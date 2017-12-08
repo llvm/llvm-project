@@ -46,11 +46,11 @@ define i8 @test_aaa(i8 %a0) optsize {
 ;
 ; HASWELL-LABEL: test_aaa:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [1:0.50]
+; HASWELL-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    aaa # sched: [100:0.25]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_aaa:
 ; BROADWELL:       # %bb.0:
@@ -130,11 +130,11 @@ define i8 @test_aad(i16 %a0) optsize {
 ;
 ; HASWELL-LABEL: test_aad:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [4:0.50]
+; HASWELL-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    aad # sched: [100:0.25]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_aad:
 ; BROADWELL:       # %bb.0:
@@ -214,11 +214,11 @@ define i16 @test_aam(i8 %a0) optsize {
 ;
 ; HASWELL-LABEL: test_aam:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [1:0.50]
+; HASWELL-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    aam # sched: [100:0.25]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_aam:
 ; BROADWELL:       # %bb.0:
@@ -298,11 +298,11 @@ define i8 @test_aas(i8 %a0) optsize {
 ;
 ; HASWELL-LABEL: test_aas:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [1:0.50]
+; HASWELL-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    aas # sched: [100:0.25]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_aas:
 ; BROADWELL:       # %bb.0:
@@ -384,11 +384,11 @@ define i8 @test_daa(i8 %a0) optsize {
 ;
 ; HASWELL-LABEL: test_daa:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [1:0.50]
+; HASWELL-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    daa # sched: [100:0.25]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_daa:
 ; BROADWELL:       # %bb.0:
@@ -468,11 +468,11 @@ define i8 @test_das(i8 %a0) optsize {
 ;
 ; HASWELL-LABEL: test_das:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [1:0.50]
+; HASWELL-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    das # sched: [100:0.25]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_das:
 ; BROADWELL:       # %bb.0:
@@ -551,7 +551,7 @@ define i8 @test_salc() optsize {
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    salc # sched: [1:0.25]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_salc:
 ; BROADWELL:       # %bb.0:

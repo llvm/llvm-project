@@ -495,9 +495,103 @@ let Predicates = [HasBWI, HasVLX] in {
 
 // If the bits are not zero we have to fall back to explicitly zeroing by
 // using shifts.
-let Predicates = [HasAVX512, NoVLX] in {
+let Predicates = [HasAVX512] in {
   def : Pat<(v16i1 (insert_subvector (v16i1 immAllZerosV),
                                      (v8i1 VK8:$mask), (iPTR 0))),
             (KSHIFTRWri (KSHIFTLWri (COPY_TO_REGCLASS VK8:$mask, VK16),
                                     (i8 8)), (i8 8))>;
+}
+
+let Predicates = [HasVLX, NoDQI] in {
+  // TODO can we legalize this out
+  def : Pat<(v4i1 (insert_subvector (v4i1 immAllZerosV),
+                                    (v2i1 VK2:$mask), (iPTR 0))),
+            (COPY_TO_REGCLASS (KSHIFTRWri
+                               (KSHIFTLWri (COPY_TO_REGCLASS VK2:$mask, VK16),
+                                           (i8 14)), (i8 14)), VK4)>;
+
+  // TODO can we legalize these out without dqi?
+  def : Pat<(v8i1 (insert_subvector (v8i1 immAllZerosV),
+                                    (v2i1 VK2:$mask), (iPTR 0))),
+            (COPY_TO_REGCLASS (KSHIFTRWri
+                               (KSHIFTLWri (COPY_TO_REGCLASS VK2:$mask, VK16),
+                                           (i8 14)), (i8 14)), VK8)>;
+  def : Pat<(v8i1 (insert_subvector (v8i1 immAllZerosV),
+                                    (v4i1 VK4:$mask), (iPTR 0))),
+            (COPY_TO_REGCLASS (KSHIFTRWri
+                               (KSHIFTLWri (COPY_TO_REGCLASS VK4:$mask, VK16),
+                                           (i8 12)), (i8 12)), VK8)>;
+}
+
+let Predicates = [HasVLX, HasDQI] in {
+  // TODO can we legalize this out
+  def : Pat<(v4i1 (insert_subvector (v4i1 immAllZerosV),
+                                    (v2i1 VK2:$mask), (iPTR 0))),
+            (COPY_TO_REGCLASS (KSHIFTRBri
+                               (KSHIFTLBri (COPY_TO_REGCLASS VK2:$mask, VK8),
+                                           (i8 14)), (i8 14)), VK4)>;
+
+  def : Pat<(v8i1 (insert_subvector (v8i1 immAllZerosV),
+                                    (v2i1 VK2:$mask), (iPTR 0))),
+            (KSHIFTRBri (KSHIFTLBri (COPY_TO_REGCLASS VK2:$mask, VK8),
+                                    (i8 6)), (i8 6))>;
+  def : Pat<(v8i1 (insert_subvector (v8i1 immAllZerosV),
+                                    (v4i1 VK4:$mask), (iPTR 0))),
+            (KSHIFTRBri (KSHIFTLBri (COPY_TO_REGCLASS VK4:$mask, VK8),
+                                    (i8 4)), (i8 4))>;
+}
+
+let Predicates = [HasVLX] in {
+  def : Pat<(v16i1 (insert_subvector (v16i1 immAllZerosV),
+                                     (v2i1 VK2:$mask), (iPTR 0))),
+            (KSHIFTRWri (KSHIFTLWri (COPY_TO_REGCLASS VK2:$mask, VK16),
+                                    (i8 14)), (i8 14))>;
+  def : Pat<(v16i1 (insert_subvector (v16i1 immAllZerosV),
+                                     (v4i1 VK4:$mask), (iPTR 0))),
+            (KSHIFTRWri (KSHIFTLWri (COPY_TO_REGCLASS VK4:$mask, VK16),
+                                    (i8 12)), (i8 12))>;
+}
+
+let Predicates = [HasBWI] in {
+  def : Pat<(v32i1 (insert_subvector (v32i1 immAllZerosV),
+                                     (v8i1 VK8:$mask), (iPTR 0))),
+            (KSHIFTRDri (KSHIFTLDri (COPY_TO_REGCLASS VK8:$mask, VK32),
+                                    (i8 24)), (i8 24))>;
+  def : Pat<(v32i1 (insert_subvector (v32i1 immAllZerosV),
+                                     (v16i1 VK16:$mask), (iPTR 0))),
+            (KSHIFTRDri (KSHIFTLDri (COPY_TO_REGCLASS VK16:$mask, VK32),
+                                    (i8 16)), (i8 16))>;
+
+  def : Pat<(v64i1 (insert_subvector (v64i1 immAllZerosV),
+                                     (v8i1 VK8:$mask), (iPTR 0))),
+            (KSHIFTRQri (KSHIFTLQri (COPY_TO_REGCLASS VK8:$mask, VK64),
+                                    (i8 56)), (i8 56))>;
+  def : Pat<(v64i1 (insert_subvector (v64i1 immAllZerosV),
+                                     (v16i1 VK16:$mask), (iPTR 0))),
+            (KSHIFTRQri (KSHIFTLQri (COPY_TO_REGCLASS VK16:$mask, VK64),
+                                    (i8 48)), (i8 48))>;
+  def : Pat<(v64i1 (insert_subvector (v64i1 immAllZerosV),
+                                     (v32i1 VK32:$mask), (iPTR 0))),
+            (KSHIFTRQri (KSHIFTLQri (COPY_TO_REGCLASS VK32:$mask, VK64),
+                                    (i8 32)), (i8 32))>;
+}
+
+let Predicates = [HasBWI, HasVLX] in {
+  def : Pat<(v32i1 (insert_subvector (v32i1 immAllZerosV),
+                                     (v2i1 VK2:$mask), (iPTR 0))),
+            (KSHIFTRDri (KSHIFTLDri (COPY_TO_REGCLASS VK2:$mask, VK32),
+                                    (i8 30)), (i8 30))>;
+  def : Pat<(v32i1 (insert_subvector (v32i1 immAllZerosV),
+                                     (v4i1 VK4:$mask), (iPTR 0))),
+            (KSHIFTRDri (KSHIFTLDri (COPY_TO_REGCLASS VK4:$mask, VK32),
+                                    (i8 28)), (i8 28))>;
+
+  def : Pat<(v64i1 (insert_subvector (v64i1 immAllZerosV),
+                                     (v2i1 VK2:$mask), (iPTR 0))),
+            (KSHIFTRQri (KSHIFTLQri (COPY_TO_REGCLASS VK2:$mask, VK64),
+                                    (i8 62)), (i8 62))>;
+  def : Pat<(v64i1 (insert_subvector (v64i1 immAllZerosV),
+                                     (v4i1 VK4:$mask), (iPTR 0))),
+            (KSHIFTRQri (KSHIFTLQri (COPY_TO_REGCLASS VK4:$mask, VK64),
+                                    (i8 60)), (i8 60))>;
 }

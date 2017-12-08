@@ -46,11 +46,11 @@ define i64 @test_cvtpd2pi(<2 x double> %a0, <2 x double>* %a1) optsize {
 ;
 ; HASWELL-LABEL: test_cvtpd2pi:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    cvtpd2pi (%rdi), %mm0 # sched: [4:1.00]
+; HASWELL-NEXT:    cvtpd2pi (%rdi), %mm0 # sched: [10:1.00]
 ; HASWELL-NEXT:    cvtpd2pi %xmm0, %mm1 # sched: [4:1.00]
 ; HASWELL-NEXT:    por %mm1, %mm0 # sched: [1:0.33]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_cvtpd2pi:
 ; BROADWELL:       # %bb.0:
@@ -132,9 +132,9 @@ define <2 x double> @test_cvtpi2pd(x86_mmx %a0, x86_mmx* %a1) optsize {
 ; HASWELL-LABEL: test_cvtpi2pd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    cvtpi2pd %mm0, %xmm0 # sched: [4:1.00]
-; HASWELL-NEXT:    cvtpi2pd (%rdi), %xmm1 # sched: [4:1.00]
+; HASWELL-NEXT:    cvtpi2pd (%rdi), %xmm1 # sched: [9:1.00]
 ; HASWELL-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_cvtpi2pd:
 ; BROADWELL:       # %bb.0:
@@ -210,9 +210,9 @@ define <4 x float> @test_cvtpi2ps(x86_mmx %a0, x86_mmx* %a1, <4 x float> %a2, <4
 ; HASWELL-LABEL: test_cvtpi2ps:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    cvtpi2ps %mm0, %xmm0 # sched: [3:1.00]
-; HASWELL-NEXT:    cvtpi2ps (%rdi), %xmm1 # sched: [3:1.00]
+; HASWELL-NEXT:    cvtpi2ps (%rdi), %xmm1 # sched: [8:1.00]
 ; HASWELL-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_cvtpi2ps:
 ; BROADWELL:       # %bb.0:
@@ -292,10 +292,10 @@ define i64 @test_cvtps2pi(<4 x float> %a0, <4 x float>* %a1) optsize {
 ; HASWELL-LABEL: test_cvtps2pi:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    cvtps2pi %xmm0, %mm0 # sched: [4:1.00]
-; HASWELL-NEXT:    cvtps2pi (%rdi), %mm1 # sched: [3:1.00]
+; HASWELL-NEXT:    cvtps2pi (%rdi), %mm1 # sched: [8:1.00]
 ; HASWELL-NEXT:    por %mm0, %mm1 # sched: [1:0.33]
 ; HASWELL-NEXT:    movd %mm1, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_cvtps2pi:
 ; BROADWELL:       # %bb.0:
@@ -380,11 +380,11 @@ define i64 @test_cvttpd2pi(<2 x double> %a0, <2 x double>* %a1) optsize {
 ;
 ; HASWELL-LABEL: test_cvttpd2pi:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    cvttpd2pi (%rdi), %mm0 # sched: [4:1.00]
+; HASWELL-NEXT:    cvttpd2pi (%rdi), %mm0 # sched: [10:1.00]
 ; HASWELL-NEXT:    cvttpd2pi %xmm0, %mm1 # sched: [4:1.00]
 ; HASWELL-NEXT:    por %mm1, %mm0 # sched: [1:0.33]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_cvttpd2pi:
 ; BROADWELL:       # %bb.0:
@@ -470,10 +470,10 @@ define i64 @test_cvttps2pi(<4 x float> %a0, <4 x float>* %a1) optsize {
 ; HASWELL-LABEL: test_cvttps2pi:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    cvttps2pi %xmm0, %mm0 # sched: [4:1.00]
-; HASWELL-NEXT:    cvttps2pi (%rdi), %mm1 # sched: [3:1.00]
+; HASWELL-NEXT:    cvttps2pi (%rdi), %mm1 # sched: [8:1.00]
 ; HASWELL-NEXT:    por %mm0, %mm1 # sched: [1:0.33]
 ; HASWELL-NEXT:    movd %mm1, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_cvttps2pi:
 ; BROADWELL:       # %bb.0:
@@ -547,7 +547,7 @@ define void @test_emms() optsize {
 ; HASWELL-LABEL: test_emms:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    emms # sched: [31:10.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_emms:
 ; BROADWELL:       # %bb.0:
@@ -602,7 +602,7 @@ define void @test_maskmovq(x86_mmx %a0, x86_mmx %a1, i8* %a2) optsize {
 ; HASWELL-LABEL: test_maskmovq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    maskmovq %mm1, %mm0 # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_maskmovq:
 ; BROADWELL:       # %bb.0:
@@ -694,15 +694,15 @@ define i32 @test_movd(x86_mmx %a0, i32 %a1, i32 *%a2) {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vmovd %edi, %xmm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    vmovq %xmm0, -{{[0-9]+}}(%rsp) # sched: [1:1.00]
-; HASWELL-NEXT:    movq -{{[0-9]+}}(%rsp), %mm1 # sched: [1:0.50]
-; HASWELL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero sched: [1:0.50]
+; HASWELL-NEXT:    movq -{{[0-9]+}}(%rsp), %mm1 # sched: [5:0.50]
+; HASWELL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero sched: [5:0.50]
 ; HASWELL-NEXT:    vmovlps %xmm0, -{{[0-9]+}}(%rsp) # sched: [1:1.00]
-; HASWELL-NEXT:    paddd -{{[0-9]+}}(%rsp), %mm1 # sched: [1:0.50]
+; HASWELL-NEXT:    paddd -{{[0-9]+}}(%rsp), %mm1 # sched: [6:0.50]
 ; HASWELL-NEXT:    paddd %mm1, %mm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    movd %mm1, %ecx # sched: [1:1.00]
 ; HASWELL-NEXT:    movd %mm0, %eax # sched: [1:1.00]
 ; HASWELL-NEXT:    movl %ecx, (%rsi) # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_movd:
 ; BROADWELL:       # %bb.0:
@@ -822,7 +822,7 @@ define i64 @test_movdq2q(<2 x i64> %a0) optsize {
 ; HASWELL-NEXT:    movdq2q %xmm0, %mm0 # sched: [2:0.67]
 ; HASWELL-NEXT:    paddd %mm0, %mm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_movdq2q:
 ; BROADWELL:       # %bb.0:
@@ -889,7 +889,7 @@ define void @test_movntq(x86_mmx* %a0, x86_mmx %a1) optsize {
 ; HASWELL-LABEL: test_movntq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    movntq %mm0, (%rdi) # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_movntq:
 ; BROADWELL:       # %bb.0:
@@ -953,10 +953,10 @@ define void @test_movq(i64 *%a0) {
 ;
 ; HASWELL-LABEL: test_movq:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    movq (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    movq (%rdi), %mm0 # sched: [5:0.50]
 ; HASWELL-NEXT:    paddd %mm0, %mm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    movq %mm0, (%rdi) # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_movq:
 ; BROADWELL:       # %bb.0:
@@ -1024,7 +1024,7 @@ define <2 x i64> @test_movq2dq(x86_mmx %a0) optsize {
 ; HASWELL-LABEL: test_movq2dq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    movq2dq %mm0, %xmm0 # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_movq2dq:
 ; BROADWELL:       # %bb.0:
@@ -1086,10 +1086,10 @@ define i64 @test_pabsb(x86_mmx *%a0) optsize {
 ;
 ; HASWELL-LABEL: test_pabsb:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    pabsb (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    pabsb (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    pabsb %mm0, %mm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pabsb:
 ; BROADWELL:       # %bb.0:
@@ -1164,10 +1164,10 @@ define i64 @test_pabsd(x86_mmx *%a0) optsize {
 ;
 ; HASWELL-LABEL: test_pabsd:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    pabsd (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    pabsd (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    pabsd %mm0, %mm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pabsd:
 ; BROADWELL:       # %bb.0:
@@ -1242,10 +1242,10 @@ define i64 @test_pabsw(x86_mmx *%a0) optsize {
 ;
 ; HASWELL-LABEL: test_pabsw:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    pabsw (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    pabsw (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    pabsw %mm0, %mm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pabsw:
 ; BROADWELL:       # %bb.0:
@@ -1321,9 +1321,9 @@ define i64 @test_packssdw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_packssdw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    packssdw %mm1, %mm0 # sched: [3:2.00]
-; HASWELL-NEXT:    packssdw (%rdi), %mm0 # sched: [2:2.00]
+; HASWELL-NEXT:    packssdw (%rdi), %mm0 # sched: [7:2.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_packssdw:
 ; BROADWELL:       # %bb.0:
@@ -1399,9 +1399,9 @@ define i64 @test_packsswb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_packsswb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    packsswb %mm1, %mm0 # sched: [3:2.00]
-; HASWELL-NEXT:    packsswb (%rdi), %mm0 # sched: [2:2.00]
+; HASWELL-NEXT:    packsswb (%rdi), %mm0 # sched: [7:2.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_packsswb:
 ; BROADWELL:       # %bb.0:
@@ -1477,9 +1477,9 @@ define i64 @test_packuswb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_packuswb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    packuswb %mm1, %mm0 # sched: [3:2.00]
-; HASWELL-NEXT:    packuswb (%rdi), %mm0 # sched: [2:2.00]
+; HASWELL-NEXT:    packuswb (%rdi), %mm0 # sched: [7:2.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_packuswb:
 ; BROADWELL:       # %bb.0:
@@ -1555,9 +1555,9 @@ define i64 @test_paddb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_paddb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    paddb %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    paddb (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    paddb (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_paddb:
 ; BROADWELL:       # %bb.0:
@@ -1633,9 +1633,9 @@ define i64 @test_paddd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_paddd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    paddd %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    paddd (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    paddd (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_paddd:
 ; BROADWELL:       # %bb.0:
@@ -1711,9 +1711,9 @@ define i64 @test_paddq(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_paddq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    paddq %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    paddq (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    paddq (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_paddq:
 ; BROADWELL:       # %bb.0:
@@ -1789,9 +1789,9 @@ define i64 @test_paddsb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_paddsb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    paddsb %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    paddsb (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    paddsb (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_paddsb:
 ; BROADWELL:       # %bb.0:
@@ -1867,9 +1867,9 @@ define i64 @test_paddsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_paddsw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    paddsw %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    paddsw (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    paddsw (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_paddsw:
 ; BROADWELL:       # %bb.0:
@@ -1945,9 +1945,9 @@ define i64 @test_paddusb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_paddusb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    paddusb %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    paddusb (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    paddusb (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_paddusb:
 ; BROADWELL:       # %bb.0:
@@ -2023,9 +2023,9 @@ define i64 @test_paddusw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_paddusw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    paddusw %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    paddusw (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    paddusw (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_paddusw:
 ; BROADWELL:       # %bb.0:
@@ -2101,9 +2101,9 @@ define i64 @test_paddw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_paddw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    paddw %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    paddw (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    paddw (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_paddw:
 ; BROADWELL:       # %bb.0:
@@ -2179,9 +2179,9 @@ define i64 @test_palignr(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_palignr:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    palignr $1, %mm1, %mm0 # sched: [1:1.00]
-; HASWELL-NEXT:    palignr $1, (%rdi), %mm0 # sched: [1:1.00]
+; HASWELL-NEXT:    palignr $1, (%rdi), %mm0 # sched: [6:1.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_palignr:
 ; BROADWELL:       # %bb.0:
@@ -2257,9 +2257,9 @@ define i64 @test_pand(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_pand:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    pand %mm1, %mm0 # sched: [1:0.33]
-; HASWELL-NEXT:    pand (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    pand (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pand:
 ; BROADWELL:       # %bb.0:
@@ -2335,9 +2335,9 @@ define i64 @test_pandn(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_pandn:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    pandn %mm1, %mm0 # sched: [1:0.33]
-; HASWELL-NEXT:    pandn (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    pandn (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pandn:
 ; BROADWELL:       # %bb.0:
@@ -2413,9 +2413,9 @@ define i64 @test_pavgb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_pavgb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    pavgb %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    pavgb (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    pavgb (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pavgb:
 ; BROADWELL:       # %bb.0:
@@ -2491,9 +2491,9 @@ define i64 @test_pavgw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_pavgw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    pavgw %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    pavgw (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    pavgw (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pavgw:
 ; BROADWELL:       # %bb.0:
@@ -2569,9 +2569,9 @@ define i64 @test_pcmpeqb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_pcmpeqb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    pcmpeqb %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    pcmpeqb (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    pcmpeqb (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pcmpeqb:
 ; BROADWELL:       # %bb.0:
@@ -2647,9 +2647,9 @@ define i64 @test_pcmpeqd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_pcmpeqd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    pcmpeqd %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    pcmpeqd (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    pcmpeqd (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pcmpeqd:
 ; BROADWELL:       # %bb.0:
@@ -2725,9 +2725,9 @@ define i64 @test_pcmpeqw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_pcmpeqw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    pcmpeqw %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    pcmpeqw (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    pcmpeqw (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pcmpeqw:
 ; BROADWELL:       # %bb.0:
@@ -2803,9 +2803,9 @@ define i64 @test_pcmpgtb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_pcmpgtb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    pcmpgtb %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    pcmpgtb (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    pcmpgtb (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pcmpgtb:
 ; BROADWELL:       # %bb.0:
@@ -2881,9 +2881,9 @@ define i64 @test_pcmpgtd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_pcmpgtd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    pcmpgtd %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    pcmpgtd (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    pcmpgtd (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pcmpgtd:
 ; BROADWELL:       # %bb.0:
@@ -2959,9 +2959,9 @@ define i64 @test_pcmpgtw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_pcmpgtw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    pcmpgtw %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    pcmpgtw (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    pcmpgtw (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pcmpgtw:
 ; BROADWELL:       # %bb.0:
@@ -3029,7 +3029,7 @@ define i32 @test_pextrw(x86_mmx %a0) optsize {
 ; HASWELL-LABEL: test_pextrw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    pextrw $0, %mm0, %eax # sched: [2:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pextrw:
 ; BROADWELL:       # %bb.0:
@@ -3092,9 +3092,9 @@ define i64 @test_phaddd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_phaddd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    phaddd %mm1, %mm0 # sched: [3:2.00]
-; HASWELL-NEXT:    phaddd (%rdi), %mm0 # sched: [3:2.00]
+; HASWELL-NEXT:    phaddd (%rdi), %mm0 # sched: [8:2.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_phaddd:
 ; BROADWELL:       # %bb.0:
@@ -3170,9 +3170,9 @@ define i64 @test_phaddsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_phaddsw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    phaddsw %mm1, %mm0 # sched: [3:2.00]
-; HASWELL-NEXT:    phaddsw (%rdi), %mm0 # sched: [3:2.00]
+; HASWELL-NEXT:    phaddsw (%rdi), %mm0 # sched: [8:2.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_phaddsw:
 ; BROADWELL:       # %bb.0:
@@ -3248,9 +3248,9 @@ define i64 @test_phaddw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_phaddw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    phaddw %mm1, %mm0 # sched: [3:2.00]
-; HASWELL-NEXT:    phaddw (%rdi), %mm0 # sched: [3:2.00]
+; HASWELL-NEXT:    phaddw (%rdi), %mm0 # sched: [8:2.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_phaddw:
 ; BROADWELL:       # %bb.0:
@@ -3326,9 +3326,9 @@ define i64 @test_phsubd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_phsubd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    phsubd %mm1, %mm0 # sched: [3:2.00]
-; HASWELL-NEXT:    phsubd (%rdi), %mm0 # sched: [3:2.00]
+; HASWELL-NEXT:    phsubd (%rdi), %mm0 # sched: [8:2.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_phsubd:
 ; BROADWELL:       # %bb.0:
@@ -3404,9 +3404,9 @@ define i64 @test_phsubsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_phsubsw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    phsubsw %mm1, %mm0 # sched: [3:2.00]
-; HASWELL-NEXT:    phsubsw (%rdi), %mm0 # sched: [3:2.00]
+; HASWELL-NEXT:    phsubsw (%rdi), %mm0 # sched: [8:2.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_phsubsw:
 ; BROADWELL:       # %bb.0:
@@ -3482,9 +3482,9 @@ define i64 @test_phsubw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_phsubw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    phsubw %mm1, %mm0 # sched: [3:2.00]
-; HASWELL-NEXT:    phsubw (%rdi), %mm0 # sched: [3:2.00]
+; HASWELL-NEXT:    phsubw (%rdi), %mm0 # sched: [8:2.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_phsubw:
 ; BROADWELL:       # %bb.0:
@@ -3564,10 +3564,10 @@ define i64 @test_pinsrw(x86_mmx %a0, i32 %a1, i16* %a2) optsize {
 ; HASWELL-LABEL: test_pinsrw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    pinsrw $0, %edi, %mm0 # sched: [2:2.00]
-; HASWELL-NEXT:    movswl (%rsi), %eax # sched: [4:0.50]
+; HASWELL-NEXT:    movswl (%rsi), %eax # sched: [5:0.50]
 ; HASWELL-NEXT:    pinsrw $1, %eax, %mm0 # sched: [2:2.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pinsrw:
 ; BROADWELL:       # %bb.0:
@@ -3649,9 +3649,9 @@ define i64 @test_pmaddwd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_pmaddwd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    pmaddwd %mm1, %mm0 # sched: [5:1.00]
-; HASWELL-NEXT:    pmaddwd (%rdi), %mm0 # sched: [5:1.00]
+; HASWELL-NEXT:    pmaddwd (%rdi), %mm0 # sched: [10:1.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmaddwd:
 ; BROADWELL:       # %bb.0:
@@ -3727,9 +3727,9 @@ define i64 @test_pmaddubsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_pmaddubsw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    pmaddubsw %mm1, %mm0 # sched: [5:1.00]
-; HASWELL-NEXT:    pmaddubsw (%rdi), %mm0 # sched: [5:1.00]
+; HASWELL-NEXT:    pmaddubsw (%rdi), %mm0 # sched: [10:1.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmaddubsw:
 ; BROADWELL:       # %bb.0:
@@ -3805,9 +3805,9 @@ define i64 @test_pmaxsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_pmaxsw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    pmaxsw %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    pmaxsw (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    pmaxsw (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmaxsw:
 ; BROADWELL:       # %bb.0:
@@ -3883,9 +3883,9 @@ define i64 @test_pmaxub(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_pmaxub:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    pmaxub %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    pmaxub (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    pmaxub (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmaxub:
 ; BROADWELL:       # %bb.0:
@@ -3961,9 +3961,9 @@ define i64 @test_pminsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_pminsw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    pminsw %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    pminsw (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    pminsw (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pminsw:
 ; BROADWELL:       # %bb.0:
@@ -4039,9 +4039,9 @@ define i64 @test_pminub(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_pminub:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    pminub %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    pminub (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    pminub (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pminub:
 ; BROADWELL:       # %bb.0:
@@ -4108,8 +4108,8 @@ define i32 @test_pmovmskb(x86_mmx %a0) optsize {
 ;
 ; HASWELL-LABEL: test_pmovmskb:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    pmovmskb %mm0, %eax # sched: [3:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    pmovmskb %mm0, %eax # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmovmskb:
 ; BROADWELL:       # %bb.0:
@@ -4172,9 +4172,9 @@ define i64 @test_pmulhrsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_pmulhrsw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    pmulhrsw %mm1, %mm0 # sched: [5:1.00]
-; HASWELL-NEXT:    pmulhrsw (%rdi), %mm0 # sched: [5:1.00]
+; HASWELL-NEXT:    pmulhrsw (%rdi), %mm0 # sched: [10:1.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmulhrsw:
 ; BROADWELL:       # %bb.0:
@@ -4250,9 +4250,9 @@ define i64 @test_pmulhw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_pmulhw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    pmulhw %mm1, %mm0 # sched: [5:1.00]
-; HASWELL-NEXT:    pmulhw (%rdi), %mm0 # sched: [5:1.00]
+; HASWELL-NEXT:    pmulhw (%rdi), %mm0 # sched: [10:1.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmulhw:
 ; BROADWELL:       # %bb.0:
@@ -4328,9 +4328,9 @@ define i64 @test_pmulhuw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_pmulhuw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    pmulhuw %mm1, %mm0 # sched: [5:1.00]
-; HASWELL-NEXT:    pmulhuw (%rdi), %mm0 # sched: [5:1.00]
+; HASWELL-NEXT:    pmulhuw (%rdi), %mm0 # sched: [10:1.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmulhuw:
 ; BROADWELL:       # %bb.0:
@@ -4406,9 +4406,9 @@ define i64 @test_pmullw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_pmullw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    pmullw %mm1, %mm0 # sched: [5:1.00]
-; HASWELL-NEXT:    pmullw (%rdi), %mm0 # sched: [5:1.00]
+; HASWELL-NEXT:    pmullw (%rdi), %mm0 # sched: [10:1.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmullw:
 ; BROADWELL:       # %bb.0:
@@ -4484,9 +4484,9 @@ define i64 @test_pmuludq(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_pmuludq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    pmuludq %mm1, %mm0 # sched: [5:1.00]
-; HASWELL-NEXT:    pmuludq (%rdi), %mm0 # sched: [5:1.00]
+; HASWELL-NEXT:    pmuludq (%rdi), %mm0 # sched: [10:1.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmuludq:
 ; BROADWELL:       # %bb.0:
@@ -4562,9 +4562,9 @@ define i64 @test_por(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_por:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    por %mm1, %mm0 # sched: [1:0.33]
-; HASWELL-NEXT:    por (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    por (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_por:
 ; BROADWELL:       # %bb.0:
@@ -4640,9 +4640,9 @@ define i64 @test_psadbw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_psadbw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    psadbw %mm1, %mm0 # sched: [5:1.00]
-; HASWELL-NEXT:    psadbw (%rdi), %mm0 # sched: [5:1.00]
+; HASWELL-NEXT:    psadbw (%rdi), %mm0 # sched: [10:1.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psadbw:
 ; BROADWELL:       # %bb.0:
@@ -4718,9 +4718,9 @@ define i64 @test_pshufb(x86_mmx %a0, x86_mmx %a1, x86_mmx *%a2) optsize {
 ; HASWELL-LABEL: test_pshufb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    pshufb %mm1, %mm0 # sched: [1:1.00]
-; HASWELL-NEXT:    pshufb (%rdi), %mm0 # sched: [1:1.00]
+; HASWELL-NEXT:    pshufb (%rdi), %mm0 # sched: [6:1.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pshufb:
 ; BROADWELL:       # %bb.0:
@@ -4795,10 +4795,10 @@ define i64 @test_pshufw(x86_mmx *%a0) optsize {
 ;
 ; HASWELL-LABEL: test_pshufw:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    pshufw $0, (%rdi), %mm0 # mm0 = mem[0,0,0,0] sched: [1:1.00]
+; HASWELL-NEXT:    pshufw $0, (%rdi), %mm0 # mm0 = mem[0,0,0,0] sched: [6:1.00]
 ; HASWELL-NEXT:    pshufw $0, %mm0, %mm0 # mm0 = mm0[0,0,0,0] sched: [1:1.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pshufw:
 ; BROADWELL:       # %bb.0:
@@ -4874,9 +4874,9 @@ define i64 @test_psignb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_psignb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    psignb %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    psignb (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    psignb (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psignb:
 ; BROADWELL:       # %bb.0:
@@ -4952,9 +4952,9 @@ define i64 @test_psignd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_psignd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    psignd %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    psignd (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    psignd (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psignd:
 ; BROADWELL:       # %bb.0:
@@ -5030,9 +5030,9 @@ define i64 @test_psignw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_psignw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    psignw %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    psignw (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    psignw (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psignw:
 ; BROADWELL:       # %bb.0:
@@ -5112,10 +5112,10 @@ define i64 @test_pslld(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_pslld:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    pslld %mm1, %mm0 # sched: [1:1.00]
-; HASWELL-NEXT:    pslld (%rdi), %mm0 # sched: [1:1.00]
+; HASWELL-NEXT:    pslld (%rdi), %mm0 # sched: [6:1.00]
 ; HASWELL-NEXT:    pslld $7, %mm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pslld:
 ; BROADWELL:       # %bb.0:
@@ -5202,10 +5202,10 @@ define i64 @test_psllq(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_psllq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    psllq %mm1, %mm0 # sched: [1:1.00]
-; HASWELL-NEXT:    psllq (%rdi), %mm0 # sched: [1:1.00]
+; HASWELL-NEXT:    psllq (%rdi), %mm0 # sched: [6:1.00]
 ; HASWELL-NEXT:    psllq $7, %mm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psllq:
 ; BROADWELL:       # %bb.0:
@@ -5292,10 +5292,10 @@ define i64 @test_psllw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_psllw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    psllw %mm1, %mm0 # sched: [1:1.00]
-; HASWELL-NEXT:    psllw (%rdi), %mm0 # sched: [1:1.00]
+; HASWELL-NEXT:    psllw (%rdi), %mm0 # sched: [6:1.00]
 ; HASWELL-NEXT:    psllw $7, %mm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psllw:
 ; BROADWELL:       # %bb.0:
@@ -5382,10 +5382,10 @@ define i64 @test_psrad(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_psrad:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    psrad %mm1, %mm0 # sched: [1:1.00]
-; HASWELL-NEXT:    psrad (%rdi), %mm0 # sched: [1:1.00]
+; HASWELL-NEXT:    psrad (%rdi), %mm0 # sched: [6:1.00]
 ; HASWELL-NEXT:    psrad $7, %mm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psrad:
 ; BROADWELL:       # %bb.0:
@@ -5472,10 +5472,10 @@ define i64 @test_psraw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_psraw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    psraw %mm1, %mm0 # sched: [1:1.00]
-; HASWELL-NEXT:    psraw (%rdi), %mm0 # sched: [1:1.00]
+; HASWELL-NEXT:    psraw (%rdi), %mm0 # sched: [6:1.00]
 ; HASWELL-NEXT:    psraw $7, %mm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psraw:
 ; BROADWELL:       # %bb.0:
@@ -5562,10 +5562,10 @@ define i64 @test_psrld(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_psrld:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    psrld %mm1, %mm0 # sched: [1:1.00]
-; HASWELL-NEXT:    psrld (%rdi), %mm0 # sched: [1:1.00]
+; HASWELL-NEXT:    psrld (%rdi), %mm0 # sched: [6:1.00]
 ; HASWELL-NEXT:    psrld $7, %mm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psrld:
 ; BROADWELL:       # %bb.0:
@@ -5652,10 +5652,10 @@ define i64 @test_psrlq(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_psrlq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    psrlq %mm1, %mm0 # sched: [1:1.00]
-; HASWELL-NEXT:    psrlq (%rdi), %mm0 # sched: [1:1.00]
+; HASWELL-NEXT:    psrlq (%rdi), %mm0 # sched: [6:1.00]
 ; HASWELL-NEXT:    psrlq $7, %mm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psrlq:
 ; BROADWELL:       # %bb.0:
@@ -5742,10 +5742,10 @@ define i64 @test_psrlw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_psrlw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    psrlw %mm1, %mm0 # sched: [1:1.00]
-; HASWELL-NEXT:    psrlw (%rdi), %mm0 # sched: [1:1.00]
+; HASWELL-NEXT:    psrlw (%rdi), %mm0 # sched: [6:1.00]
 ; HASWELL-NEXT:    psrlw $7, %mm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psrlw:
 ; BROADWELL:       # %bb.0:
@@ -5828,9 +5828,9 @@ define i64 @test_psubb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_psubb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    psubb %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    psubb (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    psubb (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psubb:
 ; BROADWELL:       # %bb.0:
@@ -5906,9 +5906,9 @@ define i64 @test_psubd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_psubd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    psubd %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    psubd (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    psubd (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psubd:
 ; BROADWELL:       # %bb.0:
@@ -5984,9 +5984,9 @@ define i64 @test_psubq(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_psubq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    psubq %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    psubq (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    psubq (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psubq:
 ; BROADWELL:       # %bb.0:
@@ -6062,9 +6062,9 @@ define i64 @test_psubsb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_psubsb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    psubsb %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    psubsb (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    psubsb (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psubsb:
 ; BROADWELL:       # %bb.0:
@@ -6140,9 +6140,9 @@ define i64 @test_psubsw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_psubsw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    psubsw %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    psubsw (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    psubsw (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psubsw:
 ; BROADWELL:       # %bb.0:
@@ -6218,9 +6218,9 @@ define i64 @test_psubusb(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_psubusb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    psubusb %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    psubusb (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    psubusb (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psubusb:
 ; BROADWELL:       # %bb.0:
@@ -6296,9 +6296,9 @@ define i64 @test_psubusw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_psubusw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    psubusw %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    psubusw (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    psubusw (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psubusw:
 ; BROADWELL:       # %bb.0:
@@ -6374,9 +6374,9 @@ define i64 @test_psubw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_psubw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    psubw %mm1, %mm0 # sched: [1:0.50]
-; HASWELL-NEXT:    psubw (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    psubw (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psubw:
 ; BROADWELL:       # %bb.0:
@@ -6452,9 +6452,9 @@ define i64 @test_punpckhbw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_punpckhbw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    punpckhbw %mm1, %mm0 # mm0 = mm0[4],mm1[4],mm0[5],mm1[5],mm0[6],mm1[6],mm0[7],mm1[7] sched: [1:1.00]
-; HASWELL-NEXT:    punpckhbw (%rdi), %mm0 # mm0 = mm0[4],mem[4],mm0[5],mem[5],mm0[6],mem[6],mm0[7],mem[7] sched: [1:1.00]
+; HASWELL-NEXT:    punpckhbw (%rdi), %mm0 # mm0 = mm0[4],mem[4],mm0[5],mem[5],mm0[6],mem[6],mm0[7],mem[7] sched: [6:1.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_punpckhbw:
 ; BROADWELL:       # %bb.0:
@@ -6530,9 +6530,9 @@ define i64 @test_punpckhdq(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_punpckhdq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    punpckhdq %mm1, %mm0 # mm0 = mm0[1],mm1[1] sched: [1:1.00]
-; HASWELL-NEXT:    punpckhdq (%rdi), %mm0 # mm0 = mm0[1],mem[1] sched: [1:1.00]
+; HASWELL-NEXT:    punpckhdq (%rdi), %mm0 # mm0 = mm0[1],mem[1] sched: [6:1.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_punpckhdq:
 ; BROADWELL:       # %bb.0:
@@ -6608,9 +6608,9 @@ define i64 @test_punpckhwd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_punpckhwd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    punpckhwd %mm1, %mm0 # mm0 = mm0[2],mm1[2],mm0[3],mm1[3] sched: [1:1.00]
-; HASWELL-NEXT:    punpckhwd (%rdi), %mm0 # mm0 = mm0[2],mem[2],mm0[3],mem[3] sched: [1:1.00]
+; HASWELL-NEXT:    punpckhwd (%rdi), %mm0 # mm0 = mm0[2],mem[2],mm0[3],mem[3] sched: [6:1.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_punpckhwd:
 ; BROADWELL:       # %bb.0:
@@ -6686,9 +6686,9 @@ define i64 @test_punpcklbw(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_punpcklbw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    punpcklbw %mm1, %mm0 # mm0 = mm0[0],mm1[0],mm0[1],mm1[1],mm0[2],mm1[2],mm0[3],mm1[3] sched: [1:1.00]
-; HASWELL-NEXT:    punpcklbw (%rdi), %mm0 # mm0 = mm0[0],mem[0],mm0[1],mem[1],mm0[2],mem[2],mm0[3],mem[3] sched: [1:1.00]
+; HASWELL-NEXT:    punpcklbw (%rdi), %mm0 # mm0 = mm0[0],mem[0],mm0[1],mem[1],mm0[2],mem[2],mm0[3],mem[3] sched: [6:1.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_punpcklbw:
 ; BROADWELL:       # %bb.0:
@@ -6764,9 +6764,9 @@ define i64 @test_punpckldq(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_punpckldq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    punpckldq %mm1, %mm0 # mm0 = mm0[0],mm1[0] sched: [1:1.00]
-; HASWELL-NEXT:    punpckldq (%rdi), %mm0 # mm0 = mm0[0],mem[0] sched: [1:1.00]
+; HASWELL-NEXT:    punpckldq (%rdi), %mm0 # mm0 = mm0[0],mem[0] sched: [6:1.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_punpckldq:
 ; BROADWELL:       # %bb.0:
@@ -6842,9 +6842,9 @@ define i64 @test_punpcklwd(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_punpcklwd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    punpcklwd %mm1, %mm0 # mm0 = mm0[0],mm1[0],mm0[1],mm1[1] sched: [1:1.00]
-; HASWELL-NEXT:    punpcklwd (%rdi), %mm0 # mm0 = mm0[0],mem[0],mm0[1],mem[1] sched: [1:1.00]
+; HASWELL-NEXT:    punpcklwd (%rdi), %mm0 # mm0 = mm0[0],mem[0],mm0[1],mem[1] sched: [6:1.00]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_punpcklwd:
 ; BROADWELL:       # %bb.0:
@@ -6920,9 +6920,9 @@ define i64 @test_pxor(x86_mmx %a0, x86_mmx %a1, x86_mmx* %a2) optsize {
 ; HASWELL-LABEL: test_pxor:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    pxor %mm1, %mm0 # sched: [1:0.33]
-; HASWELL-NEXT:    pxor (%rdi), %mm0 # sched: [1:0.50]
+; HASWELL-NEXT:    pxor (%rdi), %mm0 # sched: [6:0.50]
 ; HASWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pxor:
 ; BROADWELL:       # %bb.0:

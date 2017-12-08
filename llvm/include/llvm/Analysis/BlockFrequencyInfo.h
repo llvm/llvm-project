@@ -56,6 +56,7 @@ public:
 
   const Function *getFunction() const;
   const BranchProbabilityInfo *getBPI() const;
+  const LoopInfo *getLoopInfo() const;
   void view() const;
 
   /// getblockFreq - Return block frequency. Return 0 if we don't have the

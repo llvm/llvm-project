@@ -23,6 +23,8 @@ namespace llvm {
 
 class MachineFunction;
 class MachineInstr;
+class MachineOperand;
+class MachineRegisterInfo;
 class ScheduleDAG;
 class SIInstrInfo;
 class SIRegisterInfo;
@@ -67,8 +69,10 @@ class GCNHazardRecognizer final : public ScheduleHazardRecognizer {
   int checkSetRegHazards(MachineInstr *SetRegInstr);
   int createsVALUHazard(const MachineInstr &MI);
   int checkVALUHazards(MachineInstr *VALU);
+  int checkVALUHazardsHelper(const MachineOperand &Def, const MachineRegisterInfo &MRI);
   int checkRWLaneHazards(MachineInstr *RWLane);
   int checkRFEHazards(MachineInstr *RFE);
+  int checkInlineAsmHazards(MachineInstr *IA);
   int checkAnyInstHazards(MachineInstr *MI);
   int checkReadM0Hazards(MachineInstr *SMovRel);
 public:

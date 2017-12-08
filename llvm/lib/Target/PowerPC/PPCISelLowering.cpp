@@ -4397,18 +4397,13 @@ hasSameArgumentList(const Function *CallerFn, ImmutableCallSite CS) {
 static bool
 areCallingConvEligibleForTCO_64SVR4(CallingConv::ID CallerCC,
                                     CallingConv::ID CalleeCC) {
-  // tail calls are possible with fastcc and ccc.
-  auto isTailCallableCC  = [] (CallingConv::ID CC){
-      return  CC == CallingConv::C || CC == CallingConv::Fast;
-  };
-  if (!isTailCallableCC(CallerCC) || !isTailCallableCC(CalleeCC))
+  // Tail or Sibling call optimization (TCO/SCO) needs callee and caller to
+  // have the same calling convention.
+  if (CallerCC != CalleeCC)
     return false;
 
-  // We can safely tail call both fastcc and ccc callees from a c calling
-  // convention caller. If the caller is fastcc, we may have less stack space
-  // then a non-fastcc caller with the same signature so disable tail-calls in
-  // that case.
-  return CallerCC == CallingConv::C || CallerCC == CalleeCC;
+  // Tail or Sibling calls can be done with fastcc/ccc.
+  return (CallerCC == CallingConv::Fast || CallerCC == CallingConv::C);
 }
 
 bool
