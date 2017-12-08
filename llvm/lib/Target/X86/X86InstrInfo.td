@@ -2304,11 +2304,11 @@ multiclass bmi_bls<string mnemonic, Format RegMRM, Format MemMRM,
 let hasSideEffects = 0 in {
   def rr : I<0xF3, RegMRM, (outs RC:$dst), (ins RC:$src),
              !strconcat(mnemonic, "\t{$src, $dst|$dst, $src}"),
-             []>, T8PS, VEX_4V;
+             [], IIC_UNARY_REG>, T8PS, VEX_4V, Sched<[WriteALU]>;
   let mayLoad = 1 in
   def rm : I<0xF3, MemMRM, (outs RC:$dst), (ins x86memop:$src),
              !strconcat(mnemonic, "\t{$src, $dst|$dst, $src}"),
-             []>, T8PS, VEX_4V;
+             [], IIC_UNARY_MEM>, T8PS, VEX_4V, Sched<[WriteALULd, ReadAfterLd]>;
 }
 }
 
@@ -2343,18 +2343,18 @@ let Predicates = [HasBMI] in {
             (BLSI64rr GR64:$src)>;
 }
 
-
 multiclass bmi_bextr_bzhi<bits<8> opc, string mnemonic, RegisterClass RC,
                           X86MemOperand x86memop, Intrinsic Int,
                           PatFrag ld_frag> {
   def rr : I<opc, MRMSrcReg4VOp3, (outs RC:$dst), (ins RC:$src1, RC:$src2),
              !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-             [(set RC:$dst, (Int RC:$src1, RC:$src2)), (implicit EFLAGS)]>,
-             T8PS, VEX;
+             [(set RC:$dst, (Int RC:$src1, RC:$src2)), (implicit EFLAGS)], IIC_BIN_NONMEM>,
+             T8PS, VEX, Sched<[WriteALU]>;
   def rm : I<opc, MRMSrcMem4VOp3, (outs RC:$dst), (ins x86memop:$src1, RC:$src2),
              !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(set RC:$dst, (Int (ld_frag addr:$src1), RC:$src2)),
-              (implicit EFLAGS)]>, T8PS, VEX;
+              (implicit EFLAGS)], IIC_BIN_MEM>, T8PS, VEX,
+             Sched<[WriteALULd, ReadAfterLd]>;
 }
 
 let Predicates = [HasBMI], Defs = [EFLAGS] in {
@@ -2370,7 +2370,6 @@ let Predicates = [HasBMI2], Defs = [EFLAGS] in {
   defm BZHI64 : bmi_bextr_bzhi<0xF5, "bzhi{q}", GR64, i64mem,
                                int_x86_bmi_bzhi_64, loadi64>, VEX_W;
 }
-
 
 def CountTrailingOnes : SDNodeXForm<imm, [{
   // Count the trailing ones in the immediate.
@@ -2465,11 +2464,12 @@ multiclass bmi_pdep_pext<string mnemonic, RegisterClass RC,
                          PatFrag ld_frag> {
   def rr : I<0xF5, MRMSrcReg, (outs RC:$dst), (ins RC:$src1, RC:$src2),
              !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-             [(set RC:$dst, (Int RC:$src1, RC:$src2))]>,
-             VEX_4V;
+             [(set RC:$dst, (Int RC:$src1, RC:$src2))], IIC_BIN_NONMEM>,
+             VEX_4V, Sched<[WriteALU]>;
   def rm : I<0xF5, MRMSrcMem, (outs RC:$dst), (ins RC:$src1, x86memop:$src2),
              !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-             [(set RC:$dst, (Int RC:$src1, (ld_frag addr:$src2)))]>, VEX_4V;
+             [(set RC:$dst, (Int RC:$src1, (ld_frag addr:$src2)))],
+             IIC_BIN_MEM>, VEX_4V, Sched<[WriteALULd, ReadAfterLd]>;
 }
 
 let Predicates = [HasBMI2] in {
@@ -2495,14 +2495,14 @@ multiclass tbm_ternary_imm_intr<bits<8> opc, RegisterClass RC, string OpcodeStr,
   def ri : Ii32<opc,  MRMSrcReg, (outs RC:$dst), (ins RC:$src1, immtype:$cntl),
                 !strconcat(OpcodeStr,
                            "\t{$cntl, $src1, $dst|$dst, $src1, $cntl}"),
-                [(set RC:$dst, (Int RC:$src1, immoperator:$cntl))]>,
-           XOP, XOPA;
+                [(set RC:$dst, (Int RC:$src1, immoperator:$cntl))],
+           IIC_BIN_NONMEM>, XOP, XOPA, Sched<[WriteALU]>;
   def mi : Ii32<opc,  MRMSrcMem, (outs RC:$dst),
                 (ins x86memop:$src1, immtype:$cntl),
                 !strconcat(OpcodeStr,
                            "\t{$cntl, $src1, $dst|$dst, $src1, $cntl}"),
-                [(set RC:$dst, (Int (ld_frag addr:$src1), immoperator:$cntl))]>,
-           XOP, XOPA;
+                [(set RC:$dst, (Int (ld_frag addr:$src1), immoperator:$cntl))],
+           IIC_BIN_MEM>, XOP, XOPA, Sched<[WriteALULd, ReadAfterLd]>;
 }
 
 defm BEXTRI32 : tbm_ternary_imm_intr<0x10, GR32, "bextr", i32mem, loadi32,
@@ -2518,11 +2518,11 @@ multiclass tbm_binary_rm<bits<8> opc, Format FormReg, Format FormMem,
 let hasSideEffects = 0 in {
   def rr : I<opc,  FormReg, (outs RC:$dst), (ins RC:$src),
              !strconcat(OpcodeStr,"\t{$src, $dst|$dst, $src}"),
-             []>, XOP_4V, XOP9;
+             [], IIC_BIN_NONMEM>, XOP_4V, XOP9, Sched<[WriteALU]>;
   let mayLoad = 1 in
   def rm : I<opc,  FormMem, (outs RC:$dst), (ins x86memop:$src),
              !strconcat(OpcodeStr,"\t{$src, $dst|$dst, $src}"),
-             []>, XOP_4V, XOP9;
+             [], IIC_BIN_MEM>, XOP_4V, XOP9, Sched<[WriteALULd, ReadAfterLd]>;
 }
 }
 

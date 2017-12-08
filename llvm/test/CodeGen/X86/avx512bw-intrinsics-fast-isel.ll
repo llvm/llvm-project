@@ -120,713 +120,537 @@ define <8 x i64> @test_mm512_mask_set1_epi8(<8 x i64> %__O, i64 %__M, i8 signext
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    .cfi_def_cfa_offset 12
+; X32-NEXT:    .cfi_offset %esi, -12
 ; X32-NEXT:    .cfi_offset %ebx, -8
-; X32-NEXT:    vmovdqa64 %zmm0, %zmm3
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    kmovd %ecx, %k0
+; X32-NEXT:    kshiftrq $1, %k0, %k1
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    andb $2, %al
+; X32-NEXT:    shrb %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $62, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $2, %k0, %k1
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    andb $15, %al
+; X32-NEXT:    movl %eax, %edx
+; X32-NEXT:    shrb $2, %dl
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $61, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $3, %k0, %k1
+; X32-NEXT:    shrb $3, %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $60, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $4, %k0, %k1
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrb $4, %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $59, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $5, %k0, %k1
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrb $5, %al
+; X32-NEXT:    andb $1, %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $58, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $6, %k0, %k1
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrb $6, %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $57, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $7, %k0, %k1
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrb $7, %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $56, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $8, %k0, %k1
+; X32-NEXT:    movb %ch, %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $55, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $9, %k0, %k1
+; X32-NEXT:    andb $2, %al
+; X32-NEXT:    shrb %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $54, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $10, %k0, %k1
+; X32-NEXT:    movb %ch, %al
+; X32-NEXT:    andb $15, %al
+; X32-NEXT:    movl %eax, %edx
+; X32-NEXT:    shrb $2, %dl
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $53, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $11, %k0, %k1
+; X32-NEXT:    shrb $3, %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrl $12, %eax
+; X32-NEXT:    andl $15, %eax
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrl $13, %eax
+; X32-NEXT:    andb $1, %al
+; X32-NEXT:    kmovd %eax, %k3
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrl $14, %eax
+; X32-NEXT:    andl $3, %eax
+; X32-NEXT:    kmovd %eax, %k4
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrl $15, %eax
+; X32-NEXT:    andl $1, %eax
+; X32-NEXT:    kmovd %eax, %k5
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    shrl $16, %edx
+; X32-NEXT:    movl %edx, %eax
+; X32-NEXT:    andb $2, %al
+; X32-NEXT:    shrb %al
+; X32-NEXT:    kmovd %eax, %k6
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    andb $15, %bl
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    shrb $2, %al
+; X32-NEXT:    kmovd %eax, %k7
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $52, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $12, %k0, %k1
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $51, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $13, %k0, %k1
+; X32-NEXT:    kxorq %k3, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $50, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $14, %k0, %k1
+; X32-NEXT:    kxorq %k4, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $49, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $15, %k0, %k1
+; X32-NEXT:    kxorq %k5, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $48, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $16, %k0, %k1
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $47, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $17, %k0, %k1
+; X32-NEXT:    kxorq %k6, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $46, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $18, %k0, %k1
+; X32-NEXT:    kxorq %k7, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $45, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $19, %k0, %k1
+; X32-NEXT:    shrb $3, %bl
+; X32-NEXT:    kmovd %ebx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $44, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $20, %k0, %k1
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    shrb $4, %bl
+; X32-NEXT:    kmovd %ebx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $43, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $21, %k0, %k1
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    shrb $5, %bl
+; X32-NEXT:    andb $1, %bl
+; X32-NEXT:    kmovd %ebx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $42, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $22, %k0, %k1
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    shrb $6, %bl
+; X32-NEXT:    kmovd %ebx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $41, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $23, %k0, %k1
+; X32-NEXT:    shrb $7, %dl
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $40, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $24, %k0, %k1
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    shrl $24, %edx
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $39, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $25, %k0, %k1
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    andb $2, %bl
+; X32-NEXT:    shrb %bl
+; X32-NEXT:    kmovd %ebx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $38, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $26, %k0, %k1
+; X32-NEXT:    andb $15, %dl
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    shrb $2, %bl
+; X32-NEXT:    kmovd %ebx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $37, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $27, %k0, %k1
+; X32-NEXT:    shrb $3, %dl
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $36, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $28, %k0, %k1
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    shrl $28, %edx
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $35, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $29, %k0, %k1
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    shrl $29, %edx
+; X32-NEXT:    andb $1, %dl
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $34, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $30, %k0, %k1
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    shrl $30, %edx
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $33, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $31, %k0, %k1
+; X32-NEXT:    shrl $31, %ecx
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $32, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $32, %k0, %k1
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $31, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $33, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    andb $2, %cl
 ; X32-NEXT:    shrb %cl
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vpsllw $8, %xmm1, %xmm1
-; X32-NEXT:    kmovd %eax, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm0 = [255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm2[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $30, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $34, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    andb $15, %cl
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    shrb $2, %dl
-; X32-NEXT:    kmovd %edx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vpbroadcastw %xmm2, %xmm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm0 = [255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm0, %ymm1, %ymm2, %ymm2
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm2[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $29, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $35, %k0, %k1
 ; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vpslld $24, %xmm2, %xmm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm0 = [255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm0, %ymm1, %ymm2, %ymm2
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm2[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $28, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $36, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrb $4, %cl
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vpbroadcastd %xmm2, %xmm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm0 = [255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm0, %ymm1, %ymm2, %ymm2
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm2[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $27, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $37, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrb $5, %cl
 ; X32-NEXT:    andb $1, %cl
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vpsllq $40, %xmm2, %xmm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm0 = [255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm0, %ymm1, %ymm2, %ymm2
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm2[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $26, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $38, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrb $6, %cl
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vpbroadcastw %xmm2, %xmm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm0 = [255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm0, %ymm1, %ymm2, %ymm2
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm2[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $25, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $39, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrb $7, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm1
-; X32-NEXT:    vpsllq $56, %xmm1, %xmm1
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm0 = [255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm2[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $24, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $40, %k0, %k1
 ; X32-NEXT:    movb %ah, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm1
-; X32-NEXT:    vpbroadcastq %xmm1, %xmm1
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm0 = [255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm2[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
 ; X32-NEXT:    andb $2, %cl
 ; X32-NEXT:    shrb %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm1
-; X32-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4,5,6]
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm0 = [255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm2[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
+; X32-NEXT:    kmovd %ecx, %k2
 ; X32-NEXT:    movb %ah, %cl
 ; X32-NEXT:    andb $15, %cl
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    shrb $2, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm1
-; X32-NEXT:    vpbroadcastw %xmm1, %xmm1
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm0 = [255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm2[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
+; X32-NEXT:    kmovd %edx, %k3
 ; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm1
-; X32-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4]
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm0 = [255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm2[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $12, %ecx
-; X32-NEXT:    andl $15, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm1
-; X32-NEXT:    vpbroadcastd %xmm1, %xmm1
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm0 = [255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm2[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
+; X32-NEXT:    kmovd %ecx, %k4
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl $13, %ecx
 ; X32-NEXT:    andb $1, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm1
-; X32-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2]
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm0 = [255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm2[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $14, %ecx
-; X32-NEXT:    andl $3, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm1
-; X32-NEXT:    vpbroadcastw %xmm1, %xmm1
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm0 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm2[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $15, %ecx
-; X32-NEXT:    andl $1, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm1
-; X32-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0]
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm0 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm2[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
+; X32-NEXT:    kmovd %ecx, %k5
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl $16, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm1
-; X32-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm0 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm2[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    andb $2, %dl
 ; X32-NEXT:    shrb %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm1
-; X32-NEXT:    vpsllw $8, %xmm1, %xmm1
-; X32-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm0 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm2[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
+; X32-NEXT:    kmovd %edx, %k6
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    andb $15, %dl
 ; X32-NEXT:    movl %edx, %ebx
 ; X32-NEXT:    shrb $2, %bl
-; X32-NEXT:    kmovd %ebx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm1
-; X32-NEXT:    vpbroadcastw %xmm1, %xmm1
-; X32-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm0 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm2[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
+; X32-NEXT:    kmovd %ebx, %k7
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $23, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $41, %k0, %k1
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $22, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $42, %k0, %k1
+; X32-NEXT:    kxorq %k3, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $21, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $43, %k0, %k1
+; X32-NEXT:    kxorq %k4, %k1, %k1
+; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    shrl $12, %esi
+; X32-NEXT:    andl $15, %esi
+; X32-NEXT:    kmovd %esi, %k2
+; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    shrl $14, %esi
+; X32-NEXT:    andl $3, %esi
+; X32-NEXT:    kmovd %esi, %k3
+; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    shrl $15, %esi
+; X32-NEXT:    andl $1, %esi
+; X32-NEXT:    kmovd %esi, %k4
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $20, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $44, %k0, %k1
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $19, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $45, %k0, %k1
+; X32-NEXT:    kxorq %k5, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $18, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $46, %k0, %k1
+; X32-NEXT:    kxorq %k3, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $17, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $47, %k0, %k1
+; X32-NEXT:    kxorq %k4, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $16, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $48, %k0, %k1
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $15, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $49, %k0, %k1
+; X32-NEXT:    kxorq %k6, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $14, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $50, %k0, %k1
+; X32-NEXT:    kxorq %k7, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $13, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $51, %k0, %k1
 ; X32-NEXT:    shrb $3, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm1
-; X32-NEXT:    vpslld $24, %xmm1, %xmm1
-; X32-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm0 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm2[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $12, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k4
+; X32-NEXT:    kshiftrq $52, %k4, %k0
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    shrb $4, %dl
 ; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm1
-; X32-NEXT:    vpbroadcastd %xmm1, %xmm1
-; X32-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm0 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm2[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
+; X32-NEXT:    kxorq %k1, %k0, %k5
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    shrb $5, %dl
 ; X32-NEXT:    andb $1, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm1
-; X32-NEXT:    vpsllq $40, %xmm1, %xmm1
-; X32-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm0 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm2[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
+; X32-NEXT:    kmovd %edx, %k6
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    shrb $6, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm1
-; X32-NEXT:    vpbroadcastw %xmm1, %xmm1
-; X32-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm0 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm2[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
+; X32-NEXT:    kmovd %edx, %k7
 ; X32-NEXT:    shrb $7, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm1
-; X32-NEXT:    vpsllq $56, %xmm1, %xmm1
-; X32-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm0 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm2[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
+; X32-NEXT:    kmovd %ecx, %k0
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl $24, %ecx
 ; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm1
-; X32-NEXT:    vpbroadcastq %xmm1, %ymm1
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm0 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm2[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    andb $2, %dl
 ; X32-NEXT:    shrb %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm1
-; X32-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4,5,6]
-; X32-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm5 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm5, %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm2[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
+; X32-NEXT:    kmovd %edx, %k2
 ; X32-NEXT:    andb $15, %cl
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    shrb $2, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm1
-; X32-NEXT:    vpbroadcastw %xmm1, %xmm1
-; X32-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
-; X32-NEXT:    vpmovm2b %k0, %zmm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm4, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm4[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
+; X32-NEXT:    kmovd %edx, %k3
+; X32-NEXT:    kshiftlq $63, %k5, %k5
+; X32-NEXT:    kshiftrq $11, %k5, %k5
+; X32-NEXT:    kxorq %k4, %k5, %k4
+; X32-NEXT:    kshiftrq $53, %k4, %k5
+; X32-NEXT:    kxorq %k6, %k5, %k5
+; X32-NEXT:    kshiftlq $63, %k5, %k5
+; X32-NEXT:    kshiftrq $10, %k5, %k5
+; X32-NEXT:    kxorq %k4, %k5, %k5
+; X32-NEXT:    kshiftrq $54, %k5, %k4
+; X32-NEXT:    kxorq %k7, %k4, %k6
 ; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm1
-; X32-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4]
-; X32-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
-; X32-NEXT:    vpmovm2b %k0, %zmm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm0 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm0, %ymm4, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm4[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $28, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm1
-; X32-NEXT:    vpbroadcastd %xmm1, %xmm1
-; X32-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
-; X32-NEXT:    vpmovm2b %k0, %zmm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm0 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255]
-; X32-NEXT:    vpblendvb %ymm0, %ymm4, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm4[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm1, %k0
+; X32-NEXT:    kmovd %ecx, %k4
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl $29, %ecx
 ; X32-NEXT:    andb $1, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm1
-; X32-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2]
-; X32-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vmovdqa {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255]
-; X32-NEXT:    vpblendvb %ymm4, %ymm0, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $30, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm1
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vmovdqa {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255]
-; X32-NEXT:    vpblendvb %ymm4, %ymm0, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    shrl $31, %eax
-; X32-NEXT:    kmovd %eax, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0]
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
-; X32-NEXT:    vpblendvb %ymm7, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    kmovd %eax, %k1
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; X32-NEXT:    vpmovm2b %k1, %zmm7
-; X32-NEXT:    vmovdqa {{.*#+}} ymm6 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm6, %ymm1, %ymm7, %ymm1
-; X32-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    andb $2, %cl
-; X32-NEXT:    shrb %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllw $8, %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    andb $15, %cl
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    shrb $2, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslld $24, %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrb $4, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrb $5, %cl
-; X32-NEXT:    andb $1, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllq $40, %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrb $6, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrb $7, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllq $56, %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movb %ah, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastq %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    andb $2, %cl
-; X32-NEXT:    shrb %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movb %ah, %cl
-; X32-NEXT:    andb $15, %cl
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    shrb $2, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $12, %ecx
-; X32-NEXT:    andl $15, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $13, %ecx
-; X32-NEXT:    andb $1, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $14, %ecx
-; X32-NEXT:    andl $3, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $15, %ecx
-; X32-NEXT:    andl $1, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $16, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    andb $2, %dl
-; X32-NEXT:    shrb %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllw $8, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    andb $15, %dl
-; X32-NEXT:    movl %edx, %ebx
-; X32-NEXT:    shrb $2, %bl
-; X32-NEXT:    kmovd %ebx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    shrb $3, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslld $24, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    shrb $4, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    shrb $5, %dl
-; X32-NEXT:    andb $1, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllq $40, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    shrb $6, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    shrb $7, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllq $56, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $24, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastq %xmm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    andb $2, %dl
-; X32-NEXT:    shrb %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6]
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vpblendvb %ymm5, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    andb $15, %cl
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    shrb $2, %dl
-; X32-NEXT:    kmovd %edx, %k0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vpbroadcastw %xmm1, %xmm1
-; X32-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
-; X32-NEXT:    vextracti64x4 $1, %zmm0, %ymm5
-; X32-NEXT:    vpblendvb %ymm2, %ymm5, %ymm1, %ymm2
-; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $29, %ecx
-; X32-NEXT:    andb $1, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k2
-; X32-NEXT:    vpmovm2b %k2, %zmm0
-; X32-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vpslldq {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm2[0,1,2,3,4]
-; X32-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm5 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm5, %ymm1, %ymm2, %ymm1
-; X32-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; X32-NEXT:    kmovd %ecx, %k7
+; X32-NEXT:    kshiftlq $63, %k6, %k6
+; X32-NEXT:    kshiftrq $9, %k6, %k6
+; X32-NEXT:    kxorq %k5, %k6, %k5
+; X32-NEXT:    kshiftrq $55, %k5, %k6
+; X32-NEXT:    kxorq %k0, %k6, %k0
+; X32-NEXT:    kshiftlq $63, %k0, %k0
+; X32-NEXT:    kshiftrq $8, %k0, %k0
+; X32-NEXT:    kxorq %k5, %k0, %k0
+; X32-NEXT:    kshiftrq $56, %k0, %k5
+; X32-NEXT:    kxorq %k1, %k5, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl $28, %ecx
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vpbroadcastd %xmm2, %xmm2
-; X32-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm5 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255]
-; X32-NEXT:    vpblendvb %ymm5, %ymm1, %ymm2, %ymm1
-; X32-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; X32-NEXT:    vpmovm2b %k1, %zmm2
-; X32-NEXT:    vpslldq {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm2[0,1,2]
-; X32-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm5 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255]
-; X32-NEXT:    vpblendvb %ymm5, %ymm1, %ymm2, %ymm1
+; X32-NEXT:    kmovd %ecx, %k5
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl $30, %ecx
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vpbroadcastw %xmm2, %xmm2
-; X32-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm2
-; X32-NEXT:    vpblendvb %ymm4, %ymm1, %ymm2, %ymm1
-; X32-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k6
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $7, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $57, %k0, %k1
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $6, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $58, %k0, %k1
+; X32-NEXT:    kxorq %k3, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $5, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $59, %k0, %k1
+; X32-NEXT:    kxorq %k4, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $4, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $60, %k0, %k1
+; X32-NEXT:    kxorq %k5, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $3, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $61, %k0, %k1
+; X32-NEXT:    kxorq %k7, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $2, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $62, %k0, %k1
+; X32-NEXT:    kxorq %k6, %k1, %k1
 ; X32-NEXT:    shrl $31, %eax
-; X32-NEXT:    kmovd %eax, %k1
+; X32-NEXT:    kmovd %eax, %k2
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $1, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
 ; X32-NEXT:    kshiftlq $1, %k0, %k0
 ; X32-NEXT:    kshiftrq $1, %k0, %k0
-; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k2, %k1
 ; X32-NEXT:    korq %k1, %k0, %k1
-; X32-NEXT:    vpbroadcastb %eax, %zmm3 {%k1}
-; X32-NEXT:    vmovdqa64 %zmm3, %zmm0
+; X32-NEXT:    vpbroadcastb %eax, %zmm0 {%k1}
+; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %ebx
 ; X32-NEXT:    retl
 ;
@@ -850,710 +674,537 @@ define <8 x i64> @test_mm512_maskz_set1_epi8(i64 %__M, i8 signext %__A)  {
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    .cfi_def_cfa_offset 12
+; X32-NEXT:    .cfi_offset %esi, -12
 ; X32-NEXT:    .cfi_offset %ebx, -8
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    kmovd %ecx, %k0
+; X32-NEXT:    kshiftrq $1, %k0, %k1
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    andb $2, %al
+; X32-NEXT:    shrb %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $62, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $2, %k0, %k1
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    andb $15, %al
+; X32-NEXT:    movl %eax, %edx
+; X32-NEXT:    shrb $2, %dl
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $61, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $3, %k0, %k1
+; X32-NEXT:    shrb $3, %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $60, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $4, %k0, %k1
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrb $4, %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $59, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $5, %k0, %k1
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrb $5, %al
+; X32-NEXT:    andb $1, %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $58, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $6, %k0, %k1
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrb $6, %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $57, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $7, %k0, %k1
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrb $7, %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $56, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $8, %k0, %k1
+; X32-NEXT:    movb %ch, %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $55, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $9, %k0, %k1
+; X32-NEXT:    andb $2, %al
+; X32-NEXT:    shrb %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $54, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $10, %k0, %k1
+; X32-NEXT:    movb %ch, %al
+; X32-NEXT:    andb $15, %al
+; X32-NEXT:    movl %eax, %edx
+; X32-NEXT:    shrb $2, %dl
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $53, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $11, %k0, %k1
+; X32-NEXT:    shrb $3, %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrl $12, %eax
+; X32-NEXT:    andl $15, %eax
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrl $13, %eax
+; X32-NEXT:    andb $1, %al
+; X32-NEXT:    kmovd %eax, %k3
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrl $14, %eax
+; X32-NEXT:    andl $3, %eax
+; X32-NEXT:    kmovd %eax, %k4
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrl $15, %eax
+; X32-NEXT:    andl $1, %eax
+; X32-NEXT:    kmovd %eax, %k5
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    shrl $16, %edx
+; X32-NEXT:    movl %edx, %eax
+; X32-NEXT:    andb $2, %al
+; X32-NEXT:    shrb %al
+; X32-NEXT:    kmovd %eax, %k6
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    andb $15, %bl
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    shrb $2, %al
+; X32-NEXT:    kmovd %eax, %k7
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    andb $2, %cl
-; X32-NEXT:    shrb %cl
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vpsllw $8, %xmm0, %xmm0
-; X32-NEXT:    kmovd %eax, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    andb $15, %cl
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $52, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $12, %k0, %k1
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $51, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $13, %k0, %k1
+; X32-NEXT:    kxorq %k3, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $50, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $14, %k0, %k1
+; X32-NEXT:    kxorq %k4, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $49, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $15, %k0, %k1
+; X32-NEXT:    kxorq %k5, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $48, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $16, %k0, %k1
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $47, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $17, %k0, %k1
+; X32-NEXT:    kxorq %k6, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $46, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $18, %k0, %k1
+; X32-NEXT:    kxorq %k7, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $45, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $19, %k0, %k1
+; X32-NEXT:    shrb $3, %bl
+; X32-NEXT:    kmovd %ebx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $44, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $20, %k0, %k1
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    shrb $4, %bl
+; X32-NEXT:    kmovd %ebx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $43, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $21, %k0, %k1
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    shrb $5, %bl
+; X32-NEXT:    andb $1, %bl
+; X32-NEXT:    kmovd %ebx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $42, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $22, %k0, %k1
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    shrb $6, %bl
+; X32-NEXT:    kmovd %ebx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $41, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $23, %k0, %k1
+; X32-NEXT:    shrb $7, %dl
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $40, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $24, %k0, %k1
 ; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    shrb $2, %dl
-; X32-NEXT:    kmovd %edx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vpbroadcastw %xmm1, %xmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vpslld $24, %xmm1, %xmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrb $4, %cl
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vpbroadcastd %xmm1, %xmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrb $5, %cl
-; X32-NEXT:    andb $1, %cl
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vpsllq $40, %xmm1, %xmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrb $6, %cl
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vpbroadcastw %xmm1, %xmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrb $7, %cl
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vpsllq $56, %xmm1, %xmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movb %ah, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastq %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    andb $2, %cl
-; X32-NEXT:    shrb %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movb %ah, %cl
-; X32-NEXT:    andb $15, %cl
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    shrb $2, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $12, %ecx
-; X32-NEXT:    andl $15, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $13, %ecx
-; X32-NEXT:    andb $1, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $14, %ecx
-; X32-NEXT:    andl $3, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $15, %ecx
-; X32-NEXT:    andl $1, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $16, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    andb $2, %dl
-; X32-NEXT:    shrb %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllw $8, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    shrl $24, %edx
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $39, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $25, %k0, %k1
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    andb $2, %bl
+; X32-NEXT:    shrb %bl
+; X32-NEXT:    kmovd %ebx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $38, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $26, %k0, %k1
 ; X32-NEXT:    andb $15, %dl
 ; X32-NEXT:    movl %edx, %ebx
 ; X32-NEXT:    shrb $2, %bl
-; X32-NEXT:    kmovd %ebx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ebx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $37, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $27, %k0, %k1
 ; X32-NEXT:    shrb $3, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslld $24, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $36, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $28, %k0, %k1
 ; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    shrb $4, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    shrl $28, %edx
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $35, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $29, %k0, %k1
 ; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    shrb $5, %dl
+; X32-NEXT:    shrl $29, %edx
 ; X32-NEXT:    andb $1, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllq $40, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $34, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $30, %k0, %k1
 ; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    shrb $6, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    shrb $7, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllq $56, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm6 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm6, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $24, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastq %xmm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    andb $2, %dl
-; X32-NEXT:    shrb %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6]
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm5 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm5, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm4[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    andb $15, %cl
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    shrb $2, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm1 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm1, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm4[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4]
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm1 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm1, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm4[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $28, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm1 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255]
-; X32-NEXT:    vpblendvb %ymm1, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm4[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $29, %ecx
-; X32-NEXT:    andb $1, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2]
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm1
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vmovdqa {{.*#+}} ymm3 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255]
-; X32-NEXT:    vpblendvb %ymm3, %ymm0, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $30, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm1
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vmovdqa {{.*#+}} ymm3 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255]
-; X32-NEXT:    vpblendvb %ymm3, %ymm0, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    shrl $31, %eax
-; X32-NEXT:    kmovd %eax, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0]
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
-; X32-NEXT:    vpblendvb %ymm7, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    kmovd %eax, %k1
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; X32-NEXT:    vpmovm2b %k1, %zmm7
-; X32-NEXT:    vmovdqa {{.*#+}} ymm4 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm4, %ymm1, %ymm7, %ymm1
-; X32-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    shrl $30, %edx
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $33, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $31, %k0, %k1
+; X32-NEXT:    shrl $31, %ecx
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $32, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $32, %k0, %k1
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $31, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $33, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    andb $2, %cl
 ; X32-NEXT:    shrb %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllw $8, %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $30, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $34, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    andb $15, %cl
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    shrb $2, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $29, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $35, %k0, %k1
 ; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslld $24, %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $28, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $36, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrb $4, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $27, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $37, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrb $5, %cl
-; X32-NEXT:    andb $1, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllq $40, %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrb $6, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrb $7, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllq $56, %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movb %ah, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastq %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    andb $2, %cl
-; X32-NEXT:    shrb %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movb %ah, %cl
-; X32-NEXT:    andb $15, %cl
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    shrb $2, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $12, %ecx
-; X32-NEXT:    andl $15, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $13, %ecx
-; X32-NEXT:    andb $1, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $14, %ecx
-; X32-NEXT:    andl $3, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $15, %ecx
-; X32-NEXT:    andl $1, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $16, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    andb $2, %dl
-; X32-NEXT:    shrb %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllw $8, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    andb $15, %dl
-; X32-NEXT:    movl %edx, %ebx
-; X32-NEXT:    shrb $2, %bl
-; X32-NEXT:    kmovd %ebx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    shrb $3, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslld $24, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    shrb $4, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    shrb $5, %dl
-; X32-NEXT:    andb $1, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllq $40, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    shrb $6, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    shrb $7, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllq $56, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; X32-NEXT:    vpblendvb %ymm6, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $24, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastq %xmm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; X32-NEXT:    vpblendvb %ymm2, %ymm4, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    andb $2, %dl
-; X32-NEXT:    shrb %dl
-; X32-NEXT:    kmovd %edx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6]
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vextracti64x4 $1, %zmm2, %ymm1
-; X32-NEXT:    vpblendvb %ymm5, %ymm1, %ymm0, %ymm1
-; X32-NEXT:    andb $15, %cl
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    shrb $2, %dl
-; X32-NEXT:    kmovd %edx, %k0
-; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $29, %ecx
 ; X32-NEXT:    andb $1, %cl
 ; X32-NEXT:    kmovd %ecx, %k2
-; X32-NEXT:    vinserti64x4 $1, %ymm1, %zmm2, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k3
-; X32-NEXT:    vpmovm2b %k3, %zmm0
-; X32-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vpbroadcastw %xmm2, %xmm2
-; X32-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm4, %ymm1, %ymm2, %ymm1
-; X32-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; X32-NEXT:    vpmovm2b %k1, %zmm2
-; X32-NEXT:    vpslldq {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm2[0,1,2,3,4]
-; X32-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm4, %ymm1, %ymm2, %ymm1
-; X32-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $26, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $38, %k0, %k1
+; X32-NEXT:    movl %eax, %ecx
+; X32-NEXT:    shrb $6, %cl
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $25, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $39, %k0, %k1
+; X32-NEXT:    movl %eax, %ecx
+; X32-NEXT:    shrb $7, %cl
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $24, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $40, %k0, %k1
+; X32-NEXT:    movb %ah, %cl
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    andb $2, %cl
+; X32-NEXT:    shrb %cl
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    movb %ah, %cl
+; X32-NEXT:    andb $15, %cl
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    shrb $2, %dl
+; X32-NEXT:    kmovd %edx, %k3
+; X32-NEXT:    shrb $3, %cl
+; X32-NEXT:    kmovd %ecx, %k4
+; X32-NEXT:    movl %eax, %ecx
+; X32-NEXT:    shrl $13, %ecx
+; X32-NEXT:    andb $1, %cl
+; X32-NEXT:    kmovd %ecx, %k5
+; X32-NEXT:    movl %eax, %ecx
+; X32-NEXT:    shrl $16, %ecx
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    andb $2, %dl
+; X32-NEXT:    shrb %dl
+; X32-NEXT:    kmovd %edx, %k6
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    andb $15, %dl
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    shrb $2, %bl
+; X32-NEXT:    kmovd %ebx, %k7
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $23, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $41, %k0, %k1
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $22, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $42, %k0, %k1
+; X32-NEXT:    kxorq %k3, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $21, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $43, %k0, %k1
+; X32-NEXT:    kxorq %k4, %k1, %k1
+; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    shrl $12, %esi
+; X32-NEXT:    andl $15, %esi
+; X32-NEXT:    kmovd %esi, %k2
+; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    shrl $14, %esi
+; X32-NEXT:    andl $3, %esi
+; X32-NEXT:    kmovd %esi, %k3
+; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    shrl $15, %esi
+; X32-NEXT:    andl $1, %esi
+; X32-NEXT:    kmovd %esi, %k4
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $20, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $44, %k0, %k1
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $19, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $45, %k0, %k1
+; X32-NEXT:    kxorq %k5, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $18, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $46, %k0, %k1
+; X32-NEXT:    kxorq %k3, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $17, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $47, %k0, %k1
+; X32-NEXT:    kxorq %k4, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $16, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $48, %k0, %k1
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $15, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $49, %k0, %k1
+; X32-NEXT:    kxorq %k6, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $14, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $50, %k0, %k1
+; X32-NEXT:    kxorq %k7, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $13, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $51, %k0, %k1
+; X32-NEXT:    shrb $3, %dl
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $12, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k4
+; X32-NEXT:    kshiftrq $52, %k4, %k0
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    shrb $4, %dl
+; X32-NEXT:    kmovd %edx, %k1
+; X32-NEXT:    kxorq %k1, %k0, %k5
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    shrb $5, %dl
+; X32-NEXT:    andb $1, %dl
+; X32-NEXT:    kmovd %edx, %k6
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    shrb $6, %dl
+; X32-NEXT:    kmovd %edx, %k7
+; X32-NEXT:    shrb $7, %cl
+; X32-NEXT:    kmovd %ecx, %k0
+; X32-NEXT:    movl %eax, %ecx
+; X32-NEXT:    shrl $24, %ecx
+; X32-NEXT:    kmovd %ecx, %k1
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    andb $2, %dl
+; X32-NEXT:    shrb %dl
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    andb $15, %cl
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    shrb $2, %dl
+; X32-NEXT:    kmovd %edx, %k3
+; X32-NEXT:    kshiftlq $63, %k5, %k5
+; X32-NEXT:    kshiftrq $11, %k5, %k5
+; X32-NEXT:    kxorq %k4, %k5, %k4
+; X32-NEXT:    kshiftrq $53, %k4, %k5
+; X32-NEXT:    kxorq %k6, %k5, %k5
+; X32-NEXT:    kshiftlq $63, %k5, %k5
+; X32-NEXT:    kshiftrq $10, %k5, %k5
+; X32-NEXT:    kxorq %k4, %k5, %k5
+; X32-NEXT:    kshiftrq $54, %k5, %k4
+; X32-NEXT:    kxorq %k7, %k4, %k6
+; X32-NEXT:    shrb $3, %cl
+; X32-NEXT:    kmovd %ecx, %k4
+; X32-NEXT:    movl %eax, %ecx
+; X32-NEXT:    shrl $29, %ecx
+; X32-NEXT:    andb $1, %cl
+; X32-NEXT:    kmovd %ecx, %k7
+; X32-NEXT:    kshiftlq $63, %k6, %k6
+; X32-NEXT:    kshiftrq $9, %k6, %k6
+; X32-NEXT:    kxorq %k5, %k6, %k5
+; X32-NEXT:    kshiftrq $55, %k5, %k6
+; X32-NEXT:    kxorq %k0, %k6, %k0
+; X32-NEXT:    kshiftlq $63, %k0, %k0
+; X32-NEXT:    kshiftrq $8, %k0, %k0
+; X32-NEXT:    kxorq %k5, %k0, %k0
+; X32-NEXT:    kshiftrq $56, %k0, %k5
+; X32-NEXT:    kxorq %k1, %k5, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl $28, %ecx
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vpbroadcastd %xmm2, %xmm2
-; X32-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255]
-; X32-NEXT:    vpblendvb %ymm4, %ymm1, %ymm2, %ymm1
-; X32-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; X32-NEXT:    vpmovm2b %k2, %zmm2
-; X32-NEXT:    vpslldq {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm2[0,1,2]
-; X32-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm2
-; X32-NEXT:    vmovdqa {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255]
-; X32-NEXT:    vpblendvb %ymm4, %ymm1, %ymm2, %ymm1
+; X32-NEXT:    kmovd %ecx, %k5
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl $30, %ecx
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; X32-NEXT:    vpmovm2b %k0, %zmm2
-; X32-NEXT:    vpbroadcastw %xmm2, %xmm2
-; X32-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm2
-; X32-NEXT:    vpblendvb %ymm3, %ymm1, %ymm2, %ymm1
-; X32-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; X32-NEXT:    kmovd %ecx, %k6
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $7, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $57, %k0, %k1
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $6, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $58, %k0, %k1
+; X32-NEXT:    kxorq %k3, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $5, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $59, %k0, %k1
+; X32-NEXT:    kxorq %k4, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $4, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $60, %k0, %k1
+; X32-NEXT:    kxorq %k5, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $3, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $61, %k0, %k1
+; X32-NEXT:    kxorq %k7, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $2, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $62, %k0, %k1
+; X32-NEXT:    kxorq %k6, %k1, %k1
 ; X32-NEXT:    shrl $31, %eax
-; X32-NEXT:    kmovd %eax, %k0
+; X32-NEXT:    kmovd %eax, %k2
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    vpmovb2m %zmm0, %k1
-; X32-NEXT:    kshiftlq $1, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
 ; X32-NEXT:    kshiftrq $1, %k1, %k1
-; X32-NEXT:    kshiftlq $63, %k0, %k0
-; X32-NEXT:    korq %k0, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftlq $1, %k0, %k0
+; X32-NEXT:    kshiftrq $1, %k0, %k0
+; X32-NEXT:    kshiftlq $63, %k2, %k1
+; X32-NEXT:    korq %k1, %k0, %k1
 ; X32-NEXT:    vpbroadcastb %eax, %zmm0 {%k1} {z}
+; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %ebx
 ; X32-NEXT:    retl
 ;
@@ -2057,719 +1708,541 @@ define i64 @test_mm512_mask_test_epi8_mask(i64 %__U, <8 x i64> %__A, <8 x i64> %
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    .cfi_def_cfa_register %ebp
 ; X32-NEXT:    pushl %ebx
-; X32-NEXT:    andl $-64, %esp
-; X32-NEXT:    subl $256, %esp # imm = 0x100
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    andl $-8, %esp
+; X32-NEXT:    subl $8, %esp
+; X32-NEXT:    .cfi_offset %esi, -16
 ; X32-NEXT:    .cfi_offset %ebx, -12
-; X32-NEXT:    vmovaps %zmm1, {{[0-9]+}}(%esp) # 64-byte Spill
-; X32-NEXT:    vmovaps %zmm0, {{[0-9]+}}(%esp) # 64-byte Spill
-; X32-NEXT:    movl 8(%ebp), %eax
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    andb $2, %cl
-; X32-NEXT:    shrb %cl
+; X32-NEXT:    movl 8(%ebp), %ecx
 ; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vpsllw $8, %xmm0, %xmm0
-; X32-NEXT:    kmovd %eax, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    andb $15, %cl
-; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    kshiftrq $1, %k0, %k1
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    andb $2, %al
+; X32-NEXT:    shrb %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $62, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $2, %k0, %k1
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    andb $15, %al
+; X32-NEXT:    movl %eax, %edx
 ; X32-NEXT:    shrb $2, %dl
-; X32-NEXT:    kmovd %edx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vpbroadcastw %xmm1, %xmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vpslld $24, %xmm1, %xmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrb $4, %cl
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vpbroadcastd %xmm1, %xmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrb $5, %cl
-; X32-NEXT:    andb $1, %cl
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vpsllq $40, %xmm1, %xmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrb $6, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrb $7, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllq $56, %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movb %ah, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastq %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    andb $2, %cl
-; X32-NEXT:    shrb %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movb %ah, %cl
-; X32-NEXT:    andb $15, %cl
-; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $61, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $3, %k0, %k1
+; X32-NEXT:    shrb $3, %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $60, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $4, %k0, %k1
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrb $4, %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $59, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $5, %k0, %k1
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrb $5, %al
+; X32-NEXT:    andb $1, %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $58, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $6, %k0, %k1
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrb $6, %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $57, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $7, %k0, %k1
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrb $7, %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $56, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $8, %k0, %k1
+; X32-NEXT:    movb %ch, %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    andb $2, %al
+; X32-NEXT:    shrb %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    movb %ch, %al
+; X32-NEXT:    andb $15, %al
+; X32-NEXT:    movl %eax, %edx
 ; X32-NEXT:    shrb $2, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $12, %ecx
-; X32-NEXT:    andl $15, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $13, %ecx
-; X32-NEXT:    andb $1, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $14, %ecx
-; X32-NEXT:    andl $3, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $15, %ecx
-; X32-NEXT:    andl $1, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $16, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %edx, %k3
+; X32-NEXT:    shrb $3, %al
+; X32-NEXT:    kmovd %eax, %k4
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrl $13, %eax
+; X32-NEXT:    andb $1, %al
+; X32-NEXT:    kmovd %eax, %k5
 ; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    andb $2, %dl
-; X32-NEXT:    shrb %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllw $8, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    andb $15, %dl
+; X32-NEXT:    shrl $16, %edx
+; X32-NEXT:    movl %edx, %eax
+; X32-NEXT:    andb $2, %al
+; X32-NEXT:    shrb %al
+; X32-NEXT:    kmovd %eax, %k6
 ; X32-NEXT:    movl %edx, %ebx
-; X32-NEXT:    shrb $2, %bl
-; X32-NEXT:    kmovd %ebx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    shrb $3, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslld $24, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    shrb $4, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    shrb $5, %dl
-; X32-NEXT:    andb $1, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllq $40, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    shrb $6, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    shrb $7, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllq $56, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $24, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastq %xmm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    andb $2, %dl
-; X32-NEXT:    shrb %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6]
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    andb $15, %cl
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    shrb $2, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4]
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm5 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm5, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $28, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255]
-; X32-NEXT:    vpblendvb %ymm4, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $29, %ecx
-; X32-NEXT:    andb $1, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2]
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm1
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vmovdqa {{.*#+}} ymm3 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255]
-; X32-NEXT:    vpblendvb %ymm3, %ymm0, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $30, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm1
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    shrl $31, %eax
-; X32-NEXT:    kmovd %eax, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0]
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
-; X32-NEXT:    vpblendvb %ymm7, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    andb $15, %bl
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    shrb $2, %al
+; X32-NEXT:    kmovd %eax, %k7
 ; X32-NEXT:    movl 12(%ebp), %eax
-; X32-NEXT:    kmovd %eax, %k1
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; X32-NEXT:    vpmovm2b %k1, %zmm7
-; X32-NEXT:    vmovdqa {{.*#+}} ymm6 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm6, %ymm1, %ymm7, %ymm1
-; X32-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $55, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $9, %k0, %k1
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $54, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $10, %k0, %k1
+; X32-NEXT:    kxorq %k3, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $53, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $11, %k0, %k1
+; X32-NEXT:    kxorq %k4, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $52, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $12, %k0, %k1
+; X32-NEXT:    movl %ecx, %esi
+; X32-NEXT:    shrl $12, %esi
+; X32-NEXT:    andl $15, %esi
+; X32-NEXT:    kmovd %esi, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $51, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $13, %k0, %k1
+; X32-NEXT:    kxorq %k5, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $50, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $14, %k0, %k1
+; X32-NEXT:    movl %ecx, %esi
+; X32-NEXT:    shrl $14, %esi
+; X32-NEXT:    andl $3, %esi
+; X32-NEXT:    kmovd %esi, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $49, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $15, %k0, %k1
+; X32-NEXT:    movl %ecx, %esi
+; X32-NEXT:    shrl $15, %esi
+; X32-NEXT:    andl $1, %esi
+; X32-NEXT:    kmovd %esi, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $48, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $16, %k0, %k1
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $47, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $17, %k0, %k1
+; X32-NEXT:    kxorq %k6, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $46, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $18, %k0, %k1
+; X32-NEXT:    kxorq %k7, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $45, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $19, %k0, %k1
+; X32-NEXT:    shrb $3, %bl
+; X32-NEXT:    kmovd %ebx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $44, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $20, %k0, %k1
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    shrb $4, %bl
+; X32-NEXT:    kmovd %ebx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $43, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $21, %k0, %k1
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    shrb $5, %bl
+; X32-NEXT:    andb $1, %bl
+; X32-NEXT:    kmovd %ebx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $42, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $22, %k0, %k1
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    shrb $6, %bl
+; X32-NEXT:    kmovd %ebx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $41, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $23, %k0, %k1
+; X32-NEXT:    shrb $7, %dl
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $40, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $24, %k0, %k1
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    shrl $24, %edx
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $39, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $25, %k0, %k1
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    andb $2, %bl
+; X32-NEXT:    shrb %bl
+; X32-NEXT:    kmovd %ebx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $38, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $26, %k0, %k1
+; X32-NEXT:    andb $15, %dl
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    shrb $2, %bl
+; X32-NEXT:    kmovd %ebx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $37, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $27, %k0, %k1
+; X32-NEXT:    shrb $3, %dl
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $36, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $28, %k0, %k1
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    shrl $28, %edx
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $35, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $29, %k0, %k1
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    shrl $29, %edx
+; X32-NEXT:    andb $1, %dl
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $34, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $30, %k0, %k1
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    shrl $30, %edx
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $33, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $31, %k0, %k1
+; X32-NEXT:    shrl $31, %ecx
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $32, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $32, %k0, %k1
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $31, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $33, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    andb $2, %cl
 ; X32-NEXT:    shrb %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllw $8, %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $30, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $34, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    andb $15, %cl
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    shrb $2, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $29, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $35, %k0, %k1
 ; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslld $24, %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $28, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $36, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrb $4, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $27, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $37, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrb $5, %cl
 ; X32-NEXT:    andb $1, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllq $40, %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $26, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $38, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrb $6, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $25, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $39, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrb $7, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllq $56, %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $24, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $40, %k0, %k1
 ; X32-NEXT:    movb %ah, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastq %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
 ; X32-NEXT:    andb $2, %cl
 ; X32-NEXT:    shrb %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k2
 ; X32-NEXT:    movb %ah, %cl
 ; X32-NEXT:    andb $15, %cl
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    shrb $2, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %edx, %k3
 ; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $12, %ecx
-; X32-NEXT:    andl $15, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k4
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl $13, %ecx
 ; X32-NEXT:    andb $1, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $14, %ecx
-; X32-NEXT:    andl $3, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $15, %ecx
-; X32-NEXT:    andl $1, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k5
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl $16, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    andb $2, %dl
 ; X32-NEXT:    shrb %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllw $8, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %edx, %k6
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    andb $15, %dl
 ; X32-NEXT:    movl %edx, %ebx
 ; X32-NEXT:    shrb $2, %bl
-; X32-NEXT:    kmovd %ebx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ebx, %k7
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $23, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $41, %k0, %k1
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $22, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $42, %k0, %k1
+; X32-NEXT:    kxorq %k3, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $21, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $43, %k0, %k1
+; X32-NEXT:    kxorq %k4, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $20, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $44, %k0, %k1
+; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    shrl $12, %esi
+; X32-NEXT:    andl $15, %esi
+; X32-NEXT:    kmovd %esi, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $19, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $45, %k0, %k1
+; X32-NEXT:    kxorq %k5, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $18, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $46, %k0, %k1
+; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    shrl $14, %esi
+; X32-NEXT:    andl $3, %esi
+; X32-NEXT:    kmovd %esi, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $17, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $47, %k0, %k1
+; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    shrl $15, %esi
+; X32-NEXT:    andl $1, %esi
+; X32-NEXT:    kmovd %esi, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $16, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $48, %k0, %k1
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $15, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $49, %k0, %k1
+; X32-NEXT:    kxorq %k6, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $14, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $50, %k0, %k1
+; X32-NEXT:    kxorq %k7, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $13, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $51, %k0, %k1
 ; X32-NEXT:    shrb $3, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslld $24, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $12, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $52, %k0, %k1
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    shrb $4, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    shrb $5, %dl
 ; X32-NEXT:    andb $1, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllq $40, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %edx, %k2
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    shrb $6, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %edx, %k3
 ; X32-NEXT:    shrb $7, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllq $56, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k4
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl $24, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastq %xmm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k5
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    andb $2, %dl
 ; X32-NEXT:    shrb %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6]
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
+; X32-NEXT:    kmovd %edx, %k6
 ; X32-NEXT:    andb $15, %cl
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    shrb $2, %dl
-; X32-NEXT:    kmovd %edx, %k0
-; X32-NEXT:    vpmovb2m %zmm0, %k1
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k1, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
+; X32-NEXT:    kmovd %edx, %k7
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $11, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $53, %k0, %k1
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $10, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $54, %k0, %k1
+; X32-NEXT:    kxorq %k3, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $9, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $55, %k0, %k1
+; X32-NEXT:    kxorq %k4, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $8, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $56, %k0, %k1
+; X32-NEXT:    kxorq %k5, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $7, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $57, %k0, %k1
+; X32-NEXT:    kxorq %k6, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $6, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $58, %k0, %k1
+; X32-NEXT:    kxorq %k7, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $5, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $59, %k0, %k1
 ; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4]
-; X32-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
-; X32-NEXT:    vextracti64x4 $1, %zmm0, %ymm6
-; X32-NEXT:    vpblendvb %ymm5, %ymm6, %ymm1, %ymm1
-; X32-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $4, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $60, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl $28, %ecx
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm5
-; X32-NEXT:    vpbroadcastd %xmm5, %xmm5
-; X32-NEXT:    vinserti128 $1, %xmm5, %ymm0, %ymm5
-; X32-NEXT:    vpblendvb %ymm4, %ymm1, %ymm5, %ymm1
-; X32-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $3, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $61, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl $29, %ecx
 ; X32-NEXT:    andb $1, %cl
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm4
-; X32-NEXT:    vpslldq {{.*#+}} xmm4 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm4[0,1,2]
-; X32-NEXT:    vinserti128 $1, %xmm4, %ymm0, %ymm4
-; X32-NEXT:    vpblendvb %ymm3, %ymm1, %ymm4, %ymm1
-; X32-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $2, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $62, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl $30, %ecx
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm3
-; X32-NEXT:    vpbroadcastw %xmm3, %xmm3
-; X32-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm3
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm3, %ymm1
-; X32-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $1, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
 ; X32-NEXT:    kshiftlq $1, %k0, %k0
 ; X32-NEXT:    kshiftrq $1, %k0, %k0
 ; X32-NEXT:    shrl $31, %eax
 ; X32-NEXT:    kmovd %eax, %k1
 ; X32-NEXT:    kshiftlq $63, %k1, %k1
 ; X32-NEXT:    korq %k1, %k0, %k1
-; X32-NEXT:    vmovdqa64 {{[0-9]+}}(%esp), %zmm0 # 64-byte Reload
-; X32-NEXT:    vmovdqa64 {{[0-9]+}}(%esp), %zmm1 # 64-byte Reload
-; X32-NEXT:    vptestmb %zmm1, %zmm0, %k0 {%k1}
-; X32-NEXT:    kmovq %k0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    vptestmb %zmm0, %zmm1, %k0 {%k1}
+; X32-NEXT:    kmovq %k0, (%esp)
+; X32-NEXT:    movl (%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    leal -4(%ebp), %esp
+; X32-NEXT:    leal -8(%ebp), %esp
+; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %ebx
 ; X32-NEXT:    popl %ebp
 ; X32-NEXT:    vzeroupper
@@ -2882,719 +2355,541 @@ define i64 @test_mm512_mask_testn_epi8_mask(i64 %__U, <8 x i64> %__A, <8 x i64> 
 ; X32-NEXT:    movl %esp, %ebp
 ; X32-NEXT:    .cfi_def_cfa_register %ebp
 ; X32-NEXT:    pushl %ebx
-; X32-NEXT:    andl $-64, %esp
-; X32-NEXT:    subl $256, %esp # imm = 0x100
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    andl $-8, %esp
+; X32-NEXT:    subl $8, %esp
+; X32-NEXT:    .cfi_offset %esi, -16
 ; X32-NEXT:    .cfi_offset %ebx, -12
-; X32-NEXT:    vmovaps %zmm1, {{[0-9]+}}(%esp) # 64-byte Spill
-; X32-NEXT:    vmovaps %zmm0, {{[0-9]+}}(%esp) # 64-byte Spill
-; X32-NEXT:    movl 8(%ebp), %eax
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    andb $2, %cl
-; X32-NEXT:    shrb %cl
+; X32-NEXT:    movl 8(%ebp), %ecx
 ; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vpsllw $8, %xmm0, %xmm0
-; X32-NEXT:    kmovd %eax, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    andb $15, %cl
-; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    kshiftrq $1, %k0, %k1
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    andb $2, %al
+; X32-NEXT:    shrb %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $62, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $2, %k0, %k1
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    andb $15, %al
+; X32-NEXT:    movl %eax, %edx
 ; X32-NEXT:    shrb $2, %dl
-; X32-NEXT:    kmovd %edx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vpbroadcastw %xmm1, %xmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vpslld $24, %xmm1, %xmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrb $4, %cl
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vpbroadcastd %xmm1, %xmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrb $5, %cl
-; X32-NEXT:    andb $1, %cl
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vpsllq $40, %xmm1, %xmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrb $6, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrb $7, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllq $56, %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movb %ah, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastq %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    andb $2, %cl
-; X32-NEXT:    shrb %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movb %ah, %cl
-; X32-NEXT:    andb $15, %cl
-; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $61, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $3, %k0, %k1
+; X32-NEXT:    shrb $3, %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $60, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $4, %k0, %k1
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrb $4, %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $59, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $5, %k0, %k1
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrb $5, %al
+; X32-NEXT:    andb $1, %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $58, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $6, %k0, %k1
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrb $6, %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $57, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $7, %k0, %k1
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrb $7, %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $56, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $8, %k0, %k1
+; X32-NEXT:    movb %ch, %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    andb $2, %al
+; X32-NEXT:    shrb %al
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    movb %ch, %al
+; X32-NEXT:    andb $15, %al
+; X32-NEXT:    movl %eax, %edx
 ; X32-NEXT:    shrb $2, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $12, %ecx
-; X32-NEXT:    andl $15, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $13, %ecx
-; X32-NEXT:    andb $1, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $14, %ecx
-; X32-NEXT:    andl $3, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $15, %ecx
-; X32-NEXT:    andl $1, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $16, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %edx, %k3
+; X32-NEXT:    shrb $3, %al
+; X32-NEXT:    kmovd %eax, %k4
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrl $13, %eax
+; X32-NEXT:    andb $1, %al
+; X32-NEXT:    kmovd %eax, %k5
 ; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    andb $2, %dl
-; X32-NEXT:    shrb %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllw $8, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    andb $15, %dl
+; X32-NEXT:    shrl $16, %edx
+; X32-NEXT:    movl %edx, %eax
+; X32-NEXT:    andb $2, %al
+; X32-NEXT:    shrb %al
+; X32-NEXT:    kmovd %eax, %k6
 ; X32-NEXT:    movl %edx, %ebx
-; X32-NEXT:    shrb $2, %bl
-; X32-NEXT:    kmovd %ebx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    shrb $3, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslld $24, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    shrb $4, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    shrb $5, %dl
-; X32-NEXT:    andb $1, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllq $40, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    shrb $6, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    shrb $7, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllq $56, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $24, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastq %xmm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    andb $2, %dl
-; X32-NEXT:    shrb %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6]
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    andb $15, %cl
-; X32-NEXT:    movl %ecx, %edx
-; X32-NEXT:    shrb $2, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4]
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm5 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm5, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $28, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255]
-; X32-NEXT:    vpblendvb %ymm4, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $29, %ecx
-; X32-NEXT:    andb $1, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2]
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm1
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vmovdqa {{.*#+}} ymm3 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255]
-; X32-NEXT:    vpblendvb %ymm3, %ymm0, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $30, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm1
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255]
-; X32-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm1
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    shrl $31, %eax
-; X32-NEXT:    kmovd %eax, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0]
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0]
-; X32-NEXT:    vpblendvb %ymm7, %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm1[4,5,6,7]
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    andb $15, %bl
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    shrb $2, %al
+; X32-NEXT:    kmovd %eax, %k7
 ; X32-NEXT:    movl 12(%ebp), %eax
-; X32-NEXT:    kmovd %eax, %k1
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; X32-NEXT:    vpmovm2b %k1, %zmm7
-; X32-NEXT:    vmovdqa {{.*#+}} ymm6 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm6, %ymm1, %ymm7, %ymm1
-; X32-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $55, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $9, %k0, %k1
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $54, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $10, %k0, %k1
+; X32-NEXT:    kxorq %k3, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $53, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $11, %k0, %k1
+; X32-NEXT:    kxorq %k4, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $52, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $12, %k0, %k1
+; X32-NEXT:    movl %ecx, %esi
+; X32-NEXT:    shrl $12, %esi
+; X32-NEXT:    andl $15, %esi
+; X32-NEXT:    kmovd %esi, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $51, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $13, %k0, %k1
+; X32-NEXT:    kxorq %k5, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $50, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $14, %k0, %k1
+; X32-NEXT:    movl %ecx, %esi
+; X32-NEXT:    shrl $14, %esi
+; X32-NEXT:    andl $3, %esi
+; X32-NEXT:    kmovd %esi, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $49, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $15, %k0, %k1
+; X32-NEXT:    movl %ecx, %esi
+; X32-NEXT:    shrl $15, %esi
+; X32-NEXT:    andl $1, %esi
+; X32-NEXT:    kmovd %esi, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $48, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $16, %k0, %k1
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $47, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $17, %k0, %k1
+; X32-NEXT:    kxorq %k6, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $46, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $18, %k0, %k1
+; X32-NEXT:    kxorq %k7, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $45, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $19, %k0, %k1
+; X32-NEXT:    shrb $3, %bl
+; X32-NEXT:    kmovd %ebx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $44, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $20, %k0, %k1
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    shrb $4, %bl
+; X32-NEXT:    kmovd %ebx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $43, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $21, %k0, %k1
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    shrb $5, %bl
+; X32-NEXT:    andb $1, %bl
+; X32-NEXT:    kmovd %ebx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $42, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $22, %k0, %k1
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    shrb $6, %bl
+; X32-NEXT:    kmovd %ebx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $41, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $23, %k0, %k1
+; X32-NEXT:    shrb $7, %dl
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $40, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $24, %k0, %k1
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    shrl $24, %edx
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $39, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $25, %k0, %k1
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    andb $2, %bl
+; X32-NEXT:    shrb %bl
+; X32-NEXT:    kmovd %ebx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $38, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $26, %k0, %k1
+; X32-NEXT:    andb $15, %dl
+; X32-NEXT:    movl %edx, %ebx
+; X32-NEXT:    shrb $2, %bl
+; X32-NEXT:    kmovd %ebx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $37, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $27, %k0, %k1
+; X32-NEXT:    shrb $3, %dl
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $36, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $28, %k0, %k1
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    shrl $28, %edx
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $35, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $29, %k0, %k1
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    shrl $29, %edx
+; X32-NEXT:    andb $1, %dl
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $34, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $30, %k0, %k1
+; X32-NEXT:    movl %ecx, %edx
+; X32-NEXT:    shrl $30, %edx
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $33, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $31, %k0, %k1
+; X32-NEXT:    shrl $31, %ecx
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $32, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $32, %k0, %k1
+; X32-NEXT:    kmovd %eax, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $31, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $33, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    andb $2, %cl
 ; X32-NEXT:    shrb %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllw $8, %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $30, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $34, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    andb $15, %cl
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    shrb $2, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $29, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $35, %k0, %k1
 ; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslld $24, %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $28, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $36, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrb $4, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $27, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $37, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrb $5, %cl
 ; X32-NEXT:    andb $1, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllq $40, %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $26, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $38, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrb $6, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $25, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $39, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrb $7, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllq $56, %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $24, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $40, %k0, %k1
 ; X32-NEXT:    movb %ah, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastq %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
 ; X32-NEXT:    andb $2, %cl
 ; X32-NEXT:    shrb %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k2
 ; X32-NEXT:    movb %ah, %cl
 ; X32-NEXT:    andb $15, %cl
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    shrb $2, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %edx, %k3
 ; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $12, %ecx
-; X32-NEXT:    andl $15, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k4
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl $13, %ecx
 ; X32-NEXT:    andb $1, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $14, %ecx
-; X32-NEXT:    andl $3, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    shrl $15, %ecx
-; X32-NEXT:    andl $1, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0]
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k5
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl $16, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    andb $2, %dl
 ; X32-NEXT:    shrb %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllw $8, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %edx, %k6
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    andb $15, %dl
 ; X32-NEXT:    movl %edx, %ebx
 ; X32-NEXT:    shrb $2, %bl
-; X32-NEXT:    kmovd %ebx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ebx, %k7
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $23, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $41, %k0, %k1
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $22, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $42, %k0, %k1
+; X32-NEXT:    kxorq %k3, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $21, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $43, %k0, %k1
+; X32-NEXT:    kxorq %k4, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $20, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $44, %k0, %k1
+; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    shrl $12, %esi
+; X32-NEXT:    andl $15, %esi
+; X32-NEXT:    kmovd %esi, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $19, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $45, %k0, %k1
+; X32-NEXT:    kxorq %k5, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $18, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $46, %k0, %k1
+; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    shrl $14, %esi
+; X32-NEXT:    andl $3, %esi
+; X32-NEXT:    kmovd %esi, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $17, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $47, %k0, %k1
+; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    shrl $15, %esi
+; X32-NEXT:    andl $1, %esi
+; X32-NEXT:    kmovd %esi, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $16, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $48, %k0, %k1
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $15, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $49, %k0, %k1
+; X32-NEXT:    kxorq %k6, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $14, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $50, %k0, %k1
+; X32-NEXT:    kxorq %k7, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $13, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $51, %k0, %k1
 ; X32-NEXT:    shrb $3, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslld $24, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $12, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $52, %k0, %k1
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    shrb $4, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %edx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    shrb $5, %dl
 ; X32-NEXT:    andb $1, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllq $40, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %edx, %k2
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    shrb $6, %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %edx, %k3
 ; X32-NEXT:    shrb $7, %cl
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpsllq $56, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k4
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl $24, %ecx
-; X32-NEXT:    kmovd %ecx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpbroadcastq %xmm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k5
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    andb $2, %dl
 ; X32-NEXT:    shrb %dl
-; X32-NEXT:    kmovd %edx, %k1
-; X32-NEXT:    vpmovm2b %k1, %zmm0
-; X32-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6]
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
+; X32-NEXT:    kmovd %edx, %k6
 ; X32-NEXT:    andb $15, %cl
 ; X32-NEXT:    movl %ecx, %edx
 ; X32-NEXT:    shrb $2, %dl
-; X32-NEXT:    kmovd %edx, %k0
-; X32-NEXT:    vpmovb2m %zmm0, %k1
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vpbroadcastw %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32-NEXT:    vpmovm2b %k1, %zmm1
-; X32-NEXT:    vextracti64x4 $1, %zmm1, %ymm6
-; X32-NEXT:    vmovdqa {{.*#+}} ymm7 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,255,255,255,255,255]
-; X32-NEXT:    vpblendvb %ymm7, %ymm6, %ymm0, %ymm0
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
+; X32-NEXT:    kmovd %edx, %k7
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $11, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $53, %k0, %k1
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $10, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $54, %k0, %k1
+; X32-NEXT:    kxorq %k3, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $9, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $55, %k0, %k1
+; X32-NEXT:    kxorq %k4, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $8, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $56, %k0, %k1
+; X32-NEXT:    kxorq %k5, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $7, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $57, %k0, %k1
+; X32-NEXT:    kxorq %k6, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $6, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $58, %k0, %k1
+; X32-NEXT:    kxorq %k7, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $5, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $59, %k0, %k1
 ; X32-NEXT:    shrb $3, %cl
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm1
-; X32-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4]
-; X32-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1
-; X32-NEXT:    vextracti64x4 $1, %zmm0, %ymm6
-; X32-NEXT:    vpblendvb %ymm5, %ymm6, %ymm1, %ymm1
-; X32-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $4, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $60, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl $28, %ecx
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm5
-; X32-NEXT:    vpbroadcastd %xmm5, %xmm5
-; X32-NEXT:    vinserti128 $1, %xmm5, %ymm0, %ymm5
-; X32-NEXT:    vpblendvb %ymm4, %ymm1, %ymm5, %ymm1
-; X32-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $3, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $61, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl $29, %ecx
 ; X32-NEXT:    andb $1, %cl
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm4
-; X32-NEXT:    vpslldq {{.*#+}} xmm4 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm4[0,1,2]
-; X32-NEXT:    vinserti128 $1, %xmm4, %ymm0, %ymm4
-; X32-NEXT:    vpblendvb %ymm3, %ymm1, %ymm4, %ymm1
-; X32-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm0
-; X32-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $2, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
+; X32-NEXT:    kshiftrq $62, %k0, %k1
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl $30, %ecx
-; X32-NEXT:    kmovd %ecx, %k0
-; X32-NEXT:    vpmovm2b %k0, %zmm3
-; X32-NEXT:    vpbroadcastw %xmm3, %xmm3
-; X32-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm3
-; X32-NEXT:    vpblendvb %ymm2, %ymm1, %ymm3, %ymm1
-; X32-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; X32-NEXT:    vpmovb2m %zmm0, %k0
+; X32-NEXT:    kmovd %ecx, %k2
+; X32-NEXT:    kxorq %k2, %k1, %k1
+; X32-NEXT:    kshiftlq $63, %k1, %k1
+; X32-NEXT:    kshiftrq $1, %k1, %k1
+; X32-NEXT:    kxorq %k0, %k1, %k0
 ; X32-NEXT:    kshiftlq $1, %k0, %k0
 ; X32-NEXT:    kshiftrq $1, %k0, %k0
 ; X32-NEXT:    shrl $31, %eax
 ; X32-NEXT:    kmovd %eax, %k1
 ; X32-NEXT:    kshiftlq $63, %k1, %k1
 ; X32-NEXT:    korq %k1, %k0, %k1
-; X32-NEXT:    vmovdqa64 {{[0-9]+}}(%esp), %zmm0 # 64-byte Reload
-; X32-NEXT:    vmovdqa64 {{[0-9]+}}(%esp), %zmm1 # 64-byte Reload
-; X32-NEXT:    vptestnmb %zmm1, %zmm0, %k0 {%k1}
-; X32-NEXT:    kmovq %k0, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    vptestnmb %zmm0, %zmm1, %k0 {%k1}
+; X32-NEXT:    kmovq %k0, (%esp)
+; X32-NEXT:    movl (%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    leal -4(%ebp), %esp
+; X32-NEXT:    leal -8(%ebp), %esp
+; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %ebx
 ; X32-NEXT:    popl %ebp
 ; X32-NEXT:    vzeroupper

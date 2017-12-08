@@ -98,55 +98,57 @@ enum AliasResult {
 /// they form a two bit matrix and bit-tests for 'mod' or 'ref'
 /// work with any of the possible values.
 
-enum ModRefInfo {
+enum class ModRefInfo {
   /// The access neither references nor modifies the value stored in memory.
-  MRI_NoModRef = 0,
+  NoModRef = 0,
   /// The access may reference the value stored in memory.
-  MRI_Ref = 1,
+  Ref = 1,
   /// The access may modify the value stored in memory.
-  MRI_Mod = 2,
+  Mod = 2,
   /// The access may reference and may modify the value stored in memory.
-  MRI_ModRef = MRI_Ref | MRI_Mod,
+  ModRef = Ref | Mod,
 };
 
 LLVM_NODISCARD inline bool isNoModRef(const ModRefInfo MRI) {
-  return MRI == MRI_NoModRef;
+  return MRI == ModRefInfo::NoModRef;
 }
 LLVM_NODISCARD inline bool isModOrRefSet(const ModRefInfo MRI) {
-  return MRI & MRI_ModRef;
+  return static_cast<int>(MRI) & static_cast<int>(ModRefInfo::ModRef);
 }
 LLVM_NODISCARD inline bool isModAndRefSet(const ModRefInfo MRI) {
-  return (MRI & MRI_ModRef) == MRI_ModRef;
+  return (static_cast<int>(MRI) & static_cast<int>(ModRefInfo::ModRef)) ==
+         static_cast<int>(ModRefInfo::ModRef);
 }
 LLVM_NODISCARD inline bool isModSet(const ModRefInfo MRI) {
-  return MRI & MRI_Mod;
+  return static_cast<int>(MRI) & static_cast<int>(ModRefInfo::Mod);
 }
 LLVM_NODISCARD inline bool isRefSet(const ModRefInfo MRI) {
-  return MRI & MRI_Ref;
+  return static_cast<int>(MRI) & static_cast<int>(ModRefInfo::Ref);
 }
 
-LLVM_NODISCARD inline ModRefInfo setRef(const ModRefInfo MRI) {
-  return ModRefInfo(MRI | MRI_Ref);
-}
 LLVM_NODISCARD inline ModRefInfo setMod(const ModRefInfo MRI) {
-  return ModRefInfo(MRI | MRI_Mod);
+  return ModRefInfo(static_cast<int>(MRI) | static_cast<int>(ModRefInfo::Mod));
+}
+LLVM_NODISCARD inline ModRefInfo setRef(const ModRefInfo MRI) {
+  return ModRefInfo(static_cast<int>(MRI) | static_cast<int>(ModRefInfo::Ref));
 }
 LLVM_NODISCARD inline ModRefInfo setModAndRef(const ModRefInfo MRI) {
-  return ModRefInfo(MRI | MRI_ModRef);
+  return ModRefInfo(static_cast<int>(MRI) |
+                    static_cast<int>(ModRefInfo::ModRef));
 }
 LLVM_NODISCARD inline ModRefInfo clearMod(const ModRefInfo MRI) {
-  return ModRefInfo(MRI & MRI_Ref);
+  return ModRefInfo(static_cast<int>(MRI) & static_cast<int>(ModRefInfo::Ref));
 }
 LLVM_NODISCARD inline ModRefInfo clearRef(const ModRefInfo MRI) {
-  return ModRefInfo(MRI & MRI_Mod);
+  return ModRefInfo(static_cast<int>(MRI) & static_cast<int>(ModRefInfo::Mod));
 }
 LLVM_NODISCARD inline ModRefInfo unionModRef(const ModRefInfo MRI1,
                                              const ModRefInfo MRI2) {
-  return ModRefInfo(MRI1 | MRI2);
+  return ModRefInfo(static_cast<int>(MRI1) | static_cast<int>(MRI2));
 }
 LLVM_NODISCARD inline ModRefInfo intersectModRef(const ModRefInfo MRI1,
                                                  const ModRefInfo MRI2) {
-  return ModRefInfo(MRI1 & MRI2);
+  return ModRefInfo(static_cast<int>(MRI1) & static_cast<int>(MRI2));
 }
 
 /// The locations at which a function might access memory.
@@ -176,27 +178,31 @@ enum FunctionModRefBehavior {
   /// This property corresponds to the GCC 'const' attribute.
   /// This property corresponds to the LLVM IR 'readnone' attribute.
   /// This property corresponds to the IntrNoMem LLVM intrinsic flag.
-  FMRB_DoesNotAccessMemory = FMRL_Nowhere | MRI_NoModRef,
+  FMRB_DoesNotAccessMemory =
+      FMRL_Nowhere | static_cast<int>(ModRefInfo::NoModRef),
 
   /// The only memory references in this function (if it has any) are
   /// non-volatile loads from objects pointed to by its pointer-typed
   /// arguments, with arbitrary offsets.
   ///
   /// This property corresponds to the IntrReadArgMem LLVM intrinsic flag.
-  FMRB_OnlyReadsArgumentPointees = FMRL_ArgumentPointees | MRI_Ref,
+  FMRB_OnlyReadsArgumentPointees =
+      FMRL_ArgumentPointees | static_cast<int>(ModRefInfo::Ref),
 
   /// The only memory references in this function (if it has any) are
   /// non-volatile loads and stores from objects pointed to by its
   /// pointer-typed arguments, with arbitrary offsets.
   ///
   /// This property corresponds to the IntrArgMemOnly LLVM intrinsic flag.
-  FMRB_OnlyAccessesArgumentPointees = FMRL_ArgumentPointees | MRI_ModRef,
+  FMRB_OnlyAccessesArgumentPointees =
+      FMRL_ArgumentPointees | static_cast<int>(ModRefInfo::ModRef),
 
   /// The only memory references in this function (if it has any) are
   /// references of memory that is otherwise inaccessible via LLVM IR.
   ///
   /// This property corresponds to the LLVM IR inaccessiblememonly attribute.
-  FMRB_OnlyAccessesInaccessibleMem = FMRL_InaccessibleMem | MRI_ModRef,
+  FMRB_OnlyAccessesInaccessibleMem =
+      FMRL_InaccessibleMem | static_cast<int>(ModRefInfo::ModRef),
 
   /// The function may perform non-volatile loads and stores of objects
   /// pointed to by its pointer-typed arguments, with arbitrary offsets, and
@@ -206,7 +212,8 @@ enum FunctionModRefBehavior {
   /// This property corresponds to the LLVM IR
   /// inaccessiblemem_or_argmemonly attribute.
   FMRB_OnlyAccessesInaccessibleOrArgMem = FMRL_InaccessibleMem |
-                                          FMRL_ArgumentPointees | MRI_ModRef,
+                                          FMRL_ArgumentPointees |
+                                          static_cast<int>(ModRefInfo::ModRef),
 
   /// This function does not perform any non-local stores or volatile loads,
   /// but may read from any memory location.
@@ -214,18 +221,19 @@ enum FunctionModRefBehavior {
   /// This property corresponds to the GCC 'pure' attribute.
   /// This property corresponds to the LLVM IR 'readonly' attribute.
   /// This property corresponds to the IntrReadMem LLVM intrinsic flag.
-  FMRB_OnlyReadsMemory = FMRL_Anywhere | MRI_Ref,
+  FMRB_OnlyReadsMemory = FMRL_Anywhere | static_cast<int>(ModRefInfo::Ref),
 
   // This function does not read from memory anywhere, but may write to any
   // memory location.
   //
   // This property corresponds to the LLVM IR 'writeonly' attribute.
   // This property corresponds to the IntrWriteMem LLVM intrinsic flag.
-  FMRB_DoesNotReadMemory = FMRL_Anywhere | MRI_Mod,
+  FMRB_DoesNotReadMemory = FMRL_Anywhere | static_cast<int>(ModRefInfo::Mod),
 
   /// This indicates that the function could not be classified into one of the
   /// behaviors above.
-  FMRB_UnknownModRefBehavior = FMRL_Anywhere | MRI_ModRef
+  FMRB_UnknownModRefBehavior =
+      FMRL_Anywhere | static_cast<int>(ModRefInfo::ModRef)
 };
 
 // Wrapper method strips bits significant only in FunctionModRefBehavior,
@@ -234,7 +242,7 @@ enum FunctionModRefBehavior {
 // entry with all bits set to 1.
 LLVM_NODISCARD inline ModRefInfo
 createModRefInfo(const FunctionModRefBehavior FMRB) {
-  return ModRefInfo(FMRB & MRI_ModRef);
+  return ModRefInfo(FMRB & static_cast<int>(ModRefInfo::ModRef));
 }
 
 class AAResults {
@@ -593,7 +601,7 @@ public:
     case Instruction::CatchRet:
       return getModRefInfo((const CatchReturnInst *)I, Loc);
     default:
-      return MRI_NoModRef;
+      return ModRefInfo::NoModRef;
     }
   }
 
@@ -894,7 +902,7 @@ public:
   }
 
   ModRefInfo getArgModRefInfo(ImmutableCallSite CS, unsigned ArgIdx) {
-    return MRI_ModRef;
+    return ModRefInfo::ModRef;
   }
 
   FunctionModRefBehavior getModRefBehavior(ImmutableCallSite CS) {
@@ -906,11 +914,11 @@ public:
   }
 
   ModRefInfo getModRefInfo(ImmutableCallSite CS, const MemoryLocation &Loc) {
-    return MRI_ModRef;
+    return ModRefInfo::ModRef;
   }
 
   ModRefInfo getModRefInfo(ImmutableCallSite CS1, ImmutableCallSite CS2) {
-    return MRI_ModRef;
+    return ModRefInfo::ModRef;
   }
 };
 

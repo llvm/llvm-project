@@ -31,7 +31,7 @@ define i16 @test_rdrand_16(i16* %random_val) {
 ; HASWELL-LABEL: test_rdrand_16:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    rdrandw %ax # sched: [1:5.33]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_rdrand_16:
 ; BROADWELL:       # %bb.0:
@@ -76,7 +76,7 @@ define i32 @test_rdrand_32(i32* %random_val) {
 ; HASWELL-LABEL: test_rdrand_32:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    rdrandl %eax # sched: [1:5.33]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_rdrand_32:
 ; BROADWELL:       # %bb.0:
@@ -121,7 +121,7 @@ define i64 @test_rdrand_64(i64* %random_val) {
 ; HASWELL-LABEL: test_rdrand_64:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    rdrandq %rax # sched: [1:5.33]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_rdrand_64:
 ; BROADWELL:       # %bb.0:

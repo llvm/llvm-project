@@ -191,18 +191,18 @@ TEST_F(AliasAnalysisTest, getModRefInfo) {
   auto &AA = getAAResults(*F);
 
   // Check basic results
-  EXPECT_EQ(AA.getModRefInfo(Store1, MemoryLocation()), MRI_Mod);
-  EXPECT_EQ(AA.getModRefInfo(Store1, None), MRI_Mod);
-  EXPECT_EQ(AA.getModRefInfo(Load1, MemoryLocation()), MRI_Ref);
-  EXPECT_EQ(AA.getModRefInfo(Load1, None), MRI_Ref);
-  EXPECT_EQ(AA.getModRefInfo(Add1, MemoryLocation()), MRI_NoModRef);
-  EXPECT_EQ(AA.getModRefInfo(Add1, None), MRI_NoModRef);
-  EXPECT_EQ(AA.getModRefInfo(VAArg1, MemoryLocation()), MRI_ModRef);
-  EXPECT_EQ(AA.getModRefInfo(VAArg1, None), MRI_ModRef);
-  EXPECT_EQ(AA.getModRefInfo(CmpXChg1, MemoryLocation()), MRI_ModRef);
-  EXPECT_EQ(AA.getModRefInfo(CmpXChg1, None), MRI_ModRef);
-  EXPECT_EQ(AA.getModRefInfo(AtomicRMW, MemoryLocation()), MRI_ModRef);
-  EXPECT_EQ(AA.getModRefInfo(AtomicRMW, None), MRI_ModRef);
+  EXPECT_EQ(AA.getModRefInfo(Store1, MemoryLocation()), ModRefInfo::Mod);
+  EXPECT_EQ(AA.getModRefInfo(Store1, None), ModRefInfo::Mod);
+  EXPECT_EQ(AA.getModRefInfo(Load1, MemoryLocation()), ModRefInfo::Ref);
+  EXPECT_EQ(AA.getModRefInfo(Load1, None), ModRefInfo::Ref);
+  EXPECT_EQ(AA.getModRefInfo(Add1, MemoryLocation()), ModRefInfo::NoModRef);
+  EXPECT_EQ(AA.getModRefInfo(Add1, None), ModRefInfo::NoModRef);
+  EXPECT_EQ(AA.getModRefInfo(VAArg1, MemoryLocation()), ModRefInfo::ModRef);
+  EXPECT_EQ(AA.getModRefInfo(VAArg1, None), ModRefInfo::ModRef);
+  EXPECT_EQ(AA.getModRefInfo(CmpXChg1, MemoryLocation()), ModRefInfo::ModRef);
+  EXPECT_EQ(AA.getModRefInfo(CmpXChg1, None), ModRefInfo::ModRef);
+  EXPECT_EQ(AA.getModRefInfo(AtomicRMW, MemoryLocation()), ModRefInfo::ModRef);
+  EXPECT_EQ(AA.getModRefInfo(AtomicRMW, None), ModRefInfo::ModRef);
 }
 
 class AAPassInfraTest : public testing::Test {

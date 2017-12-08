@@ -39,6 +39,7 @@ body:             |
     %w30 = ORRWri %wzr, 1
     %lr = ORRXri %xzr, 1
 
+    %x20, %x19 = LDPXi %sp, 10
     %w16 = ORRWri %wzr, 1
     %w16 = ORRWri %wzr, 1
     %w16 = ORRWri %wzr, 1
@@ -50,6 +51,7 @@ body:             |
 
     %w3 = ORRWri %wzr, 1993
 
+    %x20, %x19 = LDPXi %sp, 10
     %w16 = ORRWri %wzr, 1
     %w16 = ORRWri %wzr, 1
     %w16 = ORRWri %wzr, 1
@@ -61,6 +63,7 @@ body:             |
 
     %w4 = ORRWri %wzr, 1994
 
+    %x20, %x19 = LDPXi %sp, 10
     %w16 = ORRWri %wzr, 1
     %w16 = ORRWri %wzr, 1
     %w16 = ORRWri %wzr, 1

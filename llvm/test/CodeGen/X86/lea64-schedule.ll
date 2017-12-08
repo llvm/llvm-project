@@ -41,7 +41,7 @@ define i64 @test_lea_offset(i64) {
 ; HASWELL-LABEL: test_lea_offset:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    leaq -24(%rdi), %rax # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_offset:
 ; BROADWELL:       # %bb.0:
@@ -96,7 +96,7 @@ define i64 @test_lea_offset_big(i64) {
 ; HASWELL-LABEL: test_lea_offset_big:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    leaq 1024(%rdi), %rax # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_offset_big:
 ; BROADWELL:       # %bb.0:
@@ -152,7 +152,7 @@ define i64 @test_lea_add(i64, i64) {
 ; HASWELL-LABEL: test_lea_add:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    leaq (%rdi,%rsi), %rax # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_add:
 ; BROADWELL:       # %bb.0:
@@ -210,7 +210,7 @@ define i64 @test_lea_add_offset(i64, i64) {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    leaq (%rdi,%rsi), %rax # sched: [1:0.50]
 ; HASWELL-NEXT:    addq $16, %rax # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_add_offset:
 ; BROADWELL:       # %bb.0:
@@ -274,7 +274,7 @@ define i64 @test_lea_add_offset_big(i64, i64) {
 ; HASWELL-NEXT:    leaq (%rdi,%rsi), %rax # sched: [1:0.50]
 ; HASWELL-NEXT:    addq $-4096, %rax # imm = 0xF000
 ; HASWELL-NEXT:    # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_add_offset_big:
 ; BROADWELL:       # %bb.0:
@@ -334,7 +334,7 @@ define i64 @test_lea_mul(i64) {
 ; HASWELL-LABEL: test_lea_mul:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    leaq (%rdi,%rdi,2), %rax # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_mul:
 ; BROADWELL:       # %bb.0:
@@ -392,7 +392,7 @@ define i64 @test_lea_mul_offset(i64) {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    leaq (%rdi,%rdi,2), %rax # sched: [1:0.50]
 ; HASWELL-NEXT:    addq $-32, %rax # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_mul_offset:
 ; BROADWELL:       # %bb.0:
@@ -456,7 +456,7 @@ define i64 @test_lea_mul_offset_big(i64) {
 ; HASWELL-NEXT:    leaq (%rdi,%rdi,8), %rax # sched: [1:0.50]
 ; HASWELL-NEXT:    addq $10000, %rax # imm = 0x2710
 ; HASWELL-NEXT:    # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_mul_offset_big:
 ; BROADWELL:       # %bb.0:
@@ -516,7 +516,7 @@ define i64 @test_lea_add_scale(i64, i64) {
 ; HASWELL-LABEL: test_lea_add_scale:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    leaq (%rdi,%rsi,2), %rax # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_add_scale:
 ; BROADWELL:       # %bb.0:
@@ -575,7 +575,7 @@ define i64 @test_lea_add_scale_offset(i64, i64) {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    leaq (%rdi,%rsi,4), %rax # sched: [1:0.50]
 ; HASWELL-NEXT:    addq $96, %rax # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_add_scale_offset:
 ; BROADWELL:       # %bb.0:
@@ -640,7 +640,7 @@ define i64 @test_lea_add_scale_offset_big(i64, i64) {
 ; HASWELL-NEXT:    leaq (%rdi,%rsi,8), %rax # sched: [1:0.50]
 ; HASWELL-NEXT:    addq $-1200, %rax # imm = 0xFB50
 ; HASWELL-NEXT:    # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_lea_add_scale_offset_big:
 ; BROADWELL:       # %bb.0:
