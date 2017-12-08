@@ -333,8 +333,16 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
         swift_runtime->GetMetadataPromise(argmetadata_ptr, swift_ast_ctx));
     if (promise_sp) {
       if (CompilerType type = promise_sp->FulfillTypePromise()) {
-        lldb::TemplateArgumentKind kind;
-        argument_type = type.GetTemplateArgument(0, kind);
+        switch (type.GetTemplateArgumentKind(0)) {
+        case eBoundGenericKindType:
+          argument_type = type.GetBoundGenericType(0);
+          break;
+        case eUnboundGenericKindType:
+          argument_type = type.GetUnboundGenericType(0);
+          break;
+        default:
+          break;
+        }
       }
     }
 

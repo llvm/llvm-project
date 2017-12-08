@@ -384,7 +384,11 @@ public:
   size_t GetNumTemplateArguments() const;
 
   lldb::TemplateArgumentKind GetTemplateArgumentKind(size_t idx) const;
+
   CompilerType GetTypeTemplateArgument(size_t idx) const;
+
+  CompilerType GetBoundGenericType(size_t idx) const;
+  CompilerType GetUnboundGenericType(size_t idx) const;
 
   // Returns the value of the template argument and its type.
   llvm::Optional<IntegralTemplateArgument>
