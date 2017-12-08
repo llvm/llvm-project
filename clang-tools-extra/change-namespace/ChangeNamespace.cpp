@@ -552,6 +552,10 @@ void ChangeNamespaceTool::run(
     if (Loc.getTypeLocClass() == TypeLoc::Elaborated) {
       NestedNameSpecifierLoc NestedNameSpecifier =
           Loc.castAs<ElaboratedTypeLoc>().getQualifierLoc();
+      // This happens for friend declaration of a base class with injected class
+      // name.
+      if (!NestedNameSpecifier.getNestedNameSpecifier())
+        return;
       const Type *SpecifierType =
           NestedNameSpecifier.getNestedNameSpecifier()->getAsType();
       if (SpecifierType && SpecifierType->isRecordType())
