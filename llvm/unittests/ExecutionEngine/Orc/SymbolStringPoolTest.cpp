@@ -15,7 +15,7 @@ using namespace llvm::orc;
 
 namespace {
 
-TEST(SymbolStringPool, UniquingAndEquality) {
+TEST(SymbolStringPool, UniquingAndComparisons) {
   SymbolStringPool SP;
   auto P1 = SP.intern("hello");
 
@@ -27,6 +27,11 @@ TEST(SymbolStringPool, UniquingAndEquality) {
 
   EXPECT_EQ(P1, P2) << "Failed to unique entries";
   EXPECT_NE(P1, P3) << "Inequal pooled symbol strings comparing equal";
+
+  // We want to test that less-than comparison of SymbolStringPtrs compiles,
+  // however we can't test the actual result as this is a pointer comparison and
+  // SymbolStringPtr doesn't expose the underlying address of the string.
+  (void)(P1 < P3);
 }
 
 TEST(SymbolStringPool, ClearDeadEntries) {
