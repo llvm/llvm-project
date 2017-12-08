@@ -3,7 +3,8 @@
 ; CHECK:      - Name:            test_ro_arg
 ; CHECK-NEXT:   SymbolName:      'test_ro_arg@kd'
 ; CHECK-NEXT:   Args:
-; CHECK-NEXT: - TypeName:        'float*'
+; CHECK-NEXT: - Name:            in
+; CHECK-NEXT:   TypeName:        'float*'
 ; CHECK-NEXT:   Size:            8
 ; CHECK-NEXT:   Align:           8
 ; CHECK-NEXT:   ValueKind:       GlobalBuffer
@@ -12,7 +13,8 @@
 ; CHECK-NEXT:   AccQual:         ReadOnly
 ; CHECK-NEXT:   IsConst:         true
 ; CHECK-NEXT:   IsRestrict:      true
-; CHECK-NEXT: - TypeName:        'float*'
+; CHECK-NEXT: - Name:            out
+; CHECK-NEXT:   TypeName:        'float*'
 ; CHECK-NEXT:   Size:            8
 ; CHECK-NEXT:   Align:           8
 ; CHECK-NEXT:   ValueKind:       GlobalBuffer

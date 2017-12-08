@@ -132,6 +132,10 @@ function(llvm_ExternalProject_Add name source_dir)
     set(exclude EXCLUDE_FROM_ALL 1)
   endif()
 
+  if(CMAKE_SYSROOT)
+    set(sysroot_arg -DCMAKE_SYSROOT=${CMAKE_SYSROOT})
+  endif()
+
   ExternalProject_Add(${name}
     DEPENDS ${ARG_DEPENDS} llvm-config
     ${name}-clobber
@@ -143,7 +147,7 @@ function(llvm_ExternalProject_Add name source_dir)
     CMAKE_ARGS ${${nameCanon}_CMAKE_ARGS}
                ${compiler_args}
                -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
-               -DCMAKE_SYSROOT=${CMAKE_SYSROOT}
+               ${sysroot_arg}
                -DLLVM_BINARY_DIR=${PROJECT_BINARY_DIR}
                -DLLVM_CONFIG_PATH=$<TARGET_FILE:llvm-config>
                -DLLVM_ENABLE_WERROR=${LLVM_ENABLE_WERROR}

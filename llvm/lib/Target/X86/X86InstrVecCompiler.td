@@ -460,16 +460,16 @@ let Predicates = [HasAVX512] in {
             (COPY_TO_REGCLASS VK8:$src, VK16)>;
 }
 
-let Predicates = [HasVLX] in {
-  def : Pat<(v4i1 (insert_subvector (v4i1 immAllZerosV),
-                                    maskzeroupperv2i1:$src, (iPTR 0))),
-            (COPY_TO_REGCLASS VK2:$src, VK4)>;
+let Predicates = [HasVLX, HasDQI] in {
   def : Pat<(v8i1 (insert_subvector (v8i1 immAllZerosV),
                                     maskzeroupperv2i1:$src, (iPTR 0))),
             (COPY_TO_REGCLASS VK2:$src, VK8)>;
   def : Pat<(v8i1 (insert_subvector (v8i1 immAllZerosV),
                                     maskzeroupperv4i1:$src, (iPTR 0))),
             (COPY_TO_REGCLASS VK4:$src, VK8)>;
+}
+
+let Predicates = [HasVLX] in {
   def : Pat<(v16i1 (insert_subvector (v16i1 immAllZerosV),
                                      maskzeroupperv2i1:$src, (iPTR 0))),
             (COPY_TO_REGCLASS VK2:$src, VK16)>;
@@ -502,35 +502,7 @@ let Predicates = [HasAVX512] in {
                                     (i8 8)), (i8 8))>;
 }
 
-let Predicates = [HasVLX, NoDQI] in {
-  // TODO can we legalize this out
-  def : Pat<(v4i1 (insert_subvector (v4i1 immAllZerosV),
-                                    (v2i1 VK2:$mask), (iPTR 0))),
-            (COPY_TO_REGCLASS (KSHIFTRWri
-                               (KSHIFTLWri (COPY_TO_REGCLASS VK2:$mask, VK16),
-                                           (i8 14)), (i8 14)), VK4)>;
-
-  // TODO can we legalize these out without dqi?
-  def : Pat<(v8i1 (insert_subvector (v8i1 immAllZerosV),
-                                    (v2i1 VK2:$mask), (iPTR 0))),
-            (COPY_TO_REGCLASS (KSHIFTRWri
-                               (KSHIFTLWri (COPY_TO_REGCLASS VK2:$mask, VK16),
-                                           (i8 14)), (i8 14)), VK8)>;
-  def : Pat<(v8i1 (insert_subvector (v8i1 immAllZerosV),
-                                    (v4i1 VK4:$mask), (iPTR 0))),
-            (COPY_TO_REGCLASS (KSHIFTRWri
-                               (KSHIFTLWri (COPY_TO_REGCLASS VK4:$mask, VK16),
-                                           (i8 12)), (i8 12)), VK8)>;
-}
-
 let Predicates = [HasVLX, HasDQI] in {
-  // TODO can we legalize this out
-  def : Pat<(v4i1 (insert_subvector (v4i1 immAllZerosV),
-                                    (v2i1 VK2:$mask), (iPTR 0))),
-            (COPY_TO_REGCLASS (KSHIFTRBri
-                               (KSHIFTLBri (COPY_TO_REGCLASS VK2:$mask, VK8),
-                                           (i8 14)), (i8 14)), VK4)>;
-
   def : Pat<(v8i1 (insert_subvector (v8i1 immAllZerosV),
                                     (v2i1 VK2:$mask), (iPTR 0))),
             (KSHIFTRBri (KSHIFTLBri (COPY_TO_REGCLASS VK2:$mask, VK8),

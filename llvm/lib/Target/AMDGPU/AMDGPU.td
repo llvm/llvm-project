@@ -540,6 +540,10 @@ def FeatureISAVersion7_0_3 : SubtargetFeatureISAVersion <7,0,3,
   [FeatureSeaIslands,
    FeatureLDSBankCount16]>;
 
+def FeatureISAVersion7_0_4 : SubtargetFeatureISAVersion <7,0,4,
+  [FeatureSeaIslands,
+   FeatureLDSBankCount32]>;
+
 def FeatureISAVersion8_0_0 : SubtargetFeatureISAVersion <8,0,0,
   [FeatureVolcanicIslands,
    FeatureLDSBankCount32,
@@ -561,10 +565,6 @@ def FeatureISAVersion8_0_3 : SubtargetFeatureISAVersion <8,0,3,
   [FeatureVolcanicIslands,
    FeatureLDSBankCount32]>;
 
-def FeatureISAVersion8_0_4 : SubtargetFeatureISAVersion <8,0,4,
-  [FeatureVolcanicIslands,
-   FeatureLDSBankCount32]>;
-
 def FeatureISAVersion8_1_0 : SubtargetFeatureISAVersion <8,1,0,
   [FeatureVolcanicIslands,
    FeatureLDSBankCount16,
@@ -576,23 +576,11 @@ def FeatureISAVersion9_0_0 : SubtargetFeatureISAVersion <9,0,0,
    FeatureLDSBankCount32
    ]>;
 
-def FeatureISAVersion9_0_1 : SubtargetFeatureISAVersion <9,0,1,
-  [FeatureGFX9,
-   FeatureMadMixInsts,
-   FeatureLDSBankCount32,
-   FeatureXNACK]>;
-
 def FeatureISAVersion9_0_2 : SubtargetFeatureISAVersion <9,0,2,
   [FeatureGFX9,
    FeatureMadMixInsts,
    FeatureLDSBankCount32
    ]>;
-
-def FeatureISAVersion9_0_3 : SubtargetFeatureISAVersion <9,0,3,
-  [FeatureGFX9,
-   FeatureMadMixInsts,
-   FeatureLDSBankCount32,
-   FeatureXNACK]>;
 
 //===----------------------------------------------------------------------===//
 // Debugger related subtarget features.

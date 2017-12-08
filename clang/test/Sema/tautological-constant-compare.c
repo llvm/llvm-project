@@ -94,17 +94,15 @@ int main()
   if (-32768 >= s)
       return 0;
 
-  // Note: both sides are promoted to unsigned long prior to the comparison, so
-  // it is perfectly possible for a short to compare greater than 32767UL.
   if (s == 32767UL)
       return 0;
   if (s != 32767UL)
       return 0;
   if (s < 32767UL)
       return 0;
-  if (s <= 32767UL)
+  if (s <= 32767UL) // expected-warning {{comparison 'short' <= 32767 is always true}}
       return 0;
-  if (s > 32767UL)
+  if (s > 32767UL) // expected-warning {{comparison 'short' > 32767 is always false}}
       return 0;
   if (s >= 32767UL)
       return 0;
@@ -113,66 +111,13 @@ int main()
       return 0;
   if (32767UL != s)
       return 0;
-  if (32767UL < s)
+  if (32767UL < s) // expected-warning {{comparison 32767 < 'short' is always false}}
       return 0;
   if (32767UL <= s)
       return 0;
   if (32767UL > s)
       return 0;
-  if (32767UL >= s)
-      return 0;
-
-  if (s == 0UL)
-      return 0;
-  if (s != 0UL)
-      return 0;
-  if (s < 0UL) // expected-warning {{comparison of unsigned expression < 0 is always false}}
-      return 0;
-  if (s <= 0UL)
-      return 0;
-  if (s > 0UL)
-      return 0;
-  if (s >= 0UL) // expected-warning {{comparison of unsigned expression >= 0 is always true}}
-      return 0;
-
-  if (0UL == s)
-      return 0;
-  if (0UL != s)
-      return 0;
-  if (0UL < s)
-      return 0;
-  if (0UL <= s) // expected-warning {{comparison of 0 <= unsigned expression is always true}}
-      return 0;
-  if (0UL > s) // expected-warning {{comparison of 0 > unsigned expression is always false}}
-      return 0;
-  if (0UL >= s)
-      return 0;
-
-  enum { ULONG_MAX = (2UL * (unsigned long)__LONG_MAX__ + 1UL) };
-  if (s == 2UL * (unsigned long)__LONG_MAX__ + 1UL)
-      return 0;
-  if (s != 2UL * (unsigned long)__LONG_MAX__ + 1UL)
-      return 0;
-  if (s < 2UL * (unsigned long)__LONG_MAX__ + 1UL)
-      return 0;
-  if (s <= 2UL * (unsigned long)__LONG_MAX__ + 1UL) // expected-warning-re {{comparison 'short' <= {{.*}} is always true}}
-      return 0;
-  if (s > 2UL * (unsigned long)__LONG_MAX__ + 1UL) // expected-warning-re {{comparison 'short' > {{.*}} is always false}}
-      return 0;
-  if (s >= 2UL * (unsigned long)__LONG_MAX__ + 1UL)
-      return 0;
-
-  if (2UL * (unsigned long)__LONG_MAX__ + 1UL == s)
-      return 0;
-  if (2UL * (unsigned long)__LONG_MAX__ + 1UL != s)
-      return 0;
-  if (2UL * (unsigned long)__LONG_MAX__ + 1UL < s) // expected-warning-re {{comparison {{.*}} < 'short' is always false}}
-      return 0;
-  if (2UL * (unsigned long)__LONG_MAX__ + 1UL <= s)
-      return 0;
-  if (2UL * (unsigned long)__LONG_MAX__ + 1UL > s)
-      return 0;
-  if (2UL * (unsigned long)__LONG_MAX__ + 1UL >= s) // expected-warning-re {{comparison {{.*}} >= 'short' is always true}}
+  if (32767UL >= s) // expected-warning {{comparison 32767 >= 'short' is always true}}
       return 0;
 
   // FIXME: assumes two's complement
@@ -335,6 +280,8 @@ int main()
     return 0;
   if (0 >= s)
     return 0;
+
+  // However the comparison with 0U would warn
 
   unsigned short us = value();
 

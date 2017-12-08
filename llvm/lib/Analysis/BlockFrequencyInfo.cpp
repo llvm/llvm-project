@@ -264,10 +264,6 @@ const BranchProbabilityInfo *BlockFrequencyInfo::getBPI() const {
   return BFI ? &BFI->getBPI() : nullptr;
 }
 
-const LoopInfo *BlockFrequencyInfo::getLoopInfo() const {
-  return BFI ? &BFI->getLoopInfo() : nullptr;
-}
-
 raw_ostream &BlockFrequencyInfo::
 printBlockFreq(raw_ostream &OS, const BlockFrequency Freq) const {
   return BFI ? BFI->printBlockFreq(OS, Freq) : OS;

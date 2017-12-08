@@ -746,6 +746,14 @@ emitCallAndSwitchStatement(Function *newFunction, BasicBlock *codeReplacer,
   // Emit the call to the function
   CallInst *call = CallInst::Create(newFunction, params,
                                     NumExitBlocks > 1 ? "targetBlock" : "");
+  // Add debug location to the new call, if the original function has debug
+  // info. In that case, the terminator of the entry block of the extracted
+  // function contains the first debug location of the extracted function,
+  // set in extractCodeRegion.
+  if (codeReplacer->getParent()->getSubprogram()) {
+    if (auto DL = newFunction->getEntryBlock().getTerminator()->getDebugLoc())
+      call->setDebugLoc(DL);
+  }
   codeReplacer->getInstList().push_back(call);
 
   Function::arg_iterator OutputArgBegin = newFunction->arg_begin();
@@ -1023,7 +1031,22 @@ Function *CodeExtractor::extractCodeRegion() {
   // head of the region, but the entry node of a function cannot have preds.
   BasicBlock *newFuncRoot = BasicBlock::Create(header->getContext(), 
                                                "newFuncRoot");
-  newFuncRoot->getInstList().push_back(BranchInst::Create(header));
+  auto *BranchI = BranchInst::Create(header);
+  // If the original function has debug info, we have to add a debug location
+  // to the new branch instruction from the artificial entry block.
+  // We use the debug location of the first instruction in the extracted
+  // blocks, as there is no other equivalent line in the source code.
+  if (oldFunction->getSubprogram()) {
+    any_of(Blocks, [&BranchI](const BasicBlock *BB) {
+      return any_of(*BB, [&BranchI](const Instruction &I) {
+        if (!I.getDebugLoc())
+          return false;
+        BranchI->setDebugLoc(I.getDebugLoc());
+        return true;
+      });
+    });
+  }
+  newFuncRoot->getInstList().push_back(BranchI);
 
   findAllocas(SinkingCands, HoistingCands, CommonExit);
   assert(HoistingCands.empty() || CommonExit);

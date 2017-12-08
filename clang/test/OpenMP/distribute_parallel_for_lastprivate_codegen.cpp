@@ -164,7 +164,7 @@ int main() {
       // LAMBDA: [[SFVAR_IN_REF:%.+]] = load float*, float** [[SFVAR_PRIVATE_ADDR]],
 
       // LAMBDA: [[G1_IN_REF:%.+]] = load double*, double** [[G1_PRIVATE_ADDR]],
-      // LAMBDA: store double* [[G1_PRIVATE]], double** [[TMP_G1]],
+      // LAMBDA: store double* [[G1_PRIVATE]], double** [[TMP_G1_PRIVATE]],
 
       // LAMBDA: call {{.*}}void @__kmpc_for_static_init_4(
 

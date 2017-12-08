@@ -11,20 +11,20 @@
 define <4 x i32> @test_sha1msg1(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; GENERIC-LABEL: test_sha1msg1:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    sha1msg1 %xmm1, %xmm0
-; GENERIC-NEXT:    sha1msg1 (%rdi), %xmm0
+; GENERIC-NEXT:    sha1msg1 %xmm1, %xmm0 # sched: [5:1.00]
+; GENERIC-NEXT:    sha1msg1 (%rdi), %xmm0 # sched: [9:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; GOLDMONT-LABEL: test_sha1msg1:
 ; GOLDMONT:       # %bb.0:
-; GOLDMONT-NEXT:    sha1msg1 %xmm1, %xmm0
-; GOLDMONT-NEXT:    sha1msg1 (%rdi), %xmm0
+; GOLDMONT-NEXT:    sha1msg1 %xmm1, %xmm0 # sched: [4:1.00]
+; GOLDMONT-NEXT:    sha1msg1 (%rdi), %xmm0 # sched: [7:1.00]
 ; GOLDMONT-NEXT:    retq # sched: [4:1.00]
 ;
 ; CANNONLAKE-LABEL: test_sha1msg1:
 ; CANNONLAKE:       # %bb.0:
-; CANNONLAKE-NEXT:    sha1msg1 %xmm1, %xmm0
-; CANNONLAKE-NEXT:    sha1msg1 (%rdi), %xmm0
+; CANNONLAKE-NEXT:    sha1msg1 %xmm1, %xmm0 # sched: [5:1.00]
+; CANNONLAKE-NEXT:    sha1msg1 (%rdi), %xmm0 # sched: [10:1.00]
 ; CANNONLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_sha1msg1:
@@ -42,20 +42,20 @@ declare <4 x i32> @llvm.x86.sha1msg1(<4 x i32>, <4 x i32>)
 define <4 x i32> @test_sha1msg2(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; GENERIC-LABEL: test_sha1msg2:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    sha1msg2 %xmm1, %xmm0
-; GENERIC-NEXT:    sha1msg2 (%rdi), %xmm0
+; GENERIC-NEXT:    sha1msg2 %xmm1, %xmm0 # sched: [5:1.00]
+; GENERIC-NEXT:    sha1msg2 (%rdi), %xmm0 # sched: [9:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; GOLDMONT-LABEL: test_sha1msg2:
 ; GOLDMONT:       # %bb.0:
-; GOLDMONT-NEXT:    sha1msg2 %xmm1, %xmm0
-; GOLDMONT-NEXT:    sha1msg2 (%rdi), %xmm0
+; GOLDMONT-NEXT:    sha1msg2 %xmm1, %xmm0 # sched: [4:1.00]
+; GOLDMONT-NEXT:    sha1msg2 (%rdi), %xmm0 # sched: [7:1.00]
 ; GOLDMONT-NEXT:    retq # sched: [4:1.00]
 ;
 ; CANNONLAKE-LABEL: test_sha1msg2:
 ; CANNONLAKE:       # %bb.0:
-; CANNONLAKE-NEXT:    sha1msg2 %xmm1, %xmm0
-; CANNONLAKE-NEXT:    sha1msg2 (%rdi), %xmm0
+; CANNONLAKE-NEXT:    sha1msg2 %xmm1, %xmm0 # sched: [5:1.00]
+; CANNONLAKE-NEXT:    sha1msg2 (%rdi), %xmm0 # sched: [10:1.00]
 ; CANNONLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_sha1msg2:
@@ -73,20 +73,20 @@ declare <4 x i32> @llvm.x86.sha1msg2(<4 x i32>, <4 x i32>)
 define <4 x i32> @test_sha1nexte(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; GENERIC-LABEL: test_sha1nexte:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    sha1nexte %xmm1, %xmm0
-; GENERIC-NEXT:    sha1nexte (%rdi), %xmm0
+; GENERIC-NEXT:    sha1nexte %xmm1, %xmm0 # sched: [5:1.00]
+; GENERIC-NEXT:    sha1nexte (%rdi), %xmm0 # sched: [9:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; GOLDMONT-LABEL: test_sha1nexte:
 ; GOLDMONT:       # %bb.0:
-; GOLDMONT-NEXT:    sha1nexte %xmm1, %xmm0
-; GOLDMONT-NEXT:    sha1nexte (%rdi), %xmm0
+; GOLDMONT-NEXT:    sha1nexte %xmm1, %xmm0 # sched: [4:1.00]
+; GOLDMONT-NEXT:    sha1nexte (%rdi), %xmm0 # sched: [7:1.00]
 ; GOLDMONT-NEXT:    retq # sched: [4:1.00]
 ;
 ; CANNONLAKE-LABEL: test_sha1nexte:
 ; CANNONLAKE:       # %bb.0:
-; CANNONLAKE-NEXT:    sha1nexte %xmm1, %xmm0
-; CANNONLAKE-NEXT:    sha1nexte (%rdi), %xmm0
+; CANNONLAKE-NEXT:    sha1nexte %xmm1, %xmm0 # sched: [5:1.00]
+; CANNONLAKE-NEXT:    sha1nexte (%rdi), %xmm0 # sched: [10:1.00]
 ; CANNONLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_sha1nexte:
@@ -104,20 +104,20 @@ declare <4 x i32> @llvm.x86.sha1nexte(<4 x i32>, <4 x i32>)
 define <4 x i32> @test_sha1rnds4(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; GENERIC-LABEL: test_sha1rnds4:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    sha1rnds4 $3, %xmm1, %xmm0
-; GENERIC-NEXT:    sha1rnds4 $3, (%rdi), %xmm0
+; GENERIC-NEXT:    sha1rnds4 $3, %xmm1, %xmm0 # sched: [5:1.00]
+; GENERIC-NEXT:    sha1rnds4 $3, (%rdi), %xmm0 # sched: [9:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; GOLDMONT-LABEL: test_sha1rnds4:
 ; GOLDMONT:       # %bb.0:
-; GOLDMONT-NEXT:    sha1rnds4 $3, %xmm1, %xmm0
-; GOLDMONT-NEXT:    sha1rnds4 $3, (%rdi), %xmm0
+; GOLDMONT-NEXT:    sha1rnds4 $3, %xmm1, %xmm0 # sched: [4:1.00]
+; GOLDMONT-NEXT:    sha1rnds4 $3, (%rdi), %xmm0 # sched: [7:1.00]
 ; GOLDMONT-NEXT:    retq # sched: [4:1.00]
 ;
 ; CANNONLAKE-LABEL: test_sha1rnds4:
 ; CANNONLAKE:       # %bb.0:
-; CANNONLAKE-NEXT:    sha1rnds4 $3, %xmm1, %xmm0
-; CANNONLAKE-NEXT:    sha1rnds4 $3, (%rdi), %xmm0
+; CANNONLAKE-NEXT:    sha1rnds4 $3, %xmm1, %xmm0 # sched: [5:1.00]
+; CANNONLAKE-NEXT:    sha1rnds4 $3, (%rdi), %xmm0 # sched: [10:1.00]
 ; CANNONLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_sha1rnds4:
@@ -139,20 +139,20 @@ declare <4 x i32> @llvm.x86.sha1rnds4(<4 x i32>, <4 x i32>, i8)
 define <4 x i32> @test_sha256msg1(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; GENERIC-LABEL: test_sha256msg1:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    sha256msg1 %xmm1, %xmm0
-; GENERIC-NEXT:    sha256msg1 (%rdi), %xmm0
+; GENERIC-NEXT:    sha256msg1 %xmm1, %xmm0 # sched: [5:1.00]
+; GENERIC-NEXT:    sha256msg1 (%rdi), %xmm0 # sched: [9:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; GOLDMONT-LABEL: test_sha256msg1:
 ; GOLDMONT:       # %bb.0:
-; GOLDMONT-NEXT:    sha256msg1 %xmm1, %xmm0
-; GOLDMONT-NEXT:    sha256msg1 (%rdi), %xmm0
+; GOLDMONT-NEXT:    sha256msg1 %xmm1, %xmm0 # sched: [4:1.00]
+; GOLDMONT-NEXT:    sha256msg1 (%rdi), %xmm0 # sched: [7:1.00]
 ; GOLDMONT-NEXT:    retq # sched: [4:1.00]
 ;
 ; CANNONLAKE-LABEL: test_sha256msg1:
 ; CANNONLAKE:       # %bb.0:
-; CANNONLAKE-NEXT:    sha256msg1 %xmm1, %xmm0
-; CANNONLAKE-NEXT:    sha256msg1 (%rdi), %xmm0
+; CANNONLAKE-NEXT:    sha256msg1 %xmm1, %xmm0 # sched: [5:1.00]
+; CANNONLAKE-NEXT:    sha256msg1 (%rdi), %xmm0 # sched: [10:1.00]
 ; CANNONLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_sha256msg1:
@@ -170,20 +170,20 @@ declare <4 x i32> @llvm.x86.sha256msg1(<4 x i32>, <4 x i32>)
 define <4 x i32> @test_sha256msg2(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; GENERIC-LABEL: test_sha256msg2:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    sha256msg2 %xmm1, %xmm0
-; GENERIC-NEXT:    sha256msg2 (%rdi), %xmm0
+; GENERIC-NEXT:    sha256msg2 %xmm1, %xmm0 # sched: [5:1.00]
+; GENERIC-NEXT:    sha256msg2 (%rdi), %xmm0 # sched: [9:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; GOLDMONT-LABEL: test_sha256msg2:
 ; GOLDMONT:       # %bb.0:
-; GOLDMONT-NEXT:    sha256msg2 %xmm1, %xmm0
-; GOLDMONT-NEXT:    sha256msg2 (%rdi), %xmm0
+; GOLDMONT-NEXT:    sha256msg2 %xmm1, %xmm0 # sched: [4:1.00]
+; GOLDMONT-NEXT:    sha256msg2 (%rdi), %xmm0 # sched: [7:1.00]
 ; GOLDMONT-NEXT:    retq # sched: [4:1.00]
 ;
 ; CANNONLAKE-LABEL: test_sha256msg2:
 ; CANNONLAKE:       # %bb.0:
-; CANNONLAKE-NEXT:    sha256msg2 %xmm1, %xmm0
-; CANNONLAKE-NEXT:    sha256msg2 (%rdi), %xmm0
+; CANNONLAKE-NEXT:    sha256msg2 %xmm1, %xmm0 # sched: [5:1.00]
+; CANNONLAKE-NEXT:    sha256msg2 (%rdi), %xmm0 # sched: [10:1.00]
 ; CANNONLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_sha256msg2:
@@ -203,8 +203,8 @@ define <4 x i32> @test_sha256rnds2(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2, 
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    movaps %xmm0, %xmm3 # sched: [1:1.00]
 ; GENERIC-NEXT:    movaps %xmm2, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    sha256rnds2 %xmm0, %xmm1, %xmm3
-; GENERIC-NEXT:    sha256rnds2 %xmm0, (%rdi), %xmm3
+; GENERIC-NEXT:    sha256rnds2 %xmm0, %xmm1, %xmm3 # sched: [5:1.00]
+; GENERIC-NEXT:    sha256rnds2 %xmm0, (%rdi), %xmm3 # sched: [9:1.00]
 ; GENERIC-NEXT:    movaps %xmm3, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -212,8 +212,8 @@ define <4 x i32> @test_sha256rnds2(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2, 
 ; GOLDMONT:       # %bb.0:
 ; GOLDMONT-NEXT:    movaps %xmm0, %xmm3 # sched: [1:1.00]
 ; GOLDMONT-NEXT:    movaps %xmm2, %xmm0 # sched: [1:1.00]
-; GOLDMONT-NEXT:    sha256rnds2 %xmm0, %xmm1, %xmm3
-; GOLDMONT-NEXT:    sha256rnds2 %xmm0, (%rdi), %xmm3
+; GOLDMONT-NEXT:    sha256rnds2 %xmm0, %xmm1, %xmm3 # sched: [4:1.00]
+; GOLDMONT-NEXT:    sha256rnds2 %xmm0, (%rdi), %xmm3 # sched: [7:1.00]
 ; GOLDMONT-NEXT:    movaps %xmm3, %xmm0 # sched: [1:1.00]
 ; GOLDMONT-NEXT:    retq # sched: [4:1.00]
 ;
@@ -221,8 +221,8 @@ define <4 x i32> @test_sha256rnds2(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2, 
 ; CANNONLAKE:       # %bb.0:
 ; CANNONLAKE-NEXT:    vmovaps %xmm0, %xmm3 # sched: [1:1.00]
 ; CANNONLAKE-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:1.00]
-; CANNONLAKE-NEXT:    sha256rnds2 %xmm0, %xmm1, %xmm3
-; CANNONLAKE-NEXT:    sha256rnds2 %xmm0, (%rdi), %xmm3
+; CANNONLAKE-NEXT:    sha256rnds2 %xmm0, %xmm1, %xmm3 # sched: [5:1.00]
+; CANNONLAKE-NEXT:    sha256rnds2 %xmm0, (%rdi), %xmm3 # sched: [10:1.00]
 ; CANNONLAKE-NEXT:    vmovaps %xmm3, %xmm0 # sched: [1:1.00]
 ; CANNONLAKE-NEXT:    retq # sched: [7:1.00]
 ;

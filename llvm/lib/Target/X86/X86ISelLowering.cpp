@@ -5017,14 +5017,25 @@ static SDValue insert1BitVector(SDValue Op, SelectionDAG &DAG,
   if (IdxVal == 0 && Vec.isUndef()) // the operation is legal
     return Op;
 
+  MVT OpVT = Op.getSimpleValueType();
+  unsigned NumElems = OpVT.getVectorNumElements();
+
   // Inserting into the lsbs of a zero vector is legal. ISel will insert shifts
   // if necessary.
-  if (IdxVal == 0 && ISD::isBuildVectorAllZeros(Vec.getNode()))
-    return Op;
+  if (IdxVal == 0 && ISD::isBuildVectorAllZeros(Vec.getNode())) {
+    if ((!Subtarget.hasDQI() && NumElems == 8) || (NumElems < 8)) {
+      // Need to promote to v16i1, do the insert, then extract back.
+      Op = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v16i1, 
+                       getZeroVector(MVT::v16i1, Subtarget, DAG, dl),
+                       SubVec, Idx);
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OpVT, Op,
+                         DAG.getIntPtrConstant(0, dl));
+    }
 
-  MVT OpVT = Op.getSimpleValueType();
+    return Op;
+  }
+
   MVT SubVecVT = SubVec.getSimpleValueType();
-  unsigned NumElems = OpVT.getVectorNumElements();
   unsigned SubVecNumElems = SubVecVT.getVectorNumElements();
 
   assert(IdxVal + SubVecNumElems <= NumElems &&
@@ -25356,9 +25367,9 @@ bool X86TargetLowering::isVectorShiftByScalarCheap(Type *Ty) const {
   if (Bits == 8)
     return false;
 
-  // On AVX2 there are new vpsllv[dq] instructions (and other shifts), that make
-  // variable shifts just as cheap as scalar ones.
-  if (Subtarget.hasInt256() && (Bits == 32 || Bits == 64))
+  // AVX2 has vpsllv[dq] instructions (and other shifts) that make variable
+  // shifts just as cheap as scalar ones.
+  if (Subtarget.hasAVX2() && (Bits == 32 || Bits == 64))
     return false;
 
   // Otherwise, it's significantly cheaper to shift by a scalar amount than by a

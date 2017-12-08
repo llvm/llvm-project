@@ -216,6 +216,37 @@ StringRef sys::detail::getHostCPUNameForARM(
             .Case("0xc01", "saphira")
             .Default("generic");
 
+  if (Implementer == "0x53") { // Samsung Electronics Co., Ltd.
+    // The Exynos chips have a convoluted ID scheme that doesn't seem to follow
+    // any predictive pattern across variants and parts.
+    unsigned Variant = 0, Part = 0;
+
+    // Look for the CPU variant line, whose value is a 1 digit hexadecimal
+    // number, corresponding to the Variant bits in the CP15/C0 register.
+    for (auto I : Lines)
+      if (I.consume_front("CPU variant"))
+        I.ltrim("\t :").getAsInteger(0, Variant);
+
+    // Look for the CPU part line, whose value is a 3 digit hexadecimal
+    // number, corresponding to the PartNum bits in the CP15/C0 register.
+    for (auto I : Lines)
+      if (I.consume_front("CPU part"))
+        I.ltrim("\t :").getAsInteger(0, Part);
+
+    unsigned Exynos = (Variant << 12) | Part;
+    switch (Exynos) {
+    default:
+      // Default by falling through to Exynos M1.
+      LLVM_FALLTHROUGH;
+
+    case 0x1001:
+      return "exynos-m1";
+
+    case 0x4001:
+      return "exynos-m2";
+    }
+  }
+
   return "generic";
 }
 

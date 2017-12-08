@@ -76,25 +76,16 @@ size_t __kmp_malloc_pool_incr = KMP_DEFAULT_MALLOC_POOL_INCR;
 
 // Barrier method defaults, settings, and strings.
 // branch factor = 2^branch_bits (only relevant for tree & hyper barrier types)
-#if KMP_ARCH_X86_64
 kmp_uint32 __kmp_barrier_gather_bb_dflt = 2;
 /* branch_factor = 4 */ /* hyper2: C78980 */
 kmp_uint32 __kmp_barrier_release_bb_dflt = 2;
 /* branch_factor = 4 */ /* hyper2: C78980 */
-#else
-kmp_uint32 __kmp_barrier_gather_bb_dflt = 2;
-/* branch_factor = 4 */ /* communication in core for MIC */
-kmp_uint32 __kmp_barrier_release_bb_dflt = 2;
-/* branch_factor = 4 */ /* communication in core for MIC */
-#endif // KMP_ARCH_X86_64
-#if KMP_ARCH_X86_64
-kmp_bar_pat_e __kmp_barrier_gather_pat_dflt = bp_hyper_bar; /* hyper2: C78980 */
-kmp_bar_pat_e __kmp_barrier_release_pat_dflt =
-    bp_hyper_bar; /* hyper2: C78980 */
-#else
-kmp_bar_pat_e __kmp_barrier_gather_pat_dflt = bp_linear_bar;
-kmp_bar_pat_e __kmp_barrier_release_pat_dflt = bp_linear_bar;
-#endif
+
+kmp_bar_pat_e __kmp_barrier_gather_pat_dflt = bp_hyper_bar;
+/* hyper2: C78980 */
+kmp_bar_pat_e __kmp_barrier_release_pat_dflt = bp_hyper_bar;
+/* hyper2: C78980 */
+
 kmp_uint32 __kmp_barrier_gather_branch_bits[bs_last_barrier] = {0};
 kmp_uint32 __kmp_barrier_release_branch_bits[bs_last_barrier] = {0};
 kmp_bar_pat_e __kmp_barrier_gather_pattern[bs_last_barrier] = {bp_linear_bar};
