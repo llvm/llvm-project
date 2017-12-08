@@ -202,6 +202,15 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
     error("no input files");
 }
 
+static const char *getEntry(opt::InputArgList &Args, const char *def) {
+  auto *Arg = Args.getLastArg(OPT_entry, OPT_no_entry);
+  if (!Arg)
+    return def;
+  if (Arg->getOption().getID() == OPT_no_entry)
+    return "";
+  return Arg->getValue();
+}
+
 void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   WasmOptTable Parser;
   opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
@@ -230,10 +239,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->CheckSignatures =
       Args.hasFlag(OPT_check_signatures, OPT_no_check_signatures, false);
   Config->EmitRelocs = Args.hasArg(OPT_emit_relocs);
-  Config->Entry = Args.getLastArgValue(OPT_entry);
+  Config->Relocatable = Args.hasArg(OPT_relocatable);
+  Config->Entry = getEntry(Args, Config->Relocatable ? "" : "_start");
   Config->ImportMemory = Args.hasArg(OPT_import_memory);
   Config->OutputFile = Args.getLastArgValue(OPT_o);
-  Config->Relocatable = Args.hasArg(OPT_relocatable);
   Config->SearchPaths = args::getStrings(Args, OPT_L);
   Config->StripAll = Args.hasArg(OPT_strip_all);
   Config->StripDebug = Args.hasArg(OPT_strip_debug);
@@ -265,10 +274,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     error("undefined symbols specified for relocatable output file");
 
   if (!Config->Relocatable) {
-    if (Config->Entry.empty())
-      Config->Entry = "_start";
-    static WasmSignature Signature = {{}, WASM_TYPE_NORESULT};
-    addSyntheticUndefinedFunction(Config->Entry, &Signature);
+    if (!Config->Entry.empty()) {
+      static WasmSignature Signature = {{}, WASM_TYPE_NORESULT};
+      addSyntheticUndefinedFunction(Config->Entry, &Signature);
+    }
 
     // Handle the `--undefined <sym>` options.
     for (StringRef S : args::getStrings(Args, OPT_undefined))
@@ -301,15 +310,12 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       if (!Sym->isDefined())
         error("function forced with --undefined not found: " + Sym->getName());
     }
-    if (errorCount())
-      return;
   }
 
-  if (!Config->Entry.empty()) {
-    Symbol *Sym = Symtab->find(Config->Entry);
-    if (!Sym->isFunction())
-      fatal("entry point is not a function: " + Sym->getName());
-  }
+  if (!Config->Entry.empty() && !Symtab->find(Config->Entry)->isDefined())
+    error("entry point not found: " + Config->Entry);
+  if (errorCount())
+    return;
 
   // Write the result to the file.
   writeResult();

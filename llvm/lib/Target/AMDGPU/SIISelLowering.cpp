@@ -2957,8 +2957,11 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     if (MI.mayLoad())
       Flags |= MachineMemOperand::MOLoad;
 
-    auto MMO = MF->getMachineMemOperand(PtrInfo, Flags, 0, 0);
-    MI.addMemOperand(*MF, MMO);
+    if (Flags != MachineMemOperand::MODereferenceable) {
+      auto MMO = MF->getMachineMemOperand(PtrInfo, Flags, 0, 0);
+      MI.addMemOperand(*MF, MMO);
+    }
+
     return BB;
   }
 
@@ -4233,6 +4236,16 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return SDValue(DAG.getMachineNode(AMDGPU::WWM, DL, Src.getValueType(), Src),
                    0);
   }
+  case Intrinsic::amdgcn_image_getlod:
+  case Intrinsic::amdgcn_image_getresinfo: {
+    unsigned Idx = (IntrinsicID == Intrinsic::amdgcn_image_getresinfo) ? 3 : 4;
+
+    // Replace dmask with everything disabled with undef.
+    const ConstantSDNode *DMask = dyn_cast<ConstantSDNode>(Op.getOperand(Idx));
+    if (!DMask || DMask->isNullValue())
+      return DAG.getUNDEF(Op.getValueType());
+    return SDValue();
+  }
   default:
     return Op;
   }
@@ -4441,9 +4454,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_image_sample_c_b_cl_o:
   case Intrinsic::amdgcn_image_sample_c_lz_o:
   case Intrinsic::amdgcn_image_sample_c_cd_o:
-  case Intrinsic::amdgcn_image_sample_c_cd_cl_o:
-
-  case Intrinsic::amdgcn_image_getlod: {
+  case Intrinsic::amdgcn_image_sample_c_cd_cl_o: {
     // Replace dmask with everything disabled with undef.
     const ConstantSDNode *DMask = dyn_cast<ConstantSDNode>(Op.getOperand(5));
     if (!DMask || DMask->isNullValue()) {
@@ -6593,6 +6604,12 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
   unsigned DmaskIdx = (Node->getNumOperands() - Node->getNumValues() == 9) ? 2 : 3;
   unsigned OldDmask = Node->getConstantOperandVal(DmaskIdx);
   unsigned NewDmask = 0;
+  bool HasChain = Node->getNumValues() > 1;
+
+  if (OldDmask == 0) {
+    // These are folded out, but on the chance it happens don't assert.
+    return Node;
+  }
 
   // Try to figure out the used register components
   for (SDNode::use_iterator I = Node->use_begin(), E = Node->use_end();
@@ -6616,7 +6633,6 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
     // Set which texture component corresponds to the lane.
     unsigned Comp;
     for (unsigned i = 0, Dmask = OldDmask; i <= Lane; i++) {
-      assert(Dmask);
       Comp = countTrailingZeros(Dmask);
       Dmask &= ~(1 << Comp);
     }
@@ -6649,15 +6665,20 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
 
   MVT SVT = Node->getValueType(0).getVectorElementType().getSimpleVT();
 
-  auto NewVTList =
-    DAG.getVTList(BitsSet == 1 ?
-                  SVT : MVT::getVectorVT(SVT, BitsSet == 3 ? 4 : BitsSet),
-                  MVT::Other);
+  MVT ResultVT = BitsSet == 1 ?
+    SVT : MVT::getVectorVT(SVT, BitsSet == 3 ? 4 : BitsSet);
+  SDVTList NewVTList = HasChain ?
+    DAG.getVTList(ResultVT, MVT::Other) : DAG.getVTList(ResultVT);
+
 
   MachineSDNode *NewNode = DAG.getMachineNode(NewOpcode, SDLoc(Node),
                                               NewVTList, Ops);
-  // Update chain.
-  DAG.ReplaceAllUsesOfValueWith(SDValue(Node, 1), SDValue(NewNode, 1));
+
+  if (HasChain) {
+    // Update chain.
+    NewNode->setMemRefs(Node->memoperands_begin(), Node->memoperands_end());
+    DAG.ReplaceAllUsesOfValueWith(SDValue(Node, 1), SDValue(NewNode, 1));
+  }
 
   if (BitsSet == 1) {
     assert(Node->hasNUsesOfValue(1, 0));

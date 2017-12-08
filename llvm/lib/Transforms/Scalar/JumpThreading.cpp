@@ -188,14 +188,14 @@ JumpThreadingPass::JumpThreadingPass(int T) {
 //
 //  Given that P(cond == true) = P(cond == true | A) * P(A) +
 //                               P(cond == true | B) * P(B)
-//  we get
+//  we get:
 //     P(cond == true ) = P(A) + P(cond == true | B) * P(B)
 //
 //  which gives us:
 //     P(A) is less than P(cond == true), i.e.
 //     P(t == true) <= P(cond == true)
 //
-//  In other words, if we know P(cond == true) is unlikely, we know 
+//  In other words, if we know P(cond == true) is unlikely, we know
 //  that P(t == true) is also unlikely.
 //
 static void updatePredecessorProfileMetadata(PHINode *PN, BasicBlock *BB) {

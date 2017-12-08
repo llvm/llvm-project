@@ -9,6 +9,8 @@
 
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
@@ -74,6 +76,28 @@ TEST(MachineOperandTest, PrintSubReg) {
   raw_string_ostream OS(str);
   MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
   ASSERT_TRUE(OS.str() == "%physreg1.subreg5");
+}
+
+TEST(MachineOperandTest, PrintCImm) {
+  LLVMContext Context;
+  APInt Int(128, UINT64_MAX);
+  ++Int;
+  ConstantInt *CImm = ConstantInt::get(Context, Int);
+  // Create a MachineOperand with an Imm=(UINT64_MAX + 1)
+  MachineOperand MO = MachineOperand::CreateCImm(CImm);
+
+  // Checking some preconditions on the newly created
+  // MachineOperand.
+  ASSERT_TRUE(MO.isCImm());
+  ASSERT_TRUE(MO.getCImm() == CImm);
+  ASSERT_TRUE(MO.getCImm()->getValue() == Int);
+
+  // Print a MachineOperand containing a SubReg. Here we check that without a
+  // TRI and IntrinsicInfo we can still print the subreg index.
+  std::string str;
+  raw_string_ostream OS(str);
+  MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+  ASSERT_TRUE(OS.str() == "i128 18446744073709551616");
 }
 
 } // end namespace

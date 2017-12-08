@@ -160,5 +160,24 @@ define void @test8(i32 %init) {
   ret void
 }
 
+define void @test9() {
+; CHECK-LABEL: Determining loop execution counts for: @test9
+; CHECK: Loop %loop: Unpredictable max backedge-taken count.
+
+; This is an infinite loop, make sure that it recognized as such.
+
+entry:
+  br label %loop
+
+leave:
+  ret void
+
+loop:
+  %iv = phi i32 [ -20, %entry ], [ %iv.shift, %loop ]
+  %iv.shift = ashr i32 %iv, 1
+  %exit.cond = icmp sgt i32 %iv, -1
+  br i1 %exit.cond, label %leave, label %loop
+}
+
 !0 = !{i32 0, i32 50000}
 !1 = !{i32 -5000, i32 -1}

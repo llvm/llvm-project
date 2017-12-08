@@ -55,8 +55,7 @@ int pat(int *const p __attribute__((pass_object_size(3))), int n) {
 
 // CHECK-LABEL: define i32 @cat(
 int cat(int p[static 10], int n) {
-  // CHECK: icmp ult i64 {{.*}}, 10, !nosanitize
-  // CHECK: __ubsan_handle_out_of_bounds
+  // CHECK-NOT: __ubsan_handle_out_of_bounds
   // CHECK: ret i32
   return p[n];
 }

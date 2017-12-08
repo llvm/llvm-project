@@ -24,10 +24,10 @@ define <4 x float> @test_vcvtph2ps_128(<8 x i16> %a0, <8 x i16> *%a1) {
 ;
 ; HASWELL-LABEL: test_vcvtph2ps_128:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vcvtph2ps (%rdi), %xmm1 # sched: [1:1.00]
+; HASWELL-NEXT:    vcvtph2ps (%rdi), %xmm1 # sched: [6:1.00]
 ; HASWELL-NEXT:    vcvtph2ps %xmm0, %xmm0 # sched: [2:1.00]
 ; HASWELL-NEXT:    vaddps %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vcvtph2ps_128:
 ; BROADWELL:       # %bb.0:
@@ -81,10 +81,10 @@ define <8 x float> @test_vcvtph2ps_256(<8 x i16> %a0, <8 x i16> *%a1) {
 ;
 ; HASWELL-LABEL: test_vcvtph2ps_256:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vcvtph2ps (%rdi), %ymm1 # sched: [1:1.00]
+; HASWELL-NEXT:    vcvtph2ps (%rdi), %ymm1 # sched: [7:1.00]
 ; HASWELL-NEXT:    vcvtph2ps %xmm0, %ymm0 # sched: [2:1.00]
 ; HASWELL-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vcvtph2ps_256:
 ; BROADWELL:       # %bb.0:
@@ -137,8 +137,8 @@ define <8 x i16> @test_vcvtps2ph_128(<4 x float> %a0, <4 x float> %a1, <4 x i16>
 ; HASWELL-LABEL: test_vcvtps2ph_128:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vcvtps2ph $0, %xmm0, %xmm0 # sched: [4:1.00]
-; HASWELL-NEXT:    vcvtps2ph $0, %xmm1, (%rdi) # sched: [4:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vcvtps2ph $0, %xmm1, (%rdi) # sched: [5:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vcvtps2ph_128:
 ; BROADWELL:       # %bb.0:
@@ -189,9 +189,9 @@ define <8 x i16> @test_vcvtps2ph_256(<8 x float> %a0, <8 x float> %a1, <8 x i16>
 ; HASWELL-LABEL: test_vcvtps2ph_256:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vcvtps2ph $0, %ymm0, %xmm0 # sched: [6:1.00]
-; HASWELL-NEXT:    vcvtps2ph $0, %ymm1, (%rdi) # sched: [6:1.00]
+; HASWELL-NEXT:    vcvtps2ph $0, %ymm1, (%rdi) # sched: [7:1.00]
 ; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vcvtps2ph_256:
 ; BROADWELL:       # %bb.0:

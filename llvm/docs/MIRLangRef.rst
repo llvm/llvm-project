@@ -430,7 +430,11 @@ immediate machine operand ``-42``:
 
     %eax = MOV32ri -42
 
-.. TODO: Describe the CIMM (Rare) and FPIMM immediate operands.
+For integers > 64bit, we use a special machine operand, ``MO_CImmediate``,
+which stores the immediate in a ``ConstantInt`` using an ``APInt`` (LLVM's
+arbitrary precision integers).
+
+.. TODO: Describe the FPIMM immediate operands.
 
 .. _register-operands:
 

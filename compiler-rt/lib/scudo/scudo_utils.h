@@ -31,6 +31,7 @@ INLINE Dest bit_cast(const Source& source) {
 void NORETURN dieWithMessage(const char *Format, ...);
 
 bool hasHardwareCRC32();
+
 }  // namespace __scudo
 
 #endif  // SCUDO_UTILS_H_
