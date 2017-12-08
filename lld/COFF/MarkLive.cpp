@@ -18,7 +18,7 @@ namespace coff {
 // Set live bit on for each reachable chunk. Unmarked (unreachable)
 // COMDAT chunks will be ignored by Writer, so they will be excluded
 // from the final output.
-void markLive(const std::vector<Chunk *> &Chunks) {
+void markLive(ArrayRef<Chunk *> Chunks) {
   // We build up a worklist of sections which have been marked as live. We only
   // push into the worklist when we discover an unmarked section, and we mark
   // as we push, so sections never appear twice in the list.

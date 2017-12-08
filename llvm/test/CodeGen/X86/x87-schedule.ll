@@ -45,7 +45,7 @@ define void @test_f2xm1() optsize {
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    f2xm1 # sched: [100:0.25]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_f2xm1:
 ; BROADWELL:       # %bb.0:
@@ -119,7 +119,7 @@ define void @test_fabs() optsize {
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fabs # sched: [1:1.00]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fabs:
 ; BROADWELL:       # %bb.0:
@@ -210,15 +210,15 @@ define void @test_fadd(float *%a0, double *%a1) optsize {
 ;
 ; HASWELL-LABEL: test_fadd:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:0.50]
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fadd %st(0), %st(1) # sched: [3:1.00]
 ; HASWELL-NEXT:    fadd %st(2) # sched: [3:1.00]
-; HASWELL-NEXT:    fadds (%ecx) # sched: [3:1.00]
-; HASWELL-NEXT:    faddl (%eax) # sched: [3:1.00]
+; HASWELL-NEXT:    fadds (%ecx) # sched: [10:1.00]
+; HASWELL-NEXT:    faddl (%eax) # sched: [10:1.00]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fadd:
 ; BROADWELL:       # %bb.0:
@@ -334,15 +334,15 @@ define void @test_faddp_fiadd(i16 *%a0, i32 *%a1) optsize {
 ;
 ; HASWELL-LABEL: test_faddp_fiadd:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:0.50]
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    faddp %st(1) # sched: [3:1.00]
 ; HASWELL-NEXT:    faddp %st(2) # sched: [3:1.00]
-; HASWELL-NEXT:    fiadds (%ecx) # sched: [6:2.00]
-; HASWELL-NEXT:    fiaddl (%eax) # sched: [6:2.00]
+; HASWELL-NEXT:    fiadds (%ecx) # sched: [13:2.00]
+; HASWELL-NEXT:    fiaddl (%eax) # sched: [13:2.00]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_faddp_fiadd:
 ; BROADWELL:       # %bb.0:
@@ -444,7 +444,7 @@ define void @test_fchs() optsize {
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fchs # sched: [1:1.00]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fchs:
 ; BROADWELL:       # %bb.0:
@@ -528,7 +528,7 @@ define void @test_fclex_fnclex() optsize {
 ; HASWELL-NEXT:    fnclex # sched: [1:1.25]
 ; HASWELL-NEXT:    fnclex # sched: [1:1.25]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fclex_fnclex:
 ; BROADWELL:       # %bb.0:
@@ -647,7 +647,7 @@ define void @test_fcmov() optsize {
 ; HASWELL-NEXT:    fcmovnu %st(1), %st(0) # sched: [3:1.00]
 ; HASWELL-NEXT:    fcmovu %st(1), %st(0) # sched: [3:1.00]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fcmov:
 ; BROADWELL:       # %bb.0:
@@ -773,15 +773,15 @@ define void @test_fcom(float *%a0, double *%a1) optsize {
 ;
 ; HASWELL-LABEL: test_fcom:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:0.50]
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fcom %st(1) # sched: [1:1.00]
 ; HASWELL-NEXT:    fcom %st(3) # sched: [1:1.00]
-; HASWELL-NEXT:    fcoms (%ecx) # sched: [1:1.00]
-; HASWELL-NEXT:    fcoml (%eax) # sched: [1:1.00]
+; HASWELL-NEXT:    fcoms (%ecx) # sched: [8:1.00]
+; HASWELL-NEXT:    fcoml (%eax) # sched: [8:1.00]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fcom:
 ; BROADWELL:       # %bb.0:
@@ -901,16 +901,16 @@ define void @test_fcomp_fcompp(float *%a0, double *%a1) optsize {
 ;
 ; HASWELL-LABEL: test_fcomp_fcompp:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:0.50]
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fcomp %st(1) # sched: [1:1.00]
 ; HASWELL-NEXT:    fcomp %st(3) # sched: [1:1.00]
-; HASWELL-NEXT:    fcomps (%ecx) # sched: [1:1.00]
-; HASWELL-NEXT:    fcompl (%eax) # sched: [1:1.00]
+; HASWELL-NEXT:    fcomps (%ecx) # sched: [8:1.00]
+; HASWELL-NEXT:    fcompl (%eax) # sched: [8:1.00]
 ; HASWELL-NEXT:    fcompp # sched: [1:0.50]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fcomp_fcompp:
 ; BROADWELL:       # %bb.0:
@@ -1019,7 +1019,7 @@ define void @test_fcomi_fcomip() optsize {
 ; HASWELL-NEXT:    fcomi %st(3) # sched: [1:0.50]
 ; HASWELL-NEXT:    fcompi %st(3) # sched: [1:0.50]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fcomi_fcomip:
 ; BROADWELL:       # %bb.0:
@@ -1098,7 +1098,7 @@ define void @test_fcos() optsize {
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fcos # sched: [100:0.25]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fcos:
 ; BROADWELL:       # %bb.0:
@@ -1172,7 +1172,7 @@ define void @test_fdecstp() optsize {
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fdecstp # sched: [2:1.00]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fdecstp:
 ; BROADWELL:       # %bb.0:
@@ -1263,15 +1263,15 @@ define void @test_fdiv(float *%a0, double *%a1) optsize {
 ;
 ; HASWELL-LABEL: test_fdiv:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:0.50]
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fdiv %st(0), %st(1) # sched: [24:1.00]
 ; HASWELL-NEXT:    fdiv %st(2) # sched: [20:1.00]
-; HASWELL-NEXT:    fdivs (%ecx) # sched: [24:1.00]
-; HASWELL-NEXT:    fdivl (%eax) # sched: [24:1.00]
+; HASWELL-NEXT:    fdivs (%ecx) # sched: [31:1.00]
+; HASWELL-NEXT:    fdivl (%eax) # sched: [31:1.00]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fdiv:
 ; BROADWELL:       # %bb.0:
@@ -1387,15 +1387,15 @@ define void @test_fdivp_fidiv(i16 *%a0, i32 *%a1) optsize {
 ;
 ; HASWELL-LABEL: test_fdivp_fidiv:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:0.50]
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fdivp %st(1) # sched: [24:1.00]
 ; HASWELL-NEXT:    fdivp %st(2) # sched: [24:1.00]
-; HASWELL-NEXT:    fidivs (%ecx) # sched: [27:1.00]
-; HASWELL-NEXT:    fidivl (%eax) # sched: [27:1.00]
+; HASWELL-NEXT:    fidivs (%ecx) # sched: [34:1.00]
+; HASWELL-NEXT:    fidivl (%eax) # sched: [34:1.00]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fdivp_fidiv:
 ; BROADWELL:       # %bb.0:
@@ -1511,15 +1511,15 @@ define void @test_fdivr(float *%a0, double *%a1) optsize {
 ;
 ; HASWELL-LABEL: test_fdivr:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:0.50]
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fdivr %st(0), %st(1) # sched: [20:1.00]
 ; HASWELL-NEXT:    fdivr %st(2) # sched: [24:1.00]
-; HASWELL-NEXT:    fdivrs (%ecx) # sched: [20:1.00]
-; HASWELL-NEXT:    fdivrl (%eax) # sched: [20:1.00]
+; HASWELL-NEXT:    fdivrs (%ecx) # sched: [27:1.00]
+; HASWELL-NEXT:    fdivrl (%eax) # sched: [27:1.00]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fdivr:
 ; BROADWELL:       # %bb.0:
@@ -1635,15 +1635,15 @@ define void @test_fdivrp_fidivr(i16 *%a0, i32 *%a1) optsize {
 ;
 ; HASWELL-LABEL: test_fdivrp_fidivr:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:0.50]
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fdivrp %st(1) # sched: [20:1.00]
 ; HASWELL-NEXT:    fdivrp %st(2) # sched: [20:1.00]
-; HASWELL-NEXT:    fidivrs (%ecx) # sched: [23:1.00]
-; HASWELL-NEXT:    fidivrl (%eax) # sched: [23:1.00]
+; HASWELL-NEXT:    fidivrs (%ecx) # sched: [30:1.00]
+; HASWELL-NEXT:    fidivrl (%eax) # sched: [30:1.00]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fdivrp_fidivr:
 ; BROADWELL:       # %bb.0:
@@ -1742,7 +1742,7 @@ define void @test_ffree() optsize {
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    ffree %st(0) # sched: [1:0.50]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_ffree:
 ; BROADWELL:       # %bb.0:
@@ -1833,15 +1833,15 @@ define void @test_ficom(i16 *%a0, i32 *%a1) optsize {
 ;
 ; HASWELL-LABEL: test_ficom:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:0.50]
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    ficoms (%ecx) # sched: [4:2.00]
-; HASWELL-NEXT:    ficoml (%eax) # sched: [4:2.00]
-; HASWELL-NEXT:    ficomps (%ecx) # sched: [4:2.00]
-; HASWELL-NEXT:    ficompl (%eax) # sched: [4:2.00]
+; HASWELL-NEXT:    ficoms (%ecx) # sched: [11:2.00]
+; HASWELL-NEXT:    ficoml (%eax) # sched: [11:2.00]
+; HASWELL-NEXT:    ficomps (%ecx) # sched: [11:2.00]
+; HASWELL-NEXT:    ficompl (%eax) # sched: [11:2.00]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_ficom:
 ; BROADWELL:       # %bb.0:
@@ -1957,15 +1957,15 @@ define void @test_fild(i16 *%a0, i32 *%a1, i64 *%a2) optsize {
 ;
 ; HASWELL-LABEL: test_fild:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:0.50]
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:0.50]
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [1:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    filds (%edx) # sched: [3:1.00]
-; HASWELL-NEXT:    fildl (%ecx) # sched: [3:1.00]
-; HASWELL-NEXT:    fildll (%eax) # sched: [3:1.00]
+; HASWELL-NEXT:    filds (%edx) # sched: [10:1.00]
+; HASWELL-NEXT:    fildl (%ecx) # sched: [10:1.00]
+; HASWELL-NEXT:    fildll (%eax) # sched: [10:1.00]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fild:
 ; BROADWELL:       # %bb.0:
@@ -2064,7 +2064,7 @@ define void @test_fincstp() optsize {
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fincstp # sched: [1:0.50]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fincstp:
 ; BROADWELL:       # %bb.0:
@@ -2148,7 +2148,7 @@ define void @test_finit_fninit() optsize {
 ; HASWELL-NEXT:    fninit # sched: [1:?]
 ; HASWELL-NEXT:    fninit # sched: [1:?]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_finit_fninit:
 ; BROADWELL:       # %bb.0:
@@ -2266,7 +2266,7 @@ define void @test_fld1_fldl2e_fldl2t_fldlg2_fldln2_fldpi_fldz() optsize {
 ; HASWELL-NEXT:    fldpi # sched: [1:0.50]
 ; HASWELL-NEXT:    fldz # sched: [1:0.50]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fld1_fldl2e_fldl2t_fldlg2_fldln2_fldpi_fldz:
 ; BROADWELL:       # %bb.0:
@@ -2382,15 +2382,15 @@ define void @test_fmul(float *%a0, double *%a1) optsize {
 ;
 ; HASWELL-LABEL: test_fmul:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:0.50]
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fmul %st(0), %st(1) # sched: [5:1.00]
 ; HASWELL-NEXT:    fmul %st(2) # sched: [5:1.00]
-; HASWELL-NEXT:    fmuls (%ecx) # sched: [5:1.00]
-; HASWELL-NEXT:    fmull (%eax) # sched: [5:1.00]
+; HASWELL-NEXT:    fmuls (%ecx) # sched: [12:1.00]
+; HASWELL-NEXT:    fmull (%eax) # sched: [12:1.00]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fmul:
 ; BROADWELL:       # %bb.0:
@@ -2506,15 +2506,15 @@ define void @test_fmulp_fimul(i16 *%a0, i32 *%a1) optsize {
 ;
 ; HASWELL-LABEL: test_fmulp_fimul:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:0.50]
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fmulp %st(1) # sched: [5:1.00]
 ; HASWELL-NEXT:    fmulp %st(2) # sched: [5:1.00]
-; HASWELL-NEXT:    fimuls (%ecx) # sched: [8:1.00]
-; HASWELL-NEXT:    fimull (%eax) # sched: [8:1.00]
+; HASWELL-NEXT:    fimuls (%ecx) # sched: [15:1.00]
+; HASWELL-NEXT:    fimull (%eax) # sched: [15:1.00]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fmulp_fimul:
 ; BROADWELL:       # %bb.0:
@@ -2613,7 +2613,7 @@ define void @test_fnop() optsize {
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fnop # sched: [1:0.50]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fnop:
 ; BROADWELL:       # %bb.0:
@@ -2687,7 +2687,7 @@ define void @test_fpatan() optsize {
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fpatan # sched: [100:0.25]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fpatan:
 ; BROADWELL:       # %bb.0:
@@ -2766,7 +2766,7 @@ define void @test_fprem_fprem1() optsize {
 ; HASWELL-NEXT:    fprem # sched: [19:?]
 ; HASWELL-NEXT:    fprem1 # sched: [19:?]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fprem_fprem1:
 ; BROADWELL:       # %bb.0:
@@ -2845,7 +2845,7 @@ define void @test_fptan() optsize {
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fptan # sched: [100:0.25]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fptan:
 ; BROADWELL:       # %bb.0:
@@ -2919,7 +2919,7 @@ define void @test_frndint() optsize {
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    frndint # sched: [11:?]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_frndint:
 ; BROADWELL:       # %bb.0:
@@ -2997,7 +2997,7 @@ define void @test_fscale() optsize {
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fscale # sched: [75:?]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fscale:
 ; BROADWELL:       # %bb.0:
@@ -3071,7 +3071,7 @@ define void @test_fsin() optsize {
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fsin # sched: [100:0.25]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fsin:
 ; BROADWELL:       # %bb.0:
@@ -3145,7 +3145,7 @@ define void @test_fsincos() optsize {
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fsincos # sched: [100:0.25]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fsincos:
 ; BROADWELL:       # %bb.0:
@@ -3219,7 +3219,7 @@ define void @test_fsqrt() optsize {
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fsqrt # sched: [15:1.00]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fsqrt:
 ; BROADWELL:       # %bb.0:
@@ -3322,15 +3322,15 @@ define void @test_fsub(float *%a0, double *%a1) optsize {
 ;
 ; HASWELL-LABEL: test_fsub:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:0.50]
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fsub %st(0), %st(1) # sched: [3:1.00]
 ; HASWELL-NEXT:    fsub %st(2) # sched: [3:1.00]
-; HASWELL-NEXT:    fsubs (%ecx) # sched: [3:1.00]
-; HASWELL-NEXT:    fsubl (%eax) # sched: [3:1.00]
+; HASWELL-NEXT:    fsubs (%ecx) # sched: [10:1.00]
+; HASWELL-NEXT:    fsubl (%eax) # sched: [10:1.00]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fsub:
 ; BROADWELL:       # %bb.0:
@@ -3446,15 +3446,15 @@ define void @test_fsubp_fisub(i16 *%a0, i32 *%a1) optsize {
 ;
 ; HASWELL-LABEL: test_fsubp_fisub:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:0.50]
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fsubp %st(1) # sched: [3:1.00]
 ; HASWELL-NEXT:    fsubp %st(2) # sched: [3:1.00]
-; HASWELL-NEXT:    fisubs (%ecx) # sched: [6:2.00]
-; HASWELL-NEXT:    fisubl (%eax) # sched: [6:2.00]
+; HASWELL-NEXT:    fisubs (%ecx) # sched: [13:2.00]
+; HASWELL-NEXT:    fisubl (%eax) # sched: [13:2.00]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fsubp_fisub:
 ; BROADWELL:       # %bb.0:
@@ -3570,15 +3570,15 @@ define void @test_fsubr(float *%a0, double *%a1) optsize {
 ;
 ; HASWELL-LABEL: test_fsubr:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:0.50]
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fsubr %st(0), %st(1) # sched: [3:1.00]
 ; HASWELL-NEXT:    fsubr %st(2) # sched: [3:1.00]
-; HASWELL-NEXT:    fsubrs (%ecx) # sched: [3:1.00]
-; HASWELL-NEXT:    fsubrl (%eax) # sched: [3:1.00]
+; HASWELL-NEXT:    fsubrs (%ecx) # sched: [10:1.00]
+; HASWELL-NEXT:    fsubrl (%eax) # sched: [10:1.00]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fsubr:
 ; BROADWELL:       # %bb.0:
@@ -3694,15 +3694,15 @@ define void @test_fsubrp_fisubr(i16 *%a0, i32 *%a1) optsize {
 ;
 ; HASWELL-LABEL: test_fsubrp_fisubr:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:0.50]
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fsubrp %st(1) # sched: [3:1.00]
 ; HASWELL-NEXT:    fsubrp %st(2) # sched: [3:1.00]
-; HASWELL-NEXT:    fisubrs (%ecx) # sched: [6:2.00]
-; HASWELL-NEXT:    fisubrl (%eax) # sched: [6:2.00]
+; HASWELL-NEXT:    fisubrs (%ecx) # sched: [13:2.00]
+; HASWELL-NEXT:    fisubrl (%eax) # sched: [13:2.00]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fsubrp_fisubr:
 ; BROADWELL:       # %bb.0:
@@ -3801,7 +3801,7 @@ define void @test_ftst() optsize {
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    ftst # sched: [1:1.00]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_ftst:
 ; BROADWELL:       # %bb.0:
@@ -3895,7 +3895,7 @@ define void @test_fucom_fucomp_fucompp() optsize {
 ; HASWELL-NEXT:    fucomp %st(3) # sched: [1:1.00]
 ; HASWELL-NEXT:    fucompp # sched: [1:0.50]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fucom_fucomp_fucompp:
 ; BROADWELL:       # %bb.0:
@@ -3994,7 +3994,7 @@ define void @test_fucomi_fucomip() optsize {
 ; HASWELL-NEXT:    fucomi %st(3) # sched: [1:0.50]
 ; HASWELL-NEXT:    fucompi %st(3) # sched: [1:0.50]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fucomi_fucomip:
 ; BROADWELL:       # %bb.0:
@@ -4073,7 +4073,7 @@ define void @test_fwait() optsize {
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    wait # sched: [1:0.50]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fwait:
 ; BROADWELL:       # %bb.0:
@@ -4147,7 +4147,7 @@ define void @test_fxam() optsize {
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fxam # sched: [1:2.00]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fxam:
 ; BROADWELL:       # %bb.0:
@@ -4226,7 +4226,7 @@ define void @test_fxch() optsize {
 ; HASWELL-NEXT:    fxch %st(1) # sched: [17:4.00]
 ; HASWELL-NEXT:    fxch %st(3) # sched: [17:4.00]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fxch:
 ; BROADWELL:       # %bb.0:
@@ -4310,12 +4310,12 @@ define void @test_fxrstor_fxsave(i8* %a0) optsize {
 ;
 ; HASWELL-LABEL: test_fxrstor_fxsave:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    fxrstor (%eax) # sched: [59:16.50]
+; HASWELL-NEXT:    fxrstor (%eax) # sched: [64:16.50]
 ; HASWELL-NEXT:    fxsave (%eax) # sched: [100:0.25]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fxrstor_fxsave:
 ; BROADWELL:       # %bb.0:
@@ -4399,7 +4399,7 @@ define void @test_fxtract() optsize {
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fxtract # sched: [15:?]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fxtract:
 ; BROADWELL:       # %bb.0:
@@ -4473,7 +4473,7 @@ define void @test_fyl2x() optsize {
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fyl2x # sched: [100:0.25]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fyl2x:
 ; BROADWELL:       # %bb.0:
@@ -4547,7 +4547,7 @@ define void @test_fyl2xp1() optsize {
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    fyl2xp1 # sched: [100:0.25]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    retl # sched: [5:0.50]
+; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_fyl2xp1:
 ; BROADWELL:       # %bb.0:

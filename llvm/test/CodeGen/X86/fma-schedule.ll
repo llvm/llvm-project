@@ -25,8 +25,8 @@ define <2 x double> @test_vfmadd213pd(<2 x double> %a0, <2 x double> %a1, <2 x d
 ; HASWELL-LABEL: test_vfmadd213pd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfmadd213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd213pd (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfmadd213pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmadd213pd:
 ; BROADWELL:       # %bb.0:
@@ -43,8 +43,8 @@ define <2 x double> @test_vfmadd213pd(<2 x double> %a0, <2 x double> %a1, <2 x d
 ; KNL-LABEL: test_vfmadd213pd:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfmadd213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd213pd (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfmadd213pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmadd213pd:
 ; SKX:       # %bb.0:
@@ -73,8 +73,8 @@ define <4 x double> @test_vfmadd213pd_ymm(<4 x double> %a0, <4 x double> %a1, <4
 ; HASWELL-LABEL: test_vfmadd213pd_ymm:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfmadd213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd213pd (%rdi), %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfmadd213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmadd213pd_ymm:
 ; BROADWELL:       # %bb.0:
@@ -91,8 +91,8 @@ define <4 x double> @test_vfmadd213pd_ymm(<4 x double> %a0, <4 x double> %a1, <4
 ; KNL-LABEL: test_vfmadd213pd_ymm:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfmadd213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd213pd (%rdi), %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfmadd213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmadd213pd_ymm:
 ; SKX:       # %bb.0:
@@ -121,8 +121,8 @@ define <4 x float> @test_vfmadd213ps(<4 x float> %a0, <4 x float> %a1, <4 x floa
 ; HASWELL-LABEL: test_vfmadd213ps:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfmadd213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd213ps (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfmadd213ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmadd213ps:
 ; BROADWELL:       # %bb.0:
@@ -139,8 +139,8 @@ define <4 x float> @test_vfmadd213ps(<4 x float> %a0, <4 x float> %a1, <4 x floa
 ; KNL-LABEL: test_vfmadd213ps:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfmadd213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd213ps (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfmadd213ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmadd213ps:
 ; SKX:       # %bb.0:
@@ -169,8 +169,8 @@ define <8 x float> @test_vfmadd213ps_ymm(<8 x float> %a0, <8 x float> %a1, <8 x 
 ; HASWELL-LABEL: test_vfmadd213ps_ymm:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfmadd213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd213ps (%rdi), %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfmadd213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmadd213ps_ymm:
 ; BROADWELL:       # %bb.0:
@@ -187,8 +187,8 @@ define <8 x float> @test_vfmadd213ps_ymm(<8 x float> %a0, <8 x float> %a1, <8 x 
 ; KNL-LABEL: test_vfmadd213ps_ymm:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfmadd213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd213ps (%rdi), %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfmadd213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmadd213ps_ymm:
 ; SKX:       # %bb.0:
@@ -217,8 +217,8 @@ define <2 x double> @test_vfmadd213sd(<2 x double> %a0, <2 x double> %a1, <2 x d
 ; HASWELL-LABEL: test_vfmadd213sd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfmadd213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd213sd (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfmadd213sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmadd213sd:
 ; BROADWELL:       # %bb.0:
@@ -235,8 +235,8 @@ define <2 x double> @test_vfmadd213sd(<2 x double> %a0, <2 x double> %a1, <2 x d
 ; KNL-LABEL: test_vfmadd213sd:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfmadd213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd213sd (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfmadd213sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmadd213sd:
 ; SKX:       # %bb.0:
@@ -265,8 +265,8 @@ define <4 x float> @test_vfmadd213ss(<4 x float> %a0, <4 x float> %a1, <4 x floa
 ; HASWELL-LABEL: test_vfmadd213ss:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfmadd213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmadd213ss (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfmadd213ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmadd213ss:
 ; BROADWELL:       # %bb.0:
@@ -283,8 +283,8 @@ define <4 x float> @test_vfmadd213ss(<4 x float> %a0, <4 x float> %a1, <4 x floa
 ; KNL-LABEL: test_vfmadd213ss:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfmadd213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmadd213ss (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfmadd213ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmadd213ss:
 ; SKX:       # %bb.0:
@@ -325,8 +325,8 @@ define <2 x double> @test_vfmaddsubpd(<2 x double> %a0, <2 x double> %a1, <2 x d
 ; HASWELL-LABEL: test_vfmaddsubpd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfmaddsub213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmaddsub213pd (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfmaddsub213pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmaddsubpd:
 ; BROADWELL:       # %bb.0:
@@ -343,8 +343,8 @@ define <2 x double> @test_vfmaddsubpd(<2 x double> %a0, <2 x double> %a1, <2 x d
 ; KNL-LABEL: test_vfmaddsubpd:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfmaddsub213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmaddsub213pd (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfmaddsub213pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmaddsubpd:
 ; SKX:       # %bb.0:
@@ -373,8 +373,8 @@ define <4 x double> @test_vfmaddsubpd_ymm(<4 x double> %a0, <4 x double> %a1, <4
 ; HASWELL-LABEL: test_vfmaddsubpd_ymm:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfmaddsub213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmaddsub213pd (%rdi), %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfmaddsub213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmaddsubpd_ymm:
 ; BROADWELL:       # %bb.0:
@@ -391,8 +391,8 @@ define <4 x double> @test_vfmaddsubpd_ymm(<4 x double> %a0, <4 x double> %a1, <4
 ; KNL-LABEL: test_vfmaddsubpd_ymm:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfmaddsub213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmaddsub213pd (%rdi), %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfmaddsub213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmaddsubpd_ymm:
 ; SKX:       # %bb.0:
@@ -421,8 +421,8 @@ define <4 x float> @test_vfmaddsubps(<4 x float> %a0, <4 x float> %a1, <4 x floa
 ; HASWELL-LABEL: test_vfmaddsubps:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfmaddsub213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmaddsub213ps (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfmaddsub213ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmaddsubps:
 ; BROADWELL:       # %bb.0:
@@ -439,8 +439,8 @@ define <4 x float> @test_vfmaddsubps(<4 x float> %a0, <4 x float> %a1, <4 x floa
 ; KNL-LABEL: test_vfmaddsubps:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfmaddsub213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmaddsub213ps (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfmaddsub213ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmaddsubps:
 ; SKX:       # %bb.0:
@@ -469,8 +469,8 @@ define <8 x float> @test_vfmaddsubps_ymm(<8 x float> %a0, <8 x float> %a1, <8 x 
 ; HASWELL-LABEL: test_vfmaddsubps_ymm:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfmaddsub213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmaddsub213ps (%rdi), %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfmaddsub213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmaddsubps_ymm:
 ; BROADWELL:       # %bb.0:
@@ -487,8 +487,8 @@ define <8 x float> @test_vfmaddsubps_ymm(<8 x float> %a0, <8 x float> %a1, <8 x 
 ; KNL-LABEL: test_vfmaddsubps_ymm:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfmaddsub213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmaddsub213ps (%rdi), %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfmaddsub213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmaddsubps_ymm:
 ; SKX:       # %bb.0:
@@ -529,8 +529,8 @@ define <2 x double> @test_vfmsubaddpd(<2 x double> %a0, <2 x double> %a1, <2 x d
 ; HASWELL-LABEL: test_vfmsubaddpd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfmsubadd213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsubadd213pd (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfmsubadd213pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmsubaddpd:
 ; BROADWELL:       # %bb.0:
@@ -547,8 +547,8 @@ define <2 x double> @test_vfmsubaddpd(<2 x double> %a0, <2 x double> %a1, <2 x d
 ; KNL-LABEL: test_vfmsubaddpd:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfmsubadd213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsubadd213pd (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfmsubadd213pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmsubaddpd:
 ; SKX:       # %bb.0:
@@ -577,8 +577,8 @@ define <4 x double> @test_vfmsubaddpd_ymm(<4 x double> %a0, <4 x double> %a1, <4
 ; HASWELL-LABEL: test_vfmsubaddpd_ymm:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfmsubadd213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsubadd213pd (%rdi), %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfmsubadd213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmsubaddpd_ymm:
 ; BROADWELL:       # %bb.0:
@@ -595,8 +595,8 @@ define <4 x double> @test_vfmsubaddpd_ymm(<4 x double> %a0, <4 x double> %a1, <4
 ; KNL-LABEL: test_vfmsubaddpd_ymm:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfmsubadd213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsubadd213pd (%rdi), %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfmsubadd213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmsubaddpd_ymm:
 ; SKX:       # %bb.0:
@@ -625,8 +625,8 @@ define <4 x float> @test_vfmsubaddps(<4 x float> %a0, <4 x float> %a1, <4 x floa
 ; HASWELL-LABEL: test_vfmsubaddps:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfmsubadd213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsubadd213ps (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfmsubadd213ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmsubaddps:
 ; BROADWELL:       # %bb.0:
@@ -643,8 +643,8 @@ define <4 x float> @test_vfmsubaddps(<4 x float> %a0, <4 x float> %a1, <4 x floa
 ; KNL-LABEL: test_vfmsubaddps:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfmsubadd213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsubadd213ps (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfmsubadd213ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmsubaddps:
 ; SKX:       # %bb.0:
@@ -673,8 +673,8 @@ define <8 x float> @test_vfmsubaddps_ymm(<8 x float> %a0, <8 x float> %a1, <8 x 
 ; HASWELL-LABEL: test_vfmsubaddps_ymm:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfmsubadd213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsubadd213ps (%rdi), %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfmsubadd213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmsubaddps_ymm:
 ; BROADWELL:       # %bb.0:
@@ -691,8 +691,8 @@ define <8 x float> @test_vfmsubaddps_ymm(<8 x float> %a0, <8 x float> %a1, <8 x 
 ; KNL-LABEL: test_vfmsubaddps_ymm:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfmsubadd213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsubadd213ps (%rdi), %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfmsubadd213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmsubaddps_ymm:
 ; SKX:       # %bb.0:
@@ -733,8 +733,8 @@ define <2 x double> @test_vfmsub213pd(<2 x double> %a0, <2 x double> %a1, <2 x d
 ; HASWELL-LABEL: test_vfmsub213pd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfmsub213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsub213pd (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfmsub213pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmsub213pd:
 ; BROADWELL:       # %bb.0:
@@ -751,8 +751,8 @@ define <2 x double> @test_vfmsub213pd(<2 x double> %a0, <2 x double> %a1, <2 x d
 ; KNL-LABEL: test_vfmsub213pd:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfmsub213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsub213pd (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfmsub213pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmsub213pd:
 ; SKX:       # %bb.0:
@@ -781,8 +781,8 @@ define <4 x double> @test_vfmsub213pd_ymm(<4 x double> %a0, <4 x double> %a1, <4
 ; HASWELL-LABEL: test_vfmsub213pd_ymm:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfmsub213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsub213pd (%rdi), %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfmsub213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmsub213pd_ymm:
 ; BROADWELL:       # %bb.0:
@@ -799,8 +799,8 @@ define <4 x double> @test_vfmsub213pd_ymm(<4 x double> %a0, <4 x double> %a1, <4
 ; KNL-LABEL: test_vfmsub213pd_ymm:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfmsub213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsub213pd (%rdi), %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfmsub213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmsub213pd_ymm:
 ; SKX:       # %bb.0:
@@ -829,8 +829,8 @@ define <4 x float> @test_vfmsub213ps(<4 x float> %a0, <4 x float> %a1, <4 x floa
 ; HASWELL-LABEL: test_vfmsub213ps:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfmsub213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsub213ps (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfmsub213ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmsub213ps:
 ; BROADWELL:       # %bb.0:
@@ -847,8 +847,8 @@ define <4 x float> @test_vfmsub213ps(<4 x float> %a0, <4 x float> %a1, <4 x floa
 ; KNL-LABEL: test_vfmsub213ps:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfmsub213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsub213ps (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfmsub213ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmsub213ps:
 ; SKX:       # %bb.0:
@@ -877,8 +877,8 @@ define <8 x float> @test_vfmsub213ps_ymm(<8 x float> %a0, <8 x float> %a1, <8 x 
 ; HASWELL-LABEL: test_vfmsub213ps_ymm:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfmsub213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsub213ps (%rdi), %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfmsub213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmsub213ps_ymm:
 ; BROADWELL:       # %bb.0:
@@ -895,8 +895,8 @@ define <8 x float> @test_vfmsub213ps_ymm(<8 x float> %a0, <8 x float> %a1, <8 x 
 ; KNL-LABEL: test_vfmsub213ps_ymm:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfmsub213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsub213ps (%rdi), %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfmsub213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmsub213ps_ymm:
 ; SKX:       # %bb.0:
@@ -925,8 +925,8 @@ define <2 x double> @test_vfmsub213sd(<2 x double> %a0, <2 x double> %a1, <2 x d
 ; HASWELL-LABEL: test_vfmsub213sd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfmsub213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsub213sd (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfmsub213sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmsub213sd:
 ; BROADWELL:       # %bb.0:
@@ -943,8 +943,8 @@ define <2 x double> @test_vfmsub213sd(<2 x double> %a0, <2 x double> %a1, <2 x d
 ; KNL-LABEL: test_vfmsub213sd:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfmsub213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsub213sd (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfmsub213sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmsub213sd:
 ; SKX:       # %bb.0:
@@ -973,8 +973,8 @@ define <4 x float> @test_vfmsub213ss(<4 x float> %a0, <4 x float> %a1, <4 x floa
 ; HASWELL-LABEL: test_vfmsub213ss:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfmsub213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfmsub213ss (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfmsub213ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmsub213ss:
 ; BROADWELL:       # %bb.0:
@@ -991,8 +991,8 @@ define <4 x float> @test_vfmsub213ss(<4 x float> %a0, <4 x float> %a1, <4 x floa
 ; KNL-LABEL: test_vfmsub213ss:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfmsub213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfmsub213ss (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfmsub213ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfmsub213ss:
 ; SKX:       # %bb.0:
@@ -1033,8 +1033,8 @@ define <2 x double> @test_vfnmadd213pd(<2 x double> %a0, <2 x double> %a1, <2 x 
 ; HASWELL-LABEL: test_vfnmadd213pd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfnmadd213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd213pd (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfnmadd213pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfnmadd213pd:
 ; BROADWELL:       # %bb.0:
@@ -1051,8 +1051,8 @@ define <2 x double> @test_vfnmadd213pd(<2 x double> %a0, <2 x double> %a1, <2 x 
 ; KNL-LABEL: test_vfnmadd213pd:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfnmadd213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd213pd (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfnmadd213pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfnmadd213pd:
 ; SKX:       # %bb.0:
@@ -1081,8 +1081,8 @@ define <4 x double> @test_vfnmadd213pd_ymm(<4 x double> %a0, <4 x double> %a1, <
 ; HASWELL-LABEL: test_vfnmadd213pd_ymm:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfnmadd213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd213pd (%rdi), %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfnmadd213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfnmadd213pd_ymm:
 ; BROADWELL:       # %bb.0:
@@ -1099,8 +1099,8 @@ define <4 x double> @test_vfnmadd213pd_ymm(<4 x double> %a0, <4 x double> %a1, <
 ; KNL-LABEL: test_vfnmadd213pd_ymm:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfnmadd213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd213pd (%rdi), %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfnmadd213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfnmadd213pd_ymm:
 ; SKX:       # %bb.0:
@@ -1129,8 +1129,8 @@ define <4 x float> @test_vfnmadd213ps(<4 x float> %a0, <4 x float> %a1, <4 x flo
 ; HASWELL-LABEL: test_vfnmadd213ps:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfnmadd213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd213ps (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfnmadd213ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfnmadd213ps:
 ; BROADWELL:       # %bb.0:
@@ -1147,8 +1147,8 @@ define <4 x float> @test_vfnmadd213ps(<4 x float> %a0, <4 x float> %a1, <4 x flo
 ; KNL-LABEL: test_vfnmadd213ps:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfnmadd213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd213ps (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfnmadd213ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfnmadd213ps:
 ; SKX:       # %bb.0:
@@ -1177,8 +1177,8 @@ define <8 x float> @test_vfnmadd213ps_ymm(<8 x float> %a0, <8 x float> %a1, <8 x
 ; HASWELL-LABEL: test_vfnmadd213ps_ymm:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfnmadd213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd213ps (%rdi), %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfnmadd213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfnmadd213ps_ymm:
 ; BROADWELL:       # %bb.0:
@@ -1195,8 +1195,8 @@ define <8 x float> @test_vfnmadd213ps_ymm(<8 x float> %a0, <8 x float> %a1, <8 x
 ; KNL-LABEL: test_vfnmadd213ps_ymm:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfnmadd213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd213ps (%rdi), %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfnmadd213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfnmadd213ps_ymm:
 ; SKX:       # %bb.0:
@@ -1225,8 +1225,8 @@ define <2 x double> @test_vfnmadd213sd(<2 x double> %a0, <2 x double> %a1, <2 x 
 ; HASWELL-LABEL: test_vfnmadd213sd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfnmadd213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd213sd (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfnmadd213sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfnmadd213sd:
 ; BROADWELL:       # %bb.0:
@@ -1243,8 +1243,8 @@ define <2 x double> @test_vfnmadd213sd(<2 x double> %a0, <2 x double> %a1, <2 x 
 ; KNL-LABEL: test_vfnmadd213sd:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfnmadd213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd213sd (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfnmadd213sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfnmadd213sd:
 ; SKX:       # %bb.0:
@@ -1273,8 +1273,8 @@ define <4 x float> @test_vfnmadd213ss(<4 x float> %a0, <4 x float> %a1, <4 x flo
 ; HASWELL-LABEL: test_vfnmadd213ss:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfnmadd213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmadd213ss (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfnmadd213ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfnmadd213ss:
 ; BROADWELL:       # %bb.0:
@@ -1291,8 +1291,8 @@ define <4 x float> @test_vfnmadd213ss(<4 x float> %a0, <4 x float> %a1, <4 x flo
 ; KNL-LABEL: test_vfnmadd213ss:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfnmadd213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmadd213ss (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfnmadd213ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfnmadd213ss:
 ; SKX:       # %bb.0:
@@ -1333,8 +1333,8 @@ define <2 x double> @test_vfnmsub213pd(<2 x double> %a0, <2 x double> %a1, <2 x 
 ; HASWELL-LABEL: test_vfnmsub213pd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfnmsub213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmsub213pd (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfnmsub213pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfnmsub213pd:
 ; BROADWELL:       # %bb.0:
@@ -1351,8 +1351,8 @@ define <2 x double> @test_vfnmsub213pd(<2 x double> %a0, <2 x double> %a1, <2 x 
 ; KNL-LABEL: test_vfnmsub213pd:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfnmsub213pd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmsub213pd (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfnmsub213pd (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfnmsub213pd:
 ; SKX:       # %bb.0:
@@ -1381,8 +1381,8 @@ define <4 x double> @test_vfnmsub213pd_ymm(<4 x double> %a0, <4 x double> %a1, <
 ; HASWELL-LABEL: test_vfnmsub213pd_ymm:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfnmsub213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmsub213pd (%rdi), %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfnmsub213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfnmsub213pd_ymm:
 ; BROADWELL:       # %bb.0:
@@ -1399,8 +1399,8 @@ define <4 x double> @test_vfnmsub213pd_ymm(<4 x double> %a0, <4 x double> %a1, <
 ; KNL-LABEL: test_vfnmsub213pd_ymm:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfnmsub213pd %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmsub213pd (%rdi), %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfnmsub213pd (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfnmsub213pd_ymm:
 ; SKX:       # %bb.0:
@@ -1429,8 +1429,8 @@ define <4 x float> @test_vfnmsub213ps(<4 x float> %a0, <4 x float> %a1, <4 x flo
 ; HASWELL-LABEL: test_vfnmsub213ps:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfnmsub213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmsub213ps (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfnmsub213ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfnmsub213ps:
 ; BROADWELL:       # %bb.0:
@@ -1447,8 +1447,8 @@ define <4 x float> @test_vfnmsub213ps(<4 x float> %a0, <4 x float> %a1, <4 x flo
 ; KNL-LABEL: test_vfnmsub213ps:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfnmsub213ps %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmsub213ps (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfnmsub213ps (%rdi), %xmm1, %xmm0 # sched: [11:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfnmsub213ps:
 ; SKX:       # %bb.0:
@@ -1477,8 +1477,8 @@ define <8 x float> @test_vfnmsub213ps_ymm(<8 x float> %a0, <8 x float> %a1, <8 x
 ; HASWELL-LABEL: test_vfnmsub213ps_ymm:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfnmsub213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmsub213ps (%rdi), %ymm1, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfnmsub213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfnmsub213ps_ymm:
 ; BROADWELL:       # %bb.0:
@@ -1495,8 +1495,8 @@ define <8 x float> @test_vfnmsub213ps_ymm(<8 x float> %a0, <8 x float> %a1, <8 x
 ; KNL-LABEL: test_vfnmsub213ps_ymm:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfnmsub213ps %ymm2, %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmsub213ps (%rdi), %ymm1, %ymm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfnmsub213ps (%rdi), %ymm1, %ymm0 # sched: [12:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfnmsub213ps_ymm:
 ; SKX:       # %bb.0:
@@ -1525,8 +1525,8 @@ define <2 x double> @test_vfnmsub213sd(<2 x double> %a0, <2 x double> %a1, <2 x 
 ; HASWELL-LABEL: test_vfnmsub213sd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfnmsub213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmsub213sd (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfnmsub213sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfnmsub213sd:
 ; BROADWELL:       # %bb.0:
@@ -1543,8 +1543,8 @@ define <2 x double> @test_vfnmsub213sd(<2 x double> %a0, <2 x double> %a1, <2 x 
 ; KNL-LABEL: test_vfnmsub213sd:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfnmsub213sd %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmsub213sd (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfnmsub213sd (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfnmsub213sd:
 ; SKX:       # %bb.0:
@@ -1573,8 +1573,8 @@ define <4 x float> @test_vfnmsub213ss(<4 x float> %a0, <4 x float> %a1, <4 x flo
 ; HASWELL-LABEL: test_vfnmsub213ss:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vfnmsub213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    vfnmsub213ss (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vfnmsub213ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfnmsub213ss:
 ; BROADWELL:       # %bb.0:
@@ -1591,8 +1591,8 @@ define <4 x float> @test_vfnmsub213ss(<4 x float> %a0, <4 x float> %a1, <4 x flo
 ; KNL-LABEL: test_vfnmsub213ss:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vfnmsub213ss %xmm2, %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    vfnmsub213ss (%rdi), %xmm1, %xmm0 # sched: [5:0.50]
-; KNL-NEXT:    retq # sched: [2:1.00]
+; KNL-NEXT:    vfnmsub213ss (%rdi), %xmm1, %xmm0 # sched: [10:0.50]
+; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_vfnmsub213ss:
 ; SKX:       # %bb.0:

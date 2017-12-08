@@ -15,9 +15,9 @@ define <8 x i32> @test_broadcasti128(<8 x i32> %a0, <4 x i32> *%a1) {
 ;
 ; HASWELL-LABEL: test_broadcasti128:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = mem[0,1,0,1] sched: [1:0.50]
+; HASWELL-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = mem[0,1,0,1] sched: [7:0.50]
 ; HASWELL-NEXT:    vpaddd %ymm0, %ymm1, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_broadcasti128:
 ; BROADWELL:       # %bb.0:
@@ -59,7 +59,7 @@ define <4 x double> @test_broadcastsd_ymm(<2 x double> %a0) {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vbroadcastsd %xmm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vaddpd %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_broadcastsd_ymm:
 ; BROADWELL:       # %bb.0:
@@ -100,7 +100,7 @@ define <4 x float> @test_broadcastss(<4 x float> %a0) {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vbroadcastss %xmm0, %xmm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    vaddps %xmm0, %xmm0, %xmm0 # sched: [3:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_broadcastss:
 ; BROADWELL:       # %bb.0:
@@ -141,7 +141,7 @@ define <8 x float> @test_broadcastss_ymm(<4 x float> %a0) {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vbroadcastss %xmm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vaddps %ymm0, %ymm0, %ymm0 # sched: [3:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_broadcastss_ymm:
 ; BROADWELL:       # %bb.0:
@@ -188,7 +188,7 @@ define <4 x i32> @test_extracti128(<8 x i32> %a0, <8 x i32> %a1, <4 x i32> *%a2)
 ; HASWELL-NEXT:    vextracti128 $1, %ymm0, %xmm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vextracti128 $1, %ymm2, (%rdi) # sched: [1:1.00]
 ; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_extracti128:
 ; BROADWELL:       # %bb.0:
@@ -241,8 +241,8 @@ define <2 x double> @test_gatherdpd(<2 x double> %a0, i8* %a1, <4 x i32> %a2, <2
 ;
 ; HASWELL-LABEL: test_gatherdpd:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vgatherdpd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [1:?]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vgatherdpd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [26:2.67]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_gatherdpd:
 ; BROADWELL:       # %bb.0:
@@ -276,8 +276,8 @@ define <4 x double> @test_gatherdpd_ymm(<4 x double> %a0, i8* %a1, <4 x i32> %a2
 ;
 ; HASWELL-LABEL: test_gatherdpd_ymm:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vgatherdpd %ymm2, (%rdi,%xmm1,8), %ymm0 # sched: [1:?]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vgatherdpd %ymm2, (%rdi,%xmm1,8), %ymm0 # sched: [27:4.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_gatherdpd_ymm:
 ; BROADWELL:       # %bb.0:
@@ -311,8 +311,8 @@ define <4 x float> @test_gatherdps(<4 x float> %a0, i8* %a1, <4 x i32> %a2, <4 x
 ;
 ; HASWELL-LABEL: test_gatherdps:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vgatherdps %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [1:?]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vgatherdps %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [25:3.67]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_gatherdps:
 ; BROADWELL:       # %bb.0:
@@ -346,8 +346,8 @@ define <8 x float> @test_gatherdps_ymm(<8 x float> %a0, i8* %a1, <8 x i32> %a2, 
 ;
 ; HASWELL-LABEL: test_gatherdps_ymm:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vgatherdps %ymm2, (%rdi,%ymm1,4), %ymm0 # sched: [1:?]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vgatherdps %ymm2, (%rdi,%ymm1,4), %ymm0 # sched: [27:6.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_gatherdps_ymm:
 ; BROADWELL:       # %bb.0:
@@ -381,8 +381,8 @@ define <2 x double> @test_gatherqpd(<2 x double> %a0, i8* %a1, <2 x i64> %a2, <2
 ;
 ; HASWELL-LABEL: test_gatherqpd:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vgatherqpd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [1:?]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vgatherqpd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [23:3.33]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_gatherqpd:
 ; BROADWELL:       # %bb.0:
@@ -416,8 +416,8 @@ define <4 x double> @test_gatherqpd_ymm(<4 x double> %a0, i8* %a1, <4 x i64> %a2
 ;
 ; HASWELL-LABEL: test_gatherqpd_ymm:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vgatherqpd %ymm2, (%rdi,%ymm1,8), %ymm0 # sched: [1:?]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vgatherqpd %ymm2, (%rdi,%ymm1,8), %ymm0 # sched: [24:5.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_gatherqpd_ymm:
 ; BROADWELL:       # %bb.0:
@@ -451,8 +451,8 @@ define <4 x float> @test_gatherqps(<4 x float> %a0, i8* %a1, <2 x i64> %a2, <4 x
 ;
 ; HASWELL-LABEL: test_gatherqps:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vgatherqps %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [1:?]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vgatherqps %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [25:3.67]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_gatherqps:
 ; BROADWELL:       # %bb.0:
@@ -487,9 +487,9 @@ define <4 x float> @test_gatherqps_ymm(<4 x float> %a0, i8* %a1, <4 x i64> %a2, 
 ;
 ; HASWELL-LABEL: test_gatherqps_ymm:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vgatherqps %xmm2, (%rdi,%ymm1,4), %xmm0 # sched: [1:?]
+; HASWELL-NEXT:    vgatherqps %xmm2, (%rdi,%ymm1,4), %xmm0 # sched: [28:3.67]
 ; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_gatherqps_ymm:
 ; BROADWELL:       # %bb.0:
@@ -530,9 +530,9 @@ define <8 x i32> @test_inserti128(<8 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) 
 ; HASWELL-LABEL: test_inserti128:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm1 # sched: [3:1.00]
-; HASWELL-NEXT:    vinserti128 $1, (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
+; HASWELL-NEXT:    vinserti128 $1, (%rdi), %ymm0, %ymm0 # sched: [7:0.50]
 ; HASWELL-NEXT:    vpaddd %ymm0, %ymm1, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_inserti128:
 ; BROADWELL:       # %bb.0:
@@ -578,8 +578,8 @@ define <4 x i64> @test_movntdqa(i8* %a0) {
 ;
 ; HASWELL-LABEL: test_movntdqa:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vmovntdqa (%rdi), %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vmovntdqa (%rdi), %ymm0 # sched: [7:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_movntdqa:
 ; BROADWELL:       # %bb.0:
@@ -615,8 +615,8 @@ define <16 x i16> @test_mpsadbw(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; HASWELL-LABEL: test_mpsadbw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vmpsadbw $7, %ymm1, %ymm0, %ymm0 # sched: [7:2.00]
-; HASWELL-NEXT:    vmpsadbw $7, (%rdi), %ymm0, %ymm0 # sched: [7:2.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vmpsadbw $7, (%rdi), %ymm0, %ymm0 # sched: [14:2.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_mpsadbw:
 ; BROADWELL:       # %bb.0:
@@ -660,9 +660,9 @@ define <32 x i8> @test_pabsb(<32 x i8> %a0, <32 x i8> *%a1) {
 ; HASWELL-LABEL: test_pabsb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpabsb %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpabsb (%rdi), %ymm1 # sched: [1:0.50]
+; HASWELL-NEXT:    vpabsb (%rdi), %ymm1 # sched: [8:0.50]
 ; HASWELL-NEXT:    vpor %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pabsb:
 ; BROADWELL:       # %bb.0:
@@ -710,9 +710,9 @@ define <8 x i32> @test_pabsd(<8 x i32> %a0, <8 x i32> *%a1) {
 ; HASWELL-LABEL: test_pabsd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpabsd %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpabsd (%rdi), %ymm1 # sched: [1:0.50]
+; HASWELL-NEXT:    vpabsd (%rdi), %ymm1 # sched: [8:0.50]
 ; HASWELL-NEXT:    vpor %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pabsd:
 ; BROADWELL:       # %bb.0:
@@ -760,9 +760,9 @@ define <16 x i16> @test_pabsw(<16 x i16> %a0, <16 x i16> *%a1) {
 ; HASWELL-LABEL: test_pabsw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpabsw %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpabsw (%rdi), %ymm1 # sched: [1:0.50]
+; HASWELL-NEXT:    vpabsw (%rdi), %ymm1 # sched: [8:0.50]
 ; HASWELL-NEXT:    vpor %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pabsw:
 ; BROADWELL:       # %bb.0:
@@ -809,8 +809,8 @@ define <16 x i16> @test_packssdw(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; HASWELL-LABEL: test_packssdw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
-; HASWELL-NEXT:    vpackssdw (%rdi), %ymm0, %ymm0 # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpackssdw (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_packssdw:
 ; BROADWELL:       # %bb.0:
@@ -853,8 +853,8 @@ define <32 x i8> @test_packsswb(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2)
 ; HASWELL-LABEL: test_packsswb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpacksswb %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
-; HASWELL-NEXT:    vpacksswb (%rdi), %ymm0, %ymm0 # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpacksswb (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_packsswb:
 ; BROADWELL:       # %bb.0:
@@ -897,8 +897,8 @@ define <16 x i16> @test_packusdw(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; HASWELL-LABEL: test_packusdw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
-; HASWELL-NEXT:    vpackusdw (%rdi), %ymm0, %ymm0 # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpackusdw (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_packusdw:
 ; BROADWELL:       # %bb.0:
@@ -941,8 +941,8 @@ define <32 x i8> @test_packuswb(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2)
 ; HASWELL-LABEL: test_packuswb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpackuswb %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
-; HASWELL-NEXT:    vpackuswb (%rdi), %ymm0, %ymm0 # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpackuswb (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_packuswb:
 ; BROADWELL:       # %bb.0:
@@ -985,8 +985,8 @@ define <32 x i8> @test_paddb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; HASWELL-LABEL: test_paddb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpaddb %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpaddb (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpaddb (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_paddb:
 ; BROADWELL:       # %bb.0:
@@ -1027,8 +1027,8 @@ define <8 x i32> @test_paddd(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; HASWELL-LABEL: test_paddd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpaddd (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpaddd (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_paddd:
 ; BROADWELL:       # %bb.0:
@@ -1069,8 +1069,8 @@ define <4 x i64> @test_paddq(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; HASWELL-LABEL: test_paddq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpaddq (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpaddq (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_paddq:
 ; BROADWELL:       # %bb.0:
@@ -1111,8 +1111,8 @@ define <32 x i8> @test_paddsb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; HASWELL-LABEL: test_paddsb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpaddsb %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpaddsb (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpaddsb (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_paddsb:
 ; BROADWELL:       # %bb.0:
@@ -1154,8 +1154,8 @@ define <16 x i16> @test_paddsw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ; HASWELL-LABEL: test_paddsw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpaddsw %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpaddsw (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpaddsw (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_paddsw:
 ; BROADWELL:       # %bb.0:
@@ -1197,8 +1197,8 @@ define <32 x i8> @test_paddusb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; HASWELL-LABEL: test_paddusb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpaddusb %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpaddusb (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpaddusb (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_paddusb:
 ; BROADWELL:       # %bb.0:
@@ -1240,8 +1240,8 @@ define <16 x i16> @test_paddusw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2)
 ; HASWELL-LABEL: test_paddusw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpaddusw %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpaddusw (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpaddusw (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_paddusw:
 ; BROADWELL:       # %bb.0:
@@ -1283,8 +1283,8 @@ define <16 x i16> @test_paddw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) {
 ; HASWELL-LABEL: test_paddw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpaddw %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpaddw (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpaddw (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_paddw:
 ; BROADWELL:       # %bb.0:
@@ -1325,8 +1325,8 @@ define <32 x i8> @test_palignr(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; HASWELL-LABEL: test_palignr:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpalignr {{.*#+}} ymm0 = ymm1[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm0[0],ymm1[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm0[16] sched: [1:1.00]
-; HASWELL-NEXT:    vpalignr {{.*#+}} ymm0 = mem[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm0[0],mem[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm0[16] sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpalignr {{.*#+}} ymm0 = mem[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],ymm0[0],mem[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],ymm0[16] sched: [8:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_palignr:
 ; BROADWELL:       # %bb.0:
@@ -1368,9 +1368,9 @@ define <4 x i64> @test_pand(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; HASWELL-LABEL: test_pand:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpand %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
-; HASWELL-NEXT:    vpand (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
+; HASWELL-NEXT:    vpand (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; HASWELL-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pand:
 ; BROADWELL:       # %bb.0:
@@ -1417,9 +1417,9 @@ define <4 x i64> @test_pandn(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; HASWELL-LABEL: test_pandn:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpandn %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
-; HASWELL-NEXT:    vpandn (%rdi), %ymm0, %ymm1 # sched: [1:0.50]
+; HASWELL-NEXT:    vpandn (%rdi), %ymm0, %ymm1 # sched: [8:0.50]
 ; HASWELL-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pandn:
 ; BROADWELL:       # %bb.0:
@@ -1467,8 +1467,8 @@ define <32 x i8> @test_pavgb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; HASWELL-LABEL: test_pavgb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpavgb %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpavgb (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpavgb (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pavgb:
 ; BROADWELL:       # %bb.0:
@@ -1519,8 +1519,8 @@ define <16 x i16> @test_pavgw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) {
 ; HASWELL-LABEL: test_pavgw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpavgw %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpavgw (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpavgw (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pavgw:
 ; BROADWELL:       # %bb.0:
@@ -1572,9 +1572,9 @@ define <4 x i32> @test_pblendd(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; HASWELL-LABEL: test_pblendd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0,1,2],xmm0[3] sched: [1:0.33]
-; HASWELL-NEXT:    vpblendd {{.*#+}} xmm1 = mem[0],xmm1[1],mem[2],xmm1[3] sched: [1:0.50]
+; HASWELL-NEXT:    vpblendd {{.*#+}} xmm1 = mem[0],xmm1[1],mem[2],xmm1[3] sched: [7:0.50]
 ; HASWELL-NEXT:    vpaddd %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pblendd:
 ; BROADWELL:       # %bb.0:
@@ -1621,9 +1621,9 @@ define <8 x i32> @test_pblendd_ymm(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2)
 ; HASWELL-LABEL: test_pblendd_ymm:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2],ymm0[3,4,5,6],ymm1[7] sched: [1:0.33]
-; HASWELL-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0],mem[1,2],ymm1[3,4,5,6,7] sched: [1:0.50]
+; HASWELL-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0],mem[1,2],ymm1[3,4,5,6,7] sched: [8:0.50]
 ; HASWELL-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pblendd_ymm:
 ; BROADWELL:       # %bb.0:
@@ -1669,8 +1669,8 @@ define <32 x i8> @test_pblendvb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> %a2, <32
 ; HASWELL-LABEL: test_pblendvb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0 # sched: [2:2.00]
-; HASWELL-NEXT:    vpblendvb %ymm3, (%rdi), %ymm0, %ymm0 # sched: [2:2.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpblendvb %ymm3, (%rdi), %ymm0, %ymm0 # sched: [9:2.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pblendvb:
 ; BROADWELL:       # %bb.0:
@@ -1712,8 +1712,8 @@ define <16 x i16> @test_pblendw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2)
 ; HASWELL-LABEL: test_pblendw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4],ymm0[5,6,7,8,9],ymm1[10,11,12],ymm0[13,14,15] sched: [1:1.00]
-; HASWELL-NEXT:    vpblendw {{.*#+}} ymm0 = mem[0],ymm0[1],mem[2],ymm0[3],mem[4],ymm0[5],mem[6],ymm0[7],mem[8],ymm0[9],mem[10],ymm0[11],mem[12],ymm0[13],mem[14],ymm0[15] sched: [4:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpblendw {{.*#+}} ymm0 = mem[0],ymm0[1],mem[2],ymm0[3],mem[4],ymm0[5],mem[6],ymm0[7],mem[8],ymm0[9],mem[10],ymm0[11],mem[12],ymm0[13],mem[14],ymm0[15] sched: [8:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pblendw:
 ; BROADWELL:       # %bb.0:
@@ -1755,9 +1755,9 @@ define <16 x i8> @test_pbroadcastb(<16 x i8> %a0, <16 x i8> *%a1) {
 ; HASWELL-LABEL: test_pbroadcastb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpbroadcastb %xmm0, %xmm0 # sched: [3:1.00]
-; HASWELL-NEXT:    vpbroadcastb (%rdi), %xmm1 # sched: [4:1.00]
+; HASWELL-NEXT:    vpbroadcastb (%rdi), %xmm1 # sched: [9:1.00]
 ; HASWELL-NEXT:    vpaddb %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pbroadcastb:
 ; BROADWELL:       # %bb.0:
@@ -1804,9 +1804,9 @@ define <32 x i8> @test_pbroadcastb_ymm(<32 x i8> %a0, <32 x i8> *%a1) {
 ; HASWELL-LABEL: test_pbroadcastb_ymm:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpbroadcastb %xmm0, %ymm0 # sched: [3:1.00]
-; HASWELL-NEXT:    vpbroadcastb (%rdi), %ymm1 # sched: [4:1.00]
+; HASWELL-NEXT:    vpbroadcastb (%rdi), %ymm1 # sched: [9:1.00]
 ; HASWELL-NEXT:    vpaddb %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pbroadcastb_ymm:
 ; BROADWELL:       # %bb.0:
@@ -1853,9 +1853,9 @@ define <4 x i32> @test_pbroadcastd(<4 x i32> %a0, <4 x i32> *%a1) {
 ; HASWELL-LABEL: test_pbroadcastd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpbroadcastd %xmm0, %xmm0 # sched: [1:1.00]
-; HASWELL-NEXT:    vpbroadcastd (%rdi), %xmm1 # sched: [1:0.50]
+; HASWELL-NEXT:    vpbroadcastd (%rdi), %xmm1 # sched: [6:0.50]
 ; HASWELL-NEXT:    vpaddd %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pbroadcastd:
 ; BROADWELL:       # %bb.0:
@@ -1901,9 +1901,9 @@ define <8 x i32> @test_pbroadcastd_ymm(<8 x i32> %a0, <8 x i32> *%a1) {
 ; HASWELL-LABEL: test_pbroadcastd_ymm:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpbroadcastd %xmm0, %ymm0 # sched: [3:1.00]
-; HASWELL-NEXT:    vpbroadcastd (%rdi), %ymm1 # sched: [1:0.50]
+; HASWELL-NEXT:    vpbroadcastd (%rdi), %ymm1 # sched: [7:0.50]
 ; HASWELL-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pbroadcastd_ymm:
 ; BROADWELL:       # %bb.0:
@@ -1949,9 +1949,9 @@ define <2 x i64> @test_pbroadcastq(<2 x i64> %a0, <2 x i64> *%a1) {
 ; HASWELL-LABEL: test_pbroadcastq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpbroadcastq %xmm0, %xmm0 # sched: [1:1.00]
-; HASWELL-NEXT:    vpbroadcastq (%rdi), %xmm1 # sched: [1:0.50]
+; HASWELL-NEXT:    vpbroadcastq (%rdi), %xmm1 # sched: [6:0.50]
 ; HASWELL-NEXT:    vpaddq %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pbroadcastq:
 ; BROADWELL:       # %bb.0:
@@ -1997,9 +1997,9 @@ define <4 x i64> @test_pbroadcastq_ymm(<4 x i64> %a0, <4 x i64> *%a1) {
 ; HASWELL-LABEL: test_pbroadcastq_ymm:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpbroadcastq %xmm0, %ymm0 # sched: [3:1.00]
-; HASWELL-NEXT:    vpbroadcastq (%rdi), %ymm1 # sched: [1:0.50]
+; HASWELL-NEXT:    vpbroadcastq (%rdi), %ymm1 # sched: [7:0.50]
 ; HASWELL-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pbroadcastq_ymm:
 ; BROADWELL:       # %bb.0:
@@ -2045,9 +2045,9 @@ define <8 x i16> @test_pbroadcastw(<8 x i16> %a0, <8 x i16> *%a1) {
 ; HASWELL-LABEL: test_pbroadcastw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpbroadcastw %xmm0, %xmm0 # sched: [3:1.00]
-; HASWELL-NEXT:    vpbroadcastw (%rdi), %xmm1 # sched: [4:1.00]
+; HASWELL-NEXT:    vpbroadcastw (%rdi), %xmm1 # sched: [9:1.00]
 ; HASWELL-NEXT:    vpaddw %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pbroadcastw:
 ; BROADWELL:       # %bb.0:
@@ -2094,9 +2094,9 @@ define <16 x i16> @test_pbroadcastw_ymm(<16 x i16> %a0, <16 x i16> *%a1) {
 ; HASWELL-LABEL: test_pbroadcastw_ymm:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpbroadcastw %xmm0, %ymm0 # sched: [3:1.00]
-; HASWELL-NEXT:    vpbroadcastw (%rdi), %ymm1 # sched: [4:1.00]
+; HASWELL-NEXT:    vpbroadcastw (%rdi), %ymm1 # sched: [9:1.00]
 ; HASWELL-NEXT:    vpaddw %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pbroadcastw_ymm:
 ; BROADWELL:       # %bb.0:
@@ -2142,8 +2142,8 @@ define <32 x i8> @test_pcmpeqb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; HASWELL-LABEL: test_pcmpeqb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpcmpeqb (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpcmpeqb (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pcmpeqb:
 ; BROADWELL:       # %bb.0:
@@ -2188,8 +2188,8 @@ define <8 x i32> @test_pcmpeqd(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; HASWELL-LABEL: test_pcmpeqd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpcmpeqd (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpcmpeqd (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pcmpeqd:
 ; BROADWELL:       # %bb.0:
@@ -2234,8 +2234,8 @@ define <4 x i64> @test_pcmpeqq(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; HASWELL-LABEL: test_pcmpeqq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpcmpeqq (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpcmpeqq (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pcmpeqq:
 ; BROADWELL:       # %bb.0:
@@ -2280,8 +2280,8 @@ define <16 x i16> @test_pcmpeqw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2)
 ; HASWELL-LABEL: test_pcmpeqw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpcmpeqw (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpcmpeqw (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pcmpeqw:
 ; BROADWELL:       # %bb.0:
@@ -2326,8 +2326,8 @@ define <32 x i8> @test_pcmpgtb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; HASWELL-LABEL: test_pcmpgtb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpcmpgtb %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpcmpgtb (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpcmpgtb (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pcmpgtb:
 ; BROADWELL:       # %bb.0:
@@ -2372,8 +2372,8 @@ define <8 x i32> @test_pcmpgtd(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; HASWELL-LABEL: test_pcmpgtd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpcmpgtd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpcmpgtd (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpcmpgtd (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pcmpgtd:
 ; BROADWELL:       # %bb.0:
@@ -2418,8 +2418,8 @@ define <4 x i64> @test_pcmpgtq(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; HASWELL-LABEL: test_pcmpgtq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
-; HASWELL-NEXT:    vpcmpgtq (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpcmpgtq (%rdi), %ymm0, %ymm0 # sched: [12:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pcmpgtq:
 ; BROADWELL:       # %bb.0:
@@ -2464,8 +2464,8 @@ define <16 x i16> @test_pcmpgtw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2)
 ; HASWELL-LABEL: test_pcmpgtw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpcmpgtw %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpcmpgtw (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpcmpgtw (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pcmpgtw:
 ; BROADWELL:       # %bb.0:
@@ -2511,9 +2511,9 @@ define <4 x i64> @test_perm2i128(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; HASWELL-LABEL: test_perm2i128:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vperm2i128 {{.*#+}} ymm1 = ymm0[2,3],ymm1[0,1] sched: [3:1.00]
-; HASWELL-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [3:1.00]
+; HASWELL-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],mem[0,1] sched: [10:1.00]
 ; HASWELL-NEXT:    vpaddq %ymm0, %ymm1, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_perm2i128:
 ; BROADWELL:       # %bb.0:
@@ -2560,9 +2560,9 @@ define <8 x i32> @test_permd(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; HASWELL-LABEL: test_permd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpermd %ymm1, %ymm0, %ymm1 # sched: [3:1.00]
-; HASWELL-NEXT:    vpermd (%rdi), %ymm0, %ymm0 # sched: [3:1.00]
+; HASWELL-NEXT:    vpermd (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; HASWELL-NEXT:    vpaddd %ymm0, %ymm1, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_permd:
 ; BROADWELL:       # %bb.0:
@@ -2610,9 +2610,9 @@ define <4 x double> @test_permpd(<4 x double> %a0, <4 x double> *%a1) {
 ; HASWELL-LABEL: test_permpd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,2,2,3] sched: [3:1.00]
-; HASWELL-NEXT:    vpermpd {{.*#+}} ymm1 = mem[0,2,2,3] sched: [3:1.00]
+; HASWELL-NEXT:    vpermpd {{.*#+}} ymm1 = mem[0,2,2,3] sched: [10:1.00]
 ; HASWELL-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_permpd:
 ; BROADWELL:       # %bb.0:
@@ -2659,9 +2659,9 @@ define <8 x float> @test_permps(<8 x i32> %a0, <8 x float> %a1, <8 x float> *%a2
 ; HASWELL-LABEL: test_permps:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpermps %ymm1, %ymm0, %ymm1 # sched: [3:1.00]
-; HASWELL-NEXT:    vpermps (%rdi), %ymm0, %ymm0 # sched: [3:1.00]
+; HASWELL-NEXT:    vpermps (%rdi), %ymm0, %ymm0 # sched: [10:1.00]
 ; HASWELL-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_permps:
 ; BROADWELL:       # %bb.0:
@@ -2709,9 +2709,9 @@ define <4 x i64> @test_permq(<4 x i64> %a0, <4 x i64> *%a1) {
 ; HASWELL-LABEL: test_permq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,2,2,3] sched: [3:1.00]
-; HASWELL-NEXT:    vpermq {{.*#+}} ymm1 = mem[0,2,2,3] sched: [3:1.00]
+; HASWELL-NEXT:    vpermq {{.*#+}} ymm1 = mem[0,2,2,3] sched: [10:1.00]
 ; HASWELL-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_permq:
 ; BROADWELL:       # %bb.0:
@@ -2755,8 +2755,8 @@ define <4 x i32> @test_pgatherdd(<4 x i32> %a0, i8* %a1, <4 x i32> %a2, <4 x i32
 ;
 ; HASWELL-LABEL: test_pgatherdd:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vpgatherdd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [1:?]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpgatherdd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [26:2.67]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pgatherdd:
 ; BROADWELL:       # %bb.0:
@@ -2790,8 +2790,8 @@ define <8 x i32> @test_pgatherdd_ymm(<8 x i32> %a0, i8* %a1, <8 x i32> %a2, <8 x
 ;
 ; HASWELL-LABEL: test_pgatherdd_ymm:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vpgatherdd %ymm2, (%rdi,%ymm1,2), %ymm0 # sched: [1:?]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpgatherdd %ymm2, (%rdi,%ymm1,2), %ymm0 # sched: [27:6.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pgatherdd_ymm:
 ; BROADWELL:       # %bb.0:
@@ -2825,8 +2825,8 @@ define <2 x i64> @test_pgatherdq(<2 x i64> %a0, i8* %a1, <4 x i32> %a2, <2 x i64
 ;
 ; HASWELL-LABEL: test_pgatherdq:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vpgatherdq %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [1:?]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpgatherdq %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [26:2.67]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pgatherdq:
 ; BROADWELL:       # %bb.0:
@@ -2860,8 +2860,8 @@ define <4 x i64> @test_pgatherdq_ymm(<4 x i64> %a0, i8* %a1, <4 x i32> %a2, <4 x
 ;
 ; HASWELL-LABEL: test_pgatherdq_ymm:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vpgatherdq %ymm2, (%rdi,%xmm1,2), %ymm0 # sched: [1:?]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpgatherdq %ymm2, (%rdi,%xmm1,2), %ymm0 # sched: [27:4.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pgatherdq_ymm:
 ; BROADWELL:       # %bb.0:
@@ -2895,8 +2895,8 @@ define <4 x i32> @test_pgatherqd(<4 x i32> %a0, i8* %a1, <2 x i64> %a2, <4 x i32
 ;
 ; HASWELL-LABEL: test_pgatherqd:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vpgatherqd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [1:?]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpgatherqd %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [25:5.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pgatherqd:
 ; BROADWELL:       # %bb.0:
@@ -2931,9 +2931,9 @@ define <4 x i32> @test_pgatherqd_ymm(<4 x i32> %a0, i8* %a1, <4 x i64> %a2, <4 x
 ;
 ; HASWELL-LABEL: test_pgatherqd_ymm:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vpgatherqd %xmm2, (%rdi,%ymm1,2), %xmm0 # sched: [1:?]
+; HASWELL-NEXT:    vpgatherqd %xmm2, (%rdi,%ymm1,2), %xmm0 # sched: [28:5.00]
 ; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pgatherqd_ymm:
 ; BROADWELL:       # %bb.0:
@@ -2971,8 +2971,8 @@ define <2 x i64> @test_pgatherqq(<2 x i64> %a0, i8 *%a1, <2 x i64> %a2, <2 x i64
 ;
 ; HASWELL-LABEL: test_pgatherqq:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vpgatherqq %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [1:?]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpgatherqq %xmm2, (%rdi,%xmm1,2), %xmm0 # sched: [23:3.33]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pgatherqq:
 ; BROADWELL:       # %bb.0:
@@ -3006,8 +3006,8 @@ define <4 x i64> @test_pgatherqq_ymm(<4 x i64> %a0, i8 *%a1, <4 x i64> %a2, <4 x
 ;
 ; HASWELL-LABEL: test_pgatherqq_ymm:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vpgatherqq %ymm2, (%rdi,%ymm1,2), %ymm0 # sched: [1:?]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpgatherqq %ymm2, (%rdi,%ymm1,2), %ymm0 # sched: [24:5.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pgatherqq_ymm:
 ; BROADWELL:       # %bb.0:
@@ -3043,8 +3043,8 @@ define <8 x i32> @test_phaddd(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; HASWELL-LABEL: test_phaddd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vphaddd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
-; HASWELL-NEXT:    vphaddd (%rdi), %ymm0, %ymm0 # sched: [3:2.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vphaddd (%rdi), %ymm0, %ymm0 # sched: [10:2.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_phaddd:
 ; BROADWELL:       # %bb.0:
@@ -3086,8 +3086,8 @@ define <16 x i16> @test_phaddsw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2)
 ; HASWELL-LABEL: test_phaddsw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vphaddsw %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
-; HASWELL-NEXT:    vphaddsw (%rdi), %ymm0, %ymm0 # sched: [3:2.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vphaddsw (%rdi), %ymm0, %ymm0 # sched: [10:2.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_phaddsw:
 ; BROADWELL:       # %bb.0:
@@ -3129,8 +3129,8 @@ define <16 x i16> @test_phaddw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ; HASWELL-LABEL: test_phaddw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vphaddw %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
-; HASWELL-NEXT:    vphaddw (%rdi), %ymm0, %ymm0 # sched: [3:2.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vphaddw (%rdi), %ymm0, %ymm0 # sched: [10:2.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_phaddw:
 ; BROADWELL:       # %bb.0:
@@ -3172,8 +3172,8 @@ define <8 x i32> @test_phsubd(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; HASWELL-LABEL: test_phsubd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vphsubd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
-; HASWELL-NEXT:    vphsubd (%rdi), %ymm0, %ymm0 # sched: [3:2.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vphsubd (%rdi), %ymm0, %ymm0 # sched: [10:2.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_phsubd:
 ; BROADWELL:       # %bb.0:
@@ -3215,8 +3215,8 @@ define <16 x i16> @test_phsubsw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2)
 ; HASWELL-LABEL: test_phsubsw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vphsubsw %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
-; HASWELL-NEXT:    vphsubsw (%rdi), %ymm0, %ymm0 # sched: [3:2.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vphsubsw (%rdi), %ymm0, %ymm0 # sched: [10:2.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_phsubsw:
 ; BROADWELL:       # %bb.0:
@@ -3258,8 +3258,8 @@ define <16 x i16> @test_phsubw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ; HASWELL-LABEL: test_phsubw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vphsubw %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
-; HASWELL-NEXT:    vphsubw (%rdi), %ymm0, %ymm0 # sched: [3:2.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vphsubw (%rdi), %ymm0, %ymm0 # sched: [10:2.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_phsubw:
 ; BROADWELL:       # %bb.0:
@@ -3301,8 +3301,8 @@ define <16 x i16> @test_pmaddubsw(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) 
 ; HASWELL-LABEL: test_pmaddubsw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
-; HASWELL-NEXT:    vpmaddubsw (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpmaddubsw (%rdi), %ymm0, %ymm0 # sched: [12:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmaddubsw:
 ; BROADWELL:       # %bb.0:
@@ -3345,8 +3345,8 @@ define <8 x i32> @test_pmaddwd(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ; HASWELL-LABEL: test_pmaddwd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmaddwd %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
-; HASWELL-NEXT:    vpmaddwd (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpmaddwd (%rdi), %ymm0, %ymm0 # sched: [12:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmaddwd:
 ; BROADWELL:       # %bb.0:
@@ -3389,10 +3389,10 @@ define <4 x i32> @test_pmaskmovd(i8* %a0, <4 x i32> %a1, <4 x i32> %a2) {
 ;
 ; HASWELL-LABEL: test_pmaskmovd:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vpmaskmovd (%rdi), %xmm0, %xmm2 # sched: [2:2.00]
-; HASWELL-NEXT:    vpmaskmovd %xmm1, %xmm0, (%rdi) # sched: [4:1.00]
+; HASWELL-NEXT:    vpmaskmovd (%rdi), %xmm0, %xmm2 # sched: [8:2.00]
+; HASWELL-NEXT:    vpmaskmovd %xmm1, %xmm0, (%rdi) # sched: [5:1.00]
 ; HASWELL-NEXT:    vmovdqa %xmm2, %xmm0 # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmaskmovd:
 ; BROADWELL:       # %bb.0:
@@ -3438,10 +3438,10 @@ define <8 x i32> @test_pmaskmovd_ymm(i8* %a0, <8 x i32> %a1, <8 x i32> %a2) {
 ;
 ; HASWELL-LABEL: test_pmaskmovd_ymm:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vpmaskmovd (%rdi), %ymm0, %ymm2 # sched: [2:2.00]
-; HASWELL-NEXT:    vpmaskmovd %ymm1, %ymm0, (%rdi) # sched: [4:1.00]
+; HASWELL-NEXT:    vpmaskmovd (%rdi), %ymm0, %ymm2 # sched: [9:2.00]
+; HASWELL-NEXT:    vpmaskmovd %ymm1, %ymm0, (%rdi) # sched: [5:1.00]
 ; HASWELL-NEXT:    vmovdqa %ymm2, %ymm0 # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmaskmovd_ymm:
 ; BROADWELL:       # %bb.0:
@@ -3487,10 +3487,10 @@ define <2 x i64> @test_pmaskmovq(i8* %a0, <2 x i64> %a1, <2 x i64> %a2) {
 ;
 ; HASWELL-LABEL: test_pmaskmovq:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vpmaskmovq (%rdi), %xmm0, %xmm2 # sched: [2:2.00]
-; HASWELL-NEXT:    vpmaskmovq %xmm1, %xmm0, (%rdi) # sched: [4:1.00]
+; HASWELL-NEXT:    vpmaskmovq (%rdi), %xmm0, %xmm2 # sched: [8:2.00]
+; HASWELL-NEXT:    vpmaskmovq %xmm1, %xmm0, (%rdi) # sched: [5:1.00]
 ; HASWELL-NEXT:    vmovdqa %xmm2, %xmm0 # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmaskmovq:
 ; BROADWELL:       # %bb.0:
@@ -3536,10 +3536,10 @@ define <4 x i64> @test_pmaskmovq_ymm(i8* %a0, <4 x i64> %a1, <4 x i64> %a2) {
 ;
 ; HASWELL-LABEL: test_pmaskmovq_ymm:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vpmaskmovq (%rdi), %ymm0, %ymm2 # sched: [2:2.00]
-; HASWELL-NEXT:    vpmaskmovq %ymm1, %ymm0, (%rdi) # sched: [4:1.00]
+; HASWELL-NEXT:    vpmaskmovq (%rdi), %ymm0, %ymm2 # sched: [9:2.00]
+; HASWELL-NEXT:    vpmaskmovq %ymm1, %ymm0, (%rdi) # sched: [5:1.00]
 ; HASWELL-NEXT:    vmovdqa %ymm2, %ymm0 # sched: [1:0.25]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmaskmovq_ymm:
 ; BROADWELL:       # %bb.0:
@@ -3585,8 +3585,8 @@ define <32 x i8> @test_pmaxsb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; HASWELL-LABEL: test_pmaxsb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmaxsb %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpmaxsb (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpmaxsb (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmaxsb:
 ; BROADWELL:       # %bb.0:
@@ -3628,8 +3628,8 @@ define <8 x i32> @test_pmaxsd(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; HASWELL-LABEL: test_pmaxsd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmaxsd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpmaxsd (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpmaxsd (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmaxsd:
 ; BROADWELL:       # %bb.0:
@@ -3671,8 +3671,8 @@ define <16 x i16> @test_pmaxsw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ; HASWELL-LABEL: test_pmaxsw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmaxsw %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpmaxsw (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpmaxsw (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmaxsw:
 ; BROADWELL:       # %bb.0:
@@ -3714,8 +3714,8 @@ define <32 x i8> @test_pmaxub(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; HASWELL-LABEL: test_pmaxub:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmaxub %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpmaxub (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpmaxub (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmaxub:
 ; BROADWELL:       # %bb.0:
@@ -3757,8 +3757,8 @@ define <8 x i32> @test_pmaxud(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; HASWELL-LABEL: test_pmaxud:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmaxud %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpmaxud (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpmaxud (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmaxud:
 ; BROADWELL:       # %bb.0:
@@ -3800,8 +3800,8 @@ define <16 x i16> @test_pmaxuw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ; HASWELL-LABEL: test_pmaxuw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmaxuw %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpmaxuw (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpmaxuw (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmaxuw:
 ; BROADWELL:       # %bb.0:
@@ -3843,8 +3843,8 @@ define <32 x i8> @test_pminsb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; HASWELL-LABEL: test_pminsb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpminsb %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpminsb (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpminsb (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pminsb:
 ; BROADWELL:       # %bb.0:
@@ -3886,8 +3886,8 @@ define <8 x i32> @test_pminsd(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; HASWELL-LABEL: test_pminsd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpminsd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpminsd (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpminsd (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pminsd:
 ; BROADWELL:       # %bb.0:
@@ -3929,8 +3929,8 @@ define <16 x i16> @test_pminsw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ; HASWELL-LABEL: test_pminsw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpminsw %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpminsw (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpminsw (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pminsw:
 ; BROADWELL:       # %bb.0:
@@ -3972,8 +3972,8 @@ define <32 x i8> @test_pminub(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; HASWELL-LABEL: test_pminub:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpminub %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpminub (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpminub (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pminub:
 ; BROADWELL:       # %bb.0:
@@ -4015,8 +4015,8 @@ define <8 x i32> @test_pminud(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; HASWELL-LABEL: test_pminud:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpminud %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpminud (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpminud (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pminud:
 ; BROADWELL:       # %bb.0:
@@ -4058,8 +4058,8 @@ define <16 x i16> @test_pminuw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ; HASWELL-LABEL: test_pminuw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpminuw %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpminuw (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpminuw (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pminuw:
 ; BROADWELL:       # %bb.0:
@@ -4102,7 +4102,7 @@ define i32 @test_pmovmskb(<32 x i8> %a0) {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmovmskb %ymm0, %eax # sched: [3:1.00]
 ; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmovmskb:
 ; BROADWELL:       # %bb.0:
@@ -4143,9 +4143,9 @@ define <8 x i32> @test_pmovsxbd(<16 x i8> %a0, <16 x i8> *%a1) {
 ; HASWELL-LABEL: test_pmovsxbd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmovsxbd %xmm0, %ymm0 # sched: [3:1.00]
-; HASWELL-NEXT:    vpmovsxbd (%rdi), %ymm1 # sched: [3:1.00]
+; HASWELL-NEXT:    vpmovsxbd (%rdi), %ymm1 # sched: [8:1.00]
 ; HASWELL-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmovsxbd:
 ; BROADWELL:       # %bb.0:
@@ -4194,9 +4194,9 @@ define <4 x i64> @test_pmovsxbq(<16 x i8> %a0, <16 x i8> *%a1) {
 ; HASWELL-LABEL: test_pmovsxbq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmovsxbq %xmm0, %ymm0 # sched: [3:1.00]
-; HASWELL-NEXT:    vpmovsxbq (%rdi), %ymm1 # sched: [3:1.00]
+; HASWELL-NEXT:    vpmovsxbq (%rdi), %ymm1 # sched: [8:1.00]
 ; HASWELL-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmovsxbq:
 ; BROADWELL:       # %bb.0:
@@ -4245,9 +4245,9 @@ define <16 x i16> @test_pmovsxbw(<16 x i8> %a0, <16 x i8> *%a1) {
 ; HASWELL-LABEL: test_pmovsxbw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmovsxbw %xmm0, %ymm0 # sched: [3:1.00]
-; HASWELL-NEXT:    vpmovsxbw (%rdi), %ymm1 # sched: [3:1.00]
+; HASWELL-NEXT:    vpmovsxbw (%rdi), %ymm1 # sched: [9:1.00]
 ; HASWELL-NEXT:    vpaddw %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmovsxbw:
 ; BROADWELL:       # %bb.0:
@@ -4294,9 +4294,9 @@ define <4 x i64> @test_pmovsxdq(<4 x i32> %a0, <4 x i32> *%a1) {
 ; HASWELL-LABEL: test_pmovsxdq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmovsxdq %xmm0, %ymm0 # sched: [3:1.00]
-; HASWELL-NEXT:    vpmovsxdq (%rdi), %ymm1 # sched: [3:1.00]
+; HASWELL-NEXT:    vpmovsxdq (%rdi), %ymm1 # sched: [9:1.00]
 ; HASWELL-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmovsxdq:
 ; BROADWELL:       # %bb.0:
@@ -4343,9 +4343,9 @@ define <8 x i32> @test_pmovsxwd(<8 x i16> %a0, <8 x i16> *%a1) {
 ; HASWELL-LABEL: test_pmovsxwd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmovsxwd %xmm0, %ymm0 # sched: [3:1.00]
-; HASWELL-NEXT:    vpmovsxwd (%rdi), %ymm1 # sched: [3:1.00]
+; HASWELL-NEXT:    vpmovsxwd (%rdi), %ymm1 # sched: [9:1.00]
 ; HASWELL-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmovsxwd:
 ; BROADWELL:       # %bb.0:
@@ -4392,9 +4392,9 @@ define <4 x i64> @test_pmovsxwq(<8 x i16> %a0, <8 x i16> *%a1) {
 ; HASWELL-LABEL: test_pmovsxwq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmovsxwq %xmm0, %ymm0 # sched: [3:1.00]
-; HASWELL-NEXT:    vpmovsxwq (%rdi), %ymm1 # sched: [3:1.00]
+; HASWELL-NEXT:    vpmovsxwq (%rdi), %ymm1 # sched: [8:1.00]
 ; HASWELL-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmovsxwq:
 ; BROADWELL:       # %bb.0:
@@ -4443,9 +4443,9 @@ define <8 x i32> @test_pmovzxbd(<16 x i8> %a0, <16 x i8> *%a1) {
 ; HASWELL-LABEL: test_pmovzxbd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero sched: [3:1.00]
-; HASWELL-NEXT:    vpmovzxbd {{.*#+}} ymm1 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero sched: [3:1.00]
+; HASWELL-NEXT:    vpmovzxbd {{.*#+}} ymm1 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero sched: [10:1.00]
 ; HASWELL-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmovzxbd:
 ; BROADWELL:       # %bb.0:
@@ -4494,9 +4494,9 @@ define <4 x i64> @test_pmovzxbq(<16 x i8> %a0, <16 x i8> *%a1) {
 ; HASWELL-LABEL: test_pmovzxbq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmovzxbq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero sched: [3:1.00]
-; HASWELL-NEXT:    vpmovzxbq {{.*#+}} ymm1 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero,mem[2],zero,zero,zero,zero,zero,zero,zero,mem[3],zero,zero,zero,zero,zero,zero,zero sched: [3:1.00]
+; HASWELL-NEXT:    vpmovzxbq {{.*#+}} ymm1 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero,mem[2],zero,zero,zero,zero,zero,zero,zero,mem[3],zero,zero,zero,zero,zero,zero,zero sched: [10:1.00]
 ; HASWELL-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmovzxbq:
 ; BROADWELL:       # %bb.0:
@@ -4545,9 +4545,9 @@ define <16 x i16> @test_pmovzxbw(<16 x i8> %a0, <16 x i8> *%a1) {
 ; HASWELL-LABEL: test_pmovzxbw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero sched: [3:1.00]
-; HASWELL-NEXT:    vpmovzxbw {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero sched: [3:1.00]
+; HASWELL-NEXT:    vpmovzxbw {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero sched: [10:1.00]
 ; HASWELL-NEXT:    vpaddw %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmovzxbw:
 ; BROADWELL:       # %bb.0:
@@ -4594,9 +4594,9 @@ define <4 x i64> @test_pmovzxdq(<4 x i32> %a0, <4 x i32> *%a1) {
 ; HASWELL-LABEL: test_pmovzxdq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero sched: [3:1.00]
-; HASWELL-NEXT:    vpmovzxdq {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero sched: [3:1.00]
+; HASWELL-NEXT:    vpmovzxdq {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero sched: [10:1.00]
 ; HASWELL-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmovzxdq:
 ; BROADWELL:       # %bb.0:
@@ -4643,9 +4643,9 @@ define <8 x i32> @test_pmovzxwd(<8 x i16> %a0, <8 x i16> *%a1) {
 ; HASWELL-LABEL: test_pmovzxwd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero sched: [3:1.00]
-; HASWELL-NEXT:    vpmovzxwd {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero sched: [3:1.00]
+; HASWELL-NEXT:    vpmovzxwd {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero sched: [9:1.00]
 ; HASWELL-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmovzxwd:
 ; BROADWELL:       # %bb.0:
@@ -4692,9 +4692,9 @@ define <4 x i64> @test_pmovzxwq(<8 x i16> %a0, <8 x i16> *%a1) {
 ; HASWELL-LABEL: test_pmovzxwq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmovzxwq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero sched: [3:1.00]
-; HASWELL-NEXT:    vpmovzxwq {{.*#+}} ymm1 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero sched: [3:1.00]
+; HASWELL-NEXT:    vpmovzxwq {{.*#+}} ymm1 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero sched: [10:1.00]
 ; HASWELL-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmovzxwq:
 ; BROADWELL:       # %bb.0:
@@ -4742,8 +4742,8 @@ define <4 x i64> @test_pmuldq(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; HASWELL-LABEL: test_pmuldq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmuldq %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
-; HASWELL-NEXT:    vpmuldq (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpmuldq (%rdi), %ymm0, %ymm0 # sched: [12:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmuldq:
 ; BROADWELL:       # %bb.0:
@@ -4786,8 +4786,8 @@ define <16 x i16> @test_pmulhrsw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2
 ; HASWELL-LABEL: test_pmulhrsw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmulhrsw %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
-; HASWELL-NEXT:    vpmulhrsw (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpmulhrsw (%rdi), %ymm0, %ymm0 # sched: [12:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmulhrsw:
 ; BROADWELL:       # %bb.0:
@@ -4829,8 +4829,8 @@ define <16 x i16> @test_pmulhuw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2)
 ; HASWELL-LABEL: test_pmulhuw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmulhuw %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
-; HASWELL-NEXT:    vpmulhuw (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpmulhuw (%rdi), %ymm0, %ymm0 # sched: [12:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmulhuw:
 ; BROADWELL:       # %bb.0:
@@ -4872,8 +4872,8 @@ define <16 x i16> @test_pmulhw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ; HASWELL-LABEL: test_pmulhw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmulhw %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
-; HASWELL-NEXT:    vpmulhw (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpmulhw (%rdi), %ymm0, %ymm0 # sched: [12:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmulhw:
 ; BROADWELL:       # %bb.0:
@@ -4915,8 +4915,8 @@ define <8 x i32> @test_pmulld(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; HASWELL-LABEL: test_pmulld:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmulld %ymm1, %ymm0, %ymm0 # sched: [10:2.00]
-; HASWELL-NEXT:    vpmulld (%rdi), %ymm0, %ymm0 # sched: [10:2.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpmulld (%rdi), %ymm0, %ymm0 # sched: [17:2.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmulld:
 ; BROADWELL:       # %bb.0:
@@ -4957,8 +4957,8 @@ define <16 x i16> @test_pmullw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ; HASWELL-LABEL: test_pmullw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmullw %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
-; HASWELL-NEXT:    vpmullw (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpmullw (%rdi), %ymm0, %ymm0 # sched: [12:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmullw:
 ; BROADWELL:       # %bb.0:
@@ -4999,8 +4999,8 @@ define <4 x i64> @test_pmuludq(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; HASWELL-LABEL: test_pmuludq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
-; HASWELL-NEXT:    vpmuludq (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpmuludq (%rdi), %ymm0, %ymm0 # sched: [12:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmuludq:
 ; BROADWELL:       # %bb.0:
@@ -5044,9 +5044,9 @@ define <4 x i64> @test_por(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; HASWELL-LABEL: test_por:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpor %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
-; HASWELL-NEXT:    vpor (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
+; HASWELL-NEXT:    vpor (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; HASWELL-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_por:
 ; BROADWELL:       # %bb.0:
@@ -5092,8 +5092,8 @@ define <4 x i64> @test_psadbw(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; HASWELL-LABEL: test_psadbw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
-; HASWELL-NEXT:    vpsadbw (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpsadbw (%rdi), %ymm0, %ymm0 # sched: [12:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psadbw:
 ; BROADWELL:       # %bb.0:
@@ -5136,8 +5136,8 @@ define <32 x i8> @test_pshufb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; HASWELL-LABEL: test_pshufb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpshufb %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
-; HASWELL-NEXT:    vpshufb (%rdi), %ymm0, %ymm0 # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpshufb (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pshufb:
 ; BROADWELL:       # %bb.0:
@@ -5180,9 +5180,9 @@ define <8 x i32> @test_pshufd(<8 x i32> %a0, <8 x i32> *%a1) {
 ; HASWELL-LABEL: test_pshufd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4] sched: [1:1.00]
-; HASWELL-NEXT:    vpshufd {{.*#+}} ymm1 = mem[1,0,3,2,5,4,7,6] sched: [1:1.00]
+; HASWELL-NEXT:    vpshufd {{.*#+}} ymm1 = mem[1,0,3,2,5,4,7,6] sched: [8:1.00]
 ; HASWELL-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pshufd:
 ; BROADWELL:       # %bb.0:
@@ -5229,9 +5229,9 @@ define <16 x i16> @test_pshufhw(<16 x i16> %a0, <16 x i16> *%a1) {
 ; HASWELL-LABEL: test_pshufhw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpshufhw {{.*#+}} ymm0 = ymm0[0,1,2,3,7,6,5,4,8,9,10,11,15,14,13,12] sched: [1:1.00]
-; HASWELL-NEXT:    vpshufhw {{.*#+}} ymm1 = mem[0,1,2,3,5,4,7,6,8,9,10,11,13,12,15,14] sched: [1:1.00]
+; HASWELL-NEXT:    vpshufhw {{.*#+}} ymm1 = mem[0,1,2,3,5,4,7,6,8,9,10,11,13,12,15,14] sched: [8:1.00]
 ; HASWELL-NEXT:    vpor %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pshufhw:
 ; BROADWELL:       # %bb.0:
@@ -5278,9 +5278,9 @@ define <16 x i16> @test_pshuflw(<16 x i16> %a0, <16 x i16> *%a1) {
 ; HASWELL-LABEL: test_pshuflw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpshuflw {{.*#+}} ymm0 = ymm0[3,2,1,0,4,5,6,7,11,10,9,8,12,13,14,15] sched: [1:1.00]
-; HASWELL-NEXT:    vpshuflw {{.*#+}} ymm1 = mem[1,0,3,2,4,5,6,7,9,8,11,10,12,13,14,15] sched: [1:1.00]
+; HASWELL-NEXT:    vpshuflw {{.*#+}} ymm1 = mem[1,0,3,2,4,5,6,7,9,8,11,10,12,13,14,15] sched: [8:1.00]
 ; HASWELL-NEXT:    vpor %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pshuflw:
 ; BROADWELL:       # %bb.0:
@@ -5326,8 +5326,8 @@ define <32 x i8> @test_psignb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; HASWELL-LABEL: test_psignb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsignb %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpsignb (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpsignb (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psignb:
 ; BROADWELL:       # %bb.0:
@@ -5369,8 +5369,8 @@ define <8 x i32> @test_psignd(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; HASWELL-LABEL: test_psignd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsignd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpsignd (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpsignd (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psignd:
 ; BROADWELL:       # %bb.0:
@@ -5412,8 +5412,8 @@ define <16 x i16> @test_psignw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ; HASWELL-LABEL: test_psignw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsignw %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpsignw (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpsignw (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psignw:
 ; BROADWELL:       # %bb.0:
@@ -5456,9 +5456,9 @@ define <8 x i32> @test_pslld(<8 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; HASWELL-LABEL: test_pslld:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpslld %xmm1, %ymm0, %ymm0 # sched: [4:1.00]
-; HASWELL-NEXT:    vpslld (%rdi), %ymm0, %ymm0 # sched: [1:1.00]
+; HASWELL-NEXT:    vpslld (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; HASWELL-NEXT:    vpslld $2, %ymm0, %ymm0 # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pslld:
 ; BROADWELL:       # %bb.0:
@@ -5504,7 +5504,7 @@ define <32 x i8> @test_pslldq(<32 x i8> %a0) {
 ; HASWELL-LABEL: test_pslldq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpslldq {{.*#+}} ymm0 = zero,zero,zero,ymm0[0,1,2,3,4,5,6,7,8,9,10,11,12],zero,zero,zero,ymm0[16,17,18,19,20,21,22,23,24,25,26,27,28] sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pslldq:
 ; BROADWELL:       # %bb.0:
@@ -5540,9 +5540,9 @@ define <4 x i64> @test_psllq(<4 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; HASWELL-LABEL: test_psllq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsllq %xmm1, %ymm0, %ymm0 # sched: [4:1.00]
-; HASWELL-NEXT:    vpsllq (%rdi), %ymm0, %ymm0 # sched: [1:1.00]
+; HASWELL-NEXT:    vpsllq (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; HASWELL-NEXT:    vpsllq $2, %ymm0, %ymm0 # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psllq:
 ; BROADWELL:       # %bb.0:
@@ -5589,8 +5589,8 @@ define <4 x i32> @test_psllvd(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; HASWELL-LABEL: test_psllvd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsllvd %xmm1, %xmm0, %xmm0 # sched: [3:2.00]
-; HASWELL-NEXT:    vpsllvd (%rdi), %xmm0, %xmm0 # sched: [3:2.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpsllvd (%rdi), %xmm0, %xmm0 # sched: [9:2.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psllvd:
 ; BROADWELL:       # %bb.0:
@@ -5632,8 +5632,8 @@ define <8 x i32> @test_psllvd_ymm(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) 
 ; HASWELL-LABEL: test_psllvd_ymm:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsllvd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
-; HASWELL-NEXT:    vpsllvd (%rdi), %ymm0, %ymm0 # sched: [3:2.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpsllvd (%rdi), %ymm0, %ymm0 # sched: [10:2.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psllvd_ymm:
 ; BROADWELL:       # %bb.0:
@@ -5675,8 +5675,8 @@ define <2 x i64> @test_psllvq(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; HASWELL-LABEL: test_psllvq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsllvq %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
-; HASWELL-NEXT:    vpsllvq (%rdi), %xmm0, %xmm0 # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpsllvq (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psllvq:
 ; BROADWELL:       # %bb.0:
@@ -5718,8 +5718,8 @@ define <4 x i64> @test_psllvq_ymm(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) 
 ; HASWELL-LABEL: test_psllvq_ymm:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsllvq %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
-; HASWELL-NEXT:    vpsllvq (%rdi), %ymm0, %ymm0 # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpsllvq (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psllvq_ymm:
 ; BROADWELL:       # %bb.0:
@@ -5762,9 +5762,9 @@ define <16 x i16> @test_psllw(<16 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ; HASWELL-LABEL: test_psllw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsllw %xmm1, %ymm0, %ymm0 # sched: [4:1.00]
-; HASWELL-NEXT:    vpsllw (%rdi), %ymm0, %ymm0 # sched: [1:1.00]
+; HASWELL-NEXT:    vpsllw (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; HASWELL-NEXT:    vpsllw $2, %ymm0, %ymm0 # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psllw:
 ; BROADWELL:       # %bb.0:
@@ -5812,9 +5812,9 @@ define <8 x i32> @test_psrad(<8 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; HASWELL-LABEL: test_psrad:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsrad %xmm1, %ymm0, %ymm0 # sched: [4:1.00]
-; HASWELL-NEXT:    vpsrad (%rdi), %ymm0, %ymm0 # sched: [1:1.00]
+; HASWELL-NEXT:    vpsrad (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; HASWELL-NEXT:    vpsrad $2, %ymm0, %ymm0 # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psrad:
 ; BROADWELL:       # %bb.0:
@@ -5861,8 +5861,8 @@ define <4 x i32> @test_psravd(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; HASWELL-LABEL: test_psravd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsravd %xmm1, %xmm0, %xmm0 # sched: [3:2.00]
-; HASWELL-NEXT:    vpsravd (%rdi), %xmm0, %xmm0 # sched: [3:2.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpsravd (%rdi), %xmm0, %xmm0 # sched: [9:2.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psravd:
 ; BROADWELL:       # %bb.0:
@@ -5904,8 +5904,8 @@ define <8 x i32> @test_psravd_ymm(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) 
 ; HASWELL-LABEL: test_psravd_ymm:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsravd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
-; HASWELL-NEXT:    vpsravd (%rdi), %ymm0, %ymm0 # sched: [3:2.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpsravd (%rdi), %ymm0, %ymm0 # sched: [10:2.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psravd_ymm:
 ; BROADWELL:       # %bb.0:
@@ -5948,9 +5948,9 @@ define <16 x i16> @test_psraw(<16 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ; HASWELL-LABEL: test_psraw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsraw %xmm1, %ymm0, %ymm0 # sched: [4:1.00]
-; HASWELL-NEXT:    vpsraw (%rdi), %ymm0, %ymm0 # sched: [1:1.00]
+; HASWELL-NEXT:    vpsraw (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; HASWELL-NEXT:    vpsraw $2, %ymm0, %ymm0 # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psraw:
 ; BROADWELL:       # %bb.0:
@@ -5998,9 +5998,9 @@ define <8 x i32> @test_psrld(<8 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; HASWELL-LABEL: test_psrld:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsrld %xmm1, %ymm0, %ymm0 # sched: [4:1.00]
-; HASWELL-NEXT:    vpsrld (%rdi), %ymm0, %ymm0 # sched: [1:1.00]
+; HASWELL-NEXT:    vpsrld (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; HASWELL-NEXT:    vpsrld $2, %ymm0, %ymm0 # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psrld:
 ; BROADWELL:       # %bb.0:
@@ -6046,7 +6046,7 @@ define <32 x i8> @test_psrldq(<32 x i8> %a0) {
 ; HASWELL-LABEL: test_psrldq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsrldq {{.*#+}} ymm0 = ymm0[3,4,5,6,7,8,9,10,11,12,13,14,15],zero,zero,zero,ymm0[19,20,21,22,23,24,25,26,27,28,29,30,31],zero,zero,zero sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psrldq:
 ; BROADWELL:       # %bb.0:
@@ -6082,9 +6082,9 @@ define <4 x i64> @test_psrlq(<4 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; HASWELL-LABEL: test_psrlq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsrlq %xmm1, %ymm0, %ymm0 # sched: [4:1.00]
-; HASWELL-NEXT:    vpsrlq (%rdi), %ymm0, %ymm0 # sched: [1:1.00]
+; HASWELL-NEXT:    vpsrlq (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; HASWELL-NEXT:    vpsrlq $2, %ymm0, %ymm0 # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psrlq:
 ; BROADWELL:       # %bb.0:
@@ -6131,8 +6131,8 @@ define <4 x i32> @test_psrlvd(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; HASWELL-LABEL: test_psrlvd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsrlvd %xmm1, %xmm0, %xmm0 # sched: [3:2.00]
-; HASWELL-NEXT:    vpsrlvd (%rdi), %xmm0, %xmm0 # sched: [3:2.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpsrlvd (%rdi), %xmm0, %xmm0 # sched: [9:2.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psrlvd:
 ; BROADWELL:       # %bb.0:
@@ -6174,8 +6174,8 @@ define <8 x i32> @test_psrlvd_ymm(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) 
 ; HASWELL-LABEL: test_psrlvd_ymm:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsrlvd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
-; HASWELL-NEXT:    vpsrlvd (%rdi), %ymm0, %ymm0 # sched: [3:2.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpsrlvd (%rdi), %ymm0, %ymm0 # sched: [10:2.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psrlvd_ymm:
 ; BROADWELL:       # %bb.0:
@@ -6217,8 +6217,8 @@ define <2 x i64> @test_psrlvq(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; HASWELL-LABEL: test_psrlvq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsrlvq %xmm1, %xmm0, %xmm0 # sched: [1:1.00]
-; HASWELL-NEXT:    vpsrlvq (%rdi), %xmm0, %xmm0 # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpsrlvq (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psrlvq:
 ; BROADWELL:       # %bb.0:
@@ -6260,8 +6260,8 @@ define <4 x i64> @test_psrlvq_ymm(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) 
 ; HASWELL-LABEL: test_psrlvq_ymm:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsrlvq %ymm1, %ymm0, %ymm0 # sched: [1:1.00]
-; HASWELL-NEXT:    vpsrlvq (%rdi), %ymm0, %ymm0 # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpsrlvq (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psrlvq_ymm:
 ; BROADWELL:       # %bb.0:
@@ -6304,9 +6304,9 @@ define <16 x i16> @test_psrlw(<16 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ; HASWELL-LABEL: test_psrlw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsrlw %xmm1, %ymm0, %ymm0 # sched: [4:1.00]
-; HASWELL-NEXT:    vpsrlw (%rdi), %ymm0, %ymm0 # sched: [1:1.00]
+; HASWELL-NEXT:    vpsrlw (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; HASWELL-NEXT:    vpsrlw $2, %ymm0, %ymm0 # sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psrlw:
 ; BROADWELL:       # %bb.0:
@@ -6353,8 +6353,8 @@ define <32 x i8> @test_psubb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; HASWELL-LABEL: test_psubb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsubb %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpsubb (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpsubb (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psubb:
 ; BROADWELL:       # %bb.0:
@@ -6395,8 +6395,8 @@ define <8 x i32> @test_psubd(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; HASWELL-LABEL: test_psubd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsubd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpsubd (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpsubd (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psubd:
 ; BROADWELL:       # %bb.0:
@@ -6437,8 +6437,8 @@ define <4 x i64> @test_psubq(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; HASWELL-LABEL: test_psubq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsubq %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpsubq (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpsubq (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psubq:
 ; BROADWELL:       # %bb.0:
@@ -6479,8 +6479,8 @@ define <32 x i8> @test_psubsb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; HASWELL-LABEL: test_psubsb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsubsb %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpsubsb (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpsubsb (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psubsb:
 ; BROADWELL:       # %bb.0:
@@ -6522,8 +6522,8 @@ define <16 x i16> @test_psubsw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ; HASWELL-LABEL: test_psubsw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsubsw %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpsubsw (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpsubsw (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psubsw:
 ; BROADWELL:       # %bb.0:
@@ -6565,8 +6565,8 @@ define <32 x i8> @test_psubusb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; HASWELL-LABEL: test_psubusb:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsubusb %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpsubusb (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpsubusb (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psubusb:
 ; BROADWELL:       # %bb.0:
@@ -6608,8 +6608,8 @@ define <16 x i16> @test_psubusw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2)
 ; HASWELL-LABEL: test_psubusw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsubusw %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpsubusw (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpsubusw (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psubusw:
 ; BROADWELL:       # %bb.0:
@@ -6651,8 +6651,8 @@ define <16 x i16> @test_psubw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) {
 ; HASWELL-LABEL: test_psubw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpsubw %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpsubw (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpsubw (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_psubw:
 ; BROADWELL:       # %bb.0:
@@ -6693,8 +6693,8 @@ define <32 x i8> @test_punpckhbw(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; HASWELL-LABEL: test_punpckhbw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpunpckhbw {{.*#+}} ymm0 = ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11],ymm0[12],ymm1[12],ymm0[13],ymm1[13],ymm0[14],ymm1[14],ymm0[15],ymm1[15],ymm0[24],ymm1[24],ymm0[25],ymm1[25],ymm0[26],ymm1[26],ymm0[27],ymm1[27],ymm0[28],ymm1[28],ymm0[29],ymm1[29],ymm0[30],ymm1[30],ymm0[31],ymm1[31] sched: [1:1.00]
-; HASWELL-NEXT:    vpunpckhbw {{.*#+}} ymm0 = ymm0[8],mem[8],ymm0[9],mem[9],ymm0[10],mem[10],ymm0[11],mem[11],ymm0[12],mem[12],ymm0[13],mem[13],ymm0[14],mem[14],ymm0[15],mem[15],ymm0[24],mem[24],ymm0[25],mem[25],ymm0[26],mem[26],ymm0[27],mem[27],ymm0[28],mem[28],ymm0[29],mem[29],ymm0[30],mem[30],ymm0[31],mem[31] sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpunpckhbw {{.*#+}} ymm0 = ymm0[8],mem[8],ymm0[9],mem[9],ymm0[10],mem[10],ymm0[11],mem[11],ymm0[12],mem[12],ymm0[13],mem[13],ymm0[14],mem[14],ymm0[15],mem[15],ymm0[24],mem[24],ymm0[25],mem[25],ymm0[26],mem[26],ymm0[27],mem[27],ymm0[28],mem[28],ymm0[29],mem[29],ymm0[30],mem[30],ymm0[31],mem[31] sched: [8:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_punpckhbw:
 ; BROADWELL:       # %bb.0:
@@ -6737,10 +6737,10 @@ define <8 x i32> @test_punpckhdq(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; HASWELL-LABEL: test_punpckhdq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpunpckhdq {{.*#+}} ymm0 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7] sched: [1:1.00]
-; HASWELL-NEXT:    vpunpckhdq {{.*#+}} ymm0 = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [1:1.00]
+; HASWELL-NEXT:    vpunpckhdq {{.*#+}} ymm0 = ymm0[2],mem[2],ymm0[3],mem[3],ymm0[6],mem[6],ymm0[7],mem[7] sched: [8:1.00]
 ; HASWELL-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1 # sched: [1:0.50]
 ; HASWELL-NEXT:    vpsubd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_punpckhdq:
 ; BROADWELL:       # %bb.0:
@@ -6791,9 +6791,9 @@ define <4 x i64> @test_punpckhqdq(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) 
 ; HASWELL-LABEL: test_punpckhqdq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpunpckhqdq {{.*#+}} ymm1 = ymm0[1],ymm1[1],ymm0[3],ymm1[3] sched: [1:1.00]
-; HASWELL-NEXT:    vpunpckhqdq {{.*#+}} ymm0 = ymm0[1],mem[1],ymm0[3],mem[3] sched: [1:1.00]
+; HASWELL-NEXT:    vpunpckhqdq {{.*#+}} ymm0 = ymm0[1],mem[1],ymm0[3],mem[3] sched: [8:1.00]
 ; HASWELL-NEXT:    vpaddq %ymm0, %ymm1, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_punpckhqdq:
 ; BROADWELL:       # %bb.0:
@@ -6839,8 +6839,8 @@ define <16 x i16> @test_punpckhwd(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a
 ; HASWELL-LABEL: test_punpckhwd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpunpckhwd {{.*#+}} ymm0 = ymm0[4],ymm1[4],ymm0[5],ymm1[5],ymm0[6],ymm1[6],ymm0[7],ymm1[7],ymm0[12],ymm1[12],ymm0[13],ymm1[13],ymm0[14],ymm1[14],ymm0[15],ymm1[15] sched: [1:1.00]
-; HASWELL-NEXT:    vpunpckhwd {{.*#+}} ymm0 = ymm0[4],mem[4],ymm0[5],mem[5],ymm0[6],mem[6],ymm0[7],mem[7],ymm0[12],mem[12],ymm0[13],mem[13],ymm0[14],mem[14],ymm0[15],mem[15] sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpunpckhwd {{.*#+}} ymm0 = ymm0[4],mem[4],ymm0[5],mem[5],ymm0[6],mem[6],ymm0[7],mem[7],ymm0[12],mem[12],ymm0[13],mem[13],ymm0[14],mem[14],ymm0[15],mem[15] sched: [8:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_punpckhwd:
 ; BROADWELL:       # %bb.0:
@@ -6881,8 +6881,8 @@ define <32 x i8> @test_punpcklbw(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; HASWELL-LABEL: test_punpcklbw:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[4],ymm1[4],ymm0[5],ymm1[5],ymm0[6],ymm1[6],ymm0[7],ymm1[7],ymm0[16],ymm1[16],ymm0[17],ymm1[17],ymm0[18],ymm1[18],ymm0[19],ymm1[19],ymm0[20],ymm1[20],ymm0[21],ymm1[21],ymm0[22],ymm1[22],ymm0[23],ymm1[23] sched: [1:1.00]
-; HASWELL-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[2],mem[2],ymm0[3],mem[3],ymm0[4],mem[4],ymm0[5],mem[5],ymm0[6],mem[6],ymm0[7],mem[7],ymm0[16],mem[16],ymm0[17],mem[17],ymm0[18],mem[18],ymm0[19],mem[19],ymm0[20],mem[20],ymm0[21],mem[21],ymm0[22],mem[22],ymm0[23],mem[23] sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[2],mem[2],ymm0[3],mem[3],ymm0[4],mem[4],ymm0[5],mem[5],ymm0[6],mem[6],ymm0[7],mem[7],ymm0[16],mem[16],ymm0[17],mem[17],ymm0[18],mem[18],ymm0[19],mem[19],ymm0[20],mem[20],ymm0[21],mem[21],ymm0[22],mem[22],ymm0[23],mem[23] sched: [8:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_punpcklbw:
 ; BROADWELL:       # %bb.0:
@@ -6925,10 +6925,10 @@ define <8 x i32> @test_punpckldq(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; HASWELL-LABEL: test_punpckldq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5] sched: [1:1.00]
-; HASWELL-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [1:1.00]
+; HASWELL-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[4],mem[4],ymm0[5],mem[5] sched: [8:1.00]
 ; HASWELL-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1 # sched: [1:0.50]
 ; HASWELL-NEXT:    vpsubd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_punpckldq:
 ; BROADWELL:       # %bb.0:
@@ -6979,9 +6979,9 @@ define <4 x i64> @test_punpcklqdq(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) 
 ; HASWELL-LABEL: test_punpcklqdq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpunpcklqdq {{.*#+}} ymm1 = ymm0[0],ymm1[0],ymm0[2],ymm1[2] sched: [1:1.00]
-; HASWELL-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[2],mem[2] sched: [1:1.00]
+; HASWELL-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[2],mem[2] sched: [8:1.00]
 ; HASWELL-NEXT:    vpaddq %ymm0, %ymm1, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_punpcklqdq:
 ; BROADWELL:       # %bb.0:
@@ -7027,8 +7027,8 @@ define <16 x i16> @test_punpcklwd(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a
 ; HASWELL-LABEL: test_punpcklwd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpunpcklwd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11] sched: [1:1.00]
-; HASWELL-NEXT:    vpunpcklwd {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[2],mem[2],ymm0[3],mem[3],ymm0[8],mem[8],ymm0[9],mem[9],ymm0[10],mem[10],ymm0[11],mem[11] sched: [1:1.00]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    vpunpcklwd {{.*#+}} ymm0 = ymm0[0],mem[0],ymm0[1],mem[1],ymm0[2],mem[2],ymm0[3],mem[3],ymm0[8],mem[8],ymm0[9],mem[9],ymm0[10],mem[10],ymm0[11],mem[11] sched: [8:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_punpcklwd:
 ; BROADWELL:       # %bb.0:
@@ -7070,9 +7070,9 @@ define <4 x i64> @test_pxor(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; HASWELL-LABEL: test_pxor:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpxor %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
-; HASWELL-NEXT:    vpxor (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
+; HASWELL-NEXT:    vpxor (%rdi), %ymm0, %ymm0 # sched: [8:0.50]
 ; HASWELL-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [2:1.00]
+; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pxor:
 ; BROADWELL:       # %bb.0:

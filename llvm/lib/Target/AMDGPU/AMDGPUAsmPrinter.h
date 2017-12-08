@@ -181,6 +181,8 @@ public:
 
   void EmitFunctionEntryLabel() override;
 
+  void EmitBasicBlockStart(const MachineBasicBlock &MBB) const override;
+
   void EmitGlobalVariable(const GlobalVariable *GV) override;
 
   void EmitStartOfAsmFile(Module &M) override;
@@ -195,8 +197,8 @@ public:
                        raw_ostream &O) override;
 
 protected:
-  std::vector<std::string> DisasmLines, HexLines;
-  size_t DisasmLineMaxLen;
+  mutable std::vector<std::string> DisasmLines, HexLines;
+  mutable size_t DisasmLineMaxLen;
   AMDGPUAS AMDGPUASI;
 };
 

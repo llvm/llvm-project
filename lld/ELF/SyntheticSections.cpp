@@ -1347,12 +1347,13 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize() {
 
   RelocData = {'A', 'P', 'S', '2'};
   raw_svector_ostream OS(RelocData);
+  auto Add = [&](int64_t V) { encodeSLEB128(V, OS); };
 
   // The format header includes the number of relocations and the initial
   // offset (we set this to zero because the first relocation group will
   // perform the initial adjustment).
-  encodeSLEB128(Relocs.size(), OS);
-  encodeSLEB128(0, OS);
+  Add(Relocs.size());
+  Add(0);
 
   std::vector<Elf_Rela> Relatives, NonRelatives;
 
@@ -1405,27 +1406,25 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize() {
   // remaining relocations.
   for (std::vector<Elf_Rela> &G : RelativeGroups) {
     // The first relocation in the group.
-    encodeSLEB128(1, OS);
-    encodeSLEB128(RELOCATION_GROUPED_BY_OFFSET_DELTA_FLAG |
-                      RELOCATION_GROUPED_BY_INFO_FLAG | HasAddendIfRela,
-                  OS);
-    encodeSLEB128(G[0].r_offset - Offset, OS);
-    encodeSLEB128(Target->RelativeRel, OS);
+    Add(1);
+    Add(RELOCATION_GROUPED_BY_OFFSET_DELTA_FLAG |
+        RELOCATION_GROUPED_BY_INFO_FLAG | HasAddendIfRela);
+    Add(G[0].r_offset - Offset);
+    Add(Target->RelativeRel);
     if (Config->IsRela) {
-      encodeSLEB128(G[0].r_addend - Addend, OS);
+      Add(G[0].r_addend - Addend);
       Addend = G[0].r_addend;
     }
 
     // The remaining relocations.
-    encodeSLEB128(G.size() - 1, OS);
-    encodeSLEB128(RELOCATION_GROUPED_BY_OFFSET_DELTA_FLAG |
-                      RELOCATION_GROUPED_BY_INFO_FLAG | HasAddendIfRela,
-                  OS);
-    encodeSLEB128(Config->Wordsize, OS);
-    encodeSLEB128(Target->RelativeRel, OS);
+    Add(G.size() - 1);
+    Add(RELOCATION_GROUPED_BY_OFFSET_DELTA_FLAG |
+        RELOCATION_GROUPED_BY_INFO_FLAG | HasAddendIfRela);
+    Add(Config->Wordsize);
+    Add(Target->RelativeRel);
     if (Config->IsRela) {
       for (auto I = G.begin() + 1, E = G.end(); I != E; ++I) {
-        encodeSLEB128(I->r_addend - Addend, OS);
+        Add(I->r_addend - Addend);
         Addend = I->r_addend;
       }
     }
@@ -1435,14 +1434,14 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize() {
 
   // Now the ungrouped relatives.
   if (!UngroupedRelatives.empty()) {
-    encodeSLEB128(UngroupedRelatives.size(), OS);
-    encodeSLEB128(RELOCATION_GROUPED_BY_INFO_FLAG | HasAddendIfRela, OS);
-    encodeSLEB128(Target->RelativeRel, OS);
+    Add(UngroupedRelatives.size());
+    Add(RELOCATION_GROUPED_BY_INFO_FLAG | HasAddendIfRela);
+    Add(Target->RelativeRel);
     for (Elf_Rela &R : UngroupedRelatives) {
-      encodeSLEB128(R.r_offset - Offset, OS);
+      Add(R.r_offset - Offset);
       Offset = R.r_offset;
       if (Config->IsRela) {
-        encodeSLEB128(R.r_addend - Addend, OS);
+        Add(R.r_addend - Addend);
         Addend = R.r_addend;
       }
     }
@@ -1454,14 +1453,14 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize() {
               return A.r_offset < B.r_offset;
             });
   if (!NonRelatives.empty()) {
-    encodeSLEB128(NonRelatives.size(), OS);
-    encodeSLEB128(HasAddendIfRela, OS);
+    Add(NonRelatives.size());
+    Add(HasAddendIfRela);
     for (Elf_Rela &R : NonRelatives) {
-      encodeSLEB128(R.r_offset - Offset, OS);
+      Add(R.r_offset - Offset);
       Offset = R.r_offset;
-      encodeSLEB128(R.r_info, OS);
+      Add(R.r_info);
       if (Config->IsRela) {
-        encodeSLEB128(R.r_addend - Addend, OS);
+        Add(R.r_addend - Addend);
         Addend = R.r_addend;
       }
     }

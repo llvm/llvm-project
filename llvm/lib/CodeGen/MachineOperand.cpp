@@ -410,7 +410,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << getImm();
     break;
   case MachineOperand::MO_CImmediate:
-    getCImm()->getValue().print(OS, false);
+    getCImm()->printAsOperand(OS, /*PrintType=*/true, MST);
     break;
   case MachineOperand::MO_FPImmediate:
     if (getFPImm()->getType()->isFloatTy()) {
