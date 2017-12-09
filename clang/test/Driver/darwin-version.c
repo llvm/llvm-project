@@ -141,6 +141,6 @@
 // CHECK-VERSION-WATCHOS-TARGET: "x86_64-apple-watchos4.0.0-simulator"
 
 // RUN: env MACOSX_DEPLOYMENT_TARGET=1000.1000 \
-// RUN:   %clang -c %s -### 2>&1 | \
+// RUN:   %clang -target x86_64-apple-darwin -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-INVALID-ENV %s
 // CHECK-VERSION-INVALID-ENV: invalid version number in 'MACOSX_DEPLOYMENT_TARGET=1000.1000'
