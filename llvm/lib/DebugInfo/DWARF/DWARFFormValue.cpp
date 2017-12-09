@@ -396,18 +396,19 @@ bool DWARFFormValue::extractValue(const DWARFDataExtractor &Data,
 void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   uint64_t UValue = Value.uval;
   bool CURelativeOffset = false;
-
+  raw_ostream &AddrOS =
+      DumpOpts.ShowAddresses ? WithColor(OS, syntax::Address).get() : nulls();
   switch (Form) {
   case DW_FORM_addr:
-    OS << format("0x%016" PRIx64, UValue);
+    AddrOS << format("0x%016" PRIx64, UValue);
     break;
   case DW_FORM_GNU_addr_index: {
-    OS << format(" indexed (%8.8x) address = ", (uint32_t)UValue);
+    AddrOS << format(" indexed (%8.8x) address = ", (uint32_t)UValue);
     uint64_t Address;
     if (U == nullptr)
       OS << "<invalid dwarf unit>";
     else if (U->getAddrOffsetSectionItem(UValue, Address))
-      OS << format("0x%016" PRIx64, Address);
+      AddrOS << format("0x%016" PRIx64, Address);
     else
       OS << "<no .debug_addr section>";
     break;
@@ -426,6 +427,8 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
     OS << format("0x%08x", (uint32_t)UValue);
     break;
   case DW_FORM_ref_sig8:
+    AddrOS << format("0x%016" PRIx64, UValue);
+    break;
   case DW_FORM_data8:
     OS << format("0x%016" PRIx64, UValue);
     break;
@@ -488,38 +491,40 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   case DW_FORM_strx3:
   case DW_FORM_strx4:
   case DW_FORM_GNU_str_index:
-    OS << format(" indexed (%8.8x) string = ", (uint32_t)UValue);
+    if (DumpOpts.Verbose)
+      OS << format(" indexed (%8.8x) string = ", (uint32_t)UValue);
     dumpString(OS);
     break;
   case DW_FORM_GNU_strp_alt:
-    OS << format("alt indirect string, offset: 0x%" PRIx64 "", UValue);
+    if (DumpOpts.Verbose)
+      OS << format("alt indirect string, offset: 0x%" PRIx64 "", UValue);
     dumpString(OS);
     break;
   case DW_FORM_ref_addr:
-    OS << format("0x%016" PRIx64, UValue);
+    AddrOS << format("0x%016" PRIx64, UValue);
     break;
   case DW_FORM_ref1:
     CURelativeOffset = true;
-    OS << format("cu + 0x%2.2x", (uint8_t)UValue);
+    AddrOS << format("cu + 0x%2.2x", (uint8_t)UValue);
     break;
   case DW_FORM_ref2:
     CURelativeOffset = true;
-    OS << format("cu + 0x%4.4x", (uint16_t)UValue);
+    AddrOS << format("cu + 0x%4.4x", (uint16_t)UValue);
     break;
   case DW_FORM_ref4:
     CURelativeOffset = true;
-    OS << format("cu + 0x%4.4x", (uint32_t)UValue);
+    AddrOS << format("cu + 0x%4.4x", (uint32_t)UValue);
     break;
   case DW_FORM_ref8:
     CURelativeOffset = true;
-    OS << format("cu + 0x%8.8" PRIx64, UValue);
+    AddrOS << format("cu + 0x%8.8" PRIx64, UValue);
     break;
   case DW_FORM_ref_udata:
     CURelativeOffset = true;
-    OS << format("cu + 0x%" PRIx64, UValue);
+    AddrOS << format("cu + 0x%" PRIx64, UValue);
     break;
   case DW_FORM_GNU_ref_alt:
-    OS << format("<alt 0x%" PRIx64 ">", UValue);
+    AddrOS << format("<alt 0x%" PRIx64 ">", UValue);
     break;
 
   // All DW_FORM_indirect attributes should be resolved prior to calling
@@ -530,7 +535,7 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
 
   // Should be formatted to 64-bit for DWARF64.
   case DW_FORM_sec_offset:
-    OS << format("0x%08x", (uint32_t)UValue);
+    AddrOS << format("0x%08x", (uint32_t)UValue);
     break;
 
   default:

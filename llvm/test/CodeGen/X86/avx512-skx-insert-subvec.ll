@@ -79,8 +79,8 @@ define <4 x i1> @test5(<2 x i1> %a, <2 x i1>%b) {
 ; CHECK-NEXT:    vpsllq $63, %xmm1, %xmm0
 ; CHECK-NEXT:    vptestmq %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    kshiftlb $2, %k1, %k1
-; CHECK-NEXT:    kshiftlb $2, %k0, %k0
-; CHECK-NEXT:    kshiftrb $2, %k0, %k0
+; CHECK-NEXT:    kshiftlb $6, %k0, %k0
+; CHECK-NEXT:    kshiftrb $6, %k0, %k0
 ; CHECK-NEXT:    korb %k1, %k0, %k0
 ; CHECK-NEXT:    vpmovm2d %k0, %xmm0
 ; CHECK-NEXT:    retq
@@ -97,8 +97,8 @@ define <16 x i1> @test6(<2 x i1> %a, <2 x i1>%b) {
 ; CHECK-NEXT:    vpsllq $63, %xmm1, %xmm0
 ; CHECK-NEXT:    vptestmq %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    kshiftlb $2, %k1, %k1
-; CHECK-NEXT:    kshiftlb $2, %k0, %k0
-; CHECK-NEXT:    kshiftrb $2, %k0, %k0
+; CHECK-NEXT:    kshiftlb $6, %k0, %k0
+; CHECK-NEXT:    kshiftrb $6, %k0, %k0
 ; CHECK-NEXT:    korb %k1, %k0, %k0
 ; CHECK-NEXT:    vpmovm2b %k0, %xmm0
 ; CHECK-NEXT:    retq

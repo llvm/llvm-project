@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx901 -show-encoding %s | FileCheck %s
+// RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s
 
 ds_add_u32 v1, v2 offset:65535
 // CHECK: [0xff,0xff,0x00,0xd8,0x01,0x02,0x00,0x00]

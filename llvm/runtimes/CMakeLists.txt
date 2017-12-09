@@ -209,6 +209,9 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
       if(TARGET install-${component})
         list(APPEND SUB_INSTALL_TARGETS install-${component})
       endif()
+      if(TARGET install-${component}-stripped)
+        list(APPEND SUB_INSTALL_TARGETS install-${component}-stripped)
+      endif()
     endforeach()
 
     if(LLVM_RUNTIMES_TARGET)
@@ -289,6 +292,7 @@ else() # if this is included from LLVM's CMake
       else()
         add_custom_target(builtins)
         add_custom_target(install-builtins)
+        add_custom_target(install-builtins-stripped)
       endif()
 
       foreach(target ${LLVM_BUILTIN_TARGETS})
@@ -296,6 +300,7 @@ else() # if this is included from LLVM's CMake
 
         add_dependencies(builtins builtins-${target})
         add_dependencies(install-builtins install-builtins-${target})
+        add_dependencies(install-builtins-stripped install-builtins-${target}-stripped)
       endforeach()
     endif()
     set(deps builtins)
@@ -331,7 +336,8 @@ else() # if this is included from LLVM's CMake
     foreach(runtime_name ${runtime_names})
       list(APPEND extra_targets
         ${runtime_name}
-        install-${runtime_name})
+        install-${runtime_name}
+        install-${runtime_name}-stripped)
       if(LLVM_INCLUDE_TESTS)
         list(APPEND test_targets check-${runtime_name})
       endif()
@@ -377,7 +383,8 @@ else() # if this is included from LLVM's CMake
     foreach(runtime_name ${runtime_names})
       list(APPEND ${name}_extra_targets
         "${runtime_name}:${runtime_name}-${name}"
-        "install-${runtime_name}:install-${runtime_name}-${name}")
+        "install-${runtime_name}:install-${runtime_name}-${name}"
+        "install-${runtime_name}-stripped:install-${runtime_name}-${name}-stripped")
       if(LLVM_INCLUDE_TESTS)
         list(APPEND ${name}_test_targets "check-${runtime_name}:check-${runtime_name}-${name}")
       endif()
@@ -452,6 +459,7 @@ else() # if this is included from LLVM's CMake
         add_custom_target(runtimes)
         add_custom_target(runtimes-configure)
         add_custom_target(install-runtimes)
+        add_custom_target(install-runtimes-stripped)
         if(LLVM_INCLUDE_TESTS)
           add_custom_target(check-runtimes)
           add_custom_target(runtimes-test-depends)
@@ -475,6 +483,7 @@ else() # if this is included from LLVM's CMake
         add_dependencies(runtimes runtimes-${name})
         add_dependencies(runtimes-configure runtimes-${name}-configure)
         add_dependencies(install-runtimes install-runtimes-${name})
+        add_dependencies(install-runtimes-stripped install-runtimes-${name}-stripped)
         if(LLVM_INCLUDE_TESTS)
           add_dependencies(check-runtimes check-runtimes-${name})
           add_dependencies(runtimes-test-depends runtimes-test-depends-${name})

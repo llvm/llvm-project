@@ -1,9 +1,8 @@
+# RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o %t.o
+# RUN: llvm-dwarfdump -v %t.o | FileCheck --check-prefix=INVALIDCONTRIB %s
+#
 # Test object to verify that llvm-dwarfdump handles an invalid string offsets
 # table.
-#
-# To generate the test object:
-# llvm-mc -triple x86_64-unknown-linux dwarfdump-str-offsets-invalid-1.s -filetype=obj \
-#         -o dwarfdump-str-offsets-invalid-1.x86_64.o
 #
 # A rudimentary abbrev section.
         .section .debug_abbrev,"",@progbits
@@ -14,7 +13,7 @@
         .byte 0x00  # EOM(2)
         .byte 0x00  # EOM(3)
 
-# A rudimentary compile unit to convince dwarfdump that we are dealing with a 
+# A rudimentary compile unit to convince dwarfdump that we are dealing with a
 # DWARF v5 string offsets table.
         .section .debug_info,"",@progbits
 
@@ -30,5 +29,11 @@ CU1_5_version:
 CU1_5_end:
 
         .section .debug_str_offsets,"",@progbits
-# A degenerate section, not enough for a single contribution size.
-        .byte 2
+# A degenerate section with fewer bytes than required for a DWARF64 size.
+        .long 0xffffffff
+        .long 0
+        .short 4
+
+# INVALIDCONTRIB:            .debug_str_offsets contents:
+# INVALIDCONTRIB-NOT:        contents:
+# INVALIDCONTRIB:            error: invalid contribution to string offsets table in section .debug_str_offsets.

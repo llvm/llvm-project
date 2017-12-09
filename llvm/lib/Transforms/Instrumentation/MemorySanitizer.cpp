@@ -320,6 +320,14 @@ static const MemoryMapParams FreeBSD_X86_64_MemoryMapParams = {
   0x380000000000,  // OriginBase
 };
 
+// x86_64 NetBSD
+static const MemoryMapParams NetBSD_X86_64_MemoryMapParams = {
+  0,               // AndMask
+  0x500000000000,  // XorMask
+  0,               // ShadowBase
+  0x100000000000,  // OriginBase
+};
+
 static const PlatformMemoryMapParams Linux_X86_MemoryMapParams = {
   &Linux_I386_MemoryMapParams,
   &Linux_X86_64_MemoryMapParams,
@@ -343,6 +351,11 @@ static const PlatformMemoryMapParams Linux_ARM_MemoryMapParams = {
 static const PlatformMemoryMapParams FreeBSD_X86_MemoryMapParams = {
   &FreeBSD_I386_MemoryMapParams,
   &FreeBSD_X86_64_MemoryMapParams,
+};
+
+static const PlatformMemoryMapParams NetBSD_X86_MemoryMapParams = {
+  nullptr,
+  &NetBSD_X86_64_MemoryMapParams,
 };
 
 namespace {
@@ -572,6 +585,15 @@ bool MemorySanitizer::doInitialization(Module &M) {
           break;
         case Triple::x86:
           MapParams = FreeBSD_X86_MemoryMapParams.bits32;
+          break;
+        default:
+          report_fatal_error("unsupported architecture");
+      }
+      break;
+    case Triple::NetBSD:
+      switch (TargetTriple.getArch()) {
+        case Triple::x86_64:
+          MapParams = NetBSD_X86_MemoryMapParams.bits64;
           break;
         default:
           report_fatal_error("unsupported architecture");

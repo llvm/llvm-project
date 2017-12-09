@@ -1,9 +1,8 @@
+# RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o %t.o
+# RUN: llvm-dwarfdump -v %t.o | FileCheck --check-prefix=INVALIDLENGTH %s
+#
 # Test object to verify that llvm-dwarfdump handles an invalid string offsets
 # table.
-#
-# To generate the test object:
-# llvm-mc -triple x86_64-unknown-linux dwarfdump-str-offsets-invalid-4.s -filetype=obj \
-#         -o dwarfdump-str-offsets-invalid-4.x86_64.o
 
         .section .debug_str,"MS",@progbits,1
 str_producer:
@@ -48,3 +47,7 @@ CU1_5_end:
         .long str_CU1
         .byte 0
 .debug_str_offsets_segment0_end:
+
+# INVALIDLENGTH:             .debug_str_offsets contents:
+# INVALIDLENGTH-NOT:         contents:
+# INVALIDLENGTH:             error: contribution to string offsets table in section .debug_str_offsets has invalid length.

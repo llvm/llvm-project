@@ -1304,14 +1304,14 @@ static void findDbgUsers(SmallVectorImpl<DbgInfoIntrinsic *> &DbgUsers,
 
 bool llvm::replaceDbgDeclare(Value *Address, Value *NewAddress,
                              Instruction *InsertBefore, DIBuilder &Builder,
-                             bool Deref, int Offset) {
+                             bool DerefBefore, int Offset, bool DerefAfter) {
   auto DbgAddrs = FindDbgAddrUses(Address);
   for (DbgInfoIntrinsic *DII : DbgAddrs) {
     DebugLoc Loc = DII->getDebugLoc();
     auto *DIVar = DII->getVariable();
     auto *DIExpr = DII->getExpression();
     assert(DIVar && "Missing variable");
-    DIExpr = DIExpression::prepend(DIExpr, Deref, Offset);
+    DIExpr = DIExpression::prepend(DIExpr, DerefBefore, Offset, DerefAfter);
     // Insert llvm.dbg.declare immediately after InsertBefore, and remove old
     // llvm.dbg.declare.
     Builder.insertDeclare(NewAddress, DIVar, DIExpr, Loc, InsertBefore);
@@ -1323,9 +1323,10 @@ bool llvm::replaceDbgDeclare(Value *Address, Value *NewAddress,
 }
 
 bool llvm::replaceDbgDeclareForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
-                                      DIBuilder &Builder, bool Deref, int Offset) {
+                                      DIBuilder &Builder, bool DerefBefore,
+                                      int Offset, bool DerefAfter) {
   return replaceDbgDeclare(AI, NewAllocaAddress, AI->getNextNode(), Builder,
-                           Deref, Offset);
+                           DerefBefore, Offset, DerefAfter);
 }
 
 static void replaceOneDbgValueForAlloca(DbgValueInst *DVI, Value *NewAddress,
@@ -1378,6 +1379,7 @@ void llvm::salvageDebugInfo(Instruction &I) {
   auto applyOffset = [&](DbgValueInst *DVI, uint64_t Offset) {
     auto *DIExpr = DVI->getExpression();
     DIExpr = DIExpression::prepend(DIExpr, DIExpression::NoDeref, Offset,
+                                   DIExpression::NoDeref,
                                    DIExpression::WithStackValue);
     DVI->setOperand(0, wrapMD(I.getOperand(0)));
     DVI->setOperand(2, MetadataAsValue::get(I.getContext(), DIExpr));

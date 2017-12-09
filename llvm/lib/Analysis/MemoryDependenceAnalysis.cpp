@@ -306,8 +306,10 @@ unsigned MemoryDependenceResults::getLoadLoadClobberFullWidthSize(
       return 0;
 
     if (LIOffs + NewLoadByteSize > MemLocEnd &&
-        LI->getParent()->getParent()->hasFnAttribute(
-            Attribute::SanitizeAddress))
+        (LI->getParent()->getParent()->hasFnAttribute(
+             Attribute::SanitizeAddress) ||
+         LI->getParent()->getParent()->hasFnAttribute(
+             Attribute::SanitizeHWAddress)))
       // We will be reading past the location accessed by the original program.
       // While this is safe in a regular build, Address Safety analysis tools
       // may start reporting false warnings. So, don't do widening.

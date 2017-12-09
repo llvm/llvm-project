@@ -2,8 +2,8 @@
 ; RUN: llc -march=amdgcn -mattr=+fp-exceptions -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SNAN -check-prefix=GCN -check-prefix=SI %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=NOSNAN -check-prefix=GCN -check-prefix=VI -check-prefix=GFX89 %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=+fp-exceptions -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SNAN -check-prefix=GCN -check-prefix=VI -check-prefix=GFX89 %s
-; RUN: llc -march=amdgcn -mcpu=gfx901 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=NOSNAN -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 %s
-; RUN: llc -march=amdgcn -mcpu=gfx901 -mattr=+fp-exceptions -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SNAN -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=NOSNAN -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=+fp-exceptions -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SNAN -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 %s
 
 
 ; GCN-LABEL: {{^}}v_test_nnan_input_fmed3_r_i_i_f32:

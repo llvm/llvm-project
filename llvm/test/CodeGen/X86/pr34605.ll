@@ -13,10 +13,10 @@ define void @pr34605(i8* nocapture %s, i32 %p) {
 ; CHECK-NEXT:    vpcmpeqd {{\.LCPI.*}}, %zmm0, %k2
 ; CHECK-NEXT:    kunpckwd %k1, %k2, %k1
 ; CHECK-NEXT:    kunpckdq %k0, %k1, %k0
-; CHECK-NEXT:    kxord %k0, %k0, %k1
 ; CHECK-NEXT:    movl $1, %ecx
-; CHECK-NEXT:    kmovd %ecx, %k2
-; CHECK-NEXT:    kunpckdq %k2, %k1, %k1
+; CHECK-NEXT:    kmovd %ecx, %k1
+; CHECK-NEXT:    kshiftlq $32, %k1, %k1
+; CHECK-NEXT:    kshiftrq $32, %k1, %k1
 ; CHECK-NEXT:    kandq %k1, %k0, %k1
 ; CHECK-NEXT:    vmovdqu8 {{\.LCPI.*}}, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1

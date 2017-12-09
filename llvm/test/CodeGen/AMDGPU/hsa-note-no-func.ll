@@ -4,6 +4,8 @@
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx701 | FileCheck --check-prefix=HSA --check-prefix=HSA-CI701 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx702 | FileCheck --check-prefix=HSA --check-prefix=HSA-CI702 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx703 | FileCheck --check-prefix=HSA --check-prefix=HSA-CI703 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx704 | FileCheck --check-prefix=HSA --check-prefix=HSA-CI704 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=bonaire | FileCheck --check-prefix=HSA --check-prefix=HSA-CI704 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=mullins | FileCheck --check-prefix=HSA --check-prefix=HSA-CI703 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=hawaii | FileCheck --check-prefix=HSA --check-prefix=HSA-CI701 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kabini | FileCheck --check-prefix=HSA --check-prefix=HSA-CI703 %s
@@ -17,12 +19,9 @@
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx801 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI801 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx802 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI802 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx803 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI803 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx804 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI804 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx810 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI810 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx900 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX900 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx901 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX901 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx902 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX902 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx903 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX903 %s
 
 ; HSA: .hsa_code_object_version 2,1
 ; HSA-SI600: .hsa_code_object_isa 6,0,0,"AMD","AMDGPU"
@@ -31,13 +30,11 @@
 ; HSA-CI701: .hsa_code_object_isa 7,0,1,"AMD","AMDGPU"
 ; HSA-CI702: .hsa_code_object_isa 7,0,2,"AMD","AMDGPU"
 ; HSA-CI703: .hsa_code_object_isa 7,0,3,"AMD","AMDGPU"
+; HSA-CI704: .hsa_code_object_isa 7,0,4,"AMD","AMDGPU"
 ; HSA-VI800: .hsa_code_object_isa 8,0,0,"AMD","AMDGPU"
 ; HSA-VI801: .hsa_code_object_isa 8,0,1,"AMD","AMDGPU"
 ; HSA-VI802: .hsa_code_object_isa 8,0,2,"AMD","AMDGPU"
 ; HSA-VI803: .hsa_code_object_isa 8,0,3,"AMD","AMDGPU"
-; HSA-VI804: .hsa_code_object_isa 8,0,4,"AMD","AMDGPU"
 ; HSA-VI810: .hsa_code_object_isa 8,1,0,"AMD","AMDGPU"
 ; HSA-GFX900: .hsa_code_object_isa 9,0,0,"AMD","AMDGPU"
-; HSA-GFX901: .hsa_code_object_isa 9,0,1,"AMD","AMDGPU"
 ; HSA-GFX902: .hsa_code_object_isa 9,0,2,"AMD","AMDGPU"
-; HSA-GFX903: .hsa_code_object_isa 9,0,3,"AMD","AMDGPU"

@@ -706,7 +706,7 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
 #define MAP(from, to)                     \
   case X86Local::MRM_##from:
 
-  OpcodeType    opcodeType  = (OpcodeType)-1;
+  llvm::Optional<OpcodeType> opcodeType;
 
   ModRMFilter*  filter      = nullptr;
   uint8_t       opcodeToSet = 0;
@@ -786,8 +786,7 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
   case X86Local::AdSize64: AddressSize = 64; break;
   }
 
-  assert(opcodeType != (OpcodeType)-1 &&
-         "Opcode type not set");
+  assert(opcodeType && "Opcode type not set");
   assert(filter && "Filter not set");
 
   if (Form == X86Local::AddRegFrm) {
@@ -799,12 +798,12 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
     for (currentOpcode = opcodeToSet;
          currentOpcode < opcodeToSet + 8;
          ++currentOpcode)
-      tables.setTableFields(opcodeType, insnContext(), currentOpcode, *filter,
+      tables.setTableFields(*opcodeType, insnContext(), currentOpcode, *filter,
                             UID, Is32Bit, OpPrefix == 0,
                             IgnoresVEX_L || EncodeRC,
                             VEX_WPrefix == X86Local::VEX_WIG, AddressSize);
   } else {
-    tables.setTableFields(opcodeType, insnContext(), opcodeToSet, *filter, UID,
+    tables.setTableFields(*opcodeType, insnContext(), opcodeToSet, *filter, UID,
                           Is32Bit, OpPrefix == 0, IgnoresVEX_L || EncodeRC,
                           VEX_WPrefix == X86Local::VEX_WIG, AddressSize);
   }

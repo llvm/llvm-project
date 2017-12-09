@@ -1,9 +1,8 @@
+# RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o %t.o
+# RUN: llvm-dwarfdump -v %t.o | FileCheck --check-prefix=INVALIDCONTRIB %s
+#
 # Test object to verify that llvm-dwarfdump handles an invalid string offsets
 # table.
-#
-# To generate the test object:
-# llvm-mc -triple x86_64-unknown-linux dwarfdump-str-offsets-invalid-3.s -filetype=obj \
-#         -o dwarfdump-str-offsets-invalid-3.x86_64.o
 
         .section .debug_str,"MS",@progbits,1
 str_producer:
@@ -86,3 +85,7 @@ CU1_5_end:
         .long str_TU
         .long str_TU_type
 .debug_str_offsets_segment2_end:
+
+# INVALIDCONTRIB:            .debug_str_offsets contents:
+# INVALIDCONTRIB-NOT:        contents:
+# INVALIDCONTRIB:            error: invalid contribution to string offsets table in section .debug_str_offsets.

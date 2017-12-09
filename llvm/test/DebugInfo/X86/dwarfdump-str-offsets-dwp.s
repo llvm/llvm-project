@@ -1,12 +1,11 @@
+# RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o %t.o
+# RUN: llvm-dwarfdump -v %t.o | FileCheck %s
+
 # Test object to verify that dwarfdump handles dwp files with DWARF v5 string
 # offset tables. We have 2 CUs and 2 TUs, where it is assumed that 
 # CU1 and TU1 came from one object file, CU2 and TU2 from a second object
 # file.
 #
-# To generate the test object:
-# llvm-mc -triple x86_64-unknown-linux dwarfdump-str-offsets-dwp.s -filetype=obj \
-#         -o dwarfdump-str_offsets-dwp.x86_64.o
-
         .section .debug_str.dwo,"MS",@progbits,1
 str_producer:
         .asciz "Handmade DWARF producer"
@@ -275,3 +274,59 @@ TU2_5_end:
         .long TU2_5_end-TU2_5_start
         .long abbrev_end-.debug_abbrev.dwo
         .long .debug_str_offsets_end_TU2-.debug_str_offsets_start_TU2
+
+
+# Verify that the correct strings from each unit are displayed and that the
+# index for the .debug_str_offsets section has the right values.
+
+# CHECK:      Compile Unit
+# CHECK-NOT:  NULL
+# CHECK:      DW_TAG_compile_unit
+# CHECK-NEXT: DW_AT_producer [DW_FORM_strx] ( indexed (00000000) string = "Handmade DWARF producer")
+# CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000001) string = "Compile_Unit_1")
+# CHECK-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x00000008)
+# CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000002) string = "/home/test/CU1")
+# CHECK-NOT:  NULL
+
+# CHECK:      Compile Unit
+# CHECK-NOT:  NULL
+# CHECK:      DW_TAG_compile_unit
+# CHECK-NEXT: DW_AT_producer [DW_FORM_strx] ( indexed (00000000) string = "Handmade DWARF producer")
+# CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000001) string = "Compile_Unit_2")
+# CHECK-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x00000008)
+# CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000002) string = "/home/test/CU2")
+# 
+# CHECK:      Type Unit
+# CHECK-NOT:  NULL
+# CHECK:      DW_TAG_type_unit
+# CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000000) string = "Type_Unit_1")
+# CHECK-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x0000001c)
+# CHECK-NOT:  NULL
+# CHECK:      DW_TAG_structure_type
+# CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000001) string = "MyStruct_1")
+#
+# CHECK:      Type Unit
+# CHECK-NOT:  NULL
+# CHECK:      DW_TAG_type_unit
+# CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000000) string = "Type_Unit_2")
+# CHECK-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x0000001c)
+# CHECK-NOT:  NULL
+# CHECK:      DW_TAG_structure_type
+# CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000001) string = "MyStruct_2")
+
+# Verify the correct offets of the compile and type units contributions in the
+# index tables.
+
+# CHECK:      .debug_cu_index contents:
+# CHECK-NOT:  contents:
+# CHECK:      1 0xddeeaaddbbaabbee [{{0x[0-9a-f]*, 0x[0-9a-f]*}}) [{{0x[0-9a-f]*, 0x[0-9a-f]*}})
+# CHECK-SAME: [0x00000000
+# CHECK-NEXT: 2 0xff00ffeeffaaff00 [{{0x[0-9a-f]*, 0x[0-9a-f]*}}) [{{0x[0-9a-f]*, 0x[0-9a-f]*}})
+# CHECK-SAME: [0x00000024
+
+# CHECK:      .debug_tu_index contents:
+# CHECK-NOT:  contents:
+# CHECK:      1 0xeeaaddbbaabbeedd [{{0x[0-9a-f]*, 0x[0-9a-f]*}}) [{{0x[0-9a-f]*, 0x[0-9a-f]*}})
+# CHECK-SAME: [0x00000000
+# CHECK-NEXT: 2 0x00ffeeffaaff00ff [{{0x[0-9a-f]*, 0x[0-9a-f]*}}) [{{0x[0-9a-f]*, 0x[0-9a-f]*}})
+# CHECK:      [0x00000024
