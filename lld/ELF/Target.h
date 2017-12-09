@@ -169,7 +169,8 @@ template <unsigned N>
 static void checkAlignment(uint8_t *Loc, uint64_t V, RelType Type) {
   if ((V & (N - 1)) != 0)
     error(getErrorLocation(Loc) + "improper alignment for relocation " +
-          lld::toString(Type));
+          lld::toString(Type) + ": 0x" + llvm::utohexstr(V) +
+          " is not aligned to " + Twine(N) + " bytes");
 }
 } // namespace elf
 } // namespace lld

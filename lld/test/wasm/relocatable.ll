@@ -1,10 +1,7 @@
-; RUN: llc -filetype=obj %p/Inputs/hello.ll -o %t.hello.o
-; RUN: llc -filetype=obj %s -o %t.o
+; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %p/Inputs/hello.ll -o %t.hello.o
+; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %s -o %t.o
 ; RUN: lld -flavor wasm -r -o %t.wasm %t.hello.o %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
-
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown-wasm"
 
 ; Function Attrs: nounwind
 define hidden i32 @my_func() local_unnamed_addr {

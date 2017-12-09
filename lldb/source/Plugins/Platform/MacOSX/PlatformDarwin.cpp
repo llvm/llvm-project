@@ -1132,28 +1132,33 @@ bool PlatformDarwin::ARMGetSupportedArchitectureAtIndex(uint32_t idx,
   return false;
 }
 
+// Return a directory path like /Applications/Xcode.app/Contents/Developer
 const char *PlatformDarwin::GetDeveloperDirectory() {
   std::lock_guard<std::mutex> guard(m_mutex);
   if (m_developer_directory.empty()) {
     bool developer_dir_path_valid = false;
     char developer_dir_path[PATH_MAX];
     FileSpec temp_file_spec;
+
+    // Get the lldb framework's file path, and if it exists, truncate some
+    // components to only the developer directory path.
     if (HostInfo::GetLLDBPath(ePathTypeLLDBShlibDir, temp_file_spec)) {
       if (temp_file_spec.GetPath(developer_dir_path,
                                  sizeof(developer_dir_path))) {
+        // e.g. /Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework
         char *shared_frameworks =
             strstr(developer_dir_path, "/SharedFrameworks/LLDB.framework");
         if (shared_frameworks) {
-          ::snprintf(shared_frameworks,
-                     sizeof(developer_dir_path) -
-                         (shared_frameworks - developer_dir_path),
-                     "/Developer");
+          shared_frameworks[0] = '\0';  // truncate developer_dir_path at this point
+          strncat (developer_dir_path, "/Developer", sizeof (developer_dir_path) - 1); // add /Developer on
           developer_dir_path_valid = true;
         } else {
-          char *lib_priv_frameworks = strstr(
-              developer_dir_path, "/Library/PrivateFrameworks/LLDB.framework");
-          if (lib_priv_frameworks) {
-            *lib_priv_frameworks = '\0';
+          // e.g. /Applications/Xcode.app/Contents/Developer/Toolchains/iOS11.2.xctoolchain/System/Library/PrivateFrameworks/LLDB.framework
+          char *developer_toolchains =
+            strstr(developer_dir_path, "/Contents/Developer/Toolchains/");
+          if (developer_toolchains) {
+            developer_toolchains += sizeof ("/Contents/Developer") - 1;
+            developer_toolchains[0] = '\0'; // truncate developer_dir_path at this point
             developer_dir_path_valid = true;
           }
         }

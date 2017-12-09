@@ -1,9 +1,6 @@
-; RUN: llc -filetype=obj %s -o %t.o
+; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %s -o %t.o
 ; RUN: lld -flavor wasm --emit-relocs -o %t.wasm %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
-
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown-wasm"
 
 ; Function Attrs: nounwind
 define hidden i32 @_start() local_unnamed_addr {
