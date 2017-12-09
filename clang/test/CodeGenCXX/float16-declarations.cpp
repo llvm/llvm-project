@@ -11,16 +11,14 @@ namespace {
 // CHECK-DAG: @_ZN12_GLOBAL__N_13f1nE = internal global half 0xH0000, align 2
 
   _Float16 f2n = 33.f16;
-// CHECK-AARCH64-DAG: @_ZN12_GLOBAL__N_13f2nE = internal global half 0xH5020, align 2
-// CHECK-X86-DAG:     @_ZN12_GLOBAL__N_13f2nE = internal global i16 20512, align 2
+// CHECK-DAG: @_ZN12_GLOBAL__N_13f2nE = internal global half 0xH5020, align 2
 
   _Float16 arr1n[10];
 // CHECK-AARCH64-DAG: @_ZN12_GLOBAL__N_15arr1nE = internal global [10 x half] zeroinitializer, align 2
 // CHECK-X86-DAG:     @_ZN12_GLOBAL__N_15arr1nE = internal global [10 x half] zeroinitializer, align 16
 
   _Float16 arr2n[] = { 1.2, 3.0, 3.e4 };
-// CHECK-AARCH64-DAG: @_ZN12_GLOBAL__N_15arr2nE = internal global [3 x half] [half 0xH3CCD, half 0xH4200, half 0xH7753], align 2
-// CHECK-X86-DAG:     @_ZN12_GLOBAL__N_15arr2nE = internal global [3 x i16] [i16 15565, i16 16896, i16 30547], align 2
+// CHECK-DAG: @_ZN12_GLOBAL__N_15arr2nE = internal global [3 x half] [half 0xH3CCD, half 0xH4200, half 0xH7753], align 2
 
   const volatile _Float16 func1n(const _Float16 &arg) {
     return arg + f2n + arr1n[4] - arr2n[1];
@@ -35,16 +33,14 @@ _Float16 f1f;
 // CHECK-X86-DAG: @f1f = global half 0xH0000, align 2
 
 _Float16 f2f = 32.4;
-// CHECK-AARCH64-DAG: @f2f = global half 0xH500D, align 2
-// CHECK-X86-DAG: @f2f = global i16 20493, align 2
+// CHECK-DAG: @f2f = global half 0xH500D, align 2
 
 _Float16 arr1f[10];
 // CHECK-AARCH64-DAG: @arr1f = global [10 x half] zeroinitializer, align 2
 // CHECK-X86-DAG: @arr1f = global [10 x half] zeroinitializer, align 16
 
 _Float16 arr2f[] = { -1.2, -3.0, -3.e4 };
-// CHECK-AARCH64-DAG: @arr2f = global [3 x half] [half 0xHBCCD, half 0xHC200, half 0xHF753], align 2
-// CHECK-X86-DAG: @arr2f = global [3 x i16] [i16 -17203, i16 -15872, i16 -2221], align 2
+// CHECK-DAG: @arr2f = global [3 x half] [half 0xHBCCD, half 0xHC200, half 0xHF753], align 2
 
 _Float16 func1f(_Float16 arg);
 
@@ -110,11 +106,9 @@ int main(void) {
 // CHECK-DAG:  call void @_ZN2C1C2EDF16_(%class.C1* %{{.*}}, half %{{.*}})
 
   S1<_Float16> s1 = { 132.f16 };
-// CHECK-AARCH64-DAG: @_ZZ4mainE2s1 = private unnamed_addr constant %struct.S1 { half 0xH5820 }, align 2
-// CHECK-X86-DAG:     @_ZZ4mainE2s1 = private unnamed_addr constant { i16 } { i16 22560 }, align 2
+// CHECK-DAG: @_ZZ4mainE2s1 = private unnamed_addr constant %struct.S1 { half 0xH5820 }, align 2
 // CHECK-DAG:  [[S1:%[0-9]+]] = bitcast %struct.S1* %{{.*}} to i8*
-// CHECK-AARCH64-DAG: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[S1]], i8* bitcast (%struct.S1* @_ZZ4mainE2s1 to i8*), i64 2, i32 2, i1 false)
-// CHECK-X86-DAG:     call void @llvm.memcpy.p0i8.p0i8.i64(i8* %{{.*}}, i8* bitcast ({ i16 }* @_ZZ4mainE2s1 to i8*), i64 2, i32 2, i1 false)
+// CHECK-DAG: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[S1]], i8* bitcast (%struct.S1* @_ZZ4mainE2s1 to i8*), i64 2, i32 2, i1 false)
 
   _Float16 f4l = func1n(f1l)  + func1f(f2l) + c1.func1c(f3l) + c1.func2c(f1l) +
     func1t(f1l) + s1.mem2 - f1n + f2n;
@@ -129,8 +123,7 @@ int main(void) {
 // CHECK-DAG:  store half [[INC]], half* %{{.*}}, align 2
 
   _Float16 arr1l[] = { -1.f16, -0.f16, -11.f16 };
-// CHECK-AARCH64-DAG: @_ZZ4mainE5arr1l = private unnamed_addr constant [3 x half] [half 0xHBC00, half 0xH8000, half 0xHC980], align 2
-// CHECK-X86-DAG:     @_ZZ4mainE5arr1l = private unnamed_addr constant [3 x i16] [i16 -17408, i16 -32768, i16 -13952], align 2
+// CHECK-DAG: @_ZZ4mainE5arr1l = private unnamed_addr constant [3 x half] [half 0xHBC00, half 0xH8000, half 0xHC980], align 2
 
   float cvtf = f2n;
 //CHECK-DAG: [[H2F:%[a-z0-9]+]] = fpext half {{%[0-9]+}} to float

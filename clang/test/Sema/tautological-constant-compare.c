@@ -563,5 +563,23 @@ int main()
   if (maybe >= e)
       return 0;
 
+  // For the time being, use the declared type of bit-fields rather than their
+  // length when determining whether a value is in-range.
+  // FIXME: Reconsider this.
+  struct A {
+    int a : 3;
+    unsigned b : 3;
+    long c : 3;
+    unsigned long d : 3;
+  } a;
+  if (a.a < 3) {}
+  if (a.a < 4) {}
+  if (a.b < 7) {}
+  if (a.b < 8) {}
+  if (a.c < 3) {}
+  if (a.c < 4) {}
+  if (a.d < 7) {}
+  if (a.d < 8) {}
+
   return 1;
 }

@@ -126,6 +126,10 @@ public:
 
   bool setFPMath(StringRef Name) override;
 
+  bool useFP16ConversionIntrinsics() const override {
+    return false;
+  }
+
   void getTargetDefinesARMV81A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
 

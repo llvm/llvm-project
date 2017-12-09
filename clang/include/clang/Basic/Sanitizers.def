@@ -44,6 +44,8 @@ SANITIZER("address", Address)
 // Kernel AddressSanitizer (KASan)
 SANITIZER("kernel-address", KernelAddress)
 
+SANITIZER("hwaddress", HWAddress)
+
 // MemorySanitizer
 SANITIZER("memory", Memory)
 

@@ -559,6 +559,14 @@ public:
     return ComplexLongDoubleUsesFP2Ret;
   }
 
+  /// Check whether llvm intrinsics such as llvm.convert.to.fp16 should be used
+  /// to convert to and from __fp16.
+  /// FIXME: This function should be removed once all targets stop using the
+  /// conversion intrinsics.
+  virtual bool useFP16ConversionIntrinsics() const {
+    return true;
+  }
+
   /// \brief Specify if mangling based on address space map should be used or
   /// not for language specific address spaces
   bool useAddressSpaceMapMangling() const {

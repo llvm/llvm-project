@@ -8681,7 +8681,13 @@ struct PromotedRange {
   PromotedRange(IntRange R, unsigned BitWidth, bool Unsigned) {
     if (R.Width == 0)
       PromotedMin = PromotedMax = llvm::APSInt(BitWidth, Unsigned);
-    else {
+    else if (R.Width >= BitWidth && !Unsigned) {
+      // Promotion made the type *narrower*. This happens when promoting
+      // a < 32-bit unsigned / <= 32-bit signed bit-field to 'signed int'.
+      // Treat all values of 'signed int' as being in range for now.
+      PromotedMin = llvm::APSInt::getMinValue(BitWidth, Unsigned);
+      PromotedMax = llvm::APSInt::getMaxValue(BitWidth, Unsigned);
+    } else {
       PromotedMin = llvm::APSInt::getMinValue(R.Width, R.NonNegative)
                         .extOrTrunc(BitWidth);
       PromotedMin.setIsUnsigned(Unsigned);
@@ -8801,12 +8807,7 @@ static bool CheckTautologicalComparison(Sema &S, BinaryOperator *E,
                                         Expr *Constant, Expr *Other,
                                         const llvm::APSInt &Value,
                                         bool RhsConstant) {
-  // Disable warning in template instantiations
-  // and only analyze <, >, <= and >= operations.
-  if (S.inTemplateInstantiation() || !E->isRelationalOp())
-    return false;
-
-  if (IsEnumConstOrFromMacro(S, Constant))
+  if (S.inTemplateInstantiation())
     return false;
 
   Expr *OriginalOther = Other;
@@ -8814,6 +8815,17 @@ static bool CheckTautologicalComparison(Sema &S, BinaryOperator *E,
   Constant = Constant->IgnoreParenImpCasts();
   Other = Other->IgnoreParenImpCasts();
 
+  // Suppress warnings on tautological comparisons between values of the same
+  // enumeration type. There are only two ways we could warn on this:
+  //  - If the constant is outside the range of representable values of
+  //    the enumeration. In such a case, we should warn about the cast
+  //    to enumeration type, not about the comparison.
+  //  - If the constant is the maximum / minimum in-range value. For an
+  //    enumeratin type, such comparisons can be meaningful and useful.
+  if (Constant->getType()->isEnumeralType() &&
+      S.Context.hasSameUnqualifiedType(Constant->getType(), Other->getType()))
+    return false;
+
   // TODO: Investigate using GetExprRange() to get tighter bounds
   // on the bit ranges.
   QualType OtherT = Other->getType();
@@ -8828,99 +8840,23 @@ static bool CheckTautologicalComparison(Sema &S, BinaryOperator *E,
   if (OtherIsBooleanDespiteType)
     OtherRange = IntRange::forBoolType();
 
-  if (FieldDecl *Bitfield = Other->getSourceBitField())
-    if (!Bitfield->getBitWidth()->isValueDependent())
-      OtherRange.Width =
-          std::min(Bitfield->getBitWidthValue(S.Context), OtherRange.Width);
-
-  // Check whether the constant value can be represented in OtherRange. Bail
-  // out if so; this isn't an out-of-range comparison.
+  // Determine the promoted range of the other type and see if a comparison of
+  // the constant against that range is tautological.
   PromotedRange OtherPromotedRange(OtherRange, Value.getBitWidth(),
                                    Value.isUnsigned());
-
   auto Cmp = OtherPromotedRange.compare(Value);
-  if (Cmp != PromotedRange::Min && Cmp != PromotedRange::Max &&
-      Cmp != PromotedRange::OnlyValue)
-    return false;
-
   auto Result = PromotedRange::constantValue(E->getOpcode(), Cmp, RhsConstant);
   if (!Result)
     return false;
 
-  // Should be enough for uint128 (39 decimal digits)
-  SmallString<64> PrettySourceValue;
-  llvm::raw_svector_ostream OS(PrettySourceValue);
-  OS << Value;
-
-  // FIXME: We use a somewhat different formatting for the cases involving
-  // boolean values for historical reasons. We should pick a consistent way
-  // of presenting these diagnostics.
-  if (Other->isKnownToHaveBooleanValue()) {
-    S.DiagRuntimeBehavior(
-      E->getOperatorLoc(), E,
-      S.PDiag(diag::warn_tautological_bool_compare)
-          << OS.str() << classifyConstantValue(Constant)
-          << OtherT << !OtherT->isBooleanType() << *Result
-          << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange());
-    return true;
-  }
-
-  unsigned Diag = (isKnownToHaveUnsignedValue(OriginalOther) && Value == 0)
-                      ? (HasEnumType(OriginalOther)
-                             ? diag::warn_unsigned_enum_always_true_comparison
-                             : diag::warn_unsigned_always_true_comparison)
-                      : diag::warn_tautological_constant_compare;
-
-  S.Diag(E->getOperatorLoc(), Diag)
-      << RhsConstant << OtherT << E->getOpcodeStr() << OS.str() << *Result
-      << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
-
-  return true;
-}
-
-static bool DiagnoseOutOfRangeComparison(Sema &S, BinaryOperator *E,
-                                         Expr *Constant, Expr *Other,
-                                         const llvm::APSInt &Value,
-                                         bool RhsConstant) {
-  // Disable warning in template instantiations.
-  if (S.inTemplateInstantiation())
-    return false;
-
-  Constant = Constant->IgnoreParenImpCasts();
-  Other = Other->IgnoreParenImpCasts();
-
-  // TODO: Investigate using GetExprRange() to get tighter bounds
-  // on the bit ranges.
-  QualType OtherT = Other->getType();
-  if (const auto *AT = OtherT->getAs<AtomicType>())
-    OtherT = AT->getValueType();
-  IntRange OtherRange = IntRange::forValueOfType(S.Context, OtherT);
-
-  // Whether we're treating Other as being a bool because of the form of
-  // expression despite it having another type (typically 'int' in C).
-  bool OtherIsBooleanDespiteType =
-      !OtherT->isBooleanType() && Other->isKnownToHaveBooleanValue();
-  if (OtherIsBooleanDespiteType)
-    OtherRange = IntRange::forBoolType();
-
-  if (FieldDecl *Bitfield = Other->getSourceBitField())
-    if (!Bitfield->getBitWidth()->isValueDependent())
-      OtherRange.Width =
-          std::min(Bitfield->getBitWidthValue(S.Context), OtherRange.Width);
-
-  // Check whether the constant value can be represented in OtherRange. Bail
-  // out if so; this isn't an out-of-range comparison.
-  PromotedRange OtherPromotedRange(OtherRange, Value.getBitWidth(),
-                                   Value.isUnsigned());
-  auto Cmp = OtherPromotedRange.compare(Value);
-
-  // If Value is in the range of possible Other values, this comparison is not
-  // tautological.
-  if (Cmp & PromotedRange::InRangeFlag)
-    return false;
-
-  auto IsTrue = PromotedRange::constantValue(E->getOpcode(), Cmp, RhsConstant);
-  if (!IsTrue)
+  // Suppress the diagnostic for an in-range comparison if the constant comes
+  // from a macro or enumerator. We don't want to diagnose
+  //
+  //   some_long_value <= INT_MAX
+  //
+  // when sizeof(int) == sizeof(long).
+  bool InRange = Cmp & PromotedRange::InRangeFlag;
+  if (InRange && IsEnumConstOrFromMacro(S, Constant))
     return false;
 
   // If this is a comparison to an enum constant, include that
@@ -8929,6 +8865,7 @@ static bool DiagnoseOutOfRangeComparison(Sema &S, BinaryOperator *E,
   if (const DeclRefExpr *DR = dyn_cast<DeclRefExpr>(Constant))
     ED = dyn_cast<EnumConstantDecl>(DR->getDecl());
 
+  // Should be enough for uint128 (39 decimal digits)
   SmallString<64> PrettySourceValue;
   llvm::raw_svector_ostream OS(PrettySourceValue);
   if (ED)
@@ -8936,14 +8873,30 @@ static bool DiagnoseOutOfRangeComparison(Sema &S, BinaryOperator *E,
   else
     OS << Value;
 
-  S.DiagRuntimeBehavior(
-    E->getOperatorLoc(), E,
-    S.PDiag(diag::warn_out_of_range_compare)
-        << OS.str() << classifyConstantValue(Constant)
-        << OtherT << OtherIsBooleanDespiteType << *IsTrue
-        << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange());
+  // FIXME: We use a somewhat different formatting for the in-range cases and
+  // cases involving boolean values for historical reasons. We should pick a
+  // consistent way of presenting these diagnostics.
+  if (!InRange || Other->isKnownToHaveBooleanValue()) {
+    S.DiagRuntimeBehavior(
+      E->getOperatorLoc(), E,
+      S.PDiag(!InRange ? diag::warn_out_of_range_compare
+                       : diag::warn_tautological_bool_compare)
+          << OS.str() << classifyConstantValue(Constant)
+          << OtherT << OtherIsBooleanDespiteType << *Result
+          << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange());
+  } else {
+    unsigned Diag = (isKnownToHaveUnsignedValue(OriginalOther) && Value == 0)
+                        ? (HasEnumType(OriginalOther)
+                               ? diag::warn_unsigned_enum_always_true_comparison
+                               : diag::warn_unsigned_always_true_comparison)
+                        : diag::warn_tautological_constant_compare;
 
-   return true;
+    S.Diag(E->getOperatorLoc(), Diag)
+        << RhsConstant << OtherT << E->getOpcodeStr() << OS.str() << *Result
+        << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
+  }
+
+  return true;
 }
 
 /// Analyze the operands of the given comparison.  Implements the
@@ -8993,11 +8946,7 @@ static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
 
       // Check whether an integer constant comparison results in a value
       // of 'true' or 'false'.
-
       if (CheckTautologicalComparison(S, E, Const, Other, Value, RhsConstant))
-        return AnalyzeImpConvsInComparison(S, E);
-
-      if (DiagnoseOutOfRangeComparison(S, E, Const, Other, Value, RhsConstant))
         return AnalyzeImpConvsInComparison(S, E);
     }
   }
