@@ -694,7 +694,16 @@ Status PlatformDarwinKernel::GetSharedModule(
       }
     }
 
-    // Second look through the kext binarys without dSYMs
+    // Give the generic methods, including possibly calling into 
+    // DebugSymbols framework on macOS systems, a chance.
+    error = PlatformDarwin::GetSharedModule(module_spec, process, module_sp,
+                                           module_search_paths_ptr,
+                                           old_module_sp_ptr, did_create_ptr);
+    if (error.Success() && module_sp.get()) {
+      return error;
+    }
+
+    // Lastly, look through the kext binarys without dSYMs
     if (m_name_to_kext_path_map_without_dsyms.count(kext_bundle_cs) > 0) {
       for (BundleIDToKextIterator it =
                m_name_to_kext_path_map_without_dsyms.begin();
@@ -739,7 +748,17 @@ Status PlatformDarwinKernel::GetSharedModule(
         }
       }
     }
-    // Second try all kernel binaries that don't have a dSYM
+
+    // Give the generic methods, including possibly calling into 
+    // DebugSymbols framework on macOS systems, a chance.
+    error = PlatformDarwin::GetSharedModule(module_spec, process, module_sp,
+                                            module_search_paths_ptr,
+                                            old_module_sp_ptr, did_create_ptr);
+    if (error.Success() && module_sp.get()) {
+      return error;
+    }
+
+    // Next try all kernel binaries that don't have a dSYM
     for (auto possible_kernel : m_kernel_binaries_without_dsyms) {
       if (possible_kernel.Exists()) {
         ModuleSpec kern_spec(possible_kernel);
@@ -767,11 +786,7 @@ Status PlatformDarwinKernel::GetSharedModule(
     }
   }
 
-  // Else fall back to treating the file's path as an actual file path - defer
-  // to PlatformDarwin's GetSharedModule.
-  return PlatformDarwin::GetSharedModule(module_spec, process, module_sp,
-                                         module_search_paths_ptr,
-                                         old_module_sp_ptr, did_create_ptr);
+  return error;
 }
 
 Status PlatformDarwinKernel::ExamineKextForMatchingUUID(
