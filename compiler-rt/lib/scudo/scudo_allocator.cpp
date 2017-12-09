@@ -370,18 +370,15 @@ struct ScudoAllocator {
       return FailureHandler::OnBadRequest();
 
     if (CheckRssLimit && UNLIKELY(isRssLimitExceeded()))
-        return FailureHandler::OnOOM();
+      return FailureHandler::OnOOM();
 
     // Primary and Secondary backed allocations have a different treatment. We
     // deal with alignment requirements of Primary serviced allocations here,
     // but the Secondary will take care of its own alignment needs.
-    const bool FromPrimary =
-        PrimaryAllocator::CanAllocate(AlignedSize, MinAlignment);
-
     void *Ptr;
     u8 ClassId;
     uptr AllocSize;
-    if (FromPrimary) {
+    if (PrimaryAllocator::CanAllocate(AlignedSize, MinAlignment)) {
       AllocSize = AlignedSize;
       ClassId = SizeClassMap::ClassID(AllocSize);
       ScudoTSD *TSD = getTSDAndLock();
@@ -396,7 +393,7 @@ struct ScudoAllocator {
       return FailureHandler::OnOOM();
 
     // If requested, we will zero out the entire contents of the returned chunk.
-    if ((ForceZeroContents || ZeroContents) && FromPrimary)
+    if ((ForceZeroContents || ZeroContents) && ClassId)
       memset(Ptr, 0, BackendAllocator.getActuallyAllocatedSize(Ptr, ClassId));
 
     UnpackedHeader Header = {};
@@ -406,23 +403,23 @@ struct ScudoAllocator {
       // Since the Secondary takes care of alignment, a non-aligned pointer
       // means it is from the Primary. It is also the only case where the offset
       // field of the header would be non-zero.
-      CHECK(FromPrimary);
+      CHECK(ClassId);
       UserBeg = RoundUpTo(UserBeg, Alignment);
       uptr Offset = UserBeg - AlignedChunkHeaderSize - BackendPtr;
       Header.Offset = Offset >> MinAlignmentLog;
     }
     CHECK_LE(UserBeg + Size, BackendPtr + AllocSize);
-    Header.ClassId = ClassId;
     Header.State = ChunkAllocated;
     Header.AllocType = Type;
-    if (FromPrimary) {
+    if (ClassId) {
+      Header.ClassId = ClassId;
       Header.SizeOrUnusedBytes = Size;
     } else {
       // The secondary fits the allocations to a page, so the amount of unused
       // bytes is the difference between the end of the user allocation and the
       // next page boundary.
-      uptr PageSize = GetPageSizeCached();
-      uptr TrailingBytes = (UserBeg + Size) & (PageSize - 1);
+      const uptr PageSize = GetPageSizeCached();
+      const uptr TrailingBytes = (UserBeg + Size) & (PageSize - 1);
       if (TrailingBytes)
         Header.SizeOrUnusedBytes = PageSize - TrailingBytes;
     }
