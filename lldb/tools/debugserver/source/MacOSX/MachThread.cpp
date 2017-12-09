@@ -164,15 +164,15 @@ const char *MachThread::GetBasicInfoAsString() const {
     //        size_t run_state_str_size = sizeof(run_state_str);
     //        switch (basicInfo.run_state)
     //        {
-    //        case TH_STATE_RUNNING:          strncpy(run_state_str, "running",
+    //        case TH_STATE_RUNNING:          strlcpy(run_state_str, "running",
     //        run_state_str_size); break;
-    //        case TH_STATE_STOPPED:          strncpy(run_state_str, "stopped",
+    //        case TH_STATE_STOPPED:          strlcpy(run_state_str, "stopped",
     //        run_state_str_size); break;
-    //        case TH_STATE_WAITING:          strncpy(run_state_str, "waiting",
+    //        case TH_STATE_WAITING:          strlcpy(run_state_str, "waiting",
     //        run_state_str_size); break;
-    //        case TH_STATE_UNINTERRUPTIBLE:  strncpy(run_state_str,
+    //        case TH_STATE_UNINTERRUPTIBLE:  strlcpy(run_state_str,
     //        "uninterruptible", run_state_str_size); break;
-    //        case TH_STATE_HALTED:           strncpy(run_state_str, "halted",
+    //        case TH_STATE_HALTED:           strlcpy(run_state_str, "halted",
     //        run_state_str_size); break;
     //        default:                        snprintf(run_state_str,
     //        run_state_str_size, "%d", basicInfo.run_state); break;    // ???
