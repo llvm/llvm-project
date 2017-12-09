@@ -1,5 +1,5 @@
-; RUN: llc -filetype=obj %p/Inputs/many-funcs.ll -o %t.many.o
-; RUN: llc -filetype=obj %s -o %t.o
+; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %p/Inputs/many-funcs.ll -o %t.many.o
+; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %s -o %t.o
 ; RUN: lld -flavor wasm -r -o %t.wasm %t.many.o %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
@@ -7,9 +7,6 @@
 ; linking object with different header sizes.  many-funcs.ll has
 ; 128 function and so the final output requires a 2-byte LEB in
 ; the CODE section header to store the function count.
-
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown-wasm"
 
 define i32 @func() {
 entry:
