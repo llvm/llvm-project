@@ -13,7 +13,7 @@
 // to clients right now.
 //===----------------------------------------------------------------------===//
 #include "FuzzerDefs.h"
-#if LIBFUZZER_LINUX || LIBFUZZER_NETBSD
+#if LIBFUZZER_LINUX || LIBFUZZER_NETBSD || LIBFUZZER_FUCHSIA
 
 #include "FuzzerExtFunctions.h"
 #include "FuzzerIO.h"

@@ -43,6 +43,7 @@
 
 #if SANITIZER_NETBSD
 #include <sys/sysctl.h>
+#include <sys/tls.h>
 #endif
 
 #if SANITIZER_LINUX
@@ -327,7 +328,7 @@ uptr ThreadSelf() {
 }
 #endif  // (x86_64 || i386 || MIPS) && SANITIZER_LINUX
 
-#if SANITIZER_FREEBSD || SANITIZER_NETBSD
+#if SANITIZER_FREEBSD
 static void **ThreadSelfSegbase() {
   void **segbase = 0;
 # if defined(__i386__)
@@ -345,7 +346,36 @@ static void **ThreadSelfSegbase() {
 uptr ThreadSelf() {
   return (uptr)ThreadSelfSegbase()[2];
 }
-#endif  // SANITIZER_FREEBSD || SANITIZER_NETBSD
+#endif  // SANITIZER_FREEBSD
+
+#if SANITIZER_NETBSD
+static struct tls_tcb * ThreadSelfTlsTcb() {
+  struct tls_tcb * tcb;
+# ifdef __HAVE___LWP_GETTCB_FAST
+  tcb = (struct tls_tcb *)__lwp_gettcb_fast();
+# elif defined(__HAVE___LWP_GETPRIVATE_FAST)
+  tcb = (struct tls_tcb *)__lwp_getprivate_fast();
+# endif
+  return tcb;
+}
+
+uptr ThreadSelf() {
+  return (uptr)ThreadSelfTlsTcb()->tcb_pthread;
+}
+
+int GetSizeFromHdr(struct dl_phdr_info *info, size_t size, void *data) {
+  const Elf_Phdr *hdr = info->dlpi_phdr;
+  const Elf_Phdr *last_hdr = hdr + info->dlpi_phnum;
+
+  for (; hdr != last_hdr; ++hdr) {
+    if (hdr->p_type == PT_TLS && info->dlpi_tls_modid == 1) {
+      *(uptr*)data = hdr->p_memsz;
+      break;
+    }
+  }
+  return 0;
+}
+#endif  // SANITIZER_NETBSD
 
 #if !SANITIZER_GO
 static void GetTls(uptr *addr, uptr *size) {
@@ -363,7 +393,7 @@ static void GetTls(uptr *addr, uptr *size) {
   *addr = 0;
   *size = 0;
 # endif
-#elif SANITIZER_FREEBSD || SANITIZER_NETBSD
+#elif SANITIZER_FREEBSD
   void** segbase = ThreadSelfSegbase();
   *addr = 0;
   *size = 0;
@@ -375,6 +405,20 @@ static void GetTls(uptr *addr, uptr *size) {
     void **dtv = (void**) segbase[1];
     *addr = (uptr) dtv[2];
     *size = (*addr == 0) ? 0 : ((uptr) segbase[0] - (uptr) dtv[2]);
+  }
+#elif SANITIZER_NETBSD
+  struct tls_tcb * const tcb = ThreadSelfTlsTcb();
+  *addr = 0;
+  *size = 0;
+  if (tcb != 0) {
+    // Find size (p_memsz) of dlpi_tls_modid 1 (TLS block of the main program).
+    // ld.elf_so hardcodes the index 1.
+    dl_iterate_phdr(GetSizeFromHdr, size);
+
+    if (*size != 0) {
+      // The block has been found and tcb_dtv[1] contains the base address
+      *addr = (uptr)tcb->tcb_dtv[1];
+    }
   }
 #elif SANITIZER_ANDROID
   *addr = 0;

@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 #include "ClangdServer.h"
 #include "Compiler.h"
+#include "Matchers.h"
 #include "Protocol.h"
 #include "TestFS.h"
 #include "gmock/gmock.h"
@@ -18,7 +19,16 @@ namespace clangd {
 // Let GMock print completion items.
 void PrintTo(const CompletionItem &I, std::ostream *O) {
   llvm::raw_os_ostream OS(*O);
-  OS << toJSON(I);
+  OS << I.label << " - " << toJSON(I);
+}
+void PrintTo(const std::vector<CompletionItem> &V, std::ostream *O) {
+  *O << "{\n";
+  for (const auto &I : V) {
+    *O << "\t";
+    PrintTo(I, O);
+    *O << "\n";
+  }
+  *O << "}";
 }
 
 namespace {
@@ -26,7 +36,6 @@ using namespace llvm;
 using ::testing::AllOf;
 using ::testing::Contains;
 using ::testing::ElementsAre;
-using ::testing::Matcher;
 using ::testing::Not;
 
 class IgnoreDiagnostics : public DiagnosticsConsumer {
@@ -57,22 +66,25 @@ StringWithPos parseTextMarker(StringRef Text) {
 
 // GMock helpers for matching completion items.
 MATCHER_P(Named, Name, "") { return arg.insertText == Name; }
+MATCHER_P(Labeled, Label, "") { return arg.label == Label; }
+MATCHER_P(Kind, K, "") { return arg.kind == K; }
+MATCHER_P(PlainText, Text, "") {
+  return arg.insertTextFormat == clangd::InsertTextFormat::PlainText &&
+         arg.insertText == Text;
+}
+MATCHER_P(Snippet, Text, "") {
+  return arg.insertTextFormat == clangd::InsertTextFormat::Snippet &&
+         arg.insertText == Text;
+}
 // Shorthand for Contains(Named(Name)).
 Matcher<const std::vector<CompletionItem> &> Has(std::string Name) {
   return Contains(Named(std::move(Name)));
 }
-MATCHER(IsDocumented, "") { return !arg.documentation.empty(); }
-MATCHER(IsSnippet, "") {
-  return arg.kind == clangd::CompletionItemKind::Snippet;
+Matcher<const std::vector<CompletionItem> &> Has(std::string Name,
+                                                 CompletionItemKind K) {
+  return Contains(AllOf(Named(std::move(Name)), Kind(K)));
 }
-// This is hard to write as a function, because matchers may be polymorphic.
-#define EXPECT_IFF(condition, value, matcher)                                  \
-  do {                                                                         \
-    if (condition)                                                             \
-      EXPECT_THAT(value, matcher);                                             \
-    else                                                                       \
-      EXPECT_THAT(value, ::testing::Not(matcher));                             \
-  } while (0)
+MATCHER(IsDocumented, "") { return !arg.documentation.empty(); }
 
 CompletionList completions(StringRef Text,
                            clangd::CodeCompleteOptions Opts = {}) {
@@ -133,93 +145,97 @@ TEST(CompletionTest, Filter) {
 }
 
 void TestAfterDotCompletion(clangd::CodeCompleteOptions Opts) {
-  auto Results = completions(R"cpp(
-#define MACRO X
+  auto Results = completions(
+      R"cpp(
+      #define MACRO X
 
-int global_var;
+      int global_var;
 
-int global_func();
+      int global_func();
 
-struct GlobalClass {};
+      struct GlobalClass {};
 
-struct ClassWithMembers {
-  /// Doc for method.
-  int method();
+      struct ClassWithMembers {
+        /// Doc for method.
+        int method();
 
-  int field;
-private:
-  int private_field;
-};
+        int field;
+      private:
+        int private_field;
+      };
 
-int test() {
-  struct LocalClass {};
+      int test() {
+        struct LocalClass {};
 
-  /// Doc for local_var.
-  int local_var;
+        /// Doc for local_var.
+        int local_var;
 
-  ClassWithMembers().^
-}
-)cpp",
-                             Opts)
-                     .items;
+        ClassWithMembers().^
+      }
+      )cpp",
+      Opts);
 
   // Class members. The only items that must be present in after-dot
   // completion.
-  EXPECT_THAT(Results, AllOf(Has(Opts.EnableSnippets ? "method()" : "method"),
-                             Has("field")));
-  EXPECT_IFF(Opts.IncludeIneligibleResults, Results, Has("private_field"));
+  EXPECT_THAT(
+      Results.items,
+      AllOf(Has(Opts.EnableSnippets ? "method()" : "method"), Has("field")));
+  EXPECT_IFF(Opts.IncludeIneligibleResults, Results.items,
+             Has("private_field"));
   // Global items.
-  EXPECT_THAT(Results, Not(AnyOf(Has("global_var"), Has("global_func"),
-                                 Has("global_func()"), Has("GlobalClass"),
-                                 Has("MACRO"), Has("LocalClass"))));
+  EXPECT_THAT(Results.items, Not(AnyOf(Has("global_var"), Has("global_func"),
+                                       Has("global_func()"), Has("GlobalClass"),
+                                       Has("MACRO"), Has("LocalClass"))));
   // There should be no code patterns (aka snippets) in after-dot
   // completion. At least there aren't any we're aware of.
-  EXPECT_THAT(Results, Not(Contains(IsSnippet())));
+  EXPECT_THAT(Results.items, Not(Contains(Kind(CompletionItemKind::Snippet))));
   // Check documentation.
-  EXPECT_IFF(Opts.IncludeBriefComments, Results, Contains(IsDocumented()));
+  EXPECT_IFF(Opts.IncludeBriefComments, Results.items,
+             Contains(IsDocumented()));
 }
 
 void TestGlobalScopeCompletion(clangd::CodeCompleteOptions Opts) {
-  auto Results = completions(R"cpp(
-#define MACRO X
+  auto Results = completions(
+      R"cpp(
+      #define MACRO X
 
-int global_var;
-int global_func();
+      int global_var;
+      int global_func();
 
-struct GlobalClass {};
+      struct GlobalClass {};
 
-struct ClassWithMembers {
-  /// Doc for method.
-  int method();
-};
+      struct ClassWithMembers {
+        /// Doc for method.
+        int method();
+      };
 
-int test() {
-  struct LocalClass {};
+      int test() {
+        struct LocalClass {};
 
-  /// Doc for local_var.
-  int local_var;
+        /// Doc for local_var.
+        int local_var;
 
-  ^
-}
-)cpp",
-                             Opts)
-                     .items;
+        ^
+      }
+      )cpp",
+      Opts);
 
   // Class members. Should never be present in global completions.
-  EXPECT_THAT(Results,
+  EXPECT_THAT(Results.items,
               Not(AnyOf(Has("method"), Has("method()"), Has("field"))));
   // Global items.
-  EXPECT_IFF(Opts.IncludeGlobals, Results,
+  EXPECT_IFF(Opts.IncludeGlobals, Results.items,
              AllOf(Has("global_var"),
                    Has(Opts.EnableSnippets ? "global_func()" : "global_func"),
                    Has("GlobalClass")));
   // A macro.
-  EXPECT_IFF(Opts.IncludeMacros, Results, Has("MACRO"));
+  EXPECT_IFF(Opts.IncludeMacros, Results.items, Has("MACRO"));
   // Local items. Must be present always.
-  EXPECT_THAT(Results, AllOf(Has("local_var"), Has("LocalClass"),
-                             Contains(IsSnippet())));
+  EXPECT_THAT(Results.items, AllOf(Has("local_var"), Has("LocalClass"),
+                             Contains(Kind(CompletionItemKind::Snippet))));
   // Check documentation.
-  EXPECT_IFF(Opts.IncludeBriefComments, Results, Contains(IsDocumented()));
+  EXPECT_IFF(Opts.IncludeBriefComments, Results.items,
+             Contains(IsDocumented()));
 }
 
 TEST(CompletionTest, CompletionOptions) {
@@ -265,6 +281,90 @@ TEST(CompletionTest, CheckContentsOverride) {
           .get()
           .Value;
   EXPECT_THAT(Results.items, Contains(Named("cbc")));
+}
+
+TEST(CompletionTest, Priorities) {
+  auto Internal = completions(R"cpp(
+      class Foo {
+        public: void pub();
+        protected: void prot();
+        private: void priv();
+      };
+      void Foo::pub() { this->^ }
+  )cpp");
+  EXPECT_THAT(Internal.items,
+              HasSubsequence(Named("priv"), Named("prot"), Named("pub")));
+
+  auto External = completions(R"cpp(
+      class Foo {
+        public: void pub();
+        protected: void prot();
+        private: void priv();
+      };
+      void test() {
+        Foo F;
+        F.^
+      }
+  )cpp");
+  EXPECT_THAT(External.items,
+              AllOf(Has("pub"), Not(Has("prot")), Not(Has("priv"))));
+}
+
+TEST(CompletionTest, Qualifiers) {
+  auto Results = completions(R"cpp(
+      class Foo {
+        public: int foo() const;
+        int bar() const;
+      };
+      class Bar : public Foo {
+        int foo() const;
+      };
+      void test() { Bar().^ }
+  )cpp");
+  EXPECT_THAT(Results.items, HasSubsequence(Labeled("bar() const"),
+                                            Labeled("Foo::foo() const")));
+  EXPECT_THAT(Results.items, Not(Contains(Labeled("foo() const")))); // private
+}
+
+TEST(CompletionTest, Snippets) {
+  clangd::CodeCompleteOptions Opts;
+  Opts.EnableSnippets = true;
+  auto Results = completions(
+      R"cpp(
+      struct fake {
+        int a;
+        int f(int i, const float f) const;
+      };
+      int main() {
+        fake f;
+        f.^
+      }
+      )cpp",
+      Opts);
+  EXPECT_THAT(Results.items,
+              HasSubsequence(PlainText("a"),
+                             Snippet("f(${1:int i}, ${2:const float f})")));
+}
+
+TEST(CompletionTest, Kinds) {
+  auto Results = completions(R"cpp(
+      #define MACRO X
+      int variable;
+      struct Struct {};
+      int function();
+      int X = ^
+  )cpp");
+  EXPECT_THAT(Results.items, Has("function", CompletionItemKind::Function));
+  EXPECT_THAT(Results.items, Has("variable", CompletionItemKind::Variable));
+  EXPECT_THAT(Results.items, Has("int", CompletionItemKind::Keyword));
+  EXPECT_THAT(Results.items, Has("Struct", CompletionItemKind::Class));
+  EXPECT_THAT(Results.items, Has("MACRO", CompletionItemKind::Text));
+
+  clangd::CodeCompleteOptions Opts;
+  Opts.EnableSnippets = true; // Needed for code patterns.
+
+  Results = completions("nam^");
+  EXPECT_THAT(Results.items, Has("namespace", CompletionItemKind::Snippet));
 }
 
 } // namespace

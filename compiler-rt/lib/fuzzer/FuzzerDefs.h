@@ -24,24 +24,34 @@
 // Platform detection.
 #ifdef __linux__
 #define LIBFUZZER_APPLE 0
+#define LIBFUZZER_FUCHSIA 0
 #define LIBFUZZER_LINUX 1
 #define LIBFUZZER_NETBSD 0
 #define LIBFUZZER_WINDOWS 0
 #elif __APPLE__
 #define LIBFUZZER_APPLE 1
+#define LIBFUZZER_FUCHSIA 0
 #define LIBFUZZER_LINUX 0
 #define LIBFUZZER_NETBSD 0
 #define LIBFUZZER_WINDOWS 0
 #elif __NetBSD__
 #define LIBFUZZER_APPLE 0
+#define LIBFUZZER_FUCHSIA 0
 #define LIBFUZZER_LINUX 0
 #define LIBFUZZER_NETBSD 1
 #define LIBFUZZER_WINDOWS 0
 #elif _WIN32
 #define LIBFUZZER_APPLE 0
+#define LIBFUZZER_FUCHSIA 0
 #define LIBFUZZER_LINUX 0
 #define LIBFUZZER_NETBSD 0
 #define LIBFUZZER_WINDOWS 1
+#elif __Fuchsia__
+#define LIBFUZZER_APPLE 0
+#define LIBFUZZER_FUCHSIA 1
+#define LIBFUZZER_LINUX 0
+#define LIBFUZZER_NETBSD 0
+#define LIBFUZZER_WINDOWS 0
 #else
 #error "Support for your platform has not been implemented"
 #endif

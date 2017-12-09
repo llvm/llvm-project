@@ -63,6 +63,7 @@ if (LIBCXX_INSTALL_HEADERS)
 
     add_custom_target(libcxx-headers)
     add_custom_target(install-libcxx-headers DEPENDS install-cxx-headers)
+    add_custom_target(install-libcxx-headers-stripped DEPENDS install-cxx-headers-stripped)
   endif()
 
 endif()

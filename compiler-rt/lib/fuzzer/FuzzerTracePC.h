@@ -230,7 +230,10 @@ void TracePC::CollectFeatures(Callback HandleFeature) const {
   size_t N = GetNumPCs();
   auto Handle8bitCounter = [&](size_t FirstFeature,
                                size_t Idx, uint8_t Counter) {
-    HandleFeature(FirstFeature + Idx * 8 + CounterToFeature(Counter));
+    if (UseCounters)
+      HandleFeature(FirstFeature + Idx * 8 + CounterToFeature(Counter));
+    else
+      HandleFeature(FirstFeature + Idx);
   };
 
   size_t FirstFeature = 0;
@@ -251,8 +254,12 @@ void TracePC::CollectFeatures(Callback HandleFeature) const {
   if (size_t NumClangCounters = ClangCountersEnd() - ClangCountersBegin()) {
     auto P = ClangCountersBegin();
     for (size_t Idx = 0; Idx < NumClangCounters; Idx++)
-      if (auto Cnt = P[Idx])
-        HandleFeature(FirstFeature + Idx * 8 + CounterToFeature(Cnt));
+      if (auto Cnt = P[Idx]) {
+        if (UseCounters)
+          HandleFeature(FirstFeature + Idx * 8 + CounterToFeature(Cnt));
+        else
+          HandleFeature(FirstFeature + Idx);
+      }
     FirstFeature += NumClangCounters;
   }
 
@@ -268,7 +275,7 @@ void TracePC::CollectFeatures(Callback HandleFeature) const {
   }
 
   if (auto MaxStackOffset = GetMaxStackOffset())
-    HandleFeature(FirstFeature + MaxStackOffset);
+    HandleFeature(FirstFeature + MaxStackOffset / 128);
 }
 
 extern TracePC TPC;

@@ -61,7 +61,7 @@
 #error Unknown compiler
 #endif
 
-#if (KMP_OS_LINUX || KMP_OS_WINDOWS) && !KMP_OS_CNK && !KMP_ARCH_PPC64
+#if (KMP_OS_LINUX || KMP_OS_WINDOWS) && !KMP_OS_CNK
 #define KMP_AFFINITY_SUPPORTED 1
 #if KMP_OS_WINDOWS && KMP_ARCH_X86_64
 #define KMP_GROUP_AFFINITY 1
@@ -859,9 +859,6 @@ typedef void (*microtask_t)(int *gtid, int *npr, ...);
 #endif
 
 // Switches for OSS builds
-#ifndef USE_SYSFS_INFO
-#define USE_SYSFS_INFO 0
-#endif
 #ifndef USE_CMPXCHG_FIX
 #define USE_CMPXCHG_FIX 1
 #endif
