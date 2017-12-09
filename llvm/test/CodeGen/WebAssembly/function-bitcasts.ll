@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-explicit-locals -enable-emscripten-cxx-exceptions | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-explicit-locals -enable-emscripten-cxx-exceptions -wasm-temporary-workarounds=false | FileCheck %s
 
 ; Test that function pointer casts are replaced with wrappers.
 
@@ -20,13 +20,13 @@ declare void @foo3()
 ; CHECK-NEXT: call        .Lbitcast@FUNCTION{{$}}
 ; CHECK-NEXT: call        .Lbitcast.1@FUNCTION{{$}}
 ; CHECK-NEXT: i32.const   $push[[L0:[0-9]+]]=, 0
-; CHECK-NEXT: call        .Lbitcast.2@FUNCTION, $pop[[L0]]{{$}}
+; CHECK-NEXT: call        .Lbitcast.4@FUNCTION, $pop[[L0]]{{$}}
 ; CHECK-NEXT: i32.const   $push[[L1:[0-9]+]]=, 0
-; CHECK-NEXT: call        .Lbitcast.2@FUNCTION, $pop[[L1]]{{$}}
+; CHECK-NEXT: call        .Lbitcast.4@FUNCTION, $pop[[L1]]{{$}}
 ; CHECK-NEXT: i32.const   $push[[L2:[0-9]+]]=, 0
-; CHECK-NEXT: call        .Lbitcast.2@FUNCTION, $pop[[L2]]{{$}}
+; CHECK-NEXT: call        .Lbitcast.4@FUNCTION, $pop[[L2]]{{$}}
 ; CHECK-NEXT: call        foo0@FUNCTION
-; CHECK-NEXT: i32.call    $drop=, .Lbitcast.3@FUNCTION{{$}}
+; CHECK-NEXT: i32.call    $drop=, .Lbitcast.5@FUNCTION{{$}}
 ; CHECK-NEXT: call        foo2@FUNCTION{{$}}
 ; CHECK-NEXT: call        foo1@FUNCTION{{$}}
 ; CHECK-NEXT: call        foo3@FUNCTION{{$}}
@@ -54,10 +54,10 @@ entry:
 ; CHECK-LABEL: test_varargs:
 ; CHECK:      set_global
 ; CHECK:      i32.const   $push[[L3:[0-9]+]]=, 0{{$}}
-; CHECK-NEXT: call        vararg@FUNCTION, $pop[[L3]]{{$}}
+; CHECK-NEXT: call        .Lbitcast.2@FUNCTION, $pop[[L3]]{{$}}
 ; CHECK-NEXT: i32.const   $push[[L4:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: i32.store   0($[[L5:[0-9]+]]), $pop[[L4]]{{$}}
-; CHECK-NEXT: call        plain@FUNCTION, $[[L5]]{{$}}
+; CHECK-NEXT: call        .Lbitcast.3@FUNCTION, $[[L5]]{{$}}
 define void @test_varargs() {
   call void bitcast (void (...)* @vararg to void (i32)*)(i32 0)
   call void (...) bitcast (void (i32)* @plain to void (...)*)(i32 0)
@@ -147,11 +147,19 @@ end:
 ; CHECK-NEXT: end_function
 
 ; CHECK-LABEL: .Lbitcast.2:
+; CHECK: call        vararg@FUNCTION, $1{{$}}
+; CHECK: end_function
+
+; CHECK-LABEL: .Lbitcast.3:
+; CHECK: call        plain@FUNCTION, $1{{$}}
+; CHECK: end_function
+
+; CHECK-LABEL: .Lbitcast.4:
 ; CHECK-NEXT: .param      i32
 ; CHECK-NEXT: call        foo0@FUNCTION{{$}}
 ; CHECK-NEXT: end_function
 
-; CHECK-LABEL: .Lbitcast.3:
+; CHECK-LABEL: .Lbitcast.5:
 ; CHECK-NEXT: .result     i32
 ; CHECK-NEXT: call        foo1@FUNCTION{{$}}
 ; CHECK-NEXT: copy_local  $push0=, $0

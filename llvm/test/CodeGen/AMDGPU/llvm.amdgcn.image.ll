@@ -129,9 +129,24 @@ main_body:
 ; GCN-LABEL: {{^}}getresinfo:
 ; GCN-NOT: s_waitcnt
 ; GCN: image_get_resinfo {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}} dmask:0xf
+; GCN: s_waitcnt vmcnt(0)
+; GCN: exp
 define amdgpu_ps void @getresinfo() #0 {
 main_body:
   %r = call <4 x float> @llvm.amdgcn.image.getresinfo.v4f32.i32.v8i32(i32 undef, <8 x i32> undef, i32 15, i1 false, i1 false, i1 false, i1 false)
+  %r0 = extractelement <4 x float> %r, i32 0
+  %r1 = extractelement <4 x float> %r, i32 1
+  %r2 = extractelement <4 x float> %r, i32 2
+  %r3 = extractelement <4 x float> %r, i32 3
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r0, float %r1, float %r2, float %r3, i1 true, i1 true) #0
+  ret void
+}
+
+; GCN-LABEL: {{^}}getresinfo_dmask0:
+; GCN-NOT: image_get_resinfo
+define amdgpu_ps void @getresinfo_dmask0() #0 {
+main_body:
+  %r = call <4 x float> @llvm.amdgcn.image.getresinfo.v4f32.i32.v8i32(i32 undef, <8 x i32> undef, i32 0, i1 false, i1 false, i1 false, i1 false)
   %r0 = extractelement <4 x float> %r, i32 0
   %r1 = extractelement <4 x float> %r, i32 1
   %r2 = extractelement <4 x float> %r, i32 2
@@ -186,9 +201,10 @@ declare <4 x float> @llvm.amdgcn.image.load.v4f32.i32.v8i32(i32, <8 x i32>, i32,
 declare <4 x float> @llvm.amdgcn.image.load.v4f32.v2i32.v8i32(<2 x i32>, <8 x i32>, i32, i1, i1, i1, i1) #1
 declare <4 x float> @llvm.amdgcn.image.load.v4f32.v4i32.v8i32(<4 x i32>, <8 x i32>, i32, i1, i1, i1, i1) #1
 declare <4 x float> @llvm.amdgcn.image.load.mip.v4f32.v4i32.v8i32(<4 x i32>, <8 x i32>, i32, i1, i1, i1, i1) #1
-declare <4 x float> @llvm.amdgcn.image.getresinfo.v4f32.i32.v8i32(i32, <8 x i32>, i32, i1, i1, i1, i1) #1
+declare <4 x float> @llvm.amdgcn.image.getresinfo.v4f32.i32.v8i32(i32, <8 x i32>, i32, i1, i1, i1, i1) #2
 
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }
+attributes #2 = { nounwind readnone }

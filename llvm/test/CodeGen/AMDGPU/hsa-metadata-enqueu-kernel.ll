@@ -11,7 +11,8 @@
 ; CHECK-NEXT:   Language:        OpenCL C
 ; CHECK-NEXT:   LanguageVersion: [ 2, 0 ]
 ; CHECK-NEXT:   Args:
-; CHECK-NEXT:     - TypeName:      char
+; CHECK-NEXT:     - Name:          a
+; CHECK-NEXT:       TypeName:      char
 ; CHECK-NEXT:       Size:          1
 ; CHECK-NEXT:       Align:         1
 ; CHECK-NEXT:       ValueKind:     ByValue
@@ -43,7 +44,8 @@ define amdgpu_kernel void @test_non_enqueue_kernel_caller(i8 %a)
 ; CHECK-NEXT:   Language:        OpenCL C
 ; CHECK-NEXT:   LanguageVersion: [ 2, 0 ]
 ; CHECK-NEXT:   Args:
-; CHECK-NEXT:     - TypeName:      char
+; CHECK-NEXT:     - Name:          a
+; CHECK-NEXT:       TypeName:      char
 ; CHECK-NEXT:       Size:          1
 ; CHECK-NEXT:       Align:         1
 ; CHECK-NEXT:       ValueKind:     ByValue

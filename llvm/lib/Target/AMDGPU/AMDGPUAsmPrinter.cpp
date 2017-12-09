@@ -219,8 +219,28 @@ void AMDGPUAsmPrinter::EmitFunctionEntryLabel() {
     getTargetStreamer()->EmitAMDGPUSymbolType(
         SymbolName, ELF::STT_AMDGPU_HSA_KERNEL);
   }
+  const AMDGPUSubtarget &STI = MF->getSubtarget<AMDGPUSubtarget>();
+  if (STI.dumpCode()) {
+    // Disassemble function name label to text.
+    DisasmLines.push_back(MF->getFunction()->getName().str() + ":");
+    DisasmLineMaxLen = std::max(DisasmLineMaxLen, DisasmLines.back().size());
+    HexLines.push_back("");
+  }
 
   AsmPrinter::EmitFunctionEntryLabel();
+}
+
+void AMDGPUAsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) const {
+  const AMDGPUSubtarget &STI = MBB.getParent()->getSubtarget<AMDGPUSubtarget>();
+  if (STI.dumpCode() && !isBlockOnlyReachableByFallthrough(&MBB)) {
+    // Write a line for the basic block label if it is not only fallthrough.
+    DisasmLines.push_back(
+        (Twine("BB") + Twine(getFunctionNumber())
+         + "_" + Twine(MBB.getNumber()) + ":").str());
+    DisasmLineMaxLen = std::max(DisasmLineMaxLen, DisasmLines.back().size());
+    HexLines.push_back("");
+  }
+  AsmPrinter::EmitBasicBlockStart(MBB);
 }
 
 void AMDGPUAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
@@ -406,8 +426,11 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
         Context.getELFSection(".AMDGPU.disasm", ELF::SHT_NOTE, 0));
 
     for (size_t i = 0; i < DisasmLines.size(); ++i) {
-      std::string Comment(DisasmLineMaxLen - DisasmLines[i].size(), ' ');
-      Comment += " ; " + HexLines[i] + "\n";
+      std::string Comment = "\n";
+      if (!HexLines[i].empty()) {
+        Comment = std::string(DisasmLineMaxLen - DisasmLines[i].size(), ' ');
+        Comment += " ; " + HexLines[i] + "\n";
+      }
 
       OutStreamer->EmitBytes(StringRef(DisasmLines[i]));
       OutStreamer->EmitBytes(StringRef(Comment));

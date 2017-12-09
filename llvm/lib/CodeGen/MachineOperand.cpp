@@ -345,6 +345,15 @@ static void tryToGetTargetInfo(const MachineOperand &MO,
   }
 }
 
+void MachineOperand::printSubregIdx(raw_ostream &OS, uint64_t Index,
+                                    const TargetRegisterInfo *TRI) {
+  OS << "%subreg.";
+  if (TRI)
+    OS << TRI->getSubRegIndexName(Index);
+  else
+    OS << Index;
+}
+
 void MachineOperand::print(raw_ostream &OS, const TargetRegisterInfo *TRI,
                            const TargetIntrinsicInfo *IntrinsicInfo) const {
   tryToGetTargetInfo(*this, TRI, IntrinsicInfo);
@@ -410,7 +419,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << getImm();
     break;
   case MachineOperand::MO_CImmediate:
-    getCImm()->getValue().print(OS, false);
+    getCImm()->printAsOperand(OS, /*PrintType=*/true, MST);
     break;
   case MachineOperand::MO_FPImmediate:
     if (getFPImm()->getType()->isFloatTy()) {

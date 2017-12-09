@@ -1405,8 +1405,11 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     } else {
       LLT TypeToPrint = MRI ? getTypeToPrint(i, PrintedTypes, *MRI) : LLT{};
       unsigned TiedOperandIdx = getTiedOperandIdx(i);
-      MO.print(OS, MST, TypeToPrint, /*PrintDef=*/true, ShouldPrintRegisterTies,
-               TiedOperandIdx, TRI, IntrinsicInfo);
+      if (MO.isImm() && isOperandSubregIdx(i))
+        MachineOperand::printSubregIdx(OS, MO.getImm(), TRI);
+      else
+        MO.print(OS, MST, TypeToPrint, /*PrintDef=*/true,
+                 ShouldPrintRegisterTies, TiedOperandIdx, TRI, IntrinsicInfo);
     }
   }
 

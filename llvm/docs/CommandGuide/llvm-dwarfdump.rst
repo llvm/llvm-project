@@ -35,6 +35,11 @@ OPTIONS
             the :option:`--debug-info`, :option:`--find`,
             and :option:`--name` options.
 
+.. option:: --diff
+
+            Emit the output in a diff-friendly way by omitting offsets and
+            addresses.
+
 .. option:: -f <name>, --find=<name>
 
             Search for the exact text <name> in the accelerator tables

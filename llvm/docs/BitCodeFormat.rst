@@ -1054,6 +1054,7 @@ The integer codes are mapped to well-known attributes as follows.
 * code 52: ``writeonly``
 * code 53: ``speculatable``
 * code 54: ``strictfp``
+* code 55: ``sanitize_hwaddress``
 
 .. note::
   The ``allocsize`` attribute has a special encoding for its arguments. Its two

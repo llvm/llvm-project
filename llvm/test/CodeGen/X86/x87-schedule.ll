@@ -752,10 +752,10 @@ define void @test_fcom(float *%a0, double *%a1) optsize {
 ; SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
 ; SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    fcom %st(1)
-; SLM-NEXT:    fcom %st(3)
-; SLM-NEXT:    fcoms (%ecx)
-; SLM-NEXT:    fcoml (%eax)
+; SLM-NEXT:    fcom %st(1) # sched: [3:1.00]
+; SLM-NEXT:    fcom %st(3) # sched: [3:1.00]
+; SLM-NEXT:    fcoms (%ecx) # sched: [6:1.00]
+; SLM-NEXT:    fcoml (%eax) # sched: [6:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retl # sched: [4:1.00]
 ;
@@ -824,10 +824,10 @@ define void @test_fcom(float *%a0, double *%a1) optsize {
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fcom %st(1)
-; BTVER2-NEXT:    fcom %st(3)
-; BTVER2-NEXT:    fcoms (%ecx)
-; BTVER2-NEXT:    fcoml (%eax)
+; BTVER2-NEXT:    fcom %st(1) # sched: [3:1.00]
+; BTVER2-NEXT:    fcom %st(3) # sched: [3:1.00]
+; BTVER2-NEXT:    fcoms (%ecx) # sched: [8:1.00]
+; BTVER2-NEXT:    fcoml (%eax) # sched: [8:1.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -878,10 +878,10 @@ define void @test_fcomp_fcompp(float *%a0, double *%a1) optsize {
 ; SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
 ; SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    fcomp %st(1)
-; SLM-NEXT:    fcomp %st(3)
-; SLM-NEXT:    fcomps (%ecx)
-; SLM-NEXT:    fcompl (%eax)
+; SLM-NEXT:    fcomp %st(1) # sched: [3:1.00]
+; SLM-NEXT:    fcomp %st(3) # sched: [3:1.00]
+; SLM-NEXT:    fcomps (%ecx) # sched: [6:1.00]
+; SLM-NEXT:    fcompl (%eax) # sched: [6:1.00]
 ; SLM-NEXT:    fcompp # sched: [100:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retl # sched: [4:1.00]
@@ -956,10 +956,10 @@ define void @test_fcomp_fcompp(float *%a0, double *%a1) optsize {
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fcomp %st(1)
-; BTVER2-NEXT:    fcomp %st(3)
-; BTVER2-NEXT:    fcomps (%ecx)
-; BTVER2-NEXT:    fcompl (%eax)
+; BTVER2-NEXT:    fcomp %st(1) # sched: [3:1.00]
+; BTVER2-NEXT:    fcomp %st(3) # sched: [3:1.00]
+; BTVER2-NEXT:    fcomps (%ecx) # sched: [8:1.00]
+; BTVER2-NEXT:    fcompl (%eax) # sched: [8:1.00]
 ; BTVER2-NEXT:    fcompp # sched: [100:0.17]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
@@ -1812,10 +1812,10 @@ define void @test_ficom(i16 *%a0, i32 *%a1) optsize {
 ; SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
 ; SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    ficoms (%ecx)
-; SLM-NEXT:    ficoml (%eax)
-; SLM-NEXT:    ficomps (%ecx)
-; SLM-NEXT:    ficompl (%eax)
+; SLM-NEXT:    ficoms (%ecx) # sched: [6:1.00]
+; SLM-NEXT:    ficoml (%eax) # sched: [6:1.00]
+; SLM-NEXT:    ficomps (%ecx) # sched: [6:1.00]
+; SLM-NEXT:    ficompl (%eax) # sched: [6:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retl # sched: [4:1.00]
 ;
@@ -1884,10 +1884,10 @@ define void @test_ficom(i16 *%a0, i32 *%a1) optsize {
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    ficoms (%ecx)
-; BTVER2-NEXT:    ficoml (%eax)
-; BTVER2-NEXT:    ficomps (%ecx)
-; BTVER2-NEXT:    ficompl (%eax)
+; BTVER2-NEXT:    ficoms (%ecx) # sched: [8:1.00]
+; BTVER2-NEXT:    ficoml (%eax) # sched: [8:1.00]
+; BTVER2-NEXT:    ficomps (%ecx) # sched: [8:1.00]
+; BTVER2-NEXT:    ficompl (%eax) # sched: [8:1.00]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;

@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx901 -show-encoding %s 2>&1 | FileCheck -check-prefix=GFX9 %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s 2>&1 | FileCheck -check-prefix=GFX9 %s
 
 // GFX9: 31: error: failed parsing operand.
 v_pk_add_u16 v1, v2, v3 op_sel

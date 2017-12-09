@@ -993,7 +993,6 @@ public:
   }
 
   const BranchProbabilityInfoT &getBPI() const { return *BPI; }
-  const LoopInfoT &getLoopInfo() const { return *LI; }
 
   /// \brief Print the frequencies for the current function.
   ///
@@ -1315,9 +1314,12 @@ BlockFrequencyInfoImpl<BT>::propagateMassToSuccessors(LoopData *OuterLoop,
       return false;
   } else {
     const BlockT *BB = getBlock(Node);
-    for (const auto Succ : children<const BlockT *>(BB))
-      if (!addToDist(Dist, OuterLoop, Node, getNode(Succ),
-                     getWeightFromBranchProb(BPI->getEdgeProbability(BB, Succ))))
+    for (auto SI = GraphTraits<const BlockT *>::child_begin(BB),
+              SE = GraphTraits<const BlockT *>::child_end(BB);
+         SI != SE; ++SI)
+      if (!addToDist(
+              Dist, OuterLoop, Node, getNode(*SI),
+              getWeightFromBranchProb(BPI->getEdgeProbability(BB, SI))))
         // Irreducible backedge.
         return false;
   }
