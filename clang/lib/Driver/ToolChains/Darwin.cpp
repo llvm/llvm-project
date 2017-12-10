@@ -1234,6 +1234,7 @@ struct DarwinPlatform {
     case DeploymentTargetEnv:
       return (llvm::Twine(EnvVarName) + "=" + OSVersion).str();
     }
+    llvm_unreachable("Unsupported Darwin Source Kind");
   }
 
   static DarwinPlatform createOSVersionArg(DarwinPlatformKind Platform,
