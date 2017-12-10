@@ -103,7 +103,7 @@ static cl::opt<bool> DisableMultiplicativeReductions(
     cl::desc("Disable multiplicative reductions"), cl::Hidden, cl::ZeroOrMore,
     cl::init(false), cl::cat(PollyCategory));
 
-enum class GranularityChoice { BasicBlocks, ScalarIndepependence };
+enum class GranularityChoice { BasicBlocks, ScalarIndependence };
 
 static cl::opt<GranularityChoice> StmtGranularity(
     "polly-stmt-granularity",
@@ -111,8 +111,8 @@ static cl::opt<GranularityChoice> StmtGranularity(
         "Algorithm to use for splitting basic blocks into multiple statements"),
     cl::values(clEnumValN(GranularityChoice::BasicBlocks, "bb",
                           "One statement per basic block"),
-               clEnumValN(GranularityChoice::ScalarIndepependence,
-                          "scalar-indep", "Scalar independence heuristic")),
+               clEnumValN(GranularityChoice::ScalarIndependence, "scalar-indep",
+                          "Scalar independence heuristic")),
     cl::init(GranularityChoice::BasicBlocks), cl::cat(PollyCategory));
 
 void ScopBuilder::buildPHIAccesses(ScopStmt *PHIStmt, PHINode *PHI,
@@ -897,7 +897,7 @@ void ScopBuilder::buildStmts(Region &SR) {
       case GranularityChoice::BasicBlocks:
         buildSequentialBlockStmts(BB);
         break;
-      case GranularityChoice::ScalarIndepependence:
+      case GranularityChoice::ScalarIndependence:
         buildEqivClassBlockStmts(BB);
         break;
       }
