@@ -2134,7 +2134,7 @@ define <4 x float> @test_movss_reg(<4 x float> %a0, <4 x float> %a1) {
 ;
 ; SKX-LABEL: test_movss_reg:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3] sched: [1:1.00]
+; SKX-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3] sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_movss_reg:

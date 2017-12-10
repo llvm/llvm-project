@@ -219,11 +219,11 @@ define <4 x i32> @test_sha256rnds2(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2, 
 ;
 ; CANNONLAKE-LABEL: test_sha256rnds2:
 ; CANNONLAKE:       # %bb.0:
-; CANNONLAKE-NEXT:    vmovaps %xmm0, %xmm3 # sched: [1:1.00]
-; CANNONLAKE-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:1.00]
+; CANNONLAKE-NEXT:    vmovaps %xmm0, %xmm3 # sched: [1:0.33]
+; CANNONLAKE-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:0.33]
 ; CANNONLAKE-NEXT:    sha256rnds2 %xmm0, %xmm1, %xmm3 # sched: [5:1.00]
 ; CANNONLAKE-NEXT:    sha256rnds2 %xmm0, (%rdi), %xmm3 # sched: [10:1.00]
-; CANNONLAKE-NEXT:    vmovaps %xmm3, %xmm0 # sched: [1:1.00]
+; CANNONLAKE-NEXT:    vmovaps %xmm3, %xmm0 # sched: [1:0.33]
 ; CANNONLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_sha256rnds2:

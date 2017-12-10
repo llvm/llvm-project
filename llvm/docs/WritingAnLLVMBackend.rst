@@ -1008,7 +1008,7 @@ Instruction Scheduling
 ----------------------
 
 Instruction itineraries can be queried using MCDesc::getSchedClass(). The
-value can be named by an enumemation in llvm::XXX::Sched namespace generated
+value can be named by an enumeration in llvm::XXX::Sched namespace generated
 by TableGen in XXXGenInstrInfo.inc. The name of the schedule classes are
 the same as provided in XXXSchedule.td plus a default NoItinerary class.
 

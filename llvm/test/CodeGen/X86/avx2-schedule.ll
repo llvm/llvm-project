@@ -3391,28 +3391,28 @@ define <4 x i32> @test_pmaskmovd(i8* %a0, <4 x i32> %a1, <4 x i32> %a2) {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmaskmovd (%rdi), %xmm0, %xmm2 # sched: [8:2.00]
 ; HASWELL-NEXT:    vpmaskmovd %xmm1, %xmm0, (%rdi) # sched: [5:1.00]
-; HASWELL-NEXT:    vmovdqa %xmm2, %xmm0 # sched: [1:0.25]
+; HASWELL-NEXT:    vmovdqa %xmm2, %xmm0 # sched: [1:0.33]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmaskmovd:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vpmaskmovd (%rdi), %xmm0, %xmm2 # sched: [7:2.00]
 ; BROADWELL-NEXT:    vpmaskmovd %xmm1, %xmm0, (%rdi) # sched: [5:1.00]
-; BROADWELL-NEXT:    vmovdqa %xmm2, %xmm0 # sched: [1:0.25]
+; BROADWELL-NEXT:    vmovdqa %xmm2, %xmm0 # sched: [1:0.33]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_pmaskmovd:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vpmaskmovd (%rdi), %xmm0, %xmm2 # sched: [7:0.50]
 ; SKYLAKE-NEXT:    vpmaskmovd %xmm1, %xmm0, (%rdi) # sched: [2:1.00]
-; SKYLAKE-NEXT:    vmovdqa %xmm2, %xmm0 # sched: [1:0.25]
+; SKYLAKE-NEXT:    vmovdqa %xmm2, %xmm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pmaskmovd:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpmaskmovd (%rdi), %xmm0, %xmm2 # sched: [7:0.50]
 ; SKX-NEXT:    vpmaskmovd %xmm1, %xmm0, (%rdi) # sched: [2:1.00]
-; SKX-NEXT:    vmovdqa %xmm2, %xmm0 # sched: [1:0.25]
+; SKX-NEXT:    vmovdqa %xmm2, %xmm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_pmaskmovd:
@@ -3440,28 +3440,28 @@ define <8 x i32> @test_pmaskmovd_ymm(i8* %a0, <8 x i32> %a1, <8 x i32> %a2) {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmaskmovd (%rdi), %ymm0, %ymm2 # sched: [9:2.00]
 ; HASWELL-NEXT:    vpmaskmovd %ymm1, %ymm0, (%rdi) # sched: [5:1.00]
-; HASWELL-NEXT:    vmovdqa %ymm2, %ymm0 # sched: [1:0.25]
+; HASWELL-NEXT:    vmovdqa %ymm2, %ymm0 # sched: [1:0.33]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmaskmovd_ymm:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vpmaskmovd (%rdi), %ymm0, %ymm2 # sched: [8:2.00]
 ; BROADWELL-NEXT:    vpmaskmovd %ymm1, %ymm0, (%rdi) # sched: [5:1.00]
-; BROADWELL-NEXT:    vmovdqa %ymm2, %ymm0 # sched: [1:0.25]
+; BROADWELL-NEXT:    vmovdqa %ymm2, %ymm0 # sched: [1:0.33]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_pmaskmovd_ymm:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vpmaskmovd (%rdi), %ymm0, %ymm2 # sched: [8:0.50]
 ; SKYLAKE-NEXT:    vpmaskmovd %ymm1, %ymm0, (%rdi) # sched: [2:1.00]
-; SKYLAKE-NEXT:    vmovdqa %ymm2, %ymm0 # sched: [1:0.25]
+; SKYLAKE-NEXT:    vmovdqa %ymm2, %ymm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pmaskmovd_ymm:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpmaskmovd (%rdi), %ymm0, %ymm2 # sched: [8:0.50]
 ; SKX-NEXT:    vpmaskmovd %ymm1, %ymm0, (%rdi) # sched: [2:1.00]
-; SKX-NEXT:    vmovdqa %ymm2, %ymm0 # sched: [1:0.25]
+; SKX-NEXT:    vmovdqa %ymm2, %ymm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_pmaskmovd_ymm:
@@ -3489,28 +3489,28 @@ define <2 x i64> @test_pmaskmovq(i8* %a0, <2 x i64> %a1, <2 x i64> %a2) {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmaskmovq (%rdi), %xmm0, %xmm2 # sched: [8:2.00]
 ; HASWELL-NEXT:    vpmaskmovq %xmm1, %xmm0, (%rdi) # sched: [5:1.00]
-; HASWELL-NEXT:    vmovdqa %xmm2, %xmm0 # sched: [1:0.25]
+; HASWELL-NEXT:    vmovdqa %xmm2, %xmm0 # sched: [1:0.33]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmaskmovq:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vpmaskmovq (%rdi), %xmm0, %xmm2 # sched: [7:2.00]
 ; BROADWELL-NEXT:    vpmaskmovq %xmm1, %xmm0, (%rdi) # sched: [5:1.00]
-; BROADWELL-NEXT:    vmovdqa %xmm2, %xmm0 # sched: [1:0.25]
+; BROADWELL-NEXT:    vmovdqa %xmm2, %xmm0 # sched: [1:0.33]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_pmaskmovq:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vpmaskmovq (%rdi), %xmm0, %xmm2 # sched: [7:0.50]
 ; SKYLAKE-NEXT:    vpmaskmovq %xmm1, %xmm0, (%rdi) # sched: [2:1.00]
-; SKYLAKE-NEXT:    vmovdqa %xmm2, %xmm0 # sched: [1:0.25]
+; SKYLAKE-NEXT:    vmovdqa %xmm2, %xmm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pmaskmovq:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpmaskmovq (%rdi), %xmm0, %xmm2 # sched: [7:0.50]
 ; SKX-NEXT:    vpmaskmovq %xmm1, %xmm0, (%rdi) # sched: [2:1.00]
-; SKX-NEXT:    vmovdqa %xmm2, %xmm0 # sched: [1:0.25]
+; SKX-NEXT:    vmovdqa %xmm2, %xmm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_pmaskmovq:
@@ -3538,28 +3538,28 @@ define <4 x i64> @test_pmaskmovq_ymm(i8* %a0, <4 x i64> %a1, <4 x i64> %a2) {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmaskmovq (%rdi), %ymm0, %ymm2 # sched: [9:2.00]
 ; HASWELL-NEXT:    vpmaskmovq %ymm1, %ymm0, (%rdi) # sched: [5:1.00]
-; HASWELL-NEXT:    vmovdqa %ymm2, %ymm0 # sched: [1:0.25]
+; HASWELL-NEXT:    vmovdqa %ymm2, %ymm0 # sched: [1:0.33]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmaskmovq_ymm:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vpmaskmovq (%rdi), %ymm0, %ymm2 # sched: [8:2.00]
 ; BROADWELL-NEXT:    vpmaskmovq %ymm1, %ymm0, (%rdi) # sched: [5:1.00]
-; BROADWELL-NEXT:    vmovdqa %ymm2, %ymm0 # sched: [1:0.25]
+; BROADWELL-NEXT:    vmovdqa %ymm2, %ymm0 # sched: [1:0.33]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_pmaskmovq_ymm:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vpmaskmovq (%rdi), %ymm0, %ymm2 # sched: [8:0.50]
 ; SKYLAKE-NEXT:    vpmaskmovq %ymm1, %ymm0, (%rdi) # sched: [2:1.00]
-; SKYLAKE-NEXT:    vmovdqa %ymm2, %ymm0 # sched: [1:0.25]
+; SKYLAKE-NEXT:    vmovdqa %ymm2, %ymm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pmaskmovq_ymm:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpmaskmovq (%rdi), %ymm0, %ymm2 # sched: [8:0.50]
 ; SKX-NEXT:    vpmaskmovq %ymm1, %ymm0, (%rdi) # sched: [2:1.00]
-; SKX-NEXT:    vmovdqa %ymm2, %ymm0 # sched: [1:0.25]
+; SKX-NEXT:    vmovdqa %ymm2, %ymm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_pmaskmovq_ymm:
