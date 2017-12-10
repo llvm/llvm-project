@@ -76,6 +76,7 @@
 #include "ICF.h"
 #include "Config.h"
 #include "SymbolTable.h"
+#include "Symbols.h"
 #include "lld/Common/Threads.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/BinaryFormat/ELF.h"

@@ -22,6 +22,7 @@
 #include "OutputSections.h"
 #include "Strings.h"
 #include "SymbolTable.h"
+#include "Symbols.h"
 #include "Target.h"
 #include "Writer.h"
 #include "lld/Common/ErrorHandler.h"

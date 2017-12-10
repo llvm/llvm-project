@@ -30,6 +30,7 @@
 
 namespace lld {
 namespace elf {
+class SharedSymbol;
 
 class SyntheticSection : public InputSection {
 public:
