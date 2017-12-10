@@ -18,6 +18,8 @@
 
 namespace lld {
 namespace elf {
+class Defined;
+class SectionBase;
 
 // SymbolTable is a bucket of all known symbols, including defined,
 // undefined, or lazy symbols (the last one is symbols in archive
