@@ -124,10 +124,10 @@ namespace PR10086 {
 namespace undefined_static_data_member {
   template<typename T> struct A {
     static int a; // expected-note {{here}}
-    template<typename U> static int b; // expected-note {{here}} expected-warning {{extension}}
+    template<typename U> static int b; // expected-note {{here}} expected-warning 0+ {{extension}}
   };
   struct B {
-    template<typename U> static int c; // expected-note {{here}} expected-warning {{extension}}
+    template<typename U> static int c; // expected-note {{here}} expected-warning 0+ {{extension}}
   };
 
   template int A<int>::a; // expected-error {{explicit instantiation of undefined static data member 'a' of class template 'undefined_static_data_member::A<int>'}}
@@ -137,14 +137,14 @@ namespace undefined_static_data_member {
 
   template<typename T> struct C {
     static int a;
-    template<typename U> static int b; // expected-warning {{extension}}
+    template<typename U> static int b; // expected-warning 0+ {{extension}}
   };
   struct D {
-    template<typename U> static int c; // expected-warning {{extension}}
+    template<typename U> static int c; // expected-warning 0+ {{extension}}
   };
   template<typename T> int C<T>::a;
-  template<typename T> template<typename U> int C<T>::b; // expected-warning {{extension}}
-  template<typename U> int D::c; // expected-warning {{extension}}
+  template<typename T> template<typename U> int C<T>::b; // expected-warning 0+ {{extension}}
+  template<typename U> int D::c; // expected-warning 0+ {{extension}}
 
   template int C<int>::a;
   template int C<int>::b<int>;
