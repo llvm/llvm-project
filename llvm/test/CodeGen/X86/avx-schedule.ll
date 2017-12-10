@@ -2077,14 +2077,14 @@ define <2 x double> @test_maskmovpd(i8* %a0, <2 x i64> %a1, <2 x double> %a2) {
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vmaskmovpd (%rdi), %xmm0, %xmm2 # sched: [7:0.50]
 ; SKYLAKE-NEXT:    vmaskmovpd %xmm1, %xmm0, (%rdi) # sched: [2:1.00]
-; SKYLAKE-NEXT:    vmovapd %xmm2, %xmm0 # sched: [1:1.00]
+; SKYLAKE-NEXT:    vmovapd %xmm2, %xmm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_maskmovpd:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmaskmovpd (%rdi), %xmm0, %xmm2 # sched: [7:0.50]
 ; SKX-NEXT:    vmaskmovpd %xmm1, %xmm0, (%rdi) # sched: [2:1.00]
-; SKX-NEXT:    vmovapd %xmm2, %xmm0 # sched: [1:1.00]
+; SKX-NEXT:    vmovapd %xmm2, %xmm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_maskmovpd:
@@ -2140,14 +2140,14 @@ define <4 x double> @test_maskmovpd_ymm(i8* %a0, <4 x i64> %a1, <4 x double> %a2
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vmaskmovpd (%rdi), %ymm0, %ymm2 # sched: [8:0.50]
 ; SKYLAKE-NEXT:    vmaskmovpd %ymm1, %ymm0, (%rdi) # sched: [2:1.00]
-; SKYLAKE-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:1.00]
+; SKYLAKE-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_maskmovpd_ymm:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmaskmovpd (%rdi), %ymm0, %ymm2 # sched: [8:0.50]
 ; SKX-NEXT:    vmaskmovpd %ymm1, %ymm0, (%rdi) # sched: [2:1.00]
-; SKX-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:1.00]
+; SKX-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_maskmovpd_ymm:
@@ -2203,14 +2203,14 @@ define <4 x float> @test_maskmovps(i8* %a0, <4 x i32> %a1, <4 x float> %a2) {
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vmaskmovps (%rdi), %xmm0, %xmm2 # sched: [7:0.50]
 ; SKYLAKE-NEXT:    vmaskmovps %xmm1, %xmm0, (%rdi) # sched: [2:1.00]
-; SKYLAKE-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:1.00]
+; SKYLAKE-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_maskmovps:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmaskmovps (%rdi), %xmm0, %xmm2 # sched: [7:0.50]
 ; SKX-NEXT:    vmaskmovps %xmm1, %xmm0, (%rdi) # sched: [2:1.00]
-; SKX-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:1.00]
+; SKX-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_maskmovps:
@@ -2266,14 +2266,14 @@ define <8 x float> @test_maskmovps_ymm(i8* %a0, <8 x i32> %a1, <8 x float> %a2) 
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vmaskmovps (%rdi), %ymm0, %ymm2 # sched: [8:0.50]
 ; SKYLAKE-NEXT:    vmaskmovps %ymm1, %ymm0, (%rdi) # sched: [2:1.00]
-; SKYLAKE-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:1.00]
+; SKYLAKE-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_maskmovps_ymm:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmaskmovps (%rdi), %ymm0, %ymm2 # sched: [8:0.50]
 ; SKX-NEXT:    vmaskmovps %ymm1, %ymm0, (%rdi) # sched: [2:1.00]
-; SKX-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:1.00]
+; SKX-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_maskmovps_ymm:

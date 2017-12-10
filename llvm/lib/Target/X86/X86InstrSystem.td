@@ -154,13 +154,14 @@ def MOV64cr : I<0x22, MRMSrcReg, (outs CONTROL_REG:$dst), (ins GR64:$src),
 //===----------------------------------------------------------------------===//
 // Segment override instruction prefixes
 
-def CS_PREFIX : I<0x2E, RawFrm, (outs), (ins), "cs", []>;
-def SS_PREFIX : I<0x36, RawFrm, (outs), (ins), "ss", []>;
-def DS_PREFIX : I<0x3E, RawFrm, (outs), (ins), "ds", []>;
-def ES_PREFIX : I<0x26, RawFrm, (outs), (ins), "es", []>;
-def FS_PREFIX : I<0x64, RawFrm, (outs), (ins), "fs", []>;
-def GS_PREFIX : I<0x65, RawFrm, (outs), (ins), "gs", []>;
-
+let SchedRW = [WriteNop] in {
+def CS_PREFIX : I<0x2E, RawFrm, (outs), (ins), "cs", [], IIC_NOP>;
+def SS_PREFIX : I<0x36, RawFrm, (outs), (ins), "ss", [], IIC_NOP>;
+def DS_PREFIX : I<0x3E, RawFrm, (outs), (ins), "ds", [], IIC_NOP>;
+def ES_PREFIX : I<0x26, RawFrm, (outs), (ins), "es", [], IIC_NOP>;
+def FS_PREFIX : I<0x64, RawFrm, (outs), (ins), "fs", [], IIC_NOP>;
+def GS_PREFIX : I<0x65, RawFrm, (outs), (ins), "gs", [], IIC_NOP>;
+} // SchedRW
 
 //===----------------------------------------------------------------------===//
 // Moves to and from segment registers.
@@ -488,24 +489,24 @@ let SchedRW = [WriteSystem], Predicates = [HasSHSTK]  in{
       def INCSSPD : I<0xAE, MRM5r, (outs), (ins GR32:$src), "incsspd\t$src",
                        [(int_x86_incsspd GR32:$src)]>, XS;
       def INCSSPQ : RI<0xAE, MRM5r, (outs), (ins GR64:$src), "incsspq\t$src",
-                       [(int_x86_incsspq GR64:$src)]>, XS, 
+                       [(int_x86_incsspq GR64:$src)]>, XS,
                        Requires<[In64BitMode]>;
     } // Defs SSP
 
     let Constraints = "$src = $dst" in {
-      def RDSSPD : I<0x1E, MRM1r, (outs GR32:$dst), (ins GR32:$src), 
+      def RDSSPD : I<0x1E, MRM1r, (outs GR32:$dst), (ins GR32:$src),
                      "rdsspd\t$dst",
                      [(set GR32:$dst, (int_x86_rdsspd GR32:$src))]>, XS;
-      def RDSSPQ : RI<0x1E, MRM1r, (outs GR64:$dst), (ins GR64:$src), 
-                     "rdsspq\t$dst", 
-                     [(set GR64:$dst, (int_x86_rdsspq GR64:$src))]>, XS, 
+      def RDSSPQ : RI<0x1E, MRM1r, (outs GR64:$dst), (ins GR64:$src),
+                     "rdsspq\t$dst",
+                     [(set GR64:$dst, (int_x86_rdsspq GR64:$src))]>, XS,
                      Requires<[In64BitMode]>;
     }
 
     let Defs = [SSP] in {
       def SAVEPREVSSP : I<0x01, MRM_EA, (outs), (ins), "saveprevssp",
                        [(int_x86_saveprevssp)]>, XS;
-      def RSTORSSP : I<0x01, MRM5m, (outs), (ins i32mem:$src), 
+      def RSTORSSP : I<0x01, MRM5m, (outs), (ins i32mem:$src),
                        "rstorssp\t$src",
                        [(int_x86_rstorssp addr:$src)]>, XS;
     } // Defs SSP
@@ -516,14 +517,14 @@ let SchedRW = [WriteSystem], Predicates = [HasSHSTK]  in{
                 [(int_x86_wrssd GR32:$src, addr:$dst)]>, T8;
   def WRSSQ : RI<0xF6, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
                  "wrssq\t{$src, $dst|$dst, $src}",
-                 [(int_x86_wrssq GR64:$src, addr:$dst)]>, T8, 
+                 [(int_x86_wrssq GR64:$src, addr:$dst)]>, T8,
                  Requires<[In64BitMode]>;
   def WRUSSD : I<0xF5, MRMDestMem, (outs), (ins i32mem:$dst, GR32:$src),
                  "wrussd\t{$src, $dst|$dst, $src}",
                  [(int_x86_wrussd GR32:$src, addr:$dst)]>, T8PD;
-  def WRUSSQ : RI<0xF5, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src), 
+  def WRUSSQ : RI<0xF5, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
                   "wrussq\t{$src, $dst|$dst, $src}",
-                  [(int_x86_wrussq GR64:$src, addr:$dst)]>, T8PD, 
+                  [(int_x86_wrussq GR64:$src, addr:$dst)]>, T8PD,
                   Requires<[In64BitMode]>;
 
   let Defs = [SSP] in {
@@ -532,7 +533,7 @@ let SchedRW = [WriteSystem], Predicates = [HasSHSTK]  in{
                          [(int_x86_setssbsy)]>, XS;
     } // Uses SSP
 
-    def CLRSSBSY : I<0xAE, MRM6m, (outs), (ins i32mem:$src), 
+    def CLRSSBSY : I<0xAE, MRM6m, (outs), (ins i32mem:$src),
                      "clrssbsy\t$src",
                      [(int_x86_clrssbsy addr:$src)]>, XS;
   } // Defs SSP
@@ -546,8 +547,8 @@ let Defs = [EDX, EAX], Uses = [ECX] in
   def XGETBV : I<0x01, MRM_D0, (outs), (ins), "xgetbv", []>, TB;
 
 let Uses = [EDX, EAX, ECX] in
-  def XSETBV : I<0x01, MRM_D1, (outs), (ins), 
-                "xsetbv", 
+  def XSETBV : I<0x01, MRM_D1, (outs), (ins),
+                "xsetbv",
                 [(int_x86_xsetbv ECX, EDX, EAX)]>, TB;
 
 } // HasXSAVE
@@ -642,31 +643,38 @@ let Uses = [EAX, ECX, EDX] in
 
 //===----------------------------------------------------------------------===//
 // FS/GS Base Instructions
-let Predicates = [HasFSGSBase, In64BitMode] in {
+let Predicates = [HasFSGSBase, In64BitMode], SchedRW = [WriteSystem] in {
   def RDFSBASE : I<0xAE, MRM0r, (outs GR32:$dst), (ins),
                    "rdfsbase{l}\t$dst",
-                   [(set GR32:$dst, (int_x86_rdfsbase_32))]>, XS;
+                   [(set GR32:$dst, (int_x86_rdfsbase_32))],
+                   IIC_SEGMENT_BASE_R>, XS;
   def RDFSBASE64 : RI<0xAE, MRM0r, (outs GR64:$dst), (ins),
                      "rdfsbase{q}\t$dst",
-                     [(set GR64:$dst, (int_x86_rdfsbase_64))]>, XS;
+                     [(set GR64:$dst, (int_x86_rdfsbase_64))],
+                     IIC_SEGMENT_BASE_R>, XS;
   def RDGSBASE : I<0xAE, MRM1r, (outs GR32:$dst), (ins),
                    "rdgsbase{l}\t$dst",
-                   [(set GR32:$dst, (int_x86_rdgsbase_32))]>, XS;
+                   [(set GR32:$dst, (int_x86_rdgsbase_32))],
+                   IIC_SEGMENT_BASE_R>, XS;
   def RDGSBASE64 : RI<0xAE, MRM1r, (outs GR64:$dst), (ins),
                      "rdgsbase{q}\t$dst",
-                     [(set GR64:$dst, (int_x86_rdgsbase_64))]>, XS;
+                     [(set GR64:$dst, (int_x86_rdgsbase_64))],
+                     IIC_SEGMENT_BASE_R>, XS;
   def WRFSBASE : I<0xAE, MRM2r, (outs), (ins GR32:$src),
                    "wrfsbase{l}\t$src",
-                   [(int_x86_wrfsbase_32 GR32:$src)]>, XS;
+                   [(int_x86_wrfsbase_32 GR32:$src)],
+                   IIC_SEGMENT_BASE_W>, XS;
   def WRFSBASE64 : RI<0xAE, MRM2r, (outs), (ins GR64:$src),
                       "wrfsbase{q}\t$src",
-                      [(int_x86_wrfsbase_64 GR64:$src)]>, XS;
+                      [(int_x86_wrfsbase_64 GR64:$src)],
+                      IIC_SEGMENT_BASE_W>, XS;
   def WRGSBASE : I<0xAE, MRM3r, (outs), (ins GR32:$src),
                    "wrgsbase{l}\t$src",
-                   [(int_x86_wrgsbase_32 GR32:$src)]>, XS;
+                   [(int_x86_wrgsbase_32 GR32:$src)], IIC_SEGMENT_BASE_W>, XS;
   def WRGSBASE64 : RI<0xAE, MRM3r, (outs), (ins GR64:$src),
                       "wrgsbase{q}\t$src",
-                      [(int_x86_wrgsbase_64 GR64:$src)]>, XS;
+                      [(int_x86_wrgsbase_64 GR64:$src)],
+                      IIC_SEGMENT_BASE_W>, XS;
 }
 
 //===----------------------------------------------------------------------===//

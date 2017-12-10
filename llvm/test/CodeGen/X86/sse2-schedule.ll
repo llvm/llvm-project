@@ -1305,7 +1305,7 @@ define float @test_cvtsd2ss(double %a0, double *%a1) {
 ; GENERIC-LABEL: test_cvtsd2ss:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    cvtsd2ss %xmm0, %xmm1 # sched: [4:1.00]
-; GENERIC-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero sched: [4:0.50]
+; GENERIC-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero sched: [6:0.50]
 ; GENERIC-NEXT:    cvtsd2ss %xmm0, %xmm0 # sched: [4:1.00]
 ; GENERIC-NEXT:    addss %xmm1, %xmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -2869,7 +2869,7 @@ define i64 @test_movd_64(<2 x i64> %a0, i64 %a1, i64 *%a2) {
 ; GENERIC-LABEL: test_movd_64:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    movq %rdi, %xmm1 # sched: [1:1.00]
-; GENERIC-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero sched: [4:0.50]
+; GENERIC-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero sched: [6:0.50]
 ; GENERIC-NEXT:    paddq %xmm0, %xmm1 # sched: [1:0.50]
 ; GENERIC-NEXT:    paddq %xmm0, %xmm2 # sched: [1:0.50]
 ; GENERIC-NEXT:    movq %xmm2, %rax # sched: [2:1.00]
@@ -3326,7 +3326,7 @@ define void @test_movntpd(<2 x double> %a0, <2 x double> *%a1) {
 define <2 x i64> @test_movq_mem(<2 x i64> %a0, i64 *%a1) {
 ; GENERIC-LABEL: test_movq_mem:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero sched: [4:0.50]
+; GENERIC-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero sched: [6:0.50]
 ; GENERIC-NEXT:    paddq %xmm1, %xmm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    movq %xmm0, (%rdi) # sched: [5:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -3471,9 +3471,9 @@ define <2 x i64> @test_movq_reg(<2 x i64> %a0, <2 x i64> %a1) {
 define void @test_movsd_mem(double* %a0, double* %a1) {
 ; GENERIC-LABEL: test_movsd_mem:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero sched: [4:0.50]
+; GENERIC-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero sched: [6:0.50]
 ; GENERIC-NEXT:    addsd %xmm0, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    movsd %xmm0, (%rsi) # sched: [1:1.00]
+; GENERIC-NEXT:    movsd %xmm0, (%rsi) # sched: [5:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_movsd_mem:

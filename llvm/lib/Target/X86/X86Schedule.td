@@ -547,6 +547,8 @@ def IIC_PUSH_CS : InstrItinClass;
 def IIC_PUSH_SR : InstrItinClass;
 def IIC_POP_SR : InstrItinClass;
 def IIC_POP_SR_SS : InstrItinClass;
+def IIC_SEGMENT_BASE_R : InstrItinClass;
+def IIC_SEGMENT_BASE_W : InstrItinClass;
 def IIC_VERR : InstrItinClass;
 def IIC_VERW_REG : InstrItinClass;
 def IIC_VERW_MEM : InstrItinClass;

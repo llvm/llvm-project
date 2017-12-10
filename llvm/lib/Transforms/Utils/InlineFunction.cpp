@@ -1866,6 +1866,7 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
           SmallVector<Value*, 6> Params(CI->arg_operands());
           Params.append(VarArgsToForward.begin(), VarArgsToForward.end());
           CallInst *Call = CallInst::Create(CI->getCalledFunction(), Params, "", CI);
+          Call->setDebugLoc(CI->getDebugLoc());
           CI->replaceAllUsesWith(Call);
           CI->eraseFromParent();
         }
