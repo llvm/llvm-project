@@ -32,6 +32,7 @@ struct CoverageViewOptions {
   bool ShowFullFilenames;
   bool ShowRegionSummary;
   bool ShowInstantiationSummary;
+  bool ExportSummaryOnly;
   OutputFormat Format;
   std::string ShowOutputDirectory;
   std::vector<std::string> DemanglerOpts;
