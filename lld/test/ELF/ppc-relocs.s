@@ -76,3 +76,15 @@ mystr:
 # CHECK: Disassembly of section .R_PPC_ADDR32:
 # CHECK: .FR_PPC_ADDR32:
 # CHECK:    11024:       00 01 10 28
+
+.align  2
+.section .R_PPC_PLTREL24,"ax",@progbits
+.globl .R_PPC_PLTREL24
+.FR_PPC_PLTREL24:
+  b .Lfoox4@PLT
+.section .R_PPC_PLTREL24_2,"ax",@progbits
+.Lfoox4:
+
+# CHECK: Disassembly of section .R_PPC_PLTREL24:
+# CHECK: .R_PPC_PLTREL24:
+# CHECK:    11028:       48 00 00 04     b .+4

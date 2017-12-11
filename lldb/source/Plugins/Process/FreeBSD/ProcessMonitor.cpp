@@ -843,7 +843,7 @@ bool ProcessMonitor::Launch(LaunchArgs *args) {
   const FileSpec &stderr_file_spec = args->m_stderr_file_spec;
   const FileSpec &working_dir = args->m_working_dir;
 
-  lldb_utility::PseudoTerminal terminal;
+  PseudoTerminal terminal;
   const size_t err_len = 1024;
   char err_str[err_len];
   ::pid_t pid;

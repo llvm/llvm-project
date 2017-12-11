@@ -17,6 +17,7 @@
 #include "Relocations.h"
 #include "Strings.h"
 #include "SymbolTable.h"
+#include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "lld/Common/Memory.h"
@@ -251,10 +252,10 @@ template <class ELFT> static void createSyntheticSections() {
   InX::DynStrTab = make<StringTableSection>(".dynstr", true);
   InX::Dynamic = make<DynamicSection<ELFT>>();
   if (Config->AndroidPackDynRelocs) {
-    In<ELFT>::RelaDyn = make<AndroidPackedRelocationSection<ELFT>>(
+    InX::RelaDyn = make<AndroidPackedRelocationSection<ELFT>>(
         Config->IsRela ? ".rela.dyn" : ".rel.dyn");
   } else {
-    In<ELFT>::RelaDyn = make<RelocationSection<ELFT>>(
+    InX::RelaDyn = make<RelocationSection<ELFT>>(
         Config->IsRela ? ".rela.dyn" : ".rel.dyn", Config->ZCombreloc);
   }
   InX::ShStrTab = make<StringTableSection>(".shstrtab", false);
@@ -334,7 +335,7 @@ template <class ELFT> static void createSyntheticSections() {
 
     Add(InX::Dynamic);
     Add(InX::DynStrTab);
-    Add(In<ELFT>::RelaDyn);
+    Add(InX::RelaDyn);
   }
 
   // Add .got. MIPS' .got is so different from the other archs,
@@ -359,9 +360,9 @@ template <class ELFT> static void createSyntheticSections() {
 
   // We always need to add rel[a].plt to output if it has entries.
   // Even for static linking it can contain R_[*]_IRELATIVE relocations.
-  In<ELFT>::RelaPlt = make<RelocationSection<ELFT>>(
+  InX::RelaPlt = make<RelocationSection<ELFT>>(
       Config->IsRela ? ".rela.plt" : ".rel.plt", false /*Sort*/);
-  Add(In<ELFT>::RelaPlt);
+  Add(InX::RelaPlt);
 
   // The RelaIplt immediately follows .rel.plt (.rel.dyn for ARM) to ensure
   // that the IRelative relocations are processed last by the dynamic loader.
@@ -369,12 +370,12 @@ template <class ELFT> static void createSyntheticSections() {
   // packing is enabled because that would cause a section type mismatch.
   // However, because the Android dynamic loader reads .rel.plt after .rel.dyn,
   // we can get the desired behaviour by placing the iplt section in .rel.plt.
-  In<ELFT>::RelaIplt = make<RelocationSection<ELFT>>(
+  InX::RelaIplt = make<RelocationSection<ELFT>>(
       (Config->EMachine == EM_ARM && !Config->AndroidPackDynRelocs)
           ? ".rel.dyn"
-          : In<ELFT>::RelaPlt->Name,
+          : InX::RelaPlt->Name,
       false /*Sort*/);
-  Add(In<ELFT>::RelaIplt);
+  Add(InX::RelaIplt);
 
   InX::Plt = make<PltSection>(Target->PltHeaderSize);
   Add(InX::Plt);
@@ -842,10 +843,10 @@ template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
   if (!Config->Static)
     return;
   StringRef S = Config->IsRela ? "__rela_iplt_start" : "__rel_iplt_start";
-  addOptionalRegular<ELFT>(S, In<ELFT>::RelaIplt, 0, STV_HIDDEN, STB_WEAK);
+  addOptionalRegular<ELFT>(S, InX::RelaIplt, 0, STV_HIDDEN, STB_WEAK);
 
   S = Config->IsRela ? "__rela_iplt_end" : "__rel_iplt_end";
-  addOptionalRegular<ELFT>(S, In<ELFT>::RelaIplt, -1, STV_HIDDEN, STB_WEAK);
+  addOptionalRegular<ELFT>(S, InX::RelaIplt, -1, STV_HIDDEN, STB_WEAK);
 }
 
 template <class ELFT>
@@ -1342,15 +1343,14 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   // Dynamic section must be the last one in this list and dynamic
   // symbol table section (DynSymTab) must be the first one.
-  applySynthetic({InX::DynSymTab,     InX::Bss,          InX::BssRelRo,
-                  InX::GnuHashTab,    InX::HashTab,      InX::SymTab,
-                  InX::ShStrTab,      InX::StrTab,       In<ELFT>::VerDef,
-                  InX::DynStrTab,     InX::Got,          InX::MipsGot,
-                  InX::IgotPlt,       InX::GotPlt,       In<ELFT>::RelaDyn,
-                  In<ELFT>::RelaIplt, In<ELFT>::RelaPlt, InX::Plt,
-                  InX::Iplt,          InX::EhFrameHdr,   In<ELFT>::VerSym,
-                  In<ELFT>::VerNeed,  InX::Dynamic},
-                 [](SyntheticSection *SS) { SS->finalizeContents(); });
+  applySynthetic(
+      {InX::DynSymTab,   InX::Bss,          InX::BssRelRo, InX::GnuHashTab,
+       InX::HashTab,     InX::SymTab,       InX::ShStrTab, InX::StrTab,
+       In<ELFT>::VerDef, InX::DynStrTab,    InX::Got,      InX::MipsGot,
+       InX::IgotPlt,     InX::GotPlt,       InX::RelaDyn,  InX::RelaIplt,
+       InX::RelaPlt,     InX::Plt,          InX::Iplt,     InX::EhFrameHdr,
+       In<ELFT>::VerSym, In<ELFT>::VerNeed, InX::Dynamic},
+      [](SyntheticSection *SS) { SS->finalizeContents(); });
 
   if (!Script->HasSectionsCommand && !Config->Relocatable)
     fixSectionAlignments();
@@ -1375,7 +1375,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       }
       if (InX::MipsGot)
         InX::MipsGot->updateAllocSize();
-      Changed |= In<ELFT>::RelaDyn->updateAllocSize();
+      Changed |= InX::RelaDyn->updateAllocSize();
     } while (Changed);
   }
 

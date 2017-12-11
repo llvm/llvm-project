@@ -14,6 +14,7 @@
 #include "LinkerScript.h"
 #include "OutputSections.h"
 #include "Relocations.h"
+#include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Thunks.h"
