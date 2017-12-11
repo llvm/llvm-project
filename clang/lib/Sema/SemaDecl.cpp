@@ -15217,7 +15217,8 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
 static bool isRepresentableIntegerValue(ASTContext &Context,
                                         llvm::APSInt &Value,
                                         QualType T) {
-  assert(T->isIntegralType(Context) && "Integral type required!");
+  assert((T->isIntegralType(Context) || T->isEnumeralType()) &&
+         "Integral type required!");
   unsigned BitWidth = Context.getIntWidth(T);
 
   if (Value.isUnsigned() || Value.isNonNegative()) {
@@ -15233,7 +15234,8 @@ static bool isRepresentableIntegerValue(ASTContext &Context,
 static QualType getNextLargerIntegralType(ASTContext &Context, QualType T) {
   // FIXME: Int128/UInt128 support, which also needs to be introduced into
   // enum checking below.
-  assert(T->isIntegralType(Context) && "Integral type required!");
+  assert((T->isIntegralType(Context) ||
+         T->isEnumeralType()) && "Integral type required!");
   const unsigned NumTypes = 4;
   QualType SignedIntegralTypes[NumTypes] = {
     Context.ShortTy, Context.IntTy, Context.LongTy, Context.LongLongTy

@@ -931,6 +931,80 @@ define void @test_inc32(i32 %a0, i32* %a1) optsize {
   ret void
 }
 
+define void @test_into() optsize {
+; GENERIC-LABEL: test_into:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    into
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    retl
+;
+; ATOM-LABEL: test_into:
+; ATOM:       # %bb.0:
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    into
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    retl # sched: [79:39.50]
+;
+; SLM-LABEL: test_into:
+; SLM:       # %bb.0:
+; SLM-NEXT:    #APP
+; SLM-NEXT:    into # sched: [100:1.00]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    retl # sched: [4:1.00]
+;
+; SANDY-LABEL: test_into:
+; SANDY:       # %bb.0:
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    into # sched: [100:0.33]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    retl # sched: [5:1.00]
+;
+; HASWELL-LABEL: test_into:
+; HASWELL:       # %bb.0:
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    into # sched: [1:?]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    retl # sched: [7:1.00]
+;
+; BROADWELL-LABEL: test_into:
+; BROADWELL:       # %bb.0:
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    into # sched: [100:0.25]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    retl # sched: [6:0.50]
+;
+; SKYLAKE-LABEL: test_into:
+; SKYLAKE:       # %bb.0:
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    into # sched: [100:0.25]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    retl # sched: [6:0.50]
+;
+; SKX-LABEL: test_into:
+; SKX:       # %bb.0:
+; SKX-NEXT:    #APP
+; SKX-NEXT:    into # sched: [100:0.25]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BTVER2-LABEL: test_into:
+; BTVER2:       # %bb.0:
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    into # sched: [100:0.17]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    retl # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_into:
+; ZNVER1:       # %bb.0:
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    into # sched: [100:?]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    retl # sched: [1:0.50]
+  call void asm sideeffect "into", ""()
+  ret void
+}
+
 define i8 @test_salc() optsize {
 ; GENERIC-LABEL: test_salc:
 ; GENERIC:       # %bb.0:

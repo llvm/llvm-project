@@ -172,6 +172,8 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   reserveRegisterTuples(Reserved, AMDGPU::TTMP6_TTMP7);
   reserveRegisterTuples(Reserved, AMDGPU::TTMP8_TTMP9);
   reserveRegisterTuples(Reserved, AMDGPU::TTMP10_TTMP11);
+  reserveRegisterTuples(Reserved, AMDGPU::TTMP12_TTMP13);
+  reserveRegisterTuples(Reserved, AMDGPU::TTMP14_TTMP15);
 
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
 

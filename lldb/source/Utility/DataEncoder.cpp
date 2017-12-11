@@ -12,7 +12,6 @@
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/Endian.h"
 
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h" // for llvm_unreachable
 #include "llvm/Support/MathExtras.h"
 
@@ -23,7 +22,36 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace llvm::support::endian;
+
+static inline void WriteInt16(unsigned char *ptr, unsigned offset,
+                              uint16_t value) {
+  *(uint16_t *)(ptr + offset) = value;
+}
+
+static inline void WriteInt32(unsigned char *ptr, unsigned offset,
+                              uint32_t value) {
+  *(uint32_t *)(ptr + offset) = value;
+}
+
+static inline void WriteInt64(unsigned char *ptr, unsigned offset,
+                              uint64_t value) {
+  *(uint64_t *)(ptr + offset) = value;
+}
+
+static inline void WriteSwappedInt16(unsigned char *ptr, unsigned offset,
+                                     uint16_t value) {
+  *(uint16_t *)(ptr + offset) = llvm::ByteSwap_16(value);
+}
+
+static inline void WriteSwappedInt32(unsigned char *ptr, unsigned offset,
+                                     uint32_t value) {
+  *(uint32_t *)(ptr + offset) = llvm::ByteSwap_32(value);
+}
+
+static inline void WriteSwappedInt64(unsigned char *ptr, unsigned offset,
+                                     uint64_t value) {
+  *(uint64_t *)(ptr + offset) = llvm::ByteSwap_64(value);
+}
 
 //----------------------------------------------------------------------
 // Default constructor.
@@ -174,9 +202,9 @@ uint32_t DataEncoder::PutU8(uint32_t offset, uint8_t value) {
 uint32_t DataEncoder::PutU16(uint32_t offset, uint16_t value) {
   if (ValidOffsetForDataOfSize(offset, sizeof(value))) {
     if (m_byte_order != endian::InlHostByteOrder())
-      write16be(m_start, offset + value);
+      WriteSwappedInt16(m_start, offset, value);
     else
-      write16le(m_start, offset + value);
+      WriteInt16(m_start, offset, value);
 
     return offset + sizeof(value);
   }
@@ -186,9 +214,9 @@ uint32_t DataEncoder::PutU16(uint32_t offset, uint16_t value) {
 uint32_t DataEncoder::PutU32(uint32_t offset, uint32_t value) {
   if (ValidOffsetForDataOfSize(offset, sizeof(value))) {
     if (m_byte_order != endian::InlHostByteOrder())
-      write32be(m_start, offset + value);
+      WriteSwappedInt32(m_start, offset, value);
     else
-      write32le(m_start, offset + value);
+      WriteInt32(m_start, offset, value);
 
     return offset + sizeof(value);
   }
@@ -198,9 +226,9 @@ uint32_t DataEncoder::PutU32(uint32_t offset, uint32_t value) {
 uint32_t DataEncoder::PutU64(uint32_t offset, uint64_t value) {
   if (ValidOffsetForDataOfSize(offset, sizeof(value))) {
     if (m_byte_order != endian::InlHostByteOrder())
-      write64be(m_start, offset + value);
+      WriteSwappedInt64(m_start, offset, value);
     else
-      write64le(m_start, offset + value);
+      WriteInt64(m_start, offset, value);
 
     return offset + sizeof(value);
   }

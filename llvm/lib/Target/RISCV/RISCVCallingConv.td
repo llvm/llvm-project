@@ -11,20 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// RISCV 32-bit C return-value convention.
-def RetCC_RISCV32 : CallingConv<[CCIfType<[i32], CCAssignToReg<[X10, X11]>>]>;
-
-// RISCV 32-bit C Calling convention.
-def CC_RISCV32 : CallingConv<[
-  // Promote i8/i16 args to i32
-  CCIfType<[ i8, i16 ], CCPromoteToType<i32>>,
-
-  // All arguments get passed in integer registers if there is space.
-  CCIfType<[i32], CCAssignToReg<[ X10, X11, X12, X13, X14, X15, X16, X17]>>,
-
-  // Could be assigned to the stack in 8-byte aligned units, but unsupported
-  CCAssignToStack<8, 8>
-]>;
+// The RISC-V calling convention is handled with custom code in
+// RISCVISelLowering.cpp (CC_RISCV).
 
 def CSR : CalleeSavedRegs<(add X1, X3, X4, X8, X9, (sequence "X%u", 18, 27))>;
 

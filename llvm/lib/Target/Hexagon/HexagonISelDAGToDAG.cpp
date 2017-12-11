@@ -641,6 +641,27 @@ void HexagonDAGToDAGISel::SelectIntrinsicWChain(SDNode *N) {
     CurDAG->RemoveDeadNode(N);
     return;
   }
+
+  unsigned IntNo = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  if (IntNo == Intrinsic::hexagon_V6_vgathermw ||
+      IntNo == Intrinsic::hexagon_V6_vgathermw_128B ||
+      IntNo == Intrinsic::hexagon_V6_vgathermh ||
+      IntNo == Intrinsic::hexagon_V6_vgathermh_128B ||
+      IntNo == Intrinsic::hexagon_V6_vgathermhw ||
+      IntNo == Intrinsic::hexagon_V6_vgathermhw_128B) {
+    SelectV65Gather(N);
+    return;
+  }
+  if (IntNo == Intrinsic::hexagon_V6_vgathermwq ||
+      IntNo == Intrinsic::hexagon_V6_vgathermwq_128B ||
+      IntNo == Intrinsic::hexagon_V6_vgathermhq ||
+      IntNo == Intrinsic::hexagon_V6_vgathermhq_128B ||
+      IntNo == Intrinsic::hexagon_V6_vgathermhwq ||
+      IntNo == Intrinsic::hexagon_V6_vgathermhwq_128B) {
+    SelectV65GatherPred(N);
+    return;
+  }
+
   SelectCode(N);
 }
 
@@ -654,6 +675,12 @@ void HexagonDAGToDAGISel::SelectIntrinsicWOChain(SDNode *N) {
   case Intrinsic::hexagon_S2_vsplatrh:
     Bits = 16;
     break;
+  case Intrinsic::hexagon_V6_vaddcarry:
+  case Intrinsic::hexagon_V6_vaddcarry_128B:
+  case Intrinsic::hexagon_V6_vsubcarry:
+  case Intrinsic::hexagon_V6_vsubcarry_128B:
+    SelectHVXDualOutput(N);
+    return;
   default:
     SelectCode(N);
     return;
@@ -1417,26 +1444,6 @@ bool HexagonDAGToDAGISel::keepsLowBits(const SDValue &Val, unsigned NumBits,
   }
   default:
     break;
-  }
-  return false;
-}
-
-
-bool HexagonDAGToDAGISel::isOrEquivalentToAdd(const SDNode *N) const {
-  assert(N->getOpcode() == ISD::OR);
-  auto *C = dyn_cast<ConstantSDNode>(N->getOperand(1));
-  if (!C)
-    return false;
-
-  // Detect when "or" is used to add an offset to a stack object.
-  if (auto *FN = dyn_cast<FrameIndexSDNode>(N->getOperand(0))) {
-    MachineFrameInfo &MFI = MF->getFrameInfo();
-    unsigned A = MFI.getObjectAlignment(FN->getIndex());
-    assert(isPowerOf2_32(A));
-    int32_t Off = C->getSExtValue();
-    // If the alleged offset fits in the zero bits guaranteed by
-    // the alignment, then this or is really an add.
-    return (Off >= 0) && (((A-1) & Off) == unsigned(Off));
   }
   return false;
 }

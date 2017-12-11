@@ -407,6 +407,19 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset_addr64(i64 addrspace
   ret void
 }
 
+; GCN-LABEL: {{^}}nocse_lds_atomic_inc_ret_i32:
+; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 42
+; GCN: ds_inc_rtn_u32 v{{[0-9]+}}, v{{[0-9]+}}, [[K]]
+; GCN: ds_inc_rtn_u32 v{{[0-9]+}}, v{{[0-9]+}}, [[K]]
+define amdgpu_kernel void @nocse_lds_atomic_inc_ret_i32(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32 addrspace(3)* %ptr) #0 {
+  %result0 = call i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* %ptr, i32 42, i32 0, i32 0, i1 false)
+  %result1 = call i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* %ptr, i32 42, i32 0, i32 0, i1 false)
+
+  store i32 %result0, i32 addrspace(1)* %out0
+  store i32 %result1, i32 addrspace(1)* %out1
+  ret void
+}
+
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind argmemonly }

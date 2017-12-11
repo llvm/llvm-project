@@ -12,5 +12,5 @@ foo:
 
 .globl	ptr
 ptr:
-	.short	foo
+	.short gs(foo)
 

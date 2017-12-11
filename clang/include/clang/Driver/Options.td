@@ -1954,6 +1954,8 @@ def mno_implicit_float : Flag<["-"], "mno-implicit-float">, Group<m_Group>,
 def mimplicit_float : Flag<["-"], "mimplicit-float">, Group<m_Group>;
 def mrecip : Flag<["-"], "mrecip">, Group<m_Group>;
 def mrecip_EQ : CommaJoined<["-"], "mrecip=">, Group<m_Group>, Flags<[CC1Option]>;
+def mprefer_vector_width_EQ : Joined<["-"], "mprefer-vector-width=">, Group<m_Group>, Flags<[CC1Option]>,
+  HelpText<"Specifies preferred vector width for auto-vectorization. Defaults to 'none' which allows target specific decisions.">;
 def mpie_copy_relocations : Flag<["-"], "mpie-copy-relocations">, Group<m_Group>,
   Flags<[CC1Option]>,
   HelpText<"Use copy relocations support for PIE builds">;

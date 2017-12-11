@@ -344,16 +344,6 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
   } else if (MRI.getRegClass(AMDGPU::SReg_512RegClassID).contains(RegNo)) {
     O << 's';
     NumRegs = 16;
-  } else if (MRI.getRegClass(AMDGPU::TTMP_64RegClassID).contains(RegNo)) {
-    O << "ttmp";
-    NumRegs = 2;
-    // Trap temps start at offset 112. TODO: Get this from tablegen.
-    RegIdx -= 112;
-  } else if (MRI.getRegClass(AMDGPU::TTMP_128RegClassID).contains(RegNo)) {
-    O << "ttmp";
-    NumRegs = 4;
-    // Trap temps start at offset 112. TODO: Get this from tablegen.
-    RegIdx -= 112;
   } else {
     O << getRegisterName(RegNo);
     return;

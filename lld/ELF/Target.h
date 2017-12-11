@@ -144,25 +144,32 @@ TargetInfo *getTarget();
 
 template <class ELFT> bool isMipsPIC(const Defined *Sym);
 
+static inline void reportRangeError(uint8_t *Loc, RelType Type, const Twine &V,
+                                    int64_t Min, uint64_t Max) {
+  error(getErrorLocation(Loc) + "relocation " + lld::toString(Type) +
+        " out of range: " + V + " is not in [" + Twine(Min) + ", " +
+        Twine(Max) + "]");
+}
+
 template <unsigned N>
 static void checkInt(uint8_t *Loc, int64_t V, RelType Type) {
   if (!llvm::isInt<N>(V))
-    error(getErrorLocation(Loc) + "relocation " + lld::toString(Type) +
-          " out of range");
+    reportRangeError(Loc, Type, Twine(V), llvm::minIntN(N), llvm::maxIntN(N));
 }
 
 template <unsigned N>
 static void checkUInt(uint8_t *Loc, uint64_t V, RelType Type) {
   if (!llvm::isUInt<N>(V))
-    error(getErrorLocation(Loc) + "relocation " + lld::toString(Type) +
-          " out of range");
+    reportRangeError(Loc, Type, Twine(V), 0, llvm::maxUIntN(N));
 }
 
 template <unsigned N>
 static void checkIntUInt(uint8_t *Loc, uint64_t V, RelType Type) {
   if (!llvm::isInt<N>(V) && !llvm::isUInt<N>(V))
-    error(getErrorLocation(Loc) + "relocation " + lld::toString(Type) +
-          " out of range");
+    // For the error message we should cast V to a signed integer so that error
+    // messages show a small negative value rather than an extremely large one
+    reportRangeError(Loc, Type, Twine((int64_t)V), llvm::minIntN(N),
+                     llvm::maxUIntN(N));
 }
 
 template <unsigned N>

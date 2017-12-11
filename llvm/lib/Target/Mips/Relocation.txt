@@ -69,40 +69,7 @@ to MIPS32 to compute addresses for the static relocation model.
 
 The instantiation in Mips64InstrInfo.td is used for MIPS64 in ILP32
 mode, as guarded by the predicate "SYM_32" and also for a submode of
-LP64 where symbols are assumed to be 32 bits wide. A similar
-multiclass for MIPS64 in LP64 mode is also defined:
-
-  // lib/Target/Mips/Mips64InstrInfo.td
-  multiclass MipsHighestHigherHiLoRelocs<Instruction Lui,
-                                         Instruction Daddiu> {
-  ...
-    def : MipsPat<(MipsHighest (i64 tglobaladdr:$in)),
-                  (Lui tglobaladdr:$in)>;
-  ...
-    def : MipsPat<(MipsHigher (i64 tglobaladdr:$in)),
-                  (Daddiu ZERO_64, tglobaladdr:$in)>;
-  ...
-    def : MipsPat<(add GPR64:$hi, (MipsHigher (i64 tglobaladdr:$lo))),
-                  (Daddiu GPR64:$hi, tglobaladdr:$lo)>;
-  ...
-    def : MipsPat<(add GPR64:$hi, (MipsHi (i64 tglobaladdr:$lo))),
-                  (Daddiu GPR64:$hi, tglobaladdr:$lo)>;
-  ...
-    def : MipsPat<(add GPR64:$hi, (MipsLo (i64 tglobaladdr:$lo))),
-                  (Daddiu GPR64:$hi, tglobaladdr:$lo)>;
-  }
-
-and it is instantiated twice:
-
-  // lib/Target/Mips/Mips64InstrInfo.td
-  defm : MipsHighestHigherHiLoRelocs<LUi64, DADDiu>, SYM_64;
-  // lib/Target/Mips/MicroMips64r6InstrInfo.td
-  defm : MipsHighestHigherHiLoRelocs<LUi64, DADDIU_MM64R6>, SYM_64,
-                                     ISA_MICROMIPS64R6;
-
-These patterns are used during instruction selection to match
-MipsISD::{Highest, Higher, Hi, Lo} to a specific machine instruction
-and operands.
+LP64 where symbols are assumed to be 32 bits wide.
 
 More details on how multiclasses in TableGen work can be found in the
 section "Multiclass definitions and instances" in the document

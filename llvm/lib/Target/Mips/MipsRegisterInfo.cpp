@@ -54,8 +54,7 @@ MipsRegisterInfo::getPointerRegClass(const MachineFunction &MF,
   case MipsPtrClass::Default:
     return ABI.ArePtrs64bit() ? &Mips::GPR64RegClass : &Mips::GPR32RegClass;
   case MipsPtrClass::GPR16MM:
-    return ABI.ArePtrs64bit() ? &Mips::GPRMM16_64RegClass
-                              : &Mips::GPRMM16RegClass;
+    return &Mips::GPRMM16RegClass;
   case MipsPtrClass::StackPointer:
     return ABI.ArePtrs64bit() ? &Mips::SP64RegClass : &Mips::SP32RegClass;
   case MipsPtrClass::GlobalPointer:

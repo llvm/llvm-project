@@ -59,6 +59,8 @@ class PPCExpandISEL : public MachineFunctionPass {
   typedef SmallDenseMap<int, BlockISELList> ISELInstructionList;
 
   // A map of MBB numbers to their lists of contained ISEL instructions.
+  // Please note when we traverse this list and expand ISEL, we only remove
+  // the ISEL from the MBB not from this list.
   ISELInstructionList ISELInstructions;
 
   /// Initialize the object.
@@ -124,9 +126,6 @@ public:
 #endif
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    if (!isExpandISELEnabled(MF))
-      return false;
-
     DEBUG(dbgs() << "Function: "; MF.dump(); dbgs() << "\n");
     initialize(MF);
 
@@ -190,30 +189,71 @@ bool PPCExpandISEL::canMerge(MachineInstr *PrevPushedMI, MachineInstr *MI) {
 }
 
 void PPCExpandISEL::expandAndMergeISELs() {
-  for (auto &BlockList : ISELInstructions) {
+  bool ExpandISELEnabled = isExpandISELEnabled(*MF);
 
-    DEBUG(dbgs() << printMBBReference(*MF->getBlockNumbered(BlockList.first))
-                 << ":\n");
+  for (auto &BlockList : ISELInstructions) {
     DEBUG(dbgs() << "Expanding ISEL instructions in "
                  << printMBBReference(*MF->getBlockNumbered(BlockList.first))
                  << "\n");
-
     BlockISELList &CurrentISELList = BlockList.second;
     auto I = CurrentISELList.begin();
     auto E = CurrentISELList.end();
 
     while (I != E) {
-      BlockISELList SubISELList;
+      assert(isISEL(**I) && "Expecting an ISEL instruction");
+      MachineOperand &Dest = (*I)->getOperand(0);
+      MachineOperand &TrueValue = (*I)->getOperand(1);
+      MachineOperand &FalseValue = (*I)->getOperand(2);
 
-      SubISELList.push_back(*I++);
-
-      // Collect the ISELs that can be merged together.
-      while (I != E && canMerge(SubISELList.back(), *I))
+      // Special case 1, all registers used by ISEL are the same one.
+      // The non-redundant isel 0, 0, 0, N would not satisfy these conditions
+      // as it would be ISEL %R0, %ZERO, %R0, %CRN.
+      if (useSameRegister(Dest, TrueValue) &&
+          useSameRegister(Dest, FalseValue)) {
+        DEBUG(dbgs() << "Remove redudant ISEL instruction: " << **I << "\n");
+        // FIXME: if the CR field used has no other uses, we could eliminate the
+        // instruction that defines it. This would have to be done manually
+        // since this pass runs too late to run DCE after it.
+        NumRemoved++;
+        (*I)->eraseFromParent();
+        I++;
+      } else if (useSameRegister(TrueValue, FalseValue)) {
+        // Special case 2, the two input registers used by ISEL are the same.
+        // Note: the non-foldable isel RX, 0, 0, N would not satisfy this
+        // condition as it would be ISEL %RX, %ZERO, %R0, %CRN, which makes it
+        // safe to fold ISEL to MR(OR) instead of ADDI.
+        MachineBasicBlock *MBB = (*I)->getParent();
+        DEBUG(dbgs() << "Fold the ISEL instruction to an unconditonal copy:\n");
+        DEBUG(dbgs() << "ISEL: " << **I << "\n");
+        NumFolded++;
+        // Note: we're using both the TrueValue and FalseValue operands so as
+        // not to lose the kill flag if it is set on either of them.
+        BuildMI(*MBB, (*I), dl, TII->get(isISEL8(**I) ? PPC::OR8 : PPC::OR))
+            .add(Dest)
+            .add(TrueValue)
+            .add(FalseValue);
+        (*I)->eraseFromParent();
+        I++;
+      } else if (ExpandISELEnabled) { // Normal cases expansion enabled
+        DEBUG(dbgs() << "Expand ISEL instructions:\n");
+        DEBUG(dbgs() << "ISEL: " << **I << "\n");
+        BlockISELList SubISELList;
         SubISELList.push_back(*I++);
+        // Collect the ISELs that can be merged together.
+        // This will eat up ISEL instructions without considering whether they
+        // may be redundant or foldable to a register copy. So we still keep
+        // the handleSpecialCases() downstream to handle them.
+        while (I != E && canMerge(SubISELList.back(), *I)) {
+          DEBUG(dbgs() << "ISEL: " << **I << "\n");
+          SubISELList.push_back(*I++);
+        }
 
-      expandMergeableISELs(SubISELList);
-    }
-  }
+        expandMergeableISELs(SubISELList);
+      } else { // Normal cases expansion disabled
+        I++; // leave the ISEL as it is
+      }
+    } // end while
+  } // end for
 }
 
 void PPCExpandISEL::handleSpecialCases(BlockISELList &BIL,
@@ -236,13 +276,15 @@ void PPCExpandISEL::handleSpecialCases(BlockISELList &BIL,
     // Similarly, if at least one of the ISEL instructions satisfy the
     // following condition, we need the False Block:
     // The Dest Register and False Value Register are not the same.
-
     bool IsADDIInstRequired = !useSameRegister(Dest, TrueValue);
     bool IsORIInstRequired = !useSameRegister(Dest, FalseValue);
 
     // Special case 1, all registers used by ISEL are the same one.
     if (!IsADDIInstRequired && !IsORIInstRequired) {
       DEBUG(dbgs() << "Remove redudant ISEL instruction.");
+      // FIXME: if the CR field used has no other uses, we could eliminate the
+      // instruction that defines it. This would have to be done manually
+      // since this pass runs too late to run DCE after it.
       NumRemoved++;
       (*MI)->eraseFromParent();
       // Setting MI to the erase result keeps the iterator valid and increased.
@@ -257,14 +299,15 @@ void PPCExpandISEL::handleSpecialCases(BlockISELList &BIL,
     // PPC::ZERO8 will be used for the first operand if the value is meant to
     // be zero. In this case, the useSameRegister method will return false,
     // thereby preventing this ISEL from being folded.
-
     if (useSameRegister(TrueValue, FalseValue) && (BIL.size() == 1)) {
       DEBUG(dbgs() << "Fold the ISEL instruction to an unconditonal copy.");
       NumFolded++;
-      BuildMI(*MBB, (*MI), dl, TII->get(isISEL8(**MI) ? PPC::ADDI8 : PPC::ADDI))
+      // Note: we're using both the TrueValue and FalseValue operands so as
+      // not to lose the kill flag if it is set on either of them.
+      BuildMI(*MBB, (*MI), dl, TII->get(isISEL8(**MI) ? PPC::OR8 : PPC::OR))
           .add(Dest)
           .add(TrueValue)
-          .add(MachineOperand::CreateImm(0));
+          .add(FalseValue);
       (*MI)->eraseFromParent();
       // Setting MI to the erase result keeps the iterator valid and increased.
       MI = BIL.erase(MI);

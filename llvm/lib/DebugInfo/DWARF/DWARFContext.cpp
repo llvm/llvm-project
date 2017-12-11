@@ -672,7 +672,8 @@ getAccelTable(std::unique_ptr<DWARFAcceleratorTable> &Cache,
   DWARFDataExtractor AccelSection(Obj, Section, IsLittleEndian, 0);
   DataExtractor StrData(StringSection, IsLittleEndian, 0);
   Cache.reset(new DWARFAcceleratorTable(AccelSection, StrData));
-  Cache->extract();
+  if (Error E = Cache->extract())
+    llvm::consumeError(std::move(E));
   return *Cache;
 }
 

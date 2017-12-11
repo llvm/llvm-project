@@ -5,6 +5,10 @@
 define i32 @foo(i32 %a, i32 *%b) {
 ; RV32I-LABEL: foo:
 ; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp)
+; RV32I-NEXT:    sw s0, 8(sp)
+; RV32I-NEXT:    addi s0, sp, 16
 ; RV32I-NEXT:    lw a2, 0(a1)
 ; RV32I-NEXT:    beq a0, a2, .LBB0_2
 ; RV32I-NEXT:  # %bb.1:
@@ -55,6 +59,9 @@ define i32 @foo(i32 %a, i32 *%b) {
 ; RV32I-NEXT:  # %bb.19:
 ; RV32I-NEXT:    addi a0, a1, 0
 ; RV32I-NEXT:  .LBB0_20:
+; RV32I-NEXT:    lw s0, 8(sp)
+; RV32I-NEXT:    lw ra, 12(sp)
+; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    jalr zero, ra, 0
   %val1 = load volatile i32, i32* %b
   %tst1 = icmp eq i32 %a, %val1

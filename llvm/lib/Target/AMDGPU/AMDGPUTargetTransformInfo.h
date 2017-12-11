@@ -132,6 +132,8 @@ public:
 
   unsigned getMaxInterleaveFactor(unsigned VF);
 
+  bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info) const;
+
   int getArithmeticInstrCost(
     unsigned Opcode, Type *Ty,
     TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,

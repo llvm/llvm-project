@@ -1196,7 +1196,7 @@ Platform::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
         // open for stdin/out/err after we have already opened the master
         // so we can read/write stdin/out/err.
         int pty_fd = launch_info.GetPTY().ReleaseMasterFileDescriptor();
-        if (pty_fd != lldb_utility::PseudoTerminal::invalid_fd) {
+        if (pty_fd != PseudoTerminal::invalid_fd) {
           process_sp->SetSTDIOFileDescriptor(pty_fd);
         }
       } else {

@@ -123,6 +123,7 @@ HexagonRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   case Hexagon::ArchEnum::V55:
   case Hexagon::ArchEnum::V60:
   case Hexagon::ArchEnum::V62:
+  case Hexagon::ArchEnum::V65:
     return HasEHReturn ? CalleeSavedRegsV3EHReturn : CalleeSavedRegsV3;
   }
 
@@ -143,6 +144,7 @@ BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
   Reserved.set(Hexagon::R29);
   Reserved.set(Hexagon::R30);
   Reserved.set(Hexagon::R31);
+  Reserved.set(Hexagon::VTMP);
   // Control registers.
   Reserved.set(Hexagon::SA0);         // C0
   Reserved.set(Hexagon::LC0);         // C1

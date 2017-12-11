@@ -2734,3 +2734,55 @@ define <8 x float> @sext_v8i8_index(float* %base, <8 x i8> %ind) {
   ret <8 x float>%res
 }
 declare <8 x float> @llvm.masked.gather.v8f32.v8p0f32(<8 x float*>, i32, <8 x i1>, <8 x float>)
+
+; Index requires promotion
+define void @test_scatter_2i32_index(<2 x double> %a1, double* %base, <2 x i32> %ind, <2 x i1> %mask) {
+; KNL_64-LABEL: test_scatter_2i32_index:
+; KNL_64:       # %bb.0:
+; KNL_64-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
+; KNL_64-NEXT:    vpsllq $32, %xmm1, %xmm1
+; KNL_64-NEXT:    vpsraq $32, %zmm1, %zmm1
+; KNL_64-NEXT:    vmovdqa %xmm2, %xmm2
+; KNL_64-NEXT:    vpsllq $63, %zmm2, %zmm2
+; KNL_64-NEXT:    vptestmq %zmm2, %zmm2, %k1
+; KNL_64-NEXT:    vscatterqpd %zmm0, (%rdi,%zmm1,8) {%k1}
+; KNL_64-NEXT:    vzeroupper
+; KNL_64-NEXT:    retq
+;
+; KNL_32-LABEL: test_scatter_2i32_index:
+; KNL_32:       # %bb.0:
+; KNL_32-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
+; KNL_32-NEXT:    vpsllq $32, %xmm1, %xmm1
+; KNL_32-NEXT:    vpsraq $32, %zmm1, %zmm1
+; KNL_32-NEXT:    vmovdqa %xmm2, %xmm2
+; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; KNL_32-NEXT:    vpsllq $63, %zmm2, %zmm2
+; KNL_32-NEXT:    vptestmq %zmm2, %zmm2, %k1
+; KNL_32-NEXT:    vscatterqpd %zmm0, (%eax,%zmm1,8) {%k1}
+; KNL_32-NEXT:    vzeroupper
+; KNL_32-NEXT:    retl
+;
+; SKX-LABEL: test_scatter_2i32_index:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vpsllq $63, %xmm2, %xmm2
+; SKX-NEXT:    vptestmq %xmm2, %xmm2, %k1
+; SKX-NEXT:    vpsllq $32, %xmm1, %xmm1
+; SKX-NEXT:    vpsraq $32, %xmm1, %xmm1
+; SKX-NEXT:    vscatterqpd %xmm0, (%rdi,%xmm1,8) {%k1}
+; SKX-NEXT:    retq
+;
+; SKX_32-LABEL: test_scatter_2i32_index:
+; SKX_32:       # %bb.0:
+; SKX_32-NEXT:    vpsllq $63, %xmm2, %xmm2
+; SKX_32-NEXT:    vptestmq %xmm2, %xmm2, %k1
+; SKX_32-NEXT:    vpsllq $32, %xmm1, %xmm1
+; SKX_32-NEXT:    vpsraq $32, %xmm1, %xmm1
+; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SKX_32-NEXT:    vscatterqpd %xmm0, (%eax,%xmm1,8) {%k1}
+; SKX_32-NEXT:    retl
+  %gep = getelementptr double, double *%base, <2 x i32> %ind
+  call void @llvm.masked.scatter.v2f64.v2p0f64(<2 x double> %a1, <2 x double*> %gep, i32 4, <2 x i1> %mask)
+  ret void
+}
+declare void @llvm.masked.scatter.v2f64.v2p0f64(<2 x double>, <2 x double*>, i32, <2 x i1>)
+

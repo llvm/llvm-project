@@ -1481,6 +1481,9 @@ void Sema::DiagnoseUnusedLambdaCapture(const LambdaScopeInfo::Capture &From) {
   if (CaptureHasSideEffects(From))
     return;
 
+  if (From.isVLATypeCapture())
+    return;
+
   auto diag = Diag(From.getLocation(), diag::warn_unused_lambda_capture);
   if (From.isThisCapture())
     diag << "'this'";
