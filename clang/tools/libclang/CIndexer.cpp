@@ -12,11 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIndexer.h"
+#include "CXString.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Version.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/MutexGuard.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -90,7 +92,8 @@ StringRef CIndexer::getClangToolchainPath() {
 
 LibclangInvocationReporter::LibclangInvocationReporter(
     CIndexer &Idx, OperationKind Op, unsigned ParseOptions,
-    llvm::ArrayRef<const char *> Args) {
+    llvm::ArrayRef<const char *> Args,
+    llvm::ArrayRef<CXUnsavedFile> UnsavedFiles) {
   StringRef Path = Idx.getInvocationEmissionPath();
   if (Path.empty())
     return;
@@ -123,6 +126,23 @@ LibclangInvocationReporter::LibclangInvocationReporter(
     if (I.index())
       OS << ',';
     OS << '"' << I.value() << '"';
+  }
+  if (!UnsavedFiles.empty()) {
+    OS << R"(],"unsaved_file_hashes":[)";
+    for (const auto &UF : llvm::enumerate(UnsavedFiles)) {
+      if (UF.index())
+        OS << ',';
+      OS << '{';
+      WriteStringKey("name", UF.value().Filename);
+      OS << ',';
+      llvm::MD5 Hash;
+      Hash.update(getContents(UF.value()));
+      llvm::MD5::MD5Result Result;
+      Hash.final(Result);
+      SmallString<32> Digest = Result.digest();
+      WriteStringKey("md5", Digest);
+      OS << '}';
+    }
   }
   OS << "]}";
 }
