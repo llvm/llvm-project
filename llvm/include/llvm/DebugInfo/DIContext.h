@@ -153,6 +153,7 @@ enum DIDumpType : unsigned {
 struct DIDumpOptions {
   unsigned DumpType = DIDT_All;
   unsigned RecurseDepth = -1U;
+  bool ShowAddresses = true;
   bool ShowChildren = false;
   bool ShowParents = false;
   bool ShowForm = false;
