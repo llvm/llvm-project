@@ -2031,6 +2031,18 @@ TEST_F(DIExpressionTest, get) {
 
   TempDIExpression Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
+
+  // Test DIExpression::prepend().
+  uint64_t Elts0[] = {dwarf::DW_OP_LLVM_fragment, 0, 32};
+  auto *N0 = DIExpression::get(Context, Elts0);
+  N0 = DIExpression::prepend(N0, true, 64, true, true);
+  uint64_t Elts1[] = {dwarf::DW_OP_deref,
+                      dwarf::DW_OP_plus_uconst, 64,
+                      dwarf::DW_OP_deref,
+                      dwarf::DW_OP_stack_value,
+                      dwarf::DW_OP_LLVM_fragment, 0, 32};
+  auto *N1 = DIExpression::get(Context, Elts1);
+  EXPECT_EQ(N0, N1);
 }
 
 TEST_F(DIExpressionTest, isValid) {

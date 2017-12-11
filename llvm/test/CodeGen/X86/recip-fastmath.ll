@@ -270,7 +270,7 @@ define float @f32_two_step(float %x) #2 {
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vrcpss %xmm0, %xmm0, %xmm1 # sched: [4:1.00]
 ; SKX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero sched: [5:0.50]
-; SKX-NEXT:    vmovaps %xmm1, %xmm3 # sched: [1:1.00]
+; SKX-NEXT:    vmovaps %xmm1, %xmm3 # sched: [1:0.33]
 ; SKX-NEXT:    vfnmadd213ss %xmm2, %xmm0, %xmm3 # sched: [4:0.33]
 ; SKX-NEXT:    vfmadd132ss %xmm1, %xmm1, %xmm3 # sched: [4:0.33]
 ; SKX-NEXT:    vfnmadd213ss %xmm2, %xmm3, %xmm0 # sched: [4:0.33]
@@ -535,7 +535,7 @@ define <4 x float> @v4f32_two_step(<4 x float> %x) #2 {
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vrcpps %xmm0, %xmm1 # sched: [4:1.00]
 ; SKX-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1,1,1,1] sched: [6:0.50]
-; SKX-NEXT:    vmovaps %xmm1, %xmm3 # sched: [1:1.00]
+; SKX-NEXT:    vmovaps %xmm1, %xmm3 # sched: [1:0.33]
 ; SKX-NEXT:    vfnmadd213ps %xmm2, %xmm0, %xmm3 # sched: [4:0.33]
 ; SKX-NEXT:    vfmadd132ps %xmm1, %xmm1, %xmm3 # sched: [4:0.33]
 ; SKX-NEXT:    vfnmadd213ps %xmm2, %xmm3, %xmm0 # sched: [4:0.33]
@@ -823,7 +823,7 @@ define <8 x float> @v8f32_two_step(<8 x float> %x) #2 {
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vrcpps %ymm0, %ymm1 # sched: [4:1.00]
 ; SKX-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1] sched: [7:0.50]
-; SKX-NEXT:    vmovaps %ymm1, %ymm3 # sched: [1:1.00]
+; SKX-NEXT:    vmovaps %ymm1, %ymm3 # sched: [1:0.33]
 ; SKX-NEXT:    vfnmadd213ps %ymm2, %ymm0, %ymm3 # sched: [4:0.33]
 ; SKX-NEXT:    vfmadd132ps %ymm1, %ymm1, %ymm3 # sched: [4:0.33]
 ; SKX-NEXT:    vfnmadd213ps %ymm2, %ymm3, %ymm0 # sched: [4:0.33]

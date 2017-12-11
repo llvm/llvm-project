@@ -4138,7 +4138,8 @@ void SelectionDAGBuilder::visitAtomicLoad(const LoadInst &I) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
 
-  if (I.getAlignment() < VT.getStoreSize())
+  if (!TLI.supportsUnalignedAtomics() &&
+      I.getAlignment() < VT.getStoreSize())
     report_fatal_error("Cannot generate unaligned atomic load");
 
   MachineMemOperand *MMO =

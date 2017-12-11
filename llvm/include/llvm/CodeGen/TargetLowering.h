@@ -1440,6 +1440,9 @@ public:
   /// require a more complex expansion.
   unsigned getMinCmpXchgSizeInBits() const { return MinCmpXchgSizeInBits; }
 
+  /// Whether the target supports unaligned atomic operations.
+  bool supportsUnalignedAtomics() const { return SupportsUnalignedAtomics; }
+
   /// Whether AtomicExpandPass should automatically insert fences and reduce
   /// ordering for this atomic. This should be true for most architectures with
   /// weak memory ordering. Defaults to false.
@@ -1845,9 +1848,14 @@ protected:
     MaxAtomicSizeInBitsSupported = SizeInBits;
   }
 
-  // Sets the minimum cmpxchg or ll/sc size supported by the backend.
+  /// Sets the minimum cmpxchg or ll/sc size supported by the backend.
   void setMinCmpXchgSizeInBits(unsigned SizeInBits) {
     MinCmpXchgSizeInBits = SizeInBits;
+  }
+
+  /// Sets whether unaligned atomic operations are supported.
+  void setSupportsUnalignedAtomics(bool UnalignedSupported) {
+    SupportsUnalignedAtomics = UnalignedSupported;
   }
 
 public:
@@ -2330,6 +2338,9 @@ private:
   /// Size in bits of the minimum cmpxchg or ll/sc operation the
   /// backend supports.
   unsigned MinCmpXchgSizeInBits;
+
+  /// This indicates if the target supports unaligned atomic operations.
+  bool SupportsUnalignedAtomics;
 
   /// If set to a physical register, this specifies the register that
   /// llvm.savestack/llvm.restorestack should save and restore.

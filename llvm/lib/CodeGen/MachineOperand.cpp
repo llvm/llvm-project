@@ -345,6 +345,15 @@ static void tryToGetTargetInfo(const MachineOperand &MO,
   }
 }
 
+void MachineOperand::printSubregIdx(raw_ostream &OS, uint64_t Index,
+                                    const TargetRegisterInfo *TRI) {
+  OS << "%subreg.";
+  if (TRI)
+    OS << TRI->getSubRegIndexName(Index);
+  else
+    OS << Index;
+}
+
 void MachineOperand::print(raw_ostream &OS, const TargetRegisterInfo *TRI,
                            const TargetIntrinsicInfo *IntrinsicInfo) const {
   tryToGetTargetInfo(*this, TRI, IntrinsicInfo);

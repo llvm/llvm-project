@@ -750,12 +750,17 @@ bool DIExpression::extractIfOffset(int64_t &Offset) const {
   return false;
 }
 
-DIExpression *DIExpression::prepend(const DIExpression *Expr, bool Deref,
-                                    int64_t Offset, bool StackValue) {
+DIExpression *DIExpression::prepend(const DIExpression *Expr, bool DerefBefore,
+                                    int64_t Offset, bool DerefAfter,
+                                    bool StackValue) {
   SmallVector<uint64_t, 8> Ops;
-  appendOffset(Ops, Offset);
-  if (Deref)
+  if (DerefBefore)
     Ops.push_back(dwarf::DW_OP_deref);
+  
+  appendOffset(Ops, Offset);
+  if (DerefAfter)
+    Ops.push_back(dwarf::DW_OP_deref);
+
   if (Expr)
     for (auto Op : Expr->expr_ops()) {
       // A DW_OP_stack_value comes at the end, but before a DW_OP_LLVM_fragment.

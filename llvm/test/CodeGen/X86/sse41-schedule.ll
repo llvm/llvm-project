@@ -2992,8 +2992,8 @@ define <2 x double> @test_roundpd(<2 x double> %a0, <2 x double> *%a1) {
 ;
 ; BROADWELL-LABEL: test_roundpd:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vroundpd $7, %xmm0, %xmm0 # sched: [6:0.50]
 ; BROADWELL-NEXT:    vroundpd $7, (%rdi), %xmm1 # sched: [11:2.00]
+; BROADWELL-NEXT:    vroundpd $7, %xmm0, %xmm0 # sched: [6:0.50]
 ; BROADWELL-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -3064,8 +3064,8 @@ define <4 x float> @test_roundps(<4 x float> %a0, <4 x float> *%a1) {
 ;
 ; BROADWELL-LABEL: test_roundps:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vroundps $7, %xmm0, %xmm0 # sched: [6:0.50]
 ; BROADWELL-NEXT:    vroundps $7, (%rdi), %xmm1 # sched: [11:2.00]
+; BROADWELL-NEXT:    vroundps $7, %xmm0, %xmm0 # sched: [6:0.50]
 ; BROADWELL-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -3137,9 +3137,9 @@ define <2 x double> @test_roundsd(<2 x double> %a0, <2 x double> %a1, <2 x doubl
 ;
 ; BROADWELL-LABEL: test_roundsd:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vroundsd $7, %xmm1, %xmm0, %xmm1 # sched: [6:0.50]
-; BROADWELL-NEXT:    vroundsd $7, (%rdi), %xmm0, %xmm0 # sched: [11:2.00]
-; BROADWELL-NEXT:    vaddpd %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
+; BROADWELL-NEXT:    vroundsd $7, (%rdi), %xmm0, %xmm2 # sched: [11:2.00]
+; BROADWELL-NEXT:    vroundsd $7, %xmm1, %xmm0, %xmm0 # sched: [6:0.50]
+; BROADWELL-NEXT:    vaddpd %xmm2, %xmm0, %xmm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_roundsd:
@@ -3210,9 +3210,9 @@ define <4 x float> @test_roundss(<4 x float> %a0, <4 x float> %a1, <4 x float> *
 ;
 ; BROADWELL-LABEL: test_roundss:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vroundss $7, %xmm1, %xmm0, %xmm1 # sched: [6:0.50]
-; BROADWELL-NEXT:    vroundss $7, (%rdi), %xmm0, %xmm0 # sched: [11:2.00]
-; BROADWELL-NEXT:    vaddps %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
+; BROADWELL-NEXT:    vroundss $7, (%rdi), %xmm0, %xmm2 # sched: [11:2.00]
+; BROADWELL-NEXT:    vroundss $7, %xmm1, %xmm0, %xmm0 # sched: [6:0.50]
+; BROADWELL-NEXT:    vaddps %xmm2, %xmm0, %xmm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_roundss:

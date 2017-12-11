@@ -172,6 +172,7 @@ enum Kind {
   kw_alwaysinline,
   kw_argmemonly,
   kw_sanitize_address,
+  kw_sanitize_hwaddress,
   kw_builtin,
   kw_byval,
   kw_inalloca,

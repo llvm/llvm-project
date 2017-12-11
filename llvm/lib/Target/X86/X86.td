@@ -324,10 +324,34 @@ def FeatureHasFastGather
                        "Indicates if gather is reasonably fast.">;
 
 //===----------------------------------------------------------------------===//
-// X86 processors supported.
+// Register File Description
+//===----------------------------------------------------------------------===//
+
+include "X86RegisterInfo.td"
+include "X86RegisterBanks.td"
+
+//===----------------------------------------------------------------------===//
+// Instruction Descriptions
 //===----------------------------------------------------------------------===//
 
 include "X86Schedule.td"
+include "X86InstrInfo.td"
+
+def X86InstrInfo : InstrInfo;
+
+//===----------------------------------------------------------------------===//
+// X86 processors supported.
+//===----------------------------------------------------------------------===//
+
+include "X86ScheduleAtom.td"
+include "X86SchedSandyBridge.td"
+include "X86SchedHaswell.td"
+include "X86SchedBroadwell.td"
+include "X86ScheduleSLM.td"
+include "X86ScheduleZnver1.td"
+include "X86ScheduleBtVer2.td"
+include "X86SchedSkylakeClient.td"
+include "X86SchedSkylakeServer.td"
 
 def ProcIntelAtom : SubtargetFeature<"atom", "X86ProcFamily", "IntelAtom",
                     "Intel Atom processors">;
@@ -953,21 +977,6 @@ def : ProcessorModel<"x86-64", SandyBridgeModel, [
   FeatureSlowIncDec,
   FeatureMacroFusion
 ]>;
-
-//===----------------------------------------------------------------------===//
-// Register File Description
-//===----------------------------------------------------------------------===//
-
-include "X86RegisterInfo.td"
-include "X86RegisterBanks.td"
-
-//===----------------------------------------------------------------------===//
-// Instruction Descriptions
-//===----------------------------------------------------------------------===//
-
-include "X86InstrInfo.td"
-
-def X86InstrInfo : InstrInfo;
 
 //===----------------------------------------------------------------------===//
 // Calling Conventions

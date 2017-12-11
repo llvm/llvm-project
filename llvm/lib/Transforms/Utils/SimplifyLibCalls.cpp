@@ -1204,11 +1204,17 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
     return Sel;
   }
 
-  if (Op2C->isExactlyValue(1.0)) // pow(x, 1.0) -> x
+  // Propagate fast-math-flags from the call to any created instructions.
+  IRBuilder<>::FastMathFlagGuard Guard(B);
+  B.setFastMathFlags(CI->getFastMathFlags());
+  // pow(x, 1.0) --> x
+  if (Op2C->isExactlyValue(1.0))
     return Op1;
-  if (Op2C->isExactlyValue(2.0)) // pow(x, 2.0) -> x*x
+  // pow(x, 2.0) --> x * x
+  if (Op2C->isExactlyValue(2.0))
     return B.CreateFMul(Op1, Op1, "pow2");
-  if (Op2C->isExactlyValue(-1.0)) // pow(x, -1.0) -> 1.0/x
+  // pow(x, -1.0) --> 1.0 / x
+  if (Op2C->isExactlyValue(-1.0))
     return B.CreateFDiv(ConstantFP::get(CI->getType(), 1.0), Op1, "powrecip");
 
   // In -ffast-math, generate repeated fmul instead of generating pow(x, n).
@@ -1220,10 +1226,6 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
         !V.isInteger())
       return nullptr;
 
-    // Propagate fast math flags.
-    IRBuilder<>::FastMathFlagGuard Guard(B);
-    B.setFastMathFlags(CI->getFastMathFlags());
-
     // We will memoize intermediate products of the Addition Chain.
     Value *InnerChain[33] = {nullptr};
     InnerChain[1] = Op1;
@@ -1231,8 +1233,8 @@ Value *LibCallSimplifier::optimizePow(CallInst *CI, IRBuilder<> &B) {
 
     // We cannot readily convert a non-double type (like float) to a double.
     // So we first convert V to something which could be converted to double.
-    bool ignored;
-    V.convert(APFloat::IEEEdouble(), APFloat::rmTowardZero, &ignored);
+    bool Ignored;
+    V.convert(APFloat::IEEEdouble(), APFloat::rmTowardZero, &Ignored);
     
     Value *FMul = getPow(InnerChain, V.convertToDouble(), B);
     // For negative exponents simply compute the reciprocal.

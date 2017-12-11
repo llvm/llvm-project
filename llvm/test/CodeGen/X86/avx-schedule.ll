@@ -1069,8 +1069,8 @@ define <4 x double> @test_cvtdq2pd(<4 x i32> %a0, <4 x i32> *%a1) {
 ;
 ; BROADWELL-LABEL: test_cvtdq2pd:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vcvtdq2pd %xmm0, %ymm0 # sched: [6:1.00]
 ; BROADWELL-NEXT:    vcvtdq2pd (%rdi), %ymm1 # sched: [11:1.00]
+; BROADWELL-NEXT:    vcvtdq2pd %xmm0, %ymm0 # sched: [6:1.00]
 ; BROADWELL-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -1658,14 +1658,14 @@ define <4 x float> @test_extractf128(<8 x float> %a0, <8 x float> %a1, <4 x floa
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vextractf128 $1, %ymm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vextractf128 $1, %ymm1, (%rdi) # sched: [5:1.00]
-; GENERIC-NEXT:    vzeroupper
+; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_extractf128:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vextractf128 $1, %ymm0, %xmm0 # sched: [1:1.00]
 ; SANDY-NEXT:    vextractf128 $1, %ymm1, (%rdi) # sched: [5:1.00]
-; SANDY-NEXT:    vzeroupper
+; SANDY-NEXT:    vzeroupper # sched: [100:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_extractf128:
@@ -2077,14 +2077,14 @@ define <2 x double> @test_maskmovpd(i8* %a0, <2 x i64> %a1, <2 x double> %a2) {
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vmaskmovpd (%rdi), %xmm0, %xmm2 # sched: [7:0.50]
 ; SKYLAKE-NEXT:    vmaskmovpd %xmm1, %xmm0, (%rdi) # sched: [2:1.00]
-; SKYLAKE-NEXT:    vmovapd %xmm2, %xmm0 # sched: [1:1.00]
+; SKYLAKE-NEXT:    vmovapd %xmm2, %xmm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_maskmovpd:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmaskmovpd (%rdi), %xmm0, %xmm2 # sched: [7:0.50]
 ; SKX-NEXT:    vmaskmovpd %xmm1, %xmm0, (%rdi) # sched: [2:1.00]
-; SKX-NEXT:    vmovapd %xmm2, %xmm0 # sched: [1:1.00]
+; SKX-NEXT:    vmovapd %xmm2, %xmm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_maskmovpd:
@@ -2140,14 +2140,14 @@ define <4 x double> @test_maskmovpd_ymm(i8* %a0, <4 x i64> %a1, <4 x double> %a2
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vmaskmovpd (%rdi), %ymm0, %ymm2 # sched: [8:0.50]
 ; SKYLAKE-NEXT:    vmaskmovpd %ymm1, %ymm0, (%rdi) # sched: [2:1.00]
-; SKYLAKE-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:1.00]
+; SKYLAKE-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_maskmovpd_ymm:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmaskmovpd (%rdi), %ymm0, %ymm2 # sched: [8:0.50]
 ; SKX-NEXT:    vmaskmovpd %ymm1, %ymm0, (%rdi) # sched: [2:1.00]
-; SKX-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:1.00]
+; SKX-NEXT:    vmovapd %ymm2, %ymm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_maskmovpd_ymm:
@@ -2203,14 +2203,14 @@ define <4 x float> @test_maskmovps(i8* %a0, <4 x i32> %a1, <4 x float> %a2) {
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vmaskmovps (%rdi), %xmm0, %xmm2 # sched: [7:0.50]
 ; SKYLAKE-NEXT:    vmaskmovps %xmm1, %xmm0, (%rdi) # sched: [2:1.00]
-; SKYLAKE-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:1.00]
+; SKYLAKE-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_maskmovps:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmaskmovps (%rdi), %xmm0, %xmm2 # sched: [7:0.50]
 ; SKX-NEXT:    vmaskmovps %xmm1, %xmm0, (%rdi) # sched: [2:1.00]
-; SKX-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:1.00]
+; SKX-NEXT:    vmovaps %xmm2, %xmm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_maskmovps:
@@ -2266,14 +2266,14 @@ define <8 x float> @test_maskmovps_ymm(i8* %a0, <8 x i32> %a1, <8 x float> %a2) 
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vmaskmovps (%rdi), %ymm0, %ymm2 # sched: [8:0.50]
 ; SKYLAKE-NEXT:    vmaskmovps %ymm1, %ymm0, (%rdi) # sched: [2:1.00]
-; SKYLAKE-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:1.00]
+; SKYLAKE-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_maskmovps_ymm:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmaskmovps (%rdi), %ymm0, %ymm2 # sched: [8:0.50]
 ; SKX-NEXT:    vmaskmovps %ymm1, %ymm0, (%rdi) # sched: [2:1.00]
-; SKX-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:1.00]
+; SKX-NEXT:    vmovaps %ymm2, %ymm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_maskmovps_ymm:
@@ -2707,13 +2707,13 @@ define i32 @test_movmskpd(<4 x double> %a0) {
 ; GENERIC-LABEL: test_movmskpd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmovmskpd %ymm0, %eax # sched: [2:1.00]
-; GENERIC-NEXT:    vzeroupper
+; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movmskpd:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmovmskpd %ymm0, %eax # sched: [2:1.00]
-; SANDY-NEXT:    vzeroupper
+; SANDY-NEXT:    vzeroupper # sched: [100:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_movmskpd:
@@ -2759,13 +2759,13 @@ define i32 @test_movmskps(<8 x float> %a0) {
 ; GENERIC-LABEL: test_movmskps:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmovmskps %ymm0, %eax # sched: [2:1.00]
-; GENERIC-NEXT:    vzeroupper
+; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movmskps:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmovmskps %ymm0, %eax # sched: [2:1.00]
-; SANDY-NEXT:    vzeroupper
+; SANDY-NEXT:    vzeroupper # sched: [100:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_movmskps:
@@ -2813,7 +2813,7 @@ define void @test_movntdq(<4 x i64> %a0, <4 x i64> *%a1) {
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    vmovntdq %ymm0, (%rdi) # sched: [5:1.00]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper
+; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movntdq:
@@ -2821,7 +2821,7 @@ define void @test_movntdq(<4 x i64> %a0, <4 x i64> *%a1) {
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    vmovntdq %ymm0, (%rdi) # sched: [5:1.00]
 ; SANDY-NEXT:    #NO_APP
-; SANDY-NEXT:    vzeroupper
+; SANDY-NEXT:    vzeroupper # sched: [100:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_movntdq:
@@ -4035,8 +4035,8 @@ define <8 x float> @test_rcpps(<8 x float> %a0, <8 x float> *%a1) {
 ;
 ; BROADWELL-LABEL: test_rcpps:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vrcpps (%rdi), %ymm1 # sched: [17:2.00]
 ; BROADWELL-NEXT:    vrcpps %ymm0, %ymm0 # sched: [11:2.00]
+; BROADWELL-NEXT:    vrcpps (%rdi), %ymm1 # sched: [17:2.00]
 ; BROADWELL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -4099,8 +4099,8 @@ define <4 x double> @test_roundpd(<4 x double> %a0, <4 x double> *%a1) {
 ;
 ; BROADWELL-LABEL: test_roundpd:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vroundpd $7, %ymm0, %ymm0 # sched: [6:0.50]
 ; BROADWELL-NEXT:    vroundpd $7, (%rdi), %ymm1 # sched: [12:2.00]
+; BROADWELL-NEXT:    vroundpd $7, %ymm0, %ymm0 # sched: [6:0.50]
 ; BROADWELL-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -4163,8 +4163,8 @@ define <8 x float> @test_roundps(<8 x float> %a0, <8 x float> *%a1) {
 ;
 ; BROADWELL-LABEL: test_roundps:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vroundps $7, %ymm0, %ymm0 # sched: [6:0.50]
 ; BROADWELL-NEXT:    vroundps $7, (%rdi), %ymm1 # sched: [12:2.00]
+; BROADWELL-NEXT:    vroundps $7, %ymm0, %ymm0 # sched: [6:0.50]
 ; BROADWELL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -4227,8 +4227,8 @@ define <8 x float> @test_rsqrtps(<8 x float> %a0, <8 x float> *%a1) {
 ;
 ; BROADWELL-LABEL: test_rsqrtps:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vrsqrtps (%rdi), %ymm1 # sched: [17:2.00]
 ; BROADWELL-NEXT:    vrsqrtps %ymm0, %ymm0 # sched: [11:2.00]
+; BROADWELL-NEXT:    vrsqrtps (%rdi), %ymm1 # sched: [17:2.00]
 ; BROADWELL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -4408,8 +4408,8 @@ define <4 x double> @test_sqrtpd(<4 x double> %a0, <4 x double> *%a1) {
 ;
 ; BROADWELL-LABEL: test_sqrtpd:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vsqrtpd (%rdi), %ymm1 # sched: [40:2.00]
 ; BROADWELL-NEXT:    vsqrtpd %ymm0, %ymm0 # sched: [34:2.00]
+; BROADWELL-NEXT:    vsqrtpd (%rdi), %ymm1 # sched: [40:2.00]
 ; BROADWELL-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -4472,8 +4472,8 @@ define <8 x float> @test_sqrtps(<8 x float> %a0, <8 x float> *%a1) {
 ;
 ; BROADWELL-LABEL: test_sqrtps:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vsqrtps (%rdi), %ymm1 # sched: [27:2.00]
 ; BROADWELL-NEXT:    vsqrtps %ymm0, %ymm0 # sched: [21:2.00]
+; BROADWELL-NEXT:    vsqrtps (%rdi), %ymm1 # sched: [27:2.00]
 ; BROADWELL-NEXT:    vaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -4708,7 +4708,7 @@ define i32 @test_testpd_ymm(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a
 ; GENERIC-NEXT:    setb %al # sched: [1:0.50]
 ; GENERIC-NEXT:    vtestpd (%rdi), %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    adcl $0, %eax # sched: [2:0.67]
-; GENERIC-NEXT:    vzeroupper
+; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_testpd_ymm:
@@ -4718,7 +4718,7 @@ define i32 @test_testpd_ymm(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a
 ; SANDY-NEXT:    setb %al # sched: [1:0.50]
 ; SANDY-NEXT:    vtestpd (%rdi), %ymm0 # sched: [8:1.00]
 ; SANDY-NEXT:    adcl $0, %eax # sched: [2:0.67]
-; SANDY-NEXT:    vzeroupper
+; SANDY-NEXT:    vzeroupper # sched: [100:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_testpd_ymm:
@@ -4875,7 +4875,7 @@ define i32 @test_testps_ymm(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) 
 ; GENERIC-NEXT:    setb %al # sched: [1:0.50]
 ; GENERIC-NEXT:    vtestps (%rdi), %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    adcl $0, %eax # sched: [2:0.67]
-; GENERIC-NEXT:    vzeroupper
+; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_testps_ymm:
@@ -4885,7 +4885,7 @@ define i32 @test_testps_ymm(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) 
 ; SANDY-NEXT:    setb %al # sched: [1:0.50]
 ; SANDY-NEXT:    vtestps (%rdi), %ymm0 # sched: [8:1.00]
 ; SANDY-NEXT:    adcl $0, %eax # sched: [2:0.67]
-; SANDY-NEXT:    vzeroupper
+; SANDY-NEXT:    vzeroupper # sched: [100:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_testps_ymm:
@@ -5325,12 +5325,12 @@ define <8 x float> @test_xorps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a
 define void @test_zeroall() {
 ; GENERIC-LABEL: test_zeroall:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vzeroall
+; GENERIC-NEXT:    vzeroall # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_zeroall:
 ; SANDY:       # %bb.0:
-; SANDY-NEXT:    vzeroall
+; SANDY-NEXT:    vzeroall # sched: [100:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_zeroall:
@@ -5370,12 +5370,12 @@ declare void @llvm.x86.avx.vzeroall() nounwind
 define void @test_zeroupper() {
 ; GENERIC-LABEL: test_zeroupper:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vzeroupper
+; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_zeroupper:
 ; SANDY:       # %bb.0:
-; SANDY-NEXT:    vzeroupper
+; SANDY-NEXT:    vzeroupper # sched: [100:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_zeroupper:

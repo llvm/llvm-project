@@ -1686,7 +1686,7 @@ define i32 @test_mul_spec(i32 %x) nounwind {
 ; X64-HSW-NEXT:    addl $42, %ecx # sched: [1:0.25]
 ; X64-HSW-NEXT:    leal (%rdi,%rdi,4), %eax # sched: [1:0.50]
 ; X64-HSW-NEXT:    addl $2, %eax # sched: [1:0.25]
-; X64-HSW-NEXT:    imull %ecx, %eax # sched: [4:1.00]
+; X64-HSW-NEXT:    imull %ecx, %eax # sched: [3:1.00]
 ; X64-HSW-NEXT:    retq # sched: [7:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_spec:
@@ -1712,7 +1712,7 @@ define i32 @test_mul_spec(i32 %x) nounwind {
 ; HSW-NOOPT-NEXT:    addl $42, %ecx # sched: [1:0.25]
 ; HSW-NOOPT-NEXT:    leal (%rdi,%rdi,4), %eax # sched: [1:0.50]
 ; HSW-NOOPT-NEXT:    addl $2, %eax # sched: [1:0.25]
-; HSW-NOOPT-NEXT:    imull %ecx, %eax # sched: [4:1.00]
+; HSW-NOOPT-NEXT:    imull %ecx, %eax # sched: [3:1.00]
 ; HSW-NOOPT-NEXT:    retq # sched: [7:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_spec:

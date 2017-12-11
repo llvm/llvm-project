@@ -35,7 +35,7 @@ bool DNBRegisterValueClass::IsValid() const {
   do {                                                                         \
     if (pos < end) {                                                           \
       if (i > 0) {                                                             \
-        strncpy(pos, ", ", end - pos);                                         \
+        strlcpy(pos, ", ", end - pos);                                         \
         pos += 2;                                                              \
       }                                                                        \
     }                                                                          \
@@ -69,7 +69,7 @@ void DNBRegisterValueClass::Dump(const char *pre, const char *post) const {
                  value.v_uint64[1]);
         break;
       default:
-        strncpy(str, "0x", 3);
+        strlcpy(str, "0x", 3);
         pos = str + 2;
         for (uint32_t i = 0; i < info.size; ++i) {
           if (pos < end)

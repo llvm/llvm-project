@@ -517,6 +517,420 @@ define i8 @test_das(i8 %a0) optsize {
   ret i8 %1
 }
 
+define void @test_dec16(i16 %a0, i16* %a1) optsize {
+; GENERIC-LABEL: test_dec16:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    decw %ax
+; GENERIC-NEXT:    decw (%ecx)
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    retl
+;
+; ATOM-LABEL: test_dec16:
+; ATOM:       # %bb.0:
+; ATOM-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
+; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    decw %ax # sched: [1:0.50]
+; ATOM-NEXT:    decw (%ecx) # sched: [1:1.00]
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    retl # sched: [79:39.50]
+;
+; SLM-LABEL: test_dec16:
+; SLM:       # %bb.0:
+; SLM-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [4:1.00]
+; SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
+; SLM-NEXT:    #APP
+; SLM-NEXT:    decw %ax # sched: [1:0.50]
+; SLM-NEXT:    decw (%ecx) # sched: [4:2.00]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    retl # sched: [4:1.00]
+;
+; SANDY-LABEL: test_dec16:
+; SANDY:       # %bb.0:
+; SANDY-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    decw %ax # sched: [1:0.33]
+; SANDY-NEXT:    decw (%ecx) # sched: [7:1.00]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    retl # sched: [5:1.00]
+;
+; HASWELL-LABEL: test_dec16:
+; HASWELL:       # %bb.0:
+; HASWELL-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    decw %ax # sched: [1:0.25]
+; HASWELL-NEXT:    decw (%ecx) # sched: [7:1.00]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    retl # sched: [7:1.00]
+;
+; BROADWELL-LABEL: test_dec16:
+; BROADWELL:       # %bb.0:
+; BROADWELL-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    decw %ax # sched: [1:0.25]
+; BROADWELL-NEXT:    decw (%ecx) # sched: [6:1.00]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    retl # sched: [6:0.50]
+;
+; SKYLAKE-LABEL: test_dec16:
+; SKYLAKE:       # %bb.0:
+; SKYLAKE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    decw %ax # sched: [1:0.25]
+; SKYLAKE-NEXT:    decw (%ecx) # sched: [6:1.00]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    retl # sched: [6:0.50]
+;
+; SKX-LABEL: test_dec16:
+; SKX:       # %bb.0:
+; SKX-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKX-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; SKX-NEXT:    #APP
+; SKX-NEXT:    decw %ax # sched: [1:0.25]
+; SKX-NEXT:    decw (%ecx) # sched: [6:1.00]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BTVER2-LABEL: test_dec16:
+; BTVER2:       # %bb.0:
+; BTVER2-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [4:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    decw %ax # sched: [1:0.50]
+; BTVER2-NEXT:    decw (%ecx) # sched: [4:1.00]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    retl # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_dec16:
+; ZNVER1:       # %bb.0:
+; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [8:0.50]
+; ZNVER1-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    decw %ax # sched: [1:0.25]
+; ZNVER1-NEXT:    decw (%ecx) # sched: [5:0.50]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    retl # sched: [1:0.50]
+  tail call void asm "decw $0 \0A\09 decw $1", "r,*m"(i16 %a0, i16* %a1) nounwind
+  ret void
+}
+define void @test_dec32(i32 %a0, i32* %a1) optsize {
+; GENERIC-LABEL: test_dec32:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    decl %eax
+; GENERIC-NEXT:    decl (%ecx)
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    retl
+;
+; ATOM-LABEL: test_dec32:
+; ATOM:       # %bb.0:
+; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
+; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    decl %eax # sched: [1:0.50]
+; ATOM-NEXT:    decl (%ecx) # sched: [1:1.00]
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    retl # sched: [79:39.50]
+;
+; SLM-LABEL: test_dec32:
+; SLM:       # %bb.0:
+; SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
+; SLM-NEXT:    #APP
+; SLM-NEXT:    decl %eax # sched: [1:0.50]
+; SLM-NEXT:    decl (%ecx) # sched: [4:2.00]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    retl # sched: [4:1.00]
+;
+; SANDY-LABEL: test_dec32:
+; SANDY:       # %bb.0:
+; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    decl %eax # sched: [1:0.33]
+; SANDY-NEXT:    decl (%ecx) # sched: [7:1.00]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    retl # sched: [5:1.00]
+;
+; HASWELL-LABEL: test_dec32:
+; HASWELL:       # %bb.0:
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    decl %eax # sched: [1:0.25]
+; HASWELL-NEXT:    decl (%ecx) # sched: [7:1.00]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    retl # sched: [7:1.00]
+;
+; BROADWELL-LABEL: test_dec32:
+; BROADWELL:       # %bb.0:
+; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    decl %eax # sched: [1:0.25]
+; BROADWELL-NEXT:    decl (%ecx) # sched: [6:1.00]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    retl # sched: [6:0.50]
+;
+; SKYLAKE-LABEL: test_dec32:
+; SKYLAKE:       # %bb.0:
+; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    decl %eax # sched: [1:0.25]
+; SKYLAKE-NEXT:    decl (%ecx) # sched: [6:1.00]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    retl # sched: [6:0.50]
+;
+; SKX-LABEL: test_dec32:
+; SKX:       # %bb.0:
+; SKX-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKX-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; SKX-NEXT:    #APP
+; SKX-NEXT:    decl %eax # sched: [1:0.25]
+; SKX-NEXT:    decl (%ecx) # sched: [6:1.00]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BTVER2-LABEL: test_dec32:
+; BTVER2:       # %bb.0:
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    decl %eax # sched: [1:0.50]
+; BTVER2-NEXT:    decl (%ecx) # sched: [4:1.00]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    retl # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_dec32:
+; ZNVER1:       # %bb.0:
+; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
+; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [8:0.50]
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    decl %eax # sched: [1:0.25]
+; ZNVER1-NEXT:    decl (%ecx) # sched: [5:0.50]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    retl # sched: [1:0.50]
+  tail call void asm "decl $0 \0A\09 decl $1", "r,*m"(i32 %a0, i32* %a1) nounwind
+  ret void
+}
+
+define void @test_inc16(i16 %a0, i16* %a1) optsize {
+; GENERIC-LABEL: test_inc16:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    incw %ax
+; GENERIC-NEXT:    incw (%ecx)
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    retl
+;
+; ATOM-LABEL: test_inc16:
+; ATOM:       # %bb.0:
+; ATOM-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
+; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    incw %ax # sched: [1:0.50]
+; ATOM-NEXT:    incw (%ecx) # sched: [1:1.00]
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    retl # sched: [79:39.50]
+;
+; SLM-LABEL: test_inc16:
+; SLM:       # %bb.0:
+; SLM-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [4:1.00]
+; SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
+; SLM-NEXT:    #APP
+; SLM-NEXT:    incw %ax # sched: [1:0.50]
+; SLM-NEXT:    incw (%ecx) # sched: [4:2.00]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    retl # sched: [4:1.00]
+;
+; SANDY-LABEL: test_inc16:
+; SANDY:       # %bb.0:
+; SANDY-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    incw %ax # sched: [1:0.33]
+; SANDY-NEXT:    incw (%ecx) # sched: [7:1.00]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    retl # sched: [5:1.00]
+;
+; HASWELL-LABEL: test_inc16:
+; HASWELL:       # %bb.0:
+; HASWELL-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    incw %ax # sched: [1:0.25]
+; HASWELL-NEXT:    incw (%ecx) # sched: [7:1.00]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    retl # sched: [7:1.00]
+;
+; BROADWELL-LABEL: test_inc16:
+; BROADWELL:       # %bb.0:
+; BROADWELL-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    incw %ax # sched: [1:0.25]
+; BROADWELL-NEXT:    incw (%ecx) # sched: [6:1.00]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    retl # sched: [6:0.50]
+;
+; SKYLAKE-LABEL: test_inc16:
+; SKYLAKE:       # %bb.0:
+; SKYLAKE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    incw %ax # sched: [1:0.25]
+; SKYLAKE-NEXT:    incw (%ecx) # sched: [6:1.00]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    retl # sched: [6:0.50]
+;
+; SKX-LABEL: test_inc16:
+; SKX:       # %bb.0:
+; SKX-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKX-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; SKX-NEXT:    #APP
+; SKX-NEXT:    incw %ax # sched: [1:0.25]
+; SKX-NEXT:    incw (%ecx) # sched: [6:1.00]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BTVER2-LABEL: test_inc16:
+; BTVER2:       # %bb.0:
+; BTVER2-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [4:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    incw %ax # sched: [1:0.50]
+; BTVER2-NEXT:    incw (%ecx) # sched: [4:1.00]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    retl # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_inc16:
+; ZNVER1:       # %bb.0:
+; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [8:0.50]
+; ZNVER1-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    incw %ax # sched: [1:0.25]
+; ZNVER1-NEXT:    incw (%ecx) # sched: [5:0.50]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    retl # sched: [1:0.50]
+  tail call void asm "incw $0 \0A\09 incw $1", "r,*m"(i16 %a0, i16* %a1) nounwind
+  ret void
+}
+define void @test_inc32(i32 %a0, i32* %a1) optsize {
+; GENERIC-LABEL: test_inc32:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    incl %eax
+; GENERIC-NEXT:    incl (%ecx)
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    retl
+;
+; ATOM-LABEL: test_inc32:
+; ATOM:       # %bb.0:
+; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
+; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    incl %eax # sched: [1:0.50]
+; ATOM-NEXT:    incl (%ecx) # sched: [1:1.00]
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    retl # sched: [79:39.50]
+;
+; SLM-LABEL: test_inc32:
+; SLM:       # %bb.0:
+; SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
+; SLM-NEXT:    #APP
+; SLM-NEXT:    incl %eax # sched: [1:0.50]
+; SLM-NEXT:    incl (%ecx) # sched: [4:2.00]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    retl # sched: [4:1.00]
+;
+; SANDY-LABEL: test_inc32:
+; SANDY:       # %bb.0:
+; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    incl %eax # sched: [1:0.33]
+; SANDY-NEXT:    incl (%ecx) # sched: [7:1.00]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    retl # sched: [5:1.00]
+;
+; HASWELL-LABEL: test_inc32:
+; HASWELL:       # %bb.0:
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    incl %eax # sched: [1:0.25]
+; HASWELL-NEXT:    incl (%ecx) # sched: [7:1.00]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    retl # sched: [7:1.00]
+;
+; BROADWELL-LABEL: test_inc32:
+; BROADWELL:       # %bb.0:
+; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    incl %eax # sched: [1:0.25]
+; BROADWELL-NEXT:    incl (%ecx) # sched: [6:1.00]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    retl # sched: [6:0.50]
+;
+; SKYLAKE-LABEL: test_inc32:
+; SKYLAKE:       # %bb.0:
+; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    incl %eax # sched: [1:0.25]
+; SKYLAKE-NEXT:    incl (%ecx) # sched: [6:1.00]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    retl # sched: [6:0.50]
+;
+; SKX-LABEL: test_inc32:
+; SKX:       # %bb.0:
+; SKX-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKX-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; SKX-NEXT:    #APP
+; SKX-NEXT:    incl %eax # sched: [1:0.25]
+; SKX-NEXT:    incl (%ecx) # sched: [6:1.00]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BTVER2-LABEL: test_inc32:
+; BTVER2:       # %bb.0:
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    incl %eax # sched: [1:0.50]
+; BTVER2-NEXT:    incl (%ecx) # sched: [4:1.00]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    retl # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_inc32:
+; ZNVER1:       # %bb.0:
+; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
+; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [8:0.50]
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    incl %eax # sched: [1:0.25]
+; ZNVER1-NEXT:    incl (%ecx) # sched: [5:0.50]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    retl # sched: [1:0.50]
+  tail call void asm "incl $0 \0A\09 incl $1", "r,*m"(i32 %a0, i32* %a1) nounwind
+  ret void
+}
+
 define i8 @test_salc() optsize {
 ; GENERIC-LABEL: test_salc:
 ; GENERIC:       # %bb.0:
