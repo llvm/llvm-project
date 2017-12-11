@@ -1971,3 +1971,124 @@ void HexagonDAGToDAGISel::SelectHvxRor(SDNode *N) {
   HvxSelector(*this, *CurDAG).selectRor(N);
 }
 
+void HexagonDAGToDAGISel::SelectV65GatherPred(SDNode *N) {
+  const SDLoc &dl(N);
+  SDValue Chain = N->getOperand(0);
+  SDValue Address = N->getOperand(2);
+  SDValue Predicate = N->getOperand(3);
+  SDValue Base = N->getOperand(4);
+  SDValue Modifier = N->getOperand(5);
+  SDValue Offset = N->getOperand(6);
+
+  unsigned Opcode;
+  unsigned IntNo = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  switch (IntNo) {
+  default:
+    llvm_unreachable("Unexpected HVX gather intrinsic.");
+  case Intrinsic::hexagon_V6_vgathermhq:
+  case Intrinsic::hexagon_V6_vgathermhq_128B:
+    Opcode = Hexagon::V6_vgathermhq_pseudo;
+    break;
+  case Intrinsic::hexagon_V6_vgathermwq:
+  case Intrinsic::hexagon_V6_vgathermwq_128B:
+    Opcode = Hexagon::V6_vgathermwq_pseudo;
+    break;
+  case Intrinsic::hexagon_V6_vgathermhwq:
+  case Intrinsic::hexagon_V6_vgathermhwq_128B:
+    Opcode = Hexagon::V6_vgathermhwq_pseudo;
+    break;
+  }
+
+  SDVTList VTs = CurDAG->getVTList(MVT::Other);
+  SDValue Ops[] = { Address, Predicate, Base, Modifier, Offset, Chain };
+  SDNode *Result = CurDAG->getMachineNode(Opcode, dl, VTs, Ops);
+
+  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
+  MemOp[0] = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  cast<MachineSDNode>(Result)->setMemRefs(MemOp, MemOp + 1);
+
+  ReplaceUses(N, Result);
+  CurDAG->RemoveDeadNode(N);
+}
+
+void HexagonDAGToDAGISel::SelectV65Gather(SDNode *N) {
+  const SDLoc &dl(N);
+  SDValue Chain = N->getOperand(0);
+  SDValue Address = N->getOperand(2);
+  SDValue Base = N->getOperand(3);
+  SDValue Modifier = N->getOperand(4);
+  SDValue Offset = N->getOperand(5);
+
+  unsigned Opcode;
+  unsigned IntNo = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  switch (IntNo) {
+  default:
+    llvm_unreachable("Unexpected HVX gather intrinsic.");
+  case Intrinsic::hexagon_V6_vgathermh:
+  case Intrinsic::hexagon_V6_vgathermh_128B:
+    Opcode = Hexagon::V6_vgathermh_pseudo;
+    break;
+  case Intrinsic::hexagon_V6_vgathermw:
+  case Intrinsic::hexagon_V6_vgathermw_128B:
+    Opcode = Hexagon::V6_vgathermw_pseudo;
+    break;
+  case Intrinsic::hexagon_V6_vgathermhw:
+  case Intrinsic::hexagon_V6_vgathermhw_128B:
+    Opcode = Hexagon::V6_vgathermhw_pseudo;
+    break;
+  }
+
+  SDVTList VTs = CurDAG->getVTList(MVT::Other);
+  SDValue Ops[] = { Address, Base, Modifier, Offset, Chain };
+  SDNode *Result = CurDAG->getMachineNode(Opcode, dl, VTs, Ops);
+
+  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
+  MemOp[0] = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  cast<MachineSDNode>(Result)->setMemRefs(MemOp, MemOp + 1);
+
+  ReplaceUses(N, Result);
+  CurDAG->RemoveDeadNode(N);
+}
+
+void HexagonDAGToDAGISel::SelectHVXDualOutput(SDNode *N) {
+  unsigned IID = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
+  SDNode *Result;
+  switch (IID) {
+  case Intrinsic::hexagon_V6_vaddcarry: {
+    SmallVector<SDValue, 3> Ops = { N->getOperand(1), N->getOperand(2),
+                                    N->getOperand(3) };
+    SDVTList VTs = CurDAG->getVTList(MVT::v16i32, MVT::v512i1);
+    Result = CurDAG->getMachineNode(Hexagon::V6_vaddcarry, SDLoc(N), VTs, Ops);
+    break;
+  }
+  case Intrinsic::hexagon_V6_vaddcarry_128B: {
+    SmallVector<SDValue, 3> Ops = { N->getOperand(1), N->getOperand(2),
+                                    N->getOperand(3) };
+    SDVTList VTs = CurDAG->getVTList(MVT::v32i32, MVT::v1024i1);
+    Result = CurDAG->getMachineNode(Hexagon::V6_vaddcarry, SDLoc(N), VTs, Ops);
+    break;
+  }
+  case Intrinsic::hexagon_V6_vsubcarry: {
+    SmallVector<SDValue, 3> Ops = { N->getOperand(1), N->getOperand(2),
+                                    N->getOperand(3) };
+    SDVTList VTs = CurDAG->getVTList(MVT::v16i32, MVT::v512i1);
+    Result = CurDAG->getMachineNode(Hexagon::V6_vsubcarry, SDLoc(N), VTs, Ops);
+    break;
+  }
+  case Intrinsic::hexagon_V6_vsubcarry_128B: {
+    SmallVector<SDValue, 3> Ops = { N->getOperand(1), N->getOperand(2),
+                                    N->getOperand(3) };
+    SDVTList VTs = CurDAG->getVTList(MVT::v32i32, MVT::v1024i1);
+    Result = CurDAG->getMachineNode(Hexagon::V6_vsubcarry, SDLoc(N), VTs, Ops);
+    break;
+  }
+  default:
+    llvm_unreachable("Unexpected HVX dual output intrinsic.");
+  }
+  ReplaceUses(N, Result);
+  ReplaceUses(SDValue(N, 0), SDValue(Result, 0));
+  ReplaceUses(SDValue(N, 1), SDValue(Result, 1));
+  CurDAG->RemoveDeadNode(N);
+}
+
+

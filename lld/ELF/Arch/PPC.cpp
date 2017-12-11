@@ -34,15 +34,8 @@ RelExpr PPC::getRelExpr(RelType Type, const Symbol &S,
   case R_PPC_REL24:
   case R_PPC_REL32:
     return R_PC;
-  // In general case R_PPC_PLTREL24 should result in R_PLT_PC, however, since
-  // PLT support is currently not available for PPC32 this workaround at least 
-  // allows lld to resolve local symbols when performing static linkage after
-  // LLVM started to forcibly use PLT relocations by default (see D38554).
-  // Non-local symbols will need a full PLT implementation, but once it lands
-  // local symbols should still avoid PLT table with static relocation model.
-  // This is the optimisation that bfd and gold are doing by default as well.
   case R_PPC_PLTREL24:
-    return R_PC;
+    return R_PLT_PC;
   default:
     return R_ABS;
   }

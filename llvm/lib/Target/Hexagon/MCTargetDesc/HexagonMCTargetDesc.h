@@ -16,11 +16,13 @@
 
 #include "llvm/Support/CommandLine.h"
 #include <cstdint>
+#include <string>
 
 namespace llvm {
 
 struct InstrItinerary;
 struct InstrStage;
+class FeatureBitset;
 class MCAsmBackend;
 class MCCodeEmitter;
 class MCContext;
@@ -44,9 +46,9 @@ MCInstrInfo *createHexagonMCInstrInfo();
 MCRegisterInfo *createHexagonMCRegisterInfo(StringRef TT);
 
 namespace Hexagon_MC {
-  StringRef ParseHexagonTriple(const Triple &TT, StringRef CPU);
-  StringRef selectHexagonCPU(const Triple &TT, StringRef CPU);
+  StringRef selectHexagonCPU(StringRef CPU);
 
+  FeatureBitset completeHVXFeatures(const FeatureBitset &FB);
   /// Create a Hexagon MCSubtargetInfo instance. This is exposed so Asm parser,
   /// etc. do not need to go through TargetRegistry.
   MCSubtargetInfo *createHexagonMCSubtargetInfo(const Triple &TT, StringRef CPU,

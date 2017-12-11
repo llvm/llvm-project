@@ -7,9 +7,16 @@
 define i64 @load_i64(i64 *%a) nounwind {
 ; RV32I-LABEL: load_i64:
 ; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp)
+; RV32I-NEXT:    sw s0, 8(sp)
+; RV32I-NEXT:    addi s0, sp, 16
 ; RV32I-NEXT:    lw a2, 0(a0)
 ; RV32I-NEXT:    lw a1, 4(a0)
 ; RV32I-NEXT:    addi a0, a2, 0
+; RV32I-NEXT:    lw s0, 8(sp)
+; RV32I-NEXT:    lw ra, 12(sp)
+; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    jalr zero, ra, 0
   %1 = load i64, i64* %a
   ret i64 %1
@@ -22,12 +29,19 @@ define i64 @load_i64(i64 *%a) nounwind {
 define i64 @load_i64_global() nounwind {
 ; RV32I-LABEL: load_i64_global:
 ; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp)
+; RV32I-NEXT:    sw s0, 8(sp)
+; RV32I-NEXT:    addi s0, sp, 16
 ; RV32I-NEXT:    lui a0, %hi(val64)
 ; RV32I-NEXT:    addi a0, a0, %lo(val64)
 ; RV32I-NEXT:    lw a0, 0(a0)
 ; RV32I-NEXT:    lui a1, %hi(val64+4)
 ; RV32I-NEXT:    addi a1, a1, %lo(val64+4)
 ; RV32I-NEXT:    lw a1, 0(a1)
+; RV32I-NEXT:    lw s0, 8(sp)
+; RV32I-NEXT:    lw ra, 12(sp)
+; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    jalr zero, ra, 0
   %1 = load i64, i64* @val64
   ret i64 %1

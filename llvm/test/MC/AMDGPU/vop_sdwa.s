@@ -694,6 +694,11 @@ v_mov_b32 v1, exec dst_sel:BYTE_0 dst_unused:UNUSED_PRESERVE src0_sel:DWORD
 
 // NOSICI: error:
 // NOVI: error:
+// GFX9: v_mov_b32_sdwa v1, ttmp12 dst_sel:BYTE_0 dst_unused:UNUSED_PRESERVE src0_sel:DWORD ; encoding: [0xf9,0x02,0x02,0x7e,0x78,0x10,0x86,0x06]
+v_mov_b32_sdwa v1, ttmp12 dst_sel:BYTE_0 dst_unused:UNUSED_PRESERVE src0_sel:DWORD
+
+// NOSICI: error:
+// NOVI: error:
 // GFX9: v_add_f32_sdwa v0, s0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x00,0x00,0x02,0x00,0x06,0x85,0x02]
 v_add_f32 v0, s0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
 
@@ -709,6 +714,16 @@ v_add_f32 v0, exec, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1
 
 // NOSICI: error:
 // NOVI: error:
+// NO: error: not a valid operand
+v_add_f32 v0, v1, tba_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error:
+// NOVI: error:
+// NO: error: not a valid operand
+v_add_f32 v0, v1, tma_hi dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error:
+// NOVI: error:
 // GFX9: v_cmp_eq_f32_sdwa vcc, s1, v2 src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x04,0x84,0x7c,0x01,0x00,0x85,0x02]
 v_cmp_eq_f32_sdwa vcc, s1, v2 src0_sel:WORD_1 src1_sel:BYTE_2
 
@@ -716,6 +731,26 @@ v_cmp_eq_f32_sdwa vcc, s1, v2 src0_sel:WORD_1 src1_sel:BYTE_2
 // NOVI: error:
 // GFX9: v_cmp_eq_f32_sdwa vcc, v1, s22 src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x2c,0x84,0x7c,0x01,0x00,0x05,0x82]
 v_cmp_eq_f32_sdwa vcc, v1, s22 src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error:
+// NOVI: error:
+// GFX9: v_cmp_eq_f32_sdwa ttmp[12:13], v1, v2 src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x04,0x84,0x7c,0x01,0xf8,0x05,0x02]
+v_cmp_eq_f32_sdwa ttmp[12:13], v1, v2 src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error:
+// NOVI: error:
+// NO: error: not a valid operand
+v_cmp_eq_f32_sdwa tba, v1, v2 src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error:
+// NOVI: error:
+// NO: error: not a valid operand
+v_cmp_eq_f32_sdwa tma, v1, v2 src0_sel:WORD_1 src1_sel:BYTE_2
+
+// NOSICI: error:
+// NOVI: error:
+// GFX9: v_cmp_eq_f32_sdwa vcc, v1, ttmp15 src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0xf6,0x84,0x7c,0x01,0x00,0x05,0x82]
+v_cmp_eq_f32_sdwa vcc, v1, ttmp15 src0_sel:WORD_1 src1_sel:BYTE_2
 
 // NOSICI: error:
 // NOVI: error:

@@ -33,18 +33,17 @@
 # RUN:	.hash : {  } \
 # RUN:	.dynstr : {  } \
 # RUN:  .text : { *(.text) } \
-# RUN:  . = ALIGN(0x1000); \
-# RUN:  bar : { HIDDEN(bar_sym = .); } \
+# RUN:  bar : { . = ALIGN(0x1000); } \
 # RUN:  .data.rel.ro : { *(.data.rel.ro) } \
 # RUN: }" > %t.script
 # RUN: ld.lld --hash-style=sysv -o %t2 --script %t.script %t.o -shared
 # RUN: llvm-readobj --elf-output-style=GNU -l -s %t2 | FileCheck --check-prefix=CHECK2 %s
 
 # CHECK2:      .text        PROGBITS 00000000000001bc 0001bc 000001 00 AX
-# CHECK2-NEXT: bar          PROGBITS 0000000000001000 001000 000000 00 AX
+# CHECK2-NEXT: bar          NOBITS   00000000000001bd 0001bd 000e43 00 AX
 # CHECK2-NEXT: .data.rel.ro PROGBITS 0000000000001000 001000 000001 00 WA
 
-# CHECK2:      LOAD 0x000000 0x0000000000000000 0x0000000000000000 0x001000 0x001000 R E
+# CHECK2:      LOAD 0x000000 0x0000000000000000 0x0000000000000000 0x0001bd 0x001000 R E
 # CHECK2-NEXT: LOAD 0x001000 0x0000000000001000 0x0000000000001000 0x000068 0x000068 RW
 
 # If the current behavior becomes a problem we should consider just moving the commands out

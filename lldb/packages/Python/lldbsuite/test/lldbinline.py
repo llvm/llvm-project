@@ -134,25 +134,28 @@ class InlineTest(TestBase):
         makefile.flush()
         makefile.close()
 
-    @skipUnlessDarwin
+    @add_test_categories(["dsym"])
     def __test_with_dsym(self):
         self.using_dsym = True
         self.BuildMakefile()
         self.buildDsym()
         self.do_test()
 
+    @add_test_categories(["dwarf"])
     def __test_with_dwarf(self):
         self.using_dsym = False
         self.BuildMakefile()
         self.buildDwarf()
         self.do_test()
 
+    @add_test_categories(["dwo"])
     def __test_with_dwo(self):
         self.using_dsym = False
         self.BuildMakefile()
         self.buildDwo()
         self.do_test()
 
+    @add_test_categories(["gmodules"])
     def __test_with_gmodules(self):
         self.using_dsym = False
         self.BuildMakefile()

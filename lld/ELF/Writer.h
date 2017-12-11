@@ -46,6 +46,7 @@ struct PhdrEntry {
   bool HasLMA = false;
 };
 
+template <class ELFT> void addReservedSymbols();
 llvm::StringRef getOutputSectionName(InputSectionBase *S);
 
 template <class ELFT> uint32_t calcMipsEFlags();

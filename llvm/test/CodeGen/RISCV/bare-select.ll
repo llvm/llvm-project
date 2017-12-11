@@ -5,12 +5,19 @@
 define i32 @bare_select(i1 %a, i32 %b, i32 %c) {
 ; RV32I-LABEL: bare_select:
 ; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp)
+; RV32I-NEXT:    sw s0, 8(sp)
+; RV32I-NEXT:    addi s0, sp, 16
 ; RV32I-NEXT:    andi a0, a0, 1
 ; RV32I-NEXT:    bne a0, zero, .LBB0_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    addi a1, a2, 0
 ; RV32I-NEXT:  .LBB0_2:
 ; RV32I-NEXT:    addi a0, a1, 0
+; RV32I-NEXT:    lw s0, 8(sp)
+; RV32I-NEXT:    lw ra, 12(sp)
+; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    jalr zero, ra, 0
   %1 = select i1 %a, i32 %b, i32 %c
   ret i32 %1

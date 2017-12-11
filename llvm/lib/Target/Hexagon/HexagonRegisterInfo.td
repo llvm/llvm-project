@@ -15,7 +15,6 @@ let Namespace = "Hexagon" in {
 
   class HexagonReg<bits<5> num, string n, list<string> alt = [],
                    list<Register> alias = []> : Register<n, alt> {
-    field bits<5> Num;
     let Aliases = alias;
     let HWEncoding{4-0} = num;
   }
@@ -23,8 +22,6 @@ let Namespace = "Hexagon" in {
   class HexagonDoubleReg<bits<5> num, string n, list<Register> subregs,
                          list<string> alt = []> :
         RegisterWithSubRegs<n, subregs> {
-    field bits<5> Num;
-
     let AltNames = alt;
     let HWEncoding{4-0} = num;
   }
@@ -32,28 +29,20 @@ let Namespace = "Hexagon" in {
   // Registers are identified with 5-bit ID numbers.
   // Ri - 32-bit integer registers.
   class Ri<bits<5> num, string n, list<string> alt = []> :
-        HexagonReg<num, n, alt> {
-    let Num = num;
-  }
+        HexagonReg<num, n, alt>;
 
   // Rf - 32-bit floating-point registers.
-  class Rf<bits<5> num, string n> : HexagonReg<num, n> {
-    let Num = num;
-  }
-
+  class Rf<bits<5> num, string n> : HexagonReg<num, n>;
 
   // Rd - 64-bit registers.
   class Rd<bits<5> num, string n, list<Register> subregs,
            list<string> alt = []> :
         HexagonDoubleReg<num, n, subregs, alt> {
-    let Num = num;
     let SubRegs = subregs;
   }
 
   // Rp - predicate registers
-  class Rp<bits<5> num, string n> : HexagonReg<num, n> {
-    let Num = num;
-  }
+  class Rp<bits<5> num, string n> : HexagonReg<num, n>;
 
 
   // Rq - vector predicate registers
@@ -64,21 +53,18 @@ let Namespace = "Hexagon" in {
   // Rc - control registers
   class Rc<bits<5> num, string n,
            list<string> alt = [], list<Register> alias = []> :
-        HexagonReg<num, n, alt, alias> {
-    let Num = num;
-  }
+        HexagonReg<num, n, alt, alias>;
 
   // Rcc - 64-bit control registers.
   class Rcc<bits<5> num, string n, list<Register> subregs,
             list<string> alt = []> :
         HexagonDoubleReg<num, n, subregs, alt> {
-    let Num = num;
     let SubRegs = subregs;
   }
 
   // Mx - address modifier registers
-  class Mx<bits<1> num, string n> : HexagonReg<{0b0000, num}, n> {
-    let Num = !cast<bits<5>>(num);
+  class Mx<bits<1> num, string n> : Register<n, []> {
+    let HWEncoding{0} = num;
   }
 
   def isub_lo  : SubRegIndex<32>;
@@ -167,25 +153,27 @@ let Namespace = "Hexagon" in {
 
   // Control registers pairs.
   let SubRegIndices = [isub_lo, isub_hi], CoveredBySubRegs = 1 in {
-    def C1_0:     Rcc<0,  "c1:0",   [SA0, LC0], ["lc0:sa0"]>, DwarfRegNum<[67]>;
-    def C3_2:     Rcc<2,  "c3:2",   [SA1, LC1], ["lc1:sa1"]>, DwarfRegNum<[69]>;
-    def C5_4:     Rcc<4,  "c5:4",   [P3_0, C5]>,              DwarfRegNum<[71]>;
-    def C7_6:     Rcc<6,  "c7:6",   [M0, M1],   ["m1:0"]>,    DwarfRegNum<[72]>;
+    def C1_0   : Rcc<0,   "c1:0",  [SA0, LC0], ["lc0:sa0"]>, DwarfRegNum<[67]>;
+    def C3_2   : Rcc<2,   "c3:2",  [SA1, LC1], ["lc1:sa1"]>, DwarfRegNum<[69]>;
+    def C5_4   : Rcc<4,   "c5:4",  [P3_0, C5]>,              DwarfRegNum<[71]>;
+    def C7_6   : Rcc<6,   "c7:6",  [M0, M1],   ["m1:0"]>,    DwarfRegNum<[72]>;
     // Use C8 instead of USR as a subregister of C9_8.
-    def C9_8:     Rcc<8,  "c9:8",   [C8, PC]>,                DwarfRegNum<[74]>;
-    def C11_10:   Rcc<10, "c11:10", [UGP, GP]>,               DwarfRegNum<[76]>;
-    def CS:       Rcc<12, "c13:12", [CS0, CS1], ["cs1:0"]>,   DwarfRegNum<[78]>;
-    def UPCYCLE:  Rcc<14, "c15:14", [UPCYCLELO, UPCYCLEHI]>,  DwarfRegNum<[80]>;
-    def C17_16:   Rcc<16, "c17:16", [FRAMELIMIT, FRAMEKEY]>,  DwarfRegNum<[83]>;
-    def PKTCOUNT: Rcc<18, "c19:18", [PKTCOUNTLO, PKTCOUNTHI], ["pktcount"]>,
+    def C9_8   : Rcc<8,   "c9:8",  [C8, PC]>,                DwarfRegNum<[74]>;
+    def C11_10 : Rcc<10, "c11:10", [UGP, GP]>,               DwarfRegNum<[76]>;
+    def CS     : Rcc<12, "c13:12", [CS0, CS1], ["cs1:0"]>,   DwarfRegNum<[78]>;
+    def UPCYCLE: Rcc<14, "c15:14", [UPCYCLELO, UPCYCLEHI], ["upcycle"]>,
+                                                              DwarfRegNum<[80]>;
+    def C17_16 : Rcc<16, "c17:16", [FRAMELIMIT, FRAMEKEY]>,  DwarfRegNum<[83]>;
+    def PKTCOUNT : Rcc<18, "c19:18", [PKTCOUNTLO, PKTCOUNTHI], ["pktcount"]>,
                                                               DwarfRegNum<[85]>;
-    def UTIMER:   Rcc<30, "c31:30", [UTIMERLO, UTIMERHI], ["utimer"]>,
+    def UTIMER :  Rcc<30, "c31:30", [UTIMERLO, UTIMERHI], ["utimer"]>,
                                                               DwarfRegNum<[97]>;
   }
 
   foreach i = 0-31 in {
     def V#i  : Ri<i, "v"#i>,  DwarfRegNum<[!add(i, 99)]>;
   }
+  def VTMP : Ri<0, "vtmp">, DwarfRegNum<[131]>;
 
   // Aliases of the V* registers used to hold double vec values.
   let SubRegIndices = [vsub_lo, vsub_hi], CoveredBySubRegs = 1 in {
@@ -244,6 +232,8 @@ def VecPI64
   : ValueTypeByHwMode<[Hvx64,  Hvx64old,  Hvx128,  Hvx128old, DefaultMode],
                       [v16i64, v16i64,    v32i64,  v32i64,    v16i64]>;
 
+// HVX register classes
+
 // Register classes.
 //
 // FIXME: the register order should be defined in terms of the preferred
@@ -268,7 +258,7 @@ def GeneralDoubleLow8Regs : RegisterClass<"Hexagon", [i64], 64,
   (add D11, D10, D9, D8, D3, D2, D1, D0)>;
 
 def HvxVR : RegisterClass<"Hexagon", [VecI8, VecI16, VecI32, VecI64], 512,
-  (add (sequence "V%u", 0, 31))> {
+  (add (sequence "V%u", 0, 31), VTMP)> {
   let RegInfos = RegInfoByHwMode<[Hvx64, Hvx128, DefaultMode],
     [RegInfo<512,512,512>, RegInfo<1024,1024,1024>, RegInfo<512,512,512>]>;
 }
@@ -312,6 +302,11 @@ let isAllocatable = 0 in
 def V62Regs : RegisterClass<"Hexagon", [i32], 32,
   (add FRAMELIMIT, FRAMEKEY,   C17_16, PKTCOUNTLO, PKTCOUNTHI, PKTCOUNT,
        UTIMERLO,   UTIMERHI,   UTIMER)>;
+
+// These registers are new for v65 and onward.
+let Size = 32, isAllocatable = 0 in
+def V65Regs : RegisterClass<"Hexagon", [i32], 32, (add VTMP)>;
+
 
 
 def HexagonCSR

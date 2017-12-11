@@ -50,6 +50,8 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
   bool UseLongCalls;
   bool ModeIEEERndNear;
 
+  bool HasMemNoShuf = false;
+  bool EnableDuplex = false;
 public:
   Hexagon::ArchEnum HexagonArchVersion;
   Hexagon::ArchEnum HexagonHVXVersion = Hexagon::ArchEnum::V4;
@@ -138,11 +140,18 @@ public:
   bool hasV62TOpsOnly() const {
     return getHexagonArchVersion() == Hexagon::ArchEnum::V62;
   }
+  bool hasV65TOps() const {
+    return getHexagonArchVersion() >= Hexagon::ArchEnum::V65;
+  }
+  bool hasV65TOpsOnly() const {
+    return getHexagonArchVersion() == Hexagon::ArchEnum::V65;
+  }
 
   bool modeIEEERndNear() const { return ModeIEEERndNear; }
   bool useHVXOps() const { return HexagonHVXVersion > Hexagon::ArchEnum::V4; }
   bool useHVX128BOps() const { return useHVXOps() && UseHVX128BOps; }
   bool useHVX64BOps() const { return useHVXOps() && UseHVX64BOps; }
+  bool hasMemNoShuf() const { return HasMemNoShuf; }
   bool useLongCalls() const { return UseLongCalls; }
   bool usePredicatedCalls() const;
 

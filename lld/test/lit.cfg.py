@@ -91,3 +91,11 @@ if tar_executable:
     if 'GNU tar' in tar_version.stdout.read().decode():
         config.available_features.add('gnutar')
     tar_version.wait()
+
+stat_executable = lit.util.which('stat', config.environment['PATH'])
+if stat_executable:
+    stat_version = subprocess.Popen(
+        [stat_executable, '--version'], stdout=subprocess.PIPE, env={'LANG': 'C'})
+    if 'GNU coreutils' in stat_version.stdout.read().decode():
+        config.available_features.add('gnustat')
+    stat_version.wait()
