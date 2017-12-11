@@ -32,6 +32,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Timer.h"
@@ -691,6 +692,16 @@ clang_codeCompleteAt_Impl(CXTranslationUnit TU, const char *complete_filename,
   CaptureCompletionResults Capture(Opts, *Results, &TU);
 
   // Perform completion.
+  std::vector<const char *> CArgs;
+  for (const auto &Arg : TU->Arguments)
+    CArgs.push_back(Arg.c_str());
+  std::string CompletionInvocation =
+      llvm::formatv("-code-completion-at={0}:{1}:{2}", complete_filename,
+                    complete_line, complete_column)
+          .str();
+  LibclangInvocationReporter InvocationReporter(
+      *CXXIdx, LibclangInvocationReporter::OperationKind::CompletionOperation,
+      TU->ParsingOptions, CArgs, CompletionInvocation, unsaved_files);
   AST->CodeComplete(complete_filename, complete_line, complete_column,
                     RemappedFiles, (options & CXCodeComplete_IncludeMacros),
                     (options & CXCodeComplete_IncludeCodePatterns),
