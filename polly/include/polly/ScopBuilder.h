@@ -233,7 +233,7 @@ class ScopBuilder {
   ///
   /// Consecutive instructions are associated to the same statement until a
   /// separator is found.
-  void buildSequentialBlockStmts(BasicBlock *BB);
+  void buildSequentialBlockStmts(BasicBlock *BB, bool SplitOnStore = false);
 
   /// Create one or more ScopStmts for @p BB using equivalence classes.
   ///
