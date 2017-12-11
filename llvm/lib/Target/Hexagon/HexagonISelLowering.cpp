@@ -2257,6 +2257,44 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   return nullptr;
 }
 
+/// Given an intrinsic, checks if on the target the intrinsic will need to map
+/// to a MemIntrinsicNode (touches memory). If this is the case, it returns
+/// true and store the intrinsic information into the IntrinsicInfo that was
+/// passed to the function.
+bool HexagonTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
+                                               const CallInst &I,
+                                               unsigned Intrinsic) const {
+  switch (Intrinsic) {
+  case Intrinsic::hexagon_V6_vgathermw:
+  case Intrinsic::hexagon_V6_vgathermw_128B:
+  case Intrinsic::hexagon_V6_vgathermh:
+  case Intrinsic::hexagon_V6_vgathermh_128B:
+  case Intrinsic::hexagon_V6_vgathermhw:
+  case Intrinsic::hexagon_V6_vgathermhw_128B:
+  case Intrinsic::hexagon_V6_vgathermwq:
+  case Intrinsic::hexagon_V6_vgathermwq_128B:
+  case Intrinsic::hexagon_V6_vgathermhq:
+  case Intrinsic::hexagon_V6_vgathermhq_128B:
+  case Intrinsic::hexagon_V6_vgathermhwq:
+  case Intrinsic::hexagon_V6_vgathermhwq_128B: {
+    const Module &M = *I.getParent()->getParent()->getParent();
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Type *VecTy = I.getArgOperand(1)->getType();
+    Info.memVT = MVT::getVT(VecTy);
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.align = M.getDataLayout().getTypeAllocSizeInBits(VecTy) / 8;
+    Info.vol = true;
+    Info.readMem = true;
+    Info.writeMem = true;
+    return true;
+  }
+  default:
+    break;
+  }
+  return false;
+}
+
 bool HexagonTargetLowering::isTruncateFree(Type *Ty1, Type *Ty2) const {
   EVT MTy1 = EVT::getEVT(Ty1);
   EVT MTy2 = EVT::getEVT(Ty2);

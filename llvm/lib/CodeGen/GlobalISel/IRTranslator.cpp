@@ -1253,6 +1253,15 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
 
   assert(PendingPHIs.empty() && "stale PHIs");
 
+  if (!DL->isLittleEndian()) {
+    // Currently we don't properly handle big endian code.
+    OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
+                               MF->getFunction()->getSubprogram(),
+                               &MF->getFunction()->getEntryBlock());
+    R << "unable to translate in big endian mode";
+    reportTranslationError(*MF, *TPC, *ORE, R);
+  }
+
   // Release the per-function state when we return, whether we succeeded or not.
   auto FinalizeOnReturn = make_scope_exit([this]() { finalizeFunction(); });
 

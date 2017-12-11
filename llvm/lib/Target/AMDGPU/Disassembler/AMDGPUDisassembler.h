@@ -111,7 +111,12 @@ public:
   MCOperand decodeSDWASrc16(unsigned Val) const;
   MCOperand decodeSDWASrc32(unsigned Val) const;
   MCOperand decodeSDWAVopcDst(unsigned Val) const;
-};
+
+  int getTTmpIdx(unsigned Val) const;
+
+  bool isVI() const;
+  bool isGFX9() const;
+  };
 
 //===----------------------------------------------------------------------===//
 // AMDGPUSymbolizer

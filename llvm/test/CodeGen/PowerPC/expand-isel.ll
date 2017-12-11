@@ -1,7 +1,7 @@
 target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v128:128:128-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 ; RUN: llc -ppc-gpr-icmps=all -verify-machineinstrs -O2 -ppc-asm-full-reg-names -mcpu=pwr7 -ppc-gen-isel=false < %s | FileCheck %s --implicit-check-not isel
-; Function Attrs: norecurse nounwind readnone
+
 define signext i32 @testExpandISELToIfElse(i32 signext %i, i32 signext %j) {
 entry:
   %cmp = icmp sgt i32 %i, 0
@@ -23,7 +23,6 @@ entry:
 }
 
 
-; Function Attrs: norecurse nounwind readnone
 define signext i32 @testExpandISELToIf(i32 signext %i, i32 signext %j) {
 entry:
   %cmp = icmp sgt i32 %i, 0
@@ -39,7 +38,6 @@ entry:
 ; CHECK-NEXT: blr
 }
 
-; Function Attrs: norecurse nounwind readnone
 define signext i32 @testExpandISELToElse(i32 signext %i, i32 signext %j) {
 entry:
   %cmp = icmp sgt i32 %i, 0
@@ -53,22 +51,7 @@ entry:
 ; CHECK-NEXT: blr
 }
 
-; Function Attrs: norecurse nounwind readnone
-define signext i32 @testReplaceISELWithCopy(i32 signext %i, i32 signext %j) {
-entry:
-  %cmp = icmp sgt i32 %i, 0
-  %cond = select i1 %cmp, i32 %j, i32 %j
-  ret i32 %cond
 
-; CHECK-LABEL: @testReplaceISELWithCopy
-
-; Fix me should really check: addi r3, r4, 0
-; but for some reason it's optimized to mr r3, r4
-; CHECK: mr r3, r4
-; CHECK-NEXT: blr
-}
-
-; Function Attrs: norecurse nounwind readnone
 define signext i32 @testExpandISELToNull(i32 signext %i, i32 signext %j) {
 entry:
   %cmp = icmp sgt i32 %i, 0
@@ -81,7 +64,6 @@ entry:
 ; CHECK: blr
 }
 
-; Function Attrs: norecurse nounwind readnone
 define signext i32 @testExpandISELsTo2ORIs2ADDIs
   (i32 signext %a, i32 signext %b, i32 signext %d,
    i32 signext %f, i32 signext %g) {
@@ -108,7 +90,6 @@ entry:
 ; CHECK-NEXT: blr
 }
 
-; Function Attrs: norecurse nounwind readnone
 define signext i32 @testExpandISELsTo2ORIs1ADDI
   (i32 signext %a, i32 signext %b, i32 signext %d,
    i32 signext %f, i32 signext %g) {
@@ -133,7 +114,6 @@ entry:
 ; CHECK-NEXT: blr
 }
 
-; Function Attrs: norecurse nounwind readnone
 define signext i32 @testExpandISELsTo1ORI1ADDI
   (i32 signext %a, i32 signext %b, i32 signext %d,
    i32 signext %f, i32 signext %g) {
@@ -160,7 +140,6 @@ entry:
 ; CHECK-NEXT: blr
 }
 
-; Function Attrs: norecurse nounwind readnone
 define signext i32 @testExpandISELsTo0ORI2ADDIs
   (i32 signext %a, i32 signext %b, i32 signext %d,
    i32 signext %f, i32 signext %g) {

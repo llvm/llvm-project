@@ -105,10 +105,8 @@ entry:
   store i32 %sub, i32* @glob
   ret void
 ; CHECK-LABEL: @test_llgeui_sext_z_store
-; CHECK: li [[REG1:r[0-9]+]], 0
-; CHECK: oris [[REG2:r[0-9]+]], [[REG1]], 65535
-; CHECK: ori [[REG3:r[0-9]+]], [[REG2]], 65535
-; CHECK: stw [[REG3]]
+; CHECK: li [[REG1:r[0-9]+]], -1
+; CHECK: stw [[REG1]]
 ; CHECK: blr
 }
 

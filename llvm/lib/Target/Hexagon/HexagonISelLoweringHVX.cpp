@@ -280,7 +280,7 @@ HexagonTargetLowering::LowerHvxInsertElement(SDValue Op, SelectionDAG &DAG)
   SDValue SubIdx = getIndexInWord32(IdxV, ElemTy, DAG);
   MVT SubVecTy = tyVector(ty(Ext), ElemTy);
   SDValue Ins = insertVector(DAG.getBitcast(SubVecTy, Ext),
-                             ValV, SubIdx, dl, SubVecTy, DAG);
+                             ValV, SubIdx, dl, ElemTy, DAG);
 
   // 3. Insert the 32-bit word back into the original vector.
   return InsertWord(VecV, Ins, ByteIdx);

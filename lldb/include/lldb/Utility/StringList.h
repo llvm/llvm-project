@@ -29,7 +29,7 @@ class StringList {
 public:
   StringList();
 
-  StringList(const char *str);
+  explicit StringList(const char *str);
 
   StringList(const char **strv, int strc);
 

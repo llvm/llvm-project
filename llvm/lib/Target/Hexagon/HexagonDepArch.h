@@ -1,4 +1,4 @@
-//===--- HexagonDepArch.h -------------------------------------------------===//
+//===- HexagonDepArch.h ---------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,12 +6,16 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+// Automatically generated file, please consult code owner before editing.
+//===----------------------------------------------------------------------===//
+
+
 
 #ifndef HEXAGON_DEP_ARCH_H
 #define HEXAGON_DEP_ARCH_H
 namespace llvm {
 namespace Hexagon {
-enum class ArchEnum { V4, V5, V55, V60, V62 };
+enum class ArchEnum { V4,V5,V55,V60,V62,V65 };
 } // namespace Hexagon
-} // namespace llvm
+} // namespace llvm;
 #endif // HEXAGON_DEP_ARCH_H

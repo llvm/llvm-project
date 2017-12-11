@@ -641,6 +641,27 @@ void HexagonDAGToDAGISel::SelectIntrinsicWChain(SDNode *N) {
     CurDAG->RemoveDeadNode(N);
     return;
   }
+
+  unsigned IntNo = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  if (IntNo == Intrinsic::hexagon_V6_vgathermw ||
+      IntNo == Intrinsic::hexagon_V6_vgathermw_128B ||
+      IntNo == Intrinsic::hexagon_V6_vgathermh ||
+      IntNo == Intrinsic::hexagon_V6_vgathermh_128B ||
+      IntNo == Intrinsic::hexagon_V6_vgathermhw ||
+      IntNo == Intrinsic::hexagon_V6_vgathermhw_128B) {
+    SelectV65Gather(N);
+    return;
+  }
+  if (IntNo == Intrinsic::hexagon_V6_vgathermwq ||
+      IntNo == Intrinsic::hexagon_V6_vgathermwq_128B ||
+      IntNo == Intrinsic::hexagon_V6_vgathermhq ||
+      IntNo == Intrinsic::hexagon_V6_vgathermhq_128B ||
+      IntNo == Intrinsic::hexagon_V6_vgathermhwq ||
+      IntNo == Intrinsic::hexagon_V6_vgathermhwq_128B) {
+    SelectV65GatherPred(N);
+    return;
+  }
+
   SelectCode(N);
 }
 
@@ -654,6 +675,12 @@ void HexagonDAGToDAGISel::SelectIntrinsicWOChain(SDNode *N) {
   case Intrinsic::hexagon_S2_vsplatrh:
     Bits = 16;
     break;
+  case Intrinsic::hexagon_V6_vaddcarry:
+  case Intrinsic::hexagon_V6_vaddcarry_128B:
+  case Intrinsic::hexagon_V6_vsubcarry:
+  case Intrinsic::hexagon_V6_vsubcarry_128B:
+    SelectHVXDualOutput(N);
+    return;
   default:
     SelectCode(N);
     return;

@@ -171,7 +171,7 @@ static Defined *addOptionalRegular(StringRef Name, SectionBase *Sec,
 
 // The linker is expected to define some symbols depending on
 // the linking result. This function defines such symbols.
-template <class ELFT> static void addReservedSymbols() {
+template <class ELFT> void elf::addReservedSymbols() {
   if (Config->EMachine == EM_MIPS) {
     // Define _gp for MIPS. st_value of _gp symbol will be updated by Writer
     // so that it points to an absolute address which by default is relative
@@ -195,13 +195,8 @@ template <class ELFT> static void addReservedSymbols() {
           Symtab->addAbsolute<ELFT>("__gnu_local_gp", STV_HIDDEN, STB_GLOBAL);
   }
 
-  // The _GLOBAL_OFFSET_TABLE_ symbol is defined by target convention to
-  // be at some offset from the base of the .got section, usually 0 or the end
-  // of the .got
-  InputSection *GotSection = InX::MipsGot ? cast<InputSection>(InX::MipsGot)
-                                          : cast<InputSection>(InX::Got);
   ElfSym::GlobalOffsetTable = addOptionalRegular<ELFT>(
-      "_GLOBAL_OFFSET_TABLE_", GotSection, Target->GotBaseSymOff);
+      "_GLOBAL_OFFSET_TABLE_", Out::ElfHeader, Target->GotBaseSymOff);
 
   // __ehdr_start is the location of ELF file headers. Note that we define
   // this symbol unconditionally even when using a linker script, which
@@ -260,8 +255,6 @@ template <class ELFT> static void createSyntheticSections() {
   }
   InX::ShStrTab = make<StringTableSection>(".shstrtab", false);
 
-  Out::ElfHeader = make<OutputSection>("", 0, SHF_ALLOC);
-  Out::ElfHeader->Size = sizeof(typename ELFT::Ehdr);
   Out::ProgramHeaders = make<OutputSection>("", 0, SHF_ALLOC);
   Out::ProgramHeaders->Alignment = Config->Wordsize;
 
@@ -406,10 +399,6 @@ template <class ELFT> void Writer<ELFT>::run() {
 
   if (!Config->Relocatable)
     combineEhFrameSections<ELFT>();
-
-  // We need to create some reserved symbols such as _end. Create them.
-  if (!Config->Relocatable)
-    addReservedSymbols<ELFT>();
 
   // We want to process linker script commands. When SECTIONS command
   // is given we let it create sections.
@@ -869,6 +858,15 @@ void Writer<ELFT>::forEachRelSec(std::function<void(InputSectionBase &)> Fn) {
 // time any references to these symbols are processed and is equivalent to
 // defining these symbols explicitly in the linker script.
 template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
+  if (ElfSym::GlobalOffsetTable) {
+    // The _GLOBAL_OFFSET_TABLE_ symbol is defined by target convention to
+    // be at some offset from the base of the .got section, usually 0 or the end
+    // of the .got
+    InputSection *GotSection = InX::MipsGot ? cast<InputSection>(InX::MipsGot)
+                                            : cast<InputSection>(InX::Got);
+    ElfSym::GlobalOffsetTable->Section = GotSection;
+  }
+
   PhdrEntry *Last = nullptr;
   PhdrEntry *LastRO = nullptr;
 
@@ -1935,3 +1933,8 @@ template void elf::writeResult<ELF32LE>();
 template void elf::writeResult<ELF32BE>();
 template void elf::writeResult<ELF64LE>();
 template void elf::writeResult<ELF64BE>();
+
+template void elf::addReservedSymbols<ELF32LE>();
+template void elf::addReservedSymbols<ELF32BE>();
+template void elf::addReservedSymbols<ELF64LE>();
+template void elf::addReservedSymbols<ELF64BE>();

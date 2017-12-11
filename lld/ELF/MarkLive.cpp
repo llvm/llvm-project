@@ -219,7 +219,7 @@ template <class ELFT> static void doGcSections() {
 
   auto MarkSymbol = [&](Symbol *Sym) {
     if (auto *D = dyn_cast_or_null<Defined>(Sym))
-      if (auto *IS = cast_or_null<InputSectionBase>(D->Section))
+      if (auto *IS = dyn_cast_or_null<InputSectionBase>(D->Section))
         Enqueue(IS, D->Value);
   };
 
