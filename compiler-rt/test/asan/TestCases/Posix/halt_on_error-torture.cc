@@ -26,7 +26,7 @@ size_t niter = 10;
 
 void random_delay(unsigned *seed) {
   *seed = 1664525 * *seed + 1013904223;
-  struct timespec delay = { 0, (*seed % 1000) * 1000 };
+  struct timespec delay = { 0, static_cast<long>((*seed % 1000) * 1000) };
   nanosleep(&delay, 0);
 }
 

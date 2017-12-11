@@ -529,7 +529,7 @@ CastKind Sema::ScalarTypeToBooleanCastKind(QualType ScalarTy) {
   case Type::STK_IntegralComplex: return CK_IntegralComplexToBoolean;
   case Type::STK_FloatingComplex: return CK_FloatingComplexToBoolean;
   }
-  return CK_Invalid;
+  llvm_unreachable("unknown scalar type kind");
 }
 
 /// \brief Used to prune the decls of Sema's UnusedFileScopedDecls vector.

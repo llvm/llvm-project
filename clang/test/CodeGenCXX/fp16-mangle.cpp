@@ -4,9 +4,9 @@
 template <typename T, typename U> struct S { static int i; };
 template <> int S<__fp16, __fp16>::i = 3;
 
-// CHECK-LABEL: define void @_Z1fPDh(i16* %x)
+// CHECK-LABEL: define void @_Z1fPDh(half* %x)
 void f (__fp16 *x) { }
 
-// CHECK-LABEL: define void @_Z1gPDhS_(i16* %x, i16* %y)
+// CHECK-LABEL: define void @_Z1gPDhS_(half* %x, half* %y)
 void g (__fp16 *x, __fp16 *y) { }
 

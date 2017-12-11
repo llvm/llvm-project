@@ -245,8 +245,8 @@ void test4(short s) {
   // unsigned.
   const unsigned B = -1;
   void (s < B); // expected-warning{{comparison of integers of different signs: 'short' and 'const unsigned int'}}
-  void (s > B); // expected-warning{{comparison of integers of different signs: 'short' and 'const unsigned int'}}
-  void (s <= B); // expected-warning{{comparison of integers of different signs: 'short' and 'const unsigned int'}}
+  void (s > B); // expected-warning{{comparison 'short' > 4294967295 is always false}}
+  void (s <= B); // expected-warning{{comparison 'short' <= 4294967295 is always true}}
   void (s >= B); // expected-warning{{comparison of integers of different signs: 'short' and 'const unsigned int'}}
   void (s == B); // expected-warning{{comparison of integers of different signs: 'short' and 'const unsigned int'}}
   void (s != B); // expected-warning{{comparison of integers of different signs: 'short' and 'const unsigned int'}}
@@ -422,4 +422,20 @@ namespace templates {
     testx<A>();
     testx<B>();
   }
+}
+
+namespace tautological_enum {
+  enum E { a, b, c } e;
+
+  // FIXME: We should warn about constructing this out-of-range numeration value.
+  const E invalid = (E)-1;
+  // ... but we should not warn about comparing against it.
+  bool x = e == invalid;
+
+  // We should not warn about relational comparisons for enumerators, even if
+  // they're tautological.
+  bool y = e >= a && e <= b;
+  const E first_in_range = a;
+  const E last_in_range = b;
+  bool z = e >= first_in_range && e <= last_in_range;
 }

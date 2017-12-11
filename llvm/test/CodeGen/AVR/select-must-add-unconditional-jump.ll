@@ -50,8 +50,8 @@ dead:
 ; both successors.
 
 ; CHECK: %bb.2: derived from LLVM BB %finish
-; CHECK: BREQk <[[BRANCHED:%bb.[0-9]+]]>
-; CHECK: RJMPk <[[DIRECT:%bb.[0-9]+]]>
+; CHECK: BREQk [[BRANCHED:%bb.[0-9]+]]
+; CHECK: RJMPk [[DIRECT:%bb.[0-9]+]]
 ; CHECK: Successors according to CFG
 ; CHECK-SAME-DAG: {{.*}}[[BRANCHED]]
 ; CHECK-SAME-DAG: {{.*}}[[DIRECT]]

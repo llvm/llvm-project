@@ -28,8 +28,6 @@
 ; RUN:    -check-prefixes=ALL,MM,MM32
 ; RUN: llc < %s -march=mips -mcpu=mips32r6 -mattr=+micromips | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,MM,MM32
-; RUN: llc < %s -march=mips -mcpu=mips64r6 -target-abi n64 -mattr=+micromips | FileCheck %s \
-; RUN:    -check-prefixes=ALL,MM,MM64
 
 define signext i1 @and_i1(i1 signext %a, i1 signext %b) {
 entry:
@@ -41,8 +39,6 @@ entry:
 
   ; MM32:         and16   $[[T0:[0-9]+]], $5
   ; MM32:         move    $2, $[[T0]]
-
-  ; MM64:         and     $1, $4, $5
 
   %r = and i1 %a, %b
   ret i1 %r
@@ -59,8 +55,6 @@ entry:
   ; MM32:         and16   $[[T0:[0-9]+]], $5
   ; MM32:         move    $2, $[[T0]]
 
-  ; MM64:         and     $1, $4, $5
-
   %r = and i8 %a, %b
   ret i8 %r
 }
@@ -75,8 +69,6 @@ entry:
 
   ; MM32:         and16   $[[T0:[0-9]+]], $5
   ; MM32          move    $2, $[[T0]]
-
-  ; MM64:         and     $1, $4, $5
 
   %r = and i16 %a, %b
   ret i16 %r
@@ -93,9 +85,6 @@ entry:
 
   ; MM32:         and16   $[[T0:[0-9]+]], $5
   ; MM32:         move    $2, $[[T0]]
-
-  ; MM64:         and     $[[T0:[0-9]+]], $4, $5
-  ; MM64:         sll     $2, $[[T0]], 0
 
   %r = and i32 %a, %b
   ret i32 %r
@@ -114,8 +103,6 @@ entry:
   ; MM32:         and16   $[[T1:[0-9]+]], $7
   ; MM32:         move    $2, $[[T0]]
   ; MM32:         move    $3, $[[T1]]
-
-  ; MM64:         and     $2, $4, $5
 
   %r = and i64 %a, %b
   ret i64 %r
@@ -145,9 +132,6 @@ entry:
   ; MM32:         and16   $[[T2]], $6
   ; MM32:         lw      $[[T3:[0-9]+]], 28($sp)
   ; MM32:         and16   $[[T3]], $7
-
-  ; MM64:         and     $2, $4, $6
-  ; MM64:         and     $3, $5, $7
 
   %r = and i128 %a, %b
   ret i128 %r
@@ -221,8 +205,6 @@ entry:
   ; MM32:         andi16  $3, $5, 4
   ; MM32:         li16     $2, 0
 
-  ; MM64:         andi    $2, $4, 4
-
   %r = and i64 4, %b
   ret i64 %r
 }
@@ -243,9 +225,6 @@ entry:
   ; MM32:         li16    $2, 0
   ; MM32:         li16    $3, 0
   ; MM32:         li16    $4, 0
-
-  ; MM64:         andi    $3, $5, 4
-  ; MM64:         daddiu  $2, $zero, 0
 
   %r = and i128 4, %b
   ret i128 %r
@@ -315,8 +294,6 @@ entry:
   ; MM32:         andi16  $3, $5, 31
   ; MM32:         li16    $2, 0
 
-  ; MM64:         andi    $2, $4, 31
-
   %r = and i64 31, %b
   ret i64 %r
 }
@@ -337,9 +314,6 @@ entry:
   ; MM32:         li16    $2, 0
   ; MM32:         li16    $3, 0
   ; MM32:         li16    $4, 0
-
-  ; MM64:         andi    $3, $5, 31
-  ; MM64:         daddiu  $2, $zero, 0
 
   %r = and i128 31, %b
   ret i128 %r
@@ -405,8 +379,6 @@ entry:
   ; MM32:         andi16  $3, $5, 255
   ; MM32:         li16    $2, 0
 
-  ; MM64:         andi    $2, $4, 255
-
   %r = and i64 255, %b
   ret i64 %r
 }
@@ -427,9 +399,6 @@ entry:
   ; MM32:         li16    $2, 0
   ; MM32:         li16    $3, 0
   ; MM32:         li16    $4, 0
-
-  ; MM64:         andi    $3, $5, 255
-  ; MM64:         daddiu  $2, $zero, 0
 
   %r = and i128 255, %b
   ret i128 %r
@@ -506,8 +475,6 @@ entry:
   ; MM32:         andi16  $3, $5, 32768
   ; MM32:         li16    $2, 0
 
-  ; MM64:         andi    $2, $4, 32768
-
   %r = and i64 32768, %b
   ret i64 %r
 }
@@ -528,9 +495,6 @@ entry:
   ; MM32:         li16    $2, 0
   ; MM32:         li16    $3, 0
   ; MM32:         li16    $4, 0
-
-  ; MM64:         andi    $3, $5, 32768
-  ; MM64:         daddiu  $2, $zero, 0
 
   %r = and i128 32768, %b
   ret i128 %r
@@ -588,8 +552,6 @@ entry:
   ; MM32-DAG:     andi    $3, $5, 65
   ; MM32-DAG:     li16    $2, 0
 
-  ; MM64:         andi    $2, $4, 65
-
   %r = and i64 65, %b
   ret i64 %r
 }
@@ -610,9 +572,6 @@ entry:
   ; MM32-DAG:     li16    $2, 0
   ; MM32-DAG:     li16    $3, 0
   ; MM32-DAG:     li16    $4, 0
-
-  ; MM64:         andi    $3, $5, 65
-  ; MM64:         daddiu  $2, $zero, 0
 
   %r = and i128 65, %b
   ret i128 %r
@@ -678,8 +637,6 @@ entry:
   ; MM32-DAG:     andi    $3, $5, 256
   ; MM32-DAG:     li16    $2, 0
 
-  ; MM64:         andi    $2, $4, 256
-
   %r = and i64 256, %b
   ret i64 %r
 }
@@ -700,9 +657,6 @@ entry:
   ; MM32-DAG:     li16    $2, 0
   ; MM32-DAG:     li16    $3, 0
   ; MM32-DAG:     li16    $4, 0
-
-  ; MM64:         andi    $3, $5, 256
-  ; MM64:         daddiu  $2, $zero, 0
 
   %r = and i128 256, %b
   ret i128 %r

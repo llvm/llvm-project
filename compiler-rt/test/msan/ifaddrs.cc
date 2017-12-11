@@ -10,7 +10,7 @@
 
 #include <vector>
 
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__NetBSD__)
 #include <sys/socket.h>  // To define 'struct sockaddr'.
 #endif
 

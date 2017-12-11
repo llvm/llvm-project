@@ -232,7 +232,7 @@ RNBRunLoopMode RNBRunLoopLaunchInferior(RNBRemote *remote,
   // were given and hope for the best
   if (!DNBResolveExecutablePath(inferior_argv[0], resolved_path,
                                 sizeof(resolved_path)))
-    ::strncpy(resolved_path, inferior_argv[0], sizeof(resolved_path));
+    ::strlcpy(resolved_path, inferior_argv[0], sizeof(resolved_path));
 
   char launch_err_str[PATH_MAX];
   launch_err_str[0] = '\0';
@@ -676,7 +676,7 @@ static void PortWasBoundCallbackUnixSocket(const void *baton, in_port_t port) {
     }
 
     saddr_un.sun_family = AF_UNIX;
-    ::strncpy(saddr_un.sun_path, unix_socket_name,
+    ::strlcpy(saddr_un.sun_path, unix_socket_name,
               sizeof(saddr_un.sun_path) - 1);
     saddr_un.sun_path[sizeof(saddr_un.sun_path) - 1] = '\0';
     saddr_un.sun_len = SUN_LEN(&saddr_un);
@@ -1366,7 +1366,7 @@ int main(int argc, char *argv[]) {
         DNBLogDebug("host = '%s'  port = %i", host.c_str(), port);
       } else if (argv[0][0] == '/') {
         port = INT32_MAX;
-        strncpy(str, argv[0], sizeof(str));
+        strlcpy(str, argv[0], sizeof(str));
       } else {
         show_usage_and_exit(2);
       }

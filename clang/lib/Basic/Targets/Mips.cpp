@@ -206,6 +206,13 @@ ArrayRef<Builtin::Info> MipsTargetInfo::getTargetBuiltins() const {
 }
 
 bool MipsTargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
+  // microMIPS64R6 backend was removed.
+  if ((getTriple().getArch() == llvm::Triple::mips64 ||
+       getTriple().getArch() == llvm::Triple::mips64el) &&
+       IsMicromips && (ABI == "n32" || ABI == "n64")) {
+    Diags.Report(diag::err_target_unsupported_cpu_for_micromips) << CPU;
+    return false;
+  }
   // FIXME: It's valid to use O32 on a 64-bit CPU but the backend can't handle
   //        this yet. It's better to fail here than on the backend assertion.
   if (processorSupportsGPR64() && ABI == "o32") {

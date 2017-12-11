@@ -236,12 +236,14 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
     OS << *formValue.getAsUnsignedConstant();
   else if (Attr == DW_AT_high_pc && !DumpOpts.ShowForm && !DumpOpts.Verbose &&
            formValue.getAsUnsignedConstant()) {
-    // Print the actual address rather than the offset.
-    uint64_t LowPC, HighPC, Index;
-    if (Die.getLowAndHighPC(LowPC, HighPC, Index))
-      OS << format("0x%016" PRIx64, HighPC);
-    else
-      formValue.dump(OS, DumpOpts);
+    if (DumpOpts.ShowAddresses) {
+      // Print the actual address rather than the offset.
+      uint64_t LowPC, HighPC, Index;
+      if (Die.getLowAndHighPC(LowPC, HighPC, Index))
+        OS << format("0x%016" PRIx64, HighPC);
+      else
+        formValue.dump(OS, DumpOpts);
+    }
   } else if (Attr == DW_AT_location || Attr == DW_AT_frame_base ||
              Attr == DW_AT_data_member_location ||
              Attr == DW_AT_GNU_call_site_value)
@@ -458,7 +460,8 @@ void DWARFDie::dump(raw_ostream &OS, unsigned Indent,
 
   if (debug_info_data.isValidOffset(offset)) {
     uint32_t abbrCode = debug_info_data.getULEB128(&offset);
-    WithColor(OS, syntax::Address).get() << format("\n0x%8.8x: ", Offset);
+    if (DumpOpts.ShowAddresses)
+      WithColor(OS, syntax::Address).get() << format("\n0x%8.8x: ", Offset);
 
     if (abbrCode) {
       auto AbbrevDecl = getAbbreviationDeclarationPtr();

@@ -121,7 +121,6 @@ private:
   void SelectHvxRor(SDNode *N);
 
   bool keepsLowBits(const SDValue &Val, unsigned NumBits, SDValue &Src);
-  bool isOrEquivalentToAdd(const SDNode *N) const;
   bool isAlignedMemNode(const MemSDNode *N) const;
   bool isSmallStackStore(const StoreSDNode *N) const;
   bool isPositiveHalfWord(const SDNode *N) const;

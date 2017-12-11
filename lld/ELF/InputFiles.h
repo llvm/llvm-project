@@ -11,8 +11,6 @@
 #define LLD_ELF_INPUT_FILES_H
 
 #include "Config.h"
-#include "InputSection.h"
-#include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
 
 #include "lld/Common/LLVM.h"
@@ -40,6 +38,7 @@ class InputFile;
 namespace lld {
 namespace elf {
 class InputFile;
+class InputSectionBase;
 }
 
 // Returns "<internal>", "foo.a(bar.o)" or "baz.o".

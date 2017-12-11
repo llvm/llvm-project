@@ -54,10 +54,10 @@ define i64 @test_cvtpd2pi(<2 x double> %a0, <2 x double>* %a1) optsize {
 ;
 ; BROADWELL-LABEL: test_cvtpd2pi:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    cvtpd2pi (%rdi), %mm0 # sched: [9:1.00]
-; BROADWELL-NEXT:    cvtpd2pi %xmm0, %mm1 # sched: [4:1.00]
-; BROADWELL-NEXT:    por %mm1, %mm0 # sched: [1:0.33]
-; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    cvtpd2pi %xmm0, %mm0 # sched: [4:1.00]
+; BROADWELL-NEXT:    cvtpd2pi (%rdi), %mm1 # sched: [9:1.00]
+; BROADWELL-NEXT:    por %mm0, %mm1 # sched: [1:0.33]
+; BROADWELL-NEXT:    movd %mm1, %rax # sched: [1:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_cvtpd2pi:
@@ -138,9 +138,9 @@ define <2 x double> @test_cvtpi2pd(x86_mmx %a0, x86_mmx* %a1) optsize {
 ;
 ; BROADWELL-LABEL: test_cvtpi2pd:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    cvtpi2pd %mm0, %xmm0 # sched: [4:1.00]
-; BROADWELL-NEXT:    cvtpi2pd (%rdi), %xmm1 # sched: [9:1.00]
-; BROADWELL-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
+; BROADWELL-NEXT:    cvtpi2pd (%rdi), %xmm0 # sched: [9:1.00]
+; BROADWELL-NEXT:    cvtpi2pd %mm0, %xmm1 # sched: [4:1.00]
+; BROADWELL-NEXT:    vaddpd %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_cvtpi2pd:
@@ -388,10 +388,10 @@ define i64 @test_cvttpd2pi(<2 x double> %a0, <2 x double>* %a1) optsize {
 ;
 ; BROADWELL-LABEL: test_cvttpd2pi:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    cvttpd2pi (%rdi), %mm0 # sched: [9:1.00]
-; BROADWELL-NEXT:    cvttpd2pi %xmm0, %mm1 # sched: [4:1.00]
-; BROADWELL-NEXT:    por %mm1, %mm0 # sched: [1:0.33]
-; BROADWELL-NEXT:    movd %mm0, %rax # sched: [1:1.00]
+; BROADWELL-NEXT:    cvttpd2pi %xmm0, %mm0 # sched: [4:1.00]
+; BROADWELL-NEXT:    cvttpd2pi (%rdi), %mm1 # sched: [9:1.00]
+; BROADWELL-NEXT:    por %mm0, %mm1 # sched: [1:0.33]
+; BROADWELL-NEXT:    movd %mm1, %rax # sched: [1:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_cvttpd2pi:

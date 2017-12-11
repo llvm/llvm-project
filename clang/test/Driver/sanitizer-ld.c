@@ -694,3 +694,56 @@
 // CHECK-SCUDO-ANDROID-STATIC: "-whole-archive" "{{.*}}libclang_rt.scudo-arm-android.a" "-no-whole-archive"
 // CHECK-SCUDO-ANDROID-STATIC-NOT: "-lstdc++"
 // CHECK-SCUDO-ANDROID-STATIC: "-lpthread"
+
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     -target aarch64-unknown-linux -fuse-ld=ld -fsanitize=hwaddress \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-HWASAN-LINUX %s
+//
+// CHECK-HWASAN-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-HWASAN-LINUX-NOT: "-lc"
+// CHECK-HWASAN-LINUX: libclang_rt.hwasan-aarch64.a"
+// CHECK-HWASAN-LINUX-NOT: "-export-dynamic"
+// CHECK-HWASAN-LINUX: "--dynamic-list={{.*}}libclang_rt.hwasan-aarch64.a.syms"
+// CHECK-HWASAN-LINUX-NOT: "-export-dynamic"
+// CHECK-HWASAN-LINUX: "-lpthread"
+// CHECK-HWASAN-LINUX: "-lrt"
+// CHECK-HWASAN-LINUX: "-ldl"
+
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     -target aarch64-unknown-linux -fuse-ld=ld -fsanitize=hwaddress -shared-libsan \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-SHARED-HWASAN-LINUX %s
+
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     -target aarch64-unknown-linux -fuse-ld=ld -fsanitize=hwaddress \
+// RUN:     -shared-libsan \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-SHARED-HWASAN-LINUX %s
+//
+// CHECK-SHARED-HWASAN-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-SHARED-HWASAN-LINUX-NOT: "-lc"
+// CHECK-SHARED-HWASAN-LINUX: libclang_rt.hwasan-aarch64.so"
+// CHECK-SHARED-HWASAN-LINUX-NOT: "-lpthread"
+// CHECK-SHARED-HWASAN-LINUX-NOT: "-lrt"
+// CHECK-SHARED-HWASAN-LINUX-NOT: "-ldl"
+// CHECK-SHARED-HWASAN-LINUX-NOT: "-export-dynamic"
+// CHECK-SHARED-HWASAN-LINUX-NOT: "--dynamic-list"
+
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.so -shared 2>&1 \
+// RUN:     -target aarch64-unknown-linux -fuse-ld=ld -fsanitize=hwaddress -shared-libsan \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-DSO-SHARED-HWASAN-LINUX %s
+//
+// CHECK-DSO-SHARED-HWASAN-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-DSO-SHARED-HWASAN-LINUX-NOT: "-lc"
+// CHECK-DSO-SHARED-HWASAN-LINUX: libclang_rt.hwasan-aarch64.so"
+// CHECK-DSO-SHARED-HWASAN-LINUX-NOT: "-lpthread"
+// CHECK-DSO-SHARED-HWASAN-LINUX-NOT: "-lrt"
+// CHECK-DSO-SHARED-HWASAN-LINUX-NOT: "-ldl"
+// CHECK-DSO-SHARED-HWASAN-LINUX-NOT: "-export-dynamic"
+// CHECK-DSO-SHARED-HWASAN-LINUX-NOT: "--dynamic-list"

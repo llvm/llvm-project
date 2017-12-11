@@ -8,6 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/MainLoop.h"
+#include "lldb/Host/ConnectionFileDescriptor.h"
+#include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "gtest/gtest.h"
 #include <future>
@@ -107,6 +109,24 @@ TEST_F(MainLoopTest, TerminatesImmediately) {
 }
 
 #ifdef LLVM_ON_UNIX
+TEST_F(MainLoopTest, DetectsEOF) {
+  PseudoTerminal term;
+  ASSERT_TRUE(term.OpenFirstAvailableMaster(O_RDWR, nullptr, 0));
+  ASSERT_TRUE(term.OpenSlave(O_RDWR | O_NOCTTY, nullptr, 0));
+  auto conn = llvm::make_unique<ConnectionFileDescriptor>(
+      term.ReleaseMasterFileDescriptor(), true);
+
+  Status error;
+  MainLoop loop;
+  auto handle =
+      loop.RegisterReadObject(conn->GetReadObject(), make_callback(), error);
+  ASSERT_TRUE(error.Success());
+  term.CloseSlaveFileDescriptor();
+
+  ASSERT_TRUE(loop.Run().Success());
+  ASSERT_EQ(1u, callback_count);
+}
+
 TEST_F(MainLoopTest, Signal) {
   MainLoop loop;
   Status error;

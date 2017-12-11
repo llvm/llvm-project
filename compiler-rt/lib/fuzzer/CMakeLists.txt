@@ -18,6 +18,7 @@ set(LIBFUZZER_SOURCES
   FuzzerTracePC.cpp
   FuzzerUtil.cpp
   FuzzerUtilDarwin.cpp
+  FuzzerUtilFuchsia.cpp
   FuzzerUtilLinux.cpp
   FuzzerUtilPosix.cpp
   FuzzerUtilWindows.cpp

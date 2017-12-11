@@ -3933,6 +3933,63 @@ def STWCIX : XForm_base_r3xo<31, 917, (outs), (ins gprc:$RST, gprc:$A, gprc:$B),
 def STDCIX : XForm_base_r3xo<31, 1013, (outs), (ins gprc:$RST, gprc:$A, gprc:$B),
                              "stdcix $RST, $A, $B", IIC_LdStLoad, []>;
 
+// External PID Load Store Instructions
+
+def LBEPX   : XForm_1<31, 95, (outs gprc:$rD), (ins memrr:$src),
+                      "lbepx $rD, $src", IIC_LdStLoad, []>,
+                      Requires<[IsE500]>;
+
+def LFDEPX  : XForm_25<31, 607, (outs f8rc:$frD), (ins memrr:$src),
+                      "lfdepx $frD, $src", IIC_LdStLFD, []>,
+                      Requires<[IsE500]>;
+
+def LHEPX   : XForm_1<31, 287, (outs gprc:$rD), (ins memrr:$src),
+                      "lhepx $rD, $src", IIC_LdStLoad, []>,
+                      Requires<[IsE500]>;
+
+def LWEPX   : XForm_1<31, 31, (outs gprc:$rD), (ins memrr:$src),
+                      "lwepx $rD, $src", IIC_LdStLoad, []>,
+                      Requires<[IsE500]>;
+
+def STBEPX  : XForm_8<31, 223, (outs), (ins gprc:$rS, memrr:$dst),
+                      "stbepx $rS, $dst", IIC_LdStStore, []>,
+                      Requires<[IsE500]>;
+
+def STFDEPX : XForm_28<31, 735, (outs), (ins f8rc:$frS, memrr:$dst),
+                      "stfdepx $frS, $dst", IIC_LdStSTFD, []>,
+                      Requires<[IsE500]>;
+
+def STHEPX  : XForm_8<31, 415, (outs), (ins gprc:$rS, memrr:$dst),
+                      "sthepx $rS, $dst", IIC_LdStStore, []>,
+                      Requires<[IsE500]>;
+
+def STWEPX  : XForm_8<31, 159, (outs), (ins gprc:$rS, memrr:$dst),
+                      "stwepx $rS, $dst", IIC_LdStStore, []>,
+                      Requires<[IsE500]>;
+
+def DCBFEP  : DCB_Form<127, 0, (outs), (ins memrr:$dst), "dcbfep $dst",
+                      IIC_LdStDCBF, []>, Requires<[IsE500]>;
+
+def DCBSTEP : DCB_Form<63, 0, (outs), (ins memrr:$dst), "dcbstep $dst",
+                      IIC_LdStDCBF, []>, Requires<[IsE500]>;
+
+def DCBTEP  : DCB_Form_hint<319, (outs), (ins memrr:$dst, u5imm:$TH),
+                      "dcbtep $TH, $dst", IIC_LdStDCBF, []>,
+                      Requires<[IsE500]>;
+
+def DCBTSTEP : DCB_Form_hint<255, (outs), (ins memrr:$dst, u5imm:$TH),
+                      "dcbtstep $TH, $dst", IIC_LdStDCBF, []>,
+                      Requires<[IsE500]>;
+
+def DCBZEP  : DCB_Form<1023, 0, (outs), (ins memrr:$dst), "dcbzep $dst",
+                      IIC_LdStDCBF, []>, Requires<[IsE500]>;
+
+def DCBZLEP : DCB_Form<1023, 1, (outs), (ins memrr:$dst), "dcbzlep $dst",
+                      IIC_LdStDCBF, []>, Requires<[IsE500]>;
+
+def ICBIEP  : XForm_1a<31, 991, (outs), (ins memrr:$src), "icbiep $src",
+                      IIC_LdStICBI, []>, Requires<[IsE500]>;
+
 //===----------------------------------------------------------------------===//
 // PowerPC Assembler Instruction Aliases
 //

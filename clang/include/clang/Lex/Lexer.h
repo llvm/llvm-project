@@ -1,4 +1,4 @@
-//===--- Lexer.h - C Language Family Lexer ----------------------*- C++ -*-===//
+//===- Lexer.h - C Language Family Lexer ------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,25 +15,39 @@
 #define LLVM_CLANG_LEX_LEXER_H
 
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/PreprocessorLexer.h"
+#include "clang/Lex/Token.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include <cassert>
+#include <cstdint>
 #include <string>
 
+namespace llvm {
+
+class MemoryBuffer;
+
+} // namespace llvm
+
 namespace clang {
-class DiagnosticsEngine;
-class SourceManager;
-class Preprocessor;
+
 class DiagnosticBuilder;
+class Preprocessor;
+class SourceManager;
 
 /// ConflictMarkerKind - Kinds of conflict marker which the lexer might be
 /// recovering from.
 enum ConflictMarkerKind {
   /// Not within a conflict marker.
   CMK_None,
+
   /// A normal or diff3 conflict marker, initiated by at least 7 "<"s,
   /// separated by at least 7 "="s or "|"s, and terminated by at least 7 ">"s.
   CMK_Normal,
+
   /// A Perforce-style conflict marker, initiated by 4 ">"s,
   /// separated by 4 "="s, and terminated by 4 "<"s.
   CMK_Perforce
@@ -43,17 +57,17 @@ enum ConflictMarkerKind {
 /// PreprocessorOptions::PrecompiledPreambleBytes.
 /// The preamble includes the BOM, if any.
 struct PreambleBounds {
-  PreambleBounds(unsigned Size, bool PreambleEndsAtStartOfLine)
-    : Size(Size),
-      PreambleEndsAtStartOfLine(PreambleEndsAtStartOfLine) {}
-
   /// \brief Size of the preamble in bytes.
   unsigned Size;
+
   /// \brief Whether the preamble ends at the start of a new line.
   ///
   /// Used to inform the lexer as to whether it's starting at the beginning of
   /// a line after skipping the preamble.
   bool PreambleEndsAtStartOfLine;
+
+  PreambleBounds(unsigned Size, bool PreambleEndsAtStartOfLine)
+      : Size(Size), PreambleEndsAtStartOfLine(PreambleEndsAtStartOfLine) {}
 };
 
 /// Lexer - This provides a simple interface that turns a text buffer into a
@@ -61,15 +75,27 @@ struct PreambleBounds {
 /// or buffering/seeking of tokens, only forward lexing is supported.  It relies
 /// on the specified Preprocessor object to handle preprocessor directives, etc.
 class Lexer : public PreprocessorLexer {
+  friend class Preprocessor;
+
   void anchor() override;
 
   //===--------------------------------------------------------------------===//
   // Constant configuration values for this lexer.
-  const char *BufferStart;       // Start of the buffer.
-  const char *BufferEnd;         // End of the buffer.
-  SourceLocation FileLoc;        // Location for start of file.
-  LangOptions LangOpts;          // LangOpts enabled by this language (cache).
-  bool Is_PragmaLexer;           // True if lexer for _Pragma handling.
+
+  // Start of the buffer.
+  const char *BufferStart;
+
+  // End of the buffer.
+  const char *BufferEnd;
+
+  // Location for start of file.
+  SourceLocation FileLoc;
+
+  // LangOpts enabled by this language (cache).
+  LangOptions LangOpts;
+
+  // True if lexer for _Pragma handling.
+  bool Is_PragmaLexer;
 
   //===--------------------------------------------------------------------===//
   // Context-specific lexing flags set by the preprocessor.
@@ -106,13 +132,9 @@ class Lexer : public PreprocessorLexer {
   // CurrentConflictMarkerState - The kind of conflict marker we are handling.
   ConflictMarkerKind CurrentConflictMarkerState;
 
-  Lexer(const Lexer &) = delete;
-  void operator=(const Lexer &) = delete;
-  friend class Preprocessor;
-
   void InitLexer(const char *BufStart, const char *BufPtr, const char *BufEnd);
-public:
 
+public:
   /// Lexer constructor - Create a new lexer object for the specified buffer
   /// with the specified preprocessor managing the lexing process.  This lexer
   /// assumes that the associated file buffer and Preprocessor objects will
@@ -131,6 +153,9 @@ public:
   Lexer(FileID FID, const llvm::MemoryBuffer *InputBuffer,
         const SourceManager &SM, const LangOptions &LangOpts);
 
+  Lexer(const Lexer &) = delete;
+  Lexer &operator=(const Lexer &) = delete;
+
   /// Create_PragmaLexer: Lexer constructor - Create a new lexer object for
   /// _Pragma expansion.  This has a variety of magic semantics that this method
   /// sets up.  It returns a new'd Lexer that must be delete'd when done.
@@ -138,7 +163,6 @@ public:
                                    SourceLocation ExpansionLocStart,
                                    SourceLocation ExpansionLocEnd,
                                    unsigned TokLen, Preprocessor &PP);
-
 
   /// getLangOpts - Return the language features currently enabled.
   /// NOTE: this lexer modifies features as a file is parsed!
@@ -510,9 +534,9 @@ public:
   static StringRef getIndentationForLine(SourceLocation Loc,
                                          const SourceManager &SM);
 
+private:
   //===--------------------------------------------------------------------===//
   // Internal implementation interfaces.
-private:
 
   /// LexTokenInternal - Internal interface to lex a preprocessing token. Called
   /// by Lex.
@@ -685,7 +709,7 @@ private:
   ///               valid), this parameter will be updated to point to the
   ///               character after the UCN.
   /// \param SlashLoc The position in the source buffer of the '\'.
-  /// \param Tok The token being formed. Pass \c NULL to suppress diagnostics
+  /// \param Tok The token being formed. Pass \c nullptr to suppress diagnostics
   ///            and handle token formation in the caller.
   ///
   /// \return The Unicode codepoint specified by the UCN, or 0 if the UCN is
@@ -714,6 +738,6 @@ private:
   bool tryConsumeIdentifierUTF8Char(const char *&CurPtr);
 };
 
-}  // end namespace clang
+} // namespace clang
 
-#endif
+#endif // LLVM_CLANG_LEX_LEXER_H

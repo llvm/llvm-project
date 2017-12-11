@@ -144,7 +144,7 @@ static Status ForkChildForPTraceDebugging(const char *path, char const *argv[],
   // Use a fork that ties the child process's stdin/out/err to a pseudo
   // terminal so we can read it in our MachProcess::STDIOThread
   // as unbuffered io.
-  lldb_utility::PseudoTerminal pty;
+  PseudoTerminal pty;
   char fork_error[256];
   memset(fork_error, 0, sizeof(fork_error));
   *pid = static_cast<::pid_t>(pty.Fork(fork_error, sizeof(fork_error)));
