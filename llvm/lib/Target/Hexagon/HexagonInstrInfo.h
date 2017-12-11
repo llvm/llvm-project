@@ -38,6 +38,11 @@ class TargetRegisterInfo;
 
 class HexagonInstrInfo : public HexagonGenInstrInfo {
   const HexagonSubtarget &Subtarget;
+
+  enum BundleAttribute {
+    memShufDisabledMask = 0x4
+  };
+
   virtual void anchor();
 
 public:
@@ -326,10 +331,11 @@ public:
 
   /// HexagonInstrInfo specifics.
 
-  unsigned createVR(MachineFunction* MF, MVT VT) const;
+  unsigned createVR(MachineFunction *MF, MVT VT) const;
 
   bool isAbsoluteSet(const MachineInstr &MI) const;
   bool isAccumulator(const MachineInstr &MI) const;
+  bool isAddrModeWithOffset(const MachineInstr &MI) const;
   bool isComplex(const MachineInstr &MI) const;
   bool isCompoundBranchInstr(const MachineInstr &MI) const;
   bool isConstExtended(const MachineInstr &MI) const;
@@ -432,7 +438,6 @@ public:
   HexagonII::SubInstructionGroup getDuplexCandidateGroup(const MachineInstr &MI)
                                                          const;
   short getEquivalentHWInstr(const MachineInstr &MI) const;
-  MachineInstr *getFirstNonDbgInst(MachineBasicBlock *BB) const;
   unsigned getInstrTimingClassLatency(const InstrItineraryData *ItinData,
                                       const MachineInstr &MI) const;
   bool getInvertedPredSense(SmallVectorImpl<MachineOperand> &Cond) const;
@@ -456,16 +461,20 @@ public:
 
   void immediateExtend(MachineInstr &MI) const;
   bool invertAndChangeJumpTarget(MachineInstr &MI,
-                                 MachineBasicBlock* NewTarget) const;
+                                 MachineBasicBlock *NewTarget) const;
   void genAllInsnTimingClasses(MachineFunction &MF) const;
   bool reversePredSense(MachineInstr &MI) const;
   unsigned reversePrediction(unsigned Opcode) const;
   bool validateBranchCond(const ArrayRef<MachineOperand> &Cond) const;
 
+  void setBundleNoShuf(MachineBasicBlock::instr_iterator MIB) const;
+  bool getBundleNoShuf(const MachineInstr &MIB) const;
   // Addressing mode relations.
   short changeAddrMode_abs_io(short Opc) const;
   short changeAddrMode_io_abs(short Opc) const;
+  short changeAddrMode_io_pi(short Opc) const;
   short changeAddrMode_io_rr(short Opc) const;
+  short changeAddrMode_pi_io(short Opc) const;
   short changeAddrMode_rr_io(short Opc) const;
   short changeAddrMode_rr_ur(short Opc) const;
   short changeAddrMode_ur_rr(short Opc) const;

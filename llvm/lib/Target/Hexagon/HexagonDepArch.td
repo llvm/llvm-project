@@ -1,4 +1,4 @@
-//===--- HexagonDepArch.td ------------------------------------------------===//
+//===- HexagonDepArch.td --------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,7 +6,12 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+// Automatically generated file, please consult code owner before editing.
+//===----------------------------------------------------------------------===//
 
+
+def ArchV65: SubtargetFeature<"v65", "HexagonArchVersion", "Hexagon::ArchEnum::V65", "Enable Hexagon V65 architecture">;
+def HasV65T : Predicate<"HST->hasV65TOps()">, AssemblerPredicate<"ArchV65">;
 def ArchV62: SubtargetFeature<"v62", "HexagonArchVersion", "Hexagon::ArchEnum::V62", "Enable Hexagon V62 architecture">;
 def HasV62T : Predicate<"HST->hasV62TOps()">, AssemblerPredicate<"ArchV62">;
 def ArchV60: SubtargetFeature<"v60", "HexagonArchVersion", "Hexagon::ArchEnum::V60", "Enable Hexagon V60 architecture">;

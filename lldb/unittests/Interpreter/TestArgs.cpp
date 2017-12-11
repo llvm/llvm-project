@@ -10,6 +10,7 @@
 #include "gtest/gtest.h"
 
 #include "lldb/Interpreter/Args.h"
+#include "lldb/Utility/StringList.h"
 
 #include <limits>
 #include <sstream>
@@ -115,6 +116,16 @@ TEST(ArgsTest, TestArgv) {
   EXPECT_NE(nullptr, args.GetArgumentVector()[3]);
   EXPECT_NE(nullptr, args.GetArgumentVector()[4]);
   EXPECT_EQ(nullptr, args.GetArgumentVector()[5]);
+}
+
+TEST(ArgsTest, StringListConstructor) {
+  StringList list;
+  list << "foo" << "bar" << "baz";
+  Args args(list);
+  ASSERT_EQ(3u, args.GetArgumentCount());
+  EXPECT_EQ("foo", args[0].ref);
+  EXPECT_EQ("bar", args[1].ref);
+  EXPECT_EQ("baz", args[2].ref);
 }
 
 TEST(ArgsTest, GetQuotedCommandString) {

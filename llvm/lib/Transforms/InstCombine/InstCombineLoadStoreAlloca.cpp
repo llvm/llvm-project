@@ -1344,9 +1344,24 @@ bool removeBitcastsFromLoadStoreOnMinMax(InstCombiner &IC, StoreInst &SI) {
   if (!isMinMaxWithLoads(LoadAddr))
     return false;
 
+  if (!all_of(LI->users(), [LI](User *U) {
+        auto *SI = dyn_cast<StoreInst>(U);
+        return SI && SI->getPointerOperand() != LI &&
+               !SI->getPointerOperand()->isSwiftError();
+      }))
+    return false;
+
+  IC.Builder.SetInsertPoint(LI);
   LoadInst *NewLI = combineLoadToNewType(
       IC, *LI, LoadAddr->getType()->getPointerElementType());
-  combineStoreToNewValue(IC, SI, NewLI);
+  // Replace all the stores with stores of the newly loaded value.
+  for (auto *UI : LI->users()) {
+    auto *SI = cast<StoreInst>(UI);
+    IC.Builder.SetInsertPoint(SI);
+    combineStoreToNewValue(IC, *SI, NewLI);
+    IC.eraseInstFromFunction(*SI);
+  }
+  IC.eraseInstFromFunction(*LI);
   return true;
 }
 
@@ -1375,7 +1390,7 @@ Instruction *InstCombiner::visitStoreInst(StoreInst &SI) {
     return eraseInstFromFunction(SI);
 
   if (removeBitcastsFromLoadStoreOnMinMax(*this, SI))
-    return eraseInstFromFunction(SI);
+    return nullptr;
 
   // Replace GEP indices if possible.
   if (Instruction *NewGEPI = replaceGEPIdxWithZero(*this, Ptr, SI)) {

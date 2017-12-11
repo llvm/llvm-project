@@ -28,6 +28,8 @@
   define void @test_pkhtb_imm16() #0 { ret void }
   define void @test_pkhtb_imm1_15() #0 { ret void }
 
+  define void @test_movti16_0xffff() #2 { ret void }
+
   attributes #0 = { "target-features"="+v6" }
   attributes #1 = { "target-features"="-v6" }
   attributes #2 = { "target-features"="+v6t2" }
@@ -827,6 +829,35 @@ body:             |
     ; CHECK: [[VREGR:%[0-9]+]]:gprnopc = PKHTB [[VREGX]], [[VREGY]], 7, 14, %noreg
 
     %r0 = COPY %8(s32)
+    ; CHECK: %r0 = COPY [[VREGR]]
+
+    BX_RET 14, %noreg, implicit %r0
+    ; CHECK: BX_RET 14, %noreg, implicit %r0
+...
+---
+name:            test_movti16_0xffff
+# CHECK-LABEL: name: test_movti16_0xffff
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]]:gpr = COPY %r0
+
+    %1(s32) = G_CONSTANT i32 4294901760 ; 0xFFFF0000
+
+    %2(s32) = G_OR %0, %1
+    ; CHECK: [[VREGR:%[0-9]+]]:gprnopc = MOVTi16 [[VREGX]], 65535, 14, %noreg
+
+    %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGR]]
 
     BX_RET 14, %noreg, implicit %r0

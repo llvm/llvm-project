@@ -49,6 +49,8 @@ class HexagonPacketizerList : public VLIWPacketizerList {
   // schedule this instruction.
   bool FoundSequentialDependence;
 
+  bool MemShufDisabled = false;
+
   // Track MIs with ignored dependence.
   std::vector<MachineInstr*> IgnoreDepMIs;
 
@@ -89,6 +91,7 @@ public:
   // and SUJ.
   bool isLegalToPruneDependencies(SUnit *SUI, SUnit *SUJ) override;
 
+  bool foundLSInPacket();
   MachineBasicBlock::iterator addToPacket(MachineInstr &MI) override;
   void endPacket(MachineBasicBlock *MBB,
                  MachineBasicBlock::iterator MI) override;
@@ -97,6 +100,12 @@ public:
   void unpacketizeSoloInstrs(MachineFunction &MF);
 
 protected:
+  bool getmemShufDisabled() {
+    return MemShufDisabled;
+  };
+  void setmemShufDisabled(bool val) {
+    MemShufDisabled = val;
+  };
   bool isCallDependent(const MachineInstr &MI, SDep::Kind DepType,
                        unsigned DepReg);
   bool promoteToDotCur(MachineInstr &MI, SDep::Kind DepType,

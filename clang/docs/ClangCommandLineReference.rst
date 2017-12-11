@@ -1281,6 +1281,10 @@ Enable '\[\[\]\]' attributes in all C and C++ language modes
 
 .. option:: -fdwarf-directory-asm, -fno-dwarf-directory-asm
 
+.. option:: -fdwarf-exceptions
+
+Use DWARF style exceptions
+
 .. option:: -felide-constructors, -fno-elide-constructors
 
 .. option:: -feliminate-unused-debug-symbols, -fno-eliminate-unused-debug-symbols
@@ -1356,6 +1360,10 @@ Implicitly search the file system for module map files.
 .. option:: -fimplicit-modules, -fno-implicit-modules
 
 .. option:: -finput-charset=<arg>
+
+.. option:: -finstrument-function-entry-bare
+
+Instrument function entry only, after inlining, without arguments to the instrumentation call
 
 .. option:: -finstrument-functions
 
@@ -1678,6 +1686,10 @@ Turn on loop reroller
 
 Generate a YAML optimization record file
 
+.. option:: -fseh-exceptions
+
+Use SEH style exceptions
+
 .. option:: -fshort-enums, -fno-short-enums
 
 Allocate to an enum type only as many bytes as it needs for the declared range of possible values
@@ -1706,17 +1718,9 @@ Which overload candidates to show when overload resolution fails: best\|all; def
 
 Enable C++14 sized global deallocation functions
 
-.. option:: -fdwarf-exceptions
-
-Use DWARF style exceptions
-
 .. option:: -fsjlj-exceptions
 
 Use SjLj style exceptions
-
-.. option:: -fseh-exceptions
-
-Use SEH style exceptions
 
 .. option:: -fslp-vectorize, -fno-slp-vectorize, -ftree-slp-vectorize
 
@@ -1869,6 +1873,10 @@ Treat signed integer overflow as two's complement
 .. option:: -fwritable-strings
 
 Store string literals as writable data
+
+.. option:: -fxray-always-emit-customevents, -fno-xray-always-emit-customevents
+
+Determine whether to always emit \_\_xray\_customevent(...) calls even if the function it appears in is not always instrumented.
 
 .. option:: -fxray-always-instrument=<arg>
 
@@ -2112,6 +2120,10 @@ Omit frame pointer setup for leaf functions
 
 Use copy relocations support for PIE builds
 
+.. option:: -mprefer-vector-width=<arg>
+
+Specifies preferred vector width for auto-vectorization. Defaults to 'none' which allows target specific decisions.
+
 .. option:: -mqdsp6-compat
 
 Enable hexagon-qdsp6 backward compatibility
@@ -2298,6 +2310,8 @@ PowerPC
 
 WebAssembly
 -----------
+.. option:: -mnontrapping-fptoint, -mno-nontrapping-fptoint
+
 .. option:: -msimd128, -mno-simd128
 
 X86
@@ -2356,6 +2370,8 @@ X86
 
 .. option:: -mfxsr, -mno-fxsr
 
+.. option:: -mibt, -mno-ibt
+
 .. option:: -mlwp, -mno-lwp
 
 .. option:: -mlzcnt, -mno-lzcnt
@@ -2387,6 +2403,8 @@ X86
 .. option:: -msgx, -mno-sgx
 
 .. option:: -msha, -mno-sha
+
+.. option:: -mshstk, -mno-shstk
 
 .. option:: -msse, -mno-sse
 

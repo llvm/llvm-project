@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 %s -fsyntax-only -verify
+// RUN: %clang_cc1 %s -fsyntax-only -verify -triple %itanium_abi_triple
+// RUN: %clang_cc1 %s -fsyntax-only -verify -triple %ms_abi_triple -DMSABI
 
 enum Foo { FooA, FooB, FooC };
 enum Bar { BarD, BarE, BarF };
@@ -42,8 +43,10 @@ void test () {
   while (b == c);
   while (B1 == name1::B2);
   while (B2 == name2::B1);
+#ifndef MSABI
   while (x == AnonAA); // expected-warning {{comparison of constant 'AnonAA' (42) with expression of type 'Foo' is always false}}
   while (AnonBB == y); // expected-warning {{comparison of constant 'AnonBB' (45) with expression of type 'Bar' is always false}}
+#endif
   while (AnonAA == AnonAB);
   while (AnonAB == AnonBA);
   while (AnonBB == AnonAA);
@@ -69,7 +72,9 @@ void test () {
   while (B2 == ((((((name2::B1)))))));
 
   while (td == Anon1);
+#ifndef MSABI
   while (td == AnonAA);  // expected-warning {{comparison of constant 'AnonAA' (42) with expression of type 'TD' is always false}}
+#endif
 
   while (B1 == B2); // expected-warning  {{comparison of two values with different enumeration types ('name1::Baz' and 'name2::Baz')}}
   while (name1::B2 == name2::B3); // expected-warning  {{comparison of two values with different enumeration types ('name1::Baz' and 'name2::Baz')}}

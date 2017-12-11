@@ -91,6 +91,7 @@ entry:
 }
 
 ; CHECK-LABEL: define void @alloca_test()
+; CHECK: %asan_local_stack_base = alloca
 ; CHECK: = alloca
 ; CHECK-NOT: = alloca
 ; CHECK: ret void

@@ -615,7 +615,18 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
     MappedInst = TmpInst;
     return;
   }
+  case Hexagon::V6_vdd0: {
+    MCInst TmpInst;
+    assert (Inst.getOperand(0).isReg() &&
+            "Expected register and none was found");
 
+    TmpInst.setOpcode(Hexagon::V6_vsubw_dv);
+    TmpInst.addOperand(Inst.getOperand(0));
+    TmpInst.addOperand(Inst.getOperand(0));
+    TmpInst.addOperand(Inst.getOperand(0));
+    MappedInst = TmpInst;
+    return;
+  }
   case Hexagon::V6_vL32Ub_pi:
   case Hexagon::V6_vL32b_cur_pi:
   case Hexagon::V6_vL32b_nt_cur_pi:
@@ -715,13 +726,25 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
   case Hexagon::V6_vS32b_qpred_ai:
     MappedInst = ScaleVectorOffset(Inst, 2, VectorSize, OutContext);
     return;
+
+  // V65+
+  case Hexagon::V6_vS32b_srls_ai:
+    MappedInst = ScaleVectorOffset(Inst, 1, VectorSize, OutContext);
+    return;
+
+  case Hexagon::V6_vS32b_srls_pi:
+    MappedInst = ScaleVectorOffset(Inst, 2, VectorSize, OutContext);
+    return;
+
   }
 }
 
 /// printMachineInstruction -- Print out a single Hexagon MI in Darwin syntax to
 /// the current output stream.
 void HexagonAsmPrinter::EmitInstruction(const MachineInstr *MI) {
-  MCInst MCB = HexagonMCInstrInfo::createBundle();
+  MCInst MCB;
+  MCB.setOpcode(Hexagon::BUNDLE);
+  MCB.addOperand(MCOperand::createImm(0));
   const MCInstrInfo &MCII = *Subtarget->getInstrInfo();
 
   if (MI->isBundle()) {
