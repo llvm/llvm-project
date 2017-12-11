@@ -2567,7 +2567,7 @@ let Predicates = [HasTBM] in {
 //===----------------------------------------------------------------------===//
 // Lightweight Profiling Instructions
 
-let Predicates = [HasLWP] in {
+let Predicates = [HasLWP], SchedRW = [WriteSystem] in {
 
 def LLWPCB : I<0x12, MRM0r, (outs), (ins GR32:$src), "llwpcb\t$src",
                [(int_x86_llwpcb GR32:$src)], IIC_LWP>,
@@ -2615,7 +2615,7 @@ multiclass lwpval_intr<RegisterClass RC, Intrinsic Int> {
 defm LWPVAL32 : lwpval_intr<GR32, int_x86_lwpval32>;
 defm LWPVAL64 : lwpval_intr<GR64, int_x86_lwpval64>, VEX_W;
 
-} // HasLWP
+} // HasLWP, SchedRW
 
 //===----------------------------------------------------------------------===//
 // MONITORX/MWAITX Instructions

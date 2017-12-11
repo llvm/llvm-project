@@ -12228,8 +12228,12 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     EVT VT = N->getOperand(1).getValueType();
     if (Subtarget.isPPC64() && !DCI.isBeforeLegalize() &&
         isa<ConstantSDNode>(N->getOperand(1)) && VT == MVT::i32) {
-      SDValue Const64 = DAG.getConstant(N->getConstantOperandVal(1), dl,
-                                        MVT::i64);
+      // Need to sign-extended to 64-bits to handle negative values.
+      EVT MemVT = cast<StoreSDNode>(N)->getMemoryVT();
+      uint64_t Val64 = SignExtend64(N->getConstantOperandVal(1),
+                                    MemVT.getSizeInBits());
+      SDValue Const64 = DAG.getConstant(Val64, dl, MVT::i64);
+
       // DAG.getTruncStore() can't be used here because it doesn't accept
       // the general (base + offset) addressing mode.
       // So we use UpdateNodeOperands and setTruncatingStore instead.

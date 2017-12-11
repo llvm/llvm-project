@@ -179,35 +179,6 @@ void HexagonMCChecker::init(MCInst const &MCI) {
     }
   }
 
-  // Figure out register definitions that produce new values.
-  if (HexagonMCInstrInfo::hasNewValue(MCII, MCI)) {
-    unsigned R = HexagonMCInstrInfo::getNewValueOperand(MCII, MCI).getReg();
-
-    if (HexagonMCInstrInfo::isCompound(MCII, MCI))
-      compoundRegisterMap(R); // Compound insns have a limited register range.
-
-    for (MCRegAliasIterator SRI(R, &RI, !MCSubRegIterator(R, &RI).isValid());
-         SRI.isValid(); ++SRI)
-      if (!MCSubRegIterator(*SRI, &RI).isValid())
-        // No super-registers defined indirectly.
-        NewDefs[*SRI].push_back(NewSense::Def(
-            PredReg, HexagonMCInstrInfo::isPredicatedTrue(MCII, MCI),
-            HexagonMCInstrInfo::isFloat(MCII, MCI)));
-
-    // For fairly unique 2-dot-new producers, example:
-    // vdeal(V1, V9, R0) V1.new and V9.new can be used by consumers.
-    if (HexagonMCInstrInfo::hasNewValue2(MCII, MCI)) {
-      unsigned R2 = HexagonMCInstrInfo::getNewValueOperand2(MCII, MCI).getReg();
-
-      bool HasSubRegs = MCSubRegIterator(R2, &RI).isValid();
-      for (MCRegAliasIterator SRI(R2, &RI, !HasSubRegs); SRI.isValid(); ++SRI)
-        if (!MCSubRegIterator(*SRI, &RI).isValid())
-          NewDefs[*SRI].push_back(NewSense::Def(
-              PredReg, HexagonMCInstrInfo::isPredicatedTrue(MCII, MCI),
-              HexagonMCInstrInfo::isFloat(MCII, MCI)));
-    }
-  }
-
   // Figure out definitions of new predicate registers.
   if (HexagonMCInstrInfo::isPredicatedNew(MCII, MCI))
     for (unsigned i = MCID.getNumDefs(); i < MCID.getNumOperands(); ++i)
@@ -217,21 +188,6 @@ void HexagonMCChecker::init(MCInst const &MCI) {
         if (isPredicateRegister(P))
           NewPreds.insert(P);
       }
-
-  // Figure out uses of new values.
-  if (HexagonMCInstrInfo::isNewValue(MCII, MCI)) {
-    unsigned N = HexagonMCInstrInfo::getNewValueOperand(MCII, MCI).getReg();
-
-    if (!MCSubRegIterator(N, &RI).isValid()) {
-      // Super-registers cannot use new values.
-      if (MCID.isBranch())
-        NewUses[N] = NewSense::Jmp(
-            HexagonMCInstrInfo::getType(MCII, MCI) == HexagonII::TypeNCJ);
-      else
-        NewUses[N] = NewSense::Use(
-            PredReg, HexagonMCInstrInfo::isPredicatedTrue(MCII, MCI));
-    }
-  }
 }
 
 HexagonMCChecker::HexagonMCChecker(MCContext &Context, MCInstrInfo const &MCII,
@@ -242,13 +198,17 @@ HexagonMCChecker::HexagonMCChecker(MCContext &Context, MCInstrInfo const &MCII,
   init();
 }
 
+HexagonMCChecker::HexagonMCChecker(HexagonMCChecker const &Other,
+                                   MCSubtargetInfo const &STI,
+                                   bool CopyReportErrors)
+    : Context(Other.Context), MCB(Other.MCB), RI(Other.RI), MCII(Other.MCII),
+      STI(STI), ReportErrors(CopyReportErrors ? Other.ReportErrors : false) {}
+
 bool HexagonMCChecker::check(bool FullCheck) {
-  bool chkB = checkBranches();
   bool chkP = checkPredicates();
   bool chkNV = checkNewValues();
   bool chkR = checkRegisters();
   bool chkRRO = checkRegistersReadOnly();
-  bool chkELB = checkEndloopBranches();
   checkRegisterCurDefs();
   bool chkS = checkSolo();
   bool chkSh = true;
@@ -258,28 +218,12 @@ bool HexagonMCChecker::check(bool FullCheck) {
   if (FullCheck)
     chkSl = checkSlots();
   bool chkAXOK = checkAXOK();
-  bool chk = chkB && chkP && chkNV && chkR && chkRRO && chkELB && chkS &&
-             chkSh && chkSl && chkAXOK;
+  bool chkCofMax1 = checkCOFMax1();
+  bool chkHWLoop = checkHWLoop();
+  bool chk = chkP && chkNV && chkR && chkRRO && chkS && chkSh && chkSl &&
+             chkAXOK && chkCofMax1 && chkHWLoop;
 
   return chk;
-}
-
-bool HexagonMCChecker::checkEndloopBranches() {
-  for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
-    MCInstrDesc const &Desc = HexagonMCInstrInfo::getDesc(MCII, I);
-    if (Desc.isBranch() || Desc.isCall()) {
-      auto Inner = HexagonMCInstrInfo::isInnerLoop(MCB);
-      if (Inner || HexagonMCInstrInfo::isOuterLoop(MCB)) {
-        reportError(I.getLoc(),
-                    Twine("packet marked with `:endloop") +
-                    (Inner ? "0" : "1") + "' " +
-                    "cannot contain instructions that modify register " + "`" +
-                    Twine(RI.getName(Hexagon::PC)) + "'");
-        return false;
-      }
-    }
-  }
-  return true;
 }
 
 static bool isDuplexAGroup(unsigned Opcode) {
@@ -355,6 +299,65 @@ bool HexagonMCChecker::checkAXOK() {
   return true;
 }
 
+void HexagonMCChecker::reportBranchErrors() {
+  for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+    MCInstrDesc const &Desc = HexagonMCInstrInfo::getDesc(MCII, I);
+    if (Desc.isBranch() || Desc.isCall() || Desc.isReturn())
+      reportNote(I.getLoc(), "Branching instruction");
+  }
+}
+
+bool HexagonMCChecker::checkHWLoop() {
+  if (!HexagonMCInstrInfo::isInnerLoop(MCB) &&
+      !HexagonMCInstrInfo::isOuterLoop(MCB))
+    return true;
+  for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+    MCInstrDesc const &Desc = HexagonMCInstrInfo::getDesc(MCII, I);
+    if (Desc.isBranch() || Desc.isCall() || Desc.isReturn()) {
+      reportError(MCB.getLoc(),
+                  "Branches cannot be in a packet with hardware loops");
+      reportBranchErrors();
+      return false;
+    }
+  }
+  return true;
+}
+
+bool HexagonMCChecker::checkCOFMax1() {
+  SmallVector<MCInst const *, 2> BranchLocations;
+  for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+    MCInstrDesc const &Desc = HexagonMCInstrInfo::getDesc(MCII, I);
+    if (Desc.isBranch() || Desc.isCall() || Desc.isReturn())
+      BranchLocations.push_back(&I);
+  }
+  for (unsigned J = 0, N = BranchLocations.size(); J < N; ++J) {
+    MCInst const &I = *BranchLocations[J];
+    if (HexagonMCInstrInfo::isCofMax1(MCII, I)) {
+      bool Relax1 = HexagonMCInstrInfo::isCofRelax1(MCII, I);
+      bool Relax2 = HexagonMCInstrInfo::isCofRelax2(MCII, I);
+      if (N > 1 && !Relax1 && !Relax2) {
+        reportError(I.getLoc(),
+                    "Instruction may not be in a packet with other branches");
+        reportBranchErrors();
+        return false;
+      }
+      if (N > 1 && J == 0 && !Relax1) {
+        reportError(I.getLoc(),
+                    "Instruction may not be the first branch in packet");
+        reportBranchErrors();
+        return false;
+      }
+      if (N > 1 && J == 1 && !Relax2) {
+        reportError(I.getLoc(),
+                    "Instruction may not be the second branch in packet");
+        reportBranchErrors();
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 bool HexagonMCChecker::checkSlots() {
   unsigned slotsUsed = 0;
   for (auto HMI : HexagonMCInstrInfo::bundleInstructions(MCB)) {
@@ -371,45 +374,6 @@ bool HexagonMCChecker::checkSlots() {
     reportError("invalid instruction packet: out of slots");
     return false;
   }
-  return true;
-}
-
-// Check legal use of branches.
-bool HexagonMCChecker::checkBranches() {
-  if (HexagonMCInstrInfo::isBundle(MCB)) {
-    bool hasConditional = false;
-    unsigned Branches = 0, Conditional = HEXAGON_PRESHUFFLE_PACKET_SIZE,
-             Unconditional = HEXAGON_PRESHUFFLE_PACKET_SIZE;
-
-    for (unsigned i = HexagonMCInstrInfo::bundleInstructionsOffset;
-         i < MCB.size(); ++i) {
-      MCInst const &MCI = *MCB.begin()[i].getInst();
-
-      if (HexagonMCInstrInfo::isImmext(MCI))
-        continue;
-      if (HexagonMCInstrInfo::getDesc(MCII, MCI).isBranch() ||
-          HexagonMCInstrInfo::getDesc(MCII, MCI).isCall()) {
-        ++Branches;
-        if (HexagonMCInstrInfo::isPredicated(MCII, MCI) ||
-            HexagonMCInstrInfo::isPredicatedNew(MCII, MCI)) {
-          hasConditional = true;
-          Conditional = i; // Record the position of the conditional branch.
-        } else {
-          Unconditional = i; // Record the position of the unconditional branch.
-        }
-      }
-    }
-
-    if (Branches > 1)
-      if (!hasConditional || Conditional > Unconditional) {
-        // Error out if more than one unconditional branch or
-        // the conditional branch appears after the unconditional one.
-        reportError(
-            "unconditional branch cannot precede another branch in packet");
-        return false;
-      }
-  }
-
   return true;
 }
 
@@ -446,16 +410,85 @@ bool HexagonMCChecker::checkPredicates() {
 
 // Check legal use of new values.
 bool HexagonMCChecker::checkNewValues() {
-  for (auto &I : NewUses) {
-    unsigned R = I.first;
-    NewSense &US = I.second;
-
-    if (!hasValidNewValueDef(US, NewDefs[R])) {
-      reportErrorNewValue(R);
+  for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+    if (!HexagonMCInstrInfo::isNewValue(MCII, I))
+      continue;
+    auto Consumer = HexagonMCInstrInfo::predicateInfo(MCII, I);
+    bool Branch = HexagonMCInstrInfo::getDesc(MCII, I).isBranch();
+    MCOperand const &Op = HexagonMCInstrInfo::getNewValueOperand(MCII, I);
+    assert(Op.isReg());
+    auto Producer = registerProducer(Op.getReg(), Consumer);
+    if (std::get<0>(Producer) == nullptr) {
+      reportError(I.getLoc(), "New value register consumer has no producer");
+      return false;
+    }
+    if (!RelaxNVChecks) {
+      // Checks that statically prove correct new value consumption
+      if (std::get<2>(Producer).isPredicated() &&
+          (!Consumer.isPredicated() ||
+           llvm::HexagonMCInstrInfo::getType(MCII, I) == HexagonII::TypeNCJ)) {
+        reportNote(
+            std::get<0>(Producer)->getLoc(),
+            "Register producer is predicated and consumer is unconditional");
+        reportError(I.getLoc(),
+                    "Instruction does not have a valid new register producer");
+        return false;
+      }
+      if (std::get<2>(Producer).Register != Hexagon::NoRegister &&
+          std::get<2>(Producer).Register != Consumer.Register) {
+        reportNote(std::get<0>(Producer)->getLoc(),
+                   "Register producer does not use the same predicate "
+                   "register as the consumer");
+        reportError(I.getLoc(),
+                    "Instruction does not have a valid new register producer");
+        return false;
+      }
+    }
+    if (std::get<2>(Producer).Register == Consumer.Register &&
+        Consumer.PredicatedTrue != std::get<2>(Producer).PredicatedTrue) {
+      reportNote(
+          std::get<0>(Producer)->getLoc(),
+          "Register producer has the opposite predicate sense as consumer");
+      reportError(I.getLoc(),
+                  "Instruction does not have a valid new register producer");
+      return false;
+    }
+    MCInstrDesc const &Desc =
+        HexagonMCInstrInfo::getDesc(MCII, *std::get<0>(Producer));
+    if (Desc.OpInfo[std::get<1>(Producer)].RegClass ==
+        Hexagon::DoubleRegsRegClassID) {
+      reportNote(std::get<0>(Producer)->getLoc(),
+                 "Double registers cannot be new-value producers");
+      reportError(I.getLoc(),
+                  "Instruction does not have a valid new register producer");
+      return false;
+    }
+    if ((Desc.mayLoad() && std::get<1>(Producer) == 1) ||
+        (Desc.mayStore() && std::get<1>(Producer) == 0)) {
+      unsigned Mode =
+          HexagonMCInstrInfo::getAddrMode(MCII, *std::get<0>(Producer));
+      StringRef ModeError;
+      if (Mode == HexagonII::AbsoluteSet)
+        ModeError = "Absolute-set";
+      if (Mode == HexagonII::PostInc)
+        ModeError = "Auto-increment";
+      if (!ModeError.empty()) {
+        reportNote(std::get<0>(Producer)->getLoc(),
+                   ModeError + " registers cannot be a new-value "
+                               "producer");
+        reportError(I.getLoc(),
+                    "Instruction does not have a valid new register producer");
+        return false;
+      }
+    }
+    if (Branch && HexagonMCInstrInfo::isFloat(MCII, *std::get<0>(Producer))) {
+      reportNote(std::get<0>(Producer)->getLoc(),
+                 "FPU instructions cannot be new-value producers for jumps");
+      reportError(I.getLoc(),
+                  "Instruction does not have a valid new register producer");
       return false;
     }
   }
-
   return true;
 }
 
@@ -487,6 +520,34 @@ bool HexagonMCChecker::registerUsed(unsigned Register) {
         return true;
     }
   return false;
+}
+
+std::tuple<MCInst const *, unsigned, HexagonMCInstrInfo::PredicateInfo>
+HexagonMCChecker::registerProducer(
+    unsigned Register, HexagonMCInstrInfo::PredicateInfo ConsumerPredicate) {
+  std::tuple<MCInst const *, unsigned, HexagonMCInstrInfo::PredicateInfo>
+      WrongSense;
+  for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+    MCInstrDesc const &Desc = HexagonMCInstrInfo::getDesc(MCII, I);
+    auto ProducerPredicate = HexagonMCInstrInfo::predicateInfo(MCII, I);
+    for (unsigned J = 0, N = Desc.getNumDefs(); J < N; ++J)
+      for (auto K = MCRegAliasIterator(I.getOperand(J).getReg(), &RI, true);
+           K.isValid(); ++K)
+        if (*K == Register) {
+          if (RelaxNVChecks ||
+              (ProducerPredicate.Register == ConsumerPredicate.Register &&
+               (ProducerPredicate.Register == Hexagon::NoRegister ||
+                ProducerPredicate.PredicatedTrue ==
+                    ConsumerPredicate.PredicatedTrue)))
+            return std::make_tuple(&I, J, ProducerPredicate);
+          std::get<0>(WrongSense) = &I;
+          std::get<1>(WrongSense) = J;
+          std::get<2>(WrongSense) = ProducerPredicate;
+        }
+    if (Register == Hexagon::VTMP && HexagonMCInstrInfo::hasTmpDst(MCII, I))
+      return std::make_tuple(&I, 0, HexagonMCInstrInfo::PredicateInfo());
+  }
+  return WrongSense;
 }
 
 void HexagonMCChecker::checkRegisterCurDefs() {
@@ -638,35 +699,6 @@ void HexagonMCChecker::compoundRegisterMap(unsigned &Register) {
   }
 }
 
-bool HexagonMCChecker::hasValidNewValueDef(const NewSense &Use,
-                                           const NewSenseList &Defs) const {
-  bool Strict = !RelaxNVChecks;
-
-  for (unsigned i = 0, n = Defs.size(); i < n; ++i) {
-    const NewSense &Def = Defs[i];
-    // NVJ cannot use a new FP value [7.6.1]
-    if (Use.IsNVJ && (Def.IsFloat || Def.PredReg != 0))
-      continue;
-    // If the definition was not predicated, then it does not matter if
-    // the use is.
-    if (Def.PredReg == 0)
-      return true;
-    // With the strict checks, both the definition and the use must be
-    // predicated on the same register and condition.
-    if (Strict) {
-      if (Def.PredReg == Use.PredReg && Def.Cond == Use.Cond)
-        return true;
-    } else {
-      // With the relaxed checks, if the definition was predicated, the only
-      // detectable violation is if the use is predicated on the opposing
-      // condition, otherwise, it's ok.
-      if (Def.PredReg != Use.PredReg || Def.Cond == Use.Cond)
-        return true;
-    }
-  }
-  return false;
-}
-
 void HexagonMCChecker::reportErrorRegisters(unsigned Register) {
   reportError("register `" + Twine(RI.getName(Register)) +
               "' modified more than once");
@@ -685,6 +717,14 @@ void HexagonMCChecker::reportError(Twine const &Msg) {
 void HexagonMCChecker::reportError(SMLoc Loc, Twine const &Msg) {
   if (ReportErrors)
     Context.reportError(Loc, Msg);
+}
+
+void HexagonMCChecker::reportNote(SMLoc Loc, llvm::Twine const &Msg) {
+  if (ReportErrors) {
+    auto SM = Context.getSourceManager();
+    if (SM)
+      SM->PrintMessage(Loc, SourceMgr::DK_Note, Msg);
+  }
 }
 
 void HexagonMCChecker::reportWarning(Twine const &Msg) {

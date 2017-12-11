@@ -308,3 +308,37 @@ define <4 x i32> @combine_vec_mul_add(<4 x i32> %x) {
   %2 = mul <4 x i32> %1, <i32 4, i32 6, i32 2, i32 0>
   ret <4 x i32> %2
 }
+
+; This would infinite loop because DAGCombiner wants to turn this into a shift,
+; but x86 lowering wants to avoid non-uniform vector shift amounts.
+
+define <16 x i8> @PR35579(<16 x i8> %x) {
+; SSE-LABEL: PR35579:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pmovsxbw %xmm0, %xmm1
+; SSE-NEXT:    pmullw {{.*}}(%rip), %xmm1
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; SSE-NEXT:    pand %xmm2, %xmm1
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; SSE-NEXT:    pmovsxbw %xmm0, %xmm0
+; SSE-NEXT:    pmullw {{.*}}(%rip), %xmm0
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    packuswb %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR35579:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmovsxbw %xmm0, %ymm0
+; AVX-NEXT:    vpmullw {{.*}}(%rip), %ymm0, %ymm0
+; AVX-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
+; AVX-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %r = mul <16 x i8> %x, <i8 0, i8 1, i8 2, i8 1, i8 4, i8 1, i8 2, i8 1, i8 8, i8 1, i8 2, i8 1, i8 4, i8 1, i8 2, i8 1>
+  ret <16 x i8> %r
+}
+

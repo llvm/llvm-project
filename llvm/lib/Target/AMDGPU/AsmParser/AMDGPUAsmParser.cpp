@@ -2578,6 +2578,25 @@ bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
 
 bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
                                            unsigned RegNo) const {
+
+  for (MCRegAliasIterator R(AMDGPU::TTMP12_TTMP13_TTMP14_TTMP15, &MRI, true);
+       R.isValid(); ++R) {
+    if (*R == RegNo)
+      return isGFX9();
+  }
+
+  switch (RegNo) {
+  case AMDGPU::TBA:
+  case AMDGPU::TBA_LO:
+  case AMDGPU::TBA_HI:
+  case AMDGPU::TMA:
+  case AMDGPU::TMA_LO:
+  case AMDGPU::TMA_HI:
+    return !isGFX9();
+  default:
+    break;
+  }
+
   if (isCI())
     return true;
 

@@ -194,8 +194,10 @@ namespace EncValues { // Encoding values of enum9/8/7 operands
 enum {
   SGPR_MIN = 0,
   SGPR_MAX = 101,
-  TTMP_MIN = 112,
-  TTMP_MAX = 123,
+  TTMP_VI_MIN = 112,
+  TTMP_VI_MAX = 123,
+  TTMP_GFX9_MIN = 108,
+  TTMP_GFX9_MAX = 123,
   INLINE_INTEGER_C_MIN = 128,
   INLINE_INTEGER_C_POSITIVE_MAX = 192, // 64
   INLINE_INTEGER_C_MAX = 208,
@@ -368,6 +370,8 @@ enum SDWA9EncValues{
   SRC_VGPR_MAX = 255,
   SRC_SGPR_MIN = 256,
   SRC_SGPR_MAX = 357,
+  SRC_TTMP_MIN = 364,
+  SRC_TTMP_MAX = 379,
 };
 
 } // namespace SDWA

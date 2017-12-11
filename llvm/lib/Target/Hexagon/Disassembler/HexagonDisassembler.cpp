@@ -45,10 +45,12 @@ class HexagonDisassembler : public MCDisassembler {
 public:
   std::unique_ptr<MCInstrInfo const> const MCII;
   std::unique_ptr<MCInst *> CurrentBundle;
+  mutable MCInst const *CurrentExtender;
 
   HexagonDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
                       MCInstrInfo const *MCII)
-      : MCDisassembler(STI, Ctx), MCII(MCII), CurrentBundle(new MCInst *) {}
+      : MCDisassembler(STI, Ctx), MCII(MCII), CurrentBundle(new MCInst *),
+        CurrentExtender(nullptr) {}
 
   DecodeStatus getSingleInstruction(MCInst &Instr, MCInst &MCB,
                                     ArrayRef<uint8_t> Bytes, uint64_t Address,
@@ -58,39 +60,37 @@ public:
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
                               raw_ostream &VStream,
                               raw_ostream &CStream) const override;
-  void addSubinstOperands(MCInst *MI, unsigned opcode, unsigned inst) const;
+  void remapInstruction(MCInst &Instr) const;
 };
 
-} // end anonymous namespace
-
-static uint32_t fullValue(MCInstrInfo const &MCII, MCInst &MCB, MCInst &MI,
+static uint64_t fullValue(HexagonDisassembler const &Disassembler, MCInst &MI,
                           int64_t Value) {
-  MCInst const *Extender = HexagonMCInstrInfo::extenderForIndex(
-    MCB, HexagonMCInstrInfo::bundleSize(MCB));
-  if (!Extender || MI.size() != HexagonMCInstrInfo::getExtendableOp(MCII, MI))
+  MCInstrInfo MCII = *Disassembler.MCII;
+  if (!Disassembler.CurrentExtender ||
+      MI.size() != HexagonMCInstrInfo::getExtendableOp(MCII, MI))
     return Value;
   unsigned Alignment = HexagonMCInstrInfo::getExtentAlignment(MCII, MI);
   uint32_t Lower6 = static_cast<uint32_t>(Value >> Alignment) & 0x3f;
   int64_t Bits;
-  bool Success = Extender->getOperand(0).getExpr()->evaluateAsAbsolute(Bits);
-  assert(Success); (void)Success;
-  uint32_t Upper26 = static_cast<uint32_t>(Bits);
-  uint32_t Operand = Upper26 | Lower6;
+  bool Success =
+      Disassembler.CurrentExtender->getOperand(0).getExpr()->evaluateAsAbsolute(
+          Bits);
+  assert(Success);
+  (void)Success;
+  uint64_t Upper26 = static_cast<uint64_t>(Bits);
+  uint64_t Operand = Upper26 | Lower6;
   return Operand;
 }
-
 static HexagonDisassembler const &disassembler(void const *Decoder) {
   return *static_cast<HexagonDisassembler const *>(Decoder);
 }
-
 template <size_t T>
 static void signedDecoder(MCInst &MI, unsigned tmp, const void *Decoder) {
   HexagonDisassembler const &Disassembler = disassembler(Decoder);
-  int64_t FullValue =
-      fullValue(*Disassembler.MCII, **Disassembler.CurrentBundle, MI,
-                SignExtend64<T>(tmp));
+  int64_t FullValue = fullValue(Disassembler, MI, SignExtend64<T>(tmp));
   int64_t Extended = SignExtend64<32>(FullValue);
   HexagonMCInstrInfo::addConstant(MI, Extended, Disassembler.getContext());
+}
 }
 
 // Forward declare these because the auto-generated code will reference them.
@@ -107,8 +107,8 @@ static DecodeStatus DecodeIntRegsLow8RegisterClass(MCInst &Inst, unsigned RegNo,
                                                    uint64_t Address,
                                                    const void *Decoder);
 static DecodeStatus DecodeHvxVRRegisterClass(MCInst &Inst, unsigned RegNo,
-                                                  uint64_t Address,
-                                                  const void *Decoder);
+                                             uint64_t Address,
+                                             const void *Decoder);
 static DecodeStatus DecodeDoubleRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                                   uint64_t Address,
                                                   const void *Decoder);
@@ -116,14 +116,14 @@ static DecodeStatus
 DecodeGeneralDoubleLow8RegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                          uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeHvxWRRegisterClass(MCInst &Inst, unsigned RegNo,
-                                                  uint64_t Address,
-                                                  const void *Decoder);
+                                             uint64_t Address,
+                                             const void *Decoder);
 static DecodeStatus DecodePredRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                                 uint64_t Address,
                                                 const void *Decoder);
 static DecodeStatus DecodeHvxQRRegisterClass(MCInst &Inst, unsigned RegNo,
-                                                   uint64_t Address,
-                                                   const void *Decoder);
+                                             uint64_t Address,
+                                             const void *Decoder);
 static DecodeStatus DecodeCtrRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                                uint64_t Address,
                                                const void *Decoder);
@@ -141,62 +141,7 @@ static DecodeStatus s32_0ImmDecoder(MCInst &MI, unsigned tmp,
 static DecodeStatus brtargetDecoder(MCInst &MI, unsigned tmp, uint64_t Address,
                                     const void *Decoder);
 
-static DecodeStatus s4_0ImmDecoder(MCInst &MI, unsigned tmp, uint64_t,
-                                   const void *Decoder) {
-  signedDecoder<4>(MI, tmp, Decoder);
-  return MCDisassembler::Success;
-}
-static DecodeStatus s29_3ImmDecoder(MCInst &MI, unsigned tmp, uint64_t,
-                                    const void *Decoder) {
-  signedDecoder<14>(MI, tmp, Decoder);
-  return MCDisassembler::Success;
-}
-static DecodeStatus s8_0ImmDecoder(MCInst &MI, unsigned tmp, uint64_t,
-                                   const void *Decoder) {
-  signedDecoder<8>(MI, tmp, Decoder);
-  return MCDisassembler::Success;
-}
-static DecodeStatus s4_3ImmDecoder(MCInst &MI, unsigned tmp, uint64_t,
-                                   const void *Decoder) {
-  signedDecoder<7>(MI, tmp, Decoder);
-  return MCDisassembler::Success;
-}
-static DecodeStatus s31_1ImmDecoder(MCInst &MI, unsigned tmp, uint64_t,
-                                    const void *Decoder) {
-  signedDecoder<12>(MI, tmp, Decoder);
-  return MCDisassembler::Success;
-}
-static DecodeStatus s3_0ImmDecoder(MCInst &MI, unsigned tmp, uint64_t,
-                                   const void *Decoder) {
-  signedDecoder<3>(MI, tmp, Decoder);
-  return MCDisassembler::Success;
-}
-static DecodeStatus s30_2ImmDecoder(MCInst &MI, unsigned tmp, uint64_t,
-                                    const void *Decoder) {
-  signedDecoder<13>(MI, tmp, Decoder);
-  return MCDisassembler::Success;
-}
-static DecodeStatus s6_0ImmDecoder(MCInst &MI, unsigned tmp, uint64_t,
-                                   const void *Decoder) {
-  signedDecoder<6>(MI, tmp, Decoder);
-  return MCDisassembler::Success;
-}
-static DecodeStatus s6_3ImmDecoder(MCInst &MI, unsigned tmp, uint64_t,
-                                   const void *Decoder) {
-  signedDecoder<9>(MI, tmp, Decoder);
-  return MCDisassembler::Success;
-}
-static DecodeStatus s4_1ImmDecoder(MCInst &MI, unsigned tmp, uint64_t,
-                                   const void *Decoder) {
-  signedDecoder<5>(MI, tmp, Decoder);
-  return MCDisassembler::Success;
-}
-static DecodeStatus s4_2ImmDecoder(MCInst &MI, unsigned tmp, uint64_t,
-                                   const void *Decoder) {
-  signedDecoder<6>(MI, tmp, Decoder);
-  return MCDisassembler::Success;
-}
-
+#include "HexagonDepDecoders.h"
 #include "HexagonGenDisassemblerTables.inc"
 
 static MCDisassembler *createHexagonDisassembler(const Target &T,
@@ -215,12 +160,15 @@ DecodeStatus HexagonDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                  uint64_t Address,
                                                  raw_ostream &os,
                                                  raw_ostream &cs) const {
+  (void)&s10_0ImmDecoder;
+  (void)&s10_6ImmDecoder;
   DecodeStatus Result = DecodeStatus::Success;
   bool Complete = false;
   Size = 0;
 
   *CurrentBundle = &MI;
-  MI = HexagonMCInstrInfo::createBundle();
+  MI.setOpcode(Hexagon::BUNDLE);
+  MI.addOperand(MCOperand::createImm(0));
   while (Result == Success && !Complete) {
     if (Bytes.size() < HEXAGON_INSTR_SIZE)
       return MCDisassembler::Fail;
@@ -238,7 +186,87 @@ DecodeStatus HexagonDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                            *getContext().getRegisterInfo(), false);
   if (!Checker.check())
     return MCDisassembler::Fail;
+  remapInstruction(MI);
   return MCDisassembler::Success;
+}
+
+void HexagonDisassembler::remapInstruction(MCInst &Instr) const {
+  for (auto I: HexagonMCInstrInfo::bundleInstructions(Instr)) {
+    auto &MI = const_cast<MCInst &>(*I.getInst());
+    switch (MI.getOpcode()) {
+    case Hexagon::S2_allocframe:
+      if (MI.getOperand(0).getReg() == Hexagon::R29) {
+        MI.setOpcode(Hexagon::S6_allocframe_to_raw);
+        MI.erase(MI.begin () + 1);
+        MI.erase(MI.begin ());
+      }
+      break;
+    case Hexagon::L2_deallocframe:
+      if (MI.getOperand(0).getReg() == Hexagon::D15 &&
+          MI.getOperand(1).getReg() == Hexagon::R30) {
+        MI.setOpcode(L6_deallocframe_map_to_raw);
+        MI.erase(MI.begin () + 1);
+        MI.erase(MI.begin ());
+      }
+      break;
+    case Hexagon::L4_return:
+      if (MI.getOperand(0).getReg() == Hexagon::D15 &&
+          MI.getOperand(1).getReg() == Hexagon::R30) {
+        MI.setOpcode(L6_return_map_to_raw);
+        MI.erase(MI.begin () + 1);
+        MI.erase(MI.begin ());
+      }
+      break;
+    case Hexagon::L4_return_t:
+      if (MI.getOperand(0).getReg() == Hexagon::D15 &&
+          MI.getOperand(2).getReg() == Hexagon::R30) {
+        MI.setOpcode(L4_return_map_to_raw_t);
+        MI.erase(MI.begin () + 2);
+        MI.erase(MI.begin ());
+      }
+      break;
+    case Hexagon::L4_return_f:
+      if (MI.getOperand(0).getReg() == Hexagon::D15 &&
+          MI.getOperand(2).getReg() == Hexagon::R30) {
+        MI.setOpcode(L4_return_map_to_raw_f);
+        MI.erase(MI.begin () + 2);
+        MI.erase(MI.begin ());
+      }
+      break;
+    case Hexagon::L4_return_tnew_pt:
+      if (MI.getOperand(0).getReg() == Hexagon::D15 &&
+          MI.getOperand(2).getReg() == Hexagon::R30) {
+        MI.setOpcode(L4_return_map_to_raw_tnew_pt);
+        MI.erase(MI.begin () + 2);
+        MI.erase(MI.begin ());
+      }
+      break;
+    case Hexagon::L4_return_fnew_pt:
+      if (MI.getOperand(0).getReg() == Hexagon::D15 &&
+          MI.getOperand(2).getReg() == Hexagon::R30) {
+        MI.setOpcode(L4_return_map_to_raw_fnew_pt);
+        MI.erase(MI.begin () + 2);
+        MI.erase(MI.begin ());
+      }
+      break;
+    case Hexagon::L4_return_tnew_pnt:
+      if (MI.getOperand(0).getReg() == Hexagon::D15 &&
+          MI.getOperand(2).getReg() == Hexagon::R30) {
+        MI.setOpcode(L4_return_map_to_raw_tnew_pnt);
+        MI.erase(MI.begin () + 2);
+        MI.erase(MI.begin ());
+      }
+      break;
+    case Hexagon::L4_return_fnew_pnt:
+      if (MI.getOperand(0).getReg() == Hexagon::D15 &&
+          MI.getOperand(2).getReg() == Hexagon::R30) {
+        MI.setOpcode(L4_return_map_to_raw_fnew_pnt);
+        MI.erase(MI.begin () + 2);
+        MI.erase(MI.begin ());
+      }
+      break;
+    }
+  }
 }
 
 static void adjustDuplex(MCInst &MI, MCContext &Context) {
@@ -274,7 +302,7 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(
       return DecodeStatus::Fail;
   }
 
-  MCInst const *Extender = HexagonMCInstrInfo::extenderForIndex(
+  CurrentExtender = HexagonMCInstrInfo::extenderForIndex(
       MCB, HexagonMCInstrInfo::bundleSize(MCB));
 
   DecodeStatus Result = DecodeStatus::Fail;
@@ -350,8 +378,12 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(
     MI.setOpcode(Hexagon::DuplexIClass0 + duplexIClass);
     MCInst *MILow = new (getContext()) MCInst;
     MCInst *MIHigh = new (getContext()) MCInst;
+    auto TmpExtender = CurrentExtender;
+    CurrentExtender =
+        nullptr; // constant extenders in duplex must always be in slot 1
     Result = decodeInstruction(DecodeLow, *MILow, Instruction & 0x1fff, Address,
                                this, STI);
+    CurrentExtender = TmpExtender;
     if (Result != DecodeStatus::Success)
       return DecodeStatus::Fail;
     adjustDuplex(*MILow, getContext());
@@ -370,7 +402,7 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(
         HexagonII::INST_PARSE_PACKET_END)
       Complete = true;
 
-    if (Extender != nullptr)
+    if (CurrentExtender != nullptr)
       Result = decodeInstruction(DecoderTableMustExtend32, MI, Instruction,
                                  Address, this, STI);
 
@@ -429,25 +461,29 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(
     unsigned Lookback = (Register & 0x6) >> 1;
     unsigned Offset = 1;
     bool Vector = HexagonMCInstrInfo::isVector(*MCII, MI);
+    bool PrevVector = false;
     auto Instructions = HexagonMCInstrInfo::bundleInstructions(**CurrentBundle);
     auto i = Instructions.end() - 1;
     for (auto n = Instructions.begin() - 1;; --i, ++Offset) {
       if (i == n)
         // Couldn't find producer
         return MCDisassembler::Fail;
-      if (Vector && !HexagonMCInstrInfo::isVector(*MCII, *i->getInst()))
+      bool CurrentVector = HexagonMCInstrInfo::isVector(*MCII, *i->getInst());
+      if (Vector && !CurrentVector)
         // Skip scalars when calculating distances for vectors
         ++Lookback;
-      if (HexagonMCInstrInfo::isImmext(*i->getInst()))
+      if (HexagonMCInstrInfo::isImmext(*i->getInst()) && (Vector == PrevVector))
         ++Lookback;
+      PrevVector = CurrentVector;
       if (Offset == Lookback)
         break;
     }
     auto const &Inst = *i->getInst();
     bool SubregBit = (Register & 0x1) != 0;
-    if (SubregBit && HexagonMCInstrInfo::hasNewValue2(*MCII, Inst)) {
+    if (HexagonMCInstrInfo::hasNewValue2(*MCII, Inst)) {
       // If subreg bit is set we're selecting the second produced newvalue
-      unsigned Producer =
+      unsigned Producer = SubregBit ?
+          HexagonMCInstrInfo::getNewValueOperand(*MCII, Inst).getReg() :
           HexagonMCInstrInfo::getNewValueOperand2(*MCII, Inst).getReg();
       assert(Producer != Hexagon::NoRegister);
       MCO.setReg(Producer);
@@ -466,7 +502,7 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(
       return MCDisassembler::Fail;
   }
 
-  if (Extender != nullptr) {
+  if (CurrentExtender != nullptr) {
     MCInst const &Inst = HexagonMCInstrInfo::isDuplex(*MCII, MI)
                              ? *MI.getOperand(1).getInst()
                              : MI;
@@ -666,8 +702,7 @@ static DecodeStatus unsignedImmDecoder(MCInst &MI, unsigned tmp,
                                        uint64_t /*Address*/,
                                        const void *Decoder) {
   HexagonDisassembler const &Disassembler = disassembler(Decoder);
-  int64_t FullValue =
-      fullValue(*Disassembler.MCII, **Disassembler.CurrentBundle, MI, tmp);
+  int64_t FullValue = fullValue(Disassembler, MI, tmp);
   assert(FullValue >= 0 && "Negative in unsigned decoder");
   HexagonMCInstrInfo::addConstant(MI, FullValue, Disassembler.getContext());
   return MCDisassembler::Success;
@@ -690,10 +725,8 @@ static DecodeStatus brtargetDecoder(MCInst &MI, unsigned tmp, uint64_t Address,
   // r13_2 is not extendable, so if there are no extent bits, it's r13_2
   if (Bits == 0)
     Bits = 15;
-  uint32_t FullValue =
-      fullValue(*Disassembler.MCII, **Disassembler.CurrentBundle, MI,
-                SignExtend64(tmp, Bits));
-  int64_t Extended = SignExtend64<32>(FullValue) + Address;
+  uint64_t FullValue = fullValue(Disassembler, MI, SignExtend64(tmp, Bits));
+  uint32_t Extended = FullValue + Address;
   if (!Disassembler.tryAddingSymbolicOperand(MI, Extended, Address, true, 0, 4))
     HexagonMCInstrInfo::addConstant(MI, Extended, Disassembler.getContext());
   return MCDisassembler::Success;

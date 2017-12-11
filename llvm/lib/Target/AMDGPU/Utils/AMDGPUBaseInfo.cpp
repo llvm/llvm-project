@@ -569,43 +569,67 @@ bool isRegIntersect(unsigned Reg0, unsigned Reg1, const MCRegisterInfo* TRI) {
   return false;
 }
 
-unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI) {
-
-  switch(Reg) {
-  default: break;
-  case AMDGPU::FLAT_SCR:
-    assert(!isSI(STI));
-    return isCI(STI) ? AMDGPU::FLAT_SCR_ci : AMDGPU::FLAT_SCR_vi;
-
-  case AMDGPU::FLAT_SCR_LO:
-    assert(!isSI(STI));
-    return isCI(STI) ? AMDGPU::FLAT_SCR_LO_ci : AMDGPU::FLAT_SCR_LO_vi;
-
-  case AMDGPU::FLAT_SCR_HI:
-    assert(!isSI(STI));
-    return isCI(STI) ? AMDGPU::FLAT_SCR_HI_ci : AMDGPU::FLAT_SCR_HI_vi;
+#define MAP_REG2REG \
+  using namespace AMDGPU; \
+  switch(Reg) { \
+  default: return Reg; \
+  CASE_CI_VI(FLAT_SCR) \
+  CASE_CI_VI(FLAT_SCR_LO) \
+  CASE_CI_VI(FLAT_SCR_HI) \
+  CASE_VI_GFX9(TTMP0) \
+  CASE_VI_GFX9(TTMP1) \
+  CASE_VI_GFX9(TTMP2) \
+  CASE_VI_GFX9(TTMP3) \
+  CASE_VI_GFX9(TTMP4) \
+  CASE_VI_GFX9(TTMP5) \
+  CASE_VI_GFX9(TTMP6) \
+  CASE_VI_GFX9(TTMP7) \
+  CASE_VI_GFX9(TTMP8) \
+  CASE_VI_GFX9(TTMP9) \
+  CASE_VI_GFX9(TTMP10) \
+  CASE_VI_GFX9(TTMP11) \
+  CASE_VI_GFX9(TTMP12) \
+  CASE_VI_GFX9(TTMP13) \
+  CASE_VI_GFX9(TTMP14) \
+  CASE_VI_GFX9(TTMP15) \
+  CASE_VI_GFX9(TTMP0_TTMP1) \
+  CASE_VI_GFX9(TTMP2_TTMP3) \
+  CASE_VI_GFX9(TTMP4_TTMP5) \
+  CASE_VI_GFX9(TTMP6_TTMP7) \
+  CASE_VI_GFX9(TTMP8_TTMP9) \
+  CASE_VI_GFX9(TTMP10_TTMP11) \
+  CASE_VI_GFX9(TTMP12_TTMP13) \
+  CASE_VI_GFX9(TTMP14_TTMP15) \
+  CASE_VI_GFX9(TTMP0_TTMP1_TTMP2_TTMP3) \
+  CASE_VI_GFX9(TTMP4_TTMP5_TTMP6_TTMP7) \
+  CASE_VI_GFX9(TTMP8_TTMP9_TTMP10_TTMP11) \
+  CASE_VI_GFX9(TTMP12_TTMP13_TTMP14_TTMP15) \
   }
-  return Reg;
+
+#define CASE_CI_VI(node) \
+  assert(!isSI(STI)); \
+  case node: return isCI(STI) ? node##_ci : node##_vi;
+
+#define CASE_VI_GFX9(node) \
+  case node: return isGFX9(STI) ? node##_gfx9 : node##_vi;
+
+unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI) {
+  MAP_REG2REG
 }
+
+#undef CASE_CI_VI
+#undef CASE_VI_GFX9
+
+#define CASE_CI_VI(node)   case node##_ci: case node##_vi:   return node;
+#define CASE_VI_GFX9(node) case node##_vi: case node##_gfx9: return node;
 
 unsigned mc2PseudoReg(unsigned Reg) {
-  switch (Reg) {
-  case AMDGPU::FLAT_SCR_ci:
-  case AMDGPU::FLAT_SCR_vi:
-    return FLAT_SCR;
-
-  case AMDGPU::FLAT_SCR_LO_ci:
-  case AMDGPU::FLAT_SCR_LO_vi:
-    return AMDGPU::FLAT_SCR_LO;
-
-  case AMDGPU::FLAT_SCR_HI_ci:
-  case AMDGPU::FLAT_SCR_HI_vi:
-    return AMDGPU::FLAT_SCR_HI;
-
-  default:
-    return Reg;
-  }
+  MAP_REG2REG
 }
+
+#undef CASE_CI_VI
+#undef CASE_VI_GFX9
+#undef MAP_REG2REG
 
 bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);

@@ -13,11 +13,13 @@
 
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "Hexagon.h"
+#include "HexagonDepArch.h"
 #include "HexagonTargetStreamer.h"
 #include "MCTargetDesc/HexagonInstPrinter.h"
 #include "MCTargetDesc/HexagonMCAsmInfo.h"
 #include "MCTargetDesc/HexagonMCELFStreamer.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -57,41 +59,55 @@ cl::opt<bool> llvm::HexagonDisableDuplex
   ("mno-pairing",
    cl::desc("Disable looking for duplex instructions for Hexagon"));
 
-static cl::opt<bool> HexagonV4ArchVariant("mv4", cl::Hidden, cl::init(false),
-  cl::desc("Build for Hexagon V4"));
+namespace { // These flags are to be deprecated
+cl::opt<bool> MV4("mv4", cl::Hidden, cl::desc("Build for Hexagon V4"),
+                  cl::init(false));
+cl::opt<bool> MV5("mv5", cl::Hidden, cl::desc("Build for Hexagon V5"),
+                  cl::init(false));
+cl::opt<bool> MV55("mv55", cl::Hidden, cl::desc("Build for Hexagon V55"),
+                   cl::init(false));
+cl::opt<bool> MV60("mv60", cl::Hidden, cl::desc("Build for Hexagon V60"),
+                   cl::init(false));
+cl::opt<bool> MV62("mv62", cl::Hidden, cl::desc("Build for Hexagon V62"),
+                   cl::init(false));
+cl::opt<bool> MV65("mv65", cl::Hidden, cl::desc("Build for Hexagon V65"),
+                   cl::init(false));
+} // namespace
 
-static cl::opt<bool> HexagonV5ArchVariant("mv5", cl::Hidden, cl::init(false),
-  cl::desc("Build for Hexagon V5"));
+cl::opt<Hexagon::ArchEnum>
+    EnableHVX("mhvx",
+      cl::desc("Enable Hexagon Vector eXtensions"),
+      cl::values(
+        clEnumValN(Hexagon::ArchEnum::V60, "v60", "Build for HVX v60"),
+        clEnumValN(Hexagon::ArchEnum::V62, "v62", "Build for HVX v62"),
+        clEnumValN(Hexagon::ArchEnum::V65, "v65", "Build for HVX v65"),
+        // Sentinal for no value specified
+        clEnumValN(Hexagon::ArchEnum::V5, "", "")),
+      // Sentinal for flag not present
+      cl::init(Hexagon::ArchEnum::V4), cl::ValueOptional);
+static cl::opt<bool>
+  DisableHVX("mno-hvx", cl::Hidden, cl::desc("Disable Hexagon Vector eXtensions"));
 
-static cl::opt<bool> HexagonV55ArchVariant("mv55", cl::Hidden, cl::init(false),
-  cl::desc("Build for Hexagon V55"));
-
-static cl::opt<bool> HexagonV60ArchVariant("mv60", cl::Hidden, cl::init(false),
-  cl::desc("Build for Hexagon V60"));
-
-static cl::opt<bool> HexagonV62ArchVariant("mv62", cl::Hidden, cl::init(false),
-  cl::desc("Build for Hexagon V62"));
-
-static cl::opt<bool> EnableHVX("mhvx", cl::Hidden, cl::init(false),
-  cl::desc("Enable Hexagon Vector Extension (HVX)"));
 
 static StringRef DefaultArch = "hexagonv60";
 
 static StringRef HexagonGetArchVariant() {
-  if (HexagonV4ArchVariant)
+  if (MV4)
     return "hexagonv4";
-  if (HexagonV5ArchVariant)
+  if (MV5)
     return "hexagonv5";
-  if (HexagonV55ArchVariant)
+  if (MV55)
     return "hexagonv55";
-  if (HexagonV60ArchVariant)
+  if (MV60)
     return "hexagonv60";
-  if (HexagonV62ArchVariant)
+  if (MV62)
     return "hexagonv62";
+  if (MV65)
+    return "hexagonv65";
   return "";
 }
 
-StringRef Hexagon_MC::selectHexagonCPU(const Triple &TT, StringRef CPU) {
+StringRef Hexagon_MC::selectHexagonCPU(StringRef CPU) {
   StringRef ArchV = HexagonGetArchVariant();
   if (!ArchV.empty() && !CPU.empty()) {
     if (ArchV != CPU)
@@ -146,7 +162,11 @@ public:
         OS << Indent << InstTxt << Separator;
       HeadTail = HeadTail.second.split('\n');
     }
-    OS << "\t}" << PacketBundle.second;
+
+    if (HexagonMCInstrInfo::isMemReorderDisabled(Inst))
+      OS << "\n\t}:mem_noshuf" << PacketBundle.second;
+    else
+      OS << "\t}" << PacketBundle.second;
   }
 };
 
@@ -251,15 +271,37 @@ static bool LLVM_ATTRIBUTE_UNUSED checkFeature(MCSubtargetInfo* STI, uint64_t F)
   return (FB & (1ULL << F)) != 0;
 }
 
-StringRef Hexagon_MC::ParseHexagonTriple(const Triple &TT, StringRef CPU) {
-  StringRef CPUName = Hexagon_MC::selectHexagonCPU(TT, CPU);
-  StringRef FS = "";
-  if (EnableHVX) {
-    if (CPUName.equals_lower("hexagonv60") ||
-        CPUName.equals_lower("hexagonv62"))
-      FS = "+hvx";
+namespace {
+std::string selectHexagonFS(StringRef CPU, StringRef FS) {
+  SmallVector<StringRef, 3> Result;
+  if (!FS.empty())
+    Result.push_back(FS);
+
+  switch (EnableHVX) {
+  case Hexagon::ArchEnum::V55:
+    break;
+  case Hexagon::ArchEnum::V60:
+    Result.push_back("+hvxv60");
+    break;
+  case Hexagon::ArchEnum::V62:
+    Result.push_back("+hvxv62");
+    break;
+  case Hexagon::ArchEnum::V65:
+    Result.push_back("+hvxv65");
+    break;
+  case Hexagon::ArchEnum::V5:{
+    Result.push_back(StringSwitch<StringRef>(CPU)
+             .Case("hexagonv60", "+hvxv60")
+             .Case("hexagonv62", "+hvxv62")
+             .Case("hexagonv65", "+hvxv65"));
+    break;
   }
-  return FS;
+  case Hexagon::ArchEnum::V4:
+    // Sentinal if -mhvx isn't specified
+    break;
+  }
+  return join(Result.begin(), Result.end(), ",");
+}
 }
 
 static bool isCPUValid(std::string CPU)
@@ -271,16 +313,76 @@ static bool isCPUValid(std::string CPU)
     "hexagonv55",
     "hexagonv60",
     "hexagonv62",
+    "hexagonv65",
   };
 
   return std::find(table.begin(), table.end(), CPU) != table.end();
 }
 
+namespace {
+std::pair<std::string, std::string> selectCPUAndFS(StringRef CPU,
+                                                   StringRef FS) {
+  std::pair<std::string, std::string> Result;
+  Result.first = Hexagon_MC::selectHexagonCPU(CPU);
+  Result.second = selectHexagonFS(Result.first, FS);
+  return Result;
+}
+}
+
+FeatureBitset Hexagon_MC::completeHVXFeatures(const FeatureBitset &S) {
+  using namespace Hexagon;
+  // Make sure that +hvx-length turns hvx on, and that "hvx" alone
+  // turns on hvxvNN, corresponding to the existing ArchVNN.
+  FeatureBitset FB = S;
+  unsigned CpuArch = ArchV4;
+  for (unsigned F : {ArchV65, ArchV62, ArchV60, ArchV55, ArchV5, ArchV4}) {
+    if (!FB.test(F))
+      continue;
+    CpuArch = F;
+    break;
+  }
+  bool UseHvx = false;
+  for (unsigned F : {ExtensionHVX, ExtensionHVX64B, ExtensionHVX128B,
+                     ExtensionHVXDbl}) {
+    if (!FB.test(F))
+      continue;
+    UseHvx = true;
+    break;
+  }
+  bool HasHvxVer = false;
+  for (unsigned F : {ExtensionHVXV60, ExtensionHVXV62, ExtensionHVXV65}) {
+    if (!FB.test(F))
+      continue;
+    HasHvxVer = true;
+    UseHvx = true;
+    break;
+  }
+
+  if (!UseHvx || HasHvxVer)
+    return FB;
+
+  // HasHvxVer is false, and UseHvx is true.
+  switch (CpuArch) {
+    case ArchV60:
+      FB.set(ExtensionHVXV60);
+      break;
+    case ArchV62:
+      FB.set(ExtensionHVXV62);
+      break;
+    case ArchV65:
+      FB.set(ExtensionHVXV65);
+      break;
+  }
+  return FB;
+}
+
 MCSubtargetInfo *Hexagon_MC::createHexagonMCSubtargetInfo(const Triple &TT,
                                                           StringRef CPU,
                                                           StringRef FS) {
-  StringRef ArchFS = (FS.size()) ? FS : Hexagon_MC::ParseHexagonTriple(TT, CPU);
-  StringRef CPUName = Hexagon_MC::selectHexagonCPU(TT, CPU);
+  std::pair<std::string, std::string> Features = selectCPUAndFS(CPU, FS);
+  StringRef CPUName = Features.first;
+  StringRef ArchFS = Features.second;
+
   if (!isCPUValid(CPUName.str())) {
     errs() << "error: invalid CPU \"" << CPUName.str().c_str()
            << "\" specified\n";
@@ -288,10 +390,12 @@ MCSubtargetInfo *Hexagon_MC::createHexagonMCSubtargetInfo(const Triple &TT,
   }
 
   MCSubtargetInfo *X = createHexagonMCSubtargetInfoImpl(TT, CPUName, ArchFS);
-  if (X->getFeatureBits()[Hexagon::ExtensionHVX128B]) {
+  if (HexagonDisableDuplex) {
     llvm::FeatureBitset Features = X->getFeatureBits();
-    X->setFeatureBits(Features.set(Hexagon::ExtensionHVX));
+    X->setFeatureBits(Features.set(Hexagon::FeatureDuplex, false));
   }
+
+  X->setFeatureBits(completeHVXFeatures(X->getFeatureBits()));
   return X;
 }
 
@@ -302,6 +406,7 @@ unsigned Hexagon_MC::GetELFFlags(const MCSubtargetInfo &STI) {
     {"hexagonv55", ELF::EF_HEXAGON_MACH_V55},
     {"hexagonv60", ELF::EF_HEXAGON_MACH_V60},
     {"hexagonv62", ELF::EF_HEXAGON_MACH_V62},
+    {"hexagonv65", ELF::EF_HEXAGON_MACH_V65},
   };
 
   auto F = ElfFlags.find(STI.getCPU());

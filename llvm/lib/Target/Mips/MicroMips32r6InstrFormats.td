@@ -17,7 +17,7 @@ class MMR6Arch<string opstr> {
   string DecoderNamespace = "MicroMipsR6";
 }
 
-// Class used for microMIPS32r6 and microMIPS64r6 instructions.
+// Class used for microMIPS32r6 instructions.
 class MicroMipsR6Inst16 : PredicateControl {
   string DecoderNamespace = "MicroMipsR6";
   let InsnPredicates = [HasMicroMips32r6];
