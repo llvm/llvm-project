@@ -90,7 +90,7 @@ public:
                         DataExtractor StringSection)
       : AccelSection(AccelSection), StringSection(StringSection) {}
 
-  bool extract();
+  llvm::Error extract();
   uint32_t getNumBuckets();
   uint32_t getNumHashes();
   uint32_t getSizeHdr();
