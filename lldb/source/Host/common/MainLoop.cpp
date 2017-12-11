@@ -221,7 +221,7 @@ void MainLoop::RunImpl::ProcessEvents() {
   for (const auto &handle : fds) {
 #else
   for (const auto &fd : read_fds) {
-    if ((fd.revents & POLLIN) == 0)
+    if ((fd.revents & (POLLIN | POLLHUP)) == 0)
       continue;
     IOObject::WaitableHandle handle = fd.fd;
 #endif
