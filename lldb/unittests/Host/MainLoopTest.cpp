@@ -110,7 +110,7 @@ TEST_F(MainLoopTest, TerminatesImmediately) {
 
 #ifdef LLVM_ON_UNIX
 TEST_F(MainLoopTest, DetectsEOF) {
-  lldb_utility::PseudoTerminal term;
+  PseudoTerminal term;
   ASSERT_TRUE(term.OpenFirstAvailableMaster(O_RDWR, nullptr, 0));
   ASSERT_TRUE(term.OpenSlave(O_RDWR | O_NOCTTY, nullptr, 0));
   auto conn = llvm::make_unique<ConnectionFileDescriptor>(

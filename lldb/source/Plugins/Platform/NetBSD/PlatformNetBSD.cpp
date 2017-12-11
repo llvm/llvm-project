@@ -393,7 +393,7 @@ lldb::ProcessSP PlatformNetBSD::DebugProcess(
     // Hook up process PTY if we have one (which we should for local debugging
     // with llgs).
     int pty_fd = launch_info.GetPTY().ReleaseMasterFileDescriptor();
-    if (pty_fd != lldb_utility::PseudoTerminal::invalid_fd) {
+    if (pty_fd != PseudoTerminal::invalid_fd) {
       process_sp->SetSTDIOFileDescriptor(pty_fd);
       if (log)
         log->Printf("PlatformNetBSD::%s pid %" PRIu64
