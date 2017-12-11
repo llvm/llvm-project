@@ -136,6 +136,10 @@ static list<std::string>
                      "name or by number. This option can be specified "
                      "multiple times, once for each desired architecture."),
                 cat(DwarfDumpCategory));
+static opt<bool>
+    Diff("diff",
+         desc("Emit diff-friendly output by omitting offsets and addresses."),
+         cat(DwarfDumpCategory));
 static list<std::string>
     Find("find",
          desc("Search for the exact match for <name> in the accelerator tables "
@@ -237,6 +241,7 @@ static DIDumpOptions getDumpOpts() {
   DIDumpOptions DumpOpts;
   DumpOpts.DumpType = DumpType;
   DumpOpts.RecurseDepth = RecurseDepth;
+  DumpOpts.ShowAddresses = !Diff;
   DumpOpts.ShowChildren = ShowChildren;
   DumpOpts.ShowParents = ShowParents;
   DumpOpts.ShowForm = ShowForm;
