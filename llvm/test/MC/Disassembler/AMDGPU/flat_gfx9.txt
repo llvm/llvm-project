@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx901 -disassemble -show-encoding < %s | FileCheck %s
+# RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -disassemble -show-encoding < %s | FileCheck %s
 
 # CHECK: flat_atomic_add v[0:1], v0    ; encoding: [0x00,0x00,0x08,0xdd,0x00,0x00,0x00,0x00]
 0x00,0x00,0x08,0xdd,0x00,0x00,0x00,0x00

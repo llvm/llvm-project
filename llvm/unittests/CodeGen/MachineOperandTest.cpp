@@ -11,6 +11,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
@@ -98,6 +99,24 @@ TEST(MachineOperandTest, PrintCImm) {
   raw_string_ostream OS(str);
   MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
   ASSERT_TRUE(OS.str() == "i128 18446744073709551616");
+}
+
+TEST(MachineOperandTest, PrintSubRegIndex) {
+  // Create a MachineOperand with an immediate and print it as a subreg index.
+  MachineOperand MO = MachineOperand::CreateImm(3);
+
+  // Checking some preconditions on the newly created
+  // MachineOperand.
+  ASSERT_TRUE(MO.isImm());
+  ASSERT_TRUE(MO.getImm() == 3);
+
+  // Print a MachineOperand containing a SubRegIdx. Here we check that without a
+  // TRI and IntrinsicInfo we can print the operand as a subreg index.
+  std::string str;
+  raw_string_ostream OS(str);
+  ModuleSlotTracker DummyMST(nullptr);
+  MachineOperand::printSubregIdx(OS, MO.getImm(), nullptr);
+  ASSERT_TRUE(OS.str() == "%subreg.3");
 }
 
 } // end namespace

@@ -587,24 +587,24 @@ class UncondBranchMM16<string opstr> :
 }
 
 def ADDU16_MM : ArithRMM16<"addu16", GPRMM16Opnd, 1, II_ADDU, add>,
-    ARITH_FM_MM16<0>, ISA_MICROMIPS_NOT_32R6_64R6;
+    ARITH_FM_MM16<0>, ISA_MICROMIPS_NOT_32R6;
 def AND16_MM : LogicRMM16<"and16", GPRMM16Opnd, II_AND, and>,
-    LOGIC_FM_MM16<0x2>, ISA_MICROMIPS_NOT_32R6_64R6;
+    LOGIC_FM_MM16<0x2>, ISA_MICROMIPS_NOT_32R6;
 def ANDI16_MM : AndImmMM16<"andi16", GPRMM16Opnd, II_AND>, ANDI_FM_MM16<0x0b>,
-    ISA_MICROMIPS_NOT_32R6_64R6;
+    ISA_MICROMIPS_NOT_32R6;
 def NOT16_MM : NotMM16<"not16", GPRMM16Opnd>, LOGIC_FM_MM16<0x0>,
-    ISA_MICROMIPS_NOT_32R6_64R6;
+    ISA_MICROMIPS_NOT_32R6;
 def OR16_MM : LogicRMM16<"or16", GPRMM16Opnd, II_OR, or>, LOGIC_FM_MM16<0x3>,
-    ISA_MICROMIPS_NOT_32R6_64R6;
+    ISA_MICROMIPS_NOT_32R6;
 def SLL16_MM : ShiftIMM16<"sll16", uimm3_shift, GPRMM16Opnd, II_SLL>,
-    SHIFT_FM_MM16<0>, ISA_MICROMIPS_NOT_32R6_64R6;
+    SHIFT_FM_MM16<0>, ISA_MICROMIPS_NOT_32R6;
 def SRL16_MM : ShiftIMM16<"srl16", uimm3_shift, GPRMM16Opnd, II_SRL>,
-    SHIFT_FM_MM16<1>, ISA_MICROMIPS_NOT_32R6_64R6;
+    SHIFT_FM_MM16<1>, ISA_MICROMIPS_NOT_32R6;
 
 def SUBU16_MM : ArithRMM16<"subu16", GPRMM16Opnd, 0, II_SUBU, sub>,
-                ARITH_FM_MM16<1>, ISA_MICROMIPS_NOT_32R6_64R6;
+                ARITH_FM_MM16<1>, ISA_MICROMIPS_NOT_32R6;
 def XOR16_MM : LogicRMM16<"xor16", GPRMM16Opnd, II_XOR, xor>,
-               LOGIC_FM_MM16<0x1>, ISA_MICROMIPS_NOT_32R6_64R6;
+               LOGIC_FM_MM16<0x1>, ISA_MICROMIPS_NOT_32R6;
 def LBU16_MM : LoadMM16<"lbu16", GPRMM16Opnd, zextloadi8, II_LBU,
                         mem_mm_4>, LOAD_STORE_FM_MM16<0x02>;
 def LHU16_MM : LoadMM16<"lhu16", GPRMM16Opnd, zextloadi16, II_LHU,
@@ -632,7 +632,7 @@ def MFHI16_MM : MoveFromHILOMM<"mfhi", GPR32Opnd, AC0>, MFHILO_FM_MM16<0x10>;
 def MFLO16_MM : MoveFromHILOMM<"mflo", GPR32Opnd, AC0>, MFHILO_FM_MM16<0x12>;
 def MOVE16_MM : MoveMM16<"move", GPR32Opnd>, MOVE_FM_MM16<0x03>;
 def MOVEP_MM : MovePMM16<"movep", GPRMM16OpndMoveP>, MOVEP_FM_MM16,
-               ISA_MICROMIPS_NOT_32R6_64R6;
+               ISA_MICROMIPS_NOT_32R6;
 def LI16_MM : LoadImmMM16<"li16", li16_imm, GPRMM16Opnd>, LI_FM_MM16,
               IsAsCheapAsAMove;
 def JALR16_MM : JumpLinkRegMM16<"jalr", GPR32Opnd>, JALR_FM_MM16<0x0e>,
@@ -647,9 +647,9 @@ def BNEZ16_MM : CBranchZeroMM<"bnez16", brtarget7_mm, GPRMM16Opnd>,
                 BEQNEZ_FM_MM16<0x2b>;
 def B16_MM : UncondBranchMM16<"b16">, B16_FM;
 def BREAK16_MM : BrkSdbbp16MM<"break16", II_BREAK>, BRKSDBBP16_FM_MM<0x28>,
-    ISA_MICROMIPS_NOT_32R6_64R6;
+    ISA_MICROMIPS_NOT_32R6;
 def SDBBP16_MM : BrkSdbbp16MM<"sdbbp16", II_SDBBP>, BRKSDBBP16_FM_MM<0x2C>,
-    ISA_MICROMIPS_NOT_32R6_64R6;
+    ISA_MICROMIPS_NOT_32R6;
 
 let DecoderNamespace = "MicroMips" in {
   /// Load and Store Instructions - multiple

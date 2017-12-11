@@ -227,6 +227,13 @@ public:
   ///
   void clearParent() { ParentMI = nullptr; }
 
+  /// Print a subreg index operand.
+  /// MO_Immediate operands can also be subreg idices. If it's the case, the
+  /// subreg index name will be printed. MachineInstr::isOperandSubregIdx can be
+  /// called to check this.
+  static void printSubregIdx(raw_ostream &OS, uint64_t Index,
+                             const TargetRegisterInfo *TRI);
+
   /// Print the MachineOperand to \p os.
   /// Providing a valid \p TRI and \p IntrinsicInfo results in a more
   /// target-specific printing. If \p TRI and \p IntrinsicInfo are null, the

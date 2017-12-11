@@ -103,12 +103,13 @@ namespace AMDGPU {
 namespace IsaInfo {
 
 IsaVersion getIsaVersion(const FeatureBitset &Features) {
-  // SI.
+  // GCN GFX6 (Southern Islands (SI)).
   if (Features.test(FeatureISAVersion6_0_0))
     return {6, 0, 0};
   if (Features.test(FeatureISAVersion6_0_1))
     return {6, 0, 1};
-  // CI.
+
+  // GCN GFX7 (Sea Islands (CI)).
   if (Features.test(FeatureISAVersion7_0_0))
     return {7, 0, 0};
   if (Features.test(FeatureISAVersion7_0_1))
@@ -117,8 +118,10 @@ IsaVersion getIsaVersion(const FeatureBitset &Features) {
     return {7, 0, 2};
   if (Features.test(FeatureISAVersion7_0_3))
     return {7, 0, 3};
+  if (Features.test(FeatureISAVersion7_0_4))
+    return {7, 0, 4};
 
-  // VI.
+  // GCN GFX8 (Volcanic Islands (VI)).
   if (Features.test(FeatureISAVersion8_0_0))
     return {8, 0, 0};
   if (Features.test(FeatureISAVersion8_0_1))
@@ -127,20 +130,14 @@ IsaVersion getIsaVersion(const FeatureBitset &Features) {
     return {8, 0, 2};
   if (Features.test(FeatureISAVersion8_0_3))
     return {8, 0, 3};
-  if (Features.test(FeatureISAVersion8_0_4))
-    return {8, 0, 4};
   if (Features.test(FeatureISAVersion8_1_0))
     return {8, 1, 0};
 
-  // GFX9.
+  // GCN GFX9.
   if (Features.test(FeatureISAVersion9_0_0))
     return {9, 0, 0};
-  if (Features.test(FeatureISAVersion9_0_1))
-    return {9, 0, 1};
   if (Features.test(FeatureISAVersion9_0_2))
     return {9, 0, 2};
-  if (Features.test(FeatureISAVersion9_0_3))
-    return {9, 0, 3};
 
   if (!Features.test(FeatureGCN) || Features.test(FeatureSouthernIslands))
     return {0, 0, 0};

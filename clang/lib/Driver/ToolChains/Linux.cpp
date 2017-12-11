@@ -854,6 +854,8 @@ SanitizerMask Linux::getSupportedSanitizers() const {
     Res |= SanitizerKind::Function;
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsX86 || IsArmArch)
     Res |= SanitizerKind::Scudo;
+  if (IsAArch64)
+    Res |= SanitizerKind::HWAddress;
   return Res;
 }
 

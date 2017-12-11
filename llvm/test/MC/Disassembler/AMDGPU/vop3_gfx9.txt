@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx901 -disassemble -show-encoding < %s | FileCheck %s -check-prefix=GFX9
+# RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -disassemble -show-encoding < %s | FileCheck %s -check-prefix=GFX9
 
 # GFX9: v_fma_f16 v5, v1, v2, v3    ; encoding: [0x05,0x00,0x06,0xd2,0x01,0x05,0x0e,0x04]
 0x05,0x00,0x06,0xd2,0x01,0x05,0x0e,0x04

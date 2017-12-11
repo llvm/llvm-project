@@ -407,8 +407,99 @@ define void @test_faddp_fiadd(i16 *%a0, i32 *%a1) optsize {
   ret void
 }
 
-; TODO - test_fbld
-; TODO - test_fbstp
+define void @test_fbld_fbstp(i8* %a0) optsize {
+; GENERIC-LABEL: test_fbld_fbstp:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    fbld (%eax)
+; GENERIC-NEXT:    fbstp (%eax)
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    retl
+;
+; ATOM-LABEL: test_fbld_fbstp:
+; ATOM:       # %bb.0:
+; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    fbld (%eax)
+; ATOM-NEXT:    fbstp (%eax)
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    retl # sched: [79:39.50]
+;
+; SLM-LABEL: test_fbld_fbstp:
+; SLM:       # %bb.0:
+; SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; SLM-NEXT:    #APP
+; SLM-NEXT:    fbld (%eax) # sched: [100:1.00]
+; SLM-NEXT:    fbstp (%eax) # sched: [100:1.00]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    retl # sched: [4:1.00]
+;
+; SANDY-LABEL: test_fbld_fbstp:
+; SANDY:       # %bb.0:
+; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    fbld (%eax) # sched: [100:0.33]
+; SANDY-NEXT:    fbstp (%eax) # sched: [100:0.33]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    retl # sched: [5:1.00]
+;
+; HASWELL-LABEL: test_fbld_fbstp:
+; HASWELL:       # %bb.0:
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    fbld (%eax) # sched: [47:?]
+; HASWELL-NEXT:    fbstp (%eax) # sched: [1:1.00]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    retl # sched: [7:1.00]
+;
+; BROADWELL-LABEL: test_fbld_fbstp:
+; BROADWELL:       # %bb.0:
+; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    fbld (%eax) # sched: [100:0.25]
+; BROADWELL-NEXT:    fbstp (%eax) # sched: [1:1.00]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    retl # sched: [6:0.50]
+;
+; SKYLAKE-LABEL: test_fbld_fbstp:
+; SKYLAKE:       # %bb.0:
+; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    fbld (%eax) # sched: [100:0.25]
+; SKYLAKE-NEXT:    fbstp (%eax) # sched: [1:1.00]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    retl # sched: [6:0.50]
+;
+; SKX-LABEL: test_fbld_fbstp:
+; SKX:       # %bb.0:
+; SKX-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKX-NEXT:    #APP
+; SKX-NEXT:    fbld (%eax) # sched: [100:0.25]
+; SKX-NEXT:    fbstp (%eax) # sched: [1:1.00]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BTVER2-LABEL: test_fbld_fbstp:
+; BTVER2:       # %bb.0:
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    fbld (%eax) # sched: [100:0.17]
+; BTVER2-NEXT:    fbstp (%eax) # sched: [100:0.17]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    retl # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_fbld_fbstp:
+; ZNVER1:       # %bb.0:
+; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    fbld (%eax) # sched: [100:?]
+; ZNVER1-NEXT:    fbstp (%eax) # sched: [100:?]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    retl # sched: [1:0.50]
+  tail call void asm sideeffect "fbld $0 \0A\09 fbstp $0", "*m"(i8 *%a0) nounwind
+  ret void
+}
 
 define void @test_fchs() optsize {
 ; GENERIC-LABEL: test_fchs:
@@ -484,97 +575,161 @@ define void @test_fchs() optsize {
   ret void
 }
 
-define void @test_fclex_fnclex() optsize {
-; GENERIC-LABEL: test_fclex_fnclex:
+define void @test_fclex() optsize {
+; GENERIC-LABEL: test_fclex:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    wait
 ; GENERIC-NEXT:    fnclex
-; GENERIC-NEXT:    fnclex
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retl
 ;
-; ATOM-LABEL: test_fclex_fnclex:
+; ATOM-LABEL: test_fclex:
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    #APP
 ; ATOM-NEXT:    wait # sched: [1:0.50]
 ; ATOM-NEXT:    fnclex # sched: [25:12.50]
-; ATOM-NEXT:    fnclex # sched: [25:12.50]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
-; SLM-LABEL: test_fclex_fnclex:
+; SLM-LABEL: test_fclex:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    #APP
 ; SLM-NEXT:    wait # sched: [100:1.00]
 ; SLM-NEXT:    fnclex # sched: [100:1.00]
-; SLM-NEXT:    fnclex # sched: [100:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retl # sched: [4:1.00]
 ;
-; SANDY-LABEL: test_fclex_fnclex:
+; SANDY-LABEL: test_fclex:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    wait # sched: [100:0.33]
 ; SANDY-NEXT:    fnclex # sched: [100:0.33]
-; SANDY-NEXT:    fnclex # sched: [100:0.33]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retl # sched: [5:1.00]
 ;
-; HASWELL-LABEL: test_fclex_fnclex:
+; HASWELL-LABEL: test_fclex:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    wait # sched: [1:0.50]
 ; HASWELL-NEXT:    fnclex # sched: [1:1.25]
-; HASWELL-NEXT:    fnclex # sched: [1:1.25]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
-; BROADWELL-LABEL: test_fclex_fnclex:
+; BROADWELL-LABEL: test_fclex:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
 ; BROADWELL-NEXT:    wait # sched: [2:0.50]
 ; BROADWELL-NEXT:    fnclex # sched: [4:1.00]
-; BROADWELL-NEXT:    fnclex # sched: [4:1.00]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retl # sched: [6:0.50]
 ;
-; SKYLAKE-LABEL: test_fclex_fnclex:
+; SKYLAKE-LABEL: test_fclex:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
 ; SKYLAKE-NEXT:    wait # sched: [2:0.50]
 ; SKYLAKE-NEXT:    fnclex # sched: [4:1.00]
-; SKYLAKE-NEXT:    fnclex # sched: [4:1.00]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retl # sched: [6:0.50]
 ;
-; SKX-LABEL: test_fclex_fnclex:
+; SKX-LABEL: test_fclex:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
 ; SKX-NEXT:    wait # sched: [2:0.50]
 ; SKX-NEXT:    fnclex # sched: [4:1.00]
-; SKX-NEXT:    fnclex # sched: [4:1.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
-; BTVER2-LABEL: test_fclex_fnclex:
+; BTVER2-LABEL: test_fclex:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    wait # sched: [100:0.17]
 ; BTVER2-NEXT:    fnclex # sched: [100:0.17]
-; BTVER2-NEXT:    fnclex # sched: [100:0.17]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
-; ZNVER1-LABEL: test_fclex_fnclex:
+; ZNVER1-LABEL: test_fclex:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    wait # sched: [1:1.00]
 ; ZNVER1-NEXT:    fnclex # sched: [100:?]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    retl # sched: [1:0.50]
+  tail call void asm sideeffect "fclex", ""() nounwind
+  ret void
+}
+
+define void @test_fnclex() optsize {
+; GENERIC-LABEL: test_fnclex:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    fnclex
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    retl
+;
+; ATOM-LABEL: test_fnclex:
+; ATOM:       # %bb.0:
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    fnclex # sched: [25:12.50]
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    retl # sched: [79:39.50]
+;
+; SLM-LABEL: test_fnclex:
+; SLM:       # %bb.0:
+; SLM-NEXT:    #APP
+; SLM-NEXT:    fnclex # sched: [100:1.00]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    retl # sched: [4:1.00]
+;
+; SANDY-LABEL: test_fnclex:
+; SANDY:       # %bb.0:
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    fnclex # sched: [100:0.33]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    retl # sched: [5:1.00]
+;
+; HASWELL-LABEL: test_fnclex:
+; HASWELL:       # %bb.0:
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    fnclex # sched: [1:1.25]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    retl # sched: [7:1.00]
+;
+; BROADWELL-LABEL: test_fnclex:
+; BROADWELL:       # %bb.0:
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    fnclex # sched: [4:1.00]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    retl # sched: [6:0.50]
+;
+; SKYLAKE-LABEL: test_fnclex:
+; SKYLAKE:       # %bb.0:
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    fnclex # sched: [4:1.00]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    retl # sched: [6:0.50]
+;
+; SKX-LABEL: test_fnclex:
+; SKX:       # %bb.0:
+; SKX-NEXT:    #APP
+; SKX-NEXT:    fnclex # sched: [4:1.00]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BTVER2-LABEL: test_fnclex:
+; BTVER2:       # %bb.0:
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    fnclex # sched: [100:0.17]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    retl # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_fnclex:
+; ZNVER1:       # %bb.0:
+; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    fnclex # sched: [100:?]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
-  tail call void asm sideeffect "fclex \0A\09 fnclex", ""() nounwind
+  tail call void asm sideeffect "fnclex", ""() nounwind
   ret void
 }
 
@@ -2104,108 +2259,565 @@ define void @test_fincstp() optsize {
   ret void
 }
 
-define void @test_finit_fninit() optsize {
-; GENERIC-LABEL: test_finit_fninit:
+define void @test_finit() optsize {
+; GENERIC-LABEL: test_finit:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    wait
 ; GENERIC-NEXT:    fninit
-; GENERIC-NEXT:    fninit
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retl
 ;
-; ATOM-LABEL: test_finit_fninit:
+; ATOM-LABEL: test_finit:
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    #APP
 ; ATOM-NEXT:    wait # sched: [1:0.50]
 ; ATOM-NEXT:    fninit # sched: [63:31.50]
-; ATOM-NEXT:    fninit # sched: [63:31.50]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
-; SLM-LABEL: test_finit_fninit:
+; SLM-LABEL: test_finit:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    #APP
 ; SLM-NEXT:    wait # sched: [100:1.00]
 ; SLM-NEXT:    fninit # sched: [100:1.00]
-; SLM-NEXT:    fninit # sched: [100:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retl # sched: [4:1.00]
 ;
-; SANDY-LABEL: test_finit_fninit:
+; SANDY-LABEL: test_finit:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    wait # sched: [100:0.33]
 ; SANDY-NEXT:    fninit # sched: [5:1.33]
-; SANDY-NEXT:    fninit # sched: [5:1.33]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retl # sched: [5:1.00]
 ;
-; HASWELL-LABEL: test_finit_fninit:
+; HASWELL-LABEL: test_finit:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
 ; HASWELL-NEXT:    wait # sched: [1:0.50]
 ; HASWELL-NEXT:    fninit # sched: [1:?]
-; HASWELL-NEXT:    fninit # sched: [1:?]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
-; BROADWELL-LABEL: test_finit_fninit:
+; BROADWELL-LABEL: test_finit:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
 ; BROADWELL-NEXT:    wait # sched: [2:0.50]
 ; BROADWELL-NEXT:    fninit # sched: [75:6.00]
-; BROADWELL-NEXT:    fninit # sched: [75:6.00]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retl # sched: [6:0.50]
 ;
-; SKYLAKE-LABEL: test_finit_fninit:
+; SKYLAKE-LABEL: test_finit:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
 ; SKYLAKE-NEXT:    wait # sched: [2:0.50]
 ; SKYLAKE-NEXT:    fninit # sched: [75:6.00]
-; SKYLAKE-NEXT:    fninit # sched: [75:6.00]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retl # sched: [6:0.50]
 ;
-; SKX-LABEL: test_finit_fninit:
+; SKX-LABEL: test_finit:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
 ; SKX-NEXT:    wait # sched: [2:0.50]
 ; SKX-NEXT:    fninit # sched: [75:6.00]
-; SKX-NEXT:    fninit # sched: [75:6.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
-; BTVER2-LABEL: test_finit_fninit:
+; BTVER2-LABEL: test_finit:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    wait # sched: [100:0.17]
 ; BTVER2-NEXT:    fninit # sched: [100:0.17]
-; BTVER2-NEXT:    fninit # sched: [100:0.17]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
-; ZNVER1-LABEL: test_finit_fninit:
+; ZNVER1-LABEL: test_finit:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    wait # sched: [1:1.00]
 ; ZNVER1-NEXT:    fninit # sched: [100:?]
-; ZNVER1-NEXT:    fninit # sched: [100:?]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
-  tail call void asm sideeffect "finit \0A\09 fninit", ""() nounwind
+  tail call void asm sideeffect "finit", ""() nounwind
   ret void
 }
 
-; TODO - test_fist
-; TODO - test_fistp
-; TODO - test_fisttp
+define void @test_fninit() optsize {
+; GENERIC-LABEL: test_fninit:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    fninit
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    retl
+;
+; ATOM-LABEL: test_fninit:
+; ATOM:       # %bb.0:
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    fninit # sched: [63:31.50]
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    retl # sched: [79:39.50]
+;
+; SLM-LABEL: test_fninit:
+; SLM:       # %bb.0:
+; SLM-NEXT:    #APP
+; SLM-NEXT:    fninit # sched: [100:1.00]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    retl # sched: [4:1.00]
+;
+; SANDY-LABEL: test_fninit:
+; SANDY:       # %bb.0:
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    fninit # sched: [5:1.33]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    retl # sched: [5:1.00]
+;
+; HASWELL-LABEL: test_fninit:
+; HASWELL:       # %bb.0:
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    fninit # sched: [1:?]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    retl # sched: [7:1.00]
+;
+; BROADWELL-LABEL: test_fninit:
+; BROADWELL:       # %bb.0:
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    fninit # sched: [75:6.00]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    retl # sched: [6:0.50]
+;
+; SKYLAKE-LABEL: test_fninit:
+; SKYLAKE:       # %bb.0:
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    fninit # sched: [75:6.00]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    retl # sched: [6:0.50]
+;
+; SKX-LABEL: test_fninit:
+; SKX:       # %bb.0:
+; SKX-NEXT:    #APP
+; SKX-NEXT:    fninit # sched: [75:6.00]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BTVER2-LABEL: test_fninit:
+; BTVER2:       # %bb.0:
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    fninit # sched: [100:0.17]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    retl # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_fninit:
+; ZNVER1:       # %bb.0:
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    fninit # sched: [100:?]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    retl # sched: [1:0.50]
+  tail call void asm sideeffect "fninit", ""() nounwind
+  ret void
+}
 
-; TODO - test_fld
+define void @test_fist_fistp_fisttp(i16* %a0, i32* %a1, i64 *%a2) optsize {
+; GENERIC-LABEL: test_fist_fistp_fisttp:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    fists (%edx)
+; GENERIC-NEXT:    fistl (%ecx)
+; GENERIC-NEXT:    fistps (%edx)
+; GENERIC-NEXT:    fistpl (%ecx)
+; GENERIC-NEXT:    fistpll (%eax)
+; GENERIC-NEXT:    fisttps (%edx)
+; GENERIC-NEXT:    fisttpl (%ecx)
+; GENERIC-NEXT:    fisttpll (%eax)
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    retl
+;
+; ATOM-LABEL: test_fist_fistp_fisttp:
+; ATOM:       # %bb.0:
+; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
+; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
+; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [1:1.00]
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    fists (%edx) # sched: [6:3.00]
+; ATOM-NEXT:    fistl (%ecx) # sched: [6:3.00]
+; ATOM-NEXT:    fistps (%edx) # sched: [6:3.00]
+; ATOM-NEXT:    fistpl (%ecx) # sched: [6:3.00]
+; ATOM-NEXT:    fistpll (%eax) # sched: [6:3.00]
+; ATOM-NEXT:    fisttps (%edx) # sched: [2:1.00]
+; ATOM-NEXT:    fisttpl (%ecx) # sched: [2:1.00]
+; ATOM-NEXT:    fisttpll (%eax) # sched: [2:1.00]
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    retl # sched: [79:39.50]
+;
+; SLM-LABEL: test_fist_fistp_fisttp:
+; SLM:       # %bb.0:
+; SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
+; SLM-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [3:1.00]
+; SLM-NEXT:    #APP
+; SLM-NEXT:    fists (%edx) # sched: [1:1.00]
+; SLM-NEXT:    fistl (%ecx) # sched: [1:1.00]
+; SLM-NEXT:    fistps (%edx) # sched: [1:1.00]
+; SLM-NEXT:    fistpl (%ecx) # sched: [1:1.00]
+; SLM-NEXT:    fistpll (%eax) # sched: [1:1.00]
+; SLM-NEXT:    fisttps (%edx) # sched: [1:1.00]
+; SLM-NEXT:    fisttpl (%ecx) # sched: [1:1.00]
+; SLM-NEXT:    fisttpll (%eax) # sched: [1:1.00]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    retl # sched: [4:1.00]
+;
+; SANDY-LABEL: test_fist_fistp_fisttp:
+; SANDY:       # %bb.0:
+; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    fists (%edx) # sched: [9:1.00]
+; SANDY-NEXT:    fistl (%ecx) # sched: [9:1.00]
+; SANDY-NEXT:    fistps (%edx) # sched: [9:1.00]
+; SANDY-NEXT:    fistpl (%ecx) # sched: [9:1.00]
+; SANDY-NEXT:    fistpll (%eax) # sched: [9:1.00]
+; SANDY-NEXT:    fisttps (%edx) # sched: [5:1.00]
+; SANDY-NEXT:    fisttpl (%ecx) # sched: [5:1.00]
+; SANDY-NEXT:    fisttpll (%eax) # sched: [5:1.00]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    retl # sched: [5:1.00]
+;
+; HASWELL-LABEL: test_fist_fistp_fisttp:
+; HASWELL:       # %bb.0:
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    fists (%edx) # sched: [4:1.00]
+; HASWELL-NEXT:    fistl (%ecx) # sched: [4:1.00]
+; HASWELL-NEXT:    fistps (%edx) # sched: [4:1.00]
+; HASWELL-NEXT:    fistpl (%ecx) # sched: [4:1.00]
+; HASWELL-NEXT:    fistpll (%eax) # sched: [4:1.00]
+; HASWELL-NEXT:    fisttps (%edx) # sched: [4:1.00]
+; HASWELL-NEXT:    fisttpl (%ecx) # sched: [4:1.00]
+; HASWELL-NEXT:    fisttpll (%eax) # sched: [4:1.00]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    retl # sched: [7:1.00]
+;
+; BROADWELL-LABEL: test_fist_fistp_fisttp:
+; BROADWELL:       # %bb.0:
+; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    fists (%edx) # sched: [4:1.00]
+; BROADWELL-NEXT:    fistl (%ecx) # sched: [4:1.00]
+; BROADWELL-NEXT:    fistps (%edx) # sched: [4:1.00]
+; BROADWELL-NEXT:    fistpl (%ecx) # sched: [4:1.00]
+; BROADWELL-NEXT:    fistpll (%eax) # sched: [4:1.00]
+; BROADWELL-NEXT:    fisttps (%edx) # sched: [4:1.00]
+; BROADWELL-NEXT:    fisttpl (%ecx) # sched: [4:1.00]
+; BROADWELL-NEXT:    fisttpll (%eax) # sched: [4:1.00]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    retl # sched: [6:0.50]
+;
+; SKYLAKE-LABEL: test_fist_fistp_fisttp:
+; SKYLAKE:       # %bb.0:
+; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    fists (%edx) # sched: [4:1.00]
+; SKYLAKE-NEXT:    fistl (%ecx) # sched: [4:1.00]
+; SKYLAKE-NEXT:    fistps (%edx) # sched: [4:1.00]
+; SKYLAKE-NEXT:    fistpl (%ecx) # sched: [4:1.00]
+; SKYLAKE-NEXT:    fistpll (%eax) # sched: [4:1.00]
+; SKYLAKE-NEXT:    fisttps (%edx) # sched: [4:1.00]
+; SKYLAKE-NEXT:    fisttpl (%ecx) # sched: [4:1.00]
+; SKYLAKE-NEXT:    fisttpll (%eax) # sched: [4:1.00]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    retl # sched: [6:0.50]
+;
+; SKX-LABEL: test_fist_fistp_fisttp:
+; SKX:       # %bb.0:
+; SKX-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKX-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; SKX-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
+; SKX-NEXT:    #APP
+; SKX-NEXT:    fists (%edx) # sched: [4:1.00]
+; SKX-NEXT:    fistl (%ecx) # sched: [4:1.00]
+; SKX-NEXT:    fistps (%edx) # sched: [4:1.00]
+; SKX-NEXT:    fistpl (%ecx) # sched: [4:1.00]
+; SKX-NEXT:    fistpll (%eax) # sched: [4:1.00]
+; SKX-NEXT:    fisttps (%edx) # sched: [4:1.00]
+; SKX-NEXT:    fisttpl (%ecx) # sched: [4:1.00]
+; SKX-NEXT:    fisttpll (%eax) # sched: [4:1.00]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BTVER2-LABEL: test_fist_fistp_fisttp:
+; BTVER2:       # %bb.0:
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:1.00]
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    fists (%edx) # sched: [1:1.00]
+; BTVER2-NEXT:    fistl (%ecx) # sched: [1:1.00]
+; BTVER2-NEXT:    fistps (%edx) # sched: [1:1.00]
+; BTVER2-NEXT:    fistpl (%ecx) # sched: [1:1.00]
+; BTVER2-NEXT:    fistpll (%eax) # sched: [1:1.00]
+; BTVER2-NEXT:    fisttps (%edx) # sched: [1:1.00]
+; BTVER2-NEXT:    fisttpl (%ecx) # sched: [1:1.00]
+; BTVER2-NEXT:    fisttpll (%eax) # sched: [1:1.00]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    retl # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_fist_fistp_fisttp:
+; ZNVER1:       # %bb.0:
+; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
+; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [8:0.50]
+; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [8:0.50]
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    fists (%edx) # sched: [12:0.50]
+; ZNVER1-NEXT:    fistl (%ecx) # sched: [12:0.50]
+; ZNVER1-NEXT:    fistps (%edx) # sched: [12:0.50]
+; ZNVER1-NEXT:    fistpl (%ecx) # sched: [12:0.50]
+; ZNVER1-NEXT:    fistpll (%eax) # sched: [12:0.50]
+; ZNVER1-NEXT:    fisttps (%edx) # sched: [12:0.50]
+; ZNVER1-NEXT:    fisttpl (%ecx) # sched: [12:0.50]
+; ZNVER1-NEXT:    fisttpll (%eax) # sched: [12:0.50]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    retl # sched: [1:0.50]
+  tail call void asm sideeffect "fists $0 \0A\09 fistl $1 \0A\09 fistps $0 \0A\09 fistpl $1 \0A\09 fistpll $2 \0A\09 fisttps $0 \0A\09 fisttpl $1 \0A\09 fisttpll $2", "*m,*m,*m"(i16* %a0, i32* %a1, i64 *%a2) nounwind
+  ret void
+}
 
-; TODO - test_fldcw
-; TODO - test_fldenv
+define void @test_fld(i16* %a0, i32* %a1, i64 *%a2) optsize {
+; GENERIC-LABEL: test_fld:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    fld %st(0)
+; GENERIC-NEXT:    flds (%edx)
+; GENERIC-NEXT:    fldl (%ecx)
+; GENERIC-NEXT:    fldt (%eax)
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    retl
+;
+; ATOM-LABEL: test_fld:
+; ATOM:       # %bb.0:
+; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
+; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
+; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [1:1.00]
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    fld %st(0) # sched: [1:1.00]
+; ATOM-NEXT:    flds (%edx) # sched: [1:1.00]
+; ATOM-NEXT:    fldl (%ecx) # sched: [1:1.00]
+; ATOM-NEXT:    fldt (%eax) # sched: [4:2.00]
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    retl # sched: [79:39.50]
+;
+; SLM-LABEL: test_fld:
+; SLM:       # %bb.0:
+; SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
+; SLM-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [3:1.00]
+; SLM-NEXT:    #APP
+; SLM-NEXT:    fld %st(0) # sched: [1:0.50]
+; SLM-NEXT:    flds (%edx) # sched: [3:1.00]
+; SLM-NEXT:    fldl (%ecx) # sched: [3:1.00]
+; SLM-NEXT:    fldt (%eax) # sched: [3:1.00]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    retl # sched: [4:1.00]
+;
+; SANDY-LABEL: test_fld:
+; SANDY:       # %bb.0:
+; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    fld %st(0) # sched: [1:1.00]
+; SANDY-NEXT:    flds (%edx) # sched: [9:1.00]
+; SANDY-NEXT:    fldl (%ecx) # sched: [9:1.00]
+; SANDY-NEXT:    fldt (%eax) # sched: [9:1.00]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    retl # sched: [5:1.00]
+;
+; HASWELL-LABEL: test_fld:
+; HASWELL:       # %bb.0:
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    fld %st(0) # sched: [1:0.50]
+; HASWELL-NEXT:    flds (%edx) # sched: [7:0.50]
+; HASWELL-NEXT:    fldl (%ecx) # sched: [7:0.50]
+; HASWELL-NEXT:    fldt (%eax) # sched: [7:0.50]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    retl # sched: [7:1.00]
+;
+; BROADWELL-LABEL: test_fld:
+; BROADWELL:       # %bb.0:
+; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    fld %st(0) # sched: [1:0.25]
+; BROADWELL-NEXT:    flds (%edx) # sched: [6:0.50]
+; BROADWELL-NEXT:    fldl (%ecx) # sched: [6:0.50]
+; BROADWELL-NEXT:    fldt (%eax) # sched: [6:0.50]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    retl # sched: [6:0.50]
+;
+; SKYLAKE-LABEL: test_fld:
+; SKYLAKE:       # %bb.0:
+; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    fld %st(0) # sched: [1:0.25]
+; SKYLAKE-NEXT:    flds (%edx) # sched: [7:0.50]
+; SKYLAKE-NEXT:    fldl (%ecx) # sched: [7:0.50]
+; SKYLAKE-NEXT:    fldt (%eax) # sched: [7:0.50]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    retl # sched: [6:0.50]
+;
+; SKX-LABEL: test_fld:
+; SKX:       # %bb.0:
+; SKX-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKX-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; SKX-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
+; SKX-NEXT:    #APP
+; SKX-NEXT:    fld %st(0) # sched: [1:0.25]
+; SKX-NEXT:    flds (%edx) # sched: [7:0.50]
+; SKX-NEXT:    fldl (%ecx) # sched: [7:0.50]
+; SKX-NEXT:    fldt (%eax) # sched: [7:0.50]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BTVER2-LABEL: test_fld:
+; BTVER2:       # %bb.0:
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:1.00]
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    fld %st(0) # sched: [1:0.50]
+; BTVER2-NEXT:    flds (%edx) # sched: [5:1.00]
+; BTVER2-NEXT:    fldl (%ecx) # sched: [5:1.00]
+; BTVER2-NEXT:    fldt (%eax) # sched: [5:1.00]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    retl # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_fld:
+; ZNVER1:       # %bb.0:
+; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
+; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [8:0.50]
+; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [8:0.50]
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    fld %st(0) # sched: [1:0.50]
+; ZNVER1-NEXT:    flds (%edx) # sched: [8:0.50]
+; ZNVER1-NEXT:    fldl (%ecx) # sched: [8:0.50]
+; ZNVER1-NEXT:    fldt (%eax) # sched: [1:0.50]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    retl # sched: [1:0.50]
+  tail call void asm sideeffect "fld %st(0) \0A\09 flds $0 \0A\09 fldl $1 \0A\09 fldt $2", "*m,*m,*m"(i16* %a0, i32* %a1, i64 *%a2) nounwind
+  ret void
+}
+
+define void @test_fldcw_fldenv(i8* %a0) optsize {
+; GENERIC-LABEL: test_fldcw_fldenv:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    fldcw (%eax)
+; GENERIC-NEXT:    fldenv (%eax)
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    retl
+;
+; ATOM-LABEL: test_fldcw_fldenv:
+; ATOM:       # %bb.0:
+; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    fldcw (%eax) # sched: [5:2.50]
+; ATOM-NEXT:    fldenv (%eax)
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    retl # sched: [79:39.50]
+;
+; SLM-LABEL: test_fldcw_fldenv:
+; SLM:       # %bb.0:
+; SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; SLM-NEXT:    #APP
+; SLM-NEXT:    fldcw (%eax) # sched: [3:1.00]
+; SLM-NEXT:    fldenv (%eax) # sched: [100:1.00]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    retl # sched: [4:1.00]
+;
+; SANDY-LABEL: test_fldcw_fldenv:
+; SANDY:       # %bb.0:
+; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    fldcw (%eax) # sched: [8:2.00]
+; SANDY-NEXT:    fldenv (%eax) # sched: [100:0.33]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    retl # sched: [5:1.00]
+;
+; HASWELL-LABEL: test_fldcw_fldenv:
+; HASWELL:       # %bb.0:
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    fldcw (%eax) # sched: [7:1.00]
+; HASWELL-NEXT:    fldenv (%eax) # sched: [61:14.00]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    retl # sched: [7:1.00]
+;
+; BROADWELL-LABEL: test_fldcw_fldenv:
+; BROADWELL:       # %bb.0:
+; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    fldcw (%eax) # sched: [7:1.00]
+; BROADWELL-NEXT:    fldenv (%eax) # sched: [60:14.00]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    retl # sched: [6:0.50]
+;
+; SKYLAKE-LABEL: test_fldcw_fldenv:
+; SKYLAKE:       # %bb.0:
+; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    fldcw (%eax) # sched: [7:1.00]
+; SKYLAKE-NEXT:    fldenv (%eax) # sched: [62:14.00]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    retl # sched: [6:0.50]
+;
+; SKX-LABEL: test_fldcw_fldenv:
+; SKX:       # %bb.0:
+; SKX-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKX-NEXT:    #APP
+; SKX-NEXT:    fldcw (%eax) # sched: [7:1.00]
+; SKX-NEXT:    fldenv (%eax) # sched: [62:14.00]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BTVER2-LABEL: test_fldcw_fldenv:
+; BTVER2:       # %bb.0:
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    fldcw (%eax) # sched: [5:1.00]
+; BTVER2-NEXT:    fldenv (%eax) # sched: [100:0.17]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    retl # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_fldcw_fldenv:
+; ZNVER1:       # %bb.0:
+; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    fldcw (%eax) # sched: [100:?]
+; ZNVER1-NEXT:    fldenv (%eax) # sched: [100:?]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    retl # sched: [1:0.50]
+  tail call void asm sideeffect "fldcw $0 \0A\09 fldenv $0", "*m"(i8* %a0) nounwind
+  ret void
+}
 
 define void @test_fld1_fldl2e_fldl2t_fldlg2_fldln2_fldpi_fldz() optsize {
 ; GENERIC-LABEL: test_fld1_fldl2e_fldl2t_fldlg2_fldln2_fldpi_fldz:
@@ -2959,9 +3571,267 @@ define void @test_frndint() optsize {
   ret void
 }
 
-; TODO - test_frstor
-; TODO - test_fsave
-; TODO - test_fnsave
+define void @test_frstor(i8* %a0) optsize {
+; GENERIC-LABEL: test_frstor:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    frstor (%eax)
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    retl
+;
+; ATOM-LABEL: test_frstor:
+; ATOM:       # %bb.0:
+; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    frstor (%eax)
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    retl # sched: [79:39.50]
+;
+; SLM-LABEL: test_frstor:
+; SLM:       # %bb.0:
+; SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; SLM-NEXT:    #APP
+; SLM-NEXT:    frstor (%eax) # sched: [100:1.00]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    retl # sched: [4:1.00]
+;
+; SANDY-LABEL: test_frstor:
+; SANDY:       # %bb.0:
+; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    frstor (%eax) # sched: [100:0.33]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    retl # sched: [5:1.00]
+;
+; HASWELL-LABEL: test_frstor:
+; HASWELL:       # %bb.0:
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    frstor (%eax) # sched: [1:?]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    retl # sched: [7:1.00]
+;
+; BROADWELL-LABEL: test_frstor:
+; BROADWELL:       # %bb.0:
+; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    frstor (%eax) # sched: [100:0.25]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    retl # sched: [6:0.50]
+;
+; SKYLAKE-LABEL: test_frstor:
+; SKYLAKE:       # %bb.0:
+; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    frstor (%eax) # sched: [100:0.25]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    retl # sched: [6:0.50]
+;
+; SKX-LABEL: test_frstor:
+; SKX:       # %bb.0:
+; SKX-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKX-NEXT:    #APP
+; SKX-NEXT:    frstor (%eax) # sched: [100:0.25]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BTVER2-LABEL: test_frstor:
+; BTVER2:       # %bb.0:
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    frstor (%eax) # sched: [100:0.17]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    retl # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_frstor:
+; ZNVER1:       # %bb.0:
+; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    frstor (%eax) # sched: [100:?]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    retl # sched: [1:0.50]
+  tail call void asm sideeffect "frstor $0", "*m"(i8* %a0) nounwind
+  ret void
+}
+
+define void @test_fsave(i8* %a0) optsize {
+; GENERIC-LABEL: test_fsave:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    wait
+; GENERIC-NEXT:    fnsave (%eax)
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    retl
+;
+; ATOM-LABEL: test_fsave:
+; ATOM:       # %bb.0:
+; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    wait # sched: [1:0.50]
+; ATOM-NEXT:    fnsave (%eax)
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    retl # sched: [79:39.50]
+;
+; SLM-LABEL: test_fsave:
+; SLM:       # %bb.0:
+; SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; SLM-NEXT:    #APP
+; SLM-NEXT:    wait # sched: [100:1.00]
+; SLM-NEXT:    fnsave (%eax) # sched: [100:1.00]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    retl # sched: [4:1.00]
+;
+; SANDY-LABEL: test_fsave:
+; SANDY:       # %bb.0:
+; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    wait # sched: [100:0.33]
+; SANDY-NEXT:    fnsave (%eax) # sched: [100:0.33]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    retl # sched: [5:1.00]
+;
+; HASWELL-LABEL: test_fsave:
+; HASWELL:       # %bb.0:
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    wait # sched: [1:0.50]
+; HASWELL-NEXT:    fnsave (%eax) # sched: [1:?]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    retl # sched: [7:1.00]
+;
+; BROADWELL-LABEL: test_fsave:
+; BROADWELL:       # %bb.0:
+; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    wait # sched: [2:0.50]
+; BROADWELL-NEXT:    fnsave (%eax) # sched: [100:0.25]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    retl # sched: [6:0.50]
+;
+; SKYLAKE-LABEL: test_fsave:
+; SKYLAKE:       # %bb.0:
+; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    wait # sched: [2:0.50]
+; SKYLAKE-NEXT:    fnsave (%eax) # sched: [100:0.25]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    retl # sched: [6:0.50]
+;
+; SKX-LABEL: test_fsave:
+; SKX:       # %bb.0:
+; SKX-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKX-NEXT:    #APP
+; SKX-NEXT:    wait # sched: [2:0.50]
+; SKX-NEXT:    fnsave (%eax) # sched: [100:0.25]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BTVER2-LABEL: test_fsave:
+; BTVER2:       # %bb.0:
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    wait # sched: [100:0.17]
+; BTVER2-NEXT:    fnsave (%eax) # sched: [100:0.17]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    retl # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_fsave:
+; ZNVER1:       # %bb.0:
+; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    wait # sched: [1:1.00]
+; ZNVER1-NEXT:    fnsave (%eax) # sched: [100:?]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    retl # sched: [1:0.50]
+  tail call void asm sideeffect "fsave $0", "*m"(i8* %a0) nounwind
+  ret void
+}
+
+define void @test_fnsave(i8* %a0) optsize {
+; GENERIC-LABEL: test_fnsave:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    fnsave (%eax)
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    retl
+;
+; ATOM-LABEL: test_fnsave:
+; ATOM:       # %bb.0:
+; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    fnsave (%eax)
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    retl # sched: [79:39.50]
+;
+; SLM-LABEL: test_fnsave:
+; SLM:       # %bb.0:
+; SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; SLM-NEXT:    #APP
+; SLM-NEXT:    fnsave (%eax) # sched: [100:1.00]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    retl # sched: [4:1.00]
+;
+; SANDY-LABEL: test_fnsave:
+; SANDY:       # %bb.0:
+; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    fnsave (%eax) # sched: [100:0.33]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    retl # sched: [5:1.00]
+;
+; HASWELL-LABEL: test_fnsave:
+; HASWELL:       # %bb.0:
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    fnsave (%eax) # sched: [1:?]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    retl # sched: [7:1.00]
+;
+; BROADWELL-LABEL: test_fnsave:
+; BROADWELL:       # %bb.0:
+; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    fnsave (%eax) # sched: [100:0.25]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    retl # sched: [6:0.50]
+;
+; SKYLAKE-LABEL: test_fnsave:
+; SKYLAKE:       # %bb.0:
+; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    fnsave (%eax) # sched: [100:0.25]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    retl # sched: [6:0.50]
+;
+; SKX-LABEL: test_fnsave:
+; SKX:       # %bb.0:
+; SKX-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKX-NEXT:    #APP
+; SKX-NEXT:    fnsave (%eax) # sched: [100:0.25]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BTVER2-LABEL: test_fnsave:
+; BTVER2:       # %bb.0:
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    fnsave (%eax) # sched: [100:0.17]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    retl # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_fnsave:
+; ZNVER1:       # %bb.0:
+; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    fnsave (%eax) # sched: [100:?]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    retl # sched: [1:0.50]
+  tail call void asm sideeffect "fnsave $0", "*m"(i8* %a0) nounwind
+  ret void
+}
 
 define void @test_fscale() optsize {
 ; GENERIC-LABEL: test_fscale:
@@ -3259,17 +4129,407 @@ define void @test_fsqrt() optsize {
   ret void
 }
 
-; TODO - test_fst
-; TODO - test_fstp
+define void @test_fst_fstp(i16* %a0, i32* %a1, i64 *%a2) optsize {
+; GENERIC-LABEL: test_fst_fstp:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    fst %st(0)
+; GENERIC-NEXT:    fsts (%edx)
+; GENERIC-NEXT:    fstl (%ecx)
+; GENERIC-NEXT:    fstp %st(0)
+; GENERIC-NEXT:    fstpl (%edx)
+; GENERIC-NEXT:    fstpl (%ecx)
+; GENERIC-NEXT:    fstpt (%eax)
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    retl
+;
+; ATOM-LABEL: test_fst_fstp:
+; ATOM:       # %bb.0:
+; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
+; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
+; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [1:1.00]
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    fst %st(0) # sched: [2:1.00]
+; ATOM-NEXT:    fsts (%edx) # sched: [2:1.00]
+; ATOM-NEXT:    fstl (%ecx) # sched: [2:1.00]
+; ATOM-NEXT:    fstp %st(0) # sched: [2:1.00]
+; ATOM-NEXT:    fstpl (%edx) # sched: [2:1.00]
+; ATOM-NEXT:    fstpl (%ecx) # sched: [2:1.00]
+; ATOM-NEXT:    fstpt (%eax) # sched: [5:2.50]
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    retl # sched: [79:39.50]
+;
+; SLM-LABEL: test_fst_fstp:
+; SLM:       # %bb.0:
+; SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
+; SLM-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [3:1.00]
+; SLM-NEXT:    #APP
+; SLM-NEXT:    fst %st(0) # sched: [1:0.50]
+; SLM-NEXT:    fsts (%edx) # sched: [1:1.00]
+; SLM-NEXT:    fstl (%ecx) # sched: [1:1.00]
+; SLM-NEXT:    fstp %st(0) # sched: [1:0.50]
+; SLM-NEXT:    fstpl (%edx) # sched: [1:1.00]
+; SLM-NEXT:    fstpl (%ecx) # sched: [1:1.00]
+; SLM-NEXT:    fstpt (%eax) # sched: [1:1.00]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    retl # sched: [4:1.00]
+;
+; SANDY-LABEL: test_fst_fstp:
+; SANDY:       # %bb.0:
+; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    fst %st(0) # sched: [1:1.00]
+; SANDY-NEXT:    fsts (%edx) # sched: [6:1.00]
+; SANDY-NEXT:    fstl (%ecx) # sched: [6:1.00]
+; SANDY-NEXT:    fstp %st(0) # sched: [1:1.00]
+; SANDY-NEXT:    fstpl (%edx) # sched: [6:1.00]
+; SANDY-NEXT:    fstpl (%ecx) # sched: [6:1.00]
+; SANDY-NEXT:    fstpt (%eax) # sched: [6:1.00]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    retl # sched: [5:1.00]
+;
+; HASWELL-LABEL: test_fst_fstp:
+; HASWELL:       # %bb.0:
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    fst %st(0) # sched: [1:0.50]
+; HASWELL-NEXT:    fsts (%edx) # sched: [1:1.00]
+; HASWELL-NEXT:    fstl (%ecx) # sched: [1:1.00]
+; HASWELL-NEXT:    fstp %st(0) # sched: [1:0.50]
+; HASWELL-NEXT:    fstpl (%edx) # sched: [1:1.00]
+; HASWELL-NEXT:    fstpl (%ecx) # sched: [1:1.00]
+; HASWELL-NEXT:    fstpt (%eax) # sched: [1:1.00]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    retl # sched: [7:1.00]
+;
+; BROADWELL-LABEL: test_fst_fstp:
+; BROADWELL:       # %bb.0:
+; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    fst %st(0) # sched: [1:0.25]
+; BROADWELL-NEXT:    fsts (%edx) # sched: [1:1.00]
+; BROADWELL-NEXT:    fstl (%ecx) # sched: [1:1.00]
+; BROADWELL-NEXT:    fstp %st(0) # sched: [1:0.25]
+; BROADWELL-NEXT:    fstpl (%edx) # sched: [1:1.00]
+; BROADWELL-NEXT:    fstpl (%ecx) # sched: [1:1.00]
+; BROADWELL-NEXT:    fstpt (%eax) # sched: [1:1.00]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    retl # sched: [6:0.50]
+;
+; SKYLAKE-LABEL: test_fst_fstp:
+; SKYLAKE:       # %bb.0:
+; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    fst %st(0) # sched: [1:0.25]
+; SKYLAKE-NEXT:    fsts (%edx) # sched: [1:1.00]
+; SKYLAKE-NEXT:    fstl (%ecx) # sched: [1:1.00]
+; SKYLAKE-NEXT:    fstp %st(0) # sched: [1:0.25]
+; SKYLAKE-NEXT:    fstpl (%edx) # sched: [1:1.00]
+; SKYLAKE-NEXT:    fstpl (%ecx) # sched: [1:1.00]
+; SKYLAKE-NEXT:    fstpt (%eax) # sched: [1:1.00]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    retl # sched: [6:0.50]
+;
+; SKX-LABEL: test_fst_fstp:
+; SKX:       # %bb.0:
+; SKX-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKX-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; SKX-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
+; SKX-NEXT:    #APP
+; SKX-NEXT:    fst %st(0) # sched: [1:0.25]
+; SKX-NEXT:    fsts (%edx) # sched: [1:1.00]
+; SKX-NEXT:    fstl (%ecx) # sched: [1:1.00]
+; SKX-NEXT:    fstp %st(0) # sched: [1:0.25]
+; SKX-NEXT:    fstpl (%edx) # sched: [1:1.00]
+; SKX-NEXT:    fstpl (%ecx) # sched: [1:1.00]
+; SKX-NEXT:    fstpt (%eax) # sched: [1:1.00]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BTVER2-LABEL: test_fst_fstp:
+; BTVER2:       # %bb.0:
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:1.00]
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    fst %st(0) # sched: [1:0.50]
+; BTVER2-NEXT:    fsts (%edx) # sched: [1:1.00]
+; BTVER2-NEXT:    fstl (%ecx) # sched: [1:1.00]
+; BTVER2-NEXT:    fstp %st(0) # sched: [1:0.50]
+; BTVER2-NEXT:    fstpl (%edx) # sched: [1:1.00]
+; BTVER2-NEXT:    fstpl (%ecx) # sched: [1:1.00]
+; BTVER2-NEXT:    fstpt (%eax) # sched: [1:1.00]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    retl # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_fst_fstp:
+; ZNVER1:       # %bb.0:
+; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
+; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [8:0.50]
+; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [8:0.50]
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    fst %st(0) # sched: [5:0.50]
+; ZNVER1-NEXT:    fsts (%edx) # sched: [1:0.50]
+; ZNVER1-NEXT:    fstl (%ecx) # sched: [1:0.50]
+; ZNVER1-NEXT:    fstp %st(0) # sched: [5:0.50]
+; ZNVER1-NEXT:    fstpl (%edx) # sched: [1:0.50]
+; ZNVER1-NEXT:    fstpl (%ecx) # sched: [1:0.50]
+; ZNVER1-NEXT:    fstpt (%eax) # sched: [5:0.50]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    retl # sched: [1:0.50]
+  tail call void asm sideeffect "fst %st(0) \0A\09 fsts $0 \0A\09 fstl $1 \0A\09 fstp %st(0) \0A\09 fstpl $0 \0A\09 fstpl $1 \0A\09 fstpt $2", "*m,*m,*m"(i16* %a0, i32* %a1, i64 *%a2) nounwind
+  ret void
+}
 
-; TODO - test_fstcw
-; TODO - test_fnstcw
+define void @test_fstcw_fstenv_fstsw(i8* %a0) optsize {
+; GENERIC-LABEL: test_fstcw_fstenv_fstsw:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    wait
+; GENERIC-NEXT:    fnstcw (%eax)
+; GENERIC-NEXT:    wait
+; GENERIC-NEXT:    fnstenv (%eax)
+; GENERIC-NEXT:    wait
+; GENERIC-NEXT:    fnstsw (%eax)
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    retl
+;
+; ATOM-LABEL: test_fstcw_fstenv_fstsw:
+; ATOM:       # %bb.0:
+; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    wait # sched: [1:0.50]
+; ATOM-NEXT:    fnstcw (%eax) # sched: [8:4.00]
+; ATOM-NEXT:    wait # sched: [1:0.50]
+; ATOM-NEXT:    fnstenv (%eax)
+; ATOM-NEXT:    wait # sched: [1:0.50]
+; ATOM-NEXT:    fnstsw (%eax)
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    retl # sched: [79:39.50]
+;
+; SLM-LABEL: test_fstcw_fstenv_fstsw:
+; SLM:       # %bb.0:
+; SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; SLM-NEXT:    #APP
+; SLM-NEXT:    wait # sched: [100:1.00]
+; SLM-NEXT:    fnstcw (%eax) # sched: [1:0.50]
+; SLM-NEXT:    wait # sched: [100:1.00]
+; SLM-NEXT:    fnstenv (%eax) # sched: [100:1.00]
+; SLM-NEXT:    wait # sched: [100:1.00]
+; SLM-NEXT:    fnstsw (%eax) # sched: [100:1.00]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    retl # sched: [4:1.00]
+;
+; SANDY-LABEL: test_fstcw_fstenv_fstsw:
+; SANDY:       # %bb.0:
+; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    wait # sched: [100:0.33]
+; SANDY-NEXT:    fnstcw (%eax) # sched: [7:1.00]
+; SANDY-NEXT:    wait # sched: [100:0.33]
+; SANDY-NEXT:    fnstenv (%eax) # sched: [100:0.33]
+; SANDY-NEXT:    wait # sched: [100:0.33]
+; SANDY-NEXT:    fnstsw (%eax) # sched: [7:1.00]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    retl # sched: [5:1.00]
+;
+; HASWELL-LABEL: test_fstcw_fstenv_fstsw:
+; HASWELL:       # %bb.0:
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    wait # sched: [1:0.50]
+; HASWELL-NEXT:    fnstcw (%eax) # sched: [2:1.00]
+; HASWELL-NEXT:    wait # sched: [1:0.50]
+; HASWELL-NEXT:    fnstenv (%eax) # sched: [115:19.50]
+; HASWELL-NEXT:    wait # sched: [1:0.50]
+; HASWELL-NEXT:    fnstsw (%eax) # sched: [4:1.00]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    retl # sched: [7:1.00]
+;
+; BROADWELL-LABEL: test_fstcw_fstenv_fstsw:
+; BROADWELL:       # %bb.0:
+; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    wait # sched: [2:0.50]
+; BROADWELL-NEXT:    fnstcw (%eax) # sched: [2:1.00]
+; BROADWELL-NEXT:    wait # sched: [2:0.50]
+; BROADWELL-NEXT:    fnstenv (%eax) # sched: [115:19.50]
+; BROADWELL-NEXT:    wait # sched: [2:0.50]
+; BROADWELL-NEXT:    fnstsw (%eax) # sched: [4:1.00]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    retl # sched: [6:0.50]
+;
+; SKYLAKE-LABEL: test_fstcw_fstenv_fstsw:
+; SKYLAKE:       # %bb.0:
+; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    wait # sched: [2:0.50]
+; SKYLAKE-NEXT:    fnstcw (%eax) # sched: [2:1.00]
+; SKYLAKE-NEXT:    wait # sched: [2:0.50]
+; SKYLAKE-NEXT:    fnstenv (%eax) # sched: [106:19.50]
+; SKYLAKE-NEXT:    wait # sched: [2:0.50]
+; SKYLAKE-NEXT:    fnstsw (%eax) # sched: [3:1.00]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    retl # sched: [6:0.50]
+;
+; SKX-LABEL: test_fstcw_fstenv_fstsw:
+; SKX:       # %bb.0:
+; SKX-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKX-NEXT:    #APP
+; SKX-NEXT:    wait # sched: [2:0.50]
+; SKX-NEXT:    fnstcw (%eax) # sched: [2:1.00]
+; SKX-NEXT:    wait # sched: [2:0.50]
+; SKX-NEXT:    fnstenv (%eax) # sched: [106:19.50]
+; SKX-NEXT:    wait # sched: [2:0.50]
+; SKX-NEXT:    fnstsw (%eax) # sched: [3:1.00]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BTVER2-LABEL: test_fstcw_fstenv_fstsw:
+; BTVER2:       # %bb.0:
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    wait # sched: [100:0.17]
+; BTVER2-NEXT:    fnstcw (%eax) # sched: [1:0.50]
+; BTVER2-NEXT:    wait # sched: [100:0.17]
+; BTVER2-NEXT:    fnstenv (%eax) # sched: [100:0.17]
+; BTVER2-NEXT:    wait # sched: [100:0.17]
+; BTVER2-NEXT:    fnstsw (%eax) # sched: [100:0.17]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    retl # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_fstcw_fstenv_fstsw:
+; ZNVER1:       # %bb.0:
+; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    wait # sched: [1:1.00]
+; ZNVER1-NEXT:    fnstcw (%eax) # sched: [100:?]
+; ZNVER1-NEXT:    wait # sched: [1:1.00]
+; ZNVER1-NEXT:    fnstenv (%eax) # sched: [100:?]
+; ZNVER1-NEXT:    wait # sched: [1:1.00]
+; ZNVER1-NEXT:    fnstsw (%eax) # sched: [100:?]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    retl # sched: [1:0.50]
+  tail call void asm sideeffect "fstcw $0 \0A\09 fstenv $0 \0A\09 fstsw $0", "*m"(i8* %a0) nounwind
+  ret void
+}
 
-; TODO - test_fstenv
-; TODO - test_fnstenv
-
-; TODO - test_fstsw
-; TODO - test_fnstsw
+define void @test_fnstcw_fnstenv_fnstsw(i8* %a0) optsize {
+; GENERIC-LABEL: test_fnstcw_fnstenv_fnstsw:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    fnstcw (%eax)
+; GENERIC-NEXT:    fnstenv (%eax)
+; GENERIC-NEXT:    fnstsw (%eax)
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    retl
+;
+; ATOM-LABEL: test_fnstcw_fnstenv_fnstsw:
+; ATOM:       # %bb.0:
+; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [1:1.00]
+; ATOM-NEXT:    #APP
+; ATOM-NEXT:    fnstcw (%eax) # sched: [8:4.00]
+; ATOM-NEXT:    fnstenv (%eax)
+; ATOM-NEXT:    fnstsw (%eax)
+; ATOM-NEXT:    #NO_APP
+; ATOM-NEXT:    retl # sched: [79:39.50]
+;
+; SLM-LABEL: test_fnstcw_fnstenv_fnstsw:
+; SLM:       # %bb.0:
+; SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; SLM-NEXT:    #APP
+; SLM-NEXT:    fnstcw (%eax) # sched: [1:0.50]
+; SLM-NEXT:    fnstenv (%eax) # sched: [100:1.00]
+; SLM-NEXT:    fnstsw (%eax) # sched: [100:1.00]
+; SLM-NEXT:    #NO_APP
+; SLM-NEXT:    retl # sched: [4:1.00]
+;
+; SANDY-LABEL: test_fnstcw_fnstenv_fnstsw:
+; SANDY:       # %bb.0:
+; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    fnstcw (%eax) # sched: [7:1.00]
+; SANDY-NEXT:    fnstenv (%eax) # sched: [100:0.33]
+; SANDY-NEXT:    fnstsw (%eax) # sched: [7:1.00]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    retl # sched: [5:1.00]
+;
+; HASWELL-LABEL: test_fnstcw_fnstenv_fnstsw:
+; HASWELL:       # %bb.0:
+; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    fnstcw (%eax) # sched: [2:1.00]
+; HASWELL-NEXT:    fnstenv (%eax) # sched: [115:19.50]
+; HASWELL-NEXT:    fnstsw (%eax) # sched: [4:1.00]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    retl # sched: [7:1.00]
+;
+; BROADWELL-LABEL: test_fnstcw_fnstenv_fnstsw:
+; BROADWELL:       # %bb.0:
+; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    fnstcw (%eax) # sched: [2:1.00]
+; BROADWELL-NEXT:    fnstenv (%eax) # sched: [115:19.50]
+; BROADWELL-NEXT:    fnstsw (%eax) # sched: [4:1.00]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    retl # sched: [6:0.50]
+;
+; SKYLAKE-LABEL: test_fnstcw_fnstenv_fnstsw:
+; SKYLAKE:       # %bb.0:
+; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    fnstcw (%eax) # sched: [2:1.00]
+; SKYLAKE-NEXT:    fnstenv (%eax) # sched: [106:19.50]
+; SKYLAKE-NEXT:    fnstsw (%eax) # sched: [3:1.00]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    retl # sched: [6:0.50]
+;
+; SKX-LABEL: test_fnstcw_fnstenv_fnstsw:
+; SKX:       # %bb.0:
+; SKX-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; SKX-NEXT:    #APP
+; SKX-NEXT:    fnstcw (%eax) # sched: [2:1.00]
+; SKX-NEXT:    fnstenv (%eax) # sched: [106:19.50]
+; SKX-NEXT:    fnstsw (%eax) # sched: [3:1.00]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BTVER2-LABEL: test_fnstcw_fnstenv_fnstsw:
+; BTVER2:       # %bb.0:
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    fnstcw (%eax) # sched: [1:0.50]
+; BTVER2-NEXT:    fnstenv (%eax) # sched: [100:0.17]
+; BTVER2-NEXT:    fnstsw (%eax) # sched: [100:0.17]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    retl # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_fnstcw_fnstenv_fnstsw:
+; ZNVER1:       # %bb.0:
+; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    fnstcw (%eax) # sched: [100:?]
+; ZNVER1-NEXT:    fnstenv (%eax) # sched: [100:?]
+; ZNVER1-NEXT:    fnstsw (%eax) # sched: [100:?]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    retl # sched: [1:0.50]
+  tail call void asm sideeffect "fnstcw $0 \0A\09 fnstenv $0 \0A\09 fnstsw $0", "*m"(i8* %a0) nounwind
+  ret void
+}
 
 define void @test_fsub(float *%a0, double *%a1) optsize {
 ; GENERIC-LABEL: test_fsub:

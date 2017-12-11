@@ -430,6 +430,35 @@ immediate machine operand ``-42``:
 
     %eax = MOV32ri -42
 
+An immediate operand is also used to represent a subregister index when the
+machine instruction has one of the following opcodes:
+
+- ``EXTRACT_SUBREG``
+
+- ``INSERT_SUBREG``
+
+- ``REG_SEQUENCE``
+
+- ``SUBREG_TO_REG``
+
+In case this is true, the Machine Operand is printed according to the target.
+
+For example:
+
+In AArch64RegisterInfo.td:
+
+.. code-block:: text
+
+  def sub_32 : SubRegIndex<32>;
+
+If the third operand is an immediate with the value ``15`` (target-dependent
+value), based on the instruction's opcode and the operand's index the operand
+will be printed as ``%subreg.sub_32``:
+
+.. code-block:: text
+
+    %1:gpr64 = SUBREG_TO_REG 0, %0, %subreg.sub_32
+
 For integers > 64bit, we use a special machine operand, ``MO_CImmediate``,
 which stores the immediate in a ``ConstantInt`` using an ``APInt`` (LLVM's
 arbitrary precision integers).

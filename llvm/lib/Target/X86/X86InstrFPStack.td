@@ -423,6 +423,7 @@ def CMOVNP_F : FPI<0xDB, MRM3r, (outs), (ins RST:$op),
 } // SchedRW
 
 // Floating point loads & stores.
+let SchedRW = [WriteLoad] in {
 let canFoldAsLoad = 1 in {
 def LD_Fp32m   : FpIf32<(outs RFP32:$dst), (ins f32mem:$src), ZeroArgFP,
                   [(set RFP32:$dst, (loadf32 addr:$src))]>;
@@ -431,7 +432,7 @@ let isReMaterializable = 1 in
                   [(set RFP64:$dst, (loadf64 addr:$src))]>;
 def LD_Fp80m   : FpI_<(outs RFP80:$dst), (ins f80mem:$src), ZeroArgFP,
                   [(set RFP80:$dst, (loadf80 addr:$src))]>;
-}
+} // canFoldAsLoad
 def LD_Fp32m64 : FpIf64<(outs RFP64:$dst), (ins f32mem:$src), ZeroArgFP,
                   [(set RFP64:$dst, (f64 (extloadf32 addr:$src)))]>;
 def LD_Fp64m80 : FpI_<(outs RFP80:$dst), (ins f64mem:$src), ZeroArgFP,
@@ -456,7 +457,9 @@ def ILD_Fp32m80: FpI_<(outs RFP80:$dst), (ins i32mem:$src), ZeroArgFP,
                   [(set RFP80:$dst, (X86fild addr:$src, i32))]>;
 def ILD_Fp64m80: FpI_<(outs RFP80:$dst), (ins i64mem:$src), ZeroArgFP,
                   [(set RFP80:$dst, (X86fild addr:$src, i64))]>;
+} // SchedRW
 
+let SchedRW = [WriteStore] in {
 def ST_Fp32m   : FpIf32<(outs), (ins f32mem:$op, RFP32:$src), OneArgFP,
                   [(store RFP32:$src, addr:$op)]>;
 def ST_Fp64m32 : FpIf64<(outs), (ins f32mem:$op, RFP64:$src), OneArgFP,
@@ -475,9 +478,11 @@ def ST_FpP64m32  : FpIf64<(outs), (ins f32mem:$op, RFP64:$src), OneArgFP, []>;
 def ST_FpP64m    : FpIf64<(outs), (ins f64mem:$op, RFP64:$src), OneArgFP, []>;
 def ST_FpP80m32  : FpI_<(outs), (ins f32mem:$op, RFP80:$src), OneArgFP, []>;
 def ST_FpP80m64  : FpI_<(outs), (ins f64mem:$op, RFP80:$src), OneArgFP, []>;
-}
+} // mayStore
+
 def ST_FpP80m    : FpI_<(outs), (ins f80mem:$op, RFP80:$src), OneArgFP,
                     [(store RFP80:$src, addr:$op)]>;
+
 let mayStore = 1, hasSideEffects = 0 in {
 def IST_Fp16m32  : FpIf32<(outs), (ins i16mem:$op, RFP32:$src), OneArgFP, []>;
 def IST_Fp32m32  : FpIf32<(outs), (ins i32mem:$op, RFP32:$src), OneArgFP, []>;
@@ -488,7 +493,8 @@ def IST_Fp64m64  : FpIf64<(outs), (ins i64mem:$op, RFP64:$src), OneArgFP, []>;
 def IST_Fp16m80  : FpI_<(outs), (ins i16mem:$op, RFP80:$src), OneArgFP, []>;
 def IST_Fp32m80  : FpI_<(outs), (ins i32mem:$op, RFP80:$src), OneArgFP, []>;
 def IST_Fp64m80  : FpI_<(outs), (ins i64mem:$op, RFP80:$src), OneArgFP, []>;
-}
+} // mayStore
+} // SchedRW
 
 let mayLoad = 1, SchedRW = [WriteLoad] in {
 def LD_F32m   : FPI<0xD9, MRM0m, (outs), (ins f32mem:$src), "fld{s}\t$src",
@@ -528,7 +534,7 @@ def IST_FP64m : FPI<0xDF, MRM7m, (outs), (ins i64mem:$dst), "fistp{ll}\t$dst",
 }
 
 // FISTTP requires SSE3 even though it's a FPStack op.
-let Predicates = [HasSSE3] in {
+let Predicates = [HasSSE3], SchedRW = [WriteStore] in {
 def ISTT_Fp16m32 : FpI_<(outs), (ins i16mem:$op, RFP32:$src), OneArgFP,
                     [(X86fp_to_i16mem RFP32:$src, addr:$op)]>;
 def ISTT_Fp32m32 : FpI_<(outs), (ins i32mem:$op, RFP32:$src), OneArgFP,
@@ -567,7 +573,7 @@ def XCH_F    : FPI<0xD9, MRM1r, (outs), (ins RST:$op), "fxch\t$op", IIC_FXCH>;
 }
 
 // Floating point constant loads.
-let isReMaterializable = 1 in {
+let isReMaterializable = 1, SchedRW = [WriteZero] in {
 def LD_Fp032 : FpIf32<(outs RFP32:$dst), (ins), ZeroArgFP,
                 [(set RFP32:$dst, fpimm0)]>;
 def LD_Fp132 : FpIf32<(outs RFP32:$dst), (ins), ZeroArgFP,

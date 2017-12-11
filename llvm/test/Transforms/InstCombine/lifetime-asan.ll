@@ -19,6 +19,20 @@ entry:
   ret void
 }
 
+define void @hwasan() sanitize_hwaddress {
+entry:
+  ; CHECK-LABEL: @hwasan(
+  %text = alloca i8, align 1
+
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %text)
+  call void @llvm.lifetime.end.p0i8(i64 1, i8* %text)
+  ; CHECK: call void @llvm.lifetime.start
+  ; CHECK-NEXT: call void @llvm.lifetime.end
+
+  call void @foo(i8* %text) ; Keep alloca alive
+
+  ret void
+}
 
 define void @no_asan() {
 entry:

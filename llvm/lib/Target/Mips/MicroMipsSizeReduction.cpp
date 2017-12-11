@@ -495,8 +495,7 @@ bool MicroMipsSizeReduce::runOnMachineFunction(MachineFunction &MF) {
 
   Subtarget = &static_cast<const MipsSubtarget &>(MF.getSubtarget());
 
-  // TODO: Add support for other subtargets:
-  // microMIPS32r6 and microMIPS64r6
+  // TODO: Add support for the subtarget microMIPS32R6.
   if (!Subtarget->inMicroMipsMode() || !Subtarget->hasMips32r2() ||
       Subtarget->hasMips32r6())
     return false;

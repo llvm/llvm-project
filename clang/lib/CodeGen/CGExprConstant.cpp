@@ -1825,7 +1825,7 @@ llvm::Constant *ConstantEmitter::tryEmitPrivate(const APValue &Value,
     const llvm::APFloat &Init = Value.getFloat();
     if (&Init.getSemantics() == &llvm::APFloat::IEEEhalf() &&
         !CGM.getContext().getLangOpts().NativeHalfType &&
-        !CGM.getContext().getLangOpts().HalfArgsAndReturns)
+        CGM.getContext().getTargetInfo().useFP16ConversionIntrinsics())
       return llvm::ConstantInt::get(CGM.getLLVMContext(),
                                     Init.bitcastToAPInt());
     else

@@ -31,9 +31,10 @@ enum : SanitizerMask {
   NotAllowedWithTrap = Vptr,
   NotAllowedWithMinimalRuntime = Vptr,
   RequiresPIE = DataFlow | Scudo,
-  NeedsUnwindTables = Address | Thread | Memory | DataFlow,
-  SupportsCoverage = Address | KernelAddress | Memory | Leak | Undefined |
-                     Integer | Nullability | DataFlow | Fuzzer | FuzzerNoLink,
+  NeedsUnwindTables = Address | HWAddress | Thread | Memory | DataFlow,
+  SupportsCoverage = Address | HWAddress | KernelAddress | Memory | Leak |
+                     Undefined | Integer | Nullability | DataFlow | Fuzzer |
+                     FuzzerNoLink,
   RecoverableByDefault = Undefined | Integer | Nullability,
   Unrecoverable = Unreachable | Return,
   LegacyFsanitizeRecoverMask = Undefined | Integer,
@@ -96,6 +97,8 @@ static bool getDefaultBlacklist(const Driver &D, SanitizerMask Kinds,
   const char *BlacklistFile = nullptr;
   if (Kinds & Address)
     BlacklistFile = "asan_blacklist.txt";
+  else if (Kinds & HWAddress)
+    BlacklistFile = "hwasan_blacklist.txt";
   else if (Kinds & Memory)
     BlacklistFile = "msan_blacklist.txt";
   else if (Kinds & Thread)
@@ -172,8 +175,8 @@ static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
 
 bool SanitizerArgs::needsUbsanRt() const {
   // All of these include ubsan.
-  if (needsAsanRt() || needsMsanRt() || needsTsanRt() || needsDfsanRt() ||
-      needsLsanRt() || needsCfiDiagRt() || needsScudoRt())
+  if (needsAsanRt() || needsMsanRt() || needsHwasanRt() || needsTsanRt() ||
+      needsDfsanRt() || needsLsanRt() || needsCfiDiagRt() || needsScudoRt())
     return false;
 
   return (Sanitizers.Mask & NeedsUbsanRt & ~TrapSanitizers.Mask) ||
@@ -373,11 +376,12 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       std::make_pair(Address, Thread | Memory),
       std::make_pair(Thread, Memory),
       std::make_pair(Leak, Thread | Memory),
-      std::make_pair(KernelAddress, Address| Leak | Thread | Memory),
-      std::make_pair(Efficiency, Address | Leak | Thread | Memory |
-                                 KernelAddress),
-      std::make_pair(Scudo, Address | Leak | Thread | Memory | KernelAddress |
-                            Efficiency) };
+      std::make_pair(KernelAddress, Address | Leak | Thread | Memory),
+      std::make_pair(HWAddress, Address | Thread | Memory | KernelAddress),
+      std::make_pair(Efficiency, Address | HWAddress | Leak | Thread | Memory |
+                                     KernelAddress),
+      std::make_pair(Scudo, Address | HWAddress | Leak | Thread | Memory |
+                                KernelAddress | Efficiency)};
   for (auto G : IncompatibleGroups) {
     SanitizerMask Group = G.first;
     if (Kinds & Group) {

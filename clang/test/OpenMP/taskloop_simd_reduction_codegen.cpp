@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fopenmp -x c++ %s -verify -debug-info-kind=limited -emit-llvm -o - -triple powerpc64le-unknown-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -x c++ %s -verify -debug-info-kind=limited -emit-llvm -o - -triple powerpc64le-unknown-linux-gnu -std=c++98 | FileCheck %s
 // expected-no-diagnostics
 
 struct S {

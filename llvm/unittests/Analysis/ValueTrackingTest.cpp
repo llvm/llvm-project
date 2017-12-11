@@ -15,6 +15,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/KnownBits.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -257,4 +258,58 @@ TEST(ValueTracking, ComputeNumSignBits_PR32045) {
   auto *RVal =
       cast<ReturnInst>(F->getEntryBlock().getTerminator())->getOperand(0);
   EXPECT_EQ(ComputeNumSignBits(RVal, M->getDataLayout()), 1u);
+}
+
+TEST(ValueTracking, ComputeKnownBits) {
+  StringRef Assembly = "define i32 @f(i32 %a, i32 %b) { "
+                       "  %ash = mul i32 %a, 8 "
+                       "  %aad = add i32 %ash, 7 "
+                       "  %aan = and i32 %aad, 4095 "
+                       "  %bsh = shl i32 %b, 4 "
+                       "  %bad = or i32 %bsh, 6 "
+                       "  %ban = and i32 %bad, 4095 "
+                       "  %mul = mul i32 %aan, %ban "
+                       "  ret i32 %mul "
+                       "} ";
+
+  LLVMContext Context;
+  SMDiagnostic Error;
+  auto M = parseAssemblyString(Assembly, Error, Context);
+  assert(M && "Bad assembly?");
+
+  auto *F = M->getFunction("f");
+  assert(F && "Bad assembly?");
+
+  auto *RVal =
+      cast<ReturnInst>(F->getEntryBlock().getTerminator())->getOperand(0);
+  auto Known = computeKnownBits(RVal, M->getDataLayout());
+  ASSERT_FALSE(Known.hasConflict());
+  EXPECT_EQ(Known.One.getZExtValue(), 10u);
+  EXPECT_EQ(Known.Zero.getZExtValue(), 4278190085u);
+}
+
+TEST(ValueTracking, ComputeKnownMulBits) {
+  StringRef Assembly = "define i32 @f(i32 %a, i32 %b) { "
+                       "  %aa = shl i32 %a, 5 "
+                       "  %bb = shl i32 %b, 5 "
+                       "  %aaa = or i32 %aa, 24 "
+                       "  %bbb = or i32 %bb, 28 "
+                       "  %mul = mul i32 %aaa, %bbb "
+                       "  ret i32 %mul "
+                       "} ";
+
+  LLVMContext Context;
+  SMDiagnostic Error;
+  auto M = parseAssemblyString(Assembly, Error, Context);
+  assert(M && "Bad assembly?");
+
+  auto *F = M->getFunction("f");
+  assert(F && "Bad assembly?");
+
+  auto *RVal =
+      cast<ReturnInst>(F->getEntryBlock().getTerminator())->getOperand(0);
+  auto Known = computeKnownBits(RVal, M->getDataLayout());
+  ASSERT_FALSE(Known.hasConflict());
+  EXPECT_EQ(Known.One.getZExtValue(), 32u);
+  EXPECT_EQ(Known.Zero.getZExtValue(), 95u);
 }

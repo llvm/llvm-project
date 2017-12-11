@@ -1,4 +1,4 @@
-//===--- TokenLexer.cpp - Lex from a token stream -------------------------===//
+//===- TokenLexer.cpp - Lex from a token stream ---------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,13 +12,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Lex/TokenLexer.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/LangOptions.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/LexDiagnostic.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/Token.h"
 #include "clang/Lex/VariadicMacroSupport.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator_range.h"
+#include <cassert>
+#include <cstring>
 
 using namespace clang;
 
@@ -238,7 +250,6 @@ void TokenLexer::ExpandFunctionArguments() {
   VAOptExpansionContext VCtx(PP);
   
   for (unsigned I = 0, E = NumTokens; I != E; ++I) {
-    
     const Token &CurTok = Tokens[I];
     // We don't want a space for the next token after a paste
     // operator.  In valid code, the token will get smooshed onto the
@@ -287,7 +298,6 @@ void TokenLexer::ExpandFunctionArguments() {
         }
         // ... else the macro was called with variadic arguments, and we do not
         // have a closing rparen - so process this token normally.
-
       } else {
         // Current token is the closing r_paren which marks the end of the
         // __VA_OPT__ invocation, so handle any place-marker pasting (if
@@ -573,7 +583,6 @@ static bool isWideStringLiteralFromMacro(const Token &FirstTok,
 }
 
 /// Lex - Lex and return a token from this macro stream.
-///
 bool TokenLexer::Lex(Token &Tok) {
   // Lexing off the end of the macro, pop this macro off the expansion stack.
   if (isAtEnd()) {
@@ -677,6 +686,7 @@ bool TokenLexer::Lex(Token &Tok) {
 bool TokenLexer::pasteTokens(Token &Tok) {
   return pasteTokens(Tok, llvm::makeArrayRef(Tokens, NumTokens), CurTokenIdx);
 }
+
 /// LHSTok is the LHS of a ## operator, and CurTokenIdx is the ##
 /// operator.  Read the ## and RHS, and paste the LHS/RHS together.  If there
 /// are more ## after it, chomp them iteratively.  Return the result as LHSTok.

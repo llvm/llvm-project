@@ -568,6 +568,7 @@ MachineInstr *OptimizeLEAPass::replaceDebugValue(MachineInstr &MI,
 
   if (AddrDispShift != 0)
     Expr = DIExpression::prepend(Expr, DIExpression::NoDeref, AddrDispShift,
+                                 DIExpression::NoDeref,
                                  DIExpression::WithStackValue);
 
   // Replace DBG_VALUE instruction with modified version.

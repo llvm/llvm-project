@@ -1792,7 +1792,7 @@ define i64 @test_mul_spec(i64 %x) nounwind {
 ; X64-HSW-NEXT:    addq $42, %rcx # sched: [1:0.25]
 ; X64-HSW-NEXT:    leaq (%rdi,%rdi,4), %rax # sched: [1:0.50]
 ; X64-HSW-NEXT:    addq $2, %rax # sched: [1:0.25]
-; X64-HSW-NEXT:    imulq %rcx, %rax # sched: [4:1.00]
+; X64-HSW-NEXT:    imulq %rcx, %rax # sched: [3:1.00]
 ; X64-HSW-NEXT:    retq # sched: [7:1.00]
 ;
 ; X64-JAG-LABEL: test_mul_spec:
@@ -1840,7 +1840,7 @@ define i64 @test_mul_spec(i64 %x) nounwind {
 ; HSW-NOOPT-NEXT:    addq $42, %rcx # sched: [1:0.25]
 ; HSW-NOOPT-NEXT:    leaq (%rdi,%rdi,4), %rax # sched: [1:0.50]
 ; HSW-NOOPT-NEXT:    addq $2, %rax # sched: [1:0.25]
-; HSW-NOOPT-NEXT:    imulq %rcx, %rax # sched: [4:1.00]
+; HSW-NOOPT-NEXT:    imulq %rcx, %rax # sched: [3:1.00]
 ; HSW-NOOPT-NEXT:    retq # sched: [7:1.00]
 ;
 ; JAG-NOOPT-LABEL: test_mul_spec:
