@@ -21,10 +21,6 @@ def BroadwellModel : SchedMachineModel {
 
   // Based on the LSD (loop-stream detector) queue size and benchmarking data.
   let LoopMicroOpBufferSize = 50;
-
-  // This flag is set to allow the scheduler to assign a default model to 
-  // unrecognized opcodes.
-  let CompleteModel = 0;
 }
 
 let SchedModel = BroadwellModel in {
@@ -119,6 +115,9 @@ def : WriteRes<WriteMove,  [BWPort0156]>;
 // Idioms that clear a register, like xorps %xmm0, %xmm0.
 // These can often bypass execution ports completely.
 def : WriteRes<WriteZero,  []>;
+
+// Treat misc copies as a move.
+def : InstRW<[WriteMove], (instrs COPY)>;
 
 // Branches don't produce values, so they have no latency, but they still
 // consume resources. Indirect branches can fold loads.
@@ -1603,7 +1602,7 @@ def: InstRW<[BWWriteResGroup42], (instregex "CVTDQ2PDrr")>;
 def: InstRW<[BWWriteResGroup42], (instregex "CVTPD2DQrr")>;
 def: InstRW<[BWWriteResGroup42], (instregex "CVTPD2PSrr")>;
 def: InstRW<[BWWriteResGroup42], (instregex "CVTSD2SSrr")>;
-def: InstRW<[BWWriteResGroup42], (instregex "CVTSI2SD64rr")>;
+def: InstRW<[BWWriteResGroup42], (instregex "CVTSI642SDrr")>;
 def: InstRW<[BWWriteResGroup42], (instregex "CVTSI2SDrr")>;
 def: InstRW<[BWWriteResGroup42], (instregex "CVTSI2SSrr")>;
 def: InstRW<[BWWriteResGroup42], (instregex "CVTTPD2DQrr")>;
@@ -1620,7 +1619,7 @@ def: InstRW<[BWWriteResGroup42], (instregex "VCVTPD2DQrr")>;
 def: InstRW<[BWWriteResGroup42], (instregex "VCVTPD2PSrr")>;
 def: InstRW<[BWWriteResGroup42], (instregex "VCVTPS2PHrr")>;
 def: InstRW<[BWWriteResGroup42], (instregex "VCVTSD2SSrr")>;
-def: InstRW<[BWWriteResGroup42], (instregex "VCVTSI2SD64rr")>;
+def: InstRW<[BWWriteResGroup42], (instregex "VCVTSI642SDrr")>;
 def: InstRW<[BWWriteResGroup42], (instregex "VCVTSI2SDrr")>;
 def: InstRW<[BWWriteResGroup42], (instregex "VCVTSI2SSrr")>;
 def: InstRW<[BWWriteResGroup42], (instregex "VCVTTPD2DQrr")>;
@@ -1891,12 +1890,12 @@ def BWWriteResGroup50 : SchedWriteRes<[BWPort1,BWPort5]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,2];
 }
-def: InstRW<[BWWriteResGroup50], (instregex "CVTSI2SS64rr")>;
+def: InstRW<[BWWriteResGroup50], (instregex "CVTSI642SSrr")>;
 def: InstRW<[BWWriteResGroup50], (instregex "HADDPDrr")>;
 def: InstRW<[BWWriteResGroup50], (instregex "HADDPSrr")>;
 def: InstRW<[BWWriteResGroup50], (instregex "HSUBPDrr")>;
 def: InstRW<[BWWriteResGroup50], (instregex "HSUBPSrr")>;
-def: InstRW<[BWWriteResGroup50], (instregex "VCVTSI2SS64rr")>;
+def: InstRW<[BWWriteResGroup50], (instregex "VCVTSI642SSrr")>;
 def: InstRW<[BWWriteResGroup50], (instregex "VHADDPDYrr")>;
 def: InstRW<[BWWriteResGroup50], (instregex "VHADDPDrr")>;
 def: InstRW<[BWWriteResGroup50], (instregex "VHADDPSYrr")>;

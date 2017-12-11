@@ -22,10 +22,6 @@ def BtVer2Model : SchedMachineModel {
   let HighLatency = 25;
   let MispredictPenalty = 14; // Minimum branch misdirection penalty
   let PostRAScheduler = 1;
-
-  // FIXME: SSE4/AVX is unimplemented. This flag is set to allow
-  // the scheduler to assign a default model to unrecognized opcodes.
-  let CompleteModel = 0;
 }
 
 let SchedModel = BtVer2Model in {
@@ -167,6 +163,9 @@ def: InstRW<[WriteSHLDm], (instregex "SHRD(16|32|64)mr(i8|CL)")>;
 def : WriteRes<WriteLoad,  [JLAGU]> { let Latency = 5; }
 def : WriteRes<WriteStore, [JSAGU]>;
 def : WriteRes<WriteMove,  [JALU01]>;
+
+// Treat misc copies as a move.
+def : InstRW<[WriteMove], (instrs COPY)>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Idioms that clear a register, like xorps %xmm0, %xmm0.

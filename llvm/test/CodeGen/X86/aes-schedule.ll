@@ -261,8 +261,8 @@ define <2 x i64> @test_aesimc(<2 x i64> %a0, <2 x i64> *%a1) {
 ;
 ; BROADWELL-LABEL: test_aesimc:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vaesimc %xmm0, %xmm0 # sched: [14:2.00]
 ; BROADWELL-NEXT:    vaesimc (%rdi), %xmm1 # sched: [19:2.00]
+; BROADWELL-NEXT:    vaesimc %xmm0, %xmm0 # sched: [14:2.00]
 ; BROADWELL-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
