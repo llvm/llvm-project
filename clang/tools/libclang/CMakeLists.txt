@@ -43,6 +43,7 @@ set(LIBS
   clangLex
   clangSema
   clangTooling
+  clangToolingRefactor
 )
 
 if (CLANG_ENABLE_ARCMT)
