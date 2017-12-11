@@ -686,8 +686,8 @@ unsigned DWARFVerifier::verifyAccelTable(const DWARFSection *AccelSection,
   }
 
   // Verify that the section is not too short.
-  if (!AccelTable.extract()) {
-    error() << "Section is smaller than size described in section header.\n";
+  if (Error E = AccelTable.extract()) {
+    error() << toString(std::move(E)) << '\n';
     return 1;
   }
 

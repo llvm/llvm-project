@@ -305,7 +305,7 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
   case Hexagon::L4_return_tnew_pt:
   case Hexagon::L4_return_fnew_pt:
     // [if ([!]p0[.new])] dealloc_return
-    SrcReg = MCI.getOperand(0).getReg();
+    SrcReg = MCI.getOperand(1).getReg();
     if (Hexagon::P0 == SrcReg) {
       return HexagonII::HSIG_L2;
     }
@@ -388,7 +388,7 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
     }
     break;
   case Hexagon::S2_allocframe:
-    if (inRange<5, 3>(MCI, 0))
+    if (inRange<5, 3>(MCI, 2))
       return HexagonII::HSIG_S2;
     break;
   //
@@ -742,7 +742,7 @@ MCInst HexagonMCInstrInfo::deriveSubInst(MCInst const &Inst) {
     break; //    1,2,3 SUBInst $Rx = add($_src_, $Rs)
   case Hexagon::S2_allocframe:
     Result.setOpcode(Hexagon::SS2_allocframe);
-    addOps(Result, Inst, 0);
+    addOps(Result, Inst, 2);
     break; //    1 SUBInst allocframe(#$u5_3)
   case Hexagon::A2_andir:
     if (minConstant(Inst, 2) == 255) {

@@ -102,6 +102,9 @@ namespace HexagonISD {
         const SmallVectorImpl<SDValue> &OutVals,
         const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG& DAG) const;
 
+    bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
+                            unsigned Intrinsic) const override;
+
     bool isTruncateFree(Type *Ty1, Type *Ty2) const override;
     bool isTruncateFree(EVT VT1, EVT VT2) const override;
 

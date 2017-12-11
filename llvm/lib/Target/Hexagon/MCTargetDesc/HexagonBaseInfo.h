@@ -68,8 +68,8 @@ namespace HexagonII {
     SoloAXPos  = 7,
     SoloAXMask = 0x1,
     // Only A-type instruction in first slot or nothing.
-    SoloAin1Pos  = 8,
-    SoloAin1Mask = 0x1,
+    RestrictSlot1AOKPos  = 8,
+    RestrictSlot1AOKMask = 0x1,
 
     // Predicated instructions.
     PredicatedPos  = 9,
@@ -122,6 +122,16 @@ namespace HexagonII {
     ExtentAlignPos  = 33,
     ExtentAlignMask = 0x3,
 
+    CofMax1Pos = 35,
+    CofMax1Mask = 0x1,
+    CofRelax1Pos = 36,
+    CofRelax1Mask = 0x1,
+    CofRelax2Pos = 37,
+    CofRelax2Mask = 0x1,
+
+    RestrictNoSlot1StorePos  = 38,
+    RestrictNoSlot1StoreMask = 0x1,
+
     // Addressing mode for load/store instructions.
     AddrModePos  = 41,
     AddrModeMask = 0x7,
@@ -152,8 +162,9 @@ namespace HexagonII {
     PrefersSlot3Pos = 56,
     PrefersSlot3Mask = 0x1,
 
-    CofMax1Pos = 60,
-    CofMax1Mask = 0x1,
+    // v65
+    HasTmpDstPos = 59,
+    HasTmpDstMask = 0x1,
 
     CVINewPos = 61,
     CVINewMask = 0x1

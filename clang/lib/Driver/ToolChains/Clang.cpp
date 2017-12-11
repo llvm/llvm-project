@@ -274,6 +274,27 @@ static void ParseMRecip(const Driver &D, const ArgList &Args,
   OutStrings.push_back(Args.MakeArgString(Out));
 }
 
+/// The -mprefer-vector-width option accepts either a positive integer
+/// or the string "none".
+static void ParseMPreferVectorWidth(const Driver &D, const ArgList &Args,
+                                    ArgStringList &CmdArgs) {
+  Arg *A = Args.getLastArg(options::OPT_mprefer_vector_width_EQ);
+  if (!A)
+    return;
+
+  StringRef Value = A->getValue();
+  if (Value == "none") {
+    CmdArgs.push_back("-mprefer-vector-width=none");
+  } else {
+    unsigned Width;
+    if (Value.getAsInteger(10, Width)) {
+      D.Diag(diag::err_drv_invalid_value) << A->getOption().getName() << Value;
+      return;
+    }
+    CmdArgs.push_back(Args.MakeArgString("-mprefer-vector-width=" + Value));
+  }
+}
+
 static void getWebAssemblyTargetFeatures(const ArgList &Args,
                                          std::vector<StringRef> &Features) {
   handleTargetFeaturesGroup(Args, Features, options::OPT_m_wasm_Features_Group);
@@ -4332,6 +4353,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasFlag(options::OPT_fslp_vectorize, SLPVectAliasOption,
                    options::OPT_fno_slp_vectorize, EnableSLPVec))
     CmdArgs.push_back("-vectorize-slp");
+
+  ParseMPreferVectorWidth(D, Args, CmdArgs);
 
   if (Arg *A = Args.getLastArg(options::OPT_fshow_overloads_EQ))
     A->render(Args, CmdArgs);

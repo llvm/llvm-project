@@ -75,10 +75,6 @@ int64_t const outerLoopMask = 1 << outerLoopOffset;
 size_t const memReorderDisabledOffset = 2;
 int64_t const memReorderDisabledMask = 1 << memReorderDisabledOffset;
 
-// allow re-ordering of memory stores by default stores cannot be re-ordered
-size_t const memStoreReorderEnabledOffset = 3;
-int64_t const memStoreReorderEnabledMask = 1 << memStoreReorderEnabledOffset;
-
 size_t const bundleInstructionsOffset = 1;
 
 void addConstant(MCInst &MI, uint64_t Value, MCContext &Context);
@@ -110,8 +106,6 @@ MCInst deriveSubInst(MCInst const &Inst);
 // Clamp off upper 26 bits of extendable operand for emission
 void clampExtended(MCInstrInfo const &MCII, MCContext &Context, MCInst &MCI);
 
-MCInst createBundle();
-
 // Return the extender for instruction at Index or nullptr if none
 MCInst const *extenderForIndex(MCInst const &MCB, size_t Index);
 void extendIfNeeded(MCContext &Context, MCInstrInfo const &MCII, MCInst &MCB,
@@ -119,6 +113,9 @@ void extendIfNeeded(MCContext &Context, MCInstrInfo const &MCII, MCInst &MCB,
 
 // Return memory access size in bytes
 unsigned getMemAccessSize(MCInstrInfo const &MCII, MCInst const &MCI);
+
+// Return memory access size
+unsigned getAddrMode(MCInstrInfo const &MCII, MCInst const &MCI);
 
 MCInstrDesc const &getDesc(MCInstrInfo const &MCII, MCInst const &MCI);
 
@@ -184,6 +181,7 @@ bool hasImmExt(MCInst const &MCI);
 // Return whether the instruction is a legal new-value producer.
 bool hasNewValue(MCInstrInfo const &MCII, MCInst const &MCI);
 bool hasNewValue2(MCInstrInfo const &MCII, MCInst const &MCI);
+bool hasTmpDst(MCInstrInfo const &MCII, MCInst const &MCI);
 unsigned iClassOfDuplexPair(unsigned Ga, unsigned Gb);
 
 int64_t minConstant(MCInst const &MCI, size_t Index);
@@ -209,6 +207,8 @@ bool isBundle(MCInst const &MCI);
 // Return whether the insn is an actual insn.
 bool isCanon(MCInstrInfo const &MCII, MCInst const &MCI);
 bool isCofMax1(MCInstrInfo const &MCII, MCInst const &MCI);
+bool isCofRelax1(MCInstrInfo const &MCII, MCInst const &MCI);
+bool isCofRelax2(MCInstrInfo const &MCII, MCInst const &MCI);
 bool isCompound(MCInstrInfo const &MCII, MCInst const &MCI);
 
 // Return whether the instruction needs to be constant extended.
@@ -236,6 +236,8 @@ bool isExtended(MCInstrInfo const &MCII, MCInst const &MCI);
 /// Return whether it is a floating-point insn.
 bool isFloat(MCInstrInfo const &MCII, MCInst const &MCI);
 
+bool isHVX(MCInstrInfo const &MCII, MCInst const &MCI);
+
 // Returns whether this instruction is an immediate extender
 bool isImmext(MCInst const &MCI);
 
@@ -248,7 +250,6 @@ bool isIntReg(unsigned Reg);
 // Is this register suitable for use in a duplex subinst
 bool isIntRegForSubInst(unsigned Reg);
 bool isMemReorderDisabled(MCInst const &MCI);
-bool isMemStoreReorderEnabled(MCInst const &MCI);
 
 // Return whether the insn is a new-value consumer.
 bool isNewValue(MCInstrInfo const &MCII, MCInst const &MCI);
@@ -283,7 +284,8 @@ bool isSolo(MCInstrInfo const &MCII, MCInst const &MCI);
 bool isSoloAX(MCInstrInfo const &MCII, MCInst const &MCI);
 
 /// Return whether the insn can be packaged only with an A-type insn in slot #1.
-bool isSoloAin1(MCInstrInfo const &MCII, MCInst const &MCI);
+bool isRestrictSlot1AOK(MCInstrInfo const &MCII, MCInst const &MCI);
+bool isRestrictNoSlot1Store(MCInstrInfo const &MCII, MCInst const &MCI);
 bool isSubInstruction(MCInst const &MCI);
 bool isVector(MCInstrInfo const &MCII, MCInst const &MCI);
 bool mustExtend(MCExpr const &Expr);
@@ -291,6 +293,17 @@ bool mustNotExtend(MCExpr const &Expr);
 
 // Pad the bundle with nops to satisfy endloop requirements
 void padEndloop(MCInst &MCI, MCContext &Context);
+class PredicateInfo {
+public:
+  PredicateInfo() : Register(0), Operand(0), PredicatedTrue(false) {}
+  PredicateInfo(unsigned Register, unsigned Operand, bool PredicatedTrue)
+      : Register(Register), Operand(Operand), PredicatedTrue(PredicatedTrue) {}
+  bool isPredicated() const;
+  unsigned Register;
+  unsigned Operand;
+  bool PredicatedTrue;
+};
+PredicateInfo predicateInfo(MCInstrInfo const &MCII, MCInst const &MCI);
 bool prefersSlot3(MCInstrInfo const &MCII, MCInst const &MCI);
 
 // Replace the instructions inside MCB, represented by Candidate
@@ -300,7 +313,6 @@ bool s27_2_reloc(MCExpr const &Expr);
 // Marks a bundle as endloop0
 void setInnerLoop(MCInst &MCI);
 void setMemReorderDisabled(MCInst &MCI);
-void setMemStoreReorderEnabled(MCInst &MCI);
 void setMustExtend(MCExpr const &Expr, bool Val = true);
 void setMustNotExtend(MCExpr const &Expr, bool Val = true);
 void setS27_2_reloc(MCExpr const &Expr, bool Val = true);

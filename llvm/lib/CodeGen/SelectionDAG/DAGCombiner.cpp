@@ -2675,7 +2675,8 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
   }
   // fold (mul x, (1 << c)) -> x << c
   if (isConstantOrConstantVector(N1, /*NoOpaques*/ true) &&
-      DAG.isKnownToBeAPowerOfTwo(N1)) {
+      DAG.isKnownToBeAPowerOfTwo(N1) &&
+      (!VT.isVector() || Level <= AfterLegalizeVectorOps)) {
     SDLoc DL(N);
     SDValue LogBase2 = BuildLogBase2(N1, DL);
     AddToWorklist(LogBase2.getNode());

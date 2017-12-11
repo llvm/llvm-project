@@ -36,11 +36,16 @@ function(llvm_create_cross_target_internal target_name toolchain buildtype)
   add_custom_target(CREATE_LLVM_${target_name}
                     DEPENDS ${LLVM_${target_name}_BUILD})
 
+  # Escape semicolons in the targets list so that cmake doesn't expand
+  # them to spaces.
+  string(REPLACE ";" "$<SEMICOLON>" targets_to_build_arg
+         "${LLVM_TARGETS_TO_BUILD}")
+
   add_custom_command(OUTPUT ${LLVM_${target_name}_BUILD}/CMakeCache.txt
     COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}"
         ${CROSS_TOOLCHAIN_FLAGS_${target_name}} ${CMAKE_SOURCE_DIR}
         -DLLVM_TARGET_IS_CROSSCOMPILE_HOST=TRUE
-        -DLLVM_TARGETS_TO_BUILD=Native
+        -DLLVM_TARGETS_TO_BUILD="${targets_to_build_arg}"
         ${build_type_flags} ${linker_flag} ${external_clang_dir}
     WORKING_DIRECTORY ${LLVM_${target_name}_BUILD}
     DEPENDS CREATE_LLVM_${target_name}

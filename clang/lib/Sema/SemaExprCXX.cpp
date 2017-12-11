@@ -1748,13 +1748,17 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     if (AllocType.isNull())
       return ExprError();
   } else if (Deduced) {
+    bool Braced = (initStyle == CXXNewExpr::ListInit);
+    if (NumInits == 1) {
+      if (auto p = dyn_cast_or_null<InitListExpr>(Inits[0])) {
+        Inits = p->getInits();
+        NumInits = p->getNumInits();
+        Braced = true;
+      }
+    }
+
     if (initStyle == CXXNewExpr::NoInit || NumInits == 0)
       return ExprError(Diag(StartLoc, diag::err_auto_new_requires_ctor_arg)
-                       << AllocType << TypeRange);
-    if (initStyle == CXXNewExpr::ListInit ||
-        (NumInits == 1 && isa<InitListExpr>(Inits[0])))
-      return ExprError(Diag(Inits[0]->getLocStart(),
-                            diag::err_auto_new_list_init)
                        << AllocType << TypeRange);
     if (NumInits > 1) {
       Expr *FirstBad = Inits[1];
@@ -1762,6 +1766,9 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
                             diag::err_auto_new_ctor_multiple_expressions)
                        << AllocType << TypeRange);
     }
+    if (Braced && !getLangOpts().CPlusPlus17)
+      Diag(Initializer->getLocStart(), diag::ext_auto_new_list_init)
+          << AllocType << TypeRange;
     Expr *Deduce = Inits[0];
     QualType DeducedType;
     if (DeduceAutoType(AllocTypeInfo, Deduce, DeducedType) == DAR_Failed)

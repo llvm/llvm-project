@@ -77,9 +77,9 @@ class InstHexagon<dag outs, dag ins, string asmstr, list<dag> pattern,
   // Packed only with A or X-type instructions.
   bits<1> isSoloAX = 0;
   let TSFlags{7} = isSoloAX;
-  // Only A-type instruction in first slot or nothing.
-  bits<1> isSoloAin1 = 0;
-  let TSFlags{8} = isSoloAin1;
+  // Restricts slot 1 to ALU-only instructions.
+  bits<1> isRestrictSlot1AOK = 0;
+  let TSFlags{8} = isRestrictSlot1AOK;
 
   // Predicated instructions.
   bits<1> isPredicated = 0;
@@ -121,6 +121,16 @@ class InstHexagon<dag outs, dag ins, string asmstr, list<dag> pattern,
   bits<2> opExtentAlign = 0;
   let TSFlags{34-33} = opExtentAlign; // Alignment exponent before extending.
 
+  bit cofMax1 = 0;
+  let TSFlags{35} = cofMax1;
+  bit cofRelax1 = 0;
+  let TSFlags{36} = cofRelax1;
+  bit cofRelax2 = 0;
+  let TSFlags{37} = cofRelax2;
+
+  bit isRestrictNoSlot1Store = 0;
+  let TSFlags{38} = isRestrictNoSlot1Store;
+
   // Addressing mode for load/store instructions.
   AddrModeType addrMode = NoAddrMode;
   let TSFlags{43-41} = addrMode.Value;
@@ -135,6 +145,9 @@ class InstHexagon<dag outs, dag ins, string asmstr, list<dag> pattern,
   bits<1> isFP = 0;
   let TSFlags {49} = isFP; // Floating-point.
 
+  bits<1> isSomeOK = 0;
+  let TSFlags {50} = isSomeOK; // Relax some grouping constraints.
+
   bits<1> hasNewValue2 = 0;
   let TSFlags{51} = hasNewValue2; // Second New-value producer insn.
   bits<3> opNewValue2 = 0;
@@ -146,8 +159,8 @@ class InstHexagon<dag outs, dag ins, string asmstr, list<dag> pattern,
   bits<1> prefersSlot3 = 0;
   let TSFlags{56} = prefersSlot3; // Complex XU
 
-  bit cofMax1 = 0;
-  let TSFlags{60} = cofMax1;
+  bits<1> hasTmpDst = 0;
+  let TSFlags{59} = hasTmpDst;  // v65 : 'fake" register VTMP is set
 
   bit CVINew = 0;
   let TSFlags{61} = CVINew;
@@ -229,15 +242,8 @@ class PseudoM<dag outs, dag ins, string asmstr, list<dag> pattern = [],
 include "HexagonInstrFormatsV4.td"
 
 //===----------------------------------------------------------------------===//
-// V55 Instruction Format Definitions +
-//===----------------------------------------------------------------------===//
-
-//===----------------------------------------------------------------------===//
-// V60 Instruction Format Definitions +
+// V60+ Instruction Format Definitions +
 //===----------------------------------------------------------------------===//
 
 include "HexagonInstrFormatsV60.td"
-
-//===----------------------------------------------------------------------===//
-// V62 Instruction Format Definitions +
-//===----------------------------------------------------------------------===//
+include "HexagonInstrFormatsV65.td"

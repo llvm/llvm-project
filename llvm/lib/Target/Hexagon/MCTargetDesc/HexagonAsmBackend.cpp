@@ -655,7 +655,8 @@ public:
     assert(HexagonMCInstrInfo::isBundle(Inst) &&
            "Hexagon relaxInstruction only works on bundles");
 
-    Res = HexagonMCInstrInfo::createBundle();
+    Res.setOpcode(Hexagon::BUNDLE);
+    Res.addOperand(MCOperand::createImm(Inst.getOperand(0).getImm()));
     // Copy the results into the bundle.
     bool Update = false;
     for (auto &I : HexagonMCInstrInfo::bundleInstructions(Inst)) {
@@ -769,6 +770,6 @@ MCAsmBackend *llvm::createHexagonAsmBackend(Target const &T,
                                       const MCTargetOptions &Options) {
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
 
-  StringRef CPUString = Hexagon_MC::selectHexagonCPU(TT, CPU);
+  StringRef CPUString = Hexagon_MC::selectHexagonCPU(CPU);
   return new HexagonAsmBackend(T, TT, OSABI, CPUString);
 }

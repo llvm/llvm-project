@@ -84,130 +84,135 @@ names from both the *Processor* and *Alternative Processor* can be used.
   .. table:: AMDGPU Processors
      :name: amdgpu-processor-table
 
-     =========== =============== ============ ===== ======= ==================
-     Processor   Alternative     Target       dGPU/ ROCm    Example
-                 Processor       Triple       APU   Support Products
-                                 Architecture
-     =========== =============== ============ ===== ======= ==================
+     =========== =============== ============ ===== ========= ======= ==================
+     Processor   Alternative     Target       dGPU/ Target    ROCm    Example
+                 Processor       Triple       APU   Features  Support Products
+                                 Architecture       Supported
+                                                    [Default]
+     =========== =============== ============ ===== ========= ======= ==================
      **Radeon HD 2000/3000 Series (R600)** [AMD-RADEON-HD-2000-3000]_
-     -------------------------------------------------------------------------
+     -----------------------------------------------------------------------------------
      ``r600``                    ``r600``     dGPU
      ``r630``                    ``r600``     dGPU
      ``rs880``                   ``r600``     dGPU
      ``rv670``                   ``r600``     dGPU
      **Radeon HD 4000 Series (R700)** [AMD-RADEON-HD-4000]_
-     -------------------------------------------------------------------------
+     -----------------------------------------------------------------------------------
      ``rv710``                   ``r600``     dGPU
      ``rv730``                   ``r600``     dGPU
      ``rv770``                   ``r600``     dGPU
      **Radeon HD 5000 Series (Evergreen)** [AMD-RADEON-HD-5000]_
-     -------------------------------------------------------------------------
+     -----------------------------------------------------------------------------------
      ``cedar``                   ``r600``     dGPU
      ``redwood``                 ``r600``     dGPU
      ``sumo``                    ``r600``     dGPU
      ``juniper``                 ``r600``     dGPU
      ``cypress``                 ``r600``     dGPU
      **Radeon HD 6000 Series (Northern Islands)** [AMD-RADEON-HD-6000]_
-     -------------------------------------------------------------------------
+     -----------------------------------------------------------------------------------
      ``barts``                   ``r600``     dGPU
      ``turks``                   ``r600``     dGPU
      ``caicos``                  ``r600``     dGPU
      ``cayman``                  ``r600``     dGPU
      **GCN GFX6 (Southern Islands (SI))** [AMD-GCN-GFX6]_
-     -------------------------------------------------------------------------
+     -----------------------------------------------------------------------------------
      ``gfx600``  - ``tahiti``    ``amdgcn``   dGPU
      ``gfx601``  - ``pitcairn``  ``amdgcn``   dGPU
                  - ``verde``
                  - ``oland``
                  - ``hainan``
      **GCN GFX7 (Sea Islands (CI))** [AMD-GCN-GFX7]_
-     -------------------------------------------------------------------------
-     ``gfx700``  - ``bonaire``   ``amdgcn``   dGPU          - Radeon HD 7790
-                                                            - Radeon HD 8770
-                                                            - R7 260
-                                                            - R7 260X
-     \           - ``kaveri``    ``amdgcn``   APU           - A6-7000
-                                                            - A6 Pro-7050B
-                                                            - A8-7100
-                                                            - A8 Pro-7150B
-                                                            - A10-7300
-                                                            - A10 Pro-7350B
-                                                            - FX-7500
-                                                            - A8-7200P
-                                                            - A10-7400P
-                                                            - FX-7600P
-     ``gfx701``  - ``hawaii``    ``amdgcn``   dGPU  ROCm    - FirePro W8100
-                                                            - FirePro W9100
-                                                            - FirePro S9150
-                                                            - FirePro S9170
-     ``gfx702``                  ``amdgcn``   dGPU  ROCm    - Radeon R9 290
-                                                            - Radeon R9 290x
-                                                            - Radeon R390
-                                                            - Radeon R390x
-     ``gfx703``  - ``kabini``    ``amdgcn``   APU           - E1-2100
-                 - ``mullins``                              - E1-2200
-                                                            - E1-2500
-                                                            - E2-3000
-                                                            - E2-3800
-                                                            - A4-5000
-                                                            - A4-5100
-                                                            - A6-5200
-                                                            - A4 Pro-3340B
+     -----------------------------------------------------------------------------------
+     ``gfx700``  - ``kaveri``    ``amdgcn``   APU                     - A6-7000
+                                                                      - A6 Pro-7050B
+                                                                      - A8-7100
+                                                                      - A8 Pro-7150B
+                                                                      - A10-7300
+                                                                      - A10 Pro-7350B
+                                                                      - FX-7500
+                                                                      - A8-7200P
+                                                                      - A10-7400P
+                                                                      - FX-7600P
+     ``gfx701``  - ``hawaii``    ``amdgcn``   dGPU            ROCm    - FirePro W8100
+                                                                      - FirePro W9100
+                                                                      - FirePro S9150
+                                                                      - FirePro S9170
+     ``gfx702``                  ``amdgcn``   dGPU            ROCm    - Radeon R9 290
+                                                                      - Radeon R9 290x
+                                                                      - Radeon R390
+                                                                      - Radeon R390x
+     ``gfx703``  - ``kabini``    ``amdgcn``   APU                     - E1-2100
+                 - ``mullins``                                        - E1-2200
+                                                                      - E1-2500
+                                                                      - E2-3000
+                                                                      - E2-3800
+                                                                      - A4-5000
+                                                                      - A4-5100
+                                                                      - A6-5200
+                                                                      - A4 Pro-3340B
+     ``gfx704``  - ``bonaire``   ``amdgcn``   dGPU                    - Radeon HD 7790
+                                                                      - Radeon HD 8770
+                                                                      - R7 260
+                                                                      - R7 260X
      **GCN GFX8 (Volcanic Islands (VI))** [AMD-GCN-GFX8]_
-     -------------------------------------------------------------------------
-     ``gfx800``  - ``iceland``   ``amdgcn``   dGPU          - FirePro S7150
-                                                            - FirePro S7100
-                                                            - FirePro W7100
-                                                            - Radeon R285
-                                                            - Radeon R9 380
-                                                            - Radeon R9 385
-                                                            - Mobile FirePro
-                                                              M7170
-     ``gfx801``  - ``carrizo``   ``amdgcn``   APU           - A6-8500P
-                                                            - Pro A6-8500B
-                                                            - A8-8600P
-                                                            - Pro A8-8600B
-                                                            - FX-8800P
-                                                            - Pro A12-8800B
-     \                           ``amdgcn``   APU   ROCm    - A10-8700P
-                                                            - Pro A10-8700B
-                                                            - A10-8780P
-     \                           ``amdgcn``   APU           - A10-9600P
-                                                            - A10-9630P
-                                                            - A12-9700P
-                                                            - A12-9730P
-                                                            - FX-9800P
-                                                            - FX-9830P
-     \                           ``amdgcn``   APU           - E2-9010
-                                                            - A6-9210
-                                                            - A9-9410
-     ``gfx802``  - ``tonga``     ``amdgcn``   dGPU  ROCm    Same as gfx800
-     ``gfx803``  - ``fiji``      ``amdgcn``   dGPU  ROCm    - Radeon R9 Nano
-                                                            - Radeon R9 Fury
-                                                            - Radeon R9 FuryX
-                                                            - Radeon Pro Duo
-                                                            - FirePro S9300x2
-                                                            - Radeon Instinct MI8
-     \           - ``polaris10`` ``amdgcn``   dGPU  ROCm    - Radeon RX 470
-                                                            - Radeon RX 480
-                                                            - Radeon Instinct MI6
-     \           - ``polaris11`` ``amdgcn``   dGPU  ROCm    - Radeon RX 460
-     ``gfx810``  - ``stoney``    ``amdgcn``   APU
+     -----------------------------------------------------------------------------------
+     ``gfx800``  - ``iceland``   ``amdgcn``   dGPU  - xnack           .. TODO
+                                                      [off]              Add product
+                                                                         names.
+     ``gfx801``  - ``carrizo``   ``amdgcn``   APU   - xnack           - A6-8500P
+                                                      [on]            - Pro A6-8500B
+                                                                      - A8-8600P
+                                                                      - Pro A8-8600B
+                                                                      - FX-8800P
+                                                                      - Pro A12-8800B
+     \                           ``amdgcn``   APU   - xnack   ROCm    - A10-8700P
+                                                      [on]            - Pro A10-8700B
+                                                                      - A10-8780P
+     \                           ``amdgcn``   APU   - xnack           - A10-9600P
+                                                      [on]            - A10-9630P
+                                                                      - A12-9700P
+                                                                      - A12-9730P
+                                                                      - FX-9800P
+                                                                      - FX-9830P
+     \                           ``amdgcn``   APU   - xnack           - E2-9010
+                                                      [on]            - A6-9210
+                                                                      - A9-9410
+     ``gfx802``  - ``tonga``     ``amdgcn``   dGPU  - xnack   ROCm    - FirePro S7150
+                                                      [off]           - FirePro S7100
+                                                                      - FirePro W7100
+                                                                      - Radeon R285
+                                                                      - Radeon R9 380
+                                                                      - Radeon R9 385
+                                                                      - Mobile FirePro
+                                                                        M7170
+     ``gfx803``  - ``fiji``      ``amdgcn``   dGPU  - xnack   ROCm    - Radeon R9 Nano
+                                                      [off]           - Radeon R9 Fury
+                                                                      - Radeon R9 FuryX
+                                                                      - Radeon Pro Duo
+                                                                      - FirePro S9300x2
+                                                                      - Radeon Instinct MI8
+     \           - ``polaris10`` ``amdgcn``   dGPU  - xnack   ROCm    - Radeon RX 470
+                                                      [off]           - Radeon RX 480
+                                                                      - Radeon Instinct MI6
+     \           - ``polaris11`` ``amdgcn``   dGPU  - xnack   ROCm    - Radeon RX 460
+                                                      [off]
+     ``gfx810``  - ``stoney``    ``amdgcn``   APU   - xnack
+                                                      [on]
      **GCN GFX9** [AMD-GCN-GFX9]_
-     -------------------------------------------------------------------------
-     ``gfx900``                  ``amdgcn``   dGPU  ROCm    - Radeon Vega
-                                                              Frontier Edition
-                                                            - Radeon RX Vega 56
-                                                            - Radeon RX Vega 64
-                                                            - Radeon RX Vega 64
-                                                              Liquid
-                                                            - Radeon Instinct MI25
-     ``gfx902``                  ``amdgcn``   APU           *TBA*
-
-                                                            .. TODO
-                                                               Add product
-                                                               names.
-     =========== =============== ============ ===== ======= ==================
+     -----------------------------------------------------------------------------------
+     ``gfx900``                  ``amdgcn``   dGPU  - xnack   ROCm    - Radeon Vega
+                                                      [off]             Frontier Edition
+                                                                      - Radeon RX Vega 56
+                                                                      - Radeon RX Vega 64
+                                                                      - Radeon RX Vega 64
+                                                                        Liquid
+                                                                      - Radeon Instinct MI25
+     ``gfx902``                  ``amdgcn``   APU   - xnack           *TBA*
+                                                      [on]
+                                                                      .. TODO
+                                                                         Add product
+                                                                         names.
+     =========== =============== ============ ===== ========= ======= ==================
 
 .. _amdgpu-target-features:
 
@@ -215,11 +220,15 @@ Target Features
 ---------------
 
 Target features control how code is generated to support certain
-features. Not all target features are supported by all processors. The
-runtime must ensure that the features supported by the device used to
-execute the code match the features enabled when generating the
-code. A mismatch of features may result in incorrect execution, or a
-reduction in performance.
+processor specific features. Not all target features are supported by
+all processors. The runtime must ensure that the features supported by
+the device used to execute the code match the features enabled when
+generating the code. A mismatch of features may result in incorrect
+execution, or a reduction in performance.
+
+The target features supported by each processor, and the default value
+used if not specified explicitly, is listed in
+:ref:`amdgpu-processor-table`.
 
 Use the ``clang -m[no-]<TargetFeature>`` option to specify the AMD GPU
 target features.
@@ -227,34 +236,31 @@ target features.
 For example:
 
 ``-mxnack``
-  Enable the *XNACK* feature.
+  Enable the ``xnack`` feature.
 ``-mno-xnack``
-  Disable the *XNACK* feature.
+  Disable the ``xnack`` feature.
 
   .. table:: AMDGPU Target Features
      :name: amdgpu-target-feature-table
 
-     ============== ======== ==================================================
-     Target Feature Default  Description
-     ============== ======== ==================================================
-     -m[no-]xnack   disabled Enable/disable generating code that has
-                             memory clauses that are compatible with
-                             having XNACK replay enabled.
+     ============== ==================================================
+     Target Feature Description
+     ============== ==================================================
+     -m[no-]xnack   Enable/disable generating code that has
+                    memory clauses that are compatible with
+                    having XNACK replay enabled.
 
-                             This is used for demand paging and page
-                             migration. If XNACK replay is enabled in
-                             the device, then if a page fault occurs
-                             the code may execute incorrectly if the
-                             XNACK feature is not enabled. Executing
-                             code that has the feature enabled on a
-                             device that does not have XNACK replay
-                             enabled will execute correctly, but may
-                             be less performant than code with the
-                             feature disabled.
-
-                             This feature is supported by the
-                             ``amdgcn`` architecture for GFX8-GFX9.
-     ============== ======== ==================================================
+                    This is used for demand paging and page
+                    migration. If XNACK replay is enabled in
+                    the device, then if a page fault occurs
+                    the code may execute incorrectly if the
+                    ``xnack`` feature is not enabled. Executing
+                    code that has the feature enabled on a
+                    device that does not have XNACK replay
+                    enabled will execute correctly, but may
+                    be less performant than code with the
+                    feature disabled.
+     ============== ==================================================
 
 .. _amdgpu-address-spaces:
 
@@ -517,6 +523,12 @@ The AMDGPU backend uses the following ELF header:
                                                   ``EF_AMDGPU_MACH_xxx`` values
                                                   defined in
                                                   :ref:`amdgpu-ef-amdgpu-mach-table`.
+     ``EF_AMDGPU_XNACK``               0x00000100 Indicates if the ``xnack``
+                                                  target feature is
+                                                  enabled for all code
+                                                  contained in the code object.
+                                                  See
+                                                  :ref:`amdgpu-target-features`.
      ================================= ========== =============================
 
   .. table:: AMDGPU ``EF_AMDGPU_MACH`` Values
@@ -551,13 +563,14 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX701``  35         ``gfx701``
      ``EF_AMDGPU_MACH_AMDGCN_GFX702``  36         ``gfx702``
      ``EF_AMDGPU_MACH_AMDGCN_GFX703``  37         ``gfx703``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX800``  38         ``gfx800``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX801``  39         ``gfx801``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX802``  40         ``gfx802``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX803``  41         ``gfx803``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX810``  42         ``gfx810``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX900``  43         ``gfx900``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX902``  44         ``gfx902``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX704``  38         ``gfx704``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX800``  39         ``gfx800``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX801``  40         ``gfx801``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX802``  41         ``gfx802``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX803``  42         ``gfx803``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX810``  43         ``gfx810``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX900``  44         ``gfx900``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX902``  45         ``gfx902``
      ================================= ========== =============================
 
 Sections
@@ -1290,11 +1303,6 @@ non-AMD key names should be prefixed by "*vendor-name*.".
                                                            be launched with a
                                                            matching corresponding
                                                            work-group size.
-     "IsXNACKEnabled"             boolean                  Indicates if the
-                                                           generated machine
-                                                           code is capable of
-                                                           supporting XNACK. See
-                                                           :ref:`amdgpu-target-features`.
      "NumSpilledSGPRs"            integer                  Number of stores from
                                                            a scalar register to
                                                            a register allocator
@@ -1589,10 +1597,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      should always be 0.
      457     1 bit   EnableSGPRGridWorkgroupCountZ   Not implemented in CP and
                                                      should always be 0.
-     462:458 5 bits                                  Reserved, must be 0.
-     463     1 bit   IsXNACKEnabled                  Indicates if the generated
-                                                     machine code is capable of
-                                                     supporting XNACK.
+     463:458 6 bits                                  Reserved, must be 0.
      511:464 6                                       Reserved, must be 0.
              bytes
      512     **Total size 64 bytes.**

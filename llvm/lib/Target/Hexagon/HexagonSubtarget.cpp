@@ -93,7 +93,7 @@ static cl::opt<bool> EnableCheckBankConflict("hexagon-check-bank-conflict",
 HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
                                    StringRef FS, const TargetMachine &TM)
     : HexagonGenSubtargetInfo(TT, CPU, FS), OptLevel(TM.getOptLevel()),
-      CPUString(Hexagon_MC::selectHexagonCPU(TT, CPU)),
+      CPUString(Hexagon_MC::selectHexagonCPU(CPU)),
       InstrInfo(initializeSubtargetDependencies(CPU, FS)),
       RegInfo(getHwMode()), TLInfo(TM, *this),
       InstrItins(getInstrItineraryForCPU(CPUString)) {
@@ -110,6 +110,7 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
       {"hexagonv55", Hexagon::ArchEnum::V55},
       {"hexagonv60", Hexagon::ArchEnum::V60},
       {"hexagonv62", Hexagon::ArchEnum::V62},
+      {"hexagonv65", Hexagon::ArchEnum::V65},
   };
 
   auto FoundIt = CpuTable.find(CPUString);
@@ -130,6 +131,11 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
 
   if (OverrideLongCalls.getPosition())
     UseLongCalls = OverrideLongCalls;
+
+  FeatureBitset Features = getFeatureBits();
+  if (HexagonDisableDuplex)
+    setFeatureBits(Features.set(Hexagon::FeatureDuplex, false));
+  setFeatureBits(Hexagon_MC::completeHVXFeatures(Features));
 
   return *this;
 }

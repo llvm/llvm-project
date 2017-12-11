@@ -16,6 +16,7 @@
 #define LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONSHUFFLER_H
 
 #include "Hexagon.h"
+#include "MCTargetDesc/HexagonMCInstrInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -152,6 +153,10 @@ protected:
   MCSubtargetInfo const &STI;
   SMLoc Loc;
   bool ReportErrors;
+  std::vector<std::pair<SMLoc, std::string>> AppliedRestrictions;
+  void applySlotRestrictions();
+  void restrictSlot1AOK();
+  void restrictNoSlot1Store();
 
 public:
   using iterator = HexagonPacket::iterator;
@@ -167,6 +172,10 @@ public:
   bool shuffle();
 
   unsigned size() const { return (Packet.size()); }
+
+  bool isMemReorderDisabled() const {
+    return (BundleFlags & HexagonMCInstrInfo::memReorderDisabledMask) != 0;
+  }
 
   iterator begin() { return (Packet.begin()); }
   iterator end() { return (Packet.end()); }
