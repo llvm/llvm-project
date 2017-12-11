@@ -452,7 +452,7 @@ define double @test_cmpsd(double %a0, double %a1, double *%a2) {
 ; GENERIC-LABEL: test_cmpsd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    cmpeqsd %xmm1, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    cmpeqsd (%rdi), %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    cmpeqsd (%rdi), %xmm0 # sched: [9:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_cmpsd:
@@ -470,7 +470,7 @@ define double @test_cmpsd(double %a0, double %a1, double *%a2) {
 ; SANDY-LABEL: test_cmpsd:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; SANDY-NEXT:    vcmpeqsd (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; SANDY-NEXT:    vcmpeqsd (%rdi), %xmm0, %xmm0 # sched: [9:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_cmpsd:
@@ -487,14 +487,14 @@ define double @test_cmpsd(double %a0, double %a1, double *%a2) {
 ;
 ; SKYLAKE-LABEL: test_cmpsd:
 ; SKYLAKE:       # %bb.0:
-; SKYLAKE-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; SKYLAKE-NEXT:    vcmpeqsd (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
+; SKYLAKE-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKYLAKE-NEXT:    vcmpeqsd (%rdi), %xmm0, %xmm0 # sched: [9:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_cmpsd:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; SKX-NEXT:    vcmpeqsd (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
+; SKX-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0 # sched: [4:0.33]
+; SKX-NEXT:    vcmpeqsd (%rdi), %xmm0, %xmm0 # sched: [9:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_cmpsd:
@@ -705,8 +705,8 @@ define <2 x double> @test_cvtdq2pd(<4 x i32> %a0, <4 x i32> *%a1) {
 ;
 ; BROADWELL-LABEL: test_cvtdq2pd:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vcvtdq2pd %xmm0, %xmm0 # sched: [4:1.00]
 ; BROADWELL-NEXT:    vcvtdq2pd (%rdi), %xmm1 # sched: [9:1.00]
+; BROADWELL-NEXT:    vcvtdq2pd %xmm0, %xmm0 # sched: [4:1.00]
 ; BROADWELL-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -1179,8 +1179,8 @@ define i32 @test_cvtsd2si(double %a0, double *%a1) {
 ;
 ; BROADWELL-LABEL: test_cvtsd2si:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vcvtsd2si %xmm0, %ecx # sched: [4:1.00]
 ; BROADWELL-NEXT:    vcvtsd2si (%rdi), %eax # sched: [9:1.00]
+; BROADWELL-NEXT:    vcvtsd2si %xmm0, %ecx # sched: [4:1.00]
 ; BROADWELL-NEXT:    addl %ecx, %eax # sched: [1:0.25]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -1259,8 +1259,8 @@ define i64 @test_cvtsd2siq(double %a0, double *%a1) {
 ;
 ; BROADWELL-LABEL: test_cvtsd2siq:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vcvtsd2si %xmm0, %rcx # sched: [4:1.00]
 ; BROADWELL-NEXT:    vcvtsd2si (%rdi), %rax # sched: [9:1.00]
+; BROADWELL-NEXT:    vcvtsd2si %xmm0, %rcx # sched: [4:1.00]
 ; BROADWELL-NEXT:    addq %rcx, %rax # sched: [1:0.25]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -1305,7 +1305,7 @@ define float @test_cvtsd2ss(double %a0, double *%a1) {
 ; GENERIC-LABEL: test_cvtsd2ss:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    cvtsd2ss %xmm0, %xmm1 # sched: [4:1.00]
-; GENERIC-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero sched: [4:0.50]
+; GENERIC-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero sched: [6:0.50]
 ; GENERIC-NEXT:    cvtsd2ss %xmm0, %xmm0 # sched: [4:1.00]
 ; GENERIC-NEXT:    addss %xmm1, %xmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -1829,8 +1829,8 @@ define i32 @test_cvttsd2si(double %a0, double *%a1) {
 ;
 ; BROADWELL-LABEL: test_cvttsd2si:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vcvttsd2si %xmm0, %ecx # sched: [4:1.00]
 ; BROADWELL-NEXT:    vcvttsd2si (%rdi), %eax # sched: [9:1.00]
+; BROADWELL-NEXT:    vcvttsd2si %xmm0, %ecx # sched: [4:1.00]
 ; BROADWELL-NEXT:    addl %ecx, %eax # sched: [1:0.25]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -1906,8 +1906,8 @@ define i64 @test_cvttsd2siq(double %a0, double *%a1) {
 ;
 ; BROADWELL-LABEL: test_cvttsd2siq:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vcvttsd2si %xmm0, %rcx # sched: [4:1.00]
 ; BROADWELL-NEXT:    vcvttsd2si (%rdi), %rax # sched: [9:1.00]
+; BROADWELL-NEXT:    vcvttsd2si %xmm0, %rcx # sched: [4:1.00]
 ; BROADWELL-NEXT:    addq %rcx, %rax # sched: [1:0.25]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -2869,7 +2869,7 @@ define i64 @test_movd_64(<2 x i64> %a0, i64 %a1, i64 *%a2) {
 ; GENERIC-LABEL: test_movd_64:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    movq %rdi, %xmm1 # sched: [1:1.00]
-; GENERIC-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero sched: [4:0.50]
+; GENERIC-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero sched: [6:0.50]
 ; GENERIC-NEXT:    paddq %xmm0, %xmm1 # sched: [1:0.50]
 ; GENERIC-NEXT:    paddq %xmm0, %xmm2 # sched: [1:0.50]
 ; GENERIC-NEXT:    movq %xmm2, %rax # sched: [2:1.00]
@@ -3326,7 +3326,7 @@ define void @test_movntpd(<2 x double> %a0, <2 x double> *%a1) {
 define <2 x i64> @test_movq_mem(<2 x i64> %a0, i64 *%a1) {
 ; GENERIC-LABEL: test_movq_mem:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero sched: [4:0.50]
+; GENERIC-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero sched: [6:0.50]
 ; GENERIC-NEXT:    paddq %xmm1, %xmm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    movq %xmm0, (%rdi) # sched: [5:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -3471,9 +3471,9 @@ define <2 x i64> @test_movq_reg(<2 x i64> %a0, <2 x i64> %a1) {
 define void @test_movsd_mem(double* %a0, double* %a1) {
 ; GENERIC-LABEL: test_movsd_mem:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero sched: [4:0.50]
+; GENERIC-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero sched: [6:0.50]
 ; GENERIC-NEXT:    addsd %xmm0, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    movsd %xmm0, (%rsi) # sched: [1:1.00]
+; GENERIC-NEXT:    movsd %xmm0, (%rsi) # sched: [5:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_movsd_mem:

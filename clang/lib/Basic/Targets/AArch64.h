@@ -48,6 +48,10 @@ public:
   bool isValidCPUName(StringRef Name) const override;
   bool setCPU(const std::string &Name) override;
 
+  bool useFP16ConversionIntrinsics() const override {
+    return false;
+  }
+
   void getTargetDefinesARMV81A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
   void getTargetDefinesARMV82A(const LangOptions &Opts,

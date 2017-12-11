@@ -126,33 +126,6 @@ catch_mach_exception_raise(mach_port_t exc_port, mach_port_t thread_port,
   return KERN_FAILURE;
 }
 
-#if 0
-void
-MachException::Message::Dump(Stream &stream) const
-{
-    stream.Printf("exc_msg { bits = 0x%8.8x size = 0x%8.8x remote-port = "
-                  "0x%8.8x local-port = 0x%8.8x reserved = 0x%8.8x "
-                  "id = 0x%8.8x }\n",
-        exc_msg.hdr.msgh_bits,
-        exc_msg.hdr.msgh_size,
-        exc_msg.hdr.msgh_remote_port,
-        exc_msg.hdr.msgh_local_port,
-        exc_msg.hdr.msgh_reserved,
-        exc_msg.hdr.msgh_id);
-
-    stream.Printf("reply_msg { bits = 0x%8.8x size = 0x%8.8x remote-port "
-                  "= 0x%8.8x local-port = 0x%8.8x reserved = 0x%8.8x "
-                  "id = 0x%8.8x }",
-                  reply_msg.hdr.msgh_bits,
-                  reply_msg.hdr.msgh_size,
-                  reply_msg.hdr.msgh_remote_port,
-                  reply_msg.hdr.msgh_local_port,
-                  reply_msg.hdr.msgh_reserved,
-                  reply_msg.hdr.msgh_id);
-    stream.Flush();
-}
-#endif
-
 bool MachException::Data::GetStopInfo(struct ThreadStopInfo *stop_info,
                                       const UnixSignals &signals,
                                       Stream &stream) const {

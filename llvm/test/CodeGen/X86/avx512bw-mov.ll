@@ -102,8 +102,7 @@ define <16 x i8> @test_mask_load_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x 
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovb2m %zmm0, %k0
-; CHECK-NEXT:    kshiftlq $48, %k0, %k0
-; CHECK-NEXT:    kshiftrq $48, %k0, %k1
+; CHECK-NEXT:    kmovw %k0, %k1
 ; CHECK-NEXT:    vmovdqu8 (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %zmm0
 ; CHECK-NEXT:    retq
@@ -117,8 +116,7 @@ define <32 x i8> @test_mask_load_32xi8(<32 x i1> %mask, <32 x i8>* %addr, <32 x 
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpsllw $7, %ymm0, %ymm0
 ; CHECK-NEXT:    vpmovb2m %zmm0, %k0
-; CHECK-NEXT:    kshiftlq $32, %k0, %k0
-; CHECK-NEXT:    kshiftrq $32, %k0, %k1
+; CHECK-NEXT:    kmovd %k0, %k1
 ; CHECK-NEXT:    vmovdqu8 (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    ## kill: def %ymm0 killed %ymm0 killed %zmm0
 ; CHECK-NEXT:    retq
@@ -147,8 +145,7 @@ define <16 x i16> @test_mask_load_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovb2m %zmm0, %k0
-; CHECK-NEXT:    kshiftld $16, %k0, %k0
-; CHECK-NEXT:    kshiftrd $16, %k0, %k1
+; CHECK-NEXT:    kmovw %k0, %k1
 ; CHECK-NEXT:    vmovdqu16 (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    ## kill: def %ymm0 killed %ymm0 killed %zmm0
 ; CHECK-NEXT:    retq
@@ -163,8 +160,7 @@ define void @test_mask_store_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x i8> 
 ; CHECK-NEXT:    ## kill: def %xmm1 killed %xmm1 def %zmm1
 ; CHECK-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovb2m %zmm0, %k0
-; CHECK-NEXT:    kshiftlq $48, %k0, %k0
-; CHECK-NEXT:    kshiftrq $48, %k0, %k1
+; CHECK-NEXT:    kmovw %k0, %k1
 ; CHECK-NEXT:    vmovdqu8 %zmm1, (%rdi) {%k1}
 ; CHECK-NEXT:    retq
   call void @llvm.masked.store.v16i8(<16 x i8> %val, <16 x i8>* %addr, i32 4, <16 x i1>%mask)
@@ -178,8 +174,7 @@ define void @test_mask_store_32xi8(<32 x i1> %mask, <32 x i8>* %addr, <32 x i8> 
 ; CHECK-NEXT:    ## kill: def %ymm1 killed %ymm1 def %zmm1
 ; CHECK-NEXT:    vpsllw $7, %ymm0, %ymm0
 ; CHECK-NEXT:    vpmovb2m %zmm0, %k0
-; CHECK-NEXT:    kshiftlq $32, %k0, %k0
-; CHECK-NEXT:    kshiftrq $32, %k0, %k1
+; CHECK-NEXT:    kmovd %k0, %k1
 ; CHECK-NEXT:    vmovdqu8 %zmm1, (%rdi) {%k1}
 ; CHECK-NEXT:    retq
   call void @llvm.masked.store.v32i8(<32 x i8> %val, <32 x i8>* %addr, i32 4, <32 x i1>%mask)
@@ -208,8 +203,7 @@ define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i1
 ; CHECK-NEXT:    ## kill: def %ymm1 killed %ymm1 def %zmm1
 ; CHECK-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovb2m %zmm0, %k0
-; CHECK-NEXT:    kshiftld $16, %k0, %k0
-; CHECK-NEXT:    kshiftrd $16, %k0, %k1
+; CHECK-NEXT:    kmovw %k0, %k1
 ; CHECK-NEXT:    vmovdqu16 %zmm1, (%rdi) {%k1}
 ; CHECK-NEXT:    retq
   call void @llvm.masked.store.v16i16(<16 x i16> %val, <16 x i16>* %addr, i32 4, <16 x i1>%mask)

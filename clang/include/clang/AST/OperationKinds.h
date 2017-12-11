@@ -23,8 +23,6 @@ enum CastKind {
 #include "clang/AST/OperationKinds.def"
 };
 
-static const CastKind CK_Invalid = static_cast<CastKind>(-1);
-
 enum BinaryOperatorKind {
 #define BINARY_OPERATION(Name, Spelling) BO_##Name,
 #include "clang/AST/OperationKinds.def"

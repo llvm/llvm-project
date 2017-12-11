@@ -122,21 +122,20 @@ template <> struct ArgTypeTraits<unsigned> {
 
 template <> struct ArgTypeTraits<attr::Kind> {
 private:
-  static attr::Kind getAttrKind(llvm::StringRef AttrKind) {
-    return llvm::StringSwitch<attr::Kind>(AttrKind)
+  static Optional<attr::Kind> getAttrKind(llvm::StringRef AttrKind) {
+    return llvm::StringSwitch<Optional<attr::Kind>>(AttrKind)
 #define ATTR(X) .Case("attr::" #X, attr:: X)
 #include "clang/Basic/AttrList.inc"
-        .Default(attr::Kind(-1));
+        .Default(llvm::None);
   }
 
 public:
   static bool is(const VariantValue &Value) {
-    return Value.isString() &&
-        getAttrKind(Value.getString()) != attr::Kind(-1);
+    return Value.isString() && getAttrKind(Value.getString());
   }
 
   static attr::Kind get(const VariantValue &Value) {
-    return getAttrKind(Value.getString());
+    return *getAttrKind(Value.getString());
   }
 
   static ArgKind getKind() {
@@ -146,21 +145,20 @@ public:
 
 template <> struct ArgTypeTraits<CastKind> {
 private:
-  static CastKind getCastKind(llvm::StringRef AttrKind) {
-    return llvm::StringSwitch<CastKind>(AttrKind)
+  static Optional<CastKind> getCastKind(llvm::StringRef AttrKind) {
+    return llvm::StringSwitch<Optional<CastKind>>(AttrKind)
 #define CAST_OPERATION(Name) .Case( #Name, CK_##Name)
 #include "clang/AST/OperationKinds.def"
-        .Default(CK_Invalid);
+        .Default(llvm::None);
   }
 
 public:
   static bool is(const VariantValue &Value) {
-    return Value.isString() &&  
-        getCastKind(Value.getString()) != CK_Invalid;
+    return Value.isString() && getCastKind(Value.getString());
   }
 
   static CastKind get(const VariantValue &Value) {
-    return getCastKind(Value.getString());
+    return *getCastKind(Value.getString());
   }
 
   static ArgKind getKind() {

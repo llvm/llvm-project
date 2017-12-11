@@ -904,14 +904,36 @@ public:
     _LIBCPP_INLINE_VISIBILITY istream_iterator  operator++(int)
         {istream_iterator __t(*this); ++(*this); return __t;}
 
+    template <class _Up, class _CharU, class _TraitsU, class _DistanceU>
     friend _LIBCPP_INLINE_VISIBILITY
-    bool operator==(const istream_iterator& __x, const istream_iterator& __y)
-        {return __x.__in_stream_ == __y.__in_stream_;}
+    bool
+    operator==(const istream_iterator<_Up, _CharU, _TraitsU, _DistanceU>& __x,
+               const istream_iterator<_Up, _CharU, _TraitsU, _DistanceU>& __y);
 
+    template <class _Up, class _CharU, class _TraitsU, class _DistanceU>
     friend _LIBCPP_INLINE_VISIBILITY
-    bool operator!=(const istream_iterator& __x, const istream_iterator& __y)
-        {return !(__x == __y);}
+    bool
+    operator==(const istream_iterator<_Up, _CharU, _TraitsU, _DistanceU>& __x,
+               const istream_iterator<_Up, _CharU, _TraitsU, _DistanceU>& __y);
 };
+
+template <class _Tp, class _CharT, class _Traits, class _Distance>
+inline _LIBCPP_INLINE_VISIBILITY
+bool
+operator==(const istream_iterator<_Tp, _CharT, _Traits, _Distance>& __x,
+           const istream_iterator<_Tp, _CharT, _Traits, _Distance>& __y)
+{
+    return __x.__in_stream_ == __y.__in_stream_;
+}
+
+template <class _Tp, class _CharT, class _Traits, class _Distance>
+inline _LIBCPP_INLINE_VISIBILITY
+bool
+operator!=(const istream_iterator<_Tp, _CharT, _Traits, _Distance>& __x,
+           const istream_iterator<_Tp, _CharT, _Traits, _Distance>& __y)
+{
+    return !(__x == __y);
+}
 
 template <class _Tp, class _CharT = char, class _Traits = char_traits<_CharT> >
 class _LIBCPP_TEMPLATE_VIS ostream_iterator

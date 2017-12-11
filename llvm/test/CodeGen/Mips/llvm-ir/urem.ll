@@ -30,8 +30,6 @@
 ; RUN:    -check-prefixes=ALL,MMR3,MM32
 ; RUN: llc < %s -march=mips -mcpu=mips32r6 -mattr=+micromips -relocation-model=pic | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,MMR6,MM32
-; RUN: llc < %s -march=mips -mcpu=mips64r6 -target-abi n64 -mattr=+micromips -relocation-model=pic | FileCheck %s \
-; RUN:    -check-prefixes=ALL,MMR6,MM64
 
 define signext i1 @urem_i1(i1 signext %a, i1 signext %b) {
 entry:
@@ -192,9 +190,6 @@ entry:
 
   ; MM32:         lw      $25, %call16(__umoddi3)($2)
 
-  ; MM64:         dmodu   $2, $4, $5
-  ; MM64:         teq     $5, $zero, 7
-
   %r = urem i64 %a, %b
   ret i64 %r
 }
@@ -209,8 +204,6 @@ entry:
   ; 64R6:         ld      $25, %call16(__umodti3)($gp)
 
   ; MM32:         lw      $25, %call16(__umodti3)($16)
-
-  ; MM64:         ld      $25, %call16(__umodti3)($2)
 
     %r = urem i128 %a, %b
     ret i128 %r

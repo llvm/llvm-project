@@ -74,7 +74,7 @@ for.end:
 ; Same as above, but for checking the SCEV "zext(trunc(%p.09)) + %step".
 ; Here we expect the following two predicates to be added for runtime checking:
 ; 1) {0,+,(trunc i32 %step to i8)}<%for.body> Added Flags: <nusw>
-; 2) Equal predicate: %step == (zext i8 (trunc i32 %step to i8) to i32)
+; 2) Equal predicate: %step == (sext i8 (trunc i32 %step to i8) to i32)
 ;
 ; int a[N];
 ; void doit2(int n, int step) {
@@ -93,7 +93,8 @@ for.end:
 ; CHECK-NOT: %mul = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 {{.*}}, i8 {{.*}})
 ; CHECK: %[[TEST:[0-9]+]] = or i1 {{.*}}, %mul.overflow
 ; CHECK: %[[NTEST:[0-9]+]] = or i1 false, %[[TEST]]
-; CHECK: %ident.check = icmp ne i32 {{.*}}, %{{.*}}
+; CHECK: %[[EXT:[0-9]+]] = sext i8 {{.*}} to i32
+; CHECK: %ident.check = icmp ne i32 {{.*}}, %[[EXT]]
 ; CHECK: %{{.*}} = or i1 %[[NTEST]], %ident.check
 ; CHECK-NOT: %mul = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 {{.*}}, i8 {{.*}})
 ; CHECK: vector.body:

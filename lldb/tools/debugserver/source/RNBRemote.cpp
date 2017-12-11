@@ -2247,7 +2247,7 @@ rnb_err_t set_logging(const char *p) {
                 continue;
             }
             char *fn = (char *) alloca (c - p + 1);
-            strncpy (fn, p, c - p);
+            strlcpy (fn, p, c - p);
             fn[c - p] = '\0';
 
             // A file name of "asl" is special and is another way to indicate
@@ -3049,7 +3049,7 @@ rnb_err_t RNBRemote::HandlePacket_last_signal(const char *unused) {
 
     // If we have an empty exit packet, lets fill one in to be safe.
     if (!pid_exited_packet[0]) {
-      strncpy(pid_exited_packet, "W00", sizeof(pid_exited_packet) - 1);
+      strlcpy(pid_exited_packet, "W00", sizeof(pid_exited_packet) - 1);
       pid_exited_packet[sizeof(pid_exited_packet) - 1] = '\0';
     }
 

@@ -559,14 +559,30 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::CMP32rr,         X86::CMP32rm,             0 },
     { X86::CMP64rr,         X86::CMP64rm,             0 },
     { X86::CMP8rr,          X86::CMP8rm,              0 },
+    { X86::CVTDQ2PDrr,      X86::CVTDQ2PDrm,          TB_NO_REVERSE },
+    { X86::CVTDQ2PSrr,      X86::CVTDQ2PSrm,          TB_ALIGN_16 },
+    { X86::CVTPD2DQrr,      X86::CVTPD2DQrm,          TB_ALIGN_16 },
+    { X86::CVTPD2PSrr,      X86::CVTPD2PSrm,          TB_ALIGN_16 },
+    { X86::CVTPS2DQrr,      X86::CVTPS2DQrm,          TB_ALIGN_16 },
+    { X86::CVTPS2PDrr,      X86::CVTPS2PDrm,          TB_NO_REVERSE },
+    { X86::CVTSD2SI64rr_Int, X86::CVTSD2SI64rm_Int,   TB_NO_REVERSE },
+    { X86::CVTSD2SIrr_Int,  X86::CVTSD2SIrm_Int,      TB_NO_REVERSE },
     { X86::CVTSD2SSrr,      X86::CVTSD2SSrm,          0 },
-    { X86::CVTSI2SD64rr,    X86::CVTSI2SD64rm,        0 },
+    { X86::CVTSI642SDrr,    X86::CVTSI642SDrm,        0 },
     { X86::CVTSI2SDrr,      X86::CVTSI2SDrm,          0 },
-    { X86::CVTSI2SS64rr,    X86::CVTSI2SS64rm,        0 },
+    { X86::CVTSI642SSrr,    X86::CVTSI642SSrm,        0 },
     { X86::CVTSI2SSrr,      X86::CVTSI2SSrm,          0 },
     { X86::CVTSS2SDrr,      X86::CVTSS2SDrm,          0 },
+    { X86::CVTSS2SI64rr_Int, X86::CVTSS2SI64rm_Int,   TB_NO_REVERSE },
+    { X86::CVTSS2SIrr_Int,  X86::CVTSS2SIrm_Int,      TB_NO_REVERSE },
+    { X86::CVTTPD2DQrr,     X86::CVTTPD2DQrm,         TB_ALIGN_16 },
+    { X86::CVTTPS2DQrr,     X86::CVTTPS2DQrm,         TB_ALIGN_16 },
     { X86::CVTTSD2SI64rr,   X86::CVTTSD2SI64rm,       0 },
+    { X86::CVTTSD2SI64rr_Int,X86::CVTTSD2SI64rm_Int,  TB_NO_REVERSE },
     { X86::CVTTSD2SIrr,     X86::CVTTSD2SIrm,         0 },
+    { X86::CVTTSD2SIrr_Int, X86::CVTTSD2SIrm_Int,     TB_NO_REVERSE },
+    { X86::CVTTSS2SI64rr_Int,X86::CVTTSS2SI64rm_Int,  TB_NO_REVERSE },
+    { X86::CVTTSS2SIrr_Int, X86::CVTTSS2SIrm_Int,     TB_NO_REVERSE },
     { X86::CVTTSS2SI64rr,   X86::CVTTSS2SI64rm,       0 },
     { X86::CVTTSS2SIrr,     X86::CVTTSS2SIrm,         0 },
     { X86::IMUL16rri,       X86::IMUL16rmi,           0 },
@@ -577,22 +593,6 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::IMUL64rri8,      X86::IMUL64rmi8,          0 },
     { X86::Int_COMISDrr,    X86::Int_COMISDrm,        TB_NO_REVERSE },
     { X86::Int_COMISSrr,    X86::Int_COMISSrm,        TB_NO_REVERSE },
-    { X86::CVTSD2SI64rr,    X86::CVTSD2SI64rm,        TB_NO_REVERSE },
-    { X86::CVTSD2SIrr,      X86::CVTSD2SIrm,          TB_NO_REVERSE },
-    { X86::CVTSS2SI64rr,    X86::CVTSS2SI64rm,        TB_NO_REVERSE },
-    { X86::CVTSS2SIrr,      X86::CVTSS2SIrm,          TB_NO_REVERSE },
-    { X86::CVTDQ2PDrr,      X86::CVTDQ2PDrm,          TB_NO_REVERSE },
-    { X86::CVTDQ2PSrr,      X86::CVTDQ2PSrm,          TB_ALIGN_16 },
-    { X86::CVTPD2DQrr,      X86::CVTPD2DQrm,          TB_ALIGN_16 },
-    { X86::CVTPD2PSrr,      X86::CVTPD2PSrm,          TB_ALIGN_16 },
-    { X86::CVTPS2DQrr,      X86::CVTPS2DQrm,          TB_ALIGN_16 },
-    { X86::CVTPS2PDrr,      X86::CVTPS2PDrm,          TB_NO_REVERSE },
-    { X86::CVTTPD2DQrr,     X86::CVTTPD2DQrm,         TB_ALIGN_16 },
-    { X86::CVTTPS2DQrr,     X86::CVTTPS2DQrm,         TB_ALIGN_16 },
-    { X86::Int_CVTTSD2SI64rr,X86::Int_CVTTSD2SI64rm,  TB_NO_REVERSE },
-    { X86::Int_CVTTSD2SIrr, X86::Int_CVTTSD2SIrm,     TB_NO_REVERSE },
-    { X86::Int_CVTTSS2SI64rr,X86::Int_CVTTSS2SI64rm,  TB_NO_REVERSE },
-    { X86::Int_CVTTSS2SIrr, X86::Int_CVTTSS2SIrm,     TB_NO_REVERSE },
     { X86::Int_UCOMISDrr,   X86::Int_UCOMISDrm,       TB_NO_REVERSE },
     { X86::Int_UCOMISSrr,   X86::Int_UCOMISSrm,       TB_NO_REVERSE },
     { X86::MOV16rr,         X86::MOV16rm,             0 },
@@ -694,17 +694,17 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::Int_VUCOMISDrr,  X86::Int_VUCOMISDrm,      TB_NO_REVERSE },
     { X86::Int_VUCOMISSrr,  X86::Int_VUCOMISSrm,      TB_NO_REVERSE },
     { X86::VCVTTSD2SI64rr,  X86::VCVTTSD2SI64rm,      0 },
-    { X86::Int_VCVTTSD2SI64rr,X86::Int_VCVTTSD2SI64rm,TB_NO_REVERSE },
+    { X86::VCVTTSD2SI64rr_Int,X86::VCVTTSD2SI64rm_Int,TB_NO_REVERSE },
     { X86::VCVTTSD2SIrr,    X86::VCVTTSD2SIrm,        0 },
-    { X86::Int_VCVTTSD2SIrr,X86::Int_VCVTTSD2SIrm,    TB_NO_REVERSE },
+    { X86::VCVTTSD2SIrr_Int,X86::VCVTTSD2SIrm_Int,    TB_NO_REVERSE },
     { X86::VCVTTSS2SI64rr,  X86::VCVTTSS2SI64rm,      0 },
-    { X86::Int_VCVTTSS2SI64rr,X86::Int_VCVTTSS2SI64rm,TB_NO_REVERSE },
+    { X86::VCVTTSS2SI64rr_Int,X86::VCVTTSS2SI64rm_Int,TB_NO_REVERSE },
     { X86::VCVTTSS2SIrr,    X86::VCVTTSS2SIrm,        0 },
-    { X86::Int_VCVTTSS2SIrr,X86::Int_VCVTTSS2SIrm,    TB_NO_REVERSE },
-    { X86::VCVTSD2SI64rr,   X86::VCVTSD2SI64rm,       TB_NO_REVERSE },
-    { X86::VCVTSD2SIrr,     X86::VCVTSD2SIrm,         TB_NO_REVERSE },
-    { X86::VCVTSS2SI64rr,   X86::VCVTSS2SI64rm,       TB_NO_REVERSE },
-    { X86::VCVTSS2SIrr,     X86::VCVTSS2SIrm,         TB_NO_REVERSE },
+    { X86::VCVTTSS2SIrr_Int,X86::VCVTTSS2SIrm_Int,    TB_NO_REVERSE },
+    { X86::VCVTSD2SI64rr_Int, X86::VCVTSD2SI64rm_Int, TB_NO_REVERSE },
+    { X86::VCVTSD2SIrr_Int,   X86::VCVTSD2SIrm_Int,   TB_NO_REVERSE },
+    { X86::VCVTSS2SI64rr_Int, X86::VCVTSS2SI64rm_Int, TB_NO_REVERSE },
+    { X86::VCVTSS2SIrr_Int, X86::VCVTSS2SIrm_Int,     TB_NO_REVERSE },
     { X86::VCVTDQ2PDrr,     X86::VCVTDQ2PDrm,         TB_NO_REVERSE },
     { X86::VCVTDQ2PSrr,     X86::VCVTDQ2PSrm,         0 },
     { X86::VCVTPD2DQrr,     X86::VCVTPD2DQrm,         0 },
@@ -977,14 +977,14 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPSHUFDZri,       X86::VPSHUFDZmi,         0 },
     { X86::VPSHUFHWZri,      X86::VPSHUFHWZmi,        0 },
     { X86::VPSHUFLWZri,      X86::VPSHUFLWZmi,        0 },
-    { X86::VPSLLDQZ512rr,    X86::VPSLLDQZ512rm,      0 },
+    { X86::VPSLLDQZrr,       X86::VPSLLDQZrm,         0 },
     { X86::VPSLLDZri,        X86::VPSLLDZmi,          0 },
     { X86::VPSLLQZri,        X86::VPSLLQZmi,          0 },
     { X86::VPSLLWZri,        X86::VPSLLWZmi,          0 },
     { X86::VPSRADZri,        X86::VPSRADZmi,          0 },
     { X86::VPSRAQZri,        X86::VPSRAQZmi,          0 },
     { X86::VPSRAWZri,        X86::VPSRAWZmi,          0 },
-    { X86::VPSRLDQZ512rr,    X86::VPSRLDQZ512rm,      0 },
+    { X86::VPSRLDQZrr,       X86::VPSRLDQZrm,         0 },
     { X86::VPSRLDZri,        X86::VPSRLDZmi,          0 },
     { X86::VPSRLQZri,        X86::VPSRLQZmi,          0 },
     { X86::VPSRLWZri,        X86::VPSRLWZmi,          0 },
@@ -1195,9 +1195,13 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::CMPPDrri,        X86::CMPPDrmi,      TB_ALIGN_16 },
     { X86::CMPPSrri,        X86::CMPPSrmi,      TB_ALIGN_16 },
     { X86::CMPSDrr,         X86::CMPSDrm,       0 },
+    { X86::CMPSDrr_Int,     X86::CMPSDrm_Int,   TB_NO_REVERSE },
     { X86::CMPSSrr,         X86::CMPSSrm,       0 },
+    { X86::CMPSSrr_Int,     X86::CMPSSrm_Int,   TB_NO_REVERSE },
     { X86::CRC32r32r32,     X86::CRC32r32m32,   0 },
     { X86::CRC32r64r64,     X86::CRC32r64m64,   0 },
+    { X86::CVTSD2SSrr_Int,  X86::CVTSD2SSrm_Int,      TB_NO_REVERSE },
+    { X86::CVTSS2SDrr_Int,  X86::CVTSS2SDrm_Int,      TB_NO_REVERSE },
     { X86::DIVPDrr,         X86::DIVPDrm,       TB_ALIGN_16 },
     { X86::DIVPSrr,         X86::DIVPSrm,       TB_ALIGN_16 },
     { X86::DIVSDrr,         X86::DIVSDrm,       0 },
@@ -1213,14 +1217,10 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::IMUL16rr,        X86::IMUL16rm,      0 },
     { X86::IMUL32rr,        X86::IMUL32rm,      0 },
     { X86::IMUL64rr,        X86::IMUL64rm,      0 },
-    { X86::Int_CMPSDrr,     X86::Int_CMPSDrm,   TB_NO_REVERSE },
-    { X86::Int_CMPSSrr,     X86::Int_CMPSSrm,   TB_NO_REVERSE },
-    { X86::Int_CVTSD2SSrr,  X86::Int_CVTSD2SSrm,      TB_NO_REVERSE },
-    { X86::Int_CVTSI2SD64rr,X86::Int_CVTSI2SD64rm,    0 },
-    { X86::Int_CVTSI2SDrr,  X86::Int_CVTSI2SDrm,      0 },
-    { X86::Int_CVTSI2SS64rr,X86::Int_CVTSI2SS64rm,    0 },
-    { X86::Int_CVTSI2SSrr,  X86::Int_CVTSI2SSrm,      0 },
-    { X86::Int_CVTSS2SDrr,  X86::Int_CVTSS2SDrm,      TB_NO_REVERSE },
+    { X86::CVTSI642SDrr_Int,X86::CVTSI642SDrm_Int,    0 },
+    { X86::CVTSI2SDrr_Int,  X86::CVTSI2SDrm_Int,      0 },
+    { X86::CVTSI642SSrr_Int,X86::CVTSI642SSrm_Int,    0 },
+    { X86::CVTSI2SSrr_Int,  X86::CVTSI2SSrm_Int,      0 },
     { X86::MAXPDrr,         X86::MAXPDrm,       TB_ALIGN_16 },
     { X86::MAXCPDrr,        X86::MAXCPDrm,      TB_ALIGN_16 },
     { X86::MAXPSrr,         X86::MAXPSrm,       TB_ALIGN_16 },
@@ -1465,14 +1465,14 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::PMULHRWrr,         X86::PMULHRWrm,         0 },
 
     // AVX 128-bit versions of foldable instructions
-    { X86::VCVTSI2SD64rr,     X86::VCVTSI2SD64rm,      0 },
-    { X86::Int_VCVTSI2SD64rr, X86::Int_VCVTSI2SD64rm,  0 },
+    { X86::VCVTSI642SDrr,     X86::VCVTSI642SDrm,      0 },
+    { X86::VCVTSI642SDrr_Int, X86::VCVTSI642SDrm_Int,  0 },
     { X86::VCVTSI2SDrr,       X86::VCVTSI2SDrm,        0 },
-    { X86::Int_VCVTSI2SDrr,   X86::Int_VCVTSI2SDrm,    0 },
-    { X86::VCVTSI2SS64rr,     X86::VCVTSI2SS64rm,      0 },
-    { X86::Int_VCVTSI2SS64rr, X86::Int_VCVTSI2SS64rm,  0 },
+    { X86::VCVTSI2SDrr_Int,   X86::VCVTSI2SDrm_Int,    0 },
+    { X86::VCVTSI642SSrr,     X86::VCVTSI642SSrm,      0 },
+    { X86::VCVTSI642SSrr_Int, X86::VCVTSI642SSrm_Int,  0 },
     { X86::VCVTSI2SSrr,       X86::VCVTSI2SSrm,        0 },
-    { X86::Int_VCVTSI2SSrr,   X86::Int_VCVTSI2SSrm,    0 },
+    { X86::VCVTSI2SSrr_Int,   X86::VCVTSI2SSrm_Int,    0 },
     { X86::VADDPDrr,          X86::VADDPDrm,           0 },
     { X86::VADDPSrr,          X86::VADDPSrm,           0 },
     { X86::VADDSDrr,          X86::VADDSDrm,           0 },
@@ -1492,7 +1492,9 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VCMPPDrri,         X86::VCMPPDrmi,          0 },
     { X86::VCMPPSrri,         X86::VCMPPSrmi,          0 },
     { X86::VCMPSDrr,          X86::VCMPSDrm,           0 },
+    { X86::VCMPSDrr_Int,      X86::VCMPSDrm_Int,       TB_NO_REVERSE },
     { X86::VCMPSSrr,          X86::VCMPSSrm,           0 },
+    { X86::VCMPSSrr_Int,      X86::VCMPSSrm_Int,       TB_NO_REVERSE },
     { X86::VDIVPDrr,          X86::VDIVPDrm,           0 },
     { X86::VDIVPSrr,          X86::VDIVPSrm,           0 },
     { X86::VDIVSDrr,          X86::VDIVSDrm,           0 },
@@ -1505,8 +1507,6 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VHADDPSrr,         X86::VHADDPSrm,          0 },
     { X86::VHSUBPDrr,         X86::VHSUBPDrm,          0 },
     { X86::VHSUBPSrr,         X86::VHSUBPSrm,          0 },
-    { X86::Int_VCMPSDrr,      X86::Int_VCMPSDrm,       TB_NO_REVERSE },
-    { X86::Int_VCMPSSrr,      X86::Int_VCMPSSrm,       TB_NO_REVERSE },
     { X86::VMAXCPDrr,         X86::VMAXCPDrm,          0 },
     { X86::VMAXCPSrr,         X86::VMAXCPSrm,          0 },
     { X86::VMAXCSDrr,         X86::VMAXCSDrm,          0 },
@@ -2042,7 +2042,7 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPMULUDQZrr,       X86::VPMULUDQZrm,         0 },
     { X86::VPORDZrr,          X86::VPORDZrm,            0 },
     { X86::VPORQZrr,          X86::VPORQZrm,            0 },
-    { X86::VPSADBWZ512rr,     X86::VPSADBWZ512rm,       0 },
+    { X86::VPSADBWZrr,        X86::VPSADBWZrm,          0 },
     { X86::VPSHUFBZrr,        X86::VPSHUFBZrm,          0 },
     { X86::VPSLLDZrr,         X86::VPSLLDZrm,           0 },
     { X86::VPSLLQZrr,         X86::VPSLLQZrm,           0 },
@@ -7995,12 +7995,12 @@ static bool hasPartialRegUpdate(unsigned Opcode) {
   switch (Opcode) {
   case X86::CVTSI2SSrr:
   case X86::CVTSI2SSrm:
-  case X86::CVTSI2SS64rr:
-  case X86::CVTSI2SS64rm:
+  case X86::CVTSI642SSrr:
+  case X86::CVTSI642SSrm:
   case X86::CVTSI2SDrr:
   case X86::CVTSI2SDrm:
-  case X86::CVTSI2SD64rr:
-  case X86::CVTSI2SD64rm:
+  case X86::CVTSI642SDrr:
+  case X86::CVTSI642SDrm:
   case X86::CVTSD2SSrr:
   case X86::CVTSD2SSrm:
   case X86::CVTSS2SDrr:
@@ -8066,28 +8066,28 @@ static bool hasUndefRegUpdate(unsigned Opcode) {
   switch (Opcode) {
   case X86::VCVTSI2SSrr:
   case X86::VCVTSI2SSrm:
-  case X86::Int_VCVTSI2SSrr:
-  case X86::Int_VCVTSI2SSrm:
-  case X86::VCVTSI2SS64rr:
-  case X86::VCVTSI2SS64rm:
-  case X86::Int_VCVTSI2SS64rr:
-  case X86::Int_VCVTSI2SS64rm:
+  case X86::VCVTSI2SSrr_Int:
+  case X86::VCVTSI2SSrm_Int:
+  case X86::VCVTSI642SSrr:
+  case X86::VCVTSI642SSrm:
+  case X86::VCVTSI642SSrr_Int:
+  case X86::VCVTSI642SSrm_Int:
   case X86::VCVTSI2SDrr:
   case X86::VCVTSI2SDrm:
-  case X86::Int_VCVTSI2SDrr:
-  case X86::Int_VCVTSI2SDrm:
-  case X86::VCVTSI2SD64rr:
-  case X86::VCVTSI2SD64rm:
-  case X86::Int_VCVTSI2SD64rr:
-  case X86::Int_VCVTSI2SD64rm:
+  case X86::VCVTSI2SDrr_Int:
+  case X86::VCVTSI2SDrm_Int:
+  case X86::VCVTSI642SDrr:
+  case X86::VCVTSI642SDrm:
+  case X86::VCVTSI642SDrr_Int:
+  case X86::VCVTSI642SDrm_Int:
   case X86::VCVTSD2SSrr:
   case X86::VCVTSD2SSrm:
-  case X86::Int_VCVTSD2SSrr:
-  case X86::Int_VCVTSD2SSrm:
+  case X86::VCVTSD2SSrr_Int:
+  case X86::VCVTSD2SSrm_Int:
   case X86::VCVTSS2SDrr:
   case X86::VCVTSS2SDrm:
-  case X86::Int_VCVTSS2SDrr:
-  case X86::Int_VCVTSS2SDrm:
+  case X86::VCVTSS2SDrr_Int:
+  case X86::VCVTSS2SDrm_Int:
   case X86::VRCPSSr:
   case X86::VRCPSSr_Int:
   case X86::VRCPSSm:
@@ -8661,7 +8661,7 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     // instruction isn't scalar (SS).
     switch (UserOpc) {
     case X86::ADDSSrr_Int: case X86::VADDSSrr_Int: case X86::VADDSSZrr_Int:
-    case X86::Int_CMPSSrr: case X86::Int_VCMPSSrr: case X86::VCMPSSZrr_Int:
+    case X86::CMPSSrr_Int: case X86::VCMPSSrr_Int: case X86::VCMPSSZrr_Int:
     case X86::DIVSSrr_Int: case X86::VDIVSSrr_Int: case X86::VDIVSSZrr_Int:
     case X86::MAXSSrr_Int: case X86::VMAXSSrr_Int: case X86::VMAXSSZrr_Int:
     case X86::MINSSrr_Int: case X86::VMINSSrr_Int: case X86::VMINSSZrr_Int:
@@ -8712,7 +8712,7 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     // instruction isn't scalar (SD).
     switch (UserOpc) {
     case X86::ADDSDrr_Int: case X86::VADDSDrr_Int: case X86::VADDSDZrr_Int:
-    case X86::Int_CMPSDrr: case X86::Int_VCMPSDrr: case X86::VCMPSDZrr_Int:
+    case X86::CMPSDrr_Int: case X86::VCMPSDrr_Int: case X86::VCMPSDZrr_Int:
     case X86::DIVSDrr_Int: case X86::VDIVSDrr_Int: case X86::VDIVSDZrr_Int:
     case X86::MAXSDrr_Int: case X86::VMAXSDrr_Int: case X86::VMAXSDZrr_Int:
     case X86::MINSDrr_Int: case X86::VMINSDrr_Int: case X86::VMINSDZrr_Int:
@@ -10059,9 +10059,9 @@ bool X86InstrInfo::isHighLatencyDef(int opc) const {
   case X86::VDIVPDZ256rr:
   case X86::VDIVPDZ256rrk:
   case X86::VDIVPDZ256rrkz:
-  case X86::VDIVPDZrb:
-  case X86::VDIVPDZrbk:
-  case X86::VDIVPDZrbkz:
+  case X86::VDIVPDZrrb:
+  case X86::VDIVPDZrrbk:
+  case X86::VDIVPDZrrbkz:
   case X86::VDIVPDZrm:
   case X86::VDIVPDZrmb:
   case X86::VDIVPDZrmbk:
@@ -10089,9 +10089,9 @@ bool X86InstrInfo::isHighLatencyDef(int opc) const {
   case X86::VDIVPSZ256rr:
   case X86::VDIVPSZ256rrk:
   case X86::VDIVPSZ256rrkz:
-  case X86::VDIVPSZrb:
-  case X86::VDIVPSZrbk:
-  case X86::VDIVPSZrbkz:
+  case X86::VDIVPSZrrb:
+  case X86::VDIVPSZrrbk:
+  case X86::VDIVPSZrrbkz:
   case X86::VDIVPSZrm:
   case X86::VDIVPSZrmb:
   case X86::VDIVPSZrmbk:
@@ -10109,9 +10109,9 @@ bool X86InstrInfo::isHighLatencyDef(int opc) const {
   case X86::VDIVSDZrr_Int:
   case X86::VDIVSDZrr_Intk:
   case X86::VDIVSDZrr_Intkz:
-  case X86::VDIVSDZrrb:
-  case X86::VDIVSDZrrbk:
-  case X86::VDIVSDZrrbkz:
+  case X86::VDIVSDZrrb_Int:
+  case X86::VDIVSDZrrb_Intk:
+  case X86::VDIVSDZrrb_Intkz:
   case X86::VDIVSSZrm:
   case X86::VDIVSSZrr:
   case X86::VDIVSSZrm_Int:
@@ -10120,9 +10120,9 @@ bool X86InstrInfo::isHighLatencyDef(int opc) const {
   case X86::VDIVSSZrr_Int:
   case X86::VDIVSSZrr_Intk:
   case X86::VDIVSSZrr_Intkz:
-  case X86::VDIVSSZrrb:
-  case X86::VDIVSSZrrbk:
-  case X86::VDIVSSZrrbkz:
+  case X86::VDIVSSZrrb_Int:
+  case X86::VDIVSSZrrb_Intk:
+  case X86::VDIVSSZrrb_Intkz:
   case X86::VSQRTPDZ128m:
   case X86::VSQRTPDZ128mb:
   case X86::VSQRTPDZ128mbk:

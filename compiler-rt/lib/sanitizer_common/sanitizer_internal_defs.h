@@ -390,6 +390,7 @@ namespace __dfsan { using namespace __sanitizer; }  // NOLINT
 namespace __esan  { using namespace __sanitizer; }  // NOLINT
 namespace __lsan  { using namespace __sanitizer; }  // NOLINT
 namespace __msan  { using namespace __sanitizer; }  // NOLINT
+namespace __hwasan  { using namespace __sanitizer; }  // NOLINT
 namespace __tsan  { using namespace __sanitizer; }  // NOLINT
 namespace __scudo { using namespace __sanitizer; }  // NOLINT
 namespace __ubsan { using namespace __sanitizer; }  // NOLINT

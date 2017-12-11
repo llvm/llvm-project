@@ -176,7 +176,10 @@ C11 Feature Support
 C++ Language Changes in Clang
 -----------------------------
 
-...
+- Clang's default C++ dialect is now ``gnu++14`` instead of ``gnu++98``. This
+  means Clang will by default accept code using features from C++14 and
+  conforming GNU extensions. Projects incompatible with C++14 can add
+  ``-std=gnu++98`` to their build settings to restore the previous behaviour.
 
 C++1z Feature Support
 ^^^^^^^^^^^^^^^^^^^^^

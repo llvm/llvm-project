@@ -593,28 +593,22 @@ bool MipsInstrInfo::verifyInstruction(const MachineInstr &MI,
     case Mips::INS:
     case Mips::INS_MM:
     case Mips::DINS:
-    case Mips::DINS_MM64R6:
       return verifyInsExtInstruction(MI, ErrInfo, 0, 32, 0, 32, 0, 32);
     case Mips::DINSM:
-    case Mips::DINSM_MM64R6:
       // The ISA spec has a subtle difference here in that it says:
       //  2 <= size <= 64 for 'dinsm', so we change the bounds so that it
       // is in line with the rest of instructions.
       return verifyInsExtInstruction(MI, ErrInfo, 0, 32, 1, 64, 32, 64);
     case Mips::DINSU:
-    case Mips::DINSU_MM64R6:
       // The ISA spec has a subtle difference here in that it says:
       //  2 <= size <= 64 for 'dinsm', so we change the bounds so that it
       // is in line with the rest of instructions.
       return verifyInsExtInstruction(MI, ErrInfo, 32, 64, 1, 32, 32, 64);
     case Mips::DEXT:
-    case Mips::DEXT_MM64R6:
       return verifyInsExtInstruction(MI, ErrInfo, 0, 32, 0, 32, 0, 63);
     case Mips::DEXTM:
-    case Mips::DEXTM_MM64R6:
       return verifyInsExtInstruction(MI, ErrInfo, 0, 32, 32, 64, 32, 64);
     case Mips::DEXTU:
-    case Mips::DEXTU_MM64R6:
       return verifyInsExtInstruction(MI, ErrInfo, 32, 64, 0, 32, 32, 64);
     default:
       return true;

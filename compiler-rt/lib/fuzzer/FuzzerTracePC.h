@@ -230,7 +230,10 @@ void TracePC::CollectFeatures(Callback HandleFeature) const {
   size_t N = GetNumPCs();
   auto Handle8bitCounter = [&](size_t FirstFeature,
                                size_t Idx, uint8_t Counter) {
-    HandleFeature(FirstFeature + Idx * 8 + CounterToFeature(Counter));
+    if (UseCounters)
+      HandleFeature(FirstFeature + Idx * 8 + CounterToFeature(Counter));
+    else
+      HandleFeature(FirstFeature + Idx);
   };
 
   size_t FirstFeature = 0;
@@ -251,8 +254,12 @@ void TracePC::CollectFeatures(Callback HandleFeature) const {
   if (size_t NumClangCounters = ClangCountersEnd() - ClangCountersBegin()) {
     auto P = ClangCountersBegin();
     for (size_t Idx = 0; Idx < NumClangCounters; Idx++)
-      if (auto Cnt = P[Idx])
-        HandleFeature(FirstFeature + Idx * 8 + CounterToFeature(Cnt));
+      if (auto Cnt = P[Idx]) {
+        if (UseCounters)
+          HandleFeature(FirstFeature + Idx * 8 + CounterToFeature(Cnt));
+        else
+          HandleFeature(FirstFeature + Idx);
+      }
     FirstFeature += NumClangCounters;
   }
 
@@ -267,8 +274,19 @@ void TracePC::CollectFeatures(Callback HandleFeature) const {
     FirstFeature += ValueProfileMap.SizeInBits();
   }
 
+  // Step function, grows similar to 8 * Log_2(A).
+  auto StackDepthStepFunction = [](uint32_t A) -> uint32_t {
+    uint32_t Log2 = 32 - __builtin_clz(A) - 1;
+    if (Log2 < 3) return A;
+    Log2 -= 3;
+    return (Log2 + 1) * 8 + ((A >> Log2) & 7);
+  };
+  assert(StackDepthStepFunction(1024) == 64);
+  assert(StackDepthStepFunction(1024 * 4) == 80);
+  assert(StackDepthStepFunction(1024 * 1024) == 144);
+
   if (auto MaxStackOffset = GetMaxStackOffset())
-    HandleFeature(FirstFeature + MaxStackOffset);
+    HandleFeature(FirstFeature + StackDepthStepFunction(MaxStackOffset / 8));
 }
 
 extern TracePC TPC;

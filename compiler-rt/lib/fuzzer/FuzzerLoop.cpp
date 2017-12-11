@@ -443,7 +443,8 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
   size_t FoundUniqFeaturesOfII = 0;
   size_t NumUpdatesBefore = Corpus.NumFeatureUpdates();
   TPC.CollectFeatures([&](size_t Feature) {
-    Corpus.UpdateFeatureFrequency(Feature);
+    if (Options.UseFeatureFrequency)
+      Corpus.UpdateFeatureFrequency(Feature);
     if (Corpus.AddFeature(Feature, Size, Options.Shrink))
       UniqFeatureSetTmp.push_back(Feature);
     if (Options.ReduceInputs && II)
@@ -757,7 +758,8 @@ void Fuzzer::Loop(const Vector<std::string> &CorpusDirs) {
     // Update TmpMaxMutationLen
     if (Options.ExperimentalLenControl) {
       if (TmpMaxMutationLen < MaxMutationLen &&
-          (TotalNumberOfRuns - LastCorpusUpdateRun > 1000 &&
+          (TotalNumberOfRuns - LastCorpusUpdateRun >
+               Options.ExperimentalLenControl &&
            duration_cast<seconds>(Now - LastCorpusUpdateTime).count() >= 1)) {
         LastCorpusUpdateRun = TotalNumberOfRuns;
         LastCorpusUpdateTime = Now;
@@ -765,8 +767,9 @@ void Fuzzer::Loop(const Vector<std::string> &CorpusDirs) {
             Min(MaxMutationLen,
                 TmpMaxMutationLen + Max(size_t(4), TmpMaxMutationLen / 8));
         if (TmpMaxMutationLen <= MaxMutationLen)
-          Printf("#%zd\tTEMP_MAX_LEN: %zd\n", TotalNumberOfRuns,
-                 TmpMaxMutationLen);
+          Printf("#%zd\tTEMP_MAX_LEN: %zd (%zd %zd)\n", TotalNumberOfRuns,
+                 TmpMaxMutationLen, Options.ExperimentalLenControl,
+                 LastCorpusUpdateRun);
       }
     } else {
       TmpMaxMutationLen = MaxMutationLen;

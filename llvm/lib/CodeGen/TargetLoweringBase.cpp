@@ -520,6 +520,7 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm) : TM(tm) {
   MaxAtomicSizeInBitsSupported = 1024;
 
   MinCmpXchgSizeInBits = 0;
+  SupportsUnalignedAtomics = false;
 
   std::fill(std::begin(LibcallRoutineNames), std::end(LibcallRoutineNames), nullptr);
 

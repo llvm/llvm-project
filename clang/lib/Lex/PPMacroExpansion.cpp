@@ -1099,6 +1099,8 @@ static bool HasFeature(const Preprocessor &PP, StringRef Feature) {
       .Case("address_sanitizer",
             LangOpts.Sanitize.hasOneOf(SanitizerKind::Address |
                                        SanitizerKind::KernelAddress))
+      .Case("hwaddress_sanitizer",
+            LangOpts.Sanitize.hasOneOf(SanitizerKind::HWAddress))
       .Case("assume_nonnull", true)
       .Case("attribute_analyzer_noreturn", true)
       .Case("attribute_availability", true)
@@ -1136,7 +1138,8 @@ static bool HasFeature(const Preprocessor &PP, StringRef Feature) {
       .Case("nullability_on_arrays", true)
       .Case("memory_sanitizer", LangOpts.Sanitize.has(SanitizerKind::Memory))
       .Case("thread_sanitizer", LangOpts.Sanitize.has(SanitizerKind::Thread))
-      .Case("dataflow_sanitizer", LangOpts.Sanitize.has(SanitizerKind::DataFlow))
+      .Case("dataflow_sanitizer",
+            LangOpts.Sanitize.has(SanitizerKind::DataFlow))
       .Case("efficiency_sanitizer",
             LangOpts.Sanitize.hasOneOf(SanitizerKind::Efficiency))
       .Case("scudo", LangOpts.Sanitize.hasOneOf(SanitizerKind::Scudo))
