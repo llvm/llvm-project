@@ -6530,16 +6530,16 @@ multiclass avx512_cvt_s_int_round<bits<8> opc, X86VectorVTInfo SrcVT,
                                   X86VectorVTInfo DstVT, SDNode OpNode,
                                   OpndItins itins, string asm> {
   let Predicates = [HasAVX512] in {
-    def rr : SI<opc, MRMSrcReg, (outs DstVT.RC:$dst), (ins SrcVT.RC:$src),
+    def rr_Int : SI<opc, MRMSrcReg, (outs DstVT.RC:$dst), (ins SrcVT.RC:$src),
                 !strconcat(asm,"\t{$src, $dst|$dst, $src}"),
                 [(set DstVT.RC:$dst, (OpNode (SrcVT.VT SrcVT.RC:$src),(i32 FROUND_CURRENT)))],
                 itins.rr>, EVEX, VEX_LIG, Sched<[itins.Sched]>;
-    def rb : SI<opc, MRMSrcReg, (outs DstVT.RC:$dst), (ins SrcVT.RC:$src, AVX512RC:$rc),
-                !strconcat(asm,"\t{$rc, $src, $dst|$dst, $src, $rc}"),
-                [(set DstVT.RC:$dst, (OpNode (SrcVT.VT SrcVT.RC:$src),(i32 imm:$rc)))],
-                itins.rr>, EVEX, VEX_LIG, EVEX_B, EVEX_RC,
-                Sched<[itins.Sched]>;
-    def rm : SI<opc, MRMSrcMem, (outs DstVT.RC:$dst), (ins SrcVT.IntScalarMemOp:$src),
+    def rrb_Int : SI<opc, MRMSrcReg, (outs DstVT.RC:$dst), (ins SrcVT.RC:$src, AVX512RC:$rc),
+                 !strconcat(asm,"\t{$rc, $src, $dst|$dst, $src, $rc}"),
+                 [(set DstVT.RC:$dst, (OpNode (SrcVT.VT SrcVT.RC:$src),(i32 imm:$rc)))],
+                 itins.rr>, EVEX, VEX_LIG, EVEX_B, EVEX_RC,
+                 Sched<[itins.Sched]>;
+    def rm_Int : SI<opc, MRMSrcMem, (outs DstVT.RC:$dst), (ins SrcVT.IntScalarMemOp:$src),
                 !strconcat(asm,"\t{$src, $dst|$dst, $src}"),
                 [(set DstVT.RC:$dst, (OpNode
                       (SrcVT.VT SrcVT.ScalarIntMemCPat:$src),
@@ -6578,21 +6578,21 @@ defm VCVTSD2USI64Z: avx512_cvt_s_int_round<0x79, f64x_info, i64x_info,
 // Therefore, the SSE intrinsics are mapped to the AVX512 instructions.
 let Predicates = [HasAVX512] in {
   def : Pat<(i32 (int_x86_sse_cvtss2si (v4f32 VR128X:$src))),
-            (VCVTSS2SIZrr VR128X:$src)>;
+            (VCVTSS2SIZrr_Int VR128X:$src)>;
   def : Pat<(i32 (int_x86_sse_cvtss2si sse_load_f32:$src)),
-            (VCVTSS2SIZrm sse_load_f32:$src)>;
+            (VCVTSS2SIZrm_Int sse_load_f32:$src)>;
   def : Pat<(i64 (int_x86_sse_cvtss2si64 (v4f32 VR128X:$src))),
-            (VCVTSS2SI64Zrr VR128X:$src)>;
+            (VCVTSS2SI64Zrr_Int VR128X:$src)>;
   def : Pat<(i64 (int_x86_sse_cvtss2si64 sse_load_f32:$src)),
-            (VCVTSS2SI64Zrm sse_load_f32:$src)>;
+            (VCVTSS2SI64Zrm_Int sse_load_f32:$src)>;
   def : Pat<(i32 (int_x86_sse2_cvtsd2si (v2f64 VR128X:$src))),
-            (VCVTSD2SIZrr VR128X:$src)>;
+            (VCVTSD2SIZrr_Int VR128X:$src)>;
   def : Pat<(i32 (int_x86_sse2_cvtsd2si sse_load_f64:$src)),
-            (VCVTSD2SIZrm sse_load_f64:$src)>;
+            (VCVTSD2SIZrm_Int sse_load_f64:$src)>;
   def : Pat<(i64 (int_x86_sse2_cvtsd2si64 (v2f64 VR128X:$src))),
-            (VCVTSD2SI64Zrr VR128X:$src)>;
+            (VCVTSD2SI64Zrr_Int VR128X:$src)>;
   def : Pat<(i64 (int_x86_sse2_cvtsd2si64 sse_load_f64:$src)),
-            (VCVTSD2SI64Zrm sse_load_f64:$src)>;
+            (VCVTSD2SI64Zrm_Int sse_load_f64:$src)>;
 } // HasAVX512
 
 let Predicates = [HasAVX512] in {
@@ -6652,7 +6652,7 @@ let Predicates = [HasAVX512] in {
               [(set _DstRC.RC:$dst, (OpNode _SrcRC.FRC:$src))], itins.rr>,
               EVEX, Sched<[itins.Sched]>;
   let hasSideEffects = 0 in
-  def rb : AVX512<opc, MRMSrcReg, (outs _DstRC.RC:$dst), (ins _SrcRC.FRC:$src),
+  def rrb : AVX512<opc, MRMSrcReg, (outs _DstRC.RC:$dst), (ins _SrcRC.FRC:$src),
                 !strconcat(asm,"\t{{sae}, $src, $dst|$dst, $src, {sae}}"),
                 [], itins.rr>, EVEX, EVEX_B, Sched<[itins.Sched]>;
   def rm : AVX512<opc, MRMSrcMem, (outs _DstRC.RC:$dst), (ins _SrcRC.ScalarMemOp:$src),
@@ -6663,7 +6663,7 @@ let Predicates = [HasAVX512] in {
   def : InstAlias<asm # aliasStr # "\t{$src, $dst|$dst, $src}",
           (!cast<Instruction>(NAME # "rr") _DstRC.RC:$dst, _SrcRC.FRC:$src), 0>;
   def : InstAlias<asm # aliasStr # "\t\t{{sae}, $src, $dst|$dst, $src, {sae}}",
-          (!cast<Instruction>(NAME # "rb") _DstRC.RC:$dst, _SrcRC.FRC:$src), 0>;
+          (!cast<Instruction>(NAME # "rrb") _DstRC.RC:$dst, _SrcRC.FRC:$src), 0>;
   def : InstAlias<asm # aliasStr # "\t{$src, $dst|$dst, $src}",
           (!cast<Instruction>(NAME # "rm") _DstRC.RC:$dst,
                                           _SrcRC.ScalarMemOp:$src), 0>;
@@ -6674,7 +6674,7 @@ let Predicates = [HasAVX512] in {
              [(set _DstRC.RC:$dst, (OpNodeRnd (_SrcRC.VT _SrcRC.RC:$src),
                                    (i32 FROUND_CURRENT)))], itins.rr>,
              EVEX, VEX_LIG, Sched<[itins.Sched]>;
-    def rb_Int : AVX512<opc, MRMSrcReg, (outs _DstRC.RC:$dst), (ins _SrcRC.RC:$src),
+    def rrb_Int : AVX512<opc, MRMSrcReg, (outs _DstRC.RC:$dst), (ins _SrcRC.RC:$src),
               !strconcat(asm,"\t{{sae}, $src, $dst|$dst, $src, {sae}}"),
               [(set _DstRC.RC:$dst, (OpNodeRnd (_SrcRC.VT _SrcRC.RC:$src),
                                     (i32 FROUND_NO_EXC)))], itins.rr>,
@@ -7542,7 +7542,7 @@ multiclass avx512_cvtps2ph<X86VectorVTInfo _dest, X86VectorVTInfo _src,
 multiclass avx512_cvtps2ph_sae<X86VectorVTInfo _dest, X86VectorVTInfo _src,
                                OpndItins itins> {
   let hasSideEffects = 0 in
-  defm rb : AVX512_maskable_in_asm<0x1D, MRMDestReg, _dest,
+  defm rrb : AVX512_maskable_in_asm<0x1D, MRMDestReg, _dest,
                    (outs _dest.RC:$dst),
                    (ins _src.RC:$src1, i32u8imm:$src2),
                    "vcvtps2ph", "$src2, {sae}, $src1", "$src1, {sae}, $src2",
@@ -9917,8 +9917,8 @@ multiclass avx512_shift_packed_all<bits<8> opc, SDNode OpNode, Format MRMr,
                                    Format MRMm, string OpcodeStr,
                                    OpndItins itins, Predicate prd>{
   let Predicates = [prd] in
-    defm Z512 : avx512_shift_packed<opc, OpNode, MRMr, MRMm,
-                                    OpcodeStr, itins, v64i8_info>, EVEX_V512;
+    defm Z : avx512_shift_packed<opc, OpNode, MRMr, MRMm,
+                                 OpcodeStr, itins, v64i8_info>, EVEX_V512;
   let Predicates = [prd, HasVLX] in {
     defm Z256 : avx512_shift_packed<opc, OpNode, MRMr, MRMm,
                                     OpcodeStr, itins, v32i8x_info>, EVEX_V256;
@@ -9958,8 +9958,8 @@ multiclass avx512_psadbw_packed_all<bits<8> opc, SDNode OpNode,
                                     string OpcodeStr, OpndItins itins,
                                     Predicate prd> {
   let Predicates = [prd] in
-    defm Z512 : avx512_psadbw_packed<opc, OpNode, OpcodeStr, itins, v8i64_info,
-                                    v64i8_info>, EVEX_V512;
+    defm Z : avx512_psadbw_packed<opc, OpNode, OpcodeStr, itins, v8i64_info,
+                                  v64i8_info>, EVEX_V512;
   let Predicates = [prd, HasVLX] in {
     defm Z256 : avx512_psadbw_packed<opc, OpNode, OpcodeStr, itins, v4i64x_info,
                                     v32i8x_info>, EVEX_V256;

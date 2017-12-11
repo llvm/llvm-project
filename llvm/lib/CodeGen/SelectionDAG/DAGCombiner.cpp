@@ -3099,19 +3099,26 @@ SDValue DAGCombiner::visitMULHS(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
 
+  if (VT.isVector()) {
+    // fold (mulhs x, 0) -> 0
+    if (ISD::isBuildVectorAllZeros(N1.getNode()))
+      return N1;
+    if (ISD::isBuildVectorAllZeros(N0.getNode()))
+      return N0;
+  }
+
   // fold (mulhs x, 0) -> 0
   if (isNullConstant(N1))
     return N1;
   // fold (mulhs x, 1) -> (sra x, size(x)-1)
-  if (isOneConstant(N1)) {
-    SDLoc DL(N);
+  if (isOneConstant(N1))
     return DAG.getNode(ISD::SRA, DL, N0.getValueType(), N0,
                        DAG.getConstant(N0.getValueSizeInBits() - 1, DL,
                                        getShiftAmountTy(N0.getValueType())));
-  }
+
   // fold (mulhs x, undef) -> 0
   if (N0.isUndef() || N1.isUndef())
-    return DAG.getConstant(0, SDLoc(N), VT);
+    return DAG.getConstant(0, DL, VT);
 
   // If the type twice as wide is legal, transform the mulhs to a wider multiply
   // plus a shift.
@@ -3138,6 +3145,14 @@ SDValue DAGCombiner::visitMULHU(SDNode *N) {
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
+
+  if (VT.isVector()) {
+    // fold (mulhu x, 0) -> 0
+    if (ISD::isBuildVectorAllZeros(N1.getNode()))
+      return N1;
+    if (ISD::isBuildVectorAllZeros(N0.getNode()))
+      return N0;
+  }
 
   // fold (mulhu x, 0) -> 0
   if (isNullConstant(N1))

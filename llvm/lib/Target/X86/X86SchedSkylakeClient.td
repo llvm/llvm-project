@@ -1918,7 +1918,7 @@ def: InstRW<[SKLWriteResGroup60], (instregex "CVTPD2DQrr")>;
 def: InstRW<[SKLWriteResGroup60], (instregex "CVTPD2PSrr")>;
 def: InstRW<[SKLWriteResGroup60], (instregex "CVTPS2PDrr")>;
 def: InstRW<[SKLWriteResGroup60], (instregex "CVTSD2SSrr")>;
-def: InstRW<[SKLWriteResGroup60], (instregex "CVTSI2SD64rr")>;
+def: InstRW<[SKLWriteResGroup60], (instregex "CVTSI642SDrr")>;
 def: InstRW<[SKLWriteResGroup60], (instregex "CVTSI2SDrr")>;
 def: InstRW<[SKLWriteResGroup60], (instregex "CVTSI2SSrr")>;
 def: InstRW<[SKLWriteResGroup60], (instregex "CVTSS2SDrr")>;
@@ -1933,7 +1933,7 @@ def: InstRW<[SKLWriteResGroup60], (instregex "VCVTPH2PSrr")>;
 def: InstRW<[SKLWriteResGroup60], (instregex "VCVTPS2PDrr")>;
 def: InstRW<[SKLWriteResGroup60], (instregex "VCVTPS2PHrr")>;
 def: InstRW<[SKLWriteResGroup60], (instregex "VCVTSD2SSrr")>;
-def: InstRW<[SKLWriteResGroup60], (instregex "VCVTSI2SD64rr")>;
+def: InstRW<[SKLWriteResGroup60], (instregex "VCVTSI642SDrr")>;
 def: InstRW<[SKLWriteResGroup60], (instregex "VCVTSI2SDrr")>;
 def: InstRW<[SKLWriteResGroup60], (instregex "VCVTSI2SSrr")>;
 def: InstRW<[SKLWriteResGroup60], (instregex "VCVTSS2SDrr")>;
@@ -2265,8 +2265,8 @@ def SKLWriteResGroup78 : SchedWriteRes<[SKLPort5,SKLPort015]> {
   let NumMicroOps = 3;
   let ResourceCycles = [2,1];
 }
-def: InstRW<[SKLWriteResGroup78], (instregex "CVTSI2SS64rr")>;
-def: InstRW<[SKLWriteResGroup78], (instregex "VCVTSI2SS64rr")>;
+def: InstRW<[SKLWriteResGroup78], (instregex "CVTSI642SSrr")>;
+def: InstRW<[SKLWriteResGroup78], (instregex "VCVTSI642SSrr")>;
 
 def SKLWriteResGroup79 : SchedWriteRes<[SKLPort1,SKLPort06,SKLPort0156]> {
   let Latency = 6;

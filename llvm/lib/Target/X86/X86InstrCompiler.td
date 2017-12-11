@@ -43,16 +43,15 @@ let hasSideEffects = 0, isNotDuplicable = 1, Uses = [ESP, SSP],
 // pointer before prolog-epilog rewriting occurs.
 // Pessimistically assume ADJCALLSTACKDOWN / ADJCALLSTACKUP will become
 // sub / add which can clobber EFLAGS.
-let Defs = [ESP, EFLAGS, SSP], Uses = [ESP, SSP] in {
+let Defs = [ESP, EFLAGS, SSP], Uses = [ESP, SSP], SchedRW = [WriteALU] in {
 def ADJCALLSTACKDOWN32 : I<0, Pseudo, (outs),
                            (ins i32imm:$amt1, i32imm:$amt2, i32imm:$amt3),
-                           "#ADJCALLSTACKDOWN",
-                           []>,
-                          Requires<[NotLP64]>;
+                           "#ADJCALLSTACKDOWN", [], IIC_ALU_NONMEM>,
+                           Requires<[NotLP64]>;
 def ADJCALLSTACKUP32   : I<0, Pseudo, (outs), (ins i32imm:$amt1, i32imm:$amt2),
                            "#ADJCALLSTACKUP",
-                           [(X86callseq_end timm:$amt1, timm:$amt2)]>,
-                          Requires<[NotLP64]>;
+                           [(X86callseq_end timm:$amt1, timm:$amt2)],
+                           IIC_ALU_NONMEM>, Requires<[NotLP64]>;
 }
 def : Pat<(X86callseq_start timm:$amt1, timm:$amt2),
        (ADJCALLSTACKDOWN32 i32imm:$amt1, i32imm:$amt2, 0)>, Requires<[NotLP64]>;
@@ -63,16 +62,15 @@ def : Pat<(X86callseq_start timm:$amt1, timm:$amt2),
 // pointer before prolog-epilog rewriting occurs.
 // Pessimistically assume ADJCALLSTACKDOWN / ADJCALLSTACKUP will become
 // sub / add which can clobber EFLAGS.
-let Defs = [RSP, EFLAGS, SSP], Uses = [RSP, SSP] in {
+let Defs = [RSP, EFLAGS, SSP], Uses = [RSP, SSP], SchedRW = [WriteALU] in {
 def ADJCALLSTACKDOWN64 : I<0, Pseudo, (outs),
                            (ins i32imm:$amt1, i32imm:$amt2, i32imm:$amt3),
                            "#ADJCALLSTACKDOWN",
-                           []>,
-                          Requires<[IsLP64]>;
+                           [], IIC_ALU_NONMEM>, Requires<[IsLP64]>;
 def ADJCALLSTACKUP64   : I<0, Pseudo, (outs), (ins i32imm:$amt1, i32imm:$amt2),
                            "#ADJCALLSTACKUP",
-                           [(X86callseq_end timm:$amt1, timm:$amt2)]>,
-                          Requires<[IsLP64]>;
+                           [(X86callseq_end timm:$amt1, timm:$amt2)],
+                           IIC_ALU_NONMEM>, Requires<[IsLP64]>;
 }
 def : Pat<(X86callseq_start timm:$amt1, timm:$amt2),
         (ADJCALLSTACKDOWN64 i32imm:$amt1, i32imm:$amt2, 0)>, Requires<[IsLP64]>;

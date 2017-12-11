@@ -2424,11 +2424,11 @@ bool X86FastISel::X86SelectSIToFP(const Instruction *I) {
 
   if (I->getType()->isDoubleTy()) {
     // sitofp int -> double
-    Opcode = InTy->isIntegerTy(64) ? X86::VCVTSI2SD64rr : X86::VCVTSI2SDrr;
+    Opcode = InTy->isIntegerTy(64) ? X86::VCVTSI642SDrr : X86::VCVTSI2SDrr;
     RC = &X86::FR64RegClass;
   } else if (I->getType()->isFloatTy()) {
     // sitofp int -> float
-    Opcode = InTy->isIntegerTy(64) ? X86::VCVTSI2SS64rr : X86::VCVTSI2SSrr;
+    Opcode = InTy->isIntegerTy(64) ? X86::VCVTSI642SSrr : X86::VCVTSI2SSrr;
     RC = &X86::FR32RegClass;
   } else
     return false;
