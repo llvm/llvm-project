@@ -1,6 +1,6 @@
 // RUN: rm -rf %t
 // RUN: mkdir %t
-// RUN: not env CINDEXTEST_INVOCATION_EMISSION_PATH=%t c-index-test -test-load-source all %s
+// RUN: env CINDEXTEST_INVOCATION_EMISSION_PATH=%t not c-index-test -test-load-source all %s
 // RUN: cat %t/libclang-* | FileCheck %s
 
 // RUN: rm -rf %t
