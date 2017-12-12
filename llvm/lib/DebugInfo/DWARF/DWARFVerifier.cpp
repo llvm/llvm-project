@@ -404,7 +404,7 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
     if (auto SectionOffset = AttrValue.Value.getAsSectionOffset()) {
       if (*SectionOffset >= DObj.getLineSection().Data.size())
         ReportError("DW_AT_stmt_list offset is beyond .debug_line bounds: " +
-                    llvm::formatv("{0:x16}", *SectionOffset));
+                    llvm::formatv("{0:x8}", *SectionOffset));
       break;
     }
     ReportError("DIE has invalid DW_AT_stmt_list encoding:");
