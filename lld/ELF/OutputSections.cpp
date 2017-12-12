@@ -312,6 +312,8 @@ template <class ELFT> void OutputSection::finalize() {
         Sections.push_back(IS);
       }
     }
+    if (isa<ByteCommand>(Base) && Type == SHT_NOBITS)
+      Type = SHT_PROGBITS;
   }
 
   if (Flags & SHF_LINK_ORDER) {

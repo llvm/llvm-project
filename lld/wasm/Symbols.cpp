@@ -67,8 +67,14 @@ void Symbol::setVirtualAddress(uint32_t Value) {
 
 void Symbol::setOutputIndex(uint32_t Index) {
   DEBUG(dbgs() << "setOutputIndex " << Name << " -> " << Index << "\n");
-  assert(!hasOutputIndex());
+  assert(!OutputIndex.hasValue());
   OutputIndex = Index;
+}
+
+void Symbol::setTableIndex(uint32_t Index) {
+  DEBUG(dbgs() << "setTableIndex " << Name << " -> " << Index << "\n");
+  assert(!TableIndex.hasValue());
+  TableIndex = Index;
 }
 
 void Symbol::update(Kind K, InputFile *F, const WasmSymbol *WasmSym,

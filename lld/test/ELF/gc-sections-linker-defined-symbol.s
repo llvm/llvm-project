@@ -13,4 +13,6 @@
 # CHECK-NEXT: Section: .dynamic
 
         .data
+        .globl g
+        g:
         .quad _end

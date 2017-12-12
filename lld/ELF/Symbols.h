@@ -210,9 +210,9 @@ public:
 
   SharedSymbol(InputFile *File, StringRef Name, uint8_t Binding,
                uint8_t StOther, uint8_t Type, uint64_t Value, uint64_t Size,
-               uint32_t Alignment, const void *Verdef)
-      : Symbol(SharedKind, File, Name, Binding, StOther, Type), Verdef(Verdef),
-        Value(Value), Size(Size), Alignment(Alignment) {
+               uint32_t Alignment, uint32_t VerdefIndex)
+      : Symbol(SharedKind, File, Name, Binding, StOther, Type), Value(Value),
+        Size(Size), VerdefIndex(VerdefIndex), Alignment(Alignment) {
     // GNU ifunc is a mechanism to allow user-supplied functions to
     // resolve PLT slot values at load-time. This is contrary to the
     // regualr symbol resolution scheme in which symbols are resolved just
@@ -237,14 +237,15 @@ public:
     return cast<SharedFile<ELFT>>(File);
   }
 
-  // This field is a pointer to the symbol's version definition.
-  const void *Verdef;
-
   // If not null, there is a copy relocation to this section.
   InputSection *CopyRelSec = nullptr;
 
   uint64_t Value; // st_value
   uint64_t Size;  // st_size
+
+  // This field is a index to the symbol's version definition.
+  uint32_t VerdefIndex;
+
   uint32_t Alignment;
 };
 

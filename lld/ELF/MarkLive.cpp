@@ -71,12 +71,13 @@ static void resolveReloc(InputSectionBase &Sec, RelT &Rel,
       SS->getFile<ELFT>()->IsNeeded = true;
 
   if (auto *D = dyn_cast<Defined>(&B)) {
-    if (!D->Section)
+    auto *RelSec = dyn_cast_or_null<InputSectionBase>(D->Section);
+    if (!RelSec)
       return;
     uint64_t Offset = D->Value;
     if (D->isSection())
       Offset += getAddend<ELFT>(Sec, Rel);
-    Fn(cast<InputSectionBase>(D->Section), Offset);
+    Fn(RelSec, Offset);
     return;
   }
 
