@@ -618,6 +618,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->GcSections = Args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, false);
   Config->GdbIndex = Args.hasFlag(OPT_gdb_index, OPT_no_gdb_index, false);
   Config->ICF = Args.hasFlag(OPT_icf_all, OPT_icf_none, false);
+  Config->ICFData = Args.hasArg(OPT_icf_data);
   Config->Init = Args.getLastArgValue(OPT_init, "_init");
   Config->LTOAAPipeline = Args.getLastArgValue(OPT_lto_aa_pipeline);
   Config->LTONewPmPasses = Args.getLastArgValue(OPT_lto_newpm_passes);
@@ -1045,6 +1046,15 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // Handle the -exclude-libs option.
   if (Args.hasArg(OPT_exclude_libs))
     excludeLibs<ELFT>(Args, Files);
+
+  // Create ElfHeader early. We need a dummy section in
+  // addReservedSymbols to mark the created symbols as not absolute.
+  Out::ElfHeader = make<OutputSection>("", 0, SHF_ALLOC);
+  Out::ElfHeader->Size = sizeof(typename ELFT::Ehdr);
+
+  // We need to create some reserved symbols such as _end. Create them.
+  if (!Config->Relocatable)
+    addReservedSymbols<ELFT>();
 
   // Apply version scripts.
   Symtab->scanVersionScript();
