@@ -51,6 +51,7 @@ private:
   void addSectionSymbols();
   void forEachRelSec(std::function<void(InputSectionBase &)> Fn);
   void sortSections();
+  void resolveShfLinkOrder();
   void sortInputSections();
   void finalizeSections();
   void addPredefinedSections();
@@ -1146,6 +1147,43 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
   Script->adjustSectionsAfterSorting();
 }
 
+static bool compareByFilePosition(InputSection *A, InputSection *B) {
+  // Synthetic doesn't have link order dependecy, stable_sort will keep it last
+  if (A->kind() == InputSectionBase::Synthetic ||
+      B->kind() == InputSectionBase::Synthetic)
+    return false;
+  InputSection *LA = A->getLinkOrderDep();
+  InputSection *LB = B->getLinkOrderDep();
+  OutputSection *AOut = LA->getParent();
+  OutputSection *BOut = LB->getParent();
+  if (AOut != BOut)
+    return AOut->SectionIndex < BOut->SectionIndex;
+  return LA->OutSecOff < LB->OutSecOff;
+}
+
+template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
+  for (OutputSection *Sec : OutputSections) {
+    if (!(Sec->Flags & SHF_LINK_ORDER))
+      continue;
+
+    // Link order may be distributed across several InputSectionDescriptions
+    // but sort must consider them all at once.
+    std::vector<InputSection **> ScriptSections;
+    std::vector<InputSection *> Sections;
+    for (BaseCommand *Base : Sec->SectionCommands) {
+      if (auto *ISD = dyn_cast<InputSectionDescription>(Base)) {
+        for (InputSection *&IS : ISD->Sections) {
+          ScriptSections.push_back(&IS);
+          Sections.push_back(IS);
+        }
+      }
+    }
+    std::stable_sort(Sections.begin(), Sections.end(), compareByFilePosition);
+    for (int I = 0, N = Sections.size(); I < N; ++I)
+      *ScriptSections[I] = Sections[I];
+  }
+}
+
 static void applySynthetic(const std::vector<SyntheticSection *> &Sections,
                            std::function<void(SyntheticSection *)> Fn) {
   for (SyntheticSection *SS : Sections)
@@ -1352,6 +1390,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   if (!Script->HasSectionsCommand && !Config->Relocatable)
     fixSectionAlignments();
+
+  // After link order processing .ARM.exidx sections can be deduplicated, which
+  // needs to be resolved before any other address dependent operation.
+  resolveShfLinkOrder();
 
   // Some architectures need to generate content that depends on the address
   // of InputSections. For example some architectures use small displacements

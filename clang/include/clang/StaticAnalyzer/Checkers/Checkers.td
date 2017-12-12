@@ -188,6 +188,10 @@ def DynamicTypeChecker : Checker<"DynamicTypeChecker">,
   HelpText<"Check for cases where the dynamic and the static type of an object are unrelated.">,
   DescFile<"DynamicTypeChecker.cpp">;
 
+def StackAddrAsyncEscapeChecker : Checker<"StackAddressAsyncEscape">,
+  HelpText<"Check that addresses to stack memory do not escape the function">,
+  DescFile<"StackAddrEscapeChecker.cpp">;
+
 } // end "alpha.core"
 
 let ParentPackage = Nullability in {

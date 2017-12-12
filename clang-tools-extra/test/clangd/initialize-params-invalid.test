@@ -20,6 +20,7 @@ Content-Length: 142
 # CHECK-NEXT:      },
 # CHECK-NEXT:      "definitionProvider": true,
 # CHECK-NEXT:      "documentFormattingProvider": true,
+# CHECK-NEXT:      "documentHighlightProvider": true,
 # CHECK-NEXT:      "documentOnTypeFormattingProvider": {
 # CHECK-NEXT:        "firstTriggerCharacter": "}",
 # CHECK-NEXT:        "moreTriggerCharacter": []

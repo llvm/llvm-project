@@ -15,11 +15,6 @@ class TestCppScopes(TestBase):
     def test_all_but_c(self):
         self.do_test(False)
 
-    # There's a global symbol in libsystem on Darwin that messes up
-    # the lookup of class C.  Breaking that test out from the others
-    # since that is a odd failure, and I don't want it to mask the
-    # real purpose of this test.
-    @expectedFailureDarwin(bugnumber="<rdar://problem/28623427>")
     @expectedFailureAll(oslist=["windows"])
     def test_c(self):
         self.do_test(True)

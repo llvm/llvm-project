@@ -1167,6 +1167,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Symtab->addAbsolute(mangle("__guard_iat_table"), 0);
   Symtab->addAbsolute(mangle("__guard_longjmp_count"), 0);
   Symtab->addAbsolute(mangle("__guard_longjmp_table"), 0);
+  // Needed for MSVC 2017 15.5 CRT.
+  Symtab->addAbsolute(mangle("__enclave_config"), 0);
 
   // This code may add new undefined symbols to the link, which may enqueue more
   // symbol resolution tasks, so we need to continue executing tasks until we
