@@ -65,10 +65,6 @@ bool dumpStab(StringRef InputFile, ArrayRef<std::string> Archs,
 bool linkDwarf(raw_fd_ostream &OutFile, const DebugMap &DM,
                const LinkOptions &Options);
 
-/// \brief Exit the dsymutil process, cleaning up every temporary
-/// files that we created.
-LLVM_ATTRIBUTE_NORETURN void exitDsymutil(int ExitStatus);
-
 void warn(const Twine &Warning, const Twine &Context);
 bool error(const Twine &Error, const Twine &Context);
 
