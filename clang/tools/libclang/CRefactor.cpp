@@ -79,7 +79,7 @@ translateOccurrenceKind(rename::SymbolOccurrence::OccurrenceKind Kind) {
     return CXSymbolOccurrence_MatchingDocCommentString;
   case rename::SymbolOccurrence::MatchingFilename:
     return CXSymbolOccurrence_MatchingFilename;
-  case rename::OldSymbolOccurrence::MatchingStringLiteral:
+  case rename::SymbolOccurrence::MatchingStringLiteral:
     return CXSymbolOccurrence_MatchingStringLiteral;
   }
 }
