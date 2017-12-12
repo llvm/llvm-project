@@ -1742,11 +1742,15 @@ int perform_test_load_source(int argc, const char **argv,
   int result;
   unsigned Repeats = 0;
   unsigned I;
+  const char *InvocationPath;
 
   Idx = clang_createIndex(/* excludeDeclsFromPCH */
                           (!strcmp(filter, "local") || 
                            !strcmp(filter, "local-display"))? 1 : 0,
                           /* displayDiagnostics=*/1);
+  InvocationPath = getenv("CINDEXTEST_INVOCATION_EMISSION_PATH");
+  if (InvocationPath)
+    clang_CXIndex_setInvocationEmissionPathOption(Idx, InvocationPath);
 
   if ((CommentSchemaFile = parse_comments_schema(argc, argv))) {
     argc--;
@@ -2307,7 +2311,8 @@ int perform_code_completion(int argc, const char **argv, int timing_only) {
   CXTranslationUnit TU;
   unsigned I, Repeats = 1;
   unsigned completionOptions = clang_defaultCodeCompleteOptions();
-  
+  const char *InvocationPath;
+
   if (getenv("CINDEXTEST_CODE_COMPLETE_PATTERNS"))
     completionOptions |= CXCodeComplete_IncludeCodePatterns;
   if (getenv("CINDEXTEST_COMPLETION_BRIEF_COMMENTS"))
@@ -2326,7 +2331,10 @@ int perform_code_completion(int argc, const char **argv, int timing_only) {
     return -1;
 
   CIdx = clang_createIndex(0, 0);
-  
+  InvocationPath = getenv("CINDEXTEST_INVOCATION_EMISSION_PATH");
+  if (InvocationPath)
+    clang_CXIndex_setInvocationEmissionPathOption(CIdx, InvocationPath);
+
   if (getenv("CINDEXTEST_EDITING"))
     Repeats = 5;
 
