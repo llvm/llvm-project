@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core -fblocks -verify %s
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,alpha.core.StackAddressAsyncEscape -fblocks -verify %s
 
 typedef struct dispatch_queue_s *dispatch_queue_t;
 typedef void (^dispatch_block_t)(void);

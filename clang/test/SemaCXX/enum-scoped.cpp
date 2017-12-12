@@ -309,3 +309,8 @@ namespace test11 {
 
   bool f() { return !f1(); } // expected-error {{invalid argument type 'test11::E2' (aka 'test11::E') to unary expression}}
 }
+
+namespace PR35586 {
+  enum C { R, G, B };
+  enum B { F = (enum C) -1, T}; // this should compile cleanly, it used to assert.
+};
