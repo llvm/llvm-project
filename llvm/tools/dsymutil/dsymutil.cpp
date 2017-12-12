@@ -93,8 +93,8 @@ static list<std::string> ArchFlags(
     "arch",
     desc("Link DWARF debug information only for specified CPU architecture\n"
          "types. This option can be specified multiple times, once for each\n"
-         "desired architecture.  All cpu architectures will be linked by\n"
-         "default."),
+         "desired architecture. All CPU architectures will be linked by\n"
+         "default."), value_desc("arch"),
     ZeroOrMore, cat(DsymCategory));
 
 static opt<bool>

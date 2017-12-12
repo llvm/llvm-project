@@ -3,7 +3,7 @@ if (DOXYGEN_FOUND)
 if (LLVM_ENABLE_DOXYGEN)
   set(abs_top_srcdir ${CMAKE_CURRENT_SOURCE_DIR})
   set(abs_top_builddir ${CMAKE_CURRENT_BINARY_DIR})
-  
+
   if (HAVE_DOT)
     set(DOT ${LLVM_PATH_DOT})
   endif()
@@ -21,20 +21,20 @@ if (LLVM_ENABLE_DOXYGEN)
     set(enable_external_search "NO")
     set(extra_search_mappings "")
   endif()
-  
+
   # If asked, configure doxygen for the creation of a Qt Compressed Help file.
   option(LLVM_ENABLE_DOXYGEN_QT_HELP
     "Generate a Qt Compressed Help file." OFF)
   if (LLVM_ENABLE_DOXYGEN_QT_HELP)
     set(LLVM_DOXYGEN_QCH_FILENAME "org.llvm.qch" CACHE STRING
       "Filename of the Qt Compressed help file")
-    set(LLVM_DOXYGEN_QHP_NAMESPACE "org.llvm" CACHE STRING 
+    set(LLVM_DOXYGEN_QHP_NAMESPACE "org.llvm" CACHE STRING
       "Namespace under which the intermediate Qt Help Project file lives")
     set(LLVM_DOXYGEN_QHP_CUST_FILTER_NAME "${PACKAGE_STRING}" CACHE STRING
       "See http://qt-project.org/doc/qt-4.8/qthelpproject.html#custom-filters")
     set(LLVM_DOXYGEN_QHP_CUST_FILTER_ATTRS "${PACKAGE_NAME},${PACKAGE_VERSION}" CACHE STRING
       "See http://qt-project.org/doc/qt-4.8/qthelpproject.html#filter-attributes")
-    find_program(LLVM_DOXYGEN_QHELPGENERATOR_PATH qhelpgenerator 
+    find_program(LLVM_DOXYGEN_QHELPGENERATOR_PATH qhelpgenerator
       DOC "Path to the qhelpgenerator binary")
     if (NOT LLVM_DOXYGEN_QHELPGENERATOR_PATH)
       message(FATAL_ERROR "Failed to find qhelpgenerator binary")
@@ -55,7 +55,7 @@ if (LLVM_ENABLE_DOXYGEN)
     set(llvm_doxygen_qhp_cust_filter_name "")
     set(llvm_doxygen_qhp_cust_filter_attrs "")
   endif()
-  
+
   option(LLVM_DOXYGEN_SVG
     "Use svg instead of png files for doxygen graphs." OFF)
   if (LLVM_DOXYGEN_SVG)
@@ -113,6 +113,7 @@ if (LLVM_ENABLE_SPHINX)
     if (${SPHINX_OUTPUT_MAN})
       add_sphinx_target(man llvm)
       add_sphinx_target(man llvm-dwarfdump)
+      add_sphinx_target(man dsymutil)
     endif()
 
   endif()
