@@ -28,7 +28,7 @@
 ; CHECK-SAME:           !DIExpression(DW_OP_plus_uconst, 4096, DW_OP_stack_value)
 ; CHECK-NEXT: DBG_VALUE debug-use %rax, debug-use %noreg, ![[S4]],
 ; CHECK-SAME:           !DIExpression(DW_OP_plus_uconst, 4096, DW_OP_stack_value)
-; CHECK-NEXT: %rdi = MOV64rm killed %rax, 1, %noreg, 4096, %noreg,
+; CHECK-NEXT: %rdi = MOV64rm killed renamable %rax, 1, %noreg, 4096, %noreg,
 
 source_filename = "test.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

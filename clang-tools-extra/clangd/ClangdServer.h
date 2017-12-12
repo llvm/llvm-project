@@ -289,12 +289,19 @@ public:
   llvm::Expected<Tagged<std::vector<DocumentHighlight>>>
   findDocumentHighlights(PathRef File, Position Pos);
 
-  /// Run formatting for \p Rng inside \p File.
-  std::vector<tooling::Replacement> formatRange(PathRef File, Range Rng);
-  /// Run formatting for the whole \p File.
-  std::vector<tooling::Replacement> formatFile(PathRef File);
-  /// Run formatting after a character was typed at \p Pos in \p File.
-  std::vector<tooling::Replacement> formatOnType(PathRef File, Position Pos);
+  /// Run formatting for \p Rng inside \p File with content \p Code.
+  llvm::Expected<tooling::Replacements> formatRange(StringRef Code,
+                                                    PathRef File, Range Rng);
+
+  /// Run formatting for the whole \p File with content \p Code.
+  llvm::Expected<tooling::Replacements> formatFile(StringRef Code,
+                                                   PathRef File);
+
+  /// Run formatting after a character was typed at \p Pos in \p File with
+  /// content \p Code.
+  llvm::Expected<tooling::Replacements>
+  formatOnType(StringRef Code, PathRef File, Position Pos);
+
   /// Rename all occurrences of the symbol at the \p Pos in \p File to
   /// \p NewName.
   Expected<std::vector<tooling::Replacement>> rename(PathRef File, Position Pos,
@@ -314,6 +321,13 @@ public:
   void onFileEvent(const DidChangeWatchedFilesParams &Params);
 
 private:
+
+  /// FIXME: This stats several files to find a .clang-format file. I/O can be
+  /// slow. Think of a way to cache this.
+  llvm::Expected<tooling::Replacements>
+  formatCode(llvm::StringRef Code, PathRef File,
+             ArrayRef<tooling::Range> Ranges);
+
   std::future<void>
   scheduleReparseAndDiags(PathRef File, VersionedDraft Contents,
                           std::shared_ptr<CppFile> Resources,

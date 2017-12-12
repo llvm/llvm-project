@@ -264,7 +264,7 @@ t4_ffc_branchcondimm:
         beq t4_ffc_branchcondimm
         ldr x10, [x7, :got_lo12:dat]
         ret
-        
+
 // Bitpattern matches erratum sequence but either all or part of the sequence
 // is in inline literal data
         .section .text.19, "ax", %progbits

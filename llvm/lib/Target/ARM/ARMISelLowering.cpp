@@ -8974,8 +8974,11 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
   // Thumb1 post-indexed loads are really just single-register LDMs.
   case ARM::tLDR_postidx: {
+    MachineOperand Def(MI.getOperand(1));
+    if (TargetRegisterInfo::isPhysicalRegister(Def.getReg()))
+      Def.setIsRenamable(false);
     BuildMI(*BB, MI, dl, TII->get(ARM::tLDMIA_UPD))
-        .add(MI.getOperand(1))  // Rn_wb
+        .add(Def)  // Rn_wb
         .add(MI.getOperand(2))  // Rn
         .add(MI.getOperand(3))  // PredImm
         .add(MI.getOperand(4))  // PredReg

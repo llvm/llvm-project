@@ -884,8 +884,12 @@ static bool isUndef(ArrayRef<int> Mask) {
 }
 
 static bool isIdentity(ArrayRef<int> Mask) {
-  unsigned Size = Mask.size();
-  return findStrip(Mask, 1, Size) == std::make_pair(0, Size);
+  for (int I = 0, E = Mask.size(); I != E; ++I) {
+    int M = Mask[I];
+    if (M >= 0 && M != I)
+      return false;
+  }
+  return true;
 }
 
 static bool isPermutation(ArrayRef<int> Mask) {
@@ -1147,7 +1151,7 @@ OpRef HvxSelector::vmuxs(ArrayRef<uint8_t> Bytes, OpRef Va, OpRef Vb,
   SDValue B = getVectorConstant(Bytes, dl);
   Results.push(Hexagon::V6_vd0, ByteTy, {});
   Results.push(Hexagon::V6_veqb, BoolTy, {OpRef(B), OpRef::res(-1)});
-  Results.push(Hexagon::V6_vmux, ByteTy, {OpRef::res(-1), Va, Vb});
+  Results.push(Hexagon::V6_vmux, ByteTy, {OpRef::res(-1), Vb, Va});
   return OpRef::res(Results.top());
 }
 
@@ -1181,6 +1185,9 @@ OpRef HvxSelector::shuffs1(ShuffleMask SM, OpRef Va, ResultStack &Results) {
 OpRef HvxSelector::shuffs2(ShuffleMask SM, OpRef Va, OpRef Vb,
                            ResultStack &Results) {
   DEBUG_WITH_TYPE("isel", {dbgs() << __func__ << '\n';});
+  if (isUndef(SM.Mask))
+    return OpRef::undef(getSingleVT(MVT::i8));
+
   OpRef C = contracting(SM, Va, Vb, Results);
   if (C.isValid())
     return C;
@@ -1210,6 +1217,11 @@ OpRef HvxSelector::shuffs2(ShuffleMask SM, OpRef Va, OpRef Vb,
 OpRef HvxSelector::shuffp1(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   DEBUG_WITH_TYPE("isel", {dbgs() << __func__ << '\n';});
   int VecLen = SM.Mask.size();
+
+  if (isIdentity(SM.Mask))
+    return Va;
+  if (isUndef(SM.Mask))
+    return OpRef::undef(getPairVT(MVT::i8));
 
   SmallVector<int,128> PackedMask(VecLen);
   OpRef P = packs(SM, OpRef::lo(Va), OpRef::hi(Va), Results, PackedMask);
@@ -1241,8 +1253,10 @@ OpRef HvxSelector::shuffp1(ShuffleMask SM, OpRef Va, ResultStack &Results) {
 OpRef HvxSelector::shuffp2(ShuffleMask SM, OpRef Va, OpRef Vb,
                            ResultStack &Results) {
   DEBUG_WITH_TYPE("isel", {dbgs() << __func__ << '\n';});
-  int VecLen = SM.Mask.size();
+  if (isUndef(SM.Mask))
+    return OpRef::undef(getPairVT(MVT::i8));
 
+  int VecLen = SM.Mask.size();
   SmallVector<int,256> PackedMask(VecLen);
   OpRef P = packp(SM, Va, Vb, Results, PackedMask);
   if (P.isValid())

@@ -27,6 +27,23 @@ struct wat
 struct F {};
 struct FD : public F {};
 
+#if TEST_STD_VER > 14
+template <typename T, typename U>
+struct test_invoke_result;
+
+template <typename Fn, typename ...Args, typename Ret>
+struct test_invoke_result<Fn(Args...), Ret>
+{
+    static void call()
+    {
+        static_assert(std::is_invocable<Fn, Args...>::value, "");
+        static_assert(std::is_invocable_r<Ret, Fn, Args...>::value, "");
+        static_assert((std::is_same<typename std::invoke_result<Fn, Args...>::type, Ret>::value), "");
+        static_assert((std::is_same<std::invoke_result_t<Fn, Args...>, Ret>::value), "");
+    }
+};
+#endif
+
 template <class T, class U>
 void test_result_of_imp()
 {
@@ -35,8 +52,7 @@ void test_result_of_imp()
     static_assert((std::is_same<std::result_of_t<T>, U>::value), "");
 #endif
 #if TEST_STD_VER > 14
-    static_assert(std::is_callable<T>::value, "");
-    static_assert(std::is_callable<T, U>::value, "");
+    test_invoke_result<T, U>::call();
 #endif
 }
 

@@ -12600,7 +12600,7 @@ void Sema::ActOnOpenMPDeclareTargetName(Scope *CurScope,
       ND->addAttr(A);
       if (ASTMutationListener *ML = Context.getASTMutationListener())
         ML->DeclarationMarkedOpenMPDeclareTarget(ND, A);
-      checkDeclIsAllowedInOpenMPTarget(nullptr, ND);
+      checkDeclIsAllowedInOpenMPTarget(nullptr, ND, Id.getLoc());
     } else if (ND->getAttr<OMPDeclareTargetDeclAttr>()->getMapType() != MT) {
       Diag(Id.getLoc(), diag::err_omp_declare_target_to_and_link)
           << Id.getName();
@@ -12689,7 +12689,8 @@ static bool checkValueDeclInTarget(SourceLocation SL, SourceRange SR,
   return true;
 }
 
-void Sema::checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D) {
+void Sema::checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D,
+                                            SourceLocation IdLoc) {
   if (!D || D->isInvalidDecl())
     return;
   SourceRange SR = E ? E->getSourceRange() : D->getSourceRange();
@@ -12715,6 +12716,16 @@ void Sema::checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D) {
         if (ASTMutationListener *ML = Context.getASTMutationListener())
           ML->DeclarationMarkedOpenMPDeclareTarget(VD, A);
       }
+      return;
+    }
+  }
+  if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
+    if (FD->hasAttr<OMPDeclareTargetDeclAttr>() &&
+        (FD->getAttr<OMPDeclareTargetDeclAttr>()->getMapType() ==
+         OMPDeclareTargetDeclAttr::MT_Link)) {
+      assert(IdLoc.isValid() && "Source location is expected");
+      Diag(IdLoc, diag::err_omp_function_in_link_clause);
+      Diag(FD->getLocation(), diag::note_defined_here) << FD;
       return;
     }
   }

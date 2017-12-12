@@ -18,11 +18,11 @@ registers:
   - { id: 1, class: gr64bit }
   - { id: 2, class: addr64bit }
 # CHECK: %r0q = L128
-# CHECK-NEXT: %r0l = COPY %r1l
+# CHECK-NEXT: %r0l = COPY renamable %r1l
 # Although R0L partially redefines R0Q, it must not mark R0Q as kill
 # because R1D is still live through that instruction.
 # CHECK-NOT: implicit killed %r0q
-# CHECK-NEXT: %r2d = COPY %r1d
+# CHECK-NEXT: %r2d = COPY renamable %r1d
 # CHECK-NEXT: LARL
 body:             |
   bb.0:

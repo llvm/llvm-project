@@ -22,11 +22,11 @@
 # SUBALIGN:   01000000 00000000 02000000 00000000
 # SUBALIGN:   03000000 00000000 04000000 00000000
 
-## Test we do not assert or crash when dot(.) is used inside SUBALIGN. 
+## Test we do not assert or crash when dot(.) is used inside SUBALIGN.
 ## ld.bfd does not allow to use dot in such expressions, our behavior is
 ## different for simplicity of implementation. Value of dot is undefined.
 # RUN: echo "SECTIONS { . = 0x32; .aaa : SUBALIGN(.) { *(.aaa*) } }" > %t3.script
-# RUN: ld.lld %t1.o --script %t3.script -o %t3 
+# RUN: ld.lld %t1.o --script %t3.script -o %t3
 # RUN: llvm-objdump -s %t3 > /dev/null
 
 ## Test we are able to link with zero alignment, this is consistent with bfd 2.26.1.

@@ -1,9 +1,9 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -stop-before=si-debugger-insert-nops < %s | FileCheck --check-prefix=GCN %s
 
 ; GCN-LABEL: name: syncscopes
-; GCN: FLAT_STORE_DWORD killed %vgpr1_vgpr2, killed %vgpr0, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store syncscope("agent") seq_cst 4 into %ir.agent_out)
-; GCN: FLAT_STORE_DWORD killed %vgpr4_vgpr5, killed %vgpr3, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store syncscope("workgroup") seq_cst 4 into %ir.workgroup_out)
-; GCN: FLAT_STORE_DWORD killed %vgpr7_vgpr8, killed %vgpr6, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store syncscope("wavefront") seq_cst 4 into %ir.wavefront_out)
+; GCN: FLAT_STORE_DWORD killed renamable %vgpr1_vgpr2, killed renamable %vgpr0, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store syncscope("agent") seq_cst 4 into %ir.agent_out)
+; GCN: FLAT_STORE_DWORD killed renamable %vgpr4_vgpr5, killed renamable %vgpr3, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store syncscope("workgroup") seq_cst 4 into %ir.workgroup_out)
+; GCN: FLAT_STORE_DWORD killed renamable %vgpr7_vgpr8, killed renamable %vgpr6, 0, 0, 0, implicit %exec, implicit %flat_scr :: (volatile store syncscope("wavefront") seq_cst 4 into %ir.wavefront_out)
 define void @syncscopes(
     i32 %agent,
     i32 addrspace(4)* %agent_out,
