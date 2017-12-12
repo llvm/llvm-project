@@ -794,7 +794,7 @@ SharedFile<ELFT>::parseVerdefs(const Elf_Versym *&Versym) {
 template <class ELFT> void SharedFile<ELFT>::parseRest() {
   // Create mapping from version identifiers to Elf_Verdef entries.
   const Elf_Versym *Versym = nullptr;
-  std::vector<const Elf_Verdef *> Verdefs = parseVerdefs(Versym);
+  Verdefs = parseVerdefs(Versym);
 
   ArrayRef<Elf_Shdr> Sections = CHECK(this->getObj().sections(), this);
 
@@ -827,6 +827,8 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
         continue;
       }
       Ver = Verdefs[VersymIndex];
+    } else {
+      VersymIndex = 0;
     }
 
     // We do not usually care about alignments of data in shared object
@@ -844,14 +846,14 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
       error(toString(this) + ": alignment too large: " + Name);
 
     if (!Hidden)
-      Symtab->addShared(Name, this, Sym, Alignment, Ver);
+      Symtab->addShared(Name, this, Sym, Alignment, VersymIndex);
 
     // Also add the symbol with the versioned name to handle undefined symbols
     // with explicit versions.
     if (Ver) {
       StringRef VerName = this->StringTable.data() + Ver->getAux()->vda_name;
       Name = Saver.save(Name + "@" + VerName);
-      Symtab->addShared(Name, this, Sym, Alignment, Ver);
+      Symtab->addShared(Name, this, Sym, Alignment, VersymIndex);
     }
   }
 }

@@ -2305,13 +2305,12 @@ VersionNeedSection<ELFT>::VersionNeedSection()
 
 template <class ELFT>
 void VersionNeedSection<ELFT>::addSymbol(SharedSymbol *SS) {
-  auto *Ver = reinterpret_cast<const typename ELFT::Verdef *>(SS->Verdef);
+  SharedFile<ELFT> *File = SS->getFile<ELFT>();
+  const typename ELFT::Verdef *Ver = File->Verdefs[SS->VerdefIndex];
   if (!Ver) {
     SS->VersionId = VER_NDX_GLOBAL;
     return;
   }
-
-  SharedFile<ELFT> *File = SS->getFile<ELFT>();
 
   // If we don't already know that we need an Elf_Verneed for this DSO, prepare
   // to create one by adding it to our needed list and creating a dynstr entry

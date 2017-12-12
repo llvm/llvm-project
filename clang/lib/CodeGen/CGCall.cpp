@@ -1744,6 +1744,11 @@ void CodeGenModule::ConstructDefaultFnAttrList(StringRef Name, bool HasOptnone,
       FuncAttrs.addAttribute("reciprocal-estimates",
                              llvm::join(Recips, ","));
 
+    if (!CodeGenOpts.PreferVectorWidth.empty() &&
+        CodeGenOpts.PreferVectorWidth != "none")
+      FuncAttrs.addAttribute("prefer-vector-width",
+                             CodeGenOpts.PreferVectorWidth);
+
     if (CodeGenOpts.StackRealignment)
       FuncAttrs.addAttribute("stackrealign");
     if (CodeGenOpts.Backchain)

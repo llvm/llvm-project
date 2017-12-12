@@ -148,7 +148,7 @@ void auto_deduction() {
 }
 
 void dangle() {
-  new auto{1, 2, 3}; // expected-error {{cannot use list-initialization}}
+  new auto{1, 2, 3}; // expected-error {{new expression for type 'auto' contains multiple constructor arguments}}
   new std::initializer_list<int>{1, 2, 3}; // expected-warning {{at the end of the full-expression}}
 }
 

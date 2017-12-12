@@ -308,8 +308,12 @@ public:
 
   /// \brief Return the value bound to the specified location.
   /// Returns UnknownVal() if none found.
-  SVal getSVal(const MemRegion* R) const;
+  SVal getSVal(const MemRegion* R, QualType T = QualType()) const;
 
+  /// \brief Return the value bound to the specified location, assuming
+  /// that the value is a scalar integer or an enumeration or a pointer.
+  /// Returns UnknownVal() if none found or the region is not known to hold
+  /// a value of such type.
   SVal getSValAsScalarOrLoc(const MemRegion *R) const;
 
   /// \brief Visits the symbols reachable from the given SVal using the provided
@@ -758,9 +762,10 @@ inline SVal ProgramState::getRawSVal(Loc LV, QualType T) const {
   return getStateManager().StoreMgr->getBinding(getStore(), LV, T);
 }
 
-inline SVal ProgramState::getSVal(const MemRegion* R) const {
+inline SVal ProgramState::getSVal(const MemRegion* R, QualType T) const {
   return getStateManager().StoreMgr->getBinding(getStore(),
-                                                loc::MemRegionVal(R));
+                                                loc::MemRegionVal(R),
+                                                T);
 }
 
 inline BasicValueFactory &ProgramState::getBasicVals() const {
