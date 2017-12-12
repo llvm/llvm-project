@@ -273,9 +273,8 @@ std::string LockFileManager::getErrorMessage() const {
     std::string ErrCodeMsg = Error->message();
     raw_string_ostream OSS(Str);
     if (!ErrCodeMsg.empty())
-      OSS << ": " << Error->message();
-    OSS.flush();
-    return Str;
+      OSS << ": " << ErrCodeMsg;
+    return OSS.str();
   }
   return "";
 }
