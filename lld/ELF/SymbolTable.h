@@ -59,7 +59,7 @@ public:
   template <class ELFT>
   void addShared(StringRef Name, SharedFile<ELFT> *F,
                  const typename ELFT::Sym &Sym, uint32_t Alignment,
-                 const typename ELFT::Verdef *Verdef);
+                 uint32_t VerdefIndex);
 
   template <class ELFT>
   Symbol *addLazyArchive(StringRef Name, ArchiveFile *F,

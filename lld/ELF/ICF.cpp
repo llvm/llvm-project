@@ -161,11 +161,15 @@ template <class ELFT> static uint32_t getHash(InputSection *S) {
 
 // Returns true if section S is subject of ICF.
 static bool isEligible(InputSection *S) {
+  // Don't merge read only data sections unless --icf-data was passed.
+  if (!(S->Flags & SHF_EXECINSTR) && !Config->ICFData)
+    return false;
+
   // .init and .fini contains instructions that must be executed to
   // initialize and finalize the process. They cannot and should not
   // be merged.
-  return S->Live && (S->Flags & SHF_ALLOC) && (S->Flags & SHF_EXECINSTR) &&
-         !(S->Flags & SHF_WRITE) && S->Name != ".init" && S->Name != ".fini";
+  return S->Live && (S->Flags & SHF_ALLOC) && !(S->Flags & SHF_WRITE) &&
+         S->Name != ".init" && S->Name != ".fini";
 }
 
 // Split an equivalence class into smaller classes.
