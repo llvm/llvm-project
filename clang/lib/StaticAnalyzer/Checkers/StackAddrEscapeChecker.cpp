@@ -37,6 +37,14 @@ class StackAddrEscapeChecker
   mutable std::unique_ptr<BuiltinBug> BT_capturedstackret;
 
 public:
+  enum CheckKind {
+    CK_StackAddrEscapeChecker,
+    CK_StackAddrAsyncEscapeChecker,
+    CK_NumCheckKinds
+  };
+
+  DefaultBool ChecksEnabled[CK_NumCheckKinds];
+
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPreStmt(const ReturnStmt *RS, CheckerContext &C) const;
   void checkEndFunction(CheckerContext &Ctx) const;
@@ -225,6 +233,8 @@ void StackAddrEscapeChecker::checkReturnedBlockCaptures(
 
 void StackAddrEscapeChecker::checkPreCall(const CallEvent &Call,
                                           CheckerContext &C) const {
+  if (!ChecksEnabled[CK_StackAddrAsyncEscapeChecker])
+    return;
   if (!Call.isGlobalCFunction("dispatch_after") &&
       !Call.isGlobalCFunction("dispatch_async"))
     return;
@@ -237,6 +247,8 @@ void StackAddrEscapeChecker::checkPreCall(const CallEvent &Call,
 
 void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS,
                                           CheckerContext &C) const {
+  if (!ChecksEnabled[CK_StackAddrEscapeChecker])
+    return;
 
   const Expr *RetE = RS->getRetValue();
   if (!RetE)
@@ -277,6 +289,9 @@ void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS,
 }
 
 void StackAddrEscapeChecker::checkEndFunction(CheckerContext &Ctx) const {
+  if (!ChecksEnabled[CK_StackAddrEscapeChecker])
+    return;
+
   ProgramStateRef State = Ctx.getState();
 
   // Iterate over all bindings to global variables and see if it contains
@@ -346,6 +361,12 @@ void StackAddrEscapeChecker::checkEndFunction(CheckerContext &Ctx) const {
   }
 }
 
-void ento::registerStackAddrEscapeChecker(CheckerManager &Mgr) {
-  Mgr.registerChecker<StackAddrEscapeChecker>();
-}
+#define REGISTER_CHECKER(name) \
+  void ento::register##name(CheckerManager &Mgr) { \
+    StackAddrEscapeChecker *Chk = \
+        Mgr.registerChecker<StackAddrEscapeChecker>(); \
+    Chk->ChecksEnabled[StackAddrEscapeChecker::CK_##name] = true; \
+  }
+
+REGISTER_CHECKER(StackAddrEscapeChecker)
+REGISTER_CHECKER(StackAddrAsyncEscapeChecker)

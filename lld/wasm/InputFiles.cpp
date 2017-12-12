@@ -46,7 +46,6 @@ void ObjFile::dumpInfo() const {
   log("reloc info for: " + getName() + "\n" +
       "        FunctionIndexOffset : " + Twine(FunctionIndexOffset) + "\n" +
       "         NumFunctionImports : " + Twine(NumFunctionImports()) + "\n" +
-      "           TableIndexOffset : " + Twine(TableIndexOffset) + "\n" +
       "           NumGlobalImports : " + Twine(NumGlobalImports()) + "\n");
 }
 
@@ -54,11 +53,15 @@ bool ObjFile::isImportedFunction(uint32_t Index) const {
   return Index < NumFunctionImports();
 }
 
-const Symbol *ObjFile::getFunctionSymbol(uint32_t Index) const {
+Symbol *ObjFile::getFunctionSymbol(uint32_t Index) const {
   return FunctionSymbols[Index];
 }
 
-const Symbol *ObjFile::getGlobalSymbol(uint32_t Index) const {
+Symbol *ObjFile::getTableSymbol(uint32_t Index) const {
+  return TableSymbols[Index];
+}
+
+Symbol *ObjFile::getGlobalSymbol(uint32_t Index) const {
   return GlobalSymbols[Index];
 }
 
@@ -67,7 +70,7 @@ uint32_t ObjFile::getRelocatedAddress(uint32_t Index) const {
 }
 
 uint32_t ObjFile::relocateFunctionIndex(uint32_t Original) const {
-  const Symbol *Sym = getFunctionSymbol(Original);
+  Symbol *Sym = getFunctionSymbol(Original);
   uint32_t Index = Sym->getOutputIndex();
   DEBUG(dbgs() << "relocateFunctionIndex: " << toString(*Sym) << ": "
                << Original << " -> " << Index << "\n");
@@ -79,11 +82,15 @@ uint32_t ObjFile::relocateTypeIndex(uint32_t Original) const {
 }
 
 uint32_t ObjFile::relocateTableIndex(uint32_t Original) const {
-  return Original + TableIndexOffset;
+  Symbol *Sym = getTableSymbol(Original);
+  uint32_t Index = Sym->getTableIndex();
+  DEBUG(dbgs() << "relocateTableIndex: " << toString(*Sym) << ": " << Original
+               << " -> " << Index << "\n");
+  return Index;
 }
 
 uint32_t ObjFile::relocateGlobalIndex(uint32_t Original) const {
-  const Symbol *Sym = getGlobalSymbol(Original);
+  Symbol *Sym = getGlobalSymbol(Original);
   uint32_t Index = Sym->getOutputIndex();
   DEBUG(dbgs() << "relocateGlobalIndex: " << toString(*Sym) << ": " << Original
                << " -> " << Index << "\n");
@@ -152,9 +159,11 @@ void ObjFile::initializeSymbols() {
   for (const WasmSegment &Seg : WasmObj->dataSegments())
     Segments.emplace_back(make<InputSegment>(&Seg, this));
 
-  Symbol *S;
+  // Populate `FunctionSymbols` and `GlobalSymbols` based on the WasmSymbols
+  // in the object
   for (const SymbolRef &Sym : WasmObj->symbols()) {
     const WasmSymbol &WasmSym = WasmObj->getWasmSymbol(Sym.getRawDataRefImpl());
+    Symbol *S;
     switch (WasmSym.Type) {
     case WasmSymbol::SymbolType::FUNCTION_IMPORT:
     case WasmSymbol::SymbolType::GLOBAL_IMPORT:
@@ -183,8 +192,26 @@ void ObjFile::initializeSymbols() {
     }
   }
 
-  DEBUG(dbgs() << "Functions: " << FunctionSymbols.size() << "\n");
-  DEBUG(dbgs() << "Globals  : " << GlobalSymbols.size() << "\n");
+  // Populate `TableSymbols` with all symbols that are called indirectly
+  uint32_t SegmentCount = WasmObj->elements().size();
+  if (SegmentCount) {
+    if (SegmentCount > 1)
+      fatal(getName() + ": contains more than one element segment");
+    const WasmElemSegment &Segment = WasmObj->elements()[0];
+    if (Segment.Offset.Opcode != WASM_OPCODE_I32_CONST)
+      fatal(getName() + ": unsupported element segment");
+    if (Segment.TableIndex != 0)
+      fatal(getName() + ": unsupported table index in elem segment");
+    if (Segment.Offset.Value.Int32 != 0)
+      fatal(getName() + ": unsupported element segment offset");
+    TableSymbols.reserve(Segment.Functions.size());
+    for (uint64_t FunctionIndex : Segment.Functions)
+      TableSymbols.push_back(getFunctionSymbol(FunctionIndex));
+  }
+
+  DEBUG(dbgs() << "TableSymbols: " << TableSymbols.size() << "\n");
+  DEBUG(dbgs() << "Functions   : " << FunctionSymbols.size() << "\n");
+  DEBUG(dbgs() << "Globals     : " << GlobalSymbols.size() << "\n");
 }
 
 Symbol *ObjFile::createUndefined(const WasmSymbol &Sym) {

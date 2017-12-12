@@ -288,6 +288,32 @@ unsigned AMDGPUTTIImpl::getMaxInterleaveFactor(unsigned VF) {
   return 8;
 }
 
+bool AMDGPUTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
+                                       MemIntrinsicInfo &Info) const {
+  switch (Inst->getIntrinsicID()) {
+  case Intrinsic::amdgcn_atomic_inc:
+  case Intrinsic::amdgcn_atomic_dec: {
+    auto *Ordering = dyn_cast<ConstantInt>(Inst->getArgOperand(2));
+    auto *Volatile = dyn_cast<ConstantInt>(Inst->getArgOperand(4));
+    if (!Ordering || !Volatile)
+      return false; // Invalid.
+
+    unsigned OrderingVal = Ordering->getZExtValue();
+    if (OrderingVal > static_cast<unsigned>(AtomicOrdering::SequentiallyConsistent))
+      return false;
+
+    Info.PtrVal = Inst->getArgOperand(0);
+    Info.Ordering = static_cast<AtomicOrdering>(OrderingVal);
+    Info.ReadMem = true;
+    Info.WriteMem = true;
+    Info.IsVolatile = !Volatile->isNullValue();
+    return true;
+  }
+  default:
+    return false;
+  }
+}
+
 int AMDGPUTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::OperandValueKind Opd1Info,
     TTI::OperandValueKind Opd2Info, TTI::OperandValueProperties Opd1PropInfo,

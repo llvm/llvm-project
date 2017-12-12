@@ -344,17 +344,15 @@ endif()
 
 add_subdirectory(include)
 
-set(COMPILER_RT_LIBCXX_PATH ${LLVM_MAIN_SRC_DIR}/projects/libcxx)
-if(EXISTS ${COMPILER_RT_LIBCXX_PATH}/)
-  set(COMPILER_RT_HAS_LIBCXX_SOURCES TRUE)
-else()
-  set(COMPILER_RT_LIBCXX_PATH ${LLVM_MAIN_SRC_DIR}/../libcxx)
-  if(EXISTS ${COMPILER_RT_LIBCXX_PATH}/)
-    set(COMPILER_RT_HAS_LIBCXX_SOURCES TRUE)
-  else()
-    set(COMPILER_RT_HAS_LIBCXX_SOURCES FALSE)
+foreach(path IN ITEMS ${LLVM_MAIN_SRC_DIR}/projects/libcxx
+                      ${LLVM_MAIN_SRC_DIR}/runtimes/libcxx
+                      ${LLVM_MAIN_SRC_DIR}/../libcxx
+                      ${LLVM_EXTERNAL_LIBCXX_SOURCE_DIR})
+  if(IS_DIRECTORY ${path})
+    set(COMPILER_RT_LIBCXX_PATH ${path})
+    break()
   endif()
-endif()
+endforeach()
 
 set(COMPILER_RT_LLD_PATH ${LLVM_MAIN_SRC_DIR}/tools/lld)
 if(EXISTS ${COMPILER_RT_LLD_PATH}/ AND LLVM_TOOL_LLD_BUILD)

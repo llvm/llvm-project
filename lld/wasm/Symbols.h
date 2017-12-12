@@ -72,6 +72,7 @@ public:
   bool hasFunctionType() const { return FunctionType != nullptr; }
   const WasmSignature &getFunctionType() const;
   uint32_t getOutputIndex() const;
+  uint32_t getTableIndex() const { return TableIndex.getValue(); }
 
   // Returns the virtual address of a defined global.
   // Only works for globals, not functions.
@@ -83,6 +84,12 @@ public:
   // Set the output index of the symbol (in the function or global index
   // space of the output object.
   void setOutputIndex(uint32_t Index);
+
+  // Returns true if a table index has been set for this symbol
+  bool hasTableIndex() const { return TableIndex.hasValue(); }
+
+  // Set the table index of the symbol
+  void setTableIndex(uint32_t Index);
 
   void setVirtualAddress(uint32_t VA);
 
@@ -108,6 +115,7 @@ protected:
   const WasmSymbol *Sym = nullptr;
   const InputSegment *Segment = nullptr;
   llvm::Optional<uint32_t> OutputIndex;
+  llvm::Optional<uint32_t> TableIndex;
   llvm::Optional<uint32_t> VirtualAddress;
   const WasmSignature *FunctionType;
 };

@@ -465,7 +465,7 @@ endmacro(add_compiler_rt_script src name)
 #                   DEPS <list of build deps>
 #                   CFLAGS <list of compile flags>)
 macro(add_custom_libcxx name prefix)
-  if(NOT COMPILER_RT_HAS_LIBCXX_SOURCES)
+  if(NOT COMPILER_RT_LIBCXX_PATH)
     message(FATAL_ERROR "libcxx not found!")
   endif()
 
