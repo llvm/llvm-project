@@ -13,8 +13,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "CodeComplete.h"
 #include "ClangdLSPServer.h"
+#include "CodeComplete.h"
 #include <sstream>
 
 extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
