@@ -164,12 +164,12 @@ public:
 
 /// Finds matching textual occurrences in string literals.
 class StringLiteralTextualParser {
-  const OldSymbolName &Name;
+  const SymbolName &Name;
 
 public:
   unsigned SymbolIndex;
 
-  StringLiteralTextualParser(const OldSymbolName &Name, unsigned SymbolIndex)
+  StringLiteralTextualParser(const SymbolName &Name, unsigned SymbolIndex)
       : Name(Name), SymbolIndex(SymbolIndex) {
     assert(Name.size() == 1 && "can't search for multi-piece names in strings");
   }
@@ -381,7 +381,7 @@ static void findMatchingTextualOccurrences(
       for (auto &Parser : StringParsers) {
         SourceLocation Loc = Parser.handleToken(RawTok, PP);
         if (Loc.isValid())
-          MatchHandler(OldSymbolOccurrence::MatchingStringLiteral, Loc,
+          MatchHandler(SymbolOccurrence::MatchingStringLiteral, Loc,
                        Parser.SymbolIndex);
       }
     }
