@@ -31,8 +31,8 @@ entry:
 ; CHECK-NEXT:       - ElemType:        ANYFUNC
 ; CHECK-NEXT:         Limits:          
 ; CHECK-NEXT:           Flags:           0x00000001
-; CHECK-NEXT:           Initial:         0x00000003
-; CHECK-NEXT:           Maximum:         0x00000003
+; CHECK-NEXT:           Initial:         0x00000002
+; CHECK-NEXT:           Maximum:         0x00000002
 ; CHECK-NEXT:   - Type:            MEMORY
 ; CHECK-NEXT:     Memories:        
 ; CHECK-NEXT:       - Initial:         0x00000002
@@ -65,7 +65,7 @@ entry:
 ; CHECK-NEXT:       - Offset:          
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1
-; CHECK-NEXT:         Functions:       [ 1, 1 ]
+; CHECK-NEXT:         Functions:       [ 1 ]
 ; CHECK-NEXT:   - Type:            CODE
 ; CHECK-NEXT:     Functions:       
 ; CHECK-NEXT:       - Locals:          
@@ -77,7 +77,7 @@ entry:
 ; CHECK-NEXT:       - Locals:          
 ; CHECK-NEXT:         Body:            41020B
 ; CHECK-NEXT:       - Locals:          
-; CHECK-NEXT:         Body:            4182808080000B
+; CHECK-NEXT:         Body:            4181808080000B
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
 ; CHECK-NEXT:     DataSize:        0

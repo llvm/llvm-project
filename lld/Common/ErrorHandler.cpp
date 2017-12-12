@@ -73,8 +73,7 @@ void ErrorHandler::print(StringRef S, raw_ostream::Colors C) {
 void ErrorHandler::log(const Twine &Msg) {
   if (Verbose) {
     std::lock_guard<std::mutex> Lock(Mu);
-    outs() << LogName << ": " << Msg << "\n";
-    outs().flush();
+    *ErrorOS << LogName << ": " << Msg << "\n";
   }
 }
 

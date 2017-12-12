@@ -103,10 +103,7 @@ private:
   uint64_t FileSize = 0;
   uint32_t DataSize = 0;
   uint32_t NumFunctions = 0;
-  uint32_t NumGlobals = 0;
   uint32_t NumMemoryPages = 0;
-  uint32_t NumTableElems = 0;
-  uint32_t NumElements = 0;
   uint32_t InitialTableOffset = 0;
 
   std::vector<const WasmSignature *> Types;
@@ -114,6 +111,7 @@ private:
   std::vector<const Symbol *> FunctionImports;
   std::vector<const Symbol *> GlobalImports;
   std::vector<const Symbol *> DefinedGlobals;
+  std::vector<const Symbol *> IndirectFunctions;
 
   // Elements that are used to construct the final output
   std::string Header;
@@ -236,14 +234,24 @@ void Writer::createGlobalSection() {
 }
 
 void Writer::createTableSection() {
+  // Always output a table section, even if there are no indirect calls.
+  // There are two reasons for this:
+  //  1. For executables it is useful to have an empty table slot at 0
+  //     which can be filled with a null function call handler.
+  //  2. If we don't do this, any program that contains a call_indirect but
+  //     no address-taken function will fail at validation time since it is
+  //     a validation error to include a call_indirect instruction if there
+  //     is not table.
+  uint32_t TableSize = InitialTableOffset + IndirectFunctions.size();
+
   SyntheticSection *Section = createSyntheticSection(WASM_SEC_TABLE);
   raw_ostream &OS = Section->getStream();
 
   writeUleb128(OS, 1, "table count");
   writeSleb128(OS, WASM_TYPE_ANYFUNC, "table type");
   writeUleb128(OS, WASM_LIMITS_FLAG_HAS_MAX, "table flags");
-  writeUleb128(OS, NumTableElems, "table initial size");
-  writeUleb128(OS, NumTableElems, "table max size");
+  writeUleb128(OS, TableSize, "table initial size");
+  writeUleb128(OS, TableSize, "table max size");
 }
 
 void Writer::createExportSection() {
@@ -309,7 +317,7 @@ void Writer::createExportSection() {
 void Writer::createStartSection() {}
 
 void Writer::createElemSection() {
-  if (!NumElements)
+  if (IndirectFunctions.empty())
     return;
 
   SyntheticSection *Section = createSyntheticSection(WASM_SEC_ELEM);
@@ -321,13 +329,14 @@ void Writer::createElemSection() {
   InitExpr.Opcode = WASM_OPCODE_I32_CONST;
   InitExpr.Value.Int32 = InitialTableOffset;
   writeInitExpr(OS, InitExpr);
-  writeUleb128(OS, NumElements, "elem count");
+  writeUleb128(OS, IndirectFunctions.size(), "elem count");
 
-  for (ObjFile *File : Symtab->ObjectFiles)
-    for (const WasmElemSegment &Segment : File->getWasmObj()->elements())
-      for (uint64_t FunctionIndex : Segment.Functions)
-        writeUleb128(OS, File->relocateFunctionIndex(FunctionIndex),
-                     "function index");
+  uint32_t TableIndex = InitialTableOffset;
+  for (const Symbol *Sym : IndirectFunctions) {
+    assert(Sym->getTableIndex() == TableIndex);
+    writeUleb128(OS, Sym->getOutputIndex(), "function index");
+    ++TableIndex;
+  }
 }
 
 void Writer::createCodeSection() {
@@ -526,8 +535,6 @@ void Writer::createSections() {
 }
 
 void Writer::calculateOffsets() {
-  NumTableElems = InitialTableOffset;
-
   for (ObjFile *File : Symtab->ObjectFiles) {
     const WasmObjectFile *WasmFile = File->getWasmObj();
 
@@ -537,34 +544,8 @@ void Writer::calculateOffsets() {
     NumFunctions += WasmFile->functions().size();
 
     // Memory
-    if (WasmFile->memories().size()) {
-      if (WasmFile->memories().size() > 1) {
-        fatal(File->getName() + ": contains more than one memory");
-      }
-    }
-
-    // Table
-    uint32_t TableCount = WasmFile->tables().size();
-    if (TableCount) {
-      if (TableCount > 1)
-        fatal(File->getName() + ": contains more than one table");
-      File->TableIndexOffset = NumTableElems;
-      NumTableElems += WasmFile->tables()[0].Limits.Initial;
-    }
-
-    // Elem
-    uint32_t SegmentCount = WasmFile->elements().size();
-    if (SegmentCount) {
-      if (SegmentCount > 1)
-        fatal(File->getName() + ": contains more than element segment");
-
-      const WasmElemSegment &Segment = WasmFile->elements()[0];
-      if (Segment.TableIndex != 0)
-        fatal(File->getName() + ": unsupported table index");
-      if (Segment.Offset.Value.Int32 != 0)
-        fatal(File->getName() + ": unsupported segment offset");
-      NumElements += Segment.Functions.size();
-    }
+    if (WasmFile->memories().size() > 1)
+      fatal(File->getName() + ": contains more than one memory");
   }
 }
 
@@ -611,21 +592,29 @@ void Writer::assignSymbolIndexes() {
   if (Config->EmitRelocs)
     DefinedGlobals.reserve(Symtab->getSymbols().size());
 
+  uint32_t TableIndex = InitialTableOffset;
+
   for (ObjFile *File : Symtab->ObjectFiles) {
     DEBUG(dbgs() << "assignSymbolIndexes: " << File->getName() << "\n");
-    for (Symbol *Sym : File->getSymbols()) {
-      if (Sym->hasOutputIndex() || !Sym->isDefined())
-        continue;
 
+    for (Symbol *Sym : File->getSymbols()) {
+      // Assign indexes for symbols defined with this file.
+      if (!Sym->isDefined() || File != Sym->getFile())
+        continue;
       if (Sym->isFunction()) {
-        if (Sym->getFile() && isa<ObjFile>(Sym->getFile())) {
-          auto *Obj = cast<ObjFile>(Sym->getFile());
-          Sym->setOutputIndex(Obj->FunctionIndexOffset +
-                              Sym->getFunctionIndex());
-        }
+        auto *Obj = cast<ObjFile>(Sym->getFile());
+        Sym->setOutputIndex(Obj->FunctionIndexOffset +
+                            Sym->getFunctionIndex());
       } else if (Config->EmitRelocs) {
         DefinedGlobals.emplace_back(Sym);
         Sym->setOutputIndex(GlobalIndex++);
+      }
+    }
+
+    for (Symbol *Sym : File->getTableSymbols()) {
+      if (!Sym->hasTableIndex()) {
+        Sym->setTableIndex(TableIndex++);
+        IndirectFunctions.emplace_back(Sym);
       }
     }
   }
@@ -681,12 +670,12 @@ void Writer::run() {
   calculateOffsets();
 
   if (errorHandler().Verbose) {
-    log("NumFunctions    : " + Twine(NumFunctions));
-    log("NumGlobals      : " + Twine(NumGlobals));
-    log("NumImports      : " +
+    log("Defined Functions: " + Twine(NumFunctions));
+    log("Defined Globals  : " + Twine(DefinedGlobals.size()));
+    log("Function Imports : " + Twine(FunctionImports.size()));
+    log("Global Imports   : " + Twine(GlobalImports.size()));
+    log("Total Imports    : " +
         Twine(FunctionImports.size() + GlobalImports.size()));
-    log("FunctionImports : " + Twine(FunctionImports.size()));
-    log("GlobalImports   : " + Twine(GlobalImports.size()));
     for (ObjFile *File : Symtab->ObjectFiles)
       File->dumpInfo();
   }
