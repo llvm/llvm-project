@@ -60,7 +60,7 @@ _start:
 // DSO-NEXT:     1034:       04 c0 9f e5     ldr     r12, [pc, #4]
 // DSO-NEXT:     1038:       0f c0 8c e0     add     r12, r12, pc
 // DSO-NEXT:     103c:       00 f0 9c e5     ldr     pc, [r12]
-// 0x1038 + 8 + 0fcc = 0x200c        
+// 0x1038 + 8 + 0fcc = 0x200c
 // DSO: $d:
 // DSO-NEXT:     1040:       cc 0f 00 00     .word   0x00000fcc
 // DSO: $a:

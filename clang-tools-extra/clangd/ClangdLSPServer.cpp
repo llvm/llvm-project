@@ -57,6 +57,7 @@ void ClangdLSPServer::onInitialize(Ctx C, InitializeParams &Params) {
                  {"triggerCharacters", {"(", ","}},
              }},
             {"definitionProvider", true},
+            {"documentHighlightProvider", true},
             {"renameProvider", true},
             {"executeCommandProvider",
              json::obj{
@@ -233,6 +234,22 @@ void ClangdLSPServer::onSwitchSourceHeader(Ctx C,
   llvm::Optional<Path> Result = Server.switchSourceHeader(Params.uri.file);
   std::string ResultUri;
   C.reply(Result ? URI::fromFile(*Result).uri : "");
+}
+
+void ClangdLSPServer::onDocumentHighlight(Ctx C,
+                                          TextDocumentPositionParams &Params) {
+
+  auto Highlights = Server.findDocumentHighlights(
+      Params.textDocument.uri.file,
+      Position{Params.position.line, Params.position.character});
+
+  if (!Highlights) {
+    C.replyError(ErrorCode::InternalError,
+                 llvm::toString(Highlights.takeError()));
+    return;
+  }
+
+  C.reply(json::ary(Highlights->Value));
 }
 
 ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,

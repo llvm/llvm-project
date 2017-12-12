@@ -32,7 +32,7 @@ int main()
     static_assert(!std::is_copy_assignable<H>::value, "");
     static_assert(!std::is_move_assignable<H>::value, "");
 #if TEST_STD_VER > 14
-    static_assert(!std::is_callable<H(X&)>::value, "");
-    static_assert(!std::is_callable<H(X const&)>::value, "");
+    static_assert(!std::is_invocable<H, X&>::value, "");
+    static_assert(!std::is_invocable<H, X const&>::value, "");
 #endif
 }

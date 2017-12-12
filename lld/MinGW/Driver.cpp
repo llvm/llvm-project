@@ -159,7 +159,9 @@ bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
   if (Args.hasArg(OPT_large_address_aware))
     Add("-largeaddressaware");
 
-  Add(Args.hasArg(OPT_dynamicbase) ? "-dynamicbase" : "-dynamicbase:no");
+  if (Args.getLastArgValue(OPT_m) != "thumb2pe" &&
+      Args.getLastArgValue(OPT_m) != "arm64pe" && !Args.hasArg(OPT_dynamicbase))
+    Add("-dynamicbase:no");
 
   if (Args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, false))
     Add("-opt:ref");

@@ -582,7 +582,7 @@ struct __variant {
 private:
   template <class _Visitor, class... _Values>
   static constexpr void __std_visit_exhaustive_visitor_check() {
-    static_assert(is_callable_v<_Visitor(_Values...)>,
+    static_assert(is_invocable_v<_Visitor, _Values...>,
                   "`std::visit` requires the visitor to be exhaustive.");
   }
 

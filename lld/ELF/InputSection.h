@@ -318,8 +318,10 @@ public:
 
   OutputSection *getParent() const;
 
-  // The offset from beginning of the output sections this section was assigned
-  // to. The writer sets a value.
+  // This variable has two usages. Initially, it represents an index in the
+  // OutputSection's InputSection list, and is used when ordering SHF_LINK_ORDER
+  // sections. After assignAddresses is called, it represents the offset from
+  // the beginning of the output section this section was assigned to.
   uint64_t OutSecOff = 0;
 
   static bool classof(const SectionBase *S);
