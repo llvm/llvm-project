@@ -13,15 +13,15 @@
 ; Function Attrs: norecurse nounwind readnone
 define i32 @foo() #0 {
 entry:
-  ret i32 1
+  ret i32 2
 }
 
 ; Function Attrs: nounwind
-define void @_start() local_unnamed_addr #1 {
+define i32 @_start() local_unnamed_addr #1 {
 entry:
   %0 = load i32 ()*, i32 ()** @indirect_func, align 4
   %call = tail call i32 %0() #2
-  ret void
+  ret i32 0
 }
 
 ; CHECK:      !WASM
@@ -37,14 +37,14 @@ entry:
 ; CHECK-NEXT:         ReturnType:      NORESULT
 ; CHECK-NEXT:         ParamTypes:      
 ; CHECK-NEXT:   - Type:            FUNCTION
-; CHECK-NEXT:     FunctionTypes:   [ 0, 1, 0, 1 ]
+; CHECK-NEXT:     FunctionTypes:   [ 0, 1, 0, 0 ]
 ; CHECK-NEXT:   - Type:            TABLE
 ; CHECK-NEXT:     Tables:          
 ; CHECK-NEXT:       - ElemType:        ANYFUNC
 ; CHECK-NEXT:         Limits:          
 ; CHECK-NEXT:           Flags:           0x00000001
-; CHECK-NEXT:           Initial:         0x00000004
-; CHECK-NEXT:           Maximum:         0x00000004
+; CHECK-NEXT:           Initial:         0x00000003
+; CHECK-NEXT:           Maximum:         0x00000003
 ; CHECK-NEXT:   - Type:            MEMORY
 ; CHECK-NEXT:     Memories:        
 ; CHECK-NEXT:       - Initial:         0x00000002
@@ -72,25 +72,30 @@ entry:
 ; CHECK-NEXT:       - Name:            call_bar_indirect
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           1
-; CHECK:        - Type:            ELEM
+; CHECK-NEXT:   - Type:            ELEM
 ; CHECK-NEXT:     Segments:        
 ; CHECK-NEXT:       - Offset:          
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1
-; CHECK-NEXT:         Functions:       [ 0, 2, 2 ]
+; CHECK-NEXT:         Functions:       [ 0, 2 ]
 ; CHECK-NEXT:   - Type:            CODE
 ; CHECK-NEXT:     Functions:       
-; CHECK:            - Locals:          
-; CHECK:            - Locals:          
-; CHECK:            - Locals:          
-; CHECK:        - Type:            DATA
+; CHECK-NEXT:       - Locals:          
+; CHECK-NEXT:         Body:            41010B
+; CHECK-NEXT:       - Locals:          
+; CHECK-NEXT:         Body:            410028028088808000118080808000001A0B
+; CHECK-NEXT:       - Locals:          
+; CHECK-NEXT:         Body:            41020B
+; CHECK-NEXT:       - Locals:          
+; CHECK-NEXT:         Body:            410028028888808000118080808000001A41000B
+; CHECK-NEXT:   - Type:            DATA
 ; CHECK-NEXT:     Segments:        
 ; CHECK-NEXT:       - SectionOffset:    7
 ; CHECK-NEXT:         MemoryIndex:      0
 ; CHECK-NEXT:         Offset:          
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1024
-; CHECK-NEXT:         Content:         '010000000200000003000000'
+; CHECK-NEXT:         Content:         '010000000200000002000000'
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
 ; CHECK-NEXT:     DataSize:        12

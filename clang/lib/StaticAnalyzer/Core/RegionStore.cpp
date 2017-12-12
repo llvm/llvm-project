@@ -1405,10 +1405,7 @@ SVal RegionStoreManager::getBinding(RegionBindingsConstRef B, Loc L, QualType T)
         T = Ctx.VoidTy;
     }
     assert(!T.isNull() && "Unable to auto-detect binding type!");
-    if (T->isVoidType()) {
-      // When trying to dereference a void pointer, read the first byte.
-      T = Ctx.CharTy;
-    }
+    assert(!T->isVoidType() && "Attempting to dereference a void pointer!");
     MR = GetElementZeroRegion(cast<SubRegion>(MR), T);
   }
 

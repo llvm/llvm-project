@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core -fblocks -fobjc-arc -verify %s
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,alpha.core.StackAddressAsyncEscape -fblocks -fobjc-arc -verify %s
 
 typedef struct dispatch_queue_s *dispatch_queue_t;
 typedef void (^dispatch_block_t)(void);
@@ -7,6 +7,7 @@ typedef long dispatch_once_t;
 void dispatch_once(dispatch_once_t *predicate, dispatch_block_t block);
 typedef long dispatch_time_t;
 void dispatch_after(dispatch_time_t when, dispatch_queue_t queue, dispatch_block_t block);
+void dispatch_barrier_sync(dispatch_queue_t queue, dispatch_block_t block);
 
 extern dispatch_queue_t queue;
 extern dispatch_once_t *predicate;
@@ -172,4 +173,17 @@ void test_no_leaks_on_semaphore_pattern() {
   // Do some other work concurrently with the asynchronous work
   // Wait for the asynchronous work to finish
   dispatch_semaphore_wait(semaphore, 1000);
+}
+
+void test_dispatch_barrier_sync() {
+  int buf[16];
+  for (int n = 0; n < 16; ++n) {
+    int *ptr = &buf[n];
+    // FIXME: Should not warn. The dispatch_barrier_sync() call ensures
+    // that the block does not outlive 'buf'.
+    dispatch_async(queue, ^{ // expected-warning{{Address of stack memory associated with local variable 'buf' is captured by an asynchronously-executed block}}
+      (void)ptr;
+    });
+  }
+  dispatch_barrier_sync(queue, ^{});
 }

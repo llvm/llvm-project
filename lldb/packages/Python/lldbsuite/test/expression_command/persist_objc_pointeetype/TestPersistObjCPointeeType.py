@@ -22,9 +22,6 @@ class PersistObjCPointeeType(TestBase):
         self.line = line_number('main.m', '// break here')
 
     @skipUnlessDarwin
-    @expectedFailureAll(
-        bugnumber='http://llvm.org/pr23504',
-        oslist=['macosx'], compiler='clang', compiler_version=['<', '7.0.0'])
     @skipIf(archs=["i386", "i686"])
     @skipIf(debug_info="gmodules", archs=['arm64', 'armv7', 'armv7k'])  # compile error with gmodules for iOS
     def test_with(self):

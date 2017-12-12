@@ -10,7 +10,7 @@
 
 ; CHECK:      Format: WASM
 ; CHECK:      Relocations [
-; CHECK-NEXT:   Section (6) DATA {
+; CHECK-NEXT:   Section (4) DATA {
 ; CHECK-NEXT:     Relocation {
 ; CHECK-NEXT:       Type: R_WEBASSEMBLY_MEMORY_ADDR_I32 (5)
 ; CHECK-NEXT:       Offset: 0x13

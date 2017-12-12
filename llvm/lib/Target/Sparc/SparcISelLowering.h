@@ -192,10 +192,6 @@ namespace llvm {
 
     SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
 
-    SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
-
-    SDValue LowerUINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
-
     bool ShouldShrinkFPConstant(EVT VT) const override {
       // Do not shrink FP constpool if VT == MVT::f128.
       // (ldd, call _Q_fdtoq) is more expensive than two ldds.

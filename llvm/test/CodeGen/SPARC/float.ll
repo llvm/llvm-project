@@ -3,8 +3,6 @@
 ; RUN: llc -march=sparc -O0 < %s | FileCheck %s -check-prefix=V8-UNOPT
 ; RUN: llc -march=sparc -mattr=v9 < %s | FileCheck %s -check-prefix=V9
 ; RUN: llc -mtriple=sparc64-unknown-linux < %s | FileCheck %s -check-prefix=SPARC64
-; RUN: llc -march=sparc -mcpu=niagara4 < %s  | FileCheck %s -check-prefix=VIS3
-; RUN: llc -march=sparcv9 -mcpu=niagara4 < %s | FileCheck %s -check-prefix=VIS3-64
 
 ; V8-LABEL:     test_neg:
 ; V8:     call get_double
@@ -196,7 +194,7 @@ entry:
 ; V9:          fstoi
 
 ; SPARC64-LABEL:    test_utos_stou
-; SPARC64:     fxtos
+; SPARC64:     fdtos
 ; SPARC64:     fstoi
 
 define void @test_utos_stou(i32 %a, i32* %ptr0, float* %ptr1) {
@@ -242,9 +240,6 @@ entry:
 ; SPARC64-NOT:      fitod
 ; SPARC64:          fdtoi
 
-; VIS3-64-LABEL:  test_utod_dtou
-; VIS3-64:        movxtod 
-
 define void @test_utod_dtou(i32 %a, double %b, i32* %ptr0, double* %ptr1) {
 entry:
   %0 = uitofp i32 %a to double
@@ -253,49 +248,3 @@ entry:
   store i32 %1, i32* %ptr0, align 8
   ret void
 }
-
-; V8-LABEL:    test_ustod
-; V8:          fitod
-
-; VIS3-LABEL:  test_ustod
-; VIS3:        movwtos 
-
-define double @test_ustod(i16 zeroext) {
-  %2 = uitofp i16 %0 to double
-  ret double %2
-}
-
-; V8-LABEL:    test_ustos
-; V8:          fitos
-
-; VIS3-LABEL:  test_ustos
-; VIS3:        movwtos
-
-define float @test_ustos(i16 zeroext) {
-  %2 = uitofp i16 %0 to float 
-  ret float %2
-}
-
-; check for movwtos used for bitcast 
-;
-; VIS3-LABEL:  test_bitcast_utos 
-; VIS3:movwtos  
-
-define float @test_bitcast_utos(i32 ) {
-  %2 = bitcast i32 %0 to float 
-  ret float %2
-}
-
-
-; check for movxtod used for bitcast 
-;
-; VIS3-64-LABEL:  test_bitcast_uxtod 
-; VIS3-64:movxtod  
-
-define double @test_bitcast_uxtod(i64 ) {
-  %2 = bitcast i64 %0 to double 
-  ret double %2
-}
-
-
-

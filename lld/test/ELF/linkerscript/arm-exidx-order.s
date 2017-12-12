@@ -9,7 +9,7 @@
 # CHECK:      Section {
 # CHECK:        Index: 
 # CHECK:        Name: .foo
-# CHECK-NEXT:   Type: SHT_PROGBITS
+# CHECK-NEXT:   Type: SHT_NOBITS
 # CHECK-NEXT:   Flags [
 # CHECK-NEXT:     SHF_ALLOC
 # CHECK-NEXT:   ]
