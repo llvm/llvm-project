@@ -579,3 +579,4 @@ TEST_F(TypeIndexIteratorTest, CallerSym) {
   checkTypeReferences(1, TypeIndex(4), TypeIndex(5), TypeIndex(6));
   checkTypeReferences(2, TypeIndex(7), TypeIndex(8), TypeIndex(9));
 }
+

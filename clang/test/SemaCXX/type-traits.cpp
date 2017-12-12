@@ -2661,3 +2661,11 @@ static_assert(sizeof(CanBeUniqueIfNoPadding) != 16 ||
               has_unique_object_representations<CanBeUniqueIfNoPadding>::value,
               "inherit from std layout");
 
+namespace ErrorType {
+  struct S; //expected-note{{forward declaration of 'ErrorType::S'}}
+
+  struct T {
+        S t; //expected-error{{field has incomplete type 'ErrorType::S'}}
+  };
+  bool b = __has_unique_object_representations(T);
+};

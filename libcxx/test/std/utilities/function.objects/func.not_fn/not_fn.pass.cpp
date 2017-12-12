@@ -438,26 +438,26 @@ void throws_in_constructor_test()
 void call_operator_sfinae_test() {
     { // wrong number of arguments
         using T = decltype(std::not_fn(returns_true));
-        static_assert(std::is_callable<T()>::value, ""); // callable only with no args
-        static_assert(!std::is_callable<T(bool)>::value, "");
+        static_assert(std::is_invocable<T>::value, ""); // callable only with no args
+        static_assert(!std::is_invocable<T, bool>::value, "");
     }
     { // violates const correctness (member function pointer)
         using T = decltype(std::not_fn(&MemFunCallable::return_value_nc));
-        static_assert(std::is_callable<T(MemFunCallable&)>::value, "");
-        static_assert(!std::is_callable<T(const MemFunCallable&)>::value, "");
+        static_assert(std::is_invocable<T, MemFunCallable&>::value, "");
+        static_assert(!std::is_invocable<T, const MemFunCallable&>::value, "");
     }
     { // violates const correctness (call object)
         using Obj = CopyCallable<bool>;
         using NCT = decltype(std::not_fn(Obj{true}));
         using CT = const NCT;
-        static_assert(std::is_callable<NCT()>::value, "");
-        static_assert(!std::is_callable<CT()>::value, "");
+        static_assert(std::is_invocable<NCT>::value, "");
+        static_assert(!std::is_invocable<CT>::value, "");
     }
     { // returns bad type with no operator!
         auto fn = [](auto x) { return x; };
         using T = decltype(std::not_fn(fn));
-        static_assert(std::is_callable<T(bool)>::value, "");
-        static_assert(!std::is_callable<T(std::string)>::value, "");
+        static_assert(std::is_invocable<T, bool>::value, "");
+        static_assert(!std::is_invocable<T, std::string>::value, "");
     }
 }
 

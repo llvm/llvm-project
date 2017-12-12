@@ -21,6 +21,10 @@ def BroadwellModel : SchedMachineModel {
 
   // Based on the LSD (loop-stream detector) queue size and benchmarking data.
   let LoopMicroOpBufferSize = 50;
+
+  // This flag is set to allow the scheduler to assign a default model to 
+  // unrecognized opcodes.
+  let CompleteModel = 0;
 }
 
 let SchedModel = BroadwellModel in {

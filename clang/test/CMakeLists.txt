@@ -131,3 +131,12 @@ add_lit_testsuites(CLANG ${CMAKE_CURRENT_SOURCE_DIR}
 add_custom_target(clang-test)
 add_dependencies(clang-test check-clang)
 set_target_properties(clang-test PROPERTIES FOLDER "Clang tests")
+
+# FIXME: This logic can be removed once all buildbots have moved
+# debuginfo-test from clang/test to llvm/projects or monorepo.
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/debuginfo-tests)
+  message(WARNING "Including debuginfo-tests in clang/test is deprecated.  Move to llvm/projects or use monorepo.")
+  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/debuginfo-tests/CMakeLists.txt)
+    add_subdirectory(debuginfo-tests)
+  endif()
+endif()
