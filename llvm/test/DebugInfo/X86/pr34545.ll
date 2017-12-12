@@ -2,11 +2,11 @@
 
 ; CHECK: %eax = MOV32rm
 ; CHECK: DBG_VALUE %eax
-; CHECK: %eax = SHL32rCL killed %eax
+; CHECK: %eax = SHL32rCL killed renamable %eax
 ; CHECK: DBG_VALUE %eax
 ; CHECK: DBG_VALUE %rsp, 0, !{{[0-9]+}}, !DIExpression(DW_OP_constu, 4, DW_OP_minus)
 ; CHECK: DBG_VALUE %eax
-; CHECK: %eax = SHL32rCL killed %eax
+; CHECK: %eax = SHL32rCL killed renamable %eax
 ; CHECK: DBG_VALUE %eax
 ; CHECK: RETQ %eax
 

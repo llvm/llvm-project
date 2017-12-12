@@ -959,6 +959,16 @@ static Instruction *replaceGEPIdxWithZero(InstCombiner &IC, Value *Ptr,
   return nullptr;
 }
 
+static bool canSimplifyNullStoreOrGEP(StoreInst &SI) {
+  if (SI.getPointerAddressSpace() != 0)
+    return false;
+
+  auto *Ptr = SI.getPointerOperand();
+  if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(Ptr))
+    Ptr = GEPI->getOperand(0);
+  return isa<ConstantPointerNull>(Ptr);
+}
+
 static bool canSimplifyNullLoadOrGEP(LoadInst &LI, Value *Op) {
   if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(Op)) {
     const Value *GEPI0 = GEPI->getOperand(0);
@@ -1329,10 +1339,10 @@ static bool equivalentAddressValues(Value *A, Value *B) {
 /// Converts store (bitcast (load (bitcast (select ...)))) to
 /// store (load (select ...)), where select is minmax:
 /// select ((cmp load V1, load V2), V1, V2).
-bool removeBitcastsFromLoadStoreOnMinMax(InstCombiner &IC, StoreInst &SI) {
+static bool removeBitcastsFromLoadStoreOnMinMax(InstCombiner &IC,
+                                                StoreInst &SI) {
   // bitcast?
-  Value *StoreAddr;
-  if (!match(SI.getPointerOperand(), m_BitCast(m_Value(StoreAddr))))
+  if (!match(SI.getPointerOperand(), m_BitCast(m_Value())))
     return false;
   // load? integer?
   Value *LoadAddr;
@@ -1344,9 +1354,25 @@ bool removeBitcastsFromLoadStoreOnMinMax(InstCombiner &IC, StoreInst &SI) {
   if (!isMinMaxWithLoads(LoadAddr))
     return false;
 
+  if (!all_of(LI->users(), [LI, LoadAddr](User *U) {
+        auto *SI = dyn_cast<StoreInst>(U);
+        return SI && SI->getPointerOperand() != LI &&
+               peekThroughBitcast(SI->getPointerOperand()) != LoadAddr &&
+               !SI->getPointerOperand()->isSwiftError();
+      }))
+    return false;
+
+  IC.Builder.SetInsertPoint(LI);
   LoadInst *NewLI = combineLoadToNewType(
       IC, *LI, LoadAddr->getType()->getPointerElementType());
-  combineStoreToNewValue(IC, SI, NewLI);
+  // Replace all the stores with stores of the newly loaded value.
+  for (auto *UI : LI->users()) {
+    auto *USI = cast<StoreInst>(UI);
+    IC.Builder.SetInsertPoint(USI);
+    combineStoreToNewValue(IC, *USI, NewLI);
+  }
+  IC.replaceInstUsesWith(*LI, UndefValue::get(LI->getType()));
+  IC.eraseInstFromFunction(*LI);
   return true;
 }
 
@@ -1447,7 +1473,8 @@ Instruction *InstCombiner::visitStoreInst(StoreInst &SI) {
   }
 
   // store X, null    -> turns into 'unreachable' in SimplifyCFG
-  if (isa<ConstantPointerNull>(Ptr) && SI.getPointerAddressSpace() == 0) {
+  // store X, GEP(null, Y) -> turns into 'unreachable' in SimplifyCFG
+  if (canSimplifyNullStoreOrGEP(SI)) {
     if (!isa<UndefValue>(Val)) {
       SI.setOperand(0, UndefValue::get(Val->getType()));
       if (Instruction *U = dyn_cast<Instruction>(Val))

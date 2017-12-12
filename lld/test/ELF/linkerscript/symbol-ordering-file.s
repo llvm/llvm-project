@@ -5,7 +5,7 @@
 # RUN: ld.lld %t.o --script %t.script -o %t.out
 # RUN: llvm-objdump -s %t.out| FileCheck %s --check-prefix=BEFORE
 # BEFORE:      Contents of section .foo:
-# BEFORE-NEXT: 1122 
+# BEFORE-NEXT: 1122
 
 # RUN: echo "_foo2" > %t.ord
 # RUN: echo "_foo1" >> %t.ord

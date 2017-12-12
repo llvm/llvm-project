@@ -529,6 +529,9 @@ corresponding internal ``llvm::RegState`` representation:
    * - ``debug-use``
      - ``RegState::Debug``
 
+   * - ``renamable``
+     - ``RegState::Renamable``
+
 .. _subregister-indices:
 
 Subregister Indices

@@ -328,7 +328,7 @@ public:
         std::find(Decls.begin(), Decls.end(), D) == Decls.end()) {
       return true;
     }
-    SourceLocation Begin, End;
+    SourceLocation End;
     const LangOptions &LangOpts = AST.getLangOpts();
     SourceLocation StartOfFileLoc = SourceMgr.getLocForStartOfFile(FID);
     SourceLocation HightlightStartLoc = StartOfFileLoc.getLocWithOffset(Offset);

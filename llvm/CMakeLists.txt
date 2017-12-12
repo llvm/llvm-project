@@ -110,7 +110,7 @@ endif()
 # LLVM_EXTERNAL_${project}_SOURCE_DIR using LLVM_ALL_PROJECTS
 # This allows an easy way of setting up a build directory for llvm and another
 # one for llvm+clang+... using the same sources.
-set(LLVM_ALL_PROJECTS "clang;libcxx;libcxxabi;lldb;compiler-rt;lld;polly")
+set(LLVM_ALL_PROJECTS "clang;libcxx;libcxxabi;lldb;compiler-rt;lld;polly;debuginfo-tests")
 set(LLVM_ENABLE_PROJECTS "" CACHE STRING
 	"Semicolon-separated list of projects to build (${LLVM_ALL_PROJECTS}), or \"all\".")
 if( LLVM_ENABLE_PROJECTS STREQUAL "all" )

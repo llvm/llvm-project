@@ -30,7 +30,7 @@ entry:
 }
 
 ; CHECK:        - Type:            EXPORT
-; CHECK-NEXT:     Exports:         
+; CHECK-NEXT:     Exports:
 ; CHECK-NEXT:       - Name:            memory
 ; CHECK-NEXT:         Kind:            MEMORY
 ; CHECK-NEXT:         Index:           0

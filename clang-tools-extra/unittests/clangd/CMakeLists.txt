@@ -16,6 +16,7 @@ add_extra_unittest(ClangdTests
   JSONExprTests.cpp
   TestFS.cpp
   TraceTests.cpp
+  SymbolCollectorTests.cpp
   )
 
 target_link_libraries(ClangdTests

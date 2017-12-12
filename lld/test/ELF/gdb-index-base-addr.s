@@ -11,7 +11,7 @@
 .text
 .globl foo
 .type foo,@function
-foo: 
+foo:
 .Lfunc_begin0:
   nop
 .Ltmp0:
