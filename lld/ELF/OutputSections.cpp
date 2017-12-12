@@ -273,24 +273,10 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *Buf) {
       writeInt(Buf + Data->Offset, Data->Expression().getValue(), Data->Size);
 }
 
-static bool compareByFilePosition(InputSection *A, InputSection *B) {
-  // Synthetic doesn't have link order dependecy, stable_sort will keep it last
-  if (A->kind() == InputSectionBase::Synthetic ||
-      B->kind() == InputSectionBase::Synthetic)
-    return false;
-  InputSection *LA = A->getLinkOrderDep();
-  InputSection *LB = B->getLinkOrderDep();
-  OutputSection *AOut = LA->getParent();
-  OutputSection *BOut = LB->getParent();
-  if (AOut != BOut)
-    return AOut->SectionIndex < BOut->SectionIndex;
-  return LA->OutSecOff < LB->OutSecOff;
-}
-
 template <class ELFT>
 static void finalizeShtGroup(OutputSection *OS,
-                             ArrayRef<InputSection *> Sections) {
-  assert(Config->Relocatable && Sections.size() == 1);
+                             InputSection *Section) {
+  assert(Config->Relocatable);
 
   // sh_link field for SHT_GROUP sections should contain the section index of
   // the symbol table.
@@ -298,49 +284,41 @@ static void finalizeShtGroup(OutputSection *OS,
 
   // sh_info then contain index of an entry in symbol table section which
   // provides signature of the section group.
-  ObjFile<ELFT> *Obj = Sections[0]->getFile<ELFT>();
+  ObjFile<ELFT> *Obj = Section->getFile<ELFT>();
   ArrayRef<Symbol *> Symbols = Obj->getSymbols();
-  OS->Info = InX::SymTab->getSymbolIndex(Symbols[Sections[0]->Info]);
+  OS->Info = InX::SymTab->getSymbolIndex(Symbols[Section->Info]);
 }
 
 template <class ELFT> void OutputSection::finalize() {
-  // Link order may be distributed across several InputSectionDescriptions
-  // but sort must consider them all at once.
-  std::vector<InputSection **> ScriptSections;
-  std::vector<InputSection *> Sections;
+  InputSection *First = nullptr;
   for (BaseCommand *Base : SectionCommands) {
     if (auto *ISD = dyn_cast<InputSectionDescription>(Base)) {
-      for (InputSection *&IS : ISD->Sections) {
-        ScriptSections.push_back(&IS);
-        Sections.push_back(IS);
-      }
+      if (ISD->Sections.empty())
+        continue;
+      if (First == nullptr)
+        First = ISD->Sections.front();
     }
     if (isa<ByteCommand>(Base) && Type == SHT_NOBITS)
       Type = SHT_PROGBITS;
   }
 
   if (Flags & SHF_LINK_ORDER) {
-    std::stable_sort(Sections.begin(), Sections.end(), compareByFilePosition);
-    for (int I = 0, N = Sections.size(); I < N; ++I)
-      *ScriptSections[I] = Sections[I];
-
     // We must preserve the link order dependency of sections with the
     // SHF_LINK_ORDER flag. The dependency is indicated by the sh_link field. We
     // need to translate the InputSection sh_link to the OutputSection sh_link,
     // all InputSections in the OutputSection have the same dependency.
-    if (auto *D = Sections.front()->getLinkOrderDep())
+    if (auto *D = First->getLinkOrderDep())
       Link = D->getParent()->SectionIndex;
   }
 
   if (Type == SHT_GROUP) {
-    finalizeShtGroup<ELFT>(this, Sections);
+    finalizeShtGroup<ELFT>(this, First);
     return;
   }
 
   if (!Config->CopyRelocs || (Type != SHT_RELA && Type != SHT_REL))
     return;
 
-  InputSection *First = Sections[0];
   if (isa<SyntheticSection>(First))
     return;
 
