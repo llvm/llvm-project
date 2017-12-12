@@ -45,7 +45,7 @@
 # CHECK-NEXT:   SectionData (
 # CHECK-NEXT:     |AAA.CCC.BBB.|
 # CHECK-NEXT:   )
-# CHECK-NEXT: } 
+# CHECK-NEXT: }
 
 .section .strings,"MS",@progbits,1,unique,10
 .Linfo_string0:

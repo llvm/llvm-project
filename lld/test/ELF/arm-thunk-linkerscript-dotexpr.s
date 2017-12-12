@@ -6,7 +6,7 @@
 // RUN: ld.lld --script %t.script %t -o %t2 2>&1
 // RUN: llvm-objdump -d %t2 -start-address=148 -stop-address=188 -triple=thumbv7a-linux-gnueabihf | FileCheck -check-prefix=CHECK1 %s
 // RUN: llvm-objdump -d %t2 -start-address=33554620 -stop-address=33554654 -triple=thumbv7a-linux-gnueabihf | FileCheck -check-prefix=CHECK2 %s
-// REQUIRES: arm        
+// REQUIRES: arm
 // Test that range extension thunks can handle location expressions within
 // a Section Description
  .syntax unified

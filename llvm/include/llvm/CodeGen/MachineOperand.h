@@ -86,24 +86,30 @@ private:
   /// before MachineInstr::tieOperands().
   unsigned char TiedTo : 4;
 
-  /// IsDef/IsImp/IsKill/IsDead flags - These are only valid for MO_Register
-  /// operands.
-
   /// IsDef - True if this is a def, false if this is a use of the register.
+  /// This is only valid on register operands.
   ///
   bool IsDef : 1;
 
   /// IsImp - True if this is an implicit def or use, false if it is explicit.
+  /// This is only valid on register opderands.
   ///
   bool IsImp : 1;
 
-  /// IsKill - True if this instruction is the last use of the register on this
-  /// path through the function.  This is only valid on uses of registers.
-  bool IsKill : 1;
+  /// IsDeadOrKill
+  /// For uses: IsKill - True if this instruction is the last use of the
+  /// register on this path through the function.
+  /// For defs: IsDead - True if this register is never used by a subsequent
+  /// instruction.
+  /// This is only valid on register operands.
+  bool IsDeadOrKill : 1;
 
-  /// IsDead - True if this register is never used by a subsequent instruction.
-  /// This is only valid on definitions of registers.
-  bool IsDead : 1;
+  /// IsRenamable - True if this register may be renamed, i.e. it does not
+  /// generate a value that is somehow read in a way that is not represented by
+  /// the Machine IR (e.g. to meet an ABI or ISA requirement).  This is only
+  /// valid on physical register operands.  Virtual registers are assumed to
+  /// always be renamable regardless of the value of this field.
+  bool IsRenamable : 1;
 
   /// IsUndef - True if this register operand reads an "undef" value, i.e. the
   /// read value doesn't matter.  This flag can be set on both use and def
@@ -333,18 +339,20 @@ public:
 
   bool isDead() const {
     assert(isReg() && "Wrong MachineOperand accessor");
-    return IsDead;
+    return IsDeadOrKill & IsDef;
   }
 
   bool isKill() const {
     assert(isReg() && "Wrong MachineOperand accessor");
-    return IsKill;
+    return IsDeadOrKill & !IsDef;
   }
 
   bool isUndef() const {
     assert(isReg() && "Wrong MachineOperand accessor");
     return IsUndef;
   }
+
+  bool isRenamable() const;
 
   bool isInternalRead() const {
     assert(isReg() && "Wrong MachineOperand accessor");
@@ -418,18 +426,24 @@ public:
   void setIsKill(bool Val = true) {
     assert(isReg() && !IsDef && "Wrong MachineOperand mutator");
     assert((!Val || !isDebug()) && "Marking a debug operation as kill");
-    IsKill = Val;
+    IsDeadOrKill = Val;
   }
 
   void setIsDead(bool Val = true) {
     assert(isReg() && IsDef && "Wrong MachineOperand mutator");
-    IsDead = Val;
+    IsDeadOrKill = Val;
   }
 
   void setIsUndef(bool Val = true) {
     assert(isReg() && "Wrong MachineOperand mutator");
     IsUndef = Val;
   }
+
+  void setIsRenamable(bool Val = true);
+
+  /// Set IsRenamable to true if there are no extra register allocation
+  /// requirements placed on this operand by the parent instruction's opcode.
+  void setIsRenamableIfNoExtraRegAllocReq();
 
   void setIsInternalRead(bool Val = true) {
     assert(isReg() && "Wrong MachineOperand mutator");
@@ -675,14 +689,15 @@ public:
                                   bool isUndef = false,
                                   bool isEarlyClobber = false,
                                   unsigned SubReg = 0, bool isDebug = false,
-                                  bool isInternalRead = false) {
+                                  bool isInternalRead = false,
+                                  bool isRenamable = false) {
     assert(!(isDead && !isDef) && "Dead flag on non-def");
     assert(!(isKill && isDef) && "Kill flag on def");
     MachineOperand Op(MachineOperand::MO_Register);
     Op.IsDef = isDef;
     Op.IsImp = isImp;
-    Op.IsKill = isKill;
-    Op.IsDead = isDead;
+    Op.IsDeadOrKill = isKill | isDead;
+    Op.IsRenamable = isRenamable;
     Op.IsUndef = isUndef;
     Op.IsInternalRead = isInternalRead;
     Op.IsEarlyClobber = isEarlyClobber;

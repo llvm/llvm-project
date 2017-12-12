@@ -22,7 +22,7 @@ void test_ds(){
 
 /// ========= In the worker function ========= ///
 
-// CK1: define internal void @__omp_offloading_{{.*}}test_ds{{.*}}worker(){{.*}}{
+// CK1: define internal void @__omp_offloading_{{.*}}test_ds{{.*}}worker() [[ATTR1:#.*]] {
 // CK1: [[SHAREDARGS:%.+]] = alloca i8**
 // CK1: call i1 @__kmpc_kernel_parallel(i8** %work_fn, i8*** [[SHAREDARGS]])
 // CK1: [[SHARGSTMP:%.+]] = load i8**, i8*** [[SHAREDARGS]]
@@ -30,7 +30,7 @@ void test_ds(){
 
 /// ========= In the kernel function ========= ///
 
-// CK1: {{.*}}define void @__omp_offloading{{.*}}test_ds{{.*}}()
+// CK1: {{.*}}define void @__omp_offloading{{.*}}test_ds{{.*}}() [[ATTR2:#.*]] {
 // CK1: [[SHAREDARGS1:%.+]] = alloca i8**
 // CK1: call void @__kmpc_kernel_prepare_parallel({{.*}}, i8*** [[SHAREDARGS1]], i32 1)
 // CK1: [[SHARGSTMP1:%.+]] = load i8**, i8*** [[SHAREDARGS1]]
@@ -40,7 +40,7 @@ void test_ds(){
 
 /// ========= In the data sharing wrapper function ========= ///
 
-// CK1: {{.*}}define internal void @__omp_outlined___wrapper({{.*}}i8**){{.*}}{
+// CK1: {{.*}}define internal void @__omp_outlined___wrapper({{.*}}i8**) [[ATTR1]] {
 // CK1: [[SHAREDARGS2:%.+]] = alloca i8**
 // CK1: store i8** %2, i8*** [[SHAREDARGS2]]
 // CK1: [[SHARGSTMP3:%.+]] = load i8**, i8*** [[SHAREDARGS2]]
@@ -48,5 +48,10 @@ void test_ds(){
 // CK1: [[SHARGSTMP5:%.+]] = bitcast i8** [[SHARGSTMP4]] to i32**
 // CK1: [[SHARGSTMP6:%.+]] = load i32*, i32** [[SHARGSTMP5]]
 // CK1: call void @__omp_outlined__({{.*}}, i32* [[SHARGSTMP6]])
+
+/// ========= Attributes ========= ///
+
+// CK1-NOT: attributes [[ATTR1]] = { {{.*}}"has-nvptx-shared-depot"{{.*}} }
+// CK1: attributes [[ATTR2]] = { {{.*}}"has-nvptx-shared-depot"{{.*}} }
 
 #endif

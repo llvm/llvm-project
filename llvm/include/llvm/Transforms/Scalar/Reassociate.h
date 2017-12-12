@@ -72,6 +72,13 @@ class ReassociatePass : public PassInfoMixin<ReassociatePass> {
   DenseMap<BasicBlock *, unsigned> RankMap;
   DenseMap<AssertingVH<Value>, unsigned> ValueRankMap;
   SetVector<AssertingVH<Instruction>> RedoInsts;
+
+  // Arbitrary, but prevents quadratic behavior.
+  static const unsigned GlobalReassociateLimit = 10;
+  static const unsigned NumBinaryOps =
+      Instruction::BinaryOpsEnd - Instruction::BinaryOpsBegin;
+  DenseMap<std::pair<Value *, Value *>, unsigned> PairMap[NumBinaryOps];
+
   bool MadeChange;
 
 public:
@@ -105,6 +112,7 @@ private:
                                  SetVector<AssertingVH<Instruction>> &Insts);
   void OptimizeInst(Instruction *I);
   Instruction *canonicalizeNegConstExpr(Instruction *I);
+  void BuildPairMap(ReversePostOrderTraversal<Function *> &RPOT);
 };
 
 } // end namespace llvm

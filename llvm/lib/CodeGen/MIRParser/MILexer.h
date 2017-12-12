@@ -60,6 +60,7 @@ struct MIToken {
     kw_internal,
     kw_early_clobber,
     kw_debug_use,
+    kw_renamable,
     kw_tied_def,
     kw_frame_setup,
     kw_debug_location,
@@ -166,7 +167,8 @@ public:
     return Kind == kw_implicit || Kind == kw_implicit_define ||
            Kind == kw_def || Kind == kw_dead || Kind == kw_killed ||
            Kind == kw_undef || Kind == kw_internal ||
-           Kind == kw_early_clobber || Kind == kw_debug_use;
+           Kind == kw_early_clobber || Kind == kw_debug_use ||
+           Kind == kw_renamable;
   }
 
   bool isMemoryOperandFlag() const {

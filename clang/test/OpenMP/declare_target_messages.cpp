@@ -19,6 +19,10 @@ void f();
 
 void c(); // expected-warning {{declaration is not declared in any declare target region}}
 
+void func() {} // expected-note {{'func' defined here}}
+
+#pragma omp declare target link(func) // expected-error {{function name is not allowed in 'link' clause}}
+
 extern int b;
 
 struct NonT {

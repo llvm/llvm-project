@@ -286,8 +286,8 @@ define <2 x float> @test10_reassoc(<2 x float> %a, <2 x float> %b, <2 x float> %
 
 define <2 x double> @test11(<2 x double> %x, <2 x double> %y) {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[FACTOR:%.*]] = fmul fast <2 x double> [[X:%.*]], <double 2.000000e+00, double 2.000000e+00>
-; CHECK-NEXT:    [[REASS_MUL:%.*]] = fmul fast <2 x double> [[FACTOR]], [[Y:%.*]]
+; CHECK-NEXT:    [[FACTOR:%.*]] = fmul fast <2 x double> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[REASS_MUL:%.*]] = fmul fast <2 x double> [[FACTOR]], <double 2.000000e+00, double 2.000000e+00>
 ; CHECK-NEXT:    ret <2 x double> [[REASS_MUL]]
 ;
   %1 = fmul fast <2 x double> %x, %y

@@ -90,6 +90,7 @@ void MachineOperand::setIsDef(bool Val) {
   assert((!Val || !isDebug()) && "Marking a debug operation as def");
   if (IsDef == Val)
     return;
+  assert(!IsDeadOrKill && "Changing def/use with dead/kill set not supported");
   // MRI may keep uses and defs in different list positions.
   if (MachineFunction *MF = getMFIfAvailable(*this)) {
     MachineRegisterInfo &MRI = MF->getRegInfo();
@@ -99,6 +100,34 @@ void MachineOperand::setIsDef(bool Val) {
     return;
   }
   IsDef = Val;
+}
+
+bool MachineOperand::isRenamable() const {
+  assert(isReg() && "Wrong MachineOperand accessor");
+  assert(TargetRegisterInfo::isPhysicalRegister(getReg()) &&
+         "isRenamable should only be checked on physical registers");
+  return IsRenamable;
+}
+
+void MachineOperand::setIsRenamable(bool Val) {
+  assert(isReg() && "Wrong MachineOperand accessor");
+  assert(TargetRegisterInfo::isPhysicalRegister(getReg()) &&
+         "setIsRenamable should only be called on physical registers");
+  if (const MachineInstr *MI = getParent())
+    if ((isDef() && MI->hasExtraDefRegAllocReq()) ||
+        (isUse() && MI->hasExtraSrcRegAllocReq()))
+      assert(!Val && "isRenamable should be false for "
+                     "hasExtraDefRegAllocReq/hasExtraSrcRegAllocReq opcodes");
+  IsRenamable = Val;
+}
+
+void MachineOperand::setIsRenamableIfNoExtraRegAllocReq() {
+  if (const MachineInstr *MI = getParent())
+    if ((isDef() && MI->hasExtraDefRegAllocReq()) ||
+        (isUse() && MI->hasExtraSrcRegAllocReq()))
+      return;
+
+  setIsRenamable(true);
 }
 
 // If this operand is currently a register operand, and if this is in a
@@ -194,13 +223,15 @@ void MachineOperand::ChangeToRegister(unsigned Reg, bool isDef, bool isImp,
     RegInfo->removeRegOperandFromUseList(this);
 
   // Change this to a register and set the reg#.
+  assert(!(isDead && !isDef) && "Dead flag on non-def");
+  assert(!(isKill && isDef) && "Kill flag on def");
   OpKind = MO_Register;
   SmallContents.RegNo = Reg;
   SubReg_TargetFlags = 0;
   IsDef = isDef;
   IsImp = isImp;
-  IsKill = isKill;
-  IsDead = isDead;
+  IsDeadOrKill = isKill | isDead;
+  IsRenamable = false;
   IsUndef = isUndef;
   IsInternalRead = false;
   IsEarlyClobber = false;
@@ -389,6 +420,8 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
       OS << "early-clobber ";
     if (isDebug())
       OS << "debug-use ";
+    if (TargetRegisterInfo::isPhysicalRegister(getReg()) && isRenamable())
+      OS << "renamable ";
     OS << printReg(Reg, TRI);
     // Print the sub register.
     if (unsigned SubReg = getSubReg()) {

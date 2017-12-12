@@ -71,7 +71,7 @@
     defined(__ppc__) || defined(__ppc64__) ||                                  \
     (!defined(__APPLE__) && defined(__arm__)) ||                               \
     (defined(__arm64__) || defined(__aarch64__)) ||                            \
-    (defined(__APPLE__) && defined(__mips__))
+    defined(__mips__)
 #define _LIBUNWIND_BUILD_ZERO_COST_APIS
 #endif
 

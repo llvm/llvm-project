@@ -134,7 +134,7 @@ _start:
 // DISASM: $a:
 // DISASM-NEXT:    11030:       04 c0 9f e5     ldr     r12, [pc, #4]
 // DISASM-NEXT:    11034:       0f c0 8c e0     add     r12, r12, pc
-// 11034 + 8 + fc8 = 0x12004        
+// 11034 + 8 + fc8 = 0x12004
 // DISASM-NEXT:    11038:       00 f0 9c e5     ldr     pc, [r12]
 // DISASM: $d:
 // DISASM-NEXT:    1103c:       c8 0f 00 00     .word   0x00000fc8

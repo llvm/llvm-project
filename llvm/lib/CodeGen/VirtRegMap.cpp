@@ -530,6 +530,7 @@ void VirtRegRewriter::rewrite() {
         // Rewrite. Note we could have used MachineOperand::substPhysReg(), but
         // we need the inlining here.
         MO.setReg(PhysReg);
+        MO.setIsRenamableIfNoExtraRegAllocReq();
       }
 
       // Add any missing super-register kills after rewriting the whole
