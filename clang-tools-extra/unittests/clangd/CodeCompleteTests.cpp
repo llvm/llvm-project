@@ -231,8 +231,9 @@ void TestGlobalScopeCompletion(clangd::CodeCompleteOptions Opts) {
   // A macro.
   EXPECT_IFF(Opts.IncludeMacros, Results.items, Has("MACRO"));
   // Local items. Must be present always.
-  EXPECT_THAT(Results.items, AllOf(Has("local_var"), Has("LocalClass"),
-                             Contains(Kind(CompletionItemKind::Snippet))));
+  EXPECT_THAT(Results.items,
+              AllOf(Has("local_var"), Has("LocalClass"),
+                    Contains(Kind(CompletionItemKind::Snippet))));
   // Check documentation.
   EXPECT_IFF(Opts.IncludeBriefComments, Results.items,
              Contains(IsDocumented()));

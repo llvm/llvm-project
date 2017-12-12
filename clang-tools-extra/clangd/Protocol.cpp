@@ -359,5 +359,12 @@ bool fromJSON(const json::Expr &Params, RenameParams &R) {
          O.map("position", R.position) && O.map("newName", R.newName);
 }
 
+json::Expr toJSON(const DocumentHighlight &DH) {
+  return json::obj{
+      {"range", toJSON(DH.range)},
+      {"kind", static_cast<int>(DH.kind)},
+  };
+}
+
 } // namespace clangd
 } // namespace clang

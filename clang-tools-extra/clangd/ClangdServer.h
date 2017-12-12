@@ -210,8 +210,7 @@ public:
   ClangdServer(GlobalCompilationDatabase &CDB,
                DiagnosticsConsumer &DiagConsumer,
                FileSystemProvider &FSProvider, unsigned AsyncThreadsCount,
-               bool StorePreamblesInMemory,
-               clangd::Logger &Logger,
+               bool StorePreamblesInMemory, clangd::Logger &Logger,
                llvm::Optional<StringRef> ResourceDir = llvm::None);
 
   /// Set the root path of the workspace.
@@ -285,6 +284,10 @@ public:
   /// Helper function that returns a path to the corresponding source file when
   /// given a header file and vice versa.
   llvm::Optional<Path> switchSourceHeader(PathRef Path);
+
+  /// Get document highlights for a given position.
+  llvm::Expected<Tagged<std::vector<DocumentHighlight>>>
+  findDocumentHighlights(PathRef File, Position Pos);
 
   /// Run formatting for \p Rng inside \p File.
   std::vector<tooling::Replacement> formatRange(PathRef File, Range Rng);

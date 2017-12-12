@@ -69,6 +69,7 @@ private:
   void onSignatureHelp(Ctx C, TextDocumentPositionParams &Params) override;
   void onGoToDefinition(Ctx C, TextDocumentPositionParams &Params) override;
   void onSwitchSourceHeader(Ctx C, TextDocumentIdentifier &Params) override;
+  void onDocumentHighlight(Ctx C, TextDocumentPositionParams &Params) override;
   void onFileEvent(Ctx C, DidChangeWatchedFilesParams &Params) override;
   void onCommand(Ctx C, ExecuteCommandParams &Params) override;
   void onRename(Ctx C, RenameParams &Parames) override;
