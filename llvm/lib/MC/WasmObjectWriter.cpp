@@ -270,10 +270,9 @@ private:
   }
 
   void writeTypeSection(ArrayRef<WasmFunctionType> FunctionTypes);
-  void writeImportSection(ArrayRef<WasmImport> Imports);
+  void writeImportSection(ArrayRef<WasmImport> Imports, uint32_t DataSize,
+                          uint32_t NumElements);
   void writeFunctionSection(ArrayRef<WasmFunction> Functions);
-  void writeTableSection(uint32_t NumElements);
-  void writeMemorySection(uint32_t DataSize);
   void writeGlobalSection();
   void writeExportSection(ArrayRef<WasmExport> Exports);
   void writeElemSection(ArrayRef<uint32_t> TableElems);
@@ -661,9 +660,13 @@ void WasmObjectWriter::writeTypeSection(
   endSection(Section);
 }
 
-void WasmObjectWriter::writeImportSection(ArrayRef<WasmImport> Imports) {
+void WasmObjectWriter::writeImportSection(ArrayRef<WasmImport> Imports,
+                                          uint32_t DataSize,
+                                          uint32_t NumElements) {
   if (Imports.empty())
     return;
+
+  uint32_t NumPages = (DataSize + wasm::WasmPageSize - 1) / wasm::WasmPageSize;
 
   SectionBookkeeping Section;
   startSection(Section, wasm::WASM_SEC_IMPORT);
@@ -683,6 +686,15 @@ void WasmObjectWriter::writeImportSection(ArrayRef<WasmImport> Imports) {
       encodeSLEB128(int32_t(Import.Type), getStream());
       encodeULEB128(int32_t(Import.IsMutable), getStream());
       break;
+    case wasm::WASM_EXTERNAL_MEMORY:
+      encodeULEB128(0, getStream()); // flags
+      encodeULEB128(NumPages, getStream()); // initial
+      break;
+    case wasm::WASM_EXTERNAL_TABLE:
+      encodeSLEB128(int32_t(Import.Type), getStream());
+      encodeULEB128(0, getStream()); // flags
+      encodeULEB128(NumElements, getStream()); // initial
+      break;
     default:
       llvm_unreachable("unsupported import kind");
     }
@@ -701,39 +713,6 @@ void WasmObjectWriter::writeFunctionSection(ArrayRef<WasmFunction> Functions) {
   encodeULEB128(Functions.size(), getStream());
   for (const WasmFunction &Func : Functions)
     encodeULEB128(Func.Type, getStream());
-
-  endSection(Section);
-}
-
-void WasmObjectWriter::writeTableSection(uint32_t NumElements) {
-  // For now, always emit the table section, since indirect calls are not
-  // valid without it. In the future, we could perhaps be more clever and omit
-  // it if there are no indirect calls.
-
-  SectionBookkeeping Section;
-  startSection(Section, wasm::WASM_SEC_TABLE);
-
-  encodeULEB128(1, getStream());                       // The number of tables.
-                                                       // Fixed to 1 for now.
-  encodeSLEB128(wasm::WASM_TYPE_ANYFUNC, getStream()); // Type of table
-  encodeULEB128(0, getStream());                       // flags
-  encodeULEB128(NumElements, getStream());             // initial
-
-  endSection(Section);
-}
-
-void WasmObjectWriter::writeMemorySection(uint32_t DataSize) {
-  // For now, always emit the memory section, since loads and stores are not
-  // valid without it. In the future, we could perhaps be more clever and omit
-  // it if there are no loads or stores.
-  SectionBookkeeping Section;
-  uint32_t NumPages = (DataSize + wasm::WasmPageSize - 1) / wasm::WasmPageSize;
-
-  startSection(Section, wasm::WASM_SEC_MEMORY);
-  encodeULEB128(1, getStream()); // number of memory spaces
-
-  encodeULEB128(0, getStream()); // flags
-  encodeULEB128(NumPages, getStream()); // initial
 
   endSection(Section);
 }
@@ -1085,6 +1064,29 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
     }
   }
 
+  // For now, always emit the memory import, since loads and stores are not
+  // valid without it. In the future, we could perhaps be more clever and omit
+  // it if there are no loads or stores.
+  MCSymbolWasm *MemorySym =
+      cast<MCSymbolWasm>(Ctx.getOrCreateSymbol("__linear_memory"));
+  WasmImport MemImport;
+  MemImport.ModuleName = MemorySym->getModuleName();
+  MemImport.FieldName = MemorySym->getName();
+  MemImport.Kind = wasm::WASM_EXTERNAL_MEMORY;
+  Imports.push_back(MemImport);
+
+  // For now, always emit the table section, since indirect calls are not
+  // valid without it. In the future, we could perhaps be more clever and omit
+  // it if there are no indirect calls.
+  MCSymbolWasm *TableSym =
+      cast<MCSymbolWasm>(Ctx.getOrCreateSymbol("__indirect_function_table"));
+  WasmImport TableImport;
+  TableImport.ModuleName = TableSym->getModuleName();
+  TableImport.FieldName = TableSym->getName();
+  TableImport.Kind = wasm::WASM_EXTERNAL_TABLE;
+  TableImport.Type = wasm::WASM_TYPE_ANYFUNC;
+  Imports.push_back(TableImport);
+
   // Populate FunctionTypeIndices and Imports.
   for (const MCSymbol &S : Asm.symbols()) {
     const auto &WS = static_cast<const MCSymbolWasm &>(S);
@@ -1295,10 +1297,10 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   writeHeader(Asm);
 
   writeTypeSection(FunctionTypes);
-  writeImportSection(Imports);
+  writeImportSection(Imports, DataSize, TableElems.size());
   writeFunctionSection(Functions);
-  writeTableSection(TableElems.size());
-  writeMemorySection(DataSize);
+  // Skip the "table" section; we import the table instead.
+  // Skip the "memory" section; we import the memory instead.
   writeGlobalSection();
   writeExportSection(Exports);
   // TODO: Start Section

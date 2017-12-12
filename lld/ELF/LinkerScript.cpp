@@ -87,7 +87,7 @@ OutputSection *LinkerScript::createOutputSection(StringRef Name,
     // There was a forward reference.
     Sec = SecRef;
   } else {
-    Sec = make<OutputSection>(Name, SHT_PROGBITS, 0);
+    Sec = make<OutputSection>(Name, SHT_NOBITS, 0);
     if (!SecRef)
       SecRef = Sec;
   }

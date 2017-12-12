@@ -292,6 +292,7 @@ template <class ELFT> class SharedFile : public ELFFileBase<ELFT> {
   const Elf_Shdr *VerdefSec = nullptr;
 
 public:
+  std::vector<const Elf_Verdef *> Verdefs;
   std::string SoName;
 
   llvm::ArrayRef<StringRef> getUndefinedSymbols() { return Undefs; }

@@ -177,8 +177,11 @@ class CoverageExporterJson {
                                                           SourceFiles, Options);
     renderFiles(SourceFiles, FileReports);
 
-    emitDictKey("functions");
-    renderFunctions(Coverage.getCoveredFunctions());
+    // Skip functions-level information for summary-only export mode.
+    if (!Options.ExportSummaryOnly) {
+      emitDictKey("functions");
+      renderFunctions(Coverage.getCoveredFunctions());
+    }
 
     emitDictKey("totals");
     renderSummary(Totals);
@@ -254,27 +257,31 @@ class CoverageExporterJson {
     emitDictStart();
 
     emitDictElement("filename", FileCoverage.getFilename());
-    emitDictKey("segments");
 
-    // Start List of Segments.
-    emitArrayStart();
+    // Skip segments and expansions for summary-only export mode.
+    if (!Options.ExportSummaryOnly) {
+      emitDictKey("segments");
 
-    for (const auto &Segment : FileCoverage)
-      renderSegment(Segment);
+      // Start List of Segments.
+      emitArrayStart();
 
-    // End List of Segments.
-    emitArrayEnd();
+      for (const auto &Segment : FileCoverage)
+        renderSegment(Segment);
 
-    emitDictKey("expansions");
+      // End List of Segments.
+      emitArrayEnd();
 
-    // Start List of Expansions.
-    emitArrayStart();
+      emitDictKey("expansions");
 
-    for (const auto &Expansion : FileCoverage.getExpansions())
-      renderExpansion(Expansion);
+      // Start List of Expansions.
+      emitArrayStart();
 
-    // End List of Expansions.
-    emitArrayEnd();
+      for (const auto &Expansion : FileCoverage.getExpansions())
+        renderExpansion(Expansion);
+
+      // End List of Expansions.
+      emitArrayEnd();
+    }
 
     emitDictKey("summary");
     renderSummary(FileReport);
