@@ -15,6 +15,10 @@ str_CU_5:
         .asciz "V5_compile_unit"
 str_TU_4:
         .asciz "V4_type_unit"
+str_LT_5a:
+        .asciz "Directory5a"
+str_LT_5b:
+        .asciz "Directory5b"
 
         .section .debug_str.dwo,"MS",@progbits,1
 dwo_TU_5:
@@ -227,11 +231,11 @@ LH_5_params:
         # Directory table format
         .byte   1               # One element per directory entry
         .byte   1               # DW_LNCT_path
-        .byte   0x08            # DW_FORM_string
+        .byte   0x0e            # DW_FORM_strp (-> .debug_str)
         # Directory table entries
         .byte   2               # Two directories
-        .asciz "Directory5a"
-        .asciz "Directory5b"
+        .long   str_LT_5a
+        .long   str_LT_5b
         # File table format
         .byte   4               # Four elements per file entry
         .byte   1               # DW_LNCT_path

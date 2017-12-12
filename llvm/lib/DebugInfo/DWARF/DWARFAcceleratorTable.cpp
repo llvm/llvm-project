@@ -22,12 +22,13 @@
 
 using namespace llvm;
 
-bool DWARFAcceleratorTable::extract() {
+llvm::Error DWARFAcceleratorTable::extract() {
   uint32_t Offset = 0;
 
   // Check that we can at least read the header.
   if (!AccelSection.isValidOffset(offsetof(Header, HeaderDataLength)+4))
-    return false;
+    return make_error<StringError>("Section too small: cannot read header.",
+                                   inconvertibleErrorCode());
 
   Hdr.Magic = AccelSection.getU32(&Offset);
   Hdr.Version = AccelSection.getU16(&Offset);
@@ -38,9 +39,13 @@ bool DWARFAcceleratorTable::extract() {
 
   // Check that we can read all the hashes and offsets from the
   // section (see SourceLevelDebugging.rst for the structure of the index).
+  // We need to substract one because we're checking for an *offset* which is
+  // equal to the size for an empty table and hence pointer after the section.
   if (!AccelSection.isValidOffset(sizeof(Hdr) + Hdr.HeaderDataLength +
-                                  Hdr.NumBuckets*4 + Hdr.NumHashes*8))
-    return false;
+                                  Hdr.NumBuckets * 4 + Hdr.NumHashes * 8 - 1))
+    return make_error<StringError>(
+        "Section too small: cannot read buckets and hashes.",
+        inconvertibleErrorCode());
 
   HdrData.DIEOffsetBase = AccelSection.getU32(&Offset);
   uint32_t NumAtoms = AccelSection.getU32(&Offset);
@@ -52,7 +57,7 @@ bool DWARFAcceleratorTable::extract() {
   }
 
   IsValid = true;
-  return true;
+  return Error::success();
 }
 
 uint32_t DWARFAcceleratorTable::getNumBuckets() { return Hdr.NumBuckets; }
@@ -90,10 +95,11 @@ std::pair<uint32_t, dwarf::Tag>
 DWARFAcceleratorTable::readAtoms(uint32_t &HashDataOffset) {
   uint32_t DieOffset = dwarf::DW_INVALID_OFFSET;
   dwarf::Tag DieTag = dwarf::DW_TAG_null;
+  DWARFFormParams FormParams = {Hdr.Version, 0, dwarf::DwarfFormat::DWARF32};
 
   for (auto Atom : getAtomsDesc()) {
     DWARFFormValue FormValue(Atom.second);
-    FormValue.extractValue(AccelSection, &HashDataOffset, NULL);
+    FormValue.extractValue(AccelSection, &HashDataOffset, FormParams);
     switch (Atom.first) {
     case dwarf::DW_ATOM_die_offset:
       DieOffset = *FormValue.getAsUnsignedConstant();
@@ -145,6 +151,7 @@ LLVM_DUMP_METHOD void DWARFAcceleratorTable::dump(raw_ostream &OS) const {
   uint32_t Offset = sizeof(Hdr) + Hdr.HeaderDataLength;
   unsigned HashesBase = Offset + Hdr.NumBuckets * 4;
   unsigned OffsetsBase = HashesBase + Hdr.NumHashes * 4;
+  DWARFFormParams FormParams = {Hdr.Version, 0, dwarf::DwarfFormat::DWARF32};
 
   for (unsigned Bucket = 0; Bucket < Hdr.NumBuckets; ++Bucket) {
     unsigned Index = AccelSection.getU32(&Offset);
@@ -181,7 +188,7 @@ LLVM_DUMP_METHOD void DWARFAcceleratorTable::dump(raw_ostream &OS) const {
           unsigned i = 0;
           for (auto &Atom : AtomForms) {
             OS << format("{Atom[%d]: ", i++);
-            if (Atom.extractValue(AccelSection, &DataOffset, nullptr))
+            if (Atom.extractValue(AccelSection, &DataOffset, FormParams))
               Atom.dump(OS);
             else
               OS << "Error extracting the value";
@@ -216,8 +223,10 @@ void DWARFAcceleratorTable::ValueIterator::Next() {
     NumData = 0;
     return;
   }
+  DWARFFormParams FormParams = {AccelTable->Hdr.Version, 0,
+                                dwarf::DwarfFormat::DWARF32};
   for (auto &Atom : AtomForms)
-    Atom.extractValue(AccelSection, &DataOffset, nullptr);
+    Atom.extractValue(AccelSection, &DataOffset, FormParams);
   ++Data;
 }
 

@@ -6,16 +6,34 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
 #include "DebugMap.h"
 #include "BinaryHolder.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Chrono.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cinttypes>
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace llvm {
+
 namespace dsymutil {
 
 using namespace llvm::object;
@@ -39,7 +57,7 @@ void DebugMapObject::print(raw_ostream &OS) const {
   OS << getObjectFilename() << ":\n";
   // Sort the symbols in alphabetical order, like llvm-nm (and to get
   // deterministic output for testing).
-  typedef std::pair<StringRef, SymbolMapping> Entry;
+  using Entry = std::pair<StringRef, SymbolMapping>;
   std::vector<Entry> Entries;
   Entries.reserve(Symbols.getNumItems());
   for (const auto &Sym : make_range(Symbols.begin(), Symbols.end()))
@@ -97,11 +115,13 @@ void DebugMap::dump() const { print(errs()); }
 #endif
 
 namespace {
+
 struct YAMLContext {
   StringRef PrependPath;
   Triple BinaryTriple;
 };
-}
+
+} // end anonymous namespace
 
 ErrorOr<std::vector<std::unique_ptr<DebugMap>>>
 DebugMap::parseYAMLDebugMap(StringRef InputFile, StringRef PrependPath,
@@ -124,7 +144,8 @@ DebugMap::parseYAMLDebugMap(StringRef InputFile, StringRef PrependPath,
   Result.push_back(std::move(Res));
   return std::move(Result);
 }
-}
+
+} // end namespace dsymutil
 
 namespace yaml {
 
@@ -155,8 +176,7 @@ void MappingTraits<dsymutil::DebugMapObject>::mapping(
   io.mapRequired("symbols", Norm->Entries);
 }
 
-void ScalarTraits<Triple>::output(const Triple &val, void *,
-                                  llvm::raw_ostream &out) {
+void ScalarTraits<Triple>::output(const Triple &val, void *, raw_ostream &out) {
   out << val.str();
 }
 
@@ -221,8 +241,7 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::denormalize(IO &IO) {
   sys::path::append(Path, Filename);
   auto ErrOrObjectFiles = BinHolder.GetObjectFiles(Path);
   if (auto EC = ErrOrObjectFiles.getError()) {
-    llvm::errs() << "warning: Unable to open " << Path << " " << EC.message()
-                 << '\n';
+    errs() << "warning: Unable to open " << Path << " " << EC.message() << '\n';
   } else if (auto ErrOrObjectFile = BinHolder.Get(Ctxt.BinaryTriple)) {
     // Rewrite the object file symbol addresses in the debug map. The
     // YAML input is mainly used to test llvm-dsymutil without
@@ -256,5 +275,7 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::denormalize(IO &IO) {
   }
   return Res;
 }
-}
-}
+
+} // end namespace yaml
+
+} // end namespace llvm

@@ -1,4 +1,4 @@
-//===-- NonRelocatableStringpool.h - A simple stringpool  -----------------===//
+//===- NonRelocatableStringpool.h - A simple stringpool  --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,10 +6,15 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef LLVM_TOOLS_DSYMUTIL_NONRELOCATABLESTRINGPOOL_H
 #define LLVM_TOOLS_DSYMUTIL_NONRELOCATABLESTRINGPOOL_H
 
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Allocator.h"
+#include <cstdint>
+#include <utility>
 
 namespace llvm {
 namespace dsymutil {
@@ -25,11 +30,10 @@ public:
   /// \brief Entries are stored into the StringMap and simply linked
   /// together through the second element of this pair in order to
   /// keep track of insertion order.
-  typedef StringMap<std::pair<uint32_t, StringMapEntryBase *>, BumpPtrAllocator>
-      MapTy;
+  using MapTy =
+      StringMap<std::pair<uint32_t, StringMapEntryBase *>, BumpPtrAllocator>;
 
-  NonRelocatableStringpool()
-      : CurrentEndOffset(0), Sentinel(0), Last(&Sentinel) {
+  NonRelocatableStringpool() : Sentinel(0), Last(&Sentinel) {
     // Legacy dsymutil puts an empty string at the start of the line
     // table.
     getStringOffset("");
@@ -61,10 +65,11 @@ public:
 
 private:
   MapTy Strings;
-  uint32_t CurrentEndOffset;
+  uint32_t CurrentEndOffset = 0;
   MapTy::MapEntryTy Sentinel, *Last;
 };
-}
-}
 
-#endif
+} // end namespace dsymutil
+} // end namespace llvm
+
+#endif // LLVM_TOOLS_DSYMUTIL_NONRELOCATABLESTRINGPOOL_H

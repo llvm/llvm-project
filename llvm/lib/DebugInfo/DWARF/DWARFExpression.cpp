@@ -104,7 +104,9 @@ static DescVector getDescriptions() {
 static DWARFExpression::Operation::Description getOpDesc(unsigned OpCode) {
   // FIXME: Make this constexpr once all compilers are smart enough to do it.
   static DescVector Descriptions = getDescriptions();
-  assert(OpCode < Descriptions.size());
+  // Handle possible corrupted or unsupported operation.
+  if (OpCode >= Descriptions.size())
+    return {};
   return Descriptions[OpCode];
 }
 
@@ -117,8 +119,10 @@ bool DWARFExpression::Operation::extract(DataExtractor Data, uint16_t Version,
   Opcode = Data.getU8(&Offset);
 
   Desc = getOpDesc(Opcode);
-  if (Desc.Version == Operation::DwarfNA)
+  if (Desc.Version == Operation::DwarfNA) {
+    EndOffset = Offset;
     return false;
+  }
 
   for (unsigned Operand = 0; Operand < 2; ++Operand) {
     unsigned Size = Desc.Op[Operand];
@@ -221,7 +225,7 @@ bool DWARFExpression::Operation::print(raw_ostream &OS,
                                        const MCRegisterInfo *RegInfo,
                                        bool isEH) {
   if (Error) {
-    OS << "decoding error.";
+    OS << "<decoding error>";
     return false;
   }
 
