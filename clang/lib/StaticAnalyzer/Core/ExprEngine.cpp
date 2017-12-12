@@ -1150,7 +1150,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
 
     case Stmt::ArraySubscriptExprClass:
       Bldr.takeNodes(Pred);
-      VisitLvalArraySubscriptExpr(cast<ArraySubscriptExpr>(S), Pred, Dst);
+      VisitArraySubscriptExpr(cast<ArraySubscriptExpr>(S), Pred, Dst);
       Bldr.addNodes(Dst);
       break;
 
@@ -2108,10 +2108,12 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
                       ProgramPoint::PostLValueKind);
     return;
   }
-  if (isa<FieldDecl>(D)) {
+  if (isa<FieldDecl>(D) || isa<IndirectFieldDecl>(D)) {
     // FIXME: Compute lvalue of field pointers-to-member.
     // Right now we just use a non-null void pointer, so that it gives proper
     // results in boolean contexts.
+    // FIXME: Maybe delegate this to the surrounding operator&.
+    // Note how this expression is lvalue, however pointer-to-member is NonLoc.
     SVal V = svalBuilder.conjureSymbolVal(Ex, LCtx, getContext().VoidPtrTy,
                                           currBldrCtx->blockCount());
     state = state->assume(V.castAs<DefinedOrUnknownSVal>(), true);
@@ -2124,10 +2126,9 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
 }
 
 /// VisitArraySubscriptExpr - Transfer function for array accesses
-void ExprEngine::VisitLvalArraySubscriptExpr(const ArraySubscriptExpr *A,
+void ExprEngine::VisitArraySubscriptExpr(const ArraySubscriptExpr *A,
                                              ExplodedNode *Pred,
                                              ExplodedNodeSet &Dst){
-
   const Expr *Base = A->getBase()->IgnoreParens();
   const Expr *Idx  = A->getIdx()->IgnoreParens();
 
@@ -2136,18 +2137,32 @@ void ExprEngine::VisitLvalArraySubscriptExpr(const ArraySubscriptExpr *A,
 
   ExplodedNodeSet EvalSet;
   StmtNodeBuilder Bldr(CheckerPreStmt, EvalSet, *currBldrCtx);
-  assert(A->isGLValue() ||
-          (!AMgr.getLangOpts().CPlusPlus &&
-           A->getType().isCForbiddenLValueType()));
+
+  bool IsVectorType = A->getBase()->getType()->isVectorType();
+
+  // The "like" case is for situations where C standard prohibits the type to
+  // be an lvalue, e.g. taking the address of a subscript of an expression of
+  // type "void *".
+  bool IsGLValueLike = A->isGLValue() ||
+    (A->getType().isCForbiddenLValueType() && !AMgr.getLangOpts().CPlusPlus);
 
   for (auto *Node : CheckerPreStmt) {
     const LocationContext *LCtx = Node->getLocationContext();
     ProgramStateRef state = Node->getState();
-    SVal V = state->getLValue(A->getType(),
-                              state->getSVal(Idx, LCtx),
-                              state->getSVal(Base, LCtx));
-    Bldr.generateNode(A, Node, state->BindExpr(A, LCtx, V), nullptr,
-                      ProgramPoint::PostLValueKind);
+
+    if (IsGLValueLike) {
+      SVal V = state->getLValue(A->getType(),
+          state->getSVal(Idx, LCtx),
+          state->getSVal(Base, LCtx));
+      Bldr.generateNode(A, Node, state->BindExpr(A, LCtx, V), nullptr,
+          ProgramPoint::PostLValueKind);
+    } else if (IsVectorType) {
+      // FIXME: non-glvalue vector reads are not modelled.
+      Bldr.generateNode(A, Node, state, nullptr);
+    } else {
+      llvm_unreachable("Array subscript should be an lValue when not \
+a vector and not a forbidden lvalue type");
+    }
   }
 
   getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, A, *this);

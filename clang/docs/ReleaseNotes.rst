@@ -315,6 +315,8 @@ Static Analyzer
   constraint solver. To enable the z3 solver backend, clang must be built with
   the ``CLANG_ANALYZER_BUILD_Z3=ON`` option, and the
   ``-Xanalyzer -analyzer-constraints=z3`` arguments passed at runtime.
+- Static Analyzer can now properly detect and diagnose unary pre-/post-
+  increment/decrement on an uninitialized value.
 
 Undefined Behavior Sanitizer (UBSan)
 ------------------------------------
