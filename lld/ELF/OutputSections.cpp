@@ -116,13 +116,7 @@ void OutputSection::addSection(InputSection *IS) {
   IS->Parent = this;
   Flags |= IS->Flags;
   Alignment = std::max(Alignment, IS->Alignment);
-
-  // The actual offsets will be computed by assignAddresses. For now, use
-  // crude approximation so that it is at least easy for other code to know the
-  // section order. It is also used to calculate the output section size early
-  // for compressed debug sections.
-  IS->OutSecOff = alignTo(Size, IS->Alignment);
-  this->Size = IS->OutSecOff + IS->getSize();
+  IS->OutSecOff = Size++;
 
   // If this section contains a table of fixed-size entries, sh_entsize
   // holds the element size. If it contains elements of different size we
@@ -188,6 +182,15 @@ template <class ELFT> void OutputSection::maybeCompress() {
   if (!Config->CompressDebugSections || (Flags & SHF_ALLOC) ||
       !Name.startswith(".debug_"))
     return;
+
+  // Calculate the section offsets and size pre-compression.
+  Size = 0;
+  for (BaseCommand *Cmd : SectionCommands)
+    if (auto *ISD = dyn_cast<InputSectionDescription>(Cmd))
+      for (InputSection *IS : ISD->Sections) {
+        IS->OutSecOff = alignTo(Size, IS->Alignment);
+        this->Size = IS->OutSecOff + IS->getSize();
+      }
 
   // Create a section header.
   ZDebugHeader.resize(sizeof(Elf_Chdr));
