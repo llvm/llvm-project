@@ -22,12 +22,13 @@
 
 using namespace llvm;
 
-bool DWARFAcceleratorTable::extract() {
+llvm::Error DWARFAcceleratorTable::extract() {
   uint32_t Offset = 0;
 
   // Check that we can at least read the header.
   if (!AccelSection.isValidOffset(offsetof(Header, HeaderDataLength)+4))
-    return false;
+    return make_error<StringError>("Section too small: cannot read header.",
+                                   inconvertibleErrorCode());
 
   Hdr.Magic = AccelSection.getU32(&Offset);
   Hdr.Version = AccelSection.getU16(&Offset);
@@ -38,9 +39,13 @@ bool DWARFAcceleratorTable::extract() {
 
   // Check that we can read all the hashes and offsets from the
   // section (see SourceLevelDebugging.rst for the structure of the index).
+  // We need to substract one because we're checking for an *offset* which is
+  // equal to the size for an empty table and hence pointer after the section.
   if (!AccelSection.isValidOffset(sizeof(Hdr) + Hdr.HeaderDataLength +
-                                  Hdr.NumBuckets*4 + Hdr.NumHashes*8))
-    return false;
+                                  Hdr.NumBuckets * 4 + Hdr.NumHashes * 8 - 1))
+    return make_error<StringError>(
+        "Section too small: cannot read buckets and hashes.",
+        inconvertibleErrorCode());
 
   HdrData.DIEOffsetBase = AccelSection.getU32(&Offset);
   uint32_t NumAtoms = AccelSection.getU32(&Offset);
@@ -52,7 +57,7 @@ bool DWARFAcceleratorTable::extract() {
   }
 
   IsValid = true;
-  return true;
+  return Error::success();
 }
 
 uint32_t DWARFAcceleratorTable::getNumBuckets() { return Hdr.NumBuckets; }
