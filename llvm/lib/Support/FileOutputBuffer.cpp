@@ -49,14 +49,14 @@ public:
 
   size_t getBufferSize() const override { return Buffer->size(); }
 
-  std::error_code commit() override {
+  Error commit() override {
     // Unmap buffer, letting OS flush dirty pages to file on disk.
     Buffer.reset();
 
     // Atomically replace the existing file with the new one.
     auto EC = fs::rename(TempPath, FinalPath);
     sys::DontRemoveFileOnSignal(TempPath);
-    return EC;
+    return errorCodeToError(EC);
   }
 
   ~OnDiskBuffer() override {
@@ -96,14 +96,14 @@ public:
 
   size_t getBufferSize() const override { return Buffer.size(); }
 
-  std::error_code commit() override {
+  Error commit() override {
     int FD;
     std::error_code EC;
     if (auto EC = openFileForWrite(FinalPath, FD, fs::F_None, Mode))
-      return EC;
+      return errorCodeToError(EC);
     raw_fd_ostream OS(FD, /*shouldClose=*/true, /*unbuffered=*/true);
     OS << StringRef((const char *)Buffer.base(), Buffer.size());
-    return std::error_code();
+    return Error::success();
   }
 
 private:
