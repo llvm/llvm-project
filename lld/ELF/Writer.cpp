@@ -1833,9 +1833,11 @@ template <class ELFT> void Writer<ELFT>::openFile() {
   }
 
   unlinkAsync(Config->OutputFile);
+  unsigned Flags = 0;
+  if (!Config->Relocatable)
+    Flags = FileOutputBuffer::F_executable;
   Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
-      FileOutputBuffer::create(Config->OutputFile, FileSize,
-                               FileOutputBuffer::F_executable);
+      FileOutputBuffer::create(Config->OutputFile, FileSize, Flags);
 
   if (!BufferOrErr)
     error("failed to open " + Config->OutputFile + ": " +

@@ -8,7 +8,7 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux \
 // RUN:    %p/Inputs/icf-non-mergeable.s -o %t2
 
-// RUN: ld.lld %t1 %t2 -o %t3 --icf=all --verbose | FileCheck %s
+// RUN: ld.lld %t1 %t2 -o %t3 --icf=all --verbose 2>&1 | FileCheck %s
 
 // CHECK-NOT: selected .text.f1
 // CHECK-NOT:   removed .text.f2
