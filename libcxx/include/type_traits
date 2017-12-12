@@ -137,13 +137,11 @@ namespace std
     template <class Base, class Derived> struct is_base_of;
     template <class From, class To> struct is_convertible;
 
-    template <class, class R = void> struct is_callable; // not defined
-    template <class Fn, class... ArgTypes, class R>
-      struct is_callable<Fn(ArgTypes...), R>;
+    template <class Fn, class... ArgTypes> struct is_invocable;
+    template <class R, class Fn, class... ArgTypes> struct is_invocable_r;
 
-    template <class, class R = void> struct is_nothrow_callable; // not defined
-    template <class Fn, class... ArgTypes, class R>
-      struct is_nothrow_callable<Fn(ArgTypes...), R>;
+    template <class Fn, class... ArgTypes> struct is_nothrow_invocable;
+    template <class R, class Fn, class... ArgTypes> struct is_nothrow_invocable_r;
 
     // Alignment properties and transformations:
     template <class T> struct alignment_of;
@@ -157,6 +155,7 @@ namespace std
     template <class T> struct underlying_type;
     template <class> class result_of; // undefined
     template <class Fn, class... ArgTypes> class result_of<Fn(ArgTypes...)>;
+    template <class Fn, class... ArgTypes> struct invoke_result;  // C++17
 
     // const-volatile modifications:
     template <class T>
@@ -215,8 +214,10 @@ namespace std
       using common_type_t     = typename common_type<T...>::type;  // C++14
     template <class T>
       using underlying_type_t = typename underlying_type<T>::type;  // C++14
-    template <class F, class... ArgTypes>
-      using result_of_t       = typename result_of<F(ArgTypes...)>::type;  // C++14
+    template <class T>
+      using result_of_t       = typename result_of<T>::type;  // C++14
+    template <class Fn, class... ArgTypes>
+      using invoke_result_t   = typename invoke_result<Fn, ArgTypes...>::type;  // C++17
 
     template <class...>
       using void_t = void;   // C++17
@@ -370,10 +371,14 @@ namespace std
         = is_base_of<Base, Derived>::value;                              // C++17
       template <class From, class To> constexpr bool is_convertible_v
         = is_convertible<From, To>::value;                               // C++17
-      template <class T, class R = void> constexpr bool is_callable_v
-        = is_callable<T, R>::value;                                      // C++17
-      template <class T, class R = void> constexpr bool is_nothrow_callable_v
-        = is_nothrow_callable<T, R>::value;                              // C++17
+      template <class Fn, class... ArgTypes> constexpr bool is_invocable_v
+        = is_invocable<Fn, ArgTypes...>::value;                          // C++17
+      template <class R, class Fn, class... ArgTypes> constexpr bool is_invocable_r_v
+        = is_invocable_r<R, Fn, ArgTypes...>::value;                     // C++17
+      template <class Fn, class... ArgTypes> constexpr bool is_nothrow_invocable_v
+        = is_nothrow_invocable<Fn, ArgTypes...>::value;                  // C++17
+      template <class R, class Fn, class... ArgTypes> constexpr bool is_nothrow_invocable_r_v
+        = is_nothrow_invocable_r<R, Fn, ArgTypes...>::value;             // C++17
 
       // [meta.logical], logical operator traits:
       template<class... B> struct conjunction;                           // C++17
@@ -4402,6 +4407,13 @@ using __nothrow_invokable_r =
     >;
 
 template <class _Fp, class ..._Args>
+using __nothrow_invokable =
+    __nothrow_invokable_r_imp<
+            __invokable<_Fp, _Args...>::value,
+            true, void, _Fp, _Args...
+    >;
+
+template <class _Fp, class ..._Args>
 struct __invoke_of
     : public enable_if<
         __invokable<_Fp, _Args...>::value,
@@ -4423,30 +4435,48 @@ template <class _Tp> using result_of_t = typename result_of<_Tp>::type;
 
 #if _LIBCPP_STD_VER > 14
 
-// is_callable
+// invoke_result
 
-template <class _Fn, class _Ret = void>
-struct _LIBCPP_TEMPLATE_VIS is_callable;
+template <class _Fn, class... _Args>
+struct _LIBCPP_TEMPLATE_VIS invoke_result
+    : __invoke_of<_Fn, _Args...>
+{
+};
 
-template <class _Fn, class ..._Args, class _Ret>
-struct _LIBCPP_TEMPLATE_VIS is_callable<_Fn(_Args...), _Ret>
+template <class _Fn, class... _Args>
+using invoke_result_t = typename invoke_result<_Fn, _Args...>::type;
+
+// is_invocable
+
+template <class _Fn, class ..._Args>
+struct _LIBCPP_TEMPLATE_VIS is_invocable
+    : integral_constant<bool, __invokable<_Fn, _Args...>::value> {};
+
+template <class _Ret, class _Fn, class ..._Args>
+struct _LIBCPP_TEMPLATE_VIS is_invocable_r
     : integral_constant<bool, __invokable_r<_Ret, _Fn, _Args...>::value> {};
 
-template <class _Fn, class _Ret = void>
-constexpr bool is_callable_v = is_callable<_Fn, _Ret>::value;
+template <class _Fn, class ..._Args>
+constexpr bool is_invocable_v = is_invocable<_Fn, _Args...>::value;
+
+template <class _Ret, class _Fn, class ..._Args>
+constexpr bool is_invocable_r_v = is_invocable_r<_Ret, _Fn, _Args...>::value;
 
 // is_nothrow_callable
 
-template <class _Fn, class _Ret = void>
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_callable;
+template <class _Fn, class ..._Args>
+struct _LIBCPP_TEMPLATE_VIS is_nothrow_invocable
+    : integral_constant<bool, __nothrow_invokable<_Fn, _Args...>::value> {};
 
-template <class _Fn, class ..._Args, class _Ret>
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_callable<_Fn(_Args...), _Ret>
-    : integral_constant<bool, __nothrow_invokable_r<_Ret, _Fn, _Args...>::value>
-{};
+template <class _Ret, class _Fn, class ..._Args>
+struct _LIBCPP_TEMPLATE_VIS is_nothrow_invocable_r
+    : integral_constant<bool, __nothrow_invokable_r<_Ret, _Fn, _Args...>::value> {};
 
-template <class _Fn, class _Ret = void>
-constexpr bool is_nothrow_callable_v = is_nothrow_callable<_Fn, _Ret>::value;
+template <class _Fn, class ..._Args>
+constexpr bool is_nothrow_invocable_v = is_nothrow_invocable<_Fn, _Args...>::value;
+
+template <class _Ret, class _Fn, class ..._Args>
+constexpr bool is_nothrow_invocable_r_v = is_nothrow_invocable_r<_Ret, _Fn, _Args...>::value;
 
 #endif // _LIBCPP_STD_VER > 14
 
