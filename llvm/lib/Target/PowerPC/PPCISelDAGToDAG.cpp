@@ -786,8 +786,10 @@ static SDNode *selectI64ImmDirect(SelectionDAG *CurDAG, const SDLoc &dl,
 
   // Simple value.
   if (isInt<16>(Imm)) {
+    uint64_t SextImm = SignExtend64(Lo, 16);
+    SDValue SDImm = CurDAG->getTargetConstant(SextImm, dl, MVT::i64);
     // Just the Lo bits.
-    Result = CurDAG->getMachineNode(PPC::LI8, dl, MVT::i64, getI32Imm(Lo));
+    Result = CurDAG->getMachineNode(PPC::LI8, dl, MVT::i64, SDImm);
   } else if (Lo) {
     // Handle the Hi bits.
     unsigned OpC = Hi ? PPC::LIS8 : PPC::LI8;
@@ -892,12 +894,74 @@ static SDNode *selectI64Imm(SelectionDAG *CurDAG, const SDLoc &dl,
                                 getI32Imm(64 - RMin), getI32Imm(MaskEnd));
 }
 
+static unsigned allUsesTruncate(SelectionDAG *CurDAG, SDNode *N) {
+  unsigned MaxTruncation = 0;
+  // Cannot use range-based for loop here as we need the actual use (i.e. we
+  // need the operand number corresponding to the use). A range-based for
+  // will unbox the use and provide an SDNode*.
+  for (SDNode::use_iterator Use = N->use_begin(), UseEnd = N->use_end();
+       Use != UseEnd; ++Use) {
+    unsigned Opc =
+      Use->isMachineOpcode() ? Use->getMachineOpcode() : Use->getOpcode();
+    switch (Opc) {
+    default: return 0;
+    case ISD::TRUNCATE:
+      if (Use->isMachineOpcode())
+        return 0;
+      MaxTruncation =
+        std::max(MaxTruncation, Use->getValueType(0).getSizeInBits());
+      continue;
+    case ISD::STORE: {
+      if (Use->isMachineOpcode())
+        return 0;
+      StoreSDNode *STN = cast<StoreSDNode>(*Use);
+      unsigned MemVTSize = STN->getMemoryVT().getSizeInBits();
+      if (MemVTSize == 64 || Use.getOperandNo() != 0)
+        return 0;
+      MaxTruncation = std::max(MaxTruncation, MemVTSize);
+      continue;
+    }
+    case PPC::STW8:
+    case PPC::STWX8:
+    case PPC::STWU8:
+    case PPC::STWUX8:
+      if (Use.getOperandNo() != 0)
+        return 0;
+      MaxTruncation = std::max(MaxTruncation, 32u);
+      continue;
+    case PPC::STH8:
+    case PPC::STHX8:
+    case PPC::STHU8:
+    case PPC::STHUX8:
+      if (Use.getOperandNo() != 0)
+        return 0;
+      MaxTruncation = std::max(MaxTruncation, 16u);
+      continue;
+    case PPC::STB8:
+    case PPC::STBX8:
+    case PPC::STBU8:
+    case PPC::STBUX8:
+      if (Use.getOperandNo() != 0)
+        return 0;
+      MaxTruncation = std::max(MaxTruncation, 8u);
+      continue;
+    }
+  }
+  return MaxTruncation;
+}
+
 // Select a 64-bit constant.
 static SDNode *selectI64Imm(SelectionDAG *CurDAG, SDNode *N) {
   SDLoc dl(N);
 
   // Get 64 bit value.
   int64_t Imm = cast<ConstantSDNode>(N)->getZExtValue();
+  if (unsigned MinSize = allUsesTruncate(CurDAG, N)) {
+    uint64_t SextImm = SignExtend64(Imm, MinSize);
+    SDValue SDImm = CurDAG->getTargetConstant(SextImm, dl, MVT::i64);
+    if (isInt<16>(SextImm))
+      return CurDAG->getMachineNode(PPC::LI8, dl, MVT::i64, SDImm);
+  }
   return selectI64Imm(CurDAG, dl, Imm);
 }
 

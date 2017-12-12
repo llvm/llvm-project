@@ -106,7 +106,7 @@ entry:
   store i8 %conv3, i8* @glob
   ret void
 ; CHECK-LABEL: @test_igeuc_sext_z_store
-; CHECK: li [[REG1:r[0-9]+]], 255
+; CHECK: li [[REG1:r[0-9]+]], -1
 ; CHECK: stb [[REG1]]
 ; CHECK: blr
 }

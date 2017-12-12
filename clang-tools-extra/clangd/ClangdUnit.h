@@ -256,7 +256,6 @@ private:
   clangd::Logger &Logger;
 };
 
-
 /// Get the beginning SourceLocation at a specified \p Pos.
 SourceLocation getBeginningOfIdentifier(ParsedAST &Unit, const Position &Pos,
                                         const FileEntry *FE);
@@ -264,6 +263,9 @@ SourceLocation getBeginningOfIdentifier(ParsedAST &Unit, const Position &Pos,
 /// Get definition of symbol at a specified \p Pos.
 std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos,
                                       clangd::Logger &Logger);
+
+std::vector<DocumentHighlight>
+findDocumentHighlights(ParsedAST &AST, Position Pos, clangd::Logger &Logger);
 
 /// For testing/debugging purposes. Note that this method deserializes all
 /// unserialized Decls, so use with care.

@@ -674,6 +674,11 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
   if (Ctx->OutSec->Flags & SHF_COMPRESSED)
     return;
 
+  // The Size previously denoted how many InputSections had been added to this
+  // section, and was used for sorting SHF_LINK_ORDER sections. Reset it to
+  // compute the actual size value.
+  Sec->Size = 0;
+
   // We visited SectionsCommands from processSectionCommands to
   // layout sections. Now, we visit SectionsCommands again to fix
   // section offsets.

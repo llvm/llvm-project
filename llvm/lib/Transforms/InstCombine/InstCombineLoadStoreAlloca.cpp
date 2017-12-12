@@ -959,6 +959,16 @@ static Instruction *replaceGEPIdxWithZero(InstCombiner &IC, Value *Ptr,
   return nullptr;
 }
 
+static bool canSimplifyNullStoreOrGEP(StoreInst &SI) {
+  if (SI.getPointerAddressSpace() != 0)
+    return false;
+
+  auto *Ptr = SI.getPointerOperand();
+  if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(Ptr))
+    Ptr = GEPI->getOperand(0);
+  return isa<ConstantPointerNull>(Ptr);
+}
+
 static bool canSimplifyNullLoadOrGEP(LoadInst &LI, Value *Op) {
   if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(Op)) {
     const Value *GEPI0 = GEPI->getOperand(0);
@@ -1447,7 +1457,8 @@ Instruction *InstCombiner::visitStoreInst(StoreInst &SI) {
   }
 
   // store X, null    -> turns into 'unreachable' in SimplifyCFG
-  if (isa<ConstantPointerNull>(Ptr) && SI.getPointerAddressSpace() == 0) {
+  // store X, GEP(null, Y) -> turns into 'unreachable' in SimplifyCFG
+  if (canSimplifyNullStoreOrGEP(SI)) {
     if (!isa<UndefValue>(Val)) {
       SI.setOperand(0, UndefValue::get(Val->getType()));
       if (Instruction *U = dyn_cast<Instruction>(Val))

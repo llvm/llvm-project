@@ -137,17 +137,19 @@ static void PrintValueSet(raw_ostream &OS, IteratorTy Begin, IteratorTy End) {
 /// correctly relocated value at that point, and is a subset of the set of
 /// definitions dominating that point.
 
+using AvailableValueSet = DenseSet<const Value *>;
+
 /// State we compute and track per basic block.
 struct BasicBlockState {
   // Set of values available coming in, before the phi nodes
-  DenseSet<const Value *> AvailableIn;
+  AvailableValueSet AvailableIn;
 
   // Set of values available going out
-  DenseSet<const Value *> AvailableOut;
+  AvailableValueSet AvailableOut;
 
   // AvailableOut minus AvailableIn.
   // All elements are Instructions
-  DenseSet<const Value *> Contribution;
+  AvailableValueSet Contribution;
 
   // True if this block contains a safepoint and thus AvailableIn does not
   // contribute to AvailableOut.
@@ -159,7 +161,7 @@ struct BasicBlockState {
 /// simply the Defs introduced by every dominating basic block and the function
 /// arguments.
 static void GatherDominatingDefs(const BasicBlock *BB,
-                                 DenseSet<const Value *> &Result,
+                                 AvailableValueSet &Result,
                                  const DominatorTree &DT,
                     DenseMap<const BasicBlock *, BasicBlockState *> &BlockMap) {
   DomTreeNode *DTN = DT[const_cast<BasicBlock *>(BB)];
@@ -183,7 +185,7 @@ static void GatherDominatingDefs(const BasicBlock *BB,
 
 /// Model the effect of an instruction on the set of available values.
 static void TransferInstruction(const Instruction &I, bool &Cleared,
-                              DenseSet<const Value *> &Available) {
+                                AvailableValueSet &Available) {
   if (isStatepoint(I)) {
     Cleared = true;
     Available.clear();
@@ -199,8 +201,8 @@ static void TransferInstruction(const Instruction &I, bool &Cleared,
 static void TransferBlock(const BasicBlock *BB, BasicBlockState &BBS,
                           bool ContributionChanged) {
 
-  const DenseSet<const Value *> &AvailableIn = BBS.AvailableIn;
-  DenseSet<const Value *> &AvailableOut  = BBS.AvailableOut;
+  const AvailableValueSet &AvailableIn = BBS.AvailableIn;
+  AvailableValueSet &AvailableOut  = BBS.AvailableOut;
 
   if (BBS.Cleared) {
     // AvailableOut will change only when Contribution changed.
@@ -209,7 +211,7 @@ static void TransferBlock(const BasicBlock *BB, BasicBlockState &BBS,
   } else {
     // Otherwise, we need to reduce the AvailableOut set by things which are no
     // longer in our AvailableIn
-    DenseSet<const Value *> Temp = BBS.Contribution;
+    AvailableValueSet Temp = BBS.Contribution;
     set_union(Temp, AvailableIn);
     AvailableOut = std::move(Temp);
   }
@@ -306,7 +308,7 @@ using BlockStateMap = DenseMap<const BasicBlock *, BasicBlockState *>;
 ///
 /// BBContributionUpdater is expected to have following signature:
 /// (const BasicBlock *BB, const BasicBlockState *BBS,
-///  DenseSet<const Value *> &Contribution) -> bool
+///  AvailableValueSet &Contribution) -> bool
 /// FIXME: type of BBContributionUpdater is a template parameter because it
 /// might be a lambda with arbitrary non-empty capture list. It's a bit ugly and
 /// unclear, but other options causes us to spread the logic of
@@ -372,7 +374,7 @@ static void Verify(const Function &F, const DominatorTree &DT) {
 
   RecalculateBBsStates(BlockMap, [] (const BasicBlock *,
                                      const BasicBlockState *,
-                                     DenseSet<const Value *> &) {
+                                     AvailableValueSet &) {
     return false;
   });
 
@@ -398,8 +400,8 @@ static void Verify(const Function &F, const DominatorTree &DT) {
   RecalculateBBsStates(BlockMap, [&ValidUnrelocatedDefs](
                                      const BasicBlock *BB,
                                      const BasicBlockState *BBS,
-                                     DenseSet<const Value *> &Contribution) {
-    DenseSet<const Value *> AvailableSet = BBS->AvailableIn;
+                                     AvailableValueSet &Contribution) {
+    AvailableValueSet AvailableSet = BBS->AvailableIn;
     bool ContributionChanged = false;
     for (const Instruction &I : *BB) {
       bool ProducesUnrelocatedPointer = false;
@@ -438,7 +440,7 @@ static void Verify(const Function &F, const DominatorTree &DT) {
     BasicBlockState *BBS = BlockMap[BB];
     // We destructively modify AvailableIn as we traverse the block instruction
     // by instruction.
-    DenseSet<const Value *> &AvailableSet = BBS->AvailableIn;
+    AvailableValueSet &AvailableSet = BBS->AvailableIn;
     for (const Instruction &I : *BB) {
       if (ValidUnrelocatedDefs.count(&I)) {
         continue; // This instruction shouldn't be added to AvailableSet.
