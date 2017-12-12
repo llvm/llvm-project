@@ -255,6 +255,8 @@ static const char *renameOccurrenceKindString(CXSymbolOccurrenceKind Kind,
     return "documentation";
   case CXSymbolOccurrence_MatchingFilename:
     return "filename";
+  case CXSymbolOccurrence_MatchingStringLiteral:
+    return "string-literal";
   case CXSymbolOccurrence_ExtractedDeclaration:
     return "extracted-decl";
   case CXSymbolOccurrence_ExtractedDeclaration_Reference:
@@ -397,6 +399,7 @@ renameIndexedOccurrenceKindStringToKind(StringRef Str, CXCursorKind Default) {
       .Case("objc-cm", CXCursor_ObjCClassMethodDecl)
       .Case("objc-message", CXCursor_ObjCMessageExpr)
       .Case("include", CXCursor_InclusionDirective)
+      .Case("objc-class", CXCursor_ObjCInterfaceDecl)
       .Default(Default);
 }
 

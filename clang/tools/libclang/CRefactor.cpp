@@ -79,6 +79,8 @@ translateOccurrenceKind(rename::SymbolOccurrence::OccurrenceKind Kind) {
     return CXSymbolOccurrence_MatchingDocCommentString;
   case rename::SymbolOccurrence::MatchingFilename:
     return CXSymbolOccurrence_MatchingFilename;
+  case rename::SymbolOccurrence::MatchingStringLiteral:
+    return CXSymbolOccurrence_MatchingStringLiteral;
   }
 }
 
@@ -666,7 +668,10 @@ CXErrorCode performIndexedSymbolSearch(
 
     IndexedSymbols.emplace_back(SymbolName(Symbol.Name, IsObjCSelector),
                                 IndexedOccurrences,
-                                /*IsObjCSelector=*/IsObjCSelector);
+                                /*IsObjCSelector=*/IsObjCSelector,
+                                /*SearchForStringLiteralOccurrences=*/
+                                Symbol.CursorKind == CXCursor_ObjCInterfaceDecl
+                                );
   }
 
   class ToolRunner final : public FrontendActionFactory,

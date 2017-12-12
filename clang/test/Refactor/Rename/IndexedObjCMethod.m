@@ -96,7 +96,7 @@ selector(performAction:with)
 // CHECK3-NOT: comment
 // CHECK3-NOT: documentation
 // CHECK3-NOT: selector
-
+// CHECK3-NOT: string-literal
 // It should be possible to find a selector in a file without any indexed occurrences:
 
 // CHECK4: selector [[@LINE+1]]:11
