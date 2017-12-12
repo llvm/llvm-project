@@ -65,13 +65,6 @@ FileOutputBuffer::create(StringRef FilePath, size_t Size, unsigned Flags) {
       IsRegular = false;
   }
 
-  if (IsRegular) {
-    // Delete target file.
-    EC = sys::fs::remove(FilePath);
-    if (EC)
-      return EC;
-  }
-
   SmallString<128> TempFilePath;
   int FD;
   if (IsRegular) {
@@ -125,7 +118,7 @@ std::error_code FileOutputBuffer::commit() {
 
   std::error_code EC;
   if (IsRegular) {
-    // Rename file to final name.
+    // Atomically replace the existing file with the new one.
     EC = sys::fs::rename(Twine(TempPath), Twine(FinalPath));
     sys::DontRemoveFileOnSignal(TempPath);
   } else {
