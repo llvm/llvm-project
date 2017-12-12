@@ -509,6 +509,39 @@ llvm::Optional<Path> ClangdServer::switchSourceHeader(PathRef Path) {
   return llvm::None;
 }
 
+llvm::Expected<Tagged<std::vector<DocumentHighlight>>>
+ClangdServer::findDocumentHighlights(PathRef File, Position Pos) {
+  auto FileContents = DraftMgr.getDraft(File);
+  if (!FileContents.Draft)
+    return llvm::make_error<llvm::StringError>(
+        "findDocumentHighlights called on non-added file",
+        llvm::errc::invalid_argument);
+
+  auto TaggedFS = FSProvider.getTaggedFileSystem(File);
+
+  std::shared_ptr<CppFile> Resources = Units.getFile(File);
+  if (!Resources)
+    return llvm::make_error<llvm::StringError>(
+        "findDocumentHighlights called on non-added file",
+        llvm::errc::invalid_argument);
+
+  std::vector<DocumentHighlight> Result;
+  llvm::Optional<llvm::Error> Err;
+  Resources->getAST().get()->runUnderLock([Pos, &Result, &Err,
+                                           this](ParsedAST *AST) {
+    if (!AST) {
+      Err = llvm::make_error<llvm::StringError>("Invalid AST",
+                                                llvm::errc::invalid_argument);
+      return;
+    }
+    Result = clangd::findDocumentHighlights(*AST, Pos, Logger);
+  });
+
+  if (Err)
+    return std::move(*Err);
+  return make_tagged(Result, TaggedFS.Tag);
+}
+
 std::future<void> ClangdServer::scheduleReparseAndDiags(
     PathRef File, VersionedDraft Contents, std::shared_ptr<CppFile> Resources,
     Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> TaggedFS) {

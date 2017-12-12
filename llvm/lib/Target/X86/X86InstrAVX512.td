@@ -6037,7 +6037,7 @@ multiclass avx512_fma3p_213_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
           (ins _.RC:$src2, _.MemOp:$src3),
           OpcodeStr, "$src3, $src2", "$src2, $src3",
           (_.VT (OpNode _.RC:$src2, _.RC:$src1, (_.LdFrag addr:$src3))),
-          NoItinerary, 1, 0>, AVX512FMA3Base, Sched<[WriteFMA, ReadAfterLd]>;
+          NoItinerary, 1, 0>, AVX512FMA3Base, Sched<[WriteFMALd, ReadAfterLd]>;
 
   defm mb: AVX512_maskable_3src<opc, MRMSrcMem, _, (outs _.RC:$dst),
             (ins _.RC:$src2, _.ScalarMemOp:$src3),
@@ -6046,7 +6046,7 @@ multiclass avx512_fma3p_213_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
             (OpNode _.RC:$src2,
              _.RC:$src1,(_.VT (X86VBroadcast (_.ScalarLdFrag addr:$src3)))),
              NoItinerary, 1, 0>, AVX512FMA3Base, EVEX_B,
-             Sched<[WriteFMA, ReadAfterLd]>;
+             Sched<[WriteFMALd, ReadAfterLd]>;
   }
 }
 
@@ -6105,7 +6105,7 @@ multiclass avx512_fma3p_231_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
           (ins _.RC:$src2, _.MemOp:$src3),
           OpcodeStr, "$src3, $src2", "$src2, $src3",
           (_.VT (OpNode _.RC:$src2, (_.LdFrag addr:$src3), _.RC:$src1)),
-          NoItinerary, 1, 0>, AVX512FMA3Base, Sched<[WriteFMA, ReadAfterLd]>;
+          NoItinerary, 1, 0>, AVX512FMA3Base, Sched<[WriteFMALd, ReadAfterLd]>;
 
   defm mb: AVX512_maskable_3src<opc, MRMSrcMem, _, (outs _.RC:$dst),
          (ins _.RC:$src2, _.ScalarMemOp:$src3),
@@ -6114,7 +6114,7 @@ multiclass avx512_fma3p_231_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
          (_.VT (OpNode _.RC:$src2,
                       (_.VT (X86VBroadcast(_.ScalarLdFrag addr:$src3))),
                       _.RC:$src1)), NoItinerary, 1, 0>, AVX512FMA3Base, EVEX_B,
-         Sched<[WriteFMA, ReadAfterLd]>;
+         Sched<[WriteFMALd, ReadAfterLd]>;
   }
 }
 
@@ -6175,7 +6175,7 @@ multiclass avx512_fma3p_132_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
           (ins _.RC:$src2, _.MemOp:$src3),
           OpcodeStr, "$src3, $src2", "$src2, $src3",
           (_.VT (OpNode (_.LdFrag addr:$src3), _.RC:$src1, _.RC:$src2)),
-          NoItinerary, 1, 0>, AVX512FMA3Base, Sched<[WriteFMA, ReadAfterLd]>;
+          NoItinerary, 1, 0>, AVX512FMA3Base, Sched<[WriteFMALd, ReadAfterLd]>;
 
   // Pattern is 312 order so that the load is in a different place from the
   // 213 and 231 patterns this helps tablegen's duplicate pattern detection.
@@ -6185,7 +6185,7 @@ multiclass avx512_fma3p_132_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
          "$src2, ${src3}"##_.BroadcastStr,
          (_.VT (OpNode (_.VT (X86VBroadcast(_.ScalarLdFrag addr:$src3))),
                        _.RC:$src1, _.RC:$src2)), NoItinerary, 1, 0>,
-         AVX512FMA3Base, EVEX_B, Sched<[WriteFMA, ReadAfterLd]>;
+         AVX512FMA3Base, EVEX_B, Sched<[WriteFMALd, ReadAfterLd]>;
   }
 }
 
@@ -6244,7 +6244,7 @@ let Constraints = "$src1 = $dst", hasSideEffects = 0 in {
   defm m_Int: AVX512_maskable_3src_scalar<opc, MRMSrcMem, _, (outs _.RC:$dst),
           (ins _.RC:$src2, _.IntScalarMemOp:$src3), OpcodeStr,
           "$src3, $src2", "$src2, $src3", RHS_VEC_m, NoItinerary, 1, 1>,
-          AVX512FMA3Base, Sched<[WriteFMA, ReadAfterLd]>;
+          AVX512FMA3Base, Sched<[WriteFMALd, ReadAfterLd]>;
 
   defm rb_Int: AVX512_maskable_3src_scalar<opc, MRMSrcReg, _, (outs _.RC:$dst),
          (ins _.RC:$src2, _.RC:$src3, AVX512RC:$rc),
@@ -6262,7 +6262,7 @@ let Constraints = "$src1 = $dst", hasSideEffects = 0 in {
                     (ins _.FRC:$src1, _.FRC:$src2, _.ScalarMemOp:$src3),
                     !strconcat(OpcodeStr,
                                "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
-                    [RHS_m]>, Sched<[WriteFMA, ReadAfterLd]>;
+                    [RHS_m]>, Sched<[WriteFMALd, ReadAfterLd]>;
   }// isCodeGenOnly = 1
 }// Constraints = "$src1 = $dst"
 }

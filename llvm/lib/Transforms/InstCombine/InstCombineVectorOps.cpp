@@ -781,10 +781,6 @@ Instruction *InstCombiner::visitInsertElementInst(InsertElementInst &IE) {
   Value *ScalarOp = IE.getOperand(1);
   Value *IdxOp    = IE.getOperand(2);
 
-  if (auto *V = SimplifyInsertElementInst(
-          VecOp, ScalarOp, IdxOp, SQ.getWithInstruction(&IE)))
-    return replaceInstUsesWith(IE, V);
-
   // Inserting an undef or into an undefined place, remove this.
   if (isa<UndefValue>(ScalarOp) || isa<UndefValue>(IdxOp))
     replaceInstUsesWith(IE, VecOp);

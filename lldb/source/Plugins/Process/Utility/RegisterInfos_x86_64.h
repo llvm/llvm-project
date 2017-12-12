@@ -7,11 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Compiler.h"
-#include <cstddef>
-#include <cstdint>
-
-// Project includes
+// This file is meant to be textually included. Do not #include modular
+// headers here.
 
 // Computes the offset of the given GPR in the user data area.
 #define GPR_OFFSET(regname) (LLVM_EXTENSION offsetof(GPR, regname))

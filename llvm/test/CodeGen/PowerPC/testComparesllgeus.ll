@@ -105,9 +105,8 @@ entry:
   store i16 %conv1, i16* @glob
   ret void
 ; CHECK-LABEL: @test_llgeus_sext_z_store
-; CHECK: li [[REG1:r[0-9]+]], 0
-; CHECK: ori [[REG2:r[0-9]+]], [[REG1]], 65535
-; CHECK: sth [[REG2]]
+; CHECK: li [[REG1:r[0-9]+]], -1
+; CHECK: sth [[REG1]]
 ; CHECK: blr  
 }
 

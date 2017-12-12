@@ -1626,8 +1626,8 @@ def ZnWriteFMADDr : SchedWriteRes<[ZnFPU03]> {
 }
 def : InstRW<[ZnWriteFMADDr],
     (instregex
-    "VF(N?)M(ADD|SUB|ADDSUB|SUBADD)P(S|D)(r213|r132|r231)r(Y)?",
-    "VF(N?)M(ADD|SUB)S(S|D)(r132|r231|r213)r",
+    "VF(N?)M(ADD|SUB|ADDSUB|SUBADD)P(S|D)(213|132|231)(Y)?r",
+    "VF(N?)M(ADD|SUB)(132|231|213)S(S|D)r",
     "VF(N?)M(ADD|SUB)S(S|D)4rr(_REV|_Int)?",
     "VF(N?)M(ADD|SUB)P(S|D)4rr(Y)?(_REV)?")>;
 
@@ -1638,8 +1638,8 @@ def ZnWriteFMADDm : SchedWriteRes<[ZnAGU, ZnFPU03]> {
 }
 def : InstRW<[ZnWriteFMADDm],
     (instregex
-    "VF(N?)M(ADD|SUB|ADDSUB|SUBADD)P(S|D)(r213|r132|r231)m(Y)?",
-    "VF(N?)M(ADD|SUB)S(S|D)(r132|r231|r213)m",
+    "VF(N?)M(ADD|SUB|ADDSUB|SUBADD)(213|132|231)P(S|D)(Y)?m",
+    "VF(N?)M(ADD|SUB)(132|231|213)S(S|D)m",
     "VF(N?)M(ADD|SUB)S(S|D)4(rm|mr)(_Int)?",
     "VF(N?)M(ADD|SUB)P(S|D)4(rm|mr)(Y)?")>;
 

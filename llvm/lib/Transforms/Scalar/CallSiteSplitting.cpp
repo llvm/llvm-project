@@ -221,7 +221,7 @@ static bool canSplitCallSite(CallSite CS) {
   // call instruction, and we do not move a call-site across any other
   // instruction.
   BasicBlock *CallSiteBB = Instr->getParent();
-  if (Instr != CallSiteBB->getFirstNonPHI())
+  if (Instr != CallSiteBB->getFirstNonPHIOrDbg())
     return false;
 
   // Need 2 predecessors and cannot split an edge from an IndirectBrInst.
@@ -278,7 +278,7 @@ static void splitCallSite(CallSite CS, BasicBlock *PredBB1, BasicBlock *PredBB2,
                           Instruction *CallInst1, Instruction *CallInst2) {
   Instruction *Instr = CS.getInstruction();
   BasicBlock *TailBB = Instr->getParent();
-  assert(Instr == (TailBB->getFirstNonPHI()) && "Unexpected call-site");
+  assert(Instr == (TailBB->getFirstNonPHIOrDbg()) && "Unexpected call-site");
 
   BasicBlock *SplitBlock1 =
       SplitBlockPredecessors(TailBB, PredBB1, ".predBB1.split");
@@ -315,7 +315,8 @@ static void splitCallSite(CallSite CS, BasicBlock *PredBB1, BasicBlock *PredBB2,
 
   // Replace users of the original call with a PHI mering call-sites split.
   if (Instr->getNumUses()) {
-    PHINode *PN = PHINode::Create(Instr->getType(), 2, "phi.call", Instr);
+    PHINode *PN = PHINode::Create(Instr->getType(), 2, "phi.call",
+                                  TailBB->getFirstNonPHI());
     PN->addIncoming(CallInst1, SplitBlock1);
     PN->addIncoming(CallInst2, SplitBlock2);
     Instr->replaceAllUsesWith(PN);
@@ -334,7 +335,7 @@ static void splitCallSite(CallSite CS, BasicBlock *PredBB1, BasicBlock *PredBB2,
 static bool isPredicatedOnPHI(CallSite CS) {
   Instruction *Instr = CS.getInstruction();
   BasicBlock *Parent = Instr->getParent();
-  if (Instr != Parent->getFirstNonPHI())
+  if (Instr != Parent->getFirstNonPHIOrDbg())
     return false;
 
   for (auto &BI : *Parent) {

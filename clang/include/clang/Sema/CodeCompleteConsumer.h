@@ -18,6 +18,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Type.h"
 #include "clang/Sema/CodeCompleteOptions.h"
+#include "clang/Sema/DeclSpec.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -280,6 +281,10 @@ private:
   /// \brief The identifiers for Objective-C selector parts.
   ArrayRef<IdentifierInfo *> SelIdents;
 
+  /// \brief The scope specifier that comes before the completion token e.g.
+  /// "a::b::"
+  llvm::Optional<CXXScopeSpec> ScopeSpecifier;
+
 public:
   /// \brief Construct a new code-completion context of the given kind.
   CodeCompletionContext(enum Kind Kind) : Kind(Kind), SelIdents(None) { }
@@ -315,8 +320,20 @@ public:
   /// \brief Determines whether we want C++ constructors as results within this
   /// context.
   bool wantConstructorResults() const;
-};
 
+  /// \brief Sets the scope specifier that comes before the completion token.
+  /// This is expected to be set in code completions on qualfied specifiers
+  /// (e.g. "a::b::").
+  void setCXXScopeSpecifier(CXXScopeSpec SS) {
+    this->ScopeSpecifier = std::move(SS);
+  }
+
+  llvm::Optional<const CXXScopeSpec *> getCXXScopeSpecifier() {
+    if (ScopeSpecifier)
+      return ScopeSpecifier.getPointer();
+    return llvm::None;
+  }
+};
 
 /// \brief A "string" used to describe how code completion can
 /// be performed for an entity.
