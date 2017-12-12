@@ -74,7 +74,7 @@ _start:
  .quad .Lfunc_begin0             # DW_AT_low_pc
  .long .Lfunc_end0-.Lfunc_begin0 # DW_AT_high_pc
  .byte 1                         # DW_AT_frame_base
- .byte 87                        
+ .byte 87
  .long 0                         # DW_AT_name
  .byte 1                         # DW_AT_decl_file
  .byte 1                         # DW_AT_decl_line

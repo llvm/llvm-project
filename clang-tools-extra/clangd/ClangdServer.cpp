@@ -38,16 +38,6 @@ private:
   std::promise<void> &Promise;
 };
 
-std::vector<tooling::Replacement> formatCode(StringRef Code, StringRef Filename,
-                                             ArrayRef<tooling::Range> Ranges) {
-  // Call clang-format.
-  // FIXME: Don't ignore style.
-  format::FormatStyle Style = format::getLLVMStyle();
-  auto Result = format::reformat(Style, Code, Ranges, Filename);
-
-  return std::vector<tooling::Replacement>(Result.begin(), Result.end());
-}
-
 std::string getStandardResourceDir() {
   static int Dummy; // Just an address in this process.
   return CompilerInvocation::GetResourcesPath("clangd", (void *)&Dummy);
@@ -331,26 +321,23 @@ ClangdServer::signatureHelp(PathRef File, Position Pos,
   return make_tagged(std::move(Result), TaggedFS.Tag);
 }
 
-std::vector<tooling::Replacement> ClangdServer::formatRange(PathRef File,
-                                                            Range Rng) {
-  std::string Code = getDocument(File);
-
+llvm::Expected<tooling::Replacements>
+ClangdServer::formatRange(StringRef Code, PathRef File, Range Rng) {
   size_t Begin = positionToOffset(Code, Rng.start);
   size_t Len = positionToOffset(Code, Rng.end) - Begin;
   return formatCode(Code, File, {tooling::Range(Begin, Len)});
 }
 
-std::vector<tooling::Replacement> ClangdServer::formatFile(PathRef File) {
+llvm::Expected<tooling::Replacements> ClangdServer::formatFile(StringRef Code,
+                                                               PathRef File) {
   // Format everything.
-  std::string Code = getDocument(File);
   return formatCode(Code, File, {tooling::Range(0, Code.size())});
 }
 
-std::vector<tooling::Replacement> ClangdServer::formatOnType(PathRef File,
-                                                             Position Pos) {
+llvm::Expected<tooling::Replacements>
+ClangdServer::formatOnType(StringRef Code, PathRef File, Position Pos) {
   // Look for the previous opening brace from the character position and
   // format starting from there.
-  std::string Code = getDocument(File);
   size_t CursorPos = positionToOffset(Code, Pos);
   size_t PreviousLBracePos = StringRef(Code).find_last_of('{', CursorPos);
   if (PreviousLBracePos == StringRef::npos)
@@ -507,6 +494,20 @@ llvm::Optional<Path> ClangdServer::switchSourceHeader(PathRef Path) {
   }
 
   return llvm::None;
+}
+
+llvm::Expected<tooling::Replacements>
+ClangdServer::formatCode(llvm::StringRef Code, PathRef File,
+                         ArrayRef<tooling::Range> Ranges) {
+  // Call clang-format.
+  auto TaggedFS = FSProvider.getTaggedFileSystem(File);
+  auto StyleOrError =
+      format::getStyle("file", File, "LLVM", Code, TaggedFS.Value.get());
+  if (!StyleOrError) {
+    return StyleOrError.takeError();
+  } else {
+    return format::reformat(StyleOrError.get(), Code, Ranges, File);
+  }
 }
 
 llvm::Expected<Tagged<std::vector<DocumentHighlight>>>

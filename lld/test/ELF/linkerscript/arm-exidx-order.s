@@ -7,7 +7,7 @@
 # RUN: llvm-readobj -s %t.so | FileCheck %s
 
 # CHECK:      Section {
-# CHECK:        Index: 
+# CHECK:        Index:
 # CHECK:        Name: .foo
 # CHECK-NEXT:   Type: SHT_NOBITS
 # CHECK-NEXT:   Flags [

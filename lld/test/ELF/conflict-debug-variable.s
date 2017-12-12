@@ -67,36 +67,36 @@ bar:
   .string  "1.c"         # DW_AT_name [DW_FORM_string]  ("1.c")
   .long  0               # DW_AT_comp_dir [DW_FORM_strp]  ( .debug_str[0x00000000] = )
   .long  0               # DW_AT_stmt_list [DW_FORM_sec_offset]  (0x00000000)
-                         
+
   .uleb128 0x2           # DW_TAG_variable [2]
   .string  "foo"         # DW_AT_name [DW_FORM_string]  ("foo")
   .byte  0x1             # DW_AT_decl_file [DW_FORM_data1]  ("1.c")
   .byte  0x1             # DW_AT_decl_line [DW_FORM_data1]  (1)
   .long  0x32            # DW_AT_type [DW_FORM_ref4]  (cu + 0x0032 => {0x00000032})
   .uleb128 0x9           # DW_AT_external [DW_FORM_flag_present]  (true)
-  .byte  0x3             
+  .byte  0x3
   .quad  foo             # DW_AT_location [DW_FORM_exprloc]  (DW_OP_addr 0x0)
-                         
+
   .uleb128 0x3           # DW_TAG_base_type [3]
   .byte  0x4             # DW_AT_byte_size [DW_FORM_data1]  (0x04)
   .byte  0x5             # DW_AT_encoding [DW_FORM_data1]  (DW_ATE_signed)
   .string  "int"         # DW_AT_name [DW_FORM_string]  ("int")
-                         
+
   .uleb128 0x2           # DW_TAG_variable [2]
   .string  "bar"         # DW_AT_name [DW_FORM_string]  ("bar")
   .byte  0x1             # DW_AT_decl_file [DW_FORM_data1]  ("1.c")
   .byte  0x2             # DW_AT_decl_line [DW_FORM_data1]  (2)
   .long  0x32            # DW_AT_type [DW_FORM_ref4]  (cu + 0x0032 => {0x00000032})
   .uleb128 0x9           # DW_AT_external [DW_FORM_flag_present]  (true)
-  .byte  0x3             
+  .byte  0x3
   .quad  bar             # DW_AT_location [DW_FORM_exprloc]  (DW_OP_addr 0x0)
   .byte  0               # END
-  
+
 
 .section  .debug_abbrev,"",@progbits
   .uleb128 0x1   # Abbreviation code.
   .uleb128 0x11  # DW_TAG_compile_unit
-  
+
   .byte  0x1     # ID
   .uleb128 0x25  # DW_AT_producer, DW_FORM_strp
   .uleb128 0xe
@@ -110,7 +110,7 @@ bar:
   .uleb128 0x17
   .byte  0
   .byte  0
-  
+
   .uleb128 0x2  # ID
   .uleb128 0x34 # DW_TAG_variable, DW_CHILDREN_no
   .byte  0
@@ -128,7 +128,7 @@ bar:
   .uleb128 0x18
   .byte  0
   .byte  0
-  
+
   .uleb128 0x3  # ID
   .uleb128 0x24 # DW_TAG_base_type, DW_CHILDREN_no
   .byte  0

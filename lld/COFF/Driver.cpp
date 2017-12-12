@@ -1078,6 +1078,11 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       Config->is64() &&
       Args.hasFlag(OPT_highentropyva, OPT_highentropyva_no, true);
 
+  if (!Config->DynamicBase &&
+      (Config->Machine == ARMNT || Config->Machine == ARM64))
+    error("/dynamicbase:no is not compatible with " +
+          machineToStr(Config->Machine));
+
   // Handle /entry and /dll
   if (auto *Arg = Args.getLastArg(OPT_entry)) {
     Config->Entry = addUndefined(mangle(Arg->getValue()));
