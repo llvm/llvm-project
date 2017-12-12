@@ -14,6 +14,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
+#include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Refactor/RefactoringOptions.h"
 #include "llvm/ADT/STLExtras.h"
@@ -161,6 +162,23 @@ public:
   void IndirectLex(Token &Result) override { LexFromRawLexer(Result); }
 };
 
+/// Finds matching textual occurrences in string literals.
+class StringLiteralTextualParser {
+  const OldSymbolName &Name;
+
+public:
+  unsigned SymbolIndex;
+
+  StringLiteralTextualParser(const OldSymbolName &Name, unsigned SymbolIndex)
+      : Name(Name), SymbolIndex(SymbolIndex) {
+    assert(Name.size() == 1 && "can't search for multi-piece names in strings");
+  }
+
+  /// Returns the name's location if the parses has found a matching textual
+  /// name in a string literal.
+  SourceLocation handleToken(const Token &RawTok, Preprocessor &PP);
+};
+
 } // end anonymous namespace
 
 SelectorParser::ParseState SelectorParser::stateForToken(const Token &RawTok) {
@@ -232,6 +250,19 @@ bool SelectorParser::handleToken(const Token &RawTok) {
   return true;
 }
 
+SourceLocation StringLiteralTextualParser::handleToken(const Token &RawTok,
+                                                       Preprocessor &PP) {
+  if (!tok::isStringLiteral(RawTok.getKind()))
+    return SourceLocation();
+  StringLiteralParser Literal(RawTok, PP);
+  if (Literal.hadError)
+    return SourceLocation();
+  return Literal.GetString() == Name[0]
+             ? RawTok.getLocation().getLocWithOffset(
+                   Literal.getOffsetOfStringByte(RawTok, 0))
+             : SourceLocation();
+}
+
 static void collectTextualMatchesInComment(
     ArrayRef<IndexedSymbol> Symbols, SourceLocation CommentLoc,
     StringRef Comment, llvm::SmallVectorImpl<TextualMatchOccurrence> &Result) {
@@ -301,7 +332,7 @@ static void findTextualMatchesInComment(
 }
 
 static void findMatchingTextualOccurrences(
-    const SourceManager &SM, const LangOptions &LangOpts,
+    Preprocessor &PP, const SourceManager &SM, const LangOptions &LangOpts,
     ArrayRef<IndexedSymbol> Symbols,
     llvm::function_ref<void(SymbolOccurrence::OccurrenceKind,
                             ArrayRef<SourceLocation> Locations,
@@ -318,9 +349,17 @@ static void findMatchingTextualOccurrences(
       SelectorParsers.push_back(
           SelectorParser(Symbol.value().Name, Symbol.index()));
   }
+  llvm::SmallVector<StringLiteralTextualParser, 1> StringParsers;
+  for (const auto &Symbol : llvm::enumerate(Symbols)) {
+    if (Symbol.value().SearchForStringLiteralOccurrences)
+      StringParsers.push_back(
+          StringLiteralTextualParser(Symbol.value().Name, Symbol.index()));
+  }
 
   Token RawTok;
   RawLex.LexFromRawLexer(RawTok);
+  bool ScanNonCommentTokens =
+      !SelectorParsers.empty() || !StringParsers.empty();
   while (RawTok.isNot(tok::eof)) {
     if (RawTok.is(tok::comment)) {
       SourceRange Range(RawTok.getLocation(), RawTok.getEndLoc());
@@ -333,11 +372,17 @@ static void findMatchingTextualOccurrences(
                                     Range, MatchHandler);
         CommentMatches.clear();
       }
-    } else if (!SelectorParsers.empty()) {
+    } else if (ScanNonCommentTokens) {
       for (auto &Parser : SelectorParsers) {
         if (Parser.handleToken(RawTok))
           MatchHandler(SymbolOccurrence::MatchingSelector,
                        Parser.SelectorLocations, Parser.SymbolIndex);
+      }
+      for (auto &Parser : StringParsers) {
+        SourceLocation Loc = Parser.handleToken(RawTok, PP);
+        if (Loc.isValid())
+          MatchHandler(OldSymbolOccurrence::MatchingStringLiteral, Loc,
+                       Parser.SymbolIndex);
       }
     }
     RawLex.LexFromRawLexer(RawTok);
@@ -432,7 +477,7 @@ void IndexedFileOccurrenceProducer::ExecuteAction() {
   if (Options && Options->get(option::AvoidTextualMatches()))
     return;
   findMatchingTextualOccurrences(
-      SM, LangOpts, Symbols,
+      PP, SM, LangOpts, Symbols,
       [&](SymbolOccurrence::OccurrenceKind Kind,
           ArrayRef<SourceLocation> Locations, unsigned SymbolIndex) {
         SymbolOccurrence Result(Kind, /*IsMacroExpansion=*/false, SymbolIndex,
