@@ -15,6 +15,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Memory.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include <system_error>
@@ -25,110 +26,147 @@
 #include <io.h>
 #endif
 
-using llvm::sys::fs::mapped_file_region;
+using namespace llvm;
+using namespace llvm::sys;
 
-namespace llvm {
-FileOutputBuffer::FileOutputBuffer(std::unique_ptr<mapped_file_region> R,
-                                   StringRef Path, StringRef TmpPath,
-                                   bool IsRegular)
-    : Region(std::move(R)), FinalPath(Path), TempPath(TmpPath),
-      IsRegular(IsRegular) {}
+// A FileOutputBuffer which creates a temporary file in the same directory
+// as the final output file. The final output file is atomically replaced
+// with the temporary file on commit().
+class OnDiskBuffer : public FileOutputBuffer {
+public:
+  OnDiskBuffer(StringRef Path, StringRef TempPath,
+               std::unique_ptr<fs::mapped_file_region> Buf)
+      : FileOutputBuffer(Path), Buffer(std::move(Buf)), TempPath(TempPath) {}
 
-FileOutputBuffer::~FileOutputBuffer() {
-  // Close the mapping before deleting the temp file, so that the removal
-  // succeeds.
-  Region.reset();
-  sys::fs::remove(Twine(TempPath));
-}
+  static ErrorOr<std::unique_ptr<OnDiskBuffer>>
+  create(StringRef Path, size_t Size, unsigned Mode);
 
-ErrorOr<std::unique_ptr<FileOutputBuffer>>
-FileOutputBuffer::create(StringRef FilePath, size_t Size, unsigned Flags) {
-  // Check file is not a regular file, in which case we cannot remove it.
-  sys::fs::file_status Stat;
-  std::error_code EC = sys::fs::status(FilePath, Stat);
-  bool IsRegular = true;
-  switch (Stat.type()) {
-    case sys::fs::file_type::file_not_found:
-      // If file does not exist, we'll create one.
-      break;
-    case sys::fs::file_type::regular_file: {
-        // If file is not currently writable, error out.
-        // FIXME: There is no sys::fs:: api for checking this.
-        // FIXME: In posix, you use the access() call to check this.
-      }
-      break;
-    case sys::fs::file_type::directory_file:
-      return errc::is_a_directory;
-    default:
-      if (EC)
-        return EC;
-      IsRegular = false;
+  uint8_t *getBufferStart() const override { return (uint8_t *)Buffer->data(); }
+
+  uint8_t *getBufferEnd() const override {
+    return (uint8_t *)Buffer->data() + Buffer->size();
   }
 
-  SmallString<128> TempFilePath;
+  size_t getBufferSize() const override { return Buffer->size(); }
+
+  std::error_code commit() override {
+    // Unmap buffer, letting OS flush dirty pages to file on disk.
+    Buffer.reset();
+
+    // Atomically replace the existing file with the new one.
+    auto EC = fs::rename(TempPath, FinalPath);
+    sys::DontRemoveFileOnSignal(TempPath);
+    return EC;
+  }
+
+  ~OnDiskBuffer() override {
+    // Close the mapping before deleting the temp file, so that the removal
+    // succeeds.
+    Buffer.reset();
+    fs::remove(TempPath);
+  }
+
+private:
+  std::unique_ptr<fs::mapped_file_region> Buffer;
+  std::string TempPath;
+};
+
+// A FileOutputBuffer which keeps data in memory and writes to the final
+// output file on commit(). This is used only when we cannot use OnDiskBuffer.
+class InMemoryBuffer : public FileOutputBuffer {
+public:
+  InMemoryBuffer(StringRef Path, MemoryBlock Buf, unsigned Mode)
+      : FileOutputBuffer(Path), Buffer(Buf), Mode(Mode) {}
+
+  static ErrorOr<std::unique_ptr<InMemoryBuffer>>
+  create(StringRef Path, size_t Size, unsigned Mode) {
+    std::error_code EC;
+    MemoryBlock MB = Memory::allocateMappedMemory(
+        Size, nullptr, sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC);
+    if (EC)
+      return EC;
+    return llvm::make_unique<InMemoryBuffer>(Path, MB, Mode);
+  }
+
+  uint8_t *getBufferStart() const override { return (uint8_t *)Buffer.base(); }
+
+  uint8_t *getBufferEnd() const override {
+    return (uint8_t *)Buffer.base() + Buffer.size();
+  }
+
+  size_t getBufferSize() const override { return Buffer.size(); }
+
+  std::error_code commit() override {
+    int FD;
+    std::error_code EC;
+    if (auto EC = openFileForWrite(FinalPath, FD, fs::F_None, Mode))
+      return EC;
+    raw_fd_ostream OS(FD, /*shouldClose=*/true, /*unbuffered=*/true);
+    OS << StringRef((const char *)Buffer.base(), Buffer.size());
+    return std::error_code();
+  }
+
+private:
+  OwningMemoryBlock Buffer;
+  unsigned Mode;
+};
+
+ErrorOr<std::unique_ptr<OnDiskBuffer>>
+OnDiskBuffer::create(StringRef Path, size_t Size, unsigned Mode) {
+  // Create new file in same directory but with random name.
+  SmallString<128> TempPath;
   int FD;
-  if (IsRegular) {
-    unsigned Mode = sys::fs::all_read | sys::fs::all_write;
-    // If requested, make the output file executable.
-    if (Flags & F_executable)
-      Mode |= sys::fs::all_exe;
-    // Create new file in same directory but with random name.
-    EC = sys::fs::createUniqueFile(Twine(FilePath) + ".tmp%%%%%%%", FD,
-                                   TempFilePath, Mode);
-  } else {
-    // Create a temporary file. Since this is a special file, we will not move
-    // it and the new file can be in another filesystem. This avoids trying to
-    // create a temporary file in /dev when outputting to /dev/null for example.
-    EC = sys::fs::createTemporaryFile(sys::path::filename(FilePath), "", FD,
-                                      TempFilePath);
-  }
-
-  if (EC)
+  if (auto EC = fs::createUniqueFile(Path + ".tmp%%%%%%%", FD, TempPath, Mode))
     return EC;
 
-  sys::RemoveFileOnSignal(TempFilePath);
+  sys::RemoveFileOnSignal(TempPath);
 
 #ifndef LLVM_ON_WIN32
   // On Windows, CreateFileMapping (the mmap function on Windows)
   // automatically extends the underlying file. We don't need to
   // extend the file beforehand. _chsize (ftruncate on Windows) is
   // pretty slow just like it writes specified amount of bytes,
-  // so we should avoid calling that.
-  EC = sys::fs::resize_file(FD, Size);
-  if (EC)
+  // so we should avoid calling that function.
+  if (auto EC = fs::resize_file(FD, Size))
     return EC;
 #endif
 
-  auto MappedFile = llvm::make_unique<mapped_file_region>(
-      FD, mapped_file_region::readwrite, Size, 0, EC);
-  int Ret = close(FD);
+  // Mmap it.
+  std::error_code EC;
+  auto MappedFile = llvm::make_unique<fs::mapped_file_region>(
+      FD, fs::mapped_file_region::readwrite, Size, 0, EC);
+  close(FD);
   if (EC)
     return EC;
-  if (Ret)
-    return std::error_code(errno, std::generic_category());
-
-  std::unique_ptr<FileOutputBuffer> Buf(new FileOutputBuffer(
-      std::move(MappedFile), FilePath, TempFilePath, IsRegular));
-  return std::move(Buf);
+  return llvm::make_unique<OnDiskBuffer>(Path, TempPath, std::move(MappedFile));
 }
 
-std::error_code FileOutputBuffer::commit() {
-  // Unmap buffer, letting OS flush dirty pages to file on disk.
-  Region.reset();
+// Create an instance of FileOutputBuffer.
+ErrorOr<std::unique_ptr<FileOutputBuffer>>
+FileOutputBuffer::create(StringRef Path, size_t Size, unsigned Flags) {
+  unsigned Mode = fs::all_read | fs::all_write;
+  if (Flags & F_executable)
+    Mode |= fs::all_exe;
 
-  std::error_code EC;
-  if (IsRegular) {
-    // Atomically replace the existing file with the new one.
-    EC = sys::fs::rename(Twine(TempPath), Twine(FinalPath));
-    sys::DontRemoveFileOnSignal(TempPath);
-  } else {
-    EC = sys::fs::copy_file(TempPath, FinalPath);
-    std::error_code RMEC = sys::fs::remove(TempPath);
-    sys::DontRemoveFileOnSignal(TempPath);
-    if (RMEC)
-      return RMEC;
+  fs::file_status Stat;
+  fs::status(Path, Stat);
+
+  // Usually, we want to create OnDiskBuffer to create a temporary file in
+  // the same directory as the destination file and atomically replaces it
+  // by rename(2).
+  //
+  // However, if the destination file is a special file, we don't want to
+  // use rename (e.g. we don't want to replace /dev/null with a regular
+  // file.) If that's the case, we create an in-memory buffer, open the
+  // destination file and write to it on commit().
+  switch (Stat.type()) {
+  case fs::file_type::directory_file:
+    return errc::is_a_directory;
+  case fs::file_type::regular_file:
+  case fs::file_type::file_not_found:
+  case fs::file_type::status_error:
+    return OnDiskBuffer::create(Path, Size, Mode);
+  default:
+    return InMemoryBuffer::create(Path, Size, Mode);
   }
-
-  return EC;
 }
-} // namespace
