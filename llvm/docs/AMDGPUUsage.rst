@@ -156,9 +156,6 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                                       - R7 260X
      **GCN GFX8 (Volcanic Islands (VI))** [AMD-GCN-GFX8]_
      -----------------------------------------------------------------------------------
-     ``gfx800``  - ``iceland``   ``amdgcn``   dGPU  - xnack           .. TODO
-                                                      [off]              Add product
-                                                                         names.
      ``gfx801``  - ``carrizo``   ``amdgcn``   APU   - xnack           - A6-8500P
                                                       [on]            - Pro A6-8500B
                                                                       - A8-8600P
@@ -178,7 +175,7 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                       [on]            - A6-9210
                                                                       - A9-9410
      ``gfx802``  - ``tonga``     ``amdgcn``   dGPU  - xnack   ROCm    - FirePro S7150
-                                                      [off]           - FirePro S7100
+                 - ``iceland``                        [off]           - FirePro S7100
                                                                       - FirePro W7100
                                                                       - Radeon R285
                                                                       - Radeon R9 380
@@ -564,13 +561,12 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX702``  36         ``gfx702``
      ``EF_AMDGPU_MACH_AMDGCN_GFX703``  37         ``gfx703``
      ``EF_AMDGPU_MACH_AMDGCN_GFX704``  38         ``gfx704``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX800``  39         ``gfx800``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX801``  40         ``gfx801``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX802``  41         ``gfx802``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX803``  42         ``gfx803``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX810``  43         ``gfx810``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX900``  44         ``gfx900``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX902``  45         ``gfx902``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX801``  39         ``gfx801``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX802``  40         ``gfx802``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX803``  41         ``gfx803``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX810``  42         ``gfx810``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX900``  43         ``gfx900``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX902``  44         ``gfx902``
      ================================= ========== =============================
 
 Sections

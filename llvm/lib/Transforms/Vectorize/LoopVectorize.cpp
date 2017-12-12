@@ -6877,7 +6877,8 @@ LoopVectorizationCostModel::expectedCost(unsigned VF) {
         continue;
 
       // Skip ignored values.
-      if (ValuesToIgnore.count(&I))
+      if (ValuesToIgnore.count(&I) ||
+          (VF > 1 && VecValuesToIgnore.count(&I)))
         continue;
 
       VectorizationCostTy C = getInstructionCost(&I, VF);
