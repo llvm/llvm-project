@@ -140,9 +140,15 @@ Value *RandomIRBuilder::findPointer(BasicBlock &BB,
     if (isa<TerminatorInst>(Inst))
       return false;
 
-    if (auto PtrTy = dyn_cast<PointerType>(Inst->getType()))
+    if (auto PtrTy = dyn_cast<PointerType>(Inst->getType())) {
+      // We can never generate loads from non first class or non sized types
+      if (!PtrTy->getElementType()->isSized() ||
+          !PtrTy->getElementType()->isFirstClassType())
+        return false;
+
       // TODO: Check if this is horribly expensive.
       return Pred.matches(Srcs, UndefValue::get(PtrTy->getElementType()));
+    }
     return false;
   };
   if (auto RS = makeSampler(Rand, make_filter_range(Insts, IsMatchingPtr)))

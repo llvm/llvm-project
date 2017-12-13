@@ -6037,6 +6037,8 @@ private:
 
   /// \brief Set of all first private variables in the current directive.
   llvm::SmallPtrSet<const VarDecl *, 8> FirstPrivateDecls;
+  /// Set of all reduction variables in the current directive.
+  llvm::SmallPtrSet<const VarDecl *, 8> ReductionDecls;
 
   /// Map between device pointer declarations and their expression components.
   /// The key value for declarations in 'this' is null.
@@ -6429,6 +6431,12 @@ private:
     if (FirstPrivateDecls.count(Cap.getCapturedVar()))
       return MappableExprsHandler::OMP_MAP_PRIVATE |
              MappableExprsHandler::OMP_MAP_TO;
+    // Reduction variable  will use only the 'private ptr' and 'map to_from'
+    // flag.
+    if (ReductionDecls.count(Cap.getCapturedVar())) {
+      return MappableExprsHandler::OMP_MAP_TO |
+             MappableExprsHandler::OMP_MAP_FROM;
+    }
 
     // We didn't modify anything.
     return CurrentModifiers;
@@ -6442,6 +6450,12 @@ public:
       for (const auto *D : C->varlists())
         FirstPrivateDecls.insert(
             cast<VarDecl>(cast<DeclRefExpr>(D)->getDecl())->getCanonicalDecl());
+    for (const auto *C : Dir.getClausesOfKind<OMPReductionClause>()) {
+      for (const auto *D : C->varlists()) {
+        ReductionDecls.insert(
+            cast<VarDecl>(cast<DeclRefExpr>(D)->getDecl())->getCanonicalDecl());
+      }
+    }
     // Extract device pointer clause information.
     for (const auto *C : Dir.getClausesOfKind<OMPIsDevicePtrClause>())
       for (auto L : C->component_lists())
@@ -6721,15 +6735,9 @@ public:
       // The default map type for a scalar/complex type is 'to' because by
       // default the value doesn't have to be retrieved. For an aggregate
       // type, the default is 'tofrom'.
-      CurMapTypes.push_back(ElementType->isAggregateType()
-                                ? (OMP_MAP_TO | OMP_MAP_FROM)
-                                : OMP_MAP_TO);
-
-      // If we have a capture by reference we may need to add the private
-      // pointer flag if the base declaration shows in some first-private
-      // clause.
-      CurMapTypes.back() =
-          adjustMapModifiersForPrivateClauses(CI, CurMapTypes.back());
+      CurMapTypes.emplace_back(adjustMapModifiersForPrivateClauses(
+          CI, ElementType->isAggregateType() ? (OMP_MAP_TO | OMP_MAP_FROM)
+                                             : OMP_MAP_TO));
     }
     // Every default map produces a single argument which is a target parameter.
     CurMapTypes.back() |= OMP_MAP_TARGET_PARAM;
@@ -7135,6 +7143,10 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
     case Stmt::OMPTargetTeamsDistributeDirectiveClass:
       CodeGenFunction::EmitOMPTargetTeamsDistributeDeviceFunction(
           CGM, ParentName, cast<OMPTargetTeamsDistributeDirective>(*S));
+      break;
+    case Stmt::OMPTargetTeamsDistributeSimdDirectiveClass:
+      CodeGenFunction::EmitOMPTargetTeamsDistributeSimdDeviceFunction(
+          CGM, ParentName, cast<OMPTargetTeamsDistributeSimdDirective>(*S));
       break;
     case Stmt::OMPTargetParallelForDirectiveClass:
       CodeGenFunction::EmitOMPTargetParallelForDeviceFunction(

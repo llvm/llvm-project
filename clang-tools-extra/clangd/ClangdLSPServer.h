@@ -74,8 +74,7 @@ private:
   void onCommand(Ctx C, ExecuteCommandParams &Params) override;
   void onRename(Ctx C, RenameParams &Parames) override;
 
-  std::vector<clang::tooling::Replacement>
-  getFixIts(StringRef File, const clangd::Diagnostic &D);
+  std::vector<TextEdit> getFixIts(StringRef File, const clangd::Diagnostic &D);
 
   JSONOutput &Out;
   /// Used to indicate that the 'shutdown' request was received from the
@@ -88,7 +87,7 @@ private:
   bool IsDone = false;
 
   std::mutex FixItsMutex;
-  typedef std::map<clangd::Diagnostic, std::vector<clang::tooling::Replacement>>
+  typedef std::map<clangd::Diagnostic, std::vector<TextEdit>>
       DiagnosticToReplacementMap;
   /// Caches FixIts per file and diagnostics
   llvm::StringMap<DiagnosticToReplacementMap> FixItsMap;

@@ -697,7 +697,7 @@ class SizeClassAllocator64 {
         // Do it only when the feature is turned on, to avoid a potentially
         // extraneous syscall.
         if (ReleaseToOSIntervalMs() >= 0)
-          region->rtoi.last_release_at_ns = NanoTime();
+          region->rtoi.last_release_at_ns = MonotonicNanoTime();
       }
       // Do the mmap for the user memory.
       const uptr user_map_size =
@@ -827,7 +827,7 @@ class SizeClassAllocator64 {
         return;
 
       if (region->rtoi.last_release_at_ns + interval_ms * 1000000ULL >
-          NanoTime()) {
+          MonotonicNanoTime()) {
         return;  // Memory was returned recently.
       }
     }
@@ -844,6 +844,6 @@ class SizeClassAllocator64 {
       region->rtoi.num_releases += memory_mapper.GetReleasedRangesCount();
       region->rtoi.last_released_bytes = memory_mapper.GetReleasedBytes();
     }
-    region->rtoi.last_release_at_ns = NanoTime();
+    region->rtoi.last_release_at_ns = MonotonicNanoTime();
   }
 };

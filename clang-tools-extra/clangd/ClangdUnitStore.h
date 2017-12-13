@@ -14,6 +14,7 @@
 
 #include "ClangdUnit.h"
 #include "GlobalCompilationDatabase.h"
+#include "Logger.h"
 #include "Path.h"
 #include "clang/Tooling/CompilationDatabase.h"
 
@@ -28,8 +29,7 @@ public:
   std::shared_ptr<CppFile>
   getOrCreateFile(PathRef File, PathRef ResourceDir,
                   GlobalCompilationDatabase &CDB, bool StorePreamblesInMemory,
-                  std::shared_ptr<PCHContainerOperations> PCHs,
-                  clangd::Logger &Logger) {
+                  std::shared_ptr<PCHContainerOperations> PCHs) {
     std::lock_guard<std::mutex> Lock(Mutex);
 
     auto It = OpenedFiles.find(File);
@@ -39,7 +39,7 @@ public:
       It = OpenedFiles
                .try_emplace(File, CppFile::Create(File, std::move(Command),
                                                   StorePreamblesInMemory,
-                                                  std::move(PCHs), Logger))
+                                                  std::move(PCHs)))
                .first;
     }
     return It->second;
@@ -61,8 +61,8 @@ public:
   /// will be returned in RecreateResult.RemovedFile.
   RecreateResult recreateFileIfCompileCommandChanged(
       PathRef File, PathRef ResourceDir, GlobalCompilationDatabase &CDB,
-      bool StorePreamblesInMemory, std::shared_ptr<PCHContainerOperations> PCHs,
-      clangd::Logger &Logger);
+      bool StorePreamblesInMemory,
+      std::shared_ptr<PCHContainerOperations> PCHs);
 
   std::shared_ptr<CppFile> getFile(PathRef File) {
     std::lock_guard<std::mutex> Lock(Mutex);

@@ -38,8 +38,7 @@ inline void PrintTo(const ErrorHolder &Err, std::ostream *Out) {
 template <typename T>
 void PrintTo(const ExpectedHolder<T> &Item, std::ostream *Out) {
   if (Item.Success) {
-    *Out << "succeeded with value \"" << ::testing::PrintToString(*Item.Exp)
-         << "\"";
+    *Out << "succeeded with value " << ::testing::PrintToString(*Item.Exp);
   } else {
     PrintTo(static_cast<const ErrorHolder &>(Item), Out);
   }

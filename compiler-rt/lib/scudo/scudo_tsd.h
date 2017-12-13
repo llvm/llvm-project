@@ -36,7 +36,7 @@ struct ALIGNED(64) ScudoTSD {
       return true;
     }
     if (atomic_load_relaxed(&Precedence) == 0)
-      atomic_store_relaxed(&Precedence, NanoTime());
+      atomic_store_relaxed(&Precedence, MonotonicNanoTime());
     return false;
   }
 

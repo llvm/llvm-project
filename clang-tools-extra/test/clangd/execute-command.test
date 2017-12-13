@@ -15,11 +15,11 @@ Content-Length: 180
 # CHECK-NEXT:        "message": "using the result of an assignment as a condition without parentheses",
 # CHECK-NEXT:        "range": {
 # CHECK-NEXT:          "end": {
-# CHECK-NEXT:            "character": 35,
+# CHECK-NEXT:            "character": 37,
 # CHECK-NEXT:            "line": 0
 # CHECK-NEXT:          },
 # CHECK-NEXT:          "start": {
-# CHECK-NEXT:            "character": 35,
+# CHECK-NEXT:            "character": 32,
 # CHECK-NEXT:            "line": 0
 # CHECK-NEXT:          }
 # CHECK-NEXT:        },
@@ -33,7 +33,7 @@ Content-Length: 180
 # CHECK-NEXT:            "line": 0
 # CHECK-NEXT:          },
 # CHECK-NEXT:          "start": {
-# CHECK-NEXT:            "character": 35,
+# CHECK-NEXT:            "character": 34,
 # CHECK-NEXT:            "line": 0
 # CHECK-NEXT:          }
 # CHECK-NEXT:        },
@@ -47,7 +47,7 @@ Content-Length: 180
 # CHECK-NEXT:            "line": 0
 # CHECK-NEXT:          },
 # CHECK-NEXT:          "start": {
-# CHECK-NEXT:            "character": 35,
+# CHECK-NEXT:            "character": 34,
 # CHECK-NEXT:            "line": 0
 # CHECK-NEXT:          }
 # CHECK-NEXT:        },

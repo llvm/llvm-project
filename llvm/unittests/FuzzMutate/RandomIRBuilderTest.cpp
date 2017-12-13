@@ -236,4 +236,34 @@ TEST(RandomIRBuilderTest, Invokes) {
   }
 }
 
+TEST(RandomIRBuilderTest, FirstClassTypes) {
+  // Check that we never insert new source as a load from non first class
+  // or unsized type.
+
+  LLVMContext Ctx;
+  const char *SourceCode = "%Opaque = type opaque\n"
+                           "define void @test(i8* %ptr) {\n"
+                           "entry:\n"
+                           "  %tmp = bitcast i8* %ptr to i32* (i32*)*\n"
+                           "  %tmp1 = bitcast i8* %ptr to %Opaque*\n"
+                           "  ret void\n"
+                           "}";
+  auto M = parseAssembly(SourceCode, Ctx);
+
+  std::vector<Type *> Types = {Type::getInt8Ty(Ctx)};
+  RandomIRBuilder IB(Seed, Types);
+
+  Function &F = *M->getFunction("test");
+  BasicBlock &BB = *F.begin();
+  // Non first class type
+  Instruction *FuncPtr = &*BB.begin();
+  // Unsized type
+  Instruction *OpaquePtr = &*std::next(BB.begin());
+
+  for (int i = 0; i < 10; ++i) {
+    Value *V = IB.findOrCreateSource(BB, {FuncPtr, OpaquePtr});
+    ASSERT_FALSE(isa<LoadInst>(V));
+  }
+}
+
 }

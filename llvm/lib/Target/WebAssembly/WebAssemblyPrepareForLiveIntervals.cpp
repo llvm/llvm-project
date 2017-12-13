@@ -117,7 +117,7 @@ bool WebAssemblyPrepareForLiveIntervals::runOnMachineFunction(MachineFunction &M
     }
   }
 
-  // Ok, we're now ready to run LiveIntervalAnalysis again.
+  // Ok, we're now ready to run the LiveIntervals analysis again.
   MF.getProperties().set(MachineFunctionProperties::Property::TracksLiveness);
 
   return Changed;

@@ -32,7 +32,7 @@ public:
 
   void finish() override;
 
-  SymbolSlab takeSymbols() const { return std::move(Symbols); }
+  SymbolSlab takeSymbols() { return std::move(Symbols); }
 
 private:
   // All Symbols collected from the AST.

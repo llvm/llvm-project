@@ -919,8 +919,13 @@ public:
   }
 
   /// \brief Whether to include global (top-level) declaration results.
-  bool includeGlobals() const {
-    return CodeCompleteOpts.IncludeGlobals;
+  bool includeGlobals() const { return CodeCompleteOpts.IncludeGlobals; }
+
+  /// \brief Whether to include declarations in namespace contexts (including
+  /// the global namespace). If this is false, `includeGlobals()` will be
+  /// ignored.
+  bool includeNamespaceLevelDecls() const {
+    return CodeCompleteOpts.IncludeNamespaceLevelDecls;
   }
 
   /// \brief Whether to include brief documentation comments within the set of

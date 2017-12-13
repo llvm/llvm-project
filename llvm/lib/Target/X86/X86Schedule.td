@@ -508,6 +508,7 @@ def IIC_RDPID : InstrItinClass;
 def IIC_RDRAND : InstrItinClass;
 def IIC_RDSEED : InstrItinClass;
 def IIC_RDTSC : InstrItinClass;
+def IIC_RDTSCP : InstrItinClass;
 def IIC_RSM : InstrItinClass;
 def IIC_SIDT : InstrItinClass;
 def IIC_SGDT : InstrItinClass;

@@ -77,6 +77,17 @@ class RVInst16CSS<bits<3> funct3, bits<2> opcode, dag outs, dag ins,
   let Inst{1-0} = opcode;
 }
 
+class RVInst16CIW<bits<3> funct3, bits<2> opcode, dag outs, dag ins,
+                  string opcodestr, string argstr>
+    : RVInst16<outs, ins, opcodestr, argstr, [], InstFormatCIW> {
+  bits<10> imm;
+  bits<3> rd;
+
+  let Inst{15-13} = funct3;
+  let Inst{4-2} = rd;
+  let Inst{1-0} = opcode;
+}
+
 // The immediate value encoding differs for each instruction, so each subclass
 // is responsible for setting the appropriate bits in the Inst field.
 // The bits Inst{12-10} and Inst{6-5} must be set for each instruction.
