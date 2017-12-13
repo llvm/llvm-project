@@ -4,7 +4,7 @@
 
 // RUN: not %clang %s -std=foobar -c 2>&1 | FileCheck --match-full-lines %s
 // RUN: not %clang -x objective-c++ %s -std=foobar -c 2>&1 | FileCheck --match-full-lines %s
-// RUN: not %clang -x cuda -nocudainc -nocudalib %s -std=foobar -c 2>&1 | FileCheck --match-full-lines --check-prefix=CHECK --check-prefix=CUDA %s
+// RUN: not %clang -x cuda -nocudainc -nocudalib --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s -std=foobar -c 2>&1 | FileCheck --match-full-lines --check-prefix=CHECK --check-prefix=CUDA %s
 
 // CHECK: error: invalid value 'foobar' in '-std=foobar'
 // CHECK-NEXT: note: use 'c++98' or 'c++03' for 'ISO C++ 1998 with amendments' standard

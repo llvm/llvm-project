@@ -12,6 +12,7 @@
 
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringExtras.h"
 
 #include <array>
@@ -49,7 +50,9 @@ public:
   }
 
 private:
-  friend class llvm::DenseMapInfo<clang::clangd::SymbolID>;
+  friend llvm::hash_code hash_value(const SymbolID &ID) {
+    return hash_value(ArrayRef<uint8_t>(ID.HashValue));
+  }
 
   std::array<uint8_t, 20> HashValue;
 };
@@ -122,8 +125,7 @@ template <> struct DenseMapInfo<clang::clangd::SymbolID> {
     return TombstoneKey;
   }
   static unsigned getHashValue(const clang::clangd::SymbolID &Sym) {
-    return hash_value(
-        ArrayRef<uint8_t>(Sym.HashValue.data(), Sym.HashValue.size()));
+    return hash_value(Sym);
   }
   static bool isEqual(const clang::clangd::SymbolID &LHS,
                       const clang::clangd::SymbolID &RHS) {
