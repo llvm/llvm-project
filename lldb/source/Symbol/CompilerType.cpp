@@ -758,9 +758,15 @@ CompilerType CompilerType::GetTypeTemplateArgument(size_t idx) const {
   return CompilerType();
 }
 
-CompilerType CompilerType::GetGenericType(size_t idx) const {
+GenericKind CompilerType::GetGenericArgumentKind(size_t idx) const {
+  if (IsValid())
+    return m_type_system->GetGenericArgumentKind(m_type, idx);
+  return eNullGenericKindType;
+}
+
+CompilerType CompilerType::GetGenericArgumentType(size_t idx) const {
   if (IsValid()) {
-    return m_type_system->GetGenericType(m_type, idx);
+    return m_type_system->GetGenericArgumentType(m_type, idx);
   }
   return CompilerType();
 }

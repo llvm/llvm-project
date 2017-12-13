@@ -119,7 +119,11 @@ CompilerType TypeSystem::GetTypeTemplateArgument(opaque_compiler_type_t type,
   return CompilerType();
 }
 
-CompilerType TypeSystem::GetGenericType(void *type, size_t idx) {
+GenericKind TypeSystem::GetGenericArgumentKind(void *type, size_t idx) {
+  return eNullGenericKindType;
+}
+
+CompilerType TypeSystem::GetGenericArgumentType(void *type, size_t idx) {
   return CompilerType();
 }
 

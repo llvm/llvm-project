@@ -390,7 +390,8 @@ public:
   virtual llvm::Optional<CompilerType::IntegralTemplateArgument>
   GetIntegralTemplateArgument(lldb::opaque_compiler_type_t type, size_t idx);
 
-  virtual CompilerType GetGenericType(void *type, size_t idx);
+  virtual lldb::GenericKind GetGenericArgumentKind(void *type, size_t idx);
+  virtual CompilerType GetGenericArgumentType(void *type, size_t idx);
 
   //----------------------------------------------------------------------
   // Dumping types

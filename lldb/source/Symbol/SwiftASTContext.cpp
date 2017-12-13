@@ -5484,7 +5484,7 @@ bool SwiftASTContext::IsOptionalChain(CompilerType type,
 
   while (is_optional(type)) {
     ++depth;
-    type = type.GetGenericType(0);
+    type = type.GetGenericArgumentType(0);
   }
 
   if (depth > 0) {
@@ -7640,7 +7640,8 @@ bool SwiftASTContext::GetSelectedEnumCase(const CompilerType &type,
   return false;
 }
 
-lldb::GenericKind SwiftASTContext::GetGenericKind(void *type, size_t idx) {
+lldb::GenericKind SwiftASTContext::GetGenericArgumentKind(void *type,
+                                                          size_t idx) {
   if (type) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
     if (auto *unbound_generic_type =
@@ -7688,10 +7689,10 @@ CompilerType SwiftASTContext::GetUnboundGenericType(void *type, size_t idx) {
   return CompilerType();
 }
 
-CompilerType SwiftASTContext::GetGenericType(void *type, size_t idx) {
+CompilerType SwiftASTContext::GetGenericArgumentType(void *type, size_t idx) {
   VALID_OR_RETURN(CompilerType());
 
-  switch (GetGenericKind(type, idx)) {
+  switch (GetGenericArgumentKind(type, idx)) {
   case eBoundGenericKindType:
     return GetBoundGenericType(type, idx);
   case eUnboundGenericKindType:
