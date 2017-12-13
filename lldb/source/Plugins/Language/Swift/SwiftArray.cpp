@@ -331,20 +331,9 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
         valobj.GetCompilerType().GetTypeSystem()));
     SwiftLanguageRuntime::MetadataPromiseSP promise_sp(
         swift_runtime->GetMetadataPromise(argmetadata_ptr, swift_ast_ctx));
-    if (promise_sp) {
-      if (CompilerType type = promise_sp->FulfillTypePromise()) {
-        switch (type.GetTemplateArgumentKind(0)) {
-        case eBoundGenericKindType:
-          argument_type = type.GetBoundGenericType(0);
-          break;
-        case eUnboundGenericKindType:
-          argument_type = type.GetUnboundGenericType(0);
-          break;
-        default:
-          break;
-        }
-      }
-    }
+    if (promise_sp)
+      if (CompilerType type = promise_sp->FulfillTypePromise())
+        argument_type = type.GetGenericType(0);
 
     if (!argument_type.IsValid())
       return nullptr;

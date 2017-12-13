@@ -74,22 +74,6 @@ void SwiftUserExpression::DidFinishExecuting() {
   }
 }
 
-static CompilerType getBoundOrUnboundType(CompilerType &valobj_type,
-                                          uint32_t idx) {
-  CompilerType key_type;
-  switch (valobj_type.GetTemplateArgumentKind(idx)) {
-  case lldb::eBoundGenericKindType:
-    key_type = valobj_type.GetBoundGenericType(idx);
-    break;
-  case lldb::eUnboundGenericKindType:
-    key_type = valobj_type.GetUnboundGenericType(idx);
-    break;
-  default:
-    break;
-  }
-  return key_type;
-}
-
 void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
@@ -298,9 +282,7 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
             log->Printf("  [SUE::SC] Class generic arguments:");
 
           for (size_t ai = 0, ae = num_template_args; ai != ae; ++ai) {
-            CompilerType template_arg_type =
-                getBoundOrUnboundType(self_type, ai);
-
+            CompilerType template_arg_type = self_type.GetGenericType(ai);
             ConstString template_arg_name = template_arg_type.GetTypeName();
 
             if (log)
@@ -327,9 +309,7 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
           for (size_t ai = 0, ae = self_unbound_type.GetNumTemplateArguments();
                ai != ae; ++ai) {
-            CompilerType template_arg_type =
-                getBoundOrUnboundType(self_unbound_type, ai);
-
+            CompilerType template_arg_type = self_unbound_type.GetGenericType(ai);
             ConstString template_arg_name = template_arg_type.GetTypeName();
 
             if (log)
@@ -382,9 +362,7 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
            ai != ae; ++ai) {
         lldb::TemplateArgumentKind template_arg_kind;
 
-        CompilerType template_arg_type =
-            getBoundOrUnboundType(function_type, ai);
-
+        CompilerType template_arg_type = function_type.GetGenericType(ai);
         ConstString template_arg_name = template_arg_type.GetTypeName();
 
         if (log)

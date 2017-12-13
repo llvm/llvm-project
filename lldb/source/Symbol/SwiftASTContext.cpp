@@ -5484,16 +5484,7 @@ bool SwiftASTContext::IsOptionalChain(CompilerType type,
 
   while (is_optional(type)) {
     ++depth;
-    switch (type.GetTemplateArgumentKind(0)) {
-    case eBoundGenericKindType:
-      type = type.GetBoundGenericType(0);
-      break;
-    case eUnboundGenericKindType:
-      type = type.GetUnboundGenericType(0);
-      break;
-    default:
-      break;
-    }
+    type = type.GetGenericType(0);
   }
 
   if (depth > 0) {
@@ -7649,8 +7640,7 @@ bool SwiftASTContext::GetSelectedEnumCase(const CompilerType &type,
   return false;
 }
 
-lldb::TemplateArgumentKind
-SwiftASTContext::GetTemplateArgumentKind(void *type, size_t idx) {
+lldb::GenericKind SwiftASTContext::GetGenericKind(void *type, size_t idx) {
   if (type) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
     if (auto *unbound_generic_type =
@@ -7661,10 +7651,10 @@ SwiftASTContext::GetTemplateArgumentKind(void *type, size_t idx) {
       if (idx < bound_generic_type->getGenericArgs().size())
         return eBoundGenericKindType;
   }
-  return eTemplateArgumentKindNull;
+  return eNullGenericKindType;
 }
 
-CompilerType SwiftASTContext::GetBoundGenericType(void *type, uint32_t idx) {
+CompilerType SwiftASTContext::GetBoundGenericType(void *type, size_t idx) {
   VALID_OR_RETURN(CompilerType());
 
   if (type) {
@@ -7679,7 +7669,7 @@ CompilerType SwiftASTContext::GetBoundGenericType(void *type, uint32_t idx) {
   return CompilerType();
 }
 
-CompilerType SwiftASTContext::GetUnboundGenericType(void *type, uint32_t idx) {
+CompilerType SwiftASTContext::GetUnboundGenericType(void *type, size_t idx) {
   VALID_OR_RETURN(CompilerType());
 
   if (type) {
@@ -7694,6 +7684,20 @@ CompilerType SwiftASTContext::GetUnboundGenericType(void *type, uint32_t idx) {
                           nominal_type_decl->mapTypeIntoContext(depTy)
                               ->castTo<swift::ArchetypeType>());
     }
+  }
+  return CompilerType();
+}
+
+CompilerType SwiftASTContext::GetGenericType(void *type, size_t idx) {
+  VALID_OR_RETURN(CompilerType());
+
+  switch (GetGenericKind(type, idx)) {
+  case eBoundGenericKindType:
+    return GetBoundGenericType(type, idx);
+  case eUnboundGenericKindType:
+    return GetUnboundGenericType(type, idx);
+  default:
+    break;
   }
   return CompilerType();
 }

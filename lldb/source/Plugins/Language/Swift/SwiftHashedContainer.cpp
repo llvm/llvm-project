@@ -283,30 +283,14 @@ bool SwiftHashedContainerNativeBufferHandler::IsValid() {
          m_capacity >= m_count;
 }
 
-static CompilerType getBoundOrUnboundType(CompilerType &valobj_type,
-                                          uint32_t idx) {
-  CompilerType key_type;
-  switch (valobj_type.GetTemplateArgumentKind(idx)) {
-  case eBoundGenericKindType:
-    key_type = valobj_type.GetBoundGenericType(idx);
-    break;
-  case eUnboundGenericKindType:
-    key_type = valobj_type.GetUnboundGenericType(idx);
-    break;
-  default:
-    break;
-  }
-  return key_type;
-}
-
 std::unique_ptr<SwiftHashedContainerBufferHandler>
 SwiftHashedContainerBufferHandler::CreateBufferHandlerForNativeStorageOwner(
     ValueObject &valobj, lldb::addr_t storage_ptr, bool fail_on_no_children,
     NativeCreatorFunction Native) {
 
   CompilerType valobj_type(valobj.GetCompilerType());
-  CompilerType key_type = getBoundOrUnboundType(valobj_type, 0);
-  CompilerType value_type = getBoundOrUnboundType(valobj_type, 1);
+  CompilerType key_type = valobj_type.GetGenericType(0);
+  CompilerType value_type = valobj_type.GetGenericType(1);
 
   static ConstString g_Native("native");
   static ConstString g_nativeStorage("nativeStorage");
@@ -348,7 +332,7 @@ SwiftHashedContainerBufferHandler::CreateBufferHandlerForNativeStorageOwner(
     }
 
     CompilerType child_type(native_sp->GetCompilerType());
-    CompilerType element_type(getBoundOrUnboundType(child_type, 1));
+    CompilerType element_type(child_type.GetGenericType(1));
     if (element_type.IsValid() == false ||
         child_type.GetTemplateArgumentKind(1) != lldb::eBoundGenericKindType)
       return nullptr;
@@ -415,8 +399,8 @@ SwiftHashedContainerBufferHandler::CreateBufferHandler(
           valobj_sp->GetChildAtNamePath({g_nativeBuffer, g__storage}));
       if (storage_sp) {
         CompilerType child_type(valobj_sp->GetCompilerType());
-        CompilerType key_type(getBoundOrUnboundType(child_type, 0));
-        CompilerType value_type(getBoundOrUnboundType(child_type, 1));
+        CompilerType key_type(child_type.GetGenericType(0));
+        CompilerType value_type(child_type.GetGenericType(1));
 
         auto handler = std::unique_ptr<SwiftHashedContainerBufferHandler>(
             Native(storage_sp, key_type, value_type));
@@ -485,8 +469,8 @@ SwiftHashedContainerBufferHandler::CreateBufferHandler(
 
     CompilerType child_type(valobj.GetCompilerType());
     lldb::TemplateArgumentKind kind;
-    CompilerType key_type(getBoundOrUnboundType(child_type, 0));
-    CompilerType value_type(getBoundOrUnboundType(child_type, 1));
+    CompilerType key_type(child_type.GetGenericType(0));
+    CompilerType value_type(child_type.GetGenericType(1));
 
     auto handler = std::unique_ptr<SwiftHashedContainerBufferHandler>(
         Native(nativeStorage_sp, key_type, value_type));
