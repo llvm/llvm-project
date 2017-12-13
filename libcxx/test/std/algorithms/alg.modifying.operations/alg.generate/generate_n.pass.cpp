@@ -15,6 +15,10 @@
 //   void
 //   generate_n(Iter first, Size n, Generator gen);
 
+#ifdef _MSC_VER
+#pragma warning(disable: 4244) // conversion from 'const double' to 'int', possible loss of data
+#endif
+
 #include <algorithm>
 #include <cassert>
 

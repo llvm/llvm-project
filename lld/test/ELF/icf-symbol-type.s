@@ -2,12 +2,18 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: ld.lld --hash-style=sysv %t.o -o %t --icf=all -shared
-# RUN: llvm-readelf --dyn-symbols %t | FileCheck %s
+# RUN: llvm-readelf --dyn-symbols --sections %t | FileCheck %s
 
 # We used to mark bar as absolute.
 
-# CHECK: [[ADDR:[0-9a-z]*]]  0 NOTYPE  GLOBAL DEFAULT   4 foo
-# CHECK: [[ADDR]]            0 NOTYPE  GLOBAL DEFAULT   4 bar
+# CHECK: .text             PROGBITS        0000000000001000
+# CHECK: 0000000000001001 0 NOTYPE  GLOBAL DEFAULT   4 foo
+# CHECK: 0000000000001001 0 NOTYPE  GLOBAL DEFAULT   4 bar
+
+# The nop makes the test more interesting by making the offset of
+# text.f non zero.
+
+nop
 
         .section        .text.f,"ax",@progbits
         .globl  foo

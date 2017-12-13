@@ -85,12 +85,6 @@ protected:
 // This corresponds to a section of an input file.
 class InputSectionBase : public SectionBase {
 public:
-  InputSectionBase()
-      : SectionBase(Regular, "", /*Flags*/ 0, /*Entsize*/ 0, /*Alignment*/ 0,
-                    /*Type*/ 0,
-                    /*Info*/ 0, /*Link*/ 0),
-        NumRelocations(0), AreRelocsRela(false), Repl(this) {}
-
   template <class ELFT>
   InputSectionBase(ObjFile<ELFT> *File, const typename ELFT::Shdr *Header,
                    StringRef Name, Kind SectionKind);
@@ -113,8 +107,6 @@ public:
 
   ArrayRef<uint8_t> Data;
   uint64_t getOffsetInFile() const;
-
-  static InputSectionBase Discarded;
 
   // True if this section has already been placed to a linker script
   // output section. This is needed because, in a linker script, you
@@ -336,6 +328,8 @@ public:
 
   // Called by ICF to merge two input sections.
   void replace(InputSection *Other);
+
+  static InputSection Discarded;
 
 private:
   template <class ELFT, class RelTy>

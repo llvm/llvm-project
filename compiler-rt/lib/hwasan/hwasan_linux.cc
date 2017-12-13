@@ -32,18 +32,91 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
 
-uptr __hwasan_shadow_memory_dynamic_address;
-
-__attribute__((alias("__hwasan_shadow_memory_dynamic_address")))
-extern uptr __hwasan_shadow_memory_dynamic_address_internal;
-
 namespace __hwasan {
+
+void ReserveShadowMemoryRange(uptr beg, uptr end, const char *name) {
+  CHECK_EQ((beg % GetMmapGranularity()), 0);
+  CHECK_EQ(((end + 1) % GetMmapGranularity()), 0);
+  uptr size = end - beg + 1;
+  DecreaseTotalMmap(size);  // Don't count the shadow against mmap_limit_mb.
+  void *res = MmapFixedNoReserve(beg, size, name);
+  if (res != (void *)beg) {
+    Report(
+        "ReserveShadowMemoryRange failed while trying to map 0x%zx bytes. "
+        "Perhaps you're using ulimit -v\n",
+        size);
+    Abort();
+  }
+  if (common_flags()->no_huge_pages_for_shadow) NoHugePagesInRegion(beg, size);
+  if (common_flags()->use_madv_dontdump) DontDumpShadowMemory(beg, size);
+}
+
+static void ProtectGap(uptr addr, uptr size) {
+  void *res = MmapFixedNoAccess(addr, size, "shadow gap");
+  if (addr == (uptr)res) return;
+  // A few pages at the start of the address space can not be protected.
+  // But we really want to protect as much as possible, to prevent this memory
+  // being returned as a result of a non-FIXED mmap().
+  if (addr == 0) {
+    uptr step = GetMmapGranularity();
+    while (size > step) {
+      addr += step;
+      size -= step;
+      void *res = MmapFixedNoAccess(addr, size, "shadow gap");
+      if (addr == (uptr)res) return;
+    }
+  }
+
+  Report(
+      "ERROR: Failed to protect the shadow gap. "
+      "ASan cannot proceed correctly. ABORTING.\n");
+  DumpProcessMap();
+  Die();
+}
 
 bool InitShadow() {
   const uptr maxVirtualAddress = GetMaxUserVirtualAddress();
-  uptr shadow_size = MEM_TO_SHADOW_OFFSET(maxVirtualAddress) + 1;
-  __hwasan_shadow_memory_dynamic_address =
-      reinterpret_cast<uptr>(MmapNoReserveOrDie(shadow_size, "shadow"));
+
+  // LowMem covers as much of the first 4GB as possible.
+  const uptr kLowMemEnd = 1UL<<32;
+  const uptr kLowShadowEnd = kLowMemEnd >> kShadowScale;
+  const uptr kLowShadowStart = kLowShadowEnd >> kShadowScale;
+
+  // HighMem covers the upper part of the address space.
+  const uptr kHighShadowEnd = (maxVirtualAddress >> kShadowScale) + 1;
+  const uptr kHighShadowStart = Max(kLowMemEnd, kHighShadowEnd >> kShadowScale);
+  CHECK(kHighShadowStart < kHighShadowEnd);
+
+  const uptr kHighMemStart = kHighShadowStart << kShadowScale;
+  CHECK(kHighShadowEnd <= kHighMemStart);
+
+  if (Verbosity()) {
+    Printf("|| `[%p, %p]` || HighMem    ||\n", (void *)kHighMemStart,
+           (void *)maxVirtualAddress);
+    if (kHighMemStart > kHighShadowEnd)
+      Printf("|| `[%p, %p]` || ShadowGap2 ||\n", (void *)kHighShadowEnd,
+             (void *)kHighMemStart);
+    Printf("|| `[%p, %p]` || HighShadow ||\n", (void *)kHighShadowStart,
+           (void *)kHighShadowEnd);
+    if (kHighShadowStart > kLowMemEnd)
+      Printf("|| `[%p, %p]` || ShadowGap2 ||\n", (void *)kHighShadowEnd,
+             (void *)kHighMemStart);
+    Printf("|| `[%p, %p]` || LowMem     ||\n", (void *)kLowShadowEnd,
+           (void *)kLowMemEnd);
+    Printf("|| `[%p, %p]` || LowShadow  ||\n", (void *)kLowShadowStart,
+           (void *)kLowShadowEnd);
+    Printf("|| `[%p, %p]` || ShadowGap1 ||\n", (void *)0,
+           (void *)kLowShadowStart);
+  }
+
+  ReserveShadowMemoryRange(kLowShadowStart, kLowShadowEnd - 1, "low shadow");
+  ReserveShadowMemoryRange(kHighShadowStart, kHighShadowEnd - 1, "high shadow");
+  ProtectGap(0, kLowShadowStart);
+  if (kHighShadowStart > kLowMemEnd)
+    ProtectGap(kLowMemEnd, kHighShadowStart - kLowMemEnd);
+  if (kHighMemStart > kHighShadowEnd)
+    ProtectGap(kHighShadowEnd, kHighMemStart - kHighShadowEnd);
+
   return true;
 }
 
@@ -105,45 +178,28 @@ struct AccessInfo {
 
 #if defined(__aarch64__)
 static AccessInfo GetAccessInfo(siginfo_t *info, ucontext_t *uc) {
+  // Access type is encoded in HLT immediate as 0x1XY,
+  // where X is 1 for store, 0 for load.
+  // Valid values of Y are 0 to 4, which are interpreted as log2(access_size),
+  // and 0xF, which means that access size is stored in X1 register.
+  // Access address is always in X0 register.
   AccessInfo ai;
   uptr pc = (uptr)info->si_addr;
+  unsigned code = ((*(u32 *)pc) >> 5) & 0xffff;
+  if ((code & 0xff00) != 0x100)
+    return AccessInfo{0, 0, false, false}; // Not ours.
+  bool is_store = code & 0x10;
+  unsigned size_log = code & 0xff;
+  if (size_log > 4 && size_log != 0xf)
+    return AccessInfo{0, 0, false, false}; // Not ours.
 
-  struct {
-    uptr addr;
-    unsigned size;
-    bool is_store;
-  } handlers[] = {
-      {(uptr)&__hwasan_load1, 1, false},   {(uptr)&__hwasan_load2, 2, false},
-      {(uptr)&__hwasan_load4, 4, false},   {(uptr)&__hwasan_load8, 8, false},
-      {(uptr)&__hwasan_load16, 16, false},  {(uptr)&__hwasan_load, 0, false},
-      {(uptr)&__hwasan_store1, 1, true},  {(uptr)&__hwasan_store2, 2, true},
-      {(uptr)&__hwasan_store4, 4, true},  {(uptr)&__hwasan_store8, 8, true},
-      {(uptr)&__hwasan_store16, 16, true}, {(uptr)&__hwasan_store, 0, true}};
-  int best = -1;
-  uptr best_distance = 0;
-  for (size_t i = 0; i < sizeof(handlers) / sizeof(handlers[0]); ++i) {
-    uptr handler = handlers[i].addr;
-    // Don't accept pc == handler: HLT is never the first instruction.
-    if (pc <= handler) continue;
-    uptr distance = pc - handler;
-    if (distance > 256) continue;
-    if (best == -1 || best_distance > distance) {
-      best = i;
-      best_distance = distance;
-    }
-  }
-
-  // Not ours.
-  if (best == -1)
-    return AccessInfo{0, 0, false, false};
-
-  ai.is_store = handlers[best].is_store;
-  ai.is_load = !handlers[best].is_store;
-  ai.size = handlers[best].size;
-
+  ai.is_store = is_store;
+  ai.is_load = !is_store;
   ai.addr = uc->uc_mcontext.regs[0];
-  if (ai.size == 0)
+  if (size_log == 0xf)
     ai.size = uc->uc_mcontext.regs[1];
+  else
+    ai.size = 1U << size_log;
   return ai;
 }
 #else
@@ -152,11 +208,11 @@ static AccessInfo GetAccessInfo(siginfo_t *info, ucontext_t *uc) {
 }
 #endif
 
-static void HwasanOnSIGILL(int signo, siginfo_t *info, ucontext_t *uc) {
+static bool HwasanOnSIGILL(int signo, siginfo_t *info, ucontext_t *uc) {
   SignalContext sig{info, uc};
   AccessInfo ai = GetAccessInfo(info, uc);
   if (!ai.is_store && !ai.is_load)
-    return;
+    return false;
 
   InternalScopedBuffer<BufferedStackTrace> stack_buffer(1);
   BufferedStackTrace *stack = stack_buffer.data();
@@ -169,8 +225,9 @@ static void HwasanOnSIGILL(int signo, siginfo_t *info, ucontext_t *uc) {
   ++hwasan_report_count;
   if (flags()->halt_on_error)
     Die();
-  else
-    uc->uc_mcontext.pc += 4;
+
+  uc->uc_mcontext.pc += 4;
+  return true;
 }
 
 static void OnStackUnwind(const SignalContext &sig, const void *,
@@ -181,11 +238,11 @@ static void OnStackUnwind(const SignalContext &sig, const void *,
 
 void HwasanOnDeadlySignal(int signo, void *info, void *context) {
   // Probably a tag mismatch.
-  // FIXME: detect pc range in __hwasan_load* or __hwasan_store*.
   if (signo == SIGILL)
-    HwasanOnSIGILL(signo, (siginfo_t *)info, (ucontext_t*)context);
-  else
-    HandleDeadlySignal(info, context, GetTid(), &OnStackUnwind, nullptr);
+    if (HwasanOnSIGILL(signo, (siginfo_t *)info, (ucontext_t*)context))
+      return;
+
+  HandleDeadlySignal(info, context, GetTid(), &OnStackUnwind, nullptr);
 }
 
 
