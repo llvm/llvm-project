@@ -164,6 +164,9 @@ variable, where we list down the options and their defaults below.
 |                   |                 |               | Data Recorder          |
 |                   |                 |               | (FDR) mode.            |
 +-------------------+-----------------+---------------+------------------------+
+| verbosity         | ``int``         | ``0``         | Runtime verbosity      |
+|                   |                 |               | level.                 |
++-------------------+-----------------+---------------+------------------------+
 
 
 If you choose to not use the default logging implementation that comes with the

@@ -605,10 +605,7 @@ InputSectionBase *ObjFile<ELFT>::getSection(uint32_t Index) const {
     return nullptr;
   if (Index >= this->Sections.size())
     fatal(toString(this) + ": invalid section index: " + Twine(Index));
-
-  if (InputSectionBase *Sec = this->Sections[Index])
-    return Sec->Repl;
-  return nullptr;
+  return this->Sections[Index];
 }
 
 template <class ELFT> Symbol *ObjFile<ELFT>::createSymbol(const Elf_Sym *Sym) {

@@ -11,20 +11,16 @@
     define i32 @fn1() {
 ; CHECK-LABEL: @fn1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @b, i64 0, i32 0), align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @b, i64 0, i32 1), align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @b, i64 0, i32 2), align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @b, i64 0, i32 3), align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> undef, i32 [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[TMP2]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP3]], i32 2
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt <4 x i32> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> [[TMP4]], i32 ptrtoint (i32 ()* @fn1 to i32), i32 1
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> [[TMP9]], i32 ptrtoint (i32 ()* @fn1 to i32), i32 2
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP10]], i32 8, i32 3
-; CHECK-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP8]], <4 x i32> [[TMP11]], <4 x i32> <i32 6, i32 0, i32 0, i32 0>
-; CHECK-NEXT:    store <4 x i32> [[TMP12]], <4 x i32>* bitcast ([4 x i32]* @a to <4 x i32>*), align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([4 x i32]* @b to <4 x i32>*), align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> undef, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> undef, i32 [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 ptrtoint (i32 ()* @fn1 to i32), i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 ptrtoint (i32 ()* @fn1 to i32), i32 2
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 8, i32 3
+; CHECK-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP7]], <4 x i32> <i32 6, i32 0, i32 0, i32 0>
+; CHECK-NEXT:    store <4 x i32> [[TMP8]], <4 x i32>* bitcast ([4 x i32]* @a to <4 x i32>*), align 4
 ; CHECK-NEXT:    ret i32 0
 ;
   entry:

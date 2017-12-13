@@ -835,18 +835,6 @@ void MIPrinter::printTargetFlags(const MachineOperand &Op) {
   OS << ") ";
 }
 
-static const char *getTargetIndexName(const MachineFunction &MF, int Index) {
-  const auto *TII = MF.getSubtarget().getInstrInfo();
-  assert(TII && "expected instruction info");
-  auto Indices = TII->getSerializableTargetIndices();
-  for (const auto &I : Indices) {
-    if (I.first == Index) {
-      return I.second;
-    }
-  }
-  return nullptr;
-}
-
 void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
                       const TargetRegisterInfo *TRI,
                       bool ShouldPrintRegisterTies, LLT TypeToPrint,
@@ -862,7 +850,10 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
     LLVM_FALLTHROUGH;
   case MachineOperand::MO_Register:
   case MachineOperand::MO_CImmediate:
-  case MachineOperand::MO_MachineBasicBlock: {
+  case MachineOperand::MO_MachineBasicBlock:
+  case MachineOperand::MO_ConstantPoolIndex:
+  case MachineOperand::MO_TargetIndex:
+  case MachineOperand::MO_JumpTableIndex: {
     unsigned TiedOperandIdx = 0;
     if (ShouldPrintRegisterTies && Op.isReg() && Op.isTied() && !Op.isDef())
       TiedOperandIdx = Op.getParent()->findTiedOperandIdx(OpIdx);
@@ -876,23 +867,6 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
     break;
   case MachineOperand::MO_FrameIndex:
     printStackObjectReference(Op.getIndex());
-    break;
-  case MachineOperand::MO_ConstantPoolIndex:
-    OS << "%const." << Op.getIndex();
-    printOffset(Op.getOffset());
-    break;
-  case MachineOperand::MO_TargetIndex:
-    OS << "target-index(";
-    if (const auto *Name =
-            getTargetIndexName(*Op.getParent()->getMF(), Op.getIndex()))
-      OS << Name;
-    else
-      OS << "<unknown>";
-    OS << ')';
-    printOffset(Op.getOffset());
-    break;
-  case MachineOperand::MO_JumpTableIndex:
-    OS << "%jump-table." << Op.getIndex();
     break;
   case MachineOperand::MO_ExternalSymbol: {
     StringRef Name = Op.getSymbolName();

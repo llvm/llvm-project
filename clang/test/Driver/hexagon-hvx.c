@@ -2,17 +2,30 @@
 // Tests for the hvx features and warnings.
 // -----------------------------------------------------------------------------
 
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv65 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECKHVX165 %s
+// CHECKHVX165: "-target-feature" "+hvxv65"
+
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 -mhvx \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECKHVX162 %s
 // CHECKHVX162: "-target-feature" "+hvxv62"
 
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv65 -mhvx \
+// RUN:  -mhvx-double 2>&1 | FileCheck -check-prefix=CHECKHVX2 %s
+
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 -mhvx \
 // RUN:  -mhvx-double 2>&1 | FileCheck -check-prefix=CHECKHVX2 %s
+
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv65 -mhvx \
+// RUN:  -mhvx-length=128B 2>&1 | FileCheck -check-prefix=CHECKHVX2 %s
 
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 -mhvx \
 // RUN:  -mhvx-length=128B 2>&1 | FileCheck -check-prefix=CHECKHVX2 %s
 // CHECKHVX2-NOT: "-target-feature" "+hvx-length64b"
 // CHECKHVX2: "-target-feature" "+hvx-length128b"
+
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv65 2>&1 \
+// RUN:  | FileCheck -check-prefix=CHECKHVX3 %s
 
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 2>&1 \
 // RUN:  | FileCheck -check-prefix=CHECKHVX3 %s

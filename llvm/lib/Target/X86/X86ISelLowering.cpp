@@ -36147,6 +36147,27 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue combineMOVMSK(SDNode *N, SelectionDAG &DAG,
+                             TargetLowering::DAGCombinerInfo &DCI) {
+  SDValue Src = N->getOperand(0);
+  MVT SrcVT = Src.getSimpleValueType();
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
+                                        !DCI.isBeforeLegalizeOps());
+
+  // MOVMSK only uses the MSB from each vector element.
+  KnownBits Known;
+  APInt DemandedMask(APInt::getSignMask(SrcVT.getScalarSizeInBits()));
+  if (TLI.SimplifyDemandedBits(Src, DemandedMask, Known, TLO)) {
+    DCI.AddToWorklist(Src.getNode());
+    DCI.CommitTargetLoweringOpt(TLO);
+    return SDValue(N, 0);
+  }
+
+  return SDValue();
+}
+
 static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     const X86Subtarget &Subtarget) {
@@ -37318,6 +37339,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::FMSUBADD_RND:
   case X86ISD::FMADDSUB:
   case X86ISD::FMSUBADD:    return combineFMADDSUB(N, DAG, Subtarget);
+  case X86ISD::MOVMSK:      return combineMOVMSK(N, DAG, DCI);
   case X86ISD::MGATHER:
   case X86ISD::MSCATTER:
   case ISD::MGATHER:

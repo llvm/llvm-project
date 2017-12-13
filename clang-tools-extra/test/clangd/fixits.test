@@ -15,11 +15,11 @@ Content-Length: 180
 # CHECK-NEXT:        "message": "using the result of an assignment as a condition without parentheses",
 # CHECK-NEXT:        "range": {
 # CHECK-NEXT:          "end": {
-# CHECK-NEXT:            "character": 35,
+# CHECK-NEXT:            "character": 37,
 # CHECK-NEXT:            "line": 0
 # CHECK-NEXT:          },
 # CHECK-NEXT:          "start": {
-# CHECK-NEXT:            "character": 35,
+# CHECK-NEXT:            "character": 32,
 # CHECK-NEXT:            "line": 0
 # CHECK-NEXT:          }
 # CHECK-NEXT:        },
@@ -33,7 +33,7 @@ Content-Length: 180
 # CHECK-NEXT:            "line": 0
 # CHECK-NEXT:          },
 # CHECK-NEXT:          "start": {
-# CHECK-NEXT:            "character": 35,
+# CHECK-NEXT:            "character": 34,
 # CHECK-NEXT:            "line": 0
 # CHECK-NEXT:          }
 # CHECK-NEXT:        },
@@ -47,7 +47,7 @@ Content-Length: 180
 # CHECK-NEXT:            "line": 0
 # CHECK-NEXT:          },
 # CHECK-NEXT:          "start": {
-# CHECK-NEXT:            "character": 35,
+# CHECK-NEXT:            "character": 34,
 # CHECK-NEXT:            "line": 0
 # CHECK-NEXT:          }
 # CHECK-NEXT:        },
@@ -58,7 +58,7 @@ Content-Length: 180
 # CHECK-NEXT:  }
 Content-Length: 746
 
-{"jsonrpc":"2.0","id":2,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///foo.c"},"range":{"start":{"line":104,"character":13},"end":{"line":0,"character":35}},"context":{"diagnostics":[{"range":{"start": {"line": 0, "character": 35}, "end": {"line": 0, "character": 35}},"severity":2,"message":"using the result of an assignment as a condition without parentheses"},{"range":{"start": {"line": 0, "character": 35}, "end": {"line": 0, "character": 35}},"severity":3,"message":"place parentheses around the assignment to silence this warning"},{"range":{"start": {"line": 0, "character": 35}, "end": {"line": 0, "character": 35}},"severity":3,"message":"use '==' to turn this assignment into an equality comparison"}]}}}
+{"jsonrpc":"2.0","id":2,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///foo.c"},"range":{"start":{"line":104,"character":13},"end":{"line":0,"character":35}},"context":{"diagnostics":[{"range":{"start": {"line": 0, "character": 32}, "end": {"line": 0, "character": 37}},"severity":2,"message":"using the result of an assignment as a condition without parentheses"},{"range":{"start": {"line": 0, "character": 34}, "end": {"line": 0, "character": 35}},"severity":3,"message":"place parentheses around the assignment to silence this warning"},{"range":{"start": {"line": 0, "character": 34}, "end": {"line": 0, "character": 35}},"severity":3,"message":"use '==' to turn this assignment into an equality comparison"}]}}}
 #      CHECK:  "id": 2,
 # CHECK-NEXT:  "jsonrpc": "2.0",
 # CHECK-NEXT:  "result": [
@@ -128,7 +128,7 @@ Content-Length: 746
 # CHECK-NEXT:  ]
 Content-Length: 771
 
-{"jsonrpc":"2.0","id":3,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///foo.c"},"range":{"start":{"line":104,"character":13},"end":{"line":0,"character":35}},"context":{"diagnostics":[{"range":{"start": {"line": 0, "character": 35}, "end": {"line": 0, "character": 35}},"severity":2,"code":"1","source":"foo","message":"using the result of an assignment as a condition without parentheses"},{"range":{"start": {"line": 0, "character": 35}, "end": {"line": 0, "character": 35}},"severity":3,"message":"place parentheses around the assignment to silence this warning"},{"range":{"start": {"line": 0, "character": 35}, "end": {"line": 0, "character": 35}},"severity":3,"message":"use '==' to turn this assignment into an equality comparison"}]}}}
+{"jsonrpc":"2.0","id":3,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///foo.c"},"range":{"start":{"line":104,"character":13},"end":{"line":0,"character":35}},"context":{"diagnostics":[{"range":{"start": {"line": 0, "character": 32}, "end": {"line": 0, "character": 37}},"severity":2,"code":"1","source":"foo","message":"using the result of an assignment as a condition without parentheses"},{"range":{"start": {"line": 0, "character": 34}, "end": {"line": 0, "character": 35}},"severity":3,"message":"place parentheses around the assignment to silence this warning"},{"range":{"start": {"line": 0, "character": 34}, "end": {"line": 0, "character": 35}},"severity":3,"message":"use '==' to turn this assignment into an equality comparison"}]}}}
 # Make sure unused "code" and "source" fields ignored gracefully
 #      CHECK:  "id": 3,
 # CHECK-NEXT:  "jsonrpc": "2.0",
@@ -246,4 +246,4 @@ Content-Length: 44
 {"jsonrpc":"2.0","id":4,"method":"shutdown"}
 Content-Length: 33
 
-{"jsonrpc":"2.0":"method":"exit"}
+{"jsonrpc":"2.0","method":"exit"}

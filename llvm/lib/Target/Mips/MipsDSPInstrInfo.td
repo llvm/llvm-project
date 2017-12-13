@@ -1325,6 +1325,10 @@ def : BitconvertPat<i32, v2i16, GPR32, DSPR>;
 def : BitconvertPat<i32, v4i8, GPR32, DSPR>;
 def : BitconvertPat<v2i16, i32, DSPR, GPR32>;
 def : BitconvertPat<v4i8, i32, DSPR, GPR32>;
+def : BitconvertPat<f32, v2i16, FGR32, DSPR>;
+def : BitconvertPat<f32, v4i8, FGR32, DSPR>;
+def : BitconvertPat<v2i16, f32, DSPR, FGR32>;
+def : BitconvertPat<v4i8, f32, DSPR, FGR32>;
 
 def : DSPPat<(v2i16 (load addr:$a)),
              (v2i16 (COPY_TO_REGCLASS (LW addr:$a), DSPR))>;

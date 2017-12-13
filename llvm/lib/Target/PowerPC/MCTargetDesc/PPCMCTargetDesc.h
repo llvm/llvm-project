@@ -101,6 +101,7 @@ static inline bool isRunOfOnes(unsigned Val, unsigned &MB, unsigned &ME) {
 // Defines symbolic names for the PowerPC instructions.
 //
 #define GET_INSTRINFO_ENUM
+#define GET_INSTRINFO_SCHED_ENUM
 #include "PPCGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM

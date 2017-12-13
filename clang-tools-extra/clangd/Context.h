@@ -95,6 +95,11 @@ private:
   Context(std::shared_ptr<const Data> DataPtr);
 
 public:
+  /// Same as Context::empty(), please use Context::empty() instead.
+  /// Constructor is defined to workaround a bug in MSVC's version of STL.
+  /// (arguments of std::future<> must be default-construcitble in MSVC).
+  Context() = default;
+
   /// Move-only.
   Context(Context const &) = delete;
   Context &operator=(const Context &) = delete;

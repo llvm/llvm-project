@@ -164,7 +164,7 @@ void LiveRangeCalc::extendToUses(LiveRange &LR, unsigned Reg, LaneBitmask Mask,
   const TargetRegisterInfo &TRI = *MRI->getTargetRegisterInfo();
   for (MachineOperand &MO : MRI->reg_nodbg_operands(Reg)) {
     // Clear all kill flags. They will be reinserted after register allocation
-    // by LiveIntervalAnalysis::addKillFlags().
+    // by LiveIntervals::addKillFlags().
     if (MO.isUse())
       MO.setIsKill(false);
     // MO::readsReg returns "true" for subregister defs. This is for keeping

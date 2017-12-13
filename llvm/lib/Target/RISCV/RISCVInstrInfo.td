@@ -459,6 +459,9 @@ def : InstAlias<"csrwi $csr, $imm", (CSRRWI X0, uimm12:$csr, uimm5:$imm)>;
 def : InstAlias<"csrsi $csr, $imm", (CSRRSI X0, uimm12:$csr, uimm5:$imm)>;
 def : InstAlias<"csrci $csr, $imm", (CSRRCI X0, uimm12:$csr, uimm5:$imm)>;
 
+def : InstAlias<"sfence.vma",     (SFENCE_VMA      X0, X0)>;
+def : InstAlias<"sfence.vma $rs", (SFENCE_VMA GPR:$rs, X0)>;
+
 //===----------------------------------------------------------------------===//
 // Pseudo-instructions and codegen patterns
 //

@@ -12,7 +12,7 @@
 
 #include "AMDGPUSubtarget.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/CodeGen/LiveIntervalAnalysis.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/SlotIndexes.h"
