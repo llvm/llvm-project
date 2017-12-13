@@ -15,8 +15,8 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix TCHECK --check-prefix TCHECK-32
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix TCHECK --check-prefix TCHECK-32
-
 // expected-no-diagnostics
+
 #ifndef HEADER
 #define HEADER
 
@@ -124,13 +124,13 @@ int foo(int n) {
   // CHECK:       call void [[HVT0:@.+]](i[[SZ]] {{[^,]+}}, i[[SZ]] {{[^,]+}}, i[[SZ]] {{[^)]+}})
   // CHECK-NEXT:  br label %[[END]]
   // CHECK:       [[END]]
-  #pragma omp target teams distribute num_teams(a) thread_limit(a) firstprivate(aa) nowait
+  #pragma omp target teams distribute simd num_teams(a) thread_limit(a) firstprivate(aa) simdlen(16) nowait
   for (int i = 0; i < 10; ++i) {
   }
 
   // CHECK:       call void [[HVT1:@.+]](i[[SZ]] {{[^,]+}})
-  #pragma omp target teams distribute if(target: 0)
-  for (int i = 0; i < 10; ++i) {
+  #pragma omp target teams distribute simd if(target: 0) safelen(32) linear(a)
+  for (a = 0; a < 10; ++a) {
     a += 1;
   }
 
@@ -150,7 +150,7 @@ int foo(int n) {
   // CHECK:       call void [[HVT2:@.+]](i[[SZ]] {{[^,]+}})
   // CHECK-NEXT:  br label %[[END]]
   // CHECK:       [[END]]
-  #pragma omp target teams distribute if(target: 1)
+  #pragma omp target teams distribute simd if(target: 1)
   for (int i = 0; i < 10; ++i) {
     aa += 1;
   }
@@ -186,7 +186,7 @@ int foo(int n) {
   // CHECK:       call void [[HVT3]]({{[^,]+}}, {{[^,]+}})
   // CHECK-NEXT:  br label %[[IFEND]]
   // CHECK:       [[IFEND]]
-  #pragma omp target teams distribute if(target: n>10)
+  #pragma omp target teams distribute simd if(target: n>10)
   for (int i = 0; i < 10; ++i) {
     a += 1;
     aa += 1;
@@ -305,7 +305,7 @@ int foo(int n) {
   // CHECK:       call void [[HVT4:@.+]]({{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}}, {{[^,]+}})
   // CHECK-NEXT:  br label %[[END]]
   // CHECK:       [[END]]
-  #pragma omp target teams distribute if(target: n>20)
+  #pragma omp target teams distribute simd if(target: n>20) aligned(b)
   for (int i = 0; i < 10; ++i) {
     a += 1;
     b[2] += 1.0;
@@ -351,8 +351,8 @@ int foo(int n) {
 // CHECK:       [[AA_ADDR:%.+]] = alloca i[[SZ]], align
 // CHECK:       store i[[SZ]] %{{.+}}, i[[SZ]]* [[AA_ADDR]], align
 // CHECK-64:    [[AA_CADDR:%.+]] = bitcast i[[SZ]]* [[AA_ADDR]] to i32*
-// CHECK-64:    [[AA:%.+]] = load i32, i32* [[AA_CADDR]], align
-// CHECK-32:    [[AA:%.+]] = load i32, i32* [[AA_ADDR]], align
+// CHECK-64:    store i32 10, i32* [[AA_CADDR]], align
+// CHECK-32:    store i32 10, i32* [[AA_ADDR]], align
 // CHECK:       ret void
 // CHECK-NEXT:  }
 
@@ -461,7 +461,7 @@ tx ftemplate(int n) {
   short aa = 0;
   tx b[10];
 
-  #pragma omp target teams distribute if(target: n>40)
+  #pragma omp target teams distribute simd if(target: n>40)
   for (int i = 0; i < 10; ++i) {
     a += 1;
     aa += 1;
@@ -478,7 +478,7 @@ int fstatic(int n) {
   char aaa = 0;
   int b[10];
 
-  #pragma omp target teams distribute if(target: n>50)
+  #pragma omp target teams distribute simd if(target: n>50)
   for (int i = a; i < n; ++i) {
     a += 1;
     aa += 1;
@@ -496,7 +496,7 @@ struct S1 {
     int b = n+1;
     short int c[2][n];
 
-    #pragma omp target teams distribute if(target: n>60)
+    #pragma omp target teams distribute simd if(target: n>60)
     for (int i = 0; i < 10; ++i) {
       this->a = (double)b + 1.5;
       c[1][1] = ++a;
@@ -816,5 +816,9 @@ int bar(int n){
 //
 // CHECK:       define internal {{.*}}void [[OMP_OUTLINED7]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, [10 x i32]* {{.+}})
 // To reduce complexity, we're only going as far as validating the signature of the outlined parallel function.
+
+// CHECK-DAG: !{!"llvm.loop.vectorize.width", i32 16}
+// CHECK-DAG: !{!"llvm.loop.vectorize.enable", i1 true}
+// CHECK-DAG: !{!"llvm.loop.vectorize.width", i32 32}
 
 #endif
