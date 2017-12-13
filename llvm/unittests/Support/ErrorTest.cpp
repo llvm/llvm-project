@@ -735,23 +735,34 @@ TEST(Error, ErrorMatchers) {
   EXPECT_THAT_EXPECTED(Expected<int>(make_error<CustomError>(0)), Failed());
   EXPECT_NONFATAL_FAILURE(
       EXPECT_THAT_EXPECTED(Expected<int>(0), Failed()),
-      "Expected: failed\n  Actual: succeeded with value \"0\"");
+      "Expected: failed\n  Actual: succeeded with value 0");
 
   EXPECT_THAT_EXPECTED(Expected<int>(0), HasValue(0));
   EXPECT_NONFATAL_FAILURE(
       EXPECT_THAT_EXPECTED(Expected<int>(make_error<CustomError>(0)),
                            HasValue(0)),
-      "Expected: succeeded with value \"0\"\n"
+      "Expected: succeeded with value (is equal to 0)\n"
       "  Actual: failed  (CustomError { 0})");
   EXPECT_NONFATAL_FAILURE(
       EXPECT_THAT_EXPECTED(Expected<int>(1), HasValue(0)),
-      "Expected: succeeded with value \"0\"\n"
-      "  Actual: succeeded with value \"1\", but \"1\" != \"0\"");
+      "Expected: succeeded with value (is equal to 0)\n"
+      "  Actual: succeeded with value 1, (isn't equal to 0)");
 
   EXPECT_THAT_EXPECTED(Expected<int &>(make_error<CustomError>(0)), Failed());
   int a = 1;
   EXPECT_THAT_EXPECTED(Expected<int &>(a), Succeeded());
-  EXPECT_THAT_EXPECTED(Expected<int &>(a), HasValue(1));
+  EXPECT_THAT_EXPECTED(Expected<int &>(a), HasValue(testing::Eq(1)));
+
+  EXPECT_THAT_EXPECTED(Expected<int>(1), HasValue(testing::Gt(0)));
+  EXPECT_NONFATAL_FAILURE(
+      EXPECT_THAT_EXPECTED(Expected<int>(0), HasValue(testing::Gt(1))),
+      "Expected: succeeded with value (is > 1)\n"
+      "  Actual: succeeded with value 0, (isn't > 1)");
+  EXPECT_NONFATAL_FAILURE(
+      EXPECT_THAT_EXPECTED(Expected<int>(make_error<CustomError>(0)),
+                           HasValue(testing::Gt(1))),
+      "Expected: succeeded with value (is > 1)\n"
+      "  Actual: failed  (CustomError { 0})");
 }
 
 } // end anon namespace

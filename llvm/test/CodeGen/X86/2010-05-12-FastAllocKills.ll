@@ -6,7 +6,7 @@ target triple = "x86_64-apple-darwin"
 ;%bb.5: derived from LLVM BB %bb10
 ;    Predecessors according to CFG: %bb.4 %bb.5
 ;	%reg1024 = MOV_Fp8080 %reg1034
-;	%reg1025 = MUL_Fp80m32 %reg1024, %rip, 1, %reg0, <cp#0>, %reg0; mem:LD4[ConstantPool]
+;	%reg1025 = MUL_Fp80m32 %reg1024, %rip, 1, %reg0, %const.0, %reg0; mem:LD4[ConstantPool]
 ;	%reg1034 = MOV_Fp8080 %reg1025
 ;	FP_REG_KILL implicit-def %fp0, implicit-def %fp1, implicit-def %fp2, implicit-def %fp3, implicit-def %fp4, implicit-def %fp5, implicit-def %fp6
 ;	JMP_4 <%bb.5>
@@ -17,7 +17,7 @@ target triple = "x86_64-apple-darwin"
 ;    Predecessors according to CFG: %bb.4 %bb.5
 ;	%fp0 = LD_Fp80m <fi#3>, 1, %reg0, 0, %reg0; mem:LD10[FixedStack3](align=4)
 ;	%fp1 = MOV_Fp8080 killed %fp0
-;	%fp2 = MUL_Fp80m32 %fp1, %rip, 1, %reg0, <cp#0>, %reg0; mem:LD4[ConstantPool]
+;	%fp2 = MUL_Fp80m32 %fp1, %rip, 1, %reg0, %const.0, %reg0; mem:LD4[ConstantPool]
 ;	%fp0 = MOV_Fp8080 %fp2
 ;	ST_FpP80m <fi#3>, 1, %reg0, 0, %reg0, killed %fp0; mem:ST10[FixedStack3](align=4)
 ;	ST_FpP80m <fi#4>, 1, %reg0, 0, %reg0, killed %fp1; mem:ST10[FixedStack4](align=4)

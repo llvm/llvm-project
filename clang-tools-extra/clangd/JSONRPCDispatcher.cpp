@@ -19,6 +19,12 @@
 using namespace clang;
 using namespace clangd;
 
+namespace {
+static Key<std::unique_ptr<trace::Span>> RequestSpan;
+static Key<json::Expr> RequestID;
+static Key<JSONOutput *> RequestOut;
+} // namespace
+
 void JSONOutput::writeMessage(const json::Expr &Message) {
   std::string S;
   llvm::raw_string_ostream OS(S);
@@ -38,7 +44,7 @@ void JSONOutput::writeMessage(const json::Expr &Message) {
   Outs.flush();
 }
 
-void JSONOutput::log(const Twine &Message) {
+void JSONOutput::log(const Context &Ctx, const Twine &Message) {
   trace::log(Message);
   std::lock_guard<std::mutex> Guard(StreamMutex);
   Logs << Message << '\n';
@@ -53,46 +59,56 @@ void JSONOutput::mirrorInput(const Twine &Message) {
   InputMirror->flush();
 }
 
-void RequestContext::reply(json::Expr &&Result) {
+void clangd::reply(const Context &Ctx, json::Expr &&Result) {
+  auto ID = Ctx.get(RequestID);
   if (!ID) {
-    Out.log("Attempted to reply to a notification!");
+    log(Ctx, "Attempted to reply to a notification!");
     return;
   }
-  SPAN_ATTACH(tracer(), "Reply", Result);
-  Out.writeMessage(json::obj{
-      {"jsonrpc", "2.0"},
-      {"id", *ID},
-      {"result", std::move(Result)},
-  });
+
+  if (auto *Span = Ctx.get(RequestSpan))
+    SPAN_ATTACH(**Span, "Reply", Result);
+
+  Ctx.getExisting(RequestOut)
+      ->writeMessage(json::obj{
+          {"jsonrpc", "2.0"},
+          {"id", *ID},
+          {"result", std::move(Result)},
+      });
 }
 
-void RequestContext::replyError(ErrorCode code,
-                                const llvm::StringRef &Message) {
-  Out.log("Error " + Twine(static_cast<int>(code)) + ": " + Message);
-  SPAN_ATTACH(tracer(), "Error",
-              (json::obj{{"code", static_cast<int>(code)},
-                         {"message", Message.str()}}));
-  if (ID) {
-    Out.writeMessage(json::obj{
-        {"jsonrpc", "2.0"},
-        {"id", *ID},
-        {"error",
-         json::obj{{"code", static_cast<int>(code)}, {"message", Message}}},
-    });
+void clangd::replyError(const Context &Ctx, ErrorCode code,
+                        const llvm::StringRef &Message) {
+  log(Ctx, "Error " + Twine(static_cast<int>(code)) + ": " + Message);
+  if (auto *Span = Ctx.get(RequestSpan))
+    SPAN_ATTACH(**Span, "Error",
+                (json::obj{{"code", static_cast<int>(code)},
+                           {"message", Message.str()}}));
+
+  if (auto ID = Ctx.get(RequestID)) {
+    Ctx.getExisting(RequestOut)
+        ->writeMessage(json::obj{
+            {"jsonrpc", "2.0"},
+            {"id", *ID},
+            {"error",
+             json::obj{{"code", static_cast<int>(code)}, {"message", Message}}},
+        });
   }
 }
 
-void RequestContext::call(StringRef Method, json::Expr &&Params) {
+void clangd::call(const Context &Ctx, StringRef Method, json::Expr &&Params) {
   // FIXME: Generate/Increment IDs for every request so that we can get proper
   // replies once we need to.
-  SPAN_ATTACH(tracer(), "Call",
-              (json::obj{{"method", Method.str()}, {"params", Params}}));
-  Out.writeMessage(json::obj{
-      {"jsonrpc", "2.0"},
-      {"id", 1},
-      {"method", Method},
-      {"params", std::move(Params)},
-  });
+  if (auto *Span = Ctx.get(RequestSpan))
+    SPAN_ATTACH(**Span, "Call",
+                (json::obj{{"method", Method.str()}, {"params", Params}}));
+  Ctx.getExisting(RequestOut)
+      ->writeMessage(json::obj{
+          {"jsonrpc", "2.0"},
+          {"id", 1},
+          {"method", Method},
+          {"params", std::move(Params)},
+      });
 }
 
 void JSONRPCDispatcher::registerHandler(StringRef Method, Handler H) {
@@ -120,8 +136,18 @@ bool JSONRPCDispatcher::call(const json::Expr &Message, JSONOutput &Out) const {
 
   auto I = Handlers.find(*Method);
   auto &Handler = I != Handlers.end() ? I->second : UnknownHandler;
-  RequestContext Ctx(Out, *Method, std::move(ID));
-  SPAN_ATTACH(Ctx.tracer(), "Params", Params);
+
+  auto Tracer = llvm::make_unique<trace::Span>(*Method);
+  if (ID)
+    SPAN_ATTACH(*Tracer, "ID", *ID);
+  SPAN_ATTACH(*Tracer, "Params", Params);
+
+  auto Ctx = Context::empty()
+                 .derive(RequestOut, &Out)
+                 .derive(RequestSpan, std::move(Tracer));
+  if (ID)
+    Ctx = std::move(Ctx).derive(RequestID, *ID);
+
   Handler(std::move(Ctx), std::move(Params));
   return true;
 }
@@ -164,9 +190,10 @@ void clangd::runLanguageServerLoop(std::istream &In, JSONOutput &Out,
       // The end of headers is signified by an empty line.
       if (LineRef.consume_front("Content-Length: ")) {
         if (ContentLength != 0) {
-          Out.log("Warning: Duplicate Content-Length header received. "
-                  "The previous value for this message (" +
-                  std::to_string(ContentLength) + ") was ignored.");
+          log(Context::empty(),
+              "Warning: Duplicate Content-Length header received. "
+              "The previous value for this message (" +
+                  std::to_string(ContentLength) + ") was ignored.\n");
         }
 
         llvm::getAsUnsignedInteger(LineRef.trim(), 0, ContentLength);
@@ -185,8 +212,8 @@ void clangd::runLanguageServerLoop(std::istream &In, JSONOutput &Out,
     // and we don't want to crash downstream because of it.
     if (ContentLength > 1 << 30) { // 1024M
       In.ignore(ContentLength);
-      Out.log("Skipped overly large message of " + Twine(ContentLength) +
-              " bytes.");
+      log(Context::empty(), "Skipped overly large message of " +
+                                Twine(ContentLength) + " bytes.\n");
       continue;
     }
 
@@ -200,9 +227,10 @@ void clangd::runLanguageServerLoop(std::istream &In, JSONOutput &Out,
         // If the stream is aborted before we read ContentLength bytes, In
         // will have eofbit and failbit set.
         if (!In) {
-          Out.log("Input was aborted. Read only " +
-                  std::to_string(In.gcount()) + " bytes of expected " +
-                  std::to_string(ContentLength) + ".");
+          log(Context::empty(), "Input was aborted. Read only " +
+                                    std::to_string(In.gcount()) +
+                                    " bytes of expected " +
+                                    std::to_string(ContentLength) + ".\n");
           break;
         }
 
@@ -211,23 +239,25 @@ void clangd::runLanguageServerLoop(std::istream &In, JSONOutput &Out,
 
       if (auto Doc = json::parse(JSONRef)) {
         // Log the formatted message.
-        Out.log(llvm::formatv(Out.Pretty ? "<-- {0:2}" : "<-- {0}", *Doc));
+        log(Context::empty(),
+            llvm::formatv(Out.Pretty ? "<-- {0:2}\n" : "<-- {0}\n", *Doc));
         // Finally, execute the action for this JSON message.
         if (!Dispatcher.call(*Doc, Out))
-          Out.log("JSON dispatch failed!");
+          log(Context::empty(), "JSON dispatch failed!\n");
       } else {
         // Parse error. Log the raw message.
-        Out.log("<-- " + JSONRef);
-        Out.log(llvm::Twine("JSON parse error: ") +
-                llvm::toString(Doc.takeError()));
+        log(Context::empty(), "<-- " + JSONRef + "\n");
+        log(Context::empty(), llvm::Twine("JSON parse error: ") +
+                                  llvm::toString(Doc.takeError()) + "\n");
       }
 
       // If we're done, exit the loop.
       if (IsDone)
         break;
     } else {
-      Out.log("Warning: Missing Content-Length header, or message has zero "
-              "length.");
+      log(Context::empty(),
+          "Warning: Missing Content-Length header, or message has zero "
+          "length.\n");
     }
   }
 }

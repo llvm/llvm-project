@@ -25,17 +25,16 @@ namespace {
 struct HandlerRegisterer {
   template <typename Param>
   void operator()(StringRef Method,
-                  void (ProtocolCallbacks::*Handler)(RequestContext, Param)) {
+                  void (ProtocolCallbacks::*Handler)(Context, Param)) {
     // Capture pointers by value, as the lambda will outlive this object.
-    auto *Out = this->Out;
     auto *Callbacks = this->Callbacks;
     Dispatcher.registerHandler(
-        Method, [=](RequestContext C, const json::Expr &RawParams) {
+        Method, [=](Context C, const json::Expr &RawParams) {
           typename std::remove_reference<Param>::type P;
           if (fromJSON(RawParams, P)) {
             (Callbacks->*Handler)(std::move(C), P);
           } else {
-            Out->log("Failed to decode " + Method + " request.");
+            log(C, "Failed to decode " + Method + " request.");
           }
         });
   }

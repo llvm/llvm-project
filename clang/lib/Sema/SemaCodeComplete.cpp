@@ -4647,10 +4647,13 @@ void Sema::CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS,
     MaybeAddOverrideCalls(*this, Ctx, Results);
   Results.ExitScope();
 
-  CodeCompletionDeclConsumer Consumer(Results, CurContext);
-  LookupVisibleDecls(Ctx, LookupOrdinaryName, Consumer,
-                     /*IncludeGlobalScope=*/true,
-                     /*IncludeDependentBases=*/true);
+  if (CodeCompleter->includeNamespaceLevelDecls() ||
+      (!Ctx->isNamespace() && !Ctx->isTranslationUnit())) {
+    CodeCompletionDeclConsumer Consumer(Results, CurContext);
+    LookupVisibleDecls(Ctx, LookupOrdinaryName, Consumer,
+                       /*IncludeGlobalScope=*/true,
+                       /*IncludeDependentBases=*/true);
+  }
 
   auto CC = Results.getCompletionContext();
   CC.setCXXScopeSpecifier(SS);

@@ -2407,6 +2407,8 @@ def mv60 : Flag<["-"], "mv60">, Group<m_hexagon_Features_Group>,
            Alias<mcpu_EQ>, AliasArgs<["hexagonv60"]>;
 def mv62 : Flag<["-"], "mv62">, Group<m_hexagon_Features_Group>,
            Alias<mcpu_EQ>, AliasArgs<["hexagonv62"]>;
+def mv65 : Flag<["-"], "mv65">, Group<m_hexagon_Features_Group>,
+           Alias<mcpu_EQ>, AliasArgs<["hexagonv65"]>;
 def mhexagon_hvx : Flag<[ "-" ], "mhvx">,
                    Group<m_hexagon_Features_HVX_Group>,
                    HelpText<"Enable Hexagon Vector eXtensions">;

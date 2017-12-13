@@ -134,6 +134,8 @@ int main(int argc, char *argv[]) {
                  InputMirrorStream ? InputMirrorStream.getPointer() : nullptr,
                  PrettyPrint);
 
+  clangd::LoggingSession LoggingSession(Out);
+
   // If --compile-commands-dir arg was invoked, check value and override default
   // path.
   llvm::Optional<Path> CompileCommandsDirPath;
