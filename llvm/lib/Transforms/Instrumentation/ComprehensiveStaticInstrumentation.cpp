@@ -696,7 +696,7 @@ void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT) {
     uint64_t LocalID = DetachFED.add(*DI);
     DetachID = DetachFED.localToGlobalId(LocalID, IRB);
     Instruction *Call = IRB.CreateCall(CsiDetach, {DetachID});
-    IRB.SetInstDebugLocation(Call);
+    setInstrumentationDebugLoc(DI, Call);
   }
 
   // Find the detached block, continuation, and associated reattaches.
@@ -716,7 +716,7 @@ void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT) {
     Value *TaskID = TaskFED.localToGlobalId(LocalID, IRB);
     Instruction *Call = IRB.CreateCall(CsiTaskEntry,
                                        {TaskID, DetachID});
-    IRB.SetInstDebugLocation(Call);
+    setInstrumentationDebugLoc(*DetachedBlock, Call);
 
     // Instrument the exit points of the detached tasks.
     for (BasicBlock *TaskExit : TaskExits) {
@@ -725,7 +725,7 @@ void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT) {
       Value *TaskExitID = TaskExitFED.localToGlobalId(LocalID, IRB);
       Instruction *Call = IRB.CreateCall(CsiTaskExit,
                                          {TaskExitID, TaskID, DetachID});
-      IRB.SetInstDebugLocation(Call);
+      setInstrumentationDebugLoc(TaskExit->getTerminator(), Call);
     }
   }
 
@@ -741,7 +741,7 @@ void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT) {
     Value *ContinueID = DetachContinueFED.localToGlobalId(LocalID, IRB);
     Instruction *Call = IRB.CreateCall(CsiDetachContinue,
                                        {ContinueID, DetachID});
-    IRB.SetInstDebugLocation(Call);
+    setInstrumentationDebugLoc(*ContinueBlock, Call);
   }
 }
 
@@ -752,7 +752,7 @@ void CSIImpl::instrumentSync(SyncInst *SI) {
   Value *SyncID = SyncFED.localToGlobalId(LocalID, IRB);
   // Insert instrumentation before the sync.
   Instruction *Call = IRB.CreateCall(CsiSync, {SyncID});
-  IRB.SetInstDebugLocation(Call);
+  setInstrumentationDebugLoc(SI, Call);
 }
 
 void CSIImpl::insertConditionalHookCall(Instruction *I, Function *HookFunction,
