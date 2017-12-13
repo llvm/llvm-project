@@ -659,6 +659,8 @@ class PatFrag<dag ops, dag frag, code pred = [{}],
   bit IsLoad = ?;
   // Is the desired pre-packaged predicate for a store?
   bit IsStore = ?;
+  // Is the desired pre-packaged predicate for an atomic?
+  bit IsAtomic = ?;
 
   // cast<LoadSDNode>(N)->getAddressingMode() == ISD::UNINDEXED;
   // cast<StoreSDNode>(N)->getAddressingMode() == ISD::UNINDEXED;
@@ -675,6 +677,25 @@ class PatFrag<dag ops, dag frag, code pred = [{}],
   // !cast<StoreSDNode>(N)->isTruncatingStore();
   // cast<StoreSDNode>(N)->isTruncatingStore();
   bit IsTruncStore = ?;
+
+  // cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::Monotonic
+  bit IsAtomicOrderingMonotonic = ?;
+  // cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::Acquire
+  bit IsAtomicOrderingAcquire = ?;
+  // cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::Release
+  bit IsAtomicOrderingRelease = ?;
+  // cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::AcquireRelease
+  bit IsAtomicOrderingAcquireRelease = ?;
+  // cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::SequentiallyConsistent
+  bit IsAtomicOrderingSequentiallyConsistent = ?;
+
+  // isAcquireOrStronger(cast<AtomicSDNode>(N)->getOrdering())
+  // !isAcquireOrStronger(cast<AtomicSDNode>(N)->getOrdering())
+  bit IsAtomicOrderingAcquireOrStronger = ?;
+
+  // isReleaseOrStronger(cast<AtomicSDNode>(N)->getOrdering())
+  // !isReleaseOrStronger(cast<AtomicSDNode>(N)->getOrdering())
+  bit IsAtomicOrderingReleaseOrStronger = ?;
 
   // cast<LoadSDNode>(N)->getMemoryVT() == MVT::<VT>;
   // cast<StoreSDNode>(N)->getMemoryVT() == MVT::<VT>;
@@ -1156,21 +1177,25 @@ def atomic_cmp_swap_64 :
 
 multiclass binary_atomic_op<SDNode atomic_op> {
   def _8 : PatFrag<(ops node:$ptr, node:$val),
-                   (atomic_op node:$ptr, node:$val), [{
-    return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i8;
-  }]>;
+                   (atomic_op node:$ptr, node:$val)> {
+    let IsAtomic = 1;
+    let MemoryVT = i8;
+  }
   def _16 : PatFrag<(ops node:$ptr, node:$val),
-                   (atomic_op node:$ptr, node:$val), [{
-    return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i16;
-  }]>;
+                    (atomic_op node:$ptr, node:$val)> {
+    let IsAtomic = 1;
+    let MemoryVT = i16;
+  }
   def _32 : PatFrag<(ops node:$ptr, node:$val),
-                   (atomic_op node:$ptr, node:$val), [{
-    return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i32;
-  }]>;
+                    (atomic_op node:$ptr, node:$val)> {
+    let IsAtomic = 1;
+    let MemoryVT = i32;
+  }
   def _64 : PatFrag<(ops node:$ptr, node:$val),
-                   (atomic_op node:$ptr, node:$val), [{
-    return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i64;
-  }]>;
+                    (atomic_op node:$ptr, node:$val)> {
+    let IsAtomic = 1;
+    let MemoryVT = i64;
+  }
 }
 
 defm atomic_load_add  : binary_atomic_op<atomic_load_add>;
@@ -1188,24 +1213,28 @@ defm atomic_store     : binary_atomic_op<atomic_store>;
 
 def atomic_load_8 :
   PatFrag<(ops node:$ptr),
-          (atomic_load node:$ptr), [{
-  return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i8;
-}]>;
+          (atomic_load node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i8;
+}
 def atomic_load_16 :
   PatFrag<(ops node:$ptr),
-          (atomic_load node:$ptr), [{
-  return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i16;
-}]>;
+          (atomic_load node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i16;
+}
 def atomic_load_32 :
   PatFrag<(ops node:$ptr),
-          (atomic_load node:$ptr), [{
-  return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i32;
-}]>;
+          (atomic_load node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i32;
+}
 def atomic_load_64 :
   PatFrag<(ops node:$ptr),
-          (atomic_load node:$ptr), [{
-  return cast<AtomicSDNode>(N)->getMemoryVT() == MVT::i64;
-}]>;
+          (atomic_load node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i64;
+}
 
 //===----------------------------------------------------------------------===//
 // Selection DAG Pattern Support.

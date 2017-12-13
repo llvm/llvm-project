@@ -758,32 +758,42 @@ static void DumpDepVars(MultipleUseVarSet &DepVars) {
 
 /// TreePredicateFn constructor.  Here 'N' is a subclass of PatFrag.
 TreePredicateFn::TreePredicateFn(TreePattern *N) : PatFragRec(N) {
-  assert((getPredCode().empty() || getImmCode().empty()) &&
-        ".td file corrupt: can't have a node predicate *and* an imm predicate");
+  assert(
+      (!hasPredCode() || !hasImmCode()) &&
+      ".td file corrupt: can't have a node predicate *and* an imm predicate");
+}
+
+bool TreePredicateFn::hasPredCode() const {
+  return isLoad() || isStore() || isAtomic() ||
+         !PatFragRec->getRecord()->getValueAsString("PredicateCode").empty();
 }
 
 std::string TreePredicateFn::getPredCode() const {
   std::string Code = "";
+
+  if (!isLoad() && !isStore() && !isAtomic()) {
+    Record *MemoryVT = getMemoryVT();
+
+    if (MemoryVT)
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "MemoryVT requires IsLoad or IsStore");
+  }
 
   if (!isLoad() && !isStore()) {
     if (isUnindexed())
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
                       "IsUnindexed requires IsLoad or IsStore");
 
-    Record *MemoryVT = getMemoryVT();
     Record *ScalarMemoryVT = getScalarMemoryVT();
 
-    if (MemoryVT)
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "MemoryVT requires IsLoad or IsStore");
     if (ScalarMemoryVT)
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
                       "ScalarMemoryVT requires IsLoad or IsStore");
   }
 
-  if (isLoad() && isStore())
+  if (isLoad() + isStore() + isAtomic() > 1)
     PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                    "IsLoad and IsStore are mutually exclusive");
+                    "IsLoad, IsStore, and IsAtomic are mutually exclusive");
 
   if (isLoad()) {
     if (!isUnindexed() && !isNonExtLoad() && !isAnyExtLoad() &&
@@ -819,6 +829,86 @@ std::string TreePredicateFn::getPredCode() const {
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
                       "IsTruncStore requires IsStore");
   }
+
+  if (isAtomic()) {
+    if (getMemoryVT() == nullptr && !isAtomicOrderingMonotonic() &&
+        !isAtomicOrderingAcquire() && !isAtomicOrderingRelease() &&
+        !isAtomicOrderingAcquireRelease() &&
+        !isAtomicOrderingSequentiallyConsistent() &&
+        !isAtomicOrderingAcquireOrStronger() &&
+        !isAtomicOrderingReleaseOrStronger() &&
+        !isAtomicOrderingWeakerThanAcquire() &&
+        !isAtomicOrderingWeakerThanRelease())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsAtomic cannot be used by itself");
+  } else {
+    if (isAtomicOrderingMonotonic())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsAtomicOrderingMonotonic requires IsAtomic");
+    if (isAtomicOrderingAcquire())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsAtomicOrderingAcquire requires IsAtomic");
+    if (isAtomicOrderingRelease())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsAtomicOrderingRelease requires IsAtomic");
+    if (isAtomicOrderingAcquireRelease())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsAtomicOrderingAcquireRelease requires IsAtomic");
+    if (isAtomicOrderingSequentiallyConsistent())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsAtomicOrderingSequentiallyConsistent requires IsAtomic");
+    if (isAtomicOrderingAcquireOrStronger())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsAtomicOrderingAcquireOrStronger requires IsAtomic");
+    if (isAtomicOrderingReleaseOrStronger())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsAtomicOrderingReleaseOrStronger requires IsAtomic");
+    if (isAtomicOrderingWeakerThanAcquire())
+      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                      "IsAtomicOrderingWeakerThanAcquire requires IsAtomic");
+  }
+
+  if (isLoad() || isStore() || isAtomic()) {
+    StringRef SDNodeName =
+        isLoad() ? "LoadSDNode" : isStore() ? "StoreSDNode" : "AtomicSDNode";
+
+    Record *MemoryVT = getMemoryVT();
+
+    if (MemoryVT)
+      Code += ("if (cast<" + SDNodeName + ">(N)->getMemoryVT() != MVT::" +
+               MemoryVT->getName() + ") return false;\n")
+                  .str();
+  }
+
+  if (isAtomic() && isAtomicOrderingMonotonic())
+    Code += "if (cast<AtomicSDNode>(N)->getOrdering() != "
+            "AtomicOrdering::Monotonic) return false;\n";
+  if (isAtomic() && isAtomicOrderingAcquire())
+    Code += "if (cast<AtomicSDNode>(N)->getOrdering() != "
+            "AtomicOrdering::Acquire) return false;\n";
+  if (isAtomic() && isAtomicOrderingRelease())
+    Code += "if (cast<AtomicSDNode>(N)->getOrdering() != "
+            "AtomicOrdering::Release) return false;\n";
+  if (isAtomic() && isAtomicOrderingAcquireRelease())
+    Code += "if (cast<AtomicSDNode>(N)->getOrdering() != "
+            "AtomicOrdering::AcquireRelease) return false;\n";
+  if (isAtomic() && isAtomicOrderingSequentiallyConsistent())
+    Code += "if (cast<AtomicSDNode>(N)->getOrdering() != "
+            "AtomicOrdering::SequentiallyConsistent) return false;\n";
+
+  if (isAtomic() && isAtomicOrderingAcquireOrStronger())
+    Code += "if (!isAcquireOrStronger(cast<AtomicSDNode>(N)->getOrdering())) "
+            "return false;\n";
+  if (isAtomic() && isAtomicOrderingWeakerThanAcquire())
+    Code += "if (isAcquireOrStronger(cast<AtomicSDNode>(N)->getOrdering())) "
+            "return false;\n";
+
+  if (isAtomic() && isAtomicOrderingReleaseOrStronger())
+    Code += "if (!isReleaseOrStronger(cast<AtomicSDNode>(N)->getOrdering())) "
+            "return false;\n";
+  if (isAtomic() && isAtomicOrderingWeakerThanRelease())
+    Code += "if (isReleaseOrStronger(cast<AtomicSDNode>(N)->getOrdering())) "
+            "return false;\n";
 
   if (isLoad() || isStore()) {
     StringRef SDNodeName = isLoad() ? "LoadSDNode" : "StoreSDNode";
@@ -860,13 +950,8 @@ std::string TreePredicateFn::getPredCode() const {
             " if (!cast<StoreSDNode>(N)->isTruncatingStore()) return false;\n";
     }
 
-    Record *MemoryVT = getMemoryVT();
     Record *ScalarMemoryVT = getScalarMemoryVT();
 
-    if (MemoryVT)
-      Code += ("if (cast<" + SDNodeName + ">(N)->getMemoryVT() != MVT::" +
-               MemoryVT->getName() + ") return false;\n")
-                  .str();
     if (ScalarMemoryVT)
       Code += ("if (cast<" + SDNodeName +
                ">(N)->getMemoryVT().getScalarType() != MVT::" +
@@ -882,6 +967,10 @@ std::string TreePredicateFn::getPredCode() const {
     Code += "return true;\n";
 
   return Code;
+}
+
+bool TreePredicateFn::hasImmCode() const {
+  return !PatFragRec->getRecord()->getValueAsString("ImmediateCode").empty();
 }
 
 std::string TreePredicateFn::getImmCode() const {
@@ -914,6 +1003,9 @@ bool TreePredicateFn::isLoad() const {
 bool TreePredicateFn::isStore() const {
   return isPredefinedPredicateEqualTo("IsStore", true);
 }
+bool TreePredicateFn::isAtomic() const {
+  return isPredefinedPredicateEqualTo("IsAtomic", true);
+}
 bool TreePredicateFn::isUnindexed() const {
   return isPredefinedPredicateEqualTo("IsUnindexed", true);
 }
@@ -934,6 +1026,34 @@ bool TreePredicateFn::isNonTruncStore() const {
 }
 bool TreePredicateFn::isTruncStore() const {
   return isPredefinedPredicateEqualTo("IsTruncStore", true);
+}
+bool TreePredicateFn::isAtomicOrderingMonotonic() const {
+  return isPredefinedPredicateEqualTo("IsAtomicOrderingMonotonic", true);
+}
+bool TreePredicateFn::isAtomicOrderingAcquire() const {
+  return isPredefinedPredicateEqualTo("IsAtomicOrderingAcquire", true);
+}
+bool TreePredicateFn::isAtomicOrderingRelease() const {
+  return isPredefinedPredicateEqualTo("IsAtomicOrderingRelease", true);
+}
+bool TreePredicateFn::isAtomicOrderingAcquireRelease() const {
+  return isPredefinedPredicateEqualTo("IsAtomicOrderingAcquireRelease", true);
+}
+bool TreePredicateFn::isAtomicOrderingSequentiallyConsistent() const {
+  return isPredefinedPredicateEqualTo("IsAtomicOrderingSequentiallyConsistent",
+                                      true);
+}
+bool TreePredicateFn::isAtomicOrderingAcquireOrStronger() const {
+  return isPredefinedPredicateEqualTo("IsAtomicOrderingAcquireOrStronger", true);
+}
+bool TreePredicateFn::isAtomicOrderingWeakerThanAcquire() const {
+  return isPredefinedPredicateEqualTo("IsAtomicOrderingAcquireOrStronger", false);
+}
+bool TreePredicateFn::isAtomicOrderingReleaseOrStronger() const {
+  return isPredefinedPredicateEqualTo("IsAtomicOrderingReleaseOrStronger", true);
+}
+bool TreePredicateFn::isAtomicOrderingWeakerThanRelease() const {
+  return isPredefinedPredicateEqualTo("IsAtomicOrderingReleaseOrStronger", false);
 }
 Record *TreePredicateFn::getMemoryVT() const {
   Record *R = getOrigPatFragRecord()->getRecord();
@@ -966,7 +1086,7 @@ StringRef TreePredicateFn::getImmTypeIdentifier() const {
 
 /// isAlwaysTrue - Return true if this is a noop predicate.
 bool TreePredicateFn::isAlwaysTrue() const {
-  return getPredCode().empty() && getImmCode().empty();
+  return !hasPredCode() && !hasImmCode();
 }
 
 /// Return the name to use in the generated code to reference this, this is
@@ -1036,7 +1156,7 @@ std::string TreePredicateFn::getCodeToRunOnSDNode() const {
   }
   
   // Handle arbitrary node predicates.
-  assert(!getPredCode().empty() && "Don't have any predicate code!");
+  assert(hasPredCode() && "Don't have any predicate code!");
   StringRef ClassName;
   if (PatFragRec->getOnlyTree()->isLeaf())
     ClassName = "SDNode";

@@ -191,6 +191,8 @@ static std::string explainPredicates(const TreePatternNode *N) {
   for (const auto &P : N->getPredicateFns()) {
     Explanation +=
         (Separator + P.getOrigPatFragRecord()->getRecord()->getName()).str();
+    Separator = ", ";
+
     if (P.isAlwaysTrue())
       Explanation += " always-true";
     if (P.isImmediatePattern())
@@ -217,6 +219,25 @@ static std::string explainPredicates(const TreePatternNode *N) {
       Explanation += (" MemVT=" + VT->getName()).str();
     if (Record *VT = P.getScalarMemoryVT())
       Explanation += (" ScalarVT(MemVT)=" + VT->getName()).str();
+
+    if (P.isAtomicOrderingMonotonic())
+      Explanation += " monotonic";
+    if (P.isAtomicOrderingAcquire())
+      Explanation += " acquire";
+    if (P.isAtomicOrderingRelease())
+      Explanation += " release";
+    if (P.isAtomicOrderingAcquireRelease())
+      Explanation += " acq_rel";
+    if (P.isAtomicOrderingSequentiallyConsistent())
+      Explanation += " seq_cst";
+    if (P.isAtomicOrderingAcquireOrStronger())
+      Explanation += " >=acquire";
+    if (P.isAtomicOrderingWeakerThanAcquire())
+      Explanation += " <acquire";
+    if (P.isAtomicOrderingReleaseOrStronger())
+      Explanation += " >=release";
+    if (P.isAtomicOrderingWeakerThanRelease())
+      Explanation += " <release";
   }
   return Explanation;
 }
@@ -253,16 +274,30 @@ static Error isTrivialOperatorNode(const TreePatternNode *N) {
     if (Predicate.isImmediatePattern())
       continue;
 
-    if (Predicate.isLoad() && Predicate.isUnindexed())
-      continue;
-
     if (Predicate.isNonExtLoad())
       continue;
 
-    if (Predicate.isStore() && Predicate.isUnindexed())
+    if (Predicate.isNonTruncStore())
       continue;
 
-    if (Predicate.isNonTruncStore())
+    if (Predicate.isLoad() || Predicate.isStore()) {
+      if (Predicate.isUnindexed())
+        continue;
+    }
+
+    if (Predicate.isAtomic() && Predicate.getMemoryVT())
+      continue;
+
+    if (Predicate.isAtomic() &&
+        (Predicate.isAtomicOrderingMonotonic() ||
+         Predicate.isAtomicOrderingAcquire() ||
+         Predicate.isAtomicOrderingRelease() ||
+         Predicate.isAtomicOrderingAcquireRelease() ||
+         Predicate.isAtomicOrderingSequentiallyConsistent() ||
+         Predicate.isAtomicOrderingAcquireOrStronger() ||
+         Predicate.isAtomicOrderingWeakerThanAcquire() ||
+         Predicate.isAtomicOrderingReleaseOrStronger() ||
+         Predicate.isAtomicOrderingWeakerThanRelease()))
       continue;
 
     HasUnsupportedPredicate = true;
@@ -1171,7 +1206,7 @@ protected:
   enum PredicateKind {
     IPM_Opcode,
     IPM_ImmPredicate,
-    IPM_NonAtomicMMO,
+    IPM_AtomicOrderingMMO,
   };
 
   PredicateKind Kind;
@@ -1300,20 +1335,42 @@ public:
   }
 };
 
-/// Generates code to check that a memory instruction has a non-atomic MachineMemoryOperand.
-class NonAtomicMMOPredicateMatcher : public InstructionPredicateMatcher {
+/// Generates code to check that a memory instruction has a atomic ordering
+/// MachineMemoryOperand.
+class AtomicOrderingMMOPredicateMatcher : public InstructionPredicateMatcher {
 public:
-  NonAtomicMMOPredicateMatcher()
-      : InstructionPredicateMatcher(IPM_NonAtomicMMO) {}
+  enum AOComparator {
+    AO_Exactly,
+    AO_OrStronger,
+    AO_WeakerThan,
+  };
+
+protected:
+  StringRef Order;
+  AOComparator Comparator;
+
+public:
+  AtomicOrderingMMOPredicateMatcher(StringRef Order,
+                                    AOComparator Comparator = AO_Exactly)
+      : InstructionPredicateMatcher(IPM_AtomicOrderingMMO), Order(Order),
+        Comparator(Comparator) {}
 
   static bool classof(const InstructionPredicateMatcher *P) {
-    return P->getKind() == IPM_NonAtomicMMO;
+    return P->getKind() == IPM_AtomicOrderingMMO;
   }
 
   void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule,
                             unsigned InsnVarID) const override {
-    Table << MatchTable::Opcode("GIM_CheckNonAtomic")
-          << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
+    StringRef Opcode = "GIM_CheckAtomicOrdering";
+
+    if (Comparator == AO_OrStronger)
+      Opcode = "GIM_CheckAtomicOrderingOrStrongerThan";
+    if (Comparator == AO_WeakerThan)
+      Opcode = "GIM_CheckAtomicOrderingWeakerThan";
+
+    Table << MatchTable::Opcode(Opcode) << MatchTable::Comment("MI")
+          << MatchTable::IntValue(InsnVarID) << MatchTable::Comment("Order")
+          << MatchTable::NamedValue(("(int64_t)AtomicOrdering::" + Order).str())
           << MatchTable::LineBreak;
   }
 };
@@ -2472,49 +2529,87 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       continue;
     }
 
-    // No check required. A G_LOAD is an unindexed load.
-    if (Predicate.isLoad() && Predicate.isUnindexed())
-      continue;
-
     // No check required. G_LOAD by itself is a non-extending load.
     if (Predicate.isNonExtLoad())
-      continue;
-
-    if (Predicate.isLoad() && Predicate.getMemoryVT() != nullptr) {
-      Optional<LLTCodeGen> MemTyOrNone =
-          MVTToLLT(getValueType(Predicate.getMemoryVT()));
-
-      if (!MemTyOrNone)
-        return failedImport("MemVT could not be converted to LLT");
-
-      InsnMatcher.getOperand(0).addPredicate<LLTOperandMatcher>(MemTyOrNone.getValue());
-      continue;
-    }
-
-    // No check required. A G_STORE is an unindexed store.
-    if (Predicate.isStore() && Predicate.isUnindexed())
       continue;
 
     // No check required. G_STORE by itself is a non-extending store.
     if (Predicate.isNonTruncStore())
       continue;
 
-    if (Predicate.isStore() && Predicate.getMemoryVT() != nullptr) {
-      Optional<LLTCodeGen> MemTyOrNone =
-          MVTToLLT(getValueType(Predicate.getMemoryVT()));
+    if (Predicate.isLoad() || Predicate.isStore() || Predicate.isAtomic()) {
+      if (Predicate.getMemoryVT() != nullptr) {
+        Optional<LLTCodeGen> MemTyOrNone =
+            MVTToLLT(getValueType(Predicate.getMemoryVT()));
 
-      if (!MemTyOrNone)
-        return failedImport("MemVT could not be converted to LLT");
+        if (!MemTyOrNone)
+          return failedImport("MemVT could not be converted to LLT");
 
-      InsnMatcher.getOperand(0).addPredicate<LLTOperandMatcher>(MemTyOrNone.getValue());
-      continue;
+        InsnMatcher.getOperand(0).addPredicate<LLTOperandMatcher>(
+            MemTyOrNone.getValue());
+        continue;
+      }
+    }
+
+    if (Predicate.isLoad() || Predicate.isStore()) {
+      // No check required. A G_LOAD/G_STORE is an unindexed load.
+      if (Predicate.isUnindexed())
+        continue;
+    }
+
+    if (Predicate.isAtomic()) {
+      if (Predicate.isAtomicOrderingMonotonic()) {
+        InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
+            "Monotonic");
+        continue;
+      }
+      if (Predicate.isAtomicOrderingAcquire()) {
+        InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>("Acquire");
+        continue;
+      }
+      if (Predicate.isAtomicOrderingRelease()) {
+        InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>("Release");
+        continue;
+      }
+      if (Predicate.isAtomicOrderingAcquireRelease()) {
+        InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
+            "AcquireRelease");
+        continue;
+      }
+      if (Predicate.isAtomicOrderingSequentiallyConsistent()) {
+        InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
+            "SequentiallyConsistent");
+        continue;
+      }
+
+      if (Predicate.isAtomicOrderingAcquireOrStronger()) {
+        InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
+            "Acquire", AtomicOrderingMMOPredicateMatcher::AO_OrStronger);
+        continue;
+      }
+      if (Predicate.isAtomicOrderingWeakerThanAcquire()) {
+        InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
+            "Acquire", AtomicOrderingMMOPredicateMatcher::AO_WeakerThan);
+        continue;
+      }
+
+      if (Predicate.isAtomicOrderingReleaseOrStronger()) {
+        InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
+            "Release", AtomicOrderingMMOPredicateMatcher::AO_OrStronger);
+        continue;
+      }
+      if (Predicate.isAtomicOrderingWeakerThanRelease()) {
+        InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
+            "Release", AtomicOrderingMMOPredicateMatcher::AO_WeakerThan);
+        continue;
+      }
     }
 
     return failedImport("Src pattern child has predicate (" +
                         explainPredicates(Src) + ")");
   }
   if (SrcGIEquivOrNull && SrcGIEquivOrNull->getValueAsBit("CheckMMOIsNonAtomic"))
-    InsnMatcher.addPredicate<NonAtomicMMOPredicateMatcher>();
+    InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>("NotAtomic");
 
   if (Src->isLeaf()) {
     Init *SrcInit = Src->getLeafValue();

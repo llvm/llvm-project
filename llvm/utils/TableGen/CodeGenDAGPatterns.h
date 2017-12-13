@@ -284,9 +284,9 @@ public:
   
   /// isAlwaysTrue - Return true if this is a noop predicate.
   bool isAlwaysTrue() const;
-  
-  bool isImmediatePattern() const { return !getImmCode().empty(); }
-  
+
+  bool isImmediatePattern() const { return hasImmCode(); }
+
   /// getImmediatePredicateCode - Return the code that evaluates this pattern if
   /// this is an immediate predicate.  It is an error to call this on a
   /// non-immediate pattern.
@@ -323,6 +323,8 @@ public:
   bool isLoad() const;
   // Is the desired predefined predicate for a store?
   bool isStore() const;
+  // Is the desired predefined predicate for an atomic?
+  bool isAtomic() const;
 
   /// Is this predicate the predefined unindexed load predicate?
   /// Is this predicate the predefined unindexed store predicate?
@@ -340,6 +342,27 @@ public:
   /// Is this predicate the predefined truncating store predicate?
   bool isTruncStore() const;
 
+  /// Is this predicate the predefined monotonic atomic predicate?
+  bool isAtomicOrderingMonotonic() const;
+  /// Is this predicate the predefined acquire atomic predicate?
+  bool isAtomicOrderingAcquire() const;
+  /// Is this predicate the predefined release atomic predicate?
+  bool isAtomicOrderingRelease() const;
+  /// Is this predicate the predefined acquire-release atomic predicate?
+  bool isAtomicOrderingAcquireRelease() const;
+  /// Is this predicate the predefined sequentially consistent atomic predicate?
+  bool isAtomicOrderingSequentiallyConsistent() const;
+
+  /// Is this predicate the predefined acquire-or-stronger atomic predicate?
+  bool isAtomicOrderingAcquireOrStronger() const;
+  /// Is this predicate the predefined weaker-than-acquire atomic predicate?
+  bool isAtomicOrderingWeakerThanAcquire() const;
+
+  /// Is this predicate the predefined release-or-stronger atomic predicate?
+  bool isAtomicOrderingReleaseOrStronger() const;
+  /// Is this predicate the predefined weaker-than-release atomic predicate?
+  bool isAtomicOrderingWeakerThanRelease() const;
+
   /// If non-null, indicates that this predicate is a predefined memory VT
   /// predicate for a load/store and returns the ValueType record for the memory VT.
   Record *getMemoryVT() const;
@@ -349,6 +372,8 @@ public:
   Record *getScalarMemoryVT() const;
 
 private:
+  bool hasPredCode() const;
+  bool hasImmCode() const;
   std::string getPredCode() const;
   std::string getImmCode() const;
   bool immCodeUsesAPInt() const;
