@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 // test unsigned long long to_ullong() const;
-extern "C" int printf(const char *, ...);
 
 #include <bitset>
 #include <algorithm>
@@ -40,7 +39,7 @@ void test_to_ullong()
     { // test values bigger than can fit into the bitset
     const unsigned long long val = 0x55AAAAFFFFAAAA55ULL;
     const bool canFit = N < sizeof(unsigned long long) * CHAR_BIT;
-    const unsigned long long mask = canFit ? (1ULL << N) - 1 : (unsigned long long)(-1);
+    const unsigned long long mask = canFit ? (1ULL << (canFit ? N : 0)) - 1 : (unsigned long long)(-1); // avoid compiler warnings
     std::bitset<N> v(val);
     assert(v.to_ullong() == (val & mask)); // we shouldn't return bit patterns from outside the limits of the bitset.
     }

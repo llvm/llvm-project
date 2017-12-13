@@ -563,4 +563,42 @@ enum {
   UNW_OR1K_R31 = 31,
 };
 
+// MIPS registers
+enum {
+  UNW_MIPS_R0  = 0,
+  UNW_MIPS_R1  = 1,
+  UNW_MIPS_R2  = 2,
+  UNW_MIPS_R3  = 3,
+  UNW_MIPS_R4  = 4,
+  UNW_MIPS_R5  = 5,
+  UNW_MIPS_R6  = 6,
+  UNW_MIPS_R7  = 7,
+  UNW_MIPS_R8  = 8,
+  UNW_MIPS_R9  = 9,
+  UNW_MIPS_R10 = 10,
+  UNW_MIPS_R11 = 11,
+  UNW_MIPS_R12 = 12,
+  UNW_MIPS_R13 = 13,
+  UNW_MIPS_R14 = 14,
+  UNW_MIPS_R15 = 15,
+  UNW_MIPS_R16 = 16,
+  UNW_MIPS_R17 = 17,
+  UNW_MIPS_R18 = 18,
+  UNW_MIPS_R19 = 19,
+  UNW_MIPS_R20 = 20,
+  UNW_MIPS_R21 = 21,
+  UNW_MIPS_R22 = 22,
+  UNW_MIPS_R23 = 23,
+  UNW_MIPS_R24 = 24,
+  UNW_MIPS_R25 = 25,
+  UNW_MIPS_R26 = 26,
+  UNW_MIPS_R27 = 27,
+  UNW_MIPS_R28 = 28,
+  UNW_MIPS_R29 = 29,
+  UNW_MIPS_R30 = 30,
+  UNW_MIPS_R31 = 31,
+  UNW_MIPS_HI = 64,
+  UNW_MIPS_LO = 65,
+};
+
 #endif
