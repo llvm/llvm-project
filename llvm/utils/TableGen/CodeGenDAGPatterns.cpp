@@ -758,8 +758,14 @@ static void DumpDepVars(MultipleUseVarSet &DepVars) {
 
 /// TreePredicateFn constructor.  Here 'N' is a subclass of PatFrag.
 TreePredicateFn::TreePredicateFn(TreePattern *N) : PatFragRec(N) {
-  assert((getPredCode().empty() || getImmCode().empty()) &&
-        ".td file corrupt: can't have a node predicate *and* an imm predicate");
+  assert(
+      (!hasPredCode() || !hasImmCode()) &&
+      ".td file corrupt: can't have a node predicate *and* an imm predicate");
+}
+
+bool TreePredicateFn::hasPredCode() const {
+  return isLoad() || isStore() ||
+         !PatFragRec->getRecord()->getValueAsString("PredicateCode").empty();
 }
 
 std::string TreePredicateFn::getPredCode() const {
@@ -884,6 +890,10 @@ std::string TreePredicateFn::getPredCode() const {
   return Code;
 }
 
+bool TreePredicateFn::hasImmCode() const {
+  return !PatFragRec->getRecord()->getValueAsString("ImmediateCode").empty();
+}
+
 std::string TreePredicateFn::getImmCode() const {
   return PatFragRec->getRecord()->getValueAsString("ImmediateCode");
 }
@@ -966,7 +976,7 @@ StringRef TreePredicateFn::getImmTypeIdentifier() const {
 
 /// isAlwaysTrue - Return true if this is a noop predicate.
 bool TreePredicateFn::isAlwaysTrue() const {
-  return getPredCode().empty() && getImmCode().empty();
+  return !hasPredCode() && !hasImmCode();
 }
 
 /// Return the name to use in the generated code to reference this, this is
@@ -1036,7 +1046,7 @@ std::string TreePredicateFn::getCodeToRunOnSDNode() const {
   }
   
   // Handle arbitrary node predicates.
-  assert(!getPredCode().empty() && "Don't have any predicate code!");
+  assert(hasPredCode() && "Don't have any predicate code!");
   StringRef ClassName;
   if (PatFragRec->getOnlyTree()->isLeaf())
     ClassName = "SDNode";
