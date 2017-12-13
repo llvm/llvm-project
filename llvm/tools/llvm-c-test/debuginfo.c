@@ -11,9 +11,7 @@
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
-#include "llvm-c-test.h"
 #include "llvm-c/DebugInfo.h"
-#include <string.h>
 #include <stdio.h>
 
 int llvm_test_dibuilder() {

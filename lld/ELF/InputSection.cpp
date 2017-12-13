@@ -186,7 +186,7 @@ uint64_t SectionBase::getOffset(uint64_t Offset) const {
 OutputSection *SectionBase::getOutputSection() {
   InputSection *Sec;
   if (auto *IS = dyn_cast<InputSection>(this))
-    Sec = cast<InputSection>(IS->Repl);
+    return IS->getParent();
   else if (auto *MS = dyn_cast<MergeInputSection>(this))
     Sec = MS->getParent();
   else if (auto *EH = dyn_cast<EhInputSection>(this))

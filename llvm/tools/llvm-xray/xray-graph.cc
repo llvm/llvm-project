@@ -11,19 +11,12 @@
 // the trace.
 //
 //===----------------------------------------------------------------------===//
-#include <algorithm>
-#include <cassert>
-#include <cmath>
-#include <system_error>
-#include <utility>
 
 #include "xray-graph.h"
 #include "xray-registry.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/XRay/InstrumentationMap.h"
 #include "llvm/XRay/Trace.h"
-#include "llvm/XRay/YAMLXRayRecord.h"
 
 using namespace llvm;
 using namespace llvm::xray;

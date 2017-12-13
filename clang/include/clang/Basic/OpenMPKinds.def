@@ -454,6 +454,7 @@ OPENMP_TARGET_CLAUSE(depend)
 OPENMP_TARGET_CLAUSE(defaultmap)
 OPENMP_TARGET_CLAUSE(firstprivate)
 OPENMP_TARGET_CLAUSE(is_device_ptr)
+OPENMP_TARGET_CLAUSE(reduction)
 
 // Clauses allowed for OpenMP directive 'target data'.
 OPENMP_TARGET_DATA_CLAUSE(if)

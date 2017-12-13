@@ -12,9 +12,7 @@
 \*===----------------------------------------------------------------------===*/
 
 #include "llvm-c-test.h"
-#include "llvm-c/BitReader.h"
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 static void print_usage(void) {

@@ -78,8 +78,7 @@ define i8 @smin_commute(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8 %a, %b
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i8 %b, %a
 ; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 %a, i8 %b
-; CHECK-NEXT:    [[M2:%.*]] = select i1 [[CMP2]], i8 %b, i8 %a
-; CHECK-NEXT:    [[R:%.*]] = mul i8 [[M1]], [[M2]]
+; CHECK-NEXT:    [[R:%.*]] = mul i8 [[M1]], [[M1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %cmp1 = icmp slt i8 %a, %b
@@ -97,9 +96,7 @@ define i1 @smin_swapped(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i8 %a, %b
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i8 %a, %b
 ; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 %b, i8 %a
-; CHECK-NEXT:    [[M2:%.*]] = select i1 [[CMP2]], i8 %a, i8 %b
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[M2]], [[M1]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp1 = icmp sgt i8 %a, %b
   %cmp2 = icmp slt i8 %a, %b
@@ -114,9 +111,7 @@ define i8 @smax_commute(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i8 %a, %b
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i8 %b, %a
 ; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 %a, i8 %b
-; CHECK-NEXT:    [[M2:%.*]] = select i1 [[CMP2]], i8 %b, i8 %a
-; CHECK-NEXT:    [[R:%.*]] = urem i8 [[M2]], [[M1]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
   %cmp1 = icmp sgt i8 %a, %b
   %cmp2 = icmp sgt i8 %b, %a
@@ -131,9 +126,7 @@ define i8 @smax_swapped(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8 %a, %b
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i8 %a, %b
 ; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 %b, i8 %a
-; CHECK-NEXT:    [[M2:%.*]] = select i1 [[CMP2]], i8 %a, i8 %b
-; CHECK-NEXT:    [[R:%.*]] = sdiv i8 [[M1]], [[M2]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 1
 ;
   %cmp1 = icmp slt i8 %a, %b
   %cmp2 = icmp sgt i8 %a, %b
@@ -148,9 +141,7 @@ define i8 @umin_commute(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 %a, %b
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i8 %b, %a
 ; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 %a, i8 %b
-; CHECK-NEXT:    [[M2:%.*]] = select i1 [[CMP2]], i8 %b, i8 %a
-; CHECK-NEXT:    [[R:%.*]] = sub i8 [[M2]], [[M1]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
   %cmp1 = icmp ult i8 %a, %b
   %cmp2 = icmp ult i8 %b, %a
@@ -167,9 +158,7 @@ define <2 x i8> @umin_swapped(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt <2 x i8> %a, %b
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult <2 x i8> %a, %b
 ; CHECK-NEXT:    [[M1:%.*]] = select <2 x i1> [[CMP1]], <2 x i8> %b, <2 x i8> %a
-; CHECK-NEXT:    [[M2:%.*]] = select <2 x i1> [[CMP2]], <2 x i8> %a, <2 x i8> %b
-; CHECK-NEXT:    [[R:%.*]] = sub <2 x i8> [[M2]], [[M1]]
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
   %cmp1 = icmp ugt <2 x i8> %a, %b
   %cmp2 = icmp ult <2 x i8> %a, %b
@@ -184,9 +173,7 @@ define i8 @umax_commute(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i8 %a, %b
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i8 %b, %a
 ; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 %a, i8 %b
-; CHECK-NEXT:    [[M2:%.*]] = select i1 [[CMP2]], i8 %b, i8 %a
-; CHECK-NEXT:    [[R:%.*]] = udiv i8 [[M1]], [[M2]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 1
 ;
   %cmp1 = icmp ugt i8 %a, %b
   %cmp2 = icmp ugt i8 %b, %a
@@ -201,8 +188,7 @@ define i8 @umax_swapped(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 %a, %b
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i8 %a, %b
 ; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 %b, i8 %a
-; CHECK-NEXT:    [[M2:%.*]] = select i1 [[CMP2]], i8 %a, i8 %b
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[M2]], [[M1]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[M1]], [[M1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %cmp1 = icmp ult i8 %a, %b
@@ -210,6 +196,25 @@ define i8 @umax_swapped(i8 %a, i8 %b) {
   %m1 = select i1 %cmp1, i8 %b, i8 %a
   %m2 = select i1 %cmp2, i8 %a, i8 %b
   %r = add i8 %m2, %m1
+  ret i8 %r
+}
+
+; Min/max may exist with non-canonical operands. Value tracking can match those.
+
+define i8 @smax_nsw(i8 %a, i8 %b) {
+; CHECK-LABEL: @smax_nsw(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 %a, %b
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8 %a, %b
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i8 [[SUB]], 0
+; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 0, i8 [[SUB]]
+; CHECK-NEXT:    ret i8 0
+;
+  %sub = sub nsw i8 %a, %b
+  %cmp1 = icmp slt i8 %a, %b
+  %cmp2 = icmp sgt i8 %sub, 0
+  %m1 = select i1 %cmp1, i8 0, i8 %sub
+  %m2 = select i1 %cmp2, i8 %sub, i8 0
+  %r = sub i8 %m2, %m1
   ret i8 %r
 }
 

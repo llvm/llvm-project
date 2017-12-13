@@ -178,6 +178,10 @@ public:
   explicit DSAStackTy(Sema &S) : SemaRef(S) {}
 
   bool isClauseParsingMode() const { return ClauseKindMode != OMPC_unknown; }
+  OpenMPClauseKind getClauseParsingMode() const {
+    assert(isClauseParsingMode() && "Must be in clause parsing mode.");
+    return ClauseKindMode;
+  }
   void setClauseParsingMode(OpenMPClauseKind K) { ClauseKindMode = K; }
 
   bool isForceVarCapturing() const { return ForceCapturing; }
@@ -1102,8 +1106,6 @@ DSAStackTy::DSAVarData DSAStackTy::hasInnermostDSA(
 bool DSAStackTy::hasExplicitDSA(
     ValueDecl *D, const llvm::function_ref<bool(OpenMPClauseKind)> &CPred,
     unsigned Level, bool NotLastprivate) {
-  if (CPred(ClauseKindMode))
-    return true;
   if (isStackEmpty())
     return false;
   D = getCanonicalDecl(D);
@@ -1277,9 +1279,13 @@ bool Sema::IsOpenMPCapturedByRef(ValueDecl *D, unsigned Level) {
       // reference except if it is a pointer that is dereferenced somehow.
       IsByRef = !(Ty->isPointerType() && IsVariableAssociatedWithSection);
     } else {
-      // By default, all the data that has a scalar type is mapped by copy.
-      IsByRef = !Ty->isScalarType() ||
-                DSAStack->getDefaultDMAAtLevel(Level) == DMA_tofrom_scalar;
+      // By default, all the data that has a scalar type is mapped by copy
+      // (except for reduction variables).
+      IsByRef =
+          !Ty->isScalarType() ||
+          DSAStack->getDefaultDMAAtLevel(Level) == DMA_tofrom_scalar ||
+          DSAStack->hasExplicitDSA(
+              D, [](OpenMPClauseKind K) { return K == OMPC_reduction; }, Level);
     }
   }
 
@@ -1367,6 +1373,8 @@ bool Sema::isOpenMPPrivateDecl(ValueDecl *D, unsigned Level) {
   return DSAStack->hasExplicitDSA(
              D, [](OpenMPClauseKind K) -> bool { return K == OMPC_private; },
              Level) ||
+         (DSAStack->isClauseParsingMode() &&
+          DSAStack->getClauseParsingMode() == OMPC_private) ||
          // Consider taskgroup reduction descriptor variable a private to avoid
          // possible capture in the region.
          (DSAStack->hasExplicitDirective(
@@ -2105,7 +2113,8 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   case OMPD_target_parallel:
   case OMPD_target_parallel_for:
   case OMPD_target_parallel_for_simd:
-  case OMPD_target_teams_distribute: {
+  case OMPD_target_teams_distribute:
+  case OMPD_target_teams_distribute_simd: {
     Sema::CapturedParamNameType ParamsTarget[] = {
         std::make_pair(StringRef(), QualType()) // __context with shared vars
     };
@@ -2213,8 +2222,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   case OMPD_distribute_parallel_for_simd:
   case OMPD_distribute_parallel_for:
   case OMPD_target_teams_distribute_parallel_for:
-  case OMPD_target_teams_distribute_parallel_for_simd:
-  case OMPD_target_teams_distribute_simd: {
+  case OMPD_target_teams_distribute_parallel_for_simd: {
     QualType KmpInt32Ty = Context.getIntTypeForBitwidth(32, 1);
     QualType KmpInt32PtrTy =
         Context.getPointerType(KmpInt32Ty).withConst().withRestrict();
@@ -7448,13 +7456,24 @@ StmtResult Sema::ActOnOpenMPTargetTeamsDistributeSimdDirective(
   // The point of exit cannot be a branch out of the structured block.
   // longjmp() and throw() must not violate the entry/exit criteria.
   CS->getCapturedDecl()->setNothrow();
+  for (int ThisCaptureLevel =
+           getOpenMPCaptureLevels(OMPD_target_teams_distribute_simd);
+       ThisCaptureLevel > 1; --ThisCaptureLevel) {
+    CS = cast<CapturedStmt>(CS->getCapturedStmt());
+    // 1.2.2 OpenMP Language Terminology
+    // Structured block - An executable statement with a single entry at the
+    // top and a single exit at the bottom.
+    // The point of exit cannot be a branch out of the structured block.
+    // longjmp() and throw() must not violate the entry/exit criteria.
+    CS->getCapturedDecl()->setNothrow();
+  }
 
   OMPLoopDirective::HelperExprs B;
   // In presence of clause 'collapse' with number of loops, it will
   // define the nested loops number.
   auto NestedLoopCount = CheckOpenMPLoop(
       OMPD_target_teams_distribute_simd, getCollapseNumberExpr(Clauses),
-      nullptr /*ordered not a clause on distribute*/, AStmt, *this, *DSAStack,
+      nullptr /*ordered not a clause on distribute*/, CS, *this, *DSAStack,
       VarsWithImplicitDSA, B);
   if (NestedLoopCount == 0)
     return StmtError();

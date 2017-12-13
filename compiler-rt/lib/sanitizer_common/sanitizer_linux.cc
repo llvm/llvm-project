@@ -459,6 +459,10 @@ u64 NanoTime() {
   return (u64)tv.tv_sec * 1000*1000*1000 + tv.tv_usec * 1000;
 }
 
+uptr internal_clock_gettime(__sanitizer_clockid_t clk_id, void *tp) {
+  return internal_syscall_ptr(SYSCALL(clock_gettime), clk_id, tp);
+}
+
 // Like getenv, but reads env directly from /proc (on Linux) or parses the
 // 'environ' array (on FreeBSD) and does not use libc. This function should be
 // called first inside __asan_init.

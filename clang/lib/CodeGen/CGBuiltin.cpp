@@ -3268,6 +3268,8 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
   case llvm::Triple::wasm32:
   case llvm::Triple::wasm64:
     return CGF->EmitWebAssemblyBuiltinExpr(BuiltinID, E);
+  case llvm::Triple::hexagon:
+    return CGF->EmitHexagonBuiltinExpr(BuiltinID, E);
   default:
     return nullptr;
   }
@@ -9905,4 +9907,59 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   default:
     return nullptr;
   }
+}
+
+Value *CodeGenFunction::EmitHexagonBuiltinExpr(unsigned BuiltinID,
+                                               const CallExpr *E) {
+  SmallVector<llvm::Value *, 4> Ops;
+  Intrinsic::ID ID = Intrinsic::not_intrinsic;
+
+  switch (BuiltinID) {
+  case Hexagon::BI__builtin_HEXAGON_V6_vaddcarry:
+  case Hexagon::BI__builtin_HEXAGON_V6_vaddcarry_128B: {
+    Address Dest = EmitPointerWithAlignment(E->getArg(2));
+    unsigned Size;
+    if (BuiltinID == Hexagon::BI__builtin_HEXAGON_V6_vaddcarry) {
+      Size = 512;
+      ID = Intrinsic::hexagon_V6_vaddcarry;
+    } else {
+      Size = 1024;
+      ID = Intrinsic::hexagon_V6_vaddcarry_128B;
+    }
+    Dest = Builder.CreateBitCast(Dest,
+        llvm::VectorType::get(Builder.getInt1Ty(), Size)->getPointerTo(0));
+    LoadInst *QLd = Builder.CreateLoad(Dest);
+    Ops = { EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1)), QLd };
+    llvm::Value *Result = Builder.CreateCall(CGM.getIntrinsic(ID), Ops);
+    llvm::Value *Vprd = Builder.CreateExtractValue(Result, 1);
+    llvm::Value *Base = Builder.CreateBitCast(EmitScalarExpr(E->getArg(2)),
+                                              Vprd->getType()->getPointerTo(0));
+    Builder.CreateAlignedStore(Vprd, Base, Dest.getAlignment());
+    return Builder.CreateExtractValue(Result, 0);
+  }
+  case Hexagon::BI__builtin_HEXAGON_V6_vsubcarry:
+  case Hexagon::BI__builtin_HEXAGON_V6_vsubcarry_128B: {
+    Address Dest = EmitPointerWithAlignment(E->getArg(2));
+    unsigned Size;
+    if (BuiltinID == Hexagon::BI__builtin_HEXAGON_V6_vsubcarry) {
+      Size = 512;
+      ID = Intrinsic::hexagon_V6_vsubcarry;
+    } else {
+      Size = 1024;
+      ID = Intrinsic::hexagon_V6_vsubcarry_128B;
+    }
+    Dest = Builder.CreateBitCast(Dest,
+        llvm::VectorType::get(Builder.getInt1Ty(), Size)->getPointerTo(0));
+    LoadInst *QLd = Builder.CreateLoad(Dest);
+    Ops = { EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1)), QLd };
+    llvm::Value *Result = Builder.CreateCall(CGM.getIntrinsic(ID), Ops);
+    llvm::Value *Vprd = Builder.CreateExtractValue(Result, 1);
+    llvm::Value *Base = Builder.CreateBitCast(EmitScalarExpr(E->getArg(2)),
+                                              Vprd->getType()->getPointerTo(0));
+    Builder.CreateAlignedStore(Vprd, Base, Dest.getAlignment());
+    return Builder.CreateExtractValue(Result, 0);
+  }
+  } // switch
+
+  return nullptr;
 }

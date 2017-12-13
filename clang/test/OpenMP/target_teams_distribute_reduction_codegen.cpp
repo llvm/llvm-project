@@ -38,24 +38,22 @@ int main() {
     // LAMBDA:  ret
 #pragma omp target teams distribute reduction(+: sivar)
   for (int i = 0; i < 2; ++i) {
-    // LAMBDA: define{{.*}} internal{{.*}} void @[[LOFFL1]](i{{64|32}} [[SIVAR_ARG:%.+]])
-    // LAMBDA: [[SIVAR_ADDR:%.+]] = alloca i{{.+}},
-    // LAMBDA: [[SIVAR_CASTED:%.+]] = alloca i{{.+}},
+    // LAMBDA: define{{.*}} internal{{.*}} void @[[LOFFL1]](i32*{{.+}} [[SIVAR_ARG:%.+]])
+    // LAMBDA: [[SIVAR_ADDR:%.+]] = alloca i{{.+}}*,
     // LAMBDA: store{{.+}} [[SIVAR_ARG]], {{.+}} [[SIVAR_ADDR]],
-    // LAMBDA: [[SIVAR_CONV:%.+]] = bitcast{{.+}} [[SIVAR_ADDR]] to
-    // LAMBDA: [[SIVAR:%.+]] = load i64, i64* [[SIVAR_CASTED]],
+    // LAMBDA: [[SIVAR:%.+]] = load i32*, i32** [[SIVAR_ADDR]],
     // LAMBDA: call void {{.+}} @__kmpc_fork_teams({{.+}}, i32 1, {{.+}} @[[LOUTL1:.+]] to {{.+}}, {{.+}} [[SIVAR]])
     // LAMBDA: ret void
 
-    // LAMBDA: define internal void @[[LOUTL1]]({{.+}}, {{.+}}, {{.+}} [[SIVAR_ARG:%.+]])
+    // LAMBDA: define internal void @[[LOUTL1]]({{.+}}, {{.+}}, {{.+}}*{{.+}} [[SIVAR_ARG:%.+]])
     // Skip global and bound tid vars
     // LAMBDA: {{.+}} = alloca i32*,
     // LAMBDA: {{.+}} = alloca i32*,
-    // LAMBDA: [[SIVAR_ADDR:%.+]] = alloca i{{.+}},
+    // LAMBDA: [[SIVAR_ADDR:%.+]] = alloca i{{.+}}*,
     // LAMBDA: [[SIVAR_PRIV:%.+]] = alloca i{{.+}},
     // LAMBDA: [[RED_LIST:%.+]] = alloca [1 x {{.+}}],
     // LAMBDA: store{{.+}} [[SIVAR_ARG]], {{.+}} [[SIVAR_ADDR]],
-    // LAMBDA: [[SIVAR_REF:%.+]] = bitcast i64* [[SIVAR_ADDR]] to i32*
+    // LAMBDA: [[SIVAR_REF:%.+]] = load {{.+}}, {{.+}} [[SIVAR_ADDR]],
     // LAMBDA: store{{.+}} 0, {{.+}} [[SIVAR_PRIV]],
 
     // LAMBDA: call void @__kmpc_for_static_init_4(
@@ -114,28 +112,26 @@ int main() {
 
 // CHECK: define {{.*}}i{{[0-9]+}} @main()
 // CHECK: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 1, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 0)
-// CHECK: call void @[[OFFL1:.+]](i{{64|32}} %{{.+}})
-// CHECK: {{%.+}} = call{{.*}} i32 @[[TMAIN_INT:.+]]()
-// CHECK:  ret
+// CHECK: call void @[[OFFL1:.+]](i32* {{.+}})
+// CHECK: [[RES:%.+]] = call{{.*}} i32 @[[TMAIN_INT:[^(]+]]()
+// CHECK: ret i32 [[RES]]
 
-// CHECK: define{{.*}} void @[[OFFL1]](i{{64|32}} [[SIVAR_ARG:%.+]])
-// CHECK: [[SIVAR_ADDR:%.+]] = alloca i{{.+}},
-// CHECK: [[SIVAR_CASTED:%.+]] = alloca i{{.+}},
-// CHECK: store{{.+}} [[SIVAR_ARG]], {{.+}} [[SIVAR_ADDR]],
-// CHECK-64: [[SIVAR_LOAD:%.+]] = load i64, i64* [[SIVAR_CASTED]],
-// CHECK-32: [[SIVAR_LOAD:%.+]] = load i32, i32* [[SIVAR_CASTED]],
+// CHECK: define{{.*}} void @[[OFFL1]](i32*{{.+}} [[SIVAR_ARG:%.+]])
+// CHECK: [[SIVAR_ADDR:%.+]] = alloca i{{.+}}*,
+// CHECK: store{{.+}} [[SIVAR_ARG]], {{.+}}** [[SIVAR_ADDR]],
+// CHECK: [[SIVAR_LOAD:%.+]] = load i32*, i32** [[SIVAR_ADDR]],
 // CHECK: call void {{.+}} @__kmpc_fork_teams({{.+}}, i32 1, {{.+}} @[[OUTL1:.+]] to {{.+}}, {{.+}} [[SIVAR_LOAD]])
 // CHECK: ret void
 
-// CHECK: define internal void @[[OUTL1]]({{.+}}, {{.+}}, {{.+}} [[SIVAR_ARG:%.+]])
+// CHECK: define internal void @[[OUTL1]]({{.+}}, {{.+}}, i32*{{.+}} [[SIVAR_ARG:%.+]])
 // Skip global and bound tid vars
 // CHECK: {{.+}} = alloca i32*,
 // CHECK: {{.+}} = alloca i32*,
-// CHECK: [[SIVAR_ADDR:%.+]] = alloca i{{.+}},
-// CHECK: [[SIVAR_PRIV:%.+]] = alloca i{{.+}},
+// CHECK: [[SIVAR_ADDR:%.+]] = alloca i{{.+}}*,
+// CHECK: [[SIVAR_PRIV:%.+]] = alloca i32,
 // CHECK: [[RED_LIST:%.+]] = alloca [1 x {{.+}}],
 // CHECK: store{{.+}} [[SIVAR_ARG]], {{.+}} [[SIVAR_ADDR]],
-// CHECK-64: [[SIVAR_REF:%.+]] = bitcast i64* [[SIVAR_ADDR]] to i32*
+// CHECK: [[SIVAR_REF:%.+]] = load i32*, i32** [[SIVAR_ADDR]],
 // CHECK: store{{.+}} 0, {{.+}} [[SIVAR_PRIV]],
 
 // CHECK: call void @__kmpc_for_static_init_4(
@@ -151,46 +147,40 @@ int main() {
 // CHECK: {{.+}}, label %[[CASE2:.+]]
 // CHECK: ]
 // CHECK: [[CASE1]]:
-// CHECK-64-DAG: [[SIVAR_VAL:%.+]] = load{{.+}}, {{.+}} [[SIVAR_REF]],
-// CHECK-32-DAG: [[SIVAR_VAL:%.+]] = load{{.+}}, {{.+}} [[SIVAR_ADDR]],
+// CHECK-DAG: [[SIVAR_VAL:%.+]] = load{{.+}}, {{.+}} [[SIVAR_REF]],
 // CHECK-DAG: [[SIVAR_PRIV_VAL:%.+]] = load{{.+}}, {{.+}} [[SIVAR_PRIV]],
 // CHECK-DAG: [[SIVAR_INC:%.+]] = add{{.+}} [[SIVAR_VAL]], [[SIVAR_PRIV_VAL]]
-// CHECK-64: store{{.+}} [[SIVAR_INC]], {{.+}} [[SIVAR_REF]],
-// CHECK-32: store{{.+}} [[SIVAR_INC]], {{.+}} [[SIVAR_ADDR]],
+// CHECK: store{{.+}} [[SIVAR_INC]], {{.+}} [[SIVAR_REF]],
 // CHECK: call void @__kmpc_end_reduce({{.+}}, {{.+}}, {{.+}} [[RED_VAR]])
 // CHECK: br
 // CHECK: [[CASE2]]:
 // CHECK-DAG: [[SIVAR_PRIV_VAL:%.+]] = load{{.+}}, {{.+}} [[SIVAR_PRIV]],
-// CHECK-64-DAG: [[ATOMIC_RES:%.+]] = atomicrmw add{{.+}} [[SIVAR_REF]], {{.+}} [[SIVAR_PRIV_VAL]]
-// CHECK-32-DAG: [[ATOMIC_RES:%.+]] = atomicrmw add{{.+}} [[SIVAR_ADDR]], {{.+}} [[SIVAR_PRIV_VAL]]
+// CHECK-DAG: [[ATOMIC_RES:%.+]] = atomicrmw add{{.+}} [[SIVAR_REF]], {{.+}} [[SIVAR_PRIV_VAL]]
 // CHECK: call void @__kmpc_end_reduce({{.+}}, {{.+}}, {{.+}} [[RED_VAR]])
 // CHECK: br
 
 
 // CHECK: define{{.*}} i{{[0-9]+}} @[[TMAIN_INT]]()
 // CHECK: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 1,
-// CHECK: call void @[[TOFFL1:.+]]({{.+}})
+// CHECK: call void @[[TOFFL1:.+]]({{.+}}* {{.+}})
 // CHECK:  ret
 
-// CHECK: define{{.*}} void @[[TOFFL1]](i{{64|32}} [[TVAR_ARG:%.+]])
-// CHECK: [[TVAR_ADDR:%.+]] = alloca i{{.+}},
-// CHECK: [[TVAR_CASTED_ADDR:%.+]] = alloca i{{.+}},
+// CHECK: define{{.*}} void @[[TOFFL1]](i32*{{.+}} [[TVAR_ARG:%.+]])
+// CHECK: [[TVAR_ADDR:%.+]] = alloca i{{.+}}*,
 // CHECK: store{{.+}} [[TVAR_ARG]], {{.+}} [[TVAR_ADDR]],
-// CHECK-64: [[TVAR_CONV:%.+]] = bitcast{{.+}} [[TVAR_ADDR]] to
-// CHECK-64: [[TVAR:%.+]] = load i64, i64* [[TVAR_CASTED_ADDR]],
-// CHECK-32: [[TVAR:%.+]] = load i32, i32* [[TVAR_CASTED_ADDR]],
+// CHECK: [[TVAR:%.+]] = load i32*, i32** [[TVAR_ADDR]],
 // CHECK: call void {{.+}} @__kmpc_fork_teams({{.+}}, i32 1, {{.+}} @[[TOUTL1:.+]] to {{.+}}, {{.+}} [[TVAR]])
 // CHECK: ret void
 
-// CHECK: define internal void @[[TOUTL1]]({{.+}}, {{.+}}, {{.+}} [[TVAR_ARG:%.+]])
+// CHECK: define internal void @[[TOUTL1]]({{.+}}, {{.+}}, {{.+}}*{{.+}} [[TVAR_ARG:%.+]])
 // Skip global and bound tid vars
 // CHECK: {{.+}} = alloca i32*,
 // CHECK: {{.+}} = alloca i32*,
-// CHECK: [[TVAR_ADDR:%.+]] = alloca i{{.+}},
+// CHECK: [[TVAR_ADDR:%.+]] = alloca i{{.+}}*,
 // CHECK: [[TVAR_PRIV:%.+]] = alloca i{{.+}},
 // CHECK: [[RED_LIST:%.+]] = alloca [1 x {{.+}}],
 // CHECK: store{{.+}} [[TVAR_ARG]], {{.+}} [[TVAR_ADDR]],
-// CHECK-64: [[TVAR_REF:%.+]] = bitcast i64* [[TVAR_ADDR]] to i32*
+// CHECK: [[TVAR_REF:%.+]] = load i32*, i32** [[TVAR_ADDR]],
 // CHECK: store{{.+}} 0, {{.+}} [[TVAR_PRIV]],
 
 // CHECK: call void @__kmpc_for_static_init_4(
@@ -206,18 +196,15 @@ int main() {
 // CHECK: {{.+}}, label %[[CASE2:.+]]
 // CHECK: ]
 // CHECK: [[CASE1]]:
-// CHECK-64-DAG: [[TVAR_VAL:%.+]] = load{{.+}}, {{.+}} [[TVAR_REF]],
-// CHECK-32-DAG: [[TVAR_VAL:%.+]] = load{{.+}}, {{.+}} [[TVAR_ADDR]],
+// CHECK-DAG: [[TVAR_VAL:%.+]] = load{{.+}}, {{.+}} [[TVAR_REF]],
 // CHECK-DAG: [[TVAR_PRIV_VAL:%.+]] = load{{.+}}, {{.+}} [[TVAR_PRIV]],
 // CHECK-DAG: [[TVAR_INC:%.+]] = add{{.+}} [[TVAR_VAL]], [[TVAR_PRIV_VAL]]
-// CHECK-64: store{{.+}} [[TVAR_INC]], {{.+}} [[TVAR_REF]],
-// CHECK-32: store{{.+}} [[TVAR_INC]], {{.+}} [[TVAR_ADDR]],
+// CHECK: store{{.+}} [[TVAR_INC]], {{.+}} [[TVAR_REF]],
 // CHECK: call void @__kmpc_end_reduce({{.+}}, {{.+}}, {{.+}} [[RED_VAR]])
 // CHECK: br
 // CHECK: [[CASE2]]:
 // CHECK-DAG: [[TVAR_PRIV_VAL:%.+]] = load{{.+}}, {{.+}} [[TVAR_PRIV]],
-// CHECK-64-DAG: [[ATOMIC_RES:%.+]] = atomicrmw add{{.+}} [[TVAR_REF]], {{.+}} [[TVAR_PRIV_VAL]]
-// CHECK-32-DAG: [[ATOMIC_RES:%.+]] = atomicrmw add{{.+}} [[TVAR_ADDR]], {{.+}} [[TVAR_PRIV_VAL]]
+// CHECK-DAG: [[ATOMIC_RES:%.+]] = atomicrmw add{{.+}} [[TVAR_REF]], {{.+}} [[TVAR_PRIV_VAL]]
 // CHECK: call void @__kmpc_end_reduce({{.+}}, {{.+}}, {{.+}} [[RED_VAR]])
 // CHECK: br
 

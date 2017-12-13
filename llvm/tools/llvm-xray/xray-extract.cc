@@ -13,16 +13,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <type_traits>
-#include <utility>
 
 #include "func-id-helper.h"
 #include "xray-registry.h"
-#include "llvm/BinaryFormat/ELF.h"
-#include "llvm/Object/ELF.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"

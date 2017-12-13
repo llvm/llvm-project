@@ -26,7 +26,6 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/StackMaps.h"
@@ -4748,20 +4747,6 @@ AArch64InstrInfo::getOutlininingCandidateInfo(
     NumInstrsToCreateFrame = 1;
   }
 
-  // Check if the range contains a call. These require a save + restore of the
-  // link register.
-  if (std::any_of(RepeatedSequenceLocs[0].first, RepeatedSequenceLocs[0].second,
-                  [](const MachineInstr &MI) { return MI.isCall(); }))
-    NumInstrsToCreateFrame += 2; // Save + restore the link register.
-
-  // Handle the last instruction separately. If this is a tail call, then the
-  // last instruction is a call. We don't want to save + restore in this case.
-  // However, it could be possible that the last instruction is a call without
-  // it being valid to tail call this sequence. We should consider this as well.
-  else if (RepeatedSequenceLocs[0].second->isCall() &&
-           FrameID != MachineOutlinerTailCall)
-    NumInstrsToCreateFrame += 2;
-
   return MachineOutlinerInfo(NumInstrsForCall, NumInstrsToCreateFrame, CallID,
                              FrameID);
 }
@@ -4811,70 +4796,6 @@ AArch64InstrInfo::getOutliningType(MachineInstr &MI) const {
     return MachineOutlinerInstrType::Illegal;
   }
 
-  // Outline calls without stack parameters or aggregate parameters.
-  if (MI.isCall()) {
-    assert(MF->getFunction() && "MF doesn't have a function?");
-    const Module *M = MF->getFunction()->getParent();
-    assert(M && "No module?");
-
-    // Get the function associated with the call. Look at each operand and find
-    // the one that represents the callee and get its name.
-    Function *Callee = nullptr;
-    for (const MachineOperand &MOP : MI.operands()) {
-      if (MOP.isSymbol()) {
-        Callee = M->getFunction(MOP.getSymbolName());
-        break;
-      }
-
-      else if (MOP.isGlobal()) {
-        Callee = M->getFunction(MOP.getGlobal()->getGlobalIdentifier());
-        break;
-      }
-    }
-
-    // Only handle functions that we have information about.
-    if (!Callee)
-      return MachineOutlinerInstrType::Illegal;
-
-    // We have a function we have information about. Check it if it's something
-    // can safely outline.
-  
-    // If the callee is vararg, it passes parameters on the stack. Don't touch
-    // it.
-    // FIXME: Functions like printf are very common and we should be able to
-    // outline them.
-    if (Callee->isVarArg())
-      return MachineOutlinerInstrType::Illegal;
-
-    // Check if any of the arguments are a pointer to a struct. We don't want
-    // to outline these since they might be loaded in two instructions.
-    for (Argument &Arg : Callee->args()) {
-      if (Arg.getType()->isPointerTy() &&
-          Arg.getType()->getPointerElementType()->isAggregateType())
-        return MachineOutlinerInstrType::Illegal;
-    }
-
-    // If the thing we're calling doesn't access memory at all, then we're good
-    // to go.
-    if (Callee->doesNotAccessMemory())
-      return MachineOutlinerInstrType::Legal;
-
-    // It accesses memory. Get the machine function for the callee to see if
-    // it's safe to outline.
-    MachineFunction *CalleeMF = MF->getMMI().getMachineFunction(*Callee);
-
-    // We don't know what's going on with the callee at all. Don't touch it.
-    if (!CalleeMF)
-      return MachineOutlinerInstrType::Illegal;   
-
-    // Does it pass anything on the stack? If it does, don't outline it.
-    if (CalleeMF->getInfo<AArch64FunctionInfo>()->getBytesInStackArgArea() != 0)
-      return MachineOutlinerInstrType::Illegal;
-    
-    // It doesn't, so it's safe to outline and we're done.
-    return MachineOutlinerInstrType::Legal;
-  }
-
   // Don't outline positions.
   if (MI.isPosition())
     return MachineOutlinerInstrType::Illegal;
@@ -4899,6 +4820,7 @@ AArch64InstrInfo::getOutliningType(MachineInstr &MI) const {
   if (MI.modifiesRegister(AArch64::SP, &RI) ||
       MI.readsRegister(AArch64::SP, &RI)) {
 
+    // Is it a memory operation?
     if (MI.mayLoadOrStore()) {
       unsigned Base;  // Filled with the base regiser of MI.
       int64_t Offset; // Filled with the offset of MI.
@@ -4919,11 +4841,12 @@ AArch64InstrInfo::getOutliningType(MachineInstr &MI) const {
       // TODO: We should really test what happens if an instruction overflows.
       // This is tricky to test with IR tests, but when the outliner is moved
       // to a MIR test, it really ought to be checked.
+
       Offset += 16; // Update the offset to what it would be if we outlined.
       if (Offset < MinOffset * Scale || Offset > MaxOffset * Scale)
         return MachineOutlinerInstrType::Illegal;
-        
-      // It's in range, so we can outline it.      
+
+      // It's in range, so we can outline it.
       return MachineOutlinerInstrType::Legal;
     }
 
@@ -4965,43 +4888,6 @@ void AArch64InstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
 void AArch64InstrInfo::insertOutlinerEpilogue(
     MachineBasicBlock &MBB, MachineFunction &MF,
     const MachineOutlinerInfo &MInfo) const {
-
-  bool ContainsCalls = false;
-
-  for (MachineInstr &MI : MBB) {
-    if (MI.isCall()) {
-      ContainsCalls = true;
-      break;
-    }
-  }
-
-  if (ContainsCalls) {
-    // Fix up the instructions in the range, since we're going to modify the
-    // stack.
-    fixupPostOutline(MBB);
-
-    MachineBasicBlock::iterator It = MBB.begin();
-    MachineBasicBlock::iterator Et = MBB.end();
-
-    if (MInfo.FrameConstructionID == MachineOutlinerTailCall)
-      Et = std::prev(MBB.end());
-    
-    // Insert a save before the outlined region
-    MachineInstr *STRXpre = BuildMI(MF, DebugLoc(), get(AArch64::STRXpre))
-                              .addReg(AArch64::SP, RegState::Define)
-                              .addReg(AArch64::LR)
-                              .addReg(AArch64::SP)
-                              .addImm(-16);
-    It = MBB.insert(It, STRXpre);
-
-    // Insert a restore before the terminator for the function.
-    MachineInstr *LDRXpost = BuildMI(MF, DebugLoc(), get(AArch64::LDRXpost))
-                               .addReg(AArch64::SP, RegState::Define)
-                               .addReg(AArch64::LR, RegState::Define)
-                               .addReg(AArch64::SP)
-                               .addImm(16);
-    Et = MBB.insert(Et, LDRXpost);
-  }
 
   // If this is a tail call outlined function, then there's already a return.
   if (MInfo.FrameConstructionID == MachineOutlinerTailCall)

@@ -33,7 +33,7 @@ entry:
 ; CHECK-NEXT:     DataSize:        0
 ; CHECK-NEXT:     SymbolInfo:      
 ; CHECK-NEXT:       - Name:            weak_external_data
-; CHECK-NEXT:         Flags:           1
+; CHECK-NEXT:         Flags:           [ BINDING_WEAK ]
 ; CHECK-NEXT:       - Name:            weak_function
-; CHECK-NEXT:         Flags:           5
+; CHECK-NEXT:         Flags:           [ BINDING_WEAK, VISIBILITY_HIDDEN ]
 ; CHECK-NEXT: ...

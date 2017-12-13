@@ -409,6 +409,7 @@ def AtomItineraries : ProcessorItineraries<
   InstrItinData<IIC_LXS,   [InstrStage<10, [Port0, Port1]>] >,
   InstrItinData<IIC_LTR,   [InstrStage<83, [Port0, Port1]>] >,
   InstrItinData<IIC_RDTSC, [InstrStage<30, [Port0, Port1]>] >,
+  InstrItinData<IIC_RDTSCP, [InstrStage<30, [Port0, Port1]>] >,
   InstrItinData<IIC_RSM,   [InstrStage<741, [Port0, Port1]>] >,
   InstrItinData<IIC_SIDT,  [InstrStage<4, [Port0, Port1]>] >,
   InstrItinData<IIC_SGDT,  [InstrStage<4, [Port0, Port1]>] >,

@@ -63,13 +63,13 @@ multiclass MIMG_NoSampler <bits<7> op, string asm> {
 
 class MIMG_Store_Helper <bits<7> op, string asm,
                          RegisterClass data_rc,
-                         RegisterClass addr_rc> : MIMG_Helper <
+                         RegisterClass addr_rc,
+                         string dns = ""> : MIMG_Helper <
   (outs),
   (ins data_rc:$vdata, addr_rc:$vaddr, SReg_256:$srsrc,
        dmask:$dmask, unorm:$unorm, GLC:$glc, slc:$slc,
        r128:$r128, tfe:$tfe, lwe:$lwe, da:$da),
-  asm#" $vdata, $vaddr, $srsrc$dmask$unorm$glc$slc$r128$tfe$lwe$da"
-     >, MIMGe<op> {
+  asm#" $vdata, $vaddr, $srsrc$dmask$unorm$glc$slc$r128$tfe$lwe$da", dns>, MIMGe<op> {
   let ssamp = 0;
   let mayLoad = 1; // TableGen requires this for matching with the intrinsics
   let mayStore = 1;
@@ -81,7 +81,8 @@ class MIMG_Store_Helper <bits<7> op, string asm,
 multiclass MIMG_Store_Addr_Helper <bits<7> op, string asm,
                                   RegisterClass data_rc,
                                   int channels> {
-  def _V1 : MIMG_Store_Helper <op, asm, data_rc, VGPR_32>,
+  def _V1 : MIMG_Store_Helper <op, asm, data_rc, VGPR_32,
+                               !if(!eq(channels, 1), "AMDGPU", "")>,
             MIMG_Mask<asm#"_V1", channels>;
   def _V2 : MIMG_Store_Helper <op, asm, data_rc, VReg_64>,
             MIMG_Mask<asm#"_V2", channels>;

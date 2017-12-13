@@ -55,13 +55,13 @@ Sections:
     DataSize:        0
     SymbolInfo:
       - Name:            weak_global_func
-        Flags:           1
+        Flags:           [ BINDING_WEAK ]
       - Name:            weak_global_data
-        Flags:           1
+        Flags:           [ BINDING_WEAK ]
       - Name:            weak_import_func
-        Flags:           1
+        Flags:           [ BINDING_WEAK ]
       - Name:            weak_import_data
-        Flags:           1
+        Flags:           [ BINDING_WEAK ]
 
 # CHECK: 00000400 W weak_global_data
 # CHECK: 00000004 W weak_global_func
