@@ -37,12 +37,8 @@ const uptr kShadowScale = 4;
 const uptr kShadowAlignment = 1UL << kShadowScale;
 
 #define MEM_TO_SHADOW_OFFSET(mem) ((uptr)(mem) >> kShadowScale)
-#define MEM_TO_SHADOW(mem)         \
-  (((uptr)(mem) >> kShadowScale) + \
-   __hwasan_shadow_memory_dynamic_address_internal)
-#define SHADOW_TO_MEM(shadow)                                       \
-  (((uptr)(shadow)-__hwasan_shadow_memory_dynamic_address_internal) \
-   << kShadowScale)
+#define MEM_TO_SHADOW(mem) ((uptr)(mem) >> kShadowScale)
+#define SHADOW_TO_MEM(shadow) ((uptr)(shadow) << kShadowScale)
 
 #define MEM_IS_APP(mem) true
 

@@ -9,7 +9,7 @@
 # CHECK:        Index:
 # CHECK:        Name: .strings
 # CHECK-NEXT:   Type: SHT_PROGBITS
-# CHECK-NEXT:   Flags [ 
+# CHECK-NEXT:   Flags [
 # CHECK-NEXT:     SHF_MERGE
 # CHECK-NEXT:     SHF_STRINGS
 # CHECK-NEXT:   ]

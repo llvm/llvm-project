@@ -13,7 +13,7 @@
 ; CHECK-NEXT:     Globals:
 ; CHECK-NEXT:       - Type:            I32
 ; CHECK-NEXT:         Mutable:         true
-; CHECK-NEXT:         InitExpr:        
+; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           66608
 ; CHECK-NEXT:       - Type:            I32

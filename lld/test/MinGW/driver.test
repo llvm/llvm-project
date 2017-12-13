@@ -93,14 +93,14 @@ STRIP-NOT: -debug:dwarf
 RUN: ld.lld -### -m i386pep foo.o --large-address-aware | FileCheck -check-prefix LARGE-ADDRESS-AWARE %s
 LARGE-ADDRESS-AWARE: -largeaddressaware
 
+RUN: ld.lld -### -m i386pe foo.o | FileCheck -check-prefix DEFAULT-DISABLE-FLAGS %s
 RUN: ld.lld -### -m i386pep foo.o | FileCheck -check-prefix DEFAULT-DISABLE-FLAGS %s
 DEFAULT-DISABLE-FLAGS: -dynamicbase:no
-
-# The extra '-' in the following check pattern is intentional, to make sure
-# that a check for "-dynamicbase" doesn't match the default "-dynamicbase:no".
-RUN: ld.lld -### -m i386pep foo.o --dynamicbase | FileCheck -check-prefix DYNAMICBASE %s
-RUN: ld.lld -### -m i386pep foo.o -dynamicbase | FileCheck -check-prefix DYNAMICBASE %s
-DYNAMICBASE: -dynamicbase -
+RUN: ld.lld -### -m i386pe --dynamicbase foo.o | FileCheck -check-prefix NO-DEFAULT-DISABLE-FLAGS %s
+RUN: ld.lld -### -m i386pep -dynamicbase foo.o | FileCheck -check-prefix NO-DEFAULT-DISABLE-FLAGS %s
+RUN: ld.lld -### -m thumb2pe foo.o | FileCheck -check-prefix NO-DEFAULT-DISABLE-FLAGS %s
+RUN: ld.lld -### -m arm64pe foo.o | FileCheck -check-prefix NO-DEFAULT-DISABLE-FLAGS %s
+NO-DEFAULT-DISABLE-FLAGS-NOT: -dynamicbase:no
 
 RUN: ld.lld -### -m i386pep foo.o --image-base 0x1230000 | FileCheck -check-prefix IMAGE-BASE %s
 RUN: ld.lld -### -m i386pep foo.o -image-base 0x1230000 | FileCheck -check-prefix IMAGE-BASE %s

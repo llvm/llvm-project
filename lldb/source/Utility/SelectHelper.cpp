@@ -32,6 +32,7 @@
 #define NOMINMAX
 #include <winsock2.h>
 #else
+#include <sys/time.h>
 #include <sys/select.h>
 #endif
 

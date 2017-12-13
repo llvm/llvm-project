@@ -17,18 +17,29 @@ using namespace clang;
 
 namespace {
 
+TextEdit replacementToEdit(StringRef Code, const tooling::Replacement &R) {
+  Range ReplacementRange = {
+      offsetToPosition(Code, R.getOffset()),
+      offsetToPosition(Code, R.getOffset() + R.getLength())};
+  return {ReplacementRange, R.getReplacementText()};
+}
+
 std::vector<TextEdit>
 replacementsToEdits(StringRef Code,
                     const std::vector<tooling::Replacement> &Replacements) {
   // Turn the replacements into the format specified by the Language Server
   // Protocol. Fuse them into one big JSON array.
   std::vector<TextEdit> Edits;
-  for (auto &R : Replacements) {
-    Range ReplacementRange = {
-        offsetToPosition(Code, R.getOffset()),
-        offsetToPosition(Code, R.getOffset() + R.getLength())};
-    Edits.push_back({ReplacementRange, R.getReplacementText()});
-  }
+  for (const auto &R : Replacements)
+    Edits.push_back(replacementToEdit(Code, R));
+  return Edits;
+}
+
+std::vector<TextEdit> replacementsToEdits(StringRef Code,
+                                          const tooling::Replacements &Repls) {
+  std::vector<TextEdit> Edits;
+  for (const auto &R : Repls)
+    Edits.push_back(replacementToEdit(Code, R));
   return Edits;
 }
 
@@ -57,6 +68,7 @@ void ClangdLSPServer::onInitialize(Ctx C, InitializeParams &Params) {
                  {"triggerCharacters", {"(", ","}},
              }},
             {"definitionProvider", true},
+            {"documentHighlightProvider", true},
             {"renameProvider", true},
             {"executeCommandProvider",
              json::obj{
@@ -152,23 +164,36 @@ void ClangdLSPServer::onDocumentOnTypeFormatting(
     Ctx C, DocumentOnTypeFormattingParams &Params) {
   auto File = Params.textDocument.uri.file;
   std::string Code = Server.getDocument(File);
-  C.reply(json::ary(
-      replacementsToEdits(Code, Server.formatOnType(File, Params.position))));
+  auto ReplacementsOrError = Server.formatOnType(Code, File, Params.position);
+  if (ReplacementsOrError)
+    C.reply(json::ary(replacementsToEdits(Code, ReplacementsOrError.get())));
+  else
+    C.replyError(ErrorCode::UnknownErrorCode,
+                 llvm::toString(ReplacementsOrError.takeError()));
 }
 
 void ClangdLSPServer::onDocumentRangeFormatting(
     Ctx C, DocumentRangeFormattingParams &Params) {
   auto File = Params.textDocument.uri.file;
   std::string Code = Server.getDocument(File);
-  C.reply(json::ary(
-      replacementsToEdits(Code, Server.formatRange(File, Params.range))));
+  auto ReplacementsOrError = Server.formatRange(Code, File, Params.range);
+  if (ReplacementsOrError)
+    C.reply(json::ary(replacementsToEdits(Code, ReplacementsOrError.get())));
+  else
+    C.replyError(ErrorCode::UnknownErrorCode,
+                 llvm::toString(ReplacementsOrError.takeError()));
 }
 
 void ClangdLSPServer::onDocumentFormatting(Ctx C,
                                            DocumentFormattingParams &Params) {
   auto File = Params.textDocument.uri.file;
   std::string Code = Server.getDocument(File);
-  C.reply(json::ary(replacementsToEdits(Code, Server.formatFile(File))));
+  auto ReplacementsOrError = Server.formatFile(Code, File);
+  if (ReplacementsOrError)
+    C.reply(json::ary(replacementsToEdits(Code, ReplacementsOrError.get())));
+  else
+    C.replyError(ErrorCode::UnknownErrorCode,
+                 llvm::toString(ReplacementsOrError.takeError()));
 }
 
 void ClangdLSPServer::onCodeAction(Ctx C, CodeActionParams &Params) {
@@ -233,6 +258,22 @@ void ClangdLSPServer::onSwitchSourceHeader(Ctx C,
   llvm::Optional<Path> Result = Server.switchSourceHeader(Params.uri.file);
   std::string ResultUri;
   C.reply(Result ? URI::fromFile(*Result).uri : "");
+}
+
+void ClangdLSPServer::onDocumentHighlight(Ctx C,
+                                          TextDocumentPositionParams &Params) {
+
+  auto Highlights = Server.findDocumentHighlights(
+      Params.textDocument.uri.file,
+      Position{Params.position.line, Params.position.character});
+
+  if (!Highlights) {
+    C.replyError(ErrorCode::InternalError,
+                 llvm::toString(Highlights.takeError()));
+    return;
+  }
+
+  C.reply(json::ary(Highlights->Value));
 }
 
 ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,

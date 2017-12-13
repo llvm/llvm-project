@@ -238,10 +238,11 @@ void __sanitizer_unaligned_store64(uu64 *p, u64 x) {
   *p = x;
 }
 
+template<unsigned X>
 __attribute__((always_inline))
 static void SigIll() {
 #if defined(__aarch64__)
-  asm("hlt #0x1\n\t");
+  asm("hlt %0\n\t" ::"n"(X));
 #elif defined(__x86_64__) || defined(__i386__)
   asm("ud2\n\t");
 #else
@@ -251,15 +252,16 @@ static void SigIll() {
   // __builtin_unreachable();
 }
 
+template<bool IsStore, unsigned LogSize>
 __attribute__((always_inline, nodebug))
 static void CheckAddress(uptr p) {
   tag_t ptr_tag = GetTagFromPointer(p);
   uptr ptr_raw = p & ~kAddressTagMask;
   tag_t mem_tag = *(tag_t *)MEM_TO_SHADOW(ptr_raw);
-  if (ptr_tag != mem_tag)
-    SigIll();
+  if (UNLIKELY(ptr_tag != mem_tag)) SigIll<0x100 + 0x10 * IsStore + LogSize>();
 }
 
+template<bool IsStore>
 __attribute__((always_inline, nodebug))
 static void CheckAddressSized(uptr p, uptr sz) {
   CHECK_NE(0, sz);
@@ -268,22 +270,22 @@ static void CheckAddressSized(uptr p, uptr sz) {
   tag_t *shadow_first = (tag_t *)MEM_TO_SHADOW(ptr_raw);
   tag_t *shadow_last = (tag_t *)MEM_TO_SHADOW(ptr_raw + sz - 1);
   for (tag_t *t = shadow_first; t <= shadow_last; ++t)
-    if (ptr_tag != *t) SigIll();
+    if (UNLIKELY(ptr_tag != *t)) SigIll<0x100 + 0x10 * IsStore + 0xf>();
 }
 
-void __hwasan_load(uptr p, uptr sz) { CheckAddressSized(p, sz); }
-void __hwasan_load1(uptr p) { CheckAddress(p); }
-void __hwasan_load2(uptr p) { CheckAddress(p); }
-void __hwasan_load4(uptr p) { CheckAddress(p); }
-void __hwasan_load8(uptr p) { CheckAddress(p); }
-void __hwasan_load16(uptr p) { CheckAddress(p); }
+void __hwasan_load(uptr p, uptr sz) { CheckAddressSized<false>(p, sz); }
+void __hwasan_load1(uptr p) { CheckAddress<false, 0>(p); }
+void __hwasan_load2(uptr p) { CheckAddress<false, 1>(p); }
+void __hwasan_load4(uptr p) { CheckAddress<false, 2>(p); }
+void __hwasan_load8(uptr p) { CheckAddress<false, 3>(p); }
+void __hwasan_load16(uptr p) { CheckAddress<false, 4>(p); }
 
-void __hwasan_store(uptr p, uptr sz) { CheckAddressSized(p, sz); }
-void __hwasan_store1(uptr p) { CheckAddress(p); }
-void __hwasan_store2(uptr p) { CheckAddress(p); }
-void __hwasan_store4(uptr p) { CheckAddress(p); }
-void __hwasan_store8(uptr p) { CheckAddress(p); }
-void __hwasan_store16(uptr p) { CheckAddress(p); }
+void __hwasan_store(uptr p, uptr sz) { CheckAddressSized<true>(p, sz); }
+void __hwasan_store1(uptr p) { CheckAddress<true, 0>(p); }
+void __hwasan_store2(uptr p) { CheckAddress<true, 1>(p); }
+void __hwasan_store4(uptr p) { CheckAddress<true, 2>(p); }
+void __hwasan_store8(uptr p) { CheckAddress<true, 3>(p); }
+void __hwasan_store16(uptr p) { CheckAddress<true, 4>(p); }
 
 #if !SANITIZER_SUPPORTS_WEAK_HOOKS
 extern "C" {

@@ -72,4 +72,6 @@ void clangd::registerCallbackHandlers(JSONRPCDispatcher &Dispatcher,
   Register("textDocument/rename", &ProtocolCallbacks::onRename);
   Register("workspace/didChangeWatchedFiles", &ProtocolCallbacks::onFileEvent);
   Register("workspace/executeCommand", &ProtocolCallbacks::onCommand);
+  Register("textDocument/documentHighlight",
+           &ProtocolCallbacks::onDocumentHighlight);
 }

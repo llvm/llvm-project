@@ -1012,10 +1012,10 @@ constexpr size_t __find_idx(size_t __i, const bool (&__matches)[_Nx]) {
 
 template <class _T1, class ..._Args>
 struct __find_exactly_one_checked {
-  static constexpr bool __matches[] = {is_same<_T1, _Args>::value...};
+    static constexpr bool __matches[sizeof...(_Args)] = {is_same<_T1, _Args>::value...};
     static constexpr size_t value = __find_detail::__find_idx(0, __matches);
-    static_assert (value != __not_found, "type not found in type list" );
-    static_assert(value != __ambiguous,"type occurs more than once in type list");
+    static_assert(value != __not_found, "type not found in type list" );
+    static_assert(value != __ambiguous, "type occurs more than once in type list");
 };
 
 template <class _T1>
