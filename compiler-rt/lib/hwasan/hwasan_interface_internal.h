@@ -32,14 +32,6 @@ using __sanitizer::u16;
 using __sanitizer::u8;
 
 SANITIZER_INTERFACE_ATTRIBUTE
-extern uptr __hwasan_shadow_memory_dynamic_address;
-
-// Hidden alias for internal access.
-__attribute__((visibility("hidden")))
-extern uptr __hwasan_shadow_memory_dynamic_address_internal;
-
-
-SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_load(uptr, uptr);
 SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_load1(uptr);

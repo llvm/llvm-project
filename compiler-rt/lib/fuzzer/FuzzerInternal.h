@@ -124,8 +124,6 @@ private:
   size_t NumberOfNewUnitsAdded = 0;
 
   size_t LastCorpusUpdateRun = 0;
-  system_clock::time_point LastCorpusUpdateTime = system_clock::now();
-
 
   bool HasMoreMallocsThanFrees = false;
   size_t NumberOfLeakDetectionAttempts = 0;
