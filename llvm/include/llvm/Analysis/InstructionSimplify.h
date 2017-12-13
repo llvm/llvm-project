@@ -161,6 +161,10 @@ Value *SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,
 Value *SimplifyInsertValueInst(Value *Agg, Value *Val, ArrayRef<unsigned> Idxs,
                                const SimplifyQuery &Q);
 
+/// Given operands for an InsertElement, fold the result or return null.
+Value *SimplifyInsertElementInst(Value *Vec, Value *Elt, Value *Idx,
+                                 const SimplifyQuery &Q);
+
 /// Given operands for an ExtractValueInst, fold the result or return null.
 Value *SimplifyExtractValueInst(Value *Agg, ArrayRef<unsigned> Idxs,
                                 const SimplifyQuery &Q);

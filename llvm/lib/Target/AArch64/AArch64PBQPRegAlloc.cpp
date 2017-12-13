@@ -20,7 +20,7 @@
 #include "AArch64PBQPRegAlloc.h"
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
-#include "llvm/CodeGen/LiveIntervalAnalysis.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"

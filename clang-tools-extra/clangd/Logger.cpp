@@ -9,11 +9,25 @@
 
 #include "Logger.h"
 
-using namespace clang::clangd;
+namespace clang {
+namespace clangd {
 
-EmptyLogger &EmptyLogger::getInstance() {
-  static EmptyLogger Logger;
-  return Logger;
+namespace {
+Logger *L = nullptr;
+} // namespace
+
+LoggingSession::LoggingSession(clangd::Logger &Instance) {
+  assert(!L);
+  L = &Instance;
 }
 
-void EmptyLogger::log(const llvm::Twine &Message) {}
+LoggingSession::~LoggingSession() { L = nullptr; }
+
+void log(const Context &Ctx, const llvm::Twine &Message) {
+  if (!L)
+    return;
+  L->log(Ctx, Message);
+}
+
+} // namespace clangd
+} // namespace clang

@@ -26,8 +26,8 @@ GlobalCompilationDatabase::getFallbackCommand(PathRef File) const {
 
 DirectoryBasedGlobalCompilationDatabase::
     DirectoryBasedGlobalCompilationDatabase(
-        clangd::Logger &Logger, llvm::Optional<Path> CompileCommandsDir)
-    : Logger(Logger), CompileCommandsDir(std::move(CompileCommandsDir)) {}
+        llvm::Optional<Path> CompileCommandsDir)
+    : CompileCommandsDir(std::move(CompileCommandsDir)) {}
 
 llvm::Optional<tooling::CompileCommand>
 DirectoryBasedGlobalCompilationDatabase::getCompileCommand(PathRef File) const {
@@ -103,9 +103,12 @@ DirectoryBasedGlobalCompilationDatabase::getCompilationDatabase(
   if (CompileCommandsDir.hasValue()) {
     tooling::CompilationDatabase *ReturnValue =
         tryLoadDatabaseFromPath(CompileCommandsDir.getValue());
-    if (ReturnValue == nullptr)
-      Logger.log("Failed to find compilation database for " + Twine(File) +
-                 "in overriden directory " + CompileCommandsDir.getValue());
+    if (ReturnValue == nullptr) {
+      // FIXME(ibiryukov): pass a proper Context here.
+      log(Context::empty(), "Failed to find compilation database for " +
+                                Twine(File) + "in overriden directory " +
+                                CompileCommandsDir.getValue());
+    }
     return ReturnValue;
   }
 
@@ -118,7 +121,9 @@ DirectoryBasedGlobalCompilationDatabase::getCompilationDatabase(
     return CDB;
   }
 
-  Logger.log("Failed to find compilation database for " + Twine(File));
+  // FIXME(ibiryukov): pass a proper Context here.
+  log(Context::empty(),
+      "Failed to find compilation database for " + Twine(File));
   return nullptr;
 }
 

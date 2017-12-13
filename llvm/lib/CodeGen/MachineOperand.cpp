@@ -14,7 +14,9 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/CodeGen/MIRPrinter.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/ModuleSlotTracker.h"
@@ -376,6 +378,28 @@ static void tryToGetTargetInfo(const MachineOperand &MO,
   }
 }
 
+static void printOffset(raw_ostream &OS, int64_t Offset) {
+  if (Offset == 0)
+    return;
+  if (Offset < 0) {
+    OS << " - " << -Offset;
+    return;
+  }
+  OS << " + " << Offset;
+}
+
+static const char *getTargetIndexName(const MachineFunction &MF, int Index) {
+  const auto *TII = MF.getSubtarget().getInstrInfo();
+  assert(TII && "expected instruction info");
+  auto Indices = TII->getSerializableTargetIndices();
+  auto Found = find_if(Indices, [&](const std::pair<int, const char *> &I) {
+    return I.first == Index;
+  });
+  if (Found != Indices.end())
+    return Found->second;
+  return nullptr;
+}
+
 void MachineOperand::printSubregIdx(raw_ostream &OS, uint64_t Index,
                                     const TargetRegisterInfo *TRI) {
   OS << "%subreg.";
@@ -486,19 +510,21 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "<fi#" << getIndex() << '>';
     break;
   case MachineOperand::MO_ConstantPoolIndex:
-    OS << "<cp#" << getIndex();
-    if (getOffset())
-      OS << "+" << getOffset();
-    OS << '>';
+    OS << "%const." << getIndex();
+    printOffset(OS, getOffset());
     break;
-  case MachineOperand::MO_TargetIndex:
-    OS << "<ti#" << getIndex();
-    if (getOffset())
-      OS << "+" << getOffset();
-    OS << '>';
+  case MachineOperand::MO_TargetIndex: {
+    OS << "target-index(";
+    const char *Name = "<unknown>";
+    if (const MachineFunction *MF = getMFIfAvailable(*this))
+      if (const auto *TargetIndexName = getTargetIndexName(*MF, getIndex()))
+        Name = TargetIndexName;
+    OS << Name << ')';
+    printOffset(OS, getOffset());
     break;
+  }
   case MachineOperand::MO_JumpTableIndex:
-    OS << "<jt#" << getIndex() << '>';
+    OS << printJumpTableEntryReference(getIndex());
     break;
   case MachineOperand::MO_GlobalAddress:
     OS << "<ga:";

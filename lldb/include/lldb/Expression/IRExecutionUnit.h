@@ -421,8 +421,8 @@ private:
   lldb::addr_t m_function_load_addr;
   lldb::addr_t m_function_end_load_addr;
 
-  bool m_strip_underscore; ///< True for platforms where global symbols have a _
-                           ///prefix
+  bool m_strip_underscore = true; ///< True for platforms where global symbols
+                                  ///  have a _ prefix
   bool m_reported_allocations; ///< True after allocations have been reported.
                                ///It is possible that
   ///< sections will be allocated when this is true, in which case they weren't

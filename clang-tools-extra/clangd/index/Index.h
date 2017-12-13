@@ -12,6 +12,7 @@
 
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringExtras.h"
 
 #include <array>
@@ -44,12 +45,14 @@ public:
   SymbolID() = default;
   SymbolID(llvm::StringRef USR);
 
-  bool operator==(const SymbolID& Sym) const {
+  bool operator==(const SymbolID &Sym) const {
     return HashValue == Sym.HashValue;
   }
 
 private:
-  friend class llvm::DenseMapInfo<clang::clangd::SymbolID>;
+  friend llvm::hash_code hash_value(const SymbolID &ID) {
+    return hash_value(ArrayRef<uint8_t>(ID.HashValue));
+  }
 
   std::array<uint8_t, 20> HashValue;
 };
@@ -86,14 +89,14 @@ struct Symbol {
 // FIXME: Use a space-efficient implementation, a lot of Symbol fields could
 // share the same storage.
 class SymbolSlab {
- public:
+public:
   using const_iterator = llvm::DenseMap<SymbolID, Symbol>::const_iterator;
 
   SymbolSlab() = default;
 
   const_iterator begin() const;
   const_iterator end() const;
-  const_iterator find(const SymbolID& SymID) const;
+  const_iterator find(const SymbolID &SymID) const;
 
   // Once called, no more symbols would be added to the SymbolSlab. This
   // operation is irreversible.
@@ -101,7 +104,7 @@ class SymbolSlab {
 
   void insert(Symbol S);
 
- private:
+private:
   bool Frozen = false;
 
   llvm::DenseMap<SymbolID, Symbol> Symbols;
@@ -122,8 +125,7 @@ template <> struct DenseMapInfo<clang::clangd::SymbolID> {
     return TombstoneKey;
   }
   static unsigned getHashValue(const clang::clangd::SymbolID &Sym) {
-    return hash_value(
-        ArrayRef<uint8_t>(Sym.HashValue.data(), Sym.HashValue.size()));
+    return hash_value(Sym);
   }
   static bool isEqual(const clang::clangd::SymbolID &LHS,
                       const clang::clangd::SymbolID &RHS) {

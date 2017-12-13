@@ -19,7 +19,7 @@ Content-Length: 205
 # CHECK-NEXT:            "line": 0
 # CHECK-NEXT:          },
 # CHECK-NEXT:          "start": {
-# CHECK-NEXT:            "character": 28,
+# CHECK-NEXT:            "character": 27,
 # CHECK-NEXT:            "line": 0
 # CHECK-NEXT:          }
 # CHECK-NEXT:        },
@@ -33,7 +33,7 @@ Content-Length: 205
 # CHECK-NEXT:            "line": 0
 # CHECK-NEXT:          },
 # CHECK-NEXT:          "start": {
-# CHECK-NEXT:            "character": 19,
+# CHECK-NEXT:            "character": 18,
 # CHECK-NEXT:            "line": 0
 # CHECK-NEXT:          }
 # CHECK-NEXT:        },
@@ -56,7 +56,7 @@ Content-Length: 175
 # CHECK-NEXT:            "line": 0
 # CHECK-NEXT:          },
 # CHECK-NEXT:          "start": {
-# CHECK-NEXT:            "character": 28,
+# CHECK-NEXT:            "character": 27,
 # CHECK-NEXT:            "line": 0
 # CHECK-NEXT:          }
 # CHECK-NEXT:        },
@@ -70,7 +70,7 @@ Content-Length: 175
 # CHECK-NEXT:            "line": 0
 # CHECK-NEXT:          },
 # CHECK-NEXT:          "start": {
-# CHECK-NEXT:            "character": 19,
+# CHECK-NEXT:            "character": 18,
 # CHECK-NEXT:            "line": 0
 # CHECK-NEXT:          }
 # CHECK-NEXT:        },

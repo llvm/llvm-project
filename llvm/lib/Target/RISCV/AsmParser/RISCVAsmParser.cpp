@@ -225,6 +225,37 @@ public:
     return IsConstantImm && isUInt<5>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
   }
 
+  bool isUImm5NonZero() const {
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK;
+    if (!isImm())
+      return false;
+    bool IsConstantImm = evaluateConstantImm(Imm, VK);
+    return IsConstantImm && isUInt<5>(Imm) && (Imm != 0) &&
+           VK == RISCVMCExpr::VK_RISCV_None;
+  }
+
+  bool isSImm6() const {
+    RISCVMCExpr::VariantKind VK;
+    int64_t Imm;
+    bool IsValid;
+    bool IsConstantImm = evaluateConstantImm(Imm, VK);
+    if (!IsConstantImm)
+      IsValid = RISCVAsmParser::classifySymbolRef(getImm(), VK, Imm);
+    else
+      IsValid = isInt<6>(Imm);
+    return IsValid &&
+           (VK == RISCVMCExpr::VK_RISCV_None || VK == RISCVMCExpr::VK_RISCV_LO);
+  }
+
+  bool isUImm6NonZero() const {
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK;
+    bool IsConstantImm = evaluateConstantImm(Imm, VK);
+    return IsConstantImm && isUInt<6>(Imm) && (Imm != 0) &&
+           VK == RISCVMCExpr::VK_RISCV_None;
+  }
+
   bool isUImm7Lsb00() const {
     int64_t Imm;
     RISCVMCExpr::VariantKind VK;
@@ -259,6 +290,14 @@ public:
            VK == RISCVMCExpr::VK_RISCV_None;
   }
 
+  bool isUImm10Lsb00NonZero() const {
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK;
+    bool IsConstantImm = evaluateConstantImm(Imm, VK);
+    return IsConstantImm && isShiftedUInt<8, 2>(Imm) && (Imm != 0) &&
+           VK == RISCVMCExpr::VK_RISCV_None;
+  }
+
   bool isSImm12() const {
     RISCVMCExpr::VariantKind VK;
     int64_t Imm;
@@ -286,6 +325,14 @@ public:
   }
 
   bool isSImm13Lsb0() const { return isBareSimmNLsb0<13>(); }
+
+  bool isSImm10Lsb0000() const {
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK;
+    bool IsConstantImm = evaluateConstantImm(Imm, VK);
+    return IsConstantImm && isShiftedInt<6, 4>(Imm) &&
+           VK == RISCVMCExpr::VK_RISCV_None;
+  }
 
   bool isUImm20() const {
     RISCVMCExpr::VariantKind VK;
@@ -491,10 +538,13 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   unsigned Reg = Op.getReg();
   bool IsRegFPR32 =
       RISCVMCRegisterClasses[RISCV::FPR32RegClassID].contains(Reg);
+  bool IsRegFPR32C =
+      RISCVMCRegisterClasses[RISCV::FPR32CRegClassID].contains(Reg);
 
   // As the parser couldn't differentiate an FPR32 from an FPR64, coerce the
-  // register from FPR32 to FPR64 if necessary.
-  if (IsRegFPR32 && Kind == MCK_FPR64) {
+  // register from FPR32 to FPR64 or FPR32C to FPR64C if necessary.
+  if ((IsRegFPR32 && Kind == MCK_FPR64) ||
+      (IsRegFPR32C && Kind == MCK_FPR64C)) {
     Op.Reg.RegNum = convertFPR32ToFPR64(Reg);
     return Match_Success;
   }
@@ -544,6 +594,13 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 5) - 1);
   case Match_InvalidUImm5:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 5) - 1);
+  case Match_InvalidUImm5NonZero:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 5) - 1);
+  case Match_InvalidSImm6:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 5),
+                                      (1 << 5) - 1);
+  case Match_InvalidUImm6NonZero:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 6) - 1);
   case Match_InvalidUImm7Lsb00:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 0, (1 << 7) - 4,
@@ -564,6 +621,14 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 0, (1 << 9) - 8,
         "immediate must be a multiple of 8 bytes in the range");
+  case Match_InvalidUImm10Lsb00NonZero:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, 4, (1 << 10) - 4,
+        "immediate must be a multiple of 4 bytes in the range");
+  case Match_InvalidSImm10Lsb0000:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, -(1 << 9), (1 << 9) - 16,
+        "immediate must be a multiple of 16 bytes in the range");
   case Match_InvalidSImm12:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 11),
                                       (1 << 11) - 1);

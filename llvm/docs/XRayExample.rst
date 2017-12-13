@@ -60,7 +60,7 @@ to enable XRay at application start. To do this, XRay checks the
   $ ./bin/llc input.ll
 
   # We need to set the XRAY_OPTIONS to enable some features.
-  $ XRAY_OPTIONS="patch_premain=true xray_mode=xray-basic" ./bin/llc input.ll
+  $ XRAY_OPTIONS="patch_premain=true xray_mode=xray-basic verbosity=1" ./bin/llc input.ll
   ==69819==XRay: Log file in 'xray-log.llc.m35qPB'
 
 At this point we now have an XRay trace we can start analysing.

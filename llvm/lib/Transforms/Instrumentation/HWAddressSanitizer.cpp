@@ -22,7 +22,10 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/MDBuilder.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/IR/Function.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstVisitor.h"
@@ -51,10 +54,18 @@ static const char *const kHwasanInitName = "__hwasan_init";
 // Accesses sizes are powers of two: 1, 2, 4, 8, 16.
 static const size_t kNumberOfAccessSizes = 5;
 
+static const size_t kShadowScale = 4;
+static const unsigned kPointerTagShift = 56;
+
 static cl::opt<std::string> ClMemoryAccessCallbackPrefix(
     "hwasan-memory-access-callback-prefix",
     cl::desc("Prefix for memory access callbacks"), cl::Hidden,
     cl::init("__hwasan_"));
+
+static cl::opt<bool>
+    ClInstrumentWithCalls("hwasan-instrument-with-calls",
+                cl::desc("instrument reads and writes with callbacks"),
+                cl::Hidden, cl::init(false));
 
 static cl::opt<bool> ClInstrumentReads("hwasan-instrument-reads",
                                        cl::desc("instrument read instructions"),
@@ -86,6 +97,9 @@ public:
   bool doInitialization(Module &M) override;
 
   void initializeCallbacks(Module &M);
+  void instrumentMemAccessInline(Value *PtrLong, bool IsWrite,
+                                 unsigned AccessSizeIndex,
+                                 Instruction *InsertBefore);
   bool instrumentMemAccess(Instruction *I);
   Value *isInterestingMemoryAccess(Instruction *I, bool *IsWrite,
                                    uint64_t *TypeSize, unsigned *Alignment,
@@ -219,6 +233,31 @@ static size_t TypeSizeToSizeIndex(uint32_t TypeSize) {
   return Res;
 }
 
+void HWAddressSanitizer::instrumentMemAccessInline(Value *PtrLong, bool IsWrite,
+                                                   unsigned AccessSizeIndex,
+                                                   Instruction *InsertBefore) {
+  IRBuilder<> IRB(InsertBefore);
+  Value *PtrTag = IRB.CreateTrunc(IRB.CreateLShr(PtrLong, kPointerTagShift), IRB.getInt8Ty());
+  Value *AddrLong =
+      IRB.CreateAnd(PtrLong, ConstantInt::get(PtrLong->getType(),
+                                              ~(0xFFULL << kPointerTagShift)));
+  Value *ShadowLong = IRB.CreateLShr(AddrLong, kShadowScale);
+  Value *MemTag = IRB.CreateLoad(IRB.CreateIntToPtr(ShadowLong, IRB.getInt8PtrTy()));
+  Value *TagMismatch = IRB.CreateICmpNE(PtrTag, MemTag);
+
+  TerminatorInst *CheckTerm =
+      SplitBlockAndInsertIfThen(TagMismatch, InsertBefore, false,
+                                MDBuilder(*C).createBranchWeights(1, 100000));
+
+  IRB.SetInsertPoint(CheckTerm);
+  // The signal handler will find the data address in x0.
+  InlineAsm *Asm = InlineAsm::get(
+      FunctionType::get(IRB.getVoidTy(), {PtrLong->getType()}, false),
+      "hlt #" + itostr(0x100 + IsWrite * 0x10 + AccessSizeIndex), "{x0}",
+      /*hasSideEffects=*/true);
+  IRB.CreateCall(Asm, PtrLong);
+}
+
 bool HWAddressSanitizer::instrumentMemAccess(Instruction *I) {
   DEBUG(dbgs() << "Instrumenting: " << *I << "\n");
   bool IsWrite = false;
@@ -237,10 +276,16 @@ bool HWAddressSanitizer::instrumentMemAccess(Instruction *I) {
   IRBuilder<> IRB(I);
   Value *AddrLong = IRB.CreatePointerCast(Addr, IntptrTy);
   if (isPowerOf2_64(TypeSize) &&
-      (TypeSize / 8 <= (1UL << (kNumberOfAccessSizes - 1)))) {
+      (TypeSize / 8 <= (1UL << (kNumberOfAccessSizes - 1))) &&
+      (Alignment >= (1UL << kShadowScale) || Alignment == 0 ||
+       Alignment >= TypeSize / 8)) {
     size_t AccessSizeIndex = TypeSizeToSizeIndex(TypeSize);
-    IRB.CreateCall(HwasanMemoryAccessCallback[IsWrite][AccessSizeIndex],
-                   AddrLong);
+    if (ClInstrumentWithCalls) {
+      IRB.CreateCall(HwasanMemoryAccessCallback[IsWrite][AccessSizeIndex],
+                     AddrLong);
+    } else {
+      instrumentMemAccessInline(AddrLong, IsWrite, AccessSizeIndex, I);
+    }
   } else {
     IRB.CreateCall(HwasanMemoryAccessCallbackSized[IsWrite],
                    {AddrLong, ConstantInt::get(IntptrTy, TypeSize / 8)});
