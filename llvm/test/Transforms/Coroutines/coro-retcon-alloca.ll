@@ -202,6 +202,34 @@ loop2:
 ; CHECK-NEXT:    br i1 %cmp, label %loop2,
 ; CHECK-NEXT:  }
 
+declare {i8*, i32} @prototype_j(i8*)
+define {i8*, i32} @j(i8* %buffer, i32 %n) {
+entry:
+  %id = call token @llvm.coro.id.retcon(i32 1024, i32 8, i8* %buffer, i8* bitcast ({i8*, i32} (i8*)* @prototype_j to i8*), i8* bitcast (i8* (i32)* @allocate to i8*), i8* bitcast (void (i8*)* @deallocate to i8*))
+  %hdl = call i8* @llvm.coro.begin(token %id, i8* null)
+  br label %forward
+
+back:
+  ; We should encounter this 'get' before we encounter the 'alloc'.
+  %ptr = call i8* @llvm.coro.alloca.get(token %alloca)
+  call void @use(i8* %ptr)
+  call void @llvm.coro.alloca.free(token %alloca)
+  %k = add i32 %n.val, 1
+  %cmp = icmp ugt i32 %k, 128
+  br i1 %cmp, label %forward, label %end
+
+forward:
+  %n.val = phi i32 [ %n, %entry ], [ %k, %back ]
+  call void (...) @llvm.coro.suspend.retcon.isVoid(i32 %n.val)
+  %alloca = call token @llvm.coro.alloca.alloc.i32(i32 %n.val, i32 8)
+  %inc = add i32 %n.val, 1
+  br label %back
+
+end:
+  call i1 @llvm.coro.end(i8* %hdl, i1 0)
+  unreachable
+}
+
 declare token @llvm.coro.id.retcon(i32, i32, i8*, i8*, i8*, i8*)
 declare i8* @llvm.coro.begin(token, i8*)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
