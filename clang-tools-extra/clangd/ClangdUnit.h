@@ -45,7 +45,7 @@ class Logger;
 /// A diagnostic with its FixIts.
 struct DiagWithFixIts {
   clangd::Diagnostic Diag;
-  llvm::SmallVector<tooling::Replacement, 1> FixIts;
+  llvm::SmallVector<TextEdit, 1> FixIts;
 };
 
 // Stores Preamble and associated data.

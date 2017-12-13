@@ -202,9 +202,7 @@ void ClangdLSPServer::onCodeAction(Ctx C, CodeActionParams &Params) {
   std::string Code = Server.getDocument(Params.textDocument.uri.file);
   json::ary Commands;
   for (Diagnostic &D : Params.context.diagnostics) {
-    std::vector<clang::tooling::Replacement> Fixes =
-        getFixIts(Params.textDocument.uri.file, D);
-    auto Edits = replacementsToEdits(Code, Fixes);
+    auto Edits = getFixIts(Params.textDocument.uri.file, D);
     if (!Edits.empty()) {
       WorkspaceEdit WE;
       WE.changes = {{Params.textDocument.uri.uri, std::move(Edits)}};
@@ -306,8 +304,8 @@ bool ClangdLSPServer::run(std::istream &In) {
   return ShutdownRequestReceived;
 }
 
-std::vector<clang::tooling::Replacement>
-ClangdLSPServer::getFixIts(StringRef File, const clangd::Diagnostic &D) {
+std::vector<TextEdit> ClangdLSPServer::getFixIts(StringRef File,
+                                                 const clangd::Diagnostic &D) {
   std::lock_guard<std::mutex> Lock(FixItsMutex);
   auto DiagToFixItsIter = FixItsMap.find(File);
   if (DiagToFixItsIter == FixItsMap.end())
