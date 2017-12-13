@@ -323,7 +323,7 @@ std::string InputSectionBase::getObjMsg(uint64_t Off) {
       .str();
 }
 
-InputSectionBase InputSectionBase::Discarded;
+InputSection InputSection::Discarded(0, 0, 0, ArrayRef<uint8_t>(), "");
 
 InputSection::InputSection(uint64_t Flags, uint32_t Type, uint32_t Alignment,
                            ArrayRef<uint8_t> Data, StringRef Name, Kind K)
