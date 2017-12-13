@@ -101,8 +101,8 @@ static list<std::string> ArchFlags(
     desc("Link DWARF debug information only for specified CPU architecture\n"
          "types. This option can be specified multiple times, once for each\n"
          "desired architecture. All CPU architectures will be linked by\n"
-         "default."), value_desc("arch"),
-    ZeroOrMore, cat(DsymCategory));
+         "default."),
+    value_desc("arch"), ZeroOrMore, cat(DsymCategory));
 
 static opt<bool>
     NoODR("no-odr",
@@ -213,7 +213,7 @@ static bool verify(llvm::StringRef OutputFile, llvm::StringRef Arch) {
     DIDumpOptions DumpOpts;
     bool success = DICtx->verify(os, DumpOpts.noImplicitRecursion());
     if (!success)
-        errs() << "error: verification failed for " << Arch << '\n';
+      errs() << "error: verification failed for " << Arch << '\n';
     return success;
   }
 
@@ -355,12 +355,14 @@ int main(int argc, char **argv) {
       NumThreads = 1;
     NumThreads = std::min<unsigned>(NumThreads, DebugMapPtrsOrErr->size());
 
+    llvm::ThreadPool Threads(NumThreads);
 
     // If there is more than one link to execute, we need to generate
     // temporary files.
     bool NeedsTempFiles = !DumpDebugMap && (*DebugMapPtrsOrErr).size() != 1;
     llvm::SmallVector<MachOUtils::ArchAndFilename, 4> TempFiles;
     TempFileVector TempFileStore;
+    std::atomic_char AllOK(1);
     for (auto &Map : *DebugMapPtrsOrErr) {
       if (Verbose || DumpDebugMap)
         Map->print(llvm::outs());
@@ -373,55 +375,52 @@ int main(int argc, char **argv) {
                      << MachOUtils::getArchName(Map->getTriple().getArchName())
                      << ")\n";
 
+      // Using a std::shared_ptr rather than std::unique_ptr because move-only
+      // types don't work with std::bind in the ThreadPool implementation.
+      std::shared_ptr<raw_fd_ostream> OS;
       std::string OutputFile = getOutputFileName(InputFile);
-      std::unique_ptr<raw_fd_ostream> OS;
       if (NeedsTempFiles) {
         Expected<sys::fs::TempFile> T = createTempFile();
         if (!T) {
           errs() << toString(T.takeError());
           return 1;
         }
-        OS = llvm::make_unique<raw_fd_ostream>(T->FD, /*shouldClose*/ false);
+        OS = std::make_shared<raw_fd_ostream>(T->FD, /*shouldClose*/ false);
         OutputFile = T->TmpName;
         TempFileStore.Files.push_back(std::move(*T));
+        TempFiles.emplace_back(Map->getTriple().getArchName().str(),
+                               OutputFile);
       } else {
         std::error_code EC;
-        OS = llvm::make_unique<raw_fd_ostream>(NoOutput ? "-" : OutputFile, EC,
-                                         sys::fs::F_None);
+        OS = std::make_shared<raw_fd_ostream>(NoOutput ? "-" : OutputFile, EC,
+                                              sys::fs::F_None);
         if (EC) {
           errs() << OutputFile << ": " << EC.message();
           return 1;
         }
       }
 
-      std::atomic_char AllOK(1);
-      auto LinkLambda = [&]() {
-        AllOK.fetch_and(linkDwarf(*OS, *Map, Options));
-        OS->flush();
+      auto LinkLambda = [&,
+                         OutputFile](std::shared_ptr<raw_fd_ostream> Stream) {
+        AllOK.fetch_and(linkDwarf(*Stream, *Map, Options));
+        Stream->flush();
+        if (Verify && !NoOutput)
+          AllOK.fetch_and(verify(OutputFile, Map->getTriple().getArchName()));
       };
 
       // FIXME: The DwarfLinker can have some very deep recursion that can max
       // out the (significantly smaller) stack when using threads. We don't
       // want this limitation when we only have a single thread.
-      if (NumThreads == 1) {
-        LinkLambda();
-      } else {
-        llvm::ThreadPool Threads(NumThreads);
-        Threads.async(LinkLambda);
-        Threads.wait();
-      }
-      if (!AllOK)
-        return 1;
-
-      if (Verify && !NoOutput &&
-          !verify(OutputFile, Map->getTriple().getArchName()))
-        return 1;
-
-      if (NeedsTempFiles)
-        TempFiles.emplace_back(Map->getTriple().getArchName().str(),
-                               OutputFile);
+      if (NumThreads == 1)
+        LinkLambda(OS);
+      else
+        Threads.async(LinkLambda, OS);
     }
 
+    Threads.wait();
+
+    if (!AllOK)
+      return 1;
 
     if (NeedsTempFiles &&
         !MachOUtils::generateUniversalBinary(

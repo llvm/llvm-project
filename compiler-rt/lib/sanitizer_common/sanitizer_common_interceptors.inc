@@ -2045,6 +2045,13 @@ INTERCEPTOR(int, clock_gettime, u32 clk_id, void *tp) {
   }
   return res;
 }
+namespace __sanitizer {
+extern "C" {
+int real_clock_gettime(u32 clk_id, void *tp) {
+  return REAL(clock_gettime)(clk_id, tp);
+}
+}  // extern "C"
+}  // namespace __sanitizer
 INTERCEPTOR(int, clock_settime, u32 clk_id, const void *tp) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, clock_settime, clk_id, tp);

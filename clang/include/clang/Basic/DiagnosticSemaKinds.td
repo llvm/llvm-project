@@ -8852,9 +8852,9 @@ def err_omp_function_expected : Error<
 def err_omp_wrong_cancel_region : Error<
   "one of 'for', 'parallel', 'sections' or 'taskgroup' is expected">;
 def err_omp_parent_cancel_region_nowait : Error<
-  "parent region for 'omp %select{cancellation point/cancel}0' construct cannot be nowait">;
+  "parent region for 'omp %select{cancellation point|cancel}0' construct cannot be nowait">;
 def err_omp_parent_cancel_region_ordered : Error<
-  "parent region for 'omp %select{cancellation point/cancel}0' construct cannot be ordered">;
+  "parent region for 'omp %select{cancellation point|cancel}0' construct cannot be ordered">;
 def err_omp_reduction_wrong_type : Error<"reduction type cannot be %select{qualified with 'const', 'volatile' or 'restrict'|a function|a reference|an array}0 type">;
 def err_omp_wrong_var_in_declare_reduction : Error<"only %select{'omp_priv' or 'omp_orig'|'omp_in' or 'omp_out'}0 variables are allowed in %select{initializer|combiner}0 expression">;
 def err_omp_declare_reduction_redefinition : Error<"redefinition of user-defined reduction for type %0">;

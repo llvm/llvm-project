@@ -20,8 +20,6 @@
 #include "llvm/Support/Path.h"
 
 #include <cstdint>
-#include <map>
-#include <set>
 #include <string>
 #include <vector>
 

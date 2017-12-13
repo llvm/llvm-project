@@ -422,7 +422,7 @@ public:
   }
   void setOnlyAccessesArgMemory() { addFnAttr(Attribute::ArgMemOnly); }
 
-  /// @brief Determine if the function may only access memory that is 
+  /// @brief Determine if the function may only access memory that is
   ///  inaccessible from the IR.
   bool onlyAccessesInaccessibleMemory() const {
     return hasFnAttribute(Attribute::InaccessibleMemOnly);
@@ -490,7 +490,7 @@ public:
   }
   void setDoesNotRecurse() {
     addFnAttr(Attribute::NoRecurse);
-  }  
+  }
 
   /// @brief True if the ABI mandates (or the user requested) that this
   /// function be in a unwind table.

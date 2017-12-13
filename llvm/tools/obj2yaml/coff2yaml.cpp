@@ -13,7 +13,6 @@
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/ObjectYAML/COFFYAML.h"
-#include "llvm/ObjectYAML/CodeViewYAMLSymbols.h"
 #include "llvm/ObjectYAML/CodeViewYAMLTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/YAMLTraits.h"

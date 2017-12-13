@@ -430,8 +430,8 @@ bool EhFrameSection::isFdeLive(EhSectionPiece &Fde, ArrayRef<RelTy> Rels) {
 
   // FDEs for garbage-collected or merged-by-ICF sections are dead.
   if (auto *D = dyn_cast<Defined>(&B))
-    if (auto *Sec = cast_or_null<InputSectionBase>(D->Section))
-      return Sec->Live && (Sec == Sec->Repl);
+    if (SectionBase *Sec = D->Section)
+      return Sec->Live;
   return false;
 }
 

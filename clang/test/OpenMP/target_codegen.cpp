@@ -111,7 +111,7 @@ int foo(int n) {
 
   // CHECK-DAG:   [[ADD:%.+]] = add nsw i32
   // CHECK-DAG:   [[DEVICE:%.+]] = sext i32 [[ADD]] to i64
-  // CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target(i64 [[DEVICE]], i8* @{{[^,]+}}, i32 2, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i[[SZ]]* getelementptr inbounds ([2 x i[[SZ]]], [2 x i[[SZ]]]* [[SIZET]], i32 0, i32 0), i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAPT]], i32 0, i32 0)
+  // CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_nowait(i64 [[DEVICE]], i8* @{{[^,]+}}, i32 2, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i[[SZ]]* getelementptr inbounds ([2 x i[[SZ]]], [2 x i[[SZ]]]* [[SIZET]], i32 0, i32 0), i64* getelementptr inbounds ([2 x i64], [2 x i64]* [[MAPT]], i32 0, i32 0)
   // CHECK-DAG:   [[BPR]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BP:%[^,]+]], i32 0, i32 0
   // CHECK-DAG:   [[PR]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[P:%[^,]+]], i32 0, i32 0
 
@@ -134,7 +134,7 @@ int foo(int n) {
   // CHECK:       call void [[HVT0_:@.+]](i[[SZ]]* [[BP0]], i[[SZ]] [[BP1]])
   // CHECK-NEXT:  br label %[[END]]
   // CHECK:       [[END]]
-  #pragma omp target device(global + a)
+  #pragma omp target device(global + a) nowait
   {
     static int local1;
     *plocal = global;

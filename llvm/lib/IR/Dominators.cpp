@@ -18,6 +18,7 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/DeferredDominance.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
@@ -389,3 +390,56 @@ void DominatorTreeWrapperPass::print(raw_ostream &OS, const Module *) const {
   DT.print(OS);
 }
 
+//===----------------------------------------------------------------------===//
+//  DeferredDominance Implementation
+//===----------------------------------------------------------------------===//
+//
+// The implementation details of the DeferredDominance class which allows
+// one to queue updates to a DominatorTree.
+//
+//===----------------------------------------------------------------------===//
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void DeferredDominance::dump() const {
+  raw_ostream &OS = llvm::dbgs();
+  OS << "PendUpdates:\n";
+  int I = 0;
+  for (auto U : PendUpdates) {
+    OS << "  " << I << " : ";
+    ++I;
+    if (U.getKind() == DominatorTree::Insert)
+      OS << "Insert, ";
+    else
+      OS << "Delete, ";
+    BasicBlock *From = U.getFrom();
+    if (From) {
+      auto S = From->getName();
+      if (!From->hasName())
+        S = "(no name)";
+      OS << S << "(" << From << "), ";
+    } else {
+      OS << "(badref), ";
+    }
+    BasicBlock *To = U.getTo();
+    if (To) {
+      auto S = To->getName();
+      if (!To->hasName())
+        S = "(no_name)";
+      OS << S << "(" << To << ")\n";
+    } else {
+      OS << "(badref)\n";
+    }
+  }
+  OS << "DeletedBBs:\n";
+  I = 0;
+  for (auto BB : DeletedBBs) {
+    OS << "  " << I << " : ";
+    ++I;
+    if (BB->hasName())
+      OS << BB->getName() << "(";
+    else
+      OS << "(no_name)(";
+    OS << BB << ")\n";
+  }
+}
+#endif

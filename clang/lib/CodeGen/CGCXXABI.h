@@ -582,6 +582,13 @@ public:
   /// Emit a single constructor/destructor with the given type from a C++
   /// constructor Decl.
   virtual void emitCXXStructor(const CXXMethodDecl *MD, StructorType Type) = 0;
+
+  /// Load a vtable from This, an object of polymorphic type RD, or from one of
+  /// its virtual bases if it does not have its own vtable. Returns the vtable
+  /// and the class from which the vtable was loaded.
+  virtual std::pair<llvm::Value *, const CXXRecordDecl *>
+  LoadVTablePtr(CodeGenFunction &CGF, Address This,
+                const CXXRecordDecl *RD) = 0;
 };
 
 // Create an instance of a C++ ABI class:
