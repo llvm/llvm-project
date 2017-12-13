@@ -2270,6 +2270,12 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
     Flags |= MachineMemOperand::MOStore;
   lex();
 
+  // Optional 'store' for operands that both load and store.
+  if (Token.is(MIToken::Identifier) && Token.stringValue() == "store") {
+    Flags |= MachineMemOperand::MOStore;
+    lex();
+  }
+
   // Optional synchronization scope.
   SyncScope::ID SSID;
   if (parseOptionalScope(MF.getFunction()->getContext(), SSID))
@@ -2292,7 +2298,11 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
 
   MachinePointerInfo Ptr = MachinePointerInfo();
   if (Token.is(MIToken::Identifier)) {
-    const char *Word = Flags & MachineMemOperand::MOLoad ? "from" : "into";
+    const char *Word =
+        ((Flags & MachineMemOperand::MOLoad) &&
+         (Flags & MachineMemOperand::MOStore))
+            ? "on"
+            : Flags & MachineMemOperand::MOLoad ? "from" : "into";
     if (Token.stringValue() != Word)
       return error(Twine("expected '") + Word + "'");
     lex();
