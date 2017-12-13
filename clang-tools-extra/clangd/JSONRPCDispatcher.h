@@ -10,6 +10,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_JSONRPCDISPATCHER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_JSONRPCDISPATCHER_H
 
+#include "Context.h"
 #include "JSONExpr.h"
 #include "Logger.h"
 #include "Protocol.h"
@@ -26,6 +27,8 @@ namespace clangd {
 /// Encapsulates output and logs streams and provides thread-safe access to
 /// them.
 class JSONOutput : public Logger {
+  // FIXME(ibiryukov): figure out if we can shrink the public interface of
+  // JSONOutput now that we pass Context everywhere.
 public:
   JSONOutput(llvm::raw_ostream &Outs, llvm::raw_ostream &Logs,
              llvm::raw_ostream *InputMirror = nullptr, bool Pretty = false)
@@ -35,7 +38,7 @@ public:
   void writeMessage(const json::Expr &Result);
 
   /// Write a line to the logging stream.
-  void log(const Twine &Message) override;
+  void log(const Context &Ctx, const Twine &Message) override;
 
   /// Mirror \p Message into InputMirror stream. Does nothing if InputMirror is
   /// null.
@@ -53,38 +56,23 @@ private:
   std::mutex StreamMutex;
 };
 
-/// Context object passed to handlers to allow replies.
-class RequestContext {
-public:
-  RequestContext(JSONOutput &Out, StringRef Method,
-                 llvm::Optional<json::Expr> ID)
-      : Out(Out), ID(std::move(ID)),
-        Tracer(llvm::make_unique<trace::Span>(Method)) {
-    if (this->ID)
-      SPAN_ATTACH(tracer(), "ID", *this->ID);
-  }
-
-  /// Sends a successful reply.
-  void reply(json::Expr &&Result);
-  /// Sends an error response to the client, and logs it.
-  void replyError(ErrorCode code, const llvm::StringRef &Message);
-  /// Sends a request to the client.
-  void call(llvm::StringRef Method, json::Expr &&Params);
-
-  trace::Span &tracer() { return *Tracer; }
-
-private:
-  JSONOutput &Out;
-  llvm::Optional<json::Expr> ID;
-  std::unique_ptr<trace::Span> Tracer;
-};
+/// Sends a successful reply. \p Ctx must either be the Context accepted by
+/// JSONRPCDispatcher::Handler or be derived from it.
+void reply(const Context &Ctx, json::Expr &&Result);
+/// Sends an error response to the client, and logs it. \p Ctx must either be
+/// the Context accepted by JSONRPCDispatcher::Handler or be derived from it.
+void replyError(const Context &Ctx, ErrorCode code,
+                const llvm::StringRef &Message);
+/// Sends a request to the client. \p Ctx must either be the Context accepted by
+/// JSONRPCDispatcher::Handler or be derived from it.
+void call(const Context &Ctx, llvm::StringRef Method, json::Expr &&Params);
 
 /// Main JSONRPC entry point. This parses the JSONRPC "header" and calls the
 /// registered Handler for the method received.
 class JSONRPCDispatcher {
 public:
   // A handler responds to requests for a particular method name.
-  using Handler = std::function<void(RequestContext, const json::Expr &)>;
+  using Handler = std::function<void(Context, const json::Expr &)>;
 
   /// Create a new JSONRPCDispatcher. UnknownHandler is called when an unknown
   /// method is received.

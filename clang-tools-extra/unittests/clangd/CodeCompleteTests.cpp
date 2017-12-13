@@ -9,6 +9,7 @@
 #include "ClangdServer.h"
 #include "Compiler.h"
 #include "Matchers.h"
+#include "Context.h"
 #include "Protocol.h"
 #include "TestFS.h"
 #include "gmock/gmock.h"
@@ -92,12 +93,13 @@ CompletionList completions(StringRef Text,
   MockCompilationDatabase CDB;
   IgnoreDiagnostics DiagConsumer;
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
-                      /*StorePreamblesInMemory=*/true,
-                      EmptyLogger::getInstance());
+                      /*StorePreamblesInMemory=*/true);
   auto File = getVirtualTestFilePath("foo.cpp");
   auto Test = parseTextMarker(Text);
-  Server.addDocument(File, Test.Text);
-  return Server.codeComplete(File, Test.MarkerPos, Opts).get().Value;
+  Server.addDocument(Context::empty(), File, Test.Text);
+  return Server.codeComplete(Context::empty(), File, Test.MarkerPos, Opts)
+      .get()
+      .second.Value;
 }
 
 TEST(CompletionTest, Limit) {
@@ -127,7 +129,6 @@ TEST(CompletionTest, Filter) {
       int Qux;
     };
   )cpp";
-
   EXPECT_THAT(completions(Body + "int main() { S().Foba^ }").items,
               AllOf(Has("FooBar"), Has("FooBaz"), Not(Has("Qux"))));
 
@@ -269,18 +270,17 @@ TEST(CompletionTest, CheckContentsOverride) {
   IgnoreDiagnostics DiagConsumer;
   MockCompilationDatabase CDB;
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
-                      /*StorePreamblesInMemory=*/true,
-                      EmptyLogger::getInstance());
+                      /*StorePreamblesInMemory=*/true);
   auto File = getVirtualTestFilePath("foo.cpp");
-  Server.addDocument(File, "ignored text!");
+  Server.addDocument(Context::empty(), File, "ignored text!");
 
   auto Example = parseTextMarker("int cbc; int b = ^;");
   auto Results =
       Server
-          .codeComplete(File, Example.MarkerPos, clangd::CodeCompleteOptions(),
-                        StringRef(Example.Text))
+          .codeComplete(Context::empty(), File, Example.MarkerPos,
+                        clangd::CodeCompleteOptions(), StringRef(Example.Text))
           .get()
-          .Value;
+          .second.Value;
   EXPECT_THAT(Results.items, Contains(Named("cbc")));
 }
 

@@ -9,7 +9,7 @@
 
 #include "ClangdLSPServer.h"
 #include "ClangdServer.h"
-#include "Logger.h"
+#include "Context.h"
 #include "TestFS.h"
 #include "clang/Config/config.h"
 #include "llvm/ADT/SmallVector.h"
@@ -123,8 +123,7 @@ protected:
     ErrorCheckingDiagConsumer DiagConsumer;
     MockCompilationDatabase CDB;
     ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
-                        /*StorePreamblesInMemory=*/true,
-                        EmptyLogger::getInstance());
+                        /*StorePreamblesInMemory=*/true);
     for (const auto &FileWithContents : ExtraFiles)
       FS.Files[getVirtualTestFilePath(FileWithContents.first)] =
           FileWithContents.second;
@@ -135,7 +134,8 @@ protected:
 
     // Have to sync reparses because requests are processed on the calling
     // thread.
-    auto AddDocFuture = Server.addDocument(SourceFilename, SourceContents);
+    auto AddDocFuture =
+        Server.addDocument(Context::empty(), SourceFilename, SourceContents);
 
     auto Result = dumpASTWithoutMemoryLocs(Server, SourceFilename);
 
@@ -187,8 +187,7 @@ TEST_F(ClangdVFSTest, Reparse) {
   ErrorCheckingDiagConsumer DiagConsumer;
   MockCompilationDatabase CDB;
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
-                      /*StorePreamblesInMemory=*/true,
-                      EmptyLogger::getInstance());
+                      /*StorePreamblesInMemory=*/true);
 
   const auto SourceContents = R"cpp(
 #include "foo.h"
@@ -203,21 +202,21 @@ int b = a;
   FS.ExpectedFile = FooCpp;
 
   // To sync reparses before checking for errors.
-  std::future<void> ParseFuture;
+  std::future<Context> ParseFuture;
 
-  ParseFuture = Server.addDocument(FooCpp, SourceContents);
+  ParseFuture = Server.addDocument(Context::empty(), FooCpp, SourceContents);
   auto DumpParse1 = dumpASTWithoutMemoryLocs(Server, FooCpp);
   ASSERT_EQ(ParseFuture.wait_for(DefaultFutureTimeout),
             std::future_status::ready);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
-  ParseFuture = Server.addDocument(FooCpp, "");
+  ParseFuture = Server.addDocument(Context::empty(), FooCpp, "");
   auto DumpParseEmpty = dumpASTWithoutMemoryLocs(Server, FooCpp);
   ASSERT_EQ(ParseFuture.wait_for(DefaultFutureTimeout),
             std::future_status::ready);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
-  ParseFuture = Server.addDocument(FooCpp, SourceContents);
+  ParseFuture = Server.addDocument(Context::empty(), FooCpp, SourceContents);
   auto DumpParse2 = dumpASTWithoutMemoryLocs(Server, FooCpp);
   ASSERT_EQ(ParseFuture.wait_for(DefaultFutureTimeout),
             std::future_status::ready);
@@ -233,8 +232,7 @@ TEST_F(ClangdVFSTest, ReparseOnHeaderChange) {
   MockCompilationDatabase CDB;
 
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
-                      /*StorePreamblesInMemory=*/true,
-                      EmptyLogger::getInstance());
+                      /*StorePreamblesInMemory=*/true);
 
   const auto SourceContents = R"cpp(
 #include "foo.h"
@@ -249,23 +247,23 @@ int b = a;
   FS.ExpectedFile = FooCpp;
 
   // To sync reparses before checking for errors.
-  std::future<void> ParseFuture;
+  std::future<Context> ParseFuture;
 
-  ParseFuture = Server.addDocument(FooCpp, SourceContents);
+  ParseFuture = Server.addDocument(Context::empty(), FooCpp, SourceContents);
   auto DumpParse1 = dumpASTWithoutMemoryLocs(Server, FooCpp);
   ASSERT_EQ(ParseFuture.wait_for(DefaultFutureTimeout),
             std::future_status::ready);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
   FS.Files[FooH] = "";
-  ParseFuture = Server.forceReparse(FooCpp);
+  ParseFuture = Server.forceReparse(Context::empty(), FooCpp);
   auto DumpParseDifferent = dumpASTWithoutMemoryLocs(Server, FooCpp);
   ASSERT_EQ(ParseFuture.wait_for(DefaultFutureTimeout),
             std::future_status::ready);
   EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
 
   FS.Files[FooH] = "int a;";
-  ParseFuture = Server.forceReparse(FooCpp);
+  ParseFuture = Server.forceReparse(Context::empty(), FooCpp);
   auto DumpParse2 = dumpASTWithoutMemoryLocs(Server, FooCpp);
   EXPECT_EQ(ParseFuture.wait_for(DefaultFutureTimeout),
             std::future_status::ready);
@@ -282,8 +280,7 @@ TEST_F(ClangdVFSTest, CheckVersions) {
   // Run ClangdServer synchronously.
   ClangdServer Server(CDB, DiagConsumer, FS,
                       /*AsyncThreadsCount=*/0,
-                      /*StorePreamblesInMemory=*/true,
-                      EmptyLogger::getInstance());
+                      /*StorePreamblesInMemory=*/true);
 
   auto FooCpp = getVirtualTestFilePath("foo.cpp");
   const auto SourceContents = "int a;";
@@ -296,16 +293,22 @@ TEST_F(ClangdVFSTest, CheckVersions) {
   // No need to sync reparses, because requests are processed on the calling
   // thread.
   FS.Tag = "123";
-  Server.addDocument(FooCpp, SourceContents);
-  EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}, CCOpts).get().Tag,
-            FS.Tag);
+  Server.addDocument(Context::empty(), FooCpp, SourceContents);
+  EXPECT_EQ(
+      Server.codeComplete(Context::empty(), FooCpp, Position{0, 0}, CCOpts)
+          .get()
+          .second.Tag,
+      FS.Tag);
   EXPECT_EQ(DiagConsumer.lastVFSTag(), FS.Tag);
 
   FS.Tag = "321";
-  Server.addDocument(FooCpp, SourceContents);
+  Server.addDocument(Context::empty(), FooCpp, SourceContents);
   EXPECT_EQ(DiagConsumer.lastVFSTag(), FS.Tag);
-  EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}, CCOpts).get().Tag,
-            FS.Tag);
+  EXPECT_EQ(
+      Server.codeComplete(Context::empty(), FooCpp, Position{0, 0}, CCOpts)
+          .get()
+          .second.Tag,
+      FS.Tag);
 }
 
 // Only enable this test on Unix
@@ -322,8 +325,7 @@ TEST_F(ClangdVFSTest, SearchLibDir) {
   // Run ClangdServer synchronously.
   ClangdServer Server(CDB, DiagConsumer, FS,
                       /*AsyncThreadsCount=*/0,
-                      /*StorePreamblesInMemory=*/true,
-                      EmptyLogger::getInstance());
+                      /*StorePreamblesInMemory=*/true);
 
   // Just a random gcc version string
   SmallString<8> Version("4.9.3");
@@ -354,14 +356,14 @@ mock_string x;
 
   // No need to sync reparses, because requests are processed on the calling
   // thread.
-  Server.addDocument(FooCpp, SourceContents);
+  Server.addDocument(Context::empty(), FooCpp, SourceContents);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
   const auto SourceContentsWithError = R"cpp(
 #include <string>
 std::string x;
 )cpp";
-  Server.addDocument(FooCpp, SourceContentsWithError);
+  Server.addDocument(Context::empty(), FooCpp, SourceContentsWithError);
   EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
 }
 #endif // LLVM_ON_UNIX
@@ -372,11 +374,10 @@ TEST_F(ClangdVFSTest, ForceReparseCompileCommand) {
   MockCompilationDatabase CDB;
   ClangdServer Server(CDB, DiagConsumer, FS,
                       /*AsyncThreadsCount=*/0,
-                      /*StorePreamblesInMemory=*/true,
-                      EmptyLogger::getInstance());
-  // No need to sync reparses, because reparses are performed on the calling
-  // thread to true.
+                      /*StorePreamblesInMemory=*/true);
 
+  // No need to sync reparses, because reparses are performed on the calling
+  // thread.
   auto FooCpp = getVirtualTestFilePath("foo.cpp");
   const auto SourceContents1 = R"cpp(
 template <class T>
@@ -392,26 +393,26 @@ struct bar { T x; };
 
   // First parse files in C mode and check they produce errors.
   CDB.ExtraClangFlags = {"-xc"};
-  Server.addDocument(FooCpp, SourceContents1);
+  Server.addDocument(Context::empty(), FooCpp, SourceContents1);
   EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
-  Server.addDocument(FooCpp, SourceContents2);
+  Server.addDocument(Context::empty(), FooCpp, SourceContents2);
   EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
 
   // Now switch to C++ mode.
   CDB.ExtraClangFlags = {"-xc++"};
   // Currently, addDocument never checks if CompileCommand has changed, so we
   // expect to see the errors.
-  Server.addDocument(FooCpp, SourceContents1);
+  Server.addDocument(Context::empty(), FooCpp, SourceContents1);
   EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
-  Server.addDocument(FooCpp, SourceContents2);
+  Server.addDocument(Context::empty(), FooCpp, SourceContents2);
   EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
   // But forceReparse should reparse the file with proper flags.
-  Server.forceReparse(FooCpp);
+  Server.forceReparse(Context::empty(), FooCpp);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
   // Subsequent addDocument calls should finish without errors too.
-  Server.addDocument(FooCpp, SourceContents1);
+  Server.addDocument(Context::empty(), FooCpp, SourceContents1);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
-  Server.addDocument(FooCpp, SourceContents2);
+  Server.addDocument(Context::empty(), FooCpp, SourceContents2);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 }
 
@@ -501,7 +502,7 @@ int d;
     unsigned RequestsWithErrors = 0;
     bool LastContentsHadErrors = false;
     bool FileIsRemoved = true;
-    std::future<void> LastRequestFuture;
+    std::future<Context> LastRequestFuture;
   };
 
   std::vector<RequestStats> ReqStats;
@@ -513,8 +514,7 @@ int d;
   {
     MockCompilationDatabase CDB;
     ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
-                        /*StorePreamblesInMemory=*/true,
-                        EmptyLogger::getInstance());
+                        /*StorePreamblesInMemory=*/true);
 
     // Prepare some random distributions for the test.
     std::random_device RandGen;
@@ -529,7 +529,7 @@ int d;
 
     // Some helpers.
     auto UpdateStatsOnAddDocument = [&](unsigned FileIndex, bool HadErrors,
-                                        std::future<void> Future) {
+                                        std::future<Context> Future) {
       auto &Stats = ReqStats[FileIndex];
 
       if (HadErrors)
@@ -542,7 +542,7 @@ int d;
     };
 
     auto UpdateStatsOnRemoveDocument = [&](unsigned FileIndex,
-                                           std::future<void> Future) {
+                                           std::future<Context> Future) {
       auto &Stats = ReqStats[FileIndex];
 
       Stats.FileIsRemoved = true;
@@ -550,7 +550,7 @@ int d;
     };
 
     auto UpdateStatsOnForceReparse = [&](unsigned FileIndex,
-                                         std::future<void> Future) {
+                                         std::future<Context> Future) {
       auto &Stats = ReqStats[FileIndex];
 
       Stats.LastRequestFuture = std::move(Future);
@@ -562,9 +562,10 @@ int d;
 
     auto AddDocument = [&](unsigned FileIndex) {
       bool ShouldHaveErrors = ShouldHaveErrorsDist(RandGen);
-      auto Future = Server.addDocument(
-          FilePaths[FileIndex], ShouldHaveErrors ? SourceContentsWithErrors
-                                                 : SourceContentsWithoutErrors);
+      auto Future =
+          Server.addDocument(Context::empty(), FilePaths[FileIndex],
+                             ShouldHaveErrors ? SourceContentsWithErrors
+                                              : SourceContentsWithoutErrors);
       UpdateStatsOnAddDocument(FileIndex, ShouldHaveErrors, std::move(Future));
     };
 
@@ -580,7 +581,7 @@ int d;
       if (ReqStats[FileIndex].FileIsRemoved)
         AddDocument(FileIndex);
 
-      auto Future = Server.forceReparse(FilePaths[FileIndex]);
+      auto Future = Server.forceReparse(Context::empty(), FilePaths[FileIndex]);
       UpdateStatsOnForceReparse(FileIndex, std::move(Future));
     };
 
@@ -590,7 +591,8 @@ int d;
       if (ReqStats[FileIndex].FileIsRemoved)
         AddDocument(FileIndex);
 
-      auto Future = Server.removeDocument(FilePaths[FileIndex]);
+      auto Future =
+          Server.removeDocument(Context::empty(), FilePaths[FileIndex]);
       UpdateStatsOnRemoveDocument(FileIndex, std::move(Future));
     };
 
@@ -608,7 +610,7 @@ int d;
       // cancelled by any subsequent AddDocument/RemoveDocument request to the
       // same file.
       Server
-          .codeComplete(FilePaths[FileIndex], Pos,
+          .codeComplete(Context::empty(), FilePaths[FileIndex], Pos,
                         clangd::CodeCompleteOptions())
           .wait();
     };
@@ -620,7 +622,8 @@ int d;
         AddDocument(FileIndex);
 
       Position Pos{LineDist(RandGen), ColumnDist(RandGen)};
-      ASSERT_TRUE(!!Server.findDefinitions(FilePaths[FileIndex], Pos));
+      ASSERT_TRUE(!!Server.findDefinitions(Context::empty(),
+                                           FilePaths[FileIndex], Pos));
     };
 
     std::vector<std::function<void()>> AsyncRequests = {
@@ -676,8 +679,7 @@ TEST_F(ClangdVFSTest, CheckSourceHeaderSwitch) {
   MockCompilationDatabase CDB;
 
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
-                      /*StorePreamblesInMemory=*/true,
-                      EmptyLogger::getInstance());
+                      /*StorePreamblesInMemory=*/true);
 
   auto SourceContents = R"cpp(
   #include "foo.h"
@@ -802,12 +804,13 @@ int d;
       std::move(StartSecondReparsePromise));
 
   MockCompilationDatabase CDB;
-  ClangdServer Server(CDB, DiagConsumer, FS, 4, /*StorePreamblesInMemory=*/true,
-                      EmptyLogger::getInstance());
-  Server.addDocument(FooCpp, SourceContentsWithErrors);
+  ClangdServer Server(CDB, DiagConsumer, FS, 4,
+                      /*StorePreamblesInMemory=*/true);
+  Server.addDocument(Context::empty(), FooCpp, SourceContentsWithErrors);
   StartSecondReparse.wait();
 
-  auto Future = Server.addDocument(FooCpp, SourceContentsWithoutErrors);
+  auto Future =
+      Server.addDocument(Context::empty(), FooCpp, SourceContentsWithoutErrors);
   Future.wait();
 }
 
