@@ -39,13 +39,17 @@ public:
   UniqueFunction(UniqueFunction &&) noexcept = default;
   UniqueFunction &operator=(UniqueFunction &&) noexcept = default;
 
-  template <class Callable>
+  template <class Callable,
+            /// A sfinae-check that Callable can be called with Args... and
+            class = typename std::enable_if<std::is_convertible<
+                decltype(std::declval<Callable>()(std::declval<Args>()...)),
+                Ret>::value>::type>
   UniqueFunction(Callable &&Func)
       : CallablePtr(llvm::make_unique<
                     FunctionCallImpl<typename std::decay<Callable>::type>>(
             std::forward<Callable>(Func))) {}
 
-  operator bool() { return CallablePtr; }
+  operator bool() { return bool(CallablePtr); }
 
   Ret operator()(Args... As) {
     assert(CallablePtr);
@@ -131,6 +135,40 @@ template <class Func, class... Args>
 ForwardBinder<Func, Args...> BindWithForward(Func F, Args &&... As) {
   return ForwardBinder<Func, Args...>(
       std::make_tuple(std::forward<Func>(F), std::forward<Args>(As)...));
+}
+
+namespace detail {
+/// Runs provided callback in destructor. Use onScopeExit helper function to
+/// create this object.
+template <class Func> struct ScopeExitGuard {
+  static_assert(std::is_same<typename std::decay<Func>::type, Func>::value,
+                "Func must be decayed");
+
+  ScopeExitGuard(Func F) : F(std::move(F)) {}
+  ~ScopeExitGuard() {
+    if (!F)
+      return;
+    (*F)();
+  }
+
+  // Move-only.
+  ScopeExitGuard(const ScopeExitGuard &) = delete;
+  ScopeExitGuard &operator=(const ScopeExitGuard &) = delete;
+
+  ScopeExitGuard(ScopeExitGuard &&Other) = default;
+  ScopeExitGuard &operator=(ScopeExitGuard &&Other) = default;
+
+private:
+  llvm::Optional<Func> F;
+};
+} // namespace detail
+
+/// Creates a RAII object that will run \p F in its destructor.
+template <class Func>
+auto onScopeExit(Func &&F)
+    -> detail::ScopeExitGuard<typename std::decay<Func>::type> {
+  return detail::ScopeExitGuard<typename std::decay<Func>::type>(
+      std::forward<Func>(F));
 }
 
 } // namespace clangd

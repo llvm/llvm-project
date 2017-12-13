@@ -63,16 +63,13 @@ int main() {
     #pragma omp teams
 #pragma omp distribute firstprivate(g, g1, svar, sfvar)
     for (int i = 0; i < 2; ++i) {
-      // LAMBDA-64: define{{.*}} internal{{.*}} void [[OMP_OUTLINED]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i{{[0-9]+}} [[G_IN:%.+]], i{{[0-9]+}} [[G1_IN:%.+]], i{{[0-9]+}} [[SVAR_IN:%.+]], i{{[0-9]+}} [[SFVAR_IN:%.+]])
-      // LAMBDA-32: define internal{{.*}} void [[OMP_OUTLINED]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, double*{{.*}} [[G_IN:%.+]], i{{[0-9]+}} [[G1_IN:%.+]], i{{[0-9]+}} [[SVAR_IN:%.+]], i{{[0-9]+}} [[SFVAR_IN:%.+]])
+      // LAMBDA: define internal{{.*}} void [[OMP_OUTLINED]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, double*{{.*}} [[G_IN:%.+]], double*{{.*}} [[G1_IN:%.+]], i32*{{.*}} [[SVAR_IN:%.+]], float*{{.*}} [[SFVAR_IN:%.+]])
       // Private alloca's for conversion
-      // LAMBDA-64: [[G_ADDR:%.+]] = alloca i{{[0-9]+}},
-      // LAMBDA-32: [[G_ADDR:%.+]] = alloca double*,
-      // LAMBDA: [[G1_ADDR:%.+]] = alloca i{{[0-9]+}},
-      // LAMBDA: [[SVAR_ADDR:%.+]] = alloca i{{[0-9]+}},
-      // LAMBDA: [[SFVAR_ADDR:%.+]] = alloca i{{[0-9]+}},
+      // LAMBDA: [[G_ADDR:%.+]] = alloca double*,
+      // LAMBDA: [[G1_ADDR:%.+]] = alloca double*,
+      // LAMBDA: [[SVAR_ADDR:%.+]] = alloca i{{[0-9]+}}*,
+      // LAMBDA: [[SFVAR_ADDR:%.+]] = alloca float*,
       // LAMBDA: [[G1_REF:%.+]] = alloca double*,
-      // LAMBDA: [[TMP:%.+]] = alloca double*,
 
       // Actual private variables to be used in the body (tmp is used for the reference type)
       // LAMBDA: [[G_PRIVATE:%.+]] = alloca double,
@@ -82,31 +79,25 @@ int main() {
       // LAMBDA: [[SFVAR_PRIVATE:%.+]] = alloca float,
 
       // Store input parameter addresses into private alloca's for conversion
-      // LAMBDA-64: store i{{[0-9]+}} [[G_IN]], i{{[0-9]+}}* [[G_ADDR]],
-      // LAMBDA-32: store double* [[G_IN]], double** [[G_ADDR]],
-      // LAMBDA: store i{{[0-9]+}} [[G1_IN]], i{{[0-9]+}}* [[G1_ADDR]],
-      // LAMBDA: store i{{[0-9]+}} [[SVAR_IN]], i{{[0-9]+}}* [[SVAR_ADDR]],
-      // LAMBDA: store i{{[0-9]+}} [[SFVAR_IN]], i{{[0-9]+}}* [[SFVAR_ADDR]],
+      // LAMBDA: store double* [[G_IN]], double** [[G_ADDR]],
+      // LAMBDA: store double* [[G1_IN]], double** [[G1_ADDR]],
+      // LAMBDA: store i{{[0-9]+}}* [[SVAR_IN]], i{{[0-9]+}}** [[SVAR_ADDR]],
+      // LAMBDA: store float* [[SFVAR_IN]], float** [[SFVAR_ADDR]],
 
-      // LAMBDA-64-DAG: [[G_CONV:%.+]] = bitcast i{{[0-9]+}}* [[G_ADDR]] to double*
-      // LAMBDA-32-DAG: [[G_ADDR_VAL:%.+]] = load double*, double** [[G_ADDR]],
-      // LAMBDA-DAG: [[G1_CONV:%.+]] = bitcast i{{[0-9]+}}* [[G1_ADDR]] to double*
-      // LAMBDA-DAG: store double* [[G1_CONV]], double** [[G1_REF]],
-      // LAMBDA-64-DAG: [[SVAR_CONV:%.+]] = bitcast i{{[0-9]+}}* [[SVAR_ADDR]] to i{{[0-9]+}}*
-      // LAMBDA-DAG: [[SFVAR_CONV:%.+]] = bitcast i{{[0-9]+}}* [[SFVAR_ADDR]] to float*
-      // LAMBDA-DAG: [[G1_REF_VAL:%.+]] = load double*, double** [[G1_REF]],
-      // LAMBDA-DAG: store double* [[G1_REF_VAL]], double** [[TMP]],
-      // LAMBDA-64-DAG: [[G_CONV_VAL:%.+]] = load{{.*}} double, double* [[G_CONV]],
-      // LAMBDA-32-DAG: [[G_CONV_VAL:%.+]] = load{{.*}} double, double* [[G_ADDR_VAL]],
+      // LAMBDA-DAG: [[G_ADDR_VAL:%.+]] = load double*, double** [[G_ADDR]],
+      // LAMBDA-DAG: [[SVAR_ADDR_VAL:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[SVAR_ADDR]],
+      // LAMBDA-DAG: [[SFVAR_ADDR_VAL:%.+]] = load float*, float** [[SFVAR_ADDR]],
+      // LAMBDA-DAG: [[G1_ADDR_VAL:%.+]] = load double*, double** [[G1_ADDR]],
+      // LAMBDA-DAG: store double* [[G1_ADDR_VAL]], double** [[G1_REF]],
+      // LAMBDA-DAG: [[G_CONV_VAL:%.+]] = load{{.*}} double, double* [[G_ADDR_VAL]],
       // LAMBDA-DAG: store double [[G_CONV_VAL]], double* [[G_PRIVATE]],
-      // LAMBDA-DAG: [[TMP_VAL:%.+]] = load double*, double** [[TMP]],
+      // LAMBDA-DAG: [[TMP_VAL:%.+]] = load double*, double** [[G1_REF]],
       // LAMBDA-DAG: [[TMP_VAL_VAL:%.+]] = load{{.*}} double, double* [[TMP_VAL]],
       // LAMBDA-DAG: store double [[TMP_VAL_VAL]], double* [[G1_PRIVATE]],
       // LAMBDA-DAG: store double* [[G1_PRIVATE]], double** [[TMP_PRIVATE]],
-      // LAMBDA-64-DAG: [[SVAR_CONV_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[SVAR_CONV]],
-      // LAMBDA-32-DAG: [[SVAR_CONV_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[SVAR_ADDR]],
+      // LAMBDA-DAG: [[SVAR_CONV_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[SVAR_ADDR_VAL]],
       // LAMBDA-DAG: store i{{[0-9]+}} [[SVAR_CONV_VAL]], i{{[0-9]+}}* [[SVAR_PRIVATE]],
-      // LAMBDA-DAG: [[SFVAR_CONV_VAL:%.+]] = load float, float* [[SFVAR_CONV]],
+      // LAMBDA-DAG: [[SFVAR_CONV_VAL:%.+]] = load float, float* [[SFVAR_ADDR_VAL]],
       // LAMBDA-DAG: store float [[SFVAR_CONV_VAL]], float* [[SFVAR_PRIVATE]],
       // LAMBDA: call {{.*}}void @__kmpc_for_static_init_4(
       g += 1;
@@ -204,16 +195,18 @@ int main() {
 // CHECK: ret
 
 // CHECK: define{{.+}} [[OFFLOAD_FUN]](
-// CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_teams(%{{.+}}* @{{.+}}, i{{[0-9]+}} 5, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i{{[0-9]+}}, [2 x i{{[0-9]+}}]*, [2 x [[S_FLOAT_TY]]]*, [[S_FLOAT_TY]]*, i{{[0-9]+}})* [[OMP_OUTLINED:@.+]] to void
+// CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_teams(%{{.+}}* @{{.+}}, i{{[0-9]+}} 5, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i{{[0-9]+}}*, [2 x i{{[0-9]+}}]*, [2 x [[S_FLOAT_TY]]]*, [[S_FLOAT_TY]]*, i{{[0-9]+}}*)* [[OMP_OUTLINED:@.+]] to void
 // CHECK: ret
 //
-// CHECK: define internal void [[OMP_OUTLINED]](i{{[0-9]+}}*{{.+}}, i{{[0-9]+}}*{{.+}}, i{{[0-9]+}} [[T_VAR_IN:%.+]], [2 x i{{[0-9]+}}]*{{.*}} [[VEC_IN:%.+]], [2 x [[S_FLOAT_TY]]]*{{.*}} [[S_ARR_IN:%.+]], [[S_FLOAT_TY]]*{{.*}} [[VAR_IN:%.+]], i{{[0-9]+}} [[SVAR_IN:%.+]])
+// CHECK: define internal void [[OMP_OUTLINED]](i{{[0-9]+}}*{{.+}}, i{{[0-9]+}}*{{.+}}, i{{[0-9]+}}*{{.+}} [[T_VAR_IN:%.+]], [2 x i{{[0-9]+}}]*{{.*}} [[VEC_IN:%.+]], [2 x [[S_FLOAT_TY]]]*{{.*}} [[S_ARR_IN:%.+]], [[S_FLOAT_TY]]*{{.*}} [[VAR_IN:%.+]], i{{[0-9]+}}*{{.+}} [[SVAR_IN:%.+]])
 
-// CHECK: [[T_VAR_ADDR:%.+]] = alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}}*,
+// CHECK: alloca i{{[0-9]+}}*,
+// CHECK: [[T_VAR_ADDR:%.+]] = alloca i{{[0-9]+}}*,
 // CHECK: [[VEC_ADDR:%.+]] = alloca [2 x i{{[0-9]+}}]*,
 // CHECK: [[S_ARR_ADDR:%.+]] = alloca [2 x [[S_FLOAT_TY]]]*,
 // CHECK: [[VAR_ADDR:%.+]] = alloca [[S_FLOAT_TY]]*,
-// CHECK: [[SVAR_ADDR:%.+]] = alloca i{{[0-9]+}},
+// CHECK: [[SVAR_ADDR:%.+]] = alloca i{{[0-9]+}}*,
 // CHECK: [[TMP:%.+]] = alloca [[S_FLOAT_TY]]*,
 
 // discard omp loop variables
@@ -231,17 +224,16 @@ int main() {
 // CHECK-DAG: [[TMP_PRIV:%.+]] = alloca [[S_FLOAT_TY]]*,
 // CHECK: [[SVAR_PRIV:%.+]] = alloca i{{[0-9]+}},
 
-// CHECK: store i{{[0-9]+}} [[T_VAR_IN]], i{{[0-9]+}}* [[T_VAR_ADDR]],
+// CHECK: store i{{[0-9]+}}* [[T_VAR_IN]], i{{[0-9]+}}** [[T_VAR_ADDR]],
 // CHECK: store [2 x i{{[0-9]+}}]* [[VEC_IN]], [2 x i{{[0-9]+}}]** [[VEC_ADDR]],
 // CHECK: store [2 x [[S_FLOAT_TY]]]* [[S_ARR_IN]], [2 x [[S_FLOAT_TY]]]** [[S_ARR_ADDR]],
 // CHECK: store [[S_FLOAT_TY]]* [[VAR_IN]], [[S_FLOAT_TY]]** [[VAR_ADDR]],
-// CHECK: store i{{[0-9]+}} [[SVAR_IN]], i{{[0-9]+}}* [[SVAR_ADDR]],
+// CHECK: store i{{[0-9]+}}* [[SVAR_IN]], i{{[0-9]+}}** [[SVAR_ADDR]],
 
 // init t_var
-// CHECK-64-DAG: [[T_VAR_ADDR_CONV:%.+]] = bitcast i{{[0-9]+}}* [[T_VAR_ADDR]] to i{{[0-9]+}}*
-// CHECK-64-DAG: [[T_VAR_ADDR_CONV_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[T_VAR_ADDR_CONV]],
-// CHECK-32-DAG: [[T_VAR_ADDR_CONV_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[T_VAR_ADDR]],
-// CHECK-DAG: store i{{[0-9]+}} [[T_VAR_ADDR_CONV_VAL]], i{{[0-9]+}}* [[T_VAR_PRIV]],
+// CHECK-DAG: [[T_VAR_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[T_VAR_ADDR]],
+// CHECK-DAG: [[T_VAR_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[T_VAR_REF]],
+// CHECK-DAG: store i{{[0-9]+}} [[T_VAR_VAL]], i{{[0-9]+}}* [[T_VAR_PRIV]],
 
 // init vec
 // CHECK-DAG: [[VEC_ADDR_VAL:%.+]] = load [2 x i{{[0-9]+}}]*, [2 x i{{[0-9]+}}]** [[VEC_ADDR]],
@@ -279,10 +271,9 @@ int main() {
 // CHECK-DAG: store [[S_FLOAT_TY]]* [[VAR_PRIV]], [[S_FLOAT_TY]]** [[TMP_PRIV]],
 
 // init svar
-// CHECK-64-DAG: [[SVAR_ADDR_CONV:%.+]] = bitcast{{.+}} [[SVAR_ADDR]] to{{.+}}
-// CHECK-64-DAG: [[SVAR_CONV_VAL:%.+]] = load{{.+}},{{.+}} [[SVAR_ADDR_CONV]],
-// CHECK-32-DAG: [[SVAR_CONV_VAL:%.+]] = load{{.+}},{{.+}} [[SVAR_ADDR]],
-// CHECK-DAG: store{{.+}} [[SVAR_CONV_VAL]],{{.+}} [[SVAR_PRIV]],
+// CHECK-DAG: [[SVAR_REF:%.+]] = load{{.+}},{{.+}} [[SVAR_ADDR]],
+// CHECK-DAG: [[SVAR_VAL:%.+]] = load{{.+}},{{.+}} [[SVAR_REF]],
+// CHECK-DAG: store{{.+}} [[SVAR_VAL]],{{.+}} [[SVAR_PRIV]],
 
 // CHECK-DAG: store i{{[0-9]+}} 0, i{{[0-9]+}}* %.omp{{.+}},
 // CHECK-DAG: store i{{[0-9]+}} 1, i{{[0-9]+}}* %.omp{{.+}},
@@ -302,12 +293,14 @@ int main() {
 // CHECK: ret
 
 // CHECK: define{{.+}} [[OFFLOAD_FUN_1]](
-// CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_teams(%{{.+}}* @{{.+}}, i{{[0-9]+}} 4, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i{{[0-9]+}}, [2 x i{{[0-9]+}}]*, [2 x [[S_INT_TY]]]*, [[S_INT_TY]]*)* [[OMP_OUTLINED_1:@.+]] to void
+// CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_teams(%{{.+}}* @{{.+}}, i{{[0-9]+}} 4, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i{{[0-9]+}}*, [2 x i{{[0-9]+}}]*, [2 x [[S_INT_TY]]]*, [[S_INT_TY]]*)* [[OMP_OUTLINED_1:@.+]] to void
 // CHECK: ret
 //
-// CHECK: define internal void [[OMP_OUTLINED_1]](i{{[0-9]+}}*{{.+}}, i{{[0-9]+}}*{{.+}}, i{{[0-9]+}} [[T_VAR_IN:%.+]], [2 x i{{[0-9]+}}]*{{.*}} [[VEC_IN:%.+]], [2 x [[S_INT_TY]]]*{{.*}} [[S_ARR_IN:%.+]], [[S_INT_TY]]*{{.*}} [[VAR_IN:%.+]])
+// CHECK: define internal void [[OMP_OUTLINED_1]](i{{[0-9]+}}*{{.+}}, i{{[0-9]+}}*{{.+}}, i{{[0-9]+}}*{{.+}} [[T_VAR_IN:%.+]], [2 x i{{[0-9]+}}]*{{.*}} [[VEC_IN:%.+]], [2 x [[S_INT_TY]]]*{{.*}} [[S_ARR_IN:%.+]], [[S_INT_TY]]*{{.*}} [[VAR_IN:%.+]])
 
-// CHECK: [[T_VAR_ADDR:%.+]] = alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}}*,
+// CHECK: alloca i{{[0-9]+}}*,
+// CHECK: [[T_VAR_ADDR:%.+]] = alloca i{{[0-9]+}}*,
 // CHECK: [[VEC_ADDR:%.+]] = alloca [2 x i{{[0-9]+}}]*,
 // CHECK: [[S_ARR_ADDR:%.+]] = alloca [2 x [[S_INT_TY]]]*,
 // CHECK: [[VAR_ADDR:%.+]] = alloca [[S_INT_TY]]*,
@@ -327,16 +320,15 @@ int main() {
 // CHECK-DAG: [[VAR_PRIV:%.+]] = alloca [[S_INT_TY]],
 // CHECK-DAG: [[TMP_PRIV:%.+]] = alloca [[S_INT_TY]]*,
 
-// CHECK: store i{{[0-9]+}} [[T_VAR_IN]], i{{[0-9]+}}* [[T_VAR_ADDR]],
+// CHECK: store i{{[0-9]+}}* [[T_VAR_IN]], i{{[0-9]+}}** [[T_VAR_ADDR]],
 // CHECK: store [2 x i{{[0-9]+}}]* [[VEC_IN]], [2 x i{{[0-9]+}}]** [[VEC_ADDR]],
 // CHECK: store [2 x [[S_INT_TY]]]* [[S_ARR_IN]], [2 x [[S_INT_TY]]]** [[S_ARR_ADDR]],
 // CHECK: store [[S_INT_TY]]* [[VAR_IN]], [[S_INT_TY]]** [[VAR_ADDR]],
 
 // init t_var
-// CHECK-64-DAG: [[T_VAR_ADDR_CONV:%.+]] = bitcast i{{[0-9]+}}* [[T_VAR_ADDR]] to i{{[0-9]+}}*
-// CHECK-64-DAG: [[T_VAR_ADDR_CONV_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[T_VAR_ADDR_CONV]],
-// CHECK-32-DAG: [[T_VAR_ADDR_CONV_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[T_VAR_ADDR]],
-// CHECK-DAG: store i{{[0-9]+}} [[T_VAR_ADDR_CONV_VAL]], i{{[0-9]+}}* [[T_VAR_PRIV]],
+// CHECK-DAG: [[T_VAR_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[T_VAR_ADDR]],
+// CHECK-DAG: [[T_VAR:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[T_VAR_REF]],
+// CHECK-DAG: store i{{[0-9]+}} [[T_VAR]], i{{[0-9]+}}* [[T_VAR_PRIV]],
 
 // init vec
 // CHECK-DAG: [[VEC_ADDR_VAL:%.+]] = load [2 x i{{[0-9]+}}]*, [2 x i{{[0-9]+}}]** [[VEC_ADDR]],

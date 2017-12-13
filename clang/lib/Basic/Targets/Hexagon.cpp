@@ -52,6 +52,9 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
   } else if (CPU == "hexagonv62") {
     Builder.defineMacro("__HEXAGON_V62__");
     Builder.defineMacro("__HEXAGON_ARCH__", "62");
+  } else if (CPU == "hexagonv65") {
+    Builder.defineMacro("__HEXAGON_V65__");
+    Builder.defineMacro("__HEXAGON_ARCH__", "65");
   }
 
   if (hasFeature("hvx-length64b")) {
@@ -145,6 +148,7 @@ const char *HexagonTargetInfo::getHexagonCPUSuffix(StringRef Name) {
       .Case("hexagonv55", "55")
       .Case("hexagonv60", "60")
       .Case("hexagonv62", "62")
+      .Case("hexagonv65", "65")
       .Default(nullptr);
 }
 

@@ -8,25 +8,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "index/SymbolCollector.h"
-#include "clang/Index/IndexingAction.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Index/IndexingAction.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "gtest/gtest.h"
 #include "gmock/gmock.h"
+#include "gtest/gtest.h"
 
 #include <memory>
 #include <string>
 
-using testing::UnorderedElementsAre;
 using testing::Eq;
 using testing::Field;
+using testing::UnorderedElementsAre;
 
 // GMock helpers for matching Symbol.
 MATCHER_P(QName, Name, "") { return arg.second.QualifiedName == Name; }
@@ -36,7 +36,7 @@ namespace clangd {
 
 namespace {
 class SymbolIndexActionFactory : public tooling::FrontendActionFactory {
- public:
+public:
   SymbolIndexActionFactory() = default;
 
   clang::FrontendAction *create() override {

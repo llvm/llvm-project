@@ -17,7 +17,7 @@ template <typename T>
 T tmain() {
   T t_var = T();
   T vec[] = {1, 2};
-#pragma omp target teams distribute reduction(+: t_var)
+#pragma omp target teams distribute simd reduction(+: t_var)
   for (int i = 0; i < 2; ++i) {
     t_var += (T) i;
   }
@@ -36,7 +36,7 @@ int main() {
     // LAMBDA: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 1, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 0)
     // LAMBDA: call void @[[LOFFL1:.+]](
     // LAMBDA:  ret
-#pragma omp target teams distribute reduction(+: sivar)
+#pragma omp target teams distribute simd reduction(+: sivar)
   for (int i = 0; i < 2; ++i) {
     // LAMBDA: define{{.*}} internal{{.*}} void @[[LOFFL1]](i32*{{.+}} [[SIVAR_ARG:%.+]])
     // LAMBDA: [[SIVAR_ADDR:%.+]] = alloca i{{.+}}*,
@@ -100,7 +100,7 @@ int main() {
   }();
   return 0;
 #else
-#pragma omp target teams distribute reduction(+: sivar)
+#pragma omp target teams distribute simd reduction(+: sivar)
   for (int i = 0; i < 2; ++i) {
     sivar += i;
   }

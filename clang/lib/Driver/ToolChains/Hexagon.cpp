@@ -32,6 +32,7 @@ static StringRef getDefaultHvxLength(StringRef Cpu) {
   return llvm::StringSwitch<StringRef>(Cpu)
       .Case("v60", "64b")
       .Case("v62", "64b")
+      .Case("v65", "64b")
       .Default("128b");
 }
 

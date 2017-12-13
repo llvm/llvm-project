@@ -10,6 +10,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_CLANGDUNIT_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CLANGDUNIT_H
 
+#include "Context.h"
 #include "Function.h"
 #include "Path.h"
 #include "Protocol.h"
@@ -40,8 +41,6 @@ struct CompileCommand;
 
 namespace clangd {
 
-class Logger;
-
 /// A diagnostic with its FixIts.
 struct DiagWithFixIts {
   clangd::Diagnostic Diag;
@@ -65,11 +64,11 @@ public:
   /// Attempts to run Clang and store parsed AST. If \p Preamble is non-null
   /// it is reused during parsing.
   static llvm::Optional<ParsedAST>
-  Build(std::unique_ptr<clang::CompilerInvocation> CI,
+  Build(const Context &Ctx, std::unique_ptr<clang::CompilerInvocation> CI,
         std::shared_ptr<const PreambleData> Preamble,
         std::unique_ptr<llvm::MemoryBuffer> Buffer,
         std::shared_ptr<PCHContainerOperations> PCHs,
-        IntrusiveRefCntPtr<vfs::FileSystem> VFS, clangd::Logger &Logger);
+        IntrusiveRefCntPtr<vfs::FileSystem> VFS);
 
   ParsedAST(ParsedAST &&Other);
   ParsedAST &operator=(ParsedAST &&Other);
@@ -146,12 +145,12 @@ public:
   static std::shared_ptr<CppFile>
   Create(PathRef FileName, tooling::CompileCommand Command,
          bool StorePreamblesInMemory,
-         std::shared_ptr<PCHContainerOperations> PCHs, clangd::Logger &Logger);
+         std::shared_ptr<PCHContainerOperations> PCHs);
 
 private:
   CppFile(PathRef FileName, tooling::CompileCommand Command,
           bool StorePreamblesInMemory,
-          std::shared_ptr<PCHContainerOperations> PCHs, clangd::Logger &Logger);
+          std::shared_ptr<PCHContainerOperations> PCHs);
 
 public:
   CppFile(CppFile const &) = delete;
@@ -173,7 +172,8 @@ public:
   /// requested in parallel (effectively cancelling this rebuild) before
   /// diagnostics were produced.
   llvm::Optional<std::vector<DiagWithFixIts>>
-  rebuild(StringRef NewContents, IntrusiveRefCntPtr<vfs::FileSystem> VFS);
+  rebuild(const Context &Ctx, StringRef NewContents,
+          IntrusiveRefCntPtr<vfs::FileSystem> VFS);
 
   /// Schedule a rebuild and return a deferred computation that will finish the
   /// rebuild, that can be called on a different thread.
@@ -189,7 +189,7 @@ public:
   /// The future to finish rebuild returns a list of diagnostics built during
   /// reparse, or None, if another deferRebuild was called before this
   /// rebuild was finished.
-  UniqueFunction<llvm::Optional<std::vector<DiagWithFixIts>>()>
+  UniqueFunction<llvm::Optional<std::vector<DiagWithFixIts>>(const Context &)>
   deferRebuild(StringRef NewContents, IntrusiveRefCntPtr<vfs::FileSystem> VFS);
 
   /// Returns a future to get the most fresh PreambleData for a file. The
@@ -252,8 +252,6 @@ private:
   std::shared_ptr<const PreambleData> LatestAvailablePreamble;
   /// Utility class, required by clang.
   std::shared_ptr<PCHContainerOperations> PCHs;
-  /// Used for logging various messages.
-  clangd::Logger &Logger;
 };
 
 /// Get the beginning SourceLocation at a specified \p Pos.
@@ -261,11 +259,11 @@ SourceLocation getBeginningOfIdentifier(ParsedAST &Unit, const Position &Pos,
                                         const FileEntry *FE);
 
 /// Get definition of symbol at a specified \p Pos.
-std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos,
-                                      clangd::Logger &Logger);
+std::vector<Location> findDefinitions(const Context &Ctx, ParsedAST &AST,
+                                      Position Pos);
 
 std::vector<DocumentHighlight>
-findDocumentHighlights(ParsedAST &AST, Position Pos, clangd::Logger &Logger);
+findDocumentHighlights(const Context &Ctx, ParsedAST &AST, Position Pos);
 
 /// For testing/debugging purposes. Note that this method deserializes all
 /// unserialized Decls, so use with care.

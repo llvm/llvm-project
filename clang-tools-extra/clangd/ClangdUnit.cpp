@@ -227,12 +227,12 @@ void clangd::dumpAST(ParsedAST &AST, llvm::raw_ostream &OS) {
 }
 
 llvm::Optional<ParsedAST>
-ParsedAST::Build(std::unique_ptr<clang::CompilerInvocation> CI,
+ParsedAST::Build(const Context &Ctx,
+                 std::unique_ptr<clang::CompilerInvocation> CI,
                  std::shared_ptr<const PreambleData> Preamble,
                  std::unique_ptr<llvm::MemoryBuffer> Buffer,
                  std::shared_ptr<PCHContainerOperations> PCHs,
-                 IntrusiveRefCntPtr<vfs::FileSystem> VFS,
-                 clangd::Logger &Logger) {
+                 IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
 
   std::vector<DiagWithFixIts> ASTDiags;
   StoreDiagsConsumer UnitDiagsConsumer(/*ref*/ ASTDiags);
@@ -250,12 +250,12 @@ ParsedAST::Build(std::unique_ptr<clang::CompilerInvocation> CI,
   auto Action = llvm::make_unique<ClangdFrontendAction>();
   const FrontendInputFile &MainInput = Clang->getFrontendOpts().Inputs[0];
   if (!Action->BeginSourceFile(*Clang, MainInput)) {
-    Logger.log("BeginSourceFile() failed when building AST for " +
-               MainInput.getFile());
+    log(Ctx, "BeginSourceFile() failed when building AST for " +
+                 MainInput.getFile());
     return llvm::None;
   }
   if (!Action->Execute())
-    Logger.log("Execute() failed when building AST for " + MainInput.getFile());
+    log(Ctx, "Execute() failed when building AST for " + MainInput.getFile());
 
   // UnitDiagsConsumer is local, we can not store it in CompilerInstance that
   // has a longer lifetime.
@@ -457,8 +457,8 @@ getDeclarationLocation(ParsedAST &AST, const SourceRange &ValSourceRange) {
   return L;
 }
 
-std::vector<Location> clangd::findDefinitions(ParsedAST &AST, Position Pos,
-                                              clangd::Logger &Logger) {
+std::vector<Location> clangd::findDefinitions(const Context &Ctx,
+                                              ParsedAST &AST, Position Pos) {
   const SourceManager &SourceMgr = AST.getASTContext().getSourceManager();
   const FileEntry *FE = SourceMgr.getFileEntryForID(SourceMgr.getMainFileID());
   if (!FE)
@@ -499,8 +499,8 @@ std::vector<Location> clangd::findDefinitions(ParsedAST &AST, Position Pos,
 }
 
 std::vector<DocumentHighlight>
-clangd::findDocumentHighlights(ParsedAST &AST, Position Pos,
-                               clangd::Logger &Logger) {
+clangd::findDocumentHighlights(const Context &Ctx, ParsedAST &AST,
+                               Position Pos) {
   const SourceManager &SourceMgr = AST.getASTContext().getSourceManager();
   const FileEntry *FE = SourceMgr.getFileEntryForID(SourceMgr.getMainFileID());
   if (!FE)
@@ -612,23 +612,21 @@ ParsedASTWrapper::ParsedASTWrapper(llvm::Optional<ParsedAST> AST)
 std::shared_ptr<CppFile>
 CppFile::Create(PathRef FileName, tooling::CompileCommand Command,
                 bool StorePreamblesInMemory,
-                std::shared_ptr<PCHContainerOperations> PCHs,
-                clangd::Logger &Logger) {
-  return std::shared_ptr<CppFile>(new CppFile(FileName, std::move(Command),
-                                              StorePreamblesInMemory,
-                                              std::move(PCHs), Logger));
+                std::shared_ptr<PCHContainerOperations> PCHs) {
+  return std::shared_ptr<CppFile>(new CppFile(
+      FileName, std::move(Command), StorePreamblesInMemory, std::move(PCHs)));
 }
 
 CppFile::CppFile(PathRef FileName, tooling::CompileCommand Command,
                  bool StorePreamblesInMemory,
-                 std::shared_ptr<PCHContainerOperations> PCHs,
-                 clangd::Logger &Logger)
+                 std::shared_ptr<PCHContainerOperations> PCHs)
     : FileName(FileName), Command(std::move(Command)),
       StorePreamblesInMemory(StorePreamblesInMemory), RebuildCounter(0),
-      RebuildInProgress(false), PCHs(std::move(PCHs)), Logger(Logger) {
-  Logger.log("Opened file " + FileName + " with command [" +
-             this->Command.Directory + "] " +
-             llvm::join(this->Command.CommandLine, " "));
+      RebuildInProgress(false), PCHs(std::move(PCHs)) {
+  // FIXME(ibiryukov): we should pass a proper Context here.
+  log(Context::empty(), "Opened file " + FileName + " with command [" +
+                            this->Command.Directory + "] " +
+                            llvm::join(this->Command.CommandLine, " "));
 
   std::lock_guard<std::mutex> Lock(Mutex);
   LatestAvailablePreamble = nullptr;
@@ -680,12 +678,12 @@ UniqueFunction<void()> CppFile::deferCancelRebuild() {
 }
 
 llvm::Optional<std::vector<DiagWithFixIts>>
-CppFile::rebuild(StringRef NewContents,
+CppFile::rebuild(const Context &Ctx, StringRef NewContents,
                  IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
-  return deferRebuild(NewContents, std::move(VFS))();
+  return deferRebuild(NewContents, std::move(VFS))(Ctx);
 }
 
-UniqueFunction<llvm::Optional<std::vector<DiagWithFixIts>>()>
+UniqueFunction<llvm::Optional<std::vector<DiagWithFixIts>>(const Context &)>
 CppFile::deferRebuild(StringRef NewContents,
                       IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
   std::shared_ptr<const PreambleData> OldPreamble;
@@ -721,10 +719,10 @@ CppFile::deferRebuild(StringRef NewContents,
 
   // Don't let this CppFile die before rebuild is finished.
   std::shared_ptr<CppFile> That = shared_from_this();
-  auto FinishRebuild = [OldPreamble, VFS, RequestRebuildCounter, PCHs,
-                        That](std::string NewContents) mutable // 'mutable' to
-                                                               // allow changing
-                                                               // OldPreamble.
+  auto FinishRebuild =
+      [OldPreamble, VFS, RequestRebuildCounter, PCHs,
+       That](std::string NewContents,
+             const Context &Ctx) mutable /* to allow changing OldPreamble. */
       -> llvm::Optional<std::vector<DiagWithFixIts>> {
     // Only one execution of this method is possible at a time.
     // RebuildGuard will wait for any ongoing rebuilds to finish and will put us
@@ -820,9 +818,8 @@ CppFile::deferRebuild(StringRef NewContents,
     {
       trace::Span Tracer("Build");
       SPAN_ATTACH(Tracer, "File", That->FileName);
-      NewAST =
-          ParsedAST::Build(std::move(CI), std::move(NewPreamble),
-                           std::move(ContentsBuffer), PCHs, VFS, That->Logger);
+      NewAST = ParsedAST::Build(Ctx, std::move(CI), std::move(NewPreamble),
+                                std::move(ContentsBuffer), PCHs, VFS);
     }
 
     if (NewAST) {

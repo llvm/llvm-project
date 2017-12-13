@@ -2028,7 +2028,15 @@ static int __kmp_affinity_create_cpuinfo_map(AddrUnsPair **address2os,
         if ((p == NULL) || (KMP_SSCANF(p + 1, "%u\n", &val) != 1))
           goto no_val;
         if (threadInfo[num_avail][osIdIndex] != UINT_MAX)
+#if KMP_ARCH_AARCH64
+          // Handle the old AArch64 /proc/cpuinfo layout differently,
+          // it contains all of the 'processor' entries listed in a
+          // single 'Processor' section, therefore the normal looking
+          // for duplicates in that section will always fail.
+          num_avail++;
+#else
           goto dup_field;
+#endif
         threadInfo[num_avail][osIdIndex] = val;
 #if KMP_OS_LINUX && !(KMP_ARCH_X86 || KMP_ARCH_X86_64)
         char path[256];
