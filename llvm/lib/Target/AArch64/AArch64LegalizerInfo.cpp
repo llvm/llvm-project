@@ -368,8 +368,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
     }
 
   if (ST.hasLSE()) {
-    for (auto Ty : {s8, s16, s32, s64})
+    for (auto Ty : {s8, s16, s32, s64}) {
+      setAction({G_ATOMIC_CMPXCHG_WITH_SUCCESS, Ty}, Lower);
       setAction({G_ATOMIC_CMPXCHG, Ty}, Legal);
+    }
     setAction({G_ATOMIC_CMPXCHG, 1, p0}, Legal);
 
     for (auto Op :
