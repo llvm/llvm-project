@@ -924,7 +924,8 @@ static bool localAllocaNeedsStackSave(CoroAllocaAllocInst *AI) {
 
 /// Turn each of the given local allocas into a normal (dynamic) alloca
 /// instruction.
-static void lowerLocalAllocas(ArrayRef<CoroAllocaAllocInst*> LocalAllocas) {
+static void lowerLocalAllocas(ArrayRef<CoroAllocaAllocInst*> LocalAllocas,
+                              SmallVectorImpl<Instruction*> &DeadInsts) {
   for (auto AI : LocalAllocas) {
     auto M = AI->getModule();
     IRBuilder<> Builder(AI);
@@ -957,10 +958,10 @@ static void lowerLocalAllocas(ArrayRef<CoroAllocaAllocInst*> LocalAllocas) {
                              StackSave);
         }
       }
-      cast<Instruction>(U)->eraseFromParent();
+      DeadInsts.push_back(cast<Instruction>(U));
     }
 
-    AI->eraseFromParent();
+    DeadInsts.push_back(AI);
   }
 }
 
@@ -1083,6 +1084,11 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
       continue;
     }
 
+    // Ignore alloca.get; we process this as part of coro.alloca.alloc.
+    if (isa<CoroAllocaGetInst>(I)) {
+      continue;
+    }
+
     for (User *U : I.users())
       if (Checker.isDefinitionAcrossSuspend(I, U)) {
         // We cannot spill a token.
@@ -1096,7 +1102,7 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
   moveSpillUsesAfterCoroBegin(F, Spills, Shape.CoroBegin);
   Shape.FrameTy = buildFrameType(F, Shape, Spills);
   Shape.FramePtr = insertSpills(Spills, Shape);
-  lowerLocalAllocas(LocalAllocas);
+  lowerLocalAllocas(LocalAllocas, DeadInstructions);
 
   for (auto I : DeadInstructions)
     I->eraseFromParent();
