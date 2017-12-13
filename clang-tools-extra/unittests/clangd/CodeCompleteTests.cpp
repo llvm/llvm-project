@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 #include "ClangdServer.h"
 #include "Compiler.h"
-#include "Matchers.h"
 #include "Context.h"
+#include "Matchers.h"
 #include "Protocol.h"
 #include "TestFS.h"
 #include "gmock/gmock.h"

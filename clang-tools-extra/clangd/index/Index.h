@@ -45,7 +45,7 @@ public:
   SymbolID() = default;
   SymbolID(llvm::StringRef USR);
 
-  bool operator==(const SymbolID& Sym) const {
+  bool operator==(const SymbolID &Sym) const {
     return HashValue == Sym.HashValue;
   }
 
@@ -89,14 +89,14 @@ struct Symbol {
 // FIXME: Use a space-efficient implementation, a lot of Symbol fields could
 // share the same storage.
 class SymbolSlab {
- public:
+public:
   using const_iterator = llvm::DenseMap<SymbolID, Symbol>::const_iterator;
 
   SymbolSlab() = default;
 
   const_iterator begin() const;
   const_iterator end() const;
-  const_iterator find(const SymbolID& SymID) const;
+  const_iterator find(const SymbolID &SymID) const;
 
   // Once called, no more symbols would be added to the SymbolSlab. This
   // operation is irreversible.
@@ -104,7 +104,7 @@ class SymbolSlab {
 
   void insert(Symbol S);
 
- private:
+private:
   bool Frozen = false;
 
   llvm::DenseMap<SymbolID, Symbol> Symbols;
