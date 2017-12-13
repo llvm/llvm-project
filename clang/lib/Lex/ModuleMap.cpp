@@ -1606,7 +1606,7 @@ static void diagnosePrivateModules(const ModuleMap &Map,
     if (M->Directory != ActiveModule->Directory)
       continue;
 
-    StringRef FullName = ActiveModule->getFullModuleName();
+    SmallString<128> FullName(ActiveModule->getFullModuleName());
     if (!FullName.startswith(M->Name) && !FullName.endswith("Private"))
       continue;
     SmallString<128> Canonical(M->Name);
@@ -1617,8 +1617,8 @@ static void diagnosePrivateModules(const ModuleMap &Map,
         M->Name == ActiveModule->Parent->Name) {
       Diags.Report(ActiveModule->DefinitionLoc,
                    diag::warn_mmap_mismatched_private_submodule)
-          << ActiveModule->getFullModuleName();
-      GenNoteAndFixIt(ActiveModule->getFullModuleName(), Canonical, M);
+          << FullName;
+      GenNoteAndFixIt(FullName, Canonical, M);
       continue;
     }
 
