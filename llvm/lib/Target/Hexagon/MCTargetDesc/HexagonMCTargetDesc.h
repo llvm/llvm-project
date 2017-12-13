@@ -82,6 +82,7 @@ unsigned HexagonGetLastSlot();
 // Defines symbolic names for the Hexagon instructions.
 //
 #define GET_INSTRINFO_ENUM
+#define GET_INSTRINFO_SCHED_ENUM
 #include "HexagonGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM

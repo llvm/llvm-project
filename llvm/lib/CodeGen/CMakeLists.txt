@@ -42,7 +42,7 @@ add_llvm_library(LLVMCodeGen
   LexicalScopes.cpp
   LiveDebugValues.cpp
   LiveDebugVariables.cpp
-  LiveIntervalAnalysis.cpp
+  LiveIntervals.cpp
   LiveInterval.cpp
   LiveIntervalUnion.cpp
   LivePhysRegs.cpp

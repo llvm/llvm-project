@@ -153,7 +153,7 @@ body:             |
     %13 = S2_asl_r_p_acc %13, %47, %8.isub_lo
     %51 = A2_tfrpi 0
 
-    ; CHECK: %d2 = S2_extractup undef %d0, 6, 25
+    ; CHECK: %d2 = S2_extractup undef renamable %d0, 6, 25
     ; CHECK: %d0 = A2_tfrpi 2
     ; CHECK: %d13 = A2_tfrpi -1
     ; CHECK-NOT: undef %r4

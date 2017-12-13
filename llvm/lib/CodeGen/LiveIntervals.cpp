@@ -1,4 +1,4 @@
-//===- LiveIntervalAnalysis.cpp - Live Interval Analysis ------------------===//
+//===- LiveIntervals.cpp - Live Interval Analysis -------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,7 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/LiveIntervalAnalysis.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "LiveRangeCalc.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DepthFirstIterator.h"

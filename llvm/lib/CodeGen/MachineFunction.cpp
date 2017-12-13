@@ -906,7 +906,7 @@ void MachineJumpTableInfo::print(raw_ostream &OS) const {
   OS << "Jump Tables:\n";
 
   for (unsigned i = 0, e = JumpTables.size(); i != e; ++i) {
-    OS << "  jt#" << i << ": ";
+    OS << printJumpTableEntryReference(i) << ": ";
     for (unsigned j = 0, f = JumpTables[i].MBBs.size(); j != f; ++j)
       OS << ' ' << printMBBReference(*JumpTables[i].MBBs[j]);
   }
@@ -917,6 +917,10 @@ void MachineJumpTableInfo::print(raw_ostream &OS) const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MachineJumpTableInfo::dump() const { print(dbgs()); }
 #endif
+
+Printable llvm::printJumpTableEntryReference(unsigned Idx) {
+  return Printable([Idx](raw_ostream &OS) { OS << "%jump-table." << Idx; });
+}
 
 //===----------------------------------------------------------------------===//
 //  MachineConstantPool implementation

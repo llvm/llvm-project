@@ -69,15 +69,15 @@ static const unsigned GPRDecoderTable[] = {
 static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, uint64_t RegNo,
                                            uint64_t Address,
                                            const void *Decoder) {
-   if (RegNo > sizeof(GPRDecoderTable))
-     return MCDisassembler::Fail;
+  if (RegNo > sizeof(GPRDecoderTable))
+    return MCDisassembler::Fail;
 
-   // We must define our own mapping from RegNo to register identifier.
-   // Accessing index RegNo in the register class will work in the case that
-   // registers were added in ascending order, but not in general.
-   unsigned Reg = GPRDecoderTable[RegNo];
-   Inst.addOperand(MCOperand::createReg(Reg));
-   return MCDisassembler::Success;
+  // We must define our own mapping from RegNo to register identifier.
+  // Accessing index RegNo in the register class will work in the case that
+  // registers were added in ascending order, but not in general.
+  unsigned Reg = GPRDecoderTable[RegNo];
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
 }
 
 static const unsigned FPR32DecoderTable[] = {
@@ -101,6 +101,17 @@ static DecodeStatus DecodeFPR32RegisterClass(MCInst &Inst, uint64_t RegNo,
   // Accessing index RegNo in the register class will work in the case that
   // registers were added in ascending order, but not in general.
   unsigned Reg = FPR32DecoderTable[RegNo];
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeFPR32CRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                              uint64_t Address,
+                                              const void *Decoder) {
+  if (RegNo > 8) {
+    return MCDisassembler::Fail;
+  }
+  unsigned Reg = FPR32DecoderTable[RegNo + 8];
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
 }
@@ -130,14 +141,35 @@ static DecodeStatus DecodeFPR64RegisterClass(MCInst &Inst, uint64_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeFPR64CRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                              uint64_t Address,
+                                              const void *Decoder) {
+  if (RegNo > 8) {
+    return MCDisassembler::Fail;
+  }
+  unsigned Reg = FPR64DecoderTable[RegNo + 8];
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus DecodeGPRNoX0RegisterClass(MCInst &Inst, uint64_t RegNo,
                                                uint64_t Address,
                                                const void *Decoder) {
-   if (RegNo == 0) {
-     return MCDisassembler::Fail;
-   }
+  if (RegNo == 0) {
+    return MCDisassembler::Fail;
+  }
 
-   return DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
+  return DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
+}
+
+static DecodeStatus DecodeGPRNoX0X2RegisterClass(MCInst &Inst, uint64_t RegNo,
+                                                 uint64_t Address,
+                                                 const void *Decoder) {
+  if (RegNo == 2) {
+    return MCDisassembler::Fail;
+  }
+
+  return DecodeGPRNoX0RegisterClass(Inst, RegNo, Address, Decoder);
 }
 
 static DecodeStatus DecodeGPRCRegisterClass(MCInst &Inst, uint64_t RegNo,
@@ -154,8 +186,17 @@ static DecodeStatus DecodeGPRCRegisterClass(MCInst &Inst, uint64_t RegNo,
 // Add implied SP operand for instructions *SP compressed instructions. The SP
 // operand isn't explicitly encoded in the instruction.
 static void addImplySP(MCInst &Inst, int64_t Address, const void *Decoder) {
-  if (Inst.getOpcode() == RISCV::CLWSP || Inst.getOpcode() == RISCV::CSWSP ||
-      Inst.getOpcode() == RISCV::CLDSP || Inst.getOpcode() == RISCV::CSDSP) {
+  if (Inst.getOpcode() == RISCV::C_LWSP || Inst.getOpcode() == RISCV::C_SWSP ||
+      Inst.getOpcode() == RISCV::C_LDSP || Inst.getOpcode() == RISCV::C_SDSP ||
+      Inst.getOpcode() == RISCV::C_FLWSP ||
+      Inst.getOpcode() == RISCV::C_FSWSP ||
+      Inst.getOpcode() == RISCV::C_FLDSP ||
+      Inst.getOpcode() == RISCV::C_FSDSP ||
+      Inst.getOpcode() == RISCV::C_ADDI4SPN) {
+    DecodeGPRRegisterClass(Inst, 2, Address, Decoder);
+  }
+  if (Inst.getOpcode() == RISCV::C_ADDI16SP) {
+    DecodeGPRRegisterClass(Inst, 2, Address, Decoder);
     DecodeGPRRegisterClass(Inst, 2, Address, Decoder);
   }
 }
@@ -173,6 +214,7 @@ template <unsigned N>
 static DecodeStatus decodeSImmOperand(MCInst &Inst, uint64_t Imm,
                                       int64_t Address, const void *Decoder) {
   assert(isUInt<N>(Imm) && "Invalid immediate");
+  addImplySP(Inst, Address, Decoder);
   // Sign-extend the number in the bottom N bits of Imm
   Inst.addOperand(MCOperand::createImm(SignExtend64<N>(Imm)));
   return MCDisassembler::Success;
@@ -210,6 +252,18 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     Size = 4;
   } else {
     Insn = support::endian::read16le(Bytes.data());
+
+    if (!STI.getFeatureBits()[RISCV::Feature64Bit]) {
+      DEBUG(dbgs() << "Trying RISCV32Only_16 table (16-bit Instruction):\n");
+      // Calling the auto-generated decoder function.
+      Result = decodeInstruction(DecoderTableRISCV32Only_16, MI, Insn, Address,
+                                 this, STI);
+      if (Result != MCDisassembler::Fail) {
+        Size = 2;
+        return Result;
+      }
+    }
+
     DEBUG(dbgs() << "Trying RISCV_C table (16-bit Instruction):\n");
     // Calling the auto-generated decoder function.
     Result = decodeInstruction(DecoderTable16, MI, Insn, Address, this, STI);

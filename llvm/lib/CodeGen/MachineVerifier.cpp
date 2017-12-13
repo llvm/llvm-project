@@ -36,7 +36,7 @@
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
 #include "llvm/CodeGen/LiveInterval.h"
-#include "llvm/CodeGen/LiveIntervalAnalysis.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveStackAnalysis.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -1100,6 +1100,14 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
                    << TRI->getRegClassName(DRC) << " register.\n";
           }
         }
+      }
+      if (MO->isRenamable() &&
+          ((MO->isDef() && MI->hasExtraDefRegAllocReq()) ||
+           (MO->isUse() && MI->hasExtraSrcRegAllocReq()))) {
+        report("Illegal isRenamable setting for opcode with extra regalloc "
+               "requirements",
+               MO, MONum);
+        return;
       }
     } else {
       // Virtual register.

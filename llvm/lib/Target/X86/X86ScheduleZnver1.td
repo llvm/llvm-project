@@ -21,6 +21,12 @@ def Znver1Model : SchedMachineModel {
   let MispredictPenalty = 17;
   let HighLatency = 25;
   let PostRAScheduler = 1;
+
+  // FIXME: This variable is required for incomplete model.
+  // We haven't catered all instructions.
+  // So, we reset the value of this variable so as to
+  // say that the model is incomplete.
+  let CompleteModel = 0;
 }
 
 let SchedModel = Znver1Model in {

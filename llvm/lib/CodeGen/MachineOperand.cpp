@@ -14,7 +14,9 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/CodeGen/MIRPrinter.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/ModuleSlotTracker.h"
@@ -90,6 +92,7 @@ void MachineOperand::setIsDef(bool Val) {
   assert((!Val || !isDebug()) && "Marking a debug operation as def");
   if (IsDef == Val)
     return;
+  assert(!IsDeadOrKill && "Changing def/use with dead/kill set not supported");
   // MRI may keep uses and defs in different list positions.
   if (MachineFunction *MF = getMFIfAvailable(*this)) {
     MachineRegisterInfo &MRI = MF->getRegInfo();
@@ -99,6 +102,34 @@ void MachineOperand::setIsDef(bool Val) {
     return;
   }
   IsDef = Val;
+}
+
+bool MachineOperand::isRenamable() const {
+  assert(isReg() && "Wrong MachineOperand accessor");
+  assert(TargetRegisterInfo::isPhysicalRegister(getReg()) &&
+         "isRenamable should only be checked on physical registers");
+  return IsRenamable;
+}
+
+void MachineOperand::setIsRenamable(bool Val) {
+  assert(isReg() && "Wrong MachineOperand accessor");
+  assert(TargetRegisterInfo::isPhysicalRegister(getReg()) &&
+         "setIsRenamable should only be called on physical registers");
+  if (const MachineInstr *MI = getParent())
+    if ((isDef() && MI->hasExtraDefRegAllocReq()) ||
+        (isUse() && MI->hasExtraSrcRegAllocReq()))
+      assert(!Val && "isRenamable should be false for "
+                     "hasExtraDefRegAllocReq/hasExtraSrcRegAllocReq opcodes");
+  IsRenamable = Val;
+}
+
+void MachineOperand::setIsRenamableIfNoExtraRegAllocReq() {
+  if (const MachineInstr *MI = getParent())
+    if ((isDef() && MI->hasExtraDefRegAllocReq()) ||
+        (isUse() && MI->hasExtraSrcRegAllocReq()))
+      return;
+
+  setIsRenamable(true);
 }
 
 // If this operand is currently a register operand, and if this is in a
@@ -194,13 +225,15 @@ void MachineOperand::ChangeToRegister(unsigned Reg, bool isDef, bool isImp,
     RegInfo->removeRegOperandFromUseList(this);
 
   // Change this to a register and set the reg#.
+  assert(!(isDead && !isDef) && "Dead flag on non-def");
+  assert(!(isKill && isDef) && "Kill flag on def");
   OpKind = MO_Register;
   SmallContents.RegNo = Reg;
   SubReg_TargetFlags = 0;
   IsDef = isDef;
   IsImp = isImp;
-  IsKill = isKill;
-  IsDead = isDead;
+  IsDeadOrKill = isKill | isDead;
+  IsRenamable = false;
   IsUndef = isUndef;
   IsInternalRead = false;
   IsEarlyClobber = false;
@@ -345,6 +378,28 @@ static void tryToGetTargetInfo(const MachineOperand &MO,
   }
 }
 
+static void printOffset(raw_ostream &OS, int64_t Offset) {
+  if (Offset == 0)
+    return;
+  if (Offset < 0) {
+    OS << " - " << -Offset;
+    return;
+  }
+  OS << " + " << Offset;
+}
+
+static const char *getTargetIndexName(const MachineFunction &MF, int Index) {
+  const auto *TII = MF.getSubtarget().getInstrInfo();
+  assert(TII && "expected instruction info");
+  auto Indices = TII->getSerializableTargetIndices();
+  auto Found = find_if(Indices, [&](const std::pair<int, const char *> &I) {
+    return I.first == Index;
+  });
+  if (Found != Indices.end())
+    return Found->second;
+  return nullptr;
+}
+
 void MachineOperand::printSubregIdx(raw_ostream &OS, uint64_t Index,
                                     const TargetRegisterInfo *TRI) {
   OS << "%subreg.";
@@ -389,6 +444,8 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
       OS << "early-clobber ";
     if (isDebug())
       OS << "debug-use ";
+    if (TargetRegisterInfo::isPhysicalRegister(getReg()) && isRenamable())
+      OS << "renamable ";
     OS << printReg(Reg, TRI);
     // Print the sub register.
     if (unsigned SubReg = getSubReg()) {
@@ -453,19 +510,21 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "<fi#" << getIndex() << '>';
     break;
   case MachineOperand::MO_ConstantPoolIndex:
-    OS << "<cp#" << getIndex();
-    if (getOffset())
-      OS << "+" << getOffset();
-    OS << '>';
+    OS << "%const." << getIndex();
+    printOffset(OS, getOffset());
     break;
-  case MachineOperand::MO_TargetIndex:
-    OS << "<ti#" << getIndex();
-    if (getOffset())
-      OS << "+" << getOffset();
-    OS << '>';
+  case MachineOperand::MO_TargetIndex: {
+    OS << "target-index(";
+    const char *Name = "<unknown>";
+    if (const MachineFunction *MF = getMFIfAvailable(*this))
+      if (const auto *TargetIndexName = getTargetIndexName(*MF, getIndex()))
+        Name = TargetIndexName;
+    OS << Name << ')';
+    printOffset(OS, getOffset());
     break;
+  }
   case MachineOperand::MO_JumpTableIndex:
-    OS << "<jt#" << getIndex() << '>';
+    OS << printJumpTableEntryReference(getIndex());
     break;
   case MachineOperand::MO_GlobalAddress:
     OS << "<ga:";

@@ -21,7 +21,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveInterval.h"
-#include "llvm/CodeGen/LiveIntervalAnalysis.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveStackAnalysis.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -530,6 +530,7 @@ void VirtRegRewriter::rewrite() {
         // Rewrite. Note we could have used MachineOperand::substPhysReg(), but
         // we need the inlining here.
         MO.setReg(PhysReg);
+        MO.setIsRenamableIfNoExtraRegAllocReq();
       }
 
       // Add any missing super-register kills after rewriting the whole

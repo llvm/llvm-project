@@ -13,5 +13,5 @@ entry:
 
 ; Make sure that the MMO on the store has no offset from the byval
 ; variable itself (we used to have mem:ST8[%v+64]).
-; CHECK: STD killed %x5, 176, %x1; mem:ST8[%v](align=16)
+; CHECK: STD killed renamable %x5, 176, %x1; mem:ST8[%v](align=16)
 

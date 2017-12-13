@@ -31,6 +31,64 @@ End:
   ret i32 %v
 }
 
+;CHECK-LABEL: @test_eq_eq_eq
+;CHECK-LABEL: Tail.predBB1.split:
+;CHECK: %[[CALL1:.*]] = call i32 @callee(i32* null, i32 %v, i32 10)
+;CHECK-LABEL: Tail.predBB2.split:
+;CHECK: %[[CALL2:.*]] = call i32 @callee(i32* null, i32 1, i32 %p)
+;CHECK-LABEL: Tail
+;CHECK: %[[MERGED:.*]] = phi i32 [ %[[CALL1]], %Tail.predBB1.split ], [ %[[CALL2]], %Tail.predBB2.split ]
+;CHECK: ret i32 %[[MERGED]]
+define i32 @test_eq_eq_eq(i32* %a, i32 %v, i32 %p) {
+Header:
+  %tobool1 = icmp eq i32* %a, null
+  br i1 %tobool1, label %Header2, label %End
+
+Header2:
+  %tobool2 = icmp eq i32 %p, 10
+  br i1 %tobool2, label %Tail, label %TBB
+
+TBB:
+  %cmp = icmp eq i32 %v, 1
+  br i1 %cmp, label %Tail, label %End
+
+Tail:
+  %r = call i32 @callee(i32* %a, i32 %v, i32 %p)
+  ret i32 %r
+
+End:
+  ret i32 %v
+}
+
+;CHECK-LABEL: @test_eq_eq_eq_constrain_same_i32_arg
+;CHECK-LABEL: Tail.predBB1.split:
+;CHECK: %[[CALL1:.*]] = call i32 @callee(i32* %a, i32 222, i32 %p)
+;CHECK-LABEL: Tail.predBB2.split:
+;CHECK: %[[CALL2:.*]] = call i32 @callee(i32* %a, i32 333, i32 %p)
+;CHECK-LABEL: Tail
+;CHECK: %[[MERGED:.*]] = phi i32 [ %[[CALL1]], %Tail.predBB1.split ], [ %[[CALL2]], %Tail.predBB2.split ]
+;CHECK: ret i32 %[[MERGED]]
+define i32 @test_eq_eq_eq_constrain_same_i32_arg(i32* %a, i32 %v, i32 %p) {
+Header:
+  %tobool1 = icmp eq i32 %v, 111
+  br i1 %tobool1, label %Header2, label %End
+
+Header2:
+  %tobool2 = icmp eq i32 %v, 222
+  br i1 %tobool2, label %Tail, label %TBB
+
+TBB:
+  %cmp = icmp eq i32 %v, 333
+  br i1 %cmp, label %Tail, label %End
+
+Tail:
+  %r = call i32 @callee(i32* %a, i32 %v, i32 %p)
+  ret i32 %r
+
+End:
+  ret i32 %v
+}
+
 ;CHECK-LABEL: @test_ne_eq
 ;CHECK-LABEL: Tail.predBB1.split:
 ;CHECK: %[[CALL1:.*]] = call i32 @callee(i32* nonnull %a, i32 %v, i32 1)
@@ -51,6 +109,35 @@ TBB:
 
 Tail:
   %p = phi i32[1,%Header], [2, %TBB]
+  %r = call i32 @callee(i32* %a, i32 %v, i32 %p)
+  ret i32 %r
+
+End:
+  ret i32 %v
+}
+
+;CHECK-LABEL: @test_ne_eq_ne
+;CHECK-LABEL: Tail.predBB1.split:
+;CHECK: %[[CALL1:.*]] = call i32 @callee(i32* nonnull %a, i32 %v, i32 10)
+;CHECK-LABEL: Tail.predBB2.split:
+;CHECK: %[[CALL2:.*]] = call i32 @callee(i32* nonnull %a, i32 %v, i32 %p)
+;CHECK-LABEL: Tail
+;CHECK: %[[MERGED:.*]] = phi i32 [ %[[CALL1]], %Tail.predBB1.split ], [ %[[CALL2]], %Tail.predBB2.split ]
+;CHECK: ret i32 %[[MERGED]]
+define i32 @test_ne_eq_ne(i32* %a, i32 %v, i32 %p) {
+Header:
+  %tobool1 = icmp ne i32* %a, null
+  br i1 %tobool1, label %Header2, label %End
+
+Header2:
+  %tobool2 = icmp eq i32 %p, 10
+  br i1 %tobool2, label %Tail, label %TBB
+
+TBB:
+  %cmp = icmp ne i32 %v, 1
+  br i1 %cmp, label %Tail, label %End
+
+Tail:
   %r = call i32 @callee(i32* %a, i32 %v, i32 %p)
   ret i32 %r
 
@@ -85,6 +172,37 @@ End:
   ret i32 %v
 }
 
+;CHECK-LABEL: @test_ne_ne_ne_constrain_same_pointer_arg
+;CHECK-LABEL: Tail.predBB1.split:
+;CHECK: %[[CALL1:.*]] = call i32 @callee(i32* nonnull %a, i32 %v, i32 %p)
+;CHECK-LABEL: Tail.predBB2.split:
+;CHECK: %[[CALL2:.*]] = call i32 @callee(i32* nonnull %a, i32 %v, i32 %p)
+;CHECK-LABEL: Tail
+;CHECK: %[[MERGED:.*]] = phi i32 [ %[[CALL1]], %Tail.predBB1.split ], [ %[[CALL2]], %Tail.predBB2.split ]
+;CHECK: ret i32 %[[MERGED]]
+define i32 @test_ne_ne_ne_constrain_same_pointer_arg(i32* %a, i32 %v, i32 %p, i32* %a2, i32* %a3) {
+Header:
+  %tobool1 = icmp ne i32* %a, null
+  br i1 %tobool1, label %Header2, label %End
+
+Header2:
+  %tobool2 = icmp ne i32* %a, %a2
+  br i1 %tobool2, label %Tail, label %TBB
+
+TBB:
+  %cmp = icmp ne i32* %a, %a3
+  br i1 %cmp, label %Tail, label %End
+
+Tail:
+  %r = call i32 @callee(i32* %a, i32 %v, i32 %p)
+  ret i32 %r
+
+End:
+  ret i32 %v
+}
+
+
+
 ;CHECK-LABEL: @test_eq_eq_untaken
 ;CHECK-LABEL: Tail.predBB1.split:
 ;CHECK: %[[CALL1:.*]] = call i32 @callee(i32* nonnull %a, i32 %v, i32 1)
@@ -112,6 +230,35 @@ End:
   ret i32 %v
 }
 
+;CHECK-LABEL: @test_eq_eq_eq_untaken
+;CHECK-LABEL: Tail.predBB1.split:
+;CHECK: %[[CALL1:.*]] = call i32 @callee(i32* nonnull %a, i32 %v, i32 10)
+;CHECK-LABEL: Tail.predBB2.split:
+;CHECK: %[[CALL2:.*]] = call i32 @callee(i32* nonnull %a, i32 1, i32 %p)
+;CHECK-LABEL: Tail
+;CHECK: %[[MERGED:.*]] = phi i32 [ %[[CALL1]], %Tail.predBB1.split ], [ %[[CALL2]], %Tail.predBB2.split ]
+;CHECK: ret i32 %[[MERGED]]
+define i32 @test_eq_eq_eq_untaken(i32* %a, i32 %v, i32 %p) {
+Header:
+  %tobool1 = icmp eq i32* %a, null
+  br i1 %tobool1, label %End, label %Header2
+
+Header2:
+  %tobool2 = icmp eq i32 %p, 10
+  br i1 %tobool2, label %Tail, label %TBB
+
+TBB:
+  %cmp = icmp eq i32 %v, 1
+  br i1 %cmp, label %Tail, label %End
+
+Tail:
+  %r = call i32 @callee(i32* %a, i32 %v, i32 %p)
+  ret i32 %r
+
+End:
+  ret i32 %v
+}
+
 ;CHECK-LABEL: @test_ne_eq_untaken
 ;CHECK-LABEL: Tail.predBB1.split:
 ;CHECK: %[[CALL1:.*]] = call i32 @callee(i32* null, i32 %v, i32 1)
@@ -132,6 +279,35 @@ TBB:
 
 Tail:
   %p = phi i32[1,%Header], [2, %TBB]
+  %r = call i32 @callee(i32* %a, i32 %v, i32 %p)
+  ret i32 %r
+
+End:
+  ret i32 %v
+}
+
+;CHECK-LABEL: @test_ne_eq_ne_untaken
+;CHECK-LABEL: Tail.predBB1.split:
+;CHECK: %[[CALL1:.*]] = call i32 @callee(i32* null, i32 %v, i32 10)
+;CHECK-LABEL: Tail.predBB2.split:
+;CHECK: %[[CALL2:.*]] = call i32 @callee(i32* null, i32 %v, i32 %p)
+;CHECK-LABEL: Tail
+;CHECK: %[[MERGED:.*]] = phi i32 [ %[[CALL1]], %Tail.predBB1.split ], [ %[[CALL2]], %Tail.predBB2.split ]
+;CHECK: ret i32 %[[MERGED]]
+define i32 @test_ne_eq_ne_untaken(i32* %a, i32 %v, i32 %p) {
+Header:
+  %tobool1 = icmp ne i32* %a, null
+  br i1 %tobool1, label %End, label %Header2
+
+Header2:
+  %tobool2 = icmp eq i32 %p, 10
+  br i1 %tobool2, label %Tail, label %TBB
+
+TBB:
+  %cmp = icmp ne i32 %v, 1
+  br i1 %cmp, label %Tail, label %End
+
+Tail:
   %r = call i32 @callee(i32* %a, i32 %v, i32 %p)
   ret i32 %r
 
@@ -338,6 +514,30 @@ Tail:
   %r = call i32 @callee(i32* %a, i32 %v, i32 %p)
   ret i32 %r
 
+End:
+  ret i32 %v
+}
+
+;CHECK-LABEL: @test_unreachable
+;CHECK-LABEL: Tail.predBB1.split:
+;CHECK: %[[CALL1:.*]] = call i32 @callee(i32* %a, i32 %v, i32 10)
+;CHECK-LABEL: Tail.predBB2.split:
+;CHECK: %[[CALL2:.*]] = call i32 @callee(i32* %a, i32 1, i32 %p)
+;CHECK-LABEL: Tail
+;CHECK: %[[MERGED:.*]] = phi i32 [ %[[CALL1]], %Tail.predBB1.split ], [ %[[CALL2]], %Tail.predBB2.split ]
+;CHECK: ret i32 %[[MERGED]]
+define i32 @test_unreachable(i32* %a, i32 %v, i32 %p) {
+Entry:
+  br label %End
+Header:
+  %tobool2 = icmp eq i32 %p, 10
+  br i1 %tobool2, label %Tail, label %TBB
+TBB:
+  %cmp = icmp eq i32 %v, 1
+  br i1 %cmp, label %Tail, label %Header
+Tail:
+  %r = call i32 @callee(i32* %a, i32 %v, i32 %p)
+  ret i32 %r
 End:
   ret i32 %v
 }

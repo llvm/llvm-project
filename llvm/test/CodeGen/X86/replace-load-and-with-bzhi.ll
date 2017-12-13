@@ -10,17 +10,14 @@
 define i32 @f32_bzhi(i32 %x, i32 %y) local_unnamed_addr {
 ; CHECK-LABEL: f32_bzhi:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movslq %esi, %rax
-; CHECK-NEXT:    andl fill_table32(,%rax,4), %edi
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    ret{{[l|q]}}
+; CHECK-NEXT:    bzhil %esi, %edi, %eax
+; CHECK-NEXT:    retq
 ;
 ; CHECK32-LABEL: f32_bzhi:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    movl fill_table32(,%eax,4), %eax
-; CHECK32-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    ret{{[l|q]}}
+; CHECK32-NEXT:    bzhil %eax, {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    retl
 entry:
   %idxprom = sext i32 %y to i64
   %arrayidx = getelementptr inbounds [32 x i32], [32 x i32]* @fill_table32, i64 0, i64 %idxprom
@@ -32,17 +29,14 @@ entry:
 define i32 @f32_bzhi_partial(i32 %x, i32 %y) local_unnamed_addr {
 ; CHECK-LABEL: f32_bzhi_partial:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movslq %esi, %rax
-; CHECK-NEXT:    andl fill_table32_partial(,%rax,4), %edi
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    ret{{[l|q]}}
+; CHECK-NEXT:    bzhil %esi, %edi, %eax
+; CHECK-NEXT:    retq
 ;
 ; CHECK32-LABEL: f32_bzhi_partial:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    movl fill_table32_partial(,%eax,4), %eax
-; CHECK32-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    ret{{[l|q]}}
+; CHECK32-NEXT:    bzhil %eax, {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    retl
 entry:
   %idxprom = sext i32 %y to i64
   %arrayidx = getelementptr inbounds [17 x i32], [17 x i32]* @fill_table32_partial, i64 0, i64 %idxprom
@@ -54,9 +48,8 @@ entry:
 define i64 @f64_bzhi(i64 %x, i64 %y) local_unnamed_addr {
 ; CHECK-LABEL: f64_bzhi:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andq fill_table64(,%rsi,8), %rdi
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    ret{{[l|q]}}
+; CHECK-NEXT:    bzhiq %rsi, %rdi, %rax
+; CHECK-NEXT:    retq
 ;
 ; CHECK32-LABEL: f64_bzhi:
 ; CHECK32:       # %bb.0: # %entry
@@ -65,7 +58,7 @@ define i64 @f64_bzhi(i64 %x, i64 %y) local_unnamed_addr {
 ; CHECK32-NEXT:    movl fill_table64(,%eax,8), %eax
 ; CHECK32-NEXT:    andl {{[0-9]+}}(%esp), %eax
 ; CHECK32-NEXT:    andl {{[0-9]+}}(%esp), %edx
-; CHECK32-NEXT:    ret{{[l|q]}}
+; CHECK32-NEXT:    retl
 entry:
   %arrayidx = getelementptr inbounds [64 x i64], [64 x i64]* @fill_table64, i64 0, i64 %y
   %0 = load i64, i64* %arrayidx, align 8
@@ -76,9 +69,8 @@ entry:
 define i64 @f64_bzhi_partial(i64 %x, i64 %y) local_unnamed_addr {
 ; CHECK-LABEL: f64_bzhi_partial:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andq fill_table64_partial(,%rsi,8), %rdi
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    ret{{[l|q]}}
+; CHECK-NEXT:    bzhiq %rsi, %rdi, %rax
+; CHECK-NEXT:    retq
 ;
 ; CHECK32-LABEL: f64_bzhi_partial:
 ; CHECK32:       # %bb.0: # %entry
@@ -87,7 +79,7 @@ define i64 @f64_bzhi_partial(i64 %x, i64 %y) local_unnamed_addr {
 ; CHECK32-NEXT:    movl fill_table64_partial(,%eax,8), %eax
 ; CHECK32-NEXT:    andl {{[0-9]+}}(%esp), %eax
 ; CHECK32-NEXT:    andl {{[0-9]+}}(%esp), %edx
-; CHECK32-NEXT:    ret{{[l|q]}}
+; CHECK32-NEXT:    retl
 entry:
   %arrayidx = getelementptr inbounds [51 x i64], [51 x i64]* @fill_table64_partial, i64 0, i64 %y
   %0 = load i64, i64* %arrayidx, align 8

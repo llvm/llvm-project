@@ -23,6 +23,10 @@ def SLMModel : SchedMachineModel {
 
   // For small loops, expand by a small factor to hide the backedge cost.
   let LoopMicroOpBufferSize = 10;
+
+  // FIXME: SSE4 is unimplemented. This flag is set to allow
+  // the scheduler to assign a default model to unrecognized opcodes.
+  let CompleteModel = 0;
 }
 
 let SchedModel = SLMModel in {
