@@ -534,6 +534,118 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind14Registers_or1k6jumptoEv)
   l.jr     r9
    l.nop
 
+#elif defined(__mips__) && defined(_ABIO32) && defined(__mips_soft_float)
+
+//
+// void libunwind::Registers_mips_o32::jumpto()
+//
+// On entry:
+//  thread state pointer is in a0 ($4)
+//
+DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind18Registers_mips_o326jumptoEv)
+  .set push
+  .set noat
+  .set noreorder
+  .set nomacro
+  // restore hi and lo
+  lw    $8, (4 * 33)($4)
+  mthi  $8
+  lw    $8, (4 * 34)($4)
+  mtlo  $8
+  // r0 is zero
+  lw    $1, (4 * 1)($4)
+  lw    $2, (4 * 2)($4)
+  lw    $3, (4 * 3)($4)
+  // skip a0 for now
+  lw    $5, (4 * 5)($4)
+  lw    $6, (4 * 6)($4)
+  lw    $7, (4 * 7)($4)
+  lw    $8, (4 * 8)($4)
+  lw    $9, (4 * 9)($4)
+  lw    $10, (4 * 10)($4)
+  lw    $11, (4 * 11)($4)
+  lw    $12, (4 * 12)($4)
+  lw    $13, (4 * 13)($4)
+  lw    $14, (4 * 14)($4)
+  lw    $15, (4 * 15)($4)
+  lw    $16, (4 * 16)($4)
+  lw    $17, (4 * 17)($4)
+  lw    $18, (4 * 18)($4)
+  lw    $19, (4 * 19)($4)
+  lw    $20, (4 * 20)($4)
+  lw    $21, (4 * 21)($4)
+  lw    $22, (4 * 22)($4)
+  lw    $23, (4 * 23)($4)
+  lw    $24, (4 * 24)($4)
+  lw    $25, (4 * 25)($4)
+  lw    $26, (4 * 26)($4)
+  lw    $27, (4 * 27)($4)
+  lw    $28, (4 * 28)($4)
+  lw    $29, (4 * 29)($4)
+  lw    $30, (4 * 30)($4)
+  // load new pc into ra
+  lw    $31, (4 * 32)($4)
+  // jump to ra, load a0 in the delay slot
+  jr    $31
+  lw    $4, (4 * 4)($4)
+  .set pop
+
+#elif defined(__mips__) && defined(_ABI64) && defined(__mips_soft_float)
+
+//
+// void libunwind::Registers_mips_n64::jumpto()
+//
+// On entry:
+//  thread state pointer is in a0 ($4)
+//
+DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind18Registers_mips_n646jumptoEv)
+  .set push
+  .set noat
+  .set noreorder
+  .set nomacro
+  // restore hi and lo
+  ld    $8, (8 * 33)($4)
+  mthi  $8
+  ld    $8, (8 * 34)($4)
+  mtlo  $8
+  // r0 is zero
+  ld    $1, (8 * 1)($4)
+  ld    $2, (8 * 2)($4)
+  ld    $3, (8 * 3)($4)
+  // skip a0 for now
+  ld    $5, (8 * 5)($4)
+  ld    $6, (8 * 6)($4)
+  ld    $7, (8 * 7)($4)
+  ld    $8, (8 * 8)($4)
+  ld    $9, (8 * 9)($4)
+  ld    $10, (8 * 10)($4)
+  ld    $11, (8 * 11)($4)
+  ld    $12, (8 * 12)($4)
+  ld    $13, (8 * 13)($4)
+  ld    $14, (8 * 14)($4)
+  ld    $15, (8 * 15)($4)
+  ld    $16, (8 * 16)($4)
+  ld    $17, (8 * 17)($4)
+  ld    $18, (8 * 18)($4)
+  ld    $19, (8 * 19)($4)
+  ld    $20, (8 * 20)($4)
+  ld    $21, (8 * 21)($4)
+  ld    $22, (8 * 22)($4)
+  ld    $23, (8 * 23)($4)
+  ld    $24, (8 * 24)($4)
+  ld    $25, (8 * 25)($4)
+  ld    $26, (8 * 26)($4)
+  ld    $27, (8 * 27)($4)
+  ld    $28, (8 * 28)($4)
+  ld    $29, (8 * 29)($4)
+  ld    $30, (8 * 30)($4)
+  // load new pc into ra
+  ld    $31, (8 * 32)($4)
+  // jump to ra, load a0 in the delay slot
+  jr    $31
+  ld    $4, (8 * 4)($4)
+  .set pop
+
 #endif
 
 #endif /* !defined(__USING_SJLJ_EXCEPTIONS__) */

@@ -67,7 +67,8 @@ function(add_lldb_library name)
       endif()
       if (NOT CMAKE_CONFIGURATION_TYPES)
         add_llvm_install_targets(install-${name}
-                                 DEPENDS ${name})
+                                 DEPENDS ${name}
+                                 COMPONENT ${name})
       endif()
     endif()
   endif()
@@ -134,7 +135,8 @@ function(add_lldb_executable name)
           RUNTIME DESTINATION bin)
     if (NOT CMAKE_CONFIGURATION_TYPES)
       add_llvm_install_targets(install-${name}
-                               DEPENDS ${name})
+                               DEPENDS ${name}
+                               COMPONENT ${name})
     endif()
   endif()
 
