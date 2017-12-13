@@ -106,6 +106,19 @@ def GPRNoX0 : RegisterClass<"RISCV", [XLenVT], 32, (add
       [RegInfo<32,32,32>, RegInfo<64,64,64>, RegInfo<32,32,32>]>;
 }
 
+def GPRNoX0X2 : RegisterClass<"RISCV", [XLenVT], 32, (add
+    (sequence "X%u", 10, 17),
+    (sequence "X%u", 5, 7),
+    (sequence "X%u", 28, 31),
+    (sequence "X%u", 8, 9),
+    (sequence "X%u", 18, 27),
+    X1, X3, X4
+  )> {
+  let RegInfos = RegInfoByHwMode<
+      [RV32,              RV64,              DefaultMode],
+      [RegInfo<32,32,32>, RegInfo<64,64,64>, RegInfo<32,32,32>]>;
+}
+
 def GPRC : RegisterClass<"RISCV", [XLenVT], 32, (add
     (sequence "X%u", 10, 15),
     (sequence "X%u", 8, 9)
@@ -172,6 +185,11 @@ def FPR32 : RegisterClass<"RISCV", [f32], 32, (add
     (sequence "F%u_32", 18, 27)
 )>;
 
+def FPR32C : RegisterClass<"RISCV", [f32], 32, (add
+  (sequence "F%u_32", 10, 15),
+  (sequence "F%u_32", 8, 9)
+)>;
+
 // The order of registers represents the preferred allocation sequence,
 // meaning caller-save regs are listed before callee-save.
 def FPR64 : RegisterClass<"RISCV", [f64], 64, (add
@@ -180,4 +198,9 @@ def FPR64 : RegisterClass<"RISCV", [f64], 64, (add
     (sequence "F%u_64", 28, 31),
     (sequence "F%u_64", 8, 9),
     (sequence "F%u_64", 18, 27)
+)>;
+
+def FPR64C : RegisterClass<"RISCV", [f64], 64, (add
+  (sequence "F%u_64", 10, 15),
+  (sequence "F%u_64", 8, 9)
 )>;

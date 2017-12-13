@@ -4336,7 +4336,7 @@ def RLWNMobm : PPCAsmPseudo<"rlwnm. $rA, $rS, $n, $b",
 
 // These generic branch instruction forms are used for the assembler parser only.
 // Defs and Uses are conservative, since we don't know the BO value.
-let PPC970_Unit = 7 in {
+let PPC970_Unit = 7, isBranch = 1 in {
   let Defs = [CTR], Uses = [CTR, RM] in {
     def gBC : BForm_3<16, 0, 0, (outs),
                       (ins u5imm:$bo, crbitrc:$bi, condbrtarget:$dst),

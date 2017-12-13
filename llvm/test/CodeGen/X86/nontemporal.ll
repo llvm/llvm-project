@@ -9,45 +9,42 @@ define i32 @f(<4 x float> %A, i8* %B, <2 x double> %C, i32 %D, <2 x i64> %E, <4 
 ; X32-SSE:       # %bb.0:
 ; X32-SSE-NEXT:    pushl %ebp
 ; X32-SSE-NEXT:    movl %esp, %ebp
-; X32-SSE-NEXT:    pushl %edi
 ; X32-SSE-NEXT:    pushl %esi
 ; X32-SSE-NEXT:    andl $-16, %esp
-; X32-SSE-NEXT:    movl 76(%ebp), %ecx
+; X32-SSE-NEXT:    subl $16, %esp
+; X32-SSE-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; X32-SSE-NEXT:    movl 12(%ebp), %eax
-; X32-SSE-NEXT:    movdqa 56(%ebp), %xmm3
-; X32-SSE-NEXT:    movdqa 40(%ebp), %xmm4
-; X32-SSE-NEXT:    movdqa 24(%ebp), %xmm5
-; X32-SSE-NEXT:    movl 8(%ebp), %esi
-; X32-SSE-NEXT:    movl 80(%ebp), %edx
-; X32-SSE-NEXT:    movl (%edx), %edi
+; X32-SSE-NEXT:    movdqa 56(%ebp), %xmm4
+; X32-SSE-NEXT:    movdqa 40(%ebp), %xmm5
+; X32-SSE-NEXT:    movdqa 24(%ebp), %xmm6
+; X32-SSE-NEXT:    movl 8(%ebp), %edx
+; X32-SSE-NEXT:    movl 80(%ebp), %ecx
+; X32-SSE-NEXT:    movl (%ecx), %esi
 ; X32-SSE-NEXT:    addps {{\.LCPI.*}}, %xmm0
-; X32-SSE-NEXT:    movntps %xmm0, (%esi)
+; X32-SSE-NEXT:    movntps %xmm0, (%edx)
 ; X32-SSE-NEXT:    paddq {{\.LCPI.*}}, %xmm2
-; X32-SSE-NEXT:    addl (%edx), %edi
-; X32-SSE-NEXT:    movntdq %xmm2, (%esi)
+; X32-SSE-NEXT:    addl (%ecx), %esi
+; X32-SSE-NEXT:    movntdq %xmm2, (%edx)
 ; X32-SSE-NEXT:    addpd {{\.LCPI.*}}, %xmm1
-; X32-SSE-NEXT:    addl (%edx), %edi
-; X32-SSE-NEXT:    movntpd %xmm1, (%esi)
-; X32-SSE-NEXT:    paddd {{\.LCPI.*}}, %xmm5
-; X32-SSE-NEXT:    addl (%edx), %edi
-; X32-SSE-NEXT:    movntdq %xmm5, (%esi)
-; X32-SSE-NEXT:    paddw {{\.LCPI.*}}, %xmm4
-; X32-SSE-NEXT:    addl (%edx), %edi
-; X32-SSE-NEXT:    movntdq %xmm4, (%esi)
-; X32-SSE-NEXT:    paddb {{\.LCPI.*}}, %xmm3
-; X32-SSE-NEXT:    addl (%edx), %edi
-; X32-SSE-NEXT:    movntdq %xmm3, (%esi)
-; X32-SSE-NEXT:    addl (%edx), %edi
-; X32-SSE-NEXT:    movntil %eax, (%esi)
-; X32-SSE-NEXT:    movl (%edx), %eax
-; X32-SSE-NEXT:    movntil %ecx, 4(%esi)
-; X32-SSE-NEXT:    movl 72(%ebp), %ecx
-; X32-SSE-NEXT:    movntil %ecx, (%esi)
-; X32-SSE-NEXT:    addl %edi, %eax
-; X32-SSE-NEXT:    addl (%edx), %eax
-; X32-SSE-NEXT:    leal -8(%ebp), %esp
+; X32-SSE-NEXT:    addl (%ecx), %esi
+; X32-SSE-NEXT:    movntpd %xmm1, (%edx)
+; X32-SSE-NEXT:    paddd {{\.LCPI.*}}, %xmm6
+; X32-SSE-NEXT:    addl (%ecx), %esi
+; X32-SSE-NEXT:    movntdq %xmm6, (%edx)
+; X32-SSE-NEXT:    paddw {{\.LCPI.*}}, %xmm5
+; X32-SSE-NEXT:    addl (%ecx), %esi
+; X32-SSE-NEXT:    movntdq %xmm5, (%edx)
+; X32-SSE-NEXT:    paddb {{\.LCPI.*}}, %xmm4
+; X32-SSE-NEXT:    addl (%ecx), %esi
+; X32-SSE-NEXT:    movntdq %xmm4, (%edx)
+; X32-SSE-NEXT:    addl (%ecx), %esi
+; X32-SSE-NEXT:    movntil %eax, (%edx)
+; X32-SSE-NEXT:    movl (%ecx), %eax
+; X32-SSE-NEXT:    addl %esi, %eax
+; X32-SSE-NEXT:    movsd %xmm3, (%edx)
+; X32-SSE-NEXT:    addl (%ecx), %eax
+; X32-SSE-NEXT:    leal -4(%ebp), %esp
 ; X32-SSE-NEXT:    popl %esi
-; X32-SSE-NEXT:    popl %edi
 ; X32-SSE-NEXT:    popl %ebp
 ; X32-SSE-NEXT:    retl
 ;
@@ -55,45 +52,42 @@ define i32 @f(<4 x float> %A, i8* %B, <2 x double> %C, i32 %D, <2 x i64> %E, <4 
 ; X32-AVX:       # %bb.0:
 ; X32-AVX-NEXT:    pushl %ebp
 ; X32-AVX-NEXT:    movl %esp, %ebp
-; X32-AVX-NEXT:    pushl %edi
 ; X32-AVX-NEXT:    pushl %esi
 ; X32-AVX-NEXT:    andl $-16, %esp
-; X32-AVX-NEXT:    movl 76(%ebp), %ecx
+; X32-AVX-NEXT:    subl $16, %esp
+; X32-AVX-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
 ; X32-AVX-NEXT:    movl 12(%ebp), %eax
-; X32-AVX-NEXT:    vmovdqa 56(%ebp), %xmm3
-; X32-AVX-NEXT:    vmovdqa 40(%ebp), %xmm4
-; X32-AVX-NEXT:    vmovdqa 24(%ebp), %xmm5
-; X32-AVX-NEXT:    movl 8(%ebp), %esi
+; X32-AVX-NEXT:    vmovdqa 56(%ebp), %xmm4
+; X32-AVX-NEXT:    vmovdqa 40(%ebp), %xmm5
+; X32-AVX-NEXT:    vmovdqa 24(%ebp), %xmm6
+; X32-AVX-NEXT:    movl 8(%ebp), %ecx
 ; X32-AVX-NEXT:    movl 80(%ebp), %edx
-; X32-AVX-NEXT:    movl (%edx), %edi
+; X32-AVX-NEXT:    movl (%edx), %esi
 ; X32-AVX-NEXT:    vaddps {{\.LCPI.*}}, %xmm0, %xmm0
-; X32-AVX-NEXT:    vmovntps %xmm0, (%esi)
+; X32-AVX-NEXT:    vmovntps %xmm0, (%ecx)
 ; X32-AVX-NEXT:    vpaddq {{\.LCPI.*}}, %xmm2, %xmm0
-; X32-AVX-NEXT:    addl (%edx), %edi
-; X32-AVX-NEXT:    vmovntdq %xmm0, (%esi)
+; X32-AVX-NEXT:    addl (%edx), %esi
+; X32-AVX-NEXT:    vmovntdq %xmm0, (%ecx)
 ; X32-AVX-NEXT:    vaddpd {{\.LCPI.*}}, %xmm1, %xmm0
-; X32-AVX-NEXT:    addl (%edx), %edi
-; X32-AVX-NEXT:    vmovntpd %xmm0, (%esi)
-; X32-AVX-NEXT:    vpaddd {{\.LCPI.*}}, %xmm5, %xmm0
-; X32-AVX-NEXT:    addl (%edx), %edi
-; X32-AVX-NEXT:    vmovntdq %xmm0, (%esi)
-; X32-AVX-NEXT:    vpaddw {{\.LCPI.*}}, %xmm4, %xmm0
-; X32-AVX-NEXT:    addl (%edx), %edi
-; X32-AVX-NEXT:    vmovntdq %xmm0, (%esi)
-; X32-AVX-NEXT:    vpaddb {{\.LCPI.*}}, %xmm3, %xmm0
-; X32-AVX-NEXT:    addl (%edx), %edi
-; X32-AVX-NEXT:    vmovntdq %xmm0, (%esi)
-; X32-AVX-NEXT:    addl (%edx), %edi
-; X32-AVX-NEXT:    movntil %eax, (%esi)
+; X32-AVX-NEXT:    addl (%edx), %esi
+; X32-AVX-NEXT:    vmovntpd %xmm0, (%ecx)
+; X32-AVX-NEXT:    vpaddd {{\.LCPI.*}}, %xmm6, %xmm0
+; X32-AVX-NEXT:    addl (%edx), %esi
+; X32-AVX-NEXT:    vmovntdq %xmm0, (%ecx)
+; X32-AVX-NEXT:    vpaddw {{\.LCPI.*}}, %xmm5, %xmm0
+; X32-AVX-NEXT:    addl (%edx), %esi
+; X32-AVX-NEXT:    vmovntdq %xmm0, (%ecx)
+; X32-AVX-NEXT:    vpaddb {{\.LCPI.*}}, %xmm4, %xmm0
+; X32-AVX-NEXT:    addl (%edx), %esi
+; X32-AVX-NEXT:    vmovntdq %xmm0, (%ecx)
+; X32-AVX-NEXT:    addl (%edx), %esi
+; X32-AVX-NEXT:    movntil %eax, (%ecx)
 ; X32-AVX-NEXT:    movl (%edx), %eax
-; X32-AVX-NEXT:    movntil %ecx, 4(%esi)
-; X32-AVX-NEXT:    movl 72(%ebp), %ecx
-; X32-AVX-NEXT:    movntil %ecx, (%esi)
-; X32-AVX-NEXT:    addl %edi, %eax
+; X32-AVX-NEXT:    addl %esi, %eax
+; X32-AVX-NEXT:    vmovsd %xmm3, (%ecx)
 ; X32-AVX-NEXT:    addl (%edx), %eax
-; X32-AVX-NEXT:    leal -8(%ebp), %esp
+; X32-AVX-NEXT:    leal -4(%ebp), %esp
 ; X32-AVX-NEXT:    popl %esi
-; X32-AVX-NEXT:    popl %edi
 ; X32-AVX-NEXT:    popl %ebp
 ; X32-AVX-NEXT:    retl
 ;

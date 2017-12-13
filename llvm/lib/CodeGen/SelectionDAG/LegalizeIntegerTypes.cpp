@@ -772,7 +772,30 @@ SDValue DAGTypeLegalizer::PromoteIntRes_UADDSUBO(SDNode *N, unsigned ResNo) {
 SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBCARRY(SDNode *N, unsigned ResNo) {
   if (ResNo == 1)
     return PromoteIntRes_Overflow(N);
-  llvm_unreachable("Not implemented");
+
+  // We need to sign-extend the operands so the carry value computed by the
+  // wide operation will be equivalent to the carry value computed by the
+  // narrow operation.
+  // An ADDCARRY can generate carry only if any of the operands has its
+  // most significant bit set. Sign extension propagates the most significant
+  // bit into the higher bits which means the extra bit that the narrow
+  // addition would need (i.e. the carry) will be propagated through the higher
+  // bits of the wide addition.
+  // A SUBCARRY can generate borrow only if LHS < RHS and this property will be
+  // preserved by sign extension.
+  SDValue LHS = SExtPromotedInteger(N->getOperand(0));
+  SDValue RHS = SExtPromotedInteger(N->getOperand(1));
+
+  EVT ValueVTs[] = {LHS.getValueType(), N->getValueType(1)};
+
+  // Do the arithmetic in the wide type.
+  SDValue Res = DAG.getNode(N->getOpcode(), SDLoc(N), DAG.getVTList(ValueVTs),
+                            LHS, RHS, N->getOperand(2));
+
+  // Update the users of the original carry/borrow value.
+  ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+
+  return SDValue(Res.getNode(), 0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_XMULO(SDNode *N, unsigned ResNo) {

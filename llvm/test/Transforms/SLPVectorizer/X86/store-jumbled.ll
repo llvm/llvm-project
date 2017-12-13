@@ -6,33 +6,26 @@
 define i32 @jumbled-load(i32* noalias nocapture %in, i32* noalias nocapture %inn, i32* noalias nocapture %out) {
 ; CHECK-LABEL: @jumbled-load(
 ; CHECK-NEXT:    [[IN_ADDR:%.*]] = getelementptr inbounds i32, i32* [[IN:%.*]], i64 0
-; CHECK-NEXT:    [[LOAD_1:%.*]] = load i32, i32* [[IN_ADDR]], align 4
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i32, i32* [[IN_ADDR]], i64 1
-; CHECK-NEXT:    [[LOAD_2:%.*]] = load i32, i32* [[GEP_1]], align 4
 ; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i32, i32* [[IN_ADDR]], i64 2
-; CHECK-NEXT:    [[LOAD_3:%.*]] = load i32, i32* [[GEP_2]], align 4
 ; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds i32, i32* [[IN_ADDR]], i64 3
-; CHECK-NEXT:    [[LOAD_4:%.*]] = load i32, i32* [[GEP_3]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[IN_ADDR]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> undef, <4 x i32> <i32 1, i32 3, i32 0, i32 2>
 ; CHECK-NEXT:    [[INN_ADDR:%.*]] = getelementptr inbounds i32, i32* [[INN:%.*]], i64 0
-; CHECK-NEXT:    [[LOAD_5:%.*]] = load i32, i32* [[INN_ADDR]], align 4
 ; CHECK-NEXT:    [[GEP_4:%.*]] = getelementptr inbounds i32, i32* [[INN_ADDR]], i64 1
-; CHECK-NEXT:    [[LOAD_6:%.*]] = load i32, i32* [[GEP_4]], align 4
 ; CHECK-NEXT:    [[GEP_5:%.*]] = getelementptr inbounds i32, i32* [[INN_ADDR]], i64 2
-; CHECK-NEXT:    [[LOAD_7:%.*]] = load i32, i32* [[GEP_5]], align 4
 ; CHECK-NEXT:    [[GEP_6:%.*]] = getelementptr inbounds i32, i32* [[INN_ADDR]], i64 3
-; CHECK-NEXT:    [[LOAD_8:%.*]] = load i32, i32* [[GEP_6]], align 4
-; CHECK-NEXT:    [[MUL_1:%.*]] = mul i32 [[LOAD_1]], [[LOAD_5]]
-; CHECK-NEXT:    [[MUL_2:%.*]] = mul i32 [[LOAD_2]], [[LOAD_6]]
-; CHECK-NEXT:    [[MUL_3:%.*]] = mul i32 [[LOAD_3]], [[LOAD_7]]
-; CHECK-NEXT:    [[MUL_4:%.*]] = mul i32 [[LOAD_4]], [[LOAD_8]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32* [[INN_ADDR]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x i32>, <4 x i32>* [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> undef, <4 x i32> <i32 1, i32 3, i32 0, i32 2>
+; CHECK-NEXT:    [[TMP7:%.*]] = mul <4 x i32> [[TMP3]], [[TMP6]]
 ; CHECK-NEXT:    [[GEP_7:%.*]] = getelementptr inbounds i32, i32* [[OUT:%.*]], i64 0
 ; CHECK-NEXT:    [[GEP_8:%.*]] = getelementptr inbounds i32, i32* [[OUT]], i64 1
 ; CHECK-NEXT:    [[GEP_9:%.*]] = getelementptr inbounds i32, i32* [[OUT]], i64 2
 ; CHECK-NEXT:    [[GEP_10:%.*]] = getelementptr inbounds i32, i32* [[OUT]], i64 3
-; CHECK-NEXT:    store i32 [[MUL_1]], i32* [[GEP_9]], align 4
-; CHECK-NEXT:    store i32 [[MUL_2]], i32* [[GEP_7]], align 4
-; CHECK-NEXT:    store i32 [[MUL_3]], i32* [[GEP_10]], align 4
-; CHECK-NEXT:    store i32 [[MUL_4]], i32* [[GEP_8]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i32* [[GEP_7]] to <4 x i32>*
+; CHECK-NEXT:    store <4 x i32> [[TMP7]], <4 x i32>* [[TMP8]], align 4
 ; CHECK-NEXT:    ret i32 undef
 ;
   %in.addr = getelementptr inbounds i32, i32* %in, i64 0

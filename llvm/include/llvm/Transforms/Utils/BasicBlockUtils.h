@@ -25,6 +25,8 @@
 
 namespace llvm {
 
+class BlockFrequencyInfo;
+class BranchProbabilityInfo;
 class DominatorTree;
 class Function;
 class Instruction;
@@ -301,7 +303,10 @@ Value *GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
 // and D1 is the D block body. We can then duplicate D0 as D0A and D0B, and
 // create the following structure:
 // A -> D0A, B -> D0A, I -> D0B, D0A -> D1, D0B -> D1
-bool SplitIndirectBrCriticalEdges(Function &F);
+// If BPI and BFI aren't non-null, BPI/BFI will be updated accordingly.
+bool SplitIndirectBrCriticalEdges(Function &F,
+                                  BranchProbabilityInfo *BPI = nullptr,
+                                  BlockFrequencyInfo *BFI = nullptr);
 
 } // end namespace llvm
 
