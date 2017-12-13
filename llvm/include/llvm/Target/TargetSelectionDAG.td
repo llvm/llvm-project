@@ -678,6 +678,17 @@ class PatFrag<dag ops, dag frag, code pred = [{}],
   // cast<StoreSDNode>(N)->isTruncatingStore();
   bit IsTruncStore = ?;
 
+  // cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::Monotonic
+  bit IsAtomicOrderingMonotonic = ?;
+  // cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::Acquire
+  bit IsAtomicOrderingAcquire = ?;
+  // cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::Release
+  bit IsAtomicOrderingRelease = ?;
+  // cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::AcquireRelease
+  bit IsAtomicOrderingAcquireRelease = ?;
+  // cast<AtomicSDNode>(N)->getOrdering() == AtomicOrdering::SequentiallyConsistent
+  bit IsAtomicOrderingSequentiallyConsistent = ?;
+
   // cast<LoadSDNode>(N)->getMemoryVT() == MVT::<VT>;
   // cast<StoreSDNode>(N)->getMemoryVT() == MVT::<VT>;
   ValueType MemoryVT = ?;
