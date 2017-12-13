@@ -156,73 +156,6 @@ struct BasicBlockState {
   bool Cleared = false;
 };
 
-
-/// Gather all the definitions dominating the start of BB into Result.  This is
-/// simply the Defs introduced by every dominating basic block and the function
-/// arguments.
-static void GatherDominatingDefs(const BasicBlock *BB,
-                                 AvailableValueSet &Result,
-                                 const DominatorTree &DT,
-                    DenseMap<const BasicBlock *, BasicBlockState *> &BlockMap) {
-  DomTreeNode *DTN = DT[const_cast<BasicBlock *>(BB)];
-
-  while (DTN->getIDom()) {
-    DTN = DTN->getIDom();
-    const auto &Defs = BlockMap[DTN->getBlock()]->Contribution;
-    Result.insert(Defs.begin(), Defs.end());
-    // If this block is 'Cleared', then nothing LiveIn to this block can be
-    // available after this block completes.  Note: This turns out to be
-    // really important for reducing memory consuption of the initial available
-    // sets and thus peak memory usage by this verifier.
-    if (BlockMap[DTN->getBlock()]->Cleared)
-      return;
-  }
-
-  for (const Argument &A : BB->getParent()->args())
-    if (containsGCPtrType(A.getType()))
-      Result.insert(&A);
-}
-
-/// Model the effect of an instruction on the set of available values.
-static void TransferInstruction(const Instruction &I, bool &Cleared,
-                                AvailableValueSet &Available) {
-  if (isStatepoint(I)) {
-    Cleared = true;
-    Available.clear();
-  } else if (containsGCPtrType(I.getType()))
-    Available.insert(&I);
-}
-
-/// Compute the AvailableOut set for BB, based on the BasicBlockState BBS,
-/// which is the BasicBlockState for BB.
-/// ContributionChanged is set when the verifier runs for the first time
-/// (in this case Contribution was changed from 'empty' to its initial state) or
-/// when Contribution of this BB was changed since last computation.
-static void TransferBlock(const BasicBlock *BB, BasicBlockState &BBS,
-                          bool ContributionChanged) {
-
-  const AvailableValueSet &AvailableIn = BBS.AvailableIn;
-  AvailableValueSet &AvailableOut  = BBS.AvailableOut;
-
-  if (BBS.Cleared) {
-    // AvailableOut will change only when Contribution changed.
-    if (ContributionChanged)
-      AvailableOut = BBS.Contribution;
-  } else {
-    // Otherwise, we need to reduce the AvailableOut set by things which are no
-    // longer in our AvailableIn
-    AvailableValueSet Temp = BBS.Contribution;
-    set_union(Temp, AvailableIn);
-    AvailableOut = std::move(Temp);
-  }
-
-  DEBUG(dbgs() << "Transfered block " << BB->getName() << " from ";
-        PrintValueSet(dbgs(), AvailableIn.begin(), AvailableIn.end());
-        dbgs() << " to ";
-        PrintValueSet(dbgs(), AvailableOut.begin(), AvailableOut.end());
-        dbgs() << "\n";);
-}
-
 /// A given derived pointer can have multiple base pointers through phi/selects.
 /// This type indicates when the base pointer is exclusively constant
 /// (ExclusivelySomeConstant), and if that constant is proven to be exclusively
@@ -298,26 +231,153 @@ static bool isNotExclusivelyConstantDerived(const Value *V) {
   return getBaseType(V) == BaseType::NonConstant;
 }
 
-using BlockStateMap = DenseMap<const BasicBlock *, BasicBlockState *>;
+namespace {
+class InstructionVerifier;
 
-/// This function iterates over all BBs from BlockMap and recalculates
-/// AvailableIn/Out for each of them until it converges.
-/// It calls Visitor for each visited BB after updating it's AvailableIn.
-/// BBContributionUpdater may change BB's Contribution and should return true in
-/// this case.
-///
-/// BBContributionUpdater is expected to have following signature:
-/// (const BasicBlock *BB, const BasicBlockState *BBS,
-///  AvailableValueSet &Contribution) -> bool
-/// FIXME: type of BBContributionUpdater is a template parameter because it
-/// might be a lambda with arbitrary non-empty capture list. It's a bit ugly and
-/// unclear, but other options causes us to spread the logic of
-/// RecalculateBBStates across the rest of the algorithm. The solution is to
-/// move this function, TransferBlock, TransferInstruction and others to a
-/// separate class which will hold all the logic related to BlockStateMap.
-template <typename VisitorTy>
-static void RecalculateBBsStates(BlockStateMap &BlockMap,
-                                 VisitorTy &&BBContributionUpdater) {
+/// Builds BasicBlockState for each BB of the function.
+/// It can traverse function for verification and provides all required
+/// information.
+class GCPtrTracker {
+  const Function &F;
+  SpecificBumpPtrAllocator<BasicBlockState> BSAllocator;
+  DenseMap<const BasicBlock *, BasicBlockState *> BlockMap;
+  // This set contains defs of unrelocated pointers that are proved to be legal
+  // and don't need verification.
+  DenseSet<const Instruction *> ValidUnrelocatedDefs;
+
+public:
+  GCPtrTracker(const Function &F, const DominatorTree &DT);
+
+  BasicBlockState *getBasicBlockState(const BasicBlock *BB);
+  const BasicBlockState *getBasicBlockState(const BasicBlock *BB) const;
+
+  /// Traverse each BB of the function and call
+  /// InstructionVerifier::verifyInstruction for each possibly invalid
+  /// instruction.
+  /// It destructively modifies GCPtrTracker so it's passed via rvalue reference
+  /// in order to prohibit further usages of GCPtrTracker as it'll be in
+  /// inconsistent state.
+  static void verifyFunction(GCPtrTracker &&Tracker,
+                             InstructionVerifier &Verifier);
+
+private:
+  /// Returns true if the instruction may be safely skipped during verification.
+  bool instructionMayBeSkipped(const Instruction *I) const;
+
+  /// Iterates over all BBs from BlockMap and recalculates AvailableIn/Out for
+  /// each of them until it converges.
+  void recalculateBBsStates();
+
+  /// Remove from Contribution all defs that legally produce unrelocated
+  /// pointers and saves them to ValidUnrelocatedDefs.
+  /// Though Contribution should belong to BBS it is passed separately with
+  /// different const-modifier in order to emphasize (and guarantee) that only
+  /// Contribution will be changed.
+  /// Returns true if Contribution was changed otherwise false.
+  bool removeValidUnrelocatedDefs(const BasicBlock *BB,
+                                  const BasicBlockState *BBS,
+                                  AvailableValueSet &Contribution);
+
+  /// Gather all the definitions dominating the start of BB into Result. This is
+  /// simply the defs introduced by every dominating basic block and the
+  /// function arguments.
+  void gatherDominatingDefs(const BasicBlock *BB, AvailableValueSet &Result,
+                            const DominatorTree &DT);
+
+  /// Compute the AvailableOut set for BB, based on the BasicBlockState BBS,
+  /// which is the BasicBlockState for BB.
+  /// ContributionChanged is set when the verifier runs for the first time
+  /// (in this case Contribution was changed from 'empty' to its initial state)
+  /// or when Contribution of this BB was changed since last computation.
+  static void transferBlock(const BasicBlock *BB, BasicBlockState &BBS,
+                            bool ContributionChanged);
+
+  /// Model the effect of an instruction on the set of available values.
+  static void transferInstruction(const Instruction &I, bool &Cleared,
+                                  AvailableValueSet &Available);
+};
+
+/// It is a visitor for GCPtrTracker::verifyFunction. It decides if the
+/// instruction (which uses heap reference) is legal or not, given our safepoint
+/// semantics.
+class InstructionVerifier {
+  bool AnyInvalidUses = false;
+
+public:
+  void verifyInstruction(const GCPtrTracker *Tracker, const Instruction &I,
+                         const AvailableValueSet &AvailableSet);
+
+  bool hasAnyInvalidUses() const { return AnyInvalidUses; }
+
+private:
+  void reportInvalidUse(const Value &V, const Instruction &I);
+};
+} // end anonymous namespace
+
+GCPtrTracker::GCPtrTracker(const Function &F, const DominatorTree &DT) : F(F) {
+  // First, calculate Contribution of each BB.
+  for (const BasicBlock &BB : F) {
+    BasicBlockState *BBS = new (BSAllocator.Allocate()) BasicBlockState;
+    for (const auto &I : BB)
+      transferInstruction(I, BBS->Cleared, BBS->Contribution);
+    BlockMap[&BB] = BBS;
+  }
+
+  // Initialize AvailableIn/Out sets of each BB using only information about
+  // dominating BBs.
+  for (auto &BBI : BlockMap) {
+    gatherDominatingDefs(BBI.first, BBI.second->AvailableIn, DT);
+    transferBlock(BBI.first, *BBI.second, true);
+  }
+
+  // Simulate the flow of defs through the CFG and recalculate AvailableIn/Out
+  // sets of each BB until it converges. If any def is proved to be an
+  // unrelocated pointer, it will be removed from all BBSs.
+  recalculateBBsStates();
+}
+
+BasicBlockState *GCPtrTracker::getBasicBlockState(const BasicBlock *BB) {
+  auto it = BlockMap.find(BB);
+  assert(it != BlockMap.end() &&
+         "No such BB in BlockMap! Probably BB from another function");
+  return it->second;
+}
+
+const BasicBlockState *GCPtrTracker::getBasicBlockState(
+    const BasicBlock *BB) const {
+  return const_cast<GCPtrTracker *>(this)->getBasicBlockState(BB);
+}
+
+bool GCPtrTracker::instructionMayBeSkipped(const Instruction *I) const {
+  return ValidUnrelocatedDefs.count(I);
+}
+
+void GCPtrTracker::verifyFunction(GCPtrTracker &&Tracker,
+                                  InstructionVerifier &Verifier) {
+  // We need RPO here to a) report always the first error b) report errors in
+  // same order from run to run.
+  ReversePostOrderTraversal<const Function *> RPOT(&Tracker.F);
+  for (const BasicBlock *BB : RPOT) {
+    BasicBlockState *BBS = Tracker.getBasicBlockState(BB);
+    // We destructively modify AvailableIn as we traverse the block instruction
+    // by instruction.
+    AvailableValueSet &AvailableSet = BBS->AvailableIn;
+    for (const Instruction &I : *BB) {
+      if (Tracker.instructionMayBeSkipped(&I))
+        continue; // This instruction shouldn't be added to AvailableSet.
+
+      Verifier.verifyInstruction(&Tracker, I, AvailableSet);
+
+      // Model the effect of current instruction on AvailableSet to keep the set
+      // relevant at each point of BB.
+      bool Cleared = false;
+      transferInstruction(I, Cleared, AvailableSet);
+      (void)Cleared;
+    }
+  }
+}
+
+void GCPtrTracker::recalculateBBsStates() {
   SetVector<const BasicBlock *> Worklist;
   // TODO: This order is suboptimal, it's better to replace it with priority
   // queue where priority is RPO number of BB.
@@ -338,12 +398,12 @@ static void RecalculateBBsStates(BlockStateMap &BlockMap,
 
     bool InputsChanged = OldInCount != BBS->AvailableIn.size();
     bool ContributionChanged =
-        BBContributionUpdater(BB, BBS, BBS->Contribution);
+        removeValidUnrelocatedDefs(BB, BBS, BBS->Contribution);
     if (!InputsChanged && !ContributionChanged)
       continue;
 
     size_t OldOutCount = BBS->AvailableOut.size();
-    TransferBlock(BB, *BBS, ContributionChanged);
+    transferBlock(BB, *BBS, ContributionChanged);
     if (OldOutCount != BBS->AvailableOut.size()) {
       assert(OldOutCount > BBS->AvailableOut.size() && "invariant!");
       Worklist.insert(succ_begin(BB), succ_end(BB));
@@ -351,167 +411,188 @@ static void RecalculateBBsStates(BlockStateMap &BlockMap,
   }
 }
 
-static void Verify(const Function &F, const DominatorTree &DT) {
-  SpecificBumpPtrAllocator<BasicBlockState> BSAllocator;
-  BlockStateMap BlockMap;
+bool GCPtrTracker::removeValidUnrelocatedDefs(const BasicBlock *BB,
+                                              const BasicBlockState *BBS,
+                                              AvailableValueSet &Contribution) {
+  assert(&BBS->Contribution == &Contribution &&
+         "Passed Contribution should be from the passed BasicBlockState!");
+  AvailableValueSet AvailableSet = BBS->AvailableIn;
+  bool ContributionChanged = false;
+  for (const Instruction &I : *BB) {
+    bool ProducesUnrelocatedPointer = false;
+    if ((isa<GetElementPtrInst>(I) || isa<BitCastInst>(I)) &&
+        containsGCPtrType(I.getType())) {
+      // GEP/bitcast of unrelocated pointer is legal by itself but this
+      // def shouldn't appear in any AvailableSet.
+      for (const Value *V : I.operands())
+        if (containsGCPtrType(V->getType()) &&
+            isNotExclusivelyConstantDerived(V) && !AvailableSet.count(V)) {
+          ProducesUnrelocatedPointer = true;
+          break;
+        }
+    }
+    if (!ProducesUnrelocatedPointer) {
+      bool Cleared = false;
+      transferInstruction(I, Cleared, AvailableSet);
+      (void)Cleared;
+    } else {
+      // Remove def of unrelocated pointer from Contribution of this BB
+      // and trigger update of all its successors.
+      Contribution.erase(&I);
+      ValidUnrelocatedDefs.insert(&I);
+      DEBUG(dbgs() << "Removing " << I << " from Contribution of "
+                   << BB->getName() << "\n");
+      ContributionChanged = true;
+    }
+  }
+  return ContributionChanged;
+}
 
+void GCPtrTracker::gatherDominatingDefs(const BasicBlock *BB,
+                                        AvailableValueSet &Result,
+                                        const DominatorTree &DT) {
+  DomTreeNode *DTN = DT[const_cast<BasicBlock *>(BB)];
+
+  while (DTN->getIDom()) {
+    DTN = DTN->getIDom();
+    const auto &Defs = BlockMap[DTN->getBlock()]->Contribution;
+    Result.insert(Defs.begin(), Defs.end());
+    // If this block is 'Cleared', then nothing LiveIn to this block can be
+    // available after this block completes.  Note: This turns out to be
+    // really important for reducing memory consuption of the initial available
+    // sets and thus peak memory usage by this verifier.
+    if (BlockMap[DTN->getBlock()]->Cleared)
+      return;
+  }
+
+  for (const Argument &A : BB->getParent()->args())
+    if (containsGCPtrType(A.getType()))
+      Result.insert(&A);
+}
+
+void GCPtrTracker::transferBlock(const BasicBlock *BB, BasicBlockState &BBS,
+                                 bool ContributionChanged) {
+  const AvailableValueSet &AvailableIn = BBS.AvailableIn;
+  AvailableValueSet &AvailableOut = BBS.AvailableOut;
+
+  if (BBS.Cleared) {
+    // AvailableOut will change only when Contribution changed.
+    if (ContributionChanged)
+      AvailableOut = BBS.Contribution;
+  } else {
+    // Otherwise, we need to reduce the AvailableOut set by things which are no
+    // longer in our AvailableIn
+    AvailableValueSet Temp = BBS.Contribution;
+    set_union(Temp, AvailableIn);
+    AvailableOut = std::move(Temp);
+  }
+
+  DEBUG(dbgs() << "Transfered block " << BB->getName() << " from ";
+        PrintValueSet(dbgs(), AvailableIn.begin(), AvailableIn.end());
+        dbgs() << " to ";
+        PrintValueSet(dbgs(), AvailableOut.begin(), AvailableOut.end());
+        dbgs() << "\n";);
+}
+
+void GCPtrTracker::transferInstruction(const Instruction &I, bool &Cleared,
+                                       AvailableValueSet &Available) {
+  if (isStatepoint(I)) {
+    Cleared = true;
+    Available.clear();
+  } else if (containsGCPtrType(I.getType()))
+    Available.insert(&I);
+}
+
+void InstructionVerifier::verifyInstruction(
+    const GCPtrTracker *Tracker, const Instruction &I,
+    const AvailableValueSet &AvailableSet) {
+  if (const PHINode *PN = dyn_cast<PHINode>(&I)) {
+    if (containsGCPtrType(PN->getType()))
+      for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
+        const BasicBlock *InBB = PN->getIncomingBlock(i);
+        const Value *InValue = PN->getIncomingValue(i);
+
+        if (isNotExclusivelyConstantDerived(InValue) &&
+            !Tracker->getBasicBlockState(InBB)->AvailableOut.count(InValue))
+          reportInvalidUse(*InValue, *PN);
+      }
+  } else if (isa<CmpInst>(I) &&
+             containsGCPtrType(I.getOperand(0)->getType())) {
+    Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
+    enum BaseType baseTyLHS = getBaseType(LHS),
+                  baseTyRHS = getBaseType(RHS);
+
+    // Returns true if LHS and RHS are unrelocated pointers and they are
+    // valid unrelocated uses.
+    auto hasValidUnrelocatedUse = [&AvailableSet, baseTyLHS, baseTyRHS, &LHS,
+                                   &RHS] () {
+        // A cmp instruction has valid unrelocated pointer operands only if
+        // both operands are unrelocated pointers.
+        // In the comparison between two pointers, if one is an unrelocated
+        // use, the other *should be* an unrelocated use, for this
+        // instruction to contain valid unrelocated uses. This unrelocated
+        // use can be a null constant as well, or another unrelocated
+        // pointer.
+        if (AvailableSet.count(LHS) || AvailableSet.count(RHS))
+          return false;
+        // Constant pointers (that are not exclusively null) may have
+        // meaning in different VMs, so we cannot reorder the compare
+        // against constant pointers before the safepoint. In other words,
+        // comparison of an unrelocated use against a non-null constant
+        // maybe invalid.
+        if ((baseTyLHS == BaseType::ExclusivelySomeConstant &&
+             baseTyRHS == BaseType::NonConstant) ||
+            (baseTyLHS == BaseType::NonConstant &&
+             baseTyRHS == BaseType::ExclusivelySomeConstant))
+          return false;
+        // All other cases are valid cases enumerated below:
+        // 1. Comparison between an exlusively derived null pointer and a
+        // constant base pointer.
+        // 2. Comparison between an exlusively derived null pointer and a
+        // non-constant unrelocated base pointer.
+        // 3. Comparison between 2 unrelocated pointers.
+        return true;
+    };
+    if (!hasValidUnrelocatedUse()) {
+      // Print out all non-constant derived pointers that are unrelocated
+      // uses, which are invalid.
+      if (baseTyLHS == BaseType::NonConstant && !AvailableSet.count(LHS))
+        reportInvalidUse(*LHS, I);
+      if (baseTyRHS == BaseType::NonConstant && !AvailableSet.count(RHS))
+        reportInvalidUse(*RHS, I);
+    }
+  } else {
+    for (const Value *V : I.operands())
+      if (containsGCPtrType(V->getType()) &&
+          isNotExclusivelyConstantDerived(V) && !AvailableSet.count(V))
+        reportInvalidUse(*V, I);
+  }
+}
+
+void InstructionVerifier::reportInvalidUse(const Value &V,
+                                           const Instruction &I) {
+  errs() << "Illegal use of unrelocated value found!\n";
+  errs() << "Def: " << V << "\n";
+  errs() << "Use: " << I << "\n";
+  if (!PrintOnly)
+    abort();
+  AnyInvalidUses = true;
+}
+
+static void Verify(const Function &F, const DominatorTree &DT) {
   DEBUG(dbgs() << "Verifying gc pointers in function: " << F.getName() << "\n");
   if (PrintOnly)
     dbgs() << "Verifying gc pointers in function: " << F.getName() << "\n";
 
-
-  for (const BasicBlock &BB : F) {
-    BasicBlockState *BBS = new(BSAllocator.Allocate()) BasicBlockState;
-    for (const auto &I : BB)
-      TransferInstruction(I, BBS->Cleared, BBS->Contribution);
-    BlockMap[&BB] = BBS;
-  }
-
-  for (auto &BBI : BlockMap) {
-    GatherDominatingDefs(BBI.first, BBI.second->AvailableIn, DT, BlockMap);
-    TransferBlock(BBI.first, *BBI.second, true);
-  }
-
-  RecalculateBBsStates(BlockMap, [] (const BasicBlock *,
-                                     const BasicBlockState *,
-                                     AvailableValueSet &) {
-    return false;
-  });
+  GCPtrTracker Tracker(F, DT);
 
   // We now have all the information we need to decide if the use of a heap
   // reference is legal or not, given our safepoint semantics.
 
-  bool AnyInvalidUses = false;
+  InstructionVerifier Verifier;
+  GCPtrTracker::verifyFunction(std::move(Tracker), Verifier);
 
-  auto ReportInvalidUse = [&AnyInvalidUses](const Value &V,
-                                            const Instruction &I) {
-    errs() << "Illegal use of unrelocated value found!\n";
-    errs() << "Def: " << V << "\n";
-    errs() << "Use: " << I << "\n";
-    if (!PrintOnly)
-      abort();
-    AnyInvalidUses = true;
-  };
-
-  // This set contains defs that can be safely ignored during verification.
-  DenseSet<const Instruction *> ValidUnrelocatedDefs;
-
-  // Now we can remove all valid unrelocated gc pointer defs from all BBS sets.
-  RecalculateBBsStates(BlockMap, [&ValidUnrelocatedDefs](
-                                     const BasicBlock *BB,
-                                     const BasicBlockState *BBS,
-                                     AvailableValueSet &Contribution) {
-    AvailableValueSet AvailableSet = BBS->AvailableIn;
-    bool ContributionChanged = false;
-    for (const Instruction &I : *BB) {
-      bool ProducesUnrelocatedPointer = false;
-      if ((isa<GetElementPtrInst>(I) || isa<BitCastInst>(I)) &&
-          containsGCPtrType(I.getType())) {
-        // GEP/bitcast of unrelocated pointer is legal by itself but this
-        // def shouldn't appear in any AvailableSet.
-        for (const Value *V : I.operands())
-          if (containsGCPtrType(V->getType()) &&
-              isNotExclusivelyConstantDerived(V) && !AvailableSet.count(V)) {
-            ProducesUnrelocatedPointer = true;
-            break;
-          }
-      }
-      if (!ProducesUnrelocatedPointer) {
-        bool Cleared = false;
-        TransferInstruction(I, Cleared, AvailableSet);
-        (void)Cleared;
-      } else {
-        // Remove def of unrelocated pointer from Contribution of this BB
-        // and trigger update of all its successors.
-        Contribution.erase(&I);
-        ValidUnrelocatedDefs.insert(&I);
-        DEBUG(dbgs() << "Removing " << I << " from Contribution of "
-                     << BB->getName() << "\n");
-        ContributionChanged = true;
-      }
-    }
-    return ContributionChanged;
-  });
-
-  // We need RPO here to a) report always the first error b) report errors in
-  // same order from run to run.
-  ReversePostOrderTraversal<const Function *> RPOT(&F);
-  for (const BasicBlock *BB : RPOT) {
-    BasicBlockState *BBS = BlockMap[BB];
-    // We destructively modify AvailableIn as we traverse the block instruction
-    // by instruction.
-    AvailableValueSet &AvailableSet = BBS->AvailableIn;
-    for (const Instruction &I : *BB) {
-      if (ValidUnrelocatedDefs.count(&I)) {
-        continue; // This instruction shouldn't be added to AvailableSet.
-      } else if (const PHINode *PN = dyn_cast<PHINode>(&I)) {
-        if (containsGCPtrType(PN->getType()))
-          for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
-            const BasicBlock *InBB = PN->getIncomingBlock(i);
-            const Value *InValue = PN->getIncomingValue(i);
-
-            if (isNotExclusivelyConstantDerived(InValue) &&
-                !BlockMap[InBB]->AvailableOut.count(InValue))
-              ReportInvalidUse(*InValue, *PN);
-          }
-      } else if (isa<CmpInst>(I) &&
-                 containsGCPtrType(I.getOperand(0)->getType())) {
-        Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
-        enum BaseType baseTyLHS = getBaseType(LHS),
-                      baseTyRHS = getBaseType(RHS);
-
-        // Returns true if LHS and RHS are unrelocated pointers and they are
-        // valid unrelocated uses.
-        auto hasValidUnrelocatedUse = [&AvailableSet, baseTyLHS, baseTyRHS, &LHS, &RHS] () {
-            // A cmp instruction has valid unrelocated pointer operands only if
-            // both operands are unrelocated pointers.
-            // In the comparison between two pointers, if one is an unrelocated
-            // use, the other *should be* an unrelocated use, for this
-            // instruction to contain valid unrelocated uses. This unrelocated
-            // use can be a null constant as well, or another unrelocated
-            // pointer.
-            if (AvailableSet.count(LHS) || AvailableSet.count(RHS))
-              return false;
-            // Constant pointers (that are not exclusively null) may have
-            // meaning in different VMs, so we cannot reorder the compare
-            // against constant pointers before the safepoint. In other words,
-            // comparison of an unrelocated use against a non-null constant
-            // maybe invalid.
-            if ((baseTyLHS == BaseType::ExclusivelySomeConstant &&
-                 baseTyRHS == BaseType::NonConstant) ||
-                (baseTyLHS == BaseType::NonConstant &&
-                 baseTyRHS == BaseType::ExclusivelySomeConstant))
-              return false;
-            // All other cases are valid cases enumerated below:
-            // 1. Comparison between an exlusively derived null pointer and a
-            // constant base pointer.
-            // 2. Comparison between an exlusively derived null pointer and a
-            // non-constant unrelocated base pointer.
-            // 3. Comparison between 2 unrelocated pointers.
-            return true;
-        };
-        if (!hasValidUnrelocatedUse()) {
-          // Print out all non-constant derived pointers that are unrelocated
-          // uses, which are invalid.
-          if (baseTyLHS == BaseType::NonConstant && !AvailableSet.count(LHS))
-            ReportInvalidUse(*LHS, I);
-          if (baseTyRHS == BaseType::NonConstant && !AvailableSet.count(RHS))
-            ReportInvalidUse(*RHS, I);
-        }
-      } else {
-        for (const Value *V : I.operands())
-          if (containsGCPtrType(V->getType()) &&
-              isNotExclusivelyConstantDerived(V) && !AvailableSet.count(V))
-            ReportInvalidUse(*V, I);
-      }
-
-      bool Cleared = false;
-      TransferInstruction(I, Cleared, AvailableSet);
-      (void)Cleared;
-    }
-  }
-
-  if (PrintOnly && !AnyInvalidUses) {
+  if (PrintOnly && !Verifier.hasAnyInvalidUses()) {
     dbgs() << "No illegal uses found by SafepointIRVerifier in: " << F.getName()
            << "\n";
   }

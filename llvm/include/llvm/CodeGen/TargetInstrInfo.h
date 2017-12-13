@@ -18,7 +18,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/None.h"
-#include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -39,6 +38,7 @@ namespace llvm {
 
 class DFAPacketizer;
 class InstrItineraryData;
+class LiveIntervals;
 class LiveVariables;
 class MachineMemOperand;
 class MachineRegisterInfo;

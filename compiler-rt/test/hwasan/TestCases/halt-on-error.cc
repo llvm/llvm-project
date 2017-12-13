@@ -11,19 +11,16 @@ int main() {
   __hwasan_disable_allocator_tagging();
   return x[2] + ((char *)x)[6] + ((char *)x)[9];
   // CHECK: READ of size 4 at
-  // CHECK: #0 {{.*}} in __hwasan_load4 {{.*}}hwasan.cc
-  // CHECK: #1 {{.*}} in main {{.*}}halt-on-error.cc:12
-  // CHECK: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in __hwasan_load4
+  // CHECK: #0 {{.*}} in main {{.*}}halt-on-error.cc:12
+  // CHECK: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in main
 
   // CHECK: READ of size 1 at
-  // CHECK: #0 {{.*}} in __hwasan_load1 {{.*}}hwasan.cc
-  // CHECK: #1 {{.*}} in main {{.*}}halt-on-error.cc:12
-  // CHECK: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in __hwasan_load1
+  // CHECK: #0 {{.*}} in main {{.*}}halt-on-error.cc:12
+  // CHECK: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in main
 
   // CHECK: READ of size 1 at
-  // CHECK: #0 {{.*}} in __hwasan_load1 {{.*}}hwasan.cc
-  // CHECK: #1 {{.*}} in main {{.*}}halt-on-error.cc:12
-  // CHECK: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in __hwasan_load1
+  // CHECK: #0 {{.*}} in main {{.*}}halt-on-error.cc:12
+  // CHECK: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in main
 
   // CHECK-NOT: tag-mismatch
 }

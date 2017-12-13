@@ -7,8 +7,10 @@ target triple = "aarch64--linux-android"
 
 define void @atomicrmw(i64* %ptr) sanitize_hwaddress {
 ; CHECK-LABEL: @atomicrmw(
-; CHECK: %[[A:[^ ]*]] = ptrtoint i64* %ptr to i64
-; CHECK: call void @__hwasan_store8(i64 %[[A]])
+; CHECK: lshr i64 %[[A:[^ ]*]], 56
+; CHECK: call void asm sideeffect "hlt #275", "{x0}"(i64 %[[A]])
+; CHECK: atomicrmw add i64* %ptr, i64 1 seq_cst
+; CHECK: ret void
 
 entry:
   %0 = atomicrmw add i64* %ptr, i64 1 seq_cst
@@ -17,8 +19,10 @@ entry:
 
 define void @cmpxchg(i64* %ptr, i64 %compare_to, i64 %new_value) sanitize_hwaddress {
 ; CHECK-LABEL: @cmpxchg(
-; CHECK: %[[A:[^ ]*]] = ptrtoint i64* %ptr to i64
-; CHECK: call void @__hwasan_store8(i64 %[[A]])
+; CHECK: lshr i64 %[[A:[^ ]*]], 56
+; CHECK: call void asm sideeffect "hlt #275", "{x0}"(i64 %[[A]])
+; CHECK: cmpxchg i64* %ptr, i64 %compare_to, i64 %new_value seq_cst seq_cst
+; CHECK: ret void
 
 entry:
   %0 = cmpxchg i64* %ptr, i64 %compare_to, i64 %new_value seq_cst seq_cst

@@ -567,7 +567,6 @@ void Fuzzer::ReportNewCoverage(InputInfo *II, const Unit &U) {
   NumberOfNewUnitsAdded++;
   CheckExitOnSrcPosOrItem(); // Check only after the unit is saved to corpus.
   LastCorpusUpdateRun = TotalNumberOfRuns;
-  LastCorpusUpdateTime = system_clock::now();
 }
 
 // Tries detecting a memory leak on the particular input that we have just
@@ -758,18 +757,15 @@ void Fuzzer::Loop(const Vector<std::string> &CorpusDirs) {
     // Update TmpMaxMutationLen
     if (Options.ExperimentalLenControl) {
       if (TmpMaxMutationLen < MaxMutationLen &&
-          (TotalNumberOfRuns - LastCorpusUpdateRun >
-               Options.ExperimentalLenControl &&
-           duration_cast<seconds>(Now - LastCorpusUpdateTime).count() >= 1)) {
-        LastCorpusUpdateRun = TotalNumberOfRuns;
-        LastCorpusUpdateTime = Now;
+          TotalNumberOfRuns - LastCorpusUpdateRun >
+              Options.ExperimentalLenControl * Log(TmpMaxMutationLen)) {
         TmpMaxMutationLen =
-            Min(MaxMutationLen,
-                TmpMaxMutationLen + Max(size_t(4), TmpMaxMutationLen / 8));
+            Min(MaxMutationLen, TmpMaxMutationLen + Log(TmpMaxMutationLen));
         if (TmpMaxMutationLen <= MaxMutationLen)
           Printf("#%zd\tTEMP_MAX_LEN: %zd (%zd %zd)\n", TotalNumberOfRuns,
                  TmpMaxMutationLen, Options.ExperimentalLenControl,
                  LastCorpusUpdateRun);
+        LastCorpusUpdateRun = TotalNumberOfRuns;
       }
     } else {
       TmpMaxMutationLen = MaxMutationLen;

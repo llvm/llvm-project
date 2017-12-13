@@ -10,7 +10,7 @@
 #include "SystemZRegisterInfo.h"
 #include "SystemZInstrInfo.h"
 #include "SystemZSubtarget.h"
-#include "llvm/CodeGen/LiveIntervalAnalysis.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"

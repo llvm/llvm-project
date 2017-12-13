@@ -14,8 +14,7 @@ int main() {
   __hwasan_disable_allocator_tagging();
   return x[5];
   // CHECK: READ of size 1 at
-  // CHECK: #0 {{.*}} in __hwasan_load1 {{.*}}hwasan.cc
-  // CHECK: #1 {{.*}} in main {{.*}}use-after-free.cc:15
+  // CHECK: #0 {{.*}} in main {{.*}}use-after-free.cc:15
 
   // CHECK: freed here:
   // CHECK: #0 {{.*}} in free {{.*}}hwasan_interceptors.cc
@@ -25,5 +24,5 @@ int main() {
   // CHECK: #0 {{.*}} in __interceptor_malloc {{.*}}hwasan_interceptors.cc
   // CHECK: #1 {{.*}} in main {{.*}}use-after-free.cc:12
 
-  // CHECK: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in __hwasan_load1
+  // CHECK: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in main
 }
