@@ -10,7 +10,7 @@ entry:
 }
 
 ; CHECK:   - Type:            EXPORT
-; CHECK:     Exports:         
+; CHECK:     Exports:
 ; CHECK:       - Name:            memory
 ; CHECK:         Kind:            MEMORY
 ; CHECK:         Index:           0
