@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenDAGPatterns.h"
 #include "CodeGenTarget.h"
 #include "X86RecognizableInstr.h"
 #include "llvm/TableGen/Error.h"

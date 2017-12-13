@@ -164,6 +164,7 @@ set(CROSS_TOOLCHAIN_FLAGS_NATIVE "${_CTF_NATIVE_DEFAULT}" CACHE STRING "")
 
 set(COMPILE_FLAGS
     -D_CRT_SECURE_NO_WARNINGS
+    -fms-compatibility-version=19.11
     -imsvc "${MSVC_INCLUDE}"
     -imsvc "${WINSDK_INCLUDE}/ucrt"
     -imsvc "${WINSDK_INCLUDE}/shared"

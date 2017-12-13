@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
+#include <cctype>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>

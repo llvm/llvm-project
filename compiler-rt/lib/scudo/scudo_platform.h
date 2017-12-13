@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// Scudo platform specific definitions.
+/// TODO(kostyak): add tests for the compile time defines.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -44,6 +45,11 @@
 #ifndef SCUDO_SHARED_TSD_POOL_SIZE
 # define SCUDO_SHARED_TSD_POOL_SIZE 32U
 #endif  // SCUDO_SHARED_TSD_POOL_SIZE
+
+// The following allows the public interface functions to be disabled.
+#ifndef SCUDO_CAN_USE_PUBLIC_INTERFACE
+# define SCUDO_CAN_USE_PUBLIC_INTERFACE 1
+#endif
 
 namespace __scudo {
 

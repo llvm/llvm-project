@@ -20,10 +20,7 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GlobalAlias.h"
-#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/COFFImportFile.h"
@@ -43,13 +40,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
-#include <cctype>
-#include <cerrno>
-#include <cstring>
-#include <system_error>
 #include <vector>
-#include <string.h>
 
 using namespace llvm;
 using namespace object;

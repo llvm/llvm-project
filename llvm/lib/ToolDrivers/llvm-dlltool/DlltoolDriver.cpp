@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ToolDrivers/llvm-dlltool/DlltoolDriver.h"
-#include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/COFFImportFile.h"
 #include "llvm/Object/COFFModuleDefinition.h"
@@ -21,7 +20,6 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Path.h"
 
-#include <string>
 #include <vector>
 
 using namespace llvm;
