@@ -94,6 +94,19 @@ def : GINodeEquiv<G_LOAD, ld> { let CheckMMOIsNonAtomic = 1; }
 // G_STORE with a non-atomic MachineMemOperand.
 def : GINodeEquiv<G_STORE, st> { let CheckMMOIsNonAtomic = 1; }
 
+def : GINodeEquiv<G_ATOMIC_CMPXCHG, atomic_cmp_swap>;
+def : GINodeEquiv<G_ATOMICRMW_XCHG, atomic_swap>;
+def : GINodeEquiv<G_ATOMICRMW_ADD, atomic_load_add>;
+def : GINodeEquiv<G_ATOMICRMW_SUB, atomic_load_sub>;
+def : GINodeEquiv<G_ATOMICRMW_AND, atomic_load_and>;
+def : GINodeEquiv<G_ATOMICRMW_NAND, atomic_load_nand>;
+def : GINodeEquiv<G_ATOMICRMW_OR, atomic_load_or>;
+def : GINodeEquiv<G_ATOMICRMW_XOR, atomic_load_xor>;
+def : GINodeEquiv<G_ATOMICRMW_MIN, atomic_load_min>;
+def : GINodeEquiv<G_ATOMICRMW_MAX, atomic_load_max>;
+def : GINodeEquiv<G_ATOMICRMW_UMIN, atomic_load_umin>;
+def : GINodeEquiv<G_ATOMICRMW_UMAX, atomic_load_umax>;
+
 // Specifies the GlobalISel equivalents for SelectionDAG's ComplexPattern.
 // Should be used on defs that subclass GIComplexOperandMatcher<>.
 class GIComplexPatternEquiv<ComplexPattern seldag> {
