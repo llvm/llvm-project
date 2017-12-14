@@ -10,13 +10,12 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_CLANGDUNITSTORE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CLANGDUNITSTORE_H
 
-#include <mutex>
-
 #include "ClangdUnit.h"
 #include "GlobalCompilationDatabase.h"
 #include "Logger.h"
 #include "Path.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include <mutex>
 
 namespace clang {
 namespace clangd {

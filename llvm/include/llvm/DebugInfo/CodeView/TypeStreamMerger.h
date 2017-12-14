@@ -19,6 +19,8 @@ namespace llvm {
 namespace codeview {
 
 class TypeIndex;
+struct GloballyHashedType;
+class GlobalTypeTableBuilder;
 class MergingTypeTableBuilder;
 
 /// \brief Merge one set of type records into another.  This method assumes
@@ -82,6 +84,22 @@ Error mergeTypeAndIdRecords(MergingTypeTableBuilder &DestIds,
                             MergingTypeTableBuilder &DestTypes,
                             SmallVectorImpl<TypeIndex> &SourceToDest,
                             const CVTypeArray &IdsAndTypes);
+
+Error mergeTypeAndIdRecords(GlobalTypeTableBuilder &DestIds,
+                            GlobalTypeTableBuilder &DestTypes,
+                            SmallVectorImpl<TypeIndex> &SourceToDest,
+                            const CVTypeArray &IdsAndTypes,
+                            ArrayRef<GloballyHashedType> Hashes);
+
+Error mergeTypeRecords(GlobalTypeTableBuilder &Dest,
+                       SmallVectorImpl<TypeIndex> &SourceToDest,
+                       const CVTypeArray &Types,
+                       ArrayRef<GloballyHashedType> Hashes);
+
+Error mergeIdRecords(GlobalTypeTableBuilder &Dest, ArrayRef<TypeIndex> Types,
+                     SmallVectorImpl<TypeIndex> &SourceToDest,
+                     const CVTypeArray &Ids,
+                     ArrayRef<GloballyHashedType> Hashes);
 
 } // end namespace codeview
 } // end namespace llvm

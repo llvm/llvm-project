@@ -7,7 +7,7 @@
 ; RUN: opt %s -o %t.o
 ; RUN: llvm-lto2 dump-symtab %t.o | FileCheck %s --check-prefix=SYMTAB
 ; RUN: opt %p/Inputs/global_with_section.ll -o %t2.o
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     --plugin-opt=save-temps \
 ; RUN:     -o %t3.o %t.o %t2.o
 ; Check results of internalization
@@ -17,7 +17,7 @@
 ; RUN: opt -module-summary %s -o %t.o
 ; RUN: llvm-lto2 dump-symtab %t.o | FileCheck %s --check-prefix=SYMTAB
 ; RUN: opt -module-summary %p/Inputs/global_with_section.ll -o %t2.o
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     --plugin-opt=thinlto \
 ; RUN:     --plugin-opt=save-temps \
 ; RUN:     -o %t3.o %t.o %t2.o

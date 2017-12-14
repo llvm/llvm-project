@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Index.h"
-
 #include "clang/Index/IndexDataConsumer.h"
 #include "clang/Index/IndexSymbol.h"
 

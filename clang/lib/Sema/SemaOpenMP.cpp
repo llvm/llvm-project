@@ -10343,6 +10343,7 @@ static bool ActOnOMPReductionKindClause(
       case BO_GE:
       case BO_EQ:
       case BO_NE:
+      case BO_Cmp:
       case BO_AndAssign:
       case BO_XorAssign:
       case BO_OrAssign:

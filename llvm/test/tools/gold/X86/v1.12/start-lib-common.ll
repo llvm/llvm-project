@@ -4,7 +4,7 @@
 ; RUN: llvm-as %s -o %t1.o
 ; RUN: llvm-as %p/Inputs/start-lib-common.ll -o %t2.o
 
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --plugin-opt=emit-llvm \
 ; RUN:    -shared %t1.o --start-lib %t2.o --end-lib -o %t3.o
 ; RUN: llvm-dis %t3.o -o - | FileCheck %s

@@ -707,10 +707,8 @@ public:
     unsigned     size = 0;         // the size of the memory location
                                    // (taken from memVT if zero)
     unsigned     align = 1;        // alignment
-    bool         vol = false;      // is volatile?
-    bool         readMem = false;  // reads memory?
-    bool         writeMem = false; // writes memory?
 
+    MachineMemOperand::Flags flags = MachineMemOperand::MONone;
     IntrinsicInfo() = default;
   };
 

@@ -804,6 +804,8 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
       printf(" (const)");
     if (clang_CXXMethod_isPureVirtual(Cursor))
       printf(" (pure)");
+    if (clang_CXXRecord_isAbstract(Cursor))
+      printf(" (abstract)");
     if (clang_EnumDecl_isScoped(Cursor))
       printf(" (scoped)");
     if (clang_Cursor_isVariadic(Cursor))

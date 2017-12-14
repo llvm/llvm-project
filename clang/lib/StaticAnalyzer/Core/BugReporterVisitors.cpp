@@ -1541,7 +1541,7 @@ ConditionBRVisitor::VisitTrueTest(const Expr *Cond, const BinaryOperator *BExpr,
   // For non-assignment operations, we require that we can understand
   // both the LHS and RHS.
   if (LhsString.empty() || RhsString.empty() ||
-      !BinaryOperator::isComparisonOp(Op))
+      !BinaryOperator::isComparisonOp(Op) || Op == BO_Cmp)
     return nullptr;
 
   // Should we invert the strings if the LHS is not a variable name?

@@ -776,8 +776,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
       if (PDiffs != nullptr)
         PDiffs->addInstruction(SU->NodeNum, RegOpers, MRI);
 
-      if (RPTracker->getPos() == RegionEnd || &*RPTracker->getPos() != &MI)
-        RPTracker->recedeSkipDebugValues();
+      RPTracker->recedeSkipDebugValues();
       assert(&*RPTracker->getPos() == &MI && "RPTracker in sync");
       RPTracker->recede(RegOpers);
     }

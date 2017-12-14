@@ -14,7 +14,8 @@
 
 #include "sanitizer_platform.h"
 
-#if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD
+#if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD || \
+    SANITIZER_SOLARIS
 
 #include "sanitizer_allocator_internal.h"
 #include "sanitizer_atomic.h"
@@ -44,6 +45,10 @@
 #if SANITIZER_NETBSD
 #include <sys/sysctl.h>
 #include <sys/tls.h>
+#endif
+
+#if SANITIZER_SOLARIS
+#include <thread.h>
 #endif
 
 #if SANITIZER_LINUX
@@ -115,13 +120,20 @@ void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
     *stack_bottom = segment.end - stacksize;
     return;
   }
+  uptr stacksize = 0;
+  void *stackaddr = nullptr;
+#if SANITIZER_SOLARIS
+  stack_t ss;
+  CHECK_EQ(thr_stksegment(&ss), 0);
+  stacksize = ss.ss_size;
+  stackaddr = (char *)ss.ss_sp - stacksize;
+#else // !SANITIZER_SOLARIS
   pthread_attr_t attr;
   pthread_attr_init(&attr);
   CHECK_EQ(pthread_getattr_np(pthread_self(), &attr), 0);
-  uptr stacksize = 0;
-  void *stackaddr = nullptr;
   my_pthread_attr_getstack(&attr, &stackaddr, &stacksize);
   pthread_attr_destroy(&attr);
+#endif // SANITIZER_SOLARIS
 
   *stack_top = (uptr)stackaddr + stacksize;
   *stack_bottom = (uptr)stackaddr;
@@ -162,7 +174,7 @@ bool SanitizerGetThreadName(char *name, int max_len) {
 }
 
 #if !SANITIZER_FREEBSD && !SANITIZER_ANDROID && !SANITIZER_GO && \
-    !SANITIZER_NETBSD
+    !SANITIZER_NETBSD && !SANITIZER_SOLARIS
 static uptr g_tls_size;
 
 #ifdef __i386__
@@ -191,7 +203,7 @@ void InitTlsSize() {
 #else
 void InitTlsSize() { }
 #endif  // !SANITIZER_FREEBSD && !SANITIZER_ANDROID && !SANITIZER_GO &&
-        // !SANITIZER_NETBSD
+        // !SANITIZER_NETBSD && !SANITIZER_SOLARIS
 
 #if (defined(__x86_64__) || defined(__i386__) || defined(__mips__) \
     || defined(__aarch64__) || defined(__powerpc64__) || defined(__s390__) \
@@ -423,6 +435,10 @@ static void GetTls(uptr *addr, uptr *size) {
 #elif SANITIZER_ANDROID
   *addr = 0;
   *size = 0;
+#elif SANITIZER_SOLARIS
+  // FIXME
+  *addr = 0;
+  *size = 0;
 #else
 # error "Unknown OS"
 #endif
@@ -431,7 +447,8 @@ static void GetTls(uptr *addr, uptr *size) {
 
 #if !SANITIZER_GO
 uptr GetTlsSize() {
-#if SANITIZER_FREEBSD || SANITIZER_ANDROID || SANITIZER_NETBSD
+#if SANITIZER_FREEBSD || SANITIZER_ANDROID || SANITIZER_NETBSD || \
+    SANITIZER_SOLARIS
   uptr addr, size;
   GetTls(&addr, &size);
   return size;
@@ -591,7 +608,8 @@ uptr GetRSS() {
   return rss * GetPageSizeCached();
 }
 
-// sysconf(_SC_NPROCESSORS_{CONF,ONLN}) cannot be used as they allocate memory.
+// sysconf(_SC_NPROCESSORS_{CONF,ONLN}) cannot be used on most platforms as
+// they allocate memory.
 u32 GetNumberOfCPUs() {
 #if SANITIZER_FREEBSD || SANITIZER_NETBSD
   u32 ncpu;
@@ -637,6 +655,8 @@ u32 GetNumberOfCPUs() {
   }
   internal_close(fd);
   return n_cpus;
+#elif SANITIZER_SOLARIS
+  return sysconf(_SC_NPROCESSORS_ONLN);
 #else
   cpu_set_t CPUs;
   CHECK_EQ(sched_getaffinity(0, sizeof(cpu_set_t), &CPUs), 0);

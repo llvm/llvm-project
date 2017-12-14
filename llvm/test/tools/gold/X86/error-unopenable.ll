@@ -1,5 +1,5 @@
 ; RUN: llvm-as -o %t %s
-; RUN: not %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: not %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --plugin-opt=obj-path=%t/nonexistent-dir/foo.o \
 ; RUN:    %t -o %t2 2>&1 | FileCheck %s
 

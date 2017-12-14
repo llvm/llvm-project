@@ -299,10 +299,3 @@ set(CMAKE_SHARED_LINKER_FLAGS "${_CMAKE_SHARED_LINKER_FLAGS_INITIAL} ${LINK_FLAG
 # control which libraries they require.
 set(CMAKE_C_STANDARD_LIBRARIES "" CACHE STRING "" FORCE)
 set(CMAKE_CXX_STANDARD_LIBRARIES "" CACHE STRING "" FORCE)
-
-# CMake's InstallRequiredSystemLibraries module searches for a Visual Studio
-# installation in order to determine where to copy the required DLLs. This
-# installation won't exist when cross-compiling, of course, so silence the
-# resulting warnings about missing libraries.
-set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_NO_WARNINGS ON)
-

@@ -17,6 +17,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/DebugInfo/CodeView/CVDebugRecord.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
+#include "llvm/DebugInfo/CodeView/GlobalTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/MergingTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/RecordName.h"
@@ -73,7 +74,7 @@ class PDBLinker {
 public:
   PDBLinker(SymbolTable *Symtab)
       : Alloc(), Symtab(Symtab), Builder(Alloc), TypeTable(Alloc),
-        IDTable(Alloc) {}
+        IDTable(Alloc), GlobalTypeTable(Alloc), GlobalIDTable(Alloc) {}
 
   /// Emit the basic PDB structure: initial streams, headers, etc.
   void initialize(const llvm::codeview::DebugInfo &BuildId);
@@ -123,6 +124,12 @@ private:
   /// Item records that will go into the PDB IPI stream.
   MergingTypeTableBuilder IDTable;
 
+  /// Type records that will go into the PDB TPI stream (for /DEBUG:GHASH)
+  GlobalTypeTableBuilder GlobalTypeTable;
+
+  /// Item records that will go into the PDB IPI stream (for /DEBUG:GHASH)
+  GlobalTypeTableBuilder GlobalIDTable;
+
   /// PDBs use a single global string table for filenames in the file checksum
   /// table.
   DebugStringTableSubsection PDBStrTab;
@@ -158,6 +165,41 @@ static ArrayRef<uint8_t> getDebugSection(ObjFile *File, StringRef SecName) {
   if (SectionChunk *Sec = findByName(File->getDebugChunks(), SecName))
     return consumeDebugMagic(Sec->getContents(), SecName);
   return {};
+}
+
+// A COFF .debug$H section is currently a clang extension.  This function checks
+// if a .debug$H section is in a format that we expect / understand, so that we
+// can ignore any sections which are coincidentally also named .debug$H but do
+// not contain a format we recognize.
+static bool canUseDebugH(ArrayRef<uint8_t> DebugH) {
+  if (DebugH.size() < sizeof(object::debug_h_header))
+    return false;
+  auto *Header =
+      reinterpret_cast<const object::debug_h_header *>(DebugH.data());
+  DebugH = DebugH.drop_front(sizeof(object::debug_h_header));
+  return Header->Magic == COFF::DEBUG_HASHES_SECTION_MAGIC &&
+         Header->Version == 0 &&
+         Header->HashAlgorithm == uint16_t(GlobalTypeHashAlg::SHA1) &&
+         (DebugH.size() % 20 == 0);
+}
+
+static Optional<ArrayRef<uint8_t>> getDebugH(ObjFile *File) {
+  SectionChunk *Sec = findByName(File->getDebugChunks(), ".debug$H");
+  if (!Sec)
+    return llvm::None;
+  ArrayRef<uint8_t> Contents = Sec->getContents();
+  if (!canUseDebugH(Contents))
+    return None;
+  return Contents;
+}
+
+static ArrayRef<GloballyHashedType>
+getHashesFromDebugH(ArrayRef<uint8_t> DebugH) {
+  assert(canUseDebugH(DebugH));
+
+  DebugH = DebugH.drop_front(sizeof(object::debug_h_header));
+  uint32_t Count = DebugH.size() / sizeof(GloballyHashedType);
+  return {reinterpret_cast<const GloballyHashedType *>(DebugH.data()), Count};
 }
 
 static void addTypeInfo(pdb::TpiStreamBuilder &TpiBuilder,
@@ -207,10 +249,26 @@ const CVIndexMap &PDBLinker::mergeDebugT(ObjFile *File,
 
   // This is a /Z7 object. Fill in the temporary, caller-provided
   // ObjectIndexMap.
-  if (auto Err = mergeTypeAndIdRecords(IDTable, TypeTable,
-                                       ObjectIndexMap.TPIMap, Types))
-    fatal("codeview::mergeTypeAndIdRecords failed: " +
-          toString(std::move(Err)));
+  if (Config->DebugGHashes) {
+    ArrayRef<GloballyHashedType> Hashes;
+    std::vector<GloballyHashedType> OwnedHashes;
+    if (Optional<ArrayRef<uint8_t>> DebugH = getDebugH(File))
+      Hashes = getHashesFromDebugH(*DebugH);
+    else {
+      OwnedHashes = GloballyHashedType::hashTypes(Types);
+      Hashes = OwnedHashes;
+    }
+
+    if (auto Err = mergeTypeAndIdRecords(GlobalIDTable, GlobalTypeTable,
+                                         ObjectIndexMap.TPIMap, Types, Hashes))
+      fatal("codeview::mergeTypeAndIdRecords failed: " +
+            toString(std::move(Err)));
+  } else {
+    if (auto Err = mergeTypeAndIdRecords(IDTable, TypeTable,
+                                         ObjectIndexMap.TPIMap, Types))
+      fatal("codeview::mergeTypeAndIdRecords failed: " +
+            toString(std::move(Err)));
+  }
   return ObjectIndexMap;
 }
 
@@ -274,21 +332,44 @@ const CVIndexMap &PDBLinker::maybeMergeTypeServerPDB(ObjFile *File,
   if (auto E = ExpectedSession.takeError())
     fatal("Type server PDB was not found: " + toString(std::move(E)));
 
-  // Merge TPI first, because the IPI stream will reference type indices.
   auto ExpectedTpi = (*ExpectedSession)->getPDBFile().getPDBTpiStream();
   if (auto E = ExpectedTpi.takeError())
     fatal("Type server does not have TPI stream: " + toString(std::move(E)));
-  if (auto Err = mergeTypeRecords(TypeTable, IndexMap.TPIMap,
-                                  ExpectedTpi->typeArray()))
-    fatal("codeview::mergeTypeRecords failed: " + toString(std::move(Err)));
-
-  // Merge IPI.
   auto ExpectedIpi = (*ExpectedSession)->getPDBFile().getPDBIpiStream();
   if (auto E = ExpectedIpi.takeError())
     fatal("Type server does not have TPI stream: " + toString(std::move(E)));
-  if (auto Err = mergeIdRecords(IDTable, IndexMap.TPIMap, IndexMap.IPIMap,
-                                ExpectedIpi->typeArray()))
-    fatal("codeview::mergeIdRecords failed: " + toString(std::move(Err)));
+
+  if (Config->DebugGHashes) {
+    // PDBs do not actually store global hashes, so when merging a type server
+    // PDB we have to synthesize global hashes.  To do this, we first synthesize
+    // global hashes for the TPI stream, since it is independent, then we
+    // synthesize hashes for the IPI stream, using the hashes for the TPI stream
+    // as inputs.
+    auto TpiHashes = GloballyHashedType::hashTypes(ExpectedTpi->typeArray());
+    auto IpiHashes =
+        GloballyHashedType::hashIds(ExpectedIpi->typeArray(), TpiHashes);
+
+    // Merge TPI first, because the IPI stream will reference type indices.
+    if (auto Err = mergeTypeRecords(GlobalTypeTable, IndexMap.TPIMap,
+                                    ExpectedTpi->typeArray(), TpiHashes))
+      fatal("codeview::mergeTypeRecords failed: " + toString(std::move(Err)));
+
+    // Merge IPI.
+    if (auto Err =
+            mergeIdRecords(GlobalIDTable, IndexMap.TPIMap, IndexMap.IPIMap,
+                           ExpectedIpi->typeArray(), IpiHashes))
+      fatal("codeview::mergeIdRecords failed: " + toString(std::move(Err)));
+  } else {
+    // Merge TPI first, because the IPI stream will reference type indices.
+    if (auto Err = mergeTypeRecords(TypeTable, IndexMap.TPIMap,
+                                    ExpectedTpi->typeArray()))
+      fatal("codeview::mergeTypeRecords failed: " + toString(std::move(Err)));
+
+    // Merge IPI.
+    if (auto Err = mergeIdRecords(IDTable, IndexMap.TPIMap, IndexMap.IPIMap,
+                                  ExpectedIpi->typeArray()))
+      fatal("codeview::mergeIdRecords failed: " + toString(std::move(Err)));
+  }
 
   return IndexMap;
 }
@@ -658,8 +739,13 @@ void PDBLinker::addObjFile(ObjFile *File) {
         File->ModuleDBI->addDebugSubsection(SS);
         break;
       case DebugSubsectionKind::Symbols:
-        mergeSymbolRecords(Alloc, File, Builder.getGsiBuilder(), IndexMap,
-                           IDTable, SS.getRecordData());
+        if (Config->DebugGHashes) {
+          mergeSymbolRecords(Alloc, File, Builder.getGsiBuilder(), IndexMap,
+                             GlobalIDTable, SS.getRecordData());
+        } else {
+          mergeSymbolRecords(Alloc, File, Builder.getGsiBuilder(), IndexMap,
+                             IDTable, SS.getRecordData());
+        }
         break;
       default:
         // FIXME: Process the rest of the subsections.
@@ -712,11 +798,14 @@ void PDBLinker::addObjectsToPDB() {
 
   Builder.getStringTableBuilder().setStrings(PDBStrTab);
 
-  // Construct TPI stream contents.
-  addTypeInfo(Builder.getTpiBuilder(), TypeTable);
-
-  // Construct IPI stream contents.
-  addTypeInfo(Builder.getIpiBuilder(), IDTable);
+  // Construct TPI and IPI stream contents.
+  if (Config->DebugGHashes) {
+    addTypeInfo(Builder.getTpiBuilder(), GlobalTypeTable);
+    addTypeInfo(Builder.getIpiBuilder(), GlobalIDTable);
+  } else {
+    addTypeInfo(Builder.getTpiBuilder(), TypeTable);
+    addTypeInfo(Builder.getIpiBuilder(), IDTable);
+  }
 
   // Compute the public and global symbols.
   auto &GsiBuilder = Builder.getGsiBuilder();

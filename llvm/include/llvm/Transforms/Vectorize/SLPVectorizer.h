@@ -96,11 +96,13 @@ private:
 
   /// \brief Try to vectorize a list of operands.
   /// \@param BuildVector A list of users to ignore for the purpose of
-  ///                     scheduling and that don't need extracting.
+  ///                     scheduling and cost estimation when NeedExtraction
+  ///                     is false.
   /// \returns true if a value was vectorized.
   bool tryToVectorizeList(ArrayRef<Value *> VL, slpvectorizer::BoUpSLP &R,
                           ArrayRef<Value *> BuildVector = None,
-                          bool AllowReorder = false);
+                          bool AllowReorder = false,
+                          bool NeedExtraction = false);
 
   /// \brief Try to vectorize a chain that may start at the operands of \p I.
   bool tryToVectorize(Instruction *I, slpvectorizer::BoUpSLP &R);

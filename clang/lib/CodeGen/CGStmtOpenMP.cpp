@@ -3408,6 +3408,7 @@ static std::pair<bool, RValue> emitOMPAtomicRMW(CodeGenFunction &CGF, LValue X,
   case BO_GE:
   case BO_EQ:
   case BO_NE:
+  case BO_Cmp:
   case BO_AddAssign:
   case BO_SubAssign:
   case BO_AndAssign:

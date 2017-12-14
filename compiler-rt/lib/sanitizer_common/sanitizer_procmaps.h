@@ -16,7 +16,8 @@
 
 #include "sanitizer_platform.h"
 
-#if SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_MAC
+#if SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD || \
+    SANITIZER_MAC || SANITIZER_SOLARIS
 
 #include "sanitizer_common.h"
 #include "sanitizer_internal_defs.h"
@@ -95,5 +96,5 @@ uptr ParseHex(const char **p);
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD ||
-        // SANITIZER_MAC
+        // SANITIZER_MAC || SANITIZER_SOLARIS
 #endif  // SANITIZER_PROCMAPS_H
