@@ -1967,8 +1967,8 @@ public:
   /// This does not determine whether the function has been defined (e.g., in a
   /// previous definition); for that information, use isDefined.
   bool isThisDeclarationADefinition() const {
-    return IsDeleted || IsDefaulted || Body || IsLateTemplateParsed ||
-      WillHaveBody || hasDefiningAttr();
+    return IsDeleted || IsDefaulted || Body || HasSkippedBody ||
+           IsLateTemplateParsed || WillHaveBody || hasDefiningAttr();
   }
 
   /// doesThisDeclarationHaveABody - Returns whether this specific

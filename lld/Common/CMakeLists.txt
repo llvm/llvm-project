@@ -17,6 +17,7 @@ add_lld_library(lldCommon
 
   LINK_COMPONENTS
   Codegen
+  Core
   Demangle
   MC
   Option

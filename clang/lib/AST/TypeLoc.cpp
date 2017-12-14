@@ -444,6 +444,15 @@ void TypeOfTypeLoc::initializeLocal(ASTContext &Context,
       getUnderlyingType(), Loc);
 }
 
+void UnaryTransformTypeLoc::initializeLocal(ASTContext &Context,
+                                       SourceLocation Loc) {
+    setKWLoc(Loc);
+    setRParenLoc(Loc);
+    setLParenLoc(Loc);
+    this->setUnderlyingTInfo(
+        Context.getTrivialTypeSourceInfo(getTypePtr()->getBaseType(), Loc));
+}
+
 void ElaboratedTypeLoc::initializeLocal(ASTContext &Context, 
                                         SourceLocation Loc) {
   setElaboratedKeywordLoc(Loc);

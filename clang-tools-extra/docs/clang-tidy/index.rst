@@ -250,6 +250,56 @@ An overview of all the command-line options:
           value:           'some value'
       ...
 
+:program:`clang-tidy` diagnostics are intended to call out code that does
+not adhere to a coding standard, or is otherwise problematic in some way.
+However, if it is known that the code is correct, the check-specific ways
+to silence the diagnostics could be used, if they are available (e.g. 
+bugprone-use-after-move can be silenced by re-initializing the variable after 
+it has been moved out, misc-string-integer-assignment can be suppressed by 
+explicitly casting the integer to char, readability-implicit-bool-conversion
+can also be suppressed by using explicit casts, etc.). If they are not 
+available or if changing the semantics of the code is not desired, 
+the ``NOLINT`` or ``NOLINTNEXTLINE`` comments can be used instead. For example:
+
+.. code-block:: c++
+
+  class Foo
+  {
+    // Silent all the diagnostics for the line
+    Foo(int param); // NOLINT
+
+    // Silent only the specified checks for the line
+    Foo(double param); // NOLINT(google-explicit-constructor, google-runtime-int)
+
+    // Silent only the specified diagnostics for the next line
+    // NOLINTNEXTLINE(google-explicit-constructor, google-runtime-int)
+    Foo(bool param); 
+  };
+
+The formal syntax of ``NOLINT``/``NOLINTNEXTLINE`` is the following:
+
+.. parsed-literal::
+
+  lint-comment:
+    lint-command
+    lint-command lint-args
+
+  lint-args:
+    **(** check-name-list **)**
+
+  check-name-list:
+    *check-name*
+    check-name-list **,** *check-name*
+
+  lint-command:
+    **NOLINT**
+    **NOLINTNEXTLINE**
+
+Note that whitespaces between ``NOLINT``/``NOLINTNEXTLINE`` and the opening
+parenthesis are not allowed (in this case the comment will be treated just as
+``NOLINT``/``NOLINTNEXTLINE``), whereas in check names list (inside
+the parenthesis) whitespaces can be used and will be ignored.
+
 .. _LibTooling: http://clang.llvm.org/docs/LibTooling.html
 .. _How To Setup Tooling For LLVM: http://clang.llvm.org/docs/HowToSetupToolingForLLVM.html
 

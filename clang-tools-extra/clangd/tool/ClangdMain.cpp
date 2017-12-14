@@ -115,8 +115,10 @@ int main(int argc, char *argv[]) {
                    << EC.message();
     }
   }
+
+  // Setup tracing facilities.
   llvm::Optional<llvm::raw_fd_ostream> TraceStream;
-  std::unique_ptr<trace::Session> TraceSession;
+  std::unique_ptr<trace::EventTracer> Tracer;
   if (!TraceFile.empty()) {
     std::error_code EC;
     TraceStream.emplace(TraceFile, /*ref*/ EC, llvm::sys::fs::F_RW);
@@ -124,9 +126,13 @@ int main(int argc, char *argv[]) {
       TraceFile.reset();
       llvm::errs() << "Error while opening trace file: " << EC.message();
     } else {
-      TraceSession = trace::Session::create(*TraceStream, PrettyPrint);
+      Tracer = trace::createJSONTracer(*TraceStream, PrettyPrint);
     }
   }
+
+  llvm::Optional<trace::Session> TracingSession;
+  if (Tracer)
+    TracingSession.emplace(*Tracer);
 
   llvm::raw_ostream &Outs = llvm::outs();
   llvm::raw_ostream &Logs = llvm::errs();

@@ -21,6 +21,7 @@
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Frontend/DiagnosticRenderer.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include <tuple>
 #include <vector>
@@ -290,7 +291,38 @@ void ClangTidyDiagnosticConsumer::finalizeLastError() {
   LastErrorPassesLineFilter = false;
 }
 
-static bool LineIsMarkedWithNOLINT(SourceManager &SM, SourceLocation Loc) {
+static bool IsNOLINTFound(StringRef NolintDirectiveText, StringRef Line,
+                          unsigned DiagID, const ClangTidyContext &Context) {
+  const size_t NolintIndex = Line.find(NolintDirectiveText);
+  if (NolintIndex == StringRef::npos)
+    return false;
+
+  size_t BracketIndex = NolintIndex + NolintDirectiveText.size();
+  // Check if the specific checks are specified in brackets.
+  if (BracketIndex < Line.size() && Line[BracketIndex] == '(') {
+    ++BracketIndex;
+    const size_t BracketEndIndex = Line.find(')', BracketIndex);
+    if (BracketEndIndex != StringRef::npos) {
+      StringRef ChecksStr =
+          Line.substr(BracketIndex, BracketEndIndex - BracketIndex);
+      // Allow disabling all the checks with "*".
+      if (ChecksStr != "*") {
+        StringRef CheckName = Context.getCheckName(DiagID);
+        // Allow specifying a few check names, delimited with comma.
+        SmallVector<StringRef, 1> Checks;
+        ChecksStr.split(Checks, ',', -1, false);
+        llvm::transform(Checks, Checks.begin(),
+                        [](StringRef S) { return S.trim(); });
+        return llvm::find(Checks, CheckName) != Checks.end();
+      }
+    }
+  }
+  return true;
+}
+
+static bool LineIsMarkedWithNOLINT(SourceManager &SM, SourceLocation Loc,
+                                   unsigned DiagID,
+                                   const ClangTidyContext &Context) {
   bool Invalid;
   const char *CharacterData = SM.getCharacterData(Loc, &Invalid);
   if (Invalid)
@@ -301,8 +333,7 @@ static bool LineIsMarkedWithNOLINT(SourceManager &SM, SourceLocation Loc) {
   while (*P != '\0' && *P != '\r' && *P != '\n')
     ++P;
   StringRef RestOfLine(CharacterData, P - CharacterData + 1);
-  // FIXME: Handle /\bNOLINT\b(\([^)]*\))?/ as cpplint.py does.
-  if (RestOfLine.find("NOLINT") != StringRef::npos)
+  if (IsNOLINTFound("NOLINT", RestOfLine, DiagID, Context))
     return true;
 
   // Check if there's a NOLINTNEXTLINE on the previous line.
@@ -329,16 +360,17 @@ static bool LineIsMarkedWithNOLINT(SourceManager &SM, SourceLocation Loc) {
     --P;
 
   RestOfLine = StringRef(P, LineEnd - P + 1);
-  if (RestOfLine.find("NOLINTNEXTLINE") != StringRef::npos)
+  if (IsNOLINTFound("NOLINTNEXTLINE", RestOfLine, DiagID, Context))
     return true;
 
   return false;
 }
 
-static bool LineIsMarkedWithNOLINTinMacro(SourceManager &SM,
-                                          SourceLocation Loc) {
+static bool LineIsMarkedWithNOLINTinMacro(SourceManager &SM, SourceLocation Loc,
+                                          unsigned DiagID,
+                                          const ClangTidyContext &Context) {
   while (true) {
-    if (LineIsMarkedWithNOLINT(SM, Loc))
+    if (LineIsMarkedWithNOLINT(SM, Loc, DiagID, Context))
       return true;
     if (!Loc.isMacroID())
       return false;
@@ -355,7 +387,8 @@ void ClangTidyDiagnosticConsumer::HandleDiagnostic(
   if (Info.getLocation().isValid() && DiagLevel != DiagnosticsEngine::Error &&
       DiagLevel != DiagnosticsEngine::Fatal &&
       LineIsMarkedWithNOLINTinMacro(Diags->getSourceManager(),
-                                    Info.getLocation())) {
+                                    Info.getLocation(), Info.getID(),
+                                    Context)) {
     ++Context.Stats.ErrorsIgnoredNOLINT;
     // Ignored a warning, should ignore related notes as well
     LastErrorWasIgnored = true;

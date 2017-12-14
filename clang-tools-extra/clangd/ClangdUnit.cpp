@@ -8,7 +8,6 @@
 //===---------------------------------------------------------------------===//
 
 #include "ClangdUnit.h"
-
 #include "Compiler.h"
 #include "Logger.h"
 #include "Trace.h"
@@ -28,7 +27,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Format.h"
-
 #include <algorithm>
 #include <chrono>
 
@@ -770,7 +768,7 @@ CppFile::deferRebuild(StringRef NewContents,
       // (if there are no other references to it).
       OldPreamble.reset();
 
-      trace::Span Tracer("Preamble");
+      trace::Span Tracer(Ctx, "Preamble");
       SPAN_ATTACH(Tracer, "File", That->FileName);
       std::vector<DiagWithFixIts> PreambleDiags;
       StoreDiagsConsumer PreambleDiagnosticsConsumer(/*ref*/ PreambleDiags);
@@ -816,7 +814,7 @@ CppFile::deferRebuild(StringRef NewContents,
     // Compute updated AST.
     llvm::Optional<ParsedAST> NewAST;
     {
-      trace::Span Tracer("Build");
+      trace::Span Tracer(Ctx, "Build");
       SPAN_ATTACH(Tracer, "File", That->FileName);
       NewAST = ParsedAST::Build(Ctx, std::move(CI), std::move(NewPreamble),
                                 std::move(ContentsBuffer), PCHs, VFS);

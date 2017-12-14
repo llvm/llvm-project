@@ -8,7 +8,6 @@
 //===---------------------------------------------------------------------===//
 
 #include "JSONExpr.h"
-
 #include "llvm/Support/Format.h"
 #include <cctype>
 

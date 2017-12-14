@@ -110,6 +110,10 @@ Non-comprehensive list of changes in this release
   If a gcc installation is found, it still prefers ``.ctors`` if the found
   gcc is older than 4.7.0.
 
+- The new builtin preprocessor macros ``__is_target_arch``,
+  ``__is_target_vendor``, ``__is_target_os``, and ``__is_target_environment``
+  can be used to to examine the individual components of the target triple.
+
 New Compiler Flags
 ------------------
 
@@ -145,6 +149,12 @@ Clang now supports the ...
 Attribute Changes in Clang
 --------------------------
 
+- Clang now supports the majority of its attributes under both the GNU-style
+  spelling (``__attribute((name))``) and the double square-bracket spelling
+  in the ``clang`` vendor namespace (``[[clang::name]]``). Attributes whose
+  syntax is specified by some other standard (such as CUDA and OpenCL
+  attributes) continue to follow their respective specification.
+  
 - Added the ``__has_c_attribute()`` builtin preprocessor macro which allows
   users to dynamically detect whether a double square-bracket attribute is
   supported in C mode. This attribute syntax can be enabled with the
