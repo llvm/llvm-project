@@ -48,7 +48,8 @@ generateNumSymbols(int Begin, int End,
   for (const auto &Sym : Slab->Slab)
     Slab->Pointers.push_back(&Sym.second);
 
-  return {std::move(Slab), &Slab->Pointers};
+  auto *Pointers = &Slab->Pointers;
+  return {std::move(Slab), Pointers};
 }
 
 std::vector<std::string> match(const SymbolIndex &I,
