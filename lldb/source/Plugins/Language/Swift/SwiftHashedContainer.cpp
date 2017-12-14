@@ -89,10 +89,10 @@ SwiftHashedContainerNativeBufferHandler::GetElementAtIndex(size_t idx) {
 
       // you found it!!!
       DataBufferSP full_buffer_sp(
-          new DataBufferHeap(m_key_stride + m_value_stride, 0));
+          new DataBufferHeap(m_key_stride_padded + m_value_stride, 0));
       uint8_t *key_buffer_ptr = full_buffer_sp->GetBytes();
       uint8_t *value_buffer_ptr =
-          m_value_stride ? (key_buffer_ptr + m_key_stride) : nullptr;
+          m_value_stride ? (key_buffer_ptr + m_key_stride_padded) : nullptr;
       if (GetDataForKeyAtCell(cell_idx, key_buffer_ptr) &&
           (value_buffer_ptr == nullptr ||
            GetDataForValueAtCell(cell_idx, value_buffer_ptr))) {
@@ -195,7 +195,7 @@ SwiftHashedContainerNativeBufferHandler::
       m_bitmask_ptr(LLDB_INVALID_ADDRESS), m_keys_ptr(LLDB_INVALID_ADDRESS),
       m_values_ptr(LLDB_INVALID_ADDRESS), m_element_type(),
       m_key_stride(key_type.GetByteStride()), m_value_stride(0),
-      m_bitmask_cache() {
+      m_key_stride_padded(m_key_stride), m_bitmask_cache() {
   static ConstString g_initializedEntries("initializedEntries");
   static ConstString g_values("values");
   static ConstString g__rawValue("_rawValue");
@@ -221,6 +221,7 @@ SwiftHashedContainerNativeBufferHandler::
       std::vector<SwiftASTContext::TupleElement> tuple_elements{
           {g_key, key_type}, {g_value, value_type}};
       m_element_type = swift_ast->CreateTupleType(tuple_elements);
+      m_key_stride_padded = m_element_type.GetByteStride() - m_value_stride;
     }
   } else
     m_element_type = key_type;
