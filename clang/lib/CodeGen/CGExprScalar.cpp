@@ -3922,6 +3922,7 @@ LValue CodeGenFunction::EmitCompoundAssignmentLValue(
   case BO_GE:
   case BO_EQ:
   case BO_NE:
+  case BO_Cmp:
   case BO_And:
   case BO_Xor:
   case BO_Or:

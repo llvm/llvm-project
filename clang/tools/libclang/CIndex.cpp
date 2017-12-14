@@ -7919,6 +7919,17 @@ unsigned clang_CXXMethod_isVirtual(CXCursor C) {
   return (Method && Method->isVirtual()) ? 1 : 0;
 }
 
+unsigned clang_CXXRecord_isAbstract(CXCursor C) {
+  if (!clang_isDeclaration(C.kind))
+    return 0;
+
+  const auto *D = cxcursor::getCursorDecl(C);
+  const auto *RD = dyn_cast_or_null<CXXRecordDecl>(D);
+  if (RD)
+    RD = RD->getDefinition();
+  return (RD && RD->isAbstract()) ? 1 : 0;
+}
+
 unsigned clang_EnumDecl_isScoped(CXCursor C) {
   if (!clang_isDeclaration(C.kind))
     return 0;

@@ -323,7 +323,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
     // We need special cases for ">>" which we have split into two ">" while
     // lexing in order to make template parsing easier.
     bool IsComparison = (Previous.getPrecedence() == prec::Relational ||
-                         Previous.getPrecedence() == prec::Equality) &&
+                         Previous.getPrecedence() == prec::Equality ||
+                         Previous.getPrecedence() == prec::Spaceship) &&
                         Previous.Previous &&
                         Previous.Previous->isNot(TT_BinaryOperator); // For >>.
     bool LHSIsBinaryExpr =
@@ -536,7 +537,8 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
        (P->is(TT_ConditionalExpr) && P->is(tok::colon))) &&
       !P->isOneOf(TT_OverloadedOperator, TT_CtorInitializerComma) &&
       P->getPrecedence() != prec::Assignment &&
-      P->getPrecedence() != prec::Relational) {
+      P->getPrecedence() != prec::Relational &&
+      P->getPrecedence() != prec::Spaceship) {
     bool BreakBeforeOperator =
         P->MustBreakBefore || P->is(tok::lessless) ||
         (P->is(TT_BinaryOperator) &&

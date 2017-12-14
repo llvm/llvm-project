@@ -396,7 +396,9 @@ bool RangeConstraintManager::canReasonAbout(SVal X) const {
     }
 
     if (const SymSymExpr *SSE = dyn_cast<SymSymExpr>(SE)) {
-      if (BinaryOperator::isComparisonOp(SSE->getOpcode())) {
+      // FIXME: Handle <=> here.
+      if (BinaryOperator::isEqualityOp(SSE->getOpcode()) ||
+          BinaryOperator::isRelationalOp(SSE->getOpcode())) {
         // We handle Loc <> Loc comparisons, but not (yet) NonLoc <> NonLoc.
         if (Loc::isLocType(SSE->getLHS()->getType())) {
           assert(Loc::isLocType(SSE->getRHS()->getType()));

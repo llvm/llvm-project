@@ -679,7 +679,7 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
     if (SymbolRef rSym = rhs.getAsLocSymbol()) {
       // We can only build expressions with symbols on the left,
       // so we need a reversible operator.
-      if (!BinaryOperator::isComparisonOp(op))
+      if (!BinaryOperator::isComparisonOp(op) || op == BO_Cmp)
         return UnknownVal();
 
       const llvm::APSInt &lVal = lhs.castAs<loc::ConcreteInt>().getValue();

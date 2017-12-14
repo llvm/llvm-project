@@ -38,6 +38,7 @@ StringRef til::getBinaryOpcodeString(TIL_BinaryOpcode Op) {
     case BOP_Neq:      return "!=";
     case BOP_Lt:       return "<";
     case BOP_Leq:      return "<=";
+    case BOP_Cmp:      return "<=>";
     case BOP_LogicAnd: return "&&";
     case BOP_LogicOr:  return "||";
   }
