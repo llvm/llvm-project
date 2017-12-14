@@ -35,7 +35,7 @@ entry:
 ; CHECK-NEXT:     Tables:
 ; CHECK-NEXT:       - ElemType:        ANYFUNC
 ; CHECK-NEXT:         Limits:
-; CHECK-NEXT:           Flags:           0x00000001
+; CHECK-NEXT:           Flags:           [ HAS_MAX ]
 ; CHECK-NEXT:           Initial:         0x00000001
 ; CHECK-NEXT:           Maximum:         0x00000001
 ; CHECK-NEXT:   - Type:            MEMORY

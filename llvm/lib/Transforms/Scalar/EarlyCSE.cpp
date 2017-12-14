@@ -27,6 +27,7 @@
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -142,6 +143,21 @@ unsigned DenseMapInfo<SimpleValue>::getHashValue(SimpleValue Val) {
     return hash_combine(Inst->getOpcode(), Pred, LHS, RHS);
   }
 
+  // Hash min/max/abs (cmp + select) to allow for commuted operands.
+  // Min/max may also have non-canonical compare predicate (eg, the compare for
+  // smin may use 'sgt' rather than 'slt'), and non-canonical operands in the
+  // compare.
+  Value *A, *B;
+  SelectPatternFlavor SPF = matchSelectPattern(Inst, A, B).Flavor;
+  // TODO: We should also detect FP min/max.
+  if (SPF == SPF_SMIN || SPF == SPF_SMAX ||
+      SPF == SPF_UMIN || SPF == SPF_UMAX ||
+      SPF == SPF_ABS || SPF == SPF_NABS) {
+    if (A > B)
+      std::swap(A, B);
+    return hash_combine(Inst->getOpcode(), SPF, A, B);
+  }
+
   if (CastInst *CI = dyn_cast<CastInst>(Inst))
     return hash_combine(CI->getOpcode(), CI->getType(), CI->getOperand(0));
 
@@ -198,6 +214,20 @@ bool DenseMapInfo<SimpleValue>::isEqual(SimpleValue LHS, SimpleValue RHS) {
     return LHSCmp->getOperand(0) == RHSCmp->getOperand(1) &&
            LHSCmp->getOperand(1) == RHSCmp->getOperand(0) &&
            LHSCmp->getSwappedPredicate() == RHSCmp->getPredicate();
+  }
+
+  // Min/max/abs can occur with commuted operands, non-canonical predicates,
+  // and/or non-canonical operands.
+  Value *LHSA, *LHSB;
+  SelectPatternFlavor LSPF = matchSelectPattern(LHSI, LHSA, LHSB).Flavor;
+  // TODO: We should also detect FP min/max.
+  if (LSPF == SPF_SMIN || LSPF == SPF_SMAX ||
+      LSPF == SPF_UMIN || LSPF == SPF_UMAX ||
+      LSPF == SPF_ABS || LSPF == SPF_NABS) {
+    Value *RHSA, *RHSB;
+    SelectPatternFlavor RSPF = matchSelectPattern(RHSI, RHSA, RHSB).Flavor;
+    return (LSPF == RSPF && ((LHSA == RHSA && LHSB == RHSB) ||
+                             (LHSA == RHSB && LHSB == RHSA)));
   }
 
   return false;

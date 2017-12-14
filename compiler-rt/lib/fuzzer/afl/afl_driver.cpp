@@ -88,7 +88,7 @@ statistics from the file. If that fails then the process will quit.
 // to the file as well, if the error occurs after the duplication is performed.
 #define CHECK_ERROR(cond, error_message)                                       \
   if (!(cond)) {                                                               \
-    fprintf(stderr, (error_message));                                          \
+    fprintf(stderr, "%s\n", (error_message));                                  \
     abort();                                                                   \
   }
 
@@ -308,6 +308,12 @@ int main(int argc, char **argv) {
     return ExecuteFilesOnyByOne(argc, argv);
 
   assert(N > 0);
+
+  // Call LLVMFuzzerTestOneInput here so that coverage caused by initialization
+  // on the first execution of LLVMFuzzerTestOneInput is ignored.
+  uint8_t dummy_input[1] = {0};
+  LLVMFuzzerTestOneInput(dummy_input, 1);
+
   time_t unit_time_secs;
   int num_runs = 0;
   while (__afl_persistent_loop(N)) {

@@ -597,6 +597,14 @@ struct ScudoAllocator {
     initThreadMaybe();
     return FailureHandler::OnBadRequest();
   }
+
+  void setRssLimit(uptr LimitMb, bool HardLimit) {
+    if (HardLimit)
+      HardRssLimitMb = LimitMb;
+    else
+      SoftRssLimitMb = LimitMb;
+    CheckRssLimit = HardRssLimitMb || SoftRssLimitMb;
+  }
 };
 
 static ScudoAllocator Instance(LINKER_INITIALIZED);
@@ -726,3 +734,13 @@ int __sanitizer_get_ownership(const void *Ptr) {
 uptr __sanitizer_get_allocated_size(const void *Ptr) {
   return Instance.getUsableSize(Ptr);
 }
+
+// Interface functions
+
+extern "C" {
+void __scudo_set_rss_limit(unsigned long LimitMb, int HardLimit) {  // NOLINT
+  if (!SCUDO_CAN_USE_PUBLIC_INTERFACE)
+    return;
+  Instance.setRssLimit(LimitMb, !!HardLimit);
+}
+}  // extern "C"

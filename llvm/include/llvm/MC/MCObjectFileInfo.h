@@ -128,6 +128,7 @@ protected:
 
   MCSection *COFFDebugSymbolsSection;
   MCSection *COFFDebugTypesSection;
+  MCSection *COFFGlobalTypeHashesSection;
 
   /// Extra TLS Variable Data section.
   ///
@@ -281,7 +282,9 @@ public:
   MCSection *getCOFFDebugTypesSection() const {
     return COFFDebugTypesSection;
   }
-
+  MCSection *getCOFFGlobalTypeHashesSection() const {
+    return COFFGlobalTypeHashesSection;
+  }
 
   MCSection *getTLSExtraDataSection() const { return TLSExtraDataSection; }
   const MCSection *getTLSDataSection() const { return TLSDataSection; }

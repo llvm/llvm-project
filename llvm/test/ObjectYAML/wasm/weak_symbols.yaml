@@ -29,9 +29,9 @@ Sections:
     DataSize:        10
     SymbolInfo:
       - Name:            function_export
-        Flags:           1
+        Flags:           [ BINDING_WEAK ]
       - Name:            global_export
-        Flags:           1
+        Flags:           [ BINDING_WEAK ]
 ...
 # CHECK: --- !WASM
 # CHECK: FileHeader:
@@ -50,6 +50,6 @@ Sections:
 # CHECK:     DataSize:        10
 # CHECK:     SymbolInfo:
 # CHECK:       - Name:            function_export
-# CHECK:         Flags:           1
+# CHECK:         Flags:           [ BINDING_WEAK ]
 # CHECK:       - Name:            global_export
-# CHECK:         Flags:           1
+# CHECK:         Flags:           [ BINDING_WEAK ]

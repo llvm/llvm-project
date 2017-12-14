@@ -184,7 +184,6 @@ enum class ValType {
 enum : unsigned {
   WASM_SYMBOL_INFO    = 0x2,
   WASM_DATA_SIZE      = 0x3,
-  WASM_DATA_ALIGNMENT = 0x4,
   WASM_SEGMENT_INFO   = 0x5,
 };
 

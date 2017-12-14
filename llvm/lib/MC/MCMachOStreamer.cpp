@@ -88,6 +88,8 @@ public:
   void EmitDataRegion(MCDataRegionType Kind) override;
   void EmitVersionMin(MCVersionMinType Kind, unsigned Major,
                       unsigned Minor, unsigned Update) override;
+  void EmitBuildVersion(unsigned Platform, unsigned Major,
+                        unsigned Minor, unsigned Update) override;
   void EmitThumbFunc(MCSymbol *Func) override;
   bool EmitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void EmitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
@@ -265,7 +267,13 @@ void MCMachOStreamer::EmitDataRegion(MCDataRegionType Kind) {
 
 void MCMachOStreamer::EmitVersionMin(MCVersionMinType Kind, unsigned Major,
                                      unsigned Minor, unsigned Update) {
-  getAssembler().setVersionMinInfo(Kind, Major, Minor, Update);
+  getAssembler().setVersionMin(Kind, Major, Minor, Update);
+}
+
+void MCMachOStreamer::EmitBuildVersion(unsigned Platform, unsigned Major,
+                                       unsigned Minor, unsigned Update) {
+  getAssembler().setBuildVersion((MachO::PlatformType)Platform, Major, Minor,
+                                 Update);
 }
 
 void MCMachOStreamer::EmitThumbFunc(MCSymbol *Symbol) {
@@ -494,26 +502,8 @@ MCStreamer *llvm::createMachOStreamer(MCContext &Context,
   MCMachOStreamer *S =
       new MCMachOStreamer(Context, std::move(MAB), OS, std::move(CE),
                           DWARFMustBeAtTheEnd, LabelSections);
-  const Triple &TT = Context.getObjectFileInfo()->getTargetTriple();
-  if (TT.isOSDarwin()) {
-    unsigned Major, Minor, Update;
-    TT.getOSVersion(Major, Minor, Update);
-    // If there is a version specified, Major will be non-zero.
-    if (Major) {
-      MCVersionMinType VersionType;
-      if (TT.isWatchOS())
-        VersionType = MCVM_WatchOSVersionMin;
-      else if (TT.isTvOS())
-        VersionType = MCVM_TvOSVersionMin;
-      else if (TT.isMacOSX())
-        VersionType = MCVM_OSXVersionMin;
-      else {
-        assert(TT.isiOS() && "Must only be iOS platform left");
-        VersionType = MCVM_IOSVersionMin;
-      }
-      S->EmitVersionMin(VersionType, Major, Minor, Update);
-    }
-  }
+  const Triple &Target = Context.getObjectFileInfo()->getTargetTriple();
+  S->EmitVersionForTarget(Target);
   if (RelaxAll)
     S->getAssembler().setRelaxAll(true);
   return S;

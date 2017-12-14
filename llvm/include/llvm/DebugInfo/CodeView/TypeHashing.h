@@ -56,6 +56,8 @@ struct LocallyHashedType {
   }
 };
 
+enum class GlobalTypeHashAlg : uint16_t { SHA1 = 0 };
+
 /// A globally hashed type represents a hash value that is sufficient to
 /// uniquely identify a record across multiple type streams or type sequences.
 /// This works by, for any given record A which references B, replacing the

@@ -9,7 +9,6 @@
 
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/DebugInfo/CodeView/Formatters.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;

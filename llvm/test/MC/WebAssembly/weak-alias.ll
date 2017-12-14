@@ -109,22 +109,22 @@ entry:
 ; CHECK-NEXT:     DataSize:        12
 ; CHECK-NEXT:     SymbolInfo:      
 ; CHECK-NEXT:       - Name:            call_alias
-; CHECK-NEXT:         Flags:           4
+; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
 ; CHECK-NEXT:       - Name:            foo
-; CHECK-NEXT:         Flags:           4
+; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
 ; CHECK-NEXT:       - Name:            foo_alias
-; CHECK-NEXT:         Flags:           5
+; CHECK-NEXT:         Flags:           [ BINDING_WEAK, VISIBILITY_HIDDEN ]
 ; CHECK-NEXT:       - Name:            bar_alias
-; CHECK-NEXT:         Flags:           5
+; CHECK-NEXT:         Flags:           [ BINDING_WEAK, VISIBILITY_HIDDEN ]
 ; CHECK-NEXT:     SegmentInfo:    
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            .data.bar
 ; CHECK-NEXT:         Alignment:       8
-; CHECK-NEXT:         Flags:           0
+; CHECK-NEXT:         Flags:           [ ]
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Name:            .data.bar_alias_address
 ; CHECK-NEXT:         Alignment:       8
-; CHECK-NEXT:         Flags:           0
+; CHECK-NEXT:         Flags:           [ ]
 ; CHECK-NEXT: ...
 
 ; CHECK-SYMS: SYMBOL TABLE:

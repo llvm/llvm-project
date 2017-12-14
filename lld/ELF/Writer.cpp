@@ -516,13 +516,10 @@ static bool includeInSymtab(const Symbol &B) {
     SectionBase *Sec = D->Section;
     if (!Sec)
       return true;
-    if (auto *IS = dyn_cast<InputSectionBase>(Sec)) {
-      Sec = IS->Repl;
-      IS = cast<InputSectionBase>(Sec);
-      // Exclude symbols pointing to garbage-collected sections.
-      if (!IS->Live)
-        return false;
-    }
+    Sec = Sec->Repl;
+    // Exclude symbols pointing to garbage-collected sections.
+    if (isa<InputSectionBase>(Sec) && !Sec->Live)
+      return false;
     if (auto *S = dyn_cast<MergeInputSection>(Sec))
       if (!S->getSectionPiece(D->Value)->Live)
         return false;

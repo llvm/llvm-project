@@ -672,10 +672,18 @@ enum OpenMPRTLFunction {
   // arg_num, void** args_base, void **args, size_t *arg_sizes, int64_t
   // *arg_types);
   OMPRTL__tgt_target,
+  // Call to int32_t __tgt_target_nowait(int64_t device_id, void *host_ptr,
+  // int32_t arg_num, void** args_base, void **args, size_t *arg_sizes, int64_t
+  // *arg_types);
+  OMPRTL__tgt_target_nowait,
   // Call to int32_t __tgt_target_teams(int64_t device_id, void *host_ptr,
   // int32_t arg_num, void** args_base, void **args, size_t *arg_sizes, int64_t
   // *arg_types, int32_t num_teams, int32_t thread_limit);
   OMPRTL__tgt_target_teams,
+  // Call to int32_t __tgt_target_teams_nowait(int64_t device_id, void
+  // *host_ptr, int32_t arg_num, void** args_base, void **args, size_t
+  // *arg_sizes, int64_t *arg_types, int32_t num_teams, int32_t thread_limit);
+  OMPRTL__tgt_target_teams_nowait,
   // Call to void __tgt_register_lib(__tgt_bin_desc *desc);
   OMPRTL__tgt_register_lib,
   // Call to void __tgt_unregister_lib(__tgt_bin_desc *desc);
@@ -2042,6 +2050,22 @@ CGOpenMPRuntime::createRuntimeFunction(unsigned Function) {
     RTLFn = CGM.CreateRuntimeFunction(FnTy, "__tgt_target");
     break;
   }
+  case OMPRTL__tgt_target_nowait: {
+    // Build int32_t __tgt_target_nowait(int64_t device_id, void *host_ptr,
+    // int32_t arg_num, void** args_base, void **args, size_t *arg_sizes,
+    // int64_t *arg_types);
+    llvm::Type *TypeParams[] = {CGM.Int64Ty,
+                                CGM.VoidPtrTy,
+                                CGM.Int32Ty,
+                                CGM.VoidPtrPtrTy,
+                                CGM.VoidPtrPtrTy,
+                                CGM.SizeTy->getPointerTo(),
+                                CGM.Int64Ty->getPointerTo()};
+    llvm::FunctionType *FnTy =
+        llvm::FunctionType::get(CGM.Int32Ty, TypeParams, /*isVarArg*/ false);
+    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__tgt_target_nowait");
+    break;
+  }
   case OMPRTL__tgt_target_teams: {
     // Build int32_t __tgt_target_teams(int64_t device_id, void *host_ptr,
     // int32_t arg_num, void** args_base, void **args, size_t *arg_sizes,
@@ -2058,6 +2082,24 @@ CGOpenMPRuntime::createRuntimeFunction(unsigned Function) {
     llvm::FunctionType *FnTy =
         llvm::FunctionType::get(CGM.Int32Ty, TypeParams, /*isVarArg*/ false);
     RTLFn = CGM.CreateRuntimeFunction(FnTy, "__tgt_target_teams");
+    break;
+  }
+  case OMPRTL__tgt_target_teams_nowait: {
+    // Build int32_t __tgt_target_teams_nowait(int64_t device_id, void
+    // *host_ptr, int32_t arg_num, void** args_base, void **args, size_t
+    // *arg_sizes, int64_t *arg_types, int32_t num_teams, int32_t thread_limit);
+    llvm::Type *TypeParams[] = {CGM.Int64Ty,
+                                CGM.VoidPtrTy,
+                                CGM.Int32Ty,
+                                CGM.VoidPtrPtrTy,
+                                CGM.VoidPtrPtrTy,
+                                CGM.SizeTy->getPointerTo(),
+                                CGM.Int64Ty->getPointerTo(),
+                                CGM.Int32Ty,
+                                CGM.Int32Ty};
+    llvm::FunctionType *FnTy =
+        llvm::FunctionType::get(CGM.Int32Ty, TypeParams, /*isVarArg*/ false);
+    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__tgt_target_teams_nowait");
     break;
   }
   case OMPRTL__tgt_register_lib: {
@@ -7010,6 +7052,7 @@ void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
     auto *NumTeams = emitNumTeamsForTargetDirective(RT, CGF, D);
     auto *NumThreads = emitNumThreadsForTargetDirective(RT, CGF, D);
 
+    bool HasNowait = D.hasClausesOfKind<OMPNowaitClause>();
     // The target region is an outlined function launched by the runtime
     // via calls __tgt_target() or __tgt_target_teams().
     //
@@ -7052,15 +7095,19 @@ void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
           Info.MapTypesArray, NumTeams,
           NumThreads};
       Return = CGF.EmitRuntimeCall(
-          RT.createRuntimeFunction(OMPRTL__tgt_target_teams), OffloadingArgs);
+          RT.createRuntimeFunction(HasNowait ? OMPRTL__tgt_target_teams_nowait
+                                             : OMPRTL__tgt_target_teams),
+          OffloadingArgs);
     } else {
       llvm::Value *OffloadingArgs[] = {
           DeviceID,           OutlinedFnID,
           PointerNum,         Info.BasePointersArray,
           Info.PointersArray, Info.SizesArray,
           Info.MapTypesArray};
-      Return = CGF.EmitRuntimeCall(RT.createRuntimeFunction(OMPRTL__tgt_target),
-                                   OffloadingArgs);
+      Return = CGF.EmitRuntimeCall(
+          RT.createRuntimeFunction(HasNowait ? OMPRTL__tgt_target_nowait
+                                             : OMPRTL__tgt_target),
+          OffloadingArgs);
     }
 
     // Check the error code and execute the host version if required.

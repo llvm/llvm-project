@@ -368,9 +368,11 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
   } else {
     if (SanOpts.has(SanitizerKind::CFINVCall) &&
         MD->getParent()->isDynamicClass()) {
-      llvm::Value *VTable = GetVTablePtr(This, Int8PtrTy, MD->getParent());
-      EmitVTablePtrCheckForCall(MD->getParent(), VTable, CFITCK_NVCall,
-                                CE->getLocStart());
+      llvm::Value *VTable;
+      const CXXRecordDecl *RD;
+      std::tie(VTable, RD) =
+          CGM.getCXXABI().LoadVTablePtr(*this, This, MD->getParent());
+      EmitVTablePtrCheckForCall(RD, VTable, CFITCK_NVCall, CE->getLocStart());
     }
 
     if (getLangOpts().AppleKext && MD->isVirtual() && HasQualifier)

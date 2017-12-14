@@ -959,3 +959,32 @@ MCSymbol *MCStreamer::endSection(MCSection *Section) {
   EmitLabel(Sym);
   return Sym;
 }
+
+void MCStreamer::EmitVersionForTarget(const Triple &Target) {
+  if (!Target.isOSBinFormatMachO() || !Target.isOSDarwin())
+    return;
+  // Do we even know the version?
+  if (Target.getOSMajorVersion() == 0)
+    return;
+
+  unsigned Major;
+  unsigned Minor;
+  unsigned Update;
+  MCVersionMinType VersionType;
+  if (Target.isWatchOS()) {
+    VersionType = MCVM_WatchOSVersionMin;
+    Target.getWatchOSVersion(Major, Minor, Update);
+  } else if (Target.isTvOS()) {
+    VersionType = MCVM_TvOSVersionMin;
+    Target.getiOSVersion(Major, Minor, Update);
+  } else if (Target.isMacOSX()) {
+    VersionType = MCVM_OSXVersionMin;
+    if (!Target.getMacOSXVersion(Major, Minor, Update))
+      Major = 0;
+  } else {
+    VersionType = MCVM_IOSVersionMin;
+    Target.getiOSVersion(Major, Minor, Update);
+  }
+  if (Major != 0)
+    EmitVersionMin(VersionType, Major, Minor, Update);
+}

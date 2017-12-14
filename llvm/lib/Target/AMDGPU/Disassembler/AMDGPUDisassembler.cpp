@@ -234,6 +234,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                          AMDGPU::OpName::src2_modifiers);
   }
 
+  if (Res && (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::MIMG)) {
+    Res = convertMIMGInst(MI);
+  }
+
   if (Res && IsSDWA)
     Res = convertSDWAInst(MI);
 
@@ -257,6 +261,42 @@ DecodeStatus AMDGPUDisassembler::convertSDWAInst(MCInst &MI) const {
       insertNamedMCOperand(MI, MCOperand::createImm(0), AMDGPU::OpName::omod);
     }
   }
+  return MCDisassembler::Success;
+}
+
+DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
+  int VDataIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                            AMDGPU::OpName::vdata);
+
+  int DMaskIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                            AMDGPU::OpName::dmask);
+  unsigned DMask = MI.getOperand(DMaskIdx).getImm() & 0xf;
+  if (DMask == 0)
+    return MCDisassembler::Success;
+
+  unsigned ChannelCount = countPopulation(DMask);
+  if (ChannelCount == 1)
+    return MCDisassembler::Success;
+
+  int NewOpcode = AMDGPU::getMaskedMIMGOp(*MCII, MI.getOpcode(), ChannelCount);
+  assert(NewOpcode != -1 && "could not find matching mimg channel instruction");
+  auto RCID = MCII->get(NewOpcode).OpInfo[VDataIdx].RegClass;
+
+  // Widen the register to the correct number of enabled channels.
+  unsigned Vdata0 = MI.getOperand(VDataIdx).getReg();
+  auto NewVdata = MRI.getMatchingSuperReg(Vdata0, AMDGPU::sub0,
+                                          &MRI.getRegClass(RCID));
+  if (NewVdata == AMDGPU::NoRegister) {
+    // It's possible to encode this such that the low register + enabled
+    // components exceeds the register count.
+    return MCDisassembler::Success;
+  }
+
+  MI.setOpcode(NewOpcode);
+  // vaddr will be always appear as a single VGPR. This will look different than
+  // how it is usually emitted because the number of register components is not
+  // in the instruction encoding.
+  MI.getOperand(VDataIdx) = MCOperand::createReg(NewVdata);
   return MCDisassembler::Success;
 }
 
@@ -786,7 +826,7 @@ static MCSymbolizer *createAMDGPUSymbolizer(const Triple &/*TT*/,
 static MCDisassembler *createAMDGPUDisassembler(const Target &T,
                                                 const MCSubtargetInfo &STI,
                                                 MCContext &Ctx) {
-  return new AMDGPUDisassembler(STI, Ctx);
+  return new AMDGPUDisassembler(STI, Ctx, T.createMCInstrInfo());
 }
 
 extern "C" void LLVMInitializeAMDGPUDisassembler() {
