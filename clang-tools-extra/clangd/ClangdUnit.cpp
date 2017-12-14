@@ -770,7 +770,7 @@ CppFile::deferRebuild(StringRef NewContents,
       // (if there are no other references to it).
       OldPreamble.reset();
 
-      trace::Span Tracer("Preamble");
+      trace::Span Tracer(Ctx, "Preamble");
       SPAN_ATTACH(Tracer, "File", That->FileName);
       std::vector<DiagWithFixIts> PreambleDiags;
       StoreDiagsConsumer PreambleDiagnosticsConsumer(/*ref*/ PreambleDiags);
@@ -816,7 +816,7 @@ CppFile::deferRebuild(StringRef NewContents,
     // Compute updated AST.
     llvm::Optional<ParsedAST> NewAST;
     {
-      trace::Span Tracer("Build");
+      trace::Span Tracer(Ctx, "Build");
       SPAN_ATTACH(Tracer, "File", That->FileName);
       NewAST = ParsedAST::Build(Ctx, std::move(CI), std::move(NewPreamble),
                                 std::move(ContentsBuffer), PCHs, VFS);
