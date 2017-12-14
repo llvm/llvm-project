@@ -74,7 +74,7 @@ void use_typedef() {
 __attribute__((objc_root_class))
 AVAILABLE_10_11 @interface Class_10_11 { // expected-note{{annotate 'Class_10_11' with an availability attribute to silence}}
   int_10_11 foo;
-  int_10_12 bar; // expected-warning {{'int_10_12' is partial: introduced in macOS 10.12}}
+  int_10_12 bar; // expected-warning {{'int_10_12' is only available on macOS 10.12 or newer}}
 }
 - (void)method1;
 - (void)method2;
@@ -127,7 +127,7 @@ void test_blocks() {
   };
 }
 
-void test_params(int_10_12 x); // expected-warning {{'int_10_12' is partial: introduced in macOS 10.12}} expected-note{{annotate 'test_params' with an availability attribute to silence}}
+void test_params(int_10_12 x); // expected-warning {{'int_10_12' is only available on macOS 10.12 or newer}} expected-note{{annotate 'test_params' with an availability attribute to silence this warning}}
 
 void test_params2(int_10_12 x) AVAILABLE_10_12; // no warn
 
@@ -238,29 +238,29 @@ void functionInFunction() {
 #endif
 
 struct InStruct { // expected-note{{annotate 'InStruct' with an availability attribute to silence}}
-  new_int mem; // expected-warning{{'new_int' is partial}}
+  new_int mem; // expected-warning{{'new_int' is only available on macOS 10.12 or newer}}
 
-  struct { new_int mem; } anon; // expected-warning{{'new_int' is partial}} expected-note{{annotate anonymous struct with an availability attribute}}
+  struct { new_int mem; } anon; // expected-warning{{'new_int' is only available on macOS 10.12 or newer}} expected-note{{annotate anonymous struct with an availability attribute to silence}}
 };
 
 #ifdef OBJCPP
 static constexpr int AVAILABLE_10_12 SomeConstexprValue = 2; // expected-note{{marked partial here}}
 typedef enum { // expected-note{{annotate anonymous enum with an availability attribute}}
-  SomeValue = SomeConstexprValue // expected-warning{{'SomeConstexprValue' is partial}} 
+  SomeValue = SomeConstexprValue // expected-warning{{'SomeConstexprValue' is only available on macOS 10.12 or newer}} 
 } SomeEnum;
 #endif
 
 @interface InInterface
--(new_int)meth; // expected-warning{{'new_int' is partial}} expected-note{{annotate 'meth' with an availability attribute}}
+-(new_int)meth; // expected-warning{{'new_int' is only available on macOS 10.12 or newer}} expected-note{{annotate 'meth' with an availability attribute}}
 @end
 
 @interface Proper // expected-note{{annotate 'Proper' with an availability attribute}}
-@property (class) new_int x; // expected-warning{{'new_int' is partial}}
+@property (class) new_int x; // expected-warning{{'new_int' is only available}}
 @end
 
 void with_local_struct() {
   struct local { // expected-note{{annotate 'local' with an availability attribute}}
-    new_int x; // expected-warning{{'new_int' is partial}}
+    new_int x; // expected-warning{{'new_int' is only available}}
   };
 }
 
@@ -273,7 +273,7 @@ AVAILABLE_10_12
 
 @protocol ProtocolWithNewProtocolRequirement <NewProtocol> // expected-note {{annotate 'ProtocolWithNewProtocolRequirement' with an availability attribute to silence}}
 
-@property(copy) id<NewProtocol> prop; // expected-warning {{'NewProtocol' is partial: introduced in macOS 10.12}}
+@property(copy) id<NewProtocol> prop; // expected-warning {{'NewProtocol' is only available on macOS 10.12 or newer}}
 
 @end
 
@@ -287,3 +287,27 @@ AVAILABLE_10_12
 @interface BaseClass (CategoryWithNewProtocolRequirement) <NewProtocol>
 
 @end
+
+typedef enum {
+  AK_Dodo __attribute__((availability(macos, deprecated=10.3))), // expected-note 3 {{marked deprecated here}}
+  AK_Cat __attribute__((availability(macos, introduced=10.4))),
+  AK_CyborgCat __attribute__((availability(macos, introduced=10.12))), // expected-note {{marked partial here}}
+} Animals;
+
+void switchAnimals(Animals a) {
+  switch (a) {
+  case AK_Dodo: break; // expected-warning{{'AK_Dodo' is deprecated}}
+  case AK_Cat: break;
+  case AK_Cat|AK_CyborgCat: break; // expected-warning{{case value not in enum}}
+  case AK_CyborgCat: break; // no warn
+  }
+
+  switch (a) {
+  case AK_Dodo...AK_CyborgCat: // expected-warning {{'AK_Dodo' is depr}}
+    break;
+  }
+
+  (void)AK_Dodo; // expected-warning{{'AK_Dodo' is deprecated}}
+  (void)AK_Cat; // no warning
+  (void)AK_CyborgCat; // expected-warning{{'AK_CyborgCat' is only available on macOS 10.12 or newer}} expected-note {{@available}}
+}
