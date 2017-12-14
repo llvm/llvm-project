@@ -21,11 +21,11 @@ top of the LLDB Debugger.
 To build LLDB for Swift, you must have the following prerequisites
 installed on your development system:
 
-* OS X Requirements
+* macOS Requirements
 
-  * OS X 10.11 (El Capitan) or later.
+  * macOS 10.12.6 or later.
 
-  * [Xcode 7.2 Beta 4][xcode-download] or later.
+  * [Xcode 9.2][xcode-download] or later.
 
   * [Cmake][cmake] (version 2.8.12.2 or later)
 
