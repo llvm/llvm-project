@@ -7,11 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/ilist_node.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/ADT/ilist_node.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
@@ -195,6 +198,142 @@ TEST(MachineOperandTest, PrintJumpTableIndex) {
   raw_string_ostream OS(str);
   MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
   ASSERT_TRUE(OS.str() == "%jump-table.3");
+}
+
+TEST(MachineOperandTest, PrintExternalSymbol) {
+  // Create a MachineOperand with an external symbol and print it.
+  MachineOperand MO = MachineOperand::CreateES("foo");
+
+  // Checking some preconditions on the newly created
+  // MachineOperand.
+  ASSERT_TRUE(MO.isSymbol());
+  ASSERT_TRUE(MO.getSymbolName() == StringRef("foo"));
+
+  // Print a MachineOperand containing an external symbol and no offset.
+  std::string str;
+  {
+    raw_string_ostream OS(str);
+    MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+    ASSERT_TRUE(OS.str() == "$foo");
+  }
+
+  str.clear();
+  MO.setOffset(12);
+
+  // Print a MachineOperand containing an external symbol and a positive offset.
+  {
+    raw_string_ostream OS(str);
+    MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+    ASSERT_TRUE(OS.str() == "$foo + 12");
+  }
+
+  str.clear();
+  MO.setOffset(-12);
+
+  // Print a MachineOperand containing an external symbol and a negative offset.
+  {
+    raw_string_ostream OS(str);
+    MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+    ASSERT_TRUE(OS.str() == "$foo - 12");
+  }
+}
+
+TEST(MachineOperandTest, PrintGlobalAddress) {
+  LLVMContext Ctx;
+  Module M("MachineOperandGVTest", Ctx);
+  M.getOrInsertGlobal("foo", Type::getInt32Ty(Ctx));
+
+  GlobalValue *GV = M.getNamedValue("foo");
+
+  // Create a MachineOperand with a global address and a positive offset and
+  // print it.
+  MachineOperand MO = MachineOperand::CreateGA(GV, 12);
+
+  // Checking some preconditions on the newly created
+  // MachineOperand.
+  ASSERT_TRUE(MO.isGlobal());
+  ASSERT_TRUE(MO.getGlobal() == GV);
+  ASSERT_TRUE(MO.getOffset() == 12);
+
+  std::string str;
+  // Print a MachineOperand containing a global address and a positive offset.
+  {
+    raw_string_ostream OS(str);
+    MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+    ASSERT_TRUE(OS.str() == "@foo + 12");
+  }
+
+  str.clear();
+  MO.setOffset(-12);
+
+  // Print a MachineOperand containing a global address and a negative offset.
+  {
+    raw_string_ostream OS(str);
+    MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+    ASSERT_TRUE(OS.str() == "@foo - 12");
+  }
+}
+
+TEST(MachineOperandTest, PrintRegisterLiveOut) {
+  // Create a MachineOperand with a register live out list and print it.
+  uint32_t Mask = 0;
+  MachineOperand MO = MachineOperand::CreateRegLiveOut(&Mask);
+
+  // Checking some preconditions on the newly created
+  // MachineOperand.
+  ASSERT_TRUE(MO.isRegLiveOut());
+  ASSERT_TRUE(MO.getRegLiveOut() == &Mask);
+
+  std::string str;
+  // Print a MachineOperand containing a register live out list without a TRI.
+  raw_string_ostream OS(str);
+  MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+  ASSERT_TRUE(OS.str() == "liveout(<unknown>)");
+}
+
+TEST(MachineOperandTest, PrintMetadata) {
+  LLVMContext Ctx;
+  Module M("MachineOperandMDNodeTest", Ctx);
+  NamedMDNode *MD = M.getOrInsertNamedMetadata("namedmd");
+  ModuleSlotTracker DummyMST(&M);
+  Metadata *MDS = MDString::get(Ctx, "foo");
+  MDNode *Node = MDNode::get(Ctx, MDS);
+  MD->addOperand(Node);
+
+  // Create a MachineOperand with a metadata and print it.
+  MachineOperand MO = MachineOperand::CreateMetadata(Node);
+
+  // Checking some preconditions on the newly created
+  // MachineOperand.
+  ASSERT_TRUE(MO.isMetadata());
+  ASSERT_TRUE(MO.getMetadata() == Node);
+
+  std::string str;
+  // Print a MachineOperand containing a metadata node.
+  raw_string_ostream OS(str);
+  MO.print(OS, DummyMST, LLT{}, false, false, 0, /*TRI=*/nullptr,
+           /*IntrinsicInfo=*/nullptr);
+  ASSERT_TRUE(OS.str() == "!0");
+}
+
+TEST(MachineOperandTest, PrintMCSymbol) {
+  MCAsmInfo MAI;
+  MCContext Ctx(&MAI, /*MRI=*/nullptr, /*MOFI=*/nullptr);
+  MCSymbol *Sym = Ctx.getOrCreateSymbol("foo");
+
+  // Create a MachineOperand with a metadata and print it.
+  MachineOperand MO = MachineOperand::CreateMCSymbol(Sym);
+
+  // Checking some preconditions on the newly created
+  // MachineOperand.
+  ASSERT_TRUE(MO.isMCSymbol());
+  ASSERT_TRUE(MO.getMCSymbol() == Sym);
+
+  std::string str;
+  // Print a MachineOperand containing a metadata node.
+  raw_string_ostream OS(str);
+  MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+  ASSERT_TRUE(OS.str() == "<mcsymbol foo>");
 }
 
 } // end namespace

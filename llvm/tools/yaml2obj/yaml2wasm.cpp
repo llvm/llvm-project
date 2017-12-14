@@ -156,7 +156,6 @@ int WasmWriter::writeSectionContent(raw_ostream &OS, WasmYAML::LinkingSection &S
     encodeULEB128(wasm::WASM_SEGMENT_INFO, OS);
     encodeULEB128(Section.SegmentInfos.size(), SubSection.GetStream());
     for (const WasmYAML::SegmentInfo &SegmentInfo : Section.SegmentInfos) {
-      encodeULEB128(SegmentInfo.Index, SubSection.GetStream());
       writeStringRef(SegmentInfo.Name, SubSection.GetStream());
       encodeULEB128(SegmentInfo.Alignment, SubSection.GetStream());
       encodeULEB128(SegmentInfo.Flags, SubSection.GetStream());

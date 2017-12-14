@@ -37,7 +37,7 @@
   }
 #
 # CHECK:       ********** MI Scheduling **********
-# CHECK:       SU(2):   %2:rgpr = t2MOVi32imm <ga:@g1>; rGPR:%2
+# CHECK:       SU(2):   %2:rgpr = t2MOVi32imm @g1; rGPR:%2
 # CHECK_A9:    Latency    : 2
 # CHECK_SWIFT: Latency    : 2
 # CHECK_R52:   Latency    : 2

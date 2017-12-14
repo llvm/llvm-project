@@ -19,5 +19,5 @@ entry:
 ; CHECK-NEXT:     DataSize:        0
 ; CHECK-NEXT:     SymbolInfo:
 ; CHECK-NEXT:       - Name:            hiddenVis
-; CHECK-NEXT:         Flags:           4
+; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
 ; CHECK-NEXT: ...

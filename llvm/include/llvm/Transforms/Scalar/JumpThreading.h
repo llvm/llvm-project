@@ -34,7 +34,6 @@ class BinaryOperator;
 class BranchInst;
 class CmpInst;
 class Constant;
-class DeferredDominance;
 class Function;
 class Instruction;
 class IntrinsicInst;
@@ -78,7 +77,6 @@ class JumpThreadingPass : public PassInfoMixin<JumpThreadingPass> {
   TargetLibraryInfo *TLI;
   LazyValueInfo *LVI;
   AliasAnalysis *AA;
-  DeferredDominance *DDT;
   std::unique_ptr<BlockFrequencyInfo> BFI;
   std::unique_ptr<BranchProbabilityInfo> BPI;
   bool HasProfileData = false;
@@ -109,8 +107,8 @@ public:
 
   // Glue for old PM.
   bool runImpl(Function &F, TargetLibraryInfo *TLI_, LazyValueInfo *LVI_,
-               AliasAnalysis *AA_, DeferredDominance *DDT_,
-               bool HasProfileData_, std::unique_ptr<BlockFrequencyInfo> BFI_,
+               AliasAnalysis *AA_, bool HasProfileData_,
+               std::unique_ptr<BlockFrequencyInfo> BFI_,
                std::unique_ptr<BranchProbabilityInfo> BPI_);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);

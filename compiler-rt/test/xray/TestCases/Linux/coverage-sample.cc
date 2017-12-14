@@ -9,6 +9,7 @@
 
 #include <set>
 #include <cstdio>
+#include <cassert>
 
 std::set<int32_t> function_ids;
 
@@ -36,9 +37,9 @@ std::set<int32_t> function_ids;
 
 [[clang::xray_always_instrument]] int main(int argc, char *argv[]) {
   __xray_set_handler(coverage_handler);
-  __xray_patch();
+  assert(__xray_patch() == XRayPatchingStatus::SUCCESS);
   foo();
-  __xray_unpatch();
+  assert(__xray_unpatch() == XRayPatchingStatus::SUCCESS);
 
   // print out the function_ids.
   printf("first pass.\n");
@@ -58,11 +59,11 @@ std::set<int32_t> function_ids;
 
   // patch the functions we've called before.
   for (const auto id : called_fns)
-    __xray_patch_function(id);
+    assert(__xray_patch_function(id) == XRayPatchingStatus::SUCCESS);
 
   // then call them again.
   foo();
-  __xray_unpatch();
+  assert(__xray_unpatch() == XRayPatchingStatus::SUCCESS);
 
   // confirm that we've seen the same functions again.
   printf("second pass.\n");
@@ -76,10 +77,10 @@ std::set<int32_t> function_ids;
   // Now we want to make sure that if we unpatch one, that we're only going to
   // see two calls of the coverage_handler.
   function_ids.clear();
-  __xray_patch();
-  __xray_unpatch_function(1);
+  assert(__xray_patch() == XRayPatchingStatus::SUCCESS);
+  assert(__xray_unpatch_function(1) == XRayPatchingStatus::SUCCESS);
   foo();
-  __xray_unpatch();
+  assert(__xray_unpatch() == XRayPatchingStatus::SUCCESS);
 
   // confirm that we don't see function id one called anymore.
   printf("missing 1.\n");

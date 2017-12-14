@@ -23,7 +23,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
-#include "llvm/DebugInfo/CodeView/MergingTypeTableBuilder.h"
+#include "llvm/DebugInfo/CodeView/GlobalTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/Allocator.h"
@@ -52,7 +52,7 @@ class MachineFunction;
 class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   MCStreamer &OS;
   BumpPtrAllocator Allocator;
-  codeview::MergingTypeTableBuilder TypeTable;
+  codeview::GlobalTypeTableBuilder TypeTable;
 
   /// Represents the most general definition range.
   struct LocalVarDefRange {
@@ -218,6 +218,8 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   void emitCodeViewMagicVersion();
 
   void emitTypeInformation();
+
+  void emitTypeGlobalHashes();
 
   void emitCompilerInformation();
 

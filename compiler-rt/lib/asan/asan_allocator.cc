@@ -274,9 +274,9 @@ struct Allocator {
     atomic_store(&max_redzone, options.max_redzone, memory_order_release);
   }
 
-  void Initialize(const AllocatorOptions &options) {
+  void InitLinkerInitialized(const AllocatorOptions &options) {
     SetAllocatorMayReturnNull(options.may_return_null);
-    allocator.Init(options.release_to_os_interval_ms);
+    allocator.InitLinkerInitialized(options.release_to_os_interval_ms);
     SharedInitCode(options);
   }
 
@@ -817,7 +817,7 @@ StackTrace AsanChunkView::GetFreeStack() const {
 }
 
 void InitializeAllocator(const AllocatorOptions &options) {
-  instance.Initialize(options);
+  instance.InitLinkerInitialized(options);
 }
 
 void ReInitializeAllocator(const AllocatorOptions &options) {

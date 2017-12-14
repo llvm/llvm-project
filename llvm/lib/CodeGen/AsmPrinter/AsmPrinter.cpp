@@ -254,28 +254,8 @@ bool AsmPrinter::doInitialization(Module &M) {
   // alternative is duplicated code in each of the target asm printers that
   // use the directive, where it would need the same conditionalization
   // anyway.
-  const Triple &TT = TM.getTargetTriple();
-  // If there is a version specified, Major will be non-zero.
-  if (TT.isOSDarwin() && TT.getOSMajorVersion() != 0) {
-    unsigned Major, Minor, Update;
-    MCVersionMinType VersionType;
-    if (TT.isWatchOS()) {
-      VersionType = MCVM_WatchOSVersionMin;
-      TT.getWatchOSVersion(Major, Minor, Update);
-    } else if (TT.isTvOS()) {
-      VersionType = MCVM_TvOSVersionMin;
-      TT.getiOSVersion(Major, Minor, Update);
-    } else if (TT.isMacOSX()) {
-      VersionType = MCVM_OSXVersionMin;
-      if (!TT.getMacOSXVersion(Major, Minor, Update))
-        Major = 0;
-    } else {
-      VersionType = MCVM_IOSVersionMin;
-      TT.getiOSVersion(Major, Minor, Update);
-    }
-    if (Major != 0)
-      OutStreamer->EmitVersionMin(VersionType, Major, Minor, Update);
-  }
+  const Triple &Target = TM.getTargetTriple();
+  OutStreamer->EmitVersionForTarget(Target);
 
   // Allow the target to emit any magic that it wants at the start of the file.
   EmitStartOfAsmFile(M);
