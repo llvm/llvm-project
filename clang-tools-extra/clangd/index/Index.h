@@ -10,6 +10,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_INDEX_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_INDEX_H
 
+#include "../Context.h"
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
@@ -108,6 +109,34 @@ private:
   bool Frozen = false;
 
   llvm::DenseMap<SymbolID, Symbol> Symbols;
+};
+
+struct FuzzyFindRequest {
+  /// \brief A query string for the fuzzy find. This is matched against symbols'
+  /// qualfified names.
+  std::string Query;
+  /// \brief The maxinum number of candidates to return.
+  size_t MaxCandidateCount = UINT_MAX;
+};
+
+/// \brief Interface for symbol indexes that can be used for searching or
+/// matching symbols among a set of symbols based on names or unique IDs.
+class SymbolIndex {
+public:
+  virtual ~SymbolIndex() = default;
+
+  /// \brief Matches symbols in the index fuzzily and applies \p Callback on
+  /// each matched symbol before returning.
+  ///
+  /// Returns true if the result list is complete, false if it was truncated due
+  /// to MaxCandidateCount
+  virtual bool
+  fuzzyFind(Context &Ctx, const FuzzyFindRequest &Req,
+            std::function<void(const Symbol &)> Callback) const = 0;
+
+  // FIXME: add interfaces for more index use cases:
+  //  - Symbol getSymbolInfo(SymbolID);
+  //  - getAllOccurrences(SymbolID);
 };
 
 } // namespace clangd
