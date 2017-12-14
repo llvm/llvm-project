@@ -261,6 +261,8 @@ Improvements to clang-tidy
   - `hicpp-use-nullptr <http://clang.llvm.org/extra/clang-tidy/checks/hicpp-use-nullptr.html>`_
   - `hicpp-vararg <http://clang.llvm.org/extra/clang-tidy/checks/hicpp-vararg.html>`_
 
+- Added the ability to suppress specific checks (or all checks) in a ``NOLINT`` or ``NOLINTNEXTLINE`` comment.
+
 Improvements to include-fixer
 -----------------------------
 
