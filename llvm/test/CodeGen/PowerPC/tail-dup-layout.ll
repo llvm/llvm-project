@@ -1,5 +1,7 @@
-; RUN: llc -O2 -o - %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-O2 %s
-; RUN: llc -O3 -o - %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-O3 %s
+; RUN: llc -O2 -ppc-reduce-cr-logicals -o - %s | FileCheck \
+; RUN:   --check-prefix=CHECK --check-prefix=CHECK-O2 %s
+; RUN: llc -O3 -ppc-reduce-cr-logicals -o - %s | FileCheck \
+; RUN:   --check-prefix=CHECK --check-prefix=CHECK-O3 %s
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-grtev4-linux-gnu"
 
@@ -276,8 +278,9 @@ exit:
 ;CHECK: add [[TAGPTRREG:[0-9]+]], 3, 4
 ;CHECK: .[[LATCHLABEL:[._0-9A-Za-z]+]]: # %for.latch
 ;CHECK: addi
-;CHECK: .[[CHECKLABEL:[._0-9A-Za-z]+]]: # %for.check
+;CHECK-O2: .[[CHECKLABEL:[._0-9A-Za-z]+]]: # %for.check
 ;CHECK: lwz [[TAGREG:[0-9]+]], 0([[TAGPTRREG]])
+;CHECK-O3: .[[CHECKLABEL:[._0-9A-Za-z]+]]: # %for.check
 ;CHECK: # %bb.{{[0-9]+}}: # %test1
 ;CHECK: andi. {{[0-9]+}}, [[TAGREG]], 1
 ;CHECK-NEXT: bc 12, 1, .[[OPT1LABEL:[._0-9A-Za-z]+]]

@@ -3489,7 +3489,6 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CONCAT_VECTORS(SDNode *N) {
   EVT NOutVT = TLI.getTypeToTransformTo(*DAG.getContext(), OutVT);
   assert(NOutVT.isVector() && "This type must be promoted to a vector type");
 
-  EVT InElemTy = OutVT.getVectorElementType();
   EVT OutElemTy = NOutVT.getVectorElementType();
 
   unsigned NumElem = N->getOperand(0).getValueType().getVectorNumElements();
@@ -3498,15 +3497,36 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CONCAT_VECTORS(SDNode *N) {
   assert(NumElem * NumOperands == NumOutElem &&
          "Unexpected number of elements");
 
+  // If the input type is legal and we can promote it to a legal type with the
+  // same element size, go ahead do that to create a new concat.
+  if (getTypeAction(N->getOperand(0).getValueType()) ==
+      TargetLowering::TypeLegal) {
+    EVT InPromotedTy = EVT::getVectorVT(*DAG.getContext(), OutElemTy, NumElem);
+    if (TLI.isTypeLegal(InPromotedTy)) {
+      SmallVector<SDValue, 8> Ops(NumOperands);
+      for (unsigned i = 0; i < NumOperands; ++i) {
+        Ops[i] = DAG.getNode(ISD::ANY_EXTEND, dl, InPromotedTy,
+                             N->getOperand(i));
+      }
+      return DAG.getNode(ISD::CONCAT_VECTORS, dl, NOutVT, Ops);
+    }
+  }
+
   // Take the elements from the first vector.
   SmallVector<SDValue, 8> Ops(NumOutElem);
   for (unsigned i = 0; i < NumOperands; ++i) {
     SDValue Op = N->getOperand(i);
+    if (getTypeAction(Op.getValueType()) == TargetLowering::TypePromoteInteger)
+      Op = GetPromotedInteger(Op);
+    EVT SclrTy = Op.getValueType().getVectorElementType();
+    assert(NumElem == Op.getValueType().getVectorNumElements() &&
+           "Unexpected number of elements");
+
     for (unsigned j = 0; j < NumElem; ++j) {
       SDValue Ext = DAG.getNode(
-          ISD::EXTRACT_VECTOR_ELT, dl, InElemTy, Op,
+          ISD::EXTRACT_VECTOR_ELT, dl, SclrTy, Op,
           DAG.getConstant(j, dl, TLI.getVectorIdxTy(DAG.getDataLayout())));
-      Ops[i * NumElem + j] = DAG.getNode(ISD::ANY_EXTEND, dl, OutElemTy, Ext);
+      Ops[i * NumElem + j] = DAG.getAnyExtOrTrunc(Ext, dl, OutElemTy);
     }
   }
 

@@ -161,7 +161,6 @@ public:
   void printIRValueReference(const Value &V);
   void printStackObjectReference(int FrameIndex);
   void printOffset(int64_t Offset);
-  void printTargetFlags(const MachineOperand &Op);
   void print(const MachineInstr &MI, unsigned OpIdx,
              const TargetRegisterInfo *TRI, bool ShouldPrintRegisterTies,
              LLT TypeToPrint, bool PrintDef = true);
@@ -778,72 +777,15 @@ void MIPrinter::printOffset(int64_t Offset) {
   OS << " + " << Offset;
 }
 
-static const char *getTargetFlagName(const TargetInstrInfo *TII, unsigned TF) {
-  auto Flags = TII->getSerializableDirectMachineOperandTargetFlags();
-  for (const auto &I : Flags) {
-    if (I.first == TF) {
-      return I.second;
-    }
-  }
-  return nullptr;
-}
-
-void MIPrinter::printTargetFlags(const MachineOperand &Op) {
-  if (!Op.getTargetFlags())
-    return;
-  const auto *TII = Op.getParent()->getMF()->getSubtarget().getInstrInfo();
-  assert(TII && "expected instruction info");
-  auto Flags = TII->decomposeMachineOperandsTargetFlags(Op.getTargetFlags());
-  OS << "target-flags(";
-  const bool HasDirectFlags = Flags.first;
-  const bool HasBitmaskFlags = Flags.second;
-  if (!HasDirectFlags && !HasBitmaskFlags) {
-    OS << "<unknown>) ";
-    return;
-  }
-  if (HasDirectFlags) {
-    if (const auto *Name = getTargetFlagName(TII, Flags.first))
-      OS << Name;
-    else
-      OS << "<unknown target flag>";
-  }
-  if (!HasBitmaskFlags) {
-    OS << ") ";
-    return;
-  }
-  bool IsCommaNeeded = HasDirectFlags;
-  unsigned BitMask = Flags.second;
-  auto BitMasks = TII->getSerializableBitmaskMachineOperandTargetFlags();
-  for (const auto &Mask : BitMasks) {
-    // Check if the flag's bitmask has the bits of the current mask set.
-    if ((BitMask & Mask.first) == Mask.first) {
-      if (IsCommaNeeded)
-        OS << ", ";
-      IsCommaNeeded = true;
-      OS << Mask.second;
-      // Clear the bits which were serialized from the flag's bitmask.
-      BitMask &= ~(Mask.first);
-    }
-  }
-  if (BitMask) {
-    // When the resulting flag's bitmask isn't zero, we know that we didn't
-    // serialize all of the bit flags.
-    if (IsCommaNeeded)
-      OS << ", ";
-    OS << "<unknown bitmask target flag>";
-  }
-  OS << ") ";
-}
-
 void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
                       const TargetRegisterInfo *TRI,
                       bool ShouldPrintRegisterTies, LLT TypeToPrint,
                       bool PrintDef) {
   const MachineOperand &Op = MI.getOperand(OpIdx);
-  printTargetFlags(Op);
   switch (Op.getType()) {
   case MachineOperand::MO_Immediate:
     if (MI.isOperandSubregIdx(OpIdx)) {
+      MachineOperand::printTargetFlags(OS, Op);
       MachineOperand::printSubregIdx(OS, Op.getImm(), TRI);
       break;
     }
@@ -853,7 +795,12 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
   case MachineOperand::MO_MachineBasicBlock:
   case MachineOperand::MO_ConstantPoolIndex:
   case MachineOperand::MO_TargetIndex:
-  case MachineOperand::MO_JumpTableIndex: {
+  case MachineOperand::MO_JumpTableIndex:
+  case MachineOperand::MO_ExternalSymbol:
+  case MachineOperand::MO_GlobalAddress:
+  case MachineOperand::MO_RegisterLiveOut:
+  case MachineOperand::MO_Metadata:
+  case MachineOperand::MO_MCSymbol: {
     unsigned TiedOperandIdx = 0;
     if (ShouldPrintRegisterTies && Op.isReg() && Op.isTied() && !Op.isDef())
       TiedOperandIdx = Op.getParent()->findTiedOperandIdx(OpIdx);
@@ -867,21 +814,6 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
     break;
   case MachineOperand::MO_FrameIndex:
     printStackObjectReference(Op.getIndex());
-    break;
-  case MachineOperand::MO_ExternalSymbol: {
-    StringRef Name = Op.getSymbolName();
-    OS << '$';
-    if (Name.empty()) {
-      OS << "\"\"";
-    } else {
-      printLLVMNameWithoutPrefix(OS, Name);
-    }
-    printOffset(Op.getOffset());
-    break;
-  }
-  case MachineOperand::MO_GlobalAddress:
-    Op.getGlobal()->printAsOperand(OS, /*PrintType=*/false, MST);
-    printOffset(Op.getOffset());
     break;
   case MachineOperand::MO_BlockAddress:
     OS << "blockaddress(";
@@ -900,27 +832,6 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
       printCustomRegMask(Op.getRegMask(), OS, TRI);
     break;
   }
-  case MachineOperand::MO_RegisterLiveOut: {
-    const uint32_t *RegMask = Op.getRegLiveOut();
-    OS << "liveout(";
-    bool IsCommaNeeded = false;
-    for (unsigned Reg = 0, E = TRI->getNumRegs(); Reg < E; ++Reg) {
-      if (RegMask[Reg / 32] & (1U << (Reg % 32))) {
-        if (IsCommaNeeded)
-          OS << ", ";
-        OS << printReg(Reg, TRI);
-        IsCommaNeeded = true;
-      }
-    }
-    OS << ")";
-    break;
-  }
-  case MachineOperand::MO_Metadata:
-    Op.getMetadata()->printAsOperand(OS, MST);
-    break;
-  case MachineOperand::MO_MCSymbol:
-    OS << "<mcsymbol " << *Op.getMCSymbol() << ">";
-    break;
   case MachineOperand::MO_CFIIndex: {
     const MachineFunction &MF = *Op.getParent()->getMF();
     print(MF.getFrameInstructions()[Op.getCFIIndex()], TRI);

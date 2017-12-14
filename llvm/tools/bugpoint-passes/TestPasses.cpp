@@ -99,7 +99,6 @@ static RegisterPass<CrashOnDeclFunc>
   Z("bugpoint-crash-decl-funcs",
     "BugPoint Test Pass - Intentionally crash on declared functions");
 
-#include <iostream>
 namespace {
 /// CrashOnOneCU - This pass is used to test bugpoint. It intentionally
 /// crashes if the Module has two or more compile units

@@ -795,8 +795,8 @@ private:
       for (auto IDFB : IDFBlocks) { // TODO: Prune out useless CHI insertions.
         for (unsigned i = 0; i < V.size(); ++i) {
           CHIArg C = {VN, nullptr, nullptr};
-          if (DT->dominates(IDFB, V[i]->getParent())) { // Ignore spurious PDFs.
-            // InValue[V[i]->getParent()].push_back(std::make_pair(VN, V[i]));
+           // Ignore spurious PDFs.
+          if (DT->properlyDominates(IDFB, V[i]->getParent())) {
             OutValue[IDFB].push_back(C);
             DEBUG(dbgs() << "\nInsertion a CHI for BB: " << IDFB->getName()
                          << ", for Insn: " << *V[i]);

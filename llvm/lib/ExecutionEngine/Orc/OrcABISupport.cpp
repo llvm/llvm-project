@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Process.h"
 
 namespace llvm {

@@ -187,3 +187,36 @@ def FCVT_S_LU : FPUnaryOp_r_frm<0b1101000, FPR32, GPR, "fcvt.s.lu"> {
 }
 def           : FPUnaryOpDynFrmAlias<FCVT_S_LU, "fcvt.s.lu", FPR32, GPR>;
 } // Predicates = [HasStdExtF, IsRV64]
+
+//===----------------------------------------------------------------------===//
+// Assembler Pseudo Instructions (User-Level ISA, Version 2.2, Chapter 20)
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtF] in {
+// TODO flw
+// TODO fsw
+
+def : InstAlias<"fmv.s $rd, $rs",  (FSGNJ_S  FPR32:$rd, FPR32:$rs, FPR32:$rs)>;
+def : InstAlias<"fabs.s $rd, $rs", (FSGNJX_S FPR32:$rd, FPR32:$rs, FPR32:$rs)>;
+def : InstAlias<"fneg.s $rd, $rs", (FSGNJN_S FPR32:$rd, FPR32:$rs, FPR32:$rs)>;
+
+// The following csr instructions actually alias instructions from the base ISA.
+// However, it only makes sense to support them when the F extension is enabled.
+// CSR Addresses: 0x003 == fcsr, 0x002 == frm, 0x001 == fflags
+// NOTE: "frcsr", "frrm", and "frflags" are more specialized version of "csrr".
+def : InstAlias<"frcsr $rd",      (CSRRS GPR:$rd, 0x003, X0), 2>;
+def : InstAlias<"fscsr $rd, $rs", (CSRRW GPR:$rd, 0x003, GPR:$rs)>;
+def : InstAlias<"fscsr $rs",      (CSRRW      X0, 0x003, GPR:$rs), 2>;
+
+def : InstAlias<"frrm $rd",        (CSRRS  GPR:$rd, 0x002, X0), 2>;
+def : InstAlias<"fsrm $rd, $rs",   (CSRRW  GPR:$rd, 0x002, GPR:$rs)>;
+def : InstAlias<"fsrm $rs",        (CSRRW       X0, 0x002, GPR:$rs), 2>;
+def : InstAlias<"fsrmi $rd, $imm", (CSRRWI GPR:$rd, 0x002, uimm5:$imm)>;
+def : InstAlias<"fsrmi $imm",      (CSRRWI      X0, 0x002, uimm5:$imm), 2>;
+
+def : InstAlias<"frflags $rd",        (CSRRS  GPR:$rd, 0x001, X0), 2>;
+def : InstAlias<"fsflags $rd, $rs",   (CSRRW  GPR:$rd, 0x001, GPR:$rs)>;
+def : InstAlias<"fsflags $rs",        (CSRRW       X0, 0x001, GPR:$rs), 2>;
+def : InstAlias<"fsflagsi $rd, $imm", (CSRRWI GPR:$rd, 0x001, uimm5:$imm)>;
+def : InstAlias<"fsflagsi $imm",      (CSRRWI      X0, 0x001, uimm5:$imm), 2>;
+} // Predicates = [HasStdExtF]

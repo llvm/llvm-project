@@ -121,6 +121,8 @@ Tests are more accessible and future proof when simplified:
   contains dummy functions (see above). The .mir loader will create the
   IR functions automatically in this case.
 
+.. _limitations:
+
 Limitations
 -----------
 
@@ -665,13 +667,37 @@ Example:
         - id:             1
           blocks:         [ '%bb.7', '%bb.7', '%bb.4.d3', '%bb.5' ]
 
+External Symbol Operands
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+An external symbol operand is represented using an identifier with the ``$``
+prefix. The identifier is surrounded with ""'s and escaped if it has any
+special non-printable characters in it.
+
+Example:
+
+.. code-block:: text
+
+    CALL64pcrel32 $__stack_chk_fail, csr_64, implicit %rsp, implicit-def %rsp
+
+MCSymbol Operands
+^^^^^^^^^^^^^^^^^
+
+A MCSymbol operand is holding a pointer to a ``MCSymbol``. For the limitations
+of this operand in MIR, see :ref:`limitations <limitations>`.
+
+The syntax is:
+
+.. code-block:: text
+
+    EH_LABEL <mcsymbol Ltmp1>
+
 .. TODO: Describe the parsers default behaviour when optional YAML attributes
    are missing.
 .. TODO: Describe the syntax for the bundled instructions.
 .. TODO: Describe the syntax for virtual register YAML definitions.
 .. TODO: Describe the machine function's YAML flag attributes.
-.. TODO: Describe the syntax for the external symbol and register
-   mask machine operands.
+.. TODO: Describe the syntax for the register mask machine operands.
 .. TODO: Describe the frame information YAML mapping.
 .. TODO: Describe the syntax of the stack object machine operands and their
    YAML definitions.

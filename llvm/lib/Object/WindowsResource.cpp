@@ -17,7 +17,6 @@
 #include "llvm/Support/MathExtras.h"
 #include <ctime>
 #include <queue>
-#include <sstream>
 #include <system_error>
 
 using namespace llvm;

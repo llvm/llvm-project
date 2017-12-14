@@ -15,7 +15,6 @@
 #include "llvm/Transforms/Scalar/LowerAtomic.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Scalar.h"
 using namespace llvm;

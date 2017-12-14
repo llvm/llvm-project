@@ -34,6 +34,7 @@ namespace llvm {
 class BasicBlock;
 class FastMathFlags;
 class MDNode;
+class Module;
 struct AAMDNodes;
 
 template <> struct ilist_alloc_traits<Instruction> {
