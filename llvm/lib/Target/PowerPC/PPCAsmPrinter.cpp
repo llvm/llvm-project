@@ -592,7 +592,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     return;
   }
   case PPC::LWZtoc: {
-    // Transform %r3 = LWZtoc <ga:@min1>, %r2
+    // Transform %r3 = LWZtoc @min1, %r2
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, isDarwin);
 
     // Change the opcode to LWZ, and the global address operand to be a
@@ -636,7 +636,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case PPC::LDtocCPT:
   case PPC::LDtocBA:
   case PPC::LDtoc: {
-    // Transform %x3 = LDtoc <ga:@min1>, %x2
+    // Transform %x3 = LDtoc @min1, %x2
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, isDarwin);
 
     // Change the opcode to LD, and the global address operand to be a
@@ -667,7 +667,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   }
 
   case PPC::ADDIStocHA: {
-    // Transform %xd = ADDIStocHA %x2, <ga:@sym>
+    // Transform %xd = ADDIStocHA %x2, @sym
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, isDarwin);
 
     // Change the opcode to ADDIS8.  If the global address is external, has
@@ -714,7 +714,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     return;
   }
   case PPC::LDtocL: {
-    // Transform %xd = LDtocL <ga:@sym>, %xs
+    // Transform %xd = LDtocL @sym, %xs
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, isDarwin);
 
     // Change the opcode to LD.  If the global address is external, has
@@ -757,7 +757,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     return;
   }
   case PPC::ADDItocL: {
-    // Transform %xd = ADDItocL %xs, <ga:@sym>
+    // Transform %xd = ADDItocL %xs, @sym
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, isDarwin);
 
     // Change the opcode to ADDI8.  If the global address is external, then
@@ -788,7 +788,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     return;
   }
   case PPC::ADDISgotTprelHA: {
-    // Transform: %xd = ADDISgotTprelHA %x2, <ga:@sym>
+    // Transform: %xd = ADDISgotTprelHA %x2, @sym
     // Into:      %xd = ADDIS8 %x2, sym@got@tlsgd@ha
     assert(Subtarget->isPPC64() && "Not supported for 32-bit PowerPC");
     const MachineOperand &MO = MI->getOperand(2);
@@ -805,7 +805,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   }
   case PPC::LDgotTprelL:
   case PPC::LDgotTprelL32: {
-    // Transform %xd = LDgotTprelL <ga:@sym>, %xs
+    // Transform %xd = LDgotTprelL @sym, %xs
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, isDarwin);
 
     // Change the opcode to LD.
@@ -866,7 +866,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     return;
   }
   case PPC::ADDIStlsgdHA: {
-    // Transform: %xd = ADDIStlsgdHA %x2, <ga:@sym>
+    // Transform: %xd = ADDIStlsgdHA %x2, @sym
     // Into:      %xd = ADDIS8 %x2, sym@got@tlsgd@ha
     assert(Subtarget->isPPC64() && "Not supported for 32-bit PowerPC");
     const MachineOperand &MO = MI->getOperand(2);
@@ -882,10 +882,10 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     return;
   }
   case PPC::ADDItlsgdL:
-    // Transform: %xd = ADDItlsgdL %xs, <ga:@sym>
+    // Transform: %xd = ADDItlsgdL %xs, @sym
     // Into:      %xd = ADDI8 %xs, sym@got@tlsgd@l
   case PPC::ADDItlsgdL32: {
-    // Transform: %rd = ADDItlsgdL32 %rs, <ga:@sym>
+    // Transform: %rd = ADDItlsgdL32 %rs, @sym
     // Into:      %rd = ADDI %rs, sym@got@tlsgd
     const MachineOperand &MO = MI->getOperand(2);
     const GlobalValue *GValue = MO.getGlobal();
@@ -902,16 +902,16 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     return;
   }
   case PPC::GETtlsADDR:
-    // Transform: %x3 = GETtlsADDR %x3, <ga:@sym>
+    // Transform: %x3 = GETtlsADDR %x3, @sym
     // Into: BL8_NOP_TLS __tls_get_addr(sym at tlsgd)
   case PPC::GETtlsADDR32: {
-    // Transform: %r3 = GETtlsADDR32 %r3, <ga:@sym>
+    // Transform: %r3 = GETtlsADDR32 %r3, @sym
     // Into: BL_TLS __tls_get_addr(sym at tlsgd)@PLT
     EmitTlsCall(MI, MCSymbolRefExpr::VK_PPC_TLSGD);
     return;
   }
   case PPC::ADDIStlsldHA: {
-    // Transform: %xd = ADDIStlsldHA %x2, <ga:@sym>
+    // Transform: %xd = ADDIStlsldHA %x2, @sym
     // Into:      %xd = ADDIS8 %x2, sym@got@tlsld@ha
     assert(Subtarget->isPPC64() && "Not supported for 32-bit PowerPC");
     const MachineOperand &MO = MI->getOperand(2);
@@ -927,10 +927,10 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     return;
   }
   case PPC::ADDItlsldL:
-    // Transform: %xd = ADDItlsldL %xs, <ga:@sym>
+    // Transform: %xd = ADDItlsldL %xs, @sym
     // Into:      %xd = ADDI8 %xs, sym@got@tlsld@l
   case PPC::ADDItlsldL32: {
-    // Transform: %rd = ADDItlsldL32 %rs, <ga:@sym>
+    // Transform: %rd = ADDItlsldL32 %rs, @sym
     // Into:      %rd = ADDI %rs, sym@got@tlsld
     const MachineOperand &MO = MI->getOperand(2);
     const GlobalValue *GValue = MO.getGlobal();
@@ -947,19 +947,19 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     return;
   }
   case PPC::GETtlsldADDR:
-    // Transform: %x3 = GETtlsldADDR %x3, <ga:@sym>
+    // Transform: %x3 = GETtlsldADDR %x3, @sym
     // Into: BL8_NOP_TLS __tls_get_addr(sym at tlsld)
   case PPC::GETtlsldADDR32: {
-    // Transform: %r3 = GETtlsldADDR32 %r3, <ga:@sym>
+    // Transform: %r3 = GETtlsldADDR32 %r3, @sym
     // Into: BL_TLS __tls_get_addr(sym at tlsld)@PLT
     EmitTlsCall(MI, MCSymbolRefExpr::VK_PPC_TLSLD);
     return;
   }
   case PPC::ADDISdtprelHA:
-    // Transform: %xd = ADDISdtprelHA %xs, <ga:@sym>
+    // Transform: %xd = ADDISdtprelHA %xs, @sym
     // Into:      %xd = ADDIS8 %xs, sym@dtprel@ha
   case PPC::ADDISdtprelHA32: {
-    // Transform: %rd = ADDISdtprelHA32 %rs, <ga:@sym>
+    // Transform: %rd = ADDISdtprelHA32 %rs, @sym
     // Into:      %rd = ADDIS %rs, sym@dtprel@ha
     const MachineOperand &MO = MI->getOperand(2);
     const GlobalValue *GValue = MO.getGlobal();
@@ -976,10 +976,10 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     return;
   }
   case PPC::ADDIdtprelL:
-    // Transform: %xd = ADDIdtprelL %xs, <ga:@sym>
+    // Transform: %xd = ADDIdtprelL %xs, @sym
     // Into:      %xd = ADDI8 %xs, sym@dtprel@l
   case PPC::ADDIdtprelL32: {
-    // Transform: %rd = ADDIdtprelL32 %rs, <ga:@sym>
+    // Transform: %rd = ADDIdtprelL32 %rs, @sym
     // Into:      %rd = ADDI %rs, sym@dtprel@l
     const MachineOperand &MO = MI->getOperand(2);
     const GlobalValue *GValue = MO.getGlobal();

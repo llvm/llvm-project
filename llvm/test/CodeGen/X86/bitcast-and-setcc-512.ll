@@ -12,33 +12,21 @@ define i8 @v8i64(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i64> %d) {
 ; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm9
 ; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm10
 ; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm11
-; SSE-NEXT:    pcmpgtq %xmm5, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,2,2,3,4,5,6,7]
-; SSE-NEXT:    pcmpgtq %xmm4, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE-NEXT:    pcmpgtq %xmm7, %xmm3
 ; SSE-NEXT:    pcmpgtq %xmm6, %xmm2
 ; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[0,2]
-; SSE-NEXT:    packssdw %xmm2, %xmm2
-; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0,1,2,3],xmm2[4,5,6,7]
+; SSE-NEXT:    pcmpgtq %xmm5, %xmm1
+; SSE-NEXT:    pcmpgtq %xmm4, %xmm0
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; SSE-NEXT:    packssdw %xmm2, %xmm0
 ; SSE-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm11
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm11[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; SSE-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm10
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm10[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,2,2,3,4,5,6,7]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSE-NEXT:    shufps {{.*#+}} xmm10 = xmm10[0,2],xmm11[0,2]
 ; SSE-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm9
 ; SSE-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm8
 ; SSE-NEXT:    shufps {{.*#+}} xmm8 = xmm8[0,2],xmm9[0,2]
-; SSE-NEXT:    packssdw %xmm8, %xmm8
-; SSE-NEXT:    pblendw {{.*#+}} xmm8 = xmm1[0,1,2,3],xmm8[4,5,6,7]
-; SSE-NEXT:    pand %xmm2, %xmm8
-; SSE-NEXT:    psllw $15, %xmm8
-; SSE-NEXT:    psraw $15, %xmm8
+; SSE-NEXT:    packssdw %xmm10, %xmm8
+; SSE-NEXT:    pand %xmm0, %xmm8
 ; SSE-NEXT:    packsswb %xmm0, %xmm8
 ; SSE-NEXT:    pmovmskb %xmm8, %eax
 ; SSE-NEXT:    # kill: def %al killed %al killed %eax
@@ -139,33 +127,21 @@ define i8 @v8f64(<8 x double> %a, <8 x double> %b, <8 x double> %c, <8 x double>
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm9
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm10
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm11
-; SSE-NEXT:    cmpltpd %xmm1, %xmm5
-; SSE-NEXT:    shufps {{.*#+}} xmm5 = xmm5[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm5[0,2,2,3,4,5,6,7]
-; SSE-NEXT:    cmpltpd %xmm0, %xmm4
-; SSE-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm4[0,2,2,3,4,5,6,7]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE-NEXT:    cmpltpd %xmm3, %xmm7
 ; SSE-NEXT:    cmpltpd %xmm2, %xmm6
 ; SSE-NEXT:    shufps {{.*#+}} xmm6 = xmm6[0,2],xmm7[0,2]
-; SSE-NEXT:    packssdw %xmm6, %xmm6
-; SSE-NEXT:    pblendw {{.*#+}} xmm6 = xmm0[0,1,2,3],xmm6[4,5,6,7]
+; SSE-NEXT:    cmpltpd %xmm1, %xmm5
+; SSE-NEXT:    cmpltpd %xmm0, %xmm4
+; SSE-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,2],xmm5[0,2]
+; SSE-NEXT:    packssdw %xmm6, %xmm4
 ; SSE-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm11
-; SSE-NEXT:    shufps {{.*#+}} xmm11 = xmm11[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm11[0,2,2,3,4,5,6,7]
 ; SSE-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm10
-; SSE-NEXT:    shufps {{.*#+}} xmm10 = xmm10[0,2,2,3]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm10[0,2,2,3,4,5,6,7]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSE-NEXT:    shufps {{.*#+}} xmm10 = xmm10[0,2],xmm11[0,2]
 ; SSE-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm9
 ; SSE-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm8
 ; SSE-NEXT:    shufps {{.*#+}} xmm8 = xmm8[0,2],xmm9[0,2]
-; SSE-NEXT:    packssdw %xmm8, %xmm8
-; SSE-NEXT:    pblendw {{.*#+}} xmm8 = xmm1[0,1,2,3],xmm8[4,5,6,7]
-; SSE-NEXT:    pand %xmm6, %xmm8
-; SSE-NEXT:    psllw $15, %xmm8
-; SSE-NEXT:    psraw $15, %xmm8
+; SSE-NEXT:    packssdw %xmm10, %xmm8
+; SSE-NEXT:    pand %xmm4, %xmm8
 ; SSE-NEXT:    packsswb %xmm0, %xmm8
 ; SSE-NEXT:    pmovmskb %xmm8, %eax
 ; SSE-NEXT:    # kill: def %al killed %al killed %eax
@@ -311,278 +287,20 @@ define i32 @v32i16(<32 x i16> %a, <32 x i16> %b, <32 x i16> %c, <32 x i16> %d) {
 ; AVX512F-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX512F-NEXT:    andq $-32, %rsp
 ; AVX512F-NEXT:    subq $32, %rsp
-; AVX512F-NEXT:    vpcmpgtw %ymm3, %ymm1, %ymm1
-; AVX512F-NEXT:    vpmovsxwd %ymm1, %zmm1
-; AVX512F-NEXT:    vpslld $31, %zmm1, %zmm1
-; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k0
-; AVX512F-NEXT:    kshiftlw $14, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    kshiftlw $15, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %ecx
-; AVX512F-NEXT:    vmovd %ecx, %xmm1
-; AVX512F-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $13, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $12, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $11, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $10, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $9, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $6, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $8, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $7, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $7, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $6, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $9, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $5, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $10, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $4, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $11, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $3, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $2, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $13, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $1, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $14, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
-; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    vpinsrb $15, %eax, %xmm1, %xmm1
 ; AVX512F-NEXT:    vpcmpgtw %ymm2, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpmovsxwd %ymm0, %zmm0
-; AVX512F-NEXT:    vpslld $31, %zmm0, %zmm0
-; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; AVX512F-NEXT:    kshiftlw $14, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    kshiftlw $15, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %ecx
-; AVX512F-NEXT:    vmovd %ecx, %xmm0
-; AVX512F-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftlw $13, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftlw $12, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $3, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftlw $11, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftlw $10, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $5, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftlw $9, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftlw $8, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftlw $7, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $8, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftlw $6, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $9, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftlw $5, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $10, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftlw $4, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $11, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftlw $3, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftlw $2, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $13, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftlw $1, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $14, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
-; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512F-NEXT:    vpcmpgtw %ymm7, %ymm5, %ymm1
+; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512F-NEXT:    vpcmpgtw %ymm3, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpmovsxwd %ymm1, %zmm1
-; AVX512F-NEXT:    vpslld $31, %zmm1, %zmm1
-; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k0
-; AVX512F-NEXT:    kshiftlw $14, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    kshiftlw $15, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %ecx
-; AVX512F-NEXT:    vmovd %ecx, %xmm1
-; AVX512F-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $13, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $12, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $11, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $10, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $9, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $6, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $8, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $7, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $7, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $6, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $9, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $5, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $10, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $4, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $11, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $3, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $2, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $13, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $1, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $14, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
-; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    vpinsrb $15, %eax, %xmm1, %xmm1
+; AVX512F-NEXT:    vpmovdb %zmm1, %xmm1
 ; AVX512F-NEXT:    vpcmpgtw %ymm6, %ymm4, %ymm2
 ; AVX512F-NEXT:    vpmovsxwd %ymm2, %zmm2
-; AVX512F-NEXT:    vpslld $31, %zmm2, %zmm2
-; AVX512F-NEXT:    vptestmd %zmm2, %zmm2, %k0
-; AVX512F-NEXT:    kshiftlw $14, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    kshiftlw $15, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %ecx
-; AVX512F-NEXT:    vmovd %ecx, %xmm2
-; AVX512F-NEXT:    vpinsrb $1, %eax, %xmm2, %xmm2
-; AVX512F-NEXT:    kshiftlw $13, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $2, %eax, %xmm2, %xmm2
-; AVX512F-NEXT:    kshiftlw $12, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $3, %eax, %xmm2, %xmm2
-; AVX512F-NEXT:    kshiftlw $11, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $4, %eax, %xmm2, %xmm2
-; AVX512F-NEXT:    kshiftlw $10, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $5, %eax, %xmm2, %xmm2
-; AVX512F-NEXT:    kshiftlw $9, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $6, %eax, %xmm2, %xmm2
-; AVX512F-NEXT:    kshiftlw $8, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $7, %eax, %xmm2, %xmm2
-; AVX512F-NEXT:    kshiftlw $7, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $8, %eax, %xmm2, %xmm2
-; AVX512F-NEXT:    kshiftlw $6, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $9, %eax, %xmm2, %xmm2
-; AVX512F-NEXT:    kshiftlw $5, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $10, %eax, %xmm2, %xmm2
-; AVX512F-NEXT:    kshiftlw $4, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $11, %eax, %xmm2, %xmm2
-; AVX512F-NEXT:    kshiftlw $3, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $12, %eax, %xmm2, %xmm2
-; AVX512F-NEXT:    kshiftlw $2, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $13, %eax, %xmm2, %xmm2
-; AVX512F-NEXT:    kshiftlw $1, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $14, %eax, %xmm2, %xmm2
-; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
-; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    vpinsrb $15, %eax, %xmm2, %xmm2
-; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; AVX512F-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512F-NEXT:    vpmovdb %zmm2, %xmm2
+; AVX512F-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX512F-NEXT:    vpcmpgtw %ymm7, %ymm5, %ymm2
+; AVX512F-NEXT:    vpmovsxwd %ymm2, %zmm2
+; AVX512F-NEXT:    vpmovdb %zmm2, %xmm2
+; AVX512F-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; AVX512F-NEXT:    vpmovsxbd %xmm1, %zmm1
 ; AVX512F-NEXT:    vpslld $31, %zmm1, %zmm1
 ; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k0

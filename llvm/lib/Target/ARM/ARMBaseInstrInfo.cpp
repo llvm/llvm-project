@@ -2882,7 +2882,7 @@ bool ARMBaseInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
   if (DefOpc != ARM::t2MOVi32imm && DefOpc != ARM::MOVi32imm)
     return false;
   if (!DefMI.getOperand(1).isImm())
-    // Could be t2MOVi32imm <ga:xx>
+    // Could be t2MOVi32imm @xx
     return false;
 
   if (!MRI->hasOneNonDBGUse(Reg))

@@ -3276,8 +3276,8 @@ PreservedAnalyses InstCombinePass::run(Function &F,
 
   auto *LI = AM.getCachedResult<LoopAnalysis>(F);
 
-  // FIXME: The AliasAnalysis is not yet supported in the new pass manager
-  if (!combineInstructionsOverFunction(F, Worklist, nullptr, AC, TLI, DT, ORE,
+  auto *AA = &AM.getResult<AAManager>(F);
+  if (!combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, DT, ORE,
                                        ExpensiveCombines, LI))
     // No changes, all analyses are preserved.
     return PreservedAnalyses::all();
@@ -3286,6 +3286,7 @@ PreservedAnalyses InstCombinePass::run(Function &F,
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
   PA.preserve<AAManager>();
+  PA.preserve<BasicAA>();
   PA.preserve<GlobalsAA>();
   return PA;
 }
