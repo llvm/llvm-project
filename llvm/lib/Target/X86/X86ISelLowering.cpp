@@ -1222,6 +1222,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       }
     }
 
+    if (Subtarget.hasAVX512())
+      setOperationAction(ISD::SELECT, MVT::v1i1, Custom);
+
     if (Subtarget.hasDQI()) {
       for (auto VT : { MVT::v2i64, MVT::v4i64, MVT::v8i64 }) {
         setOperationAction(ISD::SINT_TO_FP,     VT, Legal);
@@ -14525,12 +14528,9 @@ static SDValue ExtractBitFromMaskVector(SDValue Op, SelectionDAG &DAG,
 
   // Use kshiftlw/rw instruction.
   unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
-  unsigned MaxShift = VecVT.getVectorNumElements() - 1;
-  if (MaxShift - IdxVal)
-    Vec = DAG.getNode(X86ISD::KSHIFTL, dl, VecVT, Vec,
-                      DAG.getConstant(MaxShift - IdxVal, dl, MVT::i8));
-  Vec = DAG.getNode(X86ISD::KSHIFTR, dl, VecVT, Vec,
-                    DAG.getConstant(MaxShift, dl, MVT::i8));
+  if (IdxVal != 0)
+    Vec = DAG.getNode(X86ISD::KSHIFTR, dl, VecVT, Vec,
+                      DAG.getConstant(IdxVal, dl, MVT::i8));
   return DAG.getNode(X86ISD::VEXTRACT, dl, Op.getSimpleValueType(), Vec,
                      DAG.getIntPtrConstant(0, dl));
 }

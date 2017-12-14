@@ -38,7 +38,7 @@ void foo(int arg) {
   float lb[arg];
 
   // Region 00
-  // CK1-DAG: call void @__tgt_target_data_update(i64 [[DEV:%[^,]+]], i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE00]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00]]{{.+}})
+  // CK1-DAG: call void @__tgt_target_data_update_nowait(i64 [[DEV:%[^,]+]], i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE00]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00]]{{.+}})
   // CK1-DAG: [[DEV]] = sext i32 [[DEVi32:%[^,]+]] to i64
   // CK1-DAG: [[DEVi32]] = load i32, i32* %{{[^,]+}},
   // CK1-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
@@ -52,7 +52,7 @@ void foo(int arg) {
   // CK1-DAG: store [100 x double]* @gc, [100 x double]** [[PC0]]
 
   // CK1: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
-  #pragma omp target update if(1+3-5) device(arg) from(gc)
+  #pragma omp target update if(1+3-5) device(arg) from(gc) nowait
   {++arg;}
 
   // Region 01

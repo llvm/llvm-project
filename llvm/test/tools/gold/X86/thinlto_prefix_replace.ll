@@ -4,7 +4,7 @@
 ; Ensure that there is no existing file at the new path, so we properly
 ; test the creation of the new file there.
 ; RUN: rm -f %t/newpath/thinlto_prefix_replace.o.thinlto.bc
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=thinlto-index-only \
 ; RUN:    --plugin-opt=thinlto-prefix-replace="%t/oldpath/;%t/newpath/" \

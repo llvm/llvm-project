@@ -7,7 +7,7 @@
 
 ; First perform the thin link on the normal bitcode file, and save the
 ; resulting index.
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=thinlto-index-only \
@@ -19,7 +19,7 @@
 ; RUN: rm -f %t1.o.thinlto.bc
 ; Make sure it isn't inadvertently using the regular bitcode file.
 ; RUN: rm -f %t1.o
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=thinlto-index-only \

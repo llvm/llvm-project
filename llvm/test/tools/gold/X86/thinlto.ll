@@ -2,13 +2,13 @@
 ; bitcode without summary sections gracefully.
 ; RUN: llvm-as %s -o %t.o
 ; RUN: llvm-as %p/Inputs/thinlto.ll -o %t2.o
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=thinlto-index-only \
 ; RUN:    -shared %t.o %t2.o -o %t3
 ; RUN: not test -e %t3
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    -shared %t.o %t2.o -o %t4
@@ -19,7 +19,7 @@
 ; RUN: opt -module-summary %p/Inputs/thinlto.ll -o %t2.o
 
 ; Ensure gold generates an index and not a binary if requested.
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=thinlto-index-only \
@@ -30,7 +30,7 @@
 
 ; Ensure gold generates an index as well as a binary with save-temps in ThinLTO mode.
 ; First force single-threaded mode
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=save-temps \
 ; RUN:    --plugin-opt=thinlto \
@@ -40,7 +40,7 @@
 ; RUN: llvm-nm %t4 | FileCheck %s --check-prefix=NM
 
 ; Check with --no-map-whole-files
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=save-temps \
 ; RUN:    --plugin-opt=thinlto \
@@ -51,7 +51,7 @@
 ; RUN: llvm-nm %t4 | FileCheck %s --check-prefix=NM
 
 ; Next force multi-threaded mode
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=save-temps \
 ; RUN:    --plugin-opt=thinlto \
@@ -62,7 +62,7 @@
 
 ; Test --plugin-opt=obj-path to ensure unique object files generated.
 ; RUN: rm -f %t5.o %t5.o1
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=jobs=2 \

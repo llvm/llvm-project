@@ -394,8 +394,7 @@ void GCNScheduleDAGMILive::schedule() {
     if (MI->getIterator() != RegionEnd) {
       BB->remove(MI);
       BB->insert(RegionEnd, MI);
-      if (!MI->isDebugValue())
-        LIS->handleMove(*MI, true);
+      LIS->handleMove(*MI, true);
     }
     // Reset read-undef flags and update them later.
     for (auto &Op : MI->operands())
@@ -403,15 +402,13 @@ void GCNScheduleDAGMILive::schedule() {
         Op.setIsUndef(false);
     RegisterOperands RegOpers;
     RegOpers.collect(*MI, *TRI, MRI, ShouldTrackLaneMasks, false);
-    if (!MI->isDebugValue()) {
-      if (ShouldTrackLaneMasks) {
-        // Adjust liveness and add missing dead+read-undef flags.
-        SlotIndex SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
-        RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx, MI);
-      } else {
-        // Adjust for missing dead-def flags.
-        RegOpers.detectDeadDefs(*MI, *LIS);
-      }
+    if (ShouldTrackLaneMasks) {
+      // Adjust liveness and add missing dead+read-undef flags.
+      SlotIndex SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
+      RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx, MI);
+    } else {
+      // Adjust for missing dead-def flags.
+      RegOpers.detectDeadDefs(*MI, *LIS);
     }
     RegionEnd = MI->getIterator();
     ++RegionEnd;

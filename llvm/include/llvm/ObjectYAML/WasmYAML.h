@@ -34,9 +34,9 @@ LLVM_YAML_STRONG_TYPEDEF(int32_t, SignatureForm)
 LLVM_YAML_STRONG_TYPEDEF(uint32_t, ExportKind)
 LLVM_YAML_STRONG_TYPEDEF(uint32_t, Opcode)
 LLVM_YAML_STRONG_TYPEDEF(uint32_t, RelocType)
-LLVM_YAML_STRONG_TYPEDEF(uint32_t, SymbolFlags);
-LLVM_YAML_STRONG_TYPEDEF(uint32_t, SegmentFlags);
-LLVM_YAML_STRONG_TYPEDEF(uint32_t, LimitFlags);
+LLVM_YAML_STRONG_TYPEDEF(uint32_t, SymbolFlags)
+LLVM_YAML_STRONG_TYPEDEF(uint32_t, SegmentFlags)
+LLVM_YAML_STRONG_TYPEDEF(uint32_t, LimitFlags)
 
 struct FileHeader {
   yaml::Hex32 Version;

@@ -45,7 +45,7 @@ void JSONOutput::writeMessage(const json::Expr &Message) {
 }
 
 void JSONOutput::log(const Context &Ctx, const Twine &Message) {
-  trace::log(Message);
+  trace::log(Ctx, Message);
   std::lock_guard<std::mutex> Guard(StreamMutex);
   Logs << Message << '\n';
   Logs.flush();
@@ -137,16 +137,19 @@ bool JSONRPCDispatcher::call(const json::Expr &Message, JSONOutput &Out) const {
   auto I = Handlers.find(*Method);
   auto &Handler = I != Handlers.end() ? I->second : UnknownHandler;
 
-  auto Tracer = llvm::make_unique<trace::Span>(*Method);
+  // Create a Context that contains request information.
+  auto Ctx = Context::empty().derive(RequestOut, &Out);
+  if (ID)
+    Ctx = std::move(Ctx).derive(RequestID, *ID);
+
+  // Create a tracing Span covering the whole request lifetime.
+  auto Tracer = llvm::make_unique<trace::Span>(Ctx, *Method);
   if (ID)
     SPAN_ATTACH(*Tracer, "ID", *ID);
   SPAN_ATTACH(*Tracer, "Params", Params);
 
-  auto Ctx = Context::empty()
-                 .derive(RequestOut, &Out)
-                 .derive(RequestSpan, std::move(Tracer));
-  if (ID)
-    Ctx = std::move(Ctx).derive(RequestID, *ID);
+  // Update Ctx to include Tracer.
+  Ctx = std::move(Ctx).derive(RequestSpan, std::move(Tracer));
 
   Handler(std::move(Ctx), std::move(Params));
   return true;

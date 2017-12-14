@@ -92,8 +92,10 @@ class BlockingMutex {
   // checks that the mutex is owned, and assumes callers to be generally
   // well-behaved.
   void CheckLocked();
+
  private:
-  uptr opaque_storage_[10];
+  // Solaris mutex_t has a member that requires 64-bit alignment.
+  ALIGNED(8) uptr opaque_storage_[10];
   uptr owner_;  // for debugging
 };
 

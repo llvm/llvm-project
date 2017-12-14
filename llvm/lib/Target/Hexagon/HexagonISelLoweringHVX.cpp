@@ -214,7 +214,7 @@ HexagonTargetLowering::LowerHvxExtractElement(SDValue Op, SelectionDAG &DAG)
   SDValue VecV = Op.getOperand(0);
   MVT ElemTy = ty(VecV).getVectorElementType();
   unsigned ElemWidth = ElemTy.getSizeInBits();
-  assert(ElemWidth >= 8 && ElemWidth <= 32); // TODO i64
+  assert(ElemWidth >= 8 && ElemWidth <= 32);
   (void)ElemWidth;
 
   const SDLoc &dl(Op);
@@ -246,7 +246,7 @@ HexagonTargetLowering::LowerHvxInsertElement(SDValue Op, SelectionDAG &DAG)
   SDValue IdxV = Op.getOperand(2);
   MVT ElemTy = ty(VecV).getVectorElementType();
   unsigned ElemWidth = ElemTy.getSizeInBits();
-  assert(ElemWidth >= 8 && ElemWidth <= 32); // TODO i64
+  assert(ElemWidth >= 8 && ElemWidth <= 32);
   (void)ElemWidth;
 
   auto InsertWord = [&DAG,&dl,this] (SDValue VecV, SDValue ValV,

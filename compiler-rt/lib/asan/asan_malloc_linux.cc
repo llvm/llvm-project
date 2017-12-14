@@ -16,7 +16,7 @@
 
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_FREEBSD || SANITIZER_FUCHSIA || SANITIZER_LINUX || \
-    SANITIZER_NETBSD
+    SANITIZER_NETBSD || SANITIZER_SOLARIS
 
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 #include "asan_allocator.h"
@@ -236,4 +236,4 @@ void ReplaceSystemMalloc() {
 #endif  // SANITIZER_ANDROID
 
 #endif  // SANITIZER_FREEBSD || SANITIZER_FUCHSIA || SANITIZER_LINUX ||
-        // SANITIZER_NETBSD
+        // SANITIZER_NETBSD || SANITIZER_SOLARIS

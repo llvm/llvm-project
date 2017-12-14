@@ -119,6 +119,9 @@ def err_non_ascii : Error<
 def ext_unicode_whitespace : ExtWarn<
   "treating Unicode character as whitespace">,
   InGroup<DiagGroup<"unicode-whitespace">>;
+def warn_utf8_symbol_homoglyph : Warning<
+  "treating Unicode character <U+%0> as identifier character rather than "
+  "as '%1' symbol">, InGroup<DiagGroup<"unicode-homoglyph">>;
 
 def err_hex_escape_no_digits : Error<
   "\\%0 used with no following hex digits">;

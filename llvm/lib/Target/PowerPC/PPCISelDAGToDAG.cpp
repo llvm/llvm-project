@@ -4518,9 +4518,9 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
 
     // The first source operand is a TargetGlobalAddress or a TargetJumpTable.
     // If it must be toc-referenced according to PPCSubTarget, we generate:
-    //   LDtocL(<ga:@sym>, ADDIStocHA(%x2, <ga:@sym>))
+    //   LDtocL(@sym, ADDIStocHA(%x2, @sym))
     // Otherwise we generate:
-    //   ADDItocL(ADDIStocHA(%x2, <ga:@sym>), <ga:@sym>)
+    //   ADDItocL(ADDIStocHA(%x2, @sym), @sym)
     SDValue GA = N->getOperand(0);
     SDValue TOCbase = N->getOperand(1);
     SDNode *Tmp = CurDAG->getMachineNode(PPC::ADDIStocHA, dl, MVT::i64,

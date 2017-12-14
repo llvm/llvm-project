@@ -18,7 +18,7 @@
      defined(__NetBSD__)) &&                                                   \
     (defined(__x86_64__) || defined(__i386__) || defined(__arm__) ||           \
      defined(__aarch64__) || defined(__mips__) || defined(__powerpc64__) ||    \
-     defined(__s390__))
+     defined(__s390__)) || (defined(__sun__) && defined(__svr4__))
 # define CAN_SANITIZE_UB 1
 #elif defined(_WIN32) || defined(__Fuchsia__)
 # define CAN_SANITIZE_UB 1

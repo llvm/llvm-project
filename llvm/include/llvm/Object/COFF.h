@@ -743,6 +743,12 @@ struct coff_resource_dir_table {
   support::ulittle16_t NumberOfIDEntries;
 };
 
+struct debug_h_header {
+  support::ulittle32_t Magic;
+  support::ulittle16_t Version;
+  support::ulittle16_t HashAlgorithm;
+};
+
 class COFFObjectFile : public ObjectFile {
 private:
   friend class ImportDirectoryEntryRef;

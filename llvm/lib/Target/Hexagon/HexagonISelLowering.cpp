@@ -129,18 +129,10 @@ namespace {
 
 // Implement calling convention for Hexagon.
 
-static const MVT LegalV64[] = {
-  MVT::v64i8, MVT::v32i16, MVT::v16i32, MVT::v8i64
-};
-static const MVT LegalW64[] = {
-  MVT::v128i8, MVT::v64i16, MVT::v32i32, MVT::v16i64
-};
-static const MVT LegalV128[] = {
-  MVT::v128i8, MVT::v64i16, MVT::v32i32, MVT::v16i64
-};
-static const MVT LegalW128[] = {
-  MVT::v256i8, MVT::v128i16, MVT::v64i32, MVT::v32i64
-};
+static const MVT LegalV64[] =  { MVT::v64i8,  MVT::v32i16,  MVT::v16i32 };
+static const MVT LegalW64[] =  { MVT::v128i8, MVT::v64i16,  MVT::v32i32 };
+static const MVT LegalV128[] = { MVT::v128i8, MVT::v64i16,  MVT::v32i32 };
+static const MVT LegalW128[] = { MVT::v256i8, MVT::v128i16, MVT::v64i32 };
 
 static bool
 CC_Hexagon(unsigned ValNo, MVT ValVT,
@@ -235,19 +227,19 @@ CC_Hexagon_VarArg (unsigned ValNo, MVT ValVT,
     State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
     return false;
   }
-  if (LocVT == MVT::v8i64 || LocVT == MVT::v16i32 || LocVT == MVT::v32i16 ||
+  if (LocVT == MVT::v16i32 || LocVT == MVT::v32i16 ||
       LocVT == MVT::v64i8 || LocVT == MVT::v512i1) {
     Offset = State.AllocateStack(64, 64);
     State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
     return false;
   }
-  if (LocVT == MVT::v16i64 || LocVT == MVT::v32i32 || LocVT == MVT::v64i16 ||
+  if (LocVT == MVT::v32i32 || LocVT == MVT::v64i16 ||
       LocVT == MVT::v128i8 || LocVT == MVT::v1024i1) {
     Offset = State.AllocateStack(128, 128);
     State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
     return false;
   }
-  if (LocVT == MVT::v32i64 || LocVT == MVT::v64i32 || LocVT == MVT::v128i16 ||
+  if (LocVT == MVT::v64i32 || LocVT == MVT::v128i16 ||
       LocVT == MVT::v256i8) {
     Offset = State.AllocateStack(256, 256);
     State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
@@ -370,7 +362,7 @@ static bool CC_HexagonVector(unsigned ValNo, MVT ValVT,
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
 
   if (HST.useHVX64BOps() &&
-      (LocVT == MVT::v8i64 || LocVT == MVT::v16i32 || LocVT == MVT::v32i16 ||
+      (LocVT == MVT::v16i32 || LocVT == MVT::v32i16 ||
        LocVT == MVT::v64i8 || LocVT == MVT::v512i1)) {
     if (unsigned Reg = State.AllocateReg(VecLstS)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
@@ -380,7 +372,7 @@ static bool CC_HexagonVector(unsigned ValNo, MVT ValVT,
     State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
     return false;
   }
-  if (HST.useHVX64BOps() && (LocVT == MVT::v16i64 || LocVT == MVT::v32i32 ||
+  if (HST.useHVX64BOps() && (LocVT == MVT::v32i32 ||
                              LocVT == MVT::v64i16 || LocVT == MVT::v128i8)) {
     if (unsigned Reg = State.AllocateReg(VecLstD)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
@@ -391,7 +383,7 @@ static bool CC_HexagonVector(unsigned ValNo, MVT ValVT,
     return false;
   }
   // 128B Mode
-  if (HST.useHVX128BOps() && (LocVT == MVT::v32i64 || LocVT == MVT::v64i32 ||
+  if (HST.useHVX128BOps() && (LocVT == MVT::v64i32 ||
                               LocVT == MVT::v128i16 || LocVT == MVT::v256i8)) {
     if (unsigned Reg = State.AllocateReg(VecLstD)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
@@ -402,7 +394,7 @@ static bool CC_HexagonVector(unsigned ValNo, MVT ValVT,
     return false;
   }
   if (HST.useHVX128BOps() &&
-      (LocVT == MVT::v16i64 || LocVT == MVT::v32i32 || LocVT == MVT::v64i16 ||
+      (LocVT == MVT::v32i32 || LocVT == MVT::v64i16 ||
        LocVT == MVT::v128i8 || LocVT == MVT::v1024i1)) {
     if (unsigned Reg = State.AllocateReg(VecLstS)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
@@ -442,19 +434,18 @@ static bool RetCC_Hexagon(unsigned ValNo, MVT ValVT,
     LocVT = MVT::i64;
     LocInfo = CCValAssign::BCvt;
   } else if (LocVT == MVT::v64i8 || LocVT == MVT::v32i16 ||
-             LocVT == MVT::v16i32 || LocVT == MVT::v8i64 ||
-             LocVT == MVT::v512i1) {
+             LocVT == MVT::v16i32 || LocVT == MVT::v512i1) {
     LocVT = MVT::v16i32;
     ValVT = MVT::v16i32;
     LocInfo = CCValAssign::Full;
   } else if (LocVT == MVT::v128i8 || LocVT == MVT::v64i16 ||
-             LocVT == MVT::v32i32 || LocVT == MVT::v16i64 ||
+             LocVT == MVT::v32i32 ||
              (LocVT == MVT::v1024i1 && HST.useHVX128BOps())) {
     LocVT = MVT::v32i32;
     ValVT = MVT::v32i32;
     LocInfo = CCValAssign::Full;
   } else if (LocVT == MVT::v256i8 || LocVT == MVT::v128i16 ||
-             LocVT == MVT::v64i32 || LocVT == MVT::v32i64) {
+             LocVT == MVT::v64i32) {
     LocVT = MVT::v64i32;
     ValVT = MVT::v64i32;
     LocInfo = CCValAssign::Full;
@@ -932,10 +923,10 @@ static bool getIndexedAddressParts(SDNode *Ptr, EVT VT,
   auto &HST = static_cast<const HexagonSubtarget&>(DAG.getSubtarget());
 
   bool ValidHVX128BType =
-      HST.useHVX128BOps() && (VT == MVT::v32i32 || VT == MVT::v16i64 ||
+      HST.useHVX128BOps() && (VT == MVT::v32i32 ||
                               VT == MVT::v64i16 || VT == MVT::v128i8);
   bool ValidHVXType =
-      HST.useHVX64BOps() && (VT == MVT::v16i32 || VT == MVT::v8i64 ||
+      HST.useHVX64BOps() && (VT == MVT::v16i32 ||
                              VT == MVT::v32i16 || VT == MVT::v64i8);
 
   if (ValidHVX128BType || ValidHVXType || VT == MVT::i64 || VT == MVT::i32 ||
@@ -1167,14 +1158,14 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
         InVals.push_back(DAG.getCopyFromReg(Chain, dl, VReg, RegVT));
 
       // Single Vector
-      } else if ((RegVT == MVT::v8i64 || RegVT == MVT::v16i32 ||
+      } else if ((RegVT == MVT::v16i32 ||
                   RegVT == MVT::v32i16 || RegVT == MVT::v64i8)) {
         unsigned VReg =
           RegInfo.createVirtualRegister(&Hexagon::HvxVRRegClass);
         RegInfo.addLiveIn(VA.getLocReg(), VReg);
         InVals.push_back(DAG.getCopyFromReg(Chain, dl, VReg, RegVT));
       } else if (Subtarget.useHVX128BOps() &&
-                 ((RegVT == MVT::v16i64 || RegVT == MVT::v32i32 ||
+                 ((RegVT == MVT::v32i32 ||
                    RegVT == MVT::v64i16 || RegVT == MVT::v128i8))) {
         unsigned VReg =
           RegInfo.createVirtualRegister(&Hexagon::HvxVRRegClass);
@@ -1182,14 +1173,14 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
         InVals.push_back(DAG.getCopyFromReg(Chain, dl, VReg, RegVT));
 
       // Double Vector
-      } else if ((RegVT == MVT::v16i64 || RegVT == MVT::v32i32 ||
+      } else if ((RegVT == MVT::v32i32 ||
                   RegVT == MVT::v64i16 || RegVT == MVT::v128i8)) {
         unsigned VReg =
           RegInfo.createVirtualRegister(&Hexagon::HvxWRRegClass);
         RegInfo.addLiveIn(VA.getLocReg(), VReg);
         InVals.push_back(DAG.getCopyFromReg(Chain, dl, VReg, RegVT));
       } else if (Subtarget.useHVX128BOps() &&
-                 ((RegVT == MVT::v32i64 || RegVT == MVT::v64i32 ||
+                 ((RegVT == MVT::v64i32 ||
                    RegVT == MVT::v128i16 || RegVT == MVT::v256i8))) {
         unsigned VReg =
           RegInfo.createVirtualRegister(&Hexagon::HvxWRRegClass);
@@ -1738,21 +1729,17 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
       addRegisterClass(MVT::v64i8,  &Hexagon::HvxVRRegClass);
       addRegisterClass(MVT::v32i16, &Hexagon::HvxVRRegClass);
       addRegisterClass(MVT::v16i32, &Hexagon::HvxVRRegClass);
-      addRegisterClass(MVT::v8i64,  &Hexagon::HvxVRRegClass);
       addRegisterClass(MVT::v128i8, &Hexagon::HvxWRRegClass);
       addRegisterClass(MVT::v64i16, &Hexagon::HvxWRRegClass);
       addRegisterClass(MVT::v32i32, &Hexagon::HvxWRRegClass);
-      addRegisterClass(MVT::v16i64, &Hexagon::HvxWRRegClass);
       addRegisterClass(MVT::v512i1, &Hexagon::HvxQRRegClass);
     } else if (Subtarget.useHVX128BOps()) {
       addRegisterClass(MVT::v128i8,  &Hexagon::HvxVRRegClass);
       addRegisterClass(MVT::v64i16,  &Hexagon::HvxVRRegClass);
       addRegisterClass(MVT::v32i32,  &Hexagon::HvxVRRegClass);
-      addRegisterClass(MVT::v16i64,  &Hexagon::HvxVRRegClass);
       addRegisterClass(MVT::v256i8,  &Hexagon::HvxWRRegClass);
       addRegisterClass(MVT::v128i16, &Hexagon::HvxWRRegClass);
       addRegisterClass(MVT::v64i32,  &Hexagon::HvxWRRegClass);
-      addRegisterClass(MVT::v32i64,  &Hexagon::HvxWRRegClass);
       addRegisterClass(MVT::v1024i1, &Hexagon::HvxQRRegClass);
     }
   }
@@ -3094,9 +3081,6 @@ bool HexagonTargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
   case MVT::v16i32:
   case MVT::v32i32:
   case MVT::v64i32:
-  case MVT::v8i64:
-  case MVT::v16i64:
-  case MVT::v32i64:
     return true;
   }
   return false;
@@ -3114,13 +3098,11 @@ HexagonTargetLowering::findRepresentativeClass(const TargetRegisterInfo *TRI,
   case MVT::v64i8:
   case MVT::v32i16:
   case MVT::v16i32:
-  case MVT::v8i64:
     RRC = &Hexagon::HvxVRRegClass;
     break;
   case MVT::v128i8:
   case MVT::v64i16:
   case MVT::v32i32:
-  case MVT::v16i64:
     if (Subtarget.hasV60TOps() && Subtarget.useHVXOps() &&
         Subtarget.useHVX128BOps())
       RRC = &Hexagon::HvxVRRegClass;
@@ -3130,7 +3112,6 @@ HexagonTargetLowering::findRepresentativeClass(const TargetRegisterInfo *TRI,
   case MVT::v256i8:
   case MVT::v128i16:
   case MVT::v64i32:
-  case MVT::v32i64:
     RRC = &Hexagon::HvxWRRegClass;
     break;
   }

@@ -382,9 +382,9 @@ TEST_F(FormatTestObjC, FormatObjCMethodDeclarations) {
                "            ofSize:(size_t)height\n"
                "                  :(size_t)width;");
 
+  Style = getGoogleStyle(FormatStyle::LK_ObjC);
   // Continuation indent width should win over aligning colons if the function
   // name is long.
-  Style = getGoogleStyle(FormatStyle::LK_ObjC);
   Style.ColumnLimit = 40;
   Style.IndentWrappedFunctionNames = true;
   verifyFormat("- (void)shortf:(GTMFoo *)theFoo\n"
@@ -395,7 +395,10 @@ TEST_F(FormatTestObjC, FormatObjCMethodDeclarations) {
   verifyFormat("- (void)shortf:(GTMFoo *)theFoo\n"
                "       aShortf:(NSRect)theRect {\n"
                "}");
-
+  // Wrapped method parameters should be indented.
+  verifyFormat("- (LongReturnTypeName)\n"
+               "    longParam:(ParamName)longParamName\n"
+               "        param:(paramName)paramName;");
   // Format pairs correctly.
   Style.ColumnLimit = 80;
   verifyFormat("- (void)drawRectOn:(id)surface\n"

@@ -1217,12 +1217,14 @@ INTERCEPTOR(unsigned long, time, unsigned long *t) {
 #if SANITIZER_INTERCEPT_LOCALTIME_AND_FRIENDS
 static void unpoison_tm(void *ctx, __sanitizer_tm *tm) {
   COMMON_INTERCEPTOR_WRITE_RANGE(ctx, tm, sizeof(*tm));
+#if !SANITIZER_SOLARIS
   if (tm->tm_zone) {
     // Can not use COMMON_INTERCEPTOR_WRITE_RANGE here, because tm->tm_zone
     // can point to shared memory and tsan would report a data race.
     COMMON_INTERCEPTOR_INITIALIZE_RANGE(tm->tm_zone,
                                         REAL(strlen(tm->tm_zone)) + 1);
   }
+#endif
 }
 INTERCEPTOR(__sanitizer_tm *, localtime, unsigned long *timep) {
   void *ctx;
@@ -2113,6 +2115,18 @@ static void unpoison_glob_t(void *ctx, __sanitizer_glob_t *pglob) {
   }
 }
 
+#if SANITIZER_SOLARIS
+INTERCEPTOR(int, glob, const char *pattern, int flags,
+            int (*errfunc)(const char *epath, int eerrno),
+            __sanitizer_glob_t *pglob) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, glob, pattern, flags, errfunc, pglob);
+  COMMON_INTERCEPTOR_READ_STRING(ctx, pattern, 0);
+  int res = REAL(glob)(pattern, flags, errfunc, pglob);
+  if ((!res || res == glob_nomatch) && pglob) unpoison_glob_t(ctx, pglob);
+  return res;
+}
+#else
 static THREADLOCAL __sanitizer_glob_t *pglob_copy;
 
 static void wrapped_gl_closedir(void *dir) {
@@ -2176,7 +2190,14 @@ INTERCEPTOR(int, glob, const char *pattern, int flags,
   if ((!res || res == glob_nomatch) && pglob) unpoison_glob_t(ctx, pglob);
   return res;
 }
+#endif  // SANITIZER_SOLARIS
+#define INIT_GLOB                  \
+  COMMON_INTERCEPT_FUNCTION(glob);
+#else  // SANITIZER_INTERCEPT_GLOB
+#define INIT_GLOB
+#endif  // SANITIZER_INTERCEPT_GLOB
 
+#if SANITIZER_INTERCEPT_GLOB64
 INTERCEPTOR(int, glob64, const char *pattern, int flags,
             int (*errfunc)(const char *epath, int eerrno),
             __sanitizer_glob_t *pglob) {
@@ -2205,12 +2226,11 @@ INTERCEPTOR(int, glob64, const char *pattern, int flags,
   if ((!res || res == glob_nomatch) && pglob) unpoison_glob_t(ctx, pglob);
   return res;
 }
-#define INIT_GLOB                  \
-  COMMON_INTERCEPT_FUNCTION(glob); \
+#define INIT_GLOB64                \
   COMMON_INTERCEPT_FUNCTION(glob64);
-#else  // SANITIZER_INTERCEPT_GLOB
-#define INIT_GLOB
-#endif  // SANITIZER_INTERCEPT_GLOB
+#else  // SANITIZER_INTERCEPT_GLOB64
+#define INIT_GLOB64
+#endif  // SANITIZER_INTERCEPT_GLOB64
 
 #if SANITIZER_INTERCEPT_WAIT
 // According to sys/wait.h, wait(), waitid(), waitpid() may have symbol version
@@ -2515,7 +2535,15 @@ INTERCEPTOR(struct __sanitizer_hostent *, gethostent, int fake) {
   if (res) write_hostent(ctx, res);
   return res;
 }
+#define INIT_GETHOSTBYNAME                  \
+  COMMON_INTERCEPT_FUNCTION(gethostent);    \
+  COMMON_INTERCEPT_FUNCTION(gethostbyaddr); \
+  COMMON_INTERCEPT_FUNCTION(gethostbyname);
+#else
+#define INIT_GETHOSTBYNAME
+#endif  // SANITIZER_INTERCEPT_GETHOSTBYNAME
 
+#if SANITIZER_INTERCEPT_GETHOSTBYNAME2
 INTERCEPTOR(struct __sanitizer_hostent *, gethostbyname2, char *name, int af) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, gethostbyname2, name, af);
@@ -2523,14 +2551,10 @@ INTERCEPTOR(struct __sanitizer_hostent *, gethostbyname2, char *name, int af) {
   if (res) write_hostent(ctx, res);
   return res;
 }
-#define INIT_GETHOSTBYNAME                  \
-  COMMON_INTERCEPT_FUNCTION(gethostent);    \
-  COMMON_INTERCEPT_FUNCTION(gethostbyaddr); \
-  COMMON_INTERCEPT_FUNCTION(gethostbyname); \
-  COMMON_INTERCEPT_FUNCTION(gethostbyname2);
+#define INIT_GETHOSTBYNAME2 COMMON_INTERCEPT_FUNCTION(gethostbyname2);
 #else
-#define INIT_GETHOSTBYNAME
-#endif
+#define INIT_GETHOSTBYNAME2
+#endif  // SANITIZER_INTERCEPT_GETHOSTBYNAME2
 
 #if SANITIZER_INTERCEPT_GETHOSTBYNAME_R
 INTERCEPTOR(int, gethostbyname_r, char *name, struct __sanitizer_hostent *ret,
@@ -6384,6 +6408,7 @@ static void InitializeCommonInterceptors() {
   INIT_GETITIMER;
   INIT_TIME;
   INIT_GLOB;
+  INIT_GLOB64;
   INIT_WAIT;
   INIT_WAIT4;
   INIT_INET;
@@ -6392,6 +6417,7 @@ static void InitializeCommonInterceptors() {
   INIT_GETNAMEINFO;
   INIT_GETSOCKNAME;
   INIT_GETHOSTBYNAME;
+  INIT_GETHOSTBYNAME2;
   INIT_GETHOSTBYNAME_R;
   INIT_GETHOSTBYNAME2_R;
   INIT_GETHOSTBYADDR_R;
