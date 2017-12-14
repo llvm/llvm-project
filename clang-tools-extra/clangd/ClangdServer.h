@@ -10,20 +10,18 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_CLANGDSERVER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CLANGDSERVER_H
 
+#include "ClangdUnit.h"
 #include "ClangdUnitStore.h"
+#include "CodeComplete.h"
 #include "DraftStore.h"
+#include "Function.h"
 #include "GlobalCompilationDatabase.h"
+#include "Protocol.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
-
-#include "ClangdUnit.h"
-#include "CodeComplete.h"
-#include "Function.h"
-#include "Protocol.h"
-
 #include <condition_variable>
 #include <functional>
 #include <mutex>

@@ -8,12 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "SymbolYAML.h"
-
 #include "Index.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/Errc.h"
 
 LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(clang::clangd::Symbol)
 
