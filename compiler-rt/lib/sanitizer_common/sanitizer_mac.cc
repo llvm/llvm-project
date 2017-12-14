@@ -365,6 +365,10 @@ u64 NanoTime() {
   return 0;
 }
 
+u64 MonotonicNanoTime() {
+  return 0;
+}
+
 uptr GetTlsSize() {
   return 0;
 }
