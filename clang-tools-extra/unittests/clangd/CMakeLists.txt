@@ -12,6 +12,7 @@ add_extra_unittest(ClangdTests
   ClangdTests.cpp
   CodeCompleteTests.cpp
   ContextTests.cpp
+  FileSymbolsTests.cpp
   FuzzyMatchTests.cpp
   IndexTests.cpp
   JSONExprTests.cpp
