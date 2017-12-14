@@ -852,13 +852,9 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   TargetLowering::IntrinsicInfo Info;
   // TODO: Add a GlobalISel version of getTgtMemIntrinsic.
   if (TLI.getTgtMemIntrinsic(Info, CI, ID)) {
-    MachineMemOperand::Flags Flags =
-        Info.vol ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone;
-    Flags |=
-        Info.readMem ? MachineMemOperand::MOLoad : MachineMemOperand::MOStore;
     uint64_t Size = Info.memVT.getStoreSize();
     MIB.addMemOperand(MF->getMachineMemOperand(MachinePointerInfo(Info.ptrVal),
-                                               Flags, Size, Info.align));
+                                               Info.flags, Size, Info.align));
   }
 
   return true;

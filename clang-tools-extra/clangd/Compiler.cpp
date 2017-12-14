@@ -6,6 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===---------------------------------------------------------------------===//
+
 #include "Compiler.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/PreprocessorOptions.h"

@@ -12,13 +12,12 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_JSON_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_JSON_H
 
-#include <map>
-
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
+#include <map>
 
 namespace clang {
 namespace clangd {

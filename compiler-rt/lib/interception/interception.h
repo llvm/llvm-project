@@ -18,7 +18,8 @@
 #include "sanitizer_common/sanitizer_internal_defs.h"
 
 #if !SANITIZER_LINUX && !SANITIZER_FREEBSD && !SANITIZER_MAC && \
-    !SANITIZER_NETBSD && !SANITIZER_WINDOWS && !SANITIZER_FUCHSIA
+    !SANITIZER_NETBSD && !SANITIZER_WINDOWS && !SANITIZER_FUCHSIA && \
+    !SANITIZER_SOLARIS
 # error "Interception doesn't work on this operating system."
 #endif
 
@@ -264,7 +265,9 @@ typedef unsigned long uptr;  // NOLINT
 
 #define INCLUDED_FROM_INTERCEPTION_LIB
 
-#if SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD
+#if SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD || \
+    SANITIZER_SOLARIS
+
 # include "interception_linux.h"
 # define INTERCEPT_FUNCTION(func) INTERCEPT_FUNCTION_LINUX_OR_FREEBSD(func)
 # define INTERCEPT_FUNCTION_VER(func, symver) \

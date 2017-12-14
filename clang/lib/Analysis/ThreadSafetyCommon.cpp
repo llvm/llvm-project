@@ -505,6 +505,7 @@ til::SExpr *SExprBuilder::translateBinaryOperator(const BinaryOperator *BO,
   case BO_GE:   return translateBinOp(til::BOP_Leq, BO, Ctx, true);
   case BO_EQ:   return translateBinOp(til::BOP_Eq,  BO, Ctx);
   case BO_NE:   return translateBinOp(til::BOP_Neq, BO, Ctx);
+  case BO_Cmp:  return translateBinOp(til::BOP_Cmp, BO, Ctx);
   case BO_And:  return translateBinOp(til::BOP_BitAnd,   BO, Ctx);
   case BO_Xor:  return translateBinOp(til::BOP_BitXor,   BO, Ctx);
   case BO_Or:   return translateBinOp(til::BOP_BitOr,    BO, Ctx);

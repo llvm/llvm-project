@@ -92,6 +92,7 @@ enum TIL_BinaryOpcode : unsigned char {
   BOP_Neq,          //  !=
   BOP_Lt,           //  <
   BOP_Leq,          //  <=
+  BOP_Cmp,          //  <=>
   BOP_LogicAnd,     //  &&  (no short-circuit)
   BOP_LogicOr       //  ||  (no short-circuit)
 };

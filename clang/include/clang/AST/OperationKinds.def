@@ -332,7 +332,8 @@ CAST_OPERATION(IntToOCLSampler)
 
 //===- Binary Operations  -------------------------------------------------===//
 // Operators listed in order of precedence.
-// Note that additions to this should also update the StmtVisitor class.
+// Note that additions to this should also update the StmtVisitor class and
+// BinaryOperator::getOverloadedOperator.
 
 // [C++ 5.5] Pointer-to-member operators.
 BINARY_OPERATION(PtrMemD, ".*")
@@ -347,6 +348,8 @@ BINARY_OPERATION(Sub, "-")
 // [C99 6.5.7] Bitwise shift operators.
 BINARY_OPERATION(Shl, "<<")
 BINARY_OPERATION(Shr, ">>")
+// C++20 [expr.spaceship] Three-way comparison operator.
+BINARY_OPERATION(Cmp, "<=>")
 // [C99 6.5.8] Relational operators.
 BINARY_OPERATION(LT, "<")
 BINARY_OPERATION(GT, ">")
@@ -382,7 +385,8 @@ BINARY_OPERATION(Comma, ",")
 
 
 //===- Unary Operations ---------------------------------------------------===//
-// Note that additions to this should also update the StmtVisitor class.
+// Note that additions to this should also update the StmtVisitor class and
+// UnaryOperator::getOverloadedOperator.
 
 // [C99 6.5.2.4] Postfix increment and decrement
 UNARY_OPERATION(PostInc, "++")

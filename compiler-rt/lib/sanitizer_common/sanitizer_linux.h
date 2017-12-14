@@ -14,11 +14,13 @@
 #define SANITIZER_LINUX_H
 
 #include "sanitizer_platform.h"
-#if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD
+#if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD || \
+    SANITIZER_SOLARIS
 #include "sanitizer_common.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_platform_limits_netbsd.h"
 #include "sanitizer_platform_limits_posix.h"
+#include "sanitizer_platform_limits_solaris.h"
 #include "sanitizer_posix.h"
 
 struct link_map;  // Opaque type returned by dlopen().
@@ -143,5 +145,6 @@ ALWAYS_INLINE uptr *get_android_tls_ptr() {
 
 }  // namespace __sanitizer
 
-#endif  // SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD
+#endif  // SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD ||
+        // SANITIZER_SOLARIS
 #endif  // SANITIZER_LINUX_H

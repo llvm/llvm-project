@@ -115,8 +115,14 @@ struct WasmRelocation {
   int64_t Addend;  // A value to add to the symbol.
 };
 
+struct WasmInitFunc {
+  uint32_t Priority;
+  uint32_t FunctionIndex;
+};
+
 struct WasmLinkingData {
   uint32_t DataSize;
+  std::vector<WasmInitFunc> InitFunctions;
 };
 
 enum : unsigned {
@@ -185,6 +191,7 @@ enum : unsigned {
   WASM_SYMBOL_INFO    = 0x2,
   WASM_DATA_SIZE      = 0x3,
   WASM_SEGMENT_INFO   = 0x5,
+  WASM_INIT_FUNCS     = 0x6,
 };
 
 const unsigned WASM_SYMBOL_BINDING_MASK       = 0x3;

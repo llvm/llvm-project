@@ -162,6 +162,17 @@ int WasmWriter::writeSectionContent(raw_ostream &OS, WasmYAML::LinkingSection &S
     }
     SubSection.Done();
   }
+
+  // INIT_FUNCS subsection
+  if (Section.InitFunctions.size()) {
+    encodeULEB128(wasm::WASM_INIT_FUNCS, OS);
+    encodeULEB128(Section.InitFunctions.size(), SubSection.GetStream());
+    for (const WasmYAML::InitFunction &Func : Section.InitFunctions) {
+      encodeULEB128(Func.Priority, SubSection.GetStream());
+      encodeULEB128(Func.FunctionIndex, SubSection.GetStream());
+    }
+    SubSection.Done();
+  }
   return 0;
 }
 

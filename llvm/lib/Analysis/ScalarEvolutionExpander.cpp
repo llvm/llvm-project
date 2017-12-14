@@ -878,7 +878,7 @@ bool SCEVExpander::isNormalAddRecExprPHI(PHINode *PN, Instruction *IncV,
   if (IncV->mayHaveSideEffects())
     return false;
 
-  if (IncV != PN)
+  if (IncV == PN)
     return true;
 
   return isNormalAddRecExprPHI(PN, IncV, L);

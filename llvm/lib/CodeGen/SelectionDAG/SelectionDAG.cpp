@@ -5777,21 +5777,15 @@ SDValue SelectionDAG::getMergeValues(ArrayRef<SDValue> Ops, const SDLoc &dl) {
 
 SDValue SelectionDAG::getMemIntrinsicNode(
     unsigned Opcode, const SDLoc &dl, SDVTList VTList, ArrayRef<SDValue> Ops,
-    EVT MemVT, MachinePointerInfo PtrInfo, unsigned Align, bool Vol,
-    bool ReadMem, bool WriteMem, unsigned Size) {
+    EVT MemVT, MachinePointerInfo PtrInfo, unsigned Align,
+    MachineMemOperand::Flags Flags, unsigned Size) {
   if (Align == 0)  // Ensure that codegen never sees alignment 0
     Align = getEVTAlignment(MemVT);
 
-  MachineFunction &MF = getMachineFunction();
-  auto Flags = MachineMemOperand::MONone;
-  if (WriteMem)
-    Flags |= MachineMemOperand::MOStore;
-  if (ReadMem)
-    Flags |= MachineMemOperand::MOLoad;
-  if (Vol)
-    Flags |= MachineMemOperand::MOVolatile;
   if (!Size)
     Size = MemVT.getStoreSize();
+
+  MachineFunction &MF = getMachineFunction();
   MachineMemOperand *MMO =
     MF.getMachineMemOperand(PtrInfo, Flags, Size, Align);
 

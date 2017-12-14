@@ -8432,6 +8432,45 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedDecrement, E);
   case X86::BI_InterlockedIncrement64:
     return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedIncrement, E);
+  case X86::BI_InterlockedCompareExchange128: {
+    // InterlockedCompareExchange128 doesn't directly refer to 128bit ints,
+    // instead it takes pointers to 64bit ints for Destination and
+    // ComparandResult, and exchange is taken as two 64bit ints (high & low).
+    // The previous value is written to ComparandResult, and success is
+    // returned.
+
+    llvm::Type *Int128Ty = Builder.getInt128Ty();
+    llvm::Type *Int128PtrTy = Int128Ty->getPointerTo();
+
+    Value *Destination =
+        Builder.CreateBitCast(EmitScalarExpr(E->getArg(0)), Int128PtrTy);
+    Value *ExchangeHigh128 =
+        Builder.CreateZExt(EmitScalarExpr(E->getArg(1)), Int128Ty);
+    Value *ExchangeLow128 =
+        Builder.CreateZExt(EmitScalarExpr(E->getArg(2)), Int128Ty);
+    Address ComparandResult(
+        Builder.CreateBitCast(EmitScalarExpr(E->getArg(3)), Int128PtrTy),
+        getContext().toCharUnitsFromBits(128));
+
+    Value *Exchange = Builder.CreateOr(
+        Builder.CreateShl(ExchangeHigh128, 64, "", false, false),
+        ExchangeLow128);
+
+    Value *Comparand = Builder.CreateLoad(ComparandResult);
+
+    AtomicCmpXchgInst *CXI =
+        Builder.CreateAtomicCmpXchg(Destination, Comparand, Exchange,
+                                    AtomicOrdering::SequentiallyConsistent,
+                                    AtomicOrdering::SequentiallyConsistent);
+    CXI->setVolatile(true);
+
+    // Write the result back to the inout pointer.
+    Builder.CreateStore(Builder.CreateExtractValue(CXI, 0), ComparandResult);
+
+    // Get the success boolean and zero extend it to i8.
+    Value *Success = Builder.CreateExtractValue(CXI, 1);
+    return Builder.CreateZExt(Success, ConvertType(E->getType()));
+  }
 
   case X86::BI_AddressOfReturnAddress: {
     Value *F = CGM.getIntrinsic(Intrinsic::addressofreturnaddress);

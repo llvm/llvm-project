@@ -321,8 +321,7 @@ define i32 @zext_test1(<16 x i32> %a, <16 x i32> %b) {
 ; KNL-LABEL: zext_test1:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpcmpnleud %zmm1, %zmm0, %k0
-; KNL-NEXT:    kshiftlw $10, %k0, %k0
-; KNL-NEXT:    kshiftrw $15, %k0, %k0
+; KNL-NEXT:    kshiftrw $5, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    andl $1, %eax
 ; KNL-NEXT:    vzeroupper
@@ -331,8 +330,7 @@ define i32 @zext_test1(<16 x i32> %a, <16 x i32> %b) {
 ; SKX-LABEL: zext_test1:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpcmpnleud %zmm1, %zmm0, %k0
-; SKX-NEXT:    kshiftlw $10, %k0, %k0
-; SKX-NEXT:    kshiftrw $15, %k0, %k0
+; SKX-NEXT:    kshiftrw $5, %k0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    vzeroupper
@@ -341,8 +339,7 @@ define i32 @zext_test1(<16 x i32> %a, <16 x i32> %b) {
 ; AVX512BW-LABEL: zext_test1:
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    vpcmpnleud %zmm1, %zmm0, %k0
-; AVX512BW-NEXT:    kshiftlw $10, %k0, %k0
-; AVX512BW-NEXT:    kshiftrw $15, %k0, %k0
+; AVX512BW-NEXT:    kshiftrw $5, %k0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    andl $1, %eax
 ; AVX512BW-NEXT:    vzeroupper
@@ -351,8 +348,7 @@ define i32 @zext_test1(<16 x i32> %a, <16 x i32> %b) {
 ; AVX512DQ-LABEL: zext_test1:
 ; AVX512DQ:       ## %bb.0:
 ; AVX512DQ-NEXT:    vpcmpnleud %zmm1, %zmm0, %k0
-; AVX512DQ-NEXT:    kshiftlw $10, %k0, %k0
-; AVX512DQ-NEXT:    kshiftrw $15, %k0, %k0
+; AVX512DQ-NEXT:    kshiftrw $5, %k0, %k0
 ; AVX512DQ-NEXT:    kmovw %k0, %eax
 ; AVX512DQ-NEXT:    andl $1, %eax
 ; AVX512DQ-NEXT:    vzeroupper
@@ -367,8 +363,7 @@ define i16 @zext_test2(<16 x i32> %a, <16 x i32> %b) {
 ; KNL-LABEL: zext_test2:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpcmpnleud %zmm1, %zmm0, %k0
-; KNL-NEXT:    kshiftlw $10, %k0, %k0
-; KNL-NEXT:    kshiftrw $15, %k0, %k0
+; KNL-NEXT:    kshiftrw $5, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    andl $1, %eax
 ; KNL-NEXT:    ## kill: def %ax killed %ax killed %eax
@@ -378,8 +373,7 @@ define i16 @zext_test2(<16 x i32> %a, <16 x i32> %b) {
 ; SKX-LABEL: zext_test2:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpcmpnleud %zmm1, %zmm0, %k0
-; SKX-NEXT:    kshiftlw $10, %k0, %k0
-; SKX-NEXT:    kshiftrw $15, %k0, %k0
+; SKX-NEXT:    kshiftrw $5, %k0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    ## kill: def %ax killed %ax killed %eax
@@ -389,8 +383,7 @@ define i16 @zext_test2(<16 x i32> %a, <16 x i32> %b) {
 ; AVX512BW-LABEL: zext_test2:
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    vpcmpnleud %zmm1, %zmm0, %k0
-; AVX512BW-NEXT:    kshiftlw $10, %k0, %k0
-; AVX512BW-NEXT:    kshiftrw $15, %k0, %k0
+; AVX512BW-NEXT:    kshiftrw $5, %k0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    andl $1, %eax
 ; AVX512BW-NEXT:    ## kill: def %ax killed %ax killed %eax
@@ -400,8 +393,7 @@ define i16 @zext_test2(<16 x i32> %a, <16 x i32> %b) {
 ; AVX512DQ-LABEL: zext_test2:
 ; AVX512DQ:       ## %bb.0:
 ; AVX512DQ-NEXT:    vpcmpnleud %zmm1, %zmm0, %k0
-; AVX512DQ-NEXT:    kshiftlw $10, %k0, %k0
-; AVX512DQ-NEXT:    kshiftrw $15, %k0, %k0
+; AVX512DQ-NEXT:    kshiftrw $5, %k0, %k0
 ; AVX512DQ-NEXT:    kmovw %k0, %eax
 ; AVX512DQ-NEXT:    andl $1, %eax
 ; AVX512DQ-NEXT:    ## kill: def %ax killed %ax killed %eax
@@ -417,8 +409,7 @@ define i8 @zext_test3(<16 x i32> %a, <16 x i32> %b) {
 ; KNL-LABEL: zext_test3:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpcmpnleud %zmm1, %zmm0, %k0
-; KNL-NEXT:    kshiftlw $10, %k0, %k0
-; KNL-NEXT:    kshiftrw $15, %k0, %k0
+; KNL-NEXT:    kshiftrw $5, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    andb $1, %al
 ; KNL-NEXT:    ## kill: def %al killed %al killed %eax
@@ -428,8 +419,7 @@ define i8 @zext_test3(<16 x i32> %a, <16 x i32> %b) {
 ; SKX-LABEL: zext_test3:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpcmpnleud %zmm1, %zmm0, %k0
-; SKX-NEXT:    kshiftlw $10, %k0, %k0
-; SKX-NEXT:    kshiftrw $15, %k0, %k0
+; SKX-NEXT:    kshiftrw $5, %k0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    andb $1, %al
 ; SKX-NEXT:    ## kill: def %al killed %al killed %eax
@@ -439,8 +429,7 @@ define i8 @zext_test3(<16 x i32> %a, <16 x i32> %b) {
 ; AVX512BW-LABEL: zext_test3:
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    vpcmpnleud %zmm1, %zmm0, %k0
-; AVX512BW-NEXT:    kshiftlw $10, %k0, %k0
-; AVX512BW-NEXT:    kshiftrw $15, %k0, %k0
+; AVX512BW-NEXT:    kshiftrw $5, %k0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    andb $1, %al
 ; AVX512BW-NEXT:    ## kill: def %al killed %al killed %eax
@@ -450,8 +439,7 @@ define i8 @zext_test3(<16 x i32> %a, <16 x i32> %b) {
 ; AVX512DQ-LABEL: zext_test3:
 ; AVX512DQ:       ## %bb.0:
 ; AVX512DQ-NEXT:    vpcmpnleud %zmm1, %zmm0, %k0
-; AVX512DQ-NEXT:    kshiftlw $10, %k0, %k0
-; AVX512DQ-NEXT:    kshiftrw $15, %k0, %k0
+; AVX512DQ-NEXT:    kshiftrw $5, %k0, %k0
 ; AVX512DQ-NEXT:    kmovw %k0, %eax
 ; AVX512DQ-NEXT:    andb $1, %al
 ; AVX512DQ-NEXT:    ## kill: def %al killed %al killed %eax
@@ -1151,10 +1139,8 @@ define <8 x i1> @test18(i8 %a, i16 %y) {
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    kmovw %edi, %k0
 ; KNL-NEXT:    kmovw %esi, %k1
-; KNL-NEXT:    kshiftlw $7, %k1, %k2
-; KNL-NEXT:    kshiftrw $15, %k2, %k2
-; KNL-NEXT:    kshiftlw $6, %k1, %k1
-; KNL-NEXT:    kshiftrw $15, %k1, %k1
+; KNL-NEXT:    kshiftrw $8, %k1, %k2
+; KNL-NEXT:    kshiftrw $9, %k1, %k1
 ; KNL-NEXT:    kshiftrw $6, %k0, %k3
 ; KNL-NEXT:    kxorw %k1, %k3, %k1
 ; KNL-NEXT:    kshiftlw $15, %k1, %k1
@@ -1175,10 +1161,8 @@ define <8 x i1> @test18(i8 %a, i16 %y) {
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    kmovd %edi, %k0
 ; SKX-NEXT:    kmovd %esi, %k1
-; SKX-NEXT:    kshiftlw $7, %k1, %k2
-; SKX-NEXT:    kshiftrw $15, %k2, %k2
-; SKX-NEXT:    kshiftlw $6, %k1, %k1
-; SKX-NEXT:    kshiftrw $15, %k1, %k1
+; SKX-NEXT:    kshiftrw $8, %k1, %k2
+; SKX-NEXT:    kshiftrw $9, %k1, %k1
 ; SKX-NEXT:    kshiftrb $6, %k0, %k3
 ; SKX-NEXT:    kxorb %k1, %k3, %k1
 ; SKX-NEXT:    kshiftlb $7, %k1, %k1
@@ -1195,10 +1179,8 @@ define <8 x i1> @test18(i8 %a, i16 %y) {
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    kmovd %edi, %k0
 ; AVX512BW-NEXT:    kmovd %esi, %k1
-; AVX512BW-NEXT:    kshiftlw $7, %k1, %k2
-; AVX512BW-NEXT:    kshiftrw $15, %k2, %k2
-; AVX512BW-NEXT:    kshiftlw $6, %k1, %k1
-; AVX512BW-NEXT:    kshiftrw $15, %k1, %k1
+; AVX512BW-NEXT:    kshiftrw $8, %k1, %k2
+; AVX512BW-NEXT:    kshiftrw $9, %k1, %k1
 ; AVX512BW-NEXT:    kshiftrw $6, %k0, %k3
 ; AVX512BW-NEXT:    kxorw %k1, %k3, %k1
 ; AVX512BW-NEXT:    kshiftlw $15, %k1, %k1
@@ -1218,10 +1200,8 @@ define <8 x i1> @test18(i8 %a, i16 %y) {
 ; AVX512DQ:       ## %bb.0:
 ; AVX512DQ-NEXT:    kmovw %edi, %k0
 ; AVX512DQ-NEXT:    kmovw %esi, %k1
-; AVX512DQ-NEXT:    kshiftlw $7, %k1, %k2
-; AVX512DQ-NEXT:    kshiftrw $15, %k2, %k2
-; AVX512DQ-NEXT:    kshiftlw $6, %k1, %k1
-; AVX512DQ-NEXT:    kshiftrw $15, %k1, %k1
+; AVX512DQ-NEXT:    kshiftrw $8, %k1, %k2
+; AVX512DQ-NEXT:    kshiftrw $9, %k1, %k1
 ; AVX512DQ-NEXT:    kshiftrb $6, %k0, %k3
 ; AVX512DQ-NEXT:    kxorb %k1, %k3, %k1
 ; AVX512DQ-NEXT:    kshiftlb $7, %k1, %k1

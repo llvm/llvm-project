@@ -7,14 +7,10 @@ define <2 x double>@test_int_x86_avx512_mask_vextractf64x2_512(<8 x double> %x0,
 ; CHECK-LABEL: test_int_x86_avx512_mask_vextractf64x2_512:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; CHECK-NEXT:    vmovd %edi, %xmm2
 ; CHECK-NEXT:    kmovw %edi, %k0
-; CHECK-NEXT:    kshiftlb $7, %k0, %k1
-; CHECK-NEXT:    kshiftrb $7, %k1, %k1
-; CHECK-NEXT:    kshiftlb $6, %k0, %k0
-; CHECK-NEXT:    kshiftrb $7, %k0, %k0
+; CHECK-NEXT:    kshiftrb $1, %k0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    kmovw %k1, %ecx
-; CHECK-NEXT:    vmovd %ecx, %xmm2
 ; CHECK-NEXT:    vpinsrb $8, %eax, %xmm2, %xmm2
 ; CHECK-NEXT:    vpsllq $63, %xmm2, %xmm2
 ; CHECK-NEXT:    vpsraq $63, %zmm2, %zmm2

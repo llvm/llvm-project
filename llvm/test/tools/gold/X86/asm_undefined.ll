@@ -1,5 +1,5 @@
 ; RUN: llvm-as %s -o %t.o
-; RUN: %gold -shared -m elf_x86_64 -o %t2 -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -shared -m elf_x86_64 -o %t2 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN: %t.o --plugin-opt=save-temps
 ; RUN: llvm-nm %t2 | FileCheck %s --check-prefix=OUTPUT
 

@@ -31,7 +31,7 @@ config.suffixes = ['.c', '.cpp', '.cppm', '.m', '.mm', '.cu',
 # excludes: A list of directories to exclude from the testsuite. The 'Inputs'
 # subdirectories contain auxiliary inputs for various tests in their parent
 # directories.
-config.excludes = ['Inputs', 'CMakeLists.txt', 'README.txt', 'LICENSE.txt']
+config.excludes = ['Inputs', 'CMakeLists.txt', 'README.txt', 'LICENSE.txt', 'debuginfo-tests']
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -61,16 +61,6 @@ tools = [
     ToolSubst('%clang_func_map', command=FindTool(
         'clang-func-mapping'), unresolved='ignore'),
 ]
-
-# FIXME: This logic can be removed once all buildbots have moved
-# debuginfo-test from clang/test to llvm/projects or monorepo.
-if os.path.exists(os.path.join(config.test_source_root, 'debuginfo-tests')):
-  if os.path.isfile(
-      os.path.join(config.test_source_root, 'debuginfo-tests', 'lit.cfg.py')):
-    config.excludes.append('debuginfo-tests')
-  else:
-    tools.append(ToolSubst('%test_debuginfo', command=os.path.join(
-      config.llvm_src_root, 'utils', 'test_debuginfo.pl')))
 
 if config.clang_examples:
     tools.append('clang-interpreter')

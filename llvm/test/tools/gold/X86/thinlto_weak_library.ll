@@ -12,7 +12,7 @@
 ; %t.o. It later selects %t2.o based on the strong ref from %t3.o.
 ; Therefore, %t3.o's copy of @f is prevailing, and we need to link
 ; %t3.o before %t2.o in the final native link.
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=save-temps \
 ; RUN:    -m elf_x86_64 \

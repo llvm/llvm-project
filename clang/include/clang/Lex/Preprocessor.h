@@ -175,6 +175,10 @@ class Preprocessor {
   IdentifierInfo *Ident__has_cpp_attribute;        // __has_cpp_attribute
   IdentifierInfo *Ident__has_c_attribute;          // __has_c_attribute
   IdentifierInfo *Ident__has_declspec;             // __has_declspec_attribute
+  IdentifierInfo *Ident__is_target_arch;           // __is_target_arch
+  IdentifierInfo *Ident__is_target_vendor;         // __is_target_vendor
+  IdentifierInfo *Ident__is_target_os;             // __is_target_os
+  IdentifierInfo *Ident__is_target_environment;    // __is_target_environment
 
   SourceLocation DATELoc, TIMELoc;
 

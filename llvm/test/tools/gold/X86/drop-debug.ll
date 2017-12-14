@@ -1,4 +1,4 @@
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --plugin-opt=emit-llvm -shared %p/Inputs/drop-debug.bc \
 ; RUN:    -o t2.bc 2>&1 | FileCheck %s
 

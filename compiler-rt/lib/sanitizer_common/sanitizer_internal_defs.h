@@ -65,7 +65,7 @@
 // SANITIZER_SUPPORTS_WEAK_HOOKS means that we support real weak functions that
 // will evaluate to a null pointer when not defined.
 #ifndef SANITIZER_SUPPORTS_WEAK_HOOKS
-#if (SANITIZER_LINUX || SANITIZER_MAC) && !SANITIZER_GO
+#if (SANITIZER_LINUX || SANITIZER_MAC || SANITIZER_SOLARIS) && !SANITIZER_GO
 # define SANITIZER_SUPPORTS_WEAK_HOOKS 1
 #else
 # define SANITIZER_SUPPORTS_WEAK_HOOKS 0
@@ -90,6 +90,10 @@
 // functions very early in the process startup (unless PIC macro is defined).
 // FIXME: do we have anything like this on Mac?
 #if SANITIZER_LINUX && !SANITIZER_ANDROID && !defined(PIC)
+# define SANITIZER_CAN_USE_PREINIT_ARRAY 1
+// Before Solaris 11.4, .preinit_array is fully supported only with GNU ld.
+// FIXME: Check for those conditions.
+#elif SANITIZER_SOLARIS && !defined(PIC)
 # define SANITIZER_CAN_USE_PREINIT_ARRAY 1
 #else
 # define SANITIZER_CAN_USE_PREINIT_ARRAY 0
@@ -137,7 +141,11 @@ typedef unsigned error_t;
 typedef int fd_t;
 typedef int error_t;
 #endif
+#if SANITIZER_SOLARIS && !defined(_LP64)
+typedef long pid_t;
+#else
 typedef int pid_t;
+#endif
 
 #if SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_MAC || \
     (SANITIZER_LINUX && defined(__x86_64__))

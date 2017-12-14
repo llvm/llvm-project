@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if SANITIZER_FREEBSD || SANITIZER_MAC || SANITIZER_NETBSD
+#if SANITIZER_FREEBSD || SANITIZER_MAC || SANITIZER_NETBSD || SANITIZER_SOLARIS
 # define SYSCALL(name) SYS_ ## name
 #else
 # define SYSCALL(name) __NR_ ## name

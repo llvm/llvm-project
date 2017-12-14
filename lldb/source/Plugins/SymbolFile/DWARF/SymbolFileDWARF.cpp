@@ -444,10 +444,8 @@ void SymbolFileDWARF::InitializeObject() {
     Section *section =
         section_list->FindSectionByName(GetDWARFMachOSegmentName()).get();
 
-    // Memory map the DWARF mach-o segment so we have everything mmap'ed
-    // to keep our heap memory usage down.
     if (section)
-      m_obj_file->MemoryMapSectionData(section, m_dwarf_data);
+      m_obj_file->ReadSectionData(section, m_dwarf_data);
   }
 
   get_apple_names_data();

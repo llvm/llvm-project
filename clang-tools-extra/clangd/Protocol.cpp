@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Protocol.h"
-
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Format.h"

@@ -435,7 +435,8 @@ unsigned MCDwarfLineTableHeader::getFile(StringRef &Directory,
       return IterBool.first->second;
   }
   // Make space for this FileNumber in the MCDwarfFiles vector if needed.
-  MCDwarfFiles.resize(FileNumber + 1);
+  if (FileNumber >= MCDwarfFiles.size())
+    MCDwarfFiles.resize(FileNumber + 1);
 
   // Get the new MCDwarfFile slot for this FileNumber.
   MCDwarfFile &File = MCDwarfFiles[FileNumber];
