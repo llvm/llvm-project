@@ -1884,6 +1884,11 @@ public:
   /// The printed text is indented by \p Depth.
   void print(raw_ostream &OS, unsigned Depth) const;
 
+  /// Check if \p AR1 and \p AR2 are equal, while taking into account
+  /// Equal predicates in Preds.
+  bool areAddRecsEqualWithPreds(const SCEVAddRecExpr *AR1,
+                                const SCEVAddRecExpr *AR2) const;
+
 private:
   /// Increments the version number of the predicate.  This needs to be called
   /// every time the SCEV predicate changes.

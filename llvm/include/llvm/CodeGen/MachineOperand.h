@@ -239,6 +239,8 @@ public:
   /// called to check this.
   static void printSubregIdx(raw_ostream &OS, uint64_t Index,
                              const TargetRegisterInfo *TRI);
+  /// Print operand target flags.
+  static void printTargetFlags(raw_ostream& OS, const MachineOperand &Op);
 
   /// Print the MachineOperand to \p os.
   /// Providing a valid \p TRI and \p IntrinsicInfo results in a more

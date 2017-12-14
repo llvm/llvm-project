@@ -129,6 +129,8 @@ void applyMOV32T(uint8_t *Off, uint32_t V) {
 }
 
 static void applyBranch20T(uint8_t *Off, int32_t V) {
+  if (!isInt<21>(V))
+    fatal("relocation out of range");
   uint32_t S = V < 0 ? 1 : 0;
   uint32_t J1 = (V >> 19) & 1;
   uint32_t J2 = (V >> 18) & 1;
