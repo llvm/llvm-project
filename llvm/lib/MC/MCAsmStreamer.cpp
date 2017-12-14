@@ -137,6 +137,8 @@ public:
   void EmitDataRegion(MCDataRegionType Kind) override;
   void EmitVersionMin(MCVersionMinType Kind, unsigned Major, unsigned Minor,
                       unsigned Update) override;
+  void EmitBuildVersion(unsigned Platform, unsigned Major, unsigned Minor,
+                        unsigned Update) override;
   void EmitThumbFunc(MCSymbol *Func) override;
 
   void EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
@@ -471,15 +473,39 @@ void MCAsmStreamer::EmitDataRegion(MCDataRegionType Kind) {
   EmitEOL();
 }
 
-void MCAsmStreamer::EmitVersionMin(MCVersionMinType Kind, unsigned Major,
-                                   unsigned Minor, unsigned Update) {
-  switch (Kind) {
-  case MCVM_WatchOSVersionMin:    OS << "\t.watchos_version_min"; break;
-  case MCVM_TvOSVersionMin:       OS << "\t.tvos_version_min"; break;
-  case MCVM_IOSVersionMin:        OS << "\t.ios_version_min"; break;
-  case MCVM_OSXVersionMin:        OS << "\t.macosx_version_min"; break;
+static const char *getVersionMinDirective(MCVersionMinType Type) {
+  switch (Type) {
+  case MCVM_WatchOSVersionMin: return ".watchos_version_min";
+  case MCVM_TvOSVersionMin:    return ".tvos_version_min";
+  case MCVM_IOSVersionMin:     return ".ios_version_min";
+  case MCVM_OSXVersionMin:     return ".macosx_version_min";
   }
-  OS << " " << Major << ", " << Minor;
+  llvm_unreachable("Invalid MC version min type");
+}
+
+void MCAsmStreamer::EmitVersionMin(MCVersionMinType Type, unsigned Major,
+                                   unsigned Minor, unsigned Update) {
+  OS << '\t' << getVersionMinDirective(Type) << ' ' << Major << ", " << Minor;
+  if (Update)
+    OS << ", " << Update;
+  EmitEOL();
+}
+
+static const char *getPlatformName(MachO::PlatformType Type) {
+  switch (Type) {
+  case MachO::PLATFORM_MACOS:    return "macos";
+  case MachO::PLATFORM_IOS:      return "ios";
+  case MachO::PLATFORM_TVOS:     return "tvos";
+  case MachO::PLATFORM_WATCHOS:  return "watchos";
+  case MachO::PLATFORM_BRIDGEOS: return "bridgeos";
+  }
+  llvm_unreachable("Invalid Mach-O platform type");
+}
+
+void MCAsmStreamer::EmitBuildVersion(unsigned Platform, unsigned Major,
+                                     unsigned Minor, unsigned Update) {
+  const char *PlatformName = getPlatformName((MachO::PlatformType)Platform);
+  OS << "\t.build_version " << PlatformName << ", " << Major << ", " << Minor;
   if (Update)
     OS << ", " << Update;
   EmitEOL();

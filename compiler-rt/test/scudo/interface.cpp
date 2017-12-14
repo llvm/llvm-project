@@ -4,6 +4,7 @@
 // RUN:                                                   %run %t heap-size          2>&1
 // RUN: %env_scudo_opts="allocator_may_return_null=1"     %run %t soft-limit         2>&1
 // RUN: %env_scudo_opts="allocator_may_return_null=1" not %run %t hard-limit         2>&1
+// UNSUPPORTED: armhf-linux
 
 // Tests that the sanitizer interface functions behave appropriately.
 

@@ -218,3 +218,37 @@ define i8 @smax_nsw(i8 %a, i8 %b) {
   ret i8 %r
 }
 
+define i8 @abs_swapped(i8 %a) {
+; CHECK-LABEL: @abs_swapped(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, %a
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i8 %a, 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i8 %a, 0
+; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 %a, i8 [[NEG]]
+; CHECK-NEXT:    ret i8 [[M1]]
+;
+  %neg = sub i8 0, %a
+  %cmp1 = icmp sgt i8 %a, 0
+  %cmp2 = icmp slt i8 %a, 0
+  %m1 = select i1 %cmp1, i8 %a, i8 %neg
+  %m2 = select i1 %cmp2, i8 %neg, i8 %a
+  %r = or i8 %m2, %m1
+  ret i8 %r
+}
+
+define i8 @nabs_swapped(i8 %a) {
+; CHECK-LABEL: @nabs_swapped(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, %a
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8 %a, 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i8 %a, 0
+; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 %a, i8 [[NEG]]
+; CHECK-NEXT:    ret i8 0
+;
+  %neg = sub i8 0, %a
+  %cmp1 = icmp slt i8 %a, 0
+  %cmp2 = icmp sgt i8 %a, 0
+  %m1 = select i1 %cmp1, i8 %a, i8 %neg
+  %m2 = select i1 %cmp2, i8 %neg, i8 %a
+  %r = xor i8 %m2, %m1
+  ret i8 %r
+}
+

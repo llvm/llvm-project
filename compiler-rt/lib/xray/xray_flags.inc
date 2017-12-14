@@ -19,7 +19,9 @@ XRAY_FLAG(bool, patch_premain, false,
 XRAY_FLAG(const char *, xray_logfile_base, "xray-log.",
           "Filename base for the xray logfile.")
 XRAY_FLAG(const char *, xray_mode, "", "Mode to install by default.")
-
+XRAY_FLAG(uptr, xray_page_size_override, 0,
+          "Override the default page size for the system, in bytes. The size "
+          "should be a power-of-two.")
 
 // Basic (Naive) Mode logging options.
 XRAY_FLAG(bool, xray_naive_log, false,

@@ -721,6 +721,16 @@ bool MachObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
   return false;
 }
 
+static MachO::LoadCommandType getLCFromMCVM(MCVersionMinType Type) {
+  switch (Type) {
+  case MCVM_OSXVersionMin:     return MachO::LC_VERSION_MIN_MACOSX;
+  case MCVM_IOSVersionMin:     return MachO::LC_VERSION_MIN_IPHONEOS;
+  case MCVM_TvOSVersionMin:    return MachO::LC_VERSION_MIN_TVOS;
+  case MCVM_WatchOSVersionMin: return MachO::LC_VERSION_MIN_WATCHOS;
+  }
+  llvm_unreachable("Invalid mc version min type");
+}
+
 void MachObjectWriter::writeObject(MCAssembler &Asm,
                                    const MCAsmLayout &Layout) {
   // Compute symbol table information and bind symbol indices.
@@ -728,8 +738,8 @@ void MachObjectWriter::writeObject(MCAssembler &Asm,
                      UndefinedSymbolData);
 
   unsigned NumSections = Asm.size();
-  const MCAssembler::VersionMinInfoType &VersionInfo =
-    Layout.getAssembler().getVersionMinInfo();
+  const MCAssembler::VersionInfoType &VersionInfo =
+    Layout.getAssembler().getVersionInfo();
 
   // The section data starts after the header, the segment load command (and
   // section headers) and the symbol table.
@@ -741,7 +751,10 @@ void MachObjectWriter::writeObject(MCAssembler &Asm,
   // Add the deployment target version info load command size, if used.
   if (VersionInfo.Major != 0) {
     ++NumLoadCommands;
-    LoadCommandsSize += sizeof(MachO::version_min_command);
+    if (VersionInfo.EmitBuildVersion)
+      LoadCommandsSize += sizeof(MachO::build_version_command);
+    else
+      LoadCommandsSize += sizeof(MachO::version_min_command);
   }
 
   // Add the data-in-code load command size, if used.
@@ -832,25 +845,22 @@ void MachObjectWriter::writeObject(MCAssembler &Asm,
     assert(VersionInfo.Major < 65536 && "unencodable major target version");
     uint32_t EncodedVersion = VersionInfo.Update | (VersionInfo.Minor << 8) |
       (VersionInfo.Major << 16);
-    MachO::LoadCommandType LCType;
-    switch (VersionInfo.Kind) {
-    case MCVM_OSXVersionMin:
-      LCType = MachO::LC_VERSION_MIN_MACOSX;
-      break;
-    case MCVM_IOSVersionMin:
-      LCType = MachO::LC_VERSION_MIN_IPHONEOS;
-      break;
-    case MCVM_TvOSVersionMin:
-      LCType = MachO::LC_VERSION_MIN_TVOS;
-      break;
-    case MCVM_WatchOSVersionMin:
-      LCType = MachO::LC_VERSION_MIN_WATCHOS;
-      break;
+    if (VersionInfo.EmitBuildVersion) {
+      // FIXME: Currently empty tools. Add clang version in the future.
+      write32(MachO::LC_BUILD_VERSION);
+      write32(sizeof(MachO::build_version_command));
+      write32(VersionInfo.TypeOrPlatform.Platform);
+      write32(EncodedVersion);
+      write32(0);         // SDK version.
+      write32(0);         // Empty tools list.
+    } else {
+      MachO::LoadCommandType LCType
+        = getLCFromMCVM(VersionInfo.TypeOrPlatform.Type);
+      write32(LCType);
+      write32(sizeof(MachO::version_min_command));
+      write32(EncodedVersion);
+      write32(0);         // reserved.
     }
-    write32(LCType);
-    write32(sizeof(MachO::version_min_command));
-    write32(EncodedVersion);
-    write32(0);         // reserved.
   }
 
   // Write the data-in-code load command, if used.

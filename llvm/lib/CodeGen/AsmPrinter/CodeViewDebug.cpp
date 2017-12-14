@@ -67,10 +67,12 @@
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Target/TargetMachine.h"
@@ -87,6 +89,9 @@
 
 using namespace llvm;
 using namespace llvm::codeview;
+
+static cl::opt<bool> EmitDebugGlobalHashes("emit-codeview-ghash-section",
+                                           cl::ReallyHidden, cl::init(false));
 
 CodeViewDebug::CodeViewDebug(AsmPrinter *AP)
     : DebugHandlerBase(AP), OS(*Asm->OutStreamer), TypeTable(Allocator) {
@@ -486,9 +491,12 @@ void CodeViewDebug::endModule() {
   OS.AddComment("String table");
   OS.EmitCVStringTableDirective();
 
-  // Emit type information last, so that any types we translate while emitting
-  // function info are included.
+  // Emit type information and hashes last, so that any types we translate while
+  // emitting function info are included.
   emitTypeInformation();
+
+  if (EmitDebugGlobalHashes)
+    emitTypeGlobalHashes();
 
   clear();
 }
@@ -506,11 +514,6 @@ static void emitNullTerminatedSymbolName(MCStreamer &OS, StringRef S) {
 }
 
 void CodeViewDebug::emitTypeInformation() {
-  // Do nothing if we have no debug info or if no non-trivial types were emitted
-  // to TypeTable during codegen.
-  NamedMDNode *CU_Nodes = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
-  if (!CU_Nodes)
-    return;
   if (TypeTable.empty())
     return;
 
@@ -552,6 +555,40 @@ void CodeViewDebug::emitTypeInformation() {
     }
     OS.EmitBinaryData(Record.str_data());
     B = Table.getNext(*B);
+  }
+}
+
+void CodeViewDebug::emitTypeGlobalHashes() {
+  if (TypeTable.empty())
+    return;
+
+  // Start the .debug$H section with the version and hash algorithm, currently
+  // hardcoded to version 0, SHA1.
+  OS.SwitchSection(Asm->getObjFileLowering().getCOFFGlobalTypeHashesSection());
+
+  OS.EmitValueToAlignment(4);
+  OS.AddComment("Magic");
+  OS.EmitIntValue(COFF::DEBUG_HASHES_SECTION_MAGIC, 4);
+  OS.AddComment("Section Version");
+  OS.EmitIntValue(0, 2);
+  OS.AddComment("Hash Algorithm");
+  OS.EmitIntValue(uint16_t(GlobalTypeHashAlg::SHA1), 2);
+
+  TypeIndex TI(TypeIndex::FirstNonSimpleIndex);
+  for (const auto &GHR : TypeTable.hashes()) {
+    if (OS.isVerboseAsm()) {
+      // Emit an EOL-comment describing which TypeIndex this hash corresponds
+      // to, as well as the stringified SHA1 hash.
+      SmallString<32> Comment;
+      raw_svector_ostream CommentOS(Comment);
+      CommentOS << formatv("{0:X+} [{1}]", TI.getIndex(), GHR);
+      OS.AddComment(Comment);
+      ++TI;
+    }
+    assert(GHR.Hash.size() % 20 == 0);
+    StringRef S(reinterpret_cast<const char *>(GHR.Hash.data()),
+                GHR.Hash.size());
+    OS.EmitBinaryData(S);
   }
 }
 

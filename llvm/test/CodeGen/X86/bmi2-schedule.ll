@@ -106,7 +106,57 @@ define i64 @test_bzhi_i64(i64 %a0, i64 %a1, i64 *%a2) {
 }
 declare i64 @llvm.x86.bmi.bzhi.64(i64, i64)
 
-; TODO test_mulx_i32
+define void @test_mulx_i32(i32 %a0, i32 %a1, i32* %a2) optsize {
+; GENERIC-LABEL: test_mulx_i32:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    mulxl %esi, %esi, %edi # sched: [3:1.00]
+; GENERIC-NEXT:    mulxl (%rdx), %esi, %edi # sched: [7:1.00]
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    retq # sched: [1:1.00]
+;
+; HASWELL-LABEL: test_mulx_i32:
+; HASWELL:       # %bb.0:
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    mulxl %esi, %esi, %edi # sched: [5:1.00]
+; HASWELL-NEXT:    mulxl (%rdx), %esi, %edi # sched: [10:1.00]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    retq # sched: [7:1.00]
+;
+; BROADWELL-LABEL: test_mulx_i32:
+; BROADWELL:       # %bb.0:
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    mulxl %esi, %esi, %edi # sched: [5:1.00]
+; BROADWELL-NEXT:    mulxl (%rdx), %esi, %edi # sched: [10:1.00]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    retq # sched: [7:1.00]
+;
+; SKYLAKE-LABEL: test_mulx_i32:
+; SKYLAKE:       # %bb.0:
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    mulxl %esi, %esi, %edi # sched: [5:1.00]
+; SKYLAKE-NEXT:    mulxl (%rdx), %esi, %edi # sched: [10:1.00]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
+;
+; KNL-LABEL: test_mulx_i32:
+; KNL:       # %bb.0:
+; KNL-NEXT:    #APP
+; KNL-NEXT:    mulxl %esi, %esi, %edi # sched: [5:1.00]
+; KNL-NEXT:    mulxl (%rdx), %esi, %edi # sched: [10:1.00]
+; KNL-NEXT:    #NO_APP
+; KNL-NEXT:    retq # sched: [7:1.00]
+;
+; ZNVER1-LABEL: test_mulx_i32:
+; ZNVER1:       # %bb.0:
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    mulxl %esi, %esi, %edi # sched: [3:2.00]
+; ZNVER1-NEXT:    mulxl (%rdx), %esi, %edi # sched: [8:2.00]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
+  tail call void asm "mulx $1, $1, $0 \0A\09 mulx $2, $1, $0 ", "r,r,*m"(i32 %a0, i32 %a1, i32* %a2) nounwind
+  ret void
+}
 
 define i64 @test_mulx_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ; GENERIC-LABEL: test_mulx_i64:

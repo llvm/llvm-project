@@ -481,7 +481,7 @@ enum RelocationInfoType {
 enum { VM_PROT_READ = 0x1, VM_PROT_WRITE = 0x2, VM_PROT_EXECUTE = 0x4 };
 
 // Values for platform field in build_version_command.
-enum {
+enum PlatformType {
   PLATFORM_MACOS = 1,
   PLATFORM_IOS = 2,
   PLATFORM_TVOS = 3,
