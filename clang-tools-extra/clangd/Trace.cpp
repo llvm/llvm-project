@@ -44,10 +44,24 @@ public:
     Out.flush();
   }
 
+  EndEventCallback beginSpan(const Context &Ctx,
+                             llvm::StringRef Name) override {
+    jsonEvent("B", json::obj{{"name", Name}});
+
+    // The callback that will run when event ends.
+    return [this](json::Expr &&Args) {
+      jsonEvent("E", json::obj{{"args", std::move(Args)}});
+    };
+  }
+
+  void instant(const Context &Ctx, llvm::StringRef Name,
+               json::obj &&Args) override {
+    jsonEvent("i", json::obj{{"name", Name}, {"args", std::move(Args)}});
+  }
+
   // Record an event on the current thread. ph, pid, tid, ts are set.
   // Contents must be a list of the other JSON key/values.
-  void event(const Context &Ctx, StringRef Phase,
-             json::obj &&Contents) override {
+  void jsonEvent(StringRef Phase, json::obj &&Contents) {
     uint64_t TID = get_threadid();
     std::lock_guard<std::mutex> Lock(Mu);
     // If we haven't already, emit metadata describing this thread.
@@ -109,30 +123,26 @@ std::unique_ptr<EventTracer> createJSONTracer(llvm::raw_ostream &OS,
 void log(const Context &Ctx, const Twine &Message) {
   if (!T)
     return;
-  T->event(Ctx, "i",
-           json::obj{
-               {"name", "Log"},
-               {"args", json::obj{{"Message", Message.str()}}},
-           });
+  T->instant(Ctx, "Log", json::obj{{"Message", Message.str()}});
 }
 
-Span::Span(const Context &Ctx, std::string Name) {
+Span::Span(const Context &Ctx, llvm::StringRef Name) {
   if (!T)
     return;
-  // Clone the context, so that the original Context can be moved.
-  this->Ctx.emplace(Ctx.clone());
 
-  T->event(*this->Ctx, "B", json::obj{{"name", std::move(Name)}});
+  Callback = T->beginSpan(Ctx, Name);
+  if (!Callback)
+    return;
+
   Args = llvm::make_unique<json::obj>();
 }
 
 Span::~Span() {
-  if (!T)
+  if (!Callback)
     return;
-  if (!Args)
-    Args = llvm::make_unique<json::obj>();
-  T->event(*Ctx, "E",
-           Args ? json::obj{{"args", std::move(*Args)}} : json::obj{});
+
+  assert(Args && "Args must be non-null if Callback is defined");
+  Callback(std::move(*Args));
 }
 
 } // namespace trace

@@ -19,6 +19,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_TRACE_H_
 
 #include "Context.h"
+#include "Function.h"
 #include "JSONExpr.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
@@ -28,12 +29,24 @@ namespace clangd {
 namespace trace {
 
 /// A consumer of trace events. The events are produced by Spans and trace::log.
+/// Implmentations of this interface must be thread-safe.
 class EventTracer {
 public:
+  /// A callback executed when an event with duration ends. Args represent data
+  /// that was attached to the event via SPAN_ATTACH.
+  using EndEventCallback = UniqueFunction<void(json::obj &&Args)>;
+
   virtual ~EventTracer() = default;
-  /// Consume a trace event.
-  virtual void event(const Context &Ctx, llvm::StringRef Phase,
-                     json::obj &&Contents) = 0;
+
+  /// Called when event that has a duration starts. The returned callback will
+  /// be executed when the event ends. \p Name is a descriptive name
+  /// of the event that was passed to Span constructor.
+  virtual EndEventCallback beginSpan(const Context &Ctx,
+                                     llvm::StringRef Name) = 0;
+
+  /// Called for instant events.
+  virtual void instant(const Context &Ctx, llvm::StringRef Name,
+                       json::obj &&Args) = 0;
 };
 
 /// Sets up a global EventTracer that consumes events produced by Span and
@@ -50,9 +63,6 @@ public:
 ///
 /// The format is documented here:
 /// https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview
-///
-/// The implementation supports concurrent calls and can be used as a global
-/// tracer (i.e., can be put into a global Context).
 std::unique_ptr<EventTracer> createJSONTracer(llvm::raw_ostream &OS,
                                               bool Pretty = false);
 
@@ -67,7 +77,7 @@ void log(const Context &Ctx, const llvm::Twine &Name);
 /// SomeJSONExpr is evaluated and copied only if actually needed.
 class Span {
 public:
-  Span(const Context &Ctx, std::string Name);
+  Span(const Context &Ctx, llvm::StringRef Name);
   ~Span();
 
   /// Returns mutable span metadata if this span is interested.
@@ -75,8 +85,8 @@ public:
   json::obj *args() { return Args.get(); }
 
 private:
-  llvm::Optional<Context> Ctx;
   std::unique_ptr<json::obj> Args;
+  EventTracer::EndEventCallback Callback;
 };
 
 #define SPAN_ATTACH(S, Name, Expr)                                             \
