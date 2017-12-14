@@ -75,6 +75,10 @@ Improvements to Clang's diagnostics
 -  The compiler no longer warns about unreachable ``__builtin_unreachable``
    statements.
 
+- The new builtin preprocessor macros ``__is_target_arch``,
+  ``__is_target_vendor``, ``__is_target_os``, and ``__is_target_environment``
+  can be used to to examine the individual components of the target triple.
+
 New Compiler Flags
 ------------------
 
