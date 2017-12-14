@@ -4,7 +4,7 @@
 ; Verify that prevailing weak for linker symbol is kept.
 ; Note that gold picks the first copy of a function as the prevailing one,
 ; so listing %t.o first is sufficient to ensure that its copies are prevailing.
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     --plugin-opt=thinlto \
 ; RUN:     --plugin-opt=save-temps \
 ; RUN:     -shared \

@@ -805,9 +805,6 @@ public:
   virtual size_t ReadSectionData(Section *section,
                                  DataExtractor &section_data);
 
-  size_t MemoryMapSectionData(Section *section,
-                              DataExtractor &section_data);
-
   bool IsInMemory() const { return m_memory_addr != LLDB_INVALID_ADDRESS; }
 
   // Strip linker annotations (such as @@VERSION) from symbol names.

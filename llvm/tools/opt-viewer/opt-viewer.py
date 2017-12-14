@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import argparse
 import cgi
+import codecs
 import errno
 import functools
 from multiprocessing import cpu_count
@@ -51,7 +52,7 @@ class SourceFileRenderer:
             if os.path.exists(fn):
                 existing_filename = fn
 
-        self.stream = open(os.path.join(output_dir, optrecord.html_file_name(filename)), 'w')
+        self.stream = codecs.open(os.path.join(output_dir, optrecord.html_file_name(filename)), 'w', encoding='utf-8')
         if existing_filename:
             self.source_stream = open(existing_filename)
         else:
@@ -69,16 +70,19 @@ class SourceFileRenderer:
         file_text = stream.read()
 
         if args.no_highlight:
-            html_highlighted = file_text
+            html_highlighted = file_text.decode('utf-8')
         else:
             html_highlighted = highlight(
             file_text,
                 self.cpp_lexer,
                 self.html_formatter)
 
-            # On Python 3, pygments.highlight() returns a bytes object, not a str.
-            if sys.version_info >= (3, 0):
-              html_highlighted = html_highlighted.decode('utf-8')
+            # Note that the API is different between Python 2 and 3.  On
+            # Python 3, pygments.highlight() returns a bytes object, so we
+            # have to decode.  On Python 2, the output is str but since we
+            # support unicode characters and the output streams is unicode we
+            # decode too.
+            html_highlighted = html_highlighted.decode('utf-8')
 
             # Take off the header and footer, these must be
             #   reapplied line-wise, within the page structure
@@ -86,7 +90,7 @@ class SourceFileRenderer:
             html_highlighted = html_highlighted.replace('</pre></div>', '')
 
         for (linenum, html_line) in enumerate(html_highlighted.split('\n'), start=1):
-            print('''
+            print(u'''
 <tr>
 <td><a name=\"L{linenum}\">{linenum}</a></td>
 <td></td>
@@ -111,7 +115,7 @@ class SourceFileRenderer:
         indent = line[:max(r.Column, 1) - 1]
         indent = re.sub('\S', ' ', indent)
 
-        print('''
+        print(u'''
 <tr>
 <td></td>
 <td>{r.RelativeHotness}</td>
@@ -126,6 +130,7 @@ class SourceFileRenderer:
 
         print('''
 <html>
+<meta charset="utf-8" />
 <head>
 <link rel='stylesheet' type='text/css' href='style.css'>
 </head>
@@ -153,12 +158,12 @@ class SourceFileRenderer:
 
 class IndexRenderer:
     def __init__(self, output_dir, should_display_hotness):
-        self.stream = open(os.path.join(output_dir, 'index.html'), 'w')
+        self.stream = codecs.open(os.path.join(output_dir, 'index.html'), 'w', encoding='utf-8')
         self.should_display_hotness = should_display_hotness
 
     def render_entry(self, r, odd):
         escaped_name = cgi.escape(r.DemangledFunctionName)
-        print('''
+        print(u'''
 <tr>
 <td class=\"column-entry-{odd}\"><a href={r.Link}>{r.DebugLocString}</a></td>
 <td class=\"column-entry-{odd}\">{r.RelativeHotness}</td>
@@ -169,6 +174,7 @@ class IndexRenderer:
     def render(self, all_remarks):
         print('''
 <html>
+<meta charset="utf-8" />
 <head>
 <link rel='stylesheet' type='text/css' href='style.css'>
 </head>

@@ -2,7 +2,7 @@
 ; RUN: echo ".text._start" >> %t_order_lto.txt
 ; RUN: echo ".text.pat" >> %t_order_lto.txt
 ; RUN: llvm-as %s -o %t.o
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     -m elf_x86_64 -o %t.exe %t.o \
 ; RUN:     --section-ordering-file=%t_order_lto.txt
 ; RUN: llvm-readobj -elf-output-style=GNU -t %t.exe | FileCheck %s

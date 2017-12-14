@@ -18,10 +18,11 @@
 #if defined(_WIN32)
 
 #include "WindowsMMap.h"
-#include "InstrProfiling.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+
+#include "InstrProfiling.h"
 
 #ifdef __USE_FILE_OFFSET64
 # define DWORD_HI(x) (x >> 32)

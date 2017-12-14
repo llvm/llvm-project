@@ -2777,9 +2777,12 @@ void CodeGenFunction::EmitForwardingCallToLambda(
   RValue RV = EmitCall(calleeFnInfo, callee, returnSlot, callArgs);
 
   // If necessary, copy the returned value into the slot.
-  if (!resultType->isVoidType() && returnSlot.isNull())
+  if (!resultType->isVoidType() && returnSlot.isNull()) {
+    if (getLangOpts().ObjCAutoRefCount && resultType->isObjCRetainableType()) {
+      RV = RValue::get(EmitARCRetainAutoreleasedReturnValue(RV.getScalarVal()));
+    }
     EmitReturnOfRValue(RV, resultType);
-  else
+  } else
     EmitBranchThroughCleanup(ReturnBlock);
 }
 

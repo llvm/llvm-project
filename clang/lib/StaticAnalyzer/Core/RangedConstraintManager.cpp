@@ -33,7 +33,7 @@ ProgramStateRef RangedConstraintManager::assumeSym(ProgramStateRef State,
     // We can only simplify expressions whose RHS is an integer.
 
     BinaryOperator::Opcode op = SIE->getOpcode();
-    if (BinaryOperator::isComparisonOp(op)) {
+    if (BinaryOperator::isComparisonOp(op) && op != BO_Cmp) {
       if (!Assumption)
         op = BinaryOperator::negateComparisonOp(op);
 

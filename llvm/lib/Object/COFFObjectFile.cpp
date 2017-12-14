@@ -895,7 +895,7 @@ StringRef COFFObjectFile::getFileFormatName() const {
   }
 }
 
-unsigned COFFObjectFile::getArch() const {
+Triple::ArchType COFFObjectFile::getArch() const {
   switch (getMachine()) {
   case COFF::IMAGE_FILE_MACHINE_I386:
     return Triple::x86;

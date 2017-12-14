@@ -62,46 +62,60 @@ INLINE u32 computeCRC32(u32 Crc, uptr Value, uptr *Array, uptr ArraySize) {
 
 static ScudoBackendAllocator &getBackendAllocator();
 
-struct ScudoChunk : UnpackedHeader {
+namespace Chunk {
   // We can't use the offset member of the chunk itself, as we would double
   // fetch it without any warranty that it wouldn't have been tampered. To
   // prevent this, we work with a local copy of the header.
-  void *getBackendPtr(UnpackedHeader *Header) {
-    return reinterpret_cast<void *>(
-        reinterpret_cast<uptr>(this) - (Header->Offset << MinAlignmentLog));
+  static INLINE void *getBackendPtr(const void *Ptr, UnpackedHeader *Header) {
+    return reinterpret_cast<void *>(reinterpret_cast<uptr>(Ptr) -
+                                    AlignedChunkHeaderSize -
+                                    (Header->Offset << MinAlignmentLog));
+  }
+
+  static INLINE AtomicPackedHeader *getAtomicHeader(void *Ptr) {
+    return reinterpret_cast<AtomicPackedHeader *>(reinterpret_cast<uptr>(Ptr) -
+                                                  AlignedChunkHeaderSize);
+  }
+  static INLINE
+  const AtomicPackedHeader *getConstAtomicHeader(const void *Ptr) {
+    return reinterpret_cast<const AtomicPackedHeader *>(
+        reinterpret_cast<uptr>(Ptr) - AlignedChunkHeaderSize);
+  }
+
+  static INLINE bool isAligned(const void *Ptr) {
+    return IsAligned(reinterpret_cast<uptr>(Ptr), MinAlignment);
   }
 
   // Returns the usable size for a chunk, meaning the amount of bytes from the
   // beginning of the user data to the end of the backend allocated chunk.
-  uptr getUsableSize(UnpackedHeader *Header) {
-    const uptr Size =
-        getBackendAllocator().getActuallyAllocatedSize(getBackendPtr(Header),
-                                                       Header->ClassId);
+  static INLINE uptr getUsableSize(const void *Ptr, UnpackedHeader *Header) {
+    const uptr Size = getBackendAllocator().getActuallyAllocatedSize(
+        getBackendPtr(Ptr, Header), Header->ClassId);
     if (Size == 0)
       return 0;
     return Size - AlignedChunkHeaderSize - (Header->Offset << MinAlignmentLog);
   }
 
-  // Compute the checksum of the Chunk pointer and its ChunkHeader.
-  u16 computeChecksum(UnpackedHeader *Header) const {
+  // Compute the checksum of the chunk pointer and its header.
+  static INLINE u16 computeChecksum(const void *Ptr, UnpackedHeader *Header) {
     UnpackedHeader ZeroChecksumHeader = *Header;
     ZeroChecksumHeader.Checksum = 0;
     uptr HeaderHolder[sizeof(UnpackedHeader) / sizeof(uptr)];
     memcpy(&HeaderHolder, &ZeroChecksumHeader, sizeof(HeaderHolder));
-    u32 Crc = computeCRC32(Cookie, reinterpret_cast<uptr>(this), HeaderHolder,
-                           ARRAY_SIZE(HeaderHolder));
+    const u32 Crc = computeCRC32(Cookie, reinterpret_cast<uptr>(Ptr),
+                                 HeaderHolder, ARRAY_SIZE(HeaderHolder));
     return static_cast<u16>(Crc);
   }
 
   // Checks the validity of a chunk by verifying its checksum. It doesn't
   // incur termination in the event of an invalid chunk.
-  bool isValid() {
-    UnpackedHeader NewUnpackedHeader;
-    const AtomicPackedHeader *AtomicHeader =
-        reinterpret_cast<const AtomicPackedHeader *>(this);
-    PackedHeader NewPackedHeader = atomic_load_relaxed(AtomicHeader);
-    NewUnpackedHeader = bit_cast<UnpackedHeader>(NewPackedHeader);
-    return (NewUnpackedHeader.Checksum == computeChecksum(&NewUnpackedHeader));
+  static INLINE bool isValid(const void *Ptr) {
+    PackedHeader NewPackedHeader =
+        atomic_load_relaxed(getConstAtomicHeader(Ptr));
+    UnpackedHeader NewUnpackedHeader =
+        bit_cast<UnpackedHeader>(NewPackedHeader);
+    return (NewUnpackedHeader.Checksum ==
+            computeChecksum(Ptr, &NewUnpackedHeader));
   }
 
   // Nulls out a chunk header. When returning the chunk to the backend, there
@@ -110,56 +124,46 @@ struct ScudoChunk : UnpackedHeader {
   // the header invalid. In the extremely rare event where 0 would be a valid
   // checksum for the chunk, the state of the chunk is ChunkAvailable anyway.
   COMPILER_CHECK(ChunkAvailable == 0);
-  void eraseHeader() {
-    PackedHeader NullPackedHeader = 0;
-    AtomicPackedHeader *AtomicHeader =
-        reinterpret_cast<AtomicPackedHeader *>(this);
-    atomic_store_relaxed(AtomicHeader, NullPackedHeader);
+  static INLINE void eraseHeader(void *Ptr) {
+    const PackedHeader NullPackedHeader = 0;
+    atomic_store_relaxed(getAtomicHeader(Ptr), NullPackedHeader);
   }
 
   // Loads and unpacks the header, verifying the checksum in the process.
-  void loadHeader(UnpackedHeader *NewUnpackedHeader) const {
-    const AtomicPackedHeader *AtomicHeader =
-        reinterpret_cast<const AtomicPackedHeader *>(this);
-    PackedHeader NewPackedHeader = atomic_load_relaxed(AtomicHeader);
+  static INLINE
+  void loadHeader(const void *Ptr, UnpackedHeader *NewUnpackedHeader) {
+    PackedHeader NewPackedHeader =
+        atomic_load_relaxed(getConstAtomicHeader(Ptr));
     *NewUnpackedHeader = bit_cast<UnpackedHeader>(NewPackedHeader);
     if (UNLIKELY(NewUnpackedHeader->Checksum !=
-        computeChecksum(NewUnpackedHeader))) {
-      dieWithMessage("ERROR: corrupted chunk header at address %p\n", this);
+        computeChecksum(Ptr, NewUnpackedHeader))) {
+      dieWithMessage("ERROR: corrupted chunk header at address %p\n", Ptr);
     }
   }
 
   // Packs and stores the header, computing the checksum in the process.
-  void storeHeader(UnpackedHeader *NewUnpackedHeader) {
-    NewUnpackedHeader->Checksum = computeChecksum(NewUnpackedHeader);
+  static INLINE void storeHeader(void *Ptr, UnpackedHeader *NewUnpackedHeader) {
+    NewUnpackedHeader->Checksum = computeChecksum(Ptr, NewUnpackedHeader);
     PackedHeader NewPackedHeader = bit_cast<PackedHeader>(*NewUnpackedHeader);
-    AtomicPackedHeader *AtomicHeader =
-        reinterpret_cast<AtomicPackedHeader *>(this);
-    atomic_store_relaxed(AtomicHeader, NewPackedHeader);
+    atomic_store_relaxed(getAtomicHeader(Ptr), NewPackedHeader);
   }
 
   // Packs and stores the header, computing the checksum in the process. We
   // compare the current header with the expected provided one to ensure that
   // we are not being raced by a corruption occurring in another thread.
-  void compareExchangeHeader(UnpackedHeader *NewUnpackedHeader,
-                             UnpackedHeader *OldUnpackedHeader) {
-    NewUnpackedHeader->Checksum = computeChecksum(NewUnpackedHeader);
+  static INLINE void compareExchangeHeader(void *Ptr,
+                                           UnpackedHeader *NewUnpackedHeader,
+                                           UnpackedHeader *OldUnpackedHeader) {
+    NewUnpackedHeader->Checksum = computeChecksum(Ptr, NewUnpackedHeader);
     PackedHeader NewPackedHeader = bit_cast<PackedHeader>(*NewUnpackedHeader);
     PackedHeader OldPackedHeader = bit_cast<PackedHeader>(*OldUnpackedHeader);
-    AtomicPackedHeader *AtomicHeader =
-        reinterpret_cast<AtomicPackedHeader *>(this);
-    if (UNLIKELY(!atomic_compare_exchange_strong(AtomicHeader,
-                                                 &OldPackedHeader,
-                                                 NewPackedHeader,
-                                                 memory_order_relaxed))) {
-      dieWithMessage("ERROR: race on chunk header at address %p\n", this);
+    if (UNLIKELY(!atomic_compare_exchange_strong(
+            getAtomicHeader(Ptr), &OldPackedHeader, NewPackedHeader,
+            memory_order_relaxed))) {
+      dieWithMessage("ERROR: race on chunk header at address %p\n", Ptr);
     }
   }
-};
-
-INLINE ScudoChunk *getScudoChunk(uptr UserBeg) {
-  return reinterpret_cast<ScudoChunk *>(UserBeg - AlignedChunkHeaderSize);
-}
+}  // namespace Chunk
 
 struct QuarantineCallback {
   explicit QuarantineCallback(AllocatorCache *Cache)
@@ -167,19 +171,20 @@ struct QuarantineCallback {
 
   // Chunk recycling function, returns a quarantined chunk to the backend,
   // first making sure it hasn't been tampered with.
-  void Recycle(ScudoChunk *Chunk) {
+  void Recycle(void *Ptr) {
     UnpackedHeader Header;
-    Chunk->loadHeader(&Header);
+    Chunk::loadHeader(Ptr, &Header);
     if (UNLIKELY(Header.State != ChunkQuarantine)) {
       dieWithMessage("ERROR: invalid chunk state when recycling address %p\n",
-                     Chunk);
+                     Ptr);
     }
-    Chunk->eraseHeader();
-    void *Ptr = Chunk->getBackendPtr(&Header);
+    Chunk::eraseHeader(Ptr);
+    void *BackendPtr = Chunk::getBackendPtr(Ptr, &Header);
     if (Header.ClassId)
-      getBackendAllocator().deallocatePrimary(Cache_, Ptr, Header.ClassId);
+      getBackendAllocator().deallocatePrimary(Cache_, BackendPtr,
+                                              Header.ClassId);
     else
-      getBackendAllocator().deallocateSecondary(Ptr);
+      getBackendAllocator().deallocateSecondary(BackendPtr);
   }
 
   // Internal quarantine allocation and deallocation functions. We first check
@@ -198,7 +203,7 @@ struct QuarantineCallback {
   const uptr BatchClassId = SizeClassMap::ClassID(sizeof(QuarantineBatch));
 };
 
-typedef Quarantine<QuarantineCallback, ScudoChunk> ScudoQuarantine;
+typedef Quarantine<QuarantineCallback, void> ScudoQuarantine;
 typedef ScudoQuarantine::Cache ScudoQuarantineCache;
 COMPILER_CHECK(sizeof(ScudoQuarantineCache) <=
                sizeof(ScudoTSD::QuarantineCachePlaceHolder));
@@ -305,14 +310,13 @@ struct ScudoAllocator {
   }
 
   // Helper function that checks for a valid Scudo chunk. nullptr isn't.
-  bool isValidPointer(const void *UserPtr) {
+  bool isValidPointer(const void *Ptr) {
     initThreadMaybe();
-    if (UNLIKELY(!UserPtr))
+    if (UNLIKELY(!Ptr))
       return false;
-    uptr UserBeg = reinterpret_cast<uptr>(UserPtr);
-    if (!IsAligned(UserBeg, MinAlignment))
+    if (!Chunk::isAligned(Ptr))
       return false;
-    return getScudoChunk(UserBeg)->isValid();
+    return Chunk::isValid(Ptr);
   }
 
   // Opportunistic RSS limit check. This will update the RSS limit status, if
@@ -375,40 +379,40 @@ struct ScudoAllocator {
     // Primary and Secondary backed allocations have a different treatment. We
     // deal with alignment requirements of Primary serviced allocations here,
     // but the Secondary will take care of its own alignment needs.
-    void *Ptr;
+    void *BackendPtr;
+    uptr BackendSize;
     u8 ClassId;
-    uptr AllocSize;
     if (PrimaryAllocator::CanAllocate(AlignedSize, MinAlignment)) {
-      AllocSize = AlignedSize;
-      ClassId = SizeClassMap::ClassID(AllocSize);
+      BackendSize = AlignedSize;
+      ClassId = SizeClassMap::ClassID(BackendSize);
       ScudoTSD *TSD = getTSDAndLock();
-      Ptr = BackendAllocator.allocatePrimary(&TSD->Cache, ClassId);
+      BackendPtr = BackendAllocator.allocatePrimary(&TSD->Cache, ClassId);
       TSD->unlock();
     } else {
-      AllocSize = NeededSize;
+      BackendSize = NeededSize;
       ClassId = 0;
-      Ptr = BackendAllocator.allocateSecondary(AllocSize, Alignment);
+      BackendPtr = BackendAllocator.allocateSecondary(BackendSize, Alignment);
     }
-    if (UNLIKELY(!Ptr))
+    if (UNLIKELY(!BackendPtr))
       return FailureHandler::OnOOM();
 
     // If requested, we will zero out the entire contents of the returned chunk.
     if ((ForceZeroContents || ZeroContents) && ClassId)
-      memset(Ptr, 0, BackendAllocator.getActuallyAllocatedSize(Ptr, ClassId));
+      memset(BackendPtr, 0,
+             BackendAllocator.getActuallyAllocatedSize(BackendPtr, ClassId));
 
     UnpackedHeader Header = {};
-    uptr BackendPtr = reinterpret_cast<uptr>(Ptr);
-    uptr UserBeg = BackendPtr + AlignedChunkHeaderSize;
-    if (UNLIKELY(!IsAligned(UserBeg, Alignment))) {
+    uptr UserPtr = reinterpret_cast<uptr>(BackendPtr) + AlignedChunkHeaderSize;
+    if (UNLIKELY(!IsAligned(UserPtr, Alignment))) {
       // Since the Secondary takes care of alignment, a non-aligned pointer
       // means it is from the Primary. It is also the only case where the offset
       // field of the header would be non-zero.
-      CHECK(ClassId);
-      UserBeg = RoundUpTo(UserBeg, Alignment);
-      uptr Offset = UserBeg - AlignedChunkHeaderSize - BackendPtr;
-      Header.Offset = Offset >> MinAlignmentLog;
+      DCHECK(ClassId);
+      const uptr AlignedUserPtr = RoundUpTo(UserPtr, Alignment);
+      Header.Offset = (AlignedUserPtr - UserPtr) >> MinAlignmentLog;
+      UserPtr = AlignedUserPtr;
     }
-    CHECK_LE(UserBeg + Size, BackendPtr + AllocSize);
+    CHECK_LE(UserPtr + Size, reinterpret_cast<uptr>(BackendPtr) + BackendSize);
     Header.State = ChunkAllocated;
     Header.AllocType = Type;
     if (ClassId) {
@@ -419,33 +423,33 @@ struct ScudoAllocator {
       // bytes is the difference between the end of the user allocation and the
       // next page boundary.
       const uptr PageSize = GetPageSizeCached();
-      const uptr TrailingBytes = (UserBeg + Size) & (PageSize - 1);
+      const uptr TrailingBytes = (UserPtr + Size) & (PageSize - 1);
       if (TrailingBytes)
         Header.SizeOrUnusedBytes = PageSize - TrailingBytes;
     }
-    getScudoChunk(UserBeg)->storeHeader(&Header);
-    void *UserPtr = reinterpret_cast<void *>(UserBeg);
-    // if (&__sanitizer_malloc_hook) __sanitizer_malloc_hook(UserPtr, Size);
-    return UserPtr;
+    void *Ptr = reinterpret_cast<void *>(UserPtr);
+    Chunk::storeHeader(Ptr, &Header);
+    // if (&__sanitizer_malloc_hook) __sanitizer_malloc_hook(Ptr, Size);
+    return Ptr;
   }
 
   // Place a chunk in the quarantine or directly deallocate it in the event of
   // a zero-sized quarantine, or if the size of the chunk is greater than the
   // quarantine chunk size threshold.
-  void quarantineOrDeallocateChunk(ScudoChunk *Chunk, UnpackedHeader *Header,
+  void quarantineOrDeallocateChunk(void *Ptr, UnpackedHeader *Header,
                                    uptr Size) {
     const bool BypassQuarantine = (AllocatorQuarantine.GetCacheSize() == 0) ||
         (Size > QuarantineChunksUpToSize);
     if (BypassQuarantine) {
-      Chunk->eraseHeader();
-      void *Ptr = Chunk->getBackendPtr(Header);
+      Chunk::eraseHeader(Ptr);
+      void *BackendPtr = Chunk::getBackendPtr(Ptr, Header);
       if (Header->ClassId) {
         ScudoTSD *TSD = getTSDAndLock();
-        getBackendAllocator().deallocatePrimary(&TSD->Cache, Ptr,
+        getBackendAllocator().deallocatePrimary(&TSD->Cache, BackendPtr,
                                                 Header->ClassId);
         TSD->unlock();
       } else {
-        getBackendAllocator().deallocateSecondary(Ptr);
+        getBackendAllocator().deallocateSecondary(BackendPtr);
       }
     } else {
       // If a small memory amount was allocated with a larger alignment, we want
@@ -456,18 +460,18 @@ struct ScudoAllocator {
       uptr EstimatedSize = Size + (Header->Offset << MinAlignmentLog);
       UnpackedHeader NewHeader = *Header;
       NewHeader.State = ChunkQuarantine;
-      Chunk->compareExchangeHeader(&NewHeader, Header);
+      Chunk::compareExchangeHeader(Ptr, &NewHeader, Header);
       ScudoTSD *TSD = getTSDAndLock();
       AllocatorQuarantine.Put(getQuarantineCache(TSD),
-                              QuarantineCallback(&TSD->Cache),
-                              Chunk, EstimatedSize);
+                              QuarantineCallback(&TSD->Cache), Ptr,
+                              EstimatedSize);
       TSD->unlock();
     }
   }
 
-  // Deallocates a Chunk, which means adding it to the delayed free list (or
-  // Quarantine).
-  void deallocate(void *UserPtr, uptr DeleteSize, AllocType Type) {
+  // Deallocates a Chunk, which means either adding it to the quarantine or
+  // directly returning it to the backend if criteria are met.
+  void deallocate(void *Ptr, uptr DeleteSize, AllocType Type) {
     // For a deallocation, we only ensure minimal initialization, meaning thread
     // local data will be left uninitialized for now (when using ELF TLS). The
     // fallback cache will be used instead. This is a workaround for a situation
@@ -475,20 +479,18 @@ struct ScudoAllocator {
     // the TLS destructors, ending up in initialized thread specific data never
     // being destroyed properly. Any other heap operation will do a full init.
     initThreadMaybe(/*MinimalInit=*/true);
-    // if (&__sanitizer_free_hook) __sanitizer_free_hook(UserPtr);
-    if (UNLIKELY(!UserPtr))
+    // if (&__sanitizer_free_hook) __sanitizer_free_hook(Ptr);
+    if (UNLIKELY(!Ptr))
       return;
-    uptr UserBeg = reinterpret_cast<uptr>(UserPtr);
-    if (UNLIKELY(!IsAligned(UserBeg, MinAlignment))) {
+    if (UNLIKELY(!Chunk::isAligned(Ptr))) {
       dieWithMessage("ERROR: attempted to deallocate a chunk not properly "
-                     "aligned at address %p\n", UserPtr);
+                     "aligned at address %p\n", Ptr);
     }
-    ScudoChunk *Chunk = getScudoChunk(UserBeg);
     UnpackedHeader Header;
-    Chunk->loadHeader(&Header);
+    Chunk::loadHeader(Ptr, &Header);
     if (UNLIKELY(Header.State != ChunkAllocated)) {
       dieWithMessage("ERROR: invalid chunk state when deallocating address "
-                     "%p\n", UserPtr);
+                     "%p\n", Ptr);
     }
     if (DeallocationTypeMismatch) {
       // The deallocation type has to match the allocation one.
@@ -496,33 +498,31 @@ struct ScudoAllocator {
         // With the exception of memalign'd Chunks, that can be still be free'd.
         if (Header.AllocType != FromMemalign || Type != FromMalloc) {
           dieWithMessage("ERROR: allocation type mismatch when deallocating "
-                         "address %p\n", UserPtr);
+                         "address %p\n", Ptr);
         }
       }
     }
     uptr Size = Header.ClassId ? Header.SizeOrUnusedBytes :
-        Chunk->getUsableSize(&Header) - Header.SizeOrUnusedBytes;
+        Chunk::getUsableSize(Ptr, &Header) - Header.SizeOrUnusedBytes;
     if (DeleteSizeMismatch) {
       if (DeleteSize && DeleteSize != Size) {
         dieWithMessage("ERROR: invalid sized delete on chunk at address %p\n",
-                       UserPtr);
+                       Ptr);
       }
     }
-    quarantineOrDeallocateChunk(Chunk, &Header, Size);
+    quarantineOrDeallocateChunk(Ptr, &Header, Size);
   }
 
   // Reallocates a chunk. We can save on a new allocation if the new requested
   // size still fits in the chunk.
   void *reallocate(void *OldPtr, uptr NewSize) {
     initThreadMaybe();
-    uptr UserBeg = reinterpret_cast<uptr>(OldPtr);
-    if (UNLIKELY(!IsAligned(UserBeg, MinAlignment))) {
+    if (UNLIKELY(!Chunk::isAligned(OldPtr))) {
       dieWithMessage("ERROR: attempted to reallocate a chunk not properly "
                      "aligned at address %p\n", OldPtr);
     }
-    ScudoChunk *Chunk = getScudoChunk(UserBeg);
     UnpackedHeader OldHeader;
-    Chunk->loadHeader(&OldHeader);
+    Chunk::loadHeader(OldPtr, &OldHeader);
     if (UNLIKELY(OldHeader.State != ChunkAllocated)) {
       dieWithMessage("ERROR: invalid chunk state when reallocating address "
                      "%p\n", OldPtr);
@@ -533,7 +533,7 @@ struct ScudoAllocator {
                        "address %p\n", OldPtr);
       }
     }
-    uptr UsableSize = Chunk->getUsableSize(&OldHeader);
+    const uptr UsableSize = Chunk::getUsableSize(OldPtr, &OldHeader);
     // The new size still fits in the current chunk, and the size difference
     // is reasonable.
     if (NewSize <= UsableSize &&
@@ -541,7 +541,7 @@ struct ScudoAllocator {
       UnpackedHeader NewHeader = OldHeader;
       NewHeader.SizeOrUnusedBytes =
           OldHeader.ClassId ? NewSize : UsableSize - NewSize;
-      Chunk->compareExchangeHeader(&NewHeader, &OldHeader);
+      Chunk::compareExchangeHeader(OldPtr, &NewHeader, &OldHeader);
       return OldPtr;
     }
     // Otherwise, we have to allocate a new chunk and copy the contents of the
@@ -551,7 +551,7 @@ struct ScudoAllocator {
       uptr OldSize = OldHeader.ClassId ? OldHeader.SizeOrUnusedBytes :
           UsableSize - OldHeader.SizeOrUnusedBytes;
       memcpy(NewPtr, OldPtr, Min(NewSize, UsableSize));
-      quarantineOrDeallocateChunk(Chunk, &OldHeader, OldSize);
+      quarantineOrDeallocateChunk(OldPtr, &OldHeader, OldSize);
     }
     return NewPtr;
   }
@@ -561,16 +561,14 @@ struct ScudoAllocator {
     initThreadMaybe();
     if (UNLIKELY(!Ptr))
       return 0;
-    uptr UserBeg = reinterpret_cast<uptr>(Ptr);
-    ScudoChunk *Chunk = getScudoChunk(UserBeg);
     UnpackedHeader Header;
-    Chunk->loadHeader(&Header);
+    Chunk::loadHeader(Ptr, &Header);
     // Getting the usable size of a chunk only makes sense if it's allocated.
     if (UNLIKELY(Header.State != ChunkAllocated)) {
       dieWithMessage("ERROR: invalid chunk state when sizing address %p\n",
                      Ptr);
     }
-    return Chunk->getUsableSize(&Header);
+    return Chunk::getUsableSize(Ptr, &Header);
   }
 
   void *calloc(uptr NMemB, uptr Size) {

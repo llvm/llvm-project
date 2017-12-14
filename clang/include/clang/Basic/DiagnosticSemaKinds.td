@@ -5937,25 +5937,25 @@ def note_typecheck_assign_const : Note<
   "%select{|nested }1data member %2 declared const here}0">;
 
 def warn_unsigned_always_true_comparison : Warning<
-  "comparison of %select{%3|unsigned expression}0 %2 "
-  "%select{unsigned expression|%3}0 is always %select{false|true}4">,
+  "result of comparison of %select{%3|unsigned expression}0 %2 "
+  "%select{unsigned expression|%3}0 is always %4">,
   InGroup<TautologicalUnsignedZeroCompare>;
 def warn_unsigned_enum_always_true_comparison : Warning<
-  "comparison of %select{%3|unsigned enum expression}0 %2 "
-  "%select{unsigned enum expression|%3}0 is always %select{false|true}4">,
+  "result of comparison of %select{%3|unsigned enum expression}0 %2 "
+  "%select{unsigned enum expression|%3}0 is always %4">,
   InGroup<TautologicalUnsignedEnumZeroCompare>;
 def warn_tautological_constant_compare : Warning<
-  "comparison %select{%3|%1}0 %2 "
-  "%select{%1|%3}0 is always %select{false|true}4">,
+  "result of comparison %select{%3|%1}0 %2 "
+  "%select{%1|%3}0 is always %4">,
   InGroup<TautologicalConstantCompare>;
 
 def warn_mixed_sign_comparison : Warning<
   "comparison of integers of different signs: %0 and %1">,
   InGroup<SignCompare>, DefaultIgnore;
 def warn_out_of_range_compare : Warning<
-  "comparison of %select{constant %0|true|false}1 with " 
-  "%select{expression of type %2|boolean expression}3 is always "
-  "%select{false|true}4">, InGroup<TautologicalOutOfRangeCompare>;
+  "result of comparison of %select{constant %0|true|false}1 with " 
+  "%select{expression of type %2|boolean expression}3 is always %4">,
+  InGroup<TautologicalOutOfRangeCompare>;
 def warn_tautological_bool_compare : Warning<warn_out_of_range_compare.Text>,
   InGroup<TautologicalConstantCompare>;
 def warn_comparison_of_mixed_enum_types : Warning<
@@ -7289,7 +7289,7 @@ def ext_cxx17_attr : Extension<
   "use of the %0 attribute is a C++17 extension">, InGroup<CXX17>;
 
 def warn_unused_comparison : Warning<
-  "%select{%select{|in}1equality|relational}0 comparison result unused">,
+  "%select{equality|inequality|relational|three-way}0 comparison result unused">,
   InGroup<UnusedComparison>;
 def note_inequality_comparison_to_or_assign : Note<
   "use '|=' to turn this inequality comparison into an or-assignment">;

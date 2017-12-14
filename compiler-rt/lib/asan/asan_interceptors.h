@@ -55,13 +55,14 @@ void InitializePlatformInterceptors();
 # define ASAN_INTERCEPT_FORK 0
 #endif
 
-#if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD
+#if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD || \
+    SANITIZER_SOLARIS
 # define ASAN_USE_ALIAS_ATTRIBUTE_FOR_INDEX 1
 #else
 # define ASAN_USE_ALIAS_ATTRIBUTE_FOR_INDEX 0
 #endif
 
-#if SANITIZER_LINUX && !SANITIZER_ANDROID
+#if (SANITIZER_LINUX && !SANITIZER_ANDROID) || SANITIZER_SOLARIS
 # define ASAN_INTERCEPT_SWAPCONTEXT 1
 #else
 # define ASAN_INTERCEPT_SWAPCONTEXT 0
@@ -81,7 +82,8 @@ void InitializePlatformInterceptors();
 
 // Android bug: https://code.google.com/p/android/issues/detail?id=61799
 #if ASAN_HAS_EXCEPTIONS && !SANITIZER_WINDOWS && \
-    !(SANITIZER_ANDROID && defined(__i386))
+    !(SANITIZER_ANDROID && defined(__i386)) && \
+    !SANITIZER_SOLARIS
 # define ASAN_INTERCEPT___CXA_THROW 1
 #else
 # define ASAN_INTERCEPT___CXA_THROW 0

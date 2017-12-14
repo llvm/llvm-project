@@ -561,25 +561,9 @@ size_t ObjectFile::ReadSectionData(Section *section,
   } else {
     // The object file now contains a full mmap'ed copy of the object file data,
     // so just use this
-    return MemoryMapSectionData(section, section_data);
-  }
-}
-
-size_t ObjectFile::MemoryMapSectionData(Section *section,
-                                        DataExtractor &section_data) {
-  // If some other objectfile owns this data, pass this to them.
-  if (section->GetObjectFile() != this)
-    return section->GetObjectFile()->MemoryMapSectionData(section,
-                                                          section_data);
-
-  if (IsInMemory()) {
-    return ReadSectionData(section, section_data);
-  } else {
     if (!section->IsRelocated())
       RelocateSection(section);
 
-    // The object file now contains a full mmap'ed copy of the object file data,
-    // so just use this
     return GetData(section->GetFileOffset(), section->GetFileSize(),
                    section_data);
   }

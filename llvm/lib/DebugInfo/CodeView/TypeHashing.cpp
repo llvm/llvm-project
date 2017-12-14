@@ -54,7 +54,7 @@ GloballyHashedType::hashType(ArrayRef<uint8_t> RecordData,
         reinterpret_cast<const TypeIndex *>(RefData.data()), Ref.Count);
     for (TypeIndex TI : Indices) {
       ArrayRef<uint8_t> BytesToHash;
-      if (TI.isSimple() || TI.isNoneType()) {
+      if (TI.isSimple() || TI.isNoneType() || TI.toArrayIndex() >= Prev.size()) {
         const uint8_t *IndexBytes = reinterpret_cast<const uint8_t *>(&TI);
         BytesToHash = makeArrayRef(IndexBytes, sizeof(TypeIndex));
       } else {

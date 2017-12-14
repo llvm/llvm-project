@@ -398,6 +398,21 @@ Error WasmObjectFile::parseLinkingSection(const uint8_t *Ptr,
       }
       break;
     }
+    case wasm::WASM_INIT_FUNCS: {
+      uint32_t Count = readVaruint32(Ptr);
+      LinkingData.InitFunctions.reserve(Count);
+      for (uint32_t i = 0; i < Count; i++) {
+        wasm::WasmInitFunc Init;
+        Init.Priority = readVaruint32(Ptr);
+        Init.FunctionIndex = readVaruint32(Ptr);
+        if (!isValidFunctionIndex(Init.FunctionIndex))
+          return make_error<GenericBinaryError>("Invalid function index: " +
+                                                    Twine(Init.FunctionIndex),
+                                                object_error::parse_failed);
+        LinkingData.InitFunctions.emplace_back(Init);
+      }
+      break;
+    }
     default:
       Ptr += Size;
       break;
@@ -656,9 +671,13 @@ Error WasmObjectFile::parseExportSection(const uint8_t *Ptr, const uint8_t *End)
   return Error::success();
 }
 
+bool WasmObjectFile::isValidFunctionIndex(uint32_t Index) const {
+  return Index < FunctionTypes.size() + NumImportedFunctions;
+}
+
 Error WasmObjectFile::parseStartSection(const uint8_t *Ptr, const uint8_t *End) {
   StartFunction = readVaruint32(Ptr);
-  if (StartFunction >= FunctionTypes.size())
+  if (!isValidFunctionIndex(StartFunction))
     return make_error<GenericBinaryError>("Invalid start function",
                                           object_error::parse_failed);
   return Error::success();
@@ -1019,7 +1038,7 @@ uint8_t WasmObjectFile::getBytesInAddress() const { return 4; }
 
 StringRef WasmObjectFile::getFileFormatName() const { return "WASM"; }
 
-unsigned WasmObjectFile::getArch() const { return Triple::wasm32; }
+Triple::ArchType WasmObjectFile::getArch() const { return Triple::wasm32; }
 
 SubtargetFeatures WasmObjectFile::getFeatures() const {
   return SubtargetFeatures();

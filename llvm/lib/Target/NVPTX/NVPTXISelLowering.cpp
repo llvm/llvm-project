@@ -1561,8 +1561,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
           Chain = DAG.getMemIntrinsicNode(
               Op, dl, DAG.getVTList(MVT::Other, MVT::Glue), StoreOperands,
               TheStoreType, MachinePointerInfo(), EltAlign,
-              /* Volatile */ false, /* ReadMem */ false,
-              /* WriteMem */ true, /* Size */ 0);
+              MachineMemOperand::MOStore);
           InFlag = Chain.getValue(1);
 
           // Cleanup.
@@ -1623,8 +1622,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       Chain = DAG.getMemIntrinsicNode(NVPTXISD::StoreParam, dl, CopyParamVTs,
                                       CopyParamOps, elemtype,
                                       MachinePointerInfo(), /* Align */ 0,
-                                      /* Volatile */ false, /* ReadMem */ false,
-                                      /* WriteMem */ true, /* Size */ 0);
+                                      MachineMemOperand::MOStore);
 
       InFlag = Chain.getValue(1);
     }
@@ -1810,8 +1808,8 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
             DAG.getConstant(Offsets[VecIdx], dl, MVT::i32), InFlag};
         SDValue RetVal = DAG.getMemIntrinsicNode(
             Op, dl, DAG.getVTList(LoadVTs), LoadOperands, TheLoadType,
-            MachinePointerInfo(), EltAlign, /* Volatile */ false,
-            /* ReadMem */ true, /* WriteMem */ false, /* Size */ 0);
+            MachinePointerInfo(), EltAlign,
+            MachineMemOperand::MOLoad);
 
         for (unsigned j = 0; j < NumElts; ++j) {
           SDValue Ret = RetVal.getValue(j);
@@ -2596,8 +2594,7 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       Chain = DAG.getMemIntrinsicNode(Op, dl, DAG.getVTList(MVT::Other),
                                       StoreOperands, TheStoreType,
                                       MachinePointerInfo(), /* Align */ 1,
-                                      /* Volatile */ false, /* ReadMem */ false,
-                                      /* WriteMem */ true, /* Size */ 0);
+                                      MachineMemOperand::MOStore);
       // Cleanup vector state.
       StoreOperands.clear();
     }
@@ -3328,8 +3325,9 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     // in order to model data exchange with other threads, but perform no real
     // memory accesses.
     Info.memVT = MVT::i1;
-    Info.readMem = true;   // Our result depends on other thread's arguments.
-    Info.writeMem = true;  // Other threads depend on our thread's argument.
+
+    // Our result depends on both our and other thread's arguments.
+    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
     return true;
   case Intrinsic::nvvm_wmma_load_a_f16_col:
   case Intrinsic::nvvm_wmma_load_a_f16_row:
@@ -3359,9 +3357,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.memVT = MVT::v8f16;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
-    Info.vol = false;
-    Info.readMem = true;
-    Info.writeMem = false;
+    Info.flags = MachineMemOperand::MOLoad;
     Info.align = 16;
     return true;
   }
@@ -3382,9 +3378,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.memVT = MVT::v4f16;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
-    Info.vol = false;
-    Info.readMem = true;
-    Info.writeMem = false;
+    Info.flags = MachineMemOperand::MOLoad;
     Info.align = 16;
     return true;
   }
@@ -3405,9 +3399,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.memVT = MVT::v8f32;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
-    Info.vol = false;
-    Info.readMem = true;
-    Info.writeMem = false;
+    Info.flags = MachineMemOperand::MOLoad;
     Info.align = 16;
     return true;
   }
@@ -3428,9 +3420,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.memVT = MVT::v4f16;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
-    Info.vol = false;
-    Info.readMem = false;
-    Info.writeMem = true;
+    Info.flags = MachineMemOperand::MOStore;
     Info.align = 16;
     return true;
   }
@@ -3451,9 +3441,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.memVT = MVT::v8f32;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
-    Info.vol = false;
-    Info.readMem = false;
-    Info.writeMem = true;
+    Info.flags = MachineMemOperand::MOStore;
     Info.align = 16;
     return true;
   }
@@ -3490,9 +3478,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.memVT = getValueType(DL, I.getType());
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
-    Info.vol = false;
-    Info.readMem = true;
-    Info.writeMem = true;
+    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
     Info.align = 0;
     return true;
   }
@@ -3510,9 +3496,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
       Info.memVT = getValueType(DL, I.getType());
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
-    Info.vol = false;
-    Info.readMem = true;
-    Info.writeMem = false;
+    Info.flags = MachineMemOperand::MOLoad;
     Info.align = cast<ConstantInt>(I.getArgOperand(1))->getZExtValue();
 
     return true;
@@ -3531,9 +3515,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
       Info.memVT = getValueType(DL, I.getType());
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
-    Info.vol = false;
-    Info.readMem = true;
-    Info.writeMem = false;
+    Info.flags = MachineMemOperand::MOLoad;
     Info.align = cast<ConstantInt>(I.getArgOperand(1))->getZExtValue();
 
     return true;
@@ -3599,9 +3581,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.memVT = MVT::v4f32;
     Info.ptrVal = nullptr;
     Info.offset = 0;
-    Info.vol = false;
-    Info.readMem = true;
-    Info.writeMem = false;
+    Info.flags = MachineMemOperand::MOLoad;
     Info.align = 16;
     return true;
 
@@ -3721,9 +3701,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.memVT = MVT::v4i32;
     Info.ptrVal = nullptr;
     Info.offset = 0;
-    Info.vol = false;
-    Info.readMem = true;
-    Info.writeMem = false;
+    Info.flags = MachineMemOperand::MOLoad;
     Info.align = 16;
     return true;
 
@@ -3776,9 +3754,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.memVT = MVT::i8;
     Info.ptrVal = nullptr;
     Info.offset = 0;
-    Info.vol = false;
-    Info.readMem = true;
-    Info.writeMem = false;
+    Info.flags = MachineMemOperand::MOLoad;
     Info.align = 16;
     return true;
 
@@ -3831,9 +3807,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.memVT = MVT::i16;
     Info.ptrVal = nullptr;
     Info.offset = 0;
-    Info.vol = false;
-    Info.readMem = true;
-    Info.writeMem = false;
+    Info.flags = MachineMemOperand::MOLoad;
     Info.align = 16;
     return true;
 
@@ -3886,9 +3860,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.memVT = MVT::i32;
     Info.ptrVal = nullptr;
     Info.offset = 0;
-    Info.vol = false;
-    Info.readMem = true;
-    Info.writeMem = false;
+    Info.flags = MachineMemOperand::MOLoad;
     Info.align = 16;
     return true;
 
@@ -3926,9 +3898,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.memVT = MVT::i64;
     Info.ptrVal = nullptr;
     Info.offset = 0;
-    Info.vol = false;
-    Info.readMem = true;
-    Info.writeMem = false;
+    Info.flags = MachineMemOperand::MOLoad;
     Info.align = 16;
     return true;
   }

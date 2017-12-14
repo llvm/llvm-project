@@ -8,9 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Index.h"
-
-#include "llvm/Support/SHA1.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/SHA1.h"
 
 namespace clang {
 namespace clangd {

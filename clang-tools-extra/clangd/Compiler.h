@@ -14,6 +14,7 @@
 //===---------------------------------------------------------------------===//
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_COMPILER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_COMPILER_H
+
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PrecompiledPreamble.h"

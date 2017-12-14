@@ -1769,7 +1769,7 @@ void SelectionDAGBuilder::FindMergedConditions(const Value *Cond,
 
   // If this node is not part of the or/and tree, emit it as a branch.
   if (!BOp || !(isa<BinaryOperator>(BOp) || isa<CmpInst>(BOp)) ||
-      BOpc != Opc || !BOp->hasOneUse() ||
+      BOpc != unsigned(Opc) || !BOp->hasOneUse() ||
       BOp->getParent() != CurBB->getBasicBlock() ||
       !InBlock(BOp->getOperand(0), CurBB->getBasicBlock()) ||
       !InBlock(BOp->getOperand(1), CurBB->getBasicBlock())) {
@@ -4240,11 +4240,10 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
   SDValue Result;
   if (IsTgtIntrinsic) {
     // This is target intrinsic that touches memory
-    Result = DAG.getMemIntrinsicNode(Info.opc, getCurSDLoc(),
-                                     VTs, Ops, Info.memVT,
-                                   MachinePointerInfo(Info.ptrVal, Info.offset),
-                                     Info.align, Info.vol,
-                                     Info.readMem, Info.writeMem, Info.size);
+    Result = DAG.getMemIntrinsicNode(Info.opc, getCurSDLoc(), VTs,
+      Ops, Info.memVT,
+      MachinePointerInfo(Info.ptrVal, Info.offset), Info.align,
+      Info.flags, Info.size);
   } else if (!HasChain) {
     Result = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, getCurSDLoc(), VTs, Ops);
   } else if (!I.getType()->isVoidTy()) {
@@ -5823,6 +5822,7 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
   case Intrinsic::prefetch: {
     SDValue Ops[5];
     unsigned rw = cast<ConstantInt>(I.getArgOperand(1))->getZExtValue();
+    auto Flags = rw == 0 ? MachineMemOperand::MOLoad :MachineMemOperand::MOStore;
     Ops[0] = getRoot();
     Ops[1] = getValue(I.getArgOperand(0));
     Ops[2] = getValue(I.getArgOperand(1));
@@ -5833,9 +5833,7 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
                                         EVT::getIntegerVT(*Context, 8),
                                         MachinePointerInfo(I.getArgOperand(0)),
                                         0, /* align */
-                                        false, /* volatile */
-                                        rw==0, /* read */
-                                        rw==1)); /* write */
+                                        Flags));
     return nullptr;
   }
   case Intrinsic::lifetime_start:

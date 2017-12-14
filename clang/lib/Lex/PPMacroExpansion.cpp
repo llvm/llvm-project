@@ -375,6 +375,11 @@ void Preprocessor::RegisterBuiltinMacros() {
   Ident__has_include_next = RegisterBuiltinMacro(*this, "__has_include_next");
   Ident__has_warning      = RegisterBuiltinMacro(*this, "__has_warning");
   Ident__is_identifier    = RegisterBuiltinMacro(*this, "__is_identifier");
+  Ident__is_target_arch   = RegisterBuiltinMacro(*this, "__is_target_arch");
+  Ident__is_target_vendor = RegisterBuiltinMacro(*this, "__is_target_vendor");
+  Ident__is_target_os     = RegisterBuiltinMacro(*this, "__is_target_os");
+  Ident__is_target_environment =
+      RegisterBuiltinMacro(*this, "__is_target_environment");
 
   // Modules.
   Ident__building_module  = RegisterBuiltinMacro(*this, "__building_module");
@@ -1593,6 +1598,57 @@ static IdentifierInfo *ExpectFeatureIdentifierInfo(Token &Tok,
   return nullptr;
 }
 
+/// Implements the __is_target_arch builtin macro.
+static bool isTargetArch(const TargetInfo &TI, const IdentifierInfo *II) {
+  std::string ArchName = II->getName().lower() + "--";
+  llvm::Triple Arch(ArchName);
+  const llvm::Triple &TT = TI.getTriple();
+  if (TT.isThumb()) {
+    // arm matches thumb or thumbv7. armv7 matches thumbv7.
+    if ((Arch.getSubArch() == llvm::Triple::NoSubArch ||
+         Arch.getSubArch() == TT.getSubArch()) &&
+        ((TT.getArch() == llvm::Triple::thumb &&
+          Arch.getArch() == llvm::Triple::arm) ||
+         (TT.getArch() == llvm::Triple::thumbeb &&
+          Arch.getArch() == llvm::Triple::armeb)))
+      return true;
+  }
+  // Check the parsed arch when it has no sub arch to allow Clang to
+  // match thumb to thumbv7 but to prohibit matching thumbv6 to thumbv7.
+  return (Arch.getSubArch() == llvm::Triple::NoSubArch &&
+          Arch.getArch() == TT.getArch()) ||
+         Arch.getArchName() == TT.getArchName();
+}
+
+/// Implements the __is_target_vendor builtin macro.
+static bool isTargetVendor(const TargetInfo &TI, const IdentifierInfo *II) {
+  StringRef VendorName = TI.getTriple().getVendorName();
+  if (VendorName.empty())
+    VendorName = "unknown";
+  return VendorName.equals_lower(II->getName());
+}
+
+/// Implements the __is_target_os builtin macro.
+static bool isTargetOS(const TargetInfo &TI, const IdentifierInfo *II) {
+  std::string OSName =
+      (llvm::Twine("unknown-unknown-") + II->getName().lower()).str();
+  llvm::Triple OS(OSName);
+  if (OS.getOS() == llvm::Triple::Darwin) {
+    // Darwin matches macos, ios, etc.
+    return TI.getTriple().isOSDarwin();
+  }
+  return TI.getTriple().getOS() == OS.getOS();
+}
+
+/// Implements the __is_target_environment builtin macro.
+static bool isTargetEnvironment(const TargetInfo &TI,
+                                const IdentifierInfo *II) {
+  StringRef EnvName = TI.getTriple().getEnvironmentName();
+  if (EnvName.empty())
+    EnvName = "unknown";
+  return EnvName.equals_lower(II->getName());
+}
+
 /// ExpandBuiltinMacro - If an identifier token is read that is to be expanded
 /// as a builtin macro, handle it and return the next token as 'Tok'.
 void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
@@ -1755,6 +1811,10 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
                       .Case("__make_integer_seq", LangOpts.CPlusPlus)
                       .Case("__type_pack_element", LangOpts.CPlusPlus)
                       .Case("__builtin_available", true)
+                      .Case("__is_target_arch", true)
+                      .Case("__is_target_vendor", true)
+                      .Case("__is_target_os", true)
+                      .Case("__is_target_environment", true)
                       .Default(false);
         }
       });
@@ -1906,6 +1966,34 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
       Diag(LParenLoc, diag::note_matching) << tok::l_paren;
     }
     return;
+  } else if (II == Ident__is_target_arch) {
+    EvaluateFeatureLikeBuiltinMacro(
+        OS, Tok, II, *this, [this](Token &Tok, bool &HasLexedNextToken) -> int {
+          IdentifierInfo *II = ExpectFeatureIdentifierInfo(
+              Tok, *this, diag::err_feature_check_malformed);
+          return II && isTargetArch(getTargetInfo(), II);
+        });
+  } else if (II == Ident__is_target_vendor) {
+    EvaluateFeatureLikeBuiltinMacro(
+        OS, Tok, II, *this, [this](Token &Tok, bool &HasLexedNextToken) -> int {
+          IdentifierInfo *II = ExpectFeatureIdentifierInfo(
+              Tok, *this, diag::err_feature_check_malformed);
+          return II && isTargetVendor(getTargetInfo(), II);
+        });
+  } else if (II == Ident__is_target_os) {
+    EvaluateFeatureLikeBuiltinMacro(
+        OS, Tok, II, *this, [this](Token &Tok, bool &HasLexedNextToken) -> int {
+          IdentifierInfo *II = ExpectFeatureIdentifierInfo(
+              Tok, *this, diag::err_feature_check_malformed);
+          return II && isTargetOS(getTargetInfo(), II);
+        });
+  } else if (II == Ident__is_target_environment) {
+    EvaluateFeatureLikeBuiltinMacro(
+        OS, Tok, II, *this, [this](Token &Tok, bool &HasLexedNextToken) -> int {
+          IdentifierInfo *II = ExpectFeatureIdentifierInfo(
+              Tok, *this, diag::err_feature_check_malformed);
+          return II && isTargetEnvironment(getTargetInfo(), II);
+        });
   } else {
     llvm_unreachable("Unknown identifier!");
   }

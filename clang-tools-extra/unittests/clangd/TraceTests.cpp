@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Context.h"
 #include "Trace.h"
 
 #include "llvm/ADT/DenseMap.h"
@@ -74,10 +75,11 @@ TEST(TraceTest, SmokeTest) {
   std::string JSON;
   {
     raw_string_ostream OS(JSON);
-    auto Session = trace::Session::create(OS);
+    auto JSONTracer = trace::createJSONTracer(OS);
+    trace::Session Session(*JSONTracer);
     {
-      trace::Span S("A");
-      trace::log("B");
+      trace::Span S(Context::empty(), "A");
+      trace::log(Context::empty(), "B");
     }
   }
 

@@ -11375,6 +11375,7 @@ BinaryOperatorKind Sema::ConvertTokenKindToBinaryOpcode(tok::TokenKind Kind) {
   case tok::greater:              Opc = BO_GT; break;
   case tok::exclaimequal:         Opc = BO_NE; break;
   case tok::equalequal:           Opc = BO_EQ; break;
+  case tok::spaceship:            Opc = BO_Cmp; break;
   case tok::amp:                  Opc = BO_And; break;
   case tok::caret:                Opc = BO_Xor; break;
   case tok::pipe:                 Opc = BO_Or; break;
@@ -11682,6 +11683,13 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   case BO_NE:
     ConvertHalfVec = true;
     ResultTy = CheckCompareOperands(LHS, RHS, OpLoc, Opc, false);
+    break;
+  case BO_Cmp:
+    // FIXME: Implement proper semantic checking of '<=>'.
+    ConvertHalfVec = true;
+    ResultTy = CheckCompareOperands(LHS, RHS, OpLoc, Opc, true);
+    if (!ResultTy.isNull())
+      ResultTy = Context.VoidTy;
     break;
   case BO_And:
     checkObjCPointerIntrospection(*this, LHS, RHS, OpLoc);

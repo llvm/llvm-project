@@ -1,5 +1,5 @@
 ; RUN: llvm-as %s -o %t.o
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    -shared %t.o -o %t2
 ; RUN: llvm-nm %t2 | FileCheck %s

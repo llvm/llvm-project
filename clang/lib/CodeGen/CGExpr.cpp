@@ -2825,7 +2825,7 @@ void CodeGenFunction::EmitCheck(
   assert(IsSanitizerScope);
   assert(Checked.size() > 0);
   assert(CheckHandler >= 0 &&
-         CheckHandler < sizeof(SanitizerHandlers) / sizeof(*SanitizerHandlers));
+         size_t(CheckHandler) < llvm::array_lengthof(SanitizerHandlers));
   const StringRef CheckName = SanitizerHandlers[CheckHandler].Name;
 
   llvm::Value *FatalCond = nullptr;
