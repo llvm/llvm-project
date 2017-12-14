@@ -883,7 +883,7 @@ void Writer::sortExceptionTable() {
          [](const Entry &A, const Entry &B) { return A.Begin < B.Begin; });
     return;
   }
-  if (Config->Machine == ARMNT) {
+  if (Config->Machine == ARMNT || Config->Machine == ARM64) {
     struct Entry { ulittle32_t Begin, Unwind; };
     sort(parallel::par, (Entry *)Begin, (Entry *)End,
          [](const Entry &A, const Entry &B) { return A.Begin < B.Begin; });

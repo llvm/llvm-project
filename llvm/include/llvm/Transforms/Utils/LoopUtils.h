@@ -306,10 +306,13 @@ public:
   /// induction, the induction descriptor \p D will contain the data describing
   /// this induction. If by some other means the caller has a better SCEV
   /// expression for \p Phi than the one returned by the ScalarEvolution
-  /// analysis, it can be passed through \p Expr.
-  static bool isInductionPHI(PHINode *Phi, const Loop* L, ScalarEvolution *SE,
-                             InductionDescriptor &D,
-                             const SCEV *Expr = nullptr);
+  /// analysis, it can be passed through \p Expr. If the def-use chain 
+  /// associated with the phi includes casts (that we know we can ignore
+  /// under proper runtime checks), they are passed through \p CastsToIgnore.
+  static bool 
+  isInductionPHI(PHINode *Phi, const Loop* L, ScalarEvolution *SE,
+                 InductionDescriptor &D, const SCEV *Expr = nullptr,
+                 SmallVectorImpl<Instruction *> *CastsToIgnore = nullptr);
 
   /// Returns true if \p Phi is a floating point induction in the loop \p L.
   /// If \p Phi is an induction, the induction descriptor \p D will contain 
@@ -348,10 +351,18 @@ public:
       Instruction::BinaryOpsEnd;
   }
 
+  /// Returns a reference to the type cast instructions in the induction 
+  /// update chain, that are redundant when guarded with a runtime
+  /// SCEV overflow check.
+  const SmallVectorImpl<Instruction *> &getCastInsts() const { 
+    return RedundantCasts; 
+  }
+
 private:
   /// Private constructor - used by \c isInductionPHI.
   InductionDescriptor(Value *Start, InductionKind K, const SCEV *Step,
-                      BinaryOperator *InductionBinOp = nullptr);
+                      BinaryOperator *InductionBinOp = nullptr,
+                      SmallVectorImpl<Instruction *> *Casts = nullptr);
 
   /// Start value.
   TrackingVH<Value> StartValue;
@@ -361,6 +372,9 @@ private:
   const SCEV *Step = nullptr;
   // Instruction that advances induction variable.
   BinaryOperator *InductionBinOp = nullptr;
+  // Instructions used for type-casts of the induction variable,
+  // that are redundant when guarded with a runtime SCEV overflow check.
+  SmallVector<Instruction *, 2> RedundantCasts;
 };
 
 BasicBlock *InsertPreheaderForLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
