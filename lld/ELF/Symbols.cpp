@@ -45,8 +45,6 @@ static uint64_t getSymVA(const Symbol &Sym, int64_t &Addend) {
   case Symbol::DefinedKind: {
     auto &D = cast<Defined>(Sym);
     SectionBase *IS = D.Section;
-    if (auto *ISB = dyn_cast_or_null<InputSectionBase>(IS))
-      IS = ISB->Repl;
 
     // According to the ELF spec reference to a local symbol from outside
     // the group are not allowed. Unfortunately .eh_frame breaks that rule
@@ -59,6 +57,7 @@ static uint64_t getSymVA(const Symbol &Sym, int64_t &Addend) {
     if (!IS)
       return D.Value;
 
+    IS = IS->Repl;
     uint64_t Offset = D.Value;
 
     // An object in an SHF_MERGE section might be referenced via a
@@ -161,11 +160,8 @@ uint64_t Symbol::getSize() const {
 
 OutputSection *Symbol::getOutputSection() const {
   if (auto *S = dyn_cast<Defined>(this)) {
-    if (auto *Sec = S->Section) {
-      if (auto *IS = dyn_cast<InputSection>(Sec))
-        Sec = IS->Repl;
-      return Sec->getOutputSection();
-    }
+    if (auto *Sec = S->Section)
+      return Sec->Repl->getOutputSection();
     return nullptr;
   }
 

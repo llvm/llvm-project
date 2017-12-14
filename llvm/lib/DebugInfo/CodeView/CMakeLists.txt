@@ -19,6 +19,7 @@ add_llvm_library(LLVMDebugInfoCodeView
   DebugSymbolsSubsection.cpp
   EnumTables.cpp
   Formatters.cpp
+  GlobalTypeTableBuilder.cpp
   LazyRandomTypeCollection.cpp
   Line.cpp
   MergingTypeTableBuilder.cpp

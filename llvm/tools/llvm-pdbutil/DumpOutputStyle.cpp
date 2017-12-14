@@ -52,6 +52,7 @@
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 
+#include <cctype>
 
 using namespace llvm;
 using namespace llvm::codeview;

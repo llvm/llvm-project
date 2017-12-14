@@ -417,6 +417,16 @@ INTERCEPTOR(char *, strncat, char *dest, const char *src, SIZE_T n) {  // NOLINT
     INTERCEPTOR_STRTO_BODY(ret_type, func, nptr, endptr, base, loc);     \
   }
 
+#if SANITIZER_NETBSD
+#define INTERCEPTORS_STRTO(ret_type, func, char_type)      \
+  INTERCEPTOR_STRTO(ret_type, func, char_type)             \
+  INTERCEPTOR_STRTO_LOC(ret_type, func##_l, char_type)
+
+#define INTERCEPTORS_STRTO_BASE(ret_type, func, char_type)      \
+  INTERCEPTOR_STRTO_BASE(ret_type, func, char_type)             \
+  INTERCEPTOR_STRTO_BASE_LOC(ret_type, func##_l, char_type)
+
+#else
 #define INTERCEPTORS_STRTO(ret_type, func, char_type)      \
   INTERCEPTOR_STRTO(ret_type, func, char_type)             \
   INTERCEPTOR_STRTO_LOC(ret_type, func##_l, char_type)     \
@@ -428,6 +438,7 @@ INTERCEPTOR(char *, strncat, char *dest, const char *src, SIZE_T n) {  // NOLINT
   INTERCEPTOR_STRTO_BASE_LOC(ret_type, func##_l, char_type)     \
   INTERCEPTOR_STRTO_BASE_LOC(ret_type, __##func##_l, char_type) \
   INTERCEPTOR_STRTO_BASE_LOC(ret_type, __##func##_internal, char_type)
+#endif
 
 INTERCEPTORS_STRTO(double, strtod, char)                     // NOLINT
 INTERCEPTORS_STRTO(float, strtof, char)                      // NOLINT
@@ -446,11 +457,17 @@ INTERCEPTORS_STRTO_BASE(long long, wcstoll, wchar_t)            // NOLINT
 INTERCEPTORS_STRTO_BASE(unsigned long, wcstoul, wchar_t)        // NOLINT
 INTERCEPTORS_STRTO_BASE(unsigned long long, wcstoull, wchar_t)  // NOLINT
 
+#if SANITIZER_NETBSD
+#define INTERCEPT_STRTO(func) \
+  INTERCEPT_FUNCTION(func); \
+  INTERCEPT_FUNCTION(func##_l);
+#else
 #define INTERCEPT_STRTO(func) \
   INTERCEPT_FUNCTION(func); \
   INTERCEPT_FUNCTION(func##_l); \
   INTERCEPT_FUNCTION(__##func##_l); \
   INTERCEPT_FUNCTION(__##func##_internal);
+#endif
 
 
 // FIXME: support *wprintf in common format interceptors.
@@ -697,7 +714,7 @@ INTERCEPTOR(int, __fxstat64, int magic, int fd, void *buf) {
 #define MSAN_MAYBE_INTERCEPT___FXSTAT64
 #endif
 
-#if SANITIZER_FREEBSD && !SANITIZER_NETBSD
+#if SANITIZER_FREEBSD || SANITIZER_NETBSD
 INTERCEPTOR(int, fstatat, int fd, char *pathname, void *buf, int flags) {
   ENSURE_MSAN_INITED();
   int res = REAL(fstatat)(fd, pathname, buf, flags);
