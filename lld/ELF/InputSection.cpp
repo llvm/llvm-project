@@ -87,7 +87,7 @@ InputSectionBase::InputSectionBase(InputFile *File, uint64_t Flags,
                                    StringRef Name, Kind SectionKind)
     : SectionBase(SectionKind, Name, Flags, Entsize, Alignment, Type, Info,
                   Link),
-      File(File), Data(Data), Repl(this) {
+      File(File), Data(Data) {
   NumRelocations = 0;
   AreRelocsRela = false;
 

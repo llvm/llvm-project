@@ -599,19 +599,14 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
     this->Symbols.push_back(createSymbol(&Sym));
 }
 
-template <class ELFT>
-InputSectionBase *ObjFile<ELFT>::getSection(uint32_t Index) const {
-  if (Index == 0)
-    return nullptr;
-  if (Index >= this->Sections.size())
-    fatal(toString(this) + ": invalid section index: " + Twine(Index));
-  return this->Sections[Index];
-}
-
 template <class ELFT> Symbol *ObjFile<ELFT>::createSymbol(const Elf_Sym *Sym) {
   int Binding = Sym->getBinding();
-  InputSectionBase *Sec = getSection(this->getSectionIndex(*Sym));
 
+  uint32_t SecIdx = this->getSectionIndex(*Sym);
+  if (SecIdx >= this->Sections.size())
+    fatal(toString(this) + ": invalid section index: " + Twine(SecIdx));
+
+  InputSectionBase *Sec = this->Sections[SecIdx];
   uint8_t StOther = Sym->st_other;
   uint8_t Type = Sym->getType();
   uint64_t Value = Sym->st_value;

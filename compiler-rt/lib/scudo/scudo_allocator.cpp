@@ -157,7 +157,7 @@ struct ScudoChunk : UnpackedHeader {
   }
 };
 
-ScudoChunk *getScudoChunk(uptr UserBeg) {
+INLINE ScudoChunk *getScudoChunk(uptr UserBeg) {
   return reinterpret_cast<ScudoChunk *>(UserBeg - AlignedChunkHeaderSize);
 }
 
@@ -301,7 +301,7 @@ struct ScudoAllocator {
 
     CheckRssLimit = HardRssLimitMb || SoftRssLimitMb;
     if (CheckRssLimit)
-      atomic_store_relaxed(&RssLastCheckedAtNS, NanoTime());
+      atomic_store_relaxed(&RssLastCheckedAtNS, MonotonicNanoTime());
   }
 
   // Helper function that checks for a valid Scudo chunk. nullptr isn't.
@@ -319,7 +319,7 @@ struct ScudoAllocator {
   // it can, every 100ms, otherwise it will just return the current one.
   bool isRssLimitExceeded() {
     u64 LastCheck = atomic_load_relaxed(&RssLastCheckedAtNS);
-    const u64 CurrentCheck = NanoTime();
+    const u64 CurrentCheck = MonotonicNanoTime();
     if (LIKELY(CurrentCheck < LastCheck + (100ULL * 1000000ULL)))
       return atomic_load_relaxed(&RssLimitExceeded);
     if (!atomic_compare_exchange_weak(&RssLastCheckedAtNS, &LastCheck,
@@ -597,6 +597,14 @@ struct ScudoAllocator {
     initThreadMaybe();
     return FailureHandler::OnBadRequest();
   }
+
+  void setRssLimit(uptr LimitMb, bool HardLimit) {
+    if (HardLimit)
+      HardRssLimitMb = LimitMb;
+    else
+      SoftRssLimitMb = LimitMb;
+    CheckRssLimit = HardRssLimitMb || SoftRssLimitMb;
+  }
 };
 
 static ScudoAllocator Instance(LINKER_INITIALIZED);
@@ -726,3 +734,13 @@ int __sanitizer_get_ownership(const void *Ptr) {
 uptr __sanitizer_get_allocated_size(const void *Ptr) {
   return Instance.getUsableSize(Ptr);
 }
+
+// Interface functions
+
+extern "C" {
+void __scudo_set_rss_limit(unsigned long LimitMb, int HardLimit) {  // NOLINT
+  if (!SCUDO_CAN_USE_PUBLIC_INTERFACE)
+    return;
+  Instance.setRssLimit(LimitMb, !!HardLimit);
+}
+}  // extern "C"

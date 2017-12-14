@@ -36,6 +36,7 @@
 # define SYS_sigaltstack SYS___sigaltstack14
 # define SYS_sigprocmask SYS___sigprocmask14
 # define SYS_nanosleep SYS___nanosleep50
+# define SYS_clock_gettime SYS___clock_gettime50
 # if SANITIZER_WORDSIZE == 64
 #  define internal_syscall_ptr  __syscall
 # else

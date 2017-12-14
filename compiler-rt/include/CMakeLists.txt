@@ -10,6 +10,7 @@ if (COMPILER_RT_BUILD_SANITIZERS)
     sanitizer/linux_syscall_hooks.h
     sanitizer/lsan_interface.h
     sanitizer/msan_interface.h
+    sanitizer/scudo_interface.h
     sanitizer/tsan_interface.h
     sanitizer/tsan_interface_atomic.h)
 endif(COMPILER_RT_BUILD_SANITIZERS)
