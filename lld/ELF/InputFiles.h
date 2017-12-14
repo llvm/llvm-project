@@ -194,7 +194,6 @@ public:
   StringRef SourceFile;
 
 private:
-  InputSectionBase *getSection(uint32_t Index) const;
   void
   initializeSections(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);
   void initializeSymbols();
