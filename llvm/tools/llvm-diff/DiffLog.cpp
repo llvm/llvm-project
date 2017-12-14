@@ -14,7 +14,6 @@
 #include "DiffLog.h"
 #include "DiffConsumer.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/IR/Instructions.h"
 
 using namespace llvm;
 

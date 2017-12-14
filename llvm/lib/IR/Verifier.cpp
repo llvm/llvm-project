@@ -75,7 +75,6 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
@@ -3017,7 +3016,11 @@ void Verifier::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   Assert(isa<PointerType>(TargetTy),
          "GEP base pointer is not a vector or a vector of pointers", &GEP);
   Assert(GEP.getSourceElementType()->isSized(), "GEP into unsized type!", &GEP);
+
   SmallVector<Value*, 16> Idxs(GEP.idx_begin(), GEP.idx_end());
+  Assert(all_of(
+      Idxs, [](Value* V) { return V->getType()->isIntOrIntVectorTy(); }),
+      "GEP indexes must be integers", &GEP);
   Type *ElTy =
       GetElementPtrInst::getIndexedType(GEP.getSourceElementType(), Idxs);
   Assert(ElTy, "Invalid indices for GEP pointer type!", &GEP);

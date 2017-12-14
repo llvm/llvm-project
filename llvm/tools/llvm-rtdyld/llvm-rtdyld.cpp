@@ -24,7 +24,6 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Object/MachO.h"
 #include "llvm/Object/SymbolSize.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -37,7 +36,6 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include <list>
-#include <system_error>
 
 using namespace llvm;
 using namespace llvm::object;

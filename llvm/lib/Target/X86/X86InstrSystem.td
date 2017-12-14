@@ -19,7 +19,8 @@ let Defs = [RAX, RDX] in
               TB;
 
 let Defs = [RAX, RCX, RDX] in
-  def RDTSCP : I<0x01, MRM_F9, (outs), (ins), "rdtscp", [(X86rdtscp)]>, TB;
+  def RDTSCP : I<0x01, MRM_F9, (outs), (ins), "rdtscp", [(X86rdtscp)],
+                 IIC_RDTSCP>, TB;
 
 // CPU flow control instructions
 

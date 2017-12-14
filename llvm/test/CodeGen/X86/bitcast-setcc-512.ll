@@ -60,142 +60,14 @@ define i32 @v32i16(<32 x i16> %a, <32 x i16> %b) {
 ; AVX512F-NEXT:    subq $32, %rsp
 ; AVX512F-NEXT:    vpcmpgtw %ymm3, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpmovsxwd %ymm1, %zmm1
-; AVX512F-NEXT:    vpslld $31, %zmm1, %zmm1
-; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k0
-; AVX512F-NEXT:    kshiftlw $14, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    kshiftlw $15, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %ecx
-; AVX512F-NEXT:    vmovd %ecx, %xmm1
-; AVX512F-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $13, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $12, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $11, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $10, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $9, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $6, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $8, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $7, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $7, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $6, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $9, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $5, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $10, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $4, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $11, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $3, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $2, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $13, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftlw $1, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $14, %eax, %xmm1, %xmm1
-; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
-; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    vpinsrb $15, %eax, %xmm1, %xmm1
+; AVX512F-NEXT:    vpmovdb %zmm1, %xmm1
 ; AVX512F-NEXT:    vpmovsxbd %xmm1, %zmm1
 ; AVX512F-NEXT:    vpslld $31, %zmm1, %zmm1
 ; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k0
 ; AVX512F-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; AVX512F-NEXT:    vpcmpgtw %ymm2, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpmovsxwd %ymm0, %zmm0
-; AVX512F-NEXT:    vpslld $31, %zmm0, %zmm0
-; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; AVX512F-NEXT:    kshiftlw $14, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    kshiftlw $15, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %ecx
-; AVX512F-NEXT:    vmovd %ecx, %xmm0
-; AVX512F-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftlw $13, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftlw $12, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $3, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftlw $11, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftlw $10, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $5, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftlw $9, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftlw $8, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftlw $7, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $8, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftlw $6, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $9, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftlw $5, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $10, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftlw $4, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $11, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftlw $3, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftlw $2, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $13, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftlw $1, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
-; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    vpinsrb $14, %eax, %xmm0, %xmm0
-; AVX512F-NEXT:    kshiftrw $15, %k0, %k0
-; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
+; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512F-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512F-NEXT:    vpslld $31, %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0

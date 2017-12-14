@@ -17,16 +17,18 @@
 #define LLVM_LIB_TARGET_AMDGPU_DISASSEMBLER_AMDGPUDISASSEMBLER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCDisassembler/MCRelocationInfo.h"
 #include "llvm/MC/MCDisassembler/MCSymbolizer.h"
+
 #include <algorithm>
 #include <cstdint>
 #include <memory>
 
 namespace llvm {
 
-class MCContext;
 class MCInst;
 class MCOperand;
 class MCSubtargetInfo;
@@ -38,13 +40,16 @@ class Twine;
 
 class AMDGPUDisassembler : public MCDisassembler {
 private:
+  std::unique_ptr<MCInstrInfo const> const MCII;
+  const MCRegisterInfo &MRI;
   mutable ArrayRef<uint8_t> Bytes;
   mutable uint32_t Literal;
   mutable bool HasLiteral;
 
 public:
-  AMDGPUDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx) :
-    MCDisassembler(STI, Ctx) {}
+  AMDGPUDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
+                     MCInstrInfo const *MCII) :
+    MCDisassembler(STI, Ctx), MCII(MCII), MRI(*Ctx.getRegisterInfo()) {}
 
   ~AMDGPUDisassembler() override = default;
 
@@ -64,6 +69,7 @@ public:
                              uint64_t Address) const;
 
   DecodeStatus convertSDWAInst(MCInst &MI) const;
+  DecodeStatus convertMIMGInst(MCInst &MI) const;
 
   MCOperand decodeOperand_VGPR_32(unsigned Val) const;
   MCOperand decodeOperand_VS_32(unsigned Val) const;

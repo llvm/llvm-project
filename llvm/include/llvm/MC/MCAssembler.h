@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCFixup.h"
@@ -84,8 +85,12 @@ public:
   /// MachO specific deployment target version info.
   // A Major version of 0 indicates that no version information was supplied
   // and so the corresponding load command should not be emitted.
-  using VersionMinInfoType = struct {
-    MCVersionMinType Kind;
+  using VersionInfoType = struct {
+    bool EmitBuildVersion;
+    union {
+      MCVersionMinType Type;          ///< Used when EmitBuildVersion==false.
+      MachO::PlatformType Platform;   ///< Used when EmitBuildVersion==true.
+    } TypeOrPlatform;
     unsigned Major;
     unsigned Minor;
     unsigned Update;
@@ -145,7 +150,7 @@ private:
   /// the Streamer and the .o writer
   MCLOHContainer LOHContainer;
 
-  VersionMinInfoType VersionMinInfo;
+  VersionInfoType VersionInfo;
 
   /// Evaluate a fixup to a relocatable expression and the value which should be
   /// placed into the fixup.
@@ -243,13 +248,22 @@ public:
   void setELFHeaderEFlags(unsigned Flags) { ELFHeaderEFlags = Flags; }
 
   /// MachO deployment target version information.
-  const VersionMinInfoType &getVersionMinInfo() const { return VersionMinInfo; }
-  void setVersionMinInfo(MCVersionMinType Kind, unsigned Major, unsigned Minor,
-                         unsigned Update) {
-    VersionMinInfo.Kind = Kind;
-    VersionMinInfo.Major = Major;
-    VersionMinInfo.Minor = Minor;
-    VersionMinInfo.Update = Update;
+  const VersionInfoType &getVersionInfo() const { return VersionInfo; }
+  void setVersionMin(MCVersionMinType Type, unsigned Major, unsigned Minor,
+                     unsigned Update) {
+    VersionInfo.EmitBuildVersion = false;
+    VersionInfo.TypeOrPlatform.Type = Type;
+    VersionInfo.Major = Major;
+    VersionInfo.Minor = Minor;
+    VersionInfo.Update = Update;
+  }
+  void setBuildVersion(MachO::PlatformType Platform, unsigned Major,
+                       unsigned Minor, unsigned Update) {
+    VersionInfo.EmitBuildVersion = true;
+    VersionInfo.TypeOrPlatform.Platform = Platform;
+    VersionInfo.Major = Major;
+    VersionInfo.Minor = Minor;
+    VersionInfo.Update = Update;
   }
 
   /// Reuse an assembler instance

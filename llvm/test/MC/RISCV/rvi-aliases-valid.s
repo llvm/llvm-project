@@ -136,3 +136,10 @@ csrsi 0xfff, 0x10
 # CHECK-INST: csrrci zero, 320, 17
 # CHECK-ALIAS: csrci 320, 17
 csrci 0x140, 0x11
+
+# CHECK-INST: sfence.vma zero, zero
+# CHECK-ALIAS: sfence.vma
+sfence.vma
+# CHECK-INST: sfence.vma a0, zero
+# CHECK-ALIAS: sfence.vma a0
+sfence.vma a0

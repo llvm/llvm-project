@@ -17,8 +17,6 @@
 
 #include "gtest/gtest.h"
 
-#include <unordered_map>
-#include <utility>
 
 using namespace llvm;
 using namespace llvm::support;

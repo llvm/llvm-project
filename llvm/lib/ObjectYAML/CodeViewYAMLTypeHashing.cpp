@@ -44,11 +44,11 @@ StringRef ScalarTraits<GlobalHash>::input(StringRef Scalar, void *Ctx,
 } // end namespace yaml
 } // end namespace llvm
 
-DebugHSection llvm::CodeViewYAML::fromDebugH(ArrayRef<uint8_t> DebugT) {
-  assert(DebugT.size() >= 8);
-  assert((DebugT.size() - 8) % 20 == 0);
+DebugHSection llvm::CodeViewYAML::fromDebugH(ArrayRef<uint8_t> DebugH) {
+  assert(DebugH.size() >= 8);
+  assert((DebugH.size() - 8) % 20 == 0);
 
-  BinaryStreamReader Reader(DebugT, llvm::support::little);
+  BinaryStreamReader Reader(DebugH, llvm::support::little);
   DebugHSection DHS;
   cantFail(Reader.readInteger(DHS.Magic));
   cantFail(Reader.readInteger(DHS.Version));

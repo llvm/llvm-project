@@ -15,12 +15,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "BugDriver.h"
-#include "ToolRunner.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
-#include <ctime>
 #include <random>
 using namespace llvm;
 

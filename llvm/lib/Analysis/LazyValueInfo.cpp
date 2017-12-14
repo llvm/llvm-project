@@ -37,7 +37,6 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
-#include <stack>
 using namespace llvm;
 using namespace PatternMatch;
 

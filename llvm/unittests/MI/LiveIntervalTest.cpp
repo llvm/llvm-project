@@ -3,8 +3,6 @@
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Support/MemoryBuffer.h"

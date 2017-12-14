@@ -159,3 +159,16 @@ def FMV_D_X : FPUnaryOp_r<0b1111001, 0b000, FPR64, GPR, "fmv.d.x"> {
   let rs2 = 0b00000;
 }
 } // Predicates = [HasStdExtD, IsRV64]
+
+//===----------------------------------------------------------------------===//
+// Assembler Pseudo Instructions (User-Level ISA, Version 2.2, Chapter 20)
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtD] in {
+// TODO fld
+// TODO fsd
+
+def : InstAlias<"fmv.d $rd, $rs",  (FSGNJ_D  FPR64:$rd, FPR64:$rs, FPR64:$rs)>;
+def : InstAlias<"fabs.d $rd, $rs", (FSGNJX_D FPR64:$rd, FPR64:$rs, FPR64:$rs)>;
+def : InstAlias<"fneg.d $rd, $rs", (FSGNJN_D FPR64:$rd, FPR64:$rs, FPR64:$rs)>;
+} // Predicates = [HasStdExtD]

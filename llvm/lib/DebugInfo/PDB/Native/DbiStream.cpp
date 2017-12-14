@@ -12,7 +12,6 @@
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
 #include "llvm/DebugInfo/PDB/Native/ISectionContribVisitor.h"
-#include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"

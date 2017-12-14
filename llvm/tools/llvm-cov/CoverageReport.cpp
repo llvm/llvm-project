@@ -14,7 +14,6 @@
 #include "CoverageReport.h"
 #include "RenderingSupport.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
 #include <numeric>

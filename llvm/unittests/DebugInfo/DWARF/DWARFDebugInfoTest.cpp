@@ -26,16 +26,12 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ObjectYAML/DWARFEmitter.h"
-#include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
-#include <climits>
-#include <cstdint>
-#include <cstring>
 #include <string>
 
 using namespace llvm;

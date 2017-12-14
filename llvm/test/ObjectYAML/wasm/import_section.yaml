@@ -23,7 +23,7 @@ Sections:
         Field:           imported_memory
         Kind:            MEMORY
         Memory:
-          Flags:           0x00000001
+          Flags:           [ HAS_MAX ]
           Initial:         0x00000010
           Maximum:         0x00000011
       - Module:          foo
@@ -32,7 +32,7 @@ Sections:
         Table:
           ElemType:      ANYFUNC
           Limits:
-            Flags:           0x00000001
+            Flags:           [ HAS_MAX ]
             Initial:         0x00000020
             Maximum:         0x00000022
 ...
@@ -55,7 +55,7 @@ Sections:
 # CHECK:         Field:           imported_memory
 # CHECK:         Kind:            MEMORY
 # CHECK:         Memory:
-# CHECK:           Flags:           0x00000001
+# CHECK:           Flags:           [ HAS_MAX ]
 # CHECK:           Initial:         0x00000010
 # CHECK:           Maximum:         0x00000011
 # CHECK:       - Module:          foo
@@ -64,7 +64,7 @@ Sections:
 # CHECK:         Table:
 # CHECK:           ElemType:      ANYFUNC
 # CHECK:           Limits:
-# CHECK:             Flags:           0x00000001
+# CHECK:             Flags:           [ HAS_MAX ]
 # CHECK:             Initial:         0x00000020
 # CHECK:             Maximum:         0x00000022
 # CHECK: ...

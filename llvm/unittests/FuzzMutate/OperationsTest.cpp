@@ -211,6 +211,35 @@ TEST(OperationsTest, SplitBlock) {
   EXPECT_FALSE(verifyModule(M, &errs()));
 }
 
+TEST(OperationsTest, SplitEHBlock) {
+  // Check that we will not try to branch back to the landingpad block using
+  // regular branch instruction
+
+  LLVMContext Ctx;
+  const char *SourceCode =
+      "declare i32* @f()"
+      "declare i32 @personality_function()"
+      "define i32* @test() personality i32 ()* @personality_function {\n"
+      "entry:\n"
+      "  %val = invoke i32* @f()\n"
+      "          to label %normal unwind label %exceptional\n"
+      "normal:\n"
+      "  ret i32* %val\n"
+      "exceptional:\n"
+      "  %landing_pad4 = landingpad token cleanup\n"
+      "  ret i32* undef\n"
+      "}";
+  auto M = parseAssembly(SourceCode, Ctx);
+
+  // Get the landingpad block
+  BasicBlock &BB = *std::next(M->getFunction("test")->begin(), 2);
+
+  fuzzerop::OpDescriptor Descr = fuzzerop::splitBlockDescriptor(1);
+
+  Descr.BuilderFunc({ConstantInt::getTrue(Ctx)},&*BB.getFirstInsertionPt());
+  ASSERT_TRUE(!verifyModule(*M, &errs()));
+}
+
 TEST(OperationsTest, SplitBlockWithPhis) {
   LLVMContext Ctx;
 
@@ -307,6 +336,7 @@ TEST(OperationsTest, ExtractAndInsertValue) {
 
   Type *StructTy = StructType::create(Ctx, {Int8PtrTy, Int32Ty});
   Type *OpaqueTy = StructType::create(Ctx, "OpaqueStruct");
+  Type *ZeroSizedArrayTy = ArrayType::get(Int64Ty, 0);
   Type *ArrayTy = ArrayType::get(Int64Ty, 4);
   Type *VectorTy = VectorType::get(Int32Ty, 2);
 
@@ -317,16 +347,21 @@ TEST(OperationsTest, ExtractAndInsertValue) {
   Constant *SVal = UndefValue::get(StructTy);
   Constant *OVal = UndefValue::get(OpaqueTy);
   Constant *AVal = UndefValue::get(ArrayTy);
+  Constant *ZAVal = UndefValue::get(ZeroSizedArrayTy);
   Constant *VVal = UndefValue::get(VectorTy);
 
   EXPECT_TRUE(EVOp.SourcePreds[0].matches({}, SVal));
-  EXPECT_TRUE(EVOp.SourcePreds[0].matches({}, OVal));
+  EXPECT_FALSE(EVOp.SourcePreds[0].matches({}, OVal));
   EXPECT_TRUE(EVOp.SourcePreds[0].matches({}, AVal));
   EXPECT_FALSE(EVOp.SourcePreds[0].matches({}, VVal));
   EXPECT_TRUE(IVOp.SourcePreds[0].matches({}, SVal));
-  EXPECT_TRUE(IVOp.SourcePreds[0].matches({}, OVal));
+  EXPECT_FALSE(IVOp.SourcePreds[0].matches({}, OVal));
   EXPECT_TRUE(IVOp.SourcePreds[0].matches({}, AVal));
   EXPECT_FALSE(IVOp.SourcePreds[0].matches({}, VVal));
+
+  // Don't consider zero sized arrays as viable sources
+  EXPECT_FALSE(EVOp.SourcePreds[0].matches({}, ZAVal));
+  EXPECT_FALSE(IVOp.SourcePreds[0].matches({}, ZAVal));
 
   // Make sure we're range checking appropriately.
   EXPECT_TRUE(

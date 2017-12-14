@@ -88,7 +88,7 @@ MCAssembler::MCAssembler(MCContext &Context, MCAsmBackend &Backend,
     : Context(Context), Backend(Backend), Emitter(Emitter), Writer(Writer),
       BundleAlignSize(0), RelaxAll(false), SubsectionsViaSymbols(false),
       IncrementalLinkerCompatible(false), ELFHeaderEFlags(0) {
-  VersionMinInfo.Major = 0; // Major version == 0 for "none specified"
+  VersionInfo.Major = 0; // Major version == 0 for "none specified"
 }
 
 MCAssembler::~MCAssembler() = default;
@@ -107,7 +107,7 @@ void MCAssembler::reset() {
   IncrementalLinkerCompatible = false;
   ELFHeaderEFlags = 0;
   LOHContainer.reset();
-  VersionMinInfo.Major = 0;
+  VersionInfo.Major = 0;
 
   // reset objects owned by us
   getBackend().reset();

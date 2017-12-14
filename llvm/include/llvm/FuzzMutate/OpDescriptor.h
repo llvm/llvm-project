@@ -160,6 +160,14 @@ static inline SourcePred sizedPtrType() {
 
 static inline SourcePred anyAggregateType() {
   auto Pred = [](ArrayRef<Value *>, const Value *V) {
+    // We can't index zero sized arrays.
+    if (isa<ArrayType>(V->getType()))
+      return V->getType()->getArrayNumElements() > 0;
+
+    // Structs can also be zero sized. I.e opaque types.
+    if (isa<StructType>(V->getType()))
+      return V->getType()->getStructNumElements() > 0;
+
     return V->getType()->isAggregateType();
   };
   // TODO: For now we only find aggregates in BaseTypes. It might be better to

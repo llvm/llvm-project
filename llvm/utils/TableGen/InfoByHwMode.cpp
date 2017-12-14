@@ -20,7 +20,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <set>
-#include <sstream>
 #include <string>
 
 using namespace llvm;

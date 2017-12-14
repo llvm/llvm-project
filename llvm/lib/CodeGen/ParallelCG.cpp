@@ -19,7 +19,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
