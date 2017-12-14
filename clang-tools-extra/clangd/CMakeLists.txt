@@ -22,6 +22,7 @@ add_clang_library(clangDaemon
   index/MemIndex.cpp
   index/Index.cpp
   index/SymbolCollector.cpp
+  index/SymbolYAML.cpp
 
   LINK_LIBS
   clangAST
