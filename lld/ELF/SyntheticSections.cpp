@@ -430,8 +430,8 @@ bool EhFrameSection::isFdeLive(EhSectionPiece &Fde, ArrayRef<RelTy> Rels) {
 
   // FDEs for garbage-collected or merged-by-ICF sections are dead.
   if (auto *D = dyn_cast<Defined>(&B))
-    if (auto *Sec = cast_or_null<InputSectionBase>(D->Section))
-      return Sec->Live && (Sec == Sec->Repl);
+    if (SectionBase *Sec = D->Section)
+      return Sec->Live;
   return false;
 }
 
@@ -2569,16 +2569,22 @@ ARMExidxSentinelSection::ARMExidxSentinelSection()
 void ARMExidxSentinelSection::writeTo(uint8_t *Buf) {
   // The Sections are sorted in order of ascending PREL31 address with the
   // sentinel last. We need to find the InputSection that precedes the
-  // sentinel. By construction the Sentinel is in the last
-  // InputSectionDescription as the InputSection that precedes it.
+  // sentinel.
   OutputSection *C = getParent();
-  auto ISD =
-      std::find_if(C->SectionCommands.rbegin(), C->SectionCommands.rend(),
-                   [](const BaseCommand *Base) {
-                     return isa<InputSectionDescription>(Base);
-                   });
-  auto L = cast<InputSectionDescription>(*ISD);
-  InputSection *Highest = L->Sections[L->Sections.size() - 2];
+  InputSection *Highest = nullptr;
+  unsigned Skip = 1;
+  for (const BaseCommand *Base : llvm::reverse(C->SectionCommands)) {
+    if (!isa<InputSectionDescription>(Base))
+      continue;
+    auto L = cast<InputSectionDescription>(Base);
+    if (Skip >= L->Sections.size()) {
+      Skip -= L->Sections.size();
+      continue;
+    }
+    Highest = L->Sections[L->Sections.size() - Skip - 1];
+    break;
+  }
+  assert(Highest);
   InputSection *LS = Highest->getLinkOrderDep();
   uint64_t S = LS->getParent()->Addr + LS->getOffset(LS->getSize());
   uint64_t P = getVA();

@@ -17,6 +17,21 @@
 #include <sstream>
 #include <cassert>
 
+template<typename CharT>
+struct testbuf
+    : std::basic_stringbuf<CharT>
+{
+    void check()
+    {
+        assert(this->eback() == NULL);
+        assert(this->gptr() == NULL);
+        assert(this->egptr() == NULL);
+        assert(this->pbase() == NULL);
+        assert(this->pptr() == NULL);
+        assert(this->epptr() == NULL);
+    }
+};
+
 int main()
 {
     {
@@ -26,5 +41,13 @@ int main()
     {
         std::wstringbuf buf;
         assert(buf.str() == L"");
+    }
+    {
+        testbuf<char> buf;
+        buf.check();
+    }
+    {
+        testbuf<wchar_t> buf;
+        buf.check();
     }
 }

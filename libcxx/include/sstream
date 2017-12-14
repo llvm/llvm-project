@@ -243,7 +243,6 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::basic_stringbuf(ios_base::openmode
     : __hm_(0),
       __mode_(__wch)
 {
-    str(string_type());
 }
 
 template <class _CharT, class _Traits, class _Allocator>

@@ -584,14 +584,14 @@ private:
 
 }; // SignatureHelpCollector
 
-bool invokeCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
+bool invokeCodeComplete(const Context &Ctx,
+                        std::unique_ptr<CodeCompleteConsumer> Consumer,
                         const clang::CodeCompleteOptions &Options,
                         PathRef FileName,
                         const tooling::CompileCommand &Command,
                         PrecompiledPreamble const *Preamble, StringRef Contents,
                         Position Pos, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
-                        std::shared_ptr<PCHContainerOperations> PCHs,
-                        Logger &Logger) {
+                        std::shared_ptr<PCHContainerOperations> PCHs) {
   std::vector<const char *> ArgStrs;
   for (const auto &S : Command.CommandLine)
     ArgStrs.push_back(S.c_str());
@@ -634,12 +634,12 @@ bool invokeCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
 
   SyntaxOnlyAction Action;
   if (!Action.BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0])) {
-    Logger.log("BeginSourceFile() failed when running codeComplete for " +
-               FileName);
+    log(Ctx,
+        "BeginSourceFile() failed when running codeComplete for " + FileName);
     return false;
   }
   if (!Action.Execute()) {
-    Logger.log("Execute() failed when running codeComplete for " + FileName);
+    log(Ctx, "Execute() failed when running codeComplete for " + FileName);
     return false;
   }
 
@@ -660,13 +660,13 @@ clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts() const {
   return Result;
 }
 
-CompletionList codeComplete(PathRef FileName,
+CompletionList codeComplete(const Context &Ctx, PathRef FileName,
                             const tooling::CompileCommand &Command,
                             PrecompiledPreamble const *Preamble,
                             StringRef Contents, Position Pos,
                             IntrusiveRefCntPtr<vfs::FileSystem> VFS,
                             std::shared_ptr<PCHContainerOperations> PCHs,
-                            CodeCompleteOptions Opts, Logger &Logger) {
+                            CodeCompleteOptions Opts) {
   CompletionList Results;
   std::unique_ptr<CodeCompleteConsumer> Consumer;
   if (Opts.EnableSnippets) {
@@ -676,26 +676,28 @@ CompletionList codeComplete(PathRef FileName,
     Consumer =
         llvm::make_unique<PlainTextCompletionItemsCollector>(Opts, Results);
   }
-  invokeCodeComplete(std::move(Consumer), Opts.getClangCompleteOpts(), FileName,
-                     Command, Preamble, Contents, Pos, std::move(VFS),
-                     std::move(PCHs), Logger);
+  invokeCodeComplete(Ctx, std::move(Consumer), Opts.getClangCompleteOpts(),
+                     FileName, Command, Preamble, Contents, Pos, std::move(VFS),
+                     std::move(PCHs));
   return Results;
 }
 
-SignatureHelp
-signatureHelp(PathRef FileName, const tooling::CompileCommand &Command,
-              PrecompiledPreamble const *Preamble, StringRef Contents,
-              Position Pos, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
-              std::shared_ptr<PCHContainerOperations> PCHs, Logger &Logger) {
+SignatureHelp signatureHelp(const Context &Ctx, PathRef FileName,
+                            const tooling::CompileCommand &Command,
+                            PrecompiledPreamble const *Preamble,
+                            StringRef Contents, Position Pos,
+                            IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+                            std::shared_ptr<PCHContainerOperations> PCHs) {
   SignatureHelp Result;
   clang::CodeCompleteOptions Options;
   Options.IncludeGlobals = false;
   Options.IncludeMacros = false;
   Options.IncludeCodePatterns = false;
   Options.IncludeBriefComments = true;
-  invokeCodeComplete(llvm::make_unique<SignatureHelpCollector>(Options, Result),
+  invokeCodeComplete(Ctx,
+                     llvm::make_unique<SignatureHelpCollector>(Options, Result),
                      Options, FileName, Command, Preamble, Contents, Pos,
-                     std::move(VFS), std::move(PCHs), Logger);
+                     std::move(VFS), std::move(PCHs));
   return Result;
 }
 

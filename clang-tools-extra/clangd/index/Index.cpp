@@ -10,38 +10,37 @@
 #include "Index.h"
 
 #include "llvm/Support/SHA1.h"
+#include "llvm/ADT/StringExtras.h"
 
 namespace clang {
 namespace clangd {
 
-namespace {
-ArrayRef<uint8_t> toArrayRef(StringRef S) {
-  return {reinterpret_cast<const uint8_t *>(S.data()), S.size()};
-}
-} // namespace
-
 SymbolID::SymbolID(llvm::StringRef USR)
-    : HashValue(llvm::SHA1::hash(toArrayRef(USR))) {}
+    : HashValue(llvm::SHA1::hash(arrayRefFromStringRef(USR))) {}
 
-SymbolSlab::const_iterator SymbolSlab::begin() const {
-  return Symbols.begin();
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const SymbolID &ID) {
+  OS << toHex(llvm::toStringRef(ID.HashValue));
+  return OS;
 }
 
-SymbolSlab::const_iterator SymbolSlab::end() const {
-  return Symbols.end();
+void operator>>(llvm::StringRef Str, SymbolID &ID) {
+  std::string HexString = fromHex(Str);
+  assert(HexString.size() == 20);
+  std::copy(HexString.begin(), HexString.end(), ID.HashValue.begin());
 }
 
-SymbolSlab::const_iterator SymbolSlab::find(const SymbolID& SymID) const {
+SymbolSlab::const_iterator SymbolSlab::begin() const { return Symbols.begin(); }
+
+SymbolSlab::const_iterator SymbolSlab::end() const { return Symbols.end(); }
+
+SymbolSlab::const_iterator SymbolSlab::find(const SymbolID &SymID) const {
   return Symbols.find(SymID);
 }
 
-void SymbolSlab::freeze() {
-  Frozen = true;
-}
+void SymbolSlab::freeze() { Frozen = true; }
 
 void SymbolSlab::insert(Symbol S) {
-  assert(!Frozen &&
-         "Can't insert a symbol after the slab has been frozen!");
+  assert(!Frozen && "Can't insert a symbol after the slab has been frozen!");
   Symbols[S.ID] = std::move(S);
 }
 

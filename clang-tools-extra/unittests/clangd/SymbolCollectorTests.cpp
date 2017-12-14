@@ -8,25 +8,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "index/SymbolCollector.h"
+#include "index/SymbolYAML.h"
 #include "clang/Index/IndexingAction.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Index/IndexingAction.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "gtest/gtest.h"
 #include "gmock/gmock.h"
+#include "gtest/gtest.h"
 
 #include <memory>
 #include <string>
 
-using testing::UnorderedElementsAre;
 using testing::Eq;
 using testing::Field;
+using testing::UnorderedElementsAre;
 
 // GMock helpers for matching Symbol.
 MATCHER_P(QName, Name, "") { return arg.second.QualifiedName == Name; }
@@ -36,7 +38,7 @@ namespace clangd {
 
 namespace {
 class SymbolIndexActionFactory : public tooling::FrontendActionFactory {
- public:
+public:
   SymbolIndexActionFactory() = default;
 
   clang::FrontendAction *create() override {
@@ -103,6 +105,49 @@ TEST_F(SymbolCollectorTest, CollectSymbol) {
   runSymbolCollector(Header, Main);
   EXPECT_THAT(Symbols, UnorderedElementsAre(QName("Foo"), QName("Foo::f"),
                                             QName("f1"), QName("f2")));
+}
+
+TEST_F(SymbolCollectorTest, YAMLConversions) {
+  const std::string YAML1 = R"(
+---
+ID: 057557CEBF6E6B2DD437FBF60CC58F352D1DF856
+QualifiedName:   'clang::Foo1'
+SymInfo:
+  Kind:            Function
+  Lang:            Cpp
+CanonicalDeclaration:
+  StartOffset:     0
+  EndOffset:       1
+  FilePath:        /path/foo.h
+...
+)";
+  const std::string YAML2 = R"(
+---
+ID: 057557CEBF6E6B2DD437FBF60CC58F352D1DF858
+QualifiedName:   'clang::Foo2'
+SymInfo:
+  Kind:            Function
+  Lang:            Cpp
+CanonicalDeclaration:
+  StartOffset:     10
+  EndOffset:       12
+  FilePath:        /path/foo.h
+...
+)";
+
+  auto Symbols1 = SymbolFromYAML(YAML1);
+  EXPECT_THAT(Symbols1,
+              UnorderedElementsAre(QName("clang::Foo1")));
+  auto Symbols2 = SymbolFromYAML(YAML2);
+  EXPECT_THAT(Symbols2,
+              UnorderedElementsAre(QName("clang::Foo2")));
+
+  std::string ConcatenatedYAML =
+      SymbolToYAML(Symbols1) + SymbolToYAML(Symbols2);
+  auto ConcatenatedSymbols = SymbolFromYAML(ConcatenatedYAML);
+  EXPECT_THAT(ConcatenatedSymbols,
+              UnorderedElementsAre(QName("clang::Foo1"),
+                                   QName("clang::Foo2")));
 }
 
 } // namespace
