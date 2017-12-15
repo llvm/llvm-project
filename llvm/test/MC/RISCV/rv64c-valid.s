@@ -1,7 +1,8 @@
-# RUN: llvm-mc -triple=riscv64 -mattr=+c -show-encoding < %s \
+# RUN: llvm-mc -triple=riscv64 -mattr=+c -riscv-no-aliases -show-encoding < %s \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+c < %s \
-# RUN:     | llvm-objdump -mattr=+c -d - | FileCheck -check-prefix=CHECK-INST %s
+# RUN:     | llvm-objdump -mattr=+c -riscv-no-aliases -d - \
+# RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
 # TODO: more exhaustive testing of immediate encoding.
 
@@ -31,3 +32,13 @@ c.addiw  a3, -32
 # CHECK-INST: c.addiw  a3, 31
 # CHECK: encoding: [0xfd,0x26]
 c.addiw  a3, 31
+
+# CHECK-INST: c.slli  s0, 1
+# CHECK: encoding: [0x06,0x04]
+c.slli  s0, 1
+# CHECK-INST: c.srli  a3, 63
+# CHECK: encoding: [0xfd,0x92]
+c.srli  a3, 63
+# CHECK-INST: c.srai  a2, 63
+# CHECK: encoding: [0x7d,0x96]
+c.srai  a2, 63

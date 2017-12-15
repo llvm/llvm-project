@@ -72,6 +72,41 @@ enum {
 };
 } // end namespace PPCII
 
+// Instructions that have an immediate form might be convertible to that
+// form if the correct input is a result of a load immediate. In order to
+// know whether the transformation is special, we might need to know some
+// of the details of the two forms.
+struct ImmInstrInfo {
+  // Is the immediate field in the immediate form signed or unsigned?
+  uint64_t SignedImm : 1;
+  // Does the immediate need to be a multiple of some value?
+  uint64_t ImmMustBeMultipleOf : 5;
+  // Is R0/X0 treated specially by the original r+r instruction?
+  // If so, in which operand?
+  uint64_t ZeroIsSpecialOrig : 3;
+  // Is R0/X0 treated specially by the new r+i instruction?
+  // If so, in which operand?
+  uint64_t ZeroIsSpecialNew : 3;
+  // Is the operation commutative?
+  uint64_t IsCommutative : 1;
+  // The operand number to check for load immediate.
+  uint64_t ConstantOpNo : 3;
+  // The operand number for the immediate.
+  uint64_t ImmOpNo : 3;
+  // The opcode of the new instruction.
+  uint64_t ImmOpcode : 16;
+  // The size of the immediate.
+  uint64_t ImmWidth : 5;
+};
+
+// Information required to convert an instruction to just a materialized
+// immediate.
+struct LoadImmediateInfo {
+  unsigned Imm : 16;
+  unsigned Is64Bit : 1;
+  unsigned SetCR : 1;
+};
+
 class PPCSubtarget;
 class PPCInstrInfo : public PPCGenInstrInfo {
   PPCSubtarget &Subtarget;
@@ -87,6 +122,10 @@ class PPCInstrInfo : public PPCGenInstrInfo {
                             const TargetRegisterClass *RC,
                             SmallVectorImpl<MachineInstr *> &NewMIs,
                             bool &NonRI, bool &SpillsVRS) const;
+  bool transformToImmForm(MachineInstr &MI, const ImmInstrInfo &III,
+                          unsigned ConstantOpNo, int64_t Imm) const;
+  MachineInstr *getConstantDefMI(MachineInstr &MI, unsigned &ConstOp,
+                                 bool &SeenIntermediateUse) const;
   virtual void anchor();
 
 protected:
@@ -313,6 +352,19 @@ public:
   bool isZeroExtended(const MachineInstr &MI, const unsigned depth = 0) const {
    return isSignOrZeroExtended(MI, false, depth);
   }
+
+  bool convertToImmediateForm(MachineInstr &MI,
+                              MachineInstr **KilledDef = nullptr) const;
+  void replaceInstrWithLI(MachineInstr &MI, const LoadImmediateInfo &LII) const;
+
+  // This is used to find the "true" source register for n
+  // Machine instruction. Returns the original SrcReg unless it is the target
+  // of a copy-like operation, in which case we chain backwards through all
+  // such operations to the ultimate source register.  If a
+  // physical register is encountered, we stop the search.
+  static unsigned lookThruCopyLike(unsigned SrcReg,
+                                   const MachineRegisterInfo *MRI);
+  bool instrHasImmForm(const MachineInstr &MI, ImmInstrInfo &III) const;
 };
 
 }

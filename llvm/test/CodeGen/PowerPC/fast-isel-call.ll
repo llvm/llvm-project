@@ -37,9 +37,13 @@ define void @foo(i8 %a, i16 %b) nounwind {
 
 ;; A few test to check materialization
   %5 = call i32 @t2(i8 zeroext 255)
-; ELF64: clrldi {{[0-9]+}}, {{[0-9]+}}, 56
+; ELF64: li 3, 255
+; ELF64-NOT: clrldi
   %6 = call i32 @t4(i16 zeroext 65535)
-; ELF64: clrldi {{[0-9]+}}, {{[0-9]+}}, 48
+; ELF64: lis 3, 0
+; ELF64: ori 3, 3, 65535
+; ELF64: clrldi 3, 3, 48
+; ELF64: bl t4
   ret void
 }
 
@@ -66,12 +70,8 @@ entry:
 ; ELF64: li 6, 28
 ; ELF64: li 7, 40
 ; ELF64: li 8, 186
-; ELF64: clrldi 3, 3, 56
-; ELF64: clrldi 4, 4, 56
-; ELF64: clrldi 5, 5, 56
-; ELF64: clrldi 6, 6, 56
-; ELF64: clrldi 7, 7, 56
-; ELF64: clrldi 8, 8, 56
+; ELF64-NOT: clrldi
+; ELF64: bl bar
   ret i32 0
 }
 

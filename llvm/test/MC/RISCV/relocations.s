@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple riscv32 -mattr=+c < %s -show-encoding \
+# RUN: llvm-mc -triple riscv32 -mattr=+c -riscv-no-aliases < %s -show-encoding \
 # RUN:     | FileCheck -check-prefix=INSTR -check-prefix=FIXUP %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+c < %s \
 # RUN:     | llvm-readobj -r | FileCheck -check-prefix=RELOC %s

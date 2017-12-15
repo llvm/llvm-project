@@ -13,11 +13,11 @@ define i64 @load_i64(i64 *%a) nounwind {
 ; RV32I-NEXT:    addi s0, sp, 16
 ; RV32I-NEXT:    lw a2, 0(a0)
 ; RV32I-NEXT:    lw a1, 4(a0)
-; RV32I-NEXT:    addi a0, a2, 0
+; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   %1 = load i64, i64* %a
   ret i64 %1
 }
@@ -42,7 +42,7 @@ define i64 @load_i64_global() nounwind {
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   %1 = load i64, i64* @val64
   ret i64 %1
 }

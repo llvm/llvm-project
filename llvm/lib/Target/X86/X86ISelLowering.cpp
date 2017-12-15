@@ -5101,9 +5101,8 @@ static SDValue insert1BitVector(SDValue Op, SelectionDAG &DAG,
     SubVec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, WideOpVT,
                          getZeroVector(WideOpVT, Subtarget, DAG, dl),
                          SubVec, ZeroIdx);
-    Vec = DAG.getNode(ISD::OR, dl, WideOpVT, Vec, SubVec);
-    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OpVT, Op,
-                       ZeroIdx);
+    Op = DAG.getNode(ISD::OR, dl, WideOpVT, Vec, SubVec);
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OpVT, Op, ZeroIdx);
   }
 
   SubVec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, WideOpVT,
@@ -5111,9 +5110,9 @@ static SDValue insert1BitVector(SDValue Op, SelectionDAG &DAG,
 
   if (Vec.isUndef()) {
     assert(IdxVal != 0 && "Unexpected index");
-    Op = DAG.getNode(X86ISD::KSHIFTL, dl, WideOpVT, SubVec,
-                     DAG.getConstant(IdxVal, dl, MVT::i8));
-    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OpVT, Op, ZeroIdx);
+    SubVec = DAG.getNode(X86ISD::KSHIFTL, dl, WideOpVT, SubVec,
+                         DAG.getConstant(IdxVal, dl, MVT::i8));
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OpVT, SubVec, ZeroIdx);
   }
 
   if (ISD::isBuildVectorAllZeros(Vec.getNode())) {
@@ -5123,9 +5122,10 @@ static SDValue insert1BitVector(SDValue Op, SelectionDAG &DAG,
     unsigned ShiftRight = NumElems - SubVecNumElems - IdxVal;
     SubVec = DAG.getNode(X86ISD::KSHIFTL, dl, WideOpVT, SubVec,
                          DAG.getConstant(ShiftLeft, dl, MVT::i8));
-    Op = DAG.getNode(X86ISD::KSHIFTR, dl, WideOpVT, Op,
-                     DAG.getConstant(ShiftRight, dl, MVT::i8));
-    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OpVT, Op, ZeroIdx);
+    if (ShiftRight != 0)
+      SubVec = DAG.getNode(X86ISD::KSHIFTR, dl, WideOpVT, SubVec,
+                           DAG.getConstant(ShiftRight, dl, MVT::i8));
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OpVT, SubVec, ZeroIdx);
   }
 
   // Simple case when we put subvector in the upper part

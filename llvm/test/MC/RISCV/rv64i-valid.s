@@ -1,7 +1,8 @@
-# RUN: llvm-mc %s -triple=riscv64 -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 < %s \
-# RUN:     | llvm-objdump -d - | FileCheck -check-prefix=CHECK-INST %s
+# RUN:     | llvm-objdump -riscv-no-aliases -d - \
+# RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
 # CHECK-INST: lwu zero, 4(ra)
 # CHECK: encoding: [0x03,0xe0,0x40,0x00]

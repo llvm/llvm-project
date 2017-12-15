@@ -418,9 +418,9 @@ define <4 x i1> @any_sign_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
 define zeroext i1 @ne_neg1_and_ne_zero(i64 %x) {
 ; CHECK-LABEL: ne_neg1_and_ne_zero:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li 4, 1
 ; CHECK-NEXT:    addi 3, 3, 1
-; CHECK-NEXT:    subfc 3, 3, 4
+; CHECK-NEXT:    li 4, 1
+; CHECK-NEXT:    subfic 3, 3, 1
 ; CHECK-NEXT:    subfe 3, 4, 4
 ; CHECK-NEXT:    neg 3, 3
 ; CHECK-NEXT:    blr

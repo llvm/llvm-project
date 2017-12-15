@@ -619,6 +619,10 @@ static bool isValidCIdentifier(StringRef S) {
                      [](char C) { return C == '_' || isAlnum(C); });
 }
 
+static bool isUndefined(ld_plugin_symbol &Sym) {
+  return Sym.def == LDPK_UNDEF || Sym.def == LDPK_WEAKUNDEF;
+}
+
 static void addModule(LTO &Lto, claimed_file &F, const void *View,
                       StringRef Filename) {
   MemoryBufferRef BufferRef(StringRef((const char *)View, F.filesize),
@@ -656,16 +660,16 @@ static void addModule(LTO &Lto, claimed_file &F, const void *View,
       break;
 
     case LDPR_PREVAILING_DEF_IRONLY:
-      R.Prevailing = true;
+      R.Prevailing = !isUndefined(Sym);
       break;
 
     case LDPR_PREVAILING_DEF:
-      R.Prevailing = true;
+      R.Prevailing = !isUndefined(Sym);
       R.VisibleToRegularObj = true;
       break;
 
     case LDPR_PREVAILING_DEF_IRONLY_EXP:
-      R.Prevailing = true;
+      R.Prevailing = !isUndefined(Sym);
       if (!Res.CanOmitFromDynSym)
         R.VisibleToRegularObj = true;
       break;

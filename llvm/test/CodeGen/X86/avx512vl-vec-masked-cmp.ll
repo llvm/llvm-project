@@ -43844,3 +43844,56 @@ define i32 @test_cmpm_rnd_zero(<16 x float> %a, <16 x float> %b) {
   %cast2 = bitcast <32 x i1> %shuffle to i32
   ret i32 %cast2
 }
+
+define i8 @mask_zero_lower(<4 x i32> %a) {
+; VLX-LABEL: mask_zero_lower:
+; VLX:       # %bb.0:
+; VLX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; VLX-NEXT:    vpcmpltud %xmm1, %xmm0, %k0
+; VLX-NEXT:    kshiftlb $4, %k0, %k0
+; VLX-NEXT:    kmovd %k0, %eax
+; VLX-NEXT:    # kill: def %al killed %al killed %eax
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: mask_zero_lower:
+; NoVLX:       # %bb.0:
+; NoVLX-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
+; NoVLX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; NoVLX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
+; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k0
+; NoVLX-NEXT:    vpextrb $0, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k1
+; NoVLX-NEXT:    kxorw %k0, %k0, %k2
+; NoVLX-NEXT:    kshiftrw $4, %k2, %k3
+; NoVLX-NEXT:    kxorw %k1, %k3, %k1
+; NoVLX-NEXT:    kshiftlw $15, %k1, %k1
+; NoVLX-NEXT:    kshiftrw $11, %k1, %k1
+; NoVLX-NEXT:    kxorw %k2, %k1, %k1
+; NoVLX-NEXT:    kshiftrw $5, %k1, %k2
+; NoVLX-NEXT:    kxorw %k0, %k2, %k0
+; NoVLX-NEXT:    kshiftlw $15, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $10, %k0, %k0
+; NoVLX-NEXT:    kxorw %k1, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    vpextrb $8, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k2
+; NoVLX-NEXT:    kxorw %k2, %k1, %k1
+; NoVLX-NEXT:    kshiftlw $15, %k1, %k1
+; NoVLX-NEXT:    kshiftrw $9, %k1, %k1
+; NoVLX-NEXT:    kxorw %k0, %k1, %k0
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
+; NoVLX-NEXT:    vpextrb $12, %xmm0, %eax
+; NoVLX-NEXT:    kmovw %eax, %k2
+; NoVLX-NEXT:    kxorw %k2, %k1, %k1
+; NoVLX-NEXT:    kshiftlw $15, %k1, %k1
+; NoVLX-NEXT:    kshiftrw $8, %k1, %k1
+; NoVLX-NEXT:    kxorw %k0, %k1, %k0
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    # kill: def %al killed %al killed %eax
+; NoVLX-NEXT:    retq
+  %cmp = icmp ult <4 x i32> %a, zeroinitializer
+  %concat = shufflevector <4 x i1> %cmp, <4 x i1> zeroinitializer, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+  %cast = bitcast <8 x i1> %concat to i8
+  ret i8 %cast
+}
