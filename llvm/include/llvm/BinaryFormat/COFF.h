@@ -91,7 +91,7 @@ struct BigObjHeader {
   uint32_t NumberOfSymbols;
 };
 
-enum MachineTypes {
+enum MachineTypes : unsigned {
   MT_Invalid = 0xffff,
 
   IMAGE_FILE_MACHINE_UNKNOWN = 0x0,
@@ -118,7 +118,7 @@ enum MachineTypes {
   IMAGE_FILE_MACHINE_WCEMIPSV2 = 0x169
 };
 
-enum Characteristics {
+enum Characteristics : unsigned {
   C_Invalid = 0,
 
   /// The file does not contain base relocations and must be loaded at its
@@ -158,7 +158,7 @@ enum Characteristics {
   IMAGE_FILE_BYTES_REVERSED_HI = 0x8000
 };
 
-enum ResourceTypeID {
+enum ResourceTypeID : unsigned {
   RID_Cursor = 1,
   RID_Bitmap = 2,
   RID_Icon = 3,
@@ -234,7 +234,7 @@ enum SymbolStorageClass {
   IMAGE_SYM_CLASS_CLR_TOKEN = 107
 };
 
-enum SymbolBaseType {
+enum SymbolBaseType : unsigned {
   IMAGE_SYM_TYPE_NULL = 0,   ///< No type information or unknown base type.
   IMAGE_SYM_TYPE_VOID = 1,   ///< Used with void pointers and functions.
   IMAGE_SYM_TYPE_CHAR = 2,   ///< A character (signed byte).
@@ -253,7 +253,7 @@ enum SymbolBaseType {
   IMAGE_SYM_TYPE_DWORD = 15  ///< An unsigned 4-byte integer.
 };
 
-enum SymbolComplexType {
+enum SymbolComplexType : unsigned {
   IMAGE_SYM_DTYPE_NULL = 0,     ///< No complex type; simple scalar variable.
   IMAGE_SYM_DTYPE_POINTER = 1,  ///< A pointer to base type.
   IMAGE_SYM_DTYPE_FUNCTION = 2, ///< A function that returns a base type.
@@ -325,7 +325,7 @@ struct relocation {
   uint16_t Type;
 };
 
-enum RelocationTypeI386 {
+enum RelocationTypeI386 : unsigned {
   IMAGE_REL_I386_ABSOLUTE = 0x0000,
   IMAGE_REL_I386_DIR16 = 0x0001,
   IMAGE_REL_I386_REL16 = 0x0002,
@@ -339,7 +339,7 @@ enum RelocationTypeI386 {
   IMAGE_REL_I386_REL32 = 0x0014
 };
 
-enum RelocationTypeAMD64 {
+enum RelocationTypeAMD64 : unsigned {
   IMAGE_REL_AMD64_ABSOLUTE = 0x0000,
   IMAGE_REL_AMD64_ADDR64 = 0x0001,
   IMAGE_REL_AMD64_ADDR32 = 0x0002,
@@ -359,7 +359,7 @@ enum RelocationTypeAMD64 {
   IMAGE_REL_AMD64_SSPAN32 = 0x0010
 };
 
-enum RelocationTypesARM {
+enum RelocationTypesARM : unsigned {
   IMAGE_REL_ARM_ABSOLUTE = 0x0000,
   IMAGE_REL_ARM_ADDR32 = 0x0001,
   IMAGE_REL_ARM_ADDR32NB = 0x0002,
@@ -377,7 +377,7 @@ enum RelocationTypesARM {
   IMAGE_REL_ARM_BLX23T = 0x0015
 };
 
-enum RelocationTypesARM64 {
+enum RelocationTypesARM64 : unsigned {
   IMAGE_REL_ARM64_ABSOLUTE = 0x0000,
   IMAGE_REL_ARM64_ADDR32 = 0x0001,
   IMAGE_REL_ARM64_ADDR32NB = 0x0002,
@@ -397,7 +397,7 @@ enum RelocationTypesARM64 {
   IMAGE_REL_ARM64_BRANCH14 = 0x0010,
 };
 
-enum COMDATType {
+enum COMDATType : unsigned {
   IMAGE_COMDAT_SELECT_NODUPLICATES = 1,
   IMAGE_COMDAT_SELECT_ANY,
   IMAGE_COMDAT_SELECT_SAME_SIZE,
@@ -430,7 +430,7 @@ struct AuxiliaryWeakExternal {
   uint8_t unused[10];
 };
 
-enum WeakExternalCharacteristics {
+enum WeakExternalCharacteristics : unsigned {
   IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY = 1,
   IMAGE_WEAK_EXTERN_SEARCH_LIBRARY = 2,
   IMAGE_WEAK_EXTERN_SEARCH_ALIAS = 3
@@ -572,7 +572,7 @@ struct DataDirectory {
   uint32_t Size;
 };
 
-enum DataDirectoryIndex {
+enum DataDirectoryIndex : unsigned {
   EXPORT_TABLE = 0,
   IMPORT_TABLE,
   RESOURCE_TABLE,
@@ -592,7 +592,7 @@ enum DataDirectoryIndex {
   NUM_DATA_DIRECTORIES
 };
 
-enum WindowsSubsystem {
+enum WindowsSubsystem : unsigned {
   IMAGE_SUBSYSTEM_UNKNOWN = 0, ///< An unknown subsystem.
   IMAGE_SUBSYSTEM_NATIVE = 1,  ///< Device drivers and native Windows processes
   IMAGE_SUBSYSTEM_WINDOWS_GUI = 2,      ///< The Windows GUI subsystem.
@@ -611,7 +611,7 @@ enum WindowsSubsystem {
   IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION = 16 ///< A BCD application.
 };
 
-enum DLLCharacteristics {
+enum DLLCharacteristics : unsigned {
   /// ASLR with 64 bit address space.
   IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA = 0x0020,
   /// DLL can be relocated at load time.
@@ -637,7 +637,7 @@ enum DLLCharacteristics {
   IMAGE_DLL_CHARACTERISTICS_TERMINAL_SERVER_AWARE = 0x8000
 };
 
-enum DebugType {
+enum DebugType : unsigned {
   IMAGE_DEBUG_TYPE_UNKNOWN = 0,
   IMAGE_DEBUG_TYPE_COFF = 1,
   IMAGE_DEBUG_TYPE_CODEVIEW = 2,
@@ -657,7 +657,7 @@ enum DebugType {
   IMAGE_DEBUG_TYPE_REPRO = 16,
 };
 
-enum BaseRelocationType {
+enum BaseRelocationType : unsigned {
   IMAGE_REL_BASED_ABSOLUTE = 0,
   IMAGE_REL_BASED_HIGH = 1,
   IMAGE_REL_BASED_LOW = 2,
@@ -670,9 +670,13 @@ enum BaseRelocationType {
   IMAGE_REL_BASED_DIR64 = 10
 };
 
-enum ImportType { IMPORT_CODE = 0, IMPORT_DATA = 1, IMPORT_CONST = 2 };
+enum ImportType : unsigned {
+  IMPORT_CODE = 0,
+  IMPORT_DATA = 1,
+  IMPORT_CONST = 2
+};
 
-enum ImportNameType {
+enum ImportNameType : unsigned {
   /// Import is by ordinal. This indicates that the value in the Ordinal/Hint
   /// field of the import header is the import's ordinal. If this constant is
   /// not specified, then the Ordinal/Hint field should always be interpreted

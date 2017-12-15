@@ -790,6 +790,8 @@ protected:
     return SpecIterator<EntryType>(isEnd ? Specs.end() : Specs.begin());
   }
 
+  void loadLazySpecializationsImpl() const;
+
   template <class EntryType> typename SpecEntryTraits<EntryType>::DeclType*
   findSpecializationImpl(llvm::FoldingSetVector<EntryType> &Specs,
                          ArrayRef<TemplateArgument> Args, void *&InsertPos);
@@ -808,6 +810,13 @@ protected:
     /// was explicitly specialized.
     llvm::PointerIntPair<RedeclarableTemplateDecl*, 1, bool>
       InstantiatedFromMember;
+
+    /// \brief If non-null, points to an array of specializations (including
+    /// partial specializations) known only by their external declaration IDs.
+    ///
+    /// The first value in the array is the number of specializations/partial
+    /// specializations that follow.
+    uint32_t *LazySpecializations = nullptr;
   };
 
   /// \brief Pointer to the common data shared by all declarations of this
@@ -974,13 +983,6 @@ protected:
     /// template, and is allocated lazily, since most function templates do not
     /// require the use of this information.
     TemplateArgument *InjectedArgs = nullptr;
-
-    /// \brief If non-null, points to an array of specializations known only
-    /// by their external declaration IDs.
-    ///
-    /// The first value in the array is the number of of specializations
-    /// that follow.
-    uint32_t *LazySpecializations = nullptr;
 
     Common() = default;
   };
@@ -2065,13 +2067,6 @@ protected:
     /// \brief The injected-class-name type for this class template.
     QualType InjectedClassNameType;
 
-    /// \brief If non-null, points to an array of specializations (including
-    /// partial specializations) known only by their external declaration IDs.
-    ///
-    /// The first value in the array is the number of of specializations/
-    /// partial specializations that follow.
-    uint32_t *LazySpecializations = nullptr;
-
     Common() = default;
   };
 
@@ -2884,13 +2879,6 @@ protected:
     /// template.
     llvm::FoldingSetVector<VarTemplatePartialSpecializationDecl>
     PartialSpecializations;
-
-    /// \brief If non-null, points to an array of specializations (including
-    /// partial specializations) known ownly by their external declaration IDs.
-    ///
-    /// The first value in the array is the number of of specializations/
-    /// partial specializations that follow.
-    uint32_t *LazySpecializations = nullptr;
 
     Common() = default;
   };

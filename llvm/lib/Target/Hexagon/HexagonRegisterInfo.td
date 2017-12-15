@@ -225,6 +225,15 @@ def VecPI16
 def VecPI32
   : ValueTypeByHwMode<[Hvx64,  Hvx64old,  Hvx128,  Hvx128old, DefaultMode],
                       [v32i32, v32i32,    v64i32,  v64i32,    v32i32]>;
+def VecQ8
+  : ValueTypeByHwMode<[Hvx64,  Hvx64old,  Hvx128,  Hvx128old, DefaultMode],
+                      [v64i1,  v64i1,     v128i1,  v128i1,    v64i1]>;
+def VecQ16
+  : ValueTypeByHwMode<[Hvx64,  Hvx64old,  Hvx128,  Hvx128old, DefaultMode],
+                      [v32i1,  v32i1,     v64i1,   v64i1,     v32i1]>;
+def VecQ32
+  : ValueTypeByHwMode<[Hvx64,  Hvx64old,  Hvx128,  Hvx128old, DefaultMode],
+                      [v16i1,  v16i1,     v32i1,   v32i1,     v16i1]>;
 
 // HVX register classes
 
@@ -263,7 +272,8 @@ def HvxWR : RegisterClass<"Hexagon", [VecPI8, VecPI16, VecPI32], 1024,
     [RegInfo<1024,1024,1024>, RegInfo<2048,2048,2048>, RegInfo<1024,1024,1024>]>;
 }
 
-def HvxQR : RegisterClass<"Hexagon", [VecI1], 512, (add Q0, Q1, Q2, Q3)> {
+def HvxQR : RegisterClass<"Hexagon", [VecI1, VecQ8, VecQ16, VecQ32], 512,
+  (add Q0, Q1, Q2, Q3)> {
   let RegInfos = RegInfoByHwMode<[Hvx64, Hvx128, DefaultMode],
     [RegInfo<512,512,512>, RegInfo<1024,1024,1024>, RegInfo<512,512,512>]>;
 }

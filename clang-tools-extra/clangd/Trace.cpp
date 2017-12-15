@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Trace.h"
-
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/FormatProviders.h"

@@ -88,6 +88,10 @@ def V8I8:   PatLeaf<(v8i8    DoubleRegs:$R)>;
 def V4I16:  PatLeaf<(v4i16   DoubleRegs:$R)>;
 def V2I32:  PatLeaf<(v2i32   DoubleRegs:$R)>;
 
+def HQ8:    PatLeaf<(VecQ8   HvxQR:$R)>;
+def HQ16:   PatLeaf<(VecQ16  HvxQR:$R)>;
+def HQ32:   PatLeaf<(VecQ32  HvxQR:$R)>;
+
 def HVI8:   PatLeaf<(VecI8   HvxVR:$R)>;
 def HVI16:  PatLeaf<(VecI16  HvxVR:$R)>;
 def HVI32:  PatLeaf<(VecI32  HvxVR:$R)>;
@@ -2932,7 +2936,14 @@ let Predicates = [UseHVX] in {
   def: Pat<(sub HVI16:$Vs, HVI16:$Vt),  (V6_vsubh HvxVR:$Vs, HvxVR:$Vt)>;
   def: Pat<(sub HVI32:$Vs, HVI32:$Vt),  (V6_vsubw HvxVR:$Vs, HvxVR:$Vt)>;
 
-  def: Pat<(and HVI8:$Vs, HVI8:$Vt),    (V6_vand HvxVR:$Vs, HvxVR:$Vt)>;
-  def: Pat<(or  HVI8:$Vs, HVI8:$Vt),    (V6_vor  HvxVR:$Vs, HvxVR:$Vt)>;
-  def: Pat<(xor HVI8:$Vs, HVI8:$Vt),    (V6_vxor HvxVR:$Vs, HvxVR:$Vt)>;
+  def: Pat<(and HVI8:$Vs,  HVI8:$Vt),   (V6_vand  HvxVR:$Vs, HvxVR:$Vt)>;
+  def: Pat<(or  HVI8:$Vs,  HVI8:$Vt),   (V6_vor   HvxVR:$Vs, HvxVR:$Vt)>;
+  def: Pat<(xor HVI8:$Vs,  HVI8:$Vt),   (V6_vxor  HvxVR:$Vs, HvxVR:$Vt)>;
+
+  def: Pat<(vselect HQ8:$Qu, HVI8:$Vs, HVI8:$Vt),
+           (V6_vmux HvxQR:$Qu, HvxVR:$Vs, HvxVR:$Vt)>;
+  def: Pat<(vselect HQ16:$Qu, HVI16:$Vs, HVI16:$Vt),
+           (V6_vmux HvxQR:$Qu, HvxVR:$Vs, HvxVR:$Vt)>;
+  def: Pat<(vselect HQ32:$Qu, HVI32:$Vs, HVI32:$Vt),
+           (V6_vmux HvxQR:$Qu, HvxVR:$Vs, HvxVR:$Vt)>;
 }

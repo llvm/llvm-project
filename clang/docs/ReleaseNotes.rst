@@ -149,6 +149,12 @@ Clang now supports the ...
 Attribute Changes in Clang
 --------------------------
 
+- Clang now supports the majority of its attributes under both the GNU-style
+  spelling (``__attribute((name))``) and the double square-bracket spelling
+  in the ``clang`` vendor namespace (``[[clang::name]]``). Attributes whose
+  syntax is specified by some other standard (such as CUDA and OpenCL
+  attributes) continue to follow their respective specification.
+  
 - Added the ``__has_c_attribute()`` builtin preprocessor macro which allows
   users to dynamically detect whether a double square-bracket attribute is
   supported in C mode. This attribute syntax can be enabled with the

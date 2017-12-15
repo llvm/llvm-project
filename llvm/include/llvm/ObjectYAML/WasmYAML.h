@@ -131,6 +131,11 @@ struct SymbolInfo {
   SymbolFlags Flags;
 };
 
+struct InitFunction {
+  uint32_t Priority;
+  uint32_t FunctionIndex;
+};
+
 struct Section {
   explicit Section(SectionType SecType) : Type(SecType) {}
   virtual ~Section();
@@ -173,6 +178,7 @@ struct LinkingSection : CustomSection {
   uint32_t DataSize;
   std::vector<SymbolInfo> SymbolInfos;
   std::vector<SegmentInfo> SegmentInfos;
+  std::vector<InitFunction> InitFunctions;
 };
 
 struct TypeSection : Section {
@@ -309,6 +315,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::Relocation)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::NameEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::SegmentInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::SymbolInfo)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::InitFunction)
 
 namespace llvm {
 namespace yaml {
@@ -399,6 +406,10 @@ template <> struct MappingTraits<WasmYAML::ElemSegment> {
 
 template <> struct MappingTraits<WasmYAML::SymbolInfo> {
   static void mapping(IO &IO, WasmYAML::SymbolInfo &Info);
+};
+
+template <> struct MappingTraits<WasmYAML::InitFunction> {
+  static void mapping(IO &IO, WasmYAML::InitFunction &Init);
 };
 
 template <> struct ScalarEnumerationTraits<WasmYAML::ValueType> {

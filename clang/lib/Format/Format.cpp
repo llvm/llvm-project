@@ -732,7 +732,6 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     GoogleStyle.SpacesInContainerLiterals = false;
   } else if (Language == FormatStyle::LK_ObjC) {
     GoogleStyle.ColumnLimit = 100;
-    GoogleStyle.IndentWrappedFunctionNames = true;
   }
 
   return GoogleStyle;

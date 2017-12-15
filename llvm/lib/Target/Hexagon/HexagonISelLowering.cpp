@@ -1272,6 +1272,9 @@ SDValue HexagonTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
 
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
+  if (Subtarget.useHVXOps() && Subtarget.isHVXVectorType(ty(LHS)))
+    return LowerHvxSetCC(Op, DAG);
+
   SDValue Cmp = Op.getOperand(2);
   ISD::CondCode CC = cast<CondCodeSDNode>(Cmp)->get();
 
@@ -1732,6 +1735,9 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
       addRegisterClass(MVT::v128i8, &Hexagon::HvxWRRegClass);
       addRegisterClass(MVT::v64i16, &Hexagon::HvxWRRegClass);
       addRegisterClass(MVT::v32i32, &Hexagon::HvxWRRegClass);
+      addRegisterClass(MVT::v16i1, &Hexagon::HvxQRRegClass);
+      addRegisterClass(MVT::v32i1, &Hexagon::HvxQRRegClass);
+      addRegisterClass(MVT::v64i1, &Hexagon::HvxQRRegClass);
       addRegisterClass(MVT::v512i1, &Hexagon::HvxQRRegClass);
     } else if (Subtarget.useHVX128BOps()) {
       addRegisterClass(MVT::v128i8,  &Hexagon::HvxVRRegClass);
@@ -1740,6 +1746,9 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
       addRegisterClass(MVT::v256i8,  &Hexagon::HvxWRRegClass);
       addRegisterClass(MVT::v128i16, &Hexagon::HvxWRRegClass);
       addRegisterClass(MVT::v64i32,  &Hexagon::HvxWRRegClass);
+      addRegisterClass(MVT::v32i1, &Hexagon::HvxQRRegClass);
+      addRegisterClass(MVT::v64i1, &Hexagon::HvxQRRegClass);
+      addRegisterClass(MVT::v128i1, &Hexagon::HvxQRRegClass);
       addRegisterClass(MVT::v1024i1, &Hexagon::HvxQRRegClass);
     }
   }
@@ -2001,10 +2010,12 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
       setIndexedLoadAction(ISD::POST_INC,  T, Legal);
       setIndexedStoreAction(ISD::POST_INC, T, Legal);
 
-      setOperationAction(ISD::ADD, T, Legal);
-      setOperationAction(ISD::SUB, T, Legal);
-      setOperationAction(ISD::MUL, T, Custom);
+      setOperationAction(ISD::ADD,     T, Legal);
+      setOperationAction(ISD::SUB,     T, Legal);
+      setOperationAction(ISD::VSELECT, T, Legal);
 
+      setOperationAction(ISD::MUL,                T, Custom);
+      setOperationAction(ISD::SETCC,              T, Custom);
       setOperationAction(ISD::BUILD_VECTOR,       T, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR,   T, Custom);
       setOperationAction(ISD::INSERT_VECTOR_ELT,  T, Custom);
@@ -2250,6 +2261,7 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
 /// passed to the function.
 bool HexagonTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                                const CallInst &I,
+                                               MachineFunction &MF,
                                                unsigned Intrinsic) const {
   switch (Intrinsic) {
   case Intrinsic::hexagon_V6_vgathermw:
@@ -2271,9 +2283,9 @@ bool HexagonTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.align = M.getDataLayout().getTypeAllocSizeInBits(VecTy) / 8;
-    Info.vol = true;
-    Info.readMem = true;
-    Info.writeMem = true;
+    Info.flags = MachineMemOperand::MOLoad |
+                 MachineMemOperand::MOStore |
+                 MachineMemOperand::MOVolatile;
     return true;
   }
   default:

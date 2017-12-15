@@ -435,75 +435,12 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
   // OpenCL and C++ both have bool, true, false keywords.
   Opts.Bool = Opts.OpenCL || Opts.CPlusPlus;
 
-  //    if (Opts.CPlusPlus)
-  //        Opts.CXXOperatorNames = !Args.hasArg(OPT_fno_operator_names);
-  //
-  //    if (Args.hasArg(OPT_fobjc_gc_only))
-  //        Opts.setGCMode(LangOptions::GCOnly);
-  //    else if (Args.hasArg(OPT_fobjc_gc))
-  //        Opts.setGCMode(LangOptions::HybridGC);
-  //
-  //    if (Args.hasArg(OPT_print_ivar_layout))
-  //        Opts.ObjCGCBitmapPrint = 1;
-  //
-  //    if (Args.hasArg(OPT_faltivec))
-  //        Opts.AltiVec = 1;
-  //
-  //    if (Args.hasArg(OPT_pthread))
-  //        Opts.POSIXThreads = 1;
-  //
-  //    llvm::StringRef Vis = getLastArgValue(Args, OPT_fvisibility,
-  //                                          "default");
-  //    if (Vis == "default")
   Opts.setValueVisibilityMode(DefaultVisibility);
-  //    else if (Vis == "hidden")
-  //        Opts.setVisibilityMode(LangOptions::Hidden);
-  //    else if (Vis == "protected")
-  //        Opts.setVisibilityMode(LangOptions::Protected);
-  //    else
-  //        Diags.Report(diag::err_drv_invalid_value)
-  //        << Args.getLastArg(OPT_fvisibility)->getAsString(Args) << Vis;
-
-  //    Opts.OverflowChecking = Args.hasArg(OPT_ftrapv);
 
   // Mimicing gcc's behavior, trigraphs are only enabled if -trigraphs
   // is specified, or -std is set to a conforming mode.
   Opts.Trigraphs = !Opts.GNUMode;
-  //    if (Args.hasArg(OPT_trigraphs))
-  //        Opts.Trigraphs = 1;
-  //
-  //    Opts.DollarIdents = Args.hasFlag(OPT_fdollars_in_identifiers,
-  //                                     OPT_fno_dollars_in_identifiers,
-  //                                     !Opts.AsmPreprocessor);
-  //    Opts.PascalStrings = Args.hasArg(OPT_fpascal_strings);
-  //    Opts.Microsoft = Args.hasArg(OPT_fms_extensions);
-  //    Opts.WritableStrings = Args.hasArg(OPT_fwritable_strings);
-  //    if (Args.hasArg(OPT_fno_lax_vector_conversions))
-  //        Opts.LaxVectorConversions = 0;
-  //    Opts.Exceptions = Args.hasArg(OPT_fexceptions);
-  //    Opts.RTTI = !Args.hasArg(OPT_fno_rtti);
-  //    Opts.Blocks = Args.hasArg(OPT_fblocks);
   Opts.CharIsSigned = ArchSpec(triple).CharIsSignedByDefault();
-  //    Opts.ShortWChar = Args.hasArg(OPT_fshort_wchar);
-  //    Opts.Freestanding = Args.hasArg(OPT_ffreestanding);
-  //    Opts.NoBuiltin = Args.hasArg(OPT_fno_builtin) || Opts.Freestanding;
-  //    Opts.AssumeSaneOperatorNew =
-  //    !Args.hasArg(OPT_fno_assume_sane_operator_new);
-  //    Opts.HeinousExtensions = Args.hasArg(OPT_fheinous_gnu_extensions);
-  //    Opts.AccessControl = Args.hasArg(OPT_faccess_control);
-  //    Opts.ElideConstructors = !Args.hasArg(OPT_fno_elide_constructors);
-  //    Opts.MathErrno = !Args.hasArg(OPT_fno_math_errno);
-  //    Opts.InstantiationDepth = getLastArgIntValue(Args, OPT_ftemplate_depth,
-  //    99,
-  //                                                 Diags);
-  //    Opts.NeXTRuntime = !Args.hasArg(OPT_fgnu_runtime);
-  //    Opts.ObjCConstantStringClass = getLastArgValue(Args,
-  //                                                   OPT_fconstant_string_class);
-  //    Opts.ObjCNonFragileABI = Args.hasArg(OPT_fobjc_nonfragile_abi);
-  //    Opts.CatchUndefined = Args.hasArg(OPT_fcatch_undefined_behavior);
-  //    Opts.EmitAllDecls = Args.hasArg(OPT_femit_all_decls);
-  //    Opts.PICLevel = getLastArgIntValue(Args, OPT_pic_level, 0, Diags);
-  //    Opts.Static = Args.hasArg(OPT_static_define);
   Opts.OptimizeSize = 0;
 
   // FIXME: Eliminate this dependency.
@@ -518,18 +455,6 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
   //
   // FIXME: This is affected by other options (-fno-inline).
   Opts.NoInlineDefine = !Opt;
-
-  //    unsigned SSP = getLastArgIntValue(Args, OPT_stack_protector, 0, Diags);
-  //    switch (SSP) {
-  //        default:
-  //            Diags.Report(diag::err_drv_invalid_value)
-  //            << Args.getLastArg(OPT_stack_protector)->getAsString(Args) <<
-  //            SSP;
-  //            break;
-  //        case 0: Opts.setStackProtectorMode(LangOptions::SSPOff); break;
-  //        case 1: Opts.setStackProtectorMode(LangOptions::SSPOn);  break;
-  //        case 2: Opts.setStackProtectorMode(LangOptions::SSPReq); break;
-  //    }
 }
 
 ClangASTContext::ClangASTContext(const char *target_triple)

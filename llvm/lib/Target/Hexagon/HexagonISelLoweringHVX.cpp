@@ -383,3 +383,74 @@ HexagonTargetLowering::LowerHvxMul(SDValue Op, SelectionDAG &DAG) const {
   }
   return SDValue();
 }
+
+SDValue
+HexagonTargetLowering::LowerHvxSetCC(SDValue Op, SelectionDAG &DAG) const {
+  MVT VecTy = ty(Op.getOperand(0));
+  assert(VecTy == ty(Op.getOperand(1)));
+
+  SDValue Cmp = Op.getOperand(2);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Cmp)->get();
+  bool Negate = false, Swap = false;
+
+  // HVX has instructions for SETEQ, SETGT, SETUGT. The other comparisons
+  // can be arranged as operand-swapped/negated versions of these. Since
+  // the generated code will have the original CC expressed as
+  //   (negate (swap-op NewCmp)),
+  // the condition code for the NewCmp should be calculated from the original
+  // CC by applying these operations in the reverse order.
+
+  switch (CC) {
+    case ISD::SETNE:    // !eq
+    case ISD::SETLE:    // !gt
+    case ISD::SETGE:    // !lt
+    case ISD::SETULE:   // !ugt
+    case ISD::SETUGE:   // !ult
+      CC = ISD::getSetCCInverse(CC, true);
+      Negate = true;
+      break;
+    default:
+      break;
+  }
+
+  switch (CC) {
+    case ISD::SETLT:    // swap gt
+    case ISD::SETULT:   // swap ugt
+      CC = ISD::getSetCCSwappedOperands(CC);
+      Swap = true;
+      break;
+    default:
+      break;
+  }
+
+  assert(CC == ISD::SETEQ || CC == ISD::SETGT || CC == ISD::SETUGT);
+
+  MVT ElemTy = VecTy.getVectorElementType();
+  unsigned ElemWidth = ElemTy.getSizeInBits();
+  assert(isPowerOf2_32(ElemWidth));
+
+  auto getIdx = [] (unsigned Code) {
+    static const unsigned Idx[] = { ISD::SETEQ, ISD::SETGT, ISD::SETUGT };
+    for (unsigned I = 0, E = array_lengthof(Idx); I != E; ++I)
+      if (Code == Idx[I])
+        return I;
+    llvm_unreachable("Unhandled CondCode");
+  };
+
+  static unsigned OpcTable[3][3] = {
+    //           SETEQ             SETGT,            SETUGT
+    /* Byte */ { Hexagon::V6_veqb, Hexagon::V6_vgtb, Hexagon::V6_vgtub },
+    /* Half */ { Hexagon::V6_veqh, Hexagon::V6_vgth, Hexagon::V6_vgtuh },
+    /* Word */ { Hexagon::V6_veqw, Hexagon::V6_vgtw, Hexagon::V6_vgtuw }
+  };
+
+  unsigned CmpOpc = OpcTable[Log2_32(ElemWidth)-3][getIdx(CC)];
+
+  MVT ResTy = ty(Op);
+  const SDLoc &dl(Op);
+  SDValue OpL = Swap ? Op.getOperand(1) : Op.getOperand(0);
+  SDValue OpR = Swap ? Op.getOperand(0) : Op.getOperand(1);
+  SDValue CmpV = getNode(CmpOpc, dl, ResTy, {OpL, OpR}, DAG);
+  return Negate ? getNode(Hexagon::V6_pred_not, dl, ResTy, {CmpV}, DAG)
+                : CmpV;
+}

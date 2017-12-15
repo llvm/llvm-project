@@ -8,7 +8,6 @@
 //===---------------------------------------------------------------------===//
 
 #include "ClangdUnit.h"
-
 #include "Compiler.h"
 #include "Logger.h"
 #include "Trace.h"
@@ -28,7 +27,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Format.h"
-
 #include <algorithm>
 #include <chrono>
 

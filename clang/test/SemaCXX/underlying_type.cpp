@@ -62,3 +62,17 @@ enum E {};
 void PR26014() { f<E>(0); } // should not yield an ambiguity error.
 
 template<typename ...T> void f(__underlying_type(T) v); // expected-error {{declaration type contains unexpanded parameter pack 'T'}}
+
+namespace PR23421 {
+template <class T>
+using underlying_type_t = __underlying_type(T);
+// Should not crash.
+template <class T>
+struct make_unsigned_impl { using type = underlying_type_t<T>; };
+using AnotherType = make_unsigned_impl<E>::type;
+
+// also should not crash.
+template <typename T>
+__underlying_type(T) ft();
+auto x = &ft<E>;
+}
