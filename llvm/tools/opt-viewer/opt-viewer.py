@@ -130,6 +130,7 @@ class SourceFileRenderer:
 
         print('''
 <html>
+<meta charset="utf-8" />
 <head>
 <link rel='stylesheet' type='text/css' href='style.css'>
 </head>
@@ -173,6 +174,7 @@ class IndexRenderer:
     def render(self, all_remarks):
         print('''
 <html>
+<meta charset="utf-8" />
 <head>
 <link rel='stylesheet' type='text/css' href='style.css'>
 </head>
