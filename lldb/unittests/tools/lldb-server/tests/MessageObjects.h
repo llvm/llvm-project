@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLDB_SERVER_TESTS_MESSAGEOBJECTS_H
+#define LLDB_SERVER_TESTS_MESSAGEOBJECTS_H
+
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
@@ -102,4 +105,7 @@ llvm::Error make_parsing_error(llvm::StringRef format, Args &&... args) {
   return llvm::make_error<llvm::StringError>(error,
                                              llvm::inconvertibleErrorCode());
 }
+
 } // namespace llgs_tests
+
+#endif // LLDB_SERVER_TESTS_MESSAGEOBJECTS_H

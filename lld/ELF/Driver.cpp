@@ -626,6 +626,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->LTOPartitions = args::getInteger(Args, OPT_lto_partitions, 1);
   Config->MapFile = Args.getLastArgValue(OPT_Map);
   Config->NoGnuUnique = Args.hasArg(OPT_no_gnu_unique);
+  Config->MergeArmExidx =
+      Args.hasFlag(OPT_merge_exidx_entries, OPT_no_merge_exidx_entries, true);
   Config->NoUndefinedVersion = Args.hasArg(OPT_no_undefined_version);
   Config->NoinhibitExec = Args.hasArg(OPT_noinhibit_exec);
   Config->Nostdlib = Args.hasArg(OPT_nostdlib);

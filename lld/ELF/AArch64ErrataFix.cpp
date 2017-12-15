@@ -23,9 +23,6 @@
 // - We can place the replacement sequence within range of the branch.
 
 // FIXME:
-// - At this stage the implementation only supports detection and not fixing,
-// this is sufficient to test the decode and recognition of the erratum
-// sequence.
 // - The implementation here only supports one patch, the AArch64 Cortex-53
 // errata 843419 that affects r0p0, r0p1, r0p2 and r0p4 versions of the core.
 // To keep the initial version simple there is no support for multiple
@@ -336,13 +333,6 @@ static bool is843419ErratumSequence(uint32_t Instr1, uint32_t Instr2,
          isLoadStoreRegisterUnsigned(Instr4) && getRn(Instr4) == Rn;
 }
 
-static void report843419Fix(uint64_t AdrpAddr) {
-  if (!Config->Verbose)
-    return;
-  message("detected cortex-a53-843419 erratum sequence starting at " +
-          utohexstr(AdrpAddr) + " in unpatched output.");
-}
-
 // Scan the instruction sequence starting at Offset Off from the base of
 // InputSection IS. We update Off in this function rather than in the caller as
 // we can skip ahead much further into the section when we know how many
@@ -385,16 +375,66 @@ static uint64_t scanCortexA53Errata843419(InputSection *IS, uint64_t &Off,
   return PatchOff;
 }
 
-// The AArch64 ABI permits data in executable sections. We must avoid scanning
-// this data as if it were instructions to avoid false matches.
-// The ABI Section 4.5.4 Mapping symbols; defines local symbols that describe
-// half open intervals [Symbol Value, Next Symbol Value) of code and data
-// within sections. If there is no next symbol then the half open interval is
-// [Symbol Value, End of section). The type, code or data, is determined by the
-// mapping symbol name, $x for code, $d for data.
-std::map<InputSection *,
-         std::vector<const Defined *>> static makeAArch64SectionMap() {
-  std::map<InputSection *, std::vector<const Defined *>> SectionMap;
+class lld::elf::Patch843419Section : public SyntheticSection {
+public:
+  Patch843419Section(InputSection *P, uint64_t Off);
+
+  void writeTo(uint8_t *Buf) override;
+
+  size_t getSize() const override { return 8; }
+
+  uint64_t getLDSTAddr() const;
+
+  // The Section we are patching.
+  const InputSection *Patchee;
+  // The offset of the instruction in the Patchee section we are patching.
+  uint64_t PatcheeOffset;
+  // A label for the start of the Patch that we can use as a relocation target.
+  Symbol *PatchSym;
+};
+
+lld::elf::Patch843419Section::Patch843419Section(InputSection *P, uint64_t Off)
+    : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 4,
+                       ".text.patch"),
+      Patchee(P), PatcheeOffset(Off) {
+  this->Parent = P->getParent();
+  PatchSym = addSyntheticLocal(
+      Saver.save("__CortexA53843419_" + utohexstr(getLDSTAddr())), STT_FUNC, 0,
+      getSize(), this);
+  addSyntheticLocal(Saver.save("$x"), STT_NOTYPE, 0, 0, this);
+}
+
+uint64_t lld::elf::Patch843419Section::getLDSTAddr() const {
+  return Patchee->getParent()->Addr + Patchee->OutSecOff + PatcheeOffset;
+}
+
+void lld::elf::Patch843419Section::writeTo(uint8_t *Buf) {
+  // Copy the instruction that we will be replacing with a branch in the
+  // Patchee Section.
+  write32le(Buf, read32le(Patchee->Data.begin() + PatcheeOffset));
+
+  // Apply any relocation transferred from the original PatcheeSection.
+  // For a SyntheticSection Buf already has OutSecOff added, but relocateAlloc
+  // also adds OutSecOff so we need to subtract to avoid double counting.
+  this->relocateAlloc(Buf - OutSecOff, Buf - OutSecOff + getSize());
+
+  // Return address is the next instruction after the one we have just copied.
+  uint64_t S = getLDSTAddr() + 4;
+  uint64_t P = PatchSym->getVA() + 4;
+  Target->relocateOne(Buf + 4, R_AARCH64_JUMP26, S - P);
+}
+
+void AArch64Err843419Patcher::init() {
+  // The AArch64 ABI permits data in executable sections. We must avoid scanning
+  // this data as if it were instructions to avoid false matches. We use the
+  // mapping symbols in the InputObjects to identify this data, caching the
+  // results in SectionMap so we don't have to recalculate it each pass.
+
+  // The ABI Section 4.5.4 Mapping symbols; defines local symbols that describe
+  // half open intervals [Symbol Value, Next Symbol Value) of code and data
+  // within sections. If there is no next symbol then the half open interval is
+  // [Symbol Value, End of section). The type, code or data, is determined by
+  // the mapping symbol name, $x for code, $d for data.
   auto IsCodeMapSymbol = [](const Symbol *B) {
     return B->getName() == "$x" || B->getName().startswith("$x.");
   };
@@ -435,56 +475,174 @@ std::map<InputSection *,
                     }),
         MapSyms.end());
   }
-  return SectionMap;
+  Initialized = true;
 }
 
-static void scanInputSectionDescription(std::vector<const Defined *> &MapSyms,
-                                        InputSection *IS) {
-  // Use SectionMap to make sure we only scan code and not inline data.
-  // We have already sorted MapSyms in ascending order and removed
-  // consecutive mapping symbols of the same type. Our range of
-  // executable instructions to scan is therefore [CodeSym->Value,
-  // DataSym->Value) or [CodeSym->Value, section size).
-  auto CodeSym = llvm::find_if(MapSyms, [&](const Defined *MS) {
-    return MS->getName().startswith("$x");
-  });
+// Insert the PatchSections we have created back into the
+// InputSectionDescription. As inserting patches alters the addresses of
+// InputSections that follow them, we try and place the patches after all the
+// executable sections, although we may need to insert them earlier if the
+// InputSectionDescription is larger than the maximum branch range.
+void AArch64Err843419Patcher::insertPatches(
+    InputSectionDescription &ISD, std::vector<Patch843419Section *> &Patches) {
+  uint64_t ISLimit;
+  uint64_t PrevISLimit = ISD.Sections.front()->OutSecOff;
+  uint64_t PatchUpperBound = PrevISLimit + Target->ThunkSectionSpacing;
 
-  while (CodeSym != MapSyms.end()) {
-    auto DataSym = std::next(CodeSym);
-    uint64_t Off = (*CodeSym)->Value;
-    uint64_t Limit =
-        (DataSym == MapSyms.end()) ? IS->Data.size() : (*DataSym)->Value;
-
-    while (Off < Limit) {
-      uint64_t StartAddr = IS->getParent()->Addr + IS->OutSecOff + Off;
-      if (scanCortexA53Errata843419(IS, Off, Limit))
-        report843419Fix(StartAddr);
+  // Set the OutSecOff of patches to the place where we want to insert them.
+  // We use a similar strategy to Thunk placement. Place patches roughly
+  // every multiple of maximum branch range.
+  auto PatchIt = Patches.begin();
+  auto PatchEnd = Patches.end();
+  for (const InputSection *IS : ISD.Sections) {
+    ISLimit = IS->OutSecOff + IS->getSize();
+    if (ISLimit > PatchUpperBound) {
+      while (PatchIt != PatchEnd) {
+        if ((*PatchIt)->getLDSTAddr() >= PrevISLimit)
+          break;
+        (*PatchIt)->OutSecOff = PrevISLimit;
+        ++PatchIt;
+      }
+      PatchUpperBound = PrevISLimit + Target->ThunkSectionSpacing;
     }
-    if (DataSym == MapSyms.end())
-      break;
-    CodeSym = std::next(DataSym);
+    PrevISLimit = ISLimit;
   }
+  for (; PatchIt != PatchEnd; ++PatchIt) {
+    (*PatchIt)->OutSecOff = ISLimit;
+  }
+
+  // merge all patch sections. We use the OutSecOff assigned above to
+  // determine the insertion point. This is ok as we only merge into an
+  // InputSectionDescription once per pass, and at the end of the pass
+  // assignAddresses() will recalculate all the OutSecOff values.
+  std::vector<InputSection *> Tmp;
+  Tmp.reserve(ISD.Sections.size() + Patches.size());
+  auto MergeCmp = [](const InputSection *A, const InputSection *B) {
+    if (A->OutSecOff < B->OutSecOff)
+      return true;
+    if (A->OutSecOff == B->OutSecOff && isa<Patch843419Section>(A) &&
+        !isa<Patch843419Section>(B))
+      return true;
+    return false;
+  };
+  std::merge(ISD.Sections.begin(), ISD.Sections.end(), Patches.begin(),
+             Patches.end(), std::back_inserter(Tmp), MergeCmp);
+  ISD.Sections = std::move(Tmp);
 }
 
-// Scan all the executable code in an AArch64 link to detect the Cortex-A53
-// erratum 843419.
-// FIXME: The current implementation only scans for the erratum sequence, it
-// does not attempt to fix it.
-void lld::elf::reportA53Errata843419Fixes() {
-  std::map<InputSection *, std::vector<const Defined *>> SectionMap =
-      makeAArch64SectionMap();
+// Given an erratum sequence that starts at address AdrpAddr, with an
+// instruction that we need to patch at PatcheeOffset from the start of
+// InputSection IS, create a Patch843419 Section and add it to the
+// Patches that we need to insert.
+static void implementPatch(uint64_t AdrpAddr, uint64_t PatcheeOffset,
+                           InputSection *IS,
+                           std::vector<Patch843419Section *> &Patches) {
+  // There may be a relocation at the same offset that we are patching. There
+  // are three cases that we need to consider.
+  // Case 1: R_AARCH64_JUMP26 branch relocation. We have already patched this
+  // instance of the erratum on a previous patch and altered the relocation. We
+  // have nothing more to do.
+  // Case 2: A load/store register (unsigned immediate) class relocation. There
+  // are two of these R_AARCH_LD64_ABS_LO12_NC and R_AARCH_LD64_GOT_LO12_NC and
+  // they are both absolute. We need to add the same relocation to the patch,
+  // and replace the relocation with a R_AARCH_JUMP26 branch relocation.
+  // Case 3: No relocation. We must create a new R_AARCH64_JUMP26 branch
+  // relocation at the offset.
+  auto RelIt = std::find_if(
+      IS->Relocations.begin(), IS->Relocations.end(),
+      [=](const Relocation &R) { return R.Offset == PatcheeOffset; });
+  if (RelIt != IS->Relocations.end() && RelIt->Type == R_AARCH64_JUMP26)
+    return;
 
+  if (Config->Verbose)
+    message("detected cortex-a53-843419 erratum sequence starting at " +
+            utohexstr(AdrpAddr) + " in unpatched output.");
+
+  auto *PS = make<Patch843419Section>(IS, PatcheeOffset);
+  Patches.push_back(PS);
+
+  auto MakeRelToPatch = [](uint64_t Offset, Symbol *PatchSym) {
+    return Relocation{R_PC, R_AARCH64_JUMP26, Offset, 0, PatchSym};
+  };
+
+  if (RelIt != IS->Relocations.end()) {
+    PS->Relocations.push_back(
+        {RelIt->Expr, RelIt->Type, 0, RelIt->Addend, RelIt->Sym});
+    *RelIt = MakeRelToPatch(PatcheeOffset, PS->PatchSym);
+  } else
+    IS->Relocations.push_back(MakeRelToPatch(PatcheeOffset, PS->PatchSym));
+}
+
+// Scan all the instructions in InputSectionDescription, for each instance of
+// the erratum sequence create a Patch843419Section. We return the list of
+// Patch843419Sections that need to be applied to ISD.
+std::vector<Patch843419Section *>
+AArch64Err843419Patcher::patchInputSectionDescription(
+    InputSectionDescription &ISD) {
+  std::vector<Patch843419Section *> Patches;
+  for (InputSection *IS : ISD.Sections) {
+    //  LLD doesn't use the erratum sequence in SyntheticSections.
+    if (isa<SyntheticSection>(IS))
+      continue;
+    // Use SectionMap to make sure we only scan code and not inline data.
+    // We have already sorted MapSyms in ascending order and removed consecutive
+    // mapping symbols of the same type. Our range of executable instructions to
+    // scan is therefore [CodeSym->Value, DataSym->Value) or [CodeSym->Value,
+    // section size).
+    std::vector<const Defined *> &MapSyms = SectionMap[IS];
+
+    auto CodeSym = llvm::find_if(MapSyms, [&](const Defined *MS) {
+      return MS->getName().startswith("$x");
+    });
+
+    while (CodeSym != MapSyms.end()) {
+      auto DataSym = std::next(CodeSym);
+      uint64_t Off = (*CodeSym)->Value;
+      uint64_t Limit =
+          (DataSym == MapSyms.end()) ? IS->Data.size() : (*DataSym)->Value;
+
+      while (Off < Limit) {
+        uint64_t StartAddr = IS->getParent()->Addr + IS->OutSecOff + Off;
+        if (uint64_t PatcheeOffset = scanCortexA53Errata843419(IS, Off, Limit))
+          implementPatch(StartAddr, PatcheeOffset, IS, Patches);
+      }
+      if (DataSym == MapSyms.end())
+        break;
+      CodeSym = std::next(DataSym);
+    }
+  }
+  return Patches;
+}
+
+// For each InputSectionDescription make one pass over the executable sections
+// looking for the erratum sequence; creating a synthetic Patch843419Section
+// for each instance found. We insert these synthetic patch sections after the
+// executable code in each InputSectionDescription.
+//
+// PreConditions:
+// The Output and Input Sections have had their final addresses assigned.
+//
+// PostConditions:
+// Returns true if at least one patch was added. The addresses of the
+// Ouptut and Input Sections may have been changed.
+// Returns false if no patches were required and no changes were made.
+bool AArch64Err843419Patcher::createFixes() {
+  if (Initialized == false)
+    init();
+
+  bool AddressesChanged = false;
   for (OutputSection *OS : OutputSections) {
     if (!(OS->Flags & SHF_ALLOC) || !(OS->Flags & SHF_EXECINSTR))
       continue;
     for (BaseCommand *BC : OS->SectionCommands)
       if (auto *ISD = dyn_cast<InputSectionDescription>(BC)) {
-        for (InputSection *IS : ISD->Sections) {
-          //  LLD doesn't use the erratum sequence in SyntheticSections.
-          if (isa<SyntheticSection>(IS))
-            continue;
-          scanInputSectionDescription(SectionMap[IS], IS);
+        std::vector<Patch843419Section *> Patches =
+            patchInputSectionDescription(*ISD);
+        if (!Patches.empty()) {
+          insertPatches(*ISD, Patches);
+          AddressesChanged = true;
         }
       }
   }
+  return AddressesChanged;
 }

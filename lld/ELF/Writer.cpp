@@ -1158,6 +1158,60 @@ static bool compareByFilePosition(InputSection *A, InputSection *B) {
   return LA->OutSecOff < LB->OutSecOff;
 }
 
+// This function is used by the --merge-exidx-entries to detect duplicate
+// .ARM.exidx sections. It is Arm only.
+//
+// The .ARM.exidx section is of the form:
+// | PREL31 offset to function | Unwind instructions for function |
+// where the unwind instructions are either a small number of unwind
+// instructions inlined into the table entry, the special CANT_UNWIND value of
+// 0x1 or a PREL31 offset into a .ARM.extab Section that contains unwind
+// instructions.
+//
+// We return true if all the unwind instructions in the .ARM.exidx entries of
+// Cur can be merged into the last entry of Prev.
+static bool isDuplicateArmExidxSec(InputSection *Prev, InputSection *Cur) {
+
+  // References to .ARM.Extab Sections have bit 31 clear and are not the
+  // special EXIDX_CANTUNWIND bit-pattern.
+  auto IsExtabRef = [](uint32_t Unwind) {
+    return (Unwind & 0x80000000) == 0 && Unwind != 0x1;
+  };
+
+  struct ExidxEntry {
+    ulittle32_t Fn;
+    ulittle32_t Unwind;
+  };
+
+  // Get the last table Entry from the previous .ARM.exidx section.
+  const ExidxEntry &PrevEntry = *reinterpret_cast<const ExidxEntry *>(
+      Prev->Data.data() + Prev->getSize() - sizeof(ExidxEntry));
+  if (IsExtabRef(PrevEntry.Unwind))
+    return false;
+
+  // We consider the unwind instructions of an .ARM.exidx table entry
+  // a duplicate if the previous unwind instructions if:
+  // - Both are the special EXIDX_CANTUNWIND.
+  // - Both are the same inline unwind instructions.
+  // We do not attempt to follow and check links into .ARM.extab tables as
+  // consecutive identical entries are rare and the effort to check that they
+  // are identical is high.
+
+  if (isa<SyntheticSection>(Cur))
+    // Exidx sentinel section has implicit EXIDX_CANTUNWIND;
+    return PrevEntry.Unwind == 0x1;
+
+  ArrayRef<const ExidxEntry> Entries(
+      reinterpret_cast<const ExidxEntry *>(Cur->Data.data()),
+      Cur->getSize() / sizeof(ExidxEntry));
+  for (const ExidxEntry &Entry : Entries)
+    if (IsExtabRef(Entry.Unwind) || Entry.Unwind != PrevEntry.Unwind)
+      return false;
+  // All table entries in this .ARM.exidx Section can be merged into the
+  // previous Section.
+  return true;
+}
+
 template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
   for (OutputSection *Sec : OutputSections) {
     if (!(Sec->Flags & SHF_LINK_ORDER))
@@ -1176,8 +1230,36 @@ template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
       }
     }
     std::stable_sort(Sections.begin(), Sections.end(), compareByFilePosition);
+
+    if (Config->MergeArmExidx && !Config->Relocatable &&
+        Config->EMachine == EM_ARM && Sec->Type == SHT_ARM_EXIDX) {
+      // The EHABI for the Arm Architecture permits consecutive identical
+      // table entries to be merged. We use a simple implementation that
+      // removes a .ARM.exidx Input Section if it can be merged into the
+      // previous one. This does not require any rewriting of InputSection
+      // contents but misses opportunities for fine grained deduplication where
+      // only a subset of the InputSection contents can be merged.
+      int Cur = 1;
+      int Prev = 0;
+      int N = Sections.size();
+      while (Cur < N) {
+        if (isDuplicateArmExidxSec(Sections[Prev], Sections[Cur]))
+          Sections[Cur] = nullptr;
+        else
+          Prev = Cur;
+        ++Cur;
+      }
+    }
+
     for (int I = 0, N = Sections.size(); I < N; ++I)
       *ScriptSections[I] = Sections[I];
+
+    // Remove the Sections we marked as duplicate earlier.
+    for (BaseCommand *Base : Sec->SectionCommands)
+      if (auto *ISD = dyn_cast<InputSectionDescription>(Base))
+        ISD->Sections.erase(
+            std::remove(ISD->Sections.begin(), ISD->Sections.end(), nullptr),
+            ISD->Sections.end());
   }
 }
 
@@ -1399,6 +1481,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // alter InputSection addresses we must converge to a fixed point.
   if (Target->NeedsThunks || Config->AndroidPackDynRelocs) {
     ThunkCreator TC;
+    AArch64Err843419Patcher A64P;
     bool Changed;
     do {
       Script->assignAddresses();
@@ -1408,7 +1491,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       if (Config->FixCortexA53Errata843419) {
         if (Changed)
           Script->assignAddresses();
-        reportA53Errata843419Fixes();
+        Changed |= A64P.createFixes();
       }
       if (InX::MipsGot)
         InX::MipsGot->updateAllocSize();

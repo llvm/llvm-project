@@ -15,6 +15,7 @@
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <cstdlib>
 #include <future>
@@ -26,35 +27,46 @@ using namespace lldb_private;
 using namespace llvm;
 
 namespace llgs_tests {
-void TestClient::Initialize() { HostInfo::Initialize(); }
-
 bool TestClient::IsDebugServer() {
   return sys::path::filename(LLDB_SERVER).contains("debugserver");
 }
 
 bool TestClient::IsLldbServer() { return !IsDebugServer(); }
 
-TestClient::TestClient(const std::string &test_name,
-                       const std::string &test_case_name)
-    : m_test_name(test_name), m_test_case_name(test_case_name),
-      m_pc_register(UINT_MAX) {}
+TestClient::TestClient(std::unique_ptr<Connection> Conn) {
+  SetConnection(Conn.release());
 
-TestClient::~TestClient() {}
+  SendAck(); // Send this as a handshake.
+}
 
-llvm::Error TestClient::StartDebugger() {
+TestClient::~TestClient() {
+  std::string response;
+  // Debugserver (non-conformingly?) sends a reply to the k packet instead of
+  // simply closing the connection.
+  PacketResult result =
+      IsDebugServer() ? PacketResult::Success : PacketResult::ErrorDisconnected;
+  EXPECT_THAT_ERROR(SendMessage("k", response, result), Succeeded());
+}
+
+Expected<std::unique_ptr<TestClient>> TestClient::launch(StringRef Log) {
+  return launch(Log, {});
+}
+
+Expected<std::unique_ptr<TestClient>> TestClient::launch(StringRef Log, ArrayRef<StringRef> InferiorArgs) {
   const ArchSpec &arch_spec = HostInfo::GetArchitecture();
   Args args;
   args.AppendArgument(LLDB_SERVER);
-  if (IsLldbServer()) {
+  if (IsLldbServer())
     args.AppendArgument("gdbserver");
-    args.AppendArgument("--log-channels=gdb-remote packets");
-  } else {
-    args.AppendArgument("--log-flags=0x800000");
-  }
   args.AppendArgument("--reverse-connect");
-  std::string log_file_name = GenerateLogFileName(arch_spec);
-  if (log_file_name.size())
-    args.AppendArgument("--log-file=" + log_file_name);
+
+  if (!Log.empty()) {
+    args.AppendArgument(("--log-file=" + Log).str());
+    if (IsLldbServer())
+      args.AppendArgument("--log-channels=gdb-remote packets");
+    else
+      args.AppendArgument("--log-flags=0x800000");
+  }
 
   Status status;
   TCPSocket listen_socket(true, false);
@@ -62,36 +74,26 @@ llvm::Error TestClient::StartDebugger() {
   if (status.Fail())
     return status.ToError();
 
-  char connect_remote_address[64];
-  snprintf(connect_remote_address, sizeof(connect_remote_address),
-           "localhost:%u", listen_socket.GetLocalPortNumber());
+  args.AppendArgument(
+      ("localhost:" + Twine(listen_socket.GetLocalPortNumber())).str());
 
-  args.AppendArgument(connect_remote_address);
+  if (!InferiorArgs.empty()) {
+    args.AppendArgument("--");
+    for (StringRef arg : InferiorArgs)
+      args.AppendArgument(arg);
+  }
 
-  m_server_process_info.SetArchitecture(arch_spec);
-  m_server_process_info.SetArguments(args, true);
-  status = Host::LaunchProcess(m_server_process_info);
+  ProcessLaunchInfo Info;
+  Info.SetArchitecture(arch_spec);
+  Info.SetArguments(args, true);
+  status = Host::LaunchProcess(Info);
   if (status.Fail())
     return status.ToError();
 
-  char connect_remote_uri[64];
-  snprintf(connect_remote_uri, sizeof(connect_remote_uri), "connect://%s",
-           connect_remote_address);
   Socket *accept_socket;
   listen_socket.Accept(accept_socket);
-  SetConnection(new ConnectionFileDescriptor(accept_socket));
-
-  SendAck(); // Send this as a handshake.
-  return llvm::Error::success();
-}
-
-llvm::Error TestClient::StopDebugger() {
-  std::string response;
-  // Debugserver (non-conformingly?) sends a reply to the k packet instead of
-  // simply closing the connection.
-  PacketResult result =
-      IsDebugServer() ? PacketResult::Success : PacketResult::ErrorDisconnected;
-  return SendMessage("k", response, result);
+  auto Conn = llvm::make_unique<ConnectionFileDescriptor>(accept_socket);
+  return std::unique_ptr<TestClient>(new TestClient(std::move(Conn)));
 }
 
 Error TestClient::SetInferior(llvm::ArrayRef<std::string> inferior_args) {
@@ -117,14 +119,8 @@ Error TestClient::SetInferior(llvm::ArrayRef<std::string> inferior_args) {
     return E;
   if (Error E = SendMessage("qLaunchSuccess"))
     return E;
-  std::string response;
-  if (Error E = SendMessage("qProcessInfo", response))
+  if (Error E = QueryProcessInfo())
     return E;
-  auto create_or_error = ProcessInfo::Create(response);
-  if (auto create_error = create_or_error.takeError())
-    return create_error;
-
-  m_process_info = *create_or_error;
   return Error::success();
 }
 
@@ -223,6 +219,17 @@ unsigned int TestClient::GetPcRegisterId() {
   return m_pc_register;
 }
 
+llvm::Error TestClient::QueryProcessInfo() {
+  std::string response;
+  if (Error E = SendMessage("qProcessInfo", response))
+    return E;
+  auto create_or_error = ProcessInfo::Create(response);
+  if (!create_or_error)
+    return create_or_error.takeError();
+  m_process_info = *create_or_error;
+  return Error::success();
+}
+
 Error TestClient::Continue(StringRef message) {
   assert(m_process_info.hasValue());
 
@@ -235,23 +242,6 @@ Error TestClient::Continue(StringRef message) {
 
   m_stop_reply = std::move(*creation);
   return Error::success();
-}
-
-std::string TestClient::GenerateLogFileName(const ArchSpec &arch) const {
-  char *log_directory = getenv("LOG_FILE_DIRECTORY");
-  if (!log_directory)
-    return "";
-
-  if (!llvm::sys::fs::is_directory(log_directory)) {
-    GTEST_LOG_(WARNING) << "Cannot access log directory: " << log_directory;
-    return "";
-  }
-
-  std::string log_file_name;
-  raw_string_ostream log_file(log_file_name);
-  log_file << log_directory << "/lldb-" << m_test_case_name << '-'
-           << m_test_name << '-' << arch.GetArchitectureName() << ".log";
-  return log_file.str();
 }
 
 } // namespace llgs_tests

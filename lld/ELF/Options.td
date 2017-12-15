@@ -163,6 +163,9 @@ def m: JoinedOrSeparate<["-"], "m">, HelpText<"Set target emulation">;
 
 defm Map: Eq<"Map">, HelpText<"Print a link map to the specified file">;
 
+def merge_exidx_entries: F<"merge-exidx-entries">,
+  HelpText<"Enable merging .ARM.exidx entries">;
+
 def nostdlib: F<"nostdlib">,
   HelpText<"Only search directories specified on the command line">;
 
@@ -195,6 +198,9 @@ def no_gdb_index: F<"no-gdb-index">,
 
 def no_gnu_unique: F<"no-gnu-unique">,
   HelpText<"Disable STB_GNU_UNIQUE symbol binding">;
+
+def no_merge_exidx_entries: F<"no-merge-exidx-entries">,
+  HelpText<"Disable merging .ARM.exidx entries">;
 
 def no_threads: F<"no-threads">,
   HelpText<"Do not run the linker multi-threaded">;
