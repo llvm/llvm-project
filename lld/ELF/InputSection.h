@@ -45,6 +45,13 @@ public:
 
   StringRef Name;
 
+  // This pointer points to the "real" instance of this instance.
+  // Usually Repl == this. However, if ICF merges two sections,
+  // Repl pointer of one section points to another section. So,
+  // if you need to get a pointer to this instance, do not use
+  // this but instead this->Repl.
+  SectionBase *Repl;
+
   unsigned SectionKind : 3;
 
   // The next two bit fields are only used by InputSectionBase, but we
@@ -77,9 +84,9 @@ protected:
   SectionBase(Kind SectionKind, StringRef Name, uint64_t Flags,
               uint64_t Entsize, uint64_t Alignment, uint32_t Type,
               uint32_t Info, uint32_t Link)
-      : Name(Name), SectionKind(SectionKind), Live(false), Bss(false),
-        Alignment(Alignment), Flags(Flags), Entsize(Entsize), Type(Type),
-        Link(Link), Info(Info) {}
+      : Name(Name), Repl(this), SectionKind(SectionKind), Live(false),
+        Bss(false), Alignment(Alignment), Flags(Flags), Entsize(Entsize),
+        Type(Type), Link(Link), Info(Info) {}
 };
 
 // This corresponds to a section of an input file.
@@ -145,13 +152,6 @@ public:
         static_cast<const typename ELFT::Rela *>(FirstRelocation),
         NumRelocations);
   }
-
-  // This pointer points to the "real" instance of this instance.
-  // Usually Repl == this. However, if ICF merges two sections,
-  // Repl pointer of one section points to another section. So,
-  // if you need to get a pointer to this instance, do not use
-  // this but instead this->Repl.
-  InputSectionBase *Repl;
 
   // InputSections that are dependent on us (reverse dependency for GC)
   llvm::TinyPtrVector<InputSection *> DependentSections;

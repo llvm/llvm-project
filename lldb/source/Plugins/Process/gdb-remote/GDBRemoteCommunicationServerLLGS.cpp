@@ -244,13 +244,8 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
                                      "process but one already exists");
     auto process_or =
         m_process_factory.Launch(m_process_launch_info, *this, m_mainloop);
-    if (!process_or) {
-      Status status(process_or.takeError());
-      llvm::errs() << llvm::formatv(
-          "failed to launch executable `{0}`: {1}",
-          m_process_launch_info.GetArguments().GetArgumentAtIndex(0), status);
-      return status;
-    }
+    if (!process_or)
+      return Status(process_or.takeError());
     m_debugged_process_up = std::move(*process_or);
   }
 

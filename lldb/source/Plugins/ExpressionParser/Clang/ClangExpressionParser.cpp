@@ -389,6 +389,14 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
     // FIXME: the following language option is a temporary workaround,
     // to "ask for ObjC, get ObjC++" (see comment above).
     m_compiler->getLangOpts().CPlusPlus = true;
+
+    // Clang now sets as default C++14 as the default standard (with
+    // GNU extensions), so we do the same here to avoid mismatches that
+    // cause compiler error when evaluating expressions (e.g. nullptr
+    // not found as it's a C++11 feature). Currently lldb evaluates
+    // C++14 as C++11 (see two lines below) so we decide to be consistent
+    // with that, but this could be re-evaluated in the future.
+    m_compiler->getLangOpts().CPlusPlus11 = true;
     break;
   case lldb::eLanguageTypeC_plus_plus:
   case lldb::eLanguageTypeC_plus_plus_11:
