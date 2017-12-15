@@ -79,7 +79,11 @@ class Remark(yaml.YAMLObject):
     def _reduce_memory(self):
         self.Pass = intern(self.Pass)
         self.Name = intern(self.Name)
-        self.Function = intern(self.Function)
+        try:
+            # Can't intern unicode strings.
+            self.Function = intern(self.Function)
+        except:
+            pass
 
         def _reduce_memory_dict(old_dict):
             new_dict = dict()
@@ -156,10 +160,36 @@ class Remark(yaml.YAMLObject):
 
         if dl and key != 'Caller':
             dl_dict = dict(list(dl))
-            return "<a href={}>{}</a>".format(
+            return u"<a href={}>{}</a>".format(
                 make_link(dl_dict['File'], dl_dict['Line']), value)
         else:
             return value
+
+    # Return a cached dictionary for the arguments.  The key for each entry is
+    # the argument key (e.g. 'Callee' for inlining remarks.  The value is a
+    # list containing the value (e.g. for 'Callee' the function) and
+    # optionally a DebugLoc.
+    def getArgDict(self):
+        if hasattr(self, 'ArgDict'):
+            return self.ArgDict
+        self.ArgDict = {}
+        for arg in self.Args:
+            if len(arg) == 2:
+                if arg[0][0] == 'DebugLoc':
+                    dbgidx = 0
+                else:
+                    assert(arg[1][0] == 'DebugLoc')
+                    dbgidx = 1
+
+                key = arg[1 - dbgidx][0]
+                entry = (arg[1 - dbgidx][1], arg[dbgidx][1])
+            else:
+                arg = arg[0]
+                key = arg[0]
+                entry = (arg[1], )
+
+            self.ArgDict[key] = entry
+        return self.ArgDict
 
     def getDiffPrefix(self):
         if hasattr(self, 'Added'):
