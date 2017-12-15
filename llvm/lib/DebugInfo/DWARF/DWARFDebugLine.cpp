@@ -230,8 +230,7 @@ bool DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
 
   if (getVersion() >= 5) {
     FormParams.AddrSize = DebugLineData.getU8(OffsetPtr);
-    assert((DebugLineData.getAddressSize() == 0 ||
-            DebugLineData.getAddressSize() == getAddressSize()) &&
+    assert(getAddressSize() == DebugLineData.getAddressSize() &&
            "Line table header and data extractor disagree");
     SegSelectorSize = DebugLineData.getU8(OffsetPtr);
   }
@@ -383,7 +382,7 @@ DWARFDebugLine::getLineTable(uint32_t Offset) const {
 }
 
 const DWARFDebugLine::LineTable *
-DWARFDebugLine::getOrParseLineTable(DWARFDataExtractor &DebugLineData,
+DWARFDebugLine::getOrParseLineTable(const DWARFDataExtractor &DebugLineData,
                                     uint32_t Offset, const DWARFUnit *U) {
   std::pair<LineTableIter, bool> Pos =
       LineTableMap.insert(LineTableMapTy::value_type(Offset, LineTable()));
@@ -395,7 +394,7 @@ DWARFDebugLine::getOrParseLineTable(DWARFDataExtractor &DebugLineData,
   return LT;
 }
 
-bool DWARFDebugLine::LineTable::parse(DWARFDataExtractor &DebugLineData,
+bool DWARFDebugLine::LineTable::parse(const DWARFDataExtractor &DebugLineData,
                                       uint32_t *OffsetPtr, const DWARFUnit *U,
                                       raw_ostream *OS) {
   const uint32_t DebugLineOffset = *OffsetPtr;
@@ -414,13 +413,6 @@ bool DWARFDebugLine::LineTable::parse(DWARFDataExtractor &DebugLineData,
   const uint32_t EndOffset =
       DebugLineOffset + Prologue.TotalLength + Prologue.sizeofTotalLength();
 
-  // See if we should tell the data extractor the address size.
-  if (DebugLineData.getAddressSize() == 0)
-    DebugLineData.setAddressSize(Prologue.getAddressSize());
-  else
-    assert(Prologue.getAddressSize() == 0 ||
-           Prologue.getAddressSize() == DebugLineData.getAddressSize());
-
   ParsingState State(this);
 
   while (*OffsetPtr < EndOffset) {
@@ -435,15 +427,9 @@ bool DWARFDebugLine::LineTable::parse(DWARFDataExtractor &DebugLineData,
     if (Opcode == 0) {
       // Extended Opcodes always start with a zero opcode followed by
       // a uleb128 length so you can skip ones you don't know about
-      uint64_t Len = DebugLineData.getULEB128(OffsetPtr);
       uint32_t ExtOffset = *OffsetPtr;
-
-      // Tolerate zero-length; assume length is correct and soldier on.
-      if (Len == 0) {
-        if (OS)
-          *OS << "Badly formed extended line op (length 0)\n";
-        continue;
-      }
+      uint64_t Len = DebugLineData.getULEB128(OffsetPtr);
+      uint32_t ArgSize = Len - (*OffsetPtr - ExtOffset);
 
       uint8_t SubOpcode = DebugLineData.getU8(OffsetPtr);
       if (OS)
@@ -474,13 +460,6 @@ bool DWARFDebugLine::LineTable::parse(DWARFDataExtractor &DebugLineData,
         // relocatable address. All of the other statement program opcodes
         // that affect the address register add a delta to it. This instruction
         // stores a relocatable value into it instead.
-        //
-        // Make sure the extractor knows the address size.  If not, infer it
-        // from the size of the operand.
-        if (DebugLineData.getAddressSize() == 0)
-          DebugLineData.setAddressSize(Len - 1);
-        else
-          assert(DebugLineData.getAddressSize() == Len - 1);
         State.Row.Address = DebugLineData.getRelocatedAddress(OffsetPtr);
         if (OS)
           *OS << format(" (0x%16.16" PRIx64 ")", State.Row.Address);
@@ -529,23 +508,10 @@ bool DWARFDebugLine::LineTable::parse(DWARFDataExtractor &DebugLineData,
         break;
 
       default:
-        if (OS)
-          *OS << format("Unrecognized extended op 0x%02.02" PRIx8, SubOpcode)
-              << format(" length %" PRIx64, Len);
-        // Len doesn't include the zero opcode byte or the length itself, but
-        // it does include the sub_opcode, so we have to adjust for that.
-        (*OffsetPtr) += Len - 1;
+        // Length doesn't include the zero opcode byte or the length itself, but
+        // it does include the sub_opcode, so we have to adjust for that below
+        (*OffsetPtr) += ArgSize;
         break;
-      }
-      // Make sure the stated and parsed lengths are the same.
-      // Otherwise we have an unparseable line-number program.
-      if (*OffsetPtr - ExtOffset != Len) {
-        fprintf(stderr, "Unexpected line op length at offset 0x%8.8" PRIx32
-                " expected 0x%2.2" PRIx64 " found 0x%2.2" PRIx32 "\n",
-                ExtOffset, Len, *OffsetPtr - ExtOffset);
-        // Skip the rest of the line-number program.
-        *OffsetPtr = EndOffset;
-        return false;
       }
     } else if (Opcode < Prologue.OpcodeBase) {
       if (OS)
