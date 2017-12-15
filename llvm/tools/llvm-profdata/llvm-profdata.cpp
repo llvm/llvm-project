@@ -37,14 +37,19 @@ using namespace llvm;
 
 enum ProfileFormat { PF_None = 0, PF_Text, PF_Binary, PF_GCC };
 
-static void exitWithError(Twine Message, std::string Whence = "",
-                          std::string Hint = "") {
-  errs() << "error: ";
+static void warn(StringRef Prefix, Twine Message, std::string Whence = "",
+                 std::string Hint = "") {
+  errs() << Prefix;
   if (!Whence.empty())
     errs() << Whence << ": ";
   errs() << Message << "\n";
   if (!Hint.empty())
     errs() << Hint << "\n";
+}
+
+static void exitWithError(Twine Message, std::string Whence = "",
+                          std::string Hint = "") {
+  warn("error: ", Message, Whence, Hint);
   ::exit(1);
 }
 
@@ -129,6 +134,22 @@ struct WriterContext {
         ErrLock(ErrLock), WriterErrorCodes(WriterErrorCodes) {}
 };
 
+/// Determine whether an error is fatal for profile merging.
+static bool isFatalError(instrprof_error IPE) {
+  switch (IPE) {
+  default:
+    return true;
+  case instrprof_error::success:
+  case instrprof_error::eof:
+  case instrprof_error::unknown_function:
+  case instrprof_error::hash_mismatch:
+  case instrprof_error::count_mismatch:
+  case instrprof_error::counter_overflow:
+  case instrprof_error::value_site_count_mismatch:
+    return false;
+  }
+}
+
 /// Load an input into a writer context.
 static void loadInput(const WeightedFile &Input, WriterContext *WC) {
   std::unique_lock<std::mutex> CtxGuard{WC->Lock};
@@ -177,8 +198,13 @@ static void loadInput(const WeightedFile &Input, WriterContext *WC) {
                              FuncName, firstTime);
     });
   }
-  if (Reader->hasError())
-    WC->Err = Reader->getError();
+  if (Reader->hasError()) {
+    if (Error E = Reader->getError()) {
+      instrprof_error IPE = InstrProfError::take(std::move(E));
+      if (isFatalError(IPE))
+        WC->Err = make_error<InstrProfError>(IPE);
+    }
+  }
 }
 
 /// Merge the \p Src writer context into \p Dst.
@@ -262,9 +288,19 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
   }
 
   // Handle deferred hard errors encountered during merging.
-  for (std::unique_ptr<WriterContext> &WC : Contexts)
-    if (WC->Err)
+  for (std::unique_ptr<WriterContext> &WC : Contexts) {
+    if (!WC->Err)
+      continue;
+    if (!WC->Err.isA<InstrProfError>())
       exitWithError(std::move(WC->Err), WC->ErrWhence);
+
+    instrprof_error IPE = InstrProfError::take(std::move(WC->Err));
+    if (isFatalError(IPE))
+      exitWithError(make_error<InstrProfError>(IPE), WC->ErrWhence);
+    else
+      warn("warning: ", toString(make_error<InstrProfError>(IPE)),
+           WC->ErrWhence);
+  }
 
   InstrProfWriter &Writer = Contexts[0]->Writer;
   if (OutputFormat == PF_Text) {
