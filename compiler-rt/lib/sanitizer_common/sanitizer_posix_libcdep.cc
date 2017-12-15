@@ -20,6 +20,7 @@
 #include "sanitizer_flags.h"
 #include "sanitizer_platform_limits_netbsd.h"
 #include "sanitizer_platform_limits_posix.h"
+#include "sanitizer_platform_limits_solaris.h"
 #include "sanitizer_posix.h"
 #include "sanitizer_procmaps.h"
 #include "sanitizer_stacktrace.h"
@@ -62,7 +63,10 @@ void ReleaseMemoryPagesToOS(uptr beg, uptr end) {
   uptr beg_aligned = RoundUpTo(beg, page_size);
   uptr end_aligned = RoundDownTo(end, page_size);
   if (beg_aligned < end_aligned)
-    madvise((void *)beg_aligned, end_aligned - beg_aligned,
+    // In the default Solaris compilation environment, madvise() is declared
+    // to take a caddr_t arg; casting it to void * results in an invalid
+    // conversion error, so use char * instead.
+    madvise((char *)beg_aligned, end_aligned - beg_aligned,
             SANITIZER_MADVISE_DONTNEED);
 }
 
