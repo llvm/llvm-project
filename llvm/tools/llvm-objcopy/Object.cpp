@@ -227,10 +227,9 @@ template <class SymTabType>
 void RelocSectionWithSymtabBase<SymTabType>::removeSectionReferences(
     const SectionBase *Sec) {
   if (Symbols == Sec) {
-    error("Symbol table " + Symbols->Name +
-          " cannot be removed because it is "
-          "referenced by the relocation "
-          "section " +
+    error("Symbol table " + Symbols->Name + " cannot be removed because it is "
+                                            "referenced by the relocation "
+                                            "section " +
           this->Name);
   }
 }
@@ -245,9 +244,9 @@ void RelocSectionWithSymtabBase<SymTabType>::initialize(
           " is not a symbol table"));
 
   if (Info != SHN_UNDEF)
-    setSection(SecTable.getSection(Info, "Info field value " + Twine(Info) +
-                                             " in section " + Name +
-                                             " is invalid"));
+    setSection(SecTable.getSection(Info,
+                                   "Info field value " + Twine(Info) +
+                                       " in section " + Name + " is invalid"));
   else
     setSection(nullptr);
 }
@@ -294,9 +293,8 @@ void DynamicRelocationSection::writeSection(FileOutputBuffer &Out) const {
 
 void SectionWithStrTab::removeSectionReferences(const SectionBase *Sec) {
   if (StrTab == Sec) {
-    error("String table " + StrTab->Name +
-          " cannot be removed because it is "
-          "referenced by the section " +
+    error("String table " + StrTab->Name + " cannot be removed because it is "
+                                           "referenced by the section " +
           this->Name);
   }
 }
@@ -306,9 +304,9 @@ bool SectionWithStrTab::classof(const SectionBase *S) {
 }
 
 void SectionWithStrTab::initialize(SectionTableRef SecTable) {
-  auto StrTab =
-      SecTable.getSection(Link, "Link field value " + Twine(Link) +
-                                    " in section " + Name + " is invalid");
+  auto StrTab = SecTable.getSection(Link,
+                                    "Link field value " + Twine(Link) +
+                                        " in section " + Name + " is invalid");
   if (StrTab->Type != SHT_STRTAB) {
     error("Link field value " + Twine(Link) + " in section " + Name +
           " is not a string table");
@@ -416,9 +414,9 @@ void Object<ELFT>::initSymbolTable(const object::ELFFile<ELFT> &ElfFile,
       }
     } else if (Sym.st_shndx != SHN_UNDEF) {
       DefSection = SecTable.getSection(
-          Sym.st_shndx, "Symbol '" + Name +
-                            "' is defined in invalid section with index " +
-                            Twine(Sym.st_shndx));
+          Sym.st_shndx,
+          "Symbol '" + Name + "' is defined in invalid section with index " +
+              Twine(Sym.st_shndx));
     }
 
     SymTab->addSymbol(Name, Sym.getBinding(), Sym.getType(), DefSection,

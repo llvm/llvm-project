@@ -52,24 +52,6 @@
 ; RUN:  -r %t2.bc,bar,px
 ; RUN: llvm-dis < %t.o.0.0.preopt.bc | FileCheck  %s --check-prefix=NONE-PREVAILED2
 
-
-
-; Client marked both as prevailing
-; RUN: llvm-lto2 run %t1.bc %t2.bc -o %t.o -save-temps \
-; RUN:  -r %t1.bc,v,px \
-; RUN:  -r %t2.bc,v,px \
-; RUN:  -r %t1.bc,foo,px \
-; RUN:  -r %t2.bc,bar,px
-; RUN: llvm-dis < %t.o.0.0.preopt.bc | FileCheck %s --check-prefix=BOTH-PREVAILED1
-
-; Same as before, but reversing the order of the inputs
-; RUN: llvm-lto2 run %t2.bc %t1.bc -o %t.o -save-temps \
-; RUN:  -r %t1.bc,v,px \
-; RUN:  -r %t2.bc,v,px \
-; RUN:  -r %t1.bc,foo,px \
-; RUN:  -r %t2.bc,bar,px
-; RUN: llvm-dis < %t.o.0.0.preopt.bc | FileCheck %s --check-prefix=BOTH-PREVAILED2
-
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 

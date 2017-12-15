@@ -6,7 +6,7 @@
 # RUN:       }" > %t.script
 ## We used to crash if the last output section command for .ARM.exidx
 ## was anything but an input section description.
-# RUN: ld.lld -T %t.script %t.o -shared -o %t.so
+# RUN: ld.lld --no-merge-exidx-entries -T %t.script %t.o -shared -o %t.so
 # RUN: llvm-objdump -s -triple=armv7a-none-linux-gnueabi %t.so | FileCheck %s
 
  .syntax unified

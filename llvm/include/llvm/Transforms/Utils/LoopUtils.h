@@ -436,8 +436,9 @@ bool formLCSSARecursively(Loop &L, DominatorTree &DT, LoopInfo *LI,
 /// instructions of the loop and loop safety information as
 /// arguments. Diagnostics is emitted via \p ORE. It returns changed status.
 bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
-                TargetLibraryInfo *, Loop *, AliasSetTracker *,
-                LoopSafetyInfo *, OptimizationRemarkEmitter *ORE);
+                TargetLibraryInfo *, TargetTransformInfo *, Loop *,
+                AliasSetTracker *, LoopSafetyInfo *,
+                OptimizationRemarkEmitter *ORE);
 
 /// \brief Walk the specified region of the CFG (defined by all blocks
 /// dominated by the specified block, and that are in the current loop) in depth

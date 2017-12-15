@@ -5,9 +5,14 @@
 #include <string.h>
 #include <unistd.h>
 
+#ifdef KERNEL_USE
+extern "C" void ubsan_message(const char *msg);
+static void message(const char *msg) { ubsan_message(msg); }
+#else
 static void message(const char *msg) {
   write(2, msg, strlen(msg));
 }
+#endif
 
 static const int kMaxCallerPcs = 20;
 static __sanitizer::atomic_uintptr_t caller_pcs[kMaxCallerPcs];

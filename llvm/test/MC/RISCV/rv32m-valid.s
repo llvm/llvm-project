@@ -1,11 +1,13 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+m -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+m -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-INST %s
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+m -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+m -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+m < %s \
-# RUN:     | llvm-objdump -mattr=+m -d - | FileCheck -check-prefix=CHECK-INST %s
+# RUN:     | llvm-objdump -mattr=+m -riscv-no-aliases -d - \
+# RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+m < %s \
-# RUN:     | llvm-objdump -mattr=+m -d - | FileCheck -check-prefix=CHECK-INST %s
+# RUN:     | llvm-objdump -mattr=+m -riscv-no-aliases -d - \
+# RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
 # CHECK-INST: mul a4, ra, s0
 # CHECK: encoding: [0x33,0x87,0x80,0x02]

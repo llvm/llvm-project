@@ -7327,11 +7327,6 @@ def : Pat<(v4i32 (fp_to_uint (v4f64 VR256X:$src1))),
            (v8f64 (INSERT_SUBREG (IMPLICIT_DEF),
                                  VR256X:$src1, sub_ymm)))), sub_xmm)>;
 
-def : Pat<(v4i32 (X86cvttp2ui (v2f64 VR128X:$src))),
-          (EXTRACT_SUBREG (v8i32 (VCVTTPD2UDQZrr
-           (v8f64 (INSERT_SUBREG (IMPLICIT_DEF),
-                                 VR128X:$src, sub_xmm)))), sub_xmm)>;
-
 def : Pat<(v8f32 (uint_to_fp (v8i32 VR256X:$src1))),
           (EXTRACT_SUBREG (v16f32 (VCVTUDQ2PSZrr
            (v16i32 (INSERT_SUBREG (IMPLICIT_DEF),

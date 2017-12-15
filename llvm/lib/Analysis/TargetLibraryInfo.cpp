@@ -50,9 +50,9 @@ static bool hasSinCosPiStret(const Triple &T) {
   return true;
 }
 
-/// initialize - Initialize the set of available library functions based on the
-/// specified target triple.  This should be carefully written so that a missing
-/// target triple gets a sane set of defaults.
+/// Initialize the set of available library functions based on the specified
+/// target triple. This should be carefully written so that a missing target
+/// triple gets a sane set of defaults.
 static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
                        ArrayRef<StringRef> StandardNames) {
   // Verify that the StandardNames array is in alphabetical order.

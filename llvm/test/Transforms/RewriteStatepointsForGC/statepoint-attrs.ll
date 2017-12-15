@@ -1,4 +1,5 @@
 ; RUN: opt -S -rewrite-statepoints-for-gc < %s | FileCheck %s
+; RUN: opt -S -passes=rewrite-statepoints-for-gc < %s | FileCheck %s
 ; Ensure statepoints copy (valid) attributes from callsites.
 
 declare void @f(i8 addrspace(1)* %obj)

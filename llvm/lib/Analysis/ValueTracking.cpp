@@ -483,7 +483,7 @@ static bool isEphemeralValueOf(const Instruction *I, const Value *E) {
 }
 
 // Is this an intrinsic that cannot be speculated but also cannot trap?
-static bool isAssumeLikeIntrinsic(const Instruction *I) {
+bool llvm::isAssumeLikeIntrinsic(const Instruction *I) {
   if (const CallInst *CI = dyn_cast<CallInst>(I))
     if (Function *F = CI->getCalledFunction())
       switch (F->getIntrinsicID()) {

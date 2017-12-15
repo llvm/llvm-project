@@ -174,7 +174,7 @@ void llvm::createMemCpyLoopUnknownSize(Instruction *InsertBefore,
   Value *RuntimeBytesCopied = PLBuilder.CreateSub(CopyLen, RuntimeResidual);
 
   BasicBlock *LoopBB =
-      BasicBlock::Create(Ctx, "loop-memcpy-expansion", ParentFunc, nullptr);
+      BasicBlock::Create(Ctx, "loop-memcpy-expansion", ParentFunc, PostLoopBB);
   IRBuilder<> LoopBuilder(LoopBB);
 
   PHINode *LoopIndex = LoopBuilder.CreatePHI(CopyLenType, 2, "loop-index");
@@ -193,7 +193,8 @@ void llvm::createMemCpyLoopUnknownSize(Instruction *InsertBefore,
   if (LoopOpType != Int8Type) {
     // Loop body for the residual copy.
     BasicBlock *ResLoopBB = BasicBlock::Create(Ctx, "loop-memcpy-residual",
-                                               PreLoopBB->getParent(), nullptr);
+                                               PreLoopBB->getParent(),
+                                               PostLoopBB);
     // Residual loop header.
     BasicBlock *ResHeaderBB = BasicBlock::Create(
         Ctx, "loop-memcpy-residual-header", PreLoopBB->getParent(), nullptr);

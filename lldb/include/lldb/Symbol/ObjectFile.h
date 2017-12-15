@@ -793,15 +793,24 @@ public:
   static lldb::DataBufferSP ReadMemory(const lldb::ProcessSP &process_sp,
                                        lldb::addr_t addr, size_t byte_size);
 
+  // This function returns raw file contents. Do not use it if you want
+  // transparent decompression of section contents.
   size_t GetData(lldb::offset_t offset, size_t length,
                  DataExtractor &data) const;
 
+  // This function returns raw file contents. Do not use it if you want
+  // transparent decompression of section contents.
   size_t CopyData(lldb::offset_t offset, size_t length, void *dst) const;
 
+  // This function will transparently decompress section data if the section if
+  // compressed.
   virtual size_t ReadSectionData(Section *section,
                                  lldb::offset_t section_offset, void *dst,
                                  size_t dst_len);
 
+  // This function will transparently decompress section data if the section if
+  // compressed. Note that for compressed section the resulting data size may be
+  // larger than what Section::GetFileSize reports.
   virtual size_t ReadSectionData(Section *section,
                                  DataExtractor &section_data);
 

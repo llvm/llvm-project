@@ -8811,10 +8811,8 @@ define <16 x float> @broadcast_ss_spill(float %x) {
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 32
 ; GENERIC-NEXT:    vaddss %xmm0, %xmm0, %xmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill sched: [5:1.00]
-; GENERIC-NEXT:    # sched: [5:1.00]
 ; GENERIC-NEXT:    callq func_f32
 ; GENERIC-NEXT:    vbroadcastss (%rsp), %zmm0 # 16-byte Folded Reload sched: [5:1.00]
-; GENERIC-NEXT:    # sched: [5:1.00]
 ; GENERIC-NEXT:    addq $24, %rsp # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -8824,10 +8822,8 @@ define <16 x float> @broadcast_ss_spill(float %x) {
 ; SKX-NEXT:    .cfi_def_cfa_offset 32
 ; SKX-NEXT:    vaddss %xmm0, %xmm0, %xmm0 # sched: [4:0.33]
 ; SKX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill sched: [1:1.00]
-; SKX-NEXT:    # sched: [1:1.00]
 ; SKX-NEXT:    callq func_f32
 ; SKX-NEXT:    vbroadcastss (%rsp), %zmm0 # 16-byte Folded Reload sched: [8:0.50]
-; SKX-NEXT:    # sched: [8:0.50]
 ; SKX-NEXT:    addq $24, %rsp # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %a  = fadd float %x, %x
@@ -8845,10 +8841,8 @@ define <8 x double> @broadcast_sd_spill(double %x) {
 ; GENERIC-NEXT:    .cfi_def_cfa_offset 32
 ; GENERIC-NEXT:    vaddsd %xmm0, %xmm0, %xmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill sched: [5:1.00]
-; GENERIC-NEXT:    # sched: [5:1.00]
 ; GENERIC-NEXT:    callq func_f64
 ; GENERIC-NEXT:    vbroadcastsd (%rsp), %zmm0 # 16-byte Folded Reload sched: [5:1.00]
-; GENERIC-NEXT:    # sched: [5:1.00]
 ; GENERIC-NEXT:    addq $24, %rsp # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -8858,10 +8852,8 @@ define <8 x double> @broadcast_sd_spill(double %x) {
 ; SKX-NEXT:    .cfi_def_cfa_offset 32
 ; SKX-NEXT:    vaddsd %xmm0, %xmm0, %xmm0 # sched: [4:0.33]
 ; SKX-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill sched: [1:1.00]
-; SKX-NEXT:    # sched: [1:1.00]
 ; SKX-NEXT:    callq func_f64
 ; SKX-NEXT:    vbroadcastsd (%rsp), %zmm0 # 16-byte Folded Reload sched: [8:0.50]
-; SKX-NEXT:    # sched: [8:0.50]
 ; SKX-NEXT:    addq $24, %rsp # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %a  = fadd double %x, %x

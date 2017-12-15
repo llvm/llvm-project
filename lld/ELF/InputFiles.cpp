@@ -793,7 +793,7 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
   // Add symbols to the symbol table.
   Elf_Sym_Range Syms = this->getGlobalELFSyms();
   for (const Elf_Sym &Sym : Syms) {
-    unsigned VersymIndex = 0;
+    unsigned VersymIndex = VER_NDX_GLOBAL;
     if (Versym) {
       VersymIndex = Versym->vs_index;
       ++Versym;
@@ -813,12 +813,9 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
       continue;
     }
 
-    // Ignore local symbols.
-    if (Versym && VersymIndex == VER_NDX_LOCAL)
-      continue;
     const Elf_Verdef *Ver = nullptr;
     if (VersymIndex != VER_NDX_GLOBAL) {
-      if (VersymIndex >= Verdefs.size()) {
+      if (VersymIndex >= Verdefs.size() || VersymIndex == VER_NDX_LOCAL) {
         error("corrupt input file: version definition index " +
               Twine(VersymIndex) + " for symbol " + Name +
               " is out of bounds\n>>> defined in " + toString(this));

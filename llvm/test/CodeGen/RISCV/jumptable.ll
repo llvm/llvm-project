@@ -11,26 +11,26 @@ define void @jt(i32 %in, i32* %out) {
 ; RV32I-NEXT:    addi s0, sp, 16
 ; RV32I-NEXT:    addi a2, zero, 2
 ; RV32I-NEXT:    blt a2, a0, .LBB0_3
-; RV32I-NEXT:    jal zero, .LBB0_1
+; RV32I-NEXT:    j .LBB0_1
 ; RV32I-NEXT:  .LBB0_1: # %entry
 ; RV32I-NEXT:    addi a3, zero, 1
 ; RV32I-NEXT:    beq a0, a3, .LBB0_5
-; RV32I-NEXT:    jal zero, .LBB0_2
+; RV32I-NEXT:    j .LBB0_2
 ; RV32I-NEXT:  .LBB0_2: # %entry
 ; RV32I-NEXT:    beq a0, a2, .LBB0_6
-; RV32I-NEXT:    jal zero, .LBB0_9
+; RV32I-NEXT:    j .LBB0_9
 ; RV32I-NEXT:  .LBB0_6: # %bb2
 ; RV32I-NEXT:    addi a0, zero, 3
 ; RV32I-NEXT:    sw a0, 0(a1)
-; RV32I-NEXT:    jal zero, .LBB0_9
+; RV32I-NEXT:    j .LBB0_9
 ; RV32I-NEXT:  .LBB0_3: # %entry
 ; RV32I-NEXT:    addi a3, zero, 3
 ; RV32I-NEXT:    beq a0, a3, .LBB0_7
-; RV32I-NEXT:    jal zero, .LBB0_4
+; RV32I-NEXT:    j .LBB0_4
 ; RV32I-NEXT:  .LBB0_4: # %entry
 ; RV32I-NEXT:    addi a2, zero, 4
 ; RV32I-NEXT:    beq a0, a2, .LBB0_8
-; RV32I-NEXT:    jal zero, .LBB0_9
+; RV32I-NEXT:    j .LBB0_9
 ; RV32I-NEXT:  .LBB0_8: # %bb4
 ; RV32I-NEXT:    addi a0, zero, 1
 ; RV32I-NEXT:    sw a0, 0(a1)
@@ -38,14 +38,14 @@ define void @jt(i32 %in, i32* %out) {
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB0_5: # %bb1
 ; RV32I-NEXT:    addi a0, zero, 4
 ; RV32I-NEXT:    sw a0, 0(a1)
-; RV32I-NEXT:    jal zero, .LBB0_9
+; RV32I-NEXT:    j .LBB0_9
 ; RV32I-NEXT:  .LBB0_7: # %bb3
 ; RV32I-NEXT:    sw a2, 0(a1)
-; RV32I-NEXT:    jal zero, .LBB0_9
+; RV32I-NEXT:    j .LBB0_9
 entry:
   switch i32 %in, label %exit [
     i32 1, label %bb1
