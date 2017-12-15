@@ -135,7 +135,7 @@ InputSegment *ObjFile::getSegment(const WasmSymbol &WasmSym) {
       return Segment;
     }
   }
-  error("Symbol not found in any segment: " + WasmSym.Name);
+  error("symbol not found in any segment: " + WasmSym.Name);
   return nullptr;
 }
 
