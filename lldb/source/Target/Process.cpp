@@ -145,9 +145,6 @@ static PropertyDefinition g_properties[] = {
     {"optimization-warnings", OptionValue::eTypeBoolean, false, true, nullptr,
      nullptr, "If true, warn when stopped in code that is optimized where "
               "stepping and variable availability may not behave as expected."},
-    {"stop-on-exec", OptionValue::eTypeBoolean, true, true,
-     nullptr, nullptr,
-     "If true, stop when a shared library is loaded or unloaded."},
     {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, nullptr, nullptr}};
 
 enum {
@@ -159,8 +156,7 @@ enum {
   ePropertyStopOnSharedLibraryEvents,
   ePropertyDetachKeepsStopped,
   ePropertyMemCacheLineSize,
-  ePropertyWarningOptimization,
-  ePropertyStopOnExec
+  ePropertyWarningOptimization
 };
 
 ProcessProperties::ProcessProperties(lldb_private::Process *process)
@@ -273,12 +269,6 @@ void ProcessProperties::SetDetachKeepsStopped(bool stop) {
 
 bool ProcessProperties::GetWarningsOptimization() const {
   const uint32_t idx = ePropertyWarningOptimization;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_properties[idx].default_uint_value != 0);
-}
-
-bool ProcessProperties::GetStopOnExec() const {
-  const uint32_t idx = ePropertyStopOnExec;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
       nullptr, idx, g_properties[idx].default_uint_value != 0);
 }
