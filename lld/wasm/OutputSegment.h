@@ -27,7 +27,6 @@ public:
     Alignment = std::max(Alignment, Segment->getAlignment());
     InputSegments.push_back(Segment);
     Size = llvm::alignTo(Size, Segment->getAlignment());
-    ;
     Segment->setOutputSegment(this, Size);
     Size += Segment->getSize();
   }
