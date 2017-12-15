@@ -33,6 +33,7 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
+#include <map>
 #include <memory>
 #include <string>
 #include <system_error>
@@ -296,7 +297,7 @@ namespace {
 /// An instantiation set is a collection of functions that have the same source
 /// code, ie, template functions specializations.
 class FunctionInstantiationSetCollector {
-  using MapT = DenseMap<LineColPair, std::vector<const FunctionRecord *>>;
+  using MapT = std::map<LineColPair, std::vector<const FunctionRecord *>>;
   MapT InstantiatedFunctions;
 
 public:
