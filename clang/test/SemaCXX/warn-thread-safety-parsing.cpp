@@ -351,7 +351,8 @@ int gb_var_arg_5 GUARDED_BY(&mu1);
 int gb_var_arg_6 GUARDED_BY(muRef);
 int gb_var_arg_7 GUARDED_BY(muDoubleWrapper.getWrapper()->getMu());
 int gb_var_arg_8 GUARDED_BY(muPointer);
-
+int gb_var_arg_9 GUARDED_BY(!&mu1);
+int gb_var_arg_10 GUARDED_BY(!&*&mu1);
 
 // illegal attribute arguments
 int gb_var_arg_bad_1 GUARDED_BY(1); // \

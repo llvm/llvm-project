@@ -286,17 +286,6 @@ class TestCursor(unittest.TestCase):
         cls = get_cursor(tu, 'Y')
         self.assertFalse(cls.is_abstract_record())
 
-    def test_is_abstract_record(self):
-        """Ensure Cursor.is_abstract_record works."""
-        source = 'struct X { virtual void x() = 0; }; struct Y : X { void x(); };'
-        tu = get_tu(source, lang='cpp')
-
-        cls = get_cursor(tu, 'X')
-        self.assertTrue(cls.is_abstract_record())
-
-        cls = get_cursor(tu, 'Y')
-        self.assertFalse(cls.is_abstract_record())
-
     def test_is_scoped_enum(self):
         """Ensure Cursor.is_scoped_enum works."""
         source = 'class X {}; enum RegularEnum {}; enum class ScopedEnum {};'

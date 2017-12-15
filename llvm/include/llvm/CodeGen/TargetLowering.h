@@ -702,7 +702,10 @@ public:
   struct IntrinsicInfo {
     unsigned     opc = 0;          // target opcode
     EVT          memVT;            // memory VT
-    const Value* ptrVal = nullptr; // value representing memory location
+
+    // value representing memory location
+    PointerUnion<const Value *, const PseudoSourceValue *> ptrVal;
+
     int          offset = 0;       // offset off of ptrVal
     unsigned     size = 0;         // the size of the memory location
                                    // (taken from memVT if zero)
@@ -717,6 +720,7 @@ public:
   /// true and store the intrinsic information into the IntrinsicInfo that was
   /// passed to the function.
   virtual bool getTgtMemIntrinsic(IntrinsicInfo &, const CallInst &,
+                                  MachineFunction &,
                                   unsigned /*Intrinsic*/) const {
     return false;
   }

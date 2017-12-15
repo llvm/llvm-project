@@ -807,6 +807,12 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
       continue;
     }
 
+    if (Sym.getBinding() == STB_LOCAL) {
+      warn("found local symbol '" + Name +
+           "' in global part of symbol table in file " + toString(this));
+      continue;
+    }
+
     // Ignore local symbols.
     if (Versym && VersymIndex == VER_NDX_LOCAL)
       continue;

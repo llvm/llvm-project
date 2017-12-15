@@ -175,6 +175,9 @@ void WebAssemblyPassConfig::addIRPasses() {
     // control specifically what gets lowered.
     addPass(createAtomicExpandPass());
 
+  // Lower .llvm.global_dtors into .llvm_global_ctors with __cxa_atexit calls.
+  addPass(createWebAssemblyLowerGlobalDtors());
+
   // Fix function bitcasts, as WebAssembly requires caller and callee signatures
   // to match.
   addPass(createWebAssemblyFixFunctionBitcasts());

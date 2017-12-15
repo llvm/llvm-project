@@ -558,6 +558,7 @@ bool SITargetLowering::isShuffleMaskLegal(ArrayRef<int>, EVT) const {
 
 bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                           const CallInst &CI,
+                                          MachineFunction &MF,
                                           unsigned IntrID) const {
   switch (IntrID) {
   case Intrinsic::amdgcn_atomic_inc:
