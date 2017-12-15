@@ -634,6 +634,10 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       "show-instantiation-summary", cl::Optional,
       cl::desc("Show instantiation statistics in summary table"));
 
+  cl::opt<bool> SummaryOnly(
+      "summary-only", cl::Optional,
+      cl::desc("Export only summary information for each source file"));
+
   auto commandLineParser = [&, this](int argc, const char **argv) -> int {
     cl::ParseCommandLineOptions(argc, argv, "LLVM code coverage tool\n");
     ViewOpts.Debug = DebugDump;
@@ -746,6 +750,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
 
     ViewOpts.ShowRegionSummary = RegionSummary;
     ViewOpts.ShowInstantiationSummary = InstantiationSummary;
+    ViewOpts.ExportSummaryOnly = SummaryOnly;
 
     return 0;
   };
