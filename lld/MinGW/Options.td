@@ -55,6 +55,7 @@ def full_shutdown: Flag<["--"], "full-shutdown">;
 def high_entropy_va: F<"high-entropy-va">, HelpText<"Enable 64-bit ASLR">;
 def major_image_version: S<"major-image-version">;
 def minor_image_version: S<"minor-image-version">;
+def no_seh: F<"no-seh">;
 def nxcompat: F<"nxcompat">, HelpText<"Enable data execution prevention">;
 def pic_executable: F<"pic-executable">;
 def sysroot: J<"sysroot">, HelpText<"Sysroot">;

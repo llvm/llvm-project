@@ -347,8 +347,6 @@ public:
   size_t getSize() const override { return Size; }
 
 private:
-  void addEntries();
-
   void add(int32_t Tag, std::function<uint64_t()> Fn);
   void addInt(int32_t Tag, uint64_t Val);
   void addInSec(int32_t Tag, InputSection *Sec);
