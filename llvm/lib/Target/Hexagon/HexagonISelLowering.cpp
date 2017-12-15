@@ -2261,6 +2261,7 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
 /// passed to the function.
 bool HexagonTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                                const CallInst &I,
+                                               MachineFunction &MF,
                                                unsigned Intrinsic) const {
   switch (Intrinsic) {
   case Intrinsic::hexagon_V6_vgathermw:

@@ -729,7 +729,7 @@ bool PPCMIPeephole::simplifyCode(void) {
   // Eliminate all the TOC save instructions which are redundant.
   Simplified |= eliminateRedundantTOCSaves(TOCSaves);
   // We try to eliminate redundant compare instruction.
-  Simplified |= eliminateRedundantCompare();
+  //Simplified |= eliminateRedundantCompare();
 
   return Simplified;
 }
