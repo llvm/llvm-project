@@ -3,7 +3,9 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name objc-general.m %s -o - -emit-llvm -fblocks -fprofile-instrument=clang | FileCheck -check-prefix=PGOGEN %s
 
 // RUN: llvm-profdata merge %S/Inputs/objc-general.proftext -o %t.profdata
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name objc-general.m %s -o - -emit-llvm -fblocks -fprofile-instrument-use-path=%t.profdata | FileCheck -check-prefix=PGOUSE %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name objc-general.m %s -o - -emit-llvm -fblocks -fprofile-instrument-use-path=%t.profdata 2>&1 | FileCheck -check-prefix=PGOUSE %s
+
+// PGOUSE-NOT: warning: profile data may be out of date
 
 #ifdef HAVE_FOUNDATION
 
@@ -62,6 +64,20 @@ struct NSFastEnumerationState;
   }
 }
 @end
+
+void nested_objc_for_ranges(NSArray *arr) {
+  int x = 0;
+  for (id a in arr)
+    for (id b in arr)
+      ++x;
+}
+
+void consecutive_objc_for_ranges(NSArray *arr) {
+  int x = 0;
+  for (id a in arr) {}
+  for (id b in arr)
+    ++x;
+}
 
 // PGOUSE-DAG: ![[FR1]] = !{!"branch_weights", i32 2, i32 3}
 // PGOUSE-DAG: ![[FR2]] = !{!"branch_weights", i32 3, i32 2}

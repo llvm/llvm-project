@@ -7,7 +7,7 @@ static void static_func();
 int main() {                     // CHECK-NEXT: File 0, [[@LINE]]:12 -> [[@LINE+7]]:2 = #0
                                  // CHECK-NEXT: File 0, [[@LINE+1]]:18 -> [[@LINE+1]]:24 = (#0 + #1)
   for(int i = 0; i < 10; ++i) {  // CHECK-NEXT: File 0, [[@LINE]]:26 -> [[@LINE]]:29 = #1
-    bar();                       // CHECK-NEXT: File 0, [[@LINE-1]]:31 -> [[@LINE+1]]:4 = #1
+    bar();                       // CHECK: File 0, [[@LINE-1]]:31 -> [[@LINE+1]]:4 = #1
   }
   static_func();
   return 0;
