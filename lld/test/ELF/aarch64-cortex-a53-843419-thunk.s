@@ -2,11 +2,11 @@
 // RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux %s -o %t.o
 // RUN: echo "SECTIONS { \
 // RUN:          .text1 0x10000 : { *(.text.01) *(.text.02) *(.text.03) } \
-// RUN:          .text2 0x100000000 : { *(.text.04) } } " > %t.script
+// RUN:          .text2 0x8010000 : { *(.text.04) } } " > %t.script
 // RUN: ld.lld --script %t.script -fix-cortex-a53-843419 -verbose %t.o -o %t2 | FileCheck -check-prefix=CHECK-PRINT %s
 // RUN: llvm-objdump -triple=aarch64-linux-gnu -d %t2 | FileCheck %s
 
-// %t2 is 4.1GB, so delete it early.
+// %t2 is 128 Megabytes, so delete it early.
 // RUN: rm %t2
 
 // Test cases for Cortex-A53 Erratum 843419 that involve interactions with
@@ -38,13 +38,13 @@ t3_ff8_ldr:
 
 // CHECK-PRINT: detected cortex-a53-843419 erratum sequence starting at 10FFC in unpatched output.
 // CHECK: t3_ff8_ldr:
-// CHECK-NEXT:    10ffc:       80 ff 7f 90     adrp    x0, #4294901760
-// CHECK-NEXT:    11000:       21 00 40 f9     ldr     x1, [x1]
-// CHECK-NEXT:    11004:       02 00 00 14     b       #8
-// CHECK-NEXT:    11008:       c0 03 5f d6     ret
+// CHECK-NEXT:    10ffc:        00 00 04 90     adrp    x0, #134217728
+// CHECK-NEXT:    11000:        21 00 40 f9     ldr     x1, [x1]
+// CHECK-NEXT:    11004:        02 00 00 14     b       #8
+// CHECK-NEXT:    11008:        c0 03 5f d6     ret
 // CHECK: __CortexA53843419_11004:
-// CHECK-NEXT:    1100c:       00 08 40 f9     ldr     x0, [x0, #16]
-// CHECK-NEXT:    11010:       fe ff ff 17     b       #-8
+// CHECK-NEXT:    1100c:        00 08 40 f9     ldr     x0, [x0, #16]
+// CHECK-NEXT:    11010:        fe ff ff 17     b       #-8
 
         .section .text.04, "ax", %progbits
         .globl far_away
