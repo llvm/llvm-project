@@ -417,8 +417,8 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
     auto &GlobalRes = GlobalResolutions[Sym.getName()];
     GlobalRes.UnnamedAddr &= Sym.isUnnamedAddr();
     if (Res.Prevailing) {
-      assert((GlobalRes.IRName.empty() || !Sym.getIRName().empty()) &&
-             "Overriding existing resolution with undefined asm symbol");
+      assert(GlobalRes.IRName.empty() &&
+             "Multiple prevailing defs are not allowed");
       GlobalRes.IRName = Sym.getIRName();
     }
 

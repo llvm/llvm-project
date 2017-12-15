@@ -100,7 +100,9 @@ void X86AsmPrinter::StackMapShadowTracker::emitShadowPadding(
 }
 
 void X86AsmPrinter::EmitAndCountInstruction(MCInst &Inst) {
-  OutStreamer->EmitInstruction(Inst, getSubtargetInfo(), EnablePrintSchedInfo);
+  OutStreamer->EmitInstruction(Inst, getSubtargetInfo(),
+                               EnablePrintSchedInfo &&
+                                   !(Inst.getFlags() & X86::NO_SCHED_INFO));
   SMShadowTracker.count(Inst, getSubtargetInfo(), CodeEmitter.get());
 }
 
@@ -2000,6 +2002,8 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
   MCInst TmpInst;
   MCInstLowering.Lower(MI, TmpInst);
+  if (MI->getAsmPrinterFlag(MachineInstr::NoSchedComment))
+    TmpInst.setFlags(TmpInst.getFlags() | X86::NO_SCHED_INFO);
 
   // Stackmap shadows cannot include branch targets, so we can count the bytes
   // in a call towards the shadow, but must ensure that the no thread returns

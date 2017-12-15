@@ -899,10 +899,6 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
     }
   }
 
-  if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D))
-    if (CGM.getLangOpts().OpenMP && FD->hasAttr<OMPDeclareSimdDeclAttr>())
-      CGM.getOpenMPRuntime().emitDeclareSimdFunction(FD, Fn);
-
   // Add no-jump-tables value.
   Fn->addFnAttr("no-jump-tables",
                 llvm::toStringRef(CGM.getCodeGenOpts().NoUseJumpTables));

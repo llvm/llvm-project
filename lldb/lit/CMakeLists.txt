@@ -22,10 +22,11 @@ configure_lit_site_cfg(
 set(LLDB_TEST_DEPS
   LLDBUnitTests
   lldb
+  lldb-test
   )
 
 if(NOT LLDB_BUILT_STANDALONE)
-  list(APPEND LLDB_TEST_DEPS FileCheck not)
+  list(APPEND LLDB_TEST_DEPS FileCheck not yaml2obj)
 endif()
   
 # lldb-server is not built on every platform.

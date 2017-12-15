@@ -217,3 +217,60 @@ entry:
   ret i32 %conv
 }
 
+; CHECK-LABEL: test_shift8_mask8
+; CHECK-BE:         ldr r1, [r0]
+; CHECK-COMMON:     ldr r1, [r0]
+; CHECK-COMMON:     ubfx r1, r1, #8, #8
+; CHECK-COMMON:     str r1, [r0]
+define arm_aapcscc void @test_shift8_mask8(i32* nocapture %p) {
+entry:
+  %0 = load i32, i32* %p, align 4
+  %shl = lshr i32 %0, 8
+  %and = and i32 %shl, 255
+  store i32 %and, i32* %p, align 4
+  ret void
+}
+
+; CHECK-LABEL: test_shift8_mask16
+; CHECK-BE:         ldr r1, [r0]
+; CHECK-COMMON:     ldr r1, [r0]
+; CHECK-COMMON:     ubfx r1, r1, #8, #16
+; CHECK-COMMON:     str r1, [r0]
+define arm_aapcscc void @test_shift8_mask16(i32* nocapture %p) {
+entry:
+  %0 = load i32, i32* %p, align 4
+  %shl = lshr i32 %0, 8
+  %and = and i32 %shl, 65535
+  store i32 %and, i32* %p, align 4
+  ret void
+}
+
+; CHECK-LABEL: test_shift8_mask16
+; CHECK-BE:         ldrb r0, [r0]
+; CHECK-COMMON:     ldrb r0, [r0, #1]
+; CHECK-COMMON:     str r0, [r1]
+define arm_aapcscc void @test_sext_shift8_mask8(i16* %p, i32* %q) {
+entry:
+  %0 = load i16, i16* %p, align 4
+  %1 = sext i16 %0 to i32
+  %shl = lshr i32 %1, 8
+  %and = and i32 %shl, 255
+  store i32 %and, i32* %q, align 4
+  ret void
+}
+
+; CHECK-LABEL: test_shift8_mask16
+; CHECK-ARM:        ldrsh r0, [r0]
+; CHECK-BE:         ldrsh r0, [r0]
+; CHECK-THUMB:      ldrsh.w r0, [r0]
+; CHECK-COMMON:     ubfx r0, r0, #8, #16
+; CHECK-COMMON:     str r0, [r1]
+define arm_aapcscc void @test_sext_shift8_mask16(i16* %p, i32* %q) {
+entry:
+  %0 = load i16, i16* %p, align 4
+  %1 = sext i16 %0 to i32
+  %shl = lshr i32 %1, 8
+  %and = and i32 %shl, 65535
+  store i32 %and, i32* %q, align 4
+  ret void
+}

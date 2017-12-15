@@ -213,6 +213,7 @@ public:
   bool parseMetadataOperand(MachineOperand &Dest);
   bool parseCFIOffset(int &Offset);
   bool parseCFIRegister(unsigned &Reg);
+  bool parseCFIEscapeValues(std::string& Values);
   bool parseCFIOperand(MachineOperand &Dest);
   bool parseIRBlock(BasicBlock *&BB, const Function &F);
   bool parseBlockAddressOperand(MachineOperand &Dest);
@@ -1599,6 +1600,21 @@ bool MIParser::parseCFIRegister(unsigned &Reg) {
   return false;
 }
 
+bool MIParser::parseCFIEscapeValues(std::string &Values) {
+  do {
+    if (Token.isNot(MIToken::HexLiteral))
+      return error("expected a hexadecimal literal");
+    unsigned Value;
+    if (getUnsigned(Value))
+      return true;
+    if (Value > UINT8_MAX)
+      return error("expected a 8-bit integer (too large)");
+    Values.push_back(static_cast<uint8_t>(Value));
+    lex();
+  } while (consumeIfPresent(MIToken::comma));
+  return false;
+}
+
 bool MIParser::parseCFIOperand(MachineOperand &Dest) {
   auto Kind = Token.kind();
   lex();
@@ -1618,6 +1634,13 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
     CFIIndex =
         MF.addFrameInst(MCCFIInstruction::createOffset(nullptr, Reg, Offset));
     break;
+  case MIToken::kw_cfi_rel_offset:
+    if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
+        parseCFIOffset(Offset))
+      return true;
+    CFIIndex = MF.addFrameInst(
+        MCCFIInstruction::createRelOffset(nullptr, Reg, Offset));
+    break;
   case MIToken::kw_cfi_def_cfa_register:
     if (parseCFIRegister(Reg))
       return true;
@@ -1631,6 +1654,12 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
     CFIIndex = MF.addFrameInst(
         MCCFIInstruction::createDefCfaOffset(nullptr, -Offset));
     break;
+  case MIToken::kw_cfi_adjust_cfa_offset:
+    if (parseCFIOffset(Offset))
+      return true;
+    CFIIndex = MF.addFrameInst(
+        MCCFIInstruction::createAdjustCfaOffset(nullptr, Offset));
+    break;
   case MIToken::kw_cfi_def_cfa:
     if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
         parseCFIOffset(Offset))
@@ -1639,12 +1668,42 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
     CFIIndex =
         MF.addFrameInst(MCCFIInstruction::createDefCfa(nullptr, Reg, -Offset));
     break;
+  case MIToken::kw_cfi_remember_state:
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createRememberState(nullptr));
+    break;
   case MIToken::kw_cfi_restore:
     if (parseCFIRegister(Reg))
       return true;
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createRestore(nullptr, Reg));
     break;
+  case MIToken::kw_cfi_restore_state:
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createRestoreState(nullptr));
+    break;
+  case MIToken::kw_cfi_undefined:
+    if (parseCFIRegister(Reg))
+      return true;
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createUndefined(nullptr, Reg));
+    break;
+  case MIToken::kw_cfi_register: {
+    unsigned Reg2;
+    if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
+        parseCFIRegister(Reg2))
+      return true;
 
+    CFIIndex =
+        MF.addFrameInst(MCCFIInstruction::createRegister(nullptr, Reg, Reg2));
+    break;
+  }
+  case MIToken::kw_cfi_window_save:
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createWindowSave(nullptr));
+    break;
+  case MIToken::kw_cfi_escape: {
+    std::string Values;
+    if (parseCFIEscapeValues(Values))
+      return true;
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createEscape(nullptr, Values));
+    break;
+  }
   default:
     // TODO: Parse the other CFI operands.
     llvm_unreachable("The current token should be a cfi operand");
@@ -1921,10 +1980,18 @@ bool MIParser::parseMachineOperand(MachineOperand &Dest,
     return parseMetadataOperand(Dest);
   case MIToken::kw_cfi_same_value:
   case MIToken::kw_cfi_offset:
+  case MIToken::kw_cfi_rel_offset:
   case MIToken::kw_cfi_def_cfa_register:
   case MIToken::kw_cfi_def_cfa_offset:
+  case MIToken::kw_cfi_adjust_cfa_offset:
+  case MIToken::kw_cfi_escape:
   case MIToken::kw_cfi_def_cfa:
+  case MIToken::kw_cfi_register:
+  case MIToken::kw_cfi_remember_state:
   case MIToken::kw_cfi_restore:
+  case MIToken::kw_cfi_restore_state:
+  case MIToken::kw_cfi_undefined:
+  case MIToken::kw_cfi_window_save:
     return parseCFIOperand(Dest);
   case MIToken::kw_blockaddress:
     return parseBlockAddressOperand(Dest);

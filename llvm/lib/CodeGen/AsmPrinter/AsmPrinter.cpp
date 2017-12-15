@@ -722,7 +722,9 @@ void AsmPrinter::EmitFunctionEntryLabel() {
 }
 
 /// emitComments - Pretty-print comments for instructions.
-static void emitComments(const MachineInstr &MI, raw_ostream &CommentOS,
+/// It returns true iff the sched comment was emitted.
+///   Otherwise it returns false.
+static bool emitComments(const MachineInstr &MI, raw_ostream &CommentOS,
                          AsmPrinter *AP) {
   const MachineFunction *MF = MI.getMF();
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
@@ -766,12 +768,16 @@ static void emitComments(const MachineInstr &MI, raw_ostream &CommentOS,
     CommentOS << " Reload Reuse";
   }
 
-  if (Commented && AP->EnablePrintSchedInfo)
-    // If any comment was added above and we need sched info comment then
-    // add this new comment just after the above comment w/o "\n" between them.
-    CommentOS << " " << MF->getSubtarget().getSchedInfoStr(MI) << "\n";
-  else if (Commented)
+  if (Commented) {
+    if (AP->EnablePrintSchedInfo) {
+      // If any comment was added above and we need sched info comment then add
+      // this new comment just after the above comment w/o "\n" between them.
+      CommentOS << " " << MF->getSubtarget().getSchedInfoStr(MI) << "\n";
+      return true;
+    }
     CommentOS << "\n";
+  }
+  return false;
 }
 
 /// emitImplicitDef - This method emits the specified machine instruction
@@ -1013,8 +1019,10 @@ void AsmPrinter::EmitFunctionBody() {
         }
       }
 
-      if (isVerbose())
-        emitComments(MI, OutStreamer->GetCommentOS(), this);
+      if (isVerbose() && emitComments(MI, OutStreamer->GetCommentOS(), this)) {
+        MachineInstr *MIP = const_cast<MachineInstr *>(&MI);
+        MIP->setAsmPrinterFlag(MachineInstr::NoSchedComment);
+      }
 
       switch (MI.getOpcode()) {
       case TargetOpcode::CFI_INSTRUCTION:

@@ -964,3 +964,156 @@ entry:
   %and = and i32 %or, 65535
   ret i32 %and
 }
+
+define arm_aapcscc i1 @test6(i8* %x, i8 %y, i8 %z) {
+; ARM-LABEL: test6:
+; ARM:       @ %bb.0: @ %entry
+; ARM-NEXT:    ldrb r0, [r0]
+; ARM-NEXT:    uxtb r2, r2
+; ARM-NEXT:    and r0, r0, r1
+; ARM-NEXT:    uxtb r1, r0
+; ARM-NEXT:    mov r0, #0
+; ARM-NEXT:    cmp r1, r2
+; ARM-NEXT:    movweq r0, #1
+; ARM-NEXT:    bx lr
+;
+; ARMEB-LABEL: test6:
+; ARMEB:       @ %bb.0: @ %entry
+; ARMEB-NEXT:    ldrb r0, [r0]
+; ARMEB-NEXT:    uxtb r2, r2
+; ARMEB-NEXT:    and r0, r0, r1
+; ARMEB-NEXT:    uxtb r1, r0
+; ARMEB-NEXT:    mov r0, #0
+; ARMEB-NEXT:    cmp r1, r2
+; ARMEB-NEXT:    movweq r0, #1
+; ARMEB-NEXT:    bx lr
+;
+; THUMB1-LABEL: test6:
+; THUMB1:       @ %bb.0: @ %entry
+; THUMB1-NEXT:    ldrb r0, [r0]
+; THUMB1-NEXT:    ands r0, r1
+; THUMB1-NEXT:    uxtb r3, r0
+; THUMB1-NEXT:    uxtb r2, r2
+; THUMB1-NEXT:    movs r0, #1
+; THUMB1-NEXT:    movs r1, #0
+; THUMB1-NEXT:    cmp r3, r2
+; THUMB1-NEXT:    beq .LBB18_2
+; THUMB1-NEXT:  @ %bb.1: @ %entry
+; THUMB1-NEXT:    mov r0, r1
+; THUMB1-NEXT:  .LBB18_2: @ %entry
+; THUMB1-NEXT:    bx lr
+;
+; THUMB2-LABEL: test6:
+; THUMB2:       @ %bb.0: @ %entry
+; THUMB2-NEXT:    ldrb r0, [r0]
+; THUMB2-NEXT:    uxtb r2, r2
+; THUMB2-NEXT:    ands r0, r1
+; THUMB2-NEXT:    uxtb r1, r0
+; THUMB2-NEXT:    movs r0, #0
+; THUMB2-NEXT:    cmp r1, r2
+; THUMB2-NEXT:    it eq
+; THUMB2-NEXT:    moveq r0, #1
+; THUMB2-NEXT:    bx lr
+entry:
+  %0 = load i8, i8* %x, align 4
+  %1 = and i8 %0, %y
+  %2 = icmp eq i8 %1, %z
+  ret i1 %2
+}
+
+define arm_aapcscc i1 @test7(i16* %x, i16 %y, i8 %z) {
+; ARM-LABEL: test7:
+; ARM:       @ %bb.0: @ %entry
+; ARM-NEXT:    ldrh r0, [r0]
+; ARM-NEXT:    uxtb r2, r2
+; ARM-NEXT:    and r0, r0, r1
+; ARM-NEXT:    uxtb r1, r0
+; ARM-NEXT:    mov r0, #0
+; ARM-NEXT:    cmp r1, r2
+; ARM-NEXT:    movweq r0, #1
+; ARM-NEXT:    bx lr
+;
+; ARMEB-LABEL: test7:
+; ARMEB:       @ %bb.0: @ %entry
+; ARMEB-NEXT:    ldrh r0, [r0]
+; ARMEB-NEXT:    uxtb r2, r2
+; ARMEB-NEXT:    and r0, r0, r1
+; ARMEB-NEXT:    uxtb r1, r0
+; ARMEB-NEXT:    mov r0, #0
+; ARMEB-NEXT:    cmp r1, r2
+; ARMEB-NEXT:    movweq r0, #1
+; ARMEB-NEXT:    bx lr
+;
+; THUMB1-LABEL: test7:
+; THUMB1:       @ %bb.0: @ %entry
+; THUMB1-NEXT:    ldrh r0, [r0]
+; THUMB1-NEXT:    ands r0, r1
+; THUMB1-NEXT:    uxtb r3, r0
+; THUMB1-NEXT:    uxtb r2, r2
+; THUMB1-NEXT:    movs r0, #1
+; THUMB1-NEXT:    movs r1, #0
+; THUMB1-NEXT:    cmp r3, r2
+; THUMB1-NEXT:    beq .LBB19_2
+; THUMB1-NEXT:  @ %bb.1: @ %entry
+; THUMB1-NEXT:    mov r0, r1
+; THUMB1-NEXT:  .LBB19_2: @ %entry
+; THUMB1-NEXT:    bx lr
+;
+; THUMB2-LABEL: test7:
+; THUMB2:       @ %bb.0: @ %entry
+; THUMB2-NEXT:    ldrh r0, [r0]
+; THUMB2-NEXT:    uxtb r2, r2
+; THUMB2-NEXT:    ands r0, r1
+; THUMB2-NEXT:    uxtb r1, r0
+; THUMB2-NEXT:    movs r0, #0
+; THUMB2-NEXT:    cmp r1, r2
+; THUMB2-NEXT:    it eq
+; THUMB2-NEXT:    moveq r0, #1
+; THUMB2-NEXT:    bx lr
+entry:
+  %0 = load i16, i16* %x, align 4
+  %1 = and i16 %0, %y
+  %2 = trunc i16 %1 to i8
+  %3 = icmp eq i8 %2, %z
+  ret i1 %3
+}
+
+define arm_aapcscc void @test8(i32* nocapture %p) {
+; ARM-LABEL: test8:
+; ARM:       @ %bb.0: @ %entry
+; ARM-NEXT:    ldr r1, [r0]
+; ARM-NEXT:    mvn r1, r1
+; ARM-NEXT:    uxtb r1, r1
+; ARM-NEXT:    str r1, [r0]
+; ARM-NEXT:    bx lr
+;
+; ARMEB-LABEL: test8:
+; ARMEB:       @ %bb.0: @ %entry
+; ARMEB-NEXT:    ldr r1, [r0]
+; ARMEB-NEXT:    mvn r1, r1
+; ARMEB-NEXT:    uxtb r1, r1
+; ARMEB-NEXT:    str r1, [r0]
+; ARMEB-NEXT:    bx lr
+;
+; THUMB1-LABEL: test8:
+; THUMB1:       @ %bb.0: @ %entry
+; THUMB1-NEXT:    ldr r1, [r0]
+; THUMB1-NEXT:    movs r2, #255
+; THUMB1-NEXT:    bics r2, r1
+; THUMB1-NEXT:    str r2, [r0]
+; THUMB1-NEXT:    bx lr
+;
+; THUMB2-LABEL: test8:
+; THUMB2:       @ %bb.0: @ %entry
+; THUMB2-NEXT:    ldr r1, [r0]
+; THUMB2-NEXT:    mvns r1, r1
+; THUMB2-NEXT:    uxtb r1, r1
+; THUMB2-NEXT:    str r1, [r0]
+; THUMB2-NEXT:    bx lr
+entry:
+  %0 = load i32, i32* %p, align 4
+  %neg = and i32 %0, 255
+  %and = xor i32 %neg, 255
+  store i32 %and, i32* %p, align 4
+  ret void
+}

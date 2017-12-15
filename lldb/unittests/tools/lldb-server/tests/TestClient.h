@@ -16,6 +16,8 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Connection.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/FormatVariadic.h"
 #include <memory>
 #include <string>
 
@@ -44,6 +46,14 @@ public:
   const ProcessInfo &GetProcessInfo();
   llvm::Optional<JThreadsInfo> GetJThreadsInfo();
   const StopReply &GetLatestStopReply();
+  template <typename T> llvm::Expected<const T &> GetLatestStopReplyAs() {
+    assert(m_stop_reply);
+    if (const auto *Reply = llvm::dyn_cast<T>(m_stop_reply.get()))
+      return *Reply;
+    return llvm::make_error<llvm::StringError>(
+        llvm::formatv("Unexpected Stop Reply {0}", m_stop_reply->getKind()),
+        llvm::inconvertibleErrorCode());
+  }
   llvm::Error SendMessage(llvm::StringRef message);
   llvm::Error SendMessage(llvm::StringRef message,
                           std::string &response_string);
@@ -62,7 +72,7 @@ private:
           result);
 
   llvm::Optional<ProcessInfo> m_process_info;
-  llvm::Optional<StopReply> m_stop_reply;
+  std::unique_ptr<StopReply> m_stop_reply;
   unsigned int m_pc_register = UINT_MAX;
 };
 

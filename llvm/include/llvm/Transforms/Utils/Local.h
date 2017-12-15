@@ -455,7 +455,7 @@ void copyRangeMetadata(const DataLayout &DL, const LoadInst &OldLI, MDNode *N,
 //  Intrinsic pattern matching
 //
 
-/// Try and match a bswap or bitreverse idiom.
+/// Try to match a bswap or bitreverse idiom.
 ///
 /// If an idiom is matched, an intrinsic call is inserted before \c I. Any added
 /// instructions are returned in \c InsertedInsts. They will all have been added

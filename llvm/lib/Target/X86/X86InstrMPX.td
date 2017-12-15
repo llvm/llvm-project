@@ -76,7 +76,7 @@ def BNDSTXmr:      I<0x1B, MRMDestMem, (outs), (ins i64mem:$dst, BNDR:$src),
                     Requires<[HasMPX]>;
 }
 let mayLoad = 1 in
-def BNDLDXrm:      I<0x1A, MRMSrcMem, (outs BNDR:$dst), (ins i64mem:$src),
+def BNDLDXrm:      I<0x1A, MRMSrcMem, (outs BNDR:$dst), (ins anymem:$src),
                     "bndldx\t{$src, $dst|$dst, $src}", [], IIC_MPX>, PS,
                     Requires<[HasMPX]>;
 } // SchedRW

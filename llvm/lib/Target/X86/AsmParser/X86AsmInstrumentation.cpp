@@ -610,7 +610,7 @@ private:
     EmitInstruction(Out, MCInstBuilder(X86::CLD));
     EmitInstruction(Out, MCInstBuilder(X86::MMX_EMMS));
 
-    EmitInstruction(Out, MCInstBuilder(X86::AND64ri8)
+    EmitInstruction(Out, MCInstBuilder(X86::AND32ri8)
                              .addReg(X86::ESP)
                              .addReg(X86::ESP)
                              .addImm(-16));

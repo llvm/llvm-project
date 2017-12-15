@@ -31,8 +31,9 @@ TEST_F(StandardStartupTest, TestStopReplyContainsThreadPcs) {
   auto jthreads_info = Client->GetJThreadsInfo();
   ASSERT_TRUE(jthreads_info);
 
-  auto stop_reply = Client->GetLatestStopReply();
-  auto stop_reply_pcs = stop_reply.GetThreadPcs();
+  auto stop_reply = Client->GetLatestStopReplyAs<StopReplyStop>();
+  ASSERT_THAT_EXPECTED(stop_reply, Succeeded());
+  auto stop_reply_pcs = stop_reply->getThreadPcs();
   auto thread_infos = jthreads_info->GetThreadInfos();
   ASSERT_EQ(stop_reply_pcs.size(), thread_infos.size())
       << "Thread count mismatch.";
