@@ -1641,10 +1641,9 @@ static bool isTargetOS(const TargetInfo &TI, const IdentifierInfo *II) {
 /// Implements the __is_target_environment builtin macro.
 static bool isTargetEnvironment(const TargetInfo &TI,
                                 const IdentifierInfo *II) {
-  StringRef EnvName = TI.getTriple().getEnvironmentName();
-  if (EnvName.empty())
-    EnvName = "unknown";
-  return EnvName.equals_lower(II->getName());
+  std::string EnvName = (llvm::Twine("---") + II->getName().lower()).str();
+  llvm::Triple Env(EnvName);
+  return TI.getTriple().getEnvironment() == Env.getEnvironment();
 }
 
 /// ExpandBuiltinMacro - If an identifier token is read that is to be expanded
