@@ -39,7 +39,8 @@ public:
       : SimplifyCFGPass(SimplifyCFGOptions()
                             .forwardSwitchCondToPhi(false)
                             .convertSwitchToLookupTable(false)
-                            .needCanonicalLoops(true)) {}
+                            .needCanonicalLoops(true)
+                            .sinkCommonInsts(false)) {}
 
 
   /// Construct a pass with optional optimizations.

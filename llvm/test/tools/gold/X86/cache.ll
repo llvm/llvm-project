@@ -3,7 +3,7 @@
 ; RUN: opt -module-summary %p/Inputs/cache.ll -o %t2.o
 
 ; RUN: rm -Rf %t.cache
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     --plugin-opt=thinlto \
 ; RUN:     --plugin-opt=cache-dir=%t.cache \
 ; RUN:     -o %t3.o %t2.o %t.o
@@ -17,7 +17,7 @@
 ; RUN: opt -module-hash -module-summary %p/Inputs/cache.ll -o %t2.o
 
 ; RUN: rm -Rf %t.cache
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     --plugin-opt=thinlto \
 ; RUN:     --plugin-opt=cache-dir=%t.cache \
 ; RUN:     -o %t3.o %t2.o %t.o
@@ -29,7 +29,7 @@
 ; We should only remove files matching the pattern "llvmcache-*".
 
 ; RUN: touch -t 197001011200 %t.cache/llvmcache-foo %t.cache/foo
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     --plugin-opt=thinlto \
 ; RUN:     --plugin-opt=cache-dir=%t.cache \
 ; RUN:     --plugin-opt=cache-policy=prune_after=1h:prune_interval=0s \
@@ -43,7 +43,7 @@
 ; RUN: %python -c "print(' ' * 65536)" > %t.cache/llvmcache-foo
 
 ; This should leave the file in place.
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     --plugin-opt=thinlto \
 ; RUN:     --plugin-opt=cache-dir=%t.cache \
 ; RUN:     --plugin-opt=cache-policy=cache_size_bytes=128k:prune_interval=0s \
@@ -52,7 +52,7 @@
 
 
 ; This should remove it.
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     --plugin-opt=thinlto \
 ; RUN:     --plugin-opt=cache-dir=%t.cache \
 ; RUN:     --plugin-opt=cache-policy=cache_size_bytes=32k:prune_interval=0s \

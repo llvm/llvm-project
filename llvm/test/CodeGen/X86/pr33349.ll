@@ -41,40 +41,34 @@ target triple = "x86_64-unknown-linux-gnu"
 ; SKX-NEXT:    vpslld $31, %xmm0, %xmm0
 ; SKX-NEXT:    vptestmd %xmm0, %xmm0, %k0
 ; SKX-NEXT:    kshiftrw $2, %k0, %k1
-; SKX-NEXT:    kshiftlw $15, %k1, %k2
-; SKX-NEXT:    kshiftrw $15, %k2, %k2
+; SKX-NEXT:    kshiftrw $1, %k1, %k2
 ; SKX-NEXT:    kmovd %k2, %eax
 ; SKX-NEXT:    testb $1, %al
 ; SKX-NEXT:    fld1
 ; SKX-NEXT:    fldz
 ; SKX-NEXT:    fld %st(0)
 ; SKX-NEXT:    fcmovne %st(2), %st(0)
-; SKX-NEXT:    kshiftlw $14, %k1, %k1
-; SKX-NEXT:    kshiftrw $15, %k1, %k1
 ; SKX-NEXT:    kmovd %k1, %eax
 ; SKX-NEXT:    testb $1, %al
 ; SKX-NEXT:    fld %st(1)
 ; SKX-NEXT:    fcmovne %st(3), %st(0)
-; SKX-NEXT:    kshiftlw $15, %k0, %k1
-; SKX-NEXT:    kshiftrw $15, %k1, %k1
+; SKX-NEXT:    kshiftrw $1, %k0, %k1
 ; SKX-NEXT:    kmovd %k1, %eax
 ; SKX-NEXT:    testb $1, %al
 ; SKX-NEXT:    fld %st(2)
 ; SKX-NEXT:    fcmovne %st(4), %st(0)
-; SKX-NEXT:    kshiftlw $14, %k0, %k0
-; SKX-NEXT:    kshiftrw $15, %k0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    testb $1, %al
 ; SKX-NEXT:    fxch %st(3)
 ; SKX-NEXT:    fcmovne %st(4), %st(0)
 ; SKX-NEXT:    fstp %st(4)
 ; SKX-NEXT:    fxch %st(3)
-; SKX-NEXT:    fstpt 10(%rdi)
-; SKX-NEXT:    fxch %st(1)
 ; SKX-NEXT:    fstpt (%rdi)
 ; SKX-NEXT:    fxch %st(1)
-; SKX-NEXT:    fstpt 30(%rdi)
+; SKX-NEXT:    fstpt 10(%rdi)
+; SKX-NEXT:    fxch %st(1)
 ; SKX-NEXT:    fstpt 20(%rdi)
+; SKX-NEXT:    fstpt 30(%rdi)
 ; SKX-NEXT:    retq
  bb:
    %tmp = select <4 x i1> %m, <4 x x86_fp80> <x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK3FFF8000000000000000, x86_fp80             0xK3FFF8000000000000000>, <4 x x86_fp80> zeroinitializer

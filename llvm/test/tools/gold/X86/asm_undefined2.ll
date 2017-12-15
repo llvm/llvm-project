@@ -1,12 +1,12 @@
 ; RegularLTO testcase
 ; RUN: llvm-as %s -o %t.o
-; RUN: %gold -shared -m elf_x86_64 -o %t2 -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -shared -m elf_x86_64 -o %t2 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN: %t.o --plugin-opt=save-temps -upatatino
 ; RUN: llvm-dis < %t2.0.5.precodegen.bc | FileCheck %s
 
 ; ThinLTO testcase
 ; RUN: opt -module-summary %s -o %t.o
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     --plugin-opt=save-temps \
 ; RUN:     --plugin-opt=thinlto -o %t2 %t.o
 ; RUN: llvm-dis < %t.o.5.precodegen.bc | FileCheck --check-prefix=CHECKTHIN %s

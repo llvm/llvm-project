@@ -4,7 +4,7 @@
 
 # RUN: llvm-mc %s -o %t.o -filetype=obj -triple=x86_64-unknown-linux-gnu
 # RUN: llvm-as %p/Inputs/multiple-data.ll -o %t2.o
-# RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+# RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 # RUN:     -m elf_x86_64 -o %t.exe %t2.o %t.o  \
 # RUN:     --section-ordering-file=%t_order_lto.txt
 # RUN: llvm-readobj -elf-output-style=GNU -t %t.exe | FileCheck %s

@@ -5728,7 +5728,7 @@ bool SimplifyCFGOpt::SimplifyUncondBranch(BranchInst *BI,
   BasicBlock *BB = BI->getParent();
   BasicBlock *Succ = BI->getSuccessor(0);
 
-  if (SinkCommon && SinkThenElseCodeToEnd(BI))
+  if (SinkCommon && Options.SinkCommonInsts && SinkThenElseCodeToEnd(BI))
     return true;
 
   // If the Terminator is the only non-phi instruction, simplify the block.

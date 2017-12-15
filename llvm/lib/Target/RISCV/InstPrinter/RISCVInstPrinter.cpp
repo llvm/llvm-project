@@ -29,12 +29,10 @@ using namespace llvm;
 #define PRINT_ALIAS_INSTR
 #include "RISCVGenAsmWriter.inc"
 
-// Alias instruction emission is disabled by default. A subsequent patch will
-// change this default and fix all affected tests.
 static cl::opt<bool>
 NoAliases("riscv-no-aliases",
             cl::desc("Disable the emission of assembler pseudo instructions"),
-            cl::init(true),
+            cl::init(false),
             cl::Hidden);
 
 void RISCVInstPrinter::printInst(const MCInst *MI, raw_ostream &O,

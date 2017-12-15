@@ -1769,7 +1769,7 @@ void SelectionDAGBuilder::FindMergedConditions(const Value *Cond,
 
   // If this node is not part of the or/and tree, emit it as a branch.
   if (!BOp || !(isa<BinaryOperator>(BOp) || isa<CmpInst>(BOp)) ||
-      BOpc != Opc || !BOp->hasOneUse() ||
+      BOpc != unsigned(Opc) || !BOp->hasOneUse() ||
       BOp->getParent() != CurBB->getBasicBlock() ||
       !InBlock(BOp->getOperand(0), CurBB->getBasicBlock()) ||
       !InBlock(BOp->getOperand(1), CurBB->getBasicBlock())) {
@@ -4214,7 +4214,9 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
   // Info is set by getTgtMemInstrinsic
   TargetLowering::IntrinsicInfo Info;
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  bool IsTgtIntrinsic = TLI.getTgtMemIntrinsic(Info, I, Intrinsic);
+  bool IsTgtIntrinsic = TLI.getTgtMemIntrinsic(Info, I,
+                                               DAG.getMachineFunction(),
+                                               Intrinsic);
 
   // Add the intrinsic ID as an integer operand if it's not a target intrinsic.
   if (!IsTgtIntrinsic || Info.opc == ISD::INTRINSIC_VOID ||
@@ -4240,11 +4242,10 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
   SDValue Result;
   if (IsTgtIntrinsic) {
     // This is target intrinsic that touches memory
-    Result = DAG.getMemIntrinsicNode(Info.opc, getCurSDLoc(),
-                                     VTs, Ops, Info.memVT,
-                                   MachinePointerInfo(Info.ptrVal, Info.offset),
-                                     Info.align, Info.vol,
-                                     Info.readMem, Info.writeMem, Info.size);
+    Result = DAG.getMemIntrinsicNode(Info.opc, getCurSDLoc(), VTs,
+      Ops, Info.memVT,
+      MachinePointerInfo(Info.ptrVal, Info.offset), Info.align,
+      Info.flags, Info.size);
   } else if (!HasChain) {
     Result = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, getCurSDLoc(), VTs, Ops);
   } else if (!I.getType()->isVoidTy()) {
@@ -4853,6 +4854,13 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
     }
   }
 
+  if (!Op && N.getNode())
+    // Check if frame index is available.
+    if (LoadSDNode *LNode = dyn_cast<LoadSDNode>(N.getNode()))
+      if (FrameIndexSDNode *FINode =
+          dyn_cast<FrameIndexSDNode>(LNode->getBasePtr().getNode()))
+        Op = MachineOperand::CreateFI(FINode->getIndex());
+
   if (!Op) {
     // Check if ValueMap has reg number.
     DenseMap<const Value *, unsigned>::iterator VMI = FuncInfo.ValueMap.find(V);
@@ -4887,13 +4895,6 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
       IsIndirect = IsDbgDeclare;
     }
   }
-
-  if (!Op && N.getNode())
-    // Check if frame index is available.
-    if (LoadSDNode *LNode = dyn_cast<LoadSDNode>(N.getNode()))
-      if (FrameIndexSDNode *FINode =
-          dyn_cast<FrameIndexSDNode>(LNode->getBasePtr().getNode()))
-        Op = MachineOperand::CreateFI(FINode->getIndex());
 
   if (!Op)
     return false;
@@ -5823,6 +5824,7 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
   case Intrinsic::prefetch: {
     SDValue Ops[5];
     unsigned rw = cast<ConstantInt>(I.getArgOperand(1))->getZExtValue();
+    auto Flags = rw == 0 ? MachineMemOperand::MOLoad :MachineMemOperand::MOStore;
     Ops[0] = getRoot();
     Ops[1] = getValue(I.getArgOperand(0));
     Ops[2] = getValue(I.getArgOperand(1));
@@ -5833,9 +5835,7 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
                                         EVT::getIntegerVT(*Context, 8),
                                         MachinePointerInfo(I.getArgOperand(0)),
                                         0, /* align */
-                                        false, /* volatile */
-                                        rw==0, /* read */
-                                        rw==1)); /* write */
+                                        Flags));
     return nullptr;
   }
   case Intrinsic::lifetime_start:

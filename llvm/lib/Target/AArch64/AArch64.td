@@ -142,6 +142,7 @@ def FeatureNoNegativeImmediates : SubtargetFeature<"no-neg-immediates",
 def FeatureLSLFast : SubtargetFeature<
     "lsl-fast", "HasLSLFast", "true",
     "CPU has a fastpath logical shift of up to 3 places">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //

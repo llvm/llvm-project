@@ -63,16 +63,20 @@ struct SimplifyCFGOptions {
   bool ForwardSwitchCondToPhi;
   bool ConvertSwitchToLookupTable;
   bool NeedCanonicalLoop;
+  bool SinkCommonInsts;
   AssumptionCache *AC;
 
   SimplifyCFGOptions(unsigned BonusThreshold = 1,
                      bool ForwardSwitchCond = false,
                      bool SwitchToLookup = false, bool CanonicalLoops = true,
+                     bool SinkCommon = false,
                      AssumptionCache *AssumpCache = nullptr)
       : BonusInstThreshold(BonusThreshold),
         ForwardSwitchCondToPhi(ForwardSwitchCond),
         ConvertSwitchToLookupTable(SwitchToLookup),
-        NeedCanonicalLoop(CanonicalLoops), AC(AssumpCache) {}
+        NeedCanonicalLoop(CanonicalLoops),
+        SinkCommonInsts(SinkCommon),
+        AC(AssumpCache) {}
 
   // Support 'builder' pattern to set members by name at construction time.
   SimplifyCFGOptions &bonusInstThreshold(int I) {
@@ -89,6 +93,10 @@ struct SimplifyCFGOptions {
   }
   SimplifyCFGOptions &needCanonicalLoops(bool B) {
     NeedCanonicalLoop = B;
+    return *this;
+  }
+  SimplifyCFGOptions &sinkCommonInsts(bool B) {
+    SinkCommonInsts = B;
     return *this;
   }
   SimplifyCFGOptions &setAssumptionCache(AssumptionCache *Cache) {

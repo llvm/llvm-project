@@ -505,13 +505,6 @@ namespace {
     bool isLegalNarrowLoad(LoadSDNode *LoadN, ISD::LoadExtType ExtType,
                            EVT &ExtVT, unsigned ShAmt = 0);
 
-    /// Used by BackwardsPropagateMask to find suitable loads.
-    bool SearchForAndLoads(SDNode *N, SmallPtrSetImpl<LoadSDNode*> &Loads,
-                           ConstantSDNode *Mask, SDNode *&UncombinedNode);
-    /// Attempt to propagate a given AND node back to load leaves so that they
-    /// can be combined into narrow loads.
-    bool BackwardsPropagateMask(SDNode *N, SelectionDAG &DAG);
-
     /// Helper function for MergeConsecutiveStores which merges the
     /// component store chains.
     SDValue getMergeStoreChains(SmallVectorImpl<MemOpLink> &StoreNodes,
@@ -3805,113 +3798,6 @@ bool DAGCombiner::isLegalNarrowLoad(LoadSDNode *LoadN, ISD::LoadExtType ExtType,
   return true;
 }
 
-bool DAGCombiner::SearchForAndLoads(SDNode *N,
-                                    SmallPtrSetImpl<LoadSDNode*> &Loads,
-                                    ConstantSDNode *Mask,
-                                    SDNode *&NodeToMask) {
-  // Recursively search for the operands, looking for loads which can be
-  // narrowed.
-  for (unsigned i = 0, e = N->getNumOperands(); i < e; ++i) {
-    SDValue Op = N->getOperand(i);
-
-    // Constants should already be fixed up...
-    if (isa<ConstantSDNode>(Op))
-      continue;
-
-    if (!Op.hasOneUse() || Op.getValueType().isVector())
-      return false;
-
-    switch(Op.getOpcode()) {
-    case ISD::LOAD: {
-      auto *Load = cast<LoadSDNode>(Op);
-      EVT ExtVT;
-      if (isAndLoadExtLoad(Mask, Load, Load->getValueType(0), ExtVT) &&
-          isLegalNarrowLoad(Load, ISD::ZEXTLOAD, ExtVT)) {
-        // Only add this load if we can make it more narrow.
-        if (ExtVT.bitsLT(Load->getMemoryVT()))
-          Loads.insert(Load);
-        continue;
-      }
-      return false;
-    }
-    case ISD::ZERO_EXTEND:
-    case ISD::ANY_EXTEND:
-    case ISD::AssertZext: {
-      unsigned ActiveBits = Mask->getAPIntValue().countTrailingOnes();
-      EVT ExtVT = EVT::getIntegerVT(*DAG.getContext(), ActiveBits);
-      EVT VT = Op.getOpcode() == ISD::AssertZext ?
-        cast<VTSDNode>(Op.getOperand(1))->getVT() :
-        Op.getOperand(0).getValueType();
-
-      // We can accept extending nodes if the mask is wider or an equal
-      // width to the original type.
-      if (ExtVT.bitsGE(VT))
-        continue;
-      break;
-    }
-    case ISD::OR:
-    case ISD::XOR:
-    case ISD::AND:
-      if (!SearchForAndLoads(Op.getNode(), Loads, Mask, NodeToMask))
-        return false;
-      continue;
-    }
-
-    // Allow one node which will masked along with any loads found.
-    if (NodeToMask)
-      return false;
-    NodeToMask = Op.getNode();
-  }
-  return true;
-}
-
-bool DAGCombiner::BackwardsPropagateMask(SDNode *N, SelectionDAG &DAG) {
-  auto *Mask = dyn_cast<ConstantSDNode>(N->getOperand(1));
-  if (!Mask)
-    return false;
-
-  if (!Mask->getAPIntValue().isMask())
-    return false;
-
-  // No need to do anything if the and directly uses a load.
-  if (isa<LoadSDNode>(N->getOperand(0)))
-    return false;
-
-  SmallPtrSet<LoadSDNode*, 8> Loads;
-  SDNode *FixupNode = nullptr;
-  if (SearchForAndLoads(N, Loads, Mask, FixupNode)) {
-    if (Loads.size() == 0)
-      return false;
-
-    SDValue MaskOp = N->getOperand(1);
-
-    // If it exists, fixup the single node we allow in the tree that needs
-    // masking.
-    if (FixupNode) {
-      SDValue And = DAG.getNode(ISD::AND, SDLoc(FixupNode),
-                                FixupNode->getValueType(0),
-                                SDValue(FixupNode, 0), MaskOp);
-      DAG.ReplaceAllUsesOfValueWith(SDValue(FixupNode, 0), And);
-      DAG.UpdateNodeOperands(And.getNode(), SDValue(FixupNode, 0),
-                             MaskOp);
-    }
-
-    for (auto *Load : Loads) {
-      SDValue And = DAG.getNode(ISD::AND, SDLoc(Load), Load->getValueType(0),
-                                SDValue(Load, 0), MaskOp);
-      DAG.ReplaceAllUsesOfValueWith(SDValue(Load, 0), And);
-      DAG.UpdateNodeOperands(And.getNode(), SDValue(Load, 0), MaskOp);
-      SDValue NewLoad = ReduceLoadWidth(And.getNode());
-      assert(NewLoad &&
-             "Shouldn't be masking the load if it can't be narrowed");
-      CombineTo(Load, NewLoad, NewLoad.getValue(1));
-    }
-    DAG.ReplaceAllUsesWith(N, N->getOperand(0).getNode());
-    return true;
-  }
-  return false;
-}
-
 SDValue DAGCombiner::visitAND(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -4109,16 +3995,6 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
 
       AddToWorklist(N);
       CombineTo(LN0, Res, Res.getValue(1));
-      return SDValue(N, 0);
-    }
-  }
-
-  if (Level >= AfterLegalizeTypes) {
-    // Attempt to propagate the AND back up to the leaves which, if they're
-    // loads, can be combined to narrow loads and the AND node can be removed.
-    // Perform after legalization so that extend nodes will already be
-    // combined into the loads.
-    if (BackwardsPropagateMask(N, DAG)) {
       return SDValue(N, 0);
     }
   }

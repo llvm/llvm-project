@@ -182,6 +182,10 @@ public:
                                            const Function &F) const override;
 
   void InitializeWasm();
+  MCSection *getStaticCtorSection(unsigned Priority,
+                                  const MCSymbol *KeySym) const override;
+  MCSection *getStaticDtorSection(unsigned Priority,
+                                  const MCSymbol *KeySym) const override;
 
   const MCExpr *lowerRelativeReference(const GlobalValue *LHS,
                                        const GlobalValue *RHS,

@@ -743,6 +743,12 @@ struct coff_resource_dir_table {
   support::ulittle16_t NumberOfIDEntries;
 };
 
+struct debug_h_header {
+  support::ulittle32_t Magic;
+  support::ulittle16_t Version;
+  support::ulittle16_t HashAlgorithm;
+};
+
 class COFFObjectFile : public ObjectFile {
 private:
   friend class ImportDirectoryEntryRef;
@@ -920,7 +926,7 @@ public:
 
   uint8_t getBytesInAddress() const override;
   StringRef getFileFormatName() const override;
-  unsigned getArch() const override;
+  Triple::ArchType getArch() const override;
   SubtargetFeatures getFeatures() const override { return SubtargetFeatures(); }
 
   import_directory_iterator import_directory_begin() const;

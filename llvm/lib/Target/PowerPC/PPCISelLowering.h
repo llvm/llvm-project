@@ -773,6 +773,7 @@ namespace llvm {
 
     bool getTgtMemIntrinsic(IntrinsicInfo &Info,
                             const CallInst &I,
+                            MachineFunction &MF,
                             unsigned Intrinsic) const override;
 
     /// getOptimalMemOpType - Returns the target specific optimal type for load

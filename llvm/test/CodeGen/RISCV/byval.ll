@@ -16,7 +16,7 @@ define i32 @callee(%struct.Foo* byval %f) nounwind {
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
 entry:
   %0 = getelementptr inbounds %struct.Foo, %struct.Foo* %f, i32 0, i32 0
   %1 = load i32, i32* %0, align 4
@@ -50,11 +50,11 @@ define void @caller() nounwind {
 ; RV32I-NEXT:    lui a0, %hi(callee)
 ; RV32I-NEXT:    addi a1, a0, %lo(callee)
 ; RV32I-NEXT:    addi a0, s0, -24
-; RV32I-NEXT:    jalr ra, a1, 0
+; RV32I-NEXT:    jalr a1
 ; RV32I-NEXT:    lw s0, 24(sp)
 ; RV32I-NEXT:    lw ra, 28(sp)
 ; RV32I-NEXT:    addi sp, sp, 32
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
 entry:
   %call = call i32 @callee(%struct.Foo* byval @foo)
   ret void

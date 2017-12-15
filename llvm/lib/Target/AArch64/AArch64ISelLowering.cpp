@@ -7371,6 +7371,7 @@ SDValue AArch64TargetLowering::LowerVECREDUCE(SDValue Op,
 /// specified in the intrinsic calls.
 bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                                const CallInst &I,
+                                               MachineFunction &MF,
                                                unsigned Intrinsic) const {
   auto &DL = I.getModule()->getDataLayout();
   switch (Intrinsic) {
@@ -7393,9 +7394,8 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.ptrVal = I.getArgOperand(I.getNumArgOperands() - 1);
     Info.offset = 0;
     Info.align = 0;
-    Info.vol = false; // volatile loads with NEON intrinsics not supported
-    Info.readMem = true;
-    Info.writeMem = false;
+    // volatile loads with NEON intrinsics not supported
+    Info.flags = MachineMemOperand::MOLoad;
     return true;
   }
   case Intrinsic::aarch64_neon_st2:
@@ -7420,9 +7420,8 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.ptrVal = I.getArgOperand(I.getNumArgOperands() - 1);
     Info.offset = 0;
     Info.align = 0;
-    Info.vol = false; // volatile stores with NEON intrinsics not supported
-    Info.readMem = false;
-    Info.writeMem = true;
+    // volatile stores with NEON intrinsics not supported
+    Info.flags = MachineMemOperand::MOStore;
     return true;
   }
   case Intrinsic::aarch64_ldaxr:
@@ -7433,9 +7432,7 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.align = DL.getABITypeAlignment(PtrTy->getElementType());
-    Info.vol = true;
-    Info.readMem = true;
-    Info.writeMem = false;
+    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile;
     return true;
   }
   case Intrinsic::aarch64_stlxr:
@@ -7446,9 +7443,7 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.ptrVal = I.getArgOperand(1);
     Info.offset = 0;
     Info.align = DL.getABITypeAlignment(PtrTy->getElementType());
-    Info.vol = true;
-    Info.readMem = false;
-    Info.writeMem = true;
+    Info.flags = MachineMemOperand::MOStore | MachineMemOperand::MOVolatile;
     return true;
   }
   case Intrinsic::aarch64_ldaxp:
@@ -7458,9 +7453,7 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.align = 16;
-    Info.vol = true;
-    Info.readMem = true;
-    Info.writeMem = false;
+    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile;
     return true;
   case Intrinsic::aarch64_stlxp:
   case Intrinsic::aarch64_stxp:
@@ -7469,9 +7462,7 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.ptrVal = I.getArgOperand(2);
     Info.offset = 0;
     Info.align = 16;
-    Info.vol = true;
-    Info.readMem = false;
-    Info.writeMem = true;
+    Info.flags = MachineMemOperand::MOStore | MachineMemOperand::MOVolatile;
     return true;
   default:
     break;

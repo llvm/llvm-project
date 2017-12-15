@@ -16,7 +16,7 @@ define i32 @lb(i8 *%a) nounwind {
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   %1 = getelementptr i8, i8* %a, i32 1
   %2 = load i8, i8* %1
   %3 = sext i8 %2 to i32
@@ -37,7 +37,7 @@ define i32 @lh(i16 *%a) nounwind {
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   %1 = getelementptr i16, i16* %a, i32 2
   %2 = load i16, i16* %1
   %3 = sext i16 %2 to i32
@@ -58,7 +58,7 @@ define i32 @lw(i32 *%a) nounwind {
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   %1 = getelementptr i32, i32* %a, i32 3
   %2 = load i32, i32* %1
   %3 = load volatile i32, i32* %a
@@ -78,7 +78,7 @@ define i32 @lbu(i8 *%a) nounwind {
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   %1 = getelementptr i8, i8* %a, i32 4
   %2 = load i8, i8* %1
   %3 = zext i8 %2 to i32
@@ -101,7 +101,7 @@ define i32 @lhu(i16 *%a) nounwind {
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   %1 = getelementptr i16, i16* %a, i32 5
   %2 = load i16, i16* %1
   %3 = zext i16 %2 to i32
@@ -125,7 +125,7 @@ define void @sb(i8 *%a, i8 %b) nounwind {
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   store i8 %b, i8* %a
   %1 = getelementptr i8, i8* %a, i32 6
   store i8 %b, i8* %1
@@ -144,7 +144,7 @@ define void @sh(i16 *%a, i16 %b) nounwind {
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   store i16 %b, i16* %a
   %1 = getelementptr i16, i16* %a, i32 7
   store i16 %b, i16* %1
@@ -163,7 +163,7 @@ define void @sw(i32 *%a, i32 %b) nounwind {
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   store i32 %b, i32* %a
   %1 = getelementptr i32, i32* %a, i32 8
   store i32 %b, i32* %1
@@ -185,7 +185,7 @@ define i32 @load_sext_zext_anyext_i1(i1 *%a) nounwind {
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   ; sextload i1
   %1 = getelementptr i1, i1* %a, i32 1
   %2 = load i1, i1* %1
@@ -214,7 +214,7 @@ define i16 @load_sext_zext_anyext_i1_i16(i1 *%a) nounwind {
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   ; sextload i1
   %1 = getelementptr i1, i1* %a, i32 1
   %2 = load i1, i1* %1
@@ -248,11 +248,11 @@ define i32 @lw_sw_global(i32 %a) nounwind {
 ; RV32I-NEXT:    addi a2, a2, %lo(G+36)
 ; RV32I-NEXT:    lw a3, 0(a2)
 ; RV32I-NEXT:    sw a0, 0(a2)
-; RV32I-NEXT:    addi a0, a1, 0
+; RV32I-NEXT:    mv a0, a1
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   %1 = load volatile i32, i32* @G
   store i32 %a, i32* @G
   %2 = getelementptr i32, i32* @G, i32 9
@@ -274,11 +274,11 @@ define i32 @lw_sw_constant(i32 %a) nounwind {
 ; RV32I-NEXT:    addi a2, a1, -273
 ; RV32I-NEXT:    lw a1, 0(a2)
 ; RV32I-NEXT:    sw a0, 0(a2)
-; RV32I-NEXT:    addi a0, a1, 0
+; RV32I-NEXT:    mv a0, a1
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   %1 = inttoptr i32 3735928559 to i32*
   %2 = load volatile i32, i32* %1
   store i32 %a, i32* %1

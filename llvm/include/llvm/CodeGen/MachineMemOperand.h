@@ -47,7 +47,7 @@ struct MachinePointerInfo {
 
   uint8_t StackID;
 
-  unsigned AddrSpace;
+  unsigned AddrSpace = 0;
 
   explicit MachinePointerInfo(const Value *v, int64_t offset = 0,
                               uint8_t ID = 0)
@@ -64,6 +64,19 @@ struct MachinePointerInfo {
   explicit MachinePointerInfo(unsigned AddressSpace = 0)
       : V((const Value *)nullptr), Offset(0), StackID(0),
         AddrSpace(AddressSpace) {}
+
+  explicit MachinePointerInfo(
+    PointerUnion<const Value *, const PseudoSourceValue *> v,
+    int64_t offset = 0,
+    uint8_t ID = 0)
+    : V(v), Offset(offset), StackID(ID) {
+    if (V) {
+      if (const auto *ValPtr = V.dyn_cast<const Value*>())
+        AddrSpace = ValPtr->getType()->getPointerAddressSpace();
+      else
+        AddrSpace = V.get<const PseudoSourceValue*>()->getAddressSpace();
+    }
+  }
 
   MachinePointerInfo getWithOffset(int64_t O) const {
     if (V.isNull())
