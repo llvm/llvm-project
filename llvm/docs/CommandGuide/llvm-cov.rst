@@ -382,3 +382,10 @@ OPTIONS
  It is an error to specify an architecture that is not included in the
  universal binary or to use an architecture that does not match a
  non-universal binary.
+
+.. option:: -summary-only
+
+ Export only summary information for each file in the coverage data. This mode
+ will not export coverage information for smaller units such as individual
+ functions or regions. The result will be the same as produced by :program:
+ `llvm-cov report` command, but presented in JSON format rather than text.
