@@ -80,11 +80,15 @@ std::unique_ptr<WasmYAML::CustomSection> WasmDumper::dumpCustomSection(const Was
     for (const object::SymbolRef& Sym: Obj.symbols()) {
       const object::WasmSymbol Symbol = Obj.getWasmSymbol(Sym);
       if (Symbol.Flags != 0) {
-        WasmYAML::SymbolInfo Info = { Symbol.Name, Symbol.Flags };
-        LinkingSec->SymbolInfos.push_back(Info);
+        WasmYAML::SymbolInfo Info{Symbol.Name, Symbol.Flags};
+        LinkingSec->SymbolInfos.emplace_back(Info);
       }
     }
     LinkingSec->DataSize = Obj.linkingData().DataSize;
+    for (const wasm::WasmInitFunc &Func : Obj.linkingData().InitFunctions) {
+      WasmYAML::InitFunction F{Func.Priority, Func.FunctionIndex};
+      LinkingSec->InitFunctions.emplace_back(F);
+    }
     CustomSec = std::move(LinkingSec);
   } else {
     CustomSec = make_unique<WasmYAML::CustomSection>(WasmSec.Name);

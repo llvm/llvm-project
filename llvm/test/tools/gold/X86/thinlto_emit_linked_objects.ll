@@ -10,7 +10,7 @@
 ; a library that had no strongly referenced symbols, that file would not
 ; be included in the link and listed in the emitted file. However, this
 ; requires gold version 1.12.
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=thinlto-index-only=%t3 \
 ; RUN:    -o %t5 \

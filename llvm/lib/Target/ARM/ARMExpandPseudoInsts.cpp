@@ -1469,7 +1469,9 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       unsigned SrcReg = MI.getOperand(OpIdx++).getReg();
 
       // Copy the destination register.
-      MIB.add(MI.getOperand(OpIdx++));
+      MachineOperand Dst(MI.getOperand(OpIdx++));
+      Dst.setIsRenamable(false);
+      MIB.add(Dst);
 
       // Copy the predicate operands.
       MIB.add(MI.getOperand(OpIdx++));

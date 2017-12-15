@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Scalar/RewriteStatepointsForGC.h"
+
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -108,30 +110,96 @@ static cl::opt<bool>
     AllowStatepointWithNoDeoptInfo("rs4gc-allow-statepoint-with-no-deopt-info",
                                    cl::Hidden, cl::init(true));
 
+/// The IR fed into RewriteStatepointsForGC may have had attributes and
+/// metadata implying dereferenceability that are no longer valid/correct after
+/// RewriteStatepointsForGC has run. This is because semantically, after
+/// RewriteStatepointsForGC runs, all calls to gc.statepoint "free" the entire
+/// heap. stripNonValidData (conservatively) restores
+/// correctness by erasing all attributes in the module that externally imply
+/// dereferenceability. Similar reasoning also applies to the noalias
+/// attributes and metadata. gc.statepoint can touch the entire heap including
+/// noalias objects.
+/// Apart from attributes and metadata, we also remove instructions that imply
+/// constant physical memory: llvm.invariant.start.
+static void stripNonValidData(Module &M);
+
+static bool shouldRewriteStatepointsIn(Function &F);
+
+PreservedAnalyses RewriteStatepointsForGC::run(Module &M,
+                                               ModuleAnalysisManager &AM) {
+  bool Changed = false;
+  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  for (Function &F : M) {
+    // Nothing to do for declarations.
+    if (F.isDeclaration() || F.empty())
+      continue;
+
+    // Policy choice says not to rewrite - the most common reason is that we're
+    // compiling code without a GCStrategy.
+    if (!shouldRewriteStatepointsIn(F))
+      continue;
+
+    auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
+    auto &TTI = FAM.getResult<TargetIRAnalysis>(F);
+    auto &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
+    Changed |= runOnFunction(F, DT, TTI, TLI);
+  }
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  // stripNonValidData asserts that shouldRewriteStatepointsIn
+  // returns true for at least one function in the module.  Since at least
+  // one function changed, we know that the precondition is satisfied.
+  stripNonValidData(M);
+
+  PreservedAnalyses PA;
+  PA.preserve<TargetIRAnalysis>();
+  PA.preserve<TargetLibraryAnalysis>();
+  return PA;
+}
+
 namespace {
 
-struct RewriteStatepointsForGC : public ModulePass {
+class RewriteStatepointsForGCLegacyPass : public ModulePass {
+  RewriteStatepointsForGC Impl;
+
+public:
   static char ID; // Pass identification, replacement for typeid
 
-  RewriteStatepointsForGC() : ModulePass(ID) {
-    initializeRewriteStatepointsForGCPass(*PassRegistry::getPassRegistry());
+  RewriteStatepointsForGCLegacyPass() : ModulePass(ID), Impl() {
+    initializeRewriteStatepointsForGCLegacyPassPass(
+        *PassRegistry::getPassRegistry());
   }
-
-  bool runOnFunction(Function &F);
 
   bool runOnModule(Module &M) override {
     bool Changed = false;
-    for (Function &F : M)
-      Changed |= runOnFunction(F);
+    const TargetLibraryInfo &TLI =
+        getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+    for (Function &F : M) {
+      // Nothing to do for declarations.
+      if (F.isDeclaration() || F.empty())
+        continue;
 
-    if (Changed) {
-      // stripNonValidData asserts that shouldRewriteStatepointsIn
-      // returns true for at least one function in the module.  Since at least
-      // one function changed, we know that the precondition is satisfied.
-      stripNonValidData(M);
+      // Policy choice says not to rewrite - the most common reason is that
+      // we're compiling code without a GCStrategy.
+      if (!shouldRewriteStatepointsIn(F))
+        continue;
+
+      TargetTransformInfo &TTI =
+          getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+      auto &DT = getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
+
+      Changed |= Impl.runOnFunction(F, DT, TTI, TLI);
     }
 
-    return Changed;
+    if (!Changed)
+      return false;
+
+    // stripNonValidData asserts that shouldRewriteStatepointsIn
+    // returns true for at least one function in the module.  Since at least
+    // one function changed, we know that the precondition is satisfied.
+    stripNonValidData(M);
+    return true;
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -141,43 +209,23 @@ struct RewriteStatepointsForGC : public ModulePass {
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
   }
-
-  /// The IR fed into RewriteStatepointsForGC may have had attributes and
-  /// metadata implying dereferenceability that are no longer valid/correct after
-  /// RewriteStatepointsForGC has run. This is because semantically, after
-  /// RewriteStatepointsForGC runs, all calls to gc.statepoint "free" the entire
-  /// heap. stripNonValidData (conservatively) restores
-  /// correctness by erasing all attributes in the module that externally imply
-  /// dereferenceability. Similar reasoning also applies to the noalias
-  /// attributes and metadata. gc.statepoint can touch the entire heap including
-  /// noalias objects.
-  /// Apart from attributes and metadata, we also remove instructions that imply
-  /// constant physical memory: llvm.invariant.start.
-  void stripNonValidData(Module &M);
-
-  // Helpers for stripNonValidData
-  void stripNonValidDataFromBody(Function &F);
-  void stripNonValidAttributesFromPrototype(Function &F);
-
-  // Certain metadata on instructions are invalid after running RS4GC.
-  // Optimizations that run after RS4GC can incorrectly use this metadata to
-  // optimize functions. We drop such metadata on the instruction.
-  void stripInvalidMetadataFromInstruction(Instruction &I);
 };
 
 } // end anonymous namespace
 
-char RewriteStatepointsForGC::ID = 0;
+char RewriteStatepointsForGCLegacyPass::ID = 0;
 
-ModulePass *llvm::createRewriteStatepointsForGCPass() {
-  return new RewriteStatepointsForGC();
+ModulePass *llvm::createRewriteStatepointsForGCLegacyPass() {
+  return new RewriteStatepointsForGCLegacyPass();
 }
 
-INITIALIZE_PASS_BEGIN(RewriteStatepointsForGC, "rewrite-statepoints-for-gc",
+INITIALIZE_PASS_BEGIN(RewriteStatepointsForGCLegacyPass,
+                      "rewrite-statepoints-for-gc",
                       "Make relocations explicit at statepoints", false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_END(RewriteStatepointsForGC, "rewrite-statepoints-for-gc",
+INITIALIZE_PASS_END(RewriteStatepointsForGCLegacyPass,
+                    "rewrite-statepoints-for-gc",
                     "Make relocations explicit at statepoints", false, false)
 
 namespace {
@@ -2346,8 +2394,7 @@ static void RemoveNonValidAttrAtIndex(LLVMContext &Ctx, AttrHolder &AH,
     AH.setAttributes(AH.getAttributes().removeAttributes(Ctx, Index, R));
 }
 
-void
-RewriteStatepointsForGC::stripNonValidAttributesFromPrototype(Function &F) {
+static void stripNonValidAttributesFromPrototype(Function &F) {
   LLVMContext &Ctx = F.getContext();
 
   for (Argument &A : F.args())
@@ -2359,7 +2406,10 @@ RewriteStatepointsForGC::stripNonValidAttributesFromPrototype(Function &F) {
     RemoveNonValidAttrAtIndex(Ctx, F, AttributeList::ReturnIndex);
 }
 
-void RewriteStatepointsForGC::stripInvalidMetadataFromInstruction(Instruction &I) {
+/// Certain metadata on instructions are invalid after running RS4GC.
+/// Optimizations that run after RS4GC can incorrectly use this metadata to
+/// optimize functions. We drop such metadata on the instruction.
+static void stripInvalidMetadataFromInstruction(Instruction &I) {
   if (!isa<LoadInst>(I) && !isa<StoreInst>(I))
     return;
   // These are the attributes that are still valid on loads and stores after
@@ -2387,7 +2437,7 @@ void RewriteStatepointsForGC::stripInvalidMetadataFromInstruction(Instruction &I
   I.dropUnknownNonDebugMetadata(ValidMetadataAfterRS4GC);
 }
 
-void RewriteStatepointsForGC::stripNonValidDataFromBody(Function &F) {
+static void stripNonValidDataFromBody(Function &F) {
   if (F.empty())
     return;
 
@@ -2462,7 +2512,7 @@ static bool shouldRewriteStatepointsIn(Function &F) {
     return false;
 }
 
-void RewriteStatepointsForGC::stripNonValidData(Module &M) {
+static void stripNonValidData(Module &M) {
 #ifndef NDEBUG
   assert(llvm::any_of(M, shouldRewriteStatepointsIn) && "precondition!");
 #endif
@@ -2474,21 +2524,12 @@ void RewriteStatepointsForGC::stripNonValidData(Module &M) {
     stripNonValidDataFromBody(F);
 }
 
-bool RewriteStatepointsForGC::runOnFunction(Function &F) {
-  // Nothing to do for declarations.
-  if (F.isDeclaration() || F.empty())
-    return false;
-
-  // Policy choice says not to rewrite - the most common reason is that we're
-  // compiling code without a GCStrategy.
-  if (!shouldRewriteStatepointsIn(F))
-    return false;
-
-  DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
-  TargetTransformInfo &TTI =
-      getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  const TargetLibraryInfo &TLI =
-      getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
+                                            TargetTransformInfo &TTI,
+                                            const TargetLibraryInfo &TLI) {
+  assert(!F.isDeclaration() && !F.empty() &&
+         "need function body to rewrite statepoints in");
+  assert(shouldRewriteStatepointsIn(F) && "mismatch in rewrite decision");
 
   auto NeedsRewrite = [&TLI](Instruction &I) {
     if (ImmutableCallSite CS = ImmutableCallSite(&I))

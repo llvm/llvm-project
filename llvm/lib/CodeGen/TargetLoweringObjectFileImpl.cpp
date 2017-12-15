@@ -1359,6 +1359,18 @@ const MCExpr *TargetLoweringObjectFileWasm::lowerRelativeReference(
 void TargetLoweringObjectFileWasm::InitializeWasm() {
   StaticCtorSection =
       getContext().getWasmSection(".init_array", SectionKind::getData());
-  StaticDtorSection =
-      getContext().getWasmSection(".fini_array", SectionKind::getData());
+}
+
+MCSection *TargetLoweringObjectFileWasm::getStaticCtorSection(
+    unsigned Priority, const MCSymbol *KeySym) const {
+  return Priority == UINT16_MAX ?
+         StaticCtorSection :
+         getContext().getWasmSection(".init_array." + utostr(Priority),
+                                     SectionKind::getData());
+}
+
+MCSection *TargetLoweringObjectFileWasm::getStaticDtorSection(
+    unsigned Priority, const MCSymbol *KeySym) const {
+  llvm_unreachable("@llvm.global_dtors should have been lowered already");
+  return nullptr;
 }

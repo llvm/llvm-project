@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=armv7-eabi -mattr=+neon %s -o - | FileCheck %s --check-prefix=CHECK-LE
-; RUN: llc -mtriple=armv7eb-eabi -mattr=+neon %s -o - | FileCheck %s --check-prefix=CHECK-BE
+; RUN: llc -verify-machineinstrs -mtriple=armv7-eabi -mattr=+neon %s -o - | FileCheck %s --check-prefix=CHECK-LE
+; RUN: llc -verify-machineinstrs -mtriple=armv7eb-eabi -mattr=+neon %s -o - | FileCheck %s --check-prefix=CHECK-BE
 
 define void @ld_st_vec_i8(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 ;CHECK-LE-LABEL: ld_st_vec_i8:

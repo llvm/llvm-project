@@ -470,6 +470,7 @@ class VectorType;
 
     bool getTgtMemIntrinsic(IntrinsicInfo &Info,
                             const CallInst &I,
+                            MachineFunction &MF,
                             unsigned Intrinsic) const override;
 
     /// \brief Returns true if it is beneficial to convert a load of a constant

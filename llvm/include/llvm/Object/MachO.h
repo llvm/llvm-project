@@ -360,7 +360,7 @@ public:
   uint8_t getBytesInAddress() const override;
 
   StringRef getFileFormatName() const override;
-  unsigned getArch() const override;
+  Triple::ArchType getArch() const override;
   SubtargetFeatures getFeatures() const override { return SubtargetFeatures(); }
   Triple getArchTriple(const char **McpuDefault = nullptr) const;
 

@@ -2428,8 +2428,8 @@ static SDValue getTOCEntry(SelectionDAG &DAG, const SDLoc &dl, bool Is64Bit,
   SDValue Ops[] = { GA, Reg };
   return DAG.getMemIntrinsicNode(
       PPCISD::TOC_ENTRY, dl, DAG.getVTList(VT, MVT::Other), Ops, VT,
-      MachinePointerInfo::getGOT(DAG.getMachineFunction()), 0, false, true,
-      false, 0);
+      MachinePointerInfo::getGOT(DAG.getMachineFunction()), 0,
+      MachineMemOperand::MOLoad);
 }
 
 SDValue PPCTargetLowering::LowerConstantPool(SDValue Op,
@@ -13295,6 +13295,7 @@ PPCTargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
 
 bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                            const CallInst &I,
+                                           MachineFunction &MF,
                                            unsigned Intrinsic) const {
   switch (Intrinsic) {
   case Intrinsic::ppc_qpx_qvlfd:
@@ -13347,9 +13348,7 @@ bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = -VT.getStoreSize()+1;
     Info.size = 2*VT.getStoreSize()-1;
     Info.align = 1;
-    Info.vol = false;
-    Info.readMem = true;
-    Info.writeMem = false;
+    Info.flags = MachineMemOperand::MOLoad;
     return true;
   }
   case Intrinsic::ppc_qpx_qvlfda:
@@ -13383,9 +13382,7 @@ bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.size = VT.getStoreSize();
     Info.align = 1;
-    Info.vol = false;
-    Info.readMem = true;
-    Info.writeMem = false;
+    Info.flags = MachineMemOperand::MOLoad;
     return true;
   }
   case Intrinsic::ppc_qpx_qvstfd:
@@ -13437,9 +13434,7 @@ bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = -VT.getStoreSize()+1;
     Info.size = 2*VT.getStoreSize()-1;
     Info.align = 1;
-    Info.vol = false;
-    Info.readMem = false;
-    Info.writeMem = true;
+    Info.flags = MachineMemOperand::MOStore;
     return true;
   }
   case Intrinsic::ppc_qpx_qvstfda:
@@ -13472,9 +13467,7 @@ bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.size = VT.getStoreSize();
     Info.align = 1;
-    Info.vol = false;
-    Info.readMem = false;
-    Info.writeMem = true;
+    Info.flags = MachineMemOperand::MOStore;
     return true;
   }
   default:

@@ -3458,13 +3458,11 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
     assert(GV && "Not a direct call");
     // See if we need any target-specific flags on the GV operand.
     unsigned char OpFlags = Subtarget->classifyGlobalFunctionReference(GV);
-    // Ignore NonLazyBind attribute in FastISel
-    if (OpFlags == X86II::MO_GOTPCREL)
-      OpFlags = 0;
 
     // This will be a direct call, or an indirect call through memory for
     // NonLazyBind calls or dllimport calls.
-    bool NeedLoad = OpFlags == X86II::MO_DLLIMPORT;
+    bool NeedLoad =
+        OpFlags == X86II::MO_DLLIMPORT || OpFlags == X86II::MO_GOTPCREL;
     unsigned CallOpc = NeedLoad
                            ? (Is64Bit ? X86::CALL64m : X86::CALL32m)
                            : (Is64Bit ? X86::CALL64pcrel32 : X86::CALLpcrel32);

@@ -3004,18 +3004,12 @@ declare <8 x i64> @llvm.x86.avx512.mask.pmulu.dq.512(<16 x i32>, <16 x i32>, <8 
 define <4 x float> @test_mask_vextractf32x4(<4 x float> %b, <16 x float> %a, i8 %mask) {
 ; CHECK-LABEL: test_mask_vextractf32x4:
 ; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vmovd %edi, %xmm2
 ; CHECK-NEXT:    kmovw %edi, %k0
-; CHECK-NEXT:    kshiftlw $12, %k0, %k1
-; CHECK-NEXT:    kshiftrw $15, %k1, %k1
-; CHECK-NEXT:    kshiftlw $13, %k0, %k2
-; CHECK-NEXT:    kshiftrw $15, %k2, %k2
-; CHECK-NEXT:    kshiftlw $15, %k0, %k3
-; CHECK-NEXT:    kshiftrw $15, %k3, %k3
-; CHECK-NEXT:    kshiftlw $14, %k0, %k0
-; CHECK-NEXT:    kshiftrw $15, %k0, %k0
+; CHECK-NEXT:    kshiftrw $3, %k0, %k1
+; CHECK-NEXT:    kshiftrw $2, %k0, %k2
+; CHECK-NEXT:    kshiftrw $1, %k0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    kmovw %k3, %ecx
-; CHECK-NEXT:    vmovd %ecx, %xmm2
 ; CHECK-NEXT:    vpinsrb $4, %eax, %xmm2, %xmm2
 ; CHECK-NEXT:    kmovw %k2, %eax
 ; CHECK-NEXT:    vpinsrb $8, %eax, %xmm2, %xmm2
@@ -3035,18 +3029,12 @@ define <4 x i64> @test_mask_vextracti64x4(<4 x i64> %b, <8 x i64> %a, i8 %mask) 
 ; CHECK-LABEL: test_mask_vextracti64x4:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vextractf64x4 $1, %zmm1, %ymm1
+; CHECK-NEXT:    vmovd %edi, %xmm2
 ; CHECK-NEXT:    kmovw %edi, %k0
-; CHECK-NEXT:    kshiftlw $12, %k0, %k1
-; CHECK-NEXT:    kshiftrw $15, %k1, %k1
-; CHECK-NEXT:    kshiftlw $13, %k0, %k2
-; CHECK-NEXT:    kshiftrw $15, %k2, %k2
-; CHECK-NEXT:    kshiftlw $15, %k0, %k3
-; CHECK-NEXT:    kshiftrw $15, %k3, %k3
-; CHECK-NEXT:    kshiftlw $14, %k0, %k0
-; CHECK-NEXT:    kshiftrw $15, %k0, %k0
+; CHECK-NEXT:    kshiftrw $3, %k0, %k1
+; CHECK-NEXT:    kshiftrw $2, %k0, %k2
+; CHECK-NEXT:    kshiftrw $1, %k0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    kmovw %k3, %ecx
-; CHECK-NEXT:    vmovd %ecx, %xmm2
 ; CHECK-NEXT:    vpinsrb $4, %eax, %xmm2, %xmm2
 ; CHECK-NEXT:    kmovw %k2, %eax
 ; CHECK-NEXT:    vpinsrb $8, %eax, %xmm2, %xmm2
@@ -3065,18 +3053,12 @@ declare <4 x i64> @llvm.x86.avx512.mask.vextracti64x4.512(<8 x i64>, i32, <4 x i
 define <4 x i32> @test_maskz_vextracti32x4(<16 x i32> %a, i8 %mask) {
 ; CHECK-LABEL: test_maskz_vextracti32x4:
 ; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vmovd %edi, %xmm1
 ; CHECK-NEXT:    kmovw %edi, %k0
-; CHECK-NEXT:    kshiftlw $12, %k0, %k1
-; CHECK-NEXT:    kshiftrw $15, %k1, %k1
-; CHECK-NEXT:    kshiftlw $13, %k0, %k2
-; CHECK-NEXT:    kshiftrw $15, %k2, %k2
-; CHECK-NEXT:    kshiftlw $15, %k0, %k3
-; CHECK-NEXT:    kshiftrw $15, %k3, %k3
-; CHECK-NEXT:    kshiftlw $14, %k0, %k0
-; CHECK-NEXT:    kshiftrw $15, %k0, %k0
+; CHECK-NEXT:    kshiftrw $3, %k0, %k1
+; CHECK-NEXT:    kshiftrw $2, %k0, %k2
+; CHECK-NEXT:    kshiftrw $1, %k0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    kmovw %k3, %ecx
-; CHECK-NEXT:    vmovd %ecx, %xmm1
 ; CHECK-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
 ; CHECK-NEXT:    kmovw %k2, %eax
 ; CHECK-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1

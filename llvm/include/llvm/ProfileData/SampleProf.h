@@ -185,7 +185,9 @@ raw_ostream &operator<<(raw_ostream &OS, const SampleRecord &Sample);
 class FunctionSamples;
 
 using BodySampleMap = std::map<LineLocation, SampleRecord>;
-using FunctionSamplesMap = StringMap<FunctionSamples>;
+// NOTE: Using a StringMap here makes parsed profiles consume around 17% more
+// memory, which is *very* significant for large profiles.
+using FunctionSamplesMap = std::map<std::string, FunctionSamples>;
 using CallsiteSampleMap = std::map<LineLocation, FunctionSamplesMap>;
 
 /// Representation of the samples collected for a function.
@@ -278,7 +280,7 @@ public:
       return nullptr;
     auto FS = iter->second.find(CalleeName);
     if (FS != iter->second.end())
-      return &FS->getValue();
+      return &FS->second;
     // If we cannot find exact match of the callee name, return the FS with
     // the max total count.
     uint64_t MaxTotalSamples = 0;
@@ -347,7 +349,7 @@ public:
       const LineLocation &Loc = I.first;
       FunctionSamplesMap &FSMap = functionSamplesAt(Loc);
       for (const auto &Rec : I.second)
-        MergeResult(Result, FSMap[Rec.first()].merge(Rec.second, Weight));
+        MergeResult(Result, FSMap[Rec.first].merge(Rec.second, Weight));
     }
     return Result;
   }

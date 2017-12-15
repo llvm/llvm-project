@@ -1,6 +1,6 @@
 ; RUN: llvm-as %s -o %t.o
 
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    --plugin-opt=emit-llvm \
 ; RUN:    -shared %t.o -o %t2.o
 ; RUN: llvm-dis %t2.o -o - | FileCheck %s

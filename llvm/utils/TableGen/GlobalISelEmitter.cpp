@@ -766,13 +766,7 @@ public:
   }
 };
 
-/// Generates code to check a predicate of an operand.
-///
-/// Typical predicates include:
-/// * Operand is a particular register.
-/// * Operand is assigned a particular register bank.
-/// * Operand is an MBB.
-class OperandPredicateMatcher {
+class PredicateMatcher {
 public:
   /// This enum is used for RTTI and also defines the priority that is given to
   /// the predicate when generating the matcher code. Kinds with higher priority
@@ -781,7 +775,13 @@ public:
   /// The relative priority of OPM_LLT, OPM_RegBank, and OPM_MBB do not matter
   /// but OPM_Int must have priority over OPM_RegBank since constant integers
   /// are represented by a virtual register defined by a G_CONSTANT instruction.
+  ///
+  /// Note: The relative priority between IPM_ and OPM_ does not matter, they
+  /// are currently not compared between each other.
   enum PredicateKind {
+    IPM_Opcode,
+    IPM_ImmPredicate,
+    IPM_AtomicOrderingMMO,
     OPM_SameOperand,
     OPM_ComplexPattern,
     OPM_IntrinsicID,
@@ -798,10 +798,27 @@ protected:
   PredicateKind Kind;
 
 public:
-  OperandPredicateMatcher(PredicateKind Kind) : Kind(Kind) {}
-  virtual ~OperandPredicateMatcher() {}
+  PredicateMatcher(PredicateKind Kind) : Kind(Kind) {}
+
+  virtual ~PredicateMatcher() = default;
+  /// Emit MatchTable opcodes that check the predicate for the given operand.
+  virtual void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule,
+                                    unsigned InsnVarID,
+                                    unsigned OpIdx = ~0) const = 0;
 
   PredicateKind getKind() const { return Kind; }
+};
+
+/// Generates code to check a predicate of an operand.
+///
+/// Typical predicates include:
+/// * Operand is a particular register.
+/// * Operand is assigned a particular register bank.
+/// * Operand is an MBB.
+class OperandPredicateMatcher : public PredicateMatcher {
+public:
+  OperandPredicateMatcher(PredicateKind Kind) : PredicateMatcher(Kind) {}
+  virtual ~OperandPredicateMatcher() {}
 
   /// Emit MatchTable opcodes to capture instructions into the MIs table.
   ///
@@ -809,11 +826,6 @@ public:
   /// rest just walk the tree.
   virtual void emitCaptureOpcodes(MatchTable &Table, RuleMatcher &Rule,
                                   unsigned InsnVarID, unsigned OpIdx) const {}
-
-  /// Emit MatchTable opcodes that check the predicate for the given operand.
-  virtual void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule,
-                                    unsigned InsnVarID,
-                                    unsigned OpIdx) const = 0;
 
   /// Compare the priority of this object and B.
   ///
@@ -861,7 +873,7 @@ public:
     KnownTypes.insert(Ty);
   }
 
-  static bool classof(const OperandPredicateMatcher *P) {
+  static bool classof(const PredicateMatcher *P) {
     return P->getKind() == OPM_LLT;
   }
 
@@ -922,7 +934,7 @@ public:
       : OperandPredicateMatcher(OPM_ComplexPattern), Operand(Operand),
         TheDef(TheDef) {}
 
-  static bool classof(const OperandPredicateMatcher *P) {
+  static bool classof(const PredicateMatcher *P) {
     return P->getKind() == OPM_ComplexPattern;
   }
 
@@ -951,7 +963,7 @@ public:
   RegisterBankOperandMatcher(const CodeGenRegisterClass &RC)
       : OperandPredicateMatcher(OPM_RegBank), RC(RC) {}
 
-  static bool classof(const OperandPredicateMatcher *P) {
+  static bool classof(const PredicateMatcher *P) {
     return P->getKind() == OPM_RegBank;
   }
 
@@ -971,7 +983,7 @@ class MBBOperandMatcher : public OperandPredicateMatcher {
 public:
   MBBOperandMatcher() : OperandPredicateMatcher(OPM_MBB) {}
 
-  static bool classof(const OperandPredicateMatcher *P) {
+  static bool classof(const PredicateMatcher *P) {
     return P->getKind() == OPM_MBB;
   }
 
@@ -993,7 +1005,7 @@ public:
   ConstantIntOperandMatcher(int64_t Value)
       : OperandPredicateMatcher(OPM_Int), Value(Value) {}
 
-  static bool classof(const OperandPredicateMatcher *P) {
+  static bool classof(const PredicateMatcher *P) {
     return P->getKind() == OPM_Int;
   }
 
@@ -1016,7 +1028,7 @@ public:
   LiteralIntOperandMatcher(int64_t Value)
       : OperandPredicateMatcher(OPM_LiteralInt), Value(Value) {}
 
-  static bool classof(const OperandPredicateMatcher *P) {
+  static bool classof(const PredicateMatcher *P) {
     return P->getKind() == OPM_LiteralInt;
   }
 
@@ -1038,7 +1050,7 @@ public:
   IntrinsicIDOperandMatcher(const CodeGenIntrinsic *II)
       : OperandPredicateMatcher(OPM_IntrinsicID), II(II) {}
 
-  static bool classof(const OperandPredicateMatcher *P) {
+  static bool classof(const PredicateMatcher *P) {
     return P->getKind() == OPM_IntrinsicID;
   }
 
@@ -1199,29 +1211,10 @@ unsigned ComplexPatternOperandMatcher::getAllocatedTemporariesBaseID() const {
 /// Typical predicates include:
 /// * The opcode of the instruction is a particular value.
 /// * The nsw/nuw flag is/isn't set.
-class InstructionPredicateMatcher {
-protected:
-  /// This enum is used for RTTI and also defines the priority that is given to
-  /// the predicate when generating the matcher code. Kinds with higher priority
-  /// must be tested first.
-  enum PredicateKind {
-    IPM_Opcode,
-    IPM_ImmPredicate,
-    IPM_AtomicOrderingMMO,
-  };
-
-  PredicateKind Kind;
-
+class InstructionPredicateMatcher : public PredicateMatcher {
 public:
-  InstructionPredicateMatcher(PredicateKind Kind) : Kind(Kind) {}
+  InstructionPredicateMatcher(PredicateKind Kind) : PredicateMatcher(Kind) {}
   virtual ~InstructionPredicateMatcher() {}
-
-  PredicateKind getKind() const { return Kind; }
-
-  /// Emit MatchTable opcodes that test whether the instruction named in
-  /// InsnVarID matches the predicate.
-  virtual void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule,
-                                    unsigned InsnVarID) const = 0;
 
   /// Compare the priority of this object and B.
   ///
@@ -1251,12 +1244,13 @@ public:
   InstructionOpcodeMatcher(const CodeGenInstruction *I)
       : InstructionPredicateMatcher(IPM_Opcode), I(I) {}
 
-  static bool classof(const InstructionPredicateMatcher *P) {
+  static bool classof(const PredicateMatcher *P) {
     return P->getKind() == IPM_Opcode;
   }
 
   void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule,
-                            unsigned InsnVarID) const override {
+                            unsigned InsnVarID,
+                            unsigned OpIdx = ~0) const override {
     Table << MatchTable::Opcode("GIM_CheckOpcode") << MatchTable::Comment("MI")
           << MatchTable::IntValue(InsnVarID)
           << MatchTable::NamedValue(I->Namespace, I->TheDef->getName())
@@ -1322,12 +1316,13 @@ public:
   InstructionImmPredicateMatcher(const TreePredicateFn &Predicate)
       : InstructionPredicateMatcher(IPM_ImmPredicate), Predicate(Predicate) {}
 
-  static bool classof(const InstructionPredicateMatcher *P) {
+  static bool classof(const PredicateMatcher *P) {
     return P->getKind() == IPM_ImmPredicate;
   }
 
   void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule,
-                            unsigned InsnVarID) const override {
+                            unsigned InsnVarID,
+                            unsigned OpIdx = ~0) const override {
     Table << MatchTable::Opcode(getMatchOpcodeForPredicate(Predicate))
           << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
           << MatchTable::Comment("Predicate")
@@ -1361,7 +1356,8 @@ public:
   }
 
   void emitPredicateOpcodes(MatchTable &Table, RuleMatcher &Rule,
-                            unsigned InsnVarID) const override {
+                            unsigned InsnVarID,
+                            unsigned OpIdx = ~0) const override {
     StringRef Opcode = "GIM_CheckAtomicOrdering";
 
     if (Comparator == AO_OrStronger)
@@ -1526,7 +1522,7 @@ public:
       : OperandPredicateMatcher(OPM_Instruction),
         InsnMatcher(new InstructionMatcher(Rule, SymbolicName)) {}
 
-  static bool classof(const OperandPredicateMatcher *P) {
+  static bool classof(const PredicateMatcher *P) {
     return P->getKind() == OPM_Instruction;
   }
 

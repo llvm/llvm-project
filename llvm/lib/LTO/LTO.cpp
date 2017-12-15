@@ -416,8 +416,11 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
 
     auto &GlobalRes = GlobalResolutions[Sym.getName()];
     GlobalRes.UnnamedAddr &= Sym.isUnnamedAddr();
-    if (Res.Prevailing)
+    if (Res.Prevailing) {
+      assert((GlobalRes.IRName.empty() || !Sym.getIRName().empty()) &&
+             "Overriding existing resolution with undefined asm symbol");
       GlobalRes.IRName = Sym.getIRName();
+    }
 
     // Set the partition to external if we know it is re-defined by the linker
     // with -defsym or -wrap options, used elsewhere, e.g. it is visible to a

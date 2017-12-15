@@ -20,7 +20,7 @@ define i32 @rotl(i32 %x, i32 %y) {
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   %z = sub i32 32, %y
   %b = shl i32 %x, %y
   %c = lshr i32 %x, %z
@@ -43,7 +43,7 @@ define i32 @rotr(i32 %x, i32 %y) {
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   %z = sub i32 32, %y
   %b = lshr i32 %x, %y
   %c = shl i32 %x, %z

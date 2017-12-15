@@ -41,6 +41,9 @@ Sections:
         Alignment:   2
         Flags:       [ ]
         Name:        moredata
+    InitFunctions:
+      - Priority:      1
+        FunctionIndex: 0
 ...
 # CHECK:       - Type:            CUSTOM
 # CHECK-NEXT:    Name:            linking
@@ -57,4 +60,7 @@ Sections:
 # CHECK-NEXT:        Name:            moredata
 # CHECK-NEXT:        Alignment:       2
 # CHECK-NEXT:        Flags:           [ ]
+# CHECK-NEXT:    InitFunctions:
+# CHECK-NEXT:       - Priority:       1
+# CHECK-NEXT:         FunctionIndex:  0
 # CHECK-NEXT: ...

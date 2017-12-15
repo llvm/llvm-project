@@ -327,7 +327,7 @@ static Value *ThreadBinOpOverSelect(Instruction::BinaryOps Opcode, Value *LHS,
     // Check that the simplified value has the form "X op Y" where "op" is the
     // same as the original operation.
     Instruction *Simplified = dyn_cast<Instruction>(FV ? FV : TV);
-    if (Simplified && Simplified->getOpcode() == Opcode) {
+    if (Simplified && Simplified->getOpcode() == unsigned(Opcode)) {
       // The value that didn't simplify is "UnsimplifiedLHS op UnsimplifiedRHS".
       // We already know that "op" is the same as for the simplified value.  See
       // if the operands match too.  If so, return the simplified value.
