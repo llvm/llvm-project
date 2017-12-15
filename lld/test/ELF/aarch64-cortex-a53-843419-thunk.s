@@ -6,6 +6,9 @@
 // RUN: ld.lld --script %t.script -fix-cortex-a53-843419 -verbose %t.o -o %t2 | FileCheck -check-prefix=CHECK-PRINT %s
 // RUN: llvm-objdump -triple=aarch64-linux-gnu -d %t2 | FileCheck %s
 
+// %t2 is 4.1GB, so delete it early.
+// RUN: rm %t2
+
 // Test cases for Cortex-A53 Erratum 843419 that involve interactions with
 // range extension thunks. Both erratum fixes and range extension thunks need
 // precise address information and after creation alter address information.

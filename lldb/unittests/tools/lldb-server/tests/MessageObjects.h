@@ -10,6 +10,7 @@
 #ifndef LLDB_SERVER_TESTS_MESSAGEOBJECTS_H
 #define LLDB_SERVER_TESTS_MESSAGEOBJECTS_H
 
+#include "lldb/Host/Host.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
@@ -74,20 +75,67 @@ private:
 
 class StopReply {
 public:
-  static llvm::Expected<StopReply> Create(llvm::StringRef response,
-                                          llvm::support::endianness endian);
-  const U64Map &GetThreadPcs() const;
+  StopReply() = default;
+  virtual ~StopReply() = default;
+
+  static llvm::Expected<std::unique_ptr<StopReply>>
+  create(llvm::StringRef response, llvm::support::endianness endian);
+
+  // for llvm::cast<>
+  virtual lldb_private::WaitStatus getKind() const = 0;
+
+  StopReply(const StopReply &) = delete;
+  void operator=(const StopReply &) = delete;
+};
+
+class StopReplyStop : public StopReply {
+public:
+  StopReplyStop(uint8_t Signal, lldb::tid_t ThreadId, llvm::StringRef Name,
+                U64Map ThreadPcs, RegisterMap Registers, llvm::StringRef Reason)
+      : Signal(Signal), ThreadId(ThreadId), Name(Name),
+        ThreadPcs(std::move(ThreadPcs)), Registers(std::move(Registers)),
+        Reason(Reason) {}
+
+  static llvm::Expected<std::unique_ptr<StopReplyStop>>
+  create(llvm::StringRef response, llvm::support::endianness endian);
+
+  const U64Map &getThreadPcs() const { return ThreadPcs; }
+  lldb::tid_t getThreadId() const { return ThreadId; }
+
+  // for llvm::cast<>
+  lldb_private::WaitStatus getKind() const override {
+    return lldb_private::WaitStatus{lldb_private::WaitStatus::Stop, Signal};
+  }
+  static bool classof(const StopReply *R) {
+    return R->getKind().type == lldb_private::WaitStatus::Stop;
+  }
 
 private:
-  StopReply() = default;
-  void ParseResponse(llvm::StringRef response,
-                     llvm::support::endianness endian);
-  unsigned int m_signal;
-  lldb::tid_t m_thread;
-  std::string m_name;
-  U64Map m_thread_pcs;
-  RegisterMap m_registers;
-  std::string m_reason;
+  uint8_t Signal;
+  lldb::tid_t ThreadId;
+  std::string Name;
+  U64Map ThreadPcs;
+  RegisterMap Registers;
+  std::string Reason;
+};
+
+class StopReplyExit : public StopReply {
+public:
+  explicit StopReplyExit(uint8_t Status) : Status(Status) {}
+
+  static llvm::Expected<std::unique_ptr<StopReplyExit>>
+  create(llvm::StringRef response);
+
+  // for llvm::cast<>
+  lldb_private::WaitStatus getKind() const override {
+    return lldb_private::WaitStatus{lldb_private::WaitStatus::Exit, Status};
+  }
+  static bool classof(const StopReply *R) {
+    return R->getKind().type == lldb_private::WaitStatus::Exit;
+  }
+
+private:
+  uint8_t Status;
 };
 
 // Common functions for parsing packet data.

@@ -154,7 +154,8 @@ Optional<JThreadsInfo> TestClient::GetJThreadsInfo() {
 }
 
 const StopReply &TestClient::GetLatestStopReply() {
-  return m_stop_reply.getValue();
+  assert(m_stop_reply);
+  return *m_stop_reply;
 }
 
 Error TestClient::SendMessage(StringRef message) {
@@ -236,7 +237,7 @@ Error TestClient::Continue(StringRef message) {
   std::string response;
   if (Error E = SendMessage(message, response))
     return E;
-  auto creation = StopReply::Create(response, m_process_info->GetEndian());
+  auto creation = StopReply::create(response, m_process_info->GetEndian());
   if (Error E = creation.takeError())
     return E;
 
