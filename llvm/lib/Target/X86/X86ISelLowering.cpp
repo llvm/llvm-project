@@ -4483,6 +4483,7 @@ static bool hasFPCMov(unsigned X86CC) {
 
 bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                            const CallInst &I,
+                                           MachineFunction &MF,
                                            unsigned Intrinsic) const {
 
   const IntrinsicData* IntrData = getIntrinsicWithChain(Intrinsic);
@@ -18638,13 +18639,10 @@ static SDValue LowerExtended1BitVectorLoad(SDValue Op,
 
   assert(VT == MVT::v32i8 && "Unexpected extload type");
 
-  SmallVector<SDValue, 2> Chains;
-
   SDValue BasePtr = Ld->getBasePtr();
   SDValue LoadLo = DAG.getLoad(MVT::v16i1, dl, Ld->getChain(),
                                Ld->getBasePtr(),
                                Ld->getMemOperand());
-  Chains.push_back(LoadLo.getValue(1));
 
   SDValue BasePtrHi =
     DAG.getNode(ISD::ADD, dl, BasePtr.getValueType(), BasePtr,
@@ -18653,8 +18651,9 @@ static SDValue LowerExtended1BitVectorLoad(SDValue Op,
   SDValue LoadHi = DAG.getLoad(MVT::v16i1, dl, Ld->getChain(),
                                BasePtrHi,
                                Ld->getMemOperand());
-  Chains.push_back(LoadHi.getValue(1));
-  SDValue NewChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chains);
+
+  SDValue NewChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
+                                 LoadLo.getValue(1), LoadHi.getValue(1));
   DAG.ReplaceAllUsesOfValueWith(SDValue(Ld, 1), NewChain);
 
   SDValue Lo = DAG.getNode(ExtOpcode, dl, MVT::v16i8, LoadLo);

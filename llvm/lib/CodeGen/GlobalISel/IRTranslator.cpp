@@ -851,7 +851,7 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   const TargetLowering &TLI = *MF->getSubtarget().getTargetLowering();
   TargetLowering::IntrinsicInfo Info;
   // TODO: Add a GlobalISel version of getTgtMemIntrinsic.
-  if (TLI.getTgtMemIntrinsic(Info, CI, ID)) {
+  if (TLI.getTgtMemIntrinsic(Info, CI, *MF, ID)) {
     uint64_t Size = Info.memVT.getStoreSize();
     MIB.addMemOperand(MF->getMachineMemOperand(MachinePointerInfo(Info.ptrVal),
                                                Info.flags, Size, Info.align));

@@ -3314,7 +3314,8 @@ static unsigned getOpcForSurfaceInstr(unsigned Intrinsic) {
 // of destination
 // pointer. In particular, the address space information.
 bool NVPTXTargetLowering::getTgtMemIntrinsic(
-    IntrinsicInfo &Info, const CallInst &I, unsigned Intrinsic) const {
+    IntrinsicInfo &Info, const CallInst &I,
+    MachineFunction &MF, unsigned Intrinsic) const {
   switch (Intrinsic) {
   default:
     return false;

@@ -152,6 +152,7 @@ public:
   bool isShuffleMaskLegal(ArrayRef<int> /*Mask*/, EVT /*VT*/) const override;
 
   bool getTgtMemIntrinsic(IntrinsicInfo &, const CallInst &,
+                          MachineFunction &MF,
                           unsigned IntrinsicID) const override;
 
   bool getAddrModeArguments(IntrinsicInst * /*I*/,

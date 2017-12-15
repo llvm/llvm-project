@@ -1961,11 +1961,7 @@ public:
     setRParenLoc(Range.getEnd());
   }
 
-  void initializeLocal(ASTContext &Context, SourceLocation Loc) {
-    setKWLoc(Loc);
-    setRParenLoc(Loc);
-    setLParenLoc(Loc);
-  }
+  void initializeLocal(ASTContext &Context, SourceLocation Loc);
 };
 
 class DeducedTypeLoc

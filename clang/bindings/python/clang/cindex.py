@@ -1485,12 +1485,6 @@ class Cursor(Structure):
         """
         return conf.lib.clang_CXXRecord_isAbstract(self)
 
-    def is_abstract_record(self):
-        """Returns True if the cursor refers to a C++ record declaration
-        that has pure virtual member functions.
-        """
-        return conf.lib.clang_CXXRecord_isAbstract(self)
-
     def is_scoped_enum(self):
         """Returns True if the cursor refers to a scoped enum declaration.
         """
@@ -3410,10 +3404,6 @@ functionList = [
    bool),
 
   ("clang_CXXMethod_isVirtual",
-   [Cursor],
-   bool),
-
-  ("clang_CXXRecord_isAbstract",
    [Cursor],
    bool),
 
