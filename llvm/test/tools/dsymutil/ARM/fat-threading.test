@@ -1,0 +1,15 @@
+# REQUIRES: object-emission
+# By default, dsymutil spawns one thread per architecture and this test just
+# ensures that things don't break when processing multiple archs.
+# RUN: llvm-dsymutil -no-output %p/../Inputs/fat-test.arm.dylib -o %t.brief.dSYM 2>&1
+# RUN: llvm-dsymutil -verify %p/../Inputs/fat-test.arm.dylib -o %t.verify.dSYM 2>&1
+
+# CHECK: warning: no debug symbols in executable (-arch armv7)
+# CHECK: warning: no debug symbols in executable (-arch armv7s)
+# CHECK: warning: no debug symbols in executable (-arch arm64)
+
+# CHECK: Running lipo
+# CHECK-NEXT: lipo -create
+# CHECK-SAME: -segalign armv7
+# CHECK-SAME: -segalign armv7s
+# CHECK-SAME: -segalign arm64
