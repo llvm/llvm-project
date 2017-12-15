@@ -577,7 +577,7 @@ endif
 else
 ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
 	$(OBJCOPY) --only-keep-debug "$(EXE)" "$(DSYM)"
-	$(OBJCOPY) --remove-section .gnu_debuglink --strip-debug --add-gnu-debuglink="$(DSYM)" "$(EXE)" "$(EXE)"
+	$(OBJCOPY) --strip-debug --add-gnu-debuglink="$(DSYM)" "$(EXE)" "$(EXE)"
 endif
 endif
 endif
