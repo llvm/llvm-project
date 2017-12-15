@@ -23,6 +23,7 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
@@ -31,6 +32,7 @@
 
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Object/Decompressor.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -3459,4 +3461,57 @@ ObjectFile::Strata ObjectFileELF::CalculateStrata() {
     break;
   }
   return eStrataUnknown;
+}
+
+size_t ObjectFileELF::ReadSectionData(Section *section,
+                       lldb::offset_t section_offset, void *dst,
+                       size_t dst_len) {
+  // If some other objectfile owns this data, pass this to them.
+  if (section->GetObjectFile() != this)
+    return section->GetObjectFile()->ReadSectionData(section, section_offset,
+                                                     dst, dst_len);
+
+  if (!section->Test(SHF_COMPRESSED))
+    return ObjectFile::ReadSectionData(section, section_offset, dst, dst_len);
+
+  // For compressed sections we need to read to full data to be able to
+  // decompress.
+  DataExtractor data;
+  ReadSectionData(section, data);
+  return data.CopyData(section_offset, dst_len, dst);
+}
+
+size_t ObjectFileELF::ReadSectionData(Section *section,
+                                      DataExtractor &section_data) {
+  // If some other objectfile owns this data, pass this to them.
+  if (section->GetObjectFile() != this)
+    return section->GetObjectFile()->ReadSectionData(section, section_data);
+
+  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_MODULES);
+
+  size_t result = ObjectFile::ReadSectionData(section, section_data);
+  if (result == 0 || !section->Test(SHF_COMPRESSED))
+    return result;
+
+  auto Decompressor = llvm::object::Decompressor::create(
+      section->GetName().GetStringRef(),
+      {reinterpret_cast<const char *>(section_data.GetDataStart()),
+       size_t(section_data.GetByteSize())},
+      GetByteOrder() == eByteOrderLittle, GetAddressByteSize() == 8);
+  if (!Decompressor) {
+    LLDB_LOG(log, "Unable to initialize decompressor for section {0}: {1}",
+             section->GetName(), llvm::toString(Decompressor.takeError()));
+    return result;
+  }
+  auto buffer_sp =
+      std::make_shared<DataBufferHeap>(Decompressor->getDecompressedSize(), 0);
+  if (auto Error = Decompressor->decompress(
+          {reinterpret_cast<char *>(buffer_sp->GetBytes()),
+           size_t(buffer_sp->GetByteSize())})) {
+    LLDB_LOG(log, "Decompression of section {0} failed: {1}",
+             section->GetName(), llvm::toString(std::move(Error)));
+    return result;
+  }
+  section_data.SetData(buffer_sp);
+  return buffer_sp->GetByteSize();
 }

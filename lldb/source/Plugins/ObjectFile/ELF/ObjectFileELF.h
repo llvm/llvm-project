@@ -140,6 +140,13 @@ public:
 
   ObjectFile::Strata CalculateStrata() override;
 
+  size_t ReadSectionData(lldb_private::Section *section,
+                         lldb::offset_t section_offset, void *dst,
+                         size_t dst_len) override;
+
+  size_t ReadSectionData(lldb_private::Section *section,
+                         lldb_private::DataExtractor &section_data) override;
+
   // Returns number of program headers found in the ELF file.
   size_t GetProgramHeaderCount();
 

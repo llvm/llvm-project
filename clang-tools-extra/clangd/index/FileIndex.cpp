@@ -1,4 +1,4 @@
-//===--- FileSymbols.cpp - Symbols from files. ------------------*- C++-*-===//
+//===--- FileIndex.cpp - Indexes for files. ------------------------ C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,11 +7,30 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FileSymbols.h"
+#include "FileIndex.h"
+#include "SymbolCollector.h"
 #include "clang/Index/IndexingAction.h"
 
 namespace clang {
 namespace clangd {
+namespace {
+
+/// Retrieves namespace and class level symbols in \p Decls.
+std::unique_ptr<SymbolSlab> indexAST(ASTContext &Ctx,
+                                     llvm::ArrayRef<const Decl *> Decls) {
+  auto Collector = std::make_shared<SymbolCollector>();
+  index::IndexingOptions IndexOpts;
+  IndexOpts.SystemSymbolFilter =
+      index::IndexingOptions::SystemSymbolFilterKind::All;
+  IndexOpts.IndexFunctionLocals = false;
+
+  index::indexTopLevelDecls(Ctx, Decls, Collector, IndexOpts);
+  auto Symbols = llvm::make_unique<SymbolSlab>();
+  *Symbols = Collector->takeSymbols();
+  return Symbols;
+}
+
+} // namespace
 
 void FileSymbols::update(PathRef Path, std::unique_ptr<SymbolSlab> Slab) {
   std::lock_guard<std::mutex> Lock(Mutex);
@@ -42,6 +61,22 @@ std::shared_ptr<std::vector<const Symbol *>> FileSymbols::allSymbols() {
   // Use aliasing constructor to keep the snapshot alive along with the
   // pointers.
   return {std::move(Snap), Pointers};
+}
+
+void FileIndex::update(Context &Ctx, PathRef Path, ParsedAST *AST) {
+  if (!AST) {
+    FSymbols.update(Path, nullptr);
+  } else {
+    auto Slab = indexAST(AST->getASTContext(), AST->getTopLevelDecls());
+    FSymbols.update(Path, std::move(Slab));
+  }
+  auto Symbols = FSymbols.allSymbols();
+  Index.build(std::move(Symbols));
+}
+
+bool FileIndex::fuzzyFind(Context &Ctx, const FuzzyFindRequest &Req,
+                          std::function<void(const Symbol &)> Callback) const {
+  return Index.fuzzyFind(Ctx, Req, std::move(Callback));
 }
 
 } // namespace clangd
