@@ -48,30 +48,11 @@ int main() {                              // TEXT: [[@LINE]]|   161|int main(
 // RUN: FileCheck -check-prefixes=HTML,HTML-WHOLE-FILE -input-file %t.html.dir/coverage/tmp/showLineExecutionCounts.cpp.html %s
 // RUN: FileCheck -check-prefixes=HTML,HTML-FILTER -input-file %t.html.filtered.dir/coverage/tmp/showLineExecutionCounts.cpp.html %s
 //
-// HTML-WHOLE-FILE: <td class='line-number'><a name='L[[@LINE-47]]' href='#L[[@LINE-47]]'><pre>[[@LINE-47]]</pre></a></td><td class='uncovered-line'></td><td class='code'><pre>// before
-// HTML-FILTER-NOT: <td class='line-number'><a name='L[[@LINE-48]]' href='#L[[@LINE-48]]'><pre>[[@LINE-48]]</pre></a></td><td class='uncovered-line'></td><td class='code'><pre>// before
-// HTML: <td class='line-number'><a name='L[[@LINE-47]]' href='#L[[@LINE-47]]'><pre>[[@LINE-47]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>int main() {
-// HTML: <td class='line-number'><a name='L[[@LINE-47]]' href='#L[[@LINE-47]]'><pre>[[@LINE-47]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>  int x = 0
-// HTML: <td class='line-number'><a name='L[[@LINE-47]]' href='#L[[@LINE-47]]'><pre>[[@LINE-47]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>
-// HTML: <td class='line-number'><a name='L[[@LINE-47]]' href='#L[[@LINE-47]]'><pre>[[@LINE-47]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>  if (x)
-// HTML: <td class='line-number'><a name='L[[@LINE-47]]' href='#L[[@LINE-47]]'><pre>[[@LINE-47]]</pre></a></td><td class='uncovered-line'><pre>0</pre></td><td class='code'><pre>
-// HTML: <td class='line-number'><a name='L[[@LINE-47]]' href='#L[[@LINE-47]]'><pre>[[@LINE-47]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre><span class='red'>  }</span>
-// HTML: <td class='line-number'><a name='L[[@LINE-47]]' href='#L[[@LINE-47]]'><pre>[[@LINE-47]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>    x = 1;
-// HTML: <td class='line-number'><a name='L[[@LINE-47]]' href='#L[[@LINE-47]]'><pre>[[@LINE-47]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>  }
-// HTML: <td class='line-number'><a name='L[[@LINE-47]]' href='#L[[@LINE-47]]'><pre>[[@LINE-47]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>
-// HTML: <td class='line-number'><a name='L[[@LINE-47]]' href='#L[[@LINE-47]]'><pre>[[@LINE-47]]</pre></a></td><td class='covered-line'><pre>16.2k</pre></td><td class='code'><pre>  for (int i = 0; i &lt; 100; ++i)
-// HTML: <td class='line-number'><a name='L[[@LINE-47]]' href='#L[[@LINE-47]]'><pre>[[@LINE-47]]</pre></a></td><td class='covered-line'><pre>16.1k</pre></td><td class='code'><pre>    x = 1;
-// HTML: <td class='line-number'><a name='L[[@LINE-47]]' href='#L[[@LINE-47]]'><pre>[[@LINE-47]]</pre></a></td><td class='covered-line'><pre>16.1k</pre></td><td class='code'><pre>  }
-// HTML: <td class='line-number'><a name='L[[@LINE-47]]' href='#L[[@LINE-47]]'><pre>[[@LINE-47]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>
-// HTML: <td class='line-number'><a name='L[[@LINE-47]]' href='#L[[@LINE-47]]'><pre>[[@LINE-47]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>  x = x &lt; 10
-// HTML: <td class='line-number'><a name='L[[@LINE-47]]' href='#L[[@LINE-47]]'><pre>[[@LINE-47]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>  x = x &gt; 10
-// HTML: <td class='line-number'><a name='L[[@LINE-47]]' href='#L[[@LINE-47]]'><pre>[[@LINE-47]]</pre></a></td><td class='uncovered-line'><pre>0</pre></td><td class='code'><pre> <span class='red'>x - 1</span>:
-// HTML: <td class='line-number'><a name='L[[@LINE-47]]' href='#L[[@LINE-47]]'><pre>[[@LINE-47]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>        x + 1;
-// HTML: <td class='line-number'><a name='L[[@LINE-47]]' href='#L[[@LINE-47]]'><pre>[[@LINE-47]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>
-// HTML: <td class='line-number'><a name='L[[@LINE-47]]' href='#L[[@LINE-47]]'><pre>[[@LINE-47]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>  return 0;
-// HTML: <td class='line-number'><a name='L[[@LINE-47]]' href='#L[[@LINE-47]]'><pre>[[@LINE-47]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>}
-// HTML-WHOLE-FILE: <td class='line-number'><a name='L[[@LINE-47]]' href='#L[[@LINE-47]]'><pre>[[@LINE-47]]</pre></a></td><td class='uncovered-line'></td><td class='code'><pre>// after
-// HTML-FILTER-NOT: <td class='line-number'><a name='L[[@LINE-48]]' href='#L[[@LINE-48]]'><pre>[[@LINE-48]]</pre></a></td><td class='uncovered-line'></td><td class='code'><pre>// after
+// HTML-WHOLE-FILE: <td class='line-number'><a name='L4' href='#L4'><pre>4</pre></a></td><td class='uncovered-line'></td><td class='code'><pre>// before
+// HTML-FILTER-NOT: <td class='line-number'><a name='L4' href='#L4'><pre>4</pre></a></td><td class='uncovered-line'></td><td class='code'><pre>// before
+// HTML: <td class='line-number'><a name='L6' href='#L6'><pre>6</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>int main() {
+// HTML-WHOLE-FILE: <td class='line-number'><a name='L26' href='#L26'><pre>26</pre></a></td><td class='uncovered-line'></td><td class='code'><pre>// after
+// HTML-FILTER-NOT: <td class='line-number'><a name='L26' href='#L26'><pre>26</pre></a></td><td class='uncovered-line'></td><td class='code'><pre>// after
 //
 // Test index creation.
 // RUN: FileCheck -check-prefix=TEXT-INDEX -input-file %t.dir/index.txt %s
