@@ -162,7 +162,7 @@ body:             |
     ADJCALLSTACKDOWN32 4, 0, 4, implicit-def dead %esp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %esp, implicit %ssp, debug-location !33
     DBG_VALUE %fixed-stack.1, 0, !14, !DIExpression(), debug-location !20
     PUSH32r %ebx, implicit-def %esp, implicit %esp, debug-location !33
-    ;CFI_INSTRUCTION <unserializable cfi operation>, debug-location !33
+    CFI_INSTRUCTION adjust_cfa_offset 4, debug-location !33
     CALLpcrel32 @doSomething, csr_32, implicit %esp, implicit %ssp, implicit-def %esp, implicit-def %ssp, implicit-def %eax, debug-location !33
     ADJCALLSTACKUP32 4, 0, implicit-def dead %esp, implicit-def dead %eflags, implicit-def dead %ssp, implicit %esp, implicit %ssp, debug-location !33
     %edi = INC32r killed %edi, implicit-def dead %eflags, debug-location !30

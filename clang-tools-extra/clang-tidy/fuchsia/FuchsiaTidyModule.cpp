@@ -11,6 +11,7 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "DefaultArgumentsCheck.h"
+#include "VirtualInheritanceCheck.h"
 
 using namespace clang::ast_matchers;
 
@@ -24,6 +25,8 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<DefaultArgumentsCheck>(
         "fuchsia-default-arguments");
+    CheckFactories.registerCheck<VirtualInheritanceCheck>(
+        "fuchsia-virtual-inheritance");
   }
 };
 // Register the FuchsiaTidyModule using this statically initialized variable.

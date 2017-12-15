@@ -758,13 +758,8 @@ void MIPrinter::printStackObjectReference(int FrameIndex) {
   assert(ObjectInfo != StackObjectOperandMapping.end() &&
          "Invalid frame index");
   const FrameIndexOperand &Operand = ObjectInfo->second;
-  if (Operand.IsFixed) {
-    OS << "%fixed-stack." << Operand.ID;
-    return;
-  }
-  OS << "%stack." << Operand.ID;
-  if (!Operand.Name.empty())
-    OS << '.' << Operand.Name;
+  MachineOperand::printStackObjectReference(OS, Operand.ID, Operand.IsFixed,
+                                            Operand.Name);
 }
 
 void MIPrinter::printOffset(int64_t Offset) {
@@ -998,41 +993,95 @@ void MIPrinter::print(const MCCFIInstruction &CFI,
   switch (CFI.getOperation()) {
   case MCCFIInstruction::OpSameValue:
     OS << "same_value ";
-    if (CFI.getLabel())
-      OS << "<mcsymbol> ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
     printCFIRegister(CFI.getRegister(), OS, TRI);
+    break;
+  case MCCFIInstruction::OpRememberState:
+    OS << "remember_state ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    break;
+  case MCCFIInstruction::OpRestoreState:
+    OS << "restore_state ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
     break;
   case MCCFIInstruction::OpOffset:
     OS << "offset ";
-    if (CFI.getLabel())
-      OS << "<mcsymbol> ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
     printCFIRegister(CFI.getRegister(), OS, TRI);
     OS << ", " << CFI.getOffset();
     break;
   case MCCFIInstruction::OpDefCfaRegister:
     OS << "def_cfa_register ";
-    if (CFI.getLabel())
-      OS << "<mcsymbol> ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
     printCFIRegister(CFI.getRegister(), OS, TRI);
     break;
   case MCCFIInstruction::OpDefCfaOffset:
     OS << "def_cfa_offset ";
-    if (CFI.getLabel())
-      OS << "<mcsymbol> ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
     OS << CFI.getOffset();
     break;
   case MCCFIInstruction::OpDefCfa:
     OS << "def_cfa ";
-    if (CFI.getLabel())
-      OS << "<mcsymbol> ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
     printCFIRegister(CFI.getRegister(), OS, TRI);
     OS << ", " << CFI.getOffset();
     break;
+  case MCCFIInstruction::OpRelOffset:
+    OS << "rel_offset ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(CFI.getRegister(), OS, TRI);
+    OS << ", " << CFI.getOffset();
+    break;
+  case MCCFIInstruction::OpAdjustCfaOffset:
+    OS << "adjust_cfa_offset ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    OS << CFI.getOffset();
+    break;
   case MCCFIInstruction::OpRestore:
     OS << "restore ";
-    if (CFI.getLabel())
-      OS << "<mcsymbol> ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
     printCFIRegister(CFI.getRegister(), OS, TRI);
+    break;
+  case MCCFIInstruction::OpEscape: {
+    OS << "escape ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    if (!CFI.getValues().empty()) {
+      size_t e = CFI.getValues().size() - 1;
+      for (size_t i = 0; i < e; ++i)
+        OS << format("0x%02x", uint8_t(CFI.getValues()[i])) << ", ";
+      OS << format("0x%02x", uint8_t(CFI.getValues()[e])) << ", ";
+    }
+    break;
+  }
+  case MCCFIInstruction::OpUndefined:
+    OS << "undefined ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(CFI.getRegister(), OS, TRI);
+    break;
+  case MCCFIInstruction::OpRegister:
+    OS << "register ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(CFI.getRegister(), OS, TRI);
+    OS << ", ";
+    printCFIRegister(CFI.getRegister2(), OS, TRI);
+    break;
+  case MCCFIInstruction::OpWindowSave:
+    OS << "window_save ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
     break;
   default:
     // TODO: Print the other CFI Operations.

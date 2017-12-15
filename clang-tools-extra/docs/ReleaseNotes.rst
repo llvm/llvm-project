@@ -134,7 +134,12 @@ Improvements to clang-tidy
   <http://clang.llvm.org/extra/clang-tidy/checks/fuchsia-default-arguments.html>`_ check
 
   Warns if a function or method is declared or called with default arguments.
+  
+- New `fuchsia-virtual-inheritance
+  <http://clang.llvm.org/extra/clang-tidy/checks/fuchsia-virtual-inheritance.html>`_ check
 
+  Warns if classes are defined with virtual inheritance.
+    
 - New `google-objc-avoid-throwing-exception
   <http://clang.llvm.org/extra/clang-tidy/checks/google-objc-avoid-throwing-exception.html>`_ check
 

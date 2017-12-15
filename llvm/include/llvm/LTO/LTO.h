@@ -279,7 +279,6 @@ private:
 
     unsigned ParallelCodeGenParallelismLevel;
     LTOLLVMContext Ctx;
-    bool HasModule = false;
     std::unique_ptr<Module> CombinedModule;
     std::unique_ptr<IRMover> Mover;
 

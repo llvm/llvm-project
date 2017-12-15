@@ -1566,7 +1566,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setTruncStoreAction(MVT::v4i32, MVT::v4i16, Legal);
 
     if (Subtarget.hasDQI()) {
-      // TODO: these shouldn't require VLX. We can widen to 512-bit with AVX512F.
       // Fast v2f32 SINT_TO_FP( v2i64 ) custom conversion.
       // v2f32 UINT_TO_FP is already custom under SSE2.
       setOperationAction(ISD::SINT_TO_FP,    MVT::v2f32, Custom);
@@ -5101,9 +5100,8 @@ static SDValue insert1BitVector(SDValue Op, SelectionDAG &DAG,
     SubVec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, WideOpVT,
                          getZeroVector(WideOpVT, Subtarget, DAG, dl),
                          SubVec, ZeroIdx);
-    Vec = DAG.getNode(ISD::OR, dl, WideOpVT, Vec, SubVec);
-    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OpVT, Op,
-                       ZeroIdx);
+    Op = DAG.getNode(ISD::OR, dl, WideOpVT, Vec, SubVec);
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OpVT, Op, ZeroIdx);
   }
 
   SubVec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, WideOpVT,
@@ -5111,9 +5109,9 @@ static SDValue insert1BitVector(SDValue Op, SelectionDAG &DAG,
 
   if (Vec.isUndef()) {
     assert(IdxVal != 0 && "Unexpected index");
-    Op = DAG.getNode(X86ISD::KSHIFTL, dl, WideOpVT, SubVec,
-                     DAG.getConstant(IdxVal, dl, MVT::i8));
-    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OpVT, Op, ZeroIdx);
+    SubVec = DAG.getNode(X86ISD::KSHIFTL, dl, WideOpVT, SubVec,
+                         DAG.getConstant(IdxVal, dl, MVT::i8));
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OpVT, SubVec, ZeroIdx);
   }
 
   if (ISD::isBuildVectorAllZeros(Vec.getNode())) {
@@ -5123,9 +5121,10 @@ static SDValue insert1BitVector(SDValue Op, SelectionDAG &DAG,
     unsigned ShiftRight = NumElems - SubVecNumElems - IdxVal;
     SubVec = DAG.getNode(X86ISD::KSHIFTL, dl, WideOpVT, SubVec,
                          DAG.getConstant(ShiftLeft, dl, MVT::i8));
-    Op = DAG.getNode(X86ISD::KSHIFTR, dl, WideOpVT, Op,
-                     DAG.getConstant(ShiftRight, dl, MVT::i8));
-    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OpVT, Op, ZeroIdx);
+    if (ShiftRight != 0)
+      SubVec = DAG.getNode(X86ISD::KSHIFTR, dl, WideOpVT, SubVec,
+                           DAG.getConstant(ShiftRight, dl, MVT::i8));
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OpVT, SubVec, ZeroIdx);
   }
 
   // Simple case when we put subvector in the upper part
@@ -14539,7 +14538,7 @@ static SDValue ExtractBitFromMaskVector(SDValue Op, SelectionDAG &DAG,
     // Extending v8i1/v16i1 to 512-bit get better performance on KNL
     // than extending to 128/256bit.
     unsigned VecSize = (NumElts <= 4 ? 128 : 512);
-    MVT ExtVT = MVT::getVectorVT(MVT::getIntegerVT(VecSize/NumElts), NumElts);
+    MVT ExtVT = MVT::getVectorVT(MVT::getIntegerVT(VecSize / NumElts), NumElts);
     SDValue Ext = DAG.getNode(ISD::SIGN_EXTEND, dl, ExtVT, Vec);
     SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl,
                               ExtVT.getVectorElementType(), Ext, Idx);
@@ -14725,8 +14724,10 @@ static SDValue InsertBitToMaskVector(SDValue Op, SelectionDAG &DAG,
   if (!isa<ConstantSDNode>(Idx)) {
     // Non constant index. Extend source and destination,
     // insert element and then truncate the result.
-    MVT ExtVecVT = (VecVT == MVT::v8i1 ?  MVT::v8i64 : MVT::v16i32);
-    MVT ExtEltVT = (VecVT == MVT::v8i1 ?  MVT::i64 : MVT::i32);
+    unsigned NumElts = VecVT.getVectorNumElements();
+    unsigned VecSize = (NumElts <= 4 ? 128 : 512);
+    MVT ExtVecVT = MVT::getVectorVT(MVT::getIntegerVT(VecSize/NumElts), NumElts);
+    MVT ExtEltVT = ExtVecVT.getVectorElementType();
     SDValue ExtOp = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, ExtVecVT,
       DAG.getNode(ISD::ZERO_EXTEND, dl, ExtVecVT, Vec),
       DAG.getNode(ISD::ZERO_EXTEND, dl, ExtEltVT, Elt), Idx);
@@ -23778,14 +23779,14 @@ static SDValue LowerVectorCTPOP(SDValue Op, const X86Subtarget &Subtarget,
   // TRUNC(CTPOP(ZEXT(X))) to make use of vXi32/vXi64 VPOPCNT instructions.
   if (Subtarget.hasVPOPCNTDQ()) {
     if (VT == MVT::v8i16) {
-      Op = DAG.getNode(X86ISD::VZEXT, DL, MVT::v8i64, Op0);
+      Op = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::v8i64, Op0);
       Op = DAG.getNode(ISD::CTPOP, DL, MVT::v8i64, Op);
-      return DAG.getNode(X86ISD::VTRUNC, DL, VT, Op);
+      return DAG.getNode(ISD::TRUNCATE, DL, VT, Op);
     }
     if (VT == MVT::v16i8 || VT == MVT::v16i16) {
-      Op = DAG.getNode(X86ISD::VZEXT, DL, MVT::v16i32, Op0);
+      Op = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::v16i32, Op0);
       Op = DAG.getNode(ISD::CTPOP, DL, MVT::v16i32, Op);
-      return DAG.getNode(X86ISD::VTRUNC, DL, VT, Op);
+      return DAG.getNode(ISD::TRUNCATE, DL, VT, Op);
     }
   }
 
@@ -24676,12 +24677,21 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       assert(Subtarget.hasSSE2() && "Requires at least SSE2!");
       SDValue Src = N->getOperand(0);
       if (Src.getValueType() == MVT::v2f64) {
-        SDValue Idx = DAG.getIntPtrConstant(0, dl);
-        SDValue Res = DAG.getNode(IsSigned ? X86ISD::CVTTP2SI
-                                           : X86ISD::CVTTP2UI,
-                                  dl, MVT::v4i32, Src);
-        if (!ExperimentalVectorWideningLegalization)
-          Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v2i32, Res, Idx);
+        MVT ResVT = MVT::v4i32;
+        unsigned Opc = IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI;
+        if (!IsSigned && !Subtarget.hasVLX()) {
+          // Widen to 512-bits.
+          ResVT = MVT::v8i32;
+          Opc = ISD::FP_TO_UINT;
+          Src = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v8f64,
+                            DAG.getUNDEF(MVT::v8f64),
+                            Src, DAG.getIntPtrConstant(0, dl));
+        }
+        SDValue Res = DAG.getNode(Opc, dl, ResVT, Src);
+        ResVT = ExperimentalVectorWideningLegalization ? MVT::v4i32
+                                                       : MVT::v2i32;
+        Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, ResVT, Res,
+                          DAG.getIntPtrConstant(0, dl));
         Results.push_back(Res);
         return;
       }

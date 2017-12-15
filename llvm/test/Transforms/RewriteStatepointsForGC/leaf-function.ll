@@ -1,4 +1,5 @@
 ; RUN: opt < %s -S -rewrite-statepoints-for-gc | FileCheck %s
+; RUN: opt < %s -S -passes=rewrite-statepoints-for-gc | FileCheck %s
 
 declare void @foo() "gc-leaf-function"
 declare void @bar()

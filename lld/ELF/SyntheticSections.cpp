@@ -981,7 +981,24 @@ DynamicSection<ELFT>::DynamicSection()
   if (Config->EMachine == EM_MIPS || Config->ZRodynamic)
     this->Flags = SHF_ALLOC;
 
-  addEntries();
+  // Add strings to .dynstr early so that .dynstr's size will be
+  // fixed early.
+  for (StringRef S : Config->FilterList)
+    addInt(DT_FILTER, InX::DynStrTab->addString(S));
+  for (StringRef S : Config->AuxiliaryList)
+    addInt(DT_AUXILIARY, InX::DynStrTab->addString(S));
+
+  if (!Config->Rpath.empty())
+    addInt(Config->EnableNewDtags ? DT_RUNPATH : DT_RPATH,
+           InX::DynStrTab->addString(Config->Rpath));
+
+  for (InputFile *File : SharedFiles) {
+    SharedFile<ELFT> *F = cast<SharedFile<ELFT>>(File);
+    if (F->IsNeeded)
+      addInt(DT_NEEDED, InX::DynStrTab->addString(F->SoName));
+  }
+  if (!Config->SoName.empty())
+    addInt(DT_SONAME, InX::DynStrTab->addString(Config->SoName));
 }
 
 template <class ELFT>
@@ -1015,27 +1032,10 @@ void DynamicSection<ELFT>::addSym(int32_t Tag, Symbol *Sym) {
   Entries.push_back({Tag, [=] { return Sym->getVA(); }});
 }
 
-// There are some dynamic entries that don't depend on other sections.
-// Such entries can be set early.
-template <class ELFT> void DynamicSection<ELFT>::addEntries() {
-  // Add strings to .dynstr early so that .dynstr's size will be
-  // fixed early.
-  for (StringRef S : Config->FilterList)
-    addInt(DT_FILTER, InX::DynStrTab->addString(S));
-  for (StringRef S : Config->AuxiliaryList)
-    addInt(DT_AUXILIARY, InX::DynStrTab->addString(S));
-
-  if (!Config->Rpath.empty())
-    addInt(Config->EnableNewDtags ? DT_RUNPATH : DT_RPATH,
-           InX::DynStrTab->addString(Config->Rpath));
-
-  for (InputFile *File : SharedFiles) {
-    SharedFile<ELFT> *F = cast<SharedFile<ELFT>>(File);
-    if (F->IsNeeded)
-      addInt(DT_NEEDED, InX::DynStrTab->addString(F->SoName));
-  }
-  if (!Config->SoName.empty())
-    addInt(DT_SONAME, InX::DynStrTab->addString(Config->SoName));
+// Add remaining entries to complete .dynamic contents.
+template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
+  if (this->Size)
+    return; // Already finalized.
 
   // Set DT_FLAGS and DT_FLAGS_1.
   uint32_t DtFlags = 0;
@@ -1070,12 +1070,6 @@ template <class ELFT> void DynamicSection<ELFT>::addEntries() {
   // If the target is such a system (used -z rodynamic) don't write DT_DEBUG.
   if (!Config->Shared && !Config->Relocatable && !Config->ZRodynamic)
     addInt(DT_DEBUG, 0);
-}
-
-// Add remaining entries to complete .dynamic contents.
-template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
-  if (this->Size)
-    return; // Already finalized.
 
   this->Link = InX::DynStrTab->getParent()->SectionIndex;
   if (InX::RelaDyn->getParent() && !InX::RelaDyn->empty()) {

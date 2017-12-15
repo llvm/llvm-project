@@ -15,11 +15,11 @@ define i64 @addc_adde(i64 %a, i64 %b) {
 ; RV32I-NEXT:    add a2, a0, a2
 ; RV32I-NEXT:    sltu a0, a2, a0
 ; RV32I-NEXT:    add a1, a1, a0
-; RV32I-NEXT:    addi a0, a2, 0
+; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   %1 = add i64 %a, %b
   ret i64 %1
 }
@@ -38,7 +38,7 @@ define i64 @subc_sube(i64 %a, i64 %b) {
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   %1 = sub i64 %a, %b
   ret i64 %1
 }

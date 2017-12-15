@@ -50,6 +50,9 @@ entry:
 ; WIR:         [[IndexInc]] = add i64 %loop-index, 1
 ; WIR:         [[Cond2:%[0-9]+]] = icmp ult i64 [[IndexInc]], [[LoopCount]]
 ; WIR:         br i1 [[Cond2]], label %loop-memcpy-expansion, label %post-loop-memcpy-expansion
+
+; WIR-LABEL:   post-loop-memcpy-expansion:
+; WIR:         ret i8* %dst
 }
 
 define i8* @memcpy_volatile_caller(i8* %dst, i8* %src, i64 %n) #0 {
@@ -85,6 +88,9 @@ entry:
 ; WIR:         [[IndexInc]] = add i64 %loop-index, 1
 ; WIR:         [[Cond2:%[0-9]+]] = icmp ult i64 [[IndexInc]], [[LoopCount]]
 ; WIR:         br i1 [[Cond2]], label %loop-memcpy-expansion, label %post-loop-memcpy-expansion
+
+; WIR-LABEL:   post-loop-memcpy-expansion:
+; WIR:         ret i8* %dst
 }
 
 define i8* @memcpy_casting_caller(i32* %dst, i32* %src, i64 %n) #0 {

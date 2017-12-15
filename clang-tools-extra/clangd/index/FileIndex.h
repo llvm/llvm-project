@@ -1,4 +1,4 @@
-//===--- FileSymbols.h - Symbols from files. ---------------------*- C++-*-===//
+//===--- FileIndex.h - Index for files. ---------------------------- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,14 +6,20 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
+// FileIndex implements SymbolIndex for symbols from a set of files. Symbols are
+// maintained at source-file granuality (e.g. with ASTs), and files can be
+// updated dynamically.
+//
+//===---------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_FILESYMBOLS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_FILESYMBOLS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_FILEINDEX_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_FILEINDEX_H
 
-#include "../Path.h"
+#include "../ClangdUnit.h"
+#include "../Context.h"
 #include "Index.h"
-#include "llvm/ADT/StringMap.h"
-#include <mutex>
+#include "MemIndex.h"
 
 namespace clang {
 namespace clangd {
@@ -47,7 +53,22 @@ private:
   llvm::StringMap<std::shared_ptr<SymbolSlab>> FileToSlabs;
 };
 
+/// \brief This manages symbls from files and an in-memory index on all symbols.
+class FileIndex : public SymbolIndex {
+public:
+  /// \brief Update symbols in \p Path with symbols in \p AST. If \p AST is
+  /// nullptr, this removes all symbols in the file
+  void update(Context &Ctx, PathRef Path, ParsedAST *AST);
+
+  bool fuzzyFind(Context &Ctx, const FuzzyFindRequest &Req,
+                 std::function<void(const Symbol &)> Callback) const override;
+
+private:
+  FileSymbols FSymbols;
+  MemIndex Index;
+};
+
 } // namespace clangd
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_FILESYMBOLS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_FILEINDEX_H

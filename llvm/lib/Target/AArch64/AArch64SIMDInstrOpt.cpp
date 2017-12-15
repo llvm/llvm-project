@@ -12,17 +12,21 @@
 //
 // 1. Rewrite certain SIMD instructions with vector element due to their
 // inefficiency on some targets.
-// Example:
+//
+// For example:
 //    fmla v0.4s, v1.4s, v2.s[1]
-//    is rewritten into
+//
+// Is rewritten into:
 //    dup v3.4s, v2.s[1]
 //    fmla v0.4s, v1.4s, v3.4s
 //
-// 2. Rewrite Interleaved memory access instructions due to their
+// 2. Rewrite interleaved memory access instructions due to their
 // inefficiency on some targets.
-// Example:
+//
+// For example:
 //    st2 {v0.4s, v1.4s}, addr
-//    is rewritten into
+//
+// Is rewritten into:
 //    zip1 v2.4s, v0.4s, v1.4s
 //    zip2 v3.4s, v0.4s, v1.4s
 //    stp  q2, q3,  addr
@@ -71,8 +75,8 @@ struct AArch64SIMDInstrOpt : public MachineFunctionPass {
   // This is used to cache instruction replacement decisions within function
   // units and across function units.
   std::map<std::pair<unsigned, std::string>, bool> SIMDInstrTable;
-  // This is used to cache the decision of whether to leave the Interleave-Store
-  // instructions replacement pass early or not for a particular target.
+  // This is used to cache the decision of whether to leave the interleaved
+  // store instructions replacement pass early or not for a particular target.
   std::unordered_map<std::string, bool> InterlEarlyExit;
 
   typedef enum {
@@ -80,7 +84,7 @@ struct AArch64SIMDInstrOpt : public MachineFunctionPass {
     Interleave
   } Subpass;
 
-	// Instruction represented by OrigOpc is replaced by instructions in ReplOpc.
+  // Instruction represented by OrigOpc is replaced by instructions in ReplOpc.
   struct InstReplInfo {
     unsigned OrigOpc;
 		std::vector<unsigned> ReplOpc;
@@ -90,12 +94,12 @@ struct AArch64SIMDInstrOpt : public MachineFunctionPass {
 #define RuleST2(OpcOrg, OpcR0, OpcR1, OpcR2, RC) \
   {OpcOrg, {OpcR0, OpcR1, OpcR2}, RC}
 #define RuleST4(OpcOrg, OpcR0, OpcR1, OpcR2, OpcR3, OpcR4, OpcR5, OpcR6, \
-	OpcR7, OpcR8, OpcR9, RC) \
-  {OpcOrg, {OpcR0, OpcR1, OpcR2, OpcR3, OpcR4, OpcR5, OpcR6, OpcR7, \
-   OpcR8, OpcR9}, RC}
+                OpcR7, OpcR8, OpcR9, RC) \
+  {OpcOrg, \
+   {OpcR0, OpcR1, OpcR2, OpcR3, OpcR4, OpcR5, OpcR6, OpcR7, OpcR8, OpcR9}, RC}
 
   // The Instruction Replacement Table:
-	std::vector<InstReplInfo> IRT = {
+  std::vector<InstReplInfo> IRT = {
     // ST2 instructions
     RuleST2(AArch64::ST2Twov2d, AArch64::ZIP1v2i64, AArch64::ZIP2v2i64,
           AArch64::STPQi, AArch64::FPR128RegClass),
@@ -158,20 +162,14 @@ struct AArch64SIMDInstrOpt : public MachineFunctionPass {
                          SmallVectorImpl<const MCInstrDesc*> &ReplInstrMCID);
 
   /// Determine if we need to exit the instruction replacement optimization
-  /// subpasses early. This makes sure that Targets with no need for this
-  /// optimization do not spend any compile time on this subpass other than the
-  /// simple check performed here. This simple check is done by comparing the
-  /// latency of the original instruction to the latency of the replacement
-  /// instructions. We only check for a representative instruction in the class
-  /// of instructions and not all concerned instructions. For the VectorElem
-  /// subpass, we check for the FMLA instruction while for the interleave subpass
-  /// we check for the st2.4s instruction.
-  /// Return true if early exit of the subpass is recommended.
+  /// passes early. This makes sure that no compile time is spent in this pass
+  /// for targets with no need for any of these optimizations.
+  /// Return true if early exit of the pass is recommended.
   bool shouldExitEarly(MachineFunction *MF, Subpass SP);
 
   /// Check whether an equivalent DUP instruction has already been
   /// created or not.
-  /// Return true when the dup instruction already exists. In this case,
+  /// Return true when the DUP instruction already exists. In this case,
   /// DestReg will point to the destination of the already created DUP.
   bool reuseDUP(MachineInstr &MI, unsigned DupOpcode, unsigned SrcReg,
                 unsigned LaneNumber, unsigned *DestReg) const;
@@ -183,7 +181,7 @@ struct AArch64SIMDInstrOpt : public MachineFunctionPass {
   bool optimizeVectElement(MachineInstr &MI);
 
   /// Process The REG_SEQUENCE instruction, and extract the source
-  /// operands of the st2/4 instruction from it.
+  /// operands of the ST2/4 instruction from it.
   /// Example of such instructions.
   ///    %dest = REG_SEQUENCE %st2_src1, dsub0, %st2_src2, dsub1;
   /// Return true when the instruction is processed successfully.
@@ -191,12 +189,12 @@ struct AArch64SIMDInstrOpt : public MachineFunctionPass {
                          unsigned* StRegKill, unsigned NumArg) const;
 
   /// Load/Store Interleaving instructions are not always beneficial.
-  /// Replace them by zip instructionand classical load/store.
+  /// Replace them by ZIP instructionand classical load/store.
   /// Return true if the SIMD instruction is modified.
   bool optimizeLdStInterleave(MachineInstr &MI);
 
   /// Return the number of useful source registers for this
-  /// instruction (2 for st2 and 4 for st4).
+  /// instruction (2 for ST2 and 4 for ST4).
   unsigned determineSrcReg(MachineInstr &MI) const;
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
@@ -223,16 +221,15 @@ shouldReplaceInst(MachineFunction *MF, const MCInstrDesc *InstDesc,
   // Check if replacement decision is already available in the cached table.
   // if so, return it.
   std::string Subtarget = SchedModel.getSubtargetInfo()->getCPU();
-	std::pair<unsigned, std::string> InstID = std::make_pair(InstDesc->getOpcode(), Subtarget);
-  if (!SIMDInstrTable.empty() &&
-      SIMDInstrTable.find(InstID) != SIMDInstrTable.end())
+  auto InstID = std::make_pair(InstDesc->getOpcode(), Subtarget);
+  if (SIMDInstrTable.find(InstID) != SIMDInstrTable.end())
     return SIMDInstrTable[InstID];
 
   unsigned SCIdx = InstDesc->getSchedClass();
   const MCSchedClassDesc *SCDesc =
     SchedModel.getMCSchedModel()->getSchedClassDesc(SCIdx);
 
-  // If a subtarget does not define resources for the instructions
+  // If a target does not define resources for the instructions
   // of interest, then return false for no replacement.
   const MCSchedClassDesc *SCDescRepl;
   if (!SCDesc->isValid() || SCDesc->isVariant())
@@ -268,31 +265,30 @@ shouldReplaceInst(MachineFunction *MF, const MCInstrDesc *InstDesc,
   }
 }
 
-/// Determine if we need to exit the instruction replacement optimization
-/// subpasses early. This makes sure that Targets with no need for this
-/// optimization do not spend any compile time on this subpass other than the
-/// simple check performed here. This simple check is done by comparing the
-/// latency of the original instruction to the latency of the replacement
-/// instructions. We only check for a representative instruction in the class of
-/// instructions and not all concerned instructions. For the VectorElem subpass,
-/// we check for the FMLA instruction while for the interleave subpass we check
-/// for the st2.4s instruction.
-/// Return true if early exit of the subpass is recommended.
+/// Determine if we need to exit this pass for a kind of instruction replacement
+/// early. This makes sure that no compile time is spent in this pass for
+/// targets with no need for any of these optimizations beyond performing this
+/// check.
+/// Return true if early exit of this pass for a kind of instruction
+/// replacement is recommended for a target.
 bool AArch64SIMDInstrOpt::shouldExitEarly(MachineFunction *MF, Subpass SP) {
   const MCInstrDesc* OriginalMCID;
   SmallVector<const MCInstrDesc*, MaxNumRepl> ReplInstrMCID;
 
   switch (SP) {
+  // For this optimization, check by comparing the latency of a representative
+  // instruction to that of the replacement instructions.
+  // TODO: check for all concerned instructions.
   case VectorElem:
     OriginalMCID = &TII->get(AArch64::FMLAv4i32_indexed);
     ReplInstrMCID.push_back(&TII->get(AArch64::DUPv4i32lane));
-    ReplInstrMCID.push_back(&TII->get(AArch64::FMULv4f32));
+    ReplInstrMCID.push_back(&TII->get(AArch64::FMLAv4f32));
     if (shouldReplaceInst(MF, OriginalMCID, ReplInstrMCID))
       return false;
     break;
+
+  // For this optimization, check for all concerned instructions.
   case Interleave:
-    // Check if early exit decision is already available in the cached
-    // table or not.
     std::string Subtarget = SchedModel.getSubtargetInfo()->getCPU();
     if (InterlEarlyExit.find(Subtarget) != InterlEarlyExit.end())
       return InterlEarlyExit[Subtarget];
@@ -316,7 +312,7 @@ bool AArch64SIMDInstrOpt::shouldExitEarly(MachineFunction *MF, Subpass SP) {
 
 /// Check whether an equivalent DUP instruction has already been
 /// created or not.
-/// Return true when the dup instruction already exists. In this case,
+/// Return true when the DUP instruction already exists. In this case,
 /// DestReg will point to the destination of the already created DUP.
 bool AArch64SIMDInstrOpt::reuseDUP(MachineInstr &MI, unsigned DupOpcode,
                                          unsigned SrcReg, unsigned LaneNumber,
@@ -341,14 +337,16 @@ bool AArch64SIMDInstrOpt::reuseDUP(MachineInstr &MI, unsigned DupOpcode,
 /// Certain SIMD instructions with vector element operand are not efficient.
 /// Rewrite them into SIMD instructions with vector operands. This rewrite
 /// is driven by the latency of the instructions.
-/// The instruction of concerns are for the time being fmla, fmls, fmul,
-/// and fmulx and hence they are hardcoded.
+/// The instruction of concerns are for the time being FMLA, FMLS, FMUL,
+/// and FMULX and hence they are hardcoded.
 ///
-/// Example:
+/// For example:
 ///    fmla v0.4s, v1.4s, v2.s[1]
-///    is rewritten into
-///    dup v3.4s, v2.s[1]           // dup not necessary if redundant
+///
+/// Is rewritten into
+///    dup  v3.4s, v2.s[1]      // DUP not necessary if redundant
 ///    fmla v0.4s, v1.4s, v3.4s
+///
 /// Return true if the SIMD instruction is modified.
 bool AArch64SIMDInstrOpt::optimizeVectElement(MachineInstr &MI) {
   const MCInstrDesc *MulMCID, *DupMCID;
@@ -428,7 +426,7 @@ bool AArch64SIMDInstrOpt::optimizeVectElement(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
 
-  // get the operands of the current SIMD arithmetic instruction.
+  // Get the operands of the current SIMD arithmetic instruction.
   unsigned MulDest = MI.getOperand(0).getReg();
   unsigned SrcReg0 = MI.getOperand(1).getReg();
   unsigned Src0IsKill = getKillRegState(MI.getOperand(1).isKill());
@@ -442,7 +440,7 @@ bool AArch64SIMDInstrOpt::optimizeVectElement(MachineInstr &MI) {
     unsigned Src2IsKill = getKillRegState(MI.getOperand(3).isKill());
     unsigned LaneNumber = MI.getOperand(4).getImm();
     // Create a new DUP instruction. Note that if an equivalent DUP instruction
-    // has already been created before, then use that one instread of creating
+    // has already been created before, then use that one instead of creating
     // a new one.
     if (!reuseDUP(MI, DupMCID->getOpcode(), SrcReg2, LaneNumber, &DupDest)) {
       DupDest = MRI.createVirtualRegister(RC);
@@ -474,18 +472,20 @@ bool AArch64SIMDInstrOpt::optimizeVectElement(MachineInstr &MI) {
 }
 
 /// Load/Store Interleaving instructions are not always beneficial.
-/// Replace them by zip instructions and classical load/store.
+/// Replace them by ZIP instructions and classical load/store.
 ///
-/// Example:
+/// For example:
 ///    st2 {v0.4s, v1.4s}, addr
-///    is rewritten into
+///
+/// Is rewritten into:
 ///    zip1 v2.4s, v0.4s, v1.4s
 ///    zip2 v3.4s, v0.4s, v1.4s
 ///    stp  q2, q3, addr
 //
-/// Example:
+/// For example:
 ///    st4 {v0.4s, v1.4s, v2.4s, v3.4s}, addr
-///    is rewritten into
+///
+/// Is rewritten into:
 ///    zip1 v4.4s, v0.4s, v2.4s
 ///    zip2 v5.4s, v0.4s, v2.4s
 ///    zip1 v6.4s, v1.4s, v3.4s
@@ -496,7 +496,8 @@ bool AArch64SIMDInstrOpt::optimizeVectElement(MachineInstr &MI) {
 ///    zip2 v11.4s, v5.4s, v7.4s
 ///    stp  q8, q9, addr
 ///    stp  q10, q11, addr+32
-/// Currently only instructions related to st2 and st4 are considered.
+///
+/// Currently only instructions related to ST2 and ST4 are considered.
 /// Other may be added later.
 /// Return true if the SIMD instruction is modified.
 bool AArch64SIMDInstrOpt::optimizeLdStInterleave(MachineInstr &MI) {
@@ -541,15 +542,16 @@ bool AArch64SIMDInstrOpt::optimizeLdStInterleave(MachineInstr &MI) {
                          ReplInstrMCID))
     return false;
 
-  // Generate the replacement instructions composed of zip1, zip2, and stp (at
+  // Generate the replacement instructions composed of ZIP1, ZIP2, and STP (at
   // this point, the code generation is hardcoded and does not rely on the IRT
   // table used above given that code generation for ST2 replacement is somewhat
   // different than for ST4 replacement. We could have added more info into the
-	// table related to how we build new instructions but we may be adding more
-	// complexity with that).
+  // table related to how we build new instructions but we may be adding more
+  // complexity with that).
   switch (MI.getOpcode()) {
   default:
     return false;
+
   case AArch64::ST2Twov16b:
   case AArch64::ST2Twov8b:
   case AArch64::ST2Twov8h:
@@ -557,20 +559,21 @@ bool AArch64SIMDInstrOpt::optimizeLdStInterleave(MachineInstr &MI) {
   case AArch64::ST2Twov4s:
   case AArch64::ST2Twov2s:
   case AArch64::ST2Twov2d:
-    // zip instructions
+    // ZIP instructions
     BuildMI(MBB, MI, DL, *ReplInstrMCID[0], ZipDest[0])
         .addReg(StReg[0])
         .addReg(StReg[1]);
     BuildMI(MBB, MI, DL, *ReplInstrMCID[1], ZipDest[1])
         .addReg(StReg[0], StRegKill[0])
         .addReg(StReg[1], StRegKill[1]);
-    // stp instructions
+    // STP instructions
     BuildMI(MBB, MI, DL, *ReplInstrMCID[2])
         .addReg(ZipDest[0])
         .addReg(ZipDest[1])
         .addReg(AddrReg)
         .addImm(0);
     break;
+
   case AArch64::ST4Fourv16b:
   case AArch64::ST4Fourv8b:
   case AArch64::ST4Fourv8h:
@@ -578,7 +581,7 @@ bool AArch64SIMDInstrOpt::optimizeLdStInterleave(MachineInstr &MI) {
   case AArch64::ST4Fourv4s:
   case AArch64::ST4Fourv2s:
   case AArch64::ST4Fourv2d:
-    // zip instructions
+    // ZIP instructions
     BuildMI(MBB, MI, DL, *ReplInstrMCID[0], ZipDest[0])
         .addReg(StReg[0])
         .addReg(StReg[2]);
@@ -622,7 +625,7 @@ bool AArch64SIMDInstrOpt::optimizeLdStInterleave(MachineInstr &MI) {
 }
 
 /// Process The REG_SEQUENCE instruction, and extract the source
-/// operands of the st2/4 instruction from it.
+/// operands of the ST2/4 instruction from it.
 /// Example of such instruction.
 ///    %dest = REG_SEQUENCE %st2_src1, dsub0, %st2_src2, dsub1;
 /// Return true when the instruction is processed successfully.
@@ -641,6 +644,7 @@ bool AArch64SIMDInstrOpt::processSeqRegInst(MachineInstr *DefiningMI,
       switch (DefiningMI->getOperand(2*i+2).getImm()) {
       default:
         return false;
+
       case AArch64::dsub0:
       case AArch64::dsub1:
       case AArch64::dsub2:
@@ -664,6 +668,7 @@ unsigned AArch64SIMDInstrOpt::determineSrcReg(MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unsupported instruction for this pass");
+
   case AArch64::ST2Twov16b:
   case AArch64::ST2Twov8b:
   case AArch64::ST2Twov8h:
@@ -671,7 +676,8 @@ unsigned AArch64SIMDInstrOpt::determineSrcReg(MachineInstr &MI) const {
   case AArch64::ST2Twov4s:
   case AArch64::ST2Twov2s:
   case AArch64::ST2Twov2d:
-		return 2;
+    return 2;
+
   case AArch64::ST4Fourv16b:
   case AArch64::ST4Fourv8b:
   case AArch64::ST4Fourv8h:
@@ -728,8 +734,8 @@ bool AArch64SIMDInstrOpt::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-/// createAArch64SIMDInstrOptPass - returns an instance of the
-/// vector by element optimization pass.
+/// Returns an instance of the high cost ASIMD instruction replacement
+/// optimization pass.
 FunctionPass *llvm::createAArch64SIMDInstrOptPass() {
   return new AArch64SIMDInstrOpt();
 }

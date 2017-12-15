@@ -1,4 +1,5 @@
 ; RUN: opt < %s -rewrite-statepoints-for-gc -S | FileCheck  %s
+; RUN: opt < %s -passes=rewrite-statepoints-for-gc -S | FileCheck  %s
 
 
 define i64 addrspace(1)* @test(<2 x i64 addrspace(1)*> %vec, i32 %idx) gc "statepoint-example" {

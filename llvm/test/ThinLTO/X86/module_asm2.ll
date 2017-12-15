@@ -11,9 +11,9 @@
 ; RUN: llvm-lto2 run %t1.bc %t2.bc -o %t.o -save-temps \
 ; RUN:     -r=%t1.bc,foo,plx \
 ; RUN:     -r=%t1.bc,globalfunc,plx \
-; RUN:     -r=%t1.bc,globalfunc,plx \
+; RUN:     -r=%t1.bc,globalfunc,lx \
 ; RUN:     -r=%t1.bc,weakfunc,plx \
-; RUN:     -r=%t1.bc,weakfunc,plx \
+; RUN:     -r=%t1.bc,weakfunc,lx \
 ; RUN:     -r=%t1.bc,b,pl \
 ; RUN:     -r=%t1.bc,x,pl \
 ; RUN:     -r=%t1.bc,func1,pl \

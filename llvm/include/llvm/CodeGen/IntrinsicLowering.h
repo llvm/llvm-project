@@ -31,26 +31,22 @@ class IntrinsicLowering {
 public:
   explicit IntrinsicLowering(const DataLayout &DL) : DL(DL), Warned(false) {}
 
-  /// AddPrototypes - This method, if called, causes all of the prototypes
-  /// that might be needed by an intrinsic lowering implementation to be
-  /// inserted into the module specified.
+  /// Add all of the prototypes that might be needed by an intrinsic lowering
+  /// implementation to be inserted into the module specified.
   void AddPrototypes(Module &M);
 
-  /// LowerIntrinsicCall - This method replaces a call with the LLVM function
-  /// which should be used to implement the specified intrinsic function call.
+  /// Replace a call to the specified intrinsic function.
   /// If an intrinsic function must be implemented by the code generator
   /// (such as va_start), this function should print a message and abort.
   ///
   /// Otherwise, if an intrinsic function call can be lowered, the code to
   /// implement it (often a call to a non-intrinsic function) is inserted
-  /// _after_ the call instruction and the call is deleted.  The caller must
+  /// _after_ the call instruction and the call is deleted. The caller must
   /// be capable of handling this kind of change.
-  ///
   void LowerIntrinsicCall(CallInst *CI);
 
-  /// LowerToByteSwap - Replace a call instruction into a call to bswap
-  /// intrinsic. Return false if it has determined the call is not a
-  /// simple integer bswap.
+  /// Try to replace a call instruction with a call to a bswap intrinsic. Return
+  /// false if the call is not a simple integer bswap.
   static bool LowerToByteSwap(CallInst *CI);
 };
 }

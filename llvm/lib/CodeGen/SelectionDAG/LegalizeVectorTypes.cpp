@@ -1054,9 +1054,20 @@ void DAGTypeLegalizer::SplitVecRes_INSERT_VECTOR_ELT(SDNode *N, SDValue &Lo,
   if (CustomLowerNode(N, N->getValueType(0), true))
     return;
 
-  // Spill the vector to the stack.
+  // Make the vector elements byte-addressable if they aren't already.
   EVT VecVT = Vec.getValueType();
   EVT EltVT = VecVT.getVectorElementType();
+  if (VecVT.getScalarSizeInBits() < 8) {
+    EltVT = MVT::i8;
+    VecVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
+                             VecVT.getVectorNumElements());
+    Vec = DAG.getNode(ISD::ANY_EXTEND, dl, VecVT, Vec);
+    // Extend the element type to match if needed.
+    if (EltVT.bitsGT(Elt.getValueType()))
+      Elt = DAG.getNode(ISD::ANY_EXTEND, dl, EltVT, Elt);
+  }
+
+  // Spill the vector to the stack.
   SDValue StackPtr = DAG.CreateStackTemporary(VecVT);
   auto &MF = DAG.getMachineFunction();
   auto FrameIndex = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
@@ -1071,19 +1082,29 @@ void DAGTypeLegalizer::SplitVecRes_INSERT_VECTOR_ELT(SDNode *N, SDValue &Lo,
   Store = DAG.getTruncStore(Store, dl, Elt, EltPtr,
                             MachinePointerInfo::getUnknownStack(MF), EltVT);
 
+  EVT LoVT, HiVT;
+  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VecVT);
+
   // Load the Lo part from the stack slot.
-  Lo = DAG.getLoad(Lo.getValueType(), dl, Store, StackPtr, PtrInfo);
+  Lo = DAG.getLoad(LoVT, dl, Store, StackPtr, PtrInfo);
 
   // Increment the pointer to the other part.
-  unsigned IncrementSize = Lo.getValueSizeInBits() / 8;
+  unsigned IncrementSize = LoVT.getSizeInBits() / 8;
   StackPtr = DAG.getNode(ISD::ADD, dl, StackPtr.getValueType(), StackPtr,
                          DAG.getConstant(IncrementSize, dl,
                                          StackPtr.getValueType()));
 
   // Load the Hi part from the stack slot.
-  Hi = DAG.getLoad(Hi.getValueType(), dl, Store, StackPtr,
+  Hi = DAG.getLoad(HiVT, dl, Store, StackPtr,
                    PtrInfo.getWithOffset(IncrementSize),
                    MinAlign(Alignment, IncrementSize));
+
+  // If we adjusted the original type, we need to truncate the results.
+  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
+  if (LoVT != Lo.getValueType())
+    Lo = DAG.getNode(ISD::TRUNCATE, dl, LoVT, Lo);
+  if (HiVT != Hi.getValueType())
+    Hi = DAG.getNode(ISD::TRUNCATE, dl, HiVT, Hi);
 }
 
 void DAGTypeLegalizer::SplitVecRes_SCALAR_TO_VECTOR(SDNode *N, SDValue &Lo,

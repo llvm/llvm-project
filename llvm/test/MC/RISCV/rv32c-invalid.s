@@ -38,7 +38,7 @@ c.addi16sp  t0, 16 # CHECK: :[[@LINE]]:13: error: invalid operand for instructio
 
 # Out of range immediates
 
-## uimm5nonzero
+## uimmlog2xlennonzero
 c.slli t0, 64 # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [1, 31]
 c.srli a0, 32 # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [1, 31]
 c.srai a0, 0  # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [1, 31]

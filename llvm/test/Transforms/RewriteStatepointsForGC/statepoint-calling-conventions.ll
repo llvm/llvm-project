@@ -1,4 +1,5 @@
 ; RUN: opt -rewrite-statepoints-for-gc -S < %s | FileCheck %s
+; RUN: opt -passes=rewrite-statepoints-for-gc -S < %s | FileCheck %s
 
 ; Ensure that the gc.statepoint calls / invokes we generate carry over
 ; the right calling conventions.

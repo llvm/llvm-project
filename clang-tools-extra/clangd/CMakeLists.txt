@@ -19,7 +19,7 @@ add_clang_library(clangDaemon
   Protocol.cpp
   ProtocolHandlers.cpp
   Trace.cpp
-  index/FileSymbols.cpp
+  index/FileIndex.cpp
   index/Index.cpp
   index/MemIndex.cpp
   index/SymbolCollector.cpp
