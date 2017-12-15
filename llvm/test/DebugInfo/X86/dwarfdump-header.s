@@ -298,25 +298,23 @@ LH_5_params:
         .long   str_LT_5a
         .long   str_LT_5b
         # File table format
-        .byte   4               # Four elements per file entry
+        .byte   3               # Three elements per file entry
         .byte   1               # DW_LNCT_path
         .byte   0x08            # DW_FORM_string
         .byte   2               # DW_LNCT_directory_index
         .byte   0x0b            # DW_FORM_data1
-        .byte   3               # DW_LNCT_timestamp
-        .byte   0x0f            # DW_FORM_udata
-        .byte   4               # DW_LNCT_size
-        .byte   0x0f            # DW_FORM_udata
+        .byte   5               # DW_LNCT_MD5
+        .byte   0x1e            # DW_FORM_data16
         # File table entries
         .byte   2               # Two files
         .asciz "File5a"
         .byte   1
-        .byte   0x51
-        .byte   0x52
+        .quad   0x7766554433221100
+        .quad   0xffeeddccbbaa9988
         .asciz "File5b"
         .byte   2
-        .byte   0x53
-        .byte   0x54
+        .quad   0x8899aabbccddeeff
+        .quad   0x0011223344556677
 LH_5_header_end:
         # Line number program, which is empty.
 LH_5_end:
@@ -329,8 +327,9 @@ LH_5_end:
 # CHECK: include_directories[  1] = 'Directory5a'
 # CHECK: include_directories[  2] = 'Directory5b'
 # CHECK-NOT: include_directories
-# CHECK: file_names[  1]    1 0x00000051 0x00000052 File5a{{$}}
-# CHECK: file_names[  2]    2 0x00000053 0x00000054 File5b{{$}}
+# CHECK: MD5 Checksum
+# CHECK: file_names[  1]    1 00112233445566778899aabbccddeeff File5a{{$}}
+# CHECK: file_names[  2]    2 ffeeddccbbaa99887766554433221100 File5b{{$}}
 # CHECK-NOT: file_names
 
 	.section .debug_line.dwo,"",@progbits

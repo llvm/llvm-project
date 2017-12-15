@@ -550,18 +550,16 @@ void Writer::calculateOffsets() {
 }
 
 void Writer::calculateImports() {
-  for (ObjFile *File : Symtab->ObjectFiles) {
-    for (Symbol *Sym : File->getSymbols()) {
-      if (Sym->hasOutputIndex() || Sym->isDefined() || Sym->isWeak())
-        continue;
+  for (Symbol *Sym : Symtab->getSymbols()) {
+    if (Sym->isDefined() || Sym->isWeak())
+      continue;
 
-      if (Sym->isFunction()) {
-        Sym->setOutputIndex(FunctionImports.size());
-        FunctionImports.push_back(Sym);
-      } else {
-        Sym->setOutputIndex(GlobalImports.size());
-        GlobalImports.push_back(Sym);
-      }
+    if (Sym->isFunction()) {
+      Sym->setOutputIndex(FunctionImports.size());
+      FunctionImports.push_back(Sym);
+    } else {
+      Sym->setOutputIndex(GlobalImports.size());
+      GlobalImports.push_back(Sym);
     }
   }
 }

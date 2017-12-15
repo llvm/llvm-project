@@ -337,7 +337,7 @@ Error MinimalSymbolDumper::visitSymbolEnd(CVSymbol &Record) {
 
 std::string MinimalSymbolDumper::typeOrIdIndex(codeview::TypeIndex TI,
                                                bool IsType) const {
-  if (TI.isSimple())
+  if (TI.isSimple() || TI.isDecoratedItemId())
     return formatv("{0}", TI).str();
   auto &Container = IsType ? Types : Ids;
   StringRef Name = Container.getTypeName(TI);

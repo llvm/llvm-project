@@ -11,11 +11,11 @@ define i32 @udiv(i32 %a, i32 %b) {
 ; RV32I-NEXT:    addi s0, sp, 16
 ; RV32I-NEXT:    lui a2, %hi(__udivsi3)
 ; RV32I-NEXT:    addi a2, a2, %lo(__udivsi3)
-; RV32I-NEXT:    jalr ra, a2, 0
+; RV32I-NEXT:    jalr a2
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   %1 = udiv i32 %a, %b
   ret i32 %1
 }
@@ -30,11 +30,11 @@ define i32 @udiv_constant(i32 %a) {
 ; RV32I-NEXT:    lui a1, %hi(__udivsi3)
 ; RV32I-NEXT:    addi a2, a1, %lo(__udivsi3)
 ; RV32I-NEXT:    addi a1, zero, 5
-; RV32I-NEXT:    jalr ra, a2, 0
+; RV32I-NEXT:    jalr a2
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   %1 = udiv i32 %a, 5
   ret i32 %1
 }
@@ -50,7 +50,7 @@ define i32 @udiv_pow2(i32 %a) {
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   %1 = udiv i32 %a, 8
   ret i32 %1
 }
@@ -64,11 +64,11 @@ define i64 @udiv64(i64 %a, i64 %b) {
 ; RV32I-NEXT:    addi s0, sp, 16
 ; RV32I-NEXT:    lui a4, %hi(__udivdi3)
 ; RV32I-NEXT:    addi a4, a4, %lo(__udivdi3)
-; RV32I-NEXT:    jalr ra, a4, 0
+; RV32I-NEXT:    jalr a4
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   %1 = udiv i64 %a, %b
   ret i64 %1
 }
@@ -83,12 +83,12 @@ define i64 @udiv64_constant(i64 %a) {
 ; RV32I-NEXT:    lui a2, %hi(__udivdi3)
 ; RV32I-NEXT:    addi a4, a2, %lo(__udivdi3)
 ; RV32I-NEXT:    addi a2, zero, 5
-; RV32I-NEXT:    addi a3, zero, 0
-; RV32I-NEXT:    jalr ra, a4, 0
+; RV32I-NEXT:    mv a3, zero
+; RV32I-NEXT:    jalr a4
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   %1 = udiv i64 %a, 5
   ret i64 %1
 }
@@ -102,11 +102,11 @@ define i32 @sdiv(i32 %a, i32 %b) {
 ; RV32I-NEXT:    addi s0, sp, 16
 ; RV32I-NEXT:    lui a2, %hi(__divsi3)
 ; RV32I-NEXT:    addi a2, a2, %lo(__divsi3)
-; RV32I-NEXT:    jalr ra, a2, 0
+; RV32I-NEXT:    jalr a2
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   %1 = sdiv i32 %a, %b
   ret i32 %1
 }
@@ -121,11 +121,11 @@ define i32 @sdiv_constant(i32 %a) {
 ; RV32I-NEXT:    lui a1, %hi(__divsi3)
 ; RV32I-NEXT:    addi a2, a1, %lo(__divsi3)
 ; RV32I-NEXT:    addi a1, zero, 5
-; RV32I-NEXT:    jalr ra, a2, 0
+; RV32I-NEXT:    jalr a2
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   %1 = sdiv i32 %a, 5
   ret i32 %1
 }
@@ -144,7 +144,7 @@ define i32 @sdiv_pow2(i32 %a) {
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   %1 = sdiv i32 %a, 8
   ret i32 %1
 }
@@ -158,11 +158,11 @@ define i64 @sdiv64(i64 %a, i64 %b) {
 ; RV32I-NEXT:    addi s0, sp, 16
 ; RV32I-NEXT:    lui a4, %hi(__divdi3)
 ; RV32I-NEXT:    addi a4, a4, %lo(__divdi3)
-; RV32I-NEXT:    jalr ra, a4, 0
+; RV32I-NEXT:    jalr a4
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   %1 = sdiv i64 %a, %b
   ret i64 %1
 }
@@ -177,12 +177,12 @@ define i64 @sdiv64_constant(i64 %a) {
 ; RV32I-NEXT:    lui a2, %hi(__divdi3)
 ; RV32I-NEXT:    addi a4, a2, %lo(__divdi3)
 ; RV32I-NEXT:    addi a2, zero, 5
-; RV32I-NEXT:    addi a3, zero, 0
-; RV32I-NEXT:    jalr ra, a4, 0
+; RV32I-NEXT:    mv a3, zero
+; RV32I-NEXT:    jalr a4
 ; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    jalr zero, ra, 0
+; RV32I-NEXT:    ret
   %1 = sdiv i64 %a, 5
   ret i64 %1
 }

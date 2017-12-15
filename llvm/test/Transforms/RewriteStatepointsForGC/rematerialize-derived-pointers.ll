@@ -1,4 +1,5 @@
 ; RUN: opt < %s -rewrite-statepoints-for-gc -S | FileCheck %s
+; RUN: opt < %s -passes=rewrite-statepoints-for-gc -S | FileCheck %s
 
 
 declare void @use_obj16(i16 addrspace(1)*) "gc-leaf-function"

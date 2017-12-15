@@ -255,11 +255,9 @@ public:
   /// NOTE: To allow more flexibility a custom ASTConsumer could probably be
   /// used instead, but having only this method allows a simpler API.
   virtual void HandleTopLevelDecl(DeclGroupRef DG);
-  /// Called for each macro defined in the Preamble.
-  /// NOTE: To allow more flexibility a custom PPCallbacks could probably be
-  /// used instead, but having only this method allows a simpler API.
-  virtual void HandleMacroDefined(const Token &MacroNameTok,
-                                  const MacroDirective *MD);
+  /// Creates wrapper class for PPCallbacks so we can also process information
+  /// about includes that are inside of a preamble
+  virtual std::unique_ptr<PPCallbacks> createPPCallbacks();
 };
 
 enum class BuildPreambleError {

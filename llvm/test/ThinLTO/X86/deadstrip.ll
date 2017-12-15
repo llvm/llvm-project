@@ -16,7 +16,7 @@
 ; RUN:   -r %t1.bc,_boo,l \
 ; RUN:   -r %t2.bc,_baz,pl \
 ; RUN:   -r %t2.bc,_boo,pl \
-; RUN:   -r %t2.bc,_dead_func,pl \
+; RUN:   -r %t2.bc,_dead_func,l \
 ; RUN:   -r %t2.bc,_another_dead_func,pl
 ; RUN: llvm-dis < %t.out.0.3.import.bc | FileCheck %s --check-prefix=LTO2
 ; RUN: llvm-dis < %t.out.1.3.import.bc | FileCheck %s --check-prefix=LTO2-CHECK2
@@ -81,7 +81,7 @@
 ; RUN:   -r %t1.bc,_boo,l \
 ; RUN:   -r %t3.bc,_baz,pl \
 ; RUN:   -r %t3.bc,_boo,pl \
-; RUN:   -r %t3.bc,_dead_func,pl \
+; RUN:   -r %t3.bc,_dead_func,l \
 ; RUN:   -r %t3.bc,_another_dead_func,pl
 ; RUN: llvm-dis < %t4.out.1.3.import.bc | FileCheck %s --check-prefix=CHECK-NOTDEAD
 ; RUN: llvm-nm %t4.out.0 | FileCheck %s --check-prefix=CHECK-NM-NOTDEAD

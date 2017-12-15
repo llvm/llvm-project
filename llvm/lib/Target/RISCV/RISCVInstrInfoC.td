@@ -13,10 +13,20 @@ include "RISCVInstrFormatsC.td"
 // Operand definitions.
 //===----------------------------------------------------------------------===//
 
-def uimm5nonzero : Operand<XLenVT>,
-                   ImmLeaf<XLenVT, [{return isUInt<5>(Imm) && (Imm != 0);}]> {
-  let ParserMatchClass = UImmAsmOperand<5, "NonZero">;
-  let DecoderMethod = "decodeUImmOperand<5>";
+def UImmLog2XLenNonZeroAsmOperand : AsmOperandClass {
+  let Name = "UImmLog2XLenNonZero";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidUImmLog2XLenNonZero";
+}
+
+def uimmlog2xlennonzero : Operand<XLenVT>, ImmLeaf<XLenVT, [{
+  if (Subtarget->is64Bit())
+    return isUInt<6>(Imm) && (Imm != 0);
+  return isUInt<5>(Imm) && (Imm != 0);
+}]> {
+  let ParserMatchClass = UImmLog2XLenNonZeroAsmOperand;
+  // TODO: should ensure invalid shamt is rejected when decoding.
+  let DecoderMethod = "decodeUImmOperand<6>";
 }
 
 def simm6 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isInt<6>(Imm);}]> {
@@ -290,8 +300,8 @@ def C_LUI : RVInst16CI<0b011, 0b01, (outs GPRNoX0X2:$rd),
   let Inst{6-2} = imm{4-0};
 }
 
-def C_SRLI : Shift_right<0b00, "c.srli", GPRC, uimm5nonzero>;
-def C_SRAI : Shift_right<0b01, "c.srai", GPRC, uimm5nonzero>;
+def C_SRLI : Shift_right<0b00, "c.srli", GPRC, uimmlog2xlennonzero>;
+def C_SRAI : Shift_right<0b01, "c.srai", GPRC, uimmlog2xlennonzero>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def C_ANDI : RVInst16CB<0b100, 0b01, (outs GPRC:$rs1_wb), (ins GPRC:$rs1, simm6:$imm),
@@ -323,7 +333,7 @@ def C_BNEZ : Bcz<0b111, "c.bnez",  setne, GPRC>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def C_SLLI : RVInst16CI<0b000, 0b10, (outs GPRNoX0:$rd_wb),
-                        (ins GPRNoX0:$rd, uimm5nonzero:$imm),
+                        (ins GPRNoX0:$rd, uimmlog2xlennonzero:$imm),
                         "c.slli" ,"$rd, $imm"> {
   let Constraints = "$rd = $rd_wb";
   let Inst{6-2} = imm{4-0};

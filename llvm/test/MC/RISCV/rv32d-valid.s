@@ -1,11 +1,13 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+d -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+d -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-INST %s
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+d -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+d -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+d < %s \
-# RUN:     | llvm-objdump -mattr=+d -d - | FileCheck -check-prefix=CHECK-INST %s
+# RUN:     | llvm-objdump -mattr=+d -riscv-no-aliases -d - \
+# RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+d < %s \
-# RUN:     | llvm-objdump -mattr=+d -d - | FileCheck -check-prefix=CHECK-INST %s
+# RUN:     | llvm-objdump -mattr=+d -riscv-no-aliases -d - \
+# RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
 # Support for the 'D' extension implies support for 'F'
 # CHECK-INST: fadd.s fs10, fs11, ft8
@@ -44,34 +46,34 @@ fsd f8, %lo(2048)(s6)
 # CHECK: encoding: [0xa7,0xb3,0x9b,0x3e]
 fsd f9, 999(s7)
 
-# CHECK-INST: fmadd.d fa0, fa1, fa2, fa3
+# CHECK-INST: fmadd.d fa0, fa1, fa2, fa3, dyn
 # CHECK: encoding: [0x43,0xf5,0xc5,0x6a]
-fmadd.d f10, f11, f12, f13
-# CHECK-INST: fmsub.d fa4, fa5, fa6, fa7
+fmadd.d f10, f11, f12, f13, dyn
+# CHECK-INST: fmsub.d fa4, fa5, fa6, fa7, dyn
 # CHECK: encoding: [0x47,0xf7,0x07,0x8b]
-fmsub.d f14, f15, f16, f17
-# CHECK-INST: fnmsub.d fs2, fs3, fs4, fs5
+fmsub.d f14, f15, f16, f17, dyn
+# CHECK-INST: fnmsub.d fs2, fs3, fs4, fs5, dyn
 # CHECK: encoding: [0x4b,0xf9,0x49,0xab]
-fnmsub.d f18, f19, f20, f21
-# CHECK-INST: fnmadd.d fs6, fs7, fs8, fs9
+fnmsub.d f18, f19, f20, f21, dyn
+# CHECK-INST: fnmadd.d fs6, fs7, fs8, fs9, dyn
 # CHECK: encoding: [0x4f,0xfb,0x8b,0xcb]
-fnmadd.d f22, f23, f24, f25
+fnmadd.d f22, f23, f24, f25, dyn
 
-# CHECK-INST: fadd.d fs10, fs11, ft8
+# CHECK-INST: fadd.d fs10, fs11, ft8, dyn
 # CHECK: encoding: [0x53,0xfd,0xcd,0x03]
-fadd.d f26, f27, f28
-# CHECK-INST: fsub.d ft9, ft10, ft11
+fadd.d f26, f27, f28, dyn
+# CHECK-INST: fsub.d ft9, ft10, ft11, dyn
 # CHECK: encoding: [0xd3,0x7e,0xff,0x0b]
-fsub.d f29, f30, f31
-# CHECK-INST: fmul.d ft0, ft1, ft2
+fsub.d f29, f30, f31, dyn
+# CHECK-INST: fmul.d ft0, ft1, ft2, dyn
 # CHECK: encoding: [0x53,0xf0,0x20,0x12]
-fmul.d ft0, ft1, ft2
-# CHECK-INST: fdiv.d ft3, ft4, ft5
+fmul.d ft0, ft1, ft2, dyn
+# CHECK-INST: fdiv.d ft3, ft4, ft5, dyn
 # CHECK: encoding: [0xd3,0x71,0x52,0x1a]
-fdiv.d ft3, ft4, ft5
-# CHECK-INST: fsqrt.d ft6, ft7
+fdiv.d ft3, ft4, ft5, dyn
+# CHECK-INST: fsqrt.d ft6, ft7, dyn
 # CHECK: encoding: [0x53,0xf3,0x03,0x5a]
-fsqrt.d ft6, ft7
+fsqrt.d ft6, ft7, dyn
 # CHECK-INST: fsgnj.d fs1, fa0, fa1
 # CHECK: encoding: [0xd3,0x04,0xb5,0x22]
 fsgnj.d fs1, fa0, fa1
@@ -88,9 +90,9 @@ fmin.d fa5, fa6, fa7
 # CHECK: encoding: [0x53,0x99,0x49,0x2b]
 fmax.d fs2, fs3, fs4
 
-# CHECK-INST: fcvt.s.d fs5, fs6
+# CHECK-INST: fcvt.s.d fs5, fs6, dyn
 # CHECK: encoding: [0xd3,0x7a,0x1b,0x40]
-fcvt.s.d fs5, fs6
+fcvt.s.d fs5, fs6, dyn
 # CHECK-INST: fcvt.d.s fs7, fs8
 # CHECK: encoding: [0xd3,0x0b,0x0c,0x42]
 fcvt.d.s fs7, fs8
@@ -107,9 +109,9 @@ fle.d a3, ft8, ft9
 # CHECK: encoding: [0xd3,0x16,0x0f,0xe2]
 fclass.d a3, ft10
 
-# CHECK-INST: fcvt.w.d a4, ft11
+# CHECK-INST: fcvt.w.d a4, ft11, dyn
 # CHECK: encoding: [0x53,0xf7,0x0f,0xc2]
-fcvt.w.d a4, ft11
+fcvt.w.d a4, ft11, dyn
 # CHECK-INST: fcvt.d.w ft0, a5
 # CHECK: encoding: [0x53,0x80,0x07,0xd2]
 fcvt.d.w ft0, a5
@@ -154,6 +156,6 @@ fcvt.s.d fs5, fs6, rup
 # CHECK-INST: fcvt.w.d a4, ft11, rmm
 # CHECK: encoding: [0x53,0xc7,0x0f,0xc2]
 fcvt.w.d a4, ft11, rmm
-# CHECK-INST: fcvt.wu.d a5, ft10
+# CHECK-INST: fcvt.wu.d a5, ft10, dyn
 # CHECK: encoding: [0xd3,0x77,0x1f,0xc2]
 fcvt.wu.d a5, ft10, dyn

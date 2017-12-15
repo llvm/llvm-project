@@ -194,6 +194,11 @@ def : Pat<(PPCcall_nop (i64 texternalsym:$dst)),
           (BL8_NOP texternalsym:$dst)>;
 
 // Atomic operations
+// FIXME: some of these might be used with constant operands. This will result
+// in constant materialization instructions that may be redundant. We currently
+// clean this up in PPCMIPeephole with calls to
+// PPCInstrInfo::convertToImmediateForm() but we should probably not emit them
+// in the first place.
 let usesCustomInserter = 1 in {
   let Defs = [CR0] in {
     def ATOMIC_LOAD_ADD_I64 : Pseudo<

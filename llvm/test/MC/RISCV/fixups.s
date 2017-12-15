@@ -1,7 +1,8 @@
-# RUN: llvm-mc -triple riscv32 < %s -show-encoding \
+# RUN: llvm-mc -triple riscv32 -riscv-no-aliases < %s -show-encoding \
 # RUN:     | FileCheck -check-prefix=CHECK-FIXUP %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
-# RUN:     | llvm-objdump -d - | FileCheck -check-prefix=CHECK-INSTR %s
+# RUN:     | llvm-objdump -riscv-no-aliases -d - \
+# RUN:     | FileCheck -check-prefix=CHECK-INSTR %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 %s \
 # RUN:     | llvm-readobj -r | FileCheck %s -check-prefix=CHECK-REL
 

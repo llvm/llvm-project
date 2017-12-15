@@ -1053,7 +1053,10 @@ void ScheduleDAGMILive::initRegPressure() {
     dumpRegSetPressure(BotRPTracker.getRegSetPressureAtPos(), TRI);
   );
 
-  assert(BotRPTracker.getPos() == RegionEnd && "Can't find the region bottom");
+  assert((BotRPTracker.getPos() == RegionEnd ||
+          (RegionEnd->isDebugValue() &&
+           BotRPTracker.getPos() == priorNonDebug(RegionEnd, RegionBegin))) &&
+         "Can't find the region bottom");
 
   // Cache the list of excess pressure sets in this region. This will also track
   // the max pressure in the scheduled code for these sets.
@@ -1459,7 +1462,8 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
         RegOpers.detectDeadDefs(*MI, *LIS);
       }
 
-      BotRPTracker.recedeSkipDebugValues();
+      if (BotRPTracker.getPos() != CurrentBottom)
+        BotRPTracker.recedeSkipDebugValues();
       SmallVector<RegisterMaskPair, 8> LiveUses;
       BotRPTracker.recede(RegOpers, &LiveUses);
       assert(BotRPTracker.getPos() == CurrentBottom && "out of sync");

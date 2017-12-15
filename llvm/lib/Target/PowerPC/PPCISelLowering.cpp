@@ -13045,6 +13045,7 @@ PPCTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, &PPC::QSRCRegClass);
       if (Subtarget.hasAltivec())
         return std::make_pair(0U, &PPC::VRRCRegClass);
+      break;
     case 'y':   // crrc
       return std::make_pair(0U, &PPC::CRRCRegClass);
     }

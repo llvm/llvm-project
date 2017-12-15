@@ -78,9 +78,6 @@ public:
   // Only works for globals, not functions.
   uint32_t getVirtualAddress() const;
 
-  // Returns true if an output index has been set for this symbol
-  bool hasOutputIndex() const { return OutputIndex.hasValue(); }
-
   // Set the output index of the symbol (in the function or global index
   // space of the output object.
   void setOutputIndex(uint32_t Index);

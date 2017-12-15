@@ -1615,9 +1615,9 @@ static bool isTargetArch(const TargetInfo &TI, const IdentifierInfo *II) {
   }
   // Check the parsed arch when it has no sub arch to allow Clang to
   // match thumb to thumbv7 but to prohibit matching thumbv6 to thumbv7.
-  return (Arch.getSubArch() == llvm::Triple::NoSubArch &&
-          Arch.getArch() == TT.getArch()) ||
-         Arch.getArchName() == TT.getArchName();
+  return (Arch.getSubArch() == llvm::Triple::NoSubArch ||
+          Arch.getSubArch() == TT.getSubArch()) &&
+         Arch.getArch() == TT.getArch();
 }
 
 /// Implements the __is_target_vendor builtin macro.
@@ -1643,10 +1643,9 @@ static bool isTargetOS(const TargetInfo &TI, const IdentifierInfo *II) {
 /// Implements the __is_target_environment builtin macro.
 static bool isTargetEnvironment(const TargetInfo &TI,
                                 const IdentifierInfo *II) {
-  StringRef EnvName = TI.getTriple().getEnvironmentName();
-  if (EnvName.empty())
-    EnvName = "unknown";
-  return EnvName.equals_lower(II->getName());
+  std::string EnvName = (llvm::Twine("---") + II->getName().lower()).str();
+  llvm::Triple Env(EnvName);
+  return TI.getTriple().getEnvironment() == Env.getEnvironment();
 }
 
 /// ExpandBuiltinMacro - If an identifier token is read that is to be expanded

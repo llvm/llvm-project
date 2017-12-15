@@ -2835,7 +2835,7 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
   // In this case we can still safely fold away the COPY and generate the
   // following spill code:
   //
-  //   STRXui %xzr, <fi#0>
+  //   STRXui %xzr, %stack.0
   //
   // This also eliminates spilled cross register class COPYs (e.g. between x and
   // d regs) of the same size.  For example:
@@ -2891,7 +2891,7 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
     // where the physical register source can be widened and stored to the full
     // virtual reg destination stack slot, in this case producing:
     //
-    //   STRXui %xzr, <fi#0>
+    //   STRXui %xzr, %stack.0
     //
     if (IsSpill && DstMO.isUndef() &&
         TargetRegisterInfo::isPhysicalRegister(SrcReg)) {
@@ -2939,7 +2939,7 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
     // where we can load the full virtual reg source stack slot, into the subreg
     // destination, in this case producing:
     //
-    //   LDRWui %0:sub_32<def,read-undef>, <fi#0>
+    //   LDRWui %0:sub_32<def,read-undef>, %stack.0
     //
     if (IsFill && SrcMO.getSubReg() == 0 && DstMO.isUndef()) {
       const TargetRegisterClass *FillRC;
