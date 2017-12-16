@@ -338,3 +338,122 @@ long long test_smulll_overflow(long long x, long long y) {
     return LongLongErrorCode;
   return result;
 }
+
+int test_mixed_sign_mull_overflow(int x, unsigned y) {
+// CHECK: @test_mixed_sign_mull_overflow
+// CHECK:       [[IsNeg:%.*]] = icmp slt i32 [[Op1:%.*]], 0
+// CHECK-NEXT:  [[Signed:%.*]] = sub i32 0, [[Op1]]
+// CHECK-NEXT:  [[AbsSigned:%.*]] = select i1 [[IsNeg]], i32 [[Signed]], i32 [[Op1]]
+// CHECK-NEXT:  call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[AbsSigned]], i32 %{{.*}})
+// CHECK-NEXT:  [[UnsignedOFlow:%.*]] = extractvalue { i32, i1 } %{{.*}}, 1
+// CHECK-NEXT:  [[UnsignedResult:%.*]] = extractvalue { i32, i1 } %{{.*}}, 0
+// CHECK-NEXT:  [[IsNegZext:%.*]] = zext i1 [[IsNeg]] to i32
+// CHECK-NEXT:  [[MaxResult:%.*]] = add i32 2147483647, [[IsNegZext]]
+// CHECK-NEXT:  [[SignedOFlow:%.*]] = icmp ugt i32 [[UnsignedResult]], [[MaxResult]]
+// CHECK-NEXT:  [[OFlow:%.*]] = or i1 [[UnsignedOFlow]], [[SignedOFlow]]
+// CHECK-NEXT:  [[NegativeResult:%.*]] = sub i32 0, [[UnsignedResult]]
+// CHECK-NEXT:  [[Result:%.*]] = select i1 [[IsNeg]], i32 [[NegativeResult]], i32 [[UnsignedResult]]
+// CHECK-NEXT:  store i32 [[Result]], i32* %{{.*}}, align 4
+// CHECK:       br i1 [[OFlow]]
+
+  int result;
+  if (__builtin_mul_overflow(x, y, &result))
+    return LongErrorCode;
+  return result;
+}
+
+int test_mixed_sign_mull_overflow_unsigned(int x, unsigned y) {
+// CHECK: @test_mixed_sign_mull_overflow_unsigned
+// CHECK:       [[IsNeg:%.*]] = icmp slt i32 [[Op1:%.*]], 0
+// CHECK-NEXT:  [[Signed:%.*]] = sub i32 0, [[Op1]]
+// CHECK-NEXT:  [[AbsSigned:%.*]] = select i1 [[IsNeg]], i32 [[Signed]], i32 [[Op1]]
+// CHECK-NEXT:  call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[AbsSigned]], i32 %{{.*}})
+// CHECK-NEXT:  [[UnsignedOFlow:%.*]] = extractvalue { i32, i1 } %{{.*}}, 1
+// CHECK-NEXT:  [[UnsignedResult:%.*]] = extractvalue { i32, i1 } %{{.*}}, 0
+// CHECK-NEXT:  [[NotNull:%.*]] = icmp ne i32 [[UnsignedResult]], 0
+// CHECK-NEXT:  [[Underflow:%.*]] = and i1 [[IsNeg]], [[NotNull]]
+// CHECK-NEXT:  [[OFlow:%.*]] = or i1 [[UnsignedOFlow]], [[Underflow]]
+// CHECK-NEXT:  store i32 [[UnsignedResult]], i32* %{{.*}}, align 4
+// CHECK:       br i1 [[OFlow]]
+
+  unsigned result;
+  if (__builtin_mul_overflow(x, y, &result))
+    return LongErrorCode;
+  return result;
+}
+
+int test_mixed_sign_mull_overflow_swapped(int x, unsigned y) {
+// CHECK: @test_mixed_sign_mull_overflow_swapped
+// CHECK:  call { i32, i1 } @llvm.umul.with.overflow.i32
+// CHECK:  add i32 2147483647
+  int result;
+  if (__builtin_mul_overflow(y, x, &result))
+    return LongErrorCode;
+  return result;
+}
+
+long long test_mixed_sign_mulll_overflow(long long x, unsigned long long y) {
+// CHECK: @test_mixed_sign_mulll_overflow
+// CHECK:  call { i64, i1 } @llvm.umul.with.overflow.i64
+// CHECK:  add i64 92233720368547
+  long long result;
+  if (__builtin_mul_overflow(x, y, &result))
+    return LongLongErrorCode;
+  return result;
+}
+
+long long test_mixed_sign_mulll_overflow_swapped(long long x, unsigned long long y) {
+// CHECK: @test_mixed_sign_mulll_overflow_swapped
+// CHECK:  call { i64, i1 } @llvm.umul.with.overflow.i64
+// CHECK:  add i64 92233720368547
+  long long result;
+  if (__builtin_mul_overflow(y, x, &result))
+    return LongLongErrorCode;
+  return result;
+}
+
+long long test_mixed_sign_mulll_overflow_trunc_signed(long long x, unsigned long long y) {
+// CHECK: @test_mixed_sign_mulll_overflow_trunc_signed
+// CHECK:  call { i64, i1 } @llvm.umul.with.overflow.i64
+// CHECK:  add i64 2147483647
+// CHECK:  trunc
+// CHECK:  store
+  int result;
+  if (__builtin_mul_overflow(y, x, &result))
+    return LongLongErrorCode;
+  return result;
+}
+
+long long test_mixed_sign_mulll_overflow_trunc_unsigned(long long x, unsigned long long y) {
+// CHECK: @test_mixed_sign_mulll_overflow_trunc_unsigned
+// CHECK:       call { i64, i1 } @llvm.umul.with.overflow.i64
+// CHECK:       [[NON_ZERO:%.*]] = icmp ne i64 [[UNSIGNED_RESULT:%.*]], 0
+// CHECK-NEXT:  [[UNDERFLOW:%.*]] = and i1 {{.*}}, [[NON_ZERO]]
+// CHECK-NEXT:  [[OVERFLOW_PRE_TRUNC:%.*]] = or i1 {{.*}}, [[UNDERFLOW]]
+// CHECK-NEXT:  [[TRUNC_OVERFLOW:%.*]] = icmp ugt i64 [[UNSIGNED_RESULT]], 4294967295
+// CHECK-NEXT:  [[OVERFLOW:%.*]] = or i1 [[OVERFLOW_PRE_TRUNC]], [[TRUNC_OVERFLOW]]
+// CHECK-NEXT:  trunc i64 [[UNSIGNED_RESULT]] to i32
+// CHECK-NEXT:  store
+  unsigned result;
+  if (__builtin_mul_overflow(y, x, &result))
+    return LongLongErrorCode;
+  return result;
+}
+
+long long test_mixed_sign_mul_overflow_extend_signed(int x, unsigned y) {
+// CHECK: @test_mixed_sign_mul_overflow_extend_signed
+// CHECK:  call { i64, i1 } @llvm.smul.with.overflow.i64
+  long long result;
+  if (__builtin_mul_overflow(y, x, &result))
+    return LongLongErrorCode;
+  return result;
+}
+
+long long test_mixed_sign_mul_overflow_extend_unsigned(int x, unsigned y) {
+// CHECK: @test_mixed_sign_mul_overflow_extend_unsigned
+// CHECK:  call { i65, i1 } @llvm.smul.with.overflow.i65
+  unsigned long long result;
+  if (__builtin_mul_overflow(y, x, &result))
+    return LongLongErrorCode;
+  return result;
+}
