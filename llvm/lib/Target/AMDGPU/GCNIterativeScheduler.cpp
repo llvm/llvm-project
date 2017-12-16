@@ -566,7 +566,7 @@ void GCNIterativeScheduler::scheduleILP(
   bool TryMaximizeOccupancy) {
   const auto &ST = MF.getSubtarget<SISubtarget>();
   auto TgtOcc = std::min(ST.getOccupancyWithLocalMemSize(MF),
-                         ST.getWavesPerEU(*MF.getFunction()).second);
+                         ST.getWavesPerEU(MF.getFunction()).second);
 
   sortRegionsByPressure(TgtOcc);
   auto Occ = Regions.front()->MaxPressure.getOccupancy(ST);

@@ -1341,7 +1341,7 @@ raw_ostream &BlockFrequencyInfoImpl<BT>::print(raw_ostream &OS) const {
         << ", int = " << getBlockFreq(&BB).getFrequency();
     if (Optional<uint64_t> ProfileCount =
         BlockFrequencyInfoImplBase::getBlockProfileCount(
-            *F->getFunction(), getNode(&BB)))
+            F->getFunction(), getNode(&BB)))
       OS << ", count = " << ProfileCount.getValue();
     if (Optional<uint64_t> IrrLoopHeaderWeight =
         BB.getIrrLoopHeaderWeight())

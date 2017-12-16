@@ -61,7 +61,7 @@ HexagonEvaluator::HexagonEvaluator(const HexagonRegisterInfo &tri,
   // passed via registers.
   unsigned InVirtReg, InPhysReg = 0;
 
-  for (const Argument &Arg : MF.getFunction()->args()) {
+  for (const Argument &Arg : MF.getFunction().args()) {
     Type *ATy = Arg.getType();
     unsigned Width = 0;
     if (ATy->isIntegerTy())

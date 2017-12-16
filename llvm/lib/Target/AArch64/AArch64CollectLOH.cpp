@@ -482,7 +482,7 @@ static void handleNormalInst(const MachineInstr &MI, LOHInfo *LOHInfos) {
 }
 
 bool AArch64CollectLOH::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   DEBUG(dbgs() << "********** AArch64 Collect LOH **********\n"

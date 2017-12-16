@@ -434,7 +434,7 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
   BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
       .addCFIIndex(CFIIndex);
 
-  if (MF.getFunction()->hasFnAttribute("interrupt"))
+  if (MF.getFunction().hasFnAttribute("interrupt"))
     emitInterruptPrologueStub(MF, MBB);
 
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
@@ -582,7 +582,7 @@ void MipsSEFrameLowering::emitInterruptPrologueStub(
 
   // Perform ISR handling like GCC
   StringRef IntKind =
-      MF.getFunction()->getFnAttribute("interrupt").getValueAsString();
+      MF.getFunction().getFnAttribute("interrupt").getValueAsString();
   const TargetRegisterClass *PtrRC = &Mips::GPR32RegClass;
 
   // EIC interrupt handling needs to read the Cause register to disable
@@ -726,7 +726,7 @@ void MipsSEFrameLowering::emitEpilogue(MachineFunction &MF,
     }
   }
 
-  if (MF.getFunction()->hasFnAttribute("interrupt"))
+  if (MF.getFunction().hasFnAttribute("interrupt"))
     emitInterruptEpilogueStub(MF, MBB);
 
   // Get the number of bytes from FrameInfo
@@ -809,8 +809,8 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
     // spilled to the stack frame.
     bool IsLOHI = (Reg == Mips::LO0 || Reg == Mips::LO0_64 ||
                    Reg == Mips::HI0 || Reg == Mips::HI0_64);
-    const Function *Func = MBB.getParent()->getFunction();
-    if (IsLOHI && Func->hasFnAttribute("interrupt")) {
+    const Function &Func = MBB.getParent()->getFunction();
+    if (IsLOHI && Func.hasFnAttribute("interrupt")) {
       DebugLoc DL = MI->getDebugLoc();
 
       unsigned Op = 0;

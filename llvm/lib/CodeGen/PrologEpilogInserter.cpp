@@ -171,7 +171,7 @@ using StackObjSet = SmallSetVector<int, 8>;
 /// runOnMachineFunction - Insert prolog/epilog code and replace abstract
 /// frame indexes with appropriate references.
 bool PEI::runOnMachineFunction(MachineFunction &Fn) {
-  const Function* F = Fn.getFunction();
+  const Function &F = Fn.getFunction();
   const TargetRegisterInfo *TRI = Fn.getSubtarget().getRegisterInfo();
   const TargetFrameLowering *TFI = Fn.getSubtarget().getFrameLowering();
 
@@ -206,7 +206,7 @@ bool PEI::runOnMachineFunction(MachineFunction &Fn) {
   // called functions.  Because of this, calculateCalleeSavedRegisters()
   // must be called before this function in order to set the AdjustsStack
   // and MaxCallFrameSize variables.
-  if (!F->hasFnAttribute(Attribute::Naked))
+  if (!F.hasFnAttribute(Attribute::Naked))
     insertPrologEpilogCode(Fn);
 
   // Replace all MO_FrameIndex operands with physical register references
@@ -224,8 +224,8 @@ bool PEI::runOnMachineFunction(MachineFunction &Fn) {
   MachineFrameInfo &MFI = Fn.getFrameInfo();
   uint64_t StackSize = MFI.getStackSize();
   if (WarnStackSize.getNumOccurrences() > 0 && WarnStackSize < StackSize) {
-    DiagnosticInfoStackSize DiagStackSize(*F, StackSize);
-    F->getContext().diagnose(DiagStackSize);
+    DiagnosticInfoStackSize DiagStackSize(F, StackSize);
+    F.getContext().diagnose(DiagStackSize);
   }
 
   delete RS;
@@ -508,7 +508,7 @@ void PEI::spillCalleeSavedRegs(MachineFunction &Fn) {
   assert(Fn.getProperties().hasProperty(
       MachineFunctionProperties::Property::NoVRegs));
 
-  const Function *F = Fn.getFunction();
+  const Function &F = Fn.getFunction();
   const TargetFrameLowering *TFI = Fn.getSubtarget().getFrameLowering();
   MachineFrameInfo &MFI = Fn.getFrameInfo();
   MinCSFrameIndex = std::numeric_limits<unsigned>::max();
@@ -522,7 +522,7 @@ void PEI::spillCalleeSavedRegs(MachineFunction &Fn) {
   assignCalleeSavedSpillSlots(Fn, SavedRegs, MinCSFrameIndex, MaxCSFrameIndex);
 
   // Add the code to save and restore the callee saved registers.
-  if (!F->hasFnAttribute(Attribute::Naked)) {
+  if (!F.hasFnAttribute(Attribute::Naked)) {
     MFI.setCalleeSavedInfoValid(true);
 
     std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
@@ -952,7 +952,7 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
 
   ORE->emit([&]() {
     return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "StackSize",
-                                             Fn.getFunction()->getSubprogram(),
+                                             Fn.getFunction().getSubprogram(),
                                              &Fn.front())
            << ore::NV("NumStackBytes", StackSize) << " stack bytes in function";
   });
@@ -993,7 +993,7 @@ void PEI::insertPrologEpilogCode(MachineFunction &Fn) {
   // approach is rather similar to that of Segmented Stacks, but it uses a
   // different conditional check and another BIF for allocating more stack
   // space.
-  if (Fn.getFunction()->getCallingConv() == CallingConv::HiPE)
+  if (Fn.getFunction().getCallingConv() == CallingConv::HiPE)
     for (MachineBasicBlock *SaveBlock : SaveBlocks)
       TFI.adjustForHiPEPrologue(Fn, *SaveBlock);
 }

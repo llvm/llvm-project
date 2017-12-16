@@ -125,7 +125,7 @@ static void CombineCVTAToLocal(MachineInstr &Root) {
 }
 
 bool NVPTXPeephole::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   bool Changed = false;

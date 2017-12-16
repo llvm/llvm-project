@@ -60,7 +60,7 @@ FunctionPass *llvm::createPPCQPXLoadSplatPass() {
 }
 
 bool PPCQPXLoadSplat::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   bool MadeChange = false;

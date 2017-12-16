@@ -148,8 +148,7 @@ static unsigned findDeadCallerSavedReg(MachineBasicBlock &MBB,
                                        const X86RegisterInfo *TRI,
                                        bool Is64Bit) {
   const MachineFunction *MF = MBB.getParent();
-  const Function *F = MF->getFunction();
-  if (!F || MF->callsEHReturn())
+  if (MF->callsEHReturn())
     return 0;
 
   const TargetRegisterClass &AvailableRegs = *TRI->getGPRsForTailCall(*MF);
@@ -820,7 +819,7 @@ uint64_t X86FrameLowering::calculateMaxStackAlign(const MachineFunction &MF) con
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   uint64_t MaxAlign = MFI.getMaxAlignment(); // Desired stack alignment.
   unsigned StackAlign = getStackAlignment();
-  if (MF.getFunction()->hasFnAttribute("stackrealign")) {
+  if (MF.getFunction().hasFnAttribute("stackrealign")) {
     if (MFI.hasCalls())
       MaxAlign = (StackAlign > MaxAlign) ? StackAlign : MaxAlign;
     else if (MaxAlign < SlotSize)
@@ -935,28 +934,28 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
          "MF used frame lowering for wrong subtarget");
   MachineBasicBlock::iterator MBBI = MBB.begin();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  const Function *Fn = MF.getFunction();
+  const Function &Fn = MF.getFunction();
   MachineModuleInfo &MMI = MF.getMMI();
   X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
   uint64_t MaxAlign = calculateMaxStackAlign(MF); // Desired stack alignment.
   uint64_t StackSize = MFI.getStackSize();    // Number of bytes to allocate.
   bool IsFunclet = MBB.isEHFuncletEntry();
   EHPersonality Personality = EHPersonality::Unknown;
-  if (Fn->hasPersonalityFn())
-    Personality = classifyEHPersonality(Fn->getPersonalityFn());
+  if (Fn.hasPersonalityFn())
+    Personality = classifyEHPersonality(Fn.getPersonalityFn());
   bool FnHasClrFunclet =
       MF.hasEHFunclets() && Personality == EHPersonality::CoreCLR;
   bool IsClrFunclet = IsFunclet && FnHasClrFunclet;
   bool HasFP = hasFP(MF);
-  bool IsWin64CC = STI.isCallingConvWin64(Fn->getCallingConv());
+  bool IsWin64CC = STI.isCallingConvWin64(Fn.getCallingConv());
   bool IsWin64Prologue = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
-  bool NeedsWin64CFI = IsWin64Prologue && Fn->needsUnwindTableEntry();
+  bool NeedsWin64CFI = IsWin64Prologue && Fn.needsUnwindTableEntry();
   // FIXME: Emit FPO data for EH funclets.
   bool NeedsWinFPO =
       !IsFunclet && STI.isTargetWin32() && MMI.getModule()->getCodeViewFlag();
   bool NeedsWinCFI = NeedsWin64CFI || NeedsWinFPO;
   bool NeedsDwarfCFI =
-      !IsWin64Prologue && (MMI.hasDebugInfo() || Fn->needsUnwindTableEntry());
+      !IsWin64Prologue && (MMI.hasDebugInfo() || Fn.needsUnwindTableEntry());
   unsigned FramePtr = TRI->getFrameRegister(MF);
   const unsigned MachineFramePtr =
       STI.isTarget64BitILP32()
@@ -982,16 +981,16 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   // The default stack probe size is 4096 if the function has no stackprobesize
   // attribute.
   unsigned StackProbeSize = 4096;
-  if (Fn->hasFnAttribute("stack-probe-size"))
-    Fn->getFnAttribute("stack-probe-size")
+  if (Fn.hasFnAttribute("stack-probe-size"))
+    Fn.getFnAttribute("stack-probe-size")
         .getValueAsString()
         .getAsInteger(0, StackProbeSize);
 
   // Re-align the stack on 64-bit if the x86-interrupt calling convention is
   // used and an error code was pushed, since the x86-64 ABI requires a 16-byte
   // stack alignment.
-  if (Fn->getCallingConv() == CallingConv::X86_INTR && Is64Bit &&
-      Fn->arg_size() == 2) {
+  if (Fn.getCallingConv() == CallingConv::X86_INTR && Is64Bit &&
+      Fn.arg_size() == 2) {
     StackSize += 8;
     MFI.setStackSize(StackSize);
     emitSPUpdate(MBB, MBBI, -8, /*InEpilogue=*/false);
@@ -1002,7 +1001,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   // pointer, calls, or dynamic alloca then we do not need to adjust the
   // stack pointer (we fit in the Red Zone). We also check that we don't
   // push and pop from the stack.
-  if (Is64Bit && !Fn->hasFnAttribute(Attribute::NoRedZone) &&
+  if (Is64Bit && !Fn.hasFnAttribute(Attribute::NoRedZone) &&
       !TRI->needsStackRealignment(MF) &&
       !MFI.hasVarSizedObjects() &&             // No dynamic alloca.
       !MFI.adjustsStack() &&                   // No calls.
@@ -1447,7 +1446,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   // 1. The interrupt handling function uses any of the "rep" instructions.
   // 2. Interrupt handling function calls another function.
   //
-  if (Fn->getCallingConv() == CallingConv::X86_INTR)
+  if (Fn.getCallingConv() == CallingConv::X86_INTR)
     BuildMI(MBB, MBBI, DL, TII.get(X86::CLD))
         .setMIFlag(MachineInstr::FrameSetup);
 
@@ -1508,7 +1507,7 @@ X86FrameLowering::getWinEHFuncletFrameSize(const MachineFunction &MF) const {
   // This is the amount of stack a funclet needs to allocate.
   unsigned UsedSize;
   EHPersonality Personality =
-      classifyEHPersonality(MF.getFunction()->getPersonalityFn());
+      classifyEHPersonality(MF.getFunction().getPersonalityFn());
   if (Personality == EHPersonality::CoreCLR) {
     // CLR funclets need to hold enough space to include the PSPSym, at the
     // same offset from the stack pointer (immediately after the prolog) as it
@@ -1551,7 +1550,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
 
   bool IsWin64Prologue = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
   bool NeedsWin64CFI =
-      IsWin64Prologue && MF.getFunction()->needsUnwindTableEntry();
+      IsWin64Prologue && MF.getFunction().needsUnwindTableEntry();
   bool IsFunclet = MBBI == MBB.end() ? false : isFuncletReturnInstr(*MBBI);
 
   // Get the number of bytes to allocate from the FrameInfo.
@@ -1981,7 +1980,7 @@ void X86FrameLowering::emitCatchRetReturnValue(MachineBasicBlock &MBB,
                                                MachineInstr *CatchRet) const {
   // SEH shouldn't use catchret.
   assert(!isAsynchronousEHPersonality(classifyEHPersonality(
-             MBB.getParent()->getFunction()->getPersonalityFn())) &&
+             MBB.getParent()->getFunction().getPersonalityFn())) &&
          "SEH should not use CATCHRET");
   DebugLoc DL = CatchRet->getDebugLoc();
   MachineBasicBlock *CatchRetTarget = CatchRet->getOperand(0).getMBB();
@@ -2021,9 +2020,9 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
     // Don't restore CSRs before an SEH catchret. SEH except blocks do not form
     // funclets. emitEpilogue transforms these to normal jumps.
     if (MI->getOpcode() == X86::CATCHRET) {
-      const Function *Func = MBB.getParent()->getFunction();
+      const Function &F = MBB.getParent()->getFunction();
       bool IsSEH = isAsynchronousEHPersonality(
-          classifyEHPersonality(Func->getPersonalityFn()));
+          classifyEHPersonality(F.getPersonalityFn()));
       if (IsSEH)
         return true;
     }
@@ -2095,8 +2094,8 @@ void X86FrameLowering::determineCalleeSaves(MachineFunction &MF,
 
 static bool
 HasNestArgument(const MachineFunction *MF) {
-  const Function *F = MF->getFunction();
-  for (Function::const_arg_iterator I = F->arg_begin(), E = F->arg_end();
+  const Function &F = MF->getFunction();
+  for (Function::const_arg_iterator I = F.arg_begin(), E = F.arg_end();
        I != E; I++) {
     if (I->hasNestAttr())
       return true;
@@ -2110,7 +2109,7 @@ HasNestArgument(const MachineFunction *MF) {
 /// needed. Set primary to true for the first register, false for the second.
 static unsigned
 GetScratchRegister(bool Is64Bit, bool IsLP64, const MachineFunction &MF, bool Primary) {
-  CallingConv::ID CallingConvention = MF.getFunction()->getCallingConv();
+  CallingConv::ID CallingConvention = MF.getFunction().getCallingConv();
 
   // Erlang stuff.
   if (CallingConvention == CallingConv::HiPE) {
@@ -2160,7 +2159,7 @@ void X86FrameLowering::adjustForSegmentedStacks(
   assert(!MF.getRegInfo().isLiveIn(ScratchReg) &&
          "Scratch register is live-in");
 
-  if (MF.getFunction()->isVarArg())
+  if (MF.getFunction().isVarArg())
     report_fatal_error("Segmented stacks do not support vararg functions.");
   if (!STI.isTargetLinux() && !STI.isTargetDarwin() && !STI.isTargetWin32() &&
       !STI.isTargetWin64() && !STI.isTargetFreeBSD() &&
@@ -2434,8 +2433,8 @@ void X86FrameLowering::adjustForHiPEPrologue(
                      Is64Bit ? "AMD64_LEAF_WORDS" : "X86_LEAF_WORDS");
   const unsigned CCRegisteredArgs = Is64Bit ? 6 : 5;
   const unsigned Guaranteed = HipeLeafWords * SlotSize;
-  unsigned CallerStkArity = MF.getFunction()->arg_size() > CCRegisteredArgs ?
-                            MF.getFunction()->arg_size() - CCRegisteredArgs : 0;
+  unsigned CallerStkArity = MF.getFunction().arg_size() > CCRegisteredArgs ?
+                            MF.getFunction().arg_size() - CCRegisteredArgs : 0;
   unsigned MaxStack = MFI.getStackSize() + CallerStkArity*SlotSize + SlotSize;
 
   assert(STI.isTargetLinux() &&
@@ -2649,10 +2648,10 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
     Amount = alignTo(Amount, StackAlign);
 
     MachineModuleInfo &MMI = MF.getMMI();
-    const Function *Fn = MF.getFunction();
+    const Function &F = MF.getFunction();
     bool WindowsCFI = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
-    bool DwarfCFI = !WindowsCFI && 
-                    (MMI.hasDebugInfo() || Fn->needsUnwindTableEntry());
+    bool DwarfCFI = !WindowsCFI &&
+                    (MMI.hasDebugInfo() || F.needsUnwindTableEntry());
 
     // If we have any exception handlers in this function, and we adjust
     // the SP before calls, we may need to indicate this to the unwinder
@@ -2694,7 +2693,7 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
       StackAdjustment += mergeSPUpdates(MBB, InsertPos, false);
 
       if (StackAdjustment) {
-        if (!(Fn->optForMinSize() &&
+        if (!(F.optForMinSize() &&
               adjustStackWithPops(MBB, InsertPos, DL, StackAdjustment)))
           BuildStackAdjustment(MBB, InsertPos, DL, StackAdjustment,
                                /*InEpilogue=*/false);
@@ -2767,13 +2766,13 @@ bool X86FrameLowering::canUseAsEpilogue(const MachineBasicBlock &MBB) const {
 bool X86FrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
   // If we may need to emit frameless compact unwind information, give
   // up as this is currently broken: PR25614.
-  return (MF.getFunction()->hasFnAttribute(Attribute::NoUnwind) || hasFP(MF)) &&
+  return (MF.getFunction().hasFnAttribute(Attribute::NoUnwind) || hasFP(MF)) &&
          // The lowering of segmented stack and HiPE only support entry blocks
          // as prologue blocks: PR26107.
          // This limitation may be lifted if we fix:
          // - adjustForSegmentedStacks
          // - adjustForHiPEPrologue
-         MF.getFunction()->getCallingConv() != CallingConv::HiPE &&
+         MF.getFunction().getCallingConv() != CallingConv::HiPE &&
          !MF.shouldSplitStack();
 }
 
@@ -3003,9 +3002,9 @@ void X86FrameLowering::processFunctionBeforeFrameFinalized(
 
   // If this function isn't doing Win64-style C++ EH, we don't need to do
   // anything.
-  const Function *Fn = MF.getFunction();
+  const Function &F = MF.getFunction();
   if (!STI.is64Bit() || !MF.hasEHFunclets() ||
-      classifyEHPersonality(Fn->getPersonalityFn()) != EHPersonality::MSVC_CXX)
+      classifyEHPersonality(F.getPersonalityFn()) != EHPersonality::MSVC_CXX)
     return;
 
   // Win64 C++ EH needs to allocate the UnwindHelp object at some fixed offset

@@ -585,7 +585,7 @@ bool HexagonStoreWidening::processBasicBlock(MachineBasicBlock &MBB) {
 }
 
 bool HexagonStoreWidening::runOnMachineFunction(MachineFunction &MFn) {
-  if (skipFunction(*MFn.getFunction()))
+  if (skipFunction(MFn.getFunction()))
     return false;
 
   MF = &MFn;

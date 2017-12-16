@@ -7,7 +7,7 @@
 ; RUN:     -r=%t1.bc,_foo,pxl \
 ; RUN:     -r=%t1.bc,_bar,pl \
 ; RUN:     -r=%t1.bc,_linkonce_func,pl
-; RUN: llvm-dis < %t.o.0.2.internalize.bc | FileCheck  %s --check-prefix=INTERNALIZE2
+; RUN: llvm-dis < %t.o.1.2.internalize.bc | FileCheck  %s --check-prefix=INTERNALIZE2
 
 
 ; REGULAR: define void @foo

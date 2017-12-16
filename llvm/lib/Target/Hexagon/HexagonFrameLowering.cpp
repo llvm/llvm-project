@@ -225,7 +225,7 @@ namespace {
 bool HexagonCallFrameInformation::runOnMachineFunction(MachineFunction &MF) {
   auto &HFI = *MF.getSubtarget<HexagonSubtarget>().getFrameLowering();
   bool NeedCFI = MF.getMMI().hasDebugInfo() ||
-                 MF.getFunction()->needsUnwindTableEntry();
+                 MF.getFunction().needsUnwindTableEntry();
 
   if (!NeedCFI)
     return false;
@@ -375,17 +375,17 @@ static bool isRestoreCall(unsigned Opc) {
 }
 
 static inline bool isOptNone(const MachineFunction &MF) {
-    return MF.getFunction()->hasFnAttribute(Attribute::OptimizeNone) ||
+    return MF.getFunction().hasFnAttribute(Attribute::OptimizeNone) ||
            MF.getTarget().getOptLevel() == CodeGenOpt::None;
 }
 
 static inline bool isOptSize(const MachineFunction &MF) {
-    const Function &F = *MF.getFunction();
+    const Function &F = MF.getFunction();
     return F.optForSize() && !F.optForMinSize();
 }
 
 static inline bool isMinSize(const MachineFunction &MF) {
-    return MF.getFunction()->optForMinSize();
+    return MF.getFunction().optForMinSize();
 }
 
 /// Implements shrink-wrapping of the stack frame. By default, stack frame
@@ -960,7 +960,7 @@ void HexagonFrameLowering::insertCFIInstructionsAt(MachineBasicBlock &MBB,
 }
 
 bool HexagonFrameLowering::hasFP(const MachineFunction &MF) const {
-  if (MF.getFunction()->hasFnAttribute(Attribute::Naked))
+  if (MF.getFunction().hasFnAttribute(Attribute::Naked))
     return false;
 
   auto &MFI = MF.getFrameInfo();
@@ -1396,8 +1396,7 @@ static void dump_registers(BitVector &Regs, const TargetRegisterInfo &TRI) {
 
 bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
       const TargetRegisterInfo *TRI, std::vector<CalleeSavedInfo> &CSI) const {
-  DEBUG(dbgs() << __func__ << " on "
-               << MF.getFunction()->getName() << '\n');
+  DEBUG(dbgs() << __func__ << " on " << MF.getName() << '\n');
   MachineFrameInfo &MFI = MF.getFrameInfo();
   BitVector SRegs(Hexagon::NUM_TARGET_REGS);
 

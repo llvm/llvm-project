@@ -51,9 +51,9 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     ImplicitArgPtr(false),
     GITPtrHigh(0xffffffff) {
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
-  const Function *F = MF.getFunction();
-  FlatWorkGroupSizes = ST.getFlatWorkGroupSizes(*F);
-  WavesPerEU = ST.getWavesPerEU(*F);
+  const Function &F = MF.getFunction();
+  FlatWorkGroupSizes = ST.getFlatWorkGroupSizes(F);
+  WavesPerEU = ST.getWavesPerEU(F);
 
   if (!isEntryFunction()) {
     // Non-entry functions have no special inputs for now, other registers
@@ -68,21 +68,21 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     ArgInfo.PrivateSegmentWaveByteOffset =
       ArgDescriptor::createRegister(ScratchWaveOffsetReg);
 
-    if (F->hasFnAttribute("amdgpu-implicitarg-ptr"))
+    if (F.hasFnAttribute("amdgpu-implicitarg-ptr"))
       ImplicitArgPtr = true;
   } else {
-    if (F->hasFnAttribute("amdgpu-implicitarg-ptr"))
+    if (F.hasFnAttribute("amdgpu-implicitarg-ptr"))
       KernargSegmentPtr = true;
   }
 
-  CallingConv::ID CC = F->getCallingConv();
+  CallingConv::ID CC = F.getCallingConv();
   if (CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL) {
-    if (!F->arg_empty())
+    if (!F.arg_empty())
       KernargSegmentPtr = true;
     WorkGroupIDX = true;
     WorkItemIDX = true;
   } else if (CC == CallingConv::AMDGPU_PS) {
-    PSInputAddr = AMDGPU::getInitialPSInputAddr(*F);
+    PSInputAddr = AMDGPU::getInitialPSInputAddr(F);
   }
 
   if (ST.debuggerEmitPrologue()) {
@@ -94,27 +94,27 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     WorkItemIDY = true;
     WorkItemIDZ = true;
   } else {
-    if (F->hasFnAttribute("amdgpu-work-group-id-x"))
+    if (F.hasFnAttribute("amdgpu-work-group-id-x"))
       WorkGroupIDX = true;
 
-    if (F->hasFnAttribute("amdgpu-work-group-id-y"))
+    if (F.hasFnAttribute("amdgpu-work-group-id-y"))
       WorkGroupIDY = true;
 
-    if (F->hasFnAttribute("amdgpu-work-group-id-z"))
+    if (F.hasFnAttribute("amdgpu-work-group-id-z"))
       WorkGroupIDZ = true;
 
-    if (F->hasFnAttribute("amdgpu-work-item-id-x"))
+    if (F.hasFnAttribute("amdgpu-work-item-id-x"))
       WorkItemIDX = true;
 
-    if (F->hasFnAttribute("amdgpu-work-item-id-y"))
+    if (F.hasFnAttribute("amdgpu-work-item-id-y"))
       WorkItemIDY = true;
 
-    if (F->hasFnAttribute("amdgpu-work-item-id-z"))
+    if (F.hasFnAttribute("amdgpu-work-item-id-z"))
       WorkItemIDZ = true;
   }
 
   const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
-  bool MaySpill = ST.isVGPRSpillingEnabled(*F);
+  bool MaySpill = ST.isVGPRSpillingEnabled(F);
   bool HasStackObjects = FrameInfo.hasStackObjects();
 
   if (isEntryFunction()) {
@@ -139,30 +139,30 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     if (HasStackObjects || MaySpill)
       PrivateSegmentBuffer = true;
 
-    if (F->hasFnAttribute("amdgpu-dispatch-ptr"))
+    if (F.hasFnAttribute("amdgpu-dispatch-ptr"))
       DispatchPtr = true;
 
-    if (F->hasFnAttribute("amdgpu-queue-ptr"))
+    if (F.hasFnAttribute("amdgpu-queue-ptr"))
       QueuePtr = true;
 
-    if (F->hasFnAttribute("amdgpu-dispatch-id"))
+    if (F.hasFnAttribute("amdgpu-dispatch-id"))
       DispatchID = true;
   } else if (ST.isMesaGfxShader(MF)) {
     if (HasStackObjects || MaySpill)
       ImplicitBufferPtr = true;
   }
 
-  if (F->hasFnAttribute("amdgpu-kernarg-segment-ptr"))
+  if (F.hasFnAttribute("amdgpu-kernarg-segment-ptr"))
     KernargSegmentPtr = true;
 
   if (ST.hasFlatAddressSpace() && isEntryFunction() && IsCOV2) {
     // TODO: This could be refined a lot. The attribute is a poor way of
     // detecting calls that may require it before argument lowering.
-    if (HasStackObjects || F->hasFnAttribute("amdgpu-flat-scratch"))
+    if (HasStackObjects || F.hasFnAttribute("amdgpu-flat-scratch"))
       FlatScratchInit = true;
   }
 
-  Attribute A = F->getFnAttribute("amdgpu-git-ptr-high");
+  Attribute A = F.getFnAttribute("amdgpu-git-ptr-high");
   StringRef S = A.getValueAsString();
   if (!S.empty())
     S.consumeInteger(0, GITPtrHigh);

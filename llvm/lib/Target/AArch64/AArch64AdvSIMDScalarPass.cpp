@@ -393,7 +393,7 @@ bool AArch64AdvSIMDScalar::runOnMachineFunction(MachineFunction &mf) {
   bool Changed = false;
   DEBUG(dbgs() << "***** AArch64AdvSIMDScalar *****\n");
 
-  if (skipFunction(*mf.getFunction()))
+  if (skipFunction(mf.getFunction()))
     return false;
 
   MRI = &mf.getRegInfo();

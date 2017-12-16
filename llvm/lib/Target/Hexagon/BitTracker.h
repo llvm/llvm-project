@@ -23,6 +23,7 @@
 
 namespace llvm {
 
+class BitVector;
 class ConstantInt;
 class MachineRegisterInfo;
 class MachineBasicBlock;
@@ -63,23 +64,55 @@ private:
   void visitNonBranch(const MachineInstr &MI);
   void visitBranchesFrom(const MachineInstr &BI);
   void visitUsesOf(unsigned Reg);
-  void reset();
 
   using CFGEdge = std::pair<int, int>;
   using EdgeSetType = std::set<CFGEdge>;
   using InstrSetType = std::set<const MachineInstr *>;
   using EdgeQueueType = std::queue<CFGEdge>;
 
-  EdgeSetType EdgeExec;         // Executable flow graph edges.
-  InstrSetType InstrExec;       // Executable instructions.
-  EdgeQueueType FlowQ;          // Work queue of CFG edges.
-  DenseSet<unsigned> ReachedBB; // Cache of reached blocks.
-  bool Trace;                   // Enable tracing for debugging.
+  // Priority queue of instructions using modified registers, ordered by
+  // their relative position in a basic block.
+  struct UseQueueType {
+    unsigned size() const {
+      return Uses.size();
+    }
+    bool empty() const {
+      return size() == 0;
+    }
+    MachineInstr *front() const {
+      return Uses.top();
+    }
+    void push(MachineInstr *MI) {
+      if (Set.insert(MI).second)
+        Uses.push(MI);
+    }
+    void pop() {
+      Set.erase(front());
+      Uses.pop();
+    }
+  private:
+    struct Cmp {
+      bool operator()(const MachineInstr *MI, const MachineInstr *MJ) const;
+    };
+    std::priority_queue<MachineInstr*, std::vector<MachineInstr*>, Cmp> Uses;
+    DenseSet<MachineInstr*> Set; // Set to avoid adding duplicate entries.
+  };
+
+  void reset();
+  void runEdgeQueue(BitVector &BlockScanned);
+  void runUseQueue();
 
   const MachineEvaluator &ME;
   MachineFunction &MF;
   MachineRegisterInfo &MRI;
   CellMapType &Map;
+
+  EdgeSetType EdgeExec;         // Executable flow graph edges.
+  InstrSetType InstrExec;       // Executable instructions.
+  UseQueueType UseQ;            // Work queue of register uses.
+  EdgeQueueType FlowQ;          // Work queue of CFG edges.
+  DenseSet<unsigned> ReachedBB; // Cache of reached blocks.
+  bool Trace;                   // Enable tracing for debugging.
 };
 
 // Abstraction of a reference to bit at position Pos from a register Reg.

@@ -2642,7 +2642,7 @@ bool RAGreedy::tryRecoloringCandidates(PQueue &RecoloringQueue,
 unsigned RAGreedy::selectOrSplit(LiveInterval &VirtReg,
                                  SmallVectorImpl<unsigned> &NewVRegs) {
   CutOffInfo = CO_None;
-  LLVMContext &Ctx = MF->getFunction()->getContext();
+  LLVMContext &Ctx = MF->getFunction().getContext();
   SmallVirtRegSet FixedRegisters;
   unsigned Reg = selectOrSplitImpl(VirtReg, NewVRegs, FixedRegisters);
   if (Reg == ~0U && (CutOffInfo != CO_None)) {

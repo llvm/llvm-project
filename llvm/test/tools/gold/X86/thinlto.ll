@@ -68,11 +68,24 @@
 ; RUN:    --plugin-opt=jobs=2 \
 ; RUN:    --plugin-opt=obj-path=%t5.o \
 ; RUN:    -shared %t.o %t2.o -o %t4
-; RUN: llvm-nm %t5.o | FileCheck %s --check-prefix=NM2
 ; RUN: llvm-nm %t5.o1 | FileCheck %s --check-prefix=NM2
+; RUN: llvm-nm %t5.o2 | FileCheck %s --check-prefix=NM2
+
+; Test to ensure that thinlto-index-only with obj-path creates the file.
+; RUN: rm -f %t5.o %t5.o1
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN:    -m elf_x86_64 \
+; RUN:    --plugin-opt=thinlto \
+; RUN:    --plugin-opt=jobs=2 \
+; RUN:    --plugin-opt=thinlto-index-only \
+; RUN:    --plugin-opt=obj-path=%t5.o \
+; RUN:    -shared %t.o %t2.o -o %t4
+; RUN: llvm-readobj -h %t5.o | FileCheck %s --check-prefix=FORMAT
+; RUN: llvm-nm %t5.o | count 0
 
 ; NM: T f
 ; NM2: T {{f|g}}
+; FORMAT: Format: ELF64-x86-64
 
 ; The backend index for this module contains summaries from itself and
 ; Inputs/thinlto.ll, as it imports from the latter.

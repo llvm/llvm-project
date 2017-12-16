@@ -457,8 +457,8 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
 
 void NVPTXAsmPrinter::printReturnValStr(const MachineFunction &MF,
                                         raw_ostream &O) {
-  const Function *F = MF.getFunction();
-  printReturnValStr(F, O);
+  const Function &F = MF.getFunction();
+  printReturnValStr(&F, O);
 }
 
 // Return true if MBB is the header of a loop marked with
@@ -502,13 +502,13 @@ void NVPTXAsmPrinter::EmitFunctionEntryLabel() {
   raw_svector_ostream O(Str);
 
   if (!GlobalsEmitted) {
-    emitGlobals(*MF->getFunction()->getParent());
+    emitGlobals(*MF->getFunction().getParent());
     GlobalsEmitted = true;
   }
   
   // Set up
   MRI = &MF->getRegInfo();
-  F = MF->getFunction();
+  F = &MF->getFunction();
   emitLinkageDirective(F, O);
   if (isKernelFunction(*F))
     O << ".entry ";
@@ -536,7 +536,7 @@ void NVPTXAsmPrinter::EmitFunctionBodyStart() {
 
   SmallString<128> Str;
   raw_svector_ostream O(Str);
-  emitDemotedVars(MF->getFunction(), O);
+  emitDemotedVars(&MF->getFunction(), O);
   OutStreamer->EmitRawText(O.str());
 }
 
@@ -1708,8 +1708,8 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
 void NVPTXAsmPrinter::emitFunctionParamList(const MachineFunction &MF,
                                             raw_ostream &O) {
-  const Function *F = MF.getFunction();
-  emitFunctionParamList(F, O);
+  const Function &F = MF.getFunction();
+  emitFunctionParamList(&F, O);
 }
 
 void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
@@ -2156,7 +2156,7 @@ NVPTXAsmPrinter::lowerConstantForGV(const Constant *CV, bool ProcessingGeneric) 
       raw_string_ostream OS(S);
       OS << "Unsupported expression in static initializer: ";
       CE->printAsOperand(OS, /*PrintType=*/false,
-                     !MF ? nullptr : MF->getFunction()->getParent());
+                     !MF ? nullptr : MF->getFunction().getParent());
       report_fatal_error(OS.str());
     }
 
@@ -2170,7 +2170,7 @@ NVPTXAsmPrinter::lowerConstantForGV(const Constant *CV, bool ProcessingGeneric) 
     raw_string_ostream OS(S);
     OS << "Unsupported expression in static initializer: ";
     CE->printAsOperand(OS, /*PrintType=*/ false,
-                       !MF ? nullptr : MF->getFunction()->getParent());
+                       !MF ? nullptr : MF->getFunction().getParent());
     report_fatal_error(OS.str());
   }
 

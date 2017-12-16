@@ -9563,82 +9563,50 @@ let Predicates = [HasAVX512, NoVLX] in {
              sub_xmm)>;
 }
 
-multiclass avx512_ctlz<bits<8> opc, string OpcodeStr, OpndItins itins,
-                       Predicate prd> {
-  defm NAME : avx512_unary_rm_vl_dq<opc, opc, OpcodeStr, ctlz, itins, prd>;
+// Use 512bit version to implement 128/256 bit.
+multiclass avx512_unary_lowering<string InstrStr, SDNode OpNode,
+                                 AVX512VLVectorVTInfo _, Predicate prd> {
+  let Predicates = [prd, NoVLX] in {
+    def : Pat<(_.info256.VT(OpNode _.info256.RC:$src1)),
+              (EXTRACT_SUBREG
+                (!cast<Instruction>(InstrStr # "Zrr")
+                  (INSERT_SUBREG(_.info512.VT(IMPLICIT_DEF)),
+                                 _.info256.RC:$src1,
+                                 _.info256.SubRegIdx)),
+              _.info256.SubRegIdx)>;
+
+    def : Pat<(_.info128.VT(OpNode _.info128.RC:$src1)),
+              (EXTRACT_SUBREG
+                (!cast<Instruction>(InstrStr # "Zrr")
+                  (INSERT_SUBREG(_.info512.VT(IMPLICIT_DEF)),
+                                 _.info128.RC:$src1,
+                                 _.info128.SubRegIdx)),
+              _.info128.SubRegIdx)>;
+  }
 }
 
 // FIXME: Is there a better scheduler itinerary for VPLZCNT?
-defm VPLZCNT    : avx512_ctlz<0x44, "vplzcnt", SSE_INTALU_ITINS_P, HasCDI>;
+defm VPLZCNT    : avx512_unary_rm_vl_dq<0x44, 0x44, "vplzcnt", ctlz,
+                                        SSE_INTALU_ITINS_P, HasCDI>;
 
 // FIXME: Is there a better scheduler itinerary for VPCONFLICT?
 defm VPCONFLICT : avx512_unary_rm_vl_dq<0xC4, 0xC4, "vpconflict", X86Conflict,
                                         SSE_INTALU_ITINS_P, HasCDI>;
 
 // VPLZCNT: Use 512bit version to implement 128/256 bit in case NoVLX.
-let Predicates = [HasCDI, NoVLX] in {
-  def : Pat<(v4i64 (ctlz VR256X:$src)),
-            (EXTRACT_SUBREG
-                (VPLZCNTQZrr
-                    (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR256X:$src, sub_ymm)),
-             sub_ymm)>;
-  def : Pat<(v2i64 (ctlz VR128X:$src)),
-            (EXTRACT_SUBREG
-                (VPLZCNTQZrr
-                    (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR128X:$src, sub_xmm)),
-             sub_xmm)>;
-
-  def : Pat<(v8i32 (ctlz VR256X:$src)),
-            (EXTRACT_SUBREG
-                (VPLZCNTDZrr
-                    (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR256X:$src, sub_ymm)),
-             sub_ymm)>;
-  def : Pat<(v4i32 (ctlz VR128X:$src)),
-            (EXTRACT_SUBREG
-                (VPLZCNTDZrr
-                    (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR128X:$src, sub_xmm)),
-             sub_xmm)>;
-}
+defm : avx512_unary_lowering<"VPLZCNTQ", ctlz, avx512vl_i64_info, HasCDI>;
+defm : avx512_unary_lowering<"VPLZCNTD", ctlz, avx512vl_i32_info, HasCDI>;
 
 //===---------------------------------------------------------------------===//
 // Counts number of ones - VPOPCNTD and VPOPCNTQ
 //===---------------------------------------------------------------------===//
 
-multiclass avx512_unary_rmb_popcnt<bits<8> opc, string OpcodeStr,
-                                   OpndItins itins, X86VectorVTInfo VTInfo> {
-  let Predicates = [HasVPOPCNTDQ] in
-    defm Z : avx512_unary_rmb<opc, OpcodeStr, ctpop, itins, VTInfo>, EVEX_V512;
-}
-
-// Use 512bit version to implement 128/256 bit.
-multiclass avx512_unary_lowering<SDNode OpNode, AVX512VLVectorVTInfo _, Predicate prd> {
-  let Predicates = [prd] in {
-    def Z256_Alt : Pat<(_.info256.VT(OpNode _.info256.RC:$src1)),
-                       (EXTRACT_SUBREG
-                         (!cast<Instruction>(NAME # "Zrr")
-                           (INSERT_SUBREG(_.info512.VT(IMPLICIT_DEF)),
-                                          _.info256.RC:$src1,
-                                          _.info256.SubRegIdx)),
-                       _.info256.SubRegIdx)>;
-
-    def Z128_Alt : Pat<(_.info128.VT(OpNode _.info128.RC:$src1)),
-                       (EXTRACT_SUBREG
-                         (!cast<Instruction>(NAME # "Zrr")
-                           (INSERT_SUBREG(_.info512.VT(IMPLICIT_DEF)),
-                                          _.info128.RC:$src1,
-                                          _.info128.SubRegIdx)),
-                       _.info128.SubRegIdx)>;
-  }
-}
-
 // FIXME: Is there a better scheduler itinerary for VPOPCNTD/VPOPCNTQ?
-defm VPOPCNTD : avx512_unary_rmb_popcnt<0x55, "vpopcntd", SSE_INTALU_ITINS_P,
-                                        v16i32_info>,
-                avx512_unary_lowering<ctpop, avx512vl_i32_info, HasVPOPCNTDQ>;
+defm VPOPCNT : avx512_unary_rm_vl_dq<0x55, 0x55, "vpopcnt", ctpop,
+                                     SSE_INTALU_ITINS_P, HasVPOPCNTDQ>;
 
-defm VPOPCNTQ : avx512_unary_rmb_popcnt<0x55, "vpopcntq", SSE_INTALU_ITINS_P,
-                                        v8i64_info>,
-                avx512_unary_lowering<ctpop, avx512vl_i64_info, HasVPOPCNTDQ>, VEX_W;
+defm : avx512_unary_lowering<"VPOPCNTQ", ctpop, avx512vl_i64_info, HasVPOPCNTDQ>;
+defm : avx512_unary_lowering<"VPOPCNTD", ctpop, avx512vl_i32_info, HasVPOPCNTDQ>;
 
 //===---------------------------------------------------------------------===//
 // Replicate Single FP - MOVSHDUP and MOVSLDUP
@@ -10631,11 +10599,12 @@ defm VPDPWSSDS  : VNNI_common<0x53, "vpdpwssds", X86Vpdpwssds, SSE_PMADD>;
 
 // FIXME: Is there a better scheduler itinerary for VPOPCNTB/VPOPCNTW?
 defm VPOPCNTB : avx512_unary_rm_vl<0x54, "vpopcntb", ctpop, SSE_INTALU_ITINS_P,
-                                   avx512vl_i8_info, HasBITALG>,
-                avx512_unary_lowering<ctpop, avx512vl_i8_info, HasBITALG>;
+                                   avx512vl_i8_info, HasBITALG>;
 defm VPOPCNTW : avx512_unary_rm_vl<0x54, "vpopcntw", ctpop, SSE_INTALU_ITINS_P,
-                                   avx512vl_i16_info, HasBITALG>,
-                avx512_unary_lowering<ctpop, avx512vl_i16_info, HasBITALG>, VEX_W;
+                                   avx512vl_i16_info, HasBITALG>, VEX_W;
+
+defm : avx512_unary_lowering<"VPOPCNTB", ctpop, avx512vl_i8_info, HasBITALG>;
+defm : avx512_unary_lowering<"VPOPCNTW", ctpop, avx512vl_i16_info, HasBITALG>;
 
 multiclass VPSHUFBITQMB_rm<OpndItins itins, X86VectorVTInfo VTI> {
   defm rr : AVX512_maskable_cmp<0x8F, MRMSrcReg, VTI, (outs VTI.KRC:$dst),

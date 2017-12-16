@@ -714,7 +714,7 @@ bool PPCBranchCoalescing::mergeCandidates(CoalescingCandidateInfo &SourceRegion,
 
 bool PPCBranchCoalescing::runOnMachineFunction(MachineFunction &MF) {
 
-  if (skipFunction(*MF.getFunction()) || MF.empty())
+  if (skipFunction(MF.getFunction()) || MF.empty())
     return false;
 
   bool didSomething = false;

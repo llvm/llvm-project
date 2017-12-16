@@ -186,7 +186,6 @@ bool DWARFFormValue::skipValue(dwarf::Form Form, DataExtractor DebugInfoData,
     case DW_FORM_data2:
     case DW_FORM_data4:
     case DW_FORM_data8:
-    case DW_FORM_data16:
     case DW_FORM_flag:
     case DW_FORM_ref1:
     case DW_FORM_ref2:
@@ -340,11 +339,6 @@ bool DWARFFormValue::extractValue(const DWARFDataExtractor &Data,
     case DW_FORM_ref_sup8:
       Value.uval = Data.getU64(OffsetPtr);
       break;
-    case DW_FORM_data16:
-      // Treat this like a 16-byte block.
-      Value.uval = 16;
-      IsBlock = true;
-      break;
     case DW_FORM_sdata:
       Value.sval = Data.getSLEB128(OffsetPtr);
       break;
@@ -437,9 +431,6 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
     break;
   case DW_FORM_data8:
     OS << format("0x%016" PRIx64, UValue);
-    break;
-  case DW_FORM_data16:
-    OS << format_bytes(ArrayRef<uint8_t>(Value.data, 16), None, 16, 16);
     break;
   case DW_FORM_string:
     OS << '"';
@@ -660,8 +651,7 @@ Optional<int64_t> DWARFFormValue::getAsSignedConstant() const {
 }
 
 Optional<ArrayRef<uint8_t>> DWARFFormValue::getAsBlock() const {
-  if (!isFormClass(FC_Block) && !isFormClass(FC_Exprloc) &&
-      Form != DW_FORM_data16)
+  if (!isFormClass(FC_Block) && !isFormClass(FC_Exprloc))
     return None;
   return makeArrayRef(Value.data, Value.uval);
 }

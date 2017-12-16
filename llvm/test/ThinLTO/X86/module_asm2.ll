@@ -27,8 +27,8 @@
 ; RUN:     -r=%t2.bc,func3,l \
 ; RUN:     -r=%t2.bc,callglobalfunc,l \
 ; RUN:     -r=%t2.bc,callweakfunc,l
-; RUN: llvm-nm %t.o.0 | FileCheck  %s --check-prefix=NM0
-; RUN: llvm-nm %t.o.1 | FileCheck  %s --check-prefix=NM1
+; RUN: llvm-nm %t.o.1 | FileCheck  %s --check-prefix=NM0
+; RUN: llvm-nm %t.o.2 | FileCheck  %s --check-prefix=NM1
 
 ; Check that local values b and x, which are referenced on
 ; llvm.used and llvm.compiler.used, respectively, are not promoted.

@@ -678,7 +678,7 @@ void X86DomainReassignment::initConverters() {
 }
 
 bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
   if (DisableX86DomainReassignment)
     return false;

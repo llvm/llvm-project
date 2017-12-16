@@ -415,7 +415,7 @@ public:
     // Do not merge to float value size (128 bytes) if no implicit
     // float attribute is set.
 
-    bool NoFloat = DAG.getMachineFunction().getFunction()->hasFnAttribute(
+    bool NoFloat = DAG.getMachineFunction().getFunction().hasFnAttribute(
         Attribute::NoImplicitFloat);
 
     if (NoFloat)
@@ -444,8 +444,8 @@ public:
   }
 
   bool supportSplitCSR(MachineFunction *MF) const override {
-    return MF->getFunction()->getCallingConv() == CallingConv::CXX_FAST_TLS &&
-           MF->getFunction()->hasFnAttribute(Attribute::NoUnwind);
+    return MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS &&
+           MF->getFunction().hasFnAttribute(Attribute::NoUnwind);
   }
   void initializeSplitCSR(MachineBasicBlock *Entry) const override;
   void insertCopiesSplitCSR(

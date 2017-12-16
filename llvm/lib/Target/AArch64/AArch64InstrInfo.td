@@ -328,10 +328,10 @@ def AArch64umaxv    : SDNode<"AArch64ISD::UMAXV", SDT_AArch64UnaryVec>;
 // the Function object through the <Target>Subtarget and objections were raised
 // to that (see post-commit review comments for r301750).
 let RecomputePerFunction = 1 in {
-  def ForCodeSize   : Predicate<"MF->getFunction()->optForSize()">;
-  def NotForCodeSize   : Predicate<"!MF->getFunction()->optForSize()">;
+  def ForCodeSize   : Predicate<"MF->getFunction().optForSize()">;
+  def NotForCodeSize   : Predicate<"!MF->getFunction().optForSize()">;
   // Avoid generating STRQro if it is slow, unless we're optimizing for code size.
-  def UseSTRQro : Predicate<"!Subtarget->isSTRQroSlow() || MF->getFunction()->optForSize()">;
+  def UseSTRQro : Predicate<"!Subtarget->isSTRQroSlow() || MF->getFunction().optForSize()">;
 }
 
 include "AArch64InstrFormats.td"

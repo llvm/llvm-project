@@ -489,3 +489,69 @@ void VPlanPrinter::printAsIngredient(raw_ostream &O, Value *V) {
   RSO.flush();
   O << DOT::EscapeString(IngredientString);
 }
+
+void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent) const {
+  O << " +\n" << Indent << "\"WIDEN\\l\"";
+  for (auto &Instr : make_range(Begin, End))
+    O << " +\n" << Indent << "\"  " << VPlanIngredient(&Instr) << "\\l\"";
+}
+
+void VPWidenIntOrFpInductionRecipe::print(raw_ostream &O,
+                                          const Twine &Indent) const {
+  O << " +\n" << Indent << "\"WIDEN-INDUCTION";
+  if (Trunc) {
+    O << "\\l\"";
+    O << " +\n" << Indent << "\"  " << VPlanIngredient(IV) << "\\l\"";
+    O << " +\n" << Indent << "\"  " << VPlanIngredient(Trunc) << "\\l\"";
+  } else
+    O << " " << VPlanIngredient(IV) << "\\l\"";
+}
+
+void VPWidenPHIRecipe::print(raw_ostream &O, const Twine &Indent) const {
+  O << " +\n" << Indent << "\"WIDEN-PHI " << VPlanIngredient(Phi) << "\\l\"";
+}
+
+void VPBlendRecipe::print(raw_ostream &O, const Twine &Indent) const {
+  O << " +\n" << Indent << "\"BLEND ";
+  Phi->printAsOperand(O, false);
+  O << " =";
+  if (!User) {
+    // Not a User of any mask: not really blending, this is a
+    // single-predecessor phi.
+    O << " ";
+    Phi->getIncomingValue(0)->printAsOperand(O, false);
+  } else {
+    for (unsigned I = 0, E = User->getNumOperands(); I < E; ++I) {
+      O << " ";
+      Phi->getIncomingValue(I)->printAsOperand(O, false);
+      O << "/";
+      User->getOperand(I)->printAsOperand(O);
+    }
+  }
+  O << "\\l\"";
+}
+
+void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent) const {
+  O << " +\n"
+    << Indent << "\"" << (IsUniform ? "CLONE " : "REPLICATE ")
+    << VPlanIngredient(Ingredient);
+  if (AlsoPack)
+    O << " (S->V)";
+  O << "\\l\"";
+}
+
+void VPPredInstPHIRecipe::print(raw_ostream &O, const Twine &Indent) const {
+  O << " +\n"
+    << Indent << "\"PHI-PREDICATED-INSTRUCTION " << VPlanIngredient(PredInst)
+    << "\\l\"";
+}
+
+void VPWidenMemoryInstructionRecipe::print(raw_ostream &O,
+                                           const Twine &Indent) const {
+  O << " +\n" << Indent << "\"WIDEN " << VPlanIngredient(&Instr);
+  if (User) {
+    O << ", ";
+    User->getOperand(0)->printAsOperand(O);
+  }
+  O << "\\l\"";
+}

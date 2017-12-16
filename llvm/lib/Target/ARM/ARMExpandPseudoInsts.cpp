@@ -1259,7 +1259,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
         MachineConstantPool *MCP = MF->getConstantPool();
         unsigned PCLabelID = AFI->createPICLabelUId();
         MachineConstantPoolValue *CPV =
-            ARMConstantPoolSymbol::Create(MF->getFunction()->getContext(),
+            ARMConstantPoolSymbol::Create(MF->getFunction().getContext(),
                                           "__aeabi_read_tp", PCLabelID, 0);
         unsigned Reg = MI.getOperand(0).getReg();
         MIB = BuildMI(MBB, MBBI, MI.getDebugLoc(),

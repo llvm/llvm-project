@@ -1641,7 +1641,7 @@ AMDGPUCFGStructurizer::normalizeInfiniteLoopExit(MachineLoop* LoopRep) {
   FuncRep->push_back(DummyExitBlk);  //insert to function
   SHOWNEWBLK(DummyExitBlk, "DummyExitBlock to normalize infiniteLoop: ");
   DEBUG(dbgs() << "Old branch instr: " << *BranchMI << "\n";);
-  LLVMContext &Ctx = LoopHeader->getParent()->getFunction()->getContext();
+  LLVMContext &Ctx = LoopHeader->getParent()->getFunction().getContext();
   Ctx.emitError("Extra register needed to handle CFG");
   return nullptr;
 }

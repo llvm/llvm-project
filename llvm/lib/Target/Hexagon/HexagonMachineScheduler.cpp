@@ -188,7 +188,7 @@ bool VLIWResourceModel::reserveResources(SUnit *SU) {
 void VLIWMachineScheduler::schedule() {
   DEBUG(dbgs() << "********** MI Converging Scheduling VLIW "
                << printMBBReference(*BB) << " " << BB->getName() << " in_func "
-               << BB->getParent()->getFunction()->getName() << " at loop depth "
+               << BB->getParent()->getName() << " at loop depth "
                << MLI->getLoopDepth(BB) << " \n");
 
   buildDAGWithRegPressure();

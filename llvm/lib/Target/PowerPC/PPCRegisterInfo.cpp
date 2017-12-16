@@ -123,7 +123,7 @@ PPCRegisterInfo::getPointerRegClass(const MachineFunction &MF, unsigned Kind)
 const MCPhysReg*
 PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const PPCSubtarget &Subtarget = MF->getSubtarget<PPCSubtarget>();
-  if (MF->getFunction()->getCallingConv() == CallingConv::AnyReg) {
+  if (MF->getFunction().getCallingConv() == CallingConv::AnyReg) {
     if (Subtarget.hasVSX())
       return CSR_64_AllRegs_VSX_SaveList;
     if (Subtarget.hasAltivec())
@@ -161,7 +161,7 @@ PPCRegisterInfo::getCalleeSavedRegsViaCopy(const MachineFunction *MF) const {
     return nullptr;
   if (!TM.isPPC64())
     return nullptr;
-  if (MF->getFunction()->getCallingConv() != CallingConv::CXX_FAST_TLS)
+  if (MF->getFunction().getCallingConv() != CallingConv::CXX_FAST_TLS)
     return nullptr;
   if (!MF->getInfo<PPCFunctionInfo>()->isSplitCSR())
     return nullptr;
@@ -901,7 +901,7 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // Naked functions have stack size 0, although getStackSize may not reflect
   // that because we didn't call all the pieces that compute it for naked
   // functions.
-  if (!MF.getFunction()->hasFnAttribute(Attribute::Naked)) {
+  if (!MF.getFunction().hasFnAttribute(Attribute::Naked)) {
     if (!(hasBasePointer(MF) && FrameIndex < 0))
       Offset += MFI.getStackSize();
   }

@@ -205,7 +205,7 @@ static bool isLiveOut(const MachineBasicBlock &MBB, unsigned Reg) {
 }
 
 bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();

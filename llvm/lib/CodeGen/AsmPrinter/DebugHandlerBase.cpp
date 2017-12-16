@@ -179,7 +179,7 @@ static bool hasDebugInfo(const MachineModuleInfo *MMI,
                          const MachineFunction *MF) {
   if (!MMI->hasDebugInfo())
     return false;
-  auto *SP = MF->getFunction()->getSubprogram();
+  auto *SP = MF->getFunction().getSubprogram();
   if (!SP)
     return false;
   assert(SP->getUnit());
@@ -223,7 +223,7 @@ void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
     // label, so arguments are visible when breaking at function entry.
     const DILocalVariable *DIVar = Ranges.front().first->getDebugVariable();
     if (DIVar->isParameter() &&
-        getDISubprogram(DIVar->getScope())->describes(MF->getFunction())) {
+        getDISubprogram(DIVar->getScope())->describes(&MF->getFunction())) {
       LabelsBeforeInsn[Ranges.front().first] = Asm->getFunctionBegin();
       if (Ranges.front().first->getDebugExpression()->isFragment()) {
         // Mark all non-overlapping initial fragments.

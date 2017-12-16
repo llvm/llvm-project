@@ -82,8 +82,6 @@ void TestAllForms() {
   const uint32_t Data4 = 0x6789abcdU;
   const uint64_t Data8 = 0x0011223344556677ULL;
   const uint64_t Data8_2 = 0xAABBCCDDEEFF0011ULL;
-  const uint8_t Data16[16] = {1, 2,  3,  4,  5,  6,  7,  8,
-                              9, 10, 11, 12, 13, 14, 15, 16};
   const int64_t SData = INT64_MIN;
   const int64_t ICSData = INT64_MAX; // DW_FORM_implicit_const SData
   const uint64_t UData[] = {UINT64_MAX - 1, UINT64_MAX - 2, UINT64_MAX - 3,
@@ -121,11 +119,6 @@ void TestAllForms() {
 
   const auto Attr_DW_FORM_block4 = static_cast<dwarf::Attribute>(Attr++);
   CUDie.addAttribute(Attr_DW_FORM_block4, DW_FORM_block4, BlockData, BlockSize);
-
-  // We handle data16 as a block form.
-  const auto Attr_DW_FORM_data16 = static_cast<dwarf::Attribute>(Attr++);
-  if (Version >= 5)
-    CUDie.addAttribute(Attr_DW_FORM_data16, DW_FORM_data16, Data16, 16);
 
   //----------------------------------------------------------------------
   // Test data forms
@@ -282,17 +275,6 @@ void TestAllForms() {
   ExtractedBlockData = BlockDataOpt.getValue();
   EXPECT_EQ(ExtractedBlockData.size(), BlockSize);
   EXPECT_TRUE(memcmp(ExtractedBlockData.data(), BlockData, BlockSize) == 0);
-
-  // Data16 is handled like a block.
-  if (Version >= 5) {
-    FormValue = DieDG.find(Attr_DW_FORM_data16);
-    EXPECT_TRUE((bool)FormValue);
-    BlockDataOpt = FormValue->getAsBlock();
-    EXPECT_TRUE(BlockDataOpt.hasValue());
-    ExtractedBlockData = BlockDataOpt.getValue();
-    EXPECT_EQ(ExtractedBlockData.size(), 16u);
-    EXPECT_TRUE(memcmp(ExtractedBlockData.data(), Data16, 16) == 0);
-  }
 
   //----------------------------------------------------------------------
   // Test data forms

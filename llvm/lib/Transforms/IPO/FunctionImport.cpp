@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/AutoUpgrade.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalObject.h"
@@ -44,7 +45,9 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/Internalize.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <cassert>
 #include <memory>
 #include <set>
@@ -118,6 +121,12 @@ static cl::opt<std::string>
     SummaryFile("summary-file",
                 cl::desc("The summary file to use for function importing."));
 
+/// Used when testing importing from distributed indexes via opt
+// -function-import.
+static cl::opt<bool>
+    ImportAllIndex("import-all-index",
+                   cl::desc("Import all external functions in index."));
+
 // Load lazily a module from \p FileName in \p Context.
 static std::unique_ptr<Module> loadFile(const std::string &FileName,
                                         LLVMContext &Context) {
@@ -172,13 +181,8 @@ selectCallee(const ModuleSummaryIndex &Index,
         if (GlobalValue::isInterposableLinkage(GVSummary->linkage()))
           // There is no point in importing these, we can't inline them
           return false;
-        if (isa<AliasSummary>(GVSummary))
-          // Aliases can't point to "available_externally".
-          // FIXME: we should import alias as available_externally *function*,
-          // the destination module does not need to know it is an alias.
-          return false;
 
-        auto *Summary = cast<FunctionSummary>(GVSummary);
+        auto *Summary = cast<FunctionSummary>(GVSummary->getBaseObject());
 
         // If this is a local function, make sure we import the copy
         // in the caller's module. The only time a local function can
@@ -275,9 +279,7 @@ static void computeImportForFunction(
     }
 
     // "Resolve" the summary
-    assert(!isa<AliasSummary>(CalleeSummary) &&
-           "Unexpected alias in import list");
-    const auto *ResolvedCalleeSummary = cast<FunctionSummary>(CalleeSummary);
+    const auto *ResolvedCalleeSummary = cast<FunctionSummary>(CalleeSummary->getBaseObject());
 
     assert(ResolvedCalleeSummary->instCount() <= NewThreshold &&
            "selectCallee() didn't honor the threshold");
@@ -432,6 +434,19 @@ void llvm::ComputeCrossModuleImport(
 #endif
 }
 
+#ifndef NDEBUG
+static void dumpImportListForModule(StringRef ModulePath,
+                                    FunctionImporter::ImportMapTy &ImportList) {
+  DEBUG(dbgs() << "* Module " << ModulePath << " imports from "
+               << ImportList.size() << " modules.\n");
+  for (auto &Src : ImportList) {
+    auto SrcModName = Src.first();
+    DEBUG(dbgs() << " - " << Src.second.size() << " functions imported from "
+                 << SrcModName << "\n");
+  }
+}
+#endif
+
 /// Compute all the imports for the given module in the Index.
 void llvm::ComputeCrossModuleImportForModule(
     StringRef ModulePath, const ModuleSummaryIndex &Index,
@@ -446,13 +461,34 @@ void llvm::ComputeCrossModuleImportForModule(
   ComputeImportForModule(FunctionSummaryMap, Index, ImportList);
 
 #ifndef NDEBUG
-  DEBUG(dbgs() << "* Module " << ModulePath << " imports from "
-               << ImportList.size() << " modules.\n");
-  for (auto &Src : ImportList) {
-    auto SrcModName = Src.first();
-    DEBUG(dbgs() << " - " << Src.second.size() << " functions imported from "
-                 << SrcModName << "\n");
+  dumpImportListForModule(ModulePath, ImportList);
+#endif
+}
+
+// Mark all external summaries in Index for import into the given module.
+// Used for distributed builds using a distributed index.
+void llvm::ComputeCrossModuleImportForModuleFromIndex(
+    StringRef ModulePath, const ModuleSummaryIndex &Index,
+    FunctionImporter::ImportMapTy &ImportList) {
+  for (auto &GlobalList : Index) {
+    // Ignore entries for undefined references.
+    if (GlobalList.second.SummaryList.empty())
+      continue;
+
+    auto GUID = GlobalList.first;
+    assert(GlobalList.second.SummaryList.size() == 1 &&
+           "Expected individual combined index to have one summary per GUID");
+    auto &Summary = GlobalList.second.SummaryList[0];
+    // Skip the summaries for the importing module. These are included to
+    // e.g. record required linkage changes.
+    if (Summary->modulePath() == ModulePath)
+      continue;
+    // Doesn't matter what value we plug in to the map, just needs an entry
+    // to provoke importing by thinBackend.
+    ImportList[Summary->modulePath()][GUID] = 1;
   }
+#ifndef NDEBUG
+  dumpImportListForModule(ModulePath, ImportList);
 #endif
 }
 
@@ -692,6 +728,20 @@ void llvm::thinLTOInternalizeModule(Module &TheModule,
   internalizeModule(TheModule, MustPreserveGV);
 }
 
+/// Make alias a clone of its aliasee.
+static Function *replaceAliasWithAliasee(Module *SrcModule, GlobalAlias *GA) {
+  Function *Fn = cast<Function>(GA->getBaseObject());
+
+  ValueToValueMapTy VMap;
+  Function *NewFn = CloneFunction(Fn, VMap);
+  // Clone should use the original alias's linkage and name, and we ensure
+  // all uses of alias instead use the new clone (casted if necessary).
+  NewFn->setLinkage(GA->getLinkage());
+  GA->replaceAllUsesWith(ConstantExpr::getBitCast(NewFn, GA->getType()));
+  NewFn->takeName(GA);
+  return NewFn;
+}
+
 // Automatically import functions in Module \p DestModule based on the summaries
 // index.
 Expected<bool> FunctionImporter::importFunctions(
@@ -761,17 +811,36 @@ Expected<bool> FunctionImporter::importFunctions(
         GlobalsToImport.insert(&GV);
       }
     }
-#ifndef NDEBUG
     for (GlobalAlias &GA : SrcModule->aliases()) {
       if (!GA.hasName())
         continue;
       auto GUID = GA.getGUID();
-      assert(!ImportGUIDs.count(GUID) && "Unexpected alias in import list");
-      DEBUG(dbgs() << "Not importing alias " << GUID
+      auto Import = ImportGUIDs.count(GUID);
+      DEBUG(dbgs() << (Import ? "Is" : "Not") << " importing alias " << GUID
                    << " " << GA.getName() << " from "
                    << SrcModule->getSourceFileName() << "\n");
+      if (Import) {
+        if (Error Err = GA.materialize())
+          return std::move(Err);
+        // Import alias as a copy of its aliasee.
+        GlobalObject *Base = GA.getBaseObject();
+        if (Error Err = Base->materialize())
+          return std::move(Err);
+        auto *Fn = replaceAliasWithAliasee(SrcModule.get(), &GA);
+        DEBUG(dbgs() << "Is importing aliasee fn " << Base->getGUID()
+              << " " << Base->getName() << " from "
+              << SrcModule->getSourceFileName() << "\n");
+        if (EnableImportMetadata) {
+          // Add 'thinlto_src_module' metadata for statistics and debugging.
+          Fn->setMetadata(
+              "thinlto_src_module",
+              MDNode::get(DestModule.getContext(),
+                          {MDString::get(DestModule.getContext(),
+                                         SrcModule->getSourceFileName())}));
+        }
+        GlobalsToImport.insert(Fn);
+      }
     }
-#endif
 
     // Upgrade debug info after we're done materializing all the globals and we
     // have loaded all the required metadata!
@@ -817,8 +886,15 @@ static bool doImportingForModule(Module &M) {
 
   // First step is collecting the import list.
   FunctionImporter::ImportMapTy ImportList;
-  ComputeCrossModuleImportForModule(M.getModuleIdentifier(), *Index,
-                                    ImportList);
+  // If requested, simply import all functions in the index. This is used
+  // when testing distributed backend handling via the opt tool, when
+  // we have distributed indexes containing exactly the summaries to import.
+  if (ImportAllIndex)
+    ComputeCrossModuleImportForModuleFromIndex(M.getModuleIdentifier(), *Index,
+                                               ImportList);
+  else
+    ComputeCrossModuleImportForModule(M.getModuleIdentifier(), *Index,
+                                      ImportList);
 
   // Conservatively mark all internal values as promoted. This interface is
   // only used when doing importing via the function importing pass. The pass

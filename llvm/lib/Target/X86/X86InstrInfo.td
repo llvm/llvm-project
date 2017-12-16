@@ -918,11 +918,11 @@ def IsNotPIC     : Predicate<"!TM.isPositionIndependent()">;
 // the Function object through the <Target>Subtarget and objections were raised
 // to that (see post-commit review comments for r301750).
 let RecomputePerFunction = 1 in {
-  def OptForSize   : Predicate<"MF->getFunction()->optForSize()">;
-  def OptForMinSize : Predicate<"MF->getFunction()->optForMinSize()">;
-  def OptForSpeed  : Predicate<"!MF->getFunction()->optForSize()">;
+  def OptForSize   : Predicate<"MF->getFunction().optForSize()">;
+  def OptForMinSize : Predicate<"MF->getFunction().optForMinSize()">;
+  def OptForSpeed  : Predicate<"!MF->getFunction().optForSize()">;
   def UseIncDec : Predicate<"!Subtarget->slowIncDec() || "
-                            "MF->getFunction()->optForSize()">;
+                            "MF->getFunction().optForSize()">;
 }
 
 def CallImmAddr  : Predicate<"Subtarget->isLegalToCallImmediateAddr()">;

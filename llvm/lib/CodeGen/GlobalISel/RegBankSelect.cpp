@@ -601,9 +601,9 @@ bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   DEBUG(dbgs() << "Assign register banks for: " << MF.getName() << '\n');
-  const Function *F = MF.getFunction();
+  const Function &F = MF.getFunction();
   Mode SaveOptMode = OptMode;
-  if (F->hasFnAttribute(Attribute::OptimizeNone))
+  if (F.hasFnAttribute(Attribute::OptimizeNone))
     OptMode = Mode::Fast;
   init(MF);
 

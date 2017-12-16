@@ -512,14 +512,14 @@ public:
 
     R600MachineFunctionInfo *MFI = MF.getInfo<R600MachineFunctionInfo>();
 
-    CFStack CFStack(ST, MF.getFunction()->getCallingConv());
+    CFStack CFStack(ST, MF.getFunction().getCallingConv());
     for (MachineFunction::iterator MB = MF.begin(), ME = MF.end(); MB != ME;
         ++MB) {
       MachineBasicBlock &MBB = *MB;
       unsigned CfCount = 0;
       std::vector<std::pair<unsigned, std::set<MachineInstr *>>> LoopStack;
       std::vector<MachineInstr * > IfThenElseStack;
-      if (MF.getFunction()->getCallingConv() == CallingConv::AMDGPU_VS) {
+      if (MF.getFunction().getCallingConv() == CallingConv::AMDGPU_VS) {
         BuildMI(MBB, MBB.begin(), MBB.findDebugLoc(MBB.begin()),
             getHWInstrDesc(CF_CALL_FS));
         CfCount++;

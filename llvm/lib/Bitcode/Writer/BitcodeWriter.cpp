@@ -413,7 +413,7 @@ public:
     // in writing out the call graph edges. Save the mapping from GUID
     // to the new global value id to use when writing those edges, which
     // are currently saved in the index in terms of GUID.
-    forEachSummary([&](GVInfo I) {
+    forEachSummary([&](GVInfo I, bool) {
       GUIDToValueIdMap[I.first] = ++GlobalValueId;
     });
   }
@@ -428,12 +428,18 @@ public:
   void forEachSummary(Functor Callback) {
     if (ModuleToSummariesForIndex) {
       for (auto &M : *ModuleToSummariesForIndex)
-        for (auto &Summary : M.second)
-          Callback(Summary);
+        for (auto &Summary : M.second) {
+          Callback(Summary, false);
+          // Ensure aliasee is handled, e.g. for assigning a valueId,
+          // even if we are not importing the aliasee directly (the
+          // imported alias will contain a copy of aliasee).
+          if (auto *AS = dyn_cast<AliasSummary>(Summary.getSecond()))
+            Callback({AS->getAliaseeGUID(), &AS->getAliasee()}, true);
+        }
     } else {
       for (auto &Summaries : Index)
         for (auto &Summary : Summaries.second.SummaryList)
-          Callback({Summaries.first, Summary.get()});
+          Callback({Summaries.first, Summary.get()}, false);
     }
   }
 
@@ -3604,13 +3610,19 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     NameVals.clear();
   };
 
-  forEachSummary([&](GVInfo I) {
+  forEachSummary([&](GVInfo I, bool IsAliasee) {
     GlobalValueSummary *S = I.second;
     assert(S);
 
     auto ValueId = getValueId(I.first);
     assert(ValueId);
     SummaryToValueIdMap[S] = *ValueId;
+
+    // If this is invoked for an aliasee, we want to record the above
+    // mapping, but then not emit a summary entry (if the aliasee is
+    // to be imported, we will invoke this separately with IsAliasee=false).
+    if (IsAliasee)
+      return;
 
     if (auto *AS = dyn_cast<AliasSummary>(S)) {
       // Will process aliases as a post-pass because the reader wants all
