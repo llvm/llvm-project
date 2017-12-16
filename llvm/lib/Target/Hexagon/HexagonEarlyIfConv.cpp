@@ -1047,7 +1047,7 @@ void HexagonEarlyIfConversion::simplifyFlowGraph(const FlowPattern &FP) {
 }
 
 bool HexagonEarlyIfConversion::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   auto &ST = MF.getSubtarget<HexagonSubtarget>();

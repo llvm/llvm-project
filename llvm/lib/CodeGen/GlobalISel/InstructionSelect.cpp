@@ -189,7 +189,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
 
   if (MF.size() != NumBlocks) {
     MachineOptimizationRemarkMissed R("gisel-select", "GISelFailure",
-                                      MF.getFunction()->getSubprogram(),
+                                      MF.getFunction().getSubprogram(),
                                       /*MBB=*/nullptr);
     R << "inserting blocks is not supported yet";
     reportGISelFailure(MF, TPC, MORE, R);

@@ -373,7 +373,7 @@ bool ARMSubtarget::useStride4VFPs(const MachineFunction &MF) const {
   // For general targets, the prologue can grow when VFPs are allocated with
   // stride 4 (more vpush instructions). But WatchOS uses a compact unwind
   // format which it's more important to get right.
-  return isTargetWatchABI() || (isSwift() && !MF.getFunction()->optForMinSize());
+  return isTargetWatchABI() || (isSwift() && !MF.getFunction().optForMinSize());
 }
 
 bool ARMSubtarget::useMovt(const MachineFunction &MF) const {
@@ -381,7 +381,7 @@ bool ARMSubtarget::useMovt(const MachineFunction &MF) const {
   // immediates as it is inherently position independent, and may be out of
   // range otherwise.
   return !NoMovt && hasV8MBaselineOps() &&
-         (isTargetWindows() || !MF.getFunction()->optForMinSize() || genExecuteOnly());
+         (isTargetWindows() || !MF.getFunction().optForMinSize() || genExecuteOnly());
 }
 
 bool ARMSubtarget::useFastISel() const {

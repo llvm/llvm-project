@@ -2286,6 +2286,13 @@ MachineInstr *PPCInstrInfo::getConstantDefMI(MachineInstr &MI,
         MachineBasicBlock::reverse_iterator E = MI.getParent()->rend(), It = MI;
         It++;
         unsigned Reg = MI.getOperand(i).getReg();
+        // MachineInstr::readsRegister only returns true if the machine
+        // instruction reads the exact register or its super-register. It
+        // does not consider uses of sub-registers which seems like strange
+        // behaviour. Nonetheless, if we end up with a 64-bit register here,
+        // get the corresponding 32-bit register to check.
+        if (PPC::G8RCRegClass.contains(Reg))
+          Reg = Reg - PPC::X0 + PPC::R0;
 
         // Is this register defined by a load-immediate in this block?
         for ( ; It != E; ++It) {
@@ -2415,6 +2422,7 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
       NewImm = Addend + SExtImm;
       break;
     }
+    return false;
   }
   case PPC::RLDICL:
   case PPC::RLDICLo:
@@ -3125,7 +3133,7 @@ PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
       const PPCFunctionInfo *FuncInfo = MF->getInfo<PPCFunctionInfo>();
       // We check the ZExt/SExt flags for a method parameter.
       if (MI.getParent()->getBasicBlock() ==
-          &MF->getFunction()->getEntryBlock()) {
+          &MF->getFunction().getEntryBlock()) {
         unsigned VReg = MI.getOperand(0).getReg();
         if (MF->getRegInfo().isLiveIn(VReg))
           return SignExt ? FuncInfo->isLiveInSExt(VReg) :

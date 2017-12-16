@@ -238,7 +238,7 @@ void XCoreFrameLowering::emitPrologue(MachineFunction &MF,
     report_fatal_error("emitPrologue unsupported alignment: "
                        + Twine(MFI.getMaxAlignment()));
 
-  const AttributeList &PAL = MF.getFunction()->getAttributes();
+  const AttributeList &PAL = MF.getFunction().getAttributes();
   if (PAL.hasAttrSomewhere(Attribute::Nest))
     BuildMI(MBB, MBBI, dl, TII.get(XCore::LDWSP_ru6), XCore::R11).addImm(0);
     // FIX: Needs addMemOperand() but can't use getFixedStack() or getStack().
@@ -324,7 +324,7 @@ void XCoreFrameLowering::emitPrologue(MachineFunction &MF,
     if (XFI->hasEHSpillSlot()) {
       // The unwinder requires stack slot & CFI offsets for the exception info.
       // We do not save/spill these registers.
-      const Function *Fn = MF.getFunction();
+      const Function *Fn = &MF.getFunction();
       const Constant *PersonalityFn =
           Fn->hasPersonalityFn() ? Fn->getPersonalityFn() : nullptr;
       SmallVector<StackSlotInfo, 2> SpillList;
@@ -359,7 +359,7 @@ void XCoreFrameLowering::emitEpilogue(MachineFunction &MF,
   if (RetOpcode == XCore::EH_RETURN) {
     // 'Restore' the exception info the unwinder has placed into the stack
     // slots.
-    const Function *Fn = MF.getFunction();
+    const Function *Fn = &MF.getFunction();
     const Constant *PersonalityFn =
         Fn->hasPersonalityFn() ? Fn->getPersonalityFn() : nullptr;
     SmallVector<StackSlotInfo, 2> SpillList;
@@ -542,7 +542,7 @@ void XCoreFrameLowering::determineCalleeSaves(MachineFunction &MF,
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   bool LRUsed = MRI.isPhysRegModified(XCore::LR);
 
-  if (!LRUsed && !MF.getFunction()->isVarArg() &&
+  if (!LRUsed && !MF.getFunction().isVarArg() &&
       MF.getFrameInfo().estimateStackSize(MF))
     // If we need to extend the stack it is more efficient to use entsp / retsp.
     // We force the LR to be saved so these instructions are used.

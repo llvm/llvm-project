@@ -213,6 +213,7 @@ public:
   bool parseMetadataOperand(MachineOperand &Dest);
   bool parseCFIOffset(int &Offset);
   bool parseCFIRegister(unsigned &Reg);
+  bool parseCFIEscapeValues(std::string& Values);
   bool parseCFIOperand(MachineOperand &Dest);
   bool parseIRBlock(BasicBlock *&BB, const Function &F);
   bool parseBlockAddressOperand(MachineOperand &Dest);
@@ -430,7 +431,7 @@ bool MIParser::parseBasicBlockDefinition(
         break;
       case MIToken::IRBlock:
         // TODO: Report an error when both name and ir block are specified.
-        if (parseIRBlock(BB, *MF.getFunction()))
+        if (parseIRBlock(BB, MF.getFunction()))
           return true;
         lex();
         break;
@@ -446,7 +447,7 @@ bool MIParser::parseBasicBlockDefinition(
 
   if (!Name.empty()) {
     BB = dyn_cast_or_null<BasicBlock>(
-        MF.getFunction()->getValueSymbolTable()->lookup(Name));
+        MF.getFunction().getValueSymbolTable()->lookup(Name));
     if (!BB)
       return error(Loc, Twine("basic block '") + Name +
                             "' is not defined in the function '" +
@@ -1233,7 +1234,7 @@ bool MIParser::parseIRConstant(StringRef::iterator Loc, StringRef StringValue,
                                const Constant *&C) {
   auto Source = StringValue.str(); // The source has to be null terminated.
   SMDiagnostic Err;
-  C = parseConstantValue(Source, Err, *MF.getFunction()->getParent(),
+  C = parseConstantValue(Source, Err, *MF.getFunction().getParent(),
                          &PFS.IRSlots);
   if (!C)
     return error(Loc + Err.getColumnNo(), Err.getMessage());
@@ -1253,7 +1254,7 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
     lex();
     return false;
   } else if (Token.is(MIToken::PointerType)) {
-    const DataLayout &DL = MF.getFunction()->getParent()->getDataLayout();
+    const DataLayout &DL = MF.getDataLayout();
     unsigned AS = APSInt(Token.range().drop_front()).getZExtValue();
     Ty = LLT::pointer(AS, DL.getPointerSizeInBits(AS));
     lex();
@@ -1418,7 +1419,7 @@ bool MIParser::parseFixedStackObjectOperand(MachineOperand &Dest) {
 bool MIParser::parseGlobalValue(GlobalValue *&GV) {
   switch (Token.kind()) {
   case MIToken::NamedGlobalValue: {
-    const Module *M = MF.getFunction()->getParent();
+    const Module *M = MF.getFunction().getParent();
     GV = M->getNamedValue(Token.stringValue());
     if (!GV)
       return error(Twine("use of undefined global value '") + Token.range() +
@@ -1556,7 +1557,7 @@ bool MIParser::parseDIExpression(MDNode *&Expr) {
   if (expectAndConsume(MIToken::rparen))
     return true;
 
-  Expr = DIExpression::get(MF.getFunction()->getContext(), Elements);
+  Expr = DIExpression::get(MF.getFunction().getContext(), Elements);
   return false;
 }
 
@@ -1599,6 +1600,21 @@ bool MIParser::parseCFIRegister(unsigned &Reg) {
   return false;
 }
 
+bool MIParser::parseCFIEscapeValues(std::string &Values) {
+  do {
+    if (Token.isNot(MIToken::HexLiteral))
+      return error("expected a hexadecimal literal");
+    unsigned Value;
+    if (getUnsigned(Value))
+      return true;
+    if (Value > UINT8_MAX)
+      return error("expected a 8-bit integer (too large)");
+    Values.push_back(static_cast<uint8_t>(Value));
+    lex();
+  } while (consumeIfPresent(MIToken::comma));
+  return false;
+}
+
 bool MIParser::parseCFIOperand(MachineOperand &Dest) {
   auto Kind = Token.kind();
   lex();
@@ -1618,6 +1634,13 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
     CFIIndex =
         MF.addFrameInst(MCCFIInstruction::createOffset(nullptr, Reg, Offset));
     break;
+  case MIToken::kw_cfi_rel_offset:
+    if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
+        parseCFIOffset(Offset))
+      return true;
+    CFIIndex = MF.addFrameInst(
+        MCCFIInstruction::createRelOffset(nullptr, Reg, Offset));
+    break;
   case MIToken::kw_cfi_def_cfa_register:
     if (parseCFIRegister(Reg))
       return true;
@@ -1631,6 +1654,12 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
     CFIIndex = MF.addFrameInst(
         MCCFIInstruction::createDefCfaOffset(nullptr, -Offset));
     break;
+  case MIToken::kw_cfi_adjust_cfa_offset:
+    if (parseCFIOffset(Offset))
+      return true;
+    CFIIndex = MF.addFrameInst(
+        MCCFIInstruction::createAdjustCfaOffset(nullptr, Offset));
+    break;
   case MIToken::kw_cfi_def_cfa:
     if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
         parseCFIOffset(Offset))
@@ -1639,12 +1668,42 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
     CFIIndex =
         MF.addFrameInst(MCCFIInstruction::createDefCfa(nullptr, Reg, -Offset));
     break;
+  case MIToken::kw_cfi_remember_state:
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createRememberState(nullptr));
+    break;
   case MIToken::kw_cfi_restore:
     if (parseCFIRegister(Reg))
       return true;
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createRestore(nullptr, Reg));
     break;
+  case MIToken::kw_cfi_restore_state:
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createRestoreState(nullptr));
+    break;
+  case MIToken::kw_cfi_undefined:
+    if (parseCFIRegister(Reg))
+      return true;
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createUndefined(nullptr, Reg));
+    break;
+  case MIToken::kw_cfi_register: {
+    unsigned Reg2;
+    if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
+        parseCFIRegister(Reg2))
+      return true;
 
+    CFIIndex =
+        MF.addFrameInst(MCCFIInstruction::createRegister(nullptr, Reg, Reg2));
+    break;
+  }
+  case MIToken::kw_cfi_window_save:
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createWindowSave(nullptr));
+    break;
+  case MIToken::kw_cfi_escape: {
+    std::string Values;
+    if (parseCFIEscapeValues(Values))
+      return true;
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createEscape(nullptr, Values));
+    break;
+  }
   default:
     // TODO: Parse the other CFI operands.
     llvm_unreachable("The current token should be a cfi operand");
@@ -1921,10 +1980,18 @@ bool MIParser::parseMachineOperand(MachineOperand &Dest,
     return parseMetadataOperand(Dest);
   case MIToken::kw_cfi_same_value:
   case MIToken::kw_cfi_offset:
+  case MIToken::kw_cfi_rel_offset:
   case MIToken::kw_cfi_def_cfa_register:
   case MIToken::kw_cfi_def_cfa_offset:
+  case MIToken::kw_cfi_adjust_cfa_offset:
+  case MIToken::kw_cfi_escape:
   case MIToken::kw_cfi_def_cfa:
+  case MIToken::kw_cfi_register:
+  case MIToken::kw_cfi_remember_state:
   case MIToken::kw_cfi_restore:
+  case MIToken::kw_cfi_restore_state:
+  case MIToken::kw_cfi_undefined:
+  case MIToken::kw_cfi_window_save:
     return parseCFIOperand(Dest);
   case MIToken::kw_blockaddress:
     return parseBlockAddressOperand(Dest);
@@ -2035,7 +2102,7 @@ bool MIParser::parseOperandsOffset(MachineOperand &Op) {
 bool MIParser::parseIRValue(const Value *&V) {
   switch (Token.kind()) {
   case MIToken::NamedIRValue: {
-    V = MF.getFunction()->getValueSymbolTable()->lookup(Token.stringValue());
+    V = MF.getFunction().getValueSymbolTable()->lookup(Token.stringValue());
     break;
   }
   case MIToken::IRValue: {
@@ -2294,7 +2361,7 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
 
   // Optional synchronization scope.
   SyncScope::ID SSID;
-  if (parseOptionalScope(MF.getFunction()->getContext(), SSID))
+  if (parseOptionalScope(MF.getFunction().getContext(), SSID))
     return true;
 
   // Up to two atomic orderings (cmpxchg provides guarantees on failure).
@@ -2475,12 +2542,12 @@ static const BasicBlock *getIRBlockFromSlot(
 
 const BasicBlock *MIParser::getIRBlock(unsigned Slot) {
   if (Slots2BasicBlocks.empty())
-    initSlots2BasicBlocks(*MF.getFunction(), Slots2BasicBlocks);
+    initSlots2BasicBlocks(MF.getFunction(), Slots2BasicBlocks);
   return getIRBlockFromSlot(Slot, Slots2BasicBlocks);
 }
 
 const BasicBlock *MIParser::getIRBlock(unsigned Slot, const Function &F) {
-  if (&F == MF.getFunction())
+  if (&F == &MF.getFunction())
     return getIRBlock(Slot);
   DenseMap<unsigned, const BasicBlock *> CustomSlots2BasicBlocks;
   initSlots2BasicBlocks(F, CustomSlots2BasicBlocks);
@@ -2511,7 +2578,7 @@ static void initSlots2Values(const Function &F,
 
 const Value *MIParser::getIRValue(unsigned Slot) {
   if (Slots2Values.empty())
-    initSlots2Values(*MF.getFunction(), Slots2Values);
+    initSlots2Values(MF.getFunction(), Slots2Values);
   auto ValueInfo = Slots2Values.find(Slot);
   if (ValueInfo == Slots2Values.end())
     return nullptr;

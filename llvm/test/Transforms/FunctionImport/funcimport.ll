@@ -36,13 +36,14 @@ entry:
 ; CHECK-DAG: declare void @weakalias
 declare void @weakalias(...) #1
 
-; Cannot create an alias to available_externally
-; CHECK-DAG: declare void @analias
+; External alias imported as available_externally copy of aliasee
+; CHECK-DAG: define available_externally void @analias
 declare void @analias(...) #1
 
-; Aliases are not imported
+; External alias imported as available_externally copy of aliasee
+; (linkoncealias is an external alias to a linkonce_odr)
 declare void @linkoncealias(...) #1
-; CHECK-DAG: declare void @linkoncealias(...)
+; CHECK-DAG: define available_externally void @linkoncealias()
 
 ; INSTLIMDEF-DAG: Import referencestatics
 ; INSTLIMDEF-DAG: define available_externally i32 @referencestatics(i32 %i) !thinlto_src_module !0 {
@@ -105,7 +106,7 @@ declare void @linkoncefunc2(...) #1
 declare void @variadic(...)
 
 ; INSTLIMDEF-DAG: Import globalfunc2
-; INSTLIMDEF-DAG: 11 function-import - Number of functions imported
+; INSTLIMDEF-DAG: 13 function-import - Number of functions imported
 ; CHECK-DAG: !0 = !{!"{{.*}}/Inputs/funcimport.ll"}
 
 ; The actual GUID values will depend on path to test.

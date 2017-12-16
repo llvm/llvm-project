@@ -73,7 +73,7 @@ LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Error E) {
 
 static cl::opt<std::string> InputFilename(cl::Positional, cl::desc("<input>"));
 static cl::opt<std::string> OutputFilename(cl::Positional, cl::desc("<output>"),
-                                    cl::init("-"));
+                                           cl::init("-"));
 static cl::opt<std::string>
     OutputFormat("O", cl::desc("Set output format to one of the following:"
                                "\n\tbinary"));
@@ -100,8 +100,9 @@ static cl::opt<bool> StripDebug("strip-debug",
                                 cl::desc("Removes all debug information"));
 static cl::opt<bool> StripSections("strip-sections",
                                    cl::desc("Remove all section headers"));
-static cl::opt<bool> StripNonAlloc("strip-non-alloc",
-                                   cl::desc("Remove all non-allocated sections"));
+static cl::opt<bool>
+    StripNonAlloc("strip-non-alloc",
+                  cl::desc("Remove all non-allocated sections"));
 static cl::opt<bool>
     StripDWO("strip-dwo", cl::desc("Remove all DWARF .dwo sections from file"));
 static cl::opt<bool> ExtractDWO(
@@ -115,9 +116,7 @@ static cl::opt<std::string>
 
 using SectionPred = std::function<bool(const SectionBase &Sec)>;
 
-bool IsDWOSection(const SectionBase &Sec) {
-  return Sec.Name.endswith(".dwo");
-}
+bool IsDWOSection(const SectionBase &Sec) { return Sec.Name.endswith(".dwo"); }
 
 template <class ELFT>
 bool OnlyKeepDWOPred(const Object<ELFT> &Obj, const SectionBase &Sec) {
@@ -164,8 +163,7 @@ void SplitDWOToFile(const ELFObjectFile<ELFT> &ObjFile, StringRef File) {
 // any previous removals. Lastly whether or not something is removed shouldn't
 // depend a) on the order the options occur in or b) on some opaque priority
 // system. The only priority is that keeps/copies overrule removes.
-template <class ELFT>
-void CopyBinary(const ELFObjectFile<ELFT> &ObjFile) {
+template <class ELFT> void CopyBinary(const ELFObjectFile<ELFT> &ObjFile) {
   std::unique_ptr<Object<ELFT>> Obj;
 
   if (!OutputFormat.empty() && OutputFormat != "binary")
@@ -176,7 +174,7 @@ void CopyBinary(const ELFObjectFile<ELFT> &ObjFile) {
     Obj = llvm::make_unique<ELFObject<ELFT>>(ObjFile);
 
   if (!SplitDWO.empty())
-    SplitDWOToFile<ELFT>(ObjFile, SplitDWO.getValue());
+    SplitDWOToFile<ELFT>(ObjFile, SplitDWO.getValue()); 
 
   SectionPred RemovePred = [](const SectionBase &) { return false; };
 
@@ -207,7 +205,7 @@ void CopyBinary(const ELFObjectFile<ELFT> &ObjFile) {
         return false;
       if (&Sec == Obj->getSectionHeaderStrTab())
         return false;
-      switch(Sec.Type) {
+      switch (Sec.Type) {
       case SHT_SYMTAB:
       case SHT_REL:
       case SHT_RELA:

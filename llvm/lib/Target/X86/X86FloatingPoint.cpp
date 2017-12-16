@@ -349,7 +349,7 @@ bool FPS::runOnMachineFunction(MachineFunction &MF) {
   
   // In regcall convention, some FP registers may not be passed through
   // the stack, so they will need to be assigned to the stack first
-  if ((Entry->getParent()->getFunction()->getCallingConv() ==
+  if ((Entry->getParent()->getFunction().getCallingConv() ==
     CallingConv::X86_RegCall) && (Bundle.Mask && !Bundle.FixCount)) {
     // In the register calling convention, up to one FP argument could be 
     // saved in the first FP register.
@@ -973,7 +973,7 @@ void FPS::handleCall(MachineBasicBlock::iterator &I) {
     unsigned R = MO.getReg() - X86::FP0;
 
     if (R < 8) {
-      if (MF->getFunction()->getCallingConv() != CallingConv::X86_RegCall) {
+      if (MF->getFunction().getCallingConv() != CallingConv::X86_RegCall) {
         assert(MO.isDef() && MO.isImplicit());
       }
 

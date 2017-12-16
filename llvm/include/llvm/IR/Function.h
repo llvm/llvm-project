@@ -131,7 +131,7 @@ public:
   // This is here to help easily convert from FunctionT * (Function * or
   // MachineFunction *) in BlockFrequencyInfoImpl to Function * by calling
   // FunctionT->getFunction().
-  const Function *getFunction() const { return this; }
+  const Function &getFunction() const { return *this; }
 
   static Function *Create(FunctionType *Ty, LinkageTypes Linkage,
                           const Twine &N = "", Module *M = nullptr) {

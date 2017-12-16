@@ -98,6 +98,15 @@ void ComputeCrossModuleImportForModule(
     StringRef ModulePath, const ModuleSummaryIndex &Index,
     FunctionImporter::ImportMapTy &ImportList);
 
+/// Mark all external summaries in \p Index for import into the given module.
+/// Used for distributed builds using a distributed index.
+///
+/// \p ImportList will be populated with a map that can be passed to
+/// FunctionImporter::importFunctions() above (see description there).
+void ComputeCrossModuleImportForModuleFromIndex(
+    StringRef ModulePath, const ModuleSummaryIndex &Index,
+    FunctionImporter::ImportMapTy &ImportList);
+
 /// Compute all the symbols that are "dead": i.e these that can't be reached
 /// in the graph from any of the given symbols listed in
 /// \p GUIDPreservedSymbols.

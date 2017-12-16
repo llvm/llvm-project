@@ -164,7 +164,7 @@ void X86CmovConverterPass::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool X86CmovConverterPass::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
   if (!EnableCmovConverter)
     return false;

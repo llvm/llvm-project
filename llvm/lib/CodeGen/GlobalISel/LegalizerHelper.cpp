@@ -136,7 +136,7 @@ LegalizerHelper::LegalizeResult
 LegalizerHelper::libcall(MachineInstr &MI) {
   LLT LLTy = MRI.getType(MI.getOperand(0).getReg());
   unsigned Size = LLTy.getSizeInBits();
-  auto &Ctx = MIRBuilder.getMF().getFunction()->getContext();
+  auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
 
   MIRBuilder.setInstr(MI);
 
@@ -410,7 +410,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
       return UnableToLegalize;
     int NumParts = SizeOp0 / NarrowSize;
     const APInt &Cst = MI.getOperand(1).getCImm()->getValue();
-    LLVMContext &Ctx = MIRBuilder.getMF().getFunction()->getContext();
+    LLVMContext &Ctx = MIRBuilder.getMF().getFunction().getContext();
 
     SmallVector<unsigned, 2> DstRegs;
     for (int i = 0; i < NumParts; ++i) {
@@ -824,7 +824,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
       return UnableToLegalize;
     unsigned Res = MI.getOperand(0).getReg();
     Type *ZeroTy;
-    LLVMContext &Ctx = MIRBuilder.getMF().getFunction()->getContext();
+    LLVMContext &Ctx = MIRBuilder.getMF().getFunction().getContext();
     switch (Ty.getSizeInBits()) {
     case 16:
       ZeroTy = Type::getHalfTy(Ctx);

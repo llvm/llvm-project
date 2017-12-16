@@ -211,7 +211,7 @@ public:
   MachineInstr *lookThroughCRCopy(unsigned Reg, unsigned &Subreg,
                                   MachineInstr *&CpDef);
   bool runOnMachineFunction(MachineFunction &MF) override {
-    if (skipFunction(*MF.getFunction()))
+    if (skipFunction(MF.getFunction()))
       return false;
 
     // If the subtarget doesn't use CR bits, there's nothing to do.

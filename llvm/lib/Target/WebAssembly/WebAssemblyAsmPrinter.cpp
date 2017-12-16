@@ -114,7 +114,7 @@ void WebAssemblyAsmPrinter::EmitFunctionBodyStart() {
   getTargetStreamer()->emitParam(CurrentFnSym, MFI->getParams());
 
   SmallVector<MVT, 4> ResultVTs;
-  const Function &F(*MF->getFunction());
+  const Function &F = MF->getFunction();
 
   // Emit the function index.
   if (MDNode *Idx = F.getMetadata("wasm.index")) {

@@ -120,7 +120,7 @@ bool AArch64StorePairSuppress::isNarrowFPStore(const MachineInstr &MI) {
 }
 
 bool AArch64StorePairSuppress::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   const TargetSubtargetInfo &ST = MF.getSubtarget();

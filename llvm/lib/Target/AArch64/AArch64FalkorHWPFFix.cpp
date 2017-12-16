@@ -798,7 +798,7 @@ bool FalkorHWPFFix::runOnMachineFunction(MachineFunction &Fn) {
   if (ST.getProcFamily() != AArch64Subtarget::Falkor)
     return false;
 
-  if (skipFunction(*Fn.getFunction()))
+  if (skipFunction(Fn.getFunction()))
     return false;
 
   TII = static_cast<const AArch64InstrInfo *>(ST.getInstrInfo());

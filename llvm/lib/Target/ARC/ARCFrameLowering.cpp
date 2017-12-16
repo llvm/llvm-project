@@ -88,7 +88,7 @@ determineLastCalleeSave(const std::vector<CalleeSavedInfo> &CSI) {
 void ARCFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                             BitVector &SavedRegs,
                                             RegScavenger *RS) const {
-  DEBUG(dbgs() << "Determine Callee Saves: " << MF.getFunction()->getName()
+  DEBUG(dbgs() << "Determine Callee Saves: " << MF.getName()
                << "\n");
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
   SavedRegs.set(ARC::BLINK);
@@ -115,7 +115,7 @@ void ARCFrameLowering::adjustStackToMatchRecords(
 /// registers onto the stack, when enough callee saved registers are required.
 void ARCFrameLowering::emitPrologue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {
-  DEBUG(dbgs() << "Emit Prologue: " << MF.getFunction()->getName() << "\n");
+  DEBUG(dbgs() << "Emit Prologue: " << MF.getName() << "\n");
   auto *AFI = MF.getInfo<ARCFunctionInfo>();
   MachineModuleInfo &MMI = MF.getMMI();
   MCContext &Context = MMI.getContext();
@@ -131,7 +131,7 @@ void ARCFrameLowering::emitPrologue(MachineFunction &MF,
   unsigned StackSlotsUsedByFunclet = 0;
   bool SavedBlink = false;
   unsigned AlreadyAdjusted = 0;
-  if (MF.getFunction()->isVarArg()) {
+  if (MF.getFunction().isVarArg()) {
     // Add in the varargs area here first.
     DEBUG(dbgs() << "Varargs\n");
     unsigned VarArgsBytes = MFI.getObjectSize(AFI->getVarArgsFrameIndex());
@@ -235,7 +235,7 @@ void ARCFrameLowering::emitPrologue(MachineFunction &MF,
 /// registers onto the stack, when enough callee saved registers are required.
 void ARCFrameLowering::emitEpilogue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {
-  DEBUG(dbgs() << "Emit Epilogue: " << MF.getFunction()->getName() << "\n");
+  DEBUG(dbgs() << "Emit Epilogue: " << MF.getName() << "\n");
   auto *AFI = MF.getInfo<ARCFunctionInfo>();
   const ARCInstrInfo *TII = MF.getSubtarget<ARCSubtarget>().getInstrInfo();
   MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
@@ -302,7 +302,7 @@ void ARCFrameLowering::emitEpilogue(MachineFunction &MF,
   }
 
   // Relieve the varargs area if necessary.
-  if (MF.getFunction()->isVarArg()) {
+  if (MF.getFunction().isVarArg()) {
     // Add in the varargs area here first.
     DEBUG(dbgs() << "Varargs\n");
     unsigned VarArgsBytes = MFI.getObjectSize(AFI->getVarArgsFrameIndex());
@@ -383,7 +383,7 @@ bool ARCFrameLowering::spillCalleeSavedRegisters(
     const std::vector<CalleeSavedInfo> &CSI,
     const TargetRegisterInfo *TRI) const {
   DEBUG(dbgs() << "Spill callee saved registers: "
-               << MBB.getParent()->getFunction()->getName() << "\n");
+               << MBB.getParent()->getName() << "\n");
   // There are routines for saving at least 3 registers (r13 to r15, etc.)
   unsigned Last = determineLastCalleeSave(CSI);
   if (UseSaveRestoreFunclet && Last > ARC::R14) {
@@ -400,7 +400,7 @@ bool ARCFrameLowering::restoreCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
     std::vector<CalleeSavedInfo> &CSI, const TargetRegisterInfo *TRI) const {
   DEBUG(dbgs() << "Restore callee saved registers: "
-               << MBB.getParent()->getFunction()->getName() << "\n");
+               << MBB.getParent()->getName() << "\n");
   // There are routines for saving at least 3 registers (r13 to r15, etc.)
   unsigned Last = determineLastCalleeSave(CSI);
   if (UseSaveRestoreFunclet && Last > ARC::R14) {
@@ -415,7 +415,7 @@ void ARCFrameLowering::processFunctionBeforeFrameFinalized(
     MachineFunction &MF, RegScavenger *RS) const {
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
   DEBUG(dbgs() << "Process function before frame finalized: "
-               << MF.getFunction()->getName() << "\n");
+               << MF.getName() << "\n");
   MachineFrameInfo &MFI = MF.getFrameInfo();
   DEBUG(dbgs() << "Current stack size: " << MFI.getStackSize() << "\n");
   const TargetRegisterClass *RC = &ARC::GPR32RegClass;
@@ -440,8 +440,7 @@ static void emitRegUpdate(MachineBasicBlock &MBB,
 MachineBasicBlock::iterator ARCFrameLowering::eliminateCallFramePseudoInstr(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator I) const {
-  DEBUG(dbgs() << "EmitCallFramePseudo: " << MF.getFunction()->getName()
-               << "\n");
+  DEBUG(dbgs() << "EmitCallFramePseudo: " << MF.getName() << "\n");
   const ARCInstrInfo *TII = MF.getSubtarget<ARCSubtarget>().getInstrInfo();
   MachineInstr &Old = *I;
   DebugLoc dl = Old.getDebugLoc();

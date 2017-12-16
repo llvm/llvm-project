@@ -307,7 +307,7 @@ void SIWholeQuadMode::markInstructionUses(const MachineInstr &MI, char Flag,
 char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
                                        std::vector<WorkItem> &Worklist) {
   char GlobalFlags = 0;
-  bool WQMOutputs = MF.getFunction()->hasFnAttribute("amdgpu-ps-wqm-outputs");
+  bool WQMOutputs = MF.getFunction().hasFnAttribute("amdgpu-ps-wqm-outputs");
   SmallVector<MachineInstr *, 4> SetInactiveInstrs;
 
   // We need to visit the basic blocks in reverse post-order so that we visit
@@ -842,7 +842,7 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   Blocks.clear();
   LiveMaskQueries.clear();
   LowerToCopyInstrs.clear();
-  CallingConv = MF.getFunction()->getCallingConv();
+  CallingConv = MF.getFunction().getCallingConv();
 
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
 

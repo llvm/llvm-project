@@ -56,7 +56,7 @@ namespace {
     }
 
     bool runOnMachineFunction(MachineFunction &MF) override {
-      if (skipFunction(*MF.getFunction()) || !RunPreEmitPeephole)
+      if (skipFunction(MF.getFunction()) || !RunPreEmitPeephole)
         return false;
       bool Changed = false;
       const PPCInstrInfo *TII = MF.getSubtarget<PPCSubtarget>().getInstrInfo();

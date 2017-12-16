@@ -409,7 +409,7 @@ void Value::doRAUW(Value *New, bool NoMetadata) {
   if (!NoMetadata && isUsedByMetadata())
     ValueAsMetadata::handleRAUW(this, New);
 
-  while (!use_empty()) {
+  while (!materialized_use_empty()) {
     Use &U = *UseList;
     // Must handle Constants specially, we cannot call replaceUsesOfWith on a
     // constant because they are uniqued.

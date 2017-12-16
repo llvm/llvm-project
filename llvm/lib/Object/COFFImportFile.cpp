@@ -188,7 +188,7 @@ ObjectFactory::createImportDescriptor(std::vector<uint8_t> &Buffer) {
           (ImportName.size() + 1)),
       u32(NumberOfSymbols),
       u16(0),
-      u16(is32bit(Machine) ? IMAGE_FILE_32BIT_MACHINE : 0),
+      u16(is32bit(Machine) ? IMAGE_FILE_32BIT_MACHINE : C_Invalid),
   };
   append(Buffer, Header);
 
@@ -324,7 +324,7 @@ ObjectFactory::createNullImportDescriptor(std::vector<uint8_t> &Buffer) {
           sizeof(coff_import_directory_table_entry)),
       u32(NumberOfSymbols),
       u16(0),
-      u16(is32bit(Machine) ? IMAGE_FILE_32BIT_MACHINE : 0),
+      u16(is32bit(Machine) ? IMAGE_FILE_32BIT_MACHINE : C_Invalid),
   };
   append(Buffer, Header);
 
@@ -387,7 +387,7 @@ NewArchiveMember ObjectFactory::createNullThunk(std::vector<uint8_t> &Buffer) {
           VASize),
       u32(NumberOfSymbols),
       u16(0),
-      u16(is32bit(Machine) ? IMAGE_FILE_32BIT_MACHINE : 0),
+      u16(is32bit(Machine) ? IMAGE_FILE_32BIT_MACHINE : C_Invalid),
   };
   append(Buffer, Header);
 

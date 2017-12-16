@@ -54,11 +54,11 @@ static bool doesNotGeneratecode(const MachineInstr &MI) {
 }
 
 bool PatchableFunction::runOnMachineFunction(MachineFunction &MF) {
-  if (!MF.getFunction()->hasFnAttribute("patchable-function"))
+  if (!MF.getFunction().hasFnAttribute("patchable-function"))
     return false;
 
 #ifndef NDEBUG
-  Attribute PatchAttr = MF.getFunction()->getFnAttribute("patchable-function");
+  Attribute PatchAttr = MF.getFunction().getFnAttribute("patchable-function");
   StringRef PatchType = PatchAttr.getValueAsString();
   assert(PatchType == "prologue-short-redirect" && "Only possibility today!");
 #endif

@@ -14,7 +14,7 @@
 ; RUN:   -r %t1.bc,personality_routine3,l \
 ; RUN:   -r %t1.bc,main,xp \
 ; RUN:   -r %t1.bc,bar,l
-; RUN: llvm-readobj -t %t.o.1 | FileCheck %s --check-prefix=BINDING
+; RUN: llvm-readobj -t %t.o.2 | FileCheck %s --check-prefix=BINDING
 
 ; BINDING:     Symbol {
 ; BINDING:       Name: personality_routine
