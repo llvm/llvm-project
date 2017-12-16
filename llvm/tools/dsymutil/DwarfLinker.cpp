@@ -3127,21 +3127,16 @@ void DwarfLinker::patchLineTableForUnit(CompileUnit &Unit,
   }
 
   // Finished extracting, now emit the line tables.
-  // FIXME: LLVM hardcodes its prologue values. We just copy the
+  uint32_t PrologueEnd = *StmtList + 10 + LineTable.Prologue.PrologueLength;
+  // FIXME: LLVM hardcodes it's prologue values. We just copy the
   // prologue over and that works because we act as both producer and
   // consumer. It would be nicer to have a real configurable line
   // table emitter.
-  if (LineTable.Prologue.getVersion() < 2 ||
-      LineTable.Prologue.getVersion() > 5 ||
+  if (LineTable.Prologue.getVersion() != 2 ||
       LineTable.Prologue.DefaultIsStmt != DWARF2_LINE_DEFAULT_IS_STMT ||
       LineTable.Prologue.OpcodeBase > 13)
     reportWarning("line table parameters mismatch. Cannot emit.");
   else {
-    uint32_t PrologueEnd = *StmtList + 10 + LineTable.Prologue.PrologueLength;
-    // DWARFv5 has an extra 2 bytes of information before the header_length
-    // field.
-    if (LineTable.Prologue.getVersion() == 5)
-      PrologueEnd += 2;
     StringRef LineData = OrigDwarf.getDWARFObj().getLineSection().Data;
     MCDwarfLineTableParams Params;
     Params.DWARF2LineOpcodeBase = LineTable.Prologue.OpcodeBase;
