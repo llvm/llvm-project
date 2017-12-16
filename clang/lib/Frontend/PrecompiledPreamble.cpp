@@ -115,19 +115,6 @@ void TemporaryFiles::removeFile(StringRef File) {
   llvm::sys::fs::remove(File);
 }
 
-class PreambleMacroCallbacks : public PPCallbacks {
-public:
-  PreambleMacroCallbacks(PreambleCallbacks &Callbacks) : Callbacks(Callbacks) {}
-
-  void MacroDefined(const Token &MacroNameTok,
-                    const MacroDirective *MD) override {
-    Callbacks.HandleMacroDefined(MacroNameTok, MD);
-  }
-
-private:
-  PreambleCallbacks &Callbacks;
-};
-
 class PrecompilePreambleAction : public ASTFrontendAction {
 public:
   PrecompilePreambleAction(std::string *InMemStorage,
@@ -213,8 +200,6 @@ PrecompilePreambleAction::CreateASTConsumer(CompilerInstance &CI,
   if (!CI.getFrontendOpts().RelocatablePCH)
     Sysroot.clear();
 
-  CI.getPreprocessor().addPPCallbacks(
-      llvm::make_unique<PreambleMacroCallbacks>(Callbacks));
   return llvm::make_unique<PrecompilePreambleConsumer>(
       *this, CI.getPreprocessor(), Sysroot, std::move(OS));
 }
@@ -350,6 +335,11 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
       StoreInMemory ? &Storage.asMemory().Data : nullptr, Callbacks));
   if (!Act->BeginSourceFile(*Clang.get(), Clang->getFrontendOpts().Inputs[0]))
     return BuildPreambleError::BeginSourceFileFailed;
+
+  std::unique_ptr<PPCallbacks> DelegatedPPCallbacks =
+      Callbacks.createPPCallbacks();
+  if (DelegatedPPCallbacks)
+    Clang->getPreprocessor().addPPCallbacks(std::move(DelegatedPPCallbacks));
 
   Act->Execute();
 
@@ -707,8 +697,9 @@ void PrecompiledPreamble::setupPreambleStorage(
 void PreambleCallbacks::AfterExecute(CompilerInstance &CI) {}
 void PreambleCallbacks::AfterPCHEmitted(ASTWriter &Writer) {}
 void PreambleCallbacks::HandleTopLevelDecl(DeclGroupRef DG) {}
-void PreambleCallbacks::HandleMacroDefined(const Token &MacroNameTok,
-                                           const MacroDirective *MD) {}
+std::unique_ptr<PPCallbacks> PreambleCallbacks::createPPCallbacks() {
+  return nullptr;
+}
 
 std::error_code clang::make_error_code(BuildPreambleError Error) {
   return std::error_code(static_cast<int>(Error), BuildPreambleErrorCategory());

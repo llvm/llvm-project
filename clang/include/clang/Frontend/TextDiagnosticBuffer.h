@@ -29,6 +29,11 @@ public:
   typedef DiagList::const_iterator const_iterator;
 private:
   DiagList Errors, Warnings, Remarks, Notes;
+  /// All - All diagnostics in the order in which they were generated.  That
+  /// order likely doesn't correspond to user input order, but it at least
+  /// keeps notes in the right places.  Each pair in the vector is a diagnostic
+  /// level and an index into the corresponding DiagList above.
+  std::vector<std::pair<DiagnosticsEngine::Level, size_t>> All;
 public:
   const_iterator err_begin() const  { return Errors.begin(); }
   const_iterator err_end() const    { return Errors.end(); }

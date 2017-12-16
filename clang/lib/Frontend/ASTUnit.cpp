@@ -970,9 +970,8 @@ public:
     }
   }
 
-  void HandleMacroDefined(const Token &MacroNameTok,
-                          const MacroDirective *MD) override {
-    AddDefinedMacroToHash(MacroNameTok, Hash);
+  std::unique_ptr<PPCallbacks> createPPCallbacks() override {
+    return llvm::make_unique<MacroDefinitionTrackerPPCallbacks>(Hash);
   }
 
 private:

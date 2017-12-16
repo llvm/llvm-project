@@ -30,34 +30,45 @@ void TextDiagnosticBuffer::HandleDiagnostic(DiagnosticsEngine::Level Level,
   default: llvm_unreachable(
                          "Diagnostic not handled during diagnostic buffering!");
   case DiagnosticsEngine::Note:
+    All.emplace_back(Level, Notes.size());
     Notes.emplace_back(Info.getLocation(), Buf.str());
     break;
   case DiagnosticsEngine::Warning:
+    All.emplace_back(Level, Warnings.size());
     Warnings.emplace_back(Info.getLocation(), Buf.str());
     break;
   case DiagnosticsEngine::Remark:
+    All.emplace_back(Level, Remarks.size());
     Remarks.emplace_back(Info.getLocation(), Buf.str());
     break;
   case DiagnosticsEngine::Error:
   case DiagnosticsEngine::Fatal:
+    All.emplace_back(Level, Errors.size());
     Errors.emplace_back(Info.getLocation(), Buf.str());
     break;
   }
 }
 
 void TextDiagnosticBuffer::FlushDiagnostics(DiagnosticsEngine &Diags) const {
-  // FIXME: Flush the diagnostics in order.
-  for (const_iterator it = err_begin(), ie = err_end(); it != ie; ++it)
-    Diags.Report(Diags.getCustomDiagID(DiagnosticsEngine::Error, "%0"))
-        << it->second;
-  for (const_iterator it = warn_begin(), ie = warn_end(); it != ie; ++it)
-    Diags.Report(Diags.getCustomDiagID(DiagnosticsEngine::Warning, "%0"))
-        << it->second;
-  for (const_iterator it = remark_begin(), ie = remark_end(); it != ie; ++it)
-    Diags.Report(Diags.getCustomDiagID(DiagnosticsEngine::Remark, "%0"))
-        << it->second;
-  for (const_iterator it = note_begin(), ie = note_end(); it != ie; ++it)
-    Diags.Report(Diags.getCustomDiagID(DiagnosticsEngine::Note, "%0"))
-        << it->second;
+  for (auto it = All.begin(), ie = All.end(); it != ie; ++it) {
+    auto Diag = Diags.Report(Diags.getCustomDiagID(it->first, "%0"));
+    switch (it->first) {
+    default: llvm_unreachable(
+                           "Diagnostic not handled during diagnostic flushing!");
+    case DiagnosticsEngine::Note:
+      Diag << Notes[it->second].second;
+      break;
+    case DiagnosticsEngine::Warning:
+      Diag << Warnings[it->second].second;
+      break;
+    case DiagnosticsEngine::Remark:
+      Diag << Remarks[it->second].second;
+      break;
+    case DiagnosticsEngine::Error:
+    case DiagnosticsEngine::Fatal:
+      Diag << Errors[it->second].second;
+      break;
+    }
+  }
 }
 

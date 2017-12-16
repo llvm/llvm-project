@@ -400,8 +400,12 @@ def fcaret_diagnostics_max_lines :
   HelpText<"Set the maximum number of source lines to show in a caret diagnostic">;
 def fmessage_length : Separate<["-"], "fmessage-length">, MetaVarName<"<N>">,
   HelpText<"Format message diagnostics so that they fit within N columns or fewer, when possible.">;
+def verify_EQ : CommaJoined<["-"], "verify=">,
+  MetaVarName<"<prefixes>">,
+  HelpText<"Verify diagnostic output using comment directives that start with"
+           " prefixes in the comma-separated sequence <prefixes>">;
 def verify : Flag<["-"], "verify">,
-  HelpText<"Verify diagnostic output using comment directives">;
+  HelpText<"Equivalent to -verify=expected">;
 def verify_ignore_unexpected : Flag<["-"], "verify-ignore-unexpected">,
   HelpText<"Ignore unexpected diagnostic messages">;
 def verify_ignore_unexpected_EQ : CommaJoined<["-"], "verify-ignore-unexpected=">,

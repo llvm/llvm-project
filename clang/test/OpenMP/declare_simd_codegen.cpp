@@ -8,11 +8,22 @@
 #pragma omp declare simd linear(d : 8)
 #pragma omp declare simd inbranch simdlen(32)
 #pragma omp declare simd notinbranch
+void add_1(float *d);
+
+#pragma omp declare simd linear(d : 8)
+#pragma omp declare simd inbranch simdlen(32)
+#pragma omp declare simd notinbranch
 void add_1(float *d) {}
+
+#pragma omp declare simd linear(d : 8)
+#pragma omp declare simd inbranch simdlen(32)
+#pragma omp declare simd notinbranch
+void add_2(float *d);
 
 #pragma omp declare simd aligned(hp, hp2)
 template <class C>
 void h(C *hp, C *hp2, C *hq, C *lin) {
+  add_2(0);
 }
 
 // Explicit specialization with <C=int>.
@@ -110,6 +121,7 @@ double foo(double x) { return 0; }
 // CHECK-DAG: define {{.+}}@_Z3bax2VVPdi(
 // CHECK-DAG: define {{.+}}@_Z3fooPffi(
 // CHECK-DAG: define {{.+}}@_Z3food(
+// CHECK-DAG: declare {{.+}}@_Z5add_2Pf(
 
 // CHECK-DAG: "_ZGVbM4l8__Z5add_1Pf"
 // CHECK-DAG: "_ZGVbN4l8__Z5add_1Pf"
@@ -276,6 +288,23 @@ double foo(double x) { return 0; }
 // CHECK-DAG: "_ZGVdN8ua16vl1__Z3fooPffi"
 // CHECK-DAG: "_ZGVeM16ua16vl1__Z3fooPffi"
 // CHECK-DAG: "_ZGVeN16ua16vl1__Z3fooPffi"
+
+// CHECK-DAG: "_ZGVbM4l8__Z5add_2Pf"
+// CHECK-DAG: "_ZGVbN4l8__Z5add_2Pf"
+// CHECK-DAG: "_ZGVcM8l8__Z5add_2Pf"
+// CHECK-DAG: "_ZGVcN8l8__Z5add_2Pf"
+// CHECK-DAG: "_ZGVdM8l8__Z5add_2Pf"
+// CHECK-DAG: "_ZGVdN8l8__Z5add_2Pf"
+// CHECK-DAG: "_ZGVeM16l8__Z5add_2Pf"
+// CHECK-DAG: "_ZGVeN16l8__Z5add_2Pf"
+// CHECK-DAG: "_ZGVbM32v__Z5add_2Pf"
+// CHECK-DAG: "_ZGVcM32v__Z5add_2Pf"
+// CHECK-DAG: "_ZGVdM32v__Z5add_2Pf"
+// CHECK-DAG: "_ZGVeM32v__Z5add_2Pf"
+// CHECK-DAG: "_ZGVbN2v__Z5add_2Pf"
+// CHECK-DAG: "_ZGVcN4v__Z5add_2Pf"
+// CHECK-DAG: "_ZGVdN4v__Z5add_2Pf"
+// CHECK-DAG: "_ZGVeN8v__Z5add_2Pf"
 
 // CHECK-DAG: "_ZGVbN2v__Z3food"
 // CHECK-DAG: "_ZGVcN4v__Z3food"
