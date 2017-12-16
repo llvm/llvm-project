@@ -839,6 +839,93 @@ RValue CodeGenFunction::emitBuiltinOSLogFormat(const CallExpr &E) {
   return RValue::get(BufAddr.getPointer());
 }
 
+/// Determine if a binop is a checked mixed-sign multiply we can specialize.
+static bool isSpecialMixedSignMultiply(unsigned BuiltinID,
+                                       WidthAndSignedness Op1Info,
+                                       WidthAndSignedness Op2Info,
+                                       WidthAndSignedness ResultInfo) {
+  return BuiltinID == Builtin::BI__builtin_mul_overflow &&
+         Op1Info.Width == Op2Info.Width && Op1Info.Width >= ResultInfo.Width &&
+         Op1Info.Signed != Op2Info.Signed;
+}
+
+/// Emit a checked mixed-sign multiply. This is a cheaper specialization of
+/// the generic checked-binop irgen.
+static RValue
+EmitCheckedMixedSignMultiply(CodeGenFunction &CGF, const clang::Expr *Op1,
+                             WidthAndSignedness Op1Info, const clang::Expr *Op2,
+                             WidthAndSignedness Op2Info,
+                             const clang::Expr *ResultArg, QualType ResultQTy,
+                             WidthAndSignedness ResultInfo) {
+  assert(isSpecialMixedSignMultiply(Builtin::BI__builtin_mul_overflow, Op1Info,
+                                    Op2Info, ResultInfo) &&
+         "Not a mixed-sign multipliction we can specialize");
+
+  // Emit the signed and unsigned operands.
+  const clang::Expr *SignedOp = Op1Info.Signed ? Op1 : Op2;
+  const clang::Expr *UnsignedOp = Op1Info.Signed ? Op2 : Op1;
+  llvm::Value *Signed = CGF.EmitScalarExpr(SignedOp);
+  llvm::Value *Unsigned = CGF.EmitScalarExpr(UnsignedOp);
+
+  llvm::Type *OpTy = Signed->getType();
+  llvm::Value *Zero = llvm::Constant::getNullValue(OpTy);
+  Address ResultPtr = CGF.EmitPointerWithAlignment(ResultArg);
+  llvm::Type *ResTy = ResultPtr.getElementType();
+
+  // Take the absolute value of the signed operand.
+  llvm::Value *IsNegative = CGF.Builder.CreateICmpSLT(Signed, Zero);
+  llvm::Value *AbsOfNegative = CGF.Builder.CreateSub(Zero, Signed);
+  llvm::Value *AbsSigned =
+      CGF.Builder.CreateSelect(IsNegative, AbsOfNegative, Signed);
+
+  // Perform a checked unsigned multiplication.
+  llvm::Value *UnsignedOverflow;
+  llvm::Value *UnsignedResult =
+      EmitOverflowIntrinsic(CGF, llvm::Intrinsic::umul_with_overflow, AbsSigned,
+                            Unsigned, UnsignedOverflow);
+
+  llvm::Value *Overflow, *Result;
+  if (ResultInfo.Signed) {
+    // Signed overflow occurs if the result is greater than INT_MAX or lesser
+    // than INT_MIN, i.e when |Result| > (INT_MAX + IsNegative).
+    auto IntMax = llvm::APInt::getSignedMaxValue(ResultInfo.Width)
+                      .zextOrSelf(Op1Info.Width);
+    llvm::Value *MaxResult =
+        CGF.Builder.CreateAdd(llvm::ConstantInt::get(OpTy, IntMax),
+                              CGF.Builder.CreateZExt(IsNegative, OpTy));
+    llvm::Value *SignedOverflow =
+        CGF.Builder.CreateICmpUGT(UnsignedResult, MaxResult);
+    Overflow = CGF.Builder.CreateOr(UnsignedOverflow, SignedOverflow);
+
+    // Prepare the signed result (possibly by negating it).
+    llvm::Value *NegativeResult = CGF.Builder.CreateNeg(UnsignedResult);
+    llvm::Value *SignedResult =
+        CGF.Builder.CreateSelect(IsNegative, NegativeResult, UnsignedResult);
+    Result = CGF.Builder.CreateTrunc(SignedResult, ResTy);
+  } else {
+    // Unsigned overflow occurs if the result is < 0 or greater than UINT_MAX.
+    llvm::Value *Underflow = CGF.Builder.CreateAnd(
+        IsNegative, CGF.Builder.CreateIsNotNull(UnsignedResult));
+    Overflow = CGF.Builder.CreateOr(UnsignedOverflow, Underflow);
+    if (ResultInfo.Width < Op1Info.Width) {
+      auto IntMax =
+          llvm::APInt::getMaxValue(ResultInfo.Width).zext(Op1Info.Width);
+      llvm::Value *TruncOverflow = CGF.Builder.CreateICmpUGT(
+          UnsignedResult, llvm::ConstantInt::get(OpTy, IntMax));
+      Overflow = CGF.Builder.CreateOr(Overflow, TruncOverflow);
+    }
+
+    Result = CGF.Builder.CreateTrunc(UnsignedResult, ResTy);
+  }
+  assert(Overflow && Result && "Missing overflow or result");
+
+  bool isVolatile =
+      ResultArg->getType()->getPointeeType().isVolatileQualified();
+  CGF.Builder.CreateStore(CGF.EmitToMemory(Result, ResultQTy), ResultPtr,
+                          isVolatile);
+  return RValue::get(Overflow);
+}
+
 RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
                                         unsigned BuiltinID, const CallExpr *E,
                                         ReturnValueSlot ReturnValue) {
@@ -2323,6 +2410,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
         getIntegerWidthAndSignedness(CGM.getContext(), RightArg->getType());
     WidthAndSignedness ResultInfo =
         getIntegerWidthAndSignedness(CGM.getContext(), ResultQTy);
+
+    // Handle mixed-sign multiplication as a special case, because adding
+    // runtime or backend support for our generic irgen would be too expensive.
+    if (isSpecialMixedSignMultiply(BuiltinID, LeftInfo, RightInfo, ResultInfo))
+      return EmitCheckedMixedSignMultiply(*this, LeftArg, LeftInfo, RightArg,
+                                          RightInfo, ResultArg, ResultQTy,
+                                          ResultInfo);
+
     WidthAndSignedness EncompassingInfo =
         EncompassingIntegerType({LeftInfo, RightInfo, ResultInfo});
 
@@ -7469,6 +7564,19 @@ static Value *EmitX86MaskedLoad(CodeGenFunction &CGF,
   return CGF.Builder.CreateMaskedLoad(Ops[0], Align, MaskVec, Ops[1]);
 }
 
+static Value *EmitX86MaskLogic(CodeGenFunction &CGF, Instruction::BinaryOps Opc,
+                              unsigned NumElts, SmallVectorImpl<Value *> &Ops,
+                              bool InvertLHS = false) {
+  Value *LHS = getMaskVecValue(CGF, Ops[0], NumElts);
+  Value *RHS = getMaskVecValue(CGF, Ops[1], NumElts);
+
+  if (InvertLHS)
+    LHS = CGF.Builder.CreateNot(LHS);
+
+  return CGF.Builder.CreateBitCast(CGF.Builder.CreateBinOp(Opc, LHS, RHS),
+                                  CGF.Builder.getIntNTy(std::max(NumElts, 8U)));
+}
+
 static Value *EmitX86SubVectorBroadcast(CodeGenFunction &CGF,
                                         SmallVectorImpl<Value *> &Ops,
                                         llvm::Type *DstTy,
@@ -7860,6 +7968,10 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_storesd128_mask: {
     return EmitX86MaskedStore(*this, Ops, 16);
   }
+  case X86::BI__builtin_ia32_vpopcntd_128:
+  case X86::BI__builtin_ia32_vpopcntq_128:
+  case X86::BI__builtin_ia32_vpopcntd_256:
+  case X86::BI__builtin_ia32_vpopcntq_256:
   case X86::BI__builtin_ia32_vpopcntd_512:
   case X86::BI__builtin_ia32_vpopcntq_512: {
     llvm::Type *ResultType = ConvertType(E->getType());
@@ -8116,6 +8228,22 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_ucmpq512_mask: {
     unsigned CC = cast<llvm::ConstantInt>(Ops[2])->getZExtValue() & 0x7;
     return EmitX86MaskedCompare(*this, CC, false, Ops);
+  }
+
+  case X86::BI__builtin_ia32_kandhi:
+    return EmitX86MaskLogic(*this, Instruction::And, 16, Ops);
+  case X86::BI__builtin_ia32_kandnhi:
+    return EmitX86MaskLogic(*this, Instruction::And, 16, Ops, true);
+  case X86::BI__builtin_ia32_korhi:
+    return EmitX86MaskLogic(*this, Instruction::Or, 16, Ops);
+  case X86::BI__builtin_ia32_kxnorhi:
+    return EmitX86MaskLogic(*this, Instruction::Xor, 16, Ops, true);
+  case X86::BI__builtin_ia32_kxorhi:
+    return EmitX86MaskLogic(*this, Instruction::Xor, 16, Ops);
+  case X86::BI__builtin_ia32_knothi: {
+    Ops[0] = getMaskVecValue(*this, Ops[0], 16);
+    return Builder.CreateBitCast(Builder.CreateNot(Ops[0]),
+                                 Builder.getInt16Ty());
   }
 
   case X86::BI__builtin_ia32_vplzcntd_128_mask:
