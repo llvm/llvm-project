@@ -279,7 +279,7 @@ public:
 
   /// Try to lookup a structure type by name, and create one if one does not
   /// exist.
-  static StructType *getOrCreate(LLVMContext &Context, StringRef Name);
+  static StructType *lookupOrCreate(LLVMContext &Context, StringRef Name);
 
   /// This static method is a convenience method for creating structure types by
   /// specifying the elements as arguments. Note that this method always returns

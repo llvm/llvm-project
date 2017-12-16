@@ -103,7 +103,7 @@ bool LowerTapirToTarget::unifyReturns(Function &F) {
 
 SmallVectorImpl<Function *>
 *LowerTapirToTarget::processFunction(Function &F, DominatorTree &DT,
-                                   AssumptionCache &AC) {
+                                     AssumptionCache &AC) {
   if (unifyReturns(F))
     DT.recalculate(F);
 
@@ -148,12 +148,16 @@ bool LowerTapirToTarget::runOnModule(Module &M) {
 
   // Add functions that detach to the work list.
   SmallVector<Function *, 4> WorkList;
-  for (Function &F : M)
+  for (Function &F : M) {
+    if (F.getName() == "main")
+      WorkList.push_back(&F);
+
     for (BasicBlock &BB : F)
       if (isa<DetachInst>(BB.getTerminator())) {
         WorkList.push_back(&F);
         break;
       }
+  }
 
   if (WorkList.empty())
     return false;
