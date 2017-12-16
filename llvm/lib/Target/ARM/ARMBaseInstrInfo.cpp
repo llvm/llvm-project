@@ -1512,18 +1512,18 @@ static unsigned duplicateCPV(MachineFunction &MF, unsigned &CPI) {
         4, ACPV->getModifier(), ACPV->mustAddCurrentAddress());
   else if (ACPV->isExtSymbol())
     NewCPV = ARMConstantPoolSymbol::
-      Create(MF.getFunction()->getContext(),
+      Create(MF.getFunction().getContext(),
              cast<ARMConstantPoolSymbol>(ACPV)->getSymbol(), PCLabelId, 4);
   else if (ACPV->isBlockAddress())
     NewCPV = ARMConstantPoolConstant::
       Create(cast<ARMConstantPoolConstant>(ACPV)->getBlockAddress(), PCLabelId,
              ARMCP::CPBlockAddress, 4);
   else if (ACPV->isLSDA())
-    NewCPV = ARMConstantPoolConstant::Create(MF.getFunction(), PCLabelId,
+    NewCPV = ARMConstantPoolConstant::Create(&MF.getFunction(), PCLabelId,
                                              ARMCP::CPLSDA, 4);
   else if (ACPV->isMachineBasicBlock())
     NewCPV = ARMConstantPoolMBB::
-      Create(MF.getFunction()->getContext(),
+      Create(MF.getFunction().getContext(),
              cast<ARMConstantPoolMBB>(ACPV)->getMBB(), PCLabelId, 4);
   else
     llvm_unreachable("Unexpected ARM constantpool value type!!");
@@ -1843,7 +1843,7 @@ isProfitableToIfCvt(MachineBasicBlock &MBB,
   // If we are optimizing for size, see if the branch in the predecessor can be
   // lowered to cbn?z by the constant island lowering pass, and return false if
   // so. This results in a shorter instruction sequence.
-  if (MBB.getParent()->getFunction()->optForSize()) {
+  if (MBB.getParent()->getFunction().optForSize()) {
     MachineBasicBlock *Pred = *MBB.pred_begin();
     if (!Pred->empty()) {
       MachineInstr *LastMI = &*Pred->rbegin();
@@ -2210,7 +2210,7 @@ bool llvm::tryFoldSPUpdateIntoPushPop(const ARMSubtarget &Subtarget,
                                       unsigned NumBytes) {
   // This optimisation potentially adds lots of load and store
   // micro-operations, it's only really a great benefit to code-size.
-  if (!MF.getFunction()->optForMinSize())
+  if (!MF.getFunction().optForMinSize())
     return false;
 
   // If only one register is pushed/popped, LLVM can use an LDR/STR
@@ -3982,7 +3982,7 @@ int ARMBaseInstrInfo::getOperandLatencyImpl(
     if (Latency > 0 && Subtarget.isThumb2()) {
       const MachineFunction *MF = DefMI.getParent()->getParent();
       // FIXME: Use Function::optForSize().
-      if (MF->getFunction()->hasFnAttribute(Attribute::OptimizeForSize))
+      if (MF->getFunction().hasFnAttribute(Attribute::OptimizeForSize))
         --Latency;
     }
     return Latency;

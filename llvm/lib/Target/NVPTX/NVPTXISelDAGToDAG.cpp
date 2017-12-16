@@ -1003,7 +1003,7 @@ static bool canLowerToLDG(MemSDNode *N, const NVPTXSubtarget &Subtarget,
     return true;
 
   // Load wasn't explicitly invariant.  Attempt to infer invariance.
-  if (!isKernelFunction(*F->getFunction()))
+  if (!isKernelFunction(F->getFunction()))
     return false;
 
   // We use GetUnderlyingObjects() here instead of

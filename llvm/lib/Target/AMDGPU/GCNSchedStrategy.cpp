@@ -37,7 +37,7 @@ static unsigned getMaxWaves(unsigned SGPRs, unsigned VGPRs,
                                       ST.getOccupancyWithNumVGPRs(VGPRs));
   return std::min(MinRegOccupancy,
                   ST.getOccupancyWithLocalMemSize(MFI->getLDSSize(),
-                                                  *MF.getFunction()));
+                                                  MF.getFunction()));
 }
 
 void GCNMaxOccupancySchedStrategy::initialize(ScheduleDAGMI *DAG) {
@@ -315,7 +315,7 @@ GCNScheduleDAGMILive::GCNScheduleDAGMILive(MachineSchedContext *C,
   ST(MF.getSubtarget<SISubtarget>()),
   MFI(*MF.getInfo<SIMachineFunctionInfo>()),
   StartingOccupancy(ST.getOccupancyWithLocalMemSize(MFI.getLDSSize(),
-                                                    *MF.getFunction())),
+                                                    MF.getFunction())),
   MinOccupancy(StartingOccupancy), Stage(0), RegionIdx(0) {
 
   DEBUG(dbgs() << "Starting occupancy is " << StartingOccupancy << ".\n");

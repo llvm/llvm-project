@@ -1661,7 +1661,7 @@ void MipsConstantIslands::prescanForConstants() {
             int64_t V = Literal.getImm();
             DEBUG(dbgs() << "literal " << V << "\n");
             Type *Int32Ty =
-              Type::getInt32Ty(MF->getFunction()->getContext());
+              Type::getInt32Ty(MF->getFunction().getContext());
             const Constant *C = ConstantInt::get(Int32Ty, V);
             unsigned index = MCP->getConstantPoolIndex(C, 4);
             I->getOperand(2).ChangeToImmediate(index);

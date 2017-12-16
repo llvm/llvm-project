@@ -49,7 +49,7 @@ char &llvm::TailDuplicateID = TailDuplicatePass::ID;
 INITIALIZE_PASS(TailDuplicatePass, DEBUG_TYPE, "Tail Duplication", false, false)
 
 bool TailDuplicatePass::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   auto MBPI = &getAnalysis<MachineBranchProbabilityInfo>();

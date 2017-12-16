@@ -279,9 +279,9 @@ bool X86WinAllocaExpander::runOnMachineFunction(MachineFunction &MF) {
   SlotSize = TRI->getSlotSize();
 
   StackProbeSize = 4096;
-  if (MF.getFunction()->hasFnAttribute("stack-probe-size")) {
+  if (MF.getFunction().hasFnAttribute("stack-probe-size")) {
     MF.getFunction()
-        ->getFnAttribute("stack-probe-size")
+        .getFnAttribute("stack-probe-size")
         .getValueAsString()
         .getAsInteger(0, StackProbeSize);
   }

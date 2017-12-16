@@ -264,7 +264,7 @@ SparcTargetLowering::LowerReturn_32(SDValue Chain, CallingConv::ID CallConv,
 
   unsigned RetAddrOffset = 8; // Call Inst + Delay Slot
   // If the function returns a struct, copy the SRetReturnReg to I0
-  if (MF.getFunction()->hasStructRetAttr()) {
+  if (MF.getFunction().hasStructRetAttr()) {
     SparcMachineFunctionInfo *SFI = MF.getInfo<SparcMachineFunctionInfo>();
     unsigned Reg = SFI->getSRetReturnReg();
     if (!Reg)
@@ -519,7 +519,7 @@ SDValue SparcTargetLowering::LowerFormalArguments_32(
     InVals.push_back(Load);
   }
 
-  if (MF.getFunction()->hasStructRetAttr()) {
+  if (MF.getFunction().hasStructRetAttr()) {
     // Copy the SRet Argument to SRetReturnReg.
     SparcMachineFunctionInfo *SFI = MF.getInfo<SparcMachineFunctionInfo>();
     unsigned Reg = SFI->getSRetReturnReg();
@@ -701,8 +701,8 @@ static bool hasReturnsTwiceAttr(SelectionDAG &DAG, SDValue Callee,
     CalleeFn = dyn_cast<Function>(G->getGlobal());
   } else if (ExternalSymbolSDNode *E =
              dyn_cast<ExternalSymbolSDNode>(Callee)) {
-    const Function *Fn = DAG.getMachineFunction().getFunction();
-    const Module *M = Fn->getParent();
+    const Function &Fn = DAG.getMachineFunction().getFunction();
+    const Module *M = Fn.getParent();
     const char *CalleeName = E->getSymbol();
     CalleeFn = M->getFunction(CalleeName);
   }
@@ -1057,8 +1057,8 @@ SparcTargetLowering::getSRetArgSize(SelectionDAG &DAG, SDValue Callee) const
     CalleeFn = dyn_cast<Function>(G->getGlobal());
   } else if (ExternalSymbolSDNode *E =
              dyn_cast<ExternalSymbolSDNode>(Callee)) {
-    const Function *Fn = DAG.getMachineFunction().getFunction();
-    const Module *M = Fn->getParent();
+    const Function &F = DAG.getMachineFunction().getFunction();
+    const Module *M = F.getParent();
     const char *CalleeName = E->getSymbol();
     CalleeFn = M->getFunction(CalleeName);
     if (!CalleeFn && isFP128ABICall(CalleeName))

@@ -1154,9 +1154,9 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
 }
 
 void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
-  const Function *GV = MF->getFunction();
-  assert(FnDebugInfo.count(GV) == false);
-  CurFn = &FnDebugInfo[GV];
+  const Function &GV = MF->getFunction();
+  assert(FnDebugInfo.count(&GV) == false);
+  CurFn = &FnDebugInfo[&GV];
   CurFn->FuncId = NextFuncId++;
   CurFn->Begin = Asm->getFunctionBegin();
 
@@ -2273,15 +2273,15 @@ void CodeViewDebug::emitLocalVariable(const LocalVariable &Var) {
 }
 
 void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
-  const Function *GV = MF->getFunction();
-  assert(FnDebugInfo.count(GV));
-  assert(CurFn == &FnDebugInfo[GV]);
+  const Function &GV = MF->getFunction();
+  assert(FnDebugInfo.count(&GV));
+  assert(CurFn == &FnDebugInfo[&GV]);
 
-  collectVariableInfo(GV->getSubprogram());
+  collectVariableInfo(GV.getSubprogram());
 
   // Don't emit anything if we don't have any line tables.
   if (!CurFn->HaveLineInfo) {
-    FnDebugInfo.erase(GV);
+    FnDebugInfo.erase(&GV);
     CurFn = nullptr;
     return;
   }

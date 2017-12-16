@@ -3039,8 +3039,8 @@ SDValue SystemZTargetLowering::
 lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const {
   const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
   MachineFunction &MF = DAG.getMachineFunction();
-  bool RealignOpt = !MF.getFunction()-> hasFnAttribute("no-realign-stack");
-  bool StoreBackchain = MF.getFunction()->hasFnAttribute("backchain");
+  bool RealignOpt = !MF.getFunction().hasFnAttribute("no-realign-stack");
+  bool StoreBackchain = MF.getFunction().hasFnAttribute("backchain");
 
   SDValue Chain = Op.getOperand(0);
   SDValue Size  = Op.getOperand(1);
@@ -3572,7 +3572,7 @@ SDValue SystemZTargetLowering::lowerSTACKRESTORE(SDValue Op,
                                                  SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MF.getInfo<SystemZMachineFunctionInfo>()->setManipulatesSP(true);
-  bool StoreBackchain = MF.getFunction()->hasFnAttribute("backchain");
+  bool StoreBackchain = MF.getFunction().hasFnAttribute("backchain");
 
   SDValue Chain = Op.getOperand(0);
   SDValue NewSP = Op.getOperand(1);

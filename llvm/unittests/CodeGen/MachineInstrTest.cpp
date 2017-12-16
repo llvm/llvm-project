@@ -91,8 +91,9 @@ std::unique_ptr<MachineFunction> createMachineFunction() {
   auto TM = createTargetMachine();
   unsigned FunctionNum = 42;
   MachineModuleInfo MMI(TM.get());
+  const TargetSubtargetInfo &STI = *TM->getSubtargetImpl(*F);
 
-  return llvm::make_unique<MachineFunction>(F, *TM, FunctionNum, MMI);
+  return llvm::make_unique<MachineFunction>(*F, *TM, STI, FunctionNum, MMI);
 }
 
 // This test makes sure that MachineInstr::isIdenticalTo handles Defs correctly

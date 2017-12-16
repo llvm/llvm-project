@@ -340,9 +340,9 @@ Optional<SIMemOpInfo> SIMemOpInfo::getAtomicRmwInfo(
 /* static */
 void SIMemOpInfo::reportUnknownSyncScope(
     const MachineBasicBlock::iterator &MI) {
-  DiagnosticInfoUnsupported Diag(*MI->getParent()->getParent()->getFunction(),
+  DiagnosticInfoUnsupported Diag(MI->getParent()->getParent()->getFunction(),
                                  "Unsupported synchronization scope");
-  LLVMContext *CTX = &MI->getParent()->getParent()->getFunction()->getContext();
+  LLVMContext *CTX = &MI->getParent()->getParent()->getFunction().getContext();
   CTX->diagnose(Diag);
 }
 

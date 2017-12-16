@@ -42,22 +42,22 @@ AArch64RegisterInfo::AArch64RegisterInfo(const Triple &TT)
 const MCPhysReg *
 AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   assert(MF && "Invalid MachineFunction pointer.");
-  if (MF->getFunction()->getCallingConv() == CallingConv::GHC)
+  if (MF->getFunction().getCallingConv() == CallingConv::GHC)
     // GHC set of callee saved regs is empty as all those regs are
     // used for passing STG regs around
     return CSR_AArch64_NoRegs_SaveList;
-  if (MF->getFunction()->getCallingConv() == CallingConv::AnyReg)
+  if (MF->getFunction().getCallingConv() == CallingConv::AnyReg)
     return CSR_AArch64_AllRegs_SaveList;
-  if (MF->getFunction()->getCallingConv() == CallingConv::CXX_FAST_TLS)
+  if (MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS)
     return MF->getInfo<AArch64FunctionInfo>()->isSplitCSR() ?
            CSR_AArch64_CXX_TLS_Darwin_PE_SaveList :
            CSR_AArch64_CXX_TLS_Darwin_SaveList;
   if (MF->getSubtarget<AArch64Subtarget>().getTargetLowering()
           ->supportSwiftError() &&
-      MF->getFunction()->getAttributes().hasAttrSomewhere(
+      MF->getFunction().getAttributes().hasAttrSomewhere(
           Attribute::SwiftError))
     return CSR_AArch64_AAPCS_SwiftError_SaveList;
-  if (MF->getFunction()->getCallingConv() == CallingConv::PreserveMost)
+  if (MF->getFunction().getCallingConv() == CallingConv::PreserveMost)
     return CSR_AArch64_RT_MostRegs_SaveList;
   else
     return CSR_AArch64_AAPCS_SaveList;
@@ -66,7 +66,7 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 const MCPhysReg *AArch64RegisterInfo::getCalleeSavedRegsViaCopy(
     const MachineFunction *MF) const {
   assert(MF && "Invalid MachineFunction pointer.");
-  if (MF->getFunction()->getCallingConv() == CallingConv::CXX_FAST_TLS &&
+  if (MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS &&
       MF->getInfo<AArch64FunctionInfo>()->isSplitCSR())
     return CSR_AArch64_CXX_TLS_Darwin_ViaCopy_SaveList;
   return nullptr;
@@ -84,7 +84,7 @@ AArch64RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     return CSR_AArch64_CXX_TLS_Darwin_RegMask;
   if (MF.getSubtarget<AArch64Subtarget>().getTargetLowering()
           ->supportSwiftError() &&
-      MF.getFunction()->getAttributes().hasAttrSomewhere(Attribute::SwiftError))
+      MF.getFunction().getAttributes().hasAttrSomewhere(Attribute::SwiftError))
     return CSR_AArch64_AAPCS_SwiftError_RegMask;
   if (CC == CallingConv::PreserveMost)
     return CSR_AArch64_RT_MostRegs_RegMask;

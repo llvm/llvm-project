@@ -218,13 +218,13 @@ X86RegisterInfo::getPointerRegClass(const MachineFunction &MF,
 
 const TargetRegisterClass *
 X86RegisterInfo::getGPRsForTailCall(const MachineFunction &MF) const {
-  const Function *F = MF.getFunction();
-  if (IsWin64 || (F && F->getCallingConv() == CallingConv::Win64))
+  const Function &F = MF.getFunction();
+  if (IsWin64 || (F.getCallingConv() == CallingConv::Win64))
     return &X86::GR64_TCW64RegClass;
   else if (Is64Bit)
     return &X86::GR64_TCRegClass;
 
-  bool hasHipeCC = (F ? F->getCallingConv() == CallingConv::HiPE : false);
+  bool hasHipeCC = (F.getCallingConv() == CallingConv::HiPE);
   if (hasHipeCC)
     return &X86::GR32RegClass;
   return &X86::GR32_TCRegClass;
@@ -266,17 +266,17 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   assert(MF && "MachineFunction required");
 
   const X86Subtarget &Subtarget = MF->getSubtarget<X86Subtarget>();
-  const Function *F = MF->getFunction();
+  const Function &F = MF->getFunction();
   bool HasSSE = Subtarget.hasSSE1();
   bool HasAVX = Subtarget.hasAVX();
   bool HasAVX512 = Subtarget.hasAVX512();
   bool CallsEHReturn = MF->callsEHReturn();
 
-  CallingConv::ID CC = F->getCallingConv();
+  CallingConv::ID CC = F.getCallingConv();
 
   // If attribute NoCallerSavedRegisters exists then we set X86_INTR calling
   // convention because it has the CSR list.
-  if (MF->getFunction()->hasFnAttribute("no_caller_saved_registers"))
+  if (MF->getFunction().hasFnAttribute("no_caller_saved_registers"))
     CC = CallingConv::X86_INTR;
 
   switch (CC) {
@@ -362,7 +362,7 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 
   if (Is64Bit) {
     bool IsSwiftCC = Subtarget.getTargetLowering()->supportSwiftError() &&
-                     F->getAttributes().hasAttrSomewhere(Attribute::SwiftError);
+                     F.getAttributes().hasAttrSomewhere(Attribute::SwiftError);
     if (IsSwiftCC)
       return IsWin64 ? CSR_Win64_SwiftError_SaveList
                      : CSR_64_SwiftError_SaveList;
@@ -380,7 +380,7 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 const MCPhysReg *X86RegisterInfo::getCalleeSavedRegsViaCopy(
     const MachineFunction *MF) const {
   assert(MF && "Invalid MachineFunction pointer.");
-  if (MF->getFunction()->getCallingConv() == CallingConv::CXX_FAST_TLS &&
+  if (MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS &&
       MF->getInfo<X86MachineFunctionInfo>()->isSplitCSR())
     return CSR_64_CXX_TLS_Darwin_ViaCopy_SaveList;
   return nullptr;
@@ -473,9 +473,9 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   // Unlike getCalleeSavedRegs(), we don't have MMI so we can't check
   // callsEHReturn().
   if (Is64Bit) {
-    const Function *F = MF.getFunction();
+    const Function &F = MF.getFunction();
     bool IsSwiftCC = Subtarget.getTargetLowering()->supportSwiftError() &&
-                     F->getAttributes().hasAttrSomewhere(Attribute::SwiftError);
+                     F.getAttributes().hasAttrSomewhere(Attribute::SwiftError);
     if (IsSwiftCC)
       return IsWin64 ? CSR_Win64_SwiftError_RegMask : CSR_64_SwiftError_RegMask;
     return IsWin64 ? CSR_Win64_RegMask : CSR_64_RegMask;
@@ -519,7 +519,7 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   // Set the base-pointer register and its aliases as reserved if needed.
   if (hasBasePointer(MF)) {
-    CallingConv::ID CC = MF.getFunction()->getCallingConv();
+    CallingConv::ID CC = MF.getFunction().getCallingConv();
     const uint32_t *RegMask = getCallPreservedMask(MF, CC);
     if (MachineOperand::clobbersPhysReg(RegMask, getBaseRegister()))
       report_fatal_error(

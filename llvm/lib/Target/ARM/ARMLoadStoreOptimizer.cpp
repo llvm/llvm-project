@@ -1273,7 +1273,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSMultiple(MachineInstr *MI) {
       // can still change to a writeback form as that will save us 2 bytes
       // of code size. It can create WAW hazards though, so only do it if
       // we're minimizing code size.
-      if (!MBB.getParent()->getFunction()->optForMinSize() || !BaseKill)
+      if (!MBB.getParent()->getFunction().optForMinSize() || !BaseKill)
         return false;
       
       bool HighRegsUsed = false;
@@ -1953,7 +1953,7 @@ bool ARMLoadStoreOpt::CombineMovBx(MachineBasicBlock &MBB) {
 }
 
 bool ARMLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
-  if (skipFunction(*Fn.getFunction()))
+  if (skipFunction(Fn.getFunction()))
     return false;
 
   MF = &Fn;
@@ -2035,7 +2035,7 @@ INITIALIZE_PASS(ARMPreAllocLoadStoreOpt, "arm-prera-ldst-opt",
                 ARM_PREALLOC_LOAD_STORE_OPT_NAME, false, false)
 
 bool ARMPreAllocLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
-  if (AssumeMisalignedLoadStores || skipFunction(*Fn.getFunction()))
+  if (AssumeMisalignedLoadStores || skipFunction(Fn.getFunction()))
     return false;
 
   TD = &Fn.getDataLayout();
@@ -2130,9 +2130,9 @@ ARMPreAllocLoadStoreOpt::CanFormLdStDWord(MachineInstr *Op0, MachineInstr *Op1,
     return false;
 
   unsigned Align = (*Op0->memoperands_begin())->getAlignment();
-  const Function *Func = MF->getFunction();
+  const Function &Func = MF->getFunction();
   unsigned ReqAlign = STI->hasV6Ops()
-    ? TD->getABITypeAlignment(Type::getInt64Ty(Func->getContext()))
+    ? TD->getABITypeAlignment(Type::getInt64Ty(Func.getContext()))
     : 8;  // Pre-v6 need 8-byte align
   if (Align < ReqAlign)
     return false;

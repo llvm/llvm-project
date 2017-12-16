@@ -60,16 +60,16 @@ void ARMException::beginFunction(const MachineFunction *MF) {
 ///
 void ARMException::endFunction(const MachineFunction *MF) {
   ARMTargetStreamer &ATS = getTargetStreamer();
-  const Function *F = MF->getFunction();
+  const Function &F = MF->getFunction();
   const Function *Per = nullptr;
-  if (F->hasPersonalityFn())
-    Per = dyn_cast<Function>(F->getPersonalityFn()->stripPointerCasts());
+  if (F.hasPersonalityFn())
+    Per = dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts());
   bool forceEmitPersonality =
-    F->hasPersonalityFn() && !isNoOpWithoutInvoke(classifyEHPersonality(Per)) &&
-    F->needsUnwindTableEntry();
+    F.hasPersonalityFn() && !isNoOpWithoutInvoke(classifyEHPersonality(Per)) &&
+    F.needsUnwindTableEntry();
   bool shouldEmitPersonality = forceEmitPersonality ||
     !MF->getLandingPads().empty();
-  if (!Asm->MF->getFunction()->needsUnwindTableEntry() &&
+  if (!Asm->MF->getFunction().needsUnwindTableEntry() &&
       !shouldEmitPersonality)
     ATS.emitCantUnwind();
   else if (shouldEmitPersonality) {

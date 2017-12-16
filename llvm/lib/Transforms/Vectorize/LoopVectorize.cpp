@@ -283,12 +283,6 @@ namespace {
 class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
 class LoopVectorizationRequirements;
-class VPBlendRecipe;
-class VPInterleaveRecipe;
-class VPReplicateRecipe;
-class VPWidenIntOrFpInductionRecipe;
-class VPWidenRecipe;
-class VPWidenMemoryInstructionRecipe;
 
 } // end anonymous namespace
 
@@ -853,7 +847,7 @@ void InnerLoopVectorizer::addMetadata(ArrayRef<Value *> To,
   }
 }
 
-namespace {
+namespace llvm {
 
 /// \brief The group of interleaved loads/stores sharing the same stride and
 /// close to each other.
@@ -991,6 +985,9 @@ private:
   //      store i32 %odd               // Insert Position
   Instruction *InsertPos;
 };
+} // end namespace llvm
+
+namespace {
 
 /// \brief Drive the analysis of interleaved memory accesses in the loop.
 ///
@@ -7759,391 +7756,6 @@ static void AddRuntimeUnrollDisableMetaData(Loop *L) {
   }
 }
 
-namespace {
-
-/// VPWidenRecipe is a recipe for producing a copy of vector type for each
-/// Instruction in its ingredients independently, in order. This recipe covers
-/// most of the traditional vectorization cases where each ingredient transforms
-/// into a vectorized version of itself.
-class VPWidenRecipe : public VPRecipeBase {
-private:
-  /// Hold the ingredients by pointing to their original BasicBlock location.
-  BasicBlock::iterator Begin;
-  BasicBlock::iterator End;
-
-public:
-  VPWidenRecipe(Instruction *I) : VPRecipeBase(VPWidenSC) {
-    End = I->getIterator();
-    Begin = End++;
-  }
-
-  ~VPWidenRecipe() override = default;
-
-  /// Method to support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const VPRecipeBase *V) {
-    return V->getVPRecipeID() == VPRecipeBase::VPWidenSC;
-  }
-
-  /// Produce widened copies of all Ingredients.
-  void execute(VPTransformState &State) override {
-    for (auto &Instr : make_range(Begin, End))
-      State.ILV->widenInstruction(Instr);
-  }
-
-  /// Augment the recipe to include Instr, if it lies at its End.
-  bool appendInstruction(Instruction *Instr) {
-    if (End != Instr->getIterator())
-      return false;
-    End++;
-    return true;
-  }
-
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent) const override {
-    O << " +\n" << Indent << "\"WIDEN\\l\"";
-    for (auto &Instr : make_range(Begin, End))
-      O << " +\n" << Indent << "\"  " << VPlanIngredient(&Instr) << "\\l\"";
-  }
-};
-
-/// A recipe for handling phi nodes of integer and floating-point inductions,
-/// producing their vector and scalar values.
-class VPWidenIntOrFpInductionRecipe : public VPRecipeBase {
-private:
-  PHINode *IV;
-  TruncInst *Trunc;
-
-public:
-  VPWidenIntOrFpInductionRecipe(PHINode *IV, TruncInst *Trunc = nullptr)
-      : VPRecipeBase(VPWidenIntOrFpInductionSC), IV(IV), Trunc(Trunc) {}
-  ~VPWidenIntOrFpInductionRecipe() override = default;
-
-  /// Method to support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const VPRecipeBase *V) {
-    return V->getVPRecipeID() == VPRecipeBase::VPWidenIntOrFpInductionSC;
-  }
-
-  /// Generate the vectorized and scalarized versions of the phi node as
-  /// needed by their users.
-  void execute(VPTransformState &State) override {
-    assert(!State.Instance && "Int or FP induction being replicated.");
-    State.ILV->widenIntOrFpInduction(IV, Trunc);
-  }
-
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent) const override {
-    O << " +\n" << Indent << "\"WIDEN-INDUCTION";
-    if (Trunc) {
-      O << "\\l\"";
-      O << " +\n" << Indent << "\"  " << VPlanIngredient(IV) << "\\l\"";
-      O << " +\n" << Indent << "\"  " << VPlanIngredient(Trunc) << "\\l\"";
-    } else
-      O << " " << VPlanIngredient(IV) << "\\l\"";
-  }
-};
-
-/// A recipe for handling all phi nodes except for integer and FP inductions.
-class VPWidenPHIRecipe : public VPRecipeBase {
-private:
-  PHINode *Phi;
-
-public:
-  VPWidenPHIRecipe(PHINode *Phi) : VPRecipeBase(VPWidenPHISC), Phi(Phi) {}
-  ~VPWidenPHIRecipe() override = default;
-
-  /// Method to support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const VPRecipeBase *V) {
-    return V->getVPRecipeID() == VPRecipeBase::VPWidenPHISC;
-  }
-
-  /// Generate the phi/select nodes.
-  void execute(VPTransformState &State) override {
-    State.ILV->widenPHIInstruction(Phi, State.UF, State.VF);
-  }
-
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent) const override {
-    O << " +\n" << Indent << "\"WIDEN-PHI " << VPlanIngredient(Phi) << "\\l\"";
-  }
-};
-
-/// A recipe for vectorizing a phi-node as a sequence of mask-based select
-/// instructions.
-class VPBlendRecipe : public VPRecipeBase {
-private:
-  PHINode *Phi;
-
-  /// The blend operation is a User of a mask, if not null.
-  std::unique_ptr<VPUser> User;
-
-public:
-  VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Masks)
-      : VPRecipeBase(VPBlendSC), Phi(Phi) {
-    assert((Phi->getNumIncomingValues() == 1 ||
-            Phi->getNumIncomingValues() == Masks.size()) &&
-           "Expected the same number of incoming values and masks");
-    if (!Masks.empty())
-      User.reset(new VPUser(Masks));
-  }
-
-  /// Method to support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const VPRecipeBase *V) {
-    return V->getVPRecipeID() == VPRecipeBase::VPBlendSC;
-  }
-
-  /// Generate the phi/select nodes.
-  void execute(VPTransformState &State) override {
-    State.ILV->setDebugLocFromInst(State.Builder, Phi);
-    // We know that all PHIs in non-header blocks are converted into
-    // selects, so we don't have to worry about the insertion order and we
-    // can just use the builder.
-    // At this point we generate the predication tree. There may be
-    // duplications since this is a simple recursive scan, but future
-    // optimizations will clean it up.
-
-    unsigned NumIncoming = Phi->getNumIncomingValues();
-
-    assert((User || NumIncoming == 1) &&
-           "Multiple predecessors with predecessors having a full mask");
-    // Generate a sequence of selects of the form:
-    // SELECT(Mask3, In3,
-    //      SELECT(Mask2, In2,
-    //                   ( ...)))
-    InnerLoopVectorizer::VectorParts Entry(State.UF);
-    for (unsigned In = 0; In < NumIncoming; ++In) {
-      for (unsigned Part = 0; Part < State.UF; ++Part) {
-        // We might have single edge PHIs (blocks) - use an identity
-        // 'select' for the first PHI operand.
-        Value *In0 =
-            State.ILV->getOrCreateVectorValue(Phi->getIncomingValue(In), Part);
-        if (In == 0)
-          Entry[Part] = In0; // Initialize with the first incoming value.
-        else {
-          // Select between the current value and the previous incoming edge
-          // based on the incoming mask.
-          Value *Cond = State.get(User->getOperand(In), Part);
-          Entry[Part] =
-              State.Builder.CreateSelect(Cond, In0, Entry[Part], "predphi");
-        }
-      }
-    }
-    for (unsigned Part = 0; Part < State.UF; ++Part)
-      State.ValueMap.setVectorValue(Phi, Part, Entry[Part]);
-  }
-
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent) const override {
-    O << " +\n" << Indent << "\"BLEND ";
-    Phi->printAsOperand(O, false);
-    O << " =";
-    if (!User) {
-      // Not a User of any mask: not really blending, this is a
-      // single-predecessor phi.
-      O << " ";
-      Phi->getIncomingValue(0)->printAsOperand(O, false);
-    } else {
-      for (unsigned I = 0, E = User->getNumOperands(); I < E; ++I) {
-        O << " ";
-        Phi->getIncomingValue(I)->printAsOperand(O, false);
-        O << "/";
-        User->getOperand(I)->printAsOperand(O);
-      }
-    }
-    O << "\\l\"";
-  }
-};
-
-/// VPInterleaveRecipe is a recipe for transforming an interleave group of load
-/// or stores into one wide load/store and shuffles.
-class VPInterleaveRecipe : public VPRecipeBase {
-private:
-  const InterleaveGroup *IG;
-
-public:
-  VPInterleaveRecipe(const InterleaveGroup *IG)
-      : VPRecipeBase(VPInterleaveSC), IG(IG) {}
-  ~VPInterleaveRecipe() override = default;
-
-  /// Method to support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const VPRecipeBase *V) {
-    return V->getVPRecipeID() == VPRecipeBase::VPInterleaveSC;
-  }
-
-  /// Generate the wide load or store, and shuffles.
-  void execute(VPTransformState &State) override {
-    assert(!State.Instance && "Interleave group being replicated.");
-    State.ILV->vectorizeInterleaveGroup(IG->getInsertPos());
-  }
-
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent) const override;
-
-  const InterleaveGroup *getInterleaveGroup() { return IG; }
-};
-
-/// VPReplicateRecipe replicates a given instruction producing multiple scalar
-/// copies of the original scalar type, one per lane, instead of producing a
-/// single copy of widened type for all lanes. If the instruction is known to be
-/// uniform only one copy, per lane zero, will be generated.
-class VPReplicateRecipe : public VPRecipeBase {
-private:
-  /// The instruction being replicated.
-  Instruction *Ingredient;
-
-  /// Indicator if only a single replica per lane is needed.
-  bool IsUniform;
-
-  /// Indicator if the replicas are also predicated.
-  bool IsPredicated;
-
-  /// Indicator if the scalar values should also be packed into a vector.
-  bool AlsoPack;
-
-public:
-  VPReplicateRecipe(Instruction *I, bool IsUniform, bool IsPredicated = false)
-      : VPRecipeBase(VPReplicateSC), Ingredient(I), IsUniform(IsUniform),
-        IsPredicated(IsPredicated) {
-    // Retain the previous behavior of predicateInstructions(), where an
-    // insert-element of a predicated instruction got hoisted into the
-    // predicated basic block iff it was its only user. This is achieved by
-    // having predicated instructions also pack their values into a vector by
-    // default unless they have a replicated user which uses their scalar value.
-    AlsoPack = IsPredicated && !I->use_empty();
-  }
-
-  ~VPReplicateRecipe() override = default;
-
-  /// Method to support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const VPRecipeBase *V) {
-    return V->getVPRecipeID() == VPRecipeBase::VPReplicateSC;
-  }
-
-  /// Generate replicas of the desired Ingredient. Replicas will be generated
-  /// for all parts and lanes unless a specific part and lane are specified in
-  /// the \p State.
-  void execute(VPTransformState &State) override;
-
-  void setAlsoPack(bool Pack) { AlsoPack = Pack; }
-
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent) const override {
-    O << " +\n"
-      << Indent << "\"" << (IsUniform ? "CLONE " : "REPLICATE ")
-      << VPlanIngredient(Ingredient);
-    if (AlsoPack)
-      O << " (S->V)";
-    O << "\\l\"";
-  }
-};
-
-/// A recipe for generating conditional branches on the bits of a mask.
-class VPBranchOnMaskRecipe : public VPRecipeBase {
-private:
-  std::unique_ptr<VPUser> User;
-
-public:
-  VPBranchOnMaskRecipe(VPValue *BlockInMask) : VPRecipeBase(VPBranchOnMaskSC) {
-    if (BlockInMask) // nullptr means all-one mask.
-      User.reset(new VPUser({BlockInMask}));
-  }
-
-  /// Method to support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const VPRecipeBase *V) {
-    return V->getVPRecipeID() == VPRecipeBase::VPBranchOnMaskSC;
-  }
-
-  /// Generate the extraction of the appropriate bit from the block mask and the
-  /// conditional branch.
-  void execute(VPTransformState &State) override;
-
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent) const override {
-    O << " +\n" << Indent << "\"BRANCH-ON-MASK ";
-    if (User)
-      O << *User->getOperand(0);
-    else
-      O << " All-One";
-    O << "\\l\"";
-  }
-};
-
-/// VPPredInstPHIRecipe is a recipe for generating the phi nodes needed when
-/// control converges back from a Branch-on-Mask. The phi nodes are needed in
-/// order to merge values that are set under such a branch and feed their uses.
-/// The phi nodes can be scalar or vector depending on the users of the value.
-/// This recipe works in concert with VPBranchOnMaskRecipe.
-class VPPredInstPHIRecipe : public VPRecipeBase {
-private:
-  Instruction *PredInst;
-
-public:
-  /// Construct a VPPredInstPHIRecipe given \p PredInst whose value needs a phi
-  /// nodes after merging back from a Branch-on-Mask.
-  VPPredInstPHIRecipe(Instruction *PredInst)
-      : VPRecipeBase(VPPredInstPHISC), PredInst(PredInst) {}
-  ~VPPredInstPHIRecipe() override = default;
-
-  /// Method to support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const VPRecipeBase *V) {
-    return V->getVPRecipeID() == VPRecipeBase::VPPredInstPHISC;
-  }
-
-  /// Generates phi nodes for live-outs as needed to retain SSA form.
-  void execute(VPTransformState &State) override;
-
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent) const override {
-    O << " +\n"
-      << Indent << "\"PHI-PREDICATED-INSTRUCTION " << VPlanIngredient(PredInst)
-      << "\\l\"";
-  }
-};
-
-/// A Recipe for widening load/store operations.
-/// TODO: We currently execute only per-part unless a specific instance is
-/// provided.
-class VPWidenMemoryInstructionRecipe : public VPRecipeBase {
-private:
-  Instruction &Instr;
-  std::unique_ptr<VPUser> User;
-
-public:
-  VPWidenMemoryInstructionRecipe(Instruction &Instr, VPValue *Mask)
-      : VPRecipeBase(VPWidenMemoryInstructionSC), Instr(Instr) {
-    if (Mask) // Create a VPInstruction to register as a user of the mask.
-      User.reset(new VPUser({Mask}));
-  }
-
-  /// Method to support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const VPRecipeBase *V) {
-    return V->getVPRecipeID() == VPRecipeBase::VPWidenMemoryInstructionSC;
-  }
-
-  /// Generate the wide load/store.
-  void execute(VPTransformState &State) override {
-    if (!User)
-      return State.ILV->vectorizeMemoryInstruction(&Instr);
-
-    // Last (and currently only) operand is a mask.
-    InnerLoopVectorizer::VectorParts MaskValues(State.UF);
-    VPValue *Mask = User->getOperand(User->getNumOperands() - 1);
-    for (unsigned Part = 0; Part < State.UF; ++Part)
-      MaskValues[Part] = State.get(Mask, Part);
-    State.ILV->vectorizeMemoryInstruction(&Instr, &MaskValues);
-  }
-
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent) const override {
-    O << " +\n" << Indent << "\"WIDEN " << VPlanIngredient(&Instr);
-    if (User) {
-      O << ", ";
-      User->getOperand(0)->printAsOperand(O);
-    }
-    O << "\\l\"";
-  }
-};
-} // end anonymous namespace
-
 bool LoopVectorizationPlanner::getDecisionAndClampRange(
     const std::function<bool(unsigned)> &Predicate, VFRange &Range) {
   assert(Range.End > Range.Start && "Trying to test an empty VF range.");
@@ -8707,6 +8319,64 @@ void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent) const {
         << Indent << "\"  " << VPlanIngredient(I) << " " << i << "\\l\"";
 }
 
+void VPWidenRecipe::execute(VPTransformState &State) {
+  for (auto &Instr : make_range(Begin, End))
+    State.ILV->widenInstruction(Instr);
+}
+
+void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
+  assert(!State.Instance && "Int or FP induction being replicated.");
+  State.ILV->widenIntOrFpInduction(IV, Trunc);
+}
+
+void VPWidenPHIRecipe::execute(VPTransformState &State) {
+  State.ILV->widenPHIInstruction(Phi, State.UF, State.VF);
+}
+
+void VPBlendRecipe::execute(VPTransformState &State) {
+  State.ILV->setDebugLocFromInst(State.Builder, Phi);
+  // We know that all PHIs in non-header blocks are converted into
+  // selects, so we don't have to worry about the insertion order and we
+  // can just use the builder.
+  // At this point we generate the predication tree. There may be
+  // duplications since this is a simple recursive scan, but future
+  // optimizations will clean it up.
+
+  unsigned NumIncoming = Phi->getNumIncomingValues();
+
+  assert((User || NumIncoming == 1) &&
+         "Multiple predecessors with predecessors having a full mask");
+  // Generate a sequence of selects of the form:
+  // SELECT(Mask3, In3,
+  //      SELECT(Mask2, In2,
+  //                   ( ...)))
+  InnerLoopVectorizer::VectorParts Entry(State.UF);
+  for (unsigned In = 0; In < NumIncoming; ++In) {
+    for (unsigned Part = 0; Part < State.UF; ++Part) {
+      // We might have single edge PHIs (blocks) - use an identity
+      // 'select' for the first PHI operand.
+      Value *In0 =
+          State.ILV->getOrCreateVectorValue(Phi->getIncomingValue(In), Part);
+      if (In == 0)
+        Entry[Part] = In0; // Initialize with the first incoming value.
+      else {
+        // Select between the current value and the previous incoming edge
+        // based on the incoming mask.
+        Value *Cond = State.get(User->getOperand(In), Part);
+        Entry[Part] =
+            State.Builder.CreateSelect(Cond, In0, Entry[Part], "predphi");
+      }
+    }
+  }
+  for (unsigned Part = 0; Part < State.UF; ++Part)
+    State.ValueMap.setVectorValue(Phi, Part, Entry[Part]);
+}
+
+void VPInterleaveRecipe::execute(VPTransformState &State) {
+  assert(!State.Instance && "Interleave group being replicated.");
+  State.ILV->vectorizeInterleaveGroup(IG->getInsertPos());
+}
+
 void VPReplicateRecipe::execute(VPTransformState &State) {
   if (State.Instance) { // Generate a single instance.
     State.ILV->scalarizeInstruction(Ingredient, *State.Instance, IsPredicated);
@@ -8788,6 +8458,18 @@ void VPPredInstPHIRecipe::execute(VPTransformState &State) {
     Phi->addIncoming(ScalarPredInst, PredicatedBB);
     State.ValueMap.resetScalarValue(PredInst, *State.Instance, Phi);
   }
+}
+
+void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
+  if (!User)
+    return State.ILV->vectorizeMemoryInstruction(&Instr);
+
+  // Last (and currently only) operand is a mask.
+  InnerLoopVectorizer::VectorParts MaskValues(State.UF);
+  VPValue *Mask = User->getOperand(User->getNumOperands() - 1);
+  for (unsigned Part = 0; Part < State.UF; ++Part)
+    MaskValues[Part] = State.get(Mask, Part);
+  State.ILV->vectorizeMemoryInstruction(&Instr, &MaskValues);
 }
 
 bool LoopVectorizePass::processLoop(Loop *L) {

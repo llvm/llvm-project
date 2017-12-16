@@ -729,13 +729,13 @@ INITIALIZE_PASS_END(MachinePipeliner, DEBUG_TYPE,
 
 /// The "main" function for implementing Swing Modulo Scheduling.
 bool MachinePipeliner::runOnMachineFunction(MachineFunction &mf) {
-  if (skipFunction(*mf.getFunction()))
+  if (skipFunction(mf.getFunction()))
     return false;
 
   if (!EnableSWP)
     return false;
 
-  if (mf.getFunction()->getAttributes().hasAttribute(
+  if (mf.getFunction().getAttributes().hasAttribute(
           AttributeList::FunctionIndex, Attribute::OptimizeForSize) &&
       !EnableSWPOptSize.getPosition())
     return false;

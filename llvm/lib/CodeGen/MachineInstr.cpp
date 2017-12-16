@@ -1211,7 +1211,7 @@ void MachineInstr::print(raw_ostream &OS, bool SkipOpers, bool SkipDebugLoc,
   const Module *M = nullptr;
   if (const MachineBasicBlock *MBB = getParent())
     if (const MachineFunction *MF = MBB->getParent())
-      M = MF->getFunction()->getParent();
+      M = MF->getFunction().getParent();
 
   ModuleSlotTracker MST(M);
   print(OS, MST, SkipOpers, SkipDebugLoc, TII);

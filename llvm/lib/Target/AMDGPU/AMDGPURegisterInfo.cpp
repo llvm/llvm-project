@@ -43,7 +43,7 @@ unsigned AMDGPURegisterInfo::getSubRegFromChannel(unsigned Channel) const {
 // Forced to be here by one .inc
 const MCPhysReg *SIRegisterInfo::getCalleeSavedRegs(
   const MachineFunction *MF) const {
-  CallingConv::ID CC = MF->getFunction()->getCallingConv();
+  CallingConv::ID CC = MF->getFunction().getCallingConv();
   switch (CC) {
   case CallingConv::C:
   case CallingConv::Fast:

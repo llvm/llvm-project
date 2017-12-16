@@ -263,7 +263,7 @@ MachineInstrBuilder MachineIRBuilder::buildConstant(unsigned Res,
 
   const ConstantInt *NewVal = &Val;
   if (Ty.getSizeInBits() != Val.getBitWidth())
-    NewVal = ConstantInt::get(MF->getFunction()->getContext(),
+    NewVal = ConstantInt::get(MF->getFunction().getContext(),
                               Val.getValue().sextOrTrunc(Ty.getSizeInBits()));
 
   return buildInstr(TargetOpcode::G_CONSTANT).addDef(Res).addCImm(NewVal);
@@ -271,7 +271,7 @@ MachineInstrBuilder MachineIRBuilder::buildConstant(unsigned Res,
 
 MachineInstrBuilder MachineIRBuilder::buildConstant(unsigned Res,
                                                     int64_t Val) {
-  auto IntN = IntegerType::get(MF->getFunction()->getContext(),
+  auto IntN = IntegerType::get(MF->getFunction().getContext(),
                                MRI->getType(Res).getSizeInBits());
   ConstantInt *CI = ConstantInt::get(IntN, Val, true);
   return buildConstant(Res, *CI);

@@ -690,7 +690,7 @@ unsigned AArch64SIMDInstrOpt::determineSrcReg(MachineInstr &MI) const {
 }
 
 bool AArch64SIMDInstrOpt::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   TII = MF.getSubtarget().getInstrInfo();

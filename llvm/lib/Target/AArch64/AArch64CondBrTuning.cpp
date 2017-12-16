@@ -290,7 +290,7 @@ bool AArch64CondBrTuning::tryToTuneBranch(MachineInstr &MI,
 }
 
 bool AArch64CondBrTuning::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   DEBUG(dbgs() << "********** AArch64 Conditional Branch Tuning  **********\n"

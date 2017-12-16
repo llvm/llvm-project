@@ -434,7 +434,7 @@ bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
   DEBUG(dbgs() << "********** Hexagon New Value Jump **********\n"
                << "********** Function: " << MF.getName() << "\n");
 
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   // If we move NewValueJump before register allocation we'll need live variable

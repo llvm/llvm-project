@@ -71,7 +71,7 @@ void SystemZFrameLowering::determineCalleeSaves(MachineFunction &MF,
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   bool HasFP = hasFP(MF);
   SystemZMachineFunctionInfo *MFI = MF.getInfo<SystemZMachineFunctionInfo>();
-  bool IsVarArg = MF.getFunction()->isVarArg();
+  bool IsVarArg = MF.getFunction().isVarArg();
 
   // va_start stores incoming FPR varargs in the normal way, but delegates
   // the saving of incoming GPR varargs to spillCalleeSavedRegisters().
@@ -139,7 +139,7 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
   MachineFunction &MF = *MBB.getParent();
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   SystemZMachineFunctionInfo *ZFI = MF.getInfo<SystemZMachineFunctionInfo>();
-  bool IsVarArg = MF.getFunction()->isVarArg();
+  bool IsVarArg = MF.getFunction().isVarArg();
   DebugLoc DL;
 
   // Scan the call-saved GPRs and find the bounds of the register spill area.
@@ -374,7 +374,7 @@ void SystemZFrameLowering::emitPrologue(MachineFunction &MF,
   uint64_t StackSize = getAllocatedStackSize(MF);
   if (StackSize) {
     // Determine if we want to store a backchain.
-    bool StoreBackchain = MF.getFunction()->hasFnAttribute("backchain");
+    bool StoreBackchain = MF.getFunction().hasFnAttribute("backchain");
 
     // If we need backchain, save current stack pointer.  R1 is free at this
     // point.

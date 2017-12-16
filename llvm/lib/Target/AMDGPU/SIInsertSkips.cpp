@@ -166,7 +166,7 @@ bool SIInsertSkips::skipIfDead(MachineInstr &MI, MachineBasicBlock &NextBB) {
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction *MF = MBB.getParent();
 
-  if (MF->getFunction()->getCallingConv() != CallingConv::AMDGPU_PS ||
+  if (MF->getFunction().getCallingConv() != CallingConv::AMDGPU_PS ||
       !shouldSkip(MBB, MBB.getParent()->back()))
     return false;
 
