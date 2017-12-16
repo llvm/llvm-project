@@ -534,7 +534,7 @@ namespace __sanitizer {
   typedef long __sanitizer_clock_t;
 #endif
 
-#if SANITIZER_LINUX
+#if SANITIZER_LINUX || SANITIZER_FREEBSD
   typedef int __sanitizer_clockid_t;
 #endif
 
