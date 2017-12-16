@@ -7564,6 +7564,19 @@ static Value *EmitX86MaskedLoad(CodeGenFunction &CGF,
   return CGF.Builder.CreateMaskedLoad(Ops[0], Align, MaskVec, Ops[1]);
 }
 
+static Value *EmitX86MaskLogic(CodeGenFunction &CGF, Instruction::BinaryOps Opc,
+                              unsigned NumElts, SmallVectorImpl<Value *> &Ops,
+                              bool InvertLHS = false) {
+  Value *LHS = getMaskVecValue(CGF, Ops[0], NumElts);
+  Value *RHS = getMaskVecValue(CGF, Ops[1], NumElts);
+
+  if (InvertLHS)
+    LHS = CGF.Builder.CreateNot(LHS);
+
+  return CGF.Builder.CreateBitCast(CGF.Builder.CreateBinOp(Opc, LHS, RHS),
+                                  CGF.Builder.getIntNTy(std::max(NumElts, 8U)));
+}
+
 static Value *EmitX86SubVectorBroadcast(CodeGenFunction &CGF,
                                         SmallVectorImpl<Value *> &Ops,
                                         llvm::Type *DstTy,
@@ -8215,6 +8228,22 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_ucmpq512_mask: {
     unsigned CC = cast<llvm::ConstantInt>(Ops[2])->getZExtValue() & 0x7;
     return EmitX86MaskedCompare(*this, CC, false, Ops);
+  }
+
+  case X86::BI__builtin_ia32_kandhi:
+    return EmitX86MaskLogic(*this, Instruction::And, 16, Ops);
+  case X86::BI__builtin_ia32_kandnhi:
+    return EmitX86MaskLogic(*this, Instruction::And, 16, Ops, true);
+  case X86::BI__builtin_ia32_korhi:
+    return EmitX86MaskLogic(*this, Instruction::Or, 16, Ops);
+  case X86::BI__builtin_ia32_kxnorhi:
+    return EmitX86MaskLogic(*this, Instruction::Xor, 16, Ops, true);
+  case X86::BI__builtin_ia32_kxorhi:
+    return EmitX86MaskLogic(*this, Instruction::Xor, 16, Ops);
+  case X86::BI__builtin_ia32_knothi: {
+    Ops[0] = getMaskVecValue(*this, Ops[0], 16);
+    return Builder.CreateBitCast(Builder.CreateNot(Ops[0]),
+                                 Builder.getInt16Ty());
   }
 
   case X86::BI__builtin_ia32_vplzcntd_128_mask:
