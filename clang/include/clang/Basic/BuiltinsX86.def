@@ -1060,6 +1060,10 @@ TARGET_BUILTIN(__builtin_ia32_vpconflictsi_512_mask, "V16iV16iV16iUs", "", "avx5
 TARGET_BUILTIN(__builtin_ia32_vplzcntd_512_mask, "V16iV16iV16iUs", "", "avx512cd")
 TARGET_BUILTIN(__builtin_ia32_vplzcntq_512_mask, "V8LLiV8LLiV8LLiUc", "", "avx512cd")
 
+TARGET_BUILTIN(__builtin_ia32_vpopcntd_128, "V4iV4i", "", "avx512vpopcntdq,avx512vl")
+TARGET_BUILTIN(__builtin_ia32_vpopcntq_128, "V2LLiV2LLi", "", "avx512vpopcntdq,avx512vl")
+TARGET_BUILTIN(__builtin_ia32_vpopcntd_256, "V8iV8i", "", "avx512vpopcntdq,avx512vl")
+TARGET_BUILTIN(__builtin_ia32_vpopcntq_256, "V4LLiV4LLi", "", "avx512vpopcntdq,avx512vl")
 TARGET_BUILTIN(__builtin_ia32_vpopcntd_512, "V16iV16i", "", "avx512vpopcntdq")
 TARGET_BUILTIN(__builtin_ia32_vpopcntq_512, "V8LLiV8LLi", "", "avx512vpopcntdq")
 
