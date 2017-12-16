@@ -1131,9 +1131,10 @@ define <8 x i16> @testv8i16(<8 x i16> %in) nounwind {
 ; AVX512VPOPCNTDQ-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512VPOPCNTDQ-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX512VPOPCNTDQ-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
-; AVX512VPOPCNTDQ-NEXT:    vpmovzxwq {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
-; AVX512VPOPCNTDQ-NEXT:    vpopcntq %zmm0, %zmm0
-; AVX512VPOPCNTDQ-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512VPOPCNTDQ-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX512VPOPCNTDQ-NEXT:    vpopcntd %zmm0, %zmm0
+; AVX512VPOPCNTDQ-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
 ; AVX512VPOPCNTDQ-NEXT:    vzeroupper
 ; AVX512VPOPCNTDQ-NEXT:    retq
 ;
@@ -1144,9 +1145,9 @@ define <8 x i16> @testv8i16(<8 x i16> %in) nounwind {
 ; AVX512VPOPCNTDQVL-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX512VPOPCNTDQVL-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpmovzxwq {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
-; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %zmm0, %zmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpmovdw %ymm0, %xmm0
 ; AVX512VPOPCNTDQVL-NEXT:    vzeroupper
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
@@ -1326,9 +1327,10 @@ define <8 x i16> @testv8i16u(<8 x i16> %in) nounwind {
 ; AVX512VPOPCNTDQ-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512VPOPCNTDQ-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX512VPOPCNTDQ-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
-; AVX512VPOPCNTDQ-NEXT:    vpmovzxwq {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
-; AVX512VPOPCNTDQ-NEXT:    vpopcntq %zmm0, %zmm0
-; AVX512VPOPCNTDQ-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512VPOPCNTDQ-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX512VPOPCNTDQ-NEXT:    vpopcntd %zmm0, %zmm0
+; AVX512VPOPCNTDQ-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
 ; AVX512VPOPCNTDQ-NEXT:    vzeroupper
 ; AVX512VPOPCNTDQ-NEXT:    retq
 ;
@@ -1339,9 +1341,9 @@ define <8 x i16> @testv8i16u(<8 x i16> %in) nounwind {
 ; AVX512VPOPCNTDQVL-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX512VPOPCNTDQVL-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpmovzxwq {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
-; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %zmm0, %zmm0
-; AVX512VPOPCNTDQVL-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512VPOPCNTDQVL-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpmovdw %ymm0, %xmm0
 ; AVX512VPOPCNTDQVL-NEXT:    vzeroupper
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;

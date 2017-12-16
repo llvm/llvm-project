@@ -263,6 +263,8 @@ def menable_no_nans : Flag<["-"], "menable-no-nans">,
 def menable_unsafe_fp_math : Flag<["-"], "menable-unsafe-fp-math">,
   HelpText<"Allow unsafe floating-point math optimizations which may decrease "
            "precision">;
+def mreassociate : Flag<["-"], "mreassociate">,
+  HelpText<"Allow reassociation transformations for floating-point instructions">;
 def mfloat_abi : Separate<["-"], "mfloat-abi">,
   HelpText<"The float ABI to use">;
 def mtp : Separate<["-"], "mtp">,

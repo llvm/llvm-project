@@ -121,18 +121,23 @@
 // RUN:   | FileCheck --check-prefix=CHECK-UNSAFE-MATH %s
 // CHECK-UNSAFE-MATH: "-cc1"
 // CHECK-UNSAFE-MATH: "-menable-unsafe-fp-math"
+// CHECK-UNSAFE-MATH: "-mreassociate"
 //
 // RUN: %clang -### -fno-fast-math -fno-math-errno -fassociative-math -freciprocal-math \
 // RUN:     -fno-signed-zeros -fno-trapping-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NO-FAST-MATH-UNSAFE-MATH %s
 // CHECK-NO-FAST-MATH-UNSAFE-MATH: "-cc1"
 // CHECK-NO-FAST-MATH-UNSAFE-MATH: "-menable-unsafe-fp-math"
-//
+// CHECK-NO-FAST-MATH-UNSAFE-MATH: "-mreassociate"
+
+// The 2nd -fno-fast-math overrides -fassociative-math.
+
 // RUN: %clang -### -fno-fast-math -fno-math-errno -fassociative-math -freciprocal-math \
 // RUN:     -fno-fast-math -fno-signed-zeros -fno-trapping-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-UNSAFE-MATH-NO-FAST-MATH %s
 // CHECK-UNSAFE-MATH-NO-FAST-MATH: "-cc1"
 // CHECK-UNSAFE-MATH-NO-FAST-MATH-NOT: "-menable-unsafe-fp-math"
+// CHECK-UNSAFE-MATH-NO-FAST-MATH-NOT: "-mreassociate"
 //
 // Check that various umbrella flags also enable these frontend options.
 // RUN: %clang -### -ffast-math -c %s 2>&1 \
@@ -151,7 +156,7 @@
 // One umbrella flag is *really* weird and also changes the semantics of the
 // program by adding a special preprocessor macro. Check that the frontend flag
 // modeling this semantic change is provided. Also check that the flag is not
-// present if any of the optimization is disabled.
+// present if any of the optimizations are disabled.
 // RUN: %clang -### -ffast-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FAST-MATH %s
 // RUN: %clang -### -fno-fast-math -ffast-math -c %s 2>&1 \
@@ -175,8 +180,11 @@
 // RUN:   | FileCheck --check-prefix=CHECK-NO-FAST-MATH %s
 // RUN: %clang -### -ffast-math -fmath-errno -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NO-FAST-MATH %s
+// RUN: %clang -### -ffast-math -fno-associative-math -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NO-FAST-MATH --check-prefix=CHECK-ASSOC-MATH %s
 // CHECK-NO-FAST-MATH: "-cc1"
 // CHECK-NO-FAST-MATH-NOT: "-ffast-math"
+// CHECK-ASSOC-MATH-NOT: "-mreassociate"
 //
 // Check various means of disabling these flags, including disabling them after
 // they've been enabled via an umbrella flag.
@@ -209,21 +217,16 @@
 // CHECK-NO-NO-NANS-NOT: "-menable-no-nans"
 // CHECK-NO-NO-NANS-NOT: "-ffinite-math-only"
 // CHECK-NO-NO-NANS: "-o"
-//
+
+// A later inverted option overrides an earlier option.
+
 // RUN: %clang -### -fassociative-math -freciprocal-math -fno-signed-zeros \
 // RUN:     -fno-trapping-math -fno-associative-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NO-UNSAFE-MATH %s
-// RUN: %clang -### -fassociative-math -freciprocal-math -fno-signed-zeros \
-// RUN:     -fno-trapping-math -fno-reciprocal-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-UNSAFE-MATH %s
-// RUN: %clang -### -fassociative-math -freciprocal-math -fno-signed-zeros \
-// RUN:     -fno-trapping-math -fsigned-zeros -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-UNSAFE-MATH %s
-// RUN: %clang -### -fassociative-math -freciprocal-math -fno-signed-zeros \
-// RUN:     -fno-trapping-math -ftrapping-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-UNSAFE-MATH %s
+
 // RUN: %clang -### -funsafe-math-optimizations -fno-associative-math -c %s \
 // RUN:   2>&1 | FileCheck --check-prefix=CHECK-NO-UNSAFE-MATH %s
+
 // RUN: %clang -### -funsafe-math-optimizations -fno-reciprocal-math -c %s \
 // RUN:   2>&1 | FileCheck --check-prefix=CHECK-NO-UNSAFE-MATH %s
 // RUN: %clang -### -funsafe-math-optimizations -fsigned-zeros -c %s 2>&1 \
@@ -235,6 +238,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-NO-UNSAFE-MATH %s
 // RUN: %clang -### -ffast-math -fno-associative-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NO-UNSAFE-MATH %s
+
 // RUN: %clang -### -ffast-math -fno-reciprocal-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NO-UNSAFE-MATH %s
 // RUN: %clang -### -ffast-math -fsigned-zeros -c %s 2>&1 \
@@ -243,10 +247,43 @@
 // RUN:   | FileCheck --check-prefix=CHECK-NO-UNSAFE-MATH %s
 // RUN: %clang -### -ffast-math -fno-unsafe-math-optimizations -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NO-UNSAFE-MATH %s
+
 // CHECK-NO-UNSAFE-MATH: "-cc1"
 // CHECK-NO-UNSAFE-MATH-NOT: "-menable-unsafe-fp-math"
+// CHECK-NO_UNSAFE-MATH-NOT: "-mreassociate"
 // CHECK-NO-UNSAFE-MATH: "-o"
-//
+
+
+// Reassociate is allowed because it does not require reciprocal-math.
+
+// RUN: %clang -### -fassociative-math -freciprocal-math -fno-signed-zeros \
+// RUN:     -fno-trapping-math -fno-reciprocal-math -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-REASSOC-NO-UNSAFE-MATH %s
+
+// CHECK-REASSOC-NO-UNSAFE-MATH: "-cc1"
+// CHECK-REASSOC-NO-UNSAFE-MATH-NOT: "-menable-unsafe-fp-math"
+// CHECK-REASSOC-NO_UNSAFE-MATH: "-mreassociate"
+// CHECK-REASSOC-NO-UNSAFE-MATH-NOT: "-menable-unsafe-fp-math"
+// CHECK-REASSOC-NO-UNSAFE-MATH: "-o"
+
+
+// In these runs, reassociate is not allowed because both no-signed-zeros and no-trapping-math are required.
+
+// RUN: %clang -### -fassociative-math -freciprocal-math -fno-signed-zeros \
+// RUN:     -fno-trapping-math -fsigned-zeros -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NO-REASSOC-NO-UNSAFE-MATH %s
+
+// RUN: %clang -### -fassociative-math -freciprocal-math -fno-signed-zeros \
+// RUN:     -fno-trapping-math -ftrapping-math -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NO-REASSOC-NO-UNSAFE-MATH %s
+
+// CHECK-NO-REASSOC-NO-UNSAFE-MATH: "-cc1"
+// CHECK-NO-REASSOC-NO-UNSAFE-MATH-NOT: "-menable-unsafe-fp-math"
+// CHECK-NO-REASSOC-NO_UNSAFE-MATH-NOT: "-mreassociate"
+// CHECK-NO-REASSOC-NO-UNSAFE-MATH-NOT: "-menable-unsafe-fp-math"
+// CHECK-NO-REASSOC-NO-UNSAFE-MATH: "-o"
+
+
 // RUN: %clang -### -ftrapping-math -fno-trapping-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NO-TRAPPING-MATH %s
 // CHECK-NO-TRAPPING-MATH: "-fno-trapping-math"
