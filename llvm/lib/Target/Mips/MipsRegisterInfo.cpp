@@ -93,8 +93,8 @@ MipsRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
 const MCPhysReg *
 MipsRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const MipsSubtarget &Subtarget = MF->getSubtarget<MipsSubtarget>();
-  const Function *F = MF->getFunction();
-  if (F->hasFnAttribute("interrupt")) {
+  const Function &F = MF->getFunction();
+  if (F.hasFnAttribute("interrupt")) {
     if (Subtarget.hasMips64())
       return Subtarget.hasMips64r6() ? CSR_Interrupt_64R6_SaveList
                                      : CSR_Interrupt_64_SaveList;
@@ -238,7 +238,7 @@ getReservedRegs(const MachineFunction &MF) const {
     Reserved.set(Mips::RA_64);
     Reserved.set(Mips::T0);
     Reserved.set(Mips::T1);
-    if (MF.getFunction()->hasFnAttribute("saveS2") || MipsFI->hasSaveS2())
+    if (MF.getFunction().hasFnAttribute("saveS2") || MipsFI->hasSaveS2())
       Reserved.set(Mips::S2);
   }
 

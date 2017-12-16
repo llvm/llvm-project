@@ -1662,7 +1662,7 @@ bool PeepholeOptimizer::optimizeRecurrence(MachineInstr &PHI) {
 }
 
 bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   DEBUG(dbgs() << "********** PEEPHOLE OPTIMIZER **********\n");

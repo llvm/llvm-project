@@ -459,7 +459,7 @@ HexagonCopyToCombine::findPotentialNewifiableTFRs(MachineBasicBlock &BB) {
 }
 
 bool HexagonCopyToCombine::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   if (IsCombinesDisabled) return false;
@@ -471,8 +471,8 @@ bool HexagonCopyToCombine::runOnMachineFunction(MachineFunction &MF) {
   TRI = ST->getRegisterInfo();
   TII = ST->getInstrInfo();
 
-  const Function *F = MF.getFunction();
-  bool OptForSize = F->hasFnAttribute(Attribute::OptimizeForSize);
+  const Function &F = MF.getFunction();
+  bool OptForSize = F.hasFnAttribute(Attribute::OptimizeForSize);
 
   // Combine aggressively (for code size)
   ShouldCombineAggressively =

@@ -382,7 +382,7 @@ public:
 
   unsigned getOccupancyWithLocalMemSize(const MachineFunction &MF) const {
     const auto *MFI = MF.getInfo<SIMachineFunctionInfo>();
-    return getOccupancyWithLocalMemSize(MFI->getLDSSize(), *MF.getFunction());
+    return getOccupancyWithLocalMemSize(MFI->getLDSSize(), MF.getFunction());
   }
 
   bool hasFP16Denormals() const {
@@ -410,7 +410,7 @@ public:
   }
 
   bool enableIEEEBit(const MachineFunction &MF) const {
-    return AMDGPU::isCompute(MF.getFunction()->getCallingConv());
+    return AMDGPU::isCompute(MF.getFunction().getCallingConv());
   }
 
   bool useFlatForGlobal() const {
@@ -482,12 +482,12 @@ public:
   }
 
   bool isMesaKernel(const MachineFunction &MF) const {
-    return isMesa3DOS() && !AMDGPU::isShader(MF.getFunction()->getCallingConv());
+    return isMesa3DOS() && !AMDGPU::isShader(MF.getFunction().getCallingConv());
   }
 
   // Covers VS/PS/CS graphics shaders
   bool isMesaGfxShader(const MachineFunction &MF) const {
-    return isMesa3DOS() && AMDGPU::isShader(MF.getFunction()->getCallingConv());
+    return isMesa3DOS() && AMDGPU::isShader(MF.getFunction().getCallingConv());
   }
 
   bool isAmdCodeObjectV2(const MachineFunction &MF) const {

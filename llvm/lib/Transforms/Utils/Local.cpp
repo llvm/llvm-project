@@ -2143,8 +2143,6 @@ static bool bitTransformIsCorrectForBitReverse(unsigned From, unsigned To,
   return From == BitWidth - To - 1;
 }
 
-/// Given an OR instruction, check to see if this is a bitreverse
-/// idiom. If so, insert the new intrinsic and return true.
 bool llvm::recognizeBSwapOrBitReverseIdiom(
     Instruction *I, bool MatchBSwaps, bool MatchBitReversals,
     SmallVectorImpl<Instruction *> &InsertedInsts) {

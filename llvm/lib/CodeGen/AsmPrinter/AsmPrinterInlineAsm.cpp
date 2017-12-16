@@ -514,7 +514,7 @@ void AsmPrinter::EmitInlineAsm(const MachineInstr *MI) const {
   // Reset SanitizeAddress based on the function's attribute.
   MCTargetOptions MCOptions = TM.Options.MCOptions;
   MCOptions.SanitizeAddress =
-      MF->getFunction()->hasFnAttribute(Attribute::SanitizeAddress);
+      MF->getFunction().hasFnAttribute(Attribute::SanitizeAddress);
 
   EmitInlineAsm(OS.str(), getSubtargetInfo(), MCOptions, LocMD,
                 MI->getInlineAsmDialect());

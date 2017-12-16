@@ -366,6 +366,10 @@ class Value;
   /// operands are not memory dependent.
   bool mayBeMemoryDependent(const Instruction &I);
 
+  /// Return true if it is an intrinsic that cannot be speculated but also
+  /// cannot trap.
+  bool isAssumeLikeIntrinsic(const Instruction *I);
+
   /// Return true if it is valid to use the assumptions provided by an
   /// assume intrinsic, I, at the point in the control-flow identified by the
   /// context instruction, CxtI.

@@ -918,11 +918,11 @@ def IsNotPIC     : Predicate<"!TM.isPositionIndependent()">;
 // the Function object through the <Target>Subtarget and objections were raised
 // to that (see post-commit review comments for r301750).
 let RecomputePerFunction = 1 in {
-  def OptForSize   : Predicate<"MF->getFunction()->optForSize()">;
-  def OptForMinSize : Predicate<"MF->getFunction()->optForMinSize()">;
-  def OptForSpeed  : Predicate<"!MF->getFunction()->optForSize()">;
+  def OptForSize   : Predicate<"MF->getFunction().optForSize()">;
+  def OptForMinSize : Predicate<"MF->getFunction().optForMinSize()">;
+  def OptForSpeed  : Predicate<"!MF->getFunction().optForSize()">;
   def UseIncDec : Predicate<"!Subtarget->slowIncDec() || "
-                            "MF->getFunction()->optForSize()">;
+                            "MF->getFunction().optForSize()">;
 }
 
 def CallImmAddr  : Predicate<"Subtarget->isLegalToCallImmediateAddr()">;
@@ -1124,14 +1124,16 @@ let hasSideEffects = 0, SchedRW = [WriteZero] in {
   def NOOPL : I<0x1f, MRMXm, (outs), (ins i32mem:$zero),
                 "nop{l}\t$zero", [], IIC_NOP>, TB, OpSize32;
   def NOOPQ : RI<0x1f, MRMXm, (outs), (ins i64mem:$zero),
-                "nop{q}\t$zero", [], IIC_NOP>, TB;
+                "nop{q}\t$zero", [], IIC_NOP>, TB,
+                Requires<[In64BitMode]>;
   // Also allow register so we can assemble/disassemble
   def NOOPWr : I<0x1f, MRMXr, (outs), (ins GR16:$zero),
                  "nop{w}\t$zero", [], IIC_NOP>, TB, OpSize16;
   def NOOPLr : I<0x1f, MRMXr, (outs), (ins GR32:$zero),
                  "nop{l}\t$zero", [], IIC_NOP>, TB, OpSize32;
   def NOOPQr : RI<0x1f, MRMXr, (outs), (ins GR64:$zero),
-                  "nop{q}\t$zero", [], IIC_NOP>, TB;
+                  "nop{q}\t$zero", [], IIC_NOP>, TB,
+                  Requires<[In64BitMode]>;
 }
 
 
@@ -1486,7 +1488,8 @@ def MOV32mi : Ii32<0xC7, MRM0m, (outs), (ins i32mem:$dst, i32imm:$src),
                    [(store (i32 imm32_su:$src), addr:$dst)], IIC_MOV_MEM>, OpSize32;
 def MOV64mi32 : RIi32S<0xC7, MRM0m, (outs), (ins i64mem:$dst, i64i32imm:$src),
                        "mov{q}\t{$src, $dst|$dst, $src}",
-                       [(store i64immSExt32_su:$src, addr:$dst)], IIC_MOV_MEM>;
+                       [(store i64immSExt32_su:$src, addr:$dst)], IIC_MOV_MEM>,
+                       Requires<[In64BitMode]>;
 } // SchedRW
 
 let hasSideEffects = 0 in {
@@ -1746,7 +1749,8 @@ def BT32mi8 : Ii8<0xBA, MRM4m, (outs), (ins i32mem:$src1, i32i8imm:$src2),
 def BT64mi8 : RIi8<0xBA, MRM4m, (outs), (ins i64mem:$src1, i64i8imm:$src2),
                 "bt{q}\t{$src2, $src1|$src1, $src2}",
                 [(set EFLAGS, (X86bt (loadi64 addr:$src1),
-                                     i64immSExt8:$src2))], IIC_BT_MI>, TB;
+                                     i64immSExt8:$src2))], IIC_BT_MI>, TB,
+                Requires<[In64BitMode]>;
 } // SchedRW
 
 let hasSideEffects = 0 in {
@@ -1793,7 +1797,8 @@ def BTC32mi8 : Ii8<0xBA, MRM7m, (outs), (ins i32mem:$src1, i32i8imm:$src2),
                     "btc{l}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_MI>,
                     OpSize32, TB;
 def BTC64mi8 : RIi8<0xBA, MRM7m, (outs), (ins i64mem:$src1, i64i8imm:$src2),
-                    "btc{q}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_MI>, TB;
+                    "btc{q}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_MI>, TB,
+                    Requires<[In64BitMode]>;
 }
 
 let SchedRW = [WriteALU], Constraints = "$src1 = $dst" in {
@@ -1838,7 +1843,8 @@ def BTR32mi8 : Ii8<0xBA, MRM6m, (outs), (ins i32mem:$src1, i32i8imm:$src2),
                     "btr{l}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_MI>,
                     OpSize32, TB;
 def BTR64mi8 : RIi8<0xBA, MRM6m, (outs), (ins i64mem:$src1, i64i8imm:$src2),
-                    "btr{q}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_MI>, TB;
+                    "btr{q}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_MI>, TB,
+                    Requires<[In64BitMode]>;
 }
 
 let SchedRW = [WriteALU], Constraints = "$src1 = $dst" in {
@@ -1884,7 +1890,8 @@ def BTS32mi8 : Ii8<0xBA, MRM5m, (outs), (ins i32mem:$src1, i32i8imm:$src2),
                     "bts{l}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_MI>,
                     OpSize32, TB;
 def BTS64mi8 : RIi8<0xBA, MRM5m, (outs), (ins i64mem:$src1, i64i8imm:$src2),
-                    "bts{q}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_MI>, TB;
+                    "bts{q}\t{$src2, $src1|$src1, $src2}", [], IIC_BTX_MI>, TB,
+                    Requires<[In64BitMode]>;
 }
 } // hasSideEffects = 0
 } // Defs = [EFLAGS]
@@ -2031,7 +2038,7 @@ def CMPXCHG8B : I<0xC7, MRM1m, (outs), (ins i64mem:$dst),
 let Defs = [RAX, RDX, EFLAGS], Uses = [RAX, RBX, RCX, RDX] in
 def CMPXCHG16B : RI<0xC7, MRM1m, (outs), (ins i128mem:$dst),
                     "cmpxchg16b\t$dst", [], IIC_CMPXCHG_16B>,
-                    TB, Requires<[HasCmpxchg16b]>;
+                    TB, Requires<[HasCmpxchg16b, In64BitMode]>;
 } // SchedRW
 
 
@@ -2571,17 +2578,17 @@ let Predicates = [HasLWP], SchedRW = [WriteSystem] in {
 
 def LLWPCB : I<0x12, MRM0r, (outs), (ins GR32:$src), "llwpcb\t$src",
                [(int_x86_llwpcb GR32:$src)], IIC_LWP>,
-               XOP, XOP9, Requires<[Not64BitMode]>;
+               XOP, XOP9;
 def SLWPCB : I<0x12, MRM1r, (outs GR32:$dst), (ins), "slwpcb\t$dst",
                [(set GR32:$dst, (int_x86_slwpcb))], IIC_LWP>,
-               XOP, XOP9, Requires<[Not64BitMode]>;
+               XOP, XOP9;
 
 def LLWPCB64 : I<0x12, MRM0r, (outs), (ins GR64:$src), "llwpcb\t$src",
                  [(int_x86_llwpcb GR64:$src)], IIC_LWP>,
-                 XOP, XOP9, VEX_W, Requires<[In64BitMode]>;
+                 XOP, XOP9, VEX_W;
 def SLWPCB64 : I<0x12, MRM1r, (outs GR64:$dst), (ins), "slwpcb\t$dst",
                  [(set GR64:$dst, (int_x86_slwpcb))], IIC_LWP>,
-                 XOP, XOP9, VEX_W, Requires<[In64BitMode]>;
+                 XOP, XOP9, VEX_W;
 
 multiclass lwpins_intr<RegisterClass RC> {
   def rri : Ii32<0x12, MRM0r, (outs), (ins RC:$src0, GR32:$src1, i32imm:$cntl),

@@ -191,12 +191,12 @@ FixupLEAPass::postRAConvertToLEA(MachineFunction::iterator &MFI,
 FunctionPass *llvm::createX86FixupLEAs() { return new FixupLEAPass(); }
 
 bool FixupLEAPass::runOnMachineFunction(MachineFunction &Func) {
-  if (skipFunction(*Func.getFunction()))
+  if (skipFunction(Func.getFunction()))
     return false;
 
   MF = &Func;
   const X86Subtarget &ST = Func.getSubtarget<X86Subtarget>();
-  OptIncDec = !ST.slowIncDec() || Func.getFunction()->optForMinSize();
+  OptIncDec = !ST.slowIncDec() || Func.getFunction().optForMinSize();
   OptLEA = ST.LEAusesAG() || ST.slowLEA() || ST.slow3OpsLEA();
 
   if (!OptLEA && !OptIncDec)

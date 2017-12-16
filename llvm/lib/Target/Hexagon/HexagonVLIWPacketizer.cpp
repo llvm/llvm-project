@@ -199,7 +199,7 @@ static MachineBasicBlock::iterator moveInstrOut(MachineInstr &MI,
 }
 
 bool HexagonPacketizer::runOnMachineFunction(MachineFunction &MF) {
-  if (DisablePacketizer || skipFunction(*MF.getFunction()))
+  if (DisablePacketizer || skipFunction(MF.getFunction()))
     return false;
 
   HII = MF.getSubtarget<HexagonSubtarget>().getInstrInfo();

@@ -467,6 +467,333 @@ static void PrintIndirectSymbols(MachOObjectFile *O, bool verbose) {
   }
 }
 
+static void PrintRType(const uint64_t cputype, const unsigned r_type) {
+  static char const *generic_r_types[] = {
+    "VANILLA ", "PAIR    ", "SECTDIF ", "PBLAPTR ", "LOCSDIF ", "TLV     ",
+    "  6 (?) ", "  7 (?) ", "  8 (?) ", "  9 (?) ", " 10 (?) ", " 11 (?) ",
+    " 12 (?) ", " 13 (?) ", " 14 (?) ", " 15 (?) "
+  };
+  static char const *x86_64_r_types[] = {
+    "UNSIGND ", "SIGNED  ", "BRANCH  ", "GOT_LD  ", "GOT     ", "SUB     ",
+    "SIGNED1 ", "SIGNED2 ", "SIGNED4 ", "TLV     ", " 10 (?) ", " 11 (?) ",
+    " 12 (?) ", " 13 (?) ", " 14 (?) ", " 15 (?) "
+  };
+  static char const *arm_r_types[] = {
+    "VANILLA ", "PAIR    ", "SECTDIFF", "LOCSDIF ", "PBLAPTR ",
+    "BR24    ", "T_BR22  ", "T_BR32  ", "HALF    ", "HALFDIF ",
+    " 10 (?) ", " 11 (?) ", " 12 (?) ", " 13 (?) ", " 14 (?) ", " 15 (?) "
+  };
+  static char const *arm64_r_types[] = {
+    "UNSIGND ", "SUB     ", "BR26    ", "PAGE21  ", "PAGOF12 ",
+    "GOTLDP  ", "GOTLDPOF", "PTRTGOT ", "TLVLDP  ", "TLVLDPOF",
+    "ADDEND  ", " 11 (?) ", " 12 (?) ", " 13 (?) ", " 14 (?) ", " 15 (?) "
+  };
+  
+  if (r_type > 0xf){
+    outs() << format("%-7u", r_type) << " ";
+    return;
+  }
+  switch (cputype) {
+    case MachO::CPU_TYPE_I386:
+      outs() << generic_r_types[r_type];
+      break;
+    case MachO::CPU_TYPE_X86_64:
+      outs() << x86_64_r_types[r_type];
+      break;
+    case MachO::CPU_TYPE_ARM:
+      outs() << arm_r_types[r_type];
+      break;
+    case MachO::CPU_TYPE_ARM64:
+      outs() << arm64_r_types[r_type];
+      break;
+    default:
+      outs() << format("%-7u ", r_type);
+  }
+}
+
+static void PrintRLength(const uint64_t cputype, const unsigned r_type,
+                         const unsigned r_length, const bool previous_arm_half){
+  if (cputype == MachO::CPU_TYPE_ARM &&
+      (r_type == llvm::MachO::ARM_RELOC_HALF ||
+       r_type == llvm::MachO::ARM_RELOC_HALF_SECTDIFF ||
+       previous_arm_half == true)) {
+    if ((r_length & 0x1) == 0)
+      outs() << "lo/";
+    else
+      outs() << "hi/";
+    if ((r_length & 0x1) == 0)
+      outs() << "arm ";
+    else
+      outs() << "thm ";
+  } else {
+    switch (r_length) {
+      case 0:
+        outs() << "byte   ";
+        break;
+      case 1:
+        outs() << "word   ";
+        break;
+      case 2:
+        outs() << "long   ";
+        break;
+      case 3:
+        if (cputype == MachO::CPU_TYPE_X86_64)
+          outs() << "quad   ";
+        else
+          outs() << format("?(%2d)  ", r_length);
+        break;
+      default:
+        outs() << format("?(%2d)  ", r_length);
+    }
+  }
+}
+
+static void PrintRelocationEntries(const MachOObjectFile *O,
+                                   const relocation_iterator Begin,
+                                   const relocation_iterator End,
+                                   const uint64_t cputype,
+                                   const bool verbose) {
+  const MachO::symtab_command Symtab = O->getSymtabLoadCommand();
+  bool previous_arm_half = false;
+  bool previous_sectdiff = false;
+  uint32_t sectdiff_r_type = 0;
+  
+  for (relocation_iterator Reloc = Begin; Reloc != End; ++Reloc) {
+    const DataRefImpl Rel = Reloc->getRawDataRefImpl();
+    const MachO::any_relocation_info RE = O->getRelocation(Rel);
+    const unsigned r_type = O->getAnyRelocationType(RE);
+    const bool r_scattered = O->isRelocationScattered(RE);
+    const unsigned r_pcrel = O->getAnyRelocationPCRel(RE);
+    const unsigned r_length = O->getAnyRelocationLength(RE);
+    const unsigned r_address = O->getAnyRelocationAddress(RE);
+    const bool r_extern = (r_scattered ? false :
+                           O->getPlainRelocationExternal(RE));
+    const uint32_t r_value = (r_scattered ?
+                              O->getScatteredRelocationValue(RE) : 0);
+    const unsigned r_symbolnum = (r_scattered ? 0 :
+                                  O->getPlainRelocationSymbolNum(RE));
+    
+    if (r_scattered && cputype != MachO::CPU_TYPE_X86_64) {
+      if (verbose) {
+        // scattered: address
+        if ((cputype == MachO::CPU_TYPE_I386 &&
+             r_type == llvm::MachO::GENERIC_RELOC_PAIR) ||
+            (cputype == MachO::CPU_TYPE_ARM &&
+             r_type == llvm::MachO::ARM_RELOC_PAIR))
+          outs() << "         ";
+        else
+          outs() << format("%08x ", (unsigned int)r_address);
+        
+        // scattered: pcrel
+        if (r_pcrel)
+          outs() << "True  ";
+        else
+          outs() << "False ";
+        
+        // scattered: length
+        PrintRLength(cputype, r_type, r_length, previous_arm_half);
+        
+        // scattered: extern & type
+        outs() << "n/a    ";
+        PrintRType(cputype, r_type);
+        
+        // scattered: scattered & value
+        outs() << format("True      0x%08x", (unsigned int)r_value);
+        if (previous_sectdiff == false) {
+          if ((cputype == MachO::CPU_TYPE_ARM &&
+               r_type == llvm::MachO::ARM_RELOC_PAIR))
+            outs() << format(" half = 0x%04x ", (unsigned int)r_address);
+        }
+        else if (cputype == MachO::CPU_TYPE_ARM &&
+                 sectdiff_r_type == llvm::MachO::ARM_RELOC_HALF_SECTDIFF)
+          outs() << format(" other_half = 0x%04x ", (unsigned int)r_address);
+        if ((cputype == MachO::CPU_TYPE_I386 &&
+             (r_type == llvm::MachO::GENERIC_RELOC_SECTDIFF ||
+              r_type == llvm::MachO::GENERIC_RELOC_LOCAL_SECTDIFF)) ||
+            (cputype == MachO::CPU_TYPE_ARM &&
+             (sectdiff_r_type == llvm::MachO::ARM_RELOC_SECTDIFF ||
+              sectdiff_r_type == llvm::MachO::ARM_RELOC_LOCAL_SECTDIFF ||
+              sectdiff_r_type == llvm::MachO::ARM_RELOC_HALF_SECTDIFF))) {
+               previous_sectdiff = true;
+               sectdiff_r_type = r_type;
+             }
+        else {
+          previous_sectdiff = false;
+          sectdiff_r_type = 0;
+        }
+        if (cputype == MachO::CPU_TYPE_ARM &&
+            (r_type == llvm::MachO::ARM_RELOC_HALF ||
+             r_type == llvm::MachO::ARM_RELOC_HALF_SECTDIFF))
+          previous_arm_half = true;
+        else
+          previous_arm_half = false;
+        outs() << "\n";
+      }
+      else {
+        // scattered: address pcrel length extern type scattered value
+        outs() << format("%08x %1d     %-2d     n/a    %-7d 1         0x%08x\n",
+                         (unsigned int)r_address, r_pcrel, r_length, r_type,
+                         (unsigned int)r_value);
+      }
+    }
+    else {
+      if (verbose) {
+        // plain: address
+        if (cputype == MachO::CPU_TYPE_ARM &&
+            r_type == llvm::MachO::ARM_RELOC_PAIR)
+          outs() << "         ";
+        else
+          outs() << format("%08x ", (unsigned int)r_address);
+        
+        // plain: pcrel
+        if (r_pcrel)
+          outs() << "True  ";
+        else
+          outs() << "False ";
+        
+        // plain: length
+        PrintRLength(cputype, r_type, r_length, previous_arm_half);
+        
+        if (r_extern) {
+          // plain: extern & type & scattered
+          outs() << "True   ";
+          PrintRType(cputype, r_type);
+          outs() << "False     ";
+          
+          // plain: symbolnum/value
+          if (r_symbolnum > Symtab.nsyms)
+            outs() << format("?(%d)\n", r_symbolnum);
+          else {
+            SymbolRef Symbol = *O->getSymbolByIndex(r_symbolnum);
+            Expected<StringRef> SymNameNext = Symbol.getName();
+            const char *name = NULL;
+            if (SymNameNext)
+              name = SymNameNext->data();
+            if (name == NULL)
+              outs() << format("?(%d)\n", r_symbolnum);
+            else
+              outs() << name << "\n";
+          }
+        }
+        else {
+          // plain: extern & type & scattered
+          outs() << "False  ";
+          PrintRType(cputype, r_type);
+          outs() << "False     ";
+          
+          // plain: symbolnum/value
+          if (cputype == MachO::CPU_TYPE_ARM &&
+                   r_type == llvm::MachO::ARM_RELOC_PAIR)
+            outs() << format("other_half = 0x%04x\n", (unsigned int)r_address);
+          else if (cputype == MachO::CPU_TYPE_ARM64 &&
+                   r_type == llvm::MachO::ARM64_RELOC_ADDEND)
+            outs() << format("addend = 0x%06x\n", (unsigned int)r_symbolnum);
+          else {
+            outs() << format("%d ", r_symbolnum);
+            if (r_symbolnum == llvm::MachO::R_ABS)
+              outs() << "R_ABS\n";
+            else {
+              // in this case, r_symbolnum is actually a 1-based section number
+              uint32_t nsects = O->section_end()->getRawDataRefImpl().d.a;
+              if (r_symbolnum > 0 && r_symbolnum <= nsects) {
+                llvm::object::DataRefImpl DRI;
+                DRI.d.a = r_symbolnum-1;
+                StringRef SegName = O->getSectionFinalSegmentName(DRI);
+                StringRef SectName;
+                if (O->getSectionName(DRI, SectName))
+                  outs() << "(?,?)\n";
+                else
+                  outs() << "(" << SegName << "," << SectName << ")\n";
+              }
+              else {
+                outs() << "(?,?)\n";
+              }
+            }
+          }
+        }
+        if (cputype == MachO::CPU_TYPE_ARM &&
+            (r_type == llvm::MachO::ARM_RELOC_HALF ||
+             r_type == llvm::MachO::ARM_RELOC_HALF_SECTDIFF))
+          previous_arm_half = true;
+        else
+          previous_arm_half = false;
+      }
+      else {
+        // plain: address pcrel length extern type scattered symbolnum/section
+        outs() << format("%08x %1d     %-2d     %1d      %-7d 0         %d\n",
+                         (unsigned int)r_address, r_pcrel, r_length, r_extern,
+                         r_type, r_symbolnum);
+      }
+    }
+  }
+}
+
+static void PrintRelocations(const MachOObjectFile *O, const bool verbose) {
+  const uint64_t cputype = O->getHeader().cputype;
+  const MachO::dysymtab_command Dysymtab = O->getDysymtabLoadCommand();
+  if (Dysymtab.nextrel != 0) {
+    outs() << "External relocation information " << Dysymtab.nextrel
+           << " entries";
+    outs() << "\naddress  pcrel length extern type    scattered "
+              "symbolnum/value\n";
+    PrintRelocationEntries(O, O->extrel_begin(), O->extrel_end(), cputype,
+                           verbose);
+  }
+  if (Dysymtab.nlocrel != 0) {
+    outs() << format("Local relocation information %u entries",
+                     Dysymtab.nlocrel);
+    outs() << "\naddress  pcrel length extern type    scattered "
+              "symbolnum/value\n";
+    PrintRelocationEntries(O, O->locrel_begin(), O->locrel_end(), cputype,
+                           verbose);
+  }
+  for (const auto &Load : O->load_commands()) {
+    if (Load.C.cmd == MachO::LC_SEGMENT_64) {
+      const MachO::segment_command_64 Seg = O->getSegment64LoadCommand(Load);
+      for (unsigned J = 0; J < Seg.nsects; ++J) {
+        const MachO::section_64 Sec = O->getSection64(Load, J);
+        if (Sec.nreloc != 0) {
+          DataRefImpl DRI;
+          DRI.d.a = J;
+          const StringRef SegName = O->getSectionFinalSegmentName(DRI);
+          StringRef SectName;
+          if (O->getSectionName(DRI, SectName))
+            outs() << "Relocation information (" << SegName << ",?) "
+                   << format("%u entries", Sec.nreloc);
+          else
+            outs() << "Relocation information (" << SegName << ","
+                   << SectName << format(") %u entries", Sec.nreloc);
+          outs() << "\naddress  pcrel length extern type    scattered "
+                    "symbolnum/value\n";
+          PrintRelocationEntries(O, O->section_rel_begin(DRI),
+                                 O->section_rel_end(DRI), cputype, verbose);
+        }
+      }
+    } else if (Load.C.cmd == MachO::LC_SEGMENT) {
+      const MachO::segment_command Seg = O->getSegmentLoadCommand(Load);
+      for (unsigned J = 0; J < Seg.nsects; ++J) {
+        const MachO::section Sec = O->getSection(Load, J);
+        if (Sec.nreloc != 0) {
+          DataRefImpl DRI;
+          DRI.d.a = J;
+          const StringRef SegName = O->getSectionFinalSegmentName(DRI);
+          StringRef SectName;
+          if (O->getSectionName(DRI, SectName))
+            outs() << "Relocation information (" << SegName << ",?) "
+                   << format("%u entries", Sec.nreloc);
+          else
+            outs() << "Relocation information (" << SegName << ","
+                   << SectName << format(") %u entries", Sec.nreloc);
+          outs() << "\naddress  pcrel length extern type    scattered "
+                    "symbolnum/value\n";
+          PrintRelocationEntries(O, O->section_rel_begin(DRI),
+                                 O->section_rel_end(DRI), cputype, verbose);
+        }
+      }
+    }
+  }
+}
+
 static void PrintDataInCodeTable(MachOObjectFile *O, bool verbose) {
   MachO::linkedit_data_command DIC = O->getDataInCodeLoadCommand();
   uint32_t nentries = DIC.datasize / sizeof(struct MachO::data_in_code_entry);
@@ -1221,9 +1548,10 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
   // If we are doing some processing here on the Mach-O file print the header
   // info.  And don't print it otherwise like in the case of printing the
   // UniversalHeaders or ArchiveHeaders.
-  if (Disassemble || PrivateHeaders || ExportsTrie || Rebase || Bind || SymbolTable ||
-      LazyBind || WeakBind || IndirectSymbols || DataInCode || LinkOptHints ||
-      DylibsUsed || DylibId || ObjcMetaData || (FilterSections.size() != 0)) {
+  if (Disassemble || Relocations || PrivateHeaders || ExportsTrie || Rebase ||
+      Bind || SymbolTable || LazyBind || WeakBind || IndirectSymbols ||
+      DataInCode || LinkOptHints || DylibsUsed || DylibId || ObjcMetaData ||
+      (FilterSections.size() != 0)) {
     if (!NoLeadingHeaders) {
       outs() << Name;
       if (!ArchiveMemberName.empty())
@@ -1267,7 +1595,7 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
   if (LinkOptHints)
     PrintLinkOptHints(MachOOF);
   if (Relocations)
-    PrintRelocations(MachOOF);
+    PrintRelocations(MachOOF, !NonVerbose);
   if (SectionHeaders)
     PrintSectionHeaders(MachOOF);
   if (SectionContents)

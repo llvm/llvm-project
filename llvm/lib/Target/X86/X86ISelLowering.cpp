@@ -94,7 +94,7 @@ static void errorUnsupported(SelectionDAG &DAG, const SDLoc &dl,
                              const char *Msg) {
   MachineFunction &MF = DAG.getMachineFunction();
   DAG.getContext()->diagnose(
-      DiagnosticInfoUnsupported(*MF.getFunction(), Msg, dl.getDebugLoc()));
+      DiagnosticInfoUnsupported(MF.getFunction(), Msg, dl.getDebugLoc()));
 }
 
 X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
@@ -1566,7 +1566,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setTruncStoreAction(MVT::v4i32, MVT::v4i16, Legal);
 
     if (Subtarget.hasDQI()) {
-      // TODO: these shouldn't require VLX. We can widen to 512-bit with AVX512F.
       // Fast v2f32 SINT_TO_FP( v2i64 ) custom conversion.
       // v2f32 UINT_TO_FP is already custom under SSE2.
       setOperationAction(ISD::SINT_TO_FP,    MVT::v2f32, Custom);
@@ -1844,8 +1843,8 @@ X86TargetLowering::getOptimalMemOpType(uint64_t Size,
                                        bool IsMemset, bool ZeroMemset,
                                        bool MemcpyStrSrc,
                                        MachineFunction &MF) const {
-  const Function *F = MF.getFunction();
-  if (!F->hasFnAttribute(Attribute::NoImplicitFloat)) {
+  const Function &F = MF.getFunction();
+  if (!F.hasFnAttribute(Attribute::NoImplicitFloat)) {
     if (Size >= 16 &&
         (!Subtarget.isUnalignedMem16Slow() ||
          ((DstAlign == 0 || DstAlign >= 16) &&
@@ -1941,7 +1940,7 @@ void X86TargetLowering::markLibCallAttributes(MachineFunction *MF, unsigned CC,
   if (CC != CallingConv::C && CC != CallingConv::X86_StdCall)
     return;
   unsigned ParamRegs = 0;
-  if (auto *M = MF->getFunction()->getParent())
+  if (auto *M = MF->getFunction().getParent())
     ParamRegs = M->getNumberRegisterParameters();
 
   // Mark the first N int arguments as having reg
@@ -2208,7 +2207,7 @@ X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   // For example, when they are used for argument passing.
   bool ShouldDisableCalleeSavedRegister =
       CallConv == CallingConv::X86_RegCall ||
-      MF.getFunction()->hasFnAttribute("no_caller_saved_registers");
+      MF.getFunction().hasFnAttribute("no_caller_saved_registers");
 
   if (CallConv == CallingConv::X86_INTR && !Outs.empty())
     report_fatal_error("X86 interrupts may not return any value");
@@ -2890,8 +2889,8 @@ static ArrayRef<MCPhysReg> get64BitArgumentXMMs(MachineFunction &MF,
     return None;
   }
 
-  const Function *Fn = MF.getFunction();
-  bool NoImplicitFloatOps = Fn->hasFnAttribute(Attribute::NoImplicitFloat);
+  const Function &F = MF.getFunction();
+  bool NoImplicitFloatOps = F.hasFnAttribute(Attribute::NoImplicitFloat);
   bool isSoftFloat = Subtarget.useSoftFloat();
   assert(!(isSoftFloat && NoImplicitFloatOps) &&
          "SSE register cannot be used when SSE is disabled!");
@@ -2924,10 +2923,9 @@ SDValue X86TargetLowering::LowerFormalArguments(
   X86MachineFunctionInfo *FuncInfo = MF.getInfo<X86MachineFunctionInfo>();
   const TargetFrameLowering &TFI = *Subtarget.getFrameLowering();
 
-  const Function *Fn = MF.getFunction();
-  if (Fn->hasExternalLinkage() &&
-      Subtarget.isTargetCygMing() &&
-      Fn->getName() == "main")
+  const Function &F = MF.getFunction();
+  if (F.hasExternalLinkage() && Subtarget.isTargetCygMing() &&
+      F.getName() == "main")
     FuncInfo->setForceFramePointer(true);
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -3102,7 +3100,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
 
   // Figure out if XMM registers are in use.
   assert(!(Subtarget.useSoftFloat() &&
-           Fn->hasFnAttribute(Attribute::NoImplicitFloat)) &&
+           F.hasFnAttribute(Attribute::NoImplicitFloat)) &&
          "SSE register cannot be used when SSE is disabled!");
 
   // 64-bit calling conventions support varargs and register parameters, so we
@@ -3259,7 +3257,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
   FuncInfo->setArgumentStackSize(StackSize);
 
   if (WinEHFuncInfo *EHInfo = MF.getWinEHFuncInfo()) {
-    EHPersonality Personality = classifyEHPersonality(Fn->getPersonalityFn());
+    EHPersonality Personality = classifyEHPersonality(F.getPersonalityFn());
     if (Personality == EHPersonality::CoreCLR) {
       assert(Is64Bit);
       // TODO: Add a mechanism to frame lowering that will allow us to indicate
@@ -3276,7 +3274,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
   }
 
   if (CallConv == CallingConv::X86_RegCall ||
-      Fn->hasFnAttribute("no_caller_saved_registers")) {
+      F.hasFnAttribute("no_caller_saved_registers")) {
     MachineRegisterInfo &MRI = MF.getRegInfo();
     for (std::pair<unsigned, unsigned> Pair : MRI.liveins())
       MRI.disableCalleeSavedRegister(Pair.first);
@@ -3367,7 +3365,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   StructReturnType SR = callIsStructReturn(Outs, Subtarget.isTargetMCU());
   bool IsSibcall      = false;
   X86MachineFunctionInfo *X86Info = MF.getInfo<X86MachineFunctionInfo>();
-  auto Attr = MF.getFunction()->getFnAttribute("disable-tail-calls");
+  auto Attr = MF.getFunction().getFnAttribute("disable-tail-calls");
   const auto *CI = dyn_cast_or_null<CallInst>(CLI.CS.getInstruction());
   const Function *Fn = CI ? CI->getCalledFunction() : nullptr;
   bool HasNCSR = (CI && CI->hasFnAttr("no_caller_saved_registers")) ||
@@ -3402,7 +3400,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // Check if it's really possible to do a tail call.
     isTailCall = IsEligibleForTailCallOptimization(Callee, CallConv,
                     isVarArg, SR != NotStructReturn,
-                    MF.getFunction()->hasStructRetAttr(), CLI.RetTy,
+                    MF.getFunction().hasStructRetAttr(), CLI.RetTy,
                     Outs, OutVals, Ins, DAG);
 
     // Sibcalls are automatically detected tailcalls which do not require
@@ -3748,7 +3746,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       }
     }
   } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
-    const Module *Mod = DAG.getMachineFunction().getFunction()->getParent();
+    const Module *Mod = DAG.getMachineFunction().getFunction().getParent();
     unsigned char OpFlags =
         Subtarget.classifyGlobalFunctionReference(nullptr, *Mod);
 
@@ -3797,10 +3795,10 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // FIXME: Model this more precisely so that we can register allocate across
   // the normal edge and spill and fill across the exceptional edge.
   if (!Is64Bit && CLI.CS && CLI.CS.isInvoke()) {
-    const Function *CallerFn = MF.getFunction();
+    const Function &CallerFn = MF.getFunction();
     EHPersonality Pers =
-        CallerFn->hasPersonalityFn()
-            ? classifyEHPersonality(CallerFn->getPersonalityFn())
+        CallerFn.hasPersonalityFn()
+            ? classifyEHPersonality(CallerFn.getPersonalityFn())
             : EHPersonality::Unknown;
     if (isFuncletEHPersonality(Pers))
       Mask = RegInfo->getNoPreservedMask();
@@ -4048,15 +4046,15 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
 
   // If -tailcallopt is specified, make fastcc functions tail-callable.
   MachineFunction &MF = DAG.getMachineFunction();
-  const Function *CallerF = MF.getFunction();
+  const Function &CallerF = MF.getFunction();
 
   // If the function return type is x86_fp80 and the callee return type is not,
   // then the FP_EXTEND of the call result is not a nop. It's not safe to
   // perform a tailcall optimization here.
-  if (CallerF->getReturnType()->isX86_FP80Ty() && !RetTy->isX86_FP80Ty())
+  if (CallerF.getReturnType()->isX86_FP80Ty() && !RetTy->isX86_FP80Ty())
     return false;
 
-  CallingConv::ID CallerCC = CallerF->getCallingConv();
+  CallingConv::ID CallerCC = CallerF.getCallingConv();
   bool CCMatch = CallerCC == CalleeCC;
   bool IsCalleeWin64 = Subtarget.isCallingConvWin64(CalleeCC);
   bool IsCallerWin64 = Subtarget.isCallingConvWin64(CallerCC);
@@ -4640,7 +4638,7 @@ bool X86TargetLowering::canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
                                          const SelectionDAG &DAG) const {
   // Do not merge to float value size (128 bytes) if no implicit
   // float attribute is set.
-  bool NoFloat = DAG.getMachineFunction().getFunction()->hasFnAttribute(
+  bool NoFloat = DAG.getMachineFunction().getFunction().hasFnAttribute(
       Attribute::NoImplicitFloat);
 
   if (NoFloat) {
@@ -6928,7 +6926,7 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
   // TODO: If multiple splats are generated to load the same constant,
   // it may be detrimental to overall size. There needs to be a way to detect
   // that condition to know if this is truly a size win.
-  bool OptForSize = DAG.getMachineFunction().getFunction()->optForSize();
+  bool OptForSize = DAG.getMachineFunction().getFunction().optForSize();
 
   // Handle broadcasting a single constant scalar from the constant pool
   // into a vector.
@@ -14539,7 +14537,7 @@ static SDValue ExtractBitFromMaskVector(SDValue Op, SelectionDAG &DAG,
     // Extending v8i1/v16i1 to 512-bit get better performance on KNL
     // than extending to 128/256bit.
     unsigned VecSize = (NumElts <= 4 ? 128 : 512);
-    MVT ExtVT = MVT::getVectorVT(MVT::getIntegerVT(VecSize/NumElts), NumElts);
+    MVT ExtVT = MVT::getVectorVT(MVT::getIntegerVT(VecSize / NumElts), NumElts);
     SDValue Ext = DAG.getNode(ISD::SIGN_EXTEND, dl, ExtVT, Vec);
     SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl,
                               ExtVT.getVectorElementType(), Ext, Idx);
@@ -14725,8 +14723,10 @@ static SDValue InsertBitToMaskVector(SDValue Op, SelectionDAG &DAG,
   if (!isa<ConstantSDNode>(Idx)) {
     // Non constant index. Extend source and destination,
     // insert element and then truncate the result.
-    MVT ExtVecVT = (VecVT == MVT::v8i1 ?  MVT::v8i64 : MVT::v16i32);
-    MVT ExtEltVT = (VecVT == MVT::v8i1 ?  MVT::i64 : MVT::i32);
+    unsigned NumElts = VecVT.getVectorNumElements();
+    unsigned VecSize = (NumElts <= 4 ? 128 : 512);
+    MVT ExtVecVT = MVT::getVectorVT(MVT::getIntegerVT(VecSize/NumElts), NumElts);
+    MVT ExtEltVT = ExtVecVT.getVectorElementType();
     SDValue ExtOp = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, ExtVecVT,
       DAG.getNode(ISD::ZERO_EXTEND, dl, ExtVecVT, Vec),
       DAG.getNode(ISD::ZERO_EXTEND, dl, ExtEltVT, Elt), Idx);
@@ -14902,7 +14902,7 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
       // Bits [3:0] of the constant are the zero mask. The DAG Combiner may
       //   combine either bitwise AND or insert of float 0.0 to set these bits.
 
-      bool MinSize = DAG.getMachineFunction().getFunction()->optForMinSize();
+      bool MinSize = DAG.getMachineFunction().getFunction().optForMinSize();
       if (IdxVal == 0 && (!MinSize || !MayFoldLoad(N1))) {
         // If this is an insertion of 32-bits into the low 32-bits of
         // a vector, we prefer to generate a blend with immediate rather
@@ -15043,7 +15043,7 @@ X86TargetLowering::LowerExternalSymbol(SDValue Op, SelectionDAG &DAG) const {
 
   // In PIC mode (unless we're in RIPRel PIC mode) we add an offset to the
   // global base reg.
-  const Module *Mod = DAG.getMachineFunction().getFunction()->getParent();
+  const Module *Mod = DAG.getMachineFunction().getFunction().getParent();
   unsigned char OpFlag = Subtarget.classifyGlobalReference(nullptr, *Mod);
 
   auto PtrVT = getPointerTy(DAG.getDataLayout());
@@ -16967,7 +16967,7 @@ SDValue X86TargetLowering::EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
       // An add of one will be selected as an INC.
       if (C->isOne() &&
           (!Subtarget.slowIncDec() ||
-           DAG.getMachineFunction().getFunction()->optForSize())) {
+           DAG.getMachineFunction().getFunction().optForSize())) {
         Opcode = X86ISD::INC;
         NumOperands = 1;
         break;
@@ -16976,7 +16976,7 @@ SDValue X86TargetLowering::EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
       // An add of negative one (subtract of one) will be selected as a DEC.
       if (C->isAllOnesValue() &&
           (!Subtarget.slowIncDec() ||
-           DAG.getMachineFunction().getFunction()->optForSize())) {
+           DAG.getMachineFunction().getFunction().optForSize())) {
         Opcode = X86ISD::DEC;
         NumOperands = 1;
         break;
@@ -17171,7 +17171,7 @@ SDValue X86TargetLowering::EmitCmp(SDValue Op0, SDValue Op1, unsigned X86CC,
     // with an immediate.  16 bit immediates are to be avoided.
     if ((Op0.getValueType() == MVT::i16 &&
          (isa<ConstantSDNode>(Op0) || isa<ConstantSDNode>(Op1))) &&
-        !DAG.getMachineFunction().getFunction()->optForMinSize() &&
+        !DAG.getMachineFunction().getFunction().optForMinSize() &&
         !Subtarget.isAtom()) {
       unsigned ExtendOp =
           isX86CCUnsigned(X86CC) ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND;
@@ -19241,8 +19241,8 @@ X86TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
     if (Is64Bit) {
       // The 64 bit implementation of segmented stacks needs to clobber both r10
       // r11. This makes it impossible to use it along with nested parameters.
-      const Function *F = MF.getFunction();
-      for (const auto &A : F->args()) {
+      const Function &F = MF.getFunction();
+      for (const auto &A : F.args()) {
         if (A.hasNestAttr())
           report_fatal_error("Cannot use segmented stacks with functions that "
                              "have nested arguments.");
@@ -19289,7 +19289,7 @@ SDValue X86TargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
 
   if (!Subtarget.is64Bit() ||
-      Subtarget.isCallingConvWin64(MF.getFunction()->getCallingConv())) {
+      Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv())) {
     // vastart just stores the address of the VarArgsFrameIndex slot into the
     // memory location argument.
     SDValue FR = DAG.getFrameIndex(FuncInfo->getVarArgsFrameIndex(), PtrVT);
@@ -19343,7 +19343,7 @@ SDValue X86TargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
   assert(Op.getNumOperands() == 4);
 
   MachineFunction &MF = DAG.getMachineFunction();
-  if (Subtarget.isCallingConvWin64(MF.getFunction()->getCallingConv()))
+  if (Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv()))
     // The Win64 ABI uses char* instead of a structure.
     return DAG.expandVAArg(Op.getNode());
 
@@ -19374,7 +19374,7 @@ SDValue X86TargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
   if (ArgMode == 2) {
     // Sanity Check: Make sure using fp_offset makes sense.
     assert(!Subtarget.useSoftFloat() &&
-           !(MF.getFunction()->hasFnAttribute(Attribute::NoImplicitFloat)) &&
+           !(MF.getFunction().hasFnAttribute(Attribute::NoImplicitFloat)) &&
            Subtarget.hasSSE1());
   }
 
@@ -19402,7 +19402,7 @@ static SDValue LowerVACOPY(SDValue Op, const X86Subtarget &Subtarget,
   // where a va_list is still an i8*.
   assert(Subtarget.is64Bit() && "This code only handles 64-bit va_copy!");
   if (Subtarget.isCallingConvWin64(
-        DAG.getMachineFunction().getFunction()->getCallingConv()))
+        DAG.getMachineFunction().getFunction().getCallingConv()))
     // Probably a Win64 va_copy.
     return DAG.expandVACopy(Op.getNode());
 
@@ -20317,18 +20317,6 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                     Mask.getSimpleValueType().getSizeInBits());
       Mask = DAG.getBitcast(MaskVT, Mask);
       return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(), Mask);
-    }
-    case KUNPCK: {
-      MVT VT = Op.getSimpleValueType();
-      MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getSizeInBits()/2);
-
-      SDValue Src1 = getMaskNode(Op.getOperand(1), MaskVT, Subtarget, DAG, dl);
-      SDValue Src2 = getMaskNode(Op.getOperand(2), MaskVT, Subtarget, DAG, dl);
-      // Arguments should be swapped.
-      SDValue Res = DAG.getNode(IntrData->Opc0, dl,
-                                MVT::getVectorVT(MVT::i1, VT.getSizeInBits()),
-                                Src2, Src1);
-      return DAG.getBitcast(VT, Res);
     }
     case MASK_BINOP: {
       MVT VT = Op.getSimpleValueType();
@@ -23778,14 +23766,14 @@ static SDValue LowerVectorCTPOP(SDValue Op, const X86Subtarget &Subtarget,
   // TRUNC(CTPOP(ZEXT(X))) to make use of vXi32/vXi64 VPOPCNT instructions.
   if (Subtarget.hasVPOPCNTDQ()) {
     if (VT == MVT::v8i16) {
-      Op = DAG.getNode(X86ISD::VZEXT, DL, MVT::v8i64, Op0);
+      Op = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::v8i64, Op0);
       Op = DAG.getNode(ISD::CTPOP, DL, MVT::v8i64, Op);
-      return DAG.getNode(X86ISD::VTRUNC, DL, VT, Op);
+      return DAG.getNode(ISD::TRUNCATE, DL, VT, Op);
     }
     if (VT == MVT::v16i8 || VT == MVT::v16i16) {
-      Op = DAG.getNode(X86ISD::VZEXT, DL, MVT::v16i32, Op0);
+      Op = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::v16i32, Op0);
       Op = DAG.getNode(ISD::CTPOP, DL, MVT::v16i32, Op);
-      return DAG.getNode(X86ISD::VTRUNC, DL, VT, Op);
+      return DAG.getNode(ISD::TRUNCATE, DL, VT, Op);
     }
   }
 
@@ -23938,7 +23926,7 @@ static SDValue lowerAtomicArithWithLOCK(SDValue N, SelectionDAG &DAG,
   if (auto *C = dyn_cast<ConstantSDNode>(N->getOperand(2))) {
     // Convert to inc/dec if they aren't slow or we are optimizing for size.
     if (AllowIncDec && (!Subtarget.slowIncDec() ||
-                        DAG.getMachineFunction().getFunction()->optForSize())) {
+                        DAG.getMachineFunction().getFunction().optForSize())) {
       if ((NewOpc == X86ISD::LADD && C->isOne()) ||
           (NewOpc == X86ISD::LSUB && C->isAllOnesValue()))
         return DAG.getMemIntrinsicNode(X86ISD::LINC, SDLoc(N),
@@ -24676,12 +24664,21 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       assert(Subtarget.hasSSE2() && "Requires at least SSE2!");
       SDValue Src = N->getOperand(0);
       if (Src.getValueType() == MVT::v2f64) {
-        SDValue Idx = DAG.getIntPtrConstant(0, dl);
-        SDValue Res = DAG.getNode(IsSigned ? X86ISD::CVTTP2SI
-                                           : X86ISD::CVTTP2UI,
-                                  dl, MVT::v4i32, Src);
-        if (!ExperimentalVectorWideningLegalization)
-          Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v2i32, Res, Idx);
+        MVT ResVT = MVT::v4i32;
+        unsigned Opc = IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI;
+        if (!IsSigned && !Subtarget.hasVLX()) {
+          // Widen to 512-bits.
+          ResVT = MVT::v8i32;
+          Opc = ISD::FP_TO_UINT;
+          Src = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v8f64,
+                            DAG.getUNDEF(MVT::v8f64),
+                            Src, DAG.getIntPtrConstant(0, dl));
+        }
+        SDValue Res = DAG.getNode(Opc, dl, ResVT, Src);
+        ResVT = ExperimentalVectorWideningLegalization ? MVT::v4i32
+                                                       : MVT::v2i32;
+        Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, ResVT, Res,
+                          DAG.getIntPtrConstant(0, dl));
         Results.push_back(Res);
         return;
       }
@@ -26075,7 +26072,7 @@ MachineBasicBlock *X86TargetLowering::EmitVAStartSaveXMMRegsWithCustomInserter(
   int64_t RegSaveFrameIndex = MI.getOperand(1).getImm();
   int64_t VarArgsFPOffset = MI.getOperand(2).getImm();
 
-  if (!Subtarget.isCallingConvWin64(F->getFunction()->getCallingConv())) {
+  if (!Subtarget.isCallingConvWin64(F->getFunction().getCallingConv())) {
     // If %al is 0, branch around the XMM save block.
     BuildMI(MBB, DL, TII->get(X86::TEST8rr)).addReg(CountReg).addReg(CountReg);
     BuildMI(MBB, DL, TII->get(X86::JE_1)).addMBB(EndMBB);
@@ -26718,7 +26715,7 @@ X86TargetLowering::EmitLoweredCatchRet(MachineInstr &MI,
   DebugLoc DL = MI.getDebugLoc();
 
   assert(!isAsynchronousEHPersonality(
-             classifyEHPersonality(MF->getFunction()->getPersonalityFn())) &&
+             classifyEHPersonality(MF->getFunction().getPersonalityFn())) &&
          "SEH does not use catchret!");
 
   // Only 32-bit EH needs to worry about manually restoring stack pointers.
@@ -26745,7 +26742,7 @@ MachineBasicBlock *
 X86TargetLowering::EmitLoweredCatchPad(MachineInstr &MI,
                                        MachineBasicBlock *BB) const {
   MachineFunction *MF = BB->getParent();
-  const Constant *PerFn = MF->getFunction()->getPersonalityFn();
+  const Constant *PerFn = MF->getFunction().getPersonalityFn();
   bool IsSEH = isAsynchronousEHPersonality(classifyEHPersonality(PerFn));
   // Only 32-bit SEH requires special handling for catchpad.
   if (IsSEH && Subtarget.is32Bit()) {
@@ -32151,7 +32148,7 @@ static SDValue reduceVMULWidth(SDNode *N, SelectionDAG &DAG,
   // pmulld is supported since SSE41. It is better to use pmulld
   // instead of pmullw+pmulhw, except for subtargets where pmulld is slower than
   // the expansion.
-  bool OptForMinSize = DAG.getMachineFunction().getFunction()->optForMinSize();
+  bool OptForMinSize = DAG.getMachineFunction().getFunction().optForMinSize();
   if (Subtarget.hasSSE41() && (OptForMinSize || !Subtarget.isPMULLDSlow()))
     return SDValue();
 
@@ -32344,7 +32341,7 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
   if (!MulConstantOptimization)
     return SDValue();
   // An imul is usually smaller than the alternative sequence.
-  if (DAG.getMachineFunction().getFunction()->optForMinSize())
+  if (DAG.getMachineFunction().getFunction().optForMinSize())
     return SDValue();
 
   if (DCI.isBeforeLegalize() || DCI.isCalledByLegalizer())
@@ -33562,7 +33559,7 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // fold (or (x << c) | (y >> (64 - c))) ==> (shld64 x, y, c)
-  bool OptForSize = DAG.getMachineFunction().getFunction()->optForSize();
+  bool OptForSize = DAG.getMachineFunction().getFunction().optForSize();
 
   // SHLD/SHRD instructions have lower register pressure, but on some
   // platforms they have higher latency than the equivalent
@@ -34502,8 +34499,8 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   if (VT.getSizeInBits() != 64)
     return SDValue();
 
-  const Function *F = DAG.getMachineFunction().getFunction();
-  bool NoImplicitFloatOps = F->hasFnAttribute(Attribute::NoImplicitFloat);
+  const Function &F = DAG.getMachineFunction().getFunction();
+  bool NoImplicitFloatOps = F.hasFnAttribute(Attribute::NoImplicitFloat);
   bool F64IsLegal =
       !Subtarget.useSoftFloat() && !NoImplicitFloatOps && Subtarget.hasSSE2();
   if ((VT.isVector() ||
@@ -35378,7 +35375,7 @@ static SDValue combineFMinNumFMaxNum(SDNode *N, SelectionDAG &DAG,
 
   // This takes at least 3 instructions, so favor a library call when operating
   // on a scalar and minimizing code size.
-  if (!VT.isVector() && DAG.getMachineFunction().getFunction()->optForMinSize())
+  if (!VT.isVector() && DAG.getMachineFunction().getFunction().optForMinSize())
     return SDValue();
 
   SDValue Op0 = N->getOperand(0);
@@ -38393,7 +38390,7 @@ void X86TargetLowering::insertCopiesSplitCSR(
     // fine for CXX_FAST_TLS since the C++-style TLS access functions should be
     // nounwind. If we want to generalize this later, we may need to emit
     // CFI pseudo-instructions.
-    assert(Entry->getParent()->getFunction()->hasFnAttribute(
+    assert(Entry->getParent()->getFunction().hasFnAttribute(
                Attribute::NoUnwind) &&
            "Function should be nounwind in insertCopiesSplitCSR!");
     Entry->addLiveIn(*I);
@@ -38416,8 +38413,8 @@ bool X86TargetLowering::supportSwiftError() const {
 /// string if not applicable.
 StringRef X86TargetLowering::getStackProbeSymbolName(MachineFunction &MF) const {
   // If the function specifically requests stack probes, emit them.
-  if (MF.getFunction()->hasFnAttribute("probe-stack"))
-    return MF.getFunction()->getFnAttribute("probe-stack").getValueAsString();
+  if (MF.getFunction().hasFnAttribute("probe-stack"))
+    return MF.getFunction().getFnAttribute("probe-stack").getValueAsString();
 
   // Generally, if we aren't on Windows, the platform ABI does not include
   // support for stack probes, so don't emit them.

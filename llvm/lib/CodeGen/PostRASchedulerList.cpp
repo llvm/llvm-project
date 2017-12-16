@@ -279,7 +279,7 @@ bool PostRAScheduler::enablePostRAScheduler(
 }
 
 bool PostRAScheduler::runOnMachineFunction(MachineFunction &Fn) {
-  if (skipFunction(*Fn.getFunction()))
+  if (skipFunction(Fn.getFunction()))
     return false;
 
   TII = Fn.getSubtarget().getInstrInfo();

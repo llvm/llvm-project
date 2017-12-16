@@ -292,7 +292,7 @@ MachineSinking::AllUsesDominatedByBlock(unsigned Reg,
 }
 
 bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   DEBUG(dbgs() << "******** Machine Sinking ********\n");

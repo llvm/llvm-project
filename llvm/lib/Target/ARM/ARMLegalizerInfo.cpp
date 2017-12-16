@@ -318,7 +318,7 @@ bool ARMLegalizerInfo::legalizeCustom(MachineInstr &MI,
 
     // Our divmod libcalls return a struct containing the quotient and the
     // remainder. We need to create a virtual register for it.
-    auto &Ctx = MIRBuilder.getMF().getFunction()->getContext();
+    auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
     Type *ArgTy = Type::getInt32Ty(Ctx);
     StructType *RetTy = StructType::get(Ctx, {ArgTy, ArgTy}, /* Packed */ true);
     auto RetVal = MRI.createGenericVirtualRegister(
@@ -359,7 +359,7 @@ bool ARMLegalizerInfo::legalizeCustom(MachineInstr &MI,
       return true;
     }
 
-    auto &Ctx = MIRBuilder.getMF().getFunction()->getContext();
+    auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
     assert((OpSize == 32 || OpSize == 64) && "Unsupported operand size");
     auto *ArgTy = OpSize == 32 ? Type::getFloatTy(Ctx) : Type::getDoubleTy(Ctx);
     auto *RetTy = Type::getInt32Ty(Ctx);

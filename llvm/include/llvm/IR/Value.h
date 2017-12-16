@@ -330,6 +330,10 @@ public:
     return UseList == nullptr;
   }
 
+  bool materialized_use_empty() const {
+    return UseList == nullptr;
+  }
+
   using use_iterator = use_iterator_impl<Use>;
   using const_use_iterator = use_iterator_impl<const Use>;
 

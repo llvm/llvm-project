@@ -1,15 +1,10 @@
-; Verify that multually dependant object files in an archive is handled
-; correctly.
-;
 ; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %s -o %t.o
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %S/Inputs/archive1.ll -o %t2.o
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %S/Inputs/archive2.ll -o %t3.o
-; RUN: llvm-ar rcs %t.a %t2.o %t3.o
+; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %S/Inputs/archive1.ll -o %t.a1.o
+; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %S/Inputs/archive2.ll -o %t.a2.o
+; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %S/Inputs/hello.ll -o %t.a3.o
+; RUN: llvm-ar rcs %t.a %t.a1.o %t.a2.o %t.a3.o
 ; RUN: lld -flavor wasm %t.a %t.o -o %t.wasm
 ; RUN: llvm-nm -a %t.wasm | FileCheck %s
-
-; Specifying the same archive twice is allowed.
-; RUN: lld -flavor wasm %t.a %t.a %t.o -o %t.wasm
 
 declare i32 @foo() local_unnamed_addr #1
 
@@ -19,6 +14,18 @@ entry:
   ret i32 %call
 }
 
-; CHECK: T _start
-; CHECK: T bar
-; CHECK: T foo
+; Verify that multually dependant object files in an archive is handled
+; correctly.
+
+; CHECK:      00000002 T _start
+; CHECK-NEXT: 00000002 T _start
+; CHECK-NEXT: 00000000 T bar
+; CHECK-NEXT: 00000000 T bar
+; CHECK-NEXT: 00000001 T foo
+; CHECK-NEXT: 00000001 T foo
+
+; Verify that symbols from unused objects don't appear in the symbol table
+; CHECK-NOT: hello
+
+; Specifying the same archive twice is allowed.
+; RUN: lld -flavor wasm %t.a %t.a %t.o -o %t.wasm

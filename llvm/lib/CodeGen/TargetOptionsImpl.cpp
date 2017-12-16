@@ -28,7 +28,7 @@ bool TargetOptions::DisableFramePointerElim(const MachineFunction &MF) const {
     return true;
 
   // Check to see if we should eliminate non-leaf frame pointers.
-  if (MF.getFunction()->hasFnAttribute("no-frame-pointer-elim-non-leaf"))
+  if (MF.getFunction().hasFnAttribute("no-frame-pointer-elim-non-leaf"))
     return MF.getFrameInfo().hasCalls();
 
   return false;

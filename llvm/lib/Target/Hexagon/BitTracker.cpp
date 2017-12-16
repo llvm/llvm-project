@@ -186,7 +186,8 @@ void BitTracker::print_cells(raw_ostream &OS) const {
 }
 
 BitTracker::BitTracker(const MachineEvaluator &E, MachineFunction &F)
-    : Trace(false), ME(E), MF(F), MRI(F.getRegInfo()), Map(*new CellMapType) {}
+    : ME(E), MF(F), MRI(F.getRegInfo()), Map(*new CellMapType), Trace(false) {
+}
 
 BitTracker::~BitTracker() {
   delete &Map;
@@ -762,6 +763,33 @@ bool BT::MachineEvaluator::evaluate(const MachineInstr &MI,
   return true;
 }
 
+bool BT::UseQueueType::Cmp::operator()(const MachineInstr *InstA,
+                                       const MachineInstr *InstB) const {
+  // This is a comparison function for a priority queue: give higher priority
+  // to earlier instructions.
+  // This operator is used as "less", so returning "true" gives InstB higher
+  // priority (because then InstA < InstB).
+  if (InstA == InstB)
+    return false;
+  const MachineBasicBlock *BA = InstA->getParent();
+  const MachineBasicBlock *BB = InstB->getParent();
+  if (BA != BB) {
+    // If the blocks are different, ideally the dominating block would
+    // have a higher priority, but it may be too expensive to check.
+    return BA->getNumber() > BB->getNumber();
+  }
+
+  MachineBasicBlock::const_iterator ItA = InstA->getIterator();
+  MachineBasicBlock::const_iterator ItB = InstB->getIterator();
+  MachineBasicBlock::const_iterator End = BA->end();
+  while (ItA != End) {
+    if (ItA == ItB)
+      return false;   // ItA was before ItB.
+    ++ItA;
+  }
+  return true;
+}
+
 // Main W-Z implementation.
 
 void BT::visitPHI(const MachineInstr &PI) {
@@ -948,18 +976,11 @@ void BT::visitBranchesFrom(const MachineInstr &BI) {
 
 void BT::visitUsesOf(unsigned Reg) {
   if (Trace)
-    dbgs() << "visiting uses of " << printReg(Reg, &ME.TRI) << "\n";
+    dbgs() << "queuing uses of modified reg " << printReg(Reg, &ME.TRI)
+           << " cell: " << ME.getCell(Reg, Map) << '\n';
 
-  for (const MachineInstr &UseI : MRI.use_nodbg_instructions(Reg)) {
-    if (!InstrExec.count(&UseI))
-      continue;
-    if (UseI.isPHI())
-      visitPHI(UseI);
-    else if (!UseI.isBranch())
-      visitNonBranch(UseI);
-    else
-      visitBranchesFrom(UseI);
-  }
+  for (MachineInstr &UseI : MRI.use_nodbg_instructions(Reg))
+    UseQ.push(&UseI);
 }
 
 BT::RegisterCell BT::get(RegisterRef RR) const {
@@ -1009,6 +1030,8 @@ void BT::visit(const MachineInstr &MI) {
   assert(!MI.isBranch() && "Only non-branches are allowed");
   InstrExec.insert(&MI);
   visitNonBranch(MI);
+  // Make sure to flush all the pending use updates.
+  runUseQueue();
   // The call to visitNonBranch could propagate the changes until a branch
   // is actually visited. This could result in adding CFG edges to the flow
   // queue. Since the queue won't be processed, clear it.
@@ -1024,35 +1047,13 @@ void BT::reset() {
   ReachedBB.reserve(MF.size());
 }
 
-void BT::run() {
-  reset();
-  assert(FlowQ.empty());
-
-  using MachineFlowGraphTraits = GraphTraits<const MachineFunction*>;
-
-  const MachineBasicBlock *Entry = MachineFlowGraphTraits::getEntryNode(&MF);
-
-  unsigned MaxBN = 0;
-  for (const MachineBasicBlock &B : MF) {
-    assert(B.getNumber() >= 0 && "Disconnected block");
-    unsigned BN = B.getNumber();
-    if (BN > MaxBN)
-      MaxBN = BN;
-  }
-
-  // Keep track of visited blocks.
-  BitVector BlockScanned(MaxBN+1);
-
-  int EntryN = Entry->getNumber();
-  // Generate a fake edge to get something to start with.
-  FlowQ.push(CFGEdge(-1, EntryN));
-
+void BT::runEdgeQueue(BitVector &BlockScanned) {
   while (!FlowQ.empty()) {
     CFGEdge Edge = FlowQ.front();
     FlowQ.pop();
 
     if (EdgeExec.count(Edge))
-      continue;
+      return;
     EdgeExec.insert(Edge);
     ReachedBB.insert(Edge.second);
 
@@ -1069,7 +1070,7 @@ void BT::run() {
     // then the instructions have already been processed. Any updates to
     // the cells would now only happen through visitUsesOf...
     if (BlockScanned[Edge.second])
-      continue;
+      return;
     BlockScanned[Edge.second] = true;
 
     // Visit non-branch instructions.
@@ -1093,6 +1094,50 @@ void BT::run() {
       visitBranchesFrom(*It);
     }
   } // while (!FlowQ->empty())
+}
+
+void BT::runUseQueue() {
+  while (!UseQ.empty()) {
+    MachineInstr &UseI = *UseQ.front();
+    UseQ.pop();
+
+    if (!InstrExec.count(&UseI))
+      continue;
+    if (UseI.isPHI())
+      visitPHI(UseI);
+    else if (!UseI.isBranch())
+      visitNonBranch(UseI);
+    else
+      visitBranchesFrom(UseI);
+  }
+}
+
+void BT::run() {
+  reset();
+  assert(FlowQ.empty());
+
+  using MachineFlowGraphTraits = GraphTraits<const MachineFunction*>;
+  const MachineBasicBlock *Entry = MachineFlowGraphTraits::getEntryNode(&MF);
+
+  unsigned MaxBN = 0;
+  for (const MachineBasicBlock &B : MF) {
+    assert(B.getNumber() >= 0 && "Disconnected block");
+    unsigned BN = B.getNumber();
+    if (BN > MaxBN)
+      MaxBN = BN;
+  }
+
+  // Keep track of visited blocks.
+  BitVector BlockScanned(MaxBN+1);
+
+  int EntryN = Entry->getNumber();
+  // Generate a fake edge to get something to start with.
+  FlowQ.push(CFGEdge(-1, EntryN));
+
+  while (!FlowQ.empty() || !UseQ.empty()) {
+    runEdgeQueue(BlockScanned);
+    runUseQueue();
+  }
 
   if (Trace)
     print_cells(dbgs() << "Cells after propagation:\n");

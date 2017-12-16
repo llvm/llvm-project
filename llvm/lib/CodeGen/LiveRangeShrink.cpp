@@ -106,7 +106,7 @@ static void BuildInstOrderMap(MachineBasicBlock::iterator Start,
 }
 
 bool LiveRangeShrink::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   MachineRegisterInfo &MRI = MF.getRegInfo();

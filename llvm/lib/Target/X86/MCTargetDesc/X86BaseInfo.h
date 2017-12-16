@@ -59,7 +59,9 @@ namespace X86 {
     IP_HAS_AD_SIZE = 2,
     IP_HAS_REPEAT_NE = 4,
     IP_HAS_REPEAT = 8,
-    IP_HAS_LOCK = 16
+    IP_HAS_LOCK = 16,
+    NO_SCHED_INFO = 32 // Don't add sched comment to the current instr because
+                       // it was already added
   };
 } // end namespace X86;
 

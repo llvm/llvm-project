@@ -21,7 +21,7 @@
 ; IMPORTS2-NOT: Import _ZL3barv
 ; RUN: llvm-nm %t3.2 | FileCheck %s --check-prefix=NM
 ; NM: _ZL3barv
-; RUN: llvm-dis < %t3.2.2.internalize.bc | FileCheck %s --check-prefix=INTERNALIZE
+; RUN: llvm-dis < %t3.3.2.internalize.bc | FileCheck %s --check-prefix=INTERNALIZE
 ; INTERNALIZE: define dso_local void @_ZL3barv
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

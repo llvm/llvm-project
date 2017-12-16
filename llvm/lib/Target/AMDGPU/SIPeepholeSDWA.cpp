@@ -1050,7 +1050,7 @@ void SIPeepholeSDWA::legalizeScalarOperands(MachineInstr &MI, const SISubtarget 
 bool SIPeepholeSDWA::runOnMachineFunction(MachineFunction &MF) {
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
 
-  if (!ST.hasSDWA() || skipFunction(*MF.getFunction()))
+  if (!ST.hasSDWA() || skipFunction(MF.getFunction()))
     return false;
 
   MRI = &MF.getRegInfo();

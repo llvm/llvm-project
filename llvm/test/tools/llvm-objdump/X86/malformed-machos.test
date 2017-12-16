@@ -68,4 +68,4 @@ RUN: not llvm-objdump -macho -objc-meta-data %p/Inputs/macho-invalid-bind-entry 
 INVALID-BIND-ENTRY: macho-invalid-bind-entry': truncated or malformed object (for BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB bad library ordinal: 83 (max 0) for opcode at: 0x0)
 
 RUN: llvm-objdump -macho -r %p/Inputs/macho-invalid-reloc-section-index | FileCheck -check-prefix INVALID-RELOC-SECTION-INDEX %s
-INVALID-RELOC-SECTION-INDEX: 0000000000000021 X86_64_RELOC_UNSIGNED 8388613 (?,?)
+INVALID-RELOC-SECTION-INDEX: 00000021 False byte   False  UNSIGND False     8388613 (?,?)

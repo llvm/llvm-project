@@ -89,7 +89,7 @@ static bool isHardwareLoop(const MachineInstr &MI) {
 }
 
 bool HexagonFixupHwLoops::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
   return fixupLoopInstrs(MF);
 }

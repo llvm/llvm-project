@@ -443,7 +443,7 @@ MachineBasicBlock::iterator XCoreInstrInfo::loadImmediate(
   }
   MachineConstantPool *ConstantPool = MBB.getParent()->getConstantPool();
   const Constant *C = ConstantInt::get(
-        Type::getInt32Ty(MBB.getParent()->getFunction()->getContext()), Value);
+        Type::getInt32Ty(MBB.getParent()->getFunction().getContext()), Value);
   unsigned Idx = ConstantPool->getConstantPoolIndex(C, 4);
   return BuildMI(MBB, MI, dl, get(XCore::LDWCP_lru6), Reg)
       .addConstantPoolIndex(Idx)

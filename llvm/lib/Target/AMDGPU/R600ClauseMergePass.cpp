@@ -180,7 +180,7 @@ bool R600ClauseMergePass::mergeIfPossible(MachineInstr &RootCFAlu,
 }
 
 bool R600ClauseMergePass::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   const R600Subtarget &ST = MF.getSubtarget<R600Subtarget>();

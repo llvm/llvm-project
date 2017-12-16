@@ -327,7 +327,7 @@ bool AArch64ConditionOptimizer::adjustTo(MachineInstr *CmpMI,
 bool AArch64ConditionOptimizer::runOnMachineFunction(MachineFunction &MF) {
   DEBUG(dbgs() << "********** AArch64 Conditional Compares **********\n"
                << "********** Function: " << MF.getName() << '\n');
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   TII = MF.getSubtarget().getInstrInfo();

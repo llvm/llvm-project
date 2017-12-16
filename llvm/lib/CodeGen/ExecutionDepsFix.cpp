@@ -617,7 +617,7 @@ bool ExecutionDepsFix::isBlockDone(MachineBasicBlock *MBB) {
 }
 
 bool ExecutionDepsFix::runOnMachineFunction(MachineFunction &mf) {
-  if (skipFunction(*mf.getFunction()))
+  if (skipFunction(mf.getFunction()))
     return false;
   MF = &mf;
   TII = MF->getSubtarget().getInstrInfo();

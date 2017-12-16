@@ -197,7 +197,7 @@ bool R600InstrInfo::usesVertexCache(unsigned Opcode) const {
 
 bool R600InstrInfo::usesVertexCache(const MachineInstr &MI) const {
   const MachineFunction *MF = MI.getParent()->getParent();
-  return !AMDGPU::isCompute(MF->getFunction()->getCallingConv()) &&
+  return !AMDGPU::isCompute(MF->getFunction().getCallingConv()) &&
          usesVertexCache(MI.getOpcode());
 }
 
@@ -207,7 +207,7 @@ bool R600InstrInfo::usesTextureCache(unsigned Opcode) const {
 
 bool R600InstrInfo::usesTextureCache(const MachineInstr &MI) const {
   const MachineFunction *MF = MI.getParent()->getParent();
-  return (AMDGPU::isCompute(MF->getFunction()->getCallingConv()) &&
+  return (AMDGPU::isCompute(MF->getFunction().getCallingConv()) &&
           usesVertexCache(MI.getOpcode())) ||
           usesTextureCache(MI.getOpcode());
 }

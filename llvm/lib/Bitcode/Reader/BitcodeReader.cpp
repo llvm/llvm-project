@@ -5202,6 +5202,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       if (!AliaseeInModule)
         return error("Alias expects aliasee summary to be parsed");
       AS->setAliasee(AliaseeInModule);
+      AS->setAliaseeGUID(AliaseeGUID);
 
       auto GUID = getValueInfoFromValueId(ValueID);
       AS->setOriginalName(GUID.second);
@@ -5288,9 +5289,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           getValueInfoFromValueId(AliaseeValueId).first.getGUID();
       auto AliaseeInModule =
           TheIndex.findSummaryInModule(AliaseeGUID, AS->modulePath());
-      if (!AliaseeInModule)
-        return error("Alias expects aliasee summary to be parsed");
       AS->setAliasee(AliaseeInModule);
+      AS->setAliaseeGUID(AliaseeGUID);
 
       ValueInfo VI = getValueInfoFromValueId(ValueID).first;
       LastSeenGUID = VI.getGUID();

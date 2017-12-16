@@ -1831,7 +1831,7 @@ const MachineOperand &HCE::getStoredValueOp(const MachineInstr &MI) const {
 }
 
 bool HCE::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
   DEBUG(MF.print(dbgs() << "Before " << getPassName() << '\n', nullptr));
 

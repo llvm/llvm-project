@@ -1514,7 +1514,7 @@ unsigned SIRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   unsigned Occupancy = ST.getOccupancyWithLocalMemSize(MFI->getLDSSize(),
-                                                       *MF.getFunction());
+                                                       MF.getFunction());
   switch (RC->getID()) {
   default:
     return AMDGPURegisterInfo::getRegPressureLimit(RC, MF);

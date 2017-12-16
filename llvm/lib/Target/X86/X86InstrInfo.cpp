@@ -7726,7 +7726,7 @@ static bool ExpandMOVImmSExti8(MachineInstrBuilder &MIB,
   bool IsWin64Prologue = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
   bool NeedsDwarfCFI =
       !IsWin64Prologue &&
-      (MF.getMMI().hasDebugInfo() || MF.getFunction()->needsUnwindTableEntry());
+      (MF.getMMI().hasDebugInfo() || MF.getFunction().needsUnwindTableEntry());
   bool EmitCFI = !TFL->hasFP(MF) && NeedsDwarfCFI;
   if (EmitCFI) {
     TFL->BuildCFI(MBB, I, DL,
@@ -8409,7 +8409,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   // For CPUs that favor the register form of a call or push,
   // do not fold loads into calls or pushes, unless optimizing for size
   // aggressively.
-  if (isSlowTwoMemOps && !MF.getFunction()->optForMinSize() &&
+  if (isSlowTwoMemOps && !MF.getFunction().optForMinSize() &&
       (MI.getOpcode() == X86::CALL32r || MI.getOpcode() == X86::CALL64r ||
        MI.getOpcode() == X86::PUSH16r || MI.getOpcode() == X86::PUSH32r ||
        MI.getOpcode() == X86::PUSH64r))
@@ -8417,7 +8417,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
 
   // Avoid partial register update stalls unless optimizing for size.
   // TODO: we should block undef reg update as well.
-  if (!MF.getFunction()->optForSize() && hasPartialRegUpdate(MI.getOpcode()))
+  if (!MF.getFunction().optForSize() && hasPartialRegUpdate(MI.getOpcode()))
     return nullptr;
 
   unsigned NumOps = MI.getDesc().getNumOperands();
@@ -8586,7 +8586,7 @@ X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
   // Unless optimizing for size, don't fold to avoid partial
   // register update stalls
   // TODO: we should block undef reg update as well.
-  if (!MF.getFunction()->optForSize() && hasPartialRegUpdate(MI.getOpcode()))
+  if (!MF.getFunction().optForSize() && hasPartialRegUpdate(MI.getOpcode()))
     return nullptr;
 
   // Don't fold subreg spills, or reloads that use a high subreg.
@@ -8785,7 +8785,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
 
   // Avoid partial register update stalls unless optimizing for size.
   // TODO: we should block undef reg update as well.
-  if (!MF.getFunction()->optForSize() && hasPartialRegUpdate(MI.getOpcode()))
+  if (!MF.getFunction().optForSize() && hasPartialRegUpdate(MI.getOpcode()))
     return nullptr;
 
   // Determine the alignment of the load.
@@ -8881,16 +8881,16 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     Type *Ty;
     unsigned Opc = LoadMI.getOpcode();
     if (Opc == X86::FsFLD0SS || Opc == X86::AVX512_FsFLD0SS)
-      Ty = Type::getFloatTy(MF.getFunction()->getContext());
+      Ty = Type::getFloatTy(MF.getFunction().getContext());
     else if (Opc == X86::FsFLD0SD || Opc == X86::AVX512_FsFLD0SD)
-      Ty = Type::getDoubleTy(MF.getFunction()->getContext());
+      Ty = Type::getDoubleTy(MF.getFunction().getContext());
     else if (Opc == X86::AVX512_512_SET0 || Opc == X86::AVX512_512_SETALLONES)
-      Ty = VectorType::get(Type::getInt32Ty(MF.getFunction()->getContext()),16);
+      Ty = VectorType::get(Type::getInt32Ty(MF.getFunction().getContext()),16);
     else if (Opc == X86::AVX2_SETALLONES || Opc == X86::AVX_SET0 ||
              Opc == X86::AVX512_256_SET0 || Opc == X86::AVX1_SETALLONES)
-      Ty = VectorType::get(Type::getInt32Ty(MF.getFunction()->getContext()), 8);
+      Ty = VectorType::get(Type::getInt32Ty(MF.getFunction().getContext()), 8);
     else
-      Ty = VectorType::get(Type::getInt32Ty(MF.getFunction()->getContext()), 4);
+      Ty = VectorType::get(Type::getInt32Ty(MF.getFunction().getContext()), 4);
 
     bool IsAllOnes = (Opc == X86::V_SETALLONES || Opc == X86::AVX2_SETALLONES ||
                       Opc == X86::AVX512_512_SETALLONES ||
@@ -10691,7 +10691,7 @@ namespace {
     LDTLSCleanup() : MachineFunctionPass(ID) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override {
-      if (skipFunction(*MF.getFunction()))
+      if (skipFunction(MF.getFunction()))
         return false;
 
       X86MachineFunctionInfo *MFI = MF.getInfo<X86MachineFunctionInfo>();
@@ -10852,16 +10852,16 @@ X86InstrInfo::getOutlininingCandidateInfo(
 
 bool X86InstrInfo::isFunctionSafeToOutlineFrom(MachineFunction &MF,
                                            bool OutlineFromLinkOnceODRs) const {
-  const Function *F = MF.getFunction();
+  const Function &F = MF.getFunction();
 
   // Does the function use a red zone? If it does, then we can't risk messing
   // with the stack.
-  if (!F->hasFnAttribute(Attribute::NoRedZone))
+  if (!F.hasFnAttribute(Attribute::NoRedZone))
       return false;
 
   // If we *don't* want to outline from things that could potentially be deduped
   // then return false.
-  if (!OutlineFromLinkOnceODRs && F->hasLinkOnceODRLinkage())
+  if (!OutlineFromLinkOnceODRs && F.hasLinkOnceODRLinkage())
       return false;
 
   // This function is viable for outlining, so return true.

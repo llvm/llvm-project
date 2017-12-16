@@ -146,12 +146,12 @@ INITIALIZE_PASS(FixupBWInstPass, FIXUPBW_NAME, FIXUPBW_DESC, false, false)
 FunctionPass *llvm::createX86FixupBWInsts() { return new FixupBWInstPass(); }
 
 bool FixupBWInstPass::runOnMachineFunction(MachineFunction &MF) {
-  if (!FixupBWInsts || skipFunction(*MF.getFunction()))
+  if (!FixupBWInsts || skipFunction(MF.getFunction()))
     return false;
 
   this->MF = &MF;
   TII = MF.getSubtarget<X86Subtarget>().getInstrInfo();
-  OptForSize = MF.getFunction()->optForSize();
+  OptForSize = MF.getFunction().optForSize();
   MLI = &getAnalysis<MachineLoopInfo>();
   LiveRegs.init(TII->getRegisterInfo());
 

@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/CodeGen/MIRPrinter.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -472,6 +473,23 @@ void MachineOperand::printTargetFlags(raw_ostream &OS,
   OS << ") ";
 }
 
+void MachineOperand::printSymbol(raw_ostream &OS, MCSymbol &Sym) {
+  OS << "<mcsymbol " << Sym << ">";
+}
+
+void MachineOperand::printStackObjectReference(raw_ostream &OS,
+                                               unsigned FrameIndex,
+                                               bool IsFixed, StringRef Name) {
+  if (IsFixed) {
+    OS << "%fixed-stack." << FrameIndex;
+    return;
+  }
+
+  OS << "%stack." << FrameIndex;
+  if (!Name.empty())
+    OS << '.' << Name;
+}
+
 void MachineOperand::print(raw_ostream &OS, const TargetRegisterInfo *TRI,
                            const TargetIntrinsicInfo *IntrinsicInfo) const {
   tryToGetTargetInfo(*this, TRI, IntrinsicInfo);
@@ -570,9 +588,22 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   case MachineOperand::MO_MachineBasicBlock:
     OS << printMBBReference(*getMBB());
     break;
-  case MachineOperand::MO_FrameIndex:
-    OS << "<fi#" << getIndex() << '>';
+  case MachineOperand::MO_FrameIndex: {
+    int FrameIndex = getIndex();
+    bool IsFixed = false;
+    StringRef Name;
+    if (const MachineFunction *MF = getMFIfAvailable(*this)) {
+      const MachineFrameInfo &MFI = MF->getFrameInfo();
+      IsFixed = MFI.isFixedObjectIndex(FrameIndex);
+      if (const AllocaInst *Alloca = MFI.getObjectAllocation(FrameIndex))
+        if (Alloca->hasName())
+          Name = Alloca->getName();
+      if (IsFixed)
+        FrameIndex -= MFI.getObjectIndexBegin();
+    }
+    printStackObjectReference(OS, FrameIndex, IsFixed, Name);
     break;
+  }
   case MachineOperand::MO_ConstantPoolIndex:
     OS << "%const." << getIndex();
     printOffset(OS, getOffset());
@@ -660,7 +691,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     getMetadata()->printAsOperand(OS, MST);
     break;
   case MachineOperand::MO_MCSymbol:
-    OS << "<mcsymbol " << *getMCSymbol() << ">";
+    printSymbol(OS, *getMCSymbol());
     break;
   case MachineOperand::MO_CFIIndex:
     OS << "<call frame instruction>";

@@ -15,6 +15,11 @@ endfunction()
 
 set(LLDB_TEST_DEPS lldb)
 
+# darwin-debug is an hard dependency for the testsuite.
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+  list(APPEND LLDB_TEST_DEPS darwin-debug)
+endif()
+
 if(TARGET lldb-server)
   list(APPEND LLDB_TEST_DEPS lldb-server)
 endif()

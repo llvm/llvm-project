@@ -926,7 +926,7 @@ bool SIFoldOperands::tryFoldOMod(MachineInstr &MI) {
 }
 
 bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   MRI = &MF.getRegInfo();

@@ -1129,8 +1129,7 @@ void StackColoring::expungeSlotMap(DenseMap<int, int> &SlotRemap,
 
 bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
   DEBUG(dbgs() << "********** Stack Coloring **********\n"
-               << "********** Function: "
-               << ((const Value*)Func.getFunction())->getName() << '\n');
+               << "********** Function: " << Func.getName() << '\n');
   MF = &Func;
   MFI = &MF->getFrameInfo();
   Indexes = &getAnalysis<SlotIndexes>();
@@ -1170,7 +1169,7 @@ bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
   // Don't continue because there are not enough lifetime markers, or the
   // stack is too small, or we are told not to optimize the slots.
   if (NumMarkers < 2 || TotalSize < 16 || DisableColoring ||
-      skipFunction(*Func.getFunction())) {
+      skipFunction(Func.getFunction())) {
     DEBUG(dbgs()<<"Will not try to merge slots.\n");
     return removeAllMarkers();
   }

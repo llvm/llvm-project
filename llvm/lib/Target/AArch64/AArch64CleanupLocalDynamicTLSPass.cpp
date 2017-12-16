@@ -42,7 +42,7 @@ struct LDTLSCleanup : public MachineFunctionPass {
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    if (skipFunction(*MF.getFunction()))
+    if (skipFunction(MF.getFunction()))
       return false;
 
     AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();

@@ -1746,10 +1746,10 @@ unsigned HexagonDAGToDAGISel::getUsesInFunction(const Value *V) {
     return GAUsesInFunction[V];
 
   unsigned Result = 0;
-  const Function *CurF = CurDAG->getMachineFunction().getFunction();
+  const Function &CurF = CurDAG->getMachineFunction().getFunction();
   for (const User *U : V->users()) {
     if (isa<Instruction>(U) &&
-        cast<Instruction>(U)->getParent()->getParent() == CurF)
+        cast<Instruction>(U)->getParent()->getParent() == &CurF)
       ++Result;
   }
 
