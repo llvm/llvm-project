@@ -123,10 +123,10 @@ bool NVPTXTargetLowering::useF32FTZ(const MachineFunction &MF) const {
     // If nvptx-f32ftz is used on the command-line, always honor it
     return FtzEnabled;
   } else {
-    const Function *F = MF.getFunction();
+    const Function &F = MF.getFunction();
     // Otherwise, check for an nvptx-f32ftz attribute on the function
-    if (F->hasFnAttribute("nvptx-f32ftz"))
-      return F->getFnAttribute("nvptx-f32ftz").getValueAsString() == "true";
+    if (F.hasFnAttribute("nvptx-f32ftz"))
+      return F.getFnAttribute("nvptx-f32ftz").getValueAsString() == "true";
     else
       return false;
   }
@@ -2329,7 +2329,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
   const DataLayout &DL = DAG.getDataLayout();
   auto PtrVT = getPointerTy(DAG.getDataLayout());
 
-  const Function *F = MF.getFunction();
+  const Function *F = &MF.getFunction();
   const AttributeList &PAL = F->getAttributes();
   const TargetLowering *TLI = STI.getTargetLowering();
 
@@ -2525,7 +2525,7 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                  const SmallVectorImpl<SDValue> &OutVals,
                                  const SDLoc &dl, SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
-  Type *RetTy = MF.getFunction()->getReturnType();
+  Type *RetTy = MF.getFunction().getReturnType();
 
   bool isABI = (STI.getSmVersion() >= 20);
   assert(isABI && "Non-ABI compilation is not supported");
@@ -4022,9 +4022,9 @@ bool NVPTXTargetLowering::allowUnsafeFPMath(MachineFunction &MF) const {
     return true;
 
   // Allow unsafe math if unsafe-fp-math attribute explicitly says so.
-  const Function *F = MF.getFunction();
-  if (F->hasFnAttribute("unsafe-fp-math")) {
-    Attribute Attr = F->getFnAttribute("unsafe-fp-math");
+  const Function &F = MF.getFunction();
+  if (F.hasFnAttribute("unsafe-fp-math")) {
+    Attribute Attr = F.getFnAttribute("unsafe-fp-math");
     StringRef Val = Attr.getValueAsString();
     if (Val == "true")
       return true;

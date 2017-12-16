@@ -212,7 +212,7 @@ namespace llvm {
       IS.OptLevel = NewOptLevel;
       IS.TM.setOptLevel(NewOptLevel);
       DEBUG(dbgs() << "\nChanging optimization level for Function "
-            << IS.MF->getFunction()->getName() << "\n");
+            << IS.MF->getFunction().getName() << "\n");
       DEBUG(dbgs() << "\tBefore: -O" << SavedOptLevel
             << " ; After: -O" << NewOptLevel << "\n");
       SavedFastISel = IS.TM.Options.EnableFastISel;
@@ -228,7 +228,7 @@ namespace llvm {
       if (IS.OptLevel == SavedOptLevel)
         return;
       DEBUG(dbgs() << "\nRestoring optimization level for Function "
-            << IS.MF->getFunction()->getName() << "\n");
+            << IS.MF->getFunction().getName() << "\n");
       DEBUG(dbgs() << "\tBefore: -O" << IS.OptLevel
             << " ; After: -O" << SavedOptLevel << "\n");
       IS.OptLevel = SavedOptLevel;
@@ -384,7 +384,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   assert((!EnableFastISelAbort || TM.Options.EnableFastISel) &&
          "-fast-isel-abort > 0 requires -fast-isel");
 
-  const Function &Fn = *mf.getFunction();
+  const Function &Fn = mf.getFunction();
   MF = &mf;
 
   // Reset the target options before resetting the optimization

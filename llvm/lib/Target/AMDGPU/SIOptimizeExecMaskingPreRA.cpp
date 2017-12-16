@@ -103,7 +103,7 @@ static MachineInstr* getOrExecSource(const MachineInstr &MI,
 }
 
 bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();

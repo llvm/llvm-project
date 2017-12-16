@@ -375,7 +375,7 @@ static bool memOpsHaveSameBasePtr(const MachineInstr &MI1, unsigned BaseReg1,
   if (!Base1 || !Base2)
     return false;
   const MachineFunction &MF = *MI1.getParent()->getParent();
-  const DataLayout &DL = MF.getFunction()->getParent()->getDataLayout();
+  const DataLayout &DL = MF.getFunction().getParent()->getDataLayout();
   Base1 = GetUnderlyingObject(Base1, DL);
   Base2 = GetUnderlyingObject(Base1, DL);
 
@@ -442,10 +442,10 @@ static void reportIllegalCopy(const SIInstrInfo *TII, MachineBasicBlock &MBB,
                               const DebugLoc &DL, unsigned DestReg,
                               unsigned SrcReg, bool KillSrc) {
   MachineFunction *MF = MBB.getParent();
-  DiagnosticInfoUnsupported IllegalCopy(*MF->getFunction(),
+  DiagnosticInfoUnsupported IllegalCopy(MF->getFunction(),
                                         "illegal SGPR to VGPR copy",
                                         DL, DS_Error);
-  LLVMContext &C = MF->getFunction()->getContext();
+  LLVMContext &C = MF->getFunction().getContext();
   C.diagnose(IllegalCopy);
 
   BuildMI(MBB, MI, DL, TII->get(AMDGPU::SI_ILLEGAL_COPY), DestReg)
@@ -873,8 +873,8 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     return;
   }
 
-  if (!ST.isVGPRSpillingEnabled(*MF->getFunction())) {
-    LLVMContext &Ctx = MF->getFunction()->getContext();
+  if (!ST.isVGPRSpillingEnabled(MF->getFunction())) {
+    LLVMContext &Ctx = MF->getFunction().getContext();
     Ctx.emitError("SIInstrInfo::storeRegToStackSlot - Do not know how to"
                   " spill register");
     BuildMI(MBB, MI, DL, get(AMDGPU::KILL))
@@ -975,8 +975,8 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     return;
   }
 
-  if (!ST.isVGPRSpillingEnabled(*MF->getFunction())) {
-    LLVMContext &Ctx = MF->getFunction()->getContext();
+  if (!ST.isVGPRSpillingEnabled(MF->getFunction())) {
+    LLVMContext &Ctx = MF->getFunction().getContext();
     Ctx.emitError("SIInstrInfo::loadRegFromStackSlot - Do not know how to"
                   " restore register");
     BuildMI(MBB, MI, DL, get(AMDGPU::IMPLICIT_DEF), DestReg);
@@ -1017,7 +1017,7 @@ unsigned SIInstrInfo::calculateLDSSpillAddress(
     if (TIDReg == AMDGPU::NoRegister)
       return TIDReg;
 
-    if (!AMDGPU::isShader(MF->getFunction()->getCallingConv()) &&
+    if (!AMDGPU::isShader(MF->getFunction().getCallingConv()) &&
         WorkGroupSize > WavefrontSize) {
       unsigned TIDIGXReg
         = MFI->getPreloadedReg(AMDGPUFunctionArgInfo::WORKGROUP_ID_X);
@@ -3444,7 +3444,7 @@ void SIInstrInfo::legalizeOperands(MachineInstr &MI) const {
   // scratch memory access. In both cases, the legalization never involves
   // conversion to the addr64 form.
   if (isMIMG(MI) ||
-      (AMDGPU::isShader(MF.getFunction()->getCallingConv()) &&
+      (AMDGPU::isShader(MF.getFunction().getCallingConv()) &&
        (isMUBUF(MI) || isMTBUF(MI)))) {
     MachineOperand *SRsrc = getNamedOperand(MI, AMDGPU::OpName::srsrc);
     if (SRsrc && !RI.isSGPRClass(MRI.getRegClass(SRsrc->getReg()))) {

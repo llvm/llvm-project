@@ -1130,6 +1130,8 @@ bool X86MCCodeEmitter::emitOpcodePrefix(uint64_t TSFlags, unsigned &CurByte,
       EmitByte(0x40 | REX, CurByte, OS);
       Ret = true;
     }
+  } else {
+    assert(!(TSFlags & X86II::REX_W) && "REX.W requires 64bit mode.");
   }
 
   // 0x0F escape code must be emitted just before the opcode.

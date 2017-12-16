@@ -19,7 +19,7 @@ AMDGPUMachineFunction::AMDGPUMachineFunction(const MachineFunction &MF) :
   MaxKernArgAlign(0),
   LDSSize(0),
   ABIArgOffset(0),
-  IsEntryFunction(AMDGPU::isEntryFunctionCC(MF.getFunction()->getCallingConv())),
+  IsEntryFunction(AMDGPU::isEntryFunctionCC(MF.getFunction().getCallingConv())),
   NoSignedZerosFPMath(MF.getTarget().Options.NoSignedZerosFPMath) {
   // FIXME: Should initialize KernArgSize based on ExplicitKernelArgOffset,
   // except reserved size is not correctly aligned.

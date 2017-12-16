@@ -285,7 +285,7 @@ bool VZeroUpperInserter::runOnMachineFunction(MachineFunction &MF) {
   TII = ST.getInstrInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   EverMadeChange = false;
-  IsX86INTR = MF.getFunction()->getCallingConv() == CallingConv::X86_INTR;
+  IsX86INTR = MF.getFunction().getCallingConv() == CallingConv::X86_INTR;
 
   bool FnHasLiveInYmmOrZmm = checkFnHasLiveInYmmOrZmm(MRI);
 

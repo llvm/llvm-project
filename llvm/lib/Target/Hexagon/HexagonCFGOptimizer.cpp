@@ -114,7 +114,7 @@ bool HexagonCFGOptimizer::isOnFallThroughPath(MachineBasicBlock *MBB) {
 }
 
 bool HexagonCFGOptimizer::runOnMachineFunction(MachineFunction &Fn) {
-  if (skipFunction(*Fn.getFunction()))
+  if (skipFunction(Fn.getFunction()))
     return false;
 
   // Loop over all of the basic blocks.

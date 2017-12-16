@@ -717,12 +717,12 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   else
     CCInfo.AnalyzeCallOperands(Outs, CC_Hexagon);
 
-  auto Attr = MF.getFunction()->getFnAttribute("disable-tail-calls");
+  auto Attr = MF.getFunction().getFnAttribute("disable-tail-calls");
   if (Attr.getValueAsString() == "true")
     IsTailCall = false;
 
   if (IsTailCall) {
-    bool StructAttrFlag = MF.getFunction()->hasStructRetAttr();
+    bool StructAttrFlag = MF.getFunction().hasStructRetAttr();
     IsTailCall = IsEligibleForTailCallOptimization(Callee, CallConv,
                                                    IsVarArg, IsStructRet,
                                                    StructAttrFlag,
@@ -3006,8 +3006,8 @@ bool HexagonTargetLowering::IsEligibleForTailCallOptimization(
                                  const SmallVectorImpl<SDValue> &OutVals,
                                  const SmallVectorImpl<ISD::InputArg> &Ins,
                                  SelectionDAG& DAG) const {
-  const Function *CallerF = DAG.getMachineFunction().getFunction();
-  CallingConv::ID CallerCC = CallerF->getCallingConv();
+  const Function &CallerF = DAG.getMachineFunction().getFunction();
+  CallingConv::ID CallerCC = CallerF.getCallingConv();
   bool CCMatch = CallerCC == CalleeCC;
 
   // ***************************************************************************

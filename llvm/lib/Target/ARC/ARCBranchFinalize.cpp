@@ -142,7 +142,7 @@ void ARCBranchFinalize::replaceWithCmpBcc(MachineInstr *MI) const {
 
 bool ARCBranchFinalize::runOnMachineFunction(MachineFunction &MF) {
   DEBUG(dbgs() << "Running ARC Branch Finalize on "
-               << MF.getFunction()->getName() << "\n");
+               << MF.getName() << "\n");
   std::vector<MachineInstr *> Branches;
   bool Changed = false;
   unsigned MaxSize = 0;
@@ -172,7 +172,7 @@ bool ARCBranchFinalize::runOnMachineFunction(MachineFunction &MF) {
       isInt<9>(MaxSize) ? replaceWithBRcc(P.first) : replaceWithCmpBcc(P.first);
   }
 
-  DEBUG(dbgs() << "Estimated function size for " << MF.getFunction()->getName()
+  DEBUG(dbgs() << "Estimated function size for " << MF.getName()
                << ": " << MaxSize << "\n");
 
   return Changed;

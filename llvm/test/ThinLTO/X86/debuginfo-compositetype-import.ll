@@ -11,7 +11,7 @@
 ; RUN:   -r %t2.bc,main,plx \
 ; RUN:   -r %t2.bc,foo,l \
 ; RUN:   -r %t1.bc,foo,pl
-; RUN: llvm-dis < %t.out.1.3.import.bc | FileCheck %s
+; RUN: llvm-dis < %t.out.2.3.import.bc | FileCheck %s
 
 ; CHECK: distinct !DICompositeType(tag: DW_TAG_enumeration_type, name: "enum", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: 50, size: 32, flags: DIFlagFwdDecl, identifier: "enum")
 ; CHECK: distinct !DICompositeType(tag: DW_TAG_class_type, name: "class", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: 728, size: 448, flags: DIFlagFwdDecl, identifier: "class")
@@ -25,7 +25,7 @@
 ; RUN:   -r %t2.bc,main,plx \
 ; RUN:   -r %t2.bc,foo,l \
 ; RUN:   -r %t1.bc,foo,pl
-; RUN: llvm-dis < %t.out.1.3.import.bc | FileCheck %s --check-prefix=FULL
+; RUN: llvm-dis < %t.out.2.3.import.bc | FileCheck %s --check-prefix=FULL
 
 ; FULL: distinct !DICompositeType(tag: DW_TAG_enumeration_type, name: "enum", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: 50, size: 32, elements: !{{[0-9]+}}, identifier: "enum")
 ; FULL: distinct !DICompositeType(tag: DW_TAG_class_type, name: "class", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: 728, size: 448, elements: !{{[0-9]+}}, identifier: "class")

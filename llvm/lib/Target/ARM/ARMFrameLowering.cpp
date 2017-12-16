@@ -203,10 +203,10 @@ static int sizeOfSPAdjustment(const MachineInstr &MI) {
 static bool WindowsRequiresStackProbe(const MachineFunction &MF,
                                       size_t StackSizeInBytes) {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const Function *F = MF.getFunction();
+  const Function &F = MF.getFunction();
   unsigned StackProbeSize = (MFI.getStackProtectorIndex() > 0) ? 4080 : 4096;
-  if (F->hasFnAttribute("stack-probe-size"))
-    F->getFnAttribute("stack-probe-size")
+  if (F.hasFnAttribute("stack-probe-size"))
+    F.getFnAttribute("stack-probe-size")
         .getValueAsString()
         .getAsInteger(0, StackProbeSize);
   return StackSizeInBytes >= StackProbeSize;
@@ -370,7 +370,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
 
   // All calls are tail calls in GHC calling conv, and functions have no
   // prologue/epilogue.
-  if (MF.getFunction()->getCallingConv() == CallingConv::GHC)
+  if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     return;
 
   StackAdjustingInsts DefCFAOffsetCandidates;
@@ -448,7 +448,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   int FramePtrOffsetInPush = 0;
   if (HasFP) {
     int FPOffset = MFI.getObjectOffset(FramePtrSpillFI);
-    assert(getMaxFPOffset(*MF.getFunction(), *AFI) <= FPOffset &&
+    assert(getMaxFPOffset(MF.getFunction(), *AFI) <= FPOffset &&
            "Max FP estimation is wrong");
     FramePtrOffsetInPush = FPOffset + ArgRegsSaveSize;
     AFI->setFramePtrSpillOffset(MFI.getObjectOffset(FramePtrSpillFI) +
@@ -766,7 +766,7 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
 
   // All calls are tail calls in GHC calling conv, and functions have no
   // prologue/epilogue.
-  if (MF.getFunction()->getCallingConv() == CallingConv::GHC)
+  if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     return;
 
   // First put ourselves on the first (from top) terminator instructions.
@@ -1533,7 +1533,7 @@ checkNumAlignedDPRCS2Regs(MachineFunction &MF, BitVector &SavedRegs) {
     return;
 
   // Naked functions don't spill callee-saved registers.
-  if (MF.getFunction()->hasFnAttribute(Attribute::Naked))
+  if (MF.getFunction().hasFnAttribute(Attribute::Naked))
     return;
 
   // We are planning to use NEON instructions vst1 / vld1.
@@ -1744,7 +1744,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   EstimatedStackSize += 16; // For possible paddings.
 
   unsigned EstimatedRSStackSizeLimit = estimateRSStackSizeLimit(MF, this);
-  int MaxFPOffset = getMaxFPOffset(*MF.getFunction(), *AFI);
+  int MaxFPOffset = getMaxFPOffset(MF.getFunction(), *AFI);
   bool BigFrameOffsets = EstimatedStackSize >= EstimatedRSStackSizeLimit ||
     MFI.hasVarSizedObjects() ||
     (MFI.adjustsStack() && !canSimplifyCallFramePseudos(MF)) ||
@@ -2102,7 +2102,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
 
   // Sadly, this currently doesn't support varargs, platforms other than
   // android/linux. Note that thumb1/thumb2 are support for android/linux.
-  if (MF.getFunction()->isVarArg())
+  if (MF.getFunction().isVarArg())
     report_fatal_error("Segmented stacks do not support vararg functions.");
   if (!ST->isTargetAndroid() && !ST->isTargetLinux())
     report_fatal_error("Segmented stacks not supported on this platform.");
@@ -2250,7 +2250,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
   if (Thumb && ST->isThumb1Only()) {
     unsigned PCLabelId = ARMFI->createPICLabelUId();
     ARMConstantPoolValue *NewCPV = ARMConstantPoolSymbol::Create(
-        MF.getFunction()->getContext(), "__STACK_LIMIT", PCLabelId, 0);
+        MF.getFunction().getContext(), "__STACK_LIMIT", PCLabelId, 0);
     MachineConstantPool *MCP = MF.getConstantPool();
     unsigned CPI = MCP->getConstantPoolIndex(NewCPV, 4);
 

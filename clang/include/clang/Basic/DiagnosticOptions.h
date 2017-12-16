@@ -100,6 +100,10 @@ public:
   /// prefixes removed.
   std::vector<std::string> Remarks;
 
+  /// The prefixes for comment directives sought by -verify ("expected" by
+  /// default).
+  std::vector<std::string> VerifyPrefixes;
+
 public:
   // Define accessors/mutators for diagnostic options of enumeration type.
 #define DIAGOPT(Name, Bits, Default)

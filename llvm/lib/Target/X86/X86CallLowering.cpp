@@ -177,7 +177,7 @@ bool X86CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     MachineFunction &MF = MIRBuilder.getMF();
     MachineRegisterInfo &MRI = MF.getRegInfo();
     auto &DL = MF.getDataLayout();
-    const Function &F = *MF.getFunction();
+    const Function &F = MF.getFunction();
 
     ArgInfo OrigArg{VReg, Val->getType()};
     setArgFlags(OrigArg, AttributeList::ReturnIndex, DL, F);
@@ -334,7 +334,7 @@ bool X86CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                 const ArgInfo &OrigRet,
                                 ArrayRef<ArgInfo> OrigArgs) const {
   MachineFunction &MF = MIRBuilder.getMF();
-  const Function &F = *MF.getFunction();
+  const Function &F = MF.getFunction();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   auto &DL = F.getParent()->getDataLayout();
   const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();

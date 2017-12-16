@@ -309,7 +309,7 @@ bool SystemZShortenInst::processBlock(MachineBasicBlock &MBB) {
 }
 
 bool SystemZShortenInst::runOnMachineFunction(MachineFunction &F) {
-  if (skipFunction(*F.getFunction()))
+  if (skipFunction(F.getFunction()))
     return false;
 
   const SystemZSubtarget &ST = F.getSubtarget<SystemZSubtarget>();

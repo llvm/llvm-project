@@ -766,7 +766,7 @@ unsigned DataFlowGraph::DefStack::nextDown(unsigned P) const {
 
 RegisterSet DataFlowGraph::getLandingPadLiveIns() const {
   RegisterSet LR;
-  const Function &F = *MF.getFunction();
+  const Function &F = MF.getFunction();
   const Constant *PF = F.hasPersonalityFn() ? F.getPersonalityFn()
                                             : nullptr;
   const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();

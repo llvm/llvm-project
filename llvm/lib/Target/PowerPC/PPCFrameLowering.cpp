@@ -434,7 +434,7 @@ unsigned PPCFrameLowering::determineFrameLayout(MachineFunction &MF,
   const PPCRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
 
   unsigned LR = RegInfo->getRARegister();
-  bool DisableRedZone = MF.getFunction()->hasFnAttribute(Attribute::NoRedZone);
+  bool DisableRedZone = MF.getFunction().hasFnAttribute(Attribute::NoRedZone);
   bool CanUseRedZone = !MFI.hasVarSizedObjects() && // No dynamic alloca.
                        !MFI.adjustsStack() &&       // No calls.
                        !MustSaveLR(MF, LR) &&       // No need to save LR.
@@ -499,7 +499,7 @@ bool PPCFrameLowering::needsFP(const MachineFunction &MF) const {
 
   // Naked functions have no stack frame pushed, so we don't have a frame
   // pointer.
-  if (MF.getFunction()->hasFnAttribute(Attribute::Naked))
+  if (MF.getFunction().hasFnAttribute(Attribute::Naked))
     return false;
 
   return MF.getTarget().Options.DisableFramePointerElim(MF) ||
@@ -692,7 +692,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
   DebugLoc dl;
   bool needsCFI = MMI.hasDebugInfo() ||
-    MF.getFunction()->needsUnwindTableEntry();
+    MF.getFunction().needsUnwindTableEntry();
 
   // Get processor type.
   bool isPPC64 = Subtarget.isPPC64();
@@ -1505,7 +1505,7 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
     unsigned RetOpcode = MBBI->getOpcode();
     if (MF.getTarget().Options.GuaranteedTailCallOpt &&
         (RetOpcode == PPC::BLR || RetOpcode == PPC::BLR8) &&
-        MF.getFunction()->getCallingConv() == CallingConv::Fast) {
+        MF.getFunction().getCallingConv() == CallingConv::Fast) {
       PPCFunctionInfo *FI = MF.getInfo<PPCFunctionInfo>();
       unsigned CallerAllocatedAmt = FI->getMinReservedArea();
 

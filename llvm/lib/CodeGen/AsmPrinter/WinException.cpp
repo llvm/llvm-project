@@ -63,7 +63,7 @@ void WinException::beginFunction(const MachineFunction *MF) {
   bool hasLandingPads = !MF->getLandingPads().empty();
   bool hasEHFunclets = MF->hasEHFunclets();
 
-  const Function *F = MF->getFunction();
+  const Function &F = MF->getFunction();
 
   shouldEmitMoves = Asm->needsSEHMoves() && MF->hasWinCFI();
 
@@ -72,14 +72,14 @@ void WinException::beginFunction(const MachineFunction *MF) {
 
   EHPersonality Per = EHPersonality::Unknown;
   const Function *PerFn = nullptr;
-  if (F->hasPersonalityFn()) {
-    PerFn = dyn_cast<Function>(F->getPersonalityFn()->stripPointerCasts());
+  if (F.hasPersonalityFn()) {
+    PerFn = dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts());
     Per = classifyEHPersonality(PerFn);
   }
 
-  bool forceEmitPersonality = F->hasPersonalityFn() &&
+  bool forceEmitPersonality = F.hasPersonalityFn() &&
                               !isNoOpWithoutInvoke(Per) &&
-                              F->needsUnwindTableEntry();
+                              F.needsUnwindTableEntry();
 
   shouldEmitPersonality =
       forceEmitPersonality || ((hasLandingPads || hasEHFunclets) &&
@@ -98,7 +98,7 @@ void WinException::beginFunction(const MachineFunction *MF) {
       // functions may still refer to it.
       const WinEHFuncInfo &FuncInfo = *MF->getWinEHFuncInfo();
       StringRef FLinkageName =
-          GlobalValue::dropLLVMManglingEscape(MF->getFunction()->getName());
+          GlobalValue::dropLLVMManglingEscape(MF->getFunction().getName());
       emitEHRegistrationOffsetLabel(FuncInfo, FLinkageName);
     }
     shouldEmitLSDA = hasEHFunclets;
@@ -115,10 +115,10 @@ void WinException::endFunction(const MachineFunction *MF) {
   if (!shouldEmitPersonality && !shouldEmitMoves && !shouldEmitLSDA)
     return;
 
-  const Function *F = MF->getFunction();
+  const Function &F = MF->getFunction();
   EHPersonality Per = EHPersonality::Unknown;
-  if (F->hasPersonalityFn())
-    Per = classifyEHPersonality(F->getPersonalityFn()->stripPointerCasts());
+  if (F.hasPersonalityFn())
+    Per = classifyEHPersonality(F.getPersonalityFn()->stripPointerCasts());
 
   // Get rid of any dead landing pads if we're not using funclets. In funclet
   // schemes, the landing pad is not actually reachable. It only exists so
@@ -170,8 +170,8 @@ static MCSymbol *getMCSymbolForMBB(AsmPrinter *Asm,
   // Give catches and cleanups a name based off of their parent function and
   // their funclet entry block's number.
   const MachineFunction *MF = MBB->getParent();
-  const Function *F = MF->getFunction();
-  StringRef FuncLinkageName = GlobalValue::dropLLVMManglingEscape(F->getName());
+  const Function &F = MF->getFunction();
+  StringRef FuncLinkageName = GlobalValue::dropLLVMManglingEscape(F.getName());
   MCContext &Ctx = MF->getContext();
   StringRef HandlerPrefix = MBB->isCleanupFuncletEntry() ? "dtor" : "catch";
   return Ctx.getOrCreateSymbol("?" + HandlerPrefix + "$" +
@@ -183,7 +183,7 @@ void WinException::beginFunclet(const MachineBasicBlock &MBB,
                                 MCSymbol *Sym) {
   CurrentFuncletEntry = &MBB;
 
-  const Function *F = Asm->MF->getFunction();
+  const Function &F = Asm->MF->getFunction();
   // If a symbol was not provided for the funclet, invent one.
   if (!Sym) {
     Sym = getMCSymbolForMBB(Asm, &MBB);
@@ -198,7 +198,7 @@ void WinException::beginFunclet(const MachineBasicBlock &MBB,
     // We want our funclet's entry point to be aligned such that no nops will be
     // present after the label.
     Asm->EmitAlignment(std::max(Asm->MF->getAlignment(), MBB.getAlignment()),
-                       F);
+                       &F);
 
     // Now that we've emitted the alignment directive, point at our funclet.
     Asm->OutStreamer->EmitLabel(Sym);
@@ -215,8 +215,8 @@ void WinException::beginFunclet(const MachineBasicBlock &MBB,
     const Function *PerFn = nullptr;
 
     // Determine which personality routine we are using for this funclet.
-    if (F->hasPersonalityFn())
-      PerFn = dyn_cast<Function>(F->getPersonalityFn()->stripPointerCasts());
+    if (F.hasPersonalityFn())
+      PerFn = dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts());
     const MCSymbol *PersHandlerSym =
         TLOF.getCFIPersonalitySymbol(PerFn, Asm->TM, MMI);
 
@@ -237,10 +237,10 @@ void WinException::endFunclet() {
 
   const MachineFunction *MF = Asm->MF;
   if (shouldEmitMoves || shouldEmitPersonality) {
-    const Function *F = MF->getFunction();
+    const Function &F = MF->getFunction();
     EHPersonality Per = EHPersonality::Unknown;
-    if (F->hasPersonalityFn())
-      Per = classifyEHPersonality(F->getPersonalityFn()->stripPointerCasts());
+    if (F.hasPersonalityFn())
+      Per = classifyEHPersonality(F.getPersonalityFn()->stripPointerCasts());
 
     // Emit an UNWIND_INFO struct describing the prologue.
     Asm->OutStreamer->EmitWinEHHandlerData();
@@ -249,7 +249,7 @@ void WinException::endFunclet() {
         !CurrentFuncletEntry->isCleanupFuncletEntry()) {
       // If this is a C++ catch funclet (or the parent function),
       // emit a reference to the LSDA for the parent function.
-      StringRef FuncLinkageName = GlobalValue::dropLLVMManglingEscape(F->getName());
+      StringRef FuncLinkageName = GlobalValue::dropLLVMManglingEscape(F.getName());
       MCSymbol *FuncInfoXData = Asm->OutContext.getOrCreateSymbol(
           Twine("$cppxdata$", FuncLinkageName));
       Asm->OutStreamer->EmitValue(create32bitRef(FuncInfoXData), 4);
@@ -533,7 +533,7 @@ void WinException::emitCSpecificHandlerTable(const MachineFunction *MF) {
   // Emit a label assignment with the SEH frame offset so we can use it for
   // llvm.x86.seh.recoverfp.
   StringRef FLinkageName =
-      GlobalValue::dropLLVMManglingEscape(MF->getFunction()->getName());
+      GlobalValue::dropLLVMManglingEscape(MF->getFunction().getName());
   MCSymbol *ParentFrameOffset =
       Ctx.getOrCreateParentFrameOffsetSymbol(FLinkageName);
   const MCExpr *MCOffset =
@@ -628,11 +628,11 @@ void WinException::emitSEHActionsForRange(const WinEHFuncInfo &FuncInfo,
 }
 
 void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
-  const Function *F = MF->getFunction();
+  const Function &F = MF->getFunction();
   auto &OS = *Asm->OutStreamer;
   const WinEHFuncInfo &FuncInfo = *MF->getWinEHFuncInfo();
 
-  StringRef FuncLinkageName = GlobalValue::dropLLVMManglingEscape(F->getName());
+  StringRef FuncLinkageName = GlobalValue::dropLLVMManglingEscape(F.getName());
 
   SmallVector<std::pair<const MCExpr *, int>, 4> IPToStateTable;
   MCSymbol *FuncInfoXData = nullptr;
@@ -938,8 +938,8 @@ void WinException::emitEHRegistrationOffsetLabel(const WinEHFuncInfo &FuncInfo,
 /// indexed by state number instead of IP.
 void WinException::emitExceptHandlerTable(const MachineFunction *MF) {
   MCStreamer &OS = *Asm->OutStreamer;
-  const Function *F = MF->getFunction();
-  StringRef FLinkageName = GlobalValue::dropLLVMManglingEscape(F->getName());
+  const Function &F = MF->getFunction();
+  StringRef FLinkageName = GlobalValue::dropLLVMManglingEscape(F.getName());
 
   bool VerboseAsm = OS.isVerboseAsm();
   auto AddComment = [&](const Twine &Comment) {
@@ -956,7 +956,7 @@ void WinException::emitExceptHandlerTable(const MachineFunction *MF) {
   OS.EmitLabel(LSDALabel);
 
   const Function *Per =
-      dyn_cast<Function>(F->getPersonalityFn()->stripPointerCasts());
+      dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts());
   StringRef PerName = Per->getName();
   int BaseState = -1;
   if (PerName == "_except_handler4") {

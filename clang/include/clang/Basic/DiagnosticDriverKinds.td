@@ -338,4 +338,8 @@ def warn_drv_msvc_not_found : Warning<
 def warn_drv_fine_grained_bitfield_accesses_ignored : Warning<
   "option '-ffine-grained-bitfield-accesses' cannot be enabled together with a sanitizer; flag ignored">,
   InGroup<OptionIgnored>;
+
+def note_drv_verify_prefix_spelling : Note<
+  "-verify prefixes must start with a letter and contain only alphanumeric"
+  " characters, hyphens, and underscores">;
 }

@@ -5,11 +5,11 @@
 ; RUN: llvm-lto2 run -o %t.out %t.bc -save-temps \
 ; RUN:   -r %t.bc,test,px -r %t.bc,bar,x \
 ; RUN:   -lto-sample-profile-file=%S/Inputs/load-sample-prof-icp.prof
-; RUN: llvm-dis %t.out.0.4.opt.bc -o - | FileCheck %s
+; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s
 ; RUN: llvm-lto2 run -o %t.out %t.bc -save-temps \
 ; RUN:   -r %t.bc,test,px -r %t.bc,bar,x -use-new-pm \
 ; RUN:   -lto-sample-profile-file=%S/Inputs/load-sample-prof-icp.prof
-; RUN: llvm-dis %t.out.0.4.opt.bc -o - | FileCheck %s
+; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

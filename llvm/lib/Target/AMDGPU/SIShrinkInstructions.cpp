@@ -286,7 +286,7 @@ static void shrinkScalarCompare(const SIInstrInfo *TII, MachineInstr &MI) {
 }
 
 bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   MachineRegisterInfo &MRI = MF.getRegInfo();

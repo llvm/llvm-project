@@ -468,7 +468,7 @@ unsigned SISubtarget::getReservedNumSGPRs(const MachineFunction &MF) const {
 }
 
 unsigned SISubtarget::getMaxNumSGPRs(const MachineFunction &MF) const {
-  const Function &F = *MF.getFunction();
+  const Function &F = MF.getFunction();
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
 
   // Compute maximum number of SGPRs function can use using default/requested
@@ -518,7 +518,7 @@ unsigned SISubtarget::getMaxNumSGPRs(const MachineFunction &MF) const {
 }
 
 unsigned SISubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
-  const Function &F = *MF.getFunction();
+  const Function &F = MF.getFunction();
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
 
   // Compute maximum number of VGPRs function can use using default/requested

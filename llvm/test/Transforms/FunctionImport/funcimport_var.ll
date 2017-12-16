@@ -10,7 +10,7 @@
 ; RUN:   -r %t.bc,_Z4LinkPKcS0_,plx \
 ; RUN:   -r %t.bc,link,l \
 ; RUN:   -r %t2.bc,get_link,plx
-; RUN: llvm-nm %t.out.0 | FileCheck %s
+; RUN: llvm-nm %t.out.1 | FileCheck %s
 ; CHECK: U link
 
 ; REQUIRES: x86-registered-target

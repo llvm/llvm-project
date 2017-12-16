@@ -799,7 +799,7 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
   findVRegIntervalsToAlloc(MF, LIS);
 
 #ifndef NDEBUG
-  const Function &F = *MF.getFunction();
+  const Function &F = MF.getFunction();
   std::string FullyQualifiedName =
     F.getParent()->getModuleIdentifier() + "." + F.getName().str();
 #endif

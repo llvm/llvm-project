@@ -507,7 +507,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   MCInst TmpInst;
   bool isPPC64 = Subtarget->isPPC64();
   bool isDarwin = TM.getTargetTriple().isOSDarwin();
-  const Module *M = MF->getFunction()->getParent();
+  const Module *M = MF->getFunction().getParent();
   PICLevel::Level PL = M->getPICLevel();
 
   // Lower multi-instruction pseudo operations.
@@ -1228,7 +1228,7 @@ void PPCLinuxAsmPrinter::EmitFunctionEntryLabel() {
   // linux/ppc32 - Normal entry label.
   if (!Subtarget->isPPC64() &&
       (!isPositionIndependent() ||
-       MF->getFunction()->getParent()->getPICLevel() == PICLevel::SmallPIC))
+       MF->getFunction().getParent()->getPICLevel() == PICLevel::SmallPIC))
     return AsmPrinter::EmitFunctionEntryLabel();
 
   if (!Subtarget->isPPC64()) {

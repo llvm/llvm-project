@@ -124,8 +124,8 @@ unsigned IRTranslator::getOrCreateVReg(const Value &Val) {
     bool Success = translate(*CV, VReg);
     if (!Success) {
       OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
-                                 MF->getFunction()->getSubprogram(),
-                                 &MF->getFunction()->getEntryBlock());
+                                 MF->getFunction().getSubprogram(),
+                                 &MF->getFunction().getEntryBlock());
       R << "unable to translate constant: " << ore::NV("Type", Val.getType());
       reportTranslationError(*MF, *TPC, *ORE, R);
       return VReg;
@@ -591,7 +591,7 @@ void IRTranslator::getStackGuard(unsigned DstReg,
   MIB.addDef(DstReg);
 
   auto &TLI = *MF->getSubtarget().getTargetLowering();
-  Value *Global = TLI.getSDagStackGuard(*MF->getFunction()->getParent());
+  Value *Global = TLI.getSDagStackGuard(*MF->getFunction().getParent());
   if (!Global)
     return;
 
@@ -925,7 +925,7 @@ bool IRTranslator::translateLandingPad(const User &U,
   // If there aren't registers to copy the values into (e.g., during SjLj
   // exceptions), then don't bother.
   auto &TLI = *MF->getSubtarget().getTargetLowering();
-  const Constant *PersonalityFn = MF->getFunction()->getPersonalityFn();
+  const Constant *PersonalityFn = MF->getFunction().getPersonalityFn();
   if (TLI.getExceptionPointerRegister(PersonalityFn) == 0 &&
       TLI.getExceptionSelectorRegister(PersonalityFn) == 0)
     return true;
@@ -1236,7 +1236,7 @@ void IRTranslator::finalizeFunction() {
 
 bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   MF = &CurMF;
-  const Function &F = *MF->getFunction();
+  const Function &F = MF->getFunction();
   if (F.empty())
     return false;
   CLI = MF->getSubtarget().getCallLowering();
@@ -1252,8 +1252,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   if (!DL->isLittleEndian()) {
     // Currently we don't properly handle big endian code.
     OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
-                               MF->getFunction()->getSubprogram(),
-                               &MF->getFunction()->getEntryBlock());
+                               F.getSubprogram(), &F.getEntryBlock());
     R << "unable to translate in big endian mode";
     reportTranslationError(*MF, *TPC, *ORE, R);
   }
@@ -1289,8 +1288,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   }
   if (!CLI->lowerFormalArguments(EntryBuilder, F, VRegArgs)) {
     OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
-                               MF->getFunction()->getSubprogram(),
-                               &MF->getFunction()->getEntryBlock());
+                               F.getSubprogram(), &F.getEntryBlock());
     R << "unable to lower arguments: " << ore::NV("Prototype", F.getType());
     reportTranslationError(*MF, *TPC, *ORE, R);
     return false;

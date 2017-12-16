@@ -213,8 +213,8 @@ void MIRPrinter::print(const MachineFunction &MF) {
       MachineFunctionProperties::Property::Selected);
 
   convert(YamlMF, MF.getRegInfo(), MF.getSubtarget().getRegisterInfo());
-  ModuleSlotTracker MST(MF.getFunction()->getParent());
-  MST.incorporateFunction(*MF.getFunction());
+  ModuleSlotTracker MST(MF.getFunction().getParent());
+  MST.incorporateFunction(MF.getFunction());
   convert(MST, YamlMF.FrameInfo, MF.getFrameInfo());
   convertStackObjects(YamlMF, MF, MST);
   if (const auto *ConstantPool = MF.getConstantPool())
@@ -696,7 +696,7 @@ void MIPrinter::print(const MachineInstr &MI) {
 
   if (!MI.memoperands_empty()) {
     OS << " :: ";
-    const LLVMContext &Context = MF->getFunction()->getContext();
+    const LLVMContext &Context = MF->getFunction().getContext();
     bool NeedComma = false;
     for (const auto *Op : MI.memoperands()) {
       if (NeedComma)

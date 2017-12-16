@@ -1243,7 +1243,7 @@ bool HexagonExpandCondsets::coalesceSegments(
 }
 
 bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   HII = static_cast<const HexagonInstrInfo*>(MF.getSubtarget().getInstrInfo());
@@ -1253,7 +1253,7 @@ bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
 
   DEBUG(LIS->print(dbgs() << "Before expand-condsets\n",
-                   MF.getFunction()->getParent()));
+                   MF.getFunction().getParent()));
 
   bool Changed = false;
   std::set<unsigned> CoalUpd, PredUpd;
@@ -1281,7 +1281,7 @@ bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
           KillUpd.insert(Op.getReg());
   updateLiveness(KillUpd, false, true, false);
   DEBUG(LIS->print(dbgs() << "After coalescing\n",
-                   MF.getFunction()->getParent()));
+                   MF.getFunction().getParent()));
 
   // First, simply split all muxes into a pair of conditional transfers
   // and update the live intervals to reflect the new arrangement. The
@@ -1298,7 +1298,7 @@ bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
   // (because of predicated defs), so make sure they are left untouched.
   // Predication does not use live intervals.
   DEBUG(LIS->print(dbgs() << "After splitting\n",
-                   MF.getFunction()->getParent()));
+                   MF.getFunction().getParent()));
 
   // Traverse all blocks and collapse predicable instructions feeding
   // conditional transfers into predicated instructions.
@@ -1307,7 +1307,7 @@ bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
   for (auto &B : MF)
     Changed |= predicateInBlock(B, PredUpd);
   DEBUG(LIS->print(dbgs() << "After predicating\n",
-                   MF.getFunction()->getParent()));
+                   MF.getFunction().getParent()));
 
   PredUpd.insert(CoalUpd.begin(), CoalUpd.end());
   updateLiveness(PredUpd, true, true, true);
@@ -1315,7 +1315,7 @@ bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
   DEBUG({
     if (Changed)
       LIS->print(dbgs() << "After expand-condsets\n",
-                 MF.getFunction()->getParent());
+                 MF.getFunction().getParent());
   });
 
   return Changed;

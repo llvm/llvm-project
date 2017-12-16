@@ -94,7 +94,7 @@ bool WebAssemblyFrameLowering::needsSPWriteback(
     const MachineFunction &MF, const MachineFrameInfo &MFI) const {
   assert(needsSP(MF, MFI));
   return MFI.getStackSize() > RedZoneSize || MFI.hasCalls() ||
-         MF.getFunction()->hasFnAttribute(Attribute::NoRedZone);
+         MF.getFunction().hasFnAttribute(Attribute::NoRedZone);
 }
 
 static void writeSPToMemory(unsigned SrcReg, MachineFunction &MF,

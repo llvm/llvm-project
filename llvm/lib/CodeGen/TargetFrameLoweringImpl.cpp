@@ -32,7 +32,7 @@ TargetFrameLowering::~TargetFrameLowering() = default;
 
 /// The default implementation just looks at attribute "no-frame-pointer-elim".
 bool TargetFrameLowering::noFramePointerElim(const MachineFunction &MF) const {
-  auto Attr = MF.getFunction()->getFnAttribute("no-frame-pointer-elim");
+  auto Attr = MF.getFunction().getFnAttribute("no-frame-pointer-elim");
   return Attr.getValueAsString() == "true";
 }
 
@@ -82,7 +82,7 @@ void TargetFrameLowering::determineCalleeSaves(MachineFunction &MF,
     return;
 
   // In Naked functions we aren't going to save any registers.
-  if (MF.getFunction()->hasFnAttribute(Attribute::Naked))
+  if (MF.getFunction().hasFnAttribute(Attribute::Naked))
     return;
 
   // Functions which call __builtin_unwind_init get all their registers saved.
@@ -99,7 +99,7 @@ unsigned TargetFrameLowering::getStackAlignmentSkew(
     const MachineFunction &MF) const {
   // When HHVM function is called, the stack is skewed as the return address
   // is removed from the stack before we enter the function.
-  if (LLVM_UNLIKELY(MF.getFunction()->getCallingConv() == CallingConv::HHVM))
+  if (LLVM_UNLIKELY(MF.getFunction().getCallingConv() == CallingConv::HHVM))
     return MF.getTarget().getPointerSize();
 
   return 0;

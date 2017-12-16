@@ -394,7 +394,7 @@ void SIFrameLowering::emitEntryFunctionScratchSetup(const SISubtarget &ST,
     // We now have the GIT ptr - now get the scratch descriptor from the entry
     // at offset 0.
     PointerType *PtrTy =
-      PointerType::get(Type::getInt64Ty(MF.getFunction()->getContext()),
+      PointerType::get(Type::getInt64Ty(MF.getFunction().getContext()),
                        AMDGPUAS::CONSTANT_ADDRESS);
     MachinePointerInfo PtrInfo(UndefValue::get(PtrTy));
     const MCInstrDesc &LoadDwordX4 = TII->get(AMDGPU::S_LOAD_DWORDX4_IMM);
@@ -425,7 +425,7 @@ void SIFrameLowering::emitEntryFunctionScratchSetup(const SISubtarget &ST,
     if (MFI->hasImplicitBufferPtr()) {
       unsigned Rsrc01 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0_sub1);
 
-      if (AMDGPU::isCompute(MF.getFunction()->getCallingConv())) {
+      if (AMDGPU::isCompute(MF.getFunction().getCallingConv())) {
         const MCInstrDesc &Mov64 = TII->get(AMDGPU::S_MOV_B64);
 
         BuildMI(MBB, I, DL, Mov64, Rsrc01)
@@ -435,7 +435,7 @@ void SIFrameLowering::emitEntryFunctionScratchSetup(const SISubtarget &ST,
         const MCInstrDesc &LoadDwordX2 = TII->get(AMDGPU::S_LOAD_DWORDX2_IMM);
 
         PointerType *PtrTy =
-          PointerType::get(Type::getInt64Ty(MF.getFunction()->getContext()),
+          PointerType::get(Type::getInt64Ty(MF.getFunction().getContext()),
                            AMDGPUAS::CONSTANT_ADDRESS);
         MachinePointerInfo PtrInfo(UndefValue::get(PtrTy));
         auto MMO = MF.getMachineMemOperand(PtrInfo,
