@@ -205,7 +205,7 @@ void AMDGPUAsmPrinter::EmitFunctionBodyStart() {
   if (TM.getTargetTriple().getOS() != Triple::AMDHSA)
     return;
 
-  HSAMetadataStream.emitKernel(*MF->getFunction(),
+  HSAMetadataStream.emitKernel(MF->getFunction(),
                                getHSACodeProps(*MF, CurrentProgramInfo),
                                getHSADebugProps(*MF, CurrentProgramInfo));
 }
@@ -215,14 +215,14 @@ void AMDGPUAsmPrinter::EmitFunctionEntryLabel() {
   const AMDGPUSubtarget &STM = MF->getSubtarget<AMDGPUSubtarget>();
   if (MFI->isEntryFunction() && STM.isAmdCodeObjectV2(*MF)) {
     SmallString<128> SymbolName;
-    getNameWithPrefix(SymbolName, MF->getFunction()),
+    getNameWithPrefix(SymbolName, &MF->getFunction()),
     getTargetStreamer()->EmitAMDGPUSymbolType(
         SymbolName, ELF::STT_AMDGPU_HSA_KERNEL);
   }
   const AMDGPUSubtarget &STI = MF->getSubtarget<AMDGPUSubtarget>();
   if (STI.dumpCode()) {
     // Disassemble function name label to text.
-    DisasmLines.push_back(MF->getFunction()->getName().str() + ":");
+    DisasmLines.push_back(MF->getName().str() + ":");
     DisasmLineMaxLen = std::max(DisasmLineMaxLen, DisasmLines.back().size());
     HexLines.push_back("");
   }
@@ -314,7 +314,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
       getSIProgramInfo(CurrentProgramInfo, MF);
     } else {
       auto I = CallGraphResourceInfo.insert(
-        std::make_pair(MF.getFunction(), SIFunctionResourceInfo()));
+        std::make_pair(&MF.getFunction(), SIFunctionResourceInfo()));
       SIFunctionResourceInfo &Info = I.first->second;
       assert(I.second && "should only be called once per function");
       Info = analyzeResourceUsage(MF);
@@ -343,7 +343,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     if (STM.getGeneration() >= AMDGPUSubtarget::SOUTHERN_ISLANDS) {
       if (!MFI->isEntryFunction()) {
         OutStreamer->emitRawComment(" Function info:", false);
-        SIFunctionResourceInfo &Info = CallGraphResourceInfo[MF.getFunction()];
+        SIFunctionResourceInfo &Info = CallGraphResourceInfo[&MF.getFunction()];
         emitCommonFunctionComments(
           Info.NumVGPR,
           Info.getTotalNumSGPRs(MF.getSubtarget<SISubtarget>()),
@@ -469,7 +469,7 @@ void AMDGPUAsmPrinter::EmitProgramInfoR600(const MachineFunction &MF) {
   unsigned RsrcReg;
   if (STM.getGeneration() >= R600Subtarget::EVERGREEN) {
     // Evergreen / Northern Islands
-    switch (MF.getFunction()->getCallingConv()) {
+    switch (MF.getFunction().getCallingConv()) {
     default: LLVM_FALLTHROUGH;
     case CallingConv::AMDGPU_CS: RsrcReg = R_0288D4_SQ_PGM_RESOURCES_LS; break;
     case CallingConv::AMDGPU_GS: RsrcReg = R_028878_SQ_PGM_RESOURCES_GS; break;
@@ -478,7 +478,7 @@ void AMDGPUAsmPrinter::EmitProgramInfoR600(const MachineFunction &MF) {
     }
   } else {
     // R600 / R700
-    switch (MF.getFunction()->getCallingConv()) {
+    switch (MF.getFunction().getCallingConv()) {
     default: LLVM_FALLTHROUGH;
     case CallingConv::AMDGPU_GS: LLVM_FALLTHROUGH;
     case CallingConv::AMDGPU_CS: LLVM_FALLTHROUGH;
@@ -493,7 +493,7 @@ void AMDGPUAsmPrinter::EmitProgramInfoR600(const MachineFunction &MF) {
   OutStreamer->EmitIntValue(R_02880C_DB_SHADER_CONTROL, 4);
   OutStreamer->EmitIntValue(S_02880C_KILL_ENABLE(killPixel), 4);
 
-  if (AMDGPU::isCompute(MF.getFunction()->getCallingConv())) {
+  if (AMDGPU::isCompute(MF.getFunction().getCallingConv())) {
     OutStreamer->EmitIntValue(R_0288E8_SQ_LDS_ALLOC, 4);
     OutStreamer->EmitIntValue(alignTo(MFI->getLDSSize(), 4) >> 2, 4);
   }
@@ -787,9 +787,9 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.DynamicCallStack = Info.HasDynamicallySizedStack || Info.HasRecursion;
 
   if (!isUInt<32>(ProgInfo.ScratchSize)) {
-    DiagnosticInfoStackSize DiagStackSize(*MF.getFunction(),
+    DiagnosticInfoStackSize DiagStackSize(MF.getFunction(),
                                           ProgInfo.ScratchSize, DS_Error);
-    MF.getFunction()->getContext().diagnose(DiagStackSize);
+    MF.getFunction().getContext().diagnose(DiagStackSize);
   }
 
   const SISubtarget &STM = MF.getSubtarget<SISubtarget>();
@@ -808,8 +808,8 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     unsigned MaxAddressableNumSGPRs = STM.getAddressableNumSGPRs();
     if (ProgInfo.NumSGPR > MaxAddressableNumSGPRs) {
       // This can happen due to a compiler bug or when using inline asm.
-      LLVMContext &Ctx = MF.getFunction()->getContext();
-      DiagnosticInfoResourceLimit Diag(*MF.getFunction(),
+      LLVMContext &Ctx = MF.getFunction().getContext();
+      DiagnosticInfoResourceLimit Diag(MF.getFunction(),
                                        "addressable scalar registers",
                                        ProgInfo.NumSGPR, DS_Error,
                                        DK_ResourceLimit,
@@ -836,8 +836,8 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     if (ProgInfo.NumSGPR > MaxAddressableNumSGPRs) {
       // This can happen due to a compiler bug or when using inline asm to use
       // the registers which are usually reserved for vcc etc.
-      LLVMContext &Ctx = MF.getFunction()->getContext();
-      DiagnosticInfoResourceLimit Diag(*MF.getFunction(),
+      LLVMContext &Ctx = MF.getFunction().getContext();
+      DiagnosticInfoResourceLimit Diag(MF.getFunction(),
                                        "scalar registers",
                                        ProgInfo.NumSGPR, DS_Error,
                                        DK_ResourceLimit,
@@ -856,15 +856,15 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   }
 
   if (MFI->getNumUserSGPRs() > STM.getMaxNumUserSGPRs()) {
-    LLVMContext &Ctx = MF.getFunction()->getContext();
-    DiagnosticInfoResourceLimit Diag(*MF.getFunction(), "user SGPRs",
+    LLVMContext &Ctx = MF.getFunction().getContext();
+    DiagnosticInfoResourceLimit Diag(MF.getFunction(), "user SGPRs",
                                      MFI->getNumUserSGPRs(), DS_Error);
     Ctx.diagnose(Diag);
   }
 
   if (MFI->getLDSSize() > static_cast<unsigned>(STM.getLocalMemorySize())) {
-    LLVMContext &Ctx = MF.getFunction()->getContext();
-    DiagnosticInfoResourceLimit Diag(*MF.getFunction(), "local memory",
+    LLVMContext &Ctx = MF.getFunction().getContext();
+    DiagnosticInfoResourceLimit Diag(MF.getFunction(), "local memory",
                                      MFI->getLDSSize(), DS_Error);
     Ctx.diagnose(Diag);
   }
@@ -977,9 +977,9 @@ void AMDGPUAsmPrinter::EmitProgramInfoSI(const MachineFunction &MF,
                                          const SIProgramInfo &CurrentProgramInfo) {
   const SISubtarget &STM = MF.getSubtarget<SISubtarget>();
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  unsigned RsrcReg = getRsrcReg(MF.getFunction()->getCallingConv());
+  unsigned RsrcReg = getRsrcReg(MF.getFunction().getCallingConv());
 
-  if (AMDGPU::isCompute(MF.getFunction()->getCallingConv())) {
+  if (AMDGPU::isCompute(MF.getFunction().getCallingConv())) {
     OutStreamer->EmitIntValue(R_00B848_COMPUTE_PGM_RSRC1, 4);
 
     OutStreamer->EmitIntValue(CurrentProgramInfo.ComputePGMRSrc1, 4);
@@ -997,13 +997,13 @@ void AMDGPUAsmPrinter::EmitProgramInfoSI(const MachineFunction &MF,
     OutStreamer->EmitIntValue(S_00B028_VGPRS(CurrentProgramInfo.VGPRBlocks) |
                               S_00B028_SGPRS(CurrentProgramInfo.SGPRBlocks), 4);
     unsigned Rsrc2Val = 0;
-    if (STM.isVGPRSpillingEnabled(*MF.getFunction())) {
+    if (STM.isVGPRSpillingEnabled(MF.getFunction())) {
       OutStreamer->EmitIntValue(R_0286E8_SPI_TMPRING_SIZE, 4);
       OutStreamer->EmitIntValue(S_0286E8_WAVESIZE(CurrentProgramInfo.ScratchBlocks), 4);
       if (TM.getTargetTriple().getOS() == Triple::AMDPAL)
         Rsrc2Val = S_00B84C_SCRATCH_EN(CurrentProgramInfo.ScratchBlocks > 0);
     }
-    if (MF.getFunction()->getCallingConv() == CallingConv::AMDGPU_PS) {
+    if (MF.getFunction().getCallingConv() == CallingConv::AMDGPU_PS) {
       OutStreamer->EmitIntValue(R_0286CC_SPI_PS_INPUT_ENA, 4);
       OutStreamer->EmitIntValue(MFI->getPSInputEnable(), 4);
       OutStreamer->EmitIntValue(R_0286D0_SPI_PS_INPUT_ADDR, 4);
@@ -1036,13 +1036,13 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
   // we can use the same fixed value that .AMDGPU.config has for Mesa. Note
   // that we use a register number rather than a byte offset, so we need to
   // divide by 4.
-  unsigned Rsrc1Reg = getRsrcReg(MF.getFunction()->getCallingConv()) / 4;
+  unsigned Rsrc1Reg = getRsrcReg(MF.getFunction().getCallingConv()) / 4;
   unsigned Rsrc2Reg = Rsrc1Reg + 1;
   // Also calculate the PAL metadata key for *S_SCRATCH_SIZE. It can be used
   // with a constant offset to access any non-register shader-specific PAL
   // metadata key.
   unsigned ScratchSizeKey = PALMD::Key::CS_SCRATCH_SIZE;
-  switch (MF.getFunction()->getCallingConv()) {
+  switch (MF.getFunction().getCallingConv()) {
     case CallingConv::AMDGPU_PS:
       ScratchSizeKey = PALMD::Key::PS_SCRATCH_SIZE;
       break;
@@ -1068,7 +1068,7 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
       PALMD::Key::VS_NUM_USED_SGPRS - PALMD::Key::VS_SCRATCH_SIZE;
   PALMetadataMap[NumUsedVgprsKey] = CurrentProgramInfo.NumVGPRsForWavesPerEU;
   PALMetadataMap[NumUsedSgprsKey] = CurrentProgramInfo.NumSGPRsForWavesPerEU;
-  if (AMDGPU::isCompute(MF.getFunction()->getCallingConv())) {
+  if (AMDGPU::isCompute(MF.getFunction().getCallingConv())) {
     PALMetadataMap[Rsrc1Reg] |= CurrentProgramInfo.ComputePGMRSrc1;
     PALMetadataMap[Rsrc2Reg] |= CurrentProgramInfo.ComputePGMRSrc2;
     // ScratchSize is in bytes, 16 aligned.
@@ -1083,7 +1083,7 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
     PALMetadataMap[ScratchSizeKey] |=
         alignTo(CurrentProgramInfo.ScratchSize, 16);
   }
-  if (MF.getFunction()->getCallingConv() == CallingConv::AMDGPU_PS) {
+  if (MF.getFunction().getCallingConv() == CallingConv::AMDGPU_PS) {
     PALMetadataMap[Rsrc2Reg] |=
         S_00B02C_EXTRA_LDS_SIZE(CurrentProgramInfo.LDSBlocks);
     PALMetadataMap[R_0286CC_SPI_PS_INPUT_ENA / 4] |= MFI->getPSInputEnable();

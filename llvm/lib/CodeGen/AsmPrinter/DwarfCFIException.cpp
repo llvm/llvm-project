@@ -87,7 +87,7 @@ static MCSymbol *getExceptionSym(AsmPrinter *Asm) {
 
 void DwarfCFIException::beginFunction(const MachineFunction *MF) {
   shouldEmitMoves = shouldEmitPersonality = shouldEmitLSDA = false;
-  const Function *F = MF->getFunction();
+  const Function &F = MF->getFunction();
 
   // If any landing pads survive, we need an EH table.
   bool hasLandingPads = !MF->getLandingPads().empty();
@@ -100,17 +100,17 @@ void DwarfCFIException::beginFunction(const MachineFunction *MF) {
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
   unsigned PerEncoding = TLOF.getPersonalityEncoding();
   const Function *Per = nullptr;
-  if (F->hasPersonalityFn())
-    Per = dyn_cast<Function>(F->getPersonalityFn()->stripPointerCasts());
+  if (F.hasPersonalityFn())
+    Per = dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts());
 
   // Emit a personality function even when there are no landing pads
   forceEmitPersonality =
       // ...if a personality function is explicitly specified
-      F->hasPersonalityFn() &&
+      F.hasPersonalityFn() &&
       // ... and it's not known to be a noop in the absence of invokes
       !isNoOpWithoutInvoke(classifyEHPersonality(Per)) &&
       // ... and we're not explicitly asked not to emit it
-      F->needsUnwindTableEntry();
+      F.needsUnwindTableEntry();
 
   shouldEmitPersonality =
       (forceEmitPersonality ||
@@ -143,8 +143,8 @@ void DwarfCFIException::beginFragment(const MachineBasicBlock *MBB,
   if (!shouldEmitPersonality)
     return;
 
-  auto *F = MBB->getParent()->getFunction();
-  auto *P = dyn_cast<Function>(F->getPersonalityFn()->stripPointerCasts());
+  auto &F = MBB->getParent()->getFunction();
+  auto *P = dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts());
   assert(P && "Expected personality function");
 
   // If we are forced to emit this personality, make sure to record

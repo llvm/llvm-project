@@ -551,7 +551,7 @@ void Writer::calculateOffsets() {
 
 void Writer::calculateImports() {
   for (Symbol *Sym : Symtab->getSymbols()) {
-    if (Sym->isDefined() || Sym->isWeak())
+    if (!Sym->isUndefined() || Sym->isWeak())
       continue;
 
     if (Sym->isFunction()) {

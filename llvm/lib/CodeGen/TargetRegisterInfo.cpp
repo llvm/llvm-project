@@ -422,21 +422,21 @@ TargetRegisterInfo::getRegAllocationHints(unsigned VirtReg,
 }
 
 bool TargetRegisterInfo::canRealignStack(const MachineFunction &MF) const {
-  return !MF.getFunction()->hasFnAttribute("no-realign-stack");
+  return !MF.getFunction().hasFnAttribute("no-realign-stack");
 }
 
 bool TargetRegisterInfo::needsStackRealignment(
     const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
-  const Function *F = MF.getFunction();
+  const Function &F = MF.getFunction();
   unsigned StackAlign = TFI->getStackAlignment();
   bool requiresRealignment = ((MFI.getMaxAlignment() > StackAlign) ||
-                              F->hasFnAttribute(Attribute::StackAlignment));
-  if (MF.getFunction()->hasFnAttribute("stackrealign") || requiresRealignment) {
+                              F.hasFnAttribute(Attribute::StackAlignment));
+  if (F.hasFnAttribute("stackrealign") || requiresRealignment) {
     if (canRealignStack(MF))
       return true;
-    DEBUG(dbgs() << "Can't realign function's stack: " << F->getName() << "\n");
+    DEBUG(dbgs() << "Can't realign function's stack: " << F.getName() << "\n");
   }
   return false;
 }

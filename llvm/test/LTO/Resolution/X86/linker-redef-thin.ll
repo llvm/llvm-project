@@ -1,6 +1,6 @@
 ; RUN: opt -module-summary %s -o %t.o
 ; RUN: llvm-lto2 run -o %t1.o %t.o -r %t.o,patatino,pr
-; RUN: llvm-readobj -t %t1.o.0 | FileCheck %s
+; RUN: llvm-readobj -t %t1.o.1 | FileCheck %s
 
 ; CHECK: Name: patatino
 ; CHECK-NEXT: Value:

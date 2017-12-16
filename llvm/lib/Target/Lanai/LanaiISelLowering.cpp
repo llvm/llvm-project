@@ -513,7 +513,7 @@ SDValue LanaiTargetLowering::LowerCCCArguments(
   // The Lanai ABI for returning structs by value requires that we copy
   // the sret argument into rv for the return. Save the argument into
   // a virtual register so that we can access it from the return points.
-  if (MF.getFunction()->hasStructRetAttr()) {
+  if (MF.getFunction().hasStructRetAttr()) {
     unsigned Reg = LanaiMFI->getSRetReturnReg();
     if (!Reg) {
       Reg = MF.getRegInfo().createVirtualRegister(getRegClassFor(MVT::i32));
@@ -568,7 +568,7 @@ LanaiTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   // the sret argument into rv for the return. We saved the argument into
   // a virtual register in the entry block, so now we copy the value out
   // and into rv.
-  if (DAG.getMachineFunction().getFunction()->hasStructRetAttr()) {
+  if (DAG.getMachineFunction().getFunction().hasStructRetAttr()) {
     MachineFunction &MF = DAG.getMachineFunction();
     LanaiMachineFunctionInfo *LanaiMFI = MF.getInfo<LanaiMachineFunctionInfo>();
     unsigned Reg = LanaiMFI->getSRetReturnReg();

@@ -586,8 +586,8 @@ namespace llvm {
 
     bool supportSplitCSR(MachineFunction *MF) const override {
       return
-        MF->getFunction()->getCallingConv() == CallingConv::CXX_FAST_TLS &&
-        MF->getFunction()->hasFnAttribute(Attribute::NoUnwind);
+        MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS &&
+        MF->getFunction().hasFnAttribute(Attribute::NoUnwind);
     }
 
     void initializeSplitCSR(MachineBasicBlock *Entry) const override;

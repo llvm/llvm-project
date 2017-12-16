@@ -101,9 +101,9 @@ void MipsCCState::PreAnalyzeReturnForF128(
   const MachineFunction &MF = getMachineFunction();
   for (unsigned i = 0; i < Outs.size(); ++i) {
     OriginalArgWasF128.push_back(
-        originalTypeIsF128(MF.getFunction()->getReturnType(), nullptr));
+        originalTypeIsF128(MF.getFunction().getReturnType(), nullptr));
     OriginalArgWasFloat.push_back(
-        MF.getFunction()->getReturnType()->isFloatingPointTy());
+        MF.getFunction().getReturnType()->isFloatingPointTy());
   }
 }
 
@@ -149,7 +149,7 @@ void MipsCCState::PreAnalyzeFormalArgumentsForF128(
     const SmallVectorImpl<ISD::InputArg> &Ins) {
   const MachineFunction &MF = getMachineFunction();
   for (unsigned i = 0; i < Ins.size(); ++i) {
-    Function::const_arg_iterator FuncArg = MF.getFunction()->arg_begin();
+    Function::const_arg_iterator FuncArg = MF.getFunction().arg_begin();
 
     // SRet arguments cannot originate from f128 or {f128} returns so we just
     // push false. We have to handle this specially since SRet arguments
@@ -161,7 +161,7 @@ void MipsCCState::PreAnalyzeFormalArgumentsForF128(
       continue;
     }
 
-    assert(Ins[i].getOrigArgIndex() < MF.getFunction()->arg_size());
+    assert(Ins[i].getOrigArgIndex() < MF.getFunction().arg_size());
     std::advance(FuncArg, Ins[i].getOrigArgIndex());
 
     OriginalArgWasF128.push_back(

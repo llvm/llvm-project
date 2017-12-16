@@ -833,7 +833,7 @@ static void removeDebugValues(MachineFunction &mf) {
 bool LiveDebugVariables::runOnMachineFunction(MachineFunction &mf) {
   if (!EnableLDV)
     return false;
-  if (!mf.getFunction()->getSubprogram()) {
+  if (!mf.getFunction().getSubprogram()) {
     removeDebugValues(mf);
     return false;
   }

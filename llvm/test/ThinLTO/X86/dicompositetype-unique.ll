@@ -5,7 +5,7 @@
 ; RUN:    -r %t1.bc,_foo,lx \
 ; RUN:    -r %t1.bc,_main,plx \
 ; RUN:    -r %t2.bc,_foo,plx
-; RUN: llvm-dis %t.0.3.import.bc -o - | FileCheck %s
+; RUN: llvm-dis %t.1.3.import.bc -o - | FileCheck %s
 
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

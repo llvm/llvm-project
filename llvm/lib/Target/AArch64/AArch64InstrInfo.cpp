@@ -4753,21 +4753,21 @@ AArch64InstrInfo::getOutlininingCandidateInfo(
 
 bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(MachineFunction &MF,
                                            bool OutlineFromLinkOnceODRs) const {
-  const Function *F = MF.getFunction();
+  const Function &F = MF.getFunction();
 
   // If F uses a redzone, then don't outline from it because it might mess up
   // the stack.
-  if (!F->hasFnAttribute(Attribute::NoRedZone))
+  if (!F.hasFnAttribute(Attribute::NoRedZone))
     return false;
 
   // If anyone is using the address of this function, don't outline from it.
-  if (F->hasAddressTaken())
+  if (F.hasAddressTaken())
     return false;
 
   // Can F be deduplicated by the linker? If it can, don't outline from it.
-  if (!OutlineFromLinkOnceODRs && F->hasLinkOnceODRLinkage())
+  if (!OutlineFromLinkOnceODRs && F.hasLinkOnceODRLinkage())
     return false;
-  
+
   return true;
 }
 

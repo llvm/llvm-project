@@ -148,7 +148,7 @@ bool X86CallFrameOptimization::isLegal(MachineFunction &MF) {
   // is a danger of that being generated.
   if (STI->isTargetDarwin() &&
       (!MF.getLandingPads().empty() ||
-       (MF.getFunction()->needsUnwindTableEntry() && !TFL->hasFP(MF))))
+       (MF.getFunction().needsUnwindTableEntry() && !TFL->hasFP(MF))))
     return false;
 
   // It is not valid to change the stack pointer outside the prolog/epilog
@@ -243,7 +243,7 @@ bool X86CallFrameOptimization::runOnMachineFunction(MachineFunction &MF) {
   assert(isPowerOf2_32(SlotSize) && "Expect power of 2 stack slot size");
   Log2SlotSize = Log2_32(SlotSize);
 
-  if (skipFunction(*MF.getFunction()) || !isLegal(MF))
+  if (skipFunction(MF.getFunction()) || !isLegal(MF))
     return false;
 
   unsigned FrameSetupOpcode = TII->getCallFrameSetupOpcode();

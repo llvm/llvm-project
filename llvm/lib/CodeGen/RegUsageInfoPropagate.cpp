@@ -102,7 +102,7 @@ static const Function *findCalledFunction(const Module &M, MachineInstr &MI) {
 }
 
 bool RegUsageInfoPropagationPass::runOnMachineFunction(MachineFunction &MF) {
-  const Module *M = MF.getFunction()->getParent();
+  const Module *M = MF.getFunction().getParent();
   PhysicalRegisterUsageInfo *PRUI = &getAnalysis<PhysicalRegisterUsageInfo>();
 
   DEBUG(dbgs() << " ++++++++++++++++++++ " << getPassName()

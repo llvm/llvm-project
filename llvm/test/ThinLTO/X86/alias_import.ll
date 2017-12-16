@@ -4,9 +4,9 @@
 ; RUN: llvm-lto -thinlto-action=promote -thinlto-index %t.index.bc %t2.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=PROMOTE
 ; RUN: llvm-lto -thinlto-action=import -thinlto-index %t.index.bc %t1.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=IMPORT
 
-; Alias can't point to "available_externally", so they cannot be imported for
-; now. This could be implemented by importing the alias as an
-; available_externally definition copied from the aliasee's body.
+; Alias can't point to "available_externally", so they are implemented by
+; importing the alias as an available_externally definition copied from the
+; aliasee's body.
 ; PROMOTE-DAG: @globalfuncAlias = alias void (...), bitcast (void ()* @globalfunc to void (...)*)
 ; PROMOTE-DAG: @globalfuncWeakAlias = weak alias void (...), bitcast (void ()* @globalfunc to void (...)*)
 ; PROMOTE-DAG: @globalfuncLinkonceAlias = weak alias void (...), bitcast (void ()* @globalfunc to void (...)*)
@@ -45,45 +45,43 @@
 ; PROMOTE-DAG: define weak void @linkoncefunc()
 ; PROMOTE-DAG: define weak void @weakfunc()
 
-; On the import side now, verify that aliases are not imported
-; IMPORT-DAG:  declare void @linkonceODRfuncWeakAlias
-; IMPORT-DAG:  declare void @linkonceODRfuncLinkonceAlias
-; IMPORT-DAG:  declare void @linkonceODRfuncAlias
-; IMPORT-DAG:  declare void @linkonceODRfuncWeakODRAlias
-; IMPORT-DAG:  declare void @linkonceODRfuncLinkonceODRAlias
-
-
-; On the import side, these aliases are not imported (they don't point to a linkonce_odr)
-; IMPORT-DAG: declare void @globalfuncAlias()
+; On the import side now, verify that aliases are imported unless they
+; are preemptible (non-ODR weak/linkonce).
+; IMPORT-DAG: declare void @linkonceODRfuncWeakAlias
+; IMPORT-DAG: declare void @linkonceODRfuncLinkonceAlias
+; IMPORT-DAG: define available_externally void @linkonceODRfuncAlias
+; IMPORT-DAG: define available_externally void @linkonceODRfuncWeakODRAlias
+; IMPORT-DAG: define available_externally void @linkonceODRfuncLinkonceODRAlias
+; IMPORT-DAG: define available_externally void @globalfuncAlias()
 ; IMPORT-DAG: declare void @globalfuncWeakAlias()
 ; IMPORT-DAG: declare void @globalfuncLinkonceAlias()
-; IMPORT-DAG: declare void @globalfuncWeakODRAlias()
-; IMPORT-DAG: declare void @globalfuncLinkonceODRAlias()
-; IMPORT-DAG: declare void @internalfuncAlias()
+; IMPORT-DAG: define available_externally void @globalfuncWeakODRAlias()
+; IMPORT-DAG: define available_externally void @globalfuncLinkonceODRAlias()
+; IMPORT-DAG: define available_externally void @internalfuncAlias()
 ; IMPORT-DAG: declare void @internalfuncWeakAlias()
 ; IMPORT-DAG: declare void @internalfuncLinkonceAlias()
-; IMPORT-DAG: declare void @internalfuncWeakODRAlias()
-; IMPORT-DAG: declare void @internalfuncLinkonceODRAlias()
-; IMPORT-DAG: declare void @weakODRfuncAlias()
+; IMPORT-DAG: define available_externally void @internalfuncWeakODRAlias()
+; IMPORT-DAG: define available_externally void @internalfuncLinkonceODRAlias()
+; IMPORT-DAG: define available_externally void @weakODRfuncAlias()
 ; IMPORT-DAG: declare void @weakODRfuncWeakAlias()
 ; IMPORT-DAG: declare void @weakODRfuncLinkonceAlias()
-; IMPORT-DAG: declare void @weakODRfuncWeakODRAlias()
-; IMPORT-DAG: declare void @weakODRfuncLinkonceODRAlias()
-; IMPORT-DAG: declare void @linkoncefuncAlias()
+; IMPORT-DAG: define available_externally void @weakODRfuncWeakODRAlias()
+; IMPORT-DAG: define available_externally void @weakODRfuncLinkonceODRAlias()
+; IMPORT-DAG: define available_externally void @linkoncefuncAlias()
 ; IMPORT-DAG: declare void @linkoncefuncWeakAlias()
 ; IMPORT-DAG: declare void @linkoncefuncLinkonceAlias()
-; IMPORT-DAG: declare void @linkoncefuncWeakODRAlias()
-; IMPORT-DAG: declare void @linkoncefuncLinkonceODRAlias()
-; IMPORT-DAG: declare void @weakfuncAlias()
+; IMPORT-DAG: define available_externally void @linkoncefuncWeakODRAlias()
+; IMPORT-DAG: define available_externally void @linkoncefuncLinkonceODRAlias()
+; IMPORT-DAG: define available_externally void @weakfuncAlias()
 ; IMPORT-DAG: declare void @weakfuncWeakAlias()
 ; IMPORT-DAG: declare void @weakfuncLinkonceAlias()
-; IMPORT-DAG: declare void @weakfuncWeakODRAlias()
-; IMPORT-DAG: declare void @weakfuncLinkonceODRAlias()
-; IMPORT-DAG: declare void @linkonceODRfuncAlias()
+; IMPORT-DAG: define available_externally void @weakfuncWeakODRAlias()
+; IMPORT-DAG: define available_externally void @weakfuncLinkonceODRAlias()
+; IMPORT-DAG: define available_externally void @linkonceODRfuncAlias()
 ; IMPORT-DAG: declare void @linkonceODRfuncWeakAlias()
-; IMPORT-DAG: declare void @linkonceODRfuncWeakODRAlias()
+; IMPORT-DAG: define available_externally void @linkonceODRfuncWeakODRAlias()
 ; IMPORT-DAG: declare void @linkonceODRfuncLinkonceAlias()
-; IMPORT-DAG: declare void @linkonceODRfuncLinkonceODRAlias()
+; IMPORT-DAG: define available_externally void @linkonceODRfuncLinkonceODRAlias()
 
 define i32 @main() #0 {
 entry:

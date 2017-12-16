@@ -142,7 +142,7 @@ void XRayInstrumentation::prependRetWithPatchableExit(
 }
 
 bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
-  auto &F = *MF.getFunction();
+  auto &F = MF.getFunction();
   auto InstrAttr = F.getFnAttribute("function-instrument");
   bool AlwaysInstrument = !InstrAttr.hasAttribute(Attribute::None) &&
                           InstrAttr.isStringAttribute() &&

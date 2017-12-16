@@ -1235,7 +1235,7 @@ void MachineBlockPlacement::precomputeTriangleChains() {
 // When profile is available, we need to handle the triangle-shape CFG.
 static BranchProbability getLayoutSuccessorProbThreshold(
       const MachineBasicBlock *BB) {
-  if (!BB->getParent()->getFunction()->getEntryCount())
+  if (!BB->getParent()->getFunction().getEntryCount())
     return BranchProbability(StaticLikelyProb, 100);
   if (BB->succ_size() == 2) {
     const MachineBasicBlock *Succ1 = *BB->succ_begin();
@@ -1769,7 +1769,7 @@ MachineBlockPlacement::findBestLoopTop(const MachineLoop &L,
   // i.e. when the layout predecessor does not fallthrough to the loop header.
   // In practice this never happens though: there always seems to be a preheader
   // that can fallthrough and that is also placed before the header.
-  if (F->getFunction()->optForSize())
+  if (F->getFunction().optForSize())
     return L.getHeader();
 
   // Check that the header hasn't been fused with a preheader block due to
@@ -2178,7 +2178,7 @@ MachineBlockPlacement::collectLoopBlockSet(const MachineLoop &L) {
   // will be merged into the first outer loop chain for which this block is not
   // cold anymore. This needs precise profile data and we only do this when
   // profile data is available.
-  if (F->getFunction()->getEntryCount() || ForceLoopColdBlock) {
+  if (F->getFunction().getEntryCount() || ForceLoopColdBlock) {
     BlockFrequency LoopFreq(0);
     for (auto LoopPred : L.getHeader()->predecessors())
       if (!L.contains(LoopPred))
@@ -2220,7 +2220,7 @@ void MachineBlockPlacement::buildLoopChains(const MachineLoop &L) {
   // for better layout.
   bool RotateLoopWithProfile =
       ForcePreciseRotationCost ||
-      (PreciseRotationCost && F->getFunction()->getEntryCount());
+      (PreciseRotationCost && F->getFunction().getEntryCount());
 
   // First check to see if there is an obviously preferable top block for the
   // loop. This will default to the header, but may end up as one of the
@@ -2485,7 +2485,7 @@ void MachineBlockPlacement::alignBlocks() {
   // exclusively on the loop info here so that we can align backedges in
   // unnatural CFGs and backedges that were introduced purely because of the
   // loop rotations done during this layout pass.
-  if (F->getFunction()->optForSize())
+  if (F->getFunction().optForSize())
     return;
   BlockChain &FunctionChain = *BlockToChain[&F->front()];
   if (FunctionChain.begin() == FunctionChain.end())
@@ -2715,7 +2715,7 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
 }
 
 bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(*MF.getFunction()))
+  if (skipFunction(MF.getFunction()))
     return false;
 
   // Check for single-block functions and skip them.
@@ -2760,7 +2760,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
 
   if (TailDupPlacement) {
     MPDT = &getAnalysis<MachinePostDominatorTree>();
-    if (MF.getFunction()->optForSize())
+    if (MF.getFunction().optForSize())
       TailDupSize = 1;
     bool PreRegAlloc = false;
     TailDup.initMF(MF, PreRegAlloc, MBPI, /* LayoutMode */ true, TailDupSize);
@@ -2817,7 +2817,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   }
   if (ViewBlockLayoutWithBFI != GVDT_None &&
       (ViewBlockFreqFuncName.empty() ||
-       F->getFunction()->getName().equals(ViewBlockFreqFuncName))) {
+       F->getFunction().getName().equals(ViewBlockFreqFuncName))) {
     MBFI->view("MBP." + MF.getName(), false);
   }
 

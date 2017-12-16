@@ -246,6 +246,7 @@ public:
   /// If this is an alias summary, returns the summary of the aliased object (a
   /// global variable or function), otherwise returns itself.
   GlobalValueSummary *getBaseObject();
+  const GlobalValueSummary *getBaseObject() const;
 
   friend class ModuleSummaryIndex;
   friend void computeDeadSymbols(class ModuleSummaryIndex &,
@@ -255,10 +256,14 @@ public:
 /// \brief Alias summary information.
 class AliasSummary : public GlobalValueSummary {
   GlobalValueSummary *AliaseeSummary;
+  // AliaseeGUID is only set and accessed when we are building a combined index
+  // via the BitcodeReader.
+  GlobalValue::GUID AliaseeGUID;
 
 public:
   AliasSummary(GVFlags Flags)
-      : GlobalValueSummary(AliasKind, Flags, ArrayRef<ValueInfo>{}) {}
+      : GlobalValueSummary(AliasKind, Flags, ArrayRef<ValueInfo>{}),
+        AliaseeSummary(nullptr), AliaseeGUID(0) {}
 
   /// Check if this is an alias summary.
   static bool classof(const GlobalValueSummary *GVS) {
@@ -266,6 +271,7 @@ public:
   }
 
   void setAliasee(GlobalValueSummary *Aliasee) { AliaseeSummary = Aliasee; }
+  void setAliaseeGUID(GlobalValue::GUID GUID) { AliaseeGUID = GUID; }
 
   const GlobalValueSummary &getAliasee() const {
     assert(AliaseeSummary && "Unexpected missing aliasee summary");
@@ -276,7 +282,17 @@ public:
     return const_cast<GlobalValueSummary &>(
                          static_cast<const AliasSummary *>(this)->getAliasee());
   }
+  const GlobalValue::GUID &getAliaseeGUID() const {
+    assert(AliaseeGUID && "Unexpected missing aliasee GUID");
+    return AliaseeGUID;
+  }
 };
+
+const inline GlobalValueSummary *GlobalValueSummary::getBaseObject() const {
+  if (auto *AS = dyn_cast<AliasSummary>(this))
+    return &AS->getAliasee();
+  return this;
+}
 
 inline GlobalValueSummary *GlobalValueSummary::getBaseObject() {
   if (auto *AS = dyn_cast<AliasSummary>(this))

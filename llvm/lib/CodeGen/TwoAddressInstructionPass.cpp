@@ -1663,7 +1663,7 @@ bool TwoAddressInstructionPass::runOnMachineFunction(MachineFunction &Func) {
   OptLevel = TM.getOptLevel();
   // Disable optimizations if requested. We cannot skip the whole pass as some
   // fixups are necessary for correctness.
-  if (skipFunction(*Func.getFunction()))
+  if (skipFunction(Func.getFunction()))
     OptLevel = CodeGenOpt::None;
 
   bool MadeChange = false;

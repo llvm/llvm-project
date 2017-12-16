@@ -175,7 +175,7 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
   // outerloop for that.
   if (MF.size() != NumBlocks) {
     MachineOptimizationRemarkMissed R("gisel-legalize", "GISelFailure",
-                                      MF.getFunction()->getSubprogram(),
+                                      MF.getFunction().getSubprogram(),
                                       /*MBB=*/nullptr);
     R << "inserting blocks is not supported yet";
     reportGISelFailure(MF, TPC, MORE, R);

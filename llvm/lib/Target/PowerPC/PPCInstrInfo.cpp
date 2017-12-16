@@ -3133,7 +3133,7 @@ PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
       const PPCFunctionInfo *FuncInfo = MF->getInfo<PPCFunctionInfo>();
       // We check the ZExt/SExt flags for a method parameter.
       if (MI.getParent()->getBasicBlock() ==
-          &MF->getFunction()->getEntryBlock()) {
+          &MF->getFunction().getEntryBlock()) {
         unsigned VReg = MI.getOperand(0).getReg();
         if (MF->getRegInfo().isLiveIn(VReg))
           return SignExt ? FuncInfo->isLiveInSExt(VReg) :

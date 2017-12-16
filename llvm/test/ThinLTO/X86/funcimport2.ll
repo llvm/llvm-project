@@ -6,7 +6,7 @@
 ; RUN:     -r=%t1.bc,_foo,plx \
 ; RUN:     -r=%t2.bc,_main,plx \
 ; RUN:     -r=%t2.bc,_foo,l
-; RUN: llvm-dis %t.o.1.3.import.bc -o - | FileCheck %s
+; RUN: llvm-dis %t.o.2.3.import.bc -o - | FileCheck %s
 ; CHECK: define available_externally dso_local void @foo()
 
 ; We shouldn't do any importing at -O0
@@ -16,7 +16,7 @@
 ; RUN:     -r=%t1.bc,_foo,plx \
 ; RUN:     -r=%t2.bc,_main,plx \
 ; RUN:     -r=%t2.bc,_foo,l
-; RUN: llvm-dis %t.o.1.3.import.bc -o - | FileCheck %s --check-prefix=CHECKO0
+; RUN: llvm-dis %t.o.2.3.import.bc -o - | FileCheck %s --check-prefix=CHECKO0
 ; CHECKO0: declare dso_local void @foo(...)
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

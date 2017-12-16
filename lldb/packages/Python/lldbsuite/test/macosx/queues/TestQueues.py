@@ -230,8 +230,9 @@ class TestQueues(TestBase):
                 "requested_qos.printable_name",
                 stream),
             "Get QoS printable string for unspecified QoS thread")
+        qosName = stream.GetData()
         self.assertTrue(
-            stream.GetData() == "User Initiated",
+            qosName == "User Initiated" or qosName == "Default",
             "unspecified QoS thread name is valid")
         stream.Clear()
         self.assertTrue(

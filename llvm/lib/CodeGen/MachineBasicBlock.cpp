@@ -267,8 +267,8 @@ void MachineBasicBlock::print(raw_ostream &OS, const SlotIndexes *Indexes)
        << " is null\n";
     return;
   }
-  const Function *F = MF->getFunction();
-  const Module *M = F ? F->getParent() : nullptr;
+  const Function &F = MF->getFunction();
+  const Module *M = F.getParent();
   ModuleSlotTracker MST(M);
   print(OS, MST, Indexes);
 }

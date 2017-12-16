@@ -158,7 +158,7 @@ findIndexForHandle(MachineOperand &Op, MachineFunction &MF, unsigned &Idx) {
     unsigned Param = atoi(Sym.data()+ParamBaseName.size());
     std::string NewSym;
     raw_string_ostream NewSymStr(NewSym);
-    NewSymStr << MF.getFunction()->getName() << "_param_" << Param;
+    NewSymStr << MF.getName() << "_param_" << Param;
 
     InstrsToRemove.insert(&TexHandleDef);
     Idx = MFI->getImageHandleSymbolIndex(NewSymStr.str().c_str());

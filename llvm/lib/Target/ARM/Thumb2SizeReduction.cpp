@@ -449,7 +449,7 @@ Thumb2SizeReduce::ReduceLoadStore(MachineBasicBlock &MBB, MachineInstr *MI,
     break;
   case ARM::t2LDR_POST:
   case ARM::t2STR_POST: {
-    if (!MBB.getParent()->getFunction()->optForMinSize())
+    if (!MBB.getParent()->getFunction().optForMinSize())
       return false;
 
     if (!MI->hasOneMemOperand() ||
@@ -1084,7 +1084,7 @@ bool Thumb2SizeReduce::ReduceMBB(MachineBasicBlock &MBB) {
 }
 
 bool Thumb2SizeReduce::runOnMachineFunction(MachineFunction &MF) {
-  if (PredicateFtor && !PredicateFtor(*MF.getFunction()))
+  if (PredicateFtor && !PredicateFtor(MF.getFunction()))
     return false;
 
   STI = &static_cast<const ARMSubtarget &>(MF.getSubtarget());
@@ -1094,8 +1094,8 @@ bool Thumb2SizeReduce::runOnMachineFunction(MachineFunction &MF) {
   TII = static_cast<const Thumb2InstrInfo *>(STI->getInstrInfo());
 
   // Optimizing / minimizing size? Minimizing size implies optimizing for size.
-  OptimizeSize = MF.getFunction()->optForSize();
-  MinimizeSize = MF.getFunction()->optForMinSize();
+  OptimizeSize = MF.getFunction().optForSize();
+  MinimizeSize = MF.getFunction().optForMinSize();
 
   BlockInfo.clear();
   BlockInfo.resize(MF.getNumBlockIDs());

@@ -280,7 +280,7 @@ namespace {
   public:
     MachineConstEvaluator(MachineFunction &Fn)
       : TRI(*Fn.getSubtarget().getRegisterInfo()),
-        MF(Fn), CX(Fn.getFunction()->getContext()) {}
+        MF(Fn), CX(Fn.getFunction().getContext()) {}
     virtual ~MachineConstEvaluator() = default;
 
     // The required interface:
@@ -1890,10 +1890,8 @@ namespace {
     }
 
     bool runOnMachineFunction(MachineFunction &MF) override {
-      const Function *F = MF.getFunction();
-      if (!F)
-        return false;
-      if (skipFunction(*F))
+      const Function &F = MF.getFunction();
+      if (skipFunction(F))
         return false;
 
       HexagonConstEvaluator HCE(MF);
@@ -2925,7 +2923,7 @@ bool HexagonConstEvaluator::rewriteHexConstDefs(MachineInstr &MI,
   DEBUG({
     if (!NewInstrs.empty()) {
       MachineFunction &MF = *MI.getParent()->getParent();
-      dbgs() << "In function: " << MF.getFunction()->getName() << "\n";
+      dbgs() << "In function: " << MF.getName() << "\n";
       dbgs() << "Rewrite: for " << MI << "  created " << *NewInstrs[0];
       for (unsigned i = 1; i < NewInstrs.size(); ++i)
         dbgs() << "          " << *NewInstrs[i];
