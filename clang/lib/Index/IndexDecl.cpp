@@ -233,9 +233,8 @@ public:
     if (auto *CXXMD = dyn_cast<CXXMethodDecl>(D)) {
       if (CXXMD->isVirtual())
         Roles |= (unsigned)SymbolRole::Dynamic;
-      for (auto I = CXXMD->begin_overridden_methods(),
-           E = CXXMD->end_overridden_methods(); I != E; ++I) {
-        Relations.emplace_back((unsigned)SymbolRole::RelationOverrideOf, *I);
+      for (const CXXMethodDecl *O : CXXMD->overridden_methods()) {
+        Relations.emplace_back((unsigned)SymbolRole::RelationOverrideOf, O);
       }
     }
     gatherTemplatePseudoOverrides(D, Relations);
