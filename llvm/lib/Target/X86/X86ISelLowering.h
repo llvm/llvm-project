@@ -453,9 +453,6 @@ namespace llvm {
       // Broadcast subvector to vector.
       SUBV_BROADCAST,
 
-      // Extract vector element.
-      VEXTRACT,
-
       /// SSE4A Extraction and Insertion.
       EXTRQI, INSERTQI,
 

@@ -45,6 +45,8 @@
 #define _LIBCPP_OBJECT_FORMAT_MACHO 1
 #elif defined(_WIN32)
 #define _LIBCPP_OBJECT_FORMAT_COFF  1
+#elif defined(__wasm__)
+#define _LIBCPP_OBJECT_FORMAT_WASM  1
 #else
 #error Unknown object file format
 #endif
