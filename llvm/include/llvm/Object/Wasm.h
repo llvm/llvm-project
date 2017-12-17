@@ -140,7 +140,6 @@ public:
   ArrayRef<wasm::WasmElemSegment> elements() const { return ElemSegments; }
   ArrayRef<WasmSegment> dataSegments() const { return DataSegments; }
   ArrayRef<wasm::WasmFunction> functions() const { return Functions; }
-  const ArrayRef<uint8_t>& code() const { return CodeSection; }
   uint32_t startFunction() const { return StartFunction; }
 
   void moveSymbolNext(DataRefImpl &Symb) const override;
@@ -242,7 +241,6 @@ private:
   std::vector<WasmSegment> DataSegments;
   std::vector<wasm::WasmFunction> Functions;
   std::vector<WasmSymbol> Symbols;
-  ArrayRef<uint8_t> CodeSection;
   uint32_t StartFunction = -1;
   bool HasLinkingSection = false;
   wasm::WasmLinkingData LinkingData;
