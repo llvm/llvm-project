@@ -1378,35 +1378,27 @@ void ASTContext::setInstantiatedFromUnnamedFieldDecl(FieldDecl *Inst,
 
 ASTContext::overridden_cxx_method_iterator
 ASTContext::overridden_methods_begin(const CXXMethodDecl *Method) const {
-  llvm::DenseMap<const CXXMethodDecl *, CXXMethodVector>::const_iterator Pos =
-      OverriddenMethods.find(Method->getCanonicalDecl());
-  if (Pos == OverriddenMethods.end())
-    return nullptr;
-  return Pos->second.begin();
+  return overridden_methods(Method).begin();
 }
 
 ASTContext::overridden_cxx_method_iterator
 ASTContext::overridden_methods_end(const CXXMethodDecl *Method) const {
-  llvm::DenseMap<const CXXMethodDecl *, CXXMethodVector>::const_iterator Pos =
-      OverriddenMethods.find(Method->getCanonicalDecl());
-  if (Pos == OverriddenMethods.end())
-    return nullptr;
-  return Pos->second.end();
+  return overridden_methods(Method).end();
 }
 
 unsigned
 ASTContext::overridden_methods_size(const CXXMethodDecl *Method) const {
-  llvm::DenseMap<const CXXMethodDecl *, CXXMethodVector>::const_iterator Pos =
-      OverriddenMethods.find(Method->getCanonicalDecl());
-  if (Pos == OverriddenMethods.end())
-    return 0;
-  return Pos->second.size();
+  auto Range = overridden_methods(Method);
+  return Range.end() - Range.begin();
 }
 
 ASTContext::overridden_method_range
 ASTContext::overridden_methods(const CXXMethodDecl *Method) const {
-  return overridden_method_range(overridden_methods_begin(Method),
-                                 overridden_methods_end(Method));
+  llvm::DenseMap<const CXXMethodDecl *, CXXMethodVector>::const_iterator Pos =
+      OverriddenMethods.find(Method->getCanonicalDecl());
+  if (Pos == OverriddenMethods.end())
+    return overridden_method_range(nullptr, nullptr);
+  return overridden_method_range(Pos->second.begin(), Pos->second.end());
 }
 
 void ASTContext::addOverriddenMethod(const CXXMethodDecl *Method, 

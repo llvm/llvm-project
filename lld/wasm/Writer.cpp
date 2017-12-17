@@ -646,12 +646,6 @@ void Writer::createOutputSegments() {
       }
       S->addInputSegment(Segment);
       DEBUG(dbgs() << "added data: " << Name << ": " << S->Size << "\n");
-      for (const WasmRelocation &R : File->DataSection->Relocations) {
-        if (R.Offset >= Segment->getInputSectionOffset() &&
-            R.Offset < Segment->getInputSectionOffset() + Segment->getSize()) {
-          Segment->Relocations.push_back(R);
-        }
-      }
     }
   }
 }
