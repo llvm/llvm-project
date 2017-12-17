@@ -619,17 +619,17 @@ const Value *Value::stripInBoundsOffsets() const {
   return stripPointerCastsAndOffsets<PSK_InBounds>(this);
 }
 
-unsigned Value::getPointerDereferenceableBytes(const DataLayout &DL,
+uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
                                                bool &CanBeNull) const {
   assert(getType()->isPointerTy() && "must be pointer");
 
-  unsigned DerefBytes = 0;
+  uint64_t DerefBytes = 0;
   CanBeNull = false;
   if (const Argument *A = dyn_cast<Argument>(this)) {
     DerefBytes = A->getDereferenceableBytes();
-    if (DerefBytes == 0 && A->hasByValAttr() && A->getType()->isSized()) {
-      DerefBytes = DL.getTypeStoreSize(A->getType());
-      CanBeNull = false;
+    if (DerefBytes == 0 && A->hasByValAttr()) {
+      Type *PT = cast<PointerType>(A->getType())->getElementType();
+      DerefBytes = DL.getTypeStoreSize(PT);
     }
     if (DerefBytes == 0) {
       DerefBytes = A->getDereferenceableOrNullBytes();
@@ -655,8 +655,10 @@ unsigned Value::getPointerDereferenceableBytes(const DataLayout &DL,
       CanBeNull = true;
     }
   } else if (auto *AI = dyn_cast<AllocaInst>(this)) {
-    if (AI->getAllocatedType()->isSized()) {
-      DerefBytes = DL.getTypeStoreSize(AI->getAllocatedType());
+    const ConstantInt *ArraySize = dyn_cast<ConstantInt>(AI->getArraySize());
+    if (ArraySize && AI->getAllocatedType()->isSized()) {
+      DerefBytes = DL.getTypeStoreSize(AI->getAllocatedType()) *
+        ArraySize->getZExtValue();
       CanBeNull = false;
     }
   } else if (auto *GV = dyn_cast<GlobalVariable>(this)) {

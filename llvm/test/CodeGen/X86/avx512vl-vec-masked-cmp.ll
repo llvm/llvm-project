@@ -714,32 +714,32 @@ define zeroext i32 @test_vpcmpeqw_v8i1_v32i1_mask(<2 x i64> %__a, <2 x i64> %__b
 ; NoVLX-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -778,32 +778,32 @@ define zeroext i32 @test_vpcmpeqw_v8i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>*
 ; NoVLX-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -845,32 +845,32 @@ define zeroext i32 @test_masked_vpcmpeqw_v8i1_v32i1_mask(i8 zeroext %__u, <2 x i
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -913,32 +913,32 @@ define zeroext i32 @test_masked_vpcmpeqw_v8i1_v32i1_mask_mem(i8 zeroext %__u, <2
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -981,34 +981,34 @@ define zeroext i64 @test_vpcmpeqw_v8i1_v64i1_mask(<2 x i64> %__a, <2 x i64> %__b
 ; NoVLX-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -1050,34 +1050,34 @@ define zeroext i64 @test_vpcmpeqw_v8i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>*
 ; NoVLX-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -1122,34 +1122,34 @@ define zeroext i64 @test_masked_vpcmpeqw_v8i1_v64i1_mask(i8 zeroext %__u, <2 x i
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -1195,34 +1195,34 @@ define zeroext i64 @test_masked_vpcmpeqw_v8i1_v64i1_mask_mem(i8 zeroext %__u, <2
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -2480,15 +2480,15 @@ define zeroext i8 @test_masked_vpcmpeqd_v4i1_v8i1_mask(i8 zeroext %__u, <2 x i64
 ; NoVLX-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -2548,15 +2548,15 @@ define zeroext i8 @test_masked_vpcmpeqd_v4i1_v8i1_mask_mem(i8 zeroext %__u, <2 x
 ; NoVLX-NEXT:    vpcmpeqd (%rsi), %xmm0, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -2673,15 +2673,15 @@ define zeroext i8 @test_masked_vpcmpeqd_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <2
 ; NoVLX-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -2847,15 +2847,15 @@ define zeroext i16 @test_masked_vpcmpeqd_v4i1_v16i1_mask(i8 zeroext %__u, <2 x i
 ; NoVLX-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -2915,15 +2915,15 @@ define zeroext i16 @test_masked_vpcmpeqd_v4i1_v16i1_mask_mem(i8 zeroext %__u, <2
 ; NoVLX-NEXT:    vpcmpeqd (%rsi), %xmm0, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -3040,15 +3040,15 @@ define zeroext i16 @test_masked_vpcmpeqd_v4i1_v16i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -3200,15 +3200,15 @@ define zeroext i32 @test_masked_vpcmpeqd_v4i1_v32i1_mask(i8 zeroext %__u, <2 x i
 ; NoVLX-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -3258,15 +3258,15 @@ define zeroext i32 @test_masked_vpcmpeqd_v4i1_v32i1_mask_mem(i8 zeroext %__u, <2
 ; NoVLX-NEXT:    vpcmpeqd (%rsi), %xmm0, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -3363,15 +3363,15 @@ define zeroext i32 @test_masked_vpcmpeqd_v4i1_v32i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -3519,15 +3519,15 @@ define zeroext i64 @test_masked_vpcmpeqd_v4i1_v64i1_mask(i8 zeroext %__u, <2 x i
 ; NoVLX-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kxorw %k0, %k0, %k0
@@ -3583,15 +3583,15 @@ define zeroext i64 @test_masked_vpcmpeqd_v4i1_v64i1_mask_mem(i8 zeroext %__u, <2
 ; NoVLX-NEXT:    vpcmpeqd (%rsi), %xmm0, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kxorw %k0, %k0, %k0
@@ -3700,15 +3700,15 @@ define zeroext i64 @test_masked_vpcmpeqd_v4i1_v64i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kxorw %k0, %k0, %k0
@@ -3961,32 +3961,32 @@ define zeroext i32 @test_vpcmpeqd_v8i1_v32i1_mask(<4 x i64> %__a, <4 x i64> %__b
 ; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -4025,32 +4025,32 @@ define zeroext i32 @test_vpcmpeqd_v8i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>*
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vmovdqa (%rdi), %ymm1
 ; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -4092,32 +4092,32 @@ define zeroext i32 @test_masked_vpcmpeqd_v8i1_v32i1_mask(i8 zeroext %__u, <4 x i
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -4160,32 +4160,32 @@ define zeroext i32 @test_masked_vpcmpeqd_v8i1_v32i1_mask_mem(i8 zeroext %__u, <4
 ; NoVLX-NEXT:    vmovdqa (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -4228,32 +4228,32 @@ define zeroext i32 @test_vpcmpeqd_v8i1_v32i1_mask_mem_b(<4 x i64> %__a, i32* %__
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vpbroadcastd (%rdi), %ymm1
 ; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -4296,32 +4296,32 @@ define zeroext i32 @test_masked_vpcmpeqd_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-NEXT:    vpbroadcastd (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -4365,34 +4365,34 @@ define zeroext i64 @test_vpcmpeqd_v8i1_v64i1_mask(<4 x i64> %__a, <4 x i64> %__b
 ; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -4434,34 +4434,34 @@ define zeroext i64 @test_vpcmpeqd_v8i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>*
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vmovdqa (%rdi), %ymm1
 ; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -4506,34 +4506,34 @@ define zeroext i64 @test_masked_vpcmpeqd_v8i1_v64i1_mask(i8 zeroext %__u, <4 x i
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -4579,34 +4579,34 @@ define zeroext i64 @test_masked_vpcmpeqd_v8i1_v64i1_mask_mem(i8 zeroext %__u, <4
 ; NoVLX-NEXT:    vmovdqa (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -4652,34 +4652,34 @@ define zeroext i64 @test_vpcmpeqd_v8i1_v64i1_mask_mem_b(<4 x i64> %__a, i32* %__
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vpbroadcastd (%rdi), %ymm1
 ; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -4725,34 +4725,34 @@ define zeroext i64 @test_masked_vpcmpeqd_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-NEXT:    vpbroadcastd (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -6809,15 +6809,15 @@ define zeroext i8 @test_masked_vpcmpeqq_v4i1_v8i1_mask(i8 zeroext %__u, <4 x i64
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -6880,15 +6880,15 @@ define zeroext i8 @test_masked_vpcmpeqq_v4i1_v8i1_mask_mem(i8 zeroext %__u, <4 x
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -7011,15 +7011,15 @@ define zeroext i8 @test_masked_vpcmpeqq_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <4
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -7194,15 +7194,15 @@ define zeroext i16 @test_masked_vpcmpeqq_v4i1_v16i1_mask(i8 zeroext %__u, <4 x i
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -7265,15 +7265,15 @@ define zeroext i16 @test_masked_vpcmpeqq_v4i1_v16i1_mask_mem(i8 zeroext %__u, <4
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -7396,15 +7396,15 @@ define zeroext i16 @test_masked_vpcmpeqq_v4i1_v16i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -7563,15 +7563,15 @@ define zeroext i32 @test_masked_vpcmpeqq_v4i1_v32i1_mask(i8 zeroext %__u, <4 x i
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -7623,15 +7623,15 @@ define zeroext i32 @test_masked_vpcmpeqq_v4i1_v32i1_mask_mem(i8 zeroext %__u, <4
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -7732,15 +7732,15 @@ define zeroext i32 @test_masked_vpcmpeqq_v4i1_v32i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -7894,15 +7894,15 @@ define zeroext i64 @test_masked_vpcmpeqq_v4i1_v64i1_mask(i8 zeroext %__u, <4 x i
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kxorw %k0, %k0, %k0
@@ -7960,15 +7960,15 @@ define zeroext i64 @test_masked_vpcmpeqq_v4i1_v64i1_mask_mem(i8 zeroext %__u, <4
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kxorw %k0, %k0, %k0
@@ -8081,15 +8081,15 @@ define zeroext i64 @test_masked_vpcmpeqq_v4i1_v64i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kxorw %k0, %k0, %k0
@@ -8316,32 +8316,32 @@ define zeroext i32 @test_vpcmpeqq_v8i1_v32i1_mask(<8 x i64> %__a, <8 x i64> %__b
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -8378,32 +8378,32 @@ define zeroext i32 @test_vpcmpeqq_v8i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64>*
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    vpcmpeqq (%rdi), %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -8443,32 +8443,32 @@ define zeroext i32 @test_masked_vpcmpeqq_v8i1_v32i1_mask(i8 zeroext %__u, <8 x i
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -8509,32 +8509,32 @@ define zeroext i32 @test_masked_vpcmpeqq_v8i1_v32i1_mask_mem(i8 zeroext %__u, <8
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpeqq (%rsi), %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -8575,32 +8575,32 @@ define zeroext i32 @test_vpcmpeqq_v8i1_v32i1_mask_mem_b(<8 x i64> %__a, i64* %__
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    vpcmpeqq (%rdi){1to8}, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -8641,32 +8641,32 @@ define zeroext i32 @test_masked_vpcmpeqq_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpeqq (%rsi){1to8}, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -8708,34 +8708,34 @@ define zeroext i64 @test_vpcmpeqq_v8i1_v64i1_mask(<8 x i64> %__a, <8 x i64> %__b
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -8775,34 +8775,34 @@ define zeroext i64 @test_vpcmpeqq_v8i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>*
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    vpcmpeqq (%rdi), %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -8845,34 +8845,34 @@ define zeroext i64 @test_masked_vpcmpeqq_v8i1_v64i1_mask(i8 zeroext %__u, <8 x i
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -8916,34 +8916,34 @@ define zeroext i64 @test_masked_vpcmpeqq_v8i1_v64i1_mask_mem(i8 zeroext %__u, <8
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpeqq (%rsi), %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -8987,34 +8987,34 @@ define zeroext i64 @test_vpcmpeqq_v8i1_v64i1_mask_mem_b(<8 x i64> %__a, i64* %__
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    vpcmpeqq (%rdi){1to8}, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -9058,34 +9058,34 @@ define zeroext i64 @test_masked_vpcmpeqq_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpeqq (%rsi){1to8}, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -9824,32 +9824,32 @@ define zeroext i32 @test_vpcmpsgtw_v8i1_v32i1_mask(<2 x i64> %__a, <2 x i64> %__
 ; NoVLX-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -9888,32 +9888,32 @@ define zeroext i32 @test_vpcmpsgtw_v8i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -9955,32 +9955,32 @@ define zeroext i32 @test_masked_vpcmpsgtw_v8i1_v32i1_mask(i8 zeroext %__u, <2 x 
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -10023,32 +10023,32 @@ define zeroext i32 @test_masked_vpcmpsgtw_v8i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -10091,34 +10091,34 @@ define zeroext i64 @test_vpcmpsgtw_v8i1_v64i1_mask(<2 x i64> %__a, <2 x i64> %__
 ; NoVLX-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -10160,34 +10160,34 @@ define zeroext i64 @test_vpcmpsgtw_v8i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -10232,34 +10232,34 @@ define zeroext i64 @test_masked_vpcmpsgtw_v8i1_v64i1_mask(i8 zeroext %__u, <2 x 
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -10305,34 +10305,34 @@ define zeroext i64 @test_masked_vpcmpsgtw_v8i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -11590,15 +11590,15 @@ define zeroext i8 @test_masked_vpcmpsgtd_v4i1_v8i1_mask(i8 zeroext %__u, <2 x i6
 ; NoVLX-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -11658,15 +11658,15 @@ define zeroext i8 @test_masked_vpcmpsgtd_v4i1_v8i1_mask_mem(i8 zeroext %__u, <2 
 ; NoVLX-NEXT:    vpcmpgtd (%rsi), %xmm0, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -11783,15 +11783,15 @@ define zeroext i8 @test_masked_vpcmpsgtd_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -11957,15 +11957,15 @@ define zeroext i16 @test_masked_vpcmpsgtd_v4i1_v16i1_mask(i8 zeroext %__u, <2 x 
 ; NoVLX-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -12025,15 +12025,15 @@ define zeroext i16 @test_masked_vpcmpsgtd_v4i1_v16i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpcmpgtd (%rsi), %xmm0, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -12150,15 +12150,15 @@ define zeroext i16 @test_masked_vpcmpsgtd_v4i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -12310,15 +12310,15 @@ define zeroext i32 @test_masked_vpcmpsgtd_v4i1_v32i1_mask(i8 zeroext %__u, <2 x 
 ; NoVLX-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -12368,15 +12368,15 @@ define zeroext i32 @test_masked_vpcmpsgtd_v4i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpcmpgtd (%rsi), %xmm0, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -12473,15 +12473,15 @@ define zeroext i32 @test_masked_vpcmpsgtd_v4i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -12629,15 +12629,15 @@ define zeroext i64 @test_masked_vpcmpsgtd_v4i1_v64i1_mask(i8 zeroext %__u, <2 x 
 ; NoVLX-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kxorw %k0, %k0, %k0
@@ -12693,15 +12693,15 @@ define zeroext i64 @test_masked_vpcmpsgtd_v4i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpcmpgtd (%rsi), %xmm0, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kxorw %k0, %k0, %k0
@@ -12810,15 +12810,15 @@ define zeroext i64 @test_masked_vpcmpsgtd_v4i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kxorw %k0, %k0, %k0
@@ -13071,32 +13071,32 @@ define zeroext i32 @test_vpcmpsgtd_v8i1_v32i1_mask(<4 x i64> %__a, <4 x i64> %__
 ; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -13135,32 +13135,32 @@ define zeroext i32 @test_vpcmpsgtd_v8i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vmovdqa (%rdi), %ymm1
 ; NoVLX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -13202,32 +13202,32 @@ define zeroext i32 @test_masked_vpcmpsgtd_v8i1_v32i1_mask(i8 zeroext %__u, <4 x 
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -13270,32 +13270,32 @@ define zeroext i32 @test_masked_vpcmpsgtd_v8i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vmovdqa (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -13338,32 +13338,32 @@ define zeroext i32 @test_vpcmpsgtd_v8i1_v32i1_mask_mem_b(<4 x i64> %__a, i32* %_
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vpbroadcastd (%rdi), %ymm1
 ; NoVLX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -13406,32 +13406,32 @@ define zeroext i32 @test_masked_vpcmpsgtd_v8i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    vpbroadcastd (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -13475,34 +13475,34 @@ define zeroext i64 @test_vpcmpsgtd_v8i1_v64i1_mask(<4 x i64> %__a, <4 x i64> %__
 ; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -13544,34 +13544,34 @@ define zeroext i64 @test_vpcmpsgtd_v8i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vmovdqa (%rdi), %ymm1
 ; NoVLX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -13616,34 +13616,34 @@ define zeroext i64 @test_masked_vpcmpsgtd_v8i1_v64i1_mask(i8 zeroext %__u, <4 x 
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -13689,34 +13689,34 @@ define zeroext i64 @test_masked_vpcmpsgtd_v8i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vmovdqa (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -13762,34 +13762,34 @@ define zeroext i64 @test_vpcmpsgtd_v8i1_v64i1_mask_mem_b(<4 x i64> %__a, i32* %_
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vpbroadcastd (%rdi), %ymm1
 ; NoVLX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -13835,34 +13835,34 @@ define zeroext i64 @test_masked_vpcmpsgtd_v8i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    vpbroadcastd (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -15919,15 +15919,15 @@ define zeroext i8 @test_masked_vpcmpsgtq_v4i1_v8i1_mask(i8 zeroext %__u, <4 x i6
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -15990,15 +15990,15 @@ define zeroext i8 @test_masked_vpcmpsgtq_v4i1_v8i1_mask_mem(i8 zeroext %__u, <4 
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -16121,15 +16121,15 @@ define zeroext i8 @test_masked_vpcmpsgtq_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -16304,15 +16304,15 @@ define zeroext i16 @test_masked_vpcmpsgtq_v4i1_v16i1_mask(i8 zeroext %__u, <4 x 
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -16375,15 +16375,15 @@ define zeroext i16 @test_masked_vpcmpsgtq_v4i1_v16i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -16506,15 +16506,15 @@ define zeroext i16 @test_masked_vpcmpsgtq_v4i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -16673,15 +16673,15 @@ define zeroext i32 @test_masked_vpcmpsgtq_v4i1_v32i1_mask(i8 zeroext %__u, <4 x 
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -16733,15 +16733,15 @@ define zeroext i32 @test_masked_vpcmpsgtq_v4i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -16842,15 +16842,15 @@ define zeroext i32 @test_masked_vpcmpsgtq_v4i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -17004,15 +17004,15 @@ define zeroext i64 @test_masked_vpcmpsgtq_v4i1_v64i1_mask(i8 zeroext %__u, <4 x 
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kxorw %k0, %k0, %k0
@@ -17070,15 +17070,15 @@ define zeroext i64 @test_masked_vpcmpsgtq_v4i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kxorw %k0, %k0, %k0
@@ -17191,15 +17191,15 @@ define zeroext i64 @test_masked_vpcmpsgtq_v4i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kxorw %k0, %k0, %k0
@@ -17426,32 +17426,32 @@ define zeroext i32 @test_vpcmpsgtq_v8i1_v32i1_mask(<8 x i64> %__a, <8 x i64> %__
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -17488,32 +17488,32 @@ define zeroext i32 @test_vpcmpsgtq_v8i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64>
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    vpcmpgtq (%rdi), %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -17553,32 +17553,32 @@ define zeroext i32 @test_masked_vpcmpsgtq_v8i1_v32i1_mask(i8 zeroext %__u, <8 x 
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -17619,32 +17619,32 @@ define zeroext i32 @test_masked_vpcmpsgtq_v8i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpgtq (%rsi), %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -17685,32 +17685,32 @@ define zeroext i32 @test_vpcmpsgtq_v8i1_v32i1_mask_mem_b(<8 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    vpcmpgtq (%rdi){1to8}, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -17751,32 +17751,32 @@ define zeroext i32 @test_masked_vpcmpsgtq_v8i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpgtq (%rsi){1to8}, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -17818,34 +17818,34 @@ define zeroext i64 @test_vpcmpsgtq_v8i1_v64i1_mask(<8 x i64> %__a, <8 x i64> %__
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -17885,34 +17885,34 @@ define zeroext i64 @test_vpcmpsgtq_v8i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    vpcmpgtq (%rdi), %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -17955,34 +17955,34 @@ define zeroext i64 @test_masked_vpcmpsgtq_v8i1_v64i1_mask(i8 zeroext %__u, <8 x 
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -18026,34 +18026,34 @@ define zeroext i64 @test_masked_vpcmpsgtq_v8i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpgtq (%rsi), %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -18097,34 +18097,34 @@ define zeroext i64 @test_vpcmpsgtq_v8i1_v64i1_mask_mem_b(<8 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    vpcmpgtq (%rdi){1to8}, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -18168,34 +18168,34 @@ define zeroext i64 @test_masked_vpcmpsgtq_v8i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpgtq (%rsi){1to8}, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -18976,32 +18976,32 @@ define zeroext i32 @test_vpcmpsgew_v8i1_v32i1_mask(<2 x i64> %__a, <2 x i64> %__
 ; NoVLX-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -19043,32 +19043,32 @@ define zeroext i32 @test_vpcmpsgew_v8i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -19112,32 +19112,32 @@ define zeroext i32 @test_masked_vpcmpsgew_v8i1_v32i1_mask(i8 zeroext %__u, <2 x 
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -19183,32 +19183,32 @@ define zeroext i32 @test_masked_vpcmpsgew_v8i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -19253,34 +19253,34 @@ define zeroext i64 @test_vpcmpsgew_v8i1_v64i1_mask(<2 x i64> %__a, <2 x i64> %__
 ; NoVLX-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -19325,34 +19325,34 @@ define zeroext i64 @test_vpcmpsgew_v8i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -19399,34 +19399,34 @@ define zeroext i64 @test_masked_vpcmpsgew_v8i1_v64i1_mask(i8 zeroext %__u, <2 x 
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -19475,34 +19475,34 @@ define zeroext i64 @test_masked_vpcmpsgew_v8i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -20801,15 +20801,15 @@ define zeroext i8 @test_masked_vpcmpsged_v4i1_v8i1_mask(i8 zeroext %__u, <2 x i6
 ; NoVLX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -20870,15 +20870,15 @@ define zeroext i8 @test_masked_vpcmpsged_v4i1_v8i1_mask_mem(i8 zeroext %__u, <2 
 ; NoVLX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -20997,15 +20997,15 @@ define zeroext i8 @test_masked_vpcmpsged_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -21176,15 +21176,15 @@ define zeroext i16 @test_masked_vpcmpsged_v4i1_v16i1_mask(i8 zeroext %__u, <2 x 
 ; NoVLX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -21245,15 +21245,15 @@ define zeroext i16 @test_masked_vpcmpsged_v4i1_v16i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -21372,15 +21372,15 @@ define zeroext i16 @test_masked_vpcmpsged_v4i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -21537,15 +21537,15 @@ define zeroext i32 @test_masked_vpcmpsged_v4i1_v32i1_mask(i8 zeroext %__u, <2 x 
 ; NoVLX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -21596,15 +21596,15 @@ define zeroext i32 @test_masked_vpcmpsged_v4i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -21703,15 +21703,15 @@ define zeroext i32 @test_masked_vpcmpsged_v4i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -21864,15 +21864,15 @@ define zeroext i64 @test_masked_vpcmpsged_v4i1_v64i1_mask(i8 zeroext %__u, <2 x 
 ; NoVLX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kxorw %k0, %k0, %k0
@@ -21929,15 +21929,15 @@ define zeroext i64 @test_masked_vpcmpsged_v4i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kxorw %k0, %k0, %k0
@@ -22048,15 +22048,15 @@ define zeroext i64 @test_masked_vpcmpsged_v4i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kxorw %k0, %k0, %k0
@@ -22309,32 +22309,32 @@ define zeroext i32 @test_vpcmpsged_v8i1_v32i1_mask(<4 x i64> %__a, <4 x i64> %__
 ; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vpcmpled %zmm0, %zmm1, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -22373,32 +22373,32 @@ define zeroext i32 @test_vpcmpsged_v8i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vmovdqa (%rdi), %ymm1
 ; NoVLX-NEXT:    vpcmpled %zmm0, %zmm1, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -22440,32 +22440,32 @@ define zeroext i32 @test_masked_vpcmpsged_v8i1_v32i1_mask(i8 zeroext %__u, <4 x 
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpled %zmm0, %zmm1, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -22508,32 +22508,32 @@ define zeroext i32 @test_masked_vpcmpsged_v8i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vmovdqa (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpled %zmm0, %zmm1, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -22576,32 +22576,32 @@ define zeroext i32 @test_vpcmpsged_v8i1_v32i1_mask_mem_b(<4 x i64> %__a, i32* %_
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vpbroadcastd (%rdi), %ymm1
 ; NoVLX-NEXT:    vpcmpled %zmm0, %zmm1, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -22644,32 +22644,32 @@ define zeroext i32 @test_masked_vpcmpsged_v8i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    vpbroadcastd (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpled %zmm0, %zmm1, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -22713,34 +22713,34 @@ define zeroext i64 @test_vpcmpsged_v8i1_v64i1_mask(<4 x i64> %__a, <4 x i64> %__
 ; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vpcmpled %zmm0, %zmm1, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -22782,34 +22782,34 @@ define zeroext i64 @test_vpcmpsged_v8i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vmovdqa (%rdi), %ymm1
 ; NoVLX-NEXT:    vpcmpled %zmm0, %zmm1, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -22854,34 +22854,34 @@ define zeroext i64 @test_masked_vpcmpsged_v8i1_v64i1_mask(i8 zeroext %__u, <4 x 
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpled %zmm0, %zmm1, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -22927,34 +22927,34 @@ define zeroext i64 @test_masked_vpcmpsged_v8i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vmovdqa (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpled %zmm0, %zmm1, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -23000,34 +23000,34 @@ define zeroext i64 @test_vpcmpsged_v8i1_v64i1_mask_mem_b(<4 x i64> %__a, i32* %_
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vpbroadcastd (%rdi), %ymm1
 ; NoVLX-NEXT:    vpcmpled %zmm0, %zmm1, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -23073,34 +23073,34 @@ define zeroext i64 @test_masked_vpcmpsged_v8i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    vpbroadcastd (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpled %zmm0, %zmm1, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -25204,15 +25204,15 @@ define zeroext i8 @test_masked_vpcmpsgeq_v4i1_v8i1_mask(i8 zeroext %__u, <4 x i6
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -25278,15 +25278,15 @@ define zeroext i8 @test_masked_vpcmpsgeq_v4i1_v8i1_mask_mem(i8 zeroext %__u, <4 
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -25413,15 +25413,15 @@ define zeroext i8 @test_masked_vpcmpsgeq_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -25603,15 +25603,15 @@ define zeroext i16 @test_masked_vpcmpsgeq_v4i1_v16i1_mask(i8 zeroext %__u, <4 x 
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -25677,15 +25677,15 @@ define zeroext i16 @test_masked_vpcmpsgeq_v4i1_v16i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -25812,15 +25812,15 @@ define zeroext i16 @test_masked_vpcmpsgeq_v4i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -25986,15 +25986,15 @@ define zeroext i32 @test_masked_vpcmpsgeq_v4i1_v32i1_mask(i8 zeroext %__u, <4 x 
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -26049,15 +26049,15 @@ define zeroext i32 @test_masked_vpcmpsgeq_v4i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -26162,15 +26162,15 @@ define zeroext i32 @test_masked_vpcmpsgeq_v4i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -26331,15 +26331,15 @@ define zeroext i64 @test_masked_vpcmpsgeq_v4i1_v64i1_mask(i8 zeroext %__u, <4 x 
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kxorw %k0, %k0, %k0
@@ -26400,15 +26400,15 @@ define zeroext i64 @test_masked_vpcmpsgeq_v4i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kxorw %k0, %k0, %k0
@@ -26525,15 +26525,15 @@ define zeroext i64 @test_masked_vpcmpsgeq_v4i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kxorw %k0, %k0, %k0
@@ -26760,32 +26760,32 @@ define zeroext i32 @test_vpcmpsgeq_v8i1_v32i1_mask(<8 x i64> %__a, <8 x i64> %__
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    vpcmpleq %zmm0, %zmm1, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -26822,32 +26822,32 @@ define zeroext i32 @test_vpcmpsgeq_v8i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64>
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    vpcmpnltq (%rdi), %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -26887,32 +26887,32 @@ define zeroext i32 @test_masked_vpcmpsgeq_v8i1_v32i1_mask(i8 zeroext %__u, <8 x 
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpleq %zmm0, %zmm1, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -26953,32 +26953,32 @@ define zeroext i32 @test_masked_vpcmpsgeq_v8i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpnltq (%rsi), %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -27019,32 +27019,32 @@ define zeroext i32 @test_vpcmpsgeq_v8i1_v32i1_mask_mem_b(<8 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    vpcmpnltq (%rdi){1to8}, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -27085,32 +27085,32 @@ define zeroext i32 @test_masked_vpcmpsgeq_v8i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpnltq (%rsi){1to8}, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -27152,34 +27152,34 @@ define zeroext i64 @test_vpcmpsgeq_v8i1_v64i1_mask(<8 x i64> %__a, <8 x i64> %__
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    vpcmpleq %zmm0, %zmm1, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -27219,34 +27219,34 @@ define zeroext i64 @test_vpcmpsgeq_v8i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    vpcmpnltq (%rdi), %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -27289,34 +27289,34 @@ define zeroext i64 @test_masked_vpcmpsgeq_v8i1_v64i1_mask(i8 zeroext %__u, <8 x 
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpleq %zmm0, %zmm1, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -27360,34 +27360,34 @@ define zeroext i64 @test_masked_vpcmpsgeq_v8i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpnltq (%rsi), %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -27431,34 +27431,34 @@ define zeroext i64 @test_vpcmpsgeq_v8i1_v64i1_mask_mem_b(<8 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    vpcmpnltq (%rdi){1to8}, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -27502,34 +27502,34 @@ define zeroext i64 @test_masked_vpcmpsgeq_v8i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpnltq (%rsi){1to8}, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -28319,32 +28319,32 @@ define zeroext i32 @test_vpcmpultw_v8i1_v32i1_mask(<2 x i64> %__a, <2 x i64> %__
 ; NoVLX-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -28386,32 +28386,32 @@ define zeroext i32 @test_vpcmpultw_v8i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -28456,32 +28456,32 @@ define zeroext i32 @test_masked_vpcmpultw_v8i1_v32i1_mask(i8 zeroext %__u, <2 x 
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -28527,32 +28527,32 @@ define zeroext i32 @test_masked_vpcmpultw_v8i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -28598,34 +28598,34 @@ define zeroext i64 @test_vpcmpultw_v8i1_v64i1_mask(<2 x i64> %__a, <2 x i64> %__
 ; NoVLX-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -28670,34 +28670,34 @@ define zeroext i64 @test_vpcmpultw_v8i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -28745,34 +28745,34 @@ define zeroext i64 @test_masked_vpcmpultw_v8i1_v64i1_mask(i8 zeroext %__u, <2 x 
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -28821,34 +28821,34 @@ define zeroext i64 @test_masked_vpcmpultw_v8i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vptestmq %zmm0, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -30159,15 +30159,15 @@ define zeroext i8 @test_masked_vpcmpultd_v4i1_v8i1_mask(i8 zeroext %__u, <2 x i6
 ; NoVLX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -30230,15 +30230,15 @@ define zeroext i8 @test_masked_vpcmpultd_v4i1_v8i1_mask_mem(i8 zeroext %__u, <2 
 ; NoVLX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -30361,15 +30361,15 @@ define zeroext i8 @test_masked_vpcmpultd_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -30544,15 +30544,15 @@ define zeroext i16 @test_masked_vpcmpultd_v4i1_v16i1_mask(i8 zeroext %__u, <2 x 
 ; NoVLX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -30615,15 +30615,15 @@ define zeroext i16 @test_masked_vpcmpultd_v4i1_v16i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -30746,15 +30746,15 @@ define zeroext i16 @test_masked_vpcmpultd_v4i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -30915,15 +30915,15 @@ define zeroext i32 @test_masked_vpcmpultd_v4i1_v32i1_mask(i8 zeroext %__u, <2 x 
 ; NoVLX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -30976,15 +30976,15 @@ define zeroext i32 @test_masked_vpcmpultd_v4i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -31087,15 +31087,15 @@ define zeroext i32 @test_masked_vpcmpultd_v4i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -31252,15 +31252,15 @@ define zeroext i64 @test_masked_vpcmpultd_v4i1_v64i1_mask(i8 zeroext %__u, <2 x 
 ; NoVLX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kxorw %k0, %k0, %k0
@@ -31319,15 +31319,15 @@ define zeroext i64 @test_masked_vpcmpultd_v4i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kxorw %k0, %k0, %k0
@@ -31442,15 +31442,15 @@ define zeroext i64 @test_masked_vpcmpultd_v4i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kxorw %k0, %k0, %k0
@@ -31703,32 +31703,32 @@ define zeroext i32 @test_vpcmpultd_v8i1_v32i1_mask(<4 x i64> %__a, <4 x i64> %__
 ; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -31767,32 +31767,32 @@ define zeroext i32 @test_vpcmpultd_v8i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vmovdqa (%rdi), %ymm1
 ; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -31834,32 +31834,32 @@ define zeroext i32 @test_masked_vpcmpultd_v8i1_v32i1_mask(i8 zeroext %__u, <4 x 
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -31902,32 +31902,32 @@ define zeroext i32 @test_masked_vpcmpultd_v8i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vmovdqa (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -31970,32 +31970,32 @@ define zeroext i32 @test_vpcmpultd_v8i1_v32i1_mask_mem_b(<4 x i64> %__a, i32* %_
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vpbroadcastd (%rdi), %ymm1
 ; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -32038,32 +32038,32 @@ define zeroext i32 @test_masked_vpcmpultd_v8i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    vpbroadcastd (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -32107,34 +32107,34 @@ define zeroext i64 @test_vpcmpultd_v8i1_v64i1_mask(<4 x i64> %__a, <4 x i64> %__
 ; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -32176,34 +32176,34 @@ define zeroext i64 @test_vpcmpultd_v8i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vmovdqa (%rdi), %ymm1
 ; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -32248,34 +32248,34 @@ define zeroext i64 @test_masked_vpcmpultd_v8i1_v64i1_mask(i8 zeroext %__u, <4 x 
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -32321,34 +32321,34 @@ define zeroext i64 @test_masked_vpcmpultd_v8i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vmovdqa (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -32394,34 +32394,34 @@ define zeroext i64 @test_vpcmpultd_v8i1_v64i1_mask_mem_b(<4 x i64> %__a, i32* %_
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vpbroadcastd (%rdi), %ymm1
 ; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -32467,34 +32467,34 @@ define zeroext i64 @test_masked_vpcmpultd_v8i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    vpbroadcastd (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -34650,15 +34650,15 @@ define zeroext i8 @test_masked_vpcmpultq_v4i1_v8i1_mask(i8 zeroext %__u, <4 x i6
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -34724,15 +34724,15 @@ define zeroext i8 @test_masked_vpcmpultq_v4i1_v8i1_mask_mem(i8 zeroext %__u, <4 
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -34861,15 +34861,15 @@ define zeroext i8 @test_masked_vpcmpultq_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -35053,15 +35053,15 @@ define zeroext i16 @test_masked_vpcmpultq_v4i1_v16i1_mask(i8 zeroext %__u, <4 x 
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -35127,15 +35127,15 @@ define zeroext i16 @test_masked_vpcmpultq_v4i1_v16i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -35264,15 +35264,15 @@ define zeroext i16 @test_masked_vpcmpultq_v4i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    vpextrb $4, %xmm0, %eax
@@ -35440,15 +35440,15 @@ define zeroext i32 @test_masked_vpcmpultq_v4i1_v32i1_mask(i8 zeroext %__u, <4 x 
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -35503,15 +35503,15 @@ define zeroext i32 @test_masked_vpcmpultq_v4i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -35618,15 +35618,15 @@ define zeroext i32 @test_masked_vpcmpultq_v4i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
@@ -35789,15 +35789,15 @@ define zeroext i64 @test_masked_vpcmpultq_v4i1_v64i1_mask(i8 zeroext %__u, <4 x 
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kxorw %k0, %k0, %k0
@@ -35858,15 +35858,15 @@ define zeroext i64 @test_masked_vpcmpultq_v4i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NoVLX-NEXT:    kxorw %k0, %k0, %k0
@@ -35985,15 +35985,15 @@ define zeroext i64 @test_masked_vpcmpultq_v4i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    vpmovqd %zmm0, %ymm0
 ; NoVLX-NEXT:    kmovw %edi, %k0
 ; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k2
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k3
-; NoVLX-NEXT:    kmovw %k3, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    vmovd %ecx, %xmm1
-; NoVLX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; NoVLX-NEXT:    kmovw %k2, %eax
-; NoVLX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    kmovw %k1, %eax
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kmovw %k0, %esi
+; NoVLX-NEXT:    vmovd %esi, %xmm1
+; NoVLX-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; NoVLX-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; NoVLX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; NoVLX-NEXT:    kxorw %k0, %k0, %k0
@@ -36220,32 +36220,32 @@ define zeroext i32 @test_vpcmpultq_v8i1_v32i1_mask(<8 x i64> %__a, <8 x i64> %__
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    vpcmpltuq %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -36282,32 +36282,32 @@ define zeroext i32 @test_vpcmpultq_v8i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64>
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    vpcmpltuq (%rdi), %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -36347,32 +36347,32 @@ define zeroext i32 @test_masked_vpcmpultq_v8i1_v32i1_mask(i8 zeroext %__u, <8 x 
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpltuq %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -36413,32 +36413,32 @@ define zeroext i32 @test_masked_vpcmpultq_v8i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpltuq (%rsi), %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -36479,32 +36479,32 @@ define zeroext i32 @test_vpcmpultq_v8i1_v32i1_mask_mem_b(<8 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    vpcmpltuq (%rdi){1to8}, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -36545,32 +36545,32 @@ define zeroext i32 @test_masked_vpcmpultq_v8i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpltuq (%rsi){1to8}, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -36612,34 +36612,34 @@ define zeroext i64 @test_vpcmpultq_v8i1_v64i1_mask(<8 x i64> %__a, <8 x i64> %__
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    vpcmpltuq %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -36679,34 +36679,34 @@ define zeroext i64 @test_vpcmpultq_v8i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    vpcmpltuq (%rdi), %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -36749,34 +36749,34 @@ define zeroext i64 @test_masked_vpcmpultq_v8i1_v64i1_mask(i8 zeroext %__u, <8 x 
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpltuq %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -36820,34 +36820,34 @@ define zeroext i64 @test_masked_vpcmpultq_v8i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpltuq (%rsi), %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -36891,34 +36891,34 @@ define zeroext i64 @test_vpcmpultq_v8i1_v64i1_mask_mem_b(<8 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    vpcmpltuq (%rdi){1to8}, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -36962,34 +36962,34 @@ define zeroext i64 @test_masked_vpcmpultq_v8i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vpcmpltuq (%rsi){1to8}, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -38525,32 +38525,32 @@ define zeroext i32 @test_vcmpoeqps_v8i1_v32i1_mask(<4 x i64> %__a, <4 x i64> %__
 ; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -38589,32 +38589,32 @@ define zeroext i32 @test_vcmpoeqps_v8i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vmovaps (%rdi), %ymm1
 ; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -38654,32 +38654,32 @@ define zeroext i32 @test_vcmpoeqps_v8i1_v32i1_mask_mem_b(<4 x i64> %__a, float* 
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vbroadcastss (%rdi), %ymm1
 ; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -38722,32 +38722,32 @@ define zeroext i32 @test_masked_vcmpoeqps_v8i1_v32i1_mask(i8 zeroext %__u, <4 x 
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -38790,32 +38790,32 @@ define zeroext i32 @test_masked_vcmpoeqps_v8i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vmovaps (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -38859,32 +38859,32 @@ define zeroext i32 @test_masked_vcmpoeqps_v8i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    vbroadcastss (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -38929,34 +38929,34 @@ define zeroext i64 @test_vcmpoeqps_v8i1_v64i1_mask(<4 x i64> %__a, <4 x i64> %__
 ; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -38998,34 +38998,34 @@ define zeroext i64 @test_vcmpoeqps_v8i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vmovaps (%rdi), %ymm1
 ; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -39068,34 +39068,34 @@ define zeroext i64 @test_vcmpoeqps_v8i1_v64i1_mask_mem_b(<4 x i64> %__a, float* 
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    vbroadcastss (%rdi), %ymm1
 ; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -39141,34 +39141,34 @@ define zeroext i64 @test_masked_vcmpoeqps_v8i1_v64i1_mask(i8 zeroext %__u, <4 x 
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -39214,34 +39214,34 @@ define zeroext i64 @test_masked_vcmpoeqps_v8i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    vmovaps (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -39288,34 +39288,34 @@ define zeroext i64 @test_masked_vcmpoeqps_v8i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    vbroadcastss (%rsi), %ymm1
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vcmpeqps %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -42910,32 +42910,32 @@ define zeroext i32 @test_vcmpoeqpd_v8i1_v32i1_mask(<8 x i64> %__a, <8 x i64> %__
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -42972,32 +42972,32 @@ define zeroext i32 @test_vcmpoeqpd_v8i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64>
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    vcmpeqpd (%rdi), %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -43035,32 +43035,32 @@ define zeroext i32 @test_vcmpoeqpd_v8i1_v32i1_mask_mem_b(<8 x i64> %__a, double*
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    vcmpeqpd (%rdi){1to8}, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -43101,32 +43101,32 @@ define zeroext i32 @test_masked_vcmpoeqpd_v8i1_v32i1_mask(i8 zeroext %__u, <8 x 
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -43167,32 +43167,32 @@ define zeroext i32 @test_masked_vcmpoeqpd_v8i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vcmpeqpd (%rsi), %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -43234,32 +43234,32 @@ define zeroext i32 @test_masked_vcmpoeqpd_v8i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    subq $32, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vcmpeqpd (%rsi){1to8}, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -43352,34 +43352,34 @@ define zeroext i64 @test_vcmpoeqpd_v8i1_v64i1_mask(<8 x i64> %__a, <8 x i64> %__
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -43419,34 +43419,34 @@ define zeroext i64 @test_vcmpoeqpd_v8i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    vcmpeqpd (%rdi), %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -43487,34 +43487,34 @@ define zeroext i64 @test_vcmpoeqpd_v8i1_v64i1_mask_mem_b(<8 x i64> %__a, double*
 ; NoVLX-NEXT:    andq $-32, %rsp
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    vcmpeqpd (%rdi){1to8}, %zmm0, %k0
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -43558,34 +43558,34 @@ define zeroext i64 @test_masked_vcmpoeqpd_v8i1_v64i1_mask(i8 zeroext %__u, <8 x 
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vcmpeqpd %zmm1, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -43629,34 +43629,34 @@ define zeroext i64 @test_masked_vcmpoeqpd_v8i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vcmpeqpd (%rsi), %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0
@@ -43701,34 +43701,34 @@ define zeroext i64 @test_masked_vcmpoeqpd_v8i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    subq $64, %rsp
 ; NoVLX-NEXT:    kmovw %edi, %k1
 ; NoVLX-NEXT:    vcmpeqpd (%rsi){1to8}, %zmm0, %k0 {%k1}
-; NoVLX-NEXT:    kxorw %k0, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kmovw %k1, {{[0-9]+}}(%rsp)
-; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $7, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r8d
-; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %r9d
-; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
-; NoVLX-NEXT:    kmovw %k1, %edx
+; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %r10d
 ; NoVLX-NEXT:    kshiftrw $4, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %esi
-; NoVLX-NEXT:    kshiftrw $5, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $3, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %edi
-; NoVLX-NEXT:    kshiftrw $6, %k0, %k1
+; NoVLX-NEXT:    kshiftrw $2, %k0, %k1
 ; NoVLX-NEXT:    kmovw %k1, %eax
-; NoVLX-NEXT:    kmovw %k0, %ecx
-; NoVLX-NEXT:    kshiftrw $7, %k0, %k0
+; NoVLX-NEXT:    kshiftrw $1, %k0, %k1
+; NoVLX-NEXT:    kmovw %k1, %ecx
+; NoVLX-NEXT:    kmovw %k0, %edx
+; NoVLX-NEXT:    kxorw %k0, %k0, %k0
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; NoVLX-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; NoVLX-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $0, %ecx, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $1, %r8d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $2, %r9d, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $3, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $0, %edx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $3, %edi, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpinsrb $4, %esi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $5, %edi, %xmm0, %xmm0
-; NoVLX-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
-; NoVLX-NEXT:    kmovw %k0, %eax
-; NoVLX-NEXT:    vpinsrb $7, %eax, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $5, %r10d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $6, %r9d, %xmm0, %xmm0
+; NoVLX-NEXT:    vpinsrb $7, %r8d, %xmm0, %xmm0
 ; NoVLX-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; NoVLX-NEXT:    vpslld $31, %zmm0, %zmm0
 ; NoVLX-NEXT:    vptestmd %zmm0, %zmm0, %k0

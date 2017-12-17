@@ -3007,13 +3007,13 @@ define <4 x float> @test_mask_vextractf32x4(<4 x float> %b, <16 x float> %a, i8 
 ; CHECK-NEXT:    vmovd %edi, %xmm2
 ; CHECK-NEXT:    kmovw %edi, %k0
 ; CHECK-NEXT:    kshiftrw $3, %k0, %k1
-; CHECK-NEXT:    kshiftrw $2, %k0, %k2
-; CHECK-NEXT:    kshiftrw $1, %k0, %k0
-; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    vpinsrb $4, %eax, %xmm2, %xmm2
-; CHECK-NEXT:    kmovw %k2, %eax
-; CHECK-NEXT:    vpinsrb $8, %eax, %xmm2, %xmm2
 ; CHECK-NEXT:    kmovw %k1, %eax
+; CHECK-NEXT:    kshiftrw $2, %k0, %k1
+; CHECK-NEXT:    kmovw %k1, %ecx
+; CHECK-NEXT:    kshiftrw $1, %k0, %k0
+; CHECK-NEXT:    kmovw %k0, %edx
+; CHECK-NEXT:    vpinsrb $4, %edx, %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $8, %ecx, %xmm2, %xmm2
 ; CHECK-NEXT:    vpinsrb $12, %eax, %xmm2, %xmm2
 ; CHECK-NEXT:    vextractf32x4 $2, %zmm1, %xmm1
 ; CHECK-NEXT:    vpslld $31, %xmm2, %xmm2
@@ -3032,13 +3032,13 @@ define <4 x i64> @test_mask_vextracti64x4(<4 x i64> %b, <8 x i64> %a, i8 %mask) 
 ; CHECK-NEXT:    vmovd %edi, %xmm2
 ; CHECK-NEXT:    kmovw %edi, %k0
 ; CHECK-NEXT:    kshiftrw $3, %k0, %k1
-; CHECK-NEXT:    kshiftrw $2, %k0, %k2
-; CHECK-NEXT:    kshiftrw $1, %k0, %k0
-; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    vpinsrb $4, %eax, %xmm2, %xmm2
-; CHECK-NEXT:    kmovw %k2, %eax
-; CHECK-NEXT:    vpinsrb $8, %eax, %xmm2, %xmm2
 ; CHECK-NEXT:    kmovw %k1, %eax
+; CHECK-NEXT:    kshiftrw $2, %k0, %k1
+; CHECK-NEXT:    kmovw %k1, %ecx
+; CHECK-NEXT:    kshiftrw $1, %k0, %k0
+; CHECK-NEXT:    kmovw %k0, %edx
+; CHECK-NEXT:    vpinsrb $4, %edx, %xmm2, %xmm2
+; CHECK-NEXT:    vpinsrb $8, %ecx, %xmm2, %xmm2
 ; CHECK-NEXT:    vpinsrb $12, %eax, %xmm2, %xmm2
 ; CHECK-NEXT:    vpslld $31, %xmm2, %xmm2
 ; CHECK-NEXT:    vpmovsxdq %xmm2, %ymm2
@@ -3056,13 +3056,13 @@ define <4 x i32> @test_maskz_vextracti32x4(<16 x i32> %a, i8 %mask) {
 ; CHECK-NEXT:    vmovd %edi, %xmm1
 ; CHECK-NEXT:    kmovw %edi, %k0
 ; CHECK-NEXT:    kshiftrw $3, %k0, %k1
-; CHECK-NEXT:    kshiftrw $2, %k0, %k2
-; CHECK-NEXT:    kshiftrw $1, %k0, %k0
-; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; CHECK-NEXT:    kmovw %k2, %eax
-; CHECK-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
 ; CHECK-NEXT:    kmovw %k1, %eax
+; CHECK-NEXT:    kshiftrw $2, %k0, %k1
+; CHECK-NEXT:    kmovw %k1, %ecx
+; CHECK-NEXT:    kshiftrw $1, %k0, %k0
+; CHECK-NEXT:    kmovw %k0, %edx
+; CHECK-NEXT:    vpinsrb $4, %edx, %xmm1, %xmm1
+; CHECK-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
 ; CHECK-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; CHECK-NEXT:    vextracti32x4 $2, %zmm0, %xmm0
 ; CHECK-NEXT:    vpslld $31, %xmm1, %xmm1

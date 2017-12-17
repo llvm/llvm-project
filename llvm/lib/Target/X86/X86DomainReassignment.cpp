@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/Debug.h"
+#include <bitset>
 
 using namespace llvm;
 
@@ -42,7 +43,7 @@ static cl::opt<bool> DisableX86DomainReassignment(
     cl::desc("X86: Disable Virtual Register Reassignment."), cl::init(false));
 
 namespace {
-enum RegDomain { NoDomain = -1, GPRDomain, MaskDomain, OtherDomain };
+enum RegDomain { NoDomain = -1, GPRDomain, MaskDomain, OtherDomain, NumDomains };
 
 static bool isGPR(const TargetRegisterClass *RC) {
   return X86::GR64RegClass.hasSubClassEq(RC) ||
@@ -316,11 +317,7 @@ private:
   RegDomain Domain;
 
   /// Domains which this closure can legally be reassigned to.
-  SmallVector<RegDomain, 2> LegalDstDomains;
-
-  SmallVector<RegDomain, 2> getLegalDstDomains() const {
-    return LegalDstDomains;
-  }
+  std::bitset<NumDomains> LegalDstDomains;
 
   /// Enqueue \p Reg to be considered for addition to the closure.
   void visitRegister(unsigned Reg, SmallVectorImpl<unsigned> &Worklist);
@@ -340,12 +337,14 @@ private:
 public:
   Closure(const TargetInstrInfo *TII, MachineRegisterInfo *MRI,
           const InstrConverterBaseMap &Converters,
-          const SmallVector<RegDomain, 2> &LegalDstDomains,
+          std::initializer_list<RegDomain> LegalDstDomainList,
           DenseSet<unsigned> &EnclosedEdges,
           DenseMap<MachineInstr *, Closure *> &EnclosedInstrs)
       : TII(TII), MRI(MRI), Converters(Converters), Domain(NoDomain),
-        LegalDstDomains(LegalDstDomains), EnclosedEdges(EnclosedEdges),
-        EnclosedInstrs(EnclosedInstrs) {}
+        EnclosedEdges(EnclosedEdges), EnclosedInstrs(EnclosedInstrs) {
+    for (RegDomain D : LegalDstDomainList)
+      LegalDstDomains.set(D);
+  }
 
   /// Starting from \Reg, expand the closure as much as possible.
   void buildClosure(unsigned E);
@@ -357,13 +356,13 @@ public:
   void Reassign(RegDomain Domain) const;
 
   /// Mark this closure as illegal for reassignment to all domains.
-  void setAllIllegal() { LegalDstDomains.clear(); }
+  void setAllIllegal() { LegalDstDomains.reset(); }
 
   /// \returns true if this closure has domains which are legal to reassign to.
-  bool hasLegalDstDomain() const { return !LegalDstDomains.empty(); }
+  bool hasLegalDstDomain() const { return LegalDstDomains.any(); }
 
   /// \returns true if is legal to reassign this closure to domain \p RD.
-  bool isLegal(RegDomain RD) const { return is_contained(LegalDstDomains, RD); }
+  bool isLegal(RegDomain RD) const { return LegalDstDomains[RD]; }
 
   bool empty() const { return Edges.empty(); }
 };
@@ -440,10 +439,13 @@ void Closure::encloseInstr(MachineInstr *MI) {
   // Mark closure as illegal for reassignment to domains, if there is no
   // converter for the instruction or if the converter cannot convert the
   // instruction.
-  erase_if(LegalDstDomains, [&](RegDomain D) {
-    InstrConverterBase *IC = Converters.lookup({D, MI->getOpcode()});
-    return !IC || !IC->isLegal(MI, TII);
-  });
+  for (unsigned i = 0; i != LegalDstDomains.size(); ++i) {
+    if (LegalDstDomains[i]) {
+      InstrConverterBase *IC = Converters.lookup({i, MI->getOpcode()});
+      if (!IC || !IC->isLegal(MI, TII))
+        LegalDstDomains[i] = false;
+    }
+  }
 }
 
 double Closure::calculateCost(RegDomain DstDomain) const {
