@@ -2397,5 +2397,25 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
   if (Instruction *CastedXor = foldCastedBitwiseLogic(I))
     return CastedXor;
 
+  // Canonicalize the shifty way to code absolute value to the common pattern.
+  // There are 4 potential commuted variants. Move the 'ashr' candidate to Op1.
+  // We're relying on the fact that we only do this transform when the shift has
+  // exactly 2 uses and the add has exactly 1 use (otherwise, we might increase
+  // instructions).
+  if (Op0->getNumUses() == 2)
+    std::swap(Op0, Op1);
+
+  const APInt *ShAmt;
+  Type *Ty = I.getType();
+  if (match(Op1, m_AShr(m_Value(A), m_APInt(ShAmt))) &&
+      Op1->getNumUses() == 2 && *ShAmt == Ty->getScalarSizeInBits() - 1 &&
+      match(Op0, m_OneUse(m_c_Add(m_Specific(A), m_Specific(Op1))))) {
+    // B = ashr i32 A, 31 ; smear the sign bit
+    // xor (add A, B), B  ; add -1 and flip bits if negative
+    // --> (A < 0) ? -A : A
+    Value *Cmp = Builder.CreateICmpSLT(A, ConstantInt::getNullValue(Ty));
+    return SelectInst::Create(Cmp, Builder.CreateNeg(A), A);
+  }
+
   return Changed ? &I : nullptr;
 }

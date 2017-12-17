@@ -48,11 +48,11 @@ target triple = "x86_64-unknown-linux-gnu"
 ; SKX-NEXT:    fldz
 ; SKX-NEXT:    fld %st(0)
 ; SKX-NEXT:    fcmovne %st(2), %st(0)
-; SKX-NEXT:    kmovd %k1, %eax
+; SKX-NEXT:    kshiftrw $1, %k0, %k2
+; SKX-NEXT:    kmovd %k2, %eax
 ; SKX-NEXT:    testb $1, %al
 ; SKX-NEXT:    fld %st(1)
 ; SKX-NEXT:    fcmovne %st(3), %st(0)
-; SKX-NEXT:    kshiftrw $1, %k0, %k1
 ; SKX-NEXT:    kmovd %k1, %eax
 ; SKX-NEXT:    testb $1, %al
 ; SKX-NEXT:    fld %st(2)
@@ -65,9 +65,9 @@ target triple = "x86_64-unknown-linux-gnu"
 ; SKX-NEXT:    fxch %st(3)
 ; SKX-NEXT:    fstpt (%rdi)
 ; SKX-NEXT:    fxch %st(1)
-; SKX-NEXT:    fstpt 10(%rdi)
-; SKX-NEXT:    fxch %st(1)
 ; SKX-NEXT:    fstpt 20(%rdi)
+; SKX-NEXT:    fxch %st(1)
+; SKX-NEXT:    fstpt 10(%rdi)
 ; SKX-NEXT:    fstpt 30(%rdi)
 ; SKX-NEXT:    retq
  bb:
