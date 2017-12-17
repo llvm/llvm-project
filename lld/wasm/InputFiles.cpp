@@ -139,6 +139,14 @@ InputSegment *ObjFile::getSegment(const WasmSymbol &WasmSym) {
   return nullptr;
 }
 
+static void copyRelocationsRange(std::vector<WasmRelocation> &To,
+                                 ArrayRef<WasmRelocation> From, size_t Start,
+                                 size_t End) {
+  for (const WasmRelocation &R : From)
+    if (R.Offset >= Start && R.Offset < End)
+      To.push_back(R);
+}
+
 void ObjFile::initializeSymbols() {
   Symbols.reserve(WasmObj->getNumberOfSymbols());
 
@@ -156,8 +164,13 @@ void ObjFile::initializeSymbols() {
   FunctionSymbols.resize(FunctionImports + WasmObj->functions().size());
   GlobalSymbols.resize(GlobalImports + WasmObj->globals().size());
 
-  for (const WasmSegment &Seg : WasmObj->dataSegments())
-    Segments.emplace_back(make<InputSegment>(&Seg, this));
+  for (const WasmSegment &S : WasmObj->dataSegments()) {
+    InputSegment *Seg = make<InputSegment>(&S, this);
+    copyRelocationsRange(Seg->Relocations, DataSection->Relocations,
+                         Seg->getInputSectionOffset(),
+                         Seg->getInputSectionOffset() + Seg->getSize());
+    Segments.emplace_back(Seg);
+  }
 
   // Populate `FunctionSymbols` and `GlobalSymbols` based on the WasmSymbols
   // in the object

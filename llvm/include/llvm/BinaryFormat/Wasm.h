@@ -91,6 +91,8 @@ struct WasmLocalDecl {
 struct WasmFunction {
   std::vector<WasmLocalDecl> Locals;
   ArrayRef<uint8_t> Body;
+  uint32_t CodeSectionOffset;
+  uint32_t Size;
 };
 
 struct WasmDataSegment {

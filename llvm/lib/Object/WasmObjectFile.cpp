@@ -684,18 +684,21 @@ Error WasmObjectFile::parseStartSection(const uint8_t *Ptr, const uint8_t *End) 
 }
 
 Error WasmObjectFile::parseCodeSection(const uint8_t *Ptr, const uint8_t *End) {
+  const uint8_t *CodeSectionStart = Ptr;
   uint32_t FunctionCount = readVaruint32(Ptr);
   if (FunctionCount != FunctionTypes.size()) {
     return make_error<GenericBinaryError>("Invalid function count",
                                           object_error::parse_failed);
   }
 
-  CodeSection = ArrayRef<uint8_t>(Ptr, End - Ptr);
-
   while (FunctionCount--) {
     wasm::WasmFunction Function;
-    uint32_t FunctionSize = readVaruint32(Ptr);
-    const uint8_t *FunctionEnd = Ptr + FunctionSize;
+    const uint8_t *FunctionStart = Ptr;
+    uint32_t Size = readVaruint32(Ptr);
+    const uint8_t *FunctionEnd = Ptr + Size;
+
+    Function.CodeSectionOffset = FunctionStart - CodeSectionStart;
+    Function.Size = FunctionEnd - FunctionStart;
 
     uint32_t NumLocalDecls = readVaruint32(Ptr);
     Function.Locals.reserve(NumLocalDecls);

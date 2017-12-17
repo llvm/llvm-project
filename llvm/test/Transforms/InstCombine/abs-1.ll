@@ -48,9 +48,9 @@ define i64 @test_llabs(i64 %x) {
 
 define i8 @shifty_abs_commute0(i8 %x) {
 ; CHECK-LABEL: @shifty_abs_commute0(
-; CHECK-NEXT:    [[SIGNBIT:%.*]] = ashr i8 %x, 7
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[SIGNBIT]], %x
-; CHECK-NEXT:    [[ABS:%.*]] = xor i8 [[ADD]], [[SIGNBIT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8 %x, 0
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i8 0, %x
+; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[TMP1]], i8 [[TMP2]], i8 %x
 ; CHECK-NEXT:    ret i8 [[ABS]]
 ;
   %signbit = ashr i8 %x, 7
@@ -61,9 +61,9 @@ define i8 @shifty_abs_commute0(i8 %x) {
 
 define <2 x i8> @shifty_abs_commute1(<2 x i8> %x) {
 ; CHECK-LABEL: @shifty_abs_commute1(
-; CHECK-NEXT:    [[SIGNBIT:%.*]] = ashr <2 x i8> %x, <i8 7, i8 7>
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[SIGNBIT]], %x
-; CHECK-NEXT:    [[ABS:%.*]] = xor <2 x i8> [[SIGNBIT]], [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i8> %x, zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = sub <2 x i8> zeroinitializer, %x
+; CHECK-NEXT:    [[ABS:%.*]] = select <2 x i1> [[TMP1]], <2 x i8> [[TMP2]], <2 x i8> %x
 ; CHECK-NEXT:    ret <2 x i8> [[ABS]]
 ;
   %signbit = ashr <2 x i8> %x, <i8 7, i8 7>
@@ -75,9 +75,9 @@ define <2 x i8> @shifty_abs_commute1(<2 x i8> %x) {
 define <2 x i8> @shifty_abs_commute2(<2 x i8> %x) {
 ; CHECK-LABEL: @shifty_abs_commute2(
 ; CHECK-NEXT:    [[Y:%.*]] = mul <2 x i8> %x, <i8 3, i8 3>
-; CHECK-NEXT:    [[SIGNBIT:%.*]] = ashr <2 x i8> [[Y]], <i8 7, i8 7>
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[Y]], [[SIGNBIT]]
-; CHECK-NEXT:    [[ABS:%.*]] = xor <2 x i8> [[SIGNBIT]], [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i8> [[Y]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = sub <2 x i8> zeroinitializer, [[Y]]
+; CHECK-NEXT:    [[ABS:%.*]] = select <2 x i1> [[TMP1]], <2 x i8> [[TMP2]], <2 x i8> [[Y]]
 ; CHECK-NEXT:    ret <2 x i8> [[ABS]]
 ;
   %y = mul <2 x i8> %x, <i8 3, i8 3>   ; extra op to thwart complexity-based canonicalization
@@ -90,9 +90,9 @@ define <2 x i8> @shifty_abs_commute2(<2 x i8> %x) {
 define i8 @shifty_abs_commute3(i8 %x) {
 ; CHECK-LABEL: @shifty_abs_commute3(
 ; CHECK-NEXT:    [[Y:%.*]] = mul i8 %x, 3
-; CHECK-NEXT:    [[SIGNBIT:%.*]] = ashr i8 [[Y]], 7
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[Y]], [[SIGNBIT]]
-; CHECK-NEXT:    [[ABS:%.*]] = xor i8 [[ADD]], [[SIGNBIT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8 [[Y]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i8 0, [[Y]]
+; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[TMP1]], i8 [[TMP2]], i8 [[Y]]
 ; CHECK-NEXT:    ret i8 [[ABS]]
 ;
   %y = mul i8 %x, 3                    ; extra op to thwart complexity-based canonicalization

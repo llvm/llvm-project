@@ -22,7 +22,9 @@ declare i32* @foo()
 ; CHECK-LABEL: 'test'
 define void @test(i32 addrspace(1)* dereferenceable(8) %dparam,
                   i8 addrspace(1)* dereferenceable(32) align 1 %dparam.align1,
-                  i8 addrspace(1)* dereferenceable(32) align 16 %dparam.align16)
+                  i8 addrspace(1)* dereferenceable(32) align 16 %dparam.align16,
+                  i8* byval %i8_byval,
+                  %struct.A* byval %A_byval)
     gc "statepoint-example" {
 ; CHECK: The following are dereferenceable:
 entry:
@@ -93,6 +95,18 @@ entry:
 ; CHECK: %dparam.align16{{.*}}(aligned)
     %load15 = load i8, i8 addrspace(1)* %dparam.align1, align 16
     %load16 = load i8, i8 addrspace(1)* %dparam.align16, align 16
+
+    ; Loads from byval arguments
+; CHECK: %i8_byval{{.*}}(aligned)
+    %i8_byval_load = load i8, i8* %i8_byval
+
+; CHECK-NOT: %byval_cast
+    %byval_cast = bitcast i8* %i8_byval to i32*
+    %bad_byval_load = load i32, i32* %byval_cast
+
+; CHECK: %byval_gep{{.*}}(aligned)
+    %byval_gep = getelementptr inbounds %struct.A, %struct.A* %A_byval, i64 0, i32 1, i64 2
+    load i8, i8* %byval_gep
 
     ; Loads from aligned allocas
 ; CHECK: %alloca.align1{{.*}}(unaligned)

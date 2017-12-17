@@ -103,6 +103,9 @@ CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext)
   if (CGM.getCodeGenOpts().ReciprocalMath) {
     FMF.setAllowReciprocal();
   }
+  if (CGM.getCodeGenOpts().Reassociate) {
+    FMF.setAllowReassoc();
+  }
   Builder.setFastMathFlags(FMF);
 }
 

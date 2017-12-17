@@ -1,7 +1,7 @@
 ; RUN: opt -module-summary -o %t.bc %s
 
 ; RUN: rm -f %t2.0
-; RUN: llvm-lto2 run  %t.bc -r %t.bc,foo,pl -o %t2 -thinlto-distributed-indexes 
+; RUN: llvm-lto2 run  %t.bc -r %t.bc,foo,pl -o %t2 -thinlto-distributed-indexes
 ; RUN: llvm-readobj -h %t2.0 | FileCheck %s
 ; RUN: llvm-nm %t2.0 | count 0
 

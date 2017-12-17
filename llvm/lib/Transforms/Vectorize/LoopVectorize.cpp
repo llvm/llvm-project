@@ -1612,6 +1612,8 @@ public:
   /// 0 - Stride is unknown or non-consecutive.
   /// 1 - Address is consecutive.
   /// -1 - Address is consecutive, and decreasing.
+  /// NOTE: This method must only be used before modifying the original scalar
+  /// loop. Do not use after invoking 'createVectorizedLoopSkeleton' (PR34965).
   int isConsecutivePtr(Value *Ptr);
 
   /// Returns true if the value V is uniform within the loop.
@@ -1966,7 +1968,8 @@ public:
   /// Decision that was taken during cost calculation for memory instruction.
   enum InstWidening {
     CM_Unknown,
-    CM_Widen,
+    CM_Widen,         // For consecutive accesses with stride +1.
+    CM_Widen_Reverse, // For consecutive accesses with stride -1.
     CM_Interleave,
     CM_GatherScatter,
     CM_Scalarize
@@ -3204,8 +3207,9 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
 
   // Determine if the pointer operand of the access is either consecutive or
   // reverse consecutive.
-  int ConsecutiveStride = Legal->isConsecutivePtr(Ptr);
-  bool Reverse = ConsecutiveStride < 0;
+  bool Reverse = (Decision == LoopVectorizationCostModel::CM_Widen_Reverse);
+  bool ConsecutiveStride =
+      Reverse || (Decision == LoopVectorizationCostModel::CM_Widen);
   bool CreateGatherScatter =
       (Decision == LoopVectorizationCostModel::CM_GatherScatter);
 
@@ -5711,6 +5715,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(unsigned VF) {
            "Widening decision should be ready at this moment");
 
     return (WideningDecision == CM_Widen ||
+            WideningDecision == CM_Widen_Reverse ||
             WideningDecision == CM_Interleave);
   };
   // Iterate over the instructions in the loop, and collect all
@@ -7180,7 +7185,12 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(unsigned VF) {
       // We assume that widening is the best solution when possible.
       if (Legal->memoryInstructionCanBeWidened(&I, VF)) {
         unsigned Cost = getConsecutiveMemOpCost(&I, VF);
-        setWideningDecision(&I, VF, CM_Widen, Cost);
+        int ConsecutiveStride = Legal->isConsecutivePtr(getPointerOperand(&I));
+        assert((ConsecutiveStride == 1 || ConsecutiveStride == -1) &&
+               "Expected consecutive stride.");
+        InstWidening Decision =
+            ConsecutiveStride == 1 ? CM_Widen : CM_Widen_Reverse;
+        setWideningDecision(&I, VF, Decision, Cost);
         continue;
       }
 
@@ -7270,7 +7280,8 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(unsigned VF) {
       // by cost functions, but since this involves the task of finding out
       // if the loaded register is involved in an address computation, it is
       // instead changed here when we know this is the case.
-      if (getWideningDecision(I, VF) == CM_Widen)
+      InstWidening Decision = getWideningDecision(I, VF);
+      if (Decision == CM_Widen || Decision == CM_Widen_Reverse)
         // Scalarize a widened load of address.
         setWideningDecision(I, VF, CM_Scalarize,
                             (VF * getMemoryInstructionCost(I, 1)));
