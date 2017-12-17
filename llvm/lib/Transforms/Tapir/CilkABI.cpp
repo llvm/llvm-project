@@ -34,9 +34,9 @@ extern cl::opt<bool> fastCilk;
 
 typedef void *__CILK_JUMP_BUFFER[5];
 
-struct __cilkrts_pedigree {};
-struct __cilkrts_stack_frame {};
-struct __cilkrts_worker {};
+typedef tapir::CilkABI::__cilkrts_pedigree __cilkrts_pedigree;
+typedef tapir::CilkABI::__cilkrts_stack_frame __cilkrts_stack_frame;
+typedef tapir::CilkABI::__cilkrts_worker __cilkrts_worker;
 
 enum {
   __CILKRTS_ABI_VERSION = 1
