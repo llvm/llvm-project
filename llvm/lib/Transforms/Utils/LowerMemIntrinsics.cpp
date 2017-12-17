@@ -168,11 +168,12 @@ void llvm::createMemCpyLoopUnknownSize(Instruction *InsertBefore,
   IntegerType *ILengthType = dyn_cast<IntegerType>(CopyLenType);
   assert(ILengthType &&
          "expected size argument to memcpy to be an integer type!");
+  Type *Int8Type = Type::getInt8Ty(Ctx);
+  bool LoopOpIsInt8 = LoopOpType == Int8Type;
   ConstantInt *CILoopOpSize = ConstantInt::get(ILengthType, LoopOpSize);
-  Value *RuntimeLoopCount = PLBuilder.CreateUDiv(CopyLen, CILoopOpSize);
-  Value *RuntimeResidual = PLBuilder.CreateURem(CopyLen, CILoopOpSize);
-  Value *RuntimeBytesCopied = PLBuilder.CreateSub(CopyLen, RuntimeResidual);
-
+  Value *RuntimeLoopCount = LoopOpIsInt8 ?
+                            CopyLen :
+                            PLBuilder.CreateUDiv(CopyLen, CILoopOpSize);
   BasicBlock *LoopBB =
       BasicBlock::Create(Ctx, "loop-memcpy-expansion", ParentFunc, PostLoopBB);
   IRBuilder<> LoopBuilder(LoopBB);
@@ -189,8 +190,11 @@ void llvm::createMemCpyLoopUnknownSize(Instruction *InsertBefore,
       LoopBuilder.CreateAdd(LoopIndex, ConstantInt::get(CopyLenType, 1U));
   LoopIndex->addIncoming(NewIndex, LoopBB);
 
-  Type *Int8Type = Type::getInt8Ty(Ctx);
-  if (LoopOpType != Int8Type) {
+  if (!LoopOpIsInt8) {
+   // Add in the
+   Value *RuntimeResidual = PLBuilder.CreateURem(CopyLen, CILoopOpSize);
+   Value *RuntimeBytesCopied = PLBuilder.CreateSub(CopyLen, RuntimeResidual);
+
     // Loop body for the residual copy.
     BasicBlock *ResLoopBB = BasicBlock::Create(Ctx, "loop-memcpy-residual",
                                                PreLoopBB->getParent(),

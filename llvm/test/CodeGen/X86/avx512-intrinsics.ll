@@ -3305,17 +3305,17 @@ define i8@test_int_x86_avx512_mask_cmp_sd_all(<2 x double> %x0, <2 x double> %x1
 ; CHECK-LABEL: test_int_x86_avx512_mask_cmp_sd_all:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcmplesd %xmm1, %xmm0, %k0
-; CHECK-NEXT:    kmovw %k0, %ecx
+; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    vcmpunordsd {sae}, %xmm1, %xmm0, %k0
-; CHECK-NEXT:    kmovw %k0, %edx
+; CHECK-NEXT:    kmovw %k0, %ecx
+; CHECK-NEXT:    orl %eax, %ecx
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vcmpneqsd %xmm1, %xmm0, %k0 {%k1}
-; CHECK-NEXT:    kmovw %k0, %esi
+; CHECK-NEXT:    kmovw %k0, %edx
 ; CHECK-NEXT:    vcmpnltsd {sae}, %xmm1, %xmm0, %k0 {%k1}
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    orb %cl, %dl
-; CHECK-NEXT:    orb %sil, %al
-; CHECK-NEXT:    orb %dl, %al
+; CHECK-NEXT:    orl %edx, %eax
+; CHECK-NEXT:    orl %ecx, %eax
 ; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq
 
@@ -3350,17 +3350,17 @@ define i8@test_int_x86_avx512_mask_cmp_ss_all(<4 x float> %x0, <4 x float> %x1, 
 ; CHECK-LABEL: test_int_x86_avx512_mask_cmp_ss_all:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcmpless %xmm1, %xmm0, %k0
-; CHECK-NEXT:    kmovw %k0, %ecx
+; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    vcmpunordss {sae}, %xmm1, %xmm0, %k0
-; CHECK-NEXT:    kmovw %k0, %edx
+; CHECK-NEXT:    kmovw %k0, %ecx
+; CHECK-NEXT:    andl %eax, %ecx
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vcmpneqss %xmm1, %xmm0, %k0 {%k1}
-; CHECK-NEXT:    kmovw %k0, %esi
+; CHECK-NEXT:    kmovw %k0, %edx
 ; CHECK-NEXT:    vcmpnltss {sae}, %xmm1, %xmm0, %k0 {%k1}
 ; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    andb %cl, %dl
-; CHECK-NEXT:    andb %sil, %al
-; CHECK-NEXT:    andb %dl, %al
+; CHECK-NEXT:    andl %edx, %eax
+; CHECK-NEXT:    andl %ecx, %eax
 ; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
 ; CHECK-NEXT:    retq
   %res1 = call i8 @llvm.x86.avx512.mask.cmp.ss(<4 x float> %x0, <4 x float> %x1, i32 2, i8 -1, i32 4)
