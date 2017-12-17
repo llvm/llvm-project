@@ -1,5 +1,6 @@
 add_llvm_library(LLVMTapirOpts
   CilkABI.cpp
+  CilkRABI.cpp
   OpenMPABI.cpp
   SmallBlock.cpp
   RedundantSpawn.cpp
