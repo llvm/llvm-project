@@ -7517,16 +7517,14 @@ enum OverrideErrorKind { OEK_All, OEK_NonDeleted, OEK_Deleted };
 static void ReportOverrides(Sema& S, unsigned DiagID, const CXXMethodDecl *MD,
                             OverrideErrorKind OEK = OEK_All) {
   S.Diag(MD->getLocation(), DiagID) << MD->getDeclName();
-  for (CXXMethodDecl::method_iterator I = MD->begin_overridden_methods(),
-                                      E = MD->end_overridden_methods();
-       I != E; ++I) {
+  for (const CXXMethodDecl *O : MD->overridden_methods()) {
     // This check (& the OEK parameter) could be replaced by a predicate, but
     // without lambdas that would be overkill. This is still nicer than writing
     // out the diag loop 3 times.
     if ((OEK == OEK_All) ||
-        (OEK == OEK_NonDeleted && !(*I)->isDeleted()) ||
-        (OEK == OEK_Deleted && (*I)->isDeleted()))
-      S.Diag((*I)->getLocation(), diag::note_overridden_virtual_function);
+        (OEK == OEK_NonDeleted && !O->isDeleted()) ||
+        (OEK == OEK_Deleted && O->isDeleted()))
+      S.Diag(O->getLocation(), diag::note_overridden_virtual_function);
   }
 }
 

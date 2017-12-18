@@ -319,11 +319,11 @@ static bool hasCppPointerType(const til::SExpr *E) {
 static const CXXMethodDecl *getFirstVirtualDecl(const CXXMethodDecl *D) {
   while (true) {
     D = D->getCanonicalDecl();
-    CXXMethodDecl::method_iterator I = D->begin_overridden_methods(),
-                                   E = D->end_overridden_methods();
-    if (I == E)
+    auto OverriddenMethods = D->overridden_methods();
+    if (OverriddenMethods.begin() == OverriddenMethods.end())
       return D;  // Method does not override anything
-    D = *I;      // FIXME: this does not work with multiple inheritance.
+    // FIXME: this does not work with multiple inheritance.
+    D = *OverriddenMethods.begin();
   }
   return nullptr;
 }

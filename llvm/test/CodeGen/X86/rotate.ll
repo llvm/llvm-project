@@ -627,7 +627,47 @@ define void @rotr1_8_mem(i8* %Aptr) nounwind {
   ret void
 }
 
-define i64 @truncated_rot(i64 %x, i32 %amt) {
+define i64 @truncated_rot(i64 %x, i32 %amt) nounwind {
+; 32-LABEL: truncated_rot:
+; 32:       # %bb.0: # %entry
+; 32-NEXT:    pushl %ebx
+; 32-NEXT:    pushl %edi
+; 32-NEXT:    pushl %esi
+; 32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; 32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; 32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; 32-NEXT:    movl %esi, %eax
+; 32-NEXT:    shll %cl, %eax
+; 32-NEXT:    testb $32, %cl
+; 32-NEXT:    movl $0, %ebx
+; 32-NEXT:    jne .LBB28_2
+; 32-NEXT:  # %bb.1: # %entry
+; 32-NEXT:    movl %eax, %ebx
+; 32-NEXT:  .LBB28_2: # %entry
+; 32-NEXT:    movl $64, %edx
+; 32-NEXT:    subl %ecx, %edx
+; 32-NEXT:    movl %edi, %eax
+; 32-NEXT:    movl %edx, %ecx
+; 32-NEXT:    shrl %cl, %eax
+; 32-NEXT:    shrdl %cl, %edi, %esi
+; 32-NEXT:    testb $32, %dl
+; 32-NEXT:    jne .LBB28_4
+; 32-NEXT:  # %bb.3: # %entry
+; 32-NEXT:    movl %esi, %eax
+; 32-NEXT:  .LBB28_4: # %entry
+; 32-NEXT:    orl %ebx, %eax
+; 32-NEXT:    xorl %edx, %edx
+; 32-NEXT:    popl %esi
+; 32-NEXT:    popl %edi
+; 32-NEXT:    popl %ebx
+; 32-NEXT:    retl
+;
+; 64-LABEL: truncated_rot:
+; 64:       # %bb.0: # %entry
+; 64-NEXT:    movl %esi, %ecx
+; 64-NEXT:    rolq %cl, %rdi
+; 64-NEXT:    movl %edi, %eax
+; 64-NEXT:    retq
 entry:
   %sh_prom = zext i32 %amt to i64
   %shl = shl i64 %x, %sh_prom
@@ -637,11 +677,4 @@ entry:
   %or = or i64 %shr, %shl
   %and = and i64 %or, 4294967295
   ret i64 %and
-
-; 64-LABEL: truncated_rot:
-; 64:       # %bb.0:
-; 64-NEXT:    movl %esi, %ecx
-; 64-NEXT:    rolq %cl, %rdi
-; 64-NEXT:    movl %edi, %eax
-; 64-NEXT:    retq
 }
