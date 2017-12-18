@@ -5197,7 +5197,6 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     WorkingMI.setDesc(get(Opc));
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
                                                    OpIdx1, OpIdx2);
-    break;
   }
   case X86::BLENDPDrri:
   case X86::BLENDPSrri:

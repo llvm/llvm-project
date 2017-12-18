@@ -9,10 +9,10 @@ define void @t1() nounwind ssp {
 entry:
 ; ALL-LABEL: t1:
 ; ALL-NOT: fmov
-; CYCLONE: movi.2d v0, #0000000000000000
-; CYCLONE: movi.2d v1, #0000000000000000
-; CYCLONE: movi.2d v2, #0000000000000000
-; CYCLONE: movi.2d v3, #0000000000000000
+; CYCLONE: fmov d0, xzr
+; CYCLONE: fmov d1, xzr
+; CYCLONE: fmov d2, xzr
+; CYCLONE: fmov d3, xzr
 ; KRYO: movi v0.2d, #0000000000000000
 ; KRYO: movi v1.2d, #0000000000000000
 ; KRYO: movi v2.2d, #0000000000000000
@@ -48,8 +48,8 @@ entry:
 define void @t4() nounwind ssp {
 ; ALL-LABEL: t4:
 ; ALL-NOT: fmov
-; CYCLONE: movi.2d v0, #0000000000000000
-; CYCLONE: movi.2d v1, #0000000000000000
+; CYCLONE: fmov s0, wzr
+; CYCLONE: fmov s1, wzr
 ; KRYO: movi v0.2d, #0000000000000000
 ; KRYO: movi v1.2d, #0000000000000000
 ; FALKOR: movi v0.2d, #0000000000000000

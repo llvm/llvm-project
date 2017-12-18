@@ -2988,13 +2988,13 @@ private:
                                               ? CurrentBlock
                                               : nullptr };
         assert(Map.find(TrueItem) != Map.end() && "No True Value!");
-        Select->setTrueValue(Map[TrueItem]);
+        Select->setTrueValue(ST.Get(Map[TrueItem]));
         auto *FalseValue = CurrentSelect->getFalseValue();
         ValueInBB FalseItem = { FalseValue, isa<Instruction>(FalseValue)
                                                 ? CurrentBlock
                                                 : nullptr };
         assert(Map.find(FalseItem) != Map.end() && "No False Value!");
-        Select->setFalseValue(Map[FalseItem]);
+        Select->setFalseValue(ST.Get(Map[FalseItem]));
       } else {
         // Must be a Phi node then.
         PHINode *PHI = cast<PHINode>(V);
