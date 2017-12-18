@@ -1642,9 +1642,7 @@ bool CXXMethodDecl::isStatic() const {
 
 static bool recursivelyOverrides(const CXXMethodDecl *DerivedMD,
                                  const CXXMethodDecl *BaseMD) {
-  for (CXXMethodDecl::method_iterator I = DerivedMD->begin_overridden_methods(),
-         E = DerivedMD->end_overridden_methods(); I != E; ++I) {
-    const CXXMethodDecl *MD = *I;
+  for (const CXXMethodDecl *MD : DerivedMD->overridden_methods()) {
     if (MD->getCanonicalDecl() == BaseMD->getCanonicalDecl())
       return true;
     if (recursivelyOverrides(MD, BaseMD))

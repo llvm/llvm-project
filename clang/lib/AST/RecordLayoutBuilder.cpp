@@ -2895,13 +2895,12 @@ void MicrosoftRecordLayoutBuilder::computeVtorDispSet(
       Work.insert(MD);
   while (!Work.empty()) {
     const CXXMethodDecl *MD = *Work.begin();
-    CXXMethodDecl::method_iterator i = MD->begin_overridden_methods(),
-                                   e = MD->end_overridden_methods();
+    auto MethodRange = MD->overridden_methods();
     // If a virtual method has no-overrides it lives in its parent's vtable.
-    if (i == e)
+    if (MethodRange.begin() == MethodRange.end())
       BasesWithOverriddenMethods.insert(MD->getParent());
     else
-      Work.insert(i, e);
+      Work.insert(MethodRange.begin(), MethodRange.end());
     // We've finished processing this element, remove it from the working set.
     Work.erase(MD);
   }

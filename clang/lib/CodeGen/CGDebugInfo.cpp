@@ -1395,7 +1395,7 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
       // C++ ABI does not include all virtual methods from non-primary bases in
       // the vtable for the most derived class. For example, if C inherits from
       // A and B, C's primary vftable will not include B's virtual methods.
-      if (Method->begin_overridden_methods() == Method->end_overridden_methods())
+      if (Method->size_overridden_methods() == 0)
         Flags |= llvm::DINode::FlagIntroducedVirtual;
 
       // The 'this' adjustment accounts for both the virtual and non-virtual
