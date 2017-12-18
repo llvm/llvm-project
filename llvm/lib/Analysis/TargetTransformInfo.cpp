@@ -26,11 +26,6 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "tti"
 
-static cl::opt<bool> UseWideMemcpyLoopLowering(
-    "use-wide-memcpy-loop-lowering", cl::init(false),
-    cl::desc("Enables the new wide memcpy loop lowering in Transforms/Utils."),
-    cl::Hidden);
-
 static cl::opt<bool> EnableReduxCost("costmodel-reduxcost", cl::init(false),
                                      cl::Hidden,
                                      cl::desc("Recognize reduction patterns."));
@@ -545,10 +540,6 @@ void TargetTransformInfo::getMemcpyLoopResidualLoweringType(
     unsigned RemainingBytes, unsigned SrcAlign, unsigned DestAlign) const {
   TTIImpl->getMemcpyLoopResidualLoweringType(OpsOut, Context, RemainingBytes,
                                              SrcAlign, DestAlign);
-}
-
-bool TargetTransformInfo::useWideIRMemcpyLoopLowering() const {
-  return UseWideMemcpyLoopLowering;
 }
 
 bool TargetTransformInfo::areInlineCompatible(const Function *Caller,

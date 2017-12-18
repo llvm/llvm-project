@@ -678,23 +678,9 @@ void llvm::thinLTOResolveWeakForLinkerModule(
 /// Run internalization on \p TheModule based on symmary analysis.
 void llvm::thinLTOInternalizeModule(Module &TheModule,
                                     const GVSummaryMapTy &DefinedGlobals) {
-  // Parse inline ASM and collect the list of symbols that are not defined in
-  // the current module.
-  StringSet<> AsmUndefinedRefs;
-  ModuleSymbolTable::CollectAsmSymbols(
-      TheModule,
-      [&AsmUndefinedRefs](StringRef Name, object::BasicSymbolRef::Flags Flags) {
-        if (Flags & object::BasicSymbolRef::SF_Undefined)
-          AsmUndefinedRefs.insert(Name);
-      });
-
   // Declare a callback for the internalize pass that will ask for every
   // candidate GlobalValue if it can be internalized or not.
   auto MustPreserveGV = [&](const GlobalValue &GV) -> bool {
-    // Can't be internalized if referenced in inline asm.
-    if (AsmUndefinedRefs.count(GV.getName()))
-      return true;
-
     // Lookup the linkage recorded in the summaries during global analysis.
     auto GS = DefinedGlobals.find(GV.getGUID());
     if (GS == DefinedGlobals.end()) {

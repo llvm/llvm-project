@@ -2013,6 +2013,10 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::ADD,     T, Legal);
       setOperationAction(ISD::SUB,     T, Legal);
       setOperationAction(ISD::VSELECT, T, Legal);
+      if (T != ByteV) {
+        setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, T, Legal);
+        setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, T, Legal);
+      }
 
       setOperationAction(ISD::MUL,                T, Custom);
       setOperationAction(ISD::SETCC,              T, Custom);
@@ -2021,6 +2025,8 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INSERT_VECTOR_ELT,  T, Custom);
       setOperationAction(ISD::EXTRACT_SUBVECTOR,  T, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, T, Custom);
+      if (T != ByteV)
+        setOperationAction(ISD::ANY_EXTEND_VECTOR_INREG, T, Custom);
     }
 
     for (MVT T : LegalV) {
@@ -2321,6 +2327,18 @@ bool HexagonTargetLowering::shouldExpandBuildVectorWithShuffles(EVT VT,
 bool HexagonTargetLowering::isShuffleMaskLegal(ArrayRef<int> Mask,
                                                EVT VT) const {
   return true;
+}
+
+TargetLoweringBase::LegalizeTypeAction
+HexagonTargetLowering::getPreferredVectorAction(EVT VT) const {
+  if (Subtarget.useHVXOps()) {
+    // If the size of VT is at least half of the vector length,
+    // widen the vector. Note: the threshold was not selected in
+    // any scientific way.
+    if (VT.getSizeInBits() >= Subtarget.getVectorLength()*8/2)
+      return TargetLoweringBase::TypeWidenVector;
+  }
+  return TargetLowering::getPreferredVectorAction(VT);
 }
 
 // Lower a vector shuffle (V1, V2, V3).  V1 and V2 are the two vectors

@@ -544,21 +544,32 @@ static bool matchAccessTags(const MDNode *A, const MDNode *B,
   TBAAStructTagNode TagA(A), TagB(B);
   const MDNode *CommonType = getLeastCommonType(TagA.getAccessType(),
                                                 TagB.getAccessType());
-  if (GenericTag)
-    *GenericTag = createAccessTag(CommonType);
 
   // TODO: We need to check if AccessType of TagA encloses AccessType of
   // TagB to support aggregate AccessType. If yes, return true.
 
   // Climb the type DAG from base type of A to see if we reach base type of B.
   uint64_t OffsetA;
-  if (findAccessType(TagA, TagB.getBaseType(), OffsetA))
-    return OffsetA == TagB.getOffset();
+  if (findAccessType(TagA, TagB.getBaseType(), OffsetA)) {
+    bool SameMemberAccess = OffsetA == TagB.getOffset();
+    if (GenericTag)
+      *GenericTag = SameMemberAccess ? TagB.getNode() :
+                                       createAccessTag(CommonType);
+    return SameMemberAccess;
+  }
 
   // Climb the type DAG from base type of B to see if we reach base type of A.
   uint64_t OffsetB;
-  if (findAccessType(TagB, TagA.getBaseType(), OffsetB))
-    return OffsetB == TagA.getOffset();
+  if (findAccessType(TagB, TagA.getBaseType(), OffsetB)) {
+    bool SameMemberAccess = OffsetB == TagA.getOffset();
+    if (GenericTag)
+      *GenericTag = SameMemberAccess ? TagA.getNode() :
+                                       createAccessTag(CommonType);
+    return SameMemberAccess;
+  }
+
+  if (GenericTag)
+    *GenericTag = createAccessTag(CommonType);
 
   // If the final access types have different roots, they're part of different
   // potentially unrelated type systems, so we must be conservative.

@@ -42,8 +42,8 @@ using namespace llvm::yaml;
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(TypeIndex)
 
 // We only need to declare these, the definitions are in CodeViewYAMLTypes.cpp
-LLVM_YAML_DECLARE_SCALAR_TRAITS(APSInt, false)
-LLVM_YAML_DECLARE_SCALAR_TRAITS(TypeIndex, false)
+LLVM_YAML_DECLARE_SCALAR_TRAITS(APSInt, QuotingType::None)
+LLVM_YAML_DECLARE_SCALAR_TRAITS(TypeIndex, QuotingType::None)
 
 LLVM_YAML_DECLARE_ENUM_TRAITS(SymbolKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(FrameCookieKind)
@@ -62,7 +62,7 @@ LLVM_YAML_DECLARE_ENUM_TRAITS(ThunkOrdinal)
 
 LLVM_YAML_STRONG_TYPEDEF(StringRef, TypeName)
 
-LLVM_YAML_DECLARE_SCALAR_TRAITS(TypeName, true)
+LLVM_YAML_DECLARE_SCALAR_TRAITS(TypeName, QuotingType::Single)
 
 StringRef ScalarTraits<TypeName>::input(StringRef S, void *V, TypeName &T) {
   return ScalarTraits<StringRef>::input(S, V, T.value);

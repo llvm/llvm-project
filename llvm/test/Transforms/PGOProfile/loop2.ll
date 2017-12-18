@@ -13,7 +13,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @test_nested_for(i32 %r, i32 %s) {
 entry:
 ; GEN: entry:
-; GEN-NOT: call void @llvm.instrprof.increment
+; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @__profn_test_nested_for, i32 0, i32 0), i64 53929068288, i32 3, i32 2)
   br label %for.cond.outer
 
 for.cond.outer:
@@ -65,7 +65,8 @@ for.inc.outer:
 
 for.end.outer:
 ; GEN: for.end.outer:
-; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @__profn_test_nested_for, i32 0, i32 0), i64 53929068288, i32 3, i32 2)
+; GEN-NOT: call void @llvm.instrprof.increment
+; GEN: ret i32
   ret i32 %sum.0
 }
 

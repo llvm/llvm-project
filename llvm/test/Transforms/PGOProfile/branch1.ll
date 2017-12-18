@@ -32,7 +32,7 @@ define i32 @test_br_1(i32 %i) {
 ; USE-SAME: !prof ![[FUNC_ENTRY_COUNT:[0-9]+]]
 entry:
 ; GEN: entry:
-; GEN-NOT: llvm.instrprof.increment
+; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([9 x i8], [9 x i8]* @__profn_test_br_1, i32 0, i32 0), i64 25571299074, i32 2, i32 0)
   %cmp = icmp sgt i32 %i, 0
   br i1 %cmp, label %if.then, label %if.end
 ; USE: br i1 %cmp, label %if.then, label %if.end
@@ -50,7 +50,8 @@ if.then:
 
 if.end:
 ; GEN: if.end:
-; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([9 x i8], [9 x i8]* @__profn_test_br_1, i32 0, i32 0), i64 25571299074, i32 2, i32 0)
+; GEN-NOT: llvm.instrprof.increment
+; GEN: ret i32
   %retv = phi i32 [ %add, %if.then ], [ %i, %entry ]
   ret i32 %retv
 }

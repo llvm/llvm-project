@@ -363,14 +363,14 @@ FeatureBitset Hexagon_MC::completeHVXFeatures(const FeatureBitset &S) {
 
   // HasHvxVer is false, and UseHvx is true.
   switch (CpuArch) {
-    case ArchV60:
-      FB.set(ExtensionHVXV60);
-      break;
-    case ArchV62:
-      FB.set(ExtensionHVXV62);
-      break;
     case ArchV65:
       FB.set(ExtensionHVXV65);
+      LLVM_FALLTHROUGH;
+    case ArchV62:
+      FB.set(ExtensionHVXV62);
+      LLVM_FALLTHROUGH;
+    case ArchV60:
+      FB.set(ExtensionHVXV60);
       break;
   }
   return FB;

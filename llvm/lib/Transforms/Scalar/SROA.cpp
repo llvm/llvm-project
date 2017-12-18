@@ -124,6 +124,11 @@ static cl::opt<bool> SROARandomShuffleSlices("sroa-random-shuffle-slices",
 static cl::opt<bool> SROAStrictInbounds("sroa-strict-inbounds", cl::init(false),
                                         cl::Hidden);
 
+/// Hidden option to allow more aggressive splitting.
+static cl::opt<bool>
+SROASplitNonWholeAllocaSlices("sroa-split-nonwhole-alloca-slices",
+                              cl::init(false), cl::Hidden);
+
 namespace {
 
 /// \brief A custom IRBuilder inserter which prefixes all names, but only in
@@ -4058,7 +4063,7 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
 
   uint64_t AllocaSize = DL.getTypeAllocSize(AI.getAllocatedType());
   const uint64_t MaxBitVectorSize = 1024;
-  if (AllocaSize <= MaxBitVectorSize) {
+  if (SROASplitNonWholeAllocaSlices && AllocaSize <= MaxBitVectorSize) {
     // If a byte boundary is included in any load or store, a slice starting or
     // ending at the boundary is not splittable.
     SmallBitVector SplittableOffset(AllocaSize + 1, true);

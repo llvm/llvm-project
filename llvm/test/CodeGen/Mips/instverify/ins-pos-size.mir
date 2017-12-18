@@ -3,7 +3,7 @@
 
 # CHECK: Position + Size is out of range!
 
-# Check that the machine verifier checks the pos + size  is in range 0..32
+# Check that the machine verifier checks the pos + size is in the range 1..32
 ---
 name:            f
 alignment:       2
