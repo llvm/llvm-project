@@ -226,6 +226,9 @@ public:
   ///
   void clearParent() { ParentMI = nullptr; }
 
+  /// Print a MCSymbol as an operand.
+  static void printSymbol(raw_ostream &OS, MCSymbol &Sym);
+
   void print(raw_ostream &os, const TargetRegisterInfo *TRI = nullptr,
              const TargetIntrinsicInfo *IntrinsicInfo = nullptr) const;
   void print(raw_ostream &os, ModuleSlotTracker &MST,
