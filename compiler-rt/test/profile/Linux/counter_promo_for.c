@@ -19,18 +19,18 @@ __attribute__((noinline)) void bar(int i) { g += i; }
 
 __attribute__((noinline)) void foo(int n, int N) {
 // PROMO-LABEL: @foo
+// PROMO: load{{.*}}@__profc_foo{{.*}} 3){{.*}}
+// PROMO-NEXT: add
+// PROMO-NEXT: store{{.*}}@__profc_foo{{.*}} 3){{.*}}
 // PROMO: load{{.*}}@__profc_foo{{.*}} 0){{.*}}
 // PROMO-NEXT: add
 // PROMO-NEXT: store{{.*}}@__profc_foo{{.*}} 0){{.*}}
 // PROMO-NEXT: load{{.*}}@__profc_foo{{.*}} 1){{.*}}
 // PROMO-NEXT: add
 // PROMO-NEXT: store{{.*}}@__profc_foo{{.*}} 1){{.*}}
-// PROMO-NEXT: load{{.*}}@__profc_foo{{.*}} 2){{.*}}
+// PROMO: load{{.*}}@__profc_foo{{.*}} 2){{.*}}
 // PROMO-NEXT: add
 // PROMO-NEXT: store{{.*}}@__profc_foo{{.*}} 2){{.*}}
-// PROMO: load{{.*}}@__profc_foo{{.*}} 3){{.*}}
-// PROMO-NEXT: add
-// PROMO-NEXT: store{{.*}}@__profc_foo{{.*}} 3){{.*}}
 //
 // NOPROMO-LABEL: @foo
 // NOPROMO: load{{.*}}@__profc_foo{{.*}} 0){{.*}}
