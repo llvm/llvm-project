@@ -454,3 +454,10 @@ HexagonTargetLowering::LowerHvxSetCC(SDValue Op, SelectionDAG &DAG) const {
   return Negate ? getNode(Hexagon::V6_pred_not, dl, ResTy, {CmpV}, DAG)
                 : CmpV;
 }
+
+SDValue
+HexagonTargetLowering::LowerHvxExtend(SDValue Op, SelectionDAG &DAG) const {
+  // Sign- and zero-extends are legal.
+  assert(Op.getOpcode() == ISD::ANY_EXTEND_VECTOR_INREG);
+  return DAG.getZeroExtendVectorInReg(Op.getOperand(0), SDLoc(Op), ty(Op));
+}

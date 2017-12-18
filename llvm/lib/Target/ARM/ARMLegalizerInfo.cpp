@@ -158,6 +158,11 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
     setAction({G_FCMP, s1}, Legal);
     setAction({G_FCMP, 1, s32}, Legal);
     setAction({G_FCMP, 1, s64}, Legal);
+
+    setAction({G_MERGE_VALUES, s64}, Legal);
+    setAction({G_MERGE_VALUES, 1, s32}, Legal);
+    setAction({G_UNMERGE_VALUES, s32}, Legal);
+    setAction({G_UNMERGE_VALUES, 1, s64}, Legal);
   } else {
     for (unsigned BinOp : {G_FADD, G_FSUB, G_FMUL, G_FDIV})
       for (auto Ty : {s32, s64})
@@ -177,15 +182,6 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
     for (auto Ty : {s32, s64})
       setAction({Op, Ty}, Libcall);
 
-  // Merge/Unmerge
-  for (const auto &Ty : {s32, s64}) {
-    setAction({G_MERGE_VALUES, Ty}, Legal);
-    setAction({G_UNMERGE_VALUES, 1, Ty}, Legal);
-  }
-  for (const auto &Ty : {s16, s32}) {
-    setAction({G_MERGE_VALUES, 1, Ty}, Legal);
-    setAction({G_UNMERGE_VALUES, Ty}, Legal);
-  }
   computeTables();
 }
 

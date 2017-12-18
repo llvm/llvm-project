@@ -385,7 +385,7 @@ __m512d test_mm512_set1_pd(double d)
 __mmask16 test_mm512_knot(__mmask16 a)
 {
   // CHECK-LABEL: @test_mm512_knot
-  // CHECK: [[IN:%.*]] = bitcast i16 %1 to <16 x i1>
+  // CHECK: [[IN:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
   // CHECK: [[NOT:%.*]] = xor <16 x i1> [[IN]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
   // CHECK: bitcast <16 x i1> [[NOT]] to i16
   return _mm512_knot(a);

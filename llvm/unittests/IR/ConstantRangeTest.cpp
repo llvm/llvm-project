@@ -606,6 +606,33 @@ TEST_F(ConstantRangeTest, Lshr) {
   EXPECT_EQ(Wrap.lshr(Wrap), Full);
 }
 
+TEST_F(ConstantRangeTest, Ashr) {
+  EXPECT_EQ(Full.ashr(Full), Full);
+  EXPECT_EQ(Full.ashr(Empty), Empty);
+  EXPECT_EQ(Full.ashr(One), ConstantRange(APInt(16, 0xffe0),
+                                          APInt(16, (0x7fff >> 0xa) + 1 )));
+  ConstantRange Small(APInt(16, 0xa), APInt(16, 0xb));
+  EXPECT_EQ(Full.ashr(Small), ConstantRange(APInt(16, 0xffe0),
+                                           APInt(16, (0x7fff >> 0xa) + 1 )));
+  EXPECT_EQ(Full.ashr(Some), ConstantRange(APInt(16, 0xffe0),
+                                           APInt(16, (0x7fff >> 0xa) + 1 )));
+  EXPECT_EQ(Full.ashr(Wrap), Full);
+  EXPECT_EQ(Empty.ashr(Empty), Empty);
+  EXPECT_EQ(Empty.ashr(One), Empty);
+  EXPECT_EQ(Empty.ashr(Some), Empty);
+  EXPECT_EQ(Empty.ashr(Wrap), Empty);
+  EXPECT_EQ(One.ashr(One), ConstantRange(APInt(16, 0)));
+  EXPECT_EQ(One.ashr(Some), ConstantRange(APInt(16, 0)));
+  EXPECT_EQ(One.ashr(Wrap), ConstantRange(APInt(16, 0), APInt(16, 0xb)));
+  EXPECT_EQ(Some.ashr(Some), ConstantRange(APInt(16, 0),
+                                           APInt(16, (0xaaa >> 0xa) + 1)));
+  EXPECT_EQ(Some.ashr(Wrap), ConstantRange(APInt(16, 0), APInt(16, 0xaaa)));
+  EXPECT_EQ(Wrap.ashr(Wrap), Full);
+  ConstantRange Neg(APInt(16, 0xf3f0, true), APInt(16, 0xf7f8, true));
+  EXPECT_EQ(Neg.ashr(Small), ConstantRange(APInt(16, 0xfffc, true),
+                                           APInt(16, 0xfffe, true)));
+}
+
 TEST(ConstantRange, MakeAllowedICmpRegion) {
   // PR8250
   ConstantRange SMax = ConstantRange(APInt::getSignedMaxValue(32));

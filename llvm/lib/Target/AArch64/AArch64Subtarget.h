@@ -86,6 +86,7 @@ protected:
 
   // HasZeroCycleZeroing - Has zero-cycle zeroing instructions.
   bool HasZeroCycleZeroing = false;
+  bool HasZeroCycleZeroingFPWorkaround = false;
 
   // StrictAlign - Disallow unaligned memory accesses.
   bool StrictAlign = false;
@@ -196,6 +197,10 @@ public:
   bool hasZeroCycleRegMove() const { return HasZeroCycleRegMove; }
 
   bool hasZeroCycleZeroing() const { return HasZeroCycleZeroing; }
+
+  bool hasZeroCycleZeroingFPWorkaround() const {
+    return HasZeroCycleZeroingFPWorkaround;
+  }
 
   bool requiresStrictAlign() const { return StrictAlign; }
 

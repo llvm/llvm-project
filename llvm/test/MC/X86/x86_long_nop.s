@@ -1,7 +1,7 @@
-# RUN: llvm-mc -filetype=obj -arch=x86 -triple=x86_64-pc-linux-gnu %s | llvm-objdump -d -no-show-raw-insn - | FileCheck %s
-# RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu %s | llvm-objdump -d -no-show-raw-insn - | FileCheck %s
-# RUN: llvm-mc -filetype=obj -arch=x86 -triple=x86_64-apple-darwin10.0 %s | llvm-objdump -d -no-show-raw-insn - | FileCheck %s
-# RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-apple-darwin8 %s | llvm-objdump -d -no-show-raw-insn - | FileCheck %s
+# RUN: llvm-mc -filetype=obj -arch=x86 -triple=x86_64-pc-linux-gnu -mcpu=pentiumpro %s | llvm-objdump -d -no-show-raw-insn - | FileCheck %s
+# RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu %s -mcpu=pentiumpro | llvm-objdump -d -no-show-raw-insn - | FileCheck %s
+# RUN: llvm-mc -filetype=obj -arch=x86 -triple=x86_64-apple-darwin10.0 -mcpu=pentiumpro %s | llvm-objdump -d -no-show-raw-insn - | FileCheck %s
+# RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-apple-darwin8 -mcpu=pentiumpro %s | llvm-objdump -d -no-show-raw-insn - | FileCheck %s
 # RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu -mcpu=slm %s | llvm-objdump -d -no-show-raw-insn - | FileCheck --check-prefix=LNOP7 %s
 # RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu -mcpu=silvermont %s | llvm-objdump -d -no-show-raw-insn - | FileCheck --check-prefix=LNOP7 %s
 # RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu -mcpu=lakemont %s | llvm-objdump -d -no-show-raw-insn - | FileCheck --check-prefix=NOP1 %s

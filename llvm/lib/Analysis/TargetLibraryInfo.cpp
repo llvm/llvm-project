@@ -608,7 +608,7 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
     return (NumParams == 3 && FTy.getReturnType()->isPointerTy() &&
             FTy.getParamType(0) == FTy.getReturnType() &&
             FTy.getParamType(1) == FTy.getReturnType() &&
-            FTy.getParamType(2)->isIntegerTy());
+            IsSizeTTy(FTy.getParamType(2)));
 
   case LibFunc_strcpy_chk:
   case LibFunc_stpcpy_chk:
@@ -633,7 +633,7 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
     return (NumParams == 3 && FTy.getReturnType() == FTy.getParamType(0) &&
             FTy.getParamType(0) == FTy.getParamType(1) &&
             FTy.getParamType(0) == PCharTy &&
-            FTy.getParamType(2)->isIntegerTy());
+            IsSizeTTy(FTy.getParamType(2)));
 
   case LibFunc_strxfrm:
     return (NumParams == 3 && FTy.getParamType(0)->isPointerTy() &&
@@ -648,7 +648,7 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
     return (NumParams == 3 && FTy.getReturnType()->isIntegerTy(32) &&
             FTy.getParamType(0)->isPointerTy() &&
             FTy.getParamType(0) == FTy.getParamType(1) &&
-            FTy.getParamType(2)->isIntegerTy());
+            IsSizeTTy(FTy.getParamType(2)));
 
   case LibFunc_strspn:
   case LibFunc_strcspn:

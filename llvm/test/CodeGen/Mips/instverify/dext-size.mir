@@ -3,7 +3,7 @@
 
 # CHECK: Size operand is out of range!
 
-# Check that the machine verifier checks the size operand is in range 0..32
+# Check that the machine verifier checks the size operand is in the range 1..32
 ---
 name:            dext
 alignment:       3

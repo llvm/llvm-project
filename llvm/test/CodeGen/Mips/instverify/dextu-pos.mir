@@ -3,7 +3,7 @@
 
 # CHECK: Position operand is out of range!
 
-# Check that the machine verifier checks the position operand is in range 32..63
+# Check that the machine verifier checks the position operand is in the range 32..63
 ---
 name:            dextu
 alignment:       3
@@ -42,7 +42,7 @@ body:             |
     liveins: %a0_64
 
     %0 = COPY %a0_64
-    %1 = DEXTU %0, 65, 5
+    %1 = DEXTU %0, 64, 5
     %v0_64 = COPY %1
     RetRA implicit %v0_64
 

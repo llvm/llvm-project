@@ -777,6 +777,7 @@ void DIEBlock::EmitValue(const AsmPrinter *Asm, dwarf::Form Form) const {
   case dwarf::DW_FORM_block2: Asm->EmitInt16(Size);   break;
   case dwarf::DW_FORM_block4: Asm->EmitInt32(Size);   break;
   case dwarf::DW_FORM_block:  Asm->EmitULEB128(Size); break;
+  case dwarf::DW_FORM_data16: break;
   }
 
   for (const auto &V : values())
@@ -791,6 +792,7 @@ unsigned DIEBlock::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
   case dwarf::DW_FORM_block2: return Size + sizeof(int16_t);
   case dwarf::DW_FORM_block4: return Size + sizeof(int32_t);
   case dwarf::DW_FORM_block:  return Size + getULEB128Size(Size);
+  case dwarf::DW_FORM_data16: return 16;
   default: llvm_unreachable("Improper form for block");
   }
 }

@@ -862,12 +862,6 @@ public:
                                          unsigned SrcAlign,
                                          unsigned DestAlign) const;
 
-  /// \returns True if we want to test the new memcpy lowering functionality in
-  /// Transform/Utils.
-  /// Temporary. Will be removed once we move to the new functionality and
-  /// remove the old.
-  bool useWideIRMemcpyLoopLowering() const;
-
   /// \returns True if the two functions have compatible attributes for inlining
   /// purposes.
   bool areInlineCompatible(const Function *Caller,

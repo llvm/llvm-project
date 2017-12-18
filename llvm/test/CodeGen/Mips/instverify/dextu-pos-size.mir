@@ -3,7 +3,7 @@
 
 # CHECK: Position + Size is out of range!
 
-# Check that the machine verifier checks the pos + size is in range 32..64
+# Check that the machine verifier checks the pos + size is in the range 33..64
 ---
 name:            dextu
 alignment:       3
