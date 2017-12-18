@@ -58,7 +58,7 @@ ARM::ARM() {
   GotEntrySize = 4;
   GotPltEntrySize = 4;
   PltEntrySize = 16;
-  PltHeaderSize = 20;
+  PltHeaderSize = 32;
   TrapInstr = 0xd4d4d4d4;
   // ARM uses Variant 1 TLS
   TcbSize = 8;
@@ -184,18 +184,52 @@ void ARM::writeIgotPlt(uint8_t *Buf, const Symbol &S) const {
   write32le(Buf, S.getVA());
 }
 
-void ARM::writePltHeader(uint8_t *Buf) const {
+// Long form PLT Heade that does not have any restrictions on the displacement
+// of the .plt from the .plt.got.
+static void writePltHeaderLong(uint8_t *Buf) {
   const uint8_t PltData[] = {
       0x04, 0xe0, 0x2d, 0xe5, //     str lr, [sp,#-4]!
       0x04, 0xe0, 0x9f, 0xe5, //     ldr lr, L2
       0x0e, 0xe0, 0x8f, 0xe0, // L1: add lr, pc, lr
       0x08, 0xf0, 0xbe, 0xe5, //     ldr pc, [lr, #8]
       0x00, 0x00, 0x00, 0x00, // L2: .word   &(.got.plt) - L1 - 8
-  };
+      0xd4, 0xd4, 0xd4, 0xd4, //     Pad to 32-byte boundary
+      0xd4, 0xd4, 0xd4, 0xd4, //     Pad to 32-byte boundary
+      0xd4, 0xd4, 0xd4, 0xd4};
   memcpy(Buf, PltData, sizeof(PltData));
   uint64_t GotPlt = InX::GotPlt->getVA();
   uint64_t L1 = InX::Plt->getVA() + 8;
   write32le(Buf + 16, GotPlt - L1 - 8);
+}
+
+// The default PLT header requires the .plt.got to be within 128 Mb of the
+// .plt in the positive direction.
+void ARM::writePltHeader(uint8_t *Buf) const {
+  // Use a similar sequence to that in writePlt(), the difference is the calling
+  // conventions mean we use lr instead of ip. The PLT entry is responsible for
+  // saving lr on the stack, the dynamic loader is responsible for reloading
+  // it.
+  const uint32_t PltData[] = {
+      0xe52de004, // L1: str lr, [sp,#-4]!
+      0xe28fe600, //     add lr, pc,  #0x0NN00000 &(.got.plt - L1 - 4)
+      0xe28eea00, //     add lr, lr,  #0x000NN000 &(.got.plt - L1 - 4)
+      0xe5bef000, //     ldr pc, [lr, #0x00000NNN] &(.got.plt -L1 - 4)
+  };
+
+  uint64_t Offset = InX::GotPlt->getVA() - InX::Plt->getVA() - 4;
+  if (!llvm::isUInt<27>(Offset)) {
+    // We cannot encode the Offset, use the long form.
+    writePltHeaderLong(Buf);
+    return;
+  }
+  write32le(Buf + 0, PltData[0]);
+  write32le(Buf + 4, PltData[1] | ((Offset >> 20) & 0xff));
+  write32le(Buf + 8, PltData[2] | ((Offset >> 12) & 0xff));
+  write32le(Buf + 12, PltData[3] | (Offset & 0xfff));
+  write32le(Buf + 16, TrapInstr); // Pad to 32-byte boundary
+  write32le(Buf + 20, TrapInstr);
+  write32le(Buf + 24, TrapInstr);
+  write32le(Buf + 28, TrapInstr);
 }
 
 void ARM::addPltHeaderSymbols(InputSectionBase *ISD) const {
@@ -204,12 +238,11 @@ void ARM::addPltHeaderSymbols(InputSectionBase *ISD) const {
   addSyntheticLocal("$d", STT_NOTYPE, 16, 0, IS);
 }
 
-void ARM::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
-                   uint64_t PltEntryAddr, int32_t Index,
-                   unsigned RelOff) const {
-  // FIXME: Using simple code sequence with simple relocations.
-  // There is a more optimal sequence but it requires support for the group
-  // relocations. See ELF for the ARM Architecture Appendix A.3
+// Long form PLT entries that do not have any restrictions on the displacement
+// of the .plt from the .plt.got.
+static void writePltLong(uint8_t *Buf, uint64_t GotPltEntryAddr,
+                         uint64_t PltEntryAddr, int32_t Index,
+                         unsigned RelOff) {
   const uint8_t PltData[] = {
       0x04, 0xc0, 0x9f, 0xe5, //     ldr ip, L2
       0x0f, 0xc0, 0x8c, 0xe0, // L1: add ip, ip, pc
@@ -219,6 +252,34 @@ void ARM::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
   memcpy(Buf, PltData, sizeof(PltData));
   uint64_t L1 = PltEntryAddr + 4;
   write32le(Buf + 12, GotPltEntryAddr - L1 - 8);
+}
+
+// The default PLT entries require the .plt.got to be within 128 Mb of the
+// .plt in the positive direction.
+void ARM::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
+                   uint64_t PltEntryAddr, int32_t Index,
+                   unsigned RelOff) const {
+  // The PLT entry is similar to the example given in Appendix A of ELF for
+  // the Arm Architecture. Instead of using the Group Relocations to find the
+  // optimal rotation for the 8-bit immediate used in the add instructions we
+  // hard code the most compact rotations for simplicity. This saves a load
+  // instruction over the long plt sequences.
+  const uint32_t PltData[] = {
+      0xe28fc600, // L1: add ip, pc,  #0x0NN00000  Offset(&(.plt.got) - L1 - 8
+      0xe28cca00, //     add ip, ip,  #0x000NN000  Offset(&(.plt.got) - L1 - 8
+      0xe5bcf000, //     ldr pc, [ip, #0x00000NNN] Offset(&(.plt.got) - L1 - 8
+  };
+
+  uint64_t Offset = GotPltEntryAddr - PltEntryAddr - 8;
+  if (!llvm::isUInt<27>(Offset)) {
+    // We cannot encode the Offset, use the long form.
+    writePltLong(Buf, GotPltEntryAddr, PltEntryAddr, Index, RelOff);
+    return;
+  }
+  write32le(Buf + 0, PltData[0] | ((Offset >> 20) & 0xff));
+  write32le(Buf + 4, PltData[1] | ((Offset >> 12) & 0xff));
+  write32le(Buf + 8, PltData[2] | (Offset & 0xfff));
+  write32le(Buf + 12, TrapInstr); // Pad to 16-byte boundary
 }
 
 void ARM::addPltSymbols(InputSectionBase *ISD, uint64_t Off) const {

@@ -26,10 +26,10 @@ _start:
 // CHECK-NEXT:    11000:       00 00 00 ea     b       #0 <__ARMv7ABSLongThunk_undefined_weak_we_expect_a_plt_entry_for>
 // CHECK-NEXT:    11004:       02 00 00 eb     bl      #8 <__ARMv7ABSLongThunk_bar2>
 // CHECK: __ARMv7ABSLongThunk_undefined_weak_we_expect_a_plt_entry_for:
-// CHECK-NEXT:    11008:       34 c0 01 e3     movw    r12, #4148
-// CHECK-NEXT:    1100c:       01 c2 40 e3     movt    r12, #513
-// CHECK-NEXT:    11010:       1c ff 2f e1     bx      r12
+// CHECK-NEXT:    11008:        40 c0 01 e3     movw    r12, #4160
+// CHECK-NEXT:    1100c:        01 c2 40 e3     movt    r12, #513
+// CHECK-NEXT:    11010:        1c ff 2f e1     bx      r12
 // CHECK: __ARMv7ABSLongThunk_bar2:
-// CHECK-NEXT:    11014:       44 c0 01 e3     movw    r12, #4164
-// CHECK-NEXT:    11018:       01 c2 40 e3     movt    r12, #513
-// CHECK-NEXT:    1101c:       1c ff 2f e1     bx      r12
+// CHECK-NEXT:    11014:        50 c0 01 e3     movw    r12, #4176
+// CHECK-NEXT:    11018:        01 c2 40 e3     movt    r12, #513
+// CHECK-NEXT:    1101c:        1c ff 2f e1     bx      r12
