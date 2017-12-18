@@ -650,9 +650,11 @@ void FinalOverriderCollector::Collect(const CXXRecordDecl *RD,
       continue;
 
     CXXMethodDecl *CanonM = cast<CXXMethodDecl>(M->getCanonicalDecl());
+    using OverriddenMethodsRange =
+        llvm::iterator_range<CXXMethodDecl::method_iterator>;
+    OverriddenMethodsRange OverriddenMethods = CanonM->overridden_methods();
 
-    if (CanonM->begin_overridden_methods()
-                                       == CanonM->end_overridden_methods()) {
+    if (OverriddenMethods.begin() == OverriddenMethods.end()) {
       // This is a new virtual function that does not override any
       // other virtual function. Add it to the map of virtual
       // functions for which we are tracking overridders. 
@@ -671,11 +673,7 @@ void FinalOverriderCollector::Collect(const CXXRecordDecl *RD,
     // overrider. To do so, we dig down to the original virtual
     // functions using data recursion and update all of the methods it
     // overrides.
-    using OverriddenMethods =
-        llvm::iterator_range<CXXMethodDecl::method_iterator>;
-    SmallVector<OverriddenMethods, 4> Stack;
-    Stack.push_back(llvm::make_range(CanonM->begin_overridden_methods(),
-                                     CanonM->end_overridden_methods()));
+    SmallVector<OverriddenMethodsRange, 4> Stack(1, OverriddenMethods);
     while (!Stack.empty()) {
       for (const CXXMethodDecl *OM : Stack.pop_back_val()) {
         const CXXMethodDecl *CanonOM = OM->getCanonicalDecl();
@@ -693,14 +691,13 @@ void FinalOverriderCollector::Collect(const CXXRecordDecl *RD,
                                UniqueVirtualMethod(CanonM, SubobjectNumber,
                                                    InVirtualSubobject));
 
-        if (CanonOM->begin_overridden_methods()
-                                       == CanonOM->end_overridden_methods())
+        auto OverriddenMethods = CanonOM->overridden_methods();
+        if (OverriddenMethods.begin() == OverriddenMethods.end())
           continue;
 
         // Continue recursion to the methods that this virtual method
         // overrides.
-        Stack.push_back(llvm::make_range(CanonOM->begin_overridden_methods(),
-                                         CanonOM->end_overridden_methods()));
+        Stack.push_back(OverriddenMethods);
       }
     }
 

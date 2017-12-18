@@ -1267,10 +1267,8 @@ void ASTDeclWriter::VisitCXXMethodDecl(CXXMethodDecl *D) {
   VisitFunctionDecl(D);
   if (D->isCanonicalDecl()) {
     Record.push_back(D->size_overridden_methods());
-    for (CXXMethodDecl::method_iterator
-           I = D->begin_overridden_methods(), E = D->end_overridden_methods();
-           I != E; ++I)
-      Record.AddDeclRef(*I);
+    for (const CXXMethodDecl *MD : D->overridden_methods())
+      Record.AddDeclRef(MD);
   } else {
     // We only need to record overridden methods once for the canonical decl.
     Record.push_back(0);

@@ -1079,9 +1079,7 @@ static void
 visitAllOverriddenMethods(const CXXMethodDecl *MD, VisitorTy &Visitor) {
   assert(MD->isVirtual() && "Method is not virtual!");
 
-  for (CXXMethodDecl::method_iterator I = MD->begin_overridden_methods(),
-       E = MD->end_overridden_methods(); I != E; ++I) {
-    const CXXMethodDecl *OverriddenMD = *I;
+  for (const CXXMethodDecl *OverriddenMD : MD->overridden_methods()) {
     if (!Visitor(OverriddenMD))
       continue;
     visitAllOverriddenMethods(OverriddenMD, Visitor);
@@ -1329,11 +1327,8 @@ static bool OverridesIndirectMethodInBases(
     ItaniumVTableBuilder::PrimaryBasesSetVectorTy &Bases) {
   if (Bases.count(MD->getParent()))
     return true;
-  
-  for (CXXMethodDecl::method_iterator I = MD->begin_overridden_methods(),
-       E = MD->end_overridden_methods(); I != E; ++I) {
-    const CXXMethodDecl *OverriddenMD = *I;
-    
+
+  for (const CXXMethodDecl *OverriddenMD : MD->overridden_methods()) {
     // Check "indirect overriders".
     if (OverridesIndirectMethodInBases(OverriddenMD, Bases))
       return true;
