@@ -378,6 +378,10 @@ hash_code llvm::hash_value(const MachineOperand &MO) {
   llvm_unreachable("Invalid machine operand type");
 }
 
+void MachineOperand::printSymbol(raw_ostream &OS, MCSymbol &Sym) {
+  OS << "<MCSym= " << Sym << ">";
+}
+
 void MachineOperand::print(raw_ostream &OS, const TargetRegisterInfo *TRI,
                            const TargetIntrinsicInfo *IntrinsicInfo) const {
   ModuleSlotTracker DummyMST(nullptr);
@@ -537,7 +541,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << '>';
     break;
   case MachineOperand::MO_MCSymbol:
-    OS << "<MCSym=" << *getMCSymbol() << '>';
+    printSymbol(OS, *getMCSymbol());
     break;
   case MachineOperand::MO_CFIIndex:
     OS << "<call frame instruction>";

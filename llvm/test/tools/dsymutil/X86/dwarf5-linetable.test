@@ -1,0 +1,23 @@
+# RUN: llvm-dsymutil -f -oso-prepend-path=%p/../Inputs/ -y %s -o - | llvm-dwarfdump -debug-line - | FileCheck %s
+
+# Source:
+#   int main() {
+#     return 0;
+#   }
+# Compile with:
+#   clang -gdwarf-5 dwarf5.c -c -o dwarf5.o
+
+---
+triple:          'x86_64-apple-darwin'
+objects:
+  - filename:        dwarf5.o
+    timestamp:       1513021112
+    symbols:
+      - { sym: _main, objAddr: 0x0000000000000000, binAddr: 0x0000000100000FA0, size: 0x0000000F }
+...
+
+# CHECK: .debug_line contents:
+# CHECK: debug_line
+# CHECK: Line table prologue:
+# CHECK: total_length:
+# CHECK: version: 5
