@@ -2015,7 +2015,7 @@ public:
     if (CD->isVirtualAsWritten() || CD->isPure())
       return true;
 
-    return (CD->begin_overridden_methods() != CD->end_overridden_methods());
+    return CD->size_overridden_methods() != 0;
   }
 
   /// If it's possible to devirtualize a call to this method, return the called

@@ -36,6 +36,23 @@ entry:
     %alloca = alloca i1
     %load2 = load i1, i1* %alloca
 
+    ; Load from empty array alloca
+; CHECK-NOT: %empty_alloca
+    %empty_alloca = alloca i8, i64 0
+    %empty_load = load i8, i8* %empty_alloca
+
+    ; Load from too small array alloca
+; CHECK-NOT: %small_array_alloca
+    %small_array_alloca = alloca i8, i64 2
+    %saa_cast = bitcast i8* %small_array_alloca to i32*
+    %saa_load = load i32, i32* %saa_cast
+
+    ; Load from array alloca
+; CHECK: %big_array_alloca{{.*}}(unaligned)
+    %big_array_alloca = alloca i8, i64 4
+    %baa_cast = bitcast i8* %big_array_alloca to i32*
+    %baa_load = load i32, i32* %baa_cast
+
 ; CHECK: %dparam{{.*}}(aligned)
     %load3 = load i32, i32 addrspace(1)* %dparam
 

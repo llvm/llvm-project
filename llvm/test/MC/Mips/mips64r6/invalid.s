@@ -57,17 +57,17 @@ local_label:
         lhu $35, 8($2)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         lhue $36, 8($2)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         lh  $2, 8($34)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
-        lhe $4, 8($33)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
+        lhe $4, 8($33)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         lhu $4, 8($35)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
-        lhue $4, 8($37)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
+        lhue $4, 8($37)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         lh  $2, -65536($4) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
         lh  $2, 65536($4)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
-        lhe $4, -512($2)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
-        lhe $4, 512($2)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
+        lhe $4, -512($2)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        lhe $4, 512($2)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         lhu $4, -65536($2) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
         lhu $4, 65536($2)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
-        lhue $4, -512($2)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
-        lhue $4, 512($2)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
+        lhue $4, -512($2)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        lhue $4, 512($2)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         // FIXME: Following tests are temporarily disabled, until "PredicateControl not in hierarchy" problem is resolved
         bltl  $7, $8, local_label  # -CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         bltul $7, $8, local_label  # -CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled

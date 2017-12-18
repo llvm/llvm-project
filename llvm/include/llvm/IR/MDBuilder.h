@@ -30,6 +30,7 @@ class Constant;
 class ConstantAsMetadata;
 class MDNode;
 class MDString;
+class Metadata;
 
 class MDBuilder {
   LLVMContext &Context;
@@ -149,9 +150,9 @@ public:
   struct TBAAStructField {
     uint64_t Offset;
     uint64_t Size;
-    MDNode *TBAA;
-    TBAAStructField(uint64_t Offset, uint64_t Size, MDNode *TBAA) :
-      Offset(Offset), Size(Size), TBAA(TBAA) {}
+    MDNode *Type;
+    TBAAStructField(uint64_t Offset, uint64_t Size, MDNode *Type) :
+      Offset(Offset), Size(Size), Type(Type) {}
   };
 
   /// \brief Return metadata for a tbaa.struct node with the given
@@ -173,6 +174,20 @@ public:
   /// base type, access type and offset relative to the base type.
   MDNode *createTBAAStructTagNode(MDNode *BaseType, MDNode *AccessType,
                                   uint64_t Offset, bool IsConstant = false);
+
+  /// \brief Return metadata for a TBAA type node in the TBAA type DAG with the
+  /// given parent type, size in bytes, type identifier and a list of fields.
+  MDNode *createTBAATypeNode(MDNode *Parent, uint64_t Size, Metadata *Id,
+                             ArrayRef<TBAAStructField> Fields =
+                                 ArrayRef<TBAAStructField>());
+
+  /// \brief Return metadata for a TBAA access tag with the given base type,
+  /// final access type, offset of the access relative to the base type, size of
+  /// the access and flag indicating whether the accessed object can be
+  /// considered immutable for the purposes of the TBAA analysis.
+  MDNode *createTBAAAccessTag(MDNode *BaseType, MDNode *AccessType,
+                              uint64_t Offset, uint64_t Size,
+                              bool IsImmutable = false);
 
   /// \brief Return metadata containing an irreducible loop header weight.
   MDNode *createIrrLoopHeaderWeight(uint64_t Weight);

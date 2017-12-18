@@ -1002,6 +1002,7 @@ bool LazyValueInfoImpl::solveBlockValueBinaryOp(ValueLatticeElement &BBLV,
   case Instruction::UDiv:
   case Instruction::Shl:
   case Instruction::LShr:
+  case Instruction::AShr:
   case Instruction::And:
   case Instruction::Or:
     // continue into the code below

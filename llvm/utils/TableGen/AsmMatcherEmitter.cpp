@@ -2764,7 +2764,8 @@ static void emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
   // a better error handling.
   OS << "OperandMatchResultTy " << Target.getName() << ClassName << "::\n"
      << "MatchOperandParserImpl(OperandVector"
-     << " &Operands,\n                       StringRef Mnemonic) {\n";
+     << " &Operands,\n                       StringRef Mnemonic,\n"
+     << "                       bool ParseForAllFeatures) {\n";
 
   // Emit code to get the available features.
   OS << "  // Get the current feature set.\n";
@@ -2802,10 +2803,9 @@ static void emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
 
   // Emit check that the required features are available.
   OS << "    // check if the available features match\n";
-  OS << "    if ((AvailableFeatures & it->RequiredFeatures) "
-     << "!= it->RequiredFeatures) {\n";
-  OS << "      continue;\n";
-  OS << "    }\n\n";
+  OS << "    if (!ParseForAllFeatures && (AvailableFeatures & "
+        "it->RequiredFeatures) != it->RequiredFeatures)\n";
+  OS << "        continue;\n\n";
 
   // Emit check to ensure the operand number matches.
   OS << "    // check if the operand in question has a custom parser.\n";
@@ -2993,7 +2993,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   if (!Info.OperandMatchInfo.empty()) {
     OS << "  OperandMatchResultTy MatchOperandParserImpl(\n";
     OS << "    OperandVector &Operands,\n";
-    OS << "    StringRef Mnemonic);\n";
+    OS << "    StringRef Mnemonic,\n";
+    OS << "    bool ParseForAllFeatures = false);\n";
 
     OS << "  OperandMatchResultTy tryCustomParseOperand(\n";
     OS << "    OperandVector &Operands,\n";
@@ -3269,7 +3270,9 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "  for (const MatchEntry *it = MnemonicRange.first, "
      << "*ie = MnemonicRange.second;\n";
   OS << "       it != ie; ++it) {\n";
-
+  OS << "    bool HasRequiredFeatures =\n";
+  OS << "      (AvailableFeatures & it->RequiredFeatures) == "
+        "it->RequiredFeatures;\n";
   OS << "    DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"Trying to match opcode \"\n";
   OS << "                                          << MII.getName(it->Opcode) << \"\\n\");\n";
 
@@ -3360,7 +3363,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "        }\n";
   OS << "        // If the target matcher returned a specific error code use\n";
   OS << "        // that, else use the one from the generic matcher.\n";
-  OS << "        if (TargetDiag != Match_InvalidOperand)\n";
+  OS << "        if (TargetDiag != Match_InvalidOperand && "
+        "HasRequiredFeatures)\n";
   OS << "          Diag = TargetDiag;\n";
   OS << "      }\n";
   OS << "      // If current formal operand wasn't matched and it is optional\n"
@@ -3402,7 +3406,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "      // target predicate, that diagnostic is preferred.\n";
     OS << "      if (!HadMatchOtherThanPredicate &&\n";
     OS << "          (it == MnemonicRange.first || ErrorInfo <= ActualIdx)) {\n";
-    OS << "        if (Diag != Match_InvalidOperand || ErrorInfo != ActualIdx)\n";
+    OS << "        if (HasRequiredFeatures && (ErrorInfo != ActualIdx || Diag "
+          "!= Match_InvalidOperand))\n";
     OS << "          RetCode = Diag;\n";
     OS << "        ErrorInfo = ActualIdx;\n";
     OS << "      }\n";
@@ -3423,8 +3428,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "    }\n";
 
   // Emit check that the required features are available.
-  OS << "    if ((AvailableFeatures & it->RequiredFeatures) "
-     << "!= it->RequiredFeatures) {\n";
+  OS << "    if (!HasRequiredFeatures) {\n";
   if (!ReportMultipleNearMisses)
     OS << "      HadMatchOtherThanFeatures = true;\n";
   OS << "      uint64_t NewMissingFeatures = it->RequiredFeatures & "

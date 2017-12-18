@@ -3378,12 +3378,9 @@ static void MaybeAddOverrideCalls(Sema &S, DeclContext *InContext,
       return;
 
   PrintingPolicy Policy = getCompletionPrintingPolicy(S);
-  for (CXXMethodDecl::method_iterator M = Method->begin_overridden_methods(),
-                                   MEnd = Method->end_overridden_methods();
-       M != MEnd; ++M) {
+  for (const CXXMethodDecl *Overridden : Method->overridden_methods()) {
     CodeCompletionBuilder Builder(Results.getAllocator(),
                                   Results.getCodeCompletionTUInfo());
-    const CXXMethodDecl *Overridden = *M;
     if (Overridden->getCanonicalDecl() == Method->getCanonicalDecl())
       continue;
         

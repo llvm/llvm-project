@@ -1552,6 +1552,12 @@ INTERCEPTOR(int, vsnprintf, char *str, SIZE_T size, const char *format,
             va_list ap)
 VSNPRINTF_INTERCEPTOR_IMPL(vsnprintf, str, size, format, ap)
 
+#if SANITIZER_INTERCEPT___PRINTF_CHK
+INTERCEPTOR(int, __vsnprintf_chk, char *str, SIZE_T size, int flag,
+            SIZE_T size_to, const char *format, va_list ap)
+VSNPRINTF_INTERCEPTOR_IMPL(vsnprintf, str, size, format, ap)
+#endif
+
 #if SANITIZER_INTERCEPT_PRINTF_L
 INTERCEPTOR(int, vsnprintf_l, char *str, SIZE_T size, void *loc,
             const char *format, va_list ap)
@@ -1564,6 +1570,12 @@ FORMAT_INTERCEPTOR_IMPL(snprintf_l, vsnprintf_l, str, size, loc, format)
 
 INTERCEPTOR(int, vsprintf, char *str, const char *format, va_list ap)
 VSPRINTF_INTERCEPTOR_IMPL(vsprintf, str, format, ap)
+
+#if SANITIZER_INTERCEPT___PRINTF_CHK
+INTERCEPTOR(int, __vsprintf_chk, char *str, int flag, SIZE_T size_to,
+            const char *format, va_list ap)
+VSPRINTF_INTERCEPTOR_IMPL(vsprintf, str, format, ap)
+#endif
 
 INTERCEPTOR(int, vasprintf, char **strp, const char *format, va_list ap)
 VASPRINTF_INTERCEPTOR_IMPL(vasprintf, strp, format, ap)
@@ -1593,11 +1605,29 @@ FORMAT_INTERCEPTOR_IMPL(printf, vprintf, format)
 INTERCEPTOR(int, fprintf, __sanitizer_FILE *stream, const char *format, ...)
 FORMAT_INTERCEPTOR_IMPL(fprintf, vfprintf, stream, format)
 
+#if SANITIZER_INTERCEPT___PRINTF_CHK
+INTERCEPTOR(int, __fprintf_chk, __sanitizer_FILE *stream, SIZE_T size,
+            const char *format, ...)
+FORMAT_INTERCEPTOR_IMPL(__fprintf_chk, vfprintf, stream, format)
+#endif
+
 INTERCEPTOR(int, sprintf, char *str, const char *format, ...) // NOLINT
 FORMAT_INTERCEPTOR_IMPL(sprintf, vsprintf, str, format) // NOLINT
 
+#if SANITIZER_INTERCEPT___PRINTF_CHK
+INTERCEPTOR(int, __sprintf_chk, char *str, int flag, SIZE_T size_to,
+            const char *format, ...) // NOLINT
+FORMAT_INTERCEPTOR_IMPL(__sprintf_chk, vsprintf, str, format) // NOLINT
+#endif
+
 INTERCEPTOR(int, snprintf, char *str, SIZE_T size, const char *format, ...)
 FORMAT_INTERCEPTOR_IMPL(snprintf, vsnprintf, str, size, format)
+
+#if SANITIZER_INTERCEPT___PRINTF_CHK
+INTERCEPTOR(int, __snprintf_chk, char *str, SIZE_T size, int flag,
+            SIZE_T size_to, const char *format, ...) // NOLINT
+FORMAT_INTERCEPTOR_IMPL(__snprintf_chk, vsnprintf, str, size, format) // NOLINT
+#endif
 
 INTERCEPTOR(int, asprintf, char **strp, const char *format, ...)
 FORMAT_INTERCEPTOR_IMPL(asprintf, vasprintf, strp, format)
@@ -1636,6 +1666,17 @@ FORMAT_INTERCEPTOR_IMPL(__isoc99_snprintf, __isoc99_vsnprintf, str, size,
   COMMON_INTERCEPT_FUNCTION_LDBL(vfprintf);
 #else
 #define INIT_PRINTF
+#endif
+
+#if SANITIZER_INTERCEPT___PRINTF_CHK
+#define INIT___PRINTF_CHK                     \
+  COMMON_INTERCEPT_FUNCTION(__sprintf_chk);   \
+  COMMON_INTERCEPT_FUNCTION(__snprintf_chk);  \
+  COMMON_INTERCEPT_FUNCTION(__vsprintf_chk);  \
+  COMMON_INTERCEPT_FUNCTION(__vsnprintf_chk); \
+  COMMON_INTERCEPT_FUNCTION(__fprintf_chk);
+#else
+#define INIT___PRINTF_CHK
 #endif
 
 #if SANITIZER_INTERCEPT_PRINTF_L
@@ -6560,4 +6601,6 @@ static void InitializeCommonInterceptors() {
   COMMON_INTERCEPT_FUNCTION(__libc_mutex_unlock);
   COMMON_INTERCEPT_FUNCTION(__libc_thr_setcancelstate);
 #endif
+
+  INIT___PRINTF_CHK;
 }

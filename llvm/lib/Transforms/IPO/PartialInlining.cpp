@@ -22,7 +22,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/DominanceFrontier.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -394,8 +393,6 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(Function *F) {
   BasicBlock *EntryBlock = &F->front();
 
   DominatorTree DT(*F);
-  DominanceFrontier DF;
-  DF.analyze(DT);
   LoopInfo LI(DT);
   BranchProbabilityInfo BPI(*F, LI);
   std::unique_ptr<BlockFrequencyInfo> ScopedBFI;

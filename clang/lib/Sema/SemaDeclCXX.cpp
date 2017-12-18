@@ -2748,8 +2748,7 @@ void Sema::CheckOverrideControl(NamedDecl *D) {
   //   If a function is marked with the virt-specifier override and
   //   does not override a member function of a base class, the program is
   //   ill-formed.
-  bool HasOverriddenMethods =
-    MD->begin_overridden_methods() != MD->end_overridden_methods();
+  bool HasOverriddenMethods = MD->size_overridden_methods() != 0;
   if (MD->hasAttr<OverrideAttr>() && !HasOverriddenMethods)
     Diag(MD->getLocation(), diag::err_function_marked_override_not_overriding)
       << MD->getDeclName();
@@ -7424,10 +7423,8 @@ private:
       const llvm::SmallPtrSetImpl<const CXXMethodDecl *> &Methods) {
     if (MD->size_overridden_methods() == 0)
       return Methods.count(MD->getCanonicalDecl());
-    for (CXXMethodDecl::method_iterator I = MD->begin_overridden_methods(),
-                                        E = MD->end_overridden_methods();
-         I != E; ++I)
-      if (CheckMostOverridenMethods(*I, Methods))
+    for (const CXXMethodDecl *O : MD->overridden_methods())
+      if (CheckMostOverridenMethods(O, Methods))
         return true;
     return false;
   }
@@ -7485,10 +7482,9 @@ static void AddMostOverridenMethods(const CXXMethodDecl *MD,
                         llvm::SmallPtrSetImpl<const CXXMethodDecl *>& Methods) {
   if (MD->size_overridden_methods() == 0)
     Methods.insert(MD->getCanonicalDecl());
-  for (CXXMethodDecl::method_iterator I = MD->begin_overridden_methods(),
-                                      E = MD->end_overridden_methods();
-       I != E; ++I)
-    AddMostOverridenMethods(*I, Methods);
+  else
+    for (const CXXMethodDecl *O : MD->overridden_methods())
+      AddMostOverridenMethods(O, Methods);
 }
 
 /// \brief Check if a method overloads virtual methods in a base class without
@@ -14062,15 +14058,13 @@ void Sema::SetDeclDeleted(Decl *Dcl, SourceLocation DelLoc) {
   // non-deleted virtual function.
   if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(Fn)) {
     bool IssuedDiagnostic = false;
-    for (CXXMethodDecl::method_iterator I = MD->begin_overridden_methods(),
-                                        E = MD->end_overridden_methods();
-         I != E; ++I) {
+    for (const CXXMethodDecl *O : MD->overridden_methods()) {
       if (!(*MD->begin_overridden_methods())->isDeleted()) {
         if (!IssuedDiagnostic) {
           Diag(DelLoc, diag::err_deleted_override) << MD->getDeclName();
           IssuedDiagnostic = true;
         }
-        Diag((*I)->getLocation(), diag::note_overridden_virtual_function);
+        Diag(O->getLocation(), diag::note_overridden_virtual_function);
       }
     }
     // If this function was implicitly deleted because it was defaulted,
@@ -14981,10 +14975,8 @@ void Sema::actOnDelayedExceptionSpecification(Decl *MethodD,
 
   if (Method->isVirtual()) {
     // Check overrides, which we previously had to delay.
-    for (CXXMethodDecl::method_iterator O = Method->begin_overridden_methods(),
-                                     OEnd = Method->end_overridden_methods();
-         O != OEnd; ++O)
-      CheckOverridingFunctionExceptionSpec(Method, *O);
+    for (const CXXMethodDecl *O : Method->overridden_methods())
+      CheckOverridingFunctionExceptionSpec(Method, O);
   }
 }
 

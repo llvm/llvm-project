@@ -42,4 +42,4 @@ if.end7:
   ret i32 %mul
 }
 ; USE: ![[BW_ENTRY]] = !{!"branch_weights", i32 21, i32 0}
-; USE: ![[BW_IF]] = !{!"branch_weights", i32 0, i32 20}
+; USE: ![[BW_IF]] = !{!"branch_weights", i32 0, i32 21}

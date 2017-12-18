@@ -3,7 +3,7 @@
 
 # CHECK: Position operand is out of range!
 
-# Check that the machine verifier checks the position operand is in range 0..31
+# Check that the machine verifier checks the position operand is in the range 0..31
 ---
 name:            dinsm
 alignment:       3

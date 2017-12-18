@@ -306,7 +306,7 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
     // Create the struct type node with a vector of pairs (offset, type).
     SmallVector<std::pair<llvm::MDNode*, uint64_t>, 4> OffsetsAndTypes;
     for (const auto &Field : Fields)
-        OffsetsAndTypes.push_back(std::make_pair(Field.TBAA, Field.Offset));
+        OffsetsAndTypes.push_back(std::make_pair(Field.Type, Field.Offset));
     return MDHelper.createTBAAStructTypeNode(OutName, OffsetsAndTypes);
   }
 

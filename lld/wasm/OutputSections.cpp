@@ -108,8 +108,7 @@ static void applyRelocation(uint8_t *Buf, const OutputRelocation &Reloc) {
   }
 }
 
-static void applyRelocations(uint8_t *Buf,
-                             ArrayRef<OutputRelocation> Relocs) {
+static void applyRelocations(uint8_t *Buf, ArrayRef<OutputRelocation> Relocs) {
   log("applyRelocations: count=" + Twine(Relocs.size()));
   for (const OutputRelocation &Reloc : Relocs) {
     applyRelocation(Buf, Reloc);

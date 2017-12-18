@@ -680,6 +680,8 @@ ConstantRange ConstantRange::binaryOp(Instruction::BinaryOps BinOp,
     return shl(Other);
   case Instruction::LShr:
     return lshr(Other);
+  case Instruction::AShr:
+    return ashr(Other);
   case Instruction::And:
     return binaryAnd(Other);
   case Instruction::Or:
@@ -940,6 +942,60 @@ ConstantRange::lshr(const ConstantRange &Other) const {
 
   APInt max = getUnsignedMax().lshr(Other.getUnsignedMin()) + 1;
   APInt min = getUnsignedMin().lshr(Other.getUnsignedMax());
+  if (min == max)
+    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
+
+  return ConstantRange(std::move(min), std::move(max));
+}
+
+ConstantRange
+ConstantRange::ashr(const ConstantRange &Other) const {
+  if (isEmptySet() || Other.isEmptySet())
+    return ConstantRange(getBitWidth(), /*isFullSet=*/false);
+
+  // May straddle zero, so handle both positive and negative cases.
+  // 'PosMax' is the upper bound of the result of the ashr
+  // operation, when Upper of the LHS of ashr is a non-negative.
+  // number. Since ashr of a non-negative number will result in a
+  // smaller number, the Upper value of LHS is shifted right with
+  // the minimum value of 'Other' instead of the maximum value.
+  APInt PosMax = getSignedMax().ashr(Other.getUnsignedMin()) + 1;
+
+  // 'PosMin' is the lower bound of the result of the ashr
+  // operation, when Lower of the LHS is a non-negative number.
+  // Since ashr of a non-negative number will result in a smaller
+  // number, the Lower value of LHS is shifted right with the
+  // maximum value of 'Other'.
+  APInt PosMin = getSignedMin().ashr(Other.getUnsignedMax());
+
+  // 'NegMax' is the upper bound of the result of the ashr
+  // operation, when Upper of the LHS of ashr is a negative number.
+  // Since 'ashr' of a negative number will result in a bigger
+  // number, the Upper value of LHS is shifted right with the
+  // maximum value of 'Other'.
+  APInt NegMax = getSignedMax().ashr(Other.getUnsignedMax()) + 1;
+
+  // 'NegMin' is the lower bound of the result of the ashr
+  // operation, when Lower of the LHS of ashr is a negative number.
+  // Since 'ashr' of a negative number will result in a bigger
+  // number, the Lower value of LHS is shifted right with the
+  // minimum value of 'Other'.
+  APInt NegMin = getSignedMin().ashr(Other.getUnsignedMin());
+
+  APInt max, min;
+  if (getSignedMin().isNonNegative()) {
+    // Upper and Lower of LHS are non-negative.
+    min = PosMin;
+    max = PosMax;
+  } else if (getSignedMax().isNegative()) {
+    // Upper and Lower of LHS are negative.
+    min = NegMin;
+    max = NegMax;
+  } else {
+    // Upper is non-negative and Lower is negative.
+    min = NegMin;
+    max = PosMax;
+  }
   if (min == max)
     return ConstantRange(getBitWidth(), /*isFullSet=*/true);
 

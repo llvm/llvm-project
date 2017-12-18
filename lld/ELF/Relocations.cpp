@@ -846,7 +846,7 @@ template <class ELFT> static void addGotEntry(Symbol &Sym, bool Preemptible) {
   //
   // This is ugly -- the difference between REL and RELA should be
   // handled in a better way. It's a TODO.
-  if (!Config->IsRela)
+  if (!Config->IsRela && !Preemptible)
     InX::Got->Relocations.push_back({R_ABS, Target->GotRel, Off, 0, &Sym});
 }
 

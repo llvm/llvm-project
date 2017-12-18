@@ -538,15 +538,19 @@ bool MipsInstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
 }
 
 // ins, ext, dext*, dins have the following constraints:
-// 0 <= pos      <  X
-// 0 <  size     <= X
-// 0 <  pos+size <= x
+// X <= pos      <  Y
+// X <  size     <= Y
+// X <  pos+size <= Y
 //
-// dinsm and dinsm have the following contraints:
-// 0 <= pos      <  X
-// 0 <= size     <= X
-// 0 <  pos+size <= x
-
+// dinsm and dinsu have the following constraints:
+// X <= pos      <  Y
+// X <= size     <= Y
+// X <  pos+size <= Y
+//
+// The callee of verifyInsExtInstruction however gives the bounds of
+// dins[um] like the other (d)ins (d)ext(um) instructions, so that this
+// function doesn't have to vary it's behaviour based on the instruction
+// being checked.
 static bool verifyInsExtInstruction(const MachineInstr &MI, StringRef &ErrInfo,
                                     const int64_t PosLow, const int64_t PosHigh,
                                     const int64_t SizeLow,
@@ -595,15 +599,18 @@ bool MipsInstrInfo::verifyInstruction(const MachineInstr &MI,
     case Mips::DINS:
       return verifyInsExtInstruction(MI, ErrInfo, 0, 32, 0, 32, 0, 32);
     case Mips::DINSM:
-      // The ISA spec has a subtle difference here in that it says:
-      //  2 <= size <= 64 for 'dinsm', so we change the bounds so that it
-      // is in line with the rest of instructions.
+      // The ISA spec has a subtle difference difference between dinsm and dextm
+      // in that it says:
+      // 2 <= size <= 64 for 'dinsm' but 'dextm' has 32 < size <= 64.
+      // To make the bounds checks similar, the range 1 < size <= 64 is checked
+      // for 'dinsm'.
       return verifyInsExtInstruction(MI, ErrInfo, 0, 32, 1, 64, 32, 64);
     case Mips::DINSU:
-      // The ISA spec has a subtle difference here in that it says:
-      //  2 <= size <= 64 for 'dinsm', so we change the bounds so that it
-      // is in line with the rest of instructions.
-      return verifyInsExtInstruction(MI, ErrInfo, 32, 64, 1, 32, 32, 64);
+      // The ISA spec has a subtle difference between dinsu and dextu in that
+      // the size range of dinsu is specified as 1 <= size <= 32 whereas size
+      // for dextu is 0 < size <= 32. The range checked for dinsu here is
+      // 0 < size <= 32, which is equivalent and similar to dextu.
+      return verifyInsExtInstruction(MI, ErrInfo, 32, 64, 0, 32, 32, 64);
     case Mips::DEXT:
       return verifyInsExtInstruction(MI, ErrInfo, 0, 32, 0, 32, 0, 63);
     case Mips::DEXTM:

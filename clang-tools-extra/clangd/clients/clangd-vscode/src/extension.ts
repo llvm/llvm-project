@@ -22,11 +22,11 @@ export function activate(context: vscode.ExtensionContext) {
 
     const serverOptions: vscodelc.ServerOptions = { command: clangdPath, args: clangdArgs };
 
-    const cppFileExtensions: string[] = ['cpp', 'c', 'cc', 'cxx', 'c++', 'm', 'mm', 'h', 'hh', 'hpp', 'hxx', 'inc'];
-    const cppFileExtensionsPattern = cppFileExtensions.join();
+    const filePattern: string = '**/*.{' +
+      ['cpp', 'c', 'cc', 'cxx', 'c++', 'm', 'mm', 'h', 'hh', 'hpp', 'hxx', 'inc'].join() + '}';
     const clientOptions: vscodelc.LanguageClientOptions = {
         // Register the server for C/C++ files
-        documentSelector: cppFileExtensions,
+        documentSelector: [{scheme: 'file', pattern: filePattern}],
         uriConverters: {
             // FIXME: by default the URI sent over the protocol will be percent encoded (see rfc3986#section-2.1)
             //        the "workaround" below disables temporarily the encoding until decoding
@@ -35,7 +35,7 @@ export function activate(context: vscode.ExtensionContext) {
             protocol2Code: (uri: string) : vscode.Uri => vscode.Uri.parse(uri)
         },
         synchronize: !syncFileEvents ? undefined : {
-            fileEvents: vscode.workspace.createFileSystemWatcher('**/*.{' + cppFileExtensionsPattern + '}')
+            fileEvents: vscode.workspace.createFileSystemWatcher(filePattern)
         }
     };
 
