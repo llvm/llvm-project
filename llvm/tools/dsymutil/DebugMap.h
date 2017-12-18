@@ -232,7 +232,7 @@ template <> struct MappingTraits<dsymutil::DebugMapObject> {
 template <> struct ScalarTraits<Triple> {
   static void output(const Triple &val, void *, raw_ostream &out);
   static StringRef input(StringRef scalar, void *, Triple &value);
-  static bool mustQuote(StringRef) { return true; }
+  static QuotingType mustQuote(StringRef) { return QuotingType::Single; }
 };
 
 template <>

@@ -3,7 +3,7 @@
 
 # CHECK: Size operand is out of range!
 
-# Check that the machine verifier checks the size operand is in range 2..64
+# Check that the machine verifier checks the size operand is in the range 2..64
 ---
 name:            dinsm
 alignment:       3

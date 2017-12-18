@@ -74,9 +74,13 @@ static cl::opt<std::string> UseCoverageFile(
     cl::desc("Specify file to retrieve coverage information from"),
     cl::cat(GlobalISelEmitterCat));
 
+static cl::opt<bool> OptimizeMatchTable(
+    "optimize-match-table",
+    cl::desc("Generate an optimized version of the match table"),
+    cl::init(true), cl::cat(GlobalISelEmitterCat));
+
 namespace {
 //===- Helper functions ---------------------------------------------------===//
-
 
 /// Get the name of the enum value used to number the predicate function.
 std::string getEnumNameForPredicate(const TreePredicateFn &Predicate) {
@@ -563,9 +567,48 @@ MatchTable &operator<<(MatchTable &Table, const MatchTableRecord &Value) {
 
 class OperandMatcher;
 class MatchAction;
+class PredicateMatcher;
+class RuleMatcher;
+
+class Matcher {
+public:
+  virtual ~Matcher() = default;
+  virtual void emit(MatchTable &Table) = 0;
+  virtual std::unique_ptr<PredicateMatcher> forgetFirstCondition() = 0;
+};
+
+class GroupMatcher : public Matcher {
+  SmallVector<std::unique_ptr<PredicateMatcher>, 8> Conditions;
+  SmallVector<Matcher *, 8> Rules;
+
+public:
+  void addCondition(std::unique_ptr<PredicateMatcher> &&Predicate) {
+    Conditions.emplace_back(std::move(Predicate));
+  }
+  void addRule(Matcher &Rule) { Rules.push_back(&Rule); }
+  const std::unique_ptr<PredicateMatcher> &conditions_back() const {
+    return Conditions.back();
+  }
+  bool lastConditionMatches(const PredicateMatcher &Predicate) const;
+  bool conditions_empty() const { return Conditions.empty(); }
+  void clear() {
+    Conditions.clear();
+    Rules.clear();
+  }
+  void emit(MatchTable &Table) override;
+
+  std::unique_ptr<PredicateMatcher> forgetFirstCondition() override {
+    // We shouldn't need to mess up with groups, since we
+    // should have merged everything shareable upfront.
+    // If we start to look into reordering predicates,
+    // we may want to reconsider this.
+    assert(0 && "Groups should be formed maximal for now");
+    llvm_unreachable("No need for this for now");
+  }
+};
 
 /// Generates code to check that a match rule matches.
-class RuleMatcher {
+class RuleMatcher : public Matcher {
 public:
   using ActionVec = std::vector<std::unique_ptr<MatchAction>>;
   using action_iterator = ActionVec::iterator;
@@ -705,7 +748,7 @@ public:
 
   void emitCaptureOpcodes(MatchTable &Table);
 
-  void emit(MatchTable &Table);
+  void emit(MatchTable &Table) override;
 
   /// Compare the priority of this object and B.
   ///
@@ -716,11 +759,16 @@ public:
   /// matcher.
   unsigned countRendererFns() const;
 
+  std::unique_ptr<PredicateMatcher> forgetFirstCondition() override;
+
   // FIXME: Remove this as soon as possible
-  InstructionMatcher &insnmatcher_front() const { return *Matchers.front(); }
+  InstructionMatcher &insnmatchers_front() const { return *Matchers.front(); }
 
   unsigned allocateOutputInsnID() { return NextOutputInsnID++; }
   unsigned allocateTempRegID() { return NextTempRegID++; }
+
+  bool insnmatchers_empty() const { return Matchers.empty(); }
+  void insnmatchers_pop_front() { Matchers.erase(Matchers.begin()); }
 };
 
 uint64_t RuleMatcher::NextRuleID = 0;
@@ -756,6 +804,13 @@ public:
   }
   typename PredicateVec::size_type predicates_size() const {
     return Predicates.size();
+  }
+  bool predicates_empty() const { return Predicates.empty(); }
+
+  std::unique_ptr<PredicateTy> predicates_pop_front() {
+    std::unique_ptr<PredicateTy> Front = std::move(Predicates.front());
+    Predicates.erase(Predicates.begin());
+    return Front;
   }
 
   /// Emit MatchTable opcodes that tests whether all the predicates are met.
@@ -876,7 +931,7 @@ class SameOperandMatcher : public OperandPredicateMatcher {
   std::string MatchingName;
 
 public:
-  SameOperandMatcher(StringRef MatchingName, unsigned InsnVarID, unsigned OpIdx)
+  SameOperandMatcher(unsigned InsnVarID, unsigned OpIdx, StringRef MatchingName)
       : OperandPredicateMatcher(OPM_SameOperand, InsnVarID, OpIdx),
         MatchingName(MatchingName) {}
 
@@ -896,7 +951,7 @@ protected:
 public:
   static std::set<LLTCodeGen> KnownTypes;
 
-  LLTOperandMatcher(const LLTCodeGen &Ty, unsigned InsnVarID, unsigned OpIdx)
+  LLTOperandMatcher(unsigned InsnVarID, unsigned OpIdx, const LLTCodeGen &Ty)
       : OperandPredicateMatcher(OPM_LLT, InsnVarID, OpIdx), Ty(Ty) {
     KnownTypes.insert(Ty);
   }
@@ -936,8 +991,8 @@ protected:
   unsigned SizeInBits;
 
 public:
-  PointerToAnyOperandMatcher(unsigned SizeInBits, unsigned InsnVarID,
-                             unsigned OpIdx)
+  PointerToAnyOperandMatcher(unsigned InsnVarID, unsigned OpIdx,
+                             unsigned SizeInBits)
       : OperandPredicateMatcher(OPM_PointerToAny, InsnVarID, OpIdx),
         SizeInBits(SizeInBits) {}
 
@@ -966,9 +1021,9 @@ protected:
 public:
   bool isIdentical(const PredicateMatcher &B) const override { return false; }
 
-  ComplexPatternOperandMatcher(const OperandMatcher &Operand,
-                               const Record &TheDef, unsigned InsnVarID,
-                               unsigned OpIdx)
+  ComplexPatternOperandMatcher(unsigned InsnVarID, unsigned OpIdx,
+                               const OperandMatcher &Operand,
+                               const Record &TheDef)
       : OperandPredicateMatcher(OPM_ComplexPattern, InsnVarID, OpIdx),
         Operand(Operand), TheDef(TheDef) {}
 
@@ -998,8 +1053,8 @@ protected:
   const CodeGenRegisterClass &RC;
 
 public:
-  RegisterBankOperandMatcher(const CodeGenRegisterClass &RC, unsigned InsnVarID,
-                             unsigned OpIdx)
+  RegisterBankOperandMatcher(unsigned InsnVarID, unsigned OpIdx,
+                             const CodeGenRegisterClass &RC)
       : OperandPredicateMatcher(OPM_RegBank, InsnVarID, OpIdx), RC(RC) {}
 
   bool isIdentical(const PredicateMatcher &B) const override {
@@ -1047,7 +1102,7 @@ protected:
   int64_t Value;
 
 public:
-  ConstantIntOperandMatcher(int64_t Value, unsigned InsnVarID, unsigned OpIdx)
+  ConstantIntOperandMatcher(unsigned InsnVarID, unsigned OpIdx, int64_t Value)
       : OperandPredicateMatcher(OPM_Int, InsnVarID, OpIdx), Value(Value) {}
 
   bool isIdentical(const PredicateMatcher &B) const override {
@@ -1075,7 +1130,7 @@ protected:
   int64_t Value;
 
 public:
-  LiteralIntOperandMatcher(int64_t Value, unsigned InsnVarID, unsigned OpIdx)
+  LiteralIntOperandMatcher(unsigned InsnVarID, unsigned OpIdx, int64_t Value)
       : OperandPredicateMatcher(OPM_LiteralInt, InsnVarID, OpIdx),
         Value(Value) {}
 
@@ -1103,8 +1158,8 @@ protected:
   const CodeGenIntrinsic *II;
 
 public:
-  IntrinsicIDOperandMatcher(const CodeGenIntrinsic *II, unsigned InsnVarID,
-                            unsigned OpIdx)
+  IntrinsicIDOperandMatcher(unsigned InsnVarID, unsigned OpIdx,
+                            const CodeGenIntrinsic *II)
       : OperandPredicateMatcher(OPM_IntrinsicID, InsnVarID, OpIdx), II(II) {}
 
   bool isIdentical(const PredicateMatcher &B) const override {
@@ -1239,9 +1294,9 @@ PredicateListMatcher<OperandPredicateMatcher>::addPredicate(Args &&... args) {
   auto *OpMatcher = static_cast<OperandMatcher *>(this);
   if (static_cast<OperandMatcher *>(this)->isSameAsAnotherOperand())
     return None;
-  Predicates.emplace_back(llvm::make_unique<Kind>(
-      std::forward<Args>(args)..., OpMatcher->getInsnVarID(),
-      OpMatcher->getOperandIndex()));
+  Predicates.emplace_back(llvm::make_unique<Kind>(OpMatcher->getInsnVarID(),
+                                                  OpMatcher->getOperandIndex(),
+                                                  std::forward<Args>(args)...));
   return static_cast<Kind *>(Predicates.back().get());
 }
 
@@ -1513,6 +1568,9 @@ public:
   iterator_range<OperandVec::const_iterator> operands() const {
     return make_range(operands_begin(), operands_end());
   }
+  bool operands_empty() const { return Operands.empty(); }
+
+  void pop_front() { Operands.erase(Operands.begin()); }
 
   /// Emit MatchTable opcodes to check the shape of the match and capture
   /// instructions into the MIs table.
@@ -1610,8 +1668,8 @@ protected:
   std::unique_ptr<InstructionMatcher> InsnMatcher;
 
 public:
-  InstructionOperandMatcher(RuleMatcher &Rule, StringRef SymbolicName,
-                            unsigned InsnVarID, unsigned OpIdx)
+  InstructionOperandMatcher(unsigned InsnVarID, unsigned OpIdx,
+                            RuleMatcher &Rule, StringRef SymbolicName)
       : OperandPredicateMatcher(OPM_Instruction, InsnVarID, OpIdx),
         InsnMatcher(new InstructionMatcher(Rule, SymbolicName)) {}
 
@@ -2535,6 +2593,40 @@ private:
 
   TreePatternNode *fixupPatternNode(TreePatternNode *N);
   void fixupPatternTrees(TreePattern *P);
+
+  /// Takes a sequence of \p Rules and group them based on the predicates
+  /// they share. \p StorageGroupMatcher is used as a memory container
+  /// for the the group that are created as part of this process.
+  /// The optimization process does not change the relative order of
+  /// the rules. In particular, we don't try to share predicates if
+  /// that means reordering the rules (e.g., we won't group R1 and R3
+  /// in the following example as it would imply reordering R2 and R3
+  /// => R1 p1, R2 p2, R3 p1).
+  ///
+  /// What this optimization does looks like:
+  /// Output without optimization:
+  /// \verbatim
+  /// # R1
+  ///  # predicate A
+  ///  # predicate B
+  ///  ...
+  /// # R2
+  ///  # predicate A // <-- effectively this is going to be checked twice.
+  ///                //     Once in R1 and once in R2.
+  ///  # predicate C
+  /// \endverbatim
+  /// Output with optimization:
+  /// \verbatim
+  /// # Group1_2
+  ///  # predicate A // <-- Check is now shared.
+  ///  # R1
+  ///   # predicate B
+  ///  # R2
+  ///   # predicate C
+  /// \endverbatim
+  std::vector<Matcher *> optimizeRules(
+      const std::vector<Matcher *> &Rules,
+      std::vector<std::unique_ptr<GroupMatcher>> &StorageGroupMatcher);
 };
 
 void GlobalISelEmitter::gatherNodeEquivs() {
@@ -3469,6 +3561,38 @@ void GlobalISelEmitter::emitImmPredicates(
   OS << "};\n";
 }
 
+std::vector<Matcher *> GlobalISelEmitter::optimizeRules(
+    const std::vector<Matcher *> &Rules,
+    std::vector<std::unique_ptr<GroupMatcher>> &StorageGroupMatcher) {
+  std::vector<Matcher *> OptRules;
+  // Start with a stupid grouping for now.
+  std::unique_ptr<GroupMatcher> CurrentGroup = make_unique<GroupMatcher>();
+  assert(CurrentGroup->conditions_empty());
+  unsigned NbGroup = 0;
+  for (Matcher *Rule : Rules) {
+    std::unique_ptr<PredicateMatcher> Predicate = Rule->forgetFirstCondition();
+    if (!CurrentGroup->conditions_empty() &&
+        !CurrentGroup->lastConditionMatches(*Predicate)) {
+      // Start a new group.
+      ++NbGroup;
+      OptRules.push_back(CurrentGroup.get());
+      StorageGroupMatcher.emplace_back(std::move(CurrentGroup));
+      CurrentGroup = make_unique<GroupMatcher>();
+      assert(CurrentGroup->conditions_empty());
+    }
+    if (CurrentGroup->conditions_empty())
+      CurrentGroup->addCondition(std::move(Predicate));
+    CurrentGroup->addRule(*Rule);
+  }
+  if (!CurrentGroup->conditions_empty()) {
+    ++NbGroup;
+    OptRules.push_back(CurrentGroup.get());
+    StorageGroupMatcher.emplace_back(std::move(CurrentGroup));
+  }
+  DEBUG(dbgs() << "NbGroup: " << NbGroup << "\n");
+  return OptRules;
+}
+
 void GlobalISelEmitter::run(raw_ostream &OS) {
   if (!UseCoverageFile.empty()) {
     RuleCoverage = CodeGenCoverage();
@@ -3518,17 +3642,6 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
     }
     Rules.push_back(std::move(MatcherOrErr.get()));
   }
-
-  std::stable_sort(Rules.begin(), Rules.end(),
-            [&](const RuleMatcher &A, const RuleMatcher &B) {
-              if (A.isHigherPriorityThan(B)) {
-                assert(!B.isHigherPriorityThan(A) && "Cannot be more important "
-                                                     "and less important at "
-                                                     "the same time");
-                return true;
-              }
-              return false;
-            });
 
   std::vector<Record *> ComplexPredicates =
       RK.getAllDerivedDefinitions("GIComplexOperandMatcher");
@@ -3708,9 +3821,29 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
      << "  State.MIs.clear();\n"
      << "  State.MIs.push_back(&I);\n\n";
 
+  std::stable_sort(Rules.begin(), Rules.end(), [&](const RuleMatcher &A,
+                                                   const RuleMatcher &B) {
+    if (A.isHigherPriorityThan(B)) {
+      assert(!B.isHigherPriorityThan(A) && "Cannot be more important "
+                                           "and less important at "
+                                           "the same time");
+      return true;
+    }
+    return false;
+  });
+  std::vector<std::unique_ptr<GroupMatcher>> StorageGroupMatcher;
+
+  std::vector<Matcher *> InputRules;
+  for (Matcher &Rule : Rules)
+    InputRules.push_back(&Rule);
+
+  std::vector<Matcher *> OptRules =
+      OptimizeMatchTable ? optimizeRules(InputRules, StorageGroupMatcher)
+                         : InputRules;
+
   MatchTable Table(0);
-  for (auto &Rule : Rules) {
-    Rule.emit(Table);
+  for (Matcher *Rule : OptRules) {
+    Rule->emit(Table);
     ++NumPatternEmitted;
   }
   Table << MatchTable::Opcode("GIM_Reject") << MatchTable::LineBreak;
@@ -3824,6 +3957,61 @@ void GlobalISelEmitter::fixupPatternTrees(TreePattern *P) {
     TreePatternNode *NewTree = fixupPatternNode(OrigTree);
     if (OrigTree != NewTree)
       P->setTree(I, NewTree);
+  }
+}
+
+std::unique_ptr<PredicateMatcher> RuleMatcher::forgetFirstCondition() {
+  assert(!insnmatchers_empty() &&
+         "Trying to forget something that does not exist");
+
+  InstructionMatcher &Matcher = insnmatchers_front();
+  std::unique_ptr<PredicateMatcher> Condition;
+  if (!Matcher.predicates_empty())
+    Condition = Matcher.predicates_pop_front();
+  if (!Condition) {
+    // If there is no more predicate on the instruction itself, look at its
+    // operands.
+    assert(!Matcher.operands_empty() &&
+           "Empty instruction should have been discarded");
+    OperandMatcher &OpMatcher = **Matcher.operands_begin();
+    assert(!OpMatcher.predicates_empty() && "no operand constraint");
+    Condition = OpMatcher.predicates_pop_front();
+    // If this operand is free of constraints, rip it off.
+    if (OpMatcher.predicates_empty())
+      Matcher.pop_front();
+  }
+  // Rip the instruction off when it is empty.
+  if (Matcher.operands_empty() && Matcher.predicates_empty())
+    insnmatchers_pop_front();
+  return Condition;
+}
+
+bool GroupMatcher::lastConditionMatches(
+    const PredicateMatcher &Predicate) const {
+  const auto &LastCondition = conditions_back();
+  return Predicate.isIdentical(*LastCondition);
+}
+
+void GroupMatcher::emit(MatchTable &Table) {
+  unsigned LabelID = Table.allocateLabelID();
+  if (!conditions_empty()) {
+    Table << MatchTable::Opcode("GIM_Try", +1)
+          << MatchTable::Comment("On fail goto")
+          << MatchTable::JumpTarget(LabelID) << MatchTable::LineBreak;
+    for (auto &Condition : Conditions)
+      Condition->emitPredicateOpcodes(
+          Table, *static_cast<RuleMatcher *>(*Rules.begin()));
+  }
+  // Emit the conditions.
+  // Then checks apply the rules.
+  for (const auto &Rule : Rules)
+    Rule->emit(Table);
+  // If we don't succeeded for that block, that means we are not going to select
+  // this instruction.
+  if (!conditions_empty()) {
+    Table << MatchTable::Opcode("GIM_Reject") << MatchTable::LineBreak;
+    Table << MatchTable::Opcode("GIR_Done", -1) << MatchTable::LineBreak
+          << MatchTable::Label(LabelID);
   }
 }
 

@@ -412,46 +412,20 @@ void NativeProcessLinux::MonitorCallback(lldb::pid_t pid, bool exited,
 
   // Handle when the thread exits.
   if (exited) {
-    LLDB_LOG(log, "got exit signal({0}) , tid = {1} ({2} main thread)", signal,
-             pid, is_main_thread ? "is" : "is not");
+    LLDB_LOG(log,
+             "got exit signal({0}) , tid = {1} ({2} main thread), process "
+             "state = {3}",
+             signal, pid, is_main_thread ? "is" : "is not", GetState());
 
     // This is a thread that exited.  Ensure we're not tracking it anymore.
-    const bool thread_found = StopTrackingThread(pid);
+    StopTrackingThread(pid);
 
     if (is_main_thread) {
-      // We only set the exit status and notify the delegate if we haven't
-      // already set the process
-      // state to an exited state.  We normally should have received a SIGTRAP |
-      // (PTRACE_EVENT_EXIT << 8)
-      // for the main thread.
-      const bool already_notified = (GetState() == StateType::eStateExited) ||
-                                    (GetState() == StateType::eStateCrashed);
-      if (!already_notified) {
-        LLDB_LOG(
-            log,
-            "tid = {0} handling main thread exit ({1}), expected exit state "
-            "already set but state was {2} instead, setting exit state now",
-            pid,
-            thread_found ? "stopped tracking thread metadata"
-                         : "thread metadata not found",
-            GetState());
-        // The main thread exited.  We're done monitoring.  Report to delegate.
-        SetExitStatus(status, true);
+      // The main thread exited.  We're done monitoring.  Report to delegate.
+      SetExitStatus(status, true);
 
-        // Notify delegate that our process has exited.
-        SetState(StateType::eStateExited, true);
-      } else
-        LLDB_LOG(log, "tid = {0} main thread now exited (%s)", pid,
-                 thread_found ? "stopped tracking thread metadata"
-                              : "thread metadata not found");
-    } else {
-      // Do we want to report to the delegate in this case?  I think not.  If
-      // this was an orderly thread exit, we would already have received the
-      // SIGTRAP | (PTRACE_EVENT_EXIT << 8) signal, and we would have done an
-      // all-stop then.
-      LLDB_LOG(log, "tid = {0} handling non-main thread exit (%s)", pid,
-               thread_found ? "stopped tracking thread metadata"
-                            : "thread metadata not found");
+      // Notify delegate that our process has exited.
+      SetState(StateType::eStateExited, true);
     }
     return;
   }
@@ -662,10 +636,8 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
   case (SIGTRAP | (PTRACE_EVENT_EXIT << 8)): {
     // The inferior process or one of its threads is about to exit.
     // We don't want to do anything with the thread so we just resume it. In
-    // case we
-    // want to implement "break on thread exit" functionality, we would need to
-    // stop
-    // here.
+    // case we want to implement "break on thread exit" functionality, we would
+    // need to stop here.
 
     unsigned long data = 0;
     if (GetEventMessage(thread.GetID(), &data).Fail())
@@ -677,18 +649,14 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
              data, WIFEXITED(data), WIFSIGNALED(data), thread.GetID(),
              is_main_thread);
 
-    if (is_main_thread)
-      SetExitStatus(WaitStatus::Decode(data), true);
 
     StateType state = thread.GetState();
     if (!StateIsRunningState(state)) {
       // Due to a kernel bug, we may sometimes get this stop after the inferior
-      // gets a
-      // SIGKILL. This confuses our state tracking logic in ResumeThread(),
-      // since normally,
-      // we should not be receiving any ptrace events while the inferior is
-      // stopped. This
-      // makes sure that the inferior is resumed and exits normally.
+      // gets a SIGKILL. This confuses our state tracking logic in
+      // ResumeThread(), since normally, we should not be receiving any ptrace
+      // events while the inferior is stopped. This makes sure that the inferior
+      // is resumed and exits normally.
       state = eStateRunning;
     }
     ResumeThread(thread, state, LLDB_INVALID_SIGNAL_NUMBER);

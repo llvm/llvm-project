@@ -61,6 +61,12 @@ def FeatureZCRegMove : SubtargetFeature<"zcm", "HasZeroCycleRegMove", "true",
 def FeatureZCZeroing : SubtargetFeature<"zcz", "HasZeroCycleZeroing", "true",
                                         "Has zero-cycle zeroing instructions">;
 
+/// ... but the floating-point version doesn't quite work in rare cases on older
+/// CPUs.
+def FeatureZCZeroingFPWorkaround : SubtargetFeature<"zcz-fp-workaround",
+    "HasZeroCycleZeroingFPWorkaround", "true",
+    "The zero-cycle floating-point zeroing instruction has a bug">;
+
 def FeatureStrictAlign : SubtargetFeature<"strict-align",
                                           "StrictAlign", "true",
                                           "Disallow all unaligned memory "
@@ -290,7 +296,8 @@ def ProcCyclone : SubtargetFeature<"cyclone", "ARMProcFamily", "Cyclone",
                                    FeaturePerfMon,
                                    FeatureSlowMisaligned128Store,
                                    FeatureZCRegMove,
-                                   FeatureZCZeroing
+                                   FeatureZCZeroing,
+                                   FeatureZCZeroingFPWorkaround
                                    ]>;
 
 def ProcExynosM1 : SubtargetFeature<"exynosm1", "ARMProcFamily", "ExynosM1",

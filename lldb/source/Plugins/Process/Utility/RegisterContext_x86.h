@@ -355,12 +355,9 @@ struct LLVM_ALIGNAS(64) XSAVE {
 LLVM_PACKED_END
 
 // Floating-point registers
-struct FPR {
-  // Thread state for the floating-point unit of the processor read by ptrace.
-  union XSTATE {
-    FXSAVE fxsave; // Generic floating-point registers.
-    XSAVE xsave;   // x86 extended processor state.
-  } xstate;
+union FPR {
+  FXSAVE fxsave; // Generic floating-point registers.
+  XSAVE xsave;   // x86 extended processor state.
 };
 
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();

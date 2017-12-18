@@ -58,7 +58,7 @@ ArrayRef<uint8_t> toDebugT(ArrayRef<LeafRecord>, BumpPtrAllocator &Alloc);
 
 } // end namespace llvm
 
-LLVM_YAML_DECLARE_SCALAR_TRAITS(codeview::GUID, true)
+LLVM_YAML_DECLARE_SCALAR_TRAITS(codeview::GUID, QuotingType::Single)
 
 LLVM_YAML_DECLARE_MAPPING_TRAITS(CodeViewYAML::LeafRecord)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(CodeViewYAML::MemberRecord)

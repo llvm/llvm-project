@@ -1,17 +1,17 @@
-; RUN: opt < %s -mtriple=i686-unknown-linux-gnu -mcpu=pentium4 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X86 -check-prefix=SSE2
-; RUN: opt < %s -mtriple=i686-unknown-linux-gnu -mcpu=corei7 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X86 -check-prefix=SSE42
-; RUN: opt < %s -mtriple=i686-unknown-linux-gnu -mcpu=corei7-avx -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X86 -check-prefix=AVX
-; RUN: opt < %s -mtriple=i686-unknown-linux-gnu -mcpu=core-avx2 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X86 -check-prefix=AVX2
-; RUN: opt < %s -mtriple=i686-unknown-linux-gnu -mcpu=knl -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X86 -check-prefix=AVX512 -check-prefix=AVX512F
-; RUN: opt < %s -mtriple=i686-unknown-linux-gnu -mcpu=skx -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X86 -check-prefix=AVX512 -check-prefix=AVX512BW
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=pentium4 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X64 -check-prefix=SSE2
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X64 -check-prefix=SSE42
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7-avx -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X64 -check-prefix=AVX
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=core-avx2 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X64 -check-prefix=AVX2
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=knl -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X64 -check-prefix=AVX512 -check-prefix=AVX512F
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=skx -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X64 -check-prefix=AVX512 -check-prefix=AVX512BW
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=bdver2 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=XOP -check-prefix=XOPAVX
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=bdver4 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=XOP -check-prefix=XOPAVX2
+; RUN: opt < %s -mtriple=i686-unknown-linux-gnu -mattr=+sse2 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X86 -check-prefix=SSE2
+; RUN: opt < %s -mtriple=i686-unknown-linux-gnu -mattr=+sse4.2 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X86 -check-prefix=SSE42
+; RUN: opt < %s -mtriple=i686-unknown-linux-gnu -mattr=+avx -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X86 -check-prefix=AVX
+; RUN: opt < %s -mtriple=i686-unknown-linux-gnu -mattr=+avx2 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X86 -check-prefix=AVX2
+; RUN: opt < %s -mtriple=i686-unknown-linux-gnu -mattr=+avx512f -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X86 -check-prefix=AVX512 -check-prefix=AVX512F
+; RUN: opt < %s -mtriple=i686-unknown-linux-gnu -mattr=+avx512vl,avx512bw,avx512dq -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X86 -check-prefix=AVX512 -check-prefix=AVX512BW
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+sse2 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X64 -check-prefix=SSE2
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+sse4.2 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X64 -check-prefix=SSE42
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X64 -check-prefix=AVX
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx2 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X64 -check-prefix=AVX2
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512f -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X64 -check-prefix=AVX512 -check-prefix=AVX512F
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512vl,+avx512bw,+avx512dq -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=X64 -check-prefix=AVX512 -check-prefix=AVX512BW
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+xop -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=XOP -check-prefix=XOPAVX
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+xop,+avx2 -cost-model -analyze | FileCheck %s -check-prefix=CHECK -check-prefix=XOP -check-prefix=XOPAVX2
 
 ; Verify the cost of scalar bitreverse instructions.
 

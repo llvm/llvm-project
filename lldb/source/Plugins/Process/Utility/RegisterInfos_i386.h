@@ -27,19 +27,19 @@
 // Based on DNBArchImplI386.cpp from debugserver
 #define YMM_OFFSET(reg_index)                                                  \
   (LLVM_EXTENSION offsetof(UserArea, i387) +                                   \
-   LLVM_EXTENSION offsetof(FPR, xstate) +                                      \
+   LLVM_EXTENSION offsetof(FPR, fxsave) +                                      \
    LLVM_EXTENSION offsetof(FXSAVE, xmm[7]) + sizeof(XMMReg) +                  \
    (32 * reg_index))
 
-#define BNDR_OFFSET(reg_index) \
-    (LLVM_EXTENSION offsetof(UserArea, i387) + \
-     LLVM_EXTENSION offsetof(FPR, xstate) + \
-     LLVM_EXTENSION offsetof(XSAVE, mpxr[reg_index]))
+#define BNDR_OFFSET(reg_index)                                                 \
+  (LLVM_EXTENSION offsetof(UserArea, i387) +                                   \
+   LLVM_EXTENSION offsetof(FPR, xsave) +                                       \
+   LLVM_EXTENSION offsetof(XSAVE, mpxr[reg_index]))
 
-#define BNDC_OFFSET(reg_index) \
-    (LLVM_EXTENSION offsetof(UserArea, i387) + \
-     LLVM_EXTENSION offsetof(FPR, xstate) + \
-     LLVM_EXTENSION offsetof(XSAVE, mpxc[reg_index]))
+#define BNDC_OFFSET(reg_index)                                                 \
+  (LLVM_EXTENSION offsetof(UserArea, i387) +                                   \
+   LLVM_EXTENSION offsetof(FPR, xsave) +                                       \
+   LLVM_EXTENSION offsetof(XSAVE, mpxc[reg_index]))
 
 // Number of bytes needed to represent a FPR.
 #if !defined(FPR_SIZE)

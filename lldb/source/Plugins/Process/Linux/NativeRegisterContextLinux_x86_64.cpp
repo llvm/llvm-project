@@ -332,11 +332,11 @@ NativeRegisterContextLinux_x86_64::NativeRegisterContextLinux_x86_64(
   // Initialize m_iovec to point to the buffer and buffer size
   // using the conventions of Berkeley style UIO structures, as required
   // by PTRACE extensions.
-  m_iovec.iov_base = &m_fpr.xstate.xsave;
-  m_iovec.iov_len = sizeof(m_fpr.xstate.xsave);
+  m_iovec.iov_base = &m_fpr;
+  m_iovec.iov_len = sizeof(m_fpr);
 
   // Clear out the FPR state.
-  ::memset(&m_fpr, 0, sizeof(FPR));
+  ::memset(&m_fpr, 0, sizeof(m_fpr));
 
   // Store byte offset of fctrl (i.e. first register of FPR)
   const RegisterInfo *reg_info_fctrl = GetRegisterInfoByName("fctrl");
@@ -439,17 +439,14 @@ NativeRegisterContextLinux_x86_64::ReadRegister(const RegisterInfo *reg_info,
 
     if (byte_order != lldb::eByteOrderInvalid) {
       if (reg >= m_reg_info.first_st && reg <= m_reg_info.last_st)
-        reg_value.SetBytes(
-            m_fpr.xstate.fxsave.stmm[reg - m_reg_info.first_st].bytes,
-            reg_info->byte_size, byte_order);
+        reg_value.SetBytes(m_fpr.fxsave.stmm[reg - m_reg_info.first_st].bytes,
+                           reg_info->byte_size, byte_order);
       if (reg >= m_reg_info.first_mm && reg <= m_reg_info.last_mm)
-        reg_value.SetBytes(
-            m_fpr.xstate.fxsave.stmm[reg - m_reg_info.first_mm].bytes,
-            reg_info->byte_size, byte_order);
+        reg_value.SetBytes(m_fpr.fxsave.stmm[reg - m_reg_info.first_mm].bytes,
+                           reg_info->byte_size, byte_order);
       if (reg >= m_reg_info.first_xmm && reg <= m_reg_info.last_xmm)
-        reg_value.SetBytes(
-            m_fpr.xstate.fxsave.xmm[reg - m_reg_info.first_xmm].bytes,
-            reg_info->byte_size, byte_order);
+        reg_value.SetBytes(m_fpr.fxsave.xmm[reg - m_reg_info.first_xmm].bytes,
+                           reg_info->byte_size, byte_order);
       if (reg >= m_reg_info.first_ymm && reg <= m_reg_info.last_ymm) {
         // Concatenate ymm using the register halves in xmm.bytes and ymmh.bytes
         if (CopyXSTATEtoYMM(reg, byte_order))
@@ -490,7 +487,7 @@ NativeRegisterContextLinux_x86_64::ReadRegister(const RegisterInfo *reg_info,
     return error;
   }
 
-  // Get pointer to m_fpr.xstate.fxsave variable and set the data from it.
+  // Get pointer to m_fpr.fxsave variable and set the data from it.
 
   // Byte offsets of all registers are calculated wrt 'UserArea' structure.
   // However, ReadFPR() reads fpu registers {using ptrace(PTRACE_GETFPREGS,..)}
@@ -530,7 +527,7 @@ NativeRegisterContextLinux_x86_64::ReadRegister(const RegisterInfo *reg_info,
 
 void NativeRegisterContextLinux_x86_64::UpdateXSTATEforWrite(
     uint32_t reg_index) {
-  XSAVE_HDR::XFeature &xstate_bv = m_fpr.xstate.xsave.header.xstate_bv;
+  XSAVE_HDR::XFeature &xstate_bv = m_fpr.xsave.header.xstate_bv;
   if (IsFPR(reg_index)) {
     // IsFPR considers both %st and %xmm registers as floating point, but these
     // map to two features. Set both flags, just in case.
@@ -562,19 +559,16 @@ Status NativeRegisterContextLinux_x86_64::WriteRegister(
   if (IsFPR(reg_index) || IsAVX(reg_index) || IsMPX(reg_index)) {
     if (reg_info->encoding == lldb::eEncodingVector) {
       if (reg_index >= m_reg_info.first_st && reg_index <= m_reg_info.last_st)
-        ::memcpy(
-            m_fpr.xstate.fxsave.stmm[reg_index - m_reg_info.first_st].bytes,
-            reg_value.GetBytes(), reg_value.GetByteSize());
+        ::memcpy(m_fpr.fxsave.stmm[reg_index - m_reg_info.first_st].bytes,
+                 reg_value.GetBytes(), reg_value.GetByteSize());
 
       if (reg_index >= m_reg_info.first_mm && reg_index <= m_reg_info.last_mm)
-        ::memcpy(
-            m_fpr.xstate.fxsave.stmm[reg_index - m_reg_info.first_mm].bytes,
-            reg_value.GetBytes(), reg_value.GetByteSize());
+        ::memcpy(m_fpr.fxsave.stmm[reg_index - m_reg_info.first_mm].bytes,
+                 reg_value.GetBytes(), reg_value.GetByteSize());
 
       if (reg_index >= m_reg_info.first_xmm && reg_index <= m_reg_info.last_xmm)
-        ::memcpy(
-            m_fpr.xstate.fxsave.xmm[reg_index - m_reg_info.first_xmm].bytes,
-            reg_value.GetBytes(), reg_value.GetByteSize());
+        ::memcpy(m_fpr.fxsave.xmm[reg_index - m_reg_info.first_xmm].bytes,
+                 reg_value.GetBytes(), reg_value.GetByteSize());
 
       if (reg_index >= m_reg_info.first_ymm &&
           reg_index <= m_reg_info.last_ymm) {
@@ -602,7 +596,7 @@ Status NativeRegisterContextLinux_x86_64::WriteRegister(
           return Status("CopyMPXtoXSTATE() failed");
       }
     } else {
-      // Get pointer to m_fpr.xstate.fxsave variable and set the data to it.
+      // Get pointer to m_fpr.fxsave variable and set the data to it.
 
       // Byte offsets of all registers are calculated wrt 'UserArea' structure.
       // However, WriteFPR() takes m_fpr (of type FPR structure) and writes only
@@ -674,7 +668,7 @@ Status NativeRegisterContextLinux_x86_64::ReadAllRegisterValues(
   ::memcpy(dst, &m_gpr_x86_64, GetRegisterInfoInterface().GetGPRSize());
   dst += GetRegisterInfoInterface().GetGPRSize();
   if (m_xstate_type == XStateType::FXSAVE)
-    ::memcpy(dst, &m_fpr.xstate.fxsave, sizeof(m_fpr.xstate.fxsave));
+    ::memcpy(dst, &m_fpr.fxsave, sizeof(m_fpr.fxsave));
   else if (m_xstate_type == XStateType::XSAVE) {
     lldb::ByteOrder byte_order = GetByteOrder();
 
@@ -765,9 +759,9 @@ Status NativeRegisterContextLinux_x86_64::WriteAllRegisterValues(
 
   src += GetRegisterInfoInterface().GetGPRSize();
   if (m_xstate_type == XStateType::FXSAVE)
-    ::memcpy(&m_fpr.xstate.fxsave, src, sizeof(m_fpr.xstate.fxsave));
+    ::memcpy(&m_fpr.fxsave, src, sizeof(m_fpr.fxsave));
   else if (m_xstate_type == XStateType::XSAVE)
-    ::memcpy(&m_fpr.xstate.xsave, src, sizeof(m_fpr.xstate.xsave));
+    ::memcpy(&m_fpr.xsave, src, sizeof(m_fpr.xsave));
 
   error = WriteFPR();
   if (error.Fail())
@@ -821,12 +815,12 @@ bool NativeRegisterContextLinux_x86_64::IsCPUFeatureAvailable(
     return true;
   case RegSet::avx: // Check if CPU has AVX and if there is kernel support, by
                     // reading in the XCR0 area of XSAVE.
-    if ((m_fpr.xstate.xsave.i387.xcr0 & mask_XSTATE_AVX) == mask_XSTATE_AVX)
+    if ((m_fpr.xsave.i387.xcr0 & mask_XSTATE_AVX) == mask_XSTATE_AVX)
       return true;
      break;
   case RegSet::mpx: // Check if CPU has MPX and if there is kernel support, by
                     // reading in the XCR0 area of XSAVE.
-    if ((m_fpr.xstate.xsave.i387.xcr0 & mask_XSTATE_MPX) == mask_XSTATE_MPX)
+    if ((m_fpr.xsave.i387.xcr0 & mask_XSTATE_MPX) == mask_XSTATE_MPX)
       return true;
     break;
   }
@@ -863,11 +857,10 @@ Status NativeRegisterContextLinux_x86_64::WriteFPR() {
   switch (m_xstate_type) {
   case XStateType::FXSAVE:
     return WriteRegisterSet(
-        &m_iovec, sizeof(m_fpr.xstate.xsave),
+        &m_iovec, sizeof(m_fpr.fxsave),
         fxsr_regset(GetRegisterInfoInterface().GetTargetArchitecture()));
   case XStateType::XSAVE:
-    return WriteRegisterSet(&m_iovec, sizeof(m_fpr.xstate.xsave),
-                            NT_X86_XSTATE);
+    return WriteRegisterSet(&m_iovec, sizeof(m_fpr.xsave), NT_X86_XSTATE);
   default:
     return Status("Unrecognized FPR type.");
   }
@@ -887,11 +880,11 @@ bool NativeRegisterContextLinux_x86_64::CopyXSTATEtoYMM(
 
   if (byte_order == lldb::eByteOrderLittle) {
     ::memcpy(m_ymm_set.ymm[reg_index - m_reg_info.first_ymm].bytes,
-             m_fpr.xstate.fxsave.xmm[reg_index - m_reg_info.first_ymm].bytes,
+             m_fpr.fxsave.xmm[reg_index - m_reg_info.first_ymm].bytes,
              sizeof(XMMReg));
     ::memcpy(m_ymm_set.ymm[reg_index - m_reg_info.first_ymm].bytes +
                  sizeof(XMMReg),
-             m_fpr.xstate.xsave.ymmh[reg_index - m_reg_info.first_ymm].bytes,
+             m_fpr.xsave.ymmh[reg_index - m_reg_info.first_ymm].bytes,
              sizeof(YMMHReg));
     return true;
   }
@@ -899,10 +892,10 @@ bool NativeRegisterContextLinux_x86_64::CopyXSTATEtoYMM(
   if (byte_order == lldb::eByteOrderBig) {
     ::memcpy(m_ymm_set.ymm[reg_index - m_reg_info.first_ymm].bytes +
                  sizeof(XMMReg),
-             m_fpr.xstate.fxsave.xmm[reg_index - m_reg_info.first_ymm].bytes,
+             m_fpr.fxsave.xmm[reg_index - m_reg_info.first_ymm].bytes,
              sizeof(XMMReg));
     ::memcpy(m_ymm_set.ymm[reg_index - m_reg_info.first_ymm].bytes,
-             m_fpr.xstate.xsave.ymmh[reg_index - m_reg_info.first_ymm].bytes,
+             m_fpr.xsave.ymmh[reg_index - m_reg_info.first_ymm].bytes,
              sizeof(YMMHReg));
     return true;
   }
@@ -915,19 +908,19 @@ bool NativeRegisterContextLinux_x86_64::CopyYMMtoXSTATE(
     return false;
 
   if (byte_order == lldb::eByteOrderLittle) {
-    ::memcpy(m_fpr.xstate.fxsave.xmm[reg - m_reg_info.first_ymm].bytes,
+    ::memcpy(m_fpr.fxsave.xmm[reg - m_reg_info.first_ymm].bytes,
              m_ymm_set.ymm[reg - m_reg_info.first_ymm].bytes, sizeof(XMMReg));
-    ::memcpy(m_fpr.xstate.xsave.ymmh[reg - m_reg_info.first_ymm].bytes,
+    ::memcpy(m_fpr.xsave.ymmh[reg - m_reg_info.first_ymm].bytes,
              m_ymm_set.ymm[reg - m_reg_info.first_ymm].bytes + sizeof(XMMReg),
              sizeof(YMMHReg));
     return true;
   }
 
   if (byte_order == lldb::eByteOrderBig) {
-    ::memcpy(m_fpr.xstate.fxsave.xmm[reg - m_reg_info.first_ymm].bytes,
+    ::memcpy(m_fpr.fxsave.xmm[reg - m_reg_info.first_ymm].bytes,
              m_ymm_set.ymm[reg - m_reg_info.first_ymm].bytes + sizeof(XMMReg),
              sizeof(XMMReg));
-    ::memcpy(m_fpr.xstate.xsave.ymmh[reg - m_reg_info.first_ymm].bytes,
+    ::memcpy(m_fpr.xsave.ymmh[reg - m_reg_info.first_ymm].bytes,
              m_ymm_set.ymm[reg - m_reg_info.first_ymm].bytes, sizeof(YMMHReg));
     return true;
   }
@@ -937,7 +930,7 @@ bool NativeRegisterContextLinux_x86_64::CopyYMMtoXSTATE(
 void *NativeRegisterContextLinux_x86_64::GetFPRBuffer() {
   switch (m_xstate_type) {
   case XStateType::FXSAVE:
-    return &m_fpr.xstate.fxsave;
+    return &m_fpr.fxsave;
   case XStateType::XSAVE:
     return &m_iovec;
   default:
@@ -948,7 +941,7 @@ void *NativeRegisterContextLinux_x86_64::GetFPRBuffer() {
 size_t NativeRegisterContextLinux_x86_64::GetFPRSize() {
   switch (m_xstate_type) {
   case XStateType::FXSAVE:
-    return sizeof(m_fpr.xstate.fxsave);
+    return sizeof(m_fpr.fxsave);
   case XStateType::XSAVE:
     return sizeof(m_iovec);
   default:
@@ -961,15 +954,14 @@ Status NativeRegisterContextLinux_x86_64::ReadFPR() {
 
   // Probe XSAVE and if it is not supported fall back to FXSAVE.
   if (m_xstate_type != XStateType::FXSAVE) {
-    error =
-        ReadRegisterSet(&m_iovec, sizeof(m_fpr.xstate.xsave), NT_X86_XSTATE);
+    error = ReadRegisterSet(&m_iovec, sizeof(m_fpr.xsave), NT_X86_XSTATE);
     if (!error.Fail()) {
       m_xstate_type = XStateType::XSAVE;
       return error;
     }
   }
   error = ReadRegisterSet(
-      &m_iovec, sizeof(m_fpr.xstate.xsave),
+      &m_iovec, sizeof(m_fpr.xsave),
       fxsr_regset(GetRegisterInfoInterface().GetTargetArchitecture()));
   if (!error.Fail()) {
     m_xstate_type = XStateType::FXSAVE;
@@ -991,11 +983,11 @@ bool NativeRegisterContextLinux_x86_64::CopyXSTATEtoMPX(uint32_t reg) {
 
   if (reg >= m_reg_info.first_mpxr && reg <= m_reg_info.last_mpxr) {
     ::memcpy(m_mpx_set.mpxr[reg - m_reg_info.first_mpxr].bytes,
-             m_fpr.xstate.xsave.mpxr[reg - m_reg_info.first_mpxr].bytes,
+             m_fpr.xsave.mpxr[reg - m_reg_info.first_mpxr].bytes,
              sizeof(MPXReg));
   } else {
     ::memcpy(m_mpx_set.mpxc[reg - m_reg_info.first_mpxc].bytes,
-             m_fpr.xstate.xsave.mpxc[reg - m_reg_info.first_mpxc].bytes,
+             m_fpr.xsave.mpxc[reg - m_reg_info.first_mpxc].bytes,
              sizeof(MPXCsr));
   }
   return true;
@@ -1006,10 +998,10 @@ bool NativeRegisterContextLinux_x86_64::CopyMPXtoXSTATE(uint32_t reg) {
     return false;
 
   if (reg >= m_reg_info.first_mpxr && reg <= m_reg_info.last_mpxr) {
-    ::memcpy(m_fpr.xstate.xsave.mpxr[reg - m_reg_info.first_mpxr].bytes,
+    ::memcpy(m_fpr.xsave.mpxr[reg - m_reg_info.first_mpxr].bytes,
              m_mpx_set.mpxr[reg - m_reg_info.first_mpxr].bytes, sizeof(MPXReg));
   } else {
-    ::memcpy(m_fpr.xstate.xsave.mpxc[reg - m_reg_info.first_mpxc].bytes,
+    ::memcpy(m_fpr.xsave.mpxc[reg - m_reg_info.first_mpxc].bytes,
              m_mpx_set.mpxc[reg - m_reg_info.first_mpxc].bytes, sizeof(MPXCsr));
   }
   return true;
