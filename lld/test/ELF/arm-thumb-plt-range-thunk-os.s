@@ -6,7 +6,7 @@
 // RUN: llvm-objdump -d %t.so -start-address=8388608 -stop-address=8388624 -triple=thumbv7a-linux-gnueabihf | FileCheck -check-prefix=CHECK1 %s
 // RUN: llvm-objdump -d %t.so -start-address=16777216 -stop-address=16777256 -triple=thumbv7a-linux-gnueabihf | FileCheck -check-prefix=CHECK2 %s
 // RUN: llvm-objdump -d %t.so -start-address=25165824 -stop-address=25165828 -triple=thumbv7a-linux-gnueabihf | FileCheck -check-prefix=CHECK3 %s
-// RUN: llvm-objdump -d %t.so -start-address=25165828 -stop-address=25165908 -triple=armv7a-linux-gnueabihf | FileCheck -check-prefix=CHECK4 %s
+// RUN: llvm-objdump -d %t.so -start-address=25165828 -stop-address=25165924 -triple=armv7a-linux-gnueabihf | FileCheck -check-prefix=CHECK4 %s
  .syntax unified
  .thumb
 
@@ -39,50 +39,54 @@ preemptible:
  .balign 0x0800000
  bx lr
 // CHECK2: __ThumbV7PILongThunk_elsewhere:
-// CHECK2-NEXT:  1000004:       40 f2 14 0c     movw    r12, #20
+// CHECK2-NEXT:  1000004:       40 f2 20 0c     movw    r12, #32
 // CHECK2-NEXT:  1000008:       c0 f2 80 0c     movt    r12, #128
 // CHECK2-NEXT:  100000c:       fc 44   add     r12, pc
 // CHECK2-NEXT:  100000e:       60 47   bx      r12
 // CHECK2: __ThumbV7PILongThunk_preemptible:
-// CHECK2-NEXT:  1000010:       40 f2 18 0c     movw    r12, #24
+// CHECK2-NEXT:  1000010:       40 f2 24 0c     movw    r12, #36
 // CHECK2-NEXT:  1000014:       c0 f2 80 0c     movt    r12, #128
 // CHECK2-NEXT:  1000018:       fc 44   add     r12, pc
 // CHECK2-NEXT:  100001a:       60 47   bx      r12
 // CHECK2: __ThumbV7PILongThunk_far_preemptible:
-// CHECK2-NEXT:  100001c:       40 f2 1c 0c     movw    r12, #28
+// CHECK2-NEXT:  100001c:       40 f2 28 0c     movw    r12, #40
 // CHECK2-NEXT:  1000020:       c0 f2 80 0c     movt    r12, #128
 // CHECK2-NEXT:  1000024:       fc 44   add     r12, pc
 // CHECK2-NEXT:  1000026:       60 47   bx      r12
+
  .section .text.3, "ax", %progbits
 .balign 0x0800000
 far_preemptible:
  bl elsewhere
 // CHECK3: far_preemptible:
-// CHECK3:  1800000:       00 f0 10 e8     blx     #32
+// CHECK3:  1800000:       00 f0 16 e8     blx     #44
 
 // CHECK4: Disassembly of section .plt:
 // CHECK4-NEXT: $a:
-// CHECK4-NEXT:  1800010:       04 e0 2d e5     str     lr, [sp, #-4]!
-// CHECK4-NEXT:  1800014:       04 e0 9f e5     ldr     lr, [pc, #4]
-// CHECK4-NEXT:  1800018:       0e e0 8f e0     add     lr, pc, lr
-// CHECK4-NEXT:  180001c:       08 f0 be e5     ldr     pc, [lr, #8]!
+// CHECK4-NEXT:  1800010:	04 e0 2d e5 	str	lr, [sp, #-4]!
+// CHECK4-NEXT:  1800014:	00 e6 8f e2 	add	lr, pc, #0, #12
+// CHECK4-NEXT:  1800018:	00 ea 8e e2 	add	lr, lr, #0, #20
+// CHECK4-NEXT:  180001c:	ec ff be e5 	ldr	pc, [lr, #4076]!
 // CHECK4: $d:
-// CHECK4-NEXT:  1800020:       e0 0f 00 00     .word   0x00000fe0
+// CHECK4-NEXT:  1800020:	d4 d4 d4 d4 	.word	0xd4d4d4d4
+// CHECK4-NEXT:  1800024:	d4 d4 d4 d4 	.word	0xd4d4d4d4
+// CHECK4-NEXT:  1800028:	d4 d4 d4 d4 	.word	0xd4d4d4d4
+// CHECK4-NEXT:  180002c:	d4 d4 d4 d4 	.word	0xd4d4d4d4
 // CHECK4: $a:
-// CHECK4-NEXT:  1800024:       04 c0 9f e5     ldr     r12, [pc, #4]
-// CHECK4-NEXT:  1800028:       0f c0 8c e0     add     r12, r12, pc
-// CHECK4-NEXT:  180002c:       00 f0 9c e5     ldr     pc, [r12]
+// CHECK4-NEXT:  1800030:	00 c6 8f e2 	add	r12, pc, #0, #12
+// CHECK4-NEXT:  1800034:	00 ca 8c e2 	add	r12, r12, #0, #20
+// CHECK4-NEXT:  1800038:	d4 ff bc e5 	ldr	pc, [r12, #4052]!
 // CHECK4: $d:
-// CHECK4-NEXT:  1800030:       dc 0f 00 00     .word   0x00000fdc
+// CHECK4-NEXT:  180003c:	d4 d4 d4 d4 	.word	0xd4d4d4d4
 // CHECK4: $a:
-// CHECK4-NEXT:  1800034:       04 c0 9f e5     ldr     r12, [pc, #4]
-// CHECK4-NEXT:  1800038:       0f c0 8c e0     add     r12, r12, pc
-// CHECK4-NEXT:  180003c:       00 f0 9c e5     ldr     pc, [r12]
+// CHECK4-NEXT:  1800040:	00 c6 8f e2 	add	r12, pc, #0, #12
+// CHECK4-NEXT:  1800044:	00 ca 8c e2 	add	r12, r12, #0, #20
+// CHECK4-NEXT:  1800048:	c8 ff bc e5 	ldr	pc, [r12, #4040]!
 // CHECK4: $d:
-// CHECK4-NEXT:  1800040:       d0 0f 00 00     .word   0x00000fd0
+// CHECK4-NEXT:  180004c:	d4 d4 d4 d4 	.word	0xd4d4d4d4
 // CHECK4: $a:
-// CHECK4-NEXT:  1800044:       04 c0 9f e5     ldr     r12, [pc, #4]
-// CHECK4-NEXT:  1800048:       0f c0 8c e0     add     r12, r12, pc
-// CHECK4-NEXT:  180004c:       00 f0 9c e5     ldr     pc, [r12]
+// CHECK4-NEXT:  1800050:	00 c6 8f e2 	add	r12, pc, #0, #12
+// CHECK4-NEXT:  1800054:	00 ca 8c e2 	add	r12, r12, #0, #20
+// CHECK4-NEXT:  1800058:	bc ff bc e5 	ldr	pc, [r12, #4028]!
 // CHECK4: $d:
-// CHECK4-NEXT:  1800050:       c4 0f 00 00     .word   0x00000fc4
+// CHECK4-NEXT:  180005c:	d4 d4 d4 d4 	.word	0xd4d4d4d4

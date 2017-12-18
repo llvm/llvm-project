@@ -10,6 +10,7 @@ function(add_lldb_test_executable test_name)
 endfunction()
 
 add_lldb_test_executable(thread_inferior inferior/thread_inferior.cpp)
+add_lldb_test_executable(environment_check inferior/environment_check.cpp)
 
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
   add_definitions(-DLLDB_SERVER="$<TARGET_FILE:debugserver>")

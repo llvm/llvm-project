@@ -3442,7 +3442,9 @@ ParseModuleSpec(StructuredData::Dictionary *dict) {
 
   if (!dict->GetValueForKeyAsString("uuid", string))
     return llvm::None;
-  result.GetUUID().SetFromStringRef(string, string.size());
+  if (result.GetUUID().SetFromStringRef(string, string.size() / 2) !=
+      string.size())
+    return llvm::None;
 
   if (!dict->GetValueForKeyAsInteger("file_offset", integer))
     return llvm::None;
