@@ -40,6 +40,9 @@ TestClient::TestClient(std::unique_ptr<Connection> Conn) {
 }
 
 TestClient::~TestClient() {
+  if (!IsConnected())
+    return;
+
   std::string response;
   // Debugserver (non-conformingly?) sends a reply to the k packet instead of
   // simply closing the connection.
@@ -242,6 +245,18 @@ Error TestClient::Continue(StringRef message) {
     return E;
 
   m_stop_reply = std::move(*creation);
+  if (!isa<StopReplyStop>(m_stop_reply)) {
+    StringExtractorGDBRemote R;
+    PacketResult result = ReadPacket(R, GetPacketTimeout(), false);
+    if (result != PacketResult::ErrorDisconnected) {
+      return make_error<StringError>(
+          formatv("Expected connection close after receiving {0}. Got {1}/{2} "
+                  "instead.",
+                  response, result, R.GetStringRef())
+              .str(),
+          inconvertibleErrorCode());
+    }
+  }
   return Error::success();
 }
 

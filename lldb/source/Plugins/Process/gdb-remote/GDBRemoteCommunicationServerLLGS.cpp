@@ -825,6 +825,7 @@ void GDBRemoteCommunicationServerLLGS::HandleInferiorState_Exited(
 
   // We are ready to exit the debug monitor.
   m_exit_now = true;
+  m_mainloop.RequestTermination();
 }
 
 void GDBRemoteCommunicationServerLLGS::HandleInferiorState_Stopped(
