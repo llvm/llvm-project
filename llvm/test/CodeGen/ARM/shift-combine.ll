@@ -245,7 +245,7 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: test_shift8_mask16
+; CHECK-LABEL: test_sext_shift8_mask8
 ; CHECK-BE:         ldrb r0, [r0]
 ; CHECK-COMMON:     ldrb r0, [r0, #1]
 ; CHECK-COMMON:     str r0, [r1]
@@ -259,7 +259,7 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: test_shift8_mask16
+; CHECK-LABEL: test_sext_shift8_mask16
 ; CHECK-ARM:        ldrsh r0, [r0]
 ; CHECK-BE:         ldrsh r0, [r0]
 ; CHECK-THUMB:      ldrsh.w r0, [r0]

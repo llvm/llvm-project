@@ -3796,6 +3796,31 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
       }
     }
   }
+
+  // The Cyclone CPU and early successors didn't execute the zero-cycle zeroing
+  // instruction for FP registers correctly in some rare circumstances. Convert
+  // it to a safe instruction and warn (because silently changing someone's
+  // assembly is rude).
+  if (getSTI().getFeatureBits()[AArch64::FeatureZCZeroingFPWorkaround] &&
+      NumOperands == 4 && Tok == "movi") {
+    AArch64Operand &Op1 = static_cast<AArch64Operand &>(*Operands[1]);
+    AArch64Operand &Op2 = static_cast<AArch64Operand &>(*Operands[2]);
+    AArch64Operand &Op3 = static_cast<AArch64Operand &>(*Operands[3]);
+    if ((Op1.isToken() && Op2.isNeonVectorReg() && Op3.isImm()) ||
+        (Op1.isNeonVectorReg() && Op2.isToken() && Op3.isImm())) {
+      StringRef Suffix = Op1.isToken() ? Op1.getToken() : Op2.getToken();
+      if (Suffix.lower() == ".2d" &&
+          cast<MCConstantExpr>(Op3.getImm())->getValue() == 0) {
+        Warning(IDLoc, "instruction movi.2d with immediate #0 may not function"
+                " correctly on this CPU, converting to equivalent movi.16b");
+        // Switch the suffix to .16b.
+        unsigned Idx = Op1.isToken() ? 1 : 2;
+        Operands[Idx] = AArch64Operand::CreateToken(".16b", false, IDLoc,
+                                                  getContext());
+      }
+    }
+  }
+
   // FIXME: Horrible hack for sxtw and uxtw with Wn src and Xd dst operands.
   //        InstAlias can't quite handle this since the reg classes aren't
   //        subclasses.
