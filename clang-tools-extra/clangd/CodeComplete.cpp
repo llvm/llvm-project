@@ -784,7 +784,7 @@ SpecifiedScope extraCompletionScope(Sema &S, const CXXScopeSpec &SS) {
     DeclContext *DC = S.computeDeclContext(SS);
     if (auto *NS = llvm::dyn_cast<NamespaceDecl>(DC)) {
       Info.Resolved = NS->getQualifiedNameAsString();
-    } else if (auto *TU = llvm::dyn_cast<TranslationUnitDecl>(DC)) {
+    } else if (llvm::dyn_cast<TranslationUnitDecl>(DC) != nullptr) {
       Info.Resolved = "::";
       // Sema does not include the suffix "::" in the range of SS, so we add
       // it back here.

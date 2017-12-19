@@ -488,7 +488,7 @@ std::unique_ptr<SymbolIndex> simpleIndexFromSymbols(
   auto S = std::shared_ptr<std::vector<const Symbol *>>(std::move(Snap),
                                                         &Snap->Pointers);
   I->build(std::move(S));
-  return I;
+  return std::move(I);
 }
 
 TEST(CompletionTest, NoIndex) {
