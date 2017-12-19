@@ -3287,7 +3287,7 @@ void Sema::CheckVirtualDtorCall(CXXDestructorDecl *dtor, SourceLocation Loc,
                                 bool IsDelete, bool CallCanBeVirtual,
                                 bool WarnOnNonAbstractTypes,
                                 SourceLocation DtorLoc) {
-  if (!dtor || dtor->isVirtual() || !CallCanBeVirtual || isUnevaluatedContext())
+  if (!dtor || dtor->isVirtual() || !CallCanBeVirtual)
     return;
 
   // C++ [expr.delete]p3:
