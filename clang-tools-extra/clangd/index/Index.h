@@ -76,8 +76,11 @@ void operator>>(llvm::StringRef HexStr, SymbolID &ID);
 struct Symbol {
   // The ID of the symbol.
   SymbolID ID;
-  // The qualified name of the symbol, e.g. Foo::bar.
-  std::string QualifiedName;
+  // The unqualified name of the symbol, e.g. "bar" (for "n1::n2::bar").
+  std::string Name;
+  // The scope (e.g. namespace) of the symbol, e.g. "n1::n2" (for
+  // "n1::n2::bar").
+  std::string Scope;
   // The symbol information, like symbol kind.
   index::SymbolInfo SymInfo;
   // The location of the canonical declaration of the symbol.
@@ -124,8 +127,16 @@ private:
 
 struct FuzzyFindRequest {
   /// \brief A query string for the fuzzy find. This is matched against symbols'
-  /// qualfified names.
+  /// un-qualified identifiers and should not contain qualifiers like "::".
   std::string Query;
+  /// \brief If this is non-empty, symbols must be in at least one of the scopes
+  /// (e.g. namespaces) excluding nested scopes. For example, if a scope "xyz"
+  /// is provided, the matched symbols must be defined in scope "xyz" but not
+  /// "xyz::abc".
+  ///
+  /// A scope must be fully qualified without leading or trailing "::" e.g.
+  /// "n1::n2". "" is interpreted as the global namespace, and "::" is invalid.
+  std::vector<std::string> Scopes;
   /// \brief The maxinum number of candidates to return.
   size_t MaxCandidateCount = UINT_MAX;
 };

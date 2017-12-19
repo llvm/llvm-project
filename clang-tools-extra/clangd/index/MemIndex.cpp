@@ -8,6 +8,7 @@
 //===-------------------------------------------------------------------===//
 
 #include "MemIndex.h"
+#include "Logger.h"
 
 namespace clang {
 namespace clangd {
@@ -25,20 +26,30 @@ void MemIndex::build(std::shared_ptr<std::vector<const Symbol *>> Syms) {
   }
 }
 
-bool MemIndex::fuzzyFind(Context & /*Ctx*/, const FuzzyFindRequest &Req,
+bool MemIndex::fuzzyFind(Context &Ctx, const FuzzyFindRequest &Req,
                          std::function<void(const Symbol &)> Callback) const {
-  std::string LoweredQuery = llvm::StringRef(Req.Query).lower();
+  assert(!StringRef(Req.Query).contains("::") &&
+         "There must be no :: in query.");
+
   unsigned Matched = 0;
   {
     std::lock_guard<std::mutex> Lock(Mutex);
     for (const auto Pair : Index) {
       const Symbol *Sym = Pair.second;
-      // Find all symbols that contain the query, igoring cases.
-      // FIXME: consider matching chunks in qualified names instead the whole
-      // string.
-      // FIXME: use better matching algorithm, e.g. fuzzy matcher.
-      if (StringRef(StringRef(Sym->QualifiedName).lower())
-              .contains(LoweredQuery)) {
+
+      // Exact match against all possible scopes.
+      bool ScopeMatched = Req.Scopes.empty();
+      for (StringRef Scope : Req.Scopes) {
+        if (Scope == Sym->Scope) {
+          ScopeMatched = true;
+          break;
+        }
+      }
+      if (!ScopeMatched)
+        continue;
+
+      // FIXME(ioeric): use fuzzy matcher.
+      if (StringRef(StringRef(Sym->Name).lower()).contains(Req.Query)) {
         if (++Matched > Req.MaxCandidateCount)
           return false;
         Callback(*Sym);
