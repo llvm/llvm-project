@@ -126,11 +126,10 @@ public:
   explicit DataSection(ArrayRef<OutputSegment *> Segments);
   size_t getSize() const override { return Header.size() + BodySize; }
   void writeTo(uint8_t *Buf) override;
-  uint32_t numRelocations() const override { return Relocations.size(); }
+  uint32_t numRelocations() const override;
   void writeRelocations(raw_ostream &OS) const override;
 
 protected:
-  std::vector<OutputRelocation> Relocations;
   ArrayRef<OutputSegment *> Segments;
   std::string DataSectionHeader;
   size_t BodySize = 0;

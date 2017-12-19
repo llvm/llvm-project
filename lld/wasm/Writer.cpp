@@ -174,7 +174,7 @@ void Writer::createImportSection() {
     Import.Field = Sym->getName();
     Import.Kind = WASM_EXTERNAL_GLOBAL;
     Import.Global.Mutable = false;
-    Import.Global.Type = WASM_TYPE_I32; // Sym->getGlobalType();
+    Import.Global.Type = WASM_TYPE_I32;
     writeImport(OS, Import);
   }
 }
@@ -183,9 +183,8 @@ void Writer::createTypeSection() {
   SyntheticSection *Section = createSyntheticSection(WASM_SEC_TYPE);
   raw_ostream &OS = Section->getStream();
   writeUleb128(OS, Types.size(), "type count");
-  for (const WasmSignature *Sig : Types) {
+  for (const WasmSignature *Sig : Types)
     writeSig(OS, *Sig);
-  }
 }
 
 void Writer::createFunctionSection() {
@@ -196,11 +195,9 @@ void Writer::createFunctionSection() {
   raw_ostream &OS = Section->getStream();
 
   writeUleb128(OS, NumFunctions, "function count");
-  for (ObjFile *File : Symtab->ObjectFiles) {
-    for (uint32_t Sig : File->getWasmObj()->functionTypes()) {
+  for (ObjFile *File : Symtab->ObjectFiles)
+    for (uint32_t Sig : File->getWasmObj()->functionTypes())
       writeUleb128(OS, File->relocateTypeIndex(Sig), "sig index");
-    }
-  }
 }
 
 void Writer::createMemorySection() {
@@ -358,7 +355,7 @@ void Writer::createDataSection() {
   OutputSections.push_back(Section);
 }
 
-// Create reloctions sections in the final output.
+// Create relocations sections in the final output.
 // These are only created when relocatable output is requested.
 void Writer::createRelocSections() {
   log("createRelocSections");
@@ -376,7 +373,7 @@ void Writer::createRelocSections() {
     else if (S->Type == WASM_SEC_CODE)
       name = "reloc.CODE";
     else
-      llvm_unreachable("relocations only support for code and data");
+      llvm_unreachable("relocations only supported for code and data");
 
     SyntheticSection *Section = createSyntheticSection(WASM_SEC_CUSTOM, name);
     raw_ostream &OS = Section->getStream();
@@ -417,10 +414,9 @@ void Writer::createLinkingSection() {
   for (ObjFile *File : Symtab->ObjectFiles) {
     const WasmLinkingData &L = File->getWasmObj()->linkingData();
     InitFunctions.reserve(InitFunctions.size() + L.InitFunctions.size());
-    for (const WasmInitFunc &F : L.InitFunctions) {
+    for (const WasmInitFunc &F : L.InitFunctions)
       InitFunctions.emplace_back(WasmInitFunc{
           F.Priority, File->relocateFunctionIndex(F.FunctionIndex)});
-    }
   }
 
   if (!InitFunctions.empty()) {

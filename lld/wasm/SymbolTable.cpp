@@ -88,8 +88,8 @@ static const WasmSignature *getFunctionSig(const ObjFile &Obj,
     const WasmImport &Import = WasmObj->imports()[Sym.ImportIndex];
     FunctionType = Import.SigIndex;
   } else {
-    uint32_t FuntionIndex = Sym.ElementIndex - Obj.NumFunctionImports();
-    FunctionType = WasmObj->functionTypes()[FuntionIndex];
+    uint32_t FunctionIndex = Sym.ElementIndex - Obj.NumFunctionImports();
+    FunctionType = WasmObj->functionTypes()[FunctionIndex];
   }
   return &WasmObj->types()[FunctionType];
 }
