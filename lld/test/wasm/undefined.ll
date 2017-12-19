@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %s -o %t.o
+; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %s -o %t.o
 ; RUN: lld -flavor wasm --allow-undefined -o %t.wasm %t.o
 
 ; Fails due to undefined 'foo'

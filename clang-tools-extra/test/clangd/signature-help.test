@@ -1,4 +1,4 @@
-# RUN: clangd -run-synchronously < %s | FileCheck %s
+# RUN: clangd -pretty -run-synchronously < %s | FileCheck -strict-whitespace %s
 # It is absolutely vital that this file has CRLF line endings.
 
 # Start a session.
@@ -6,45 +6,32 @@ Content-Length: 125
 
 {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
 
-# Modify the document.
-Content-Length: 333
+Content-Length: 172
 
-{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///main.cpp","languageId":"cpp","version":1,"text":"void foo(int x, int y);\nvoid foo(int x, float y);\nvoid foo(float x, int y);\nvoid foo(float x, float y);\nvoid bar(int x, int y = 0);\nvoid bar(float x = 0, int y = 42);\nint main() { foo("}}}
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///main.cpp","languageId":"cpp","version":1,"text":"void x(int);\nint main(){\nx("}}}
 
-# Ask for signature help.
 Content-Length: 151
 
-{"jsonrpc":"2.0","id":1,"method":"textDocument/signatureHelp","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":8,"character":9}}}
-# CHECK: {"id":1,"jsonrpc":"2.0","result":{"activeParameter":0,"activeSignature":0,"signatures":[
-# CHECK-DAG: {"label":"foo(float x, float y) -> void","parameters":[{"label":"float x"},{"label":"float y"}]}
-# CHECK-DAG: {"label":"foo(float x, int y) -> void","parameters":[{"label":"float x"},{"label":"int y"}]}
-# CHECK-DAG: {"label":"foo(int x, float y) -> void","parameters":[{"label":"int x"},{"label":"float y"}]}
-# CHECK-DAG: {"label":"foo(int x, int y) -> void","parameters":[{"label":"int x"},{"label":"int y"}]}
-# CHECK-SAME: ]}
-
-# Modify the document
-Content-Length: 333
-
-{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///main.cpp","languageId":"cpp","version":2,"text":"void foo(int x, int y);\nvoid foo(int x, float y);\nvoid foo(float x, int y);\nvoid foo(float x, float y);\nvoid bar(int x, int y = 0);\nvoid bar(float x = 0, int y = 42);\nint main() { bar("}}}
-
-# Ask for signature help (this checks default argument handling).
-Content-Length: 151
-
-{"jsonrpc":"2.0","id":2,"method":"textDocument/signatureHelp","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":8,"character":9}}}
-# CHECK: {"id":2,"jsonrpc":"2.0","result":{"activeParameter":0,"activeSignature":0,"signatures":[
-# CHECK-DAG: {"label":"bar(int x, int y = 0) -> void","parameters":[{"label":"int x"},{"label":"int y = 0"}]}
-# CHECK-DAG: {"label":"bar(float x = 0, int y = 42) -> void","parameters":[{"label":"float x = 0"},{"label":"int y = 42"}]}
-# CHECK-SAME: ]}
-
-Content-Length: 159
-
-{"jsonrpc":"2.0","id":3,"method":"textDocument/signatureHelp","params":{"textDocument":{"uri":"file:///doesnotexist.cpp"},"position":{"line":8,"character":9}}}
-# CHECK: {"error":{"code":-32602,"message":"signatureHelp is called for non-added document"},"id":3,"jsonrpc":"2.0"}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/signatureHelp","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":2,"character":2}}}
+#      CHECK: "id": 1,
+# CHECK-NEXT: "jsonrpc": "2.0",
+# CHECK-NEXT: "result": {
+# CHECK-NEXT:   "activeParameter": 0,
+# CHECK-NEXT:   "activeSignature": 0,
+# CHECK-NEXT:   "signatures": [
+# CHECK-NEXT:     {
+# CHECK-NEXT:       "label": "x(int) -> void",
+# CHECK-NEXT:       "parameters": [
+# CHECK-NEXT:         {
+# CHECK-NEXT:           "label": "int"
+# CHECK-NEXT:         }
+# CHECK-NEXT:       ]
+# CHECK-NEXT:     }
+# CHECK-NEXT:   ]
+# CHECK-NEXT: }
 
 # Shutdown.
 Content-Length: 49
 
 {"jsonrpc":"2.0","id":100000,"method":"shutdown"}
 Content-Length: 33
-
-{"jsonrpc":"2.0":"method":"exit"}

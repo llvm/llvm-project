@@ -1,5 +1,5 @@
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %p/Inputs/call-indirect.ll -o %t2.o
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %s -o %t.o
+; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %p/Inputs/call-indirect.ll -o %t2.o
+; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %s -o %t.o
 ; RUN: lld -flavor wasm -o %t.wasm %t2.o %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 

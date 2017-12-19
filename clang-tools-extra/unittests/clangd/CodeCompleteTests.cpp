@@ -17,12 +17,25 @@
 
 namespace clang {
 namespace clangd {
-// Let GMock print completion items.
+// Let GMock print completion items and signature help.
 void PrintTo(const CompletionItem &I, std::ostream *O) {
   llvm::raw_os_ostream OS(*O);
   OS << I.label << " - " << toJSON(I);
 }
 void PrintTo(const std::vector<CompletionItem> &V, std::ostream *O) {
+  *O << "{\n";
+  for (const auto &I : V) {
+    *O << "\t";
+    PrintTo(I, O);
+    *O << "\n";
+  }
+  *O << "}";
+}
+void PrintTo(const SignatureInformation &I, std::ostream *O) {
+  llvm::raw_os_ostream OS(*O);
+  OS << I.label << " - " << toJSON(I);
+}
+void PrintTo(const std::vector<SignatureInformation> &V, std::ostream *O) {
   *O << "{\n";
   for (const auto &I : V) {
     *O << "\t";
@@ -366,6 +379,81 @@ TEST(CompletionTest, Kinds) {
 
   Results = completions("nam^");
   EXPECT_THAT(Results.items, Has("namespace", CompletionItemKind::Snippet));
+}
+
+SignatureHelp signatures(StringRef Text) {
+  MockFSProvider FS;
+  MockCompilationDatabase CDB;
+  IgnoreDiagnostics DiagConsumer;
+  ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
+                      /*StorePreamblesInMemory=*/true);
+  auto File = getVirtualTestFilePath("foo.cpp");
+  auto Test = parseTextMarker(Text);
+  Server.addDocument(Context::empty(), File, Test.Text);
+  auto R = Server.signatureHelp(Context::empty(), File, Test.MarkerPos);
+  assert(R);
+  return R.get().Value;
+}
+
+MATCHER_P(ParamsAre, P, "") {
+  if (P.size() != arg.parameters.size())
+    return false;
+  for (unsigned I = 0; I < P.size(); ++I)
+    if (P[I] != arg.parameters[I].label)
+      return false;
+  return true;
+}
+
+Matcher<SignatureInformation> Sig(std::string Label,
+                                  std::vector<std::string> Params) {
+  return AllOf(Labeled(Label), ParamsAre(Params));
+}
+
+TEST(SignatureHelpTest, Overloads) {
+  auto Results = signatures(R"cpp(
+    void foo(int x, int y);
+    void foo(int x, float y);
+    void foo(float x, int y);
+    void foo(float x, float y);
+    void bar(int x, int y = 0);
+    int main() { foo(^); }
+  )cpp");
+  EXPECT_THAT(Results.signatures,
+              UnorderedElementsAre(
+                  Sig("foo(float x, float y) -> void", {"float x", "float y"}),
+                  Sig("foo(float x, int y) -> void", {"float x", "int y"}),
+                  Sig("foo(int x, float y) -> void", {"int x", "float y"}),
+                  Sig("foo(int x, int y) -> void", {"int x", "int y"})));
+  // We always prefer the first signature.
+  EXPECT_EQ(0, Results.activeSignature);
+  EXPECT_EQ(0, Results.activeParameter);
+}
+
+TEST(SignatureHelpTest, DefaultArgs) {
+  auto Results = signatures(R"cpp(
+    void bar(int x, int y = 0);
+    void bar(float x = 0, int y = 42);
+    int main() { bar(^
+  )cpp");
+  EXPECT_THAT(Results.signatures,
+              UnorderedElementsAre(
+                  Sig("bar(int x, int y = 0) -> void", {"int x", "int y = 0"}),
+                  Sig("bar(float x = 0, int y = 42) -> void",
+                      {"float x = 0", "int y = 42"})));
+  EXPECT_EQ(0, Results.activeSignature);
+  EXPECT_EQ(0, Results.activeParameter);
+}
+
+TEST(SignatureHelpTest, ActiveArg) {
+  auto Results = signatures(R"cpp(
+    int baz(int a, int b, int c);
+    int main() { baz(baz(1,2,3), ^); }
+  )cpp");
+  EXPECT_THAT(Results.signatures,
+              ElementsAre(Sig("baz(int a, int b, int c) -> int",
+                              {"int a", "int b", "int c"})));
+  EXPECT_EQ(0, Results.activeSignature);
+  EXPECT_EQ(1, Results.activeParameter);
 }
 
 } // namespace
