@@ -81,6 +81,11 @@ void Section::writeSection(FileOutputBuffer &Out) const {
   std::copy(std::begin(Contents), std::end(Contents), Buf);
 }
 
+void OwnedDataSection::writeSection(FileOutputBuffer &Out) const {
+  uint8_t *Buf = Out.getBufferStart() + Offset;
+  std::copy(std::begin(Data), std::end(Data), Buf);
+}
+
 void StringTableSection::addString(StringRef Name) {
   StrTabBuilder.add(Name);
   Size = StrTabBuilder.getSize();
@@ -674,6 +679,13 @@ void Object<ELFT>::removeSections(
   }
   // Now finally get rid of them all togethor.
   Sections.erase(Iter, std::end(Sections));
+}
+
+template <class ELFT>
+void Object<ELFT>::addSection(StringRef SecName, ArrayRef<uint8_t> Data) {
+  auto Sec = llvm::make_unique<OwnedDataSection>(SecName, Data);
+  Sec->OriginalOffset = ~0ULL;
+  Sections.push_back(std::move(Sec));
 }
 
 template <class ELFT> void ELFObject<ELFT>::sortSections() {

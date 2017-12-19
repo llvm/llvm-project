@@ -348,11 +348,6 @@ unsigned ARMSubtarget::getMispredictionPenalty() const {
   return SchedModel.MispredictPenalty;
 }
 
-bool ARMSubtarget::hasSinCos() const {
-  return isTargetWatchOS() ||
-    (isTargetIOS() && !getTargetTriple().isOSVersionLT(7, 0));
-}
-
 bool ARMSubtarget::enableMachineScheduler() const {
   // Enable the MachineScheduler before register allocation for subtargets
   // with the use-misched feature.

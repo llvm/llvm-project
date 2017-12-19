@@ -1,7 +1,7 @@
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %s -o %t.o
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %S/Inputs/archive1.ll -o %t.a1.o
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %S/Inputs/archive2.ll -o %t.a2.o
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %S/Inputs/hello.ll -o %t.a3.o
+; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %s -o %t.o
+; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %S/Inputs/archive1.ll -o %t.a1.o
+; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %S/Inputs/archive2.ll -o %t.a2.o
+; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %S/Inputs/hello.ll -o %t.a3.o
 ; RUN: llvm-ar rcs %t.a %t.a1.o %t.a2.o %t.a3.o
 ; RUN: lld -flavor wasm %t.a %t.o -o %t.wasm
 ; RUN: llvm-nm -a %t.wasm | FileCheck %s

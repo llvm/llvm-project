@@ -849,6 +849,23 @@ TEST(APFloatTest, fromDecimalString) {
   EXPECT_EQ(2.71828, convertToDoubleFromString("2.71828"));
 }
 
+TEST(APFloatTest, fromToStringSpecials) {
+  auto expects = [] (const char *first, const char *second) {
+    std::string roundtrip = convertToString(convertToDoubleFromString(second), 0, 3);
+    EXPECT_STREQ(first, roundtrip.c_str());
+  };
+  expects("+Inf", "+Inf");
+  expects("+Inf", "INFINITY");
+  expects("+Inf", "inf");
+  expects("-Inf", "-Inf");
+  expects("-Inf", "-INFINITY");
+  expects("-Inf", "-inf");
+  expects("NaN", "NaN");
+  expects("NaN", "nan");
+  expects("NaN", "-NaN");
+  expects("NaN", "-nan");
+}
+
 TEST(APFloatTest, fromHexadecimalString) {
   EXPECT_EQ( 1.0, APFloat(APFloat::IEEEdouble(),  "0x1p0").convertToDouble());
   EXPECT_EQ(+1.0, APFloat(APFloat::IEEEdouble(), "+0x1p0").convertToDouble());

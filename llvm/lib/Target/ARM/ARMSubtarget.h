@@ -712,10 +712,6 @@ public:
 
   unsigned getMispredictionPenalty() const;
 
-  /// This function returns true if the target has sincos() routine in its
-  /// compiler runtime or math libraries.
-  bool hasSinCos() const;
-
   /// Returns true if machine scheduler should be enabled.
   bool enableMachineScheduler() const override;
 
