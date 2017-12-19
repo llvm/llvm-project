@@ -12,11 +12,15 @@
 // CHECK-VERSION-IOS3: "armv6k-apple-ios3.0.0"
 
 // RUN: env IPHONEOS_DEPLOYMENT_TARGET=11.0 \
-// RUN:   %clang -target armv7-apple-ios9.0 -c -### %s 2> %t.err
+// RUN:   %clang -target armv7-apple-darwin -c -### %s 2> %t.err
 // RUN:   FileCheck --input-file=%t.err --check-prefix=CHECK-VERSION-IOS4 %s
 // CHECK-VERSION-IOS4: invalid iOS deployment version 'IPHONEOS_DEPLOYMENT_TARGET=11.0'
 
-// RUN: %clang -target armv7-apple-ios9.0 -miphoneos-version-min=11.0 -c -### %s 2> %t.err
+// RUN: %clang -target armv7-apple-ios11.0 -c -### %s 2> %t.err
+// RUN: FileCheck --input-file=%t.err --check-prefix=CHECK-VERSION-IOS41 %s
+// CHECK-VERSION-IOS41: invalid iOS deployment version '--target=armv7-apple-ios11.0'
+
+// RUN: %clang -target armv7-apple-darwin -miphoneos-version-min=11.0 -c -### %s 2> %t.err
 // RUN: FileCheck --input-file=%t.err --check-prefix=CHECK-VERSION-IOS5 %s
 // CHECK-VERSION-IOS5: invalid iOS deployment version '-miphoneos-version-min=11.0'
 
@@ -25,13 +29,14 @@
 // CHECK-VERSION-IOS6: invalid iOS deployment version '-mios-simulator-version-min=11.0'
 
 // RUN: %clang -target armv7-apple-ios11.1 -c -### %s 2>&1 | \
-// RUN: FileCheck --check-prefix=CHECK-VERSION-IOS7 %s
-// RUN: %clang -target armv7-apple-ios9 -Wno-missing-sysroot -isysroot SDKs/iPhoneOS11.0.sdk -c -### %s 2>&1 | \
+// RUN: FileCheck --check-prefix=CHECK-VERSION-IOS71 %s
+// CHECK-VERSION-IOS71: invalid iOS deployment version
+// RUN: %clang -target armv7-apple-darwin -Wno-missing-sysroot -isysroot SDKs/iPhoneOS11.0.sdk -c -### %s 2>&1 | \
 // RUN: FileCheck --check-prefix=CHECK-VERSION-IOS7 %s
 // CHECK-VERSION-IOS7: thumbv7-apple-ios10.99.99
 
 // RUN: env IPHONEOS_DEPLOYMENT_TARGET=11.0 \
-// RUN:   %clang -target arm64-apple-ios11.0 -c -### %s 2>&1 | \
+// RUN:   %clang -target arm64-apple-darwin -c -### %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-IOS8 %s
 // CHECK-VERSION-IOS8: arm64-apple-ios11.0.0
 
@@ -49,7 +54,7 @@
 
 // RUN: %clang -target armv7-apple-ios9.0 -miphoneos-version-min=11.0 -c -Wno-invalid-ios-deployment-target -### %s 2>&1 | \
 // RUN: FileCheck --check-prefix=CHECK-VERSION-IOS12 %s
-// CHECK-VERSION-IOS12: thumbv7-apple-ios11.0.0
+// CHECK-VERSION-IOS12: thumbv7-apple-ios9.0.0
 
 // RUN: %clang -target i686-apple-darwin8 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-OSX4 %s
@@ -68,14 +73,14 @@
 // CHECK-VERSION-OSX6: "i386-apple-macosx10.6.0"
 // RUN: %clang -target x86_64-apple-darwin14 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-OSX10 %s
-// RUN: %clang -target x86_64-apple-macosx -mmacosx-version-min=10.10 -c %s -### 2>&1 | \
+// RUN: %clang -target x86_64-apple-darwin -mmacosx-version-min=10.10 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-OSX10 %s
-// RUN: %clang -target x86_64-apple-macosx -mmacos-version-min=10.10 -c %s -### 2>&1 | \
+// RUN: %clang -target x86_64-apple-darwin -mmacos-version-min=10.10 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-OSX10 %s
 // CHECK-VERSION-OSX10: "x86_64-apple-macosx10.10.0"
-// RUN: %clang -target x86_64-apple-macosx -mmacosx-version-min= -c %s -### 2>&1 | \
+// RUN: %clang -target x86_64-apple-darwin -mmacosx-version-min= -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-MISSING %s
-// RUN: %clang -target x86_64-apple-macosx -mmacos-version-min= -c %s -### 2>&1 | \
+// RUN: %clang -target x86_64-apple-darwin -mmacos-version-min= -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-MISSING %s
 // CHECK-VERSION-MISSING: invalid version number
 // RUN: %clang -target armv7k-apple-darwin -mwatchos-version-min=2.0 -c %s -### 2>&1 | \
@@ -144,3 +149,116 @@
 // RUN:   %clang -target x86_64-apple-darwin -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-INVALID-ENV %s
 // CHECK-VERSION-INVALID-ENV: invalid version number in 'MACOSX_DEPLOYMENT_TARGET=1000.1000'
+
+
+
+// Target can specify the OS version:
+
+// RUN: %clang -target x86_64-apple-macos10.11.2 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-TMAC2 %s
+// CHECK-VERSION-TMAC2: "x86_64-apple-macosx10.11.2"
+
+// RUN: %clang -target arm64-apple-ios11.1 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-TIOS1 %s
+// CHECK-VERSION-TIOS1: "arm64-apple-ios11.1.0"
+
+// RUN: %clang -target arm64-apple-tvos10.3 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-TTVOS1 %s
+// CHECK-VERSION-TTVOS1: "arm64-apple-tvos10.3.0"
+
+// RUN: %clang -target armv7k-apple-watchos4.1 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-TWATCHOS1 %s
+// CHECK-VERSION-TWATCHOS1: "thumbv7k-apple-watchos4.1.0"
+
+// "darwin" always back to the -m<os>version-min and environment:
+
+// RUN: %clang -target x86_64-apple-darwin14 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-TDARWIN-FALL1 %s
+// CHECK-VERSION-TDARWIN-FALL1: "x86_64-apple-macosx10.10.0"
+
+// RUN: %clang -target x86_64-apple-darwin14 -miphoneos-version-min=10.1 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-TDARWIN-FALL2 %s
+// CHECK-VERSION-TDARWIN-FALL2: "x86_64-apple-ios10.1.0-simulator"
+
+// RUN: env IPHONEOS_DEPLOYMENT_TARGET=9.1 \
+// RUN:   %clang -target arm64-apple-darwin14 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-TDARWIN-FALL3 %s
+// CHECK-VERSION-TDARWIN-FALL3: "arm64-apple-ios9.1.0"
+
+// RUN: %clang -target arm64-apple-darwin14 -isysroot SDKs/iPhoneOS11.0.sdk -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-TDARWIN-FALL4 %s
+// CHECK-VERSION-TDARWIN-FALL4: "arm64-apple-ios11.0.0"
+
+// RUN: %clang -target unknown-apple-darwin12  -arch armv7  -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-TDARWIN-FALL5 %s
+// CHECK-VERSION-TDARWIN-FALL5: "thumbv7-apple-ios5.0.0"
+
+// Warn about -m<os>-version-min when it's used with target:
+
+// RUN: %clang -target x86_64-apple-macos10.11.2 -mmacos-version-min=10.6 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-TNO-OSV1 %s
+// CHECK-VERSION-TNO-OSV1: argument unused during compilation: '-mmacosx-version-min=10.6'
+
+// RUN: %clang -target x86_64-apple-macos -miphoneos-version-min=9.1 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-TNO-OSV2 %s
+// CHECK-VERSION-TNO-OSV2: argument unused during compilation: '-miphoneos-version-min=9.1'
+
+// Target with OS version is not overriden by -m<os>-version-min variables:
+
+// RUN: %clang -target x86_64-apple-macos10.11.2 -mmacos-version-min=10.6 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-TIGNORE-OSV1 %s
+// CHECK-VERSION-TIGNORE-OSV1: "x86_64-apple-macosx10.11.2"
+
+// RUN: %clang -target arm64-apple-ios11.0 -mios-version-min=9.0 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-TIGNORE-OSV2 %s
+// CHECK-VERSION-TIGNORE-OSV2: "arm64-apple-ios11.0.0"
+
+// RUN: %clang -target arm64-apple-tvos11.0 -mtvos-version-min=9.0 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-TIGNORE-OSV3 %s
+// CHECK-VERSION-TIGNORE-OSV3: "arm64-apple-tvos11.0.0"
+
+// RUN: %clang -target armv7k-apple-watchos3 -mwatchos-version-min=4 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-TIGNORE-OSV4 %s
+// CHECK-VERSION-TIGNORE-OSV4: "thumbv7k-apple-watchos3.0.0"
+
+// Target with OS version is not overriden by environment variables:
+
+// RUN: env MACOSX_DEPLOYMENT_TARGET=10.1 \
+// RUN:   %clang -target i386-apple-macos10.5 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-TMACOS-CMD %s
+// CHECK-VERSION-TMACOS-CMD: "i386-apple-macosx10.5.0"
+
+// RUN: env IPHONEOS_DEPLOYMENT_TARGET=10.1 \
+// RUN:   %clang -target arm64-apple-ios11 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-TIOS-CMD %s
+// CHECK-VERSION-TIOS-CMD: "arm64-apple-ios11.0.0"
+
+// RUN: env TVOS_DEPLOYMENT_TARGET=8.3.1 \
+// RUN:   %clang -target arm64-apple-tvos9 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-TTVOS-CMD %s
+// CHECK-VERSION-TTVOS-CMD: "arm64-apple-tvos9.0.0"
+
+// RUN: env WATCHOS_DEPLOYMENT_TARGET=2 \
+// RUN:   %clang -target armv7k-apple-watchos3 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-TWATCHOS-CMD %s
+// CHECK-VERSION-TWATCHOS-CMD: "thumbv7k-apple-watchos3.0.0"
+
+// Target with OS version is not overriden by the SDK:
+
+// RUN: %clang -target armv7-apple-ios9 -Wno-missing-sysroot -isysroot SDKs/iPhoneOS11.0.sdk -c -### %s 2>&1 | \
+// RUN: FileCheck --check-prefix=CHECK-VERSION-TIOS-SDK %s
+// CHECK-VERSION-TIOS-SDK: thumbv7-apple-ios9
+
+// RUN: %clang -target armv7k-apple-watchos4 -Wno-missing-sysroot -isysroot SDKs/WatchOS3.0.sdk -c -### %s 2>&1 | \
+// RUN: FileCheck --check-prefix=CHECK-VERSION-TWATCHOS-SDK %s
+// CHECK-VERSION-TWATCHOS-SDK: thumbv7k-apple-watchos4
+
+// RUN: %clang -target armv7-apple-tvos9 -Wno-missing-sysroot -isysroot SDKs/AppleTVOS11.0.sdk -c -### %s 2>&1 | \
+// RUN: FileCheck --check-prefix=CHECK-VERSION-TTVOS-SDK %s
+// CHECK-VERSION-TTVOS-SDK: thumbv7-apple-tvos9
+
+// Target with OS version is not overriden by arch:
+
+// RUN: %clang -target uknown-apple-macos10.11.2 -arch=armv7k -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-TIGNORE-ARCH1 %s
+// CHECK-VERSION-TIGNORE-ARCH1: "unknown-apple-macosx10.11.2"
