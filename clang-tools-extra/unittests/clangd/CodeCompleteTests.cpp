@@ -558,6 +558,38 @@ TEST(CompletionTest, FullyQualifiedScope) {
   EXPECT_THAT(Results.items, Has("XYZ", CompletionItemKind::Class));
 }
 
+TEST(CompletionTest, ASTIndexMultiFile) {
+  MockFSProvider FS;
+  MockCompilationDatabase CDB;
+  IgnoreDiagnostics DiagConsumer;
+  ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
+                      /*StorePreamblesInMemory=*/true,
+                      /*BuildDynamicSymbolIndex=*/true);
+
+  Server
+      .addDocument(Context::empty(), getVirtualTestFilePath("foo.cpp"), R"cpp(
+      namespace ns { class XYZ {}; void foo() {} }
+  )cpp")
+      .wait();
+
+  auto File = getVirtualTestFilePath("bar.cpp");
+  auto Test = parseTextMarker(R"cpp(
+      namespace ns { class XXX {}; void fooooo() {} }
+      void f() { ns::^ }
+  )cpp");
+  Server.addDocument(Context::empty(), File, Test.Text).wait();
+
+  auto Results = Server.codeComplete(Context::empty(), File, Test.MarkerPos, {})
+                     .get()
+                     .second.Value;
+  // "XYZ" and "foo" are not included in the file being completed but are still
+  // visible through the index.
+  EXPECT_THAT(Results.items, Has("XYZ", CompletionItemKind::Class));
+  EXPECT_THAT(Results.items, Has("foo", CompletionItemKind::Function));
+  EXPECT_THAT(Results.items, Has("XXX", CompletionItemKind::Class));
+  EXPECT_THAT(Results.items, Has("fooooo", CompletionItemKind::Function));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

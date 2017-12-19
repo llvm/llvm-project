@@ -357,17 +357,21 @@ ParsedASTWrapper::ParsedASTWrapper(llvm::Optional<ParsedAST> AST)
 std::shared_ptr<CppFile>
 CppFile::Create(PathRef FileName, tooling::CompileCommand Command,
                 bool StorePreamblesInMemory,
-                std::shared_ptr<PCHContainerOperations> PCHs) {
-  return std::shared_ptr<CppFile>(new CppFile(
-      FileName, std::move(Command), StorePreamblesInMemory, std::move(PCHs)));
+                std::shared_ptr<PCHContainerOperations> PCHs,
+                ASTParsedCallback ASTCallback) {
+  return std::shared_ptr<CppFile>(
+      new CppFile(FileName, std::move(Command), StorePreamblesInMemory,
+                  std::move(PCHs), std::move(ASTCallback)));
 }
 
 CppFile::CppFile(PathRef FileName, tooling::CompileCommand Command,
                  bool StorePreamblesInMemory,
-                 std::shared_ptr<PCHContainerOperations> PCHs)
+                 std::shared_ptr<PCHContainerOperations> PCHs,
+                 ASTParsedCallback ASTCallback)
     : FileName(FileName), Command(std::move(Command)),
       StorePreamblesInMemory(StorePreamblesInMemory), RebuildCounter(0),
-      RebuildInProgress(false), PCHs(std::move(PCHs)) {
+      RebuildInProgress(false), PCHs(std::move(PCHs)),
+      ASTCallback(std::move(ASTCallback)) {
   // FIXME(ibiryukov): we should pass a proper Context here.
   log(Context::empty(), "Opened file " + FileName + " with command [" +
                             this->Command.Directory + "] " +
@@ -570,6 +574,8 @@ CppFile::deferRebuild(StringRef NewContents,
     if (NewAST) {
       Diagnostics.insert(Diagnostics.end(), NewAST->getDiagnostics().begin(),
                          NewAST->getDiagnostics().end());
+      if (That->ASTCallback)
+        That->ASTCallback(Ctx, That->FileName, NewAST.getPointer());
     } else {
       // Don't report even Preamble diagnostics if we coulnd't build AST.
       Diagnostics.clear();

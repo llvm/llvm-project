@@ -398,13 +398,38 @@ void Writer::createLinkingSection() {
   DataSizeSubSection.finalizeContents();
   DataSizeSubSection.writeToStream(OS);
 
-  if (Segments.size() && Config->Relocatable) {
+  if (!Config->Relocatable)
+    return;
+
+  if (Segments.size()) {
     SubSection SubSection(WASM_SEGMENT_INFO);
     writeUleb128(SubSection.getStream(), Segments.size(), "num data segments");
     for (const OutputSegment *S : Segments) {
       writeStr(SubSection.getStream(), S->Name, "segment name");
       writeUleb128(SubSection.getStream(), S->Alignment, "alignment");
       writeUleb128(SubSection.getStream(), 0, "flags");
+    }
+    SubSection.finalizeContents();
+    SubSection.writeToStream(OS);
+  }
+
+  std::vector<WasmInitFunc> InitFunctions;
+  for (ObjFile *File : Symtab->ObjectFiles) {
+    const WasmLinkingData &L = File->getWasmObj()->linkingData();
+    InitFunctions.reserve(InitFunctions.size() + L.InitFunctions.size());
+    for (const WasmInitFunc &F : L.InitFunctions) {
+      InitFunctions.emplace_back(WasmInitFunc{
+          F.Priority, File->relocateFunctionIndex(F.FunctionIndex)});
+    }
+  }
+
+  if (!InitFunctions.empty()) {
+    SubSection SubSection(WASM_INIT_FUNCS);
+    writeUleb128(SubSection.getStream(), InitFunctions.size(),
+                 "num init functionsw");
+    for (const WasmInitFunc &F : InitFunctions) {
+      writeUleb128(SubSection.getStream(), F.Priority, "priority");
+      writeUleb128(SubSection.getStream(), F.FunctionIndex, "function index");
     }
     SubSection.finalizeContents();
     SubSection.writeToStream(OS);

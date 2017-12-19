@@ -176,10 +176,17 @@ static void calcRelocations(const ObjFile &File,
   }
 }
 
+std::string OutputSection::getSectionName() {
+  return sectionTypeToString(Type);
+}
+
+std::string SubSection::getSectionName() {
+  return std::string("subsection <type=") + std::to_string(Type) + ">";
+}
+
 void OutputSection::createHeader(size_t BodySize) {
   raw_string_ostream OS(Header);
-  debugWrite(OS.tell(),
-             "section type [" + Twine(sectionTypeToString(Type)) + "]");
+  debugWrite(OS.tell(), "section type [" + Twine(getSectionName()) + "]");
   writeUleb128(OS, Type, nullptr);
   writeUleb128(OS, BodySize, "section size");
   OS.flush();
