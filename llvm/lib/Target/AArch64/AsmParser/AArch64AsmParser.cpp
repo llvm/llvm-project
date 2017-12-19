@@ -59,12 +59,7 @@ using namespace llvm;
 
 namespace {
 
-enum class RegKind {
-  Scalar,
-  NeonVector,
-  SVEDataVector,
-  SVEPredicateVector
-};
+enum class RegKind {Scalar, NeonVector, SVEDataVector};
 
 class AArch64AsmParser : public MCTargetAsmParser {
 private:
@@ -139,7 +134,6 @@ private:
   OperandMatchResultTy tryParseGPRSeqPair(OperandVector &Operands);
   template <bool ParseSuffix>
   OperandMatchResultTy tryParseSVEDataVector(OperandVector &Operands);
-  OperandMatchResultTy tryParseSVEPredicateVector(OperandVector &Operands);
 
 public:
   enum AArch64MatchResultTy {
@@ -832,26 +826,14 @@ public:
                Reg.RegNum);
   }
 
-  template <unsigned Class> bool isSVEVectorReg() const {
-    RegKind RK;
-    switch (Class) {
-    case AArch64::ZPRRegClassID:
-      RK = RegKind::SVEDataVector;
-      break;
-    case AArch64::PPRRegClassID:
-      RK = RegKind::SVEPredicateVector;
-      break;
-    default:
-      llvm_unreachable("Unsupport register class");
-    }
-
-    return (Kind == k_Register && Reg.Kind == RK) &&
+  template <unsigned Class = AArch64::ZPRRegClassID>
+  bool isSVEDataVectorReg() const {
+    return (Kind == k_Register && Reg.Kind == RegKind::SVEDataVector) &&
            AArch64MCRegisterClasses[Class].contains(getReg());
   }
 
-  template <int ElementWidth, unsigned Class>
-  bool isSVEVectorRegOfWidth() const {
-    return isSVEVectorReg<Class>() &&
+  template <int ElementWidth> bool isSVEDataVectorRegOfWidth() const {
+    return isSVEDataVectorReg() &&
            (ElementWidth == -1 || Reg.ElementWidth == ElementWidth);
   }
 
@@ -1944,27 +1926,6 @@ static unsigned matchSVEDataVectorRegName(StringRef Name) {
       .Default(0);
 }
 
-static unsigned matchSVEPredicateVectorRegName(StringRef Name) {
-  return StringSwitch<unsigned>(Name.lower())
-      .Case("p0", AArch64::P0)
-      .Case("p1", AArch64::P1)
-      .Case("p2", AArch64::P2)
-      .Case("p3", AArch64::P3)
-      .Case("p4", AArch64::P4)
-      .Case("p5", AArch64::P5)
-      .Case("p6", AArch64::P6)
-      .Case("p7", AArch64::P7)
-      .Case("p8", AArch64::P8)
-      .Case("p9", AArch64::P9)
-      .Case("p10", AArch64::P10)
-      .Case("p11", AArch64::P11)
-      .Case("p12", AArch64::P12)
-      .Case("p13", AArch64::P13)
-      .Case("p14", AArch64::P14)
-      .Case("p15", AArch64::P15)
-      .Default(0);
-}
-
 static bool isValidSVEKind(StringRef Name) {
   return StringSwitch<bool>(Name.lower())
       .Case(".b", true)
@@ -1975,8 +1936,8 @@ static bool isValidSVEKind(StringRef Name) {
       .Default(false);
 }
 
-static bool isSVERegister(StringRef Name) {
-  return Name[0] == 'z' || Name[0] == 'p';
+static bool isSVEDataVectorRegister(StringRef Name) {
+  return Name[0] == 'z';
 }
 
 static void parseValidVectorKind(StringRef Name, unsigned &NumElements,
@@ -2019,9 +1980,6 @@ unsigned AArch64AsmParser::matchRegisterNameAlias(StringRef Name,
   case RegKind::SVEDataVector:
     RegNum = matchSVEDataVectorRegName(Name);
     break;
-  case RegKind::SVEPredicateVector:
-    RegNum = matchSVEPredicateVectorRegName(Name);
-    break;
   }
 
   if (!RegNum) {
@@ -2049,7 +2007,7 @@ int AArch64AsmParser::tryParseRegister() {
     return -1;
 
   std::string lowerCase = Tok.getString().lower();
-  if (isSVERegister(lowerCase))
+  if (isSVEDataVectorRegister(lowerCase))
     return -1;
 
   unsigned RegNum = matchRegisterNameAlias(lowerCase, RegKind::Scalar);
@@ -2784,36 +2742,6 @@ AArch64AsmParser::tryParseSVERegister(int &Reg, StringRef &Kind,
   return MatchOperand_NoMatch;
 }
 
-/// tryParseSVEPredicateVector - Parse a SVE predicate register operand.
-OperandMatchResultTy
-AArch64AsmParser::tryParseSVEPredicateVector(OperandVector &Operands) {
-  // Check for a SVE predicate register specifier first.
-  const SMLoc S = getLoc();
-  StringRef Kind;
-  int RegNum = -1;
-  auto Res = tryParseSVERegister(RegNum, Kind, RegKind::SVEPredicateVector);
-  if (Res != MatchOperand_Success)
-    return Res;
-
-  unsigned ElementWidth = StringSwitch<unsigned>(Kind.lower())
-                              .Case("", -1)
-                              .Case(".b", 8)
-                              .Case(".h", 16)
-                              .Case(".s", 32)
-                              .Case(".d", 64)
-                              .Case(".q", 128)
-                              .Default(0);
-
-  if (!ElementWidth)
-    return MatchOperand_NoMatch;
-
-  Operands.push_back(
-      AArch64Operand::CreateReg(RegNum, RegKind::SVEPredicateVector,
-                                ElementWidth, S, getLoc(), getContext()));
-
-  return MatchOperand_Success;
-}
-
 /// parseRegister - Parse a non-vector register operand.
 bool AArch64AsmParser::parseRegister(OperandVector &Operands) {
   SMLoc S = getLoc();
@@ -3034,12 +2962,9 @@ AArch64AsmParser::tryParseGPR64sp0Operand(OperandVector &Operands) {
 bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
                                   bool invertCondCode) {
   MCAsmParser &Parser = getParser();
-
-  OperandMatchResultTy ResTy =
-      MatchOperandParserImpl(Operands, Mnemonic, /*ParseForAllFeatures=*/ true);
-
   // Check if the current operand has a custom associated parser, if so, try to
   // custom parse the operand, or fallback to the general approach.
+  OperandMatchResultTy ResTy = MatchOperandParserImpl(Operands, Mnemonic);
   if (ResTy == MatchOperand_Success)
     return false;
   // If there wasn't a custom match, try the generic matcher below. Otherwise,
@@ -3650,12 +3575,6 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
         ComputeAvailableFeatures(STI->getFeatureBits()));
     return Error(Loc, "unrecognized instruction mnemonic" + Suggestion);
   }
-  case Match_InvalidSVEPredicateAnyReg:
-  case Match_InvalidSVEPredicateBReg:
-  case Match_InvalidSVEPredicateHReg:
-  case Match_InvalidSVEPredicateSReg:
-  case Match_InvalidSVEPredicateDReg:
-    return Error(Loc, "invalid predicate register.");
   default:
     llvm_unreachable("unexpected error code!");
   }
@@ -4080,11 +3999,6 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidLabel:
   case Match_InvalidComplexRotationEven:
   case Match_InvalidComplexRotationOdd:
-  case Match_InvalidSVEPredicateAnyReg:
-  case Match_InvalidSVEPredicateBReg:
-  case Match_InvalidSVEPredicateHReg:
-  case Match_InvalidSVEPredicateSReg:
-  case Match_InvalidSVEPredicateDReg:
   case Match_MSR:
   case Match_MRS: {
     if (ErrorInfo >= Operands.size())
@@ -4433,20 +4347,6 @@ bool AArch64AsmParser::parseDirectiveReq(StringRef Name, SMLoc L) {
     if (Res == MatchOperand_Success && !Kind.empty())
       return Error(SRegLoc,
                    "sve vector register without type specifier expected");
-  }
-
-  if (RegNum == -1) {
-    StringRef Kind;
-    RegisterKind = RegKind::SVEPredicateVector;
-    OperandMatchResultTy Res =
-        tryParseSVERegister(RegNum, Kind, RegKind::SVEPredicateVector);
-
-    if (Res == MatchOperand_ParseFail)
-      return true;
-
-    if (Res == MatchOperand_Success && !Kind.empty())
-      return Error(SRegLoc,
-                   "sve predicate register without type specifier expected");
   }
 
   if (RegNum == -1)

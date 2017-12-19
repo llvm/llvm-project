@@ -1,6 +1,6 @@
-# RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - \
+# RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu -mcpu=pentiumpro %s -o - \
 # RUN:   | llvm-objdump -disassemble - | FileCheck %s
-# RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu -mc-relax-all %s -o - \
+# RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu -mcpu=pentiumpro -mc-relax-all %s -o - \
 # RUN:   | llvm-objdump -disassemble - | FileCheck %s
 
 # Test that instructions inside bundle-locked groups are relaxed even if their

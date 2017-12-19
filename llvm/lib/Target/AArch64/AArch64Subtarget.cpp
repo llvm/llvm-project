@@ -217,19 +217,6 @@ unsigned char AArch64Subtarget::classifyGlobalFunctionReference(
   return AArch64II::MO_NO_FLAG;
 }
 
-/// This function returns the name of a function which has an interface
-/// like the non-standard bzero function, if such a function exists on
-/// the current subtarget and it is considered prefereable over
-/// memset with zero passed as the second argument. Otherwise it
-/// returns null.
-const char *AArch64Subtarget::getBZeroEntry() const {
-  // Prefer bzero on Darwin only.
-  if(isTargetDarwin())
-    return "bzero";
-
-  return nullptr;
-}
-
 void AArch64Subtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
                                            unsigned NumRegionInstrs) const {
   // LNT run (at least on Cyclone) showed reasonably significant gains for

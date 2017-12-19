@@ -8,6 +8,6 @@
 	.set noat
         bc1fl     $fcc7,27        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
         bc1tl     $fcc7,27        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: non-zero fcc register doesn't exist in current ISA level
-        scd       $15,-8243($sp)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        scd       $15,-8243($sp)  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
         sdl       $a3,-20961($s8) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         sdr       $11,-20423($12) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction

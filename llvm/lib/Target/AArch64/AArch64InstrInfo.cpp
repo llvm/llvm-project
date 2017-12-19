@@ -4963,16 +4963,9 @@ void AArch64InstrInfo::insertOutlinerEpilogue(
     MachineBasicBlock &MBB, MachineFunction &MF,
     const MachineOutlinerInfo &MInfo) const {
 
-  bool ContainsCalls = false;
-
-  for (MachineInstr &MI : MBB) {
-    if (MI.isCall()) {
-      ContainsCalls = true;
-      break;
-    }
-  }
-
-  if (ContainsCalls) {
+  // Is there a call in the outlined range?
+  if (std::any_of(MBB.instr_begin(), MBB.instr_end(),
+                  [](MachineInstr &MI) { return MI.isCall(); })) {
     // Fix up the instructions in the range, since we're going to modify the
     // stack.
     fixupPostOutline(MBB);

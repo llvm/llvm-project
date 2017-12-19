@@ -351,21 +351,3 @@
   bnezc $2, -4194303       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
   bnezc $2, 4194304        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
   bnezc $2, 4194303        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
-  teq $8, $9, $2           # CHECK: :[[@LINE]]:15: error: expected 4-bit unsigned immediate
-  teq $8, $9, -1           # CHECK: :[[@LINE]]:15: error: expected 4-bit unsigned immediate
-  tge $8, $9, $2           # CHECK: :[[@LINE]]:15: error: expected 4-bit unsigned immediate
-  tge $8, $9, -1           # CHECK: :[[@LINE]]:15: error: expected 4-bit unsigned immediate
-  tgeu $8, $9, $2          # CHECK: :[[@LINE]]:16: error: expected 4-bit unsigned immediate
-  tgeu $8, $9, -1          # CHECK: :[[@LINE]]:16: error: expected 4-bit unsigned immediate
-  tlt $8, $9, $2           # CHECK: :[[@LINE]]:15: error: expected 4-bit unsigned immediate
-  tlt $8, $9, -1           # CHECK: :[[@LINE]]:15: error: expected 4-bit unsigned immediate
-  tltu $8, $9, $2          # CHECK: :[[@LINE]]:16: error: expected 4-bit unsigned immediate
-  tltu $8, $9, -1          # CHECK: :[[@LINE]]:16: error: expected 4-bit unsigned immediate
-  tne $8, $9, $2           # CHECK: :[[@LINE]]:15: error: expected 4-bit unsigned immediate
-  tne $8, $9, -1           # CHECK: :[[@LINE]]:15: error: expected 4-bit unsigned immediate
-  syscall -1               # CHECK: :[[@LINE]]:11: error: expected 10-bit unsigned immediate
-  syscall $4               # CHECK: :[[@LINE]]:11: error: expected 10-bit unsigned immediate
-  ldc2 $1, 1023($32)       # CHECK: :[[@LINE]]:12: error: expected memory with 11-bit signed offset
-  lwc2 $1, 16($32)         # CHECK: :[[@LINE]]:12: error: expected memory with 11-bit signed offset
-  sdc2 $1, 8($32)          # CHECK: :[[@LINE]]:12: error: expected memory with 11-bit signed offset
-  swc2 $1, 777($32)        # CHECK: :[[@LINE]]:12: error: expected memory with 11-bit signed offset

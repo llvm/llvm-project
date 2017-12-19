@@ -1,6 +1,6 @@
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %p/Inputs/weak-symbol1.ll -o %t1.o
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %p/Inputs/weak-symbol2.ll -o %t2.o
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %s -o %t.o
+; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %p/Inputs/weak-symbol1.ll -o %t1.o
+; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %p/Inputs/weak-symbol2.ll -o %t2.o
+; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %s -o %t.o
 ; RUN: lld -flavor wasm -o %t.wasm %t.o %t1.o %t2.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 

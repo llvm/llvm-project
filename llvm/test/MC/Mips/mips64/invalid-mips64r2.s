@@ -29,13 +29,13 @@
         seb       $25,$15             # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         seh       $v1,$12             # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         wsbh      $k1,$9              # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
-        dins $2, $3, -1, 1            # CHECK: :[[@LINE]]:22: error: invalid operand for instruction
-        dins $2, $3, 64, 1            # CHECK: :[[@LINE]]:22: error: invalid operand for instruction
-        dinsm $2, $3, -1, 1           # CHECK: :[[@LINE]]:23: error: invalid operand for instruction
-        dinsm $2, $3, 32, 1           # CHECK: :[[@LINE]]:23: error: invalid operand for instruction
-        dinsm $2, $3, 31, 0           # CHECK: :[[@LINE]]:27: error: invalid operand for instruction
-        dinsm $2, $3, 31, 65          # CHECK: :[[@LINE]]:27: error: invalid operand for instruction
-        dinsu $2, $3, 31, 1           # CHECK: :[[@LINE]]:23: error: invalid operand for instruction
-        dinsu $2, $3, 64, 1           # CHECK: :[[@LINE]]:23: error: invalid operand for instruction
-        dinsu $2, $3, 63, 0           # CHECK: :[[@LINE]]:27: error: invalid operand for instruction
-        dinsu $2, $3, 32, 33          # CHECK: :[[@LINE]]:27: error: invalid operand for instruction
+        dins $2, $3, -1, 1            # CHECK: :[[@LINE]]:22: error: expected 6-bit unsigned immediate
+        dins $2, $3, 64, 1            # CHECK: :[[@LINE]]:22: error: expected 6-bit unsigned immediate
+        dinsm $2, $3, -1, 1           # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+        dinsm $2, $3, 32, 1           # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
+        dinsm $2, $3, 31, 0           # CHECK: :[[@LINE]]:27: error: expected immediate in range 2 .. 64
+        dinsm $2, $3, 31, 65          # CHECK: :[[@LINE]]:27: error: expected immediate in range 2 .. 64
+        dinsu $2, $3, 31, 1           # CHECK: :[[@LINE]]:23: error: expected immediate in range 32 .. 63
+        dinsu $2, $3, 64, 1           # CHECK: :[[@LINE]]:23: error: expected immediate in range 32 .. 63
+        dinsu $2, $3, 63, 0           # CHECK: :[[@LINE]]:27: error: expected immediate in range 1 .. 32
+        dinsu $2, $3, 32, 33          # CHECK: :[[@LINE]]:27: error: expected immediate in range 1 .. 32

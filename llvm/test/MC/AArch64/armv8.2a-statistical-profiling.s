@@ -3,7 +3,7 @@
 
   psb csync
 // CHECK: psb csync              // encoding: [0x3f,0x22,0x03,0xd5]
-// NO_SPE:  instruction requires: spe
+// NO_SPE:  invalid operand for instruction
 
   msr pmblimitr_el1, x0
   msr pmbptr_el1, x0

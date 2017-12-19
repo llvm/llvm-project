@@ -1,4 +1,4 @@
-//===- LiveStackAnalysis.h - Live Stack Slot Analysis -----------*- C++ -*-===//
+//===- LiveStacks.h - Live Stack Slot Analysis ------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_LIVESTACKANALYSIS_H
-#define LLVM_CODEGEN_LIVESTACKANALYSIS_H
+#ifndef LLVM_CODEGEN_LIVESTACKS_H
+#define LLVM_CODEGEN_LIVESTACKS_H
 
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -100,4 +100,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_CODEGEN_LIVESTACK_ANALYSIS_H
+#endif

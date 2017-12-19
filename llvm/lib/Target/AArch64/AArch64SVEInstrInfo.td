@@ -14,10 +14,4 @@
 let Predicates = [HasSVE] in {
   defm ADD_ZZZ   : sve_int_bin_cons_arit_0<0b000, "add">;
   defm SUB_ZZZ   : sve_int_bin_cons_arit_0<0b001, "sub">;
-
-  defm ZIP1_ZZZ : sve_int_perm_bin_perm_zz<0b000, "zip1">;
-  defm ZIP2_ZZZ : sve_int_perm_bin_perm_zz<0b001, "zip2">;
-
-  defm ZIP1_PPP : sve_int_perm_bin_perm_pp<0b000, "zip1">;
-  defm ZIP2_PPP : sve_int_perm_bin_perm_pp<0b001, "zip2">;
 }

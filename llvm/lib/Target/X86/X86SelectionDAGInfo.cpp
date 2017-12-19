@@ -89,8 +89,9 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
     // Check to see if there is a specialized entry-point for memory zeroing.
     ConstantSDNode *ValC = dyn_cast<ConstantSDNode>(Val);
 
-    if (const char *bzeroEntry = ValC &&
-        ValC->isNullValue() ? Subtarget.getBZeroEntry() : nullptr) {
+    if (const char *bzeroName = (ValC && ValC->isNullValue())
+        ? DAG.getTargetLoweringInfo().getLibcallName(RTLIB::BZERO)
+        : nullptr) {
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
       EVT IntPtr = TLI.getPointerTy(DAG.getDataLayout());
       Type *IntPtrTy = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
@@ -106,7 +107,7 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
       CLI.setDebugLoc(dl)
           .setChain(Chain)
           .setLibCallee(CallingConv::C, Type::getVoidTy(*DAG.getContext()),
-                        DAG.getExternalSymbol(bzeroEntry, IntPtr),
+                        DAG.getExternalSymbol(bzeroName, IntPtr),
                         std::move(Args))
           .setDiscardResult();
 

@@ -107,22 +107,22 @@
     copy_s.h $2, $w9[8]      # CHECK: :[[@LINE]]:22: error: expected 3-bit unsigned immediate
     copy_s.w $2, $w9[-1]     # CHECK: :[[@LINE]]:22: error: expected 2-bit unsigned immediate
     copy_s.w $2, $w9[4]      # CHECK: :[[@LINE]]:22: error: expected 2-bit unsigned immediate
-    copy_s.d $2, $w9[-1]     # CHECK: :[[@LINE]]:22: error: invalid operand for instruction
-    copy_s.d $2, $w9[2]      # CHECK: :[[@LINE]]:22: error: invalid operand for instruction
+    copy_s.d $2, $w9[-1]     # CHECK: :[[@LINE]]:22: error: expected 1-bit unsigned immediate
+    copy_s.d $2, $w9[2]      # CHECK: :[[@LINE]]:22: error: expected 1-bit unsigned immediate
     copy_u.b $2, $w9[-1]     # CHECK: :[[@LINE]]:22: error: expected 4-bit unsigned immediate
     copy_u.b $2, $w9[16]     # CHECK: :[[@LINE]]:22: error: expected 4-bit unsigned immediate
     copy_u.h $2, $w9[-1]     # CHECK: :[[@LINE]]:22: error: expected 3-bit unsigned immediate
     copy_u.h $2, $w9[8]      # CHECK: :[[@LINE]]:22: error: expected 3-bit unsigned immediate
-    copy_u.w $2, $w9[-1]     # CHECK: :[[@LINE]]:22: error: invalid operand for instruction
-    copy_u.w $2, $w9[4]      # CHECK: :[[@LINE]]:22: error: invalid operand for instruction
+    copy_u.w $2, $w9[-1]     # CHECK: :[[@LINE]]:22: error: expected 2-bit unsigned immediate
+    copy_u.w $2, $w9[4]      # CHECK: :[[@LINE]]:22: error: expected 2-bit unsigned immediate
     insert.b $w9[-1], $2     # CHECK: :[[@LINE]]:18: error: expected 4-bit unsigned immediate
     insert.b $w9[16], $2     # CHECK: :[[@LINE]]:18: error: expected 4-bit unsigned immediate
     insert.h $w9[-1], $2     # CHECK: :[[@LINE]]:18: error: expected 3-bit unsigned immediate
     insert.h $w9[8], $2      # CHECK: :[[@LINE]]:18: error: expected 3-bit unsigned immediate
     insert.w $w9[-1], $2     # CHECK: :[[@LINE]]:18: error: expected 2-bit unsigned immediate
     insert.w $w9[4], $2      # CHECK: :[[@LINE]]:18: error: expected 2-bit unsigned immediate
-    insert.d $w9[-1], $2     # CHECK: :[[@LINE]]:18: error: invalid operand for instruction
-    insert.d $w9[2], $2      # CHECK: :[[@LINE]]:18: error: invalid operand for instruction
+    insert.d $w9[-1], $2     # CHECK: :[[@LINE]]:18: error: expected 1-bit unsigned immediate
+    insert.d $w9[2], $2      # CHECK: :[[@LINE]]:18: error: expected 1-bit unsigned immediate
     insve.b $w25[-1], $w9[0] # CHECK: :[[@LINE]]:18: error: expected 4-bit unsigned immediate
     insve.b $w25[16], $w9[0] # CHECK: :[[@LINE]]:18: error: expected 4-bit unsigned immediate
     insve.h $w24[-1], $w2[0] # CHECK: :[[@LINE]]:18: error: expected 3-bit unsigned immediate

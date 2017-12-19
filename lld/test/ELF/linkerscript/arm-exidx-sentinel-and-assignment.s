@@ -18,7 +18,7 @@ _start:
  bx lr
  .fnend
 
-// CHECK: Contents of section .ARM.exidx:
-// 1000 + 1000 = 0x2000 = _start
-// 1008 + 0ffc = 0x2004 = _start + sizeof(_start)
-// CHECK-NEXT: 1000 00100000 01000000 fc0f0000 01000000
+# CHECK: Contents of section .ARM.exidx:
+# 1000 + 1000 = 0x2000 = _start
+# 1008 + 0ffc = 0x2004 = _start + sizeof(_start)
+# CHECK-NEXT: 1000 00100000 01000000 fc0f0000 01000000

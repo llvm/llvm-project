@@ -4,4 +4,4 @@
 
   .set noat
   wrdsp $5, 128            # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
-  wrdsp $5, -1             # CHECK: :[[@LINE]]:13: error: expected 7-bit unsigned immediate
+  wrdsp $5, -1             # CHECK: :[[@LINE]]:13: error: expected 10-bit unsigned immediate

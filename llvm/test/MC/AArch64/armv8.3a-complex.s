@@ -133,11 +133,9 @@
 
 // Invalid indices
   fcmla v0.4h, v1.4h, v2.h[2], #0
-// STDERR-NO-FP16: :[[@LINE-1]]:{{[0-9]*}}: error: invalid operand for instruction
-// STDERR-FP16: :[[@LINE-2]]:{{[0-9]*}}: error: vector lane must be an integer in range [0, 1].
+// STDERR: :[[@LINE-1]]:{{[0-9]*}}: error: vector lane must be an integer in range [0, 1].
   fcmla v0.8h, v1.8h, v2.h[4], #0
-// STDERR-NO-FP16: :[[@LINE-1]]:{{[0-9]*}}: error: invalid operand for instruction
-// STDERR-FP16: :[[@LINE-2]]:{{[0-9]*}}: error: vector lane must be an integer in range [0, 3].
+// STDERR: :[[@LINE-1]]:{{[0-9]*}}: error: vector lane must be an integer in range [0, 3].
   fcmla v0.4s, v1.4s, v2.s[2], #0
 // STDERR: :[[@LINE-1]]:{{[0-9]*}}: error: vector lane must be an integer in range [0, 1].
 
