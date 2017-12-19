@@ -1513,12 +1513,9 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   Optional<DarwinPlatform> OSTarget =
       getDeploymentTargetFromTargetArg(Args, getTriple(), getDriver());
   if (OSTarget) {
-    // Warn about superfluous -m<os>-version-min arg.
     Optional<DarwinPlatform> OSVersionArgTarget =
         getDeploymentTargetFromOSVersionArg(Args, getDriver());
-    if (OSVersionArgTarget)
-      getDriver().Diag(clang::diag::warn_drv_unused_argument)
-          << OSVersionArgTarget->getAsString(Args, Opts);
+    (void)OSVersionArgTarget;
   } else {
     // The OS target can be specified using the -m<os>version-min argument.
     OSTarget = getDeploymentTargetFromOSVersionArg(Args, getDriver());
