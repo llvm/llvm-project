@@ -11,6 +11,7 @@
 #include "Context.h"
 #include "Matchers.h"
 #include "Protocol.h"
+#include "SourceCode.h"
 #include "TestFS.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"

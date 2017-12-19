@@ -35,12 +35,6 @@ class PCHContainerOperations;
 
 namespace clangd {
 
-/// Turn a [line, column] pair into an offset in Code.
-size_t positionToOffset(StringRef Code, Position P);
-
-/// Turn an offset in Code into a [line, column] pair.
-Position offsetToPosition(StringRef Code, size_t Offset);
-
 /// A tag supplied by the FileSytemProvider.
 typedef std::string VFSTag;
 

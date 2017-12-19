@@ -18,6 +18,7 @@ add_clang_library(clangDaemon
   Logger.cpp
   Protocol.cpp
   ProtocolHandlers.cpp
+  SourceCode.cpp
   Trace.cpp
   index/FileIndex.cpp
   index/Index.cpp

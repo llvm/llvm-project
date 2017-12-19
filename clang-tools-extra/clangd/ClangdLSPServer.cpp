@@ -9,6 +9,7 @@
 
 #include "ClangdLSPServer.h"
 #include "JSONRPCDispatcher.h"
+#include "SourceCode.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace clang::clangd;
