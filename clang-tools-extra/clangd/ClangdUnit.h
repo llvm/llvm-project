@@ -258,13 +258,6 @@ private:
 SourceLocation getBeginningOfIdentifier(ParsedAST &Unit, const Position &Pos,
                                         const FileEntry *FE);
 
-/// Get definition of symbol at a specified \p Pos.
-std::vector<Location> findDefinitions(const Context &Ctx, ParsedAST &AST,
-                                      Position Pos);
-
-std::vector<DocumentHighlight>
-findDocumentHighlights(const Context &Ctx, ParsedAST &AST, Position Pos);
-
 /// For testing/debugging purposes. Note that this method deserializes all
 /// unserialized Decls, so use with care.
 void dumpAST(ParsedAST &AST, llvm::raw_ostream &OS);
