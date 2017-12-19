@@ -38,7 +38,7 @@ public:
   StringRef Name;
   uint32_t Alignment = 0;
   uint32_t StartVA = 0;
-  std::vector<const InputSegment *> InputSegments;
+  std::vector<InputSegment *> InputSegments;
 
   // Sum of the size of the all the input segments
   uint32_t Size = 0;

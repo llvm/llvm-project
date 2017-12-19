@@ -109,10 +109,11 @@ static void applyRelocation(uint8_t *Buf, const OutputRelocation &Reloc) {
 }
 
 static void applyRelocations(uint8_t *Buf, ArrayRef<OutputRelocation> Relocs) {
+  if (!Relocs.size())
+    return;
   log("applyRelocations: count=" + Twine(Relocs.size()));
-  for (const OutputRelocation &Reloc : Relocs) {
+  for (const OutputRelocation &Reloc : Relocs)
     applyRelocation(Buf, Reloc);
-  }
 }
 
 // Relocations contain an index into the function, global or table index
@@ -251,8 +252,7 @@ void CodeSection::writeTo(uint8_t *Buf) {
            PayloadSize);
 
     log("applying relocations for: " + File->getName());
-    if (File->CodeRelocations.size())
-      applyRelocations(ContentsStart, File->CodeRelocations);
+    applyRelocations(ContentsStart, File->CodeRelocations);
   });
 }
 
@@ -288,13 +288,13 @@ DataSection::DataSection(ArrayRef<OutputSegment *> Segments)
     Segment->setSectionOffset(BodySize);
     BodySize += Segment->Header.size();
     log("Data segment: size=" + Twine(Segment->Size));
-    for (const InputSegment *InputSeg : Segment->InputSegments) {
+    for (InputSegment *InputSeg : Segment->InputSegments) {
       uint32_t InputOffset = InputSeg->getInputSectionOffset();
       uint32_t OutputOffset = Segment->getSectionOffset() +
                               Segment->Header.size() +
                               InputSeg->getOutputSegmentOffset();
-      calcRelocations(*InputSeg->File, InputSeg->Relocations, Relocations,
-                      OutputOffset - InputOffset);
+      calcRelocations(*InputSeg->File, InputSeg->Relocations,
+                      InputSeg->OutRelocations, OutputOffset - InputOffset);
     }
     BodySize += Segment->Size;
   }
@@ -327,13 +327,22 @@ void DataSection::writeTo(uint8_t *Buf) {
       memcpy(SegStart + Segment->Header.size() +
                  Input->getOutputSegmentOffset(),
              Content.data(), Content.size());
+      applyRelocations(ContentsStart, Input->OutRelocations);
     }
   });
+}
 
-  applyRelocations(ContentsStart, Relocations);
+uint32_t DataSection::numRelocations() const {
+  uint32_t Count = 0;
+  for (const OutputSegment *Seg : Segments)
+    for (const InputSegment *InputSeg : Seg->InputSegments)
+      Count += InputSeg->OutRelocations.size();
+  return Count;
 }
 
 void DataSection::writeRelocations(raw_ostream &OS) const {
-  for (const OutputRelocation &Reloc : Relocations)
-    writeReloc(OS, Reloc);
+  for (const OutputSegment *Seg : Segments)
+    for (const InputSegment *InputSeg : Seg->InputSegments)
+      for (const OutputRelocation &Reloc : InputSeg->OutRelocations)
+        writeReloc(OS, Reloc);
 }

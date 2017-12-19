@@ -322,14 +322,15 @@ struct Diagnostic {
 
   /// The diagnostic's message.
   std::string message;
-
-  friend bool operator==(const Diagnostic &LHS, const Diagnostic &RHS) {
-    return std::tie(LHS.range, LHS.severity, LHS.message) ==
-           std::tie(RHS.range, RHS.severity, RHS.message);
-  }
-  friend bool operator<(const Diagnostic &LHS, const Diagnostic &RHS) {
-    return std::tie(LHS.range, LHS.severity, LHS.message) <
-           std::tie(RHS.range, RHS.severity, RHS.message);
+};
+/// A LSP-specific comparator used to find diagnostic in a container like
+/// std:map.
+/// We only use the required fields of Diagnostic to do the comparsion to avoid
+/// any regression issues from LSP clients (e.g. VScode), see
+/// https://git.io/vbr29
+struct LSPDiagnosticCompare {
+  bool operator()(const Diagnostic& LHS, const Diagnostic& RHS) const {
+    return std::tie(LHS.range, LHS.message) < std::tie(RHS.range, RHS.message);
   }
 };
 bool fromJSON(const json::Expr &, Diagnostic &);

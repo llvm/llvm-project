@@ -21,6 +21,7 @@
 #ifndef LLD_WASM_INPUT_SEGMENT_H
 #define LLD_WASM_INPUT_SEGMENT_H
 
+#include "WriterUtils.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Object/Wasm.h"
 
@@ -62,6 +63,7 @@ public:
   const WasmSegment *Segment;
   const ObjFile *File;
   std::vector<WasmRelocation> Relocations;
+  std::vector<OutputRelocation> OutRelocations;
 
 protected:
   const OutputSegment *OutputSeg = nullptr;
