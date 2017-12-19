@@ -24,7 +24,7 @@ namespace {
 Symbol symbol(llvm::StringRef ID) {
   Symbol Sym;
   Sym.ID = SymbolID(ID);
-  Sym.QualifiedName = ID;
+  Sym.Name = ID;
   return Sym;
 }
 
@@ -37,7 +37,7 @@ std::vector<std::string>
 getSymbolNames(const std::vector<const Symbol *> &Symbols) {
   std::vector<std::string> Names;
   for (const Symbol *Sym : Symbols)
-    Names.push_back(Sym->QualifiedName);
+    Names.push_back(Sym->Name);
   return Names;
 }
 
@@ -92,8 +92,9 @@ std::vector<std::string> match(const SymbolIndex &I,
                                const FuzzyFindRequest &Req) {
   std::vector<std::string> Matches;
   auto Ctx = Context::empty();
-  I.fuzzyFind(Ctx, Req,
-              [&](const Symbol &Sym) { Matches.push_back(Sym.QualifiedName); });
+  I.fuzzyFind(Ctx, Req, [&](const Symbol &Sym) {
+    Matches.push_back(Sym.Scope + (Sym.Scope.empty() ? "" : "::") + Sym.Name);
+  });
   return Matches;
 }
 
@@ -122,7 +123,8 @@ TEST(FileIndexTest, IndexAST) {
       build("f1", "namespace ns { void f() {} class X {}; }").getPointer());
 
   FuzzyFindRequest Req;
-  Req.Query = "ns::";
+  Req.Query = "";
+  Req.Scopes = {"ns"};
   EXPECT_THAT(match(M, Req), UnorderedElementsAre("ns::f", "ns::X"));
 }
 
@@ -150,9 +152,9 @@ TEST(FileIndexTest, IndexMultiASTAndDeduplicate) {
       build("f2", "namespace ns { void ff() {} class X {}; }").getPointer());
 
   FuzzyFindRequest Req;
-  Req.Query = "ns::";
-  EXPECT_THAT(match(M, Req),
-              UnorderedElementsAre("ns::f", "ns::X", "ns::ff"));
+  Req.Query = "";
+  Req.Scopes = {"ns"};
+  EXPECT_THAT(match(M, Req), UnorderedElementsAre("ns::f", "ns::X", "ns::ff"));
 }
 
 TEST(FileIndexTest, RemoveAST) {
@@ -163,7 +165,8 @@ TEST(FileIndexTest, RemoveAST) {
       build("f1", "namespace ns { void f() {} class X {}; }").getPointer());
 
   FuzzyFindRequest Req;
-  Req.Query = "ns::";
+  Req.Query = "";
+  Req.Scopes = {"ns"};
   EXPECT_THAT(match(M, Req), UnorderedElementsAre("ns::f", "ns::X"));
 
   M.update(Ctx, "f1", nullptr);

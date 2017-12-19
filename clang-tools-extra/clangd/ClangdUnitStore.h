@@ -25,6 +25,11 @@ class Logger;
 /// Thread-safe mapping from FileNames to CppFile.
 class CppFileCollection {
 public:
+  /// \p ASTCallback is called when a file is parsed synchronously. This should
+  /// not be expensive since it blocks diagnostics.
+  explicit CppFileCollection(ASTParsedCallback ASTCallback)
+      : ASTCallback(std::move(ASTCallback)) {}
+
   std::shared_ptr<CppFile>
   getOrCreateFile(PathRef File, PathRef ResourceDir,
                   GlobalCompilationDatabase &CDB, bool StorePreamblesInMemory,
@@ -38,7 +43,7 @@ public:
       It = OpenedFiles
                .try_emplace(File, CppFile::Create(File, std::move(Command),
                                                   StorePreamblesInMemory,
-                                                  std::move(PCHs)))
+                                                  std::move(PCHs), ASTCallback))
                .first;
     }
     return It->second;
@@ -85,6 +90,7 @@ private:
 
   std::mutex Mutex;
   llvm::StringMap<std::shared_ptr<CppFile>> OpenedFiles;
+  ASTParsedCallback ASTCallback;
 };
 } // namespace clangd
 } // namespace clang
