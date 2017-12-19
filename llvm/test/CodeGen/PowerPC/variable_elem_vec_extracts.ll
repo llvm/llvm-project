@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple=powerpc64le-unknown-unknown < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple=powerpc64le-unknown-unknown -ppc-late-peephole=true < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple=powerpc64-unknown-unknown < %s | FileCheck %s \
 ; RUN:  --check-prefix=CHECK-BE
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple=powerpc64-unknown-unknown < %s | FileCheck %s \

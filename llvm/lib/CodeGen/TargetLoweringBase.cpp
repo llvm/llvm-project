@@ -89,6 +89,18 @@ static cl::opt<unsigned> OptsizeJumpTableDensity(
     cl::desc("Minimum density for building a jump table in "
              "an optsize function"));
 
+static bool darwinHasSinCos(const Triple &TT) {
+  assert(TT.isOSDarwin() && "should be called with darwin triple");
+  // Macos < 10.9 has no sincos_stret and we don't bother for 32bit code.
+  if (TT.isMacOSX())
+    return !TT.isMacOSXVersionLT(10, 9) && TT.isArch64Bit();
+  // iOS < 7.0 has no sincos_stret.
+  if (TT.isiOS())
+    return !TT.isOSVersionLT(7, 0);
+  // Any other darwin such as WatchOS/TvOS is new enough.
+  return true;
+}
+
 // Although this default value is arbitrary, it is not random. It is assumed
 // that a condition that evaluates the same way by a higher percentage than this
 // is best represented as control flow. Therefore, the default value N should be
@@ -100,42 +112,54 @@ static cl::opt<int> MinPercentageForPredictableBranch(
              "or false to assume that the condition is predictable"),
     cl::Hidden);
 
-/// InitLibcallNames - Set default libcall names.
-static void InitLibcallNames(const char **Names, const Triple &TT) {
+void TargetLoweringBase::InitLibcalls(const Triple &TT) {
 #define HANDLE_LIBCALL(code, name) \
-  Names[RTLIB::code] = name;
+  setLibcallName(RTLIB::code, name);
 #include "llvm/CodeGen/RuntimeLibcalls.def"
 #undef HANDLE_LIBCALL
+  // Initialize calling conventions to their default.
+  for (int LC = 0; LC < RTLIB::UNKNOWN_LIBCALL; ++LC)
+    setLibcallCallingConv((RTLIB::Libcall)LC, CallingConv::C);
 
   // A few names are different on particular architectures or environments.
   if (TT.isOSDarwin()) {
     // For f16/f32 conversions, Darwin uses the standard naming scheme, instead
     // of the gnueabi-style __gnu_*_ieee.
     // FIXME: What about other targets?
-    Names[RTLIB::FPEXT_F16_F32] = "__extendhfsf2";
-    Names[RTLIB::FPROUND_F32_F16] = "__truncsfhf2";
+    setLibcallName(RTLIB::FPEXT_F16_F32, "__extendhfsf2");
+    setLibcallName(RTLIB::FPROUND_F32_F16, "__truncsfhf2");
+
+    // Darwin 10 and higher has an optimized __bzero.
+    if (!TT.isMacOSX() || !TT.isMacOSXVersionLT(10, 6) || TT.isArch64Bit()) {
+      setLibcallName(RTLIB::BZERO, TT.isAArch64() ? "bzero" : "__bzero");
+    }
+
+    if (darwinHasSinCos(TT)) {
+      setLibcallName(RTLIB::SINCOS_STRET_F32, "__sincosf_stret");
+      setLibcallName(RTLIB::SINCOS_STRET_F64, "__sincos_stret");
+      if (TT.isWatchABI()) {
+        setLibcallCallingConv(RTLIB::SINCOS_STRET_F32,
+                              CallingConv::ARM_AAPCS_VFP);
+        setLibcallCallingConv(RTLIB::SINCOS_STRET_F64,
+                              CallingConv::ARM_AAPCS_VFP);
+      }
+    }
   } else {
-    Names[RTLIB::FPEXT_F16_F32] = "__gnu_h2f_ieee";
-    Names[RTLIB::FPROUND_F32_F16] = "__gnu_f2h_ieee";
+    setLibcallName(RTLIB::FPEXT_F16_F32, "__gnu_h2f_ieee");
+    setLibcallName(RTLIB::FPROUND_F32_F16, "__gnu_f2h_ieee");
   }
 
   if (TT.isGNUEnvironment() || TT.isOSFuchsia()) {
-    Names[RTLIB::SINCOS_F32] = "sincosf";
-    Names[RTLIB::SINCOS_F64] = "sincos";
-    Names[RTLIB::SINCOS_F80] = "sincosl";
-    Names[RTLIB::SINCOS_F128] = "sincosl";
-    Names[RTLIB::SINCOS_PPCF128] = "sincosl";
+    setLibcallName(RTLIB::SINCOS_F32, "sincosf");
+    setLibcallName(RTLIB::SINCOS_F64, "sincos");
+    setLibcallName(RTLIB::SINCOS_F80, "sincosl");
+    setLibcallName(RTLIB::SINCOS_F128, "sincosl");
+    setLibcallName(RTLIB::SINCOS_PPCF128, "sincosl");
   }
 
   if (TT.isOSOpenBSD()) {
-    Names[RTLIB::STACKPROTECTOR_CHECK_FAIL] = nullptr;
+    setLibcallName(RTLIB::STACKPROTECTOR_CHECK_FAIL, nullptr);
   }
-}
-
-/// Set default libcall CallingConvs.
-static void InitLibcallCallingConvs(CallingConv::ID *CCs) {
-  for (int LC = 0; LC < RTLIB::UNKNOWN_LIBCALL; ++LC)
-    CCs[LC] = CallingConv::C;
 }
 
 /// getFPEXT - Return the FPEXT_*_* value for the given types, or
@@ -524,9 +548,8 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm) : TM(tm) {
 
   std::fill(std::begin(LibcallRoutineNames), std::end(LibcallRoutineNames), nullptr);
 
-  InitLibcallNames(LibcallRoutineNames, TM.getTargetTriple());
+  InitLibcalls(TM.getTargetTriple());
   InitCmpLibcallCCs(CmpLibcallCCs);
-  InitLibcallCallingConvs(LibcallCallingConvs);
 }
 
 void TargetLoweringBase::initActions() {

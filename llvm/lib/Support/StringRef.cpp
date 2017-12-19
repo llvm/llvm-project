@@ -586,7 +586,7 @@ bool StringRef::getAsDouble(double &Result, bool AllowInexact) const {
   APFloat::opStatus Status =
       F.convertFromString(*this, APFloat::rmNearestTiesToEven);
   if (Status != APFloat::opOK) {
-    if (!AllowInexact || Status != APFloat::opInexact)
+    if (!AllowInexact || !(Status & APFloat::opInexact))
       return true;
   }
 

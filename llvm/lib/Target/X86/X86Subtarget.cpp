@@ -174,28 +174,6 @@ X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV,
   return X86II::MO_NO_FLAG;
 }
 
-/// This function returns the name of a function which has an interface like
-/// the non-standard bzero function, if such a function exists on the
-/// current subtarget and it is considered preferable over memset with zero
-/// passed as the second argument. Otherwise it returns null.
-const char *X86Subtarget::getBZeroEntry() const {
-  // Darwin 10 has a __bzero entry point for this purpose.
-  if (getTargetTriple().isMacOSX() &&
-      !getTargetTriple().isMacOSXVersionLT(10, 6))
-    return "__bzero";
-
-  return nullptr;
-}
-
-bool X86Subtarget::hasSinCos() const {
-  if (getTargetTriple().isMacOSX()) {
-    return !getTargetTriple().isMacOSXVersionLT(10, 9) && is64Bit();
-  } else if (getTargetTriple().isOSFuchsia()) {
-    return true;
-  }
-  return false;
-}
-
 /// Return true if the subtarget allows calls to immediate address.
 bool X86Subtarget::isLegalToCallImmediateAddr() const {
   // FIXME: I386 PE/COFF supports PC relative calls using IMAGE_REL_I386_REL32

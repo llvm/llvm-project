@@ -678,9 +678,13 @@ foreach(t ${LLVM_TARGETS_TO_BUILD})
 
   list(FIND LLVM_ALL_TARGETS ${t} idx)
   list(FIND LLVM_EXPERIMENTAL_TARGETS_TO_BUILD ${t} idy)
+  # At this point, LLVMBUILDTOOL already checked all the targets passed in
+  # LLVM_TARGETS_TO_BUILD and LLVM_EXPERIMENTAL_TARGETS_TO_BUILD, so
+  # this test just makes sure that any experimental targets were passed via
+  # LLVM_EXPERIMENTAL_TARGETS_TO_BUILD, not LLVM_TARGETS_TO_BUILD.
   if( idx LESS 0 AND idy LESS 0 )
-    message(FATAL_ERROR "The target `${t}' does not exist.
-    It should be one of\n${LLVM_ALL_TARGETS}")
+    message(FATAL_ERROR "The target `${t}' is experimental and must be passed "
+      "via LLVM_EXPERIMENTAL_TARGETS_TO_BUILD.")
   else()
     set(LLVM_ENUM_TARGETS "${LLVM_ENUM_TARGETS}LLVM_TARGET(${t})\n")
   endif()
