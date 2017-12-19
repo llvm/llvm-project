@@ -56,6 +56,18 @@ std::string makeAbsolutePath(const SourceManager &SM, StringRef Path) {
   }
   return AbsolutePath.str();
 }
+
+// Split a qualified symbol name into scope and unqualified name, e.g. given
+// "a::b::c", return {"a::b", "c"}. Scope is empty if it doesn't exist.
+std::pair<llvm::StringRef, llvm::StringRef>
+splitQualifiedName(llvm::StringRef QName) {
+  assert(!QName.startswith("::") && "Qualified names should not start with ::");
+  size_t Pos = QName.rfind("::");
+  if (Pos == llvm::StringRef::npos)
+    return {StringRef(), QName};
+  return {QName.substr(0, Pos), QName.substr(Pos + 2)};
+}
+
 } // namespace
 
 // Always return true to continue indexing.
@@ -86,7 +98,9 @@ bool SymbolCollector::handleDeclOccurence(
     SymbolLocation Location = {
         makeAbsolutePath(SM, SM.getFilename(D->getLocation())),
         SM.getFileOffset(D->getLocStart()), SM.getFileOffset(D->getLocEnd())};
-    Symbols.insert({std::move(ID), ND->getQualifiedNameAsString(),
+    std::string QName = ND->getQualifiedNameAsString();
+    auto ScopeAndName = splitQualifiedName(QName);
+    Symbols.insert({std::move(ID), ScopeAndName.second, ScopeAndName.first,
                     index::getSymbolInfo(D), std::move(Location)});
   }
 

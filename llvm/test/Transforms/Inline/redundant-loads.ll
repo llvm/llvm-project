@@ -184,3 +184,21 @@ define void @inner9(i32* %a, void ()* %f) {
   call void @pad()
   ret void
 }
+
+
+define void @outer10(i32* %a) {
+; CHECK-LABEL: @outer10(
+; CHECK: call void @inner10
+  %b = alloca i32
+  call void @inner10(i32* %a, i32* %b)
+  ret void
+}
+
+define void @inner10(i32* %a, i32* %b) {
+  %1 = load i32, i32* %a
+  store i32 %1, i32 * %b
+  %2 = load volatile i32, i32* %a ; volatile load should be kept.
+  call void @pad()
+  %3 = load volatile i32, i32* %a ; Same as the above.
+  ret void
+}

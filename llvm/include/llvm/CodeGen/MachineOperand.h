@@ -29,6 +29,7 @@ class GlobalValue;
 class MachineBasicBlock;
 class MachineInstr;
 class MachineRegisterInfo;
+class MCCFIInstruction;
 class MDNode;
 class ModuleSlotTracker;
 class TargetMachine;

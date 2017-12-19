@@ -42,7 +42,6 @@ public:
   void addFile(InputFile *File);
 
   std::vector<ObjFile *> ObjectFiles;
-  std::vector<Symbol *> SyntheticSymbols;
 
   void reportDuplicate(Symbol *Existing, InputFile *NewFile);
   void reportRemainingUndefines();

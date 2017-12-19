@@ -9,6 +9,7 @@
 
 #include "ClangdLSPServer.h"
 #include "JSONRPCDispatcher.h"
+#include "SourceCode.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace clang::clangd;
@@ -281,10 +282,11 @@ ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,
                                  bool StorePreamblesInMemory,
                                  const clangd::CodeCompleteOptions &CCOpts,
                                  llvm::Optional<StringRef> ResourceDir,
-                                 llvm::Optional<Path> CompileCommandsDir)
+                                 llvm::Optional<Path> CompileCommandsDir,
+                                 bool BuildDynamicSymbolIndex)
     : Out(Out), CDB(std::move(CompileCommandsDir)), CCOpts(CCOpts),
       Server(CDB, /*DiagConsumer=*/*this, FSProvider, AsyncThreadsCount,
-             StorePreamblesInMemory, ResourceDir) {}
+             StorePreamblesInMemory, BuildDynamicSymbolIndex, ResourceDir) {}
 
 bool ClangdLSPServer::run(std::istream &In) {
   assert(!IsDone && "Run was called before");

@@ -211,8 +211,8 @@ void InputSectionBase::maybeUncompress() {
     fatal(toString(this) +
           ": decompress failed: " + llvm::toString(std::move(E)));
 
-  this->Data = makeArrayRef((uint8_t *)UncompressBuf.get(), Size);
-  this->Flags &= ~(uint64_t)SHF_COMPRESSED;
+  Data = makeArrayRef((uint8_t *)UncompressBuf.get(), Size);
+  Flags &= ~(uint64_t)SHF_COMPRESSED;
 }
 
 InputSection *InputSectionBase::getLinkOrderDep() const {
@@ -357,15 +357,15 @@ template <class ELFT> void InputSection::copyShtGroup(uint8_t *Buf) {
 
   // Adjust section numbers because section numbers in an input object
   // files are different in the output.
-  ArrayRef<InputSectionBase *> Sections = this->File->getSections();
+  ArrayRef<InputSectionBase *> Sections = File->getSections();
   for (uint32_t Idx : From.slice(1))
     *To++ = Sections[Idx]->getOutputSection()->SectionIndex;
 }
 
 InputSectionBase *InputSection::getRelocatedSection() {
-  assert(this->Type == SHT_RELA || this->Type == SHT_REL);
-  ArrayRef<InputSectionBase *> Sections = this->File->getSections();
-  return Sections[this->Info];
+  assert(Type == SHT_RELA || Type == SHT_REL);
+  ArrayRef<InputSectionBase *> Sections = File->getSections();
+  return Sections[Info];
 }
 
 // This is used for -r and --emit-relocs. We can't use memcpy to copy
@@ -377,7 +377,7 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
 
   for (const RelTy &Rel : Rels) {
     RelType Type = Rel.getType(Config->IsMips64EL);
-    Symbol &Sym = this->getFile<ELFT>()->getRelocTargetSym(Rel);
+    Symbol &Sym = getFile<ELFT>()->getRelocTargetSym(Rel);
 
     auto *P = reinterpret_cast<typename ELFT::Rela *>(Buf);
     Buf += sizeof(RelTy);
@@ -679,7 +679,7 @@ void InputSection::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
     if (!RelTy::IsRela)
       Addend += Target->getImplicitAddend(BufLoc, Type);
 
-    Symbol &Sym = this->getFile<ELFT>()->getRelocTargetSym(Rel);
+    Symbol &Sym = getFile<ELFT>()->getRelocTargetSym(Rel);
     RelExpr Expr = Target->getRelExpr(Type, Sym, BufLoc);
     if (Expr == R_NONE)
       continue;
@@ -691,7 +691,7 @@ void InputSection::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
       if (Config->EMachine == EM_386 && Type == R_386_GOTPC)
         continue;
 
-      error(this->getLocation<ELFT>(Offset) + ": has non-ABS relocation " +
+      error(getLocation<ELFT>(Offset) + ": has non-ABS relocation " +
             toString(Type) + " against symbol '" + toString(Sym) + "'");
       return;
     }
@@ -765,7 +765,7 @@ void InputSectionBase::relocateAlloc(uint8_t *Buf, uint8_t *BufEnd) {
 }
 
 template <class ELFT> void InputSection::writeTo(uint8_t *Buf) {
-  if (this->Type == SHT_NOBITS)
+  if (Type == SHT_NOBITS)
     return;
 
   if (auto *S = dyn_cast<SyntheticSection>(this)) {
@@ -775,19 +775,17 @@ template <class ELFT> void InputSection::writeTo(uint8_t *Buf) {
 
   // If -r or --emit-relocs is given, then an InputSection
   // may be a relocation section.
-  if (this->Type == SHT_RELA) {
-    copyRelocations<ELFT>(Buf + OutSecOff,
-                          this->template getDataAs<typename ELFT::Rela>());
+  if (Type == SHT_RELA) {
+    copyRelocations<ELFT>(Buf + OutSecOff, getDataAs<typename ELFT::Rela>());
     return;
   }
-  if (this->Type == SHT_REL) {
-    copyRelocations<ELFT>(Buf + OutSecOff,
-                          this->template getDataAs<typename ELFT::Rel>());
+  if (Type == SHT_REL) {
+    copyRelocations<ELFT>(Buf + OutSecOff, getDataAs<typename ELFT::Rel>());
     return;
   }
 
   // If -r is given, we may have a SHT_GROUP section.
-  if (this->Type == SHT_GROUP) {
+  if (Type == SHT_GROUP) {
     copyShtGroup<ELFT>(Buf + OutSecOff);
     return;
   }
@@ -796,12 +794,12 @@ template <class ELFT> void InputSection::writeTo(uint8_t *Buf) {
   // and then apply relocations.
   memcpy(Buf + OutSecOff, Data.data(), Data.size());
   uint8_t *BufEnd = Buf + OutSecOff + Data.size();
-  this->relocate<ELFT>(Buf, BufEnd);
+  relocate<ELFT>(Buf, BufEnd);
 }
 
 void InputSection::replace(InputSection *Other) {
-  this->Alignment = std::max(this->Alignment, Other->Alignment);
-  Other->Repl = this->Repl;
+  Alignment = std::max(Alignment, Other->Alignment);
+  Other->Repl = Repl;
   Other->Live = false;
 }
 
@@ -838,22 +836,21 @@ static unsigned getReloc(IntTy Begin, IntTy Size, const ArrayRef<RelTy> &Rels,
 // This function splits an input section into records and returns them.
 template <class ELFT> void EhInputSection::split() {
   // Early exit if already split.
-  if (!this->Pieces.empty())
+  if (!Pieces.empty())
     return;
 
-  if (this->AreRelocsRela)
-    split<ELFT>(this->relas<ELFT>());
+  if (AreRelocsRela)
+    split<ELFT>(relas<ELFT>());
   else
-    split<ELFT>(this->rels<ELFT>());
+    split<ELFT>(rels<ELFT>());
 }
 
 template <class ELFT, class RelTy>
 void EhInputSection::split(ArrayRef<RelTy> Rels) {
-  ArrayRef<uint8_t> Data = this->Data;
   unsigned RelI = 0;
   for (size_t Off = 0, End = Data.size(); Off != End;) {
     size_t Size = readEhRecordSize(this, Off);
-    this->Pieces.emplace_back(Off, this, Size, getReloc(Off, Size, Rels, RelI));
+    Pieces.emplace_back(Off, this, Size, getReloc(Off, Size, Rels, RelI));
     // The empty record is the end marker.
     if (Size == 4)
       break;
@@ -882,7 +879,7 @@ SyntheticSection *MergeInputSection::getParent() const {
 // null-terminated strings.
 void MergeInputSection::splitStrings(ArrayRef<uint8_t> Data, size_t EntSize) {
   size_t Off = 0;
-  bool IsAlloc = this->Flags & SHF_ALLOC;
+  bool IsAlloc = Flags & SHF_ALLOC;
   StringRef S = toStringRef(Data);
 
   while (!S.empty()) {
@@ -903,7 +900,7 @@ void MergeInputSection::splitNonStrings(ArrayRef<uint8_t> Data,
                                         size_t EntSize) {
   size_t Size = Data.size();
   assert((Size % EntSize) == 0);
-  bool IsAlloc = this->Flags & SHF_ALLOC;
+  bool IsAlloc = Flags & SHF_ALLOC;
 
   for (size_t I = 0; I != Size; I += EntSize)
     Pieces.emplace_back(I, xxHash64(toStringRef(Data.slice(I, EntSize))),
@@ -931,14 +928,14 @@ MergeInputSection::MergeInputSection(ObjFile<ELFT> *F,
 void MergeInputSection::splitIntoPieces() {
   assert(Pieces.empty());
 
-  if (this->Flags & SHF_STRINGS)
+  if (Flags & SHF_STRINGS)
     splitStrings(Data, Entsize);
   else
     splitNonStrings(Data, Entsize);
 
-  if (Config->GcSections && (this->Flags & SHF_ALLOC))
+  if (Config->GcSections && (Flags & SHF_ALLOC))
     for (uint64_t Off : LiveOffsets)
-      this->getSectionPiece(Off)->Live = true;
+      getSectionPiece(Off)->Live = true;
 }
 
 // Do binary search to get a section piece at a given input offset.
@@ -993,7 +990,7 @@ uint64_t MergeInputSection::getOffset(uint64_t Offset) const {
 
   // If Offset is not at beginning of a section piece, it is not in the map.
   // In that case we need to search from the original section piece vector.
-  const SectionPiece &Piece = *this->getSectionPiece(Offset);
+  const SectionPiece &Piece = *getSectionPiece(Offset);
   if (!Piece.Live)
     return 0;
 
