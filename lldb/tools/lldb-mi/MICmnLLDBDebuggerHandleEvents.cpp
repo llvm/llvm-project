@@ -900,7 +900,7 @@ bool CMICmnLLDBDebuggerHandleEvents::HandleProcessEventBroadcastBitStateChanged(
     bOk = HandleProcessEventStateStopped(vEvent, bShouldBrk);
     if (bShouldBrk)
       break;
-    break;
+    LLVM_FALLTHROUGH;
   case lldb::eStateCrashed:
   case lldb::eStateSuspended:
     pEventType = "eStateSuspended";
