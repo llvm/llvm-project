@@ -98,7 +98,7 @@ bool CommunicationKDP::SendRequestAndGetReply(
 #ifdef LLDB_CONFIGURATION_DEBUG
   // NOTE: this only works for packets that are in native endian byte order
   assert(request_packet.GetSize() ==
-         *((uint16_t *)(request_packet.GetData() + 2)));
+         *((const uint16_t *)(request_packet.GetData() + 2)));
 #endif
   lldb::offset_t offset = 1;
   const uint32_t num_retries = 3;
