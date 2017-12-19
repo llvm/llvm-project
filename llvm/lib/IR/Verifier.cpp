@@ -4700,7 +4700,8 @@ template <typename... Tys> void TBAAVerifier::CheckFailed(Tys &&... Args) {
 /// TBAA scheme.  This means \p BaseNode is either a scalar node, or a
 /// struct-type node describing an aggregate data structure (like a struct).
 TBAAVerifier::TBAABaseNodeSummary
-TBAAVerifier::verifyTBAABaseNode(Instruction &I, const MDNode *BaseNode) {
+TBAAVerifier::verifyTBAABaseNode(Instruction &I, const MDNode *BaseNode,
+                                 bool IsNewFormat) {
   if (BaseNode->getNumOperands() < 2) {
     CheckFailed("Base nodes must have at least two operands", &I, BaseNode);
     return {true, ~0u};
@@ -4710,7 +4711,7 @@ TBAAVerifier::verifyTBAABaseNode(Instruction &I, const MDNode *BaseNode) {
   if (Itr != TBAABaseNodes.end())
     return Itr->second;
 
-  auto Result = verifyTBAABaseNodeImpl(I, BaseNode);
+  auto Result = verifyTBAABaseNodeImpl(I, BaseNode, IsNewFormat);
   auto InsertResult = TBAABaseNodes.insert({BaseNode, Result});
   (void)InsertResult;
   assert(InsertResult.second && "We just checked!");
@@ -4718,7 +4719,8 @@ TBAAVerifier::verifyTBAABaseNode(Instruction &I, const MDNode *BaseNode) {
 }
 
 TBAAVerifier::TBAABaseNodeSummary
-TBAAVerifier::verifyTBAABaseNodeImpl(Instruction &I, const MDNode *BaseNode) {
+TBAAVerifier::verifyTBAABaseNodeImpl(Instruction &I, const MDNode *BaseNode,
+                                     bool IsNewFormat) {
   const TBAAVerifier::TBAABaseNodeSummary InvalidNode = {true, ~0u};
 
   if (BaseNode->getNumOperands() == 2) {
@@ -4728,13 +4730,32 @@ TBAAVerifier::verifyTBAABaseNodeImpl(Instruction &I, const MDNode *BaseNode) {
                : InvalidNode;
   }
 
-  if (BaseNode->getNumOperands() % 2 != 1) {
-    CheckFailed("Struct tag nodes must have an odd number of operands!",
-                BaseNode);
-    return InvalidNode;
+  if (IsNewFormat) {
+    if (BaseNode->getNumOperands() % 3 != 0) {
+      CheckFailed("Access tag nodes must have the number of operands that is a "
+                  "multiple of 3!", BaseNode);
+      return InvalidNode;
+    }
+  } else {
+    if (BaseNode->getNumOperands() % 2 != 1) {
+      CheckFailed("Struct tag nodes must have an odd number of operands!",
+                  BaseNode);
+      return InvalidNode;
+    }
   }
 
-  if (!isa<MDString>(BaseNode->getOperand(0))) {
+  // Check the type size field.
+  if (IsNewFormat) {
+    auto *TypeSizeNode = mdconst::dyn_extract_or_null<ConstantInt>(
+        BaseNode->getOperand(1));
+    if (!TypeSizeNode) {
+      CheckFailed("Type size nodes must be constants!", &I, BaseNode);
+      return InvalidNode;
+    }
+  }
+
+  // Check the type name field. In the new format it can be anything.
+  if (!IsNewFormat && !isa<MDString>(BaseNode->getOperand(0))) {
     CheckFailed("Struct tag nodes have a string as their first operand",
                 BaseNode);
     return InvalidNode;
@@ -4747,7 +4768,10 @@ TBAAVerifier::verifyTBAABaseNodeImpl(Instruction &I, const MDNode *BaseNode) {
 
   // We've already checked that BaseNode is not a degenerate root node with one
   // operand in \c verifyTBAABaseNode, so this loop should run at least once.
-  for (unsigned Idx = 1; Idx < BaseNode->getNumOperands(); Idx += 2) {
+  unsigned FirstFieldOpNo = IsNewFormat ? 3 : 1;
+  unsigned NumOpsPerField = IsNewFormat ? 3 : 2;
+  for (unsigned Idx = FirstFieldOpNo; Idx < BaseNode->getNumOperands();
+           Idx += NumOpsPerField) {
     const MDOperand &FieldTy = BaseNode->getOperand(Idx);
     const MDOperand &FieldOffset = BaseNode->getOperand(Idx + 1);
     if (!isa<MDNode>(FieldTy)) {
@@ -4789,6 +4813,16 @@ TBAAVerifier::verifyTBAABaseNodeImpl(Instruction &I, const MDNode *BaseNode) {
     }
 
     PrevOffset = OffsetEntryCI->getValue();
+
+    if (IsNewFormat) {
+      auto *MemberSizeNode = mdconst::dyn_extract_or_null<ConstantInt>(
+          BaseNode->getOperand(Idx + 2));
+      if (!MemberSizeNode) {
+        CheckFailed("Member size entries must be constants!", &I, BaseNode);
+        Failed = true;
+        continue;
+      }
+    }
   }
 
   return Failed ? InvalidNode
@@ -4838,7 +4872,8 @@ bool TBAAVerifier::isValidScalarTBAANode(const MDNode *MD) {
 /// We assume we've okayed \p BaseNode via \c verifyTBAABaseNode.
 MDNode *TBAAVerifier::getFieldNodeFromTBAABaseNode(Instruction &I,
                                                    const MDNode *BaseNode,
-                                                   APInt &Offset) {
+                                                   APInt &Offset,
+                                                   bool IsNewFormat) {
   assert(BaseNode->getNumOperands() >= 2 && "Invalid base node!");
 
   // Scalar nodes have only one possible "field" -- their parent in the access
@@ -4847,35 +4882,52 @@ MDNode *TBAAVerifier::getFieldNodeFromTBAABaseNode(Instruction &I,
   if (BaseNode->getNumOperands() == 2)
     return cast<MDNode>(BaseNode->getOperand(1));
 
-  for (unsigned Idx = 1; Idx < BaseNode->getNumOperands(); Idx += 2) {
+  unsigned FirstFieldOpNo = IsNewFormat ? 3 : 1;
+  unsigned NumOpsPerField = IsNewFormat ? 3 : 2;
+  for (unsigned Idx = FirstFieldOpNo; Idx < BaseNode->getNumOperands();
+           Idx += NumOpsPerField) {
     auto *OffsetEntryCI =
         mdconst::extract<ConstantInt>(BaseNode->getOperand(Idx + 1));
     if (OffsetEntryCI->getValue().ugt(Offset)) {
-      if (Idx == 1) {
+      if (Idx == FirstFieldOpNo) {
         CheckFailed("Could not find TBAA parent in struct type node", &I,
                     BaseNode, &Offset);
         return nullptr;
       }
 
+      unsigned PrevIdx = Idx - NumOpsPerField;
       auto *PrevOffsetEntryCI =
-          mdconst::extract<ConstantInt>(BaseNode->getOperand(Idx - 1));
+          mdconst::extract<ConstantInt>(BaseNode->getOperand(PrevIdx + 1));
       Offset -= PrevOffsetEntryCI->getValue();
-      return cast<MDNode>(BaseNode->getOperand(Idx - 2));
+      return cast<MDNode>(BaseNode->getOperand(PrevIdx));
     }
   }
 
+  unsigned LastIdx = BaseNode->getNumOperands() - NumOpsPerField;
   auto *LastOffsetEntryCI = mdconst::extract<ConstantInt>(
-      BaseNode->getOperand(BaseNode->getNumOperands() - 1));
-
+      BaseNode->getOperand(LastIdx + 1));
   Offset -= LastOffsetEntryCI->getValue();
-  return cast<MDNode>(BaseNode->getOperand(BaseNode->getNumOperands() - 2));
+  return cast<MDNode>(BaseNode->getOperand(LastIdx));
+}
+
+static bool isNewFormatTBAATypeNode(llvm::MDNode *Type) {
+  if (!Type || Type->getNumOperands() < 3)
+    return false;
+
+  // In the new format type nodes shall have a reference to the parent type as
+  // its first operand.
+  MDNode *Parent = dyn_cast_or_null<MDNode>(Type->getOperand(0));
+  if (!Parent)
+    return false;
+
+  return true;
 }
 
 bool TBAAVerifier::visitTBAAMetadata(Instruction &I, const MDNode *MD) {
   AssertTBAA(isa<LoadInst>(I) || isa<StoreInst>(I) || isa<CallInst>(I) ||
                  isa<VAArgInst>(I) || isa<AtomicRMWInst>(I) ||
                  isa<AtomicCmpXchgInst>(I),
-             "TBAA is only for loads, stores and calls!", &I);
+             "This instruction shall not have a TBAA access tag!", &I);
 
   bool IsStructPathTBAA =
       isa<MDNode>(MD->getOperand(0)) && MD->getNumOperands() >= 3;
@@ -4884,18 +4936,34 @@ bool TBAAVerifier::visitTBAAMetadata(Instruction &I, const MDNode *MD) {
       IsStructPathTBAA,
       "Old-style TBAA is no longer allowed, use struct-path TBAA instead", &I);
 
-  AssertTBAA(MD->getNumOperands() < 5,
-             "Struct tag metadata must have either 3 or 4 operands", &I, MD);
-
   MDNode *BaseNode = dyn_cast_or_null<MDNode>(MD->getOperand(0));
   MDNode *AccessType = dyn_cast_or_null<MDNode>(MD->getOperand(1));
 
-  if (MD->getNumOperands() == 4) {
-    auto *IsImmutableCI =
-        mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(3));
+  bool IsNewFormat = isNewFormatTBAATypeNode(AccessType);
+
+  if (IsNewFormat) {
+    AssertTBAA(MD->getNumOperands() == 4 || MD->getNumOperands() == 5,
+               "Access tag metadata must have either 4 or 5 operands", &I, MD);
+  } else {
+    AssertTBAA(MD->getNumOperands() < 5,
+               "Struct tag metadata must have either 3 or 4 operands", &I, MD);
+  }
+
+  // Check the access size field.
+  if (IsNewFormat) {
+    auto *AccessSizeNode = mdconst::dyn_extract_or_null<ConstantInt>(
+        MD->getOperand(3));
+    AssertTBAA(AccessSizeNode, "Access size field must be a constant", &I, MD);
+  }
+
+  // Check the immutability flag.
+  unsigned ImmutabilityFlagOpNo = IsNewFormat ? 4 : 3;
+  if (MD->getNumOperands() == ImmutabilityFlagOpNo + 1) {
+    auto *IsImmutableCI = mdconst::dyn_extract_or_null<ConstantInt>(
+        MD->getOperand(ImmutabilityFlagOpNo));
     AssertTBAA(IsImmutableCI,
-               "Immutability tag on struct tag metadata must be a constant", &I,
-               MD);
+               "Immutability tag on struct tag metadata must be a constant",
+               &I, MD);
     AssertTBAA(
         IsImmutableCI->isZero() || IsImmutableCI->isOne(),
         "Immutability part of the struct tag metadata must be either 0 or 1",
@@ -4903,13 +4971,15 @@ bool TBAAVerifier::visitTBAAMetadata(Instruction &I, const MDNode *MD) {
   }
 
   AssertTBAA(BaseNode && AccessType,
-             "Malformed struct tag metadata:  base and access-type "
+             "Malformed struct tag metadata: base and access-type "
              "should be non-null and point to Metadata nodes",
              &I, MD, BaseNode, AccessType);
 
-  AssertTBAA(isValidScalarTBAANode(AccessType),
-             "Access type node must be a valid scalar type", &I, MD,
-             AccessType);
+  if (!IsNewFormat) {
+    AssertTBAA(isValidScalarTBAANode(AccessType),
+               "Access type node must be a valid scalar type", &I, MD,
+               AccessType);
+  }
 
   auto *OffsetCI = mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(2));
   AssertTBAA(OffsetCI, "Offset must be constant integer", &I, MD);
@@ -4920,7 +4990,8 @@ bool TBAAVerifier::visitTBAAMetadata(Instruction &I, const MDNode *MD) {
   SmallPtrSet<MDNode *, 4> StructPath;
 
   for (/* empty */; BaseNode && !IsRootTBAANode(BaseNode);
-       BaseNode = getFieldNodeFromTBAABaseNode(I, BaseNode, Offset)) {
+       BaseNode = getFieldNodeFromTBAABaseNode(I, BaseNode, Offset,
+                                               IsNewFormat)) {
     if (!StructPath.insert(BaseNode).second) {
       CheckFailed("Cycle detected in struct path", &I, MD);
       return false;
@@ -4928,7 +4999,8 @@ bool TBAAVerifier::visitTBAAMetadata(Instruction &I, const MDNode *MD) {
 
     bool Invalid;
     unsigned BaseNodeBitWidth;
-    std::tie(Invalid, BaseNodeBitWidth) = verifyTBAABaseNode(I, BaseNode);
+    std::tie(Invalid, BaseNodeBitWidth) = verifyTBAABaseNode(I, BaseNode,
+                                                             IsNewFormat);
 
     // If the base node is invalid in itself, then we've already printed all the
     // errors we wanted to print.
@@ -4942,9 +5014,13 @@ bool TBAAVerifier::visitTBAAMetadata(Instruction &I, const MDNode *MD) {
                  &I, MD, &Offset);
 
     AssertTBAA(BaseNodeBitWidth == Offset.getBitWidth() ||
-                   (BaseNodeBitWidth == 0 && Offset == 0),
+                   (BaseNodeBitWidth == 0 && Offset == 0) ||
+                   (IsNewFormat && BaseNodeBitWidth == ~0u),
                "Access bit-width not the same as description bit-width", &I, MD,
                BaseNodeBitWidth, Offset.getBitWidth());
+
+    if (IsNewFormat && SeenAccessTypeInPath)
+      break;
   }
 
   AssertTBAA(SeenAccessTypeInPath, "Did not see access type in access path!",

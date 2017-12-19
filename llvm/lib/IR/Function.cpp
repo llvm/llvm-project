@@ -1333,7 +1333,9 @@ Optional<uint64_t> Function::getEntryCount() const {
       if (MDS->getString().equals("function_entry_count")) {
         ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(1));
         uint64_t Count = CI->getValue().getZExtValue();
-        if (Count == 0)
+        // A value of -1 is used for SamplePGO when there were no samples.
+        // Treat this the same as unknown.
+        if (Count == (uint64_t)-1)
           return None;
         return Count;
       }

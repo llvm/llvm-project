@@ -317,6 +317,10 @@ public:
   /// logical right shift of a value in this range and a value in \p Other.
   ConstantRange lshr(const ConstantRange &Other) const;
 
+  /// Return a new range representing the possible values resulting from a
+  /// arithmetic right shift of a value in this range and a value in \p Other.
+  ConstantRange ashr(const ConstantRange &Other) const;
+
   /// Return a new range that is the logical not of the current set.
   ConstantRange inverse() const;
 

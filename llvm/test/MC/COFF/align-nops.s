@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple i686-pc-win32 %s | llvm-readobj -s -sd | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple i686-pc-win32 -mcpu=pentiumpro %s | llvm-readobj -s -sd | FileCheck %s
 
 // Test that we get optimal nops in text
     .text

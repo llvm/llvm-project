@@ -78,7 +78,7 @@ public:
               CPU != "i586" && CPU != "pentium" && CPU != "pentium-mmx" &&
               CPU != "i686" && CPU != "k6" && CPU != "k6-2" && CPU != "k6-3" &&
               CPU != "geode" && CPU != "winchip-c6" && CPU != "winchip2" &&
-              CPU != "c3" && CPU != "c3-2" && CPU != "lakemont";
+              CPU != "c3" && CPU != "c3-2" && CPU != "lakemont" && CPU != "";
   }
 
   unsigned getNumFixupKinds() const override {

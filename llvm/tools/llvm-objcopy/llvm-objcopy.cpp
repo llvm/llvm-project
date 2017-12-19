@@ -113,6 +113,10 @@ static cl::opt<std::string>
              cl::desc("Equivalent to extract-dwo on the input file to "
                       "<dwo-file>, then strip-dwo on the input file"),
              cl::value_desc("dwo-file"));
+static cl::list<std::string> AddSection(
+    "add-section",
+    cl::desc("Make a section named <section> with the contents of <file>."),
+    cl::value_desc("section=file"));
 
 using SectionPred = std::function<bool(const SectionBase &Sec)>;
 
@@ -174,7 +178,7 @@ template <class ELFT> void CopyBinary(const ELFObjectFile<ELFT> &ObjFile) {
     Obj = llvm::make_unique<ELFObject<ELFT>>(ObjFile);
 
   if (!SplitDWO.empty())
-    SplitDWOToFile<ELFT>(ObjFile, SplitDWO.getValue()); 
+    SplitDWOToFile<ELFT>(ObjFile, SplitDWO.getValue());
 
   SectionPred RemovePred = [](const SectionBase &) { return false; };
 
@@ -286,6 +290,22 @@ template <class ELFT> void CopyBinary(const ELFObjectFile<ELFT> &ObjFile) {
   }
 
   Obj->removeSections(RemovePred);
+
+  if (!AddSection.empty()) {
+    for (const auto &Flag : AddSection) {
+      auto SecPair = StringRef(Flag).split("=");
+      auto SecName = SecPair.first;
+      auto File = SecPair.second;
+      auto BufOrErr = MemoryBuffer::getFile(File);
+      if (!BufOrErr)
+        reportError(File, BufOrErr.getError());
+      auto Buf = std::move(*BufOrErr);
+      auto BufPtr = reinterpret_cast<const uint8_t *>(Buf->getBufferStart());
+      auto BufSize = Buf->getBufferSize();
+      Obj->addSection(SecName, ArrayRef<uint8_t>(BufPtr, BufSize));
+    }
+  }
+
   Obj->finalize();
   WriteObjectFile(*Obj, OutputFilename.getValue());
 }

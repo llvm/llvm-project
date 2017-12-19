@@ -56,7 +56,7 @@ ArrayRef<uint8_t> toDebugH(const DebugHSection &DebugH,
 } // end namespace llvm
 
 LLVM_YAML_DECLARE_MAPPING_TRAITS(CodeViewYAML::DebugHSection)
-LLVM_YAML_DECLARE_SCALAR_TRAITS(CodeViewYAML::GlobalHash, false)
+LLVM_YAML_DECLARE_SCALAR_TRAITS(CodeViewYAML::GlobalHash, QuotingType::None)
 LLVM_YAML_IS_SEQUENCE_VECTOR(CodeViewYAML::GlobalHash)
 
 #endif // LLVM_OBJECTYAML_CODEVIEWYAMLTYPES_H
