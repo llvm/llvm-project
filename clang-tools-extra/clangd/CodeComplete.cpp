@@ -830,8 +830,9 @@ CompletionList codeComplete(const Context &Ctx, PathRef FileName,
                      FileName, Command, Preamble, Contents, Pos, std::move(VFS),
                      std::move(PCHs));
   if (Opts.Index && CompletedName.SSInfo) {
-    log(Ctx, "WARNING: Got completion results from sema for completion on "
-             "qualified ID while symbol index is provided.");
+    if (!Results.items.empty())
+      log(Ctx, "WARNING: Got completion results from sema for completion on "
+               "qualified ID while symbol index is provided.");
     Results.items.clear();
     completeWithIndex(Ctx, *Opts.Index, Contents, *CompletedName.SSInfo,
                       CompletedName.Filter, &Results);
