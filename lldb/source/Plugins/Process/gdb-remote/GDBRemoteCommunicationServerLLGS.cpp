@@ -204,21 +204,8 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
                         });
 }
 
-Status
-GDBRemoteCommunicationServerLLGS::SetLaunchArguments(const char *const args[],
-                                                     int argc) {
-  if ((argc < 1) || !args || !args[0] || !args[0][0])
-    return Status("%s: no process command line specified to launch",
-                  __FUNCTION__);
-
-  m_process_launch_info.SetArguments(const_cast<const char **>(args), true);
-  return Status();
-}
-
-Status
-GDBRemoteCommunicationServerLLGS::SetLaunchFlags(unsigned int launch_flags) {
-  m_process_launch_info.GetFlags().Set(launch_flags);
-  return Status();
+void GDBRemoteCommunicationServerLLGS::SetLaunchInfo(const ProcessLaunchInfo &info) {
+  m_process_launch_info = info;
 }
 
 Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {

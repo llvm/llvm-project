@@ -89,6 +89,11 @@ Expected<std::unique_ptr<TestClient>> TestClient::launch(StringRef Log, ArrayRef
   ProcessLaunchInfo Info;
   Info.SetArchitecture(arch_spec);
   Info.SetArguments(args, true);
+
+  StringList Env;
+  Host::GetEnvironment(Env);
+  Info.GetEnvironmentEntries() = Args(Env);
+
   status = Host::LaunchProcess(Info);
   if (status.Fail())
     return status.ToError();
@@ -96,7 +101,14 @@ Expected<std::unique_ptr<TestClient>> TestClient::launch(StringRef Log, ArrayRef
   Socket *accept_socket;
   listen_socket.Accept(accept_socket);
   auto Conn = llvm::make_unique<ConnectionFileDescriptor>(accept_socket);
-  return std::unique_ptr<TestClient>(new TestClient(std::move(Conn)));
+  auto Client = std::unique_ptr<TestClient>(new TestClient(std::move(Conn)));
+
+  if (!InferiorArgs.empty()) {
+    if (Error E = Client->QueryProcessInfo())
+      return std::move(E);
+  }
+
+  return std::move(Client);
 }
 
 Error TestClient::SetInferior(llvm::ArrayRef<std::string> inferior_args) {
