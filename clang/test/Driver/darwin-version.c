@@ -277,3 +277,13 @@
 // RUN: %clang -target uknown-apple-macos10.11.2 -arch=armv7k -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-TIGNORE-ARCH1 %s
 // CHECK-VERSION-TIGNORE-ARCH1: "unknown-apple-macosx10.11.2"
+
+// Target can be used to specify the environment:
+
+// RUN: %clang -target x86_64-apple-ios11-simulator -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-TENV-SIM1 %s
+// CHECK-VERSION-TENV-SIM1: "x86_64-apple-ios11.0.0-simulator"
+
+// RUN: %clang -target armv7k-apple-ios10.1-simulator -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-TENV-SIM2 %s
+// CHECK-VERSION-TENV-SIM2: "thumbv7k-apple-ios10.1.0-simulator"
