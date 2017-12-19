@@ -31,7 +31,10 @@ using testing::Field;
 using testing::UnorderedElementsAre;
 
 // GMock helpers for matching Symbol.
-MATCHER_P(QName, Name, "") { return arg.second.QualifiedName == Name; }
+MATCHER_P(QName, Name, "") {
+  return (arg.second.Scope + (arg.second.Scope.empty() ? "" : "::") +
+          arg.second.Name) == Name;
+}
 
 namespace clang {
 namespace clangd {
@@ -111,7 +114,8 @@ TEST_F(SymbolCollectorTest, YAMLConversions) {
   const std::string YAML1 = R"(
 ---
 ID: 057557CEBF6E6B2DD437FBF60CC58F352D1DF856
-QualifiedName:   'clang::Foo1'
+Name:   'Foo1'
+Scope:   'clang'
 SymInfo:
   Kind:            Function
   Lang:            Cpp
@@ -124,7 +128,8 @@ CanonicalDeclaration:
   const std::string YAML2 = R"(
 ---
 ID: 057557CEBF6E6B2DD437FBF60CC58F352D1DF858
-QualifiedName:   'clang::Foo2'
+Name:   'Foo2'
+Scope:   'clang'
 SymInfo:
   Kind:            Function
   Lang:            Cpp

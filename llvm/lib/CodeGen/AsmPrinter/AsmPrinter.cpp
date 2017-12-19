@@ -2033,6 +2033,7 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
     }
   }
   // else fallthrough
+  LLVM_FALLTHROUGH;
 
   // The MC library also has a right-shift operator, but it isn't consistently
   // signed or unsigned between different targets.

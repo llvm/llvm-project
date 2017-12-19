@@ -1181,8 +1181,11 @@ struct DarwinPlatform {
   };
 
   using DarwinPlatformKind = Darwin::DarwinPlatformKind;
+  using DarwinEnvironmentKind = Darwin::DarwinEnvironmentKind;
 
   DarwinPlatformKind getPlatform() const { return Platform; }
+
+  DarwinEnvironmentKind getEnvironment() const { return Environment; }
 
   StringRef getOSVersion() const {
     if (Kind == OSVersionArg)
@@ -1233,6 +1236,19 @@ struct DarwinPlatform {
     llvm_unreachable("Unsupported Darwin Source Kind");
   }
 
+  static DarwinPlatform createFromTarget(llvm::Triple::OSType OS,
+                                         StringRef OSVersion, Arg *A,
+                                         llvm::Triple::EnvironmentType Env) {
+    DarwinPlatform Result(TargetArg, getPlatformFromOS(OS), OSVersion, A);
+    switch (Env) {
+    case llvm::Triple::Simulator:
+      Result.Environment = DarwinEnvironmentKind::Simulator;
+      break;
+    default:
+      break;
+    }
+    return Result;
+  }
   static DarwinPlatform createOSVersionArg(DarwinPlatformKind Platform,
                                            Arg *A) {
     return DarwinPlatform(OSVersionArg, Platform, A);
@@ -1250,35 +1266,35 @@ struct DarwinPlatform {
   }
   static DarwinPlatform createFromArch(llvm::Triple::OSType OS,
                                        StringRef Value) {
-    DarwinPlatformKind Platform;
-    switch (OS) {
-    case llvm::Triple::Darwin:
-    case llvm::Triple::MacOSX:
-      Platform = DarwinPlatformKind::MacOS;
-      break;
-    case llvm::Triple::IOS:
-      Platform = DarwinPlatformKind::IPhoneOS;
-      break;
-    case llvm::Triple::TvOS:
-      Platform = DarwinPlatformKind::TvOS;
-      break;
-    case llvm::Triple::WatchOS:
-      Platform = DarwinPlatformKind::WatchOS;
-      break;
-    default:
-      llvm_unreachable("Unable to infer Darwin variant");
-    }
-    return DarwinPlatform(InferredFromArch, Platform, Value);
+    return DarwinPlatform(InferredFromArch, getPlatformFromOS(OS), Value);
   }
 
 private:
   DarwinPlatform(SourceKind Kind, DarwinPlatformKind Platform, Arg *Argument)
       : Kind(Kind), Platform(Platform), Argument(Argument) {}
-  DarwinPlatform(SourceKind Kind, DarwinPlatformKind Platform, StringRef Value)
-      : Kind(Kind), Platform(Platform), OSVersion(Value), Argument(nullptr) {}
+  DarwinPlatform(SourceKind Kind, DarwinPlatformKind Platform, StringRef Value,
+                 Arg *Argument = nullptr)
+      : Kind(Kind), Platform(Platform), OSVersion(Value), Argument(Argument) {}
+
+  static DarwinPlatformKind getPlatformFromOS(llvm::Triple::OSType OS) {
+    switch (OS) {
+    case llvm::Triple::Darwin:
+    case llvm::Triple::MacOSX:
+      return DarwinPlatformKind::MacOS;
+    case llvm::Triple::IOS:
+      return DarwinPlatformKind::IPhoneOS;
+    case llvm::Triple::TvOS:
+      return DarwinPlatformKind::TvOS;
+    case llvm::Triple::WatchOS:
+      return DarwinPlatformKind::WatchOS;
+    default:
+      llvm_unreachable("Unable to infer Darwin variant");
+    }
+  }
 
   SourceKind Kind;
   DarwinPlatformKind Platform;
+  DarwinEnvironmentKind Environment = DarwinEnvironmentKind::NativeEnvironment;
   std::string OSVersion;
   Arg *Argument;
   StringRef EnvVarName;
@@ -1449,25 +1465,34 @@ inferDeploymentTargetFromArch(DerivedArgList &Args, const Darwin &Toolchain,
                               const Driver &TheDriver) {
   llvm::Triple::OSType OSTy = llvm::Triple::UnknownOS;
 
-  // Set the OSTy based on -target if -arch isn't present.
-  if (Args.hasArg(options::OPT_target) && !Args.hasArg(options::OPT_arch)) {
-    OSTy = Triple.getOS();
-  } else {
-    StringRef MachOArchName = Toolchain.getMachOArchName(Args);
-    if (MachOArchName == "armv7" || MachOArchName == "armv7s" ||
-        MachOArchName == "arm64")
-      OSTy = llvm::Triple::IOS;
-    else if (MachOArchName == "armv7k")
-      OSTy = llvm::Triple::WatchOS;
-    else if (MachOArchName != "armv6m" && MachOArchName != "armv7m" &&
-             MachOArchName != "armv7em")
-      OSTy = llvm::Triple::MacOSX;
-  }
+  StringRef MachOArchName = Toolchain.getMachOArchName(Args);
+  if (MachOArchName == "armv7" || MachOArchName == "armv7s" ||
+      MachOArchName == "arm64")
+    OSTy = llvm::Triple::IOS;
+  else if (MachOArchName == "armv7k")
+    OSTy = llvm::Triple::WatchOS;
+  else if (MachOArchName != "armv6m" && MachOArchName != "armv7m" &&
+           MachOArchName != "armv7em")
+    OSTy = llvm::Triple::MacOSX;
 
   if (OSTy == llvm::Triple::UnknownOS)
     return None;
   return DarwinPlatform::createFromArch(OSTy,
                                         getOSVersion(OSTy, Triple, TheDriver));
+}
+
+/// Returns the deployment target that's specified using the -target option.
+Optional<DarwinPlatform> getDeploymentTargetFromTargetArg(
+    DerivedArgList &Args, const llvm::Triple &Triple, const Driver &TheDriver) {
+  if (!Args.hasArg(options::OPT_target))
+    return None;
+  if (Triple.getOS() == llvm::Triple::Darwin ||
+      Triple.getOS() == llvm::Triple::UnknownOS)
+    return None;
+  std::string OSVersion = getOSVersion(Triple.getOS(), Triple, TheDriver);
+  return DarwinPlatform::createFromTarget(Triple.getOS(), OSVersion,
+                                          Args.getLastArg(options::OPT_target),
+                                          Triple.getEnvironment());
 }
 
 } // namespace
@@ -1494,24 +1519,35 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
     }
   }
 
-  // The OS target can be specified using the -m<os>version-min argument.
+  // The OS and the version can be specified using the -target argument.
   Optional<DarwinPlatform> OSTarget =
-      getDeploymentTargetFromOSVersionArg(Args, getDriver());
-  // If no deployment target was specified on the command line, check for
-  // environment defines.
-  if (!OSTarget)
-    OSTarget =
-        getDeploymentTargetFromEnvironmentVariables(getDriver(), getTriple());
-  // If there is no command-line argument to specify the Target version and
-  // no environment variable defined, see if we can set the default based
-  // on -isysroot.
-  if (!OSTarget)
-    OSTarget = inferDeploymentTargetFromSDK(Args);
-  // If no OS targets have been specified, try to guess platform from -target
-  // or arch name and compute the version from the triple.
-  if (!OSTarget)
-    OSTarget =
-        inferDeploymentTargetFromArch(Args, *this, getTriple(), getDriver());
+      getDeploymentTargetFromTargetArg(Args, getTriple(), getDriver());
+  if (OSTarget) {
+    // Warn about superfluous -m<os>-version-min arg.
+    Optional<DarwinPlatform> OSVersionArgTarget =
+        getDeploymentTargetFromOSVersionArg(Args, getDriver());
+    if (OSVersionArgTarget)
+      getDriver().Diag(clang::diag::warn_drv_unused_argument)
+          << OSVersionArgTarget->getAsString(Args, Opts);
+  } else {
+    // The OS target can be specified using the -m<os>version-min argument.
+    OSTarget = getDeploymentTargetFromOSVersionArg(Args, getDriver());
+    // If no deployment target was specified on the command line, check for
+    // environment defines.
+    if (!OSTarget)
+      OSTarget =
+          getDeploymentTargetFromEnvironmentVariables(getDriver(), getTriple());
+    // If there is no command-line argument to specify the Target version and
+    // no environment variable defined, see if we can set the default based
+    // on -isysroot.
+    if (!OSTarget)
+      OSTarget = inferDeploymentTargetFromSDK(Args);
+    // If no OS targets have been specified, try to guess platform from -target
+    // or arch name and compute the version from the triple.
+    if (!OSTarget)
+      OSTarget =
+          inferDeploymentTargetFromArch(Args, *this, getTriple(), getDriver());
+  }
 
   assert(OSTarget && "Unable to infer Darwin variant");
   OSTarget->addOSVersionMinArgument(Args, Opts);
@@ -1562,10 +1598,11 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   } else
     llvm_unreachable("unknown kind of Darwin platform");
 
-  DarwinEnvironmentKind Environment = NativeEnvironment;
+  DarwinEnvironmentKind Environment = OSTarget->getEnvironment();
   // Recognize iOS targets with an x86 architecture as the iOS simulator.
-  if (Platform != MacOS && (getTriple().getArch() == llvm::Triple::x86 ||
-                            getTriple().getArch() == llvm::Triple::x86_64))
+  if (Environment == NativeEnvironment && Platform != MacOS &&
+      (getTriple().getArch() == llvm::Triple::x86 ||
+       getTriple().getArch() == llvm::Triple::x86_64))
     Environment = Simulator;
 
   setTarget(Platform, Environment, Major, Minor, Micro);

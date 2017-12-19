@@ -155,7 +155,8 @@ bool llvm::pruneCache(StringRef Path, CachePruningPolicy Policy) {
   SmallString<128> TimestampFile(Path);
   sys::path::append(TimestampFile, "llvmcache.timestamp");
   sys::fs::file_status FileStatus;
-  const auto CurrentTime = system_clock::now();
+  const auto CurrentTime =
+      time_point_cast<decltype(Policy.Interval)>(system_clock::now());
   if (auto EC = sys::fs::status(TimestampFile, FileStatus)) {
     if (EC == errc::no_such_file_or_directory) {
       // If the timestamp file wasn't there, create one now.
@@ -168,7 +169,8 @@ bool llvm::pruneCache(StringRef Path, CachePruningPolicy Policy) {
     if (Policy.Interval != seconds(0)) {
       // Check whether the time stamp is older than our pruning interval.
       // If not, do nothing.
-      const auto TimeStampModTime = FileStatus.getLastModificationTime();
+      const auto TimeStampModTime = time_point_cast<decltype(Policy.Interval)>(
+          FileStatus.getLastModificationTime());
       auto TimeStampAge = CurrentTime - TimeStampModTime;
       if (TimeStampAge <= Policy.Interval) {
         DEBUG(dbgs() << "Timestamp file too recent ("

@@ -91,7 +91,10 @@ static cl::opt<unsigned> OptsizeJumpTableDensity(
 
 static bool darwinHasSinCos(const Triple &TT) {
   assert(TT.isOSDarwin() && "should be called with darwin triple");
-  // Macos < 10.9 has no sincos_stret and we don't bother for 32bit code.
+  // Don't bother with 32 bit x86.
+  if (TT.getArch() == Triple::x86)
+    return false;
+  // Macos < 10.9 has no sincos_stret.
   if (TT.isMacOSX())
     return !TT.isMacOSXVersionLT(10, 9) && TT.isArch64Bit();
   // iOS < 7.0 has no sincos_stret.

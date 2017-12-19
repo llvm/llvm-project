@@ -278,3 +278,106 @@ L2:
 L3:
   ret void
 }
+
+; Make sure that we don't PRE a non-speculable load across a guard.
+define void @unsafe_pre_across_guard(i8* %p, i1 %load.is.valid) {
+
+; CHECK-LABEL: @unsafe_pre_across_guard(
+; CHECK-NOT:   loaded.pr
+; CHECK:       entry:
+; CHECK-NEXT:    br label %loop
+; CHECK:       loop:
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 %load.is.valid) [ "deopt"() ]
+; CHECK-NEXT:    %loaded = load i8, i8* %p
+; CHECK-NEXT:    %continue = icmp eq i8 %loaded, 0
+; CHECK-NEXT:    br i1 %continue, label %exit, label %loop
+entry:
+  br label %loop
+
+loop:                                             ; preds = %loop, %entry
+  call void (i1, ...) @llvm.experimental.guard(i1 %load.is.valid) [ "deopt"() ]
+  %loaded = load i8, i8* %p
+  %continue = icmp eq i8 %loaded, 0
+  br i1 %continue, label %exit, label %loop
+
+exit:                                             ; preds = %loop
+  ret void
+}
+
+; Make sure that we can safely PRE a speculable load across a guard.
+define void @safe_pre_across_guard(i8* noalias nocapture readonly dereferenceable(8) %p, i1 %load.is.valid) {
+
+; CHECK-LABEL: @safe_pre_across_guard(
+; CHECK:       entry:
+; CHECK-NEXT:    %loaded.pr = load i8, i8* %p
+; CHECK-NEXT:    br label %loop
+; CHECK:       loop:
+; CHECK-NEXT:    %loaded = phi i8 [ %loaded, %loop ], [ %loaded.pr, %entry ]
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 %load.is.valid) [ "deopt"() ]
+; CHECK-NEXT:    %continue = icmp eq i8 %loaded, 0
+; CHECK-NEXT:    br i1 %continue, label %exit, label %loop
+
+entry:
+  br label %loop
+
+loop:                                             ; preds = %loop, %entry
+  call void (i1, ...) @llvm.experimental.guard(i1 %load.is.valid) [ "deopt"() ]
+  %loaded = load i8, i8* %p
+  %continue = icmp eq i8 %loaded, 0
+  br i1 %continue, label %exit, label %loop
+
+exit:                                             ; preds = %loop
+  ret void
+}
+
+; Make sure that we don't PRE a non-speculable load across a call which may
+; alias with the load.
+define void @unsafe_pre_across_call(i8* %p) {
+
+; CHECK-LABEL: @unsafe_pre_across_call(
+; CHECK-NOT:   loaded.pr
+; CHECK:       entry:
+; CHECK-NEXT:    br label %loop
+; CHECK:       loop:
+; CHECK-NEXT:    call i32 @f1()
+; CHECK-NEXT:    %loaded = load i8, i8* %p
+; CHECK-NEXT:    %continue = icmp eq i8 %loaded, 0
+; CHECK-NEXT:    br i1 %continue, label %exit, label %loop
+entry:
+  br label %loop
+
+loop:                                             ; preds = %loop, %entry
+  call i32 @f1()
+  %loaded = load i8, i8* %p
+  %continue = icmp eq i8 %loaded, 0
+  br i1 %continue, label %exit, label %loop
+
+exit:                                             ; preds = %loop
+  ret void
+}
+
+; Make sure that we can safely PRE a speculable load across a call.
+define void @safe_pre_across_call(i8* noalias nocapture readonly dereferenceable(8) %p) {
+
+; CHECK-LABEL: @safe_pre_across_call(
+; CHECK:       entry:
+; CHECK-NEXT:    %loaded.pr = load i8, i8* %p
+; CHECK-NEXT:    br label %loop
+; CHECK:       loop:
+; CHECK-NEXT:    %loaded = phi i8 [ %loaded, %loop ], [ %loaded.pr, %entry ]
+; CHECK-NEXT:    call i32 @f1()
+; CHECK-NEXT:    %continue = icmp eq i8 %loaded, 0
+; CHECK-NEXT:    br i1 %continue, label %exit, label %loop
+
+entry:
+  br label %loop
+
+loop:                                             ; preds = %loop, %entry
+  call i32 @f1()
+  %loaded = load i8, i8* %p
+  %continue = icmp eq i8 %loaded, 0
+  br i1 %continue, label %exit, label %loop
+
+exit:                                             ; preds = %loop
+  ret void
+}

@@ -90,6 +90,13 @@ static llvm::cl::opt<Path> TraceFile(
         "Trace internal events and timestamps in chrome://tracing JSON format"),
     llvm::cl::init(""), llvm::cl::Hidden);
 
+static llvm::cl::opt<bool> EnableIndexBasedCompletion(
+    "enable-index-based-completion",
+    llvm::cl::desc(
+        "Enable index-based global code completion (experimental). Clangd will "
+        "use index built from symbols in opened files"),
+    llvm::cl::init(false), llvm::cl::Hidden);
+
 int main(int argc, char *argv[]) {
   llvm::cl::ParseCommandLineOptions(argc, argv, "clangd");
 
@@ -180,7 +187,8 @@ int main(int argc, char *argv[]) {
   CCOpts.IncludeIneligibleResults = IncludeIneligibleResults;
   // Initialize and run ClangdLSPServer.
   ClangdLSPServer LSPServer(Out, WorkerThreadsCount, StorePreamblesInMemory,
-                            CCOpts, ResourceDirRef, CompileCommandsDirPath);
+                            CCOpts, ResourceDirRef, CompileCommandsDirPath,
+                            EnableIndexBasedCompletion);
   constexpr int NoShutdownRequestErrorCode = 1;
   llvm::set_thread_name("clangd.main");
   return LSPServer.run(std::cin) ? 0 : NoShutdownRequestErrorCode;

@@ -34,7 +34,8 @@ public:
                   bool StorePreamblesInMemory,
                   const clangd::CodeCompleteOptions &CCOpts,
                   llvm::Optional<StringRef> ResourceDir,
-                  llvm::Optional<Path> CompileCommandsDir);
+                  llvm::Optional<Path> CompileCommandsDir,
+                  bool BuildDynamicSymbolIndex);
 
   /// Run LSP server loop, receiving input for it from \p In. \p In must be
   /// opened in binary mode. Output will be written using Out variable passed to
@@ -87,7 +88,8 @@ private:
   bool IsDone = false;
 
   std::mutex FixItsMutex;
-  typedef std::map<clangd::Diagnostic, std::vector<TextEdit>>
+  typedef std::map<clangd::Diagnostic, std::vector<TextEdit>,
+                   LSPDiagnosticCompare>
       DiagnosticToReplacementMap;
   /// Caches FixIts per file and diagnostics
   llvm::StringMap<DiagnosticToReplacementMap> FixItsMap;

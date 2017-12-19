@@ -148,10 +148,9 @@ define void @shuffle_v32i16_to_v16i16(<32 x i16>* %L, <16 x i16>* %S) nounwind {
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; AVX512BWVL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512BWVL-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,2,4,6,16,18,20,22,8,10,12,14,24,26,28,30]
+; AVX512BWVL-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30]
 ; AVX512BWVL-NEXT:    vpermi2w %ymm1, %ymm0, %ymm2
-; AVX512BWVL-NEXT:    vpermq {{.*#+}} ymm0 = ymm2[0,2,1,3]
-; AVX512BWVL-NEXT:    vmovdqa %ymm0, (%rsi)
+; AVX512BWVL-NEXT:    vmovdqa %ymm2, (%rsi)
 ; AVX512BWVL-NEXT:    vzeroupper
 ; AVX512BWVL-NEXT:    retq
   %vec = load <32 x i16>, <32 x i16>* %L

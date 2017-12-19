@@ -252,6 +252,7 @@ bool ResourcePriorityQueue::isResourceAvailable(SUnit *SU) {
       if (!ResourcesModel->canReserveResources(&TII->get(
           SU->getNode()->getMachineOpcode())))
            return false;
+      break;
     case TargetOpcode::EXTRACT_SUBREG:
     case TargetOpcode::INSERT_SUBREG:
     case TargetOpcode::SUBREG_TO_REG:
