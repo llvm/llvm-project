@@ -6,6 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
 #include "ClangdServer.h"
 #include "Compiler.h"
 #include "Context.h"
@@ -13,6 +14,7 @@
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "TestFS.h"
+#include "index/MemIndex.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -83,6 +85,7 @@ StringWithPos parseTextMarker(StringRef Text) {
 MATCHER_P(Named, Name, "") { return arg.insertText == Name; }
 MATCHER_P(Labeled, Label, "") { return arg.label == Label; }
 MATCHER_P(Kind, K, "") { return arg.kind == K; }
+MATCHER_P(Filter, F, "") { return arg.filterText == F; }
 MATCHER_P(PlainText, Text, "") {
   return arg.insertTextFormat == clangd::InsertTextFormat::PlainText &&
          arg.insertText == Text;
@@ -455,6 +458,104 @@ TEST(SignatureHelpTest, ActiveArg) {
                               {"int a", "int b", "int c"})));
   EXPECT_EQ(0, Results.activeSignature);
   EXPECT_EQ(1, Results.activeParameter);
+}
+
+std::unique_ptr<SymbolIndex> simpleIndexFromSymbols(
+    std::vector<std::pair<std::string, index::SymbolKind>> Symbols) {
+  auto I = llvm::make_unique<MemIndex>();
+  struct Snapshot {
+    SymbolSlab Slab;
+    std::vector<const Symbol *> Pointers;
+  };
+  auto Snap = std::make_shared<Snapshot>();
+  for (const auto &Pair : Symbols) {
+    Symbol Sym;
+    Sym.ID = SymbolID(Pair.first);
+    llvm::StringRef QName = Pair.first;
+    size_t Pos = QName.rfind("::");
+    if (Pos == llvm::StringRef::npos) {
+      Sym.Name = QName;
+      Sym.Scope = "";
+    } else {
+      Sym.Name = QName.substr(Pos + 2);
+      Sym.Scope = QName.substr(0, Pos);
+    }
+    Sym.SymInfo.Kind = Pair.second;
+    Snap->Slab.insert(std::move(Sym));
+  }
+  for (auto &Iter : Snap->Slab)
+    Snap->Pointers.push_back(&Iter.second);
+  auto S = std::shared_ptr<std::vector<const Symbol *>>(std::move(Snap),
+                                                        &Snap->Pointers);
+  I->build(std::move(S));
+  return I;
+}
+
+TEST(CompletionTest, NoIndex) {
+  clangd::CodeCompleteOptions Opts;
+  Opts.Index = nullptr;
+
+  auto Results = completions(R"cpp(
+      namespace ns { class No {}; }
+      void f() { ns::^ }
+  )cpp",
+                             Opts);
+  EXPECT_THAT(Results.items, Has("No"));
+}
+
+TEST(CompletionTest, SimpleIndexBased) {
+  clangd::CodeCompleteOptions Opts;
+  auto I = simpleIndexFromSymbols({{"ns::XYZ", index::SymbolKind::Class},
+                                   {"nx::XYZ", index::SymbolKind::Class},
+                                   {"ns::foo", index::SymbolKind::Function}});
+  Opts.Index = I.get();
+
+  auto Results = completions(R"cpp(
+      namespace ns { class No {}; }
+      void f() { ns::^ }
+  )cpp",
+                             Opts);
+  EXPECT_THAT(Results.items, Has("XYZ", CompletionItemKind::Class));
+  EXPECT_THAT(Results.items, Has("foo", CompletionItemKind::Function));
+  EXPECT_THAT(Results.items, Not(Has("No")));
+}
+
+TEST(CompletionTest, IndexBasedWithFilter) {
+  clangd::CodeCompleteOptions Opts;
+  auto I = simpleIndexFromSymbols({{"ns::XYZ", index::SymbolKind::Class},
+                                   {"ns::foo", index::SymbolKind::Function}});
+  Opts.Index = I.get();
+
+  auto Results = completions(R"cpp(
+      void f() { ns::x^ }
+  )cpp",
+                             Opts);
+  EXPECT_THAT(Results.items, Contains(AllOf(Named("XYZ"), Filter("x"))));
+  EXPECT_THAT(Results.items, Not(Has("foo")));
+}
+
+TEST(CompletionTest, GlobalQualified) {
+  clangd::CodeCompleteOptions Opts;
+  auto I = simpleIndexFromSymbols({{"XYZ", index::SymbolKind::Class}});
+  Opts.Index = I.get();
+
+  auto Results = completions(R"cpp(
+      void f() { ::^ }
+  )cpp",
+                             Opts);
+  EXPECT_THAT(Results.items, Has("XYZ", CompletionItemKind::Class));
+}
+
+TEST(CompletionTest, FullyQualifiedScope) {
+  clangd::CodeCompleteOptions Opts;
+  auto I = simpleIndexFromSymbols({{"ns::XYZ", index::SymbolKind::Class}});
+  Opts.Index = I.get();
+
+  auto Results = completions(R"cpp(
+      void f() { ::ns::^ }
+  )cpp",
+                             Opts);
+  EXPECT_THAT(Results.items, Has("XYZ", CompletionItemKind::Class));
 }
 
 } // namespace

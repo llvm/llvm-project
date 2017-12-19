@@ -153,7 +153,7 @@ public:
   /// Returns true if the result list is complete, false if it was truncated due
   /// to MaxCandidateCount
   virtual bool
-  fuzzyFind(Context &Ctx, const FuzzyFindRequest &Req,
+  fuzzyFind(const Context &Ctx, const FuzzyFindRequest &Req,
             std::function<void(const Symbol &)> Callback) const = 0;
 
   // FIXME: add interfaces for more index use cases:

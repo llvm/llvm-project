@@ -143,7 +143,7 @@ TEST(MemIndexTest, MatchQualifiedNamesWithGlobalScope) {
   I.build(generateSymbols({"a::xyz", "b::yz", "yz"}));
   FuzzyFindRequest Req;
   Req.Query = "y";
-  Req.Scopes.push_back("");
+  Req.Scopes = {""};
   auto Matches = match(I, Req);
   EXPECT_THAT(match(I, Req), UnorderedElementsAre("yz"));
 }
@@ -153,7 +153,7 @@ TEST(MemIndexTest, MatchQualifiedNamesWithOneScope) {
   I.build(generateSymbols({"a::xyz", "a::yy", "a::xz", "b::yz", "yz"}));
   FuzzyFindRequest Req;
   Req.Query = "y";
-  Req.Scopes.push_back("a");
+  Req.Scopes = {"a"};
   auto Matches = match(I, Req);
   EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::xyz", "a::yy"));
 }
@@ -163,8 +163,7 @@ TEST(MemIndexTest, MatchQualifiedNamesWithMultipleScopes) {
   I.build(generateSymbols({"a::xyz", "a::yy", "a::xz", "b::yz", "yz"}));
   FuzzyFindRequest Req;
   Req.Query = "y";
-  Req.Scopes.push_back("a");
-  Req.Scopes.push_back("b");
+  Req.Scopes = {"a", "b"};
   auto Matches = match(I, Req);
   EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::xyz", "a::yy", "b::yz"));
 }
@@ -174,7 +173,7 @@ TEST(MemIndexTest, NoMatchNestedScopes) {
   I.build(generateSymbols({"a::xyz", "a::b::yy"}));
   FuzzyFindRequest Req;
   Req.Query = "y";
-  Req.Scopes.push_back("a");
+  Req.Scopes = {"a"};
   auto Matches = match(I, Req);
   EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::xyz"));
 }
