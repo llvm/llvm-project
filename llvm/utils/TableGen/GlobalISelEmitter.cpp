@@ -931,7 +931,7 @@ class SameOperandMatcher : public OperandPredicateMatcher {
   std::string MatchingName;
 
 public:
-  SameOperandMatcher(StringRef MatchingName, unsigned InsnVarID, unsigned OpIdx)
+  SameOperandMatcher(unsigned InsnVarID, unsigned OpIdx, StringRef MatchingName)
       : OperandPredicateMatcher(OPM_SameOperand, InsnVarID, OpIdx),
         MatchingName(MatchingName) {}
 
@@ -951,7 +951,7 @@ protected:
 public:
   static std::set<LLTCodeGen> KnownTypes;
 
-  LLTOperandMatcher(const LLTCodeGen &Ty, unsigned InsnVarID, unsigned OpIdx)
+  LLTOperandMatcher(unsigned InsnVarID, unsigned OpIdx, const LLTCodeGen &Ty)
       : OperandPredicateMatcher(OPM_LLT, InsnVarID, OpIdx), Ty(Ty) {
     KnownTypes.insert(Ty);
   }
@@ -991,8 +991,8 @@ protected:
   unsigned SizeInBits;
 
 public:
-  PointerToAnyOperandMatcher(unsigned SizeInBits, unsigned InsnVarID,
-                             unsigned OpIdx)
+  PointerToAnyOperandMatcher(unsigned InsnVarID, unsigned OpIdx,
+                             unsigned SizeInBits)
       : OperandPredicateMatcher(OPM_PointerToAny, InsnVarID, OpIdx),
         SizeInBits(SizeInBits) {}
 
@@ -1021,9 +1021,9 @@ protected:
 public:
   bool isIdentical(const PredicateMatcher &B) const override { return false; }
 
-  ComplexPatternOperandMatcher(const OperandMatcher &Operand,
-                               const Record &TheDef, unsigned InsnVarID,
-                               unsigned OpIdx)
+  ComplexPatternOperandMatcher(unsigned InsnVarID, unsigned OpIdx,
+                               const OperandMatcher &Operand,
+                               const Record &TheDef)
       : OperandPredicateMatcher(OPM_ComplexPattern, InsnVarID, OpIdx),
         Operand(Operand), TheDef(TheDef) {}
 
@@ -1053,8 +1053,8 @@ protected:
   const CodeGenRegisterClass &RC;
 
 public:
-  RegisterBankOperandMatcher(const CodeGenRegisterClass &RC, unsigned InsnVarID,
-                             unsigned OpIdx)
+  RegisterBankOperandMatcher(unsigned InsnVarID, unsigned OpIdx,
+                             const CodeGenRegisterClass &RC)
       : OperandPredicateMatcher(OPM_RegBank, InsnVarID, OpIdx), RC(RC) {}
 
   bool isIdentical(const PredicateMatcher &B) const override {
@@ -1102,7 +1102,7 @@ protected:
   int64_t Value;
 
 public:
-  ConstantIntOperandMatcher(int64_t Value, unsigned InsnVarID, unsigned OpIdx)
+  ConstantIntOperandMatcher(unsigned InsnVarID, unsigned OpIdx, int64_t Value)
       : OperandPredicateMatcher(OPM_Int, InsnVarID, OpIdx), Value(Value) {}
 
   bool isIdentical(const PredicateMatcher &B) const override {
@@ -1130,7 +1130,7 @@ protected:
   int64_t Value;
 
 public:
-  LiteralIntOperandMatcher(int64_t Value, unsigned InsnVarID, unsigned OpIdx)
+  LiteralIntOperandMatcher(unsigned InsnVarID, unsigned OpIdx, int64_t Value)
       : OperandPredicateMatcher(OPM_LiteralInt, InsnVarID, OpIdx),
         Value(Value) {}
 
@@ -1158,8 +1158,8 @@ protected:
   const CodeGenIntrinsic *II;
 
 public:
-  IntrinsicIDOperandMatcher(const CodeGenIntrinsic *II, unsigned InsnVarID,
-                            unsigned OpIdx)
+  IntrinsicIDOperandMatcher(unsigned InsnVarID, unsigned OpIdx,
+                            const CodeGenIntrinsic *II)
       : OperandPredicateMatcher(OPM_IntrinsicID, InsnVarID, OpIdx), II(II) {}
 
   bool isIdentical(const PredicateMatcher &B) const override {
@@ -1294,9 +1294,9 @@ PredicateListMatcher<OperandPredicateMatcher>::addPredicate(Args &&... args) {
   auto *OpMatcher = static_cast<OperandMatcher *>(this);
   if (static_cast<OperandMatcher *>(this)->isSameAsAnotherOperand())
     return None;
-  Predicates.emplace_back(llvm::make_unique<Kind>(
-      std::forward<Args>(args)..., OpMatcher->getInsnVarID(),
-      OpMatcher->getOperandIndex()));
+  Predicates.emplace_back(llvm::make_unique<Kind>(OpMatcher->getInsnVarID(),
+                                                  OpMatcher->getOperandIndex(),
+                                                  std::forward<Args>(args)...));
   return static_cast<Kind *>(Predicates.back().get());
 }
 
@@ -1668,8 +1668,8 @@ protected:
   std::unique_ptr<InstructionMatcher> InsnMatcher;
 
 public:
-  InstructionOperandMatcher(RuleMatcher &Rule, StringRef SymbolicName,
-                            unsigned InsnVarID, unsigned OpIdx)
+  InstructionOperandMatcher(unsigned InsnVarID, unsigned OpIdx,
+                            RuleMatcher &Rule, StringRef SymbolicName)
       : OperandPredicateMatcher(OPM_Instruction, InsnVarID, OpIdx),
         InsnMatcher(new InstructionMatcher(Rule, SymbolicName)) {}
 

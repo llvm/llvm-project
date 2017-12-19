@@ -164,7 +164,7 @@ synthesize the various copy insertion/inspection methods in TargetInstrInfo.
 
 Stack coloring improvements:
 
-1. Do proper LiveStackAnalysis on all stack objects including those which are
+1. Do proper LiveStacks analysis on all stack objects including those which are
    not spill slots.
 2. Reorder objects to fill in gaps between objects.
    e.g. 4, 1, <gap>, 4, 1, 1, 1, <gap>, 4 => 4, 1, 1, 1, 1, 4, 4

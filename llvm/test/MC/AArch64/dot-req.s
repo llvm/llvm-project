@@ -37,3 +37,8 @@ bar:
 // CHECK: fmov    d2, d3                  // encoding: [0x62,0x40,0x60,0x1e]
 // CHECK: ldr      q2, [sp]               // encoding: [0xe2,0x03,0xc0,0x3d]
 // CHECK: mov             v0.8b, v1.8b    // encoding: [0x20,0x1c,0xa1,0x0e]
+
+	peter .req x6
+	add peter, x0, x0
+	.unreq peter
+// CHECK: add x6, x0, x0

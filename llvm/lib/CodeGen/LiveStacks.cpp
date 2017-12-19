@@ -1,4 +1,4 @@
-//===-- LiveStackAnalysis.cpp - Live Stack Slot Analysis ------------------===//
+//===-- LiveStacks.cpp - Live Stack Slot Analysis -------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,7 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/LiveStackAnalysis.h"
+#include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"

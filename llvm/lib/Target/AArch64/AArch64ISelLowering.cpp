@@ -470,10 +470,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   if (Subtarget->hasPerfMon())
     setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Legal);
 
-  if (Subtarget->isTargetMachO()) {
-    // For iOS, we don't want to the normal expansion of a libcall to
-    // sincos. We want to issue a libcall to __sincos_stret to avoid memory
-    // traffic.
+  if (getLibcallName(RTLIB::SINCOS_STRET_F32) != nullptr &&
+      getLibcallName(RTLIB::SINCOS_STRET_F64) != nullptr) {
+    // Issue __sincos_stret if available.
     setOperationAction(ISD::FSINCOS, MVT::f64, Custom);
     setOperationAction(ISD::FSINCOS, MVT::f32, Custom);
   } else {
@@ -2328,8 +2327,9 @@ SDValue AArch64TargetLowering::LowerFSINCOS(SDValue Op,
   Entry.IsZExt = false;
   Args.push_back(Entry);
 
-  const char *LibcallName =
-      (ArgVT == MVT::f64) ? "__sincos_stret" : "__sincosf_stret";
+  RTLIB::Libcall LC = ArgVT == MVT::f64 ? RTLIB::SINCOS_STRET_F64
+                                        : RTLIB::SINCOS_STRET_F32;
+  const char *LibcallName = getLibcallName(LC);
   SDValue Callee =
       DAG.getExternalSymbol(LibcallName, getPointerTy(DAG.getDataLayout()));
 

@@ -4289,7 +4289,11 @@ void CodeGenModule::ClearUnusedCoverageMapping(const Decl *D) {
 }
 
 void CodeGenModule::EmitDeferredUnusedCoverageMappings() {
-  for (const auto &Entry : DeferredEmptyCoverageMappingDecls) {
+  // We call takeVector() here to avoid use-after-free.
+  // FIXME: DeferredEmptyCoverageMappingDecls is getting mutated because
+  // we deserialize function bodies to emit coverage info for them, and that
+  // deserializes more declarations. How should we handle that case?
+  for (const auto &Entry : DeferredEmptyCoverageMappingDecls.takeVector()) {
     if (!Entry.second)
       continue;
     const Decl *D = Entry.first;

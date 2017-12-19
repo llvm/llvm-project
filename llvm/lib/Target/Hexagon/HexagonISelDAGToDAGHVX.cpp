@@ -910,21 +910,38 @@ bool HvxSelector::selectVectorConstants(SDNode *N) {
   // Since they are generated during the selection process, the main
   // selection algorithm is not aware of them. Select them directly
   // here.
-  if (!N->isMachineOpcode() && N->getOpcode() == ISD::LOAD) {
-    SDValue Addr = cast<LoadSDNode>(N)->getBasePtr();
-    unsigned AddrOpc = Addr.getOpcode();
-    if (AddrOpc == HexagonISD::AT_PCREL || AddrOpc == HexagonISD::CP) {
-      if (Addr.getOperand(0).getOpcode() == ISD::TargetConstantPool) {
-        ISel.Select(N);
-        return true;
-      }
+  SmallVector<SDNode*,4> Loads;
+  SmallVector<SDNode*,16> WorkQ;
+
+  // The DAG can change (due to CSE) during selection, so cache all the
+  // unselected nodes first to avoid traversing a mutating DAG.
+
+  auto IsLoadToSelect = [] (SDNode *N) {
+    if (!N->isMachineOpcode() && N->getOpcode() == ISD::LOAD) {
+      SDValue Addr = cast<LoadSDNode>(N)->getBasePtr();
+      unsigned AddrOpc = Addr.getOpcode();
+      if (AddrOpc == HexagonISD::AT_PCREL || AddrOpc == HexagonISD::CP)
+        if (Addr.getOperand(0).getOpcode() == ISD::TargetConstantPool)
+          return true;
     }
+    return false;
+  };
+
+  WorkQ.push_back(N);
+  for (unsigned i = 0; i != WorkQ.size(); ++i) {
+    SDNode *W = WorkQ[i];
+    if (IsLoadToSelect(W)) {
+      Loads.push_back(W);
+      continue;
+    }
+    for (unsigned j = 0, f = W->getNumOperands(); j != f; ++j)
+      WorkQ.push_back(W->getOperand(j).getNode());
   }
 
-  bool Selected = false;
-  for (unsigned I = 0, E = N->getNumOperands(); I != E; ++I)
-    Selected = selectVectorConstants(N->getOperand(I).getNode()) || Selected;
-  return Selected;
+  for (SDNode *L : Loads)
+    ISel.Select(L);
+
+  return !Loads.empty();
 }
 
 void HvxSelector::materialize(const ResultStack &Results) {
