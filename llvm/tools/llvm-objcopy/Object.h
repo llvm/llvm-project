@@ -126,6 +126,20 @@ public:
   void writeSection(FileOutputBuffer &Out) const override;
 };
 
+class OwnedDataSection : public SectionBase {
+private:
+  std::vector<uint8_t> Data;
+
+public:
+  OwnedDataSection(StringRef SecName, ArrayRef<uint8_t> Data)
+      : Data(std::begin(Data), std::end(Data)) {
+    Name = SecName;
+    Type = ELF::SHT_PROGBITS;
+    Size = Data.size();
+  }
+  void writeSection(FileOutputBuffer &Out) const override;
+};
+
 // There are two types of string tables that can exist, dynamic and not dynamic.
 // In the dynamic case the string table is allocated. Changing a dynamic string
 // table would mean altering virtual addresses and thus the memory image. So
@@ -372,6 +386,7 @@ public:
   const SymbolTableSection *getSymTab() const { return SymbolTable; }
   const SectionBase *getSectionHeaderStrTab() const { return SectionNames; }
   void removeSections(std::function<bool(const SectionBase &)> ToRemove);
+  void addSection(StringRef SecName, ArrayRef<uint8_t> Data);
   virtual size_t totalSize() const = 0;
   virtual void finalize() = 0;
   virtual void write(FileOutputBuffer &Out) const = 0;

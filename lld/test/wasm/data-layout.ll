@@ -1,5 +1,5 @@
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %p/Inputs/hello.ll -o %t.hello.o
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %s -o %t.o
+; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %p/Inputs/hello.ll -o %t.hello.o
+; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %s -o %t.o
 ; RUN: lld -flavor wasm --emit-relocs --allow-undefined --no-entry -o %t.wasm %t.o %t.hello.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 

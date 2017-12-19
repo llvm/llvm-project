@@ -51,7 +51,7 @@ add_llvm_library(LLVMCodeGen
   LiveRangeShrink.cpp
   LiveRegMatrix.cpp
   LiveRegUnits.cpp
-  LiveStackAnalysis.cpp
+  LiveStacks.cpp
   LiveVariables.cpp
   LLVMTargetMachine.cpp
   LocalStackSlotAllocation.cpp

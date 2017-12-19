@@ -1622,16 +1622,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setLibcallName(RTLIB::MUL_I128, nullptr);
   }
 
-  // Combine sin / cos into one node or libcall if possible.
-  if (Subtarget.hasSinCos()) {
-    setLibcallName(RTLIB::SINCOS_F32, "sincosf");
-    setLibcallName(RTLIB::SINCOS_F64, "sincos");
-    if (Subtarget.isTargetDarwin()) {
-      // For MacOSX, we don't want the normal expansion of a libcall to sincos.
-      // We want to issue a libcall to __sincos_stret to avoid memory traffic.
-      setOperationAction(ISD::FSINCOS, MVT::f64, Custom);
-      setOperationAction(ISD::FSINCOS, MVT::f32, Custom);
-    }
+  // Combine sin / cos into _sincos_stret if it is available.
+  if (getLibcallName(RTLIB::SINCOS_STRET_F32) != nullptr &&
+      getLibcallName(RTLIB::SINCOS_STRET_F64) != nullptr) {
+    setOperationAction(ISD::FSINCOS, MVT::f64, Custom);
+    setOperationAction(ISD::FSINCOS, MVT::f32, Custom);
   }
 
   if (Subtarget.isTargetWin64()) {
@@ -22994,7 +22989,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     unsigned ExtOpc =
         Op.getOpcode() == ISD::SRA ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
     R = DAG.getNode(ExtOpc, dl, ExtVT, R);
-    Amt = DAG.getNode(ISD::ANY_EXTEND, dl, ExtVT, Amt);
+    Amt = DAG.getNode(ISD::ZERO_EXTEND, dl, ExtVT, Amt);
     return DAG.getNode(ISD::TRUNCATE, dl, VT,
                        DAG.getNode(Op.getOpcode(), dl, ExtVT, R, Amt));
   }
@@ -24101,8 +24096,9 @@ static SDValue LowerFSINCOS(SDValue Op, const X86Subtarget &Subtarget,
   // Only optimize x86_64 for now. i386 is a bit messy. For f32,
   // the small struct {f32, f32} is returned in (eax, edx). For f64,
   // the results are returned via SRet in memory.
-  const char *LibcallName =  isF64 ? "__sincos_stret" : "__sincosf_stret";
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  RTLIB::Libcall LC = isF64 ? RTLIB::SINCOS_STRET_F64 : RTLIB::SINCOS_STRET_F32;
+  const char *LibcallName = TLI.getLibcallName(LC);
   SDValue Callee =
       DAG.getExternalSymbol(LibcallName, TLI.getPointerTy(DAG.getDataLayout()));
 
@@ -32626,37 +32622,6 @@ static SDValue combineShiftRightLogical(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
-/// \brief Returns a vector of 0s if the node in input is a vector logical
-/// shift by a constant amount which is known to be bigger than or equal
-/// to the vector element size in bits.
-static SDValue performShiftToAllZeros(SDNode *N, SelectionDAG &DAG,
-                                      const X86Subtarget &Subtarget) {
-  EVT VT = N->getValueType(0);
-
-  if (VT != MVT::v2i64 && VT != MVT::v4i32 && VT != MVT::v8i16 &&
-      (!Subtarget.hasInt256() ||
-       (VT != MVT::v4i64 && VT != MVT::v8i32 && VT != MVT::v16i16)))
-    return SDValue();
-
-  SDValue Amt = N->getOperand(1);
-  SDLoc DL(N);
-  if (auto *AmtBV = dyn_cast<BuildVectorSDNode>(Amt))
-    if (auto *AmtSplat = AmtBV->getConstantSplatNode()) {
-      const APInt &ShiftAmt = AmtSplat->getAPIntValue();
-      unsigned MaxAmount =
-        VT.getSimpleVT().getScalarSizeInBits();
-
-      // SSE2/AVX2 logical shifts always return a vector of 0s
-      // if the shift amount is bigger than or equal to
-      // the element size. The constant shift amount will be
-      // encoded as a 8-bit immediate.
-      if (ShiftAmt.trunc(8).uge(MaxAmount))
-        return getZeroVector(VT.getSimpleVT(), Subtarget, DAG, DL);
-    }
-
-  return SDValue();
-}
-
 static SDValue combineShift(SDNode* N, SelectionDAG &DAG,
                             TargetLowering::DAGCombinerInfo &DCI,
                             const X86Subtarget &Subtarget) {
@@ -32670,11 +32635,6 @@ static SDValue combineShift(SDNode* N, SelectionDAG &DAG,
 
   if (N->getOpcode() == ISD::SRL)
     if (SDValue V = combineShiftRightLogical(N, DAG))
-      return V;
-
-  // Try to fold this logical shift into a zero vector.
-  if (N->getOpcode() != ISD::SRA)
-    if (SDValue V = performShiftToAllZeros(N, DAG, Subtarget))
       return V;
 
   return SDValue();

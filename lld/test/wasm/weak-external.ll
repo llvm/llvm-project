@@ -1,4 +1,4 @@
-; RUN: llc -mtriple wasm32-unknown-unknown-wasm -filetype=obj -o %t.o %s
+; RUN: llc -mtriple=wasm32-unknown-unknown-wasm -filetype=obj -o %t.o %s
 ; RUN: lld -flavor wasm -strip-debug %t.o -o %t.wasm
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 

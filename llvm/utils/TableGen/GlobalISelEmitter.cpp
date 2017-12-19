@@ -2346,6 +2346,10 @@ void RuleMatcher::emit(MatchTable &Table) {
   if (Matchers.empty())
     llvm_unreachable("Unexpected empty matcher!");
 
+  // Reset the ID generation so that the emitted IDs match the ones
+  // we set while building the InstructionMatcher and such.
+  clearImplicitMap();
+
   // The representation supports rules that require multiple roots such as:
   //    %ptr(p0) = ...
   //    %elt0(s32) = G_LOAD %ptr
@@ -3352,9 +3356,6 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   unsigned TempOpIdx = 0;
   auto InsnMatcherOrError =
       createAndImportSelDAGMatcher(M, InsnMatcherTemp, Src, TempOpIdx);
-  // Reset the ID generation so that the emitted IDs match the ones
-  // in the InstructionMatcher and such.
-  M.clearImplicitMap();
   if (auto Error = InsnMatcherOrError.takeError())
     return std::move(Error);
   InstructionMatcher &InsnMatcher = InsnMatcherOrError.get();
