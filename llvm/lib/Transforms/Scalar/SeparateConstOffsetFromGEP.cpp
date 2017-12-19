@@ -97,7 +97,7 @@
 //    load %p2
 //    ...
 //
-// We can not do CSE for to the common part related to index "i64 %i". Lowering
+// We can not do CSE to the common part related to index "i64 %i". Lowering
 // GEPs can achieve such goals.
 // If the target does not use alias analysis in codegen, this pass will
 // lower a GEP with multiple indices into arithmetic operations:

@@ -10,11 +10,10 @@ declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) #3
 define i32 @main() local_unnamed_addr #1 {
 ; Make sure the stores happen in the correct order (the exact instructions could change).
 ; CHECK-LABEL: main:
-; CHECK: stp xzr, xzr, [sp, #72]
+; CHECK: str xzr, [sp, #80]
 ; CHECK: str w9, [sp, #80]
-; CHECK: str q0, [sp, #48]
+; CHECK: stp q0, q0, [sp, #48]
 ; CHECK: ldr w8, [sp, #48]
-; CHECK: str q0, [sp, #64]
 
 for.body.lr.ph.i.i.i.i.i.i63:
   %b1 = alloca [10 x i32], align 16
