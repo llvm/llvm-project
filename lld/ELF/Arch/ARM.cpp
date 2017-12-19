@@ -184,7 +184,7 @@ void ARM::writeIgotPlt(uint8_t *Buf, const Symbol &S) const {
   write32le(Buf, S.getVA());
 }
 
-// Long form PLT Heade that does not have any restrictions on the displacement
+// Long form PLT Header that does not have any restrictions on the displacement
 // of the .plt from the .plt.got.
 static void writePltHeaderLong(uint8_t *Buf) {
   const uint8_t PltData[] = {
