@@ -817,7 +817,7 @@ void Sema::checkVariadicArgument(const Expr *E, VariadicCallType CT) {
         E->getLocStart(), nullptr,
         PDiag(diag::warn_cxx98_compat_pass_non_pod_arg_to_vararg)
           << Ty << CT);
-    // Fall through.
+    LLVM_FALLTHROUGH;
   case VAK_Valid:
     if (Ty->isRecordType()) {
       // This is unlikely to be what the user intended. If the class has a
@@ -2881,7 +2881,7 @@ ExprResult Sema::BuildDeclarationNameExpr(
         valueKind = VK_RValue;
         break;
       }
-      // fallthrough
+      LLVM_FALLTHROUGH;
 
     case Decl::ImplicitParam:
     case Decl::ParmVar: {
@@ -2978,7 +2978,7 @@ ExprResult Sema::BuildDeclarationNameExpr(
         valueKind = VK_LValue;
         break;
       }
-      // fallthrough
+      LLVM_FALLTHROUGH;
 
     case Decl::CXXConversion:
     case Decl::CXXDestructor:
