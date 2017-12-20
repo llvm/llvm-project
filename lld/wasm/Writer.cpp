@@ -522,7 +522,7 @@ void Writer::layoutMemory() {
 SyntheticSection *Writer::createSyntheticSection(uint32_t Type,
                                                  std::string Name) {
   auto Sec = make<SyntheticSection>(Type, Name);
-  log("createSection: " + toString(Sec));
+  log("createSection: " + toString(*Sec));
   OutputSections.push_back(Sec);
   return Sec;
 }
