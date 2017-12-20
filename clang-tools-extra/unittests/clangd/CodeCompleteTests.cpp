@@ -341,7 +341,7 @@ TEST(CompletionTest, Snippets) {
       )cpp",
       Opts);
   EXPECT_THAT(Results.items,
-              HasSubsequence(PlainText("a"),
+              HasSubsequence(Snippet("a"),
                              Snippet("f(${1:int i}, ${2:const float f})")));
 }
 

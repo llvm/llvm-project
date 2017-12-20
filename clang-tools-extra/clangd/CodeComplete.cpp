@@ -15,6 +15,7 @@
 //===---------------------------------------------------------------------===//
 
 #include "CodeComplete.h"
+#include "CodeCompletionStrings.h"
 #include "Compiler.h"
 #include "Logger.h"
 #include "index/Index.h"
@@ -142,46 +143,6 @@ CompletionItemKind toCompletionItemKind(index::SymbolKind Kind) {
     return CompletionItemKind::Constructor;
   }
   llvm_unreachable("Unhandled clang::index::SymbolKind.");
-}
-
-std::string escapeSnippet(const llvm::StringRef Text) {
-  std::string Result;
-  Result.reserve(Text.size()); // Assume '$', '}' and '\\' are rare.
-  for (const auto Character : Text) {
-    if (Character == '$' || Character == '}' || Character == '\\')
-      Result.push_back('\\');
-    Result.push_back(Character);
-  }
-  return Result;
-}
-
-std::string getDocumentation(const CodeCompletionString &CCS) {
-  // Things like __attribute__((nonnull(1,3))) and [[noreturn]]. Present this
-  // information in the documentation field.
-  std::string Result;
-  const unsigned AnnotationCount = CCS.getAnnotationCount();
-  if (AnnotationCount > 0) {
-    Result += "Annotation";
-    if (AnnotationCount == 1) {
-      Result += ": ";
-    } else /* AnnotationCount > 1 */ {
-      Result += "s: ";
-    }
-    for (unsigned I = 0; I < AnnotationCount; ++I) {
-      Result += CCS.getAnnotation(I);
-      Result.push_back(I == AnnotationCount - 1 ? '\n' : ' ');
-    }
-  }
-  // Add brief documentation (if there is any).
-  if (CCS.getBriefComment() != nullptr) {
-    if (!Result.empty()) {
-      // This means we previously added annotations. Add an extra newline
-      // character to make the annotations stand out.
-      Result.push_back('\n');
-    }
-    Result += CCS.getBriefComment();
-  }
-  return Result;
 }
 
 /// Get the optional chunk as a string. This function is possibly recursive.
@@ -320,7 +281,8 @@ public:
                              /*OutputIsBinary=*/false),
         ClangdOpts(CodeCompleteOpts), Items(Items),
         Allocator(std::make_shared<clang::GlobalCodeCompletionAllocator>()),
-        CCTUInfo(Allocator), CompletedName(CompletedName) {}
+        CCTUInfo(Allocator), CompletedName(CompletedName),
+        EnableSnippets(CodeCompleteOpts.EnableSnippets) {}
 
   void ProcessCodeCompleteResults(Sema &S, CodeCompletionContext Context,
                                   CodeCompletionResult *Results,
@@ -402,14 +364,16 @@ private:
     // Adjust this to InsertTextFormat::Snippet iff we encounter a
     // CK_Placeholder chunk in SnippetCompletionItemsCollector.
     CompletionItem Item;
-    Item.insertTextFormat = InsertTextFormat::PlainText;
 
     Item.documentation = getDocumentation(CCS);
     Item.sortText = Candidate.sortText();
 
-    // Fill in the label, detail, insertText and filterText fields of the
-    // CompletionItem.
-    ProcessChunks(CCS, Item);
+    Item.detail = getDetail(CCS);
+    Item.filterText = getFilterText(CCS);
+    getLabelAndInsertText(CCS, &Item.label, &Item.insertText, EnableSnippets);
+
+    Item.insertTextFormat = EnableSnippets ? InsertTextFormat::Snippet
+                                           : InsertTextFormat::PlainText;
 
     // Fill in the kind field of the CompletionItem.
     Item.kind = toCompletionItemKind(Candidate.Result->Kind,
@@ -418,169 +382,13 @@ private:
     return Item;
   }
 
-  virtual void ProcessChunks(const CodeCompletionString &CCS,
-                             CompletionItem &Item) const = 0;
-
   CodeCompleteOptions ClangdOpts;
   CompletionList &Items;
   std::shared_ptr<clang::GlobalCodeCompletionAllocator> Allocator;
   CodeCompletionTUInfo CCTUInfo;
   NameToComplete &CompletedName;
+  bool EnableSnippets;
 }; // CompletionItemsCollector
-
-bool isInformativeQualifierChunk(CodeCompletionString::Chunk const &Chunk) {
-  return Chunk.Kind == CodeCompletionString::CK_Informative &&
-         StringRef(Chunk.Text).endswith("::");
-}
-
-class PlainTextCompletionItemsCollector final
-    : public CompletionItemsCollector {
-
-public:
-  PlainTextCompletionItemsCollector(const CodeCompleteOptions &CodeCompleteOpts,
-                                    CompletionList &Items,
-                                    NameToComplete &CompletedName)
-      : CompletionItemsCollector(CodeCompleteOpts, Items, CompletedName) {}
-
-private:
-  void ProcessChunks(const CodeCompletionString &CCS,
-                     CompletionItem &Item) const override {
-    for (const auto &Chunk : CCS) {
-      // Informative qualifier chunks only clutter completion results, skip
-      // them.
-      if (isInformativeQualifierChunk(Chunk))
-        continue;
-
-      switch (Chunk.Kind) {
-      case CodeCompletionString::CK_TypedText:
-        // There's always exactly one CK_TypedText chunk.
-        Item.insertText = Item.filterText = Chunk.Text;
-        Item.label += Chunk.Text;
-        break;
-      case CodeCompletionString::CK_ResultType:
-        assert(Item.detail.empty() && "Unexpected extraneous CK_ResultType");
-        Item.detail = Chunk.Text;
-        break;
-      case CodeCompletionString::CK_Optional:
-        break;
-      default:
-        Item.label += Chunk.Text;
-        break;
-      }
-    }
-  }
-}; // PlainTextCompletionItemsCollector
-
-class SnippetCompletionItemsCollector final : public CompletionItemsCollector {
-
-public:
-  SnippetCompletionItemsCollector(const CodeCompleteOptions &CodeCompleteOpts,
-                                  CompletionList &Items,
-                                  NameToComplete &CompletedName)
-      : CompletionItemsCollector(CodeCompleteOpts, Items, CompletedName) {}
-
-private:
-  void ProcessChunks(const CodeCompletionString &CCS,
-                     CompletionItem &Item) const override {
-    unsigned ArgCount = 0;
-    for (const auto &Chunk : CCS) {
-      // Informative qualifier chunks only clutter completion results, skip
-      // them.
-      if (isInformativeQualifierChunk(Chunk))
-        continue;
-
-      switch (Chunk.Kind) {
-      case CodeCompletionString::CK_TypedText:
-        // The piece of text that the user is expected to type to match
-        // the code-completion string, typically a keyword or the name of
-        // a declarator or macro.
-        Item.filterText = Chunk.Text;
-        LLVM_FALLTHROUGH;
-      case CodeCompletionString::CK_Text:
-        // A piece of text that should be placed in the buffer,
-        // e.g., parentheses or a comma in a function call.
-        Item.label += Chunk.Text;
-        Item.insertText += Chunk.Text;
-        break;
-      case CodeCompletionString::CK_Optional:
-        // A code completion string that is entirely optional.
-        // For example, an optional code completion string that
-        // describes the default arguments in a function call.
-
-        // FIXME: Maybe add an option to allow presenting the optional chunks?
-        break;
-      case CodeCompletionString::CK_Placeholder:
-        // A string that acts as a placeholder for, e.g., a function call
-        // argument.
-        ++ArgCount;
-        Item.insertText += "${" + std::to_string(ArgCount) + ':' +
-                           escapeSnippet(Chunk.Text) + '}';
-        Item.label += Chunk.Text;
-        Item.insertTextFormat = InsertTextFormat::Snippet;
-        break;
-      case CodeCompletionString::CK_Informative:
-        // A piece of text that describes something about the result
-        // but should not be inserted into the buffer.
-        // For example, the word "const" for a const method, or the name of
-        // the base class for methods that are part of the base class.
-        Item.label += Chunk.Text;
-        // Don't put the informative chunks in the insertText.
-        break;
-      case CodeCompletionString::CK_ResultType:
-        // A piece of text that describes the type of an entity or,
-        // for functions and methods, the return type.
-        assert(Item.detail.empty() && "Unexpected extraneous CK_ResultType");
-        Item.detail = Chunk.Text;
-        break;
-      case CodeCompletionString::CK_CurrentParameter:
-        // A piece of text that describes the parameter that corresponds to
-        // the code-completion location within a function call, message send,
-        // macro invocation, etc.
-        //
-        // This should never be present while collecting completion items,
-        // only while collecting overload candidates.
-        llvm_unreachable("Unexpected CK_CurrentParameter while collecting "
-                         "CompletionItems");
-        break;
-      case CodeCompletionString::CK_LeftParen:
-        // A left parenthesis ('(').
-      case CodeCompletionString::CK_RightParen:
-        // A right parenthesis (')').
-      case CodeCompletionString::CK_LeftBracket:
-        // A left bracket ('[').
-      case CodeCompletionString::CK_RightBracket:
-        // A right bracket (']').
-      case CodeCompletionString::CK_LeftBrace:
-        // A left brace ('{').
-      case CodeCompletionString::CK_RightBrace:
-        // A right brace ('}').
-      case CodeCompletionString::CK_LeftAngle:
-        // A left angle bracket ('<').
-      case CodeCompletionString::CK_RightAngle:
-        // A right angle bracket ('>').
-      case CodeCompletionString::CK_Comma:
-        // A comma separator (',').
-      case CodeCompletionString::CK_Colon:
-        // A colon (':').
-      case CodeCompletionString::CK_SemiColon:
-        // A semicolon (';').
-      case CodeCompletionString::CK_Equal:
-        // An '=' sign.
-      case CodeCompletionString::CK_HorizontalSpace:
-        // Horizontal whitespace (' ').
-        Item.insertText += Chunk.Text;
-        Item.label += Chunk.Text;
-        break;
-      case CodeCompletionString::CK_VerticalSpace:
-        // Vertical whitespace ('\n' or '\r\n', depending on the
-        // platform).
-        Item.insertText += Chunk.Text;
-        // Don't even add a space to the label.
-        break;
-      }
-    }
-  }
-}; // SnippetCompletionItemsCollector
 
 class SignatureHelpCollector final : public CodeCompleteConsumer {
 
@@ -617,6 +425,8 @@ public:
   CodeCompletionTUInfo &getCodeCompletionTUInfo() override { return CCTUInfo; }
 
 private:
+  // FIXME(ioeric): consider moving CodeCompletionString logic here to
+  // CompletionString.h.
   SignatureInformation
   ProcessOverloadCandidate(const OverloadCandidate &Candidate,
                            const CodeCompletionString &CCS) const {
@@ -817,15 +627,9 @@ CompletionList codeComplete(const Context &Ctx, PathRef FileName,
                             std::shared_ptr<PCHContainerOperations> PCHs,
                             CodeCompleteOptions Opts) {
   CompletionList Results;
-  std::unique_ptr<CodeCompleteConsumer> Consumer;
   NameToComplete CompletedName;
-  if (Opts.EnableSnippets) {
-    Consumer = llvm::make_unique<SnippetCompletionItemsCollector>(
-        Opts, Results, CompletedName);
-  } else {
-    Consumer = llvm::make_unique<PlainTextCompletionItemsCollector>(
-        Opts, Results, CompletedName);
-  }
+  auto Consumer =
+      llvm::make_unique<CompletionItemsCollector>(Opts, Results, CompletedName);
   invokeCodeComplete(Ctx, std::move(Consumer), Opts.getClangCompleteOpts(),
                      FileName, Command, Preamble, Contents, Pos, std::move(VFS),
                      std::move(PCHs));
