@@ -62,7 +62,7 @@ public:
                  uint32_t VerdefIndex);
 
   template <class ELFT>
-  Symbol *addLazyArchive(StringRef Name, ArchiveFile *F,
+  Symbol *addLazyArchive(StringRef Name, ArchiveFile &F,
                          const llvm::object::Archive::Symbol S);
 
   template <class ELFT> void addLazyObject(StringRef Name, LazyObjFile &Obj);

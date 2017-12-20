@@ -532,7 +532,7 @@ Symbol *SymbolTable::find(StringRef Name) {
 }
 
 template <class ELFT>
-Symbol *SymbolTable::addLazyArchive(StringRef Name, ArchiveFile *F,
+Symbol *SymbolTable::addLazyArchive(StringRef Name, ArchiveFile &F,
                                     const object::Archive::Symbol Sym) {
   Symbol *S;
   bool WasInserted;
@@ -551,9 +551,9 @@ Symbol *SymbolTable::addLazyArchive(StringRef Name, ArchiveFile *F,
     S->Binding = STB_WEAK;
     return S;
   }
-  std::pair<MemoryBufferRef, uint64_t> MBInfo = F->getMember(&Sym);
+  std::pair<MemoryBufferRef, uint64_t> MBInfo = F.getMember(&Sym);
   if (!MBInfo.first.getBuffer().empty())
-    addFile<ELFT>(createObjectFile(MBInfo.first, F->getName(), MBInfo.second));
+    addFile<ELFT>(createObjectFile(MBInfo.first, F.getName(), MBInfo.second));
   return S;
 }
 
@@ -563,7 +563,7 @@ void SymbolTable::addLazyObject(StringRef Name, LazyObjFile &Obj) {
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);
   if (WasInserted) {
-    replaceSymbol<LazyObject>(S, &Obj, Name, Symbol::UnknownType);
+    replaceSymbol<LazyObject>(S, Obj, Name, Symbol::UnknownType);
     return;
   }
   if (!S->isUndefined())
@@ -571,7 +571,7 @@ void SymbolTable::addLazyObject(StringRef Name, LazyObjFile &Obj) {
 
   // See comment for addLazyArchive above.
   if (S->isWeak())
-    replaceSymbol<LazyObject>(S, &Obj, Name, S->Type);
+    replaceSymbol<LazyObject>(S, Obj, Name, S->Type);
   else if (InputFile *F = Obj.fetch())
     addFile<ELFT>(F);
 }
@@ -820,16 +820,16 @@ template Defined *SymbolTable::addAbsolute<ELF64BE>(StringRef, uint8_t,
                                                     uint8_t);
 
 template Symbol *
-SymbolTable::addLazyArchive<ELF32LE>(StringRef, ArchiveFile *,
+SymbolTable::addLazyArchive<ELF32LE>(StringRef, ArchiveFile &,
                                      const object::Archive::Symbol);
 template Symbol *
-SymbolTable::addLazyArchive<ELF32BE>(StringRef, ArchiveFile *,
+SymbolTable::addLazyArchive<ELF32BE>(StringRef, ArchiveFile &,
                                      const object::Archive::Symbol);
 template Symbol *
-SymbolTable::addLazyArchive<ELF64LE>(StringRef, ArchiveFile *,
+SymbolTable::addLazyArchive<ELF64LE>(StringRef, ArchiveFile &,
                                      const object::Archive::Symbol);
 template Symbol *
-SymbolTable::addLazyArchive<ELF64BE>(StringRef, ArchiveFile *,
+SymbolTable::addLazyArchive<ELF64BE>(StringRef, ArchiveFile &,
                                      const object::Archive::Symbol);
 
 template void SymbolTable::addLazyObject<ELF32LE>(StringRef, LazyObjFile &);

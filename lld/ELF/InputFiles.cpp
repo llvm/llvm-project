@@ -384,8 +384,8 @@ void ObjFile<ELFT>::initializeSections(
     // have a SHF_LINK_ORDER dependency, this is identified by the sh_link.
     if (Sec.sh_flags & SHF_LINK_ORDER) {
       if (Sec.sh_link >= this->Sections.size())
-        fatal(toString(this) + ": invalid sh_link index: " +
-              Twine(Sec.sh_link));
+        fatal(toString(this) +
+              ": invalid sh_link index: " + Twine(Sec.sh_link));
       this->Sections[Sec.sh_link]->DependentSections.push_back(
           cast<InputSection>(this->Sections[I]));
     }
@@ -471,7 +471,7 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
       break;
     ARMAttributeParser Attributes;
     ArrayRef<uint8_t> Contents = check(this->getObj().getSectionContents(&Sec));
-    Attributes.Parse(Contents, /*isLittle*/Config->EKind == ELF32LEKind);
+    Attributes.Parse(Contents, /*isLittle*/ Config->EKind == ELF32LEKind);
     updateSupportedARMFeatures(Attributes);
     // FIXME: Retain the first attribute section we see. The eglibc ARM
     // dynamic loaders require the presence of an attribute section for dlopen
@@ -660,7 +660,7 @@ ArchiveFile::ArchiveFile(std::unique_ptr<Archive> &&File)
 template <class ELFT> void ArchiveFile::parse() {
   Symbols.reserve(File->getNumberOfSymbols());
   for (const Archive::Symbol &Sym : File->symbols())
-    Symbols.push_back(Symtab->addLazyArchive<ELFT>(Sym.getName(), this, Sym));
+    Symbols.push_back(Symtab->addLazyArchive<ELFT>(Sym.getName(), *this, Sym));
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.
@@ -996,8 +996,8 @@ template <class ELFT> void BinaryFile::parse() {
     if (!isAlnum(S[I]))
       S[I] = '_';
 
-  Symtab->addRegular<ELFT>(Saver.save(S + "_start"), STV_DEFAULT, STT_OBJECT,
-                           0, 0, STB_GLOBAL, Section, nullptr);
+  Symtab->addRegular<ELFT>(Saver.save(S + "_start"), STV_DEFAULT, STT_OBJECT, 0,
+                           0, STB_GLOBAL, Section, nullptr);
   Symtab->addRegular<ELFT>(Saver.save(S + "_end"), STV_DEFAULT, STT_OBJECT,
                            Data.size(), 0, STB_GLOBAL, Section, nullptr);
   Symtab->addRegular<ELFT>(Saver.save(S + "_size"), STV_DEFAULT, STT_OBJECT,

@@ -267,8 +267,8 @@ public:
   InputFile *fetch();
 
 protected:
-  Lazy(Kind K, InputFile *File, StringRef Name, uint8_t Type)
-      : Symbol(K, File, Name, llvm::ELF::STB_GLOBAL, llvm::ELF::STV_DEFAULT,
+  Lazy(Kind K, InputFile &File, StringRef Name, uint8_t Type)
+      : Symbol(K, &File, Name, llvm::ELF::STB_GLOBAL, llvm::ELF::STV_DEFAULT,
                Type) {}
 };
 
@@ -278,13 +278,13 @@ protected:
 // symbol.
 class LazyArchive : public Lazy {
 public:
-  LazyArchive(InputFile *File, const llvm::object::Archive::Symbol S,
+  LazyArchive(InputFile &File, const llvm::object::Archive::Symbol S,
               uint8_t Type)
       : Lazy(LazyArchiveKind, File, S.getName(), Type), Sym(S) {}
 
   static bool classof(const Symbol *S) { return S->kind() == LazyArchiveKind; }
 
-  ArchiveFile *getFile();
+  ArchiveFile &getFile();
   InputFile *fetch();
 
 private:
@@ -295,12 +295,12 @@ private:
 // --start-lib and --end-lib options.
 class LazyObject : public Lazy {
 public:
-  LazyObject(InputFile *File, StringRef Name, uint8_t Type)
+  LazyObject(InputFile &File, StringRef Name, uint8_t Type)
       : Lazy(LazyObjectKind, File, Name, Type) {}
 
   static bool classof(const Symbol *S) { return S->kind() == LazyObjectKind; }
 
-  LazyObjFile *getFile();
+  LazyObjFile &getFile();
   InputFile *fetch();
 };
 
