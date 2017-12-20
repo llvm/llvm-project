@@ -7,7 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Annotations.h"
 #include "ClangdServer.h"
+#include "CodeComplete.h"
 #include "Compiler.h"
 #include "Context.h"
 #include "Matchers.h"
@@ -60,27 +62,6 @@ class IgnoreDiagnostics : public DiagnosticsConsumer {
       PathRef File, Tagged<std::vector<DiagWithFixIts>> Diagnostics) override {}
 };
 
-struct StringWithPos {
-  std::string Text;
-  clangd::Position MarkerPos;
-};
-
-/// Accepts a source file with a cursor marker ^.
-/// Returns the source file with the marker removed, and the marker position.
-StringWithPos parseTextMarker(StringRef Text) {
-  std::size_t MarkerOffset = Text.find('^');
-  assert(MarkerOffset != StringRef::npos && "^ wasn't found in Text.");
-
-  std::string WithoutMarker;
-  WithoutMarker += Text.take_front(MarkerOffset);
-  WithoutMarker += Text.drop_front(MarkerOffset + 1);
-  assert(StringRef(WithoutMarker).find('^') == StringRef::npos &&
-         "There were multiple occurences of ^ inside Text");
-
-  auto MarkerPos = offsetToPosition(WithoutMarker, MarkerOffset);
-  return {std::move(WithoutMarker), MarkerPos};
-}
-
 // GMock helpers for matching completion items.
 MATCHER_P(Named, Name, "") { return arg.insertText == Name; }
 MATCHER_P(Labeled, Label, "") { return arg.label == Label; }
@@ -112,9 +93,9 @@ CompletionList completions(StringRef Text,
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
                       /*StorePreamblesInMemory=*/true);
   auto File = getVirtualTestFilePath("foo.cpp");
-  auto Test = parseTextMarker(Text);
-  Server.addDocument(Context::empty(), File, Test.Text);
-  return Server.codeComplete(Context::empty(), File, Test.MarkerPos, Opts)
+  Annotations Test(Text);
+  Server.addDocument(Context::empty(), File, Test.code());
+  return Server.codeComplete(Context::empty(), File, Test.point(), Opts)
       .get()
       .second.Value;
 }
@@ -291,13 +272,13 @@ TEST(CompletionTest, CheckContentsOverride) {
   auto File = getVirtualTestFilePath("foo.cpp");
   Server.addDocument(Context::empty(), File, "ignored text!");
 
-  auto Example = parseTextMarker("int cbc; int b = ^;");
-  auto Results =
-      Server
-          .codeComplete(Context::empty(), File, Example.MarkerPos,
-                        clangd::CodeCompleteOptions(), StringRef(Example.Text))
-          .get()
-          .second.Value;
+  Annotations Example("int cbc; int b = ^;");
+  auto Results = Server
+                     .codeComplete(Context::empty(), File, Example.point(),
+                                   clangd::CodeCompleteOptions(),
+                                   StringRef(Example.code()))
+                     .get()
+                     .second.Value;
   EXPECT_THAT(Results.items, Contains(Named("cbc")));
 }
 
@@ -392,9 +373,9 @@ SignatureHelp signatures(StringRef Text) {
   ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
                       /*StorePreamblesInMemory=*/true);
   auto File = getVirtualTestFilePath("foo.cpp");
-  auto Test = parseTextMarker(Text);
-  Server.addDocument(Context::empty(), File, Test.Text);
-  auto R = Server.signatureHelp(Context::empty(), File, Test.MarkerPos);
+  Annotations Test(Text);
+  Server.addDocument(Context::empty(), File, Test.code());
+  auto R = Server.signatureHelp(Context::empty(), File, Test.point());
   assert(R);
   return R.get().Value;
 }
@@ -573,13 +554,13 @@ TEST(CompletionTest, ASTIndexMultiFile) {
       .wait();
 
   auto File = getVirtualTestFilePath("bar.cpp");
-  auto Test = parseTextMarker(R"cpp(
+  Annotations Test(R"cpp(
       namespace ns { class XXX {}; void fooooo() {} }
       void f() { ns::^ }
   )cpp");
-  Server.addDocument(Context::empty(), File, Test.Text).wait();
+  Server.addDocument(Context::empty(), File, Test.code()).wait();
 
-  auto Results = Server.codeComplete(Context::empty(), File, Test.MarkerPos, {})
+  auto Results = Server.codeComplete(Context::empty(), File, Test.point(), {})
                      .get()
                      .second.Value;
   // "XYZ" and "foo" are not included in the file being completed but are still
