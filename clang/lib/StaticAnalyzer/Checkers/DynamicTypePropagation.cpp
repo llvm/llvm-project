@@ -22,6 +22,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangSACheckers.h"
+#include "clang/AST/ParentMap.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -262,8 +263,19 @@ void DynamicTypePropagation::checkPostCall(const CallEvent &Call,
       if (const MemRegion *Target = Ctor->getCXXThisVal().getAsRegion()) {
         // We just finished a base constructor. Now we can use the subclass's
         // type when resolving virtual calls.
-        const Decl *D = C.getLocationContext()->getDecl();
-        recordFixedType(Target, cast<CXXConstructorDecl>(D), C);
+        const LocationContext *LCtx = C.getLocationContext();
+
+        // FIXME: In C++17 classes with non-virtual bases may be treated as
+        // aggregates, and in such case no top-frame constructor will be called.
+        // Figure out if we need to do anything in this case.
+        // FIXME: Instead of relying on the ParentMap, we should have the
+        // trigger-statement (InitListExpr in this case) available in this
+        // callback, ideally as part of CallEvent.
+        if (dyn_cast_or_null<InitListExpr>(
+                LCtx->getParentMap().getParent(Ctor->getOriginExpr())))
+          return;
+
+        recordFixedType(Target, cast<CXXConstructorDecl>(LCtx->getDecl()), C);
       }
       return;
     }

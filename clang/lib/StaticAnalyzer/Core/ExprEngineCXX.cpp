@@ -14,6 +14,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/StmtCXX.h"
+#include "clang/AST/ParentMap.h"
 #include "clang/Basic/PrettyStackTrace.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
@@ -267,6 +268,23 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
     }
     // FALLTHROUGH
   case CXXConstructExpr::CK_NonVirtualBase:
+    // In C++17, classes with non-virtual bases may be aggregates, so they would
+    // be initialized as aggregates without a constructor call, so we may have
+    // a base class constructed directly into an initializer list without
+    // having the derived-class constructor call on the previous stack frame.
+    // Initializer lists may be nested into more initializer lists that
+    // correspond to surrounding aggregate initializations.
+    // FIXME: For now this code essentially bails out. We need to find the
+    // correct target region and set it.
+    // FIXME: Instead of relying on the ParentMap, we should have the
+    // trigger-statement (InitListExpr in this case) passed down from CFG or
+    // otherwise always available during construction.
+    if (dyn_cast_or_null<InitListExpr>(LCtx->getParentMap().getParent(CE))) {
+      MemRegionManager &MRMgr = getSValBuilder().getRegionManager();
+      Target = MRMgr.getCXXTempObjectRegion(CE, LCtx);
+      break;
+    }
+    // FALLTHROUGH
   case CXXConstructExpr::CK_Delegating: {
     const CXXMethodDecl *CurCtor = cast<CXXMethodDecl>(LCtx->getDecl());
     Loc ThisPtr = getSValBuilder().getCXXThis(CurCtor,
