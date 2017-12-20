@@ -773,19 +773,19 @@ void Type::applyTypespec(bool &Quad) {
       break;
     case 'h':
       Float = true;
-    // Fall through
+      LLVM_FALLTHROUGH;
     case 's':
       ElementBitwidth = 16;
       break;
     case 'f':
       Float = true;
-    // Fall through
+      LLVM_FALLTHROUGH;
     case 'i':
       ElementBitwidth = 32;
       break;
     case 'd':
       Float = true;
-    // Fall through
+      LLVM_FALLTHROUGH;
     case 'l':
       ElementBitwidth = 64;
       break;

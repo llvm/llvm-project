@@ -5324,7 +5324,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
 
   case Type::InjectedClassName:
     T = cast<InjectedClassNameType>(T)->getInjectedSpecializationType();
-    // fall through
+    LLVM_FALLTHROUGH;
 
   case Type::TemplateSpecialization: {
     const TemplateSpecializationType *Spec

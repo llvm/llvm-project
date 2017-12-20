@@ -61,6 +61,7 @@ void initializeARMLoadStoreOptPass(PassRegistry &);
 void initializeARMPreAllocLoadStoreOptPass(PassRegistry &);
 void initializeARMConstantIslandsPass(PassRegistry &);
 void initializeARMExpandPseudoPass(PassRegistry &);
+void initializeThumb2SizeReducePass(PassRegistry &);
 
 } // end namespace llvm
 

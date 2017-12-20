@@ -549,6 +549,12 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
       TC.getTriple().getOS() != llvm::Triple::NetBSD &&
       TC.getTriple().getOS() != llvm::Triple::RTEMS)
     CmdArgs.push_back("-ldl");
+  // Required for forkpty on some OSes
+  if (TC.getTriple().getOS() == llvm::Triple::NetBSD)
+    CmdArgs.push_back("-lutil");
+  // Required for backtrace on some OSes
+  if (TC.getTriple().getOS() == llvm::Triple::NetBSD)
+    CmdArgs.push_back("-lexecinfo");
 }
 
 static void

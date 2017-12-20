@@ -627,9 +627,10 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
   CanBeNull = false;
   if (const Argument *A = dyn_cast<Argument>(this)) {
     DerefBytes = A->getDereferenceableBytes();
-    if (DerefBytes == 0 && A->hasByValAttr()) {
+    if (DerefBytes == 0 && (A->hasByValAttr() || A->hasStructRetAttr())) {
       Type *PT = cast<PointerType>(A->getType())->getElementType();
-      DerefBytes = DL.getTypeStoreSize(PT);
+      if (PT->isSized())
+        DerefBytes = DL.getTypeStoreSize(PT);
     }
     if (DerefBytes == 0) {
       DerefBytes = A->getDereferenceableOrNullBytes();

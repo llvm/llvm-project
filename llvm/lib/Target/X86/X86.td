@@ -263,6 +263,12 @@ def FeatureSlowIncDec : SubtargetFeature<"slow-incdec", "SlowIncDec", "true",
 def FeatureSoftFloat
     : SubtargetFeature<"soft-float", "UseSoftFloat", "true",
                        "Use software floating point features.">;
+// On recent X86 (port bound) processors, its preferable to combine to a single shuffle
+// using a variable mask over multiple fixed shuffles.
+def FeatureFastVariableShuffle
+    : SubtargetFeature<"fast-variable-shuffle",
+                       "HasFastVariableShuffle",
+                       "true", "Shuffles with variable masks are fast">;
 // On some X86 processors, there is no performance hazard to writing only the
 // lower parts of a YMM or ZMM register without clearing the upper part.
 def FeatureFastPartialYMMorZMMWrite
@@ -620,7 +626,8 @@ def HSWFeatures : ProcessorFeatures<IVBFeatures.Value, [
   FeatureERMSB,
   FeatureFMA,
   FeatureLZCNT,
-  FeatureMOVBE
+  FeatureMOVBE,
+  FeatureFastVariableShuffle
 ]>;
 
 class HaswellProc<string Name> : ProcModel<Name, HaswellModel,

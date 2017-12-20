@@ -45,6 +45,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "t2-reduce-size"
+#define THUMB2_SIZE_REDUCE_NAME "Thumb2 instruction size reduce pass"
 
 STATISTIC(NumNarrows,  "Number of 32-bit instrs reduced to 16-bit ones");
 STATISTIC(Num2Addrs,   "Number of 32-bit instrs reduced to 2addr 16-bit ones");
@@ -162,7 +163,7 @@ namespace {
     const Thumb2InstrInfo *TII;
     const ARMSubtarget *STI;
 
-    Thumb2SizeReduce(std::function<bool(const Function &)> Ftor);
+    Thumb2SizeReduce(std::function<bool(const Function &)> Ftor = nullptr);
 
     bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -172,7 +173,7 @@ namespace {
     }
 
     StringRef getPassName() const override {
-      return "Thumb2 instruction size reduction pass";
+      return THUMB2_SIZE_REDUCE_NAME;
     }
 
   private:
@@ -236,6 +237,9 @@ namespace {
   char Thumb2SizeReduce::ID = 0;
 
 } // end anonymous namespace
+
+INITIALIZE_PASS(Thumb2SizeReduce, DEBUG_TYPE, THUMB2_SIZE_REDUCE_NAME, false,
+                false)
 
 Thumb2SizeReduce::Thumb2SizeReduce(std::function<bool(const Function &)> Ftor)
     : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {

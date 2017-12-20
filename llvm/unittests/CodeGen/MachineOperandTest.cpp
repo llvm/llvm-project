@@ -10,6 +10,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
@@ -334,6 +335,68 @@ TEST(MachineOperandTest, PrintMCSymbol) {
   raw_string_ostream OS(str);
   MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
   ASSERT_TRUE(OS.str() == "<mcsymbol foo>");
+}
+
+TEST(MachineOperandTest, PrintCFI) {
+  // Create a MachineOperand with a CFI index but no function and print it.
+  MachineOperand MO = MachineOperand::CreateCFIIndex(8);
+
+  // Checking some preconditions on the newly created
+  // MachineOperand.
+  ASSERT_TRUE(MO.isCFIIndex());
+  ASSERT_TRUE(MO.getCFIIndex() == 8);
+
+  std::string str;
+  // Print a MachineOperand containing a CFI Index node but no machine function
+  // attached to it.
+  raw_string_ostream OS(str);
+  MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+  ASSERT_TRUE(OS.str() == "<cfi directive>");
+}
+
+TEST(MachineOperandTest, PrintIntrinsicID) {
+  // Create a MachineOperand with a generic intrinsic ID.
+  MachineOperand MO = MachineOperand::CreateIntrinsicID(Intrinsic::bswap);
+
+  // Checking some preconditions on the newly created
+  // MachineOperand.
+  ASSERT_TRUE(MO.isIntrinsicID());
+  ASSERT_TRUE(MO.getIntrinsicID() == Intrinsic::bswap);
+
+  std::string str;
+  {
+    // Print a MachineOperand containing a generic intrinsic ID.
+    raw_string_ostream OS(str);
+    MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+    ASSERT_TRUE(OS.str() == "intrinsic(@llvm.bswap)");
+  }
+
+  str.clear();
+  // Set a target-specific intrinsic.
+  MO = MachineOperand::CreateIntrinsicID((Intrinsic::ID)-1);
+  {
+    // Print a MachineOperand containing a target-specific intrinsic ID but not
+    // IntrinsicInfo.
+    raw_string_ostream OS(str);
+    MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+    ASSERT_TRUE(OS.str() == "intrinsic(4294967295)");
+  }
+}
+
+TEST(MachineOperandTest, PrintPredicate) {
+  // Create a MachineOperand with a generic intrinsic ID.
+  MachineOperand MO = MachineOperand::CreatePredicate(CmpInst::ICMP_EQ);
+
+  // Checking some preconditions on the newly created
+  // MachineOperand.
+  ASSERT_TRUE(MO.isPredicate());
+  ASSERT_TRUE(MO.getPredicate() == CmpInst::ICMP_EQ);
+
+  std::string str;
+  // Print a MachineOperand containing a int predicate ICMP_EQ.
+  raw_string_ostream OS(str);
+  MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+  ASSERT_TRUE(OS.str() == "intpred(eq)");
 }
 
 } // end namespace

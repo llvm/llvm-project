@@ -15,6 +15,7 @@
 #define LLVM_SUPPORT_MEMORYBUFFER_H
 
 #include "llvm-c/Types.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CBindingWrapping.h"
@@ -47,6 +48,9 @@ protected:
 
   void init(const char *BufStart, const char *BufEnd,
             bool RequiresNullTerminator);
+
+  static constexpr bool Writable = false;
+
 public:
   MemoryBuffer(const MemoryBuffer &) = delete;
   MemoryBuffer &operator=(const MemoryBuffer &) = delete;
@@ -122,6 +126,9 @@ public:
   /// Allocate a new MemoryBuffer of the specified size that is not initialized.
   /// Note that the caller should initialize the memory allocated by this
   /// method. The memory is owned by the MemoryBuffer object.
+  //
+  // TODO: Remove this and migrate callers to
+  //   WritableMemoryBuffer::getNewUninitMemBuffer
   static std::unique_ptr<MemoryBuffer>
   getNewUninitMemBuffer(size_t Size, const Twine &BufferName = "");
 
@@ -154,6 +161,59 @@ public:
   virtual BufferKind getBufferKind() const = 0;
 
   MemoryBufferRef getMemBufferRef() const;
+};
+
+/// This class is an extension of MemoryBuffer, which allows writing to the
+/// underlying contents.  It only supports creation methods that are guaranteed
+/// to produce a writable buffer.  For example, mapping a file read-only is not
+/// supported.
+class WritableMemoryBuffer : public MemoryBuffer {
+protected:
+  WritableMemoryBuffer() = default;
+
+  static constexpr bool Writable = true;
+
+public:
+  using MemoryBuffer::getBuffer;
+  using MemoryBuffer::getBufferEnd;
+  using MemoryBuffer::getBufferStart;
+
+  // const_cast is well-defined here, because the underlying buffer is
+  // guaranteed to have been initialized with a mutable buffer.
+  char *getBufferStart() {
+    return const_cast<char *>(MemoryBuffer::getBufferStart());
+  }
+  char *getBufferEnd() {
+    return const_cast<char *>(MemoryBuffer::getBufferEnd());
+  }
+  MutableArrayRef<char> getBuffer() {
+    return {getBufferStart(), getBufferEnd()};
+  }
+
+  static ErrorOr<std::unique_ptr<WritableMemoryBuffer>>
+  getFile(const Twine &Filename, int64_t FileSize = -1,
+          bool IsVolatile = false);
+
+  /// Map a subrange of the specified file as a WritableMemoryBuffer.
+  static ErrorOr<std::unique_ptr<WritableMemoryBuffer>>
+  getFileSlice(const Twine &Filename, uint64_t MapSize, uint64_t Offset,
+               bool IsVolatile = false);
+
+  static std::unique_ptr<WritableMemoryBuffer>
+  getNewUninitMemBuffer(size_t Size, const Twine &BufferName = "");
+
+private:
+  // Hide these base class factory function so one can't write
+  //   WritableMemoryBuffer::getXXX()
+  // and be surprised that he got a read-only Buffer.
+  using MemoryBuffer::getFileAsStream;
+  using MemoryBuffer::getFileOrSTDIN;
+  using MemoryBuffer::getMemBuffer;
+  using MemoryBuffer::getMemBufferCopy;
+  using MemoryBuffer::getNewMemBuffer;
+  using MemoryBuffer::getOpenFile;
+  using MemoryBuffer::getOpenFileSlice;
+  using MemoryBuffer::getSTDIN;
 };
 
 class MemoryBufferRef {

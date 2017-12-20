@@ -156,6 +156,9 @@ static cl::opt<std::string> ThinLTOModuleId(
 static cl::opt<std::string>
     ThinLTOCacheDir("thinlto-cache-dir", cl::desc("Enable ThinLTO caching."));
 
+static cl::opt<int>
+    ThinLTOCachePruningInterval("thinlto-cache-pruning-interval", cl::desc("Set ThinLTO cache pruning interval."));
+
 static cl::opt<std::string> ThinLTOSaveTempsPrefix(
     "thinlto-save-temps",
     cl::desc("Save ThinLTO temp files using filenames created by adding "
@@ -470,6 +473,7 @@ public:
     ThinGenerator.setCodePICModel(getRelocModel());
     ThinGenerator.setTargetOptions(Options);
     ThinGenerator.setCacheDir(ThinLTOCacheDir);
+    ThinGenerator.setCachePruningInterval(ThinLTOCachePruningInterval);
     ThinGenerator.setFreestanding(EnableFreestanding);
 
     // Add all the exported symbols to the table of symbols to preserve.

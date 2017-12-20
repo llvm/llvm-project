@@ -10671,7 +10671,7 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
       // that has an in-class initializer, so we type-check this like
       // a declaration.
       //
-      // Fall through
+      LLVM_FALLTHROUGH;
 
     case VarDecl::DeclarationOnly:
       // It's only a declaration.

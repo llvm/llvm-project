@@ -717,6 +717,7 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
         if (addComma)
           OS << ",";
         OS << "Attribute::InaccessibleMemOrArgMemOnly";
+        break;
       case CodeGenIntrinsic::ReadWriteMem:
         break;
       }

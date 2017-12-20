@@ -835,6 +835,9 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     case 64:
       ZeroTy = Type::getDoubleTy(Ctx);
       break;
+    case 128:
+      ZeroTy = Type::getFP128Ty(Ctx);
+      break;
     default:
       llvm_unreachable("unexpected floating-point type");
     }
