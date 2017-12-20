@@ -49,7 +49,7 @@ bool MemIndex::fuzzyFind(const Context &Ctx, const FuzzyFindRequest &Req,
         continue;
 
       // FIXME(ioeric): use fuzzy matcher.
-      if (StringRef(StringRef(Sym->Name).lower()).contains(Req.Query)) {
+      if (StringRef(Sym->Name).find_lower(Req.Query) != StringRef::npos) {
         if (++Matched > Req.MaxCandidateCount)
           return false;
         Callback(*Sym);
