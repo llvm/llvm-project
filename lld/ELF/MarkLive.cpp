@@ -68,7 +68,7 @@ static void resolveReloc(InputSectionBase &Sec, RelT &Rel,
   B.Used = true;
   if (auto *SS = dyn_cast<SharedSymbol>(&B))
     if (!SS->isWeak())
-      SS->getFile<ELFT>()->IsNeeded = true;
+      SS->getFile<ELFT>().IsNeeded = true;
 
   if (auto *D = dyn_cast<Defined>(&B)) {
     auto *RelSec = dyn_cast_or_null<InputSectionBase>(D->Section);
