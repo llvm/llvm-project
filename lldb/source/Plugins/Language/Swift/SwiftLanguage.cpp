@@ -1649,6 +1649,7 @@ bool SwiftLanguage::GetFunctionDisplayName(
         }
       }
     }
+    break;
   }
   case Language::FunctionNameRepresentation::eNameWithArgs: {
     if (sc->function) {
