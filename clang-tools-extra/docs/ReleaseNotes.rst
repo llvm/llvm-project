@@ -269,7 +269,7 @@ Improvements to clang-tidy
 - Added the ability to suppress specific checks (or all checks) in a ``NOLINT`` or ``NOLINTNEXTLINE`` comment.
 
 - Added new functionality to `misc-redundant-expression
-  http://clang.llvm.org/extra/clang-tidy/checks/misc-redundant-expression.html`_ check
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-redundant-expression.html>`_ check
 
   Finds redundant binary operator expressions where the operators are overloaded,
   and ones that contain the same macros twice.
