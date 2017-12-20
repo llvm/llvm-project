@@ -8,6 +8,7 @@
 ## was anything but an input section description.
 # RUN: ld.lld --no-merge-exidx-entries -T %t.script %t.o -shared -o %t.so
 # RUN: llvm-objdump -s -triple=armv7a-none-linux-gnueabi %t.so | FileCheck %s
+# RUN: llvm-readobj -s -t %t.so | FileCheck %s --check-prefix=SYMBOL
 
  .syntax unified
  .text
@@ -22,3 +23,19 @@ _start:
 # 1000 + 1000 = 0x2000 = _start
 # 1008 + 0ffc = 0x2004 = _start + sizeof(_start)
 # CHECK-NEXT: 1000 00100000 01000000 fc0f0000 01000000
+
+# SYMBOL:       Section {
+# SYMBOL:         Name: .ARM.exidx
+# SYMBOL-NEXT:    Type: SHT_ARM_EXIDX
+# SYMBOL-NEXT:    Flags [
+# SYMBOL-NEXT:      SHF_ALLOC
+# SYMBOL-NEXT:      SHF_LINK_ORDER
+# SYMBOL-NEXT:    ]
+# SYMBOL-NEXT:    Address: 0x1000
+# SYMBOL-NEXT:    Offset:
+# SYMBOL-NEXT:    Size: 16
+
+# Symbol 'foo' is expected to point at the end of the section.
+# SYMBOL:       Symbol {
+# SYMBOL:         Name: foo
+# SYMBOL-NEXT:    Value: 0x1010

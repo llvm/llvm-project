@@ -8,7 +8,7 @@
 //===-------------------------------------------------------------------===//
 
 #include "MemIndex.h"
-#include "Logger.h"
+#include "../Logger.h"
 
 namespace clang {
 namespace clangd {

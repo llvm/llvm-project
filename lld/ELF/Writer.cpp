@@ -54,7 +54,6 @@ private:
   void resolveShfLinkOrder();
   void sortInputSections();
   void finalizeSections();
-  void addPredefinedSections();
   void setReservedSymbolSections();
 
   std::vector<PhdrEntry *> createPhdrs();
@@ -390,6 +389,11 @@ template <class ELFT> static void createSyntheticSections() {
   Add(InX::ShStrTab);
   if (InX::StrTab)
     Add(InX::StrTab);
+
+  if (Config->EMachine == EM_ARM && !Config->Relocatable)
+    // Add a sentinel to terminate .ARM.exidx. It helps an unwinder
+    // to find the exact address range of the last entry.
+    Add(make<ARMExidxSentinelSection>());
 }
 
 // The main function of the writer.
@@ -1145,10 +1149,10 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
 }
 
 static bool compareByFilePosition(InputSection *A, InputSection *B) {
-  // Synthetic doesn't have link order dependecy, stable_sort will keep it last
+  // Synthetic, i. e. a sentinel section, should go last.
   if (A->kind() == InputSectionBase::Synthetic ||
       B->kind() == InputSectionBase::Synthetic)
-    return false;
+    return A->kind() != InputSectionBase::Synthetic;
   InputSection *LA = A->getLinkOrderDep();
   InputSection *LB = B->getLinkOrderDep();
   OutputSection *AOut = LA->getParent();
@@ -1231,23 +1235,37 @@ template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
     }
     std::stable_sort(Sections.begin(), Sections.end(), compareByFilePosition);
 
-    if (Config->MergeArmExidx && !Config->Relocatable &&
-        Config->EMachine == EM_ARM && Sec->Type == SHT_ARM_EXIDX) {
-      // The EHABI for the Arm Architecture permits consecutive identical
-      // table entries to be merged. We use a simple implementation that
-      // removes a .ARM.exidx Input Section if it can be merged into the
-      // previous one. This does not require any rewriting of InputSection
-      // contents but misses opportunities for fine grained deduplication where
-      // only a subset of the InputSection contents can be merged.
-      int Cur = 1;
-      int Prev = 0;
-      int N = Sections.size();
-      while (Cur < N) {
-        if (isDuplicateArmExidxSec(Sections[Prev], Sections[Cur]))
-          Sections[Cur] = nullptr;
-        else
-          Prev = Cur;
-        ++Cur;
+    if (!Config->Relocatable && Config->EMachine == EM_ARM &&
+        Sec->Type == SHT_ARM_EXIDX) {
+
+      if (!Sections.empty() && isa<ARMExidxSentinelSection>(Sections.back())) {
+        assert(Sections.size() >= 2 &&
+               "We should create a sentinel section only if there are "
+               "alive regular exidx sections.");
+        // The last executable section is required to fill the sentinel.
+        // Remember it here so that we don't have to find it again.
+        auto *Sentinel = cast<ARMExidxSentinelSection>(Sections.back());
+        Sentinel->Highest = Sections[Sections.size() - 2]->getLinkOrderDep();
+      }
+
+      if (Config->MergeArmExidx) {
+        // The EHABI for the Arm Architecture permits consecutive identical
+        // table entries to be merged. We use a simple implementation that
+        // removes a .ARM.exidx Input Section if it can be merged into the
+        // previous one. This does not require any rewriting of InputSection
+        // contents but misses opportunities for fine grained deduplication
+        // where only a subset of the InputSection contents can be merged.
+        int Cur = 1;
+        int Prev = 0;
+        // The last one is a sentinel entry which should not be removed.
+        int N = Sections.size() - 1;
+        while (Cur < N) {
+          if (isDuplicateArmExidxSec(Sections[Prev], Sections[Cur]))
+            Sections[Cur] = nullptr;
+          else
+            Prev = Cur;
+          ++Cur;
+        }
       }
     }
 
@@ -1413,7 +1431,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   if (errorCount())
     return;
 
-  addPredefinedSections();
   removeUnusedSyntheticSections();
 
   sortSections();
@@ -1508,17 +1525,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // createThunks may have added local symbols to the static symbol table
   applySynthetic({InX::SymTab},
                  [](SyntheticSection *SS) { SS->postThunkContents(); });
-}
-
-template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
-  // ARM ABI requires .ARM.exidx to be terminated by some piece of data.
-  // We have the terminater synthetic section class. Add that at the end.
-  OutputSection *Cmd = findSection(".ARM.exidx");
-  if (!Cmd || !Cmd->Live || Config->Relocatable)
-    return;
-
-  auto *Sentinel = make<ARMExidxSentinelSection>();
-  Cmd->addSection(Sentinel);
 }
 
 // The linker is expected to define SECNAME_start and SECNAME_end
