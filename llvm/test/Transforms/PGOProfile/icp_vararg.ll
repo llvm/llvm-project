@@ -13,8 +13,7 @@ entry:
 define i32 @bar() #1 {
 entry:
   %tmp = load i32 (i32, ...)*, i32 (i32, ...)** @foo, align 8
-; ICALL-PROM:  [[BITCAST:%[0-9]+]] = bitcast i32 (i32, ...)* %tmp to i8*
-; ICALL-PROM:  [[CMP:%[0-9]+]] = icmp eq i8* [[BITCAST]], bitcast (i32 (i32, ...)* @va_func to i8*)
+; ICALL-PROM:  [[CMP:%[0-9]+]] = icmp eq i32 (i32, ...)* %tmp, @va_func
 ; ICALL-PROM:  br i1 [[CMP]], label %if.true.direct_targ, label %if.false.orig_indirect, !prof [[BRANCH_WEIGHT:![0-9]+]]
 ; ICALL-PROM:if.true.direct_targ:
 ; ICALL-PROM:  [[DIRCALL_RET:%[0-9]+]] = call i32 (i32, ...) @va_func(i32 3, i32 12, i32 22, i32 4)

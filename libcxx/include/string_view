@@ -196,9 +196,9 @@ public:
     // types
     typedef _Traits                                    traits_type;
     typedef _CharT                                     value_type;
-    typedef const _CharT*                              pointer;
+    typedef _CharT*                                    pointer;
     typedef const _CharT*                              const_pointer;
-    typedef const _CharT&                              reference;
+    typedef _CharT&                                    reference;
     typedef const _CharT&                              const_reference;
     typedef const_pointer                              const_iterator; // See [string.view.iterators]
     typedef const_iterator                             iterator;

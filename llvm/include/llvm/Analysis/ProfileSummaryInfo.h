@@ -92,12 +92,12 @@ public:
   bool hasHugeWorkingSetSize();
   /// \brief Returns true if \p F has hot function entry.
   bool isFunctionEntryHot(const Function *F);
-  /// Returns true if \p F has hot function entry or hot call edge.
-  bool isFunctionHotInCallGraph(const Function *F);
+  /// Returns true if \p F contains hot code.
+  bool isFunctionHotInCallGraph(const Function *F, BlockFrequencyInfo &BFI);
   /// \brief Returns true if \p F has cold function entry.
   bool isFunctionEntryCold(const Function *F);
-  /// Returns true if \p F has cold function entry or cold call edge.
-  bool isFunctionColdInCallGraph(const Function *F);
+  /// Returns true if \p F contains only cold code.
+  bool isFunctionColdInCallGraph(const Function *F, BlockFrequencyInfo &BFI);
   /// \brief Returns true if \p F is a hot function.
   bool isHotCount(uint64_t C);
   /// \brief Returns true if count \p C is considered cold.

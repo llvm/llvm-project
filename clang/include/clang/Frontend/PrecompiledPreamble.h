@@ -244,6 +244,10 @@ class PreambleCallbacks {
 public:
   virtual ~PreambleCallbacks() = default;
 
+  /// Called before FrontendAction::BeginSourceFile.
+  /// Can be used to store references to various CompilerInstance fields
+  /// (e.g. SourceManager) that may be interesting to the consumers of other callbacks.
+  virtual void BeforeExecute(CompilerInstance &CI);
   /// Called after FrontendAction::Execute(), but before
   /// FrontendAction::EndSourceFile(). Can be used to transfer ownership of
   /// various CompilerInstance fields before they are destroyed.

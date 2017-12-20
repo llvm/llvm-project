@@ -12,7 +12,7 @@
 
 ; CHECK-LABEL: fred:
 ; CHECK: v[[REG:[0-9]+]] = vsplat
-; CHECK: vmem(r29+#6) = v[[REG]]
+; CHECK: vmem(r29+#{{[0-9]+}}) = v[[REG]]
 
 
 target triple = "hexagon"

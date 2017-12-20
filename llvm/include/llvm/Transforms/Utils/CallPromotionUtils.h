@@ -29,13 +29,23 @@ namespace llvm {
 bool isLegalToPromote(CallSite CS, Function *Callee,
                       const char **FailureReason = nullptr);
 
+/// Promote the given indirect call site to unconditionally call \p Callee.
+///
+/// This function promotes the given call site, returning the direct call or
+/// invoke instruction. If the function type of the call site doesn't match that
+/// of the callee, bitcast instructions are inserted where appropriate. If \p
+/// RetBitCast is non-null, it will be used to store the return value bitcast,
+/// if created.
+Instruction *promoteCall(CallSite CS, Function *Callee,
+                         CastInst **RetBitCast = nullptr);
+
 /// Promote the given indirect call site to conditionally call \p Callee.
 ///
 /// This function creates an if-then-else structure at the location of the call
-/// site. The original call site is promoted and moved into the "then" block. A
-/// clone of the indirect call site is placed in the "else" block and returned.
-/// If \p BranchWeights is non-null, it will be used to set !prof metadata on
-/// the new conditional branch.
+/// site. The original call site is moved into the "else" block. A clone of the
+/// indirect call site is promoted, placed in the "then" block, and returned. If
+/// \p BranchWeights is non-null, it will be used to set !prof metadata on the
+/// new conditional branch.
 Instruction *promoteCallWithIfThenElse(CallSite CS, Function *Callee,
                                        MDNode *BranchWeights = nullptr);
 

@@ -95,6 +95,17 @@ public:
   virtual void prettyPrintAsm(MCInstPrinter &InstPrinter, raw_ostream &OS,
                               const MCInst &Inst, const MCSubtargetInfo &STI);
 
+  virtual void emitDwarfFileDirective(StringRef Directive);
+
+  /// Update streamer for a new active section.
+  ///
+  /// This is called by PopSection and SwitchSection, if the current
+  /// section changes.
+  virtual void changeSection(const MCSection *CurSection, MCSection *Section,
+                             const MCExpr *SubSection, raw_ostream &OS);
+
+  virtual void emitValue(const MCExpr *Value);
+
   virtual void finish();
 };
 

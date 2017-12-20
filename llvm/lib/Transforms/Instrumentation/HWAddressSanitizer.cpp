@@ -80,6 +80,11 @@ static cl::opt<bool> ClInstrumentAtomics(
     cl::desc("instrument atomic instructions (rmw, cmpxchg)"), cl::Hidden,
     cl::init(true));
 
+static cl::opt<bool> ClRecover(
+    "hwasan-recover",
+    cl::desc("Enable recovery mode (continue-after-error)."),
+    cl::Hidden, cl::init(false));
+
 namespace {
 
 /// \brief An instrumentation pass implementing detection of addressability bugs
@@ -89,7 +94,8 @@ public:
   // Pass identification, replacement for typeid.
   static char ID;
 
-  HWAddressSanitizer() : FunctionPass(ID) {}
+  HWAddressSanitizer(bool Recover = false)
+      : FunctionPass(ID), Recover(Recover || ClRecover) {}
 
   StringRef getPassName() const override { return "HWAddressSanitizer"; }
 
@@ -109,6 +115,8 @@ private:
   LLVMContext *C;
   Type *IntptrTy;
 
+  bool Recover;
+
   Function *HwasanCtorFunction;
 
   Function *HwasanMemoryAccessCallback[2][kNumberOfAccessSizes];
@@ -126,8 +134,8 @@ INITIALIZE_PASS_END(
     HWAddressSanitizer, "hwasan",
     "HWAddressSanitizer: detect memory bugs using tagged addressing.", false, false)
 
-FunctionPass *llvm::createHWAddressSanitizerPass() {
-  return new HWAddressSanitizer();
+FunctionPass *llvm::createHWAddressSanitizerPass(bool Recover) {
+  return new HWAddressSanitizer(Recover);
 }
 
 /// \brief Module-level initialization.
@@ -156,10 +164,11 @@ void HWAddressSanitizer::initializeCallbacks(Module &M) {
   IRBuilder<> IRB(*C);
   for (size_t AccessIsWrite = 0; AccessIsWrite <= 1; AccessIsWrite++) {
     const std::string TypeStr = AccessIsWrite ? "store" : "load";
+    const std::string EndingStr = Recover ? "_noabort" : "";
 
     HwasanMemoryAccessCallbackSized[AccessIsWrite] =
         checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-            ClMemoryAccessCallbackPrefix + TypeStr,
+            ClMemoryAccessCallbackPrefix + TypeStr + EndingStr,
             FunctionType::get(IRB.getVoidTy(), {IntptrTy, IntptrTy}, false)));
 
     for (size_t AccessSizeIndex = 0; AccessSizeIndex < kNumberOfAccessSizes;
@@ -167,7 +176,7 @@ void HWAddressSanitizer::initializeCallbacks(Module &M) {
       HwasanMemoryAccessCallback[AccessIsWrite][AccessSizeIndex] =
           checkSanitizerInterfaceFunction(M.getOrInsertFunction(
               ClMemoryAccessCallbackPrefix + TypeStr +
-                  itostr(1ULL << AccessSizeIndex),
+                  itostr(1ULL << AccessSizeIndex) + EndingStr,
               FunctionType::get(IRB.getVoidTy(), {IntptrTy}, false)));
     }
   }
@@ -246,14 +255,16 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *PtrLong, bool IsWrite,
   Value *TagMismatch = IRB.CreateICmpNE(PtrTag, MemTag);
 
   TerminatorInst *CheckTerm =
-      SplitBlockAndInsertIfThen(TagMismatch, InsertBefore, false,
+      SplitBlockAndInsertIfThen(TagMismatch, InsertBefore, !Recover,
                                 MDBuilder(*C).createBranchWeights(1, 100000));
 
   IRB.SetInsertPoint(CheckTerm);
   // The signal handler will find the data address in x0.
   InlineAsm *Asm = InlineAsm::get(
       FunctionType::get(IRB.getVoidTy(), {PtrLong->getType()}, false),
-      "hlt #" + itostr(0x100 + IsWrite * 0x10 + AccessSizeIndex), "{x0}",
+      "hlt #" +
+          itostr(0x100 + Recover * 0x20 + IsWrite * 0x10 + AccessSizeIndex),
+      "{x0}",
       /*hasSideEffects=*/true);
   IRB.CreateCall(Asm, PtrLong);
 }
