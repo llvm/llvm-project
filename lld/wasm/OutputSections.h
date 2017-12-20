@@ -37,6 +37,8 @@ public:
 
   virtual ~OutputSection() = default;
 
+  std::string getSectionName();
+
   void setOffset(size_t NewOffset) {
     log("setOffset: " + toString(this) + " -> " + Twine(NewOffset));
     Offset = NewOffset;
@@ -97,6 +99,8 @@ class SubSection : public SyntheticSection {
 public:
   explicit SubSection(uint32_t Type) : SyntheticSection(Type) {}
 
+  std::string getSectionName();
+
   void writeToStream(raw_ostream &OS) {
     writeBytes(OS, Header.data(), Header.size());
     writeBytes(OS, Body.data(), Body.size());
@@ -122,11 +126,10 @@ public:
   explicit DataSection(ArrayRef<OutputSegment *> Segments);
   size_t getSize() const override { return Header.size() + BodySize; }
   void writeTo(uint8_t *Buf) override;
-  uint32_t numRelocations() const override { return Relocations.size(); }
+  uint32_t numRelocations() const override;
   void writeRelocations(raw_ostream &OS) const override;
 
 protected:
-  std::vector<OutputRelocation> Relocations;
   ArrayRef<OutputSegment *> Segments;
   std::string DataSectionHeader;
   size_t BodySize = 0;

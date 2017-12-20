@@ -20,7 +20,8 @@ declare i32* @foo()
 @globalptr.align16 = external global i8, align 16
 
 ; CHECK-LABEL: 'test'
-define void @test(i32 addrspace(1)* dereferenceable(8) %dparam,
+define void @test(%struct.A* sret %result,
+                  i32 addrspace(1)* dereferenceable(8) %dparam,
                   i8 addrspace(1)* dereferenceable(32) align 1 %dparam.align1,
                   i8 addrspace(1)* dereferenceable(32) align 16 %dparam.align16,
                   i8* byval %i8_byval,
@@ -52,6 +53,15 @@ entry:
     %big_array_alloca = alloca i8, i64 4
     %baa_cast = bitcast i8* %big_array_alloca to i32*
     %baa_load = load i32, i32* %baa_cast
+
+    ; Loads from sret arguments
+; CHECK: %sret_gep{{.*}}(aligned)
+    %sret_gep = getelementptr inbounds %struct.A, %struct.A* %result, i64 0, i32 1, i64 2
+    load i8, i8* %sret_gep
+
+; CHECK-NOT: %sret_gep_outside
+    %sret_gep_outside = getelementptr %struct.A, %struct.A* %result, i64 0, i32 1, i64 7
+    load i8, i8* %sret_gep_outside
 
 ; CHECK: %dparam{{.*}}(aligned)
     %load3 = load i32, i32 addrspace(1)* %dparam

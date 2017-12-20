@@ -875,7 +875,12 @@ struct GetDoubleStrings {
                      {"0.0", false, false, 0.0},
                      {"-0.0", false, false, -0.0},
                      {"123.45", false, true, 123.45},
-                     {"123.45", true, false, 123.45}};
+                     {"123.45", true, false, 123.45},
+                     {"1.8e308", true, false, std::numeric_limits<double>::infinity()},
+                     {"1.8e308", false, true, std::numeric_limits<double>::infinity()},
+                     {"0x0.0000000000001P-1023", false, true, 0.0},
+                     {"0x0.0000000000001P-1023", true, false, 0.0},
+                    };
 
 TEST(StringRefTest, getAsDouble) {
   for (const auto &Entry : DoubleStrings) {

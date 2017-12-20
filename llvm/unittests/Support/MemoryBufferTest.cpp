@@ -15,6 +15,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -225,5 +226,38 @@ TEST_F(MemoryBufferTest, slice) {
   EXPECT_TRUE(BufData2.substr(0x17F8,8).equals("12345678"));
   EXPECT_TRUE(BufData2.substr(0x1800,8).equals("abcdefgh"));
   EXPECT_TRUE(BufData2.substr(0x2FF8,8).equals("abcdefgh"));
+}
+
+TEST_F(MemoryBufferTest, writableSlice) {
+  // Create a file initialized with some data
+  int FD;
+  SmallString<64> TestPath;
+  sys::fs::createTemporaryFile("MemoryBufferTest_WritableSlice", "temp", FD,
+                               TestPath);
+  FileRemover Cleanup(TestPath);
+  raw_fd_ostream OF(FD, true);
+  for (unsigned i = 0; i < 0x1000; ++i)
+    OF << "0123456789abcdef";
+  OF.close();
+
+  {
+    auto MBOrError =
+        WritableMemoryBuffer::getFileSlice(TestPath.str(), 0x6000, 0x2000);
+    ASSERT_FALSE(MBOrError.getError());
+    // Write some data.  It should be mapped private, so that upon completion
+    // the original file contents are not modified.
+    WritableMemoryBuffer &MB = **MBOrError;
+    ASSERT_EQ(0x6000u, MB.getBufferSize());
+    char *Start = MB.getBufferStart();
+    ASSERT_EQ(MB.getBufferEnd(), MB.getBufferStart() + MB.getBufferSize());
+    ::memset(Start, 'x', MB.getBufferSize());
+  }
+
+  auto MBOrError = MemoryBuffer::getFile(TestPath);
+  ASSERT_FALSE(MBOrError.getError());
+  auto &MB = **MBOrError;
+  ASSERT_EQ(0x10000u, MB.getBufferSize());
+  for (size_t i = 0; i < MB.getBufferSize(); i += 0x10)
+    EXPECT_EQ("0123456789abcdef", MB.getBuffer().substr(i, 0x10)) << "i: " << i;
 }
 }

@@ -8,6 +8,9 @@
 //===-------------------------------------------------------------------===//
 
 #include "ClangdServer.h"
+#include "CodeComplete.h"
+#include "SourceCode.h"
+#include "XRefs.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -56,29 +59,6 @@ public:
 };
 
 } // namespace
-
-size_t clangd::positionToOffset(StringRef Code, Position P) {
-  size_t Offset = 0;
-  for (int I = 0; I != P.line; ++I) {
-    // FIXME: \r\n
-    // FIXME: UTF-8
-    size_t F = Code.find('\n', Offset);
-    if (F == StringRef::npos)
-      return 0; // FIXME: Is this reasonable?
-    Offset = F + 1;
-  }
-  return (Offset == 0 ? 0 : (Offset - 1)) + P.character;
-}
-
-/// Turn an offset in Code into a [line, column] pair.
-Position clangd::offsetToPosition(StringRef Code, size_t Offset) {
-  StringRef JustBefore = Code.substr(0, Offset);
-  // FIXME: \r\n
-  // FIXME: UTF-8
-  int Lines = JustBefore.count('\n');
-  int Cols = JustBefore.size() - JustBefore.rfind('\n') - 1;
-  return {Lines, Cols};
-}
 
 Tagged<IntrusiveRefCntPtr<vfs::FileSystem>>
 RealFileSystemProvider::getTaggedFileSystem(PathRef File) {
@@ -154,8 +134,19 @@ ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
                            FileSystemProvider &FSProvider,
                            unsigned AsyncThreadsCount,
                            bool StorePreamblesInMemory,
+                           bool BuildDynamicSymbolIndex,
                            llvm::Optional<StringRef> ResourceDir)
     : CDB(CDB), DiagConsumer(DiagConsumer), FSProvider(FSProvider),
+      FileIdx(BuildDynamicSymbolIndex ? new FileIndex() : nullptr),
+      // Pass a callback into `Units` to extract symbols from a newly parsed
+      // file and rebuild the file index synchronously each time an AST is
+      // parsed.
+      // FIXME(ioeric): this can be slow and we may be able to index on less
+      // critical paths.
+      Units(FileIdx
+                ? [this](const Context &Ctx, PathRef Path,
+                         ParsedAST *AST) { FileIdx->update(Ctx, Path, AST); }
+                : ASTParsedCallback()),
       ResourceDir(ResourceDir ? ResourceDir->str() : getStandardResourceDir()),
       PCHs(std::make_shared<PCHContainerOperations>()),
       StorePreamblesInMemory(StorePreamblesInMemory),
@@ -258,6 +249,8 @@ void ClangdServer::codeComplete(
       Resources->getPossiblyStalePreamble();
   // Copy completion options for passing them to async task handler.
   auto CodeCompleteOpts = Opts;
+  if (FileIdx)
+    CodeCompleteOpts.Index = FileIdx.get();
   // A task that will be run asynchronously.
   auto Task =
       // 'mutable' to reassign Preamble variable.
@@ -337,7 +330,7 @@ ClangdServer::formatOnType(StringRef Code, PathRef File, Position Pos) {
   size_t PreviousLBracePos = StringRef(Code).find_last_of('{', CursorPos);
   if (PreviousLBracePos == StringRef::npos)
     PreviousLBracePos = CursorPos;
-  size_t Len = 1 + CursorPos - PreviousLBracePos;
+  size_t Len = CursorPos - PreviousLBracePos;
 
   return formatCode(Code, File, {tooling::Range(PreviousLBracePos, Len)});
 }

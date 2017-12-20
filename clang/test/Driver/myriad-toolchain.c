@@ -1,19 +1,19 @@
-// RUN: %clang -no-canonical-prefixes -### -target sparc-myriad-rtems-elf %s \
+// RUN: %clang -no-canonical-prefixes -### -target sparc-myriad-rtems %s \
 // RUN: -ccc-install-dir %S/Inputs/basic_myriad_tree/bin \
 // RUN: --gcc-toolchain=%S/Inputs/basic_myriad_tree 2>&1 | FileCheck %s -check-prefix=LINK_WITH_RTEMS
 // LINK_WITH_RTEMS: Inputs{{.*}}crti.o
 // LINK_WITH_RTEMS: Inputs{{.*}}crtbegin.o
-// LINK_WITH_RTEMS: "-L{{.*}}Inputs/basic_myriad_tree/lib/gcc/sparc-myriad-elf/4.8.2"
-// LINK_WITH_RTEMS: "-L{{.*}}Inputs/basic_myriad_tree/bin/../sparc-myriad-elf/lib"
+// LINK_WITH_RTEMS: "-L{{.*}}Inputs/basic_myriad_tree/lib/gcc/sparc-myriad-rtems/6.3.0"
+// LINK_WITH_RTEMS: "-L{{.*}}Inputs/basic_myriad_tree/bin/../sparc-myriad-rtems/lib"
 // LINK_WITH_RTEMS: "--start-group" "-lc" "-lgcc" "-lrtemscpu" "-lrtemsbsp" "--end-group"
 // LINK_WITH_RTEMS: Inputs{{.*}}crtend.o
 // LINK_WITH_RTEMS: Inputs{{.*}}crtn.o
 
-// RUN: %clang -c -no-canonical-prefixes -### -target sparc-myriad-rtems-elf -x c++ %s \
+// RUN: %clang -c -no-canonical-prefixes -### -target sparc-myriad-rtems -x c++ %s \
 // RUN: -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/basic_myriad_tree 2>&1 | FileCheck %s -check-prefix=COMPILE_CXX
-// COMPILE_CXX: "-internal-isystem" "{{.*}}/Inputs/basic_myriad_tree/lib/gcc/sparc-myriad-elf/4.8.2/../../../../sparc-myriad-elf/include/c++/4.8.2"
-// COMPILE_CXX: "-internal-isystem" "{{.*}}/Inputs/basic_myriad_tree/lib/gcc/sparc-myriad-elf/4.8.2/../../../../sparc-myriad-elf/include/c++/4.8.2/sparc-myriad-elf"
-// COMPILE_CXX: "-internal-isystem" "{{.*}}/Inputs/basic_myriad_tree/lib/gcc/sparc-myriad-elf/4.8.2/../../../../sparc-myriad-elf/include/c++/4.8.2/backward"
+// COMPILE_CXX: "-internal-isystem" "{{.*}}/Inputs/basic_myriad_tree/lib/gcc/sparc-myriad-rtems/6.3.0/../../../../sparc-myriad-rtems/include/c++/6.3.0"
+// COMPILE_CXX: "-internal-isystem" "{{.*}}/Inputs/basic_myriad_tree/lib/gcc/sparc-myriad-rtems/6.3.0/../../../../sparc-myriad-rtems/include/c++/6.3.0/sparc-myriad-rtems"
+// COMPILE_CXX: "-internal-isystem" "{{.*}}/Inputs/basic_myriad_tree/lib/gcc/sparc-myriad-rtems/6.3.0/../../../../sparc-myriad-rtems/include/c++/6.3.0/backward"
 
 // RUN: %clang -### -E -target sparc-myriad --sysroot=/yow %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=SLASH_INCLUDE
@@ -85,6 +85,6 @@
 // RUN: %clang -### -c -g %s -target sparc-myriad 2>&1 | FileCheck -check-prefix=G_SPARC %s
 // G_SPARC: "-debug-info-kind=limited" "-dwarf-version=2"
 
-// RUN: %clang -### -c %s -target sparc-myriad-elf -fuse-init-array 2>&1 \
+// RUN: %clang -### -c %s -target sparc-myriad-rtems -fuse-init-array 2>&1 \
 // RUN: | FileCheck -check-prefix=USE-INIT-ARRAY %s
 // USE-INIT-ARRAY-NOT: argument unused

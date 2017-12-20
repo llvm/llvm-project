@@ -41,13 +41,14 @@ CppFileCollection::recreateFileIfCompileCommandChanged(
     It = OpenedFiles
              .try_emplace(File, CppFile::Create(File, std::move(NewCommand),
                                                 StorePreamblesInMemory,
-                                                std::move(PCHs)))
+                                                std::move(PCHs), ASTCallback))
              .first;
   } else if (!compileCommandsAreEqual(It->second->getCompileCommand(),
                                       NewCommand)) {
     Result.RemovedFile = std::move(It->second);
-    It->second = CppFile::Create(File, std::move(NewCommand),
-                                 StorePreamblesInMemory, std::move(PCHs));
+    It->second =
+        CppFile::Create(File, std::move(NewCommand), StorePreamblesInMemory,
+                        std::move(PCHs), ASTCallback);
   }
   Result.FileInCollection = It->second;
   return Result;

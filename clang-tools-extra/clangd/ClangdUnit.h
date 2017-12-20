@@ -136,6 +136,9 @@ private:
   mutable llvm::Optional<ParsedAST> AST;
 };
 
+using ASTParsedCallback =
+    std::function<void(const Context &Ctx, PathRef Path, ParsedAST *)>;
+
 /// Manages resources, required by clangd. Allows to rebuild file with new
 /// contents, and provides AST and Preamble for it.
 class CppFile : public std::enable_shared_from_this<CppFile> {
@@ -145,12 +148,14 @@ public:
   static std::shared_ptr<CppFile>
   Create(PathRef FileName, tooling::CompileCommand Command,
          bool StorePreamblesInMemory,
-         std::shared_ptr<PCHContainerOperations> PCHs);
+         std::shared_ptr<PCHContainerOperations> PCHs,
+         ASTParsedCallback ASTCallback);
 
 private:
   CppFile(PathRef FileName, tooling::CompileCommand Command,
           bool StorePreamblesInMemory,
-          std::shared_ptr<PCHContainerOperations> PCHs);
+          std::shared_ptr<PCHContainerOperations> PCHs,
+          ASTParsedCallback ASTCallback);
 
 public:
   CppFile(CppFile const &) = delete;
@@ -252,18 +257,14 @@ private:
   std::shared_ptr<const PreambleData> LatestAvailablePreamble;
   /// Utility class, required by clang.
   std::shared_ptr<PCHContainerOperations> PCHs;
+  /// This is called after the file is parsed. This can be nullptr if there is
+  /// no callback.
+  ASTParsedCallback ASTCallback;
 };
 
 /// Get the beginning SourceLocation at a specified \p Pos.
 SourceLocation getBeginningOfIdentifier(ParsedAST &Unit, const Position &Pos,
                                         const FileEntry *FE);
-
-/// Get definition of symbol at a specified \p Pos.
-std::vector<Location> findDefinitions(const Context &Ctx, ParsedAST &AST,
-                                      Position Pos);
-
-std::vector<DocumentHighlight>
-findDocumentHighlights(const Context &Ctx, ParsedAST &AST, Position Pos);
 
 /// For testing/debugging purposes. Note that this method deserializes all
 /// unserialized Decls, so use with care.

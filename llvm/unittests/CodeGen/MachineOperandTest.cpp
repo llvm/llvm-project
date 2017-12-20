@@ -336,4 +336,21 @@ TEST(MachineOperandTest, PrintMCSymbol) {
   ASSERT_TRUE(OS.str() == "<mcsymbol foo>");
 }
 
+TEST(MachineOperandTest, PrintCFI) {
+  // Create a MachineOperand with a CFI index but no function and print it.
+  MachineOperand MO = MachineOperand::CreateCFIIndex(8);
+
+  // Checking some preconditions on the newly created
+  // MachineOperand.
+  ASSERT_TRUE(MO.isCFIIndex());
+  ASSERT_TRUE(MO.getCFIIndex() == 8);
+
+  std::string str;
+  // Print a MachineOperand containing a CFI Index node but no machine function
+  // attached to it.
+  raw_string_ostream OS(str);
+  MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+  ASSERT_TRUE(OS.str() == "<cfi directive>");
+}
+
 } // end namespace
