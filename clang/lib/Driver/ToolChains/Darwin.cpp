@@ -1523,12 +1523,29 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   Optional<DarwinPlatform> OSTarget =
       getDeploymentTargetFromTargetArg(Args, getTriple(), getDriver());
   if (OSTarget) {
-    // Warn about superfluous -m<os>-version-min arg.
     Optional<DarwinPlatform> OSVersionArgTarget =
         getDeploymentTargetFromOSVersionArg(Args, getDriver());
-    if (OSVersionArgTarget)
-      getDriver().Diag(clang::diag::warn_drv_unused_argument)
-          << OSVersionArgTarget->getAsString(Args, Opts);
+    if (OSVersionArgTarget) {
+      unsigned TargetMajor, TargetMinor, TargetMicro;
+      bool TargetExtra;
+      unsigned ArgMajor, ArgMinor, ArgMicro;
+      bool ArgExtra;
+      if (OSTarget->getPlatform() != OSVersionArgTarget->getPlatform() ||
+          (Driver::GetReleaseVersion(OSTarget->getOSVersion(), TargetMajor,
+                                     TargetMinor, TargetMicro, TargetExtra) &&
+           Driver::GetReleaseVersion(OSVersionArgTarget->getOSVersion(),
+                                     ArgMajor, ArgMinor, ArgMicro, ArgExtra) &&
+           (VersionTuple(TargetMajor, TargetMinor, TargetMicro) !=
+                VersionTuple(ArgMajor, ArgMinor, ArgMicro) ||
+            TargetExtra != ArgExtra))) {
+        // Warn about -m<os>-version-min that doesn't match the OS version
+        // that's specified in the target.
+        std::string OSVersionArg = OSVersionArgTarget->getAsString(Args, Opts);
+        std::string TargetArg = OSTarget->getAsString(Args, Opts);
+        getDriver().Diag(clang::diag::warn_drv_overriding_flag_option)
+            << OSVersionArg << TargetArg;
+      }
+    }
   } else {
     // The OS target can be specified using the -m<os>version-min argument.
     OSTarget = getDeploymentTargetFromOSVersionArg(Args, getDriver());

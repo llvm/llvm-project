@@ -275,9 +275,9 @@ InputSection *elf::createInterpSection() {
 }
 
 Symbol *elf::addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
-                               uint64_t Size, InputSectionBase *Section) {
-  auto *S = make<Defined>(Section->File, Name, STB_LOCAL, STV_DEFAULT, Type,
-                          Value, Size, Section);
+                               uint64_t Size, InputSectionBase &Section) {
+  auto *S = make<Defined>(Section.File, Name, STB_LOCAL, STV_DEFAULT, Type,
+                          Value, Size, &Section);
   if (InX::SymTab)
     InX::SymTab->addSymbol(S);
   return S;
@@ -1893,10 +1893,10 @@ size_t PltSection::getSize() const {
 void PltSection::addSymbols() {
   // The PLT may have symbols defined for the Header, the IPLT has no header
   if (HeaderSize != 0)
-    Target->addPltHeaderSymbols(this);
+    Target->addPltHeaderSymbols(*this);
   size_t Off = HeaderSize;
   for (size_t I = 0; I < Entries.size(); ++I) {
-    Target->addPltSymbols(this, Off);
+    Target->addPltSymbols(*this, Off);
     Off += Target->PltEntrySize;
   }
 }

@@ -189,7 +189,7 @@ static AccessInfo GetAccessInfo(siginfo_t *info, ucontext_t *uc) {
   if ((code & 0xff00) != 0x100)
     return AccessInfo{0, 0, false, false}; // Not ours.
   bool is_store = code & 0x10;
-  unsigned size_log = code & 0xff;
+  unsigned size_log = code & 0xf;
   if (size_log > 4 && size_log != 0xf)
     return AccessInfo{0, 0, false, false}; // Not ours.
 

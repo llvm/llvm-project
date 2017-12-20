@@ -1,4 +1,4 @@
-// RUN: %clangxx_hwasan -O0 %s -o %t && not %env_hwasan_opts=halt_on_error=0 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-%os --check-prefix=CHECK
+// RUN: %clangxx_hwasan -O0 %s -o %t && not %env_hwasan_opts=halt_on_error=0 %run %t 2>&1 | FileCheck %s
 // REQUIRES: stable-runtime
 
 #include <stdlib.h>

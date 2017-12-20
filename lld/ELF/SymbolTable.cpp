@@ -582,7 +582,7 @@ template <class ELFT> void SymbolTable::fetchIfLazy(StringRef Name) {
     // Mark the symbol not to be eliminated by LTO
     // even if it is a bitcode symbol.
     B->IsUsedInRegularObj = true;
-    if (auto *L = dyn_cast_or_null<Lazy>(B))
+    if (auto *L = dyn_cast<Lazy>(B))
       if (InputFile *File = L->fetch())
         addFile<ELFT>(File);
   }
