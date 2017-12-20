@@ -1132,8 +1132,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
         Import.IsMutable = false;
         SymbolIndices[&WS] = NumGlobalImports;
 
-        // If this global is the stack pointer, make it mutable and remember it
-        // so that we can emit metadata for it.
+        // If this global is the stack pointer, make it mutable.
         if (WS.getName() == "__stack_pointer")
           Import.IsMutable = true;
 

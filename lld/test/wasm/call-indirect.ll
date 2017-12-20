@@ -20,8 +20,15 @@ entry:
 define i32 @_start() local_unnamed_addr #1 {
 entry:
   %0 = load i32 ()*, i32 ()** @indirect_func, align 4
-  %call = tail call i32 %0() #2
+  %call = call i32 %0() #2
   ret i32 0
+}
+
+; Indirect function call where no function actually has this type.
+; Ensures that the type entry is still created in this case.
+define void @call_ptr(i64 (i64)* %arg) {
+  %1 = call i64 %arg(i64 1)
+  ret void
 }
 
 ; CHECK:      !WASM
@@ -36,8 +43,16 @@ entry:
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         ReturnType:      NORESULT
 ; CHECK-NEXT:         ParamTypes:
+; CHECK-NEXT:       - Index:           2
+; CHECK-NEXT:         ReturnType:      NORESULT
+; CHECK-NEXT:         ParamTypes:      
+; CHECK-NEXT:           - I32
+; CHECK-NEXT:       - Index:           3
+; CHECK-NEXT:         ReturnType:      I64
+; CHECK-NEXT:         ParamTypes:      
+; CHECK-NEXT:           - I64
 ; CHECK-NEXT:   - Type:            FUNCTION
-; CHECK-NEXT:     FunctionTypes:   [ 0, 1, 0, 0 ]
+; CHECK-NEXT:     FunctionTypes:   [ 0, 1, 0, 0, 2 ]
 ; CHECK-NEXT:   - Type:            TABLE
 ; CHECK-NEXT:     Tables:
 ; CHECK-NEXT:       - ElemType:        ANYFUNC
@@ -72,6 +87,9 @@ entry:
 ; CHECK-NEXT:       - Name:            call_bar_indirect
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           1
+; CHECK-NEXT:       - Name:            call_ptr
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Index:           4
 ; CHECK-NEXT:   - Type:            ELEM
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - Offset:
@@ -88,6 +106,8 @@ entry:
 ; CHECK-NEXT:         Body:            41020B
 ; CHECK-NEXT:       - Locals:
 ; CHECK-NEXT:         Body:            410028028888808000118080808000001A41000B
+; CHECK-NEXT:       - Locals:
+; CHECK-NEXT:         Body:            42012000118380808000001A0B
 ; CHECK-NEXT:   - Type:            DATA
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - SectionOffset:    7

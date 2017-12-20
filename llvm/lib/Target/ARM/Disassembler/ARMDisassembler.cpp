@@ -2386,6 +2386,7 @@ static DecodeStatus DecodeVLDInstruction(MCInst &Inst, unsigned Insn,
     case ARM::VLD4q32_UPD:
       if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+2)%32, Address, Decoder)))
         return MCDisassembler::Fail;
+      break;
     default:
       break;
   }
@@ -3326,6 +3327,7 @@ static DecodeStatus DecodeT2AddrModeSOReg(MCInst &Inst, unsigned Val,
   case ARM::t2STRs:
     if (Rn == 15)
       return MCDisassembler::Fail;
+    break;
   default:
     break;
   }
@@ -3391,6 +3393,7 @@ static DecodeStatus DecodeT2LoadShift(MCInst &Inst, unsigned Insn,
       break;
     case ARM::t2LDRSBs:
       Inst.setOpcode(ARM::t2PLIs);
+      break;
     default:
       break;
     }
@@ -3854,6 +3857,7 @@ static DecodeStatus DecodeT2AddrModeImm12(MCInst &Inst, unsigned Val,
   case ARM::t2STRHi12:
     if (Rn == 15)
       return MCDisassembler::Fail;
+    break;
   default:
     break;
   }

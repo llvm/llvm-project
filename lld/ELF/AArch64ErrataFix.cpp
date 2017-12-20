@@ -400,8 +400,8 @@ lld::elf::Patch843419Section::Patch843419Section(InputSection *P, uint64_t Off)
   this->Parent = P->getParent();
   PatchSym = addSyntheticLocal(
       Saver.save("__CortexA53843419_" + utohexstr(getLDSTAddr())), STT_FUNC, 0,
-      getSize(), this);
-  addSyntheticLocal(Saver.save("$x"), STT_NOTYPE, 0, 0, this);
+      getSize(), *this);
+  addSyntheticLocal(Saver.save("$x"), STT_NOTYPE, 0, 0, *this);
 }
 
 uint64_t lld::elf::Patch843419Section::getLDSTAddr() const {

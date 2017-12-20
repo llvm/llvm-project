@@ -713,6 +713,29 @@ which may be emitted later in the MC layer as:
 
     .cfi_offset w30, -16
 
+IntrinsicID Operands
+^^^^^^^^^^^^^^^^^^^^
+
+An Intrinsic ID operand contains a generic intrinsic ID or a target-specific ID.
+
+The syntax for the ``returnaddress`` intrinsic is:
+
+.. code-block:: text
+
+   %x0 = COPY intrinsic(@llvm.returnaddress)
+
+Predicate Operands
+^^^^^^^^^^^^^^^^^^
+
+A Predicate operand contains an IR predicate from ``CmpInst::Predicate``, like
+``ICMP_EQ``, etc.
+
+For an int eq predicate ``ICMP_EQ``, the syntax is:
+
+.. code-block:: text
+
+   %2:gpr(s32) = G_ICMP intpred(eq), %0, %1
+
 .. TODO: Describe the parsers default behaviour when optional YAML attributes
    are missing.
 .. TODO: Describe the syntax for the bundled instructions.
