@@ -197,11 +197,25 @@
 
 // RUN: %clang -target x86_64-apple-macos10.11.2 -mmacos-version-min=10.6 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-TNO-OSV1 %s
-// CHECK-VERSION-TNO-OSV1: argument unused during compilation: '-mmacosx-version-min=10.6'
+// CHECK-VERSION-TNO-OSV1: overriding '-mmacosx-version-min=10.6' option with '--target=x86_64-apple-macos10.11.2'
 
 // RUN: %clang -target x86_64-apple-macos -miphoneos-version-min=9.1 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-TNO-OSV2 %s
-// CHECK-VERSION-TNO-OSV2: argument unused during compilation: '-miphoneos-version-min=9.1'
+// CHECK-VERSION-TNO-OSV2: overriding '-miphoneos-version-min=9.1' option with '--target=x86_64-apple-macos'
+
+// RUN: %clang -target x86_64-apple-ios -miphonesimulator-version-min=10.0 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-TNO-OSV3 %s
+// CHECK-VERSION-TNO-OSV3: overriding '-mios-simulator-version-min=10.0' option with '--target=x86_64-apple-ios'
+// CHECK-VERSION-TNO-OSV3-NOT: argument unused during compilation
+
+// RUN: %clang -target arm64-apple-ios10.1.0 -miphoneos-version-min=10.1.0.1 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-TNO-OSV4 %s
+// CHECK-VERSION-TNO-OSV4: overriding '-miphoneos-version-min=10.1.0.1' option with '--target=arm64-apple-ios10.1.0'
+
+// RUN: %clang -target x86_64-apple-macos10.6 -mmacos-version-min=10.6 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-TNO-SAME %s
+// CHECK-VERSION-TNO-SAME-NOT: overriding
+// CHECK-VERSION-TNO-SAME-NOT: argument unused during compilation
 
 // Target with OS version is not overriden by -m<os>-version-min variables:
 

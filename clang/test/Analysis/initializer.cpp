@@ -1,4 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,cplusplus.NewDeleteLeaks,debug.ExprInspection -analyzer-config c++-inlining=constructors -std=c++11 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,cplusplus.NewDeleteLeaks,debug.ExprInspection -analyzer-config c++-inlining=constructors -std=c++17 -DCPLUSPLUS17 -verify %s
 
 void clang_analyzer_eval(bool);
 
@@ -222,5 +223,44 @@ void testPointerEscapeIntoLists() {
 
 void testPassListsWithExplicitConstructors() {
   (void)(std::initializer_list<int>){12}; // no-crash
+}
+}
+
+namespace CXX17_aggregate_construction {
+struct A {
+  A();
+};
+
+struct B: public A {
+};
+
+struct C: public B {
+};
+
+struct D: public virtual A {
+};
+
+// In C++17, classes B and C are aggregates, so they will be constructed
+// without actually calling their trivial constructor. Used to crash.
+void foo() {
+  B b = {}; // no-crash
+  const B &bl = {}; // no-crash
+  B &&br = {}; // no-crash
+
+  C c = {}; // no-crash
+  const C &cl = {}; // no-crash
+  C &&cr = {}; // no-crash
+
+  D d = {}; // no-crash
+
+#ifdef CPLUSPLUS17
+  C cd = {{}}; // no-crash
+  const C &cdl = {{}}; // no-crash
+  C &&cdr = {{}}; // no-crash
+
+  const B &bll = {{}}; // no-crash
+  const B &bcl = C({{}}); // no-crash
+  B &&bcr = C({{}}); // no-crash
+#endif
 }
 }

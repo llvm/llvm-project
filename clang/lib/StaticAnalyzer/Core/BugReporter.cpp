@@ -885,8 +885,12 @@ static bool GenerateMinimalPathDiagnostic(
     if (NextNode) {
       // Add diagnostic pieces from custom visitors.
       BugReport *R = PDB.getBugReport();
+      llvm::FoldingSet<PathDiagnosticPiece> DeduplicationSet;
       for (auto &V : visitors) {
         if (auto p = V->VisitNode(N, NextNode, PDB, *R)) {
+          if (DeduplicationSet.GetOrInsertNode(p.get()) != p.get())
+            continue;
+
           updateStackPiecesWithMessage(*p, CallStack);
           PD.getActivePath().push_front(std::move(p));
         }
@@ -1584,8 +1588,12 @@ static bool GenerateExtensivePathDiagnostic(
 
     // Add pieces from custom visitors.
     BugReport *R = PDB.getBugReport();
+    llvm::FoldingSet<PathDiagnosticPiece> DeduplicationSet;
     for (auto &V : visitors) {
       if (auto p = V->VisitNode(N, NextNode, PDB, *R)) {
+        if (DeduplicationSet.GetOrInsertNode(p.get()) != p.get())
+          continue;
+
         const PathDiagnosticLocation &Loc = p->getLocation();
         EB.addEdge(Loc, true);
         updateStackPiecesWithMessage(*p, CallStack);
@@ -1879,8 +1887,12 @@ static bool GenerateAlternateExtensivePathDiagnostic(
       continue;
 
     // Add pieces from custom visitors.
+    llvm::FoldingSet<PathDiagnosticPiece> DeduplicationSet;
     for (auto &V : visitors) {
       if (auto p = V->VisitNode(N, NextNode, PDB, *report)) {
+        if (DeduplicationSet.GetOrInsertNode(p.get()) != p.get())
+          continue;
+
         addEdgeToPath(PD.getActivePath(), PrevLoc, p->getLocation(), PDB.LC);
         updateStackPiecesWithMessage(*p, CallStack);
         PD.getActivePath().push_front(std::move(p));
