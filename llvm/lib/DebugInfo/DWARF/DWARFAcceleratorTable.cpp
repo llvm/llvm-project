@@ -83,6 +83,7 @@ bool DWARFAcceleratorTable::validateForms() {
            !FormValue.isFormClass(DWARFFormValue::FC_Flag)) ||
           FormValue.getForm() == dwarf::DW_FORM_sdata)
         return false;
+      break;
     default:
       break;
     }

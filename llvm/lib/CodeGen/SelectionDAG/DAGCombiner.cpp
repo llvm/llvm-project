@@ -10201,7 +10201,7 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
       case ISD::SETLT:
       case ISD::SETLE:
         std::swap(TrueOpnd, FalseOpnd);
-        // Fall through
+        LLVM_FALLTHROUGH;
       case ISD::SETOGT:
       case ISD::SETUGT:
       case ISD::SETOGE:

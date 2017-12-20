@@ -2606,56 +2606,32 @@ define <2 x float> @large_index(float* %base, <2 x i128> %ind, <2 x i1> %mask, <
 define <16 x float> @sext_i8_index(float* %base, <16 x i8> %ind) {
 ; KNL_64-LABEL: sext_i8_index:
 ; KNL_64:       # %bb.0:
-; KNL_64-NEXT:    vpmovsxbw %xmm0, %ymm0
-; KNL_64-NEXT:    vpmovsxwq %xmm0, %zmm1
-; KNL_64-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; KNL_64-NEXT:    vpmovsxwq %xmm0, %zmm0
+; KNL_64-NEXT:    vpmovsxbd %xmm0, %zmm1
 ; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
-; KNL_64-NEXT:    kxnorw %k0, %k0, %k2
-; KNL_64-NEXT:    vgatherqps (%rdi,%zmm0,4), %ymm2 {%k2}
-; KNL_64-NEXT:    vgatherqps (%rdi,%zmm1,4), %ymm0 {%k1}
-; KNL_64-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; KNL_64-NEXT:    vgatherdps (%rdi,%zmm1,4), %zmm0 {%k1}
 ; KNL_64-NEXT:    retq
 ;
 ; KNL_32-LABEL: sext_i8_index:
 ; KNL_32:       # %bb.0:
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; KNL_32-NEXT:    vpmovsxbw %xmm0, %ymm0
-; KNL_32-NEXT:    vpmovsxwq %xmm0, %zmm1
-; KNL_32-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; KNL_32-NEXT:    vpmovsxwq %xmm0, %zmm0
+; KNL_32-NEXT:    vpmovsxbd %xmm0, %zmm1
 ; KNL_32-NEXT:    kxnorw %k0, %k0, %k1
-; KNL_32-NEXT:    kxnorw %k0, %k0, %k2
-; KNL_32-NEXT:    vgatherqps (%eax,%zmm0,4), %ymm2 {%k2}
-; KNL_32-NEXT:    vgatherqps (%eax,%zmm1,4), %ymm0 {%k1}
-; KNL_32-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; KNL_32-NEXT:    vgatherdps (%eax,%zmm1,4), %zmm0 {%k1}
 ; KNL_32-NEXT:    retl
 ;
 ; SKX-LABEL: sext_i8_index:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpmovsxbw %xmm0, %ymm0
-; SKX-NEXT:    vpmovsxwq %xmm0, %zmm1
-; SKX-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; SKX-NEXT:    vpmovsxwq %xmm0, %zmm0
+; SKX-NEXT:    vpmovsxbd %xmm0, %zmm1
 ; SKX-NEXT:    kxnorw %k0, %k0, %k1
-; SKX-NEXT:    kxnorw %k0, %k0, %k2
-; SKX-NEXT:    vgatherqps (%rdi,%zmm0,4), %ymm2 {%k2}
-; SKX-NEXT:    vgatherqps (%rdi,%zmm1,4), %ymm0 {%k1}
-; SKX-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; SKX-NEXT:    vgatherdps (%rdi,%zmm1,4), %zmm0 {%k1}
 ; SKX-NEXT:    retq
 ;
 ; SKX_32-LABEL: sext_i8_index:
 ; SKX_32:       # %bb.0:
 ; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SKX_32-NEXT:    vpmovsxbw %xmm0, %ymm0
-; SKX_32-NEXT:    vpmovsxwq %xmm0, %zmm1
-; SKX_32-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; SKX_32-NEXT:    vpmovsxwq %xmm0, %zmm0
+; SKX_32-NEXT:    vpmovsxbd %xmm0, %zmm1
 ; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
-; SKX_32-NEXT:    kxnorw %k0, %k0, %k2
-; SKX_32-NEXT:    vgatherqps (%eax,%zmm0,4), %ymm2 {%k2}
-; SKX_32-NEXT:    vgatherqps (%eax,%zmm1,4), %ymm0 {%k1}
-; SKX_32-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; SKX_32-NEXT:    vgatherdps (%eax,%zmm1,4), %zmm0 {%k1}
 ; SKX_32-NEXT:    retl
 
   %sext_ind = sext <16 x i8> %ind to <16 x i64>
@@ -2669,40 +2645,42 @@ define <16 x float> @sext_i8_index(float* %base, <16 x i8> %ind) {
 define <8 x float> @sext_v8i8_index(float* %base, <8 x i8> %ind) {
 ; KNL_64-LABEL: sext_v8i8_index:
 ; KNL_64:       # %bb.0:
-; KNL_64-NEXT:    vpmovzxwq {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
-; KNL_64-NEXT:    vpsllq $56, %zmm0, %zmm0
-; KNL_64-NEXT:    vpsraq $56, %zmm0, %zmm1
+; KNL_64-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_64-NEXT:    vpslld $24, %ymm0, %ymm0
+; KNL_64-NEXT:    vpsrad $24, %ymm0, %ymm0
+; KNL_64-NEXT:    vpmovsxdq %ymm0, %zmm1
 ; KNL_64-NEXT:    vgatherqps (%rdi,%zmm1,4), %ymm0 {%k1}
 ; KNL_64-NEXT:    retq
 ;
 ; KNL_32-LABEL: sext_v8i8_index:
 ; KNL_32:       # %bb.0:
-; KNL_32-NEXT:    vpmovzxwq {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
+; KNL_32-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; KNL_32-NEXT:    vpsllq $56, %zmm0, %zmm0
-; KNL_32-NEXT:    vpsraq $56, %zmm0, %zmm1
+; KNL_32-NEXT:    vpslld $24, %ymm0, %ymm0
+; KNL_32-NEXT:    vpsrad $24, %ymm0, %ymm0
 ; KNL_32-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_32-NEXT:    vpmovsxdq %ymm0, %zmm1
 ; KNL_32-NEXT:    vgatherqps (%eax,%zmm1,4), %ymm0 {%k1}
 ; KNL_32-NEXT:    retl
 ;
 ; SKX-LABEL: sext_v8i8_index:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpmovzxwq {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
-; SKX-NEXT:    vpsllq $56, %zmm0, %zmm0
-; SKX-NEXT:    vpsraq $56, %zmm0, %zmm1
+; SKX-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; SKX-NEXT:    kxnorw %k0, %k0, %k1
-; SKX-NEXT:    vgatherqps (%rdi,%zmm1,4), %ymm0 {%k1}
+; SKX-NEXT:    vpslld $24, %ymm0, %ymm0
+; SKX-NEXT:    vpsrad $24, %ymm0, %ymm1
+; SKX-NEXT:    vgatherdps (%rdi,%ymm1,4), %ymm0 {%k1}
 ; SKX-NEXT:    retq
 ;
 ; SKX_32-LABEL: sext_v8i8_index:
 ; SKX_32:       # %bb.0:
-; SKX_32-NEXT:    vpmovzxwq {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
+; SKX_32-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SKX_32-NEXT:    vpsllq $56, %zmm0, %zmm0
-; SKX_32-NEXT:    vpsraq $56, %zmm0, %zmm1
+; SKX_32-NEXT:    vpslld $24, %ymm0, %ymm0
+; SKX_32-NEXT:    vpsrad $24, %ymm0, %ymm1
 ; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
-; SKX_32-NEXT:    vgatherqps (%eax,%zmm1,4), %ymm0 {%k1}
+; SKX_32-NEXT:    vgatherdps (%eax,%ymm1,4), %ymm0 {%k1}
 ; SKX_32-NEXT:    retl
 
   %sext_ind = sext <8 x i8> %ind to <8 x i64>

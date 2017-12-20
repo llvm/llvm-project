@@ -2561,29 +2561,23 @@ ARMExidxSentinelSection::ARMExidxSentinelSection()
 // The sentinel must have the PREL31 value of an address higher than any
 // address described by any other table entry.
 void ARMExidxSentinelSection::writeTo(uint8_t *Buf) {
-  // The Sections are sorted in order of ascending PREL31 address with the
-  // sentinel last. We need to find the InputSection that precedes the
-  // sentinel.
-  OutputSection *C = getParent();
-  InputSection *Highest = nullptr;
-  unsigned Skip = 1;
-  for (const BaseCommand *Base : llvm::reverse(C->SectionCommands)) {
-    if (!isa<InputSectionDescription>(Base))
-      continue;
-    auto L = cast<InputSectionDescription>(Base);
-    if (Skip >= L->Sections.size()) {
-      Skip -= L->Sections.size();
-      continue;
-    }
-    Highest = L->Sections[L->Sections.size() - Skip - 1];
-    break;
-  }
   assert(Highest);
-  InputSection *LS = Highest->getLinkOrderDep();
-  uint64_t S = LS->getParent()->Addr + LS->getOffset(LS->getSize());
+  uint64_t S =
+      Highest->getParent()->Addr + Highest->getOffset(Highest->getSize());
   uint64_t P = getVA();
   Target->relocateOne(Buf, R_ARM_PREL31, S - P);
   write32le(Buf + 4, 1);
+}
+
+// The sentinel has to be removed if there are no other .ARM.exidx entries.
+bool ARMExidxSentinelSection::empty() const {
+  OutputSection *OS = getParent();
+  for (auto *B : OS->SectionCommands)
+    if (auto *ISD = dyn_cast<InputSectionDescription>(B))
+      for (auto *S : ISD->Sections)
+        if (!isa<ARMExidxSentinelSection>(S))
+          return false;
+  return true;
 }
 
 ThunkSection::ThunkSection(OutputSection *OS, uint64_t Off)

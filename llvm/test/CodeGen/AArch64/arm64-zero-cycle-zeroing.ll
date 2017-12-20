@@ -87,4 +87,13 @@ for.end:
   ret double %v0
 }
 
+define <2 x i64> @t6() {
+; ALL-LABEL: t6:
+; CYCLONE: movi.16b v0, #0
+; KRYO: movi v0.2d, #0000000000000000
+; FALKOR: movi v0.2d, #0000000000000000
+ ret <2 x i64> zeroinitializer
+}
+
+
 declare double @sin(double)

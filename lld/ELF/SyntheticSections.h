@@ -785,6 +785,9 @@ public:
   ARMExidxSentinelSection();
   size_t getSize() const override { return 8; }
   void writeTo(uint8_t *Buf) override;
+  bool empty() const override;
+
+  InputSection *Highest = 0;
 };
 
 // A container for one or more linker generated thunks. Instances of these
