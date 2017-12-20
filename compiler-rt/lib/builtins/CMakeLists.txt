@@ -446,6 +446,12 @@ set(aarch64_SOURCES
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES})
 
+if (MINGW)
+  set(aarch64_SOURCES
+      ${aarch64_SOURCES}
+      aarch64/chkstk.S)
+endif()
+
 set(armhf_SOURCES ${arm_SOURCES})
 set(armv7_SOURCES ${arm_SOURCES})
 set(armv7s_SOURCES ${arm_SOURCES})
