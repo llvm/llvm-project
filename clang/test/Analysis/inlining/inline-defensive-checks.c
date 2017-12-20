@@ -190,3 +190,21 @@ void idcTrackZeroValueThroughUnaryPointerOperatorsWithArrayField(struct S2 *s) {
   idc(s);
   *(&(s->a[0])) = 7; // no-warning
 }
+
+void idcTrackConstraintThroughSymbolicRegion(int **x) {
+  idc(*x);
+  // FIXME: Should not warn.
+  **x = 7; // expected-warning{{Dereference of null pointer}}
+}
+
+int *idcPlainNull(int coin) {
+  if (coin)
+    return 0;
+  static int X;
+  return &X;
+}
+
+void idcTrackZeroValueThroughSymbolicRegion(int coin, int **x) {
+  *x = idcPlainNull(coin);
+  **x = 7; // no-warning
+}

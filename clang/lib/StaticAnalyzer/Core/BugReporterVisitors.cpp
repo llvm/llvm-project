@@ -1142,9 +1142,12 @@ bool bugreporter::trackNullOrUndefValue(const ExplodedNode *N,
     else
       RVal = state->getSVal(L->getRegion());
 
-    const MemRegion *RegionRVal = RVal.getAsRegion();
     report.addVisitor(llvm::make_unique<UndefOrNullArgVisitor>(L->getRegion()));
+    if (Optional<KnownSVal> KV = RVal.getAs<KnownSVal>())
+      report.addVisitor(llvm::make_unique<FindLastStoreBRVisitor>(
+          *KV, L->getRegion(), EnableNullFPSuppression));
 
+    const MemRegion *RegionRVal = RVal.getAsRegion();
     if (RegionRVal && isa<SymbolicRegion>(RegionRVal)) {
       report.markInteresting(RegionRVal);
       report.addVisitor(llvm::make_unique<TrackConstraintBRVisitor>(
