@@ -863,6 +863,7 @@ int PartialInlinerImpl::computeBBInlineCost(BasicBlock *BB) {
     case Instruction::GetElementPtr:
       if (cast<GetElementPtrInst>(I)->hasAllZeroIndices())
         continue;
+      break;
     default:
       break;
     }
