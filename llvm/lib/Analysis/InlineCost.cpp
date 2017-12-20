@@ -363,6 +363,7 @@ void CallAnalyzer::accumulateSROACost(DenseMap<Value *, int>::iterator CostIt,
 void CallAnalyzer::disableLoadElimination() {
   if (EnableLoadElimination) {
     Cost += LoadEliminationCost;
+    LoadEliminationCost = 0;
     EnableLoadElimination = false;
   }
 }
@@ -1097,7 +1098,7 @@ bool CallAnalyzer::visitLoad(LoadInst &I) {
   // by any stores or calls, this load is likely to be redundant and can be
   // eliminated.
   if (EnableLoadElimination &&
-      !LoadAddrSet.insert(I.getPointerOperand()).second) {
+      !LoadAddrSet.insert(I.getPointerOperand()).second && I.isUnordered()) {
     LoadEliminationCost += InlineConstants::InstrCost;
     return true;
   }

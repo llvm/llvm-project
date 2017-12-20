@@ -320,6 +320,7 @@ void X86Subtarget::initializeEnvironment() {
   HasSSEUnalignedMem = false;
   HasCmpxchg16b = false;
   UseLeaForSP = false;
+  HasFastVariableShuffle = false;
   HasFastPartialYMMorZMMWrite = false;
   HasFastGather = false;
   HasFastScalarFSQRT = false;

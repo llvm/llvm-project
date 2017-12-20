@@ -1674,6 +1674,7 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
           }
         }
       }
+      break;
     }
     default:
       break;

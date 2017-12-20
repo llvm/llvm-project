@@ -82,7 +82,7 @@ PreservedAnalyses CFGOnlyViewerPass::run(Function &F,
   return PreservedAnalyses::all();
 }
 
-static void writeCFGToDotFile(Function &F) {
+static void writeCFGToDotFile(Function &F, bool CFGOnly = false) {
   std::string Filename = ("cfg." + F.getName() + ".dot").str();
   errs() << "Writing '" << Filename << "'...";
 
@@ -90,7 +90,7 @@ static void writeCFGToDotFile(Function &F) {
   raw_fd_ostream File(Filename, EC, sys::fs::F_Text);
 
   if (!EC)
-    WriteGraph(File, (const Function*)&F);
+    WriteGraph(File, (const Function*)&F, CFGOnly);
   else
     errs() << "  error opening file for writing!";
   errs() << "\n";
@@ -134,7 +134,7 @@ namespace {
     }
 
     bool runOnFunction(Function &F) override {
-      writeCFGToDotFile(F);
+      writeCFGToDotFile(F, /*CFGOnly=*/true);
       return false;
     }
     void print(raw_ostream &OS, const Module* = nullptr) const override {}
@@ -152,7 +152,7 @@ INITIALIZE_PASS(CFGOnlyPrinterLegacyPass, "dot-cfg-only",
 
 PreservedAnalyses CFGOnlyPrinterPass::run(Function &F,
                                           FunctionAnalysisManager &AM) {
-  writeCFGToDotFile(F);
+  writeCFGToDotFile(F, /*CFGOnly=*/true);
   return PreservedAnalyses::all();
 }
 

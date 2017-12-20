@@ -8,15 +8,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/FuzzMutate/IRMutator.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/FuzzMutate/Operations.h"
 #include "llvm/FuzzMutate/Random.h"
 #include "llvm/FuzzMutate/RandomIRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar/DCE.h"
 
 using namespace llvm;
@@ -90,14 +92,14 @@ std::vector<fuzzerop::OpDescriptor> InjectorIRStrategy::getDefaultOps() {
   return Ops;
 }
 
-fuzzerop::OpDescriptor
+Optional<fuzzerop::OpDescriptor>
 InjectorIRStrategy::chooseOperation(Value *Src, RandomIRBuilder &IB) {
   auto OpMatchesPred = [&Src](fuzzerop::OpDescriptor &Op) {
     return Op.SourcePreds[0].matches({}, Src);
   };
   auto RS = makeSampler(IB.Rand, make_filter_range(Operations, OpMatchesPred));
   if (RS.isEmpty())
-    report_fatal_error("No available operations for src type");
+    return None;
   return *RS;
 }
 
@@ -120,10 +122,15 @@ void InjectorIRStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
 
   // Choose an operation that's constrained to be valid for the type of the
   // source, collect any other sources it needs, and then build it.
-  fuzzerop::OpDescriptor OpDesc = chooseOperation(Srcs[0], IB);
-  for (const auto &Pred : makeArrayRef(OpDesc.SourcePreds).slice(1))
+  auto OpDesc = chooseOperation(Srcs[0], IB);
+  // Bail if no operation was found
+  if (!OpDesc)
+    return;
+
+  for (const auto &Pred : makeArrayRef(OpDesc->SourcePreds).slice(1))
     Srcs.push_back(IB.findOrCreateSource(BB, InstsBefore, Srcs, Pred));
-  if (Value *Op = OpDesc.BuilderFunc(Srcs, Insts[IP])) {
+
+  if (Value *Op = OpDesc->BuilderFunc(Srcs, Insts[IP])) {
     // Find a sink and wire up the results of the operation.
     IB.connectToSink(BB, InstsAfter, Op);
   }

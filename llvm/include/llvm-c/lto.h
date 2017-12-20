@@ -757,17 +757,17 @@ extern void thinlto_codegen_add_cross_referenced_symbol(thinlto_code_gen_t cg,
  * @ingroup LLVMCTLTO
  *
  * These entry points control the ThinLTO cache. The cache is intended to
- * support incremental build, and thus needs to be persistent accross build.
- * The client enabled the cache by supplying a path to an existing directory.
+ * support incremental builds, and thus needs to be persistent across builds.
+ * The client enables the cache by supplying a path to an existing directory.
  * The code generator will use this to store objects files that may be reused
  * during a subsequent build.
  * To avoid filling the disk space, a few knobs are provided:
- *  - The pruning interval limit the frequency at which the garbage collector
- *    will try to scan the cache directory to prune it from expired entries.
- *    Setting to -1 disable the pruning (default).
+ *  - The pruning interval limits the frequency at which the garbage collector
+ *    will try to scan the cache directory to prune expired entries.
+ *    Setting to a negative number applies the maximum interval.
  *  - The pruning expiration time indicates to the garbage collector how old an
  *    entry needs to be to be removed.
- *  - Finally, the garbage collector can be instructed to prune the cache till
+ *  - Finally, the garbage collector can be instructed to prune the cache until
  *    the occupied space goes below a threshold.
  * @{
  */
@@ -782,9 +782,9 @@ extern void thinlto_codegen_set_cache_dir(thinlto_code_gen_t cg,
                                           const char *cache_dir);
 
 /**
- * Sets the cache pruning interval (in seconds). A negative value disable the
- * pruning. An unspecified default value will be applied, and a value of 0 will
- * be ignored.
+ * Sets the cache pruning interval (in seconds). A negative value sets the
+ * maximum possible pruning interval. An unspecified default value will be
+ * applied, and a value of 0 will be ignored.
  *
  * \since LTO_API_VERSION=18
  */

@@ -135,7 +135,7 @@ continue:
 }
 
 ; Check that we fallback on invoke translation failures.
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %0:_(s128) = G_FCONSTANT quad 2
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %0:_(s128) = G_FCONSTANT fp128 0xL00000000000000004000000000000000
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for test_quad_dump
 ; FALLBACK-WITH-REPORT-OUT-LABEL: test_quad_dump:
 define fp128 @test_quad_dump() {

@@ -5135,11 +5135,12 @@ bool AArch64FastISel::fastSelectInstruction(const Instruction *I) {
     return selectAtomicCmpXchg(cast<AtomicCmpXchgInst>(I));
   }
 
-  // fall-back to target-independent instruction selection.
-  return selectOperator(I, I->getOpcode());
   // Silence warnings.
   (void)&CC_AArch64_DarwinPCS_VarArg;
   (void)&CC_AArch64_Win64_VarArg;
+
+  // fall-back to target-independent instruction selection.
+  return selectOperator(I, I->getOpcode());
 }
 
 namespace llvm {

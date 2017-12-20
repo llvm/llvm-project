@@ -64,7 +64,8 @@ template<> struct MappingTraits<Symbol> {
     MappingNormalization<NormalizedSymbolID, SymbolID> NSymbolID(
         IO, Sym.ID);
     IO.mapRequired("ID", NSymbolID->HexString);
-    IO.mapRequired("QualifiedName", Sym.QualifiedName);
+    IO.mapRequired("Name", Sym.Name);
+    IO.mapRequired("Scope", Sym.Scope);
     IO.mapRequired("SymInfo", Sym.SymInfo);
     IO.mapRequired("CanonicalDeclaration", Sym.CanonicalDeclaration);
   }

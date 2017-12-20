@@ -19,6 +19,7 @@
 #include "Logger.h"
 #include "Path.h"
 #include "Protocol.h"
+#include "index/Index.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Sema/CodeCompleteOptions.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -59,6 +60,13 @@ struct CodeCompleteOptions {
   /// Limit the number of results returned (0 means no limit).
   /// If more results are available, we set CompletionList.isIncomplete.
   size_t Limit = 0;
+
+  // Populated internally by clangd, do not set.
+  /// If `Index` is set, it is used to augment the code completion
+  /// results.
+  /// FIXME(ioeric): we might want a better way to pass the index around inside
+  /// clangd.
+  const SymbolIndex *Index = nullptr;
 };
 
 /// Get code completions at a specified \p Pos in \p FileName.

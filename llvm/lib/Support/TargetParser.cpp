@@ -739,7 +739,6 @@ ARM::ProfileKind ARM::parseArchProfile(StringRef Arch) {
   case ARM::ArchKind::ARMV8_2A:
   case ARM::ArchKind::ARMV8_3A:
     return ARM::ProfileKind::A;
-    LLVM_FALLTHROUGH;
   case ARM::ArchKind::ARMV2:
   case ARM::ArchKind::ARMV2A:
   case ARM::ArchKind::ARMV3:

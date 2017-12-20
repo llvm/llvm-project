@@ -29,6 +29,7 @@ class GlobalValue;
 class MachineBasicBlock;
 class MachineInstr;
 class MachineRegisterInfo;
+class MCCFIInstruction;
 class MDNode;
 class ModuleSlotTracker;
 class TargetMachine;
@@ -249,6 +250,12 @@ public:
   /// Print a stack object reference.
   static void printStackObjectReference(raw_ostream &OS, unsigned FrameIndex,
                                         bool IsFixed, StringRef Name);
+
+  /// Print the offset with explicit +/- signs.
+  static void printOperandOffset(raw_ostream &OS, int64_t Offset);
+
+  /// Print an IRSlotNumber.
+  static void printIRSlotNumber(raw_ostream &OS, int Slot);
 
   /// Print the MachineOperand to \p os.
   /// Providing a valid \p TRI and \p IntrinsicInfo results in a more

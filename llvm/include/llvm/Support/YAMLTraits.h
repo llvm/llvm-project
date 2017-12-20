@@ -549,9 +549,9 @@ inline QuotingType needsQuotes(StringRef S) {
       // range.
       if (C <= 0x1F)
         return QuotingType::Double;
-      // C1 control block (0x80 - 0x9F) is excluded from the allowed character
-      // range.
-      if (C >= 0x80 && C <= 0x9F)
+
+      // Always double quote UTF-8.
+      if ((C & 0x80) != 0)
         return QuotingType::Double;
 
       // The character is not safe, at least simple quoting needed.

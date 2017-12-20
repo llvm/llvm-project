@@ -380,16 +380,6 @@ static void tryToGetTargetInfo(const MachineOperand &MO,
   }
 }
 
-static void printOffset(raw_ostream &OS, int64_t Offset) {
-  if (Offset == 0)
-    return;
-  if (Offset < 0) {
-    OS << " - " << -Offset;
-    return;
-  }
-  OS << " + " << Offset;
-}
-
 static const char *getTargetIndexName(const MachineFunction &MF, int Index) {
   const auto *TII = MF.getSubtarget().getInstrInfo();
   assert(TII && "expected instruction info");
@@ -410,6 +400,44 @@ static const char *getTargetFlagName(const TargetInstrInfo *TII, unsigned TF) {
     }
   }
   return nullptr;
+}
+
+static void printCFIRegister(unsigned DwarfReg, raw_ostream &OS,
+                             const TargetRegisterInfo *TRI) {
+  if (!TRI) {
+    OS << "%dwarfreg." << DwarfReg;
+    return;
+  }
+
+  int Reg = TRI->getLLVMRegNum(DwarfReg, true);
+  if (Reg == -1) {
+    OS << "<badreg>";
+    return;
+  }
+  OS << printReg(Reg, TRI);
+}
+
+static void printIRBlockReference(raw_ostream &OS, const BasicBlock &BB,
+                                  ModuleSlotTracker &MST) {
+  OS << "%ir-block.";
+  if (BB.hasName()) {
+    printLLVMNameWithoutPrefix(OS, BB.getName());
+    return;
+  }
+  Optional<int> Slot;
+  if (const Function *F = BB.getParent()) {
+    if (F == MST.getCurrentFunction()) {
+      Slot = MST.getLocalSlot(&BB);
+    } else if (const Module *M = F->getParent()) {
+      ModuleSlotTracker CustomMST(M, /*ShouldInitializeAllMetadata=*/false);
+      CustomMST.incorporateFunction(*F);
+      Slot = CustomMST.getLocalSlot(&BB);
+    }
+  }
+  if (Slot)
+    MachineOperand::printIRSlotNumber(OS, *Slot);
+  else
+    OS << "<unknown>";
 }
 
 void MachineOperand::printSubregIdx(raw_ostream &OS, uint64_t Index,
@@ -490,6 +518,125 @@ void MachineOperand::printStackObjectReference(raw_ostream &OS,
     OS << '.' << Name;
 }
 
+void MachineOperand::printOperandOffset(raw_ostream &OS, int64_t Offset) {
+  if (Offset == 0)
+    return;
+  if (Offset < 0) {
+    OS << " - " << -Offset;
+    return;
+  }
+  OS << " + " << Offset;
+}
+
+void MachineOperand::printIRSlotNumber(raw_ostream &OS, int Slot) {
+  if (Slot == -1)
+    OS << "<badref>";
+  else
+    OS << Slot;
+}
+
+static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
+                     const TargetRegisterInfo *TRI) {
+  switch (CFI.getOperation()) {
+  case MCCFIInstruction::OpSameValue:
+    OS << "same_value ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(CFI.getRegister(), OS, TRI);
+    break;
+  case MCCFIInstruction::OpRememberState:
+    OS << "remember_state ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    break;
+  case MCCFIInstruction::OpRestoreState:
+    OS << "restore_state ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    break;
+  case MCCFIInstruction::OpOffset:
+    OS << "offset ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(CFI.getRegister(), OS, TRI);
+    OS << ", " << CFI.getOffset();
+    break;
+  case MCCFIInstruction::OpDefCfaRegister:
+    OS << "def_cfa_register ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(CFI.getRegister(), OS, TRI);
+    break;
+  case MCCFIInstruction::OpDefCfaOffset:
+    OS << "def_cfa_offset ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    OS << CFI.getOffset();
+    break;
+  case MCCFIInstruction::OpDefCfa:
+    OS << "def_cfa ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(CFI.getRegister(), OS, TRI);
+    OS << ", " << CFI.getOffset();
+    break;
+  case MCCFIInstruction::OpRelOffset:
+    OS << "rel_offset ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(CFI.getRegister(), OS, TRI);
+    OS << ", " << CFI.getOffset();
+    break;
+  case MCCFIInstruction::OpAdjustCfaOffset:
+    OS << "adjust_cfa_offset ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    OS << CFI.getOffset();
+    break;
+  case MCCFIInstruction::OpRestore:
+    OS << "restore ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(CFI.getRegister(), OS, TRI);
+    break;
+  case MCCFIInstruction::OpEscape: {
+    OS << "escape ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    if (!CFI.getValues().empty()) {
+      size_t e = CFI.getValues().size() - 1;
+      for (size_t i = 0; i < e; ++i)
+        OS << format("0x%02x", uint8_t(CFI.getValues()[i])) << ", ";
+      OS << format("0x%02x", uint8_t(CFI.getValues()[e])) << ", ";
+    }
+    break;
+  }
+  case MCCFIInstruction::OpUndefined:
+    OS << "undefined ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(CFI.getRegister(), OS, TRI);
+    break;
+  case MCCFIInstruction::OpRegister:
+    OS << "register ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(CFI.getRegister(), OS, TRI);
+    OS << ", ";
+    printCFIRegister(CFI.getRegister2(), OS, TRI);
+    break;
+  case MCCFIInstruction::OpWindowSave:
+    OS << "window_save ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    break;
+  default:
+    // TODO: Print the other CFI Operations.
+    OS << "<unserializable cfi directive>";
+    break;
+  }
+}
+
 void MachineOperand::print(raw_ostream &OS, const TargetRegisterInfo *TRI,
                            const TargetIntrinsicInfo *IntrinsicInfo) const {
   tryToGetTargetInfo(*this, TRI, IntrinsicInfo);
@@ -561,29 +708,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     getCImm()->printAsOperand(OS, /*PrintType=*/true, MST);
     break;
   case MachineOperand::MO_FPImmediate:
-    if (getFPImm()->getType()->isFloatTy()) {
-      OS << getFPImm()->getValueAPF().convertToFloat();
-    } else if (getFPImm()->getType()->isHalfTy()) {
-      APFloat APF = getFPImm()->getValueAPF();
-      bool Unused;
-      APF.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven, &Unused);
-      OS << "half " << APF.convertToFloat();
-    } else if (getFPImm()->getType()->isFP128Ty()) {
-      APFloat APF = getFPImm()->getValueAPF();
-      SmallString<16> Str;
-      getFPImm()->getValueAPF().toString(Str);
-      OS << "quad " << Str;
-    } else if (getFPImm()->getType()->isX86_FP80Ty()) {
-      APFloat APF = getFPImm()->getValueAPF();
-      OS << "x86_fp80 0xK";
-      APInt API = APF.bitcastToAPInt();
-      OS << format_hex_no_prefix(API.getHiBits(16).getZExtValue(), 4,
-                                 /*Upper=*/true);
-      OS << format_hex_no_prefix(API.getLoBits(64).getZExtValue(), 16,
-                                 /*Upper=*/true);
-    } else {
-      OS << getFPImm()->getValueAPF().convertToDouble();
-    }
+    getFPImm()->printAsOperand(OS, /*PrintType=*/true, MST);
     break;
   case MachineOperand::MO_MachineBasicBlock:
     OS << printMBBReference(*getMBB());
@@ -606,7 +731,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   case MachineOperand::MO_ConstantPoolIndex:
     OS << "%const." << getIndex();
-    printOffset(OS, getOffset());
+    printOperandOffset(OS, getOffset());
     break;
   case MachineOperand::MO_TargetIndex: {
     OS << "target-index(";
@@ -615,7 +740,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
       if (const auto *TargetIndexName = getTargetIndexName(*MF, getIndex()))
         Name = TargetIndexName;
     OS << Name << ')';
-    printOffset(OS, getOffset());
+    printOperandOffset(OS, getOffset());
     break;
   }
   case MachineOperand::MO_JumpTableIndex:
@@ -623,7 +748,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     break;
   case MachineOperand::MO_GlobalAddress:
     getGlobal()->printAsOperand(OS, /*PrintType=*/false, MST);
-    printOffset(OS, getOffset());
+    printOperandOffset(OS, getOffset());
     break;
   case MachineOperand::MO_ExternalSymbol: {
     StringRef Name = getSymbolName();
@@ -633,16 +758,19 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     } else {
       printLLVMNameWithoutPrefix(OS, Name);
     }
-    printOffset(OS, getOffset());
+    printOperandOffset(OS, getOffset());
     break;
   }
-  case MachineOperand::MO_BlockAddress:
-    OS << '<';
-    getBlockAddress()->printAsOperand(OS, /*PrintType=*/false, MST);
-    if (getOffset())
-      OS << "+" << getOffset();
-    OS << '>';
+  case MachineOperand::MO_BlockAddress: {
+    OS << "blockaddress(";
+    getBlockAddress()->getFunction()->printAsOperand(OS, /*PrintType=*/false,
+                                                     MST);
+    OS << ", ";
+    printIRBlockReference(OS, *getBlockAddress()->getBasicBlock(), MST);
+    OS << ')';
+    MachineOperand::printOperandOffset(OS, getOffset());
     break;
+  }
   case MachineOperand::MO_RegisterMask: {
     OS << "<regmask";
     if (TRI) {
@@ -693,23 +821,27 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   case MachineOperand::MO_MCSymbol:
     printSymbol(OS, *getMCSymbol());
     break;
-  case MachineOperand::MO_CFIIndex:
-    OS << "<call frame instruction>";
+  case MachineOperand::MO_CFIIndex: {
+    if (const MachineFunction *MF = getMFIfAvailable(*this))
+      printCFI(OS, MF->getFrameInstructions()[getCFIIndex()], TRI);
+    else
+      OS << "<cfi directive>";
     break;
+  }
   case MachineOperand::MO_IntrinsicID: {
     Intrinsic::ID ID = getIntrinsicID();
     if (ID < Intrinsic::num_intrinsics)
-      OS << "<intrinsic:@" << Intrinsic::getName(ID, None) << '>';
+      OS << "intrinsic(@" << Intrinsic::getName(ID, None) << ')';
     else if (IntrinsicInfo)
-      OS << "<intrinsic:@" << IntrinsicInfo->getName(ID) << '>';
+      OS << "intrinsic(@" << IntrinsicInfo->getName(ID) << ')';
     else
-      OS << "<intrinsic:" << ID << '>';
+      OS << "intrinsic(" << ID << ')';
     break;
   }
   case MachineOperand::MO_Predicate: {
     auto Pred = static_cast<CmpInst::Predicate>(getPredicate());
-    OS << '<' << (CmpInst::isIntPredicate(Pred) ? "intpred" : "floatpred")
-       << CmpInst::getPredicateName(Pred) << '>';
+    OS << (CmpInst::isIntPredicate(Pred) ? "int" : "float") << "pred("
+       << CmpInst::getPredicateName(Pred) << ')';
     break;
   }
   }

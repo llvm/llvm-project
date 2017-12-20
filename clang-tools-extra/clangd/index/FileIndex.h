@@ -58,9 +58,9 @@ class FileIndex : public SymbolIndex {
 public:
   /// \brief Update symbols in \p Path with symbols in \p AST. If \p AST is
   /// nullptr, this removes all symbols in the file
-  void update(Context &Ctx, PathRef Path, ParsedAST *AST);
+  void update(const Context &Ctx, PathRef Path, ParsedAST *AST);
 
-  bool fuzzyFind(Context &Ctx, const FuzzyFindRequest &Req,
+  bool fuzzyFind(const Context &Ctx, const FuzzyFindRequest &Req,
                  std::function<void(const Symbol &)> Callback) const override;
 
 private:

@@ -1,0 +1,46 @@
+# RUN: llc -march=mips -mcpu=mips32r6 -mattr=+micromips %s -start-after=xray-instrumentation -o - -show-mc-encoding | FileCheck %s
+
+# Test that the 'sll $zero, $zero, 0' is correctly recognized as a real
+# instruction rather than some unimplemented opcode for the purposes of
+# encoding an instruction.
+
+# CHECK-LABEL: a:
+# CHECK:  nop                           # encoding: [0x00,0x00,0x00,0x00]
+# CHECK:  jrc   $ra                     # encoding: [0x45,0xbf]
+---
+name:            a
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: false
+registers:
+liveins:
+  - { reg: '%a0', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+constants:
+body:             |
+  bb.0.entry:
+    renamable %zero = SLL_MMR6 killed renamable %zero, 0
+    JRC16_MM undef %ra, implicit %v0
+
+...

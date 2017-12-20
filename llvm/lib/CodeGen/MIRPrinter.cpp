@@ -157,18 +157,14 @@ public:
   void print(const MachineBasicBlock &MBB);
 
   void print(const MachineInstr &MI);
-  void printIRBlockReference(const BasicBlock &BB);
   void printIRValueReference(const Value &V);
   void printStackObjectReference(int FrameIndex);
-  void printOffset(int64_t Offset);
   void print(const MachineInstr &MI, unsigned OpIdx,
              const TargetRegisterInfo *TRI, bool ShouldPrintRegisterTies,
              LLT TypeToPrint, bool PrintDef = true);
   void print(const LLVMContext &Context, const TargetInstrInfo &TII,
              const MachineMemOperand &Op);
   void printSyncScope(const LLVMContext &Context, SyncScope::ID SSID);
-
-  void print(const MCCFIInstruction &CFI, const TargetRegisterInfo *TRI);
 };
 
 } // end namespace llvm
@@ -707,32 +703,6 @@ void MIPrinter::print(const MachineInstr &MI) {
   }
 }
 
-static void printIRSlotNumber(raw_ostream &OS, int Slot) {
-  if (Slot == -1)
-    OS << "<badref>";
-  else
-    OS << Slot;
-}
-
-void MIPrinter::printIRBlockReference(const BasicBlock &BB) {
-  OS << "%ir-block.";
-  if (BB.hasName()) {
-    printLLVMNameWithoutPrefix(OS, BB.getName());
-    return;
-  }
-  const Function *F = BB.getParent();
-  int Slot;
-  if (F == MST.getCurrentFunction()) {
-    Slot = MST.getLocalSlot(&BB);
-  } else {
-    ModuleSlotTracker CustomMST(F->getParent(),
-                                /*ShouldInitializeAllMetadata=*/false);
-    CustomMST.incorporateFunction(*F);
-    Slot = CustomMST.getLocalSlot(&BB);
-  }
-  printIRSlotNumber(OS, Slot);
-}
-
 void MIPrinter::printIRValueReference(const Value &V) {
   if (isa<GlobalValue>(V)) {
     V.printAsOperand(OS, /*PrintType=*/false, MST);
@@ -750,7 +720,7 @@ void MIPrinter::printIRValueReference(const Value &V) {
     printLLVMNameWithoutPrefix(OS, V.getName());
     return;
   }
-  printIRSlotNumber(OS, MST.getLocalSlot(&V));
+  MachineOperand::printIRSlotNumber(OS, MST.getLocalSlot(&V));
 }
 
 void MIPrinter::printStackObjectReference(int FrameIndex) {
@@ -760,16 +730,6 @@ void MIPrinter::printStackObjectReference(int FrameIndex) {
   const FrameIndexOperand &Operand = ObjectInfo->second;
   MachineOperand::printStackObjectReference(OS, Operand.ID, Operand.IsFixed,
                                             Operand.Name);
-}
-
-void MIPrinter::printOffset(int64_t Offset) {
-  if (Offset == 0)
-    return;
-  if (Offset < 0) {
-    OS << " - " << -Offset;
-    return;
-  }
-  OS << " + " << Offset;
 }
 
 void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
@@ -787,6 +747,7 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
     LLVM_FALLTHROUGH;
   case MachineOperand::MO_Register:
   case MachineOperand::MO_CImmediate:
+  case MachineOperand::MO_FPImmediate:
   case MachineOperand::MO_MachineBasicBlock:
   case MachineOperand::MO_ConstantPoolIndex:
   case MachineOperand::MO_TargetIndex:
@@ -795,7 +756,11 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
   case MachineOperand::MO_GlobalAddress:
   case MachineOperand::MO_RegisterLiveOut:
   case MachineOperand::MO_Metadata:
-  case MachineOperand::MO_MCSymbol: {
+  case MachineOperand::MO_MCSymbol:
+  case MachineOperand::MO_CFIIndex:
+  case MachineOperand::MO_IntrinsicID:
+  case MachineOperand::MO_Predicate:
+  case MachineOperand::MO_BlockAddress: {
     unsigned TiedOperandIdx = 0;
     if (ShouldPrintRegisterTies && Op.isReg() && Op.isTied() && !Op.isDef())
       TiedOperandIdx = Op.getParent()->findTiedOperandIdx(OpIdx);
@@ -804,20 +769,8 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
              TiedOperandIdx, TRI, TII);
     break;
   }
-  case MachineOperand::MO_FPImmediate:
-    Op.getFPImm()->printAsOperand(OS, /*PrintType=*/true, MST);
-    break;
   case MachineOperand::MO_FrameIndex:
     printStackObjectReference(Op.getIndex());
-    break;
-  case MachineOperand::MO_BlockAddress:
-    OS << "blockaddress(";
-    Op.getBlockAddress()->getFunction()->printAsOperand(OS, /*PrintType=*/false,
-                                                        MST);
-    OS << ", ";
-    printIRBlockReference(*Op.getBlockAddress()->getBasicBlock());
-    OS << ')';
-    printOffset(Op.getOffset());
     break;
   case MachineOperand::MO_RegisterMask: {
     auto RegMaskInfo = RegisterMaskIds.find(Op.getRegMask());
@@ -825,28 +778,6 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
       OS << StringRef(TRI->getRegMaskNames()[RegMaskInfo->second]).lower();
     else
       printCustomRegMask(Op.getRegMask(), OS, TRI);
-    break;
-  }
-  case MachineOperand::MO_CFIIndex: {
-    const MachineFunction &MF = *Op.getParent()->getMF();
-    print(MF.getFrameInstructions()[Op.getCFIIndex()], TRI);
-    break;
-  }
-  case MachineOperand::MO_IntrinsicID: {
-    Intrinsic::ID ID = Op.getIntrinsicID();
-    if (ID < Intrinsic::num_intrinsics)
-      OS << "intrinsic(@" << Intrinsic::getName(ID, None) << ')';
-    else {
-      const MachineFunction &MF = *Op.getParent()->getMF();
-      const TargetIntrinsicInfo *TII = MF.getTarget().getIntrinsicInfo();
-      OS << "intrinsic(@" << TII->getName(ID) << ')';
-    }
-    break;
-  }
-  case MachineOperand::MO_Predicate: {
-    auto Pred = static_cast<CmpInst::Predicate>(Op.getPredicate());
-    OS << (CmpInst::isIntPredicate(Pred) ? "int" : "float") << "pred("
-       << CmpInst::getPredicateName(Pred) << ')';
     break;
   }
   }
@@ -938,7 +869,7 @@ void MIPrinter::print(const LLVMContext &Context, const TargetInstrInfo &TII,
       break;
     }
   }
-  printOffset(Op.getOffset());
+  MachineOperand::printOperandOffset(OS, Op.getOffset());
   if (Op.getBaseAlignment() != Op.getSize())
     OS << ", align " << Op.getBaseAlignment();
   auto AAInfo = Op.getAAInfo();
@@ -975,118 +906,6 @@ void MIPrinter::printSyncScope(const LLVMContext &Context, SyncScope::ID SSID) {
     OS << "\") ";
     break;
   }
-  }
-}
-
-static void printCFIRegister(unsigned DwarfReg, raw_ostream &OS,
-                             const TargetRegisterInfo *TRI) {
-  int Reg = TRI->getLLVMRegNum(DwarfReg, true);
-  if (Reg == -1) {
-    OS << "<badreg>";
-    return;
-  }
-  OS << printReg(Reg, TRI);
-}
-
-void MIPrinter::print(const MCCFIInstruction &CFI,
-                      const TargetRegisterInfo *TRI) {
-  switch (CFI.getOperation()) {
-  case MCCFIInstruction::OpSameValue:
-    OS << "same_value ";
-    if (MCSymbol *Label = CFI.getLabel())
-      MachineOperand::printSymbol(OS, *Label);
-    printCFIRegister(CFI.getRegister(), OS, TRI);
-    break;
-  case MCCFIInstruction::OpRememberState:
-    OS << "remember_state ";
-    if (MCSymbol *Label = CFI.getLabel())
-      MachineOperand::printSymbol(OS, *Label);
-    break;
-  case MCCFIInstruction::OpRestoreState:
-    OS << "restore_state ";
-    if (MCSymbol *Label = CFI.getLabel())
-      MachineOperand::printSymbol(OS, *Label);
-    break;
-  case MCCFIInstruction::OpOffset:
-    OS << "offset ";
-    if (MCSymbol *Label = CFI.getLabel())
-      MachineOperand::printSymbol(OS, *Label);
-    printCFIRegister(CFI.getRegister(), OS, TRI);
-    OS << ", " << CFI.getOffset();
-    break;
-  case MCCFIInstruction::OpDefCfaRegister:
-    OS << "def_cfa_register ";
-    if (MCSymbol *Label = CFI.getLabel())
-      MachineOperand::printSymbol(OS, *Label);
-    printCFIRegister(CFI.getRegister(), OS, TRI);
-    break;
-  case MCCFIInstruction::OpDefCfaOffset:
-    OS << "def_cfa_offset ";
-    if (MCSymbol *Label = CFI.getLabel())
-      MachineOperand::printSymbol(OS, *Label);
-    OS << CFI.getOffset();
-    break;
-  case MCCFIInstruction::OpDefCfa:
-    OS << "def_cfa ";
-    if (MCSymbol *Label = CFI.getLabel())
-      MachineOperand::printSymbol(OS, *Label);
-    printCFIRegister(CFI.getRegister(), OS, TRI);
-    OS << ", " << CFI.getOffset();
-    break;
-  case MCCFIInstruction::OpRelOffset:
-    OS << "rel_offset ";
-    if (MCSymbol *Label = CFI.getLabel())
-      MachineOperand::printSymbol(OS, *Label);
-    printCFIRegister(CFI.getRegister(), OS, TRI);
-    OS << ", " << CFI.getOffset();
-    break;
-  case MCCFIInstruction::OpAdjustCfaOffset:
-    OS << "adjust_cfa_offset ";
-    if (MCSymbol *Label = CFI.getLabel())
-      MachineOperand::printSymbol(OS, *Label);
-    OS << CFI.getOffset();
-    break;
-  case MCCFIInstruction::OpRestore:
-    OS << "restore ";
-    if (MCSymbol *Label = CFI.getLabel())
-      MachineOperand::printSymbol(OS, *Label);
-    printCFIRegister(CFI.getRegister(), OS, TRI);
-    break;
-  case MCCFIInstruction::OpEscape: {
-    OS << "escape ";
-    if (MCSymbol *Label = CFI.getLabel())
-      MachineOperand::printSymbol(OS, *Label);
-    if (!CFI.getValues().empty()) {
-      size_t e = CFI.getValues().size() - 1;
-      for (size_t i = 0; i < e; ++i)
-        OS << format("0x%02x", uint8_t(CFI.getValues()[i])) << ", ";
-      OS << format("0x%02x", uint8_t(CFI.getValues()[e])) << ", ";
-    }
-    break;
-  }
-  case MCCFIInstruction::OpUndefined:
-    OS << "undefined ";
-    if (MCSymbol *Label = CFI.getLabel())
-      MachineOperand::printSymbol(OS, *Label);
-    printCFIRegister(CFI.getRegister(), OS, TRI);
-    break;
-  case MCCFIInstruction::OpRegister:
-    OS << "register ";
-    if (MCSymbol *Label = CFI.getLabel())
-      MachineOperand::printSymbol(OS, *Label);
-    printCFIRegister(CFI.getRegister(), OS, TRI);
-    OS << ", ";
-    printCFIRegister(CFI.getRegister2(), OS, TRI);
-    break;
-  case MCCFIInstruction::OpWindowSave:
-    OS << "window_save ";
-    if (MCSymbol *Label = CFI.getLabel())
-      MachineOperand::printSymbol(OS, *Label);
-    break;
-  default:
-    // TODO: Print the other CFI Operations.
-    OS << "<unserializable cfi operation>";
-    break;
   }
 }
 
