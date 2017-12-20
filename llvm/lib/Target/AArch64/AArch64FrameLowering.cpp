@@ -97,6 +97,7 @@
 #include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
 #include "AArch64TargetMachine.h"
+#include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
@@ -335,6 +336,22 @@ bool AArch64FrameLowering::canUseAsPrologue(
   return findScratchNonCalleeSaveRegister(TmpMBB) != AArch64::NoRegister;
 }
 
+static bool windowsRequiresStackProbe(MachineFunction &MF,
+                                      unsigned StackSizeInBytes) {
+  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+  if (!Subtarget.isTargetWindows())
+    return false;
+  const Function &F = MF.getFunction();
+  // TODO: When implementing stack protectors, take that into account
+  // for the probe threshold.
+  unsigned StackProbeSize = 4096;
+  if (F.hasFnAttribute("stack-probe-size"))
+    F.getFnAttribute("stack-probe-size")
+        .getValueAsString()
+        .getAsInteger(0, StackProbeSize);
+  return StackSizeInBytes >= StackProbeSize;
+}
+
 bool AArch64FrameLowering::shouldCombineCSRLocalStackBump(
     MachineFunction &MF, unsigned StackBumpBytes) const {
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
@@ -347,7 +364,7 @@ bool AArch64FrameLowering::shouldCombineCSRLocalStackBump(
 
   // 512 is the maximum immediate for stp/ldp that will be used for
   // callee-save save/restores
-  if (StackBumpBytes >= 512)
+  if (StackBumpBytes >= 512 || windowsRequiresStackProbe(MF, StackBumpBytes))
     return false;
 
   if (MFI.hasVarSizedObjects())
@@ -478,7 +495,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     return;
 
   int NumBytes = (int)MFI.getStackSize();
-  if (!AFI->hasStackFrame()) {
+  if (!AFI->hasStackFrame() && !windowsRequiresStackProbe(MF, NumBytes)) {
     assert(!HasFP && "unexpected function without stack frame but with FP");
 
     // All of the stack allocation is for locals.
@@ -548,6 +565,44 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     // This code marks the instruction(s) that set the FP also.
     emitFrameOffset(MBB, MBBI, DL, AArch64::FP, AArch64::SP, FPOffset, TII,
                     MachineInstr::FrameSetup);
+  }
+
+  if (windowsRequiresStackProbe(MF, NumBytes)) {
+    uint32_t NumWords = NumBytes >> 4;
+
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::MOVi64imm), AArch64::X15)
+        .addImm(NumWords)
+        .setMIFlags(MachineInstr::FrameSetup);
+
+    switch (MF.getTarget().getCodeModel()) {
+    case CodeModel::Small:
+    case CodeModel::Medium:
+    case CodeModel::Kernel:
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::BL))
+          .addExternalSymbol("__chkstk")
+          .addReg(AArch64::X15, RegState::Implicit)
+          .setMIFlags(MachineInstr::FrameSetup);
+      break;
+    case CodeModel::Large:
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::MOVaddrEXT))
+          .addReg(AArch64::X16, RegState::Define)
+          .addExternalSymbol("__chkstk")
+          .addExternalSymbol("__chkstk")
+          .setMIFlags(MachineInstr::FrameSetup);
+
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::BLR))
+          .addReg(AArch64::X16, RegState::Kill)
+          .addReg(AArch64::X15, RegState::Implicit | RegState::Define)
+          .setMIFlags(MachineInstr::FrameSetup);
+      break;
+    }
+
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::SUBXrx64), AArch64::SP)
+        .addReg(AArch64::SP, RegState::Kill)
+        .addReg(AArch64::X15, RegState::Kill)
+        .addImm(AArch64_AM::getArithExtendImm(AArch64_AM::UXTX, 4))
+        .setMIFlags(MachineInstr::FrameSetup);
+    NumBytes = 0;
   }
 
   // Allocate space for the rest of the frame.
@@ -1164,18 +1219,32 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   unsigned UnspilledCSGPR = AArch64::NoRegister;
   unsigned UnspilledCSGPRPaired = AArch64::NoRegister;
 
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  const MCPhysReg *CSRegs = RegInfo->getCalleeSavedRegs(&MF);
+
+  unsigned BasePointerReg = RegInfo->hasBasePointer(MF)
+                                ? RegInfo->getBaseRegister()
+                                : (unsigned)AArch64::NoRegister;
+
+  unsigned SpillEstimate = SavedRegs.count();
+  for (unsigned i = 0; CSRegs[i]; ++i) {
+    unsigned Reg = CSRegs[i];
+    unsigned PairedReg = CSRegs[i ^ 1];
+    if (Reg == BasePointerReg)
+      SpillEstimate++;
+    if (produceCompactUnwindFrame(MF) && !SavedRegs.test(PairedReg))
+      SpillEstimate++;
+  }
+  SpillEstimate += 2; // Conservatively include FP+LR in the estimate
+  unsigned StackEstimate = MFI.estimateStackSize(MF) + 8 * SpillEstimate;
+
   // The frame record needs to be created by saving the appropriate registers
-  if (hasFP(MF)) {
+  if (hasFP(MF) || windowsRequiresStackProbe(MF, StackEstimate)) {
     SavedRegs.set(AArch64::FP);
     SavedRegs.set(AArch64::LR);
   }
 
-  unsigned BasePointerReg = AArch64::NoRegister;
-  if (RegInfo->hasBasePointer(MF))
-    BasePointerReg = RegInfo->getBaseRegister();
-
   unsigned ExtraCSSpill = 0;
-  const MCPhysReg *CSRegs = RegInfo->getCalleeSavedRegs(&MF);
   // Figure out which callee-saved registers to save/restore.
   for (unsigned i = 0; CSRegs[i]; ++i) {
     const unsigned Reg = CSRegs[i];
@@ -1217,7 +1286,6 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
 
   // The CSR spill slots have not been allocated yet, so estimateStackSize
   // won't include them.
-  MachineFrameInfo &MFI = MF.getFrameInfo();
   unsigned CFSize = MFI.estimateStackSize(MF) + 8 * NumRegsSpilled;
   DEBUG(dbgs() << "Estimated stack frame size: " << CFSize << " bytes.\n");
   unsigned EstimatedStackSizeLimit = estimateRSStackSizeLimit(MF);
