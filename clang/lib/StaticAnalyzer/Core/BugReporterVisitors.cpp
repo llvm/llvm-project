@@ -985,12 +985,8 @@ bool bugreporter::trackNullOrUndefValue(const ExplodedNode *N,
   if (!S || !N)
     return false;
 
-  if (const Expr *Ex = dyn_cast<Expr>(S)) {
-    Ex = Ex->IgnoreParenCasts();
-    const Expr *PeeledEx = peelOffOuterExpr(Ex, N);
-    if (Ex != PeeledEx)
-      S = PeeledEx;
-  }
+  if (const Expr *Ex = dyn_cast<Expr>(S))
+    S = peelOffOuterExpr(Ex, N);
 
   const Expr *Inner = nullptr;
   if (const Expr *Ex = dyn_cast<Expr>(S)) {
