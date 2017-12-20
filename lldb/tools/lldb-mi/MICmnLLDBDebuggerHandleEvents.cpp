@@ -18,6 +18,7 @@
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBUnixSignals.h"
+#include "llvm/Support/Compiler.h"
 #ifdef _WIN32
 #include <io.h> // For the ::_access()
 #else
@@ -899,6 +900,7 @@ bool CMICmnLLDBDebuggerHandleEvents::HandleProcessEventBroadcastBitStateChanged(
     bOk = HandleProcessEventStateStopped(vEvent, bShouldBrk);
     if (bShouldBrk)
       break;
+    LLVM_FALLTHROUGH;
   case lldb::eStateCrashed:
   case lldb::eStateSuspended:
     pEventType = "eStateSuspended";

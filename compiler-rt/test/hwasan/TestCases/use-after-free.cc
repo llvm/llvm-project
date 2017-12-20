@@ -1,7 +1,10 @@
-// RUN: %clangxx_hwasan -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-%os --check-prefix=CHECK
-// RUN: %clangxx_hwasan -O1 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-%os --check-prefix=CHECK
-// RUN: %clangxx_hwasan -O2 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-%os --check-prefix=CHECK
-// RUN: %clangxx_hwasan -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-%os --check-prefix=CHECK
+// RUN: %clangxx_hwasan -O0 -DLOAD %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK,LOAD
+// RUN: %clangxx_hwasan -O1 -DLOAD %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK,LOAD
+// RUN: %clangxx_hwasan -O2 -DLOAD %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK,LOAD
+// RUN: %clangxx_hwasan -O3 -DLOAD %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK,LOAD
+
+// RUN: %clangxx_hwasan -O0 -DSTORE %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK,STORE
+
 // REQUIRES: stable-runtime
 
 #include <stdlib.h>
@@ -9,20 +12,28 @@
 
 int main() {
   __hwasan_enable_allocator_tagging();
-  char *x = (char*)malloc(10);
+  char * volatile x = (char*)malloc(10);
   free(x);
   __hwasan_disable_allocator_tagging();
+#ifdef STORE
+  x[5] = 42;
+#endif
+#ifdef LOAD
   return x[5];
-  // CHECK: READ of size 1 at
-  // CHECK: #0 {{.*}} in main {{.*}}use-after-free.cc:15
+#endif
+  // LOAD: READ of size 1 at
+  // LOAD: #0 {{.*}} in main {{.*}}use-after-free.cc:22
+
+  // STORE: WRITE of size 1 at
+  // STORE: #0 {{.*}} in main {{.*}}use-after-free.cc:19
 
   // CHECK: freed here:
   // CHECK: #0 {{.*}} in free {{.*}}hwasan_interceptors.cc
-  // CHECK: #1 {{.*}} in main {{.*}}use-after-free.cc:13
+  // CHECK: #1 {{.*}} in main {{.*}}use-after-free.cc:16
 
   // CHECK: previously allocated here:
   // CHECK: #0 {{.*}} in __interceptor_malloc {{.*}}hwasan_interceptors.cc
-  // CHECK: #1 {{.*}} in main {{.*}}use-after-free.cc:12
+  // CHECK: #1 {{.*}} in main {{.*}}use-after-free.cc:15
 
   // CHECK: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in main
 }

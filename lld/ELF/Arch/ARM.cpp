@@ -37,8 +37,8 @@ public:
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
-  void addPltSymbols(InputSectionBase *IS, uint64_t Off) const override;
-  void addPltHeaderSymbols(InputSectionBase *ISD) const override;
+  void addPltSymbols(InputSection &IS, uint64_t Off) const override;
+  void addPltHeaderSymbols(InputSection &ISD) const override;
   bool needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
                   uint64_t BranchAddr, const Symbol &S) const override;
   bool inBranchRange(RelType Type, uint64_t Src, uint64_t Dst) const override;
@@ -232,8 +232,7 @@ void ARM::writePltHeader(uint8_t *Buf) const {
   write32le(Buf + 28, TrapInstr);
 }
 
-void ARM::addPltHeaderSymbols(InputSectionBase *ISD) const {
-  auto *IS = cast<InputSection>(ISD);
+void ARM::addPltHeaderSymbols(InputSection &IS) const {
   addSyntheticLocal("$a", STT_NOTYPE, 0, 0, IS);
   addSyntheticLocal("$d", STT_NOTYPE, 16, 0, IS);
 }
@@ -282,8 +281,7 @@ void ARM::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
   write32le(Buf + 12, TrapInstr); // Pad to 16-byte boundary
 }
 
-void ARM::addPltSymbols(InputSectionBase *ISD, uint64_t Off) const {
-  auto *IS = cast<InputSection>(ISD);
+void ARM::addPltSymbols(InputSection &IS, uint64_t Off) const {
   addSyntheticLocal("$a", STT_NOTYPE, Off, 0, IS);
   addSyntheticLocal("$d", STT_NOTYPE, Off + 12, 0, IS);
 }
