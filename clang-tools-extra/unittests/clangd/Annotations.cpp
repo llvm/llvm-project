@@ -24,7 +24,7 @@ static void require(bool Assertion, const char *Msg, llvm::StringRef Code) {
 
 Annotations::Annotations(StringRef Text) {
   auto Here = [this] { return offsetToPosition(Code, Code.size()); };
-  auto Require = [this, Text](bool Assertion, const char *Msg) {
+  auto Require = [Text](bool Assertion, const char *Msg) {
     require(Assertion, Msg, Text);
   };
   Optional<StringRef> Name;
