@@ -178,6 +178,16 @@ TEST(MemIndexTest, NoMatchNestedScopes) {
   EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::xyz"));
 }
 
+TEST(MemIndexTest, IgnoreCases) {
+  MemIndex I;
+  I.build(generateSymbols({"ns::ABC", "ns::abc"}));
+  FuzzyFindRequest Req;
+  Req.Query = "AB";
+  Req.Scopes = {"ns"};
+  auto Matches = match(I, Req);
+  EXPECT_THAT(match(I, Req), UnorderedElementsAre("ns::ABC", "ns::abc"));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

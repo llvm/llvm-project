@@ -583,6 +583,20 @@ void AArch64AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   switch (MI->getOpcode()) {
   default:
     break;
+  case AArch64::MOVIv2d_ns:
+    // If the target has <rdar://problem/16473581>, lower this
+    // instruction to movi.16b instead.
+    if (STI->hasZeroCycleZeroingFPWorkaround() &&
+        MI->getOperand(1).getImm() == 0) {
+      MCInst TmpInst;
+      TmpInst.setOpcode(AArch64::MOVIv16b_ns);
+      TmpInst.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
+      TmpInst.addOperand(MCOperand::createImm(MI->getOperand(1).getImm()));
+      EmitToStreamer(*OutStreamer, TmpInst);
+      return;
+    }
+    break;
+
   case AArch64::DBG_VALUE: {
     if (isVerbose() && OutStreamer->hasRawTextSupport()) {
       SmallString<128> TmpStr;
