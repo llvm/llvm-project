@@ -3020,7 +3020,7 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
   case AtomicExpr::AO__atomic_add_fetch:
   case AtomicExpr::AO__atomic_sub_fetch:
     IsAddSub = true;
-    // Fall through.
+    LLVM_FALLTHROUGH;
   case AtomicExpr::AO__c11_atomic_fetch_and:
   case AtomicExpr::AO__c11_atomic_fetch_or:
   case AtomicExpr::AO__c11_atomic_fetch_xor:
@@ -8487,7 +8487,7 @@ static IntRange GetExprRange(ASTContext &C, const Expr *E, unsigned MaxWidth) {
           return IntRange(R.Width, /*NonNegative*/ true);
         }
       }
-      // fallthrough
+      LLVM_FALLTHROUGH;
 
     case BO_ShlAssign:
       return IntRange::forValueOfType(C, GetExprType(E));

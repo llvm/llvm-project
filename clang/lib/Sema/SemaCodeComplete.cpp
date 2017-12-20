@@ -1372,7 +1372,7 @@ static void AddFunctionSpecifiers(Sema::ParserCompletionContext CCC,
       Results.AddResult(Result("mutable"));
       Results.AddResult(Result("virtual"));
     }    
-    // Fall through
+    LLVM_FALLTHROUGH;
 
   case Sema::PCC_ObjCInterface:
   case Sema::PCC_ObjCImplementation:
@@ -1590,7 +1590,7 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC,
       AddObjCTopLevelResults(Results, true);
       
     AddTypedefResult(Results);
-    // Fall through
+    LLVM_FALLTHROUGH;
 
   case Sema::PCC_Class:
     if (SemaRef.getLangOpts().CPlusPlus) {
@@ -1640,7 +1640,7 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC,
         Results.AddResult(Result(Builder.TakeString()));
       }
     }
-    // Fall through
+    LLVM_FALLTHROUGH;
 
   case Sema::PCC_Template:
   case Sema::PCC_MemberTemplate:
