@@ -1185,8 +1185,11 @@ struct DarwinPlatform {
   };
 
   using DarwinPlatformKind = Darwin::DarwinPlatformKind;
+  using DarwinEnvironmentKind = Darwin::DarwinEnvironmentKind;
 
   DarwinPlatformKind getPlatform() const { return Platform; }
+
+  DarwinEnvironmentKind getEnvironment() const { return Environment; }
 
   StringRef getOSVersion() const {
     if (Kind == OSVersionArg)
@@ -1244,8 +1247,17 @@ struct DarwinPlatform {
   }
 
   static DarwinPlatform createFromTarget(llvm::Triple::OSType OS,
-                                         StringRef OSVersion, Arg *A) {
-    return DarwinPlatform(TargetArg, getPlatformFromOS(OS), OSVersion, A);
+                                         StringRef OSVersion, Arg *A,
+                                         llvm::Triple::EnvironmentType Env) {
+    DarwinPlatform Result(TargetArg, getPlatformFromOS(OS), OSVersion, A);
+    switch (Env) {
+    case llvm::Triple::Simulator:
+      Result.Environment = DarwinEnvironmentKind::Simulator;
+      break;
+    default:
+      break;
+    }
+    return Result;
   }
   static DarwinPlatform createOSVersionArg(DarwinPlatformKind Platform,
                                            Arg *A) {
@@ -1292,6 +1304,7 @@ private:
 
   SourceKind Kind;
   DarwinPlatformKind Platform;
+  DarwinEnvironmentKind Environment = DarwinEnvironmentKind::NativeEnvironment;
   std::string OSVersion;
   Arg *Argument;
   StringRef EnvVarName;
@@ -1488,7 +1501,8 @@ Optional<DarwinPlatform> getDeploymentTargetFromTargetArg(
     return None;
   std::string OSVersion = getOSVersion(Triple.getOS(), Triple, TheDriver);
   return DarwinPlatform::createFromTarget(Triple.getOS(), OSVersion,
-                                          Args.getLastArg(options::OPT_target));
+                                          Args.getLastArg(options::OPT_target),
+                                          Triple.getEnvironment());
 }
 
 } // namespace
@@ -1620,10 +1634,11 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   } else
     llvm_unreachable("unknown kind of Darwin platform");
 
-  DarwinEnvironmentKind Environment = NativeEnvironment;
+  DarwinEnvironmentKind Environment = OSTarget->getEnvironment();
   // Recognize iOS targets with an x86 architecture as the iOS simulator.
-  if (Platform != MacOS && (getTriple().getArch() == llvm::Triple::x86 ||
-                            getTriple().getArch() == llvm::Triple::x86_64))
+  if (Environment == NativeEnvironment && Platform != MacOS &&
+      (getTriple().getArch() == llvm::Triple::x86 ||
+       getTriple().getArch() == llvm::Triple::x86_64))
     Environment = Simulator;
 
   setTarget(Platform, Environment, Major, Minor, Micro);
