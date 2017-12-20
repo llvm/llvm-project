@@ -2811,6 +2811,7 @@ GetThunkKind(llvm::StringRef symbol_name)
     if (node_ptr->getFirstChild()->getKind() 
            == swift::Demangle::Node::Kind::Class)
       return ThunkKind::AllocatingInit;
+    break;
   default:
     break;
   }
