@@ -656,10 +656,8 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
       CanBeNull = true;
     }
   } else if (auto *AI = dyn_cast<AllocaInst>(this)) {
-    const ConstantInt *ArraySize = dyn_cast<ConstantInt>(AI->getArraySize());
-    if (ArraySize && AI->getAllocatedType()->isSized()) {
-      DerefBytes = DL.getTypeStoreSize(AI->getAllocatedType()) *
-        ArraySize->getZExtValue();
+    if (!AI->isArrayAllocation()) {
+      DerefBytes = DL.getTypeStoreSize(AI->getAllocatedType());
       CanBeNull = false;
     }
   } else if (auto *GV = dyn_cast<GlobalVariable>(this)) {

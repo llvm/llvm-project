@@ -42,3 +42,8 @@ bar:
 	add peter, x0, x0
 	.unreq peter
 // CHECK: add x6, x0, x0
+
+	zoe .req x6
+	add zoe, x0, x0
+	.unreq zoe
+// CHECK: add x6, x0, x0

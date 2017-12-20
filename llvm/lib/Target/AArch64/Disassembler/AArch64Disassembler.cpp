@@ -88,6 +88,9 @@ static DecodeStatus DecodeDDDDRegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus DecodeZPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Address,
                                            const void *Decode);
+static DecodeStatus DecodePPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                           uint64_t Address,
+                                           const void *Decode);
 
 static DecodeStatus DecodeFixedPointScaleImm32(MCInst &Inst, unsigned Imm,
                                                uint64_t Address,
@@ -457,6 +460,23 @@ static DecodeStatus DecodeZPRRegisterClass(MCInst &Inst, unsigned RegNo,
     return Fail;
 
   unsigned Register = ZPRDecoderTable[RegNo];
+  Inst.addOperand(MCOperand::createReg(Register));
+  return Success;
+}
+
+static const unsigned PPRDecoderTable[] = {
+  AArch64::P0,  AArch64::P1,  AArch64::P2,  AArch64::P3,
+  AArch64::P4,  AArch64::P5,  AArch64::P6,  AArch64::P7,
+  AArch64::P8,  AArch64::P9,  AArch64::P10, AArch64::P11,
+  AArch64::P12, AArch64::P13, AArch64::P14, AArch64::P15
+};
+
+static DecodeStatus DecodePPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                           uint64_t Addr, const void *Decoder) {
+  if (RegNo > 15)
+    return Fail;
+
+  unsigned Register = PPRDecoderTable[RegNo];
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }

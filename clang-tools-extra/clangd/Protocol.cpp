@@ -59,6 +59,10 @@ bool fromJSON(const json::Expr &E, URI &R) {
 
 json::Expr toJSON(const URI &U) { return U.uri; }
 
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const URI &U) {
+  return OS << U.uri;
+}
+
 bool fromJSON(const json::Expr &Params, TextDocumentIdentifier &R) {
   json::ObjectMapper O(Params);
   return O && O.map("uri", R.uri);
@@ -76,6 +80,10 @@ json::Expr toJSON(const Position &P) {
   };
 }
 
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Position &P) {
+  return OS << P.line << ':' << P.character;
+}
+
 bool fromJSON(const json::Expr &Params, Range &R) {
   json::ObjectMapper O(Params);
   return O && O.map("start", R.start) && O.map("end", R.end);
@@ -88,11 +96,19 @@ json::Expr toJSON(const Range &P) {
   };
 }
 
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Range &R) {
+  return OS << R.start << '-' << R.end;
+}
+
 json::Expr toJSON(const Location &P) {
   return json::obj{
       {"uri", P.uri},
       {"range", P.range},
   };
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Location &L) {
+  return OS << L.range << '@' << L.uri;
 }
 
 bool fromJSON(const json::Expr &Params, TextDocumentItem &R) {
