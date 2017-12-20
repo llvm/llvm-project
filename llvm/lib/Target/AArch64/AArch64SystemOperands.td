@@ -322,6 +322,9 @@ def : ROSysReg<"PMCEID0_EL0",        0b11, 0b011, 0b1001, 0b1100, 0b110>;
 def : ROSysReg<"PMCEID1_EL0",        0b11, 0b011, 0b1001, 0b1100, 0b111>;
 def : ROSysReg<"MIDR_EL1",           0b11, 0b000, 0b0000, 0b0000, 0b000>;
 def : ROSysReg<"CCSIDR_EL1",         0b11, 0b001, 0b0000, 0b0000, 0b000>;
+def : ROSysReg<"CCSIDR2_EL1",        0b11, 0b001, 0b0000, 0b0000, 0b010> {
+  let Requires = [{ {AArch64::HasV8_3aOps} }];
+}
 def : ROSysReg<"CLIDR_EL1",          0b11, 0b001, 0b0000, 0b0000, 0b001>;
 def : ROSysReg<"CTR_EL0",            0b11, 0b011, 0b0000, 0b0000, 0b001>;
 def : ROSysReg<"MPIDR_EL1",          0b11, 0b000, 0b0000, 0b0000, 0b101>;

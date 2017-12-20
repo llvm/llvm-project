@@ -741,6 +741,31 @@ bool ARMInstructionSelector::select(MachineInstr &I,
     const auto &SrcRegBank = *RBI.getRegBank(SrcReg, MRI, TRI);
     const auto &DstRegBank = *RBI.getRegBank(DstReg, MRI, TRI);
 
+    if (SrcRegBank.getID() == ARM::FPRRegBankID) {
+      // This should only happen in the obscure case where we have put a 64-bit
+      // integer into a D register. Get it out of there and keep only the
+      // interesting part.
+      assert(I.getOpcode() == G_TRUNC && "Unsupported operand for G_ANYEXT");
+      assert(DstRegBank.getID() == ARM::GPRRegBankID &&
+             "Unsupported combination of register banks");
+      assert(MRI.getType(SrcReg).getSizeInBits() == 64 && "Unsupported size");
+      assert(MRI.getType(DstReg).getSizeInBits() <= 32 && "Unsupported size");
+
+      unsigned IgnoredBits = MRI.createVirtualRegister(&ARM::GPRRegClass);
+      auto InsertBefore = std::next(I.getIterator());
+      auto MovI =
+          BuildMI(MBB, InsertBefore, I.getDebugLoc(), TII.get(ARM::VMOVRRD))
+              .addDef(DstReg)
+              .addDef(IgnoredBits)
+              .addUse(SrcReg)
+              .add(predOps(ARMCC::AL));
+      if (!constrainSelectedInstRegOperands(*MovI, TII, TRI, RBI))
+        return false;
+
+      MIB->eraseFromParent();
+      return true;
+    }
+
     if (SrcRegBank.getID() != DstRegBank.getID()) {
       DEBUG(dbgs() << "G_TRUNC/G_ANYEXT operands on different register banks\n");
       return false;

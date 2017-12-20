@@ -6,18 +6,18 @@
 # RUN: FileCheck %s < %t1
 
         .set noat
-        lwle      $s6,255($15)       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
-        lwle      $s7,-256($10)      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
-        lwle      $s7,-176($13)      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
-        lwre      $zero,255($gp)     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
-        lwre      $zero,-256($gp)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
-        lwre      $zero,-176($gp)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
-        swle      $9,255($s1)        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
-        swle      $10,-256($s3)      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
-        swle      $8,131($s5)        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
-        swre      $s4,255($13)       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
-        swre      $s4,-256($13)      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
-        swre      $s2,86($14)        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 9-bit signed offset
+        lwle      $s6,255($15)       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        lwle      $s7,-256($10)      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        lwle      $s7,-176($13)      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        lwre      $zero,255($gp)     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        lwre      $zero,-256($gp)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        lwre      $zero,-176($gp)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        swle      $9,255($s1)        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        swle      $10,-256($s3)      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        swle      $8,131($s5)        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        swre      $s4,255($13)       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        swre      $s4,-256($13)      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+        swre      $s2,86($14)        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
         lle       $33, 8($5)         # CHECK: :[[@LINE]]:19: error: invalid operand for instruction
         lle       $4, 8($33)         # CHECK: :[[@LINE]]:23: error: expected memory with 9-bit signed offset
         lle       $4, 512($5)        # CHECK: :[[@LINE]]:23: error: expected memory with 9-bit signed offset

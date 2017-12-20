@@ -3504,6 +3504,7 @@
         msr MIDR_EL1, x12
         msr CCSIDR_EL1, x12
         msr CLIDR_EL1, x12
+        msr CCSIDR2_EL1, x12
         msr CTR_EL0, x12
         msr MPIDR_EL1, x12
         msr REVIDR_EL1, x12
@@ -3570,6 +3571,9 @@
 // CHECK-ERROR-NEXT:             ^
 // CHECK-ERROR-NEXT: error: expected writable system register or pstate
 // CHECK-ERROR-NEXT:         msr CLIDR_EL1, x12
+// CHECK-ERROR-NEXT:             ^
+// CHECK-ERROR-NEXT: error: expected writable system register or pstate
+// CHECK-ERROR-NEXT:         msr CCSIDR2_EL1, x12
 // CHECK-ERROR-NEXT:             ^
 // CHECK-ERROR-NEXT: error: expected writable system register or pstate
 // CHECK-ERROR-NEXT:         msr CTR_EL0, x12

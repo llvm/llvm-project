@@ -1246,6 +1246,7 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::CMOV:          return "ARMISD::CMOV";
 
   case ARMISD::SSAT:          return "ARMISD::SSAT";
+  case ARMISD::USAT:          return "ARMISD::USAT";
 
   case ARMISD::SRL_FLAG:      return "ARMISD::SRL_FLAG";
   case ARMISD::SRA_FLAG:      return "ARMISD::SRA_FLAG";
@@ -4196,7 +4197,7 @@ static bool isUpperSaturate(const SDValue LHS, const SDValue RHS,
           ((K == LHS && K == TrueVal) || (K == RHS && K == FalseVal)));
 }
 
-// Check if two chained conditionals could be converted into SSAT.
+// Check if two chained conditionals could be converted into SSAT or USAT.
 //
 // SSAT can replace a set of two conditional selectors that bound a number to an
 // interval of type [k, ~k] when k + 1 is a power of 2. Here are some examples:
@@ -4207,10 +4208,14 @@ static bool isUpperSaturate(const SDValue LHS, const SDValue RHS,
 //     x < k ? (x < -k ? -k : x) : k
 //     etc.
 //
+// USAT works similarily to SSAT but bounds on the interval [0, k] where k + 1 is
+// a power of 2.
+//
 // It returns true if the conversion can be done, false otherwise.
-// Additionally, the variable is returned in parameter V and the constant in K.
+// Additionally, the variable is returned in parameter V, the constant in K and
+// usat is set to true if the conditional represents an unsigned saturation
 static bool isSaturatingConditional(const SDValue &Op, SDValue &V,
-                                    uint64_t &K) {
+                                    uint64_t &K, bool &usat) {
   SDValue LHS1 = Op.getOperand(0);
   SDValue RHS1 = Op.getOperand(1);
   SDValue TrueVal1 = Op.getOperand(2);
@@ -4277,13 +4282,23 @@ static bool isSaturatingConditional(const SDValue &Op, SDValue &V,
   int64_t Val1 = cast<ConstantSDNode>(*K1)->getSExtValue();
   int64_t Val2 = cast<ConstantSDNode>(*K2)->getSExtValue();
   int64_t PosVal = std::max(Val1, Val2);
+  int64_t NegVal = std::min(Val1, Val2);
 
   if (((Val1 > Val2 && UpperCheckOp == &Op) ||
        (Val1 < Val2 && UpperCheckOp == &Op2)) &&
-      Val1 == ~Val2 && isPowerOf2_64(PosVal + 1)) {
+      isPowerOf2_64(PosVal + 1)) {
+
+    // Handle the difference between USAT (unsigned) and SSAT (signed) saturation
+    if (Val1 == ~Val2)
+      usat = false;
+    else if (NegVal == 0)
+      usat = true;
+    else
+      return false;
 
     V = V2;
     K = (uint64_t)PosVal; // At this point, PosVal is guaranteed to be positive
+
     return true;
   }
 
@@ -4297,10 +4312,16 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   // Try to convert two saturating conditional selects into a single SSAT
   SDValue SatValue;
   uint64_t SatConstant;
+  bool SatUSat;
   if (((!Subtarget->isThumb() && Subtarget->hasV6Ops()) || Subtarget->isThumb2()) &&
-      isSaturatingConditional(Op, SatValue, SatConstant))
-    return DAG.getNode(ARMISD::SSAT, dl, VT, SatValue,
-                       DAG.getConstant(countTrailingOnes(SatConstant), dl, VT));
+      isSaturatingConditional(Op, SatValue, SatConstant, SatUSat)) {
+    if (SatUSat)
+      return DAG.getNode(ARMISD::USAT, dl, VT, SatValue,
+                         DAG.getConstant(countTrailingOnes(SatConstant), dl, VT));
+    else
+      return DAG.getNode(ARMISD::SSAT, dl, VT, SatValue,
+                         DAG.getConstant(countTrailingOnes(SatConstant), dl, VT));
+  }
 
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);

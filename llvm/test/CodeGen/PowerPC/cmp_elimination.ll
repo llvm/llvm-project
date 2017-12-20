@@ -1,4 +1,3 @@
-; XFAIL: *
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu | FileCheck %s
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu | FileCheck %s
 
@@ -745,6 +744,37 @@ if.end:
   br i1 %cmp1, label %do.body, label %do.end
 
 do.end:
+  ret void
+}
+
+define void @func29(i32 signext %a) {
+; We cannot merge two compares due to difference in sign extension behaviors.
+; equivalent C code example:
+;   int a = .. ;
+;   if (a == -1) dummy1();
+;   if (a == (uint16_t)-1) dummy2();
+
+; CHECK-LABEL: @func29
+; CHECK: cmp
+; CHECK: cmp
+; CHECK: blr
+entry:
+  %cmp = icmp eq i32 %a, -1
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  tail call void @dummy1()
+  br label %if.end3
+
+if.else:
+  %cmp1 = icmp eq i32 %a, 65535
+  br i1 %cmp1, label %if.then2, label %if.end3
+
+if.then2:
+  tail call void @dummy2()
+  br label %if.end3
+
+if.end3:
   ret void
 }
 
