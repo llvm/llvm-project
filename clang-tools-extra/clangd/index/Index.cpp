@@ -38,9 +38,17 @@ SymbolSlab::const_iterator SymbolSlab::find(const SymbolID &SymID) const {
 
 void SymbolSlab::freeze() { Frozen = true; }
 
-void SymbolSlab::insert(Symbol S) {
+void SymbolSlab::insert(const Symbol &S) {
   assert(!Frozen && "Can't insert a symbol after the slab has been frozen!");
-  Symbols[S.ID] = std::move(S);
+  auto ItInserted = Symbols.try_emplace(S.ID, S);
+  if (!ItInserted.second)
+    return;
+  auto &Sym = ItInserted.first->second;
+
+  // We inserted a new symbol, so copy the underlying data.
+  intern(Sym.Name);
+  intern(Sym.Scope);
+  intern(Sym.CanonicalDeclaration.FilePath);
 }
 
 } // namespace clangd
