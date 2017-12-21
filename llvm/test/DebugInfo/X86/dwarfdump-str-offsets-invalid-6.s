@@ -1,8 +1,8 @@
 # RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o %t.o
-# RUN: llvm-dwarfdump -v %t.o | FileCheck --check-prefix=INVALIDCONTRIB %s
+# RUN: llvm-dwarfdump -v %t.o | FileCheck --check-prefix=OVERLAP %s
 #
 # Test object to verify that llvm-dwarfdump handles an invalid string offsets
-# table.
+# table with overlapping contributions.
 
         .section .debug_str,"MS",@progbits,1
 str_producer:
@@ -43,10 +43,7 @@ dwo_str_TU_5_type:
         .byte 0x00  # EOM(2)
         .byte 0x00  # EOM(3)
 
-# A rudimentary compile unit to convince dwarfdump that we are dealing with a
-# DWARF v5 string offsets table.
         .section .debug_info,"",@progbits
-
 # DWARF v5 CU header.
         .long  CU1_5_end-CU1_5_version  # Length of Unit
 CU1_5_version:
@@ -59,10 +56,21 @@ CU1_5_version:
         .long .debug_str_offsets_base0
 CU1_5_end:
 
+# DWARF v5 CU header.
+        .long  CU2_5_end-CU2_5_version  # Length of Unit
+CU2_5_version:
+        .short 5               # DWARF version number
+        .byte 1                # DWARF Unit Type
+        .byte 8                # Address Size (in bytes)
+        .long .debug_abbrev    # Offset Into Abbrev. Section
+# A compile-unit DIE, which has no attributes.
+        .byte 1                # Abbreviation code
+        .long .debug_str_offsets_base1
+CU2_5_end:
+
         .section .debug_str_offsets,"",@progbits
 # CU1's contribution
-# Invalid length
-        .long 0xfffffffe
+        .long .debug_str_offsets_segment1_end-.debug_str_offsets_base0
         .short 5    # DWARF version
         .short 0    # Padding
 .debug_str_offsets_base0:
@@ -71,6 +79,7 @@ CU1_5_end:
         .long str_CU1_dir
 .debug_str_offsets_segment0_end:
 # CU2's contribution
+# Overlapping with CU1's contribution
         .long .debug_str_offsets_segment1_end-.debug_str_offsets_base1
         .short 5    # DWARF version
         .short 0    # Padding
@@ -79,15 +88,7 @@ CU1_5_end:
         .long str_CU2
         .long str_CU2_dir
 .debug_str_offsets_segment1_end:
-# The TU's contribution
-        .long .debug_str_offsets_segment2_end-.debug_str_offsets_base2
-        .short 5    # DWARF version
-        .short 0    # Padding
-.debug_str_offsets_base2:
-        .long str_TU
-        .long str_TU_type
-.debug_str_offsets_segment2_end:
 
-# INVALIDCONTRIB:            .debug_str_offsets contents:
-# INVALIDCONTRIB-NOT:        contents:
-# INVALIDCONTRIB:            error: invalid contribution to string offsets table in section .debug_str_offsets.
+# OVERLAP:            .debug_str_offsets contents:
+# OVERLAP-NOT:        contents:
+# OVERLAP:            error: overlapping contributions to string offsets table in section .debug_str_offsets.

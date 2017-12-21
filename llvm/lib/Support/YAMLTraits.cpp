@@ -657,7 +657,12 @@ void Output::scalarString(StringRef &S, QuotingType MustQuote) {
       }
       i = j + 1;
     } else if (MustQuote == QuotingType::Double &&
-               !sys::unicode::isPrintable(S[j])) {
+               !sys::unicode::isPrintable(S[j]) && (S[j] & 0x80) == 0) {
+      // If we're double quoting non-printable characters, we prefer printing
+      // them as "\x" + their hex representation. Note that special casing is
+      // needed for UTF-8, where a byte may be part of a UTF-8 sequence and
+      // appear as non-printable, in which case we want to print the correct
+      // unicode character and not its hex representation.
       output(StringRef(&Base[i], j - i)); // "flush"
       output(StringLiteral("\\x"));
 

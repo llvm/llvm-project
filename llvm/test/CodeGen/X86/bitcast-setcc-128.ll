@@ -26,9 +26,9 @@ define i8 @v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; AVX512F-LABEL: v8i16:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm0
-; AVX512F-NEXT:    vpmovsxwq %xmm0, %zmm0
-; AVX512F-NEXT:    vpsllq $63, %zmm0, %zmm0
-; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    vpmovsxwd %xmm0, %ymm0
+; AVX512F-NEXT:    vpslld $31, %ymm0, %ymm0
+; AVX512F-NEXT:    vptestmd %ymm0, %ymm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    # kill: def %al killed %al killed %eax
 ; AVX512F-NEXT:    vzeroupper
@@ -640,9 +640,9 @@ define i8 @v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; AVX512F-NEXT:    vpsllw $8, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpsraw $8, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm0
-; AVX512F-NEXT:    vpmovsxwq %xmm0, %zmm0
-; AVX512F-NEXT:    vpsllq $63, %zmm0, %zmm0
-; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    vpmovsxwd %xmm0, %ymm0
+; AVX512F-NEXT:    vpslld $31, %ymm0, %ymm0
+; AVX512F-NEXT:    vptestmd %ymm0, %ymm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    # kill: def %al killed %al killed %eax
 ; AVX512F-NEXT:    vzeroupper
