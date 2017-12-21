@@ -143,7 +143,7 @@ template <PR9412_MatchType type> int PR9412_t() {
 } // expected-warning {{control reaches end of non-void function}}
 
 void PR9412_f() {
-    PR9412_t<PR9412_Exact>(); // expected-note {{in instantiation of function template specialization 'PR9412_t<PR9412_MatchType::PR9412_Exact>' requested here}}
+    PR9412_t<PR9412_Exact>(); // expected-note {{in instantiation of function template specialization 'PR9412_t<PR9412_Exact>' requested here}}
 }
 
 struct NoReturn {

@@ -647,6 +647,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
 
       // Ok, this store might clobber the query pointer.  Check to see if it is
       // a must alias: in this case, we want to return this as a def.
+      // FIXME: Use ModRefInfo::Must bit from getModRefInfo call above.
       MemoryLocation StoreLoc = MemoryLocation::get(SI);
 
       // If we found a pointer, check if it could be the same as our pointer.
@@ -690,7 +691,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     // If necessary, perform additional analysis.
     if (isModAndRefSet(MR))
       MR = AA.callCapturesBefore(Inst, MemLoc, &DT, &OBB);
-    switch (MR) {
+    switch (clearMust(MR)) {
     case ModRefInfo::NoModRef:
       // If the call has no effect on the queried pointer, just ignore it.
       continue;

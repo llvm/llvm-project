@@ -44,14 +44,17 @@ str_Variable3:
         .long str_Variable2
         .long str_Variable3
 .debug_str_offsets_segment0_end:
-# CU2's contribution
-        .long .debug_str_offsets_segment1_end-.debug_str_offsets_base1
+# A 4-byte gap.
+        .long 0
+# CU2's contribution in DWARF64 format
+        .long 0xffffffff
+        .quad .debug_str_offsets_segment1_end-.debug_str_offsets_base1
         .short 5    # DWARF version
         .short 0    # Padding
 .debug_str_offsets_base1:
-        .long str_producer
-        .long str_CU2
-        .long str_CU2_dir
+        .quad str_producer
+        .quad str_CU2
+        .quad str_CU2_dir
 .debug_str_offsets_segment1_end:
 # The TU's contribution
         .long .debug_str_offsets_segment2_end-.debug_str_offsets_base2
@@ -75,7 +78,7 @@ dwo_str_TU_5_type:
         .asciz "V5_split_Mystruct"
 
         .section .debug_str_offsets.dwo,"",@progbits
-# The split CU's contribution
+# One contribution only in a .dwo file
         .long .debug_dwo_str_offsets_segment0_end-.debug_dwo_str_offsets_base0
         .short 5    # DWARF version
         .short 0    # Padding
@@ -83,15 +86,9 @@ dwo_str_TU_5_type:
         .long dwo_str_CU_5_producer-.debug_str.dwo
         .long dwo_str_CU_5_name-.debug_str.dwo
         .long dwo_str_CU_5_comp_dir-.debug_str.dwo
-.debug_dwo_str_offsets_segment0_end:
-# The split TU's contribution
-        .long .debug_dwo_str_offsets_segment1_end-.debug_dwo_str_offsets_base1
-        .short 5    # DWARF version
-        .short 0    # Padding
-.debug_dwo_str_offsets_base1:
         .long dwo_str_TU_5-.debug_str.dwo
         .long dwo_str_TU_5_type-.debug_str.dwo
-.debug_dwo_str_offsets_segment1_end:
+.debug_dwo_str_offsets_segment0_end:
 
 # All CUs/TUs use the same abbrev section for simplicity.
         .section .debug_abbrev,"",@progbits
@@ -163,8 +160,6 @@ dwo_str_TU_5_type:
         .byte 0x1a  # DW_FORM_strx
         .byte 0x03  # DW_AT_name
         .byte 0x1a  # DW_FORM_strx
-        .byte 0x72  # DW_AT_str_offsets_base
-        .byte 0x17  # DW_FORM_sec_offset
         .byte 0x1b  # DW_AT_comp_dir
         .byte 0x1a  # DW_FORM_strx
         .byte 0x00  # EOM(1)
@@ -174,8 +169,6 @@ dwo_str_TU_5_type:
         .byte 0x01  # DW_CHILDREN_yes
         .byte 0x03  # DW_AT_name
         .byte 0x1a  # DW_FORM_strx
-        .byte 0x72  # DW_AT_str_offsets_base
-        .byte 0x17  # DW_FORM_sec_offset
         .byte 0x00  # EOM(1)
         .byte 0x00  # EOM(2)
         .byte 0x03  # Abbrev code
@@ -275,7 +268,6 @@ CU_split_5_version:
         .byte 1                # Abbreviation code
         .byte 0                # The index of the producer string
         .byte 1                # The index of the CU name string
-        .long .debug_dwo_str_offsets_base0-.debug_str_offsets.dwo
         .byte 2                # The index of the comp dir string
         .byte 0 # NULL
 CU_split_5_end:
@@ -294,12 +286,11 @@ TU_split_5_version:
         .long TU_split_5_type-TU_split_5_start  # Type offset
 # The type-unit DIE, which has a name.
         .byte 2                # Abbreviation code
-        .byte 0                # The index of the type unit name string
-        .long .debug_dwo_str_offsets_base1-.debug_str_offsets.dwo 
+        .byte 3                # The index of the type unit name string
 # The type DIE, which has a name.
 TU_split_5_type:
         .byte 3                # Abbreviation code
-        .byte 1                # The index of the type name string
+        .byte 4                # The index of the type name string
         .byte 0 # NULL
         .byte 0 # NULL
 TU_split_5_end:
@@ -340,7 +331,7 @@ TU_split_5_end:
 # COMMON:      DW_TAG_compile_unit
 # COMMON-NEXT: DW_AT_producer [DW_FORM_strx] ( indexed (00000000) string = "Handmade DWARF producer")
 # COMMON-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000001) string = "Compile_Unit_2")
-# COMMON-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x0000002c)
+# COMMON-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x00000038)
 # COMMON-NEXT: DW_AT_comp_dir [DW_FORM_strx] ( indexed (00000002) string = "/home/test/CU2")
 # 
 # The split CU
@@ -349,28 +340,25 @@ TU_split_5_end:
 # SPLIT:       DW_TAG_compile_unit
 # SPLIT-NEXT:  DW_AT_producer [DW_FORM_strx] ( indexed (00000000) string = "Handmade split DWARF producer")
 # SPLIT-NEXT:  DW_AT_name [DW_FORM_strx] ( indexed (00000001) string = "V5_split_compile_unit")
-# SPLIT-NEXT:  DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x00000008)
 # SPLIT-NEXT:  DW_AT_comp_dir [DW_FORM_strx] ( indexed (00000002) string = "/home/test/splitCU")
 # 
 # The type unit
 # COMMON:      .debug_types contents:
 # COMMON:      DW_TAG_type_unit
 # COMMON-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000000) string = "Type_Unit")
-# COMMON-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset]       (0x00000040)
 # COMMON:      DW_TAG_structure_type
 # COMMON-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000001) string = "MyStruct")
 # 
 # The split type unit
 # SPLIT:       .debug_types.dwo contents:
 # SPLIT:       DW_TAG_type_unit
-# SPLIT-NEXT:  DW_AT_name [DW_FORM_strx] ( indexed (00000000) string = "V5_split_type_unit")
-# SPLIT-NEXT:  DW_AT_str_offsets_base [DW_FORM_sec_offset]       (0x0000001c)
+# SPLIT-NEXT:  DW_AT_name [DW_FORM_strx] ( indexed (00000003) string = "V5_split_type_unit")
 # SPLIT:       DW_TAG_structure_type
-# SPLIT-NEXT:  DW_AT_name [DW_FORM_strx] ( indexed (00000001) string = "V5_split_Mystruct")
+# SPLIT-NEXT:  DW_AT_name [DW_FORM_strx] ( indexed (00000004) string = "V5_split_Mystruct")
 # 
 # The .debug_str_offsets section
 # COMMON:      .debug_str_offsets contents:
-# COMMON-NEXT: 0x00000000: Contribution size = 28, Version = 5
+# COMMON-NEXT: 0x00000000: Contribution size = 28, Format = DWARF32, Version = 5
 # COMMON-NEXT: 0x00000008: 00000000 "Handmade DWARF producer"
 # COMMON-NEXT: 0x0000000c: 00000018 "Compile_Unit_1"
 # COMMON-NEXT: 0x00000010: 00000027 "/home/test/CU1"
@@ -378,19 +366,19 @@ TU_split_5_end:
 # COMMON-NEXT: 0x00000018: 0000006e "MyVar1"
 # COMMON-NEXT: 0x0000001c: 00000075 "MyVar2"
 # COMMON-NEXT: 0x00000020: 0000007c "MyVar3"
-# COMMON-NEXT: 0x00000024: Contribution size = 12, Version = 5
-# COMMON-NEXT: 0x0000002c: 00000000 "Handmade DWARF producer"
-# COMMON-NEXT: 0x00000030: 00000036 "Compile_Unit_2"
-# COMMON-NEXT: 0x00000034: 00000045 "/home/test/CU2"
-# COMMON-NEXT: 0x00000038: Contribution size = 8, Version = 5
-# COMMON-NEXT: 0x00000040: 00000054 "Type_Unit"
-# COMMON-NEXT: 0x00000044: 0000005e "MyStruct"
+# COMMON-NEXT: Gap, length = 4
+# COMMON-NEXT: 0x00000028: Contribution size = 24, Format = DWARF64, Version = 5
+# COMMON-NEXT: 0x00000038: 00000000 "Handmade DWARF producer"
+# COMMON-NEXT: 0x00000040: 00000036 "Compile_Unit_2"
+# COMMON-NEXT: 0x00000048: 00000045 "/home/test/CU2"
+# COMMON-NEXT: 0x00000050: Contribution size = 8, Format = DWARF32, Version = 5
+# COMMON-NEXT: 0x00000058: 00000054 "Type_Unit"
+# COMMON-NEXT: 0x0000005c: 0000005e "MyStruct"
 # 
 # SPLIT:       .debug_str_offsets.dwo contents:
-# SPLIT-NEXT:  0x00000000: Contribution size = 12, Version = 5
+# SPLIT-NEXT:  0x00000000: Contribution size = 20, Format = DWARF32, Version = 5
 # SPLIT-NEXT:  0x00000008: 00000000 "Handmade split DWARF producer"
 # SPLIT-NEXT:  0x0000000c: 0000001e "V5_split_compile_unit"
 # SPLIT-NEXT:  0x00000010: 00000034 "/home/test/splitCU"
-# SPLIT-NEXT:  0x00000014: Contribution size = 8, Version = 5
-# SPLIT-NEXT:  0x0000001c: 00000047 "V5_split_type_unit"
-# SPLIT-NEXT:  0x00000020: 0000005a "V5_split_Mystruct"
+# SPLIT-NEXT:  0x00000014: 00000047 "V5_split_type_unit"
+# SPLIT-NEXT:  0x00000018: 0000005a "V5_split_Mystruct"

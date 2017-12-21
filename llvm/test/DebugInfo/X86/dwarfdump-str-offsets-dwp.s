@@ -2,9 +2,10 @@
 # RUN: llvm-dwarfdump -v %t.o | FileCheck %s
 
 # Test object to verify that dwarfdump handles dwp files with DWARF v5 string
-# offset tables. We have 2 CUs and 2 TUs, where it is assumed that 
+# offset tables. We have 3 CUs and 2 TUs, where it is assumed that 
 # CU1 and TU1 came from one object file, CU2 and TU2 from a second object
-# file.
+# file, and CU3 from a third object file that was compiled with 
+# -gdwarf-4.
 #
         .section .debug_str.dwo,"MS",@progbits,1
 str_producer:
@@ -25,56 +26,50 @@ str_TU2:
         .asciz "Type_Unit_2"
 str_TU2_type:
         .asciz "MyStruct_2"
+str_CU3:
+        .asciz "Compile_Unit_3"
+str_CU3_dir:
+        .asciz "/home/test/CU3"
 
         .section .debug_str_offsets.dwo,"",@progbits
 # Object files 1's portion of the .debug_str_offsets.dwo section.
-.debug_str_offsets_object_file1:
-
-# CU1's contribution (from object file 1)
-.debug_str_offsets_start_CU1:
-        .long .debug_str_offsets_end_CU1-.debug_str_offsets_base_CU1
+# CU1 and TU1 share a contribution to the string offsets table.
+.debug_str_offsets_object_file1_start:
+        .long .debug_str_offsets_object_file1_end-.debug_str_offsets_base_1
         .short 5    # DWARF version
         .short 0    # Padding
-.debug_str_offsets_base_CU1:
+.debug_str_offsets_base_1:
         .long str_producer-.debug_str.dwo
         .long str_CU1-.debug_str.dwo
         .long str_CU1_dir-.debug_str.dwo
-.debug_str_offsets_end_CU1:
-
-# TU1's contribution (from object file 1)
-.debug_str_offsets_start_TU1:
-        .long .debug_str_offsets_end_TU1-.debug_str_offsets_base_TU1
-        .short 5    # DWARF version
-        .short 0    # Padding
-.debug_str_offsets_base_TU1:
         .long str_TU1-.debug_str.dwo
         .long str_TU1_type-.debug_str.dwo
-.debug_str_offsets_end_TU1:
+.debug_str_offsets_object_file1_end:
 
 # Object files 2's portion of the .debug_str_offsets.dwo section.
-.debug_str_offsets_object_file2:
-
-# CU2's contribution (from object file 2)
-.debug_str_offsets_start_CU2:
-        .long .debug_str_offsets_end_CU2-.debug_str_offsets_base_CU2
+# CU2 and TU2 share a contribution to the string offsets table.
+.debug_str_offsets_object_file2_start:
+        .long .debug_str_offsets_object_file2_end-.debug_str_offsets_base_2
         .short 5    # DWARF version
         .short 0    # Padding
-.debug_str_offsets_base_CU2:
+.debug_str_offsets_base_2:
         .long str_producer-.debug_str.dwo
         .long str_CU2-.debug_str.dwo
         .long str_CU2_dir-.debug_str.dwo
-.debug_str_offsets_end_CU2:
-
-# TU2's contribution (from object file 2)
-.debug_str_offsets_start_TU2:
-        .long .debug_str_offsets_end_TU2-.debug_str_offsets_base_TU2
-        .short 5    # DWARF version
-        .short 0    # Padding
-.debug_str_offsets_base_TU2:
         .long str_TU2-.debug_str.dwo
         .long str_TU2_type-.debug_str.dwo
-.debug_str_offsets_end_TU2:
+.debug_str_offsets_object_file2_end:
 
+# Object files 3's portion of the .debug_str_offsets.dwo section.
+# This file is assumed to have been compiled with -gdwarf-4 and
+# therefore contains a version 4 CU and a GNU format contribution
+# to the .debug_str_offsets section.
+.debug_str_offsets_object_file3_start:
+.debug_str_offsets_base_3:
+        .long str_producer-.debug_str.dwo
+        .long str_CU3-.debug_str.dwo
+        .long str_CU3_dir-.debug_str.dwo
+.debug_str_offsets_object_file3_end:
 
 # Abbrevs are shared for all compile and type units
         .section .debug_abbrev.dwo,"",@progbits
@@ -85,8 +80,6 @@ str_TU2_type:
         .byte 0x1a  # DW_FORM_strx
         .byte 0x03  # DW_AT_name
         .byte 0x1a  # DW_FORM_strx
-        .byte 0x72  # DW_AT_str_offsets_base
-        .byte 0x17  # DW_FORM_sec_offset
         .byte 0x03  # DW_AT_name
         .byte 0x1a  # DW_FORM_strx
         .byte 0x00  # EOM(1)
@@ -96,8 +89,6 @@ str_TU2_type:
         .byte 0x01  # DW_CHILDREN_yes
         .byte 0x03  # DW_AT_name
         .byte 0x1a  # DW_FORM_strx
-        .byte 0x72  # DW_AT_str_offsets_base
-        .byte 0x17  # DW_FORM_sec_offset
         .byte 0x00  # EOM(1)
         .byte 0x00  # EOM(2)
         .byte 0x03  # Abbrev code
@@ -105,6 +96,17 @@ str_TU2_type:
         .byte 0x00  # DW_CHILDREN_no (no members)
         .byte 0x03  # DW_AT_name
         .byte 0x1a  # DW_FORM_strx
+        .byte 0x00  # EOM(1)
+        .byte 0x00  # EOM(2)
+        .byte 0x04  # Abbrev code
+        .byte 0x11  # DW_TAG_compile_unit
+        .byte 0x00  # DW_CHILDREN_no
+        .byte 0x25  # DW_AT_producer
+        .short 0x3e82  # DW_FORM_GNU_str_index
+        .byte 0x03  # DW_AT_name
+        .short 0x3e82  # DW_FORM_GNU_str_index
+        .byte 0x03  # DW_AT_name
+        .short 0x3e82  # DW_FORM_GNU_str_index
         .byte 0x00  # EOM(1)
         .byte 0x00  # EOM(2)
         .byte 0x00  # EOM(3)
@@ -120,15 +122,11 @@ CU1_5_version:
         .byte 1                # DWARF Unit Type
         .byte 8                # Address Size (in bytes)
         .long .debug_abbrev.dwo # Offset Into Abbrev. Section
-# The compile-unit DIE, which has a DW_AT_producer, DW_AT_name,
-# DW_AT_str_offsets and DW_AT_compdir.
+# The compile-unit DIE, which has a DW_AT_producer, DW_AT_name
+# and DW_AT_compdir.
         .byte 1                # Abbreviation code
         .byte 0                # The index of the producer string
         .byte 1                # The index of the CU name string
-# The DW_AT_str_offsets_base attribute for CU1 contains the offset of CU1's
-# contribution relative to the start of object file 1's portion of the
-# .debug_str_offsets section.
-        .long .debug_str_offsets_base_CU1-.debug_str_offsets_object_file1
         .byte 2                # The index of the comp dir string
         .byte 0 # NULL
 CU1_5_end:
@@ -140,18 +138,29 @@ CU2_5_version:
         .byte 1                # DWARF Unit Type
         .byte 8                # Address Size (in bytes)
         .long .debug_abbrev.dwo # Offset Into Abbrev. Section
-# The compile-unit DIE, which has a DW_AT_producer, DW_AT_name,
-# DW_AT_str_offsets and DW_AT_compdir.
+# The compile-unit DIE, which has a DW_AT_producer, DW_AT_name
+# and DW_AT_compdir.
         .byte 1                # Abbreviation code
         .byte 0                # The index of the producer string
         .byte 1                # The index of the CU name string
-# The DW_AT_str_offsets_base attribute for CU2 contains the offset of CU2's
-# contribution relative to the start of object file 2's portion of the
-# .debug_str_offsets section.
-        .long .debug_str_offsets_base_CU2-.debug_str_offsets_object_file2
         .byte 2                # The index of the comp dir string
         .byte 0 # NULL
 CU2_5_end:
+
+CU3_4_start:
+        .long  CU3_4_end-CU3_4_version  # Length of Unit
+CU3_4_version:
+        .short 4               # DWARF version number
+        .long .debug_abbrev.dwo # Offset Into Abbrev. Section
+        .byte 8                # Address Size (in bytes)
+# The compile-unit DIE, which has a DW_AT_producer, DW_AT_name
+# and DW_AT_compdir.
+        .byte 4                # Abbreviation code
+        .byte 0                # The index of the producer string
+        .byte 1                # The index of the CU name string
+        .byte 2                # The index of the comp dir string
+        .byte 0 # NULL
+CU3_4_end:
 
         .section .debug_types.dwo,"",@progbits
 # DWARF v5 Type unit header.
@@ -166,15 +175,11 @@ TU1_5_version:
         .long TU1_5_type-TU1_5_start # Type offset
 # The type-unit DIE, which has a name.
         .byte 2                # Abbreviation code
-        .byte 0                # Index of the unit type name string
-# The DW_AT_str_offsets_base attribute for TU1 contains the offset of TU1's
-# contribution relative to the start of object file 1's portion of the
-# .debug_str_offsets section.
-        .long .debug_str_offsets_base_TU1-.debug_str_offsets_object_file1
+        .byte 3                # Index of the unit type name string
 # The type DIE, which has a name.
 TU1_5_type:
         .byte 3                # Abbreviation code
-        .byte 1                # Index of the type name string
+        .byte 4                # Index of the type name string
         .byte 0 # NULL
         .byte 0 # NULL
 TU1_5_end:
@@ -190,15 +195,11 @@ TU2_5_version:
         .long TU2_5_type-TU2_5_start # Type offset
 # The type-unit DIE, which has a name.
         .byte 2                # Abbreviation code
-        .byte 0                # Index of the unit type name string
-# The DW_AT_str_offsets_base attribute for TU2 contains the offset of TU2's
-# contribution relative to the start of object file 2's portion of the
-# .debug_str_offsets section.
-        .long .debug_str_offsets_base_TU2-.debug_str_offsets_object_file2
+        .byte 3                # Index of the unit type name string
 # The type DIE, which has a name.
 TU2_5_type:
         .byte 3                # Abbreviation code
-        .byte 1                # Index of the type name string
+        .byte 4                # Index of the type name string
         .byte 0 # NULL
         .byte 0 # NULL
 TU2_5_end:
@@ -207,37 +208,45 @@ TU2_5_end:
         # The index header
         .long 2                # Version 
         .long 3                # Columns of contribution matrix
-        .long 2                # number of units
-        .long 2                # number of hash buckets in table
+        .long 3                # number of units
+        .long 3                # number of hash buckets in table
 
-        # The signatures for both CUs.
+        # The signatures for all CUs.
         .quad 0xddeeaaddbbaabbee # signature 1
         .quad 0xff00ffeeffaaff00 # signature 2
+        .quad 0xf00df00df00df00d # signature 2
         # The indexes for both CUs.
         .long 1                # index 1
         .long 2                # index 2
-        # The sections to which both CUs contribute.
+        .long 3                # index 3
+        # The sections to which all CUs contribute.
         .long 1                # DW_SECT_INFO
         .long 3                # DW_SECT_ABBREV
         .long 6                # DW_SECT_STR_OFFSETS
 
-        # The starting offsets of both CU's contributions to info,
+        # The starting offsets of all CU's contributions to info,
         # abbrev and string offsets table.
         .long CU1_5_start-.debug_info.dwo                   
         .long 0
-        .long .debug_str_offsets_object_file1-.debug_str_offsets.dwo
+        .long .debug_str_offsets_object_file1_start-.debug_str_offsets.dwo
         .long CU2_5_start-.debug_info.dwo
         .long 0
-        .long .debug_str_offsets_object_file2-.debug_str_offsets.dwo
+        .long .debug_str_offsets_object_file2_start-.debug_str_offsets.dwo
+        .long CU3_4_start-.debug_info.dwo
+        .long 0
+        .long .debug_str_offsets_object_file3_start-.debug_str_offsets.dwo
 
-        # The lengths of both CU's contributions to info, abbrev and
+        # The lengths of all CU's contributions to info, abbrev and
         # string offsets table.
         .long CU1_5_end-CU1_5_start
         .long abbrev_end-.debug_abbrev.dwo
-        .long .debug_str_offsets_end_CU1-.debug_str_offsets_start_CU1
+        .long .debug_str_offsets_object_file1_end-.debug_str_offsets_object_file1_start
         .long CU2_5_end-CU2_5_start
         .long abbrev_end-.debug_abbrev.dwo
-        .long .debug_str_offsets_end_CU2-.debug_str_offsets_start_CU2
+        .long .debug_str_offsets_object_file2_end-.debug_str_offsets_object_file2_start
+        .long CU3_4_end-CU3_4_start
+        .long abbrev_end-.debug_abbrev.dwo
+        .long .debug_str_offsets_object_file3_end-.debug_str_offsets_object_file3_start
 
         .section .debug_tu_index,"",@progbits
         # The index header
@@ -261,19 +270,19 @@ TU2_5_end:
         # abbrev and string offsets table.
         .long TU1_5_start-.debug_types.dwo
         .long 0
-        .long .debug_str_offsets_object_file1-.debug_str_offsets.dwo
+        .long .debug_str_offsets_object_file1_start-.debug_str_offsets.dwo
         .long TU2_5_start-.debug_types.dwo
         .long 0
-        .long .debug_str_offsets_object_file2-.debug_str_offsets.dwo
+        .long .debug_str_offsets_object_file2_start-.debug_str_offsets.dwo
 
         # The lengths of both TU's contributions to info, abbrev and
         # string offsets table.
         .long TU1_5_end-TU1_5_start
         .long abbrev_end-.debug_abbrev.dwo
-        .long .debug_str_offsets_end_TU1-.debug_str_offsets_start_TU1
+        .long .debug_str_offsets_object_file1_end-.debug_str_offsets_object_file1_start
         .long TU2_5_end-TU2_5_start
         .long abbrev_end-.debug_abbrev.dwo
-        .long .debug_str_offsets_end_TU2-.debug_str_offsets_start_TU2
+        .long .debug_str_offsets_object_file2_end-.debug_str_offsets_object_file2_start
 
 
 # Verify that the correct strings from each unit are displayed and that the
@@ -284,7 +293,6 @@ TU2_5_end:
 # CHECK:      DW_TAG_compile_unit
 # CHECK-NEXT: DW_AT_producer [DW_FORM_strx] ( indexed (00000000) string = "Handmade DWARF producer")
 # CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000001) string = "Compile_Unit_1")
-# CHECK-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x00000008)
 # CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000002) string = "/home/test/CU1")
 # CHECK-NOT:  NULL
 
@@ -293,26 +301,23 @@ TU2_5_end:
 # CHECK:      DW_TAG_compile_unit
 # CHECK-NEXT: DW_AT_producer [DW_FORM_strx] ( indexed (00000000) string = "Handmade DWARF producer")
 # CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000001) string = "Compile_Unit_2")
-# CHECK-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x00000008)
 # CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000002) string = "/home/test/CU2")
 # 
 # CHECK:      Type Unit
 # CHECK-NOT:  NULL
 # CHECK:      DW_TAG_type_unit
-# CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000000) string = "Type_Unit_1")
-# CHECK-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x0000001c)
+# CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000003) string = "Type_Unit_1")
 # CHECK-NOT:  NULL
 # CHECK:      DW_TAG_structure_type
-# CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000001) string = "MyStruct_1")
+# CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000004) string = "MyStruct_1")
 #
 # CHECK:      Type Unit
 # CHECK-NOT:  NULL
 # CHECK:      DW_TAG_type_unit
-# CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000000) string = "Type_Unit_2")
-# CHECK-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x0000001c)
+# CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000003) string = "Type_Unit_2")
 # CHECK-NOT:  NULL
 # CHECK:      DW_TAG_structure_type
-# CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000001) string = "MyStruct_2")
+# CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000004) string = "MyStruct_2")
 
 # Verify the correct offets of the compile and type units contributions in the
 # index tables.
@@ -322,11 +327,11 @@ TU2_5_end:
 # CHECK:      1 0xddeeaaddbbaabbee [{{0x[0-9a-f]*, 0x[0-9a-f]*}}) [{{0x[0-9a-f]*, 0x[0-9a-f]*}})
 # CHECK-SAME: [0x00000000
 # CHECK-NEXT: 2 0xff00ffeeffaaff00 [{{0x[0-9a-f]*, 0x[0-9a-f]*}}) [{{0x[0-9a-f]*, 0x[0-9a-f]*}})
-# CHECK-SAME: [0x00000024
+# CHECK-SAME: [0x0000001c
 
 # CHECK:      .debug_tu_index contents:
 # CHECK-NOT:  contents:
 # CHECK:      1 0xeeaaddbbaabbeedd [{{0x[0-9a-f]*, 0x[0-9a-f]*}}) [{{0x[0-9a-f]*, 0x[0-9a-f]*}})
 # CHECK-SAME: [0x00000000
 # CHECK-NEXT: 2 0x00ffeeffaaff00ff [{{0x[0-9a-f]*, 0x[0-9a-f]*}}) [{{0x[0-9a-f]*, 0x[0-9a-f]*}})
-# CHECK:      [0x00000024
+# CHECK:      [0x0000001c

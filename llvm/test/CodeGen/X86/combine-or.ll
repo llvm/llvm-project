@@ -430,24 +430,34 @@ define <4 x i32> @test2f(<4 x i32> %a, <4 x i32> %b) {
   ret <4 x i32> %or
 }
 
-; TODO: Why would we do this?
-; (or (and X, c1), c2) -> (and (or X, c2), c1|c2)
+; (or (and X, c1), c2) -> (and (or X, c2), c1|c2) iff (c1 & c2) != 0
 
 define <2 x i64> @or_and_v2i64(<2 x i64> %a0) {
 ; CHECK-LABEL: or_and_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    orps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %1 = and <2 x i64> %a0, <i64 7, i64 7>
   %2 = or <2 x i64> %1, <i64 3, i64 3>
   ret <2 x i64> %2
 }
 
-; If all masked bits are going to be set, that's a constant fold.
-
 define <4 x i32> @or_and_v4i32(<4 x i32> %a0) {
 ; CHECK-LABEL: or_and_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    orps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    retq
+  %1 = and <4 x i32> %a0, <i32 1, i32 3, i32 5, i32 7>
+  %2 = or <4 x i32> %1, <i32 3, i32 2, i32 15, i32 2>
+  ret <4 x i32> %2
+}
+
+; If all masked bits are going to be set, that's a constant fold.
+
+define <4 x i32> @or_and_v4i32_fold(<4 x i32> %a0) {
+; CHECK-LABEL: or_and_v4i32_fold:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [3,3,3,3]
 ; CHECK-NEXT:    retq

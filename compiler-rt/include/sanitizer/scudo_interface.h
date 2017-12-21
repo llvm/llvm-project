@@ -20,7 +20,7 @@ extern "C" {
 #endif
   // This function may be optionally provided by a user and should return
   // a string containing Scudo runtime options. See scudo_flags.h for details.
-  const char* __scudo_default_options();
+  const char* __scudo_default_options(void);
 
   // This function allows to set the RSS limit at runtime. This can be either
   // the hard limit (HardLimit=1) or the soft limit (HardLimit=0). The limit
