@@ -206,7 +206,7 @@ public:
 
   ArrayRef<MVT> getHVXElementTypes() const {
     static MVT Types[] = { MVT::i8, MVT::i16, MVT::i32 };
-    return Types;
+    return makeArrayRef(Types);
   }
 
   bool isHVXVectorType(MVT VecTy, bool IncludeBool = false) const {

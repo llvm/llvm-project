@@ -43,9 +43,9 @@ public:
   };
 
   WasmSymbol(StringRef Name, SymbolType Type, uint32_t Section,
-             uint32_t ElementIndex, uint32_t ImportIndex = 0)
+             uint32_t ElementIndex, uint32_t FunctionType = 0)
       : Name(Name), Type(Type), Section(Section), ElementIndex(ElementIndex),
-        ImportIndex(ImportIndex) {}
+        FunctionType(FunctionType) {}
 
   StringRef Name;
   SymbolType Type;
@@ -55,8 +55,18 @@ public:
   // Index into either the function or global index space.
   uint32_t ElementIndex;
 
-  // For imports, the index into the import table
-  uint32_t ImportIndex;
+  // For function, the type index
+  uint32_t FunctionType;
+
+  // Symbols can be both exported and imported (in the case of the weakly
+  // defined symbol).  In this the import index is stored as AltIndex.
+  uint32_t AltIndex = 0;
+  bool HasAltIndex = false;
+
+  void setAltIndex(uint32_t Index) {
+    HasAltIndex = true;
+    AltIndex = Index;
+  }
 
   bool isFunction() const {
     return Type == WasmSymbol::SymbolType::FUNCTION_IMPORT ||
@@ -91,8 +101,7 @@ public:
 
   void print(raw_ostream &Out) const {
     Out << "Name=" << Name << ", Type=" << static_cast<int>(Type)
-        << ", Flags=" << Flags << " ElemIndex=" << ElementIndex
-        << ", ImportIndex=" << ImportIndex;
+        << ", Flags=" << Flags << " ElemIndex=" << ElementIndex;
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
