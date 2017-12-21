@@ -24,7 +24,6 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
@@ -406,8 +405,7 @@ ObjectFile *ObjectFileELF::CreateInstance(const lldb::ModuleSP &module_sp,
                                           lldb::offset_t file_offset,
                                           lldb::offset_t length) {
   if (!data_sp) {
-    data_sp =
-        DataBufferLLVM::CreateSliceFromPath(file->GetPath(), length, file_offset, true);
+    data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp)
       return nullptr;
     data_offset = 0;
@@ -424,8 +422,7 @@ ObjectFile *ObjectFileELF::CreateInstance(const lldb::ModuleSP &module_sp,
 
   // Update the data to contain the entire file if it doesn't already
   if (data_sp->GetByteSize() < length) {
-    data_sp =
-        DataBufferLLVM::CreateSliceFromPath(file->GetPath(), length, file_offset, true);
+    data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp)
       return nullptr;
     data_offset = 0;
@@ -684,8 +681,7 @@ size_t ObjectFileELF::GetModuleSpecifications(
           size_t section_header_end = header.e_shoff + header.e_shentsize;
           if (header.HasHeaderExtension() &&
             section_header_end > data_sp->GetByteSize()) {
-            data_sp = DataBufferLLVM::CreateSliceFromPath(
-                file.GetPath(), section_header_end, file_offset);
+            data_sp = MapFileData(file, section_header_end, file_offset);
             if (data_sp) {
               data.SetData(data_sp);
               lldb::offset_t header_offset = data_offset;
@@ -698,8 +694,7 @@ size_t ObjectFileELF::GetModuleSpecifications(
           section_header_end =
               header.e_shoff + header.e_shnum * header.e_shentsize;
           if (section_header_end > data_sp->GetByteSize()) {
-            data_sp = DataBufferLLVM::CreateSliceFromPath(
-                file.GetPath(), section_header_end, file_offset);
+            data_sp = MapFileData(file, section_header_end, file_offset);
             if (data_sp)
               data.SetData(data_sp);
           }
@@ -741,8 +736,7 @@ size_t ObjectFileELF::GetModuleSpecifications(
                 size_t program_headers_end =
                     header.e_phoff + header.e_phnum * header.e_phentsize;
                 if (program_headers_end > data_sp->GetByteSize()) {
-                  data_sp = DataBufferLLVM::CreateSliceFromPath(
-                      file.GetPath(), program_headers_end, file_offset);
+                  data_sp = MapFileData(file, program_headers_end, file_offset);
                   if (data_sp)
                     data.SetData(data_sp);
                 }
@@ -757,8 +751,7 @@ size_t ObjectFileELF::GetModuleSpecifications(
                 }
 
                 if (segment_data_end > data_sp->GetByteSize()) {
-                  data_sp = DataBufferLLVM::CreateSliceFromPath(
-                      file.GetPath(), segment_data_end, file_offset);
+                  data_sp = MapFileData(file, segment_data_end, file_offset);
                   if (data_sp)
                     data.SetData(data_sp);
                 }
@@ -767,8 +760,7 @@ size_t ObjectFileELF::GetModuleSpecifications(
                     CalculateELFNotesSegmentsCRC32(program_headers, data);
               } else {
                 // Need to map entire file into memory to calculate the crc.
-                data_sp = DataBufferLLVM::CreateSliceFromPath(file.GetPath(), -1,
-                                                         file_offset);
+                data_sp = MapFileData(file, -1, file_offset);
                 if (data_sp) {
                   data.SetData(data_sp);
                   gnu_debuglink_crc = calc_gnu_debuglink_crc32(

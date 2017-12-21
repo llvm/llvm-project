@@ -15,6 +15,8 @@ str_CU1:
         .byte 0x01  # Abbrev code
         .byte 0x11  # DW_TAG_compile_unit
         .byte 0x00  # DW_CHILDREN_no
+        .byte 0x72  # DW_AT_str_offsets_base
+        .byte 0x17  # DW_FORM_sec_offset
         .byte 0x00  # EOM(1)
         .byte 0x00  # EOM(2)
         .byte 0x00  # EOM(3)
@@ -32,6 +34,7 @@ CU1_5_version:
         .long .debug_abbrev    # Offset Into Abbrev. Section
 # A compile-unit DIE, which has no attributes.
         .byte 1                # Abbreviation code
+        .long .debug_str_offsets_base0
 CU1_5_end:
 
 # Every unit contributes to the string_offsets table.
@@ -50,4 +53,4 @@ CU1_5_end:
 
 # INVALIDLENGTH:             .debug_str_offsets contents:
 # INVALIDLENGTH-NOT:         contents:
-# INVALIDLENGTH:             error: contribution to string offsets table in section .debug_str_offsets has invalid length.
+# INVALIDLENGTH:             error: invalid contribution to string offsets table in section .debug_str_offsets.

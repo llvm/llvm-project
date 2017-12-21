@@ -11882,6 +11882,12 @@ SDValue PPCTargetLowering::combineFPToIntToFP(SDNode *N,
   SDLoc dl(N);
   SDValue Op(N, 0);
 
+  // Don't handle ppc_fp128 here or i1 conversions.
+  if (Op.getValueType() != MVT::f32 && Op.getValueType() != MVT::f64)
+    return SDValue();
+  if (Op.getOperand(0).getValueType() == MVT::i1)
+    return SDValue();
+
   SDValue FirstOperand(Op.getOperand(0));
   bool SubWordLoad = FirstOperand.getOpcode() == ISD::LOAD &&
     (FirstOperand.getValueType() == MVT::i8 ||
@@ -11910,11 +11916,6 @@ SDValue PPCTargetLowering::combineFPToIntToFP(SDNode *N,
       return DAG.getNode(ConvOp, dl, DstDouble ? MVT::f64 : MVT::f32, Ld);
   }
 
-  // Don't handle ppc_fp128 here or i1 conversions.
-  if (Op.getValueType() != MVT::f32 && Op.getValueType() != MVT::f64)
-    return SDValue();
-  if (Op.getOperand(0).getValueType() == MVT::i1)
-    return SDValue();
 
   // For i32 intermediate values, unfortunately, the conversion functions
   // leave the upper 32 bits of the value are undefined. Within the set of

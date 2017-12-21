@@ -220,6 +220,16 @@ define <4 x i32> @and_or_v4i32(<4 x i32> %a0) {
   ret <4 x i32> %2
 }
 
+define <8 x i16> @and_or_v8i16(<8 x i16> %a0) {
+; CHECK-LABEL: and_or_v8i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [15,7,3,1,14,10,2,32767]
+; CHECK-NEXT:    retq
+  %1 = or <8 x i16> %a0, <i16 255, i16 127, i16 63, i16 31, i16 15, i16 31, i16 63, i16 -1>
+  %2 = and <8 x i16> %1, <i16 15, i16 7, i16 3, i16 1, i16 14, i16 10, i16 2, i16 32767>
+  ret <8 x i16> %2
+}
+
 ;
 ; known bits folding
 ;

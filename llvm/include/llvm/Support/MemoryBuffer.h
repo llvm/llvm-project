@@ -123,15 +123,6 @@ public:
   static std::unique_ptr<MemoryBuffer>
   getNewMemBuffer(size_t Size, StringRef BufferName = "");
 
-  /// Allocate a new MemoryBuffer of the specified size that is not initialized.
-  /// Note that the caller should initialize the memory allocated by this
-  /// method. The memory is owned by the MemoryBuffer object.
-  //
-  // TODO: Remove this and migrate callers to
-  //   WritableMemoryBuffer::getNewUninitMemBuffer
-  static std::unique_ptr<MemoryBuffer>
-  getNewUninitMemBuffer(size_t Size, const Twine &BufferName = "");
-
   /// Read all of stdin into a file buffer, and return it.
   static ErrorOr<std::unique_ptr<MemoryBuffer>> getSTDIN();
 
@@ -199,6 +190,9 @@ public:
   getFileSlice(const Twine &Filename, uint64_t MapSize, uint64_t Offset,
                bool IsVolatile = false);
 
+  /// Allocate a new MemoryBuffer of the specified size that is not initialized.
+  /// Note that the caller should initialize the memory allocated by this
+  /// method. The memory is owned by the MemoryBuffer object.
   static std::unique_ptr<WritableMemoryBuffer>
   getNewUninitMemBuffer(size_t Size, const Twine &BufferName = "");
 
