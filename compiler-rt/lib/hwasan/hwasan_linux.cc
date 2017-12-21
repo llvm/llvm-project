@@ -174,12 +174,14 @@ struct AccessInfo {
   uptr size;
   bool is_store;
   bool is_load;
+  bool recover;
 };
 
 #if defined(__aarch64__)
 static AccessInfo GetAccessInfo(siginfo_t *info, ucontext_t *uc) {
   // Access type is encoded in HLT immediate as 0x1XY,
-  // where X is 1 for store, 0 for load.
+  // where X&1 is 1 for store, 0 for load,
+  // and X&2 is 1 if the error is recoverable.
   // Valid values of Y are 0 to 4, which are interpreted as log2(access_size),
   // and 0xF, which means that access size is stored in X1 register.
   // Access address is always in X0 register.
@@ -189,6 +191,7 @@ static AccessInfo GetAccessInfo(siginfo_t *info, ucontext_t *uc) {
   if ((code & 0xff00) != 0x100)
     return AccessInfo{0, 0, false, false}; // Not ours.
   bool is_store = code & 0x10;
+  bool recover = code & 0x20;
   unsigned size_log = code & 0xf;
   if (size_log > 4 && size_log != 0xf)
     return AccessInfo{0, 0, false, false}; // Not ours.
@@ -200,6 +203,7 @@ static AccessInfo GetAccessInfo(siginfo_t *info, ucontext_t *uc) {
     ai.size = uc->uc_mcontext.regs[1];
   else
     ai.size = 1U << size_log;
+  ai.recover = recover;
   return ai;
 }
 #else
@@ -223,7 +227,7 @@ static bool HwasanOnSIGILL(int signo, siginfo_t *info, ucontext_t *uc) {
   ReportTagMismatch(stack, ai.addr, ai.size, ai.is_store);
 
   ++hwasan_report_count;
-  if (flags()->halt_on_error)
+  if (flags()->halt_on_error || !ai.recover)
     Die();
 
   uc->uc_mcontext.pc += 4;

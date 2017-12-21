@@ -297,7 +297,7 @@ void __ubsan::__ubsan_handle_out_of_bounds_abort(OutOfBoundsData *Data,
 static void handleBuiltinUnreachableImpl(UnreachableData *Data,
                                          ReportOptions Opts) {
   ScopedReport R(Opts, Data->Loc, ErrorType::UnreachableCall);
-  Diag(Data->Loc, DL_Error, "execution reached a __builtin_unreachable() call");
+  Diag(Data->Loc, DL_Error, "execution reached an unreachable program point");
 }
 
 void __ubsan::__ubsan_handle_builtin_unreachable(UnreachableData *Data) {
