@@ -3550,16 +3550,24 @@ void GlobalISelEmitter::emitImmPredicates(
     OS << "};\n";
   }
 
-  for (const auto *Record : MatchedRecords)
-    OS << "static bool Predicate_" << Record->getName() << "(" << Type
-       << " Imm) {" << Record->getValueAsString("ImmediateCode") << "}\n";
-
-  OS << "static InstructionSelector::" << TypeIdentifier
-     << "ImmediatePredicateFn " << TypeIdentifier << "ImmPredicateFns[] = {\n"
-     << "  nullptr,\n";
-  for (const auto *Record : MatchedRecords)
-    OS << "  Predicate_" << Record->getName() << ",\n";
-  OS << "};\n";
+  OS << "bool " << Target.getName() << "InstructionSelector::testImmPredicate_"
+     << TypeIdentifier << "(unsigned PredicateID, " << Type
+     << " Imm) const {\n";
+  if (!MatchedRecords.empty())
+    OS << "  switch (PredicateID) {\n";
+  for (const auto *Record : MatchedRecords) {
+    OS << "  case GIPFP_" << TypeIdentifier << "_Predicate_"
+       << Record->getName() << ": {\n"
+       << "    " << Record->getValueAsString("ImmediateCode") << "\n"
+       << "    llvm_unreachable(\"ImmediateCode should have returned\");\n"
+       << "    return false;\n"
+       << "  }\n";
+  }
+  if (!MatchedRecords.empty())
+    OS << "  }\n";
+  OS << "  llvm_unreachable(\"Unknown predicate\");\n"
+     << "  return false;\n"
+     << "}\n";
 }
 
 std::vector<Matcher *> GlobalISelEmitter::optimizeRules(
@@ -3673,12 +3681,17 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
         "MatcherInfo;\n"
      << "  static " << Target.getName()
      << "InstructionSelector::ComplexMatcherMemFn ComplexPredicateFns[];\n"
+     << "bool testImmPredicate_I64(unsigned PredicateID, int64_t Imm) const "
+        "override;\n"
+     << "bool testImmPredicate_APInt(unsigned PredicateID, const APInt &Imm) "
+        "const override;\n"
+     << "bool testImmPredicate_APFloat(unsigned PredicateID, const APFloat "
+        "&Imm) const override;\n"
      << "#endif // ifdef GET_GLOBALISEL_TEMPORARIES_DECL\n\n";
 
   OS << "#ifdef GET_GLOBALISEL_TEMPORARIES_INIT\n"
      << ", State(" << MaxTemporaries << "),\n"
-     << "MatcherInfo({TypeObjects, FeatureBitsets, I64ImmPredicateFns, "
-        "APIntImmPredicateFns, APFloatImmPredicateFns, ComplexPredicateFns})\n"
+     << "MatcherInfo({TypeObjects, FeatureBitsets, ComplexPredicateFns})\n"
      << "#endif // ifdef GET_GLOBALISEL_TEMPORARIES_INIT\n\n";
 
   OS << "#ifdef GET_GLOBALISEL_IMPL\n";

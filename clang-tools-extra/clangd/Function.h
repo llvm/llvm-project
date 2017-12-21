@@ -49,7 +49,7 @@ public:
                     FunctionCallImpl<typename std::decay<Callable>::type>>(
             std::forward<Callable>(Func))) {}
 
-  operator bool() { return bool(CallablePtr); }
+  explicit operator bool() { return bool(CallablePtr); }
 
   Ret operator()(Args... As) {
     assert(CallablePtr);

@@ -4394,6 +4394,7 @@ InstCombiner::transformCallThroughTrampoline(CallSite CS,
             cast<CallInst>(Caller)->getCallingConv());
         cast<CallInst>(NewCaller)->setAttributes(NewPAL);
       }
+      NewCaller->setDebugLoc(Caller->getDebugLoc());
 
       return NewCaller;
     }

@@ -99,6 +99,9 @@ namespace  {
     const CommandTraits *Traits;
     const SourceManager *SM;
 
+    /// The policy to use for printing; can be defaulted.
+    PrintingPolicy PrintPolicy;
+
     /// Pending[i] is an action to dump an entity at level i.
     llvm::SmallVector<std::function<void(bool isLastChild)>, 32> Pending;
 
@@ -207,12 +210,17 @@ namespace  {
   public:
     ASTDumper(raw_ostream &OS, const CommandTraits *Traits,
               const SourceManager *SM)
-      : OS(OS), Traits(Traits), SM(SM),
-        ShowColors(SM && SM->getDiagnostics().getShowColors()) { }
+        : ASTDumper(OS, Traits, SM,
+                    SM && SM->getDiagnostics().getShowColors()) {}
 
     ASTDumper(raw_ostream &OS, const CommandTraits *Traits,
               const SourceManager *SM, bool ShowColors)
-      : OS(OS), Traits(Traits), SM(SM), ShowColors(ShowColors) {}
+        : ASTDumper(OS, Traits, SM, ShowColors, LangOptions()) {}
+    ASTDumper(raw_ostream &OS, const CommandTraits *Traits,
+              const SourceManager *SM, bool ShowColors,
+              const PrintingPolicy &PrintPolicy)
+        : OS(OS), Traits(Traits), SM(SM), ShowColors(ShowColors),
+          PrintPolicy(PrintPolicy) {}
 
     void setDeserialize(bool D) { Deserialize = D; }
 
@@ -646,13 +654,13 @@ void ASTDumper::dumpBareType(QualType T, bool Desugar) {
   ColorScope Color(*this, TypeColor);
 
   SplitQualType T_split = T.split();
-  OS << "'" << QualType::getAsString(T_split) << "'";
+  OS << "'" << QualType::getAsString(T_split, PrintPolicy) << "'";
 
   if (Desugar && !T.isNull()) {
     // If the type is sugared, also dump a (shallow) desugared type.
     SplitQualType D_split = T.getSplitDesugaredType();
     if (T_split != D_split)
-      OS << ":'" << QualType::getAsString(D_split) << "'";
+      OS << ":'" << QualType::getAsString(D_split, PrintPolicy) << "'";
   }
 }
 
@@ -1187,12 +1195,12 @@ void ASTDumper::VisitFunctionDecl(const FunctionDecl *D) {
 
   if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(D)) {
     if (MD->size_overridden_methods() != 0) {
-      auto dumpOverride =
-        [=](const CXXMethodDecl *D) {
-          SplitQualType T_split = D->getType().split();
-          OS << D << " " << D->getParent()->getName() << "::"
-             << D->getNameAsString() << " '" << QualType::getAsString(T_split) << "'";
-        };
+      auto dumpOverride = [=](const CXXMethodDecl *D) {
+        SplitQualType T_split = D->getType().split();
+        OS << D << " " << D->getParent()->getName()
+           << "::" << D->getNameAsString() << " '"
+           << QualType::getAsString(T_split, PrintPolicy) << "'";
+      };
 
       dumpChild([=] {
         auto Overrides = MD->overridden_methods();
@@ -2682,15 +2690,18 @@ LLVM_DUMP_METHOD void Type::dump(llvm::raw_ostream &OS) const {
 LLVM_DUMP_METHOD void Decl::dump() const { dump(llvm::errs()); }
 
 LLVM_DUMP_METHOD void Decl::dump(raw_ostream &OS, bool Deserialize) const {
-  ASTDumper P(OS, &getASTContext().getCommentCommandTraits(),
-              &getASTContext().getSourceManager());
+  const ASTContext &Ctx = getASTContext();
+  ASTDumper P(OS, &Ctx.getCommentCommandTraits(), &Ctx.getSourceManager(),
+              false, Ctx.getPrintingPolicy());
   P.setDeserialize(Deserialize);
   P.dumpDecl(this);
 }
 
 LLVM_DUMP_METHOD void Decl::dumpColor() const {
-  ASTDumper P(llvm::errs(), &getASTContext().getCommentCommandTraits(),
-              &getASTContext().getSourceManager(), /*ShowColors*/true);
+  const ASTContext &Ctx = getASTContext();
+  ASTDumper P(llvm::errs(), &Ctx.getCommentCommandTraits(),
+              &Ctx.getSourceManager(), /*ShowColors*/ true,
+              Ctx.getPrintingPolicy());
   P.dumpDecl(this);
 }
 
@@ -2705,7 +2716,8 @@ LLVM_DUMP_METHOD void DeclContext::dumpLookups(raw_ostream &OS,
   while (!DC->isTranslationUnit())
     DC = DC->getParent();
   ASTContext &Ctx = cast<TranslationUnitDecl>(DC)->getASTContext();
-  ASTDumper P(OS, &Ctx.getCommentCommandTraits(), &Ctx.getSourceManager());
+  ASTDumper P(OS, &Ctx.getCommentCommandTraits(), &Ctx.getSourceManager(),
+              false, Ctx.getPrintingPolicy());
   P.setDeserialize(Deserialize);
   P.dumpLookups(this, DumpDecls);
 }

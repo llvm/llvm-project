@@ -9,8 +9,8 @@ namespace PR6733 {
   public: enum { kSomeConst = 128 };
     bar(int x = kSomeConst) {}
   };
-  
-  // CHECK: FunctionDecl{{.*}}f 'void (void)'
+
+  // CHECK: FunctionDecl{{.*}}f 'void ()'
   void f() {
     // CHECK: VarDecl{{.*}}tmp 'bar<int>'
     // CHECK: CXXDefaultArgExpr{{.*}}'int'

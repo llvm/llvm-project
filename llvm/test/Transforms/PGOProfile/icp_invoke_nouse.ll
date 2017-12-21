@@ -18,8 +18,7 @@ entry:
 
 if.end:                                           ; preds = %entry
   %fptr = load i32 ()*, i32 ()** @pfptr, align 8
-; ICP:  [[BITCAST_IC1:%[0-9]+]] = bitcast i32 ()* %fptr to i8*
-; ICP:  [[CMP_IC1:%[0-9]+]] = icmp eq i8* [[BITCAST_IC1]], bitcast (i32 ()* @_ZL4bar1v to i8*)
+; ICP:  [[CMP_IC1:%[0-9]+]] = icmp eq i32 ()* %fptr, @_ZL4bar1v
 ; ICP:  br i1 [[CMP_IC1]], label %[[TRUE_LABEL_IC1:.*]], label %[[FALSE_LABEL_IC1:.*]], !prof [[BRANCH_WEIGHT:![0-9]+]]
 ; ICP:[[TRUE_LABEL_IC1]]:
 ; ICP:  invoke i32 @_ZL4bar1v()
