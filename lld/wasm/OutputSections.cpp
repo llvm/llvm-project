@@ -63,10 +63,10 @@ static StringRef sectionTypeToString(uint32_t SectionType) {
   }
 }
 
-std::string lld::toString(OutputSection *Section) {
-  std::string rtn = sectionTypeToString(Section->Type);
-  if (!Section->Name.empty())
-    rtn += "(" + Section->Name + ")";
+std::string lld::toString(const OutputSection &Section) {
+  std::string rtn = Section.getSectionName();
+  if (!Section.Name.empty())
+    rtn += "(" + Section.Name + ")";
   return rtn;
 }
 
@@ -177,11 +177,11 @@ static void calcRelocations(const ObjFile &File,
   }
 }
 
-std::string OutputSection::getSectionName() {
+std::string OutputSection::getSectionName() const {
   return sectionTypeToString(Type);
 }
 
-std::string SubSection::getSectionName() {
+std::string SubSection::getSectionName() const {
   return std::string("subsection <type=") + std::to_string(Type) + ">";
 }
 
@@ -191,7 +191,7 @@ void OutputSection::createHeader(size_t BodySize) {
   writeUleb128(OS, Type, nullptr);
   writeUleb128(OS, BodySize, "section size");
   OS.flush();
-  log("createHeader: " + toString(this) + " body=" + Twine(BodySize) +
+  log("createHeader: " + toString(*this) + " body=" + Twine(BodySize) +
       " total=" + Twine(getSize()));
 }
 
@@ -222,7 +222,7 @@ CodeSection::CodeSection(uint32_t NumFunctions, ArrayRef<ObjFile *> Objs)
 }
 
 void CodeSection::writeTo(uint8_t *Buf) {
-  log("writing " + toString(this));
+  log("writing " + toString(*this));
   log(" size=" + Twine(getSize()));
   Buf += Offset;
 
@@ -303,7 +303,7 @@ DataSection::DataSection(ArrayRef<OutputSegment *> Segments)
 }
 
 void DataSection::writeTo(uint8_t *Buf) {
-  log("writing " + toString(this) + " size=" + Twine(getSize()) +
+  log("writing " + toString(*this) + " size=" + Twine(getSize()) +
       " body=" + Twine(BodySize));
   Buf += Offset;
 

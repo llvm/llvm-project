@@ -81,17 +81,9 @@ static ArrayRef<uint8_t> getVersion() {
 // With this feature, you can identify LLD-generated binaries easily
 // by "readelf --string-dump .comment <file>".
 // The returned object is a mergeable string section.
-template <class ELFT> MergeInputSection *elf::createCommentSection() {
-  typename ELFT::Shdr Hdr = {};
-  Hdr.sh_flags = SHF_MERGE | SHF_STRINGS;
-  Hdr.sh_type = SHT_PROGBITS;
-  Hdr.sh_entsize = 1;
-  Hdr.sh_addralign = 1;
-
-  auto *Ret =
-      make<MergeInputSection>((ObjFile<ELFT> *)nullptr, &Hdr, ".comment");
-  Ret->Data = getVersion();
-  return Ret;
+MergeInputSection *elf::createCommentSection() {
+  return make<MergeInputSection>(SHF_MERGE | SHF_STRINGS, SHT_PROGBITS, 1,
+                                 getVersion(), ".comment");
 }
 
 // .MIPS.abiflags section.
@@ -268,16 +260,16 @@ InputSection *elf::createInterpSection() {
   StringRef S = Saver.save(Config->DynamicLinker);
   ArrayRef<uint8_t> Contents = {(const uint8_t *)S.data(), S.size() + 1};
 
-  auto *Sec =
-      make<InputSection>(SHF_ALLOC, SHT_PROGBITS, 1, Contents, ".interp");
+  auto *Sec = make<InputSection>(nullptr, SHF_ALLOC, SHT_PROGBITS, 1, Contents,
+                                 ".interp");
   Sec->Live = true;
   return Sec;
 }
 
 Symbol *elf::addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
-                               uint64_t Size, InputSectionBase *Section) {
-  auto *S = make<Defined>(Section->File, Name, STB_LOCAL, STV_DEFAULT, Type,
-                          Value, Size, Section);
+                               uint64_t Size, InputSectionBase &Section) {
+  auto *S = make<Defined>(Section.File, Name, STB_LOCAL, STV_DEFAULT, Type,
+                          Value, Size, &Section);
   if (InX::SymTab)
     InX::SymTab->addSymbol(S);
   return S;
@@ -1893,10 +1885,10 @@ size_t PltSection::getSize() const {
 void PltSection::addSymbols() {
   // The PLT may have symbols defined for the Header, the IPLT has no header
   if (HeaderSize != 0)
-    Target->addPltHeaderSymbols(this);
+    Target->addPltHeaderSymbols(*this);
   size_t Off = HeaderSize;
   for (size_t I = 0; I < Entries.size(); ++I) {
-    Target->addPltSymbols(this, Off);
+    Target->addPltSymbols(*this, Off);
     Off += Target->PltEntrySize;
   }
 }
@@ -2299,8 +2291,8 @@ VersionNeedSection<ELFT>::VersionNeedSection()
 
 template <class ELFT>
 void VersionNeedSection<ELFT>::addSymbol(SharedSymbol *SS) {
-  SharedFile<ELFT> *File = SS->getFile<ELFT>();
-  const typename ELFT::Verdef *Ver = File->Verdefs[SS->VerdefIndex];
+  SharedFile<ELFT> &File = SS->getFile<ELFT>();
+  const typename ELFT::Verdef *Ver = File.Verdefs[SS->VerdefIndex];
   if (!Ver) {
     SS->VersionId = VER_NDX_GLOBAL;
     return;
@@ -2309,14 +2301,14 @@ void VersionNeedSection<ELFT>::addSymbol(SharedSymbol *SS) {
   // If we don't already know that we need an Elf_Verneed for this DSO, prepare
   // to create one by adding it to our needed list and creating a dynstr entry
   // for the soname.
-  if (File->VerdefMap.empty())
-    Needed.push_back({File, InX::DynStrTab->addString(File->SoName)});
-  typename SharedFile<ELFT>::NeededVer &NV = File->VerdefMap[Ver];
+  if (File.VerdefMap.empty())
+    Needed.push_back({&File, InX::DynStrTab->addString(File.SoName)});
+  typename SharedFile<ELFT>::NeededVer &NV = File.VerdefMap[Ver];
   // If we don't already know that we need an Elf_Vernaux for this Elf_Verdef,
   // prepare to create one by allocating a version identifier and creating a
   // dynstr entry for the version name.
   if (NV.Index == 0) {
-    NV.StrTab = InX::DynStrTab->addString(File->getStringTable().data() +
+    NV.StrTab = InX::DynStrTab->addString(File.getStringTable().data() +
                                           Ver->getAux()->vda_name);
     NV.Index = NextIndex++;
   }
@@ -2561,29 +2553,23 @@ ARMExidxSentinelSection::ARMExidxSentinelSection()
 // The sentinel must have the PREL31 value of an address higher than any
 // address described by any other table entry.
 void ARMExidxSentinelSection::writeTo(uint8_t *Buf) {
-  // The Sections are sorted in order of ascending PREL31 address with the
-  // sentinel last. We need to find the InputSection that precedes the
-  // sentinel.
-  OutputSection *C = getParent();
-  InputSection *Highest = nullptr;
-  unsigned Skip = 1;
-  for (const BaseCommand *Base : llvm::reverse(C->SectionCommands)) {
-    if (!isa<InputSectionDescription>(Base))
-      continue;
-    auto L = cast<InputSectionDescription>(Base);
-    if (Skip >= L->Sections.size()) {
-      Skip -= L->Sections.size();
-      continue;
-    }
-    Highest = L->Sections[L->Sections.size() - Skip - 1];
-    break;
-  }
   assert(Highest);
-  InputSection *LS = Highest->getLinkOrderDep();
-  uint64_t S = LS->getParent()->Addr + LS->getOffset(LS->getSize());
+  uint64_t S =
+      Highest->getParent()->Addr + Highest->getOffset(Highest->getSize());
   uint64_t P = getVA();
   Target->relocateOne(Buf, R_ARM_PREL31, S - P);
   write32le(Buf + 4, 1);
+}
+
+// The sentinel has to be removed if there are no other .ARM.exidx entries.
+bool ARMExidxSentinelSection::empty() const {
+  OutputSection *OS = getParent();
+  for (auto *B : OS->SectionCommands)
+    if (auto *ISD = dyn_cast<InputSectionDescription>(B))
+      for (auto *S : ISD->Sections)
+        if (!isa<ARMExidxSentinelSection>(S))
+          return false;
+  return true;
 }
 
 ThunkSection::ThunkSection(OutputSection *OS, uint64_t Off)
@@ -2654,11 +2640,6 @@ template void PltSection::addEntry<ELF32LE>(Symbol &Sym);
 template void PltSection::addEntry<ELF32BE>(Symbol &Sym);
 template void PltSection::addEntry<ELF64LE>(Symbol &Sym);
 template void PltSection::addEntry<ELF64BE>(Symbol &Sym);
-
-template MergeInputSection *elf::createCommentSection<ELF32LE>();
-template MergeInputSection *elf::createCommentSection<ELF32BE>();
-template MergeInputSection *elf::createCommentSection<ELF64LE>();
-template MergeInputSection *elf::createCommentSection<ELF64BE>();
 
 template class elf::MipsAbiFlagsSection<ELF32LE>;
 template class elf::MipsAbiFlagsSection<ELF32BE>;

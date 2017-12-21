@@ -23,7 +23,7 @@ namespace lld {
 namespace wasm {
 class OutputSection;
 }
-std::string toString(wasm::OutputSection *Section);
+std::string toString(const wasm::OutputSection &Section);
 
 namespace wasm {
 
@@ -34,27 +34,23 @@ class OutputSection {
 public:
   OutputSection(uint32_t Type, std::string Name = "")
       : Type(Type), Name(Name) {}
-
   virtual ~OutputSection() = default;
 
-  std::string getSectionName();
-
+  std::string getSectionName() const;
   void setOffset(size_t NewOffset) {
-    log("setOffset: " + toString(this) + " -> " + Twine(NewOffset));
+    log("setOffset: " + toString(*this) + ": " + Twine(NewOffset));
     Offset = NewOffset;
   }
-
   void createHeader(size_t BodySize);
   virtual size_t getSize() const = 0;
   virtual void writeTo(uint8_t *Buf) = 0;
   virtual void finalizeContents() {}
+  virtual uint32_t numRelocations() const { return 0; }
+  virtual void writeRelocations(raw_ostream &OS) const {}
 
   std::string Header;
   uint32_t Type;
   std::string Name;
-
-  virtual uint32_t numRelocations() const { return 0; }
-  virtual void writeRelocations(raw_ostream &OS) const {}
 
 protected:
   size_t Offset = 0;
@@ -70,7 +66,7 @@ public:
 
   void writeTo(uint8_t *Buf) override {
     assert(Offset);
-    log("writing " + toString(this));
+    log("writing " + toString(*this));
     memcpy(Buf + Offset, Header.data(), Header.size());
     memcpy(Buf + Offset + Header.size(), Body.data(), Body.size());
   }
@@ -99,8 +95,7 @@ class SubSection : public SyntheticSection {
 public:
   explicit SubSection(uint32_t Type) : SyntheticSection(Type) {}
 
-  std::string getSectionName();
-
+  std::string getSectionName() const;
   void writeToStream(raw_ostream &OS) {
     writeBytes(OS, Header.data(), Header.size());
     writeBytes(OS, Body.data(), Body.size());
