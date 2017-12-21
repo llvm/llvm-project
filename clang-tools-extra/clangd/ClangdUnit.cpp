@@ -513,10 +513,13 @@ CppFile::deferRebuild(StringRef NewContents,
           ComputePreambleBounds(*CI->getLangOpts(), ContentsBuffer.get(), 0);
       if (OldPreamble && OldPreamble->Preamble.CanReuse(
                              *CI, ContentsBuffer.get(), Bounds, VFS.get())) {
+        log(Ctx, "Reusing preamble for file " + Twine(That->FileName));
         return OldPreamble;
       }
-      // We won't need the OldPreamble anymore, release it so it can be deleted
-      // (if there are no other references to it).
+      log(Ctx, "Premble for file " + Twine(That->FileName) +
+                   " cannot be reused. Attempting to rebuild it.");
+      // We won't need the OldPreamble anymore, release it so it can be
+      // deleted (if there are no other references to it).
       OldPreamble.reset();
 
       trace::Span Tracer(Ctx, "Preamble");
@@ -533,11 +536,16 @@ CppFile::deferRebuild(StringRef NewContents,
           SerializedDeclsCollector);
 
       if (BuiltPreamble) {
+        log(Ctx, "Built preamble of size " + Twine(BuiltPreamble->getSize()) +
+                     " for file " + Twine(That->FileName));
+
         return std::make_shared<PreambleData>(
             std::move(*BuiltPreamble),
             SerializedDeclsCollector.takeTopLevelDeclIDs(),
             std::move(PreambleDiags));
       } else {
+        log(Ctx,
+            "Could not build a preamble for file " + Twine(That->FileName));
         return nullptr;
       }
     };
