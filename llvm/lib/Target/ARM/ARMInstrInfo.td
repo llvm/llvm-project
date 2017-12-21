@@ -280,6 +280,9 @@ def HasDSP           : Predicate<"Subtarget->hasDSP()">,
 def HasDB            : Predicate<"Subtarget->hasDataBarrier()">,
                                  AssemblerPredicate<"FeatureDB",
                                                     "data-barriers">;
+def HasDFB           : Predicate<"Subtarget->hasFullDataBarrier()">,
+                                 AssemblerPredicate<"FeatureDFB",
+                                                    "full-data-barrier">;
 def HasV7Clrex  : Predicate<"Subtarget->hasV7Clrex()">,
                             AssemblerPredicate<"FeatureV7Clrex",
                                                "v7 clrex">;
@@ -5850,6 +5853,8 @@ include "ARMInstrNEON.td"
 def : InstAlias<"dmb", (DMB 0xf), 0>, Requires<[IsARM, HasDB]>;
 def : InstAlias<"dsb", (DSB 0xf), 0>, Requires<[IsARM, HasDB]>;
 def : InstAlias<"isb", (ISB 0xf), 0>, Requires<[IsARM, HasDB]>;
+// Armv8-R 'Data Full Barrier'
+def : InstAlias<"dfb", (DSB 0xc), 1>, Requires<[IsARM, HasDFB]>;
 
 // System instructions
 def : MnemonicAlias<"swi", "svc">;
