@@ -583,7 +583,7 @@ DiagnosticIDs::getDiagnosticsInGroup(diag::Flavor Flavor, StringRef Group,
 }
 
 void DiagnosticIDs::getAllDiagnostics(diag::Flavor Flavor,
-                                      SmallVectorImpl<diag::kind> &Diags) {
+                                      std::vector<diag::kind> &Diags) {
   for (unsigned i = 0; i != StaticDiagInfoSize; ++i)
     if (StaticDiagInfo[i].getFlavor() == Flavor)
       Diags.push_back(StaticDiagInfo[i].DiagID);

@@ -454,11 +454,9 @@ InputSectionBase *ObjFile<ELFT>::getRelocTarget(const Elf_Shdr &Sec) {
 
 // Create a regular InputSection class that has the same contents
 // as a given section.
-InputSectionBase *toRegularSection(MergeInputSection *Sec) {
-  auto *Ret = make<InputSection>(Sec->Flags, Sec->Type, Sec->Alignment,
-                                 Sec->Data, Sec->Name);
-  Ret->File = Sec->File;
-  return Ret;
+static InputSection *toRegularSection(MergeInputSection *Sec) {
+  return make<InputSection>(Sec->File, Sec->Flags, Sec->Type, Sec->Alignment,
+                            Sec->Data, Sec->Name);
 }
 
 template <class ELFT>
@@ -477,7 +475,7 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
     // dynamic loaders require the presence of an attribute section for dlopen
     // to work. In a full implementation we would merge all attribute sections.
     if (InX::ARMAttributes == nullptr) {
-      InX::ARMAttributes = make<InputSection>(this, &Sec, Name);
+      InX::ARMAttributes = make<InputSection>(*this, Sec, Name);
       return InX::ARMAttributes;
     }
     return &InputSection::Discarded;
@@ -496,7 +494,7 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
     // If -r is given, we do not interpret or apply relocation
     // but just copy relocation sections to output.
     if (Config->Relocatable)
-      return make<InputSection>(this, &Sec, Name);
+      return make<InputSection>(*this, Sec, Name);
 
     if (Target->FirstRelocation)
       fatal(toString(this) +
@@ -534,7 +532,7 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
     // However, if -emit-relocs is given, we need to leave them in the output.
     // (Some post link analysis tools need this information.)
     if (Config->EmitRelocs) {
-      InputSection *RelocSec = make<InputSection>(this, &Sec, Name);
+      InputSection *RelocSec = make<InputSection>(*this, Sec, Name);
       // We will not emit relocation section if target was discarded.
       Target->DependentSections.push_back(RelocSec);
       return RelocSec;
@@ -581,11 +579,11 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   // .eh_frame_hdr section for runtime. So we handle them with a special
   // class. For relocatable outputs, they are just passed through.
   if (Name == ".eh_frame" && !Config->Relocatable)
-    return make<EhInputSection>(this, &Sec, Name);
+    return make<EhInputSection>(*this, Sec, Name);
 
   if (shouldMerge(Sec))
-    return make<MergeInputSection>(this, &Sec, Name);
-  return make<InputSection>(this, &Sec, Name);
+    return make<MergeInputSection>(*this, Sec, Name);
+  return make<InputSection>(*this, Sec, Name);
 }
 
 template <class ELFT>
@@ -983,8 +981,8 @@ static ELFKind getELFKind(MemoryBufferRef MB) {
 
 template <class ELFT> void BinaryFile::parse() {
   ArrayRef<uint8_t> Data = toArrayRef(MB.getBuffer());
-  auto *Section =
-      make<InputSection>(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS, 8, Data, ".data");
+  auto *Section = make<InputSection>(nullptr, SHF_ALLOC | SHF_WRITE,
+                                     SHT_PROGBITS, 8, Data, ".data");
   Sections.push_back(Section);
 
   // For each input file foo that is embedded to a result as a binary

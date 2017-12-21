@@ -91,3 +91,22 @@ int pr31843() {
 
   return n;
 }
+
+typedef struct {
+  char string[512];
+} NestedArrayStruct;
+
+typedef struct {
+  int x;
+  NestedArrayStruct session[];
+} IncompleteArrayStruct;
+
+void rd36094951_IAS_builtin_object_size_assertion(IncompleteArrayStruct *p) {
+#define rd36094951_CHECK(mode)                                                 \
+  __builtin___strlcpy_chk(p->session[0].string, "ab", 2,                       \
+                          __builtin_object_size(p->session[0].string, mode))
+  rd36094951_CHECK(0);
+  rd36094951_CHECK(1);
+  rd36094951_CHECK(2);
+  rd36094951_CHECK(3);
+}
