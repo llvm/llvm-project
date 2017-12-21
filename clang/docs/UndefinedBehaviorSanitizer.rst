@@ -124,8 +124,8 @@ Available checks are:
   -  ``-fsanitize=signed-integer-overflow``: Signed integer overflow,
      including all the checks added by ``-ftrapv``, and checking for
      overflow in signed division (``INT_MIN / -1``).
-  -  ``-fsanitize=unreachable``: If control flow reaches
-     ``__builtin_unreachable``.
+  -  ``-fsanitize=unreachable``: If control flow reaches an unreachable
+     program point.
   -  ``-fsanitize=unsigned-integer-overflow``: Unsigned integer
      overflows. Note that unlike signed integer overflow, unsigned integer
      is not undefined behavior. However, while it has well-defined semantics,
