@@ -477,7 +477,7 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
     // dynamic loaders require the presence of an attribute section for dlopen
     // to work. In a full implementation we would merge all attribute sections.
     if (InX::ARMAttributes == nullptr) {
-      InX::ARMAttributes = make<InputSection>(this, &Sec, Name);
+      InX::ARMAttributes = make<InputSection>(*this, Sec, Name);
       return InX::ARMAttributes;
     }
     return &InputSection::Discarded;
@@ -496,7 +496,7 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
     // If -r is given, we do not interpret or apply relocation
     // but just copy relocation sections to output.
     if (Config->Relocatable)
-      return make<InputSection>(this, &Sec, Name);
+      return make<InputSection>(*this, Sec, Name);
 
     if (Target->FirstRelocation)
       fatal(toString(this) +
@@ -534,7 +534,7 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
     // However, if -emit-relocs is given, we need to leave them in the output.
     // (Some post link analysis tools need this information.)
     if (Config->EmitRelocs) {
-      InputSection *RelocSec = make<InputSection>(this, &Sec, Name);
+      InputSection *RelocSec = make<InputSection>(*this, Sec, Name);
       // We will not emit relocation section if target was discarded.
       Target->DependentSections.push_back(RelocSec);
       return RelocSec;
@@ -581,11 +581,11 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   // .eh_frame_hdr section for runtime. So we handle them with a special
   // class. For relocatable outputs, they are just passed through.
   if (Name == ".eh_frame" && !Config->Relocatable)
-    return make<EhInputSection>(this, &Sec, Name);
+    return make<EhInputSection>(*this, Sec, Name);
 
   if (shouldMerge(Sec))
-    return make<MergeInputSection>(this, &Sec, Name);
-  return make<InputSection>(this, &Sec, Name);
+    return make<MergeInputSection>(*this, Sec, Name);
+  return make<InputSection>(*this, Sec, Name);
 }
 
 template <class ELFT>

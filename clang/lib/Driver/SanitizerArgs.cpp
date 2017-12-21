@@ -440,6 +440,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   RecoverableKinds &= ~Unrecoverable;
 
   TrappingKinds &= Kinds;
+  RecoverableKinds &= ~TrappingKinds;
 
   // Setup blacklist files.
   // Add default blacklist from resource directory.
@@ -683,6 +684,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   Sanitizers.Mask |= Kinds;
   RecoverableSanitizers.Mask |= RecoverableKinds;
   TrapSanitizers.Mask |= TrappingKinds;
+  assert(!(RecoverableKinds & TrappingKinds) &&
+         "Overlap between recoverable and trapping sanitizers");
 }
 
 static std::string toString(const clang::SanitizerSet &Sanitizers) {

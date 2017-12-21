@@ -75,7 +75,7 @@ D test5(D d) {
   return d;
   // Verify the implicit move from the AST dump
   // CHECK-AST: ReturnStmt{{.*}}line:[[@LINE-2]]
-  // CHECK-AST-NEXT: CXXConstructExpr{{.*}}D{{.*}}void (D &&)
+  // CHECK-AST-NEXT: CXXConstructExpr{{.*}}struct D{{.*}}void (struct D &&)
   // CHECK-AST-NEXT: ImplicitCastExpr
   // CHECK-AST-NEXT: DeclRefExpr{{.*}}ParmVar{{.*}}'d'
 

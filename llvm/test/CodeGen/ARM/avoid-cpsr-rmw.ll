@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=thumbv7-apple-darwin -mcpu=cortex-a9 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CORTEX
-; RUN: llc < %s -mtriple=thumbv7-apple-darwin -mcpu=swift     | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-SWIFT
+; RUN: llc < %s -mtriple=thumbv7-apple-darwin -mcpu=cortex-a9 -simplifycfg-sink-common=false | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CORTEX
+; RUN: llc < %s -mtriple=thumbv7-apple-darwin -mcpu=swift     -simplifycfg-sink-common=false | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-SWIFT
 ; Avoid some 's' 16-bit instruction which partially update CPSR (and add false
 ; dependency) when it isn't dependent on last CPSR defining instruction.
 ; rdar://8928208

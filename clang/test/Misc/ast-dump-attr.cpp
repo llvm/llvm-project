@@ -123,7 +123,7 @@ int __attribute__((cdecl)) TestOne(void), TestTwo(void);
 
 void func() {
   auto Test = []() __attribute__((no_thread_safety_analysis)) {};
-  // CHECK: CXXMethodDecl{{.*}}operator() 'void () const'
+  // CHECK: CXXMethodDecl{{.*}}operator() 'void (void) const'
   // CHECK: NoThreadSafetyAnalysisAttr
 
   // Because GNU's noreturn applies to the function type, and this lambda does
@@ -131,7 +131,7 @@ void func() {
   // conversion should both be noreturn, but the method should not contain a
   // NoReturnAttr because the attribute applied to the type.
   auto Test2 = []() __attribute__((noreturn)) { while(1); };
-  // CHECK: CXXMethodDecl{{.*}}operator() 'void () __attribute__((noreturn)) const'
+  // CHECK: CXXMethodDecl{{.*}}operator() 'void (void) __attribute__((noreturn)) const'
   // CHECK-NOT: NoReturnAttr
   // CHECK: CXXConversionDecl{{.*}}operator void (*)() __attribute__((noreturn))
 }

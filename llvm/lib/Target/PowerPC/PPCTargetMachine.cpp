@@ -451,8 +451,7 @@ void PPCPassConfig::addPreEmitPass() {
   addPass(createPPCBranchSelectionPass(), false);
 }
 
-TargetIRAnalysis PPCTargetMachine::getTargetIRAnalysis() {
-  return TargetIRAnalysis([this](const Function &F) {
-    return TargetTransformInfo(PPCTTIImpl(this, F));
-  });
+TargetTransformInfo
+PPCTargetMachine::getTargetTransformInfo(const Function &F) {
+  return TargetTransformInfo(PPCTTIImpl(this, F));
 }

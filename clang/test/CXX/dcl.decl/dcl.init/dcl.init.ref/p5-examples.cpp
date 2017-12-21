@@ -16,13 +16,13 @@ struct B : A { } b;
 
 // CHECK-LABEL: example1
 void example1() {
-  // CHECK: VarDecl{{.*}}ra 'A &'
-  // CHECK: ImplicitCastExpr{{.*}}'A' lvalue <DerivedToBase (A)>
+  // CHECK: VarDecl{{.*}}ra 'struct A &'
+  // CHECK: ImplicitCastExpr{{.*}}'struct A' lvalue <DerivedToBase (A)>
   A &ra = b;
-  // CHECK: VarDecl{{.*}}rca 'const A &'
-  // CHECK: ImplicitCastExpr{{.*}}'const A' lvalue <DerivedToBase (A)>
+  // CHECK: VarDecl{{.*}}rca 'const struct A &'
+  // CHECK: ImplicitCastExpr{{.*}}'const struct A' lvalue <DerivedToBase (A)>
   // CHECK-NOT: MaterializeTemporaryExpr
-  // CHECK: ImplicitCastExpr{{.*}}'const B' lvalue <NoOp>
+  // CHECK: ImplicitCastExpr{{.*}}'const struct B' lvalue <NoOp>
   const A& rca = b;
 }
 
@@ -34,17 +34,17 @@ struct X {
 
 // CHECK-LABEL: example2
 void example2() {
-  // CHECK: VarDecl{{.*}}rca 'const A &'
-  // CHECK: ImplicitCastExpr{{.*}}'const A' lvalue <DerivedToBase (A)>
-  // CHECK: MaterializeTemporaryExpr{{.*}}'const B'
-  // CHECK: ImplicitCastExpr{{.*}}'const B' <NoOp>
+  // CHECK: VarDecl{{.*}}rca 'const struct A &'
+  // CHECK: ImplicitCastExpr{{.*}}'const struct A' lvalue <DerivedToBase (A)>
+  // CHECK: MaterializeTemporaryExpr{{.*}}'const struct B'
+  // CHECK: ImplicitCastExpr{{.*}}'const struct B' <NoOp>
   // CHECK: CallExpr{{.*}}B
-  const A &rca = f();
-  // CHECK: VarDecl{{.*}}r 'const A &'
-  // CHECK: ImplicitCastExpr{{.*}}'const A' lvalue <DerivedToBase (A)>
-  // CHECK: MaterializeTemporaryExpr{{.*}}'const B'
-  // CHECK: ImplicitCastExpr{{.*}}'const B' <NoOp>
-  // CHECK: CXXMemberCallExpr{{.*}}'B'
+  const A &rca = f(); 
+  // CHECK: VarDecl{{.*}}r 'const struct A &'
+  // CHECK: ImplicitCastExpr{{.*}}'const struct A' lvalue <DerivedToBase (A)>
+  // CHECK: MaterializeTemporaryExpr{{.*}}'const struct B'
+  // CHECK: ImplicitCastExpr{{.*}}'const struct B' <NoOp>
+  // CHECK: CXXMemberCallExpr{{.*}}'struct B'
   const A& r = x;
 }
 
@@ -52,5 +52,5 @@ void example2() {
 void example3() {
   // CHECK: VarDecl{{.*}}rcd2 'const double &'
   // CHECK: ImplicitCastExpr{{.*}} <IntegralToFloating>
-  const double& rcd2 = 2;
+  const double& rcd2 = 2; 
 }

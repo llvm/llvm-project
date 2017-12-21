@@ -1712,20 +1712,16 @@ void Qualifiers::print(raw_ostream &OS, const PrintingPolicy& Policy,
     OS << ' ';
 }
 
-std::string QualType::getAsString() const {
-  return getAsString(split(), LangOptions());
-}
-
 std::string QualType::getAsString(const PrintingPolicy &Policy) const {
   std::string S;
   getAsStringInternal(S, Policy);
   return S;
 }
 
-std::string QualType::getAsString(const Type *ty, Qualifiers qs,
-                                  const PrintingPolicy &Policy) {
+std::string QualType::getAsString(const Type *ty, Qualifiers qs) {
   std::string buffer;
-  getAsStringInternal(ty, qs, buffer, Policy);
+  LangOptions options;
+  getAsStringInternal(ty, qs, buffer, PrintingPolicy(options));
   return buffer;
 }
 

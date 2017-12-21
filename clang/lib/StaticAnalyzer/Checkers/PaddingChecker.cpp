@@ -293,9 +293,7 @@ public:
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
     Os << "Excessive padding in '";
-    Os << QualType::getAsString(RD->getTypeForDecl(), Qualifiers(),
-                                LangOptions())
-       << "'";
+    Os << QualType::getAsString(RD->getTypeForDecl(), Qualifiers()) << "'";
 
     if (auto *TSD = dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
       // TODO: make this show up better in the console output and in

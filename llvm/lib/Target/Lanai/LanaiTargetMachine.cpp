@@ -74,10 +74,9 @@ LanaiTargetMachine::LanaiTargetMachine(const Target &T, const Triple &TT,
   initAsmInfo();
 }
 
-TargetIRAnalysis LanaiTargetMachine::getTargetIRAnalysis() {
-  return TargetIRAnalysis([this](const Function &F) {
-    return TargetTransformInfo(LanaiTTIImpl(this, F));
-  });
+TargetTransformInfo
+LanaiTargetMachine::getTargetTransformInfo(const Function &F) {
+  return TargetTransformInfo(LanaiTTIImpl(this, F));
 }
 
 namespace {
