@@ -16,6 +16,9 @@
 // Each struct has a toJSON and fromJSON function, that converts between
 // the struct and a JSON representation. (See JSONExpr.h)
 //
+// Some structs also have operator<< serialization. This is for debugging and
+// tests, and is not generally machine-readable.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_PROTOCOL_H
@@ -65,6 +68,7 @@ struct URI {
 };
 json::Expr toJSON(const URI &U);
 bool fromJSON(const json::Expr &, URI &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const URI &);
 
 struct TextDocumentIdentifier {
   /// The text document's URI.
@@ -90,6 +94,7 @@ struct Position {
 };
 bool fromJSON(const json::Expr &, Position &);
 json::Expr toJSON(const Position &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Position &);
 
 struct Range {
   /// The range's start position.
@@ -107,6 +112,7 @@ struct Range {
 };
 bool fromJSON(const json::Expr &, Range &);
 json::Expr toJSON(const Range &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Range &);
 
 struct Location {
   /// The text document's URI.
@@ -126,6 +132,7 @@ struct Location {
   }
 };
 json::Expr toJSON(const Location &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Location &);
 
 struct Metadata {
   std::vector<std::string> extraFlags;

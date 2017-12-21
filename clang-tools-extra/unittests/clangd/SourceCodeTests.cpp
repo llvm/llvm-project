@@ -13,10 +13,6 @@
 
 namespace clang{
 namespace clangd {
-void PrintTo(const Position &P, std::ostream *O) {
-  llvm::raw_os_ostream OS(*O);
-  OS << toJSON(P);
-}
 namespace {
 
 MATCHER_P2(Pos, Line, Col, "") {

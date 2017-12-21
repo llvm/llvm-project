@@ -420,10 +420,9 @@ bool Preprocessor::SetCodeCompletionPoint(const FileEntry *File,
   CodeCompletionFile = File;
   CodeCompletionOffset = Position - Buffer->getBufferStart();
 
-  std::unique_ptr<MemoryBuffer> NewBuffer =
-      MemoryBuffer::getNewUninitMemBuffer(Buffer->getBufferSize() + 1,
-                                          Buffer->getBufferIdentifier());
-  char *NewBuf = const_cast<char*>(NewBuffer->getBufferStart());
+  auto NewBuffer = llvm::WritableMemoryBuffer::getNewUninitMemBuffer(
+      Buffer->getBufferSize() + 1, Buffer->getBufferIdentifier());
+  char *NewBuf = NewBuffer->getBufferStart();
   char *NewPos = std::copy(Buffer->getBufferStart(), Position, NewBuf);
   *NewPos = '\0';
   std::copy(Position, Buffer->getBufferEnd(), NewPos+1);

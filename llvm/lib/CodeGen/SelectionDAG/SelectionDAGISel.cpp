@@ -3117,7 +3117,16 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       continue;
     }
     case OPC_RecordMemRef:
-      MatchedMemRefs.push_back(cast<MemSDNode>(N)->getMemOperand());
+      if (auto *MN = dyn_cast<MemSDNode>(N))
+        MatchedMemRefs.push_back(MN->getMemOperand());
+      else {
+        DEBUG(
+          dbgs() << "Expected MemSDNode ";
+          N->dump(CurDAG);
+          dbgs() << '\n'
+        );
+      }
+
       continue;
 
     case OPC_CaptureGlueInput:
@@ -3563,7 +3572,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         Ops.push_back(InputGlue);
 
       // Create the node.
-      SDNode *Res = nullptr;
+      MachineSDNode *Res = nullptr;
       bool IsMorphNodeTo = Opcode == OPC_MorphNodeTo ||
                      (Opcode >= OPC_MorphNodeTo0 && Opcode <= OPC_MorphNodeTo2);
       if (!IsMorphNodeTo) {
@@ -3589,7 +3598,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
                  "Chain node replaced during MorphNode");
           Chain.erase(std::remove(Chain.begin(), Chain.end(), N), Chain.end());
         });
-        Res = MorphNode(NodeToMatch, TargetOpc, VTList, Ops, EmitNodeInfo);
+        Res = cast<MachineSDNode>(MorphNode(NodeToMatch, TargetOpc, VTList,
+                                            Ops, EmitNodeInfo));
       }
 
       // If the node had chain/glue results, update our notion of the current
@@ -3645,13 +3655,19 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
           }
         }
 
-        cast<MachineSDNode>(Res)
-          ->setMemRefs(MemRefs, MemRefs + NumMemRefs);
+        Res->setMemRefs(MemRefs, MemRefs + NumMemRefs);
       }
 
-      DEBUG(dbgs() << "  "
-                   << (IsMorphNodeTo ? "Morphed" : "Created")
-                   << " node: "; Res->dump(CurDAG); dbgs() << "\n");
+      DEBUG(
+        if (!MatchedMemRefs.empty() && Res->memoperands_empty())
+          dbgs() << "  Dropping mem operands\n";
+        dbgs() << "  "
+               << (IsMorphNodeTo ? "Morphed" : "Created")
+               << " node: ";
+        Res->dump(CurDAG);
+
+        dbgs() << '\n';
+      );
 
       // If this was a MorphNodeTo then we're completely done!
       if (IsMorphNodeTo) {

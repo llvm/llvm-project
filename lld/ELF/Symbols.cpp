@@ -224,21 +224,21 @@ InputFile *Lazy::fetch() {
   return cast<LazyObject>(this)->fetch();
 }
 
-ArchiveFile *LazyArchive::getFile() { return cast<ArchiveFile>(File); }
+ArchiveFile &LazyArchive::getFile() { return *cast<ArchiveFile>(File); }
 
 InputFile *LazyArchive::fetch() {
-  std::pair<MemoryBufferRef, uint64_t> MBInfo = getFile()->getMember(&Sym);
+  std::pair<MemoryBufferRef, uint64_t> MBInfo = getFile().getMember(&Sym);
 
   // getMember returns an empty buffer if the member was already
   // read from the library.
   if (MBInfo.first.getBuffer().empty())
     return nullptr;
-  return createObjectFile(MBInfo.first, getFile()->getName(), MBInfo.second);
+  return createObjectFile(MBInfo.first, getFile().getName(), MBInfo.second);
 }
 
-LazyObjFile *LazyObject::getFile() { return cast<LazyObjFile>(File); }
+LazyObjFile &LazyObject::getFile() { return *cast<LazyObjFile>(File); }
 
-InputFile *LazyObject::fetch() { return getFile()->fetch(); }
+InputFile *LazyObject::fetch() { return getFile().fetch(); }
 
 uint8_t Symbol::computeBinding() const {
   if (Config->Relocatable)

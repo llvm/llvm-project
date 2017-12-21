@@ -30,6 +30,10 @@ Available options:
                         'branches/release_40'
                         (default: 'trunk')
     -r|--revision       svn revision to checkout
+    -c|--cherrypick     revision to cherry-pick. Can be specified multiple times.
+                        Cherry-picks are performed in the sorted order using the
+                        following command:
+                        'svn patch <(svn diff -c \$rev)'.
     -p|--llvm-project   name of an svn project to checkout. Will also add the
                         project to a list LLVM_ENABLE_PROJECTS, passed to CMake.
                         For clang, please use 'clang', not 'cfe'.
@@ -92,7 +96,7 @@ while [[ $# -gt 0 ]]; do
       DOCKER_TAG="$1"
       shift
       ;;
-    -i|--install-target|-r|--revision|-b|--branch|-p|--llvm-project)
+    -i|--install-target|-r|--revision|-c|-cherrypick|-b|--branch|-p|--llvm-project)
       if [ "$1" == "-i" ] || [ "$1" == "--install-target" ]; then
         SEEN_INSTALL_TARGET=1
       fi

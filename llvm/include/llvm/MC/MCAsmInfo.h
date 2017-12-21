@@ -165,7 +165,8 @@ protected:
   const char *ZeroDirective;
 
   /// This directive allows emission of an ascii string with the standard C
-  /// escape characters embedded into it.  Defaults to "\t.ascii\t"
+  /// escape characters embedded into it.  If a target doesn't support this, it
+  /// can be set to null. Defaults to "\t.ascii\t"
   const char *AsciiDirective;
 
   /// If not null, this allows for special handling of zero terminated strings

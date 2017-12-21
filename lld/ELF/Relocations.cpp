@@ -443,8 +443,8 @@ template <class ELFT> static bool isReadOnly(SharedSymbol *SS) {
   typedef typename ELFT::Phdr Elf_Phdr;
 
   // Determine if the symbol is read-only by scanning the DSO's program headers.
-  const SharedFile<ELFT> *File = SS->getFile<ELFT>();
-  for (const Elf_Phdr &Phdr : check(File->getObj().program_headers()))
+  const SharedFile<ELFT> &File = SS->getFile<ELFT>();
+  for (const Elf_Phdr &Phdr : check(File.getObj().program_headers()))
     if ((Phdr.p_type == ELF::PT_LOAD || Phdr.p_type == ELF::PT_GNU_RELRO) &&
         !(Phdr.p_flags & ELF::PF_W) && SS->Value >= Phdr.p_vaddr &&
         SS->Value < Phdr.p_vaddr + Phdr.p_memsz)
@@ -461,14 +461,14 @@ template <class ELFT>
 static std::vector<SharedSymbol *> getSymbolsAt(SharedSymbol *SS) {
   typedef typename ELFT::Sym Elf_Sym;
 
-  SharedFile<ELFT> *File = SS->getFile<ELFT>();
+  SharedFile<ELFT> &File = SS->getFile<ELFT>();
 
   std::vector<SharedSymbol *> Ret;
-  for (const Elf_Sym &S : File->getGlobalELFSyms()) {
+  for (const Elf_Sym &S : File.getGlobalELFSyms()) {
     if (S.st_shndx == SHN_UNDEF || S.st_shndx == SHN_ABS ||
         S.st_value != SS->Value)
       continue;
-    StringRef Name = check(S.getName(File->getStringTable()));
+    StringRef Name = check(S.getName(File.getStringTable()));
     Symbol *Sym = Symtab->find(Name);
     if (auto *Alias = dyn_cast_or_null<SharedSymbol>(Sym))
       Ret.push_back(Alias);

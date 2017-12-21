@@ -652,6 +652,24 @@ def XSeqPairClassOperand :
 
 //===----- END: v8.1a atomic CASP register operands -----------------------===//
 
+// SVE predicate registers
+def P0    : AArch64Reg<0,   "p0">, DwarfRegNum<[48]>;
+def P1    : AArch64Reg<1,   "p1">, DwarfRegNum<[49]>;
+def P2    : AArch64Reg<2,   "p2">, DwarfRegNum<[50]>;
+def P3    : AArch64Reg<3,   "p3">, DwarfRegNum<[51]>;
+def P4    : AArch64Reg<4,   "p4">, DwarfRegNum<[52]>;
+def P5    : AArch64Reg<5,   "p5">, DwarfRegNum<[53]>;
+def P6    : AArch64Reg<6,   "p6">, DwarfRegNum<[54]>;
+def P7    : AArch64Reg<7,   "p7">, DwarfRegNum<[55]>;
+def P8    : AArch64Reg<8,   "p8">, DwarfRegNum<[56]>;
+def P9    : AArch64Reg<9,   "p9">, DwarfRegNum<[57]>;
+def P10   : AArch64Reg<10, "p10">, DwarfRegNum<[58]>;
+def P11   : AArch64Reg<11, "p11">, DwarfRegNum<[59]>;
+def P12   : AArch64Reg<12, "p12">, DwarfRegNum<[60]>;
+def P13   : AArch64Reg<13, "p13">, DwarfRegNum<[61]>;
+def P14   : AArch64Reg<14, "p14">, DwarfRegNum<[62]>;
+def P15   : AArch64Reg<15, "p15">, DwarfRegNum<[63]>;
+
 // The part of SVE registers that don't overlap Neon registers.
 // These are only used as part of clobber lists.
 def Z0_HI    : AArch64Reg<0,   "z0_hi">;
@@ -731,8 +749,40 @@ class SVERegOp <string Suffix, AsmOperandClass C,
   let ParserMatchClass = C;
 }
 
+class PPRRegOp <string Suffix, AsmOperandClass C,
+                RegisterClass RC> : SVERegOp<Suffix, C, RC> {}
 class ZPRRegOp <string Suffix, AsmOperandClass C,
                 RegisterClass RC> : SVERegOp<Suffix, C, RC> {}
+
+//******************************************************************************
+
+// SVE predicate register class.
+def PPR : RegisterClass<"AArch64",
+                        [nxv16i1, nxv8i1, nxv4i1, nxv2i1],
+                        16, (sequence "P%u", 0, 15)> {
+  let Size = 16;
+}
+
+class PPRAsmOperand <string name, int Width>: AsmOperandClass {
+  let Name = "SVE" # name # "Reg";
+  let PredicateMethod = "isSVEVectorRegOfWidth<"
+                            # Width # ", AArch64::PPRRegClassID>";
+  let DiagnosticType = "InvalidSVE" # name # "Reg";
+  let RenderMethod = "addRegOperands";
+  let ParserMethod = "tryParseSVEPredicateVector";
+}
+
+def PPRAsmOpAny : PPRAsmOperand<"PredicateAny", -1>;
+def PPRAsmOp8   : PPRAsmOperand<"PredicateB",  8>;
+def PPRAsmOp16  : PPRAsmOperand<"PredicateH", 16>;
+def PPRAsmOp32  : PPRAsmOperand<"PredicateS", 32>;
+def PPRAsmOp64  : PPRAsmOperand<"PredicateD", 64>;
+
+def PPRAny : PPRRegOp<"",  PPRAsmOpAny, PPR>;
+def PPR8   : PPRRegOp<"b", PPRAsmOp8,   PPR>;
+def PPR16  : PPRRegOp<"h", PPRAsmOp16,  PPR>;
+def PPR32  : PPRRegOp<"s", PPRAsmOp32,  PPR>;
+def PPR64  : PPRRegOp<"d", PPRAsmOp64,  PPR>;
 
 //******************************************************************************
 
@@ -748,7 +798,8 @@ def ZPR : RegisterClass<"AArch64",
 
 class ZPRAsmOperand <string name, int Width>: AsmOperandClass {
   let Name = "SVE" # name # "Reg";
-  let PredicateMethod = "isSVEDataVectorRegOfWidth<" # Width # ">";
+  let PredicateMethod = "isSVEVectorRegOfWidth<"
+                            # Width # ", AArch64::ZPRRegClassID>";
   let RenderMethod = "addRegOperands";
   let ParserMethod = "tryParseSVEDataVector<"
                                # !if(!eq(Width, -1), "false", "true") # ">";

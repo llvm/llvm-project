@@ -2742,3 +2742,48 @@ define void @test_scatter_2i32_index(<2 x double> %a1, double* %base, <2 x i32> 
 }
 declare void @llvm.masked.scatter.v2f64.v2p0f64(<2 x double>, <2 x double*>, i32, <2 x i1>)
 
+define <16 x float> @zext_index(float* %base, <16 x i32> %ind) {
+; KNL_64-LABEL: zext_index:
+; KNL_64:       # %bb.0:
+; KNL_64-NEXT:    vpandd {{.*}}(%rip){1to16}, %zmm0, %zmm1
+; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_64-NEXT:    vgatherdps (%rdi,%zmm1,4), %zmm0 {%k1}
+; KNL_64-NEXT:    retq
+;
+; KNL_32-LABEL: zext_index:
+; KNL_32:       # %bb.0:
+; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; KNL_32-NEXT:    vpandd {{\.LCPI.*}}{1to16}, %zmm0, %zmm1
+; KNL_32-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_32-NEXT:    vgatherdps (%eax,%zmm1,4), %zmm0 {%k1}
+; KNL_32-NEXT:    retl
+;
+; SKX_SMALL-LABEL: zext_index:
+; SKX_SMALL:       # %bb.0:
+; SKX_SMALL-NEXT:    vandps {{.*}}(%rip){1to16}, %zmm0, %zmm1
+; SKX_SMALL-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_SMALL-NEXT:    vgatherdps (%rdi,%zmm1,4), %zmm0 {%k1}
+; SKX_SMALL-NEXT:    retq
+;
+; SKX_LARGE-LABEL: zext_index:
+; SKX_LARGE:       # %bb.0:
+; SKX_LARGE-NEXT:    movabsq ${{\.LCPI.*}}, %rax
+; SKX_LARGE-NEXT:    vandps (%rax){1to16}, %zmm0, %zmm1
+; SKX_LARGE-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_LARGE-NEXT:    vgatherdps (%rdi,%zmm1,4), %zmm0 {%k1}
+; SKX_LARGE-NEXT:    retq
+;
+; SKX_32-LABEL: zext_index:
+; SKX_32:       # %bb.0:
+; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SKX_32-NEXT:    vandps {{\.LCPI.*}}{1to16}, %zmm0, %zmm1
+; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_32-NEXT:    vgatherdps (%eax,%zmm1,4), %zmm0 {%k1}
+; SKX_32-NEXT:    retl
+  %ind_masked = and <16 x i32> %ind, <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>
+  %sext_ind = zext <16 x i32> %ind_masked to <16 x i64>
+  %gep.random = getelementptr float, float *%base, <16 x i64> %sext_ind
+
+  %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> %gep.random, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
+  ret <16 x float>%res
+}

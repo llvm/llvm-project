@@ -226,12 +226,28 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_SEXT:
   case G_ZEXT:
   case G_ANYEXT:
-  case G_TRUNC:
   case G_GEP:
     // FIXME: We're abusing the fact that everything lives in a GPR for now; in
     // the real world we would use different mappings.
     OperandsMapping = &ARM::ValueMappings[ARM::GPR3OpsIdx];
     break;
+  case G_TRUNC: {
+    // In some cases we may end up with a G_TRUNC from a 64-bit value to a
+    // 32-bit value. This isn't a real floating point trunc (that would be a
+    // G_FPTRUNC). Instead it is an integer trunc in disguise, which can appear
+    // because the legalizer doesn't distinguish between integer and floating
+    // point values so it may leave some 64-bit integers un-narrowed. Until we
+    // have a more principled solution that doesn't let such things sneak all
+    // the way to this point, just map the source to a DPR and the destination
+    // to a GPR.
+    LLT LargeTy = MRI.getType(MI.getOperand(1).getReg());
+    OperandsMapping =
+        LargeTy.getSizeInBits() <= 32
+            ? &ARM::ValueMappings[ARM::GPR3OpsIdx]
+            : getOperandsMapping({&ARM::ValueMappings[ARM::GPR3OpsIdx],
+                                  &ARM::ValueMappings[ARM::DPR3OpsIdx]});
+    break;
+  }
   case G_LOAD:
   case G_STORE: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());

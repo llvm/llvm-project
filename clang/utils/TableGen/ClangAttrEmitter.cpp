@@ -2622,6 +2622,31 @@ void EmitClangAttrPCHWrite(RecordKeeper &Records, raw_ostream &OS) {
   OS << "  }\n";
 }
 
+// Helper function for GenerateTargetSpecificAttrChecks that alters the 'Test'
+// parameter with only a single check type, if applicable.
+static void GenerateTargetSpecificAttrCheck(const Record *R, std::string &Test,
+                                            std::string *FnName,
+                                            StringRef ListName,
+                                            StringRef CheckAgainst,
+                                            StringRef Scope) {
+  if (!R->isValueUnset(ListName)) {
+    Test += " && (";
+    std::vector<StringRef> Items = R->getValueAsListOfStrings(ListName);
+    for (auto I = Items.begin(), E = Items.end(); I != E; ++I) {
+      StringRef Part = *I;
+      Test += CheckAgainst;
+      Test += " == ";
+      Test += Scope;
+      Test += Part;
+      if (I + 1 != E)
+        Test += " || ";
+      if (FnName)
+        *FnName += Part;
+    }
+    Test += ")";
+  }
+}
+
 // Generate a conditional expression to check if the current target satisfies
 // the conditions for a TargetSpecificAttr record, and append the code for
 // those checks to the Test string. If the FnName string pointer is non-null,
@@ -2635,53 +2660,35 @@ static void GenerateTargetSpecificAttrChecks(const Record *R,
   // named "T" and a TargetInfo object named "Target" within
   // scope that can be used to determine whether the attribute exists in
   // a given target.
-  Test += "(";
-
-  for (auto I = Arches.begin(), E = Arches.end(); I != E; ++I) {
-    StringRef Part = *I;
-    Test += "T.getArch() == llvm::Triple::";
-    Test += Part;
-    if (I + 1 != E)
-      Test += " || ";
-    if (FnName)
-      *FnName += Part;
+  Test += "true";
+  // If one or more architectures is specified, check those.  Arches are handled
+  // differently because GenerateTargetRequirements needs to combine the list
+  // with ParseKind.
+  if (!Arches.empty()) {
+    Test += " && (";
+    for (auto I = Arches.begin(), E = Arches.end(); I != E; ++I) {
+      StringRef Part = *I;
+      Test += "T.getArch() == llvm::Triple::";
+      Test += Part;
+      if (I + 1 != E)
+        Test += " || ";
+      if (FnName)
+        *FnName += Part;
+    }
+    Test += ")";
   }
-  Test += ")";
 
   // If the attribute is specific to particular OSes, check those.
-  if (!R->isValueUnset("OSes")) {
-    // We know that there was at least one arch test, so we need to and in the
-    // OS tests.
-    Test += " && (";
-    std::vector<StringRef> OSes = R->getValueAsListOfStrings("OSes");
-    for (auto I = OSes.begin(), E = OSes.end(); I != E; ++I) {
-      StringRef Part = *I;
-
-      Test += "T.getOS() == llvm::Triple::";
-      Test += Part;
-      if (I + 1 != E)
-        Test += " || ";
-      if (FnName)
-        *FnName += Part;
-    }
-    Test += ")";
-  }
+  GenerateTargetSpecificAttrCheck(R, Test, FnName, "OSes", "T.getOS()",
+                                  "llvm::Triple::");
 
   // If one or more CXX ABIs are specified, check those as well.
-  if (!R->isValueUnset("CXXABIs")) {
-    Test += " && (";
-    std::vector<StringRef> CXXABIs = R->getValueAsListOfStrings("CXXABIs");
-    for (auto I = CXXABIs.begin(), E = CXXABIs.end(); I != E; ++I) {
-      StringRef Part = *I;
-      Test += "Target.getCXXABI().getKind() == TargetCXXABI::";
-      Test += Part;
-      if (I + 1 != E)
-        Test += " || ";
-      if (FnName)
-        *FnName += Part;
-    }
-    Test += ")";
-  }
+  GenerateTargetSpecificAttrCheck(R, Test, FnName, "CXXABIs",
+                                  "Target.getCXXABI().getKind()",
+                                  "TargetCXXABI::");
+  // If one or more object formats is specified, check those.
+  GenerateTargetSpecificAttrCheck(R, Test, FnName, "ObjectFormats",
+                                  "T.getObjectFormat()", "llvm::Triple::");
 }
 
 static void GenerateHasAttrSpellingStringSwitch(
@@ -3301,11 +3308,6 @@ static std::string GenerateTargetRequirements(const Record &Attr,
   // Get the list of architectures to be tested for.
   const Record *R = Attr.getValueAsDef("Target");
   std::vector<StringRef> Arches = R->getValueAsListOfStrings("Arches");
-  if (Arches.empty()) {
-    PrintError(Attr.getLoc(), "Empty list of target architectures for a "
-                              "target-specific attr");
-    return "defaultTargetRequirements";
-  }
 
   // If there are other attributes which share the same parsed attribute kind,
   // such as target-specific attributes with a shared spelling, collapse the

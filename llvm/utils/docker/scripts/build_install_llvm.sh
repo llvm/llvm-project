@@ -25,6 +25,10 @@ Available options:
                       'branches/release_40'
                       (default: 'trunk')
   -r|--revision       svn revision to checkout
+  -c|--cherrypick     revision to cherry-pick. Can be specified multiple times.
+                      Cherry-picks are performed in the sorted order using the
+                      following command:
+                      'svn patch <(svn diff -c \$rev)'.
   -p|--llvm-project   name of an svn project to checkout. Will also add the
                       project to a list LLVM_ENABLE_PROJECTS, passed to CMake.
                       For clang, please use 'clang', not 'cfe'.
@@ -40,6 +44,7 @@ EOF
 }
 
 LLVM_SVN_REV=""
+CHERRYPICKS=""
 LLVM_BRANCH=""
 CMAKE_ARGS=""
 CMAKE_INSTALL_TARGETS=""
@@ -75,6 +80,11 @@ while [[ $# -gt 0 ]]; do
     -r|--revision)
       shift
       LLVM_SVN_REV="$1"
+      shift
+      ;;
+    -c|--cherrypick)
+      shift
+      CHERRYPICKS="$CHERRYPICKS $1"
       shift
       ;;
     -b|--branch)
@@ -153,6 +163,28 @@ else
   echo "Checking out latest svn revision."
 fi
 
+# Sort cherrypicks and remove duplicates.
+CHERRYPICKS="$(echo "$CHERRYPICKS" | xargs -n1 | sort | uniq | xargs)"
+
+function apply_cherrypicks() {
+  local CHECKOUT_DIR="$1"
+
+  [ "$CHERRYPICKS" == "" ] || echo "Applying cherrypicks"
+  pushd "$CHECKOUT_DIR"
+
+  # This function is always called on a sorted list of cherrypicks.
+  for CHERRY_REV in $CHERRYPICKS; do
+    echo "Cherry-picking r$CHERRY_REV into $CHECKOUT_DIR"
+
+    local PATCH_FILE="$(mktemp)"
+    svn diff -c $CHERRY_REV > "$PATCH_FILE"
+    svn patch "$PATCH_FILE"
+    rm "$PATCH_FILE"
+  done
+
+  popd
+}
+
 CLANG_BUILD_DIR=/tmp/clang-build
 CLANG_INSTALL_DIR=/tmp/clang-install
 
@@ -172,6 +204,11 @@ for LLVM_PROJECT in $LLVM_PROJECTS; do
   svn co -q $SVN_REV_ARG \
     "https://llvm.org/svn/llvm-project/$SVN_PROJECT/$LLVM_BRANCH" \
     "$CLANG_BUILD_DIR/src/$LLVM_PROJECT"
+
+  # We apply cherrypicks to all repositories regardless of whether the revision
+  # changes this repository or not. For repositories not affected by the
+  # cherrypick, applying the cherrypick is a no-op.
+  apply_cherrypicks "$CLANG_BUILD_DIR/src/$LLVM_PROJECT"
 done
 
 if [ $CLANG_TOOLS_EXTRA_ENABLED -ne 0 ]; then
@@ -179,6 +216,8 @@ if [ $CLANG_TOOLS_EXTRA_ENABLED -ne 0 ]; then
   svn co -q $SVN_REV_ARG \
     "https://llvm.org/svn/llvm-project/clang-tools-extra/$LLVM_BRANCH" \
     "$CLANG_BUILD_DIR/src/clang/tools/extra"
+
+  apply_cherrypicks "$CLANG_BUILD_DIR/src/clang/tools/extra"
 fi
 
 CHECKSUMS_FILE="/tmp/checksums/checksums.txt"

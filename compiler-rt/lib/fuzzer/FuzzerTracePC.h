@@ -276,6 +276,7 @@ void TracePC::CollectFeatures(Callback HandleFeature) const {
 
   // Step function, grows similar to 8 * Log_2(A).
   auto StackDepthStepFunction = [](uint32_t A) -> uint32_t {
+    if (!A) return A;
     uint32_t Log2 = Log(A);
     if (Log2 < 3) return A;
     Log2 -= 3;

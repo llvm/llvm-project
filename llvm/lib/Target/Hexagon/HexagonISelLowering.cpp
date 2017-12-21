@@ -761,10 +761,12 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // Promote the value if needed.
     switch (VA.getLocInfo()) {
       default:
-        // Loc info must be one of Full, SExt, ZExt, or AExt.
+        // Loc info must be one of Full, BCvt, SExt, ZExt, or AExt.
         llvm_unreachable("Unknown loc info!");
-      case CCValAssign::BCvt:
       case CCValAssign::Full:
+        break;
+      case CCValAssign::BCvt:
+        Arg = DAG.getBitcast(VA.getLocVT(), Arg);
         break;
       case CCValAssign::SExt:
         Arg = DAG.getNode(ISD::SIGN_EXTEND, dl, VA.getLocVT(), Arg);
@@ -1135,6 +1137,8 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
         unsigned VReg =
           RegInfo.createVirtualRegister(&Hexagon::IntRegsRegClass);
         RegInfo.addLiveIn(VA.getLocReg(), VReg);
+        if (VA.getLocInfo() == CCValAssign::BCvt)
+          RegVT = VA.getValVT();
         SDValue Copy = DAG.getCopyFromReg(Chain, dl, VReg, RegVT);
         // Treat values of type MVT::i1 specially: they are passed in
         // registers of type i32, but they need to remain as values of
@@ -1155,6 +1159,8 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
         unsigned VReg =
           RegInfo.createVirtualRegister(&Hexagon::DoubleRegsRegClass);
         RegInfo.addLiveIn(VA.getLocReg(), VReg);
+        if (VA.getLocInfo() == CCValAssign::BCvt)
+          RegVT = VA.getValVT();
         InVals.push_back(DAG.getCopyFromReg(Chain, dl, VReg, RegVT));
 
       // Single Vector
@@ -2518,25 +2524,29 @@ HexagonTargetLowering::buildVector32(ArrayRef<SDValue> Elem, const SDLoc &dl,
     IsSplat = false;
     break;
   }
-  if (IsSplat)
-    return DAG.getNode(HexagonISD::VSPLAT, dl, VecTy, Elem[First]);
+  if (IsSplat) {
+    // Legalize the operand to VSPLAT.
+    SDValue Ext = DAG.getZExtOrTrunc(Elem[First], dl, MVT::i32);
+    return DAG.getNode(HexagonISD::VSPLAT, dl, VecTy, Ext);
+  }
 
   // Generate
   //   (zxtb(Elem[0]) | (zxtb(Elem[1]) << 8)) |
   //   (zxtb(Elem[2]) | (zxtb(Elem[3]) << 8)) << 16
+  assert(Elem.size() == 4);
+  SDValue Vs[4];
+  for (unsigned i = 0; i != 4; ++i) {
+    Vs[i] = DAG.getZExtOrTrunc(Elem[i], dl, MVT::i32);
+    Vs[i] = DAG.getZeroExtendInReg(Vs[i], dl, MVT::i8);
+  }
   SDValue S8 = DAG.getConstant(8, dl, MVT::i32);
-  SDValue V0 = DAG.getZeroExtendInReg(Elem[0], dl, MVT::i8);
-  SDValue V1 = DAG.getZeroExtendInReg(Elem[1], dl, MVT::i8);
-  SDValue V2 = DAG.getZeroExtendInReg(Elem[2], dl, MVT::i8);
-  SDValue V3 = DAG.getZeroExtendInReg(Elem[3], dl, MVT::i8);
+  SDValue T0 = DAG.getNode(ISD::SHL, dl, MVT::i32, {Vs[1], S8});
+  SDValue T1 = DAG.getNode(ISD::SHL, dl, MVT::i32, {Vs[3], S8});
+  SDValue B0 = DAG.getNode(ISD::OR, dl, MVT::i32, {Vs[0], T0});
+  SDValue B1 = DAG.getNode(ISD::OR, dl, MVT::i32, {Vs[2], T1});
 
-  SDValue V4 = DAG.getNode(ISD::SHL, dl, MVT::i32, {V1, S8});
-  SDValue V5 = DAG.getNode(ISD::SHL, dl, MVT::i32, {V3, S8});
-  SDValue V6 = DAG.getNode(ISD::OR, dl, MVT::i32, {V0, V4});
-  SDValue V7 = DAG.getNode(ISD::OR, dl, MVT::i32, {V2, V5});
-
-  SDValue T0 = getNode(Hexagon::A2_combine_ll, dl, MVT::i32, {V7, V6}, DAG);
-  return DAG.getBitcast(MVT::v4i8, T0);
+  SDValue R = getNode(Hexagon::A2_combine_ll, dl, MVT::i32, {B1, B0}, DAG);
+  return DAG.getBitcast(MVT::v4i8, R);
 }
 
 SDValue
@@ -2573,8 +2583,11 @@ HexagonTargetLowering::buildVector64(ArrayRef<SDValue> Elem, const SDLoc &dl,
       IsSplat = false;
       break;
     }
-    if (IsSplat)
-      return DAG.getNode(HexagonISD::VSPLAT, dl, VecTy, Elem[First]);
+    if (IsSplat) {
+      // Legalize the operand to VSPLAT.
+      SDValue Ext = DAG.getZExtOrTrunc(Elem[First], dl, MVT::i32);
+      return DAG.getNode(HexagonISD::VSPLAT, dl, VecTy, Ext);
+    }
   }
 
   // Then try constant.

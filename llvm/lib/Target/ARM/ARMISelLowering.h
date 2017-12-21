@@ -87,6 +87,7 @@ class VectorType;
       CMOV,         // ARM conditional move instructions.
 
       SSAT,         // Signed saturation
+      USAT,         // Unsigned saturation
 
       BCC_i64,
 

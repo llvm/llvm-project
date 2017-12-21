@@ -1,4 +1,5 @@
 ; RUN: not llvm-mc -triple arm64-apple-darwin -show-encoding < %s 2> %t | FileCheck %s
+; RUN: not llvm-mc -triple arm64-apple-darwin -mattr=+v8.3a -show-encoding < %s 2> %t | FileCheck %s --check-prefix=CHECK-V83
 ; RUN: FileCheck --check-prefix=CHECK-ERRORS < %t %s
 
 foo:
@@ -233,6 +234,7 @@ foo:
   mrs x3, AMAIR_EL3
   mrs x3, CCSIDR_EL1
   mrs x3, CLIDR_EL1
+  mrs x3, CCSIDR2_EL1
   mrs x3, CNTFRQ_EL0
   mrs x3, CNTHCTL_EL2
   mrs x3, CNTHP_CTL_EL2
@@ -418,6 +420,7 @@ foo:
 ; CHECK: mrs x3, AMAIR_EL3              ; encoding: [0x03,0xa3,0x3e,0xd5]
 ; CHECK: mrs x3, CCSIDR_EL1             ; encoding: [0x03,0x00,0x39,0xd5]
 ; CHECK: mrs x3, CLIDR_EL1              ; encoding: [0x23,0x00,0x39,0xd5]
+; CHECK-V83: mrs x3, CCSIDR2_EL1        ; encoding: [0x43,0x00,0x39,0xd5]
 ; CHECK: mrs x3, CNTFRQ_EL0             ; encoding: [0x03,0xe0,0x3b,0xd5]
 ; CHECK: mrs x3, CNTHCTL_EL2            ; encoding: [0x03,0xe1,0x3c,0xd5]
 ; CHECK: mrs x3, CNTHP_CTL_EL2          ; encoding: [0x23,0xe2,0x3c,0xd5]

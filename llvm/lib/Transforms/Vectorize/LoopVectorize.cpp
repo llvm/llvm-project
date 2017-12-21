@@ -5049,13 +5049,13 @@ bool LoopVectorizationLegality::canVectorize() {
   bool Result = true;
   
   bool DoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
-  if (DoExtraAnalysis)
   // We must have a loop in canonical form. Loops with indirectbr in them cannot
   // be canonicalized.
   if (!TheLoop->getLoopPreheader()) {
+    DEBUG(dbgs() << "LV: Loop doesn't have a legal pre-header.\n");
     ORE->emit(createMissedAnalysis("CFGNotUnderstood")
               << "loop control flow is not understood by vectorizer");
-  if (DoExtraAnalysis)
+    if (DoExtraAnalysis)
       Result = false;
     else
       return false;
