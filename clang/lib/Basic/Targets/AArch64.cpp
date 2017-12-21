@@ -181,6 +181,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (Unaligned)
     Builder.defineMacro("__ARM_FEATURE_UNALIGNED", "1");
 
+  if ((FPU & NeonMode) && HasFullFP16)
+    Builder.defineMacro("__ARM_FEATURE_FP16_VECTOR_ARITHMETIC", "1");
+
   switch (ArchKind) {
   default:
     break;

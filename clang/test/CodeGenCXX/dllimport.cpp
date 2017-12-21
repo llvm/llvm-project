@@ -362,8 +362,8 @@ struct __declspec(dllimport) ClassWithNonDllImportField { using X = ClassWithDto
 struct __declspec(dllimport) ClassWithNonDllImportBase : public ClassWithDtor { };
 USECLASS(ClassWithNonDllImportField);
 USECLASS(ClassWithNonDllImportBase);
-// MO1-DAG: declare dllimport x86_thiscallcc void @"\01??_DClassWithNonDllImportBase@@QAEXXZ"(%struct.ClassWithNonDllImportBase*)
-// MO1-DAG: declare dllimport x86_thiscallcc void @"\01??_DClassWithNonDllImportField@@QAEXXZ"(%struct.ClassWithNonDllImportField*)
+// MO1-DAG: declare dllimport x86_thiscallcc void @"\01??1ClassWithNonDllImportBase@@QAE@XZ"(%struct.ClassWithNonDllImportBase*)
+// MO1-DAG: declare dllimport x86_thiscallcc void @"\01??1ClassWithNonDllImportField@@QAE@XZ"(%struct.ClassWithNonDllImportField*)
 struct ClassWithCtor { ClassWithCtor() {} };
 struct __declspec(dllimport) ClassWithNonDllImportFieldWithCtor { ClassWithCtor t; };
 USECLASS(ClassWithNonDllImportFieldWithCtor);
