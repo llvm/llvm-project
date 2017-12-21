@@ -21,10 +21,10 @@ extern "C" {
 #endif
   // This function may be optionally provided by user and should return
   // a string containing HWASan runtime options. See asan_flags.h for details.
-  const char* __hwasan_default_options();
+  const char* __hwasan_default_options(void);
 
-  void __hwasan_enable_allocator_tagging();
-  void __hwasan_disable_allocator_tagging();
+  void __hwasan_enable_allocator_tagging(void);
+  void __hwasan_disable_allocator_tagging(void);
 
 #ifdef __cplusplus
 }  // extern "C"
