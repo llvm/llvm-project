@@ -577,6 +577,7 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::seekoff(off_type __off,
     if ((__wch & (ios_base::in | ios_base::out)) == (ios_base::in | ios_base::out)
         && __way == ios_base::cur)
         return pos_type(-1);
+    const ptrdiff_t __hm = __hm_ == nullptr ? 0 : __hm_ - __str_.data();
     off_type __noff;
     switch (__way)
     {
@@ -590,13 +591,13 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::seekoff(off_type __off,
             __noff = this->pptr() - this->pbase();
         break;
     case ios_base::end:
-        __noff = __hm_ - __str_.data();
+        __noff = __hm;
         break;
     default:
         return pos_type(-1);
     }
     __noff += __off;
-    if (__noff < 0 || __hm_ - __str_.data() < __noff)
+    if (__noff < 0 || __hm < __noff)
         return pos_type(-1);
     if (__noff != 0)
     {

@@ -89,7 +89,7 @@ TargetInfo *elf::getTarget() {
 
 template <class ELFT> static std::string getErrorLoc(const uint8_t *Loc) {
   for (InputSectionBase *D : InputSections) {
-    auto *IS = dyn_cast_or_null<InputSection>(D);
+    auto *IS = dyn_cast<InputSection>(D);
     if (!IS || !IS->getParent())
       continue;
 

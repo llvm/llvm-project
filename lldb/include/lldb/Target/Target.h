@@ -181,7 +181,7 @@ public:
 
   lldb::LanguageType GetLanguage() const;
 
-  const char *GetExpressionPrefixContentsAsCString();
+  llvm::StringRef GetExpressionPrefixContents();
 
   bool GetUseHexImmediates() const;
 

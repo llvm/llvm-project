@@ -57,22 +57,22 @@ public:
                      SectionBase *Section, InputFile *File);
 
   template <class ELFT>
-  void addShared(StringRef Name, SharedFile<ELFT> *F,
+  void addShared(StringRef Name, SharedFile<ELFT> &F,
                  const typename ELFT::Sym &Sym, uint32_t Alignment,
                  uint32_t VerdefIndex);
 
   template <class ELFT>
-  Symbol *addLazyArchive(StringRef Name, ArchiveFile *F,
+  Symbol *addLazyArchive(StringRef Name, ArchiveFile &F,
                          const llvm::object::Archive::Symbol S);
 
   template <class ELFT> void addLazyObject(StringRef Name, LazyObjFile &Obj);
 
   Symbol *addBitcode(StringRef Name, uint8_t Binding, uint8_t StOther,
-                     uint8_t Type, bool CanOmitFromDynSym, BitcodeFile *File);
+                     uint8_t Type, bool CanOmitFromDynSym, BitcodeFile &File);
 
   Symbol *addCommon(StringRef Name, uint64_t Size, uint32_t Alignment,
                     uint8_t Binding, uint8_t StOther, uint8_t Type,
-                    InputFile *File);
+                    InputFile &File);
 
   std::pair<Symbol *, bool> insert(StringRef Name);
   std::pair<Symbol *, bool> insert(StringRef Name, uint8_t Type,

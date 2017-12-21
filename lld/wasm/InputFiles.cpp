@@ -198,12 +198,21 @@ void ObjFile::initializeSymbols() {
       DEBUG(dbgs() << "Function: " << WasmSym.ElementIndex << " -> "
                    << toString(*S) << "\n");
       FunctionSymbols[WasmSym.ElementIndex] = S;
+      if (WasmSym.HasAltIndex)
+        FunctionSymbols[WasmSym.AltIndex] = S;
     } else {
       DEBUG(dbgs() << "Global: " << WasmSym.ElementIndex << " -> "
                    << toString(*S) << "\n");
       GlobalSymbols[WasmSym.ElementIndex] = S;
+      if (WasmSym.HasAltIndex)
+        GlobalSymbols[WasmSym.AltIndex] = S;
     }
   }
+
+  DEBUG(for (size_t I = 0; I < FunctionSymbols.size(); ++I)
+            assert(FunctionSymbols[I] != nullptr);
+        for (size_t I = 0; I < GlobalSymbols.size(); ++I)
+            assert(GlobalSymbols[I] != nullptr););
 
   // Populate `TableSymbols` with all symbols that are called indirectly
   uint32_t SegmentCount = WasmObj->elements().size();
