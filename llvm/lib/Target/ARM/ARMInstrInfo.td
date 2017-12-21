@@ -139,6 +139,8 @@ def ARMcmov          : SDNode<"ARMISD::CMOV", SDT_ARMCMov,
 
 def ARMssatnoshift   : SDNode<"ARMISD::SSAT", SDTIntSatNoShOp, []>;
 
+def ARMusatnoshift   : SDNode<"ARMISD::USAT", SDTIntSatNoShOp, []>;
+
 def ARMbrcond        : SDNode<"ARMISD::BRCOND", SDT_ARMBrcond,
                               [SDNPHasChain, SDNPInGlue, SDNPOutGlue]>;
 
@@ -3832,6 +3834,8 @@ def : ARMV6Pat<(int_arm_usat GPRnopc:$a, imm0_31:$pos),
                (USAT imm0_31:$pos, GPRnopc:$a, 0)>;
 def : ARMPat<(ARMssatnoshift GPRnopc:$Rn, imm0_31:$imm),
              (SSAT imm0_31:$imm, GPRnopc:$Rn, 0)>;
+def : ARMPat<(ARMusatnoshift GPRnopc:$Rn, imm0_31:$imm),
+             (USAT imm0_31:$imm, GPRnopc:$Rn, 0)>;
 def : ARMV6Pat<(int_arm_ssat16 GPRnopc:$a, imm1_16:$pos),
                (SSAT16 imm1_16:$pos, GPRnopc:$a)>;
 def : ARMV6Pat<(int_arm_usat16 GPRnopc:$a, imm0_15:$pos),

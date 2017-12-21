@@ -77,6 +77,7 @@ using namespace ELF;
 
 #define TYPEDEF_ELF_TYPES(ELFT)                                                \
   using ELFO = ELFFile<ELFT>;                                                  \
+  using Elf_Addr = typename ELFO::Elf_Addr;                                    \
   using Elf_Shdr = typename ELFO::Elf_Shdr;                                    \
   using Elf_Sym = typename ELFO::Elf_Sym;                                      \
   using Elf_Dyn = typename ELFO::Elf_Dyn;                                      \
@@ -249,6 +250,9 @@ public:
   Elf_Rela_Range dyn_relas() const;
   std::string getFullSymbolName(const Elf_Sym *Symbol, StringRef StrTable,
                                 bool IsDynamic) const;
+  void getSectionNameIndex(const Elf_Sym *Symbol, const Elf_Sym *FirstSym,
+                           StringRef &SectionName,
+                           unsigned &SectionIndex) const;
 
   void printSymbolsHelper(bool IsDynamic) const;
   const Elf_Shdr *getDotSymtabSec() const { return DotSymtabSec; }
@@ -287,6 +291,8 @@ void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic) const {
     ELFDumperStyle->printSymbol(Obj, &Sym, Syms.begin(), StrTable, IsDynamic);
 }
 
+template <class ELFT> class MipsGOTParser;
+
 template <typename ELFT> class DumpStyle {
 public:
   using Elf_Shdr = typename ELFFile<ELFT>::Elf_Shdr;
@@ -310,6 +316,8 @@ public:
   virtual void printProgramHeaders(const ELFFile<ELFT> *Obj) = 0;
   virtual void printHashHistogram(const ELFFile<ELFT> *Obj) = 0;
   virtual void printNotes(const ELFFile<ELFT> *Obj) = 0;
+  virtual void printMipsGOT(const MipsGOTParser<ELFT> &Parser) = 0;
+  virtual void printMipsPLT(const MipsGOTParser<ELFT> &Parser) = 0;
   const ELFDumper<ELFT> *dumper() const { return Dumper; }
 
 private:
@@ -337,6 +345,8 @@ public:
   void printProgramHeaders(const ELFO *Obj) override;
   void printHashHistogram(const ELFFile<ELFT> *Obj) override;
   void printNotes(const ELFFile<ELFT> *Obj) override;
+  void printMipsGOT(const MipsGOTParser<ELFT> &Parser) override;
+  void printMipsPLT(const MipsGOTParser<ELFT> &Parser) override;
 
 private:
   struct Field {
@@ -395,6 +405,8 @@ public:
   void printProgramHeaders(const ELFO *Obj) override;
   void printHashHistogram(const ELFFile<ELFT> *Obj) override;
   void printNotes(const ELFFile<ELFT> *Obj) override;
+  void printMipsGOT(const MipsGOTParser<ELFT> &Parser) override;
+  void printMipsPLT(const MipsGOTParser<ELFT> &Parser) override;
 
 private:
   void printRelocation(const ELFO *Obj, Elf_Rela Rel, const Elf_Shdr *SymTab);
@@ -735,11 +747,10 @@ std::string ELFDumper<ELFT>::getFullSymbolName(const Elf_Sym *Symbol,
 }
 
 template <typename ELFT>
-static void
-getSectionNameIndex(const ELFFile<ELFT> &Obj, const typename ELFT::Sym *Symbol,
-                    const typename ELFT::Sym *FirstSym,
-                    ArrayRef<typename ELFT::Word> ShndxTable,
-                    StringRef &SectionName, unsigned &SectionIndex) {
+void ELFDumper<ELFT>::getSectionNameIndex(const Elf_Sym *Symbol,
+                                          const Elf_Sym *FirstSym,
+                                          StringRef &SectionName,
+                                          unsigned &SectionIndex) const {
   SectionIndex = Symbol->st_shndx;
   if (Symbol->isUndefined())
     SectionName = "Undefined";
@@ -758,8 +769,8 @@ getSectionNameIndex(const ELFFile<ELFT> &Obj, const typename ELFT::Sym *Symbol,
       SectionIndex = unwrapOrError(object::getExtendedSymbolTableIndex<ELFT>(
           Symbol, FirstSym, ShndxTable));
     const typename ELFT::Shdr *Sec =
-        unwrapOrError(Obj.getSection(SectionIndex));
-    SectionName = unwrapOrError(Obj.getSectionName(Sec));
+        unwrapOrError(Obj->getSection(SectionIndex));
+    SectionName = unwrapOrError(Obj->getSectionName(Sec));
   }
 }
 
@@ -1905,47 +1916,83 @@ template <> void ELFDumper<ELFType<support::little, false>>::printAttributes() {
 template <class ELFT> class MipsGOTParser {
 public:
   TYPEDEF_ELF_TYPES(ELFT)
-  using GOTEntry = typename ELFO::Elf_Addr;
+  using Entry = typename ELFO::Elf_Addr;
+  using Entries = ArrayRef<Entry>;
 
-  MipsGOTParser(ELFDumper<ELFT> *Dumper, const ELFO *Obj,
-                Elf_Dyn_Range DynTable, ScopedPrinter &W);
+  const bool IsStatic;
+  const ELFO * const Obj;
 
-  void parseStaticGOT();
-  void parseGOT();
-  void parsePLT();
+  MipsGOTParser(const ELFO *Obj, Elf_Dyn_Range DynTable, Elf_Sym_Range DynSyms);
+
+  bool hasGot() const { return !GotEntries.empty(); }
+  bool hasPlt() const { return !PltEntries.empty(); }
+
+  uint64_t getGp() const;
+
+  const Entry *getGotLazyResolver() const;
+  const Entry *getGotModulePointer() const;
+  const Entry *getPltLazyResolver() const;
+  const Entry *getPltModulePointer() const;
+
+  Entries getLocalEntries() const;
+  Entries getGlobalEntries() const;
+  Entries getOtherEntries() const;
+  Entries getPltEntries() const;
+
+  uint64_t getGotAddress(const Entry * E) const;
+  int64_t getGotOffset(const Entry * E) const;
+  const Elf_Sym *getGotSym(const Entry *E) const;
+
+  uint64_t getPltAddress(const Entry * E) const;
+  const Elf_Sym *getPltSym(const Entry *E) const;
+
+  StringRef getPltStrTable() const { return PltStrTable; }
 
 private:
-  ELFDumper<ELFT> *Dumper;
-  const ELFO *Obj;
-  ScopedPrinter &W;
-  Optional<uint64_t> DtPltGot;
-  Optional<uint64_t> DtLocalGotNum;
-  Optional<uint64_t> DtGotSym;
-  Optional<uint64_t> DtMipsPltGot;
-  Optional<uint64_t> DtJmpRel;
+  const Elf_Shdr *GotSec;
+  size_t LocalNum;
+  size_t GlobalNum;
 
-  std::size_t getGOTTotal(ArrayRef<uint8_t> GOT) const;
-  const GOTEntry *makeGOTIter(ArrayRef<uint8_t> GOT, std::size_t EntryNum);
+  const Elf_Shdr *PltSec;
+  const Elf_Shdr *PltRelSec;
+  const Elf_Shdr *PltSymTable;
+  Elf_Sym_Range GotDynSyms;
+  StringRef PltStrTable;
 
-  void printLocalGOT(const Elf_Shdr *GOTShdr, size_t Num);
-  void printGotEntry(uint64_t GotAddr, const GOTEntry *BeginIt,
-                     const GOTEntry *It);
-  void printGlobalGotEntry(uint64_t GotAddr, const GOTEntry *BeginIt,
-                           const GOTEntry *It, const Elf_Sym *Sym,
-                           StringRef StrTable);
-  void printPLTEntry(uint64_t PLTAddr, const GOTEntry *BeginIt,
-                     const GOTEntry *It, StringRef Purpose);
-  void printPLTEntry(uint64_t PLTAddr, const GOTEntry *BeginIt,
-                     const GOTEntry *It, StringRef StrTable,
-                     const Elf_Sym *Sym);
+  Entries GotEntries;
+  Entries PltEntries;
 };
 
 } // end anonymous namespace
 
 template <class ELFT>
-MipsGOTParser<ELFT>::MipsGOTParser(ELFDumper<ELFT> *Dumper, const ELFO *Obj,
-                                   Elf_Dyn_Range DynTable, ScopedPrinter &W)
-    : Dumper(Dumper), Obj(Obj), W(W) {
+MipsGOTParser<ELFT>::MipsGOTParser(const ELFO *Obj, Elf_Dyn_Range DynTable,
+                                   Elf_Sym_Range DynSyms)
+    : IsStatic(DynTable.empty()), Obj(Obj), GotSec(nullptr), LocalNum(0),
+      GlobalNum(0), PltSec(nullptr), PltRelSec(nullptr), PltSymTable(nullptr) {
+  // See "Global Offset Table" in Chapter 5 in the following document
+  // for detailed GOT description.
+  // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
+
+  // Find static GOT secton.
+  if (IsStatic) {
+    GotSec = findSectionByName(*Obj, ".got");
+    if (!GotSec)
+      reportError("Cannot find .got section");
+
+    ArrayRef<uint8_t> Content = unwrapOrError(Obj->getSectionContents(GotSec));
+    GotEntries = Entries(reinterpret_cast<const Entry *>(Content.data()),
+                         Content.size() / sizeof(Entry));
+    LocalNum = GotEntries.size();
+    return;
+  }
+
+  // Lookup dynamic table tags which define GOT/PLT layouts.
+  Optional<uint64_t> DtPltGot;
+  Optional<uint64_t> DtLocalGotNum;
+  Optional<uint64_t> DtGotSym;
+  Optional<uint64_t> DtMipsPltGot;
+  Optional<uint64_t> DtJmpRel;
   for (const auto &Entry : DynTable) {
     switch (Entry.getTag()) {
     case ELF::DT_PLTGOT:
@@ -1965,261 +2012,175 @@ MipsGOTParser<ELFT>::MipsGOTParser(ELFDumper<ELFT> *Dumper, const ELFO *Obj,
       break;
     }
   }
+
+  // Find dynamic GOT section.
+  if (DtPltGot || DtLocalGotNum || DtGotSym) {
+    if (!DtPltGot)
+      report_fatal_error("Cannot find PLTGOT dynamic table tag.");
+    if (!DtLocalGotNum)
+      report_fatal_error("Cannot find MIPS_LOCAL_GOTNO dynamic table tag.");
+    if (!DtGotSym)
+      report_fatal_error("Cannot find MIPS_GOTSYM dynamic table tag.");
+
+    size_t DynSymTotal = DynSyms.size();
+    if (*DtGotSym > DynSymTotal)
+      reportError("MIPS_GOTSYM exceeds a number of dynamic symbols");
+
+    GotSec = findNotEmptySectionByAddress(Obj, *DtPltGot);
+    if (!GotSec)
+      reportError("There is no not empty GOT section at 0x" +
+                  Twine::utohexstr(*DtPltGot));
+
+    LocalNum = *DtLocalGotNum;
+    GlobalNum = DynSymTotal - *DtGotSym;
+
+    ArrayRef<uint8_t> Content = unwrapOrError(Obj->getSectionContents(GotSec));
+    GotEntries = Entries(reinterpret_cast<const Entry *>(Content.data()),
+                         Content.size() / sizeof(Entry));
+    GotDynSyms = DynSyms.drop_front(*DtGotSym);
+  }
+
+  // Find PLT section.
+  if (DtMipsPltGot || DtJmpRel) {
+    if (!DtMipsPltGot)
+      report_fatal_error("Cannot find MIPS_PLTGOT dynamic table tag.");
+    if (!DtJmpRel)
+      report_fatal_error("Cannot find JMPREL dynamic table tag.");
+
+    PltSec = findNotEmptySectionByAddress(Obj, *DtMipsPltGot);
+    if (!PltSec)
+      report_fatal_error("There is no not empty PLTGOT section at 0x " +
+                         Twine::utohexstr(*DtMipsPltGot));
+
+    PltRelSec = findNotEmptySectionByAddress(Obj, *DtJmpRel);
+    if (!PltRelSec)
+      report_fatal_error("There is no not empty RELPLT section at 0x" +
+                         Twine::utohexstr(*DtJmpRel));
+
+    ArrayRef<uint8_t> PltContent =
+        unwrapOrError(Obj->getSectionContents(PltSec));
+    PltEntries = Entries(reinterpret_cast<const Entry *>(PltContent.data()),
+                         PltContent.size() / sizeof(Entry));
+
+    PltSymTable = unwrapOrError(Obj->getSection(PltRelSec->sh_link));
+    PltStrTable = unwrapOrError(Obj->getStringTableForSymtab(*PltSymTable));
+  }
+}
+
+template <class ELFT> uint64_t MipsGOTParser<ELFT>::getGp() const {
+  return GotSec->sh_addr + 0x7ff0;
 }
 
 template <class ELFT>
-void MipsGOTParser<ELFT>::printLocalGOT(const Elf_Shdr *GOTShdr, size_t Num) {
-  ArrayRef<uint8_t> GOT = unwrapOrError(Obj->getSectionContents(GOTShdr));
-
-  const GOTEntry *GotBegin = makeGOTIter(GOT, 0);
-  const GOTEntry *GotEnd = makeGOTIter(GOT, Num);
-  const GOTEntry *It = GotBegin;
-
-  W.printHex("Canonical gp value", GOTShdr->sh_addr + 0x7ff0);
-  {
-    ListScope RS(W, "Reserved entries");
-
-    {
-      DictScope D(W, "Entry");
-      printGotEntry(GOTShdr->sh_addr, GotBegin, It++);
-      W.printString("Purpose", StringRef("Lazy resolver"));
-    }
-
-    if (It != GotEnd && (*It >> (sizeof(GOTEntry) * 8 - 1)) != 0) {
-      DictScope D(W, "Entry");
-      printGotEntry(GOTShdr->sh_addr, GotBegin, It++);
-      W.printString("Purpose", StringRef("Module pointer (GNU extension)"));
-    }
-  }
-  {
-    ListScope LS(W, "Local entries");
-    for (; It != GotEnd; ++It) {
-      DictScope D(W, "Entry");
-      printGotEntry(GOTShdr->sh_addr, GotBegin, It);
-    }
-  }
-}
-
-template <class ELFT> void MipsGOTParser<ELFT>::parseStaticGOT() {
-  const Elf_Shdr *GOTShdr = findSectionByName(*Obj, ".got");
-  if (!GOTShdr) {
-    W.startLine() << "Cannot find .got section.\n";
-    return;
-  }
-
-  DictScope GS(W, "Static GOT");
-  printLocalGOT(GOTShdr, GOTShdr->sh_size / sizeof(GOTEntry));
-}
-
-template <class ELFT> void MipsGOTParser<ELFT>::parseGOT() {
-  // See "Global Offset Table" in Chapter 5 in the following document
-  // for detailed GOT description.
-  // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-  if (!DtPltGot) {
-    W.startLine() << "Cannot find PLTGOT dynamic table tag.\n";
-    return;
-  }
-  if (!DtLocalGotNum) {
-    W.startLine() << "Cannot find MIPS_LOCAL_GOTNO dynamic table tag.\n";
-    return;
-  }
-  if (!DtGotSym) {
-    W.startLine() << "Cannot find MIPS_GOTSYM dynamic table tag.\n";
-    return;
-  }
-
-  std::size_t DynSymTotal = Dumper->dynamic_symbols().size();
-
-  if (*DtGotSym > DynSymTotal)
-    report_fatal_error("MIPS_GOTSYM exceeds a number of dynamic symbols");
-
-  std::size_t GlobalGotNum = DynSymTotal - *DtGotSym;
-
-  if (*DtLocalGotNum + GlobalGotNum == 0) {
-    W.startLine() << "GOT is empty.\n";
-    return;
-  }
-
-  const Elf_Shdr *GOTShdr = findNotEmptySectionByAddress(Obj, *DtPltGot);
-  if (!GOTShdr)
-    report_fatal_error("There is no not empty GOT section at 0x" +
-                       Twine::utohexstr(*DtPltGot));
-
-  ArrayRef<uint8_t> GOT = unwrapOrError(Obj->getSectionContents(GOTShdr));
-
-  if (*DtLocalGotNum + GlobalGotNum > getGOTTotal(GOT))
-    report_fatal_error("Number of GOT entries exceeds the size of GOT section");
-
-  DictScope GS(W, "Primary GOT");
-  printLocalGOT(GOTShdr, *DtLocalGotNum);
-
-  {
-    ListScope GS(W, "Global entries");
-
-    const GOTEntry *GotBegin = makeGOTIter(GOT, 0);
-    const GOTEntry *GotEnd = makeGOTIter(GOT, *DtLocalGotNum + GlobalGotNum);
-    const Elf_Sym *GotDynSym = Dumper->dynamic_symbols().begin() + *DtGotSym;
-    for (auto It = makeGOTIter(GOT, *DtLocalGotNum); It != GotEnd; ++It) {
-      DictScope D(W, "Entry");
-      printGlobalGotEntry(GOTShdr->sh_addr, GotBegin, It, GotDynSym++,
-                          Dumper->getDynamicStringTable());
-    }
-  }
-
-  std::size_t SpecGotNum = getGOTTotal(GOT) - *DtLocalGotNum - GlobalGotNum;
-  W.printNumber("Number of TLS and multi-GOT entries", uint64_t(SpecGotNum));
-}
-
-template <class ELFT> void MipsGOTParser<ELFT>::parsePLT() {
-  if (!DtMipsPltGot) {
-    W.startLine() << "Cannot find MIPS_PLTGOT dynamic table tag.\n";
-    return;
-  }
-  if (!DtJmpRel) {
-    W.startLine() << "Cannot find JMPREL dynamic table tag.\n";
-    return;
-  }
-
-  const Elf_Shdr *PLTShdr = findNotEmptySectionByAddress(Obj, *DtMipsPltGot);
-  if (!PLTShdr)
-    report_fatal_error("There is no not empty PLTGOT section at 0x " +
-                       Twine::utohexstr(*DtMipsPltGot));
-  ArrayRef<uint8_t> PLT = unwrapOrError(Obj->getSectionContents(PLTShdr));
-
-  const Elf_Shdr *PLTRelShdr = findNotEmptySectionByAddress(Obj, *DtJmpRel);
-  if (!PLTRelShdr)
-    report_fatal_error("There is no not empty RELPLT section at 0x" +
-                       Twine::utohexstr(*DtJmpRel));
-  const Elf_Shdr *SymTable =
-      unwrapOrError(Obj->getSection(PLTRelShdr->sh_link));
-  StringRef StrTable = unwrapOrError(Obj->getStringTableForSymtab(*SymTable));
-
-  const GOTEntry *PLTBegin = makeGOTIter(PLT, 0);
-  const GOTEntry *PLTEnd = makeGOTIter(PLT, getGOTTotal(PLT));
-  const GOTEntry *It = PLTBegin;
-
-  DictScope GS(W, "PLT GOT");
-  {
-    ListScope RS(W, "Reserved entries");
-    printPLTEntry(PLTShdr->sh_addr, PLTBegin, It++, "PLT lazy resolver");
-    if (It != PLTEnd)
-      printPLTEntry(PLTShdr->sh_addr, PLTBegin, It++, "Module pointer");
-  }
-  {
-    ListScope GS(W, "Entries");
-
-    switch (PLTRelShdr->sh_type) {
-    case ELF::SHT_REL:
-      for (const Elf_Rel &Rel : unwrapOrError(Obj->rels(PLTRelShdr))) {
-        const Elf_Sym *Sym =
-            unwrapOrError(Obj->getRelocationSymbol(&Rel, SymTable));
-        printPLTEntry(PLTShdr->sh_addr, PLTBegin, It, StrTable, Sym);
-        if (++It == PLTEnd)
-          break;
-      }
-      break;
-    case ELF::SHT_RELA:
-      for (const Elf_Rela &Rel : unwrapOrError(Obj->relas(PLTRelShdr))) {
-        const Elf_Sym *Sym =
-            unwrapOrError(Obj->getRelocationSymbol(&Rel, SymTable));
-        printPLTEntry(PLTShdr->sh_addr, PLTBegin, It, StrTable, Sym);
-        if (++It == PLTEnd)
-          break;
-      }
-      break;
-    }
-  }
+const typename MipsGOTParser<ELFT>::Entry *
+MipsGOTParser<ELFT>::getGotLazyResolver() const {
+  return LocalNum > 0 ? &GotEntries[0] : nullptr;
 }
 
 template <class ELFT>
-std::size_t MipsGOTParser<ELFT>::getGOTTotal(ArrayRef<uint8_t> GOT) const {
-  return GOT.size() / sizeof(GOTEntry);
+const typename MipsGOTParser<ELFT>::Entry *
+MipsGOTParser<ELFT>::getGotModulePointer() const {
+  if (LocalNum < 2)
+    return nullptr;
+  const Entry &E = GotEntries[1];
+  if ((E >> (sizeof(Entry) * 8 - 1)) == 0)
+    return nullptr;
+  return &E;
 }
 
 template <class ELFT>
-const typename MipsGOTParser<ELFT>::GOTEntry *
-MipsGOTParser<ELFT>::makeGOTIter(ArrayRef<uint8_t> GOT, std::size_t EntryNum) {
-  const char *Data = reinterpret_cast<const char *>(GOT.data());
-  return reinterpret_cast<const GOTEntry *>(Data + EntryNum * sizeof(GOTEntry));
+typename MipsGOTParser<ELFT>::Entries
+MipsGOTParser<ELFT>::getLocalEntries() const {
+  size_t Skip = getGotModulePointer() ? 2 : 1;
+  if (LocalNum - Skip <= 0)
+    return Entries();
+  return GotEntries.slice(Skip, LocalNum - Skip);
 }
 
 template <class ELFT>
-void MipsGOTParser<ELFT>::printGotEntry(uint64_t GotAddr,
-                                        const GOTEntry *BeginIt,
-                                        const GOTEntry *It) {
-  int64_t Offset = std::distance(BeginIt, It) * sizeof(GOTEntry);
-  W.printHex("Address", GotAddr + Offset);
-  W.printNumber("Access", Offset - 0x7ff0);
-  W.printHex("Initial", *It);
+typename MipsGOTParser<ELFT>::Entries
+MipsGOTParser<ELFT>::getGlobalEntries() const {
+  if (GlobalNum == 0)
+    return Entries();
+  return GotEntries.slice(LocalNum, GlobalNum);
 }
 
 template <class ELFT>
-void MipsGOTParser<ELFT>::printGlobalGotEntry(uint64_t GotAddr,
-                                              const GOTEntry *BeginIt,
-                                              const GOTEntry *It,
-                                              const Elf_Sym *Sym,
-                                              StringRef StrTable) {
-  printGotEntry(GotAddr, BeginIt, It);
-
-  W.printHex("Value", Sym->st_value);
-  W.printEnum("Type", Sym->getType(), makeArrayRef(ElfSymbolTypes));
-
-  unsigned SectionIndex = 0;
-  StringRef SectionName;
-  getSectionNameIndex(*Obj, Sym, Dumper->dynamic_symbols().begin(),
-                      Dumper->getShndxTable(), SectionName, SectionIndex);
-  W.printHex("Section", SectionName, SectionIndex);
-
-  std::string FullSymbolName = Dumper->getFullSymbolName(Sym, StrTable, true);
-  W.printNumber("Name", FullSymbolName, Sym->st_name);
+typename MipsGOTParser<ELFT>::Entries
+MipsGOTParser<ELFT>::getOtherEntries() const {
+  size_t OtherNum = GotEntries.size() - LocalNum - GlobalNum;
+  if (OtherNum == 0)
+    return Entries();
+  return GotEntries.slice(LocalNum + GlobalNum, OtherNum);
 }
 
 template <class ELFT>
-void MipsGOTParser<ELFT>::printPLTEntry(uint64_t PLTAddr,
-                                        const GOTEntry *BeginIt,
-                                        const GOTEntry *It, StringRef Purpose) {
-  DictScope D(W, "Entry");
-  int64_t Offset = std::distance(BeginIt, It) * sizeof(GOTEntry);
-  W.printHex("Address", PLTAddr + Offset);
-  W.printHex("Initial", *It);
-  W.printString("Purpose", Purpose);
+uint64_t MipsGOTParser<ELFT>::getGotAddress(const Entry *E) const {
+  int64_t Offset = std::distance(GotEntries.data(), E) * sizeof(Entry);
+  return GotSec->sh_addr + Offset;
 }
 
 template <class ELFT>
-void MipsGOTParser<ELFT>::printPLTEntry(uint64_t PLTAddr,
-                                        const GOTEntry *BeginIt,
-                                        const GOTEntry *It, StringRef StrTable,
-                                        const Elf_Sym *Sym) {
-  DictScope D(W, "Entry");
-  int64_t Offset = std::distance(BeginIt, It) * sizeof(GOTEntry);
-  W.printHex("Address", PLTAddr + Offset);
-  W.printHex("Initial", *It);
-  W.printHex("Value", Sym->st_value);
-  W.printEnum("Type", Sym->getType(), makeArrayRef(ElfSymbolTypes));
+int64_t MipsGOTParser<ELFT>::getGotOffset(const Entry *E) const {
+  int64_t Offset = std::distance(GotEntries.data(), E) * sizeof(Entry);
+  return Offset - 0x7ff0;
+}
 
-  unsigned SectionIndex = 0;
-  StringRef SectionName;
-  getSectionNameIndex(*Obj, Sym, Dumper->dynamic_symbols().begin(),
-                      Dumper->getShndxTable(), SectionName, SectionIndex);
-  W.printHex("Section", SectionName, SectionIndex);
+template <class ELFT>
+const typename MipsGOTParser<ELFT>::Elf_Sym *
+MipsGOTParser<ELFT>::getGotSym(const Entry *E) const {
+  int64_t Offset = std::distance(GotEntries.data(), E);
+  return &GotDynSyms[Offset - LocalNum];
+}
 
-  std::string FullSymbolName = Dumper->getFullSymbolName(Sym, StrTable, true);
-  W.printNumber("Name", FullSymbolName, Sym->st_name);
+template <class ELFT>
+const typename MipsGOTParser<ELFT>::Entry *
+MipsGOTParser<ELFT>::getPltLazyResolver() const {
+  return PltEntries.empty() ? nullptr : &PltEntries[0];
+}
+
+template <class ELFT>
+const typename MipsGOTParser<ELFT>::Entry *
+MipsGOTParser<ELFT>::getPltModulePointer() const {
+  return PltEntries.size() < 2 ? nullptr : &PltEntries[1];
+}
+
+template <class ELFT>
+typename MipsGOTParser<ELFT>::Entries
+MipsGOTParser<ELFT>::getPltEntries() const {
+  if (PltEntries.size() <= 2)
+    return Entries();
+  return PltEntries.slice(2, PltEntries.size() - 2);
+}
+
+template <class ELFT>
+uint64_t MipsGOTParser<ELFT>::getPltAddress(const Entry *E) const {
+  int64_t Offset = std::distance(PltEntries.data(), E) * sizeof(Entry);
+  return PltSec->sh_addr + Offset;
+}
+
+template <class ELFT>
+const typename MipsGOTParser<ELFT>::Elf_Sym *
+MipsGOTParser<ELFT>::getPltSym(const Entry *E) const {
+  int64_t Offset = std::distance(getPltEntries().data(), E);
+  if (PltRelSec->sh_type == ELF::SHT_REL) {
+    Elf_Rel_Range Rels = unwrapOrError(Obj->rels(PltRelSec));
+    return unwrapOrError(Obj->getRelocationSymbol(&Rels[Offset], PltSymTable));
+  } else {
+    Elf_Rela_Range Rels = unwrapOrError(Obj->relas(PltRelSec));
+    return unwrapOrError(Obj->getRelocationSymbol(&Rels[Offset], PltSymTable));
+  }
 }
 
 template <class ELFT> void ELFDumper<ELFT>::printMipsPLTGOT() {
-  if (Obj->getHeader()->e_machine != EM_MIPS) {
-    W.startLine() << "MIPS PLT GOT is available for MIPS targets only.\n";
-    return;
-  }
+  if (Obj->getHeader()->e_machine != EM_MIPS)
+    reportError("MIPS PLT GOT is available for MIPS targets only");
 
-  MipsGOTParser<ELFT> GOTParser(this, Obj, dynamic_table(), W);
-  if (dynamic_table().empty())
-    GOTParser.parseStaticGOT();
-  else {
-    GOTParser.parseGOT();
-    GOTParser.parsePLT();
-  }
+  MipsGOTParser<ELFT> Parser(Obj, dynamic_table(), dynamic_symbols());
+  if (Parser.hasGot())
+    ELFDumperStyle->printMipsGOT(Parser);
+  if (Parser.hasPlt())
+    ELFDumperStyle->printMipsPLT(Parser);
 }
 
 static const EnumEntry<unsigned> ElfMipsISAExtType[] = {
@@ -3597,6 +3558,119 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
   }
 }
 
+template <class ELFT>
+void GNUStyle<ELFT>::printMipsGOT(const MipsGOTParser<ELFT> &Parser) {
+  size_t Bias = ELFT::Is64Bits ? 8 : 0;
+  auto PrintEntry = [&](const Elf_Addr *E, StringRef Purpose) {
+    OS.PadToColumn(2);
+    OS << format_hex_no_prefix(Parser.getGotAddress(E), 8 + Bias);
+    OS.PadToColumn(11 + Bias);
+    OS << format_decimal(Parser.getGotOffset(E), 6) << "(gp)";
+    OS.PadToColumn(22 + Bias);
+    OS << format_hex_no_prefix(*E, 8 + Bias);
+    OS.PadToColumn(31 + 2 * Bias);
+    OS << Purpose << "\n";
+  };
+
+  OS << (Parser.IsStatic ? "Static GOT:\n" : "Primary GOT:\n");
+  OS << " Canonical gp value: "
+     << format_hex_no_prefix(Parser.getGp(), 8 + Bias) << "\n\n";
+
+  OS << " Reserved entries:\n";
+  OS << "   Address     Access  Initial Purpose\n";
+  PrintEntry(Parser.getGotLazyResolver(), "Lazy resolver");
+  if (Parser.getGotModulePointer())
+    PrintEntry(Parser.getGotModulePointer(), "Module pointer (GNU extension)");
+
+  if (!Parser.getLocalEntries().empty()) {
+    OS << "\n";
+    OS << " Local entries:\n";
+    OS << "   Address     Access  Initial\n";
+    for (auto &E : Parser.getLocalEntries())
+      PrintEntry(&E, "");
+  }
+
+  if (Parser.IsStatic)
+    return;
+
+  if (!Parser.getGlobalEntries().empty()) {
+    OS << "\n";
+    OS << " Global entries:\n";
+    OS << "   Address     Access  Initial Sym.Val. Type    Ndx Name\n";
+    for (auto &E : Parser.getGlobalEntries()) {
+      const Elf_Sym *Sym = Parser.getGotSym(&E);
+      std::string SymName = this->dumper()->getFullSymbolName(
+          Sym, this->dumper()->getDynamicStringTable(), false);
+
+      OS.PadToColumn(2);
+      OS << to_string(format_hex_no_prefix(Parser.getGotAddress(&E), 8 + Bias));
+      OS.PadToColumn(11 + Bias);
+      OS << to_string(format_decimal(Parser.getGotOffset(&E), 6)) + "(gp)";
+      OS.PadToColumn(22 + Bias);
+      OS << to_string(format_hex_no_prefix(E, 8 + Bias));
+      OS.PadToColumn(31 + 2 * Bias);
+      OS << to_string(format_hex_no_prefix(Sym->st_value, 8 + Bias));
+      OS.PadToColumn(40 + 3 * Bias);
+      OS << printEnum(Sym->getType(), makeArrayRef(ElfSymbolTypes));
+      OS.PadToColumn(48 + 3 * Bias);
+      OS << getSymbolSectionNdx(Parser.Obj, Sym,
+                                this->dumper()->dynamic_symbols().begin());
+      OS.PadToColumn(52 + 3 * Bias);
+      OS << SymName << "\n";
+    }
+  }
+
+  if (!Parser.getOtherEntries().empty())
+    OS << "\n Number of TLS and multi-GOT entries "
+       << Parser.getOtherEntries().size() << "\n";
+}
+
+template <class ELFT>
+void GNUStyle<ELFT>::printMipsPLT(const MipsGOTParser<ELFT> &Parser) {
+  size_t Bias = ELFT::Is64Bits ? 8 : 0;
+  auto PrintEntry = [&](const Elf_Addr *E, StringRef Purpose) {
+    OS.PadToColumn(2);
+    OS << format_hex_no_prefix(Parser.getGotAddress(E), 8 + Bias);
+    OS.PadToColumn(11 + Bias);
+    OS << format_hex_no_prefix(*E, 8 + Bias);
+    OS.PadToColumn(20 + 2 * Bias);
+    OS << Purpose << "\n";
+  };
+
+  OS << "PLT GOT:\n\n";
+
+  OS << " Reserved entries:\n";
+  OS << "   Address  Initial Purpose\n";
+  PrintEntry(Parser.getPltLazyResolver(), "PLT lazy resolver");
+  if (Parser.getPltModulePointer())
+    PrintEntry(Parser.getGotModulePointer(), "Module pointer");
+
+  if (!Parser.getPltEntries().empty()) {
+    OS << "\n";
+    OS << " Entries:\n";
+    OS << "   Address  Initial Sym.Val. Type    Ndx Name\n";
+    for (auto &E : Parser.getPltEntries()) {
+      const Elf_Sym *Sym = Parser.getPltSym(&E);
+      std::string SymName = this->dumper()->getFullSymbolName(
+          Sym, this->dumper()->getDynamicStringTable(), false);
+
+      OS.PadToColumn(2);
+      OS << to_string(format_hex_no_prefix(Parser.getGotAddress(&E), 8 + Bias));
+      OS.PadToColumn(11 + Bias);
+      OS << to_string(format_hex_no_prefix(E, 8 + Bias));
+      OS.PadToColumn(20 + 2 * Bias);
+      OS << to_string(format_hex_no_prefix(Sym->st_value, 8 + Bias));
+      OS.PadToColumn(29 + 3 * Bias);
+      OS << printEnum(Sym->getType(), makeArrayRef(ElfSymbolTypes));
+      OS.PadToColumn(37 + 3 * Bias);
+      OS << getSymbolSectionNdx(Parser.Obj, Sym,
+                                this->dumper()->dynamic_symbols().begin());
+      OS.PadToColumn(41 + 3 * Bias);
+      OS << SymName << "\n";
+    }
+  }
+}
+
 template <class ELFT> void LLVMStyle<ELFT>::printFileHeaders(const ELFO *Obj) {
   const Elf_Ehdr *e = Obj->getHeader();
   {
@@ -3854,8 +3928,7 @@ void LLVMStyle<ELFT>::printSymbol(const ELFO *Obj, const Elf_Sym *Symbol,
                                   bool IsDynamic) {
   unsigned SectionIndex = 0;
   StringRef SectionName;
-  getSectionNameIndex(*Obj, Symbol, First, this->dumper()->getShndxTable(),
-                      SectionName, SectionIndex);
+  this->dumper()->getSectionNameIndex(Symbol, First, SectionName, SectionIndex);
   std::string FullSymbolName =
       this->dumper()->getFullSymbolName(Symbol, StrTable, IsDynamic);
   unsigned char SymbolType = Symbol->getType();
@@ -3991,4 +4064,115 @@ void LLVMStyle<ELFT>::printHashHistogram(const ELFFile<ELFT> *Obj) {
 template <class ELFT>
 void LLVMStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
   W.startLine() << "printNotes not implemented!\n";
+}
+
+template <class ELFT>
+void LLVMStyle<ELFT>::printMipsGOT(const MipsGOTParser<ELFT> &Parser) {
+  auto PrintEntry = [&](const Elf_Addr *E) {
+    W.printHex("Address", Parser.getGotAddress(E));
+    W.printNumber("Access", Parser.getGotOffset(E));
+    W.printHex("Initial", *E);
+  };
+
+  DictScope GS(W, Parser.IsStatic ? "Static GOT" : "Primary GOT");
+
+  W.printHex("Canonical gp value", Parser.getGp());
+  {
+    ListScope RS(W, "Reserved entries");
+    {
+      DictScope D(W, "Entry");
+      PrintEntry(Parser.getGotLazyResolver());
+      W.printString("Purpose", StringRef("Lazy resolver"));
+    }
+
+    if (Parser.getGotModulePointer()) {
+      DictScope D(W, "Entry");
+      PrintEntry(Parser.getGotModulePointer());
+      W.printString("Purpose", StringRef("Module pointer (GNU extension)"));
+    }
+  }
+  {
+    ListScope LS(W, "Local entries");
+    for (auto &E : Parser.getLocalEntries()) {
+      DictScope D(W, "Entry");
+      PrintEntry(&E);
+    }
+  }
+
+  if (Parser.IsStatic)
+    return;
+
+  {
+    ListScope GS(W, "Global entries");
+    for (auto &E : Parser.getGlobalEntries()) {
+      DictScope D(W, "Entry");
+
+      PrintEntry(&E);
+
+      const Elf_Sym *Sym = Parser.getGotSym(&E);
+      W.printHex("Value", Sym->st_value);
+      W.printEnum("Type", Sym->getType(), makeArrayRef(ElfSymbolTypes));
+
+      unsigned SectionIndex = 0;
+      StringRef SectionName;
+      this->dumper()->getSectionNameIndex(
+          Sym, this->dumper()->dynamic_symbols().begin(), SectionName,
+          SectionIndex);
+      W.printHex("Section", SectionName, SectionIndex);
+
+      std::string SymName = this->dumper()->getFullSymbolName(
+          Sym, this->dumper()->getDynamicStringTable(), true);
+      W.printNumber("Name", SymName, Sym->st_name);
+    }
+  }
+
+  W.printNumber("Number of TLS and multi-GOT entries",
+                uint64_t(Parser.getOtherEntries().size()));
+}
+
+template <class ELFT>
+void LLVMStyle<ELFT>::printMipsPLT(const MipsGOTParser<ELFT> &Parser) {
+  auto PrintEntry = [&](const Elf_Addr *E) {
+    W.printHex("Address", Parser.getPltAddress(E));
+    W.printHex("Initial", *E);
+  };
+
+  DictScope GS(W, "PLT GOT");
+
+  {
+    ListScope RS(W, "Reserved entries");
+    {
+      DictScope D(W, "Entry");
+      PrintEntry(Parser.getPltLazyResolver());
+      W.printString("Purpose", StringRef("PLT lazy resolver"));
+    }
+
+    if (auto E = Parser.getPltModulePointer()) {
+      DictScope D(W, "Entry");
+      PrintEntry(E);
+      W.printString("Purpose", StringRef("Module pointer"));
+    }
+  }
+  {
+    ListScope LS(W, "Entries");
+    for (auto &E : Parser.getPltEntries()) {
+      DictScope D(W, "Entry");
+      PrintEntry(&E);
+
+      const Elf_Sym *Sym = Parser.getPltSym(&E);
+      W.printHex("Value", Sym->st_value);
+      W.printEnum("Type", Sym->getType(), makeArrayRef(ElfSymbolTypes));
+
+      unsigned SectionIndex = 0;
+      StringRef SectionName;
+      this->dumper()->getSectionNameIndex(
+          Sym, this->dumper()->dynamic_symbols().begin(), SectionName,
+          SectionIndex);
+      W.printHex("Section", SectionName, SectionIndex);
+
+      std::string SymName =
+          this->dumper()->getFullSymbolName(Sym, Parser.getPltStrTable(), true);
+      W.printNumber("Name", SymName, Sym->st_name);
+    }
+  }
 }

@@ -6,6 +6,7 @@
   define void @test_trunc_and_zext_s16() { ret void }
   define void @test_trunc_and_anyext_s8() { ret void }
   define void @test_trunc_and_anyext_s16() { ret void }
+  define void @test_trunc_s64() #0 { ret void }
 
   define void @test_add_s32() { ret void }
   define void @test_add_fold_imm_s32() { ret void }
@@ -239,6 +240,36 @@ body:             |
 
     BX_RET 14, %noreg, implicit %r0
     ; CHECK: BX_RET 14, %noreg, implicit %r0
+...
+---
+name:            test_trunc_s64
+# CHECK-LABEL: name: test_trunc_s64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: %r0, %d0
+
+    %0(s64) = COPY %d0
+    ; CHECK: [[VREG:%[0-9]+]]:dpr = COPY %d0
+
+    %2(p0) = COPY %r0
+    ; CHECK: [[PTR:%[0-9]+]]:gpr = COPY %r0
+
+    %1(s32) = G_TRUNC %0(s64)
+    ; CHECK: [[VREGTRUNC:%[0-9]+]]:gpr, [[UNINTERESTING:%[0-9]+]]:gpr = VMOVRRD [[VREG]]
+
+    G_STORE %1(s32), %2 :: (store 4)
+    ; CHECK: STRi12 [[VREGTRUNC]], [[PTR]], 0, 14, %noreg
+
+    BX_RET 14, %noreg
+    ; CHECK: BX_RET 14, %noreg
 ...
 ---
 name:            test_add_s32

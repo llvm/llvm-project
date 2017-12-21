@@ -18,9 +18,9 @@
 // CHECK: ldapr x0, [x0]     // encoding: [0x00,0xc0,0xbf,0xf8]
 // CHECK: ldapr w18, [x0]    // encoding: [0x12,0xc0,0xbf,0xb8]
 // CHECK: ldapr x15, [x0]    // encoding: [0x0f,0xc0,0xbf,0xf8]
-// CHECK-REQ: error: invalid operand for instruction
-// CHECK-REQ: error: invalid operand for instruction
-// CHECK-REQ: error: invalid operand for instruction
-// CHECK-REQ: error: invalid operand for instruction
+// CHECK-REQ: error: instruction requires: rcpc
+// CHECK-REQ: error: instruction requires: rcpc
+// CHECK-REQ: error: instruction requires: rcpc
+// CHECK-REQ: error: instruction requires: rcpc
 // CHECK-REQ: error: instruction requires: rcpc
 // CHECK-REQ: error: instruction requires: rcpc

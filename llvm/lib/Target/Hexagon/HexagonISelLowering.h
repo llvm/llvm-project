@@ -70,6 +70,7 @@ namespace HexagonISD {
       EH_RETURN,
       DCFETCH,
       READCYCLE,
+      VZERO,
 
       OP_END
     };
@@ -283,6 +284,9 @@ namespace HexagonISD {
     }
 
   private:
+    bool getBuildVectorConstInts(ArrayRef<SDValue> Values, MVT VecTy,
+                                 SelectionDAG &DAG,
+                                 MutableArrayRef<ConstantInt*> Consts) const;
     SDValue buildVector32(ArrayRef<SDValue> Elem, const SDLoc &dl, MVT VecTy,
                           SelectionDAG &DAG) const;
     SDValue buildVector64(ArrayRef<SDValue> Elem, const SDLoc &dl, MVT VecTy,
@@ -301,6 +305,7 @@ namespace HexagonISD {
       SDNode *N = DAG.getMachineNode(MachineOpc, dl, Ty, Ops);
       return SDValue(N, 0);
     }
+    SDValue getZero(const SDLoc &dl, MVT Ty, SelectionDAG &DAG) const;
 
     using VectorPair = std::pair<SDValue, SDValue>;
     using TypePair = std::pair<MVT, MVT>;
@@ -343,6 +348,13 @@ namespace HexagonISD {
     SDValue getIndexInWord32(SDValue Idx, MVT ElemTy, SelectionDAG &DAG) const;
     SDValue getByteShuffle(const SDLoc &dl, SDValue Op0, SDValue Op1,
                            ArrayRef<int> Mask, SelectionDAG &DAG) const;
+
+    MVT getVecBoolVT() const;
+
+    SDValue buildHvxVectorSingle(ArrayRef<SDValue> Values, const SDLoc &dl,
+                                 MVT VecTy, SelectionDAG &DAG) const;
+    SDValue buildHvxVectorPred(ArrayRef<SDValue> Values, const SDLoc &dl,
+                               MVT VecTy, SelectionDAG &DAG) const;
 
     SDValue LowerHvxBuildVector(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerHvxExtractElement(SDValue Op, SelectionDAG &DAG) const;

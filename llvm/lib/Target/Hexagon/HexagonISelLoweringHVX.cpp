@@ -141,49 +141,50 @@ HexagonTargetLowering::getByteShuffle(const SDLoc &dl, SDValue Op0,
                               opCastElem(Op1, MVT::i8, DAG), ByteMask);
 }
 
-SDValue
-HexagonTargetLowering::LowerHvxBuildVector(SDValue Op, SelectionDAG &DAG)
-      const {
-  const SDLoc &dl(Op);
-  BuildVectorSDNode *BN = cast<BuildVectorSDNode>(Op.getNode());
-  bool IsConst = BN->isConstant();
-  MachineFunction &MF = DAG.getMachineFunction();
-  MVT VecTy = ty(Op);
+MVT
+HexagonTargetLowering::getVecBoolVT() const {
+  return MVT::getVectorVT(MVT::i1, 8*Subtarget.getVectorLength());
+}
 
-  if (IsConst) {
-    SmallVector<Constant*, 128> Elems;
-    for (SDValue V : BN->op_values()) {
-      if (auto *C = dyn_cast<ConstantSDNode>(V.getNode()))
-        Elems.push_back(const_cast<ConstantInt*>(C->getConstantIntValue()));
-    }
-    Constant *CV = ConstantVector::get(Elems);
-    unsigned Align = VecTy.getSizeInBits() / 8;
+SDValue
+HexagonTargetLowering::buildHvxVectorSingle(ArrayRef<SDValue> Values,
+                                            const SDLoc &dl, MVT VecTy,
+                                            SelectionDAG &DAG) const {
+  unsigned VecLen = Values.size();
+  MachineFunction &MF = DAG.getMachineFunction();
+  MVT ElemTy = VecTy.getVectorElementType();
+  unsigned ElemWidth = ElemTy.getSizeInBits();
+  unsigned HwLen = Subtarget.getVectorLength();
+
+  SmallVector<ConstantInt*, 128> Consts(VecLen);
+  bool AllConst = getBuildVectorConstInts(Values, VecTy, DAG, Consts);
+  if (AllConst) {
+    if (llvm::all_of(Consts, [](ConstantInt *CI) { return CI->isZero(); }))
+      return getZero(dl, VecTy, DAG);
+
+    ArrayRef<Constant*> Tmp((Constant**)Consts.begin(),
+                            (Constant**)Consts.end());
+    Constant *CV = ConstantVector::get(Tmp);
+    unsigned Align = HwLen;
     SDValue CP = LowerConstantPool(DAG.getConstantPool(CV, VecTy, Align), DAG);
     return DAG.getLoad(VecTy, dl, DAG.getEntryNode(), CP,
                        MachinePointerInfo::getConstantPool(MF), Align);
   }
 
-  unsigned NumOps = Op.getNumOperands();
-  unsigned HwLen = Subtarget.getVectorLength();
-  unsigned ElemSize = VecTy.getVectorElementType().getSizeInBits() / 8;
-  assert(ElemSize*NumOps == HwLen);
-
+  unsigned ElemSize = ElemWidth / 8;
+  assert(ElemSize*VecLen == HwLen);
   SmallVector<SDValue,32> Words;
-  SmallVector<SDValue,32> Ops;
-  for (unsigned i = 0; i != NumOps; ++i)
-    Ops.push_back(Op.getOperand(i));
 
   if (VecTy.getVectorElementType() != MVT::i32) {
-    assert(ElemSize < 4 && "vNi64 should have been promoted to vNi32");
     assert((ElemSize == 1 || ElemSize == 2) && "Invalid element size");
     unsigned OpsPerWord = (ElemSize == 1) ? 4 : 2;
     MVT PartVT = MVT::getVectorVT(VecTy.getVectorElementType(), OpsPerWord);
-    for (unsigned i = 0; i != NumOps; i += OpsPerWord) {
-      SDValue W = buildVector32({&Ops[i], OpsPerWord}, dl, PartVT, DAG);
+    for (unsigned i = 0; i != VecLen; i += OpsPerWord) {
+      SDValue W = buildVector32(Values.slice(i, OpsPerWord), dl, PartVT, DAG);
       Words.push_back(DAG.getBitcast(MVT::i32, W));
     }
   } else {
-    Words.assign(Ops.begin(), Ops.end());
+    Words.assign(Values.begin(), Values.end());
   }
 
   // Construct two halves in parallel, then or them together.
@@ -205,6 +206,83 @@ HexagonTargetLowering::LowerHvxBuildVector(SDValue Op, SelectionDAG &DAG)
                        {HalfV0, DAG.getConstant(HwLen/2, dl, MVT::i32)});
   SDValue DstV = DAG.getNode(ISD::OR, dl, VecTy, {HalfV0, HalfV1});
   return DstV;
+}
+
+SDValue
+HexagonTargetLowering::buildHvxVectorPred(ArrayRef<SDValue> Values,
+                                          const SDLoc &dl, MVT VecTy,
+                                          SelectionDAG &DAG) const {
+  // Construct a vector V of bytes, such that a comparison V >u 0 would
+  // produce the required vector predicate.
+  unsigned VecLen = Values.size();
+  unsigned HwLen = Subtarget.getVectorLength();
+  assert(VecLen <= HwLen || VecLen == 8*HwLen);
+  SmallVector<SDValue,128> Bytes;
+
+  if (VecLen <= HwLen) {
+    // In the hardware, each bit of a vector predicate corresponds to a byte
+    // of a vector register. Calculate how many bytes does a bit of VecTy
+    // correspond to.
+    assert(HwLen % VecLen == 0);
+    unsigned BitBytes = HwLen / VecLen;
+    for (SDValue V : Values) {
+      SDValue Ext = !V.isUndef() ? DAG.getZExtOrTrunc(V, dl, MVT::i8)
+                                 : DAG.getConstant(0, dl, MVT::i8);
+      for (unsigned B = 0; B != BitBytes; ++B)
+        Bytes.push_back(Ext);
+    }
+  } else {
+    // There are as many i1 values, as there are bits in a vector register.
+    // Divide the values into groups of 8 and check that each group consists
+    // of the same value (ignoring undefs).
+    for (unsigned I = 0; I != VecLen; I += 8) {
+      unsigned B = 0;
+      // Find the first non-undef value in this group.
+      for (; B != 8; ++B) {
+        if (!Values[I+B].isUndef())
+          break;
+      }
+      SDValue F = Values[I+B];
+      SDValue Ext = (B < 8) ? DAG.getZExtOrTrunc(F, dl, MVT::i8)
+                            : DAG.getConstant(0, dl, MVT::i8);
+      Bytes.push_back(Ext);
+      // Verify that the rest of values in the group are the same as the
+      // first.
+      for (; B != 8; ++B)
+        assert(Values[I+B].isUndef() || Values[I+B] == F);
+    }
+  }
+
+  MVT ByteTy = MVT::getVectorVT(MVT::i8, HwLen);
+  SDValue ByteVec = buildHvxVectorSingle(Bytes, dl, ByteTy, DAG);
+  SDValue Cmp = DAG.getSetCC(dl, VecTy, ByteVec, getZero(dl, ByteTy, DAG),
+                             ISD::SETUGT);
+  return Cmp;
+}
+
+SDValue
+HexagonTargetLowering::LowerHvxBuildVector(SDValue Op, SelectionDAG &DAG)
+      const {
+  const SDLoc &dl(Op);
+  MVT VecTy = ty(Op);
+
+  unsigned Size = Op.getNumOperands();
+  SmallVector<SDValue,128> Ops;
+  for (unsigned i = 0; i != Size; ++i)
+    Ops.push_back(Op.getOperand(i));
+
+  if (VecTy.getVectorElementType() == MVT::i1)
+    return buildHvxVectorPred(Ops, dl, VecTy, DAG);
+
+  if (VecTy.getSizeInBits() == 16*Subtarget.getVectorLength()) {
+    ArrayRef<SDValue> A(Ops);
+    MVT SingleTy = typeSplit(VecTy).first;
+    SDValue V0 = buildHvxVectorSingle(A.take_front(Size/2), dl, SingleTy, DAG);
+    SDValue V1 = buildHvxVectorSingle(A.drop_front(Size/2), dl, SingleTy, DAG);
+    return DAG.getNode(ISD::CONCAT_VECTORS, dl, VecTy, V0, V1);
+  }
+
+  return buildHvxVectorSingle(Ops, dl, VecTy, DAG);
 }
 
 SDValue
@@ -399,6 +477,10 @@ HexagonTargetLowering::LowerHvxSetCC(SDValue Op, SelectionDAG &DAG) const {
   //   (negate (swap-op NewCmp)),
   // the condition code for the NewCmp should be calculated from the original
   // CC by applying these operations in the reverse order.
+  //
+  // This could also be done through setCondCodeAction, but for negation it
+  // uses a xor with a vector of -1s, which it obtains from BUILD_VECTOR.
+  // That is far too expensive for what can be done with a single instruction.
 
   switch (CC) {
     case ISD::SETNE:    // !eq

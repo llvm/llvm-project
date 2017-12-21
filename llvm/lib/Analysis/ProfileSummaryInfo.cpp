@@ -115,42 +115,62 @@ bool ProfileSummaryInfo::isFunctionEntryHot(const Function *F) {
   return FunctionCount && isHotCount(FunctionCount.getValue());
 }
 
-/// Returns true if the function's entry or total call edge count is hot.
+/// Returns true if the function contains hot code. This can include a hot
+/// function entry count, hot basic block, or (in the case of Sample PGO)
+/// hot total call edge count.
 /// If it returns false, it either means it is not hot or it is unknown
-/// whether it is hot or not (for example, no profile data is available).
-bool ProfileSummaryInfo::isFunctionHotInCallGraph(const Function *F) {
+/// (for example, no profile data is available).
+bool ProfileSummaryInfo::isFunctionHotInCallGraph(const Function *F,
+                                                  BlockFrequencyInfo &BFI) {
   if (!F || !computeSummary())
     return false;
   if (auto FunctionCount = F->getEntryCount())
     if (isHotCount(FunctionCount.getValue()))
       return true;
 
-  uint64_t TotalCallCount = 0;
+  if (hasSampleProfile()) {
+    uint64_t TotalCallCount = 0;
+    for (const auto &BB : *F)
+      for (const auto &I : BB)
+        if (isa<CallInst>(I) || isa<InvokeInst>(I))
+          if (auto CallCount = getProfileCount(&I, nullptr))
+            TotalCallCount += CallCount.getValue();
+    if (isHotCount(TotalCallCount))
+      return true;
+  }
   for (const auto &BB : *F)
-    for (const auto &I : BB)
-      if (isa<CallInst>(I) || isa<InvokeInst>(I))
-        if (auto CallCount = getProfileCount(&I, nullptr))
-          TotalCallCount += CallCount.getValue();
-  return isHotCount(TotalCallCount);
+    if (isHotBB(&BB, &BFI))
+      return true;
+  return false;
 }
 
-/// Returns true if the function's entry and total call edge count is cold.
+/// Returns true if the function only contains cold code. This means that
+/// the function entry and blocks are all cold, and (in the case of Sample PGO)
+/// the total call edge count is cold.
 /// If it returns false, it either means it is not cold or it is unknown
-/// whether it is cold or not (for example, no profile data is available).
-bool ProfileSummaryInfo::isFunctionColdInCallGraph(const Function *F) {
+/// (for example, no profile data is available).
+bool ProfileSummaryInfo::isFunctionColdInCallGraph(const Function *F,
+                                                   BlockFrequencyInfo &BFI) {
   if (!F || !computeSummary())
     return false;
   if (auto FunctionCount = F->getEntryCount())
     if (!isColdCount(FunctionCount.getValue()))
       return false;
-  
-  uint64_t TotalCallCount = 0;
+
+  if (hasSampleProfile()) {
+    uint64_t TotalCallCount = 0;
+    for (const auto &BB : *F)
+      for (const auto &I : BB)
+        if (isa<CallInst>(I) || isa<InvokeInst>(I))
+          if (auto CallCount = getProfileCount(&I, nullptr))
+            TotalCallCount += CallCount.getValue();
+    if (!isColdCount(TotalCallCount))
+      return false;
+  }
   for (const auto &BB : *F)
-    for (const auto &I : BB) 
-      if (isa<CallInst>(I) || isa<InvokeInst>(I))
-        if (auto CallCount = getProfileCount(&I, nullptr))
-          TotalCallCount += CallCount.getValue();
-  return isColdCount(TotalCallCount);
+    if (!isColdBB(&BB, &BFI))
+      return false;
+  return true;
 }
 
 /// Returns true if the function's entry is a cold. If it returns false, it

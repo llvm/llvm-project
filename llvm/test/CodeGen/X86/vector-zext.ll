@@ -3,7 +3,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+ssse3 | FileCheck %s --check-prefix=SSE --check-prefix=SSSE3
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4.1 | FileCheck %s --check-prefix=SSE --check-prefix=SSE41
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefix=AVX --check-prefix=AVX1
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefix=AVX --check-prefix=AVX2
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefix=AVX --check-prefix=AVX2 --check-prefix=AVX2-SLOW
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-shuffle | FileCheck %s --check-prefix=AVX --check-prefix=AVX2 --check-prefix=AVX2-FAST
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s --check-prefix=AVX --check-prefix=AVX512 --check-prefix=AVX512F
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefix=AVX --check-prefix=AVX512 --check-prefix=AVX512BW
 
@@ -1911,11 +1912,28 @@ define <4 x i32> @shuf_zext_8i16_to_4i32_offset1(<8 x i16> %A) nounwind uwtable 
 ; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: shuf_zext_8i16_to_4i32_offset1:
-; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[2,3,4,5,6,7,8,9,10,11,12,13,14,15],zero,zero
-; AVX-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; AVX-NEXT:    retq
+; AVX1-LABEL: shuf_zext_8i16_to_4i32_offset1:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[2,3,4,5,6,7,8,9,10,11,12,13,14,15],zero,zero
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX1-NEXT:    retq
+;
+; AVX2-SLOW-LABEL: shuf_zext_8i16_to_4i32_offset1:
+; AVX2-SLOW:       # %bb.0: # %entry
+; AVX2-SLOW-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[2,3,4,5,6,7,8,9,10,11,12,13,14,15],zero,zero
+; AVX2-SLOW-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX2-SLOW-NEXT:    retq
+;
+; AVX2-FAST-LABEL: shuf_zext_8i16_to_4i32_offset1:
+; AVX2-FAST:       # %bb.0: # %entry
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,3],zero,zero,xmm0[4,5],zero,zero,xmm0[6,7],zero,zero,xmm0[8,9],zero,zero
+; AVX2-FAST-NEXT:    retq
+;
+; AVX512-LABEL: shuf_zext_8i16_to_4i32_offset1:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[2,3,4,5,6,7,8,9,10,11,12,13,14,15],zero,zero
+; AVX512-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX512-NEXT:    retq
 entry:
   %B = shufflevector <8 x i16> %A, <8 x i16> zeroinitializer, <8 x i32> <i32 1, i32 8, i32 2, i32 8, i32 3, i32 8, i32 4, i32 8>
   %Z = bitcast <8 x i16> %B to <4 x i32>

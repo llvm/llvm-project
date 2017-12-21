@@ -1591,37 +1591,7 @@ SDNodeInfo::SDNodeInfo(Record *R, const CodeGenHwModes &CGH) : Def(R) {
   NumOperands = TypeProfile->getValueAsInt("NumOperands");
 
   // Parse the properties.
-  Properties = 0;
-  for (Record *Property : R->getValueAsListOfDefs("Properties")) {
-    if (Property->getName() == "SDNPCommutative") {
-      Properties |= 1 << SDNPCommutative;
-    } else if (Property->getName() == "SDNPAssociative") {
-      Properties |= 1 << SDNPAssociative;
-    } else if (Property->getName() == "SDNPHasChain") {
-      Properties |= 1 << SDNPHasChain;
-    } else if (Property->getName() == "SDNPOutGlue") {
-      Properties |= 1 << SDNPOutGlue;
-    } else if (Property->getName() == "SDNPInGlue") {
-      Properties |= 1 << SDNPInGlue;
-    } else if (Property->getName() == "SDNPOptInGlue") {
-      Properties |= 1 << SDNPOptInGlue;
-    } else if (Property->getName() == "SDNPMayStore") {
-      Properties |= 1 << SDNPMayStore;
-    } else if (Property->getName() == "SDNPMayLoad") {
-      Properties |= 1 << SDNPMayLoad;
-    } else if (Property->getName() == "SDNPSideEffect") {
-      Properties |= 1 << SDNPSideEffect;
-    } else if (Property->getName() == "SDNPMemOperand") {
-      Properties |= 1 << SDNPMemOperand;
-    } else if (Property->getName() == "SDNPVariadic") {
-      Properties |= 1 << SDNPVariadic;
-    } else {
-      PrintFatalError("Unknown SD Node property '" +
-                      Property->getName() + "' on node '" +
-                      R->getName() + "'!");
-    }
-  }
-
+  Properties = parseSDPatternOperatorProperties(R);
 
   // Parse the type constraints.
   std::vector<Record*> ConstraintList =
@@ -2100,11 +2070,20 @@ bool TreePatternNode::NodeHasProperty(SDNP Property,
   if (isLeaf()) {
     if (const ComplexPattern *CP = getComplexPatternInfo(CGP))
       return CP->hasProperty(Property);
+
     return false;
   }
 
-  Record *Operator = getOperator();
-  if (!Operator->isSubClassOf("SDNode")) return false;
+  if (Property != SDNPHasChain) {
+    // The chain proprety is already present on the different intrinsic node
+    // types (intrinsic_w_chain, intrinsic_void), and is not explicitly listed
+    // on the intrinsic. Anything else is specific to the individual intrinsic.
+    if (const CodeGenIntrinsic *Int = getIntrinsicInfo(CGP))
+      return Int->hasProperty(Property);
+  }
+
+  if (!Operator->isSubClassOf("SDPatternOperator"))
+    return false;
 
   return CGP.getSDNodeInfo(Operator).hasProperty(Property);
 }

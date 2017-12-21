@@ -756,11 +756,11 @@ struct ShuffleMask {
 
   ShuffleMask lo() const {
     size_t H = Mask.size()/2;
-    return ShuffleMask({Mask.data(), H});
+    return ShuffleMask(Mask.take_front(H));
   }
   ShuffleMask hi() const {
     size_t H = Mask.size()/2;
-    return ShuffleMask({Mask.data()+H, H});
+    return ShuffleMask(Mask.take_back(H));
   }
 };
 
@@ -834,15 +834,6 @@ namespace llvm {
                           SDValue Va, SDValue Vb, SDNode *N);
 
   };
-}
-
-// Return a submask of A that is shorter than A by |C| elements:
-// - if C > 0, return a submask of A that starts at position C,
-// - if C <= 0, return a submask of A that starts at 0 (reduce A by |C|).
-static ArrayRef<int> subm(ArrayRef<int> A, int C) {
-  if (C > 0)
-    return { A.data()+C, A.size()-C };
-  return { A.data(), A.size()+C };
 }
 
 static void splitMask(ArrayRef<int> Mask, MutableArrayRef<int> MaskL,
@@ -1176,8 +1167,8 @@ OpRef HvxSelector::vmuxp(ArrayRef<uint8_t> Bytes, OpRef Va, OpRef Vb,
                          ResultStack &Results) {
   DEBUG_WITH_TYPE("isel", {dbgs() << __func__ << '\n';});
   size_t S = Bytes.size() / 2;
-  OpRef L = vmuxs({Bytes.data(),   S}, OpRef::lo(Va), OpRef::lo(Vb), Results);
-  OpRef H = vmuxs({Bytes.data()+S, S}, OpRef::hi(Va), OpRef::hi(Vb), Results);
+  OpRef L = vmuxs(Bytes.take_front(S), OpRef::lo(Va), OpRef::lo(Vb), Results);
+  OpRef H = vmuxs(Bytes.drop_front(S), OpRef::hi(Va), OpRef::hi(Vb), Results);
   return concat(L, H, Results);
 }
 
@@ -1452,7 +1443,7 @@ OpRef HvxSelector::contracting(ShuffleMask SM, OpRef Va, OpRef Vb,
       return OpRef::fail();
     // Examine the rest of the mask.
     for (int I = L; I < N; I += L) {
-      auto S = findStrip(subm(SM.Mask,I), 1, N-I);
+      auto S = findStrip(SM.Mask.drop_front(I), 1, N-I);
       // Check whether the mask element at the beginning of each strip
       // increases by 2L each time.
       if (S.first - Strip.first != 2*I)
@@ -1482,7 +1473,7 @@ OpRef HvxSelector::contracting(ShuffleMask SM, OpRef Va, OpRef Vb,
   std::pair<int,unsigned> PrevS = Strip;
   bool Flip = false;
   for (int I = L; I < N; I += L) {
-    auto S = findStrip(subm(SM.Mask,I), 1, N-I);
+    auto S = findStrip(SM.Mask.drop_front(I), 1, N-I);
     if (S.second != PrevS.second)
       return OpRef::fail();
     int Diff = Flip ? PrevS.first - S.first + 2*L
@@ -1541,7 +1532,7 @@ OpRef HvxSelector::expanding(ShuffleMask SM, OpRef Va, ResultStack &Results) {
 
   // First, check the non-ignored strips.
   for (int I = 2*L; I < 2*N; I += 2*L) {
-    auto S = findStrip(subm(SM.Mask,I), 1, N-I);
+    auto S = findStrip(SM.Mask.drop_front(I), 1, N-I);
     if (S.second != unsigned(L))
       return OpRef::fail();
     if (2*S.first != I)
@@ -1549,7 +1540,7 @@ OpRef HvxSelector::expanding(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   }
   // Check the -1s.
   for (int I = L; I < 2*N; I += 2*L) {
-    auto S = findStrip(subm(SM.Mask,I), 0, N-I);
+    auto S = findStrip(SM.Mask.drop_front(I), 0, N-I);
     if (S.first != -1 || S.second != unsigned(L))
       return OpRef::fail();
   }
@@ -1683,8 +1674,8 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
     if (!isPowerOf2_32(X))
       return OpRef::fail();
     // Check the other segments of Mask.
-    for (int J = 0; J < VecLen; J += I) {
-      if (XorPow2(subm(SM.Mask, -J), I) != X)
+    for (int J = I; J < VecLen; J += I) {
+      if (XorPow2(SM.Mask.slice(J, I), I) != X)
         return OpRef::fail();
     }
     Perm[Log2_32(X)] = Log2_32(I)-1;

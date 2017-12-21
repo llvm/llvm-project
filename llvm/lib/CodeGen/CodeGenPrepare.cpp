@@ -352,8 +352,6 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
   // Clear per function information.
   InsertedInsts.clear();
   PromotedInsts.clear();
-  BFI.reset();
-  BPI.reset();
 
   ModifiedDT = false;
   if (auto *TPC = getAnalysisIfAvailable<TargetPassConfig>()) {
@@ -365,14 +363,16 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
   TLInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  BPI.reset(new BranchProbabilityInfo(F, *LI));
+  BFI.reset(new BlockFrequencyInfo(F, *BPI, *LI));
   OptSize = F.optForSize();
 
   ProfileSummaryInfo *PSI =
       getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   if (ProfileGuidedSectionPrefix) {
-    if (PSI->isFunctionHotInCallGraph(&F))
+    if (PSI->isFunctionHotInCallGraph(&F, *BFI))
       F.setSectionPrefix(".hot");
-    else if (PSI->isFunctionColdInCallGraph(&F))
+    else if (PSI->isFunctionColdInCallGraph(&F, *BFI))
       F.setSectionPrefix(".unlikely");
   }
 
@@ -651,13 +651,6 @@ bool CodeGenPrepare::isMergingEmptyBlockProfitable(BasicBlock *BB,
   // Pred already.
   if (SameIncomingValueBBs.count(Pred))
     return true;
-
-  if (!BFI) {
-    Function &F = *BB->getParent();
-    LoopInfo LI{DominatorTree(F)};
-    BPI.reset(new BranchProbabilityInfo(F, LI));
-    BFI.reset(new BlockFrequencyInfo(F, *BPI, LI));
-  }
 
   BlockFrequency PredFreq = BFI->getBlockFreq(Pred);
   BlockFrequency BBFreq = BFI->getBlockFreq(BB);

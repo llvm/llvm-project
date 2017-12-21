@@ -63,11 +63,14 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    typedef ComplexRendererFns(MyTargetInstructionSelector::*ComplexMatcherMemFn)(MachineOperand &) const;
 // CHECK-NEXT:    const MatcherInfoTy<PredicateBitset, ComplexMatcherMemFn> MatcherInfo;
 // CHECK-NEXT:    static MyTargetInstructionSelector::ComplexMatcherMemFn ComplexPredicateFns[];
+// CHECK-NEXT:    bool testImmPredicate_I64(unsigned PredicateID, int64_t Imm) const override;
+// CHECK-NEXT:    bool testImmPredicate_APInt(unsigned PredicateID, const APInt &Imm) const override;
+// CHECK-NEXT:    bool testImmPredicate_APFloat(unsigned PredicateID, const APFloat &Imm) const override;
 // CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_DECL
 
 // CHECK-LABEL: #ifdef GET_GLOBALISEL_TEMPORARIES_INIT
 // CHECK-NEXT:    , State(2),
-// CHECK-NEXT:    MatcherInfo({TypeObjects, FeatureBitsets, I64ImmPredicateFns, APIntImmPredicateFns, APFloatImmPredicateFns, ComplexPredicateFns})
+// CHECK-NEXT:    MatcherInfo({TypeObjects, FeatureBitsets, ComplexPredicateFns})
 // CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_INIT
 
 // CHECK-LABEL: enum SubtargetFeatureBits : uint8_t {
@@ -127,31 +130,49 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:  enum {
 // CHECK-NEXT:    GIPFP_I64_Predicate_simm8 = GIPFP_I64_Invalid + 1,
 // CHECK-NEXT:  };
-// CHECK-NEXT:  static bool Predicate_simm8(int64_t Imm) { return isInt<8>(Imm);   }
-// CHECK-NEXT:  static InstructionSelector::I64ImmediatePredicateFn I64ImmPredicateFns[] = {
-// CHECK-NEXT:    nullptr,
-// CHECK-NEXT:    Predicate_simm8,
-// CHECK-NEXT:  };
+// CHECK-NEXT:  bool MyTargetInstructionSelector::testImmPredicate_I64(unsigned PredicateID, int64_t Imm) const {
+// CHECK-NEXT:    switch (PredicateID) {
+// CHECK-NEXT:    case GIPFP_I64_Predicate_simm8: {
+// CHECK-NEXT:      return isInt<8>(Imm);
+// CHECK-NEXT:      llvm_unreachable("ImmediateCode should have returned");
+// CHECK-NEXT:      return false;
+// CHECK-NEXT:    }
+// CHECK-NEXT:    }
+// CHECK-NEXT:    llvm_unreachable("Unknown predicate");
+// CHECK-NEXT:    return false;
+// CHECK-NEXT:  }
 
 // CHECK-LABEL: // PatFrag predicates.
 // CHECK-NEXT:  enum {
 // CHECK-NEXT:    GIPFP_APFloat_Predicate_fpimmz = GIPFP_APFloat_Invalid + 1,
 // CHECK-NEXT:  };
-// CHECK-NEXT:  static bool Predicate_fpimmz(const APFloat & Imm) { return Imm->isExactlyValue(0.0); }
-// CHECK-NEXT:  static InstructionSelector::APFloatImmediatePredicateFn APFloatImmPredicateFns[] = {
-// CHECK-NEXT:    nullptr,
-// CHECK-NEXT:    Predicate_fpimmz,
-// CHECK-NEXT:  };
+// CHECK-NEXT:  bool MyTargetInstructionSelector::testImmPredicate_APFloat(unsigned PredicateID, const APFloat & Imm) const {
+// CHECK-NEXT:    switch (PredicateID) {
+// CHECK-NEXT:    case GIPFP_APFloat_Predicate_fpimmz: {
+// CHECK-NEXT:      return Imm->isExactlyValue(0.0);
+// CHECK-NEXT:      llvm_unreachable("ImmediateCode should have returned");
+// CHECK-NEXT:      return false;
+// CHECK-NEXT:    }
+// CHECK-NEXT:    }
+// CHECK-NEXT:    llvm_unreachable("Unknown predicate");
+// CHECK-NEXT:    return false;
+// CHECK-NEXT:  }
 
 // CHECK-LABEL: // PatFrag predicates.
 // CHECK-NEXT:  enum {
 // CHECK-NEXT:    GIPFP_APInt_Predicate_simm9 = GIPFP_APInt_Invalid + 1,
 // CHECK-NEXT:  };
-// CHECK-NEXT:  static bool Predicate_simm9(const APInt & Imm) { return isInt<9>(Imm->getSExtValue());   }
-// CHECK-NEXT:  static InstructionSelector::APIntImmediatePredicateFn APIntImmPredicateFns[] = {
-// CHECK-NEXT:    nullptr,
-// CHECK-NEXT:    Predicate_simm9,
-// CHECK-NEXT:  };
+// CHECK-NEXT:  bool MyTargetInstructionSelector::testImmPredicate_APInt(unsigned PredicateID, const APInt & Imm) const {
+// CHECK-NEXT:    switch (PredicateID) {
+// CHECK-NEXT:    case GIPFP_APInt_Predicate_simm9: {
+// CHECK-NEXT:      return isInt<9>(Imm->getSExtValue());
+// CHECK-NEXT:      llvm_unreachable("ImmediateCode should have returned");
+// CHECK-NEXT:      return false;
+// CHECK-NEXT:    }
+// CHECK-NEXT:    }
+// CHECK-NEXT:    llvm_unreachable("Unknown predicate");
+// CHECK-NEXT:    return false;
+// CHECK-NEXT:  }
 
 // CHECK-LABEL: MyTargetInstructionSelector::ComplexMatcherMemFn
 // CHECK-NEXT:  MyTargetInstructionSelector::ComplexPredicateFns[] = {

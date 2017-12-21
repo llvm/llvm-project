@@ -23,10 +23,30 @@ using namespace llvm;
 /// Fix-up phi nodes in an invoke instruction's normal destination.
 ///
 /// After versioning an invoke instruction, values coming from the original
-/// block will now either be coming from the original block or the "else" block.
+/// block will now be coming from the "merge" block. For example, in the code
+/// below:
+///
+///   then_bb:
+///     %t0 = invoke i32 %ptr() to label %merge_bb unwind label %unwind_dst
+///
+///   else_bb:
+///     %t1 = invoke i32 %ptr() to label %merge_bb unwind label %unwind_dst
+///
+///   merge_bb:
+///     %t2 = phi i32 [ %t0, %then_bb ], [ %t1, %else_bb ]
+///     br %normal_dst
+///
+///   normal_dst:
+///     %t3 = phi i32 [ %x, %orig_bb ], ...
+///
+/// "orig_bb" is no longer a predecessor of "normal_dst", so the phi nodes in
+/// "normal_dst" must be fixed to refer to "merge_bb":
+///
+///    normal_dst:
+///      %t3 = phi i32 [ %x, %merge_bb ], ...
+///
 static void fixupPHINodeForNormalDest(InvokeInst *Invoke, BasicBlock *OrigBlock,
-                                      BasicBlock *ElseBlock,
-                                      Instruction *NewInst) {
+                                      BasicBlock *MergeBlock) {
   for (auto &I : *Invoke->getNormalDest()) {
     auto *Phi = dyn_cast<PHINode>(&I);
     if (!Phi)
@@ -34,13 +54,7 @@ static void fixupPHINodeForNormalDest(InvokeInst *Invoke, BasicBlock *OrigBlock,
     int Idx = Phi->getBasicBlockIndex(OrigBlock);
     if (Idx == -1)
       continue;
-    Value *V = Phi->getIncomingValue(Idx);
-    if (dyn_cast<Instruction>(V) == Invoke) {
-      Phi->setIncomingBlock(Idx, ElseBlock);
-      Phi->addIncoming(NewInst, OrigBlock);
-      continue;
-    }
-    Phi->addIncoming(V, ElseBlock);
+    Phi->setIncomingBlock(Idx, MergeBlock);
   }
 }
 
@@ -48,6 +62,23 @@ static void fixupPHINodeForNormalDest(InvokeInst *Invoke, BasicBlock *OrigBlock,
 ///
 /// After versioning an invoke instruction, values coming from the original
 /// block will now be coming from either the "then" block or the "else" block.
+/// For example, in the code below:
+///
+///   then_bb:
+///     %t0 = invoke i32 %ptr() to label %merge_bb unwind label %unwind_dst
+///
+///   else_bb:
+///     %t1 = invoke i32 %ptr() to label %merge_bb unwind label %unwind_dst
+///
+///   unwind_dst:
+///     %t3 = phi i32 [ %x, %orig_bb ], ...
+///
+/// "orig_bb" is no longer a predecessor of "unwind_dst", so the phi nodes in
+/// "unwind_dst" must be fixed to refer to "then_bb" and "else_bb":
+///
+///   unwind_dst:
+///     %t3 = phi i32 [ %x, %then_bb ], [ %x, %else_bb ], ...
+///
 static void fixupPHINodeForUnwindDest(InvokeInst *Invoke, BasicBlock *OrigBlock,
                                       BasicBlock *ThenBlock,
                                       BasicBlock *ElseBlock) {
@@ -64,44 +95,26 @@ static void fixupPHINodeForUnwindDest(InvokeInst *Invoke, BasicBlock *OrigBlock,
   }
 }
 
-/// Get the phi node having the returned value of a call or invoke instruction
-/// as it's operand.
-static bool getRetPhiNode(Instruction *Inst, BasicBlock *Block) {
-  BasicBlock *FromBlock = Inst->getParent();
-  for (auto &I : *Block) {
-    PHINode *PHI = dyn_cast<PHINode>(&I);
-    if (!PHI)
-      break;
-    int Idx = PHI->getBasicBlockIndex(FromBlock);
-    if (Idx == -1)
-      continue;
-    auto *V = PHI->getIncomingValue(Idx);
-    if (V == Inst)
-      return true;
-  }
-  return false;
-}
-
 /// Create a phi node for the returned value of a call or invoke instruction.
 ///
 /// After versioning a call or invoke instruction that returns a value, we have
 /// to merge the value of the original and new instructions. We do this by
 /// creating a phi node and replacing uses of the original instruction with this
 /// phi node.
-static void createRetPHINode(Instruction *OrigInst, Instruction *NewInst) {
+///
+/// For example, if \p OrigInst is defined in "else_bb" and \p NewInst is
+/// defined in "then_bb", we create the following phi node:
+///
+///   ; Uses of the original instruction are replaced by uses of the phi node.
+///   %t0 = phi i32 [ %orig_inst, %else_bb ], [ %new_inst, %then_bb ],
+///
+static void createRetPHINode(Instruction *OrigInst, Instruction *NewInst,
+                             BasicBlock *MergeBlock, IRBuilder<> &Builder) {
 
   if (OrigInst->getType()->isVoidTy() || OrigInst->use_empty())
     return;
 
-  BasicBlock *RetValBB = NewInst->getParent();
-  if (auto *Invoke = dyn_cast<InvokeInst>(NewInst))
-    RetValBB = Invoke->getNormalDest();
-  BasicBlock *PhiBB = RetValBB->getSingleSuccessor();
-
-  if (getRetPhiNode(OrigInst, PhiBB))
-    return;
-
-  IRBuilder<> Builder(&PhiBB->front());
+  Builder.SetInsertPoint(&MergeBlock->front());
   PHINode *Phi = Builder.CreatePHI(OrigInst->getType(), 0);
   SmallVector<User *, 16> UsersToUpdate;
   for (User *U : OrigInst->users())
@@ -109,7 +122,7 @@ static void createRetPHINode(Instruction *OrigInst, Instruction *NewInst) {
   for (User *U : UsersToUpdate)
     U->replaceUsesOfWith(OrigInst, Phi);
   Phi->addIncoming(OrigInst, OrigInst->getParent());
-  Phi->addIncoming(NewInst, RetValBB);
+  Phi->addIncoming(NewInst, NewInst->getParent());
 }
 
 /// Cast a call or invoke instruction to the given type.
@@ -118,7 +131,41 @@ static void createRetPHINode(Instruction *OrigInst, Instruction *NewInst) {
 /// that of the callee. If this is the case, we have to cast the returned value
 /// to the correct type. The location of the cast depends on if we have a call
 /// or invoke instruction.
-Instruction *createRetBitCast(CallSite CS, Type *RetTy) {
+///
+/// For example, if the call instruction below requires a bitcast after
+/// promotion:
+///
+///   orig_bb:
+///     %t0 = call i32 @func()
+///     ...
+///
+/// The bitcast is placed after the call instruction:
+///
+///   orig_bb:
+///     ; Uses of the original return value are replaced by uses of the bitcast.
+///     %t0 = call i32 @func()
+///     %t1 = bitcast i32 %t0 to ...
+///     ...
+///
+/// A similar transformation is performed for invoke instructions. However,
+/// since invokes are terminating, a new block is created for the bitcast. For
+/// example, if the invoke instruction below requires a bitcast after promotion:
+///
+///   orig_bb:
+///     %t0 = invoke i32 @func() to label %normal_dst unwind label %unwind_dst
+///
+/// The edge between the original block and the invoke's normal destination is
+/// split, and the bitcast is placed there:
+///
+///   orig_bb:
+///     %t0 = invoke i32 @func() to label %split_bb unwind label %unwind_dst
+///
+///   split_bb:
+///     ; Uses of the original return value are replaced by uses of the bitcast.
+///     %t1 = bitcast i32 %t0 to ...
+///     br label %normal_dst
+///
+static void createRetBitCast(CallSite CS, Type *RetTy, CastInst **RetBitCast) {
 
   // Save the users of the calling instruction. These uses will be changed to
   // use the bitcast after we create it.
@@ -130,19 +177,20 @@ Instruction *createRetBitCast(CallSite CS, Type *RetTy) {
   // value. The location depends on if we have a call or invoke instruction.
   Instruction *InsertBefore = nullptr;
   if (auto *Invoke = dyn_cast<InvokeInst>(CS.getInstruction()))
-    InsertBefore = &*Invoke->getNormalDest()->getFirstInsertionPt();
+    InsertBefore =
+        &SplitEdge(Invoke->getParent(), Invoke->getNormalDest())->front();
   else
     InsertBefore = &*std::next(CS.getInstruction()->getIterator());
 
   // Bitcast the return value to the correct type.
   auto *Cast = CastInst::Create(Instruction::BitCast, CS.getInstruction(),
                                 RetTy, "", InsertBefore);
+  if (RetBitCast)
+    *RetBitCast = Cast;
 
   // Replace all the original uses of the calling instruction with the bitcast.
   for (User *U : UsersToUpdate)
     U->replaceUsesOfWith(CS.getInstruction(), Cast);
-
-  return Cast;
 }
 
 /// Predicate and clone the given call site.
@@ -152,21 +200,78 @@ Instruction *createRetBitCast(CallSite CS, Type *RetTy) {
 /// callee. The original call site is moved into the "else" block, and a clone
 /// of the call site is placed in the "then" block. The cloned instruction is
 /// returned.
+///
+/// For example, the call instruction below:
+///
+///   orig_bb:
+///     %t0 = call i32 %ptr()
+///     ...
+///
+/// Is replace by the following:
+///
+///   orig_bb:
+///     %cond = icmp eq i32 ()* %ptr, @func
+///     br i1 %cond, %then_bb, %else_bb
+///
+///   then_bb:
+///     ; The clone of the original call instruction is placed in the "then"
+///     ; block. It is not yet promoted.
+///     %t1 = call i32 %ptr()
+///     br merge_bb
+///
+///   else_bb:
+///     ; The original call instruction is moved to the "else" block.
+///     %t0 = call i32 %ptr()
+///     br merge_bb
+///
+///   merge_bb:
+///     ; Uses of the original call instruction are replaced by uses of the phi
+///     ; node.
+///     %t2 = phi i32 [ %t0, %else_bb ], [ %t1, %then_bb ]
+///     ...
+///
+/// A similar transformation is performed for invoke instructions. However,
+/// since invokes are terminating, more work is required. For example, the
+/// invoke instruction below:
+///
+///   orig_bb:
+///     %t0 = invoke %ptr() to label %normal_dst unwind label %unwind_dst
+///
+/// Is replace by the following:
+///
+///   orig_bb:
+///     %cond = icmp eq i32 ()* %ptr, @func
+///     br i1 %cond, %then_bb, %else_bb
+///
+///   then_bb:
+///     ; The clone of the original invoke instruction is placed in the "then"
+///     ; block, and its normal destination is set to the "merge" block. It is
+///     ; not yet promoted.
+///     %t1 = invoke i32 %ptr() to label %merge_bb unwind label %unwind_dst
+///
+///   else_bb:
+///     ; The original invoke instruction is moved into the "else" block, and
+///     ; its normal destination is set to the "merge" block.
+///     %t0 = invoke i32 %ptr() to label %merge_bb unwind label %unwind_dst
+///
+///   merge_bb:
+///     ; Uses of the original invoke instruction are replaced by uses of the
+///     ; phi node, and the merge block branches to the normal destination.
+///     %t2 = phi i32 [ %t0, %else_bb ], [ %t1, %then_bb ]
+///     br %normal_dst
+///
 static Instruction *versionCallSite(CallSite CS, Value *Callee,
-                                    MDNode *BranchWeights,
-                                    BasicBlock *&ThenBlock,
-                                    BasicBlock *&ElseBlock,
-                                    BasicBlock *&MergeBlock) {
+                                    MDNode *BranchWeights) {
 
   IRBuilder<> Builder(CS.getInstruction());
   Instruction *OrigInst = CS.getInstruction();
+  BasicBlock *OrigBlock = OrigInst->getParent();
 
   // Create the compare. The called value and callee must have the same type to
   // be compared.
-  auto *LHS =
-      Builder.CreateBitCast(CS.getCalledValue(), Builder.getInt8PtrTy());
-  auto *RHS = Builder.CreateBitCast(Callee, Builder.getInt8PtrTy());
-  auto *Cond = Builder.CreateICmpEQ(LHS, RHS);
+  if (CS.getCalledValue()->getType() != Callee->getType())
+    Callee = Builder.CreateBitCast(Callee, CS.getCalledValue()->getType());
+  auto *Cond = Builder.CreateICmpEQ(CS.getCalledValue(), Callee);
 
   // Create an if-then-else structure. The original instruction is moved into
   // the "else" block, and a clone of the original instruction is placed in the
@@ -175,9 +280,9 @@ static Instruction *versionCallSite(CallSite CS, Value *Callee,
   TerminatorInst *ElseTerm = nullptr;
   SplitBlockAndInsertIfThenElse(Cond, CS.getInstruction(), &ThenTerm, &ElseTerm,
                                 BranchWeights);
-  ThenBlock = ThenTerm->getParent();
-  ElseBlock = ElseTerm->getParent();
-  MergeBlock = OrigInst->getParent();
+  BasicBlock *ThenBlock = ThenTerm->getParent();
+  BasicBlock *ElseBlock = ElseTerm->getParent();
+  BasicBlock *MergeBlock = OrigInst->getParent();
 
   ThenBlock->setName("if.true.direct_targ");
   ElseBlock->setName("if.false.orig_indirect");
@@ -188,7 +293,8 @@ static Instruction *versionCallSite(CallSite CS, Value *Callee,
   NewInst->insertBefore(ThenTerm);
 
   // If the original call site is an invoke instruction, we have extra work to
-  // do since invoke instructions are terminating.
+  // do since invoke instructions are terminating. We have to fix-up phi nodes
+  // in the invoke's normal and unwind destinations.
   if (auto *OrigInvoke = dyn_cast<InvokeInst>(OrigInst)) {
     auto *NewInvoke = cast<InvokeInst>(NewInst);
 
@@ -201,10 +307,18 @@ static Instruction *versionCallSite(CallSite CS, Value *Callee,
     Builder.SetInsertPoint(MergeBlock);
     Builder.CreateBr(OrigInvoke->getNormalDest());
 
-    // Now set the normal destination of new the invoke instruction to be the
+    // Fix-up phi nodes in the original invoke's normal and unwind destinations.
+    fixupPHINodeForNormalDest(OrigInvoke, OrigBlock, MergeBlock);
+    fixupPHINodeForUnwindDest(OrigInvoke, MergeBlock, ThenBlock, ElseBlock);
+
+    // Now set the normal destinations of the invoke instructions to be the
     // "merge" block.
+    OrigInvoke->setNormalDest(MergeBlock);
     NewInvoke->setNormalDest(MergeBlock);
   }
+
+  // Create a phi node for the returned value of the call site.
+  createRetPHINode(OrigInst, NewInst, MergeBlock, Builder);
 
   return NewInst;
 }
@@ -253,7 +367,8 @@ bool llvm::isLegalToPromote(CallSite CS, Function *Callee,
   return true;
 }
 
-static void promoteCall(CallSite CS, Function *Callee, Instruction *&Cast) {
+Instruction *llvm::promoteCall(CallSite CS, Function *Callee,
+                               CastInst **RetBitCast) {
   assert(!CS.getCalledFunction() && "Only indirect call sites can be promoted");
 
   // Set the called function of the call site to be the given callee.
@@ -268,7 +383,7 @@ static void promoteCall(CallSite CS, Function *Callee, Instruction *&Cast) {
   // If the function type of the call site matches that of the callee, no
   // additional work is required.
   if (CS.getFunctionType() == Callee->getFunctionType())
-    return;
+    return CS.getInstruction();
 
   // Save the return types of the call site and callee.
   Type *CallSiteRetTy = CS.getInstruction()->getType();
@@ -294,7 +409,9 @@ static void promoteCall(CallSite CS, Function *Callee, Instruction *&Cast) {
   // If the return type of the call site doesn't match that of the callee, cast
   // the returned value to the appropriate type.
   if (!CallSiteRetTy->isVoidTy() && CallSiteRetTy != CalleeRetTy)
-    Cast = createRetBitCast(CS, CallSiteRetTy);
+    createRetBitCast(CS, CallSiteRetTy, RetBitCast);
+
+  return CS.getInstruction();
 }
 
 Instruction *llvm::promoteCallWithIfThenElse(CallSite CS, Function *Callee,
@@ -303,26 +420,10 @@ Instruction *llvm::promoteCallWithIfThenElse(CallSite CS, Function *Callee,
   // Version the indirect call site. If the called value is equal to the given
   // callee, 'NewInst' will be executed, otherwise the original call site will
   // be executed.
-  BasicBlock *ThenBlock, *ElseBlock, *MergeBlock;
-  Instruction *NewInst = versionCallSite(CS, Callee, BranchWeights, ThenBlock,
-                                         ElseBlock, MergeBlock);
+  Instruction *NewInst = versionCallSite(CS, Callee, BranchWeights);
 
   // Promote 'NewInst' so that it directly calls the desired function.
-  Instruction *Cast = NewInst;
-  promoteCall(CallSite(NewInst), Callee, Cast);
-
-  // If the original call site is an invoke instruction, we have to fix-up phi
-  // nodes in the invoke's normal and unwind destinations.
-  if (auto *OrigInvoke = dyn_cast<InvokeInst>(CS.getInstruction())) {
-    fixupPHINodeForNormalDest(OrigInvoke, MergeBlock, ElseBlock, Cast);
-    fixupPHINodeForUnwindDest(OrigInvoke, MergeBlock, ThenBlock, ElseBlock);
-  }
-
-  // Create a phi node for the returned value of the call site.
-  createRetPHINode(CS.getInstruction(), Cast ? Cast : NewInst);
-
-  // Return the new direct call.
-  return NewInst;
+  return promoteCall(CallSite(NewInst), Callee);
 }
 
 #undef DEBUG_TYPE
