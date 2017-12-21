@@ -333,6 +333,7 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
   std::unique_ptr<PrecompilePreambleAction> Act;
   Act.reset(new PrecompilePreambleAction(
       StoreInMemory ? &Storage.asMemory().Data : nullptr, Callbacks));
+  Callbacks.BeforeExecute(*Clang);
   if (!Act->BeginSourceFile(*Clang.get(), Clang->getFrontendOpts().Inputs[0]))
     return BuildPreambleError::BeginSourceFileFailed;
 
@@ -694,6 +695,7 @@ void PrecompiledPreamble::setupPreambleStorage(
   }
 }
 
+void PreambleCallbacks::BeforeExecute(CompilerInstance &CI) {}
 void PreambleCallbacks::AfterExecute(CompilerInstance &CI) {}
 void PreambleCallbacks::AfterPCHEmitted(ASTWriter &Writer) {}
 void PreambleCallbacks::HandleTopLevelDecl(DeclGroupRef DG) {}

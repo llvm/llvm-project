@@ -125,11 +125,12 @@ llvm::MemoryBuffer *ContentCache::getBuffer(DiagnosticsEngine &Diag,
   // possible.
   if (!BufferOrError) {
     StringRef FillStr("<<<MISSING SOURCE FILE>>>\n");
-    Buffer.setPointer(MemoryBuffer::getNewUninitMemBuffer(
-                          ContentsEntry->getSize(), "<invalid>").release());
-    char *Ptr = const_cast<char*>(Buffer.getPointer()->getBufferStart());
+    auto BackupBuffer = llvm::WritableMemoryBuffer::getNewUninitMemBuffer(
+        ContentsEntry->getSize(), "<invalid>");
+    char *Ptr = BackupBuffer->getBufferStart();
     for (unsigned i = 0, e = ContentsEntry->getSize(); i != e; ++i)
       Ptr[i] = FillStr[i % FillStr.size()];
+    Buffer.setPointer(BackupBuffer.release());
 
     if (Diag.isDiagnosticInFlight())
       Diag.SetDelayedDiagnostic(diag::err_cannot_open_file,

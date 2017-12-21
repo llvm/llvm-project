@@ -274,13 +274,24 @@ def RenderScript : LangOpt<"RenderScript">;
 def ObjC : LangOpt<"ObjC1">;
 def BlocksSupported : LangOpt<"Blocks">;
 
-// Defines targets for target-specific attributes. The list of strings should
-// specify architectures for which the target applies, based off the ArchType
-// enumeration in Triple.h.
-class TargetArch<list<string> arches> {
-  list<string> Arches = arches;
+// Defines targets for target-specific attributes. Empty lists are unchecked.
+class TargetSpec {
+  // Specifies Architectures for which the target applies, based off the
+  // ArchType enumeration in Triple.h.
+  list<string> Arches = [];
+  // Specifies Operating Systems for which the target applies, based off the
+  // OSType enumeration in Triple.h
   list<string> OSes;
+  // Specifies the C++ ABIs for which the target applies, based off the
+  // TargetCXXABI::Kind in TargetCXXABI.h.
   list<string> CXXABIs;
+  // Specifies Object Formats for which the target applies, based off the
+  // ObjectFormatType enumeration in Triple.h
+  list<string> ObjectFormats;
+}
+
+class TargetArch<list<string> arches> : TargetSpec {
+  let Arches = arches;
 }
 def TargetARM : TargetArch<["arm", "thumb", "armeb", "thumbeb"]>;
 def TargetAVR : TargetArch<["avr"]>;
@@ -294,6 +305,9 @@ def TargetWindows : TargetArch<["x86", "x86_64", "arm", "thumb", "aarch64"]> {
 }
 def TargetMicrosoftCXXABI : TargetArch<["x86", "x86_64", "arm", "thumb", "aarch64"]> {
   let CXXABIs = ["Microsoft"];
+}
+def TargetELF : TargetSpec {
+  let ObjectFormats = ["ELF"];
 }
 
 // Attribute subject match rules that are used for #pragma clang attribute.
@@ -472,8 +486,8 @@ class InheritableAttr : Attr;
 
 /// A target-specific attribute.  This class is meant to be used as a mixin
 /// with InheritableAttr or Attr depending on the attribute's needs.
-class TargetSpecificAttr<TargetArch target> {
-  TargetArch Target = target;
+class TargetSpecificAttr<TargetSpec target> {
+  TargetSpec Target = target;
   // Attributes are generally required to have unique spellings for their names
   // so that the parser can determine what kind of attribute it has parsed.
   // However, target-specific attributes are special in that the attribute only
@@ -1129,7 +1143,7 @@ def IBOutletCollection : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
-def IFunc : Attr {
+def IFunc : Attr, TargetSpecificAttr<TargetELF> {
   let Spellings = [GCC<"ifunc">];
   let Args = [StringArgument<"Resolver">];
   let Subjects = SubjectList<[Function]>;

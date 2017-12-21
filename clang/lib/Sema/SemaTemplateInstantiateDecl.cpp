@@ -3855,7 +3855,8 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   }
 
   // Note, we should never try to instantiate a deleted function template.
-  assert((Pattern || PatternDecl->isDefaulted()) &&
+  assert((Pattern || PatternDecl->isDefaulted() ||
+          PatternDecl->hasSkippedBody()) &&
          "unexpected kind of function template definition");
 
   // C++1y [temp.explicit]p10:
@@ -3940,16 +3941,20 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
       }
     }
 
-    // Instantiate the function body.
-    StmtResult Body = SubstStmt(Pattern, TemplateArgs);
+    if (PatternDecl->hasSkippedBody()) {
+      ActOnSkippedFunctionBody(Function);
+    } else {
+      // Instantiate the function body.
+      StmtResult Body = SubstStmt(Pattern, TemplateArgs);
 
-    if (Body.isInvalid())
-      Function->setInvalidDecl();
+      if (Body.isInvalid())
+        Function->setInvalidDecl();
 
-    // FIXME: finishing the function body while in an expression evaluation
-    // context seems wrong. Investigate more.
-    ActOnFinishFunctionBody(Function, Body.get(),
-                            /*IsInstantiation=*/true);
+      // FIXME: finishing the function body while in an expression evaluation
+      // context seems wrong. Investigate more.
+      ActOnFinishFunctionBody(Function, Body.get(),
+                              /*IsInstantiation=*/true);
+    }
 
     PerformDependentDiagnostics(PatternDecl, TemplateArgs);
 
