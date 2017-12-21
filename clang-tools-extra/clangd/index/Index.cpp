@@ -24,7 +24,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const SymbolID &ID) {
 
 void operator>>(llvm::StringRef Str, SymbolID &ID) {
   std::string HexString = fromHex(Str);
-  assert(HexString.size() == 20);
+  assert(HexString.size() == ID.HashValue.size());
   std::copy(HexString.begin(), HexString.end(), ID.HashValue.begin());
 }
 
