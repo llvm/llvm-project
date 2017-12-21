@@ -326,10 +326,6 @@ static
                                           long chunk_size) {
 // Intialize the loop worksharing construct.
 
-#if OMPT_SUPPORT
-  if (ompt_enabled.enabled)
-    OMPT_STORE_RETURN_ADDRESS(*gtid);
-#endif
   KMP_DISPATCH_INIT(loc, *gtid, schedule, start, end, incr, chunk_size,
                     schedule != kmp_sch_static);
 
@@ -819,8 +815,10 @@ LOOP_NEXT_ULL(KMP_EXPAND_NAME(KMP_API_NAME_GOMP_LOOP_ULL_ORDERED_RUNTIME_NEXT),
                            (microtask_t)__kmp_GOMP_parallel_microtask_wrapper, \
                            9, task, data, num_threads, &loc, (schedule), lb,   \
                            (str > 0) ? (ub - 1) : (ub + 1), str, chunk_sz);    \
+      IF_OMPT_SUPPORT(OMPT_STORE_RETURN_ADDRESS(gtid));                        \
     } else {                                                                   \
       __kmp_GOMP_serialized_parallel(&loc, gtid, task);                        \
+      IF_OMPT_SUPPORT(OMPT_STORE_RETURN_ADDRESS(gtid));                        \
     }                                                                          \
                                                                                \
     KMP_DISPATCH_INIT(&loc, gtid, (schedule), lb,                              \
@@ -1040,6 +1038,10 @@ unsigned KMP_EXPAND_NAME(KMP_API_NAME_GOMP_SECTIONS_NEXT)(void) {
   MKLOC(loc, "GOMP_sections_next");
   KA_TRACE(20, ("GOMP_sections_next: T#%d\n", gtid));
 
+#if OMPT_SUPPORT
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
+
   status = KMP_DISPATCH_NEXT(&loc, gtid, NULL, &lb, &ub, &stride);
   if (status) {
     KMP_DEBUG_ASSERT(stride == 1);
@@ -1205,6 +1207,10 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_SECTIONS)(void (*task)(void *),
   } else {
     __kmp_GOMP_serialized_parallel(&loc, gtid, task);
   }
+
+#if OMPT_SUPPORT
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
 
   KMP_DISPATCH_INIT(&loc, gtid, kmp_nm_dynamic_chunked, 1, count, 1, 1, TRUE);
 

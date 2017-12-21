@@ -1,7 +1,8 @@
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
-// GCC generates code that does not distinguish between sections and loops
-// XFAIL: gcc
+// Some compilers generate code that does not distinguish between sections and loops
+// XFAIL: gcc, clang-3, clang-4, clang-5, icc-16, icc-17
+// UNSUPPORTED: icc-18
 
 #include "callback.h"
 #include <omp.h>

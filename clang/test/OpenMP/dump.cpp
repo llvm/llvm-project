@@ -48,7 +48,7 @@ struct S {
 // CHECK-NEXT: |       | `-DeclRefExpr {{.+}} <col:48> 'int' lvalue OMPCapturedExpr {{.+}} 'a' 'int &'
 // CHECK-NEXT: |       |-OMPSharedClause {{.+}} <col:51, col:61>
 // CHECK-NEXT: |       | `-MemberExpr {{.+}} <col:58> 'int' lvalue ->b
-// CHECK-NEXT: |       |   `-CXXThisExpr {{.+}} <col:58> 'struct S *' this
+// CHECK-NEXT: |       |   `-CXXThisExpr {{.+}} <col:58> 'S *' this
 // CHECK-NEXT: |       |-OMPScheduleClause {{.+}} <col:61, col:79>
 // CHECK-NEXT: |       | `-ImplicitCastExpr {{.+}} <col:78> 'int' <LValueToRValue>
 // CHECK-NEXT: |       |   `-DeclRefExpr {{.+}} <col:78> 'int' lvalue OMPCapturedExpr {{.+}} '.capture_expr.' 'int'
@@ -62,7 +62,7 @@ struct S {
 #pragma omp declare simd inbranch
 void foo();
 
-// CHECK:      `-FunctionDecl {{.+}} <line:63:1, col:10> col:6 foo 'void (void)'
+// CHECK:      `-FunctionDecl {{.+}} <line:63:1, col:10> col:6 foo 'void ()'
 // CHECK-NEXT:   |-OMPDeclareSimdDeclAttr {{.+}} <line:62:9, col:34> Implicit BS_Inbranch
 // CHECK:        `-OMPDeclareSimdDeclAttr {{.+}} <line:61:9, col:25> Implicit BS_Undefined
 

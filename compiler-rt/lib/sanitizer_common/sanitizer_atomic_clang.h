@@ -78,7 +78,17 @@ INLINE bool atomic_compare_exchange_strong(volatile T *a, typename T::Type *cmp,
   typedef typename T::Type Type;
   Type cmpv = *cmp;
   Type prev;
+#if defined(_MIPS_SIM) && _MIPS_SIM == _ABIO32
+  if (sizeof(*a) == 8) {
+    Type volatile *val_ptr = const_cast<Type volatile *>(&a->val_dont_use);
+    prev = __mips_sync_val_compare_and_swap<u64>(
+        reinterpret_cast<u64 volatile *>(val_ptr), (u64)cmpv, (u64)xchg);
+  } else {
+    prev = __sync_val_compare_and_swap(&a->val_dont_use, cmpv, xchg);
+  }
+#else
   prev = __sync_val_compare_and_swap(&a->val_dont_use, cmpv, xchg);
+#endif
   if (prev == cmpv) return true;
   *cmp = prev;
   return false;
@@ -93,13 +103,6 @@ INLINE bool atomic_compare_exchange_weak(volatile T *a,
 }
 
 }  // namespace __sanitizer
-
-// This include provides explicit template instantiations for atomic_uint64_t
-// on MIPS32, which does not directly support 8 byte atomics. It has to
-// proceed the template definitions above.
-#if defined(_MIPS_SIM) && defined(_ABIO32)
-  #include "sanitizer_atomic_clang_mips.h"
-#endif
 
 #undef ATOMIC_ORDER
 

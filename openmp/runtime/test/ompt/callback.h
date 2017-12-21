@@ -37,6 +37,7 @@ static ompt_get_task_info_t ompt_get_task_info;
 static ompt_get_thread_data_t ompt_get_thread_data;
 static ompt_get_parallel_info_t ompt_get_parallel_info;
 static ompt_get_unique_id_t ompt_get_unique_id;
+static ompt_get_num_procs_t ompt_get_num_procs;
 static ompt_get_num_places_t ompt_get_num_places;
 static ompt_get_place_proc_ids_t ompt_get_place_proc_ids;
 static ompt_get_place_num_t ompt_get_place_num;
@@ -64,6 +65,17 @@ do {\
   printf("%" PRIu64 ": __builtin_frame_address(%d)=%p\n", ompt_get_thread_data()->value, level, __builtin_frame_address(level));\
 } while(0)
 
+// clang (version 5.0 and above) adds an intermediate function call with debug flag (-g)
+#if defined(TEST_NEED_PRINT_FRAME_FROM_OUTLINED_FN)
+  #if defined(DEBUG) && defined(__clang__) && __clang_major__ >= 5
+    #define print_frame_from_outlined_fn(level) print_frame(level+1)
+  #else
+    #define print_frame_from_outlined_fn(level) print_frame(level)
+  #endif
+
+  #warning "Clang 5.0 and later add an additional wrapper function for tasks when compiling with debug information."
+  #warning "Please define -DDEBUG iff you manually pass in -g!"
+#endif
 
 // This macro helps to define a label at the current position that can be used
 // to get the current address in the code.
@@ -673,6 +685,7 @@ int ompt_initialize(
   ompt_get_parallel_info = (ompt_get_parallel_info_t) lookup("ompt_get_parallel_info");
   ompt_get_unique_id = (ompt_get_unique_id_t) lookup("ompt_get_unique_id");
 
+  ompt_get_num_procs = (ompt_get_num_procs_t) lookup("ompt_get_num_procs");
   ompt_get_num_places = (ompt_get_num_places_t) lookup("ompt_get_num_places");
   ompt_get_place_proc_ids = (ompt_get_place_proc_ids_t) lookup("ompt_get_place_proc_ids");
   ompt_get_place_num = (ompt_get_place_num_t) lookup("ompt_get_place_num");
