@@ -38,6 +38,7 @@
 # Python modules:
 import os           # Provide directory and file handling, determine OS information
 import sys          # System specific parameters and functions
+import platform     # Provides information about the system we're working with
 import shutil       # High-level operations on files and collections of files
 import ctypes       # Invoke Windows API for creating symlinks
 
@@ -649,12 +650,36 @@ def get_framework_python_dir_windows(vDictArgs):
             vDictArgs["--cmakeBuildConfiguration"])
 
     if strPythonInstallDir.__len__() != 0:
-        strWkDir = get_python_lib(True, False, strPythonInstallDir)
+        strWkDir = get_pylib_for_platform(strPythonInstallDir)
     else:
         strWkDir = get_python_lib(True, False)
     strWkDir = os.path.normcase(os.path.join(strWkDir, "lldb"))
 
     return (bOk, strWkDir, strErrMsg)
+
+#++---------------------------------------------------------------------------
+# Details:  Perform a platform check and depending if we're on Linux,
+#           check the distro and handle distro-specific differences
+#           in getting Python's lib directory
+# Args:     vstrPythonInstallDir    - (R) Directory prefix
+# Returns:  Str - Python library installation directory with prefix
+# Throws:   None.
+#--
+
+
+def get_pylib_for_platform(vstrPythonInstallDir):
+    dbg = utilsDebug.CDebugFnVerbose(
+        "Python script get_pylib_for_platform()")
+
+    from distutils.sysconfig import get_python_lib
+    if platform.system() == 'Linux':
+        if platform.linux_distribution()[0] == 'Fedora':
+            dbg.dump_text("Platform is Fedora Linux")
+            # On Fedora the installation gets split into lib and lib64,
+            # which prevents building lldb from completing successfully.
+            return get_python_lib(False, False, vstrPythonInstallDir)
+
+    return get_python_lib(True, False, vstrPythonInstallDir)
 
 #++---------------------------------------------------------------------------
 # Details:  Retrieve the directory path for Python's dist_packages/
