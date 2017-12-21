@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -mconstructor-aliases %s -triple x86_64-windows-msvc -fms-extensions -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -mconstructor-aliases %s -triple x86_64-windows-msvc -fms-extensions -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck --check-prefix=MO1 %s
 
 // FIXME: We should really consider removing -mconstructor-aliases for MS C++
 // ABI. The risk of bugs introducing ABI incompatibility under
@@ -24,7 +23,9 @@ struct __declspec(dllimport) ImportOverrideVDtor : public BaseClass {
   virtual ~ImportOverrideVDtor() {}
 };
 
-// Virtually inherits from a non-dllimport base class. Emit the vbase destructor.
+// Virtually inherits from a non-dllimport base class. This time we need to call
+// the complete destructor and emit it inline. It's not exported from the DLL,
+// and it must be emitted.
 struct __declspec(dllimport) ImportVBaseOverrideVDtor
     : public virtual BaseClass {
   virtual ~ImportVBaseOverrideVDtor() {}
@@ -40,11 +41,9 @@ extern "C" void testit() {
 // needs the complete destructor (_D).
 // CHECK-LABEL: define void @testit()
 // CHECK:  call void @"\01??_DImportVBaseOverrideVDtor@@QEAAXXZ"(%struct.ImportVBaseOverrideVDtor* %{{.*}})
-// CHECK:  call void @"\01??_DImportOverrideVDtor@@QEAAXXZ"(%struct.ImportOverrideVDtor* %{{.*}})
-// CHECK:  call void @"\01??_DImportIntroVDtor@@QEAAXXZ"(%struct.ImportIntroVDtor* %{{.*}})
+// CHECK:  call void @"\01??1ImportOverrideVDtor@@UEAA@XZ"(%struct.ImportOverrideVDtor* %{{.*}})
+// CHECK:  call void @"\01??1ImportIntroVDtor@@UEAA@XZ"(%struct.ImportIntroVDtor* %{{.*}})
 
-// CHECK-LABEL: declare dllimport void @"\01??_DImportVBaseOverrideVDtor@@QEAAXXZ"(%struct.ImportVBaseOverrideVDtor*)
-// CHECK-LABEL: declare dllimport void @"\01??_DImportOverrideVDtor@@QEAAXXZ"(%struct.ImportOverrideVDtor*)
-// CHECK-LABEL: declare dllimport void @"\01??_DImportIntroVDtor@@QEAAXXZ"(%struct.ImportIntroVDtor*)
-
-// MO1-DAG: define available_externally dllimport void @"\01??_DImportIntroVDtor@@QEAAXXZ"
+// CHECK-LABEL: define linkonce_odr void @"\01??_DImportVBaseOverrideVDtor@@QEAAXXZ"
+// CHECK-LABEL: declare dllimport void @"\01??1ImportOverrideVDtor@@UEAA@XZ"
+// CHECK-LABEL: declare dllimport void @"\01??1ImportIntroVDtor@@UEAA@XZ"

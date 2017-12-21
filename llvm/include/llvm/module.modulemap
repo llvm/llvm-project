@@ -61,7 +61,7 @@ module LLVM_BinaryFormat {
     textual header "BinaryFormat/ELFRelocs/SystemZ.def"
     textual header "BinaryFormat/ELFRelocs/x86_64.def"
     textual header "BinaryFormat/ELFRelocs/WebAssembly.def"
-    textual header "BinaryFormat/WasmRelocs/WebAssembly.def"
+    textual header "BinaryFormat/WasmRelocs.def"
 }
 
 module LLVM_Config { requires cplusplus umbrella "Config" module * { export * } }

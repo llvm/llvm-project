@@ -1026,7 +1026,7 @@ void WasmObjectFile::getRelocationTypeName(
     break;
 
   switch (Rel.Type) {
-#include "llvm/BinaryFormat/WasmRelocs/WebAssembly.def"
+#include "llvm/BinaryFormat/WasmRelocs.def"
   }
 
 #undef WASM_RELOC

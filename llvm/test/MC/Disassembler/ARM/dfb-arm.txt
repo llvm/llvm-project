@@ -1,0 +1,6 @@
+# RUN: llvm-mc -disassemble -triple armv8-none-eabi -mcpu=cortex-r52 -show-encoding < %s | FileCheck %s --check-prefix=CHECK-DFB
+# RUN: llvm-mc -disassemble -triple armv8-none-eabi -mcpu=cortex-r52 -mattr=-dfb -show-encoding < %s | FileCheck %s --check-prefix=CHECK-NODFB
+
+# CHECK-DFB:   dfb                             @ encoding: [0x4c,0xf0,0x7f,0xf5]
+# CHECK-NODFB: dsb     #0xc                    @ encoding: [0x4c,0xf0,0x7f,0xf5]
+[0x4c,0xf0,0x7f,0xf5]

@@ -3801,8 +3801,10 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
       FieldTBAAInfo.Offset +=
           Layout.getFieldOffset(field->getFieldIndex()) / CharWidth;
 
-    // Update the final access type.
+    // Update the final access type and size.
     FieldTBAAInfo.AccessType = CGM.getTBAATypeInfo(FieldType);
+    FieldTBAAInfo.Size =
+        getContext().getTypeSizeInChars(FieldType).getQuantity();
   }
 
   Address addr = base.getAddress();

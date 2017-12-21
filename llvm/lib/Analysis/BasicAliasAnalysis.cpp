@@ -781,6 +781,7 @@ ModRefInfo BasicAAResult::getModRefInfo(ImmutableCallSite CS,
     // Optimistically assume that call doesn't touch Object and check this
     // assumption in the following loop.
     ModRefInfo Result = ModRefInfo::NoModRef;
+    bool IsMustAlias = true;
 
     unsigned OperandNo = 0;
     for (auto CI = CS.data_operands_begin(), CE = CS.data_operands_end();
@@ -802,7 +803,8 @@ ModRefInfo BasicAAResult::getModRefInfo(ImmutableCallSite CS,
       // is impossible to alias the pointer we're checking.
       AliasResult AR =
           getBestAAResults().alias(MemoryLocation(*CI), MemoryLocation(Object));
-
+      if (AR != MustAlias)
+        IsMustAlias = false;
       // Operand doesnt alias 'Object', continue looking for other aliases
       if (AR == NoAlias)
         continue;
@@ -818,13 +820,20 @@ ModRefInfo BasicAAResult::getModRefInfo(ImmutableCallSite CS,
         continue;
       }
       // This operand aliases 'Object' and call reads and writes into it.
+      // Setting ModRef will not yield an early return below, MustAlias is not
+      // used further.
       Result = ModRefInfo::ModRef;
       break;
     }
 
+    // No operand aliases, reset Must bit. Add below if at least one aliases
+    // and all aliases found are MustAlias.
+    if (isNoModRef(Result))
+      IsMustAlias = false;
+
     // Early return if we improved mod ref information
     if (!isModAndRefSet(Result))
-      return Result;
+      return IsMustAlias ? setMust(Result) : clearMust(Result);
   }
 
   // If the CallSite is to malloc or calloc, we can assume that it doesn't

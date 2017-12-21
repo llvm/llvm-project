@@ -208,7 +208,7 @@ const unsigned WASM_SYMBOL_VISIBILITY_HIDDEN  = 0x4;
 #define WASM_RELOC(name, value) name = value,
 
 enum : unsigned {
-#include "WasmRelocs/WebAssembly.def"
+#include "WasmRelocs.def"
 };
 
 #undef WASM_RELOC

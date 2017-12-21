@@ -143,16 +143,8 @@ define <64 x i8> @avg_v64i8_mask(<64 x i8> %a, <64 x i8> %b, <64 x i8> %src, i64
 ; AVX512F-NEXT:    shrq $32, %rax
 ; AVX512F-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
 ; AVX512F-NEXT:    movl %edi, (%rsp)
-; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm6
-; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm8
-; AVX512F-NEXT:    vextracti128 $1, %ymm2, %xmm7
-; AVX512F-NEXT:    vpavgb %xmm7, %xmm6, %xmm6
-; AVX512F-NEXT:    vextracti128 $1, %ymm3, %xmm7
-; AVX512F-NEXT:    vpavgb %xmm7, %xmm8, %xmm7
-; AVX512F-NEXT:    vpavgb %xmm3, %xmm1, %xmm1
-; AVX512F-NEXT:    vinserti128 $1, %xmm7, %ymm1, %ymm1
-; AVX512F-NEXT:    vpavgb %xmm2, %xmm0, %xmm0
-; AVX512F-NEXT:    vinserti128 $1, %xmm6, %ymm0, %ymm0
+; AVX512F-NEXT:    vpavgb %ymm3, %ymm1, %ymm1
+; AVX512F-NEXT:    vpavgb %ymm2, %ymm0, %ymm0
 ; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k1
 ; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k2
 ; AVX512F-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
@@ -201,16 +193,8 @@ define <64 x i8> @avg_v64i8_maskz(<64 x i8> %a, <64 x i8> %b, i64 %mask) nounwin
 ; AVX512F-NEXT:    shrq $32, %rax
 ; AVX512F-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
 ; AVX512F-NEXT:    movl %edi, (%rsp)
-; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm4
-; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm5
-; AVX512F-NEXT:    vextracti128 $1, %ymm2, %xmm6
-; AVX512F-NEXT:    vpavgb %xmm6, %xmm4, %xmm4
-; AVX512F-NEXT:    vextracti128 $1, %ymm3, %xmm6
-; AVX512F-NEXT:    vpavgb %xmm6, %xmm5, %xmm5
-; AVX512F-NEXT:    vpavgb %xmm3, %xmm1, %xmm1
-; AVX512F-NEXT:    vinserti128 $1, %xmm5, %ymm1, %ymm1
-; AVX512F-NEXT:    vpavgb %xmm2, %xmm0, %xmm0
-; AVX512F-NEXT:    vinserti128 $1, %xmm4, %ymm0, %ymm0
+; AVX512F-NEXT:    vpavgb %ymm3, %ymm1, %ymm1
+; AVX512F-NEXT:    vpavgb %ymm2, %ymm0, %ymm0
 ; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k1
 ; AVX512F-NEXT:    kmovw {{[0-9]+}}(%rsp), %k2
 ; AVX512F-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k1} {z}

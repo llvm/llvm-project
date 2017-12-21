@@ -688,3 +688,8 @@ Status ObjectFile::LoadInMemory(Target &target, bool set_pc) {
 void ObjectFile::RelocateSection(lldb_private::Section *section)
 {
 }
+
+DataBufferSP ObjectFile::MapFileData(const FileSpec &file, uint64_t Size,
+                                     uint64_t Offset) {
+  return DataBufferLLVM::CreateSliceFromPath(file.GetPath(), Size, Offset);
+}
