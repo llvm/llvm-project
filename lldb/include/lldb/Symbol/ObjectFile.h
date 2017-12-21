@@ -879,6 +879,9 @@ protected:
 
   ConstString GetNextSyntheticSymbolName();
 
+  static lldb::DataBufferSP MapFileData(const FileSpec &file, uint64_t Size,
+                                        uint64_t Offset);
+
 private:
   DISALLOW_COPY_AND_ASSIGN(ObjectFile);
 };

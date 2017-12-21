@@ -55,7 +55,7 @@ public:
   const AMDGPUIntrinsicInfo *getIntrinsicInfo() const override {
     return &IntrinsicInfo;
   }
-  TargetTransformInfo getTargetTransformInfo(const Function &F) override;
+  TargetIRAnalysis getTargetIRAnalysis() override;
 
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();

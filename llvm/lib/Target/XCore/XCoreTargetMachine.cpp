@@ -108,7 +108,8 @@ extern "C" void LLVMInitializeXCoreTarget() {
   RegisterTargetMachine<XCoreTargetMachine> X(getTheXCoreTarget());
 }
 
-TargetTransformInfo
-XCoreTargetMachine::getTargetTransformInfo(const Function &F) {
-  return TargetTransformInfo(XCoreTTIImpl(this, F));
+TargetIRAnalysis XCoreTargetMachine::getTargetIRAnalysis() {
+  return TargetIRAnalysis([this](const Function &F) {
+    return TargetTransformInfo(XCoreTTIImpl(this, F));
+  });
 }

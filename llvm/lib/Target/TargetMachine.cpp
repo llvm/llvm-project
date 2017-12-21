@@ -219,8 +219,10 @@ CodeGenOpt::Level TargetMachine::getOptLevel() const { return OptLevel; }
 
 void TargetMachine::setOptLevel(CodeGenOpt::Level Level) { OptLevel = Level; }
 
-TargetTransformInfo TargetMachine::getTargetTransformInfo(const Function &F) {
-  return TargetTransformInfo(F.getParent()->getDataLayout());
+TargetIRAnalysis TargetMachine::getTargetIRAnalysis() {
+  return TargetIRAnalysis([](const Function &F) {
+    return TargetTransformInfo(F.getParent()->getDataLayout());
+  });
 }
 
 void TargetMachine::getNameWithPrefix(SmallVectorImpl<char> &Name,
@@ -241,11 +243,4 @@ MCSymbol *TargetMachine::getSymbol(const GlobalValue *GV) const {
   SmallString<128> NameStr;
   getNameWithPrefix(NameStr, GV, TLOF->getMangler());
   return TLOF->getContext().getOrCreateSymbol(NameStr);
-}
-
-TargetIRAnalysis TargetMachine::getTargetIRAnalysis() {
-  // Since Analysis can't depend on Target, use a std::function to invert the
-  // dependency.
-  return TargetIRAnalysis(
-      [this](const Function &F) { return this->getTargetTransformInfo(F); });
 }

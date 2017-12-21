@@ -146,9 +146,10 @@ public:
 };
 } // end anonymous namespace
 
-TargetTransformInfo
-WebAssemblyTargetMachine::getTargetTransformInfo(const Function &F) {
-  return TargetTransformInfo(WebAssemblyTTIImpl(this, F));
+TargetIRAnalysis WebAssemblyTargetMachine::getTargetIRAnalysis() {
+  return TargetIRAnalysis([this](const Function &F) {
+    return TargetTransformInfo(WebAssemblyTTIImpl(this, F));
+  });
 }
 
 TargetPassConfig *

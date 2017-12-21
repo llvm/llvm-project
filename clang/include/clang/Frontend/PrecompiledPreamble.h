@@ -19,6 +19,7 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/MD5.h"
+#include <cstddef>
 #include <memory>
 #include <system_error>
 #include <type_traits>
@@ -88,6 +89,11 @@ public:
 
   /// PreambleBounds used to build the preamble.
   PreambleBounds getBounds() const;
+
+  /// Returns the size, in bytes, that preamble takes on disk or in memory.
+  /// For on-disk preambles returns 0 if filesystem operations fail. Intended to
+  /// be used for logging and debugging purposes only.
+  std::size_t getSize() const;
 
   /// Check whether PrecompiledPreamble can be reused for the new contents(\p
   /// MainFileBuffer) of the main file.
@@ -246,7 +252,8 @@ public:
 
   /// Called before FrontendAction::BeginSourceFile.
   /// Can be used to store references to various CompilerInstance fields
-  /// (e.g. SourceManager) that may be interesting to the consumers of other callbacks.
+  /// (e.g. SourceManager) that may be interesting to the consumers of other
+  /// callbacks.
   virtual void BeforeExecute(CompilerInstance &CI);
   /// Called after FrontendAction::Execute(), but before
   /// FrontendAction::EndSourceFile(). Can be used to transfer ownership of

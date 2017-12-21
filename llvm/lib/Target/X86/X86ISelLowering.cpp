@@ -11953,6 +11953,19 @@ static int canLowerByDroppingEvenElements(ArrayRef<int> Mask,
   return 0;
 }
 
+static SDValue lowerVectorShuffleWithPERMV(const SDLoc &DL, MVT VT,
+                                           ArrayRef<int> Mask, SDValue V1,
+                                           SDValue V2, SelectionDAG &DAG) {
+  MVT MaskEltVT = MVT::getIntegerVT(VT.getScalarSizeInBits());
+  MVT MaskVecVT = MVT::getVectorVT(MaskEltVT, VT.getVectorNumElements());
+
+  SDValue MaskNode = getConstVector(Mask, MaskVecVT, DAG, DL, true);
+  if (V2.isUndef())
+    return DAG.getNode(X86ISD::VPERMV, DL, VT, MaskNode, V1);
+
+  return DAG.getNode(X86ISD::VPERMV3, DL, VT, V1, MaskNode, V2);
+}
+
 /// \brief Generic lowering of v16i8 shuffles.
 ///
 /// This is a hybrid strategy to lower v16i8 vectors. It first attempts to
@@ -12143,6 +12156,10 @@ static SDValue lowerV16I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
       if (SDValue Unpack = lowerVectorShuffleAsPermuteAndUnpack(
               DL, MVT::v16i8, V1, V2, Mask, DAG))
         return Unpack;
+
+      // If we have VBMI we can use one VPERM instead of multiple PSHUFBs.
+      if (Subtarget.hasVBMI() && Subtarget.hasVLX())
+        return lowerVectorShuffleWithPERMV(DL, MVT::v16i8, Mask, V1, V2, DAG);
     }
 
     return PSHUFB;
@@ -13043,19 +13060,6 @@ static SDValue lowerVectorShuffleWithSHUFPD(const SDLoc &DL, MVT VT,
                      DAG.getConstant(Immediate, DL, MVT::i8));
 }
 
-static SDValue lowerVectorShuffleWithPERMV(const SDLoc &DL, MVT VT,
-                                           ArrayRef<int> Mask, SDValue V1,
-                                           SDValue V2, SelectionDAG &DAG) {
-  MVT MaskEltVT = MVT::getIntegerVT(VT.getScalarSizeInBits());
-  MVT MaskVecVT = MVT::getVectorVT(MaskEltVT, VT.getVectorNumElements());
-
-  SDValue MaskNode = getConstVector(Mask, MaskVecVT, DAG, DL, true);
-  if (V2.isUndef())
-    return DAG.getNode(X86ISD::VPERMV, DL, VT, MaskNode, V1);
-
-  return DAG.getNode(X86ISD::VPERMV3, DL, VT, V1, MaskNode, V2);
-}
-
 /// \brief Handle lowering of 4-lane 64-bit floating point shuffles.
 ///
 /// Also ends up handling lowering of 4-lane 64-bit integer shuffles when AVX2
@@ -13610,6 +13614,10 @@ static SDValue lowerV32I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
           DL, MVT::v32i8, Mask, V1, V2, Zeroable, Subtarget, DAG))
     return PSHUFB;
 
+  // AVX512VBMIVL can lower to VPERMB.
+  if (Subtarget.hasVBMI() && Subtarget.hasVLX())
+    return lowerVectorShuffleWithPERMV(DL, MVT::v32i8, Mask, V1, V2, DAG);
+
   // Try to simplify this by merging 128-bit lanes to enable a lane-based
   // shuffle.
   if (SDValue Result = lowerVectorShuffleByMerging128BitLanes(
@@ -14071,6 +14079,10 @@ static SDValue lowerV32I16VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (SDValue Blend = lowerVectorShuffleAsBlend(DL, MVT::v32i16, V1, V2, Mask,
                                                 Zeroable, Subtarget, DAG))
     return Blend;
+
+  if (SDValue PSHUFB = lowerVectorShuffleWithPSHUFB(
+          DL, MVT::v32i16, Mask, V1, V2, Zeroable, Subtarget, DAG))
+    return PSHUFB;
 
   return lowerVectorShuffleWithPERMV(DL, MVT::v32i16, Mask, V1, V2, DAG);
 }

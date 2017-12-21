@@ -39,7 +39,7 @@ public:
 
   void adjustPassManager(PassManagerBuilder &PMB) override;
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
-  TargetTransformInfo getTargetTransformInfo(const Function &F) override;
+  TargetIRAnalysis getTargetIRAnalysis() override;
 
   HexagonTargetObjectFile *getObjFileLowering() const override {
     return static_cast<HexagonTargetObjectFile*>(TLOF.get());

@@ -43,6 +43,15 @@ entry:
 ; CHECK-NEXT:           ElemType:        ANYFUNC
 ; CHECK-NEXT:           Limits:
 ; CHECK-NEXT:             Initial:         0x00000000
+; CHECK-NEXT:       - Module:          env
+; CHECK-NEXT:         Field:           foo_alias
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         SigIndex:        0
+; CHECK-NEXT:       - Module:          env
+; CHECK-NEXT:         Field:           bar_alias
+; CHECK-NEXT:         Kind:            GLOBAL
+; CHECK-NEXT:         GlobalType:      I32
+; CHECK-NEXT:         GlobalMutable:   false
 ; CHECK-NEXT:   - Type:            FUNCTION
 ; CHECK-NEXT:     FunctionTypes:   [ 0, 0 ]
 ; CHECK-NEXT:   - Type:            GLOBAL
@@ -61,24 +70,33 @@ entry:
 ; CHECK-NEXT:     Exports:         
 ; CHECK-NEXT:       - Name:            call_alias
 ; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           0
+; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:       - Name:            foo
 ; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           1
+; CHECK-NEXT:         Index:           2
 ; CHECK-NEXT:       - Name:            bar
 ; CHECK-NEXT:         Kind:            GLOBAL
-; CHECK-NEXT:         Index:           0
+; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:       - Name:            bar_alias_address
 ; CHECK-NEXT:         Kind:            GLOBAL
-; CHECK-NEXT:         Index:           1
+; CHECK-NEXT:         Index:           2
 ; CHECK-NEXT:       - Name:            foo_alias
 ; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           1
+; CHECK-NEXT:         Index:           2
 ; CHECK-NEXT:       - Name:            bar_alias
 ; CHECK-NEXT:         Kind:            GLOBAL
+; CHECK-NEXT:         Index:           1
+; CHECK-NEXT:   - Type:            CODE
+; CHECK-NEXT:     Relocations:     
+; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:         Index:           0
-
-; CHECK:        - Type:            DATA
+; CHECK-NEXT:         Offset:          0x00000004
+; CHECK-NEXT:     Functions:       
+; CHECK-NEXT:       - Locals:          
+; CHECK-NEXT:         Body:            1080808080000B
+; CHECK-NEXT:       - Locals:          
+; CHECK-NEXT:         Body:            41000B
+; CHECK-NEXT:   - Type:            DATA
 ; CHECK-NEXT:     Relocations:     
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_I32
 ; CHECK-NEXT:         Index:           0
@@ -101,21 +119,23 @@ entry:
 ; CHECK-NEXT:     Name:            name
 ; CHECK-NEXT:     FunctionNames:   
 ; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         Name:            call_alias
+; CHECK-NEXT:         Name:            foo_alias
 ; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         Name:            call_alias
+; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Name:            foo
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
 ; CHECK-NEXT:     DataSize:        12
 ; CHECK-NEXT:     SymbolInfo:      
-; CHECK-NEXT:       - Name:            call_alias
-; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
-; CHECK-NEXT:       - Name:            foo
-; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
 ; CHECK-NEXT:       - Name:            foo_alias
 ; CHECK-NEXT:         Flags:           [ BINDING_WEAK, VISIBILITY_HIDDEN ]
 ; CHECK-NEXT:       - Name:            bar_alias
 ; CHECK-NEXT:         Flags:           [ BINDING_WEAK, VISIBILITY_HIDDEN ]
+; CHECK-NEXT:       - Name:            call_alias
+; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+; CHECK-NEXT:       - Name:            foo
+; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
 ; CHECK-NEXT:     SegmentInfo:    
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            .data.bar
@@ -128,11 +148,12 @@ entry:
 ; CHECK-NEXT: ...
 
 ; CHECK-SYMS: SYMBOL TABLE:
-; CHECK-SYMS-NEXT: 00000000 g     F name	call_alias
-; CHECK-SYMS-NEXT: 00000001 g     F name	foo
-; CHECK-SYMS-NEXT: 00000000 g     F EXPORT	.hidden call_alias
-; CHECK-SYMS-NEXT: 00000001 g     F EXPORT	.hidden foo
+; CHECK-SYMS-NEXT: 00000000 g     F name	foo_alias
+; CHECK-SYMS-NEXT: 00000001 g     F name	call_alias
+; CHECK-SYMS-NEXT: 00000002 g     F name	foo
+; CHECK-SYMS-NEXT: 00000002 gw    F EXPORT	.hidden foo_alias
+; CHECK-SYMS-NEXT: 00000000 gw      EXPORT	.hidden bar_alias
+; CHECK-SYMS-NEXT: 00000001 g     F EXPORT	.hidden call_alias
+; CHECK-SYMS-NEXT: 00000002 g     F EXPORT	.hidden foo
 ; CHECK-SYMS-NEXT: 00000000 g       EXPORT	bar
 ; CHECK-SYMS-NEXT: 00000008 g       EXPORT	bar_alias_address
-; CHECK-SYMS-NEXT: 00000001 gw    F EXPORT	.hidden foo_alias
-; CHECK-SYMS-NEXT: 00000000 gw      EXPORT	.hidden bar_alias

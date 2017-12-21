@@ -260,8 +260,8 @@ InputSection *elf::createInterpSection() {
   StringRef S = Saver.save(Config->DynamicLinker);
   ArrayRef<uint8_t> Contents = {(const uint8_t *)S.data(), S.size() + 1};
 
-  auto *Sec =
-      make<InputSection>(SHF_ALLOC, SHT_PROGBITS, 1, Contents, ".interp");
+  auto *Sec = make<InputSection>(nullptr, SHF_ALLOC, SHT_PROGBITS, 1, Contents,
+                                 ".interp");
   Sec->Live = true;
   return Sec;
 }

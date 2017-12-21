@@ -81,9 +81,10 @@ LLVMTargetMachine::LLVMTargetMachine(const Target &T,
   this->OptLevel = OL;
 }
 
-TargetTransformInfo
-LLVMTargetMachine::getTargetTransformInfo(const Function &F) {
-  return TargetTransformInfo(BasicTTIImpl(this, F));
+TargetIRAnalysis LLVMTargetMachine::getTargetIRAnalysis() {
+  return TargetIRAnalysis([this](const Function &F) {
+    return TargetTransformInfo(BasicTTIImpl(this, F));
+  });
 }
 
 /// addPassesToX helper drives creation and initialization of TargetPassConfig.

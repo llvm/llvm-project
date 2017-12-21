@@ -42,7 +42,7 @@ public:
     return &Subtarget;
   }
 
-  TargetTransformInfo getTargetTransformInfo(const Function &F) override;
+  TargetIRAnalysis getTargetIRAnalysis() override;
 
   // Pass Pipeline Configuration
   TargetPassConfig *createPassConfig(PassManagerBase &pass_manager) override;

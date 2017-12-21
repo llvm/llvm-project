@@ -24,7 +24,6 @@
 
 namespace llvm {
 
-class Function;
 class GlobalValue;
 class MachineModuleInfo;
 class Mangler;
@@ -39,7 +38,6 @@ class PassManagerBuilder;
 class Target;
 class TargetIntrinsicInfo;
 class TargetIRAnalysis;
-class TargetTransformInfo;
 class TargetLoweringObjectFile;
 class TargetPassConfig;
 class TargetSubtargetInfo;
@@ -206,13 +204,7 @@ public:
   /// This is used to construct the new pass manager's target IR analysis pass,
   /// set up appropriately for this target machine. Even the old pass manager
   /// uses this to answer queries about the IR.
-  TargetIRAnalysis getTargetIRAnalysis();
-
-  /// \brief Return a TargetTransformInfo for a given function.
-  ///
-  /// The returned TargetTransformInfo is specialized to the subtarget
-  /// corresponding to \p F.
-  virtual TargetTransformInfo getTargetTransformInfo(const Function &F);
+  virtual TargetIRAnalysis getTargetIRAnalysis();
 
   /// Allow the target to modify the pass manager, e.g. by calling
   /// PassManagerBuilder::addExtension.
@@ -288,11 +280,11 @@ protected: // Can only create subclasses.
   void initAsmInfo();
 
 public:
-  /// \brief Get a TargetTransformInfo implementation for the target.
+  /// \brief Get a TargetIRAnalysis implementation for the target.
   ///
-  /// The TTI returned uses the common code generator to answer queries about
-  /// the IR.
-  TargetTransformInfo getTargetTransformInfo(const Function &F) override;
+  /// This analysis will produce a TTI result which uses the common code
+  /// generator to answer queries about the IR.
+  TargetIRAnalysis getTargetIRAnalysis() override;
 
   /// Create a pass configuration object to be used by addPassToEmitX methods
   /// for generating a pipeline of CodeGen passes.

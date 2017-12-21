@@ -258,9 +258,10 @@ void HexagonTargetMachine::adjustPassManager(PassManagerBuilder &PMB) {
     });
 }
 
-TargetTransformInfo
-HexagonTargetMachine::getTargetTransformInfo(const Function &F) {
-  return TargetTransformInfo(HexagonTTIImpl(this, F));
+TargetIRAnalysis HexagonTargetMachine::getTargetIRAnalysis() {
+  return TargetIRAnalysis([this](const Function &F) {
+    return TargetTransformInfo(HexagonTTIImpl(this, F));
+  });
 }
 
 

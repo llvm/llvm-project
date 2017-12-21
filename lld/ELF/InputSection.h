@@ -301,7 +301,7 @@ public:
 // .eh_frame. It also includes the synthetic sections themselves.
 class InputSection : public InputSectionBase {
 public:
-  InputSection(uint64_t Flags, uint32_t Type, uint32_t Alignment,
+  InputSection(InputFile *F, uint64_t Flags, uint32_t Type, uint32_t Alignment,
                ArrayRef<uint8_t> Data, StringRef Name, Kind K = Regular);
   template <class ELFT>
   InputSection(ObjFile<ELFT> &F, const typename ELFT::Shdr &Header,

@@ -259,16 +259,17 @@ void MipsPassConfig::addPreRegAlloc() {
   addPass(createMipsOptimizePICCallPass());
 }
 
-TargetTransformInfo
-MipsTargetMachine::getTargetTransformInfo(const Function &F) {
-  if (Subtarget->allowMixed16_32()) {
-    DEBUG(errs() << "No Target Transform Info Pass Added\n");
-    // FIXME: This is no longer necessary as the TTI returned is per-function.
-    return TargetTransformInfo(F.getParent()->getDataLayout());
-  }
+TargetIRAnalysis MipsTargetMachine::getTargetIRAnalysis() {
+  return TargetIRAnalysis([this](const Function &F) {
+    if (Subtarget->allowMixed16_32()) {
+      DEBUG(errs() << "No Target Transform Info Pass Added\n");
+      // FIXME: This is no longer necessary as the TTI returned is per-function.
+      return TargetTransformInfo(F.getParent()->getDataLayout());
+    }
 
-  DEBUG(errs() << "Target Transform Info Pass Added\n");
-  return TargetTransformInfo(BasicTTIImpl(this, F));
+    DEBUG(errs() << "Target Transform Info Pass Added\n");
+    return TargetTransformInfo(BasicTTIImpl(this, F));
+  });
 }
 
 // Implemented by targets that want to run passes immediately before

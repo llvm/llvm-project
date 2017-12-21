@@ -43,7 +43,8 @@ public:
     return TLOF.get();
   }
 
-  TargetTransformInfo getTargetTransformInfo(const Function &F) override;
+  /// \brief Get the TargetIRAnalysis for this target.
+  TargetIRAnalysis getTargetIRAnalysis() override;
 
   bool usesPhysRegsForPEI() const override { return false; }
 };

@@ -104,15 +104,15 @@ TEST_F(MemoryBufferTest, copy) {
 
 TEST_F(MemoryBufferTest, make_new) {
   // 0-sized buffer
-  OwningBuffer Zero(MemoryBuffer::getNewUninitMemBuffer(0));
+  OwningBuffer Zero(WritableMemoryBuffer::getNewUninitMemBuffer(0));
   EXPECT_TRUE(nullptr != Zero.get());
 
   // uninitialized buffer with no name
-  OwningBuffer One(MemoryBuffer::getNewUninitMemBuffer(321));
+  OwningBuffer One(WritableMemoryBuffer::getNewUninitMemBuffer(321));
   EXPECT_TRUE(nullptr != One.get());
 
   // uninitialized buffer with name
-  OwningBuffer Two(MemoryBuffer::getNewUninitMemBuffer(123, "bla"));
+  OwningBuffer Two(WritableMemoryBuffer::getNewUninitMemBuffer(123, "bla"));
   EXPECT_TRUE(nullptr != Two.get());
 
   // 0-initialized buffer with no name

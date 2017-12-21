@@ -329,11 +329,12 @@ std::string InputSectionBase::getObjMsg(uint64_t Off) {
       .str();
 }
 
-InputSection InputSection::Discarded(0, 0, 0, ArrayRef<uint8_t>(), "");
+InputSection InputSection::Discarded(nullptr, 0, 0, 0, ArrayRef<uint8_t>(), "");
 
-InputSection::InputSection(uint64_t Flags, uint32_t Type, uint32_t Alignment,
-                           ArrayRef<uint8_t> Data, StringRef Name, Kind K)
-    : InputSectionBase(nullptr, Flags, Type,
+InputSection::InputSection(InputFile *F, uint64_t Flags, uint32_t Type,
+                           uint32_t Alignment, ArrayRef<uint8_t> Data,
+                           StringRef Name, Kind K)
+    : InputSectionBase(F, Flags, Type,
                        /*Entsize*/ 0, /*Link*/ 0, /*Info*/ 0, Alignment, Data,
                        Name, K) {}
 

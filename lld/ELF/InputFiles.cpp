@@ -454,11 +454,9 @@ InputSectionBase *ObjFile<ELFT>::getRelocTarget(const Elf_Shdr &Sec) {
 
 // Create a regular InputSection class that has the same contents
 // as a given section.
-InputSectionBase *toRegularSection(MergeInputSection *Sec) {
-  auto *Ret = make<InputSection>(Sec->Flags, Sec->Type, Sec->Alignment,
-                                 Sec->Data, Sec->Name);
-  Ret->File = Sec->File;
-  return Ret;
+static InputSection *toRegularSection(MergeInputSection *Sec) {
+  return make<InputSection>(Sec->File, Sec->Flags, Sec->Type, Sec->Alignment,
+                            Sec->Data, Sec->Name);
 }
 
 template <class ELFT>
@@ -983,8 +981,8 @@ static ELFKind getELFKind(MemoryBufferRef MB) {
 
 template <class ELFT> void BinaryFile::parse() {
   ArrayRef<uint8_t> Data = toArrayRef(MB.getBuffer());
-  auto *Section =
-      make<InputSection>(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS, 8, Data, ".data");
+  auto *Section = make<InputSection>(nullptr, SHF_ALLOC | SHF_WRITE,
+                                     SHT_PROGBITS, 8, Data, ".data");
   Sections.push_back(Section);
 
   // For each input file foo that is embedded to a result as a binary

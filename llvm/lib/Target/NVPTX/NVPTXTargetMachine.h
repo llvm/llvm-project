@@ -63,7 +63,7 @@ public:
 
   void adjustPassManager(PassManagerBuilder &) override;
 
-  TargetTransformInfo getTargetTransformInfo(const Function &F) override;
+  TargetIRAnalysis getTargetIRAnalysis() override;
 
   bool isMachineVerifierClean() const override {
     return false;
