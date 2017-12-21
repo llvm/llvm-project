@@ -15,6 +15,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSet.h"
 #include <array>
 #include <string>
 
@@ -23,7 +24,7 @@ namespace clangd {
 
 struct SymbolLocation {
   // The absolute path of the source file where a symbol occurs.
-  std::string FilePath;
+  llvm::StringRef FilePath;
   // The 0-based offset to the first character of the symbol from the beginning
   // of the source file.
   unsigned StartOffset;
@@ -71,16 +72,19 @@ void operator>>(llvm::StringRef HexStr, SymbolID &ID);
 
 // The class presents a C++ symbol, e.g. class, function.
 //
-// FIXME: instead of having own copy fields for each symbol, we can share
-// storage from SymbolSlab.
+// WARNING: Symbols do not own much of their underlying data - typically strings
+// are owned by a SymbolSlab. They should be treated as non-owning references.
+// Copies are shallow.
+// When adding new unowned data fields to Symbol, remember to update
+// SymbolSlab::insert to copy them to the slab's storage.
 struct Symbol {
   // The ID of the symbol.
   SymbolID ID;
   // The unqualified name of the symbol, e.g. "bar" (for "n1::n2::bar").
-  std::string Name;
+  llvm::StringRef Name;
   // The scope (e.g. namespace) of the symbol, e.g. "n1::n2" (for
   // "n1::n2::bar").
-  std::string Scope;
+  llvm::StringRef Scope;
   // The symbol information, like symbol kind.
   index::SymbolInfo SymInfo;
   // The location of the canonical declaration of the symbol.
@@ -100,9 +104,6 @@ struct Symbol {
 
 // A symbol container that stores a set of symbols. The container will maintain
 // the lifetime of the symbols.
-//
-// FIXME: Use a space-efficient implementation, a lot of Symbol fields could
-// share the same storage.
 class SymbolSlab {
 public:
   using const_iterator = llvm::DenseMap<SymbolID, Symbol>::const_iterator;
@@ -117,11 +118,21 @@ public:
   // operation is irreversible.
   void freeze();
 
-  void insert(Symbol S);
+  // Adds the symbol to this slab.
+  // This is a deep copy: underlying strings will be owned by the slab.
+  void insert(const Symbol& S);
 
 private:
+  // Replaces S with a reference to the same string, owned by this slab.
+  void intern(llvm::StringRef &S) {
+    S = S.empty() ? llvm::StringRef() : Strings.insert(S).first->getKey();
+  }
+
   bool Frozen = false;
 
+  // Intern table for strings. Not StringPool as we don't refcount, just insert.
+  // We use BumpPtrAllocator to avoid lots of tiny allocations for nodes.
+  llvm::StringSet<llvm::BumpPtrAllocator> Strings;
   llvm::DenseMap<SymbolID, Symbol> Symbols;
 };
 
