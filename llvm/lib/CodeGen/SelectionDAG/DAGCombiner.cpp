@@ -13786,8 +13786,8 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
 
   // Deal with elidable overlapping chained stores.
   if (StoreSDNode *ST1 = dyn_cast<StoreSDNode>(Chain))
-    if (OptLevel != CodeGenOpt::None && ST1->isUnindexed() &&
-        !ST1->isVolatile() && ST1->hasOneUse() &&
+    if (OptLevel != CodeGenOpt::None && ST->isUnindexed() &&
+        ST1->isUnindexed() && !ST1->isVolatile() && ST1->hasOneUse() &&
         !ST1->getBasePtr().isUndef() && !ST->isVolatile()) {
       BaseIndexOffset STBasePtr = BaseIndexOffset::match(ST->getBasePtr(), DAG);
       BaseIndexOffset ST1BasePtr =

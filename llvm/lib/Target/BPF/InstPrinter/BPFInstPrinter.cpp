@@ -56,7 +56,7 @@ void BPFInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   if (Op.isReg()) {
     O << getRegisterName(Op.getReg());
   } else if (Op.isImm()) {
-    O << (int32_t)Op.getImm();
+    O << formatImm((int32_t)Op.getImm());
   } else {
     assert(Op.isExpr() && "Expected an expression");
     printExpr(Op.getExpr(), O);
@@ -76,9 +76,9 @@ void BPFInstPrinter::printMemOperand(const MCInst *MI, int OpNo, raw_ostream &O,
   if (OffsetOp.isImm()) {
     auto Imm = OffsetOp.getImm();
     if (Imm >= 0)
-      O << " + " << formatDec(Imm);
+      O << " + " << formatImm(Imm);
     else
-      O << " - " << formatDec(-Imm);
+      O << " - " << formatImm(-Imm);
   } else {
     assert(0 && "Expected an immediate");
   }
@@ -88,7 +88,7 @@ void BPFInstPrinter::printImm64Operand(const MCInst *MI, unsigned OpNo,
                                        raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isImm())
-    O << (uint64_t)Op.getImm();
+    O << formatImm(Op.getImm());
   else if (Op.isExpr())
     printExpr(Op.getExpr(), O);
   else
@@ -100,7 +100,7 @@ void BPFInstPrinter::printBrTargetOperand(const MCInst *MI, unsigned OpNo,
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isImm()) {
     int16_t Imm = Op.getImm();
-    O << ((Imm >= 0) ? "+" : "") << Imm;
+    O << ((Imm >= 0) ? "+" : "") << formatImm(Imm);
   } else if (Op.isExpr()) {
     printExpr(Op.getExpr(), O);
   } else {

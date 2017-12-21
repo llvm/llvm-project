@@ -242,7 +242,7 @@ def VecQ32
 // FIXME: the register order should be defined in terms of the preferred
 // allocation order...
 //
-def IntRegs : RegisterClass<"Hexagon", [i32, f32, v4i8, v2i16], 32,
+def IntRegs : RegisterClass<"Hexagon", [i32, f32, v32i1, v4i8, v2i16], 32,
   (add (sequence "R%u", 0, 9), (sequence "R%u", 12, 28),
        R10, R11, R29, R30, R31)>;
 
@@ -254,7 +254,8 @@ def GeneralSubRegs : RegisterClass<"Hexagon", [i32], 32,
 def IntRegsLow8 : RegisterClass<"Hexagon", [i32], 32,
   (add R7, R6, R5, R4, R3, R2, R1, R0)> ;
 
-def DoubleRegs : RegisterClass<"Hexagon", [i64, f64, v8i8, v4i16, v2i32], 64,
+def DoubleRegs : RegisterClass<"Hexagon",
+  [i64, f64, v64i1, v8i8, v4i16, v2i32], 64,
   (add (sequence "D%u", 0, 4), (sequence "D%u", 6, 13), D5, D14, D15)>;
 
 def GeneralDoubleLow8Regs : RegisterClass<"Hexagon", [i64], 64,

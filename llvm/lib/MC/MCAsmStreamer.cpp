@@ -405,9 +405,13 @@ void MCAsmStreamer::emitExplicitComments() {
 void MCAsmStreamer::ChangeSection(MCSection *Section,
                                   const MCExpr *Subsection) {
   assert(Section && "Cannot switch to a null section!");
-  Section->PrintSwitchToSection(
-      *MAI, getContext().getObjectFileInfo()->getTargetTriple(), OS,
-      Subsection);
+  if (MCTargetStreamer *TS = getTargetStreamer()) {
+    TS->changeSection(getCurrentSectionOnly(), Section, Subsection, OS);
+  } else {
+    Section->PrintSwitchToSection(
+        *MAI, getContext().getObjectFileInfo()->getTargetTriple(), OS,
+        Subsection);
+  }
 }
 
 void MCAsmStreamer::EmitLabel(MCSymbol *Symbol, SMLoc Loc) {
@@ -796,10 +800,15 @@ void MCAsmStreamer::EmitBytes(StringRef Data) {
          "Cannot emit contents before setting section!");
   if (Data.empty()) return;
 
-  if (Data.size() == 1) {
-    OS << MAI->getData8bitsDirective();
-    OS << (unsigned)(unsigned char)Data[0];
-    EmitEOL();
+  // If only single byte is provided or no ascii or asciz directives is
+  // supported, emit as vector of 8bits data.
+  if (Data.size() == 1 ||
+      !(MAI->getAscizDirective() || MAI->getAsciiDirective())) {
+    const char *Directive = MAI->getData8bitsDirective();
+    for (const unsigned char C : Data.bytes()) {
+      OS << Directive << (unsigned)C;
+      EmitEOL();
+    }
     return;
   }
 
@@ -884,8 +893,12 @@ void MCAsmStreamer::EmitValueImpl(const MCExpr *Value, unsigned Size,
 
   assert(Directive && "Invalid size for machine code value!");
   OS << Directive;
-  Value->print(OS, MAI);
-  EmitEOL();
+  if (MCTargetStreamer *TS = getTargetStreamer()) {
+    TS->emitValue(Value);
+  } else {
+    Value->print(OS, MAI);
+    EmitEOL();
+  }
 }
 
 void MCAsmStreamer::EmitULEB128Value(const MCExpr *Value) {
@@ -1097,13 +1110,19 @@ unsigned MCAsmStreamer::EmitDwarfFileDirective(unsigned FileNo,
     }
   }
 
-  OS << "\t.file\t" << FileNo << ' ';
+  SmallString<128> Str;
+  raw_svector_ostream OS1(Str);
+  OS1 << "\t.file\t" << FileNo << ' ';
   if (!Directory.empty()) {
-    PrintQuotedString(Directory, OS);
-    OS << ' ';
+    PrintQuotedString(Directory, OS1);
+    OS1 << ' ';
   }
-  PrintQuotedString(Filename, OS);
-  EmitEOL();
+  PrintQuotedString(Filename, OS1);
+  if (MCTargetStreamer *TS = getTargetStreamer()) {
+    TS->emitDwarfFileDirective(OS1.str());
+  } else {
+    EmitRawText(OS1.str());
+  }
 
   return FileNo;
 }

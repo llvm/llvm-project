@@ -1,9 +1,8 @@
-; RUN: llc -march=hexagon -enable-pipeliner=false < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 
 ; Test that we generate a .cur
 
-; CHECK: v{{[0-9]*}}.cur{{ *}}
-; CHECK: v{{[0-9]*}}.cur{{ *}}
+; CHECK: v{{[0-9]*}}.cur
 
 define void @conv3x3_i(i8* noalias nocapture readonly %iptr0, i32 %shift, i32 %width) #0 {
 entry:

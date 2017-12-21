@@ -1531,11 +1531,11 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
 
 void PPCFrameLowering::createTailCallBranchInstr(MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
-  DebugLoc dl;
 
-  if (MBBI != MBB.end())
-    dl = MBBI->getDebugLoc();
+  // If we got this far a first terminator should exist.
+  assert(MBBI != MBB.end() && "Failed to find the first terminator.");
 
+  DebugLoc dl = MBBI->getDebugLoc();
   const PPCInstrInfo &TII = *Subtarget.getInstrInfo();
 
   // Create branch instruction for pseudo tail call return instruction

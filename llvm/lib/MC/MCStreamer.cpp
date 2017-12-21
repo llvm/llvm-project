@@ -49,6 +49,28 @@ void MCTargetStreamer::emitLabel(MCSymbol *Symbol) {}
 
 void MCTargetStreamer::finish() {}
 
+void MCTargetStreamer::changeSection(const MCSection *CurSection,
+                                     MCSection *Section,
+                                     const MCExpr *Subsection,
+                                     raw_ostream &OS) {
+  Section->PrintSwitchToSection(
+      *Streamer.getContext().getAsmInfo(),
+      Streamer.getContext().getObjectFileInfo()->getTargetTriple(), OS,
+      Subsection);
+}
+
+void MCTargetStreamer::emitDwarfFileDirective(StringRef Directive) {
+  Streamer.EmitRawText(Directive);
+}
+
+void MCTargetStreamer::emitValue(const MCExpr *Value) {
+  SmallString<128> Str;
+  raw_svector_ostream OS(Str);
+
+  Value->print(OS, Streamer.getContext().getAsmInfo());
+  Streamer.EmitRawText(OS.str());
+}
+
 void MCTargetStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {}
 
 MCStreamer::MCStreamer(MCContext &Ctx)

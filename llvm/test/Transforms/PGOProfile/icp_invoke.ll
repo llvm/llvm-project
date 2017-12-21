@@ -20,8 +20,7 @@ entry:
 define i32 @_Z3goov() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 entry:
   %tmp = load void ()*, void ()** @foo1, align 8
-; ICP:  [[BITCAST_IC1:%[0-9]+]] = bitcast void ()* %tmp to i8*
-; ICP:  [[CMP_IC1:%[0-9]+]] = icmp eq i8* [[BITCAST_IC1]], bitcast (void ()* @_ZL4bar1v to i8*)
+; ICP:  [[CMP_IC1:%[0-9]+]] = icmp eq void ()* %tmp, @_ZL4bar1v
 ; ICP:  br i1 [[CMP_IC1]], label %[[TRUE_LABEL_IC1:.*]], label %[[FALSE_LABEL_IC1:.*]], !prof [[BRANCH_WEIGHT:![0-9]+]]
 ; ICP:[[TRUE_LABEL_IC1]]:
 ; ICP:  invoke void @_ZL4bar1v()
@@ -49,17 +48,19 @@ catch:
 
 try.cont:
   %tmp6 = load i32 ()*, i32 ()** @foo2, align 8
-; ICP:  [[BITCAST_IC2:%[0-9]+]] = bitcast i32 ()* %tmp6 to i8*
-; ICP:  [[CMP_IC2:%[0-9]+]] = icmp eq i8* [[BITCAST_IC2]], bitcast (i32 ()* @_ZL4bar2v to i8*)
+; ICP:  [[CMP_IC2:%[0-9]+]] = icmp eq i32 ()* %tmp6, @_ZL4bar2v
 ; ICP:  br i1 [[CMP_IC2]], label %[[TRUE_LABEL_IC2:.*]], label %[[FALSE_LABEL_IC2:.*]], !prof [[BRANCH_WEIGHT:![0-9]+]]
 ; ICP:[[TRUE_LABEL_IC2]]:
-; ICP:  [[RESULT_IC2:%[0-9]+]] = invoke i32 @_ZL4bar2v()
-; ICP:          to label %[[DCALL_NORMAL_DEST_IC2:.*]] unwind label %lpad1
+; ICP:  [[RESULT_IC2_0:%[0-9]+]] = invoke i32 @_ZL4bar2v()
+; ICP:          to label %[[MERGE_BB:.*]] unwind label %lpad1
 ; ICP:[[FALSE_LABEL_IC2]]:
+; ICP:  [[RESULT_IC2_1:%.+]] = invoke i32 %tmp6()
+; ICP:          to label %[[MERGE_BB]] unwind label %lpad1
   %call = invoke i32 %tmp6()
           to label %try.cont8 unwind label %lpad1, !prof !3
 
-; ICP:[[DCALL_NORMAL_DEST_IC2]]:
+; ICP:[[MERGE_BB]]:
+; ICP:  [[MERGE_PHI:%.+]] = phi i32 [ [[RESULT_IC2_1]], %[[FALSE_LABEL_IC2]] ], [ [[RESULT_IC2_0]], %[[TRUE_LABEL_IC2]] ]
 ; ICP:  br label %try.cont8
 lpad1:
   %tmp7 = landingpad { i8*, i32 }
@@ -77,7 +78,7 @@ catch6:
 
 try.cont8:
   %i.0 = phi i32 [ undef, %catch6 ], [ %call, %try.cont ]
-; ICP:  %i.0 = phi i32 [ undef, %catch6 ], [ %call, %[[FALSE_LABEL_IC2]] ], [ [[RESULT_IC2]], %[[DCALL_NORMAL_DEST_IC2]] ]
+; ICP:  %i.0 = phi i32 [ undef, %catch6 ], [ [[MERGE_PHI]], %[[MERGE_BB]] ]
   ret i32 %i.0
 
 eh.resume:

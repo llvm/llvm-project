@@ -2,6 +2,7 @@
 // XFAIL: vg_leak
 
 class IntrinsicProperty;
+class SDNodeProperty;
 
 class ValueType<int size, int value> {
   string Namespace = "MVT";
@@ -20,6 +21,7 @@ class Intrinsic<string name, list<LLVMType> param_types = []> {
   list<LLVMType> RetTypes = [];
   list<LLVMType> ParamTypes = param_types;
   list<IntrinsicProperty> IntrProperties = [];
+  list<SDNodeProperty> Properties = [];
 }
 
 // isVoid needs to match the definition in ValueTypes.td

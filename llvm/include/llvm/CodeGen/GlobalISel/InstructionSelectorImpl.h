@@ -181,7 +181,7 @@ bool InstructionSelector::executeMatchTable(
       else
         llvm_unreachable("Expected Imm or CImm operand");
 
-      if (!MatcherInfo.I64ImmPredicateFns[Predicate](Value))
+      if (!testImmPredicate_I64(Predicate, Value))
         if (handleReject() == RejectAndGiveUp)
           return false;
       break;
@@ -202,7 +202,7 @@ bool InstructionSelector::executeMatchTable(
       else
         llvm_unreachable("Expected Imm or CImm operand");
 
-      if (!MatcherInfo.APIntImmPredicateFns[Predicate](Value))
+      if (!testImmPredicate_APInt(Predicate, Value))
         if (handleReject() == RejectAndGiveUp)
           return false;
       break;
@@ -221,7 +221,7 @@ bool InstructionSelector::executeMatchTable(
       assert(Predicate > GIPFP_APFloat_Invalid && "Expected a valid predicate");
       APFloat Value = State.MIs[InsnID]->getOperand(1).getFPImm()->getValueAPF();
 
-      if (!MatcherInfo.APFloatImmPredicateFns[Predicate](Value))
+      if (!testImmPredicate_APFloat(Predicate, Value))
         if (handleReject() == RejectAndGiveUp)
           return false;
       break;
