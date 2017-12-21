@@ -83,15 +83,7 @@ static const WasmSignature *getFunctionSig(const ObjFile &Obj,
                                            const WasmSymbol &Sym) {
   DEBUG(dbgs() << "getFunctionSig: " << Sym.Name << "\n");
   const WasmObjectFile *WasmObj = Obj.getWasmObj();
-  uint32_t FunctionType;
-  if (Obj.isImportedFunction(Sym.ElementIndex)) {
-    const WasmImport &Import = WasmObj->imports()[Sym.ImportIndex];
-    FunctionType = Import.SigIndex;
-  } else {
-    uint32_t FunctionIndex = Sym.ElementIndex - Obj.NumFunctionImports();
-    FunctionType = WasmObj->functionTypes()[FunctionIndex];
-  }
-  return &WasmObj->types()[FunctionType];
+  return &WasmObj->types()[Sym.FunctionType];
 }
 
 // Check the type of new symbol matches that of the symbol is replacing.

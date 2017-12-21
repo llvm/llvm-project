@@ -25,7 +25,8 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
   // Initialize and run ClangdLSPServer.
   clang::clangd::ClangdLSPServer LSPServer(
       Out, clang::clangd::getDefaultAsyncThreadsCount(),
-      /*StorePreamblesInMemory=*/false, CCOpts, llvm::None, llvm::None);
+      /*StorePreamblesInMemory=*/false, CCOpts, llvm::None, llvm::None,
+      /*BuildDynamicSymbolIndex=*/false);
 
   std::istringstream In(std::string(reinterpret_cast<char *>(data), size));
   LSPServer.run(In);

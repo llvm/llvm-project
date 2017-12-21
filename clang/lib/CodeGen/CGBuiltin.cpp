@@ -1432,14 +1432,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   case Builtin::BI__debugbreak:
     return RValue::get(EmitTrapCall(Intrinsic::debugtrap));
   case Builtin::BI__builtin_unreachable: {
-    if (SanOpts.has(SanitizerKind::Unreachable)) {
-      SanitizerScope SanScope(this);
-      EmitCheck(std::make_pair(static_cast<llvm::Value *>(Builder.getFalse()),
-                               SanitizerKind::Unreachable),
-                SanitizerHandler::BuiltinUnreachable,
-                EmitCheckSourceLocation(E->getExprLoc()), None);
-    } else
-      Builder.CreateUnreachable();
+    EmitUnreachable(E->getExprLoc());
 
     // We do need to preserve an insertion point.
     EmitBlock(createBasicBlock("unreachable.cont"));

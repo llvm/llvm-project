@@ -2899,6 +2899,8 @@ def HexagonREADCYCLE: SDNode<"HexagonISD::READCYCLE", SDTInt64Leaf,
 def: Pat<(HexagonREADCYCLE), (A4_tfrcpp UPCYCLE)>;
 
 
+def SDTVecLeaf: SDTypeProfile<1, 0, [SDTCisVec<0>]>;
+
 def SDTHexagonVEXTRACTW: SDTypeProfile<1, 2,
   [SDTCisVT<0, i32>, SDTCisVec<1>, SDTCisVT<2, i32>]>;
 def HexagonVEXTRACTW : SDNode<"HexagonISD::VEXTRACTW", SDTHexagonVEXTRACTW>;
@@ -2920,7 +2922,14 @@ let Predicates = [UseHVX] in {
   def: OpR_RR_pat<V6_vpackoh,  pf2<HexagonVPACKO>,    VecI16, HVI16>;
 }
 
+def HexagonVZERO: SDNode<"HexagonISD::VZERO", SDTVecLeaf>;
+def vzero: PatFrag<(ops), (HexagonVZERO)>;
+
 let Predicates = [UseHVX] in {
+  def: Pat<(VecI8  vzero), (V6_vd0)>;
+  def: Pat<(VecI16 vzero), (V6_vd0)>;
+  def: Pat<(VecI32 vzero), (V6_vd0)>;
+
   def: Pat<(VecPI8 (concat_vectors HVI8:$Vs, HVI8:$Vt)),
            (Combinev HvxVR:$Vt, HvxVR:$Vs)>;
   def: Pat<(VecPI16 (concat_vectors HVI16:$Vs, HVI16:$Vt)),

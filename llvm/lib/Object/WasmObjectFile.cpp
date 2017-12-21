@@ -303,7 +303,6 @@ Error WasmObjectFile::parseNameSection(const uint8_t *Ptr, const uint8_t *End) {
 
 void WasmObjectFile::populateSymbolTable() {
   // Add imports to symbol table
-  size_t ImportIndex = 0;
   size_t GlobalIndex = 0;
   size_t FunctionIndex = 0;
   for (const wasm::WasmImport& Import : Imports) {
@@ -312,7 +311,7 @@ void WasmObjectFile::populateSymbolTable() {
       assert(Import.Global.Type == wasm::WASM_TYPE_I32);
       SymbolMap.try_emplace(Import.Field, Symbols.size());
       Symbols.emplace_back(Import.Field, WasmSymbol::SymbolType::GLOBAL_IMPORT,
-                           ImportSection, GlobalIndex++, ImportIndex);
+                           ImportSection, GlobalIndex++);
       DEBUG(dbgs() << "Adding import: " << Symbols.back()
                    << " sym index:" << Symbols.size() << "\n");
       break;
@@ -320,14 +319,13 @@ void WasmObjectFile::populateSymbolTable() {
       SymbolMap.try_emplace(Import.Field, Symbols.size());
       Symbols.emplace_back(Import.Field,
                            WasmSymbol::SymbolType::FUNCTION_IMPORT,
-                           ImportSection, FunctionIndex++, ImportIndex);
+                           ImportSection, FunctionIndex++, Import.SigIndex);
       DEBUG(dbgs() << "Adding import: " << Symbols.back()
                    << " sym index:" << Symbols.size() << "\n");
       break;
     default:
       break;
     }
-    ImportIndex++;
   }
 
   // Add exports to symbol table
@@ -338,11 +336,22 @@ void WasmObjectFile::populateSymbolTable() {
           Export.Kind == wasm::WASM_EXTERNAL_FUNCTION
               ? WasmSymbol::SymbolType::FUNCTION_EXPORT
               : WasmSymbol::SymbolType::GLOBAL_EXPORT;
-      SymbolMap.try_emplace(Export.Name, Symbols.size());
-      Symbols.emplace_back(Export.Name, ExportType,
-                           ExportSection, Export.Index);
-      DEBUG(dbgs() << "Adding export: " << Symbols.back()
-                   << " sym index:" << Symbols.size() << "\n");
+      auto Pair = SymbolMap.try_emplace(Export.Name, Symbols.size());
+      if (Pair.second) {
+        Symbols.emplace_back(Export.Name, ExportType,
+                             ExportSection, Export.Index);
+        DEBUG(dbgs() << "Adding export: " << Symbols.back()
+                     << " sym index:" << Symbols.size() << "\n");
+      } else {
+        uint32_t SymIndex = Pair.first->second;
+        const WasmSymbol &OldSym = Symbols[SymIndex];
+        WasmSymbol NewSym(Export.Name, ExportType, ExportSection, Export.Index);
+        NewSym.setAltIndex(OldSym.ElementIndex);
+        Symbols[SymIndex] = NewSym;
+
+        DEBUG(dbgs() << "Replacing existing symbol:  " << NewSym
+                     << " sym index:" << SymIndex << "\n");
+      }
     }
   }
 }
