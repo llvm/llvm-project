@@ -47,7 +47,7 @@ namespace llvm {
     ScalarEvolution &SE;
     const DataLayout &DL;
 
-    // New instructions receive a name to identifies them with the current pass.
+    // New instructions receive a name to identify them with the current pass.
     const char* IVName;
 
     // InsertedExpressions caches Values for reuse, so must track RAUW.

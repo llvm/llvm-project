@@ -301,59 +301,20 @@ typedef DenseMap<InstrConverterBaseKeyTy, InstrConverterBase *>
 /// different closure that manipulates the loaded or stored value.
 class Closure {
 private:
-  const TargetInstrInfo *TII;
-  MachineRegisterInfo *MRI;
-
   /// Virtual registers in the closure.
   DenseSet<unsigned> Edges;
 
   /// Instructions in the closure.
   SmallVector<MachineInstr *, 8> Instrs;
 
-  /// A map of available Instruction Converters.
-  const InstrConverterBaseMap &Converters;
-
-  /// The register domain of this closure.
-  RegDomain Domain;
-
   /// Domains which this closure can legally be reassigned to.
   std::bitset<NumDomains> LegalDstDomains;
 
-  /// Enqueue \p Reg to be considered for addition to the closure.
-  void visitRegister(unsigned Reg, SmallVectorImpl<unsigned> &Worklist);
-
-  /// Add \p MI to this closure.
-  void encloseInstr(MachineInstr *MI);
-
-  /// Calculate the total cost of reassigning the closure to \p Domain.
-  double calculateCost(RegDomain Domain) const;
-
-  /// All edges that are included in some closure.
-  DenseSet<unsigned> &EnclosedEdges;
-
-  /// All instructions that are included in some closure.
-  DenseMap<MachineInstr *, Closure *> &EnclosedInstrs;
-
 public:
-  Closure(const TargetInstrInfo *TII, MachineRegisterInfo *MRI,
-          const InstrConverterBaseMap &Converters,
-          std::initializer_list<RegDomain> LegalDstDomainList,
-          DenseSet<unsigned> &EnclosedEdges,
-          DenseMap<MachineInstr *, Closure *> &EnclosedInstrs)
-      : TII(TII), MRI(MRI), Converters(Converters), Domain(NoDomain),
-        EnclosedEdges(EnclosedEdges), EnclosedInstrs(EnclosedInstrs) {
+  Closure(std::initializer_list<RegDomain> LegalDstDomainList) {
     for (RegDomain D : LegalDstDomainList)
       LegalDstDomains.set(D);
   }
-
-  /// Starting from \Reg, expand the closure as much as possible.
-  void buildClosure(unsigned E);
-
-  /// /returns true if it is profitable to reassign the closure to \p Domain.
-  bool isReassignmentProfitable(RegDomain Domain) const;
-
-  /// Reassign the closure to \p Domain.
-  void Reassign(RegDomain Domain) const;
 
   /// Mark this closure as illegal for reassignment to all domains.
   void setAllIllegal() { LegalDstDomains.reset(); }
@@ -364,10 +325,41 @@ public:
   /// \returns true if is legal to reassign this closure to domain \p RD.
   bool isLegal(RegDomain RD) const { return LegalDstDomains[RD]; }
 
+  /// Mark this closure as illegal for reassignment to domain \p RD.
+  void setIllegal(RegDomain RD) { LegalDstDomains[RD] = false; }
+
   bool empty() const { return Edges.empty(); }
+
+  bool insertEdge(unsigned Reg) {
+    return Edges.insert(Reg).second;
+  }
+
+  using const_edge_iterator = DenseSet<unsigned>::const_iterator;
+  iterator_range<const_edge_iterator> edges() const {
+    return iterator_range<const_edge_iterator>(Edges.begin(), Edges.end());
+  }
+
+  void addInstruction(MachineInstr *I) {
+    Instrs.push_back(I);
+  }
+
+  ArrayRef<MachineInstr *> instructions() const {
+    return Instrs;
+  }
+
 };
 
 class X86DomainReassignment : public MachineFunctionPass {
+  const X86Subtarget *STI;
+  MachineRegisterInfo *MRI;
+  const X86InstrInfo *TII;
+
+  /// All edges that are included in some closure
+  DenseSet<unsigned> EnclosedEdges;
+
+  /// All instructions that are included in some closure.
+  DenseMap<MachineInstr *, Closure *> EnclosedInstrs;
+
 public:
   static char ID;
 
@@ -387,22 +379,39 @@ public:
   }
 
 private:
-  const X86Subtarget *STI;
-  MachineRegisterInfo *MRI;
-  const X86InstrInfo *TII;
-
   /// A map of available Instruction Converters.
   InstrConverterBaseMap Converters;
 
   /// Initialize Converters map.
   void initConverters();
+
+  /// Starting from \Reg, expand the closure as much as possible.
+  void buildClosure(Closure &, unsigned Reg);
+
+  /// Enqueue \p Reg to be considered for addition to the closure.
+  void visitRegister(Closure &, unsigned Reg, RegDomain &Domain,
+                     SmallVectorImpl<unsigned> &Worklist);
+
+  /// Reassign the closure to \p Domain.
+  void reassign(const Closure &C, RegDomain Domain) const;
+
+  /// Add \p MI to the closure.
+  void encloseInstr(Closure &C, MachineInstr *MI);
+
+  /// /returns true if it is profitable to reassign the closure to \p Domain.
+  bool isReassignmentProfitable(const Closure &C, RegDomain Domain) const;
+
+  /// Calculate the total cost of reassigning the closure to \p Domain.
+  double calculateCost(const Closure &C, RegDomain Domain) const;
 };
 
 char X86DomainReassignment::ID = 0;
 
 } // End anonymous namespace.
 
-void Closure::visitRegister(unsigned Reg, SmallVectorImpl<unsigned> &Worklist) {
+void X86DomainReassignment::visitRegister(Closure &C, unsigned Reg,
+                                          RegDomain &Domain,
+                                          SmallVectorImpl<unsigned> &Worklist) {
   if (EnclosedEdges.count(Reg))
     return;
 
@@ -423,59 +432,61 @@ void Closure::visitRegister(unsigned Reg, SmallVectorImpl<unsigned> &Worklist) {
   Worklist.push_back(Reg);
 }
 
-void Closure::encloseInstr(MachineInstr *MI) {
+void X86DomainReassignment::encloseInstr(Closure &C, MachineInstr *MI) {
   auto I = EnclosedInstrs.find(MI);
   if (I != EnclosedInstrs.end()) {
-    if (I->second != this)
+    if (I->second != &C)
       // Instruction already belongs to another closure, avoid conflicts between
       // closure and mark this closure as illegal.
-      setAllIllegal();
+      C.setAllIllegal();
     return;
   }
 
-  EnclosedInstrs[MI] = this;
-  Instrs.push_back(MI);
+  EnclosedInstrs[MI] = &C;
+  C.addInstruction(MI);
 
   // Mark closure as illegal for reassignment to domains, if there is no
   // converter for the instruction or if the converter cannot convert the
   // instruction.
-  for (unsigned i = 0; i != LegalDstDomains.size(); ++i) {
-    if (LegalDstDomains[i]) {
+  for (int i = 0; i != NumDomains; ++i) {
+    if (C.isLegal((RegDomain)i)) {
       InstrConverterBase *IC = Converters.lookup({i, MI->getOpcode()});
       if (!IC || !IC->isLegal(MI, TII))
-        LegalDstDomains[i] = false;
+        C.setIllegal((RegDomain)i);
     }
   }
 }
 
-double Closure::calculateCost(RegDomain DstDomain) const {
-  assert(isLegal(DstDomain) && "Cannot calculate cost for illegal closure");
+double X86DomainReassignment::calculateCost(const Closure &C,
+                                            RegDomain DstDomain) const {
+  assert(C.isLegal(DstDomain) && "Cannot calculate cost for illegal closure");
 
   double Cost = 0.0;
-  for (auto MI : Instrs)
+  for (auto *MI : C.instructions())
     Cost +=
         Converters.lookup({DstDomain, MI->getOpcode()})->getExtraCost(MI, MRI);
   return Cost;
 }
 
-bool Closure::isReassignmentProfitable(RegDomain Domain) const {
-  return calculateCost(Domain) < 0.0;
+bool X86DomainReassignment::isReassignmentProfitable(const Closure &C,
+                                                     RegDomain Domain) const {
+  return calculateCost(C, Domain) < 0.0;
 }
 
-void Closure::Reassign(RegDomain Domain) const {
-  assert(isLegal(Domain) && "Cannot convert illegal closure");
+void X86DomainReassignment::reassign(const Closure &C, RegDomain Domain) const {
+  assert(C.isLegal(Domain) && "Cannot convert illegal closure");
 
   // Iterate all instructions in the closure, convert each one using the
   // appropriate converter.
   SmallVector<MachineInstr *, 8> ToErase;
-  for (auto MI : Instrs)
+  for (auto *MI : C.instructions())
     if (Converters.lookup({Domain, MI->getOpcode()})
             ->convertInstr(MI, TII, MRI))
       ToErase.push_back(MI);
 
   // Iterate all registers in the closure, replace them with registers in the
   // destination domain.
-  for (unsigned Reg : Edges) {
+  for (unsigned Reg : C.edges()) {
     MRI->setRegClass(Reg, getDstRC(MRI->getRegClass(Reg), Domain));
     for (auto &MO : MRI->use_operands(Reg)) {
       if (MO.isReg())
@@ -512,18 +523,19 @@ static bool usedAsAddr(const MachineInstr &MI, unsigned Reg,
   return false;
 }
 
-void Closure::buildClosure(unsigned Reg) {
+void X86DomainReassignment::buildClosure(Closure &C, unsigned Reg) {
   SmallVector<unsigned, 4> Worklist;
-  visitRegister(Reg, Worklist);
+  RegDomain Domain = NoDomain;
+  visitRegister(C, Reg, Domain, Worklist);
   while (!Worklist.empty()) {
     unsigned CurReg = Worklist.pop_back_val();
 
     // Register already in this closure.
-    if (!Edges.insert(CurReg).second)
+    if (!C.insertEdge(CurReg))
       continue;
 
     MachineInstr *DefMI = MRI->getVRegDef(CurReg);
-    encloseInstr(DefMI);
+    encloseInstr(C, DefMI);
 
     // Add register used by the defining MI to the worklist.
     // Do not add registers which are used in address calculation, they will be
@@ -542,7 +554,7 @@ void Closure::buildClosure(unsigned Reg) {
       auto &Op = DefMI->getOperand(OpIdx);
       if (!Op.isReg() || !Op.isUse())
         continue;
-      visitRegister(Op.getReg(), Worklist);
+      visitRegister(C, Op.getReg(), Domain, Worklist);
     }
 
     // Expand closure through register uses.
@@ -550,10 +562,10 @@ void Closure::buildClosure(unsigned Reg) {
       // We would like to avoid converting closures which calculare addresses,
       // as this should remain in GPRs.
       if (usedAsAddr(UseMI, CurReg, TII)) {
-        setAllIllegal();
+        C.setAllIllegal();
         continue;
       }
-      encloseInstr(&UseMI);
+      encloseInstr(C, &UseMI);
 
       for (auto &DefOp : UseMI.defs()) {
         if (!DefOp.isReg())
@@ -561,10 +573,10 @@ void Closure::buildClosure(unsigned Reg) {
 
         unsigned DefReg = DefOp.getReg();
         if (!TargetRegisterInfo::isVirtualRegister(DefReg)) {
-          setAllIllegal();
+          C.setAllIllegal();
           continue;
         }
-        visitRegister(DefReg, Worklist);
+        visitRegister(C, DefReg, Domain, Worklist);
       }
     }
   }
@@ -701,8 +713,8 @@ bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
   initConverters();
   bool Changed = false;
 
-  DenseSet<unsigned> EnclosedEdges;
-  DenseMap<MachineInstr *, Closure *> EnclosedInstrs;
+  EnclosedEdges.clear();
+  EnclosedInstrs.clear();
 
   std::vector<Closure> Closures;
 
@@ -719,9 +731,8 @@ bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
       continue;
 
     // Calculate closure starting with Reg.
-    Closure C(TII, MRI, Converters, {MaskDomain}, EnclosedEdges,
-              EnclosedInstrs);
-    C.buildClosure(Reg);
+    Closure C({MaskDomain});
+    buildClosure(C, Reg);
 
     // Collect all closures that can potentially be converted.
     if (!C.empty() && C.isLegal(MaskDomain))
@@ -729,8 +740,8 @@ bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
   }
 
   for (Closure &C : Closures)
-    if (C.isReassignmentProfitable(MaskDomain)) {
-      C.Reassign(MaskDomain);
+    if (isReassignmentProfitable(C, MaskDomain)) {
+      reassign(C, MaskDomain);
       ++NumClosuresConverted;
       Changed = true;
     }

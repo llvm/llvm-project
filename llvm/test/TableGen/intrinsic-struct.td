@@ -2,6 +2,7 @@
 // XFAIL: vg_leak
 
 class IntrinsicProperty;
+class SDNodeProperty;
 
 class ValueType<int size, int value> {
   string Namespace = "MVT";
@@ -20,6 +21,7 @@ class Intrinsic<string name, list<LLVMType> ret_types = []> {
   list<LLVMType> RetTypes = ret_types;
   list<LLVMType> ParamTypes = [];
   list<IntrinsicProperty> IntrProperties = [];
+  list<SDNodeProperty> Properties = [];
 }
 
 def iAny : ValueType<0, 253>;

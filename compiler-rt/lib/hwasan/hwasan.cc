@@ -252,40 +252,112 @@ static void SigIll() {
   // __builtin_unreachable();
 }
 
-template<bool IsStore, unsigned LogSize>
-__attribute__((always_inline, nodebug))
-static void CheckAddress(uptr p) {
+enum class ErrorAction { Abort, Recover };
+enum class AccessType { Load, Store };
+
+template <ErrorAction EA, AccessType AT, unsigned LogSize>
+__attribute__((always_inline, nodebug)) static void CheckAddress(uptr p) {
   tag_t ptr_tag = GetTagFromPointer(p);
   uptr ptr_raw = p & ~kAddressTagMask;
   tag_t mem_tag = *(tag_t *)MEM_TO_SHADOW(ptr_raw);
-  if (UNLIKELY(ptr_tag != mem_tag)) SigIll<0x100 + 0x10 * IsStore + LogSize>();
+  if (UNLIKELY(ptr_tag != mem_tag)) {
+    SigIll<0x100 + 0x20 * (EA == ErrorAction::Recover) +
+           0x10 * (AT == AccessType::Store) + LogSize>();
+    if (EA == ErrorAction::Abort) __builtin_unreachable();
+  }
 }
 
-template<bool IsStore>
-__attribute__((always_inline, nodebug))
-static void CheckAddressSized(uptr p, uptr sz) {
+template <ErrorAction EA, AccessType AT>
+__attribute__((always_inline, nodebug)) static void CheckAddressSized(uptr p,
+                                                                      uptr sz) {
   CHECK_NE(0, sz);
   tag_t ptr_tag = GetTagFromPointer(p);
   uptr ptr_raw = p & ~kAddressTagMask;
   tag_t *shadow_first = (tag_t *)MEM_TO_SHADOW(ptr_raw);
   tag_t *shadow_last = (tag_t *)MEM_TO_SHADOW(ptr_raw + sz - 1);
   for (tag_t *t = shadow_first; t <= shadow_last; ++t)
-    if (UNLIKELY(ptr_tag != *t)) SigIll<0x100 + 0x10 * IsStore + 0xf>();
+    if (UNLIKELY(ptr_tag != *t)) {
+      SigIll<0x100 + 0x20 * (EA == ErrorAction::Recover) +
+             0x10 * (AT == AccessType::Store) + 0xf>();
+      if (EA == ErrorAction::Abort) __builtin_unreachable();
+    }
 }
 
-void __hwasan_load(uptr p, uptr sz) { CheckAddressSized<false>(p, sz); }
-void __hwasan_load1(uptr p) { CheckAddress<false, 0>(p); }
-void __hwasan_load2(uptr p) { CheckAddress<false, 1>(p); }
-void __hwasan_load4(uptr p) { CheckAddress<false, 2>(p); }
-void __hwasan_load8(uptr p) { CheckAddress<false, 3>(p); }
-void __hwasan_load16(uptr p) { CheckAddress<false, 4>(p); }
+void __hwasan_load(uptr p, uptr sz) {
+  CheckAddressSized<ErrorAction::Abort, AccessType::Load>(p, sz);
+}
+void __hwasan_load1(uptr p) {
+  CheckAddress<ErrorAction::Abort, AccessType::Load, 0>(p);
+}
+void __hwasan_load2(uptr p) {
+  CheckAddress<ErrorAction::Abort, AccessType::Load, 1>(p);
+}
+void __hwasan_load4(uptr p) {
+  CheckAddress<ErrorAction::Abort, AccessType::Load, 2>(p);
+}
+void __hwasan_load8(uptr p) {
+  CheckAddress<ErrorAction::Abort, AccessType::Load, 3>(p);
+}
+void __hwasan_load16(uptr p) {
+  CheckAddress<ErrorAction::Abort, AccessType::Load, 4>(p);
+}
 
-void __hwasan_store(uptr p, uptr sz) { CheckAddressSized<true>(p, sz); }
-void __hwasan_store1(uptr p) { CheckAddress<true, 0>(p); }
-void __hwasan_store2(uptr p) { CheckAddress<true, 1>(p); }
-void __hwasan_store4(uptr p) { CheckAddress<true, 2>(p); }
-void __hwasan_store8(uptr p) { CheckAddress<true, 3>(p); }
-void __hwasan_store16(uptr p) { CheckAddress<true, 4>(p); }
+void __hwasan_load_noabort(uptr p, uptr sz) {
+  CheckAddressSized<ErrorAction::Recover, AccessType::Load>(p, sz);
+}
+void __hwasan_load1_noabort(uptr p) {
+  CheckAddress<ErrorAction::Recover, AccessType::Load, 0>(p);
+}
+void __hwasan_load2_noabort(uptr p) {
+  CheckAddress<ErrorAction::Recover, AccessType::Load, 1>(p);
+}
+void __hwasan_load4_noabort(uptr p) {
+  CheckAddress<ErrorAction::Recover, AccessType::Load, 2>(p);
+}
+void __hwasan_load8_noabort(uptr p) {
+  CheckAddress<ErrorAction::Recover, AccessType::Load, 3>(p);
+}
+void __hwasan_load16_noabort(uptr p) {
+  CheckAddress<ErrorAction::Recover, AccessType::Load, 4>(p);
+}
+
+void __hwasan_store(uptr p, uptr sz) {
+  CheckAddressSized<ErrorAction::Abort, AccessType::Store>(p, sz);
+}
+void __hwasan_store1(uptr p) {
+  CheckAddress<ErrorAction::Abort, AccessType::Store, 0>(p);
+}
+void __hwasan_store2(uptr p) {
+  CheckAddress<ErrorAction::Abort, AccessType::Store, 1>(p);
+}
+void __hwasan_store4(uptr p) {
+  CheckAddress<ErrorAction::Abort, AccessType::Store, 2>(p);
+}
+void __hwasan_store8(uptr p) {
+  CheckAddress<ErrorAction::Abort, AccessType::Store, 3>(p);
+}
+void __hwasan_store16(uptr p) {
+  CheckAddress<ErrorAction::Abort, AccessType::Store, 4>(p);
+}
+
+void __hwasan_store_noabort(uptr p, uptr sz) {
+  CheckAddressSized<ErrorAction::Recover, AccessType::Store>(p, sz);
+}
+void __hwasan_store1_noabort(uptr p) {
+  CheckAddress<ErrorAction::Recover, AccessType::Store, 0>(p);
+}
+void __hwasan_store2_noabort(uptr p) {
+  CheckAddress<ErrorAction::Recover, AccessType::Store, 1>(p);
+}
+void __hwasan_store4_noabort(uptr p) {
+  CheckAddress<ErrorAction::Recover, AccessType::Store, 2>(p);
+}
+void __hwasan_store8_noabort(uptr p) {
+  CheckAddress<ErrorAction::Recover, AccessType::Store, 3>(p);
+}
+void __hwasan_store16_noabort(uptr p) {
+  CheckAddress<ErrorAction::Recover, AccessType::Store, 4>(p);
+}
 
 #if !SANITIZER_SUPPORTS_WEAK_HOOKS
 extern "C" {

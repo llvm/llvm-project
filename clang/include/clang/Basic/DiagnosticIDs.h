@@ -297,7 +297,7 @@ public:
 
   /// \brief Get the set of all diagnostic IDs.
   static void getAllDiagnostics(diag::Flavor Flavor,
-                                SmallVectorImpl<diag::kind> &Diags);
+                                std::vector<diag::kind> &Diags);
 
   /// \brief Get the diagnostic option with the closest edit distance to the
   /// given group name.

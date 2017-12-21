@@ -18,6 +18,7 @@
 #include "CodeGenHwModes.h"
 #include "CodeGenIntrinsics.h"
 #include "CodeGenTarget.h"
+#include "SDNodeProperties.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
@@ -1204,6 +1205,7 @@ inline bool SDNodeInfo::ApplyTypeConstraints(TreePatternNode *N,
       MadeChange |= TypeConstraints[i].ApplyTypeConstraint(N, *this, TP);
     return MadeChange;
   }
+
 } // end namespace llvm
 
 #endif

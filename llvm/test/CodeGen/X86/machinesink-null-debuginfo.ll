@@ -11,10 +11,10 @@ define double @_Z3fooddb(double %x, double %y, i1 zeroext %c) local_unnamed_addr
   tail call void @llvm.dbg.value(metadata double %y, metadata !14, metadata !DIExpression()), !dbg !17
   tail call void @llvm.dbg.value(metadata i1 %c, metadata !15, metadata !DIExpression()), !dbg !18
   %a = fdiv double %x, 3.000000e+00
-  %b = fdiv double %y, 5.000000e+00, !dbg !21
+  %b = fdiv double %y, 5.000000e+00, !dbg !19
   %cond = select i1 %c,  double %a, double %b
-; CHECK-NOT: debug-location !21
-  ret double %cond, !dbg !22
+; CHECK-NOT: debug-location !19
+  ret double %cond, !dbg !20
 }
 
 ; Function Attrs: nounwind readnone speculatable
@@ -45,5 +45,5 @@ attributes #1 = { nounwind readnone speculatable }
 !16 = !DILocation(line: 1, column: 19, scope: !7)
 !17 = !DILocation(line: 1, column: 29, scope: !7)
 !18 = !DILocation(line: 1, column: 37, scope: !7)
-!21 = !DILocation(line: 2, column: 26, scope: !7)
-!22 = !DILocation(line: 2, column: 3, scope: !7)
+!19 = !DILocation(line: 2, column: 26, scope: !7)
+!20 = !DILocation(line: 2, column: 3, scope: !7)

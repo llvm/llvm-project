@@ -204,14 +204,38 @@ public:
     llvm_unreachable("Invalid HVX vector length settings");
   }
 
-  bool isHVXVectorType(MVT VecTy) const {
+  ArrayRef<MVT> getHVXElementTypes() const {
+    static MVT Types[] = { MVT::i8, MVT::i16, MVT::i32 };
+    return Types;
+  }
+
+  bool isHVXVectorType(MVT VecTy, bool IncludeBool = false) const {
     if (!VecTy.isVector() || !useHVXOps())
       return false;
-    unsigned ElemWidth = VecTy.getVectorElementType().getSizeInBits();
-    if (ElemWidth < 8 || ElemWidth > 64)
+    MVT ElemTy = VecTy.getVectorElementType();
+    if (!IncludeBool && ElemTy == MVT::i1)
       return false;
+
+    unsigned HwLen = getVectorLength();
+    unsigned NumElems = VecTy.getVectorNumElements();
+    ArrayRef<MVT> ElemTypes = getHVXElementTypes();
+
+    if (IncludeBool && ElemTy == MVT::i1) {
+      // Special case for the v512i1, etc.
+      if (8*HwLen == NumElems)
+        return true;
+      // Boolean HVX vector types are formed from regular HVX vector types
+      // by replacing the element type with i1.
+      for (MVT T : ElemTypes)
+        if (NumElems * T.getSizeInBits() == 8*HwLen)
+          return true;
+      return false;
+    }
+
     unsigned VecWidth = VecTy.getSizeInBits();
-    return VecWidth == 8*getVectorLength() || VecWidth == 16*getVectorLength();
+    if (VecWidth != 8*HwLen && VecWidth != 16*HwLen)
+      return false;
+    return llvm::any_of(ElemTypes, [ElemTy] (MVT T) { return ElemTy == T; });
   }
 
   unsigned getL1CacheLineSize() const;
