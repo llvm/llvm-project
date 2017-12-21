@@ -3,14 +3,14 @@
 ; RUN: lld -flavor wasm %t.o %t2.o -o %t.wasm
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
-; Test that weak aliases (bar is a weak alias of foo) are linked correctly
+; Test that weak aliases (alias_fn is a weak alias of direct_fn) are linked correctly
 
-declare i32 @bar() local_unnamed_addr #1
+declare i32 @alias_fn() local_unnamed_addr #1
 
 ; Function Attrs: nounwind uwtable
 define i32 @_start() local_unnamed_addr #1 {
 entry:
-  %call = tail call i32 @bar() #2
+  %call = tail call i32 @alias_fn() #2
   ret i32 %call
 }
 
@@ -24,14 +24,14 @@ entry:
 ; CHECK-NEXT:         ReturnType:      I32
 ; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:   - Type:            FUNCTION
-; CHECK-NEXT:     FunctionTypes:   [ 0, 0, 0 ]
+; CHECK-NEXT:     FunctionTypes:   [ 0, 0, 0, 0, 0, 0 ]
 ; CHECK-NEXT:   - Type:            TABLE
 ; CHECK-NEXT:     Tables:
 ; CHECK-NEXT:       - ElemType:        ANYFUNC
 ; CHECK-NEXT:         Limits:
 ; CHECK-NEXT:           Flags:           [ HAS_MAX ]
-; CHECK-NEXT:           Initial:         0x00000001
-; CHECK-NEXT:           Maximum:         0x00000001
+; CHECK-NEXT:           Initial:         0x00000002
+; CHECK-NEXT:           Maximum:         0x00000002
 ; CHECK-NEXT:   - Type:            MEMORY
 ; CHECK-NEXT:     Memories:
 ; CHECK-NEXT:       - Initial:         0x00000002
@@ -50,15 +50,30 @@ entry:
 ; CHECK-NEXT:       - Name:            _start
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           0
-; CHECK-NEXT:       - Name:            bar
+; CHECK-NEXT:       - Name:            alias_fn
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           1
-; CHECK-NEXT:       - Name:            foo
+; CHECK-NEXT:       - Name:            direct_fn
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           1
-; CHECK-NEXT:       - Name:            call_bar
+; CHECK-NEXT:       - Name:            call_direct
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           2
+; CHECK-NEXT:       - Name:            call_alias
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Index:           3
+; CHECK-NEXT:       - Name:            call_alias_ptr
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Index:           4
+; CHECK-NEXT:       - Name:            call_direct_ptr
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Index:           5
+; CHECK-NEXT:   - Type:            ELEM
+; CHECK-NEXT:     Segments:        
+; CHECK-NEXT:       - Offset:          
+; CHECK-NEXT:           Opcode:          I32_CONST
+; CHECK-NEXT:           Value:           1
+; CHECK-NEXT:         Functions:       [ 1 ]
 ; CHECK-NEXT:   - Type:            CODE
 ; CHECK-NEXT:     Functions:
 ; CHECK-NEXT:       - Locals:
@@ -67,6 +82,14 @@ entry:
 ; CHECK-NEXT:         Body:            41000B
 ; CHECK-NEXT:       - Locals:
 ; CHECK-NEXT:         Body:            1081808080000B
+; CHECK-NEXT:       - Locals:
+; CHECK-NEXT:         Body:            1081808080000B
+; CHECK-NEXT:       - Locals:          
+; CHECK-NEXT:         Body:            41010B
+; CHECK-NEXT:       - Locals:          
+; CHECK-NEXT:           - Type:            I32
+; CHECK-NEXT:             Count:           2
+; CHECK-NEXT:         Body:            23808080800041106B220024808080800020004181808080003602081081808080002101200041106A24808080800020010B
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
 ; CHECK-NEXT:     DataSize:        0
@@ -76,7 +99,13 @@ entry:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            _start
 ; CHECK-NEXT:       - Index:           1
-; CHECK-NEXT:         Name:            foo
+; CHECK-NEXT:         Name:            direct_fn
 ; CHECK-NEXT:       - Index:           2
-; CHECK-NEXT:         Name:            call_bar
+; CHECK-NEXT:         Name:            call_direct
+; CHECK-NEXT:       - Index:           3
+; CHECK-NEXT:         Name:            call_alias
+; CHECK-NEXT:       - Index:           4
+; CHECK-NEXT:         Name:            call_alias_ptr
+; CHECK-NEXT:       - Index:           5
+; CHECK-NEXT:         Name:            call_direct_ptr
 ; CHECK-NEXT: ...
