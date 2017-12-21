@@ -30,10 +30,9 @@ define <8 x i1> @test2(<2 x i1> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; CHECK-NEXT:    vptestmq %xmm0, %xmm0, %k0
-; CHECK-NEXT:    vpmovm2q %k0, %zmm0
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; CHECK-NEXT:    vpmovq2m %zmm0, %k0
+; CHECK-NEXT:    vpmovm2d %k0, %ymm0
+; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = zero,zero,ymm0[0,1]
+; CHECK-NEXT:    vpmovd2m %ymm0, %k0
 ; CHECK-NEXT:    vpmovm2w %k0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq

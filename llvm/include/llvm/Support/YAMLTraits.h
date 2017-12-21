@@ -1725,7 +1725,7 @@ template <typename T> struct StdMapStringCustomMappingTraitsImpl {
   template <> struct ScalarTraits<Type> {                                      \
     static void output(const Type &Value, void *ctx, raw_ostream &Out);        \
     static StringRef input(StringRef Scalar, void *ctxt, Type &Value);         \
-    static QuotingType mustQuote(StringRef) { return MustQuote; }         \
+    static QuotingType mustQuote(StringRef) { return MustQuote; }              \
   };                                                                           \
   }                                                                            \
   }

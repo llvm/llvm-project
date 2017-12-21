@@ -491,6 +491,15 @@ OMPT_API_ROUTINE int ompt_get_task_info(int ancestor_level, int *type,
 }
 
 /*****************************************************************************
+ * num_procs
+ ****************************************************************************/
+
+OMPT_API_ROUTINE int ompt_get_num_procs(void) {
+// copied from kmp_ftn_entry.h (but modified: OMPT can only be called when runtime is initialized)
+  return __kmp_avail_proc;
+}
+
+/*****************************************************************************
  * places
  ****************************************************************************/
 

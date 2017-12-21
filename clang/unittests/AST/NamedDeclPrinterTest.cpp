@@ -143,7 +143,7 @@ TEST(NamedDeclPrinter, TestNamedEnum) {
   ASSERT_TRUE(PrintedWrittenNamedDeclCXX11Matches(
     "enum X { A };",
     "A",
-    "X::A"));
+    "A"));
 }
 
 TEST(NamedDeclPrinter, TestScopedNamedEnum) {
@@ -164,7 +164,7 @@ TEST(NamedDeclPrinter, TestClassWithUnscopedNamedEnum) {
   ASSERT_TRUE(PrintedWrittenNamedDeclCXX11Matches(
     "class X { enum Y { A }; };",
     "A",
-    "X::Y::A"));
+    "X::A"));
 }
 
 TEST(NamedDeclPrinter, TestClassWithScopedNamedEnum) {

@@ -79,8 +79,10 @@ bool DWARFUnit::getAddrOffsetSectionItem(uint32_t Index,
 
 bool DWARFUnit::getStringOffsetSectionItem(uint32_t Index,
                                            uint64_t &Result) const {
-  unsigned ItemSize = getDwarfOffsetByteSize();
-  uint32_t Offset = StringOffsetSectionBase + Index * ItemSize;
+  if (!StringOffsetsTableContribution)
+    return false;
+  unsigned ItemSize = getDwarfStringOffsetsByteSize();
+  uint32_t Offset = getStringOffsetsBase() + Index * ItemSize;
   if (StringOffsetSection.Data.size() < Offset + ItemSize)
     return false;
   DWARFDataExtractor DA(Context.getDWARFObj(), StringOffsetSection,
@@ -251,15 +253,28 @@ size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
       RangeSectionBase = toSectionOffset(UnitDie.find(DW_AT_rnglists_base), 0);
     }
 
-    // In general, we derive the offset of the unit's contibution to the
-    // debug_str_offsets{.dwo} section from the unit DIE's
-    // DW_AT_str_offsets_base attribute. In dwp files we add to it the offset
-    // we get from the index table.
-    StringOffsetSectionBase =
-        toSectionOffset(UnitDie.find(DW_AT_str_offsets_base), 0);
+    // In general, in DWARF v5 and beyond we derive the start of the unit's
+    // contribution to the string offsets table from the unit DIE's
+    // DW_AT_str_offsets_base attribute. Split DWARF units do not use this
+    // attribute, so we assume that there is a contribution to the string
+    // offsets table starting at offset 0 of the debug_str_offsets.dwo section.
+    // In both cases we need to determine the format of the contribution,
+    // which may differ from the unit's format.
+    uint64_t StringOffsetsContributionBase =
+        isDWO ? 0 : toSectionOffset(UnitDie.find(DW_AT_str_offsets_base), 0);
     if (IndexEntry)
       if (const auto *C = IndexEntry->getOffset(DW_SECT_STR_OFFSETS))
-        StringOffsetSectionBase += C->Offset;
+        StringOffsetsContributionBase += C->Offset;
+
+    DWARFDataExtractor DA(Context.getDWARFObj(), StringOffsetSection,
+                          isLittleEndian, 0);
+    if (isDWO)
+      StringOffsetsTableContribution =
+          determineStringOffsetsTableContributionDWO(
+              DA, StringOffsetsContributionBase);
+    else if (getVersion() >= 5)
+      StringOffsetsTableContribution = determineStringOffsetsTableContribution(
+          DA, StringOffsetsContributionBase);
 
     // Don't fall back to DW_AT_GNU_ranges_base: it should be ignored for
     // skeleton CU DIE, so that DWARF users not aware of it are not broken.
@@ -465,4 +480,90 @@ const DWARFAbbreviationDeclarationSet *DWARFUnit::getAbbreviations() const {
   if (!Abbrevs)
     Abbrevs = Abbrev->getAbbreviationDeclarationSet(AbbrOffset);
   return Abbrevs;
+}
+
+Optional<StrOffsetsContributionDescriptor>
+StrOffsetsContributionDescriptor::validateContributionSize(
+    DWARFDataExtractor &DA) {
+  uint8_t EntrySize = getDwarfOffsetByteSize();
+  // In order to ensure that we don't read a partial record at the end of
+  // the section we validate for a multiple of the entry size.
+  uint64_t ValidationSize = alignTo(Size, EntrySize);
+  // Guard against overflow.
+  if (ValidationSize >= Size)
+    if (DA.isValidOffsetForDataOfSize((uint32_t)Base, ValidationSize))
+      return *this;
+  return Optional<StrOffsetsContributionDescriptor>();
+}
+
+// Look for a DWARF64-formatted contribution to the string offsets table
+// starting at a given offset and record it in a descriptor.
+static Optional<StrOffsetsContributionDescriptor>
+parseDWARF64StringOffsetsTableHeader(DWARFDataExtractor &DA, uint32_t Offset) {
+  if (!DA.isValidOffsetForDataOfSize(Offset, 16))
+    return Optional<StrOffsetsContributionDescriptor>();
+
+  if (DA.getU32(&Offset) != 0xffffffff)
+    return Optional<StrOffsetsContributionDescriptor>();
+
+  uint64_t Size = DA.getU64(&Offset);
+  uint8_t Version = DA.getU16(&Offset);
+  (void)DA.getU16(&Offset); // padding
+  return StrOffsetsContributionDescriptor(Offset, Size, Version, DWARF64);
+  //return Optional<StrOffsetsContributionDescriptor>(Descriptor);
+}
+
+// Look for a DWARF32-formatted contribution to the string offsets table
+// starting at a given offset and record it in a descriptor.
+static Optional<StrOffsetsContributionDescriptor>
+parseDWARF32StringOffsetsTableHeader(DWARFDataExtractor &DA, uint32_t Offset) {
+  if (!DA.isValidOffsetForDataOfSize(Offset, 8))
+    return Optional<StrOffsetsContributionDescriptor>();
+  uint32_t ContributionSize = DA.getU32(&Offset);
+  if (ContributionSize >= 0xfffffff0)
+    return Optional<StrOffsetsContributionDescriptor>();
+  uint8_t Version = DA.getU16(&Offset);
+  (void)DA.getU16(&Offset); // padding
+  return StrOffsetsContributionDescriptor(Offset, ContributionSize, Version, DWARF32);
+  //return Optional<StrOffsetsContributionDescriptor>(Descriptor);
+}
+
+Optional<StrOffsetsContributionDescriptor>
+DWARFUnit::determineStringOffsetsTableContribution(DWARFDataExtractor &DA,
+                                                   uint64_t Offset) {
+  Optional<StrOffsetsContributionDescriptor> Descriptor;
+  // Attempt to find a DWARF64 contribution 16 bytes before the base.
+  if (Offset >= 16)
+    Descriptor =
+        parseDWARF64StringOffsetsTableHeader(DA, (uint32_t)Offset - 16);
+  // Try to find a DWARF32 contribution 8 bytes before the base.
+  if (!Descriptor && Offset >= 8)
+    Descriptor = parseDWARF32StringOffsetsTableHeader(DA, (uint32_t)Offset - 8);
+  return Descriptor ? Descriptor->validateContributionSize(DA) : Descriptor;
+}
+
+Optional<StrOffsetsContributionDescriptor>
+DWARFUnit::determineStringOffsetsTableContributionDWO(DWARFDataExtractor &DA,
+                                                      uint64_t Offset) {
+  if (getVersion() >= 5) {
+    // Look for a valid contribution at the given offset.
+    auto Descriptor =
+        parseDWARF64StringOffsetsTableHeader(DA, (uint32_t)Offset);
+    if (!Descriptor)
+      Descriptor = parseDWARF32StringOffsetsTableHeader(DA, (uint32_t)Offset);
+    return Descriptor ? Descriptor->validateContributionSize(DA) : Descriptor;
+  }
+  // Prior to DWARF v5, we derive the contribution size from the
+  // index table (in a package file). In a .dwo file it is simply
+  // the length of the string offsets section.
+  uint64_t Size = 0;
+  if (!IndexEntry)
+    Size = StringOffsetSection.Data.size();
+  else if (const auto *C = IndexEntry->getOffset(DW_SECT_STR_OFFSETS))
+    Size = C->Length;
+  // Return a descriptor with the given offset as base, version 4 and
+  // DWARF32 format.
+  //return Optional<StrOffsetsContributionDescriptor>(
+      //StrOffsetsContributionDescriptor(Offset, Size, 4, DWARF32));
+  return StrOffsetsContributionDescriptor(Offset, Size, 4, DWARF32);
 }

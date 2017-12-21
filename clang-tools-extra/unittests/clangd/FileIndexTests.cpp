@@ -93,7 +93,8 @@ std::vector<std::string> match(const SymbolIndex &I,
   std::vector<std::string> Matches;
   auto Ctx = Context::empty();
   I.fuzzyFind(Ctx, Req, [&](const Symbol &Sym) {
-    Matches.push_back(Sym.Scope + (Sym.Scope.empty() ? "" : "::") + Sym.Name);
+    Matches.push_back(
+        (Sym.Scope + (Sym.Scope.empty() ? "" : "::") + Sym.Name).str());
   });
   return Matches;
 }

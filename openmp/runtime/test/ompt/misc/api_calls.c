@@ -43,6 +43,9 @@ int main()
 
     printf("%" PRIu64 ": sched_getcpu()=%d\n", ompt_get_thread_data()->value, sched_getcpu());
     printf("%" PRIu64 ": ompt_get_proc_id()=%d\n", ompt_get_thread_data()->value, ompt_get_proc_id());
+
+    printf("%" PRIu64 ": omp_get_num_procs()=%d\n", ompt_get_thread_data()->value, omp_get_num_procs());
+    printf("%" PRIu64 ": ompt_get_num_procs()=%d\n", ompt_get_thread_data()->value, ompt_get_num_procs());
   }
 
   // Check if libomp supports the callbacks for this test.
@@ -60,6 +63,9 @@ int main()
 
   // CHECK: {{^}}[[MASTER_ID]]: sched_getcpu()=[[CPU_ID:[0-9]+]]
   // CHECK: {{^}}[[MASTER_ID]]: ompt_get_proc_id()=[[CPU_ID]]
+
+  // CHECK: {{^}}[[MASTER_ID]]: omp_get_num_procs()=[[NUM_PROCS:[-]?[0-9]+]]
+  // CHECK: {{^}}[[MASTER_ID]]: ompt_get_num_procs()=[[NUM_PROCS]]
 
 
   return 0;

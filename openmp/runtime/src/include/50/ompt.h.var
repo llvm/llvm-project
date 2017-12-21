@@ -32,6 +32,7 @@
     macro (ompt_get_thread_data)            \
     macro (ompt_get_unique_id)              \
                                             \
+    macro(ompt_get_num_procs)               \
     macro(ompt_get_num_places)              \
     macro(ompt_get_place_proc_ids)          \
     macro(ompt_get_place_num)               \
@@ -581,6 +582,9 @@ OMPT_API_FUNCTION(int, ompt_get_task_info, (
     ompt_data_t **parallel_data,
     int *thread_num
 ));
+
+/* procs */
+OMPT_API_FUNCTION(int, ompt_get_num_procs, (void));
 
 /* places */
 OMPT_API_FUNCTION(int, ompt_get_num_places, (void));

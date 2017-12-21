@@ -17,6 +17,55 @@
 
 namespace __sanitizer {
 
+// MIPS32 does not support atomic > 4 bytes. To address this lack of
+// functionality, the sanitizer library provides helper methods which use an
+// internal spin lock mechanism to emulate atomic oprations when the size is
+// 8 bytes.
+#if defined(_MIPS_SIM) && _MIPS_SIM == _ABIO32
+static void __spin_lock(volatile int *lock) {
+  while (__sync_lock_test_and_set(lock, 1))
+    while (*lock) {
+    }
+}
+
+static void __spin_unlock(volatile int *lock) { __sync_lock_release(lock); }
+
+
+// Make sure the lock is on its own cache line to prevent false sharing.
+// Put it inside a struct that is aligned and padded to the typical MIPS
+// cacheline which is 32 bytes.
+static struct {
+  int lock;
+  char pad[32 - sizeof(int)];
+} __attribute__((aligned(32))) lock = {0};
+
+template <class T>
+T __mips_sync_fetch_and_add(volatile T *ptr, T val) {
+  T ret;
+
+  __spin_lock(&lock.lock);
+
+  ret = *ptr;
+  *ptr = ret + val;
+
+  __spin_unlock(&lock.lock);
+
+  return ret;
+}
+
+template <class T>
+T __mips_sync_val_compare_and_swap(volatile T *ptr, T oldval, T newval) {
+  T ret;
+  __spin_lock(&lock.lock);
+
+  ret = *ptr;
+  if (ret == oldval) *ptr = newval;
+
+  __spin_unlock(&lock.lock);
+
+  return ret;
+}
+#endif
 
 INLINE void proc_yield(int cnt) {
   __asm__ __volatile__("" ::: "memory");
@@ -54,8 +103,15 @@ INLINE typename T::Type atomic_load(
     // 64-bit load on 32-bit platform.
     // Gross, but simple and reliable.
     // Assume that it is not in read-only memory.
+#if defined(_MIPS_SIM) && _MIPS_SIM == _ABIO32
+    typename T::Type volatile *val_ptr =
+        const_cast<typename T::Type volatile *>(&a->val_dont_use);
+    v = __mips_sync_fetch_and_add<u64>(
+        reinterpret_cast<u64 volatile *>(val_ptr), 0);
+#else
     v = __sync_fetch_and_add(
         const_cast<typename T::Type volatile *>(&a->val_dont_use), 0);
+#endif
   }
   return v;
 }
@@ -85,7 +141,14 @@ INLINE void atomic_store(volatile T *a, typename T::Type v, memory_order mo) {
     typename T::Type cmp = a->val_dont_use;
     typename T::Type cur;
     for (;;) {
+#if defined(_MIPS_SIM) && _MIPS_SIM == _ABIO32
+      typename T::Type volatile *val_ptr =
+          const_cast<typename T::Type volatile *>(&a->val_dont_use);
+      cur = __mips_sync_val_compare_and_swap<u64>(
+          reinterpret_cast<u64 volatile *>(val_ptr), (u64)cmp, (u64)v);
+#else
       cur = __sync_val_compare_and_swap(&a->val_dont_use, cmp, v);
+#endif
       if (cmp == v)
         break;
       cmp = cur;

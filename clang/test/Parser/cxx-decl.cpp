@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fsyntax-only -triple i386-linux -pedantic-errors -fcxx-exceptions -fexceptions %s
-// RUN: %clang_cc1 -verify -fsyntax-only -triple i386-linux -pedantic-errors -fcxx-exceptions -fexceptions -std=c++98 %s
-// RUN: %clang_cc1 -verify -fsyntax-only -triple i386-linux -pedantic-errors -fcxx-exceptions -fexceptions -std=c++11 %s
+// RUN: %clang_cc1 -verify -fsyntax-only -triple i386-linux -Wredundant-parens -pedantic-errors -fcxx-exceptions -fexceptions %s
+// RUN: %clang_cc1 -verify -fsyntax-only -triple i386-linux -Wredundant-parens -pedantic-errors -fcxx-exceptions -fexceptions -std=c++98 %s
+// RUN: %clang_cc1 -verify -fsyntax-only -triple i386-linux -Wredundant-parens -pedantic-errors -fcxx-exceptions -fexceptions -std=c++11 %s
 
 const char const *x10; // expected-error {{duplicate 'const' declaration specifier}}
 
@@ -83,7 +83,7 @@ namespace Commas {
 
   int global1,
   __attribute__(()) global2,
-  (global5),
+  (global5), // expected-warning {{redundant parentheses surrounding declarator}}
   *global6,
   &global7 = global1,
   &&global8 = static_cast<int&&>(global1),
@@ -261,6 +261,25 @@ namespace DuplicateFriend {
     // expected-error@-2 {{'friend' must appear first in a non-function declaration}}
 #endif
   };
+}
+
+namespace NNS {
+  struct A {};
+  namespace B { extern A C1, C2, *C3, C4[], C5; }
+  // Do not produce a redundant parentheses warning here; removing these parens
+  // changes the meaning of the program.
+  A (::NNS::B::C1);
+  A (NNS::B::C2); // expected-warning {{redundant parentheses surrounding declarator}}
+  A (*::NNS::B::C3); // expected-warning {{redundant parentheses surrounding declarator}}
+  A (::NNS::B::C4[2]);
+  // Removing one of these sets of parentheses would be reasonable.
+  A ((::NNS::B::C5)); // expected-warning {{redundant parentheses surrounding declarator}}
+
+  void f() {
+    // FIXME: A vexing-parse warning here would be useful.
+    A(::NNS::B::C1); // expected-error {{definition or redeclaration}}
+    A(NNS::B::C1); // expected-warning {{redundant paren}} expected-error {{definition or redeclaration}}
+  }
 }
 
 // PR8380

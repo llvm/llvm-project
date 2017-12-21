@@ -1821,11 +1821,11 @@ define i32 @test_insertelement_variable_v32i1(<32 x i8> %a, i8 %b, i32 %index) {
 ; SKX-NEXT:    subq $128, %rsp
 ; SKX-NEXT:    ## kill: def %esi killed %esi def %rsi
 ; SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; SKX-NEXT:    vpcmpnleub %ymm1, %ymm0, %k1
+; SKX-NEXT:    vpcmpnleub %ymm1, %ymm0, %k0
 ; SKX-NEXT:    xorl %eax, %eax
 ; SKX-NEXT:    testb %dil, %dil
 ; SKX-NEXT:    setne %al
-; SKX-NEXT:    vmovdqu16 {{.*}}(%rip), %zmm0 {%k1} {z}
+; SKX-NEXT:    vpmovm2w %k0, %zmm0
 ; SKX-NEXT:    vmovdqa32 %zmm0, (%rsp)
 ; SKX-NEXT:    andl $31, %esi
 ; SKX-NEXT:    movw %ax, (%rsp,%rsi,2)
@@ -1905,10 +1905,10 @@ define i64 @test_insertelement_variable_v64i1(<64 x i8> %a, i8 %b, i32 %index) {
 ; SKX-NEXT:    subq $128, %rsp
 ; SKX-NEXT:    ## kill: def %esi killed %esi def %rsi
 ; SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; SKX-NEXT:    vpcmpnleub %zmm1, %zmm0, %k1
+; SKX-NEXT:    vpcmpnleub %zmm1, %zmm0, %k0
 ; SKX-NEXT:    andl $63, %esi
 ; SKX-NEXT:    testb %dil, %dil
-; SKX-NEXT:    vmovdqu8 {{.*}}(%rip), %zmm0 {%k1} {z}
+; SKX-NEXT:    vpmovm2b %k0, %zmm0
 ; SKX-NEXT:    vmovdqa32 %zmm0, (%rsp)
 ; SKX-NEXT:    movq %rsp, %rax
 ; SKX-NEXT:    setne (%rsi,%rax)
