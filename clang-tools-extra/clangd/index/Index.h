@@ -52,7 +52,9 @@ public:
 
 private:
   friend llvm::hash_code hash_value(const SymbolID &ID) {
-    return hash_value(ArrayRef<uint8_t>(ID.HashValue));
+    // We already have a good hash, just return the first bytes.
+    static_assert(sizeof(size_t) <= 20, "size_t longer than SHA1!");
+    return *reinterpret_cast<const size_t *>(ID.HashValue.data());
   }
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                        const SymbolID &ID);

@@ -102,7 +102,10 @@ public:
 
   // True is this is an undefined weak symbol. This only works once
   // all input files have been added.
-  bool isUndefWeak() const;
+  bool isUndefWeak() const {
+    // See comment on Lazy the details.
+    return isWeak() && (isUndefined() || isLazy());
+  }
 
   StringRef getName() const { return Name; }
   uint8_t getVisibility() const { return StOther & 0x3; }
