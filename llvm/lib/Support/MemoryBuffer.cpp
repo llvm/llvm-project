@@ -140,17 +140,12 @@ MemoryBuffer::getMemBufferCopy(StringRef InputData, const Twine &BufferName) {
 }
 
 std::unique_ptr<MemoryBuffer>
-MemoryBuffer::getNewUninitMemBuffer(size_t Size, const Twine &BufferName) {
-  return WritableMemoryBuffer::getNewUninitMemBuffer(Size, BufferName);
-}
-
-std::unique_ptr<MemoryBuffer>
 MemoryBuffer::getNewMemBuffer(size_t Size, StringRef BufferName) {
-  std::unique_ptr<MemoryBuffer> SB = getNewUninitMemBuffer(Size, BufferName);
+  auto SB = WritableMemoryBuffer::getNewUninitMemBuffer(Size, BufferName);
   if (!SB)
     return nullptr;
-  memset(const_cast<char*>(SB->getBufferStart()), 0, Size);
-  return SB;
+  memset(SB->getBufferStart(), 0, Size);
+  return std::move(SB);
 }
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>

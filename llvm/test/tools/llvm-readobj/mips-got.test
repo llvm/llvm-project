@@ -1,4 +1,4 @@
-RUN: llvm-readobj -mips-plt-got %p/Inputs/relocs.obj.elf-mips | \
+RUN: not llvm-readobj -mips-plt-got %p/Inputs/relocs.obj.elf-mips 2>&1 | \
 RUN:   FileCheck %s -check-prefix GOT-OBJ
 RUN: llvm-readobj -mips-plt-got %p/Inputs/dynamic-table-exe.mips | \
 RUN:   FileCheck %s -check-prefix GOT-EXE
@@ -11,7 +11,26 @@ RUN:   FileCheck %s -check-prefix GOT-EMPTY
 RUN: llvm-readobj -mips-plt-got %p/Inputs/got-static.exe.mips | \
 RUN:   FileCheck %s -check-prefix GOT-STATIC
 
-GOT-OBJ: Cannot find .got section
+RUN: not llvm-readobj -mips-plt-got %p/Inputs/relocs.obj.elf-mips \
+RUN:                  --elf-output-style=GNU 2>&1 | \
+RUN:   FileCheck %s -check-prefix GNU-GOT-OBJ
+RUN: llvm-readobj -mips-plt-got %p/Inputs/dynamic-table-exe.mips \
+RUN:                  --elf-output-style=GNU | \
+RUN:   FileCheck %s -check-prefix GNU-GOT-EXE
+RUN: llvm-readobj -mips-plt-got %p/Inputs/dynamic-table-so.mips \
+RUN:                  --elf-output-style=GNU | \
+RUN:   FileCheck %s -check-prefix GNU-GOT-SO
+RUN: llvm-readobj -mips-plt-got %p/Inputs/got-tls.so.elf-mips64el \
+RUN:                  --elf-output-style=GNU | \
+RUN:   FileCheck %s -check-prefix GNU-GOT-TLS
+RUN: llvm-readobj -mips-plt-got %p/Inputs/got-empty.exe.mipsel \
+RUN:                  --elf-output-style=GNU | \
+RUN:   FileCheck %s -check-prefix GNU-GOT-EMPTY
+RUN: llvm-readobj -mips-plt-got %p/Inputs/got-static.exe.mips \
+RUN:                  --elf-output-style=GNU | \
+RUN:   FileCheck %s -check-prefix GNU-GOT-STATIC
+
+GOT-OBJ: Error reading file: Cannot find .got section.
 
 GOT-EXE:      Primary GOT {
 GOT-EXE-NEXT:   Canonical gp value: 0x418880
@@ -366,3 +385,116 @@ GOT-STATIC-NEXT:       Initial: 0x400104
 GOT-STATIC-NEXT:     }
 GOT-STATIC-NEXT:   ]
 GOT-STATIC-NEXT: }
+
+GNU-GOT-OBJ: Error reading file: Cannot find .got section.
+
+GNU-GOT-EXE:      Primary GOT:
+GNU-GOT-EXE-NEXT:  Canonical gp value: 00418880
+
+GNU-GOT-EXE:       Reserved entries:
+GNU-GOT-EXE-NEXT:    Address     Access  Initial Purpose
+GNU-GOT-EXE-NEXT:   00410890 -32752(gp) 00000000 Lazy resolver
+GNU-GOT-EXE-NEXT:   00410894 -32748(gp) 80000000 Module pointer (GNU extension)
+
+GNU-GOT-EXE:       Local entries:
+GNU-GOT-EXE-NEXT:    Address     Access  Initial
+GNU-GOT-EXE-NEXT:   00410898 -32744(gp) 00400418
+GNU-GOT-EXE-NEXT:   0041089c -32740(gp) 00410840
+GNU-GOT-EXE-NEXT:   004108a0 -32736(gp) 00000000
+
+GNU-GOT-EXE:       Global entries:
+GNU-GOT-EXE-NEXT:    Address     Access  Initial Sym.Val. Type    Ndx Name
+GNU-GOT-EXE-NEXT:   004108a4 -32732(gp) 00000000 00000000 FUNC    UND __gmon_start__
+
+GNU-GOT-EXE:      PLT GOT:
+
+GNU-GOT-EXE:       Reserved entries:
+GNU-GOT-EXE-NEXT:    Address  Initial Purpose
+GNU-GOT-EXE-NEXT:   00410854 00000000 PLT lazy resolver
+GNU-GOT-EXE-NEXT:   00410894 80000000 Module pointer
+
+GNU-GOT-EXE:       Entries:
+GNU-GOT-EXE-NEXT:    Address  Initial Sym.Val. Type    Ndx Name
+GNU-GOT-EXE-NEXT:   0041085c 00400800 00000000 FUNC    UND puts
+GNU-GOT-EXE-NEXT:   00410860 00400800 00000000 FUNC    UND __libc_start_main
+
+GNU-GOT-SO:      Primary GOT:
+GNU-GOT-SO-NEXT:  Canonical gp value: 000188d0
+
+GNU-GOT-SO:       Reserved entries:
+GNU-GOT-SO-NEXT:    Address     Access  Initial Purpose
+GNU-GOT-SO-NEXT:   000108e0 -32752(gp) 00000000 Lazy resolver
+GNU-GOT-SO-NEXT:   000108e4 -32748(gp) 80000000 Module pointer (GNU extension)
+
+GNU-GOT-SO:       Local entries:
+GNU-GOT-SO-NEXT:    Address     Access  Initial
+GNU-GOT-SO-NEXT:   000108e8 -32744(gp) 000108e0
+GNU-GOT-SO-NEXT:   000108ec -32740(gp) 00010000
+GNU-GOT-SO-NEXT:   000108f0 -32736(gp) 00010920
+GNU-GOT-SO-NEXT:   000108f4 -32732(gp) 000108cc
+GNU-GOT-SO-NEXT:   000108f8 -32728(gp) 00000000
+GNU-GOT-SO-NEXT:   000108fc -32724(gp) 00000000
+GNU-GOT-SO-NEXT:   00010900 -32720(gp) 00000000
+GNU-GOT-SO-NEXT:   00010904 -32716(gp) 00000000
+
+GNU-GOT-SO:       Global entries:
+GNU-GOT-SO-NEXT:    Address     Access  Initial Sym.Val. Type    Ndx Name
+GNU-GOT-SO-NEXT:   00010908 -32712(gp) 00000000 00000000 NOTYPE  UND _ITM_registerTMCloneTable
+GNU-GOT-SO-NEXT:   0001090c -32708(gp) 00000000 00000000 NOTYPE  UND _Jv_RegisterClasses
+GNU-GOT-SO-NEXT:   00010910 -32704(gp) 00000000 00000000 FUNC    UND __gmon_start__
+GNU-GOT-SO-NEXT:   00010914 -32700(gp) 00000840 00000840 FUNC    UND puts
+GNU-GOT-SO-NEXT:   00010918 -32696(gp) 00000000 00000000 NOTYPE  UND _ITM_deregisterTMCloneTable
+GNU-GOT-SO-NEXT:   0001091c -32692(gp) 00000000 00000000 FUNC    UND __cxa_finalize
+
+GNU-GOT-TLS:      Primary GOT:
+GNU-GOT-TLS-NEXT:  Canonical gp value: 0000000000018bf0
+
+GNU-GOT-TLS:       Reserved entries:
+GNU-GOT-TLS-NEXT:            Address     Access          Initial Purpose
+GNU-GOT-TLS-NEXT:   0000000000010c00 -32752(gp) 0000000000000000 Lazy resolver
+GNU-GOT-TLS-NEXT:   0000000000010c08 -32744(gp) 8000000000000000 Module pointer (GNU extension)
+
+GNU-GOT-TLS:       Local entries:
+GNU-GOT-TLS-NEXT:            Address     Access          Initial
+GNU-GOT-TLS-NEXT:   0000000000010c10 -32736(gp) 0000000000010000
+GNU-GOT-TLS-NEXT:   0000000000010c18 -32728(gp) 0000000000010c00
+GNU-GOT-TLS-NEXT:   0000000000010c20 -32720(gp) 0000000000010cb8
+GNU-GOT-TLS-NEXT:   0000000000010c28 -32712(gp) 0000000000010bf0
+GNU-GOT-TLS-NEXT:   0000000000010c30 -32704(gp) 0000000000000000
+GNU-GOT-TLS-NEXT:   0000000000010c38 -32696(gp) 0000000000000948
+GNU-GOT-TLS-NEXT:   0000000000010c40 -32688(gp) 0000000000000a20
+GNU-GOT-TLS-NEXT:   0000000000010c48 -32680(gp) 0000000000000af0
+GNU-GOT-TLS-NEXT:   0000000000010c50 -32672(gp) 0000000000000000
+GNU-GOT-TLS-NEXT:   0000000000010c58 -32664(gp) 0000000000000000
+GNU-GOT-TLS-NEXT:   0000000000010c60 -32656(gp) 0000000000000000
+
+GNU-GOT-TLS:       Global entries:
+GNU-GOT-TLS-NEXT:            Address     Access          Initial         Sym.Val. Type    Ndx Name
+GNU-GOT-TLS-NEXT:   0000000000010c68 -32648(gp) 0000000000000000 0000000000000000 NOTYPE  UND _ITM_registerTMCloneTable
+GNU-GOT-TLS-NEXT:   0000000000010c70 -32640(gp) 0000000000000000 0000000000000000 NOTYPE  UND _Jv_RegisterClasses
+GNU-GOT-TLS-NEXT:   0000000000010c78 -32632(gp) 0000000000000000 0000000000000000 FUNC    UND __gmon_start__
+GNU-GOT-TLS-NEXT:   0000000000010c80 -32624(gp) 0000000000000b60 0000000000000b60 FUNC    UND __tls_get_addr
+GNU-GOT-TLS-NEXT:   0000000000010c88 -32616(gp) 0000000000000000 0000000000000000 NOTYPE  UND _ITM_deregisterTMCloneTable
+GNU-GOT-TLS-NEXT:   0000000000010c90 -32608(gp) 0000000000000000 0000000000000000 FUNC    UND __cxa_finalize
+
+GNU-GOTY     : Primary GOT:
+GNU-GOT-EMPTY:  Canonical gp value: 00409ff0
+
+GNU-GOTY     :  Reserved entries:
+GNU-GOT-EMPTY:    Address     Access  Initial Purpose
+GNU-GOT-EMPTY:   00402000 -32752(gp) 00000000 Lazy resolver
+GNU-GOT-EMPTY:   00402004 -32748(gp) 80000000 Module pointer (GNU extension)
+
+GNU-GOT-STATIC:      Static GOT:
+GNU-GOT-STATIC-NEXT:  Canonical gp value: 00418100
+
+GNU-GOT-STATIC:       Reserved entries:
+GNU-GOT-STATIC-NEXT:    Address     Access  Initial Purpose
+GNU-GOT-STATIC-NEXT:   00410110 -32752(gp) 00000000 Lazy resolver
+GNU-GOT-STATIC-NEXT:   00410114 -32748(gp) 80000000 Module pointer (GNU extension)
+
+GNU-GOT-STATIC:       Local entries:
+GNU-GOT-STATIC-NEXT:    Address     Access  Initial
+GNU-GOT-STATIC-NEXT:   00410118 -32744(gp) 00400000
+GNU-GOT-STATIC-NEXT:   0041011c -32740(gp) 00400100
+GNU-GOT-STATIC-NEXT:   00410120 -32736(gp) 00400104

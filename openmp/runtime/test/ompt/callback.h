@@ -105,6 +105,12 @@ ompt_label_##id:
 #define print_possible_return_addresses(addr) \
   printf("%" PRIu64 ": current_address=%p\n", ompt_get_thread_data()->value, \
          ((char *)addr) - 8)
+#elif KMP_ARCH_AARCH64
+// On AArch64 the NOP instruction is 4 bytes long, can be followed by inserted
+// store instruction (another 4 bytes long).
+#define print_possible_return_addresses(addr) \
+  printf("%" PRIu64 ": current_address=%p or %p\n", ompt_get_thread_data()->value, \
+         ((char *)addr) - 4, ((char *)addr) - 8)
 #else
 #error Unsupported target architecture, cannot determine address offset!
 #endif

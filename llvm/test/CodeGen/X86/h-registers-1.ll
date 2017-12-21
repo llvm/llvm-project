@@ -22,21 +22,18 @@ define i64 @foo(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, i64 %h) 
 ; CHECK-NEXT:    movzbl %ah, %eax # NOREX
 ; CHECK-NEXT:    movq %rax, %r10
 ; CHECK-NEXT:    movzbl %dh, %edx # NOREX
-; CHECK-NEXT:    movzbl %ch, %eax # NOREX
-; CHECK-NEXT:    movq %rax, %r11
+; CHECK-NEXT:    movzbl %ch, %ebp # NOREX
 ; CHECK-NEXT:    movq %r8, %rax
 ; CHECK-NEXT:    movzbl %ah, %ecx # NOREX
 ; CHECK-NEXT:    movq %r9, %rax
-; CHECK-NEXT:    movzbl %ah, %ebp # NOREX
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; CHECK-NEXT:    movzbl %ah, %eax # NOREX
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %ebx
-; CHECK-NEXT:    movzbl %bh, %edi # NOREX
+; CHECK-NEXT:    movzbl %ah, %ebx # NOREX
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
 ; CHECK-NEXT:    movq %r10, %r8
 ; CHECK-NEXT:    addq %r8, %rsi
-; CHECK-NEXT:    addq %r11, %rdx
+; CHECK-NEXT:    addq %rbp, %rdx
 ; CHECK-NEXT:    addq %rsi, %rdx
-; CHECK-NEXT:    addq %rbp, %rcx
+; CHECK-NEXT:    addq %rbx, %rcx
 ; CHECK-NEXT:    addq %rdi, %rax
 ; CHECK-NEXT:    addq %rcx, %rax
 ; CHECK-NEXT:    addq %rdx, %rax
@@ -58,21 +55,18 @@ define i64 @foo(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, i64 %h) 
 ; GNUX32-NEXT:    movzbl %ah, %eax # NOREX
 ; GNUX32-NEXT:    movq %rax, %r10
 ; GNUX32-NEXT:    movzbl %dh, %edx # NOREX
-; GNUX32-NEXT:    movzbl %ch, %eax # NOREX
-; GNUX32-NEXT:    movq %rax, %r11
+; GNUX32-NEXT:    movzbl %ch, %ebp # NOREX
 ; GNUX32-NEXT:    movq %r8, %rax
 ; GNUX32-NEXT:    movzbl %ah, %ecx # NOREX
 ; GNUX32-NEXT:    movq %r9, %rax
-; GNUX32-NEXT:    movzbl %ah, %ebp # NOREX
-; GNUX32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; GNUX32-NEXT:    movzbl %ah, %eax # NOREX
-; GNUX32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; GNUX32-NEXT:    movzbl %bh, %edi # NOREX
+; GNUX32-NEXT:    movzbl %ah, %ebx # NOREX
+; GNUX32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; GNUX32-NEXT:    movzbl {{[0-9]+}}(%esp), %edi
 ; GNUX32-NEXT:    movq %r10, %r8
 ; GNUX32-NEXT:    addq %r8, %rsi
-; GNUX32-NEXT:    addq %r11, %rdx
+; GNUX32-NEXT:    addq %rbp, %rdx
 ; GNUX32-NEXT:    addq %rsi, %rdx
-; GNUX32-NEXT:    addq %rbp, %rcx
+; GNUX32-NEXT:    addq %rbx, %rcx
 ; GNUX32-NEXT:    addq %rdi, %rax
 ; GNUX32-NEXT:    addq %rcx, %rax
 ; GNUX32-NEXT:    addq %rdx, %rax

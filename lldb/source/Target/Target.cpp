@@ -2313,7 +2313,7 @@ ExpressionResults Target::EvaluateExpression(
     result_valobj_sp = persistent_var_sp->GetValueObject();
     execution_results = eExpressionCompleted;
   } else {
-    const char *prefix = GetExpressionPrefixContentsAsCString();
+    llvm::StringRef prefix = GetExpressionPrefixContents();
     Status error;
     execution_results = UserExpression::Evaluate(exe_ctx, options, expr, prefix,
                                                  result_valobj_sp, error,
@@ -4046,18 +4046,19 @@ LanguageType TargetProperties::GetLanguage() const {
   return LanguageType();
 }
 
-const char *TargetProperties::GetExpressionPrefixContentsAsCString() {
+llvm::StringRef TargetProperties::GetExpressionPrefixContents() {
   const uint32_t idx = ePropertyExprPrefix;
   OptionValueFileSpec *file =
       m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpec(nullptr, false,
                                                                idx);
   if (file) {
-    const bool null_terminate = true;
-    DataBufferSP data_sp(file->GetFileContents(null_terminate));
+    DataBufferSP data_sp(file->GetFileContents());
     if (data_sp)
-      return (const char *)data_sp->GetBytes();
+      return llvm::StringRef(
+          reinterpret_cast<const char *>(data_sp->GetBytes()),
+          data_sp->GetByteSize());
   }
-  return nullptr;
+  return "";
 }
 
 bool TargetProperties::GetBreakpointsConsultPlatformAvoidList() {
