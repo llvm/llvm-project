@@ -91,6 +91,9 @@ public:
   // Rewrite the file specified by FID with HTML formatting.
   void RewriteFile(Rewriter &R, const SourceManager& SMgr,
                    const PathPieces& path, FileID FID);
+
+  /// \return Javascript for navigating the HTML report using j/k keys.
+  std::string generateKeyboardNavigationJavascript();
 };
 
 } // end anonymous namespace
@@ -337,6 +340,9 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
   int LineNumber = path.back()->getLocation().asLocation().getExpansionLineNumber();
   int ColumnNumber = path.back()->getLocation().asLocation().getExpansionColumnNumber();
 
+  R.InsertTextBefore(SMgr.getLocForStartOfFile(FID),
+                     generateKeyboardNavigationJavascript());
+
   // Add the name of the file as an <h1> tag.
   {
     std::string s;
@@ -378,8 +384,14 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
       os << "<tr><td></td><td>" << html::EscapeText(*I) << "</td></tr>\n";
     }
 
-    os << "</table>\n<!-- REPORTSUMMARYEXTRA -->\n"
-          "<h3>Annotated Source Code</h3>\n";
+    os << R"<<<(
+</table>
+<!-- REPORTSUMMARYEXTRA -->
+<h3>Annotated Source Code</h3>
+<p><span class='macro'>[?]
+  <span class='expansion'>Use j/k keys for keyboard navigation</span>
+</span></p>
+)<<<";
 
     R.InsertTextBefore(SMgr.getLocForStartOfFile(FID), os.str());
   }
@@ -776,4 +788,83 @@ void HTMLDiagnostics::HighlightRange(Rewriter& R, FileID BugFileID,
     InstantiationEnd.getLocWithOffset(EndColNo - OldEndColNo);
 
   html::HighlightRange(R, InstantiationStart, E, HighlightStart, HighlightEnd);
+}
+
+std::string HTMLDiagnostics::generateKeyboardNavigationJavascript() {
+  return R"<<<(
+<script type='text/javascript'>
+var digitMatcher = new RegExp("[0-9]+");
+
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll(".PathNav > a").forEach(
+        function(currentValue, currentIndex) {
+            var hrefValue = currentValue.getAttribute("href");
+            currentValue.onclick = function() {
+                scrollTo(document.querySelector(hrefValue));
+                return false;
+            };
+        });
+});
+
+var findNum = function() {
+    var s = document.querySelector(".selected");
+    if (!s || s.id == "EndPath") {
+        return 0;
+    }
+    var out = parseInt(digitMatcher.exec(s.id)[0]);
+    return out;
+};
+
+var scrollTo = function(el) {
+    document.querySelectorAll(".selected").forEach(function(s) {
+        s.classList.remove("selected");
+    });
+    el.classList.add("selected");
+    window.scrollBy(0, el.getBoundingClientRect().top -
+        (window.innerHeight / 2));
+}
+
+var move = function(num, up, numItems) {
+  if (num == 1 && up || num == numItems - 1 && !up) {
+    return 0;
+  } else if (num == 0 && up) {
+    return numItems - 1;
+  } else if (num == 0 && !up) {
+    return 1 % numItems;
+  }
+  return up ? num - 1 : num + 1;
+}
+
+var numToId = function(num) {
+  if (num == 0) {
+    return document.getElementById("EndPath")
+  }
+  return document.getElementById("Path" + num);
+};
+
+var navigateTo = function(up) {
+  var numItems = document.querySelectorAll(".line > .msg").length;
+  var currentSelected = findNum();
+  var newSelected = move(currentSelected, up, numItems);
+  var newEl = numToId(newSelected, numItems);
+
+  // Scroll element into center.
+  scrollTo(newEl);
+};
+
+window.addEventListener("keydown", function (event) {
+  if (event.defaultPrevented) {
+    return;
+  }
+  if (event.key == "j") {
+    navigateTo(/*up=*/false);
+  } else if (event.key == "k") {
+    navigateTo(/*up=*/true);
+  } else {
+    return;
+  } 
+  event.preventDefault();
+}, true);
+</script>
+  )<<<";
 }

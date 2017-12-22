@@ -282,6 +282,22 @@ namespace NNS {
   }
 }
 
+inline namespace ParensAroundFriend { // expected-error 0-1{{C++11}}
+  struct A {};
+  struct B {
+    static A C();
+  };
+  namespace X {
+    struct B {};
+    struct D {
+      // No warning here: while this could be written as
+      //   friend (::B::C)();
+      // we do need parentheses *somewhere* here.
+      friend A (::B::C());
+    };
+  }
+}
+
 // PR8380
 extern ""      // expected-error {{unknown linkage language}}
 test6a { ;// expected-error {{C++ requires a type specifier for all declarations}}

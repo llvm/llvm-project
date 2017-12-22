@@ -132,7 +132,7 @@ public:
 //CHECK-NEXT: | |     `-BinaryOperator {{.*}} '_Float16' '+'
 //CHECK-NEXT: | |       |-ImplicitCastExpr {{.*}} '_Float16' <LValueToRValue>
 //CHECK-NEXT: | |       | `-MemberExpr {{.*}} '_Float16' lvalue ->f1c 0x{{.*}}
-//CHECK-NEXT: | |       |   `-CXXThisExpr {{.*}} 'class C1 *' this
+//CHECK-NEXT: | |       |   `-CXXThisExpr {{.*}} 'C1 *' this
 //CHECK-NEXT: | |       `-ImplicitCastExpr {{.*}} '_Float16' <LValueToRValue>
 //CHECK-NEXT: | |         `-DeclRefExpr {{.*}} '_Float16' lvalue ParmVar 0x{{.*}} 'arg' '_Float16'
 //CHECK-NEXT: | |-CXXMethodDecl {{.*}} used func2c '_Float16 (_Float16)' static
@@ -208,14 +208,14 @@ int main(void) {
 //CHECK-NEXT:  |     `-FloatingLiteral {{.*}} 'double' 1.000977e+00
 
   C1 c1(f1l);
-//CHECK:       | `-VarDecl{{.*}} used c1 'class C1' callinit
-//CHECK-NEXT:  |   `-CXXConstructExpr {{.*}} 'class C1' 'void (_Float16)
+//CHECK:       | `-VarDecl{{.*}} used c1 'C1' callinit
+//CHECK-NEXT:  |   `-CXXConstructExpr {{.*}} 'C1' 'void (_Float16)
 //CHECK-NEXT:  |     `-ImplicitCastExpr {{.*}} '_Float16' <LValueToRValue>
 //CHECK-NEXT:  |       `-DeclRefExpr {{.*}} '_Float16' lvalue Var 0x{{.*}} 'f1l' '_Float16'
 
   S1<_Float16> s1 = { 132.f16 };
-//CHECK:       | `-VarDecl {{.*}} used s1 'S1<_Float16>':'struct S1<_Float16>' cinit
-//CHECK-NEXT:  |   `-InitListExpr {{.*}} 'S1<_Float16>':'struct S1<_Float16>'
+//CHECK:       | `-VarDecl {{.*}} used s1 'S1<_Float16>':'S1<_Float16>' cinit
+//CHECK-NEXT:  |   `-InitListExpr {{.*}} 'S1<_Float16>':'S1<_Float16>'
 //CHECK-NEXT:  |     `-FloatingLiteral {{.*}} '_Float16' 1.320000e+02
 
   _Float16 f4l = func1n(f1l)  + func1f(f2l) + c1.func1c(f3l) + c1.func2c(f1l) +
@@ -240,13 +240,13 @@ int main(void) {
 //CHECK-NEXT:  |     | | | | | |     `-DeclRefExpr {{.*}} '_Float16' lvalue Var {{.*}} 'f2l' '_Float16'
 //CHECK-NEXT:  |     | | | | | `-CXXMemberCallExpr {{.*}} '_Float16'
 //CHECK-NEXT:  |     | | | | |   |-MemberExpr {{.*}} '<bound member function type>' .func1c {{.*}}
-//CHECK-NEXT:  |     | | | | |   | `-DeclRefExpr {{.*}} 'class C1' lvalue Var {{.*}} 'c1' 'class C1'
+//CHECK-NEXT:  |     | | | | |   | `-DeclRefExpr {{.*}} 'C1' lvalue Var {{.*}} 'c1' 'C1'
 //CHECK-NEXT:  |     | | | | |   `-ImplicitCastExpr {{.*}} '_Float16' <LValueToRValue>
 //CHECK-NEXT:  |     | | | | |     `-DeclRefExpr {{.*}} '_Float16' lvalue Var {{.*}} 'f3l' '_Float16'
 //CHECK-NEXT:  |     | | | | `-CallExpr {{.*}} '_Float16'
 //CHECK-NEXT:  |     | | | |   |-ImplicitCastExpr {{.*}} '_Float16 (*)(_Float16)' <FunctionToPointerDecay>
 //CHECK-NEXT:  |     | | | |   | `-MemberExpr {{.*}} '_Float16 (_Float16)' lvalue .func2c {{.*}}
-//CHECK-NEXT:  |     | | | |   |   `-DeclRefExpr {{.*}} 'class C1' lvalue Var {{.*}} 'c1' 'class C1'
+//CHECK-NEXT:  |     | | | |   |   `-DeclRefExpr {{.*}} 'C1' lvalue Var {{.*}} 'c1' 'C1'
 //CHECK-NEXT:  |     | | | |   `-ImplicitCastExpr {{.*}} '_Float16' <LValueToRValue>
 //CHECK-NEXT:  |     | | | |     `-DeclRefExpr {{.*}} '_Float16' lvalue Var {{.*}} 'f1l' '_Float16'
 //CHECK-NEXT:  |     | | | `-CallExpr {{.*}} '_Float16':'_Float16'
@@ -256,7 +256,7 @@ int main(void) {
 //CHECK-NEXT:  |     | | |     `-DeclRefExpr {{.*}} '_Float16' lvalue Var {{.*}} 'f1l' '_Float16'
 //CHECK-NEXT:  |     | | `-ImplicitCastExpr {{.*}} '_Float16' <LValueToRValue>
 //CHECK-NEXT:  |     | |   `-MemberExpr {{.*}} '_Float16' lvalue .mem2 {{.*}}
-//CHECK-NEXT:  |     | |     `-DeclRefExpr {{.*}} 'S1<_Float16>':'struct S1<_Float16>' lvalue Var {{.*}} 's1' 'S1<_Float16>':'struct S1<_Float16>'
+//CHECK-NEXT:  |     | |     `-DeclRefExpr {{.*}} 'S1<_Float16>':'S1<_Float16>' lvalue Var {{.*}} 's1' 'S1<_Float16>':'S1<_Float16>'
 //CHECK-NEXT:  |     | `-ImplicitCastExpr {{.*}} '_Float16' <LValueToRValue>
 //CHECK-NEXT:  |     |   `-DeclRefExpr {{.*}} '_Float16' lvalue Var {{.*}} 'f1n' '_Float16'
 //CHECK-NEXT:  |     `-ImplicitCastExpr {{.*}} '_Float16' <LValueToRValue>
