@@ -950,7 +950,7 @@ Decl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
     if (DS.getStorageClassSpec() != DeclSpec::SCS_unspecified)
       EmitDiag(DS.getStorageClassSpecLoc());
     
-    if (DeclSpec::TSCS TSCS = DS.getThreadStorageClassSpec())
+    if (DS.getThreadStorageClassSpec() != TSCS_unspecified)
       EmitDiag(DS.getThreadStorageClassSpecLoc());
     
     // [dcl.inline]p1: 

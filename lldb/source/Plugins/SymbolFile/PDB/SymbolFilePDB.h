@@ -172,7 +172,8 @@ private:
       const llvm::pdb::PDBSymbolCompiland &cu,
       llvm::DenseMap<uint32_t, uint32_t> &index_map) const;
 
-  void FindTypesByRegex(const std::string &regex, uint32_t max_matches,
+  void FindTypesByRegex(const lldb_private::RegularExpression &regex,
+                        uint32_t max_matches,
                         lldb_private::TypeMap &types);
 
   void FindTypesByName(const std::string &name, uint32_t max_matches,

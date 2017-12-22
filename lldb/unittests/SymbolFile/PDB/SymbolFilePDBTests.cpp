@@ -519,6 +519,13 @@ TEST_F(SymbolFilePDBTests, TestRegexNameMatch) {
                                             false, 0, searched_files, results);
   EXPECT_GT(num_results, 1u);
   EXPECT_EQ(num_results, results.GetSize());
+
+  // We expect no exception thrown if the given regex can't be compiled
+  results.Clear();
+  num_results = symfile->FindTypes(sc, ConstString("**"), nullptr,
+                                   false, 0, searched_files, results);
+  EXPECT_EQ(num_results, 0u);
+  EXPECT_EQ(num_results, results.GetSize());
 }
 
 TEST_F(SymbolFilePDBTests, TestMaxMatches) {

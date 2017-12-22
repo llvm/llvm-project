@@ -220,10 +220,40 @@ class DWARFUnit {
   /// The compile unit debug information entry items.
   std::vector<DWARFDebugInfoEntry> DieArray;
 
-  /// Map from range's start address to end address and corresponding DIE.
-  /// IntervalMap does not support range removal, as a result, we use the
-  /// std::map::upper_bound for address range lookup.
-  std::map<uint64_t, std::pair<uint64_t, DWARFDie>> AddrDieMap;
+  /// The vector of inlined subroutine DIEs that we can map directly to from
+  /// their subprogram below.
+  std::vector<DWARFDie> InlinedSubroutineDIEs;
+
+  /// A type representing a subprogram DIE and a map (built using a sorted
+  /// vector) into that subprogram's inlined subroutine DIEs.
+  struct SubprogramDIEAddrInfo {
+    DWARFDie SubprogramDIE;
+
+    uint64_t SubprogramBasePC;
+
+    /// A vector sorted to allow mapping from a relative PC to the inlined
+    /// subroutine DIE with the most specific address range covering that PC.
+    ///
+    /// The PCs are relative to the `SubprogramBasePC`.
+    ///
+    /// The vector is sorted in ascending order of the first int which
+    /// represents the relative PC for an interval in the map. The second int
+    /// represents the index into the `InlinedSubroutineDIEs` vector of the DIE
+    /// that interval maps to. An index of '-1` indicates an empty mapping. The
+    /// interval covered is from the `.first` relative PC to the next entry's
+    /// `.first` relative PC.
+    std::vector<std::pair<uint32_t, int32_t>> InlinedSubroutineDIEAddrMap;
+  };
+
+  /// Vector of the subprogram DIEs and their subroutine address maps.
+  std::vector<SubprogramDIEAddrInfo> SubprogramDIEAddrInfos;
+
+  /// A vector sorted to allow mapping from a PC to the subprogram DIE (and
+  /// associated addr map) index. Subprograms with overlapping PC ranges aren't
+  /// supported here. Nothing will crash, but the mapping may be inaccurate.
+  /// This vector may also contain "empty" ranges marked by an address with
+  /// a DIE index of '-1'.
+  std::vector<std::pair<uint64_t, int64_t>> SubprogramDIEAddrMap;
 
   using die_iterator_range =
       iterator_range<std::vector<DWARFDebugInfoEntry>::iterator>;
@@ -281,9 +311,6 @@ public:
     AddrOffsetSection = AOS;
     AddrOffsetSectionBase = Base;
   }
-
-  /// Recursively update address to Die map.
-  void updateAddressDieMap(DWARFDie Die);
 
   void setRangesSection(const DWARFSection *RS, uint32_t Base) {
     RangeSection = RS;
@@ -480,6 +507,9 @@ private:
   /// parseDWO - Parses .dwo file for current compile unit. Returns true if
   /// it was actually constructed.
   bool parseDWO();
+
+  void buildSubprogramDIEAddrMap();
+  void buildInlinedSubroutineDIEAddrMap(SubprogramDIEAddrInfo &SPInfo);
 };
 
 } // end namespace llvm

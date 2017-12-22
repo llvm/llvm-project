@@ -198,6 +198,11 @@ def err_missing_module : Error<
 def err_no_submodule : Error<"no submodule named %0 in module '%1'">;
 def err_no_submodule_suggest : Error<
   "no submodule named %0 in module '%1'; did you mean '%2'?">;
+def warn_no_priv_submodule_use_toplevel : Warning<
+  "no submodule named %0 in module '%1'; using top level '%2'">,
+  InGroup<PrivateModule>;
+def note_private_top_level_defined : Note<
+  "module defined here">;
 def warn_missing_submodule : Warning<"missing submodule '%0'">,
   InGroup<IncompleteUmbrella>;
 def note_module_import_here : Note<"module imported here">;
