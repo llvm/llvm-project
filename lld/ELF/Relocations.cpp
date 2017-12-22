@@ -556,7 +556,8 @@ static void errorOrWarn(const Twine &Msg) {
 
 template <class ELFT>
 static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
-                          InputSectionBase &S, uint64_t RelOff) {
+                          InputSectionBase &S, uint64_t RelOff,
+                          bool &IsConstant) {
   // We can create any dynamic relocation if a section is simply writable.
   if (S.Flags & SHF_WRITE)
     return Expr;
@@ -569,7 +570,7 @@ static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
 
   // If a relocation can be applied at link-time, we don't need to
   // create a dynamic relocation in the first place.
-  if (isStaticLinkTimeConstant<ELFT>(Expr, Type, Sym, S, RelOff))
+  if (IsConstant)
     return Expr;
 
   // If we got here we know that this relocation would require the dynamic
@@ -579,6 +580,7 @@ static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
   // non preemptible 0.
   if (Sym.isUndefWeak()) {
     Sym.IsPreemptible = false;
+    IsConstant = true;
     return Expr;
   }
 
@@ -611,6 +613,7 @@ static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
 
       addCopyRelSymbol<ELFT>(B);
     }
+    IsConstant = true;
     return Expr;
   }
 
@@ -637,6 +640,7 @@ static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
     // R_386_JMP_SLOT, etc).
     Sym.NeedsPltAddr = true;
     Sym.IsPreemptible = false;
+    IsConstant = true;
     return toPlt(Expr);
   }
 
@@ -923,7 +927,10 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
     else if (!Preemptible)
       Expr = fromPlt(Expr);
 
-    Expr = adjustExpr<ELFT>(Sym, Expr, Type, Sec, Rel.r_offset);
+    bool IsConstant =
+        isStaticLinkTimeConstant<ELFT>(Expr, Type, Sym, Sec, Rel.r_offset);
+
+    Expr = adjustExpr<ELFT>(Sym, Expr, Type, Sec, Rel.r_offset, IsConstant);
     if (errorCount())
       continue;
 
@@ -1004,10 +1011,6 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
         InX::MipsGot->addEntry(Sym, Addend, Expr);
       continue;
     }
-
-    // If the relocation points to something in the file, we can process it.
-    bool IsConstant =
-        isStaticLinkTimeConstant<ELFT>(Expr, Type, Sym, Sec, Rel.r_offset);
 
     // The size is not going to change, so we fold it in here.
     if (Expr == R_SIZE)

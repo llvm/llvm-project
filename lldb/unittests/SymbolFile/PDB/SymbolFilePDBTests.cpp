@@ -154,8 +154,7 @@ TEST_F(SymbolFilePDBTests, TestAbilitiesForPDB) {
   EXPECT_NE(nullptr, symfile);
   EXPECT_EQ(symfile->GetPluginName(), SymbolFilePDB::GetPluginNameStatic());
 
-  uint32_t expected_abilities =
-      SymbolFile::CompileUnits | SymbolFile::LineTables;
+  uint32_t expected_abilities = SymbolFile::kAllAbilities;
   EXPECT_EQ(expected_abilities, symfile->CalculateAbilities());
 }
 
@@ -519,6 +518,13 @@ TEST_F(SymbolFilePDBTests, TestRegexNameMatch) {
   uint32_t num_results = symfile->FindTypes(sc, ConstString(".*"), nullptr,
                                             false, 0, searched_files, results);
   EXPECT_GT(num_results, 1u);
+  EXPECT_EQ(num_results, results.GetSize());
+
+  // We expect no exception thrown if the given regex can't be compiled
+  results.Clear();
+  num_results = symfile->FindTypes(sc, ConstString("**"), nullptr,
+                                   false, 0, searched_files, results);
+  EXPECT_EQ(num_results, 0u);
   EXPECT_EQ(num_results, results.GetSize());
 }
 
