@@ -37,6 +37,23 @@ bool BaseIndexOffset::equalBaseIndex(BaseIndexOffset &Other,
           return true;
         }
 
+    // Match Constants
+    if (auto *A = dyn_cast<ConstantPoolSDNode>(Base))
+      if (auto *B = dyn_cast<ConstantPoolSDNode>(Other.Base)) {
+        bool IsMatch =
+            A->isMachineConstantPoolEntry() == B->isMachineConstantPoolEntry();
+        if (IsMatch) {
+          if (A->isMachineConstantPoolEntry())
+            IsMatch = A->getMachineCPVal() == B->getMachineCPVal();
+          else
+            IsMatch = A->getConstVal() == B->getConstVal();
+        }
+        if (IsMatch) {
+          Off += B->getOffset() - A->getOffset();
+          return true;
+        }
+      }
+
     const MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
 
     // Match non-equal FrameIndexes - If both frame indices are fixed

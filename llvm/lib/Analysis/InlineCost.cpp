@@ -249,8 +249,6 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
   bool visitCastInst(CastInst &I);
   bool visitUnaryInstruction(UnaryInstruction &I);
   bool visitCmpInst(CmpInst &I);
-  bool visitAnd(BinaryOperator &I);
-  bool visitOr(BinaryOperator &I);
   bool visitSub(BinaryOperator &I);
   bool visitBinaryOperator(BinaryOperator &I);
   bool visitLoad(LoadInst &I);
@@ -1021,34 +1019,6 @@ bool CallAnalyzer::visitCmpInst(CmpInst &I) {
   return false;
 }
 
-bool CallAnalyzer::visitOr(BinaryOperator &I) {
-  // This is necessary because the generic simplify instruction only works if
-  // both operands are constants.
-  for (unsigned i = 0; i < 2; ++i) {
-    if (ConstantInt *C = dyn_cast_or_null<ConstantInt>(
-            SimplifiedValues.lookup(I.getOperand(i))))
-      if (C->isAllOnesValue()) {
-        SimplifiedValues[&I] = C;
-        return true;
-      }
-  }
-  return Base::visitOr(I);
-}
-
-bool CallAnalyzer::visitAnd(BinaryOperator &I) {
-  // This is necessary because the generic simplify instruction only works if
-  // both operands are constants.
-  for (unsigned i = 0; i < 2; ++i) {
-    if (ConstantInt *C = dyn_cast_or_null<ConstantInt>(
-            SimplifiedValues.lookup(I.getOperand(i))))
-      if (C->isZero()) {
-        SimplifiedValues[&I] = C;
-        return true;
-      }
-  }
-  return Base::visitAnd(I);
-}
-
 bool CallAnalyzer::visitSub(BinaryOperator &I) {
   // Try to handle a special case: we can fold computing the difference of two
   // constant-related pointers.
@@ -1078,17 +1048,25 @@ bool CallAnalyzer::visitSub(BinaryOperator &I) {
 
 bool CallAnalyzer::visitBinaryOperator(BinaryOperator &I) {
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
-  auto Evaluate = [&](SmallVectorImpl<Constant *> &COps) {
-    Value *SimpleV = nullptr;
-    if (auto FI = dyn_cast<FPMathOperator>(&I))
-      SimpleV = SimplifyFPBinOp(I.getOpcode(), COps[0], COps[1],
-                                FI->getFastMathFlags(), DL);
-    else
-      SimpleV = SimplifyBinOp(I.getOpcode(), COps[0], COps[1], DL);
-    return dyn_cast_or_null<Constant>(SimpleV);
-  };
+  Constant *CLHS = dyn_cast<Constant>(LHS);
+  if (!CLHS)
+    CLHS = SimplifiedValues.lookup(LHS);
+  Constant *CRHS = dyn_cast<Constant>(RHS);
+  if (!CRHS)
+    CRHS = SimplifiedValues.lookup(RHS);
 
-  if (simplifyInstruction(I, Evaluate))
+  Value *SimpleV = nullptr;
+  if (auto FI = dyn_cast<FPMathOperator>(&I))
+    SimpleV = SimplifyFPBinOp(I.getOpcode(), CLHS ? CLHS : LHS,
+                              CRHS ? CRHS : RHS, FI->getFastMathFlags(), DL);
+  else
+    SimpleV =
+        SimplifyBinOp(I.getOpcode(), CLHS ? CLHS : LHS, CRHS ? CRHS : RHS, DL);
+
+  if (Constant *C = dyn_cast_or_null<Constant>(SimpleV))
+    SimplifiedValues[&I] = C;
+
+  if (SimpleV)
     return true;
 
   // Disable any SROA on arguments to arbitrary, unsimplified binary operators.

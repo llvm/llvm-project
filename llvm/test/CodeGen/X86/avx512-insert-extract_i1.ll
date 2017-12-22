@@ -18,8 +18,7 @@ define zeroext i8 @test_extractelement_varible_v64i1(<64 x i8> %a, <64 x i8> %b,
 ; SKX-NEXT:    vpmovm2b %k0, %zmm0
 ; SKX-NEXT:    vmovdqa32 %zmm0, (%rsp)
 ; SKX-NEXT:    andl $63, %edi
-; SKX-NEXT:    movq %rsp, %rax
-; SKX-NEXT:    movzbl (%rdi,%rax), %eax
+; SKX-NEXT:    movzbl (%rsp,%rdi), %eax
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    movq %rbp, %rsp
 ; SKX-NEXT:    popq %rbp

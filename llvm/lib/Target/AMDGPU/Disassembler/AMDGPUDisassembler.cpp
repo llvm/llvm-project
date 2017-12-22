@@ -348,10 +348,12 @@ MCOperand AMDGPUDisassembler::createSRegOperand(unsigned SRegClassID,
   case AMDGPU::TTMP_128RegClassID:
   // ToDo: unclear if s[100:104] is available on VI. Can we use VCC as SGPR in
   // this bundle?
-  case AMDGPU::SReg_256RegClassID:
-  // ToDo: unclear if s[96:104] is available on VI. Can we use VCC as SGPR in
+  case AMDGPU::SGPR_256RegClassID:
+  case AMDGPU::TTMP_256RegClassID:
+    // ToDo: unclear if s[96:104] is available on VI. Can we use VCC as SGPR in
   // this bundle?
-  case AMDGPU::SReg_512RegClassID:
+  case AMDGPU::SGPR_512RegClassID:
+  case AMDGPU::TTMP_512RegClassID:
     shift = 2;
     break;
   // ToDo: unclear if s[88:104] is available on VI. Can we use VCC as SGPR in
@@ -441,11 +443,11 @@ MCOperand AMDGPUDisassembler::decodeOperand_SReg_128(unsigned Val) const {
 }
 
 MCOperand AMDGPUDisassembler::decodeOperand_SReg_256(unsigned Val) const {
-  return createSRegOperand(AMDGPU::SReg_256RegClassID, Val);
+  return decodeDstOp(OPW256, Val);
 }
 
 MCOperand AMDGPUDisassembler::decodeOperand_SReg_512(unsigned Val) const {
-  return createSRegOperand(AMDGPU::SReg_512RegClassID, Val);
+  return decodeDstOp(OPW512, Val);
 }
 
 MCOperand AMDGPUDisassembler::decodeLiteralConstant() const {
@@ -593,6 +595,8 @@ unsigned AMDGPUDisassembler::getSgprClassId(const OpWidthTy Width) const {
     return SGPR_32RegClassID;
   case OPW64: return SGPR_64RegClassID;
   case OPW128: return SGPR_128RegClassID;
+  case OPW256: return SGPR_256RegClassID;
+  case OPW512: return SGPR_512RegClassID;
   }
 }
 
@@ -608,6 +612,8 @@ unsigned AMDGPUDisassembler::getTtmpClassId(const OpWidthTy Width) const {
     return TTMP_32RegClassID;
   case OPW64: return TTMP_64RegClassID;
   case OPW128: return TTMP_128RegClassID;
+  case OPW256: return TTMP_256RegClassID;
+  case OPW512: return TTMP_512RegClassID;
   }
 }
 
@@ -657,6 +663,25 @@ MCOperand AMDGPUDisassembler::decodeSrcOp(const OpWidthTy Width, unsigned Val) c
   default:
     llvm_unreachable("unexpected immediate type");
   }
+}
+
+MCOperand AMDGPUDisassembler::decodeDstOp(const OpWidthTy Width, unsigned Val) const {
+  using namespace AMDGPU::EncValues;
+
+  assert(Val < 128);
+  assert(Width == OPW256 || Width == OPW512);
+
+  if (Val <= SGPR_MAX) {
+    assert(SGPR_MIN == 0); // "SGPR_MIN <= Val" is always true and causes compilation warning.
+    return createSRegOperand(getSgprClassId(Width), Val - SGPR_MIN);
+  }
+
+  int TTmpIdx = getTTmpIdx(Val);
+  if (TTmpIdx >= 0) {
+    return createSRegOperand(getTtmpClassId(Width), TTmpIdx);
+  }
+
+  llvm_unreachable("unknown dst register");
 }
 
 MCOperand AMDGPUDisassembler::decodeSpecialReg32(unsigned Val) const {

@@ -9,7 +9,7 @@
 int main()
 {
   omp_set_nested(1);
-  int condition;
+  int condition = 0;
 
   #pragma omp parallel num_threads(4)
   {
