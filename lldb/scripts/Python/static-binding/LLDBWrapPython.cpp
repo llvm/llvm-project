@@ -40522,7 +40522,8 @@ SWIGINTERN PyObject *_wrap_SBProcess_GetSTDOUT(PyObject *SWIGUNUSEDPARM(self), P
   {
     Py_XDECREF(resultobj);   /* Blow away any previous result */
     if (result == 0) {
-      resultobj = Py_None;
+      lldb_private::PythonString string("");
+      resultobj = string.release();
       Py_INCREF(resultobj);
     } else {
       llvm::StringRef ref(static_cast<const char*>(arg2), result);
@@ -40575,7 +40576,8 @@ SWIGINTERN PyObject *_wrap_SBProcess_GetSTDERR(PyObject *SWIGUNUSEDPARM(self), P
   {
     Py_XDECREF(resultobj);   /* Blow away any previous result */
     if (result == 0) {
-      resultobj = Py_None;
+      lldb_private::PythonString string("");
+      resultobj = string.release();
       Py_INCREF(resultobj);
     } else {
       llvm::StringRef ref(static_cast<const char*>(arg2), result);
@@ -40628,7 +40630,8 @@ SWIGINTERN PyObject *_wrap_SBProcess_GetAsyncProfileData(PyObject *SWIGUNUSEDPAR
   {
     Py_XDECREF(resultobj);   /* Blow away any previous result */
     if (result == 0) {
-      resultobj = Py_None;
+      lldb_private::PythonString string("");
+      resultobj = string.release();
       Py_INCREF(resultobj);
     } else {
       llvm::StringRef ref(static_cast<const char*>(arg2), result);
@@ -42054,7 +42057,8 @@ SWIGINTERN PyObject *_wrap_SBProcess_ReadCStringFromMemory(PyObject *SWIGUNUSEDP
   {
     Py_XDECREF(resultobj);   /* Blow away any previous result */
     if (result == 0) {
-      resultobj = Py_None;
+      lldb_private::PythonString string("");
+      resultobj = string.release();
       Py_INCREF(resultobj);
     } else {
       llvm::StringRef ref(static_cast<const char*>(arg3), result);
@@ -46317,7 +46321,8 @@ SWIGINTERN PyObject *_wrap_SBStructuredData_GetStringValue(PyObject *SWIGUNUSEDP
   {
     Py_XDECREF(resultobj);   /* Blow away any previous result */
     if (result == 0) {
-      resultobj = Py_None;
+      lldb_private::PythonString string("");
+      resultobj = string.release();
       Py_INCREF(resultobj);
     } else {
       llvm::StringRef ref(static_cast<const char*>(arg2), result);
@@ -55458,7 +55463,8 @@ SWIGINTERN PyObject *_wrap_SBThread_GetStopDescription(PyObject *SWIGUNUSEDPARM(
   {
     Py_XDECREF(resultobj);   /* Blow away any previous result */
     if (result == 0) {
-      resultobj = Py_None;
+      lldb_private::PythonString string("");
+      resultobj = string.release();
       Py_INCREF(resultobj);
     } else {
       llvm::StringRef ref(static_cast<const char*>(arg2), result);
