@@ -701,6 +701,22 @@ bool CallAnalyzer::visitCastInst(CastInst &I) {
   // Disable SROA in the face of arbitrary casts we don't whitelist elsewhere.
   disableSROA(I.getOperand(0));
 
+  // If this is a floating-point cast, and the target says this operation
+  // is expensive, this may eventually become a library call. Treat the cost
+  // as such.
+  switch (I.getOpcode()) {
+  case Instruction::FPTrunc:
+  case Instruction::FPExt:
+  case Instruction::UIToFP:
+  case Instruction::SIToFP:
+  case Instruction::FPToUI:
+  case Instruction::FPToSI:
+    if (TTI.getFPOpCost(I.getType()) == TargetTransformInfo::TCC_Expensive)
+      Cost += InlineConstants::CallPenalty;
+  default:
+    break;
+  }
+
   return TargetTransformInfo::TCC_Free == TTI.getUserCost(&I);
 }
 
@@ -1078,6 +1094,13 @@ bool CallAnalyzer::visitBinaryOperator(BinaryOperator &I) {
   // Disable any SROA on arguments to arbitrary, unsimplified binary operators.
   disableSROA(LHS);
   disableSROA(RHS);
+
+  // If the instruction is floating point, and the target says this operation
+  // is expensive, this may eventually become a library call. Treat the cost
+  // as such.
+  if (I.getType()->isFloatingPointTy() &&
+      TTI.getFPOpCost(I.getType()) == TargetTransformInfo::TCC_Expensive)
+    Cost += InlineConstants::CallPenalty;
 
   return false;
 }
@@ -1547,17 +1570,6 @@ bool CallAnalyzer::analyzeBlock(BasicBlock *BB,
     ++NumInstructions;
     if (isa<ExtractElementInst>(I) || I->getType()->isVectorTy())
       ++NumVectorInstructions;
-
-    // If the instruction is floating point, and the target says this operation
-    // is expensive or the function has the "use-soft-float" attribute, this may
-    // eventually become a library call. Treat the cost as such.
-    if (I->getType()->isFloatingPointTy()) {
-      // If the function has the "use-soft-float" attribute, mark it as
-      // expensive.
-      if (TTI.getFPOpCost(I->getType()) == TargetTransformInfo::TCC_Expensive ||
-          (F.getFnAttribute("use-soft-float").getValueAsString() == "true"))
-        Cost += InlineConstants::CallPenalty;
-    }
 
     // If the instruction simplified to a constant, there is no cost to this
     // instruction. Visit the instructions using our InstVisitor to account for

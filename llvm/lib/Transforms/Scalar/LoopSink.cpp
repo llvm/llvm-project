@@ -247,7 +247,7 @@ static bool sinkLoopInvariantInstructions(Loop &L, AAResults &AA, LoopInfo &LI,
 
   // Enable LoopSink only when runtime profile is available.
   // With static profile, the sinking decision may be sub-optimal.
-  if (!Preheader->getParent()->getEntryCount())
+  if (!Preheader->getParent()->hasProfileData())
     return false;
 
   const BlockFrequency PreheaderFreq = BFI.getBlockFreq(Preheader);
