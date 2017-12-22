@@ -302,9 +302,13 @@ public:
   }
 
   unsigned getFPOpCost(Type *Ty) {
-    // By default, FP instructions are no more expensive since they are
-    // implemented in HW.  Target specific TTI can override this.
-    return TargetTransformInfo::TCC_Basic;
+    // Check whether FADD is available, as a proxy for floating-point in
+    // general.
+    const TargetLoweringBase *TLI = getTLI();
+    EVT VT = TLI->getValueType(DL, Ty);
+    if (TLI->isOperationLegalOrCustomOrPromote(ISD::FADD, VT))
+      return TargetTransformInfo::TCC_Basic;
+    return TargetTransformInfo::TCC_Expensive;
   }
 
   unsigned getOperationCost(unsigned Opcode, Type *Ty, Type *OpTy) {

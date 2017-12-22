@@ -1854,6 +1854,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
 
   // Verify that the rest of the module path actually corresponds to
   // a submodule.
+  bool MapPrivateSubModToTopLevel = false;
   if (!getLangOpts().ModulesTS && Path.size() > 1) {
     for (unsigned I = 1, N = Path.size(); I != N; ++I) {
       StringRef Name = Path[I].first->getName();
@@ -1892,7 +1893,40 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
           Sub = Module->findSubmodule(Best[0]);
         }
       }
-      
+
+      // If the user is requesting Foo.Private and it doesn't exist, try to
+      // match Foo_Private and emit a warning asking for the user to write
+      // @import Foo_Private instead. FIXME: remove this when existing clients
+      // migrate off of Foo.Private syntax.
+      if (!Sub && PP->getLangOpts().ImplicitModules && Name == "Private" &&
+          Module == Module->getTopLevelModule()) {
+        SmallString<128> PrivateModule(Module->Name);
+        PrivateModule.append("_Private");
+
+        SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> PrivPath;
+        auto &II = PP->getIdentifierTable().get(
+            PrivateModule, PP->getIdentifierInfo(Module->Name)->getTokenID());
+        PrivPath.push_back(std::make_pair(&II, Path[0].second));
+
+        if (PP->getHeaderSearchInfo().lookupModule(PrivateModule))
+          Sub =
+              loadModule(ImportLoc, PrivPath, Visibility, IsInclusionDirective);
+        if (Sub) {
+          MapPrivateSubModToTopLevel = true;
+          if (!getDiagnostics().isIgnored(
+                  diag::warn_no_priv_submodule_use_toplevel, ImportLoc)) {
+            getDiagnostics().Report(Path[I].second,
+                                    diag::warn_no_priv_submodule_use_toplevel)
+                << Path[I].first << Module->getFullModuleName() << PrivateModule
+                << SourceRange(Path[0].second, Path[I].second)
+                << FixItHint::CreateReplacement(SourceRange(Path[0].second),
+                                                PrivateModule);
+            getDiagnostics().Report(Sub->DefinitionLoc,
+                                    diag::note_private_top_level_defined);
+          }
+        }
+      }
+
       if (!Sub) {
         // No submodule by this name. Complain, and don't look for further
         // submodules.
@@ -1909,7 +1943,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
   // Make the named module visible, if it's not already part of the module
   // we are parsing.
   if (ModuleName != getLangOpts().CurrentModule) {
-    if (!Module->IsFromModuleFile) {
+    if (!Module->IsFromModuleFile && !MapPrivateSubModToTopLevel) {
       // We have an umbrella header or directory that doesn't actually include
       // all of the headers within the directory it covers. Complain about
       // this missing submodule and recover by forgetting that we ever saw

@@ -396,6 +396,12 @@ public:
     assert(isl_ctx_get_max_operations(IslCtx) == 0 &&
            "Nested max operations not supported");
 
+    // Users of this guard may check whether the last error was isl_error_quota.
+    // Reset the last error such that a previous out-of-quota error is not
+    // mistaken to have occurred in the in this quota, even if the max number of
+    // operations is set to infinite (LocalMaxOps == 0).
+    isl_ctx_reset_error(IslCtx);
+
     if (LocalMaxOps == 0) {
       // No limit on operations; also disable restoring on_error/max_operations.
       this->IslCtx = nullptr;

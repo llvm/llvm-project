@@ -461,7 +461,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SRL_PARTS, VT, Custom);
   }
 
-  if (Subtarget.hasSSE1())
+  if (Subtarget.hasSSEPrefetch() || Subtarget.has3DNow())
     setOperationAction(ISD::PREFETCH      , MVT::Other, Legal);
 
   setOperationAction(ISD::ATOMIC_FENCE  , MVT::Other, Custom);
@@ -16296,21 +16296,6 @@ static  SDValue LowerZERO_EXTEND_Mask(SDValue Op,
   return SelectedVal;
 }
 
-static SDValue LowerANY_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
-                               SelectionDAG &DAG) {
-  SDValue In = Op->getOperand(0);
-  MVT InVT = In.getSimpleValueType();
-
-  if (InVT.getVectorElementType() == MVT::i1)
-    return LowerZERO_EXTEND_Mask(Op, Subtarget, DAG);
-
-  if (Subtarget.hasFp256())
-    if (SDValue Res = LowerAVXExtend(Op, DAG, Subtarget))
-      return Res;
-
-  return SDValue();
-}
-
 static SDValue LowerZERO_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
                                 SelectionDAG &DAG) {
   SDValue In = Op.getOperand(0);
@@ -18454,6 +18439,21 @@ static SDValue LowerSIGN_EXTEND_Mask(SDValue Op,
                     DAG.getIntPtrConstant(0, dl));
 
   return V;
+}
+
+static SDValue LowerANY_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
+                               SelectionDAG &DAG) {
+  SDValue In = Op->getOperand(0);
+  MVT InVT = In.getSimpleValueType();
+
+  if (InVT.getVectorElementType() == MVT::i1)
+    return LowerSIGN_EXTEND_Mask(Op, Subtarget, DAG);
+
+  if (Subtarget.hasFp256())
+    if (SDValue Res = LowerAVXExtend(Op, DAG, Subtarget))
+      return Res;
+
+  return SDValue();
 }
 
 // Lowering for SIGN_EXTEND_VECTOR_INREG and ZERO_EXTEND_VECTOR_INREG.

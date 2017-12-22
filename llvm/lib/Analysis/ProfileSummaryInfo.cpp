@@ -251,7 +251,7 @@ bool ProfileSummaryInfo::isColdCallSite(const CallSite &CS,
   // If there is no profile for the caller, and we know the profile is
   // accurate, we consider the callsite as cold.
   return (hasSampleProfile() &&
-          (CS.getCaller()->getEntryCount() || ProfileSampleAccurate ||
+          (CS.getCaller()->hasProfileData() || ProfileSampleAccurate ||
            CS.getCaller()->hasFnAttribute("profile-sample-accurate")));
 }
 

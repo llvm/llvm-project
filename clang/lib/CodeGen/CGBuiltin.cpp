@@ -8022,8 +8022,9 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   default: return nullptr;
   case X86::BI_mm_prefetch: {
     Value *Address = Ops[0];
-    Value *RW = ConstantInt::get(Int32Ty, 0);
-    Value *Locality = Ops[1];
+    ConstantInt *C = cast<ConstantInt>(Ops[1]);
+    Value *RW = ConstantInt::get(Int32Ty, (C->getZExtValue() >> 2) & 0x1);
+    Value *Locality = ConstantInt::get(Int32Ty, C->getZExtValue() & 0x3);
     Value *Data = ConstantInt::get(Int32Ty, 1);
     Value *F = CGM.getIntrinsic(Intrinsic::prefetch);
     return Builder.CreateCall(F, {Address, RW, Locality, Data});

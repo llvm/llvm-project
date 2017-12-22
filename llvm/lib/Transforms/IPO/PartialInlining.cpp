@@ -710,7 +710,7 @@ PartialInlinerImpl::computeOutliningInfo(Function *F) {
 
 // Check if there is PGO data or user annoated branch data:
 static bool hasProfileData(Function *F, FunctionOutliningInfo *OI) {
-  if (F->getEntryCount())
+  if (F->hasProfileData())
     return true;
   // Now check if any of the entry block has MD_prof data:
   for (auto *E : OI->Entries) {
@@ -1274,7 +1274,7 @@ std::pair<bool, Function *> PartialInlinerImpl::unswitchFunction(Function *F) {
 
   // Only try to outline cold regions if we have a profile summary, which
   // implies we have profiling information.
-  if (PSI->hasProfileSummary() && F->getEntryCount().hasValue() &&
+  if (PSI->hasProfileSummary() && F->hasProfileData() &&
       !DisableMultiRegionPartialInline) {
     std::unique_ptr<FunctionOutliningMultiRegionInfo> OMRI =
         computeOutliningColdRegionsInfo(F);
@@ -1380,10 +1380,10 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
                             Cloner.ClonedFunc->user_end());
 
   DenseMap<User *, uint64_t> CallSiteToProfCountMap;
-  if (Cloner.OrigFunc->getEntryCount())
+  auto CalleeEntryCount = Cloner.OrigFunc->getEntryCount();
+  if (CalleeEntryCount)
     computeCallsiteToProfCountMap(Cloner.ClonedFunc, CallSiteToProfCountMap);
 
-  auto CalleeEntryCount = Cloner.OrigFunc->getEntryCount();
   uint64_t CalleeEntryCountV = (CalleeEntryCount ? *CalleeEntryCount : 0);
 
   bool AnyInline = false;

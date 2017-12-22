@@ -117,7 +117,7 @@ class MiniDumpNewTestCase(TestBase):
         thread = self.process.GetThreadAtIndex(0)
         self.assertEqual(thread.GetStopReason(), lldb.eStopReasonNone)
         stop_description = thread.GetStopDescription(256)
-        self.assertEqual(stop_description, None)
+        self.assertEqual(stop_description, "")
 
     def do_test_deeper_stack(self, binary, core, pid):
         target = self.dbg.CreateTarget(binary)

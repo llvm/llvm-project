@@ -154,8 +154,7 @@ TEST_F(SymbolFilePDBTests, TestAbilitiesForPDB) {
   EXPECT_NE(nullptr, symfile);
   EXPECT_EQ(symfile->GetPluginName(), SymbolFilePDB::GetPluginNameStatic());
 
-  uint32_t expected_abilities =
-      SymbolFile::CompileUnits | SymbolFile::LineTables;
+  uint32_t expected_abilities = SymbolFile::kAllAbilities;
   EXPECT_EQ(expected_abilities, symfile->CalculateAbilities());
 }
 

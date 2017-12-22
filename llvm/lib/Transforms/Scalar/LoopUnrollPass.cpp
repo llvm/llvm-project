@@ -882,7 +882,7 @@ static bool computeUnrollCount(
   }
   
   // Check if the runtime trip count is too small when profile is available.
-  if (L->getHeader()->getParent()->getEntryCount()) {
+  if (L->getHeader()->getParent()->hasProfileData()) {
     if (auto ProfileTripCount = getLoopEstimatedTripCount(L)) {
       if (*ProfileTripCount < FlatLoopTripCountThreshold)
         return false;
