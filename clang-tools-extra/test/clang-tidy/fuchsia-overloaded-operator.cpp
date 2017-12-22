@@ -14,5 +14,5 @@ public:
   // CHECK-MESSAGES-NOT: [[@LINE-1]]:3: warning: cannot overload 'operator=' [fuchsia-overloaded-operator]
 };
 
-A operator-(const A& AA, const A& BB);
+A operator-(const A &A1, const A &A2);
 // CHECK-MESSAGES: [[@LINE-1]]:1: warning: cannot overload 'operator-' [fuchsia-overloaded-operator]
