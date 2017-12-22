@@ -823,13 +823,15 @@ void __kmp_msg(kmp_msg_severity_t severity, kmp_msg_t message, va_list args) {
     switch (message.type) {
     case kmp_mt_hint: {
       format = kmp_i18n_fmt_Hint;
+      // we cannot skip %1$ and only use %2$ to print the message without the number
+      fmsg = __kmp_msg_format(format, message.str);
     } break;
     case kmp_mt_syserr: {
       format = kmp_i18n_fmt_SysErr;
+      fmsg = __kmp_msg_format(format, message.num, message.str);
     } break;
     default: { KMP_DEBUG_ASSERT(0); }
     }
-    fmsg = __kmp_msg_format(format, message.num, message.str);
     __kmp_str_free(&message.str);
     __kmp_str_buf_cat(&buffer, fmsg.str, fmsg.len);
     __kmp_str_free(&fmsg.str);

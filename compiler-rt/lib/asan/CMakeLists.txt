@@ -175,6 +175,11 @@ else()
                                     EXTRA asan.syms.extra)
       set(VERSION_SCRIPT_FLAG
            -Wl,--version-script,${CMAKE_CURRENT_BINARY_DIR}/clang_rt.asan-dynamic-${arch}.vers)
+      # The Solaris 11.4 linker supports a subset of GNU ld version scripts,
+      # but requires a special option to enable it.
+      if (OS_NAME MATCHES "SunOS")
+          list(APPEND VERSION_SCRIPT_FLAG -Wl,-z,gnu-version-script-compat)
+      endif()
       set_property(SOURCE
         ${CMAKE_CURRENT_BINARY_DIR}/dummy.cc
         APPEND PROPERTY

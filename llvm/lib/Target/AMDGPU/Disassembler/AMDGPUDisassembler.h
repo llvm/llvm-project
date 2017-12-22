@@ -95,6 +95,8 @@ public:
     OPW32,
     OPW64,
     OPW128,
+    OPW256,
+    OPW512,
     OPW16,
     OPWV216,
     OPW_LAST_,
@@ -110,6 +112,7 @@ public:
   MCOperand decodeLiteralConstant() const;
 
   MCOperand decodeSrcOp(const OpWidthTy Width, unsigned Val) const;
+  MCOperand decodeDstOp(const OpWidthTy Width, unsigned Val) const;
   MCOperand decodeSpecialReg32(unsigned Val) const;
   MCOperand decodeSpecialReg64(unsigned Val) const;
 

@@ -17405,43 +17405,6 @@ SDValue DAGCombiner::buildSqrtEstimate(SDValue Op, SDNodeFlags Flags) {
   return buildSqrtEstimateImpl(Op, Flags, false);
 }
 
-/// Return true if base is a frame index, which is known not to alias with
-/// anything but itself.  Provides base object and offset as results.
-static bool findBaseOffset(SDValue Ptr, SDValue &Base, int64_t &Offset,
-                           const GlobalValue *&GV, const void *&CV) {
-  // Assume it is a primitive operation.
-  Base = Ptr; Offset = 0; GV = nullptr; CV = nullptr;
-
-  // If it's an adding a simple constant then integrate the offset.
-  if (Base.getOpcode() == ISD::ADD) {
-    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Base.getOperand(1))) {
-      Base = Base.getOperand(0);
-      Offset += C->getSExtValue();
-    }
-  }
-
-  // Return the underlying GlobalValue, and update the Offset.  Return false
-  // for GlobalAddressSDNode since the same GlobalAddress may be represented
-  // by multiple nodes with different offsets.
-  if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Base)) {
-    GV = G->getGlobal();
-    Offset += G->getOffset();
-    return false;
-  }
-
-  // Return the underlying Constant value, and update the Offset.  Return false
-  // for ConstantSDNodes since the same constant pool entry may be represented
-  // by multiple nodes with different offsets.
-  if (ConstantPoolSDNode *C = dyn_cast<ConstantPoolSDNode>(Base)) {
-    CV = C->isMachineConstantPoolEntry() ? (const void *)C->getMachineCPVal()
-                                         : (const void *)C->getConstVal();
-    Offset += C->getOffset();
-    return false;
-  }
-  // If it's any of the following then it can't alias with anything but itself.
-  return isa<FrameIndexSDNode>(Base);
-}
-
 /// Return true if there is any possibility that the two addresses overlap.
 bool DAGCombiner::isAlias(LSBaseSDNode *Op0, LSBaseSDNode *Op1) const {
   // If they are the same then they must be aliases.
@@ -17483,39 +17446,18 @@ bool DAGCombiner::isAlias(LSBaseSDNode *Op0, LSBaseSDNode *Op1) const {
         return false;
     }
 
-  // FIXME: findBaseOffset and ConstantValue/GlobalValue/FrameIndex analysis
-  // modified to use BaseIndexOffset.
+  bool IsFI0 = isa<FrameIndexSDNode>(BasePtr0.getBase());
+  bool IsFI1 = isa<FrameIndexSDNode>(BasePtr1.getBase());
+  bool IsGV0 = isa<GlobalAddressSDNode>(BasePtr0.getBase());
+  bool IsGV1 = isa<GlobalAddressSDNode>(BasePtr1.getBase());
+  bool IsCV0 = isa<ConstantPoolSDNode>(BasePtr0.getBase());
+  bool IsCV1 = isa<ConstantPoolSDNode>(BasePtr1.getBase());
 
-  // Gather base node and offset information.
-  SDValue Base0, Base1;
-  int64_t Offset0, Offset1;
-  const GlobalValue *GV0, *GV1;
-  const void *CV0, *CV1;
-  bool IsFrameIndex0 = findBaseOffset(Op0->getBasePtr(),
-                                      Base0, Offset0, GV0, CV0);
-  bool IsFrameIndex1 = findBaseOffset(Op1->getBasePtr(),
-                                      Base1, Offset1, GV1, CV1);
-
-  // If they have the same base address, then check to see if they overlap.
-  if (Base0 == Base1 || (GV0 && (GV0 == GV1)) || (CV0 && (CV0 == CV1)))
-    return !((Offset0 + NumBytes0) <= Offset1 ||
-             (Offset1 + NumBytes1) <= Offset0);
-
-  // It is possible for different frame indices to alias each other, mostly
-  // when tail call optimization reuses return address slots for arguments.
-  // To catch this case, look up the actual index of frame indices to compute
-  // the real alias relationship.
-  if (IsFrameIndex0 && IsFrameIndex1) {
-    MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
-    Offset0 += MFI.getObjectOffset(cast<FrameIndexSDNode>(Base0)->getIndex());
-    Offset1 += MFI.getObjectOffset(cast<FrameIndexSDNode>(Base1)->getIndex());
-    return !((Offset0 + NumBytes0) <= Offset1 ||
-             (Offset1 + NumBytes1) <= Offset0);
-  }
-
-  // Otherwise, if we know what the bases are, and they aren't identical, then
-  // we know they cannot alias.
-  if ((IsFrameIndex0 || CV0 || GV0) && (IsFrameIndex1 || CV1 || GV1))
+  // If of mismatched base types or checkable indices we can check
+  // they do not alias.
+  if ((BasePtr0.getIndex() == BasePtr1.getIndex() || (IsFI0 != IsFI1) ||
+       (IsGV0 != IsGV1) || (IsCV0 != IsCV1)) &&
+      (IsFI0 || IsGV0 || IsCV0) && (IsFI1 || IsGV1 || IsCV1))
     return false;
 
   // If we know required SrcValue1 and SrcValue2 have relatively large alignment

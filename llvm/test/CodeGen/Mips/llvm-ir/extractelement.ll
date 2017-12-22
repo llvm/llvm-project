@@ -15,5 +15,5 @@ define i1 @via_stack_bug(i8 signext %idx) {
 ; ALL-DAG:       sh     [[ONE]], 6($sp)
 ; ALL-DAG:       andi   [[MASKED_IDX:\$[0-9]+]], $4, 1
 ; ALL-DAG:       addiu  [[VPTR:\$[0-9]+]], $sp, 6
-; ALL-DAG:       or   [[EPTR:\$[0-9]+]], [[MASKED_IDX]], [[VPTR]]
+; ALL-DAG:       or   [[EPTR:\$[0-9]+]], [[VPTR]], [[MASKED_IDX]]
 ; ALL:           lbu    $2, 0([[EPTR]])

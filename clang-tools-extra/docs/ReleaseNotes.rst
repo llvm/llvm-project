@@ -134,7 +134,12 @@ Improvements to clang-tidy
   <http://clang.llvm.org/extra/clang-tidy/checks/fuchsia-default-arguments.html>`_ check
 
   Warns if a function or method is declared or called with default arguments.
-  
+
+- New `fuchsia-overloaded-operator
+  <http://clang.llvm.org/extra/clang-tidy/checks/fuchsia-overloaded-operator.html>`_ check
+
+  Warns if an operator is overloaded, except for the assignment (copy and move) operators.
+
 - New `fuchsia-virtual-inheritance
   <http://clang.llvm.org/extra/clang-tidy/checks/fuchsia-virtual-inheritance.html>`_ check
 

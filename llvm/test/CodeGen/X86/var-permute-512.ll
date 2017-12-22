@@ -511,265 +511,201 @@ define <64 x i8> @var_shuffle_v64i8(<64 x i8> %v, <64 x i8> %indices) nounwind {
 ; NOBW-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
 ; NOBW-NEXT:    vmovaps %ymm0, (%rsp)
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    movzbl (%rax,%rcx), %eax
-; NOBW-NEXT:    vpextrb $1, %xmm4, %ecx
-; NOBW-NEXT:    andl $63, %ecx
+; NOBW-NEXT:    movzbl 3008(%rsp,%rax), %eax
 ; NOBW-NEXT:    vmovd %eax, %xmm0
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
-; NOBW-NEXT:    vpinsrb $1, (%rcx,%rax), %xmm0, %xmm0
+; NOBW-NEXT:    vpextrb $1, %xmm4, %eax
+; NOBW-NEXT:    andl $63, %eax
+; NOBW-NEXT:    vpinsrb $1, 2944(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $2, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $2, (%rax,%rcx), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $2, 2880(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $3, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $3, (%rax,%rcx), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $3, 2816(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $4, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $4, (%rax,%rcx), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $4, 2752(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $5, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $5, (%rax,%rcx), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $5, 2688(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $6, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $6, (%rax,%rcx), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $6, 2624(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $7, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $7, (%rax,%rcx), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $7, 2560(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $8, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $8, (%rax,%rcx), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $8, 2496(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $9, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $9, (%rax,%rcx), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $9, 2432(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $10, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $10, (%rax,%rcx), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $10, 2368(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $11, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $11, (%rax,%rcx), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $11, 2304(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $12, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $12, (%rax,%rcx), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $12, 2240(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $13, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $13, (%rax,%rcx), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $13, 2176(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $14, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $14, (%rax,%rcx), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $14, 2112(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $15, %xmm4, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $15, (%rax,%rcx), %xmm0, %xmm0
+; NOBW-NEXT:    vpinsrb $15, 2048(%rsp,%rax), %xmm0, %xmm0
 ; NOBW-NEXT:    vpextrb $0, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    movzbl (%rax,%rcx), %eax
-; NOBW-NEXT:    vpextrb $1, %xmm2, %ecx
-; NOBW-NEXT:    andl $63, %ecx
+; NOBW-NEXT:    movzbl 4032(%rsp,%rax), %eax
 ; NOBW-NEXT:    vmovd %eax, %xmm1
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
-; NOBW-NEXT:    vpinsrb $1, (%rcx,%rax), %xmm1, %xmm1
+; NOBW-NEXT:    vpextrb $1, %xmm2, %eax
+; NOBW-NEXT:    andl $63, %eax
+; NOBW-NEXT:    vpinsrb $1, 3968(%rsp,%rax), %xmm1, %xmm1
 ; NOBW-NEXT:    vpextrb $2, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $2, (%rax,%rcx), %xmm1, %xmm1
+; NOBW-NEXT:    vpinsrb $2, 3904(%rsp,%rax), %xmm1, %xmm1
 ; NOBW-NEXT:    vpextrb $3, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $3, (%rax,%rcx), %xmm1, %xmm1
+; NOBW-NEXT:    vpinsrb $3, 3840(%rsp,%rax), %xmm1, %xmm1
 ; NOBW-NEXT:    vpextrb $4, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $4, (%rax,%rcx), %xmm1, %xmm1
+; NOBW-NEXT:    vpinsrb $4, 3776(%rsp,%rax), %xmm1, %xmm1
 ; NOBW-NEXT:    vpextrb $5, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $5, (%rax,%rcx), %xmm1, %xmm1
+; NOBW-NEXT:    vpinsrb $5, 3712(%rsp,%rax), %xmm1, %xmm1
 ; NOBW-NEXT:    vpextrb $6, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $6, (%rax,%rcx), %xmm1, %xmm1
+; NOBW-NEXT:    vpinsrb $6, 3648(%rsp,%rax), %xmm1, %xmm1
 ; NOBW-NEXT:    vpextrb $7, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $7, (%rax,%rcx), %xmm1, %xmm1
+; NOBW-NEXT:    vpinsrb $7, 3584(%rsp,%rax), %xmm1, %xmm1
 ; NOBW-NEXT:    vpextrb $8, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $8, (%rax,%rcx), %xmm1, %xmm1
+; NOBW-NEXT:    vpinsrb $8, 3520(%rsp,%rax), %xmm1, %xmm1
 ; NOBW-NEXT:    vpextrb $9, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $9, (%rax,%rcx), %xmm1, %xmm1
+; NOBW-NEXT:    vpinsrb $9, 3456(%rsp,%rax), %xmm1, %xmm1
 ; NOBW-NEXT:    vpextrb $10, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $10, (%rax,%rcx), %xmm1, %xmm1
+; NOBW-NEXT:    vpinsrb $10, 3392(%rsp,%rax), %xmm1, %xmm1
 ; NOBW-NEXT:    vpextrb $11, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $11, (%rax,%rcx), %xmm1, %xmm1
+; NOBW-NEXT:    vpinsrb $11, 3328(%rsp,%rax), %xmm1, %xmm1
 ; NOBW-NEXT:    vpextrb $12, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $12, (%rax,%rcx), %xmm1, %xmm1
+; NOBW-NEXT:    vpinsrb $12, 3264(%rsp,%rax), %xmm1, %xmm1
 ; NOBW-NEXT:    vpextrb $13, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $13, (%rax,%rcx), %xmm1, %xmm1
+; NOBW-NEXT:    vpinsrb $13, 3200(%rsp,%rax), %xmm1, %xmm1
 ; NOBW-NEXT:    vpextrb $14, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $14, (%rax,%rcx), %xmm1, %xmm1
+; NOBW-NEXT:    vpinsrb $14, 3136(%rsp,%rax), %xmm1, %xmm1
 ; NOBW-NEXT:    vpextrb $15, %xmm2, %eax
 ; NOBW-NEXT:    vextracti128 $1, %ymm3, %xmm2
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $15, (%rax,%rcx), %xmm1, %xmm1
+; NOBW-NEXT:    vpinsrb $15, 3072(%rsp,%rax), %xmm1, %xmm1
 ; NOBW-NEXT:    vpextrb $0, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    movzbl (%rax,%rcx), %eax
-; NOBW-NEXT:    vpextrb $1, %xmm2, %ecx
-; NOBW-NEXT:    andl $63, %ecx
+; NOBW-NEXT:    movzbl 960(%rsp,%rax), %eax
 ; NOBW-NEXT:    vmovd %eax, %xmm4
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
-; NOBW-NEXT:    vpinsrb $1, (%rcx,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpextrb $1, %xmm2, %eax
+; NOBW-NEXT:    andl $63, %eax
+; NOBW-NEXT:    vpinsrb $1, 896(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $2, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $2, (%rax,%rcx), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $2, 832(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $3, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $3, (%rax,%rcx), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $3, 768(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $4, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $4, (%rax,%rcx), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $4, 704(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $5, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $5, (%rax,%rcx), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $5, 640(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $6, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $6, (%rax,%rcx), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $6, 576(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $7, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $7, (%rax,%rcx), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $7, 512(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $8, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $8, (%rax,%rcx), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $8, 448(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $9, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $9, (%rax,%rcx), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $9, 384(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $10, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $10, (%rax,%rcx), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $10, 320(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $11, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $11, (%rax,%rcx), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $11, 256(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $12, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $12, (%rax,%rcx), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $12, 192(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $13, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $13, (%rax,%rcx), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $13, 128(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $14, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $14, (%rax,%rcx), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $14, 64(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $15, %xmm2, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    movq %rsp, %rcx
-; NOBW-NEXT:    vpinsrb $15, (%rax,%rcx), %xmm4, %xmm2
+; NOBW-NEXT:    vpinsrb $15, (%rsp,%rax), %xmm4, %xmm2
 ; NOBW-NEXT:    vpextrb $0, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    movzbl (%rax,%rcx), %eax
-; NOBW-NEXT:    vpextrb $1, %xmm3, %ecx
-; NOBW-NEXT:    andl $63, %ecx
+; NOBW-NEXT:    movzbl 1984(%rsp,%rax), %eax
 ; NOBW-NEXT:    vmovd %eax, %xmm4
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
-; NOBW-NEXT:    vpinsrb $1, (%rcx,%rax), %xmm4, %xmm4
+; NOBW-NEXT:    vpextrb $1, %xmm3, %eax
+; NOBW-NEXT:    andl $63, %eax
+; NOBW-NEXT:    vpinsrb $1, 1920(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $2, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $2, (%rax,%rcx), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $2, 1856(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $3, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $3, (%rax,%rcx), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $3, 1792(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $4, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $4, (%rax,%rcx), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $4, 1728(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $5, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $5, (%rax,%rcx), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $5, 1664(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $6, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $6, (%rax,%rcx), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $6, 1600(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $7, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $7, (%rax,%rcx), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $7, 1536(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $8, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $8, (%rax,%rcx), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $8, 1472(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $9, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $9, (%rax,%rcx), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $9, 1408(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $10, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $10, (%rax,%rcx), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $10, 1344(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $11, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $11, (%rax,%rcx), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $11, 1280(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $12, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $12, (%rax,%rcx), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $12, 1216(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $13, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $13, (%rax,%rcx), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $13, 1152(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $14, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $14, (%rax,%rcx), %xmm4, %xmm4
+; NOBW-NEXT:    vpinsrb $14, 1088(%rsp,%rax), %xmm4, %xmm4
 ; NOBW-NEXT:    vpextrb $15, %xmm3, %eax
 ; NOBW-NEXT:    andl $63, %eax
-; NOBW-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; NOBW-NEXT:    vpinsrb $15, (%rax,%rcx), %xmm4, %xmm3
+; NOBW-NEXT:    vpinsrb $15, 1024(%rsp,%rax), %xmm4, %xmm3
 ; NOBW-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; NOBW-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm1
 ; NOBW-NEXT:    movq %rbp, %rsp

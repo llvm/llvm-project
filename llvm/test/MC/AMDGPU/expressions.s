@@ -46,3 +46,11 @@ BB2:
 s_sub_u32 vcc_lo, vcc_lo, (BB2+4)-BB1
 // VI: s_sub_u32 vcc_lo, vcc_lo, (BB2+4)-BB1 ; encoding: [0x6a,0xff,0xea,0x80,A,A,A,A]
 // VI-NEXT: ;   fixup A - offset: 4, value: (BB2+4)-BB1, kind: FK_Data_4
+
+t=1
+s_sub_u32 s0, s0, -t
+// VI: s_sub_u32 s0, s0, -1            ; encoding: [0x00,0xc1,0x80,0x80]
+
+t=-1
+s_sub_u32 s0, s0, -t
+// VI: s_sub_u32 s0, s0, 1             ; encoding: [0x00,0x81,0x80,0x80]

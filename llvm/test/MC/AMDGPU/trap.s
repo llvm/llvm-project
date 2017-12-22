@@ -190,6 +190,48 @@ s_mov_b64     ttmp[14:15], exec
 // GFX9: s_mov_b64 ttmp[14:15], exec       ; encoding: [0x7e,0x01,0xfa,0xbe]
 
 //===----------------------------------------------------------------------===//
+// Trap Handler related - 8-dword registers
+// NB: gfx7 doc states that SMRD does not support trap registers for dst
+//===----------------------------------------------------------------------===//
+
+s_buffer_load_dwordx8 ttmp[0:7], s[0:3], s0
+// VI:   [0x00,0x1c,0x2c,0xc0,0x00,0x00,0x00,0x00]
+// GFX9: [0x00,0x1b,0x2c,0xc0,0x00,0x00,0x00,0x00]
+
+s_buffer_load_dwordx8 ttmp[4:11], s[0:3], s0
+// VI:   [0x00,0x1d,0x2c,0xc0,0x00,0x00,0x00,0x00]
+// GFX9: [0x00,0x1c,0x2c,0xc0,0x00,0x00,0x00,0x00]
+
+s_buffer_load_dwordx8 ttmp[8:15], s[0:3], s0
+// NOSICIVI: error: not a valid operand
+// GFX9: [0x00,0x1d,0x2c,0xc0,0x00,0x00,0x00,0x00]
+
+s_load_dwordx8 ttmp[0:7], s[0:1], s0
+// VI:   [0x00,0x1c,0x0c,0xc0,0x00,0x00,0x00,0x00]
+// GFX9: [0x00,0x1b,0x0c,0xc0,0x00,0x00,0x00,0x00]
+
+s_load_dwordx8 ttmp[4:11], s[0:1], s0
+// VI:   [0x00,0x1d,0x0c,0xc0,0x00,0x00,0x00,0x00]
+// GFX9: [0x00,0x1c,0x0c,0xc0,0x00,0x00,0x00,0x00]
+
+s_load_dwordx8 ttmp[8:15], s[0:1], s0
+// NOSICIVI: error: not a valid operand
+// GFX9: [0x00,0x1d,0x0c,0xc0,0x00,0x00,0x00,0x00]
+
+//===----------------------------------------------------------------------===//
+// Trap Handler related - 16-dword registers
+// NB: gfx7 doc states that SMRD does not support trap registers for dst
+//===----------------------------------------------------------------------===//
+
+s_buffer_load_dwordx16 ttmp[0:15], s[0:3], s0
+// NOSICIVI: error: not a valid operand
+// GFX9: [0x00,0x1b,0x30,0xc0,0x00,0x00,0x00,0x00]
+
+s_load_dwordx16 ttmp[0:15], s[0:1], s0
+// NOSICIVI: error: not a valid operand
+// GFX9: [0x00,0x1b,0x10,0xc0,0x00,0x00,0x00,0x00]
+
+//===----------------------------------------------------------------------===//
 // Trap Handler related - Some specific instructions
 //===----------------------------------------------------------------------===//
 

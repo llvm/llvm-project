@@ -335,13 +335,13 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
   } else if (MRI.getRegClass(AMDGPU::VReg_256RegClassID).contains(RegNo)) {
     O << 'v';
     NumRegs = 8;
-  } else if (MRI.getRegClass(AMDGPU::SReg_256RegClassID).contains(RegNo)) {
+  } else if (MRI.getRegClass(AMDGPU::SGPR_256RegClassID).contains(RegNo)) {
     O << 's';
     NumRegs = 8;
   } else if (MRI.getRegClass(AMDGPU::VReg_512RegClassID).contains(RegNo)) {
     O << 'v';
     NumRegs = 16;
-  } else if (MRI.getRegClass(AMDGPU::SReg_512RegClassID).contains(RegNo)) {
+  } else if (MRI.getRegClass(AMDGPU::SGPR_512RegClassID).contains(RegNo)) {
     O << 's';
     NumRegs = 16;
   } else {

@@ -201,6 +201,12 @@ void ScopAnnotator::annotate(Instruction *Inst) {
   if (!AliasScopeDomain)
     return;
 
+  // Do not apply annotations on memory operations that take more than one
+  // pointer. It would be ambiguous to which pointer the annotation applies.
+  // FIXME: How can we specify annotations for all pointer arguments?
+  if (isa<CallInst>(Inst) && !isa<MemSetInst>(Inst))
+    return;
+
   auto *Ptr = getMemAccInstPointerOperand(Inst);
   if (!Ptr)
     return;

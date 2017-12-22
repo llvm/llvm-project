@@ -346,10 +346,9 @@ public:
 
 } // end anonymous namespace
 
-TargetIRAnalysis AArch64TargetMachine::getTargetIRAnalysis() {
-  return TargetIRAnalysis([this](const Function &F) {
-    return TargetTransformInfo(AArch64TTIImpl(this, F));
-  });
+TargetTransformInfo
+AArch64TargetMachine::getTargetTransformInfo(const Function &F) {
+  return TargetTransformInfo(AArch64TTIImpl(this, F));
 }
 
 TargetPassConfig *AArch64TargetMachine::createPassConfig(PassManagerBase &PM) {
