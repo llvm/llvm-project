@@ -159,6 +159,7 @@ bool X86TargetInfo::initFeatureMap(
   case CK_Broadwell:
     setFeatureEnabledImpl(Features, "rdseed", true);
     setFeatureEnabledImpl(Features, "adx", true);
+    setFeatureEnabledImpl(Features, "prfchw", true);
     LLVM_FALLTHROUGH;
   case CK_Haswell:
     setFeatureEnabledImpl(Features, "avx2", true);
@@ -224,6 +225,7 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "aes", true);
     setFeatureEnabledImpl(Features, "pclmul", true);
     setFeatureEnabledImpl(Features, "sse4.2", true);
+    setFeatureEnabledImpl(Features, "prfchw", true);
     LLVM_FALLTHROUGH;
   case CK_Bonnell:
     setFeatureEnabledImpl(Features, "movbe", true);
@@ -241,6 +243,7 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "avx512cd", true);
     setFeatureEnabledImpl(Features, "avx512er", true);
     setFeatureEnabledImpl(Features, "avx512pf", true);
+    setFeatureEnabledImpl(Features, "prfchw", true);
     setFeatureEnabledImpl(Features, "prefetchwt1", true);
     setFeatureEnabledImpl(Features, "fxsr", true);
     setFeatureEnabledImpl(Features, "rdseed", true);
