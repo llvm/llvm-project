@@ -9,6 +9,7 @@
 
 #ifdef _WIN32
 #include <direct.h>
+#include <process.h>
 #include <windows.h>
 #include "WindowsMMap.h"
 #else

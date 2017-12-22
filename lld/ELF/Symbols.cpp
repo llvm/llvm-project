@@ -116,12 +116,6 @@ static uint64_t getSymVA(const Symbol &Sym, int64_t &Addend) {
   llvm_unreachable("invalid symbol kind");
 }
 
-// Returns true if this is a weak undefined symbol.
-bool Symbol::isUndefWeak() const {
-  // See comment on Lazy in Symbols.h for the details.
-  return isWeak() && (isUndefined() || isLazy());
-}
-
 uint64_t Symbol::getVA(int64_t Addend) const {
   uint64_t OutVA = getSymVA(*this, Addend);
   return OutVA + Addend;
