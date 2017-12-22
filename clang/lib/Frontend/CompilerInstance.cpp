@@ -1897,9 +1897,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
         auto &II = PP->getIdentifierTable().get(
             PrivateModule, PP->getIdentifierInfo(Module->Name)->getTokenID());
         PrivPath.push_back(std::make_pair(&II, Path[0].second));
-        //Sub = loadModule(ImportLoc, PrivPath, Visibility, IsInclusionDirective);
-        //if (loadModule(ImportLoc, PrivPath, Visibility, IsInclusionDirective))
-        //  Sub = PP->getHeaderSearchInfo().lookupModule(PrivateModule);
+
         if (PP->getHeaderSearchInfo().lookupModule(PrivateModule))
           Sub =
               loadModule(ImportLoc, PrivPath, Visibility, IsInclusionDirective);
