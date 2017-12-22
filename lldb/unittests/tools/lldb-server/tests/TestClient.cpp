@@ -27,11 +27,6 @@ using namespace lldb_private;
 using namespace llvm;
 
 namespace llgs_tests {
-bool TestClient::IsDebugServer() {
-  return sys::path::filename(LLDB_SERVER).contains("debugserver");
-}
-
-bool TestClient::IsLldbServer() { return !IsDebugServer(); }
 
 TestClient::TestClient(std::unique_ptr<Connection> Conn) {
   SetConnection(Conn.release());
@@ -56,6 +51,10 @@ Expected<std::unique_ptr<TestClient>> TestClient::launch(StringRef Log) {
 }
 
 Expected<std::unique_ptr<TestClient>> TestClient::launch(StringRef Log, ArrayRef<StringRef> InferiorArgs) {
+  return launchCustom(Log, {}, InferiorArgs);
+}
+
+Expected<std::unique_ptr<TestClient>> TestClient::launchCustom(StringRef Log, ArrayRef<StringRef> ServerArgs, ArrayRef<StringRef> InferiorArgs) {
   const ArchSpec &arch_spec = HostInfo::GetArchitecture();
   Args args;
   args.AppendArgument(LLDB_SERVER);
@@ -79,6 +78,9 @@ Expected<std::unique_ptr<TestClient>> TestClient::launch(StringRef Log, ArrayRef
 
   args.AppendArgument(
       ("localhost:" + Twine(listen_socket.GetLocalPortNumber())).str());
+
+  for (StringRef arg : ServerArgs)
+    args.AppendArgument(arg);
 
   if (!InferiorArgs.empty()) {
     args.AppendArgument("--");
