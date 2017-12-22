@@ -125,3 +125,20 @@ void fizbin() {
   baz b3; // expected-error {{must use 'class' tag to refer to type 'baz' in this scope}}
 }
 }
+
+namespace TemporaryFromFunctionCall {
+  struct A {
+    A(int);
+  };
+  int f();
+  int g(int);
+  namespace N {
+    void x() {
+      // FIXME: For the first and second of these (but not the third), we
+      // should produce a vexing-parse warning.
+      A(f());
+      A(g(int()));
+      A(g(int));
+    }
+  }
+}

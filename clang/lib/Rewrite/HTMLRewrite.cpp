@@ -342,6 +342,7 @@ void html::AddHeaderFooterInternalBuiltinCSS(Rewriter &R, FileID FID,
       " .CodeInsertionHint { font-weight: bold; background-color: #10dd10 }\n"
       " .CodeRemovalHint { background-color:#de1010 }\n"
       " .CodeRemovalHint { border-bottom:1px solid #6F9DBE }\n"
+      " .selected{ background-color:orange !important; }\n"
       " table.simpletable {\n"
       "   padding: 5px;\n"
       "   font-size:12pt;\n"

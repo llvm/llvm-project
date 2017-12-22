@@ -793,11 +793,10 @@ define i32 @test_insertelement_v32i1(i32 %a, i32 %b, <32 x i32> %x , <32 x i32> 
 ; KNL-NEXT:    cmpl %esi, %edi
 ; KNL-NEXT:    setb %al
 ; KNL-NEXT:    vpcmpltud %zmm2, %zmm0, %k1
-; KNL-NEXT:    movl {{.*}}(%rip), %ecx
-; KNL-NEXT:    vpbroadcastd %ecx, %zmm0 {%k1} {z}
+; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vpmovdb %zmm0, %xmm0
 ; KNL-NEXT:    vpcmpltud %zmm3, %zmm1, %k1
-; KNL-NEXT:    vpbroadcastd %ecx, %zmm1 {%k1} {z}
+; KNL-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
 ; KNL-NEXT:    vpmovdb %zmm1, %xmm1
 ; KNL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; KNL-NEXT:    vpsllw $7, %ymm0, %ymm0
@@ -2215,15 +2214,14 @@ define i96 @test_insertelement_variable_v96i1(<96 x i8> %a, i8 %b, i32 %index) {
 ; SKX-NEXT:    vpinsrb $15, 728(%rbp), %xmm2, %xmm2
 ; SKX-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; SKX-NEXT:    vpcmpnleub %zmm2, %zmm0, %k1
-; SKX-NEXT:    vpcmpnleub %zmm2, %zmm1, %k2
+; SKX-NEXT:    vpcmpnleub %zmm2, %zmm0, %k0
+; SKX-NEXT:    vpcmpnleub %zmm2, %zmm1, %k1
 ; SKX-NEXT:    movl 744(%rbp), %eax
 ; SKX-NEXT:    andl $127, %eax
 ; SKX-NEXT:    cmpb $0, 736(%rbp)
-; SKX-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; SKX-NEXT:    vmovdqu8 %zmm0, %zmm1 {%k2} {z}
-; SKX-NEXT:    vmovdqa32 %zmm1, {{[0-9]+}}(%rsp)
-; SKX-NEXT:    vmovdqu8 %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    vpmovm2b %k1, %zmm0
+; SKX-NEXT:    vmovdqa32 %zmm0, {{[0-9]+}}(%rsp)
+; SKX-NEXT:    vpmovm2b %k0, %zmm0
 ; SKX-NEXT:    vmovdqa32 %zmm0, (%rsp)
 ; SKX-NEXT:    movq %rsp, %rcx
 ; SKX-NEXT:    setne (%rax,%rcx)
@@ -2336,14 +2334,13 @@ define i128 @test_insertelement_variable_v128i1(<128 x i8> %a, i8 %b, i32 %index
 ; SKX-NEXT:    subq $256, %rsp ## imm = 0x100
 ; SKX-NEXT:    ## kill: def %esi killed %esi def %rsi
 ; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; SKX-NEXT:    vpcmpnleub %zmm2, %zmm0, %k1
-; SKX-NEXT:    vpcmpnleub %zmm2, %zmm1, %k2
+; SKX-NEXT:    vpcmpnleub %zmm2, %zmm0, %k0
+; SKX-NEXT:    vpcmpnleub %zmm2, %zmm1, %k1
 ; SKX-NEXT:    andl $127, %esi
 ; SKX-NEXT:    testb %dil, %dil
-; SKX-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; SKX-NEXT:    vmovdqu8 %zmm0, %zmm1 {%k2} {z}
-; SKX-NEXT:    vmovdqa32 %zmm1, {{[0-9]+}}(%rsp)
-; SKX-NEXT:    vmovdqu8 %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    vpmovm2b %k1, %zmm0
+; SKX-NEXT:    vmovdqa32 %zmm0, {{[0-9]+}}(%rsp)
+; SKX-NEXT:    vpmovm2b %k0, %zmm0
 ; SKX-NEXT:    vmovdqa32 %zmm0, (%rsp)
 ; SKX-NEXT:    movq %rsp, %rax
 ; SKX-NEXT:    setne (%rsi,%rax)

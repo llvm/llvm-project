@@ -1743,8 +1743,8 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                       "DWARF DW_TAG_array_type DIE at 0x%8.8x has a "
                       "class/union/struct element type DIE 0x%8.8x that is a "
                       "forward declaration, not a complete definition.\nTry "
-                      "compiling the source file with -fno-limit-debug-info or "
-                      "disable -gmodule",
+                      "compiling the source file with -fstandalone-debug or "
+                      "disable -gmodules",
                       die.GetOffset(), type_die_ref.die_offset);
                 else
                   module_sp->ReportError(
@@ -2255,7 +2255,7 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
                 if (die.GetCU()->GetProducer() ==
                     DWARFCompileUnit::eProducerClang)
                   module->ReportError(":: Try compiling the source file with "
-                                      "-fno-limit-debug-info.");
+                                      "-fstandalone-debug.");
 
                 // We have no choice other than to pretend that the base class
                 // is complete. If we don't do this, clang will crash when we
@@ -3095,7 +3095,7 @@ bool DWARFASTParserClang::ParseChildMembers(
                       "DWARF DIE at 0x%8.8x (class %s) has a member variable "
                       "0x%8.8x (%s) whose type is a forward declaration, not a "
                       "complete definition.\nTry compiling the source file "
-                      "with -fno-limit-debug-info",
+                      "with -fstandalone-debug",
                       parent_die.GetOffset(), parent_die.GetName(),
                       die.GetOffset(), name);
                 else

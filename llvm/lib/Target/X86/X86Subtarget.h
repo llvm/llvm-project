@@ -201,7 +201,7 @@ protected:
   bool HasCLZERO;
 
   /// Processor has Prefetch with intent to Write instruction
-  bool HasPFPREFETCHWT1;
+  bool HasPREFETCHWT1;
 
   /// True if SHLD instructions are slow.
   bool IsSHLDSlow;
@@ -517,7 +517,14 @@ public:
   bool hasRTM() const { return HasRTM; }
   bool hasADX() const { return HasADX; }
   bool hasSHA() const { return HasSHA; }
-  bool hasPRFCHW() const { return HasPRFCHW; }
+  bool hasPRFCHW() const { return HasPRFCHW || HasPREFETCHWT1; }
+  bool hasPREFETCHWT1() const { return HasPREFETCHWT1; }
+  bool hasSSEPrefetch() const {
+    // We implicitly enable these when we have a write prefix supporting cache
+    // level OR if we have prfchw, but don't already have a read prefetch from
+    // 3dnow.
+    return hasSSE1() || (hasPRFCHW() && !has3DNow()) || hasPREFETCHWT1();
+  }
   bool hasRDSEED() const { return HasRDSEED; }
   bool hasLAHFSAHF() const { return HasLAHFSAHF; }
   bool hasMWAITX() const { return HasMWAITX; }

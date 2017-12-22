@@ -203,7 +203,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   // hit the peeled section.
   // We only do this in the presence of profile information, since otherwise
   // our estimates of the trip count are not reliable enough.
-  if (UP.AllowPeeling && L->getHeader()->getParent()->getEntryCount()) {
+  if (UP.AllowPeeling && L->getHeader()->getParent()->hasProfileData()) {
     Optional<unsigned> PeelCount = getLoopEstimatedTripCount(L);
     if (!PeelCount)
       return;

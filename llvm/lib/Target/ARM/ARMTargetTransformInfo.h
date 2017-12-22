@@ -156,8 +156,6 @@ public:
   int getAddressComputationCost(Type *Val, ScalarEvolution *SE, 
                                 const SCEV *Ptr);
 
-  int getFPOpCost(Type *Ty);
-
   int getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
       TTI::OperandValueKind Op1Info = TTI::OK_AnyValue,
