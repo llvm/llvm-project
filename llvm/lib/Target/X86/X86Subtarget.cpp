@@ -302,6 +302,7 @@ void X86Subtarget::initializeEnvironment() {
   HasVNNI = false;
   HasBITALG = false;
   HasSHA = false;
+  HasPREFETCHWT1 = false;
   HasPRFCHW = false;
   HasRDSEED = false;
   HasLAHFSAHF = false;

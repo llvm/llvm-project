@@ -72,8 +72,10 @@ femms
 
 // CHECK: prefetch (%rax)   # encoding: [0x0f,0x0d,0x00]
 // CHECK: prefetchw (%rax)  # encoding: [0x0f,0x0d,0x08]
+// CHECK: prefetchwt1 (%rax)  # encoding: [0x0f,0x0d,0x10]
 prefetch (%rax)
 prefetchw (%rax)
+prefetchwt1 (%rax)
 
 
 // CHECK: pf2iw %mm2, %mm1  # encoding: [0x0f,0x0f,0xca,0x1c]

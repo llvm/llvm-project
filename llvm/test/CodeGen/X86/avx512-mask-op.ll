@@ -1783,20 +1783,19 @@ define void @ktest_2(<32 x float> %in, float * %base) {
 ; KNL-NEXT:    vmovups (%rdi), %zmm2
 ; KNL-NEXT:    vmovups 64(%rdi), %zmm3
 ; KNL-NEXT:    vcmpltps %zmm0, %zmm2, %k1
-; KNL-NEXT:    movl {{.*}}(%rip), %eax
-; KNL-NEXT:    vpbroadcastd %eax, %zmm2 {%k1} {z}
+; KNL-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
 ; KNL-NEXT:    vpmovdb %zmm2, %xmm2
 ; KNL-NEXT:    vcmpltps %zmm1, %zmm3, %k2
-; KNL-NEXT:    vpbroadcastd %eax, %zmm3 {%k2} {z}
+; KNL-NEXT:    vpternlogd $255, %zmm3, %zmm3, %zmm3 {%k2} {z}
 ; KNL-NEXT:    vpmovdb %zmm3, %xmm3
 ; KNL-NEXT:    vmovups 68(%rdi), %zmm4 {%k2} {z}
 ; KNL-NEXT:    vmovups 4(%rdi), %zmm5 {%k1} {z}
 ; KNL-NEXT:    vcmpltps %zmm5, %zmm0, %k1
-; KNL-NEXT:    vpbroadcastd %eax, %zmm5 {%k1} {z}
+; KNL-NEXT:    vpternlogd $255, %zmm5, %zmm5, %zmm5 {%k1} {z}
 ; KNL-NEXT:    vpmovdb %zmm5, %xmm5
 ; KNL-NEXT:    vpor %xmm5, %xmm2, %xmm2
 ; KNL-NEXT:    vcmpltps %zmm4, %zmm1, %k1
-; KNL-NEXT:    vpbroadcastd %eax, %zmm4 {%k1} {z}
+; KNL-NEXT:    vpternlogd $255, %zmm4, %zmm4, %zmm4 {%k1} {z}
 ; KNL-NEXT:    vpmovdb %zmm4, %xmm4
 ; KNL-NEXT:    vpor %xmm4, %xmm3, %xmm3
 ; KNL-NEXT:    vpmovsxbd %xmm3, %zmm3
@@ -1886,20 +1885,19 @@ define void @ktest_2(<32 x float> %in, float * %base) {
 ; AVX512DQ-NEXT:    vmovups (%rdi), %zmm2
 ; AVX512DQ-NEXT:    vmovups 64(%rdi), %zmm3
 ; AVX512DQ-NEXT:    vcmpltps %zmm0, %zmm2, %k1
-; AVX512DQ-NEXT:    movl {{.*}}(%rip), %eax
-; AVX512DQ-NEXT:    vpbroadcastd %eax, %zmm2 {%k1} {z}
+; AVX512DQ-NEXT:    vpmovm2d %k1, %zmm2
 ; AVX512DQ-NEXT:    vpmovdb %zmm2, %xmm2
 ; AVX512DQ-NEXT:    vcmpltps %zmm1, %zmm3, %k2
-; AVX512DQ-NEXT:    vpbroadcastd %eax, %zmm3 {%k2} {z}
+; AVX512DQ-NEXT:    vpmovm2d %k2, %zmm3
 ; AVX512DQ-NEXT:    vpmovdb %zmm3, %xmm3
 ; AVX512DQ-NEXT:    vmovups 68(%rdi), %zmm4 {%k2} {z}
 ; AVX512DQ-NEXT:    vmovups 4(%rdi), %zmm5 {%k1} {z}
-; AVX512DQ-NEXT:    vcmpltps %zmm5, %zmm0, %k1
-; AVX512DQ-NEXT:    vpbroadcastd %eax, %zmm5 {%k1} {z}
+; AVX512DQ-NEXT:    vcmpltps %zmm5, %zmm0, %k0
+; AVX512DQ-NEXT:    vpmovm2d %k0, %zmm5
 ; AVX512DQ-NEXT:    vpmovdb %zmm5, %xmm5
 ; AVX512DQ-NEXT:    vpor %xmm5, %xmm2, %xmm2
-; AVX512DQ-NEXT:    vcmpltps %zmm4, %zmm1, %k1
-; AVX512DQ-NEXT:    vpbroadcastd %eax, %zmm4 {%k1} {z}
+; AVX512DQ-NEXT:    vcmpltps %zmm4, %zmm1, %k0
+; AVX512DQ-NEXT:    vpmovm2d %k0, %zmm4
 ; AVX512DQ-NEXT:    vpmovdb %zmm4, %xmm4
 ; AVX512DQ-NEXT:    vpor %xmm4, %xmm3, %xmm3
 ; AVX512DQ-NEXT:    vpmovsxbd %xmm3, %zmm3

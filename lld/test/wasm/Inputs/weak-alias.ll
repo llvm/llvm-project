@@ -20,15 +20,11 @@ entry:
 
 define i32 @call_alias_ptr() #0 {
 entry:
-; TODO(sbc): This code currently causes linker failures:
-; LLVM ERROR: symbol not found table index space: alias_fn
-; See: https://github.com/WebAssembly/tool-conventions/issues/34#
-;  %fnptr = alloca i32 ()*, align 8
-;  store i32 ()* @alias_fn, i32 ()** %fnptr, align 8
-;  %0 = load i32 ()*, i32 ()** %fnptr, align 8
-;  %call = call i32 %0()
-;  ret i32 %call
-   ret i32 1
+   %fnptr = alloca i32 ()*, align 8
+   store i32 ()* @alias_fn, i32 ()** %fnptr, align 8
+   %0 = load i32 ()*, i32 ()** %fnptr, align 8
+   %call = call i32 %0()
+   ret i32 %call
 }
 
 define i32 @call_direct_ptr() #0 {

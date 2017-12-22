@@ -148,16 +148,15 @@ public:
   /// incremental build.
   void setCacheDir(std::string Path) { CacheOptions.Path = std::move(Path); }
 
-  /// Cache policy: interval (seconds) between two prunes of the cache. A
-  /// negative value sets the maximum possible pruning interval. A value
-  /// of 0 will be ignored.
+  /// Cache policy: interval (seconds) between two prunes of the cache. Set to a
+  /// negative value to disable pruning. A value of 0 will be ignored.
   void setCachePruningInterval(int Interval) {
-    static_assert(std::is_same<decltype(CacheOptions.Policy.Interval),
-                               std::chrono::seconds>::value,
-                  "ensure same types to avoid risk of overflow");
-    if (Interval)
-      CacheOptions.Policy.Interval = Interval > 0 ? std::chrono::seconds(Interval)
-                                                  : std::chrono::seconds::max();
+    if (Interval == 0)
+      return;
+    if(Interval < 0)
+      CacheOptions.Policy.Interval.reset();
+    else
+      CacheOptions.Policy.Interval = std::chrono::seconds(Interval);
   }
 
   /// Cache policy: expiration (in seconds) for an entry.

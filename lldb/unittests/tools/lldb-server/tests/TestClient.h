@@ -21,12 +21,20 @@
 #include <memory>
 #include <string>
 
+#if LLDB_SERVER_IS_DEBUGSERVER
+#define LLGS_TEST(x) DISABLED_ ## x
+#define DS_TEST(x) x
+#else
+#define LLGS_TEST(x) x
+#define DS_TEST(x) DISABLED_ ## x
+#endif
+
 namespace llgs_tests {
 class TestClient
     : public lldb_private::process_gdb_remote::GDBRemoteCommunicationClient {
 public:
-  static bool IsDebugServer();
-  static bool IsLldbServer();
+  static bool IsDebugServer() { return LLDB_SERVER_IS_DEBUGSERVER; }
+  static bool IsLldbServer() { return !IsDebugServer(); }
 
   /// Launches the server, connects it to the client and returns the client. If
   /// Log is non-empty, the server will write it's log to this file.
@@ -36,6 +44,13 @@ public:
   /// When the client connects, it already has a process ready.
   static llvm::Expected<std::unique_ptr<TestClient>>
   launch(llvm::StringRef Log, llvm::ArrayRef<llvm::StringRef> InferiorArgs);
+
+  /// Allows user to pass additional arguments to the server. Be careful when
+  /// using this for generic tests, as the two stubs have different
+  /// command-line interfaces.
+  static llvm::Expected<std::unique_ptr<TestClient>>
+  launchCustom(llvm::StringRef Log, llvm::ArrayRef<llvm::StringRef> ServerArgs, llvm::ArrayRef<llvm::StringRef> InferiorArgs);
+
 
   ~TestClient() override;
   llvm::Error SetInferior(llvm::ArrayRef<std::string> inferior_args);

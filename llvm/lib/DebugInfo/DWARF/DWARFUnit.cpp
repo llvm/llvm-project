@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
@@ -359,45 +360,378 @@ void DWARFUnit::collectAddressRanges(DWARFAddressRangesVector &CURanges) {
     clearDIEs(true);
 }
 
-void DWARFUnit::updateAddressDieMap(DWARFDie Die) {
-  if (Die.isSubroutineDIE()) {
+// Populates a map from PC addresses to subprogram DIEs.
+//
+// This routine tries to look at the smallest amount of the debug info it can
+// to locate the DIEs. This is because many subprograms will never end up being
+// read or needed at all. We want to be as lazy as possible.
+void DWARFUnit::buildSubprogramDIEAddrMap() {
+  assert(SubprogramDIEAddrMap.empty() && "Must only build this map once!");
+  SmallVector<DWARFDie, 16> Worklist;
+  Worklist.push_back(getUnitDIE());
+  do {
+    DWARFDie Die = Worklist.pop_back_val();
+
+    // Queue up child DIEs to recurse through.
+    // FIXME: This causes us to read a lot more debug info than we really need.
+    // We should look at pruning out DIEs which cannot transitively hold
+    // separate subprograms.
+    for (DWARFDie Child : Die.children())
+      Worklist.push_back(Child);
+
+    // If handling a non-subprogram DIE, nothing else to do.
+    if (!Die.isSubprogramDIE())
+      continue;
+
+    // For subprogram DIEs, store them, and insert relevant markers into the
+    // address map. We don't care about overlap at all here as DWARF doesn't
+    // meaningfully support that, so we simply will insert a range with no DIE
+    // starting from the high PC. In the event there are overlaps, sorting
+    // these may truncate things in surprising ways but still will allow
+    // lookups to proceed.
+    int DIEIndex = SubprogramDIEAddrInfos.size();
+    SubprogramDIEAddrInfos.push_back({Die, (uint64_t)-1, {}});
     for (const auto &R : Die.getAddressRanges()) {
       // Ignore 0-sized ranges.
       if (R.LowPC == R.HighPC)
         continue;
-      auto B = AddrDieMap.upper_bound(R.LowPC);
-      if (B != AddrDieMap.begin() && R.LowPC < (--B)->second.first) {
-        // The range is a sub-range of existing ranges, we need to split the
-        // existing range.
-        if (R.HighPC < B->second.first)
-          AddrDieMap[R.HighPC] = B->second;
-        if (R.LowPC > B->first)
-          AddrDieMap[B->first].first = R.LowPC;
-      }
-      AddrDieMap[R.LowPC] = std::make_pair(R.HighPC, Die);
+
+      SubprogramDIEAddrMap.push_back({R.LowPC, DIEIndex});
+      SubprogramDIEAddrMap.push_back({R.HighPC, -1});
+
+      if (R.LowPC < SubprogramDIEAddrInfos.back().SubprogramBasePC)
+        SubprogramDIEAddrInfos.back().SubprogramBasePC = R.LowPC;
     }
+  } while (!Worklist.empty());
+
+  if (SubprogramDIEAddrMap.empty()) {
+    // If we found no ranges, create a no-op map so that lookups remain simple
+    // but never find anything.
+    SubprogramDIEAddrMap.push_back({0, -1});
+    return;
   }
-  // Parent DIEs are added to the AddrDieMap prior to the Children DIEs to
-  // simplify the logic to update AddrDieMap. The child's range will always
-  // be equal or smaller than the parent's range. With this assumption, when
-  // adding one range into the map, it will at most split a range into 3
-  // sub-ranges.
-  for (DWARFDie Child = Die.getFirstChild(); Child; Child = Child.getSibling())
-    updateAddressDieMap(Child);
+
+  // Next, sort the ranges and remove both exact duplicates and runs with the
+  // same DIE index. We order the ranges so that non-empty ranges are
+  // preferred. Because there may be ties, we also need to use stable sort.
+  std::stable_sort(SubprogramDIEAddrMap.begin(), SubprogramDIEAddrMap.end(),
+                   [](const std::pair<uint64_t, int64_t> &LHS,
+                      const std::pair<uint64_t, int64_t> &RHS) {
+                     if (LHS.first < RHS.first)
+                       return true;
+                     if (LHS.first > RHS.first)
+                       return false;
+
+                     // For ranges that start at the same address, keep the one
+                     // with a DIE.
+                     if (LHS.second != -1 && RHS.second == -1)
+                       return true;
+
+                     return false;
+                   });
+  SubprogramDIEAddrMap.erase(
+      std::unique(SubprogramDIEAddrMap.begin(), SubprogramDIEAddrMap.end(),
+                  [](const std::pair<uint64_t, int64_t> &LHS,
+                     const std::pair<uint64_t, int64_t> &RHS) {
+                    // If the start addresses are exactly the same, we can
+                    // remove all but the first one as it is the only one that
+                    // will be found and used.
+                    //
+                    // If the DIE indices are the same, we can "merge" the
+                    // ranges by eliminating the second.
+                    return LHS.first == RHS.first || LHS.second == RHS.second;
+                  }),
+      SubprogramDIEAddrMap.end());
+
+  assert(SubprogramDIEAddrMap.back().second == -1 &&
+         "The last interval must not have a DIE as each DIE's address range is "
+         "bounded.");
+}
+
+// Build the second level of mapping from PC to DIE, specifically one that maps
+// a PC *within* a particular DWARF subprogram into a precise, maximally nested
+// inlined subroutine DIE (if any exists). We build a separate map for each
+// subprogram because many subprograms will never get queried for an address
+// and this allows us to be significantly lazier in reading the DWARF itself.
+void DWARFUnit::buildInlinedSubroutineDIEAddrMap(
+    SubprogramDIEAddrInfo &SPInfo) {
+  auto &AddrMap = SPInfo.InlinedSubroutineDIEAddrMap;
+  uint64_t BasePC = SPInfo.SubprogramBasePC;
+
+  auto SubroutineAddrMapSorter = [](const std::pair<int, int> &LHS,
+                                    const std::pair<int, int> &RHS) {
+    if (LHS.first < RHS.first)
+      return true;
+    if (LHS.first > RHS.first)
+      return false;
+
+    // For ranges that start at the same address, keep the
+    // non-empty one.
+    if (LHS.second != -1 && RHS.second == -1)
+      return true;
+
+    return false;
+  };
+  auto SubroutineAddrMapUniquer = [](const std::pair<int, int> &LHS,
+                                     const std::pair<int, int> &RHS) {
+    // If the start addresses are exactly the same, we can
+    // remove all but the first one as it is the only one that
+    // will be found and used.
+    //
+    // If the DIE indices are the same, we can "merge" the
+    // ranges by eliminating the second.
+    return LHS.first == RHS.first || LHS.second == RHS.second;
+  };
+
+  struct DieAndParentIntervalRange {
+    DWARFDie Die;
+    int ParentIntervalsBeginIdx, ParentIntervalsEndIdx;
+  };
+
+  SmallVector<DieAndParentIntervalRange, 16> Worklist;
+  auto EnqueueChildDIEs = [&](const DWARFDie &Die, int ParentIntervalsBeginIdx,
+                              int ParentIntervalsEndIdx) {
+    for (DWARFDie Child : Die.children())
+      Worklist.push_back(
+          {Child, ParentIntervalsBeginIdx, ParentIntervalsEndIdx});
+  };
+  EnqueueChildDIEs(SPInfo.SubprogramDIE, 0, 0);
+  while (!Worklist.empty()) {
+    DWARFDie Die = Worklist.back().Die;
+    int ParentIntervalsBeginIdx = Worklist.back().ParentIntervalsBeginIdx;
+    int ParentIntervalsEndIdx = Worklist.back().ParentIntervalsEndIdx;
+    Worklist.pop_back();
+
+    // If we encounter a nested subprogram, simply ignore it. We map to
+    // (disjoint) subprograms before arriving here and we don't want to examine
+    // any inlined subroutines of an unrelated subpragram.
+    if (Die.getTag() == DW_TAG_subprogram)
+      continue;
+
+    // For non-subroutines, just recurse to keep searching for inlined
+    // subroutines.
+    if (Die.getTag() != DW_TAG_inlined_subroutine) {
+      EnqueueChildDIEs(Die, ParentIntervalsBeginIdx, ParentIntervalsEndIdx);
+      continue;
+    }
+
+    // Capture the inlined subroutine DIE that we will reference from the map.
+    int DIEIndex = InlinedSubroutineDIEs.size();
+    InlinedSubroutineDIEs.push_back(Die);
+
+    int DieIntervalsBeginIdx = AddrMap.size();
+    // First collect the PC ranges for this DIE into our subroutine interval
+    // map.
+    for (auto R : Die.getAddressRanges()) {
+      // Clamp the PCs to be above the base.
+      R.LowPC = std::max(R.LowPC, BasePC);
+      R.HighPC = std::max(R.HighPC, BasePC);
+      // Compute relative PCs from the subprogram base and drop down to an
+      // unsigned 32-bit int to represent them within the data structure. This
+      // lets us cover a 4gb single subprogram. Because subprograms may be
+      // partitioned into distant parts of a binary (think hot/cold
+      // partitioning) we want to preserve as much as we can here without
+      // burning extra memory. Past that, we will simply truncate and lose the
+      // ability to map those PCs to a DIE more precise than the subprogram.
+      const uint32_t MaxRelativePC = std::numeric_limits<uint32_t>::max();
+      uint32_t RelativeLowPC = (R.LowPC - BasePC) > (uint64_t)MaxRelativePC
+                                   ? MaxRelativePC
+                                   : (uint32_t)(R.LowPC - BasePC);
+      uint32_t RelativeHighPC = (R.HighPC - BasePC) > (uint64_t)MaxRelativePC
+                                    ? MaxRelativePC
+                                    : (uint32_t)(R.HighPC - BasePC);
+      // Ignore empty or bogus ranges.
+      if (RelativeLowPC >= RelativeHighPC)
+        continue;
+      AddrMap.push_back({RelativeLowPC, DIEIndex});
+      AddrMap.push_back({RelativeHighPC, -1});
+    }
+
+    // If there are no address ranges, there is nothing to do to map into them
+    // and there cannot be any child subroutine DIEs with address ranges of
+    // interest as those would all be required to nest within this DIE's
+    // non-existent ranges, so we can immediately continue to the next DIE in
+    // the worklist.
+    if (DieIntervalsBeginIdx == (int)AddrMap.size())
+      continue;
+
+    // The PCs from this DIE should never overlap, so we can easily sort them
+    // here.
+    std::sort(AddrMap.begin() + DieIntervalsBeginIdx, AddrMap.end(),
+              SubroutineAddrMapSorter);
+    // Remove any dead ranges. These should only come from "empty" ranges that
+    // were clobbered by some other range.
+    AddrMap.erase(std::unique(AddrMap.begin() + DieIntervalsBeginIdx,
+                              AddrMap.end(), SubroutineAddrMapUniquer),
+                  AddrMap.end());
+
+    // Compute the end index of this DIE's addr map intervals.
+    int DieIntervalsEndIdx = AddrMap.size();
+
+    assert(DieIntervalsBeginIdx != DieIntervalsEndIdx &&
+           "Must not have an empty map for this layer!");
+    assert(AddrMap.back().second == -1 && "Must end with an empty range!");
+    assert(std::is_sorted(AddrMap.begin() + DieIntervalsBeginIdx, AddrMap.end(),
+                          less_first()) &&
+           "Failed to sort this DIE's interals!");
+
+    // If we have any parent intervals, walk the newly added ranges and find
+    // the parent ranges they were inserted into. Both of these are sorted and
+    // neither has any overlaps. We need to append new ranges to split up any
+    // parent ranges these new ranges would overlap when we merge them.
+    if (ParentIntervalsBeginIdx != ParentIntervalsEndIdx) {
+      int ParentIntervalIdx = ParentIntervalsBeginIdx;
+      for (int i = DieIntervalsBeginIdx, e = DieIntervalsEndIdx - 1; i < e;
+           ++i) {
+        const uint32_t IntervalStart = AddrMap[i].first;
+        const uint32_t IntervalEnd = AddrMap[i + 1].first;
+        const int IntervalDieIdx = AddrMap[i].second;
+        if (IntervalDieIdx == -1) {
+          // For empty intervals, nothing is required. This is a bit surprising
+          // however. If the prior interval overlaps a parent interval and this
+          // would be necessary to mark the end, we will synthesize a new end
+          // that switches back to the parent DIE below. And this interval will
+          // get dropped in favor of one with a DIE attached. However, we'll
+          // still include this and so worst-case, it will still end the prior
+          // interval.
+          continue;
+        }
+
+        // We are walking the new ranges in order, so search forward from the
+        // last point for a parent range that might overlap.
+        auto ParentIntervalsRange =
+            make_range(AddrMap.begin() + ParentIntervalIdx,
+                       AddrMap.begin() + ParentIntervalsEndIdx);
+        assert(std::is_sorted(ParentIntervalsRange.begin(),
+                              ParentIntervalsRange.end(), less_first()) &&
+               "Unsorted parent intervals can't be searched!");
+        auto PI = std::upper_bound(
+            ParentIntervalsRange.begin(), ParentIntervalsRange.end(),
+            IntervalStart,
+            [](uint32_t LHS, const std::pair<uint32_t, int32_t> &RHS) {
+              return LHS < RHS.first;
+            });
+        if (PI == ParentIntervalsRange.begin() ||
+            PI == ParentIntervalsRange.end())
+          continue;
+
+        ParentIntervalIdx = PI - AddrMap.begin();
+        int32_t &ParentIntervalDieIdx = std::prev(PI)->second;
+        uint32_t &ParentIntervalStart = std::prev(PI)->first;
+        const uint32_t ParentIntervalEnd = PI->first;
+
+        // If the new range starts exactly at the position of the parent range,
+        // we need to adjust the parent range. Note that these collisions can
+        // only happen with the original parent range because we will merge any
+        // adjacent ranges in the child.
+        if (IntervalStart == ParentIntervalStart) {
+          // If there will be a tail, just shift the start of the parent
+          // forward. Note that this cannot change the parent ordering.
+          if (IntervalEnd < ParentIntervalEnd) {
+            ParentIntervalStart = IntervalEnd;
+            continue;
+          }
+          // Otherwise, mark this as becoming empty so we'll remove it and
+          // prefer the child range.
+          ParentIntervalDieIdx = -1;
+          continue;
+        }
+
+        // Finally, if the parent interval will need to remain as a prefix to
+        // this one, insert a new interval to cover any tail.
+        if (IntervalEnd < ParentIntervalEnd)
+          AddrMap.push_back({IntervalEnd, ParentIntervalDieIdx});
+      }
+    }
+
+    // Note that we don't need to re-sort even this DIE's address map intervals
+    // after this. All of the newly added intervals actually fill in *gaps* in
+    // this DIE's address map, and we know that children won't need to lookup
+    // into those gaps.
+
+    // Recurse through its children, giving them the interval map range of this
+    // DIE to use as their parent intervals.
+    EnqueueChildDIEs(Die, DieIntervalsBeginIdx, DieIntervalsEndIdx);
+  }
+
+  if (AddrMap.empty()) {
+    AddrMap.push_back({0, -1});
+    return;
+  }
+
+  // Now that we've added all of the intervals needed, we need to resort and
+  // unique them. Most notably, this will remove all the empty ranges that had
+  // a parent range covering, etc. We only expect a single non-empty interval
+  // at any given start point, so we just use std::sort. This could potentially
+  // produce non-deterministic maps for invalid DWARF.
+  std::sort(AddrMap.begin(), AddrMap.end(), SubroutineAddrMapSorter);
+  AddrMap.erase(
+      std::unique(AddrMap.begin(), AddrMap.end(), SubroutineAddrMapUniquer),
+      AddrMap.end());
 }
 
 DWARFDie DWARFUnit::getSubroutineForAddress(uint64_t Address) {
   extractDIEsIfNeeded(false);
-  if (AddrDieMap.empty())
-    updateAddressDieMap(getUnitDIE());
-  auto R = AddrDieMap.upper_bound(Address);
-  if (R == AddrDieMap.begin())
+
+  // We use a two-level mapping structure to locate subroutines for a given PC
+  // address.
+  //
+  // First, we map the address to a subprogram. This can be done more cheaply
+  // because subprograms cannot nest within each other. It also allows us to
+  // avoid detailed examination of many subprograms, instead only focusing on
+  // the ones which we end up actively querying.
+  if (SubprogramDIEAddrMap.empty())
+    buildSubprogramDIEAddrMap();
+
+  assert(!SubprogramDIEAddrMap.empty() &&
+         "We must always end up with a non-empty map!");
+
+  auto I = std::upper_bound(
+      SubprogramDIEAddrMap.begin(), SubprogramDIEAddrMap.end(), Address,
+      [](uint64_t LHS, const std::pair<uint64_t, int64_t> &RHS) {
+        return LHS < RHS.first;
+      });
+  // If we find the beginning, then the address is before the first subprogram.
+  if (I == SubprogramDIEAddrMap.begin())
     return DWARFDie();
-  // upper_bound's previous item contains Address.
-  --R;
-  if (Address >= R->second.first)
+  // Back up to the interval containing the address and see if it
+  // has a DIE associated with it.
+  --I;
+  if (I->second == -1)
     return DWARFDie();
-  return R->second.second;
+
+  auto &SPInfo = SubprogramDIEAddrInfos[I->second];
+
+  // Now that we have the subprogram for this address, we do the second level
+  // mapping by building a map within a subprogram's PC range to any specific
+  // inlined subroutine.
+  if (SPInfo.InlinedSubroutineDIEAddrMap.empty())
+    buildInlinedSubroutineDIEAddrMap(SPInfo);
+
+  // We lookup within the inlined subroutine using a subprogram-relative
+  // address.
+  assert(Address >= SPInfo.SubprogramBasePC &&
+         "Address isn't above the start of the subprogram!");
+  uint32_t RelativeAddr = ((Address - SPInfo.SubprogramBasePC) >
+                           (uint64_t)std::numeric_limits<uint32_t>::max())
+                              ? std::numeric_limits<uint32_t>::max()
+                              : (uint32_t)(Address - SPInfo.SubprogramBasePC);
+
+  auto J =
+      std::upper_bound(SPInfo.InlinedSubroutineDIEAddrMap.begin(),
+                       SPInfo.InlinedSubroutineDIEAddrMap.end(), RelativeAddr,
+                       [](uint32_t LHS, const std::pair<uint32_t, int32_t> &RHS) {
+                         return LHS < RHS.first;
+                       });
+  // If we find the beginning, the address is before any inlined subroutine so
+  // return the subprogram DIE.
+  if (J == SPInfo.InlinedSubroutineDIEAddrMap.begin())
+    return SPInfo.SubprogramDIE;
+  // Back up `J` and return the inlined subroutine if we have one or the
+  // subprogram if we don't.
+  --J;
+  return J->second == -1 ? SPInfo.SubprogramDIE
+                         : InlinedSubroutineDIEs[J->second];
 }
 
 void

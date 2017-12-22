@@ -3165,7 +3165,12 @@ static void warnAboutRedundantParens(Sema &S, Declarator &D, QualType T) {
       // In a new-type-id, function chunks require parentheses.
       if (D.getContext() == Declarator::CXXNewContext)
         return;
-      LLVM_FALLTHROUGH;
+      // FIXME: "A(f())" deserves a vexing-parse warning, not just a
+      // redundant-parens warning, but we don't know whether the function
+      // chunk was syntactically valid as an expression here.
+      CouldBeTemporaryObject = false;
+      continue;
+
     case DeclaratorChunk::BlockPointer:
     case DeclaratorChunk::MemberPointer:
     case DeclaratorChunk::Pipe:

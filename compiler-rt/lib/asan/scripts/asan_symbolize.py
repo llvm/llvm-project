@@ -280,7 +280,7 @@ def BreakpadSymbolizerFactory(binary):
 def SystemSymbolizerFactory(system, addr, binary, arch):
   if system == 'Darwin':
     return DarwinSymbolizer(addr, binary, arch)
-  elif system in ['Linux', 'FreeBSD', 'NetBSD']:
+  elif system in ['Linux', 'FreeBSD', 'NetBSD', 'SunOS']:
     return Addr2LineSymbolizer(binary)
 
 
@@ -370,7 +370,7 @@ class SymbolizationLoop(object):
       self.binary_name_filter = binary_name_filter
       self.dsym_hint_producer = dsym_hint_producer
       self.system = os.uname()[0]
-      if self.system not in ['Linux', 'Darwin', 'FreeBSD', 'NetBSD']:
+      if self.system not in ['Linux', 'Darwin', 'FreeBSD', 'NetBSD','SunOS']:
         raise Exception('Unknown system')
       self.llvm_symbolizers = {}
       self.last_llvm_symbolizer = None

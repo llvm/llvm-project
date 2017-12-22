@@ -553,7 +553,7 @@ uint32_t WasmObjectWriter::getRelocationIndexValue(
   case wasm::R_WEBASSEMBLY_TABLE_INDEX_SLEB:
   case wasm::R_WEBASSEMBLY_TABLE_INDEX_I32:
     if (!IndirectSymbolIndices.count(RelEntry.Symbol))
-      report_fatal_error("symbol not found table index space: " +
+      report_fatal_error("symbol not found in table index space: " +
                          RelEntry.Symbol->getName());
     return IndirectSymbolIndices[RelEntry.Symbol];
   case wasm::R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
@@ -562,7 +562,7 @@ uint32_t WasmObjectWriter::getRelocationIndexValue(
   case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
   case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32:
     if (!SymbolIndices.count(RelEntry.Symbol))
-      report_fatal_error("symbol not found function/global index space: " +
+      report_fatal_error("symbol not found in function/global index space: " +
                          RelEntry.Symbol->getName());
     return SymbolIndices[RelEntry.Symbol];
   case wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB:
@@ -994,32 +994,9 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   SmallVector<WasmExport, 4> Exports;
   SmallVector<std::pair<StringRef, uint32_t>, 4> SymbolFlags;
   SmallVector<std::pair<uint16_t, uint32_t>, 2> InitFuncs;
-  SmallPtrSet<const MCSymbolWasm *, 4> IsAddressTaken;
   unsigned NumFuncImports = 0;
   SmallVector<WasmDataSegment, 4> DataSegments;
   uint32_t DataSize = 0;
-
-  // Populate the IsAddressTaken set.
-  for (const WasmRelocationEntry &RelEntry : CodeRelocations) {
-    switch (RelEntry.Type) {
-    case wasm::R_WEBASSEMBLY_TABLE_INDEX_SLEB:
-    case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
-      IsAddressTaken.insert(RelEntry.Symbol);
-      break;
-    default:
-      break;
-    }
-  }
-  for (const WasmRelocationEntry &RelEntry : DataRelocations) {
-    switch (RelEntry.Type) {
-    case wasm::R_WEBASSEMBLY_TABLE_INDEX_I32:
-    case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32:
-      IsAddressTaken.insert(RelEntry.Symbol);
-      break;
-    default:
-      break;
-    }
-  }
 
   // In the special .global_variables section, we've encoded global
   // variables used by the function. Translate them into the Globals
@@ -1217,14 +1194,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
       }
 
       DEBUG(dbgs() << "  -> function index: " << Index << "\n");
-
-      // If needed, prepare the function to be called indirectly.
-      if (IsAddressTaken.count(&WS) != 0) {
-        IndirectSymbolIndices[&WS] = TableElems.size();
-        DEBUG(dbgs() << "  -> adding to table: " << TableElems.size() << "\n");
-        TableElems.push_back(Index);
-      }
-    } else {
+   } else {
       if (WS.isTemporary() && !WS.getSize())
         continue;
 
@@ -1288,7 +1258,6 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
     uint32_t Index = SymbolIndices.find(ResolvedSym)->second;
     DEBUG(dbgs() << "  -> index:" << Index << "\n");
 
-    //SymbolIndices[&WS] = Index;
     WasmExport Export;
     Export.FieldName = WS.getName();
     Export.Index = Index;
@@ -1303,12 +1272,34 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
       SymbolFlags.emplace_back(WS.getName(), wasm::WASM_SYMBOL_BINDING_LOCAL);
   }
 
-  // Add types for indirect function calls.
-  for (const WasmRelocationEntry &Fixup : CodeRelocations) {
-    if (Fixup.Type != wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB)
-      continue;
+  {
+    auto HandleReloc = [&](const WasmRelocationEntry &Rel) {
+      // Functions referenced by a relocation need to prepared to be called
+      // indirectly.
+      const MCSymbolWasm& WS = *Rel.Symbol;
+      if (WS.isFunction() && IndirectSymbolIndices.count(&WS) == 0) {
+        switch (Rel.Type) {
+        case wasm::R_WEBASSEMBLY_TABLE_INDEX_I32:
+        case wasm::R_WEBASSEMBLY_TABLE_INDEX_SLEB:
+        case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32:
+        case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB: {
+          uint32_t Index = SymbolIndices.find(&WS)->second;
+          IndirectSymbolIndices[&WS] = TableElems.size();
+          DEBUG(dbgs() << "  -> adding to table: " << TableElems.size() << "\n");
+          TableElems.push_back(Index);
+          registerFunctionType(WS);
+          break;
+        }
+        default:
+          break;
+        }
+      }
+    };
 
-    registerFunctionType(*Fixup.Symbol);
+    for (const WasmRelocationEntry &RelEntry : CodeRelocations)
+      HandleReloc(RelEntry);
+    for (const WasmRelocationEntry &RelEntry : DataRelocations)
+      HandleReloc(RelEntry);
   }
 
   // Translate .init_array section contents into start functions.

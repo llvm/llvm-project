@@ -248,6 +248,12 @@ public:
   /// pgo data.
   Optional<uint64_t> getEntryCount() const;
 
+  /// Return true if the function is annotated with profile data.
+  ///
+  /// Presence of entry counts from a profile run implies the function has
+  /// profile annotations.
+  bool hasProfileData() const { return getEntryCount().hasValue(); }
+
   /// Returns the set of GUIDs that needs to be imported to the function for
   /// sample PGO, to enable the same inlines as the profiled optimized binary.
   DenseSet<GlobalValue::GUID> getImportGUIDs() const;

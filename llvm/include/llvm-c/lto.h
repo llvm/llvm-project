@@ -764,7 +764,7 @@ extern void thinlto_codegen_add_cross_referenced_symbol(thinlto_code_gen_t cg,
  * To avoid filling the disk space, a few knobs are provided:
  *  - The pruning interval limits the frequency at which the garbage collector
  *    will try to scan the cache directory to prune expired entries.
- *    Setting to a negative number applies the maximum interval.
+ *    Setting to a negative number disables the pruning.
  *  - The pruning expiration time indicates to the garbage collector how old an
  *    entry needs to be to be removed.
  *  - Finally, the garbage collector can be instructed to prune the cache until
@@ -782,9 +782,9 @@ extern void thinlto_codegen_set_cache_dir(thinlto_code_gen_t cg,
                                           const char *cache_dir);
 
 /**
- * Sets the cache pruning interval (in seconds). A negative value sets the
- * maximum possible pruning interval. An unspecified default value will be
- * applied, and a value of 0 will be ignored.
+ * Sets the cache pruning interval (in seconds). A negative value disables the
+ * pruning. An unspecified default value will be applied, and a value of 0 will
+ * be ignored.
  *
  * \since LTO_API_VERSION=18
  */

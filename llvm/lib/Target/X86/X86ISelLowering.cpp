@@ -461,7 +461,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SRL_PARTS, VT, Custom);
   }
 
-  if (Subtarget.hasSSE1())
+  if (Subtarget.hasSSEPrefetch() || Subtarget.has3DNow())
     setOperationAction(ISD::PREFETCH      , MVT::Other, Legal);
 
   setOperationAction(ISD::ATOMIC_FENCE  , MVT::Other, Custom);
@@ -14578,11 +14578,10 @@ static SDValue ExtractBitFromMaskVector(SDValue Op, SelectionDAG &DAG,
     unsigned NumElts = VecVT.getVectorNumElements();
     // Extending v8i1/v16i1 to 512-bit get better performance on KNL
     // than extending to 128/256bit.
-    unsigned VecSize = (NumElts <= 4 ? 128 : 512);
-    MVT ExtVT = MVT::getVectorVT(MVT::getIntegerVT(VecSize / NumElts), NumElts);
-    SDValue Ext = DAG.getNode(ISD::SIGN_EXTEND, dl, ExtVT, Vec);
-    SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl,
-                              ExtVT.getVectorElementType(), Ext, Idx);
+    MVT ExtEltVT = (NumElts <= 8) ? MVT::getIntegerVT(128 / NumElts) : MVT::i8;
+    MVT ExtVecVT = MVT::getVectorVT(ExtEltVT, NumElts);
+    SDValue Ext = DAG.getNode(ISD::SIGN_EXTEND, dl, ExtVecVT, Vec);
+    SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, ExtEltVT, Ext, Idx);
     return DAG.getNode(ISD::TRUNCATE, dl, EltVT, Elt);
   }
 
@@ -14777,9 +14776,8 @@ static SDValue InsertBitToMaskVector(SDValue Op, SelectionDAG &DAG,
     // Non constant index. Extend source and destination,
     // insert element and then truncate the result.
     unsigned NumElts = VecVT.getVectorNumElements();
-    unsigned VecSize = (NumElts <= 4 ? 128 : 512);
-    MVT ExtVecVT = MVT::getVectorVT(MVT::getIntegerVT(VecSize/NumElts), NumElts);
-    MVT ExtEltVT = ExtVecVT.getVectorElementType();
+    MVT ExtEltVT = (NumElts <= 8) ? MVT::getIntegerVT(128 / NumElts) : MVT::i8;
+    MVT ExtVecVT = MVT::getVectorVT(ExtEltVT, NumElts);
     SDValue ExtOp = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, ExtVecVT,
       DAG.getNode(ISD::SIGN_EXTEND, dl, ExtVecVT, Vec),
       DAG.getNode(ISD::SIGN_EXTEND, dl, ExtEltVT, Elt), Idx);
@@ -16294,21 +16292,6 @@ static  SDValue LowerZERO_EXTEND_Mask(SDValue Op,
                               DAG.getIntPtrConstant(0, DL));
 
   return SelectedVal;
-}
-
-static SDValue LowerANY_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
-                               SelectionDAG &DAG) {
-  SDValue In = Op->getOperand(0);
-  MVT InVT = In.getSimpleValueType();
-
-  if (InVT.getVectorElementType() == MVT::i1)
-    return LowerZERO_EXTEND_Mask(Op, Subtarget, DAG);
-
-  if (Subtarget.hasFp256())
-    if (SDValue Res = LowerAVXExtend(Op, DAG, Subtarget))
-      return Res;
-
-  return SDValue();
 }
 
 static SDValue LowerZERO_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
@@ -18454,6 +18437,21 @@ static SDValue LowerSIGN_EXTEND_Mask(SDValue Op,
                     DAG.getIntPtrConstant(0, dl));
 
   return V;
+}
+
+static SDValue LowerANY_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
+                               SelectionDAG &DAG) {
+  SDValue In = Op->getOperand(0);
+  MVT InVT = In.getSimpleValueType();
+
+  if (InVT.getVectorElementType() == MVT::i1)
+    return LowerSIGN_EXTEND_Mask(Op, Subtarget, DAG);
+
+  if (Subtarget.hasFp256())
+    if (SDValue Res = LowerAVXExtend(Op, DAG, Subtarget))
+      return Res;
+
+  return SDValue();
 }
 
 // Lowering for SIGN_EXTEND_VECTOR_INREG and ZERO_EXTEND_VECTOR_INREG.

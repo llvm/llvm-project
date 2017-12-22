@@ -454,7 +454,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     std::unique_ptr<BlockFrequencyInfo> BFIPtr;
     if (GetBFICallback)
       BFI = GetBFICallback(F);
-    else if (F.getEntryCount().hasValue()) {
+    else if (F.hasProfileData()) {
       LoopInfo LI{DominatorTree(const_cast<Function &>(F))};
       BranchProbabilityInfo BPI{F, LI};
       BFIPtr = llvm::make_unique<BlockFrequencyInfo>(F, BPI, LI);

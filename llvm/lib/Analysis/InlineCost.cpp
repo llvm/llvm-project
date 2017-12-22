@@ -249,8 +249,6 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
   bool visitCastInst(CastInst &I);
   bool visitUnaryInstruction(UnaryInstruction &I);
   bool visitCmpInst(CmpInst &I);
-  bool visitAnd(BinaryOperator &I);
-  bool visitOr(BinaryOperator &I);
   bool visitSub(BinaryOperator &I);
   bool visitBinaryOperator(BinaryOperator &I);
   bool visitLoad(LoadInst &I);
@@ -701,6 +699,22 @@ bool CallAnalyzer::visitCastInst(CastInst &I) {
   // Disable SROA in the face of arbitrary casts we don't whitelist elsewhere.
   disableSROA(I.getOperand(0));
 
+  // If this is a floating-point cast, and the target says this operation
+  // is expensive, this may eventually become a library call. Treat the cost
+  // as such.
+  switch (I.getOpcode()) {
+  case Instruction::FPTrunc:
+  case Instruction::FPExt:
+  case Instruction::UIToFP:
+  case Instruction::SIToFP:
+  case Instruction::FPToUI:
+  case Instruction::FPToSI:
+    if (TTI.getFPOpCost(I.getType()) == TargetTransformInfo::TCC_Expensive)
+      Cost += InlineConstants::CallPenalty;
+  default:
+    break;
+  }
+
   return TargetTransformInfo::TCC_Free == TTI.getUserCost(&I);
 }
 
@@ -1005,34 +1019,6 @@ bool CallAnalyzer::visitCmpInst(CmpInst &I) {
   return false;
 }
 
-bool CallAnalyzer::visitOr(BinaryOperator &I) {
-  // This is necessary because the generic simplify instruction only works if
-  // both operands are constants.
-  for (unsigned i = 0; i < 2; ++i) {
-    if (ConstantInt *C = dyn_cast_or_null<ConstantInt>(
-            SimplifiedValues.lookup(I.getOperand(i))))
-      if (C->isAllOnesValue()) {
-        SimplifiedValues[&I] = C;
-        return true;
-      }
-  }
-  return Base::visitOr(I);
-}
-
-bool CallAnalyzer::visitAnd(BinaryOperator &I) {
-  // This is necessary because the generic simplify instruction only works if
-  // both operands are constants.
-  for (unsigned i = 0; i < 2; ++i) {
-    if (ConstantInt *C = dyn_cast_or_null<ConstantInt>(
-            SimplifiedValues.lookup(I.getOperand(i))))
-      if (C->isZero()) {
-        SimplifiedValues[&I] = C;
-        return true;
-      }
-  }
-  return Base::visitAnd(I);
-}
-
 bool CallAnalyzer::visitSub(BinaryOperator &I) {
   // Try to handle a special case: we can fold computing the difference of two
   // constant-related pointers.
@@ -1062,22 +1048,37 @@ bool CallAnalyzer::visitSub(BinaryOperator &I) {
 
 bool CallAnalyzer::visitBinaryOperator(BinaryOperator &I) {
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
-  auto Evaluate = [&](SmallVectorImpl<Constant *> &COps) {
-    Value *SimpleV = nullptr;
-    if (auto FI = dyn_cast<FPMathOperator>(&I))
-      SimpleV = SimplifyFPBinOp(I.getOpcode(), COps[0], COps[1],
-                                FI->getFastMathFlags(), DL);
-    else
-      SimpleV = SimplifyBinOp(I.getOpcode(), COps[0], COps[1], DL);
-    return dyn_cast_or_null<Constant>(SimpleV);
-  };
+  Constant *CLHS = dyn_cast<Constant>(LHS);
+  if (!CLHS)
+    CLHS = SimplifiedValues.lookup(LHS);
+  Constant *CRHS = dyn_cast<Constant>(RHS);
+  if (!CRHS)
+    CRHS = SimplifiedValues.lookup(RHS);
 
-  if (simplifyInstruction(I, Evaluate))
+  Value *SimpleV = nullptr;
+  if (auto FI = dyn_cast<FPMathOperator>(&I))
+    SimpleV = SimplifyFPBinOp(I.getOpcode(), CLHS ? CLHS : LHS,
+                              CRHS ? CRHS : RHS, FI->getFastMathFlags(), DL);
+  else
+    SimpleV =
+        SimplifyBinOp(I.getOpcode(), CLHS ? CLHS : LHS, CRHS ? CRHS : RHS, DL);
+
+  if (Constant *C = dyn_cast_or_null<Constant>(SimpleV))
+    SimplifiedValues[&I] = C;
+
+  if (SimpleV)
     return true;
 
   // Disable any SROA on arguments to arbitrary, unsimplified binary operators.
   disableSROA(LHS);
   disableSROA(RHS);
+
+  // If the instruction is floating point, and the target says this operation
+  // is expensive, this may eventually become a library call. Treat the cost
+  // as such.
+  if (I.getType()->isFloatingPointTy() &&
+      TTI.getFPOpCost(I.getType()) == TargetTransformInfo::TCC_Expensive)
+    Cost += InlineConstants::CallPenalty;
 
   return false;
 }
@@ -1547,17 +1548,6 @@ bool CallAnalyzer::analyzeBlock(BasicBlock *BB,
     ++NumInstructions;
     if (isa<ExtractElementInst>(I) || I->getType()->isVectorTy())
       ++NumVectorInstructions;
-
-    // If the instruction is floating point, and the target says this operation
-    // is expensive or the function has the "use-soft-float" attribute, this may
-    // eventually become a library call. Treat the cost as such.
-    if (I->getType()->isFloatingPointTy()) {
-      // If the function has the "use-soft-float" attribute, mark it as
-      // expensive.
-      if (TTI.getFPOpCost(I->getType()) == TargetTransformInfo::TCC_Expensive ||
-          (F.getFnAttribute("use-soft-float").getValueAsString() == "true"))
-        Cost += InlineConstants::CallPenalty;
-    }
 
     // If the instruction simplified to a constant, there is no cost to this
     // instruction. Visit the instructions using our InstVisitor to account for

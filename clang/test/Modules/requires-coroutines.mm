@@ -1,6 +1,6 @@
 // RUN: rm -rf %t
-// RUN: %clang_cc1 -fmodules-cache-path=%t -fmodules -fimplicit-module-maps -F %S/Inputs -I %S/Inputs/DependsOnModule.framework %s -verify
-// RUN: %clang_cc1 -fmodules-cache-path=%t -fmodules -fimplicit-module-maps -F %S/Inputs -I %S/Inputs/DependsOnModule.framework %s -verify -fcoroutines-ts -DCOROUTINES
+// RUN: %clang_cc1 -fmodules-cache-path=%t -fmodules -fimplicit-module-maps -Wno-private-module -F %S/Inputs -I %S/Inputs/DependsOnModule.framework %s -verify
+// RUN: %clang_cc1 -fmodules-cache-path=%t -fmodules -fimplicit-module-maps -Wno-private-module -F %S/Inputs -I %S/Inputs/DependsOnModule.framework %s -verify -fcoroutines-ts -DCOROUTINES
 
 #ifdef COROUTINES
 @import DependsOnModule.Coroutines;

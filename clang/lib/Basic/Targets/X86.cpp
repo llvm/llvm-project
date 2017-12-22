@@ -159,6 +159,7 @@ bool X86TargetInfo::initFeatureMap(
   case CK_Broadwell:
     setFeatureEnabledImpl(Features, "rdseed", true);
     setFeatureEnabledImpl(Features, "adx", true);
+    setFeatureEnabledImpl(Features, "prfchw", true);
     LLVM_FALLTHROUGH;
   case CK_Haswell:
     setFeatureEnabledImpl(Features, "avx2", true);
@@ -224,6 +225,7 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "aes", true);
     setFeatureEnabledImpl(Features, "pclmul", true);
     setFeatureEnabledImpl(Features, "sse4.2", true);
+    setFeatureEnabledImpl(Features, "prfchw", true);
     LLVM_FALLTHROUGH;
   case CK_Bonnell:
     setFeatureEnabledImpl(Features, "movbe", true);
@@ -241,6 +243,7 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "avx512cd", true);
     setFeatureEnabledImpl(Features, "avx512er", true);
     setFeatureEnabledImpl(Features, "avx512pf", true);
+    setFeatureEnabledImpl(Features, "prfchw", true);
     setFeatureEnabledImpl(Features, "prefetchwt1", true);
     setFeatureEnabledImpl(Features, "fxsr", true);
     setFeatureEnabledImpl(Features, "rdseed", true);
@@ -1131,6 +1134,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
   return llvm::StringSwitch<bool>(Name)
       .Case("3dnow", true)
       .Case("3dnowa", true)
+      .Case("adx", true)
       .Case("aes", true)
       .Case("avx", true)
       .Case("avx2", true)
@@ -1160,6 +1164,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("mmx", true)
       .Case("movbe", true)
       .Case("mpx", true)
+      .Case("mwaitx", true)
       .Case("pclmul", true)
       .Case("pku", true)
       .Case("popcnt", true)
@@ -1170,6 +1175,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("rtm", true)
       .Case("sgx", true)
       .Case("sha", true)
+      .Case("shstk", true)
       .Case("sse", true)
       .Case("sse2", true)
       .Case("sse3", true)
@@ -1190,6 +1196,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
 
 bool X86TargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
+      .Case("adx", HasADX)
       .Case("aes", HasAES)
       .Case("avx", SSELevel >= AVX)
       .Case("avx2", SSELevel >= AVX2)
@@ -1214,6 +1221,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("fma4", XOPLevel >= FMA4)
       .Case("fsgsbase", HasFSGSBASE)
       .Case("fxsr", HasFXSR)
+      .Case("ibt", HasIBT)
       .Case("lwp", HasLWP)
       .Case("lzcnt", HasLZCNT)
       .Case("mm3dnow", MMX3DNowLevel >= AMD3DNow)
@@ -1221,8 +1229,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("mmx", MMX3DNowLevel >= MMX)
       .Case("movbe", HasMOVBE)
       .Case("mpx", HasMPX)
-      .Case("shstk", HasSHSTK)
-      .Case("ibt", HasIBT)
+      .Case("mwaitx", HasMWAITX)
       .Case("pclmul", HasPCLMUL)
       .Case("pku", HasPKU)
       .Case("popcnt", HasPOPCNT)
@@ -1233,6 +1240,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("rtm", HasRTM)
       .Case("sgx", HasSGX)
       .Case("sha", HasSHA)
+      .Case("shstk", HasSHSTK)
       .Case("sse", SSELevel >= SSE1)
       .Case("sse2", SSELevel >= SSE2)
       .Case("sse3", SSELevel >= SSE3)
