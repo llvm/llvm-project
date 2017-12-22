@@ -976,16 +976,14 @@ public:
     return LHS.Value != RHS.Value;
   }
 
-  std::string getAsString() const {
-    return getAsString(split());
+  static std::string getAsString(SplitQualType split,
+                                 const PrintingPolicy &Policy) {
+    return getAsString(split.Ty, split.Quals, Policy);
   }
+  static std::string getAsString(const Type *ty, Qualifiers qs,
+                                 const PrintingPolicy &Policy);
 
-  static std::string getAsString(SplitQualType split) {
-    return getAsString(split.Ty, split.Quals);
-  }
-
-  static std::string getAsString(const Type *ty, Qualifiers qs);
-
+  std::string getAsString() const; 
   std::string getAsString(const PrintingPolicy &Policy) const;
 
   void print(raw_ostream &OS, const PrintingPolicy &Policy,

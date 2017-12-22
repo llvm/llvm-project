@@ -31,12 +31,15 @@ DirectoryBasedGlobalCompilationDatabase::
 
 llvm::Optional<tooling::CompileCommand>
 DirectoryBasedGlobalCompilationDatabase::getCompileCommand(PathRef File) const {
-  if (auto CDB = getCompilationDatabase(File)) {
+  if (auto CDB = getCDBForFile(File)) {
     auto Candidates = CDB->getCompileCommands(File);
     if (!Candidates.empty()) {
       addExtraFlags(File, Candidates.front());
       return std::move(Candidates.front());
     }
+  } else {
+    log(Context::empty(), // FIXME(ibiryukov): pass a proper Context here.
+        "Failed to find compilation database for " + Twine(File));
   }
   return llvm::None;
 }
@@ -71,59 +74,32 @@ void DirectoryBasedGlobalCompilationDatabase::addExtraFlags(
 }
 
 tooling::CompilationDatabase *
-DirectoryBasedGlobalCompilationDatabase::tryLoadDatabaseFromPath(
-    PathRef File) const {
+DirectoryBasedGlobalCompilationDatabase::getCDBInDirLocked(PathRef Dir) const {
+  // FIXME(ibiryukov): Invalidate cached compilation databases on changes
+  auto CachedIt = CompilationDatabases.find(Dir);
+  if (CachedIt != CompilationDatabases.end())
+    return CachedIt->second.get();
+  std::string Error = "";
+  auto CDB = tooling::CompilationDatabase::loadFromDirectory(Dir, Error);
+  auto Result = CDB.get();
+  CompilationDatabases.insert(std::make_pair(Dir, std::move(CDB)));
+  return Result;
+}
 
+tooling::CompilationDatabase *
+DirectoryBasedGlobalCompilationDatabase::getCDBForFile(PathRef File) const {
   namespace path = llvm::sys::path;
-  auto CachedIt = CompilationDatabases.find(File);
-
   assert((path::is_absolute(File, path::Style::posix) ||
           path::is_absolute(File, path::Style::windows)) &&
          "path must be absolute");
 
-  if (CachedIt != CompilationDatabases.end())
-    return CachedIt->second.get();
-  std::string Error = "";
-  auto CDB = tooling::CompilationDatabase::loadFromDirectory(File, Error);
-  if (CDB) {
-    auto Result = CDB.get();
-    CompilationDatabases.insert(std::make_pair(File, std::move(CDB)));
-    return Result;
-  }
-
-  return nullptr;
-}
-
-tooling::CompilationDatabase *
-DirectoryBasedGlobalCompilationDatabase::getCompilationDatabase(
-    PathRef File) const {
   std::lock_guard<std::mutex> Lock(Mutex);
-
-  namespace path = llvm::sys::path;
-  if (CompileCommandsDir.hasValue()) {
-    tooling::CompilationDatabase *ReturnValue =
-        tryLoadDatabaseFromPath(CompileCommandsDir.getValue());
-    if (ReturnValue == nullptr) {
-      // FIXME(ibiryukov): pass a proper Context here.
-      log(Context::empty(), "Failed to find compilation database for " +
-                                Twine(File) + "in overriden directory " +
-                                CompileCommandsDir.getValue());
-    }
-    return ReturnValue;
-  }
-
+  if (CompileCommandsDir)
+    return getCDBInDirLocked(*CompileCommandsDir);
   for (auto Path = path::parent_path(File); !Path.empty();
-       Path = path::parent_path(Path)) {
-    auto CDB = tryLoadDatabaseFromPath(Path);
-    if (!CDB)
-      continue;
-    // FIXME(ibiryukov): Invalidate cached compilation databases on changes
-    return CDB;
-  }
-
-  // FIXME(ibiryukov): pass a proper Context here.
-  log(Context::empty(),
-      "Failed to find compilation database for " + Twine(File));
+       Path = path::parent_path(Path))
+    if (auto CDB = getCDBInDirLocked(Path))
+      return CDB;
   return nullptr;
 }
 

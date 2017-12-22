@@ -20,7 +20,7 @@ namespace testVarDeclNRVO {
     return TestVarDeclNRVO;
   }
 }
-// CHECK: VarDecl{{.*}} TestVarDeclNRVO 'class testVarDeclNRVO::A' nrvo
+// CHECK: VarDecl{{.*}} TestVarDeclNRVO 'testVarDeclNRVO::A' nrvo
 
 void testParmVarDeclInit(int TestParmVarDeclInit = 0);
 // CHECK:      ParmVarDecl{{.*}} TestParmVarDeclInit 'int'
@@ -97,8 +97,8 @@ namespace testCXXRecordDecl {
 // CHECK-NEXT:     CopyAssignment non_trivial has_const_param
 // CHECK-NEXT:     MoveAssignment exists simple non_trivial
 // CHECK-NEXT:     Destructor simple irrelevant trivial
-// CHECK-NEXT:   virtual private 'class testCXXRecordDecl::A'
-// CHECK-NEXT:   public 'class testCXXRecordDecl::B'
+// CHECK-NEXT:   virtual private 'testCXXRecordDecl::A'
+// CHECK-NEXT:   public 'testCXXRecordDecl::B'
 // CHECK-NEXT:   CXXRecordDecl{{.*}} class TestCXXRecordDecl
 // CHECK-NEXT:   FieldDecl
 
@@ -118,10 +118,10 @@ class testCXXMethodDecl {
   void TestCXXMethodDeclThrow() throw();
   void TestCXXMethodDeclThrowType() throw(int);
 };
-// CHECK: CXXMethodDecl{{.*}} TestCXXMethodDeclPure 'void (void)' virtual pure
-// CHECK: CXXMethodDecl{{.*}} TestCXXMethodDeclDelete 'void (void)' delete
-// CHECK: CXXMethodDecl{{.*}} TestCXXMethodDeclThrow 'void (void) throw()'
-// CHECK: CXXMethodDecl{{.*}} TestCXXMethodDeclThrowType 'void (void) throw(int)'
+// CHECK: CXXMethodDecl{{.*}} TestCXXMethodDeclPure 'void ()' virtual pure
+// CHECK: CXXMethodDecl{{.*}} TestCXXMethodDeclDelete 'void ()' delete
+// CHECK: CXXMethodDecl{{.*}} TestCXXMethodDeclThrow 'void () throw()'
+// CHECK: CXXMethodDecl{{.*}} TestCXXMethodDeclThrowType 'void () throw(int)'
 
 namespace testCXXConstructorDecl {
   class A { };
@@ -147,7 +147,7 @@ namespace testCXXConstructorDecl {
 class TestCXXDestructorDecl {
   ~TestCXXDestructorDecl() { }
 };
-// CHECK:      CXXDestructorDecl{{.*}} ~TestCXXDestructorDecl 'void (void) noexcept'
+// CHECK:      CXXDestructorDecl{{.*}} ~TestCXXDestructorDecl 'void () noexcept'
 // CHECK-NEXT:   CompoundStmt
 
 // Test that the range of a defaulted members is computed correctly.
@@ -177,7 +177,7 @@ void SomeFunction() {
 class TestCXXConversionDecl {
   operator int() { return 0; }
 };
-// CHECK:      CXXConversionDecl{{.*}} operator int 'int (void)'
+// CHECK:      CXXConversionDecl{{.*}} operator int 'int ()'
 // CHECK-NEXT:   CompoundStmt
 
 namespace TestStaticAssertDecl {
@@ -499,7 +499,7 @@ template<typename T> class TestFriendDecl {
 // CHECK:        CXXRecord{{.*}} TestFriendDecl
 // CHECK-NEXT:   FriendDecl
 // CHECK-NEXT:     FunctionDecl{{.*}} foo
-// CHECK-NEXT:   FriendDecl{{.*}} 'class A':'class A'
+// CHECK-NEXT:   FriendDecl{{.*}} 'class A':'A'
 // CHECK-NEXT:   FriendDecl{{.*}} 'T'
 
 namespace TestFileScopeAsmDecl {
@@ -516,11 +516,11 @@ namespace TestFriendDecl2 {
   };
 }
 // CHECK: NamespaceDecl [[TestFriendDecl2:0x.*]] <{{.*}}> {{.*}} TestFriendDecl2
-// CHECK: |-FunctionDecl [[TestFriendDecl2_f:0x.*]] <{{.*}}> {{.*}} f 'void (void)'
+// CHECK: |-FunctionDecl [[TestFriendDecl2_f:0x.*]] <{{.*}}> {{.*}} f 'void ()'
 // CHECK: `-CXXRecordDecl {{.*}} struct S
 // CHECK:   |-CXXRecordDecl {{.*}} struct S
 // CHECK:   `-FriendDecl
-// CHECK:     `-FunctionDecl {{.*}} parent [[TestFriendDecl2]] prev [[TestFriendDecl2_f]] <{{.*}}> {{.*}} f 'void (void)'
+// CHECK:     `-FunctionDecl {{.*}} parent [[TestFriendDecl2]] prev [[TestFriendDecl2_f]] <{{.*}}> {{.*}} f 'void ()'
 
 namespace Comment {
   extern int Test;

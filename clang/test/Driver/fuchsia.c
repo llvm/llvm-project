@@ -79,3 +79,20 @@
 // CHECK-ASAN-SHARED: "-fsanitize-address-globals-dead-stripping"
 // CHECK-ASAN-SHARED: "{{.*[/\\]}}libclang_rt.asan-x86_64.so"
 // CHECK-ASAN-SHARED-NOT: "{{.*[/\\]}}libclang_rt.asan-preinit-x86_64.a"
+
+// RUN: %clang %s -### --target=x86_64-fuchsia \
+// RUN:     -fsanitize=scudo 2>&1 \
+// RUN:     | FileCheck %s -check-prefix=CHECK-SCUDO-X86
+// CHECK-SCUDO-X86: "-fsanitize=scudo"
+// CHECK-SCUDO-X86: "-pie"
+
+// RUN: %clang %s -### --target=aarch64-fuchsia \
+// RUN:     -fsanitize=scudo 2>&1 \
+// RUN:     | FileCheck %s -check-prefix=CHECK-SCUDO-AARCH64
+// CHECK-SCUDO-AARCH64: "-fsanitize=scudo"
+// CHECK-SCUDO-AARCH64: "-pie"
+
+// RUN: %clang %s -### --target=x86_64-fuchsia \
+// RUN:     -fsanitize=scudo -fPIC -shared 2>&1 \
+// RUN:     | FileCheck %s -check-prefix=CHECK-SCUDO-SHARED
+// CHECK-SCUDO-SHARED: "-fsanitize=scudo"
