@@ -59,7 +59,10 @@ llvm::MDNode *CodeGenTBAA::getRoot() {
 llvm::MDNode *CodeGenTBAA::createScalarTypeNode(StringRef Name,
                                                 llvm::MDNode *Parent,
                                                 uint64_t Size) {
-  (void)Size; // TODO: Support generation of size-aware type nodes.
+  if (CodeGenOpts.NewStructPathTBAA) {
+    llvm::Metadata *Id = MDHelper.createString(Name);
+    return MDHelper.createTBAATypeNode(Parent, Size, Id);
+  }
   return MDHelper.createTBAAScalarTypeNode(Name, Parent);
 }
 
@@ -157,6 +160,10 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
   // pointers distinct.
   if (Ty->isPointerType() || Ty->isReferenceType())
     return createScalarTypeNode("any pointer", getChar(), Size);
+
+  // Accesses to arrays are accesses to objects of their element types.
+  if (CodeGenOpts.NewStructPathTBAA && Ty->isArrayType())
+    return getTypeInfo(cast<ArrayType>(Ty)->getElementType());
 
   // Enum types are distinct types. In C++ they have "underlying types",
   // however they aren't related for TBAA.
@@ -300,8 +307,12 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
       OutName = RD->getName();
     }
 
-    // TODO: Support size-aware type nodes and create one here for the
-    // given aggregate type.
+    if (CodeGenOpts.NewStructPathTBAA) {
+      llvm::MDNode *Parent = getChar();
+      uint64_t Size = Context.getTypeSizeInChars(Ty).getQuantity();
+      llvm::Metadata *Id = MDHelper.createString(OutName);
+      return MDHelper.createTBAATypeNode(Parent, Size, Id, Fields);
+    }
 
     // Create the struct type node with a vector of pairs (offset, type).
     SmallVector<std::pair<llvm::MDNode*, uint64_t>, 4> OffsetsAndTypes;
@@ -347,6 +358,10 @@ llvm::MDNode *CodeGenTBAA::getAccessTagInfo(TBAAAccessInfo Info) {
   if (!Info.BaseType) {
     Info.BaseType = Info.AccessType;
     assert(!Info.Offset && "Nonzero offset for an access with no base type!");
+  }
+  if (CodeGenOpts.NewStructPathTBAA) {
+    return N = MDHelper.createTBAAAccessTag(Info.BaseType, Info.AccessType,
+                                            Info.Offset, Info.Size);
   }
   return N = MDHelper.createTBAAStructTagNode(Info.BaseType, Info.AccessType,
                                               Info.Offset);
