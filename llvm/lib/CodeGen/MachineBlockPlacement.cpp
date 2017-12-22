@@ -1235,7 +1235,7 @@ void MachineBlockPlacement::precomputeTriangleChains() {
 // When profile is available, we need to handle the triangle-shape CFG.
 static BranchProbability getLayoutSuccessorProbThreshold(
       const MachineBasicBlock *BB) {
-  if (!BB->getParent()->getFunction().getEntryCount())
+  if (!BB->getParent()->getFunction().hasProfileData())
     return BranchProbability(StaticLikelyProb, 100);
   if (BB->succ_size() == 2) {
     const MachineBasicBlock *Succ1 = *BB->succ_begin();
@@ -2178,7 +2178,7 @@ MachineBlockPlacement::collectLoopBlockSet(const MachineLoop &L) {
   // will be merged into the first outer loop chain for which this block is not
   // cold anymore. This needs precise profile data and we only do this when
   // profile data is available.
-  if (F->getFunction().getEntryCount() || ForceLoopColdBlock) {
+  if (F->getFunction().hasProfileData() || ForceLoopColdBlock) {
     BlockFrequency LoopFreq(0);
     for (auto LoopPred : L.getHeader()->predecessors())
       if (!L.contains(LoopPred))
@@ -2220,7 +2220,7 @@ void MachineBlockPlacement::buildLoopChains(const MachineLoop &L) {
   // for better layout.
   bool RotateLoopWithProfile =
       ForcePreciseRotationCost ||
-      (PreciseRotationCost && F->getFunction().getEntryCount());
+      (PreciseRotationCost && F->getFunction().hasProfileData());
 
   // First check to see if there is an obviously preferable top block for the
   // loop. This will default to the header, but may end up as one of the

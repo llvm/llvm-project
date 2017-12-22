@@ -3911,6 +3911,9 @@ def err_template_param_different_kind : Error<
   "%select{|template parameter }0redeclaration">;
 def note_template_param_different_kind : Note<
   "template parameter has a different kind in template argument">;
+
+def err_invalid_decl_specifier_in_nontype_parm : Error<
+  "invalid declaration specifier in template non-type parameter">;
   
 def err_template_nontype_parm_different_type : Error<
   "template non-type parameter has a different type %0 in template "

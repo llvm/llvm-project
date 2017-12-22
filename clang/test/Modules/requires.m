@@ -1,5 +1,5 @@
 // RUN: rm -rf %t
-// RUN: %clang_cc1 -Wauto-import -fmodules-cache-path=%t -fmodules -fimplicit-module-maps -F %S/Inputs -I %S/Inputs %s -verify -fmodule-feature custom_req1
+// RUN: %clang_cc1 -Wauto-import -Wno-private-module -fmodules-cache-path=%t -fmodules -fimplicit-module-maps -F %S/Inputs -I %S/Inputs %s -verify -fmodule-feature custom_req1
 
 // expected-error@DependsOnModule.framework/module.map:7 {{module 'DependsOnModule.CXX' requires feature 'cplusplus'}}
 @import DependsOnModule.CXX; // expected-note {{module imported here}}

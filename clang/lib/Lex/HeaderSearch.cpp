@@ -209,11 +209,14 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, bool AllowSearch) {
 
   // The facility for "private modules" -- adjacent, optional module maps named
   // module.private.modulemap that are supposed to define private submodules --
-  // is sometimes misused by frameworks that name their associated private
-  // module FooPrivate, rather than as a submodule named Foo.Private as
-  // intended. Here we compensate for such cases by looking in directories named
-  // Foo.framework, when we previously looked and failed to find a
-  // FooPrivate.framework.
+  // may have different flavors of names: FooPrivate, Foo_Private and Foo.Private.
+  //
+  // Foo.Private is now depracated in favor of Foo_Private. Users of FooPrivate
+  // should also rename to Foo_Private. Representing private as submodules
+  // could force building unwanted dependencies into the parent module and cause
+  // dependency cycles.
+  if (!Module && SearchName.consume_back("_Private"))
+    Module = lookupModule(ModuleName, SearchName);
   if (!Module && SearchName.consume_back("Private"))
     Module = lookupModule(ModuleName, SearchName);
   return Module;

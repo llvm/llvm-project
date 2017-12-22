@@ -468,6 +468,7 @@ void ODRHash::AddCXXRecordDecl(const CXXRecordDecl *Record) {
 
 void ODRHash::AddDecl(const Decl *D) {
   assert(D && "Expecting non-null pointer.");
+  D = D->getCanonicalDecl();
   auto Result = DeclMap.insert(std::make_pair(D, DeclMap.size()));
   ID.AddInteger(Result.first->second);
   // On first encounter of a Decl pointer, process it.  Every time afterwards,
