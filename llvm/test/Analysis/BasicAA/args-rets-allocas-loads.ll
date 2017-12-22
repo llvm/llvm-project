@@ -308,4 +308,9 @@ define void @caller_a(double* %arg_a0,
 ; CHECK-NEXT:   0 mod responses (0.0%)
 ; CHECK-NEXT:   0 ref responses (0.0%)
 ; CHECK-NEXT:   140 mod & ref responses (76.0%)
-; CHECK-NEXT:   Alias Analysis Evaluator Mod/Ref Summary: 23%/0%/0%/76%
+; CHECK-NEXT:   0 must responses (0.0%)
+; CHECK-NEXT:   0 must mod responses (0.0%)
+; CHECK-NEXT:   0 must ref responses (0.0%)
+; CHECK-NEXT:   0 must mod & ref responses (0.0%)
+; CHECK-NEXT:   Alias Analysis Evaluator Mod/Ref Summary: 23%/0%/0%/76%/0%/0%/0%/0%
+

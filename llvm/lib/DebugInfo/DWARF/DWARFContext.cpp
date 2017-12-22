@@ -168,7 +168,7 @@ static void dumpDWARFv5StringOffsetsSection(
       OS << format("0x%8.8x: Gap, length = ", Offset);
       OS << (ContributionHeader - Offset) << "\n";
     }
-    OS << format("0x%8.8x: ", ContributionHeader);
+    OS << format("0x%8.8x: ", (uint32_t)ContributionHeader);
     OS << "Contribution size = " << Contribution->Size
        << ", Format = " << (Format == DWARF32 ? "DWARF32" : "DWARF64")
        << ", Version = " << Version << "\n";
