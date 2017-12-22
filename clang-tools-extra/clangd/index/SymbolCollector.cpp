@@ -101,8 +101,14 @@ bool SymbolCollector::handleDeclOccurence(
                                SM.getFileOffset(D->getLocEnd())};
     std::string QName = ND->getQualifiedNameAsString();
     auto ScopeAndName = splitQualifiedName(QName);
-    Symbols.insert({std::move(ID), ScopeAndName.second, ScopeAndName.first,
-                    index::getSymbolInfo(D), std::move(Location)});
+
+    Symbol S;
+    S.ID = std::move(ID);
+    S.Scope = ScopeAndName.first;
+    S.Name = ScopeAndName.second;
+    S.SymInfo = index::getSymbolInfo(D);
+    S.CanonicalDeclaration = Location;
+    Symbols.insert(S);
   }
 
   return true;
