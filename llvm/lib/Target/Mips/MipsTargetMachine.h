@@ -44,7 +44,7 @@ public:
                     CodeGenOpt::Level OL, bool JIT, bool isLittle);
   ~MipsTargetMachine() override;
 
-  TargetIRAnalysis getTargetIRAnalysis() override;
+  TargetTransformInfo getTargetTransformInfo(const Function &F) override;
 
   const MipsSubtarget *getSubtargetImpl() const {
     if (Subtarget)

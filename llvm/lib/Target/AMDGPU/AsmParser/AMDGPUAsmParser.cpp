@@ -1495,6 +1495,8 @@ static int getRegClass(RegisterKind Is, unsigned RegWidth) {
       case 1: return AMDGPU::TTMP_32RegClassID;
       case 2: return AMDGPU::TTMP_64RegClassID;
       case 4: return AMDGPU::TTMP_128RegClassID;
+      case 8: return AMDGPU::TTMP_256RegClassID;
+      case 16: return AMDGPU::TTMP_512RegClassID;
     }
   } else if (Is == IS_SGPR) {
     switch (RegWidth) {
@@ -1502,8 +1504,8 @@ static int getRegClass(RegisterKind Is, unsigned RegWidth) {
       case 1: return AMDGPU::SGPR_32RegClassID;
       case 2: return AMDGPU::SGPR_64RegClassID;
       case 4: return AMDGPU::SGPR_128RegClassID;
-      case 8: return AMDGPU::SReg_256RegClassID;
-      case 16: return AMDGPU::SReg_512RegClassID;
+      case 8: return AMDGPU::SGPR_256RegClassID;
+      case 16: return AMDGPU::SGPR_512RegClassID;
     }
   }
   return -1;
@@ -1758,6 +1760,11 @@ AMDGPUAsmParser::parseImm(OperandVector &Operands, bool AbsMod) {
   // TODO: add syntactic sugar for 1/(2*PI)
   bool Minus = false;
   if (getLexer().getKind() == AsmToken::Minus) {
+    const AsmToken NextToken = getLexer().peekTok();
+    if (!NextToken.is(AsmToken::Integer) &&
+        !NextToken.is(AsmToken::Real)) {
+        return MatchOperand_NoMatch;
+    }
     Minus = true;
     Parser.Lex();
   }
@@ -1787,7 +1794,7 @@ AMDGPUAsmParser::parseImm(OperandVector &Operands, bool AbsMod) {
     return MatchOperand_Success;
   }
   default:
-    return Minus ? MatchOperand_ParseFail : MatchOperand_NoMatch;
+    return MatchOperand_NoMatch;
   }
 }
 
@@ -3850,7 +3857,9 @@ AMDGPUAsmParser::parseSwizzleOp(OperandVector &Operands) {
 
     return Ok? MatchOperand_Success : MatchOperand_ParseFail;
   } else {
-    return MatchOperand_NoMatch;
+    // Swizzle "offset" operand is optional.
+    // If it is omitted, try parsing other optional operands.
+    return parseOptionalOperand(Operands);
   }
 }
 
