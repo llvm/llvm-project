@@ -7,9 +7,9 @@
 // RUN: %clang %flags -DTOOL -shared -fPIC %s -o %T/tool.so
 // 2. "introducing a dynamically-linked library that includes the tool’s definition of ompt_start_tool into the application’s address space"
 // 2.1 Link with tool during compilation
-// RUN: %libomp-compile -DCODE %T/tool.so && %libomp-run | FileCheck %s
+// RUN: %libomp-compile -DCODE -Wl,--no-as-needed %T/tool.so && %libomp-run | FileCheck %s
 // 2.2 Link with tool during compilation, but AFTER the runtime
-// RUN: %libomp-compile -DCODE -lomp %T/tool.so && %libomp-run | FileCheck %s
+// RUN: %libomp-compile -DCODE -lomp -Wl,--no-as-needed %T/tool.so && %libomp-run | FileCheck %s
 // 2.3 Inject tool via the dynamic loader
 // RUN: %libomp-compile -DCODE && %preload-tool %libomp-run | FileCheck %s
 

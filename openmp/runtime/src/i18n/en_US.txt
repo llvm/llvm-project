@@ -115,7 +115,7 @@ Info                         "OMP: Info #%1$d: %2$s\n"
 Warning                      "OMP: Warning #%1$d: %2$s\n"
 Fatal                        "OMP: Error #%1$d: %2$s\n"
 SysErr                       "OMP: System error #%1$d: %2$s\n"
-Hint                         "OMP: Hint: %2$s\n"
+Hint                         "OMP: Hint %1$s\n"
 
 Pragma                       "%1$s pragma (at %2$s:%3$s():%4$s)"
     # %1 is pragma name (like "parallel" or "master",

@@ -26,12 +26,32 @@ new_delete = set([
                   '_Znwm', '_ZnwmRKSt9nothrow_t',    # operator new(unsigned long)
                   '_Znaj', '_ZnajRKSt9nothrow_t',    # operator new[](unsigned int)
                   '_Znwj', '_ZnwjRKSt9nothrow_t',    # operator new(unsigned int)
+                  # operator new(unsigned long, std::align_val_t)
+                  '_ZnwmSt11align_val_t', '_ZnwmSt11align_val_tRKSt9nothrow_t',
+                  # operator new(unsigned int, std::align_val_t)
+                  '_ZnwjSt11align_val_t', '_ZnwjSt11align_val_tRKSt9nothrow_t',
+                  # operator new[](unsigned long, std::align_val_t)
+                  '_ZnamSt11align_val_t', '_ZnamSt11align_val_tRKSt9nothrow_t',
+                  # operator new[](unsigned int, std::align_val_t)
+                  '_ZnajSt11align_val_t', '_ZnajSt11align_val_tRKSt9nothrow_t',
                   '_ZdaPv', '_ZdaPvRKSt9nothrow_t',  # operator delete[](void *)
                   '_ZdlPv', '_ZdlPvRKSt9nothrow_t',  # operator delete(void *)
                   '_ZdaPvm',                         # operator delete[](void*, unsigned long)
                   '_ZdlPvm',                         # operator delete(void*, unsigned long)
                   '_ZdaPvj',                         # operator delete[](void*, unsigned int)
                   '_ZdlPvj',                         # operator delete(void*, unsigned int)
+                  # operator delete(void*, std::align_val_t)
+                  '_ZdlPvSt11align_val_t', '_ZdlPvSt11align_val_tRKSt9nothrow_t',
+                  # operator delete[](void*, std::align_val_t)
+                  '_ZdaPvSt11align_val_t', '_ZdaPvSt11align_val_tRKSt9nothrow_t',
+                  # operator delete(void*, unsigned long,  std::align_val_t)
+                  '_ZdlPvmSt11align_val_t',
+                  # operator delete[](void*, unsigned long, std::align_val_t)
+                  '_ZdaPvmSt11align_val_t',
+                  # operator delete(void*, unsigned int,  std::align_val_t)
+                  '_ZdlPvjSt11align_val_t',
+                  # operator delete[](void*, unsigned int, std::align_val_t)
+                  '_ZdaPvjSt11align_val_t',
                   ])
 
 versioned_functions = set(['memcpy', 'pthread_attr_getaffinity_np',
