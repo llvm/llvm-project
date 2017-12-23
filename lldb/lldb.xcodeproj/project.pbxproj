@@ -1333,15 +1333,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		94F6292E1AFC4275007BA92B /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 7;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		AF90106415AB7D2900FF120D /* Copy Files */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 8;
@@ -3329,13 +3320,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		26579F66126A25920007C5CB /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		26680205115FD0ED008E1FE4 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -3348,13 +3332,6 @@
 				2668022F115FD19D008E1FE4 /* CoreFoundation.framework in Frameworks */,
 				26680233115FD1A7008E1FE4 /* libobjc.dylib in Frameworks */,
 				4CF3D80C15AF4DC800845BF3 /* Security.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		2689FFC713353D7A00698AC0 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -6999,7 +6976,6 @@
 			buildConfigurationList = 26579F6D126A25BF0007C5CB /* Build configuration list for PBXNativeTarget "darwin-debug" */;
 			buildPhases = (
 				26579F65126A25920007C5CB /* Sources */,
-				26579F66126A25920007C5CB /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -7024,7 +7000,6 @@
 				4C848E0918D289FD00EC6DD0 /* Install Clang compiler headers */,
 				49DD45051B4EDB4A00DB3579 /* Install Swift compiler resources */,
 				94C4F2D31A96A3E600029D70 /* CopyFiles */,
-				94F6292E1AFC4275007BA92B /* CopyFiles */,
 				496C2F9B1BD8342F00C70FEA /* Delete debugserver (build) */,
 				49DFDE781BEBD8FE008A6797 /* Delete debugserver (install) */,
 			);
@@ -7049,7 +7024,6 @@
 				232172E11BFEA17C0018FE4B /* Stamp VCS Revision */,
 				261EECA21337D399001D193C /* Build llvm and clang */,
 				2689FFC613353D7A00698AC0 /* Sources */,
-				2689FFC713353D7A00698AC0 /* Frameworks */,
 				2689FFC813353D7A00698AC0 /* Headers */,
 				94C8C91C1D6F9249000EA446 /* Check AST Context */,
 			);
