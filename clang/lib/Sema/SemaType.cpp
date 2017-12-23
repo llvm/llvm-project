@@ -3129,6 +3129,7 @@ static void warnAboutRedundantParens(Sema &S, Declarator &D, QualType T) {
     case DeclaratorChunk::Paren:
       if (&C == &Paren)
         continue;
+      LLVM_FALLTHROUGH;
     case DeclaratorChunk::Pointer:
       StartsWithDeclaratorId = false;
       continue;
