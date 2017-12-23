@@ -372,10 +372,10 @@ bool
 Parser::ParseTemplateParameterList(unsigned Depth,
                              SmallVectorImpl<NamedDecl*> &TemplateParams) {
   while (1) {
-    // FIXME: ParseTemplateParameter should probably just return a NamedDecl.
-    if (Decl *TmpParam
+    
+    if (NamedDecl *TmpParam
           = ParseTemplateParameter(Depth, TemplateParams.size())) {
-      TemplateParams.push_back(dyn_cast<NamedDecl>(TmpParam));
+      TemplateParams.push_back(TmpParam);
     } else {
       // If we failed to parse a template parameter, skip until we find
       // a comma or closing brace.
@@ -480,7 +480,7 @@ bool Parser::isStartOfTemplateTypeParameter() {
 ///               'class' ...[opt] identifier[opt]
 ///         'template' '<' template-parameter-list '>' 'class' identifier[opt]
 ///               = id-expression
-Decl *Parser::ParseTemplateParameter(unsigned Depth, unsigned Position) {
+NamedDecl *Parser::ParseTemplateParameter(unsigned Depth, unsigned Position) {
   if (isStartOfTemplateTypeParameter())
     return ParseTypeParameter(Depth, Position);
 
@@ -502,7 +502,7 @@ Decl *Parser::ParseTemplateParameter(unsigned Depth, unsigned Position) {
 ///         'class' identifier[opt] '=' type-id
 ///         'typename' ...[opt][C++0x] identifier[opt]
 ///         'typename' identifier[opt] '=' type-id
-Decl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
+NamedDecl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
   assert(Tok.isOneOf(tok::kw_class, tok::kw_typename) &&
          "A type-parameter starts with 'class' or 'typename'");
 
@@ -564,7 +564,7 @@ Decl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
 ///       type-parameter-key:
 ///         'class'
 ///         'typename'       [C++1z]
-Decl *
+NamedDecl *
 Parser::ParseTemplateTemplateParameter(unsigned Depth, unsigned Position) {
   assert(Tok.is(tok::kw_template) && "Expected 'template' keyword");
 
@@ -669,7 +669,7 @@ Parser::ParseTemplateTemplateParameter(unsigned Depth, unsigned Position) {
 ///       template-parameter:
 ///         ...
 ///         parameter-declaration
-Decl *
+NamedDecl *
 Parser::ParseNonTypeTemplateParameter(unsigned Depth, unsigned Position) {
   // Parse the declaration-specifiers (i.e., the type).
   // FIXME: The type should probably be restricted in some way... Not all
