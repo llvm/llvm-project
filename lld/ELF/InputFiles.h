@@ -72,6 +72,11 @@ public:
 
   Kind kind() const { return FileKind; }
 
+  bool isElf() const {
+    Kind K = kind();
+    return K == ObjKind || K == SharedKind;
+  }
+
   StringRef getName() const { return MB.getBufferIdentifier(); }
   MemoryBufferRef MB;
 
@@ -104,6 +109,9 @@ public:
   // Cache for toString(). Only toString() should use this member.
   mutable std::string ToStringCache;
 
+  std::string getSrcMsg(const Symbol &Sym, InputSectionBase &Sec,
+                        uint64_t Offset);
+
 protected:
   InputFile(Kind K, MemoryBufferRef M);
   std::vector<InputSectionBase *> Sections;
@@ -121,10 +129,7 @@ public:
   typedef typename ELFT::SymRange Elf_Sym_Range;
 
   ELFFileBase(Kind K, MemoryBufferRef M);
-  static bool classof(const InputFile *F) {
-    Kind K = F->kind();
-    return K == ObjKind || K == SharedKind;
-  }
+  static bool classof(const InputFile *F) { return F->isElf(); }
 
   llvm::object::ELFFile<ELFT> getObj() const {
     return check(llvm::object::ELFFile<ELFT>::create(MB.getBuffer()));
@@ -325,7 +330,7 @@ class BinaryFile : public InputFile {
 public:
   explicit BinaryFile(MemoryBufferRef M) : InputFile(BinaryKind, M) {}
   static bool classof(const InputFile *F) { return F->kind() == BinaryKind; }
-  template <class ELFT> void parse();
+  void parse();
 };
 
 InputFile *createObjectFile(MemoryBufferRef MB, StringRef ArchiveName = "",
