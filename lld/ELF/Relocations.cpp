@@ -554,6 +554,35 @@ static void errorOrWarn(const Twine &Msg) {
     warn(Msg);
 }
 
+// Returns PLT relocation expression.
+//
+// This handles a non PIC program call to function in a shared library. In
+// an ideal world, we could just report an error saying the relocation can
+// overflow at runtime. In the real world with glibc, crt1.o has a
+// R_X86_64_PC32 pointing to libc.so.
+//
+// The general idea on how to handle such cases is to create a PLT entry and
+// use that as the function value.
+//
+// For the static linking part, we just return a plt expr and everything
+// else will use the the PLT entry as the address.
+//
+// The remaining problem is making sure pointer equality still works. We
+// need the help of the dynamic linker for that. We let it know that we have
+// a direct reference to a so symbol by creating an undefined symbol with a
+// non zero st_value. Seeing that, the dynamic linker resolves the symbol to
+// the value of the symbol we created. This is true even for got entries, so
+// pointer equality is maintained. To avoid an infinite loop, the only entry
+// that points to the real function is a dedicated got entry used by the
+// plt. That is identified by special relocation types (R_X86_64_JUMP_SLOT,
+// R_386_JMP_SLOT, etc).
+static RelExpr getPltExpr(Symbol &Sym, RelExpr Expr, bool &IsConstant) {
+  Sym.NeedsPltAddr = true;
+  Sym.IsPreemptible = false;
+  IsConstant = true;
+  return toPlt(Expr);
+}
+
 template <class ELFT>
 static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
                           InputSectionBase &S, uint64_t RelOff,
@@ -563,10 +592,15 @@ static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
     return Expr;
 
   // Or, if we are allowed to create dynamic relocations against
-  // read-only sections (i.e. unless "-z notext" is given),
+  // read-only sections (i.e. when "-z notext" is given),
   // we can create a dynamic relocation as we want, too.
-  if (!Config->ZText)
+  if (!Config->ZText) {
+    // We use PLT for relocations that may overflow in runtime,
+    // see comment for getPltExpr().
+    if (Sym.isFunc() && !Target->isPicRel(Type))
+      return getPltExpr(Sym, Expr, IsConstant);
     return Expr;
+  }
 
   // If a relocation can be applied at link-time, we don't need to
   // create a dynamic relocation in the first place.
@@ -617,32 +651,8 @@ static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
     return Expr;
   }
 
-  if (Sym.isFunc()) {
-    // This handles a non PIC program call to function in a shared library. In
-    // an ideal world, we could just report an error saying the relocation can
-    // overflow at runtime. In the real world with glibc, crt1.o has a
-    // R_X86_64_PC32 pointing to libc.so.
-    //
-    // The general idea on how to handle such cases is to create a PLT entry and
-    // use that as the function value.
-    //
-    // For the static linking part, we just return a plt expr and everything
-    // else will use the the PLT entry as the address.
-    //
-    // The remaining problem is making sure pointer equality still works. We
-    // need the help of the dynamic linker for that. We let it know that we have
-    // a direct reference to a so symbol by creating an undefined symbol with a
-    // non zero st_value. Seeing that, the dynamic linker resolves the symbol to
-    // the value of the symbol we created. This is true even for got entries, so
-    // pointer equality is maintained. To avoid an infinite loop, the only entry
-    // that points to the real function is a dedicated got entry used by the
-    // plt. That is identified by special relocation types (R_X86_64_JUMP_SLOT,
-    // R_386_JMP_SLOT, etc).
-    Sym.NeedsPltAddr = true;
-    Sym.IsPreemptible = false;
-    IsConstant = true;
-    return toPlt(Expr);
-  }
+  if (Sym.isFunc())
+    return getPltExpr(Sym, Expr, IsConstant);
 
   errorOrWarn("symbol '" + toString(Sym) + "' defined in " +
               toString(Sym.File) + " has no type");

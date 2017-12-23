@@ -349,8 +349,9 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   let TSFlags{54}    = hasEVEX_RC;
 }
 
-class PseudoI<dag oops, dag iops, list<dag> pattern>
-  : X86Inst<0, Pseudo, NoImm, oops, iops, "", NoItinerary> {
+class PseudoI<dag oops, dag iops, list<dag> pattern,
+              InstrItinClass itin = NoItinerary>
+  : X86Inst<0, Pseudo, NoImm, oops, iops, "", itin> {
   let Pattern = pattern;
 }
 
