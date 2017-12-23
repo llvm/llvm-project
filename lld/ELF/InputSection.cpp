@@ -24,7 +24,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/xxhash.h"
 #include <mutex>
@@ -263,40 +262,17 @@ std::string InputSectionBase::getLocation(uint64_t Offset) {
   return (SrcFile + ":(" + Name + "+0x" + utohexstr(Offset) + ")").str();
 }
 
-// Concatenates arguments to construct a string representing an error location.
-static std::string createFileLineMsg(StringRef Path, unsigned Line) {
-  std::string Filename = path::filename(Path);
-  std::string Lineno = ":" + std::to_string(Line);
-  if (Filename == Path)
-    return Filename + Lineno;
-  return Filename + Lineno + " (" + Path.str() + Lineno + ")";
-}
-
 // This function is intended to be used for constructing an error message.
 // The returned message looks like this:
 //
 //   foo.c:42 (/home/alice/possibly/very/long/path/foo.c:42)
 //
 //  Returns an empty string if there's no way to get line info.
-template <class ELFT>
 std::string InputSectionBase::getSrcMsg(const Symbol &Sym, uint64_t Offset) {
   // Synthetic sections don't have input files.
-  ObjFile<ELFT> *File = getFile<ELFT>();
   if (!File)
     return "";
-
-  // In DWARF, functions and variables are stored to different places.
-  // First, lookup a function for a given offset.
-  if (Optional<DILineInfo> Info = File->getDILineInfo(this, Offset))
-    return createFileLineMsg(Info->FileName, Info->Line);
-
-  // If it failed, lookup again as a variable.
-  if (Optional<std::pair<std::string, unsigned>> FileLine =
-          File->getVariableLoc(Sym.getName()))
-    return createFileLineMsg(FileLine->first, FileLine->second);
-
-  // File->SourceFile contains STT_FILE symbol, and that is a last resort.
-  return File->SourceFile;
+  return File->getSrcMsg(Sym, *this, Offset);
 }
 
 // Returns a filename string along with an optional section name. This
@@ -1018,15 +994,6 @@ template std::string InputSectionBase::getLocation<ELF32LE>(uint64_t);
 template std::string InputSectionBase::getLocation<ELF32BE>(uint64_t);
 template std::string InputSectionBase::getLocation<ELF64LE>(uint64_t);
 template std::string InputSectionBase::getLocation<ELF64BE>(uint64_t);
-
-template std::string InputSectionBase::getSrcMsg<ELF32LE>(const Symbol &,
-                                                          uint64_t);
-template std::string InputSectionBase::getSrcMsg<ELF32BE>(const Symbol &,
-                                                          uint64_t);
-template std::string InputSectionBase::getSrcMsg<ELF64LE>(const Symbol &,
-                                                          uint64_t);
-template std::string InputSectionBase::getSrcMsg<ELF64BE>(const Symbol &,
-                                                          uint64_t);
 
 template void InputSection::writeTo<ELF32LE>(uint8_t *);
 template void InputSection::writeTo<ELF32BE>(uint8_t *);
