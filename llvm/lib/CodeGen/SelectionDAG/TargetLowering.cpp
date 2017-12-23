@@ -3812,7 +3812,7 @@ SDValue TargetLowering::getVectorElementPointer(SelectionDAG &DAG,
 
   Index = DAG.getNode(ISD::MUL, dl, IdxVT, Index,
                       DAG.getConstant(EltSize, dl, IdxVT));
-  return DAG.getNode(ISD::ADD, dl, IdxVT, Index, VecPtr);
+  return DAG.getNode(ISD::ADD, dl, IdxVT, VecPtr, Index);
 }
 
 //===----------------------------------------------------------------------===//

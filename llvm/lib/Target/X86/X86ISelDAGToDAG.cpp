@@ -106,14 +106,15 @@ namespace {
       if (Base_Reg.getNode())
         Base_Reg.getNode()->dump();
       else
-        dbgs() << "nul";
-      dbgs() << " Base.FrameIndex " << Base_FrameIndex << '\n'
-             << " Scale" << Scale << '\n'
+        dbgs() << "nul\n";
+      if (BaseType == FrameIndexBase)
+        dbgs() << " Base.FrameIndex " << Base_FrameIndex << '\n';
+      dbgs() << " Scale " << Scale << '\n'
              << "IndexReg ";
       if (IndexReg.getNode())
         IndexReg.getNode()->dump();
       else
-        dbgs() << "nul";
+        dbgs() << "nul\n";
       dbgs() << " Disp " << Disp << '\n'
              << "GV ";
       if (GV)

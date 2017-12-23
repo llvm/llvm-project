@@ -88,8 +88,7 @@ extern "C" void LLVMInitializeARCTarget() {
   RegisterTargetMachine<ARCTargetMachine> X(getTheARCTarget());
 }
 
-TargetIRAnalysis ARCTargetMachine::getTargetIRAnalysis() {
-  return TargetIRAnalysis([this](const Function &F) {
-    return TargetTransformInfo(ARCTTIImpl(this, F));
-  });
+TargetTransformInfo
+ARCTargetMachine::getTargetTransformInfo(const Function &F) {
+  return TargetTransformInfo(ARCTTIImpl(this, F));
 }
