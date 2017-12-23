@@ -1092,6 +1092,10 @@ private:
   llvm::SmallDenseMap<CXXRecordDecl *, llvm::SmallVector<DataPointers, 2>, 2>
       PendingOdrMergeFailures;
 
+  /// \brief Function definitions in which we found an ODR violation.
+  llvm::SmallDenseMap<FunctionDecl *, llvm::SmallVector<FunctionDecl *, 2>, 2>
+      PendingFunctionOdrMergeFailures;
+
   /// \brief DeclContexts in which we have diagnosed an ODR violation.
   llvm::SmallPtrSet<DeclContext*, 2> DiagnosedOdrMergeFailures;
 

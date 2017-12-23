@@ -796,6 +796,9 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   FD->setCachedLinkage(Linkage(Record.readInt()));
   FD->EndRangeLoc = ReadSourceLocation();
 
+  FD->ODRHash = Record.readInt();
+  FD->HasODRHash = true;
+
   switch ((FunctionDecl::TemplatedKind)Record.readInt()) {
   case FunctionDecl::TK_NonTemplate:
     mergeRedeclarable(FD, Redecl);
