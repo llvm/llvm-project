@@ -20,12 +20,15 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_platform_limits_linux.cc
   sanitizer_platform_limits_netbsd.cc
   sanitizer_platform_limits_posix.cc
+  sanitizer_platform_limits_solaris.cc
   sanitizer_posix.cc
   sanitizer_printf.cc
   sanitizer_procmaps_common.cc
   sanitizer_procmaps_freebsd.cc
   sanitizer_procmaps_linux.cc
   sanitizer_procmaps_mac.cc
+  sanitizer_procmaps_solaris.cc
+  sanitizer_solaris.cc
   sanitizer_stackdepot.cc
   sanitizer_stacktrace.cc
   sanitizer_stacktrace_printer.cc
@@ -40,7 +43,7 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_thread_registry.cc
   sanitizer_win.cc)
 
-if(UNIX AND NOT APPLE)
+if(UNIX AND NOT APPLE AND NOT OS_NAME MATCHES "SunOS")
   list(APPEND SANITIZER_SOURCES_NOTERMINATION
     sanitizer_linux_x86_64.S)
   list(APPEND SANITIZER_SOURCES_NOTERMINATION
@@ -122,6 +125,7 @@ set(SANITIZER_HEADERS
   sanitizer_platform_interceptors.h
   sanitizer_platform_limits_netbsd.h
   sanitizer_platform_limits_posix.h
+  sanitizer_platform_limits_solaris.h
   sanitizer_posix.h
   sanitizer_procmaps.h
   sanitizer_quarantine.h
@@ -215,6 +219,38 @@ add_compiler_rt_object_libraries(RTSanitizerCommonLibcNoHooks
   SOURCES ${SANITIZER_LIBCDEP_SOURCES}
   CFLAGS ${SANITIZER_NO_WEAK_HOOKS_CFLAGS}
   DEFS ${SANITIZER_COMMON_DEFINITIONS})
+
+if(OS_NAME MATCHES "SunOS")
+  # Solaris ld doesn't support the non-standard GNU ld extension of adding
+  # __start_SECNAME and __stop_SECNAME labels to sections whose names are
+  # valid C identifiers.  Instead we add our own definitions for the
+  # __sancov_guards section.
+  add_compiler_rt_object_libraries(SancovBegin
+    ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
+    SOURCES sancov_begin.S
+    CFLAGS ${SANITIZER_CFLAGS}
+    DEFS ${SANITIZER_COMMON_DEFINITIONS})
+
+  add_compiler_rt_runtime(clang_rt.sancov_begin
+    STATIC
+    ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
+    OBJECT_LIBS SancovBegin
+    CFLAGS ${SANITIZER_CFLAGS}
+    DEFS ${SANITIZER_COMMON_DEFINITIONS})
+
+  add_compiler_rt_object_libraries(SancovEnd
+    ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
+    SOURCES sancov_end.S
+    CFLAGS ${SANITIZER_CFLAGS}
+    DEFS ${SANITIZER_COMMON_DEFINITIONS})
+
+  add_compiler_rt_runtime(clang_rt.sancov_end
+    STATIC
+    ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
+    OBJECT_LIBS SancovEnd
+    CFLAGS ${SANITIZER_CFLAGS}
+    DEFS ${SANITIZER_COMMON_DEFINITIONS})
+endif()
 
 if(WIN32)
   add_compiler_rt_object_libraries(SanitizerCommonWeakInterception
