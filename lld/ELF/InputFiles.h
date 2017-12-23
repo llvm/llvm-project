@@ -109,6 +109,9 @@ public:
   // Cache for toString(). Only toString() should use this member.
   mutable std::string ToStringCache;
 
+  std::string getSrcMsg(const Symbol &Sym, InputSectionBase &Sec,
+                        uint64_t Offset);
+
 protected:
   InputFile(Kind K, MemoryBufferRef M);
   std::vector<InputSectionBase *> Sections;
@@ -327,7 +330,7 @@ class BinaryFile : public InputFile {
 public:
   explicit BinaryFile(MemoryBufferRef M) : InputFile(BinaryKind, M) {}
   static bool classof(const InputFile *F) { return F->kind() == BinaryKind; }
-  template <class ELFT> void parse();
+  void parse();
 };
 
 InputFile *createObjectFile(MemoryBufferRef MB, StringRef ArchiveName = "",

@@ -1056,7 +1056,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // We need to create some reserved symbols such as _end. Create them.
   if (!Config->Relocatable)
-    addReservedSymbols<ELFT>();
+    addReservedSymbols();
 
   // Apply version scripts.
   Symtab->scanVersionScript();
