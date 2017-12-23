@@ -449,6 +449,7 @@ std::unique_ptr<SymbolIndex> simpleIndexFromSymbols(
     std::vector<const Symbol *> Pointers;
   };
   auto Snap = std::make_shared<Snapshot>();
+  SymbolSlab::Builder Slab;
   for (const auto &Pair : Symbols) {
     Symbol Sym;
     Sym.ID = SymbolID(Pair.first);
@@ -462,10 +463,11 @@ std::unique_ptr<SymbolIndex> simpleIndexFromSymbols(
       Sym.Scope = QName.substr(0, Pos);
     }
     Sym.SymInfo.Kind = Pair.second;
-    Snap->Slab.insert(std::move(Sym));
+    Slab.insert(Sym);
   }
+  Snap->Slab = std::move(Slab).build();
   for (auto &Iter : Snap->Slab)
-    Snap->Pointers.push_back(&Iter.second);
+    Snap->Pointers.push_back(&Iter);
   auto S = std::shared_ptr<std::vector<const Symbol *>>(std::move(Snap),
                                                         &Snap->Pointers);
   I->build(std::move(S));

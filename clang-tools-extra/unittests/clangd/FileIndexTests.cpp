@@ -28,9 +28,11 @@ Symbol symbol(llvm::StringRef ID) {
   return Sym;
 }
 
-void addNumSymbolsToSlab(int Begin, int End, SymbolSlab *Slab) {
+std::unique_ptr<SymbolSlab> numSlab(int Begin, int End) {
+  SymbolSlab::Builder Slab;
   for (int i = Begin; i <= End; i++)
-    Slab->insert(symbol(std::to_string(i)));
+    Slab.insert(symbol(std::to_string(i)));
+  return llvm::make_unique<SymbolSlab>(std::move(Slab).build());
 }
 
 std::vector<std::string>
@@ -45,28 +47,15 @@ TEST(FileSymbolsTest, UpdateAndGet) {
   FileSymbols FS;
   EXPECT_THAT(getSymbolNames(*FS.allSymbols()), UnorderedElementsAre());
 
-  auto Slab = llvm::make_unique<SymbolSlab>();
-  addNumSymbolsToSlab(1, 3, Slab.get());
-
-  FS.update("f1", std::move(Slab));
-
+  FS.update("f1", numSlab(1, 3));
   EXPECT_THAT(getSymbolNames(*FS.allSymbols()),
               UnorderedElementsAre("1", "2", "3"));
 }
 
 TEST(FileSymbolsTest, Overlap) {
   FileSymbols FS;
-
-  auto Slab = llvm::make_unique<SymbolSlab>();
-  addNumSymbolsToSlab(1, 3, Slab.get());
-
-  FS.update("f1", std::move(Slab));
-
-  Slab = llvm::make_unique<SymbolSlab>();
-  addNumSymbolsToSlab(3, 5, Slab.get());
-
-  FS.update("f2", std::move(Slab));
-
+  FS.update("f1", numSlab(1, 3));
+  FS.update("f2", numSlab(3, 5));
   EXPECT_THAT(getSymbolNames(*FS.allSymbols()),
               UnorderedElementsAre("1", "2", "3", "3", "4", "5"));
 }
@@ -74,17 +63,13 @@ TEST(FileSymbolsTest, Overlap) {
 TEST(FileSymbolsTest, SnapshotAliveAfterRemove) {
   FileSymbols FS;
 
-  auto Slab = llvm::make_unique<SymbolSlab>();
-  addNumSymbolsToSlab(1, 3, Slab.get());
-
-  FS.update("f1", std::move(Slab));
+  FS.update("f1", numSlab(1, 3));
 
   auto Symbols = FS.allSymbols();
   EXPECT_THAT(getSymbolNames(*Symbols), UnorderedElementsAre("1", "2", "3"));
 
   FS.update("f1", nullptr);
   EXPECT_THAT(getSymbolNames(*FS.allSymbols()), UnorderedElementsAre());
-
   EXPECT_THAT(getSymbolNames(*Symbols), UnorderedElementsAre("1", "2", "3"));
 }
 

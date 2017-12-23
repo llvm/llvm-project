@@ -168,7 +168,6 @@ public:
 
   // Returns a source location string. Used to construct an error message.
   template <class ELFT> std::string getLocation(uint64_t Offset);
-  template <class ELFT>
   std::string getSrcMsg(const Symbol &Sym, uint64_t Offset);
   std::string getObjMsg(uint64_t Offset);
 
