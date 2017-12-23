@@ -14578,11 +14578,10 @@ static SDValue ExtractBitFromMaskVector(SDValue Op, SelectionDAG &DAG,
     unsigned NumElts = VecVT.getVectorNumElements();
     // Extending v8i1/v16i1 to 512-bit get better performance on KNL
     // than extending to 128/256bit.
-    unsigned VecSize = (NumElts <= 4 ? 128 : 512);
-    MVT ExtVT = MVT::getVectorVT(MVT::getIntegerVT(VecSize / NumElts), NumElts);
-    SDValue Ext = DAG.getNode(ISD::SIGN_EXTEND, dl, ExtVT, Vec);
-    SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl,
-                              ExtVT.getVectorElementType(), Ext, Idx);
+    MVT ExtEltVT = (NumElts <= 8) ? MVT::getIntegerVT(128 / NumElts) : MVT::i8;
+    MVT ExtVecVT = MVT::getVectorVT(ExtEltVT, NumElts);
+    SDValue Ext = DAG.getNode(ISD::SIGN_EXTEND, dl, ExtVecVT, Vec);
+    SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, ExtEltVT, Ext, Idx);
     return DAG.getNode(ISD::TRUNCATE, dl, EltVT, Elt);
   }
 
@@ -14777,9 +14776,8 @@ static SDValue InsertBitToMaskVector(SDValue Op, SelectionDAG &DAG,
     // Non constant index. Extend source and destination,
     // insert element and then truncate the result.
     unsigned NumElts = VecVT.getVectorNumElements();
-    unsigned VecSize = (NumElts <= 4 ? 128 : 512);
-    MVT ExtVecVT = MVT::getVectorVT(MVT::getIntegerVT(VecSize/NumElts), NumElts);
-    MVT ExtEltVT = ExtVecVT.getVectorElementType();
+    MVT ExtEltVT = (NumElts <= 8) ? MVT::getIntegerVT(128 / NumElts) : MVT::i8;
+    MVT ExtVecVT = MVT::getVectorVT(ExtEltVT, NumElts);
     SDValue ExtOp = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, ExtVecVT,
       DAG.getNode(ISD::SIGN_EXTEND, dl, ExtVecVT, Vec),
       DAG.getNode(ISD::SIGN_EXTEND, dl, ExtEltVT, Elt), Idx);
@@ -21138,7 +21136,7 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
   // ADC/ADCX/SBB
   case ADX: {
     SDVTList CFVTs = DAG.getVTList(Op->getValueType(0), MVT::i32);
-    SDVTList VTs = DAG.getVTList(Op.getOperand(3)->getValueType(0), MVT::i32);
+    SDVTList VTs = DAG.getVTList(Op.getOperand(3).getValueType(), MVT::i32);
     SDValue GenCF = DAG.getNode(X86ISD::ADD, dl, CFVTs, Op.getOperand(2),
                                 DAG.getConstant(-1, dl, MVT::i8));
     SDValue Res = DAG.getNode(IntrData->Opc0, dl, VTs, Op.getOperand(3),
@@ -24943,7 +24941,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::BITCAST: {
     assert(Subtarget.hasSSE2() && "Requires at least SSE2!");
     EVT DstVT = N->getValueType(0);
-    EVT SrcVT = N->getOperand(0)->getValueType(0);
+    EVT SrcVT = N->getOperand(0).getValueType();
 
     if (SrcVT != MVT::f64 ||
         (DstVT != MVT::v2i32 && DstVT != MVT::v4i16 && DstVT != MVT::v8i8))
@@ -30217,7 +30215,7 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, SDValue BitCast,
     // For cases such as (i4 bitcast (v4i1 setcc v4i64 v1, v2))
     // sign-extend to a 256-bit operation to avoid truncation.
     if (N0->getOpcode() == ISD::SETCC && Subtarget.hasAVX() &&
-        N0->getOperand(0)->getValueType(0).is256BitVector()) {
+        N0->getOperand(0).getValueType().is256BitVector()) {
       SExtVT = MVT::v4i64;
       FPCastVT = MVT::v4f64;
     }
@@ -30230,8 +30228,8 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, SDValue BitCast,
     // 256-bit because the shuffle is cheaper than sign extending the result of
     // the compare.
     if (N0->getOpcode() == ISD::SETCC && Subtarget.hasAVX() &&
-        (N0->getOperand(0)->getValueType(0).is256BitVector() ||
-         N0->getOperand(0)->getValueType(0).is512BitVector())) {
+        (N0->getOperand(0).getValueType().is256BitVector() ||
+         N0->getOperand(0).getValueType().is512BitVector())) {
       SExtVT = MVT::v8i32;
       FPCastVT = MVT::v8f32;
     }
@@ -33044,7 +33042,7 @@ static SDValue WidenMaskArithmetic(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // The type of the truncated inputs.
-  EVT WideVT = N0->getOperand(0)->getValueType(0);
+  EVT WideVT = N0->getOperand(0).getValueType();
   if (WideVT != VT)
     return SDValue();
 
@@ -33075,20 +33073,14 @@ static SDValue WidenMaskArithmetic(SDNode *N, SelectionDAG &DAG,
   SDValue Op = DAG.getNode(Narrow->getOpcode(), DL, WideVT, N0, N1);
   unsigned Opcode = N->getOpcode();
   switch (Opcode) {
+  default: llvm_unreachable("Unexpected opcode");
   case ISD::ANY_EXTEND:
     return Op;
-  case ISD::ZERO_EXTEND: {
-    unsigned InBits = NarrowVT.getScalarSizeInBits();
-    APInt Mask = APInt::getAllOnesValue(InBits);
-    Mask = Mask.zext(VT.getScalarSizeInBits());
-    return DAG.getNode(ISD::AND, DL, VT,
-                       Op, DAG.getConstant(Mask, DL, VT));
-  }
+  case ISD::ZERO_EXTEND:
+    return DAG.getZeroExtendInReg(Op, DL, NarrowVT.getScalarType());
   case ISD::SIGN_EXTEND:
     return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT,
                        Op, DAG.getValueType(NarrowVT));
-  default:
-    llvm_unreachable("Unexpected opcode");
   }
 }
 
@@ -36400,7 +36392,7 @@ static SDValue combineVectorCompareAndMaskUnaryOp(SDNode *N,
   EVT VT = N->getValueType(0);
   if (!VT.isVector() || N->getOperand(0)->getOpcode() != ISD::AND ||
       N->getOperand(0)->getOperand(0)->getOpcode() != ISD::SETCC ||
-      VT.getSizeInBits() != N->getOperand(0)->getValueType(0).getSizeInBits())
+      VT.getSizeInBits() != N->getOperand(0).getValueSizeInBits())
     return SDValue();
 
   // Now check that the other operand of the AND is a constant. We could

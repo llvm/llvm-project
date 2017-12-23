@@ -27,8 +27,9 @@ template <typename T> class Expected;
 struct CachePruningPolicy {
   /// The pruning interval. This is intended to be used to avoid scanning the
   /// directory too often. It does not impact the decision of which file to
-  /// prune. A value of 0 forces the scan to occur.
-  std::chrono::seconds Interval = std::chrono::seconds(1200);
+  /// prune. A value of 0 forces the scan to occur. A value of None disables
+  /// pruning.
+  llvm::Optional<std::chrono::seconds> Interval = std::chrono::seconds(1200);
 
   /// The expiration for a file. When a file hasn't been accessed for Expiration
   /// seconds, it is removed from the cache. A value of 0 disables the

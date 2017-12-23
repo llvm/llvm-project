@@ -180,10 +180,9 @@ void NVPTXTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
     });
 }
 
-TargetIRAnalysis NVPTXTargetMachine::getTargetIRAnalysis() {
-  return TargetIRAnalysis([this](const Function &F) {
-    return TargetTransformInfo(NVPTXTTIImpl(this, F));
-  });
+TargetTransformInfo
+NVPTXTargetMachine::getTargetTransformInfo(const Function &F) {
+  return TargetTransformInfo(NVPTXTTIImpl(this, F));
 }
 
 void NVPTXPassConfig::addEarlyCSEOrGVNPass() {
