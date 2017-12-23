@@ -1,8 +1,8 @@
 // RUN: %clangxx -std=c++1z -faligned-allocation -O0 %s -o %t && %run %t
 // RUN: %clangxx -std=c++1z -faligned-allocation -fsized-deallocation -O0 %s -o %t && %run %t
 
-// ubsan does not intercept new/delete, adnroid is to be fixed.
-// UNSUPPORTED: ubsan,android
+// ubsan does not intercept new/delete.
+// UNSUPPORTED: ubsan
 
 // Check that all new/delete variants are defined and work with supported
 // sanitizers. Sanitizer-specific failure modes tests are supposed to go to
@@ -11,7 +11,7 @@
 #include <cstddef>
 
 // Define all new/delete to do not depend on the version provided by the
-// plaform. The implementation is provided by the sanitizer anyway.
+// platform. The implementation is provided by the sanitizer anyway.
 
 namespace std {
 struct nothrow_t {};

@@ -466,6 +466,39 @@ void ODRHash::AddCXXRecordDecl(const CXXRecordDecl *Record) {
   }
 }
 
+void ODRHash::AddFunctionDecl(const FunctionDecl *Function) {
+  assert(Function && "Expecting non-null pointer.");
+
+  // Skip hashing these kinds of function.
+  if (Function->isImplicit()) return;
+  if (Function->isDefaulted()) return;
+  if (Function->isDeleted()) return;
+  if (!Function->hasBody()) return;
+  if (!Function->getBody()) return;
+
+  // TODO: Fix hashing for class methods.
+  if (isa<CXXMethodDecl>(Function)) return;
+
+  // Skip functions that are specializations or in specialization context.
+  const DeclContext *DC = Function;
+  while (DC) {
+    if (isa<ClassTemplateSpecializationDecl>(DC)) return;
+    if (auto *F = dyn_cast<FunctionDecl>(DC))
+      if (F->isFunctionTemplateSpecialization()) return;
+    DC = DC->getParent();
+  }
+
+  AddDecl(Function);
+
+  AddQualType(Function->getReturnType());
+
+  ID.AddInteger(Function->param_size());
+  for (auto Param : Function->parameters())
+    AddSubDecl(Param);
+
+  AddStmt(Function->getBody());
+}
+
 void ODRHash::AddDecl(const Decl *D) {
   assert(D && "Expecting non-null pointer.");
   D = D->getCanonicalDecl();
