@@ -44,8 +44,8 @@ static InputFile *getFirstElf() {
 // All input object files must be for the same architecture
 // (e.g. it does not make sense to link x86 object files with
 // MIPS object files.) This function checks for that error.
-template <class ELFT> static bool isCompatible(InputFile *F) {
-  if (!isa<ELFFileBase<ELFT>>(F) && !isa<BitcodeFile>(F))
+static bool isCompatible(InputFile *F) {
+  if (!F->isElf() && !isa<BitcodeFile>(F))
     return true;
 
   if (F->EKind == Config->EKind && F->EMachine == Config->EMachine) {
@@ -64,7 +64,7 @@ template <class ELFT> static bool isCompatible(InputFile *F) {
 
 // Add symbols in File to the symbol table.
 template <class ELFT> void SymbolTable::addFile(InputFile *File) {
-  if (!isCompatible<ELFT>(File))
+  if (!isCompatible(File))
     return;
 
   // Binary file

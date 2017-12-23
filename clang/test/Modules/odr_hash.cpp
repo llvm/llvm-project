@@ -557,11 +557,11 @@ S10 s10;
 
 #if defined(FIRST)
 struct S11 {
-  void A(int x) {}
+  void A(int x);
 };
 #elif defined(SECOND)
 struct S11 {
-  void A(int y) {}
+  void A(int y);
 };
 #else
 S11 s11;
@@ -571,11 +571,11 @@ S11 s11;
 
 #if defined(FIRST)
 struct S12 {
-  void A(int x) {}
+  void A(int x);
 };
 #elif defined(SECOND)
 struct S12 {
-  void A(int x = 1) {}
+  void A(int x = 1);
 };
 #else
 S12 s12;
@@ -585,11 +585,11 @@ S12 s12;
 
 #if defined(FIRST)
 struct S13 {
-  void A(int x = 1 + 0) {}
+  void A(int x = 1 + 0);
 };
 #elif defined(SECOND)
 struct S13 {
-  void A(int x = 1) {}
+  void A(int x = 1);
 };
 #else
 S13 s13;
@@ -599,11 +599,11 @@ S13 s13;
 
 #if defined(FIRST)
 struct S14 {
-  void A(int x[2]) {}
+  void A(int x[2]);
 };
 #elif defined(SECOND)
 struct S14 {
-  void A(int x[3]) {}
+  void A(int x[3]);
 };
 #else
 S14 s14;
@@ -2751,14 +2751,14 @@ namespace DefaultArguments {
 template <typename T>
 struct S {
   struct R {
-    void foo(T x = 0) {}
+    void foo(T x = 0);
   };
 };
 #elif defined(SECOND)
 template <typename T>
 struct S {
   struct R {
-    void foo(T x = 1) {}
+    void foo(T x = 1);
   };
 };
 #else
@@ -2771,13 +2771,13 @@ void run() {
 
 #if defined(FIRST)
 template <typename alpha> struct Bravo {
-  void charlie(bool delta = false) {}
+  void charlie(bool delta = false);
 };
 typedef Bravo<char> echo;
 echo foxtrot;
 #elif defined(SECOND)
 template <typename alpha> struct Bravo {
-  void charlie(bool delta = (false)) {}
+  void charlie(bool delta = (false));
 };
 typedef Bravo<char> echo;
 echo foxtrot;
@@ -2787,6 +2787,142 @@ Bravo<char> golf;
 // expected-note@first.h:* {{but in 'FirstModule' found method 'charlie' with 1st parameter with a different default argument}}
 #endif
 }  // namespace DefaultArguments
+
+namespace FunctionDecl {
+#if defined(FIRST)
+struct S1 {};
+S1 s1a;
+#elif defined(SECOND)
+struct S1 {};
+#else
+S1 s1;
+#endif
+
+#if defined(FIRST)
+struct S2 {
+  S2() = default;
+};
+S2 s2a = S2();
+#elif defined(SECOND)
+struct S2 {
+  S2() = default;
+};
+#else
+S2 s2;
+#endif
+
+#if defined(FIRST)
+struct S3 {
+  S3() = delete;
+};
+S3* s3c;
+#elif defined(SECOND)
+struct S3 {
+  S3() = delete;
+};
+#else
+S3* s3;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+int F1(int x, float y = 2.7) { return 1; }
+#else
+int I1 = F1(1);
+#endif
+
+#if defined(FIRST)
+int F2() { return 1; }
+#elif defined(SECOND)
+double F2() { return 1; }
+#else
+int I2 = F2();
+// expected-error@-1 {{call to 'F2' is ambiguous}}
+// expected-note@first.h:* {{candidate function}}
+// expected-note@second.h:* {{candidate function}}
+#endif
+
+#if defined(FIRST)
+int F3(float) { return 1; }
+#elif defined(SECOND)
+int F3(double) { return 1; }
+#else
+int I3 = F3(1);
+// expected-error@-1 {{call to 'F3' is ambiguous}}
+// expected-note@first.h:* {{candidate function}}
+// expected-note@second.h:* {{candidate function}}
+#endif
+
+#if defined(FIRST)
+int F4(int x) { return 1; }
+#elif defined(SECOND)
+int F4(int y) { return 1; }
+#else
+int I4 = F4(1);
+// expected-error@second.h:* {{'FunctionDecl::F4' has different definitions in different modules; definition in module 'SecondModule' first difference is 1st parameter with name 'y'}}
+// expected-note@first.h:* {{but in 'FirstModule' found 1st parameter with name 'x'}}
+#endif
+
+#if defined(FIRST)
+int F5(int x) { return 1; }
+#elif defined(SECOND)
+int F5(int x = 1) { return 1; }
+#else
+int I5 = F6(1);
+// expected-error@second.h:* {{'FunctionDecl::F5' has different definitions in different modules; definition in module 'SecondModule' first difference is 1st parameter without a default argument}}
+// expected-note@first.h:* {{but in 'FirstModule' found 1st parameter with a default argument}}
+#endif
+
+#if defined(FIRST)
+int F6(int x = 2) { return 1; }
+#elif defined(SECOND)
+int F6(int x = 1) { return 1; }
+#else
+int I6 = F6(1);
+// expected-error@second.h:* {{'FunctionDecl::F6' has different definitions in different modules; definition in module 'SecondModule' first difference is 1st parameter with a default argument}}
+// expected-note@first.h:* {{but in 'FirstModule' found 1st parameter with a different default argument}}
+#endif
+
+using I = int;
+#if defined(FIRST)
+I F7() { return 0; }
+#elif defined(SECOND)
+int F7() { return 0; }
+#else
+int I7 = F7();
+// expected-error@second.h:* {{'FunctionDecl::F7' has different definitions in different modules; definition in module 'SecondModule' first difference is return type is 'int'}}
+// expected-note@first.h:* {{but in 'FirstModule' found different return type 'FunctionDecl::I' (aka 'int')}}
+#endif
+
+#if defined(FIRST)
+int F8(int) { return 0; }
+#elif defined(SECOND)
+int F8(I) { return 0; }
+#else
+int I8 = F8(1);
+// expected-error@second.h:* {{'FunctionDecl::F8' has different definitions in different modules; definition in module 'SecondModule' first difference is 1st parameter with type 'FunctionDecl::I' (aka 'int')}}
+// expected-note@first.h:* {{but in 'FirstModule' found 1st parameter with type 'int'}}
+#endif
+
+#if defined(FIRST)
+int F9(int[1]) { return 0; }
+#elif defined(SECOND)
+int F9(int[2]) { return 0; }
+#else
+int I9 = F9(nullptr);
+// expected-error@second.h:* {{'FunctionDecl::F9' has different definitions in different modules; definition in module 'SecondModule' first difference is 1st parameter with type 'int *' decayed from 'int [2]'}}
+// expected-note@first.h:* {{but in 'FirstModule' found 1st parameter with type 'int *' decayed from 'int [1]'}}
+#endif
+
+#if defined(FIRST)
+int F10() { return 1; }
+#elif defined(SECOND)
+int F10() { return 2; }
+#else
+int I10 = F10();
+#endif
+// expected-error@second.h:* {{'FunctionDecl::F10' has different definitions in different modules; definition in module 'SecondModule' first difference is function body}}
+// expected-note@first.h:* {{but in 'FirstModule' found a different body}}
+}  // namespace FunctionDecl
 
 // Keep macros contained to one file.
 #ifdef FIRST
