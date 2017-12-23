@@ -270,6 +270,29 @@ def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
   "friend function %2|"
   "}1">;
 
+def err_module_odr_violation_function : Error<
+  "%q0 has different definitions in different modules; "
+  "%select{definition in module '%2'|defined here}1 "
+  "first difference is "
+  "%select{"
+  "return type is %4|"
+  "%ordinal4 parameter with name %5|"
+  "%ordinal4 parameter with type %5%select{| decayed from %7}6|"
+  "%ordinal4 parameter with%select{out|}5 a default argument|"
+  "%ordinal4 parameter with a default argument|"
+  "function body"
+  "}3">;
+
+def note_module_odr_violation_function : Note<"but in '%0' found "
+  "%select{"
+  "different return type %2|"
+  "%ordinal2 parameter with name %3|"
+  "%ordinal2 parameter with type %3%select{| decayed from %5}4|"
+  "%ordinal2 parameter with%select{out|}3 a default argument|"
+  "%ordinal2 parameter with a different default argument|"
+  "a different body"
+  "}1">;
+
 def err_module_odr_violation_mismatch_decl_unknown : Error<
   "%q0 %select{with definition in module '%2'|defined here}1 has different "
   "definitions in different modules; first difference is this "
