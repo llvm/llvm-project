@@ -13,10 +13,10 @@
 #include "gtest/gtest.h"
 
 using testing::UnorderedElementsAre;
+using testing::Pointee;
 
 namespace clang {
 namespace clangd {
-
 namespace {
 
 Symbol symbol(llvm::StringRef QName) {
@@ -33,6 +33,24 @@ Symbol symbol(llvm::StringRef QName) {
   return Sym;
 }
 
+MATCHER_P(Named, N, "") { return arg.Name == N; }
+
+TEST(SymbolSlab, FindAndIterate) {
+  SymbolSlab::Builder B;
+  B.insert(symbol("Z"));
+  B.insert(symbol("Y"));
+  B.insert(symbol("X"));
+  EXPECT_EQ(nullptr, B.find(SymbolID("W")));
+  for (const char *Sym : {"X", "Y", "Z"})
+    EXPECT_THAT(B.find(SymbolID(Sym)), Pointee(Named(Sym)));
+
+  SymbolSlab S = std::move(B).build();
+  EXPECT_THAT(S, UnorderedElementsAre(Named("X"), Named("Y"), Named("Z")));
+  EXPECT_EQ(S.end(), S.find(SymbolID("W")));
+  for (const char *Sym : {"X", "Y", "Z"})
+    EXPECT_THAT(*S.find(SymbolID(Sym)), Named(Sym));
+}
+
 struct SlabAndPointers {
   SymbolSlab Slab;
   std::vector<const Symbol *> Pointers;
@@ -45,18 +63,18 @@ struct SlabAndPointers {
 std::shared_ptr<std::vector<const Symbol *>>
 generateSymbols(std::vector<std::string> QualifiedNames,
                 std::weak_ptr<SlabAndPointers> *WeakSymbols = nullptr) {
-  auto Slab = std::make_shared<SlabAndPointers>();
-  if (WeakSymbols)
-    *WeakSymbols = Slab;
-
+  SymbolSlab::Builder Slab;
   for (llvm::StringRef QName : QualifiedNames)
-    Slab->Slab.insert(symbol(QName));
+    Slab.insert(symbol(QName));
 
-  for (const auto &Sym : Slab->Slab)
-    Slab->Pointers.push_back(&Sym.second);
-
-  auto *Pointers = &Slab->Pointers;
-  return {std::move(Slab), Pointers};
+  auto Storage = std::make_shared<SlabAndPointers>();
+  Storage->Slab = std::move(Slab).build();
+  for (const auto &Sym : Storage->Slab)
+    Storage->Pointers.push_back(&Sym);
+  if (WeakSymbols)
+    *WeakSymbols = Storage;
+  auto *Pointers = &Storage->Pointers;
+  return {std::move(Storage), Pointers};
 }
 
 // Create a slab of symbols with IDs and names [Begin, End], otherwise identical

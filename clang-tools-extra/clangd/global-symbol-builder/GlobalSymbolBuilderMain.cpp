@@ -80,16 +80,16 @@ int main(int argc, const char **argv) {
 
   // Found compilation database, we iterate all TUs from database to get all
   // symbols, and then merge them into a single SymbolSlab.
-  SymbolSlab GlobalSymbols;
+  SymbolSlab::Builder GlobalSymbols;
   std::mutex SymbolMutex;
   auto AddSymbols = [&](const SymbolSlab& NewSymbols) {
     // Synchronize set accesses.
     std::unique_lock<std::mutex> LockGuard(SymbolMutex);
-    for (auto It : NewSymbols) {
+    for (auto Sym : NewSymbols) {
       // FIXME: Better handling the overlap symbols, currently we overwrite it
       // with the latest one, but we always want to good declarations (class
       // definitions, instead of forward declarations).
-      GlobalSymbols.insert(It.second);
+      GlobalSymbols.insert(Sym);
     }
   };
 
@@ -105,6 +105,6 @@ int main(int argc, const char **argv) {
     }
   }
 
-  llvm::outs() << SymbolToYAML(GlobalSymbols);
+  llvm::outs() << SymbolToYAML(std::move(GlobalSymbols).build());
   return 0;
 }

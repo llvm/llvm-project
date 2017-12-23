@@ -218,7 +218,7 @@ public:
         Size(Size), VerdefIndex(VerdefIndex), Alignment(Alignment) {
     // GNU ifunc is a mechanism to allow user-supplied functions to
     // resolve PLT slot values at load-time. This is contrary to the
-    // regualr symbol resolution scheme in which symbols are resolved just
+    // regular symbol resolution scheme in which symbols are resolved just
     // by name. Using this hook, you can program how symbols are solved
     // for you program. For example, you can make "memcpy" to be resolved
     // to a SSE-enabled version of memcpy only when a machine running the
