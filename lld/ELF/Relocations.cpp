@@ -70,12 +70,11 @@ using namespace lld::elf;
 // >>> defined in /home/alice/src/foo.o
 // >>> referenced by bar.c:12 (/home/alice/src/bar.c:12)
 // >>>               /home/alice/src/bar.o:(.text+0x1)
-template <class ELFT>
 static std::string getLocation(InputSectionBase &S, const Symbol &Sym,
                                uint64_t Off) {
   std::string Msg =
       "\n>>> defined in " + toString(Sym.File) + "\n>>> referenced by ";
-  std::string Src = S.getSrcMsg<ELFT>(Sym, Off);
+  std::string Src = S.getSrcMsg(Sym, Off);
   if (!Src.empty())
     Msg += Src + "\n>>>               ";
   return Msg + S.getObjMsg(Off);
@@ -365,7 +364,6 @@ static bool isRelExpr(RelExpr Expr) {
 //
 // If this function returns false, that means we need to emit a
 // dynamic relocation so that the relocation will be fixed at load-time.
-template <class ELFT>
 static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
                                      InputSectionBase &S, uint64_t RelOff) {
   // These expressions always compute a constant
@@ -410,7 +408,7 @@ static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
     return true;
 
   error("relocation " + toString(Type) + " cannot refer to absolute symbol: " +
-        toString(Sym) + getLocation<ELFT>(S, Sym, RelOff));
+        toString(Sym) + getLocation(S, Sym, RelOff));
   return true;
 }
 
@@ -625,13 +623,13 @@ static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
         "can't create dynamic relocation " + toString(Type) + " against " +
         (Sym.getName().empty() ? "local symbol" : "symbol: " + toString(Sym)) +
         " in readonly segment; recompile object files with -fPIC" +
-        getLocation<ELFT>(S, Sym, RelOff));
+        getLocation(S, Sym, RelOff));
     return Expr;
   }
 
   if (Sym.getVisibility() != STV_DEFAULT) {
     error("cannot preempt symbol: " + toString(Sym) +
-          getLocation<ELFT>(S, Sym, RelOff));
+          getLocation(S, Sym, RelOff));
     return Expr;
   }
 
@@ -643,7 +641,7 @@ static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
         error("unresolvable relocation " + toString(Type) +
               " against symbol '" + toString(*B) +
               "'; recompile with -fPIC or remove '-z nocopyreloc'" +
-              getLocation<ELFT>(S, Sym, RelOff));
+              getLocation(S, Sym, RelOff));
 
       addCopyRelSymbol<ELFT>(B);
     }
@@ -722,7 +720,6 @@ static int64_t computeAddend(const RelTy &Rel, const RelTy *End,
 
 // Report an undefined symbol if necessary.
 // Returns true if this function printed out an error message.
-template <class ELFT>
 static bool maybeReportUndefined(Symbol &Sym, InputSectionBase &Sec,
                                  uint64_t Offset) {
   if (Config->UnresolvedSymbols == UnresolvedPolicy::IgnoreAll)
@@ -739,7 +736,7 @@ static bool maybeReportUndefined(Symbol &Sym, InputSectionBase &Sec,
   std::string Msg =
       "undefined symbol: " + toString(Sym) + "\n>>> referenced by ";
 
-  std::string Src = Sec.getSrcMsg<ELFT>(Sym, Offset);
+  std::string Src = Sec.getSrcMsg(Sym, Offset);
   if (!Src.empty())
     Msg += Src + "\n>>>               ";
   Msg += Sec.getObjMsg(Offset);
@@ -899,7 +896,7 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
       continue;
 
     // Skip if the target symbol is an erroneous undefined symbol.
-    if (maybeReportUndefined<ELFT>(Sym, Sec, Rel.r_offset))
+    if (maybeReportUndefined(Sym, Sec, Rel.r_offset))
       continue;
 
     RelExpr Expr =
@@ -938,7 +935,7 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
       Expr = fromPlt(Expr);
 
     bool IsConstant =
-        isStaticLinkTimeConstant<ELFT>(Expr, Type, Sym, Sec, Rel.r_offset);
+        isStaticLinkTimeConstant(Expr, Type, Sym, Sec, Rel.r_offset);
 
     Expr = adjustExpr<ELFT>(Sym, Expr, Type, Sec, Rel.r_offset, IsConstant);
     if (errorCount())
@@ -997,7 +994,7 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
         errorOrWarn(
             "relocation " + toString(Type) +
             " cannot be used against shared object; recompile with -fPIC" +
-            getLocation<ELFT>(Sec, Sym, Offset));
+            getLocation(Sec, Sym, Offset));
 
       InX::RelaDyn->addReloc(
           {Target->getDynRel(Type), &Sec, Offset, false, &Sym, Addend});
