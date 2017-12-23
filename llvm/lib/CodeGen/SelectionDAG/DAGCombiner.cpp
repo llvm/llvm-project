@@ -17453,8 +17453,10 @@ bool DAGCombiner::isAlias(LSBaseSDNode *Op0, LSBaseSDNode *Op1) const {
   bool IsCV0 = isa<ConstantPoolSDNode>(BasePtr0.getBase());
   bool IsCV1 = isa<ConstantPoolSDNode>(BasePtr1.getBase());
 
-  // If of mismatched base types they do not alias.
-  if (((IsFI0 != IsFI1) || (IsGV0 != IsGV1) || (IsCV0 != IsCV1)) &&
+  // If of mismatched base types or checkable indices we can check
+  // they do not alias.
+  if ((BasePtr0.getIndex() == BasePtr1.getIndex() || (IsFI0 != IsFI1) ||
+       (IsGV0 != IsGV1) || (IsCV0 != IsCV1)) &&
       (IsFI0 || IsGV0 || IsCV0) && (IsFI1 || IsGV1 || IsCV1))
     return false;
 
