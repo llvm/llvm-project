@@ -6,12 +6,10 @@
 // RUN: %env_asan_opts=new_delete_type_mismatch=1:halt_on_error=false:detect_leaks=false %run %t 2>&1 | FileCheck %s
 // RUN: %env_asan_opts=new_delete_type_mismatch=0                                        %run %t
 
-// REQUIRES: asan-static-runtime
-
 #include <stdio.h>
 
 // Define all new/delete to do not depend on the version provided by the
-// plaform. The implementation is provided by ASan anyway.
+// platform. The implementation is provided by ASan anyway.
 
 namespace std {
 struct nothrow_t {};
@@ -57,34 +55,8 @@ struct alignas(1024) S1024_1024 { char a[1024]; };
 
 
 int main(int argc, char **argv) {
-  fprintf(stderr, "Testing valid cases\n");
-
-  delete break_optimization(new S12);
-  operator delete(break_optimization(new S12), std::nothrow);
-  delete [] break_optimization(new S12[100]);
-  operator delete[](break_optimization(new S12[100]), std::nothrow);
-
-  delete break_optimization(new S12_128);
-  operator delete(break_optimization(new S12_128),
-                  std::align_val_t(alignof(S12_128)));
-  operator delete(break_optimization(new S12_128),
-                  std::align_val_t(alignof(S12_128)), std::nothrow);
-  operator delete(break_optimization(new S12_128), sizeof(S12_128),
-                  std::align_val_t(alignof(S12_128)));
-
-  delete [] break_optimization(new S12_128[100]);
-  operator delete[](break_optimization(new S12_128[100]),
-                    std::align_val_t(alignof(S12_128)));
-  operator delete[](break_optimization(new S12_128[100]),
-                    std::align_val_t(alignof(S12_128)), std::nothrow);
-  operator delete[](break_optimization(new S12_128[100]), sizeof(S12_128[100]),
-                    std::align_val_t(alignof(S12_128)));
-
-  fprintf(stderr, "Done\n");
-  // CHECK: Testing valid cases
-  // CHECK-NEXT: Done
-
-  // Explicit mismatched calls.
+  // Check the mismatched calls only, all the valid cases are verified in
+  // test/sanitizer_common/TestCases/Linux/new_delete_test.cc.
 
   operator delete(break_optimization(new S12_128), std::nothrow);
   // CHECK: AddressSanitizer: new-delete-type-mismatch

@@ -1759,6 +1759,11 @@ protected:
   unsigned IsCopyDeductionCandidate : 1;
 
 private:
+
+  /// Store the ODRHash after first calculation.
+  unsigned HasODRHash : 1;
+  unsigned ODRHash;
+
   /// \brief End part of this FunctionDecl's source range.
   ///
   /// We could compute the full range in getSourceRange(). However, when we're
@@ -1841,8 +1846,9 @@ protected:
         IsExplicitlyDefaulted(false), HasImplicitReturnZero(false),
         IsLateTemplateParsed(false), IsConstexpr(isConstexprSpecified),
         InstantiationIsPending(false), UsesSEHTry(false), HasSkippedBody(false),
-        WillHaveBody(false), IsCopyDeductionCandidate(false),
-        EndRangeLoc(NameInfo.getEndLoc()), DNLoc(NameInfo.getInfo()) {}
+        WillHaveBody(false), IsCopyDeductionCandidate(false), HasODRHash(false),
+        ODRHash(0), EndRangeLoc(NameInfo.getEndLoc()),
+        DNLoc(NameInfo.getInfo()) {}
 
   using redeclarable_base = Redeclarable<FunctionDecl>;
 
@@ -2438,6 +2444,10 @@ public:
   /// the corresponding Builtin ID. If the function is not a memory function,
   /// returns 0.
   unsigned getMemoryFunctionKind() const;
+
+  /// \brief Returns ODRHash of the function.  This value is calculated and
+  /// stored on first call, then the stored value returned on the other calls.
+  unsigned getODRHash();
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
