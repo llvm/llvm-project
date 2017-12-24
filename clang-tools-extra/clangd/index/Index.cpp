@@ -13,16 +13,17 @@
 
 namespace clang {
 namespace clangd {
+using namespace llvm;
 
-SymbolID::SymbolID(llvm::StringRef USR)
-    : HashValue(llvm::SHA1::hash(arrayRefFromStringRef(USR))) {}
+SymbolID::SymbolID(StringRef USR)
+    : HashValue(SHA1::hash(arrayRefFromStringRef(USR))) {}
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const SymbolID &ID) {
-  OS << toHex(llvm::toStringRef(ID.HashValue));
+raw_ostream &operator<<(raw_ostream &OS, const SymbolID &ID) {
+  OS << toHex(toStringRef(ID.HashValue));
   return OS;
 }
 
-void operator>>(llvm::StringRef Str, SymbolID &ID) {
+void operator>>(StringRef Str, SymbolID &ID) {
   std::string HexString = fromHex(Str);
   assert(HexString.size() == ID.HashValue.size());
   std::copy(HexString.begin(), HexString.end(), ID.HashValue.begin());
@@ -32,23 +33,58 @@ SymbolSlab::const_iterator SymbolSlab::begin() const { return Symbols.begin(); }
 
 SymbolSlab::const_iterator SymbolSlab::end() const { return Symbols.end(); }
 
-SymbolSlab::const_iterator SymbolSlab::find(const SymbolID &SymID) const {
-  return Symbols.find(SymID);
+SymbolSlab::const_iterator SymbolSlab::find(const SymbolID &ID) const {
+  auto It = std::lower_bound(Symbols.begin(), Symbols.end(), ID,
+                             [](const Symbol &S, const SymbolID &I) {
+                               return S.ID < I;
+                             });
+  if (It != Symbols.end() && It->ID == ID)
+    return It;
+  return Symbols.end();
 }
 
-void SymbolSlab::freeze() { Frozen = true; }
+// Copy the underlying data of the symbol into the owned arena.
+static void own(Symbol &S, DenseSet<StringRef> &Strings,
+                BumpPtrAllocator &Arena) {
+  // Intern replaces V with a reference to the same string owned by the arena.
+  auto Intern = [&](StringRef &V) {
+    auto R = Strings.insert(V);
+    if (R.second) { // New entry added to the table, copy the string.
+      char *Data = Arena.Allocate<char>(V.size());
+      memcpy(Data, V.data(), V.size());
+      *R.first = StringRef(Data, V.size());
+    }
+    V = *R.first;
+  };
 
-void SymbolSlab::insert(const Symbol &S) {
-  assert(!Frozen && "Can't insert a symbol after the slab has been frozen!");
-  auto ItInserted = Symbols.try_emplace(S.ID, S);
-  if (!ItInserted.second)
-    return;
-  auto &Sym = ItInserted.first->second;
+  // We need to copy every StringRef field onto the arena.
+  Intern(S.Name);
+  Intern(S.Scope);
+  Intern(S.CanonicalDeclaration.FilePath);
+}
 
-  // We inserted a new symbol, so copy the underlying data.
-  intern(Sym.Name);
-  intern(Sym.Scope);
-  intern(Sym.CanonicalDeclaration.FilePath);
+void SymbolSlab::Builder::insert(const Symbol &S) {
+  auto R = SymbolIndex.try_emplace(S.ID, Symbols.size());
+  if (R.second) {
+    Symbols.push_back(S);
+    own(Symbols.back(), Strings, Arena);
+  } else {
+    auto &Copy = Symbols[R.first->second] = S;
+    own(Copy, Strings, Arena);
+  }
+}
+
+SymbolSlab SymbolSlab::Builder::build() && {
+  Symbols = {Symbols.begin(), Symbols.end()}; // Force shrink-to-fit.
+  // Sort symbols so the slab can binary search over them.
+  std::sort(Symbols.begin(), Symbols.end(),
+            [](const Symbol &L, const Symbol &R) { return L.ID < R.ID; });
+  // We may have unused strings from overwritten symbols. Build a new arena.
+  BumpPtrAllocator NewArena;
+  DenseSet<StringRef> Strings;
+  for (auto &S : Symbols)
+    own(S, Strings, NewArena);
+  return SymbolSlab(std::move(NewArena), std::move(Symbols));
 }
 
 } // namespace clangd

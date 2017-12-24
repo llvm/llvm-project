@@ -475,15 +475,15 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
   kmp_taskdata_t *current_task = thread->th.th_current_task;
 
 #if OMPT_SUPPORT
-  OMPT_STORE_RETURN_ADDRESS(gtid);
-
   if (ompt_enabled.enabled) {
+    OMPT_STORE_RETURN_ADDRESS(gtid);
+    if (!current_task->ompt_task_info.frame.enter_frame)
+      current_task->ompt_task_info.frame.enter_frame = OMPT_GET_FRAME_ADDRESS(1);
     if (ompt_enabled.ompt_callback_task_create) {
-      kmp_taskdata_t *parent = new_taskdata->td_parent;
       ompt_data_t task_data = ompt_data_none;
       ompt_callbacks.ompt_callback(ompt_callback_task_create)(
-          parent ? &(parent->ompt_task_info.task_data) : &task_data,
-          parent ? &(parent->ompt_task_info.frame) : NULL,
+          current_task ? &(current_task->ompt_task_info.task_data) : &task_data,
+          current_task ? &(current_task->ompt_task_info.frame) : NULL,
           &(new_taskdata->ompt_task_info.task_data),
           ompt_task_explicit | TASK_TYPE_DETAILS_FORMAT(new_taskdata), 1,
           OMPT_LOAD_RETURN_ADDRESS(gtid));
@@ -574,6 +574,11 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
                     "dependencies: "
                     "loc=%p task=%p, return: TASK_CURRENT_NOT_QUEUED\n",
                     gtid, loc_ref, new_taskdata));
+#if OMPT_SUPPORT
+      if (ompt_enabled.enabled) {
+        current_task->ompt_task_info.frame.enter_frame = NULL;
+      }
+#endif
       return TASK_CURRENT_NOT_QUEUED;
     }
   } else {
@@ -588,7 +593,13 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
                 "loc=%p task=%p, transferring to __kmpc_omp_task\n",
                 gtid, loc_ref, new_taskdata));
 
-  return __kmp_omp_task(gtid, new_task, true);
+  kmp_int32 ret = __kmp_omp_task(gtid, new_task, true);
+#if OMPT_SUPPORT
+  if (ompt_enabled.enabled) {
+    current_task->ompt_task_info.frame.enter_frame = NULL;
+  }
+#endif
+  return ret;
 }
 
 /*!

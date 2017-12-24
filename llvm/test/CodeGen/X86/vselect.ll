@@ -182,7 +182,7 @@ define <8 x i16> @test10(<8 x i16> %a, <8 x i16> %b) {
 define <8 x i16> @test11(<8 x i16> %a, <8 x i16> %b) {
 ; SSE2-LABEL: test11:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movaps {{.*#+}} xmm2 = [0,65535,65535,0,65535,65535,65535,65535]
+; SSE2-NEXT:    movaps {{.*#+}} xmm2 = [0,65535,65535,0,0,65535,65535,0]
 ; SSE2-NEXT:    andps %xmm2, %xmm0
 ; SSE2-NEXT:    andnps %xmm1, %xmm2
 ; SSE2-NEXT:    orps %xmm2, %xmm0
@@ -190,12 +190,12 @@ define <8 x i16> @test11(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; SSE41-LABEL: test11:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0],xmm0[1,2],xmm1[3],xmm0[4,5,6,7]
+; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0],xmm0[1,2],xmm1[3,4],xmm0[5,6],xmm1[7]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: test11:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0],xmm0[1,2],xmm1[3],xmm0[4,5,6,7]
+; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0],xmm0[1,2],xmm1[3,4],xmm0[5,6],xmm1[7]
 ; AVX-NEXT:    retq
   %1 = select <8 x i1> <i1 false, i1 true, i1 true, i1 false, i1 undef, i1 true, i1 true, i1 undef>, <8 x i16> %a, <8 x i16> %b
   ret <8 x i16> %1

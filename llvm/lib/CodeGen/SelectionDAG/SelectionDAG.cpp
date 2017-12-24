@@ -3750,6 +3750,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       case ISD::FP_TO_SINT:
       case ISD::FP_TO_UINT:
       case ISD::TRUNCATE:
+      case ISD::ANY_EXTEND:
+      case ISD::ZERO_EXTEND:
+      case ISD::SIGN_EXTEND:
       case ISD::UINT_TO_FP:
       case ISD::SINT_TO_FP:
       case ISD::ABS:

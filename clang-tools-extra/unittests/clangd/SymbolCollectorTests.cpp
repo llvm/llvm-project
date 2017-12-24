@@ -32,8 +32,7 @@ using testing::UnorderedElementsAre;
 
 // GMock helpers for matching Symbol.
 MATCHER_P(QName, Name, "") {
-  return (arg.second.Scope + (arg.second.Scope.empty() ? "" : "::") +
-          arg.second.Name).str() == Name;
+  return (arg.Scope + (arg.Scope.empty() ? "" : "::") + arg.Name).str() == Name;
 }
 
 namespace clang {

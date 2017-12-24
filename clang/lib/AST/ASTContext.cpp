@@ -2148,7 +2148,7 @@ static bool unionHasUniqueObjectRepresentations(const ASTContext &Context,
   return true;
 }
 
-bool isStructEmpty(QualType Ty) {
+static bool isStructEmpty(QualType Ty) {
   const RecordDecl *RD = Ty->castAs<RecordType>()->getDecl();
 
   if (!RD->field_empty())
