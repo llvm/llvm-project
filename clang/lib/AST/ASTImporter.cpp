@@ -4321,9 +4321,8 @@ Stmt *ASTNodeImporter::VisitCompoundStmt(CompoundStmt *S) {
 
   SourceLocation ToLBraceLoc = Importer.Import(S->getLBracLoc());
   SourceLocation ToRBraceLoc = Importer.Import(S->getRBracLoc());
-  return new (Importer.getToContext()) CompoundStmt(Importer.getToContext(),
-                                                    ToStmts,
-                                                    ToLBraceLoc, ToRBraceLoc);
+  return CompoundStmt::Create(Importer.getToContext(), ToStmts, ToLBraceLoc,
+                              ToRBraceLoc);
 }
 
 Stmt *ASTNodeImporter::VisitCaseStmt(CaseStmt *S) {
