@@ -119,7 +119,7 @@ void ASTStmtReader::VisitCompoundStmt(CompoundStmt *S) {
   unsigned NumStmts = Record.readInt();
   while (NumStmts--)
     Stmts.push_back(Record.readSubStmt());
-  S->setStmts(Record.getContext(), Stmts);
+  S->setStmts(Stmts);
   S->LBraceLoc = ReadSourceLocation();
   S->RBraceLoc = ReadSourceLocation();
 }
@@ -3081,7 +3081,8 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case STMT_COMPOUND:
-      S = new (Context) CompoundStmt(Empty);
+      S = CompoundStmt::CreateEmpty(
+          Context, /*NumStmts=*/Record[ASTStmtReader::NumStmtFields]);
       break;
 
     case STMT_CASE:
