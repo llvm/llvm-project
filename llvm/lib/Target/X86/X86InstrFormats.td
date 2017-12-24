@@ -424,9 +424,8 @@ class FPI<bits<8> o, Format F, dag outs, dag ins, string asm,
 // FpI_ - Floating Point Pseudo Instruction template. Not Predicated.
 class FpI_<dag outs, dag ins, FPFormat fp, list<dag> pattern,
            InstrItinClass itin = NoItinerary>
-  : X86Inst<0, Pseudo, NoImm, outs, ins, "", itin> {
+  : PseudoI<outs, ins, pattern, itin> {
   let FPForm = fp;
-  let Pattern = pattern;
 }
 
 // Templates for instructions that use a 16- or 32-bit segmented address as

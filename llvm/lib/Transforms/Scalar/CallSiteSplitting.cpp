@@ -13,10 +13,11 @@
 // threading, or IPA-CP based function cloning, etc.).
 // As of now we support two cases :
 //
-// 1) If a call site is dominated by an OR condition and if any of its arguments
-// are predicated on this OR condition, try to split the condition with more
-// constrained arguments. For example, in the code below, we try to split the
-// call site since we can predicate the argument(ptr) based on the OR condition.
+// 1) Try to a split call-site with constrained arguments, if any constraints
+// on any argument can be found by following the single predecessors of the
+// all site's predecessors. Currently this pass only handles call-sites with 2
+// predecessors. For example, in the code below, we try to split the call-site
+// since we can predicate the argument(ptr) based on the OR condition.
 //
 // Split from :
 //   if (!ptr || c)
@@ -200,16 +201,15 @@ static bool canSplitCallSite(CallSite CS) {
 }
 
 /// Return true if the CS is split into its new predecessors which are directly
-/// hooked to each of its orignial predecessors pointed by PredBB1 and PredBB2.
-/// In OR predicated case, PredBB1 will point the header, and PredBB2 will point
-/// to the second compare block. CallInst1 and CallInst2 will be the new
-/// call-sites placed in the new predecessors split for PredBB1 and PredBB2,
-/// repectively. Therefore, CallInst1 will be the call-site placed
-/// between Header and Tail, and CallInst2 will be the call-site between TBB and
-/// Tail. For example, in the IR below with an OR condition, the call-site can
-/// be split
+/// hooked to each of its original predecessors pointed by PredBB1 and PredBB2.
+/// CallInst1 and CallInst2 will be the new call-sites placed in the new
+/// predecessors split for PredBB1 and PredBB2, respectively.
+/// For example, in the IR below with an OR condition, the call-site can
+/// be split. Assuming PredBB1=Header and PredBB2=TBB, CallInst1 will be the
+/// call-site placed between Header and Tail, and CallInst2 will be the
+/// call-site between TBB and Tail.
 ///
-/// from :
+/// From :
 ///
 ///   Header:
 ///     %c = icmp eq i32* %a, null
@@ -237,9 +237,9 @@ static bool canSplitCallSite(CallSite CS) {
 ///   Tail:
 ///    %p = phi i1 [%ca1, %Tail-split1],[%ca2, %Tail-split2]
 ///
-/// Note that for an OR predicated case, CallInst1 and CallInst2 should be
-/// created with more constrained arguments in
-/// createCallSitesOnOrPredicatedArgument().
+/// Note that in case any arguments at the call-site are constrained by its
+/// predecessors, new call-sites with more constrained arguments will be
+/// created in createCallSitesOnPredicatedArgument().
 static void splitCallSite(CallSite CS, BasicBlock *PredBB1, BasicBlock *PredBB2,
                           Instruction *CallInst1, Instruction *CallInst2) {
   Instruction *Instr = CS.getInstruction();
@@ -332,18 +332,10 @@ static bool tryToSplitOnPHIPredicatedArgument(CallSite CS) {
   splitCallSite(CS, Preds[0], Preds[1], nullptr, nullptr);
   return true;
 }
-// Check if one of the predecessors is a single predecessors of the other.
-// This is a requirement for control flow modeling an OR. HeaderBB points to
-// the single predecessor and OrBB points to other node. HeaderBB potentially
-// contains the first compare of the OR and OrBB the second.
-static bool isOrHeader(BasicBlock *HeaderBB, BasicBlock *OrBB) {
-  return OrBB->getSinglePredecessor() == HeaderBB &&
-         HeaderBB->getTerminator()->getNumSuccessors() == 2;
-}
 
-static bool tryToSplitOnOrPredicatedArgument(CallSite CS) {
+static bool tryToSplitOnPredicatedArgument(CallSite CS) {
   auto Preds = getTwoPredecessors(CS.getInstruction()->getParent());
-  if (!isOrHeader(Preds[0], Preds[1]) && !isOrHeader(Preds[1], Preds[0]))
+  if (Preds[0] == Preds[1])
     return false;
 
   SmallVector<std::pair<ICmpInst *, unsigned>, 2> C1, C2;
@@ -362,7 +354,7 @@ static bool tryToSplitOnOrPredicatedArgument(CallSite CS) {
 static bool tryToSplitCallSite(CallSite CS) {
   if (!CS.arg_size() || !canSplitCallSite(CS))
     return false;
-  return tryToSplitOnOrPredicatedArgument(CS) ||
+  return tryToSplitOnPredicatedArgument(CS) ||
          tryToSplitOnPHIPredicatedArgument(CS);
 }
 
