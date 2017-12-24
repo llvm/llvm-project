@@ -54,7 +54,7 @@ std::shared_ptr<std::vector<const Symbol *>> FileSymbols::allSymbols() {
     for (const auto &FileAndSlab : FileToSlabs) {
       Snap->KeepAlive.push_back(FileAndSlab.second);
       for (const auto &Iter : *FileAndSlab.second)
-        Snap->Pointers.push_back(&Iter.second);
+        Snap->Pointers.push_back(&Iter);
     }
   }
   auto *Pointers = &Snap->Pointers;
