@@ -423,8 +423,12 @@ bool ELFAsmParser::parseGroup(StringRef &GroupName) {
   if (L.isNot(AsmToken::Comma))
     return TokError("expected group name");
   Lex();
-  if (getParser().parseIdentifier(GroupName))
+  if (L.is(AsmToken::Integer)) {
+    GroupName = getTok().getString();
+    Lex();
+  } else if (getParser().parseIdentifier(GroupName)) {
     return true;
+  }
   if (L.is(AsmToken::Comma)) {
     Lex();
     StringRef Linkage;
