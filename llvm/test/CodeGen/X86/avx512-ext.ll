@@ -1366,21 +1366,12 @@ define i16 @trunc_16i32_to_16i1(<16 x i32> %a) {
 }
 
 define <4 x i32> @trunc_4i32_to_4i1(<4 x i32> %a, <4 x i32> %b) {
-; KNL-LABEL: trunc_4i32_to_4i1:
-; KNL:       # %bb.0:
-; KNL-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; KNL-NEXT:    vpslld $31, %xmm0, %xmm0
-; KNL-NEXT:    vpsrad $31, %xmm0, %xmm0
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: trunc_4i32_to_4i1:
-; SKX:       # %bb.0:
-; SKX-NEXT:    vpslld $31, %xmm0, %xmm0
-; SKX-NEXT:    vptestmd %xmm0, %xmm0, %k1
-; SKX-NEXT:    vpslld $31, %xmm1, %xmm0
-; SKX-NEXT:    vptestmd %xmm0, %xmm0, %k0 {%k1}
-; SKX-NEXT:    vpmovm2d %k0, %xmm0
-; SKX-NEXT:    retq
+; ALL-LABEL: trunc_4i32_to_4i1:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; ALL-NEXT:    vpslld $31, %xmm0, %xmm0
+; ALL-NEXT:    vpsrad $31, %xmm0, %xmm0
+; ALL-NEXT:    retq
   %mask_a = trunc <4 x i32>%a to <4 x i1>
   %mask_b = trunc <4 x i32>%b to <4 x i1>
   %a_and_b = and <4 x i1>%mask_a, %mask_b

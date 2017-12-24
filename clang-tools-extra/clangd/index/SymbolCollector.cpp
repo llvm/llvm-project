@@ -91,7 +91,7 @@ bool SymbolCollector::handleDeclOccurence(
 
     std::string USR(Buff.data(), Buff.size());
     auto ID = SymbolID(USR);
-    if (Symbols.find(ID) != Symbols.end())
+    if (Symbols.find(ID) != nullptr)
       return true;
 
     auto &SM = ND->getASTContext().getSourceManager();
@@ -113,8 +113,6 @@ bool SymbolCollector::handleDeclOccurence(
 
   return true;
 }
-
-void SymbolCollector::finish() { Symbols.freeze(); }
 
 } // namespace clangd
 } // namespace clang

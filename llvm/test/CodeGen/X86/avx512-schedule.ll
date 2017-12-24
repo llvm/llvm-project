@@ -4376,20 +4376,16 @@ define i16 @trunc_16i32_to_16i1(<16 x i32> %a) {
 define <4 x i32> @trunc_4i32_to_4i1(<4 x i32> %a, <4 x i32> %b) {
 ; GENERIC-LABEL: trunc_4i32_to_4i1:
 ; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    vpand %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpslld $31, %xmm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vptestmd %xmm0, %xmm0, %k1 # sched: [1:1.00]
-; GENERIC-NEXT:    vpslld $31, %xmm1, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vptestmd %xmm0, %xmm0, %k0 {%k1} # sched: [1:1.00]
-; GENERIC-NEXT:    vpmovm2d %k0, %xmm0 # sched: [1:0.33]
+; GENERIC-NEXT:    vpsrad $31, %xmm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: trunc_4i32_to_4i1:
 ; SKX:       # %bb.0:
+; SKX-NEXT:    vpand %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
 ; SKX-NEXT:    vpslld $31, %xmm0, %xmm0 # sched: [1:0.50]
-; SKX-NEXT:    vptestmd %xmm0, %xmm0, %k1 # sched: [3:1.00]
-; SKX-NEXT:    vpslld $31, %xmm1, %xmm0 # sched: [1:0.50]
-; SKX-NEXT:    vptestmd %xmm0, %xmm0, %k0 {%k1} # sched: [3:1.00]
-; SKX-NEXT:    vpmovm2d %k0, %xmm0 # sched: [1:0.25]
+; SKX-NEXT:    vpsrad $31, %xmm0, %xmm0 # sched: [1:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %mask_a = trunc <4 x i32>%a to <4 x i1>
   %mask_b = trunc <4 x i32>%b to <4 x i1>
