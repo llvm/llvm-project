@@ -880,9 +880,10 @@ bool InductionDescriptor::isFPInductionPHI(PHINode *Phi, const Loop *TheLoop,
 /// If we are able to find such sequence, we return the instructions
 /// we found, namely %casted_phi and the instructions on its use-def chain up
 /// to the phi (not including the phi).
-bool getCastsForInductionPHI(
-    PredicatedScalarEvolution &PSE, const SCEVUnknown *PhiScev,
-    const SCEVAddRecExpr *AR, SmallVectorImpl<Instruction *> &CastInsts) {
+static bool getCastsForInductionPHI(PredicatedScalarEvolution &PSE,
+                                    const SCEVUnknown *PhiScev,
+                                    const SCEVAddRecExpr *AR,
+                                    SmallVectorImpl<Instruction *> &CastInsts) {
 
   assert(CastInsts.empty() && "CastInsts is expected to be empty.");
   auto *PN = cast<PHINode>(PhiScev->getValue());

@@ -1691,8 +1691,8 @@ define <2 x double> @sbto2f64(<2 x double> %a) {
 ; VLDQ:       # %bb.0:
 ; VLDQ-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; VLDQ-NEXT:    vcmpltpd %xmm0, %xmm1, %k0
-; VLDQ-NEXT:    vpmovm2q %k0, %xmm0
-; VLDQ-NEXT:    vcvtqq2pd %xmm0, %xmm0
+; VLDQ-NEXT:    vpmovm2d %k0, %xmm0
+; VLDQ-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; VLDQ-NEXT:    retq
 ;
 ; VLNODQ-LABEL: sbto2f64:
@@ -1700,12 +1700,8 @@ define <2 x double> @sbto2f64(<2 x double> %a) {
 ; VLNODQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; VLNODQ-NEXT:    vcmpltpd %xmm0, %xmm1, %k1
 ; VLNODQ-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; VLNODQ-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
-; VLNODQ-NEXT:    vpextrq $1, %xmm0, %rax
-; VLNODQ-NEXT:    vcvtsi2sdl %eax, %xmm2, %xmm1
-; VLNODQ-NEXT:    vmovq %xmm0, %rax
-; VLNODQ-NEXT:    vcvtsi2sdl %eax, %xmm2, %xmm0
-; VLNODQ-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; VLNODQ-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
+; VLNODQ-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; VLNODQ-NEXT:    retq
   %cmpres = fcmp ogt <2 x double> %a, zeroinitializer
   %1 = sitofp <2 x i1> %cmpres to <2 x double>
@@ -2002,30 +1998,22 @@ define <2 x double> @ubto2f64(<2 x i32> %a) {
 ; NOVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; NOVL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
 ; NOVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
-; NOVL-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; NOVL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; NOVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1]
+; NOVL-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; NOVL-NEXT:    vcvtudq2pd %ymm0, %zmm0
+; NOVL-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; NOVL-NEXT:    vzeroupper
 ; NOVL-NEXT:    retq
 ;
-; VLDQ-LABEL: ubto2f64:
-; VLDQ:       # %bb.0:
-; VLDQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; VLDQ-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
-; VLDQ-NEXT:    vpcmpltuq %xmm1, %xmm0, %k1
-; VLDQ-NEXT:    vmovdqa64 {{.*}}(%rip), %xmm0 {%k1} {z}
-; VLDQ-NEXT:    vcvtqq2pd %xmm0, %xmm0
-; VLDQ-NEXT:    retq
-;
-; VLNODQ-LABEL: ubto2f64:
-; VLNODQ:       # %bb.0:
-; VLNODQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; VLNODQ-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
-; VLNODQ-NEXT:    vpcmpltuq %xmm1, %xmm0, %k1
-; VLNODQ-NEXT:    vmovdqa64 {{.*}}(%rip), %xmm0 {%k1} {z}
-; VLNODQ-NEXT:    vpextrq $1, %xmm0, %rax
-; VLNODQ-NEXT:    vcvtsi2sdl %eax, %xmm2, %xmm1
-; VLNODQ-NEXT:    vmovq %xmm0, %rax
-; VLNODQ-NEXT:    vcvtsi2sdl %eax, %xmm2, %xmm0
-; VLNODQ-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; VLNODQ-NEXT:    retq
+; VL-LABEL: ubto2f64:
+; VL:       # %bb.0:
+; VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; VL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; VL-NEXT:    vpcmpltuq %xmm1, %xmm0, %k1
+; VL-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm0 {%k1} {z}
+; VL-NEXT:    vcvtudq2pd %xmm0, %xmm0
+; VL-NEXT:    retq
   %mask = icmp ult <2 x i32> %a, zeroinitializer
   %1 = uitofp <2 x i1> %mask to <2 x double>
   ret <2 x double> %1
