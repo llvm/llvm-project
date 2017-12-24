@@ -33047,10 +33047,8 @@ static SDValue WidenMaskArithmetic(SDNode *N, SelectionDAG &DAG,
   // The right side has to be a 'trunc' or a constant vector.
   bool RHSTrunc = N1.getOpcode() == ISD::TRUNCATE &&
                   N1.getOperand(0).getValueType() == VT;
-  ConstantSDNode *RHSConstSplat = nullptr;
-  if (auto *RHSBV = dyn_cast<BuildVectorSDNode>(N1))
-    RHSConstSplat = RHSBV->getConstantSplatNode();
-  if (!RHSTrunc && !RHSConstSplat)
+  if (!RHSTrunc &&
+      !ISD::isBuildVectorOfConstantSDNodes(N1.getNode()))
     return SDValue();
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -33060,13 +33058,10 @@ static SDValue WidenMaskArithmetic(SDNode *N, SelectionDAG &DAG,
 
   // Set N0 and N1 to hold the inputs to the new wide operation.
   N0 = N0->getOperand(0);
-  if (RHSConstSplat) {
-    N1 = DAG.getNode(ISD::ZERO_EXTEND, DL, VT.getVectorElementType(),
-                     SDValue(RHSConstSplat, 0));
-    N1 = DAG.getSplatBuildVector(VT, DL, N1);
-  } else if (RHSTrunc) {
+  if (RHSTrunc)
     N1 = N1->getOperand(0);
-  }
+  else
+    N1 = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N1);
 
   // Generate the wide operation.
   SDValue Op = DAG.getNode(Narrow->getOpcode(), DL, VT, N0, N1);
