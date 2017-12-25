@@ -585,14 +585,10 @@ template <class ELFT>
 static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
                           InputSectionBase &S, uint64_t RelOff,
                           bool &IsConstant) {
-  // We can create any dynamic relocation if a section is simply writable.
-  if (S.Flags & SHF_WRITE)
-    return Expr;
-
-  // Or, if we are allowed to create dynamic relocations against
-  // read-only sections (i.e. when "-z notext" is given),
-  // we can create a dynamic relocation as we want, too.
-  if (!Config->ZText) {
+  // If a section writable or if we are allowed to create dynamic relocations
+  // against read-only sections (i.e. when "-z notext" is given), we can create
+  // any dynamic relocation the dynamic linker knows how to handle.
+  if ((S.Flags & SHF_WRITE) || !Config->ZText) {
     // We use PLT for relocations that may overflow in runtime,
     // see comment for getPltExpr().
     if (Sym.isFunc() && !Target->isPicRel(Type))
