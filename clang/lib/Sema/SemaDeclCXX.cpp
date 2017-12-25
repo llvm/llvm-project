@@ -12265,11 +12265,10 @@ void Sema::DefineImplicitLambdaToFunctionPointerConversion(
   // Construct the body of the conversion function { return __invoke; }.
   Expr *FunctionRef = BuildDeclRefExpr(Invoker, Invoker->getType(),
                                         VK_LValue, Conv->getLocation()).get();
-   assert(FunctionRef && "Can't refer to __invoke function?");
-   Stmt *Return = BuildReturnStmt(Conv->getLocation(), FunctionRef).get();
-   Conv->setBody(new (Context) CompoundStmt(Context, Return,
-                                            Conv->getLocation(),
-                                            Conv->getLocation()));
+  assert(FunctionRef && "Can't refer to __invoke function?");
+  Stmt *Return = BuildReturnStmt(Conv->getLocation(), FunctionRef).get();
+  Conv->setBody(CompoundStmt::Create(Context, Return, Conv->getLocation(),
+                                     Conv->getLocation()));
 
   Conv->markUsed(Context);
   Conv->setReferenced();
@@ -12330,9 +12329,8 @@ void Sema::DefineImplicitLambdaToBlockPointerConversion(
 
   // Set the body of the conversion function.
   Stmt *ReturnS = Return.get();
-  Conv->setBody(new (Context) CompoundStmt(Context, ReturnS,
-                                           Conv->getLocation(),
-                                           Conv->getLocation()));
+  Conv->setBody(CompoundStmt::Create(Context, ReturnS, Conv->getLocation(),
+                                     Conv->getLocation()));
   Conv->markUsed(Context);
 
   // We're done; notify the mutation listener, if any.

@@ -592,15 +592,21 @@ public:
 };
 
 /// CompoundStmt - This represents a group of statements like { stmt stmt }.
-class CompoundStmt : public Stmt {
+class CompoundStmt final : public Stmt,
+                           private llvm::TrailingObjects<CompoundStmt, Stmt *> {
   friend class ASTStmtReader;
+  friend TrailingObjects;
 
-  Stmt** Body = nullptr;
   SourceLocation LBraceLoc, RBraceLoc;
 
+  CompoundStmt(ArrayRef<Stmt *> Stmts, SourceLocation LB, SourceLocation RB);
+  explicit CompoundStmt(EmptyShell Empty) : Stmt(CompoundStmtClass, Empty) {}
+
+  void setStmts(ArrayRef<Stmt *> Stmts);
+
 public:
-  CompoundStmt(const ASTContext &C, ArrayRef<Stmt*> Stmts,
-               SourceLocation LB, SourceLocation RB);
+  static CompoundStmt *Create(const ASTContext &C, ArrayRef<Stmt *> Stmts,
+                              SourceLocation LB, SourceLocation RB);
 
   // \brief Build an empty compound statement with a location.
   explicit CompoundStmt(SourceLocation Loc)
@@ -609,11 +615,7 @@ public:
   }
 
   // \brief Build an empty compound statement.
-  explicit CompoundStmt(EmptyShell Empty) : Stmt(CompoundStmtClass, Empty) {
-    CompoundStmtBits.NumStmts = 0;
-  }
-
-  void setStmts(const ASTContext &C, ArrayRef<Stmt *> Stmts);
+  static CompoundStmt *CreateEmpty(const ASTContext &C, unsigned NumStmts);
 
   bool body_empty() const { return CompoundStmtBits.NumStmts == 0; }
   unsigned size() const { return CompoundStmtBits.NumStmts; }
@@ -622,14 +624,16 @@ public:
   using body_range = llvm::iterator_range<body_iterator>;
 
   body_range body() { return body_range(body_begin(), body_end()); }
-  body_iterator body_begin() { return Body; }
-  body_iterator body_end() { return Body + size(); }
-  Stmt *body_front() { return !body_empty() ? Body[0] : nullptr; }
-  Stmt *body_back() { return !body_empty() ? Body[size()-1] : nullptr; }
+  body_iterator body_begin() { return getTrailingObjects<Stmt *>(); }
+  body_iterator body_end() { return body_begin() + size(); }
+  Stmt *body_front() { return !body_empty() ? body_begin()[0] : nullptr; }
+  Stmt *body_back() {
+    return !body_empty() ? body_begin()[size() - 1] : nullptr;
+  }
 
   void setLastStmt(Stmt *S) {
     assert(!body_empty() && "setLastStmt");
-    Body[size()-1] = S;
+    body_begin()[size() - 1] = S;
   }
 
   using const_body_iterator = Stmt* const *;
@@ -639,15 +643,17 @@ public:
     return body_const_range(body_begin(), body_end());
   }
 
-  const_body_iterator body_begin() const { return Body; }
-  const_body_iterator body_end() const { return Body + size(); }
+  const_body_iterator body_begin() const {
+    return getTrailingObjects<Stmt *>();
+  }
+  const_body_iterator body_end() const { return body_begin() + size(); }
 
   const Stmt *body_front() const {
-    return !body_empty() ? Body[0] : nullptr;
+    return !body_empty() ? body_begin()[0] : nullptr;
   }
 
   const Stmt *body_back() const {
-    return !body_empty() ? Body[size() - 1] : nullptr;
+    return !body_empty() ? body_begin()[size() - 1] : nullptr;
   }
 
   using reverse_body_iterator = std::reverse_iterator<body_iterator>;
@@ -682,13 +688,10 @@ public:
   }
 
   // Iterators
-  child_range children() {
-    return child_range(Body, Body + CompoundStmtBits.NumStmts);
-  }
+  child_range children() { return child_range(body_begin(), body_end()); }
 
   const_child_range children() const {
-    return const_child_range(child_iterator(Body),
-                             child_iterator(Body + CompoundStmtBits.NumStmts));
+    return const_child_range(body_begin(), body_end());
   }
 };
 
@@ -875,8 +878,11 @@ public:
 ///
 /// Represents an attribute applied to a statement. For example:
 ///   [[omp::for(...)]] for (...) { ... }
-class AttributedStmt : public Stmt {
+class AttributedStmt final
+    : public Stmt,
+      private llvm::TrailingObjects<AttributedStmt, const Attr *> {
   friend class ASTStmtReader;
+  friend TrailingObjects;
 
   Stmt *SubStmt;
   SourceLocation AttrLoc;
@@ -894,11 +900,9 @@ class AttributedStmt : public Stmt {
   }
 
   const Attr *const *getAttrArrayPtr() const {
-    return reinterpret_cast<const Attr *const *>(this + 1);
+    return getTrailingObjects<const Attr *>();
   }
-  const Attr **getAttrArrayPtr() {
-    return reinterpret_cast<const Attr **>(this + 1);
-  }
+  const Attr **getAttrArrayPtr() { return getTrailingObjects<const Attr *>(); }
 
 public:
   static AttributedStmt *Create(const ASTContext &C, SourceLocation Loc,

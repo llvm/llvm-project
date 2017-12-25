@@ -7108,8 +7108,8 @@ static SDValue ConvertI1VectorToInteger(SDValue Op, SelectionDAG &DAG) {
   return DAG.getConstant(Immediate, dl, VT);
 }
 // Lower BUILD_VECTOR operation for v8i1 and v16i1 types.
-SDValue
-X86TargetLowering::LowerBUILD_VECTORvXi1(SDValue Op, SelectionDAG &DAG) const {
+static SDValue LowerBUILD_VECTORvXi1(SDValue Op, SelectionDAG &DAG,
+                                     const X86Subtarget &Subtarget) {
 
   MVT VT = Op.getSimpleValueType();
   assert((VT.getVectorElementType() == MVT::i1) &&
@@ -7131,8 +7131,8 @@ X86TargetLowering::LowerBUILD_VECTORvXi1(SDValue Op, SelectionDAG &DAG) const {
           DAG.getBuildVector(MVT::v32i1, dl, Op.getNode()->ops().slice(32, 32));
       // We have to manually lower both halves so getNode doesn't try to
       // reassemble the build_vector.
-      Lower = LowerBUILD_VECTORvXi1(Lower, DAG);
-      Upper = LowerBUILD_VECTORvXi1(Upper, DAG);
+      Lower = LowerBUILD_VECTORvXi1(Lower, DAG, Subtarget);
+      Upper = LowerBUILD_VECTORvXi1(Upper, DAG, Subtarget);
       return DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v64i1, Lower, Upper);
     }
     SDValue Imm = ConvertI1VectorToInteger(Op, DAG);
@@ -7881,7 +7881,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
 
   // Generate vectors for predicate vectors.
   if (VT.getVectorElementType() == MVT::i1 && Subtarget.hasAVX512())
-    return LowerBUILD_VECTORvXi1(Op, DAG);
+    return LowerBUILD_VECTORvXi1(Op, DAG, Subtarget);
 
   if (SDValue VectorConstant = materializeVectorConstant(Op, DAG, Subtarget))
     return VectorConstant;
@@ -15658,8 +15658,8 @@ SDValue X86TargetLowering::BuildFILD(SDValue Op, EVT SrcVT, SDValue Chain,
 }
 
 /// 64-bit unsigned integer to double expansion.
-SDValue X86TargetLowering::LowerUINT_TO_FP_i64(SDValue Op,
-                                               SelectionDAG &DAG) const {
+static SDValue LowerUINT_TO_FP_i64(SDValue Op, SelectionDAG &DAG,
+                                   const X86Subtarget &Subtarget) {
   // This algorithm is not obvious. Here it is what we're trying to output:
   /*
      movq       %rax,  %xmm0
@@ -15679,7 +15679,7 @@ SDValue X86TargetLowering::LowerUINT_TO_FP_i64(SDValue Op,
   // Build some magic constants.
   static const uint32_t CV0[] = { 0x43300000, 0x45300000, 0, 0 };
   Constant *C0 = ConstantDataVector::get(*Context, CV0);
-  auto PtrVT = getPointerTy(DAG.getDataLayout());
+  auto PtrVT = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
   SDValue CPIdx0 = DAG.getConstantPool(C0, PtrVT, 16);
 
   SmallVector<Constant*,2> CV1;
@@ -15726,8 +15726,8 @@ SDValue X86TargetLowering::LowerUINT_TO_FP_i64(SDValue Op,
 }
 
 /// 32-bit unsigned integer to float expansion.
-SDValue X86TargetLowering::LowerUINT_TO_FP_i32(SDValue Op,
-                                               SelectionDAG &DAG) const {
+static SDValue LowerUINT_TO_FP_i32(SDValue Op, SelectionDAG &DAG,
+                                   const X86Subtarget &Subtarget) {
   SDLoc dl(Op);
   // FP constant to bias correct the final result.
   SDValue Bias = DAG.getConstantFP(BitsToDouble(0x4330000000000000ULL), dl,
@@ -15760,16 +15760,7 @@ SDValue X86TargetLowering::LowerUINT_TO_FP_i32(SDValue Op,
   SDValue Sub = DAG.getNode(ISD::FSUB, dl, MVT::f64, Or, Bias);
 
   // Handle final rounding.
-  MVT DestVT = Op.getSimpleValueType();
-
-  if (DestVT.bitsLT(MVT::f64))
-    return DAG.getNode(ISD::FP_ROUND, dl, DestVT, Sub,
-                       DAG.getIntPtrConstant(0, dl));
-  if (DestVT.bitsGT(MVT::f64))
-    return DAG.getNode(ISD::FP_EXTEND, dl, DestVT, Sub);
-
-  // Handle final rounding.
-  return Sub;
+  return DAG.getFPExtendOrRound(Sub, dl, Op.getSimpleValueType());
 }
 
 static SDValue lowerUINT_TO_FP_v2i32(SDValue Op, SelectionDAG &DAG,
@@ -15901,8 +15892,8 @@ static SDValue lowerUINT_TO_FP_vXi32(SDValue Op, SelectionDAG &DAG,
   return DAG.getNode(ISD::FADD, DL, VecFloatVT, LowBitcast, FHigh);
 }
 
-SDValue X86TargetLowering::lowerUINT_TO_FP_vec(SDValue Op,
-                                               SelectionDAG &DAG) const {
+static SDValue lowerUINT_TO_FP_vec(SDValue Op, SelectionDAG &DAG,
+                                   const X86Subtarget &Subtarget) {
   SDValue N0 = Op.getOperand(0);
   MVT SrcVT = N0.getSimpleValueType();
   SDLoc dl(Op);
@@ -15941,7 +15932,7 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   auto PtrVT = getPointerTy(DAG.getDataLayout());
 
   if (Op.getSimpleValueType().isVector())
-    return lowerUINT_TO_FP_vec(Op, DAG);
+    return lowerUINT_TO_FP_vec(Op, DAG, Subtarget);
 
   MVT SrcVT = N0.getSimpleValueType();
   MVT DstVT = Op.getSimpleValueType();
@@ -15954,9 +15945,9 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   }
 
   if (SrcVT == MVT::i64 && DstVT == MVT::f64 && X86ScalarSSEf64)
-    return LowerUINT_TO_FP_i64(Op, DAG);
+    return LowerUINT_TO_FP_i64(Op, DAG, Subtarget);
   if (SrcVT == MVT::i32 && X86ScalarSSEf64)
-    return LowerUINT_TO_FP_i32(Op, DAG);
+    return LowerUINT_TO_FP_i32(Op, DAG, Subtarget);
   if (Subtarget.is64Bit() && SrcVT == MVT::i64 && DstVT == MVT::f32)
     return SDValue();
 
