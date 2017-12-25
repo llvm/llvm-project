@@ -512,6 +512,7 @@ using StatT =  struct stat;
 
 #if defined(__APPLE__)
 TimeSpec extract_mtime(StatT const& st) { return st.st_mtimespec; }
+__attribute__((unused)) // Suppress warning
 TimeSpec extract_atime(StatT const& st) { return st.st_atimespec; }
 #else
 TimeSpec extract_mtime(StatT const& st) { return st.st_mtim; }

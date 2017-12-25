@@ -32423,6 +32423,37 @@ static SDValue combineMulSpecial(uint64_t MulAmt, SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue combineVMUL(SDNode *N, SelectionDAG &DAG,
+                           const X86Subtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
+  SDLoc dl(N);
+
+  if (VT.getScalarType() != MVT::i64)
+    return SDValue();
+
+  MVT MulVT = MVT::getVectorVT(MVT::i32, VT.getVectorNumElements() * 2);
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  // MULDQ returns the 64-bit result of the signed multiplication of the lower
+  // 32-bits. We can lower with this if the sign bits stretch that far.
+  if (Subtarget.hasSSE41() && DAG.ComputeNumSignBits(LHS) > 32 &&
+      DAG.ComputeNumSignBits(RHS) > 32) {
+    return DAG.getNode(X86ISD::PMULDQ, dl, VT, DAG.getBitcast(MulVT, LHS),
+                       DAG.getBitcast(MulVT, RHS));
+  }
+
+  // If the upper bits are zero we can use a single pmuludq.
+  APInt Mask = APInt::getHighBitsSet(64, 32);
+  if (DAG.MaskedValueIsZero(LHS, Mask) && DAG.MaskedValueIsZero(RHS, Mask)) {
+    return DAG.getNode(X86ISD::PMULUDQ, dl, VT, DAG.getBitcast(MulVT, LHS),
+                       DAG.getBitcast(MulVT, RHS));
+  }
+
+  return SDValue();
+}
+
 /// Optimize a single multiply with constant into two operations in order to
 /// implement it with two cheaper instructions, e.g. LEA + SHL, LEA + LEA.
 static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
@@ -32431,6 +32462,9 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   if (DCI.isBeforeLegalize() && VT.isVector())
     return reduceVMULWidth(N, DAG, Subtarget);
+
+  if (!DCI.isBeforeLegalize() && VT.isVector())
+    return combineVMUL(N, DAG, Subtarget);
 
   if (!MulConstantOptimization)
     return SDValue();
