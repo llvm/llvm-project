@@ -237,6 +237,59 @@ class InstructionVerifier;
 /// Builds BasicBlockState for each BB of the function.
 /// It can traverse function for verification and provides all required
 /// information.
+///
+/// GC pointer may be in one of three states: relocated, unrelocated and
+/// poisoned.
+/// Relocated pointer may be used without any restrictions.
+/// Unrelocated pointer cannot be dereferenced, passed as argument to any call
+/// or returned. Unrelocated pointer may be safely compared against another
+/// unrelocated pointer or against a pointer exclusively derived from null.
+/// Poisoned pointers are produced when we somehow derive pointer from relocated
+/// and unrelocated pointers (e.g. phi, select). This pointers may be safely
+/// used in a very limited number of situations. Currently the only way to use
+/// it is comparison against constant exclusively derived from null. All
+/// limitations arise due to their undefined state: this pointers should be
+/// treated as relocated and unrelocated simultaneously.
+/// Rules of deriving:
+/// R + U = P - that's where the poisoned pointers come from
+/// P + X = P
+/// U + U = U
+/// R + R = R
+/// X + C = X
+/// Where "+" - any operation that somehow derive pointer, U - unrelocated,
+/// R - relocated and P - poisoned, C - constant, X - U or R or P or C or
+/// nothing (in case when "+" is unary operation).
+/// Deriving of pointers by itself is always safe.
+/// NOTE: when we are making decision on the status of instruction's result:
+/// a) for phi we need to check status of each input *at the end of
+///    corresponding predecessor BB*.
+/// b) for other instructions we need to check status of each input *at the
+///    current point*.
+///
+/// FIXME: This works fairly well except one case
+///     bb1:
+///     p = *some GC-ptr def*
+///     p1 = gep p, offset
+///         /     |
+///        /      |
+///    bb2:       |
+///    safepoint  |
+///        \      |
+///         \     |
+///      bb3:
+///      p2 = phi [p, bb2] [p1, bb1]
+///      p3 = phi [p, bb2] [p, bb1]
+///      here p and p1 is unrelocated
+///           p2 and p3 is poisoned (though they shouldn't be)
+///
+/// This leads to some weird results:
+///      cmp eq p, p2 - illegal instruction (false-positive)
+///      cmp eq p1, p2 - illegal instruction (false-positive)
+///      cmp eq p, p3 - illegal instruction (false-positive)
+///      cmp eq p, p1 - ok
+/// To fix this we need to introduce conception of generations and be able to
+/// check if two values belong to one generation or not. This way p2 will be
+/// considered to be unrelocated and no false alarm will happen.
 class GCPtrTracker {
   const Function &F;
   SpecificBumpPtrAllocator<BasicBlockState> BSAllocator;
@@ -244,12 +297,17 @@ class GCPtrTracker {
   // This set contains defs of unrelocated pointers that are proved to be legal
   // and don't need verification.
   DenseSet<const Instruction *> ValidUnrelocatedDefs;
+  // This set contains poisoned defs. They can be safely ignored during
+  // verification too.
+  DenseSet<const Value *> PoisonedDefs;
 
 public:
   GCPtrTracker(const Function &F, const DominatorTree &DT);
 
   BasicBlockState *getBasicBlockState(const BasicBlock *BB);
   const BasicBlockState *getBasicBlockState(const BasicBlock *BB) const;
+
+  bool isValuePoisoned(const Value *V) const { return PoisonedDefs.count(V); }
 
   /// Traverse each BB of the function and call
   /// InstructionVerifier::verifyInstruction for each possibly invalid
@@ -349,7 +407,9 @@ const BasicBlockState *GCPtrTracker::getBasicBlockState(
 }
 
 bool GCPtrTracker::instructionMayBeSkipped(const Instruction *I) const {
-  return ValidUnrelocatedDefs.count(I);
+  // Poisoned defs are skipped since they are always safe by itself by
+  // definition (for details see comment to this class).
+  return ValidUnrelocatedDefs.count(I) || PoisonedDefs.count(I);
 }
 
 void GCPtrTracker::verifyFunction(GCPtrTracker &&Tracker,
@@ -418,31 +478,78 @@ bool GCPtrTracker::removeValidUnrelocatedDefs(const BasicBlock *BB,
          "Passed Contribution should be from the passed BasicBlockState!");
   AvailableValueSet AvailableSet = BBS->AvailableIn;
   bool ContributionChanged = false;
+  // For explanation why instructions are processed this way see
+  // "Rules of deriving" in the comment to this class.
   for (const Instruction &I : *BB) {
-    bool ProducesUnrelocatedPointer = false;
-    if ((isa<GetElementPtrInst>(I) || isa<BitCastInst>(I)) &&
-        containsGCPtrType(I.getType())) {
-      // GEP/bitcast of unrelocated pointer is legal by itself but this
-      // def shouldn't appear in any AvailableSet.
+    bool ValidUnrelocatedPointerDef = false;
+    bool PoisonedPointerDef = false;
+    // TODO: `select` instructions should be handled here too.
+    if (const PHINode *PN = dyn_cast<PHINode>(&I)) {
+      if (containsGCPtrType(PN->getType())) {
+        // If both is true, output is poisoned.
+        bool HasRelocatedInputs = false;
+        bool HasUnrelocatedInputs = false;
+        for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
+          const BasicBlock *InBB = PN->getIncomingBlock(i);
+          const Value *InValue = PN->getIncomingValue(i);
+
+          if (isNotExclusivelyConstantDerived(InValue)) {
+            if (isValuePoisoned(InValue)) {
+              // If any of inputs is poisoned, output is always poisoned too.
+              HasRelocatedInputs = true;
+              HasUnrelocatedInputs = true;
+              break;
+            }
+            if (BlockMap[InBB]->AvailableOut.count(InValue))
+              HasRelocatedInputs = true;
+            else
+              HasUnrelocatedInputs = true;
+          }
+        }
+        if (HasUnrelocatedInputs) {
+          if (HasRelocatedInputs)
+            PoisonedPointerDef = true;
+          else
+            ValidUnrelocatedPointerDef = true;
+        }
+      }
+    } else if ((isa<GetElementPtrInst>(I) || isa<BitCastInst>(I)) &&
+               containsGCPtrType(I.getType())) {
+      // GEP/bitcast of unrelocated pointer is legal by itself but this def
+      // shouldn't appear in any AvailableSet.
       for (const Value *V : I.operands())
         if (containsGCPtrType(V->getType()) &&
             isNotExclusivelyConstantDerived(V) && !AvailableSet.count(V)) {
-          ProducesUnrelocatedPointer = true;
+          if (isValuePoisoned(V))
+            PoisonedPointerDef = true;
+          else
+            ValidUnrelocatedPointerDef = true;
           break;
         }
     }
-    if (!ProducesUnrelocatedPointer) {
+    assert(!(ValidUnrelocatedPointerDef && PoisonedPointerDef) &&
+           "Value cannot be both unrelocated and poisoned!");
+    if (ValidUnrelocatedPointerDef) {
+      // Remove def of unrelocated pointer from Contribution of this BB and
+      // trigger update of all its successors.
+      Contribution.erase(&I);
+      PoisonedDefs.erase(&I);
+      ValidUnrelocatedDefs.insert(&I);
+      DEBUG(dbgs() << "Removing urelocated " << I << " from Contribution of "
+                   << BB->getName() << "\n");
+      ContributionChanged = true;
+    } else if (PoisonedPointerDef) {
+      // Mark pointer as poisoned, remove its def from Contribution and trigger
+      // update of all successors.
+      Contribution.erase(&I);
+      PoisonedDefs.insert(&I);
+      DEBUG(dbgs() << "Removing poisoned " << I << " from Contribution of "
+                   << BB->getName() << "\n");
+      ContributionChanged = true;
+    } else {
       bool Cleared = false;
       transferInstruction(I, Cleared, AvailableSet);
       (void)Cleared;
-    } else {
-      // Remove def of unrelocated pointer from Contribution of this BB
-      // and trigger update of all its successors.
-      Contribution.erase(&I);
-      ValidUnrelocatedDefs.insert(&I);
-      DEBUG(dbgs() << "Removing " << I << " from Contribution of "
-                   << BB->getName() << "\n");
-      ContributionChanged = true;
     }
   }
   return ContributionChanged;
@@ -524,8 +631,8 @@ void InstructionVerifier::verifyInstruction(
 
     // Returns true if LHS and RHS are unrelocated pointers and they are
     // valid unrelocated uses.
-    auto hasValidUnrelocatedUse = [&AvailableSet, baseTyLHS, baseTyRHS, &LHS,
-                                   &RHS] () {
+    auto hasValidUnrelocatedUse = [&AvailableSet, Tracker, baseTyLHS, baseTyRHS,
+                                   &LHS, &RHS] () {
         // A cmp instruction has valid unrelocated pointer operands only if
         // both operands are unrelocated pointers.
         // In the comparison between two pointers, if one is an unrelocated
@@ -545,12 +652,23 @@ void InstructionVerifier::verifyInstruction(
             (baseTyLHS == BaseType::NonConstant &&
              baseTyRHS == BaseType::ExclusivelySomeConstant))
           return false;
+
+        // If one of pointers is poisoned and other is not exclusively derived
+        // from null it is an invalid expression: it produces poisoned result
+        // and unless we want to track all defs (not only gc pointers) the only
+        // option is to prohibit such instructions.
+        if ((Tracker->isValuePoisoned(LHS) && baseTyRHS != ExclusivelyNull) ||
+            (Tracker->isValuePoisoned(RHS) && baseTyLHS != ExclusivelyNull))
+            return false;
+
         // All other cases are valid cases enumerated below:
-        // 1. Comparison between an exlusively derived null pointer and a
+        // 1. Comparison between an exclusively derived null pointer and a
         // constant base pointer.
-        // 2. Comparison between an exlusively derived null pointer and a
+        // 2. Comparison between an exclusively derived null pointer and a
         // non-constant unrelocated base pointer.
         // 3. Comparison between 2 unrelocated pointers.
+        // 4. Comparison between a pointer exclusively derived from null and a
+        // non-constant poisoned pointer.
         return true;
     };
     if (!hasValidUnrelocatedUse()) {
