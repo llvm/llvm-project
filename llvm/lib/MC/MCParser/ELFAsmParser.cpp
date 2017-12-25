@@ -427,13 +427,13 @@ bool ELFAsmParser::parseGroup(StringRef &GroupName) {
     GroupName = getTok().getString();
     Lex();
   } else if (getParser().parseIdentifier(GroupName)) {
-    return true;
+    return TokError("invalid group name");
   }
   if (L.is(AsmToken::Comma)) {
     Lex();
     StringRef Linkage;
     if (getParser().parseIdentifier(Linkage))
-      return true;
+      return TokError("invalid linkage");
     if (Linkage != "comdat")
       return TokError("Linkage must be 'comdat'");
   }

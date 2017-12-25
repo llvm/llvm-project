@@ -27,6 +27,8 @@
 
 using namespace llvm;
 
+namespace {
+
 // --------------------------------------------------------------------
 // Implementation of permutation networks.
 
@@ -147,6 +149,7 @@ private:
   void build();
   bool color();
 };
+} // namespace
 
 std::pair<bool,uint8_t> Coloring::getUniqueColor(const NodeSet &Nodes) {
   uint8_t Color = None;
@@ -300,6 +303,7 @@ void Coloring::dump() const {
   dbgs() << "  }\n}\n";
 }
 
+namespace {
 // Base class of for reordering networks. They don't strictly need to be
 // permutations, as outputs with repeated occurrences of an input element
 // are allowed.
@@ -408,7 +412,7 @@ struct BenesNetwork : public PermNetwork {
 private:
   bool route(ElemType *P, RowType *T, unsigned Size, unsigned Step);
 };
-
+} // namespace
 
 bool ForwardDeltaNetwork::route(ElemType *P, RowType *T, unsigned Size,
                                 unsigned Step) {
@@ -602,6 +606,7 @@ bool BenesNetwork::route(ElemType *P, RowType *T, unsigned Size,
 // Support for building selection results (output instructions that are
 // parts of the final selection).
 
+namespace {
 struct OpRef {
   OpRef(SDValue V) : OpV(V) {}
   bool isValue() const { return OpV.getNode() != nullptr; }
@@ -689,6 +694,7 @@ struct ResultStack {
 
   void print(raw_ostream &OS, const SelectionDAG &G) const;
 };
+} // namespace
 
 void OpRef::print(raw_ostream &OS, const SelectionDAG &G) const {
   if (isValue()) {
@@ -740,6 +746,7 @@ void ResultStack::print(raw_ostream &OS, const SelectionDAG &G) const {
   }
 }
 
+namespace {
 struct ShuffleMask {
   ShuffleMask(ArrayRef<int> M) : Mask(M) {
     for (unsigned I = 0, E = Mask.size(); I != E; ++I) {
@@ -763,6 +770,7 @@ struct ShuffleMask {
     return ShuffleMask(Mask.take_back(H));
   }
 };
+} // namespace
 
 // --------------------------------------------------------------------
 // The HvxSelector class.
