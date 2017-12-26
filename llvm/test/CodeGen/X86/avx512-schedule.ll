@@ -129,7 +129,7 @@ entry:
 define <8 x i64> @imulq512(<8 x i64> %y, <8 x i64> %x) {
 ; GENERIC-LABEL: imulq512:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpmullq %zmm0, %zmm1, %zmm0 # sched: [3:1.00]
+; GENERIC-NEXT:    vpmullq %zmm0, %zmm1, %zmm0 # sched: [5:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: imulq512:
@@ -143,7 +143,7 @@ define <8 x i64> @imulq512(<8 x i64> %y, <8 x i64> %x) {
 define <4 x i64> @imulq256(<4 x i64> %y, <4 x i64> %x) {
 ; GENERIC-LABEL: imulq256:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpmullq %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
+; GENERIC-NEXT:    vpmullq %ymm0, %ymm1, %ymm0 # sched: [5:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: imulq256:
@@ -157,7 +157,7 @@ define <4 x i64> @imulq256(<4 x i64> %y, <4 x i64> %x) {
 define <2 x i64> @imulq128(<2 x i64> %y, <2 x i64> %x) {
 ; GENERIC-LABEL: imulq128:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpmullq %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
+; GENERIC-NEXT:    vpmullq %xmm0, %xmm1, %xmm0 # sched: [5:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: imulq128:
@@ -550,7 +550,7 @@ define <16 x i32> @vpsubd_test(<16 x i32> %i, <16 x i32> %j) nounwind readnone {
 define <16 x i32> @vpmulld_test(<16 x i32> %i, <16 x i32> %j) {
 ; GENERIC-LABEL: vpmulld_test:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpmulld %zmm1, %zmm0, %zmm0 # sched: [3:1.00]
+; GENERIC-NEXT:    vpmulld %zmm1, %zmm0, %zmm0 # sched: [5:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: vpmulld_test:
