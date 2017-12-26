@@ -155,17 +155,30 @@ define i8 @t13(float %a) {
   ret i8 %3
 }
 
-; <= comparison, where %a could be -0.0. Not safe.
+; %a could be -0.0, but it doesn't matter because the conversion to int is the same for 0.0 or -0.0.
 define i8 @t14(float %a) {
 ; CHECK-LABEL: @t14(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule float %a, 0.000000e+00
-; CHECK-NEXT:    [[TMP2:%.*]] = fptosi float %a to i8
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i8 [[TMP2]], i8 0
-; CHECK-NEXT:    ret i8 [[TMP3]]
+; CHECK-NEXT:    [[DOTINV:%.*]] = fcmp oge float %a, 0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[DOTINV]], float 0.000000e+00, float %a
+; CHECK-NEXT:    [[TMP2:%.*]] = fptosi float [[TMP1]] to i8
+; CHECK-NEXT:    ret i8 [[TMP2]]
 ;
   %1 = fcmp ule float %a, 0.0
   %2 = fptosi float %a to i8
   %3 = select i1 %1, i8 %2, i8 0
+  ret i8 %3
+}
+
+define i8 @t14_commute(float %a) {
+; CHECK-LABEL: @t14_commute(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt float %a, 0.000000e+00
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], float %a, float 0.000000e+00
+; CHECK-NEXT:    [[TMP3:%.*]] = fptosi float [[TMP2]] to i8
+; CHECK-NEXT:    ret i8 [[TMP3]]
+;
+  %1 = fcmp ule float %a, 0.0
+  %2 = fptosi float %a to i8
+  %3 = select i1 %1, i8 0, i8 %2
   ret i8 %3
 }
 

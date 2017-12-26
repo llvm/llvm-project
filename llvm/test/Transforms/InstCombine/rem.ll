@@ -593,3 +593,17 @@ define <2 x i32> @test23(<2 x i32> %A) {
   %mul = srem <2 x i32> %and, <i32 2147483647, i32 2147483647>
   ret <2 x i32> %mul
 }
+
+; FP division-by-zero is not UB.
+
+define double @PR34870(i1 %cond, double %x, double %y) {
+; CHECK-LABEL: @PR34870(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 %cond, double %y, double 0.000000e+00
+; CHECK-NEXT:    [[FMOD:%.*]] = frem double %x, [[SEL]]
+; CHECK-NEXT:    ret double [[FMOD]]
+;
+  %sel = select i1 %cond, double %y, double 0.0
+  %fmod = frem double %x, %sel
+  ret double %fmod
+}
+
