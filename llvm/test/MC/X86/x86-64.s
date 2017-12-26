@@ -99,6 +99,10 @@
 // CHECK: shll $2, %eax
         sall $2, %eax
 
+// CHECK: rep movsb
+rep     # comment
+movsb
+
 // CHECK: rep
 // CHECK: insb
         rep;insb

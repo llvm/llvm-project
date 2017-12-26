@@ -1631,9 +1631,5 @@ Instruction *InstCombiner::visitFRem(BinaryOperator &I) {
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
-  // Handle cases involving: rem X, (select Cond, Y, Z)
-  if (simplifyDivRemOfSelectWithZeroOp(I))
-    return &I;
-
   return nullptr;
 }
