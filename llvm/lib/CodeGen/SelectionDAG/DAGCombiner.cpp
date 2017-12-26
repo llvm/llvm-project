@@ -3577,7 +3577,8 @@ SDValue DAGCombiner::foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
 
   // TODO: What is the 'or' equivalent of this fold?
   // (and (setne X, 0), (setne X, -1)) --> (setuge (add X, 1), 2)
-  if (IsAnd && LL == RL && CC0 == CC1 && IsInteger && CC0 == ISD::SETNE &&
+  if (IsAnd && LL == RL && CC0 == CC1 && OpVT.getScalarSizeInBits() > 1 &&
+      IsInteger && CC0 == ISD::SETNE &&
       ((isNullConstant(LR) && isAllOnesConstant(RR)) ||
        (isAllOnesConstant(LR) && isNullConstant(RR)))) {
     SDValue One = DAG.getConstant(1, DL, OpVT);
