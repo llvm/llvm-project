@@ -3897,8 +3897,9 @@ static Value *SimplifyExtractElementInst(Value *Vec, Value *Idx, const SimplifyQ
   // If extracting a specified index from the vector, see if we can recursively
   // find a previously computed scalar that was inserted into the vector.
   if (auto *IdxC = dyn_cast<ConstantInt>(Idx))
-    if (Value *Elt = findScalarElement(Vec, IdxC->getZExtValue()))
-      return Elt;
+    if (IdxC->getValue().ule(Vec->getType()->getVectorNumElements()))
+      if (Value *Elt = findScalarElement(Vec, IdxC->getZExtValue()))
+        return Elt;
 
   // An undef extract index can be arbitrarily chosen to be an out-of-range
   // index value, which would result in the instruction being undef.
