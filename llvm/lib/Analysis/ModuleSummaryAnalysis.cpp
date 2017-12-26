@@ -306,7 +306,9 @@ computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
       NonRenamableLocal || HasInlineAsmMaybeReferencingInternal ||
       // Inliner doesn't handle variadic functions.
       // FIXME: refactor this to use the same code that inliner is using.
-      F.isVarArg();
+      F.isVarArg() ||
+      // Don't try to import functions with noinline attribute.
+      F.getAttributes().hasFnAttribute(Attribute::NoInline);
   GlobalValueSummary::GVFlags Flags(F.getLinkage(), NotEligibleForImport,
                                     /* Live = */ false, F.isDSOLocal());
   FunctionSummary::FFlags FunFlags{

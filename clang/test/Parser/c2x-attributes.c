@@ -7,7 +7,7 @@ enum [[]] E {
 };
 
 enum [[]] { Four };
-[[]] enum E2 { Five }; // expected-error {{an attribute list cannot appear here}}
+[[]] enum E2 { Five }; // expected-error {{misplaced attributes}}
 
 // FIXME: this diagnostic can be improved.
 enum { [[]] Six }; // expected-error {{expected identifier}}
@@ -24,7 +24,7 @@ struct [[]] S1 {
   int o [[]] : 12;
 };
 
-[[]] struct S2 { int a; }; // expected-error {{an attribute list cannot appear here}}
+[[]] struct S2 { int a; }; // expected-error {{misplaced attributes}}
 struct S3 [[]] { int a; }; // expected-error {{an attribute list cannot appear here}}
 
 union [[]] U {
@@ -32,7 +32,7 @@ union [[]] U {
   [[]] int i;
 };
 
-[[]] union U2 { double d; }; // expected-error {{an attribute list cannot appear here}}
+[[]] union U2 { double d; }; // expected-error {{misplaced attributes}}
 union U3 [[]] { double d; }; // expected-error {{an attribute list cannot appear here}}
 
 struct [[]] IncompleteStruct;

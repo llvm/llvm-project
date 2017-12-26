@@ -199,7 +199,7 @@ namespace PR15017 {
 // expected-error@-2 {{expected expression}}
 // expected-error@-3 {{expected unqualified-id}}
 #else
-// expected-error@-5 {{an attribute list cannot appear here}}
+// expected-error@-5 {{misplaced attributes}}
 #endif
 
 namespace test7 {

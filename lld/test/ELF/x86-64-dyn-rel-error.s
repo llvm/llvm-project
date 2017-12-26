@@ -7,7 +7,7 @@
         .global _start
 _start:
         .data
-        .long bar
+        .long zed
 
 // CHECK: relocation R_X86_64_32 cannot be used against shared object; recompile with -fPIC
 
