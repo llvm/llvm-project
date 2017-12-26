@@ -1548,15 +1548,21 @@ void Parser::DiagnoseMisplacedCXX11Attribute(ParsedAttributesWithRange &Attrs,
   SourceLocation Loc = Tok.getLocation();
   ParseCXX11Attributes(Attrs);
   CharSourceRange AttrRange(SourceRange(Loc, Attrs.Range.getEnd()), true);
-
+  // FIXME: use err_attributes_misplaced
   Diag(Loc, diag::err_attributes_not_allowed)
     << FixItHint::CreateInsertionFromRange(CorrectLocation, AttrRange)
     << FixItHint::CreateRemoval(AttrRange);
 }
 
-void Parser::DiagnoseProhibitedAttributes(ParsedAttributesWithRange &attrs) {
-  Diag(attrs.Range.getBegin(), diag::err_attributes_not_allowed)
-    << attrs.Range;
+void Parser::DiagnoseProhibitedAttributes(ParsedAttributesWithRange &attrs,
+                                          const SourceLocation CorrectLocation) {
+  if (CorrectLocation.isValid()) {
+    CharSourceRange AttrRange(attrs.Range, true);
+    Diag(CorrectLocation, diag::err_attributes_misplaced)
+        << FixItHint::CreateInsertionFromRange(CorrectLocation, AttrRange)
+        << FixItHint::CreateRemoval(AttrRange);
+  } else
+    Diag(attrs.Range.getBegin(), diag::err_attributes_not_allowed) << attrs.Range;
 }
 
 void Parser::ProhibitCXX11Attributes(ParsedAttributesWithRange &Attrs,

@@ -22088,7 +22088,7 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
   // Lower v4i32 mul as 2x shuffle, 2x pmuludq, 2x shuffle.
   if (VT == MVT::v4i32) {
     assert(Subtarget.hasSSE2() && !Subtarget.hasSSE41() &&
-           "Should not custom lower when pmuldq is available!");
+           "Should not custom lower when pmulld is available!");
 
     // Extract the odd parts.
     static const int UnpackMask[] = { 1, -1, 3, -1 };
