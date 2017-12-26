@@ -5624,16 +5624,8 @@ define <4 x i32> @test_pmaddwd(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ;
 ; ATOM-LABEL: test_pmaddwd:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    pmaddwd %xmm1, %xmm0
-; ATOM-NEXT:    pmaddwd (%rdi), %xmm0
-; ATOM-NEXT:    nop # sched: [1:0.50]
-; ATOM-NEXT:    nop # sched: [1:0.50]
-; ATOM-NEXT:    nop # sched: [1:0.50]
-; ATOM-NEXT:    nop # sched: [1:0.50]
-; ATOM-NEXT:    nop # sched: [1:0.50]
-; ATOM-NEXT:    nop # sched: [1:0.50]
-; ATOM-NEXT:    nop # sched: [1:0.50]
-; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    pmaddwd %xmm1, %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    pmaddwd (%rdi), %xmm0 # sched: [5:5.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_pmaddwd:
@@ -6241,16 +6233,8 @@ define <2 x i64> @test_pmuludq(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ;
 ; ATOM-LABEL: test_pmuludq:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    pmuludq %xmm1, %xmm0
-; ATOM-NEXT:    pmuludq (%rdi), %xmm0
-; ATOM-NEXT:    nop # sched: [1:0.50]
-; ATOM-NEXT:    nop # sched: [1:0.50]
-; ATOM-NEXT:    nop # sched: [1:0.50]
-; ATOM-NEXT:    nop # sched: [1:0.50]
-; ATOM-NEXT:    nop # sched: [1:0.50]
-; ATOM-NEXT:    nop # sched: [1:0.50]
-; ATOM-NEXT:    nop # sched: [1:0.50]
-; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    pmuludq %xmm1, %xmm0 # sched: [5:5.00]
+; ATOM-NEXT:    pmuludq (%rdi), %xmm0 # sched: [5:5.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_pmuludq:
@@ -6394,12 +6378,8 @@ define <2 x i64> @test_psadbw(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ;
 ; ATOM-LABEL: test_psadbw:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    psadbw %xmm1, %xmm0
-; ATOM-NEXT:    psadbw (%rdi), %xmm0
-; ATOM-NEXT:    nop # sched: [1:0.50]
-; ATOM-NEXT:    nop # sched: [1:0.50]
-; ATOM-NEXT:    nop # sched: [1:0.50]
-; ATOM-NEXT:    nop # sched: [1:0.50]
+; ATOM-NEXT:    psadbw %xmm1, %xmm0 # sched: [1:0.50]
+; ATOM-NEXT:    psadbw (%rdi), %xmm0 # sched: [1:1.00]
 ; ATOM-NEXT:    nop # sched: [1:0.50]
 ; ATOM-NEXT:    nop # sched: [1:0.50]
 ; ATOM-NEXT:    nop # sched: [1:0.50]
