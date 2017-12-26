@@ -2200,13 +2200,16 @@ private:
 
   void stripTypeAttributesOffDeclSpec(ParsedAttributesWithRange &Attrs,
                                       DeclSpec &DS, Sema::TagUseKind TUK);
-
-  void ProhibitAttributes(ParsedAttributesWithRange &attrs) {
+  
+  // FixItLoc = possible correct location for the attributes
+  void ProhibitAttributes(ParsedAttributesWithRange &attrs,
+                          SourceLocation FixItLoc = SourceLocation()) {
     if (!attrs.Range.isValid()) return;
-    DiagnoseProhibitedAttributes(attrs);
+    DiagnoseProhibitedAttributes(attrs, FixItLoc);
     attrs.clear();
   }
-  void DiagnoseProhibitedAttributes(ParsedAttributesWithRange &attrs);
+  void DiagnoseProhibitedAttributes(ParsedAttributesWithRange &attrs, 
+    SourceLocation FixItLoc);
 
   // Forbid C++11 and C2x attributes that appear on certain syntactic locations
   // which standard permits but we don't supported yet, for example, attributes

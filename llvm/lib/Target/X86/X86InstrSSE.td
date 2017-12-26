@@ -3734,7 +3734,7 @@ multiclass PDI_binop_rm2<bits<8> opc, string OpcodeStr, SDNode OpNode,
        !if(Is2Addr,
            !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
            !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}")),
-       [(set RC:$dst, (DstVT (OpNode (SrcVT RC:$src1), RC:$src2)))]>,
+       [(set RC:$dst, (DstVT (OpNode (SrcVT RC:$src1), RC:$src2)))], itins.rr>,
        Sched<[itins.Sched]>;
   def rm : PDI<opc, MRMSrcMem, (outs RC:$dst),
        (ins RC:$src1, x86memop:$src2),
@@ -3742,8 +3742,8 @@ multiclass PDI_binop_rm2<bits<8> opc, string OpcodeStr, SDNode OpNode,
            !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
            !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}")),
        [(set RC:$dst, (DstVT (OpNode (SrcVT RC:$src1),
-                                     (bitconvert (memop_frag addr:$src2)))))]>,
-       Sched<[itins.Sched.Folded, ReadAfterLd]>;
+                                     (bitconvert (memop_frag addr:$src2)))))],
+       itins.rm>, Sched<[itins.Sched.Folded, ReadAfterLd]>;
 }
 } // ExeDomain = SSEPackedInt
 
@@ -6313,7 +6313,7 @@ multiclass SS48I_binop_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
        !if(Is2Addr,
            !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
            !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}")),
-       [(set RC:$dst, (OpVT (OpNode RC:$src1, RC:$src2)))]>,
+       [(set RC:$dst, (OpVT (OpNode RC:$src1, RC:$src2)))], itins.rr>,
        Sched<[itins.Sched]>;
   def rm : SS48I<opc, MRMSrcMem, (outs RC:$dst),
        (ins RC:$src1, x86memop:$src2),
@@ -6321,8 +6321,8 @@ multiclass SS48I_binop_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
            !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
            !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}")),
        [(set RC:$dst,
-         (OpVT (OpNode RC:$src1, (bitconvert (memop_frag addr:$src2)))))]>,
-       Sched<[itins.Sched.Folded, ReadAfterLd]>;
+         (OpVT (OpNode RC:$src1, (bitconvert (memop_frag addr:$src2)))))],
+       itins.rm>, Sched<[itins.Sched.Folded, ReadAfterLd]>;
 }
 
 /// SS48I_binop_rm2 - Simple SSE41 binary operator with different src and dst
@@ -6338,7 +6338,7 @@ multiclass SS48I_binop_rm2<bits<8> opc, string OpcodeStr, SDNode OpNode,
        !if(Is2Addr,
            !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
            !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}")),
-       [(set RC:$dst, (DstVT (OpNode (SrcVT RC:$src1), RC:$src2)))]>,
+       [(set RC:$dst, (DstVT (OpNode (SrcVT RC:$src1), RC:$src2)))], itins.rr>,
        Sched<[itins.Sched]>;
   def rm : SS48I<opc, MRMSrcMem, (outs RC:$dst),
        (ins RC:$src1, x86memop:$src2),
@@ -6346,8 +6346,8 @@ multiclass SS48I_binop_rm2<bits<8> opc, string OpcodeStr, SDNode OpNode,
            !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
            !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}")),
        [(set RC:$dst, (DstVT (OpNode (SrcVT RC:$src1),
-                                     (bitconvert (memop_frag addr:$src2)))))]>,
-       Sched<[itins.Sched.Folded, ReadAfterLd]>;
+                                     (bitconvert (memop_frag addr:$src2)))))],
+       itins.rm>, Sched<[itins.Sched.Folded, ReadAfterLd]>;
 }
 
 let Predicates = [HasAVX, NoVLX] in {
@@ -6924,14 +6924,15 @@ multiclass SS42I_binop_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
        !if(Is2Addr,
            !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
            !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}")),
-       [(set RC:$dst, (OpVT (OpNode RC:$src1, RC:$src2)))]>, Sched<[itins.Sched]>;
+       [(set RC:$dst, (OpVT (OpNode RC:$src1, RC:$src2)))], itins.rr>,
+       Sched<[itins.Sched]>;
   def rm : SS428I<opc, MRMSrcMem, (outs RC:$dst),
        (ins RC:$src1, x86memop:$src2),
        !if(Is2Addr,
            !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
            !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}")),
        [(set RC:$dst,
-         (OpVT (OpNode RC:$src1, (memop_frag addr:$src2))))]>,
+         (OpVT (OpNode RC:$src1, (memop_frag addr:$src2))))], itins.rm>,
        Sched<[itins.Sched.Folded, ReadAfterLd]>;
 }
 

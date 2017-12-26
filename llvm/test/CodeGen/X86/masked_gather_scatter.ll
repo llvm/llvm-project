@@ -497,7 +497,7 @@ define <8 x i32> @test9(%struct.ST* %base, <8 x i64> %ind1, <8 x i32>%ind5) {
 ; SKX_SMALL-NEXT:    vpbroadcastq %rdi, %zmm2
 ; SKX_SMALL-NEXT:    vpmullq {{.*}}(%rip){1to8}, %zmm0, %zmm0
 ; SKX_SMALL-NEXT:    vpmovsxdq %ymm1, %zmm1
-; SKX_SMALL-NEXT:    vpmullq {{.*}}(%rip){1to8}, %zmm1, %zmm1
+; SKX_SMALL-NEXT:    vpmuldq {{.*}}(%rip){1to8}, %zmm1, %zmm1
 ; SKX_SMALL-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; SKX_SMALL-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
 ; SKX_SMALL-NEXT:    vpaddq {{.*}}(%rip){1to8}, %zmm0, %zmm1
@@ -510,7 +510,7 @@ define <8 x i32> @test9(%struct.ST* %base, <8 x i64> %ind1, <8 x i32>%ind5) {
 ; SKX_LARGE-NEXT:    vpbroadcastq %rdi, %zmm2
 ; SKX_LARGE-NEXT:    vpmovsxdq %ymm1, %zmm1
 ; SKX_LARGE-NEXT:    movabsq ${{\.LCPI.*}}, %rax
-; SKX_LARGE-NEXT:    vpmullq (%rax){1to8}, %zmm1, %zmm1
+; SKX_LARGE-NEXT:    vpmuldq (%rax){1to8}, %zmm1, %zmm1
 ; SKX_LARGE-NEXT:    movabsq ${{\.LCPI.*}}, %rax
 ; SKX_LARGE-NEXT:    vpmullq (%rax){1to8}, %zmm0, %zmm0
 ; SKX_LARGE-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
@@ -582,7 +582,7 @@ define <8 x i32> @test10(%struct.ST* %base, <8 x i64> %i1, <8 x i32>%ind5) {
 ; SKX_SMALL-NEXT:    vpbroadcastq %rdi, %zmm2
 ; SKX_SMALL-NEXT:    vpmullq {{.*}}(%rip){1to8}, %zmm0, %zmm0
 ; SKX_SMALL-NEXT:    vpmovsxdq %ymm1, %zmm1
-; SKX_SMALL-NEXT:    vpmullq {{.*}}(%rip){1to8}, %zmm1, %zmm1
+; SKX_SMALL-NEXT:    vpmuldq {{.*}}(%rip){1to8}, %zmm1, %zmm1
 ; SKX_SMALL-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; SKX_SMALL-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
 ; SKX_SMALL-NEXT:    vpaddq {{.*}}(%rip){1to8}, %zmm0, %zmm1
@@ -595,7 +595,7 @@ define <8 x i32> @test10(%struct.ST* %base, <8 x i64> %i1, <8 x i32>%ind5) {
 ; SKX_LARGE-NEXT:    vpbroadcastq %rdi, %zmm2
 ; SKX_LARGE-NEXT:    vpmovsxdq %ymm1, %zmm1
 ; SKX_LARGE-NEXT:    movabsq ${{\.LCPI.*}}, %rax
-; SKX_LARGE-NEXT:    vpmullq (%rax){1to8}, %zmm1, %zmm1
+; SKX_LARGE-NEXT:    vpmuldq (%rax){1to8}, %zmm1, %zmm1
 ; SKX_LARGE-NEXT:    movabsq ${{\.LCPI.*}}, %rax
 ; SKX_LARGE-NEXT:    vpmullq (%rax){1to8}, %zmm0, %zmm0
 ; SKX_LARGE-NEXT:    vpaddq %zmm1, %zmm0, %zmm0

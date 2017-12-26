@@ -17,7 +17,7 @@ include(HandleLLVMStdlib)
 
 if( UNIX AND NOT (BEOS OR HAIKU) )
   # Used by check_symbol_exists:
-  set(CMAKE_REQUIRED_LIBRARIES m)
+  list(APPEND CMAKE_REQUIRED_LIBRARIES "m")
 endif()
 # x86_64 FreeBSD 9.2 requires libcxxrt to be specified explicitly.
 if( CMAKE_SYSTEM MATCHES "FreeBSD-9.2-RELEASE" AND

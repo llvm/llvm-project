@@ -64,6 +64,13 @@ struct MemberFnOrder {
 struct [[]] struct_attr;
 class [[]] class_attr {};
 union [[]] union_attr;
+enum [[]] E { };
+namespace test_misplacement {
+[[]] struct struct_attr2;  //expected-error{{misplaced attributes}}
+[[]] class class_attr2; //expected-error{{misplaced attributes}}
+[[]] union union_attr2; //expected-error{{misplaced attributes}}
+[[]] enum  E2 { }; //expected-error{{misplaced attributes}}
+}
 
 // Checks attributes placed at wrong syntactic locations of class specifiers.
 class [[]] [[]]
@@ -91,7 +98,7 @@ class C final [[deprecated(l]] {}); // expected-error {{use of undeclared identi
 class D final alignas ([l) {}]{}); // expected-error {{expected ',' or ']' in lambda capture list}} expected-error {{an attribute list cannot appear here}}
 
 [[]] struct with_init_declarators {} init_declarator;
-[[]] struct no_init_declarators; // expected-error {{an attribute list cannot appear here}}
+[[]] struct no_init_declarators; // expected-error {{misplaced attributes}}
 template<typename> [[]] struct no_init_declarators_template; // expected-error {{an attribute list cannot appear here}}
 void fn_with_structs() {
   [[]] struct with_init_declarators {} init_declarator;
