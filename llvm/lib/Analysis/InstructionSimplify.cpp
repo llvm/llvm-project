@@ -3897,8 +3897,9 @@ static Value *SimplifyExtractElementInst(Value *Vec, Value *Idx, const SimplifyQ
   // If extracting a specified index from the vector, see if we can recursively
   // find a previously computed scalar that was inserted into the vector.
   if (auto *IdxC = dyn_cast<ConstantInt>(Idx))
-    if (Value *Elt = findScalarElement(Vec, IdxC->getZExtValue()))
-      return Elt;
+    if (IdxC->getValue().ule(Vec->getType()->getVectorNumElements()))
+      if (Value *Elt = findScalarElement(Vec, IdxC->getZExtValue()))
+        return Elt;
 
   // An undef extract index can be arbitrarily chosen to be an out-of-range
   // index value, which would result in the instruction being undef.
@@ -4494,6 +4495,22 @@ static Value *SimplifyIntrinsic(Function *F, IterTy ArgBegin, IterTy ArgEnd,
         return *ArgBegin;
       return nullptr;
     }
+    case Intrinsic::bswap: {
+      Value *IIOperand = *ArgBegin;
+      Value *X = nullptr;
+      // bswap(bswap(x)) -> x
+      if (match(IIOperand, m_BSwap(m_Value(X))))
+        return X;
+      return nullptr;
+    }
+    case Intrinsic::bitreverse: {
+      Value *IIOperand = *ArgBegin;
+      Value *X = nullptr;
+      // bitreverse(bitreverse(x)) -> x
+      if (match(IIOperand, m_BitReverse(m_Value(X))))
+        return X;
+      return nullptr;
+    }
     default:
       return nullptr;
     }
@@ -4548,6 +4565,16 @@ static Value *SimplifyIntrinsic(Function *F, IterTy ArgBegin, IterTy ArgEnd,
         return SimplifyRelativeLoad(C0, C1, Q.DL);
       return nullptr;
     }
+    case Intrinsic::powi:
+      if (ConstantInt *Power = dyn_cast<ConstantInt>(RHS)) {
+        // powi(x, 0) -> 1.0
+        if (Power->isZero())
+          return ConstantFP::get(LHS->getType(), 1.0);
+        // powi(x, 1) -> x
+        if (Power->isOne())
+          return LHS;
+      }
+      return nullptr;
     default:
       return nullptr;
     }
@@ -4614,6 +4641,12 @@ Value *llvm::SimplifyCall(ImmutableCallSite CS, Value *V,
 Value *llvm::SimplifyCall(ImmutableCallSite CS, Value *V,
                           ArrayRef<Value *> Args, const SimplifyQuery &Q) {
   return ::SimplifyCall(CS, V, Args.begin(), Args.end(), Q, RecursionLimit);
+}
+
+Value *llvm::SimplifyCall(ImmutableCallSite ICS, const SimplifyQuery &Q) {
+  CallSite CS(const_cast<Instruction*>(ICS.getInstruction()));
+  return ::SimplifyCall(CS, CS.getCalledValue(), CS.arg_begin(), CS.arg_end(),
+                        Q, RecursionLimit);
 }
 
 /// See if we can compute a simplified version of this instruction.
@@ -4750,8 +4783,7 @@ Value *llvm::SimplifyInstruction(Instruction *I, const SimplifyQuery &SQ,
     break;
   case Instruction::Call: {
     CallSite CS(cast<CallInst>(I));
-    Result = SimplifyCall(CS, CS.getCalledValue(), CS.arg_begin(), CS.arg_end(),
-                          Q);
+    Result = SimplifyCall(CS, Q);
     break;
   }
 #define HANDLE_CAST_INST(num, opc, clas) case Instruction::opc:

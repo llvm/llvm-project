@@ -3577,7 +3577,8 @@ SDValue DAGCombiner::foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
 
   // TODO: What is the 'or' equivalent of this fold?
   // (and (setne X, 0), (setne X, -1)) --> (setuge (add X, 1), 2)
-  if (IsAnd && LL == RL && CC0 == CC1 && IsInteger && CC0 == ISD::SETNE &&
+  if (IsAnd && LL == RL && CC0 == CC1 && OpVT.getScalarSizeInBits() > 1 &&
+      IsInteger && CC0 == ISD::SETNE &&
       ((isNullConstant(LR) && isAllOnesConstant(RR)) ||
        (isAllOnesConstant(LR) && isNullConstant(RR)))) {
     SDValue One = DAG.getConstant(1, DL, OpVT);
@@ -3641,15 +3642,18 @@ SDValue DAGCombiner::visitANDLike(SDValue N0, SDValue N1, SDNode *N) {
   if (N0.getOpcode() == ISD::ADD && N1.getOpcode() == ISD::SRL &&
       VT.getSizeInBits() <= 64) {
     if (ConstantSDNode *ADDI = dyn_cast<ConstantSDNode>(N0.getOperand(1))) {
-      APInt ADDC = ADDI->getAPIntValue();
-      if (!TLI.isLegalAddImmediate(ADDC.getSExtValue())) {
+      if (ConstantSDNode *SRLI = dyn_cast<ConstantSDNode>(N1.getOperand(1))) {
         // Look for (and (add x, c1), (lshr y, c2)). If C1 wasn't a legal
         // immediate for an add, but it is legal if its top c2 bits are set,
         // transform the ADD so the immediate doesn't need to be materialized
         // in a register.
-        if (ConstantSDNode *SRLI = dyn_cast<ConstantSDNode>(N1.getOperand(1))) {
+        APInt ADDC = ADDI->getAPIntValue();
+        APInt SRLC = SRLI->getAPIntValue();
+        if (ADDC.getMinSignedBits() <= 64 &&
+            SRLC.ult(VT.getSizeInBits()) &&
+            !TLI.isLegalAddImmediate(ADDC.getSExtValue())) {
           APInt Mask = APInt::getHighBitsSet(VT.getSizeInBits(),
-                                             SRLI->getZExtValue());
+                                             SRLC.getZExtValue());
           if (DAG.MaskedValueIsZero(N0.getOperand(1), Mask)) {
             ADDC |= Mask;
             if (TLI.isLegalAddImmediate(ADDC.getSExtValue())) {
