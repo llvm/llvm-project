@@ -31003,8 +31003,8 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
     DAG.ReplaceAllUsesOfValueWith(SDValue(Extract, 0), Vals[IdxVal]);
   }
 
-  // The replacement was made in place; don't return anything.
-  return SDValue();
+  // The replacement was made in place; return N so it won't be revisited.
+  return SDValue(N, 0);
 }
 
 /// If a vector select has an operand that is -1 or 0, try to simplify the
