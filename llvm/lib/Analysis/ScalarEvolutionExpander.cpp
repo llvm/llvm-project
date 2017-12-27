@@ -187,8 +187,21 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
       // generated code.
       if (isa<DbgInfoIntrinsic>(IP))
         ScanLimit++;
+
+      // Conservatively, do not use any instruction which has any of wrap/exact
+      // flags installed.
+      // TODO: Instead of simply disable poison instructions we can be clever
+      //       here and match SCEV to this instruction.
+      auto canGeneratePoison = [](Instruction *I) {
+        if (isa<OverflowingBinaryOperator>(I) &&
+            (I->hasNoSignedWrap() || I->hasNoUnsignedWrap()))
+          return true;
+        if (isa<PossiblyExactOperator>(I) && I->isExact())
+          return true;
+        return false;
+      };
       if (IP->getOpcode() == (unsigned)Opcode && IP->getOperand(0) == LHS &&
-          IP->getOperand(1) == RHS)
+          IP->getOperand(1) == RHS && !canGeneratePoison(&*IP))
         return &*IP;
       if (IP == BlockBegin) break;
     }

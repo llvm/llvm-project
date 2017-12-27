@@ -1050,19 +1050,23 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_ICL_M32
 // CHECK_ICL_M32: #define __AES__ 1
 // CHECK_ICL_M32: #define __AVX2__ 1
+// CHECK_ICL_M32: #define __AVX512BITALG__ 1
 // CHECK_ICL_M32: #define __AVX512BW__ 1
 // CHECK_ICL_M32: #define __AVX512CD__ 1
 // CHECK_ICL_M32: #define __AVX512DQ__ 1
 // CHECK_ICL_M32: #define __AVX512F__ 1
 // CHECK_ICL_M32: #define __AVX512IFMA__ 1
+// CHECK_ICL_M32: #define __AVX512VBMI2__ 1
 // CHECK_ICL_M32: #define __AVX512VBMI__ 1
 // CHECK_ICL_M32: #define __AVX512VL__ 1
+// CHECK_ICL_M32: #define __AVX512VNNI__ 1
 // CHECK_ICL_M32: #define __AVX__ 1
 // CHECK_ICL_M32: #define __BMI2__ 1
 // CHECK_ICL_M32: #define __BMI__ 1
 // CHECK_ICL_M32: #define __CLFLUSHOPT__ 1
 // CHECK_ICL_M32: #define __F16C__ 1
 // CHECK_ICL_M32: #define __FMA__ 1
+// CHECK_ICL_M32: #define __GFNI__ 1
 // CHECK_ICL_M32: #define __LZCNT__ 1
 // CHECK_ICL_M32: #define __MMX__ 1
 // CHECK_ICL_M32: #define __MPX__ 1
@@ -1079,6 +1083,8 @@
 // CHECK_ICL_M32: #define __SSE4_2__ 1
 // CHECK_ICL_M32: #define __SSE__ 1
 // CHECK_ICL_M32: #define __SSSE3__ 1
+// CHECK_ICL_M32: #define __VAES__ 1
+// CHECK_ICL_M32: #define __VPCLMULQDQ__ 1
 // CHECK_ICL_M32: #define __XSAVEC__ 1
 // CHECK_ICL_M32: #define __XSAVEOPT__ 1
 // CHECK_ICL_M32: #define __XSAVES__ 1
@@ -1095,19 +1101,23 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_ICL_M64
 // CHECK_ICL_M64: #define __AES__ 1
 // CHECK_ICL_M64: #define __AVX2__ 1
+// CHECK_ICL_M64: #define __AVX512BITALG__ 1
 // CHECK_ICL_M64: #define __AVX512BW__ 1
 // CHECK_ICL_M64: #define __AVX512CD__ 1
 // CHECK_ICL_M64: #define __AVX512DQ__ 1
 // CHECK_ICL_M64: #define __AVX512F__ 1
 // CHECK_ICL_M64: #define __AVX512IFMA__ 1
+// CHECK_ICL_M64: #define __AVX512VBMI2__ 1
 // CHECK_ICL_M64: #define __AVX512VBMI__ 1
 // CHECK_ICL_M64: #define __AVX512VL__ 1
+// CHECK_ICL_M64: #define __AVX512VNNI__ 1
 // CHECK_ICL_M64: #define __AVX__ 1
 // CHECK_ICL_M64: #define __BMI2__ 1
 // CHECK_ICL_M64: #define __BMI__ 1
 // CHECK_ICL_M64: #define __CLFLUSHOPT__ 1
 // CHECK_ICL_M64: #define __F16C__ 1
 // CHECK_ICL_M64: #define __FMA__ 1
+// CHECK_ICL_M64: #define __GFNI__ 1
 // CHECK_ICL_M64: #define __LZCNT__ 1
 // CHECK_ICL_M64: #define __MMX__ 1
 // CHECK_ICL_M64: #define __MPX__ 1
@@ -1124,6 +1134,8 @@
 // CHECK_ICL_M64: #define __SSE4_2__ 1
 // CHECK_ICL_M64: #define __SSE__ 1
 // CHECK_ICL_M64: #define __SSSE3__ 1
+// CHECK_ICL_M64: #define __VAES__ 1
+// CHECK_ICL_M64: #define __VPCLMULQDQ__ 1
 // CHECK_ICL_M64: #define __XSAVEC__ 1
 // CHECK_ICL_M64: #define __XSAVEOPT__ 1
 // CHECK_ICL_M64: #define __XSAVES__ 1
