@@ -90,7 +90,7 @@ define <2 x i64> @combine_shuffle_zero_pmuludq(<4 x i32> %a0, <4 x i32> %a1) {
 ; AVX512DQVL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512DQVL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
 ; AVX512DQVL-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
-; AVX512DQVL-NEXT:    vpmullq %xmm1, %xmm0, %xmm0
+; AVX512DQVL-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
 ; AVX512DQVL-NEXT:    retq
   %1 = shufflevector <4 x i32> %a0, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   %2 = shufflevector <4 x i32> %a1, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
@@ -134,7 +134,7 @@ define <4 x i64> @combine_shuffle_zero_pmuludq_256(<8 x i32> %a0, <8 x i32> %a1)
 ; AVX512DQVL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512DQVL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm2[1],ymm0[2],ymm2[3],ymm0[4],ymm2[5],ymm0[6],ymm2[7]
 ; AVX512DQVL-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0],ymm2[1],ymm1[2],ymm2[3],ymm1[4],ymm2[5],ymm1[6],ymm2[7]
-; AVX512DQVL-NEXT:    vpmullq %ymm1, %ymm0, %ymm0
+; AVX512DQVL-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0
 ; AVX512DQVL-NEXT:    retq
   %1 = shufflevector <8 x i32> %a0, <8 x i32> zeroinitializer, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
   %2 = shufflevector <8 x i32> %a1, <8 x i32> zeroinitializer, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>

@@ -1297,7 +1297,8 @@ bool Sema::IsOpenMPCapturedByRef(ValueDecl *D, unsigned Level) {
             Level, /*NotLastprivate=*/true) &&
         // If the variable is artificial and must be captured by value - try to
         // capture by value.
-        !(isa<OMPCapturedExprDecl>(D) && D->hasAttr<OMPCaptureKindAttr>());
+        !(isa<OMPCapturedExprDecl>(D) && !D->hasAttr<OMPCaptureNoInitAttr>() &&
+          !cast<OMPCapturedExprDecl>(D)->getInit()->isGLValue());
   }
 
   // When passing data by copy, we need to make sure it fits the uintptr size
@@ -2326,7 +2327,6 @@ static OMPCapturedExprDecl *buildCaptureDecl(Sema &S, IdentifierInfo *Id,
   ASTContext &C = S.getASTContext();
   Expr *Init = AsExpression ? CaptureExpr : CaptureExpr->IgnoreImpCasts();
   QualType Ty = Init->getType();
-  Attr *OMPCaptureKind = nullptr;
   if (CaptureExpr->getObjectKind() == OK_Ordinary && CaptureExpr->isGLValue()) {
     if (S.getLangOpts().CPlusPlus) {
       Ty = C.getLValueReferenceType(Ty);
@@ -2339,16 +2339,11 @@ static OMPCapturedExprDecl *buildCaptureDecl(Sema &S, IdentifierInfo *Id,
       Init = Res.get();
     }
     WithInit = true;
-  } else if (AsExpression) {
-    // This variable must be captured by value.
-    OMPCaptureKind = OMPCaptureKindAttr::CreateImplicit(C, OMPC_unknown);
   }
   auto *CED = OMPCapturedExprDecl::Create(C, S.CurContext, Id, Ty,
                                           CaptureExpr->getLocStart());
   if (!WithInit)
     CED->addAttr(OMPCaptureNoInitAttr::CreateImplicit(C, SourceRange()));
-  if (OMPCaptureKind)
-    CED->addAttr(OMPCaptureKind);
   S.CurContext->addHiddenDecl(CED);
   S.AddInitializerToDecl(CED, Init, /*DirectInit=*/false);
   return CED;
@@ -7628,6 +7623,11 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_teams_distribute_parallel_for_simd:
       CaptureRegion = OMPD_teams;
       break;
+    case OMPD_target_update:
+    case OMPD_target_enter_data:
+    case OMPD_target_exit_data:
+      CaptureRegion = OMPD_task;
+      break;
     case OMPD_cancel:
     case OMPD_parallel:
     case OMPD_parallel_sections:
@@ -7644,9 +7644,6 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_taskloop:
     case OMPD_taskloop_simd:
     case OMPD_target_data:
-    case OMPD_target_enter_data:
-    case OMPD_target_exit_data:
-    case OMPD_target_update:
       // Do not capture if-clause expressions.
       break;
     case OMPD_threadprivate:
@@ -8007,15 +8004,17 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     break;
   case OMPC_device:
     switch (DKind) {
+    case OMPD_target_update:
+    case OMPD_target_enter_data:
+    case OMPD_target_exit_data:
+      CaptureRegion = OMPD_task;
+      break;
     case OMPD_target_teams:
     case OMPD_target_teams_distribute:
     case OMPD_target_teams_distribute_simd:
     case OMPD_target_teams_distribute_parallel_for:
     case OMPD_target_teams_distribute_parallel_for_simd:
     case OMPD_target_data:
-    case OMPD_target_enter_data:
-    case OMPD_target_exit_data:
-    case OMPD_target_update:
     case OMPD_target:
     case OMPD_target_simd:
     case OMPD_target_parallel:

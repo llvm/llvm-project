@@ -81,6 +81,9 @@ public:
   void printSymbols() override;
   void printDynamicSymbols() override;
   void printUnwindInfo() override;
+
+  void printNeededLibraries() override;
+
   void printCOFFImports() override;
   void printCOFFExports() override;
   void printCOFFDirectives() override;
@@ -1519,6 +1522,25 @@ void COFFDumper::printUnwindInfo() {
     W.printEnum("unsupported Image Machine", Obj->getMachine(),
                 makeArrayRef(ImageFileMachineType));
     break;
+  }
+}
+
+void COFFDumper::printNeededLibraries() {
+  ListScope D(W, "NeededLibraries");
+
+  using LibsTy = std::vector<StringRef>;
+  LibsTy Libs;
+
+  for (const ImportDirectoryEntryRef &DirRef : Obj->import_directories()) {
+    StringRef Name;
+    if (!DirRef.getName(Name))
+      Libs.push_back(Name);
+  }
+
+  std::stable_sort(Libs.begin(), Libs.end());
+
+  for (const auto &L : Libs) {
+    outs() << "  " << L << "\n";
   }
 }
 
