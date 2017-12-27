@@ -32431,6 +32431,10 @@ static SDValue combineVMUL(SDNode *N, SelectionDAG &DAG,
   if (VT.getScalarType() != MVT::i64)
     return SDValue();
 
+  // Don't try to lower 256 bit integer vectors on AVX1 targets.
+  if (!Subtarget.hasAVX2() && VT.getVectorNumElements() > 2)
+    return SDValue();
+
   MVT MulVT = MVT::getVectorVT(MVT::i32, VT.getVectorNumElements() * 2);
 
   SDValue LHS = N->getOperand(0);

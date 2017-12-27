@@ -585,6 +585,19 @@ template <class ELFT>
 static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
                           InputSectionBase &S, uint64_t RelOff,
                           bool &IsConstant) {
+  // If a relocation can be applied at link-time, we don't need to
+  // create a dynamic relocation in the first place.
+  if (IsConstant)
+    return Expr;
+
+  // If the relocation is to a weak undef, and we are producing
+  // executable, give up on it and produce a non preemptible 0.
+  if (!Config->Shared && Sym.isUndefWeak()) {
+    Sym.IsPreemptible = false;
+    IsConstant = true;
+    return Expr;
+  }
+
   // If a section writable or if we are allowed to create dynamic relocations
   // against read-only sections (i.e. when "-z notext" is given), we can create
   // any dynamic relocation the dynamic linker knows how to handle.
@@ -596,21 +609,8 @@ static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
     return Expr;
   }
 
-  // If a relocation can be applied at link-time, we don't need to
-  // create a dynamic relocation in the first place.
-  if (IsConstant)
-    return Expr;
-
   // If we got here we know that this relocation would require the dynamic
   // linker to write a value to read only memory.
-
-  // If the relocation is to a weak undef, give up on it and produce a
-  // non preemptible 0.
-  if (Sym.isUndefWeak()) {
-    Sym.IsPreemptible = false;
-    IsConstant = true;
-    return Expr;
-  }
 
   // We can hack around it if we are producing an executable and
   // the refered symbol can be preemepted to refer to the executable.

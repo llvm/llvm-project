@@ -13,6 +13,7 @@
 #include "xray_fdr_logging.h"
 #include "gtest/gtest.h"
 
+#include <array>
 #include <fcntl.h>
 #include <iostream>
 #include <sys/mman.h>
