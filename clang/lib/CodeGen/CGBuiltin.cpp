@@ -8143,12 +8143,18 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_storesd128_mask: {
     return EmitX86MaskedStore(*this, Ops, 16);
   }
+  case X86::BI__builtin_ia32_vpopcntb_128:
   case X86::BI__builtin_ia32_vpopcntd_128:
   case X86::BI__builtin_ia32_vpopcntq_128:
+  case X86::BI__builtin_ia32_vpopcntw_128:
+  case X86::BI__builtin_ia32_vpopcntb_256:
   case X86::BI__builtin_ia32_vpopcntd_256:
   case X86::BI__builtin_ia32_vpopcntq_256:
+  case X86::BI__builtin_ia32_vpopcntw_256:
+  case X86::BI__builtin_ia32_vpopcntb_512:
   case X86::BI__builtin_ia32_vpopcntd_512:
-  case X86::BI__builtin_ia32_vpopcntq_512: {
+  case X86::BI__builtin_ia32_vpopcntq_512:
+  case X86::BI__builtin_ia32_vpopcntw_512: {
     llvm::Type *ResultType = ConvertType(E->getType());
     llvm::Function *F = CGM.getIntrinsic(Intrinsic::ctpop, ResultType);
     return Builder.CreateCall(F, Ops);
