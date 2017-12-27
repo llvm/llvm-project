@@ -192,9 +192,9 @@ void X86::writePltHeader(uint8_t *Buf) const {
   }
 
   const uint8_t PltData[] = {
-      0xff, 0x35, 0x00, 0x00, 0x00, 0x00, // pushl (GOTPLT+4)
-      0xff, 0x25, 0x00, 0x00, 0x00, 0x00, // jmp *(GOTPLT+8)
-      0x90, 0x90, 0x90, 0x90              // nop
+      0xff, 0x35, 0, 0, 0, 0, // pushl (GOTPLT+4)
+      0xff, 0x25, 0, 0, 0, 0, // jmp *(GOTPLT+8)
+      0x90, 0x90, 0x90, 0x90, // nop
   };
   memcpy(Buf, PltData, sizeof(PltData));
   uint32_t GotPlt = InX::GotPlt->getVA();
@@ -206,9 +206,9 @@ void X86::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
                    uint64_t PltEntryAddr, int32_t Index,
                    unsigned RelOff) const {
   const uint8_t Inst[] = {
-      0xff, 0x00, 0x00, 0x00, 0x00, 0x00, // jmp *foo_in_GOT|*foo@GOT(%ebx)
-      0x68, 0x00, 0x00, 0x00, 0x00,       // pushl $reloc_offset
-      0xe9, 0x00, 0x00, 0x00, 0x00        // jmp .PLT0@PC
+      0xff, 0x00, 0, 0, 0, 0, // jmp *foo_in_GOT or jmp *foo@GOT(%ebx)
+      0x68, 0, 0, 0, 0,       // pushl $reloc_offset
+      0xe9, 0, 0, 0, 0,       // jmp .PLT0@PC
   };
   memcpy(Buf, Inst, sizeof(Inst));
 
@@ -318,7 +318,7 @@ void X86::relaxTlsGdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const {
   //   subl $x@ntpoff,%eax
   const uint8_t Inst[] = {
       0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0, %eax
-      0x81, 0xe8, 0x00, 0x00, 0x00, 0x00  // subl 0(%ebx), %eax
+      0x81, 0xe8, 0, 0, 0, 0,             // subl Val(%ebx), %eax
   };
   memcpy(Loc - 3, Inst, sizeof(Inst));
   write32le(Loc + 5, Val);
@@ -333,7 +333,7 @@ void X86::relaxTlsGdToIe(uint8_t *Loc, RelType Type, uint64_t Val) const {
   //   addl x@gotntpoff(%ebx), %eax
   const uint8_t Inst[] = {
       0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0, %eax
-      0x03, 0x83, 0x00, 0x00, 0x00, 0x00  // addl 0(%ebx), %eax
+      0x03, 0x83, 0, 0, 0, 0,             // addl Val(%ebx), %eax
   };
   memcpy(Loc - 3, Inst, sizeof(Inst));
   write32le(Loc + 5, Val);
@@ -394,7 +394,7 @@ void X86::relaxTlsLdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const {
   const uint8_t Inst[] = {
       0x65, 0xa1, 0x00, 0x00, 0x00, 0x00, // movl %gs:0,%eax
       0x90,                               // nop
-      0x8d, 0x74, 0x26, 0x00              // leal 0(%esi,1),%esi
+      0x8d, 0x74, 0x26, 0x00,             // leal 0(%esi,1),%esi
   };
   memcpy(Loc - 2, Inst, sizeof(Inst));
 }
