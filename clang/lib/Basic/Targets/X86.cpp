@@ -132,6 +132,11 @@ bool X86TargetInfo::initFeatureMap(
     break;
 
   case CK_Icelake:
+    setFeatureEnabledImpl(Features, "vaes", true);
+    setFeatureEnabledImpl(Features, "gfni", true);
+    setFeatureEnabledImpl(Features, "vpclmulqdq", true);
+    setFeatureEnabledImpl(Features, "avx512bitalg", true);
+    setFeatureEnabledImpl(Features, "avx512vnni", true);
     // TODO: Add icelake features here.
     LLVM_FALLTHROUGH;
   case CK_Cannonlake:
@@ -443,7 +448,7 @@ void X86TargetInfo::setSSELevel(llvm::StringMap<bool> &Features,
     LLVM_FALLTHROUGH;
   case SSE2:
     Features["sse2"] = Features["pclmul"] = Features["aes"] = Features["sha"] =
-        false;
+        Features["gfni"] = false;
     LLVM_FALLTHROUGH;
   case SSE3:
     Features["sse3"] = false;
@@ -460,7 +465,7 @@ void X86TargetInfo::setSSELevel(llvm::StringMap<bool> &Features,
     LLVM_FALLTHROUGH;
   case AVX:
     Features["fma"] = Features["avx"] = Features["f16c"] = Features["xsave"] =
-        Features["xsaveopt"] = false;
+        Features["xsaveopt"] = Features["vaes"] = Features["vpclmulqdq"] = false;
     setXOPLevel(Features, FMA4, false);
     LLVM_FALLTHROUGH;
   case AVX2:
@@ -470,7 +475,8 @@ void X86TargetInfo::setSSELevel(llvm::StringMap<bool> &Features,
     Features["avx512f"] = Features["avx512cd"] = Features["avx512er"] =
         Features["avx512pf"] = Features["avx512dq"] = Features["avx512bw"] =
             Features["avx512vl"] = Features["avx512vbmi"] =
-                Features["avx512ifma"] = Features["avx512vpopcntdq"] = false;
+                Features["avx512ifma"] = Features["avx512vpopcntdq"] =
+                    Features["avx512bitalg"] = Features["avx512vnni"] = false;
     break;
   }
 }
@@ -572,8 +578,25 @@ void X86TargetInfo::setFeatureEnabledImpl(llvm::StringMap<bool> &Features,
   } else if (Name == "aes") {
     if (Enabled)
       setSSELevel(Features, SSE2, Enabled);
+    else
+      Features["vaes"] = false;
+  } else if (Name == "vaes") {
+    if (Enabled) {
+      setSSELevel(Features, AVX, Enabled);
+      Features["aes"] = true;
+    }
   } else if (Name == "pclmul") {
     if (Enabled)
+      setSSELevel(Features, SSE2, Enabled);
+    else
+      Features["vpclmulqdq"] = false;
+  } else if (Name == "vpclmulqdq") {
+    if (Enabled) {
+      setSSELevel(Features, AVX, Enabled);
+      Features["pclmul"] = true;
+    }
+  } else if (Name == "gfni") {
+     if (Enabled)
       setSSELevel(Features, SSE2, Enabled);
   } else if (Name == "avx") {
     setSSELevel(Features, AVX, Enabled);
@@ -584,15 +607,16 @@ void X86TargetInfo::setFeatureEnabledImpl(llvm::StringMap<bool> &Features,
   } else if (Name == "avx512cd" || Name == "avx512er" || Name == "avx512pf" ||
              Name == "avx512dq" || Name == "avx512bw" || Name == "avx512vl" ||
              Name == "avx512vbmi" || Name == "avx512ifma" ||
-             Name == "avx512vpopcntdq") {
+             Name == "avx512vpopcntdq" || Name == "avx512bitalg" ||
+             Name == "avx512vnni") {
     if (Enabled)
       setSSELevel(Features, AVX512F, Enabled);
-    // Enable BWI instruction if VBMI is being enabled.
-    if (Name == "avx512vbmi" && Enabled)
+    // Enable BWI instruction if VBMI / BITALG is being enabled.
+    if ((Name == "avx512vbmi" || Name == "avx512bitalg") && Enabled)
       Features["avx512bw"] = true;
-    // Also disable VBMI if BWI is being disabled.
+    // Also disable VBMI / BITALG if BWI is being disabled.
     if (Name == "avx512bw" && !Enabled)
-      Features["avx512vbmi"] = false;
+      Features["avx512vbmi"] = Features["avx512bitalg"] = false;
   } else if (Name == "fma") {
     if (Enabled)
       setSSELevel(Features, AVX, Enabled);
@@ -636,8 +660,12 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 
     if (Feature == "+aes") {
       HasAES = true;
+    } else if (Feature == "+vaes") {
+      HasVAES = true;
     } else if (Feature == "+pclmul") {
       HasPCLMUL = true;
+    } else if (Feature == "+vpclmulqdq") {
+      HasVPCLMULQDQ = true;
     } else if (Feature == "+lzcnt") {
       HasLZCNT = true;
     } else if (Feature == "+rdrnd") {
@@ -666,16 +694,22 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasFMA = true;
     } else if (Feature == "+f16c") {
       HasF16C = true;
+    } else if (Feature == "+gfni") {
+      HasGFNI = true;
     } else if (Feature == "+avx512cd") {
       HasAVX512CD = true;
     } else if (Feature == "+avx512vpopcntdq") {
       HasAVX512VPOPCNTDQ = true;
+    } else if (Feature == "+avx512vnni") {
+      HasAVX512VNNI = true;
     } else if (Feature == "+avx512er") {
       HasAVX512ER = true;
     } else if (Feature == "+avx512pf") {
       HasAVX512PF = true;
     } else if (Feature == "+avx512dq") {
       HasAVX512DQ = true;
+    } else if (Feature == "+avx512bitalg") {
+      HasAVX512BITALG = true;
     } else if (Feature == "+avx512bw") {
       HasAVX512BW = true;
     } else if (Feature == "+avx512vl") {
@@ -934,8 +968,14 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasAES)
     Builder.defineMacro("__AES__");
 
+  if (HasVAES)
+    Builder.defineMacro("__VAES__");
+
   if (HasPCLMUL)
     Builder.defineMacro("__PCLMUL__");
+
+  if (HasVPCLMULQDQ)
+    Builder.defineMacro("__VPCLMULQDQ__");
 
   if (HasLZCNT)
     Builder.defineMacro("__LZCNT__");
@@ -996,16 +1036,23 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasF16C)
     Builder.defineMacro("__F16C__");
 
+  if (HasGFNI)
+    Builder.defineMacro("__GFNI__");
+
   if (HasAVX512CD)
     Builder.defineMacro("__AVX512CD__");
   if (HasAVX512VPOPCNTDQ)
     Builder.defineMacro("__AVX512VPOPCNTDQ__");
+  if (HasAVX512VNNI)
+    Builder.defineMacro("__AVX512VNNI__");
   if (HasAVX512ER)
     Builder.defineMacro("__AVX512ER__");
   if (HasAVX512PF)
     Builder.defineMacro("__AVX512PF__");
   if (HasAVX512DQ)
     Builder.defineMacro("__AVX512DQ__");
+  if (HasAVX512BITALG)
+    Builder.defineMacro("__AVX512BITALG__");
   if (HasAVX512BW)
     Builder.defineMacro("__AVX512BW__");
   if (HasAVX512VL)
@@ -1141,9 +1188,11 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("avx512f", true)
       .Case("avx512cd", true)
       .Case("avx512vpopcntdq", true)
+      .Case("avx512vnni", true)
       .Case("avx512er", true)
       .Case("avx512pf", true)
       .Case("avx512dq", true)
+      .Case("avx512bitalg", true)
       .Case("avx512bw", true)
       .Case("avx512vl", true)
       .Case("avx512vbmi", true)
@@ -1159,6 +1208,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("fma4", true)
       .Case("fsgsbase", true)
       .Case("fxsr", true)
+      .Case("gfni", true)
       .Case("lwp", true)
       .Case("lzcnt", true)
       .Case("mmx", true)
@@ -1185,6 +1235,8 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("sse4.2", true)
       .Case("sse4a", true)
       .Case("tbm", true)
+      .Case("vaes", true)
+      .Case("vpclmulqdq", true)
       .Case("x87", true)
       .Case("xop", true)
       .Case("xsave", true)
@@ -1203,9 +1255,11 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("avx512f", SSELevel >= AVX512F)
       .Case("avx512cd", HasAVX512CD)
       .Case("avx512vpopcntdq", HasAVX512VPOPCNTDQ)
+      .Case("avx512vnni", HasAVX512VNNI)
       .Case("avx512er", HasAVX512ER)
       .Case("avx512pf", HasAVX512PF)
       .Case("avx512dq", HasAVX512DQ)
+      .Case("avx512bitalg", HasAVX512BITALG)
       .Case("avx512bw", HasAVX512BW)
       .Case("avx512vl", HasAVX512VL)
       .Case("avx512vbmi", HasAVX512VBMI)
@@ -1221,6 +1275,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("fma4", XOPLevel >= FMA4)
       .Case("fsgsbase", HasFSGSBASE)
       .Case("fxsr", HasFXSR)
+      .Case("gfni", HasGFNI)
       .Case("ibt", HasIBT)
       .Case("lwp", HasLWP)
       .Case("lzcnt", HasLZCNT)
@@ -1249,6 +1304,8 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("sse4.2", SSELevel >= SSE42)
       .Case("sse4a", XOPLevel >= SSE4A)
       .Case("tbm", HasTBM)
+      .Case("vaes", HasVAES)
+      .Case("vpclmulqdq", HasVPCLMULQDQ)
       .Case("x86", true)
       .Case("x86_32", getTriple().getArch() == llvm::Triple::x86)
       .Case("x86_64", getTriple().getArch() == llvm::Triple::x86_64)
