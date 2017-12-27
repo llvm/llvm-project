@@ -2820,6 +2820,20 @@ public:
   void EmitOMPTaskBasedDirective(const OMPExecutableDirective &S,
                                  const RegionCodeGenTy &BodyGen,
                                  const TaskGenTy &TaskGen, OMPTaskDataTy &Data);
+  struct OMPTargetDataInfo {
+    Address BasePointersArray = Address::invalid();
+    Address PointersArray = Address::invalid();
+    Address SizesArray = Address::invalid();
+    unsigned NumberOfTargetItems = 0;
+    explicit OMPTargetDataInfo() = default;
+    OMPTargetDataInfo(Address BasePointersArray, Address PointersArray,
+                      Address SizesArray, unsigned NumberOfTargetItems)
+        : BasePointersArray(BasePointersArray), PointersArray(PointersArray),
+          SizesArray(SizesArray), NumberOfTargetItems(NumberOfTargetItems) {}
+  };
+  void EmitOMPTargetTaskBasedDirective(const OMPExecutableDirective &S,
+                                       const RegionCodeGenTy &BodyGen,
+                                       OMPTargetDataInfo &InputInfo);
 
   void EmitOMPParallelDirective(const OMPParallelDirective &S);
   void EmitOMPSimdDirective(const OMPSimdDirective &S);

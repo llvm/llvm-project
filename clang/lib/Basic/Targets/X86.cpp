@@ -137,7 +137,9 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "vpclmulqdq", true);
     setFeatureEnabledImpl(Features, "avx512bitalg", true);
     setFeatureEnabledImpl(Features, "avx512vnni", true);
-    // TODO: Add icelake features here.
+    setFeatureEnabledImpl(Features, "avx512vbmi2", true);
+    setFeatureEnabledImpl(Features, "avx512vpopcntdq", true);
+    setFeatureEnabledImpl(Features, "clwb", true);
     LLVM_FALLTHROUGH;
   case CK_Cannonlake:
     setFeatureEnabledImpl(Features, "avx512ifma", true);
@@ -150,8 +152,10 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "avx512dq", true);
     setFeatureEnabledImpl(Features, "avx512bw", true);
     setFeatureEnabledImpl(Features, "avx512vl", true);
-    setFeatureEnabledImpl(Features, "pku", true);
-    setFeatureEnabledImpl(Features, "clwb", true);
+    if (Kind == CK_SkylakeServer) {
+      setFeatureEnabledImpl(Features, "pku", true);
+      setFeatureEnabledImpl(Features, "clwb", true);
+    }
     LLVM_FALLTHROUGH;
   case CK_SkylakeClient:
     setFeatureEnabledImpl(Features, "xsavec", true);
@@ -476,7 +480,8 @@ void X86TargetInfo::setSSELevel(llvm::StringMap<bool> &Features,
         Features["avx512pf"] = Features["avx512dq"] = Features["avx512bw"] =
             Features["avx512vl"] = Features["avx512vbmi"] =
                 Features["avx512ifma"] = Features["avx512vpopcntdq"] =
-                    Features["avx512bitalg"] = Features["avx512vnni"] = false;
+                    Features["avx512bitalg"] = Features["avx512vnni"] =
+                        Features["avx512vbmi2"] = false;
     break;
   }
 }
@@ -608,15 +613,16 @@ void X86TargetInfo::setFeatureEnabledImpl(llvm::StringMap<bool> &Features,
              Name == "avx512dq" || Name == "avx512bw" || Name == "avx512vl" ||
              Name == "avx512vbmi" || Name == "avx512ifma" ||
              Name == "avx512vpopcntdq" || Name == "avx512bitalg" ||
-             Name == "avx512vnni") {
+             Name == "avx512vnni" || Name == "avx512vbmi2") {
     if (Enabled)
       setSSELevel(Features, AVX512F, Enabled);
-    // Enable BWI instruction if VBMI / BITALG is being enabled.
-    if ((Name == "avx512vbmi" || Name == "avx512bitalg") && Enabled)
+    // Enable BWI instruction if VBMI/VBMI2/BITALG is being enabled.
+    if ((Name.startswith("avx512vbmi") || Name == "avx512bitalg") && Enabled)
       Features["avx512bw"] = true;
-    // Also disable VBMI / BITALG if BWI is being disabled.
+    // Also disable VBMI/VBMI2/BITALG if BWI is being disabled.
     if (Name == "avx512bw" && !Enabled)
-      Features["avx512vbmi"] = Features["avx512bitalg"] = false;
+      Features["avx512vbmi"] = Features["avx512vbmi2"] =
+      Features["avx512bitalg"] = false;
   } else if (Name == "fma") {
     if (Enabled)
       setSSELevel(Features, AVX, Enabled);
@@ -716,6 +722,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVX512VL = true;
     } else if (Feature == "+avx512vbmi") {
       HasAVX512VBMI = true;
+    } else if (Feature == "+avx512vbmi2") {
+      HasAVX512VBMI2 = true;
     } else if (Feature == "+avx512ifma") {
       HasAVX512IFMA = true;
     } else if (Feature == "+sha") {
@@ -1059,6 +1067,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AVX512VL__");
   if (HasAVX512VBMI)
     Builder.defineMacro("__AVX512VBMI__");
+  if (HasAVX512VBMI2)
+    Builder.defineMacro("__AVX512VBMI2__");
   if (HasAVX512IFMA)
     Builder.defineMacro("__AVX512IFMA__");
 
@@ -1196,6 +1206,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("avx512bw", true)
       .Case("avx512vl", true)
       .Case("avx512vbmi", true)
+      .Case("avx512vbmi2", true)
       .Case("avx512ifma", true)
       .Case("bmi", true)
       .Case("bmi2", true)
@@ -1263,6 +1274,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("avx512bw", HasAVX512BW)
       .Case("avx512vl", HasAVX512VL)
       .Case("avx512vbmi", HasAVX512VBMI)
+      .Case("avx512vbmi2", HasAVX512VBMI2)
       .Case("avx512ifma", HasAVX512IFMA)
       .Case("bmi", HasBMI)
       .Case("bmi2", HasBMI2)
