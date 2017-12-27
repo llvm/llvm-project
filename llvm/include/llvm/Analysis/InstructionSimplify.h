@@ -197,6 +197,9 @@ Value *SimplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,
 Value *SimplifyFPBinOp(unsigned Opcode, Value *LHS, Value *RHS,
                        FastMathFlags FMF, const SimplifyQuery &Q);
 
+/// Given a callsite, fold the result or return null.
+Value *SimplifyCall(ImmutableCallSite CS, const SimplifyQuery &Q);
+
 /// Given a function and iterators over arguments, fold the result or return
 /// null.
 Value *SimplifyCall(ImmutableCallSite CS, Value *V, User::op_iterator ArgBegin,

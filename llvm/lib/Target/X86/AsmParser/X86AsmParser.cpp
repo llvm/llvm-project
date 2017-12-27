@@ -2377,10 +2377,11 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     Flags |= Prefix;
     Name = Parser.getTok().getString();
     Parser.Lex(); // eat the prefix
-    // Hack: we could have something like
+    // Hack: we could have something like "rep # some comment" or
     //    "lock; cmpxchg16b $1" or "lock\0A\09incl" or "lock/incl"
     while (Name.startswith(";") || Name.startswith("\n") ||
-           Name.startswith("\t") || Name.startswith("/")) {
+           Name.startswith("#") || Name.startswith("\t") ||
+           Name.startswith("/")) {
       Name = Parser.getTok().getString();
       Parser.Lex(); // go to next prefix or instr
     }
