@@ -1184,5 +1184,109 @@ TEST_F(ScalarEvolutionsTest, SCEVExpanderIsSafeToExpandAt) {
   EXPECT_TRUE(isSafeToExpandAt(AR, Post->getTerminator(), SE));
 }
 
+// Check that SCEV expander does not use the nuw instruction
+// for expansion.
+TEST_F(ScalarEvolutionsTest, SCEVExpanderNUW) {
+  /*
+   * Create the following code:
+   * func(i64 %a)
+   * entry:
+   *   br false, label %exit, label %body
+   * body:
+   *  %s1 = add i64 %a, -1
+   *  br label %exit
+   * exit:
+   *  %s = add nuw i64 %a, -1
+   *  ret %s
+   */
+
+  // Create a module.
+  Module M("SCEVExpanderNUW", Context);
+
+  Type *T_int64 = Type::getInt64Ty(Context);
+
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(Context), { T_int64 }, false);
+  Function *F = cast<Function>(M.getOrInsertFunction("func", FTy));
+  Argument *Arg = &*F->arg_begin();
+  ConstantInt *C = ConstantInt::get(Context, APInt(64, -1));
+
+  BasicBlock *Entry = BasicBlock::Create(Context, "entry", F);
+  BasicBlock *Body = BasicBlock::Create(Context, "body", F);
+  BasicBlock *Exit = BasicBlock::Create(Context, "exit", F);
+
+  IRBuilder<> Builder(Entry);
+  ConstantInt *Cond = ConstantInt::get(Context, APInt(1, 0));
+  Builder.CreateCondBr(Cond, Exit, Body);
+
+  Builder.SetInsertPoint(Body);
+  auto *S1 = cast<Instruction>(Builder.CreateAdd(Arg, C, "add"));
+  Builder.CreateBr(Exit);
+
+  Builder.SetInsertPoint(Exit);
+  auto *S2 = cast<Instruction>(Builder.CreateAdd(Arg, C, "add"));
+  S2->setHasNoUnsignedWrap(true);
+  auto *R = cast<Instruction>(Builder.CreateRetVoid());
+
+  ScalarEvolution SE = buildSE(*F);
+  const SCEV *S = SE.getSCEV(S1);
+  EXPECT_TRUE(isa<SCEVAddExpr>(S));
+  SCEVExpander Exp(SE, M.getDataLayout(), "expander");
+  auto *I = cast<Instruction>(Exp.expandCodeFor(S, nullptr, R));
+  EXPECT_FALSE(I->hasNoUnsignedWrap());
+}
+
+// Check that SCEV expander does not use the nsw instruction
+// for expansion.
+TEST_F(ScalarEvolutionsTest, SCEVExpanderNSW) {
+  /*
+   * Create the following code:
+   * func(i64 %a)
+   * entry:
+   *   br false, label %exit, label %body
+   * body:
+   *  %s1 = add i64 %a, -1
+   *  br label %exit
+   * exit:
+   *  %s = add nsw i64 %a, -1
+   *  ret %s
+   */
+
+  // Create a module.
+  Module M("SCEVExpanderNSW", Context);
+
+  Type *T_int64 = Type::getInt64Ty(Context);
+
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(Context), { T_int64 }, false);
+  Function *F = cast<Function>(M.getOrInsertFunction("func", FTy));
+  Argument *Arg = &*F->arg_begin();
+  ConstantInt *C = ConstantInt::get(Context, APInt(64, -1));
+
+  BasicBlock *Entry = BasicBlock::Create(Context, "entry", F);
+  BasicBlock *Body = BasicBlock::Create(Context, "body", F);
+  BasicBlock *Exit = BasicBlock::Create(Context, "exit", F);
+
+  IRBuilder<> Builder(Entry);
+  ConstantInt *Cond = ConstantInt::get(Context, APInt(1, 0));
+  Builder.CreateCondBr(Cond, Exit, Body);
+
+  Builder.SetInsertPoint(Body);
+  auto *S1 = cast<Instruction>(Builder.CreateAdd(Arg, C, "add"));
+  Builder.CreateBr(Exit);
+
+  Builder.SetInsertPoint(Exit);
+  auto *S2 = cast<Instruction>(Builder.CreateAdd(Arg, C, "add"));
+  S2->setHasNoSignedWrap(true);
+  auto *R = cast<Instruction>(Builder.CreateRetVoid());
+
+  ScalarEvolution SE = buildSE(*F);
+  const SCEV *S = SE.getSCEV(S1);
+  EXPECT_TRUE(isa<SCEVAddExpr>(S));
+  SCEVExpander Exp(SE, M.getDataLayout(), "expander");
+  auto *I = cast<Instruction>(Exp.expandCodeFor(S, nullptr, R));
+  EXPECT_FALSE(I->hasNoSignedWrap());
+}
+
 }  // end anonymous namespace
 }  // end namespace llvm
