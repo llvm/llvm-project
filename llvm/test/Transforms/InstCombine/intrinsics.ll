@@ -267,12 +267,17 @@ define void @powi(double %V, double *%P) {
 
   %C = tail call double @llvm.powi.f64(double %V, i32 1) nounwind
   store volatile double %C, double* %P
+
+  %D = tail call double @llvm.powi.f64(double %V, i32 2) nounwind
+  store volatile double %D, double* %P
   ret void
 ; CHECK-LABEL: @powi(
 ; CHECK: %A = fdiv double 1.0{{.*}}, %V
 ; CHECK: store volatile double %A,
 ; CHECK: store volatile double 1.0
 ; CHECK: store volatile double %V
+; CHECK: %D = fmul double %V, %V
+; CHECK: store volatile double %D
 }
 
 define i32 @cttz(i32 %a) {
