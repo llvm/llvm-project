@@ -227,7 +227,7 @@ static bool isDecorated(StringRef Sym) {
 void LinkerDriver::parseDirectives(StringRef S) {
   ArgParser Parser;
   // .drectve is always tokenized using Windows shell rules.
-  opt::InputArgList Args = Parser.parse(S);
+  opt::InputArgList Args = Parser.parseDirectives(S);
 
   for (auto *Arg : Args) {
     switch (Arg->getOption().getUnaliasedOption().getID()) {
@@ -245,6 +245,13 @@ void LinkerDriver::parseDirectives(StringRef S) {
       Config->Entry = addUndefined(mangle(Arg->getValue()));
       break;
     case OPT_export: {
+      // If a common header file contains dllexported function
+      // declarations, many object files may end up with having the
+      // same /EXPORT options. In order to save cost of parsing them,
+      // we dedup them first.
+      if (!DirectivesExports.insert(Arg->getValue()).second)
+        break;
+
       Export E = parseExport(Arg->getValue());
       if (Config->Machine == I386 && Config->MinGW) {
         if (!isDecorated(E.Name))
@@ -794,6 +801,13 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   for (auto *Arg : Args.filtered(OPT_libpath))
     SearchPaths.push_back(Arg->getValue());
   addLibSearchPaths();
+
+  // Handle /ignore
+  for (auto *Arg : Args.filtered(OPT_ignore)) {
+    if (StringRef(Arg->getValue()) == "4217")
+      Config->WarnLocallyDefinedImported = false;
+    // Other warning numbers are ignored.
+  }
 
   // Handle /out
   if (auto *Arg = Args.getLastArg(OPT_out))

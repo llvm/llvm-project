@@ -29,6 +29,7 @@ def export  : P<"export", "Export a function">;
 // No help text because /failifmismatch is not intended to be used by the user.
 def failifmismatch : P<"failifmismatch", "">;
 def heap    : P<"heap", "Size of the heap">;
+def ignore : P<"ignore", "Specify warning codes to ignore">;
 def implib  : P<"implib", "Import library name">;
 def libpath : P<"libpath", "Additional library search path">;
 def linkrepro : P<"linkrepro", "Dump linker invocation and input files for debugging">;
@@ -155,7 +156,6 @@ def fastfail : F<"fastfail">;
 def delay : QF<"delay">;
 def errorreport : QF<"errorreport">;
 def idlout : QF<"idlout">;
-def ignore : QF<"ignore">;
 def maxilksize : QF<"maxilksize">;
 def natvis : QF<"natvis">;
 def pdbaltpath : QF<"pdbaltpath">;

@@ -16,6 +16,7 @@
 #include "lld/Common/Reproduce.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Option/Arg.h"
@@ -53,6 +54,10 @@ public:
 
   // Tokenizes a given string and then parses as command line options.
   llvm::opt::InputArgList parse(StringRef S) { return parse(tokenize(S)); }
+
+  // Tokenizes a given string and then parses as command line options in
+  // .drectve section.
+  llvm::opt::InputArgList parseDirectives(StringRef S);
 
 private:
   // Parses command line options.
@@ -123,6 +128,8 @@ private:
   std::list<std::function<void()>> TaskQueue;
   std::vector<StringRef> FilePaths;
   std::vector<MemoryBufferRef> Resources;
+
+  llvm::StringSet<> DirectivesExports;
 };
 
 // Functions below this line are defined in DriverUtils.cpp.
