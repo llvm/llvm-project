@@ -117,9 +117,10 @@ void SymbolTable::reportRemainingUndefines() {
   for (Symbol *B : Config->GCRoot) {
     if (Undefs.count(B))
       errorOrWarn("<root>: undefined symbol: " + B->getName());
-    if (Symbol *Imp = LocalImports.lookup(B))
-      warn("<root>: locally defined symbol imported: " + Imp->getName() +
-           " (defined in " + toString(Imp->getFile()) + ")");
+    if (Config->WarnLocallyDefinedImported)
+      if (Symbol *Imp = LocalImports.lookup(B))
+        warn("<root>: locally defined symbol imported: " + Imp->getName() +
+             " (defined in " + toString(Imp->getFile()) + ")");
   }
 
   for (ObjFile *File : ObjFile::Instances) {
@@ -128,9 +129,11 @@ void SymbolTable::reportRemainingUndefines() {
         continue;
       if (Undefs.count(Sym))
         errorOrWarn(toString(File) + ": undefined symbol: " + Sym->getName());
-      if (Symbol *Imp = LocalImports.lookup(Sym))
-        warn(toString(File) + ": locally defined symbol imported: " +
-             Imp->getName() + " (defined in " + toString(Imp->getFile()) + ")");
+      if (Config->WarnLocallyDefinedImported)
+        if (Symbol *Imp = LocalImports.lookup(Sym))
+          warn(toString(File) + ": locally defined symbol imported: " +
+               Imp->getName() + " (defined in " + toString(Imp->getFile()) +
+               ")");
     }
   }
 }

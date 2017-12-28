@@ -16,6 +16,7 @@
 #include "lld/Common/Reproduce.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Option/Arg.h"
@@ -127,6 +128,8 @@ private:
   std::list<std::function<void()>> TaskQueue;
   std::vector<StringRef> FilePaths;
   std::vector<MemoryBufferRef> Resources;
+
+  llvm::StringSet<> DirectivesExports;
 };
 
 // Functions below this line are defined in DriverUtils.cpp.

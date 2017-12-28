@@ -2376,7 +2376,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // The compare intrinsic uses the above assumptions and therefore
     // doesn't require additional flags.
     if ((match(Arg0, m_OneUse(m_FSub(m_Value(A), m_Value(B)))) &&
-         match(Arg1, m_Zero()) &&
+         match(Arg1, m_Zero()) && isa<Instruction>(Arg0) &&
          cast<Instruction>(Arg0)->getFastMathFlags().noInfs())) {
       if (Arg0IsZero)
         std::swap(A, B);
