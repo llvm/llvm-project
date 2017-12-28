@@ -57,7 +57,7 @@
 # 	return w;
 # }
 #
-# CHECK:       129:       eb 13   jmp     19 <ifElse+0x7E>
+# CHECK:       129:       eb 13   jmp     19 <ifElse+0x7e>
 # CHECK:       12e:       eb a0   jmp     -96 <ifElse+0x10>
 # CHECK:       132:       eb 9c   jmp     -100 <ifElse+0x10>
 # CHECK:       137:       eb 97   jmp     -105 <ifElse+0x10>

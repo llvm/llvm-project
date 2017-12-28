@@ -1797,11 +1797,7 @@ void NVPTXAsmPrinter::printFPConstant(const ConstantFP *Fp, raw_ostream &O) {
     llvm_unreachable("unsupported fp type");
 
   APInt API = APF.bitcastToAPInt();
-  std::string hexstr(utohexstr(API.getZExtValue()));
-  O << lead;
-  if (hexstr.length() < numHex)
-    O << std::string(numHex - hexstr.length(), '0');
-  O << utohexstr(API.getZExtValue());
+  O << lead << format_hex_no_prefix(API.getZExtValue(), numHex, /*Upper=*/true);
 }
 
 void NVPTXAsmPrinter::printScalarConstant(const Constant *CPV, raw_ostream &O) {

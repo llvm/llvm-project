@@ -2106,7 +2106,7 @@ void NeonEmitter::genOverloadTypeCheckCode(raw_ostream &OS,
     OverloadInfo &OI = I.second;
 
     OS << "case NEON::BI__builtin_neon_" << I.first << ": ";
-    OS << "mask = 0x" << utohexstr(OI.Mask) << "ULL";
+    OS << "mask = 0x" << Twine::utohexstr(OI.Mask) << "ULL";
     if (OI.PtrArgNum >= 0)
       OS << "; PtrArgNum = " << OI.PtrArgNum;
     if (OI.HasConstPtr)
@@ -2320,7 +2320,7 @@ void NeonEmitter::run(raw_ostream &OS) {
 
     Type T2 = T;
     T2.makeScalar();
-    OS << utostr(T.getNumElements()) << "))) ";
+    OS << T.getNumElements() << "))) ";
     OS << T2.str();
     OS << " " << T.str() << ";\n";
   }
@@ -2350,7 +2350,7 @@ void NeonEmitter::run(raw_ostream &OS) {
       Type VT(TS, M);
       OS << "typedef struct " << VT.str() << " {\n";
       OS << "  " << T.str() << " val";
-      OS << "[" << utostr(NumMembers) << "]";
+      OS << "[" << NumMembers << "]";
       OS << ";\n} ";
       OS << VT.str() << ";\n";
       OS << "\n";

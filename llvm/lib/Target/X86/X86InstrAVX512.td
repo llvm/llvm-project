@@ -8704,17 +8704,6 @@ def rr : AVX512XS8I<opc, MRMSrcReg, (outs Vec.RC:$dst), (ins Vec.KRC:$src),
                   IIC_SSE_MOV_S_RR>, EVEX, Sched<[WriteMove]>;
 }
 
-// Use 512bit version to implement 128/256 bit in case NoVLX.
-multiclass avx512_convert_mask_to_vector_lowering<X86VectorVTInfo X86Info,
-                                                            X86VectorVTInfo _> {
-
-  def : Pat<(X86Info.VT (X86vsext (X86Info.KVT X86Info.KRC:$src))),
-            (X86Info.VT (EXTRACT_SUBREG
-                           (_.VT (!cast<Instruction>(NAME#"Zrr")
-                             (_.KVT (COPY_TO_REGCLASS X86Info.KRC:$src,_.KRC)))),
-                           X86Info.SubRegIdx))>;
-}
-
 multiclass cvt_mask_by_elt_width<bits<8> opc, AVX512VLVectorVTInfo VTInfo,
                                  string OpcodeStr, Predicate prd> {
 let Predicates = [prd] in
@@ -8724,11 +8713,6 @@ let Predicates = [prd] in
     defm Z256 : cvt_by_vec_width<opc, VTInfo.info256, OpcodeStr>, EVEX_V256;
     defm Z128 : cvt_by_vec_width<opc, VTInfo.info128, OpcodeStr>, EVEX_V128;
   }
-let Predicates = [prd, NoVLX] in {
-   defm Z256_Alt :   avx512_convert_mask_to_vector_lowering<VTInfo.info256,VTInfo.info512>;
-   defm Z128_Alt :   avx512_convert_mask_to_vector_lowering<VTInfo.info128,VTInfo.info512>;
-  }
-
 }
 
 defm VPMOVM2B : cvt_mask_by_elt_width<0x28, avx512vl_i8_info, "vpmovm2" , HasBWI>;

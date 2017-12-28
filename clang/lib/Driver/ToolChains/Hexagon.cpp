@@ -138,16 +138,15 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   const Driver &D = HTC.getDriver();
   ArgStringList CmdArgs;
 
-  std::string MArchString = "-march=hexagon";
-  CmdArgs.push_back(Args.MakeArgString(MArchString));
+  CmdArgs.push_back("-march=hexagon");
 
   RenderExtraToolArgs(JA, CmdArgs);
 
-  std::string AsName = "hexagon-llvm-mc";
-  std::string MCpuString = "-mcpu=hexagon" +
-        toolchains::HexagonToolChain::GetTargetCPUVersion(Args).str();
+  const char *AsName = "hexagon-llvm-mc";
   CmdArgs.push_back("-filetype=obj");
-  CmdArgs.push_back(Args.MakeArgString(MCpuString));
+  CmdArgs.push_back(Args.MakeArgString(
+      "-mcpu=hexagon" +
+      toolchains::HexagonToolChain::GetTargetCPUVersion(Args)));
 
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
@@ -158,8 +157,7 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (auto G = toolchains::HexagonToolChain::getSmallDataThreshold(Args)) {
-    std::string N = llvm::utostr(G.getValue());
-    CmdArgs.push_back(Args.MakeArgString(std::string("-gpsize=") + N));
+    CmdArgs.push_back(Args.MakeArgString("-gpsize=" + Twine(G.getValue())));
   }
 
   Args.AddAllArgValues(CmdArgs, options::OPT_Wa_COMMA, options::OPT_Xassembler);
@@ -192,7 +190,7 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
       II.getInputArg().render(Args, CmdArgs);
   }
 
-  auto *Exec = Args.MakeArgString(HTC.GetProgramPath(AsName.c_str()));
+  auto *Exec = Args.MakeArgString(HTC.GetProgramPath(AsName));
   C.addCommand(llvm::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
 }
 
@@ -243,10 +241,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Opt.c_str());
 
   CmdArgs.push_back("-march=hexagon");
-  std::string CpuVer =
-        toolchains::HexagonToolChain::GetTargetCPUVersion(Args).str();
-  std::string MCpuString = "-mcpu=hexagon" + CpuVer;
-  CmdArgs.push_back(Args.MakeArgString(MCpuString));
+  StringRef CpuVer = toolchains::HexagonToolChain::GetTargetCPUVersion(Args);
+  CmdArgs.push_back(Args.MakeArgString("-mcpu=hexagon" + CpuVer));
 
   if (IsShared) {
     CmdArgs.push_back("-shared");
@@ -261,8 +257,7 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-pie");
 
   if (auto G = toolchains::HexagonToolChain::getSmallDataThreshold(Args)) {
-    std::string N = llvm::utostr(G.getValue());
-    CmdArgs.push_back(Args.MakeArgString(std::string("-G") + N));
+    CmdArgs.push_back(Args.MakeArgString("-G" + Twine(G.getValue())));
     UseG0 = G.getValue() == 0;
   }
 
@@ -291,7 +286,7 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   //----------------------------------------------------------------------------
   // Start Files
   //----------------------------------------------------------------------------
-  const std::string MCpuSuffix = "/" + CpuVer;
+  const std::string MCpuSuffix = "/" + CpuVer.str();
   const std::string MCpuG0Suffix = MCpuSuffix + "/G0";
   const std::string RootDir =
       HTC.getHexagonTargetDir(D.InstalledDir, D.PrefixDirs) + "/";
@@ -351,7 +346,7 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("--start-group");
 
     if (!IsShared) {
-      for (const std::string &Lib : OsLibs)
+      for (StringRef Lib : OsLibs)
         CmdArgs.push_back(Args.MakeArgString("-l" + Lib));
       CmdArgs.push_back("-lc");
     }

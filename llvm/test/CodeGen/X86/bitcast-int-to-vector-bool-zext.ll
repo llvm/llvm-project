@@ -63,9 +63,7 @@ define <2 x i64> @ext_i2_2i64(i2 %a0) {
 ; AVX512VLBW-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
 ; AVX512VLBW-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; AVX512VLBW-NEXT:    kmovd %eax, %k1
-; AVX512VLBW-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
-; AVX512VLBW-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
-; AVX512VLBW-NEXT:    vzeroupper
+; AVX512VLBW-NEXT:    vmovdqa64 {{.*}}(%rip), %xmm0 {%k1} {z}
 ; AVX512VLBW-NEXT:    retq
   %1 = bitcast i2 %a0 to <2 x i1>
   %2 = zext <2 x i1> %1 to <2 x i64>
@@ -120,9 +118,7 @@ define <4 x i32> @ext_i4_4i32(i4 %a0) {
 ; AVX512VLBW-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
 ; AVX512VLBW-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; AVX512VLBW-NEXT:    kmovd %eax, %k1
-; AVX512VLBW-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm0 {%k1} {z}
-; AVX512VLBW-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
-; AVX512VLBW-NEXT:    vzeroupper
+; AVX512VLBW-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm0 {%k1} {z}
 ; AVX512VLBW-NEXT:    retq
   %1 = bitcast i4 %a0 to <4 x i1>
   %2 = zext <4 x i1> %1 to <4 x i32>
@@ -317,8 +313,7 @@ define <4 x i64> @ext_i4_4i64(i4 %a0) {
 ; AVX512VLBW-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
 ; AVX512VLBW-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; AVX512VLBW-NEXT:    kmovd %eax, %k1
-; AVX512VLBW-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
-; AVX512VLBW-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512VLBW-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm0 {%k1} {z}
 ; AVX512VLBW-NEXT:    retq
   %1 = bitcast i4 %a0 to <4 x i1>
   %2 = zext <4 x i1> %1 to <4 x i64>

@@ -196,7 +196,7 @@ void clangd::runLanguageServerLoop(std::istream &In, JSONOutput &Out,
           log(Context::empty(),
               "Warning: Duplicate Content-Length header received. "
               "The previous value for this message (" +
-                  std::to_string(ContentLength) + ") was ignored.\n");
+                  llvm::Twine(ContentLength) + ") was ignored.\n");
         }
 
         llvm::getAsUnsignedInteger(LineRef.trim(), 0, ContentLength);
@@ -230,10 +230,9 @@ void clangd::runLanguageServerLoop(std::istream &In, JSONOutput &Out,
         // If the stream is aborted before we read ContentLength bytes, In
         // will have eofbit and failbit set.
         if (!In) {
-          log(Context::empty(), "Input was aborted. Read only " +
-                                    std::to_string(In.gcount()) +
-                                    " bytes of expected " +
-                                    std::to_string(ContentLength) + ".\n");
+          log(Context::empty(),
+              "Input was aborted. Read only " + llvm::Twine(In.gcount()) +
+                  " bytes of expected " + llvm::Twine(ContentLength) + ".\n");
           break;
         }
 

@@ -29,10 +29,6 @@ void operator>>(StringRef Str, SymbolID &ID) {
   std::copy(HexString.begin(), HexString.end(), ID.HashValue.begin());
 }
 
-SymbolSlab::const_iterator SymbolSlab::begin() const { return Symbols.begin(); }
-
-SymbolSlab::const_iterator SymbolSlab::end() const { return Symbols.end(); }
-
 SymbolSlab::const_iterator SymbolSlab::find(const SymbolID &ID) const {
   auto It = std::lower_bound(Symbols.begin(), Symbols.end(), ID,
                              [](const Symbol &S, const SymbolID &I) {
@@ -50,9 +46,7 @@ static void own(Symbol &S, DenseSet<StringRef> &Strings,
   auto Intern = [&](StringRef &V) {
     auto R = Strings.insert(V);
     if (R.second) { // New entry added to the table, copy the string.
-      char *Data = Arena.Allocate<char>(V.size());
-      memcpy(Data, V.data(), V.size());
-      *R.first = StringRef(Data, V.size());
+      *R.first = V.copy(Arena);
     }
     V = *R.first;
   };

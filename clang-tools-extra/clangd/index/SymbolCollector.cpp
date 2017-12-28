@@ -48,11 +48,10 @@ std::string makeAbsolutePath(const SourceManager &SM, StringRef Path) {
       llvm::sys::path::parent_path(AbsolutePath.str()));
   if (Dir) {
     StringRef DirName = SM.getFileManager().getCanonicalName(Dir);
-    SmallVector<char, 128> AbsoluteFilename;
+    SmallString<128> AbsoluteFilename;
     llvm::sys::path::append(AbsoluteFilename, DirName,
                             llvm::sys::path::filename(AbsolutePath.str()));
-    return llvm::StringRef(AbsoluteFilename.data(), AbsoluteFilename.size())
-        .str();
+    return AbsoluteFilename.str();
   }
   return AbsolutePath.str();
 }
@@ -85,11 +84,10 @@ bool SymbolCollector::handleDeclOccurence(
     if (!ND->hasExternalFormalLinkage() || ND->isInAnonymousNamespace())
       return true;
 
-    llvm::SmallVector<char, 128> Buff;
-    if (index::generateUSRForDecl(ND, Buff))
+    llvm::SmallString<128> USR;
+    if (index::generateUSRForDecl(ND, USR))
       return true;
 
-    std::string USR(Buff.data(), Buff.size());
     auto ID = SymbolID(USR);
     if (Symbols.find(ID) != nullptr)
       return true;

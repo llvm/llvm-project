@@ -12,6 +12,8 @@ define i64 @func1(i64 %p1, i64 %p2, i64 %p3, i64 %p4, { i64, i8* } %struct) {
 ; CHECK-DAG:     [[LOBITS:t[0-9]+]]: i32,ch = load<LD4[FixedStack-2]>
 ; CHECK-DAG:     [[HIBITS:t[0-9]+]]: i32,ch = load<LD4[FixedStack-1]>
 ; CHECK: Combining: t{{[0-9]+}}: i64 = build_pair [[LOBITS]], [[HIBITS]]
+; CHECK-NEXT: Creating new node
+; CHECK-SAME: load<LD8[FixedStack-1]
 ; CHECK-NEXT: into
 ; CHECK-SAME: load<LD8[FixedStack-1]
 ; CHECK-LABEL: Optimized lowered selection DAG:
