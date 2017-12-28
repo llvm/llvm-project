@@ -3673,15 +3673,6 @@ static bool getFMAPatterns(MachineInstr &Root,
     }
     break;
   case AArch64::FSUBv2f32:
-    if (canCombineWithFMUL(MBB, Root.getOperand(1),
-                           AArch64::FMULv2i32_indexed)) {
-      Patterns.push_back(MachineCombinerPattern::FMLSv2i32_indexed_OP1);
-      Found = true;
-    } else if (canCombineWithFMUL(MBB, Root.getOperand(1),
-                                  AArch64::FMULv2f32)) {
-      Patterns.push_back(MachineCombinerPattern::FMLSv2f32_OP1);
-      Found = true;
-    }
     if (canCombineWithFMUL(MBB, Root.getOperand(2),
                            AArch64::FMULv2i32_indexed)) {
       Patterns.push_back(MachineCombinerPattern::FMLSv2i32_indexed_OP2);
@@ -3691,17 +3682,17 @@ static bool getFMAPatterns(MachineInstr &Root,
       Patterns.push_back(MachineCombinerPattern::FMLSv2f32_OP2);
       Found = true;
     }
-    break;
-  case AArch64::FSUBv2f64:
     if (canCombineWithFMUL(MBB, Root.getOperand(1),
-                           AArch64::FMULv2i64_indexed)) {
-      Patterns.push_back(MachineCombinerPattern::FMLSv2i64_indexed_OP1);
+                           AArch64::FMULv2i32_indexed)) {
+      Patterns.push_back(MachineCombinerPattern::FMLSv2i32_indexed_OP1);
       Found = true;
     } else if (canCombineWithFMUL(MBB, Root.getOperand(1),
-                                  AArch64::FMULv2f64)) {
-      Patterns.push_back(MachineCombinerPattern::FMLSv2f64_OP1);
+                                  AArch64::FMULv2f32)) {
+      Patterns.push_back(MachineCombinerPattern::FMLSv2f32_OP1);
       Found = true;
     }
+    break;
+  case AArch64::FSUBv2f64:
     if (canCombineWithFMUL(MBB, Root.getOperand(2),
                            AArch64::FMULv2i64_indexed)) {
       Patterns.push_back(MachineCombinerPattern::FMLSv2i64_indexed_OP2);
@@ -3711,17 +3702,17 @@ static bool getFMAPatterns(MachineInstr &Root,
       Patterns.push_back(MachineCombinerPattern::FMLSv2f64_OP2);
       Found = true;
     }
-    break;
-  case AArch64::FSUBv4f32:
     if (canCombineWithFMUL(MBB, Root.getOperand(1),
-                           AArch64::FMULv4i32_indexed)) {
-      Patterns.push_back(MachineCombinerPattern::FMLSv4i32_indexed_OP1);
+                           AArch64::FMULv2i64_indexed)) {
+      Patterns.push_back(MachineCombinerPattern::FMLSv2i64_indexed_OP1);
       Found = true;
     } else if (canCombineWithFMUL(MBB, Root.getOperand(1),
-                                  AArch64::FMULv4f32)) {
-      Patterns.push_back(MachineCombinerPattern::FMLSv4f32_OP1);
+                                  AArch64::FMULv2f64)) {
+      Patterns.push_back(MachineCombinerPattern::FMLSv2f64_OP1);
       Found = true;
     }
+    break;
+  case AArch64::FSUBv4f32:
     if (canCombineWithFMUL(MBB, Root.getOperand(2),
                            AArch64::FMULv4i32_indexed)) {
       Patterns.push_back(MachineCombinerPattern::FMLSv4i32_indexed_OP2);
@@ -3729,6 +3720,15 @@ static bool getFMAPatterns(MachineInstr &Root,
     } else if (canCombineWithFMUL(MBB, Root.getOperand(2),
                                   AArch64::FMULv4f32)) {
       Patterns.push_back(MachineCombinerPattern::FMLSv4f32_OP2);
+      Found = true;
+    }
+    if (canCombineWithFMUL(MBB, Root.getOperand(1),
+                           AArch64::FMULv4i32_indexed)) {
+      Patterns.push_back(MachineCombinerPattern::FMLSv4i32_indexed_OP1);
+      Found = true;
+    } else if (canCombineWithFMUL(MBB, Root.getOperand(1),
+                                  AArch64::FMULv4f32)) {
+      Patterns.push_back(MachineCombinerPattern::FMLSv4f32_OP1);
       Found = true;
     }
     break;

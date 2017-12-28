@@ -744,3 +744,158 @@ define <2 x i8> @min_through_cast_vec2(<2 x i32> %x) {
   %res = select <2 x i1> %cmp, <2 x i8> %x_trunc, <2 x i8> <i8 255, i8 255>
   ret <2 x i8> %res
 }
+
+; Remove a min/max op in a sequence with a common operand.
+; PR35717: https://bugs.llvm.org/show_bug.cgi?id=35717
+
+; min(min(a, b), min(b, c)) --> min(min(a, b), c)
+
+define i32 @common_factor_smin(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @common_factor_smin(
+; CHECK-NEXT:    [[CMP_AB:%.*]] = icmp slt i32 %a, %b
+; CHECK-NEXT:    [[MIN_AB:%.*]] = select i1 [[CMP_AB]], i32 %a, i32 %b
+; CHECK-NEXT:    [[CMP_BC:%.*]] = icmp slt i32 %b, %c
+; CHECK-NEXT:    [[MIN_BC:%.*]] = select i1 [[CMP_BC]], i32 %b, i32 %c
+; CHECK-NEXT:    [[CMP_AB_BC:%.*]] = icmp slt i32 [[MIN_AB]], [[MIN_BC]]
+; CHECK-NEXT:    [[MIN_ABC:%.*]] = select i1 [[CMP_AB_BC]], i32 [[MIN_AB]], i32 [[MIN_BC]]
+; CHECK-NEXT:    ret i32 [[MIN_ABC]]
+;
+  %cmp_ab = icmp slt i32 %a, %b
+  %min_ab = select i1 %cmp_ab, i32 %a, i32 %b
+  %cmp_bc = icmp slt i32 %b, %c
+  %min_bc = select i1 %cmp_bc, i32 %b, i32 %c
+  %cmp_ab_bc = icmp slt i32 %min_ab, %min_bc
+  %min_abc = select i1 %cmp_ab_bc, i32 %min_ab, i32 %min_bc
+  ret i32 %min_abc
+}
+
+; max(max(a, b), max(c, b)) --> max(max(a, b), c)
+
+define <2 x i32> @common_factor_smax(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) {
+; CHECK-LABEL: @common_factor_smax(
+; CHECK-NEXT:    [[CMP_AB:%.*]] = icmp sgt <2 x i32> %a, %b
+; CHECK-NEXT:    [[MAX_AB:%.*]] = select <2 x i1> [[CMP_AB]], <2 x i32> %a, <2 x i32> %b
+; CHECK-NEXT:    [[CMP_CB:%.*]] = icmp sgt <2 x i32> %c, %b
+; CHECK-NEXT:    [[MAX_CB:%.*]] = select <2 x i1> [[CMP_CB]], <2 x i32> %c, <2 x i32> %b
+; CHECK-NEXT:    [[CMP_AB_CB:%.*]] = icmp sgt <2 x i32> [[MAX_AB]], [[MAX_CB]]
+; CHECK-NEXT:    [[MAX_ABC:%.*]] = select <2 x i1> [[CMP_AB_CB]], <2 x i32> [[MAX_AB]], <2 x i32> [[MAX_CB]]
+; CHECK-NEXT:    ret <2 x i32> [[MAX_ABC]]
+;
+  %cmp_ab = icmp sgt <2 x i32> %a, %b
+  %max_ab = select <2 x i1> %cmp_ab, <2 x i32> %a, <2 x i32> %b
+  %cmp_cb = icmp sgt <2 x i32> %c, %b
+  %max_cb = select <2 x i1> %cmp_cb, <2 x i32> %c, <2 x i32> %b
+  %cmp_ab_cb = icmp sgt <2 x i32> %max_ab, %max_cb
+  %max_abc = select <2 x i1> %cmp_ab_cb, <2 x i32> %max_ab, <2 x i32> %max_cb
+  ret <2 x i32> %max_abc
+}
+
+; min(min(b, c), min(a, b)) --> min(min(b, c), a)
+
+define <2 x i32> @common_factor_umin(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) {
+; CHECK-LABEL: @common_factor_umin(
+; CHECK-NEXT:    [[CMP_BC:%.*]] = icmp ult <2 x i32> %b, %c
+; CHECK-NEXT:    [[MIN_BC:%.*]] = select <2 x i1> [[CMP_BC]], <2 x i32> %b, <2 x i32> %c
+; CHECK-NEXT:    [[CMP_AB:%.*]] = icmp ult <2 x i32> %a, %b
+; CHECK-NEXT:    [[MIN_AB:%.*]] = select <2 x i1> [[CMP_AB]], <2 x i32> %a, <2 x i32> %b
+; CHECK-NEXT:    [[CMP_BC_AB:%.*]] = icmp ult <2 x i32> [[MIN_BC]], [[MIN_AB]]
+; CHECK-NEXT:    [[MIN_ABC:%.*]] = select <2 x i1> [[CMP_BC_AB]], <2 x i32> [[MIN_BC]], <2 x i32> [[MIN_AB]]
+; CHECK-NEXT:    ret <2 x i32> [[MIN_ABC]]
+;
+  %cmp_bc = icmp ult <2 x i32> %b, %c
+  %min_bc = select <2 x i1> %cmp_bc, <2 x i32> %b, <2 x i32> %c
+  %cmp_ab = icmp ult <2 x i32> %a, %b
+  %min_ab = select <2 x i1> %cmp_ab, <2 x i32> %a, <2 x i32> %b
+  %cmp_bc_ab = icmp ult <2 x i32> %min_bc, %min_ab
+  %min_abc = select <2 x i1> %cmp_bc_ab, <2 x i32> %min_bc, <2 x i32> %min_ab
+  ret <2 x i32> %min_abc
+}
+
+; max(max(b, c), max(b, a)) --> max(max(b, c), a)
+
+define i32 @common_factor_umax(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @common_factor_umax(
+; CHECK-NEXT:    [[CMP_BC:%.*]] = icmp ugt i32 %b, %c
+; CHECK-NEXT:    [[MAX_BC:%.*]] = select i1 [[CMP_BC]], i32 %b, i32 %c
+; CHECK-NEXT:    [[CMP_BA:%.*]] = icmp ugt i32 %b, %a
+; CHECK-NEXT:    [[MAX_BA:%.*]] = select i1 [[CMP_BA]], i32 %b, i32 %a
+; CHECK-NEXT:    [[CMP_BC_BA:%.*]] = icmp ugt i32 [[MAX_BC]], [[MAX_BA]]
+; CHECK-NEXT:    [[MAX_ABC:%.*]] = select i1 [[CMP_BC_BA]], i32 [[MAX_BC]], i32 [[MAX_BA]]
+; CHECK-NEXT:    ret i32 [[MAX_ABC]]
+;
+  %cmp_bc = icmp ugt i32 %b, %c
+  %max_bc = select i1 %cmp_bc, i32 %b, i32 %c
+  %cmp_ba = icmp ugt i32 %b, %a
+  %max_ba = select i1 %cmp_ba, i32 %b, i32 %a
+  %cmp_bc_ba = icmp ugt i32 %max_bc, %max_ba
+  %max_abc = select i1 %cmp_bc_ba, i32 %max_bc, i32 %max_ba
+  ret i32 %max_abc
+}
+
+declare void @extra_use(i32)
+
+define i32 @common_factor_umax_extra_use_lhs(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @common_factor_umax_extra_use_lhs(
+; CHECK-NEXT:    [[CMP_BC:%.*]] = icmp ugt i32 %b, %c
+; CHECK-NEXT:    [[MAX_BC:%.*]] = select i1 [[CMP_BC]], i32 %b, i32 %c
+; CHECK-NEXT:    [[CMP_BA:%.*]] = icmp ugt i32 %b, %a
+; CHECK-NEXT:    [[MAX_BA:%.*]] = select i1 [[CMP_BA]], i32 %b, i32 %a
+; CHECK-NEXT:    [[CMP_BC_BA:%.*]] = icmp ugt i32 [[MAX_BC]], [[MAX_BA]]
+; CHECK-NEXT:    [[MAX_ABC:%.*]] = select i1 [[CMP_BC_BA]], i32 [[MAX_BC]], i32 [[MAX_BA]]
+; CHECK-NEXT:    call void @extra_use(i32 [[MAX_BC]])
+; CHECK-NEXT:    ret i32 [[MAX_ABC]]
+;
+  %cmp_bc = icmp ugt i32 %b, %c
+  %max_bc = select i1 %cmp_bc, i32 %b, i32 %c
+  %cmp_ba = icmp ugt i32 %b, %a
+  %max_ba = select i1 %cmp_ba, i32 %b, i32 %a
+  %cmp_bc_ba = icmp ugt i32 %max_bc, %max_ba
+  %max_abc = select i1 %cmp_bc_ba, i32 %max_bc, i32 %max_ba
+  call void @extra_use(i32 %max_bc)
+  ret i32 %max_abc
+}
+
+define i32 @common_factor_umax_extra_use_rhs(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @common_factor_umax_extra_use_rhs(
+; CHECK-NEXT:    [[CMP_BC:%.*]] = icmp ugt i32 %b, %c
+; CHECK-NEXT:    [[MAX_BC:%.*]] = select i1 [[CMP_BC]], i32 %b, i32 %c
+; CHECK-NEXT:    [[CMP_BA:%.*]] = icmp ugt i32 %b, %a
+; CHECK-NEXT:    [[MAX_BA:%.*]] = select i1 [[CMP_BA]], i32 %b, i32 %a
+; CHECK-NEXT:    [[CMP_BC_BA:%.*]] = icmp ugt i32 [[MAX_BC]], [[MAX_BA]]
+; CHECK-NEXT:    [[MAX_ABC:%.*]] = select i1 [[CMP_BC_BA]], i32 [[MAX_BC]], i32 [[MAX_BA]]
+; CHECK-NEXT:    call void @extra_use(i32 [[MAX_BA]])
+; CHECK-NEXT:    ret i32 [[MAX_ABC]]
+;
+  %cmp_bc = icmp ugt i32 %b, %c
+  %max_bc = select i1 %cmp_bc, i32 %b, i32 %c
+  %cmp_ba = icmp ugt i32 %b, %a
+  %max_ba = select i1 %cmp_ba, i32 %b, i32 %a
+  %cmp_bc_ba = icmp ugt i32 %max_bc, %max_ba
+  %max_abc = select i1 %cmp_bc_ba, i32 %max_bc, i32 %max_ba
+  call void @extra_use(i32 %max_ba)
+  ret i32 %max_abc
+}
+
+define i32 @common_factor_umax_extra_use_both(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @common_factor_umax_extra_use_both(
+; CHECK-NEXT:    [[CMP_BC:%.*]] = icmp ugt i32 %b, %c
+; CHECK-NEXT:    [[MAX_BC:%.*]] = select i1 [[CMP_BC]], i32 %b, i32 %c
+; CHECK-NEXT:    [[CMP_BA:%.*]] = icmp ugt i32 %b, %a
+; CHECK-NEXT:    [[MAX_BA:%.*]] = select i1 [[CMP_BA]], i32 %b, i32 %a
+; CHECK-NEXT:    [[CMP_BC_BA:%.*]] = icmp ugt i32 [[MAX_BC]], [[MAX_BA]]
+; CHECK-NEXT:    [[MAX_ABC:%.*]] = select i1 [[CMP_BC_BA]], i32 [[MAX_BC]], i32 [[MAX_BA]]
+; CHECK-NEXT:    call void @extra_use(i32 [[MAX_BC]])
+; CHECK-NEXT:    call void @extra_use(i32 [[MAX_BA]])
+; CHECK-NEXT:    ret i32 [[MAX_ABC]]
+;
+  %cmp_bc = icmp ugt i32 %b, %c
+  %max_bc = select i1 %cmp_bc, i32 %b, i32 %c
+  %cmp_ba = icmp ugt i32 %b, %a
+  %max_ba = select i1 %cmp_ba, i32 %b, i32 %a
+  %cmp_bc_ba = icmp ugt i32 %max_bc, %max_ba
+  %max_abc = select i1 %cmp_bc_ba, i32 %max_bc, i32 %max_ba
+  call void @extra_use(i32 %max_bc)
+  call void @extra_use(i32 %max_ba)
+  ret i32 %max_abc
+}
+

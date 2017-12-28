@@ -598,19 +598,19 @@ static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
     return Expr;
   }
 
-  // If a section writable or if we are allowed to create dynamic relocations
-  // against read-only sections (i.e. when "-z notext" is given), we can create
-  // any dynamic relocation the dynamic linker knows how to handle.
-  if ((S.Flags & SHF_WRITE) || !Config->ZText) {
-    // We use PLT for relocations that may overflow in runtime,
-    // see comment for getPltExpr().
-    if (Sym.isFunc() && !Target->isPicRel(Type))
-      return getPltExpr(Sym, Expr, IsConstant);
+  // We can create any dynamic relocation supported by the dynamic linker if a
+  // section is writable or we are passed -z notext.
+  bool CanWrite = (S.Flags & SHF_WRITE) || !Config->ZText;
+  if (CanWrite && Target->isPicRel(Type))
     return Expr;
-  }
 
   // If we got here we know that this relocation would require the dynamic
-  // linker to write a value to read only memory.
+  // linker to write a value to read only memory or use an unsupported
+  // relocation.
+
+  // FIXME: This is a hack to avoid changing error messages for now.
+  if (CanWrite && !Sym.isFunc())
+    return Expr;
 
   // We can hack around it if we are producing an executable and
   // the refered symbol can be preemepted to refer to the executable.
