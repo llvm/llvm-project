@@ -266,7 +266,7 @@ bool fromJSON(const json::Expr &Params, WorkspaceEdit &R) {
   return O && O.map("changes", R.changes);
 }
 
-const std::string ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND =
+const llvm::StringLiteral ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND =
     "clangd.applyFix";
 
 bool fromJSON(const json::Expr &Params, ExecuteCommandParams &R) {
