@@ -288,7 +288,8 @@ class AMDGPUAtomicIncIntrin : Intrinsic<[llvm_anyint_ty],
   llvm_i32_ty, // ordering
   llvm_i32_ty, // scope
   llvm_i1_ty], // isVolatile
-  [IntrArgMemOnly, NoCapture<0>]
+  [IntrArgMemOnly, NoCapture<0>], "",
+  [SDNPMemOperand]
 >;
 
 def int_amdgcn_atomic_inc : AMDGPUAtomicIncIntrin;
