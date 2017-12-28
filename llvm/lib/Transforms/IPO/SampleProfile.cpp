@@ -181,8 +181,9 @@ public:
       StringRef Name, bool IsThinLTOPreLink,
       std::function<AssumptionCache &(Function &)> GetAssumptionCache,
       std::function<TargetTransformInfo &(Function &)> GetTargetTransformInfo)
-      : GetAC(GetAssumptionCache), GetTTI(GetTargetTransformInfo),
-        Filename(Name), IsThinLTOPreLink(IsThinLTOPreLink) {}
+      : GetAC(std::move(GetAssumptionCache)),
+        GetTTI(std::move(GetTargetTransformInfo)), Filename(Name),
+        IsThinLTOPreLink(IsThinLTOPreLink) {}
 
   bool doInitialization(Module &M);
   bool runOnModule(Module &M, ModuleAnalysisManager *AM);
@@ -1547,14 +1548,14 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM) {
 
   // Populate the symbol map.
   for (const auto &N_F : M.getValueSymbolTable()) {
-    std::string OrigName = N_F.getKey();
+    StringRef OrigName = N_F.getKey();
     Function *F = dyn_cast<Function>(N_F.getValue());
     if (F == nullptr)
       continue;
     SymbolMap[OrigName] = F;
     auto pos = OrigName.find('.');
-    if (pos != std::string::npos) {
-      std::string NewName = OrigName.substr(0, pos);
+    if (pos != StringRef::npos) {
+      StringRef NewName = OrigName.substr(0, pos);
       auto r = SymbolMap.insert(std::make_pair(NewName, F));
       // Failiing to insert means there is already an entry in SymbolMap,
       // thus there are multiple functions that are mapped to the same

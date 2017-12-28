@@ -314,10 +314,6 @@ int TargetTransformInfo::getIntImmCost(Intrinsic::ID IID, unsigned Idx,
   return Cost;
 }
 
-bool TargetTransformInfo::isOutOfOrder() const {
-  return TTIImpl->isOutOfOrder();
-}
-
 unsigned TargetTransformInfo::getNumberOfRegisters(bool Vector) const {
   return TTIImpl->getNumberOfRegisters(Vector);
 }

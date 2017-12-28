@@ -226,8 +226,8 @@ public:
 
   sampleprof_error addCalledTargetSamples(uint32_t LineOffset,
                                           uint32_t Discriminator,
-                                          const std::string &FName,
-                                          uint64_t Num, uint64_t Weight = 1) {
+                                          StringRef FName, uint64_t Num,
+                                          uint64_t Weight = 1) {
     return BodySamples[LineLocation(LineOffset, Discriminator)].addCalledTarget(
         FName, Num, Weight);
   }

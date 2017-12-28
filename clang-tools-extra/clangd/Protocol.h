@@ -380,7 +380,7 @@ json::Expr toJSON(const WorkspaceEdit &WE);
 /// one argument type will be parsed and set.
 struct ExecuteCommandParams {
   // Command to apply fix-its. Uses WorkspaceEdit as argument.
-  const static std::string CLANGD_APPLY_FIX_COMMAND;
+  const static llvm::StringLiteral CLANGD_APPLY_FIX_COMMAND;
 
   /// The command identifier, e.g. CLANGD_APPLY_FIX_COMMAND
   std::string command;

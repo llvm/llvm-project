@@ -65,7 +65,7 @@ static int convertYAML(yaml::Input &YIn, raw_ostream &Out) {
     }
   } while (YIn.nextDocument());
 
-  error("yaml2obj: Cannot find the " + utostr(DocNum) +
+  error("yaml2obj: Cannot find the " + Twine(DocNum) +
         llvm::getOrdinalSuffix(DocNum) + " document");
 }
 
