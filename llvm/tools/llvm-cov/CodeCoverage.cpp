@@ -353,13 +353,14 @@ std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
   auto Coverage = std::move(CoverageOrErr.get());
   unsigned Mismatched = Coverage->getMismatchedCount();
   if (Mismatched) {
-    warning(utostr(Mismatched) + " functions have mismatched data");
+    warning(Twine(Mismatched) + " functions have mismatched data");
 
     if (ViewOpts.Debug) {
       for (const auto &HashMismatch : Coverage->getHashMismatches())
         errs() << "hash-mismatch: "
                << "No profile record found for '" << HashMismatch.first << "'"
-               << " with hash = 0x" << utohexstr(HashMismatch.second) << "\n";
+               << " with hash = 0x" << Twine::utohexstr(HashMismatch.second)
+               << '\n';
 
       for (const auto &CounterMismatch : Coverage->getCounterMismatches())
         errs() << "counter-mismatch: "

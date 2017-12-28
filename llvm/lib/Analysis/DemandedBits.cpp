@@ -385,8 +385,8 @@ bool DemandedBits::isInstructionDead(Instruction *I) {
 void DemandedBits::print(raw_ostream &OS) {
   performAnalysis();
   for (auto &KV : AliveBits) {
-    OS << "DemandedBits: 0x" << utohexstr(KV.second.getLimitedValue()) << " for "
-       << *KV.first << "\n";
+    OS << "DemandedBits: 0x" << Twine::utohexstr(KV.second.getLimitedValue())
+       << " for " << *KV.first << '\n';
   }
 }
 
