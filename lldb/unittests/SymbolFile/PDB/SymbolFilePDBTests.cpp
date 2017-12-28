@@ -512,20 +512,15 @@ TEST_F(SymbolFilePDBTests, TestRegexNameMatch) {
   SymbolVendor *plugin = module->GetSymbolVendor();
   SymbolFilePDB *symfile =
       static_cast<SymbolFilePDB *>(plugin->GetSymbolFile());
-  SymbolContext sc;
-  llvm::DenseSet<SymbolFile *> searched_files;
   TypeMap results;
-  uint32_t num_results = symfile->FindTypes(sc, ConstString(".*"), nullptr,
-                                            false, 0, searched_files, results);
-  EXPECT_GT(num_results, 1u);
-  EXPECT_EQ(num_results, results.GetSize());
+   
+  symfile->FindTypesByRegex(RegularExpression(".*"), 0, results);
+  EXPECT_GT(results.GetSize(), 1u);
 
   // We expect no exception thrown if the given regex can't be compiled
   results.Clear();
-  num_results = symfile->FindTypes(sc, ConstString("**"), nullptr,
-                                   false, 0, searched_files, results);
-  EXPECT_EQ(num_results, 0u);
-  EXPECT_EQ(num_results, results.GetSize());
+  symfile->FindTypesByRegex(RegularExpression("**"), 0, results);
+  EXPECT_EQ(0u, results.GetSize());
 }
 
 TEST_F(SymbolFilePDBTests, TestMaxMatches) {
@@ -539,7 +534,8 @@ TEST_F(SymbolFilePDBTests, TestMaxMatches) {
   SymbolContext sc;
   llvm::DenseSet<SymbolFile *> searched_files;
   TypeMap results;
-  uint32_t num_results = symfile->FindTypes(sc, ConstString(".*"), nullptr,
+  const ConstString name("ClassTypedef");
+  uint32_t num_results = symfile->FindTypes(sc, name, nullptr,
                                             false, 0, searched_files, results);
   // Try to limit ourselves from 1 to 10 results, otherwise we could be doing
   // this thousands of times.
@@ -549,7 +545,7 @@ TEST_F(SymbolFilePDBTests, TestMaxMatches) {
   uint32_t iterations = std::min(num_results, 10u);
   for (uint32_t i = 1; i <= iterations; ++i) {
     uint32_t num_limited_results = symfile->FindTypes(
-        sc, ConstString(".*"), nullptr, false, i, searched_files, results);
+        sc, name, nullptr, false, i, searched_files, results);
     EXPECT_EQ(i, num_limited_results);
     EXPECT_EQ(num_limited_results, results.GetSize());
   }

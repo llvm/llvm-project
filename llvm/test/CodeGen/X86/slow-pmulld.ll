@@ -10,22 +10,14 @@
 define <4 x i32> @foo(<4 x i8> %A) {
 ; CHECK32-LABEL: foo:
 ; CHECK32:       # %bb.0:
-; CHECK32-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0],zero,xmm0[4],zero,xmm0[8],zero,xmm0[12],zero,xmm0[u,u,u,u,u,u,u,u]
-; CHECK32-NEXT:    movdqa {{.*#+}} xmm1 = <18778,18778,18778,18778,u,u,u,u>
-; CHECK32-NEXT:    movdqa %xmm0, %xmm2
-; CHECK32-NEXT:    pmullw %xmm1, %xmm0
-; CHECK32-NEXT:    pmulhw %xmm1, %xmm2
-; CHECK32-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; CHECK32-NEXT:    pand {{\.LCPI.*}}, %xmm0
+; CHECK32-NEXT:    pmaddwd {{\.LCPI.*}}, %xmm0
 ; CHECK32-NEXT:    retl
 ;
 ; CHECK64-LABEL: foo:
 ; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0],zero,xmm0[4],zero,xmm0[8],zero,xmm0[12],zero,xmm0[u,u,u,u,u,u,u,u]
-; CHECK64-NEXT:    movdqa {{.*#+}} xmm1 = <18778,18778,18778,18778,u,u,u,u>
-; CHECK64-NEXT:    movdqa %xmm0, %xmm2
-; CHECK64-NEXT:    pmullw %xmm1, %xmm0
-; CHECK64-NEXT:    pmulhw %xmm1, %xmm2
-; CHECK64-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; CHECK64-NEXT:    pand {{.*}}(%rip), %xmm0
+; CHECK64-NEXT:    pmaddwd {{.*}}(%rip), %xmm0
 ; CHECK64-NEXT:    retq
 ;
 ; SSE4-32-LABEL: foo:
