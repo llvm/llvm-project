@@ -37,7 +37,7 @@ void FileSymbols::update(PathRef Path, std::unique_ptr<SymbolSlab> Slab) {
   if (!Slab)
     FileToSlabs.erase(Path);
   else
-    FileToSlabs[Path] = std::shared_ptr<SymbolSlab>(Slab.release());
+    FileToSlabs[Path] = std::move(Slab);
 }
 
 std::shared_ptr<std::vector<const Symbol *>> FileSymbols::allSymbols() {
@@ -74,9 +74,10 @@ void FileIndex::update(const Context &Ctx, PathRef Path, ParsedAST *AST) {
   Index.build(std::move(Symbols));
 }
 
-bool FileIndex::fuzzyFind(const Context &Ctx, const FuzzyFindRequest &Req,
-                          std::function<void(const Symbol &)> Callback) const {
-  return Index.fuzzyFind(Ctx, Req, std::move(Callback));
+bool FileIndex::fuzzyFind(
+    const Context &Ctx, const FuzzyFindRequest &Req,
+    llvm::function_ref<void(const Symbol &)> Callback) const {
+  return Index.fuzzyFind(Ctx, Req, Callback);
 }
 
 } // namespace clangd

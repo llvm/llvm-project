@@ -140,8 +140,8 @@ public:
 
   SymbolSlab() = default;
 
-  const_iterator begin() const;
-  const_iterator end() const;
+  const_iterator begin() const { return Symbols.begin(); }
+  const_iterator end() const { return Symbols.end(); }
   const_iterator find(const SymbolID &SymID) const;
 
   size_t size() const { return Symbols.size(); }
@@ -214,7 +214,7 @@ public:
   /// to MaxCandidateCount
   virtual bool
   fuzzyFind(const Context &Ctx, const FuzzyFindRequest &Req,
-            std::function<void(const Symbol &)> Callback) const = 0;
+            llvm::function_ref<void(const Symbol &)> Callback) const = 0;
 
   // FIXME: add interfaces for more index use cases:
   //  - Symbol getSymbolInfo(SymbolID);

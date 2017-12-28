@@ -26,8 +26,9 @@ void MemIndex::build(std::shared_ptr<std::vector<const Symbol *>> Syms) {
   }
 }
 
-bool MemIndex::fuzzyFind(const Context &Ctx, const FuzzyFindRequest &Req,
-                         std::function<void(const Symbol &)> Callback) const {
+bool MemIndex::fuzzyFind(
+    const Context &Ctx, const FuzzyFindRequest &Req,
+    llvm::function_ref<void(const Symbol &)> Callback) const {
   assert(!StringRef(Req.Query).contains("::") &&
          "There must be no :: in query.");
 
@@ -38,14 +39,7 @@ bool MemIndex::fuzzyFind(const Context &Ctx, const FuzzyFindRequest &Req,
       const Symbol *Sym = Pair.second;
 
       // Exact match against all possible scopes.
-      bool ScopeMatched = Req.Scopes.empty();
-      for (StringRef Scope : Req.Scopes) {
-        if (Scope == Sym->Scope) {
-          ScopeMatched = true;
-          break;
-        }
-      }
-      if (!ScopeMatched)
+      if (!Req.Scopes.empty() && !llvm::is_contained(Req.Scopes, Sym->Scope))
         continue;
 
       // FIXME(ioeric): use fuzzy matcher.
