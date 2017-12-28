@@ -545,8 +545,7 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (unsigned Parallelism =
           getLTOParallelism(Args, getToolChain().getDriver())) {
     CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back(
-        Args.MakeArgString(Twine("-threads=") + llvm::to_string(Parallelism)));
+    CmdArgs.push_back(Args.MakeArgString("-threads=" + Twine(Parallelism)));
   }
 
   if (getToolChain().ShouldLinkCXXStdlib(Args))

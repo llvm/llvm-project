@@ -641,7 +641,7 @@ Optional<SinkingInstructionCandidate> GVNSink::analyzeInstructionForSinking(
   DenseMap<uint32_t, unsigned> VNums;
   for (auto *I : Insts) {
     uint32_t N = VN.lookupOrAdd(I);
-    DEBUG(dbgs() << " VN=" << utohexstr(N) << " for" << *I << "\n");
+    DEBUG(dbgs() << " VN=" << Twine::utohexstr(N) << " for" << *I << "\n");
     if (N == ~0U)
       return None;
     VNums[N]++;

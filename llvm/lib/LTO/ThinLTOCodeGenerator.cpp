@@ -76,7 +76,7 @@ static void saveTempBitcode(const Module &TheModule, StringRef TempDir,
   if (TempDir.empty())
     return;
   // User asked to save temps, let dump the bitcode file after import.
-  std::string SaveTempPath = (TempDir + llvm::utostr(count) + Suffix).str();
+  std::string SaveTempPath = (TempDir + llvm::Twine(count) + Suffix).str();
   std::error_code EC;
   raw_fd_ostream OS(SaveTempPath, EC, sys::fs::F_None);
   if (EC)

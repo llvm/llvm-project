@@ -190,7 +190,7 @@ void WebAssemblyAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
     if (isVerbose()) {
       OutStreamer->AddComment("fallthrough-return: $pop" +
-                              utostr(MFI->getWARegStackId(
+                              Twine(MFI->getWARegStackId(
                                   MFI->getWAReg(MI->getOperand(0).getReg()))));
       OutStreamer->AddBlankLine();
     }

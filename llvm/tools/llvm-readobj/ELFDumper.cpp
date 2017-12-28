@@ -1900,8 +1900,8 @@ template <> void ELFDumper<ELFType<support::little, false>>::printAttributes() {
 
     ArrayRef<uint8_t> Contents = unwrapOrError(Obj->getSectionContents(&Sec));
     if (Contents[0] != ARMBuildAttrs::Format_Version) {
-      errs() << "unrecognised FormatVersion: 0x" << utohexstr(Contents[0])
-             << '\n';
+      errs() << "unrecognised FormatVersion: 0x"
+             << Twine::utohexstr(Contents[0]) << '\n';
       continue;
     }
 

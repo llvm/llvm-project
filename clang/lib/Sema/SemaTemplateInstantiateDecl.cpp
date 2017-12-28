@@ -3932,22 +3932,22 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
                                          TemplateArgs))
       return;
 
-    if (CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(Function)) {
-      // If this is a constructor, instantiate the member initializers.
-      InstantiateMemInitializers(Ctor, cast<CXXConstructorDecl>(PatternDecl),
-                                 TemplateArgs);
-
-      // If this is an MS ABI dllexport default constructor, instantiate any
-      // default arguments.
-      if (Context.getTargetInfo().getCXXABI().isMicrosoft() &&
-          Ctor->isDefaultConstructor()) {
-        InstantiateDefaultCtorDefaultArgs(*this, Ctor);
-      }
-    }
-
     if (PatternDecl->hasSkippedBody()) {
       ActOnSkippedFunctionBody(Function);
     } else {
+      if (CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(Function)) {
+        // If this is a constructor, instantiate the member initializers.
+        InstantiateMemInitializers(Ctor, cast<CXXConstructorDecl>(PatternDecl),
+                                   TemplateArgs);
+
+        // If this is an MS ABI dllexport default constructor, instantiate any
+        // default arguments.
+        if (Context.getTargetInfo().getCXXABI().isMicrosoft() &&
+            Ctor->isDefaultConstructor()) {
+          InstantiateDefaultCtorDefaultArgs(*this, Ctor);
+        }
+      }
+
       // Instantiate the function body.
       StmtResult Body = SubstStmt(Pattern, TemplateArgs);
 

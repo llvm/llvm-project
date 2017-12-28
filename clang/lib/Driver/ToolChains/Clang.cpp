@@ -1738,10 +1738,9 @@ void Clang::AddHexagonTargetArgs(const ArgList &Args,
   CmdArgs.push_back("-Wreturn-type");
 
   if (auto G = toolchains::HexagonToolChain::getSmallDataThreshold(Args)) {
-    std::string N = llvm::utostr(G.getValue());
-    std::string Opt = std::string("-hexagon-small-data-threshold=") + N;
     CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back(Args.MakeArgString(Opt));
+    CmdArgs.push_back(Args.MakeArgString("-hexagon-small-data-threshold=" +
+                                         Twine(G.getValue())));
   }
 
   if (!Args.hasArg(options::OPT_fno_short_enums))

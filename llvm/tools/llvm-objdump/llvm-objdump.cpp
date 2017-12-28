@@ -1643,7 +1643,7 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
                 outs() << " <" << TargetName;
                 uint64_t Disp = Target - TargetAddress;
                 if (Disp)
-                  outs() << "+0x" << utohexstr(Disp);
+                  outs() << "+0x" << Twine::utohexstr(Disp);
                 outs() << '>';
               }
             }

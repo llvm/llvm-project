@@ -60,8 +60,9 @@ public:
   /// nullptr, this removes all symbols in the file
   void update(const Context &Ctx, PathRef Path, ParsedAST *AST);
 
-  bool fuzzyFind(const Context &Ctx, const FuzzyFindRequest &Req,
-                 std::function<void(const Symbol &)> Callback) const override;
+  bool
+  fuzzyFind(const Context &Ctx, const FuzzyFindRequest &Req,
+            llvm::function_ref<void(const Symbol &)> Callback) const override;
 
 private:
   FileSymbols FSymbols;
