@@ -24,8 +24,9 @@ public:
   /// accessible as long as `Symbols` is kept alive.
   void build(std::shared_ptr<std::vector<const Symbol *>> Symbols);
 
-  bool fuzzyFind(const Context &Ctx, const FuzzyFindRequest &Req,
-                 std::function<void(const Symbol &)> Callback) const override;
+  bool
+  fuzzyFind(const Context &Ctx, const FuzzyFindRequest &Req,
+            llvm::function_ref<void(const Symbol &)> Callback) const override;
 
 private:
   std::shared_ptr<std::vector<const Symbol *>> Symbols;
