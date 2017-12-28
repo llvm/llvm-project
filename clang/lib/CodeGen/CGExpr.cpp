@@ -570,7 +570,7 @@ static llvm::Value *emitHash16Bytes(CGBuilderTy &Builder, llvm::Value *Low,
 
 bool CodeGenFunction::isNullPointerAllowed(TypeCheckKind TCK) {
   return TCK == TCK_DowncastPointer || TCK == TCK_Upcast ||
-         TCK == TCK_UpcastToVirtualBase;
+         TCK == TCK_UpcastToVirtualBase || TCK == TCK_DynamicOperation;
 }
 
 bool CodeGenFunction::isVptrCheckRequired(TypeCheckKind TCK, QualType Ty) {
@@ -578,7 +578,7 @@ bool CodeGenFunction::isVptrCheckRequired(TypeCheckKind TCK, QualType Ty) {
   return (RD && RD->hasDefinition() && RD->isDynamicClass()) &&
          (TCK == TCK_MemberAccess || TCK == TCK_MemberCall ||
           TCK == TCK_DowncastPointer || TCK == TCK_DowncastReference ||
-          TCK == TCK_UpcastToVirtualBase);
+          TCK == TCK_UpcastToVirtualBase || TCK == TCK_DynamicOperation);
 }
 
 bool CodeGenFunction::sanitizePerformTypeCheck() const {

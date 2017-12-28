@@ -174,6 +174,7 @@ struct Configuration {
   bool HighEntropyVA = false;
   bool AppContainer = false;
   bool MinGW = false;
+  bool WarnLocallyDefinedImported = true;
 };
 
 extern Configuration *Config;
