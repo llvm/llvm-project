@@ -29,13 +29,11 @@ public:
                       unsigned Offset,
                       index::IndexDataConsumer::ASTNodeInfo ASTNode) override;
 
-  void finish() override;
-
-  SymbolSlab takeSymbols() { return std::move(Symbols); }
+  SymbolSlab takeSymbols() { return std::move(Symbols).build(); }
 
 private:
   // All Symbols collected from the AST.
-  SymbolSlab Symbols;
+  SymbolSlab::Builder Symbols;
 };
 
 } // namespace clangd

@@ -115,11 +115,19 @@ void ScriptLexer::tokenize(MemoryBufferRef MB) {
       continue;
     }
 
+    // ">foo" is parsed to ">" and "foo", but ">>" is parsed to ">>".
+    if (S.startswith("<<") || S.startswith("<=") || S.startswith(">>") ||
+        S.startswith(">=")) {
+      Vec.push_back(S.substr(0, 2));
+      S = S.substr(2);
+      continue;
+    }
+
     // Unquoted token. This is more relaxed than tokens in C-like language,
     // so that you can write "file-name.cpp" as one bare token, for example.
     size_t Pos = S.find_first_not_of(
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-        "0123456789_.$/\\~=+[]*?-!<>^:");
+        "0123456789_.$/\\~=+[]*?-!^:");
 
     // A character that cannot start a word (which is usually a
     // punctuation) forms a single character token.

@@ -54,6 +54,10 @@ public:
   // Tokenizes a given string and then parses as command line options.
   llvm::opt::InputArgList parse(StringRef S) { return parse(tokenize(S)); }
 
+  // Tokenizes a given string and then parses as command line options in
+  // .drectve section.
+  llvm::opt::InputArgList parseDirectives(StringRef S);
+
 private:
   // Parses command line options.
   llvm::opt::InputArgList parse(llvm::ArrayRef<const char *> Args);

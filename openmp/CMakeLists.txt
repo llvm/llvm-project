@@ -17,7 +17,7 @@ if (OPENMP_STANDALONE_BUILD OR "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_S
   set(OPENMP_ENABLE_WERROR FALSE CACHE BOOL
     "Enable -Werror flags to turn warnings into errors for supporting compilers.")
   set(OPENMP_LIBDIR_SUFFIX "" CACHE STRING
-    "suffix of lib installation directory, e.g. 64 => lib64")
+    "Suffix of lib installation directory, e.g. 64 => lib64")
 
   # Group test settings.
   set(OPENMP_TEST_C_COMPILER ${CMAKE_C_COMPILER} CACHE STRING

@@ -129,9 +129,9 @@ void X86_64<ELFT>::writeGotPlt(uint8_t *Buf, const Symbol &S) const {
 
 template <class ELFT> void X86_64<ELFT>::writePltHeader(uint8_t *Buf) const {
   const uint8_t PltData[] = {
-      0xff, 0x35, 0x00, 0x00, 0x00, 0x00, // pushq GOTPLT+8(%rip)
-      0xff, 0x25, 0x00, 0x00, 0x00, 0x00, // jmp *GOTPLT+16(%rip)
-      0x0f, 0x1f, 0x40, 0x00              // nop
+      0xff, 0x35, 0, 0, 0, 0, // pushq GOTPLT+8(%rip)
+      0xff, 0x25, 0, 0, 0, 0, // jmp *GOTPLT+16(%rip)
+      0x0f, 0x1f, 0x40, 0x00, // nop
   };
   memcpy(Buf, PltData, sizeof(PltData));
   uint64_t GotPlt = InX::GotPlt->getVA();
@@ -145,9 +145,9 @@ void X86_64<ELFT>::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
                             uint64_t PltEntryAddr, int32_t Index,
                             unsigned RelOff) const {
   const uint8_t Inst[] = {
-      0xff, 0x25, 0x00, 0x00, 0x00, 0x00, // jmpq *got(%rip)
-      0x68, 0x00, 0x00, 0x00, 0x00,       // pushq <relocation index>
-      0xe9, 0x00, 0x00, 0x00, 0x00        // jmpq plt[0]
+      0xff, 0x25, 0, 0, 0, 0, // jmpq *got(%rip)
+      0x68, 0, 0, 0, 0,       // pushq <relocation index>
+      0xe9, 0, 0, 0, 0,       // jmpq plt[0]
   };
   memcpy(Buf, Inst, sizeof(Inst));
 
@@ -175,7 +175,7 @@ void X86_64<ELFT>::relaxTlsGdToLe(uint8_t *Loc, RelType Type,
   //   lea x@tpoff,%rax
   const uint8_t Inst[] = {
       0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00, 0x00, 0x00, // mov %fs:0x0,%rax
-      0x48, 0x8d, 0x80, 0x00, 0x00, 0x00, 0x00              // lea x@tpoff,%rax
+      0x48, 0x8d, 0x80, 0, 0, 0, 0,                         // lea x@tpoff,%rax
   };
   memcpy(Loc - 4, Inst, sizeof(Inst));
 
@@ -198,7 +198,7 @@ void X86_64<ELFT>::relaxTlsGdToIe(uint8_t *Loc, RelType Type,
   //   addq x@tpoff,%rax
   const uint8_t Inst[] = {
       0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00, 0x00, 0x00, // mov %fs:0x0,%rax
-      0x48, 0x03, 0x05, 0x00, 0x00, 0x00, 0x00              // addq x@tpoff,%rax
+      0x48, 0x03, 0x05, 0, 0, 0, 0,                         // addq x@tpoff,%rax
   };
   memcpy(Loc - 4, Inst, sizeof(Inst));
 
@@ -274,9 +274,9 @@ void X86_64<ELFT>::relaxTlsLdToLe(uint8_t *Loc, RelType Type,
   }
 
   const uint8_t Inst[] = {
-      0x66, 0x66,                                          // .word 0x6666
-      0x66,                                                // .byte 0x66
-      0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00, 0x00, 0x00 // mov %fs:0,%rax
+      0x66, 0x66,                                           // .word 0x6666
+      0x66,                                                 // .byte 0x66
+      0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00, 0x00, 0x00, // mov %fs:0,%rax
   };
   memcpy(Loc - 3, Inst, sizeof(Inst));
 }
