@@ -140,6 +140,10 @@ public:
   size_t FindTypes(const std::vector<lldb_private::CompilerContext> &context,
                    bool append, lldb_private::TypeMap &types) override;
 
+  void FindTypesByRegex(const lldb_private::RegularExpression &regex,
+                        uint32_t max_matches,
+                        lldb_private::TypeMap &types);
+
   lldb_private::TypeList *GetTypeList() override;
 
   size_t GetTypes(lldb_private::SymbolContextScope *sc_scope,

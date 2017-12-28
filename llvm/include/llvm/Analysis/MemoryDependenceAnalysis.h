@@ -407,12 +407,6 @@ public:
   void getNonLocalPointerDependency(Instruction *QueryInst,
                                     SmallVectorImpl<NonLocalDepResult> &Result);
 
-  /// Perform a dependency query specifically for QueryInst's access to Loc.
-  /// The other comments for getNonLocalPointerDependency apply here as well.
-  void getNonLocalPointerDependencyFrom(Instruction *QueryInst,
-                                        const MemoryLocation &Loc, bool isLoad,
-                                        SmallVectorImpl<NonLocalDepResult> &Result);
-
   /// Removes an instruction from the dependence analysis, updating the
   /// dependence of instructions that previously depended on it.
   void removeInstruction(Instruction *InstToRemove);
