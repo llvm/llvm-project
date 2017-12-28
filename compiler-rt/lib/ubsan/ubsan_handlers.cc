@@ -38,7 +38,8 @@ bool ignoreReport(SourceLocation SLoc, ReportOptions Opts, ErrorType ET) {
 const char *TypeCheckKinds[] = {
     "load of", "store to", "reference binding to", "member access within",
     "member call on", "constructor call on", "downcast of", "downcast of",
-    "upcast of", "cast to virtual base of", "_Nonnull binding to"};
+    "upcast of", "cast to virtual base of", "_Nonnull binding to",
+    "dynamic operation on"};
 }
 
 static void handleTypeMismatchImpl(TypeMismatchData *Data, ValueHandle Pointer,
