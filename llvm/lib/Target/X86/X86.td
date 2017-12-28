@@ -739,7 +739,8 @@ def ICLFeatures : ProcessorFeatures<CNLFeatures.Value, [
   FeatureVNNI,
   FeatureVPCLMULQDQ,
   FeatureVPOPCNTDQ,
-  FeatureGFNI
+  FeatureGFNI,
+  FeatureCLWB
 ]>;
 
 class IcelakeProc<string Name> : ProcModel<Name, SkylakeServerModel,

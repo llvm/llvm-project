@@ -920,14 +920,6 @@ void MemoryDependenceResults::getNonLocalPointerDependency(
     Instruction *QueryInst, SmallVectorImpl<NonLocalDepResult> &Result) {
   const MemoryLocation Loc = MemoryLocation::get(QueryInst);
   bool isLoad = isa<LoadInst>(QueryInst);
-  return getNonLocalPointerDependencyFrom(QueryInst, Loc, isLoad, Result);
-}
-
-void MemoryDependenceResults::getNonLocalPointerDependencyFrom(
-    Instruction *QueryInst,
-    const MemoryLocation &Loc,
-    bool isLoad,
-    SmallVectorImpl<NonLocalDepResult> &Result) {
   BasicBlock *FromBB = QueryInst->getParent();
   assert(FromBB);
 
@@ -1127,15 +1119,21 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
   // If we already have a cache entry for this CacheKey, we may need to do some
   // work to reconcile the cache entry and the current query.
   if (!Pair.second) {
-    if (CacheInfo->Size != Loc.Size) {
-      // The query's Size differs from the cached one. Throw out the
-      // cached data and proceed with the query at the new size.
+    if (CacheInfo->Size < Loc.Size) {
+      // The query's Size is greater than the cached one. Throw out the
+      // cached data and proceed with the query at the greater size.
       CacheInfo->Pair = BBSkipFirstBlockPair();
       CacheInfo->Size = Loc.Size;
       for (auto &Entry : CacheInfo->NonLocalDeps)
         if (Instruction *Inst = Entry.getResult().getInst())
           RemoveFromReverseMap(ReverseNonLocalPtrDeps, Inst, CacheKey);
       CacheInfo->NonLocalDeps.clear();
+    } else if (CacheInfo->Size > Loc.Size) {
+      // This query's Size is less than the cached one. Conservatively restart
+      // the query using the greater size.
+      return getNonLocalPointerDepFromBB(
+          QueryInst, Pointer, Loc.getWithNewSize(CacheInfo->Size), isLoad,
+          StartBB, Result, Visited, SkipFirstBlock);
     }
 
     // If the query's AATags are inconsistent with the cached one,
