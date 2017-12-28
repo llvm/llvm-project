@@ -32,6 +32,7 @@
 using namespace llvm;
 using namespace llvm::ELF;
 using namespace llvm::object;
+using namespace llvm::sys;
 using namespace llvm::sys::fs;
 
 using namespace lld;
@@ -67,6 +68,50 @@ Optional<MemoryBufferRef> elf::readFile(StringRef Path) {
   if (Tar)
     Tar->append(relativeToRoot(Path), MBRef.getBuffer());
   return MBRef;
+}
+
+// Concatenates arguments to construct a string representing an error location.
+static std::string createFileLineMsg(StringRef Path, unsigned Line) {
+  std::string Filename = path::filename(Path);
+  std::string Lineno = ":" + std::to_string(Line);
+  if (Filename == Path)
+    return Filename + Lineno;
+  return Filename + Lineno + " (" + Path.str() + Lineno + ")";
+}
+
+template <class ELFT>
+static std::string getSrcMsgAux(ObjFile<ELFT> &File, const Symbol &Sym,
+                                InputSectionBase &Sec, uint64_t Offset) {
+  // In DWARF, functions and variables are stored to different places.
+  // First, lookup a function for a given offset.
+  if (Optional<DILineInfo> Info = File.getDILineInfo(&Sec, Offset))
+    return createFileLineMsg(Info->FileName, Info->Line);
+
+  // If it failed, lookup again as a variable.
+  if (Optional<std::pair<std::string, unsigned>> FileLine =
+          File.getVariableLoc(Sym.getName()))
+    return createFileLineMsg(FileLine->first, FileLine->second);
+
+  // File.SourceFile contains STT_FILE symbol, and that is a last resort.
+  return File.SourceFile;
+}
+
+std::string InputFile::getSrcMsg(const Symbol &Sym, InputSectionBase &Sec,
+                                 uint64_t Offset) {
+  if (kind() != ObjKind)
+    return "";
+  switch (Config->EKind) {
+  default:
+    llvm_unreachable("Invalid kind");
+  case ELF32LEKind:
+    return getSrcMsgAux(cast<ObjFile<ELF32LE>>(*this), Sym, Sec, Offset);
+  case ELF32BEKind:
+    return getSrcMsgAux(cast<ObjFile<ELF32BE>>(*this), Sym, Sec, Offset);
+  case ELF64LEKind:
+    return getSrcMsgAux(cast<ObjFile<ELF64LE>>(*this), Sym, Sec, Offset);
+  case ELF64BEKind:
+    return getSrcMsgAux(cast<ObjFile<ELF64BE>>(*this), Sym, Sec, Offset);
+  }
 }
 
 template <class ELFT> void ObjFile<ELFT>::initializeDwarf() {
@@ -646,8 +691,8 @@ template <class ELFT> Symbol *ObjFile<ELFT>::createSymbol(const Elf_Sym *Sym) {
     if (Sec == &InputSection::Discarded)
       return Symtab->addUndefined<ELFT>(Name, Binding, StOther, Type,
                                         /*CanOmitFromDynSym=*/false, this);
-    return Symtab->addRegular<ELFT>(Name, StOther, Type, Value, Size, Binding,
-                                    Sec, this);
+    return Symtab->addRegular(Name, StOther, Type, Value, Size, Binding, Sec,
+                              this);
   }
 }
 
@@ -979,7 +1024,7 @@ static ELFKind getELFKind(MemoryBufferRef MB) {
   return (Endian == ELFDATA2LSB) ? ELF64LEKind : ELF64BEKind;
 }
 
-template <class ELFT> void BinaryFile::parse() {
+void BinaryFile::parse() {
   ArrayRef<uint8_t> Data = toArrayRef(MB.getBuffer());
   auto *Section = make<InputSection>(nullptr, SHF_ALLOC | SHF_WRITE,
                                      SHT_PROGBITS, 8, Data, ".data");
@@ -994,12 +1039,12 @@ template <class ELFT> void BinaryFile::parse() {
     if (!isAlnum(S[I]))
       S[I] = '_';
 
-  Symtab->addRegular<ELFT>(Saver.save(S + "_start"), STV_DEFAULT, STT_OBJECT, 0,
-                           0, STB_GLOBAL, Section, nullptr);
-  Symtab->addRegular<ELFT>(Saver.save(S + "_end"), STV_DEFAULT, STT_OBJECT,
-                           Data.size(), 0, STB_GLOBAL, Section, nullptr);
-  Symtab->addRegular<ELFT>(Saver.save(S + "_size"), STV_DEFAULT, STT_OBJECT,
-                           Data.size(), 0, STB_GLOBAL, nullptr, nullptr);
+  Symtab->addRegular(Saver.save(S + "_start"), STV_DEFAULT, STT_OBJECT, 0, 0,
+                     STB_GLOBAL, Section, nullptr);
+  Symtab->addRegular(Saver.save(S + "_end"), STV_DEFAULT, STT_OBJECT,
+                     Data.size(), 0, STB_GLOBAL, Section, nullptr);
+  Symtab->addRegular(Saver.save(S + "_size"), STV_DEFAULT, STT_OBJECT,
+                     Data.size(), 0, STB_GLOBAL, nullptr, nullptr);
 }
 
 static bool isBitcode(MemoryBufferRef MB) {
@@ -1143,8 +1188,3 @@ template class elf::SharedFile<ELF32LE>;
 template class elf::SharedFile<ELF32BE>;
 template class elf::SharedFile<ELF64LE>;
 template class elf::SharedFile<ELF64BE>;
-
-template void BinaryFile::parse<ELF32LE>();
-template void BinaryFile::parse<ELF32BE>();
-template void BinaryFile::parse<ELF64LE>();
-template void BinaryFile::parse<ELF64BE>();

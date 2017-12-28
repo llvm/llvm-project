@@ -44,8 +44,8 @@ static InputFile *getFirstElf() {
 // All input object files must be for the same architecture
 // (e.g. it does not make sense to link x86 object files with
 // MIPS object files.) This function checks for that error.
-template <class ELFT> static bool isCompatible(InputFile *F) {
-  if (!isa<ELFFileBase<ELFT>>(F) && !isa<BitcodeFile>(F))
+static bool isCompatible(InputFile *F) {
+  if (!F->isElf() && !isa<BitcodeFile>(F))
     return true;
 
   if (F->EKind == Config->EKind && F->EMachine == Config->EMachine) {
@@ -64,13 +64,13 @@ template <class ELFT> static bool isCompatible(InputFile *F) {
 
 // Add symbols in File to the symbol table.
 template <class ELFT> void SymbolTable::addFile(InputFile *File) {
-  if (!isCompatible<ELFT>(File))
+  if (!isCompatible(File))
     return;
 
   // Binary file
   if (auto *F = dyn_cast<BinaryFile>(File)) {
     BinaryFiles.push_back(F);
-    F->parse<ELFT>();
+    F->parse();
     return;
   }
 
@@ -135,11 +135,10 @@ template <class ELFT> void SymbolTable::addCombinedLTOObject() {
   }
 }
 
-template <class ELFT>
 Defined *SymbolTable::addAbsolute(StringRef Name, uint8_t Visibility,
                                   uint8_t Binding) {
-  Symbol *Sym = addRegular<ELFT>(Name, Visibility, STT_NOTYPE, 0, 0, Binding,
-                                 nullptr, nullptr);
+  Symbol *Sym =
+      addRegular(Name, Visibility, STT_NOTYPE, 0, 0, Binding, nullptr, nullptr);
   return cast<Defined>(Sym);
 }
 
@@ -424,9 +423,8 @@ static void reportDuplicate(Symbol *Sym, InputFile *NewFile) {
               toString(Sym->File) + "\n>>> defined in " + toString(NewFile));
 }
 
-template <class ELFT>
 static void reportDuplicate(Symbol *Sym, InputSectionBase *ErrSec,
-                            typename ELFT::uint ErrOffset) {
+                            uint64_t ErrOffset) {
   Defined *D = cast<Defined>(Sym);
   if (!D->Section || !ErrSec) {
     reportDuplicate(Sym, ErrSec ? ErrSec->File : nullptr);
@@ -441,9 +439,9 @@ static void reportDuplicate(Symbol *Sym, InputSectionBase *ErrSec,
   //   >>> defined at baz.c:563
   //   >>>            baz.o in archive libbaz.a
   auto *Sec1 = cast<InputSectionBase>(D->Section);
-  std::string Src1 = Sec1->getSrcMsg<ELFT>(*Sym, D->Value);
+  std::string Src1 = Sec1->getSrcMsg(*Sym, D->Value);
   std::string Obj1 = Sec1->getObjMsg(D->Value);
-  std::string Src2 = ErrSec->getSrcMsg<ELFT>(*Sym, ErrOffset);
+  std::string Src2 = ErrSec->getSrcMsg(*Sym, ErrOffset);
   std::string Obj2 = ErrSec->getObjMsg(ErrOffset);
 
   std::string Msg = "duplicate symbol: " + toString(*Sym) + "\n>>> defined at ";
@@ -456,7 +454,6 @@ static void reportDuplicate(Symbol *Sym, InputSectionBase *ErrSec,
   warnOrError(Msg);
 }
 
-template <typename ELFT>
 Symbol *SymbolTable::addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
                                 uint64_t Value, uint64_t Size, uint8_t Binding,
                                 SectionBase *Section, InputFile *File) {
@@ -470,8 +467,7 @@ Symbol *SymbolTable::addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
     replaceSymbol<Defined>(S, File, Name, Binding, StOther, Type, Value, Size,
                            Section);
   else if (Cmp == 0)
-    reportDuplicate<ELFT>(S, dyn_cast_or_null<InputSectionBase>(Section),
-                          Value);
+    reportDuplicate(S, dyn_cast_or_null<InputSectionBase>(Section), Value);
   return S;
 }
 
@@ -796,28 +792,6 @@ template void SymbolTable::addCombinedLTOObject<ELF32LE>();
 template void SymbolTable::addCombinedLTOObject<ELF32BE>();
 template void SymbolTable::addCombinedLTOObject<ELF64LE>();
 template void SymbolTable::addCombinedLTOObject<ELF64BE>();
-
-template Symbol *SymbolTable::addRegular<ELF32LE>(StringRef, uint8_t, uint8_t,
-                                                  uint64_t, uint64_t, uint8_t,
-                                                  SectionBase *, InputFile *);
-template Symbol *SymbolTable::addRegular<ELF32BE>(StringRef, uint8_t, uint8_t,
-                                                  uint64_t, uint64_t, uint8_t,
-                                                  SectionBase *, InputFile *);
-template Symbol *SymbolTable::addRegular<ELF64LE>(StringRef, uint8_t, uint8_t,
-                                                  uint64_t, uint64_t, uint8_t,
-                                                  SectionBase *, InputFile *);
-template Symbol *SymbolTable::addRegular<ELF64BE>(StringRef, uint8_t, uint8_t,
-                                                  uint64_t, uint64_t, uint8_t,
-                                                  SectionBase *, InputFile *);
-
-template Defined *SymbolTable::addAbsolute<ELF32LE>(StringRef, uint8_t,
-                                                    uint8_t);
-template Defined *SymbolTable::addAbsolute<ELF32BE>(StringRef, uint8_t,
-                                                    uint8_t);
-template Defined *SymbolTable::addAbsolute<ELF64LE>(StringRef, uint8_t,
-                                                    uint8_t);
-template Defined *SymbolTable::addAbsolute<ELF64BE>(StringRef, uint8_t,
-                                                    uint8_t);
 
 template Symbol *
 SymbolTable::addLazyArchive<ELF32LE>(StringRef, ArchiveFile &,

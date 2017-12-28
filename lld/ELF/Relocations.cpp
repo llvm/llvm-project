@@ -70,12 +70,11 @@ using namespace lld::elf;
 // >>> defined in /home/alice/src/foo.o
 // >>> referenced by bar.c:12 (/home/alice/src/bar.c:12)
 // >>>               /home/alice/src/bar.o:(.text+0x1)
-template <class ELFT>
 static std::string getLocation(InputSectionBase &S, const Symbol &Sym,
                                uint64_t Off) {
   std::string Msg =
       "\n>>> defined in " + toString(Sym.File) + "\n>>> referenced by ";
-  std::string Src = S.getSrcMsg<ELFT>(Sym, Off);
+  std::string Src = S.getSrcMsg(Sym, Off);
   if (!Src.empty())
     Msg += Src + "\n>>>               ";
   return Msg + S.getObjMsg(Off);
@@ -365,7 +364,6 @@ static bool isRelExpr(RelExpr Expr) {
 //
 // If this function returns false, that means we need to emit a
 // dynamic relocation so that the relocation will be fixed at load-time.
-template <class ELFT>
 static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
                                      InputSectionBase &S, uint64_t RelOff) {
   // These expressions always compute a constant
@@ -410,7 +408,7 @@ static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
     return true;
 
   error("relocation " + toString(Type) + " cannot refer to absolute symbol: " +
-        toString(Sym) + getLocation<ELFT>(S, Sym, RelOff));
+        toString(Sym) + getLocation(S, Sym, RelOff));
   return true;
 }
 
@@ -554,50 +552,83 @@ static void errorOrWarn(const Twine &Msg) {
     warn(Msg);
 }
 
+// Returns PLT relocation expression.
+//
+// This handles a non PIC program call to function in a shared library. In
+// an ideal world, we could just report an error saying the relocation can
+// overflow at runtime. In the real world with glibc, crt1.o has a
+// R_X86_64_PC32 pointing to libc.so.
+//
+// The general idea on how to handle such cases is to create a PLT entry and
+// use that as the function value.
+//
+// For the static linking part, we just return a plt expr and everything
+// else will use the the PLT entry as the address.
+//
+// The remaining problem is making sure pointer equality still works. We
+// need the help of the dynamic linker for that. We let it know that we have
+// a direct reference to a so symbol by creating an undefined symbol with a
+// non zero st_value. Seeing that, the dynamic linker resolves the symbol to
+// the value of the symbol we created. This is true even for got entries, so
+// pointer equality is maintained. To avoid an infinite loop, the only entry
+// that points to the real function is a dedicated got entry used by the
+// plt. That is identified by special relocation types (R_X86_64_JUMP_SLOT,
+// R_386_JMP_SLOT, etc).
+static RelExpr getPltExpr(Symbol &Sym, RelExpr Expr, bool &IsConstant) {
+  Sym.NeedsPltAddr = true;
+  Sym.IsPreemptible = false;
+  IsConstant = true;
+  return toPlt(Expr);
+}
+
+// This modifies the expression if we can use a copy relocation or point the
+// symbol to the PLT.
 template <class ELFT>
 static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
                           InputSectionBase &S, uint64_t RelOff,
                           bool &IsConstant) {
-  // We can create any dynamic relocation if a section is simply writable.
-  if (S.Flags & SHF_WRITE)
-    return Expr;
-
-  // Or, if we are allowed to create dynamic relocations against
-  // read-only sections (i.e. unless "-z notext" is given),
-  // we can create a dynamic relocation as we want, too.
-  if (!Config->ZText)
-    return Expr;
-
   // If a relocation can be applied at link-time, we don't need to
   // create a dynamic relocation in the first place.
   if (IsConstant)
     return Expr;
 
-  // If we got here we know that this relocation would require the dynamic
-  // linker to write a value to read only memory.
-
-  // If the relocation is to a weak undef, give up on it and produce a
-  // non preemptible 0.
-  if (Sym.isUndefWeak()) {
+  // If the relocation is to a weak undef, and we are producing
+  // executable, give up on it and produce a non preemptible 0.
+  if (!Config->Shared && Sym.isUndefWeak()) {
     Sym.IsPreemptible = false;
     IsConstant = true;
     return Expr;
   }
 
+  // We can create any dynamic relocation supported by the dynamic linker if a
+  // section is writable or we are passed -z notext.
+  bool CanWrite = (S.Flags & SHF_WRITE) || !Config->ZText;
+  if (CanWrite && Target->isPicRel(Type))
+    return Expr;
+
+  // If we got here we know that this relocation would require the dynamic
+  // linker to write a value to read only memory or use an unsupported
+  // relocation.
+
   // We can hack around it if we are producing an executable and
   // the refered symbol can be preemepted to refer to the executable.
-  if (Config->Shared || (Config->Pic && !isRelExpr(Expr))) {
+  if (!CanWrite && (Config->Shared || (Config->Pic && !isRelExpr(Expr)))) {
     error(
         "can't create dynamic relocation " + toString(Type) + " against " +
         (Sym.getName().empty() ? "local symbol" : "symbol: " + toString(Sym)) +
         " in readonly segment; recompile object files with -fPIC" +
-        getLocation<ELFT>(S, Sym, RelOff));
+        getLocation(S, Sym, RelOff));
     return Expr;
   }
 
+  // Copy relocations are only possible if we are creating an executable and the
+  // symbol is shared.
+  if (!Sym.isShared() || Config->Shared)
+    return Expr;
+
   if (Sym.getVisibility() != STV_DEFAULT) {
     error("cannot preempt symbol: " + toString(Sym) +
-          getLocation<ELFT>(S, Sym, RelOff));
+          getLocation(S, Sym, RelOff));
     return Expr;
   }
 
@@ -609,7 +640,7 @@ static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
         error("unresolvable relocation " + toString(Type) +
               " against symbol '" + toString(*B) +
               "'; recompile with -fPIC or remove '-z nocopyreloc'" +
-              getLocation<ELFT>(S, Sym, RelOff));
+              getLocation(S, Sym, RelOff));
 
       addCopyRelSymbol<ELFT>(B);
     }
@@ -617,32 +648,8 @@ static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
     return Expr;
   }
 
-  if (Sym.isFunc()) {
-    // This handles a non PIC program call to function in a shared library. In
-    // an ideal world, we could just report an error saying the relocation can
-    // overflow at runtime. In the real world with glibc, crt1.o has a
-    // R_X86_64_PC32 pointing to libc.so.
-    //
-    // The general idea on how to handle such cases is to create a PLT entry and
-    // use that as the function value.
-    //
-    // For the static linking part, we just return a plt expr and everything
-    // else will use the the PLT entry as the address.
-    //
-    // The remaining problem is making sure pointer equality still works. We
-    // need the help of the dynamic linker for that. We let it know that we have
-    // a direct reference to a so symbol by creating an undefined symbol with a
-    // non zero st_value. Seeing that, the dynamic linker resolves the symbol to
-    // the value of the symbol we created. This is true even for got entries, so
-    // pointer equality is maintained. To avoid an infinite loop, the only entry
-    // that points to the real function is a dedicated got entry used by the
-    // plt. That is identified by special relocation types (R_X86_64_JUMP_SLOT,
-    // R_386_JMP_SLOT, etc).
-    Sym.NeedsPltAddr = true;
-    Sym.IsPreemptible = false;
-    IsConstant = true;
-    return toPlt(Expr);
-  }
+  if (Sym.isFunc())
+    return getPltExpr(Sym, Expr, IsConstant);
 
   errorOrWarn("symbol '" + toString(Sym) + "' defined in " +
               toString(Sym.File) + " has no type");
@@ -712,7 +719,6 @@ static int64_t computeAddend(const RelTy &Rel, const RelTy *End,
 
 // Report an undefined symbol if necessary.
 // Returns true if this function printed out an error message.
-template <class ELFT>
 static bool maybeReportUndefined(Symbol &Sym, InputSectionBase &Sec,
                                  uint64_t Offset) {
   if (Config->UnresolvedSymbols == UnresolvedPolicy::IgnoreAll)
@@ -729,7 +735,7 @@ static bool maybeReportUndefined(Symbol &Sym, InputSectionBase &Sec,
   std::string Msg =
       "undefined symbol: " + toString(Sym) + "\n>>> referenced by ";
 
-  std::string Src = Sec.getSrcMsg<ELFT>(Sym, Offset);
+  std::string Src = Sec.getSrcMsg(Sym, Offset);
   if (!Src.empty())
     Msg += Src + "\n>>>               ";
   Msg += Sec.getObjMsg(Offset);
@@ -889,7 +895,7 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
       continue;
 
     // Skip if the target symbol is an erroneous undefined symbol.
-    if (maybeReportUndefined<ELFT>(Sym, Sec, Rel.r_offset))
+    if (maybeReportUndefined(Sym, Sec, Rel.r_offset))
       continue;
 
     RelExpr Expr =
@@ -928,7 +934,7 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
       Expr = fromPlt(Expr);
 
     bool IsConstant =
-        isStaticLinkTimeConstant<ELFT>(Expr, Type, Sym, Sec, Rel.r_offset);
+        isStaticLinkTimeConstant(Expr, Type, Sym, Sec, Rel.r_offset);
 
     Expr = adjustExpr<ELFT>(Sym, Expr, Type, Sec, Rel.r_offset, IsConstant);
     if (errorCount())
@@ -987,7 +993,7 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
         errorOrWarn(
             "relocation " + toString(Type) +
             " cannot be used against shared object; recompile with -fPIC" +
-            getLocation<ELFT>(Sec, Sym, Offset));
+            getLocation(Sec, Sym, Offset));
 
       InX::RelaDyn->addReloc(
           {Target->getDynRel(Type), &Sec, Offset, false, &Sym, Addend});

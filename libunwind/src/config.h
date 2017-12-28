@@ -91,8 +91,11 @@
 #endif
 
 #if defined(NDEBUG) && defined(_LIBUNWIND_IS_BAREMETAL)
+#define _LIBUNWIND_LOG0(msg)
 #define _LIBUNWIND_LOG(msg, ...)
 #else
+#define _LIBUNWIND_LOG0(msg)                                               \
+  fprintf(stderr, "libunwind: " msg "\n")
 #define _LIBUNWIND_LOG(msg, ...)                                               \
   fprintf(stderr, "libunwind: " msg "\n", __VA_ARGS__)
 #endif
