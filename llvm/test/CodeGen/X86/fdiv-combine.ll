@@ -95,6 +95,41 @@ define double @div3_arcp(double %x, double %y, double %z) {
   ret double %ret
 }
 
+define float @div_select_constant_fold(i1 zeroext %arg) {
+; CHECK-LABEL: div_select_constant_fold:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    jne .LBB6_1
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB6_1:
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    retq
+  %tmp = select i1 %arg, float 5.000000e+00, float 6.000000e+00
+  %B2 = fdiv float %tmp, 1.000000e+00
+  ret float %B2
+}
+
+define float @div_select_constant_fold_zero(i1 zeroext %arg) {
+; CHECK-LABEL: div_select_constant_fold_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    jne .LBB7_1
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    jmp .LBB7_3
+; CHECK-NEXT:  .LBB7_1:
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:  .LBB7_3:
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    divss %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %tmp = select i1 %arg, float 5.000000e+00, float 6.000000e+00
+  %B2 = fdiv float %tmp, 0.000000e+00
+  ret float %B2
+}
+
 define void @PR24141() {
 ; CHECK-LABEL: PR24141:
 ; CHECK:	callq

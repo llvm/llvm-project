@@ -1310,8 +1310,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::UINT_TO_FP, MVT::v8i64, Legal);
       setOperationAction(ISD::FP_TO_SINT, MVT::v8i64, Legal);
       setOperationAction(ISD::FP_TO_UINT, MVT::v8i64, Legal);
-
-      setOperationAction(ISD::MUL,        MVT::v8i64, Legal);
     }
 
     if (Subtarget.hasCDI()) {
@@ -1388,8 +1386,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
         setOperationAction(ISD::UINT_TO_FP,     VT, Legal);
         setOperationAction(ISD::FP_TO_SINT,     VT, Legal);
         setOperationAction(ISD::FP_TO_UINT,     VT, Legal);
-
-        setOperationAction(ISD::MUL,            VT, Legal);
       }
     }
 
@@ -22090,6 +22086,13 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
     assert(Subtarget.hasSSE2() && !Subtarget.hasSSE41() &&
            "Should not custom lower when pmulld is available!");
 
+    // If the upper 17 bits of each element are zero then we can use PMADD.
+    APInt Mask17 = APInt::getHighBitsSet(32, 17);
+    if (DAG.MaskedValueIsZero(A, Mask17) && DAG.MaskedValueIsZero(B, Mask17))
+      return DAG.getNode(X86ISD::VPMADDWD, dl, VT,
+                         DAG.getBitcast(MVT::v8i16, A),
+                         DAG.getBitcast(MVT::v8i16, B));
+
     // Extract the odd parts.
     static const int UnpackMask[] = { 1, -1, 3, -1 };
     SDValue Aodds = DAG.getVectorShuffle(VT, dl, A, A, UnpackMask);
@@ -22139,6 +22142,11 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
   APInt UpperBitsMask = APInt::getHighBitsSet(64, 32);
   bool AHiIsZero = DAG.MaskedValueIsZero(A, UpperBitsMask);
   bool BHiIsZero = DAG.MaskedValueIsZero(B, UpperBitsMask);
+
+  // If DQI is supported we can use MULLQ, but MULUDQ is still better if the
+  // the high bits are known to be zero.
+  if (Subtarget.hasDQI() && (!AHiIsZero || !BHiIsZero))
+    return Op;
 
   // Bit cast to 32-bit vectors for MULUDQ.
   SDValue Alo = DAG.getBitcast(MulVT, A);
@@ -32258,6 +32266,13 @@ static SDValue reduceVMULWidth(SDNode *N, SelectionDAG &DAG,
   if ((NumElts % 2) != 0)
     return SDValue();
 
+  // If the upper 17 bits of each element are zero then we can use PMADD.
+  APInt Mask17 = APInt::getHighBitsSet(32, 17);
+  if (VT == MVT::v4i32 && DAG.MaskedValueIsZero(N0, Mask17) &&
+      DAG.MaskedValueIsZero(N1, Mask17))
+    return DAG.getNode(X86ISD::VPMADDWD, DL, VT, DAG.getBitcast(MVT::v8i16, N0),
+                       DAG.getBitcast(MVT::v8i16, N1));
+
   unsigned RegSize = 128;
   MVT OpsVT = MVT::getVectorVT(MVT::i16, RegSize / 16);
   EVT ReducedVT = EVT::getVectorVT(*DAG.getContext(), MVT::i16, NumElts);
@@ -32423,37 +32438,6 @@ static SDValue combineMulSpecial(uint64_t MulAmt, SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue combineVMUL(SDNode *N, SelectionDAG &DAG,
-                           const X86Subtarget &Subtarget) {
-  EVT VT = N->getValueType(0);
-  SDLoc dl(N);
-
-  if (VT.getScalarType() != MVT::i64)
-    return SDValue();
-
-  MVT MulVT = MVT::getVectorVT(MVT::i32, VT.getVectorNumElements() * 2);
-
-  SDValue LHS = N->getOperand(0);
-  SDValue RHS = N->getOperand(1);
-
-  // MULDQ returns the 64-bit result of the signed multiplication of the lower
-  // 32-bits. We can lower with this if the sign bits stretch that far.
-  if (Subtarget.hasSSE41() && DAG.ComputeNumSignBits(LHS) > 32 &&
-      DAG.ComputeNumSignBits(RHS) > 32) {
-    return DAG.getNode(X86ISD::PMULDQ, dl, VT, DAG.getBitcast(MulVT, LHS),
-                       DAG.getBitcast(MulVT, RHS));
-  }
-
-  // If the upper bits are zero we can use a single pmuludq.
-  APInt Mask = APInt::getHighBitsSet(64, 32);
-  if (DAG.MaskedValueIsZero(LHS, Mask) && DAG.MaskedValueIsZero(RHS, Mask)) {
-    return DAG.getNode(X86ISD::PMULUDQ, dl, VT, DAG.getBitcast(MulVT, LHS),
-                       DAG.getBitcast(MulVT, RHS));
-  }
-
-  return SDValue();
-}
-
 /// Optimize a single multiply with constant into two operations in order to
 /// implement it with two cheaper instructions, e.g. LEA + SHL, LEA + LEA.
 static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
@@ -32462,9 +32446,6 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   if (DCI.isBeforeLegalize() && VT.isVector())
     return reduceVMULWidth(N, DAG, Subtarget);
-
-  if (!DCI.isBeforeLegalize() && VT.isVector())
-    return combineVMUL(N, DAG, Subtarget);
 
   if (!MulConstantOptimization)
     return SDValue();
@@ -34907,7 +34888,7 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
     // X86 is rubbish at scalar and vector i64 multiplies (until AVX512DQ) - its
     // better to truncate if we have the chance.
     if (SrcVT.getScalarType() == MVT::i64 && TLI.isOperationLegal(Opcode, VT) &&
-        !TLI.isOperationLegal(Opcode, SrcVT))
+        !Subtarget.hasDQI())
       return TruncateArithmetic(Src.getOperand(0), Src.getOperand(1));
     LLVM_FALLTHROUGH;
   case ISD::ADD: {
