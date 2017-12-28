@@ -48,7 +48,10 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   enum XOPEnum { NoXOP, SSE4A, FMA4, XOP } XOPLevel = NoXOP;
 
   bool HasAES = false;
+  bool HasVAES = false;
   bool HasPCLMUL = false;
+  bool HasVPCLMULQDQ = false;
+  bool HasGFNI = false;
   bool HasLZCNT = false;
   bool HasRDRND = false;
   bool HasFSGSBASE = false;
@@ -65,12 +68,15 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasF16C = false;
   bool HasAVX512CD = false;
   bool HasAVX512VPOPCNTDQ = false;
+  bool HasAVX512VNNI = false;
   bool HasAVX512ER = false;
   bool HasAVX512PF = false;
   bool HasAVX512DQ = false;
+  bool HasAVX512BITALG = false;
   bool HasAVX512BW = false;
   bool HasAVX512VL = false;
   bool HasAVX512VBMI = false;
+  bool HasAVX512VBMI2 = false;
   bool HasAVX512IFMA = false;
   bool HasSHA = false;
   bool HasMPX = false;

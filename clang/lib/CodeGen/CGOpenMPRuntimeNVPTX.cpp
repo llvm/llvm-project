@@ -33,10 +33,11 @@ enum OpenMPRTLFunctionNVPTX {
   /// \brief Call to void __kmpc_spmd_kernel_deinit();
   OMPRTL_NVPTX__kmpc_spmd_kernel_deinit,
   /// \brief Call to void __kmpc_kernel_prepare_parallel(void
-  /// *outlined_function, void ***args, kmp_int32 nArgs);
+  /// *outlined_function, void ***args, kmp_int32 nArgs, int16_t
+  /// IsOMPRuntimeInitialized);
   OMPRTL_NVPTX__kmpc_kernel_prepare_parallel,
   /// \brief Call to bool __kmpc_kernel_parallel(void **outlined_function, void
-  /// ***args);
+  /// ***args, int16_t IsOMPRuntimeInitialized);
   OMPRTL_NVPTX__kmpc_kernel_parallel,
   /// \brief Call to void __kmpc_kernel_end_parallel();
   OMPRTL_NVPTX__kmpc_kernel_end_parallel,
@@ -521,7 +522,9 @@ void CGOpenMPRuntimeNVPTX::emitWorkerLoop(CodeGenFunction &CGF,
   // Set up shared arguments
   Address SharedArgs =
       CGF.CreateDefaultAlignTempAlloca(CGF.Int8PtrPtrTy, "shared_args");
-  llvm::Value *Args[] = {WorkFn.getPointer(), SharedArgs.getPointer()};
+  // TODO: Optimize runtime initialization and pass in correct value.
+  llvm::Value *Args[] = {WorkFn.getPointer(), SharedArgs.getPointer(),
+                         /*RequiresOMPRuntime=*/Bld.getInt16(1)};
   llvm::Value *Ret = CGF.EmitRuntimeCall(
       createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_kernel_parallel), Args);
   Bld.CreateStore(Bld.CreateZExt(Ret, CGF.Int8Ty), ExecStatus);
@@ -637,18 +640,21 @@ CGOpenMPRuntimeNVPTX::createNVPTXRuntimeFunction(unsigned Function) {
   }
   case OMPRTL_NVPTX__kmpc_kernel_prepare_parallel: {
     /// Build void __kmpc_kernel_prepare_parallel(
-    /// void *outlined_function, void ***args, kmp_int32 nArgs);
+    /// void *outlined_function, void ***args, kmp_int32 nArgs, int16_t
+    /// IsOMPRuntimeInitialized);
     llvm::Type *TypeParams[] = {CGM.Int8PtrTy,
-        CGM.Int8PtrPtrTy->getPointerTo(0), CGM.Int32Ty};
+                                CGM.Int8PtrPtrTy->getPointerTo(0), CGM.Int32Ty,
+                                CGM.Int16Ty};
     llvm::FunctionType *FnTy =
         llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
     RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_kernel_prepare_parallel");
     break;
   }
   case OMPRTL_NVPTX__kmpc_kernel_parallel: {
-    /// Build bool __kmpc_kernel_parallel(void **outlined_function, void ***args);
+    /// Build bool __kmpc_kernel_parallel(void **outlined_function, void
+    /// ***args, int16_t IsOMPRuntimeInitialized);
     llvm::Type *TypeParams[] = {CGM.Int8PtrPtrTy,
-        CGM.Int8PtrPtrTy->getPointerTo(0)};
+                                CGM.Int8PtrPtrTy->getPointerTo(0), CGM.Int16Ty};
     llvm::Type *RetTy = CGM.getTypes().ConvertType(CGM.getContext().BoolTy);
     llvm::FunctionType *FnTy =
         llvm::FunctionType::get(RetTy, TypeParams, /*isVarArg*/ false);
@@ -949,8 +955,10 @@ void CGOpenMPRuntimeNVPTX::emitGenericParallelCall(
           CGF.CreateDefaultAlignTempAlloca(CGF.VoidPtrPtrTy,
               "shared_args");
       llvm::Value *SharedArgsPtr = SharedArgs.getPointer();
+      // TODO: Optimize runtime initialization and pass in correct value.
       llvm::Value *Args[] = {ID, SharedArgsPtr,
-                             Bld.getInt32(CapturedVars.size())};
+                             Bld.getInt32(CapturedVars.size()),
+                             /*RequiresOMPRuntime=*/Bld.getInt16(1)};
 
       CGF.EmitRuntimeCall(
           createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_kernel_prepare_parallel),
@@ -970,9 +978,10 @@ void CGOpenMPRuntimeNVPTX::emitGenericParallelCall(
         Idx++;
       }
     } else {
-      llvm::Value *Args[] = {ID,
-          llvm::ConstantPointerNull::get(CGF.VoidPtrPtrTy->getPointerTo(0)),
-          /*nArgs=*/Bld.getInt32(0)};
+      // TODO: Optimize runtime initialization and pass in correct value.
+      llvm::Value *Args[] = {
+          ID, llvm::ConstantPointerNull::get(CGF.VoidPtrPtrTy->getPointerTo(0)),
+          /*nArgs=*/Bld.getInt32(0), /*RequiresOMPRuntime=*/Bld.getInt16(1)};
       CGF.EmitRuntimeCall(
           createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_kernel_prepare_parallel),
           Args);

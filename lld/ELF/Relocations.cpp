@@ -581,6 +581,8 @@ static RelExpr getPltExpr(Symbol &Sym, RelExpr Expr, bool &IsConstant) {
   return toPlt(Expr);
 }
 
+// This modifies the expression if we can use a copy relocation or point the
+// symbol to the PLT.
 template <class ELFT>
 static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
                           InputSectionBase &S, uint64_t RelOff,
@@ -598,23 +600,19 @@ static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
     return Expr;
   }
 
-  // If a section writable or if we are allowed to create dynamic relocations
-  // against read-only sections (i.e. when "-z notext" is given), we can create
-  // any dynamic relocation the dynamic linker knows how to handle.
-  if ((S.Flags & SHF_WRITE) || !Config->ZText) {
-    // We use PLT for relocations that may overflow in runtime,
-    // see comment for getPltExpr().
-    if (Sym.isFunc() && !Target->isPicRel(Type))
-      return getPltExpr(Sym, Expr, IsConstant);
+  // We can create any dynamic relocation supported by the dynamic linker if a
+  // section is writable or we are passed -z notext.
+  bool CanWrite = (S.Flags & SHF_WRITE) || !Config->ZText;
+  if (CanWrite && Target->isPicRel(Type))
     return Expr;
-  }
 
   // If we got here we know that this relocation would require the dynamic
-  // linker to write a value to read only memory.
+  // linker to write a value to read only memory or use an unsupported
+  // relocation.
 
   // We can hack around it if we are producing an executable and
   // the refered symbol can be preemepted to refer to the executable.
-  if (Config->Shared || (Config->Pic && !isRelExpr(Expr))) {
+  if (!CanWrite && (Config->Shared || (Config->Pic && !isRelExpr(Expr)))) {
     error(
         "can't create dynamic relocation " + toString(Type) + " against " +
         (Sym.getName().empty() ? "local symbol" : "symbol: " + toString(Sym)) +
@@ -622,6 +620,11 @@ static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
         getLocation(S, Sym, RelOff));
     return Expr;
   }
+
+  // Copy relocations are only possible if we are creating an executable and the
+  // symbol is shared.
+  if (!Sym.isShared() || Config->Shared)
+    return Expr;
 
   if (Sym.getVisibility() != STV_DEFAULT) {
     error("cannot preempt symbol: " + toString(Sym) +

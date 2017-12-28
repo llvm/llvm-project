@@ -7,6 +7,8 @@ set(files
   arm64intr.h
   avx2intrin.h
   avx512bwintrin.h
+  avx512bitalgintrin.h
+  avx512vlbitalgintrin.h
   avx512cdintrin.h
   avx512vpopcntdqintrin.h
   avx512dqintrin.h
@@ -17,11 +19,15 @@ set(files
   avx512pfintrin.h
   avx512vbmiintrin.h
   avx512vbmivlintrin.h
+  avx512vbmi2intrin.h
+  avx512vlvbmi2intrin.h
   avx512vlbwintrin.h
   avx512vlcdintrin.h
   avx512vldqintrin.h
   avx512vlintrin.h
   avx512vpopcntdqvlintrin.h
+  avx512vnniintrin.h
+  avx512vlvnniintrin.h
   avxintrin.h
   bmi2intrin.h
   bmiintrin.h
@@ -42,6 +48,7 @@ set(files
   fma4intrin.h
   fmaintrin.h
   fxsrintrin.h
+  gfniintrin.h
   htmintrin.h
   htmxlintrin.h
   ia32intrin.h
@@ -82,8 +89,10 @@ set(files
   tmmintrin.h
   unwind.h
   vadefs.h
+  vaesintrin.h
   varargs.h
   vecintrin.h
+  vpclmulqdqintrin.h
   wmmintrin.h
   __wmmintrin_aes.h
   __wmmintrin_pclmul.h

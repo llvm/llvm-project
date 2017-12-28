@@ -495,6 +495,36 @@ TEST(ImportType, ImportAtomicType) {
                            has(atomicType())))))))));
 }
 
+TEST(ImportDecl, ImportFunctionTemplateDecl) {
+  MatchVerifier<Decl> Verifier;
+  testImport("template <typename T> void declToImport() { };", Lang_CXX, "",
+             Lang_CXX, Verifier, functionTemplateDecl());
+}
+
+const internal::VariadicDynCastAllOfMatcher<Expr, CXXDependentScopeMemberExpr>
+    cxxDependentScopeMemberExpr;
+
+TEST(ImportExpr, ImportCXXDependentScopeMemberExpr) {
+  MatchVerifier<Decl> Verifier;
+  testImport("template <typename T> struct C { T t; };"
+             "template <typename T> void declToImport() {"
+             "  C<T> d;"
+             "  d.t;"
+             "}"
+             "void instantiate() { declToImport<int>(); }",
+             Lang_CXX, "", Lang_CXX, Verifier,
+             functionTemplateDecl(has(functionDecl(
+                 has(compoundStmt(has(cxxDependentScopeMemberExpr())))))));
+  testImport("template <typename T> struct C { T t; };"
+             "template <typename T> void declToImport() {"
+             "  C<T> d;"
+             "  (&d)->t;"
+             "}"
+             "void instantiate() { declToImport<int>(); }",
+             Lang_CXX, "", Lang_CXX, Verifier,
+             functionTemplateDecl(has(functionDecl(
+                 has(compoundStmt(has(cxxDependentScopeMemberExpr())))))));
+}
 
 TEST(ImportType, ImportTypeAliasTemplate) {
   MatchVerifier<Decl> Verifier;

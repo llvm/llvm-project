@@ -41,7 +41,7 @@ $ mkdir build && cd build
 $ cmake path/to/openmp -DCMAKE_C_COMPILER=<C compiler> -DCMAKE_CXX_COMPILER=<C++ compiler>
 $ make
 
-For details about building, please look at Build_With_CMake.txt
+For details about building, please look at README.rst in the parent directory.
 
 Architectures Supported
 =======================
