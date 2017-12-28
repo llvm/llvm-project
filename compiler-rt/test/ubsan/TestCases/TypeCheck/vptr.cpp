@@ -1,41 +1,53 @@
-// RUN: %clangxx -frtti -fsanitize=null,vptr -fno-sanitize-recover=null,vptr -g %s -O3 -o %t -mllvm -enable-tail-merge=false
-// RUN: %run %t rT && %run %t mT && %run %t fT && %run %t cT
-// RUN: %run %t rU && %run %t mU && %run %t fU && %run %t cU
-// RUN: %run %t rS && %run %t rV && %run %t oV
-// RUN: %env_ubsan_opts=print_stacktrace=1 not %run %t mS 2>&1 | FileCheck %s --check-prefix=CHECK-MEMBER --check-prefix=CHECK-%os-MEMBER --strict-whitespace
-// RUN: %env_ubsan_opts=print_stacktrace=1 not %run %t fS 2>&1 | FileCheck %s --check-prefix=CHECK-MEMFUN --strict-whitespace
-// RUN: %env_ubsan_opts=print_stacktrace=1 not %run %t cS 2>&1 | FileCheck %s --check-prefix=CHECK-DOWNCAST --check-prefix=CHECK-%os-DOWNCAST --strict-whitespace
-// RUN: %env_ubsan_opts=print_stacktrace=1 not %run %t mV 2>&1 | FileCheck %s --check-prefix=CHECK-MEMBER --check-prefix=CHECK-%os-MEMBER --strict-whitespace
-// RUN: %env_ubsan_opts=print_stacktrace=1 not %run %t fV 2>&1 | FileCheck %s --check-prefix=CHECK-MEMFUN --strict-whitespace
-// RUN: %env_ubsan_opts=print_stacktrace=1 not %run %t cV 2>&1 | FileCheck %s --check-prefix=CHECK-DOWNCAST --check-prefix=CHECK-%os-DOWNCAST --strict-whitespace
-// RUN: %env_ubsan_opts=print_stacktrace=1 not %run %t oU 2>&1 | FileCheck %s --check-prefix=CHECK-OFFSET --check-prefix=CHECK-%os-OFFSET --strict-whitespace
-// RUN: %env_ubsan_opts=print_stacktrace=1 not %run %t m0 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-MEMBER --check-prefix=CHECK-%os-NULL-MEMBER --strict-whitespace
-// RUN: %env_ubsan_opts=print_stacktrace=1 not %run %t m0 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-MEMBER --check-prefix=CHECK-%os-NULL-MEMBER --strict-whitespace
-// RUN: not %run %t nN 2>&1 | FileCheck %s --check-prefix=CHECK-NULL-MEMFUN --strict-whitespace
+// RUN: %clangxx -frtti -fsanitize=null,vptr -g %s -O3 -o %t -mllvm -enable-tail-merge=false
+// RUN: %env_ubsan_opts=halt_on_error=1 %run %t rT
+// RUN: %env_ubsan_opts=halt_on_error=1 %run %t mT
+// RUN: %env_ubsan_opts=halt_on_error=1 %run %t fT
+// RUN: %env_ubsan_opts=halt_on_error=1 %run %t cT
+// RUN: %env_ubsan_opts=halt_on_error=1 %run %t rU
+// RUN: %env_ubsan_opts=halt_on_error=1 %run %t mU
+// RUN: %env_ubsan_opts=halt_on_error=1 %run %t fU
+// RUN: %env_ubsan_opts=halt_on_error=1 %run %t cU
+// RUN: %env_ubsan_opts=halt_on_error=1 %run %t rS
+// RUN: %env_ubsan_opts=halt_on_error=1 %run %t rV
+// RUN: %env_ubsan_opts=halt_on_error=1 %run %t oV
+// RUN: %env_ubsan_opts=halt_on_error=1 %run %t zN
+// RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t mS 2>&1 | FileCheck %s --check-prefix=CHECK-MEMBER --check-prefix=CHECK-%os-MEMBER --strict-whitespace
+// RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t fS 2>&1 | FileCheck %s --check-prefix=CHECK-MEMFUN --strict-whitespace
+// RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t cS 2>&1 | FileCheck %s --check-prefix=CHECK-DOWNCAST --check-prefix=CHECK-%os-DOWNCAST --strict-whitespace
+// RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t mV 2>&1 | FileCheck %s --check-prefix=CHECK-MEMBER --check-prefix=CHECK-%os-MEMBER --strict-whitespace
+// RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t fV 2>&1 | FileCheck %s --check-prefix=CHECK-MEMFUN --strict-whitespace
+// RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t cV 2>&1 | FileCheck %s --check-prefix=CHECK-DOWNCAST --check-prefix=CHECK-%os-DOWNCAST --strict-whitespace
+// RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t oU 2>&1 | FileCheck %s --check-prefix=CHECK-OFFSET --check-prefix=CHECK-%os-OFFSET --strict-whitespace
+// RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t m0 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-MEMBER --check-prefix=CHECK-%os-NULL-MEMBER --strict-whitespace
+// RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t m0 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-MEMBER --check-prefix=CHECK-%os-NULL-MEMBER --strict-whitespace
+// RUN: %env_ubsan_opts=halt_on_error=1 not %run %t nN 2>&1 | FileCheck %s --check-prefix=CHECK-NULL-MEMFUN --strict-whitespace
+// RUN: %env_ubsan_opts=print_stacktrace=1 %run %t dT 2>&1 | FileCheck %s --check-prefix=CHECK-DYNAMIC --check-prefix=CHECK-%os-DYNAMIC --strict-whitespace
 
 // RUN: (echo "vptr_check:S"; echo "vptr_check:T"; echo "vptr_check:U") > %t.supp
-// RUN: %env_ubsan_opts=suppressions='"%t.supp"' %run %t mS
-// RUN: %env_ubsan_opts=suppressions='"%t.supp"' %run %t fS
-// RUN: %env_ubsan_opts=suppressions='"%t.supp"' %run %t cS
-// RUN: %env_ubsan_opts=suppressions='"%t.supp"' %run %t mV
-// RUN: %env_ubsan_opts=suppressions='"%t.supp"' %run %t fV
-// RUN: %env_ubsan_opts=suppressions='"%t.supp"' %run %t cV
-// RUN: %env_ubsan_opts=suppressions='"%t.supp"' %run %t oU
+// RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.supp"' %run %t mS
+// RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.supp"' %run %t fS
+// RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.supp"' %run %t cS
+// RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.supp"' %run %t mV
+// RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.supp"' %run %t fV
+// RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.supp"' %run %t cV
+// RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.supp"' %run %t oU
+// RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.supp"' %run %t dT
 
 // RUN: echo "vptr_check:S" > %t.loc-supp
-// RUN: %env_ubsan_opts=suppressions='"%t.loc-supp"' not %run %t x- 2>&1 | FileCheck %s --check-prefix=CHECK-LOC-SUPPRESS
+// RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.loc-supp"' not %run %t x- 2>&1 | FileCheck %s --check-prefix=CHECK-LOC-SUPPRESS
 
 // REQUIRES: stable-runtime, cxxabi
 // UNSUPPORTED: win32
 // Suppressions file not pushed to the device.
 // UNSUPPORTED: android
 #include <new>
+#include <typeinfo>
 #include <assert.h>
 #include <stdio.h>
 
 struct S {
   S() : a(0) {}
-  ~S() {}
+  ~S();
   int a;
   int f() { return 0; }
   virtual int v() { return 0; }
@@ -52,12 +64,22 @@ struct U : S, T { virtual int v() { return 2; } };
 
 struct V : S {};
 
-// Make p global so that lsan does not complain.
+namespace {
+  struct W {};
+}
+
 T *p = 0;
+
+bool dtorCheck = false;
 
 volatile void *sink1, *sink2;
 
 int access_p(T *p, char type);
+
+S::~S() {
+  if (dtorCheck)
+    access_p(p, '~');
+}
 
 int main(int argc, char **argv) {
   assert(argc > 1);
@@ -180,6 +202,51 @@ int access_p(T *p, char type) {
   case 'n':
     // CHECK-NULL-MEMFUN: vptr.cpp:[[@LINE+1]]:15: runtime error: member call on null pointer of type 'T'
     return p->g();
+
+  case 'd':
+    dtorCheck = true;
+    delete p;
+    dtorCheck = false;
+    return 0;
+  case '~':
+    // CHECK-DYNAMIC: vptr.cpp:[[@LINE+6]]:11: runtime error: dynamic operation on address [[PTR:0x[0-9a-f]*]] which does not point to an object of type 'T'
+    // CHECK-DYNAMIC-NEXT: [[PTR]]: note: object is of type 'S'
+    // CHECK-DYNAMIC-NEXT: {{^ .. .. .. ..  .. .. .. .. .. .. .. ..  }}
+    // CHECK-DYNAMIC-NEXT: {{^              \^~~~~~~~~~~(~~~~~~~~~~~~)? *$}}
+    // CHECK-DYNAMIC-NEXT: {{^              vptr for}} 'S'
+    // CHECK-Linux-DYNAMIC: #0 {{.*}}access_p{{.*}}vptr.cpp:[[@LINE+1]]
+    (void)dynamic_cast<V*>(p);
+    // CHECK-DYNAMIC: vptr.cpp:[[@LINE+6]]:11: runtime error: dynamic operation on address [[PTR:0x[0-9a-f]*]] which does not point to an object of type 'T'
+    // CHECK-DYNAMIC-NEXT: [[PTR]]: note: object is of type 'S'
+    // CHECK-DYNAMIC-NEXT: {{^ .. .. .. ..  .. .. .. .. .. .. .. ..  }}
+    // CHECK-DYNAMIC-NEXT: {{^              \^~~~~~~~~~~(~~~~~~~~~~~~)? *$}}
+    // CHECK-DYNAMIC-NEXT: {{^              vptr for}} 'S'
+    // CHECK-Linux-DYNAMIC: #0 {{.*}}access_p{{.*}}vptr.cpp:[[@LINE+1]]
+    (void)dynamic_cast<W*>(p);
+    try {
+      // CHECK-DYNAMIC: vptr.cpp:[[@LINE+6]]:13: runtime error: dynamic operation on address [[PTR:0x[0-9a-f]*]] which does not point to an object of type 'T'
+      // CHECK-DYNAMIC-NEXT: [[PTR]]: note: object is of type 'S'
+      // CHECK-DYNAMIC-NEXT: {{^ .. .. .. ..  .. .. .. .. .. .. .. ..  }}
+      // CHECK-DYNAMIC-NEXT: {{^              \^~~~~~~~~~~(~~~~~~~~~~~~)? *$}}
+      // CHECK-DYNAMIC-NEXT: {{^              vptr for}} 'S'
+      // CHECK-Linux-DYNAMIC: #0 {{.*}}access_p{{.*}}vptr.cpp:[[@LINE+1]]
+      (void)dynamic_cast<V&>(*p);
+    } catch (std::bad_cast &) {}
+    // CHECK-DYNAMIC: vptr.cpp:[[@LINE+6]]:18: runtime error: dynamic operation on address [[PTR:0x[0-9a-f]*]] which does not point to an object of type 'T'
+    // CHECK-DYNAMIC-NEXT: [[PTR]]: note: object is of type 'S'
+    // CHECK-DYNAMIC-NEXT: {{^ .. .. .. ..  .. .. .. .. .. .. .. ..  }}
+    // CHECK-DYNAMIC-NEXT: {{^              \^~~~~~~~~~~(~~~~~~~~~~~~)? *$}}
+    // CHECK-DYNAMIC-NEXT: {{^              vptr for}} 'S'
+    // CHECK-Linux-DYNAMIC: #0 {{.*}}access_p{{.*}}vptr.cpp:[[@LINE+1]]
+    (void)typeid(*p);
+    return 0;
+
+  case 'z':
+    (void)dynamic_cast<V*>(p);
+    try {
+      (void)typeid(*p);
+    } catch (std::bad_typeid &) {}
+    return 0;
   }
   return 0;
 }
