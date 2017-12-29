@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -verify -triple powerpc64le-unknown-linux-gnu -fopenmp -x c -emit-llvm %s -o - | FileCheck %s
 
+// RUN: %clang_cc1 -verify -triple powerpc64le-unknown-linux-gnu -fopenmp-simd -x c -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
+
 int a;
 
 // CHECK-LABEL: foo

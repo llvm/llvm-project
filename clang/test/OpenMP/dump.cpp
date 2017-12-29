@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -verify -fopenmp -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -ast-dump %s | FileCheck %s
 // expected-no-diagnostics
 
 int ga, gb;
@@ -12,7 +13,7 @@ int ga, gb;
 
 #pragma omp declare reduction(fun : float : omp_out += omp_in) initializer(omp_priv = omp_orig + 15)
 
-// CHECK:      |-OMPDeclareReductionDecl {{.+}} <line:11:35> col:35 operator+ 'int' combiner
+// CHECK:      |-OMPDeclareReductionDecl {{.+}} <line:12:35> col:35 operator+ 'int' combiner
 // CHECK-NEXT: | |-CompoundAssignOperator {{.+}} <col:47, col:58> 'int' lvalue '*=' ComputeLHSTy='int' ComputeResultTy='int'
 // CHECK-NEXT: | | |-DeclRefExpr {{.+}} <col:47> 'int' lvalue Var {{.+}} 'omp_out' 'int'
 // CHECK-NEXT: | | `-ImplicitCastExpr {{.+}} <col:58> 'int' <LValueToRValue>
@@ -27,7 +28,7 @@ int ga, gb;
 // CHECK-NEXT: | |     `-DeclRefExpr {{.+}} <col:58> 'char' lvalue Var {{.+}} 'omp_in' 'char'
 // CHECK-NEXT: | |-VarDecl {{.+}} <col:40> col:40 implicit used omp_in 'char'
 // CHECK-NEXT: | `-VarDecl {{.+}} <col:40> col:40 implicit used omp_out 'char'
-// CHECK-NEXT: |-OMPDeclareReductionDecl {{.+}} <line:13:37> col:37 fun 'float' combiner initializer
+// CHECK-NEXT: |-OMPDeclareReductionDecl {{.+}} <line:14:37> col:37 fun 'float' combiner initializer
 // CHECK-NEXT: | |-CompoundAssignOperator {{.+}} <col:45, col:56> 'float' lvalue '+=' ComputeLHSTy='float' ComputeResultTy='float'
 // CHECK-NEXT: | | |-DeclRefExpr {{.+}} <col:45> 'float' lvalue Var {{.+}} 'omp_out' 'float'
 // CHECK-NEXT: | | `-ImplicitCastExpr {{.+}} <col:56> 'float' <LValueToRValue>
@@ -42,7 +43,7 @@ struct S {
   }
 };
 
-// CHECK:      |     `-OMPParallelForDirective {{.+}} <line:39:9, col:80>
+// CHECK:      |     `-OMPParallelForDirective {{.+}} {{<line:40:9, col:80>|<col:9, col:80>}}
 // CHECK-NEXT: |       |-OMPDefaultClause {{.+}} <col:26, col:40>
 // CHECK-NEXT: |       |-OMPPrivateClause {{.+}} <col:40, col:51>
 // CHECK-NEXT: |       | `-DeclRefExpr {{.+}} <col:48> 'int' lvalue OMPCapturedExpr {{.+}} 'a' 'int &'
@@ -52,17 +53,17 @@ struct S {
 // CHECK-NEXT: |       |-OMPScheduleClause {{.+}} <col:61, col:79>
 // CHECK-NEXT: |       | `-ImplicitCastExpr {{.+}} <col:78> 'int' <LValueToRValue>
 // CHECK-NEXT: |       |   `-DeclRefExpr {{.+}} <col:78> 'int' lvalue OMPCapturedExpr {{.+}} '.capture_expr.' 'int'
-// CHECK-NEXT: |       |-CapturedStmt {{.+}} <line:40:5, line:41:9>
+// CHECK-NEXT: |       |-CapturedStmt {{.+}} <line:41:5, line:42:9>
 // CHECK-NEXT: |       | |-CapturedDecl {{.+}} <<invalid sloc>> <invalid sloc>
-// CHECK-NEXT: |       | | |-ForStmt {{.+}} <line:40:5, line:41:9>
-// CHECK:      |       | | | `-UnaryOperator {{.+}} <line:41:7, col:9> 'int' lvalue prefix '++'
+// CHECK-NEXT: |       | | |-ForStmt {{.+}} <line:41:5, line:42:9>
+// CHECK:      |       | | | `-UnaryOperator {{.+}} <line:42:7, col:9> 'int' lvalue prefix '++'
 // CHECK-NEXT: |       | | |   `-DeclRefExpr {{.+}} <col:9> 'int' lvalue OMPCapturedExpr {{.+}} 'a' 'int &'
 
 #pragma omp declare simd
 #pragma omp declare simd inbranch
 void foo();
 
-// CHECK:      `-FunctionDecl {{.+}} <line:63:1, col:10> col:6 foo 'void ()'
-// CHECK-NEXT:   |-OMPDeclareSimdDeclAttr {{.+}} <line:62:9, col:34> Implicit BS_Inbranch
-// CHECK:        `-OMPDeclareSimdDeclAttr {{.+}} <line:61:9, col:25> Implicit BS_Undefined
+// CHECK:      `-FunctionDecl {{.+}} <line:64:1, col:10> col:6 foo 'void ()'
+// CHECK-NEXT:   |-OMPDeclareSimdDeclAttr {{.+}} <line:63:9, col:34> Implicit BS_Inbranch
+// CHECK:        `-OMPDeclareSimdDeclAttr {{.+}} <line:62:9, col:25> Implicit BS_Undefined
 

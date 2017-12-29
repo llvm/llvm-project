@@ -2,6 +2,11 @@
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 -std=c++98 %s
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 -std=c++11 %s
 
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 -std=c++98 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 -std=c++11 %s
+// SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
+
 int nested(int a) {
 #pragma omp parallel
   ++a;
