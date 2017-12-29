@@ -101,7 +101,7 @@ E: nico.rieck@gmail.com
 D: Windows fixes
 
 N: Jon Roelofs
-E: jonathan@jroelofs.com
+E: jroelofS@jroelofs.com
 D: Remote testing, Newlib port, baremetal/single-threaded support.
 
 N: Jonathan Sauer
