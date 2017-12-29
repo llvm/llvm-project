@@ -794,7 +794,7 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
   if (MsanTrackOrigins)
     CmdArgs.push_back(Args.MakeArgString("-fsanitize-memory-track-origins=" +
-                                         llvm::utostr(MsanTrackOrigins)));
+                                         Twine(MsanTrackOrigins)));
 
   if (MsanUseAfterDtor)
     CmdArgs.push_back("-fsanitize-memory-use-after-dtor");
@@ -829,7 +829,7 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
   if (AsanFieldPadding)
     CmdArgs.push_back(Args.MakeArgString("-fsanitize-address-field-padding=" +
-                                         llvm::utostr(AsanFieldPadding)));
+                                         Twine(AsanFieldPadding)));
 
   if (AsanUseAfterScope)
     CmdArgs.push_back("-fsanitize-address-use-after-scope");

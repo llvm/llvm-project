@@ -139,7 +139,6 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "avx512vnni", true);
     setFeatureEnabledImpl(Features, "avx512vbmi2", true);
     setFeatureEnabledImpl(Features, "avx512vpopcntdq", true);
-    setFeatureEnabledImpl(Features, "clwb", true);
     LLVM_FALLTHROUGH;
   case CK_Cannonlake:
     setFeatureEnabledImpl(Features, "avx512ifma", true);
@@ -152,10 +151,8 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "avx512dq", true);
     setFeatureEnabledImpl(Features, "avx512bw", true);
     setFeatureEnabledImpl(Features, "avx512vl", true);
-    if (Kind == CK_SkylakeServer) {
-      setFeatureEnabledImpl(Features, "pku", true);
-      setFeatureEnabledImpl(Features, "clwb", true);
-    }
+    setFeatureEnabledImpl(Features, "pku", true);
+    setFeatureEnabledImpl(Features, "clwb", true);
     LLVM_FALLTHROUGH;
   case CK_SkylakeClient:
     setFeatureEnabledImpl(Features, "xsavec", true);

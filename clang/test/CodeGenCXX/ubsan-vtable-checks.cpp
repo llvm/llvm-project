@@ -38,3 +38,15 @@ void delete_it(T *t) {
   // CHECK-VPTR: load {{.*}} (%struct.T*{{.*}})**, {{.*}} (%struct.T*{{.*}})***
   delete t;
 }
+
+// ITANIUM: define %struct.U* @_Z7dyncastP1T
+// MSABI: define %struct.U* @"\01?dyncast
+U* dyncast(T *t) {
+  // First, we check that dynamic_cast is not called before a type check.
+  // CHECK-VPTR-NOT: call i8* @__{{dynamic_cast|RTDynamicCast}}
+  // CHECK-VPTR: br i1 {{.*}} label %{{.*}}
+  // CHECK-VPTR: call void @__ubsan_handle_dynamic_type_cache_miss_abort
+  // Second, we check that dynamic_cast is actually called once the type check is done.
+  // CHECK-VPTR: call i8* @__{{dynamic_cast|RTDynamicCast}}
+  return dynamic_cast<U*>(t);
+}

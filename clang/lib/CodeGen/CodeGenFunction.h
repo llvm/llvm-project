@@ -2371,7 +2371,10 @@ public:
     /// object within its lifetime.
     TCK_UpcastToVirtualBase,
     /// Checking the value assigned to a _Nonnull pointer. Must not be null.
-    TCK_NonnullAssign
+    TCK_NonnullAssign,
+    /// Checking the operand of a dynamic_cast or a typeid expression.  Must be
+    /// null or an object within its lifetime.
+    TCK_DynamicOperation
   };
 
   /// Determine whether the pointer type check \p TCK permits null pointers.
