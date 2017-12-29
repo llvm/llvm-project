@@ -250,7 +250,8 @@ Parser::ParseOpenMPDeclareReductionDirective(AccessSpecifier AS) {
   do {
     ColonProtectionRAIIObject ColonRAII(*this);
     SourceRange Range;
-    TypeResult TR = ParseTypeName(&Range, Declarator::PrototypeContext, AS);
+    TypeResult TR =
+        ParseTypeName(&Range, DeclaratorContext::PrototypeContext, AS);
     if (TR.isUsable()) {
       auto ReductionType =
           Actions.ActOnOpenMPDeclareReductionType(Range.getBegin(), TR);

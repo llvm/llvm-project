@@ -127,16 +127,6 @@ static cl::opt<unsigned> MaxSpeculationDepth(
     cl::desc("Limit maximum recursion depth when calculating costs of "
              "speculatively executed instructions"));
 
-static cl::opt<unsigned> DependenceChainLatency(
-    "dependence-chain-latency", cl::Hidden, cl::init(8),
-    cl::desc("Limit the maximum latency of dependence chain containing cmp "
-             "for if conversion"));
-
-static cl::opt<unsigned> SmallBBSize(
-    "small-bb-size", cl::Hidden, cl::init(40),
-    cl::desc("Check dependence chain latency only in basic block smaller than "
-             "this number"));
-
 STATISTIC(NumBitMaps, "Number of switch instructions turned into bitmaps");
 STATISTIC(NumLinearMaps,
           "Number of switch instructions turned into linear mapping");
@@ -403,166 +393,6 @@ static bool DominatesMergePoint(Value *V, BasicBlock *BB,
   // Okay, it's safe to do this!  Remember this instruction.
   AggressiveInsts->insert(I);
   return true;
-}
-
-/// Estimate the code size of the specified BB.
-static unsigned CountBBCodeSize(BasicBlock *BB,
-                                const TargetTransformInfo &TTI) {
-  unsigned Size = 0;
-  for (auto II = BB->begin(); !isa<TerminatorInst>(II); ++II)
-    Size += TTI.getInstructionCost(&(*II), TargetTransformInfo::TCK_CodeSize);
-  return Size;
-}
-
-/// Find out the latency of the longest dependence chain in the BB if
-/// LongestChain is true, or the dependence chain containing the compare
-/// instruction feeding the block's conditional branch.
-static unsigned FindDependenceChainLatency(BasicBlock *BB,
-                            DenseMap<Instruction *, unsigned> &Instructions,
-                            const TargetTransformInfo &TTI,
-                            bool LongestChain) {
-  unsigned MaxLatency = 0;
-
-  BasicBlock::iterator II;
-  for (II = BB->begin(); !isa<TerminatorInst>(II); ++II) {
-    unsigned Latency = 0;
-    for (unsigned O = 0, E = II->getNumOperands(); O != E; ++O) {
-      Instruction *Op = dyn_cast<Instruction>(II->getOperand(O));
-      if (Op && Instructions.count(Op)) {
-        auto OpLatency = Instructions[Op];
-        if (OpLatency > Latency)
-          Latency = OpLatency;
-      }
-    }
-    Latency += TTI.getInstructionCost(&(*II), TargetTransformInfo::TCK_Latency);
-    Instructions[&(*II)] = Latency;
-
-    if (Latency > MaxLatency)
-      MaxLatency = Latency;
-  }
-
-  if (LongestChain)
-    return MaxLatency;
-
-  // The length of the dependence chain containing the compare instruction is
-  // wanted, so the terminator must be a BranchInst.
-  assert(isa<BranchInst>(II));
-  BranchInst* Br = cast<BranchInst>(II);
-  Instruction *Cmp = dyn_cast<Instruction>(Br->getCondition());
-  if (Cmp && Instructions.count(Cmp))
-    return Instructions[Cmp];
-  else
-    return 0;
-}
-
-/// Instructions in BB2 may depend on instructions in BB1, and instructions
-/// in BB1 may have users in BB2. If the last (in terms of latency) such kind
-/// of instruction in BB1 is I, then the instructions after I can be executed
-/// in parallel with instructions in BB2.
-/// This function returns the latency of I.
-static unsigned LatencyAdjustment(BasicBlock *BB1, BasicBlock *BB2,
-                        BasicBlock *IfBlock1, BasicBlock *IfBlock2,
-                        DenseMap<Instruction *, unsigned> &BB1Instructions) {
-  unsigned LastLatency = 0;
-  SmallVector<Instruction *, 16> Worklist;
-  BasicBlock::iterator II;
-  for (II = BB2->begin(); !isa<TerminatorInst>(II); ++II) {
-    if (PHINode *PN = dyn_cast<PHINode>(II)) {
-      // Look for users in BB2.
-      bool InBBUser = false;
-      for (User *U : PN->users()) {
-        if (cast<Instruction>(U)->getParent() == BB2) {
-          InBBUser = true;
-          break;
-        }
-      }
-      // No such user, we don't care about this instruction and its operands.
-      if (!InBBUser)
-        break;
-    }
-    Worklist.push_back(&(*II));
-  }
-
-  while (!Worklist.empty()) {
-    Instruction *I = Worklist.pop_back_val();
-    for (unsigned O = 0, E = I->getNumOperands(); O != E; ++O) {
-      if (Instruction *Op = dyn_cast<Instruction>(I->getOperand(O))) {
-        if (Op->getParent() == IfBlock1 || Op->getParent() == IfBlock2)
-          Worklist.push_back(Op);
-        else if (Op->getParent() == BB1 && BB1Instructions.count(Op)) {
-          if (BB1Instructions[Op] > LastLatency)
-            LastLatency = BB1Instructions[Op];
-        }
-      }
-    }
-  }
-
-  return LastLatency;
-}
-
-/// If after if conversion, most of the instructions in this new BB construct a
-/// long and slow dependence chain, it may be slower than cmp/branch, even
-/// if the branch has a high miss rate, because the control dependence is
-/// transformed into data dependence, and control dependence can be speculated,
-/// and thus, the second part can execute in parallel with the first part on
-/// modern OOO processor.
-///
-/// To check this condition, this function finds the length of the dependence
-/// chain in BB1 (only the part that can be executed in parallel with code after
-/// branch in BB2) containing cmp, and if the length is longer than a threshold,
-/// don't perform if conversion.
-///
-/// BB1, BB2, IfBlock1 and IfBlock2 are candidate BBs for if conversion.
-/// SpeculationSize contains the code size of IfBlock1 and IfBlock2.
-static bool FindLongDependenceChain(BasicBlock *BB1, BasicBlock *BB2,
-                             BasicBlock *IfBlock1, BasicBlock *IfBlock2,
-                             unsigned SpeculationSize,
-                             const TargetTransformInfo &TTI) {
-  // Accumulated latency of each instruction in their BBs.
-  DenseMap<Instruction *, unsigned> BB1Instructions;
-  DenseMap<Instruction *, unsigned> BB2Instructions;
-
-  if (!TTI.isOutOfOrder())
-    return false;
-
-  unsigned NewBBSize = CountBBCodeSize(BB1, TTI) + CountBBCodeSize(BB2, TTI)
-                         + SpeculationSize;
-
-  // We check small BB only since it is more difficult to find unrelated
-  // instructions to fill functional units in a small BB.
-  if (NewBBSize > SmallBBSize)
-    return false;
-
-  auto BB1Chain =
-         FindDependenceChainLatency(BB1, BB1Instructions, TTI, false);
-  auto BB2Chain =
-         FindDependenceChainLatency(BB2, BB2Instructions, TTI, true);
-
-  // If there are many unrelated instructions in the new BB, there will be
-  // other instructions for the processor to issue regardless of the length
-  // of this new dependence chain.
-  // Modern processors can issue 3 or more instructions in each cycle. But in
-  // real world applications, an IPC of 2 is already very good for non-loop
-  // code with small basic blocks. Higher IPC is usually found in programs with
-  // small kernel. So IPC of 2 is more reasonable for most applications.
-  if ((BB1Chain + BB2Chain) * 2 <= NewBBSize)
-    return false;
-
-  // We only care about part of the dependence chain in BB1 that can be
-  // executed in parallel with BB2, so adjust the latency.
-  BB1Chain -=
-      LatencyAdjustment(BB1, BB2, IfBlock1, IfBlock2, BB1Instructions);
-
-  // Correctly predicted branch instruction can skip the dependence chain in
-  // BB1, but misprediction has a penalty, so only when the dependence chain is
-  // longer than DependenceChainLatency, then branch is better than select.
-  // Besides misprediction penalty, the threshold value DependenceChainLatency
-  // also depends on branch misprediction rate, taken branch latency and cmov
-  // latency.
-  if (BB1Chain >= DependenceChainLatency)
-    return true;
-
-  return false;
 }
 
 /// Extract ConstantInt from value, looking through IntToPtr
@@ -2214,11 +2044,6 @@ static bool SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
   if (!HaveRewritablePHIs && !(HoistCondStores && SpeculatedStoreValue))
     return false;
 
-  // Don't do if conversion for long dependence chain.
-  if (FindLongDependenceChain(BB, EndBB, ThenBB, nullptr,
-                              CountBBCodeSize(ThenBB, TTI), TTI))
-    return false;
-
   // If we get here, we can hoist the instruction and if-convert.
   DEBUG(dbgs() << "SPECULATIVELY EXECUTING BB" << *ThenBB << "\n";);
 
@@ -2525,10 +2350,6 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
         return false;
       }
   }
-
-  if (FindLongDependenceChain(DomBlock, BB, IfBlock1, IfBlock2,
-                              AggressiveInsts.size(), TTI))
-    return false;
 
   DEBUG(dbgs() << "FOUND IF CONDITION!  " << *IfCond << "  T: "
                << IfTrue->getName() << "  F: " << IfFalse->getName() << "\n");

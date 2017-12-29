@@ -25,6 +25,11 @@
 #include <dispatch/dispatch.h>
 #include <pthread.h>
 
+// DISPATCH_NOESCAPE is not defined prior to XCode 8.
+#ifndef DISPATCH_NOESCAPE
+#define DISPATCH_NOESCAPE
+#endif
+
 typedef long long_t;  // NOLINT
 
 namespace __tsan {

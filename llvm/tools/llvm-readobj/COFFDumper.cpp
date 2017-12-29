@@ -767,7 +767,7 @@ void COFFDumper::printRVATable(uint64_t TableVA, uint64_t Count,
   for (uintptr_t I = TableStart; I < TableEnd; I += EntrySize) {
     uint32_t RVA = *reinterpret_cast<const ulittle32_t *>(I);
     raw_ostream &OS = W.startLine();
-    OS << "0x" << Twine::utohexstr(Obj->getImageBase() + RVA);
+    OS << "0x" << W.hex(Obj->getImageBase() + RVA);
     if (PrintExtra)
       PrintExtra(OS, reinterpret_cast<const uint8_t *>(I));
     OS << '\n';

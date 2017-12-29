@@ -43,7 +43,7 @@ using namespace clang;
 ///
 /// Called type-id in C++.
 TypeResult Parser::ParseTypeName(SourceRange *Range,
-                                 Declarator::TheContext Context,
+                                 DeclaratorContext Context,
                                  AccessSpecifier AS,
                                  Decl **OwnedType,
                                  ParsedAttributes *Attrs) {
@@ -1639,7 +1639,7 @@ void Parser::stripTypeAttributesOffDeclSpec(ParsedAttributesWithRange &Attrs,
 
 /// ParseDeclaration - Parse a full 'declaration', which consists of
 /// declaration-specifiers, some number of declarators, and a semicolon.
-/// 'Context' should be a Declarator::TheContext value.  This returns the
+/// 'Context' should be a DeclaratorContext value.  This returns the
 /// location of the semicolon in DeclEnd.
 ///
 ///       declaration: [C99 6.7]
@@ -1653,7 +1653,7 @@ void Parser::stripTypeAttributesOffDeclSpec(ParsedAttributesWithRange &Attrs,
 /// [C++11/C11] static_assert-declaration
 ///         others... [FIXME]
 ///
-Parser::DeclGroupPtrTy Parser::ParseDeclaration(unsigned Context,
+Parser::DeclGroupPtrTy Parser::ParseDeclaration(DeclaratorContext Context,
                                                 SourceLocation &DeclEnd,
                                           ParsedAttributesWithRange &attrs) {
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
@@ -1714,7 +1714,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(unsigned Context,
 /// of a simple-declaration. If we find that we are, we also parse the
 /// for-range-initializer, and place it here.
 Parser::DeclGroupPtrTy
-Parser::ParseSimpleDeclaration(unsigned Context,
+Parser::ParseSimpleDeclaration(DeclaratorContext Context,
                                SourceLocation &DeclEnd,
                                ParsedAttributesWithRange &Attrs,
                                bool RequireSemi, ForRangeInit *FRI) {
@@ -1753,7 +1753,7 @@ Parser::ParseSimpleDeclaration(unsigned Context,
 
 /// Returns true if this might be the start of a declarator, or a common typo
 /// for a declarator.
-bool Parser::MightBeDeclarator(unsigned Context) {
+bool Parser::MightBeDeclarator(DeclaratorContext Context) {
   switch (Tok.getKind()) {
   case tok::annot_cxxscope:
   case tok::annot_template_id:
@@ -1772,11 +1772,12 @@ bool Parser::MightBeDeclarator(unsigned Context) {
     return getLangOpts().CPlusPlus;
 
   case tok::l_square: // Might be an attribute on an unnamed bit-field.
-    return Context == Declarator::MemberContext && getLangOpts().CPlusPlus11 &&
-           NextToken().is(tok::l_square);
+    return Context == DeclaratorContext::MemberContext &&
+           getLangOpts().CPlusPlus11 && NextToken().is(tok::l_square);
 
   case tok::colon: // Might be a typo for '::' or an unnamed bit-field.
-    return Context == Declarator::MemberContext || getLangOpts().CPlusPlus;
+    return Context == DeclaratorContext::MemberContext ||
+           getLangOpts().CPlusPlus;
 
   case tok::identifier:
     switch (NextToken().getKind()) {
@@ -1802,8 +1803,9 @@ bool Parser::MightBeDeclarator(unsigned Context) {
       // At namespace scope, 'identifier:' is probably a typo for 'identifier::'
       // and in block scope it's probably a label. Inside a class definition,
       // this is a bit-field.
-      return Context == Declarator::MemberContext ||
-             (getLangOpts().CPlusPlus && Context == Declarator::FileContext);
+      return Context == DeclaratorContext::MemberContext ||
+             (getLangOpts().CPlusPlus &&
+              Context == DeclaratorContext::FileContext);
 
     case tok::identifier: // Possible virt-specifier.
       return getLangOpts().CPlusPlus11 && isCXX11VirtSpecifier(NextToken());
@@ -1902,11 +1904,11 @@ void Parser::SkipMalformedDecl() {
 /// definition or a group of object declarations, actually parse the
 /// result.
 Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
-                                              unsigned Context,
+                                              DeclaratorContext Context,
                                               SourceLocation *DeclEnd,
                                               ForRangeInit *FRI) {
   // Parse the first declarator.
-  ParsingDeclarator D(*this, DS, static_cast<Declarator::TheContext>(Context));
+  ParsingDeclarator D(*this, DS, Context);
   ParseDeclarator(D);
 
   // Bail out if the first declarator didn't seem well-formed.
@@ -1953,7 +1955,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     // Function definitions are only allowed at file scope and in C++ classes.
     // The C++ inline method definition case is handled elsewhere, so we only
     // need to handle the file scope definition case.
-    if (Context == Declarator::FileContext) {
+    if (Context == DeclaratorContext::FileContext) {
       if (isStartOfFunctionDefinition(D)) {
         if (DS.getStorageClassSpec() == DeclSpec::SCS_typedef) {
           Diag(Tok, diag::err_function_declared_typedef);
@@ -2024,7 +2026,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
   if (FirstDecl)
     DeclsInGroup.push_back(FirstDecl);
 
-  bool ExpectSemi = Context != Declarator::ForContext;
+  bool ExpectSemi = Context != DeclaratorContext::ForContext;
   
   // If we don't have a comma, it is either the end of the list (a ';') or an
   // error, bail out.
@@ -2070,7 +2072,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     *DeclEnd = Tok.getLocation();
 
   if (ExpectSemi &&
-      ExpectAndConsumeSemi(Context == Declarator::FileContext
+      ExpectAndConsumeSemi(Context == DeclaratorContext::FileContext
                            ? diag::err_invalid_token_after_toplevel_declarator
                            : diag::err_expected_semi_declaration)) {
     // Okay, there was no semicolon and one was expected.  If we see a
@@ -2273,8 +2275,8 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
       if (Init.isInvalid()) {
         SmallVector<tok::TokenKind, 2> StopTokens;
         StopTokens.push_back(tok::comma);
-        if (D.getContext() == Declarator::ForContext ||
-            D.getContext() == Declarator::InitStmtContext)
+        if (D.getContext() == DeclaratorContext::ForContext ||
+            D.getContext() == DeclaratorContext::InitStmtContext)
           StopTokens.push_back(tok::r_paren);
         SkipUntil(StopTokens, StopAtSemi | StopBeforeMatch);
         Actions.ActOnInitializerError(ThisDecl);
@@ -2655,21 +2657,21 @@ bool Parser::ParseImplicitInt(DeclSpec &DS, CXXScopeSpec *SS,
 /// context.
 ///
 /// \param Context the declarator context, which is one of the
-/// Declarator::TheContext enumerator values.
+/// DeclaratorContext enumerator values.
 Parser::DeclSpecContext
-Parser::getDeclSpecContextFromDeclaratorContext(unsigned Context) {
-  if (Context == Declarator::MemberContext)
+Parser::getDeclSpecContextFromDeclaratorContext(DeclaratorContext Context) {
+  if (Context == DeclaratorContext::MemberContext)
     return DSC_class;
-  if (Context == Declarator::FileContext)
+  if (Context == DeclaratorContext::FileContext)
     return DSC_top_level;
-  if (Context == Declarator::TemplateParamContext)
+  if (Context == DeclaratorContext::TemplateParamContext)
     return DSC_template_param;
-  if (Context == Declarator::TemplateTypeArgContext)
+  if (Context == DeclaratorContext::TemplateTypeArgContext)
     return DSC_template_type_arg;
-  if (Context == Declarator::TrailingReturnContext)
+  if (Context == DeclaratorContext::TrailingReturnContext)
     return DSC_trailing;
-  if (Context == Declarator::AliasDeclContext ||
-      Context == Declarator::AliasTemplateContext)
+  if (Context == DeclaratorContext::AliasDeclContext ||
+      Context == DeclaratorContext::AliasTemplateContext)
     return DSC_alias_declaration;
   return DSC_normal;
 }
@@ -5175,7 +5177,7 @@ void Parser::ParseDeclarator(Declarator &D) {
 }
 
 static bool isPtrOperatorToken(tok::TokenKind Kind, const LangOptions &Lang,
-                               unsigned TheContext) {
+                               DeclaratorContext TheContext) {
   if (Kind == tok::star || Kind == tok::caret)
     return true;
 
@@ -5194,8 +5196,9 @@ static bool isPtrOperatorToken(tok::TokenKind Kind, const LangOptions &Lang,
   // (The same thing can in theory happen after a trailing-return-type, but
   // since those are a C++11 feature, there is no rejects-valid issue there.)
   if (Kind == tok::ampamp)
-    return Lang.CPlusPlus11 || (TheContext != Declarator::ConversionIdContext &&
-                                TheContext != Declarator::CXXNewContext);
+    return Lang.CPlusPlus11 ||
+           (TheContext != DeclaratorContext::ConversionIdContext &&
+            TheContext != DeclaratorContext::CXXNewContext);
 
   return false;
 }
@@ -5249,8 +5252,9 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
        (Tok.is(tok::identifier) &&
         (NextToken().is(tok::coloncolon) || NextToken().is(tok::less))) ||
        Tok.is(tok::annot_cxxscope))) {
-    bool EnteringContext = D.getContext() == Declarator::FileContext ||
-                           D.getContext() == Declarator::MemberContext;
+    bool EnteringContext =
+        D.getContext() == DeclaratorContext::FileContext ||
+        D.getContext() == DeclaratorContext::MemberContext;
     CXXScopeSpec SS;
     ParseOptionalCXXScopeSpecifier(SS, nullptr, EnteringContext);
 
@@ -5316,9 +5320,9 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
     // GNU attributes are not allowed here in a new-type-id, but Declspec and
     // C++11 attributes are allowed.
     unsigned Reqs = AR_CXX11AttributesParsed | AR_DeclspecAttributesParsed |
-                            ((D.getContext() != Declarator::CXXNewContext)
-                                 ? AR_GNUAttributesParsed
-                                 : AR_GNUAttributesParsedAndRejected);
+                    ((D.getContext() != DeclaratorContext::CXXNewContext)
+                         ? AR_GNUAttributesParsed
+                         : AR_GNUAttributesParsedAndRejected);
     ParseTypeQualifierListOpt(DS, Reqs, true, !D.mayOmitIdentifier());
     D.ExtendWithDeclSpec(DS);
 
@@ -5470,15 +5474,16 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
     // Don't parse FOO:BAR as if it were a typo for FOO::BAR inside a class, in
     // this context it is a bitfield. Also in range-based for statement colon
     // may delimit for-range-declaration.
-    ColonProtectionRAIIObject X(*this,
-                                D.getContext() == Declarator::MemberContext ||
-                                    (D.getContext() == Declarator::ForContext &&
-                                     getLangOpts().CPlusPlus11));
+    ColonProtectionRAIIObject X(
+        *this, D.getContext() == DeclaratorContext::MemberContext ||
+                   (D.getContext() == DeclaratorContext::ForContext &&
+                    getLangOpts().CPlusPlus11));
 
     // ParseDeclaratorInternal might already have parsed the scope.
     if (D.getCXXScopeSpec().isEmpty()) {
-      bool EnteringContext = D.getContext() == Declarator::FileContext ||
-                             D.getContext() == Declarator::MemberContext;
+      bool EnteringContext =
+          D.getContext() == DeclaratorContext::FileContext ||
+          D.getContext() == DeclaratorContext::MemberContext;
       ParseOptionalCXXScopeSpecifier(D.getCXXScopeSpec(), nullptr,
                                      EnteringContext);
     }
@@ -5507,9 +5512,9 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
     //   been expanded or contains auto; otherwise, it is parsed as part of the
     //   parameter-declaration-clause.
     if (Tok.is(tok::ellipsis) && D.getCXXScopeSpec().isEmpty() &&
-        !((D.getContext() == Declarator::PrototypeContext ||
-           D.getContext() == Declarator::LambdaExprParameterContext ||
-           D.getContext() == Declarator::BlockLiteralContext) &&
+        !((D.getContext() == DeclaratorContext::PrototypeContext ||
+           D.getContext() == DeclaratorContext::LambdaExprParameterContext ||
+           D.getContext() == DeclaratorContext::BlockLiteralContext) &&
           NextToken().is(tok::r_paren) &&
           !D.hasGroupingParens() &&
           !Actions.containsUnexpandedParameterPacks(D) &&
@@ -5541,14 +5546,15 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
         AllowDeductionGuide = false;
       } else if (D.getCXXScopeSpec().isSet()) {
         AllowConstructorName =
-          (D.getContext() == Declarator::FileContext ||
-           D.getContext() == Declarator::MemberContext);
+          (D.getContext() == DeclaratorContext::FileContext ||
+           D.getContext() == DeclaratorContext::MemberContext);
         AllowDeductionGuide = false;
       } else {
-        AllowConstructorName = (D.getContext() == Declarator::MemberContext);
+        AllowConstructorName =
+            (D.getContext() == DeclaratorContext::MemberContext);
         AllowDeductionGuide = 
-          (D.getContext() == Declarator::FileContext ||
-           D.getContext() == Declarator::MemberContext);
+          (D.getContext() == DeclaratorContext::FileContext ||
+           D.getContext() == DeclaratorContext::MemberContext);
       }
 
       SourceLocation TemplateKWLoc;
@@ -5604,15 +5610,15 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       // An identifier within parens is unlikely to be intended to be anything
       // other than a name being "declared".
       DiagnoseIdentifier = true;
-    else if (D.getContext() == Declarator::TemplateTypeArgContext)
+    else if (D.getContext() == DeclaratorContext::TemplateTypeArgContext)
       // T<int N> is an accidental identifier; T<int N indicates a missing '>'.
       DiagnoseIdentifier =
           NextToken().isOneOf(tok::comma, tok::greater, tok::greatergreater);
-    else if (D.getContext() == Declarator::AliasDeclContext ||
-             D.getContext() == Declarator::AliasTemplateContext)
+    else if (D.getContext() == DeclaratorContext::AliasDeclContext ||
+             D.getContext() == DeclaratorContext::AliasTemplateContext)
       // The most likely error is that the ';' was forgotten.
       DiagnoseIdentifier = NextToken().isOneOf(tok::comma, tok::semi);
-    else if (D.getContext() == Declarator::TrailingReturnContext &&
+    else if (D.getContext() == DeclaratorContext::TrailingReturnContext &&
              !isCXX11VirtSpecifier(Tok))
       DiagnoseIdentifier = NextToken().isOneOf(
           tok::comma, tok::semi, tok::equal, tok::l_brace, tok::kw_try);
@@ -5659,7 +5665,7 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       LLVM_BUILTIN_TRAP;
     if (Tok.is(tok::l_square))
       return ParseMisplacedBracketDeclarator(D);
-    if (D.getContext() == Declarator::MemberContext) {
+    if (D.getContext() == DeclaratorContext::MemberContext) {
       // Objective-C++: Detect C++ keywords and try to prevent further errors by
       // treating these keyword as valid member names.
       if (getLangOpts().ObjC1 && getLangOpts().CPlusPlus &&
@@ -6042,9 +6048,9 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
       bool IsCXX11MemberFunction =
         getLangOpts().CPlusPlus11 &&
         D.getDeclSpec().getStorageClassSpec() != DeclSpec::SCS_typedef &&
-        (D.getContext() == Declarator::MemberContext
+        (D.getContext() == DeclaratorContext::MemberContext
          ? !D.getDeclSpec().isFriendSpecified()
-         : D.getContext() == Declarator::FileContext &&
+         : D.getContext() == DeclaratorContext::FileContext &&
            D.getCXXScopeSpec().isValid() &&
            Actions.CurContext->isRecord());
       Sema::CXXThisScopeRAII ThisScope(Actions,
@@ -6309,10 +6315,10 @@ void Parser::ParseParameterDeclarationClause(
     // Parse the declarator.  This is "PrototypeContext" or 
     // "LambdaExprParameterContext", because we must accept either 
     // 'declarator' or 'abstract-declarator' here.
-    Declarator ParmDeclarator(DS, 
-              D.getContext() == Declarator::LambdaExprContext ?
-                                  Declarator::LambdaExprParameterContext : 
-                                                Declarator::PrototypeContext);
+    Declarator ParmDeclarator(
+        DS, D.getContext() == DeclaratorContext::LambdaExprContext
+                ? DeclaratorContext::LambdaExprParameterContext
+                : DeclaratorContext::PrototypeContext);
     ParseDeclarator(ParmDeclarator);
 
     // Parse GNU attributes, if present.
@@ -6355,7 +6361,7 @@ void Parser::ParseParameterDeclarationClause(
         SourceLocation EqualLoc = Tok.getLocation();
 
         // Parse the default argument
-        if (D.getContext() == Declarator::MemberContext) {
+        if (D.getContext() == DeclaratorContext::MemberContext) {
           // If we're inside a class definition, cache the tokens
           // corresponding to the default argument. We'll actually parse
           // them when we see the end of the class definition.
