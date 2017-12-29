@@ -582,7 +582,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   // ACLE 6.4.4 LDREX/STREX
   if (LDREX)
-    Builder.defineMacro("__ARM_FEATURE_LDREX", "0x" + llvm::utohexstr(LDREX));
+    Builder.defineMacro("__ARM_FEATURE_LDREX", "0x" + Twine::utohexstr(LDREX));
 
   // ACLE 6.4.5 CLZ
   if (ArchVersion == 5 || (ArchVersion == 6 && CPUProfile != "M") ||
@@ -591,7 +591,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   // ACLE 6.5.1 Hardware Floating Point
   if (HW_FP)
-    Builder.defineMacro("__ARM_FP", "0x" + llvm::utohexstr(HW_FP));
+    Builder.defineMacro("__ARM_FP", "0x" + Twine::utohexstr(HW_FP));
 
   // ACLE predefines.
   Builder.defineMacro("__ARM_ACLE", "200");
@@ -672,11 +672,11 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
     // current AArch32 NEON implementations do not support double-precision
     // floating-point even when it is present in VFP.
     Builder.defineMacro("__ARM_NEON_FP",
-                        "0x" + llvm::utohexstr(HW_FP & ~HW_FP_DP));
+                        "0x" + Twine::utohexstr(HW_FP & ~HW_FP_DP));
   }
 
   Builder.defineMacro("__ARM_SIZEOF_WCHAR_T",
-                      llvm::utostr(Opts.WCharSize ? Opts.WCharSize : 4));
+                      Twine(Opts.WCharSize ? Opts.WCharSize : 4));
 
   Builder.defineMacro("__ARM_SIZEOF_MINIMAL_ENUM", Opts.ShortEnums ? "1" : "4");
 
