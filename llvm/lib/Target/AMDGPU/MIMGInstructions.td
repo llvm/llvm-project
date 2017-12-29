@@ -71,9 +71,9 @@ class MIMG_Store_Helper <bits<7> op, string asm,
        r128:$r128, tfe:$tfe, lwe:$lwe, da:$da),
   asm#" $vdata, $vaddr, $srsrc$dmask$unorm$glc$slc$r128$tfe$lwe$da", dns>, MIMGe<op> {
   let ssamp = 0;
-  let mayLoad = 1; // TableGen requires this for matching with the intrinsics
+  let mayLoad = 0;
   let mayStore = 1;
-  let hasSideEffects = 1;
+  let hasSideEffects = 0;
   let hasPostISelHook = 0;
   let DisableWQM = 1;
 }
@@ -103,10 +103,10 @@ class MIMG_Atomic_Helper <string asm, RegisterClass data_rc,
     (ins data_rc:$vdata, addr_rc:$vaddr, SReg_256:$srsrc,
          dmask:$dmask, unorm:$unorm, GLC:$glc, slc:$slc,
          r128:$r128, tfe:$tfe, lwe:$lwe, da:$da),
-    asm#" $vdst, $vaddr, $srsrc$dmask$unorm$glc$slc$r128$tfe$lwe$da"
-  > {
+    asm#" $vdst, $vaddr, $srsrc$dmask$unorm$glc$slc$r128$tfe$lwe$da"> {
+  let mayLoad = 1;
   let mayStore = 1;
-  let hasSideEffects = 1;
+  let hasSideEffects = 1; // FIXME: Remove this
   let hasPostISelHook = 0;
   let DisableWQM = 1;
   let Constraints = "$vdst = $vdata";

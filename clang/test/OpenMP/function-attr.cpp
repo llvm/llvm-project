@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-apple-darwin10  -stack-protector 2 -emit-llvm -o - %s | FileCheck %s
 
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-apple-darwin10  -stack-protector 2 -emit-llvm -o - %s | FileCheck --check-prefix SIMD-ONLY0 %s
+// SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
+
 // Check that function attributes are added to the OpenMP runtime functions.
 
 template <class T>

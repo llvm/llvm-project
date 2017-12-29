@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 200 %s
+
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 200 %s
 // rUN: %clang_cc1 -DCCODE -verify -fopenmp -ferror-limit 200 -x c %s
 #ifdef CCODE
 void foo(int arg) {
