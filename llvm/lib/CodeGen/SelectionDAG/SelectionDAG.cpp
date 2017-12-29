@@ -7128,6 +7128,8 @@ void SelectionDAG::transferDbgValues(SDValue From, SDValue To,
 void SelectionDAG::salvageDebugInfo(SDNode &N) {
   if (!N.getHasDebugValue())
     return;
+
+  SmallVector<SDDbgValue *, 2> ClonedDVs;
   for (auto DV : GetDbgValues(&N)) {
     if (DV->isInvalidated())
       continue;
@@ -7151,13 +7153,16 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
         SDDbgValue *Clone =
             getDbgValue(DV->getVariable(), DIExpr, N0.getNode(), N0.getResNo(),
                         DV->isIndirect(), DV->getDebugLoc(), DV->getOrder());
+        ClonedDVs.push_back(Clone);
         DV->setIsInvalidated();
-        AddDbgValue(Clone, N0.getNode(), false);
         DEBUG(dbgs() << "SALVAGE: Rewriting"; N0.getNode()->dumprFull(this);
               dbgs() << " into " << *DIExpr << '\n');
       }
     }
   }
+
+  for (SDDbgValue *Dbg : ClonedDVs)
+    AddDbgValue(Dbg, Dbg->getSDNode(), false);
 }
 
 namespace {
