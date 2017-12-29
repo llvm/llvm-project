@@ -412,10 +412,10 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   // We provide the opt remark emitter pass for LICM to use. We only need to do
   // this once as it is immutable.
   FPM.addPass(RequireAnalysisPass<OptimizationRemarkEmitterAnalysis, Function>());
-  FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM1)));
+  FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM1), DebugLogging));
   FPM.addPass(SimplifyCFGPass());
   FPM.addPass(InstCombinePass());
-  FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM2)));
+  FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM2), DebugLogging));
 
   // Eliminate redundancies.
   if (Level != O1) {
@@ -450,7 +450,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(JumpThreadingPass());
   FPM.addPass(CorrelatedValuePropagationPass());
   FPM.addPass(DSEPass());
-  FPM.addPass(createFunctionToLoopPassAdaptor(LICMPass()));
+  FPM.addPass(createFunctionToLoopPassAdaptor(LICMPass(), DebugLogging));
 
   for (auto &C : ScalarOptimizerLateEPCallbacks)
     C(FPM, Level);
@@ -510,7 +510,8 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM, bool DebugLogging,
     MPM.addPass(PGOInstrumentationGen());
 
     FunctionPassManager FPM;
-    FPM.addPass(createFunctionToLoopPassAdaptor(LoopRotatePass()));
+    FPM.addPass(
+        createFunctionToLoopPassAdaptor(LoopRotatePass(), DebugLogging));
     MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
 
     // Add the profile lowering pass.
@@ -730,7 +731,8 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
     C(OptimizePM, Level);
 
   // First rotate loops that may have been un-rotated by prior passes.
-  OptimizePM.addPass(createFunctionToLoopPassAdaptor(LoopRotatePass()));
+  OptimizePM.addPass(
+      createFunctionToLoopPassAdaptor(LoopRotatePass(), DebugLogging));
 
   // Distribute loops to allow partial vectorization.  I.e. isolate dependences
   // into separate loop that would otherwise inhibit vectorization.  This is
@@ -777,7 +779,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   OptimizePM.addPass(LoopUnrollPass(Level));
   OptimizePM.addPass(InstCombinePass());
   OptimizePM.addPass(RequireAnalysisPass<OptimizationRemarkEmitterAnalysis, Function>());
-  OptimizePM.addPass(createFunctionToLoopPassAdaptor(LICMPass()));
+  OptimizePM.addPass(createFunctionToLoopPassAdaptor(LICMPass(), DebugLogging));
 
   // Now that we've vectorized and unrolled loops, we may have more refined
   // alignment information, try to re-derive it here.
@@ -1533,7 +1535,8 @@ bool PassBuilder::parseFunctionPass(FunctionPassManager &FPM,
                                  DebugLogging))
         return false;
       // Add the nested pass manager with the appropriate adaptor.
-      FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM)));
+      FPM.addPass(
+          createFunctionToLoopPassAdaptor(std::move(LPM), DebugLogging));
       return true;
     }
     if (auto Count = parseRepeatPassName(Name)) {

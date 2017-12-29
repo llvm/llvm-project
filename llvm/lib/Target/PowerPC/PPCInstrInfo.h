@@ -97,6 +97,8 @@ struct ImmInstrInfo {
   uint64_t ImmOpcode : 16;
   // The size of the immediate.
   uint64_t ImmWidth : 5;
+  // The immediate should be truncated to N bits.
+  uint64_t TruncateImmTo : 5;
 };
 
 // Information required to convert an instruction to just a materialized

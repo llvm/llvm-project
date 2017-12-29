@@ -47,7 +47,7 @@ enum TypeDiagSelector {
 /// isOmittedBlockReturnType - Return true if this declarator is missing a
 /// return type because this is a omitted return type on a block literal.
 static bool isOmittedBlockReturnType(const Declarator &D) {
-  if (D.getContext() != Declarator::BlockLiteralContext ||
+  if (D.getContext() != DeclaratorContext::BlockLiteralContext ||
       D.getDeclSpec().hasTypeSpecifier())
     return false;
 
@@ -1291,11 +1291,12 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     // The declspec is always missing in a lambda expr context; it is either
     // specified with a trailing return type or inferred.
     if (S.getLangOpts().CPlusPlus14 &&
-        declarator.getContext() == Declarator::LambdaExprContext) {
+        declarator.getContext() == DeclaratorContext::LambdaExprContext) {
       // In C++1y, a lambda's implicit return type is 'auto'.
       Result = Context.getAutoDeductType();
       break;
-    } else if (declarator.getContext() == Declarator::LambdaExprContext ||
+    } else if (declarator.getContext() ==
+                   DeclaratorContext::LambdaExprContext ||
                checkOmittedBlockReturnType(S, declarator,
                                            Context.DependentTy)) {
       Result = Context.DependentTy;
@@ -1572,7 +1573,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
 
   // Before we process any type attributes, synthesize a block literal
   // function declarator if necessary.
-  if (declarator.getContext() == Declarator::BlockLiteralContext)
+  if (declarator.getContext() == DeclaratorContext::BlockLiteralContext)
     maybeSynthesizeBlockSignature(state, Result);
 
   // Apply any type attributes from the decl spec.  This may cause the
@@ -2780,16 +2781,16 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
         (Auto && Auto->getKeyword() != AutoTypeKeyword::GNUAutoType);
 
     switch (D.getContext()) {
-    case Declarator::LambdaExprContext:
+    case DeclaratorContext::LambdaExprContext:
       // Declared return type of a lambda-declarator is implicit and is always
       // 'auto'.
       break;
-    case Declarator::ObjCParameterContext:
-    case Declarator::ObjCResultContext:
-    case Declarator::PrototypeContext:
+    case DeclaratorContext::ObjCParameterContext:
+    case DeclaratorContext::ObjCResultContext:
+    case DeclaratorContext::PrototypeContext:
       Error = 0;  
       break;
-    case Declarator::LambdaExprParameterContext:
+    case DeclaratorContext::LambdaExprParameterContext:
       // In C++14, generic lambdas allow 'auto' in their parameters.
       if (!SemaRef.getLangOpts().CPlusPlus14 ||
           !Auto || Auto->getKeyword() != AutoTypeKeyword::Auto)
@@ -2821,7 +2822,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
             T, QualType(CorrespondingTemplateParam->getTypeForDecl(), 0));
       }
       break;
-    case Declarator::MemberContext: {
+    case DeclaratorContext::MemberContext: {
       if (D.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_static ||
           D.isFunctionDeclarator())
         break;
@@ -2837,57 +2838,57 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
         Error = 20; // Friend type
       break;
     }
-    case Declarator::CXXCatchContext:
-    case Declarator::ObjCCatchContext:
+    case DeclaratorContext::CXXCatchContext:
+    case DeclaratorContext::ObjCCatchContext:
       Error = 7; // Exception declaration
       break;
-    case Declarator::TemplateParamContext:
+    case DeclaratorContext::TemplateParamContext:
       if (isa<DeducedTemplateSpecializationType>(Deduced))
         Error = 19; // Template parameter
       else if (!SemaRef.getLangOpts().CPlusPlus17)
         Error = 8; // Template parameter (until C++17)
       break;
-    case Declarator::BlockLiteralContext:
+    case DeclaratorContext::BlockLiteralContext:
       Error = 9; // Block literal
       break;
-    case Declarator::TemplateTypeArgContext:
+    case DeclaratorContext::TemplateTypeArgContext:
       Error = 10; // Template type argument
       break;
-    case Declarator::AliasDeclContext:
-    case Declarator::AliasTemplateContext:
+    case DeclaratorContext::AliasDeclContext:
+    case DeclaratorContext::AliasTemplateContext:
       Error = 12; // Type alias
       break;
-    case Declarator::TrailingReturnContext:
+    case DeclaratorContext::TrailingReturnContext:
       if (!SemaRef.getLangOpts().CPlusPlus14 || !IsCXXAutoType)
         Error = 13; // Function return type
       break;
-    case Declarator::ConversionIdContext:
+    case DeclaratorContext::ConversionIdContext:
       if (!SemaRef.getLangOpts().CPlusPlus14 || !IsCXXAutoType)
         Error = 14; // conversion-type-id
       break;
-    case Declarator::FunctionalCastContext:
+    case DeclaratorContext::FunctionalCastContext:
       if (isa<DeducedTemplateSpecializationType>(Deduced))
         break;
       LLVM_FALLTHROUGH;
-    case Declarator::TypeNameContext:
+    case DeclaratorContext::TypeNameContext:
       Error = 15; // Generic
       break;
-    case Declarator::FileContext:
-    case Declarator::BlockContext:
-    case Declarator::ForContext:
-    case Declarator::InitStmtContext:
-    case Declarator::ConditionContext:
+    case DeclaratorContext::FileContext:
+    case DeclaratorContext::BlockContext:
+    case DeclaratorContext::ForContext:
+    case DeclaratorContext::InitStmtContext:
+    case DeclaratorContext::ConditionContext:
       // FIXME: P0091R3 (erroneously) does not permit class template argument
       // deduction in conditions, for-init-statements, and other declarations
       // that are not simple-declarations.
       break;
-    case Declarator::CXXNewContext:
+    case DeclaratorContext::CXXNewContext:
       // FIXME: P0091R3 does not permit class template argument deduction here,
       // but we follow GCC and allow it anyway.
       if (!IsCXXAutoType && !isa<DeducedTemplateSpecializationType>(Deduced))
         Error = 17; // 'new' type
       break;
-    case Declarator::KNRTypeListContext:
+    case DeclaratorContext::KNRTypeListContext:
       Error = 18; // K&R function parameter
       break;
     }
@@ -2959,47 +2960,47 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     // or enumeration in a type-specifier-seq.
     unsigned DiagID = 0;
     switch (D.getContext()) {
-    case Declarator::TrailingReturnContext:
+    case DeclaratorContext::TrailingReturnContext:
       // Class and enumeration definitions are syntactically not allowed in
       // trailing return types.
       llvm_unreachable("parser should not have allowed this");
       break;
-    case Declarator::FileContext:
-    case Declarator::MemberContext:
-    case Declarator::BlockContext:
-    case Declarator::ForContext:
-    case Declarator::InitStmtContext:
-    case Declarator::BlockLiteralContext:
-    case Declarator::LambdaExprContext:
+    case DeclaratorContext::FileContext:
+    case DeclaratorContext::MemberContext:
+    case DeclaratorContext::BlockContext:
+    case DeclaratorContext::ForContext:
+    case DeclaratorContext::InitStmtContext:
+    case DeclaratorContext::BlockLiteralContext:
+    case DeclaratorContext::LambdaExprContext:
       // C++11 [dcl.type]p3:
       //   A type-specifier-seq shall not define a class or enumeration unless
       //   it appears in the type-id of an alias-declaration (7.1.3) that is not
       //   the declaration of a template-declaration.
-    case Declarator::AliasDeclContext:
+    case DeclaratorContext::AliasDeclContext:
       break;
-    case Declarator::AliasTemplateContext:
+    case DeclaratorContext::AliasTemplateContext:
       DiagID = diag::err_type_defined_in_alias_template;
       break;
-    case Declarator::TypeNameContext:
-    case Declarator::FunctionalCastContext:
-    case Declarator::ConversionIdContext:
-    case Declarator::TemplateParamContext:
-    case Declarator::CXXNewContext:
-    case Declarator::CXXCatchContext:
-    case Declarator::ObjCCatchContext:
-    case Declarator::TemplateTypeArgContext:
+    case DeclaratorContext::TypeNameContext:
+    case DeclaratorContext::FunctionalCastContext:
+    case DeclaratorContext::ConversionIdContext:
+    case DeclaratorContext::TemplateParamContext:
+    case DeclaratorContext::CXXNewContext:
+    case DeclaratorContext::CXXCatchContext:
+    case DeclaratorContext::ObjCCatchContext:
+    case DeclaratorContext::TemplateTypeArgContext:
       DiagID = diag::err_type_defined_in_type_specifier;
       break;
-    case Declarator::PrototypeContext:
-    case Declarator::LambdaExprParameterContext:
-    case Declarator::ObjCParameterContext:
-    case Declarator::ObjCResultContext:
-    case Declarator::KNRTypeListContext:
+    case DeclaratorContext::PrototypeContext:
+    case DeclaratorContext::LambdaExprParameterContext:
+    case DeclaratorContext::ObjCParameterContext:
+    case DeclaratorContext::ObjCResultContext:
+    case DeclaratorContext::KNRTypeListContext:
       // C++ [dcl.fct]p6:
       //   Types shall not be defined in return or parameter types.
       DiagID = diag::err_type_defined_in_param_type;
       break;
-    case Declarator::ConditionContext:
+    case DeclaratorContext::ConditionContext:
       // C++ 6.4p2:
       // The type-specifier-seq shall not contain typedef and shall not declare
       // a new class or enumeration.
@@ -3048,7 +3049,7 @@ static void warnAboutAmbiguousFunction(Sema &S, Declarator &D,
 
   // Inside a condition, a direct initializer is not permitted. We allow one to
   // be parsed in order to give better diagnostics in condition parsing.
-  if (D.getContext() == Declarator::ConditionContext)
+  if (D.getContext() == DeclaratorContext::ConditionContext)
     return;
 
   SourceRange ParenRange(DeclType.Loc, DeclType.EndLoc);
@@ -3164,7 +3165,7 @@ static void warnAboutRedundantParens(Sema &S, Declarator &D, QualType T) {
 
     case DeclaratorChunk::Function:
       // In a new-type-id, function chunks require parentheses.
-      if (D.getContext() == Declarator::CXXNewContext)
+      if (D.getContext() == DeclaratorContext::CXXNewContext)
         return;
       // FIXME: "A(f())" deserves a vexing-parse warning, not just a
       // redundant-parens warning, but we don't know whether the function
@@ -3282,7 +3283,7 @@ getCCForDeclaratorChunk(Sema &S, Declarator &D,
       // in a member pointer.
       IsCXXInstanceMethod =
           D.getTypeObject(I).Kind == DeclaratorChunk::MemberPointer;
-    } else if (D.getContext() == Declarator::LambdaExprContext) {
+    } else if (D.getContext() == DeclaratorContext::LambdaExprContext) {
       // This can only be a call operator for a lambda, which is an instance
       // method.
       IsCXXInstanceMethod = true;
@@ -3779,8 +3780,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   // Does this declaration declare a typedef-name?
   bool IsTypedefName =
     D.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_typedef ||
-    D.getContext() == Declarator::AliasDeclContext ||
-    D.getContext() == Declarator::AliasTemplateContext;
+    D.getContext() == DeclaratorContext::AliasDeclContext ||
+    D.getContext() == DeclaratorContext::AliasTemplateContext;
 
   // Does T refer to a function type with a cv-qualifier or a ref-qualifier?
   bool IsQualifiedFunction = T->isFunctionProtoType() &&
@@ -3909,14 +3910,14 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   } else {
     bool isFunctionOrMethod = false;
     switch (auto context = state.getDeclarator().getContext()) {
-    case Declarator::ObjCParameterContext:
-    case Declarator::ObjCResultContext:
-    case Declarator::PrototypeContext:
-    case Declarator::TrailingReturnContext:
+    case DeclaratorContext::ObjCParameterContext:
+    case DeclaratorContext::ObjCResultContext:
+    case DeclaratorContext::PrototypeContext:
+    case DeclaratorContext::TrailingReturnContext:
       isFunctionOrMethod = true;
       LLVM_FALLTHROUGH;
 
-    case Declarator::MemberContext:
+    case DeclaratorContext::MemberContext:
       if (state.getDeclarator().isObjCIvar() && !isFunctionOrMethod) {
         complainAboutMissingNullability = CAMN_No;
         break;
@@ -3930,8 +3931,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
       LLVM_FALLTHROUGH;
 
-    case Declarator::FileContext:
-    case Declarator::KNRTypeListContext: {
+    case DeclaratorContext::FileContext:
+    case DeclaratorContext::KNRTypeListContext: {
       complainAboutMissingNullability = CAMN_Yes;
 
       // Nullability inference depends on the type and declarator.
@@ -3947,8 +3948,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         if (inAssumeNonNullRegion) {
           complainAboutInferringWithinChunk = wrappingKind;
           inferNullability = NullabilityKind::NonNull;
-          inferNullabilityCS = (context == Declarator::ObjCParameterContext ||
-                                context == Declarator::ObjCResultContext);
+          inferNullabilityCS =
+              (context == DeclaratorContext::ObjCParameterContext ||
+               context == DeclaratorContext::ObjCResultContext);
         }
         break;
 
@@ -3988,26 +3990,26 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       break;
     }
 
-    case Declarator::ConversionIdContext:
+    case DeclaratorContext::ConversionIdContext:
       complainAboutMissingNullability = CAMN_Yes;
       break;
 
-    case Declarator::AliasDeclContext:
-    case Declarator::AliasTemplateContext:
-    case Declarator::BlockContext:
-    case Declarator::BlockLiteralContext:
-    case Declarator::ConditionContext:
-    case Declarator::CXXCatchContext:
-    case Declarator::CXXNewContext:
-    case Declarator::ForContext:
-    case Declarator::InitStmtContext:
-    case Declarator::LambdaExprContext:
-    case Declarator::LambdaExprParameterContext:
-    case Declarator::ObjCCatchContext:
-    case Declarator::TemplateParamContext:
-    case Declarator::TemplateTypeArgContext:
-    case Declarator::TypeNameContext:
-    case Declarator::FunctionalCastContext:
+    case DeclaratorContext::AliasDeclContext:
+    case DeclaratorContext::AliasTemplateContext:
+    case DeclaratorContext::BlockContext:
+    case DeclaratorContext::BlockLiteralContext:
+    case DeclaratorContext::ConditionContext:
+    case DeclaratorContext::CXXCatchContext:
+    case DeclaratorContext::CXXNewContext:
+    case DeclaratorContext::ForContext:
+    case DeclaratorContext::InitStmtContext:
+    case DeclaratorContext::LambdaExprContext:
+    case DeclaratorContext::LambdaExprParameterContext:
+    case DeclaratorContext::ObjCCatchContext:
+    case DeclaratorContext::TemplateParamContext:
+    case DeclaratorContext::TemplateTypeArgContext:
+    case DeclaratorContext::TypeNameContext:
+    case DeclaratorContext::FunctionalCastContext:
       // Don't infer in these contexts.
       break;
     }
@@ -4243,7 +4245,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       // array type, ...
       if (ASM == ArrayType::Static || ATI.TypeQuals) {
         if (!(D.isPrototypeContext() ||
-              D.getContext() == Declarator::KNRTypeListContext)) {
+              D.getContext() == DeclaratorContext::KNRTypeListContext)) {
           S.Diag(DeclType.Loc, diag::err_array_static_outside_prototype) <<
               (ASM == ArrayType::Static ? "'static'" : "type qualifier");
           // Remove the 'static' and the type qualifiers.
@@ -4267,7 +4269,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       const AutoType *AT = T->getContainedAutoType();
       // Allow arrays of auto if we are a generic lambda parameter.
       // i.e. [](auto (&array)[5]) { return array[0]; }; OK
-      if (AT && D.getContext() != Declarator::LambdaExprParameterContext) {
+      if (AT &&
+          D.getContext() != DeclaratorContext::LambdaExprParameterContext) {
         // We've already diagnosed this for decltype(auto).
         if (!AT->isDecltypeAuto())
           S.Diag(DeclType.Loc, diag::err_illegal_decl_array_of_auto)
@@ -4326,7 +4329,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                   << D.getSourceRange();
               D.setInvalidType(true);
             }
-          } else if (D.getContext() != Declarator::LambdaExprContext &&
+          } else if (D.getContext() != DeclaratorContext::LambdaExprContext &&
                      (T.hasQualifiers() || !isa<AutoType>(T) ||
                       cast<AutoType>(T)->getKeyword() !=
                           AutoTypeKeyword::Auto)) {
@@ -4352,7 +4355,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         // Last processing chunk in block context means this function chunk
         // represents the block.
         if (chunkIndex == 0 &&
-            D.getContext() == Declarator::BlockLiteralContext)
+            D.getContext() == DeclaratorContext::BlockLiteralContext)
           diagID = diag::err_block_returning_array_function;
         S.Diag(DeclType.Loc, diagID) << T->isFunctionType() << T;
         T = Context.IntTy;
@@ -4490,8 +4493,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       if (IsTypedefName && FTI.getExceptionSpecType() && !LangOpts.CPlusPlus17)
         S.Diag(FTI.getExceptionSpecLocBeg(),
                diag::err_exception_spec_in_typedef)
-            << (D.getContext() == Declarator::AliasDeclContext ||
-                D.getContext() == Declarator::AliasTemplateContext);
+            << (D.getContext() == DeclaratorContext::AliasDeclContext ||
+                D.getContext() == DeclaratorContext::AliasTemplateContext);
 
       // If we see "T var();" or "T var(T());" at block scope, it is probably
       // an attempt to initialize a variable, not a function declaration.
@@ -4794,8 +4797,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     if (D.getName().getKind() == UnqualifiedId::IK_DeductionGuideName)
       Kind = DeductionGuide;
     else if (!D.getCXXScopeSpec().isSet()) {
-      if ((D.getContext() == Declarator::MemberContext ||
-           D.getContext() == Declarator::LambdaExprContext) &&
+      if ((D.getContext() == DeclaratorContext::MemberContext ||
+           D.getContext() == DeclaratorContext::LambdaExprContext) &&
           !D.getDeclSpec().isFriendSpecified())
         Kind = Member;
     } else {
@@ -4824,7 +4827,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         !(Kind == Member &&
           D.getDeclSpec().getStorageClassSpec() != DeclSpec::SCS_static) &&
         !IsTypedefName &&
-        D.getContext() != Declarator::TemplateTypeArgContext) {
+        D.getContext() != DeclaratorContext::TemplateTypeArgContext) {
       SourceLocation Loc = D.getLocStart();
       SourceRange RemovalRange;
       unsigned I;
@@ -4890,8 +4893,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     //   only be used in a parameter-declaration. Such a parameter-declaration
     //   is a parameter pack (14.5.3). [...]
     switch (D.getContext()) {
-    case Declarator::PrototypeContext:
-    case Declarator::LambdaExprParameterContext:
+    case DeclaratorContext::PrototypeContext:
+    case DeclaratorContext::LambdaExprParameterContext:
       // C++0x [dcl.fct]p13:
       //   [...] When it is part of a parameter-declaration-clause, the
       //   parameter pack is a function parameter pack (14.5.3). The type T
@@ -4910,7 +4913,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         T = Context.getPackExpansionType(T, None);
       }
       break;
-    case Declarator::TemplateParamContext:
+    case DeclaratorContext::TemplateParamContext:
       // C++0x [temp.param]p15:
       //   If a template-parameter is a [...] is a parameter-declaration that
       //   declares a parameter pack (8.3.5), then the template-parameter is a
@@ -4928,27 +4931,29 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                  : diag::ext_variadic_templates);
       break;
 
-    case Declarator::FileContext:
-    case Declarator::KNRTypeListContext:
-    case Declarator::ObjCParameterContext:  // FIXME: special diagnostic here?
-    case Declarator::ObjCResultContext:     // FIXME: special diagnostic here?
-    case Declarator::TypeNameContext:
-    case Declarator::FunctionalCastContext:
-    case Declarator::CXXNewContext:
-    case Declarator::AliasDeclContext:
-    case Declarator::AliasTemplateContext:
-    case Declarator::MemberContext:
-    case Declarator::BlockContext:
-    case Declarator::ForContext:
-    case Declarator::InitStmtContext:
-    case Declarator::ConditionContext:
-    case Declarator::CXXCatchContext:
-    case Declarator::ObjCCatchContext:
-    case Declarator::BlockLiteralContext:
-    case Declarator::LambdaExprContext:
-    case Declarator::ConversionIdContext:
-    case Declarator::TrailingReturnContext:
-    case Declarator::TemplateTypeArgContext:
+    case DeclaratorContext::FileContext:
+    case DeclaratorContext::KNRTypeListContext:
+    case DeclaratorContext::ObjCParameterContext:  // FIXME: special diagnostic
+                                                   // here?
+    case DeclaratorContext::ObjCResultContext:     // FIXME: special diagnostic
+                                                   // here?
+    case DeclaratorContext::TypeNameContext:
+    case DeclaratorContext::FunctionalCastContext:
+    case DeclaratorContext::CXXNewContext:
+    case DeclaratorContext::AliasDeclContext:
+    case DeclaratorContext::AliasTemplateContext:
+    case DeclaratorContext::MemberContext:
+    case DeclaratorContext::BlockContext:
+    case DeclaratorContext::ForContext:
+    case DeclaratorContext::InitStmtContext:
+    case DeclaratorContext::ConditionContext:
+    case DeclaratorContext::CXXCatchContext:
+    case DeclaratorContext::ObjCCatchContext:
+    case DeclaratorContext::BlockLiteralContext:
+    case DeclaratorContext::LambdaExprContext:
+    case DeclaratorContext::ConversionIdContext:
+    case DeclaratorContext::TrailingReturnContext:
+    case DeclaratorContext::TemplateTypeArgContext:
       // FIXME: We may want to allow parameter packs in block-literal contexts
       // in the future.
       S.Diag(D.getEllipsisLoc(),
@@ -5637,9 +5642,9 @@ TypeResult Sema::ActOnTypeName(Scope *S, Declarator &D) {
   // to apply them to the actual parameter declaration.
   // Likewise, we don't want to do this for alias declarations, because
   // we are actually going to build a declaration from this eventually.
-  if (D.getContext() != Declarator::ObjCParameterContext &&
-      D.getContext() != Declarator::AliasDeclContext &&
-      D.getContext() != Declarator::AliasTemplateContext)
+  if (D.getContext() != DeclaratorContext::ObjCParameterContext &&
+      D.getContext() != DeclaratorContext::AliasDeclContext &&
+      D.getContext() != DeclaratorContext::AliasTemplateContext)
     checkUnusedDeclAttributes(D);
 
   if (getLangOpts().CPlusPlus) {
@@ -7066,7 +7071,7 @@ static void deduceOpenCLImplicitAddrSpace(TypeProcessingState &State,
       IsFuncReturnType || IsFuncType ||
       // Do not deduce addr space for member types of struct, except the pointee
       // type of a pointer member type.
-      (D.getContext() == Declarator::MemberContext && !IsPointee) ||
+      (D.getContext() == DeclaratorContext::MemberContext && !IsPointee) ||
       // Do not deduce addr space for types used to define a typedef and the
       // typedef itself, except the pointee type of a pointer type which is used
       // to define the typedef.
@@ -7098,7 +7103,7 @@ static void deduceOpenCLImplicitAddrSpace(TypeProcessingState &State,
     if (IsPointee) {
       ImpAddr = LangAS::opencl_generic;
     } else {
-      if (D.getContext() == Declarator::FileContext) {
+      if (D.getContext() == DeclaratorContext::FileContext) {
         ImpAddr = LangAS::opencl_global;
       } else {
         if (D.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_static ||

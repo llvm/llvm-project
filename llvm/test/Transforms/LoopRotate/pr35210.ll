@@ -9,8 +9,12 @@
 ; CHECK-NEXT: Running analysis: DominatorTreeAnalysis on f
 ; CHECK-NEXT: Running analysis: PostDominatorTreeAnalysis on f
 ; CHECK-NEXT: Running pass: FunctionToLoopPassAdaptor{{.*}} on f
+; CHECK-NEXT: Starting llvm::Function pass manager run.
+; CHECK-NEXT: Running pass: LoopSimplifyPass on f
 ; CHECK-NEXT: Running analysis: LoopAnalysis on f
 ; CHECK-NEXT: Running analysis: AssumptionAnalysis on f
+; CHECK-NEXT: Running pass: LCSSAPass on f
+; CHECK-NEXT: Finished llvm::Function pass manager run.
 ; CHECK-NEXT: Running analysis: AAManager on f
 ; CHECK-NEXT: Running analysis: TargetLibraryAnalysis on f
 ; CHECK-NEXT: Running analysis: ScalarEvolutionAnalysis on f

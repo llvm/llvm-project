@@ -2358,7 +2358,7 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
       FoundMatch = true;
     }
   if (FoundMatch)
-    return getAddExpr(Ops, Flags);
+    return getAddExpr(Ops, Flags, Depth + 1);
 
   // Check for truncates. If all the operands are truncated from the same
   // type, see if factoring out the truncate would permit the result to be

@@ -783,7 +783,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
     // A function definition cannot start with any of these keywords.
     {
       SourceLocation DeclEnd;
-      return ParseDeclaration(Declarator::FileContext, DeclEnd, attrs);
+      return ParseDeclaration(DeclaratorContext::FileContext, DeclEnd, attrs);
     }
 
   case tok::kw_static:
@@ -793,7 +793,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
       Diag(ConsumeToken(), diag::warn_static_inline_explicit_inst_ignored)
         << 0;
       SourceLocation DeclEnd;
-      return ParseDeclaration(Declarator::FileContext, DeclEnd, attrs);
+      return ParseDeclaration(DeclaratorContext::FileContext, DeclEnd, attrs);
     }
     goto dont_know;
       
@@ -804,7 +804,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
       // Inline namespaces. Allowed as an extension even in C++03.
       if (NextKind == tok::kw_namespace) {
         SourceLocation DeclEnd;
-        return ParseDeclaration(Declarator::FileContext, DeclEnd, attrs);
+        return ParseDeclaration(DeclaratorContext::FileContext, DeclEnd, attrs);
       }
       
       // Parse (then ignore) 'inline' prior to a template instantiation. This is
@@ -813,7 +813,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
         Diag(ConsumeToken(), diag::warn_static_inline_explicit_inst_ignored)
           << 1;
         SourceLocation DeclEnd;
-        return ParseDeclaration(Declarator::FileContext, DeclEnd, attrs);
+        return ParseDeclaration(DeclaratorContext::FileContext, DeclEnd, attrs);
       }
     }
     goto dont_know;
@@ -828,7 +828,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
              diag::ext_extern_template) << SourceRange(ExternLoc, TemplateLoc);
       SourceLocation DeclEnd;
       return Actions.ConvertDeclToDeclGroup(
-                  ParseExplicitInstantiation(Declarator::FileContext,
+                  ParseExplicitInstantiation(DeclaratorContext::FileContext,
                                              ExternLoc, TemplateLoc, DeclEnd));
     }
     goto dont_know;
@@ -1004,11 +1004,11 @@ Parser::ParseDeclOrFunctionDefInternal(ParsedAttributesWithRange &attrs,
   if (getLangOpts().CPlusPlus && isTokenStringLiteral() &&
       DS.getStorageClassSpec() == DeclSpec::SCS_extern &&
       DS.getParsedSpecifiers() == DeclSpec::PQ_StorageClassSpecifier) {
-    Decl *TheDecl = ParseLinkage(DS, Declarator::FileContext);
+    Decl *TheDecl = ParseLinkage(DS, DeclaratorContext::FileContext);
     return Actions.ConvertDeclToDeclGroup(TheDecl);
   }
 
-  return ParseDeclGroup(DS, Declarator::FileContext);
+  return ParseDeclGroup(DS, DeclaratorContext::FileContext);
 }
 
 Parser::DeclGroupPtrTy
@@ -1313,7 +1313,7 @@ void Parser::ParseKNRParamDeclarations(Declarator &D) {
     }
 
     // Parse the first declarator attached to this declspec.
-    Declarator ParmDeclarator(DS, Declarator::KNRTypeListContext);
+    Declarator ParmDeclarator(DS, DeclaratorContext::KNRTypeListContext);
     ParseDeclarator(ParmDeclarator);
 
     // Handle the full declarator list.

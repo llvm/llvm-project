@@ -24,7 +24,7 @@ using namespace clang;
 /// \brief Parse a template declaration, explicit instantiation, or
 /// explicit specialization.
 Decl *
-Parser::ParseDeclarationStartingWithTemplate(unsigned Context,
+Parser::ParseDeclarationStartingWithTemplate(DeclaratorContext Context,
                                              SourceLocation &DeclEnd,
                                              AccessSpecifier AS,
                                              AttributeList *AccessAttrs) {
@@ -57,7 +57,7 @@ Parser::ParseDeclarationStartingWithTemplate(unsigned Context,
 ///       explicit-specialization: [ C++ temp.expl.spec]
 ///         'template' '<' '>' declaration
 Decl *
-Parser::ParseTemplateDeclarationOrSpecialization(unsigned Context,
+Parser::ParseTemplateDeclarationOrSpecialization(DeclaratorContext Context,
                                                  SourceLocation &DeclEnd,
                                                  AccessSpecifier AS,
                                                  AttributeList *AccessAttrs) {
@@ -169,7 +169,7 @@ Parser::ParseTemplateDeclarationOrSpecialization(unsigned Context,
 /// \returns the new declaration.
 Decl *
 Parser::ParseSingleDeclarationAfterTemplate(
-                                       unsigned Context,
+                                       DeclaratorContext Context,
                                        const ParsedTemplateInfo &TemplateInfo,
                                        ParsingDeclRAIIObject &DiagsFromTParams,
                                        SourceLocation &DeclEnd,
@@ -186,7 +186,7 @@ Parser::ParseSingleDeclarationAfterTemplate(
     return ParseStaticAssertDeclaration(DeclEnd);
   }
 
-  if (Context == Declarator::MemberContext) {
+  if (Context == DeclaratorContext::MemberContext) {
     // We are parsing a member template.
     ParseCXXClassMemberDeclaration(AS, AccessAttrs, TemplateInfo,
                                    &DiagsFromTParams);
@@ -234,7 +234,7 @@ Parser::ParseSingleDeclarationAfterTemplate(
     DS.takeAttributesFrom(prefixAttrs);
 
   // Parse the declarator.
-  ParsingDeclarator DeclaratorInfo(*this, DS, (Declarator::TheContext)Context);
+  ParsingDeclarator DeclaratorInfo(*this, DS, (DeclaratorContext)Context);
   ParseDeclarator(DeclaratorInfo);
   // Error parsing the declarator?
   if (!DeclaratorInfo.hasName()) {
@@ -255,7 +255,7 @@ Parser::ParseSingleDeclarationAfterTemplate(
     // Function definitions are only allowed at file scope and in C++ classes.
     // The C++ inline method definition case is handled elsewhere, so we only
     // need to handle the file scope definition case.
-    if (Context != Declarator::FileContext) {
+    if (Context != DeclaratorContext::FileContext) {
       Diag(Tok, diag::err_function_definition_not_allowed);
       SkipMalformedDecl();
       return nullptr;
@@ -369,7 +369,7 @@ bool Parser::ParseTemplateParameters(
 ///         template-parameter
 ///         template-parameter-list ',' template-parameter
 bool
-Parser::ParseTemplateParameterList(unsigned Depth,
+Parser::ParseTemplateParameterList(const unsigned Depth,
                              SmallVectorImpl<NamedDecl*> &TemplateParams) {
   while (1) {
     
@@ -546,7 +546,7 @@ NamedDecl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
   ParsedType DefaultArg;
   if (TryConsumeToken(tok::equal, EqualLoc))
     DefaultArg = ParseTypeName(/*Range=*/nullptr,
-                               Declarator::TemplateTypeArgContext).get();
+                               DeclaratorContext::TemplateTypeArgContext).get();
 
   return Actions.ActOnTypeParameter(getCurScope(), TypenameKeyword, EllipsisLoc,
                                     KeyLoc, ParamName, NameLoc, Depth, Position,
@@ -679,7 +679,7 @@ Parser::ParseNonTypeTemplateParameter(unsigned Depth, unsigned Position) {
                              DSC_template_param);
 
   // Parse this as a typename.
-  Declarator ParamDecl(DS, Declarator::TemplateParamContext);
+  Declarator ParamDecl(DS, DeclaratorContext::TemplateParamContext);
   ParseDeclarator(ParamDecl);
   if (DS.getTypeSpecType() == DeclSpec::TST_unspecified) {
     Diag(Tok.getLocation(), diag::err_expected_template_parameter);
@@ -1193,8 +1193,8 @@ ParsedTemplateArgument Parser::ParseTemplateArgument() {
       Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   if (isCXXTypeId(TypeIdAsTemplateArgument)) {
     SourceLocation Loc = Tok.getLocation();
-    TypeResult TypeArg = ParseTypeName(/*Range=*/nullptr,
-                                       Declarator::TemplateTypeArgContext);
+    TypeResult TypeArg = ParseTypeName(
+        /*Range=*/nullptr, DeclaratorContext::TemplateTypeArgContext);
     if (TypeArg.isInvalid())
       return ParsedTemplateArgument();
     
@@ -1297,7 +1297,7 @@ Parser::ParseTemplateArgumentList(TemplateArgList &TemplateArgs) {
 ///         'extern' [opt] 'template' declaration
 ///
 /// Note that the 'extern' is a GNU extension and C++11 feature.
-Decl *Parser::ParseExplicitInstantiation(unsigned Context,
+Decl *Parser::ParseExplicitInstantiation(DeclaratorContext Context,
                                          SourceLocation ExternLoc,
                                          SourceLocation TemplateLoc,
                                          SourceLocation &DeclEnd,
