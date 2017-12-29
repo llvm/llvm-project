@@ -202,7 +202,7 @@ namespace clang {
     ParsingDeclRAIIObject ParsingRAII;
 
   public:
-    ParsingDeclarator(Parser &P, const ParsingDeclSpec &DS, TheContext C)
+    ParsingDeclarator(Parser &P, const ParsingDeclSpec &DS, DeclaratorContext C)
       : Declarator(DS, C), ParsingRAII(P, &DS.getDelayedDiagnosticPool()) {
     }
 

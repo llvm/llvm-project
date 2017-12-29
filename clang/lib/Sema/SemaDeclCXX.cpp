@@ -712,7 +712,7 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
   Diag(Decomp.getLSquareLoc(),
        !getLangOpts().CPlusPlus17
            ? diag::ext_decomp_decl
-           : D.getContext() == Declarator::ConditionContext
+           : D.getContext() == DeclaratorContext::ConditionContext
                  ? diag::ext_decomp_decl_cond
                  : diag::warn_cxx14_compat_decomp_decl)
       << Decomp.getSourceRange();
@@ -13625,7 +13625,7 @@ Decl *Sema::ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
   // Try to convert the decl specifier to a type.  This works for
   // friend templates because ActOnTag never produces a ClassTemplateDecl
   // for a TUK_Friend.
-  Declarator TheDeclarator(DS, Declarator::MemberContext);
+  Declarator TheDeclarator(DS, DeclaratorContext::MemberContext);
   TypeSourceInfo *TSI = GetTypeForDeclarator(TheDeclarator, S);
   QualType T = TSI->getType();
   if (TheDeclarator.isInvalidType())

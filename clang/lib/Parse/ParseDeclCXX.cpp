@@ -55,7 +55,7 @@ using namespace clang;
 ///       namespace-alias-definition:  [C++ 7.3.2: namespace.alias]
 ///         'namespace' identifier '=' qualified-namespace-specifier ';'
 ///
-Parser::DeclGroupPtrTy Parser::ParseNamespace(unsigned Context,
+Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
                                               SourceLocation &DeclEnd,
                                               SourceLocation InlineLoc) {
   assert(Tok.is(tok::kw_namespace) && "Not a namespace!");
@@ -307,7 +307,7 @@ Decl *Parser::ParseNamespaceAlias(SourceLocation NamespaceLoc,
 ///         'extern' string-literal '{' declaration-seq[opt] '}'
 ///         'extern' string-literal declaration
 ///
-Decl *Parser::ParseLinkage(ParsingDeclSpec &DS, unsigned Context) {
+Decl *Parser::ParseLinkage(ParsingDeclSpec &DS, DeclaratorContext Context) {
   assert(isTokenStringLiteral() && "Not a string literal!");
   ExprResult Lang = ParseStringLiteralExpression(false);
 
@@ -434,7 +434,7 @@ Decl *Parser::ParseExportDeclaration() {
 /// ParseUsingDirectiveOrDeclaration - Parse C++ using using-declaration or
 /// using-directive. Assumes that current token is 'using'.
 Parser::DeclGroupPtrTy
-Parser::ParseUsingDirectiveOrDeclaration(unsigned Context,
+Parser::ParseUsingDirectiveOrDeclaration(DeclaratorContext Context,
                                          const ParsedTemplateInfo &TemplateInfo,
                                          SourceLocation &DeclEnd,
                                          ParsedAttributesWithRange &attrs) {
@@ -482,7 +482,7 @@ Parser::ParseUsingDirectiveOrDeclaration(unsigned Context,
 ///        'using' 'namespace' ::[opt] nested-name-specifier[opt]
 ///                 namespace-name attributes[opt] ;
 ///
-Decl *Parser::ParseUsingDirective(unsigned Context,
+Decl *Parser::ParseUsingDirective(DeclaratorContext Context,
                                   SourceLocation UsingLoc,
                                   SourceLocation &DeclEnd,
                                   ParsedAttributes &attrs) {
@@ -551,7 +551,8 @@ Decl *Parser::ParseUsingDirective(unsigned Context,
 ///     using-declarator:
 ///       'typename'[opt] nested-name-specifier unqualified-id
 ///
-bool Parser::ParseUsingDeclarator(unsigned Context, UsingDeclarator &D) {
+bool Parser::ParseUsingDeclarator(DeclaratorContext Context,
+                                  UsingDeclarator &D) {
   D.clear();
 
   // Ignore optional 'typename'.
@@ -582,7 +583,8 @@ bool Parser::ParseUsingDeclarator(unsigned Context, UsingDeclarator &D) {
   //   or the simple-template-id's template-name in the last component of the
   //   nested-name-specifier, the name is [...] considered to name the
   //   constructor.
-  if (getLangOpts().CPlusPlus11 && Context == Declarator::MemberContext &&
+  if (getLangOpts().CPlusPlus11 &&
+      Context == DeclaratorContext::MemberContext &&
       Tok.is(tok::identifier) &&
       (NextToken().is(tok::semi) || NextToken().is(tok::comma) ||
        NextToken().is(tok::ellipsis)) &&
@@ -629,7 +631,7 @@ bool Parser::ParseUsingDeclarator(unsigned Context, UsingDeclarator &D) {
 ///       'using' identifier attribute-specifier-seq[opt] = type-id ;
 ///
 Parser::DeclGroupPtrTy
-Parser::ParseUsingDeclaration(unsigned Context,
+Parser::ParseUsingDeclaration(DeclaratorContext Context,
                               const ParsedTemplateInfo &TemplateInfo,
                               SourceLocation UsingLoc, SourceLocation &DeclEnd,
                               AccessSpecifier AS) {
@@ -791,11 +793,11 @@ Decl *Parser::ParseAliasDeclarationAfterDeclarator(
       << FixItHint::CreateRemoval(SourceRange(D.EllipsisLoc));
 
   Decl *DeclFromDeclSpec = nullptr;
-  TypeResult TypeAlias =
-      ParseTypeName(nullptr,
-                    TemplateInfo.Kind ? Declarator::AliasTemplateContext
-                                      : Declarator::AliasDeclContext,
-                    AS, &DeclFromDeclSpec, &Attrs);
+  TypeResult TypeAlias = ParseTypeName(
+      nullptr,
+      TemplateInfo.Kind ? DeclaratorContext::AliasTemplateContext
+                        : DeclaratorContext::AliasDeclContext,
+      AS, &DeclFromDeclSpec, &Attrs);
   if (OwnedType)
     *OwnedType = DeclFromDeclSpec;
 
@@ -1094,7 +1096,7 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
 
     EndLocation = ParseDecltypeSpecifier(DS);
 
-    Declarator DeclaratorInfo(DS, Declarator::TypeNameContext);
+    Declarator DeclaratorInfo(DS, DeclaratorContext::TypeNameContext);
     return Actions.ActOnTypeName(getCurScope(), DeclaratorInfo);
   }
 
@@ -1195,7 +1197,7 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
   DS.SetTypeSpecType(TST_typename, IdLoc, PrevSpec, DiagID, Type,
                      Actions.getASTContext().getPrintingPolicy());
 
-  Declarator DeclaratorInfo(DS, Declarator::TypeNameContext);
+  Declarator DeclaratorInfo(DS, DeclaratorContext::TypeNameContext);
   return Actions.ActOnTypeName(getCurScope(), DeclaratorInfo);
 }
 
@@ -2509,7 +2511,7 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
     SourceLocation DeclEnd;
     return DeclGroupPtrTy::make(
         DeclGroupRef(ParseTemplateDeclarationOrSpecialization(
-            Declarator::MemberContext, DeclEnd, AS, AccessAttrs)));
+            DeclaratorContext::MemberContext, DeclEnd, AS, AccessAttrs)));
   }
 
   // Handle:  member-declaration ::= '__extension__' member-declaration
@@ -2545,7 +2547,7 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
     }
     SourceLocation DeclEnd;
     // Otherwise, it must be a using-declaration or an alias-declaration.
-    return ParseUsingDeclaration(Declarator::MemberContext, TemplateInfo,
+    return ParseUsingDeclaration(DeclaratorContext::MemberContext, TemplateInfo,
                                  UsingLoc, DeclEnd, AS);
   }
 
@@ -2593,7 +2595,7 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
     return Actions.ConvertDeclToDeclGroup(TheDecl);
   }
 
-  ParsingDeclarator DeclaratorInfo(*this, DS, Declarator::MemberContext);
+  ParsingDeclarator DeclaratorInfo(*this, DS, DeclaratorContext::MemberContext);
   VirtSpecifiers VS;
 
   // Hold late-parsed attributes so we can attach a Decl to them later.
@@ -2852,7 +2854,7 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
       break;
 
     if (Tok.isAtStartOfLine() &&
-        !MightBeDeclarator(Declarator::MemberContext)) {
+        !MightBeDeclarator(DeclaratorContext::MemberContext)) {
       // This comma was followed by a line-break and something which can't be
       // the start of a declarator. The comma was probably a typo for a
       // semicolon.
@@ -3709,7 +3711,7 @@ TypeResult Parser::ParseTrailingReturnType(SourceRange &Range) {
 
   ConsumeToken();
 
-  return ParseTypeName(&Range, Declarator::TrailingReturnContext);
+  return ParseTypeName(&Range, DeclaratorContext::TrailingReturnContext);
 }
 
 /// \brief We have just started parsing the definition of a new class,

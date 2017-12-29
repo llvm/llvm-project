@@ -1538,7 +1538,7 @@ void Sema::actOnObjCTypeArgsOrProtocolQualifiers(
     DS.SetRangeEnd(loc);
 
     // Form the declarator.
-    Declarator D(DS, Declarator::TypeNameContext);
+    Declarator D(DS, DeclaratorContext::TypeNameContext);
 
     // If we have a typedef of an Objective-C class type that is missing a '*',
     // add the '*'.

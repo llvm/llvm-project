@@ -264,7 +264,8 @@ template <typename LoopPassT>
 class FunctionToLoopPassAdaptor
     : public PassInfoMixin<FunctionToLoopPassAdaptor<LoopPassT>> {
 public:
-  explicit FunctionToLoopPassAdaptor(LoopPassT Pass) : Pass(std::move(Pass)) {
+  explicit FunctionToLoopPassAdaptor(LoopPassT Pass, bool DebugLogging = false)
+      : Pass(std::move(Pass)), LoopCanonicalizationFPM(DebugLogging) {
     LoopCanonicalizationFPM.addPass(LoopSimplifyPass());
     LoopCanonicalizationFPM.addPass(LCSSAPass());
   }
@@ -384,8 +385,8 @@ private:
 /// adaptor.
 template <typename LoopPassT>
 FunctionToLoopPassAdaptor<LoopPassT>
-createFunctionToLoopPassAdaptor(LoopPassT Pass) {
-  return FunctionToLoopPassAdaptor<LoopPassT>(std::move(Pass));
+createFunctionToLoopPassAdaptor(LoopPassT Pass, bool DebugLogging = false) {
+  return FunctionToLoopPassAdaptor<LoopPassT>(std::move(Pass), DebugLogging);
 }
 
 /// \brief Pass for printing a loop's contents as textual IR.
