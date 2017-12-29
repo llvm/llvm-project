@@ -1192,6 +1192,13 @@ struct DarwinPlatform {
     return OSVersion;
   }
 
+  void setOSVersion(StringRef S) {
+    assert(Kind == TargetArg && "Unexpected kind!");
+    OSVersion = S;
+  }
+
+  bool hasOSVersion() const { return HasOSVersion; }
+
   /// Returns true if the target OS was explicitly specified.
   bool isExplicitlySpecified() const { return Kind <= DeploymentTargetEnv; }
 
@@ -1235,17 +1242,21 @@ struct DarwinPlatform {
     llvm_unreachable("Unsupported Darwin Source Kind");
   }
 
-  static DarwinPlatform createFromTarget(llvm::Triple::OSType OS,
-                                         StringRef OSVersion, Arg *A,
-                                         llvm::Triple::EnvironmentType Env) {
-    DarwinPlatform Result(TargetArg, getPlatformFromOS(OS), OSVersion, A);
-    switch (Env) {
+  static DarwinPlatform createFromTarget(const llvm::Triple &TT,
+                                         StringRef OSVersion, Arg *A) {
+    DarwinPlatform Result(TargetArg, getPlatformFromOS(TT.getOS()), OSVersion,
+                          A);
+    switch (TT.getEnvironment()) {
     case llvm::Triple::Simulator:
       Result.Environment = DarwinEnvironmentKind::Simulator;
       break;
     default:
       break;
     }
+    unsigned Major, Minor, Micro;
+    TT.getOSVersion(Major, Minor, Micro);
+    if (Major == 0)
+      Result.HasOSVersion = false;
     return Result;
   }
   static DarwinPlatform createOSVersionArg(DarwinPlatformKind Platform,
@@ -1295,6 +1306,7 @@ private:
   DarwinPlatformKind Platform;
   DarwinEnvironmentKind Environment = DarwinEnvironmentKind::NativeEnvironment;
   std::string OSVersion;
+  bool HasOSVersion = true;
   Arg *Argument;
   StringRef EnvVarName;
 };
@@ -1489,9 +1501,8 @@ Optional<DarwinPlatform> getDeploymentTargetFromTargetArg(
       Triple.getOS() == llvm::Triple::UnknownOS)
     return None;
   std::string OSVersion = getOSVersion(Triple.getOS(), Triple, TheDriver);
-  return DarwinPlatform::createFromTarget(Triple.getOS(), OSVersion,
-                                          Args.getLastArg(options::OPT_target),
-                                          Triple.getEnvironment());
+  return DarwinPlatform::createFromTarget(Triple, OSVersion,
+                                          Args.getLastArg(options::OPT_target));
 }
 
 } // namespace
@@ -1537,12 +1548,20 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
            (VersionTuple(TargetMajor, TargetMinor, TargetMicro) !=
                 VersionTuple(ArgMajor, ArgMinor, ArgMicro) ||
             TargetExtra != ArgExtra))) {
-        // Warn about -m<os>-version-min that doesn't match the OS version
-        // that's specified in the target.
-        std::string OSVersionArg = OSVersionArgTarget->getAsString(Args, Opts);
-        std::string TargetArg = OSTarget->getAsString(Args, Opts);
-        getDriver().Diag(clang::diag::warn_drv_overriding_flag_option)
-            << OSVersionArg << TargetArg;
+        // Select the OS version from the -m<os>-version-min argument when
+        // the -target does not include an OS version.
+        if (OSTarget->getPlatform() == OSVersionArgTarget->getPlatform() &&
+            !OSTarget->hasOSVersion()) {
+          OSTarget->setOSVersion(OSVersionArgTarget->getOSVersion());
+        } else {
+          // Warn about -m<os>-version-min that doesn't match the OS version
+          // that's specified in the target.
+          std::string OSVersionArg =
+              OSVersionArgTarget->getAsString(Args, Opts);
+          std::string TargetArg = OSTarget->getAsString(Args, Opts);
+          getDriver().Diag(clang::diag::warn_drv_overriding_flag_option)
+              << OSVersionArg << TargetArg;
+        }
       }
     }
   } else {

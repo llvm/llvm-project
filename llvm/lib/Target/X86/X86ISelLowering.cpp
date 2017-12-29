@@ -11261,6 +11261,20 @@ static SDValue lowerV8I16GeneralSingleInputVectorShuffle(
   MutableArrayRef<int> LoMask = Mask.slice(0, 4);
   MutableArrayRef<int> HiMask = Mask.slice(4, 4);
 
+  // Attempt to directly match PSHUFLW or PSHUFHW.
+  if (isUndefOrInRange(LoMask, 0, 4) &&
+      isSequentialOrUndefInRange(HiMask, 0, 4, 4)) {
+    return DAG.getNode(X86ISD::PSHUFLW, DL, VT, V,
+                       getV4X86ShuffleImm8ForMask(LoMask, DL, DAG));
+  }
+  if (isUndefOrInRange(HiMask, 4, 8) &&
+      isSequentialOrUndefInRange(LoMask, 0, 4, 0)) {
+    for (int i = 0; i != 4; ++i)
+      HiMask[i] = (HiMask[i] < 0 ? HiMask[i] : (HiMask[i] - 4));
+    return DAG.getNode(X86ISD::PSHUFHW, DL, VT, V,
+                       getV4X86ShuffleImm8ForMask(HiMask, DL, DAG));
+  }
+
   SmallVector<int, 4> LoInputs;
   copy_if(LoMask, std::back_inserter(LoInputs), [](int M) { return M >= 0; });
   std::sort(LoInputs.begin(), LoInputs.end());
@@ -11280,13 +11294,11 @@ static SDValue lowerV8I16GeneralSingleInputVectorShuffle(
   MutableArrayRef<int> HToLInputs(LoInputs.data() + NumLToL, NumHToL);
   MutableArrayRef<int> HToHInputs(HiInputs.data() + NumLToH, NumHToH);
 
-  // If we are splatting two values from one half - one to each half, then
-  // we can shuffle that half so each is splatted to a dword, then splat those
-  // to their respective halves.
-  auto SplatHalfs = [&](int LoInput, int HiInput, unsigned ShufWOp,
-                        int DOffset) {
-    int PSHUFHalfMask[] = {LoInput % 4, LoInput % 4, HiInput % 4, HiInput % 4};
-    int PSHUFDMask[] = {DOffset + 0, DOffset + 0, DOffset + 1, DOffset + 1};
+  // If we are shuffling values from one half - check how many different DWORD
+  // pairs we need to create. If only 1 or 2 then we can perform this as a
+  // PSHUFLW/PSHUFHW + PSHUFD instead of the PSHUFD+PSHUFLW+PSHUFHW chain below.
+  auto ShuffleDWordPairs = [&](ArrayRef<int> PSHUFHalfMask,
+                               ArrayRef<int> PSHUFDMask, unsigned ShufWOp) {
     V = DAG.getNode(ShufWOp, DL, VT, V,
                     getV4X86ShuffleImm8ForMask(PSHUFHalfMask, DL, DAG));
     V = DAG.getBitcast(PSHUFDVT, V);
@@ -11295,10 +11307,48 @@ static SDValue lowerV8I16GeneralSingleInputVectorShuffle(
     return DAG.getBitcast(VT, V);
   };
 
-  if (NumLToL == 1 && NumLToH == 1 && (NumHToL + NumHToH) == 0)
-    return SplatHalfs(LToLInputs[0], LToHInputs[0], X86ISD::PSHUFLW, 0);
-  if (NumHToL == 1 && NumHToH == 1 && (NumLToL + NumLToH) == 0)
-    return SplatHalfs(HToLInputs[0], HToHInputs[0], X86ISD::PSHUFHW, 2);
+  if ((NumHToL + NumHToH) == 0 || (NumLToL + NumLToH) == 0) {
+    int PSHUFDMask[4] = { -1, -1, -1, -1 };
+    SmallVector<std::pair<int, int>, 4> DWordPairs;
+    int DOffset = ((NumHToL + NumHToH) == 0 ? 0 : 2);
+
+    // Collect the different DWORD pairs.
+    for (int DWord = 0; DWord != 4; ++DWord) {
+      int M0 = Mask[2 * DWord + 0];
+      int M1 = Mask[2 * DWord + 1];
+      M0 = (M0 >= 0 ? M0 % 4 : M0);
+      M1 = (M1 >= 0 ? M1 % 4 : M1);
+      if (M0 < 0 && M1 < 0)
+        continue;
+
+      bool Match = false;
+      for (int j = 0, e = DWordPairs.size(); j < e; ++j) {
+        auto &DWordPair = DWordPairs[j];
+        if ((M0 < 0 || isUndefOrEqual(DWordPair.first, M0)) &&
+            (M1 < 0 || isUndefOrEqual(DWordPair.second, M1))) {
+          DWordPair.first = (M0 >= 0 ? M0 : DWordPair.first);
+          DWordPair.second = (M1 >= 0 ? M1 : DWordPair.second);
+          PSHUFDMask[DWord] = DOffset + j;
+          Match = true;
+          break;
+        }
+      }
+      if (!Match) {
+        PSHUFDMask[DWord] = DOffset + DWordPairs.size();
+        DWordPairs.push_back(std::make_pair(M0, M1));
+      }
+    }
+
+    if (DWordPairs.size() <= 2) {
+      DWordPairs.resize(2, std::make_pair(-1, -1));
+      int PSHUFHalfMask[4] = {DWordPairs[0].first, DWordPairs[0].second,
+                              DWordPairs[1].first, DWordPairs[1].second};
+      if ((NumHToL + NumHToH) == 0)
+        return ShuffleDWordPairs(PSHUFHalfMask, PSHUFDMask, X86ISD::PSHUFLW);
+      if ((NumLToL + NumLToH) == 0)
+        return ShuffleDWordPairs(PSHUFHalfMask, PSHUFDMask, X86ISD::PSHUFHW);
+    }
+  }
 
   // Simplify the 1-into-3 and 3-into-1 cases with a single pshufd. For all
   // such inputs we can swap two of the dwords across the half mark and end up

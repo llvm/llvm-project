@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -verify -fopenmp %s
 // RUN: %clang_cc1 -verify -fopenmp -std=c++11 %s
 
+// RUN: %clang_cc1 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 %s
+
 void foo() {
 }
 

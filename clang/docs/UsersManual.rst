@@ -2042,6 +2042,11 @@ directives, and ``#pragma omp taskgroup`` directive.
 Use `-fopenmp` to enable OpenMP. Support for OpenMP can be disabled with
 `-fno-openmp`.
 
+Use `-fopenmp-simd` to enable OpenMP simd features only, without linking
+the runtime library; for combined constructs
+(e.g. ``#pragma omp parallel for simd``) the non-simd directives and clauses
+will be ignored. This can be disabled with `-fno-openmp-simd`.
+
 Controlling implementation limits
 ---------------------------------
 

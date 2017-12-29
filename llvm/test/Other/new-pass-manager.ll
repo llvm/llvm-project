@@ -450,10 +450,14 @@
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}>
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Starting llvm::Function pass manager run
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running pass: FunctionToLoopPassAdaptor
+; CHECK-REPEAT-LOOP-PASS-NEXT: Starting llvm::Function pass manager run
+; CHECK-REPEAT-LOOP-PASS-NEXT: Running pass: LoopSimplify
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: LoopAnalysis
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: DominatorTreeAnalysis
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: AssumptionAnalysis
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Invalidating all non-preserved analyses
+; CHECK-REPEAT-LOOP-PASS-NEXT: Running pass: LCSSAPass
+; CHECK-REPEAT-LOOP-PASS-NEXT: Finished llvm::Function pass manager run
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: AAManager
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: ScalarEvolutionAnalysis
