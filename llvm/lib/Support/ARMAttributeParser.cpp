@@ -666,7 +666,7 @@ void ARMAttributeParser::ParseSubsection(const uint8_t *Data, uint32_t Length) {
       ParseIndexList(Data, Offset, Indicies);
       break;
     default:
-      errs() << "unrecognised tag: 0x" << utohexstr(Tag) << '\n';
+      errs() << "unrecognised tag: 0x" << Twine::utohexstr(Tag) << '\n';
       return;
     }
 

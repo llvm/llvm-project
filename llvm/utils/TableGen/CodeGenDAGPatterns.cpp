@@ -1873,7 +1873,7 @@ TreePatternNode *TreePatternNode::InlinePatternFragments(TreePattern &TP) {
   // Verify that we are passing the right number of operands.
   if (Frag->getNumArgs() != Children.size()) {
     TP.error("'" + Op->getName() + "' fragment requires " +
-             utostr(Frag->getNumArgs()) + " operands!");
+             Twine(Frag->getNumArgs()) + " operands!");
     return nullptr;
   }
 
@@ -2195,7 +2195,7 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
             SignBitAndAbove == 1)
           continue;
 
-        TP.error("Integer value '" + itostr(II->getValue()) +
+        TP.error("Integer value '" + Twine(II->getValue()) +
                  "' is out of range for type '" + getEnumName(VT) + "'!");
         break;
       }
@@ -2245,9 +2245,8 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
       MadeChange |= UpdateNodeType(i, Int->IS.RetVTs[i], TP);
 
     if (getNumChildren() != NumParamVTs + 1) {
-      TP.error("Intrinsic '" + Int->Name + "' expects " +
-               utostr(NumParamVTs) + " operands, not " +
-               utostr(getNumChildren() - 1) + " operands!");
+      TP.error("Intrinsic '" + Int->Name + "' expects " + Twine(NumParamVTs) +
+               " operands, not " + Twine(getNumChildren() - 1) + " operands!");
       return false;
     }
 
@@ -2271,7 +2270,7 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
     if (NI.getNumOperands() >= 0 &&
         getNumChildren() != (unsigned)NI.getNumOperands()) {
       TP.error(getOperator()->getName() + " node requires exactly " +
-               itostr(NI.getNumOperands()) + " operands!");
+               Twine(NI.getNumOperands()) + " operands!");
       return false;
     }
 
@@ -2340,7 +2339,7 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
         TreePatternNode *SubIdxChild = getChild(I + 1);
         if (!isOperandClass(SubIdxChild, "SubRegIndex")) {
           TP.error("REG_SEQUENCE requires a SubRegIndex for operand " +
-                   itostr(I + 1) + "!");
+                   Twine(I + 1) + "!");
           return false;
         }
       }
@@ -3514,7 +3513,7 @@ const DAGInstruction &CodeGenDAGPatterns::parseInstructionPattern(
     CGIOperandList::OperandInfo &Op = CGI.Operands[i];
     const std::string &OpName = Op.Name;
     if (OpName.empty())
-      I->error("Operand #" + utostr(i) + " in operands list has no name!");
+      I->error("Operand #" + Twine(i) + " in operands list has no name!");
 
     if (!InstInputsCheck.count(OpName)) {
       // If this is an operand with a DefaultOps set filled in, we can ignore

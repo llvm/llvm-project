@@ -16281,7 +16281,7 @@ static  SDValue LowerZERO_EXTEND_Mask(SDValue Op,
   // Truncate if we had to extend i16/i8 above.
   if (VT != ExtVT) {
     WideVT = MVT::getVectorVT(VT.getVectorElementType(), NumElts);
-    SelectedVal = DAG.getNode(X86ISD::VTRUNC, DL, WideVT, SelectedVal);
+    SelectedVal = DAG.getNode(ISD::TRUNCATE, DL, WideVT, SelectedVal);
   }
 
   // Extract back to 128/256-bit if we widened.
@@ -18426,7 +18426,7 @@ static SDValue LowerSIGN_EXTEND_Mask(SDValue Op,
   // Truncate if we had to extend i16/i8 above.
   if (VT != ExtVT) {
     WideVT = MVT::getVectorVT(VTElt, NumElts);
-    V = DAG.getNode(X86ISD::VTRUNC, dl, WideVT, V);
+    V = DAG.getNode(ISD::TRUNCATE, dl, WideVT, V);
   }
 
   // Extract back to 128/256-bit if we widened.
@@ -18679,6 +18679,14 @@ static SDValue LowerExtended1BitVectorLoad(SDValue Op,
       // Replace chain users with the new chain.
       assert(Load->getNumValues() == 2 && "Loads must carry a chain!");
       DAG.ReplaceAllUsesOfValueWith(SDValue(Ld, 1), Load.getValue(1));
+      if (Subtarget.hasVLX()) {
+        // Extract to v4i1/v2i1.
+        SDValue Extract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MemVT, Load,
+                                      DAG.getIntPtrConstant(0, dl));
+        // Finally, do a normal sign-extend to the desired register.
+        return DAG.getNode(ExtOpcode, dl, Op.getValueType(), Extract);
+      }
+
       MVT ExtVT = MVT::getVectorVT(VT.getScalarType(), 8);
       SDValue ExtVec = DAG.getNode(ExtOpcode, dl, ExtVT, Load);
 
@@ -18698,22 +18706,25 @@ static SDValue LowerExtended1BitVectorLoad(SDValue Op,
 
   if (NumElts <= 8) {
     // A subset, assume that we have only AVX-512F
-    unsigned NumBitsToLoad = 8;
-    MVT TypeToLoad = MVT::getIntegerVT(NumBitsToLoad);
-    SDValue Load = DAG.getLoad(TypeToLoad, dl, Ld->getChain(),
+    SDValue Load = DAG.getLoad(MVT::i8, dl, Ld->getChain(),
                               Ld->getBasePtr(),
                               Ld->getMemOperand());
     // Replace chain users with the new chain.
     assert(Load->getNumValues() == 2 && "Loads must carry a chain!");
     DAG.ReplaceAllUsesOfValueWith(SDValue(Ld, 1), Load.getValue(1));
 
-    MVT MaskVT = MVT::getVectorVT(MVT::i1, NumBitsToLoad);
-    SDValue BitVec = DAG.getBitcast(MaskVT, Load);
+    SDValue BitVec = DAG.getBitcast(MVT::v8i1, Load);
 
     if (NumElts == 8)
       return DAG.getNode(ExtOpcode, dl, VT, BitVec);
 
-      // we should take care to v4i1 and v2i1
+    if (Subtarget.hasVLX()) {
+      // Extract to v4i1/v2i1.
+      SDValue Extract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MemVT, BitVec,
+                                    DAG.getIntPtrConstant(0, dl));
+      // Finally, do a normal sign-extend to the desired register.
+      return DAG.getNode(ExtOpcode, dl, Op.getValueType(), Extract);
+    }
 
     MVT ExtVT = MVT::getVectorVT(VT.getScalarType(), 8);
     SDValue ExtVec = DAG.getNode(ExtOpcode, dl, ExtVT, BitVec);
@@ -18728,13 +18739,12 @@ static SDValue LowerExtended1BitVectorLoad(SDValue Op,
                                Ld->getBasePtr(),
                                Ld->getMemOperand());
 
-  SDValue BasePtrHi =
-    DAG.getNode(ISD::ADD, dl, BasePtr.getValueType(), BasePtr,
-                DAG.getConstant(2, dl, BasePtr.getValueType()));
+  SDValue BasePtrHi = DAG.getMemBasePlusOffset(BasePtr, 2, dl);
 
-  SDValue LoadHi = DAG.getLoad(MVT::v16i1, dl, Ld->getChain(),
-                               BasePtrHi,
-                               Ld->getMemOperand());
+  SDValue LoadHi = DAG.getLoad(MVT::v16i1, dl, Ld->getChain(), BasePtrHi,
+                               Ld->getPointerInfo().getWithOffset(2),
+                               MinAlign(Ld->getAlignment(), 2U),
+                               Ld->getMemOperand()->getFlags());
 
   SDValue NewChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
                                  LoadLo.getValue(1), LoadHi.getValue(1));
@@ -34051,15 +34061,14 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
 
     Ptr = DAG.getMemBasePlusOffset(Ptr, 16, dl);
     SDValue Load2 =
-        DAG.getLoad(HalfVT, dl, Ld->getChain(), Ptr, Ld->getPointerInfo(),
-                    std::min(16U, Alignment), Ld->getMemOperand()->getFlags());
+        DAG.getLoad(HalfVT, dl, Ld->getChain(), Ptr,
+                    Ld->getPointerInfo().getWithOffset(16),
+                    MinAlign(Alignment, 16U), Ld->getMemOperand()->getFlags());
     SDValue TF = DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
                              Load1.getValue(1),
                              Load2.getValue(1));
 
-    SDValue NewVec = DAG.getUNDEF(RegVT);
-    NewVec = insert128BitVector(NewVec, Load1, 0, DAG, dl);
-    NewVec = insert128BitVector(NewVec, Load2, NumElems / 2, DAG, dl);
+    SDValue NewVec = DAG.getNode(ISD::CONCAT_VECTORS, dl, RegVT, Load1, Load2);
     return DCI.CombineTo(N, NewVec, TF, true);
   }
 
@@ -34465,8 +34474,9 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
         DAG.getStore(St->getChain(), dl, Value0, Ptr0, St->getPointerInfo(),
                      Alignment, St->getMemOperand()->getFlags());
     SDValue Ch1 =
-        DAG.getStore(St->getChain(), dl, Value1, Ptr1, St->getPointerInfo(),
-                     std::min(16U, Alignment), St->getMemOperand()->getFlags());
+        DAG.getStore(St->getChain(), dl, Value1, Ptr1,
+                     St->getPointerInfo().getWithOffset(16),
+                     MinAlign(Alignment, 16U), St->getMemOperand()->getFlags());
     return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Ch0, Ch1);
   }
 
