@@ -100,13 +100,11 @@ public:
 
   /// Make this value negative.
   void makeNegative() {
-    assert(!isNonNegative() && "Can't make a non-negative value negative");
     One.setSignBit();
   }
 
   /// Make this value negative.
   void makeNonNegative() {
-    assert(!isNegative() && "Can't make a negative value non-negative");
     Zero.setSignBit();
   }
 

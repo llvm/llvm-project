@@ -46,9 +46,8 @@ define <2 x i1> @bitcast_i2_2i1(i2 zeroext %a0) {
 ; AVX512-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; AVX512-NEXT:    kmovd %eax, %k1
-; AVX512-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
-; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %1 = bitcast i2 %a0 to <2 x i1>
   ret <2 x i1> %1
@@ -90,10 +89,8 @@ define <4 x i1> @bitcast_i4_4i1(i4 zeroext %a0) {
 ; AVX512-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; AVX512-NEXT:    kmovd %eax, %k1
-; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
-; AVX512-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
-; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %1 = bitcast i4 %a0 to <4 x i1>
   ret <4 x i1> %1

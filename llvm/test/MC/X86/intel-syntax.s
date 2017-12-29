@@ -867,3 +867,11 @@ movsd  qword ptr [rax], xmm0
 xlat byte ptr [eax]
 // CHECK: xlatb
 // CHECK-STDERR: memory operand is only for determining the size, (R|E)BX will be used for the location
+
+// CHECK:   punpcklbw
+punpcklbw mm0, dword ptr [rsp]
+// CHECK:   punpcklwd
+punpcklwd mm0, dword ptr [rsp]
+// CHECK:   punpckldq
+punpckldq mm0, dword ptr [rsp]
+

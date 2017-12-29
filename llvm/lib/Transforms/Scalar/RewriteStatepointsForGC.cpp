@@ -2796,17 +2796,12 @@ static void recomputeLiveInValues(GCPtrLivenessData &RevisedLivenessData,
   StatepointLiveSetTy Updated;
   findLiveSetAtInst(Inst, RevisedLivenessData, Updated);
 
-#ifndef NDEBUG
-  DenseSet<Value *> Bases;
-  for (auto KVPair : Info.PointerToBase)
-    Bases.insert(KVPair.second);
-#endif
-
   // We may have base pointers which are now live that weren't before.  We need
   // to update the PointerToBase structure to reflect this.
   for (auto V : Updated)
     if (Info.PointerToBase.insert({V, V}).second) {
-      assert(Bases.count(V) && "Can't find base for unexpected live value!");
+      assert(isKnownBaseResult(V) &&
+             "Can't find base for unexpected live value!");
       continue;
     }
 

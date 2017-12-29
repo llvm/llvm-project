@@ -110,7 +110,7 @@ int llvm::TableGenMain(char *argv0, TableGenMainFn *MainFn) {
     return 1;
 
   if (ErrorsPrinted > 0)
-    return reportError(argv0, utostr(ErrorsPrinted) + " errors.\n");
+    return reportError(argv0, Twine(ErrorsPrinted) + " errors.\n");
 
   // Declare success.
   Out.keep();

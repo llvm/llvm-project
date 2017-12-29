@@ -628,7 +628,7 @@ CoverageMapping::getInstantiationGroups(StringRef Filename) const {
   }
 
   std::vector<InstantiationGroup> Result;
-  for (const auto &InstantiationSet : InstantiationSetCollector) {
+  for (auto &InstantiationSet : InstantiationSetCollector) {
     InstantiationGroup IG{InstantiationSet.first.first,
                           InstantiationSet.first.second,
                           std::move(InstantiationSet.second)};
