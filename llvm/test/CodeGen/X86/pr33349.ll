@@ -40,7 +40,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; SKX:       # %bb.0: # %bb
 ; SKX-NEXT:    vpslld $31, %xmm0, %xmm0
 ; SKX-NEXT:    vptestmd %xmm0, %xmm0, %k0
-; SKX-NEXT:    kshiftrw $2, %k0, %k1
+; SKX-NEXT:    kshiftrb $2, %k0, %k1
 ; SKX-NEXT:    kshiftrw $1, %k1, %k2
 ; SKX-NEXT:    kmovd %k2, %eax
 ; SKX-NEXT:    testb $1, %al

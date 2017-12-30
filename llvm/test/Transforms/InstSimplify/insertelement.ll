@@ -23,3 +23,9 @@ define <4 x i32> @test4(<4 x i32> %A) {
   ; CHECK: ret <4 x i32> undef
   ret <4 x i32> %I
 }
+
+define <4 x i32> @test5(<4 x i32> %A) {
+  %I = insertelement <4 x i32> %A, i32 5, i64 undef
+  ; CHECK: ret <4 x i32> undef
+  ret <4 x i32> %I
+}

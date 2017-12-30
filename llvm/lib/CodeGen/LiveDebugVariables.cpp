@@ -242,8 +242,11 @@ public:
     // We are storing a MachineOperand outside a MachineInstr.
     locations.back().clearParent();
     // Don't store def operands.
-    if (locations.back().isReg())
+    if (locations.back().isReg()) {
+      if (locations.back().isDef())
+        locations.back().setIsDead(false);
       locations.back().setIsUse();
+    }
     return locations.size() - 1;
   }
 

@@ -569,6 +569,22 @@
   }
   
   ; Function Attrs: norecurse nounwind readnone
+  define zeroext i32 @testRLWINMFullReg(i32 zeroext %a) local_unnamed_addr #0 {
+  entry:
+    %shl = shl i32 %a, 4
+    %and = and i32 %shl, 4080
+    ret i32 %and
+  }
+  
+  ; Function Attrs: norecurse nounwind readnone
+  define zeroext i32 @testRLWINMFullRegOutOfRange(i32 zeroext %a) local_unnamed_addr #0 {
+  entry:
+    %shl = shl i32 %a, 4
+    %and = and i32 %shl, 4080
+    ret i32 %and
+  }
+  
+  ; Function Attrs: norecurse nounwind readnone
   define i64 @testRLWINM8(i64 %a) local_unnamed_addr #0 {
   entry:
     %shl = shl i64 %a, 4
@@ -3935,6 +3951,110 @@ body:             |
     %4 = RLWINM killed %2, 4, 20, 27
     ; CHECK: LI 272
     ; CHECK-LATE: li 3, 272
+    %x3 = EXTSW_32_64 %4
+    BLR8 implicit %lr8, implicit %rm, implicit %x3
+
+...
+---
+name:            testRLWINMFullReg
+# CHECK-ALL: name: testRLWINMFullReg
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: g8rc, preferred-register: '' }
+  - { id: 1, class: gprc, preferred-register: '' }
+  - { id: 2, class: gprc, preferred-register: '' }
+  - { id: 3, class: g8rc, preferred-register: '' }
+  - { id: 4, class: gprc, preferred-register: '' }
+liveins:         
+  - { reg: '%x3', virtual-reg: '%0' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: %x3
+  
+    %0 = COPY %x3
+    %1 = COPY %0.sub_32
+    %3 = IMPLICIT_DEF
+    %2 = LI 2
+    %4 = RLWINM killed %2, 31, 0, 31
+    ; CHECK: LI 1
+    ; CHECK-LATE: li 3, 1
+    %x3 = EXTSW_32_64 %4
+    BLR8 implicit %lr8, implicit %rm, implicit %x3
+
+...
+---
+name:            testRLWINMFullRegOutOfRange
+# CHECK-ALL: name: testRLWINMFullRegOutOfRange
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: g8rc, preferred-register: '' }
+  - { id: 1, class: gprc, preferred-register: '' }
+  - { id: 2, class: gprc, preferred-register: '' }
+  - { id: 3, class: g8rc, preferred-register: '' }
+  - { id: 4, class: gprc, preferred-register: '' }
+liveins:         
+  - { reg: '%x3', virtual-reg: '%0' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: %x3
+  
+    %0 = COPY %x3
+    %1 = COPY %0.sub_32
+    %3 = IMPLICIT_DEF
+    %2 = LI 1
+    %4 = RLWINM killed %2, 31, 0, 31
+    ; CHECK: RLWINM killed %2, 31, 0, 31
+    ; CHECK-LATE: rotlwi 3, 3, 31
     %x3 = EXTSW_32_64 %4
     BLR8 implicit %lr8, implicit %rm, implicit %x3
 
