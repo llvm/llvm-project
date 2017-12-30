@@ -701,7 +701,7 @@ Parser::ParseUsingDeclaration(DeclaratorContext Context,
       // "typename" keyword is allowed for identifiers only,
       // because it may be a type definition.
       if (D.TypenameLoc.isValid() &&
-          D.Name.getKind() != UnqualifiedId::IK_Identifier) {
+          D.Name.getKind() != UnqualifiedIdKind::IK_Identifier) {
         Diag(D.Name.getSourceRange().getBegin(),
              diag::err_typename_identifiers_only)
             << FixItHint::CreateRemoval(SourceRange(D.TypenameLoc));
@@ -755,7 +755,7 @@ Decl *Parser::ParseAliasDeclarationAfterDeclarator(
   // Type alias templates cannot be specialized.
   int SpecKind = -1;
   if (TemplateInfo.Kind == ParsedTemplateInfo::Template &&
-      D.Name.getKind() == UnqualifiedId::IK_TemplateId)
+      D.Name.getKind() == UnqualifiedIdKind::IK_TemplateId)
     SpecKind = 0;
   if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitSpecialization)
     SpecKind = 1;
@@ -775,7 +775,7 @@ Decl *Parser::ParseAliasDeclarationAfterDeclarator(
   }
 
   // Name must be an identifier.
-  if (D.Name.getKind() != UnqualifiedId::IK_Identifier) {
+  if (D.Name.getKind() != UnqualifiedIdKind::IK_Identifier) {
     Diag(D.Name.StartLocation, diag::err_alias_declaration_not_identifier);
     // No removal fixit: can't recover from this.
     SkipUntil(tok::semi);

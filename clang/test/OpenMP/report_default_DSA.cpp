@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 %s
 
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 %s
+
 void foo(int x, int n) {
   double vec[n];
   for (int iter = 0; iter < x; iter++) {

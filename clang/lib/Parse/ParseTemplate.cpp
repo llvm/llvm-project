@@ -271,7 +271,8 @@ Parser::ParseSingleDeclarationAfterTemplate(
     }
 
     if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation) {
-      if (DeclaratorInfo.getName().getKind() != UnqualifiedId::IK_TemplateId) {
+      if (DeclaratorInfo.getName().getKind() !=
+          UnqualifiedIdKind::IK_TemplateId) {
         // If the declarator-id is not a template-id, issue a diagnostic and
         // recover by ignoring the 'template' keyword.
         Diag(Tok, diag::err_template_defn_explicit_instantiation) << 0;
@@ -1015,12 +1016,12 @@ bool Parser::AnnotateTemplateIdToken(TemplateTy Template, TemplateNameKind TNK,
     Tok.setKind(tok::annot_template_id);
     
     IdentifierInfo *TemplateII =
-        TemplateName.getKind() == UnqualifiedId::IK_Identifier
+        TemplateName.getKind() == UnqualifiedIdKind::IK_Identifier
             ? TemplateName.Identifier
             : nullptr;
 
     OverloadedOperatorKind OpKind =
-        TemplateName.getKind() == UnqualifiedId::IK_Identifier
+        TemplateName.getKind() == UnqualifiedIdKind::IK_Identifier
             ? OO_None
             : TemplateName.OperatorFunctionId.Operator;
 

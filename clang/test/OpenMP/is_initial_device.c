@@ -7,6 +7,11 @@
 // RUN: %clang_cc1 -verify -fopenmp -x c -triple powerpc64le-unknown-unknown -emit-llvm -fopenmp-is-device \
 // RUN:             %s -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s -check-prefixes DEVICE,OUTLINED
 
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-unknown-unknown -emit-llvm-bc %s -o %t-ppc-host.bc
+// RUN: %clang_cc1 -verify -fopenmp-simd -x ir -triple powerpc64le-unknown-unknown -emit-llvm %t-ppc-host.bc -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c -triple powerpc64le-unknown-unknown -emit-llvm -fopenmp-is-device %s -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
+
 // expected-no-diagnostics
 int check() {
   int host = omp_is_initial_device();
