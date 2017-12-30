@@ -33,6 +33,12 @@ TEST(BasicBlockTest, PhiRange) {
   std::unique_ptr<BasicBlock> BB2(BasicBlock::Create(Context));
   BranchInst::Create(BB.get(), BB2.get());
 
+  // Make sure this doesn't crash if there are no phis.
+  for (auto &PN : BB->phis()) {
+    (void)PN;
+    EXPECT_TRUE(false) << "empty block should have no phis";
+  }
+
   // Make it a cycle.
   auto *BI = BranchInst::Create(BB.get(), BB.get());
 

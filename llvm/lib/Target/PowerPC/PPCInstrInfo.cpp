@@ -2433,7 +2433,7 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
     int64_t MB = MI.getOperand(3).getImm();
     APInt InVal(Opc == PPC::RLDICL ? 64 : 32, SExtImm, true);
     InVal = InVal.rotl(SH);
-    uint64_t Mask = (1LU << (63 - MB + 1)) - 1;
+    uint64_t Mask = (1LLU << (63 - MB + 1)) - 1;
     InVal &= Mask;
     // Can't replace negative values with an LI as that will sign-extend
     // and not clear the left bits. If we're setting the CR bit, we will use
@@ -2457,8 +2457,8 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
     int64_t ME = MI.getOperand(4).getImm();
     APInt InVal(32, SExtImm, true);
     InVal = InVal.rotl(SH);
-    // Set the bits (       MB + 32      ) to (       ME + 32      ).
-    uint64_t Mask = ((1 << (32 - MB)) - 1) & ~((1 << (31 - ME)) - 1);
+    // Set the bits (        MB + 32       ) to (        ME + 32       ).
+    uint64_t Mask = ((1LLU << (32 - MB)) - 1) & ~((1LLU << (31 - ME)) - 1);
     InVal &= Mask;
     // Can't replace negative values with an LI as that will sign-extend
     // and not clear the left bits. If we're setting the CR bit, we will use
@@ -2527,6 +2527,7 @@ bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
   III.ConstantOpNo = 2;
   III.ImmWidth = 16;
   III.ImmMustBeMultipleOf = 1;
+  III.TruncateImmTo = 0;
   switch (Opc) {
   default: return false;
   case PPC::ADD4:
@@ -2600,10 +2601,6 @@ bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
   case PPC::RLWNM8:
   case PPC::RLWNMo:
   case PPC::RLWNM8o:
-  case PPC::RLDCL:
-  case PPC::RLDCLo:
-  case PPC::RLDCR:
-  case PPC::RLDCRo:
   case PPC::SLW:
   case PPC::SLW8:
   case PPC::SLWo:
@@ -2614,6 +2611,50 @@ bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
   case PPC::SRW8o:
   case PPC::SRAW:
   case PPC::SRAWo:
+    III.SignedImm = false;
+    III.ZeroIsSpecialOrig = 0;
+    III.ZeroIsSpecialNew = 0;
+    III.IsCommutative = false;
+    // This isn't actually true, but the instructions ignore any of the
+    // upper bits, so any immediate loaded with an LI is acceptable.
+    // This does not apply to shift right algebraic because a value
+    // out of range will produce a -1/0.
+    III.ImmWidth = 16;
+    if (Opc == PPC::RLWNM || Opc == PPC::RLWNM8 ||
+        Opc == PPC::RLWNMo || Opc == PPC::RLWNM8o)
+      III.TruncateImmTo = 5;
+    else
+      III.TruncateImmTo = 6;
+    switch(Opc) {
+    default: llvm_unreachable("Unknown opcode");
+    case PPC::RLWNM: III.ImmOpcode = PPC::RLWINM; break;
+    case PPC::RLWNM8: III.ImmOpcode = PPC::RLWINM8; break;
+    case PPC::RLWNMo: III.ImmOpcode = PPC::RLWINMo; break;
+    case PPC::RLWNM8o: III.ImmOpcode = PPC::RLWINM8o; break;
+    case PPC::SLW: III.ImmOpcode = PPC::RLWINM; break;
+    case PPC::SLW8: III.ImmOpcode = PPC::RLWINM8; break;
+    case PPC::SLWo: III.ImmOpcode = PPC::RLWINMo; break;
+    case PPC::SLW8o: III.ImmOpcode = PPC::RLWINM8o; break;
+    case PPC::SRW: III.ImmOpcode = PPC::RLWINM; break;
+    case PPC::SRW8: III.ImmOpcode = PPC::RLWINM8; break;
+    case PPC::SRWo: III.ImmOpcode = PPC::RLWINMo; break;
+    case PPC::SRW8o: III.ImmOpcode = PPC::RLWINM8o; break;
+    case PPC::SRAW:
+      III.ImmWidth = 5;
+      III.TruncateImmTo = 0;
+      III.ImmOpcode = PPC::SRAWI;
+      break;
+    case PPC::SRAWo:
+      III.ImmWidth = 5;
+      III.TruncateImmTo = 0;
+      III.ImmOpcode = PPC::SRAWIo;
+      break;
+    }
+    break;
+  case PPC::RLDCL:
+  case PPC::RLDCLo:
+  case PPC::RLDCR:
+  case PPC::RLDCRo:
   case PPC::SLD:
   case PPC::SLDo:
   case PPC::SRD:
@@ -2626,33 +2667,34 @@ bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
     III.IsCommutative = false;
     // This isn't actually true, but the instructions ignore any of the
     // upper bits, so any immediate loaded with an LI is acceptable.
+    // This does not apply to shift right algebraic because a value
+    // out of range will produce a -1/0.
     III.ImmWidth = 16;
+    if (Opc == PPC::RLDCL || Opc == PPC::RLDCLo ||
+        Opc == PPC::RLDCR || Opc == PPC::RLDCRo)
+      III.TruncateImmTo = 6;
+    else
+      III.TruncateImmTo = 7;
     switch(Opc) {
     default: llvm_unreachable("Unknown opcode");
-    case PPC::RLWNM: III.ImmOpcode = PPC::RLWINM; break;
-    case PPC::RLWNM8: III.ImmOpcode = PPC::RLWINM8; break;
-    case PPC::RLWNMo: III.ImmOpcode = PPC::RLWINMo; break;
-    case PPC::RLWNM8o: III.ImmOpcode = PPC::RLWINM8o; break;
     case PPC::RLDCL: III.ImmOpcode = PPC::RLDICL; break;
     case PPC::RLDCLo: III.ImmOpcode = PPC::RLDICLo; break;
     case PPC::RLDCR: III.ImmOpcode = PPC::RLDICR; break;
     case PPC::RLDCRo: III.ImmOpcode = PPC::RLDICRo; break;
-    case PPC::SLW: III.ImmOpcode = PPC::RLWINM; break;
-    case PPC::SLW8: III.ImmOpcode = PPC::RLWINM8; break;
-    case PPC::SLWo: III.ImmOpcode = PPC::RLWINMo; break;
-    case PPC::SLW8o: III.ImmOpcode = PPC::RLWINM8o; break;
-    case PPC::SRW: III.ImmOpcode = PPC::RLWINM; break;
-    case PPC::SRW8: III.ImmOpcode = PPC::RLWINM8; break;
-    case PPC::SRWo: III.ImmOpcode = PPC::RLWINMo; break;
-    case PPC::SRW8o: III.ImmOpcode = PPC::RLWINM8o; break;
-    case PPC::SRAW: III.ImmOpcode = PPC::SRAWI; break;
-    case PPC::SRAWo: III.ImmOpcode = PPC::SRAWIo; break;
     case PPC::SLD: III.ImmOpcode = PPC::RLDICR; break;
     case PPC::SLDo: III.ImmOpcode = PPC::RLDICRo; break;
     case PPC::SRD: III.ImmOpcode = PPC::RLDICL; break;
     case PPC::SRDo: III.ImmOpcode = PPC::RLDICLo; break;
-    case PPC::SRAD: III.ImmOpcode = PPC::SRADI; break;
-    case PPC::SRADo: III.ImmOpcode = PPC::SRADIo; break;
+    case PPC::SRAD:
+      III.ImmWidth = 6;
+      III.TruncateImmTo = 0;
+      III.ImmOpcode = PPC::SRADI;
+       break;
+    case PPC::SRADo:
+      III.ImmWidth = 6;
+      III.TruncateImmTo = 0;
+      III.ImmOpcode = PPC::SRADIo;
+      break;
     }
     break;
   // Loads and stores:
@@ -2866,6 +2908,8 @@ bool PPCInstrInfo::transformToImmForm(MachineInstr &MI, const ImmInstrInfo &III,
     return false;
   if (Imm % III.ImmMustBeMultipleOf)
     return false;
+  if (III.TruncateImmTo)
+    Imm &= ((1 << III.TruncateImmTo) - 1);
   if (III.SignedImm) {
     APInt ActualValue(64, Imm, true);
     if (!ActualValue.isSignedIntN(III.ImmWidth))

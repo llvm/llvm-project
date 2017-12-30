@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}test1:
@@ -20,6 +20,7 @@ define amdgpu_ps void @test1(<8 x i32> inreg %rsrc, <4 x float> %d0, <4 x float>
 ; CHECK-LABEL: {{^}}test2:
 ; CHECK-NOT: s_waitcnt
 ; CHECK: image_load
+; CHECK-NEXT: v_lshlrev_b32
 ; CHECK-NEXT: s_waitcnt
 ; CHECK: s_waitcnt vmcnt(0){{$}}
 ; CHECK-NEXT: image_store

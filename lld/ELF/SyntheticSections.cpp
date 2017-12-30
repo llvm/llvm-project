@@ -1064,7 +1064,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
     addInt(DT_DEBUG, 0);
 
   this->Link = InX::DynStrTab->getParent()->SectionIndex;
-  if (InX::RelaDyn->getParent() && !InX::RelaDyn->empty()) {
+  if (!InX::RelaDyn->empty()) {
     addInSec(InX::RelaDyn->DynamicTag, InX::RelaDyn);
     addSize(InX::RelaDyn->SizeDynamicTag, InX::RelaDyn->getParent());
 
@@ -1081,7 +1081,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
         addInt(IsRela ? DT_RELACOUNT : DT_RELCOUNT, NumRelativeRels);
     }
   }
-  if (InX::RelaPlt->getParent() && !InX::RelaPlt->empty()) {
+  if (!InX::RelaPlt->empty()) {
     addInSec(DT_JMPREL, InX::RelaPlt);
     addSize(DT_PLTRELSZ, InX::RelaPlt->getParent());
     switch (Config->EMachine) {

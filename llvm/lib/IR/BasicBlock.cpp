@@ -264,7 +264,8 @@ const BasicBlock *BasicBlock::getUniqueSuccessor() const {
 }
 
 iterator_range<BasicBlock::phi_iterator> BasicBlock::phis() {
-  return make_range<phi_iterator>(dyn_cast<PHINode>(&front()), nullptr);
+  PHINode *P = empty() ? nullptr : dyn_cast<PHINode>(&*begin());
+  return make_range<phi_iterator>(P, nullptr);
 }
 
 /// This method is used to notify a BasicBlock that the
