@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -fopenmp %s
 
+// RUN: %clang_cc1 -fsyntax-only -verify -fopenmp-simd %s
+
 void foo() {
 }
 

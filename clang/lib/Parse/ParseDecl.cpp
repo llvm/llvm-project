@@ -2252,7 +2252,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
       // FIXME: This check should be for a variable template instantiation only.
 
       // Check that this is a valid instantiation
-      if (D.getName().getKind() != UnqualifiedId::IK_TemplateId) {
+      if (D.getName().getKind() != UnqualifiedIdKind::IK_TemplateId) {
         // If the declarator-id is not a template-id, issue a diagnostic and
         // recover by ignoring the 'template' keyword.
         Diag(Tok, diag::err_template_defn_explicit_instantiation)

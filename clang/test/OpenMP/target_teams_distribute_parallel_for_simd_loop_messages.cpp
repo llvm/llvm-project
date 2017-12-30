@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -fopenmp -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify %s
 
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify %s
+
 class S {
   int a;
   S() : a(0) {} // expected-note {{implicitly declared private here}}

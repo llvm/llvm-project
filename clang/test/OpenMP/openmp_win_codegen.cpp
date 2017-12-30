@@ -1,4 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-pc-windows-msvc18.0.0 -std=c++11 -fms-compatibility-version=18 -fms-extensions -emit-llvm %s -fexceptions -fcxx-exceptions -o - -O1 | FileCheck %s
+
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple x86_64-pc-windows-msvc18.0.0 -std=c++11 -fms-compatibility-version=18 -fms-extensions -emit-llvm %s -fexceptions -fcxx-exceptions -o - -O1 | FileCheck --check-prefix SIMD-ONLY0 %s
+// SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 // REQUIRES: x86-registered-target
 // expected-no-diagnostics
 

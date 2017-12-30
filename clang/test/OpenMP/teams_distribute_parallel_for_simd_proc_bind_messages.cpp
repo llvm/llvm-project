@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 -o - %s
 
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 -o - %s
+
 void foo();
 
 template <class T, typename S, int N>

@@ -2,6 +2,11 @@
 // RUN: %clang_cc1 -verify -fopenmp -std=c++98 %s
 // RUN: %clang_cc1 -verify -fopenmp -std=c++11 %s
 
+// RUN: %clang_cc1 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 %s
+// SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
+
 void foo() {
 }
 
