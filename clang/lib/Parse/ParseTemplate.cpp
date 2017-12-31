@@ -677,7 +677,7 @@ Parser::ParseNonTypeTemplateParameter(unsigned Depth, unsigned Position) {
   // declarators (parts of declarators?) are accepted for parameters.
   DeclSpec DS(AttrFactory);
   ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS_none,
-                             DSC_template_param);
+                             DeclSpecContext::DSC_template_param);
 
   // Parse this as a typename.
   Declarator ParamDecl(DS, DeclaratorContext::TemplateParamContext);

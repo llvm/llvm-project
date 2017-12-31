@@ -48,8 +48,8 @@ TypeResult Parser::ParseTypeName(SourceRange *Range,
                                  Decl **OwnedType,
                                  ParsedAttributes *Attrs) {
   DeclSpecContext DSC = getDeclSpecContextFromDeclaratorContext(Context);
-  if (DSC == DSC_normal)
-    DSC = DSC_type_specifier;
+  if (DSC == DeclSpecContext::DSC_normal)
+    DSC = DeclSpecContext::DSC_type_specifier;
 
   // Parse the common declaration-specifiers piece.
   DeclSpec DS(AttrFactory);
@@ -2450,7 +2450,7 @@ void Parser::ParseSpecifierQualifierList(DeclSpec &DS, AccessSpecifier AS,
   }
 
   // Issue diagnostic and remove constexpr specfier if present.
-  if (DS.isConstexprSpecified() && DSC != DSC_condition) {
+  if (DS.isConstexprSpecified() && DSC != DeclSpecContext::DSC_condition) {
     Diag(DS.getConstexprSpecLoc(), diag::err_typename_invalid_constexpr);
     DS.ClearConstexprSpec();
   }
@@ -2539,7 +2539,7 @@ bool Parser::ParseImplicitInt(DeclSpec &DS, CXXScopeSpec *SS,
     // classes.
     if (ParsedType T = Actions.ActOnMSVCUnknownTypeName(
             *Tok.getIdentifierInfo(), Tok.getLocation(),
-            DSC == DSC_template_type_arg)) {
+            DSC == DeclSpecContext::DSC_template_type_arg)) {
       const char *PrevSpec;
       unsigned DiagID;
       DS.SetTypeSpecType(DeclSpec::TST_typename, Loc, PrevSpec, DiagID, T,
@@ -2593,18 +2593,20 @@ bool Parser::ParseImplicitInt(DeclSpec &DS, CXXScopeSpec *SS,
 
       // Parse this as a tag as if the missing tag were present.
       if (TagKind == tok::kw_enum)
-        ParseEnumSpecifier(Loc, DS, TemplateInfo, AS, DSC_normal);
+        ParseEnumSpecifier(Loc, DS, TemplateInfo, AS,
+                           DeclSpecContext::DSC_normal);
       else
         ParseClassSpecifier(TagKind, Loc, DS, TemplateInfo, AS,
-                            /*EnteringContext*/ false, DSC_normal, Attrs);
+                            /*EnteringContext*/ false,
+                            DeclSpecContext::DSC_normal, Attrs);
       return true;
     }
   }
 
   // Determine whether this identifier could plausibly be the name of something
   // being declared (with a missing type).
-  if (!isTypeSpecifier(DSC) &&
-      (!SS || DSC == DSC_top_level || DSC == DSC_class)) {
+  if (!isTypeSpecifier(DSC) && (!SS || DSC == DeclSpecContext::DSC_top_level ||
+                                DSC == DeclSpecContext::DSC_class)) {
     // Look ahead to the next token to try to figure out what this declaration
     // was supposed to be.
     switch (NextToken().getKind()) {
@@ -2628,7 +2630,8 @@ bool Parser::ParseImplicitInt(DeclSpec &DS, CXXScopeSpec *SS,
 
       // If we're in a context where we could be declaring a constructor,
       // check whether this is a constructor declaration with a bogus name.
-      if (DSC == DSC_class || (DSC == DSC_top_level && SS)) {
+      if (DSC == DeclSpecContext::DSC_class ||
+          (DSC == DeclSpecContext::DSC_top_level && SS)) {
         IdentifierInfo *II = Tok.getIdentifierInfo();
         if (Actions.isCurrentClassNameTypo(II, SS)) {
           Diag(Loc, diag::err_constructor_bad_name)
@@ -2712,19 +2715,19 @@ bool Parser::ParseImplicitInt(DeclSpec &DS, CXXScopeSpec *SS,
 Parser::DeclSpecContext
 Parser::getDeclSpecContextFromDeclaratorContext(DeclaratorContext Context) {
   if (Context == DeclaratorContext::MemberContext)
-    return DSC_class;
+    return DeclSpecContext::DSC_class;
   if (Context == DeclaratorContext::FileContext)
-    return DSC_top_level;
+    return DeclSpecContext::DSC_top_level;
   if (Context == DeclaratorContext::TemplateParamContext)
-    return DSC_template_param;
+    return DeclSpecContext::DSC_template_param;
   if (Context == DeclaratorContext::TemplateTypeArgContext)
-    return DSC_template_type_arg;
+    return DeclSpecContext::DSC_template_type_arg;
   if (Context == DeclaratorContext::TrailingReturnContext)
-    return DSC_trailing;
+    return DeclSpecContext::DSC_trailing;
   if (Context == DeclaratorContext::AliasDeclContext ||
       Context == DeclaratorContext::AliasTemplateContext)
-    return DSC_alias_declaration;
-  return DSC_normal;
+    return DeclSpecContext::DSC_alias_declaration;
+  return DeclSpecContext::DSC_normal;
 }
 
 /// ParseAlignArgument - Parse the argument to an alignment-specifier.
@@ -2804,7 +2807,8 @@ Parser::DiagnoseMissingSemiAfterTagDefinition(DeclSpec &DS, AccessSpecifier AS,
                                               LateParsedAttrList *LateAttrs) {
   assert(DS.hasTagDefinition() && "shouldn't call this");
 
-  bool EnteringContext = (DSContext == DSC_class || DSContext == DSC_top_level);
+  bool EnteringContext = (DSContext == DeclSpecContext::DSC_class ||
+                          DSContext == DeclSpecContext::DSC_top_level);
 
   if (getLangOpts().CPlusPlus &&
       Tok.isOneOf(tok::identifier, tok::coloncolon, tok::kw_decltype,
@@ -2938,7 +2942,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     DS.SetRangeEnd(SourceLocation());
   }
 
-  bool EnteringContext = (DSContext == DSC_class || DSContext == DSC_top_level);
+  bool EnteringContext = (DSContext == DeclSpecContext::DSC_class ||
+                          DSContext == DeclSpecContext::DSC_top_level);
   bool AttrsLastTime = false;
   ParsedAttributesWithRange attrs(AttrFactory);
   // We use Sema's policy to get bool macros right.
@@ -3008,8 +3013,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
                                           Scope::FunctionPrototypeScope |
                                           Scope::AtCatchScope)) == 0;
         bool AllowNestedNameSpecifiers
-          = DSContext == DSC_top_level ||
-            (DSContext == DSC_class && DS.isFriendSpecified());
+          = DSContext == DeclSpecContext::DSC_top_level ||
+            (DSContext == DeclSpecContext::DSC_class && DS.isFriendSpecified());
 
         Actions.CodeCompleteDeclSpec(getCurScope(), DS,
                                      AllowNonIdentifiers,
@@ -3020,9 +3025,9 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       if (getCurScope()->getFnParent() || getCurScope()->getBlockParent())
         CCC = Sema::PCC_LocalDeclarationSpecifiers;
       else if (TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate)
-        CCC = DSContext == DSC_class? Sema::PCC_MemberTemplate
-                                    : Sema::PCC_Template;
-      else if (DSContext == DSC_class)
+        CCC = DSContext == DeclSpecContext::DSC_class ? Sema::PCC_MemberTemplate
+                                                      : Sema::PCC_Template;
+      else if (DSContext == DeclSpecContext::DSC_class)
         CCC = Sema::PCC_Class;
       else if (CurParsedObjCImpl)
         CCC = Sema::PCC_ObjCImplementation;
@@ -3066,10 +3071,11 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
         // To improve diagnostics for this case, parse the declaration as a
         // constructor (and reject the extra template arguments later).
         TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Next);
-        if ((DSContext == DSC_top_level || DSContext == DSC_class) &&
+        if ((DSContext == DeclSpecContext::DSC_top_level ||
+             DSContext == DeclSpecContext::DSC_class) &&
             TemplateId->Name &&
             Actions.isCurrentClassName(*TemplateId->Name, getCurScope(), &SS) &&
-            isConstructorDeclarator(/*Unqualified*/false)) {
+            isConstructorDeclarator(/*Unqualified*/ false)) {
           // The user meant this to be an out-of-line constructor
           // definition, but template arguments are not allowed
           // there.  Just allow this as a constructor; we'll
@@ -3108,7 +3114,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       // Check whether this is a constructor declaration. If we're in a
       // context where the identifier could be a class name, and it has the
       // shape of a constructor declaration, process it as one.
-      if ((DSContext == DSC_top_level || DSContext == DSC_class) &&
+      if ((DSContext == DeclSpecContext::DSC_top_level ||
+           DSContext == DeclSpecContext::DSC_class) &&
           Actions.isCurrentClassName(*Next.getIdentifierInfo(), getCurScope(),
                                      &SS) &&
           isConstructorDeclarator(/*Unqualified*/ false))
@@ -3246,7 +3253,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       if (DS.isTypeAltiVecVector())
         goto DoneWithDeclSpec;
 
-      if (DSContext == DSC_objc_method_result && isObjCInstancetype()) {
+      if (DSContext == DeclSpecContext::DSC_objc_method_result &&
+          isObjCInstancetype()) {
         ParsedType TypeRep = Actions.ActOnObjCInstanceType(Loc);
         assert(TypeRep);
         isInvalid = DS.SetTypeSpecType(DeclSpec::TST_typename, Loc, PrevSpec,
@@ -3280,7 +3288,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
 
       // If we're in a context where the identifier could be a class name,
       // check whether this is a constructor declaration.
-      if (getLangOpts().CPlusPlus && DSContext == DSC_class &&
+      if (getLangOpts().CPlusPlus && DSContext == DeclSpecContext::DSC_class &&
           Actions.isCurrentClassName(*Tok.getIdentifierInfo(), getCurScope()) &&
           isConstructorDeclarator(/*Unqualified*/true))
         goto DoneWithDeclSpec;
@@ -3288,7 +3296,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       // Likewise, if this is a context where the identifier could be a template
       // name, check whether this is a deduction guide declaration.
       if (getLangOpts().CPlusPlus17 &&
-          (DSContext == DSC_class || DSContext == DSC_top_level) &&
+          (DSContext == DeclSpecContext::DSC_class ||
+           DSContext == DeclSpecContext::DSC_top_level) &&
           Actions.isDeductionGuideName(getCurScope(), *Tok.getIdentifierInfo(),
                                        Tok.getLocation()) &&
           isConstructorDeclarator(/*Unqualified*/ true,
@@ -3334,7 +3343,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       // If we're in a context where the template-id could be a
       // constructor name or specialization, check whether this is a
       // constructor declaration.
-      if (getLangOpts().CPlusPlus && DSContext == DSC_class &&
+      if (getLangOpts().CPlusPlus && DSContext == DeclSpecContext::DSC_class &&
           Actions.isCurrentClassName(*TemplateId->Name, getCurScope()) &&
           isConstructorDeclarator(TemplateId->SS.isEmpty()))
         goto DoneWithDeclSpec;
@@ -3504,7 +3513,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
 
     // friend
     case tok::kw_friend:
-      if (DSContext == DSC_class)
+      if (DSContext == DeclSpecContext::DSC_class)
         isInvalid = DS.SetFriendSpec(Loc, PrevSpec, DiagID);
       else {
         PrevSpec = ""; // not actually used by the diagnostic
@@ -4123,7 +4132,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   SuppressAccessChecks diagsFromTag(*this, shouldDelayDiagsInTag);
 
   // Enum definitions should not be parsed in a trailing-return-type.
-  bool AllowDeclaration = DSC != DSC_trailing;
+  bool AllowDeclaration = DSC != DeclSpecContext::DSC_trailing;
 
   bool AllowFixedUnderlyingType = AllowDeclaration &&
     (getLangOpts().CPlusPlus11 || getLangOpts().MicrosoftExt ||
@@ -4349,14 +4358,14 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   bool IsDependent = false;
   const char *PrevSpec = nullptr;
   unsigned DiagID;
-  Decl *TagDecl = Actions.ActOnTag(getCurScope(), DeclSpec::TST_enum, TUK,
-                                   StartLoc, SS, Name, NameLoc, attrs.getList(),
-                                   AS, DS.getModulePrivateSpecLoc(), TParams,
-                                   Owned, IsDependent, ScopedEnumKWLoc,
-                                   IsScopedUsingClassTag, BaseType,
-                                   DSC == DSC_type_specifier,
-                                   DSC == DSC_template_param ||
-                                   DSC == DSC_template_type_arg, &SkipBody);
+  Decl *TagDecl = Actions.ActOnTag(
+      getCurScope(), DeclSpec::TST_enum, TUK, StartLoc, SS, Name, NameLoc,
+      attrs.getList(), AS, DS.getModulePrivateSpecLoc(), TParams, Owned,
+      IsDependent, ScopedEnumKWLoc, IsScopedUsingClassTag, BaseType,
+      DSC == DeclSpecContext::DSC_type_specifier,
+      DSC == DeclSpecContext::DSC_template_param ||
+          DSC == DeclSpecContext::DSC_template_type_arg,
+      &SkipBody);
 
   if (SkipBody.ShouldSkip) {
     assert(TUK == Sema::TUK_Definition && "can only skip a definition");
