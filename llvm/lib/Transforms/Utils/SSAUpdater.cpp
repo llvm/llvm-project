@@ -147,11 +147,9 @@ Value *SSAUpdater::GetValueInMiddleOfBlock(BasicBlock *BB) {
   if (isa<PHINode>(BB->begin())) {
     SmallDenseMap<BasicBlock *, Value *, 8> ValueMapping(PredValues.begin(),
                                                          PredValues.end());
-    PHINode *SomePHI;
-    for (BasicBlock::iterator It = BB->begin();
-         (SomePHI = dyn_cast<PHINode>(It)); ++It) {
-      if (IsEquivalentPHI(SomePHI, ValueMapping))
-        return SomePHI;
+    for (PHINode &SomePHI : BB->phis()) {
+      if (IsEquivalentPHI(&SomePHI, ValueMapping))
+        return &SomePHI;
     }
   }
 

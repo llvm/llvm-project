@@ -1265,9 +1265,9 @@ ParsedType Parser::ParseObjCTypeName(ObjCDeclSpec &DS,
     // Parse an abstract declarator.
     DeclSpec declSpec(AttrFactory);
     declSpec.setObjCQualifiers(&DS);
-    DeclSpecContext dsContext = DSC_normal;
+    DeclSpecContext dsContext = DeclSpecContext::DSC_normal;
     if (context == DeclaratorContext::ObjCResultContext)
-      dsContext = DSC_objc_method_result;
+      dsContext = DeclSpecContext::DSC_objc_method_result;
     ParseSpecifierQualifierList(declSpec, AS_none, dsContext);
     Declarator declarator(declSpec, context);
     ParseDeclarator(declarator);

@@ -13,16 +13,6 @@ define i32 @test4(i32 %a) nounwind  {
   ret i32 %tmp4
 }
 
-; A
-define i32 @test5(i32 %a) nounwind {
-; CHECK-LABEL: @test5(
-; CHECK-NEXT:    ret i32 %a
-;
-  %tmp2 = tail call i32 @llvm.bswap.i32( i32 %a )
-  %tmp4 = tail call i32 @llvm.bswap.i32( i32 %tmp2 )
-  ret i32 %tmp4
-}
-
 ; a >> 24
 define i32 @test6(i32 %a) nounwind {
 ; CHECK-LABEL: @test6(

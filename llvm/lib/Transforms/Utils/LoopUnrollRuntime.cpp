@@ -80,25 +80,21 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
   // The new PHI node value is added as an operand of a PHI node in either
   // the loop header or the loop exit block.
   for (BasicBlock *Succ : successors(Latch)) {
-    for (Instruction &BBI : *Succ) {
-      PHINode *PN = dyn_cast<PHINode>(&BBI);
-      // Exit when we passed all PHI nodes.
-      if (!PN)
-        break;
+    for (PHINode &PN : Succ->phis()) {
       // Add a new PHI node to the prolog end block and add the
       // appropriate incoming values.
-      PHINode *NewPN = PHINode::Create(PN->getType(), 2, PN->getName() + ".unr",
+      PHINode *NewPN = PHINode::Create(PN.getType(), 2, PN.getName() + ".unr",
                                        PrologExit->getFirstNonPHI());
       // Adding a value to the new PHI node from the original loop preheader.
       // This is the value that skips all the prolog code.
-      if (L->contains(PN)) {
-        NewPN->addIncoming(PN->getIncomingValueForBlock(NewPreHeader),
+      if (L->contains(&PN)) {
+        NewPN->addIncoming(PN.getIncomingValueForBlock(NewPreHeader),
                            PreHeader);
       } else {
-        NewPN->addIncoming(UndefValue::get(PN->getType()), PreHeader);
+        NewPN->addIncoming(UndefValue::get(PN.getType()), PreHeader);
       }
 
-      Value *V = PN->getIncomingValueForBlock(Latch);
+      Value *V = PN.getIncomingValueForBlock(Latch);
       if (Instruction *I = dyn_cast<Instruction>(V)) {
         if (L->contains(I)) {
           V = VMap.lookup(I);
@@ -111,10 +107,10 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
       // Update the existing PHI node operand with the value from the
       // new PHI node.  How this is done depends on if the existing
       // PHI node is in the original loop block, or the exit block.
-      if (L->contains(PN)) {
-        PN->setIncomingValue(PN->getBasicBlockIndex(NewPreHeader), NewPN);
+      if (L->contains(&PN)) {
+        PN.setIncomingValue(PN.getBasicBlockIndex(NewPreHeader), NewPN);
       } else {
-        PN->addIncoming(NewPN, PrologExit);
+        PN.addIncoming(NewPN, PrologExit);
       }
     }
   }
@@ -191,11 +187,7 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
   // Exit (EpilogPN)
 
   // Update PHI nodes at NewExit and Exit.
-  for (Instruction &BBI : *NewExit) {
-    PHINode *PN = dyn_cast<PHINode>(&BBI);
-    // Exit when we passed all PHI nodes.
-    if (!PN)
-      break;
+  for (PHINode &PN : NewExit->phis()) {
     // PN should be used in another PHI located in Exit block as
     // Exit was split by SplitBlockPredecessors into Exit and NewExit
     // Basicaly it should look like:
@@ -207,14 +199,14 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
     //
     // There is EpilogPreHeader incoming block instead of NewExit as
     // NewExit was spilt 1 more time to get EpilogPreHeader.
-    assert(PN->hasOneUse() && "The phi should have 1 use");
-    PHINode *EpilogPN = cast<PHINode> (PN->use_begin()->getUser());
+    assert(PN.hasOneUse() && "The phi should have 1 use");
+    PHINode *EpilogPN = cast<PHINode>(PN.use_begin()->getUser());
     assert(EpilogPN->getParent() == Exit && "EpilogPN should be in Exit block");
 
     // Add incoming PreHeader from branch around the Loop
-    PN->addIncoming(UndefValue::get(PN->getType()), PreHeader);
+    PN.addIncoming(UndefValue::get(PN.getType()), PreHeader);
 
-    Value *V = PN->getIncomingValueForBlock(Latch);
+    Value *V = PN.getIncomingValueForBlock(Latch);
     Instruction *I = dyn_cast<Instruction>(V);
     if (I && L->contains(I))
       // If value comes from an instruction in the loop add VMap value.
@@ -242,23 +234,19 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
     // Skip this as we already updated phis in exit blocks.
     if (!L->contains(Succ))
       continue;
-    for (Instruction &BBI : *Succ) {
-      PHINode *PN = dyn_cast<PHINode>(&BBI);
-      // Exit when we passed all PHI nodes.
-      if (!PN)
-        break;
+    for (PHINode &PN : Succ->phis()) {
       // Add new PHI nodes to the loop exit block and update epilog
       // PHIs with the new PHI values.
-      PHINode *NewPN = PHINode::Create(PN->getType(), 2, PN->getName() + ".unr",
+      PHINode *NewPN = PHINode::Create(PN.getType(), 2, PN.getName() + ".unr",
                                        NewExit->getFirstNonPHI());
       // Adding a value to the new PHI node from the unrolling loop preheader.
-      NewPN->addIncoming(PN->getIncomingValueForBlock(NewPreHeader), PreHeader);
+      NewPN->addIncoming(PN.getIncomingValueForBlock(NewPreHeader), PreHeader);
       // Adding a value to the new PHI node from the unrolling loop latch.
-      NewPN->addIncoming(PN->getIncomingValueForBlock(Latch), Latch);
+      NewPN->addIncoming(PN.getIncomingValueForBlock(Latch), Latch);
 
       // Update the existing PHI node operand with the value from the new PHI
       // node.  Corresponding instruction in epilog loop should be PHI.
-      PHINode *VPN = cast<PHINode>(VMap[&BBI]);
+      PHINode *VPN = cast<PHINode>(VMap[&PN]);
       VPN->setIncomingValue(VPN->getBasicBlockIndex(EpilogPreHeader), NewPN);
     }
   }

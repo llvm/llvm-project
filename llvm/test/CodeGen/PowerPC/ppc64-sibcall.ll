@@ -41,6 +41,15 @@ define void @caller_64_64_copy([8 x i64] %a, [8 x i64] %b) #1 {
 ; CHECK-SCO: b callee_64_64_copy
 }
 
+define internal fastcc void @callee_64_64_copy_fastcc([8 x i64] %a, [8 x i64] %b) #0 { ret void }
+define void @caller_64_64_copy_ccc([8 x i64] %a, [8 x i64] %b) #1 {
+  tail call fastcc void @callee_64_64_copy_fastcc([8 x i64] %a, [8 x i64] %b)
+  ret void
+; If caller and callee use different calling convensions, we cannot apply TCO.
+; CHECK-SCO-LABEL: caller_64_64_copy_ccc:
+; CHECK-SCO: bl callee_64_64_copy_fastcc
+}
+
 define void @caller_64_64_reorder_copy([8 x i64] %a, [8 x i64] %b) #1 {
   tail call void @callee_64_64_copy([8 x i64] %b, [8 x i64] %a)
   ret void

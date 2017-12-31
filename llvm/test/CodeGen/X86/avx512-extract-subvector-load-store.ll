@@ -6,7 +6,7 @@ define void @load_v8i1_broadcast_4_v2i1(<8 x i1>* %a0,<2 x double> %a1,<2 x doub
 ; AVX512-LABEL: load_v8i1_broadcast_4_v2i1:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovb (%rdi), %k0
-; AVX512-NEXT:    kshiftrw $4, %k0, %k0
+; AVX512-NEXT:    kshiftrb $4, %k0, %k0
 ; AVX512-NEXT:    vpmovm2q %k0, %xmm2
 ; AVX512-NEXT:    vpbroadcastq %xmm2, %xmm2
 ; AVX512-NEXT:    vpmovq2m %xmm2, %k1
@@ -37,7 +37,7 @@ define void @load_v8i1_broadcast_7_v2i1(<8 x i1>* %a0,<2 x double> %a1,<2 x doub
 ; AVX512-LABEL: load_v8i1_broadcast_7_v2i1:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovb (%rdi), %k0
-; AVX512-NEXT:    kshiftrw $6, %k0, %k0
+; AVX512-NEXT:    kshiftrb $6, %k0, %k0
 ; AVX512-NEXT:    vpmovm2q %k0, %xmm2
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,2,3]
 ; AVX512-NEXT:    vpmovq2m %xmm2, %k1
@@ -624,7 +624,7 @@ define void @load_v2i1_broadcast_1_v1i1_store(<2 x i1>* %a0,<1 x i1>* %a1) {
 ; AVX512-LABEL: load_v2i1_broadcast_1_v1i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovb (%rdi), %k0
-; AVX512-NEXT:    kshiftrw $1, %k0, %k0
+; AVX512-NEXT:    kshiftrb $1, %k0, %k0
 ; AVX512-NEXT:    kmovb %k0, (%rsi)
 ; AVX512-NEXT:    retq
 ;
@@ -645,7 +645,7 @@ define void @load_v3i1_broadcast_1_v1i1_store(<3 x i1>* %a0,<1 x i1>* %a1) {
 ; AVX512-LABEL: load_v3i1_broadcast_1_v1i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovb (%rdi), %k0
-; AVX512-NEXT:    kshiftrw $1, %k0, %k0
+; AVX512-NEXT:    kshiftrb $1, %k0, %k0
 ; AVX512-NEXT:    kmovb %k0, (%rsi)
 ; AVX512-NEXT:    retq
 ;
@@ -666,7 +666,7 @@ define void @load_v3i1_broadcast_2_v1i1_store(<3 x i1>* %a0,<1 x i1>* %a1) {
 ; AVX512-LABEL: load_v3i1_broadcast_2_v1i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovb (%rdi), %k0
-; AVX512-NEXT:    kshiftrw $2, %k0, %k0
+; AVX512-NEXT:    kshiftrb $2, %k0, %k0
 ; AVX512-NEXT:    kmovb %k0, (%rsi)
 ; AVX512-NEXT:    retq
 ;
@@ -687,7 +687,7 @@ define void @load_v4i1_broadcast_2_v1i1_store(<4 x i1>* %a0,<1 x i1>* %a1) {
 ; AVX512-LABEL: load_v4i1_broadcast_2_v1i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovb (%rdi), %k0
-; AVX512-NEXT:    kshiftrw $2, %k0, %k0
+; AVX512-NEXT:    kshiftrb $2, %k0, %k0
 ; AVX512-NEXT:    kmovb %k0, (%rsi)
 ; AVX512-NEXT:    retq
 ;
@@ -708,7 +708,7 @@ define void @load_v4i1_broadcast_3_v1i1_store(<4 x i1>* %a0,<1 x i1>* %a1) {
 ; AVX512-LABEL: load_v4i1_broadcast_3_v1i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovb (%rdi), %k0
-; AVX512-NEXT:    kshiftrw $3, %k0, %k0
+; AVX512-NEXT:    kshiftrb $3, %k0, %k0
 ; AVX512-NEXT:    kmovb %k0, (%rsi)
 ; AVX512-NEXT:    retq
 ;
@@ -729,7 +729,7 @@ define void @load_v8i1_broadcast_4_v1i1_store(<8 x i1>* %a0,<1 x i1>* %a1) {
 ; AVX512-LABEL: load_v8i1_broadcast_4_v1i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovb (%rdi), %k0
-; AVX512-NEXT:    kshiftrw $4, %k0, %k0
+; AVX512-NEXT:    kshiftrb $4, %k0, %k0
 ; AVX512-NEXT:    kmovb %k0, (%rsi)
 ; AVX512-NEXT:    retq
 ;
@@ -750,7 +750,7 @@ define void @load_v8i1_broadcast_4_v2i1_store(<8 x i1>* %a0,<2 x i1>* %a1) {
 ; AVX512-LABEL: load_v8i1_broadcast_4_v2i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovb (%rdi), %k0
-; AVX512-NEXT:    kshiftrw $4, %k0, %k0
+; AVX512-NEXT:    kshiftrb $4, %k0, %k0
 ; AVX512-NEXT:    vpmovm2q %k0, %xmm0
 ; AVX512-NEXT:    vpbroadcastq %xmm0, %xmm0
 ; AVX512-NEXT:    vpmovq2m %xmm0, %k0
@@ -779,7 +779,7 @@ define void @load_v8i1_broadcast_7_v1i1_store(<8 x i1>* %a0,<1 x i1>* %a1) {
 ; AVX512-LABEL: load_v8i1_broadcast_7_v1i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovb (%rdi), %k0
-; AVX512-NEXT:    kshiftrw $7, %k0, %k0
+; AVX512-NEXT:    kshiftrb $7, %k0, %k0
 ; AVX512-NEXT:    kmovb %k0, (%rsi)
 ; AVX512-NEXT:    retq
 ;
@@ -800,7 +800,7 @@ define void @load_v8i1_broadcast_7_v2i1_store(<8 x i1>* %a0,<2 x i1>* %a1) {
 ; AVX512-LABEL: load_v8i1_broadcast_7_v2i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovb (%rdi), %k0
-; AVX512-NEXT:    kshiftrw $6, %k0, %k0
+; AVX512-NEXT:    kshiftrb $6, %k0, %k0
 ; AVX512-NEXT:    vpmovm2q %k0, %xmm0
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; AVX512-NEXT:    vpmovq2m %xmm0, %k0

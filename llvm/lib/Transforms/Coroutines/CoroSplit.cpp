@@ -440,16 +440,14 @@ static void
 scanPHIsAndUpdateValueMap(Instruction *Prev, BasicBlock *NewBlock,
                           DenseMap<Value *, Value *> &ResolvedValues) {
   auto *PrevBB = Prev->getParent();
-  auto *I = &*NewBlock->begin();
-  while (auto PN = dyn_cast<PHINode>(I)) {
-    auto V = PN->getIncomingValueForBlock(PrevBB);
+  for (PHINode &PN : NewBlock->phis()) {
+    auto V = PN.getIncomingValueForBlock(PrevBB);
     // See if we already resolved it.
     auto VI = ResolvedValues.find(V);
     if (VI != ResolvedValues.end())
       V = VI->second;
     // Remember the value.
-    ResolvedValues[PN] = V;
-    I = I->getNextNode();
+    ResolvedValues[&PN] = V;
   }
 }
 
