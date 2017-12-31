@@ -258,11 +258,8 @@ static bool isEpilogProfitable(Loop *L) {
   BasicBlock *PreHeader = L->getLoopPreheader();
   BasicBlock *Header = L->getHeader();
   assert(PreHeader && Header);
-  for (Instruction &BBI : *Header) {
-    PHINode *PN = dyn_cast<PHINode>(&BBI);
-    if (!PN)
-      break;
-    if (isa<ConstantInt>(PN->getIncomingValueForBlock(PreHeader)))
+  for (const PHINode &PN : Header->phis()) {
+    if (isa<ConstantInt>(PN.getIncomingValueForBlock(PreHeader)))
       return true;
   }
   return false;
@@ -611,13 +608,12 @@ LoopUnrollResult llvm::UnrollLoop(
       for (BasicBlock *Succ : successors(*BB)) {
         if (L->contains(Succ))
           continue;
-        for (BasicBlock::iterator BBI = Succ->begin();
-             PHINode *phi = dyn_cast<PHINode>(BBI); ++BBI) {
-          Value *Incoming = phi->getIncomingValueForBlock(*BB);
+        for (PHINode &PHI : Succ->phis()) {
+          Value *Incoming = PHI.getIncomingValueForBlock(*BB);
           ValueToValueMapTy::iterator It = LastValueMap.find(Incoming);
           if (It != LastValueMap.end())
             Incoming = It->second;
-          phi->addIncoming(Incoming, New);
+          PHI.addIncoming(Incoming, New);
         }
       }
       // Keep track of new headers and latches as we create them, so that
@@ -721,10 +717,8 @@ LoopUnrollResult llvm::UnrollLoop(
         for (BasicBlock *Succ: successors(BB)) {
           if (Succ == Headers[i])
             continue;
-          for (BasicBlock::iterator BBI = Succ->begin();
-               PHINode *Phi = dyn_cast<PHINode>(BBI); ++BBI) {
-            Phi->removeIncomingValue(BB, false);
-          }
+          for (PHINode &Phi : Succ->phis())
+            Phi.removeIncomingValue(BB, false);
         }
       }
       // Replace the conditional branch with an unconditional one.

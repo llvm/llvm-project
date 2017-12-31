@@ -265,15 +265,12 @@ static void splitCallSite(CallSite CS, BasicBlock *PredBB1, BasicBlock *PredBB2,
   CallSite CS2(CallInst2);
 
   // Handle PHIs used as arguments in the call-site.
-  for (auto &PI : *TailBB) {
-    PHINode *PN = dyn_cast<PHINode>(&PI);
-    if (!PN)
-      break;
+  for (PHINode &PN : TailBB->phis()) {
     unsigned ArgNo = 0;
     for (auto &CI : CS.args()) {
-      if (&*CI == PN) {
-        CS1.setArgument(ArgNo, PN->getIncomingValueForBlock(SplitBlock1));
-        CS2.setArgument(ArgNo, PN->getIncomingValueForBlock(SplitBlock2));
+      if (&*CI == &PN) {
+        CS1.setArgument(ArgNo, PN.getIncomingValueForBlock(SplitBlock1));
+        CS2.setArgument(ArgNo, PN.getIncomingValueForBlock(SplitBlock2));
       }
       ++ArgNo;
     }

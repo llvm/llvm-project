@@ -43,9 +43,7 @@ define <2 x i1> @bitcast_i2_2i1(i2 zeroext %a0) {
 ;
 ; AVX512-LABEL: bitcast_i2_2i1:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
-; AVX512-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; AVX512-NEXT:    kmovd %eax, %k1
+; AVX512-NEXT:    kmovd %edi, %k1
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
@@ -86,9 +84,7 @@ define <4 x i1> @bitcast_i4_4i1(i4 zeroext %a0) {
 ;
 ; AVX512-LABEL: bitcast_i4_4i1:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
-; AVX512-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; AVX512-NEXT:    kmovd %eax, %k1
+; AVX512-NEXT:    kmovd %edi, %k1
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    retq

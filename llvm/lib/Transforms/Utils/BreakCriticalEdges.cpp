@@ -106,10 +106,9 @@ static void createPHIsForSplitLoopExit(ArrayRef<BasicBlock *> Preds,
           SplitBB->isLandingPad()) && "SplitBB has non-PHI nodes!");
 
   // For each PHI in the destination block.
-  for (BasicBlock::iterator I = DestBB->begin();
-       PHINode *PN = dyn_cast<PHINode>(I); ++I) {
-    unsigned Idx = PN->getBasicBlockIndex(SplitBB);
-    Value *V = PN->getIncomingValue(Idx);
+  for (PHINode &PN : DestBB->phis()) {
+    unsigned Idx = PN.getBasicBlockIndex(SplitBB);
+    Value *V = PN.getIncomingValue(Idx);
 
     // If the input is a PHI which already satisfies LCSSA, don't create
     // a new one.
@@ -119,13 +118,13 @@ static void createPHIsForSplitLoopExit(ArrayRef<BasicBlock *> Preds,
 
     // Otherwise a new PHI is needed. Create one and populate it.
     PHINode *NewPN = PHINode::Create(
-        PN->getType(), Preds.size(), "split",
+        PN.getType(), Preds.size(), "split",
         SplitBB->isLandingPad() ? &SplitBB->front() : SplitBB->getTerminator());
     for (unsigned i = 0, e = Preds.size(); i != e; ++i)
       NewPN->addIncoming(V, Preds[i]);
 
     // Update the original PHI.
-    PN->setIncomingValue(Idx, NewPN);
+    PN.setIncomingValue(Idx, NewPN);
   }
 }
 
