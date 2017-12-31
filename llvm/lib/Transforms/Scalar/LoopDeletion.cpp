@@ -49,11 +49,10 @@ static bool isLoopDead(Loop *L, ScalarEvolution &SE,
   // must pass through a PHI in the exit block, meaning that this check is
   // sufficient to guarantee that no loop-variant values are used outside
   // of the loop.
-  BasicBlock::iterator BI = ExitBlock->begin();
   bool AllEntriesInvariant = true;
   bool AllOutgoingValuesSame = true;
-  while (PHINode *P = dyn_cast<PHINode>(BI)) {
-    Value *incoming = P->getIncomingValueForBlock(ExitingBlocks[0]);
+  for (PHINode &P : ExitBlock->phis()) {
+    Value *incoming = P.getIncomingValueForBlock(ExitingBlocks[0]);
 
     // Make sure all exiting blocks produce the same incoming value for the exit
     // block.  If there are different incoming values for different exiting
@@ -61,7 +60,7 @@ static bool isLoopDead(Loop *L, ScalarEvolution &SE,
     // be used.
     AllOutgoingValuesSame =
         all_of(makeArrayRef(ExitingBlocks).slice(1), [&](BasicBlock *BB) {
-          return incoming == P->getIncomingValueForBlock(BB);
+          return incoming == P.getIncomingValueForBlock(BB);
         });
 
     if (!AllOutgoingValuesSame)
@@ -72,8 +71,6 @@ static bool isLoopDead(Loop *L, ScalarEvolution &SE,
         AllEntriesInvariant = false;
         break;
       }
-
-    ++BI;
   }
 
   if (Changed)
@@ -162,11 +159,9 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
   if (ExitBlock && isLoopNeverExecuted(L)) {
     DEBUG(dbgs() << "Loop is proven to never execute, delete it!");
     // Set incoming value to undef for phi nodes in the exit block.
-    BasicBlock::iterator BI = ExitBlock->begin();
-    while (PHINode *P = dyn_cast<PHINode>(BI)) {
-      for (unsigned i = 0; i < P->getNumIncomingValues(); i++)
-        P->setIncomingValue(i, UndefValue::get(P->getType()));
-      BI++;
+    for (PHINode &P : ExitBlock->phis()) {
+      std::fill(P.incoming_values().begin(), P.incoming_values().end(),
+                UndefValue::get(P.getType()));
     }
     deleteDeadLoop(L, &DT, &SE, &LI);
     ++NumDeleted;

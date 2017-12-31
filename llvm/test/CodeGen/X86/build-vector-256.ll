@@ -411,3 +411,77 @@ define <32 x i8> @test_buildvector_v32i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
   %ins31 = insertelement <32 x i8> %ins30, i8 %a31, i32 31
   ret <32 x i8> %ins31
 }
+
+; PR30780
+
+define <8 x i32> @test_buildvector_v8i32_splat_sext_i8(i8 %in) {
+; AVX1-32-LABEL: test_buildvector_v8i32_splat_sext_i8:
+; AVX1-32:       # %bb.0:
+; AVX1-32-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
+; AVX1-32-NEXT:    vmovd %eax, %xmm0
+; AVX1-32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1-32-NEXT:    retl
+;
+; AVX1-64-LABEL: test_buildvector_v8i32_splat_sext_i8:
+; AVX1-64:       # %bb.0:
+; AVX1-64-NEXT:    movsbl %dil, %eax
+; AVX1-64-NEXT:    vmovd %eax, %xmm0
+; AVX1-64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1-64-NEXT:    retq
+;
+; AVX2-32-LABEL: test_buildvector_v8i32_splat_sext_i8:
+; AVX2-32:       # %bb.0:
+; AVX2-32-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
+; AVX2-32-NEXT:    vmovd %eax, %xmm0
+; AVX2-32-NEXT:    vpbroadcastd %xmm0, %ymm0
+; AVX2-32-NEXT:    retl
+;
+; AVX2-64-LABEL: test_buildvector_v8i32_splat_sext_i8:
+; AVX2-64:       # %bb.0:
+; AVX2-64-NEXT:    movsbl %dil, %eax
+; AVX2-64-NEXT:    vmovd %eax, %xmm0
+; AVX2-64-NEXT:    vpbroadcastd %xmm0, %ymm0
+; AVX2-64-NEXT:    retq
+  %ext = sext i8 %in to i32
+  %insert = insertelement <8 x i32> undef, i32 %ext, i32 0
+  %splat = shufflevector <8 x i32> %insert, <8 x i32> undef, <8 x i32> zeroinitializer
+  ret <8 x i32> %splat
+}
+
+define <8 x i32> @test_buildvector_v8i32_splat_zext_i8(i8 %in) {
+; AVX1-32-LABEL: test_buildvector_v8i32_splat_zext_i8:
+; AVX1-32:       # %bb.0:
+; AVX1-32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; AVX1-32-NEXT:    vmovd %eax, %xmm0
+; AVX1-32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1-32-NEXT:    retl
+;
+; AVX1-64-LABEL: test_buildvector_v8i32_splat_zext_i8:
+; AVX1-64:       # %bb.0:
+; AVX1-64-NEXT:    vmovd %edi, %xmm0
+; AVX1-64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1-64-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-64-NEXT:    retq
+;
+; AVX2-32-LABEL: test_buildvector_v8i32_splat_zext_i8:
+; AVX2-32:       # %bb.0:
+; AVX2-32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; AVX2-32-NEXT:    vmovd %eax, %xmm0
+; AVX2-32-NEXT:    vpbroadcastd %xmm0, %ymm0
+; AVX2-32-NEXT:    retl
+;
+; AVX2-64-LABEL: test_buildvector_v8i32_splat_zext_i8:
+; AVX2-64:       # %bb.0:
+; AVX2-64-NEXT:    movzbl %dil, %eax
+; AVX2-64-NEXT:    vmovd %eax, %xmm0
+; AVX2-64-NEXT:    vpbroadcastd %xmm0, %ymm0
+; AVX2-64-NEXT:    retq
+  %ext = zext i8 %in to i32
+  %insert = insertelement <8 x i32> undef, i32 %ext, i32 0
+  %splat = shufflevector <8 x i32> %insert, <8 x i32> undef, <8 x i32> zeroinitializer
+  ret <8 x i32> %splat
+}

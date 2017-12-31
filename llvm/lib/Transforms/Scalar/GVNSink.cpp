@@ -592,12 +592,8 @@ private:
   /// Create a ModelledPHI for each PHI in BB, adding to PHIs.
   void analyzeInitialPHIs(BasicBlock *BB, ModelledPHISet &PHIs,
                           SmallPtrSetImpl<Value *> &PHIContents) {
-    for (auto &I : *BB) {
-      auto *PN = dyn_cast<PHINode>(&I);
-      if (!PN)
-        return;
-
-      auto MPHI = ModelledPHI(PN);
+    for (PHINode &PN : BB->phis()) {
+      auto MPHI = ModelledPHI(&PN);
       PHIs.insert(MPHI);
       for (auto *V : MPHI.getValues())
         PHIContents.insert(V);

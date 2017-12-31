@@ -544,10 +544,7 @@ void StructurizeCFG::insertConditions(bool Loops) {
 /// them in DeletedPhis
 void StructurizeCFG::delPhiValues(BasicBlock *From, BasicBlock *To) {
   PhiMap &Map = DeletedPhis[To];
-  for (Instruction &I : *To) {
-    if (!isa<PHINode>(I))
-      break;
-    PHINode &Phi = cast<PHINode>(I);
+  for (PHINode &Phi : To->phis()) {
     while (Phi.getBasicBlockIndex(From) != -1) {
       Value *Deleted = Phi.removeIncomingValue(From, false);
       Map[&Phi].push_back(std::make_pair(From, Deleted));
@@ -557,10 +554,7 @@ void StructurizeCFG::delPhiValues(BasicBlock *From, BasicBlock *To) {
 
 /// \brief Add a dummy PHI value as soon as we knew the new predecessor
 void StructurizeCFG::addPhiValues(BasicBlock *From, BasicBlock *To) {
-  for (Instruction &I : *To) {
-    if (!isa<PHINode>(I))
-      break;
-    PHINode &Phi = cast<PHINode>(I);
+  for (PHINode &Phi : To->phis()) {
     Value *Undef = UndefValue::get(Phi.getType());
     Phi.addIncoming(Undef, From);
   }
