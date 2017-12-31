@@ -468,18 +468,12 @@ define <4 x i32> @test_buildvector_v4i32_splat_zext_i8(i8 %in) {
 ; SSE-32-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE-32-NEXT:    retl
 ;
-; SSE2-64-LABEL: test_buildvector_v4i32_splat_zext_i8:
-; SSE2-64:       # %bb.0:
-; SSE2-64-NEXT:    movd %edi, %xmm0
-; SSE2-64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; SSE2-64-NEXT:    pand {{.*}}(%rip), %xmm0
-; SSE2-64-NEXT:    retq
-;
-; SSE41-64-LABEL: test_buildvector_v4i32_splat_zext_i8:
-; SSE41-64:       # %bb.0:
-; SSE41-64-NEXT:    movd %edi, %xmm0
-; SSE41-64-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[0],zero,zero,zero,xmm0[0],zero,zero,zero,xmm0[0],zero,zero,zero
-; SSE41-64-NEXT:    retq
+; SSE-64-LABEL: test_buildvector_v4i32_splat_zext_i8:
+; SSE-64:       # %bb.0:
+; SSE-64-NEXT:    movzbl %dil, %eax
+; SSE-64-NEXT:    movd %eax, %xmm0
+; SSE-64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE-64-NEXT:    retq
 ;
 ; AVX1-32-LABEL: test_buildvector_v4i32_splat_zext_i8:
 ; AVX1-32:       # %bb.0:
@@ -490,8 +484,9 @@ define <4 x i32> @test_buildvector_v4i32_splat_zext_i8(i8 %in) {
 ;
 ; AVX1-64-LABEL: test_buildvector_v4i32_splat_zext_i8:
 ; AVX1-64:       # %bb.0:
-; AVX1-64-NEXT:    vmovd %edi, %xmm0
-; AVX1-64-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[0],zero,zero,zero,xmm0[0],zero,zero,zero,xmm0[0],zero,zero,zero
+; AVX1-64-NEXT:    movzbl %dil, %eax
+; AVX1-64-NEXT:    vmovd %eax, %xmm0
+; AVX1-64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; AVX1-64-NEXT:    retq
 ;
 ; AVX2-32-LABEL: test_buildvector_v4i32_splat_zext_i8:
