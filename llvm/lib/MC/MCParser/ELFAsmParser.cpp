@@ -447,7 +447,7 @@ bool ELFAsmParser::parseMetadataSym(MCSymbolELF *&Associated) {
   Lex();
   StringRef Name;
   if (getParser().parseIdentifier(Name))
-    return true;
+    return TokError("invalid metadata symbol");
   Associated = dyn_cast_or_null<MCSymbolELF>(getContext().lookupSymbol(Name));
   if (!Associated || !Associated->isInSection())
     return TokError("symbol is not in a section: " + Name);
