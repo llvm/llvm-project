@@ -1174,13 +1174,9 @@ void LoopConstrainer::cloneLoop(LoopConstrainer::ClonedLoop &Result,
       if (OriginalLoop.contains(SBB))
         continue; // not an exit block
 
-      for (Instruction &I : *SBB) {
-        auto *PN = dyn_cast<PHINode>(&I);
-        if (!PN)
-          break;
-
-        Value *OldIncoming = PN->getIncomingValueForBlock(OriginalBB);
-        PN->addIncoming(GetClonedValue(OldIncoming), ClonedBB);
+      for (PHINode &PN : SBB->phis()) {
+        Value *OldIncoming = PN.getIncomingValueForBlock(OriginalBB);
+        PN.addIncoming(GetClonedValue(OldIncoming), ClonedBB);
       }
     }
   }
@@ -1327,16 +1323,12 @@ LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
   // We emit PHI nodes into `RRI.PseudoExit' that compute the "latest" value of
   // each of the PHI nodes in the loop header.  This feeds into the initial
   // value of the same PHI nodes if/when we continue execution.
-  for (Instruction &I : *LS.Header) {
-    auto *PN = dyn_cast<PHINode>(&I);
-    if (!PN)
-      break;
-
-    PHINode *NewPHI = PHINode::Create(PN->getType(), 2, PN->getName() + ".copy",
+  for (PHINode &PN : LS.Header->phis()) {
+    PHINode *NewPHI = PHINode::Create(PN.getType(), 2, PN.getName() + ".copy",
                                       BranchToContinuation);
 
-    NewPHI->addIncoming(PN->getIncomingValueForBlock(Preheader), Preheader);
-    NewPHI->addIncoming(PN->getIncomingValueForBlock(LS.Latch),
+    NewPHI->addIncoming(PN.getIncomingValueForBlock(Preheader), Preheader);
+    NewPHI->addIncoming(PN.getIncomingValueForBlock(LS.Latch),
                         RRI.ExitSelector);
     RRI.PHIValuesAtPseudoExit.push_back(NewPHI);
   }
@@ -1348,12 +1340,8 @@ LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
 
   // The latch exit now has a branch from `RRI.ExitSelector' instead of
   // `LS.Latch'.  The PHI nodes need to be updated to reflect that.
-  for (Instruction &I : *LS.LatchExit) {
-    if (PHINode *PN = dyn_cast<PHINode>(&I))
-      replacePHIBlock(PN, LS.Latch, RRI.ExitSelector);
-    else
-      break;
-  }
+  for (PHINode &PN : LS.LatchExit->phis())
+    replacePHIBlock(&PN, LS.Latch, RRI.ExitSelector);
 
   return RRI;
 }
@@ -1362,15 +1350,10 @@ void LoopConstrainer::rewriteIncomingValuesForPHIs(
     LoopStructure &LS, BasicBlock *ContinuationBlock,
     const LoopConstrainer::RewrittenRangeInfo &RRI) const {
   unsigned PHIIndex = 0;
-  for (Instruction &I : *LS.Header) {
-    auto *PN = dyn_cast<PHINode>(&I);
-    if (!PN)
-      break;
-
-    for (unsigned i = 0, e = PN->getNumIncomingValues(); i < e; ++i)
-      if (PN->getIncomingBlock(i) == ContinuationBlock)
-        PN->setIncomingValue(i, RRI.PHIValuesAtPseudoExit[PHIIndex++]);
-  }
+  for (PHINode &PN : LS.Header->phis())
+    for (unsigned i = 0, e = PN.getNumIncomingValues(); i < e; ++i)
+      if (PN.getIncomingBlock(i) == ContinuationBlock)
+        PN.setIncomingValue(i, RRI.PHIValuesAtPseudoExit[PHIIndex++]);
 
   LS.IndVarStart = RRI.IndVarEnd;
 }
@@ -1381,14 +1364,9 @@ BasicBlock *LoopConstrainer::createPreheader(const LoopStructure &LS,
   BasicBlock *Preheader = BasicBlock::Create(Ctx, Tag, &F, LS.Header);
   BranchInst::Create(LS.Header, Preheader);
 
-  for (Instruction &I : *LS.Header) {
-    auto *PN = dyn_cast<PHINode>(&I);
-    if (!PN)
-      break;
-
-    for (unsigned i = 0, e = PN->getNumIncomingValues(); i < e; ++i)
-      replacePHIBlock(PN, OldPreheader, Preheader);
-  }
+  for (PHINode &PN : LS.Header->phis())
+    for (unsigned i = 0, e = PN.getNumIncomingValues(); i < e; ++i)
+      replacePHIBlock(&PN, OldPreheader, Preheader);
 
   return Preheader;
 }

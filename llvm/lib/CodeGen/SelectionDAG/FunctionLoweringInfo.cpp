@@ -257,20 +257,20 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
 
     // Create Machine PHI nodes for LLVM PHI nodes, lowering them as
     // appropriate.
-    for (BasicBlock::const_iterator I = BB.begin();
-         const PHINode *PN = dyn_cast<PHINode>(I); ++I) {
-      if (PN->use_empty()) continue;
-
-      // Skip empty types
-      if (PN->getType()->isEmptyTy())
+    for (const PHINode &PN : BB.phis()) {
+      if (PN.use_empty())
         continue;
 
-      DebugLoc DL = PN->getDebugLoc();
-      unsigned PHIReg = ValueMap[PN];
+      // Skip empty types
+      if (PN.getType()->isEmptyTy())
+        continue;
+
+      DebugLoc DL = PN.getDebugLoc();
+      unsigned PHIReg = ValueMap[&PN];
       assert(PHIReg && "PHI node does not have an assigned virtual register!");
 
       SmallVector<EVT, 4> ValueVTs;
-      ComputeValueVTs(*TLI, MF->getDataLayout(), PN->getType(), ValueVTs);
+      ComputeValueVTs(*TLI, MF->getDataLayout(), PN.getType(), ValueVTs);
       for (EVT VT : ValueVTs) {
         unsigned NumRegisters = TLI->getNumRegisters(Fn->getContext(), VT);
         const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();

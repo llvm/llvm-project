@@ -898,8 +898,9 @@ void cl::tokenizeConfigFile(StringRef Source, StringSaver &Saver,
           if (*Cur == '\n' ||
               (*Cur == '\r' && (Cur + 1 != End) && Cur[1] == '\n')) {
             Line.append(Start, Cur - 1);
-            Cur += (*Cur == '\r' ? 2 : 1);
-            Start = Cur;
+            if (*Cur == '\r')
+              ++Cur;
+            Start = Cur + 1;
           }
         }
       } else if (*Cur == '\n')

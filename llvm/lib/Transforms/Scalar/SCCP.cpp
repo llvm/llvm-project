@@ -523,10 +523,8 @@ private:
       DEBUG(dbgs() << "Marking Edge Executable: " << Source->getName()
             << " -> " << Dest->getName() << '\n');
 
-      PHINode *PN;
-      for (BasicBlock::iterator I = Dest->begin();
-           (PN = dyn_cast<PHINode>(I)); ++I)
-        visitPHINode(*PN);
+      for (PHINode &PN : Dest->phis())
+        visitPHINode(PN);
     }
   }
 
