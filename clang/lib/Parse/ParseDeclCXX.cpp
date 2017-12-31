@@ -701,7 +701,7 @@ Parser::ParseUsingDeclaration(DeclaratorContext Context,
       // "typename" keyword is allowed for identifiers only,
       // because it may be a type definition.
       if (D.TypenameLoc.isValid() &&
-          D.Name.getKind() != UnqualifiedId::IK_Identifier) {
+          D.Name.getKind() != UnqualifiedIdKind::IK_Identifier) {
         Diag(D.Name.getSourceRange().getBegin(),
              diag::err_typename_identifiers_only)
             << FixItHint::CreateRemoval(SourceRange(D.TypenameLoc));
@@ -755,7 +755,7 @@ Decl *Parser::ParseAliasDeclarationAfterDeclarator(
   // Type alias templates cannot be specialized.
   int SpecKind = -1;
   if (TemplateInfo.Kind == ParsedTemplateInfo::Template &&
-      D.Name.getKind() == UnqualifiedId::IK_TemplateId)
+      D.Name.getKind() == UnqualifiedIdKind::IK_TemplateId)
     SpecKind = 0;
   if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitSpecialization)
     SpecKind = 1;
@@ -775,7 +775,7 @@ Decl *Parser::ParseAliasDeclarationAfterDeclarator(
   }
 
   // Name must be an identifier.
-  if (D.Name.getKind() != UnqualifiedId::IK_Identifier) {
+  if (D.Name.getKind() != UnqualifiedIdKind::IK_Identifier) {
     Diag(D.Name.StartLocation, diag::err_alias_declaration_not_identifier);
     // No removal fixit: can't recover from this.
     SkipUntil(tok::semi);
@@ -1614,14 +1614,15 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   //   new struct s;
   // or
   //   &T::operator struct s;
-  // For these, DSC is DSC_type_specifier or DSC_alias_declaration.
+  // For these, DSC is DeclSpecContext::DSC_type_specifier or
+  // DeclSpecContext::DSC_alias_declaration.
 
   // If there are attributes after class name, parse them.
   MaybeParseCXX11Attributes(Attributes);
 
   const PrintingPolicy &Policy = Actions.getASTContext().getPrintingPolicy();
   Sema::TagUseKind TUK;
-  if (DSC == DSC_trailing)
+  if (DSC == DeclSpecContext::DSC_trailing)
     TUK = Sema::TUK_Reference;
   else if (Tok.is(tok::l_brace) ||
            (getLangOpts().CPlusPlus && Tok.is(tok::colon)) ||
@@ -1883,15 +1884,14 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
     stripTypeAttributesOffDeclSpec(attrs, DS, TUK);
 
     // Declaration or definition of a class type
-    TagOrTempResult = Actions.ActOnTag(getCurScope(), TagType, TUK, StartLoc,
-                                       SS, Name, NameLoc, attrs.getList(), AS,
-                                       DS.getModulePrivateSpecLoc(),
-                                       TParams, Owned, IsDependent,
-                                       SourceLocation(), false,
-                                       clang::TypeResult(),
-                                       DSC == DSC_type_specifier,
-                                       DSC == DSC_template_param ||
-                                       DSC == DSC_template_type_arg, &SkipBody);
+    TagOrTempResult = Actions.ActOnTag(
+        getCurScope(), TagType, TUK, StartLoc, SS, Name, NameLoc,
+        attrs.getList(), AS, DS.getModulePrivateSpecLoc(), TParams, Owned,
+        IsDependent, SourceLocation(), false, clang::TypeResult(),
+        DSC == DeclSpecContext::DSC_type_specifier,
+        DSC == DeclSpecContext::DSC_template_param ||
+            DSC == DeclSpecContext::DSC_template_type_arg,
+        &SkipBody);
 
     // If ActOnTag said the type was dependent, try again with the
     // less common call.
@@ -2561,7 +2561,7 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
   if (MalformedTypeSpec)
     DS.SetTypeSpecError();
 
-  ParseDeclarationSpecifiers(DS, TemplateInfo, AS, DSC_class,
+  ParseDeclarationSpecifiers(DS, TemplateInfo, AS, DeclSpecContext::DSC_class,
                              &CommonLateParsedAttrs);
 
   // Turn off colon protection that was set for declspec.
@@ -2571,7 +2571,7 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
   // may get this far before the problem becomes obvious.
   if (DS.hasTagDefinition() &&
       TemplateInfo.Kind == ParsedTemplateInfo::NonTemplate &&
-      DiagnoseMissingSemiAfterTagDefinition(DS, AS, DSC_class,
+      DiagnoseMissingSemiAfterTagDefinition(DS, AS, DeclSpecContext::DSC_class,
                                             &CommonLateParsedAttrs))
     return nullptr;
 

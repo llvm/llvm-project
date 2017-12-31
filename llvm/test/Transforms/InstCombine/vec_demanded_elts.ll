@@ -191,11 +191,11 @@ define <4 x i32> @inselt_shuf_no_demand_multiuse(i32 %a0, i32 %a1, <4 x i32> %b)
 
 define <4 x float> @inselt_shuf_no_demand_bogus_insert_index_in_chain(float %a1, float %a2, float %a3, i32 %variable_index) {
 ; CHECK-LABEL: @inselt_shuf_no_demand_bogus_insert_index_in_chain(
-; CHECK-NEXT:    [[OUT1:%.*]] = insertelement <4 x float> undef, float %a1, i32 1
-; CHECK-NEXT:    ret <4 x float> [[OUT1]]
+; CHECK-NEXT:    [[OUT12:%.*]] = insertelement <4 x float> undef, float [[A2:%.*]], i32 [[VARIABLE_INDEX:%.*]]
+; CHECK-NEXT:    ret <4 x float> [[OUT12]]
 ;
   %out1 = insertelement <4 x float> undef, float %a1, i32 1
-  %out12 = insertelement <4 x float> %out1, float %a2, i32 undef ; something unexpected
+  %out12 = insertelement <4 x float> %out1, float %a2, i32 %variable_index ; something unexpected
   %out123 = insertelement <4 x float> %out12, float %a3, i32 3
   %shuffle = shufflevector <4 x float> %out123, <4 x float> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
   ret <4 x float> %shuffle

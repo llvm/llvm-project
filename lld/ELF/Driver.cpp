@@ -1043,7 +1043,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     return;
 
   // Handle undefined symbols in DSOs.
-  Symtab->scanShlibUndefined<ELFT>();
+  if (!Config->Shared)
+    Symtab->scanShlibUndefined<ELFT>();
 
   // Handle the -exclude-libs option.
   if (Args.hasArg(OPT_exclude_libs))

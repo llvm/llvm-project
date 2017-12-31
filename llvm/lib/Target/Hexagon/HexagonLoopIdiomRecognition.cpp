@@ -1050,14 +1050,11 @@ bool PolynomialMultiplyRecognize::promoteTypes(BasicBlock *LoopB,
   // Check if the exit values have types that are no wider than the type
   // that we want to promote to.
   unsigned DestBW = DestTy->getBitWidth();
-  for (Instruction &In : *ExitB) {
-    PHINode *P = dyn_cast<PHINode>(&In);
-    if (!P)
-      break;
-    if (P->getNumIncomingValues() != 1)
+  for (PHINode &P : ExitB->phis()) {
+    if (P.getNumIncomingValues() != 1)
       return false;
-    assert(P->getIncomingBlock(0) == LoopB);
-    IntegerType *T = dyn_cast<IntegerType>(P->getType());
+    assert(P.getIncomingBlock(0) == LoopB);
+    IntegerType *T = dyn_cast<IntegerType>(P.getType());
     if (!T || T->getBitWidth() > DestBW)
       return false;
   }

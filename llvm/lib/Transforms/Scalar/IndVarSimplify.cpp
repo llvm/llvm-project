@@ -485,9 +485,8 @@ void IndVarSimplify::rewriteNonIntegerIVs(Loop *L) {
   BasicBlock *Header = L->getHeader();
 
   SmallVector<WeakTrackingVH, 8> PHIs;
-  for (BasicBlock::iterator I = Header->begin();
-       PHINode *PN = dyn_cast<PHINode>(I); ++I)
-    PHIs.push_back(PN);
+  for (PHINode &PN : Header->phis())
+    PHIs.push_back(&PN);
 
   for (unsigned i = 0, e = PHIs.size(); i != e; ++i)
     if (PHINode *PN = dyn_cast_or_null<PHINode>(&*PHIs[i]))
@@ -724,13 +723,12 @@ void IndVarSimplify::rewriteFirstIterationLoopExitValues(Loop *L) {
   assert(LoopHeader && "Invalid loop");
 
   for (auto *ExitBB : ExitBlocks) {
-    BasicBlock::iterator BBI = ExitBB->begin();
     // If there are no more PHI nodes in this exit block, then no more
     // values defined inside the loop are used on this path.
-    while (auto *PN = dyn_cast<PHINode>(BBI++)) {
-      for (unsigned IncomingValIdx = 0, E = PN->getNumIncomingValues();
-          IncomingValIdx != E; ++IncomingValIdx) {
-        auto *IncomingBB = PN->getIncomingBlock(IncomingValIdx);
+    for (PHINode &PN : ExitBB->phis()) {
+      for (unsigned IncomingValIdx = 0, E = PN.getNumIncomingValues();
+           IncomingValIdx != E; ++IncomingValIdx) {
+        auto *IncomingBB = PN.getIncomingBlock(IncomingValIdx);
 
         // We currently only support loop exits from loop header. If the
         // incoming block is not loop header, we need to recursively check
@@ -755,8 +753,7 @@ void IndVarSimplify::rewriteFirstIterationLoopExitValues(Loop *L) {
         if (!L->isLoopInvariant(Cond))
           continue;
 
-        auto *ExitVal =
-            dyn_cast<PHINode>(PN->getIncomingValue(IncomingValIdx));
+        auto *ExitVal = dyn_cast<PHINode>(PN.getIncomingValue(IncomingValIdx));
 
         // Only deal with PHIs.
         if (!ExitVal)
@@ -771,8 +768,8 @@ void IndVarSimplify::rewriteFirstIterationLoopExitValues(Loop *L) {
         if (PreheaderIdx != -1) {
           assert(ExitVal->getParent() == LoopHeader &&
                  "ExitVal must be in loop header");
-          PN->setIncomingValue(IncomingValIdx,
-              ExitVal->getIncomingValue(PreheaderIdx));
+          PN.setIncomingValue(IncomingValIdx,
+                              ExitVal->getIncomingValue(PreheaderIdx));
         }
       }
     }

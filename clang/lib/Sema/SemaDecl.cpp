@@ -4897,13 +4897,13 @@ Sema::GetNameFromUnqualifiedId(const UnqualifiedId &Name) {
 
   switch (Name.getKind()) {
 
-  case UnqualifiedId::IK_ImplicitSelfParam:
-  case UnqualifiedId::IK_Identifier:
+  case UnqualifiedIdKind::IK_ImplicitSelfParam:
+  case UnqualifiedIdKind::IK_Identifier:
     NameInfo.setName(Name.Identifier);
     NameInfo.setLoc(Name.StartLocation);
     return NameInfo;
 
-  case UnqualifiedId::IK_DeductionGuideName: {
+  case UnqualifiedIdKind::IK_DeductionGuideName: {
     // C++ [temp.deduct.guide]p3:
     //   The simple-template-id shall name a class template specialization.
     //   The template-name shall be the same identifier as the template-name
@@ -4931,7 +4931,7 @@ Sema::GetNameFromUnqualifiedId(const UnqualifiedId &Name) {
     return NameInfo;
   }
 
-  case UnqualifiedId::IK_OperatorFunctionId:
+  case UnqualifiedIdKind::IK_OperatorFunctionId:
     NameInfo.setName(Context.DeclarationNames.getCXXOperatorName(
                                            Name.OperatorFunctionId.Operator));
     NameInfo.setLoc(Name.StartLocation);
@@ -4941,14 +4941,14 @@ Sema::GetNameFromUnqualifiedId(const UnqualifiedId &Name) {
       = Name.EndLocation.getRawEncoding();
     return NameInfo;
 
-  case UnqualifiedId::IK_LiteralOperatorId:
+  case UnqualifiedIdKind::IK_LiteralOperatorId:
     NameInfo.setName(Context.DeclarationNames.getCXXLiteralOperatorName(
                                                            Name.Identifier));
     NameInfo.setLoc(Name.StartLocation);
     NameInfo.setCXXLiteralOperatorNameLoc(Name.EndLocation);
     return NameInfo;
 
-  case UnqualifiedId::IK_ConversionFunctionId: {
+  case UnqualifiedIdKind::IK_ConversionFunctionId: {
     TypeSourceInfo *TInfo;
     QualType Ty = GetTypeFromParser(Name.ConversionFunctionId, &TInfo);
     if (Ty.isNull())
@@ -4960,7 +4960,7 @@ Sema::GetNameFromUnqualifiedId(const UnqualifiedId &Name) {
     return NameInfo;
   }
 
-  case UnqualifiedId::IK_ConstructorName: {
+  case UnqualifiedIdKind::IK_ConstructorName: {
     TypeSourceInfo *TInfo;
     QualType Ty = GetTypeFromParser(Name.ConstructorName, &TInfo);
     if (Ty.isNull())
@@ -4972,7 +4972,7 @@ Sema::GetNameFromUnqualifiedId(const UnqualifiedId &Name) {
     return NameInfo;
   }
 
-  case UnqualifiedId::IK_ConstructorTemplateId: {
+  case UnqualifiedIdKind::IK_ConstructorTemplateId: {
     // In well-formed code, we can only have a constructor
     // template-id that refers to the current context, so go there
     // to find the actual type being constructed.
@@ -4995,7 +4995,7 @@ Sema::GetNameFromUnqualifiedId(const UnqualifiedId &Name) {
     return NameInfo;
   }
 
-  case UnqualifiedId::IK_DestructorName: {
+  case UnqualifiedIdKind::IK_DestructorName: {
     TypeSourceInfo *TInfo;
     QualType Ty = GetTypeFromParser(Name.DestructorName, &TInfo);
     if (Ty.isNull())
@@ -5007,7 +5007,7 @@ Sema::GetNameFromUnqualifiedId(const UnqualifiedId &Name) {
     return NameInfo;
   }
 
-  case UnqualifiedId::IK_TemplateId: {
+  case UnqualifiedIdKind::IK_TemplateId: {
     TemplateName TName = Name.TemplateId->Template.get();
     SourceLocation TNameLoc = Name.TemplateId->TemplateNameLoc;
     return Context.getNameForTemplate(TName, TNameLoc);
@@ -5670,8 +5670,8 @@ Sema::ActOnTypedefDeclarator(Scope* S, Declarator& D, DeclContext* DC,
     Diag(D.getDeclSpec().getConstexprSpecLoc(), diag::err_invalid_constexpr)
       << 1;
 
-  if (D.getName().Kind != UnqualifiedId::IK_Identifier) {
-    if (D.getName().Kind == UnqualifiedId::IK_DeductionGuideName)
+  if (D.getName().Kind != UnqualifiedIdKind::IK_Identifier) {
+    if (D.getName().Kind == UnqualifiedIdKind::IK_DeductionGuideName)
       Diag(D.getName().StartLocation,
            diag::err_deduction_guide_invalid_specifier)
           << "typedef";
@@ -6425,7 +6425,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     TemplateParams = MatchTemplateParametersToScopeSpecifier(
         D.getDeclSpec().getLocStart(), D.getIdentifierLoc(),
         D.getCXXScopeSpec(),
-        D.getName().getKind() == UnqualifiedId::IK_TemplateId
+        D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId
             ? D.getName().TemplateId
             : nullptr,
         TemplateParamLists,
@@ -6433,7 +6433,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
     if (TemplateParams) {
       if (!TemplateParams->size() &&
-          D.getName().getKind() != UnqualifiedId::IK_TemplateId) {
+          D.getName().getKind() != UnqualifiedIdKind::IK_TemplateId) {
         // There is an extraneous 'template<>' for this variable. Complain
         // about it, but allow the declaration of the variable.
         Diag(TemplateParams->getTemplateLoc(),
@@ -6443,7 +6443,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
                          TemplateParams->getRAngleLoc());
         TemplateParams = nullptr;
       } else {
-        if (D.getName().getKind() == UnqualifiedId::IK_TemplateId) {
+        if (D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId) {
           // This is an explicit specialization or a partial specialization.
           // FIXME: Check that we can declare a specialization here.
           IsVariableTemplateSpecialization = true;
@@ -6464,9 +6464,9 @@ NamedDecl *Sema::ActOnVariableDeclarator(
         }
       }
     } else {
-      assert(
-          (Invalid || D.getName().getKind() != UnqualifiedId::IK_TemplateId) &&
-          "should have a 'template<>' for this decl");
+      assert((Invalid ||
+              D.getName().getKind() != UnqualifiedIdKind::IK_TemplateId) &&
+             "should have a 'template<>' for this decl");
     }
 
     if (IsVariableTemplateSpecialization) {
@@ -8261,7 +8261,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
             MatchTemplateParametersToScopeSpecifier(
                 D.getDeclSpec().getLocStart(), D.getIdentifierLoc(),
                 D.getCXXScopeSpec(),
-                D.getName().getKind() == UnqualifiedId::IK_TemplateId
+                D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId
                     ? D.getName().TemplateId
                     : nullptr,
                 TemplateParamLists, isFriend, isMemberSpecialization,
@@ -8318,7 +8318,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
           // and clearly the user wants a template specialization.  So
           // we need to insert '<>' after the name.
           SourceLocation InsertLoc;
-          if (D.getName().getKind() != UnqualifiedId::IK_TemplateId) {
+          if (D.getName().getKind() != UnqualifiedIdKind::IK_TemplateId) {
             InsertLoc = D.getName().getSourceRange().getEnd();
             InsertLoc = getLocForEndOfToken(InsertLoc);
           }
@@ -8719,7 +8719,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
     // If the declarator is a template-id, translate the parser's template
     // argument list into our AST format.
-    if (D.getName().getKind() == UnqualifiedId::IK_TemplateId) {
+    if (D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId) {
       TemplateIdAnnotation *TemplateId = D.getName().TemplateId;
       TemplateArgs.setLAngleLoc(TemplateId->LAngleLoc);
       TemplateArgs.setRAngleLoc(TemplateId->RAngleLoc);

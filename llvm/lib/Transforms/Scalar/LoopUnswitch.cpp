@@ -1274,12 +1274,11 @@ void LoopUnswitch::UnswitchNontrivialCondition(Value *LIC, Constant *Val,
 
     // If the successor of the exit block had PHI nodes, add an entry for
     // NewExit.
-    for (BasicBlock::iterator I = ExitSucc->begin();
-         PHINode *PN = dyn_cast<PHINode>(I); ++I) {
-      Value *V = PN->getIncomingValueForBlock(ExitBlocks[i]);
+    for (PHINode &PN : ExitSucc->phis()) {
+      Value *V = PN.getIncomingValueForBlock(ExitBlocks[i]);
       ValueToValueMapTy::iterator It = VMap.find(V);
       if (It != VMap.end()) V = It->second;
-      PN->addIncoming(V, NewExit);
+      PN.addIncoming(V, NewExit);
     }
 
     if (LandingPadInst *LPad = NewExit->getLandingPadInst()) {
@@ -1496,10 +1495,9 @@ void LoopUnswitch::RewriteLoopBodyWithConditionConstant(Loop *L, Value *LIC,
     BranchInst::Create(Abort, OldSISucc,
                        ConstantInt::getTrue(Context), NewSISucc);
     // Release the PHI operands for this edge.
-    for (BasicBlock::iterator II = NewSISucc->begin();
-         PHINode *PN = dyn_cast<PHINode>(II); ++II)
-      PN->setIncomingValue(PN->getBasicBlockIndex(Switch),
-                           UndefValue::get(PN->getType()));
+    for (PHINode &PN : NewSISucc->phis())
+      PN.setIncomingValue(PN.getBasicBlockIndex(Switch),
+                          UndefValue::get(PN.getType()));
     // Tell the domtree about the new block. We don't fully update the
     // domtree here -- instead we force it to do a full recomputation
     // after the pass is complete -- but we do need to inform it of

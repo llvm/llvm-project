@@ -633,16 +633,10 @@ bool CodeGenPrepare::isMergingEmptyBlockProfitable(BasicBlock *BB,
     if (DestBBPred == BB)
       continue;
 
-    bool HasAllSameValue = true;
-    BasicBlock::const_iterator DestBBI = DestBB->begin();
-    while (const PHINode *DestPN = dyn_cast<PHINode>(DestBBI++)) {
-      if (DestPN->getIncomingValueForBlock(BB) !=
-          DestPN->getIncomingValueForBlock(DestBBPred)) {
-        HasAllSameValue = false;
-        break;
-      }
-    }
-    if (HasAllSameValue)
+    if (llvm::all_of(DestBB->phis(), [&](const PHINode &DestPN) {
+          return DestPN.getIncomingValueForBlock(BB) ==
+                 DestPN.getIncomingValueForBlock(DestBBPred);
+        }))
       SameIncomingValueBBs.insert(DestBBPred);
   }
 
@@ -672,9 +666,8 @@ bool CodeGenPrepare::canMergeBlocks(const BasicBlock *BB,
   // We only want to eliminate blocks whose phi nodes are used by phi nodes in
   // the successor.  If there are more complex condition (e.g. preheaders),
   // don't mess around with them.
-  BasicBlock::const_iterator BBI = BB->begin();
-  while (const PHINode *PN = dyn_cast<PHINode>(BBI++)) {
-    for (const User *U : PN->users()) {
+  for (const PHINode &PN : BB->phis()) {
+    for (const User *U : PN.users()) {
       const Instruction *UI = cast<Instruction>(U);
       if (UI->getParent() != DestBB || !isa<PHINode>(UI))
         return false;
@@ -713,10 +706,9 @@ bool CodeGenPrepare::canMergeBlocks(const BasicBlock *BB,
   for (unsigned i = 0, e = DestBBPN->getNumIncomingValues(); i != e; ++i) {
     BasicBlock *Pred = DestBBPN->getIncomingBlock(i);
     if (BBPreds.count(Pred)) {   // Common predecessor?
-      BBI = DestBB->begin();
-      while (const PHINode *PN = dyn_cast<PHINode>(BBI++)) {
-        const Value *V1 = PN->getIncomingValueForBlock(Pred);
-        const Value *V2 = PN->getIncomingValueForBlock(BB);
+      for (const PHINode &PN : DestBB->phis()) {
+        const Value *V1 = PN.getIncomingValueForBlock(Pred);
+        const Value *V2 = PN.getIncomingValueForBlock(BB);
 
         // If V2 is a phi node in BB, look up what the mapped value will be.
         if (const PHINode *V2PN = dyn_cast<PHINode>(V2))
@@ -759,11 +751,9 @@ void CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB) {
 
   // Otherwise, we have multiple predecessors of BB.  Update the PHIs in DestBB
   // to handle the new incoming edges it is about to have.
-  PHINode *PN;
-  for (BasicBlock::iterator BBI = DestBB->begin();
-       (PN = dyn_cast<PHINode>(BBI)); ++BBI) {
+  for (PHINode &PN : DestBB->phis()) {
     // Remove the incoming value for BB, and remember it.
-    Value *InVal = PN->removeIncomingValue(BB, false);
+    Value *InVal = PN.removeIncomingValue(BB, false);
 
     // Two options: either the InVal is a phi node defined in BB or it is some
     // value that dominates BB.
@@ -771,17 +761,17 @@ void CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB) {
     if (InValPhi && InValPhi->getParent() == BB) {
       // Add all of the input values of the input PHI as inputs of this phi.
       for (unsigned i = 0, e = InValPhi->getNumIncomingValues(); i != e; ++i)
-        PN->addIncoming(InValPhi->getIncomingValue(i),
-                        InValPhi->getIncomingBlock(i));
+        PN.addIncoming(InValPhi->getIncomingValue(i),
+                       InValPhi->getIncomingBlock(i));
     } else {
       // Otherwise, add one instance of the dominating value for each edge that
       // we will be adding.
       if (PHINode *BBPN = dyn_cast<PHINode>(BB->begin())) {
         for (unsigned i = 0, e = BBPN->getNumIncomingValues(); i != e; ++i)
-          PN->addIncoming(InVal, BBPN->getIncomingBlock(i));
+          PN.addIncoming(InVal, BBPN->getIncomingBlock(i));
       } else {
         for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI)
-          PN->addIncoming(InVal, *PI);
+          PN.addIncoming(InVal, *PI);
       }
     }
   }
@@ -6497,22 +6487,16 @@ bool CodeGenPrepare::splitBranchCondition(Function &F) {
       std::swap(TBB, FBB);
 
     // Replace the old BB with the new BB.
-    for (auto &I : *TBB) {
-      PHINode *PN = dyn_cast<PHINode>(&I);
-      if (!PN)
-        break;
+    for (PHINode &PN : TBB->phis()) {
       int i;
-      while ((i = PN->getBasicBlockIndex(&BB)) >= 0)
-        PN->setIncomingBlock(i, TmpBB);
+      while ((i = PN.getBasicBlockIndex(&BB)) >= 0)
+        PN.setIncomingBlock(i, TmpBB);
     }
 
     // Add another incoming edge form the new BB.
-    for (auto &I : *FBB) {
-      PHINode *PN = dyn_cast<PHINode>(&I);
-      if (!PN)
-        break;
-      auto *Val = PN->getIncomingValueForBlock(&BB);
-      PN->addIncoming(Val, TmpBB);
+    for (PHINode &PN : FBB->phis()) {
+      auto *Val = PN.getIncomingValueForBlock(&BB);
+      PN.addIncoming(Val, TmpBB);
     }
 
     // Update the branch weights (from SelectionDAGBuilder::

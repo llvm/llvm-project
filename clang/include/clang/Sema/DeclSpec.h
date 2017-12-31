@@ -882,6 +882,30 @@ private:
 
 };
 
+/// \brief Describes the kind of unqualified-id parsed.
+enum class UnqualifiedIdKind {
+  /// \brief An identifier.
+  IK_Identifier,
+  /// \brief An overloaded operator name, e.g., operator+.
+  IK_OperatorFunctionId,
+  /// \brief A conversion function name, e.g., operator int.
+  IK_ConversionFunctionId,
+  /// \brief A user-defined literal name, e.g., operator "" _i.
+  IK_LiteralOperatorId,
+  /// \brief A constructor name.
+  IK_ConstructorName,
+  /// \brief A constructor named via a template-id.
+  IK_ConstructorTemplateId,
+  /// \brief A destructor name.
+  IK_DestructorName,
+  /// \brief A template-id, e.g., f<int>.
+  IK_TemplateId,
+  /// \brief An implicit 'self' parameter
+  IK_ImplicitSelfParam,
+  /// \brief A deduction-guide name (a template-name)
+  IK_DeductionGuideName
+};
+
 /// \brief Represents a C++ unqualified-id that has been parsed. 
 class UnqualifiedId {
 private:
@@ -890,28 +914,7 @@ private:
 
 public:
   /// \brief Describes the kind of unqualified-id parsed.
-  enum IdKind {
-    /// \brief An identifier.
-    IK_Identifier,
-    /// \brief An overloaded operator name, e.g., operator+.
-    IK_OperatorFunctionId,
-    /// \brief A conversion function name, e.g., operator int.
-    IK_ConversionFunctionId,
-    /// \brief A user-defined literal name, e.g., operator "" _i.
-    IK_LiteralOperatorId,
-    /// \brief A constructor name.
-    IK_ConstructorName,
-    /// \brief A constructor named via a template-id.
-    IK_ConstructorTemplateId,
-    /// \brief A destructor name.
-    IK_DestructorName,
-    /// \brief A template-id, e.g., f<int>.
-    IK_TemplateId,
-    /// \brief An implicit 'self' parameter
-    IK_ImplicitSelfParam,
-    /// \brief A deduction-guide name (a template-name)
-    IK_DeductionGuideName
-  } Kind;
+  UnqualifiedIdKind Kind;
 
   struct OFI {
     /// \brief The kind of overloaded operator.
@@ -966,13 +969,14 @@ public:
   
   /// \brief The location of the last token that describes this unqualified-id.
   SourceLocation EndLocation;
-  
-  UnqualifiedId() : Kind(IK_Identifier), Identifier(nullptr) { }
+
+  UnqualifiedId()
+      : Kind(UnqualifiedIdKind::IK_Identifier), Identifier(nullptr) {}
 
   /// \brief Clear out this unqualified-id, setting it to default (invalid) 
   /// state.
   void clear() {
-    Kind = IK_Identifier;
+    Kind = UnqualifiedIdKind::IK_Identifier;
     Identifier = nullptr;
     StartLocation = SourceLocation();
     EndLocation = SourceLocation();
@@ -985,15 +989,15 @@ public:
   bool isInvalid() const { return !isValid(); }
   
   /// \brief Determine what kind of name we have.
-  IdKind getKind() const { return Kind; }
-  void setKind(IdKind kind) { Kind = kind; } 
+  UnqualifiedIdKind getKind() const { return Kind; }
+  void setKind(UnqualifiedIdKind kind) { Kind = kind; } 
   
   /// \brief Specify that this unqualified-id was parsed as an identifier.
   ///
   /// \param Id the parsed identifier.
   /// \param IdLoc the location of the parsed identifier.
   void setIdentifier(const IdentifierInfo *Id, SourceLocation IdLoc) {
-    Kind = IK_Identifier;
+    Kind = UnqualifiedIdKind::IK_Identifier;
     Identifier = const_cast<IdentifierInfo *>(Id);
     StartLocation = EndLocation = IdLoc;
   }
@@ -1022,7 +1026,7 @@ public:
   void setConversionFunctionId(SourceLocation OperatorLoc, 
                                ParsedType Ty,
                                SourceLocation EndLoc) {
-    Kind = IK_ConversionFunctionId;
+    Kind = UnqualifiedIdKind::IK_ConversionFunctionId;
     StartLocation = OperatorLoc;
     EndLocation = EndLoc;
     ConversionFunctionId = Ty;
@@ -1038,7 +1042,7 @@ public:
   /// \param IdLoc the location of the identifier.
   void setLiteralOperatorId(const IdentifierInfo *Id, SourceLocation OpLoc,
                               SourceLocation IdLoc) {
-    Kind = IK_LiteralOperatorId;
+    Kind = UnqualifiedIdKind::IK_LiteralOperatorId;
     Identifier = const_cast<IdentifierInfo *>(Id);
     StartLocation = OpLoc;
     EndLocation = IdLoc;
@@ -1054,7 +1058,7 @@ public:
   void setConstructorName(ParsedType ClassType, 
                           SourceLocation ClassNameLoc,
                           SourceLocation EndLoc) {
-    Kind = IK_ConstructorName;
+    Kind = UnqualifiedIdKind::IK_ConstructorName;
     StartLocation = ClassNameLoc;
     EndLocation = EndLoc;
     ConstructorName = ClassType;
@@ -1077,7 +1081,7 @@ public:
   void setDestructorName(SourceLocation TildeLoc,
                          ParsedType ClassType,
                          SourceLocation EndLoc) {
-    Kind = IK_DestructorName;
+    Kind = UnqualifiedIdKind::IK_DestructorName;
     StartLocation = TildeLoc;
     EndLocation = EndLoc;
     DestructorName = ClassType;
@@ -1097,7 +1101,7 @@ public:
   /// \param TemplateLoc The location of the parsed template-name.
   void setDeductionGuideName(ParsedTemplateTy Template,
                              SourceLocation TemplateLoc) {
-    Kind = IK_DeductionGuideName;
+    Kind = UnqualifiedIdKind::IK_DeductionGuideName;
     TemplateName = Template;
     StartLocation = EndLocation = TemplateLoc;
   }
@@ -2040,7 +2044,7 @@ public:
       return false;
 
     // Special names can't have direct initializers.
-    if (Name.getKind() != UnqualifiedId::IK_Identifier)
+    if (Name.getKind() != UnqualifiedIdKind::IK_Identifier)
       return false;
 
     switch (Context) {
@@ -2090,8 +2094,8 @@ public:
   /// special C++ name (constructor, destructor, etc.), or a structured
   /// binding (which is not exactly a name, but occupies the same position).
   bool hasName() const {
-    return Name.getKind() != UnqualifiedId::IK_Identifier || Name.Identifier ||
-           isDecompositionDeclarator();
+    return Name.getKind() != UnqualifiedIdKind::IK_Identifier ||
+           Name.Identifier || isDecompositionDeclarator();
   }
 
   /// Return whether this declarator is a decomposition declarator.
@@ -2100,7 +2104,7 @@ public:
   }
 
   IdentifierInfo *getIdentifier() const { 
-    if (Name.getKind() == UnqualifiedId::IK_Identifier)
+    if (Name.getKind() == UnqualifiedIdKind::IK_Identifier)
       return Name.Identifier;
     
     return nullptr;

@@ -94,9 +94,8 @@ bool llvm::DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI) {
   // Recursively deleting a PHI may cause multiple PHIs to be deleted
   // or RAUW'd undef, so use an array of WeakTrackingVH for the PHIs to delete.
   SmallVector<WeakTrackingVH, 8> PHIs;
-  for (BasicBlock::iterator I = BB->begin();
-       PHINode *PN = dyn_cast<PHINode>(I); ++I)
-    PHIs.push_back(PN);
+  for (PHINode &PN : BB->phis())
+    PHIs.push_back(&PN);
 
   bool Changed = false;
   for (unsigned i = 0, e = PHIs.size(); i != e; ++i)
@@ -134,24 +133,17 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DominatorTree *DT,
   if (!OnlySucc) return false;
 
   // Can't merge if there is PHI loop.
-  for (BasicBlock::iterator BI = BB->begin(), BE = BB->end(); BI != BE; ++BI) {
-    if (PHINode *PN = dyn_cast<PHINode>(BI)) {
-      for (Value *IncValue : PN->incoming_values())
-        if (IncValue == PN)
-          return false;
-    } else
-      break;
-  }
+  for (PHINode &PN : BB->phis())
+    for (Value *IncValue : PN.incoming_values())
+      if (IncValue == &PN)
+        return false;
 
   // Begin by getting rid of unneeded PHIs.
   SmallVector<Value *, 4> IncomingValues;
   if (isa<PHINode>(BB->front())) {
-    for (auto &I : *BB)
-      if (PHINode *PN = dyn_cast<PHINode>(&I)) {
-        if (PN->getIncomingValue(0) != PN)
-          IncomingValues.push_back(PN->getIncomingValue(0));
-      } else
-        break;
+    for (PHINode &PN : BB->phis())
+      if (PN.getIncomingValue(0) != &PN)
+        IncomingValues.push_back(PN.getIncomingValue(0));
     FoldSingleEntryPHINodes(BB, MemDep);
   }
 
