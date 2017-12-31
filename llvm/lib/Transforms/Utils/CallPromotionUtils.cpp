@@ -47,14 +47,11 @@ using namespace llvm;
 ///
 static void fixupPHINodeForNormalDest(InvokeInst *Invoke, BasicBlock *OrigBlock,
                                       BasicBlock *MergeBlock) {
-  for (auto &I : *Invoke->getNormalDest()) {
-    auto *Phi = dyn_cast<PHINode>(&I);
-    if (!Phi)
-      break;
-    int Idx = Phi->getBasicBlockIndex(OrigBlock);
+  for (PHINode &Phi : Invoke->getNormalDest()->phis()) {
+    int Idx = Phi.getBasicBlockIndex(OrigBlock);
     if (Idx == -1)
       continue;
-    Phi->setIncomingBlock(Idx, MergeBlock);
+    Phi.setIncomingBlock(Idx, MergeBlock);
   }
 }
 
@@ -82,16 +79,13 @@ static void fixupPHINodeForNormalDest(InvokeInst *Invoke, BasicBlock *OrigBlock,
 static void fixupPHINodeForUnwindDest(InvokeInst *Invoke, BasicBlock *OrigBlock,
                                       BasicBlock *ThenBlock,
                                       BasicBlock *ElseBlock) {
-  for (auto &I : *Invoke->getUnwindDest()) {
-    auto *Phi = dyn_cast<PHINode>(&I);
-    if (!Phi)
-      break;
-    int Idx = Phi->getBasicBlockIndex(OrigBlock);
+  for (PHINode &Phi : Invoke->getUnwindDest()->phis()) {
+    int Idx = Phi.getBasicBlockIndex(OrigBlock);
     if (Idx == -1)
       continue;
-    auto *V = Phi->getIncomingValue(Idx);
-    Phi->setIncomingBlock(Idx, ThenBlock);
-    Phi->addIncoming(V, ElseBlock);
+    auto *V = Phi.getIncomingValue(Idx);
+    Phi.setIncomingBlock(Idx, ThenBlock);
+    Phi.addIncoming(V, ElseBlock);
   }
 }
 

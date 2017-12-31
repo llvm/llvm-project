@@ -271,8 +271,7 @@ define i4 @v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpcmpgtq %ymm1, %ymm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX512F-NEXT:    # kill: def %al killed %al killed %eax
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -280,8 +279,7 @@ define i4 @v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpcmpgtq %ymm1, %ymm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX512BW-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX512BW-NEXT:    # kill: def %al killed %al killed %eax
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
   %x = icmp sgt <4 x i64> %a, %b
@@ -311,8 +309,7 @@ define i4 @v4f64(<4 x double> %a, <4 x double> %b) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vcmpltpd %ymm0, %ymm1, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX512F-NEXT:    # kill: def %al killed %al killed %eax
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -320,8 +317,7 @@ define i4 @v4f64(<4 x double> %a, <4 x double> %b) {
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vcmpltpd %ymm0, %ymm1, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX512BW-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX512BW-NEXT:    # kill: def %al killed %al killed %eax
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
   %x = fcmp ogt <4 x double> %a, %b

@@ -857,12 +857,11 @@ static MemAccessTy getAccessType(const TargetTransformInfo &TTI,
 
 /// Return true if this AddRec is already a phi in its loop.
 static bool isExistingPhi(const SCEVAddRecExpr *AR, ScalarEvolution &SE) {
-  for (BasicBlock::iterator I = AR->getLoop()->getHeader()->begin();
-       PHINode *PN = dyn_cast<PHINode>(I); ++I) {
-    if (SE.isSCEVable(PN->getType()) &&
-        (SE.getEffectiveSCEVType(PN->getType()) ==
+  for (PHINode &PN : AR->getLoop()->getHeader()->phis()) {
+    if (SE.isSCEVable(PN.getType()) &&
+        (SE.getEffectiveSCEVType(PN.getType()) ==
          SE.getEffectiveSCEVType(AR->getType())) &&
-        SE.getSCEV(PN) == AR)
+        SE.getSCEV(&PN) == AR)
       return true;
   }
   return false;
@@ -3013,15 +3012,14 @@ void LSRInstance::CollectChains() {
     } // Continue walking down the instructions.
   } // Continue walking down the domtree.
   // Visit phi backedges to determine if the chain can generate the IV postinc.
-  for (BasicBlock::iterator I = L->getHeader()->begin();
-       PHINode *PN = dyn_cast<PHINode>(I); ++I) {
-    if (!SE.isSCEVable(PN->getType()))
+  for (PHINode &PN : L->getHeader()->phis()) {
+    if (!SE.isSCEVable(PN.getType()))
       continue;
 
     Instruction *IncV =
-      dyn_cast<Instruction>(PN->getIncomingValueForBlock(L->getLoopLatch()));
+        dyn_cast<Instruction>(PN.getIncomingValueForBlock(L->getLoopLatch()));
     if (IncV)
-      ChainInstruction(PN, IncV, ChainUsersVec);
+      ChainInstruction(&PN, IncV, ChainUsersVec);
   }
   // Remove any unprofitable chains.
   unsigned ChainIdx = 0;
@@ -3152,12 +3150,11 @@ void LSRInstance::GenerateIVChain(const IVChain &Chain, SCEVExpander &Rewriter,
   // If LSR created a new, wider phi, we may also replace its postinc. We only
   // do this if we also found a wide value for the head of the chain.
   if (isa<PHINode>(Chain.tailUserInst())) {
-    for (BasicBlock::iterator I = L->getHeader()->begin();
-         PHINode *Phi = dyn_cast<PHINode>(I); ++I) {
-      if (!isCompatibleIVType(Phi, IVSrc))
+    for (PHINode &Phi : L->getHeader()->phis()) {
+      if (!isCompatibleIVType(&Phi, IVSrc))
         continue;
       Instruction *PostIncV = dyn_cast<Instruction>(
-        Phi->getIncomingValueForBlock(L->getLoopLatch()));
+          Phi.getIncomingValueForBlock(L->getLoopLatch()));
       if (!PostIncV || (SE.getSCEV(PostIncV) != SE.getSCEV(IVSrc)))
         continue;
       Value *IVOper = IVSrc;
@@ -3168,7 +3165,7 @@ void LSRInstance::GenerateIVChain(const IVChain &Chain, SCEVExpander &Rewriter,
         Builder.SetCurrentDebugLocation(PostIncV->getDebugLoc());
         IVOper = Builder.CreatePointerCast(IVSrc, PostIncTy, "lsr.chain");
       }
-      Phi->replaceUsesOfWith(PostIncV, IVOper);
+      Phi.replaceUsesOfWith(PostIncV, IVOper);
       DeadInsts.emplace_back(PostIncV);
     }
   }

@@ -207,6 +207,85 @@ TEST(CommandLineTest, TokenizeWindowsCommandLine) {
                            array_lengthof(Output));
 }
 
+TEST(CommandLineTest, TokenizeConfigFile1) {
+  const char *Input = "\\";
+  const char *const Output[] = { "\\" };
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output,
+                           array_lengthof(Output));
+}
+
+TEST(CommandLineTest, TokenizeConfigFile2) {
+  const char *Input = "\\abc";
+  const char *const Output[] = { "abc" };
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output,
+                           array_lengthof(Output));
+}
+
+TEST(CommandLineTest, TokenizeConfigFile3) {
+  const char *Input = "abc\\";
+  const char *const Output[] = { "abc\\" };
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output,
+                           array_lengthof(Output));
+}
+
+TEST(CommandLineTest, TokenizeConfigFile4) {
+  const char *Input = "abc\\\n123";
+  const char *const Output[] = { "abc123" };
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output,
+                           array_lengthof(Output));
+}
+
+TEST(CommandLineTest, TokenizeConfigFile5) {
+  const char *Input = "abc\\\r\n123";
+  const char *const Output[] = { "abc123" };
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output,
+                           array_lengthof(Output));
+}
+
+TEST(CommandLineTest, TokenizeConfigFile6) {
+  const char *Input = "abc\\\n";
+  const char *const Output[] = { "abc" };
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output,
+                           array_lengthof(Output));
+}
+
+TEST(CommandLineTest, TokenizeConfigFile7) {
+  const char *Input = "abc\\\r\n";
+  const char *const Output[] = { "abc" };
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output,
+                           array_lengthof(Output));
+}
+
+TEST(CommandLineTest, TokenizeConfigFile8) {
+  SmallVector<const char *, 0> Actual;
+  BumpPtrAllocator A;
+  StringSaver Saver(A);
+  cl::tokenizeConfigFile("\\\n", Saver, Actual, /*MarkEOLs=*/false);
+  EXPECT_TRUE(Actual.empty());
+}
+
+TEST(CommandLineTest, TokenizeConfigFile9) {
+  SmallVector<const char *, 0> Actual;
+  BumpPtrAllocator A;
+  StringSaver Saver(A);
+  cl::tokenizeConfigFile("\\\r\n", Saver, Actual, /*MarkEOLs=*/false);
+  EXPECT_TRUE(Actual.empty());
+}
+
+TEST(CommandLineTest, TokenizeConfigFile10) {
+  const char *Input = "\\\nabc";
+  const char *const Output[] = { "abc" };
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output,
+                           array_lengthof(Output));
+}
+
+TEST(CommandLineTest, TokenizeConfigFile11) {
+  const char *Input = "\\\r\nabc";
+  const char *const Output[] = { "abc" };
+  testCommandLineTokenizer(cl::tokenizeConfigFile, Input, Output,
+                           array_lengthof(Output));
+}
+
 TEST(CommandLineTest, AliasesWithArguments) {
   static const size_t ARGC = 3;
   const char *const Inputs[][ARGC] = {
@@ -646,6 +725,60 @@ TEST(CommandLineTest, SetDefautValue) {
   EXPECT_TRUE(Opt1 == "true");
   EXPECT_TRUE(Opt2);
   EXPECT_TRUE(Opt3 == 3);
+}
+
+TEST(CommandLineTest, ReadConfigFile) {
+  llvm::SmallVector<const char *, 1> Argv;
+
+  llvm::SmallString<128> TestDir;
+  std::error_code EC =
+      llvm::sys::fs::createUniqueDirectory("unittest", TestDir);
+  EXPECT_TRUE(!EC);
+
+  llvm::SmallString<128> TestCfg;
+  llvm::sys::path::append(TestCfg, TestDir, "foo");
+  std::ofstream ConfigFile(TestCfg.c_str());
+  EXPECT_TRUE(ConfigFile.is_open());
+  ConfigFile << "# Comment\n"
+                "-option_1\n"
+                "@subconfig\n"
+                "-option_3=abcd\n"
+                "-option_4=\\\n"
+                "cdef\n";
+  ConfigFile.close();
+
+  llvm::SmallString<128> TestCfg2;
+  llvm::sys::path::append(TestCfg2, TestDir, "subconfig");
+  std::ofstream ConfigFile2(TestCfg2.c_str());
+  EXPECT_TRUE(ConfigFile2.is_open());
+  ConfigFile2 << "-option_2\n"
+                 "\n"
+                 "   # comment\n";
+  ConfigFile2.close();
+
+  // Make sure the current directory is not the directory where config files
+  // resides. In this case the code that expands response files will not find
+  // 'subconfig' unless it resolves nested inclusions relative to the including
+  // file.
+  llvm::SmallString<128> CurrDir;
+  EC = llvm::sys::fs::current_path(CurrDir);
+  EXPECT_TRUE(!EC);
+  EXPECT_TRUE(StringRef(CurrDir) != StringRef(TestDir));
+
+  llvm::BumpPtrAllocator A;
+  llvm::StringSaver Saver(A);
+  bool Result = llvm::cl::readConfigFile(TestCfg, Saver, Argv);
+
+  EXPECT_TRUE(Result);
+  EXPECT_EQ(Argv.size(), 4U);
+  EXPECT_STREQ(Argv[0], "-option_1");
+  EXPECT_STREQ(Argv[1], "-option_2");
+  EXPECT_STREQ(Argv[2], "-option_3=abcd");
+  EXPECT_STREQ(Argv[3], "-option_4=cdef");
+
+  llvm::sys::fs::remove(TestCfg2);
+  llvm::sys::fs::remove(TestCfg);
+  llvm::sys::fs::remove(TestDir);
 }
 
 }  // anonymous namespace

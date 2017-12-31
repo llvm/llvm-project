@@ -2701,11 +2701,6 @@ def : Pat<(i64 (bitconvert (v64i1 VK64:$src))),
 
 // Load/store kreg
 let Predicates = [HasDQI] in {
-  def : Pat<(store (i8 (bitconvert (v8i1 VK8:$src))), addr:$dst),
-            (KMOVBmk addr:$dst, VK8:$src)>;
-  def : Pat<(v8i1 (bitconvert (i8 (load addr:$src)))),
-            (KMOVBkm addr:$src)>;
-
   def : Pat<(store VK4:$src, addr:$dst),
             (KMOVBmk addr:$dst, (COPY_TO_REGCLASS VK4:$src, VK8))>;
   def : Pat<(store VK2:$src, addr:$dst),
@@ -2745,22 +2740,10 @@ let Predicates = [HasAVX512, NoDQI] in {
 }
 
 let Predicates = [HasAVX512] in {
-  def : Pat<(store (i16 (bitconvert (v16i1 VK16:$src))), addr:$dst),
-            (KMOVWmk addr:$dst, VK16:$src)>;
   def : Pat<(v1i1 (load addr:$src)),
-            (COPY_TO_REGCLASS (AND32ri8 (MOVZX32rm8 addr:$src), (i32 1)), VK1)>;
-  def : Pat<(v16i1 (bitconvert (i16 (load addr:$src)))),
-            (KMOVWkm addr:$src)>;
-}
-let Predicates = [HasBWI] in {
-  def : Pat<(store (i32 (bitconvert (v32i1 VK32:$src))), addr:$dst),
-            (KMOVDmk addr:$dst, VK32:$src)>;
-  def : Pat<(v32i1 (bitconvert (i32 (load addr:$src)))),
-            (KMOVDkm addr:$src)>;
-  def : Pat<(store (i64 (bitconvert (v64i1 VK64:$src))), addr:$dst),
-            (KMOVQmk addr:$dst, VK64:$src)>;
-  def : Pat<(v64i1 (bitconvert (i64 (load addr:$src)))),
-            (KMOVQkm addr:$src)>;
+            (COPY_TO_REGCLASS (MOVZX32rm8 addr:$src), VK1)>;
+  def : Pat<(v8i1 (bitconvert (i8 (load addr:$src)))),
+            (COPY_TO_REGCLASS (MOVZX32rm8 addr:$src), VK8)>;
 }
 
 let Predicates = [HasAVX512] in {

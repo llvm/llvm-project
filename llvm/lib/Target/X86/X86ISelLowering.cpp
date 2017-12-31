@@ -2143,6 +2143,10 @@ static SDValue lowerMasksToReg(const SDValue &ValArg, const EVT &ValLoc,
                                const SDLoc &Dl, SelectionDAG &DAG) {
   EVT ValVT = ValArg.getValueType();
 
+  if (ValVT == MVT::v1i1)
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, Dl, ValLoc, ValArg,
+                       DAG.getIntPtrConstant(0, Dl));
+
   if ((ValVT == MVT::v8i1 && (ValLoc == MVT::i8 || ValLoc == MVT::i32)) ||
       (ValVT == MVT::v16i1 && (ValLoc == MVT::i16 || ValLoc == MVT::i32))) {
     // Two stage lowering might be required
@@ -4626,6 +4630,14 @@ bool X86TargetLowering::isCheapToSpeculateCttz() const {
 bool X86TargetLowering::isCheapToSpeculateCtlz() const {
   // Speculate ctlz only if we can directly use LZCNT.
   return Subtarget.hasLZCNT();
+}
+
+bool X86TargetLowering::isLoadBitCastBeneficial(EVT LoadVT,
+                                                EVT BitcastVT) const {
+  if (!Subtarget.hasDQI() && BitcastVT == MVT::v8i1)
+    return false;
+
+  return TargetLowering::isLoadBitCastBeneficial(LoadVT, BitcastVT);
 }
 
 bool X86TargetLowering::canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
@@ -18718,6 +18730,7 @@ static SDValue LowerTruncatingStore(SDValue StOp, const X86Subtarget &Subtarget,
                         DAG.getUNDEF(ExtVT), Op, DAG.getIntPtrConstant(0, dl));
     }
     Op = DAG.getNode(ISD::TRUNCATE, dl, MVT::v8i1, Op);
+    Op = DAG.getBitcast(MVT::i8, Op);
     return DAG.getStore(St->getChain(), dl, Op, St->getBasePtr(),
                         St->getMemOperand());
   }
@@ -18734,12 +18747,12 @@ static SDValue LowerTruncatingStore(SDValue StOp, const X86Subtarget &Subtarget,
                             DAG.getIntPtrConstant(16, dl));
   Hi = DAG.getNode(ISD::TRUNCATE, dl, MVT::v16i1, Hi);
 
-  SDValue BasePtrHi =
-    DAG.getNode(ISD::ADD, dl, BasePtr.getValueType(), BasePtr,
-                DAG.getConstant(2, dl, BasePtr.getValueType()));
+  SDValue BasePtrHi = DAG.getMemBasePlusOffset(BasePtr, 2, dl);
 
   SDValue StHi = DAG.getStore(St->getChain(), dl, Hi,
-                              BasePtrHi, St->getMemOperand());
+                              BasePtrHi, St->getPointerInfo().getWithOffset(2),
+                              MinAlign(St->getAlignment(), 2U),
+                              St->getMemOperand()->getFlags());
   return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, StLo, StHi);
 }
 
@@ -30399,9 +30412,34 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
   // (i16 movmsk (16i8 sext (v16i1 x)))
   // before the setcc result is scalarized on subtargets that don't have legal
   // vxi1 types.
-  if (DCI.isBeforeLegalize())
+  if (DCI.isBeforeLegalize()) {
     if (SDValue V = combineBitcastvxi1(DAG, SDValue(N, 0), Subtarget))
       return V;
+
+    // If this is a bitcast between a MVT::v4i1/v2i1 and an illegal integer
+    // type, widen both sides to avoid a trip through memory.
+    if ((VT == MVT::v4i1 || VT == MVT::v2i1) && SrcVT.isScalarInteger() &&
+        Subtarget.hasVLX()) {
+      SDLoc dl(N);
+      N0 = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i8, N0);
+      N0 = DAG.getBitcast(MVT::v8i1, N0);
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, N0,
+                         DAG.getIntPtrConstant(0, dl));
+    }
+
+    // If this is a bitcast between a MVT::v4i1/v2i1 and an illegal integer
+    // type, widen both sides to avoid a trip through memory.
+    if ((SrcVT == MVT::v4i1 || SrcVT == MVT::v2i1) && VT.isScalarInteger() &&
+        Subtarget.hasVLX()) {
+      SDLoc dl(N);
+      N0 = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v8i1,
+                       DAG.getUNDEF(MVT::v8i1), N0,
+                       DAG.getIntPtrConstant(0, dl));
+      N0 = DAG.getBitcast(MVT::i8, N0);
+      return DAG.getNode(ISD::TRUNCATE, dl, VT, N0);
+    }
+  }
+
   // Since MMX types are special and don't usually play with other vector types,
   // it's better to handle them early to be sure we emit efficient code by
   // avoiding store-load conversions.

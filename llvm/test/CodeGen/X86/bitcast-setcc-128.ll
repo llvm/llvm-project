@@ -64,16 +64,14 @@ define i4 @v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpcmpgtd %xmm1, %xmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX512F-NEXT:    # kill: def %al killed %al killed %eax
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: v4i32:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpcmpgtd %xmm1, %xmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX512BW-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX512BW-NEXT:    # kill: def %al killed %al killed %eax
 ; AVX512BW-NEXT:    retq
   %x = icmp sgt <4 x i32> %a, %b
   %res = bitcast <4 x i1> %x to i4
@@ -99,16 +97,14 @@ define i4 @v4f32(<4 x float> %a, <4 x float> %b) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vcmpltps %xmm0, %xmm1, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX512F-NEXT:    # kill: def %al killed %al killed %eax
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: v4f32:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vcmpltps %xmm0, %xmm1, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX512BW-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX512BW-NEXT:    # kill: def %al killed %al killed %eax
 ; AVX512BW-NEXT:    retq
   %x = fcmp ogt <4 x float> %a, %b
   %res = bitcast <4 x i1> %x to i4
@@ -226,8 +222,7 @@ define i2 @v2i8(<2 x i8> %a, <2 x i8> %b) {
 ; AVX512F-NEXT:    vpsraq $56, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpcmpgtq %xmm1, %xmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX512F-NEXT:    # kill: def %al killed %al killed %eax
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: v2i8:
@@ -238,8 +233,7 @@ define i2 @v2i8(<2 x i8> %a, <2 x i8> %b) {
 ; AVX512BW-NEXT:    vpsraq $56, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpcmpgtq %xmm1, %xmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX512BW-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX512BW-NEXT:    # kill: def %al killed %al killed %eax
 ; AVX512BW-NEXT:    retq
   %x = icmp sgt <2 x i8> %a, %b
   %res = bitcast <2 x i1> %x to i2
@@ -320,8 +314,7 @@ define i2 @v2i16(<2 x i16> %a, <2 x i16> %b) {
 ; AVX512F-NEXT:    vpsraq $48, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpcmpgtq %xmm1, %xmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX512F-NEXT:    # kill: def %al killed %al killed %eax
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: v2i16:
@@ -332,8 +325,7 @@ define i2 @v2i16(<2 x i16> %a, <2 x i16> %b) {
 ; AVX512BW-NEXT:    vpsraq $48, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpcmpgtq %xmm1, %xmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX512BW-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX512BW-NEXT:    # kill: def %al killed %al killed %eax
 ; AVX512BW-NEXT:    retq
   %x = icmp sgt <2 x i16> %a, %b
   %res = bitcast <2 x i1> %x to i2
@@ -406,8 +398,7 @@ define i2 @v2i32(<2 x i32> %a, <2 x i32> %b) {
 ; AVX512F-NEXT:    vpsraq $32, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpcmpgtq %xmm1, %xmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX512F-NEXT:    # kill: def %al killed %al killed %eax
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: v2i32:
@@ -418,8 +409,7 @@ define i2 @v2i32(<2 x i32> %a, <2 x i32> %b) {
 ; AVX512BW-NEXT:    vpsraq $32, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpcmpgtq %xmm1, %xmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX512BW-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX512BW-NEXT:    # kill: def %al killed %al killed %eax
 ; AVX512BW-NEXT:    retq
   %x = icmp sgt <2 x i32> %a, %b
   %res = bitcast <2 x i1> %x to i2
@@ -455,16 +445,14 @@ define i2 @v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpcmpgtq %xmm1, %xmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX512F-NEXT:    # kill: def %al killed %al killed %eax
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: v2i64:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpcmpgtq %xmm1, %xmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX512BW-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX512BW-NEXT:    # kill: def %al killed %al killed %eax
 ; AVX512BW-NEXT:    retq
   %x = icmp sgt <2 x i64> %a, %b
   %res = bitcast <2 x i1> %x to i2
@@ -490,16 +478,14 @@ define i2 @v2f64(<2 x double> %a, <2 x double> %b) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vcmpltpd %xmm0, %xmm1, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX512F-NEXT:    # kill: def %al killed %al killed %eax
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: v2f64:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vcmpltpd %xmm0, %xmm1, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX512BW-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX512BW-NEXT:    # kill: def %al killed %al killed %eax
 ; AVX512BW-NEXT:    retq
   %x = fcmp ogt <2 x double> %a, %b
   %res = bitcast <2 x i1> %x to i2
@@ -537,8 +523,7 @@ define i4 @v4i8(<4 x i8> %a, <4 x i8> %b) {
 ; AVX512F-NEXT:    vpsrad $24, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpcmpgtd %xmm1, %xmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX512F-NEXT:    # kill: def %al killed %al killed %eax
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: v4i8:
@@ -549,8 +534,7 @@ define i4 @v4i8(<4 x i8> %a, <4 x i8> %b) {
 ; AVX512BW-NEXT:    vpsrad $24, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpcmpgtd %xmm1, %xmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX512BW-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX512BW-NEXT:    # kill: def %al killed %al killed %eax
 ; AVX512BW-NEXT:    retq
   %x = icmp sgt <4 x i8> %a, %b
   %res = bitcast <4 x i1> %x to i4
@@ -588,8 +572,7 @@ define i4 @v4i16(<4 x i16> %a, <4 x i16> %b) {
 ; AVX512F-NEXT:    vpsrad $16, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpcmpgtd %xmm1, %xmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX512F-NEXT:    # kill: def %al killed %al killed %eax
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: v4i16:
@@ -600,8 +583,7 @@ define i4 @v4i16(<4 x i16> %a, <4 x i16> %b) {
 ; AVX512BW-NEXT:    vpsrad $16, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpcmpgtd %xmm1, %xmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; AVX512BW-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; AVX512BW-NEXT:    # kill: def %al killed %al killed %eax
 ; AVX512BW-NEXT:    retq
   %x = icmp sgt <4 x i16> %a, %b
   %res = bitcast <4 x i1> %x to i4

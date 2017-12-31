@@ -1154,16 +1154,11 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
         IVIncInsertLoop &&
         SE.DT.properlyDominates(LatchBlock, IVIncInsertLoop->getHeader());
 
-    for (auto &I : *L->getHeader()) {
-      auto *PN = dyn_cast<PHINode>(&I);
-      // Found first non-phi, the rest of instructions are also not Phis.
-      if (!PN)
-        break;
-
-      if (!SE.isSCEVable(PN->getType()))
+    for (PHINode &PN : L->getHeader()->phis()) {
+      if (!SE.isSCEVable(PN.getType()))
         continue;
 
-      const SCEVAddRecExpr *PhiSCEV = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(PN));
+      const SCEVAddRecExpr *PhiSCEV = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(&PN));
       if (!PhiSCEV)
         continue;
 
@@ -1175,16 +1170,16 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
           continue;
 
       Instruction *TempIncV =
-          cast<Instruction>(PN->getIncomingValueForBlock(LatchBlock));
+          cast<Instruction>(PN.getIncomingValueForBlock(LatchBlock));
 
       // Check whether we can reuse this PHI node.
       if (LSRMode) {
-        if (!isExpandedAddRecExprPHI(PN, TempIncV, L))
+        if (!isExpandedAddRecExprPHI(&PN, TempIncV, L))
           continue;
         if (L == IVIncInsertLoop && !hoistIVInc(TempIncV, IVIncInsertPos))
           continue;
       } else {
-        if (!isNormalAddRecExprPHI(PN, TempIncV, L))
+        if (!isNormalAddRecExprPHI(&PN, TempIncV, L))
           continue;
       }
 
@@ -1193,7 +1188,7 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
         IncV = TempIncV;
         TruncTy = nullptr;
         InvertStep = false;
-        AddRecPhiMatch = PN;
+        AddRecPhiMatch = &PN;
         break;
       }
 
@@ -1203,7 +1198,7 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
           canBeCheaplyTransformed(SE, PhiSCEV, Normalized, InvertStep)) {
         // Record the phi node. But don't stop we might find an exact match
         // later.
-        AddRecPhiMatch = PN;
+        AddRecPhiMatch = &PN;
         IncV = TempIncV;
         TruncTy = SE.getEffectiveSCEVType(Normalized->getType());
       }
@@ -1863,12 +1858,8 @@ SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
                                   const TargetTransformInfo *TTI) {
   // Find integer phis in order of increasing width.
   SmallVector<PHINode*, 8> Phis;
-  for (auto &I : *L->getHeader()) {
-    if (auto *PN = dyn_cast<PHINode>(&I))
-      Phis.push_back(PN);
-    else
-      break;
-  }
+  for (PHINode &PN : L->getHeader()->phis())
+    Phis.push_back(&PN);
 
   if (TTI)
     std::sort(Phis.begin(), Phis.end(), [](Value *LHS, Value *RHS) {
