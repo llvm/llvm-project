@@ -7723,6 +7723,10 @@ static SDValue lowerBuildVectorToBitOp(BuildVectorSDNode *Op,
   case ISD::AND:
   case ISD::XOR:
   case ISD::OR:
+    // Don't do this if the buildvector is a splat - we'd replace one
+    // constant with an entire vector.
+    if (Op->getSplatValue())
+      return SDValue();
     if (!TLI.isOperationLegalOrPromote(Opcode, VT))
       return SDValue();
     break;
@@ -30432,9 +30436,10 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
     if ((SrcVT == MVT::v4i1 || SrcVT == MVT::v2i1) && VT.isScalarInteger() &&
         Subtarget.hasVLX()) {
       SDLoc dl(N);
-      N0 = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v8i1,
-                       DAG.getUNDEF(MVT::v8i1), N0,
-                       DAG.getIntPtrConstant(0, dl));
+      unsigned NumConcats = 8 / SrcVT.getVectorNumElements();
+      SmallVector<SDValue, 4> Ops(NumConcats, DAG.getUNDEF(SrcVT));
+      Ops[0] = N0;
+      N0 = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v8i1, Ops);
       N0 = DAG.getBitcast(MVT::i8, N0);
       return DAG.getNode(ISD::TRUNCATE, dl, VT, N0);
     }
@@ -30918,6 +30923,11 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
   // Don't attempt this for boolean mask vectors or unknown extraction indices.
   if (SrcSVT == MVT::i1 || !isa<ConstantSDNode>(Idx))
     return SDValue();
+
+  // Handle extract(broadcast(scalar_value)), it doesn't matter what index is.
+  if (X86ISD::VBROADCAST == Src.getOpcode() &&
+      Src.getOperand(0).getValueType() == VT)
+    return Src.getOperand(0);
 
   // Resolve the target shuffle inputs and mask.
   SmallVector<int, 16> Mask;
