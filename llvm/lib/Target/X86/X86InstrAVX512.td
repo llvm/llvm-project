@@ -3087,66 +3087,6 @@ defm : operation_subvector_mask_lowering<VK16, v16i1, VK64, v64i1>;
 
 defm : operation_subvector_mask_lowering<VK32, v32i1, VK64, v64i1>;
 
-
-multiclass vextract_for_mask_to_mask<string InstrStr, X86KVectorVTInfo From,
-                                     X86KVectorVTInfo To, Predicate prd> {
-let Predicates = [prd] in
-  def :
-    Pat<(To.KVT(extract_subvector(From.KVT From.KRC:$src), (iPTR imm:$imm8))),
-        (To.KVT(COPY_TO_REGCLASS
-                  (!cast<Instruction>(InstrStr#"ri") From.KVT:$src,
-                      (i8 imm:$imm8)), To.KRC))>;
-}
-
-multiclass vextract_for_mask_to_mask_legal_w<X86KVectorVTInfo From,
-                                             X86KVectorVTInfo To> {
-def :
-  Pat<(To.KVT(extract_subvector(From.KVT From.KRC:$src), (iPTR imm:$imm8))),
-      (To.KVT(COPY_TO_REGCLASS
-               (KSHIFTRWri(COPY_TO_REGCLASS From.KRC:$src, VK16),
-                   (i8 imm:$imm8)), To.KRC))>;
-}
-
-defm : vextract_for_mask_to_mask_legal_w<v2i1_info, v1i1_info>;
-defm : vextract_for_mask_to_mask_legal_w<v4i1_info, v1i1_info>;
-defm : vextract_for_mask_to_mask_legal_w<v8i1_info, v1i1_info>;
-defm : vextract_for_mask_to_mask_legal_w<v4i1_info, v2i1_info>;
-defm : vextract_for_mask_to_mask_legal_w<v8i1_info, v2i1_info>;
-defm : vextract_for_mask_to_mask_legal_w<v8i1_info, v4i1_info>;
-
-defm : vextract_for_mask_to_mask<"KSHIFTRW", v16i1_info, v1i1_info, HasAVX512>;
-defm : vextract_for_mask_to_mask<"KSHIFTRD", v32i1_info, v1i1_info, HasBWI>;
-defm : vextract_for_mask_to_mask<"KSHIFTRQ", v64i1_info, v1i1_info, HasBWI>;
-defm : vextract_for_mask_to_mask<"KSHIFTRW", v16i1_info, v2i1_info, HasAVX512>;
-defm : vextract_for_mask_to_mask<"KSHIFTRD", v32i1_info, v2i1_info, HasBWI>;
-defm : vextract_for_mask_to_mask<"KSHIFTRQ", v64i1_info, v2i1_info, HasBWI>;
-defm : vextract_for_mask_to_mask<"KSHIFTRW", v16i1_info, v4i1_info, HasAVX512>;
-defm : vextract_for_mask_to_mask<"KSHIFTRD", v32i1_info, v4i1_info, HasBWI>;
-defm : vextract_for_mask_to_mask<"KSHIFTRQ", v64i1_info, v4i1_info, HasBWI>;
-defm : vextract_for_mask_to_mask<"KSHIFTRW", v16i1_info, v8i1_info, HasAVX512>;
-defm : vextract_for_mask_to_mask<"KSHIFTRD", v32i1_info, v8i1_info, HasBWI>;
-defm : vextract_for_mask_to_mask<"KSHIFTRQ", v64i1_info, v8i1_info, HasBWI>;
-defm : vextract_for_mask_to_mask<"KSHIFTRD", v32i1_info, v16i1_info, HasBWI>;
-defm : vextract_for_mask_to_mask<"KSHIFTRQ", v64i1_info, v16i1_info, HasBWI>;
-defm : vextract_for_mask_to_mask<"KSHIFTRQ", v64i1_info, v32i1_info, HasBWI>;
-
-// Patterns for kmask shift
-multiclass mask_shift_lowering<RegisterClass RC, ValueType VT> {
-  def : Pat<(VT (X86kshiftl RC:$src, (i8 imm:$imm))),
-            (VT (COPY_TO_REGCLASS
-                   (KSHIFTLWri (COPY_TO_REGCLASS RC:$src, VK16),
-                               (I8Imm $imm)),
-                   RC))>;
-  def : Pat<(VT (X86kshiftr RC:$src, (i8 imm:$imm))),
-            (VT (COPY_TO_REGCLASS
-                   (KSHIFTRWri (COPY_TO_REGCLASS RC:$src, VK16),
-                               (I8Imm $imm)),
-                   RC))>;
-}
-
-defm : mask_shift_lowering<VK8, v8i1>, Requires<[HasAVX512, NoDQI]>;
-defm : mask_shift_lowering<VK4, v4i1>, Requires<[HasAVX512]>;
-defm : mask_shift_lowering<VK2, v2i1>, Requires<[HasAVX512]>;
 //===----------------------------------------------------------------------===//
 // AVX-512 - Aligned and unaligned load and store
 //
@@ -8704,17 +8644,6 @@ def rr : AVX512XS8I<opc, MRMSrcReg, (outs Vec.RC:$dst), (ins Vec.KRC:$src),
                   IIC_SSE_MOV_S_RR>, EVEX, Sched<[WriteMove]>;
 }
 
-// Use 512bit version to implement 128/256 bit in case NoVLX.
-multiclass avx512_convert_mask_to_vector_lowering<X86VectorVTInfo X86Info,
-                                                            X86VectorVTInfo _> {
-
-  def : Pat<(X86Info.VT (X86vsext (X86Info.KVT X86Info.KRC:$src))),
-            (X86Info.VT (EXTRACT_SUBREG
-                           (_.VT (!cast<Instruction>(NAME#"Zrr")
-                             (_.KVT (COPY_TO_REGCLASS X86Info.KRC:$src,_.KRC)))),
-                           X86Info.SubRegIdx))>;
-}
-
 multiclass cvt_mask_by_elt_width<bits<8> opc, AVX512VLVectorVTInfo VTInfo,
                                  string OpcodeStr, Predicate prd> {
 let Predicates = [prd] in
@@ -8724,11 +8653,6 @@ let Predicates = [prd] in
     defm Z256 : cvt_by_vec_width<opc, VTInfo.info256, OpcodeStr>, EVEX_V256;
     defm Z128 : cvt_by_vec_width<opc, VTInfo.info128, OpcodeStr>, EVEX_V128;
   }
-let Predicates = [prd, NoVLX] in {
-   defm Z256_Alt :   avx512_convert_mask_to_vector_lowering<VTInfo.info256,VTInfo.info512>;
-   defm Z128_Alt :   avx512_convert_mask_to_vector_lowering<VTInfo.info128,VTInfo.info512>;
-  }
-
 }
 
 defm VPMOVM2B : cvt_mask_by_elt_width<0x28, avx512vl_i8_info, "vpmovm2" , HasBWI>;

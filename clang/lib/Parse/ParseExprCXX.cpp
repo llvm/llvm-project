@@ -292,8 +292,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
           break;
         }
 
-        if (TemplateName.getKind() != UnqualifiedId::IK_OperatorFunctionId &&
-            TemplateName.getKind() != UnqualifiedId::IK_LiteralOperatorId) {
+        if (TemplateName.getKind() != UnqualifiedIdKind::IK_OperatorFunctionId &&
+            TemplateName.getKind() != UnqualifiedIdKind::IK_LiteralOperatorId) {
           Diag(TemplateName.getSourceRange().getBegin(),
                diag::err_id_after_template_in_nested_name_spec)
             << TemplateName.getSourceRange();
@@ -1090,7 +1090,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
 
   // Parse lambda-declarator[opt].
   DeclSpec DS(AttrFactory);
-  Declarator D(DS, Declarator::LambdaExprContext);
+  Declarator D(DS, DeclaratorContext::LambdaExprContext);
   TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
   Actions.PushLambdaScope();
 
@@ -1353,7 +1353,7 @@ ExprResult Parser::ParseCXXCasts() {
   ParseSpecifierQualifierList(DS);
 
   // Parse the abstract-declarator, if present.
-  Declarator DeclaratorInfo(DS, Declarator::TypeNameContext);
+  Declarator DeclaratorInfo(DS, DeclaratorContext::TypeNameContext);
   ParseDeclarator(DeclaratorInfo);
 
   SourceLocation RAngleBracketLoc = Tok.getLocation();
@@ -1660,7 +1660,7 @@ ExprResult Parser::ParseCXXThis() {
 /// In C++1z onwards, the type specifier can also be a template-name.
 ExprResult
 Parser::ParseCXXTypeConstructExpression(const DeclSpec &DS) {
-  Declarator DeclaratorInfo(DS, Declarator::FunctionalCastContext);
+  Declarator DeclaratorInfo(DS, DeclaratorContext::FunctionalCastContext);
   ParsedType TypeRep = Actions.ActOnTypeName(getCurScope(), DeclaratorInfo).get();
 
   assert((Tok.is(tok::l_paren) ||
@@ -1767,8 +1767,9 @@ Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
                                 : diag::ext_init_statement)
         << (CK == Sema::ConditionKind::Switch);
     SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
-    DeclGroupPtrTy DG = ParseSimpleDeclaration(
-        Declarator::InitStmtContext, DeclEnd, attrs, /*RequireSemi=*/true);
+    DeclGroupPtrTy DG =
+        ParseSimpleDeclaration(DeclaratorContext::InitStmtContext, DeclEnd,
+                               attrs, /*RequireSemi=*/true);
     *InitStmt = Actions.ActOnDeclStmt(DG, DeclStart, DeclEnd);
     return ParseCXXCondition(nullptr, Loc, CK);
   }
@@ -1784,7 +1785,7 @@ Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
   ParseSpecifierQualifierList(DS, AS_none, DSC_condition);
 
   // declarator
-  Declarator DeclaratorInfo(DS, Declarator::ConditionContext);
+  Declarator DeclaratorInfo(DS, DeclaratorContext::ConditionContext);
   ParseDeclarator(DeclaratorInfo);
 
   // simple-asm-expr[opt]
@@ -2033,9 +2034,9 @@ bool Parser::ParseUnqualifiedIdTemplateId(CXXScopeSpec &SS,
   TemplateTy Template;
   TemplateNameKind TNK = TNK_Non_template;
   switch (Id.getKind()) {
-  case UnqualifiedId::IK_Identifier:
-  case UnqualifiedId::IK_OperatorFunctionId:
-  case UnqualifiedId::IK_LiteralOperatorId:
+  case UnqualifiedIdKind::IK_Identifier:
+  case UnqualifiedIdKind::IK_OperatorFunctionId:
+  case UnqualifiedIdKind::IK_LiteralOperatorId:
     if (AssumeTemplateId) {
       // We defer the injected-class-name checks until we've found whether
       // this template-id is used to form a nested-name-specifier or not.
@@ -2058,11 +2059,11 @@ bool Parser::ParseUnqualifiedIdTemplateId(CXXScopeSpec &SS,
         // parse correctly as a template, so suggest the keyword 'template'
         // before 'getAs' and treat this as a dependent template name.
         std::string Name;
-        if (Id.getKind() == UnqualifiedId::IK_Identifier)
+        if (Id.getKind() == UnqualifiedIdKind::IK_Identifier)
           Name = Id.Identifier->getName();
         else {
           Name = "operator ";
-          if (Id.getKind() == UnqualifiedId::IK_OperatorFunctionId)
+          if (Id.getKind() == UnqualifiedIdKind::IK_OperatorFunctionId)
             Name += getOperatorSpelling(Id.OperatorFunctionId.Operator);
           else
             Name += Id.Identifier->getName();
@@ -2079,7 +2080,7 @@ bool Parser::ParseUnqualifiedIdTemplateId(CXXScopeSpec &SS,
     }
     break;
       
-  case UnqualifiedId::IK_ConstructorName: {
+  case UnqualifiedIdKind::IK_ConstructorName: {
     UnqualifiedId TemplateName;
     bool MemberOfUnknownSpecialization;
     TemplateName.setIdentifier(Name, NameLoc);
@@ -2090,7 +2091,7 @@ bool Parser::ParseUnqualifiedIdTemplateId(CXXScopeSpec &SS,
     break;
   }
       
-  case UnqualifiedId::IK_DestructorName: {
+  case UnqualifiedIdKind::IK_DestructorName: {
     UnqualifiedId TemplateName;
     bool MemberOfUnknownSpecialization;
     TemplateName.setIdentifier(Name, NameLoc);
@@ -2129,18 +2130,20 @@ bool Parser::ParseUnqualifiedIdTemplateId(CXXScopeSpec &SS,
                                true, LAngleLoc, TemplateArgs, RAngleLoc))
     return true;
   
-  if (Id.getKind() == UnqualifiedId::IK_Identifier ||
-      Id.getKind() == UnqualifiedId::IK_OperatorFunctionId ||
-      Id.getKind() == UnqualifiedId::IK_LiteralOperatorId) {
+  if (Id.getKind() == UnqualifiedIdKind::IK_Identifier ||
+      Id.getKind() == UnqualifiedIdKind::IK_OperatorFunctionId ||
+      Id.getKind() == UnqualifiedIdKind::IK_LiteralOperatorId) {
     // Form a parsed representation of the template-id to be stored in the
     // UnqualifiedId.
 
     // FIXME: Store name for literal operator too.
     IdentifierInfo *TemplateII =
-        Id.getKind() == UnqualifiedId::IK_Identifier ? Id.Identifier : nullptr;
-    OverloadedOperatorKind OpKind = Id.getKind() == UnqualifiedId::IK_Identifier
-                                        ? OO_None
-                                        : Id.OperatorFunctionId.Operator;
+        Id.getKind() == UnqualifiedIdKind::IK_Identifier ? Id.Identifier
+                                                         : nullptr;
+    OverloadedOperatorKind OpKind =
+        Id.getKind() == UnqualifiedIdKind::IK_Identifier
+            ? OO_None
+            : Id.OperatorFunctionId.Operator;
 
     TemplateIdAnnotation *TemplateId = TemplateIdAnnotation::Create(
         SS, TemplateKWLoc, Id.StartLocation, TemplateII, OpKind, Template, TNK,
@@ -2162,7 +2165,7 @@ bool Parser::ParseUnqualifiedIdTemplateId(CXXScopeSpec &SS,
   if (Type.isInvalid())
     return true;
   
-  if (Id.getKind() == UnqualifiedId::IK_ConstructorName)
+  if (Id.getKind() == UnqualifiedIdKind::IK_ConstructorName)
     Id.setConstructorName(Type.get(), NameLoc, RAngleLoc);
   else
     Id.setDestructorName(Id.StartLocation, Type.get(), RAngleLoc);
@@ -2395,7 +2398,7 @@ bool Parser::ParseUnqualifiedIdOperator(CXXScopeSpec &SS, bool EnteringContext,
   
   // Parse the conversion-declarator, which is merely a sequence of
   // ptr-operators.
-  Declarator D(DS, Declarator::ConversionIdContext);
+  Declarator D(DS, DeclaratorContext::ConversionIdContext);
   ParseDeclaratorInternal(D, /*DirectDeclParser=*/nullptr);
 
   // Finish up the type.
@@ -2556,8 +2559,8 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, bool EnteringContext,
     // 
     //   template-id:
     //     operator-function-id < template-argument-list[opt] >
-    if ((Result.getKind() == UnqualifiedId::IK_OperatorFunctionId ||
-         Result.getKind() == UnqualifiedId::IK_LiteralOperatorId) &&
+    if ((Result.getKind() == UnqualifiedIdKind::IK_OperatorFunctionId ||
+         Result.getKind() == UnqualifiedIdKind::IK_LiteralOperatorId) &&
         (TemplateSpecified || Tok.is(tok::less)))
       return ParseUnqualifiedIdTemplateId(SS, TemplateKWLoc,
                                           nullptr, SourceLocation(),
@@ -2696,7 +2699,7 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
 
   SourceRange TypeIdParens;
   DeclSpec DS(AttrFactory);
-  Declarator DeclaratorInfo(DS, Declarator::CXXNewContext);
+  Declarator DeclaratorInfo(DS, DeclaratorContext::CXXNewContext);
   if (Tok.is(tok::l_paren)) {
     // If it turns out to be a placement, we change the type location.
     BalancedDelimiterTracker T(*this, tok::l_paren);
@@ -3172,7 +3175,7 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
   if (ParseAs >= CompoundLiteral) {
     // Parse the type declarator.
     DeclSpec DS(AttrFactory);
-    Declarator DeclaratorInfo(DS, Declarator::TypeNameContext);
+    Declarator DeclaratorInfo(DS, DeclaratorContext::TypeNameContext);
     {
       ColonProtectionRAIIObject InnerColonProtection(*this);
       ParseSpecifierQualifierList(DS);

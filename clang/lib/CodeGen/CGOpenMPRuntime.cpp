@@ -397,6 +397,7 @@ class InlinedOpenMPRegionRAII {
   CodeGenFunction &CGF;
   llvm::DenseMap<const VarDecl *, FieldDecl *> LambdaCaptureFields;
   FieldDecl *LambdaThisCaptureField = nullptr;
+  const CodeGen::CGBlockInfo *BlockInfo = nullptr;
 
 public:
   /// \brief Constructs region for combined constructs.
@@ -412,6 +413,8 @@ public:
     std::swap(CGF.LambdaCaptureFields, LambdaCaptureFields);
     LambdaThisCaptureField = CGF.LambdaThisCaptureField;
     CGF.LambdaThisCaptureField = nullptr;
+    BlockInfo = CGF.BlockInfo;
+    CGF.BlockInfo = nullptr;
   }
 
   ~InlinedOpenMPRegionRAII() {
@@ -422,6 +425,7 @@ public:
     CGF.CapturedStmtInfo = OldCSI;
     std::swap(CGF.LambdaCaptureFields, LambdaCaptureFields);
     CGF.LambdaThisCaptureField = LambdaThisCaptureField;
+    CGF.BlockInfo = BlockInfo;
   }
 };
 
@@ -8014,3 +8018,299 @@ Address CGOpenMPRuntime::getParameterAddress(CodeGenFunction &CGF,
                                              const VarDecl *TargetParam) const {
   return CGF.GetAddrOfLocalVar(NativeParam);
 }
+
+llvm::Value *CGOpenMPSIMDRuntime::emitParallelOutlinedFunction(
+    const OMPExecutableDirective &D, const VarDecl *ThreadIDVar,
+    OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+llvm::Value *CGOpenMPSIMDRuntime::emitTeamsOutlinedFunction(
+    const OMPExecutableDirective &D, const VarDecl *ThreadIDVar,
+    OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+llvm::Value *CGOpenMPSIMDRuntime::emitTaskOutlinedFunction(
+    const OMPExecutableDirective &D, const VarDecl *ThreadIDVar,
+    const VarDecl *PartIDVar, const VarDecl *TaskTVar,
+    OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen,
+    bool Tied, unsigned &NumberOfParts) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitParallelCall(CodeGenFunction &CGF,
+                                           SourceLocation Loc,
+                                           llvm::Value *OutlinedFn,
+                                           ArrayRef<llvm::Value *> CapturedVars,
+                                           const Expr *IfCond) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitCriticalRegion(
+    CodeGenFunction &CGF, StringRef CriticalName,
+    const RegionCodeGenTy &CriticalOpGen, SourceLocation Loc,
+    const Expr *Hint) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitMasterRegion(CodeGenFunction &CGF,
+                                           const RegionCodeGenTy &MasterOpGen,
+                                           SourceLocation Loc) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitTaskyieldCall(CodeGenFunction &CGF,
+                                            SourceLocation Loc) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitTaskgroupRegion(
+    CodeGenFunction &CGF, const RegionCodeGenTy &TaskgroupOpGen,
+    SourceLocation Loc) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitSingleRegion(
+    CodeGenFunction &CGF, const RegionCodeGenTy &SingleOpGen,
+    SourceLocation Loc, ArrayRef<const Expr *> CopyprivateVars,
+    ArrayRef<const Expr *> DestExprs, ArrayRef<const Expr *> SrcExprs,
+    ArrayRef<const Expr *> AssignmentOps) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitOrderedRegion(CodeGenFunction &CGF,
+                                            const RegionCodeGenTy &OrderedOpGen,
+                                            SourceLocation Loc,
+                                            bool IsThreads) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitBarrierCall(CodeGenFunction &CGF,
+                                          SourceLocation Loc,
+                                          OpenMPDirectiveKind Kind,
+                                          bool EmitChecks,
+                                          bool ForceSimpleCall) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitForDispatchInit(
+    CodeGenFunction &CGF, SourceLocation Loc,
+    const OpenMPScheduleTy &ScheduleKind, unsigned IVSize, bool IVSigned,
+    bool Ordered, const DispatchRTInput &DispatchValues) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitForStaticInit(
+    CodeGenFunction &CGF, SourceLocation Loc, OpenMPDirectiveKind DKind,
+    const OpenMPScheduleTy &ScheduleKind, const StaticRTInput &Values) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitDistributeStaticInit(
+    CodeGenFunction &CGF, SourceLocation Loc,
+    OpenMPDistScheduleClauseKind SchedKind, const StaticRTInput &Values) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitForOrderedIterationEnd(CodeGenFunction &CGF,
+                                                     SourceLocation Loc,
+                                                     unsigned IVSize,
+                                                     bool IVSigned) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitForStaticFinish(CodeGenFunction &CGF,
+                                              SourceLocation Loc,
+                                              OpenMPDirectiveKind DKind) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+llvm::Value *CGOpenMPSIMDRuntime::emitForNext(CodeGenFunction &CGF,
+                                              SourceLocation Loc,
+                                              unsigned IVSize, bool IVSigned,
+                                              Address IL, Address LB,
+                                              Address UB, Address ST) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitNumThreadsClause(CodeGenFunction &CGF,
+                                               llvm::Value *NumThreads,
+                                               SourceLocation Loc) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitProcBindClause(CodeGenFunction &CGF,
+                                             OpenMPProcBindClauseKind ProcBind,
+                                             SourceLocation Loc) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+Address CGOpenMPSIMDRuntime::getAddrOfThreadPrivate(CodeGenFunction &CGF,
+                                                    const VarDecl *VD,
+                                                    Address VDAddr,
+                                                    SourceLocation Loc) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+llvm::Function *CGOpenMPSIMDRuntime::emitThreadPrivateVarDefinition(
+    const VarDecl *VD, Address VDAddr, SourceLocation Loc, bool PerformInit,
+    CodeGenFunction *CGF) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+Address CGOpenMPSIMDRuntime::getAddrOfArtificialThreadPrivate(
+    CodeGenFunction &CGF, QualType VarType, StringRef Name) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitFlush(CodeGenFunction &CGF,
+                                    ArrayRef<const Expr *> Vars,
+                                    SourceLocation Loc) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitTaskCall(CodeGenFunction &CGF, SourceLocation Loc,
+                                       const OMPExecutableDirective &D,
+                                       llvm::Value *TaskFunction,
+                                       QualType SharedsTy, Address Shareds,
+                                       const Expr *IfCond,
+                                       const OMPTaskDataTy &Data) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitTaskLoopCall(
+    CodeGenFunction &CGF, SourceLocation Loc, const OMPLoopDirective &D,
+    llvm::Value *TaskFunction, QualType SharedsTy, Address Shareds,
+    const Expr *IfCond, const OMPTaskDataTy &Data) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitReduction(
+    CodeGenFunction &CGF, SourceLocation Loc, ArrayRef<const Expr *> Privates,
+    ArrayRef<const Expr *> LHSExprs, ArrayRef<const Expr *> RHSExprs,
+    ArrayRef<const Expr *> ReductionOps, ReductionOptionsTy Options) {
+  assert(Options.SimpleReduction && "Only simple reduction is expected.");
+  CGOpenMPRuntime::emitReduction(CGF, Loc, Privates, LHSExprs, RHSExprs,
+                                 ReductionOps, Options);
+}
+
+llvm::Value *CGOpenMPSIMDRuntime::emitTaskReductionInit(
+    CodeGenFunction &CGF, SourceLocation Loc, ArrayRef<const Expr *> LHSExprs,
+    ArrayRef<const Expr *> RHSExprs, const OMPTaskDataTy &Data) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitTaskReductionFixups(CodeGenFunction &CGF,
+                                                  SourceLocation Loc,
+                                                  ReductionCodeGen &RCG,
+                                                  unsigned N) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+Address CGOpenMPSIMDRuntime::getTaskReductionItem(CodeGenFunction &CGF,
+                                                  SourceLocation Loc,
+                                                  llvm::Value *ReductionsPtr,
+                                                  LValue SharedLVal) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitTaskwaitCall(CodeGenFunction &CGF,
+                                           SourceLocation Loc) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitCancellationPointCall(
+    CodeGenFunction &CGF, SourceLocation Loc,
+    OpenMPDirectiveKind CancelRegion) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitCancelCall(CodeGenFunction &CGF,
+                                         SourceLocation Loc, const Expr *IfCond,
+                                         OpenMPDirectiveKind CancelRegion) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitTargetOutlinedFunction(
+    const OMPExecutableDirective &D, StringRef ParentName,
+    llvm::Function *&OutlinedFn, llvm::Constant *&OutlinedFnID,
+    bool IsOffloadEntry, const RegionCodeGenTy &CodeGen) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitTargetCall(CodeGenFunction &CGF,
+                                         const OMPExecutableDirective &D,
+                                         llvm::Value *OutlinedFn,
+                                         llvm::Value *OutlinedFnID,
+                                         const Expr *IfCond, const Expr *Device,
+                                         ArrayRef<llvm::Value *> CapturedVars) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+bool CGOpenMPSIMDRuntime::emitTargetFunctions(GlobalDecl GD) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+bool CGOpenMPSIMDRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+bool CGOpenMPSIMDRuntime::emitTargetGlobal(GlobalDecl GD) {
+  return false;
+}
+
+llvm::Function *CGOpenMPSIMDRuntime::emitRegistrationFunction() {
+  return nullptr;
+}
+
+void CGOpenMPSIMDRuntime::emitTeamsCall(CodeGenFunction &CGF,
+                                        const OMPExecutableDirective &D,
+                                        SourceLocation Loc,
+                                        llvm::Value *OutlinedFn,
+                                        ArrayRef<llvm::Value *> CapturedVars) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitNumTeamsClause(CodeGenFunction &CGF,
+                                             const Expr *NumTeams,
+                                             const Expr *ThreadLimit,
+                                             SourceLocation Loc) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitTargetDataCalls(
+    CodeGenFunction &CGF, const OMPExecutableDirective &D, const Expr *IfCond,
+    const Expr *Device, const RegionCodeGenTy &CodeGen, TargetDataInfo &Info) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitTargetDataStandAloneCall(
+    CodeGenFunction &CGF, const OMPExecutableDirective &D, const Expr *IfCond,
+    const Expr *Device) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitDoacrossInit(CodeGenFunction &CGF,
+                                           const OMPLoopDirective &D) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitDoacrossOrdered(CodeGenFunction &CGF,
+                                              const OMPDependClause *C) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+const VarDecl *
+CGOpenMPSIMDRuntime::translateParameter(const FieldDecl *FD,
+                                        const VarDecl *NativeParam) const {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+Address
+CGOpenMPSIMDRuntime::getParameterAddress(CodeGenFunction &CGF,
+                                         const VarDecl *NativeParam,
+                                         const VarDecl *TargetParam) const {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+

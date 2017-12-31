@@ -173,10 +173,12 @@ void CodeGenFunction::EmitCXXGlobalVarDeclInit(const VarDecl &D,
   ConstantAddress DeclAddr(DeclPtr, getContext().getDeclAlign(&D));
 
   if (!T->isReferenceType()) {
-    if (getLangOpts().OpenMP && D.hasAttr<OMPThreadPrivateDeclAttr>())
+    if (getLangOpts().OpenMP && !getLangOpts().OpenMPSimd &&
+        D.hasAttr<OMPThreadPrivateDeclAttr>()) {
       (void)CGM.getOpenMPRuntime().emitThreadPrivateVarDefinition(
           &D, DeclAddr, D.getAttr<OMPThreadPrivateDeclAttr>()->getLocation(),
           PerformInit, this);
+    }
     if (PerformInit)
       EmitDeclInit(*this, D, DeclAddr);
     if (CGM.isTypeConstant(D.getType(), true))

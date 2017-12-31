@@ -695,7 +695,7 @@ define void @pr29025(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c, <12 x i8> *%p) nounw
 ; SSE2-NEXT:    packuswb %xmm2, %xmm2
 ; SSE2-NEXT:    packuswb %xmm2, %xmm2
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,0,1,1,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,1,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,1,3]
 ; SSE2-NEXT:    pandn %xmm2, %xmm1
 ; SSE2-NEXT:    por %xmm0, %xmm1
 ; SSE2-NEXT:    movq %xmm1, (%rdi)

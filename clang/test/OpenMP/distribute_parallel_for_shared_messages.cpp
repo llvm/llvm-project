@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s
 
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s
+
 
 struct S1; // expected-note 2 {{declared here}}
 extern S1 a;

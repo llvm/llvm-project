@@ -55,7 +55,7 @@ FixedPointRegToImm("ppc-reg-to-imm-fixed-point", cl::Hidden, cl::init(true),
                             "convert reg-reg instructions to reg-imm"));
 
 static cl::opt<bool>
-ConvertRegReg("ppc-convert-rr-to-ri", cl::Hidden, cl::init(false),
+ConvertRegReg("ppc-convert-rr-to-ri", cl::Hidden, cl::init(true),
               cl::desc("Convert eligible reg+reg instructions to reg+imm"));
 
 static cl::opt<bool>

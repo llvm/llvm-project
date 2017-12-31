@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -instsimplify -S | FileCheck %s
 
 define i32 @identity_bitreverse_i32(i32 %p) {
 ; CHECK-LABEL: @identity_bitreverse_i32(

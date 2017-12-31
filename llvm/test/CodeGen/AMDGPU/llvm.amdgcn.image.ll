@@ -157,17 +157,33 @@ main_body:
 
 ; Ideally, the register allocator would avoid the wait here
 ;
+; XXX - Is this really allowed? Are the resource descriptors allowed to alias?
 ; GCN-LABEL: {{^}}image_store_wait:
+; GCN: image_load v[5:8], v4, s[8:15] dmask:0xf unorm
 ; GCN: image_store v[0:3], v4, s[0:7] dmask:0xf unorm
-; GCN: s_waitcnt expcnt(0)
-; GCN: image_load v[0:3], v4, s[8:15] dmask:0xf unorm
-; GCN: s_waitcnt vmcnt(0)
-; GCN: image_store v[0:3], v4, s[16:23] dmask:0xf unorm
+; GCN: s_waitcnt vmcnt(1)
+; GCN: image_store v[5:8], v4, s[16:23] dmask:0xf unorm
+; GCN-NEXT: s_endpgm
 define amdgpu_ps void @image_store_wait(<8 x i32> inreg %arg, <8 x i32> inreg %arg1, <8 x i32> inreg %arg2, <4 x float> %arg3, i32 %arg4) #0 {
 main_body:
   call void @llvm.amdgcn.image.store.v4f32.i32.v8i32(<4 x float> %arg3, i32 %arg4, <8 x i32> %arg, i32 15, i1 false, i1 false, i1 false, i1 false)
   %data = call <4 x float> @llvm.amdgcn.image.load.v4f32.i32.v8i32(i32 %arg4, <8 x i32> %arg1, i32 15, i1 false, i1 false, i1 false, i1 false)
   call void @llvm.amdgcn.image.store.v4f32.i32.v8i32(<4 x float> %data, i32 %arg4, <8 x i32> %arg2, i32 15, i1 false, i1 false, i1 false, i1 false)
+  ret void
+}
+
+; The same image resource is used so reordering is not OK.
+; GCN-LABEL: {{^}}image_store_wait_same_resource:
+; GCN: image_store v[0:3], v4, s[0:7] dmask:0xf unorm
+; GCN: s_waitcnt expcnt(0)
+; GCN: image_load v[0:3], v4, s[0:7] dmask:0xf unorm
+; GCN: s_waitcnt vmcnt(0)
+; GCN: image_store v[0:3], v4, s[0:7] dmask:0xf unorm
+define amdgpu_ps void @image_store_wait_same_resource(<8 x i32> inreg %rsrc, <4 x float> %arg3, i32 %arg4) #0 {
+main_body:
+  call void @llvm.amdgcn.image.store.v4f32.i32.v8i32(<4 x float> %arg3, i32 %arg4, <8 x i32> %rsrc, i32 15, i1 false, i1 false, i1 false, i1 false)
+  %data = call <4 x float> @llvm.amdgcn.image.load.v4f32.i32.v8i32(i32 %arg4, <8 x i32> %rsrc, i32 15, i1 false, i1 false, i1 false, i1 false)
+  call void @llvm.amdgcn.image.store.v4f32.i32.v8i32(<4 x float> %data, i32 %arg4, <8 x i32> %rsrc, i32 15, i1 false, i1 false, i1 false, i1 false)
   ret void
 }
 

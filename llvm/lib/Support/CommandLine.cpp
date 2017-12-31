@@ -873,6 +873,44 @@ void cl::TokenizeWindowsCommandLine(StringRef Src, StringSaver &Saver,
     NewArgv.push_back(nullptr);
 }
 
+void cl::tokenizeConfigFile(StringRef Source, StringSaver &Saver,
+                            SmallVectorImpl<const char *> &NewArgv,
+                            bool MarkEOLs) {
+  for (const char *Cur = Source.begin(); Cur != Source.end();) {
+    SmallString<128> Line;
+    // Check for comment line.
+    if (isWhitespace(*Cur)) {
+      while (Cur != Source.end() && isWhitespace(*Cur))
+        ++Cur;
+      continue;
+    }
+    if (*Cur == '#') {
+      while (Cur != Source.end() && *Cur != '\n')
+        ++Cur;
+      continue;
+    }
+    // Find end of the current line.
+    const char *Start = Cur;
+    for (const char *End = Source.end(); Cur != End; ++Cur) {
+      if (*Cur == '\\') {
+        if (Cur + 1 != End) {
+          ++Cur;
+          if (*Cur == '\n' ||
+              (*Cur == '\r' && (Cur + 1 != End) && Cur[1] == '\n')) {
+            Line.append(Start, Cur - 1);
+            Cur += (*Cur == '\r' ? 2 : 1);
+            Start = Cur;
+          }
+        }
+      } else if (*Cur == '\n')
+        break;
+    }
+    // Tokenize line.
+    Line.append(Start, Cur);
+    cl::TokenizeGNUCommandLine(Line, Saver, NewArgv, MarkEOLs);
+  }
+}
+
 // It is called byte order marker but the UTF-8 BOM is actually not affected
 // by the host system's endianness.
 static bool hasUTF8ByteOrderMark(ArrayRef<char> S) {
@@ -975,6 +1013,15 @@ bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
     Argv.insert(Argv.begin() + I, ExpandedArgv.begin(), ExpandedArgv.end());
   }
   return AllExpanded;
+}
+
+bool cl::readConfigFile(StringRef CfgFile, StringSaver &Saver,
+                        SmallVectorImpl<const char *> &Argv) {
+  if (!ExpandResponseFile(CfgFile, Saver, cl::tokenizeConfigFile, Argv,
+                          /*MarkEOLs*/ false, /*RelativeNames*/ true))
+    return false;
+  return ExpandResponseFiles(Saver, cl::tokenizeConfigFile, Argv,
+                             /*MarkEOLs*/ false, /*RelativeNames*/ true);
 }
 
 /// ParseEnvironmentOptions - An alternative entry point to the

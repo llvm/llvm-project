@@ -558,7 +558,7 @@ CompletionItem indexCompletionItem(const Symbol &Sym, llvm::StringRef Filter,
   Item.insertText = Sym.Name;
   // FIXME(ioeric): support snippets.
   Item.insertTextFormat = InsertTextFormat::PlainText;
-  Item.filterText = Filter;
+  Item.filterText = Sym.Name;
 
   // FIXME(ioeric): sort symbols appropriately.
   Item.sortText = "";

@@ -2364,8 +2364,8 @@ define <2 x i64> @test_mm_set1_epi8(i8 %a0) nounwind {
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movd %eax, %xmm0
 ; X32-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; X32-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; X32-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; X32-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,2,3,4,5,6,7]
+; X32-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_set1_epi8:
@@ -2373,8 +2373,8 @@ define <2 x i64> @test_mm_set1_epi8(i8 %a0) nounwind {
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    movd %eax, %xmm0
 ; X64-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; X64-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; X64-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,2,3,4,5,6,7]
+; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X64-NEXT:    retq
   %res0  = insertelement <16 x i8> undef,  i8 %a0, i32 0
   %res1  = insertelement <16 x i8> %res0,  i8 %a0, i32 1
@@ -2401,15 +2401,15 @@ define <2 x i64> @test_mm_set1_epi16(i16 %a0) nounwind {
 ; X32:       # %bb.0:
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movd %eax, %xmm0
-; X32-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; X32-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; X32-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,2,3,4,5,6,7]
+; X32-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_set1_epi16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movd %edi, %xmm0
-; X64-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; X64-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,2,3,4,5,6,7]
+; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X64-NEXT:    retq
   %res0  = insertelement <8 x i16> undef, i16 %a0, i32 0
   %res1  = insertelement <8 x i16> %res0, i16 %a0, i32 1

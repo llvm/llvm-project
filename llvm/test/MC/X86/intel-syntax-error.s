@@ -34,3 +34,13 @@ lea RDX, [4 * RAX + 27 * RBX + _pat]
 lea RDX, [[arr]
 //CHECK: error: unexpected bracket encountered
 lea RDX, [arr[]
+
+.intel_syntax
+
+// CHECK: error: invalid operand for instruction
+punpcklbw mm0, qword ptr [rsp]
+// CHECK: error: invalid operand for instruction
+punpcklwd mm0, word ptr [rsp]
+// CHECK: error: invalid operand for instruction
+punpckldq mm0, qword ptr [rsp]
+

@@ -5,8 +5,8 @@ define <2 x i64> @doload64(i16 signext  %x) nounwind  {
 ; CHECK-LABEL: doload64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,2,3,4,5,6,7]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; CHECK-NEXT:    retl
   %tmp36 = insertelement <8 x i16> undef, i16 %x, i32 0
   %tmp37 = insertelement <8 x i16> %tmp36, i16 %x, i32 1

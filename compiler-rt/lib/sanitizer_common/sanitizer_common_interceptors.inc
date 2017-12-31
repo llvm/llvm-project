@@ -4551,6 +4551,20 @@ INTERCEPTOR(int, pthread_setname_np, uptr thread, const char *name, void *arg) {
 #define INIT_PTHREAD_SETNAME_NP
 #endif
 
+#if SANITIZER_INTERCEPT_PTHREAD_GETNAME_NP
+INTERCEPTOR(int, pthread_getname_np, uptr thread, char *name, SIZE_T len) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, pthread_getname_np, thread, name, len);
+  int res = REAL(pthread_getname_np)(thread, name, len);
+  if (!res)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, name, internal_strnlen(name, len) + 1);
+  return res;
+}
+#define INIT_PTHREAD_GETNAME_NP COMMON_INTERCEPT_FUNCTION(pthread_getname_np);
+#else
+#define INIT_PTHREAD_GETNAME_NP
+#endif
+
 #if SANITIZER_INTERCEPT_SINCOS
 INTERCEPTOR(void, sincos, double x, double *sin, double *cos) {
   void *ctx;
@@ -6541,6 +6555,7 @@ static void InitializeCommonInterceptors() {
   INIT_TTYNAME_R;
   INIT_TEMPNAM;
   INIT_PTHREAD_SETNAME_NP;
+  INIT_PTHREAD_GETNAME_NP;
   INIT_SINCOS;
   INIT_REMQUO;
   INIT_LGAMMA;

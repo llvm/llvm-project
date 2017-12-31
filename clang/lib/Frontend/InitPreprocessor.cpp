@@ -1021,8 +1021,8 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("_OPENMP", "201511");
     break;
   default:
-    // Default version is OpenMP 3.1
-    Builder.defineMacro("_OPENMP", "201107");
+    // Default version is OpenMP 3.1, in Simd only mode - 4.5
+    Builder.defineMacro("_OPENMP", LangOpts.OpenMPSimd ? "201511" : "201107");
     break;
   }
 
