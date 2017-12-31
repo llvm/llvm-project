@@ -215,7 +215,7 @@ template void h<A(&)[13], int>(A(&)[13]); // expected-note {{requested here}}
 template<typename T>
 void i(T t) {
   for (auto u : t) { // expected-error {{invalid range expression of type 'X::A *'; no viable 'begin' function available}} \
-                        expected-error {{member function 'begin' not viable}} \
+                        expected-error {{'this' argument to member function 'begin' has type 'const X::A', but function is not marked const}} \
                         expected-note {{when looking up 'begin' function}}
 
   }

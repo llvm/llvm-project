@@ -410,3 +410,27 @@ define i32 @test12(i32 %a1, i32 %a2, i32 %b1) {
   %res1 = select i1 %cond, i32 %res, i32 0
   ret i32 %res1
 }
+
+define <1 x i1> @test13(<1 x i1>* %foo) {
+; KNL-LABEL: test13:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    movzbl (%rdi), %eax
+; KNL-NEXT:    ## kill: def %al killed %al killed %eax
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test13:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    kmovb (%rdi), %k0
+; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    ## kill: def %al killed %al killed %eax
+; SKX-NEXT:    retq
+;
+; KNL_X32-LABEL: test13:
+; KNL_X32:       ## %bb.0:
+; KNL_X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; KNL_X32-NEXT:    movzbl (%eax), %eax
+; KNL_X32-NEXT:    ## kill: def %al killed %al killed %eax
+; KNL_X32-NEXT:    retl
+  %bar = load <1 x i1>, <1 x i1>* %foo
+  ret <1 x i1> %bar
+}

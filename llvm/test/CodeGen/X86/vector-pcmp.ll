@@ -84,47 +84,28 @@ define <2 x i64> @test_pcmpgtq(<2 x i64> %x) {
 }
 
 define <1 x i128> @test_strange_type(<1 x i128> %x) {
-; SSE2-LABEL: test_strange_type:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    sarq $63, %rsi
-; SSE2-NEXT:    movq %rsi, %xmm0
-; SSE2-NEXT:    notq %rsi
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE2-NEXT:    pxor %xmm0, %xmm1
-; SSE2-NEXT:    movq %xmm1, %rax
-; SSE2-NEXT:    movq %rsi, %rdx
-; SSE2-NEXT:    retq
-;
-; SSE42-LABEL: test_strange_type:
-; SSE42:       # %bb.0:
-; SSE42-NEXT:    sarq $63, %rsi
-; SSE42-NEXT:    movq %rsi, %xmm0
-; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; SSE42-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE42-NEXT:    pxor %xmm0, %xmm1
-; SSE42-NEXT:    movq %xmm1, %rax
-; SSE42-NEXT:    pextrq $1, %xmm1, %rdx
-; SSE42-NEXT:    retq
+; SSE-LABEL: test_strange_type:
+; SSE:       # %bb.0:
+; SSE-NEXT:    sarq $63, %rsi
+; SSE-NEXT:    notq %rsi
+; SSE-NEXT:    movq %rsi, %rax
+; SSE-NEXT:    movq %rsi, %rdx
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test_strange_type:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    sarq $63, %rsi
-; AVX1-NEXT:    vmovq %rsi, %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vmovq %xmm0, %rax
-; AVX1-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX1-NEXT:    notq %rsi
+; AVX1-NEXT:    movq %rsi, %rax
+; AVX1-NEXT:    movq %rsi, %rdx
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_strange_type:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    sarq $63, %rsi
+; AVX2-NEXT:    notq %rsi
 ; AVX2-NEXT:    vmovq %rsi, %xmm0
 ; AVX2-NEXT:    vpbroadcastq %xmm0, %xmm0
-; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovq %xmm0, %rax
 ; AVX2-NEXT:    vpextrq $1, %xmm0, %rdx
 ; AVX2-NEXT:    retq
