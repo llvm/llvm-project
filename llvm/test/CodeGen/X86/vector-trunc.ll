@@ -1852,6 +1852,83 @@ entry:
   ret <16 x i8> %1
 }
 
+define <8 x i16> @PR32160(<8 x i32> %x) {
+; SSE2-LABEL: PR32160:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pslld $16, %xmm1
+; SSE2-NEXT:    psrad $16, %xmm1
+; SSE2-NEXT:    pslld $16, %xmm0
+; SSE2-NEXT:    psrad $16, %xmm0
+; SSE2-NEXT:    packssdw %xmm1, %xmm0
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,2,2,3,4,5,6,7]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: PR32160:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,4,6,7]
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,2,2,2]
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: PR32160:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,4,6,7]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,2,2,2]
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: PR32160:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[8,9,8,9,8,9,8,9,8,9,8,9,8,9,8,9]
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: PR32160:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[2,2,2,3,4,5,6,7]
+; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: PR32160:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512F-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[2,2,2,3,4,5,6,7]
+; AVX512F-NEXT:    vpbroadcastd %xmm0, %xmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: PR32160:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpmovdw %ymm0, %xmm0
+; AVX512VL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[2,2,2,3,4,5,6,7]
+; AVX512VL-NEXT:    vpbroadcastd %xmm0, %xmm0
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
+;
+; AVX512BW-LABEL: PR32160:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; AVX512BW-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512BW-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[2,2,2,3,4,5,6,7]
+; AVX512BW-NEXT:    vpbroadcastd %xmm0, %xmm0
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512BWVL-LABEL: PR32160:
+; AVX512BWVL:       # %bb.0:
+; AVX512BWVL-NEXT:    vpmovdw %ymm0, %xmm0
+; AVX512BWVL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[2,2,2,3,4,5,6,7]
+; AVX512BWVL-NEXT:    vpbroadcastd %xmm0, %xmm0
+; AVX512BWVL-NEXT:    vzeroupper
+; AVX512BWVL-NEXT:    retq
+  %shuf = trunc <8 x i32> %x to <8 x i16>
+  %trunc = shufflevector <8 x i16> %shuf, <8 x i16> undef, <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+  ret <8 x i16> %trunc
+}
+
 define void @PR34773(i16* %a0, i8* %a1) {
 ; SSE-LABEL: PR34773:
 ; SSE:       # %bb.0:
