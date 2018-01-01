@@ -26,7 +26,7 @@ struct foo {
 };
 
 // PR3600
-void test(const foo *P) { P->bar(); } // expected-error{{'bar' not viable: 'this' argument has type 'const foo', but function is not marked const}}
+void test(const foo *P) { P->bar(); } // expected-error{{'this' argument to member function 'bar' has type 'const foo', but function is not marked const}}
 
 namespace PR6757 {
   struct Foo {
