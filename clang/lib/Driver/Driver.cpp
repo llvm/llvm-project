@@ -62,6 +62,7 @@
 #include "llvm/Option/OptSpecifier.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -70,6 +71,7 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/StringSaver.h"
 #include <map>
 #include <memory>
 #include <utility>
@@ -92,7 +94,8 @@ Driver::Driver(StringRef ClangExecutable, StringRef DefaultTargetTriple,
       CCPrintHeadersFilename(nullptr), CCLogDiagnosticsFilename(nullptr),
       CCCPrintBindings(false), CCPrintHeaders(false), CCLogDiagnostics(false),
       CCGenDiagnostics(false), DefaultTargetTriple(DefaultTargetTriple),
-      CCCGenericGCCName(""), CheckInputsExist(true), CCCUsePCH(true),
+      CCCGenericGCCName(""), Saver(Alloc),
+      CheckInputsExist(true), CCCUsePCH(true),
       GenReproducer(false), SuppressMissingInputWarning(false) {
 
   // Provide a sane fallback if no VFS is specified.
@@ -102,6 +105,13 @@ Driver::Driver(StringRef ClangExecutable, StringRef DefaultTargetTriple,
   Name = llvm::sys::path::filename(ClangExecutable);
   Dir = llvm::sys::path::parent_path(ClangExecutable);
   InstalledDir = Dir; // Provide a sensible default installed dir.
+
+#if defined(CLANG_CONFIG_FILE_SYSTEM_DIR)
+  SystemConfigDir = CLANG_CONFIG_FILE_SYSTEM_DIR;
+#endif
+#if defined(CLANG_CONFIG_FILE_USER_DIR)
+  UserConfigDir = CLANG_CONFIG_FILE_USER_DIR;
+#endif
 
   // Compute the path to the resource directory.
   StringRef ClangResourceDir(CLANG_RESOURCE_DIR);
@@ -600,6 +610,216 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
   //
 }
 
+/// Looks the given directories for the specified file.
+///
+/// \param[out] FilePath File path, if the file was found.
+/// \param[in]  Dirs Directories used for the search.
+/// \param[in]  FileName Name of the file to search for.
+/// \return True if file was found.
+///
+/// Looks for file specified by FileName sequentially in directories specified
+/// by Dirs.
+///
+static bool searchForFile(SmallVectorImpl<char> &FilePath,
+                          ArrayRef<std::string> Dirs,
+                          StringRef FileName) {
+  SmallString<128> WPath;
+  for (const StringRef &Dir : Dirs) {
+    if (Dir.empty())
+      continue;
+    WPath.clear();
+    llvm::sys::path::append(WPath, Dir, FileName);
+    llvm::sys::path::native(WPath);
+    if (llvm::sys::fs::is_regular_file(WPath)) {
+      FilePath = std::move(WPath);
+      return true;
+    }
+  }
+  return false;
+}
+
+bool Driver::readConfigFile(StringRef FileName) {
+  // Try reading the given file.
+  SmallVector<const char *, 32> NewCfgArgs;
+  if (!llvm::cl::readConfigFile(FileName, Saver, NewCfgArgs)) {
+    Diag(diag::err_drv_cannot_read_config_file) << FileName;
+    return true;
+  }
+
+  // Read options from config file.
+  llvm::SmallString<128> CfgFileName(FileName);
+  llvm::sys::path::native(CfgFileName);
+  ConfigFile = CfgFileName.str();
+  bool ContainErrors;
+  CfgOptions = llvm::make_unique<InputArgList>(
+      ParseArgStrings(NewCfgArgs, ContainErrors));
+  if (ContainErrors) {
+    CfgOptions.reset();
+    return true;
+  }
+
+  if (CfgOptions->hasArg(options::OPT_config)) {
+    CfgOptions.reset();
+    Diag(diag::err_drv_nested_config_file);
+    return true;
+  }
+
+  // Claim all arguments that come from a configuration file so that the driver
+  // does not warn on any that is unused.
+  for (Arg *A : *CfgOptions)
+    A->claim();
+  return false;
+}
+
+bool Driver::loadConfigFile() {
+  std::string CfgFileName;
+  bool FileSpecifiedExplicitly = false;
+
+  // Process options that change search path for config files.
+  if (CLOptions) {
+    if (CLOptions->hasArg(options::OPT_config_system_dir_EQ)) {
+      SmallString<128> CfgDir;
+      CfgDir.append(
+          CLOptions->getLastArgValue(options::OPT_config_system_dir_EQ));
+      if (!CfgDir.empty()) {
+        if (std::error_code EC = llvm::sys::fs::make_absolute(CfgDir))
+          SystemConfigDir.clear();
+        else
+          SystemConfigDir = std::string(CfgDir.begin(), CfgDir.end());
+      }
+    }
+    if (CLOptions->hasArg(options::OPT_config_user_dir_EQ)) {
+      SmallString<128> CfgDir;
+      CfgDir.append(
+          CLOptions->getLastArgValue(options::OPT_config_user_dir_EQ));
+      if (!CfgDir.empty()) {
+        if (std::error_code EC = llvm::sys::fs::make_absolute(CfgDir))
+          UserConfigDir.clear();
+        else
+          UserConfigDir = std::string(CfgDir.begin(), CfgDir.end());
+      }
+    }
+  }
+
+  // First try to find config file specified in command line.
+  if (CLOptions) {
+    std::vector<std::string> ConfigFiles =
+        CLOptions->getAllArgValues(options::OPT_config);
+    if (ConfigFiles.size() > 1) {
+      Diag(diag::err_drv_duplicate_config);
+      return true;
+    }
+
+    if (!ConfigFiles.empty()) {
+      CfgFileName = ConfigFiles.front();
+      assert(!CfgFileName.empty());
+
+      // If argument contains directory separator, treat it as a path to
+      // configuration file.
+      if (llvm::sys::path::has_parent_path(CfgFileName)) {
+        SmallString<128> CfgFilePath;
+        if (llvm::sys::path::is_relative(CfgFileName))
+          llvm::sys::fs::current_path(CfgFilePath);
+        llvm::sys::path::append(CfgFilePath, CfgFileName);
+        if (!llvm::sys::fs::is_regular_file(CfgFilePath)) {
+          Diag(diag::err_drv_config_file_not_exist) << CfgFilePath;
+          return true;
+        }
+        return readConfigFile(CfgFilePath);
+      }
+
+      FileSpecifiedExplicitly = true;
+    }
+  }
+
+  // If config file is not specified explicitly, try to deduce configuration
+  // from executable name. For instance, an executable 'armv7l-clang' will
+  // search for config file 'armv7l-clang.cfg'.
+  if (CfgFileName.empty() && !ClangNameParts.TargetPrefix.empty())
+    CfgFileName = ClangNameParts.TargetPrefix + '-' + ClangNameParts.ModeSuffix;
+
+  if (CfgFileName.empty())
+    return false;
+
+  // Determine architecture part of the file name, if it is present.
+  StringRef CfgFileArch = CfgFileName;
+  size_t ArchPrefixLen = CfgFileArch.find('-');
+  if (ArchPrefixLen == StringRef::npos)
+    ArchPrefixLen = CfgFileArch.size();
+  llvm::Triple CfgTriple;
+  CfgFileArch = CfgFileArch.take_front(ArchPrefixLen);
+  CfgTriple = llvm::Triple(llvm::Triple::normalize(CfgFileArch));
+  if (CfgTriple.getArch() == llvm::Triple::ArchType::UnknownArch)
+    ArchPrefixLen = 0;
+
+  if (!StringRef(CfgFileName).endswith(".cfg"))
+    CfgFileName += ".cfg";
+
+  // If config file starts with architecture name and command line options
+  // redefine architecture (with options like -m32 -LE etc), try finding new
+  // config file with that architecture.
+  SmallString<128> FixedConfigFile;
+  size_t FixedArchPrefixLen = 0;
+  if (ArchPrefixLen) {
+    // Get architecture name from config file name like 'i386.cfg' or
+    // 'armv7l-clang.cfg'.
+    // Check if command line options changes effective triple.
+    llvm::Triple EffectiveTriple = computeTargetTriple(*this,
+                                             CfgTriple.getTriple(), *CLOptions);
+    if (CfgTriple.getArch() != EffectiveTriple.getArch()) {
+      FixedConfigFile = EffectiveTriple.getArchName();
+      FixedArchPrefixLen = FixedConfigFile.size();
+      // Append the rest of original file name so that file name transforms
+      // like: i386-clang.cfg -> x86_64-clang.cfg.
+      if (ArchPrefixLen < CfgFileName.size())
+        FixedConfigFile += CfgFileName.substr(ArchPrefixLen);
+    }
+  }
+
+  // Prepare list of directories where config file is searched for.
+  SmallVector<std::string, 3> CfgFileSearchDirs;
+  CfgFileSearchDirs.push_back(UserConfigDir);
+  CfgFileSearchDirs.push_back(SystemConfigDir);
+  CfgFileSearchDirs.push_back(Dir);
+
+  // Try to find config file. First try file with corrected architecture.
+  llvm::SmallString<128> CfgFilePath;
+  if (!FixedConfigFile.empty()) {
+    if (searchForFile(CfgFilePath, CfgFileSearchDirs, FixedConfigFile))
+      return readConfigFile(CfgFilePath);
+    // If 'x86_64-clang.cfg' was not found, try 'x86_64.cfg'.
+    FixedConfigFile.resize(FixedArchPrefixLen);
+    FixedConfigFile.append(".cfg");
+    if (searchForFile(CfgFilePath, CfgFileSearchDirs, FixedConfigFile))
+      return readConfigFile(CfgFilePath);
+  }
+
+  // Then try original file name.
+  if (searchForFile(CfgFilePath, CfgFileSearchDirs, CfgFileName))
+    return readConfigFile(CfgFilePath);
+
+  // Finally try removing driver mode part: 'x86_64-clang.cfg' -> 'x86_64.cfg'.
+  if (!ClangNameParts.ModeSuffix.empty() &&
+      !ClangNameParts.TargetPrefix.empty()) {
+    CfgFileName.assign(ClangNameParts.TargetPrefix);
+    CfgFileName.append(".cfg");
+    if (searchForFile(CfgFilePath, CfgFileSearchDirs, CfgFileName))
+      return readConfigFile(CfgFilePath);
+  }
+
+  // Report error but only if config file was specified explicitly, by option
+  // --config. If it was deduced from executable name, it is not an error.
+  if (FileSpecifiedExplicitly) {
+    Diag(diag::err_drv_config_file_not_found) << CfgFileName;
+    for (const std::string &SearchDir : CfgFileSearchDirs)
+      if (!SearchDir.empty())
+        Diag(diag::note_drv_config_file_searched_in) << SearchDir;
+    return true;
+  }
+
+  return false;
+}
+
 Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   llvm::PrettyStackTraceString CrashInfo("Compilation construction");
 
@@ -623,11 +843,34 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
 
   // FIXME: What are we going to do with -V and -b?
 
+  // Arguments specified in command line.
+  bool ContainsError;
+  CLOptions = llvm::make_unique<InputArgList>(
+      ParseArgStrings(ArgList.slice(1), ContainsError));
+
+  // Try parsing configuration file.
+  if (!ContainsError)
+    ContainsError = loadConfigFile();
+  bool HasConfigFile = !ContainsError && (CfgOptions.get() != nullptr);
+
+  // All arguments, from both config file and command line.
+  InputArgList Args = std::move(HasConfigFile ? std::move(*CfgOptions)
+                                              : std::move(*CLOptions));
+  if (HasConfigFile)
+    for (auto *Opt : *CLOptions) {
+      const Arg *BaseArg = &Opt->getBaseArg();
+      if (BaseArg == Opt)
+        BaseArg = nullptr;
+      Arg *Copy = new llvm::opt::Arg(Opt->getOption(), Opt->getSpelling(),
+                                     Args.size(), BaseArg);
+      Copy->getValues() = Opt->getValues();
+      if (Opt->isClaimed())
+        Copy->claim();
+      Args.append(Copy);
+    }
+
   // FIXME: This stuff needs to go into the Compilation, not the driver.
   bool CCCPrintPhases;
-
-  bool ContainsError;
-  InputArgList Args = ParseArgStrings(ArgList.slice(1), ContainsError);
 
   // Silence driver warnings if requested
   Diags.setIgnoreAllWarnings(Args.hasArg(options::OPT_w));
@@ -1144,6 +1387,10 @@ void Driver::PrintVersion(const Compilation &C, raw_ostream &OS) const {
 
   // Print out the install directory.
   OS << "InstalledDir: " << InstalledDir << '\n';
+
+  // If configuration file was used, print its path.
+  if (!ConfigFile.empty())
+    OS << "Configuration file: " << ConfigFile << '\n';
 }
 
 /// PrintDiagnosticCategories - Implement the --print-diagnostic-categories
@@ -1248,6 +1495,15 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
       C.getArgs().hasArg(options::OPT__HASH_HASH_HASH)) {
     PrintVersion(C, llvm::errs());
     SuppressMissingInputWarning = true;
+  }
+
+  if (C.getArgs().hasArg(options::OPT_v)) {
+    if (!SystemConfigDir.empty())
+      llvm::errs() << "System configuration file directory: "
+                   << SystemConfigDir << "\n";
+    if (!UserConfigDir.empty())
+      llvm::errs() << "User configuration file directory: "
+                   << UserConfigDir << "\n";
   }
 
   const ToolChain &TC = C.getDefaultToolChain();
