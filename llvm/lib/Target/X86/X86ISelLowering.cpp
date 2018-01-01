@@ -16523,13 +16523,16 @@ static SDValue LowerTruncateVecI1(SDValue Op, SelectionDAG &DAG,
   if (InVT.getScalarSizeInBits() <= 16) {
     if (Subtarget.hasBWI()) {
       // legal, will go to VPMOVB2M, VPMOVW2M
-      // Shift packed bytes not supported natively, bitcast to word
-      MVT ExtVT = MVT::getVectorVT(MVT::i16, InVT.getSizeInBits()/16);
-      SDValue  ShiftNode = DAG.getNode(ISD::SHL, DL, ExtVT,
-                                       DAG.getBitcast(ExtVT, In),
-                                       DAG.getConstant(ShiftInx, DL, ExtVT));
-      ShiftNode = DAG.getBitcast(InVT, ShiftNode);
-      return DAG.getNode(X86ISD::CVT2MASK, DL, VT, ShiftNode);
+      if (DAG.ComputeNumSignBits(In) < InVT.getScalarSizeInBits()) {
+        // We need to shift to get the lsb into sign position.
+        // Shift packed bytes not supported natively, bitcast to word
+        MVT ExtVT = MVT::getVectorVT(MVT::i16, InVT.getSizeInBits()/16);
+        In = DAG.getNode(ISD::SHL, DL, ExtVT,
+                         DAG.getBitcast(ExtVT, In),
+                         DAG.getConstant(ShiftInx, DL, ExtVT));
+        In = DAG.getBitcast(InVT, In);
+      }
+      return DAG.getNode(X86ISD::CVT2MASK, DL, VT, In);
     }
     // Use TESTD/Q, extended vector to packed dword/qword.
     assert((InVT.is256BitVector() || InVT.is128BitVector()) &&
@@ -16542,9 +16545,12 @@ static SDValue LowerTruncateVecI1(SDValue Op, SelectionDAG &DAG,
     ShiftInx = InVT.getScalarSizeInBits() - 1;
   }
 
-  SDValue  ShiftNode = DAG.getNode(ISD::SHL, DL, InVT, In,
-                                   DAG.getConstant(ShiftInx, DL, InVT));
-  return DAG.getNode(X86ISD::TESTM, DL, VT, ShiftNode, ShiftNode);
+  if (DAG.ComputeNumSignBits(In) < InVT.getScalarSizeInBits()) {
+    // We need to shift to get the lsb into sign position.
+    In = DAG.getNode(ISD::SHL, DL, InVT, In,
+                     DAG.getConstant(ShiftInx, DL, InVT));
+  }
+  return DAG.getNode(X86ISD::TESTM, DL, VT, In, In);
 }
 
 SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {

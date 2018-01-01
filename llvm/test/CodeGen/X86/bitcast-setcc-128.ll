@@ -27,7 +27,6 @@ define i8 @v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpmovsxwd %xmm0, %ymm0
-; AVX512F-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX512F-NEXT:    vptestmd %ymm0, %ymm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    # kill: def %al killed %al killed %eax
@@ -130,7 +129,6 @@ define i16 @v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpmovsxbd %xmm0, %zmm0
-; AVX512F-NEXT:    vpslld $31, %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    # kill: def %ax killed %ax killed %eax
@@ -623,7 +621,6 @@ define i8 @v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; AVX512F-NEXT:    vpsraw $8, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpmovsxwd %xmm0, %ymm0
-; AVX512F-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX512F-NEXT:    vptestmd %ymm0, %ymm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    # kill: def %al killed %al killed %eax

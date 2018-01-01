@@ -3351,28 +3351,33 @@ def : Pat<(v16i32 (vselect (xor VK16:$mask, (v16i1 immAllOnesV)),
                            (v16i32 VR512:$src))),
                   (VMOVDQA32Zrrkz VK16WM:$mask, VR512:$src)>;
 
+multiclass mask_move_lowering<string InstrStr, X86VectorVTInfo Narrow,
+                              X86VectorVTInfo Wide> {
+ def : Pat<(Narrow.VT (vselect (Narrow.KVT Narrow.KRCWM:$mask),
+                               Narrow.RC:$src1, Narrow.RC:$src0)),
+           (EXTRACT_SUBREG
+            (Wide.VT
+             (!cast<Instruction>(InstrStr#"rrk")
+              (Wide.VT (INSERT_SUBREG (IMPLICIT_DEF), Narrow.RC:$src0, Narrow.SubRegIdx)),
+              (COPY_TO_REGCLASS Narrow.KRCWM:$mask, Wide.KRCWM),
+              (Wide.VT (INSERT_SUBREG (IMPLICIT_DEF), Narrow.RC:$src1, Narrow.SubRegIdx)))),
+            Narrow.SubRegIdx)>;
+
+ def : Pat<(Narrow.VT (vselect (Narrow.KVT Narrow.KRCWM:$mask),
+                               Narrow.RC:$src1, Narrow.ImmAllZerosV)),
+           (EXTRACT_SUBREG
+            (Wide.VT
+             (!cast<Instruction>(InstrStr#"rrkz")
+              (COPY_TO_REGCLASS Narrow.KRCWM:$mask, Wide.KRCWM),
+              (Wide.VT (INSERT_SUBREG (IMPLICIT_DEF), Narrow.RC:$src1, Narrow.SubRegIdx)))),
+            Narrow.SubRegIdx)>;
+}
+
 // Patterns for handling v8i1 selects of 256-bit vectors when VLX isn't
 // available. Use a 512-bit operation and extract.
 let Predicates = [HasAVX512, NoVLX] in {
-def : Pat<(v8f32 (vselect (v8i1 VK8WM:$mask), (v8f32 VR256X:$src1),
-                          (v8f32 VR256X:$src0))),
-          (EXTRACT_SUBREG
-           (v16f32
-            (VMOVAPSZrrk
-             (v16f32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src0, sub_ymm)),
-             (COPY_TO_REGCLASS VK8WM:$mask, VK16WM),
-             (v16f32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)))),
-           sub_ymm)>;
-
-def : Pat<(v8i32 (vselect (v8i1 VK8WM:$mask), (v8i32 VR256X:$src1),
-                          (v8i32 VR256X:$src0))),
-          (EXTRACT_SUBREG
-           (v16i32
-            (VMOVDQA32Zrrk
-             (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src0, sub_ymm)),
-             (COPY_TO_REGCLASS VK8WM:$mask, VK16WM),
-             (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)))),
-           sub_ymm)>;
+  defm : mask_move_lowering<"VMOVAPSZ", v8f32x_info, v16f32_info>;
+  defm : mask_move_lowering<"VMOVDQA32Z", v8i32x_info, v16i32_info>;
 }
 
 let Predicates = [HasAVX512] in {
@@ -4556,7 +4561,7 @@ multiclass avx512_min_max_lowering<Instruction Instr, SDNode OpNode> {
              sub_xmm)>;
 }
 
-let Predicates = [HasAVX512] in {
+let Predicates = [HasAVX512, NoVLX] in {
   defm : avx512_min_max_lowering<VPMAXUQZrr, umax>;
   defm : avx512_min_max_lowering<VPMINUQZrr, umin>;
   defm : avx512_min_max_lowering<VPMAXSQZrr, smax>;
