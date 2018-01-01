@@ -5459,38 +5459,30 @@ define <128 x i1> @test_cmp_v128i8(<128 x i8> %a0, <128 x i8> %a1) nounwind {
 ; AVX512F-NEXT:    vpcmpgtb %ymm7, %ymm3, %ymm3
 ; AVX512F-NEXT:    vextracti128 $1, %ymm3, %xmm4
 ; AVX512F-NEXT:    vpmovsxbd %xmm4, %zmm4
-; AVX512F-NEXT:    vpslld $31, %zmm4, %zmm4
 ; AVX512F-NEXT:    vptestmd %zmm4, %zmm4, %k0
 ; AVX512F-NEXT:    kmovw %k0, 14(%rdi)
 ; AVX512F-NEXT:    vpmovsxbd %xmm3, %zmm3
-; AVX512F-NEXT:    vpslld $31, %zmm3, %zmm3
 ; AVX512F-NEXT:    vptestmd %zmm3, %zmm3, %k0
 ; AVX512F-NEXT:    kmovw %k0, 12(%rdi)
 ; AVX512F-NEXT:    vextracti128 $1, %ymm2, %xmm3
 ; AVX512F-NEXT:    vpmovsxbd %xmm3, %zmm3
-; AVX512F-NEXT:    vpslld $31, %zmm3, %zmm3
 ; AVX512F-NEXT:    vptestmd %zmm3, %zmm3, %k0
 ; AVX512F-NEXT:    kmovw %k0, 10(%rdi)
 ; AVX512F-NEXT:    vpmovsxbd %xmm2, %zmm2
-; AVX512F-NEXT:    vpslld $31, %zmm2, %zmm2
 ; AVX512F-NEXT:    vptestmd %zmm2, %zmm2, %k0
 ; AVX512F-NEXT:    kmovw %k0, 8(%rdi)
 ; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX512F-NEXT:    vpmovsxbd %xmm2, %zmm2
-; AVX512F-NEXT:    vpslld $31, %zmm2, %zmm2
 ; AVX512F-NEXT:    vptestmd %zmm2, %zmm2, %k0
 ; AVX512F-NEXT:    kmovw %k0, 6(%rdi)
 ; AVX512F-NEXT:    vpmovsxbd %xmm1, %zmm1
-; AVX512F-NEXT:    vpslld $31, %zmm1, %zmm1
 ; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k0
 ; AVX512F-NEXT:    kmovw %k0, 4(%rdi)
 ; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512F-NEXT:    vpmovsxbd %xmm1, %zmm1
-; AVX512F-NEXT:    vpslld $31, %zmm1, %zmm1
 ; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k0
 ; AVX512F-NEXT:    kmovw %k0, 2(%rdi)
 ; AVX512F-NEXT:    vpmovsxbd %xmm0, %zmm0
-; AVX512F-NEXT:    vpslld $31, %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, (%rdi)
 ; AVX512F-NEXT:    movq %rdi, %rax
@@ -5505,38 +5497,30 @@ define <128 x i1> @test_cmp_v128i8(<128 x i8> %a0, <128 x i8> %a1) nounwind {
 ; AVX512DQ-NEXT:    vpcmpgtb %ymm7, %ymm3, %ymm3
 ; AVX512DQ-NEXT:    vextracti128 $1, %ymm3, %xmm4
 ; AVX512DQ-NEXT:    vpmovsxbd %xmm4, %zmm4
-; AVX512DQ-NEXT:    vpslld $31, %zmm4, %zmm4
 ; AVX512DQ-NEXT:    vptestmd %zmm4, %zmm4, %k0
 ; AVX512DQ-NEXT:    kmovw %k0, 14(%rdi)
 ; AVX512DQ-NEXT:    vpmovsxbd %xmm3, %zmm3
-; AVX512DQ-NEXT:    vpslld $31, %zmm3, %zmm3
 ; AVX512DQ-NEXT:    vptestmd %zmm3, %zmm3, %k0
 ; AVX512DQ-NEXT:    kmovw %k0, 12(%rdi)
 ; AVX512DQ-NEXT:    vextracti128 $1, %ymm2, %xmm3
 ; AVX512DQ-NEXT:    vpmovsxbd %xmm3, %zmm3
-; AVX512DQ-NEXT:    vpslld $31, %zmm3, %zmm3
 ; AVX512DQ-NEXT:    vptestmd %zmm3, %zmm3, %k0
 ; AVX512DQ-NEXT:    kmovw %k0, 10(%rdi)
 ; AVX512DQ-NEXT:    vpmovsxbd %xmm2, %zmm2
-; AVX512DQ-NEXT:    vpslld $31, %zmm2, %zmm2
 ; AVX512DQ-NEXT:    vptestmd %zmm2, %zmm2, %k0
 ; AVX512DQ-NEXT:    kmovw %k0, 8(%rdi)
 ; AVX512DQ-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX512DQ-NEXT:    vpmovsxbd %xmm2, %zmm2
-; AVX512DQ-NEXT:    vpslld $31, %zmm2, %zmm2
 ; AVX512DQ-NEXT:    vptestmd %zmm2, %zmm2, %k0
 ; AVX512DQ-NEXT:    kmovw %k0, 6(%rdi)
 ; AVX512DQ-NEXT:    vpmovsxbd %xmm1, %zmm1
-; AVX512DQ-NEXT:    vpslld $31, %zmm1, %zmm1
 ; AVX512DQ-NEXT:    vptestmd %zmm1, %zmm1, %k0
 ; AVX512DQ-NEXT:    kmovw %k0, 4(%rdi)
 ; AVX512DQ-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512DQ-NEXT:    vpmovsxbd %xmm1, %zmm1
-; AVX512DQ-NEXT:    vpslld $31, %zmm1, %zmm1
 ; AVX512DQ-NEXT:    vptestmd %zmm1, %zmm1, %k0
 ; AVX512DQ-NEXT:    kmovw %k0, 2(%rdi)
 ; AVX512DQ-NEXT:    vpmovsxbd %xmm0, %zmm0
-; AVX512DQ-NEXT:    vpslld $31, %zmm0, %zmm0
 ; AVX512DQ-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512DQ-NEXT:    kmovw %k0, (%rdi)
 ; AVX512DQ-NEXT:    movq %rdi, %rax
