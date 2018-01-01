@@ -461,10 +461,10 @@ define <8 x i32> @test_buildvector_v8i32_splat_zext_i8(i8 %in) {
 ;
 ; AVX1-64-LABEL: test_buildvector_v8i32_splat_zext_i8:
 ; AVX1-64:       # %bb.0:
-; AVX1-64-NEXT:    vmovd %edi, %xmm0
+; AVX1-64-NEXT:    movzbl %dil, %eax
+; AVX1-64-NEXT:    vmovd %eax, %xmm0
 ; AVX1-64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; AVX1-64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-64-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
 ; AVX1-64-NEXT:    retq
 ;
 ; AVX2-32-LABEL: test_buildvector_v8i32_splat_zext_i8:
