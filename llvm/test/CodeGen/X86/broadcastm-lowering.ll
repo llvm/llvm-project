@@ -8,7 +8,6 @@ define <2 x i64> @test_mm_epi64(<8 x i16> %a, <8 x i16> %b) {
 ; AVX512CD:       # %bb.0: # %entry
 ; AVX512CD-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
 ; AVX512CD-NEXT:    vpmovsxwq %xmm0, %zmm0
-; AVX512CD-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; AVX512CD-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512CD-NEXT:    kmovw %k0, %eax
 ; AVX512CD-NEXT:    vpxor %xmm0, %xmm0, %xmm0
@@ -45,7 +44,6 @@ define <4 x i32> @test_mm_epi32(<16 x i8> %a, <16 x i8> %b) {
 ; AVX512CD:       # %bb.0: # %entry
 ; AVX512CD-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX512CD-NEXT:    vpmovsxbd %xmm0, %zmm0
-; AVX512CD-NEXT:    vpslld $31, %zmm0, %zmm0
 ; AVX512CD-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512CD-NEXT:    kmovw %k0, %eax
 ; AVX512CD-NEXT:    vpxor %xmm0, %xmm0, %xmm0
@@ -179,7 +177,6 @@ define <8 x i32> @test_mm256_epi32(<16 x i16> %a, <16 x i16> %b) {
 ; AVX512CD:       # %bb.0: # %entry
 ; AVX512CD-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
 ; AVX512CD-NEXT:    vpmovsxwd %ymm0, %zmm0
-; AVX512CD-NEXT:    vpslld $31, %zmm0, %zmm0
 ; AVX512CD-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; AVX512CD-NEXT:    kmovw %k0, %eax
 ; AVX512CD-NEXT:    vpxor %xmm0, %xmm0, %xmm0
