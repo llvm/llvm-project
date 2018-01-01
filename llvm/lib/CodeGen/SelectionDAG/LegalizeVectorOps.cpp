@@ -139,14 +139,14 @@ class VectorLegalizer {
 
   /// \brief Implements [SU]INT_TO_FP vector promotion.
   ///
-  /// This is a [zs]ext of the input operand to the next size up.
+  /// This is a [zs]ext of the input operand to a larger integer type.
   SDValue PromoteINT_TO_FP(SDValue Op);
 
   /// \brief Implements FP_TO_[SU]INT vector promotion of the result type.
   ///
-  /// It is promoted to the next size up integer type.  The result is then
+  /// It is promoted to a larger integer type.  The result is then
   /// truncated back to the original type.
-  SDValue PromoteFP_TO_INT(SDValue Op, bool isSigned);
+  SDValue PromoteFP_TO_INT(SDValue Op);
 
 public:
   VectorLegalizer(SelectionDAG& dag) :
@@ -431,7 +431,7 @@ SDValue VectorLegalizer::Promote(SDValue Op) {
   case ISD::FP_TO_UINT:
   case ISD::FP_TO_SINT:
     // Promote the operation by extending the operand.
-    return PromoteFP_TO_INT(Op, Op->getOpcode() == ISD::FP_TO_SINT);
+    return PromoteFP_TO_INT(Op);
   }
 
   // There are currently two cases of vector promotion:
@@ -472,20 +472,11 @@ SDValue VectorLegalizer::Promote(SDValue Op) {
 SDValue VectorLegalizer::PromoteINT_TO_FP(SDValue Op) {
   // INT_TO_FP operations may require the input operand be promoted even
   // when the type is otherwise legal.
-  EVT VT = Op.getOperand(0).getValueType();
-  assert(Op.getNode()->getNumValues() == 1 &&
-         "Can't promote a vector with multiple results!");
+  MVT VT = Op.getOperand(0).getSimpleValueType();
+  MVT NVT = TLI.getTypeToPromoteTo(Op.getOpcode(), VT);
+  assert(NVT.getVectorNumElements() == VT.getVectorNumElements() &&
+         "Vectors have different number of elements!");
 
-  // Normal getTypeToPromoteTo() doesn't work here, as that will promote
-  // by widening the vector w/ the same element width and twice the number
-  // of elements. We want the other way around, the same number of elements,
-  // each twice the width.
-  //
-  // Increase the bitwidth of the element to the next pow-of-two
-  // (which is greater than 8 bits).
-
-  EVT NVT = VT.widenIntegerVectorElementType(*DAG.getContext());
-  assert(NVT.isSimple() && "Promoting to a non-simple vector type!");
   SDLoc dl(Op);
   SmallVector<SDValue, 4> Operands(Op.getNumOperands());
 
@@ -505,35 +496,28 @@ SDValue VectorLegalizer::PromoteINT_TO_FP(SDValue Op) {
 // elements and then truncate the result.  This is different from the default
 // PromoteVector which uses bitcast to promote thus assumning that the
 // promoted vector type has the same overall size.
-SDValue VectorLegalizer::PromoteFP_TO_INT(SDValue Op, bool isSigned) {
-  assert(Op.getNode()->getNumValues() == 1 &&
-         "Can't promote a vector with multiple results!");
-  EVT VT = Op.getValueType();
+SDValue VectorLegalizer::PromoteFP_TO_INT(SDValue Op) {
+  MVT VT = Op.getSimpleValueType();
+  MVT NVT = TLI.getTypeToPromoteTo(Op.getOpcode(), VT);
+  assert(NVT.getVectorNumElements() == VT.getVectorNumElements() &&
+         "Vectors have different number of elements!");
 
-  EVT NewVT = VT;
-  unsigned NewOpc;
-  while (true) {
-    NewVT = NewVT.widenIntegerVectorElementType(*DAG.getContext());
-    assert(NewVT.isSimple() && "Promoting to a non-simple vector type!");
-    if (TLI.isOperationLegalOrCustom(ISD::FP_TO_SINT, NewVT)) {
-      NewOpc = ISD::FP_TO_SINT;
-      break;
-    }
-    if (!isSigned && TLI.isOperationLegalOrCustom(ISD::FP_TO_UINT, NewVT)) {
-      NewOpc = ISD::FP_TO_UINT;
-      break;
-    }
-  }
+  unsigned NewOpc = Op->getOpcode();
+  // Change FP_TO_UINT to FP_TO_SINT if possible.
+  // TODO: Should we only do this if FP_TO_UINT itself isn't legal?
+  if (NewOpc == ISD::FP_TO_UINT &&
+      TLI.isOperationLegalOrCustom(ISD::FP_TO_SINT, NVT))
+    NewOpc = ISD::FP_TO_SINT;
 
   SDLoc dl(Op);
-  SDValue Promoted  = DAG.getNode(NewOpc, dl, NewVT, Op.getOperand(0));
+  SDValue Promoted  = DAG.getNode(NewOpc, dl, NVT, Op.getOperand(0));
 
   // Assert that the converted value fits in the original type.  If it doesn't
   // (eg: because the value being converted is too big), then the result of the
   // original operation was undefined anyway, so the assert is still correct.
   Promoted = DAG.getNode(Op->getOpcode() == ISD::FP_TO_UINT ? ISD::AssertZext
                                                             : ISD::AssertSext,
-                         dl, NewVT, Promoted,
+                         dl, NVT, Promoted,
                          DAG.getValueType(VT.getScalarType()));
   return DAG.getNode(ISD::TRUNCATE, dl, VT, Promoted);
 }

@@ -996,8 +996,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     // (fp_to_int:v8i16 (v8f32 ..)) requires the result type to be promoted
     // even though v8i16 is a legal type.
-    setOperationAction(ISD::FP_TO_SINT,         MVT::v8i16, Promote);
-    setOperationAction(ISD::FP_TO_UINT,         MVT::v8i16, Promote);
+    setOperationPromotedToType(ISD::FP_TO_SINT, MVT::v8i16, MVT::v8i32);
+    setOperationPromotedToType(ISD::FP_TO_UINT, MVT::v8i16, MVT::v8i32);
     setOperationAction(ISD::FP_TO_SINT,         MVT::v8i32, Legal);
 
     setOperationAction(ISD::SINT_TO_FP,         MVT::v8i32, Legal);
@@ -1151,14 +1151,25 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v1i1, Custom);
     setOperationAction(ISD::BUILD_VECTOR,       MVT::v1i1, Custom);
 
-    setOperationAction(ISD::SINT_TO_FP,         MVT::v16i1, Custom);
-    setOperationAction(ISD::UINT_TO_FP,         MVT::v16i1, Custom);
-    setOperationAction(ISD::SINT_TO_FP,         MVT::v8i1,  Custom);
-    setOperationAction(ISD::UINT_TO_FP,         MVT::v8i1,  Custom);
-    setOperationAction(ISD::SINT_TO_FP,         MVT::v4i1,  Custom);
-    setOperationAction(ISD::UINT_TO_FP,         MVT::v4i1,  Custom);
+    setOperationPromotedToType(ISD::SINT_TO_FP, MVT::v16i1, MVT::v16i32);
+    setOperationPromotedToType(ISD::UINT_TO_FP, MVT::v16i1, MVT::v16i32);
+    setOperationPromotedToType(ISD::SINT_TO_FP, MVT::v8i1,  MVT::v8i32);
+    setOperationPromotedToType(ISD::UINT_TO_FP, MVT::v8i1,  MVT::v8i32);
+    setOperationPromotedToType(ISD::SINT_TO_FP, MVT::v4i1,  MVT::v4i32);
+    setOperationPromotedToType(ISD::UINT_TO_FP, MVT::v4i1,  MVT::v4i32);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v2i1,  Custom);
     setOperationAction(ISD::UINT_TO_FP,         MVT::v2i1,  Custom);
+
+    setOperationPromotedToType(ISD::FP_TO_SINT, MVT::v16i1, MVT::v16i32);
+    setOperationPromotedToType(ISD::FP_TO_UINT, MVT::v16i1, MVT::v16i32);
+    setOperationPromotedToType(ISD::FP_TO_SINT, MVT::v8i1,  MVT::v8i32);
+    setOperationPromotedToType(ISD::FP_TO_UINT, MVT::v8i1,  MVT::v8i32);
+    setOperationPromotedToType(ISD::FP_TO_SINT, MVT::v4i1,  MVT::v4i32);
+    setOperationPromotedToType(ISD::FP_TO_UINT, MVT::v4i1,  MVT::v4i32);
+    if (Subtarget.hasVLX()) {
+      setOperationAction(ISD::FP_TO_SINT,         MVT::v2i1,  Custom);
+      setOperationAction(ISD::FP_TO_UINT,         MVT::v2i1,  Custom);
+    }
 
     // Extends of v16i1/v8i1 to 128-bit vectors.
     setOperationAction(ISD::SIGN_EXTEND,        MVT::v16i8, Custom);
@@ -1218,11 +1229,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
 
     setOperationAction(ISD::FP_TO_SINT,         MVT::v16i32, Legal);
-    setOperationAction(ISD::FP_TO_SINT,         MVT::v16i16, Promote);
-    setOperationAction(ISD::FP_TO_SINT,         MVT::v16i8, Promote);
+    setOperationPromotedToType(ISD::FP_TO_SINT, MVT::v16i16, MVT::v16i32);
+    setOperationPromotedToType(ISD::FP_TO_SINT, MVT::v16i8, MVT::v16i32);
     setOperationAction(ISD::FP_TO_UINT,         MVT::v16i32, Legal);
-    setOperationAction(ISD::FP_TO_UINT,         MVT::v16i8, Promote);
-    setOperationAction(ISD::FP_TO_UINT,         MVT::v16i16, Promote);
+    setOperationPromotedToType(ISD::FP_TO_UINT, MVT::v16i8, MVT::v16i32);
+    setOperationPromotedToType(ISD::FP_TO_UINT, MVT::v16i16, MVT::v16i32);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v16i32, Legal);
     setOperationAction(ISD::UINT_TO_FP,         MVT::v16i32, Legal);
 
@@ -15650,19 +15661,13 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
                          DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i32, Src,
                                      DAG.getUNDEF(SrcVT)));
     }
-    if (SrcVT.getVectorElementType() == MVT::i1) {
-      if (SrcVT == MVT::v2i1) {
-        // For v2i1, we need to widen to v4i1 first.
-        assert(VT == MVT::v2f64 && "Unexpected type");
-        Src = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i1, Src,
-                          DAG.getUNDEF(MVT::v2i1));
-        return DAG.getNode(X86ISD::CVTSI2P, dl, Op.getValueType(),
-                           DAG.getNode(ISD::SIGN_EXTEND, dl, MVT::v4i32, Src));
-      }
-
-      MVT IntegerVT = MVT::getVectorVT(MVT::i32, SrcVT.getVectorNumElements());
-      return DAG.getNode(ISD::SINT_TO_FP, dl, Op.getValueType(),
-                         DAG.getNode(ISD::SIGN_EXTEND, dl, IntegerVT, Src));
+    if (SrcVT == MVT::v2i1) {
+      // For v2i1, we need to widen to v4i1 first.
+      assert(VT == MVT::v2f64 && "Unexpected type");
+      Src = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i1, Src,
+                        DAG.getUNDEF(MVT::v2i1));
+      return DAG.getNode(X86ISD::CVTSI2P, dl, Op.getValueType(),
+                         DAG.getNode(ISD::SIGN_EXTEND, dl, MVT::v4i32, Src));
     }
     return SDValue();
   }
@@ -15999,19 +16004,13 @@ static SDValue lowerUINT_TO_FP_vec(SDValue Op, SelectionDAG &DAG,
   MVT SrcVT = N0.getSimpleValueType();
   SDLoc dl(Op);
 
-  if (SrcVT.getVectorElementType() == MVT::i1) {
-    if (SrcVT == MVT::v2i1) {
-      // For v2i1, we need to widen to v4i1 first.
-      assert(Op.getValueType() == MVT::v2f64 && "Unexpected type");
-      N0 = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i1, N0,
-                       DAG.getUNDEF(MVT::v2i1));
-      return DAG.getNode(X86ISD::CVTUI2P, dl, MVT::v2f64,
-                         DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::v4i32, N0));
-    }
-
-    MVT IntegerVT = MVT::getVectorVT(MVT::i32, SrcVT.getVectorNumElements());
-    return DAG.getNode(ISD::UINT_TO_FP, dl, Op.getValueType(),
-                       DAG.getNode(ISD::ZERO_EXTEND, dl, IntegerVT, N0));
+  if (SrcVT == MVT::v2i1) {
+    // For v2i1, we need to widen to v4i1 first.
+    assert(Op.getValueType() == MVT::v2f64 && "Unexpected type");
+    N0 = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i1, N0,
+                     DAG.getUNDEF(MVT::v2i1));
+    return DAG.getNode(X86ISD::CVTUI2P, dl, MVT::v2f64,
+                       DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::v4i32, N0));
   }
 
   switch (SrcVT.SimpleTy) {
@@ -16683,9 +16682,29 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
   MVT VT = Op.getSimpleValueType();
 
   if (VT.isVector()) {
-    assert(Subtarget.hasDQI() && Subtarget.hasVLX() && "Requires AVX512DQVL!");
     SDValue Src = Op.getOperand(0);
     SDLoc dl(Op);
+
+    if (VT == MVT::v2i1 && Src.getSimpleValueType() == MVT::v2f64) {
+      MVT ResVT = MVT::v4i32;
+      MVT TruncVT = MVT::v4i1;
+      unsigned Opc = IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI;
+      if (!IsSigned && !Subtarget.hasVLX()) {
+        // Widen to 512-bits.
+        ResVT = MVT::v8i32;
+        TruncVT = MVT::v8i1;
+        Opc = ISD::FP_TO_UINT;
+        Src = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v8f64,
+                          DAG.getUNDEF(MVT::v8f64),
+                          Src, DAG.getIntPtrConstant(0, dl));
+      }
+      SDValue Res = DAG.getNode(Opc, dl, ResVT, Src);
+      Res = DAG.getNode(ISD::TRUNCATE, dl, TruncVT, Res);
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v2i1, Res,
+                         DAG.getIntPtrConstant(0, dl));
+    }
+
+    assert(Subtarget.hasDQI() && Subtarget.hasVLX() && "Requires AVX512DQVL!");
     if (VT == MVT::v2i64 && Src.getSimpleValueType() == MVT::v2f32) {
       return DAG.getNode(IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI, dl, VT,
                          DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32, Src,

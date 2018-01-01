@@ -2018,3 +2018,372 @@ define <2 x double> @ubto2f64(<2 x i32> %a) {
   %1 = uitofp <2 x i1> %mask to <2 x double>
   ret <2 x double> %1
 }
+
+define <2 x i64> @test_2f64toub(<2 x double> %a, <2 x i64> %passthru) {
+; NOVLDQ-LABEL: test_2f64toub:
+; NOVLDQ:       # %bb.0:
+; NOVLDQ-NEXT:    vcvttsd2usi %xmm0, %rax
+; NOVLDQ-NEXT:    vmovq %rax, %xmm2
+; NOVLDQ-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; NOVLDQ-NEXT:    vcvttsd2usi %xmm0, %rax
+; NOVLDQ-NEXT:    vmovq %rax, %xmm0
+; NOVLDQ-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm2[0],xmm0[0]
+; NOVLDQ-NEXT:    vpsllq $63, %xmm0, %xmm0
+; NOVLDQ-NEXT:    vpsraq $63, %zmm0, %zmm0
+; NOVLDQ-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; NOVLDQ-NEXT:    vzeroupper
+; NOVLDQ-NEXT:    retq
+;
+; VL-LABEL: test_2f64toub:
+; VL:       # %bb.0:
+; VL-NEXT:    vcvttpd2udq %xmm0, %xmm0
+; VL-NEXT:    vpslld $31, %xmm0, %xmm0
+; VL-NEXT:    vptestmd %xmm0, %xmm0, %k1
+; VL-NEXT:    vmovdqa64 %xmm1, %xmm0 {%k1} {z}
+; VL-NEXT:    retq
+;
+; AVX512DQ-LABEL: test_2f64toub:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
+; AVX512DQ-NEXT:    vcvttpd2uqq %zmm0, %zmm0
+; AVX512DQ-NEXT:    vpsllq $63, %xmm0, %xmm0
+; AVX512DQ-NEXT:    vpsraq $63, %zmm0, %zmm0
+; AVX512DQ-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512DQ-NEXT:    vzeroupper
+; AVX512DQ-NEXT:    retq
+  %mask = fptoui <2 x double> %a to <2 x i1>
+  %select = select <2 x i1> %mask, <2 x i64> %passthru, <2 x i64> zeroinitializer
+  ret <2 x i64> %select
+}
+
+define <4 x i64> @test_4f64toub(<4 x double> %a, <4 x i64> %passthru) {
+; NOVL-LABEL: test_4f64toub:
+; NOVL:       # %bb.0:
+; NOVL-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; NOVL-NEXT:    vcvttpd2udq %zmm0, %ymm0
+; NOVL-NEXT:    vpslld $31, %xmm0, %xmm0
+; NOVL-NEXT:    vpsrad $31, %xmm0, %xmm0
+; NOVL-NEXT:    vpmovsxdq %xmm0, %ymm0
+; NOVL-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; NOVL-NEXT:    retq
+;
+; VL-LABEL: test_4f64toub:
+; VL:       # %bb.0:
+; VL-NEXT:    vcvttpd2dq %ymm0, %xmm0
+; VL-NEXT:    vpslld $31, %xmm0, %xmm0
+; VL-NEXT:    vptestmd %xmm0, %xmm0, %k1
+; VL-NEXT:    vmovdqa64 %ymm1, %ymm0 {%k1} {z}
+; VL-NEXT:    retq
+  %mask = fptoui <4 x double> %a to <4 x i1>
+  %select = select <4 x i1> %mask, <4 x i64> %passthru, <4 x i64> zeroinitializer
+  ret <4 x i64> %select
+}
+
+define <8 x i64> @test_8f64toub(<8 x double> %a, <8 x i64> %passthru) {
+; NOVL-LABEL: test_8f64toub:
+; NOVL:       # %bb.0:
+; NOVL-NEXT:    vcvttpd2dq %zmm0, %ymm0
+; NOVL-NEXT:    vpslld $31, %ymm0, %ymm0
+; NOVL-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; NOVL-NEXT:    vmovdqa64 %zmm1, %zmm0 {%k1} {z}
+; NOVL-NEXT:    retq
+;
+; VL-LABEL: test_8f64toub:
+; VL:       # %bb.0:
+; VL-NEXT:    vcvttpd2dq %zmm0, %ymm0
+; VL-NEXT:    vpslld $31, %ymm0, %ymm0
+; VL-NEXT:    vptestmd %ymm0, %ymm0, %k1
+; VL-NEXT:    vmovdqa64 %zmm1, %zmm0 {%k1} {z}
+; VL-NEXT:    retq
+  %mask = fptoui <8 x double> %a to <8 x i1>
+  %select = select <8 x i1> %mask, <8 x i64> %passthru, <8 x i64> zeroinitializer
+  ret <8 x i64> %select
+}
+
+define <2 x i64> @test_2f32toub(<2 x float> %a, <2 x i64> %passthru) {
+; NOVL-LABEL: test_2f32toub:
+; NOVL:       # %bb.0:
+; NOVL-NEXT:    vcvttss2usi %xmm0, %rax
+; NOVL-NEXT:    vmovq %rax, %xmm2
+; NOVL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; NOVL-NEXT:    vcvttss2usi %xmm0, %rax
+; NOVL-NEXT:    vmovq %rax, %xmm0
+; NOVL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm2[0],xmm0[0]
+; NOVL-NEXT:    vpsllq $63, %xmm0, %xmm0
+; NOVL-NEXT:    vpsraq $63, %zmm0, %zmm0
+; NOVL-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; NOVL-NEXT:    vzeroupper
+; NOVL-NEXT:    retq
+;
+; VLBW-LABEL: test_2f32toub:
+; VLBW:       # %bb.0:
+; VLBW-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; VLBW-NEXT:    vcvttss2si %xmm2, %eax
+; VLBW-NEXT:    kmovd %eax, %k0
+; VLBW-NEXT:    vcvttss2si %xmm0, %eax
+; VLBW-NEXT:    andl $1, %eax
+; VLBW-NEXT:    kmovw %eax, %k1
+; VLBW-NEXT:    kshiftrw $1, %k0, %k2
+; VLBW-NEXT:    kshiftlw $1, %k2, %k2
+; VLBW-NEXT:    korw %k1, %k2, %k1
+; VLBW-NEXT:    kshiftrw $1, %k1, %k2
+; VLBW-NEXT:    kxorw %k0, %k2, %k0
+; VLBW-NEXT:    kshiftlw $15, %k0, %k0
+; VLBW-NEXT:    kshiftrw $14, %k0, %k0
+; VLBW-NEXT:    kxorw %k1, %k0, %k1
+; VLBW-NEXT:    vmovdqa64 %xmm1, %xmm0 {%k1} {z}
+; VLBW-NEXT:    retq
+;
+; VLNOBW-LABEL: test_2f32toub:
+; VLNOBW:       # %bb.0:
+; VLNOBW-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; VLNOBW-NEXT:    vcvttss2si %xmm2, %eax
+; VLNOBW-NEXT:    kmovw %eax, %k0
+; VLNOBW-NEXT:    vcvttss2si %xmm0, %eax
+; VLNOBW-NEXT:    andl $1, %eax
+; VLNOBW-NEXT:    kmovw %eax, %k1
+; VLNOBW-NEXT:    kshiftrw $1, %k0, %k2
+; VLNOBW-NEXT:    kshiftlw $1, %k2, %k2
+; VLNOBW-NEXT:    korw %k1, %k2, %k1
+; VLNOBW-NEXT:    kshiftrw $1, %k1, %k2
+; VLNOBW-NEXT:    kxorw %k0, %k2, %k0
+; VLNOBW-NEXT:    kshiftlw $15, %k0, %k0
+; VLNOBW-NEXT:    kshiftrw $14, %k0, %k0
+; VLNOBW-NEXT:    kxorw %k1, %k0, %k1
+; VLNOBW-NEXT:    vmovdqa64 %xmm1, %xmm0 {%k1} {z}
+; VLNOBW-NEXT:    retq
+  %mask = fptoui <2 x float> %a to <2 x i1>
+  %select = select <2 x i1> %mask, <2 x i64> %passthru, <2 x i64> zeroinitializer
+  ret <2 x i64> %select
+}
+
+define <4 x i64> @test_4f32toub(<4 x float> %a, <4 x i64> %passthru) {
+; NOVL-LABEL: test_4f32toub:
+; NOVL:       # %bb.0:
+; NOVL-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
+; NOVL-NEXT:    vcvttps2udq %zmm0, %zmm0
+; NOVL-NEXT:    vpslld $31, %xmm0, %xmm0
+; NOVL-NEXT:    vpsrad $31, %xmm0, %xmm0
+; NOVL-NEXT:    vpmovsxdq %xmm0, %ymm0
+; NOVL-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; NOVL-NEXT:    retq
+;
+; VL-LABEL: test_4f32toub:
+; VL:       # %bb.0:
+; VL-NEXT:    vcvttps2dq %xmm0, %xmm0
+; VL-NEXT:    vpslld $31, %xmm0, %xmm0
+; VL-NEXT:    vptestmd %xmm0, %xmm0, %k1
+; VL-NEXT:    vmovdqa64 %ymm1, %ymm0 {%k1} {z}
+; VL-NEXT:    retq
+  %mask = fptoui <4 x float> %a to <4 x i1>
+  %select = select <4 x i1> %mask, <4 x i64> %passthru, <4 x i64> zeroinitializer
+  ret <4 x i64> %select
+}
+
+define <8 x i64> @test_8f32toub(<8 x float> %a, <8 x i64> %passthru) {
+; NOVL-LABEL: test_8f32toub:
+; NOVL:       # %bb.0:
+; NOVL-NEXT:    vcvttps2dq %ymm0, %ymm0
+; NOVL-NEXT:    vpslld $31, %ymm0, %ymm0
+; NOVL-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; NOVL-NEXT:    vmovdqa64 %zmm1, %zmm0 {%k1} {z}
+; NOVL-NEXT:    retq
+;
+; VL-LABEL: test_8f32toub:
+; VL:       # %bb.0:
+; VL-NEXT:    vcvttps2dq %ymm0, %ymm0
+; VL-NEXT:    vpslld $31, %ymm0, %ymm0
+; VL-NEXT:    vptestmd %ymm0, %ymm0, %k1
+; VL-NEXT:    vmovdqa64 %zmm1, %zmm0 {%k1} {z}
+; VL-NEXT:    retq
+  %mask = fptoui <8 x float> %a to <8 x i1>
+  %select = select <8 x i1> %mask, <8 x i64> %passthru, <8 x i64> zeroinitializer
+  ret <8 x i64> %select
+}
+
+define <16 x i32> @test_16f32toub(<16 x float> %a, <16 x i32> %passthru) {
+; ALL-LABEL: test_16f32toub:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vcvttps2dq %zmm0, %zmm0
+; ALL-NEXT:    vpslld $31, %zmm0, %zmm0
+; ALL-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; ALL-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1} {z}
+; ALL-NEXT:    retq
+  %mask = fptoui <16 x float> %a to <16 x i1>
+  %select = select <16 x i1> %mask, <16 x i32> %passthru, <16 x i32> zeroinitializer
+  ret <16 x i32> %select
+}
+
+define <2 x i64> @test_2f64tosb(<2 x double> %a, <2 x i64> %passthru) {
+; NOVLDQ-LABEL: test_2f64tosb:
+; NOVLDQ:       # %bb.0:
+; NOVLDQ-NEXT:    vcvttsd2si %xmm0, %rax
+; NOVLDQ-NEXT:    vmovq %rax, %xmm2
+; NOVLDQ-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; NOVLDQ-NEXT:    vcvttsd2si %xmm0, %rax
+; NOVLDQ-NEXT:    vmovq %rax, %xmm0
+; NOVLDQ-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm2[0],xmm0[0]
+; NOVLDQ-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; NOVLDQ-NEXT:    retq
+;
+; VL-LABEL: test_2f64tosb:
+; VL:       # %bb.0:
+; VL-NEXT:    vcvttpd2dq %xmm0, %xmm0
+; VL-NEXT:    vpslld $31, %xmm0, %xmm0
+; VL-NEXT:    vptestmd %xmm0, %xmm0, %k1
+; VL-NEXT:    vmovdqa64 %xmm1, %xmm0 {%k1} {z}
+; VL-NEXT:    retq
+;
+; AVX512DQ-LABEL: test_2f64tosb:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
+; AVX512DQ-NEXT:    vcvttpd2qq %zmm0, %zmm0
+; AVX512DQ-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; AVX512DQ-NEXT:    vzeroupper
+; AVX512DQ-NEXT:    retq
+  %mask = fptosi <2 x double> %a to <2 x i1>
+  %select = select <2 x i1> %mask, <2 x i64> %passthru, <2 x i64> zeroinitializer
+  ret <2 x i64> %select
+}
+
+define <4 x i64> @test_4f64tosb(<4 x double> %a, <4 x i64> %passthru) {
+; NOVL-LABEL: test_4f64tosb:
+; NOVL:       # %bb.0:
+; NOVL-NEXT:    vcvttpd2dq %ymm0, %xmm0
+; NOVL-NEXT:    vpmovsxdq %xmm0, %ymm0
+; NOVL-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; NOVL-NEXT:    retq
+;
+; VL-LABEL: test_4f64tosb:
+; VL:       # %bb.0:
+; VL-NEXT:    vcvttpd2dq %ymm0, %xmm0
+; VL-NEXT:    vptestmd %xmm0, %xmm0, %k1
+; VL-NEXT:    vmovdqa64 %ymm1, %ymm0 {%k1} {z}
+; VL-NEXT:    retq
+  %mask = fptosi <4 x double> %a to <4 x i1>
+  %select = select <4 x i1> %mask, <4 x i64> %passthru, <4 x i64> zeroinitializer
+  ret <4 x i64> %select
+}
+
+define <8 x i64> @test_8f64tosb(<8 x double> %a, <8 x i64> %passthru) {
+; NOVL-LABEL: test_8f64tosb:
+; NOVL:       # %bb.0:
+; NOVL-NEXT:    vcvttpd2dq %zmm0, %ymm0
+; NOVL-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; NOVL-NEXT:    vmovdqa64 %zmm1, %zmm0 {%k1} {z}
+; NOVL-NEXT:    retq
+;
+; VL-LABEL: test_8f64tosb:
+; VL:       # %bb.0:
+; VL-NEXT:    vcvttpd2dq %zmm0, %ymm0
+; VL-NEXT:    vptestmd %ymm0, %ymm0, %k1
+; VL-NEXT:    vmovdqa64 %zmm1, %zmm0 {%k1} {z}
+; VL-NEXT:    retq
+  %mask = fptosi <8 x double> %a to <8 x i1>
+  %select = select <8 x i1> %mask, <8 x i64> %passthru, <8 x i64> zeroinitializer
+  ret <8 x i64> %select
+}
+
+define <2 x i64> @test_2f32tosb(<2 x float> %a, <2 x i64> %passthru) {
+; NOVL-LABEL: test_2f32tosb:
+; NOVL:       # %bb.0:
+; NOVL-NEXT:    vcvttss2si %xmm0, %rax
+; NOVL-NEXT:    vmovq %rax, %xmm2
+; NOVL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; NOVL-NEXT:    vcvttss2si %xmm0, %rax
+; NOVL-NEXT:    vmovq %rax, %xmm0
+; NOVL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm2[0],xmm0[0]
+; NOVL-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; NOVL-NEXT:    retq
+;
+; VLBW-LABEL: test_2f32tosb:
+; VLBW:       # %bb.0:
+; VLBW-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; VLBW-NEXT:    vcvttss2si %xmm2, %eax
+; VLBW-NEXT:    kmovd %eax, %k0
+; VLBW-NEXT:    vcvttss2si %xmm0, %eax
+; VLBW-NEXT:    andl $1, %eax
+; VLBW-NEXT:    kmovw %eax, %k1
+; VLBW-NEXT:    kshiftrw $1, %k0, %k2
+; VLBW-NEXT:    kshiftlw $1, %k2, %k2
+; VLBW-NEXT:    korw %k1, %k2, %k1
+; VLBW-NEXT:    kshiftrw $1, %k1, %k2
+; VLBW-NEXT:    kxorw %k0, %k2, %k0
+; VLBW-NEXT:    kshiftlw $15, %k0, %k0
+; VLBW-NEXT:    kshiftrw $14, %k0, %k0
+; VLBW-NEXT:    kxorw %k1, %k0, %k1
+; VLBW-NEXT:    vmovdqa64 %xmm1, %xmm0 {%k1} {z}
+; VLBW-NEXT:    retq
+;
+; VLNOBW-LABEL: test_2f32tosb:
+; VLNOBW:       # %bb.0:
+; VLNOBW-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; VLNOBW-NEXT:    vcvttss2si %xmm2, %eax
+; VLNOBW-NEXT:    kmovw %eax, %k0
+; VLNOBW-NEXT:    vcvttss2si %xmm0, %eax
+; VLNOBW-NEXT:    andl $1, %eax
+; VLNOBW-NEXT:    kmovw %eax, %k1
+; VLNOBW-NEXT:    kshiftrw $1, %k0, %k2
+; VLNOBW-NEXT:    kshiftlw $1, %k2, %k2
+; VLNOBW-NEXT:    korw %k1, %k2, %k1
+; VLNOBW-NEXT:    kshiftrw $1, %k1, %k2
+; VLNOBW-NEXT:    kxorw %k0, %k2, %k0
+; VLNOBW-NEXT:    kshiftlw $15, %k0, %k0
+; VLNOBW-NEXT:    kshiftrw $14, %k0, %k0
+; VLNOBW-NEXT:    kxorw %k1, %k0, %k1
+; VLNOBW-NEXT:    vmovdqa64 %xmm1, %xmm0 {%k1} {z}
+; VLNOBW-NEXT:    retq
+  %mask = fptosi <2 x float> %a to <2 x i1>
+  %select = select <2 x i1> %mask, <2 x i64> %passthru, <2 x i64> zeroinitializer
+  ret <2 x i64> %select
+}
+
+define <4 x i64> @test_4f32tosb(<4 x float> %a, <4 x i64> %passthru) {
+; NOVL-LABEL: test_4f32tosb:
+; NOVL:       # %bb.0:
+; NOVL-NEXT:    vcvttps2dq %xmm0, %xmm0
+; NOVL-NEXT:    vpmovsxdq %xmm0, %ymm0
+; NOVL-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; NOVL-NEXT:    retq
+;
+; VL-LABEL: test_4f32tosb:
+; VL:       # %bb.0:
+; VL-NEXT:    vcvttps2dq %xmm0, %xmm0
+; VL-NEXT:    vptestmd %xmm0, %xmm0, %k1
+; VL-NEXT:    vmovdqa64 %ymm1, %ymm0 {%k1} {z}
+; VL-NEXT:    retq
+  %mask = fptosi <4 x float> %a to <4 x i1>
+  %select = select <4 x i1> %mask, <4 x i64> %passthru, <4 x i64> zeroinitializer
+  ret <4 x i64> %select
+}
+
+define <8 x i64> @test_8f32tosb(<8 x float> %a, <8 x i64> %passthru) {
+; NOVL-LABEL: test_8f32tosb:
+; NOVL:       # %bb.0:
+; NOVL-NEXT:    vcvttps2dq %ymm0, %ymm0
+; NOVL-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; NOVL-NEXT:    vmovdqa64 %zmm1, %zmm0 {%k1} {z}
+; NOVL-NEXT:    retq
+;
+; VL-LABEL: test_8f32tosb:
+; VL:       # %bb.0:
+; VL-NEXT:    vcvttps2dq %ymm0, %ymm0
+; VL-NEXT:    vptestmd %ymm0, %ymm0, %k1
+; VL-NEXT:    vmovdqa64 %zmm1, %zmm0 {%k1} {z}
+; VL-NEXT:    retq
+  %mask = fptosi <8 x float> %a to <8 x i1>
+  %select = select <8 x i1> %mask, <8 x i64> %passthru, <8 x i64> zeroinitializer
+  ret <8 x i64> %select
+}
+
+define <16 x i32> @test_16f32tosb(<16 x float> %a, <16 x i32> %passthru) {
+; ALL-LABEL: test_16f32tosb:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vcvttps2dq %zmm0, %zmm0
+; ALL-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; ALL-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1} {z}
+; ALL-NEXT:    retq
+  %mask = fptosi <16 x float> %a to <16 x i1>
+  %select = select <16 x i1> %mask, <16 x i32> %passthru, <16 x i32> zeroinitializer
+  ret <16 x i32> %select
+}
