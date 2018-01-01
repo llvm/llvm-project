@@ -731,7 +731,7 @@ directory where Clang resides.
 If a driver mode is specified in invocation, Clang tries to find a file specific
 for the specified mode. For example, if the executable file is named
 `x86_64-clang-cl`, Clang first looks for `x86_64-cl.cfg` and if it is not found,
-looks for `x86_64.cfg'.
+looks for `x86_64.cfg`.
 
 If the command line contains options that effectively change target architecture
 (these are -m32, -EL, and some others) and the configuration file starts with an

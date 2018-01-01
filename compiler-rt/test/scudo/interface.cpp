@@ -4,7 +4,6 @@
 // RUN:                                                   %run %t heap-size          2>&1
 // RUN: %env_scudo_opts="allocator_may_return_null=1"     %run %t soft-limit         2>&1
 // RUN: %env_scudo_opts="allocator_may_return_null=1" not %run %t hard-limit         2>&1
-// UNSUPPORTED: armhf-linux
 
 // Tests that the sanitizer interface functions behave appropriately.
 
@@ -51,8 +50,11 @@ int main(int argc, char **argv)
     // Verifies that setting the soft RSS limit at runtime works as expected.
     std::vector<void *> pointers;
     size_t size = 1 << 19;  // 512Kb
-    for (int i = 0; i < 5; i++)
-      pointers.push_back(malloc(size));
+    for (int i = 0; i < 5; i++) {
+      void *p = malloc(size);
+      memset(p, 0, size);
+      pointers.push_back(p);
+    }
     // Set the soft RSS limit to 1Mb.
     __scudo_set_rss_limit(1, 0);
     usleep(20000);
@@ -74,8 +76,11 @@ int main(int argc, char **argv)
     // Verifies that setting the hard RSS limit at runtime works as expected.
     std::vector<void *> pointers;
     size_t size = 1 << 19;  // 512Kb
-    for (int i = 0; i < 5; i++)
-      pointers.push_back(malloc(size));
+    for (int i = 0; i < 5; i++) {
+      void *p = malloc(size);
+      memset(p, 0, size);
+      pointers.push_back(p);
+    }
     // Set the hard RSS limit to 1Mb
     __scudo_set_rss_limit(1, 1);
     usleep(20000);
