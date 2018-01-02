@@ -860,7 +860,7 @@ namespace yaml {
           return "malformed by";
       }
     }
-    static bool mustQuote(StringRef) { return true; }
+    static QuotingType mustQuote(StringRef) { return QuotingType::Single; }
   };
 }
 }
@@ -1064,7 +1064,7 @@ namespace yaml {
       return StringRef();
     }
 
-    static bool mustQuote(StringRef) { return false; }
+    static QuotingType mustQuote(StringRef) { return QuotingType::None; }
   };
 
   template <> struct ScalarTraits<MyString> {
@@ -1075,7 +1075,9 @@ namespace yaml {
     static StringRef input(StringRef S, void *Ctx, MyString &V) {
       return Impl::input(S, Ctx, V.value);
     }
-    static bool mustQuote(StringRef S) { return Impl::mustQuote(S); }
+    static QuotingType mustQuote(StringRef S) {
+      return Impl::mustQuote(S);
+    }
   };
 }
 }
@@ -2232,7 +2234,7 @@ struct ScalarTraits<FlowSeq> {
     return "";
   }
 
-  static bool mustQuote(StringRef S) { return false; }
+  static QuotingType mustQuote(StringRef S) { return QuotingType::None; }
 };
 }
 }
@@ -2454,4 +2456,88 @@ TEST(YAMLIO, InvalidInput) {
   std::vector<FooBar> Data;
   yin >> Data;
   EXPECT_TRUE((bool)yin.error());
+}
+
+TEST(YAMLIO, TestEscapedSingleQuote) {
+  std::string Id = "@abc@";
+
+  std::string out;
+  llvm::raw_string_ostream ostr(out);
+  Output xout(ostr, nullptr, 0);
+
+  llvm::yaml::EmptyContext Ctx;
+  yamlize(xout, Id, true, Ctx);
+
+  ostr.flush();
+  EXPECT_EQ("'@abc@'", out);
+}
+
+TEST(YAMLIO, TestEscapedNoQuote) {
+  std::string Id = "abc/";
+
+  std::string out;
+  llvm::raw_string_ostream ostr(out);
+  Output xout(ostr, nullptr, 0);
+
+  llvm::yaml::EmptyContext Ctx;
+  yamlize(xout, Id, true, Ctx);
+
+  ostr.flush();
+  EXPECT_EQ("abc/", out);
+}
+
+TEST(YAMLIO, TestEscapedDoubleQuoteNonPrintable) {
+  std::string Id = "\01@abc@";
+
+  std::string out;
+  llvm::raw_string_ostream ostr(out);
+  Output xout(ostr, nullptr, 0);
+
+  llvm::yaml::EmptyContext Ctx;
+  yamlize(xout, Id, true, Ctx);
+
+  ostr.flush();
+  EXPECT_EQ("\"\\x01@abc@\"", out);
+}
+
+TEST(YAMLIO, TestEscapedDoubleQuoteInsideSingleQuote) {
+  std::string Id = "abc\"fdf";
+
+  std::string out;
+  llvm::raw_string_ostream ostr(out);
+  Output xout(ostr, nullptr, 0);
+
+  llvm::yaml::EmptyContext Ctx;
+  yamlize(xout, Id, true, Ctx);
+
+  ostr.flush();
+  EXPECT_EQ("'abc\"fdf'", out);
+}
+
+TEST(YAMLIO, TestEscapedDoubleQuoteInsideDoubleQuote) {
+  std::string Id = "\01bc\"fdf";
+
+  std::string out;
+  llvm::raw_string_ostream ostr(out);
+  Output xout(ostr, nullptr, 0);
+
+  llvm::yaml::EmptyContext Ctx;
+  yamlize(xout, Id, true, Ctx);
+
+  ostr.flush();
+  EXPECT_EQ("\"\\x01bc\\\"fdf\"", out);
+}
+
+TEST(YAMLIO, TestEscapedSingleQuoteInsideSingleQuote) {
+  std::string Id = "abc'fdf";
+
+  std::string out;
+  llvm::raw_string_ostream ostr(out);
+  Output xout(ostr, nullptr, 0);
+
+  llvm::yaml::EmptyContext Ctx;
+  yamlize(xout, Id, true, Ctx);
+
+  ostr.flush();
+  EXPECT_EQ("'abc''fdf'", out);
 }
