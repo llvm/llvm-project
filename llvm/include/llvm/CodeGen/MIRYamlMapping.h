@@ -56,7 +56,7 @@ template <> struct ScalarTraits<StringValue> {
     return "";
   }
 
-  static bool mustQuote(StringRef Scalar) { return needsQuotes(Scalar); }
+  static QuotingType mustQuote(StringRef S) { return needsQuotes(S); }
 };
 
 struct FlowStringValue : StringValue {
@@ -73,7 +73,7 @@ template <> struct ScalarTraits<FlowStringValue> {
     return ScalarTraits<StringValue>::input(Scalar, Ctx, S);
   }
 
-  static bool mustQuote(StringRef Scalar) { return needsQuotes(Scalar); }
+  static QuotingType mustQuote(StringRef S) { return needsQuotes(S); }
 };
 
 struct BlockStringValue {
@@ -120,7 +120,7 @@ template <> struct ScalarTraits<UnsignedValue> {
     return ScalarTraits<unsigned>::input(Scalar, Ctx, Value.Value);
   }
 
-  static bool mustQuote(StringRef Scalar) {
+  static QuotingType mustQuote(StringRef Scalar) {
     return ScalarTraits<unsigned>::mustQuote(Scalar);
   }
 };
