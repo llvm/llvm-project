@@ -2541,3 +2541,31 @@ TEST(YAMLIO, TestEscapedSingleQuoteInsideSingleQuote) {
   ostr.flush();
   EXPECT_EQ("'abc''fdf'", out);
 }
+
+TEST(YAMLIO, TestEscapedUTF8SingleQuoteInsideDoubleQuote) {
+  std::string Id = "parameter 'параметр' is unused";
+
+  std::string out;
+  llvm::raw_string_ostream ostr(out);
+  Output xout(ostr, nullptr, 0);
+
+  llvm::yaml::EmptyContext Ctx;
+  yamlize(xout, Id, true, Ctx);
+
+  ostr.flush();
+  EXPECT_EQ("\"parameter 'параметр' is unused\"", out);
+}
+
+TEST(YAMLIO, TestEscapedUTF8) {
+  std::string Id = "/*параметр*/";
+
+  std::string out;
+  llvm::raw_string_ostream ostr(out);
+  Output xout(ostr, nullptr, 0);
+
+  llvm::yaml::EmptyContext Ctx;
+  yamlize(xout, Id, true, Ctx);
+
+  ostr.flush();
+  EXPECT_EQ("\"/*параметр*/\"", out);
+}
