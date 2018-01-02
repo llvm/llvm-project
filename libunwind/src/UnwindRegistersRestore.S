@@ -128,6 +128,101 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind16Registers_x86_646jumptoEv)
   ret            # rip was saved here
 
 
+#elif defined(__powerpc64__)
+
+DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind15Registers_ppc646jumptoEv)
+//
+// void libunwind::Registers_ppc64::jumpto()
+//
+// On entry:
+//  thread_state pointer is in r3
+//
+
+  // restore integral registers
+  // skip r0 for now
+  // skip r1 for now
+  ld    %r2,   32(%r3)
+  // skip r3 for now
+  // skip r4 for now
+  // skip r5 for now
+  ld    %r6,   64(%r3)
+  ld    %r7,   72(%r3)
+  ld    %r8,   80(%r3)
+  ld    %r9,   88(%r3)
+  ld    %r10,  96(%r3)
+  ld    %r11, 104(%r3)
+  ld    %r12, 112(%r3)
+  ld    %r13, 120(%r3)
+  ld    %r14, 128(%r3)
+  ld    %r15, 136(%r3)
+  ld    %r16, 144(%r3)
+  ld    %r17, 152(%r3)
+  ld    %r18, 160(%r3)
+  ld    %r19, 168(%r3)
+  ld    %r20, 176(%r3)
+  ld    %r21, 184(%r3)
+  ld    %r22, 192(%r3)
+  ld    %r23, 200(%r3)
+  ld    %r24, 208(%r3)
+  ld    %r25, 216(%r3)
+  ld    %r26, 224(%r3)
+  ld    %r27, 232(%r3)
+  ld    %r28, 240(%r3)
+  ld    %r29, 248(%r3)
+  ld    %r30, 256(%r3)
+  ld    %r31, 264(%r3)
+
+  //restore float registers
+  lfd   %f0,  312(%r3)
+  lfd   %f1,  320(%r3)
+  lfd   %f2,  328(%r3)
+  lfd   %f3,  336(%r3)
+  lfd   %f4,  344(%r3)
+  lfd   %f5,  352(%r3)
+  lfd   %f6,  360(%r3)
+  lfd   %f7,  368(%r3)
+  lfd   %f8,  376(%r3)
+  lfd   %f9,  384(%r3)
+  lfd   %f10, 392(%r3)
+  lfd   %f11, 400(%r3)
+  lfd   %f12, 408(%r3)
+  lfd   %f13, 416(%r3)
+  lfd   %f14, 424(%r3)
+  lfd   %f15, 432(%r3)
+  lfd   %f16, 440(%r3)
+  lfd   %f17, 448(%r3)
+  lfd   %f18, 456(%r3)
+  lfd   %f19, 464(%r3)
+  lfd   %f20, 472(%r3)
+  lfd   %f21, 480(%r3)
+  lfd   %f22, 488(%r3)
+  lfd   %f23, 496(%r3)
+  lfd   %f24, 504(%r3)
+  lfd   %f25, 512(%r3)
+  lfd   %f26, 520(%r3)
+  lfd   %f27, 528(%r3)
+  lfd   %f28, 536(%r3)
+  lfd   %f29, 544(%r3)
+  lfd   %f30, 552(%r3)
+  lfd   %f31, 560(%r3)
+
+  //TODO: restore vector registers
+
+  // Lnovec:
+  ld    %r0, 272(%r3) // __cr
+  mtcr  %r0
+  ld    %r0, 296(%r3) // __ctr
+  mtctr %r0
+  ld    %r0,   0(%r3) // __ssr0
+  mtctr %r0
+
+  ld    %r0,   16(%r3)
+  ld    %r5,   56(%r3)
+  ld    %r4,   48(%r3)
+  ld    %r1,   24(%r3)
+  ld    %r3,   40(%r3)
+  bctr
+
 #elif defined(__ppc__)
 
 DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_ppc6jumptoEv)

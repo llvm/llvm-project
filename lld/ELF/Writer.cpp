@@ -1767,16 +1767,22 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
 // virtual address (modulo the page size) so that the loader can load
 // executables without any address adjustment.
 static uint64_t getFileAlignment(uint64_t Off, OutputSection *Cmd) {
-  // If the section is not in a PT_LOAD, we just have to align it.
-  if (!Cmd->PtLoad)
-    return alignTo(Off, Cmd->Alignment);
-
-  OutputSection *First = Cmd->PtLoad->FirstSec;
+  OutputSection *First = Cmd->PtLoad ? Cmd->PtLoad->FirstSec : nullptr;
   // The first section in a PT_LOAD has to have congruent offset and address
   // module the page size.
   if (Cmd == First)
     return alignTo(Off, std::max<uint64_t>(Cmd->Alignment, Config->MaxPageSize),
                    Cmd->Addr);
+
+  // For SHT_NOBITS we don't want the alignment of the section to impact the
+  // offset of the sections that follow. Since nothing seems to care about the
+  // sh_offset of the SHT_NOBITS section itself, just ignore it.
+  if (Cmd->Type == SHT_NOBITS)
+    return Off;
+
+  // If the section is not in a PT_LOAD, we just have to align it.
+  if (!Cmd->PtLoad)
+    return alignTo(Off, Cmd->Alignment);
 
   // If two sections share the same PT_LOAD the file offset is calculated
   // using this formula: Off2 = Off1 + (VA2 - VA1).
@@ -1784,13 +1790,13 @@ static uint64_t getFileAlignment(uint64_t Off, OutputSection *Cmd) {
 }
 
 static uint64_t setOffset(OutputSection *Cmd, uint64_t Off) {
-  if (Cmd->Type == SHT_NOBITS) {
-    Cmd->Offset = Off;
-    return Off;
-  }
-
   Off = getFileAlignment(Off, Cmd);
   Cmd->Offset = Off;
+
+  // For SHT_NOBITS we should not count the size.
+  if (Cmd->Type == SHT_NOBITS)
+    return Off;
+
   return Off + Cmd->Size;
 }
 

@@ -63,12 +63,12 @@
 #define _LIBUNWIND_BUILD_SJLJ_APIS
 #endif
 
-#if defined(__i386__) || defined(__x86_64__) || defined(__ppc__) || defined(__ppc64__)
+#if defined(__i386__) || defined(__x86_64__) || defined(__ppc__) || defined(__ppc64__) || defined(__powerpc64__)
 #define _LIBUNWIND_SUPPORT_FRAME_APIS
 #endif
 
 #if defined(__i386__) || defined(__x86_64__) ||                                \
-    defined(__ppc__) || defined(__ppc64__) ||                                  \
+    defined(__ppc__) || defined(__ppc64__) || defined(__powerpc64__) ||        \
     (!defined(__APPLE__) && defined(__arm__)) ||                               \
     (defined(__arm64__) || defined(__aarch64__)) ||                            \
     defined(__mips__)

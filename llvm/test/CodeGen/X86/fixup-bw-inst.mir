@@ -26,6 +26,12 @@
     ret i16 %i.0
   }
 
+  define i16 @test4() {
+  entry:
+    %t1 = zext i1 undef to i16
+    %t2 = or i16 undef, %t1
+    ret i16 %t2
+  }
 ...
 ---
 # CHECK-LABEL: name: test1
@@ -148,4 +154,48 @@ body:             |
     %ax = KILL %ax, implicit killed %eax
     RETQ %ax
 
+...
+---
+# CHECK-LABEL: name: test4
+name:            test4
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+liveins:
+  - { reg: '%r9d' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+constants:
+# This code copies r10b into r9b and then uses r9w. We would like to promote
+# the copy to a 32-bit copy, but because r9w is used this is not acceptable.
+body:             |
+  bb.0.entry:
+    successors:
+    liveins: %r9d
+
+    %r9b = MOV8rr undef %r10b, implicit-def %r9d, implicit killed %r9d, implicit-def %eflags
+    ; CHECK-NOT: MOV32rr
+    %ax = OR16rr undef %ax, %r9w, implicit-def %eflags
+    RETQ %ax
 ...
