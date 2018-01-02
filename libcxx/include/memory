@@ -18,7 +18,7 @@ namespace std
 {
 
 struct allocator_arg_t { };
-constexpr allocator_arg_t allocator_arg = allocator_arg_t();
+inline constexpr allocator_arg_t allocator_arg = allocator_arg_t();
 
 template <class T, class Alloc> struct uses_allocator;
 
@@ -630,6 +630,9 @@ template<class T>
 template <class T> struct hash;
 template <class T, class D> struct hash<unique_ptr<T, D> >;
 template <class T> struct hash<shared_ptr<T> >;
+
+template <class T, class Alloc>
+  inline constexpr bool uses_allocator_v = uses_allocator<T, Alloc>::value;
 
 // Pointer safety
 enum class pointer_safety { relaxed, preferred, strict };

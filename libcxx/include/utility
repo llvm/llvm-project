@@ -99,7 +99,7 @@ void
 swap(pair<T1, T2>& x, pair<T1, T2>& y) noexcept(noexcept(x.swap(y)));
 
 struct piecewise_construct_t { };
-constexpr piecewise_construct_t piecewise_construct = piecewise_construct_t();
+inline constexpr piecewise_construct_t piecewise_construct = piecewise_construct_t();
 
 template <class T> class tuple_size;
 template <size_t I, class T> class tuple_element;
@@ -296,7 +296,7 @@ struct _LIBCPP_TEMPLATE_VIS piecewise_construct_t { };
 #if defined(_LIBCPP_CXX03_LANG) || defined(_LIBCPP_BUILDING_UTILITY)
 extern const piecewise_construct_t piecewise_construct;// = piecewise_construct_t();
 #else
-constexpr piecewise_construct_t piecewise_construct = piecewise_construct_t();
+_LIBCPP_INLINE_VAR constexpr piecewise_construct_t piecewise_construct = piecewise_construct_t();
 #endif
 
 #if defined(_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR)
@@ -904,30 +904,21 @@ _T1 exchange(_T1& __obj, _T2 && __new_value)
 struct _LIBCPP_TYPE_VIS in_place_t {
     explicit in_place_t() = default;
 };
-#ifndef _LIBCPP_HAS_NO_INLINE_VARIABLES
-inline
-#endif
-constexpr in_place_t in_place{};
+_LIBCPP_INLINE_VAR constexpr in_place_t in_place{};
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS in_place_type_t {
     explicit in_place_type_t() = default;
 };
 template <class _Tp>
-#ifndef _LIBCPP_HAS_NO_INLINE_VARIABLES
-inline
-#endif
-constexpr in_place_type_t<_Tp> in_place_type{};
+_LIBCPP_INLINE_VAR constexpr in_place_type_t<_Tp> in_place_type{};
 
 template <size_t _Idx>
 struct _LIBCPP_TYPE_VIS in_place_index_t {
     explicit in_place_index_t() = default;
 };
 template <size_t _Idx>
-#ifndef _LIBCPP_HAS_NO_INLINE_VARIABLES
-inline
-#endif
-constexpr in_place_index_t<_Idx> in_place_index{};
+_LIBCPP_INLINE_VAR constexpr in_place_index_t<_Idx> in_place_index{};
 
 template <class _Tp> struct __is_inplace_type_imp : false_type {};
 template <class _Tp> struct __is_inplace_type_imp<in_place_type_t<_Tp>> : true_type {};

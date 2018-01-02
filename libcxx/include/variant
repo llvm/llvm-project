@@ -76,7 +76,7 @@ namespace std {
   template <class T> struct variant_size; // undefined
 
   template <class T>
-  constexpr size_t variant_size_v = variant_size<T>::value;
+  inline constexpr size_t variant_size_v = variant_size<T>::value;
 
   template <class T> struct variant_size<const T>;
   template <class T> struct variant_size<volatile T>;
@@ -97,7 +97,7 @@ namespace std {
   template <size_t I, class... Types>
   struct variant_alternative<I, variant<Types...>>;
 
-  constexpr size_t variant_npos = -1;
+  inline constexpr size_t variant_npos = -1;
 
   // 20.7.4, value access
   template <class T, class... Types>
@@ -246,7 +246,7 @@ template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS variant_size;
 
 template <class _Tp>
-constexpr size_t variant_size_v = variant_size<_Tp>::value;
+_LIBCPP_INLINE_VAR constexpr size_t variant_size_v = variant_size<_Tp>::value;
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS variant_size<const _Tp> : variant_size<_Tp> {};
@@ -286,7 +286,7 @@ struct _LIBCPP_TEMPLATE_VIS variant_alternative<_Ip, variant<_Types...>> {
   using type = __type_pack_element<_Ip, _Types...>;
 };
 
-constexpr size_t variant_npos = static_cast<size_t>(-1);
+_LIBCPP_INLINE_VAR constexpr size_t variant_npos = static_cast<size_t>(-1);
 
 constexpr int __choose_index_type(unsigned int __num_elem) {
   if (__num_elem < std::numeric_limits<unsigned char>::max())

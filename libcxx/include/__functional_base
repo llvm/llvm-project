@@ -564,7 +564,7 @@ struct _LIBCPP_TEMPLATE_VIS allocator_arg_t { };
 #if defined(_LIBCPP_CXX03_LANG) || defined(_LIBCPP_BUILDING_MEMORY)
 extern const allocator_arg_t allocator_arg;
 #else
-constexpr allocator_arg_t allocator_arg = allocator_arg_t();
+_LIBCPP_INLINE_VAR constexpr allocator_arg_t allocator_arg = allocator_arg_t();
 #endif
 
 // uses_allocator
@@ -601,7 +601,7 @@ struct _LIBCPP_TEMPLATE_VIS uses_allocator
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp, class _Alloc>
-constexpr size_t uses_allocator_v = uses_allocator<_Tp, _Alloc>::value;
+_LIBCPP_INLINE_VAR constexpr size_t uses_allocator_v = uses_allocator<_Tp, _Alloc>::value;
 #endif
 
 #ifndef _LIBCPP_CXX03_LANG
