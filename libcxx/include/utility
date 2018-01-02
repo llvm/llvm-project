@@ -296,7 +296,7 @@ struct _LIBCPP_TEMPLATE_VIS piecewise_construct_t { };
 #if defined(_LIBCPP_CXX03_LANG) || defined(_LIBCPP_BUILDING_UTILITY)
 extern const piecewise_construct_t piecewise_construct;// = piecewise_construct_t();
 #else
-_LIBCPP_INLINE_VAR constexpr piecewise_construct_t piecewise_construct = piecewise_construct_t();
+/* _LIBCPP_INLINE_VAR */ constexpr piecewise_construct_t piecewise_construct = piecewise_construct_t();
 #endif
 
 #if defined(_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR)
