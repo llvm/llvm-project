@@ -2264,9 +2264,9 @@ static unsigned ComputeNumSignBitsImpl(const Value *V, unsigned Depth,
     // ashr X, C   -> adds C sign bits.  Vectors too.
     const APInt *ShAmt;
     if (match(U->getOperand(1), m_APInt(ShAmt))) {
-      unsigned ShAmtLimited = ShAmt->getZExtValue();
-      if (ShAmtLimited >= TyBits)
+      if (ShAmt->uge(TyBits))
         break;  // Bad shift.
+      unsigned ShAmtLimited = ShAmt->getZExtValue();
       Tmp += ShAmtLimited;
       if (Tmp > TyBits) Tmp = TyBits;
     }
@@ -2277,9 +2277,9 @@ static unsigned ComputeNumSignBitsImpl(const Value *V, unsigned Depth,
     if (match(U->getOperand(1), m_APInt(ShAmt))) {
       // shl destroys sign bits.
       Tmp = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
+      if (ShAmt->uge(TyBits) ||      // Bad shift.
+          ShAmt->uge(Tmp)) break;    // Shifted all sign bits out.
       Tmp2 = ShAmt->getZExtValue();
-      if (Tmp2 >= TyBits ||      // Bad shift.
-          Tmp2 >= Tmp) break;    // Shifted all sign bits out.
       return Tmp - Tmp2;
     }
     break;

@@ -3374,11 +3374,9 @@ SDValue DAGTypeLegalizer::WidenVecOp_EXTEND(SDNode *N) {
   EVT VT = N->getValueType(0);
 
   SDValue InOp = N->getOperand(0);
-  // If some legalization strategy other than widening is used on the operand,
-  // we can't safely assume that just extending the low lanes is the correct
-  // transformation.
-  if (getTypeAction(InOp.getValueType()) != TargetLowering::TypeWidenVector)
-    return WidenVecOp_Convert(N);
+  assert(getTypeAction(InOp.getValueType()) ==
+             TargetLowering::TypeWidenVector &&
+         "Unexpected type action");
   InOp = GetWidenedVector(InOp);
   assert(VT.getVectorNumElements() <
              InOp.getValueType().getVectorNumElements() &&
@@ -3448,8 +3446,10 @@ SDValue DAGTypeLegalizer::WidenVecOp_Convert(SDNode *N) {
   SDLoc dl(N);
   unsigned NumElts = VT.getVectorNumElements();
   SDValue InOp = N->getOperand(0);
-  if (getTypeAction(InOp.getValueType()) == TargetLowering::TypeWidenVector)
-    InOp = GetWidenedVector(InOp);
+  assert(getTypeAction(InOp.getValueType()) ==
+             TargetLowering::TypeWidenVector &&
+         "Unexpected type action");
+  InOp = GetWidenedVector(InOp);
   EVT InVT = InOp.getValueType();
   EVT InEltVT = InVT.getVectorElementType();
 
@@ -3506,8 +3506,10 @@ SDValue DAGTypeLegalizer::WidenVecOp_CONCAT_VECTORS(SDNode *N) {
   unsigned NumOperands = N->getNumOperands();
   for (unsigned i=0; i < NumOperands; ++i) {
     SDValue InOp = N->getOperand(i);
-    if (getTypeAction(InOp.getValueType()) == TargetLowering::TypeWidenVector)
-      InOp = GetWidenedVector(InOp);
+    assert(getTypeAction(InOp.getValueType()) ==
+               TargetLowering::TypeWidenVector &&
+           "Unexpected type action");
+    InOp = GetWidenedVector(InOp);
     for (unsigned j=0; j < NumInElts; ++j)
       Ops[Idx++] = DAG.getNode(
           ISD::EXTRACT_VECTOR_ELT, dl, EltVT, InOp,
