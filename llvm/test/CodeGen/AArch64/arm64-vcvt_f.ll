@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
-; RUN: llc < %s -O0 -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
+; RUN: llc < %s -O0 -fast-isel -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
 
 define <2 x double> @test_vcvt_f64_f32(<2 x float> %x) nounwind readnone ssp {
 ; CHECK-LABEL: test_vcvt_f64_f32:

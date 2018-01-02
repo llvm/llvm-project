@@ -193,22 +193,33 @@ define i32 @eq_i256(<4 x i64> %x, <4 x i64> %y) {
 ; if we allowed 2 pairs of 16-byte loads per block.
 
 define i32 @ne_i128_pair(i128* %a, i128* %b) {
-; ANY-LABEL: ne_i128_pair:
-; ANY:       # %bb.0:
-; ANY-NEXT:    movq (%rdi), %rax
-; ANY-NEXT:    movq 8(%rdi), %rcx
-; ANY-NEXT:    xorq (%rsi), %rax
-; ANY-NEXT:    xorq 8(%rsi), %rcx
-; ANY-NEXT:    movq 24(%rdi), %rdx
-; ANY-NEXT:    movq 16(%rdi), %rdi
-; ANY-NEXT:    xorq 16(%rsi), %rdi
-; ANY-NEXT:    orq %rax, %rdi
-; ANY-NEXT:    xorq 24(%rsi), %rdx
-; ANY-NEXT:    orq %rcx, %rdx
-; ANY-NEXT:    xorl %eax, %eax
-; ANY-NEXT:    orq %rdi, %rdx
-; ANY-NEXT:    setne %al
-; ANY-NEXT:    retq
+; SSE2-LABEL: ne_i128_pair:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqu (%rdi), %xmm0
+; SSE2-NEXT:    movdqu 16(%rdi), %xmm1
+; SSE2-NEXT:    movdqu (%rsi), %xmm2
+; SSE2-NEXT:    pcmpeqb %xmm0, %xmm2
+; SSE2-NEXT:    movdqu 16(%rsi), %xmm0
+; SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    pmovmskb %xmm0, %ecx
+; SSE2-NEXT:    xorl %eax, %eax
+; SSE2-NEXT:    cmpl $65535, %ecx # imm = 0xFFFF
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    retq
+;
+; AVXANY-LABEL: ne_i128_pair:
+; AVXANY:       # %bb.0:
+; AVXANY-NEXT:    vmovdqu (%rdi), %xmm0
+; AVXANY-NEXT:    vmovdqu 16(%rdi), %xmm1
+; AVXANY-NEXT:    vpcmpeqb 16(%rsi), %xmm1, %xmm1
+; AVXANY-NEXT:    vpcmpeqb (%rsi), %xmm0, %xmm0
+; AVXANY-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVXANY-NEXT:    vpmovmskb %xmm0, %ecx
+; AVXANY-NEXT:    xorl %eax, %eax
+; AVXANY-NEXT:    cmpl $65535, %ecx # imm = 0xFFFF
+; AVXANY-NEXT:    setne %al
+; AVXANY-NEXT:    retq
   %a0 = load i128, i128* %a
   %b0 = load i128, i128* %b
   %xor1 = xor i128 %a0, %b0
@@ -227,22 +238,33 @@ define i32 @ne_i128_pair(i128* %a, i128* %b) {
 ; if we allowed 2 pairs of 16-byte loads per block.
 
 define i32 @eq_i128_pair(i128* %a, i128* %b) {
-; ANY-LABEL: eq_i128_pair:
-; ANY:       # %bb.0:
-; ANY-NEXT:    movq (%rdi), %rax
-; ANY-NEXT:    movq 8(%rdi), %rcx
-; ANY-NEXT:    xorq (%rsi), %rax
-; ANY-NEXT:    xorq 8(%rsi), %rcx
-; ANY-NEXT:    movq 24(%rdi), %rdx
-; ANY-NEXT:    movq 16(%rdi), %rdi
-; ANY-NEXT:    xorq 16(%rsi), %rdi
-; ANY-NEXT:    orq %rax, %rdi
-; ANY-NEXT:    xorq 24(%rsi), %rdx
-; ANY-NEXT:    orq %rcx, %rdx
-; ANY-NEXT:    xorl %eax, %eax
-; ANY-NEXT:    orq %rdi, %rdx
-; ANY-NEXT:    sete %al
-; ANY-NEXT:    retq
+; SSE2-LABEL: eq_i128_pair:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqu (%rdi), %xmm0
+; SSE2-NEXT:    movdqu 16(%rdi), %xmm1
+; SSE2-NEXT:    movdqu (%rsi), %xmm2
+; SSE2-NEXT:    pcmpeqb %xmm0, %xmm2
+; SSE2-NEXT:    movdqu 16(%rsi), %xmm0
+; SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    pmovmskb %xmm0, %ecx
+; SSE2-NEXT:    xorl %eax, %eax
+; SSE2-NEXT:    cmpl $65535, %ecx # imm = 0xFFFF
+; SSE2-NEXT:    sete %al
+; SSE2-NEXT:    retq
+;
+; AVXANY-LABEL: eq_i128_pair:
+; AVXANY:       # %bb.0:
+; AVXANY-NEXT:    vmovdqu (%rdi), %xmm0
+; AVXANY-NEXT:    vmovdqu 16(%rdi), %xmm1
+; AVXANY-NEXT:    vpcmpeqb 16(%rsi), %xmm1, %xmm1
+; AVXANY-NEXT:    vpcmpeqb (%rsi), %xmm0, %xmm0
+; AVXANY-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVXANY-NEXT:    vpmovmskb %xmm0, %ecx
+; AVXANY-NEXT:    xorl %eax, %eax
+; AVXANY-NEXT:    cmpl $65535, %ecx # imm = 0xFFFF
+; AVXANY-NEXT:    sete %al
+; AVXANY-NEXT:    retq
   %a0 = load i128, i128* %a
   %b0 = load i128, i128* %b
   %xor1 = xor i128 %a0, %b0
@@ -261,34 +283,77 @@ define i32 @eq_i128_pair(i128* %a, i128* %b) {
 ; if we allowed 2 pairs of 32-byte loads per block.
 
 define i32 @ne_i256_pair(i256* %a, i256* %b) {
-; ANY-LABEL: ne_i256_pair:
-; ANY:       # %bb.0:
-; ANY-NEXT:    movq 16(%rdi), %r9
-; ANY-NEXT:    movq 24(%rdi), %r11
-; ANY-NEXT:    movq (%rdi), %r8
-; ANY-NEXT:    movq 8(%rdi), %r10
-; ANY-NEXT:    xorq 8(%rsi), %r10
-; ANY-NEXT:    xorq 24(%rsi), %r11
-; ANY-NEXT:    xorq (%rsi), %r8
-; ANY-NEXT:    xorq 16(%rsi), %r9
-; ANY-NEXT:    movq 48(%rdi), %rdx
-; ANY-NEXT:    movq 32(%rdi), %rax
-; ANY-NEXT:    movq 56(%rdi), %rcx
-; ANY-NEXT:    movq 40(%rdi), %rdi
-; ANY-NEXT:    xorq 40(%rsi), %rdi
-; ANY-NEXT:    xorq 56(%rsi), %rcx
-; ANY-NEXT:    orq %r11, %rcx
-; ANY-NEXT:    orq %rdi, %rcx
-; ANY-NEXT:    orq %r10, %rcx
-; ANY-NEXT:    xorq 32(%rsi), %rax
-; ANY-NEXT:    xorq 48(%rsi), %rdx
-; ANY-NEXT:    orq %r9, %rdx
-; ANY-NEXT:    orq %rax, %rdx
-; ANY-NEXT:    orq %r8, %rdx
-; ANY-NEXT:    xorl %eax, %eax
-; ANY-NEXT:    orq %rcx, %rdx
-; ANY-NEXT:    setne %al
-; ANY-NEXT:    retq
+; SSE2-LABEL: ne_i256_pair:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movq 16(%rdi), %r9
+; SSE2-NEXT:    movq 24(%rdi), %r11
+; SSE2-NEXT:    movq (%rdi), %r8
+; SSE2-NEXT:    movq 8(%rdi), %r10
+; SSE2-NEXT:    xorq 8(%rsi), %r10
+; SSE2-NEXT:    xorq 24(%rsi), %r11
+; SSE2-NEXT:    xorq (%rsi), %r8
+; SSE2-NEXT:    xorq 16(%rsi), %r9
+; SSE2-NEXT:    movq 48(%rdi), %rdx
+; SSE2-NEXT:    movq 32(%rdi), %rax
+; SSE2-NEXT:    movq 56(%rdi), %rcx
+; SSE2-NEXT:    movq 40(%rdi), %rdi
+; SSE2-NEXT:    xorq 40(%rsi), %rdi
+; SSE2-NEXT:    xorq 56(%rsi), %rcx
+; SSE2-NEXT:    orq %r11, %rcx
+; SSE2-NEXT:    orq %rdi, %rcx
+; SSE2-NEXT:    orq %r10, %rcx
+; SSE2-NEXT:    xorq 32(%rsi), %rax
+; SSE2-NEXT:    xorq 48(%rsi), %rdx
+; SSE2-NEXT:    orq %r9, %rdx
+; SSE2-NEXT:    orq %rax, %rdx
+; SSE2-NEXT:    orq %r8, %rdx
+; SSE2-NEXT:    xorl %eax, %eax
+; SSE2-NEXT:    orq %rcx, %rdx
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    retq
+;
+; AVX1-LABEL: ne_i256_pair:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    movq 16(%rdi), %r9
+; AVX1-NEXT:    movq 24(%rdi), %r11
+; AVX1-NEXT:    movq (%rdi), %r8
+; AVX1-NEXT:    movq 8(%rdi), %r10
+; AVX1-NEXT:    xorq 8(%rsi), %r10
+; AVX1-NEXT:    xorq 24(%rsi), %r11
+; AVX1-NEXT:    xorq (%rsi), %r8
+; AVX1-NEXT:    xorq 16(%rsi), %r9
+; AVX1-NEXT:    movq 48(%rdi), %rdx
+; AVX1-NEXT:    movq 32(%rdi), %rax
+; AVX1-NEXT:    movq 56(%rdi), %rcx
+; AVX1-NEXT:    movq 40(%rdi), %rdi
+; AVX1-NEXT:    xorq 40(%rsi), %rdi
+; AVX1-NEXT:    xorq 56(%rsi), %rcx
+; AVX1-NEXT:    orq %r11, %rcx
+; AVX1-NEXT:    orq %rdi, %rcx
+; AVX1-NEXT:    orq %r10, %rcx
+; AVX1-NEXT:    xorq 32(%rsi), %rax
+; AVX1-NEXT:    xorq 48(%rsi), %rdx
+; AVX1-NEXT:    orq %r9, %rdx
+; AVX1-NEXT:    orq %rax, %rdx
+; AVX1-NEXT:    orq %r8, %rdx
+; AVX1-NEXT:    xorl %eax, %eax
+; AVX1-NEXT:    orq %rcx, %rdx
+; AVX1-NEXT:    setne %al
+; AVX1-NEXT:    retq
+;
+; AVX256-LABEL: ne_i256_pair:
+; AVX256:       # %bb.0:
+; AVX256-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX256-NEXT:    vmovdqu 32(%rdi), %ymm1
+; AVX256-NEXT:    vpcmpeqb 32(%rsi), %ymm1, %ymm1
+; AVX256-NEXT:    vpcmpeqb (%rsi), %ymm0, %ymm0
+; AVX256-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX256-NEXT:    vpmovmskb %ymm0, %ecx
+; AVX256-NEXT:    xorl %eax, %eax
+; AVX256-NEXT:    cmpl $-1, %ecx
+; AVX256-NEXT:    setne %al
+; AVX256-NEXT:    vzeroupper
+; AVX256-NEXT:    retq
   %a0 = load i256, i256* %a
   %b0 = load i256, i256* %b
   %xor1 = xor i256 %a0, %b0
@@ -307,34 +372,77 @@ define i32 @ne_i256_pair(i256* %a, i256* %b) {
 ; if we allowed 2 pairs of 32-byte loads per block.
 
 define i32 @eq_i256_pair(i256* %a, i256* %b) {
-; ANY-LABEL: eq_i256_pair:
-; ANY:       # %bb.0:
-; ANY-NEXT:    movq 16(%rdi), %r9
-; ANY-NEXT:    movq 24(%rdi), %r11
-; ANY-NEXT:    movq (%rdi), %r8
-; ANY-NEXT:    movq 8(%rdi), %r10
-; ANY-NEXT:    xorq 8(%rsi), %r10
-; ANY-NEXT:    xorq 24(%rsi), %r11
-; ANY-NEXT:    xorq (%rsi), %r8
-; ANY-NEXT:    xorq 16(%rsi), %r9
-; ANY-NEXT:    movq 48(%rdi), %rdx
-; ANY-NEXT:    movq 32(%rdi), %rax
-; ANY-NEXT:    movq 56(%rdi), %rcx
-; ANY-NEXT:    movq 40(%rdi), %rdi
-; ANY-NEXT:    xorq 40(%rsi), %rdi
-; ANY-NEXT:    xorq 56(%rsi), %rcx
-; ANY-NEXT:    orq %r11, %rcx
-; ANY-NEXT:    orq %rdi, %rcx
-; ANY-NEXT:    orq %r10, %rcx
-; ANY-NEXT:    xorq 32(%rsi), %rax
-; ANY-NEXT:    xorq 48(%rsi), %rdx
-; ANY-NEXT:    orq %r9, %rdx
-; ANY-NEXT:    orq %rax, %rdx
-; ANY-NEXT:    orq %r8, %rdx
-; ANY-NEXT:    xorl %eax, %eax
-; ANY-NEXT:    orq %rcx, %rdx
-; ANY-NEXT:    sete %al
-; ANY-NEXT:    retq
+; SSE2-LABEL: eq_i256_pair:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movq 16(%rdi), %r9
+; SSE2-NEXT:    movq 24(%rdi), %r11
+; SSE2-NEXT:    movq (%rdi), %r8
+; SSE2-NEXT:    movq 8(%rdi), %r10
+; SSE2-NEXT:    xorq 8(%rsi), %r10
+; SSE2-NEXT:    xorq 24(%rsi), %r11
+; SSE2-NEXT:    xorq (%rsi), %r8
+; SSE2-NEXT:    xorq 16(%rsi), %r9
+; SSE2-NEXT:    movq 48(%rdi), %rdx
+; SSE2-NEXT:    movq 32(%rdi), %rax
+; SSE2-NEXT:    movq 56(%rdi), %rcx
+; SSE2-NEXT:    movq 40(%rdi), %rdi
+; SSE2-NEXT:    xorq 40(%rsi), %rdi
+; SSE2-NEXT:    xorq 56(%rsi), %rcx
+; SSE2-NEXT:    orq %r11, %rcx
+; SSE2-NEXT:    orq %rdi, %rcx
+; SSE2-NEXT:    orq %r10, %rcx
+; SSE2-NEXT:    xorq 32(%rsi), %rax
+; SSE2-NEXT:    xorq 48(%rsi), %rdx
+; SSE2-NEXT:    orq %r9, %rdx
+; SSE2-NEXT:    orq %rax, %rdx
+; SSE2-NEXT:    orq %r8, %rdx
+; SSE2-NEXT:    xorl %eax, %eax
+; SSE2-NEXT:    orq %rcx, %rdx
+; SSE2-NEXT:    sete %al
+; SSE2-NEXT:    retq
+;
+; AVX1-LABEL: eq_i256_pair:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    movq 16(%rdi), %r9
+; AVX1-NEXT:    movq 24(%rdi), %r11
+; AVX1-NEXT:    movq (%rdi), %r8
+; AVX1-NEXT:    movq 8(%rdi), %r10
+; AVX1-NEXT:    xorq 8(%rsi), %r10
+; AVX1-NEXT:    xorq 24(%rsi), %r11
+; AVX1-NEXT:    xorq (%rsi), %r8
+; AVX1-NEXT:    xorq 16(%rsi), %r9
+; AVX1-NEXT:    movq 48(%rdi), %rdx
+; AVX1-NEXT:    movq 32(%rdi), %rax
+; AVX1-NEXT:    movq 56(%rdi), %rcx
+; AVX1-NEXT:    movq 40(%rdi), %rdi
+; AVX1-NEXT:    xorq 40(%rsi), %rdi
+; AVX1-NEXT:    xorq 56(%rsi), %rcx
+; AVX1-NEXT:    orq %r11, %rcx
+; AVX1-NEXT:    orq %rdi, %rcx
+; AVX1-NEXT:    orq %r10, %rcx
+; AVX1-NEXT:    xorq 32(%rsi), %rax
+; AVX1-NEXT:    xorq 48(%rsi), %rdx
+; AVX1-NEXT:    orq %r9, %rdx
+; AVX1-NEXT:    orq %rax, %rdx
+; AVX1-NEXT:    orq %r8, %rdx
+; AVX1-NEXT:    xorl %eax, %eax
+; AVX1-NEXT:    orq %rcx, %rdx
+; AVX1-NEXT:    sete %al
+; AVX1-NEXT:    retq
+;
+; AVX256-LABEL: eq_i256_pair:
+; AVX256:       # %bb.0:
+; AVX256-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX256-NEXT:    vmovdqu 32(%rdi), %ymm1
+; AVX256-NEXT:    vpcmpeqb 32(%rsi), %ymm1, %ymm1
+; AVX256-NEXT:    vpcmpeqb (%rsi), %ymm0, %ymm0
+; AVX256-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX256-NEXT:    vpmovmskb %ymm0, %ecx
+; AVX256-NEXT:    xorl %eax, %eax
+; AVX256-NEXT:    cmpl $-1, %ecx
+; AVX256-NEXT:    sete %al
+; AVX256-NEXT:    vzeroupper
+; AVX256-NEXT:    retq
   %a0 = load i256, i256* %a
   %b0 = load i256, i256* %b
   %xor1 = xor i256 %a0, %b0

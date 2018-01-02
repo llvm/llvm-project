@@ -419,6 +419,9 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   EmitIfUsed(*this, TerminateHandler);
   EmitIfUsed(*this, UnreachableBlock);
 
+  for (const auto &FuncletAndParent : TerminateFunclets)
+    EmitIfUsed(*this, FuncletAndParent.second);
+
   if (CGM.getCodeGenOpts().EmitDeclMetadata)
     EmitDeclMetadata();
 

@@ -980,9 +980,10 @@ template <unsigned> struct __static_assert_check {};
 #define _LIBCPP_NODISCARD_AFTER_CXX17
 #endif
 
-// FIXME: Remove all usages of this macro once compilers catch up.
-#if !defined(__cpp_inline_variables) || (__cpp_inline_variables < 201606L)
-# define _LIBCPP_HAS_NO_INLINE_VARIABLES
+#if _LIBCPP_STD_VER > 14 && defined(__cpp_inline_variables) && (__cpp_inline_variables >= 201606L)
+# define _LIBCPP_INLINE_VAR  inline
+#else
+# define _LIBCPP_INLINE_VAR  
 #endif
 
 #ifdef _LIBCPP_HAS_NO_RVALUE_REFERENCES

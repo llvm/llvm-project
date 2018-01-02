@@ -501,6 +501,13 @@ private:
   }
 #endif
 
+#if defined(_LIBUNWIND_TARGET_PPC64)
+  int stepWithCompactEncoding(Registers_ppc64 &) {
+    return UNW_EINVAL;
+  }
+#endif
+
+
 #if defined(_LIBUNWIND_TARGET_AARCH64)
   int stepWithCompactEncoding(Registers_arm64 &) {
     return CompactUnwinder_arm64<A>::stepWithCompactEncoding(
@@ -553,6 +560,12 @@ private:
   }
 #endif
 
+#if defined(_LIBUNWIND_TARGET_PPC64)
+  bool compactSaysUseDwarf(Registers_ppc64 &, uint32_t *) const {
+    return true;
+  }
+#endif
+
 #if defined(_LIBUNWIND_TARGET_AARCH64)
   bool compactSaysUseDwarf(Registers_arm64 &, uint32_t *offset) const {
     if ((_info.format & UNWIND_ARM64_MODE_MASK) == UNWIND_ARM64_MODE_DWARF) {
@@ -597,6 +610,12 @@ private:
 
 #if defined(_LIBUNWIND_TARGET_PPC)
   compact_unwind_encoding_t dwarfEncoding(Registers_ppc &) const {
+    return 0;
+  }
+#endif
+
+#if defined(_LIBUNWIND_TARGET_PPC64)
+  compact_unwind_encoding_t dwarfEncoding(Registers_ppc64 &) const {
     return 0;
   }
 #endif
