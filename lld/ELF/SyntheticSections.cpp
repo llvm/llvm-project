@@ -1064,7 +1064,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
     addInt(DT_DEBUG, 0);
 
   this->Link = InX::DynStrTab->getParent()->SectionIndex;
-  if (InX::RelaDyn->getParent() && !InX::RelaDyn->empty()) {
+  if (!InX::RelaDyn->empty()) {
     addInSec(InX::RelaDyn->DynamicTag, InX::RelaDyn);
     addSize(InX::RelaDyn->SizeDynamicTag, InX::RelaDyn->getParent());
 
@@ -1081,7 +1081,13 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
         addInt(IsRela ? DT_RELACOUNT : DT_RELCOUNT, NumRelativeRels);
     }
   }
-  if (InX::RelaPlt->getParent() && !InX::RelaPlt->empty()) {
+  // .rel[a].plt section usually consists of two parts, containing plt and
+  // iplt relocations. It is possible to have only iplt relocations in the
+  // output. In that case RelaPlt is empty and have zero offset, the same offset
+  // as RelaIplt have. And we still want to emit proper dynamic tags for that
+  // case, so here we always use RelaPlt as marker for the begining of
+  // .rel[a].plt section.
+  if (InX::RelaPlt->getParent()->Live) {
     addInSec(DT_JMPREL, InX::RelaPlt);
     addSize(DT_PLTRELSZ, InX::RelaPlt->getParent());
     switch (Config->EMachine) {

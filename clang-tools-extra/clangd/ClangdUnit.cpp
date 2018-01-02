@@ -529,11 +529,21 @@ CppFile::deferRebuild(StringRef NewContents,
       IntrusiveRefCntPtr<DiagnosticsEngine> PreambleDiagsEngine =
           CompilerInstance::createDiagnostics(
               &CI->getDiagnosticOpts(), &PreambleDiagnosticsConsumer, false);
+
+      // Skip function bodies when building the preamble to speed up building
+      // the preamble and make it smaller.
+      assert(!CI->getFrontendOpts().SkipFunctionBodies);
+      CI->getFrontendOpts().SkipFunctionBodies = true;
+
       CppFilePreambleCallbacks SerializedDeclsCollector;
       auto BuiltPreamble = PrecompiledPreamble::Build(
           *CI, ContentsBuffer.get(), Bounds, *PreambleDiagsEngine, VFS, PCHs,
           /*StoreInMemory=*/That->StorePreamblesInMemory,
           SerializedDeclsCollector);
+
+      // When building the AST for the main file, we do want the function
+      // bodies.
+      CI->getFrontendOpts().SkipFunctionBodies = false;
 
       if (BuiltPreamble) {
         log(Ctx, "Built preamble of size " + Twine(BuiltPreamble->getSize()) +

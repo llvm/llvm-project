@@ -54,6 +54,7 @@ namespace {
 using namespace llvm;
 using ::testing::AllOf;
 using ::testing::Contains;
+using ::testing::Each;
 using ::testing::ElementsAre;
 using ::testing::Not;
 
@@ -75,6 +76,11 @@ MATCHER_P(Snippet, Text, "") {
   return arg.insertTextFormat == clangd::InsertTextFormat::Snippet &&
          arg.insertText == Text;
 }
+MATCHER(FilterContainsName, "") {
+  if (arg.filterText.empty())
+    return true;
+  return llvm::StringRef(arg.insertText).contains(arg.filterText);
+}
 // Shorthand for Contains(Named(Name)).
 Matcher<const std::vector<CompletionItem> &> Has(std::string Name) {
   return Contains(Named(std::move(Name)));
@@ -95,9 +101,13 @@ CompletionList completions(StringRef Text,
   auto File = getVirtualTestFilePath("foo.cpp");
   Annotations Test(Text);
   Server.addDocument(Context::empty(), File, Test.code());
-  return Server.codeComplete(Context::empty(), File, Test.point(), Opts)
-      .get()
-      .second.Value;
+  auto CompletionList =
+      Server.codeComplete(Context::empty(), File, Test.point(), Opts)
+          .get()
+          .second.Value;
+  // Sanity-check that filterText is valid.
+  EXPECT_THAT(CompletionList.items, Each(FilterContainsName()));
+  return CompletionList;
 }
 
 TEST(CompletionTest, Limit) {
@@ -513,7 +523,7 @@ TEST(CompletionTest, IndexBasedWithFilter) {
       void f() { ns::x^ }
   )cpp",
                              Opts);
-  EXPECT_THAT(Results.items, Contains(AllOf(Named("XYZ"), Filter("x"))));
+  EXPECT_THAT(Results.items, Contains(AllOf(Named("XYZ"), Filter("XYZ"))));
   EXPECT_THAT(Results.items, Not(Has("foo")));
 }
 
