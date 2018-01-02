@@ -564,7 +564,7 @@ struct _LIBCPP_TEMPLATE_VIS allocator_arg_t { };
 #if defined(_LIBCPP_CXX03_LANG) || defined(_LIBCPP_BUILDING_MEMORY)
 extern const allocator_arg_t allocator_arg;
 #else
-_LIBCPP_INLINE_VAR constexpr allocator_arg_t allocator_arg = allocator_arg_t();
+/* _LIBCPP_INLINE_VAR */ constexpr allocator_arg_t allocator_arg = allocator_arg_t();
 #endif
 
 // uses_allocator
