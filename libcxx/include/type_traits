@@ -4523,12 +4523,14 @@ struct _LIBCPP_TEMPLATE_VIS is_invocable_r
     : integral_constant<bool, __invokable_r<_Ret, _Fn, _Args...>::value> {};
 
 template <class _Fn, class ..._Args>
-constexpr bool is_invocable_v = is_invocable<_Fn, _Args...>::value;
+_LIBCPP_INLINE_VAR constexpr bool is_invocable_v
+    = is_invocable<_Fn, _Args...>::value;
 
 template <class _Ret, class _Fn, class ..._Args>
-constexpr bool is_invocable_r_v = is_invocable_r<_Ret, _Fn, _Args...>::value;
+_LIBCPP_INLINE_VAR constexpr bool is_invocable_r_v
+    = is_invocable_r<_Ret, _Fn, _Args...>::value;
 
-// is_nothrow_callable
+// is_nothrow_invocable
 
 template <class _Fn, class ..._Args>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_invocable
@@ -4539,10 +4541,12 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_invocable_r
     : integral_constant<bool, __nothrow_invokable_r<_Ret, _Fn, _Args...>::value> {};
 
 template <class _Fn, class ..._Args>
-constexpr bool is_nothrow_invocable_v = is_nothrow_invocable<_Fn, _Args...>::value;
+_LIBCPP_INLINE_VAR constexpr bool is_nothrow_invocable_v
+    = is_nothrow_invocable<_Fn, _Args...>::value;
 
 template <class _Ret, class _Fn, class ..._Args>
-constexpr bool is_nothrow_invocable_r_v = is_nothrow_invocable_r<_Ret, _Fn, _Args...>::value;
+_LIBCPP_INLINE_VAR constexpr bool is_nothrow_invocable_r_v
+    = is_nothrow_invocable_r<_Ret, _Fn, _Args...>::value;
 
 #endif // _LIBCPP_STD_VER > 14
 
@@ -4682,10 +4686,12 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_swappable
 };
 
 template <class _Tp, class _Up>
-constexpr bool is_swappable_with_v = is_swappable_with<_Tp, _Up>::value;
+_LIBCPP_INLINE_VAR constexpr bool is_swappable_with_v
+    = is_swappable_with<_Tp, _Up>::value;
 
 template <class _Tp>
-constexpr bool is_swappable_v = is_swappable<_Tp>::value;
+_LIBCPP_INLINE_VAR constexpr bool is_swappable_v
+    = is_swappable<_Tp>::value;
 
 template <class _Tp, class _Up>
 _LIBCPP_INLINE_VAR constexpr bool is_nothrow_swappable_with_v
