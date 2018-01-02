@@ -1106,6 +1106,583 @@ inline const char *Registers_ppc::getRegisterName(int regNum) {
 }
 #endif // _LIBUNWIND_TARGET_PPC
 
+#if defined(_LIBUNWIND_TARGET_PPC64)
+/// Registers_ppc holds the register state of a thread in a 64-bit PowerPC
+/// process.
+class _LIBUNWIND_HIDDEN Registers_ppc64 {
+public:
+  Registers_ppc64();
+  Registers_ppc64(const void *registers);
+
+  bool        validRegister(int num) const;
+  uint64_t    getRegister(int num) const;
+  void        setRegister(int num, uint64_t value);
+  bool        validFloatRegister(int num) const;
+  double      getFloatRegister(int num) const;
+  void        setFloatRegister(int num, double value);
+  bool        validVectorRegister(int num) const;
+  v128        getVectorRegister(int num) const;
+  void        setVectorRegister(int num, v128 value);
+  const char *getRegisterName(int num);
+  void        jumpto();
+  static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_PPC64; }
+
+  uint64_t  getSP() const         { return _registers.__r1; }
+  void      setSP(uint64_t value) { _registers.__r1 = value; }
+  uint64_t  getIP() const         { return _registers.__srr0; }
+  void      setIP(uint64_t value) { _registers.__srr0 = value; }
+
+private:
+  struct ppc64_thread_state_t {
+    uint64_t __srr0; /* Instruction address register (PC) */
+    uint64_t __srr1; /* Machine state register (supervisor) */
+    uint64_t __r0;
+    uint64_t __r1;
+    uint64_t __r2;
+    uint64_t __r3;
+    uint64_t __r4;
+    uint64_t __r5;
+    uint64_t __r6;
+    uint64_t __r7;
+    uint64_t __r8;
+    uint64_t __r9;
+    uint64_t __r10;
+    uint64_t __r11;
+    uint64_t __r12;
+    uint64_t __r13;
+    uint64_t __r14;
+    uint64_t __r15;
+    uint64_t __r16;
+    uint64_t __r17;
+    uint64_t __r18;
+    uint64_t __r19;
+    uint64_t __r20;
+    uint64_t __r21;
+    uint64_t __r22;
+    uint64_t __r23;
+    uint64_t __r24;
+    uint64_t __r25;
+    uint64_t __r26;
+    uint64_t __r27;
+    uint64_t __r28;
+    uint64_t __r29;
+    uint64_t __r30;
+    uint64_t __r31;
+    uint64_t __cr;     /* Condition register */
+    uint64_t __xer;    /* User's integer exception register */
+    uint64_t __lr;     /* Link register */
+    uint64_t __ctr;    /* Count register */
+    uint64_t __vrsave; /* Vector Save Register */
+  };
+
+  struct ppc64_float_state_t {
+    double __fpregs[32];
+    uint64_t __fpscr;     /* floating point status register */
+  };
+
+  ppc64_thread_state_t _registers;
+  ppc64_float_state_t  _floatRegisters;
+  v128                 _vectorRegisters[32];
+};
+
+inline Registers_ppc64::Registers_ppc64(const void *registers) {
+  static_assert((check_fit<Registers_ppc64, unw_context_t>::does_fit),
+                "ppc64 registers do not fit into unw_context_t");
+  memcpy(&_registers, static_cast<const uint8_t *>(registers),
+         sizeof(_registers));
+  static_assert(sizeof(ppc64_thread_state_t) == 312,
+                "expected float register offset to be 312");
+  memcpy(&_floatRegisters,
+         static_cast<const uint8_t *>(registers) + sizeof(ppc64_thread_state_t),
+         sizeof(_floatRegisters));
+  static_assert(sizeof(ppc64_thread_state_t) + sizeof(ppc64_float_state_t) == 576,
+                "expected vector register offset to be 576 bytes");
+  memcpy(_vectorRegisters,
+         static_cast<const uint8_t *>(registers) + sizeof(ppc64_thread_state_t) +
+             sizeof(ppc64_float_state_t),
+         sizeof(_vectorRegisters));
+}
+
+inline Registers_ppc64::Registers_ppc64() {
+  memset(&_registers, 0, sizeof(_registers));
+  memset(&_floatRegisters, 0, sizeof(_floatRegisters));
+  memset(&_vectorRegisters, 0, sizeof(_vectorRegisters));
+}
+
+inline bool Registers_ppc64::validRegister(int regNum) const {
+  switch (regNum) {
+  case UNW_REG_IP:
+  case UNW_REG_SP:
+  case UNW_PPC64_VRSAVE:
+  case UNW_PPC64_LR:
+  case UNW_PPC64_CTR:
+      return true;
+  }
+
+  if (regNum >= UNW_PPC64_R0 && regNum <= UNW_PPC64_R31)
+    return true;
+  if (regNum >= UNW_PPC64_CR0 && regNum <= UNW_PPC64_CR7)
+    return true;
+
+  return false;
+}
+
+inline uint64_t Registers_ppc64::getRegister(int regNum) const {
+  switch (regNum) {
+  case UNW_REG_IP:
+    return _registers.__srr0;
+  case UNW_REG_SP:
+    return _registers.__r1;
+  case UNW_PPC64_R0:
+    return _registers.__r0;
+  case UNW_PPC64_R1:
+    return _registers.__r1;
+  case UNW_PPC64_R2:
+    return _registers.__r2;
+  case UNW_PPC64_R3:
+    return _registers.__r3;
+  case UNW_PPC64_R4:
+    return _registers.__r4;
+  case UNW_PPC64_R5:
+    return _registers.__r5;
+  case UNW_PPC64_R6:
+    return _registers.__r6;
+  case UNW_PPC64_R7:
+    return _registers.__r7;
+  case UNW_PPC64_R8:
+    return _registers.__r8;
+  case UNW_PPC64_R9:
+    return _registers.__r9;
+  case UNW_PPC64_R10:
+    return _registers.__r10;
+  case UNW_PPC64_R11:
+    return _registers.__r11;
+  case UNW_PPC64_R12:
+    return _registers.__r12;
+  case UNW_PPC64_R13:
+    return _registers.__r13;
+  case UNW_PPC64_R14:
+    return _registers.__r14;
+  case UNW_PPC64_R15:
+    return _registers.__r15;
+  case UNW_PPC64_R16:
+    return _registers.__r16;
+  case UNW_PPC64_R17:
+    return _registers.__r17;
+  case UNW_PPC64_R18:
+    return _registers.__r18;
+  case UNW_PPC64_R19:
+    return _registers.__r19;
+  case UNW_PPC64_R20:
+    return _registers.__r20;
+  case UNW_PPC64_R21:
+    return _registers.__r21;
+  case UNW_PPC64_R22:
+    return _registers.__r22;
+  case UNW_PPC64_R23:
+    return _registers.__r23;
+  case UNW_PPC64_R24:
+    return _registers.__r24;
+  case UNW_PPC64_R25:
+    return _registers.__r25;
+  case UNW_PPC64_R26:
+    return _registers.__r26;
+  case UNW_PPC64_R27:
+    return _registers.__r27;
+  case UNW_PPC64_R28:
+    return _registers.__r28;
+  case UNW_PPC64_R29:
+    return _registers.__r29;
+  case UNW_PPC64_R30:
+    return _registers.__r30;
+  case UNW_PPC64_R31:
+    return _registers.__r31;
+  case UNW_PPC64_LR:
+    return _registers.__lr;
+  case UNW_PPC64_CTR:
+    return _registers.__ctr;
+  case UNW_PPC64_CR0:
+    return (_registers.__cr & 0xF0000000);
+  case UNW_PPC64_CR1:
+    return (_registers.__cr & 0x0F000000);
+  case UNW_PPC64_CR2:
+    return (_registers.__cr & 0x00F00000);
+  case UNW_PPC64_CR3:
+    return (_registers.__cr & 0x000F0000);
+  case UNW_PPC64_CR4:
+    return (_registers.__cr & 0x0000F000);
+  case UNW_PPC64_CR5:
+    return (_registers.__cr & 0x00000F00);
+  case UNW_PPC64_CR6:
+    return (_registers.__cr & 0x000000F0);
+  case UNW_PPC64_CR7:
+    return (_registers.__cr & 0x0000000F);
+  case UNW_PPC64_VRSAVE:
+    return _registers.__vrsave;
+  case UNW_PPC64_FPSCR:
+    return _floatRegisters.__fpscr;
+  }
+  _LIBUNWIND_ABORT("unsupported ppc64 register");
+}
+
+inline void Registers_ppc64::setRegister(int regNum, uint64_t value) {
+  switch (regNum) {
+  case UNW_REG_IP:
+    _registers.__srr0 = value;
+    return;
+  case UNW_REG_SP:
+    _registers.__r1 = value;
+    return;
+  case UNW_PPC64_R0:
+    _registers.__r0 = value;
+    return;
+  case UNW_PPC64_R1:
+    _registers.__r1 = value;
+    return;
+  case UNW_PPC64_R2:
+    _registers.__r2 = value;
+    return;
+  case UNW_PPC64_R3:
+    _registers.__r3 = value;
+    return;
+  case UNW_PPC64_R4:
+    _registers.__r4 = value;
+    return;
+  case UNW_PPC64_R5:
+    _registers.__r5 = value;
+    return;
+  case UNW_PPC64_R6:
+    _registers.__r6 = value;
+    return;
+  case UNW_PPC64_R7:
+    _registers.__r7 = value;
+    return;
+  case UNW_PPC64_R8:
+    _registers.__r8 = value;
+    return;
+  case UNW_PPC64_R9:
+    _registers.__r9 = value;
+    return;
+  case UNW_PPC64_R10:
+    _registers.__r10 = value;
+    return;
+  case UNW_PPC64_R11:
+    _registers.__r11 = value;
+    return;
+  case UNW_PPC64_R12:
+    _registers.__r12 = value;
+    return;
+  case UNW_PPC64_R13:
+    _registers.__r13 = value;
+    return;
+  case UNW_PPC64_R14:
+    _registers.__r14 = value;
+    return;
+  case UNW_PPC64_R15:
+    _registers.__r15 = value;
+    return;
+  case UNW_PPC64_R16:
+    _registers.__r16 = value;
+    return;
+  case UNW_PPC64_R17:
+    _registers.__r17 = value;
+    return;
+  case UNW_PPC64_R18:
+    _registers.__r18 = value;
+    return;
+  case UNW_PPC64_R19:
+    _registers.__r19 = value;
+    return;
+  case UNW_PPC64_R20:
+    _registers.__r20 = value;
+    return;
+  case UNW_PPC64_R21:
+    _registers.__r21 = value;
+    return;
+  case UNW_PPC64_R22:
+    _registers.__r22 = value;
+    return;
+  case UNW_PPC64_R23:
+    _registers.__r23 = value;
+    return;
+  case UNW_PPC64_R24:
+    _registers.__r24 = value;
+    return;
+  case UNW_PPC64_R25:
+    _registers.__r25 = value;
+    return;
+  case UNW_PPC64_R26:
+    _registers.__r26 = value;
+    return;
+  case UNW_PPC64_R27:
+    _registers.__r27 = value;
+    return;
+  case UNW_PPC64_R28:
+    _registers.__r28 = value;
+    return;
+  case UNW_PPC64_R29:
+    _registers.__r29 = value;
+    return;
+  case UNW_PPC64_R30:
+    _registers.__r30 = value;
+    return;
+  case UNW_PPC64_R31:
+    _registers.__r31 = value;
+    return;
+  case UNW_PPC64_LR:
+    _registers.__lr = value;
+    return;
+  case UNW_PPC64_CTR:
+    _registers.__ctr = value;
+    return;
+  case UNW_PPC64_CR0:
+    _registers.__cr &= 0x0FFFFFFF;
+    _registers.__cr |= (value & 0xF0000000);
+    return;
+  case UNW_PPC64_CR1:
+    _registers.__cr &= 0xF0FFFFFF;
+    _registers.__cr |= (value & 0x0F000000);
+    return;
+  case UNW_PPC64_CR2:
+    _registers.__cr &= 0xFF0FFFFF;
+    _registers.__cr |= (value & 0x00F00000);
+    return;
+  case UNW_PPC64_CR3:
+    _registers.__cr &= 0xFFF0FFFF;
+    _registers.__cr |= (value & 0x000F0000);
+    return;
+  case UNW_PPC64_CR4:
+    _registers.__cr &= 0xFFFF0FFF;
+    _registers.__cr |= (value & 0x0000F000);
+    return;
+  case UNW_PPC64_CR5:
+    _registers.__cr &= 0xFFFFF0FF;
+    _registers.__cr |= (value & 0x00000F00);
+    return;
+  case UNW_PPC64_CR6:
+    _registers.__cr &= 0xFFFFFF0F;
+    _registers.__cr |= (value & 0x000000F0);
+    return;
+  case UNW_PPC64_CR7:
+    _registers.__cr &= 0xFFFFFFF0;
+    _registers.__cr |= (value & 0x0000000F);
+    return;
+  case UNW_PPC64_VRSAVE:
+    _registers.__vrsave = value;
+    return;
+  case UNW_PPC64_XER:
+    _registers.__xer = value;
+    return;
+  case UNW_PPC64_VSCR:
+    // not saved
+    return;
+  }
+  _LIBUNWIND_ABORT("unsupported ppc64 register");
+}
+
+inline bool Registers_ppc64::validFloatRegister(int regNum) const {
+  if (regNum < UNW_PPC64_F0)
+    return false;
+  if (regNum > UNW_PPC64_F31)
+    return false;
+  return true;
+}
+
+inline double Registers_ppc64::getFloatRegister(int regNum) const {
+  assert(validFloatRegister(regNum));
+  return _floatRegisters.__fpregs[regNum - UNW_PPC64_F0];
+}
+
+inline void Registers_ppc64::setFloatRegister(int regNum, double value) {
+  assert(validFloatRegister(regNum));
+  _floatRegisters.__fpregs[regNum - UNW_PPC64_F0] = value;
+}
+
+inline bool Registers_ppc64::validVectorRegister(int regNum) const {
+  if (regNum < UNW_PPC64_V0)
+    return false;
+  if (regNum > UNW_PPC64_V31)
+    return false;
+  return true;
+}
+
+inline v128 Registers_ppc64::getVectorRegister(int regNum) const {
+  assert(validVectorRegister(regNum));
+  v128 result = _vectorRegisters[regNum - UNW_PPC64_V0];
+  return result;
+}
+
+inline void Registers_ppc64::setVectorRegister(int regNum, v128 value) {
+  assert(validVectorRegister(regNum));
+  _vectorRegisters[regNum - UNW_PPC64_V0] = value;
+}
+
+inline const char *Registers_ppc64::getRegisterName(int regNum) {
+  switch (regNum) {
+  case UNW_REG_IP:
+    return "ip";
+  case UNW_REG_SP:
+    return "sp";
+  case UNW_PPC64_R0:
+    return "r0";
+  case UNW_PPC64_R1:
+    return "r1";
+  case UNW_PPC64_R2:
+    return "r2";
+  case UNW_PPC64_R3:
+    return "r3";
+  case UNW_PPC64_R4:
+    return "r4";
+  case UNW_PPC64_R5:
+    return "r5";
+  case UNW_PPC64_R6:
+    return "r6";
+  case UNW_PPC64_R7:
+    return "r7";
+  case UNW_PPC64_R8:
+    return "r8";
+  case UNW_PPC64_R9:
+    return "r9";
+  case UNW_PPC64_R10:
+    return "r10";
+  case UNW_PPC64_R11:
+    return "r11";
+  case UNW_PPC64_R12:
+    return "r12";
+  case UNW_PPC64_R13:
+    return "r13";
+  case UNW_PPC64_R14:
+    return "r14";
+  case UNW_PPC64_R15:
+    return "r15";
+  case UNW_PPC64_R16:
+    return "r16";
+  case UNW_PPC64_R17:
+    return "r17";
+  case UNW_PPC64_R18:
+    return "r18";
+  case UNW_PPC64_R19:
+    return "r19";
+  case UNW_PPC64_R20:
+    return "r20";
+  case UNW_PPC64_R21:
+    return "r21";
+  case UNW_PPC64_R22:
+    return "r22";
+  case UNW_PPC64_R23:
+    return "r23";
+  case UNW_PPC64_R24:
+    return "r24";
+  case UNW_PPC64_R25:
+    return "r25";
+  case UNW_PPC64_R26:
+    return "r26";
+  case UNW_PPC64_R27:
+    return "r27";
+  case UNW_PPC64_R28:
+    return "r28";
+  case UNW_PPC64_R29:
+    return "r29";
+  case UNW_PPC64_R30:
+    return "r30";
+  case UNW_PPC64_R31:
+    return "r31";
+  case UNW_PPC64_F0:
+    return "fp0";
+  case UNW_PPC64_F1:
+    return "fp1";
+  case UNW_PPC64_F2:
+    return "fp2";
+  case UNW_PPC64_F3:
+    return "fp3";
+  case UNW_PPC64_F4:
+    return "fp4";
+  case UNW_PPC64_F5:
+    return "fp5";
+  case UNW_PPC64_F6:
+    return "fp6";
+  case UNW_PPC64_F7:
+    return "fp7";
+  case UNW_PPC64_F8:
+    return "fp8";
+  case UNW_PPC64_F9:
+    return "fp9";
+  case UNW_PPC64_F10:
+    return "fp10";
+  case UNW_PPC64_F11:
+    return "fp11";
+  case UNW_PPC64_F12:
+    return "fp12";
+  case UNW_PPC64_F13:
+    return "fp13";
+  case UNW_PPC64_F14:
+    return "fp14";
+  case UNW_PPC64_F15:
+    return "fp15";
+  case UNW_PPC64_F16:
+    return "fp16";
+  case UNW_PPC64_F17:
+    return "fp17";
+  case UNW_PPC64_F18:
+    return "fp18";
+  case UNW_PPC64_F19:
+    return "fp19";
+  case UNW_PPC64_F20:
+    return "fp20";
+  case UNW_PPC64_F21:
+    return "fp21";
+  case UNW_PPC64_F22:
+    return "fp22";
+  case UNW_PPC64_F23:
+    return "fp23";
+  case UNW_PPC64_F24:
+    return "fp24";
+  case UNW_PPC64_F25:
+    return "fp25";
+  case UNW_PPC64_F26:
+    return "fp26";
+  case UNW_PPC64_F27:
+    return "fp27";
+  case UNW_PPC64_F28:
+    return "fp28";
+  case UNW_PPC64_F29:
+    return "fp29";
+  case UNW_PPC64_F30:
+    return "fp30";
+  case UNW_PPC64_F31:
+    return "fp31";
+  case UNW_PPC64_LR:
+    return "lr";
+  case UNW_PPC64_CTR:
+    return "ctr";
+  case UNW_PPC64_CR0:
+    return "cr0";
+  case UNW_PPC64_CR1:
+    return "cr1";
+  case UNW_PPC64_CR2:
+    return "cr2";
+  case UNW_PPC64_CR3:
+    return "cr3";
+  case UNW_PPC64_CR4:
+    return "cr4";
+  case UNW_PPC64_CR5:
+    return "cr5";
+  case UNW_PPC64_CR6:
+    return "cr6";
+  case UNW_PPC64_CR7:
+    return "cr7";
+  case UNW_PPC64_XER:
+    return "xer";
+  case UNW_PPC64_VRSAVE:
+    return "vrsave";
+  case UNW_PPC64_FPSCR:
+    return "fpscr";
+  default:
+    return "unknown register";
+  }
+}
+#endif // _LIBUNWIND_TARGET_PPC64
+
 
 #if defined(_LIBUNWIND_TARGET_AARCH64)
 /// Registers_arm64  holds the register state of a thread in a 64-bit arm
