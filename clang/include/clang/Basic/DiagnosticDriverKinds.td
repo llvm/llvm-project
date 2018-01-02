@@ -112,6 +112,18 @@ def err_drv_invalid_argument_to_fdebug_prefix_map : Error<
   "invalid argument '%0' to -fdebug-prefix-map">;
 def err_drv_malformed_sanitizer_blacklist : Error<
   "malformed sanitizer blacklist: '%0'">;
+def err_drv_duplicate_config : Error<
+  "no more than one option '--config' is allowed">;
+def err_drv_config_file_not_exist : Error<
+  "configuration file '%0' does not exist">;
+def err_drv_config_file_not_found : Error<
+  "configuration file '%0' cannot be found">;
+def note_drv_config_file_searched_in : Note<
+  "was searched for in the directory: %0">;
+def err_drv_cannot_read_config_file : Error<
+  "cannot read configuration file '%0'">;
+def err_drv_nested_config_file: Error<
+  "option '--config' is not allowed inside configuration file">;
 
 def err_target_unsupported_arch
   : Error<"the target architecture '%0' is not supported by the target '%1'">;
