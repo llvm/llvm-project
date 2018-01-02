@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
@@ -2450,122 +2451,34 @@ TEST(YAMLIO, TestCustomMappingStruct) {
   EXPECT_EQ(4, y["bar"].bar);
 }
 
-TEST(YAMLIO, InvalidInput) {
-  // polluting 1 value in the sequence
-  Input yin("---\n- foo:  3\n  bar:  5\n1\n- foo:  3\n  bar:  5\n...\n");
-  std::vector<FooBar> Data;
-  yin >> Data;
-  EXPECT_TRUE((bool)yin.error());
-}
-
-TEST(YAMLIO, TestEscapedSingleQuote) {
-  std::string Id = "@abc@";
-
+static void TestEscaped(llvm::StringRef Input, llvm::StringRef Expected) {
   std::string out;
   llvm::raw_string_ostream ostr(out);
   Output xout(ostr, nullptr, 0);
 
   llvm::yaml::EmptyContext Ctx;
-  yamlize(xout, Id, true, Ctx);
+  yamlize(xout, Input, true, Ctx);
 
   ostr.flush();
-  EXPECT_EQ("'@abc@'", out);
+  EXPECT_EQ(Expected, out);
 }
 
-TEST(YAMLIO, TestEscapedNoQuote) {
-  std::string Id = "abc/";
-
-  std::string out;
-  llvm::raw_string_ostream ostr(out);
-  Output xout(ostr, nullptr, 0);
-
-  llvm::yaml::EmptyContext Ctx;
-  yamlize(xout, Id, true, Ctx);
-
-  ostr.flush();
-  EXPECT_EQ("abc/", out);
-}
-
-TEST(YAMLIO, TestEscapedDoubleQuoteNonPrintable) {
-  std::string Id = "\01@abc@";
-
-  std::string out;
-  llvm::raw_string_ostream ostr(out);
-  Output xout(ostr, nullptr, 0);
-
-  llvm::yaml::EmptyContext Ctx;
-  yamlize(xout, Id, true, Ctx);
-
-  ostr.flush();
-  EXPECT_EQ("\"\\x01@abc@\"", out);
-}
-
-TEST(YAMLIO, TestEscapedDoubleQuoteInsideSingleQuote) {
-  std::string Id = "abc\"fdf";
-
-  std::string out;
-  llvm::raw_string_ostream ostr(out);
-  Output xout(ostr, nullptr, 0);
-
-  llvm::yaml::EmptyContext Ctx;
-  yamlize(xout, Id, true, Ctx);
-
-  ostr.flush();
-  EXPECT_EQ("'abc\"fdf'", out);
-}
-
-TEST(YAMLIO, TestEscapedDoubleQuoteInsideDoubleQuote) {
-  std::string Id = "\01bc\"fdf";
-
-  std::string out;
-  llvm::raw_string_ostream ostr(out);
-  Output xout(ostr, nullptr, 0);
-
-  llvm::yaml::EmptyContext Ctx;
-  yamlize(xout, Id, true, Ctx);
-
-  ostr.flush();
-  EXPECT_EQ("\"\\x01bc\\\"fdf\"", out);
-}
-
-TEST(YAMLIO, TestEscapedSingleQuoteInsideSingleQuote) {
-  std::string Id = "abc'fdf";
-
-  std::string out;
-  llvm::raw_string_ostream ostr(out);
-  Output xout(ostr, nullptr, 0);
-
-  llvm::yaml::EmptyContext Ctx;
-  yamlize(xout, Id, true, Ctx);
-
-  ostr.flush();
-  EXPECT_EQ("'abc''fdf'", out);
-}
-
-TEST(YAMLIO, TestEscapedUTF8SingleQuoteInsideDoubleQuote) {
-  std::string Id = "parameter 'параметр' is unused";
-
-  std::string out;
-  llvm::raw_string_ostream ostr(out);
-  Output xout(ostr, nullptr, 0);
-
-  llvm::yaml::EmptyContext Ctx;
-  yamlize(xout, Id, true, Ctx);
-
-  ostr.flush();
-  EXPECT_EQ("\"parameter 'параметр' is unused\"", out);
-}
-
-TEST(YAMLIO, TestEscapedUTF8) {
-  std::string Id = "/*параметр*/";
-
-  std::string out;
-  llvm::raw_string_ostream ostr(out);
-  Output xout(ostr, nullptr, 0);
-
-  llvm::yaml::EmptyContext Ctx;
-  yamlize(xout, Id, true, Ctx);
-
-  ostr.flush();
-  EXPECT_EQ("\"/*параметр*/\"", out);
+TEST(YAMLIO, TestEscaped) {
+  // Single quote
+  TestEscaped("@abc@", "'@abc@'");
+  // No quote
+  TestEscaped("abc/", "abc/");
+  // Double quote non-printable
+  TestEscaped("\01@abc@", "\"\\x01@abc@\"");
+  // Double quote inside single quote
+  TestEscaped("abc\"fdf", "'abc\"fdf'");
+  // Double quote inside double quote
+  TestEscaped("\01bc\"fdf", "\"\\x01bc\\\"fdf\"");
+  // Single quote inside single quote
+  TestEscaped("abc'fdf", "'abc''fdf'");
+  // UTF8
+  TestEscaped("/*параметр*/", "\"/*параметр*/\"");
+  // UTF8 with single quote inside double quote
+  TestEscaped("parameter 'параметр' is unused",
+              "\"parameter 'параметр' is unused\"");
 }
