@@ -3438,9 +3438,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_FCOPYSIGN(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_Convert(SDNode *N) {
-  // Since the result is legal and the input is illegal, it is unlikely that we
-  // can fix the input to a legal type so unroll the convert into some scalar
-  // code and create a nasty build vector.
+  // Since the result is legal and the input is illegal.
   EVT VT = N->getValueType(0);
   EVT EltVT = VT.getVectorElementType();
   SDLoc dl(N);
@@ -3451,9 +3449,20 @@ SDValue DAGTypeLegalizer::WidenVecOp_Convert(SDNode *N) {
          "Unexpected type action");
   InOp = GetWidenedVector(InOp);
   EVT InVT = InOp.getValueType();
+  unsigned Opcode = N->getOpcode();
+
+  // See if a widened result type would be legal, if so widen the node.
+  EVT WideVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
+                                InVT.getVectorNumElements());
+  if (TLI.isTypeLegal(WideVT)) {
+    SDValue Res = DAG.getNode(Opcode, dl, WideVT, InOp);
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, Res,
+                       DAG.getIntPtrConstant(0, dl));
+  }
+
   EVT InEltVT = InVT.getVectorElementType();
 
-  unsigned Opcode = N->getOpcode();
+  // Unroll the convert into some scalar code and create a nasty build vector.
   SmallVector<SDValue, 16> Ops(NumElts);
   for (unsigned i=0; i < NumElts; ++i)
     Ops[i] = DAG.getNode(

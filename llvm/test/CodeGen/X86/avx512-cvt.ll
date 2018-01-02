@@ -2101,57 +2101,37 @@ define <8 x i64> @test_8f64toub(<8 x double> %a, <8 x i64> %passthru) {
 }
 
 define <2 x i64> @test_2f32toub(<2 x float> %a, <2 x i64> %passthru) {
-; NOVL-LABEL: test_2f32toub:
-; NOVL:       # %bb.0:
-; NOVL-NEXT:    vcvttss2usi %xmm0, %rax
-; NOVL-NEXT:    vmovq %rax, %xmm2
-; NOVL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; NOVL-NEXT:    vcvttss2usi %xmm0, %rax
-; NOVL-NEXT:    vmovq %rax, %xmm0
-; NOVL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm2[0],xmm0[0]
-; NOVL-NEXT:    vpsllq $63, %xmm0, %xmm0
-; NOVL-NEXT:    vpsraq $63, %zmm0, %zmm0
-; NOVL-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; NOVL-NEXT:    vzeroupper
-; NOVL-NEXT:    retq
+; NOVLDQ-LABEL: test_2f32toub:
+; NOVLDQ:       # %bb.0:
+; NOVLDQ-NEXT:    vcvttss2usi %xmm0, %rax
+; NOVLDQ-NEXT:    vmovq %rax, %xmm2
+; NOVLDQ-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; NOVLDQ-NEXT:    vcvttss2usi %xmm0, %rax
+; NOVLDQ-NEXT:    vmovq %rax, %xmm0
+; NOVLDQ-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm2[0],xmm0[0]
+; NOVLDQ-NEXT:    vpsllq $63, %xmm0, %xmm0
+; NOVLDQ-NEXT:    vpsraq $63, %zmm0, %zmm0
+; NOVLDQ-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; NOVLDQ-NEXT:    vzeroupper
+; NOVLDQ-NEXT:    retq
 ;
-; VLBW-LABEL: test_2f32toub:
-; VLBW:       # %bb.0:
-; VLBW-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; VLBW-NEXT:    vcvttss2si %xmm2, %eax
-; VLBW-NEXT:    kmovd %eax, %k0
-; VLBW-NEXT:    vcvttss2si %xmm0, %eax
-; VLBW-NEXT:    andl $1, %eax
-; VLBW-NEXT:    kmovw %eax, %k1
-; VLBW-NEXT:    kshiftrw $1, %k0, %k2
-; VLBW-NEXT:    kshiftlw $1, %k2, %k2
-; VLBW-NEXT:    korw %k1, %k2, %k1
-; VLBW-NEXT:    kshiftrw $1, %k1, %k2
-; VLBW-NEXT:    kxorw %k0, %k2, %k0
-; VLBW-NEXT:    kshiftlw $15, %k0, %k0
-; VLBW-NEXT:    kshiftrw $14, %k0, %k0
-; VLBW-NEXT:    kxorw %k1, %k0, %k1
-; VLBW-NEXT:    vmovdqa64 %xmm1, %xmm0 {%k1} {z}
-; VLBW-NEXT:    retq
+; VL-LABEL: test_2f32toub:
+; VL:       # %bb.0:
+; VL-NEXT:    vcvttps2dq %xmm0, %xmm0
+; VL-NEXT:    vpslld $31, %xmm0, %xmm0
+; VL-NEXT:    vptestmd %xmm0, %xmm0, %k1
+; VL-NEXT:    vmovdqa64 %xmm1, %xmm0 {%k1} {z}
+; VL-NEXT:    retq
 ;
-; VLNOBW-LABEL: test_2f32toub:
-; VLNOBW:       # %bb.0:
-; VLNOBW-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; VLNOBW-NEXT:    vcvttss2si %xmm2, %eax
-; VLNOBW-NEXT:    kmovw %eax, %k0
-; VLNOBW-NEXT:    vcvttss2si %xmm0, %eax
-; VLNOBW-NEXT:    andl $1, %eax
-; VLNOBW-NEXT:    kmovw %eax, %k1
-; VLNOBW-NEXT:    kshiftrw $1, %k0, %k2
-; VLNOBW-NEXT:    kshiftlw $1, %k2, %k2
-; VLNOBW-NEXT:    korw %k1, %k2, %k1
-; VLNOBW-NEXT:    kshiftrw $1, %k1, %k2
-; VLNOBW-NEXT:    kxorw %k0, %k2, %k0
-; VLNOBW-NEXT:    kshiftlw $15, %k0, %k0
-; VLNOBW-NEXT:    kshiftrw $14, %k0, %k0
-; VLNOBW-NEXT:    kxorw %k1, %k0, %k1
-; VLNOBW-NEXT:    vmovdqa64 %xmm1, %xmm0 {%k1} {z}
-; VLNOBW-NEXT:    retq
+; AVX512DQ-LABEL: test_2f32toub:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
+; AVX512DQ-NEXT:    vcvttps2uqq %ymm0, %zmm0
+; AVX512DQ-NEXT:    vpsllq $63, %xmm0, %xmm0
+; AVX512DQ-NEXT:    vpsraq $63, %zmm0, %zmm0
+; AVX512DQ-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512DQ-NEXT:    vzeroupper
+; AVX512DQ-NEXT:    retq
   %mask = fptoui <2 x float> %a to <2 x i1>
   %select = select <2 x i1> %mask, <2 x i64> %passthru, <2 x i64> zeroinitializer
   ret <2 x i64> %select
@@ -2285,54 +2265,31 @@ define <8 x i64> @test_8f64tosb(<8 x double> %a, <8 x i64> %passthru) {
 }
 
 define <2 x i64> @test_2f32tosb(<2 x float> %a, <2 x i64> %passthru) {
-; NOVL-LABEL: test_2f32tosb:
-; NOVL:       # %bb.0:
-; NOVL-NEXT:    vcvttss2si %xmm0, %rax
-; NOVL-NEXT:    vmovq %rax, %xmm2
-; NOVL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; NOVL-NEXT:    vcvttss2si %xmm0, %rax
-; NOVL-NEXT:    vmovq %rax, %xmm0
-; NOVL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm2[0],xmm0[0]
-; NOVL-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; NOVL-NEXT:    retq
+; NOVLDQ-LABEL: test_2f32tosb:
+; NOVLDQ:       # %bb.0:
+; NOVLDQ-NEXT:    vcvttss2si %xmm0, %rax
+; NOVLDQ-NEXT:    vmovq %rax, %xmm2
+; NOVLDQ-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; NOVLDQ-NEXT:    vcvttss2si %xmm0, %rax
+; NOVLDQ-NEXT:    vmovq %rax, %xmm0
+; NOVLDQ-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm2[0],xmm0[0]
+; NOVLDQ-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; NOVLDQ-NEXT:    retq
 ;
-; VLBW-LABEL: test_2f32tosb:
-; VLBW:       # %bb.0:
-; VLBW-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; VLBW-NEXT:    vcvttss2si %xmm2, %eax
-; VLBW-NEXT:    kmovd %eax, %k0
-; VLBW-NEXT:    vcvttss2si %xmm0, %eax
-; VLBW-NEXT:    andl $1, %eax
-; VLBW-NEXT:    kmovw %eax, %k1
-; VLBW-NEXT:    kshiftrw $1, %k0, %k2
-; VLBW-NEXT:    kshiftlw $1, %k2, %k2
-; VLBW-NEXT:    korw %k1, %k2, %k1
-; VLBW-NEXT:    kshiftrw $1, %k1, %k2
-; VLBW-NEXT:    kxorw %k0, %k2, %k0
-; VLBW-NEXT:    kshiftlw $15, %k0, %k0
-; VLBW-NEXT:    kshiftrw $14, %k0, %k0
-; VLBW-NEXT:    kxorw %k1, %k0, %k1
-; VLBW-NEXT:    vmovdqa64 %xmm1, %xmm0 {%k1} {z}
-; VLBW-NEXT:    retq
+; VL-LABEL: test_2f32tosb:
+; VL:       # %bb.0:
+; VL-NEXT:    vcvttps2dq %xmm0, %xmm0
+; VL-NEXT:    vptestmd %xmm0, %xmm0, %k1
+; VL-NEXT:    vmovdqa64 %xmm1, %xmm0 {%k1} {z}
+; VL-NEXT:    retq
 ;
-; VLNOBW-LABEL: test_2f32tosb:
-; VLNOBW:       # %bb.0:
-; VLNOBW-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; VLNOBW-NEXT:    vcvttss2si %xmm2, %eax
-; VLNOBW-NEXT:    kmovw %eax, %k0
-; VLNOBW-NEXT:    vcvttss2si %xmm0, %eax
-; VLNOBW-NEXT:    andl $1, %eax
-; VLNOBW-NEXT:    kmovw %eax, %k1
-; VLNOBW-NEXT:    kshiftrw $1, %k0, %k2
-; VLNOBW-NEXT:    kshiftlw $1, %k2, %k2
-; VLNOBW-NEXT:    korw %k1, %k2, %k1
-; VLNOBW-NEXT:    kshiftrw $1, %k1, %k2
-; VLNOBW-NEXT:    kxorw %k0, %k2, %k0
-; VLNOBW-NEXT:    kshiftlw $15, %k0, %k0
-; VLNOBW-NEXT:    kshiftrw $14, %k0, %k0
-; VLNOBW-NEXT:    kxorw %k1, %k0, %k1
-; VLNOBW-NEXT:    vmovdqa64 %xmm1, %xmm0 {%k1} {z}
-; VLNOBW-NEXT:    retq
+; AVX512DQ-LABEL: test_2f32tosb:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
+; AVX512DQ-NEXT:    vcvttps2qq %ymm0, %zmm0
+; AVX512DQ-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; AVX512DQ-NEXT:    vzeroupper
+; AVX512DQ-NEXT:    retq
   %mask = fptosi <2 x float> %a to <2 x i1>
   %select = select <2 x i1> %mask, <2 x i64> %passthru, <2 x i64> zeroinitializer
   ret <2 x i64> %select

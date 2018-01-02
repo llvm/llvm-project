@@ -3850,7 +3850,6 @@ bool DAGCombiner::SearchForAndLoads(SDNode *N,
       return false;
     }
     case ISD::ZERO_EXTEND:
-    case ISD::ANY_EXTEND:
     case ISD::AssertZext: {
       unsigned ActiveBits = Mask->getAPIntValue().countTrailingOnes();
       EVT ExtVT = EVT::getIntegerVT(*DAG.getContext(), ActiveBits);

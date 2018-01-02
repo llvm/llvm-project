@@ -177,7 +177,7 @@ class CS_ALU<bits<2> funct2, string OpcodeStr, RegisterClass cls,
 
 let Predicates = [HasStdExtC] in {
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [X2] in
 def C_ADDI4SPN : RVInst16CIW<0b000, 0b00, (outs GPRC:$rd),
                              (ins SP:$rs1, uimm10_lsb00nonzero:$imm),
                              "c.addi4spn", "$rd, $rs1, $imm"> {
@@ -260,7 +260,7 @@ def C_ADDI : RVInst16CI<0b000, 0b01, (outs GPRNoX0:$rd_wb),
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCall = 1,
-    DecoderNamespace = "RISCV32Only_" in
+    DecoderNamespace = "RISCV32Only_", Defs = [X1] in
 def C_JAL : RVInst16CJ<0b001, 0b01, (outs), (ins simm12_lsb0:$offset),
                        "c.jal", "$offset">,
             Requires<[IsRV32]>;
