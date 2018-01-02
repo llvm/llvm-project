@@ -826,7 +826,7 @@ static Value *SimplifyMulInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
                                           MaxRecurse))
     return V;
 
-  // Mul distributes over Add.  Try some generic simplifications based on this.
+  // Mul distributes over Add. Try some generic simplifications based on this.
   if (Value *V = ExpandBinOp(Instruction::Mul, Op0, Op1, Instruction::Add,
                              Q, MaxRecurse))
     return V;
