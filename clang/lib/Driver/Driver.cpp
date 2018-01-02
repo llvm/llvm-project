@@ -682,7 +682,7 @@ bool Driver::loadConfigFile() {
       CfgDir.append(
           CLOptions->getLastArgValue(options::OPT_config_system_dir_EQ));
       if (!CfgDir.empty()) {
-        if (std::error_code EC = llvm::sys::fs::make_absolute(CfgDir))
+        if (llvm::sys::fs::make_absolute(CfgDir).value() != 0)
           SystemConfigDir.clear();
         else
           SystemConfigDir = std::string(CfgDir.begin(), CfgDir.end());
@@ -693,7 +693,7 @@ bool Driver::loadConfigFile() {
       CfgDir.append(
           CLOptions->getLastArgValue(options::OPT_config_user_dir_EQ));
       if (!CfgDir.empty()) {
-        if (std::error_code EC = llvm::sys::fs::make_absolute(CfgDir))
+        if (llvm::sys::fs::make_absolute(CfgDir).value() != 0)
           UserConfigDir.clear();
         else
           UserConfigDir = std::string(CfgDir.begin(), CfgDir.end());
