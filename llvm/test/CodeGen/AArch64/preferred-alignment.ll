@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64 -O0 < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64 -O0 -fast-isel < %s | FileCheck %s
 
 ; Function Attrs: nounwind
 define i32 @foo() #0 {

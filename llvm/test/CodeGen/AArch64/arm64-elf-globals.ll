@@ -1,11 +1,11 @@
 ; RUN: llc -mtriple=arm64-linux-gnu -o - %s -mcpu=cyclone | FileCheck %s
-; RUN: llc -mtriple=arm64-linux-gnu -o - %s -O0 -mcpu=cyclone | FileCheck %s --check-prefix=CHECK-FAST
+; RUN: llc -mtriple=arm64-linux-gnu -o - %s -O0 -fast-isel -mcpu=cyclone | FileCheck %s --check-prefix=CHECK-FAST
 ; RUN: llc -mtriple=arm64-linux-gnu -relocation-model=pic -o - %s -mcpu=cyclone | FileCheck %s --check-prefix=CHECK-PIC
-; RUN: llc -mtriple=arm64-linux-gnu -O0 -relocation-model=pic -o - %s -mcpu=cyclone | FileCheck %s --check-prefix=CHECK-FAST-PIC
+; RUN: llc -mtriple=arm64-linux-gnu -O0 -fast-isel -relocation-model=pic -o - %s -mcpu=cyclone | FileCheck %s --check-prefix=CHECK-FAST-PIC
 ; RUN: llc -mtriple=aarch64-fuchsia -code-model=kernel -o - %s -mcpu=cyclone | FileCheck %s
-; RUN: llc -mtriple=aarch64-fuchsia -code-model=kernel -o - %s -O0 -mcpu=cyclone | FileCheck %s --check-prefix=CHECK-FAST
+; RUN: llc -mtriple=aarch64-fuchsia -code-model=kernel -o - %s -O0 -fast-isel -mcpu=cyclone | FileCheck %s --check-prefix=CHECK-FAST
 ; RUN: llc -mtriple=aarch64-fuchsia -code-model=kernel -relocation-model=pic -o - %s -mcpu=cyclone | FileCheck %s --check-prefix=CHECK-PIC
-; RUN: llc -mtriple=aarch64-fuchsia -code-model=kernel -O0 -relocation-model=pic -o - %s -mcpu=cyclone | FileCheck %s --check-prefix=CHECK-FAST-PIC
+; RUN: llc -mtriple=aarch64-fuchsia -code-model=kernel -O0 -fast-isel -relocation-model=pic -o - %s -mcpu=cyclone | FileCheck %s --check-prefix=CHECK-FAST-PIC
 
 @var8 = external global i8, align 1
 @var16 = external global i16, align 2
