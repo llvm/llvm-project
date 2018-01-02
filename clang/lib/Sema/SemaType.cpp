@@ -4610,7 +4610,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         break;
       case DeclaratorChunk::Function: {
         const DeclaratorChunk::FunctionTypeInfo &FTI = DeclType.Fun;
-        if (FTI.NumParams == 0)
+        if (FTI.NumParams == 0 && !FTI.isVariadic)
           S.Diag(DeclType.Loc, diag::warn_strict_prototypes)
               << IsBlock
               << FixItHint::CreateInsertion(FTI.getRParenLoc(), "void");
