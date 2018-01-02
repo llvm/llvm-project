@@ -645,9 +645,7 @@ define <16 x i1> @interleaved_load_vf16_i8_stride4(<64 x i8>* %ptr) {
 ; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1]
 ; AVX512-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; AVX512-NEXT:    vpcmpeqb %xmm0, %xmm5, %xmm0
-; AVX512-NEXT:    vpsllw $7, %xmm3, %xmm1
-; AVX512-NEXT:    vpmovb2m %zmm1, %k0
-; AVX512-NEXT:    vpsllw $7, %xmm0, %xmm0
+; AVX512-NEXT:    vpmovb2m %zmm3, %k0
 ; AVX512-NEXT:    vpmovb2m %zmm0, %k1
 ; AVX512-NEXT:    kxnorw %k1, %k0, %k0
 ; AVX512-NEXT:    vpmovm2b %k0, %zmm0
@@ -958,9 +956,7 @@ define <32 x i1> @interleaved_load_vf32_i8_stride4(<128 x i8>* %ptr) {
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm1 = ymm3[0,1,2,3,4,5],ymm1[6,7]
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; AVX512-NEXT:    vpcmpeqb %ymm0, %ymm2, %ymm0
-; AVX512-NEXT:    vpsllw $7, %ymm8, %ymm1
-; AVX512-NEXT:    vpmovb2m %zmm1, %k0
-; AVX512-NEXT:    vpsllw $7, %ymm0, %ymm0
+; AVX512-NEXT:    vpmovb2m %zmm8, %k0
 ; AVX512-NEXT:    vpmovb2m %zmm0, %k1
 ; AVX512-NEXT:    kxnord %k1, %k0, %k0
 ; AVX512-NEXT:    vpmovm2b %k0, %zmm0

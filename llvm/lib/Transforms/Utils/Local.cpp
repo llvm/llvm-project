@@ -105,20 +105,16 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
   IRBuilder<> Builder(T);
 
   // Branch - See if we are conditional jumping on constant
-  if (BranchInst *BI = dyn_cast<BranchInst>(T)) {
+  if (auto *BI = dyn_cast<BranchInst>(T)) {
     if (BI->isUnconditional()) return false;  // Can't optimize uncond branch
     BasicBlock *Dest1 = BI->getSuccessor(0);
     BasicBlock *Dest2 = BI->getSuccessor(1);
 
-    if (ConstantInt *Cond = dyn_cast<ConstantInt>(BI->getCondition())) {
+    if (auto *Cond = dyn_cast<ConstantInt>(BI->getCondition())) {
       // Are we branching on constant?
       // YES.  Change to unconditional branch...
       BasicBlock *Destination = Cond->getZExtValue() ? Dest1 : Dest2;
       BasicBlock *OldDest     = Cond->getZExtValue() ? Dest2 : Dest1;
-
-      //cerr << "Function: " << T->getParent()->getParent()
-      //     << "\nRemoving branch from " << T->getParent()
-      //     << "\n\nTo: " << OldDest << endl;
 
       // Let the basic block know that we are letting go of it.  Based on this,
       // it will adjust it's PHI nodes.
@@ -150,10 +146,10 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
     return false;
   }
 
-  if (SwitchInst *SI = dyn_cast<SwitchInst>(T)) {
+  if (auto *SI = dyn_cast<SwitchInst>(T)) {
     // If we are switching on a constant, we can convert the switch to an
     // unconditional branch.
-    ConstantInt *CI = dyn_cast<ConstantInt>(SI->getCondition());
+    auto *CI = dyn_cast<ConstantInt>(SI->getCondition());
     BasicBlock *DefaultDest = SI->getDefaultDest();
     BasicBlock *TheOnlyDest = DefaultDest;
 
@@ -280,9 +276,9 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
     return false;
   }
 
-  if (IndirectBrInst *IBI = dyn_cast<IndirectBrInst>(T)) {
+  if (auto *IBI = dyn_cast<IndirectBrInst>(T)) {
     // indirectbr blockaddress(@F, @BB) -> br label @BB
-    if (BlockAddress *BA =
+    if (auto *BA =
           dyn_cast<BlockAddress>(IBI->getAddress()->stripPointerCasts())) {
       BasicBlock *TheOnlyDest = BA->getBasicBlock();
       // Insert the new branch.

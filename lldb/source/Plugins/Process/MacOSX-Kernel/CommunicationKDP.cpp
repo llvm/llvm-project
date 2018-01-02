@@ -59,15 +59,6 @@ bool CommunicationKDP::SendRequestPacket(
   return SendRequestPacketNoLock(request_packet);
 }
 
-#if 0
-typedef struct {
-	uint8_t     request;	// Either: CommandType | ePacketTypeRequest, or CommandType | ePacketTypeReply
-	uint8_t     sequence;
-	uint16_t    length;		// Length of entire packet including this header
-	uint32_t	key;		// Session key
-} kdp_hdr_t;
-#endif
-
 void CommunicationKDP::MakeRequestPacketHeader(CommandType request_type,
                                                PacketStreamType &request_packet,
                                                uint16_t request_length) {
@@ -435,34 +426,6 @@ bool CommunicationKDP::SendRequestVersion() {
   }
   return false;
 }
-
-#if 0 // Disable KDP_IMAGEPATH for now, it seems to hang the KDP connection...
-const char *
-CommunicationKDP::GetImagePath ()
-{
-    if (m_image_path.empty())
-        SendRequestImagePath();
-    return m_image_path.c_str();
-}
-
-bool
-CommunicationKDP::SendRequestImagePath ()
-{
-    PacketStreamType request_packet (Stream::eBinary, m_addr_byte_size, m_byte_order);
-    const CommandType command = KDP_IMAGEPATH;
-    const uint32_t command_length = 8;
-    MakeRequestPacketHeader (command, request_packet, command_length);
-    DataExtractor reply_packet;
-    if (SendRequestAndGetReply (command, request_packet, reply_packet))
-    {
-        const char *path = reply_packet.PeekCStr(8);
-        if (path && path[0])
-            m_kernel_version.assign (path);
-        return true;
-    }
-    return false;
-}
-#endif
 
 uint32_t CommunicationKDP::GetCPUMask() {
   if (!HostInfoIsValid())

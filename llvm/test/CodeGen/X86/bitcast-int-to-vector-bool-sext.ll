@@ -44,7 +44,6 @@ define <2 x i64> @ext_i2_2i64(i2 %a0) {
 ;
 ; AVX512-LABEL: ext_i2_2i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    andb $3, %dil
 ; AVX512-NEXT:    kmovd %edi, %k1
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
@@ -84,7 +83,6 @@ define <4 x i32> @ext_i4_4i32(i4 %a0) {
 ;
 ; AVX512-LABEL: ext_i4_4i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    andb $15, %dil
 ; AVX512-NEXT:    kmovd %edi, %k1
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
@@ -235,7 +233,6 @@ define <4 x i64> @ext_i4_4i64(i4 %a0) {
 ;
 ; AVX512-LABEL: ext_i4_4i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    andb $15, %dil
 ; AVX512-NEXT:    kmovd %edi, %k1
 ; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; AVX512-NEXT:    vmovdqa64 %ymm0, %ymm0 {%k1} {z}

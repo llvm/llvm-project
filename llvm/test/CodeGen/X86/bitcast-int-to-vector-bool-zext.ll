@@ -57,7 +57,6 @@ define <2 x i64> @ext_i2_2i64(i2 %a0) {
 ;
 ; AVX512VLBW-LABEL: ext_i2_2i64:
 ; AVX512VLBW:       # %bb.0:
-; AVX512VLBW-NEXT:    andb $3, %dil
 ; AVX512VLBW-NEXT:    kmovd %edi, %k1
 ; AVX512VLBW-NEXT:    vmovdqa64 {{.*}}(%rip), %xmm0 {%k1} {z}
 ; AVX512VLBW-NEXT:    retq
@@ -108,7 +107,6 @@ define <4 x i32> @ext_i4_4i32(i4 %a0) {
 ;
 ; AVX512VLBW-LABEL: ext_i4_4i32:
 ; AVX512VLBW:       # %bb.0:
-; AVX512VLBW-NEXT:    andb $15, %dil
 ; AVX512VLBW-NEXT:    kmovd %edi, %k1
 ; AVX512VLBW-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm0 {%k1} {z}
 ; AVX512VLBW-NEXT:    retq
@@ -299,7 +297,6 @@ define <4 x i64> @ext_i4_4i64(i4 %a0) {
 ;
 ; AVX512VLBW-LABEL: ext_i4_4i64:
 ; AVX512VLBW:       # %bb.0:
-; AVX512VLBW-NEXT:    andb $15, %dil
 ; AVX512VLBW-NEXT:    kmovd %edi, %k1
 ; AVX512VLBW-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm0 {%k1} {z}
 ; AVX512VLBW-NEXT:    retq
