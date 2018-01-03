@@ -242,3 +242,20 @@ namespace tag_hiding {
   ExternCStruct3 *q3 = p3;
   ExternCStruct4 *q4 = p4; // expected-error {{ambiguous}}
 }
+
+namespace PR35697 {
+  typedef struct {} *ReturnStruct;
+  extern "C" ReturnStruct PR35697_f();
+  extern "C" ReturnStruct PR35697_v;
+  ReturnStruct PR35697_f();
+  ReturnStruct PR35697_v;
+
+  namespace {
+    extern "C" ReturnStruct PR35697_f();
+    extern "C" ReturnStruct PR35697_v;
+    void q() {
+      extern ReturnStruct PR35697_f();
+      extern ReturnStruct PR35697_v;
+    }
+  }
+}
