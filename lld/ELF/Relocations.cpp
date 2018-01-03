@@ -640,8 +640,8 @@ static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
   if (Sym.isFunc())
     return getPltExpr(Sym, Expr, IsConstant);
 
-  errorOrWarn("symbol '" + toString(Sym) + "' defined in " +
-              toString(Sym.File) + " has no type");
+  errorOrWarn("symbol '" + toString(Sym) + "' has no type" +
+              getLocation(S, Sym, RelOff));
   return Expr;
 }
 
@@ -983,10 +983,9 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
       // We don't know anything about the finaly symbol. Just ask the dynamic
       // linker to handle the relocation for us.
       if (!Target->isPicRel(Type))
-        errorOrWarn(
-            "relocation " + toString(Type) +
-            " cannot be used against shared object; recompile with -fPIC" +
-            getLocation(Sec, Sym, Offset));
+        errorOrWarn("relocation " + toString(Type) +
+                    " cannot be used against symbol " + toString(Sym) +
+                    "; recompile with -fPIC" + getLocation(Sec, Sym, Offset));
 
       InX::RelaDyn->addReloc(
           {Target->getDynRel(Type), &Sec, Offset, false, &Sym, Addend});
