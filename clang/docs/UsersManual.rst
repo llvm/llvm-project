@@ -2732,6 +2732,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /Gd                     Set __cdecl as a default calling convention
       /GF-                    Disable string pooling
       /GR-                    Disable emission of RTTI data
+      /Gregcall               Set __regcall as a default calling convention
       /GR                     Enable emission of RTTI data
       /Gr                     Set __fastcall as a default calling convention
       /GS-                    Disable buffer security check
@@ -2788,7 +2789,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /W2                     Enable -Wall
       /W3                     Enable -Wall
       /W4                     Enable -Wall and -Wextra
-      /Wall                   Enable -Wall and -Wextra
+      /Wall                   Enable -Weverything
       /WX-                    Do not treat warnings as errors
       /WX                     Treat warnings as errors
       /w                      Disable all warnings
@@ -2845,6 +2846,8 @@ Execute ``clang-cl /?`` to see a list of supported options:
                               Disable specified features of coverage instrumentation for Sanitizers
       -fno-sanitize-memory-track-origins
                               Disable origins tracking in MemorySanitizer
+      -fno-sanitize-memory-use-after-dtor
+                              Disable use-after-destroy detection in MemorySanitizer
       -fno-sanitize-recover=<value>
                               Disable recovery for specified sanitizers
       -fno-sanitize-stats     Disable sanitizer statistics gathering.
@@ -2875,6 +2878,8 @@ Execute ``clang-cl /?`` to see a list of supported options:
                               Path to blacklist file for sanitizers
       -fsanitize-cfi-cross-dso
                               Enable control flow integrity (CFI) checks for cross-DSO calls.
+      -fsanitize-cfi-icall-generalize-pointers
+                              Generalize pointers in CFI indirect call type signature checks
       -fsanitize-coverage=<value>
                               Specify the type of coverage instrumentation for Sanitizers
       -fsanitize-memory-track-origins=<value>
@@ -2898,6 +2903,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fsanitize=<check>      Turn on runtime checks for various forms of undefined or suspicious
                               behavior. See user manual for available checks
       -fstandalone-debug      Emit full debug info for all types used by the program
+      -fwhole-program-vtables Enables whole-program vtable optimization. Requires -flto
       -gcodeview              Generate CodeView debug information
       -gline-tables-only      Emit debug line number tables only
       -miamcu                 Use Intel MCU ABI
@@ -2906,6 +2912,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -Qunused-arguments      Don't emit warning for unused driver arguments
       -R<remark>              Enable the specified remark
       --target=<value>        Generate code for the given target
+      --version               Print version information
       -v                      Show commands to run and use verbose output
       -W<warning>             Enable the specified warning
       -Xclang <arg>           Pass <arg> to the clang compiler

@@ -816,8 +816,6 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
       printf(" (variadic)");
     if (clang_Cursor_isObjCOptional(Cursor))
       printf(" (@optional)");
-    if (clang_isInvalidDeclaration(Cursor))
-      printf(" (invalid)");
 
     switch (clang_getCursorExceptionSpecificationType(Cursor))
     {
