@@ -120,6 +120,10 @@ Output path for the plist report
 
 .. option:: -compatibility\_version<arg>
 
+.. option:: --config <arg>
+
+Specifies configuration file
+
 .. option:: --constant-cfstrings
 
 .. option:: -coverage, --coverage
@@ -1545,6 +1549,10 @@ Enable ARC-style weak references in Objective-C
 
 OpenMP target code is compiled as relocatable using the -c flag. For OpenMP targets the code is relocatable by default.
 
+.. option:: -fopenmp-simd, -fno-openmp-simd
+
+Emit OpenMP code only for SIMD-based constructs.
+
 .. option:: -fopenmp-use-tls
 
 .. option:: -fopenmp-version=<arg>
@@ -1998,7 +2006,7 @@ Link stack frames through backchain on System Z
 
 .. option:: -mconsole<arg>
 
-.. option:: -mcpu=<arg>, -mv4 (equivalent to -mcpu=hexagonv4), -mv5 (equivalent to -mcpu=hexagonv5), -mv55 (equivalent to -mcpu=hexagonv55), -mv60 (equivalent to -mcpu=hexagonv60), -mv62 (equivalent to -mcpu=hexagonv62)
+.. option:: -mcpu=<arg>, -mv4 (equivalent to -mcpu=hexagonv4), -mv5 (equivalent to -mcpu=hexagonv5), -mv55 (equivalent to -mcpu=hexagonv55), -mv60 (equivalent to -mcpu=hexagonv60), -mv62 (equivalent to -mcpu=hexagonv62), -mv65 (equivalent to -mcpu=hexagonv65)
 
 .. option:: -mdefault-build-attributes<arg>, -mno-default-build-attributes<arg>
 
@@ -2328,6 +2336,8 @@ X86
 
 .. option:: -mavx2, -mno-avx2
 
+.. option:: -mavx512bitalg, -mno-avx512bitalg
+
 .. option:: -mavx512bw, -mno-avx512bw
 
 .. option:: -mavx512cd, -mno-avx512cd
@@ -2344,7 +2354,11 @@ X86
 
 .. option:: -mavx512vbmi, -mno-avx512vbmi
 
+.. option:: -mavx512vbmi2, -mno-avx512vbmi2
+
 .. option:: -mavx512vl, -mno-avx512vl
+
+.. option:: -mavx512vnni, -mno-avx512vnni
 
 .. option:: -mavx512vpopcntdq, -mno-avx512vpopcntdq
 
@@ -2369,6 +2383,8 @@ X86
 .. option:: -mfsgsbase, -mno-fsgsbase
 
 .. option:: -mfxsr, -mno-fxsr
+
+.. option:: -mgfni, -mno-gfni
 
 .. option:: -mibt, -mno-ibt
 
@@ -2423,6 +2439,10 @@ X86
 .. option:: -mssse3, -mno-ssse3
 
 .. option:: -mtbm, -mno-tbm
+
+.. option:: -mvaes, -mno-vaes
+
+.. option:: -mvpclmulqdq, -mno-vpclmulqdq
 
 .. option:: -mx87, -m80387, -mno-x87
 
