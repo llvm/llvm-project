@@ -65,3 +65,9 @@ void foo11(p, p2) int p; int p2; {}
 void __attribute__((cdecl)) foo12(d) // expected-warning {{this old-style function definition is not preceded by a prototype}}
   short d;
 {}
+
+// No warnings for variadic functions. Overloadable attribute is required
+// to avoid err_ellipsis_first_param error.
+// rdar://problem/33251668
+void foo13(...) __attribute__((overloadable));
+void foo13(...) __attribute__((overloadable)) {}
