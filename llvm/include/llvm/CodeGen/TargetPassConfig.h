@@ -218,9 +218,6 @@ public:
   /// Return true if the optimized regalloc pipeline is enabled.
   bool getOptimizeRegAlloc() const;
 
-  /// Return true if shrink wrapping is enabled.
-  bool getEnableShrinkWrap() const;
-
   /// Return true if the default global register allocator is in use and
   /// has not be overriden on the command line with '-regalloc=...'
   bool usingDefaultRegAlloc() const;

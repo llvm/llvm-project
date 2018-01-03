@@ -80,27 +80,6 @@ static std::string getLocation(InputSectionBase &S, const Symbol &Sym,
   return Msg + S.getObjMsg(Off);
 }
 
-// This is a MIPS-specific rule.
-//
-// In case of MIPS GP-relative relocations always resolve to a definition
-// in a regular input file, ignoring the one-definition rule. So we,
-// for example, should not attempt to create a dynamic relocation even
-// if the target symbol is preemptible. There are two two MIPS GP-relative
-// relocations R_MIPS_GPREL16 and R_MIPS_GPREL32. But only R_MIPS_GPREL16
-// can be against a preemptible symbol.
-//
-// To get MIPS relocation type we apply 0xff mask. In case of O32 ABI all
-// relocation types occupy eight bit. In case of N64 ABI we extract first
-// relocation from 3-in-1 packet because only the first relocation can
-// be against a real symbol.
-static bool isMipsGprel(RelType Type) {
-  if (Config->EMachine != EM_MIPS)
-    return false;
-  Type &= 0xff;
-  return Type == R_MIPS_GPREL16 || Type == R_MICROMIPS_GPREL16 ||
-         Type == R_MICROMIPS_GPREL7_S2;
-}
-
 // This function is similar to the `handleTlsRelocation`. MIPS does not
 // support any relaxations for TLS relocations so by factoring out MIPS
 // handling in to the separate function we can simplify the code and do not
@@ -417,27 +396,33 @@ static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
 }
 
 static RelExpr toPlt(RelExpr Expr) {
-  if (Expr == R_PPC_OPD)
+  switch (Expr) {
+  case R_PPC_OPD:
     return R_PPC_PLT_OPD;
-  if (Expr == R_PC)
+  case R_PC:
     return R_PLT_PC;
-  if (Expr == R_PAGE_PC)
+  case R_PAGE_PC:
     return R_PLT_PAGE_PC;
-  if (Expr == R_ABS)
+  case R_ABS:
     return R_PLT;
-  return Expr;
+  default:
+    return Expr;
+  }
 }
 
 static RelExpr fromPlt(RelExpr Expr) {
   // We decided not to use a plt. Optimize a reference to the plt to a
   // reference to the symbol itself.
-  if (Expr == R_PLT_PC)
+  switch (Expr) {
+  case R_PLT_PC:
     return R_PC;
-  if (Expr == R_PPC_PLT_OPD)
+  case R_PPC_PLT_OPD:
     return R_PPC_OPD;
-  if (Expr == R_PLT)
+  case R_PLT:
     return R_ABS;
-  return Expr;
+  default:
+    return Expr;
+  }
 }
 
 // Returns true if a given shared symbol is in a read-only segment in a DSO.
@@ -902,15 +887,20 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
     if (maybeReportUndefined(Sym, Sec, Rel.r_offset))
       continue;
 
-    RelExpr Expr =
-        Target->getRelExpr(Type, Sym, Sec.Data.begin() + Rel.r_offset);
+    const uint8_t *RelocatedAddr = Sec.Data.begin() + Rel.r_offset;
+    RelExpr Expr = Target->getRelExpr(Type, Sym, RelocatedAddr);
 
     // Ignore "hint" relocations because they are only markers for relaxation.
     if (isRelExprOneOf<R_HINT, R_NONE>(Expr))
       continue;
 
-    // Handle yet another MIPS-ness.
-    if (isMipsGprel(Type)) {
+    // In case of MIPS GP-relative relocations always resolve to a definition
+    // in a regular input file, ignoring the one-definition rule. So we,
+    // for example, should not attempt to create a dynamic relocation even
+    // if the target symbol is preemptible. There are two two MIPS GP-relative
+    // relocations R_MIPS_GPREL16 and R_MIPS_GPREL32. But only R_MIPS_GPREL16
+    // can be against a preemptible symbol.
+    if (Expr == R_MIPS_GOTREL) {
       int64_t Addend = computeAddend<ELFT>(Rel, End, Sec, Expr, Sym.isLocal());
       Sec.Relocations.push_back({R_MIPS_GOTREL, Type, Offset, Addend, &Sym});
       continue;
@@ -918,7 +908,7 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
 
     bool Preemptible = Sym.IsPreemptible;
 
-    // Strenghten or relax a PLT access.
+    // Strenghten or relax relocations.
     //
     // GNU ifunc symbols must be accessed via PLT because their addresses
     // are determined by runtime.
@@ -932,8 +922,7 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
     if (Sym.isGnuIFunc())
       Expr = toPlt(Expr);
     else if (!Preemptible && Expr == R_GOT_PC && !isAbsoluteValue(Sym))
-      Expr =
-          Target->adjustRelaxExpr(Type, Sec.Data.data() + Rel.r_offset, Expr);
+      Expr = Target->adjustRelaxExpr(Type, RelocatedAddr, Expr);
     else if (!Preemptible)
       Expr = fromPlt(Expr);
 
