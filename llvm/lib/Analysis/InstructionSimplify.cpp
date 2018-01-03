@@ -4493,26 +4493,53 @@ static Value *SimplifyIntrinsic(Function *F, IterTy ArgBegin, IterTy ArgEnd,
       }
     }
 
+    Value *IIOperand = *ArgBegin;
+    Value *X;
     switch (IID) {
     case Intrinsic::fabs: {
-      if (SignBitMustBeZero(*ArgBegin, Q.TLI))
-        return *ArgBegin;
+      if (SignBitMustBeZero(IIOperand, Q.TLI))
+        return IIOperand;
       return nullptr;
     }
     case Intrinsic::bswap: {
-      Value *IIOperand = *ArgBegin;
-      Value *X = nullptr;
       // bswap(bswap(x)) -> x
       if (match(IIOperand, m_BSwap(m_Value(X))))
         return X;
       return nullptr;
     }
     case Intrinsic::bitreverse: {
-      Value *IIOperand = *ArgBegin;
-      Value *X = nullptr;
       // bitreverse(bitreverse(x)) -> x
       if (match(IIOperand, m_BitReverse(m_Value(X))))
         return X;
+      return nullptr;
+    }
+    case Intrinsic::exp: {
+      // exp(log(x)) -> x
+      if (Q.CxtI->isFast() &&
+          match(IIOperand, m_Intrinsic<Intrinsic::log>(m_Value(X))))
+        return X;
+      return nullptr;
+    }
+    case Intrinsic::exp2: {
+      // exp2(log2(x)) -> x
+      if (Q.CxtI->isFast() &&
+          match(IIOperand, m_Intrinsic<Intrinsic::log2>(m_Value(X))))
+        return X;
+      return nullptr;
+    }
+    case Intrinsic::log: {
+      // log(exp(x)) -> x
+      if (Q.CxtI->isFast() &&
+          match(IIOperand, m_Intrinsic<Intrinsic::exp>(m_Value(X))))
+        return X;
+      return nullptr;
+    }
+    case Intrinsic::log2: {
+      // log2(exp2(x)) -> x
+      if (Q.CxtI->isFast() &&
+          match(IIOperand, m_Intrinsic<Intrinsic::exp2>(m_Value(X)))) {
+        return X;
+      }
       return nullptr;
     }
     default:

@@ -32,7 +32,7 @@ STATISTIC(NumMemCmpGreaterThanMax,
           "Number of memcmp calls with size greater than max size");
 STATISTIC(NumMemCmpInlined, "Number of inlined memcmp calls");
 
-static cl::opt<unsigned> MemCmpNumLoadsPerBlock(
+static cl::opt<unsigned> MemCmpEqZeroNumLoadsPerBlock(
     "memcmp-num-loads-per-block", cl::Hidden, cl::init(1),
     cl::desc("The number of loads per basic block for inline expansion of "
              "memcmp that is only being compared against zero."));
@@ -56,7 +56,7 @@ class MemCmpExpansion {
   const uint64_t Size;
   unsigned MaxLoadSize;
   uint64_t NumLoadsNonOneByte;
-  const uint64_t NumLoadsPerBlock;
+  const uint64_t NumLoadsPerBlockForZeroCmp;
   std::vector<BasicBlock *> LoadCmpBlocks;
   BasicBlock *EndBlock;
   PHINode *PhiRes;
@@ -102,7 +102,7 @@ class MemCmpExpansion {
   MemCmpExpansion(CallInst *CI, uint64_t Size,
                   const TargetTransformInfo::MemCmpExpansionOptions &Options,
                   unsigned MaxNumLoads, const bool IsUsedForZeroCmp,
-                  unsigned NumLoadsPerBlock, const DataLayout &DL);
+                  unsigned NumLoadsPerBlockForZeroCmp, const DataLayout &DL);
 
   unsigned getNumBlocks();
   uint64_t getNumLoads() const { return LoadSequence.size(); }
@@ -122,12 +122,12 @@ MemCmpExpansion::MemCmpExpansion(
     CallInst *const CI, uint64_t Size,
     const TargetTransformInfo::MemCmpExpansionOptions &Options,
     const unsigned MaxNumLoads, const bool IsUsedForZeroCmp,
-    const unsigned NumLoadsPerBlock, const DataLayout &TheDataLayout)
+    const unsigned MaxLoadsPerBlockForZeroCmp, const DataLayout &TheDataLayout)
     : CI(CI),
       Size(Size),
       MaxLoadSize(0),
       NumLoadsNonOneByte(0),
-      NumLoadsPerBlock(NumLoadsPerBlock),
+      NumLoadsPerBlockForZeroCmp(MaxLoadsPerBlockForZeroCmp),
       IsUsedForZeroCmp(IsUsedForZeroCmp),
       DL(TheDataLayout),
       Builder(CI) {
@@ -171,8 +171,8 @@ MemCmpExpansion::MemCmpExpansion(
 
 unsigned MemCmpExpansion::getNumBlocks() {
   if (IsUsedForZeroCmp)
-    return getNumLoads() / NumLoadsPerBlock +
-           (getNumLoads() % NumLoadsPerBlock != 0 ? 1 : 0);
+    return getNumLoads() / NumLoadsPerBlockForZeroCmp +
+           (getNumLoads() % NumLoadsPerBlockForZeroCmp != 0 ? 1 : 0);
   return getNumLoads();
 }
 
@@ -249,7 +249,7 @@ Value *MemCmpExpansion::getCompareLoadPairs(unsigned BlockIndex,
   Value *Diff;
 
   const unsigned NumLoads =
-      std::min(getNumLoads() - LoadIndex, NumLoadsPerBlock);
+      std::min(getNumLoads() - LoadIndex, NumLoadsPerBlockForZeroCmp);
 
   // For a single-block expansion, start inserting before the memcmp call.
   if (LoadCmpBlocks.empty())
@@ -519,8 +519,6 @@ Value *MemCmpExpansion::getMemCmpEqZeroOneBlock() {
 /// A memcmp expansion that only has one block of load and compare can bypass
 /// the compare, branch, and phi IR that is required in the general case.
 Value *MemCmpExpansion::getMemCmpOneBlock() {
-  assert(NumLoadsPerBlock == 1 && "Only handles one load pair per block");
-
   Type *LoadSizeType = IntegerType::get(CI->getContext(), Size * 8);
   Value *Source1 = CI->getArgOperand(0);
   Value *Source2 = CI->getArgOperand(1);
@@ -570,7 +568,8 @@ Value *MemCmpExpansion::getMemCmpExpansion() {
   // not need to set up any extra blocks. This case could be handled in the DAG,
   // but since we have all of the machinery to flexibly expand any memcpy here,
   // we choose to handle this case too to avoid fragmented lowering.
-  if ((!IsUsedForZeroCmp && NumLoadsPerBlock != 1) || getNumBlocks() != 1) {
+  if ((!IsUsedForZeroCmp && NumLoadsPerBlockForZeroCmp != 1) ||
+      getNumBlocks() != 1) {
     BasicBlock *StartBlock = CI->getParent();
     EndBlock = StartBlock->splitBasicBlock(CI, "endblock");
     setupEndBlockPHINodes();
@@ -596,8 +595,8 @@ Value *MemCmpExpansion::getMemCmpExpansion() {
     return getNumBlocks() == 1 ? getMemCmpEqZeroOneBlock()
                                : getMemCmpExpansionZeroCase();
 
-  // TODO: Handle more than one load pair per block in getMemCmpOneBlock().
-  if (getNumBlocks() == 1 && NumLoadsPerBlock == 1) return getMemCmpOneBlock();
+  if (getNumBlocks() == 1)
+    return getMemCmpOneBlock();
 
   for (unsigned I = 0; I < getNumBlocks(); ++I) {
     emitLoadCompareBlock(I);
@@ -709,8 +708,12 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
   const unsigned MaxNumLoads =
       TLI->getMaxExpandSizeMemcmp(CI->getFunction()->optForSize());
 
+  unsigned NumLoadsPerBlock = MemCmpEqZeroNumLoadsPerBlock.getNumOccurrences()
+                                  ? MemCmpEqZeroNumLoadsPerBlock
+                                  : TLI->getMemcmpEqZeroLoadsPerBlock();
+
   MemCmpExpansion Expansion(CI, SizeVal, *Options, MaxNumLoads,
-                            IsUsedForZeroCmp, MemCmpNumLoadsPerBlock, *DL);
+                            IsUsedForZeroCmp, NumLoadsPerBlock, *DL);
 
   // Don't expand if this will require more loads than desired by the target.
   if (Expansion.getNumLoads() == 0) {
