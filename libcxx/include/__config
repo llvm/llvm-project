@@ -461,7 +461,11 @@ namespace std {
 #endif 
 
 #if __has_builtin(__builtin_launder)
-#define	_LIBCPP_COMPILER_HAS_BUILTIN_LAUNDER
+#define _LIBCPP_COMPILER_HAS_BUILTIN_LAUNDER
+#endif
+
+#if !__is_identifier(__has_unique_object_representations)
+#define _LIBCPP_HAS_UNIQUE_OBJECT_REPRESENTATIONS
 #endif
 
 #elif defined(_LIBCPP_COMPILER_GCC)
@@ -547,7 +551,11 @@ namespace std {
 #endif
 
 #if _GNUC_VER >= 700
-#define	_LIBCPP_COMPILER_HAS_BUILTIN_LAUNDER
+#define _LIBCPP_COMPILER_HAS_BUILTIN_LAUNDER
+#endif
+
+#if _GNUC_VER >= 700
+#define _LIBCPP_HAS_UNIQUE_OBJECT_REPRESENTATIONS
 #endif
 
 #elif defined(_LIBCPP_COMPILER_MSVC)

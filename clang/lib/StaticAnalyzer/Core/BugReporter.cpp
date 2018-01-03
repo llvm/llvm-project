@@ -229,7 +229,6 @@ adjustCallLocations(PathPieces &Pieces,
     PathDiagnosticCallPiece *Call = dyn_cast<PathDiagnosticCallPiece>(I->get());
 
     if (!Call) {
-      assert((*I)->getLocation().asLocation().isValid());
       continue;
     }
 

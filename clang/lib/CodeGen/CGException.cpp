@@ -646,7 +646,7 @@ CodeGenFunction::getMSVCDispatchBlock(EHScopeStack::stable_iterator SI) {
     return DispatchBlock;
 
   if (EHS.getKind() == EHScope::Terminate)
-    DispatchBlock = getTerminateHandler();
+    DispatchBlock = getTerminateFunclet();
   else
     DispatchBlock = createBasicBlock();
   CGBuilderTy Builder(*this, DispatchBlock);
@@ -1334,24 +1334,15 @@ llvm::BasicBlock *CodeGenFunction::getTerminateHandler() {
   if (TerminateHandler)
     return TerminateHandler;
 
-  CGBuilderTy::InsertPoint SavedIP = Builder.saveAndClearIP();
-
   // Set up the terminate handler.  This block is inserted at the very
   // end of the function by FinishFunction.
   TerminateHandler = createBasicBlock("terminate.handler");
+  CGBuilderTy::InsertPoint SavedIP = Builder.saveAndClearIP();
   Builder.SetInsertPoint(TerminateHandler);
+
   llvm::Value *Exn = nullptr;
-  SaveAndRestore<llvm::Instruction *> RestoreCurrentFuncletPad(
-      CurrentFuncletPad);
-  if (EHPersonality::get(*this).usesFuncletPads()) {
-    llvm::Value *ParentPad = CurrentFuncletPad;
-    if (!ParentPad)
-      ParentPad = llvm::ConstantTokenNone::get(CGM.getLLVMContext());
-    CurrentFuncletPad = Builder.CreateCleanupPad(ParentPad);
-  } else {
-    if (getLangOpts().CPlusPlus)
-      Exn = getExceptionFromSlot();
-  }
+  if (getLangOpts().CPlusPlus)
+    Exn = getExceptionFromSlot();
   llvm::CallInst *terminateCall =
       CGM.getCXXABI().emitTerminateForUnexpectedException(*this, Exn);
   terminateCall->setDoesNotReturn();
@@ -1361,6 +1352,42 @@ llvm::BasicBlock *CodeGenFunction::getTerminateHandler() {
   Builder.restoreIP(SavedIP);
 
   return TerminateHandler;
+}
+
+llvm::BasicBlock *CodeGenFunction::getTerminateFunclet() {
+  assert(EHPersonality::get(*this).usesFuncletPads() &&
+         "use getTerminateLandingPad for non-funclet EH");
+
+  llvm::BasicBlock *&TerminateFunclet = TerminateFunclets[CurrentFuncletPad];
+  if (TerminateFunclet)
+    return TerminateFunclet;
+
+  CGBuilderTy::InsertPoint SavedIP = Builder.saveAndClearIP();
+
+  // Set up the terminate handler.  This block is inserted at the very
+  // end of the function by FinishFunction.
+  TerminateFunclet = createBasicBlock("terminate.handler");
+  Builder.SetInsertPoint(TerminateFunclet);
+
+  // Create the cleanuppad using the current parent pad as its token. Use 'none'
+  // if this is a top-level terminate scope, which is the common case.
+  SaveAndRestore<llvm::Instruction *> RestoreCurrentFuncletPad(
+      CurrentFuncletPad);
+  llvm::Value *ParentPad = CurrentFuncletPad;
+  if (!ParentPad)
+    ParentPad = llvm::ConstantTokenNone::get(CGM.getLLVMContext());
+  CurrentFuncletPad = Builder.CreateCleanupPad(ParentPad);
+
+  // Emit the __std_terminate call.
+  llvm::CallInst *terminateCall =
+      CGM.getCXXABI().emitTerminateForUnexpectedException(*this, nullptr);
+  terminateCall->setDoesNotReturn();
+  Builder.CreateUnreachable();
+
+  // Restore the saved insertion state.
+  Builder.restoreIP(SavedIP);
+
+  return TerminateFunclet;
 }
 
 llvm::BasicBlock *CodeGenFunction::getEHResumeBlock(bool isCleanup) {
