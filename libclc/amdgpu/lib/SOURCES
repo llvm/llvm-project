@@ -1,5 +1,0 @@
-math/native_exp.cl
-math/native_log.cl
-math/native_log10.cl
-math/nextafter.cl
-math/sqrt.cl
