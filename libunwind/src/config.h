@@ -155,7 +155,7 @@
 #if defined(_LIBUNWIND_IS_NATIVE_ONLY)
 # define COMP_OP ==
 #else
-# define COMP_OP <
+# define COMP_OP <=
 #endif
 template <typename _Type, typename _Mem>
 struct check_fit {

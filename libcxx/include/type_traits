@@ -132,6 +132,8 @@ namespace std
 
     template <class T> struct has_virtual_destructor;
 
+    template<class T> struct has_unique_object_representations;         // C++17
+
     // Relationships between types:
     template <class T, class U> struct is_same;
     template <class Base, class Derived> struct is_base_of;
@@ -355,6 +357,8 @@ namespace std
         = is_nothrow_destructible<T>::value;                             // C++17
       template <class T> inline constexpr bool has_virtual_destructor_v
         = has_virtual_destructor<T>::value;                              // C++17
+      template<class T> inline constexpr bool has_unique_object_representations_v // C++17
+        = has_unique_object_representations<T>::value;
 
       // See C++14 20.10.5, type property queries
       template <class T> inline constexpr size_t alignment_of_v
@@ -1615,6 +1619,22 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS has_virtual_destructor
 template <class _Tp>
 _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool has_virtual_destructor_v
     = has_virtual_destructor<_Tp>::value;
+#endif
+
+// has_unique_object_representations
+
+#if _LIBCPP_STD_VER > 14 && defined(_LIBCPP_HAS_UNIQUE_OBJECT_REPRESENTATIONS)
+
+template <class _Tp> struct _LIBCPP_TEMPLATE_VIS has_unique_object_representations
+    : public integral_constant<bool, 
+       __has_unique_object_representations(remove_cv_t<remove_all_extents_t<_Tp>>)> {};
+
+#if !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
+template <class _Tp>
+_LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool has_unique_object_representations_v
+    = has_unique_object_representations<_Tp>::value;
+#endif
+
 #endif
 
 // alignment_of

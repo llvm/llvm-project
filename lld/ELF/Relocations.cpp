@@ -592,6 +592,12 @@ static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
   if (IsConstant)
     return Expr;
 
+  // We can create any dynamic relocation supported by the dynamic linker if a
+  // section is writable or we are passed -z notext.
+  bool CanWrite = (S.Flags & SHF_WRITE) || !Config->ZText;
+  if (CanWrite && Target->isPicRel(Type))
+    return Expr;
+
   // If the relocation is to a weak undef, and we are producing
   // executable, give up on it and produce a non preemptible 0.
   if (!Config->Shared && Sym.isUndefWeak()) {
@@ -599,12 +605,6 @@ static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
     IsConstant = true;
     return Expr;
   }
-
-  // We can create any dynamic relocation supported by the dynamic linker if a
-  // section is writable or we are passed -z notext.
-  bool CanWrite = (S.Flags & SHF_WRITE) || !Config->ZText;
-  if (CanWrite && Target->isPicRel(Type))
-    return Expr;
 
   // If we got here we know that this relocation would require the dynamic
   // linker to write a value to read only memory or use an unsupported

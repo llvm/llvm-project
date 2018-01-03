@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++14 -Wundefined-func-template %s
 
+#if !defined(INCLUDE)
 template <class T> struct C1 {
   static char s_var_1;       // expected-note{{forward declaration of template entity is here}}
   static char s_var_2;       // expected-note{{forward declaration of template entity is here}}
@@ -142,6 +143,16 @@ namespace test_24 {
   void h(X<int> x) { g(x); } // no warning for use of 'g' despite the declaration having been instantiated from a template
 }
 
+#define INCLUDE
+#include "undefined-template.cpp"
+void func_25(SystemHeader<char> *x) {
+  x->meth();
+}
+
 int main() {
   return 0;
 }
+#else
+#pragma clang system_header
+template <typename T> struct SystemHeader { T meth(); };
+#endif
