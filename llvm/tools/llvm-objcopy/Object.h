@@ -193,6 +193,7 @@ struct Symbol {
   uint64_t Size;
   uint8_t Type;
   uint64_t Value;
+  uint8_t Visibility;
 
   uint16_t getShndx() const;
 };
@@ -207,8 +208,8 @@ protected:
 public:
   void setStrTab(StringTableSection *StrTab) { SymbolNames = StrTab; }
   void addSymbol(StringRef Name, uint8_t Bind, uint8_t Type,
-                 SectionBase *DefinedIn, uint64_t Value, uint16_t Shndx,
-                 uint64_t Sz);
+                 SectionBase *DefinedIn, uint64_t Value, uint8_t Visibility,
+                 uint16_t Shndx, uint64_t Sz);
   void addSymbolNames();
   const SectionBase *getStrTab() const { return SymbolNames; }
   const Symbol *getSymbolByIndex(uint32_t Index) const;

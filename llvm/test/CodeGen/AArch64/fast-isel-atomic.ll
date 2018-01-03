@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=aarch64-- -O0 -fast-isel -fast-isel-abort=4 -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mtriple=aarch64-- -O0 -fast-isel=0 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-- -O0 -fast-isel=0 -global-isel=false -verify-machineinstrs < %s | FileCheck %s
 
 ; Note that checking SelectionDAG output isn't strictly necessary, but they
 ; currently match, so we might as well check both!  Feel free to remove SDAG.

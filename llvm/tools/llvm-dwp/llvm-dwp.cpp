@@ -673,19 +673,19 @@ int main(int argc, char **argv) {
   MCContext MC(MAI.get(), MRI.get(), &MOFI);
   MOFI.InitMCObjectFileInfo(TheTriple, /*PIC*/ false, MC);
 
+  std::unique_ptr<MCSubtargetInfo> MSTI(
+      TheTarget->createMCSubtargetInfo(TripleName, "", ""));
+  if (!MSTI)
+    return error("no subtarget info for target " + TripleName, Context);
+
   MCTargetOptions Options;
-  auto MAB = TheTarget->createMCAsmBackend(*MRI, TripleName, "", Options);
+  auto MAB = TheTarget->createMCAsmBackend(*MSTI, *MRI, Options);
   if (!MAB)
     return error("no asm backend for target " + TripleName, Context);
 
   std::unique_ptr<MCInstrInfo> MII(TheTarget->createMCInstrInfo());
   if (!MII)
     return error("no instr info info for target " + TripleName, Context);
-
-  std::unique_ptr<MCSubtargetInfo> MSTI(
-      TheTarget->createMCSubtargetInfo(TripleName, "", ""));
-  if (!MSTI)
-    return error("no subtarget info for target " + TripleName, Context);
 
   MCCodeEmitter *MCE = TheTarget->createMCCodeEmitter(*MII, *MRI, MC);
   if (!MCE)

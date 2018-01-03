@@ -712,8 +712,11 @@ bool TargetPassConfig::addCoreISelPasses() {
 
   // Ask the target for an isel.
   // Enable GlobalISel if the target wants to, but allow that to be overriden.
+  // Explicitly enabling fast-isel should override implicitly enabled
+  // global-isel.
   if (EnableGlobalISel == cl::BOU_TRUE ||
-      (EnableGlobalISel == cl::BOU_UNSET && isGlobalISelEnabled())) {
+      (EnableGlobalISel == cl::BOU_UNSET && isGlobalISelEnabled() &&
+       EnableFastISelOption != cl::BOU_TRUE)) {
     if (addIRTranslator())
       return true;
 
@@ -1133,7 +1136,12 @@ bool TargetPassConfig::isGlobalISelEnabled() const {
 }
 
 bool TargetPassConfig::isGlobalISelAbortEnabled() const {
-  return EnableGlobalISelAbort == 1;
+  if (EnableGlobalISelAbort.getNumOccurrences() > 0)
+    return EnableGlobalISelAbort == 1;
+
+  // When no abort behaviour is specified, we don't abort if the target says
+  // that GISel is enabled.
+  return !isGlobalISelEnabled();
 }
 
 bool TargetPassConfig::reportDiagnosticWhenGlobalISelFallback() const {

@@ -815,7 +815,14 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   if (CI.isInlineAsm())
     return translateInlineAsm(CI, MIRBuilder);
 
-  if (!F || !F->isIntrinsic()) {
+  Intrinsic::ID ID = Intrinsic::not_intrinsic;
+  if (F && F->isIntrinsic()) {
+    ID = F->getIntrinsicID();
+    if (TII && ID == Intrinsic::not_intrinsic)
+      ID = static_cast<Intrinsic::ID>(TII->getIntrinsicID(F));
+  }
+
+  if (!F || !F->isIntrinsic() || ID == Intrinsic::not_intrinsic) {
     unsigned Res = CI.getType()->isVoidTy() ? 0 : getOrCreateVReg(CI);
     SmallVector<unsigned, 8> Args;
     for (auto &Arg: CI.arg_operands())
@@ -826,10 +833,6 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
       return getOrCreateVReg(*CI.getCalledValue());
     });
   }
-
-  Intrinsic::ID ID = F->getIntrinsicID();
-  if (TII && ID == Intrinsic::not_intrinsic)
-    ID = static_cast<Intrinsic::ID>(TII->getIntrinsicID(F));
 
   assert(ID != Intrinsic::not_intrinsic && "unknown intrinsic");
 

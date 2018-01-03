@@ -70,11 +70,13 @@ MCCodeEmitter *createX86MCCodeEmitter(const MCInstrInfo &MCII,
                                       const MCRegisterInfo &MRI,
                                       MCContext &Ctx);
 
-MCAsmBackend *createX86_32AsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                                     const Triple &TT, StringRef CPU,
+MCAsmBackend *createX86_32AsmBackend(const Target &T,
+                                     const MCSubtargetInfo &STI,
+                                     const MCRegisterInfo &MRI,
                                      const MCTargetOptions &Options);
-MCAsmBackend *createX86_64AsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                                     const Triple &TT, StringRef CPU,
+MCAsmBackend *createX86_64AsmBackend(const Target &T,
+                                     const MCSubtargetInfo &STI,
+                                     const MCRegisterInfo &MRI,
                                      const MCTargetOptions &Options);
 
 /// Implements X86-only directives for assembly emission.

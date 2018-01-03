@@ -1,5 +1,5 @@
 ; RUN: llc -verify-machineinstrs -mtriple=aarch64-apple-ios -o - %s | FileCheck --check-prefix=CHECK --check-prefix=OPT %s
-; RUN: llc -O0 -verify-machineinstrs -mtriple=aarch64-apple-ios -o - %s | FileCheck %s
+; RUN: llc -O0 -fast-isel -verify-machineinstrs -mtriple=aarch64-apple-ios -o - %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mtriple=aarch64-unknown-linux-gnu -o - %s | FileCheck --check-prefix=CHECK --check-prefix=OPT %s
 
 ; Parameter with swiftself should be allocated to x20.

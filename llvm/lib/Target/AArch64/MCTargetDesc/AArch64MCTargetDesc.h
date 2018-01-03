@@ -45,12 +45,12 @@ MCCodeEmitter *createAArch64MCCodeEmitter(const MCInstrInfo &MCII,
                                           const MCRegisterInfo &MRI,
                                           MCContext &Ctx);
 MCAsmBackend *createAArch64leAsmBackend(const Target &T,
+                                        const MCSubtargetInfo &STI,
                                         const MCRegisterInfo &MRI,
-                                        const Triple &TT, StringRef CPU,
                                         const MCTargetOptions &Options);
 MCAsmBackend *createAArch64beAsmBackend(const Target &T,
+                                        const MCSubtargetInfo &STI,
                                         const MCRegisterInfo &MRI,
-                                        const Triple &TT, StringRef CPU,
                                         const MCTargetOptions &Options);
 
 std::unique_ptr<MCObjectWriter>

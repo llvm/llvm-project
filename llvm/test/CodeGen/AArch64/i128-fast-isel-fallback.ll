@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=arm64-apple-ios7.0 -mcpu=generic < %s | FileCheck %s
+; RUN: llc -O0 -fast-isel -mtriple=arm64-apple-ios7.0 -mcpu=generic < %s | FileCheck %s
 
 ; Function Attrs: nounwind ssp
 define void @test1() {
