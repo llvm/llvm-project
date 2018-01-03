@@ -40,8 +40,8 @@ Target &getTheSparcelTarget();
 MCCodeEmitter *createSparcMCCodeEmitter(const MCInstrInfo &MCII,
                                         const MCRegisterInfo &MRI,
                                         MCContext &Ctx);
-MCAsmBackend *createSparcAsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                                    const Triple &TT, StringRef CPU,
+MCAsmBackend *createSparcAsmBackend(const Target &T, const MCSubtargetInfo &STI,
+                                    const MCRegisterInfo &MRI,
                                     const MCTargetOptions &Options);
 std::unique_ptr<MCObjectWriter>
 createSparcELFObjectWriter(raw_pwrite_stream &OS, bool Is64Bit,

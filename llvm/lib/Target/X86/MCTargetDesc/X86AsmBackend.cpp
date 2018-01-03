@@ -843,10 +843,12 @@ public:
 } // end anonymous namespace
 
 MCAsmBackend *llvm::createX86_32AsmBackend(const Target &T,
+                                           const MCSubtargetInfo &STI,
                                            const MCRegisterInfo &MRI,
-                                           const Triple &TheTriple,
-                                           StringRef CPU,
                                            const MCTargetOptions &Options) {
+  const Triple &TheTriple = STI.getTargetTriple();
+  StringRef CPU = STI.getCPU();
+  llvm::errs() << "create x86-32 backend with CPU: " << CPU << "\n";
   if (TheTriple.isOSBinFormatMachO())
     return new DarwinX86_32AsmBackend(T, MRI, CPU);
 
@@ -862,10 +864,11 @@ MCAsmBackend *llvm::createX86_32AsmBackend(const Target &T,
 }
 
 MCAsmBackend *llvm::createX86_64AsmBackend(const Target &T,
+                                           const MCSubtargetInfo &STI,
                                            const MCRegisterInfo &MRI,
-                                           const Triple &TheTriple,
-                                           StringRef CPU,
                                            const MCTargetOptions &Options) {
+  const Triple &TheTriple = STI.getTargetTriple();
+  StringRef CPU = STI.getCPU();
   if (TheTriple.isOSBinFormatMachO()) {
     MachO::CPUSubTypeX86 CS =
         StringSwitch<MachO::CPUSubTypeX86>(TheTriple.getArchName())

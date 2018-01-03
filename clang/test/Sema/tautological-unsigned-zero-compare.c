@@ -1,7 +1,13 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -Wno-tautological-unsigned-zero-compare -verify=silence %s
-// RUN: %clang_cc1 -fsyntax-only -verify -x c++ %s
-// RUN: %clang_cc1 -fsyntax-only -Wno-tautological-unsigned-zero-compare -verify=silence -x c++ %s
+// RUN: %clang_cc1 -fsyntax-only \
+// RUN:            -Wtautological-unsigned-zero-compare \
+// RUN:            -verify %s
+// RUN: %clang_cc1 -fsyntax-only \
+// RUN:            -verify=silence %s
+// RUN: %clang_cc1 -fsyntax-only \
+// RUN:            -Wtautological-unsigned-zero-compare \
+// RUN:            -verify -x c++ %s
+// RUN: %clang_cc1 -fsyntax-only \
+// RUN:            -verify=silence -x c++ %s
 
 unsigned uvalue(void);
 signed int svalue(void);
@@ -32,9 +38,38 @@ int main()
   TFunc<unsigned short>();
 #endif
 
+  short s = svalue();
+
   unsigned un = uvalue();
 
   // silence-no-diagnostics
+
+  // Note: both sides are promoted to unsigned long prior to the comparison.
+  if (s == 0UL)
+      return 0;
+  if (s != 0UL)
+      return 0;
+  if (s < 0UL) // expected-warning {{comparison of unsigned expression < 0 is always false}}
+      return 0;
+  if (s <= 0UL)
+      return 0;
+  if (s > 0UL)
+      return 0;
+  if (s >= 0UL) // expected-warning {{comparison of unsigned expression >= 0 is always true}}
+      return 0;
+
+  if (0UL == s)
+      return 0;
+  if (0UL != s)
+      return 0;
+  if (0UL < s)
+      return 0;
+  if (0UL <= s) // expected-warning {{comparison of 0 <= unsigned expression is always true}}
+      return 0;
+  if (0UL > s) // expected-warning {{comparison of 0 > unsigned expression is always false}}
+      return 0;
+  if (0UL >= s)
+      return 0;
 
   if (un == 0)
       return 0;

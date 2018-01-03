@@ -5946,15 +5946,15 @@ def note_typecheck_assign_const : Note<
 def warn_unsigned_always_true_comparison : Warning<
   "result of comparison of %select{%3|unsigned expression}0 %2 "
   "%select{unsigned expression|%3}0 is always %4">,
-  InGroup<TautologicalUnsignedZeroCompare>;
+  InGroup<TautologicalUnsignedZeroCompare>, DefaultIgnore;
 def warn_unsigned_enum_always_true_comparison : Warning<
   "result of comparison of %select{%3|unsigned enum expression}0 %2 "
   "%select{unsigned enum expression|%3}0 is always %4">,
-  InGroup<TautologicalUnsignedEnumZeroCompare>;
+  InGroup<TautologicalUnsignedEnumZeroCompare>, DefaultIgnore;
 def warn_tautological_constant_compare : Warning<
   "result of comparison %select{%3|%1}0 %2 "
   "%select{%1|%3}0 is always %4">,
-  InGroup<TautologicalConstantCompare>;
+  InGroup<TautologicalTypeLimitCompare>, DefaultIgnore;
 
 def warn_mixed_sign_comparison : Warning<
   "comparison of integers of different signs: %0 and %1">,

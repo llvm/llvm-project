@@ -123,8 +123,8 @@ public:
   using AsmPrinterCtorTy = AsmPrinter *(*)(
       TargetMachine &TM, std::unique_ptr<MCStreamer> &&Streamer);
   using MCAsmBackendCtorTy = MCAsmBackend *(*)(const Target &T,
+                                               const MCSubtargetInfo &STI,
                                                const MCRegisterInfo &MRI,
-                                               const Triple &TT, StringRef CPU,
                                                const MCTargetOptions &Options);
   using MCAsmParserCtorTy = MCTargetAsmParser *(*)(
       const MCSubtargetInfo &STI, MCAsmParser &P, const MCInstrInfo &MII,
@@ -381,15 +381,12 @@ public:
   }
 
   /// createMCAsmBackend - Create a target specific assembly parser.
-  ///
-  /// \param TheTriple The target triple string.
-  MCAsmBackend *createMCAsmBackend(const MCRegisterInfo &MRI,
-                                   StringRef TheTriple, StringRef CPU,
-                                   const MCTargetOptions &Options)
-                                   const {
+  MCAsmBackend *createMCAsmBackend(const MCSubtargetInfo &STI,
+                                   const MCRegisterInfo &MRI,
+                                   const MCTargetOptions &Options) const {
     if (!MCAsmBackendCtorFn)
       return nullptr;
-    return MCAsmBackendCtorFn(*this, MRI, Triple(TheTriple), CPU, Options);
+    return MCAsmBackendCtorFn(*this, STI, MRI, Options);
   }
 
   /// createMCAsmParser - Create a target specific assembly parser.
@@ -1106,10 +1103,10 @@ template <class MCAsmBackendImpl> struct RegisterMCAsmBackend {
   }
 
 private:
-  static MCAsmBackend *Allocator(const Target &T, const MCRegisterInfo &MRI,
-                                 const Triple &TheTriple, StringRef CPU,
+  static MCAsmBackend *Allocator(const Target &T, const MCSubtargetInfo &STI,
+                                 const MCRegisterInfo &MRI,
                                  const MCTargetOptions &Options) {
-    return new MCAsmBackendImpl(T, MRI, TheTriple, CPU);
+    return new MCAsmBackendImpl(T, STI, MRI);
   }
 };
 

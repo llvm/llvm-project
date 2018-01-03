@@ -843,6 +843,7 @@ public:
       RK = RegKind::SVEDataVector;
       break;
     case AArch64::PPRRegClassID:
+    case AArch64::PPR_3bRegClassID:
       RK = RegKind::SVEPredicateVector;
       break;
     default:
@@ -3652,6 +3653,12 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
   case Match_InvalidSVEPredicateSReg:
   case Match_InvalidSVEPredicateDReg:
     return Error(Loc, "invalid predicate register.");
+  case Match_InvalidSVEPredicate3bAnyReg:
+  case Match_InvalidSVEPredicate3bBReg:
+  case Match_InvalidSVEPredicate3bHReg:
+  case Match_InvalidSVEPredicate3bSReg:
+  case Match_InvalidSVEPredicate3bDReg:
+    return Error(Loc, "restricted predicate has range [0, 7].");
   default:
     llvm_unreachable("unexpected error code!");
   }
@@ -4081,6 +4088,11 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSVEPredicateHReg:
   case Match_InvalidSVEPredicateSReg:
   case Match_InvalidSVEPredicateDReg:
+  case Match_InvalidSVEPredicate3bAnyReg:
+  case Match_InvalidSVEPredicate3bBReg:
+  case Match_InvalidSVEPredicate3bHReg:
+  case Match_InvalidSVEPredicate3bSReg:
+  case Match_InvalidSVEPredicate3bDReg:
   case Match_MSR:
   case Match_MRS: {
     if (ErrorInfo >= Operands.size())

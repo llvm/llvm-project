@@ -68,27 +68,27 @@ MCCodeEmitter *createARMBEMCCodeEmitter(const MCInstrInfo &MCII,
                                         const MCRegisterInfo &MRI,
                                         MCContext &Ctx);
 
-MCAsmBackend *createARMAsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                                  const Triple &TT, StringRef CPU,
+MCAsmBackend *createARMAsmBackend(const Target &T, const MCSubtargetInfo &STI,
+                                  const MCRegisterInfo &MRI,
                                   const MCTargetOptions &Options,
                                   bool IsLittleEndian);
 
-MCAsmBackend *createARMLEAsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                                    const Triple &TT, StringRef CPU,
+MCAsmBackend *createARMLEAsmBackend(const Target &T, const MCSubtargetInfo &STI,
+                                    const MCRegisterInfo &MRI,
                                     const MCTargetOptions &Options);
 
-MCAsmBackend *createARMBEAsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                                    const Triple &TT, StringRef CPU,
+MCAsmBackend *createARMBEAsmBackend(const Target &T, const MCSubtargetInfo &STI,
+                                    const MCRegisterInfo &MRI,
                                     const MCTargetOptions &Options);
 
 MCAsmBackend *createThumbLEAsmBackend(const Target &T,
+                                      const MCSubtargetInfo &STI,
                                       const MCRegisterInfo &MRI,
-                                      const Triple &TT, StringRef CPU,
                                       const MCTargetOptions &Options);
 
 MCAsmBackend *createThumbBEAsmBackend(const Target &T,
+                                      const MCSubtargetInfo &STI,
                                       const MCRegisterInfo &MRI,
-                                      const Triple &TT, StringRef CPU,
                                       const MCTargetOptions &Options);
 
 // Construct a PE/COFF machine code streamer which will generate a PE/COFF

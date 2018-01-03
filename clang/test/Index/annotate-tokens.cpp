@@ -37,7 +37,9 @@ class C {
   ~C();
 };
 
-// RUN: c-index-test -test-annotate-tokens=%s:1:1:38:1 %s -fno-delayed-template-parsing | FileCheck %s
+auto test5(X) -> X;
+
+// RUN: c-index-test -test-annotate-tokens=%s:1:1:41:1 %s -std=c++14 -fno-delayed-template-parsing | FileCheck %s
 // CHECK: Keyword: "struct" [1:1 - 1:7] StructDecl=bonk:1:8 (Definition)
 // CHECK: Identifier: "bonk" [1:8 - 1:12] StructDecl=bonk:1:8 (Definition)
 // CHECK: Punctuation: "{" [1:13 - 1:14] StructDecl=bonk:1:8 (Definition)
@@ -184,6 +186,14 @@ class C {
 // CHECK: Punctuation: "}" [29:22 - 29:23] CompoundStmt=
 // CHECK: Punctuation: "~" [37:3 - 37:4] CXXDestructor=~C:37:3
 // CHECK: Identifier: "C" [37:4 - 37:5] CXXDestructor=~C:37:3
+// CHECK: Keyword: "auto" [40:1 - 40:5] FunctionDecl=test5:40:6
+// CHECK: Identifier: "test5" [40:6 - 40:11] FunctionDecl=test5:40:6
+// CHECK: Punctuation: "(" [40:11 - 40:12] FunctionDecl=test5:40:6
+// CHECK: Identifier: "X" [40:12 - 40:13] TypeRef=struct X:7:8
+// CHECK: Punctuation: ")" [40:13 - 40:14] FunctionDecl=test5:40:6
+// CHECK: Punctuation: "->" [40:15 - 40:17] FunctionDecl=test5:40:6
+// CHECK: Identifier: "X" [40:18 - 40:19] TypeRef=struct X:7:8
+// CHECK: Punctuation: ";" [40:19 - 40:20]
 
 // RUN: env LIBCLANG_DISABLE_CRASH_RECOVERY=1 c-index-test -test-annotate-tokens=%s:32:1:32:13 %s | FileCheck %s -check-prefix=CHECK2
 // CHECK2: Keyword: "if" [32:3 - 32:5] IfStmt=
