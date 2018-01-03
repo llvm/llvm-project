@@ -336,6 +336,13 @@ exec $_to \$@
 EOF
 }
 
+# On Android-L not allowing user segv handler breaks some applications.
+# Since ~May 2017 this is the default setting; included for compatibility with
+# older library versions.
+if [[ PRE_L -eq 0 ]]; then
+    ASAN_OPTIONS="$ASAN_OPTIONS,allow_user_segv_handler=1"
+fi
+
 if [[ x$extra_options != x ]] ; then
     ASAN_OPTIONS="$ASAN_OPTIONS,$extra_options"
 fi

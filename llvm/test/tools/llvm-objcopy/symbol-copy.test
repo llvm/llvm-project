@@ -28,11 +28,22 @@ Symbols:
       Section:  .text
       Value:    0x1000
       Size:     4
+    - Name:     bam
+      Type:     STT_FUNC
+      Section:  .text
+      Value:    0x1001
+      Size:     4
+      Visibility: STV_HIDDEN
     - Name:     foo
       Type:     STT_FUNC
       Section:  .text
-      Section:  .text
       Value:    0x1004
+    - Name:     faz
+      Type:     STT_OBJECT
+      Section:  .data
+      Value:    0x2002
+      Size:     2
+      Visibility: STV_INTERNAL
     - Name:     bar
       Type:     STT_OBJECT
       Section:  .data
@@ -64,6 +75,17 @@ Symbols:
 #CHECK-NEXT:    Section: .text
 #CHECK-NEXT:  }
 #CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: bam
+#CHECK-NEXT:    Value: 0x1001
+#CHECK-NEXT:    Size: 4
+#CHECK-NEXT:    Binding: Global
+#CHECK-NEXT:    Type: Function
+#CHECK-NEXT:    Other [
+#CHECK-NEXT:      STV_HIDDEN
+#CHECK-NEXT:    ]
+#CHECK-NEXT:    Section: .text
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
 #CHECK-NEXT:    Name: foo
 #CHECK-NEXT:    Value: 0x1004
 #CHECK-NEXT:    Size: 0
@@ -71,6 +93,17 @@ Symbols:
 #CHECK-NEXT:    Type: Function
 #CHECK-NEXT:    Other: 0
 #CHECK-NEXT:    Section: .text
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: faz
+#CHECK-NEXT:    Value: 0x2002
+#CHECK-NEXT:    Size: 2
+#CHECK-NEXT:    Binding: Global
+#CHECK-NEXT:    Type: Object
+#CHECK-NEXT:    Other [
+#CHECK-NEXT:      STV_INTERNAL
+#CHECK-NEXT:    ]
+#CHECK-NEXT:    Section: .data
 #CHECK-NEXT:  }
 #CHECK-NEXT:  Symbol {
 #CHECK-NEXT:    Name: bar
