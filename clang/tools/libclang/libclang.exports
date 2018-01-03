@@ -291,7 +291,6 @@ clang_isAttribute
 clang_isConstQualifiedType
 clang_isCursorDefinition
 clang_isDeclaration
-clang_isInvalidDeclaration
 clang_isExpression
 clang_isFileMultipleIncludeGuarded
 clang_isFunctionTypeVariadic
