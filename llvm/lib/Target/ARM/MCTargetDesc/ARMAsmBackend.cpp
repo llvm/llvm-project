@@ -172,8 +172,8 @@ void ARMAsmBackend::handleAssemblerFlag(MCAssemblerFlag Flag) {
 }
 
 unsigned ARMAsmBackend::getRelaxedOpcode(unsigned Op) const {
-  bool HasThumb2 = STI->getFeatureBits()[ARM::FeatureThumb2];
-  bool HasV8MBaselineOps = STI->getFeatureBits()[ARM::HasV8MBaselineOps];
+  bool HasThumb2 = STI.getFeatureBits()[ARM::FeatureThumb2];
+  bool HasV8MBaselineOps = STI.getFeatureBits()[ARM::HasV8MBaselineOps];
 
   switch (Op) {
   default:
@@ -389,7 +389,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   case FK_SecRel_4:
     return Value;
   case ARM::fixup_arm_movt_hi16:
-    if (IsResolved || !STI->getTargetTriple().isOSBinFormatELF())
+    if (IsResolved || !STI.getTargetTriple().isOSBinFormatELF())
       Value >>= 16;
     LLVM_FALLTHROUGH;
   case ARM::fixup_arm_movw_lo16: {
@@ -401,7 +401,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
     return Value;
   }
   case ARM::fixup_t2_movt_hi16:
-    if (IsResolved || !STI->getTargetTriple().isOSBinFormatELF())
+    if (IsResolved || !STI.getTargetTriple().isOSBinFormatELF())
       Value >>= 16;
     LLVM_FALLTHROUGH;
   case ARM::fixup_t2_movw_lo16: {
@@ -591,7 +591,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   case ARM::fixup_arm_thumb_cp:
     // On CPUs supporting Thumb2, this will be relaxed to an ldr.w, otherwise we
     // could have an error on our hands.
-    if (!STI->getFeatureBits()[ARM::FeatureThumb2] && IsResolved) {
+    if (!STI.getFeatureBits()[ARM::FeatureThumb2] && IsResolved) {
       const char *FixupDiagnostic = reasonForFixupRelaxation(Fixup, Value);
       if (FixupDiagnostic) {
         Ctx.reportError(Fixup.getLoc(), FixupDiagnostic);
@@ -615,8 +615,8 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   }
   case ARM::fixup_arm_thumb_br:
     // Offset by 4 and don't encode the lower bit, which is always 0.
-    if (!STI->getFeatureBits()[ARM::FeatureThumb2] &&
-        !STI->getFeatureBits()[ARM::HasV8MBaselineOps]) {
+    if (!STI.getFeatureBits()[ARM::FeatureThumb2] &&
+        !STI.getFeatureBits()[ARM::HasV8MBaselineOps]) {
       const char *FixupDiagnostic = reasonForFixupRelaxation(Fixup, Value);
       if (FixupDiagnostic) {
         Ctx.reportError(Fixup.getLoc(), FixupDiagnostic);
@@ -626,7 +626,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
     return ((Value - 4) >> 1) & 0x7ff;
   case ARM::fixup_arm_thumb_bcc:
     // Offset by 4 and don't encode the lower bit, which is always 0.
-    if (!STI->getFeatureBits()[ARM::FeatureThumb2]) {
+    if (!STI.getFeatureBits()[ARM::FeatureThumb2]) {
       const char *FixupDiagnostic = reasonForFixupRelaxation(Fixup, Value);
       if (FixupDiagnostic) {
         Ctx.reportError(Fixup.getLoc(), FixupDiagnostic);
@@ -1154,24 +1154,25 @@ static MachO::CPUSubTypeARM getMachOSubTypeFromArch(StringRef Arch) {
 }
 
 MCAsmBackend *llvm::createARMAsmBackend(const Target &T,
+                                        const MCSubtargetInfo &STI,
                                         const MCRegisterInfo &MRI,
-                                        const Triple &TheTriple, StringRef CPU,
                                         const MCTargetOptions &Options,
                                         bool isLittle) {
+  const Triple &TheTriple = STI.getTargetTriple();
   switch (TheTriple.getObjectFormat()) {
   default:
     llvm_unreachable("unsupported object format");
   case Triple::MachO: {
     MachO::CPUSubTypeARM CS = getMachOSubTypeFromArch(TheTriple.getArchName());
-    return new ARMAsmBackendDarwin(T, TheTriple, MRI, CS);
+    return new ARMAsmBackendDarwin(T, STI, MRI, CS);
   }
   case Triple::COFF:
     assert(TheTriple.isOSWindows() && "non-Windows ARM COFF is not supported");
-    return new ARMAsmBackendWinCOFF(T, TheTriple);
+    return new ARMAsmBackendWinCOFF(T, STI);
   case Triple::ELF:
     assert(TheTriple.isOSBinFormatELF() && "using ELF for non-ELF target");
     uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
-    return new ARMAsmBackendELF(T, TheTriple, OSABI, isLittle);
+    return new ARMAsmBackendELF(T, STI, OSABI, isLittle);
   }
 }
 
@@ -1179,30 +1180,26 @@ MCAsmBackend *llvm::createARMLEAsmBackend(const Target &T,
                                           const MCSubtargetInfo &STI,
                                           const MCRegisterInfo &MRI,
                                           const MCTargetOptions &Options) {
-  return createARMAsmBackend(T, MRI, STI.getTargetTriple(), STI.getCPU(),
-                             Options, true);
+  return createARMAsmBackend(T, STI, MRI, Options, true);
 }
 
 MCAsmBackend *llvm::createARMBEAsmBackend(const Target &T,
                                           const MCSubtargetInfo &STI,
                                           const MCRegisterInfo &MRI,
                                           const MCTargetOptions &Options) {
-  return createARMAsmBackend(T, MRI, STI.getTargetTriple(), STI.getCPU(),
-                             Options, false);
+  return createARMAsmBackend(T, STI, MRI, Options, false);
 }
 
 MCAsmBackend *llvm::createThumbLEAsmBackend(const Target &T,
                                             const MCSubtargetInfo &STI,
                                             const MCRegisterInfo &MRI,
                                             const MCTargetOptions &Options) {
-  return createARMAsmBackend(T, MRI, STI.getTargetTriple(), STI.getCPU(),
-                             Options, true);
+  return createARMAsmBackend(T, STI, MRI, Options, true);
 }
 
 MCAsmBackend *llvm::createThumbBEAsmBackend(const Target &T,
                                             const MCSubtargetInfo &STI,
                                             const MCRegisterInfo &MRI,
                                             const MCTargetOptions &Options) {
-  return createARMAsmBackend(T, MRI, STI.getTargetTriple(), STI.getCPU(),
-                             Options, false);
+  return createARMAsmBackend(T, STI, MRI, Options, false);
 }

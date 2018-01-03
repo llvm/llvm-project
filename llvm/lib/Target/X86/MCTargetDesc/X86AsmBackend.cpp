@@ -848,7 +848,6 @@ MCAsmBackend *llvm::createX86_32AsmBackend(const Target &T,
                                            const MCTargetOptions &Options) {
   const Triple &TheTriple = STI.getTargetTriple();
   StringRef CPU = STI.getCPU();
-  llvm::errs() << "create x86-32 backend with CPU: " << CPU << "\n";
   if (TheTriple.isOSBinFormatMachO())
     return new DarwinX86_32AsmBackend(T, MRI, CPU);
 

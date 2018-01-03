@@ -68,8 +68,8 @@ MCCodeEmitter *createARMBEMCCodeEmitter(const MCInstrInfo &MCII,
                                         const MCRegisterInfo &MRI,
                                         MCContext &Ctx);
 
-MCAsmBackend *createARMAsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                                  const Triple &TT, StringRef CPU,
+MCAsmBackend *createARMAsmBackend(const Target &T, const MCSubtargetInfo &STI,
+                                  const MCRegisterInfo &MRI,
                                   const MCTargetOptions &Options,
                                   bool IsLittleEndian);
 
