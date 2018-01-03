@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-pc-windows-msvc18.0.0 -std=c++11 -fms-compatibility-version=18 -fms-extensions -emit-llvm %s -fexceptions -fcxx-exceptions -o - -O1 | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-pc-windows-msvc18.0.0 -std=c++11 -fms-compatibility-version=18 -fms-extensions -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple x86_64-pc-windows-msvc18.0.0 -std=c++11 -fms-compatibility-version=18 -fms-extensions -emit-llvm %s -fexceptions -fcxx-exceptions -o - -O1 | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple x86_64-pc-windows-msvc18.0.0 -std=c++11 -fms-compatibility-version=18 -fms-extensions -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
-// REQUIRES: x86-registered-target
 // expected-no-diagnostics
 
 void foo();
@@ -52,13 +52,19 @@ int main() {
 // CHECK: define internal void [[OUTLINED]](
 // CHECK: [[GID:%.+]] = {{.*}}call i32 @__kmpc_global_thread_num(%ident_t* {{.*}}@0)
 // CHECK: invoke void @{{.+}}foo
-// CHECK: catchswitch within
-// CHECK: catchpad within
+// CHECK: [[CATCHSWITCH:%.+]] = catchswitch within none
+// CHECK: [[CATCHPAD:%.+]] = catchpad within [[CATCHSWITCH]]
 // CHECK: call void @__kmpc_critical(%ident_t* {{.*}}@0, i32 [[GID]],
 // CHECK: invoke void @{{.+}}bar
 // CHECK: call void @__kmpc_end_critical(%ident_t* {{.*}}@0, i32 [[GID]],
-// CHECK: catchret from
-// CHECK: cleanuppad within
-// CHECK: call void @__kmpc_end_critical(%ident_t* {{.*}}@0, i32 [[GID]],
-// CHECK: cleanupret from
-
+// CHECK: catchret from [[CATCHPAD]] to
+// CHECK:      cleanuppad within [[CATCHPAD]] []
+// CHECK-NEXT: call void @__kmpc_end_critical(%ident_t* {{.*}}@0, i32 [[GID]],
+// CHECK-NEXT: cleanupret from {{.*}} unwind label %[[CATCHTERM:[^ ]+]]
+// CHECK:      cleanuppad within none []
+// CHECK-NEXT: call void @"\01?terminate@@YAXXZ"() #5 [ "funclet"(token %{{.*}}) ]
+// CHECK-NEXT: unreachable
+// CHECK:      [[CATCHTERM]]
+// CHECK-NEXT: cleanuppad within [[CATCHPAD]] []
+// CHECK-NEXT: call void @"\01?terminate@@YAXXZ"() #5 [ "funclet"(token %{{.*}}) ]
+// CHECK-NEXT: unreachable
