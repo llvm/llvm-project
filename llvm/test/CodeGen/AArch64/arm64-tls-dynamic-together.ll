@@ -1,6 +1,6 @@
-; RUN: llc -O0 -mtriple=arm64-none-linux-gnu -relocation-model=pic \
+; RUN: llc -O0 -fast-isel -mtriple=arm64-none-linux-gnu -relocation-model=pic \
 ; RUN:     -verify-machineinstrs < %s | FileCheck -check-prefix=CHECK -check-prefix=NOEMU %s
-; RUN: llc -emulated-tls -O0 -mtriple=arm64-none-linux-gnu -relocation-model=pic \
+; RUN: llc -emulated-tls -O0 -fast-isel -mtriple=arm64-none-linux-gnu -relocation-model=pic \
 ; RUN:     -verify-machineinstrs < %s | FileCheck -check-prefix=CHECK -check-prefix=EMU %s
 
 ; If the .tlsdesccall and blr parts are emitted completely separately (even with

@@ -765,11 +765,12 @@ public:
 
 // MCAsmBackend
 MCAsmBackend *llvm::createHexagonAsmBackend(Target const &T,
-                                      MCRegisterInfo const & /*MRI*/,
-                                      const Triple &TT, StringRef CPU,
-                                      const MCTargetOptions &Options) {
+                                            const MCSubtargetInfo &STI,
+                                            MCRegisterInfo const & /*MRI*/,
+                                            const MCTargetOptions &Options) {
+  const Triple &TT = STI.getTargetTriple();
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
 
-  StringRef CPUString = Hexagon_MC::selectHexagonCPU(CPU);
+  StringRef CPUString = Hexagon_MC::selectHexagonCPU(STI.getCPU());
   return new HexagonAsmBackend(T, TT, OSABI, CPUString);
 }

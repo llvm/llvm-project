@@ -476,10 +476,10 @@ bool AVRAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   }
 }
 
-MCAsmBackend *createAVRAsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                                  const Triple &TT, StringRef CPU,
+MCAsmBackend *createAVRAsmBackend(const Target &T, const MCSubtargetInfo &STI,
+                                  const MCRegisterInfo &MRI,
                                   const llvm::MCTargetOptions &TO) {
-  return new AVRAsmBackend(TT.getOS());
+  return new AVRAsmBackend(STI.getTargetTriple().getOS());
 }
 
 } // end of namespace llvm

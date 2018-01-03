@@ -580,7 +580,6 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
   }
 
   MachineFunction &MF = DAG.getMachineFunction();
-  MVT XLenVT = Subtarget.getXLenVT();
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
 
   if (IsVarArg)
@@ -593,7 +592,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
 
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i];
-    assert(VA.getLocVT() == XLenVT && "Unhandled argument type");
+    assert(VA.getLocVT() == Subtarget.getXLenVT() && "Unhandled argument type");
     SDValue ArgValue;
     if (VA.isRegLoc())
       ArgValue = unpackFromRegLoc(DAG, Chain, VA, DL);

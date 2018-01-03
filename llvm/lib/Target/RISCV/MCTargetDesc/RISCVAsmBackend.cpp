@@ -230,9 +230,10 @@ RISCVAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
 } // end anonymous namespace
 
 MCAsmBackend *llvm::createRISCVAsmBackend(const Target &T,
+                                          const MCSubtargetInfo &STI,
                                           const MCRegisterInfo &MRI,
-                                          const Triple &TT, StringRef CPU,
                                           const MCTargetOptions &Options) {
+  const Triple &TT = STI.getTargetTriple();
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
   return new RISCVAsmBackend(OSABI, TT.isArch64Bit());
 }

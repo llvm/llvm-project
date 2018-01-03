@@ -1,4 +1,4 @@
-; RUN: llc -O0 -filetype=obj -o - %s | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc -O0 -fast-isel -filetype=obj -o - %s | llvm-dwarfdump -v - | FileCheck %s
 ;
 ; Derived from (clang -O0 -g -fsanitize=address -fobjc-arc)
 ;   @protocol NSObject

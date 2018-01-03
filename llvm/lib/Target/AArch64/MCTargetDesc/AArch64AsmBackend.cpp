@@ -605,10 +605,10 @@ public:
 }
 
 MCAsmBackend *llvm::createAArch64leAsmBackend(const Target &T,
+                                              const MCSubtargetInfo &STI,
                                               const MCRegisterInfo &MRI,
-                                              const Triple &TheTriple,
-                                              StringRef CPU,
                                               const MCTargetOptions &Options) {
+  const Triple &TheTriple = STI.getTargetTriple();
   if (TheTriple.isOSBinFormatMachO())
     return new DarwinAArch64AsmBackend(T, TheTriple, MRI);
 
@@ -624,10 +624,10 @@ MCAsmBackend *llvm::createAArch64leAsmBackend(const Target &T,
 }
 
 MCAsmBackend *llvm::createAArch64beAsmBackend(const Target &T,
+                                              const MCSubtargetInfo &STI,
                                               const MCRegisterInfo &MRI,
-                                              const Triple &TheTriple,
-                                              StringRef CPU,
                                               const MCTargetOptions &Options) {
+  const Triple &TheTriple = STI.getTargetTriple();
   assert(TheTriple.isOSBinFormatELF() &&
          "Big endian is only supported for ELF targets!");
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());

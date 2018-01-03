@@ -325,9 +325,9 @@ public:
   virtual bool isGlobalISelEnabled() const;
 
   /// Check whether or not GlobalISel should abort on error.
-  /// When this is disable, GlobalISel will fall back on SDISel instead of
+  /// When this is disabled, GlobalISel will fall back on SDISel instead of
   /// erroring out.
-  virtual bool isGlobalISelAbortEnabled() const;
+  bool isGlobalISelAbortEnabled() const;
 
   /// Check whether or not a diagnostic should be emitted when GlobalISel
   /// uses the fallback path. In other words, it will emit a diagnostic

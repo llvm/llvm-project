@@ -1176,29 +1176,33 @@ MCAsmBackend *llvm::createARMAsmBackend(const Target &T,
 }
 
 MCAsmBackend *llvm::createARMLEAsmBackend(const Target &T,
+                                          const MCSubtargetInfo &STI,
                                           const MCRegisterInfo &MRI,
-                                          const Triple &TT, StringRef CPU,
                                           const MCTargetOptions &Options) {
-  return createARMAsmBackend(T, MRI, TT, CPU, Options, true);
+  return createARMAsmBackend(T, MRI, STI.getTargetTriple(), STI.getCPU(),
+                             Options, true);
 }
 
 MCAsmBackend *llvm::createARMBEAsmBackend(const Target &T,
+                                          const MCSubtargetInfo &STI,
                                           const MCRegisterInfo &MRI,
-                                          const Triple &TT, StringRef CPU,
                                           const MCTargetOptions &Options) {
-  return createARMAsmBackend(T, MRI, TT, CPU, Options, false);
+  return createARMAsmBackend(T, MRI, STI.getTargetTriple(), STI.getCPU(),
+                             Options, false);
 }
 
 MCAsmBackend *llvm::createThumbLEAsmBackend(const Target &T,
+                                            const MCSubtargetInfo &STI,
                                             const MCRegisterInfo &MRI,
-                                            const Triple &TT, StringRef CPU,
                                             const MCTargetOptions &Options) {
-  return createARMAsmBackend(T, MRI, TT, CPU, Options, true);
+  return createARMAsmBackend(T, MRI, STI.getTargetTriple(), STI.getCPU(),
+                             Options, true);
 }
 
 MCAsmBackend *llvm::createThumbBEAsmBackend(const Target &T,
+                                            const MCSubtargetInfo &STI,
                                             const MCRegisterInfo &MRI,
-                                            const Triple &TT, StringRef CPU,
                                             const MCTargetOptions &Options) {
-  return createARMAsmBackend(T, MRI, TT, CPU, Options, false);
+  return createARMAsmBackend(T, MRI, STI.getTargetTriple(), STI.getCPU(),
+                             Options, false);
 }
