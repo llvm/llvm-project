@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -fsyntax-only -DUNSIGNED -verify %s
-// RUN: %clang_cc1 -triple=x86_64-pc-win32 -fsyntax-only -DSIGNED -verify %s
+// RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -fsyntax-only -DUNSIGNED -Wtautological-constant-in-range-compare -verify %s
+// RUN: %clang_cc1 -triple=x86_64-pc-win32 -fsyntax-only -DSIGNED -Wtautological-constant-in-range-compare -verify %s
 // RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -fsyntax-only -DUNSIGNED -DSILENCE -Wno-tautological-constant-compare -verify %s
 // RUN: %clang_cc1 -triple=x86_64-pc-win32 -fsyntax-only -DSIGNED -DSILENCE -Wno-tautological-constant-compare -verify %s
 
