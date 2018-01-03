@@ -8,7 +8,12 @@
   entry:
     ret void
   }
-  define void @test_mul_overflow() { ret void }
+  define void @test_smul_overflow() {
+    ret void
+  }
+  define void @test_umul_overflow() {
+    ret void
+  }
 ...
 
 ---
@@ -43,24 +48,51 @@ body: |
 
 
 ---
-name:            test_mul_overflow
+name:            test_smul_overflow
 body: |
   bb.0:
     liveins: %x0, %x1, %w2, %w3
 
-    ; CHECK-LABEL: name: test_mul_overflow
+    ; CHECK-LABEL: name: test_smul_overflow
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY %x0
     ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY %x1
     ; CHECK: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[COPY]], [[COPY1]]
     ; CHECK: [[SMULH:%[0-9]+]]:_(s64) = G_SMULH [[COPY]], [[COPY1]]
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[SMULH]](s64), [[C]]
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
+    ; CHECK: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[MUL]], [[C]]
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[SMULH]](s64), [[ASHR]]
     ; CHECK: %x0 = COPY [[MUL]](s64)
     ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ICMP]](s32)
     ; CHECK: %w0 = COPY [[COPY2]](s32)
     %0:_(s64) = COPY %x0
     %1:_(s64) = COPY %x1
     %2:_(s64), %3:_(s1) = G_SMULO %0, %1
+    %x0 = COPY %2
+    %4:_(s32) = G_ANYEXT %3
+    %w0 = COPY %4
+
+...
+
+
+---
+name:            test_umul_overflow
+body: |
+  bb.0:
+    liveins: %x0, %x1, %w2, %w3
+
+    ; CHECK-LABEL: name: test_umul_overflow
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY %x0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY %x1
+    ; CHECK: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[COPY]], [[COPY1]]
+    ; CHECK: [[UMULH:%[0-9]+]]:_(s64) = G_UMULH [[COPY]], [[COPY1]]
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[UMULH]](s64), [[C]]
+    ; CHECK: %x0 = COPY [[MUL]](s64)
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ICMP]](s32)
+    ; CHECK: %w0 = COPY [[COPY2]](s32)
+    %0:_(s64) = COPY %x0
+    %1:_(s64) = COPY %x1
+    %2:_(s64), %3:_(s1) = G_UMULO %0, %1
     %x0 = COPY %2
     %4:_(s32) = G_ANYEXT %3
     %w0 = COPY %4
