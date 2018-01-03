@@ -32,7 +32,7 @@
  * compatible, thus CINDEX_VERSION_MAJOR is expected to remain stable.
  */
 #define CINDEX_VERSION_MAJOR 0
-#define CINDEX_VERSION_MINOR 45
+#define CINDEX_VERSION_MINOR 46
 
 #define CINDEX_VERSION_ENCODE(major, minor) ( \
       ((major) * 10000)                       \
@@ -2640,6 +2640,16 @@ CINDEX_LINKAGE enum CXCursorKind clang_getCursorKind(CXCursor);
  * \brief Determine whether the given cursor kind represents a declaration.
  */
 CINDEX_LINKAGE unsigned clang_isDeclaration(enum CXCursorKind);
+
+/**
+ * \brief Determine whether the given declaration is invalid.
+ *
+ * A declaration is invalid if it could not be parsed successfully.
+ *
+ * \returns non-zero if the cursor represents a declaration and it is
+ * invalid, otherwise NULL.
+ */
+CINDEX_LINKAGE unsigned clang_isInvalidDeclaration(CXCursor);
 
 /**
  * \brief Determine whether the given cursor kind represents a simple
