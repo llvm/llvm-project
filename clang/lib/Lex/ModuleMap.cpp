@@ -744,14 +744,13 @@ Module *ModuleMap::lookupModuleQualified(StringRef Name, Module *Context) const{
   return Context->findSubmodule(Name);
 }
 
-std::pair<Module *, bool> ModuleMap::findOrCreateModule(StringRef Name,
-                                                        Module *Parent,
-                                                        bool IsFramework,
-                                                        bool IsExplicit) {
+std::pair<Module *, bool>
+ModuleMap::findOrCreateModule(StringRef Name, Module *Parent, bool IsFramework,
+                              bool IsExplicit, bool UsesExplicitModuleMapFile) {
   // Try to find an existing module with this name.
   if (Module *Sub = lookupModuleQualified(Name, Parent))
     return std::make_pair(Sub, false);
-  
+
   // Create a new module with this name.
   Module *Result = new Module(Name, SourceLocation(), Parent, IsFramework,
                               IsExplicit, NumCreatedModules++);
@@ -759,22 +758,10 @@ std::pair<Module *, bool> ModuleMap::findOrCreateModule(StringRef Name,
     if (LangOpts.CurrentModule == Name)
       SourceModule = Result;
     Modules[Name] = Result;
-    ModuleScopeIDs[Result] = CurrentModuleScopeID;
+    if (UsesExplicitModuleMapFile)
+      ExplicitlyProvidedModules.insert(Result);
   }
   return std::make_pair(Result, true);
-}
-
-Module *ModuleMap::createShadowedModule(StringRef Name, bool IsFramework,
-                                        Module *ShadowingModule) {
-
-  // Create a new module with this name.
-  Module *Result =
-      new Module(Name, SourceLocation(), /*Parent=*/nullptr, IsFramework,
-                 /*IsExplicit=*/false, NumCreatedModules++);
-  Result->ShadowingModule = ShadowingModule;
-  Result->IsAvailable = false;
-  ModuleScopeIDs[Result] = CurrentModuleScopeID;
-  return Result;
 }
 
 Module *ModuleMap::createGlobalModuleForInterfaceUnit(SourceLocation Loc) {
@@ -935,8 +922,6 @@ Module *ModuleMap::inferFrameworkModule(const DirectoryEntry *FrameworkDir,
   Module *Result = new Module(ModuleName, SourceLocation(), Parent,
                               /*IsFramework=*/true, /*IsExplicit=*/false,
                               NumCreatedModules++);
-  if (!Parent)
-    ModuleScopeIDs[Result] = CurrentModuleScopeID;
   InferredModuleAllowedBy[Result] = ModuleMapFile;
   Result->IsInferred = true;
   if (!Parent) {
@@ -1011,6 +996,19 @@ Module *ModuleMap::inferFrameworkModule(const DirectoryEntry *FrameworkDir,
   if (!Result->isSubFramework()) {
     inferFrameworkLink(Result, FrameworkDir, FileMgr);
   }
+
+  return Result;
+}
+
+Module *ModuleMap::createShadowedModule(StringRef Name, bool IsFramework,
+                                        Module *ShadowingModule) {
+
+  // Create a new module with this name.
+  Module *Result =
+      new Module(Name, SourceLocation(), /*Parent=*/nullptr, IsFramework,
+                 /*IsExplicit=*/false, NumCreatedModules++);
+  Result->ShadowingModule = ShadowingModule;
+  Result->IsAvailable = false;
 
   return Result;
 }
@@ -1130,6 +1128,11 @@ void ModuleMap::excludeHeader(Module *Mod, Module::Header Header) {
   (void) Headers[Header.Entry];
 
   Mod->Headers[Module::HK_Excluded].push_back(std::move(Header));
+}
+
+void ModuleMap::setExplicitlyProvided(Module *Mod) {
+  assert(Modules[Mod->Name] == Mod && "explicitly provided module is shadowed");
+  ExplicitlyProvidedModules.insert(Mod);
 }
 
 const FileEntry *
@@ -1335,7 +1338,9 @@ namespace clang {
 
     /// \brief Consume the current token and return its location.
     SourceLocation consumeToken();
-    
+
+    bool UsesExplicitModuleMapFile = false;
+
     /// \brief Skip tokens until we reach the a token with the given kind
     /// (or the end of the file).
     void skipUntil(MMToken::TokenKind K);
@@ -1361,20 +1366,19 @@ namespace clang {
     bool parseOptionalAttributes(Attributes &Attrs);
     
   public:
-    explicit ModuleMapParser(Lexer &L, SourceManager &SourceMgr, 
-                             const TargetInfo *Target,
-                             DiagnosticsEngine &Diags,
-                             ModuleMap &Map,
-                             const FileEntry *ModuleMapFile,
-                             const DirectoryEntry *Directory,
-                             bool IsSystem)
+    explicit ModuleMapParser(Lexer &L, SourceManager &SourceMgr,
+                             const TargetInfo *Target, DiagnosticsEngine &Diags,
+                             ModuleMap &Map, const FileEntry *ModuleMapFile,
+                             const DirectoryEntry *Directory, bool IsSystem,
+                             bool UsesExplicitModuleMapFile)
         : L(L), SourceMgr(SourceMgr), Target(Target), Diags(Diags), Map(Map),
           ModuleMapFile(ModuleMapFile), Directory(Directory),
-          IsSystem(IsSystem) {
+          IsSystem(IsSystem),
+          UsesExplicitModuleMapFile(UsesExplicitModuleMapFile) {
       Tok.clear();
       consumeToken();
     }
-    
+
     bool parseModuleMapFile();
 
     bool terminatedByDirective() { return false; }
@@ -1833,7 +1837,8 @@ void ModuleMapParser::parseModuleDecl() {
       return;
     }
 
-    if (!Existing->Parent && Map.mayShadowNewModule(Existing)) {
+    if (!Existing->Parent &&
+        Map.mayShadowModuleBeingParsed(Existing, UsesExplicitModuleMapFile)) {
       ShadowingModule = Existing;
     } else {
       // This is not a shawdowed module decl, it is an illegal redefinition.
@@ -1856,9 +1861,9 @@ void ModuleMapParser::parseModuleDecl() {
     ActiveModule =
         Map.createShadowedModule(ModuleName, Framework, ShadowingModule);
   } else {
-    ActiveModule =
-        Map.findOrCreateModule(ModuleName, ActiveModule, Framework, Explicit)
-            .first;
+    ActiveModule = Map.findOrCreateModule(ModuleName, ActiveModule, Framework,
+                                          Explicit, UsesExplicitModuleMapFile)
+                       .first;
   }
 
   ActiveModule->DefinitionLoc = ModuleNameLoc;
@@ -2036,7 +2041,7 @@ void ModuleMapParser::parseExternModuleDecl() {
         Map.HeaderInfo.getHeaderSearchOpts().ModuleMapFileHomeIsCwd
             ? Directory
             : File->getDir(),
-        FileID(), nullptr, ExternLoc);
+        false /*IsExplicitlyProvided*/, FileID(), nullptr, ExternLoc);
 }
 
 /// Whether to add the requirement \p Feature to the module \p M.
@@ -2848,7 +2853,8 @@ bool ModuleMapParser::parseModuleMapFile() {
 }
 
 bool ModuleMap::parseModuleMapFile(const FileEntry *File, bool IsSystem,
-                                   const DirectoryEntry *Dir, FileID ID,
+                                   const DirectoryEntry *Dir,
+                                   bool IsExplicitlyProvided, FileID ID,
                                    unsigned *Offset,
                                    SourceLocation ExternModuleLoc) {
   assert(Target && "Missing target information");
@@ -2878,7 +2884,7 @@ bool ModuleMap::parseModuleMapFile(const FileEntry *File, bool IsSystem,
           Buffer->getBufferEnd());
   SourceLocation Start = L.getSourceLocation();
   ModuleMapParser Parser(L, SourceMgr, Target, Diags, *this, File, Dir,
-                         IsSystem);
+                         IsSystem, IsExplicitlyProvided);
   bool Result = Parser.parseModuleMapFile();
   ParsedModuleMap[File] = Result;
 
@@ -2891,5 +2897,6 @@ bool ModuleMap::parseModuleMapFile(const FileEntry *File, bool IsSystem,
   // Notify callbacks that we parsed it.
   for (const auto &Cb : Callbacks)
     Cb->moduleMapFileRead(Start, *File, IsSystem);
+
   return Result;
 }
