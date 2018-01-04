@@ -168,8 +168,8 @@ Attribute Changes in Clang
 Windows Support
 ---------------
 
-Clang's support for building native Windows programs ...
-
+- Clang now has initial, preliminary support for targeting Windows on
+  ARM64.
 
 C Language Changes in Clang
 ---------------------------
