@@ -670,14 +670,6 @@ bool ARMInstructionSelector::select(MachineInstr &I,
   }
 
   using namespace TargetOpcode;
-  if (I.getOpcode() == G_CONSTANT) {
-    // Pointer constants should be treated the same as 32-bit integer constants.
-    // Change the type and let TableGen handle it.
-    unsigned ResultReg = I.getOperand(0).getReg();
-    LLT Ty = MRI.getType(ResultReg);
-    if (Ty.isPointer())
-      MRI.setType(ResultReg, LLT::scalar(32));
-  }
 
   if (selectImpl(I, CoverageInfo))
     return true;
@@ -787,6 +779,32 @@ bool ARMInstructionSelector::select(MachineInstr &I,
 
     I.setDesc(TII.get(COPY));
     return selectCopy(I, TII, MRI, TRI, RBI);
+  }
+  case G_CONSTANT: {
+    if (!MRI.getType(I.getOperand(0).getReg()).isPointer()) {
+      // Non-pointer constants should be handled by TableGen.
+      DEBUG(dbgs() << "Unsupported constant type\n");
+      return false;
+    }
+
+    auto &Val = I.getOperand(1);
+    if (Val.isCImm()) {
+      if (!Val.getCImm()->isZero()) {
+        DEBUG(dbgs() << "Unsupported pointer constant value\n");
+        return false;
+      }
+      Val.ChangeToImmediate(0);
+    } else {
+      assert(Val.isImm() && "Unexpected operand for G_CONSTANT");
+      if (Val.getImm() != 0) {
+        DEBUG(dbgs() << "Unsupported pointer constant value\n");
+        return false;
+      }
+    }
+
+    I.setDesc(TII.get(ARM::MOVi));
+    MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
+    break;
   }
   case G_INTTOPTR:
   case G_PTRTOINT: {

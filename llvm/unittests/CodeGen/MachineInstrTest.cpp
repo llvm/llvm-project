@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
@@ -244,72 +243,5 @@ TEST(MachineInstrExpressionTraitTest, IsEqualAgreesWithGetHashValue) {
   checkHashAndIsEqualMatch(VD1SD, VD2PD);
 
   checkHashAndIsEqualMatch(VD2PU, VD2PD);
-}
-
-TEST(MachineBasicBlockTest, PhiRange) {
-  auto MF = createMachineFunction();
-
-  // Create the main block.
-  auto BB = MF->CreateMachineBasicBlock();
-
-  // Create some predecessors of it.
-  auto BB1 = MF->CreateMachineBasicBlock();
-  BB1->addSuccessor(BB);
-  auto BB2 = MF->CreateMachineBasicBlock();
-  BB2->addSuccessor(BB);
-
-  // Make sure this doesn't crash if there are no phis.
-  for (auto &PN : BB->phis()) {
-    (void)PN;
-    ASSERT_TRUE(false) << "empty block should have no phis";
-  }
-
-  // Make it a cycle.
-  BB->addSuccessor(BB);
-
-  // Now insert some PHI nodes.
-  MCOperandInfo OpInfo[] = { { -1, 0, MCOI::OPERAND_UNKNOWN, 0} };
-  MCInstrDesc PHIMCID = {
-      TargetOpcode::PHI, 1, 1, 0, 0,
-      (1ULL << MCID::Pseudo) | (1ULL << MCID::Variadic), 0,
-      nullptr, nullptr, OpInfo, -1, nullptr};
-  auto P1 = BuildMI(*BB, BB->end(), DebugLoc(), PHIMCID, -101);
-  auto P2 = BuildMI(*BB, BB->end(), DebugLoc(), PHIMCID, -102);
-  auto P3 = BuildMI(*BB, BB->end(), DebugLoc(), PHIMCID, -103);
-
-  // A non-PHI node.
-  MCInstrDesc ImpDefMCID = {
-      TargetOpcode::IMPLICIT_DEF, 1, 1, 0, 0,
-      (1ULL << MCID::Pseudo), 0,
-      nullptr, nullptr, OpInfo, -1, nullptr};
-  BuildMI(*BB, BB->end(), DebugLoc(), ImpDefMCID, -104);
-
-  // Now wire up the incoming values that are interesting.
-  P1.addReg(-102).addMBB(BB);
-  P2.addReg(-101).addMBB(BB);
-  P3.addReg(-104).addMBB(BB);
-
-  // Finally, let's iterate them, which is the thing we're trying to test.
-  // We'll use this to wire up the rest of the incoming values.
-  for (auto &PN : BB->phis()) {
-    EXPECT_TRUE(PN.isPHI());
-    PN.addOperand(*MF, MachineOperand::CreateReg(-100, /*isDef*/ false));
-    PN.addOperand(*MF, MachineOperand::CreateMBB(BB1));
-    PN.addOperand(*MF, MachineOperand::CreateReg(-100, /*isDef*/ false));
-    PN.addOperand(*MF, MachineOperand::CreateMBB(BB2));
-  }
-
-  // Test that we can use const iterators and generally that the iterators
-  // behave like iterators.
-  MachineBasicBlock::const_iterator CI;
-  CI = BB->phis().begin();
-  EXPECT_NE(CI, BB->phis().end());
-
-  // And iterate a const range.
-  for (const auto &PN : const_cast<const MachineBasicBlock *>(BB)->phis()) {
-    EXPECT_EQ(BB, PN.getOperand(2).getMBB());
-    EXPECT_EQ(BB1, PN.getOperand(4).getMBB());
-    EXPECT_EQ(BB2, PN.getOperand(6).getMBB());
-  }
 }
 } // end namespace

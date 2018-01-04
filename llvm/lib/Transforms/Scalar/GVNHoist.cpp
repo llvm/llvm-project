@@ -648,7 +648,7 @@ private:
           // track in a CHI. In the PDom walk, there can be values in the
           // stack which are not control dependent e.g., nested loop.
           if (si != RenameStack.end() && si->second.size() &&
-              DT->dominates(Pred, si->second.back()->getParent())) {
+              DT->properlyDominates(Pred, si->second.back()->getParent())) {
             C.Dest = BB;                     // Assign the edge
             C.I = si->second.pop_back_val(); // Assign the argument
             DEBUG(dbgs() << "\nCHI Inserted in BB: " << C.Dest->getName()
