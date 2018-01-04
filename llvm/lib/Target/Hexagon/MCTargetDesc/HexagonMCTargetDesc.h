@@ -61,8 +61,8 @@ MCCodeEmitter *createHexagonMCCodeEmitter(const MCInstrInfo &MCII,
                                           MCContext &MCT);
 
 MCAsmBackend *createHexagonAsmBackend(const Target &T,
+                                      const MCSubtargetInfo &STI,
                                       const MCRegisterInfo &MRI,
-                                      const Triple &TT, StringRef CPU,
                                       const MCTargetOptions &Options);
 
 std::unique_ptr<MCObjectWriter>

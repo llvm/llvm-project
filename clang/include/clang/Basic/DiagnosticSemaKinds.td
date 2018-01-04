@@ -5946,15 +5946,15 @@ def note_typecheck_assign_const : Note<
 def warn_unsigned_always_true_comparison : Warning<
   "result of comparison of %select{%3|unsigned expression}0 %2 "
   "%select{unsigned expression|%3}0 is always %4">,
-  InGroup<TautologicalUnsignedZeroCompare>;
+  InGroup<TautologicalUnsignedZeroCompare>, DefaultIgnore;
 def warn_unsigned_enum_always_true_comparison : Warning<
   "result of comparison of %select{%3|unsigned enum expression}0 %2 "
   "%select{unsigned enum expression|%3}0 is always %4">,
-  InGroup<TautologicalUnsignedEnumZeroCompare>;
+  InGroup<TautologicalUnsignedEnumZeroCompare>, DefaultIgnore;
 def warn_tautological_constant_compare : Warning<
   "result of comparison %select{%3|%1}0 %2 "
   "%select{%1|%3}0 is always %4">,
-  InGroup<TautologicalConstantCompare>;
+  InGroup<TautologicalTypeLimitCompare>, DefaultIgnore;
 
 def warn_mixed_sign_comparison : Warning<
   "comparison of integers of different signs: %0 and %1">,
@@ -8300,12 +8300,16 @@ def err_c99_array_usage_cxx : Error<
   "feature, not permitted in C++">;
 def err_type_unsupported : Error<
   "%0 is not supported on this target">;
-def warn_nsconsumed_attribute_mismatch : Warning<
+def err_nsconsumed_attribute_mismatch : Error<
   "overriding method has mismatched ns_consumed attribute on its"
-  " parameter">, InGroup<NSConsumedMismatch>;
-def warn_nsreturns_retained_attribute_mismatch : Warning<
+  " parameter">;
+def err_nsreturns_retained_attribute_mismatch : Error<
   "overriding method has mismatched ns_returns_%select{not_retained|retained}0"
-  " attributes">, InGroup<NSReturnsMismatch>;
+  " attributes">;
+def warn_nsconsumed_attribute_mismatch : Warning<
+  err_nsconsumed_attribute_mismatch.Text>, InGroup<NSConsumedMismatch>;
+def warn_nsreturns_retained_attribute_mismatch : Warning<
+  err_nsreturns_retained_attribute_mismatch.Text>, InGroup<NSReturnsMismatch>;
   
 def note_getter_unavailable : Note<
   "or because setter is declared here, but no getter method %0 is found">;

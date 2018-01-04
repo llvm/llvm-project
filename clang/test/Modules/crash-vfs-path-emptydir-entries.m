@@ -8,7 +8,7 @@
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/i %t/m %t %t/sysroot
-// RUN: cp -a %S/Inputs/crash-recovery/usr %t/i/
+// RUN: cp -R %S/Inputs/crash-recovery/usr %t/i/
 
 // RUN: not env FORCE_CLANG_DIAGNOSTICS_CRASH= TMPDIR=%t TEMP=%t TMP=%t \
 // RUN: %clang -fsyntax-only %s -I %/t/i -isysroot %/t/sysroot/ \

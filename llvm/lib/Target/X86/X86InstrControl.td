@@ -309,8 +309,7 @@ let isCall = 1, Uses = [RSP, SSP], SchedRW = [WriteJump] in {
 }
 
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
-    isCodeGenOnly = 1, Uses = [RSP, SSP], usesCustomInserter = 1,
-    SchedRW = [WriteJump] in {
+    isCodeGenOnly = 1, Uses = [RSP, SSP], SchedRW = [WriteJump] in {
   def TCRETURNdi64   : PseudoI<(outs),
                         (ins i64i32imm_pcrel:$dst, i32imm:$offset),
                         []>;

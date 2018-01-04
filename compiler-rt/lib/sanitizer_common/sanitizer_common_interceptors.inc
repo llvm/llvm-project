@@ -2810,7 +2810,7 @@ INTERCEPTOR(long double, modfl, long double x, long double *iptr) {
 #define INIT_MODF
 #endif
 
-#if SANITIZER_INTERCEPT_RECVMSG
+#if SANITIZER_INTERCEPT_RECVMSG || SANITIZER_INTERCEPT_RECVMMSG
 static void write_msghdr(void *ctx, struct __sanitizer_msghdr *msg,
                          SSIZE_T maxlen) {
   COMMON_INTERCEPTOR_WRITE_RANGE(ctx, msg, sizeof(*msg));
@@ -2823,7 +2823,9 @@ static void write_msghdr(void *ctx, struct __sanitizer_msghdr *msg,
   if (msg->msg_control && msg->msg_controllen)
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, msg->msg_control, msg->msg_controllen);
 }
+#endif
 
+#if SANITIZER_INTERCEPT_RECVMSG
 INTERCEPTOR(SSIZE_T, recvmsg, int fd, struct __sanitizer_msghdr *msg,
             int flags) {
   void *ctx;
@@ -2846,7 +2848,30 @@ INTERCEPTOR(SSIZE_T, recvmsg, int fd, struct __sanitizer_msghdr *msg,
 #define INIT_RECVMSG
 #endif
 
-#if SANITIZER_INTERCEPT_SENDMSG
+#if SANITIZER_INTERCEPT_RECVMMSG
+INTERCEPTOR(int, recvmmsg, int fd, struct __sanitizer_mmsghdr *msgvec,
+            unsigned int vlen, int flags, void *timeout) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, recvmmsg, fd, msgvec, vlen, flags, timeout);
+  if (timeout) COMMON_INTERCEPTOR_READ_RANGE(ctx, timeout, struct_timespec_sz);
+  int res = REAL(recvmmsg)(fd, msgvec, vlen, flags, timeout);
+  if (res >= 0) {
+    if (fd >= 0) COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd);
+    for (int i = 0; i < res; ++i) {
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, &msgvec[i].msg_len,
+                                     sizeof(msgvec[i].msg_len));
+      write_msghdr(ctx, &msgvec[i].msg_hdr, msgvec[i].msg_len);
+      COMMON_INTERCEPTOR_HANDLE_RECVMSG(ctx, &msgvec[i].msg_hdr);
+    }
+  }
+  return res;
+}
+#define INIT_RECVMMSG COMMON_INTERCEPT_FUNCTION(recvmmsg);
+#else
+#define INIT_RECVMMSG
+#endif
+
+#if SANITIZER_INTERCEPT_SENDMSG || SANITIZER_INTERCEPT_SENDMMSG
 static void read_msghdr_control(void *ctx, void *control, uptr controllen) {
   const unsigned kCmsgDataOffset =
       RoundUpTo(sizeof(__sanitizer_cmsghdr), sizeof(uptr));
@@ -2896,7 +2921,9 @@ static void read_msghdr(void *ctx, struct __sanitizer_msghdr *msg,
   if (msg->msg_control && msg->msg_controllen)
     read_msghdr_control(ctx, msg->msg_control, msg->msg_controllen);
 }
+#endif
 
+#if SANITIZER_INTERCEPT_SENDMSG
 INTERCEPTOR(SSIZE_T, sendmsg, int fd, struct __sanitizer_msghdr *msg,
             int flags) {
   void *ctx;
@@ -2913,6 +2940,30 @@ INTERCEPTOR(SSIZE_T, sendmsg, int fd, struct __sanitizer_msghdr *msg,
 #define INIT_SENDMSG COMMON_INTERCEPT_FUNCTION(sendmsg);
 #else
 #define INIT_SENDMSG
+#endif
+
+#if SANITIZER_INTERCEPT_SENDMMSG
+INTERCEPTOR(int, sendmmsg, int fd, struct __sanitizer_mmsghdr *msgvec,
+            unsigned vlen, int flags) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, sendmmsg, fd, msgvec, vlen, flags);
+  if (fd >= 0) {
+    COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
+    COMMON_INTERCEPTOR_FD_RELEASE(ctx, fd);
+  }
+  int res = REAL(sendmmsg)(fd, msgvec, vlen, flags);
+  if (res >= 0 && msgvec)
+    for (int i = 0; i < res; ++i) {
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, &msgvec[i].msg_len,
+                                     sizeof(msgvec[i].msg_len));
+      if (common_flags()->intercept_send)
+        read_msghdr(ctx, &msgvec[i].msg_hdr, msgvec[i].msg_len);
+    }
+  return res;
+}
+#define INIT_SENDMMSG COMMON_INTERCEPT_FUNCTION(sendmmsg);
+#else
+#define INIT_SENDMMSG
 #endif
 
 #if SANITIZER_INTERCEPT_GETPEERNAME
@@ -6483,6 +6534,8 @@ static void InitializeCommonInterceptors() {
   INIT_MODF;
   INIT_RECVMSG;
   INIT_SENDMSG;
+  INIT_RECVMMSG;
+  INIT_SENDMMSG;
   INIT_GETPEERNAME;
   INIT_IOCTL;
   INIT_INET_ATON;

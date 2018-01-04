@@ -1,7 +1,13 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -DTEST -verify %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wno-tautological-constant-compare -verify %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -DTEST -verify -x c++ %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wno-tautological-constant-compare -verify -x c++ %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wtautological-constant-in-range-compare -DTEST -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wtautological-constant-in-range-compare -DTEST -verify -x c++ %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wtautological-type-limit-compare -DTEST -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wtautological-type-limit-compare -DTEST -verify -x c++ %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wextra -Wno-sign-compare -DTEST -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wextra -Wno-sign-compare -DTEST -verify -x c++ %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wall -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wall -verify -x c++ %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -verify -x c++ %s
 
 int value(void);
 
@@ -120,32 +126,6 @@ int main()
   if (32767UL > s)
       return 0;
   if (32767UL >= s)
-      return 0;
-
-  if (s == 0UL)
-      return 0;
-  if (s != 0UL)
-      return 0;
-  if (s < 0UL) // expected-warning {{comparison of unsigned expression < 0 is always false}}
-      return 0;
-  if (s <= 0UL)
-      return 0;
-  if (s > 0UL)
-      return 0;
-  if (s >= 0UL) // expected-warning {{comparison of unsigned expression >= 0 is always true}}
-      return 0;
-
-  if (0UL == s)
-      return 0;
-  if (0UL != s)
-      return 0;
-  if (0UL < s)
-      return 0;
-  if (0UL <= s) // expected-warning {{comparison of 0 <= unsigned expression is always true}}
-      return 0;
-  if (0UL > s) // expected-warning {{comparison of 0 > unsigned expression is always false}}
-      return 0;
-  if (0UL >= s)
       return 0;
 
   enum { ULONG_MAX = (2UL * (unsigned long)__LONG_MAX__ + 1UL) };
@@ -498,7 +478,7 @@ int main()
     return 0;
 
 #if __SIZEOF_INT128__
-  __int128 i128;
+  __int128 i128 = value();
   if (i128 == -1) // used to crash
       return 0;
 #endif
@@ -509,7 +489,7 @@ int main()
   no,
   maybe
   };
-  enum E e;
+  enum E e = (enum E)value();
 
   if (e == yes)
       return 0;

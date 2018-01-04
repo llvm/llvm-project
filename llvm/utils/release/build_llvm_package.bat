@@ -26,8 +26,8 @@ set python64_dir=C:\Users\%USER%\AppData\Local\Programs\Python\Python35
 
 set revision=%1
 set branch=trunk
-set package_version=6.0.0-r%revision%
-set clang_format_vs_version=6.0.0.%revision%
+set package_version=7.0.0-r%revision%
+set clang_format_vs_version=7.0.0.%revision%
 set build_dir=llvm_package_%revision%
 
 echo Branch: %branch%

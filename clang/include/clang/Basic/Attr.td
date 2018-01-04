@@ -231,9 +231,12 @@ class GCC<string name> : Spelling<name, "GCC"> {
   let KnownToGCC = 1;
 }
 
-// The Clang spelling implies GNU<name> and CXX11<"clang", name>. This spelling
-// should be used for any Clang-specific attributes.
-class Clang<string name> : Spelling<name, "Clang">;
+// The Clang spelling implies GNU<name>, CXX11<"clang", name>, and optionally,
+// C2x<"clang", name>. This spelling should be used for any Clang-specific
+// attributes.
+class Clang<string name, bit allowInC = 0> : Spelling<name, "Clang"> {
+  bit AllowInC = allowInC;
+}
 
 class Accessor<string name, list<Spelling> spellings> {
   string Name = name;
@@ -549,6 +552,7 @@ def Aligned : InheritableAttr {
                                           Keyword<"_Alignas">]>,
                    Accessor<"isDeclspec",[Declspec<"align">]>];
   let Documentation = [Undocumented];
+  let DuplicatesAllowedWhileMerging = 1;
 }
 
 def AlignValue : Attr {
@@ -618,7 +622,7 @@ def AnalyzerNoReturn : InheritableAttr {
 }
 
 def Annotate : InheritableParamAttr {
-  let Spellings = [Clang<"annotate">];
+  let Spellings = [Clang<"annotate", 1>];
   let Args = [StringArgument<"Annotation">];
   // Ensure that the annotate attribute can be used with
   // '#pragma clang attribute' even though it has no subject list.

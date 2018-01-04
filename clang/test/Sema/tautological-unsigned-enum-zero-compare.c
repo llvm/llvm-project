@@ -1,9 +1,10 @@
 // RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -fsyntax-only \
+// RUN:            -Wtautological-unsigned-enum-zero-compare \
 // RUN:            -verify=unsigned,unsigned-signed %s
 // RUN: %clang_cc1 -triple=x86_64-pc-win32 -fsyntax-only \
+// RUN:            -Wtautological-unsigned-enum-zero-compare \
 // RUN:            -verify=unsigned-signed %s
 // RUN: %clang_cc1 -triple=x86_64-pc-win32 -fsyntax-only \
-// RUN:            -Wno-tautological-unsigned-enum-zero-compare \
 // RUN:            -verify=silence %s
 
 // Okay, this is where it gets complicated.

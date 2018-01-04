@@ -482,6 +482,13 @@ namespace __sanitizer {
   };
 #endif
 
+#if SANITIZER_LINUX
+  struct __sanitizer_mmsghdr {
+    __sanitizer_msghdr msg_hdr;
+    unsigned int msg_len;
+  };
+#endif
+
 #if SANITIZER_MAC
   struct __sanitizer_dirent {
     unsigned long long d_ino;
