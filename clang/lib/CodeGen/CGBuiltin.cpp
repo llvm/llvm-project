@@ -915,7 +915,11 @@ EmitCheckedMixedSignMultiply(CodeGenFunction &CGF, const clang::Expr *Op1,
       Overflow = CGF.Builder.CreateOr(Overflow, TruncOverflow);
     }
 
-    Result = CGF.Builder.CreateTrunc(UnsignedResult, ResTy);
+    // Negate the product if it would be negative in infinite precision.
+    Result = CGF.Builder.CreateSelect(
+        IsNegative, CGF.Builder.CreateNeg(UnsignedResult), UnsignedResult);
+
+    Result = CGF.Builder.CreateTrunc(Result, ResTy);
   }
   assert(Overflow && Result && "Missing overflow or result");
 

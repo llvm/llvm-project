@@ -21,3 +21,14 @@ struct C { char a[16]; };
 
 static_assert(sizeof(my_union<A, B, C>) == 16, "");
 static_assert(alignof(my_union<A, B, C>) == 8, "");
+
+namespace PR35028 {
+  template<class X, int Alignment> struct alignas(X) alignas(long long) alignas(long double) alignas(Alignment) Aligned {
+    union {
+      long long align1;
+      long double align2;
+      char data[sizeof(X)];
+    };
+  };
+  Aligned<int, 1> a;
+}

@@ -100,6 +100,9 @@ static AllocatorCache fallback_allocator_cache;
 static SpinMutex fallback_mutex;
 static atomic_uint8_t hwasan_allocator_tagging_enabled;
 
+static const tag_t kFallbackAllocTag = 0xBB;
+static const tag_t kFallbackFreeTag = 0xBC;
+
 void HwasanAllocatorInit() {
   atomic_store_relaxed(&hwasan_allocator_tagging_enabled,
                        !flags()->disable_allocator_tagging);
@@ -145,10 +148,11 @@ static void *HwasanAllocate(StackTrace *stack, uptr size, uptr alignment,
   if (zeroise)
     internal_memset(allocated, 0, size);
 
-  void *user_ptr = (flags()->tag_in_malloc &&
-                    atomic_load_relaxed(&hwasan_allocator_tagging_enabled))
-                       ? (void *)TagMemoryAligned((uptr)allocated, size, 0xBB)
-                       : allocated;
+  void *user_ptr = allocated;
+  if (flags()->tag_in_malloc &&
+      atomic_load_relaxed(&hwasan_allocator_tagging_enabled))
+    user_ptr = (void *)TagMemoryAligned(
+        (uptr)user_ptr, size, t ? t->GenerateRandomTag() : kFallbackAllocTag);
 
   HWASAN_MALLOC_HOOK(user_ptr, size);
   return user_ptr;
@@ -166,10 +170,11 @@ void HwasanDeallocate(StackTrace *stack, void *user_ptr) {
   meta->free_context_id = StackDepotPut(*stack);
   // This memory will not be reused by anyone else, so we are free to keep it
   // poisoned.
+  HwasanThread *t = GetCurrentThread();
   if (flags()->tag_in_free &&
       atomic_load_relaxed(&hwasan_allocator_tagging_enabled))
-    TagMemoryAligned((uptr)p, size, 0xBC);
-  HwasanThread *t = GetCurrentThread();
+    TagMemoryAligned((uptr)p, size,
+                     t ? t->GenerateRandomTag() : kFallbackFreeTag);
   if (t) {
     AllocatorCache *cache = GetAllocatorCache(&t->malloc_storage());
     allocator.Deallocate(cache, p);
@@ -195,8 +200,12 @@ void *HwasanReallocate(StackTrace *stack, void *user_old_p, uptr new_size,
     meta->requested_size = new_size;
     if (!atomic_load_relaxed(&hwasan_allocator_tagging_enabled))
       return user_old_p;
-    if (flags()->retag_in_realloc)
-      return (void *)TagMemoryAligned((uptr)old_p, new_size, 0xCC);
+    if (flags()->retag_in_realloc) {
+      HwasanThread *t = GetCurrentThread();
+      return (void *)TagMemoryAligned(
+          (uptr)old_p, new_size,
+          t ? t->GenerateRandomTag() : kFallbackAllocTag);
+    }
     if (new_size > old_size) {
       tag_t tag = GetTagFromPointer((uptr)user_old_p);
       TagMemoryAligned((uptr)old_p + old_size, new_size - old_size, tag);

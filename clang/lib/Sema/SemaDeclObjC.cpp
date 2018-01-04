@@ -156,23 +156,23 @@ void Sema::CheckObjCMethodOverride(ObjCMethodDecl *NewMethod,
       Diag(Overridden->getLocation(), 
            diag::note_related_result_type_overridden);
   }
-  if (getLangOpts().ObjCAutoRefCount) {
-    Diags.setSeverity(diag::warn_nsreturns_retained_attribute_mismatch,
-                      diag::Severity::Error, SourceLocation());
-    Diags.setSeverity(diag::warn_nsconsumed_attribute_mismatch,
-                      diag::Severity::Error, SourceLocation());
-  }
 
   if ((NewMethod->hasAttr<NSReturnsRetainedAttr>() !=
        Overridden->hasAttr<NSReturnsRetainedAttr>())) {
     Diag(NewMethod->getLocation(),
-         diag::warn_nsreturns_retained_attribute_mismatch) << 1;
+         getLangOpts().ObjCAutoRefCount
+             ? diag::err_nsreturns_retained_attribute_mismatch
+             : diag::warn_nsreturns_retained_attribute_mismatch)
+        << 1;
     Diag(Overridden->getLocation(), diag::note_previous_decl) << "method";
   }
   if ((NewMethod->hasAttr<NSReturnsNotRetainedAttr>() !=
        Overridden->hasAttr<NSReturnsNotRetainedAttr>())) {
     Diag(NewMethod->getLocation(),
-         diag::warn_nsreturns_retained_attribute_mismatch) << 0;
+         getLangOpts().ObjCAutoRefCount
+             ? diag::err_nsreturns_retained_attribute_mismatch
+             : diag::warn_nsreturns_retained_attribute_mismatch)
+        << 0;
     Diag(Overridden->getLocation(), diag::note_previous_decl)  << "method";
   }
 
@@ -185,7 +185,10 @@ void Sema::CheckObjCMethodOverride(ObjCMethodDecl *NewMethod,
     ParmVarDecl *newDecl = (*ni);
     if (newDecl->hasAttr<NSConsumedAttr>() !=
         oldDecl->hasAttr<NSConsumedAttr>()) {
-      Diag(newDecl->getLocation(), diag::warn_nsconsumed_attribute_mismatch);
+      Diag(newDecl->getLocation(),
+           getLangOpts().ObjCAutoRefCount
+               ? diag::err_nsconsumed_attribute_mismatch
+               : diag::warn_nsconsumed_attribute_mismatch);
       Diag(oldDecl->getLocation(), diag::note_previous_decl) << "parameter";
     }
 

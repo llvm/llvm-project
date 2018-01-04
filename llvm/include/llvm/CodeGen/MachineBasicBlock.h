@@ -225,6 +225,14 @@ public:
     return make_range(getFirstTerminator(), end());
   }
 
+  /// Returns a range that iterates over the phis in the basic block.
+  inline iterator_range<iterator> phis() {
+    return make_range(begin(), getFirstNonPHI());
+  }
+  inline iterator_range<const_iterator> phis() const {
+    return const_cast<MachineBasicBlock *>(this)->phis();
+  }
+
   // Machine-CFG iterators
   using pred_iterator = std::vector<MachineBasicBlock *>::iterator;
   using const_pred_iterator = std::vector<MachineBasicBlock *>::const_iterator;
