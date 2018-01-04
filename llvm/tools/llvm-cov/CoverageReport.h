@@ -1,4 +1,4 @@
-//===- CoverageReport.h - Code coverage report ---------------------------===//
+//===- CoverageReport.h - Code coverage report ----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

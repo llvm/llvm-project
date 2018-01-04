@@ -13,6 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CoverageExporterJson.h"
 #include "CoverageFilters.h"
 #include "CoverageReport.h"
 #include "CoverageSummaryInfo.h"
@@ -113,14 +114,14 @@ private:
 
   typedef llvm::function_ref<int(int, const char **)> CommandLineParserType;
 
-  int show(int argc, const char **argv,
-           CommandLineParserType commandLineParser);
-
-  int report(int argc, const char **argv,
+  int doShow(int argc, const char **argv,
              CommandLineParserType commandLineParser);
 
-  int export_(int argc, const char **argv,
-              CommandLineParserType commandLineParser);
+  int doReport(int argc, const char **argv,
+               CommandLineParserType commandLineParser);
+
+  int doExport(int argc, const char **argv,
+               CommandLineParserType commandLineParser);
 
   std::vector<StringRef> ObjectFilenames;
   CoverageViewOptions ViewOpts;
@@ -755,17 +756,17 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
 
   switch (Cmd) {
   case Show:
-    return show(argc, argv, commandLineParser);
+    return doShow(argc, argv, commandLineParser);
   case Report:
-    return report(argc, argv, commandLineParser);
+    return doReport(argc, argv, commandLineParser);
   case Export:
-    return export_(argc, argv, commandLineParser);
+    return doExport(argc, argv, commandLineParser);
   }
   return 0;
 }
 
-int CodeCoverageTool::show(int argc, const char **argv,
-                           CommandLineParserType commandLineParser) {
+int CodeCoverageTool::doShow(int argc, const char **argv,
+                             CommandLineParserType commandLineParser) {
 
   cl::OptionCategory ViewCategory("Viewing options");
 
@@ -932,8 +933,8 @@ int CodeCoverageTool::show(int argc, const char **argv,
   return 0;
 }
 
-int CodeCoverageTool::report(int argc, const char **argv,
-                             CommandLineParserType commandLineParser) {
+int CodeCoverageTool::doReport(int argc, const char **argv,
+                               CommandLineParserType commandLineParser) {
   cl::opt<bool> ShowFunctionSummaries(
       "show-functions", cl::Optional, cl::init(false),
       cl::desc("Show coverage summaries for each function"));
@@ -969,8 +970,8 @@ int CodeCoverageTool::report(int argc, const char **argv,
   return 0;
 }
 
-int CodeCoverageTool::export_(int argc, const char **argv,
-                              CommandLineParserType commandLineParser) {
+int CodeCoverageTool::doExport(int argc, const char **argv,
+                               CommandLineParserType commandLineParser) {
 
   auto Err = commandLineParser(argc, argv);
   if (Err)
@@ -987,7 +988,12 @@ int CodeCoverageTool::export_(int argc, const char **argv,
     return 1;
   }
 
-  exportCoverageDataToJson(*Coverage.get(), ViewOpts, outs());
+  auto Exporter = CoverageExporterJson(*Coverage.get(), ViewOpts, outs());
+
+  if (SourceFiles.empty())
+    Exporter.renderRoot();
+  else
+    Exporter.renderRoot(SourceFiles);
 
   return 0;
 }
