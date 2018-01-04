@@ -36,7 +36,6 @@ private:
   using BlkT = typename Traits::BlkT;
   using ValT = typename Traits::ValT;
   using PhiT = typename Traits::PhiT;
-  using PhiItT = typename Traits::PhiItT;
 
   /// BBInfo - Per-basic block information used internally by SSAUpdaterImpl.
   /// The predecessors of each block are cached here since pred_iterator is
