@@ -220,6 +220,7 @@ clang_getExceptionSpecificationType
 clang_getFieldDeclBitWidth
 clang_getExpansionLocation
 clang_getFile
+clang_getFileContents
 clang_getFileLocation
 clang_getFileName
 clang_getFileTime

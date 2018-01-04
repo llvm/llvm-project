@@ -8,7 +8,7 @@ set(ASAN_DYNAMIC_TESTSUITES)
 # unreliable. Remove the asan tests from check-all in this configuration.
 set(SHADOW_MAPPING_UNRELIABLE FALSE)
 if(OS_NAME MATCHES "Windows" AND CMAKE_SIZEOF_VOID_P EQUAL 8 AND
-    ${CMAKE_SYSTEM_VERSION} LESS 6.2)
+    CMAKE_SYSTEM_VERSION LESS 6.2)
   set(SHADOW_MAPPING_UNRELIABLE TRUE)
   message(WARNING "Disabling ASan tests because they are unreliable on Windows 7 and earlier")
 endif()

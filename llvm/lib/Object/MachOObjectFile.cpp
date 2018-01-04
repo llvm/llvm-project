@@ -1659,6 +1659,10 @@ void MachOObjectFile::moveSymbolNext(DataRefImpl &Symb) const {
 Expected<StringRef> MachOObjectFile::getSymbolName(DataRefImpl Symb) const {
   StringRef StringTable = getStringTableData();
   MachO::nlist_base Entry = getSymbolTableEntryBase(*this, Symb);
+  if (Entry.n_strx == 0)
+    // A n_strx value of 0 indicates that no name is associated with a
+    // particular symbol table entry.
+    return StringRef();
   const char *Start = &StringTable.data()[Entry.n_strx];
   if (Start < getData().begin() || Start >= getData().end()) {
     return malformedError("bad string index: " + Twine(Entry.n_strx) +

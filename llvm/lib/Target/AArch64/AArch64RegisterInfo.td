@@ -756,33 +756,49 @@ class ZPRRegOp <string Suffix, AsmOperandClass C,
 
 //******************************************************************************
 
-// SVE predicate register class.
-def PPR : RegisterClass<"AArch64",
-                        [nxv16i1, nxv8i1, nxv4i1, nxv2i1],
-                        16, (sequence "P%u", 0, 15)> {
+// SVE predicate register classes.
+class PPRClass<int lastreg> : RegisterClass<
+                                  "AArch64",
+                                  [ nxv16i1, nxv8i1, nxv4i1, nxv2i1 ], 16,
+                                  (sequence "P%u", 0, lastreg)> {
   let Size = 16;
 }
 
-class PPRAsmOperand <string name, int Width>: AsmOperandClass {
+def PPR    : PPRClass<15>;
+def PPR_3b : PPRClass<7>; // Restricted 3 bit SVE predicate register class.
+
+class PPRAsmOperand <string name, string RegClass, int Width>: AsmOperandClass {
   let Name = "SVE" # name # "Reg";
   let PredicateMethod = "isSVEVectorRegOfWidth<"
-                            # Width # ", AArch64::PPRRegClassID>";
+                            # Width # ", " # "AArch64::" # RegClass # "RegClassID>";
   let DiagnosticType = "InvalidSVE" # name # "Reg";
   let RenderMethod = "addRegOperands";
   let ParserMethod = "tryParseSVEPredicateVector";
 }
 
-def PPRAsmOpAny : PPRAsmOperand<"PredicateAny", -1>;
-def PPRAsmOp8   : PPRAsmOperand<"PredicateB",  8>;
-def PPRAsmOp16  : PPRAsmOperand<"PredicateH", 16>;
-def PPRAsmOp32  : PPRAsmOperand<"PredicateS", 32>;
-def PPRAsmOp64  : PPRAsmOperand<"PredicateD", 64>;
+def PPRAsmOpAny : PPRAsmOperand<"PredicateAny", "PPR", -1>;
+def PPRAsmOp8   : PPRAsmOperand<"PredicateB",   "PPR",  8>;
+def PPRAsmOp16  : PPRAsmOperand<"PredicateH",   "PPR", 16>;
+def PPRAsmOp32  : PPRAsmOperand<"PredicateS",   "PPR", 32>;
+def PPRAsmOp64  : PPRAsmOperand<"PredicateD",   "PPR", 64>;
 
 def PPRAny : PPRRegOp<"",  PPRAsmOpAny, PPR>;
 def PPR8   : PPRRegOp<"b", PPRAsmOp8,   PPR>;
 def PPR16  : PPRRegOp<"h", PPRAsmOp16,  PPR>;
 def PPR32  : PPRRegOp<"s", PPRAsmOp32,  PPR>;
 def PPR64  : PPRRegOp<"d", PPRAsmOp64,  PPR>;
+
+def PPRAsmOp3bAny : PPRAsmOperand<"Predicate3bAny", "PPR_3b", -1>;
+def PPRAsmOp3b8   : PPRAsmOperand<"Predicate3bB",   "PPR_3b",  8>;
+def PPRAsmOp3b16  : PPRAsmOperand<"Predicate3bH",   "PPR_3b", 16>;
+def PPRAsmOp3b32  : PPRAsmOperand<"Predicate3bS",   "PPR_3b", 32>;
+def PPRAsmOp3b64  : PPRAsmOperand<"Predicate3bD",   "PPR_3b", 64>;
+
+def PPR3bAny : PPRRegOp<"",  PPRAsmOp3bAny, PPR_3b>;
+def PPR3b8   : PPRRegOp<"b", PPRAsmOp3b8,   PPR_3b>;
+def PPR3b16  : PPRRegOp<"h", PPRAsmOp3b16,  PPR_3b>;
+def PPR3b32  : PPRRegOp<"s", PPRAsmOp3b32,  PPR_3b>;
+def PPR3b64  : PPRRegOp<"d", PPRAsmOp3b64,  PPR_3b>;
 
 //******************************************************************************
 

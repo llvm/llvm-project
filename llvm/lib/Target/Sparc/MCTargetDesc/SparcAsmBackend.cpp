@@ -14,6 +14,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/TargetRegistry.h"
 
@@ -301,8 +302,8 @@ namespace {
 } // end anonymous namespace
 
 MCAsmBackend *llvm::createSparcAsmBackend(const Target &T,
+                                          const MCSubtargetInfo &STI,
                                           const MCRegisterInfo &MRI,
-                                          const Triple &TT, StringRef CPU,
                                           const MCTargetOptions &Options) {
-  return new ELFSparcAsmBackend(T, TT.getOS());
+  return new ELFSparcAsmBackend(T, STI.getTargetTriple().getOS());
 }

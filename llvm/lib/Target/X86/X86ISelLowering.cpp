@@ -2168,13 +2168,16 @@ static SDValue lowerMasksToReg(const SDValue &ValArg, const EVT &ValLoc,
     if (ValLoc == MVT::i32)
       ValToCopy = DAG.getNode(ISD::ANY_EXTEND, Dl, ValLoc, ValToCopy);
     return ValToCopy;
-  } else if ((ValVT == MVT::v32i1 && ValLoc == MVT::i32) ||
-             (ValVT == MVT::v64i1 && ValLoc == MVT::i64)) {
+  }
+
+  if ((ValVT == MVT::v32i1 && ValLoc == MVT::i32) ||
+      (ValVT == MVT::v64i1 && ValLoc == MVT::i64)) {
     // One stage lowering is required
     // bitcast:   v32i1 -> i32 / v64i1 -> i64
     return DAG.getBitcast(ValLoc, ValArg);
-  } else
-    return DAG.getNode(ISD::SIGN_EXTEND, Dl, ValLoc, ValArg);
+  }
+
+  return DAG.getNode(ISD::ANY_EXTEND, Dl, ValLoc, ValArg);
 }
 
 /// Breaks v64i1 value into two registers and adds the new node to the DAG
@@ -27551,16 +27554,6 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
   switch (MI.getOpcode()) {
   default: llvm_unreachable("Unexpected instr type to insert");
-  case X86::TAILJMPd64:
-  case X86::TAILJMPr64:
-  case X86::TAILJMPm64:
-  case X86::TAILJMPr64_REX:
-  case X86::TAILJMPm64_REX:
-    llvm_unreachable("TAILJMP64 would not be touched here.");
-  case X86::TCRETURNdi64:
-  case X86::TCRETURNri64:
-  case X86::TCRETURNmi64:
-    return BB;
   case X86::TLS_addr32:
   case X86::TLS_addr64:
   case X86::TLS_base_addr32:

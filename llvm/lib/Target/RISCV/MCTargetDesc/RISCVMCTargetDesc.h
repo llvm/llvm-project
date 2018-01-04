@@ -40,8 +40,8 @@ MCCodeEmitter *createRISCVMCCodeEmitter(const MCInstrInfo &MCII,
                                         const MCRegisterInfo &MRI,
                                         MCContext &Ctx);
 
-MCAsmBackend *createRISCVAsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                                    const Triple &TT, StringRef CPU,
+MCAsmBackend *createRISCVAsmBackend(const Target &T, const MCSubtargetInfo &STI,
+                                    const MCRegisterInfo &MRI,
                                     const MCTargetOptions &Options);
 
 std::unique_ptr<MCObjectWriter>

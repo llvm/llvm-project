@@ -198,9 +198,9 @@ public:
 } // end anonymous namespace
 
 MCAsmBackend *llvm::createAMDGPUAsmBackend(const Target &T,
+                                           const MCSubtargetInfo &STI,
                                            const MCRegisterInfo &MRI,
-                                           const Triple &TT, StringRef CPU,
                                            const MCTargetOptions &Options) {
   // Use 64-bit ELF for amdgcn
-  return new ELFAMDGPUAsmBackend(T, TT);
+  return new ELFAMDGPUAsmBackend(T, STI.getTargetTriple());
 }

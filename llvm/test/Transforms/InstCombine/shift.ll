@@ -1592,3 +1592,24 @@ define i32 @ashr_select_xor_false(i32 %x, i1 %cond) {
   %3 = ashr i32 %2, 1
   ret i32 %3
 }
+
+; OSS Fuzz #4871
+; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=4871
+define i177 @lshr_out_of_range(i177 %Y, i177** %A2) {
+; CHECK-LABEL: @lshr_out_of_range(
+; CHECK-NEXT:    store i177** [[A2:%.*]], i177*** undef, align 8
+; CHECK-NEXT:    ret i177 0
+;
+  %B5 = udiv i177 %Y, -1
+  %B4 = add i177 %B5, -1
+  %B2 = add i177 %B4, -1
+  %B6 = mul i177 %B5, %B2
+  %B3 = add i177 %B2, %B2
+  %B10 = sub i177 %B5, %B3
+  %B12 = lshr i177 %Y, %B6
+  %C8 = icmp ugt i177 %B12, %B4
+  %G18 = getelementptr i177*, i177** %A2, i1 %C8
+  store i177** %G18, i177*** undef
+  %B1 = udiv i177 %B10, %B6
+  ret i177 %B1
+}

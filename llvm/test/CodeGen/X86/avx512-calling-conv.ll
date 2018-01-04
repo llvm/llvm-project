@@ -19,20 +19,12 @@ define <16 x i1> @test1() {
 define <16 x i1> @test2(<16 x i1>%a, <16 x i1>%b) {
 ; ALL_X64-LABEL: test2:
 ; ALL_X64:       ## %bb.0:
-; ALL_X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; ALL_X64-NEXT:    vpsllw $7, %xmm0, %xmm0
-; ALL_X64-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; ALL_X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; ALL_X64-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; ALL_X64-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; ALL_X64-NEXT:    retq
 ;
 ; KNL_X32-LABEL: test2:
 ; KNL_X32:       ## %bb.0:
-; KNL_X32-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; KNL_X32-NEXT:    vpsllw $7, %xmm0, %xmm0
-; KNL_X32-NEXT:    vpand LCPI1_0, %xmm0, %xmm0
-; KNL_X32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; KNL_X32-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; KNL_X32-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; KNL_X32-NEXT:    retl
   %c = and <16 x i1>%a, %b
   ret <16 x i1> %c
@@ -41,33 +33,22 @@ define <16 x i1> @test2(<16 x i1>%a, <16 x i1>%b) {
 define <8 x i1> @test3(<8 x i1>%a, <8 x i1>%b) {
 ; ALL_X64-LABEL: test3:
 ; ALL_X64:       ## %bb.0:
-; ALL_X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; ALL_X64-NEXT:    vpsllw $15, %xmm0, %xmm0
-; ALL_X64-NEXT:    vpsraw $15, %xmm0, %xmm0
+; ALL_X64-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; ALL_X64-NEXT:    retq
 ;
 ; KNL_X32-LABEL: test3:
 ; KNL_X32:       ## %bb.0:
-; KNL_X32-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; KNL_X32-NEXT:    vpsllw $15, %xmm0, %xmm0
-; KNL_X32-NEXT:    vpsraw $15, %xmm0, %xmm0
+; KNL_X32-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; KNL_X32-NEXT:    retl
   %c = and <8 x i1>%a, %b
   ret <8 x i1> %c
 }
 
 define <4 x i1> @test4(<4 x i1>%a, <4 x i1>%b) {
-; KNL-LABEL: test4:
-; KNL:       ## %bb.0:
-; KNL-NEXT:    vandps %xmm1, %xmm0, %xmm0
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: test4:
-; SKX:       ## %bb.0:
-; SKX-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; SKX-NEXT:    vpslld $31, %xmm0, %xmm0
-; SKX-NEXT:    vpsrad $31, %xmm0, %xmm0
-; SKX-NEXT:    retq
+; ALL_X64-LABEL: test4:
+; ALL_X64:       ## %bb.0:
+; ALL_X64-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; ALL_X64-NEXT:    retq
 ;
 ; KNL_X32-LABEL: test4:
 ; KNL_X32:       ## %bb.0:
@@ -228,9 +209,7 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
 ; KNL-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %ymm0
 ; KNL-NEXT:    callq _func8xi1
-; KNL-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; KNL-NEXT:    vpsllw $15, %xmm0, %xmm0
-; KNL-NEXT:    vpsraw $15, %xmm0, %xmm0
+; KNL-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
 ; KNL-NEXT:    popq %rax
 ; KNL-NEXT:    retq
 ;
@@ -243,8 +222,6 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    callq _func8xi1
 ; SKX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; SKX-NEXT:    vpsllw $15, %xmm0, %xmm0
-; SKX-NEXT:    vpsraw $15, %xmm0, %xmm0
 ; SKX-NEXT:    popq %rax
 ; SKX-NEXT:    retq
 ;
@@ -256,9 +233,7 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; KNL_X32-NEXT:    vpmovdw %zmm0, %ymm0
 ; KNL_X32-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %ymm0
 ; KNL_X32-NEXT:    calll _func8xi1
-; KNL_X32-NEXT:    vpand LCPI7_0, %xmm0, %xmm0
-; KNL_X32-NEXT:    vpsllw $15, %xmm0, %xmm0
-; KNL_X32-NEXT:    vpsraw $15, %xmm0, %xmm0
+; KNL_X32-NEXT:    vandps LCPI7_0, %xmm0, %xmm0
 ; KNL_X32-NEXT:    addl $12, %esp
 ; KNL_X32-NEXT:    retl
   %cmpRes = icmp sgt <8 x i32>%a, %b

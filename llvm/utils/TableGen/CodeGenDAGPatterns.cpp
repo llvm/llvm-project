@@ -2656,6 +2656,10 @@ TreePatternNode *TreePattern::ParseTreePattern(Init *TheInit, StringRef OpName){
   for (unsigned i = 0, e = Dag->getNumArgs(); i != e; ++i)
     Children.push_back(ParseTreePattern(Dag->getArg(i), Dag->getArgNameStr(i)));
 
+  // Get the actual number of results before Operator is converted to an intrinsic
+  // node (which is hard-coded to have either zero or one result).
+  unsigned NumResults = GetNumNodeResults(Operator, CDP);
+
   // If the operator is an intrinsic, then this is just syntactic sugar for for
   // (intrinsic_* <number>, ..children..).  Pick the right intrinsic node, and
   // convert the intrinsic name to a number.
@@ -2698,7 +2702,6 @@ TreePatternNode *TreePattern::ParseTreePattern(Init *TheInit, StringRef OpName){
     }
   }
 
-  unsigned NumResults = GetNumNodeResults(Operator, CDP);
   TreePatternNode *Result = new TreePatternNode(Operator, Children, NumResults);
   Result->setName(OpName);
 

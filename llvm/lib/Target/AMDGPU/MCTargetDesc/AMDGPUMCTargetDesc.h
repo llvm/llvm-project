@@ -45,8 +45,9 @@ MCCodeEmitter *createSIMCCodeEmitter(const MCInstrInfo &MCII,
                                      const MCRegisterInfo &MRI,
                                      MCContext &Ctx);
 
-MCAsmBackend *createAMDGPUAsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                                     const Triple &TT, StringRef CPU,
+MCAsmBackend *createAMDGPUAsmBackend(const Target &T,
+                                     const MCSubtargetInfo &STI,
+                                     const MCRegisterInfo &MRI,
                                      const MCTargetOptions &Options);
 
 std::unique_ptr<MCObjectWriter>

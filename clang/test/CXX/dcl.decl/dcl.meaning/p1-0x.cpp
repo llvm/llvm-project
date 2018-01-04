@@ -101,4 +101,25 @@ namespace inline_namespaces {
   template<> struct N::V<int> {};
   template struct N::V<int*>;
   template struct N::V<char>; // expected-error {{undefined}}
+
+  struct Q {};
+
+  // Perversely, inline anonymous namespaces can cause an ostensibly
+  // external-linkage declaration to acquire internal linkage when
+  // redeclared with a qualified name.
+  inline namespace {
+    struct Q {} q;
+    int f_in_inline();
+    extern int v_in_inline;
+    typedef int t_in_inline;
+  }
+  // FIXME: These "extra qualification" warnings are bogus: the qualification
+  // changes the meaning of the program.
+  int inline_namespaces::f_in_inline() { // expected-warning {{extra qualification}}
+    // Finds <anon>::Q, not inline_namespaces::Q
+    Q x = q;
+    return 0;
+  }
+  int inline_namespaces::v_in_inline = // expected-warning {{extra qualification}}
+    (Q(q), 0);
 }

@@ -309,6 +309,17 @@ namespace dependent {
   template int New(int);
 }
 
+namespace injected_class_name {
+  template<typename T = void> struct A {
+    A();
+    template<typename U> A(A<U>);
+  };
+  A<int> a;
+  A b = a;
+  using T = decltype(a);
+  using T = decltype(b);
+}
+
 #else
 
 // expected-no-diagnostics

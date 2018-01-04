@@ -785,6 +785,16 @@ bool CursorVisitor::VisitDeclaratorDecl(DeclaratorDecl *DD) {
   return false;
 }
 
+static bool HasTrailingReturnType(FunctionDecl *ND) {
+  const QualType Ty = ND->getType();
+  if (const FunctionType *AFT = Ty->getAs<FunctionType>()) {
+    if (const FunctionProtoType *FT = dyn_cast<FunctionProtoType>(AFT))
+      return FT->hasTrailingReturn();
+  }
+
+  return false;
+}
+
 /// \brief Compare two base or member initializers based on their source order.
 static int CompareCXXCtorInitializers(CXXCtorInitializer *const *X,
                                       CXXCtorInitializer *const *Y) {
@@ -804,14 +814,16 @@ bool CursorVisitor::VisitFunctionDecl(FunctionDecl *ND) {
     // written. This requires a bit of work.
     TypeLoc TL = TSInfo->getTypeLoc().IgnoreParens();
     FunctionTypeLoc FTL = TL.getAs<FunctionTypeLoc>();
+    const bool HasTrailingRT = HasTrailingReturnType(ND);
     
     // If we have a function declared directly (without the use of a typedef),
     // visit just the return type. Otherwise, just visit the function's type
     // now.
-    if ((FTL && !isa<CXXConversionDecl>(ND) && Visit(FTL.getReturnLoc())) ||
+    if ((FTL && !isa<CXXConversionDecl>(ND) && !HasTrailingRT &&
+         Visit(FTL.getReturnLoc())) ||
         (!FTL && Visit(TL)))
       return true;
-    
+
     // Visit the nested-name-specifier, if present.
     if (NestedNameSpecifierLoc QualifierLoc = ND->getQualifierLoc())
       if (VisitNestedNameSpecifierLoc(QualifierLoc))
@@ -827,7 +839,11 @@ bool CursorVisitor::VisitFunctionDecl(FunctionDecl *ND) {
     // Visit the function parameters, if we have a function type.
     if (FTL && VisitFunctionTypeLoc(FTL, true))
       return true;
-    
+
+    // Visit the function's trailing return type.
+    if (FTL && HasTrailingRT && Visit(FTL.getReturnLoc()))
+      return true;
+
     // FIXME: Attributes?
   }
   

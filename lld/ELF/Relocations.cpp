@@ -80,27 +80,6 @@ static std::string getLocation(InputSectionBase &S, const Symbol &Sym,
   return Msg + S.getObjMsg(Off);
 }
 
-// This is a MIPS-specific rule.
-//
-// In case of MIPS GP-relative relocations always resolve to a definition
-// in a regular input file, ignoring the one-definition rule. So we,
-// for example, should not attempt to create a dynamic relocation even
-// if the target symbol is preemptible. There are two two MIPS GP-relative
-// relocations R_MIPS_GPREL16 and R_MIPS_GPREL32. But only R_MIPS_GPREL16
-// can be against a preemptible symbol.
-//
-// To get MIPS relocation type we apply 0xff mask. In case of O32 ABI all
-// relocation types occupy eight bit. In case of N64 ABI we extract first
-// relocation from 3-in-1 packet because only the first relocation can
-// be against a real symbol.
-static bool isMipsGprel(RelType Type) {
-  if (Config->EMachine != EM_MIPS)
-    return false;
-  Type &= 0xff;
-  return Type == R_MIPS_GPREL16 || Type == R_MICROMIPS_GPREL16 ||
-         Type == R_MICROMIPS_GPREL7_S2;
-}
-
 // This function is similar to the `handleTlsRelocation`. MIPS does not
 // support any relaxations for TLS relocations so by factoring out MIPS
 // handling in to the separate function we can simplify the code and do not
@@ -417,39 +396,45 @@ static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
 }
 
 static RelExpr toPlt(RelExpr Expr) {
-  if (Expr == R_PPC_OPD)
+  switch (Expr) {
+  case R_PPC_OPD:
     return R_PPC_PLT_OPD;
-  if (Expr == R_PC)
+  case R_PC:
     return R_PLT_PC;
-  if (Expr == R_PAGE_PC)
+  case R_PAGE_PC:
     return R_PLT_PAGE_PC;
-  if (Expr == R_ABS)
+  case R_ABS:
     return R_PLT;
-  return Expr;
+  default:
+    return Expr;
+  }
 }
 
 static RelExpr fromPlt(RelExpr Expr) {
   // We decided not to use a plt. Optimize a reference to the plt to a
   // reference to the symbol itself.
-  if (Expr == R_PLT_PC)
+  switch (Expr) {
+  case R_PLT_PC:
     return R_PC;
-  if (Expr == R_PPC_PLT_OPD)
+  case R_PPC_PLT_OPD:
     return R_PPC_OPD;
-  if (Expr == R_PLT)
+  case R_PLT:
     return R_ABS;
-  return Expr;
+  default:
+    return Expr;
+  }
 }
 
 // Returns true if a given shared symbol is in a read-only segment in a DSO.
-template <class ELFT> static bool isReadOnly(SharedSymbol *SS) {
+template <class ELFT> static bool isReadOnly(SharedSymbol &SS) {
   typedef typename ELFT::Phdr Elf_Phdr;
 
   // Determine if the symbol is read-only by scanning the DSO's program headers.
-  const SharedFile<ELFT> &File = SS->getFile<ELFT>();
+  const SharedFile<ELFT> &File = SS.getFile<ELFT>();
   for (const Elf_Phdr &Phdr : check(File.getObj().program_headers()))
     if ((Phdr.p_type == ELF::PT_LOAD || Phdr.p_type == ELF::PT_GNU_RELRO) &&
-        !(Phdr.p_flags & ELF::PF_W) && SS->Value >= Phdr.p_vaddr &&
-        SS->Value < Phdr.p_vaddr + Phdr.p_memsz)
+        !(Phdr.p_flags & ELF::PF_W) && SS.Value >= Phdr.p_vaddr &&
+        SS.Value < Phdr.p_vaddr + Phdr.p_memsz)
       return true;
   return false;
 }
@@ -460,15 +445,15 @@ template <class ELFT> static bool isReadOnly(SharedSymbol *SS) {
 // them are copied by a copy relocation, all of them need to be copied.
 // Otherwise, they would refer different places at runtime.
 template <class ELFT>
-static std::vector<SharedSymbol *> getSymbolsAt(SharedSymbol *SS) {
+static std::vector<SharedSymbol *> getSymbolsAt(SharedSymbol &SS) {
   typedef typename ELFT::Sym Elf_Sym;
 
-  SharedFile<ELFT> &File = SS->getFile<ELFT>();
+  SharedFile<ELFT> &File = SS.getFile<ELFT>();
 
   std::vector<SharedSymbol *> Ret;
   for (const Elf_Sym &S : File.getGlobalELFSyms()) {
     if (S.st_shndx == SHN_UNDEF || S.st_shndx == SHN_ABS ||
-        S.st_value != SS->Value)
+        S.st_value != SS.Value)
       continue;
     StringRef Name = check(S.getName(File.getStringTable()));
     Symbol *Sym = Symtab->find(Name);
@@ -520,17 +505,17 @@ static std::vector<SharedSymbol *> getSymbolsAt(SharedSymbol *SS) {
 // to the variable in .bss. This kind of issue is sometimes very hard to
 // debug. What's a solution? Instead of exporting a varaible V from a DSO,
 // define an accessor getV().
-template <class ELFT> static void addCopyRelSymbol(SharedSymbol *SS) {
+template <class ELFT> static void addCopyRelSymbol(SharedSymbol &SS) {
   // Copy relocation against zero-sized symbol doesn't make sense.
-  uint64_t SymSize = SS->getSize();
+  uint64_t SymSize = SS.getSize();
   if (SymSize == 0)
-    fatal("cannot create a copy relocation for symbol " + toString(*SS));
+    fatal("cannot create a copy relocation for symbol " + toString(SS));
 
   // See if this symbol is in a read-only segment. If so, preserve the symbol's
   // memory protection by reserving space in the .bss.rel.ro section.
   bool IsReadOnly = isReadOnly<ELFT>(SS);
   BssSection *Sec = make<BssSection>(IsReadOnly ? ".bss.rel.ro" : ".bss",
-                                     SymSize, SS->Alignment);
+                                     SymSize, SS.Alignment);
   if (IsReadOnly)
     InX::BssRelRo->getParent()->addSection(Sec);
   else
@@ -546,7 +531,7 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol *SS) {
     Sym->Used = true;
   }
 
-  InX::RelaDyn->addReloc({Target->CopyRel, Sec, 0, false, SS, 0});
+  InX::RelaDyn->addReloc({Target->CopyRel, Sec, 0, false, &SS, 0});
 }
 
 static void errorOrWarn(const Twine &Msg) {
@@ -554,35 +539,6 @@ static void errorOrWarn(const Twine &Msg) {
     error(Msg);
   else
     warn(Msg);
-}
-
-// Returns PLT relocation expression.
-//
-// This handles a non PIC program call to function in a shared library. In
-// an ideal world, we could just report an error saying the relocation can
-// overflow at runtime. In the real world with glibc, crt1.o has a
-// R_X86_64_PC32 pointing to libc.so.
-//
-// The general idea on how to handle such cases is to create a PLT entry and
-// use that as the function value.
-//
-// For the static linking part, we just return a plt expr and everything
-// else will use the the PLT entry as the address.
-//
-// The remaining problem is making sure pointer equality still works. We
-// need the help of the dynamic linker for that. We let it know that we have
-// a direct reference to a so symbol by creating an undefined symbol with a
-// non zero st_value. Seeing that, the dynamic linker resolves the symbol to
-// the value of the symbol we created. This is true even for got entries, so
-// pointer equality is maintained. To avoid an infinite loop, the only entry
-// that points to the real function is a dedicated got entry used by the
-// plt. That is identified by special relocation types (R_X86_64_JUMP_SLOT,
-// R_386_JMP_SLOT, etc).
-static RelExpr getPltExpr(Symbol &Sym, RelExpr Expr, bool &IsConstant) {
-  Sym.NeedsPltAddr = true;
-  Sym.IsPreemptible = false;
-  IsConstant = true;
-  return toPlt(Expr);
 }
 
 // This modifies the expression if we can use a copy relocation or point the
@@ -646,17 +602,41 @@ static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
               "'; recompile with -fPIC or remove '-z nocopyreloc'" +
               getLocation(S, Sym, RelOff));
 
-      addCopyRelSymbol<ELFT>(B);
+      addCopyRelSymbol<ELFT>(*B);
     }
     IsConstant = true;
     return Expr;
   }
 
-  if (Sym.isFunc())
-    return getPltExpr(Sym, Expr, IsConstant);
+  if (Sym.isFunc()) {
+    // This handles a non PIC program call to function in a shared library. In
+    // an ideal world, we could just report an error saying the relocation can
+    // overflow at runtime. In the real world with glibc, crt1.o has a
+    // R_X86_64_PC32 pointing to libc.so.
+    //
+    // The general idea on how to handle such cases is to create a PLT entry and
+    // use that as the function value.
+    //
+    // For the static linking part, we just return a plt expr and everything
+    // else will use the the PLT entry as the address.
+    //
+    // The remaining problem is making sure pointer equality still works. We
+    // need the help of the dynamic linker for that. We let it know that we have
+    // a direct reference to a so symbol by creating an undefined symbol with a
+    // non zero st_value. Seeing that, the dynamic linker resolves the symbol to
+    // the value of the symbol we created. This is true even for got entries, so
+    // pointer equality is maintained. To avoid an infinite loop, the only entry
+    // that points to the real function is a dedicated got entry used by the
+    // plt. That is identified by special relocation types (R_X86_64_JUMP_SLOT,
+    // R_386_JMP_SLOT, etc).
+    Sym.NeedsPltAddr = true;
+    Sym.IsPreemptible = false;
+    IsConstant = true;
+    return toPlt(Expr);
+  }
 
-  errorOrWarn("symbol '" + toString(Sym) + "' defined in " +
-              toString(Sym.File) + " has no type");
+  errorOrWarn("symbol '" + toString(Sym) + "' has no type" +
+              getLocation(S, Sym, RelOff));
   return Expr;
 }
 
@@ -902,15 +882,20 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
     if (maybeReportUndefined(Sym, Sec, Rel.r_offset))
       continue;
 
-    RelExpr Expr =
-        Target->getRelExpr(Type, Sym, Sec.Data.begin() + Rel.r_offset);
+    const uint8_t *RelocatedAddr = Sec.Data.begin() + Rel.r_offset;
+    RelExpr Expr = Target->getRelExpr(Type, Sym, RelocatedAddr);
 
     // Ignore "hint" relocations because they are only markers for relaxation.
     if (isRelExprOneOf<R_HINT, R_NONE>(Expr))
       continue;
 
-    // Handle yet another MIPS-ness.
-    if (isMipsGprel(Type)) {
+    // In case of MIPS GP-relative relocations always resolve to a definition
+    // in a regular input file, ignoring the one-definition rule. So we,
+    // for example, should not attempt to create a dynamic relocation even
+    // if the target symbol is preemptible. There are two two MIPS GP-relative
+    // relocations R_MIPS_GPREL16 and R_MIPS_GPREL32. But only R_MIPS_GPREL16
+    // can be against a preemptible symbol.
+    if (Expr == R_MIPS_GOTREL) {
       int64_t Addend = computeAddend<ELFT>(Rel, End, Sec, Expr, Sym.isLocal());
       Sec.Relocations.push_back({R_MIPS_GOTREL, Type, Offset, Addend, &Sym});
       continue;
@@ -918,7 +903,7 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
 
     bool Preemptible = Sym.IsPreemptible;
 
-    // Strenghten or relax a PLT access.
+    // Strenghten or relax relocations.
     //
     // GNU ifunc symbols must be accessed via PLT because their addresses
     // are determined by runtime.
@@ -932,8 +917,7 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
     if (Sym.isGnuIFunc())
       Expr = toPlt(Expr);
     else if (!Preemptible && Expr == R_GOT_PC && !isAbsoluteValue(Sym))
-      Expr =
-          Target->adjustRelaxExpr(Type, Sec.Data.data() + Rel.r_offset, Expr);
+      Expr = Target->adjustRelaxExpr(Type, RelocatedAddr, Expr);
     else if (!Preemptible)
       Expr = fromPlt(Expr);
 
@@ -994,10 +978,9 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
       // We don't know anything about the finaly symbol. Just ask the dynamic
       // linker to handle the relocation for us.
       if (!Target->isPicRel(Type))
-        errorOrWarn(
-            "relocation " + toString(Type) +
-            " cannot be used against shared object; recompile with -fPIC" +
-            getLocation(Sec, Sym, Offset));
+        errorOrWarn("relocation " + toString(Type) +
+                    " cannot be used against symbol " + toString(Sym) +
+                    "; recompile with -fPIC" + getLocation(Sec, Sym, Offset));
 
       InX::RelaDyn->addReloc(
           {Target->getDynRel(Type), &Sec, Offset, false, &Sym, Addend});
