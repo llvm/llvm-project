@@ -117,6 +117,30 @@ ARMInstructionSelector::ARMInstructionSelector(const ARMBaseTargetMachine &TM,
 {
 }
 
+static const TargetRegisterClass *guessRegClass(unsigned Reg,
+                                                MachineRegisterInfo &MRI,
+                                                const TargetRegisterInfo &TRI,
+                                                const RegisterBankInfo &RBI) {
+  const RegisterBank *RegBank = RBI.getRegBank(Reg, MRI, TRI);
+  assert(RegBank && "Can't get reg bank for virtual register");
+
+  const unsigned Size = MRI.getType(Reg).getSizeInBits();
+  assert((RegBank->getID() == ARM::GPRRegBankID ||
+          RegBank->getID() == ARM::FPRRegBankID) &&
+         "Unsupported reg bank");
+
+  if (RegBank->getID() == ARM::FPRRegBankID) {
+    if (Size == 32)
+      return &ARM::SPRRegClass;
+    else if (Size == 64)
+      return &ARM::DPRRegClass;
+    else
+      llvm_unreachable("Unsupported destination size");
+  }
+
+  return &ARM::GPRRegClass;
+}
+
 static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
                        MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
                        const RegisterBankInfo &RBI) {
@@ -124,25 +148,7 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   if (TargetRegisterInfo::isPhysicalRegister(DstReg))
     return true;
 
-  const RegisterBank *RegBank = RBI.getRegBank(DstReg, MRI, TRI);
-  (void)RegBank;
-  assert(RegBank && "Can't get reg bank for virtual register");
-
-  const unsigned DstSize = MRI.getType(DstReg).getSizeInBits();
-  assert((RegBank->getID() == ARM::GPRRegBankID ||
-          RegBank->getID() == ARM::FPRRegBankID) &&
-         "Unsupported reg bank");
-
-  const TargetRegisterClass *RC = &ARM::GPRRegClass;
-
-  if (RegBank->getID() == ARM::FPRRegBankID) {
-    if (DstSize == 32)
-      RC = &ARM::SPRRegClass;
-    else if (DstSize == 64)
-      RC = &ARM::DPRRegClass;
-    else
-      llvm_unreachable("Unsupported destination size");
-  }
+  const TargetRegisterClass *RC = guessRegClass(DstReg, MRI, TRI, RBI);
 
   // No need to constrain SrcReg. It will get constrained when
   // we hit another of its uses or its defs.
@@ -670,14 +676,6 @@ bool ARMInstructionSelector::select(MachineInstr &I,
   }
 
   using namespace TargetOpcode;
-  if (I.getOpcode() == G_CONSTANT) {
-    // Pointer constants should be treated the same as 32-bit integer constants.
-    // Change the type and let TableGen handle it.
-    unsigned ResultReg = I.getOperand(0).getReg();
-    LLT Ty = MRI.getType(ResultReg);
-    if (Ty.isPointer())
-      MRI.setType(ResultReg, LLT::scalar(32));
-  }
 
   if (selectImpl(I, CoverageInfo))
     return true;
@@ -787,6 +785,32 @@ bool ARMInstructionSelector::select(MachineInstr &I,
 
     I.setDesc(TII.get(COPY));
     return selectCopy(I, TII, MRI, TRI, RBI);
+  }
+  case G_CONSTANT: {
+    if (!MRI.getType(I.getOperand(0).getReg()).isPointer()) {
+      // Non-pointer constants should be handled by TableGen.
+      DEBUG(dbgs() << "Unsupported constant type\n");
+      return false;
+    }
+
+    auto &Val = I.getOperand(1);
+    if (Val.isCImm()) {
+      if (!Val.getCImm()->isZero()) {
+        DEBUG(dbgs() << "Unsupported pointer constant value\n");
+        return false;
+      }
+      Val.ChangeToImmediate(0);
+    } else {
+      assert(Val.isImm() && "Unexpected operand for G_CONSTANT");
+      if (Val.getImm() != 0) {
+        DEBUG(dbgs() << "Unsupported pointer constant value\n");
+        return false;
+      }
+    }
+
+    I.setDesc(TII.get(ARM::MOVi));
+    MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
+    break;
   }
   case G_INTTOPTR:
   case G_PTRTOINT: {
@@ -915,6 +939,17 @@ bool ARMInstructionSelector::select(MachineInstr &I,
     if (!constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI))
       return false;
     I.eraseFromParent();
+    return true;
+  }
+  case G_PHI: {
+    I.setDesc(TII.get(PHI));
+
+    unsigned DstReg = I.getOperand(0).getReg();
+    const TargetRegisterClass *RC = guessRegClass(DstReg, MRI, TRI, RBI);
+    if (!RBI.constrainGenericRegister(DstReg, *RC, MRI)) {
+      break;
+    }
+
     return true;
   }
   default:

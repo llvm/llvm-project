@@ -5437,6 +5437,15 @@ unsigned clang_isDeclaration(enum CXCursorKind K) {
          (K >= CXCursor_FirstExtraDecl && K <= CXCursor_LastExtraDecl);
 }
 
+unsigned clang_isInvalidDeclaration(CXCursor C) {
+  if (clang_isDeclaration(C.kind)) {
+    if (const Decl *D = getCursorDecl(C))
+      return D->isInvalidDecl();
+  }
+
+  return 0;
+}
+
 unsigned clang_isReference(enum CXCursorKind K) {
   return K >= CXCursor_FirstRef && K <= CXCursor_LastRef;
 }

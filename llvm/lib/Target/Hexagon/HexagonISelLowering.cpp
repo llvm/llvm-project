@@ -2256,9 +2256,7 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case HexagonISD::DCFETCH:       return "HexagonISD::DCFETCH";
   case HexagonISD::EH_RETURN:     return "HexagonISD::EH_RETURN";
   case HexagonISD::EXTRACTU:      return "HexagonISD::EXTRACTU";
-  case HexagonISD::EXTRACTURP:    return "HexagonISD::EXTRACTURP";
   case HexagonISD::INSERT:        return "HexagonISD::INSERT";
-  case HexagonISD::INSERTRP:      return "HexagonISD::INSERTRP";
   case HexagonISD::JT:            return "HexagonISD::JT";
   case HexagonISD::RET_FLAG:      return "HexagonISD::RET_FLAG";
   case HexagonISD::TC_RETURN:     return "HexagonISD::TC_RETURN";
@@ -2707,11 +2705,8 @@ HexagonTargetLowering::extractVector(SDValue VecV, SDValue IdxV,
       IdxV = DAG.getZExtOrTrunc(IdxV, dl, MVT::i32);
     SDValue OffV = DAG.getNode(ISD::MUL, dl, MVT::i32, IdxV,
                                DAG.getConstant(ElemWidth, dl, MVT::i32));
-    // EXTRACTURP takes width/offset in a 64-bit pair.
-    SDValue CombV = DAG.getNode(HexagonISD::COMBINE, dl, MVT::i64,
-                                  {WidthV, OffV});
-    ExtV = DAG.getNode(HexagonISD::EXTRACTURP, dl, ScalarTy,
-                       {VecV, CombV});
+    ExtV = DAG.getNode(HexagonISD::EXTRACTU, dl, ScalarTy,
+                       {VecV, WidthV, OffV});
   }
 
   // Cast ExtV to the requested result type.
@@ -2752,11 +2747,8 @@ HexagonTargetLowering::insertVector(SDValue VecV, SDValue ValV, SDValue IdxV,
     if (ty(IdxV) != MVT::i32)
       IdxV = DAG.getZExtOrTrunc(IdxV, dl, MVT::i32);
     SDValue OffV = DAG.getNode(ISD::MUL, dl, MVT::i32, IdxV, WidthV);
-    // INSERTRP takes width/offset in a 64-bit pair.
-    SDValue CombV = DAG.getNode(HexagonISD::COMBINE, dl, MVT::i64,
-                                  {WidthV, OffV});
-    InsV = DAG.getNode(HexagonISD::INSERTRP, dl, ScalarTy,
-                       {VecV, ValV, CombV});
+    InsV = DAG.getNode(HexagonISD::INSERT, dl, ScalarTy,
+                       {VecV, ValV, WidthV, OffV});
   }
 
   return DAG.getNode(ISD::BITCAST, dl, VecTy, InsV);
