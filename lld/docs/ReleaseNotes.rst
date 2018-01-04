@@ -29,7 +29,13 @@ ELF Improvements
 COFF Improvements
 -----------------
 
-* Item 1.
+* A GNU ld style frontend for the COFF linker has been added for MinGW.
+  In MinGW environments, the linker is invoked with GNU ld style parameters;
+  which LLD previously only supported when used as an ELF linker. When
+  a PE/COFF target is chosen, those parameters are rewritten into the
+  lld-link style parameters and the COFF linker is invoked instead.
+
+* Initial support for the ARM64 architecture has been added.
 
 MachO Improvements
 ------------------
