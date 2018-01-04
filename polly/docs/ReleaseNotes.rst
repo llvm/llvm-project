@@ -1,8 +1,8 @@
 ============================
-Release Notes 6.0 (upcoming)
+Release Notes 7.0 (upcoming)
 ============================
 
-In Polly 6 the following important changes have been incorporated.
+In Polly 7 the following important changes have been incorporated.
 
 .. warning::
 
