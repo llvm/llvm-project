@@ -47,7 +47,8 @@
   define void @test_gep() { ret void }
   define void @test_constant_imm() { ret void }
   define void @test_constant_cimm() { ret void }
-  define void @test_pointer_constant() { ret void }
+  define void @test_pointer_constant_unconstrained() { ret void }
+  define void @test_pointer_constant_constrained() { ret void }
 
   define void @test_inttoptr_s32() { ret void }
   define void @test_ptrtoint_s32() { ret void }
@@ -1110,8 +1111,8 @@ body:             |
     BX_RET 14, %noreg, implicit %r0
 ...
 ---
-name:            test_pointer_constant
-# CHECK-LABEL: name: test_pointer_constant
+name:            test_pointer_constant_unconstrained
+# CHECK-LABEL: name: test_pointer_constant_unconstrained
 legalized:       true
 regBankSelected: true
 selected:        false
@@ -1123,8 +1124,26 @@ body:             |
     %0(p0) = G_CONSTANT i32 0
     ; CHECK: %[[C:[0-9]+]]:gpr = MOVi 0, 14, %noreg, %noreg
 
+    ; This leaves %0 unconstrained before the G_CONSTANT is selected.
     %r0 = COPY %0(p0)
     BX_RET 14, %noreg, implicit %r0
+...
+---
+name:            test_pointer_constant_constrained
+# CHECK-LABEL: name: test_pointer_constant_constrained
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+body:             |
+  bb.0:
+    %0(p0) = G_CONSTANT i32 0
+    ; CHECK: %[[C:[0-9]+]]:gpr = MOVi 0, 14, %noreg, %noreg
+
+    ; This constrains %0 before the G_CONSTANT is selected.
+    G_STORE %0(p0), %0(p0) :: (store 4)
 ...
 ---
 name:            test_inttoptr_s32

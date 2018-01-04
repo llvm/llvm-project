@@ -2929,6 +2929,48 @@ static bool hasIdenticalPassObjectSizeAttrs(const FunctionDecl *A,
   return std::equal(A->param_begin(), A->param_end(), B->param_begin(), AttrEq);
 }
 
+/// If necessary, adjust the semantic declaration context for a qualified
+/// declaration to name the correct inline namespace within the qualifier.
+static void adjustDeclContextForDeclaratorDecl(DeclaratorDecl *NewD,
+                                               DeclaratorDecl *OldD) {
+  // The only case where we need to update the DeclContext is when
+  // redeclaration lookup for a qualified name finds a declaration
+  // in an inline namespace within the context named by the qualifier:
+  //
+  //   inline namespace N { int f(); }
+  //   int ::f(); // Sema DC needs adjusting from :: to N::.
+  //
+  // For unqualified declarations, the semantic context *can* change
+  // along the redeclaration chain (for local extern declarations,
+  // extern "C" declarations, and friend declarations in particular).
+  if (!NewD->getQualifier())
+    return;
+
+  // NewD is probably already in the right context.
+  auto *NamedDC = NewD->getDeclContext()->getRedeclContext();
+  auto *SemaDC = OldD->getDeclContext()->getRedeclContext();
+  if (NamedDC->Equals(SemaDC))
+    return;
+
+  assert((NamedDC->InEnclosingNamespaceSetOf(SemaDC) ||
+          NewD->isInvalidDecl() || OldD->isInvalidDecl()) &&
+         "unexpected context for redeclaration");
+
+  auto *LexDC = NewD->getLexicalDeclContext();
+  auto FixSemaDC = [=](NamedDecl *D) {
+    if (!D)
+      return;
+    D->setDeclContext(SemaDC);
+    D->setLexicalDeclContext(LexDC);
+  };
+
+  FixSemaDC(NewD);
+  if (auto *FD = dyn_cast<FunctionDecl>(NewD))
+    FixSemaDC(FD->getDescribedFunctionTemplate());
+  else if (auto *VD = dyn_cast<VarDecl>(NewD))
+    FixSemaDC(VD->getDescribedVarTemplate());
+}
+
 /// MergeFunctionDecl - We just parsed a function 'New' from
 /// declarator D which has the same name and scope as a previous
 /// declaration 'Old'.  Figure out how to resolve this situation,
@@ -3953,6 +3995,7 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
   New->setPreviousDecl(Old);
   if (NewTemplate)
     NewTemplate->setPreviousDecl(OldTemplate);
+  adjustDeclContextForDeclaratorDecl(New, Old);
 
   // Inherit access appropriately.
   New->setAccess(Old->getAccess());
@@ -9252,12 +9295,13 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
 
     if (FunctionTemplateDecl *OldTemplateDecl
                                   = dyn_cast<FunctionTemplateDecl>(OldDecl)) {
-      NewFD->setPreviousDeclaration(OldTemplateDecl->getTemplatedDecl());
+      auto *OldFD = OldTemplateDecl->getTemplatedDecl();
+      NewFD->setPreviousDeclaration(OldFD);
+      adjustDeclContextForDeclaratorDecl(NewFD, OldFD);
       FunctionTemplateDecl *NewTemplateDecl
         = NewFD->getDescribedFunctionTemplate();
       assert(NewTemplateDecl && "Template/non-template mismatch");
-      if (CXXMethodDecl *Method
-            = dyn_cast<CXXMethodDecl>(NewTemplateDecl->getTemplatedDecl())) {
+      if (auto *Method = dyn_cast<CXXMethodDecl>(NewFD)) {
         Method->setAccess(OldTemplateDecl->getAccess());
         NewTemplateDecl->setAccess(OldTemplateDecl->getAccess());
       }
@@ -9270,22 +9314,22 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
         assert(OldTemplateDecl->isMemberSpecialization());
         // Explicit specializations of a member template do not inherit deleted
         // status from the parent member template that they are specializing.
-        if (OldTemplateDecl->getTemplatedDecl()->isDeleted()) {
-          FunctionDecl *const OldTemplatedDecl =
-              OldTemplateDecl->getTemplatedDecl();
+        if (OldFD->isDeleted()) {
           // FIXME: This assert will not hold in the presence of modules.
-          assert(OldTemplatedDecl->getCanonicalDecl() == OldTemplatedDecl);
+          assert(OldFD->getCanonicalDecl() == OldFD);
           // FIXME: We need an update record for this AST mutation.
-          OldTemplatedDecl->setDeletedAsWritten(false);
+          OldFD->setDeletedAsWritten(false);
         }
       }
 
     } else {
       if (shouldLinkDependentDeclWithPrevious(NewFD, OldDecl)) {
+        auto *OldFD = cast<FunctionDecl>(OldDecl);
         // This needs to happen first so that 'inline' propagates.
-        NewFD->setPreviousDeclaration(cast<FunctionDecl>(OldDecl));
+        NewFD->setPreviousDeclaration(OldFD);
+        adjustDeclContextForDeclaratorDecl(NewFD, OldFD);
         if (isa<CXXMethodDecl>(NewFD))
-          NewFD->setAccess(OldDecl->getAccess());
+          NewFD->setAccess(OldFD->getAccess());
       }
     }
   } else if (!getLangOpts().CPlusPlus && MayNeedOverloadableChecks &&

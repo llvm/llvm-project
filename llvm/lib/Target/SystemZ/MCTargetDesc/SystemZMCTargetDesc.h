@@ -89,8 +89,8 @@ MCCodeEmitter *createSystemZMCCodeEmitter(const MCInstrInfo &MCII,
                                           MCContext &Ctx);
 
 MCAsmBackend *createSystemZMCAsmBackend(const Target &T,
+                                        const MCSubtargetInfo &STI,
                                         const MCRegisterInfo &MRI,
-                                        const Triple &TT, StringRef CPU,
                                         const MCTargetOptions &Options);
 
 std::unique_ptr<MCObjectWriter> createSystemZObjectWriter(raw_pwrite_stream &OS,

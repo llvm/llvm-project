@@ -104,15 +104,15 @@ BPFAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
 }
 
 MCAsmBackend *llvm::createBPFAsmBackend(const Target &T,
+                                        const MCSubtargetInfo &STI,
                                         const MCRegisterInfo &MRI,
-                                        const Triple &TT, StringRef CPU,
-                                        const MCTargetOptions&) {
+                                        const MCTargetOptions &) {
   return new BPFAsmBackend(/*IsLittleEndian=*/true);
 }
 
 MCAsmBackend *llvm::createBPFbeAsmBackend(const Target &T,
+                                          const MCSubtargetInfo &STI,
                                           const MCRegisterInfo &MRI,
-                                          const Triple &TT, StringRef CPU,
-                                          const MCTargetOptions&) {
+                                          const MCTargetOptions &) {
   return new BPFAsmBackend(/*IsLittleEndian=*/false);
 }

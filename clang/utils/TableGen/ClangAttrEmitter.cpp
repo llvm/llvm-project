@@ -87,6 +87,8 @@ GetFlattenedSpellings(const Record &Attr) {
     } else if (Variety == "Clang") {
       Ret.emplace_back("GNU", Name, "", false);
       Ret.emplace_back("CXX11", Name, "clang", false);
+      if (Spelling->getValueAsBit("AllowInC"))
+        Ret.emplace_back("C2x", Name, "clang", false);
     } else
       Ret.push_back(FlattenedSpelling(*Spelling));
   }

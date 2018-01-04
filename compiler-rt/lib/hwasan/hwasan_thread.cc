@@ -8,6 +8,19 @@
 
 namespace __hwasan {
 
+static u32 RandomSeed() {
+  u32 seed;
+  do {
+    if (UNLIKELY(!GetRandom(reinterpret_cast<void *>(&seed), sizeof(seed),
+                            /*blocking=*/false))) {
+      seed = static_cast<u32>(
+          (NanoTime() >> 12) ^
+          (reinterpret_cast<uptr>(__builtin_frame_address(0)) >> 4));
+    }
+  } while (!seed);
+  return seed;
+}
+
 HwasanThread *HwasanThread::Create(thread_callback_t start_routine,
                                void *arg) {
   uptr PageSize = GetPageSizeCached();
@@ -16,6 +29,7 @@ HwasanThread *HwasanThread::Create(thread_callback_t start_routine,
   thread->start_routine_ = start_routine;
   thread->arg_ = arg;
   thread->destructor_iterations_ = GetPthreadDestructorIterations();
+  thread->random_state_ = RandomSeed();
 
   return thread;
 }
@@ -70,6 +84,26 @@ thread_return_t HwasanThread::ThreadStart() {
   thread_return_t res = start_routine_(arg_);
 
   return res;
+}
+
+static u32 xorshift(u32 state) {
+  state ^= state << 13;
+  state ^= state >> 17;
+  state ^= state << 5;
+  return state;
+}
+
+// Generate a (pseudo-)random non-zero tag.
+tag_t HwasanThread::GenerateRandomTag() {
+  tag_t tag;
+  do {
+    if (!random_buffer_)
+      random_buffer_ = random_state_ = xorshift(random_state_);
+    CHECK(random_buffer_);
+    tag = random_buffer_ & 0xFF;
+    random_buffer_ >>= 8;
+  } while (!tag);
+  return tag;
 }
 
 } // namespace __hwasan

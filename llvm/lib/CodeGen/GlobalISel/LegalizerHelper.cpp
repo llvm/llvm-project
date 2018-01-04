@@ -813,7 +813,21 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
 
     unsigned Zero = MRI.createGenericVirtualRegister(Ty);
     MIRBuilder.buildConstant(Zero, 0);
-    MIRBuilder.buildICmp(CmpInst::ICMP_NE, Overflow, HiPart, Zero);
+
+    // For *signed* multiply, overflow is detected by checking:
+    // (hi != (lo >> bitwidth-1))
+    if (Opcode == TargetOpcode::G_SMULH) {
+      unsigned Shifted = MRI.createGenericVirtualRegister(Ty);
+      unsigned ShiftAmt = MRI.createGenericVirtualRegister(Ty);
+      MIRBuilder.buildConstant(ShiftAmt, Ty.getSizeInBits() - 1);
+      MIRBuilder.buildInstr(TargetOpcode::G_ASHR)
+        .addDef(Shifted)
+        .addUse(Res)
+        .addUse(ShiftAmt);
+      MIRBuilder.buildICmp(CmpInst::ICMP_NE, Overflow, HiPart, Shifted);
+    } else {
+      MIRBuilder.buildICmp(CmpInst::ICMP_NE, Overflow, HiPart, Zero);
+    }
     MI.eraseFromParent();
     return Legalized;
   }

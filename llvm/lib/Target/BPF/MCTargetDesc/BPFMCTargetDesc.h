@@ -45,11 +45,11 @@ MCCodeEmitter *createBPFbeMCCodeEmitter(const MCInstrInfo &MCII,
                                         const MCRegisterInfo &MRI,
                                         MCContext &Ctx);
 
-MCAsmBackend *createBPFAsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                                  const Triple &TT, StringRef CPU,
+MCAsmBackend *createBPFAsmBackend(const Target &T, const MCSubtargetInfo &STI,
+                                  const MCRegisterInfo &MRI,
                                   const MCTargetOptions &Options);
-MCAsmBackend *createBPFbeAsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                                    const Triple &TT, StringRef CPU,
+MCAsmBackend *createBPFbeAsmBackend(const Target &T, const MCSubtargetInfo &STI,
+                                    const MCRegisterInfo &MRI,
                                     const MCTargetOptions &Options);
 
 std::unique_ptr<MCObjectWriter> createBPFELFObjectWriter(raw_pwrite_stream &OS,

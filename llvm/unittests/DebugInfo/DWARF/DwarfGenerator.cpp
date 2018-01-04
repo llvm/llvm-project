@@ -152,8 +152,13 @@ llvm::Error dwarfgen::Generator::init(Triple TheTriple, uint16_t V) {
   MC.reset(new MCContext(MAI.get(), MRI.get(), MOFI.get()));
   MOFI->InitMCObjectFileInfo(TheTriple, /*PIC*/ false, *MC);
 
+  MSTI.reset(TheTarget->createMCSubtargetInfo(TripleName, "", ""));
+  if (!MSTI)
+    return make_error<StringError>("no subtarget info for target " + TripleName,
+                                   inconvertibleErrorCode());
+
   MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
-  MAB = TheTarget->createMCAsmBackend(*MRI, TripleName, "", MCOptions);
+  MAB = TheTarget->createMCAsmBackend(*MSTI, *MRI, MCOptions);
   if (!MAB)
     return make_error<StringError>("no asm backend for target " + TripleName,
                                    inconvertibleErrorCode());
@@ -162,11 +167,6 @@ llvm::Error dwarfgen::Generator::init(Triple TheTriple, uint16_t V) {
   if (!MII)
     return make_error<StringError>("no instr info info for target " +
                                        TripleName,
-                                   inconvertibleErrorCode());
-
-  MSTI.reset(TheTarget->createMCSubtargetInfo(TripleName, "", ""));
-  if (!MSTI)
-    return make_error<StringError>("no subtarget info for target " + TripleName,
                                    inconvertibleErrorCode());
 
   MCE = TheTarget->createMCCodeEmitter(*MII, *MRI, *MC);
