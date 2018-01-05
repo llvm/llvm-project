@@ -832,16 +832,8 @@ template <class ELFT> static void addGotEntry(Symbol &Sym, bool Preemptible) {
     Type = Target->RelativeRel;
   else
     Type = Target->GotRel;
-  InX::RelaDyn->addReloc({Type, InX::Got, Off, !Preemptible, &Sym, 0});
-
-  // REL type relocations don't have addend fields unlike RELAs, and
-  // their addends are stored to the section to which they are applied.
-  // So, store addends if we need to.
-  //
-  // This is ugly -- the difference between REL and RELA should be
-  // handled in a better way. It's a TODO.
-  if (!Config->IsRela && !Preemptible)
-    InX::Got->Relocations.push_back({R_ABS, Target->GotRel, Off, 0, &Sym});
+  InX::RelaDyn->addReloc(Type, InX::Got, Off, !Preemptible, &Sym, 0, R_ABS,
+                         Target->GotRel);
 }
 
 // The reason we have to do this early scan is as follows
@@ -1022,15 +1014,8 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
     // dynamic linker. We can however do better than just copying the incoming
     // relocation. We can process some of it and and just ask the dynamic
     // linker to add the load address.
-    if (Config->IsRela) {
-      InX::RelaDyn->addReloc(
-          {Target->RelativeRel, &Sec, Offset, true, &Sym, Addend});
-    } else {
-      // In REL, addends are stored to the target section.
-      InX::RelaDyn->addReloc(
-          {Target->RelativeRel, &Sec, Offset, true, &Sym, 0});
-      Sec.Relocations.push_back({Expr, Type, Offset, Addend, &Sym});
-    }
+    InX::RelaDyn->addReloc(Target->RelativeRel, &Sec, Offset, true, &Sym,
+                           Addend, Expr, Type);
   }
 }
 
