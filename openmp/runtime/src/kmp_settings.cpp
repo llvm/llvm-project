@@ -4702,7 +4702,7 @@ static void __kmp_stg_init(void) {
       kmp_setting_t *omp_stacksize =
           __kmp_stg_find("OMP_STACKSIZE"); // 3rd priority.
 
-      // !!! volatile keyword is Intel (R) C Compiler bug CQ49908 workaround.
+      // !!! volatile keyword is Intel(R) C Compiler bug CQ49908 workaround.
       // !!! Compiler does not understand rivals is used and optimizes out
       // assignments
       // !!!     rivals[ i ++ ] = ...;
@@ -4740,7 +4740,7 @@ static void __kmp_stg_init(void) {
       kmp_setting_t *omp_wait_policy =
           __kmp_stg_find("OMP_WAIT_POLICY"); // 2nd priority.
 
-      // !!! volatile keyword is Intel (R) C Compiler bug CQ49908 workaround.
+      // !!! volatile keyword is Intel(R) C Compiler bug CQ49908 workaround.
       static kmp_setting_t *volatile rivals[3];
       static kmp_stg_wp_data_t kmp_data = {0, CCAST(kmp_setting_t **, rivals)};
       static kmp_stg_wp_data_t omp_data = {1, CCAST(kmp_setting_t **, rivals)};
@@ -4764,7 +4764,7 @@ static void __kmp_stg_init(void) {
       kmp_setting_t *kmp_all_threads =
           __kmp_stg_find("KMP_ALL_THREADS"); // 2nd priority.
 
-      // !!! volatile keyword is Intel (R) C Compiler bug CQ49908 workaround.
+      // !!! volatile keyword is Intel(R) C Compiler bug CQ49908 workaround.
       static kmp_setting_t *volatile rivals[3];
       int i = 0;
 
@@ -4782,7 +4782,7 @@ static void __kmp_stg_init(void) {
       // 2nd priority
       kmp_setting_t *kmp_place_threads = __kmp_stg_find("KMP_PLACE_THREADS");
 
-      // !!! volatile keyword is Intel (R) C Compiler bug CQ49908 workaround.
+      // !!! volatile keyword is Intel(R) C Compiler bug CQ49908 workaround.
       static kmp_setting_t *volatile rivals[3];
       int i = 0;
 
@@ -4810,7 +4810,7 @@ static void __kmp_stg_init(void) {
           __kmp_stg_find("OMP_PROC_BIND"); // 3rd priority.
       KMP_DEBUG_ASSERT(omp_proc_bind != NULL);
 
-      // !!! volatile keyword is Intel (R) C Compiler bug CQ49908 workaround.
+      // !!! volatile keyword is Intel(R) C Compiler bug CQ49908 workaround.
       static kmp_setting_t *volatile rivals[4];
       int i = 0;
 
@@ -4852,7 +4852,7 @@ static void __kmp_stg_init(void) {
       kmp_setting_t *kmp_determ_red =
           __kmp_stg_find("KMP_DETERMINISTIC_REDUCTION"); // 2nd priority.
 
-      // !!! volatile keyword is Intel (R) C Compiler bug CQ49908 workaround.
+      // !!! volatile keyword is Intel(R) C Compiler bug CQ49908 workaround.
       static kmp_setting_t *volatile rivals[3];
       static kmp_stg_fr_data_t force_data = {1,
                                              CCAST(kmp_setting_t **, rivals)};
