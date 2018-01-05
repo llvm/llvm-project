@@ -98,6 +98,9 @@ class ModuleMap {
   /// \brief The top-level modules that are known.
   llvm::StringMap<Module *> Modules;
 
+  /// Shadow modules created while building this module map.
+  llvm::SmallVector<Module*, 2> ShadowModules;
+
   /// \brief The number of modules we have created in total.
   unsigned NumCreatedModules = 0;
 
@@ -194,6 +197,17 @@ private:
   /// in the module map over to the module that includes them via its umbrella
   /// header.
   llvm::DenseMap<const DirectoryEntry *, Module *> UmbrellaDirs;
+
+  /// \brief The set of modules provided explicitly (e.g. by -fmodule-map-file),
+  /// which are allowed to shadow other implicitly discovered modules.
+  llvm::DenseSet<const Module *> ExplicitlyProvidedModules;
+
+  bool mayShadowModuleBeingParsed(Module *ExistingModule,
+                                  bool IsExplicitlyProvided) {
+    assert(!ExistingModule->Parent && "expected top-level module");
+    return !IsExplicitlyProvided &&
+           ExplicitlyProvidedModules.count(ExistingModule);
+  }
 
   /// \brief The set of attributes that can be attached to a module.
   struct Attributes {
@@ -475,9 +489,9 @@ public:
   ///
   /// \returns The found or newly-created module, along with a boolean value
   /// that will be true if the module is newly-created.
-  std::pair<Module *, bool> findOrCreateModule(StringRef Name, Module *Parent,
-                                               bool IsFramework,
-                                               bool IsExplicit);
+  std::pair<Module *, bool>
+  findOrCreateModule(StringRef Name, Module *Parent, bool IsFramework,
+                     bool IsExplicit, bool UsesExplicitModuleMapFile = false);
 
   /// \brief Create a 'global module' for a C++ Modules TS module interface
   /// unit.
@@ -501,6 +515,11 @@ public:
   /// framework directory.
   Module *inferFrameworkModule(const DirectoryEntry *FrameworkDir,
                                bool IsSystem, Module *Parent);
+
+  /// \brief Create a new top-level module that is shadowed by
+  /// \p ShadowingModule.
+  Module *createShadowedModule(StringRef Name, bool IsFramework,
+                               Module *ShadowingModule);
 
   /// \brief Retrieve the module map file containing the definition of the given
   /// module.
@@ -587,6 +606,8 @@ public:
   /// \brief Marks this header as being excluded from the given module.
   void excludeHeader(Module *Mod, Module::Header Header);
 
+  void setExplicitlyProvided(Module *Mod);
+
   /// \brief Parse the given module map file, and record any modules we 
   /// encounter.
   ///
@@ -606,10 +627,15 @@ public:
   /// \param ExternModuleLoc The location of the "extern module" declaration
   ///        that caused us to load this module map file, if any.
   ///
+  /// \param IsExplicitlyProvided Whether this module map file was provided
+  /// explicitly by the user (e.g. -fmodule-map-file), rather than found
+  /// implicitly.
+  ///
   /// \returns true if an error occurred, false otherwise.
   bool parseModuleMapFile(const FileEntry *File, bool IsSystem,
-                          const DirectoryEntry *HomeDir, FileID ID = FileID(),
-                          unsigned *Offset = nullptr,
+                          const DirectoryEntry *HomeDir,
+                          bool IsExplicitlyProvided = false,
+                          FileID ID = FileID(), unsigned *Offset = nullptr,
                           SourceLocation ExternModuleLoc = SourceLocation());
 
   /// \brief Dump the contents of the module map, for debugging purposes.

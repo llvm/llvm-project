@@ -26,7 +26,7 @@ extern "C" {
   // the hard limit (HardLimit=1) or the soft limit (HardLimit=0). The limit
   // can be removed by setting LimitMb to 0. This function's parameters should
   // be fully trusted to avoid security mishaps.
-  void __scudo_set_rss_limit(unsigned long LimitMb, int HardLimit);
+  void __scudo_set_rss_limit(size_t LimitMb, int HardLimit);
 #ifdef __cplusplus
 }  // extern "C"
 #endif

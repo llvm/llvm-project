@@ -1162,6 +1162,13 @@ public:
   /// \brief Change the result type of a function type once it is deduced.
   void adjustDeducedFunctionResultType(FunctionDecl *FD, QualType ResultType);
 
+  /// Get a function type and produce the equivalent function type with the
+  /// specified exception specification. Type sugar that can be present on a
+  /// declaration of a function with an exception specification is permitted
+  /// and preserved. Other type sugar (for instance, typedefs) is not.
+  QualType getFunctionTypeWithExceptionSpec(
+      QualType Orig, const FunctionProtoType::ExceptionSpecInfo &ESI);
+
   /// \brief Determine whether two function types are the same, ignoring
   /// exception specifications in cases where they're part of the type.
   bool hasSameFunctionTypeIgnoringExceptionSpec(QualType T, QualType U);

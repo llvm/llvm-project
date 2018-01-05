@@ -64,8 +64,9 @@ DWARFFormValue::getFixedByteSize(dwarf::Form Form,
                                  const DWARFFormParams Params) {
   switch (Form) {
   case DW_FORM_addr:
-    assert(Params.Version && Params.AddrSize && "Invalid Params for form");
-    return Params.AddrSize;
+    if (Params)
+      return Params.AddrSize;
+    return None;
 
   case DW_FORM_block:          // ULEB128 length L followed by L bytes.
   case DW_FORM_block1:         // 1 byte length L followed by L bytes.
@@ -86,8 +87,9 @@ DWARFFormValue::getFixedByteSize(dwarf::Form Form,
     return None;
 
   case DW_FORM_ref_addr:
-    assert(Params.Version && Params.AddrSize && "Invalid Params for form");
-    return Params.getRefAddrByteSize();
+    if (Params)
+      return Params.getRefAddrByteSize();
+    return None;
 
   case DW_FORM_flag:
   case DW_FORM_data1:
@@ -118,8 +120,9 @@ DWARFFormValue::getFixedByteSize(dwarf::Form Form,
   case DW_FORM_line_strp:
   case DW_FORM_sec_offset:
   case DW_FORM_strp_sup:
-    assert(Params.Version && Params.AddrSize && "Invalid Params for form");
-    return Params.getDwarfOffsetByteSize();
+    if (Params)
+      return Params.getDwarfOffsetByteSize();
+    return None;
 
   case DW_FORM_data8:
   case DW_FORM_ref8:

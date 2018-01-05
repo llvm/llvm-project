@@ -168,9 +168,9 @@ int bar(int n){
   // CHECK: [[REMOTE_ELT_VOID:%.+]] = load i8*, i8** [[REMOTE_ELT_REF]],
   // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i[[SZ]] 0, i[[SZ]] 0
   // CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
-  // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to double*
   // CHECK: [[REMOTE_ELT:%.+]] = bitcast i8* [[REMOTE_ELT_VOID]] to double*
   // CHECK: [[REMOTE_ELT_VAL:%.+]] = load double, double* [[REMOTE_ELT]], align
+  // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to double*
   // CHECK: store double [[REMOTE_ELT_VAL]], double* [[ELT]], align
   // CHECK: br label {{%?}}[[COPY_CONT:.+]]
   //
@@ -249,9 +249,9 @@ int bar(int n){
   // CHECK: [[P:%.+]] = mul i[[SZ]] 8, [[TEAM]]
   // CHECK: [[SCRATCHPAD_ELT_PTR64:%.+]] = add i[[SZ]] [[SCRATCHPAD]], [[P]]
   // CHECK: [[SCRATCHPAD_ELT_PTR_VOID:%.+]] = inttoptr i[[SZ]] [[SCRATCHPAD_ELT_PTR64]] to i8*
-  // CHECK: [[SCRATCHPAD_ELT_PTR:%.+]] = bitcast i8* [[SCRATCHPAD_ELT_PTR_VOID]] to double*
   // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to double*
   // CHECK: [[ELT_VAL:%.+]] = load double, double* [[ELT]], align
+  // CHECK: [[SCRATCHPAD_ELT_PTR:%.+]] = bitcast i8* [[SCRATCHPAD_ELT_PTR_VOID]] to double*
   // CHECK: store double [[ELT_VAL]], double* [[SCRATCHPAD_ELT_PTR]], align
   //
   // CHECK: ret
@@ -298,24 +298,14 @@ int bar(int n){
   // CHECK: [[REMOTE_ELT_VOID:%.+]] = load i8*, i8** [[REMOTE_ELT_REF]],
   // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST:%.+]], i[[SZ]] 0, i[[SZ]] 0
   // CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
-  // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to double*
   // CHECK: [[REMOTE_ELT:%.+]] = bitcast i8* [[REMOTE_ELT_VOID]] to double*
   // CHECK: [[REMOTE_ELT_VAL:%.+]] = load double, double* [[REMOTE_ELT]], align
+  // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to double*
   // CHECK: store double [[REMOTE_ELT_VAL]], double* [[ELT]], align
   // CHECK: br label {{%?}}[[REDUCE_CONT]]
   //
   // CHECK: [[REDUCE_CONT]]
   // CHECK: ret
-
-
-
-
-
-
-
-
-
-
 
   // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l33}}_worker()
 
@@ -480,9 +470,9 @@ int bar(int n){
   // CHECK: [[REMOTE_ELT_VOID:%.+]] = load i8*, i8** [[REMOTE_ELT_REF]],
   // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i[[SZ]] 0, i[[SZ]] 1
   // CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
-  // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to float*
   // CHECK: [[REMOTE_ELT:%.+]] = bitcast i8* [[REMOTE_ELT_VOID]] to float*
   // CHECK: [[REMOTE_ELT_VAL:%.+]] = load float, float* [[REMOTE_ELT]], align
+  // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to float*
   // CHECK: store float [[REMOTE_ELT_VAL]], float* [[ELT]], align
   // CHECK: br label {{%?}}[[COPY_CONT:.+]]
   //
@@ -617,9 +607,9 @@ int bar(int n){
   // CHECK: [[P:%.+]] = mul i[[SZ]] 4, [[TEAM]]
   // CHECK: [[SCRATCHPAD_ELT_PTR64:%.+]] = add i[[SZ]] [[SCRATCHPAD_NEXT]], [[P]]
   // CHECK: [[SCRATCHPAD_ELT_PTR_VOID:%.+]] = inttoptr i[[SZ]] [[SCRATCHPAD_ELT_PTR64]] to i8*
-  // CHECK: [[SCRATCHPAD_ELT_PTR:%.+]] = bitcast i8* [[SCRATCHPAD_ELT_PTR_VOID]] to float*
   // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to float*
   // CHECK: [[ELT_VAL:%.+]] = load float, float* [[ELT]], align
+  // CHECK: [[SCRATCHPAD_ELT_PTR:%.+]] = bitcast i8* [[SCRATCHPAD_ELT_PTR_VOID]] to float*
   // CHECK: store float [[ELT_VAL]], float* [[SCRATCHPAD_ELT_PTR]], align
   //
   // CHECK: ret
@@ -690,23 +680,14 @@ int bar(int n){
   // CHECK: [[REMOTE_ELT_VOID:%.+]] = load i8*, i8** [[REMOTE_ELT_REF]],
   // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST:%.+]], i[[SZ]] 0, i[[SZ]] 1
   // CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
-  // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to float*
   // CHECK: [[REMOTE_ELT:%.+]] = bitcast i8* [[REMOTE_ELT_VOID]] to float*
   // CHECK: [[REMOTE_ELT_VAL:%.+]] = load float, float* [[REMOTE_ELT]], align
+  // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to float*
   // CHECK: store float [[REMOTE_ELT_VAL]], float* [[ELT]], align
   // CHECK: br label {{%?}}[[REDUCE_CONT]]
   //
   // CHECK: [[REDUCE_CONT]]
   // CHECK: ret
-
-
-
-
-
-
-
-
-
 
   // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l40}}_worker()
 
@@ -903,18 +884,18 @@ int bar(int n){
   // CHECK: [[REMOTE_ELT_VOID:%.+]] = load i8*, i8** [[REMOTE_ELT_REF]],
   // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i[[SZ]] 0, i[[SZ]] 0
   // CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
-  // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i32*
   // CHECK: [[REMOTE_ELT:%.+]] = bitcast i8* [[REMOTE_ELT_VOID]] to i32*
   // CHECK: [[REMOTE_ELT_VAL:%.+]] = load i32, i32* [[REMOTE_ELT]], align
+  // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i32*
   // CHECK: store i32 [[REMOTE_ELT_VAL]], i32* [[ELT]], align
   //
   // CHECK: [[REMOTE_ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[REMOTE_RED_LIST]], i[[SZ]] 0, i[[SZ]] 1
   // CHECK: [[REMOTE_ELT_VOID:%.+]] = load i8*, i8** [[REMOTE_ELT_REF]],
   // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i[[SZ]] 0, i[[SZ]] 1
   // CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
-  // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i16*
   // CHECK: [[REMOTE_ELT:%.+]] = bitcast i8* [[REMOTE_ELT_VOID]] to i16*
   // CHECK: [[REMOTE_ELT_VAL:%.+]] = load i16, i16* [[REMOTE_ELT]], align
+  // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i16*
   // CHECK: store i16 [[REMOTE_ELT_VAL]], i16* [[ELT]], align
   // CHECK: br label {{%?}}[[COPY_CONT:.+]]
   //
@@ -1035,9 +1016,9 @@ int bar(int n){
   // CHECK: [[P:%.+]] = mul i[[SZ]] 4, [[TEAM]]
   // CHECK: [[SCRATCHPAD_ELT_PTR64:%.+]] = add i[[SZ]] [[SCRATCHPAD]], [[P]]
   // CHECK: [[SCRATCHPAD_ELT_PTR_VOID:%.+]] = inttoptr i[[SZ]] [[SCRATCHPAD_ELT_PTR64]] to i8*
-  // CHECK: [[SCRATCHPAD_ELT_PTR:%.+]] = bitcast i8* [[SCRATCHPAD_ELT_PTR_VOID]] to i32*
   // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i32*
   // CHECK: [[ELT_VAL:%.+]] = load i32, i32* [[ELT]], align
+  // CHECK: [[SCRATCHPAD_ELT_PTR:%.+]] = bitcast i8* [[SCRATCHPAD_ELT_PTR_VOID]] to i32*
   // CHECK: store i32 [[ELT_VAL]], i32* [[SCRATCHPAD_ELT_PTR]], align
   //
   // CHECK: [[OF:%.+]] = mul i[[SZ]] [[NUM_TEAMS]], 4
@@ -1053,9 +1034,9 @@ int bar(int n){
   // CHECK: [[P:%.+]] = mul i[[SZ]] 2, [[TEAM]]
   // CHECK: [[SCRATCHPAD_ELT_PTR64:%.+]] = add i[[SZ]] [[SCRATCHPAD_NEXT]], [[P]]
   // CHECK: [[SCRATCHPAD_ELT_PTR_VOID:%.+]] = inttoptr i[[SZ]] [[SCRATCHPAD_ELT_PTR64]] to i8*
-  // CHECK: [[SCRATCHPAD_ELT_PTR:%.+]] = bitcast i8* [[SCRATCHPAD_ELT_PTR_VOID]] to i16*
   // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i16*
   // CHECK: [[ELT_VAL:%.+]] = load i16, i16* [[ELT]], align
+  // CHECK: [[SCRATCHPAD_ELT_PTR:%.+]] = bitcast i8* [[SCRATCHPAD_ELT_PTR_VOID]] to i16*
   // CHECK: store i16 [[ELT_VAL]], i16* [[SCRATCHPAD_ELT_PTR]], align
   //
   // CHECK: ret
@@ -1121,18 +1102,18 @@ int bar(int n){
   // CHECK: [[REMOTE_ELT_VOID:%.+]] = load i8*, i8** [[REMOTE_ELT_REF]],
   // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST:%.+]], i[[SZ]] 0, i[[SZ]] 0
   // CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
-  // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i32*
   // CHECK: [[REMOTE_ELT:%.+]] = bitcast i8* [[REMOTE_ELT_VOID]] to i32*
   // CHECK: [[REMOTE_ELT_VAL:%.+]] = load i32, i32* [[REMOTE_ELT]], align
+  // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i32*
   // CHECK: store i32 [[REMOTE_ELT_VAL]], i32* [[ELT]], align
   //
   // CHECK: [[REMOTE_ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[REMOTE_RED_LIST:%.+]], i[[SZ]] 0, i[[SZ]] 1
   // CHECK: [[REMOTE_ELT_VOID:%.+]] = load i8*, i8** [[REMOTE_ELT_REF]],
   // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST:%.+]], i[[SZ]] 0, i[[SZ]] 1
   // CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
-  // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i16*
   // CHECK: [[REMOTE_ELT:%.+]] = bitcast i8* [[REMOTE_ELT_VOID]] to i16*
   // CHECK: [[REMOTE_ELT_VAL:%.+]] = load i16, i16* [[REMOTE_ELT]], align
+  // CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i16*
   // CHECK: store i16 [[REMOTE_ELT_VAL]], i16* [[ELT]], align
   // CHECK: br label {{%?}}[[REDUCE_CONT]]
   //

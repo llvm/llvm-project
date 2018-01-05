@@ -2884,8 +2884,8 @@ extern int __kmp_zero_bt; /* whether blocktime has been forced to zero */
 #ifdef KMP_DFLT_NTH_CORES
 extern int __kmp_ncores; /* Total number of cores for threads placement */
 #endif
-extern int
-    __kmp_abort_delay; /* Number of millisecs to delay on abort for VTune */
+/* Number of millisecs to delay on abort for Intel(R) VTune(TM) tools */
+extern int __kmp_abort_delay;
 
 extern int __kmp_need_register_atfork_specified;
 extern int

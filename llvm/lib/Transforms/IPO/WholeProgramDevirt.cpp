@@ -281,24 +281,11 @@ struct VirtualCallSite {
     DebugLoc DLoc = CS->getDebugLoc();
     BasicBlock *Block = CS.getParent();
 
-    // In the new pass manager, we can request the optimization
-    // remark emitter pass on a per-function-basis, which the
-    // OREGetter will do for us.
-    // In the old pass manager, this is harder, so we just build
-    // a optimization remark emitter on the fly, when we need it.
-    std::unique_ptr<OptimizationRemarkEmitter> OwnedORE;
-    OptimizationRemarkEmitter *ORE;
-    if (OREGetter)
-      ORE = &OREGetter(F);
-    else {
-      OwnedORE = make_unique<OptimizationRemarkEmitter>(F);
-      ORE = OwnedORE.get();
-    }
-
     using namespace ore;
-    ORE->emit(OptimizationRemark(DEBUG_TYPE, OptName, DLoc, Block)
-              << NV("Optimization", OptName) << ": devirtualized a call to "
-              << NV("FunctionName", TargetName));
+    OREGetter(F).emit(OptimizationRemark(DEBUG_TYPE, OptName, DLoc, Block)
+                      << NV("Optimization", OptName)
+                      << ": devirtualized a call to "
+                      << NV("FunctionName", TargetName));
   }
 
   void replaceAndErase(
@@ -539,7 +526,16 @@ struct WholeProgramDevirt : public ModulePass {
     if (skipModule(M))
       return false;
 
-    auto OREGetter = function_ref<OptimizationRemarkEmitter &(Function *)>();
+    // In the new pass manager, we can request the optimization
+    // remark emitter pass on a per-function-basis, which the
+    // OREGetter will do for us.
+    // In the old pass manager, this is harder, so we just build
+    // an optimization remark emitter on the fly, when we need it.
+    std::unique_ptr<OptimizationRemarkEmitter> ORE;
+    auto OREGetter = [&](Function *F) -> OptimizationRemarkEmitter & {
+      ORE = make_unique<OptimizationRemarkEmitter>(F);
+      return *ORE;
+    };
 
     if (UseCommandLine)
       return DevirtModule::runForTesting(M, LegacyAARGetter(*this), OREGetter);
@@ -1499,23 +1495,10 @@ bool DevirtModule::run() {
     for (const auto &DT : DevirtTargets) {
       Function *F = DT.second;
 
-      // In the new pass manager, we can request the optimization
-      // remark emitter pass on a per-function-basis, which the
-      // OREGetter will do for us.
-      // In the old pass manager, this is harder, so we just build
-      // a optimization remark emitter on the fly, when we need it.
-      std::unique_ptr<OptimizationRemarkEmitter> OwnedORE;
-      OptimizationRemarkEmitter *ORE;
-      if (OREGetter)
-        ORE = &OREGetter(F);
-      else {
-        OwnedORE = make_unique<OptimizationRemarkEmitter>(F);
-        ORE = OwnedORE.get();
-      }
-
       using namespace ore;
-      ORE->emit(OptimizationRemark(DEBUG_TYPE, "Devirtualized", F)
-                << "devirtualized " << NV("FunctionName", F->getName()));
+      OREGetter(F).emit(OptimizationRemark(DEBUG_TYPE, "Devirtualized", F)
+                        << "devirtualized "
+                        << NV("FunctionName", F->getName()));
     }
   }
 
