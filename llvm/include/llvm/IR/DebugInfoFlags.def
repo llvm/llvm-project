@@ -43,6 +43,8 @@ HANDLE_DI_FLAG((1 << 18), IntroducedVirtual)
 HANDLE_DI_FLAG((1 << 19), BitField)
 HANDLE_DI_FLAG((1 << 20), NoReturn)
 HANDLE_DI_FLAG((1 << 21), MainSubprogram)
+HANDLE_DI_FLAG((1 << 22), TypePassByValue)
+HANDLE_DI_FLAG((1 << 23), TypePassByReference)
 
 // To avoid needing a dedicated value for IndirectVirtualBase, we use
 // the bitwise or of Virtual and FwdDecl, which does not otherwise
@@ -52,7 +54,7 @@ HANDLE_DI_FLAG((1 << 2) | (1 << 5), IndirectVirtualBase)
 #ifdef DI_FLAG_LARGEST_NEEDED
 // intended to be used with ADT/BitmaskEnum.h
 // NOTE: always must be equal to largest flag, check this when adding new flag
-HANDLE_DI_FLAG((1 << 21), Largest)
+HANDLE_DI_FLAG((1 << 23), Largest)
 #undef DI_FLAG_LARGEST_NEEDED
 #endif
 

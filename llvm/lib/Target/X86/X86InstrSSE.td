@@ -7556,7 +7556,8 @@ def VBROADCASTI128 : AVX8I<0x5A, MRMSrcMem, (outs VR256:$dst),
                            "vbroadcasti128\t{$src, $dst|$dst, $src}", []>,
                            Sched<[WriteLoad]>, VEX, VEX_L;
 
-let mayLoad = 1, hasSideEffects = 0, Predicates = [HasAVX] in
+let mayLoad = 1, hasSideEffects = 0, Predicates = [HasAVX],
+    ExeDomain = SSEPackedSingle in
 def VBROADCASTF128 : AVX8I<0x1A, MRMSrcMem, (outs VR256:$dst),
                            (ins f128mem:$src),
                            "vbroadcastf128\t{$src, $dst|$dst, $src}", []>,

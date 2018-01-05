@@ -516,10 +516,6 @@ bool IRTranslator::translateGetElementPtr(const User &U,
         Offset = 0;
       }
 
-      // N = N + Idx * ElementSize;
-      unsigned ElementSizeReg =
-          getOrCreateVReg(*ConstantInt::get(OffsetIRTy, ElementSize));
-
       unsigned IdxReg = getOrCreateVReg(*Idx);
       if (MRI->getType(IdxReg) != OffsetTy) {
         unsigned NewIdxReg = MRI->createGenericVirtualRegister(OffsetTy);
@@ -527,11 +523,20 @@ bool IRTranslator::translateGetElementPtr(const User &U,
         IdxReg = NewIdxReg;
       }
 
-      unsigned OffsetReg = MRI->createGenericVirtualRegister(OffsetTy);
-      MIRBuilder.buildMul(OffsetReg, ElementSizeReg, IdxReg);
+      // N = N + Idx * ElementSize;
+      // Avoid doing it for ElementSize of 1.
+      unsigned GepOffsetReg;
+      if (ElementSize != 1) {
+        unsigned ElementSizeReg =
+            getOrCreateVReg(*ConstantInt::get(OffsetIRTy, ElementSize));
+
+        GepOffsetReg = MRI->createGenericVirtualRegister(OffsetTy);
+        MIRBuilder.buildMul(GepOffsetReg, ElementSizeReg, IdxReg);
+      } else
+        GepOffsetReg = IdxReg;
 
       unsigned NewBaseReg = MRI->createGenericVirtualRegister(PtrTy);
-      MIRBuilder.buildGEP(NewBaseReg, BaseReg, OffsetReg);
+      MIRBuilder.buildGEP(NewBaseReg, BaseReg, GepOffsetReg);
       BaseReg = NewBaseReg;
     }
   }

@@ -57,9 +57,7 @@ namespace HexagonISD {
       VLSR,
 
       INSERT,
-      INSERTRP,
       EXTRACTU,
-      EXTRACTURP,
       VCOMBINE,
       VPACKE,
       VPACKO,

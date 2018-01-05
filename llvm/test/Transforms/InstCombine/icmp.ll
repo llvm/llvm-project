@@ -3286,3 +3286,19 @@ define i32 @abs_preserve(i32 %x) {
   %abs = select i1 %c, i32 %a, i32 %nega
   ret i32 %abs
 }
+
+; Don't crash by assuming the compared values are integers.
+
+declare void @llvm.assume(i1)
+define i1 @PR35794(i32* %a) {
+; CHECK-LABEL: @PR35794(
+; CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i32* %a, null
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp sgt i32* %a, inttoptr (i64 -1 to i32*)
+  %maskcond = icmp eq i32* %a, null
+  tail call void @llvm.assume(i1 %maskcond)
+  ret i1 %cmp
+}
+
