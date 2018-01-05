@@ -1,4 +1,8 @@
 # Test "report" command with and without multiple threads.
+
+# Temporarily disable the test on Windows as it doesn't support "diff -r".
+REQUIRES: shell
+
 RUN: llvm-cov report -num-threads=1 \
 RUN:   -path-equivalence=/tmp,%S/Inputs \
 RUN:   -instr-profile %S/Inputs/multithreaded_report/main.profdata \
