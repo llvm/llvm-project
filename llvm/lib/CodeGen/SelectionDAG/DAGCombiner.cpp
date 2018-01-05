@@ -3842,9 +3842,16 @@ bool DAGCombiner::SearchForAndLoads(SDNode *N,
       EVT ExtVT;
       if (isAndLoadExtLoad(Mask, Load, Load->getValueType(0), ExtVT) &&
           isLegalNarrowLoad(Load, ISD::ZEXTLOAD, ExtVT)) {
-        // Only add this load if we can make it more narrow.
-        if (ExtVT.bitsLT(Load->getMemoryVT()))
+
+        // ZEXTLOAD is already small enough.
+        if (Load->getExtensionType() == ISD::ZEXTLOAD &&
+            ExtVT.bitsGE(Load->getMemoryVT()))
+          continue;
+
+        // Use LE to convert equal sized loads to zext.
+        if (ExtVT.bitsLE(Load->getMemoryVT()))
           Loads.insert(Load);
+
         continue;
       }
       return false;
@@ -3899,11 +3906,13 @@ bool DAGCombiner::BackwardsPropagateMask(SDNode *N, SelectionDAG &DAG) {
     if (Loads.size() == 0)
       return false;
 
+    DEBUG(dbgs() << "Backwards propagate AND: "; N->dump());
     SDValue MaskOp = N->getOperand(1);
 
     // If it exists, fixup the single node we allow in the tree that needs
     // masking.
     if (FixupNode) {
+      DEBUG(dbgs() << "First, need to fix up: "; FixupNode->dump());
       SDValue And = DAG.getNode(ISD::AND, SDLoc(FixupNode),
                                 FixupNode->getValueType(0),
                                 SDValue(FixupNode, 0), MaskOp);
@@ -3922,6 +3931,7 @@ bool DAGCombiner::BackwardsPropagateMask(SDNode *N, SelectionDAG &DAG) {
 
     // Create narrow loads.
     for (auto *Load : Loads) {
+      DEBUG(dbgs() << "Propagate AND back to: "; Load->dump());
       SDValue And = DAG.getNode(ISD::AND, SDLoc(Load), Load->getValueType(0),
                                 SDValue(Load, 0), MaskOp);
       DAG.ReplaceAllUsesOfValueWith(SDValue(Load, 0), And);

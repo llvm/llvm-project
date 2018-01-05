@@ -268,7 +268,7 @@ bool DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
 
   if (getVersion() >= 5) {
     if (!parseV5DirFileTables(DebugLineData, OffsetPtr, EndPrologueOffset,
-                              getFormParams(), U, HasMD5, IncludeDirectories,
+                              FormParams, U, HasMD5, IncludeDirectories,
                               FileNames)) {
       fprintf(stderr,
               "warning: parsing line table prologue at 0x%8.8" PRIx64
