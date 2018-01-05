@@ -58,16 +58,6 @@ void test_return_type()
                        decltype(std::transform_reduce(p, p, p, Init{}))> );
 }
 
-inline MoveOnly operator+(const MoveOnly& lhs, const MoveOnly& rhs)
-{
-    return MoveOnly{lhs.get() + rhs.get()};
-}
-
-inline MoveOnly operator*(const MoveOnly& lhs, const MoveOnly& rhs)
-{
-    return MoveOnly{lhs.get() * rhs.get()};
-}
-
 void test_move_only_types()
 {
     MoveOnly ia[] = {{1}, {2}, {3}};
