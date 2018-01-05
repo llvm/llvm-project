@@ -1,0 +1,164 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-objcopy -localize-hidden %t %t2
+# RUN: llvm-readobj -relocations -symbols %t2 | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x0000000000000010
+    Size:            64
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x2000
+    AddressAlign:    0x0000000000000010
+    Content:         "0000000000000000"
+  - Name:            .rel.text
+    Type:            SHT_REL
+    Info:            .text
+    Relocations:
+      - Offset: 0x1000
+        Symbol: undefGlobal
+        Type:   R_X86_64_PC32
+Symbols:
+  Local:
+    - Name:     hiddenLocal
+      Type:     STT_FUNC
+      Section:  .text
+      Value:    0x1008
+      Size:     8
+      Visibility: STV_HIDDEN
+  Weak:
+    - Name:     hiddenWeak
+      Type:     STT_FUNC
+      Section:  .text
+      Value:    0x1010
+      Size:     8
+      Visibility: STV_HIDDEN
+  Global:
+    - Name:     defaultGlobal
+      Type:     STT_FUNC
+      Size:     8
+      Section:  .text
+      Value:    0x1000
+    - Name:     hiddenGlobal
+      Type:     STT_OBJECT
+      Section:  .data
+      Value:    0x2006
+      Size:     2
+      Visibility: STV_HIDDEN
+    - Name:     undefGlobal
+      Type:     STT_FUNC
+      Size:     8
+    - Name:     internalGlobal
+      Type:     STT_OBJECT
+      Section:  .data
+      Value:    0x2002
+      Size:     2
+      Visibility: STV_INTERNAL
+    - Name:     protectedGlobal
+      Type:     STT_OBJECT
+      Section:  .data
+      Value:    0x2000
+      Size:     4
+      Visibility: STV_PROTECTED
+
+#CHECK:     Relocations [
+#CHECK-NEXT:  Section (3) .rel.text {
+#CHECK-NEXT:    0x1000 R_X86_64_PC32 undefGlobal 0x0
+#CHECK-NEXT:  }
+#CHECK-NEXT:]
+
+
+#CHECK: Symbols [
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name:
+#CHECK-NEXT:    Value: 0x0
+#CHECK-NEXT:    Size: 0
+#CHECK-NEXT:    Binding: Local
+#CHECK-NEXT:    Type: None
+#CHECK-NEXT:    Other: 0
+#CHECK-NEXT:    Section: Undefined
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: hiddenLocal
+#CHECK-NEXT:    Value: 0x1008
+#CHECK-NEXT:    Size: 8
+#CHECK-NEXT:    Binding: Local
+#CHECK-NEXT:    Type: Function
+#CHECK-NEXT:    Other [
+#CHECK-NEXT:      STV_HIDDEN
+#CHECK-NEXT:    ]
+#CHECK-NEXT:    Section: .text
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: hiddenGlobal
+#CHECK-NEXT:    Value: 0x2006
+#CHECK-NEXT:    Size: 2
+#CHECK-NEXT:    Binding: Local
+#CHECK-NEXT:    Type: Object
+#CHECK-NEXT:    Other [
+#CHECK-NEXT:      STV_HIDDEN
+#CHECK-NEXT:    ]
+#CHECK-NEXT:    Section: .data
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: internalGlobal
+#CHECK-NEXT:    Value: 0x2002
+#CHECK-NEXT:    Size: 2
+#CHECK-NEXT:    Binding: Local
+#CHECK-NEXT:    Type: Object
+#CHECK-NEXT:    Other [
+#CHECK-NEXT:      STV_INTERNAL
+#CHECK-NEXT:    ]
+#CHECK-NEXT:    Section: .data
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: hiddenWeak
+#CHECK-NEXT:    Value: 0x1010
+#CHECK-NEXT:    Size: 8
+#CHECK-NEXT:    Binding: Local
+#CHECK-NEXT:    Type: Function
+#CHECK-NEXT:    Other [
+#CHECK-NEXT:      STV_HIDDEN
+#CHECK-NEXT:    ]
+#CHECK-NEXT:    Section: .text
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: defaultGlobal
+#CHECK-NEXT:    Value: 0x1000
+#CHECK-NEXT:    Size: 8
+#CHECK-NEXT:    Binding: Global
+#CHECK-NEXT:    Type: Function
+#CHECK-NEXT:    Other: 0
+#CHECK-NEXT:    Section: .text
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: undefGlobal
+#CHECK-NEXT:    Value: 0x0
+#CHECK-NEXT:    Size: 8
+#CHECK-NEXT:    Binding: Global
+#CHECK-NEXT:    Type: Function
+#CHECK-NEXT:    Other: 0
+#CHECK-NEXT:    Section:
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: protectedGlobal
+#CHECK-NEXT:    Value: 0x2000
+#CHECK-NEXT:    Size: 4
+#CHECK-NEXT:    Binding: Global
+#CHECK-NEXT:    Type: Object
+#CHECK-NEXT:    Other [
+#CHECK-NEXT:      STV_PROTECTED
+#CHECK-NEXT:    ]
+#CHECK-NEXT:    Section: .data
+#CHECK-NEXT:  }
+#CHECK-NEXT:]

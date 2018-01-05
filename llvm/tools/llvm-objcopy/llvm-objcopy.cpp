@@ -117,6 +117,10 @@ static cl::list<std::string> AddSection(
     "add-section",
     cl::desc("Make a section named <section> with the contents of <file>."),
     cl::value_desc("section=file"));
+static cl::opt<bool> LocalizeHidden(
+    "localize-hidden",
+    cl::desc(
+        "Mark all symbols that have hidden or internal visibility as local"));
 
 using SectionPred = std::function<bool(const SectionBase &Sec)>;
 
@@ -179,6 +183,14 @@ template <class ELFT> void CopyBinary(const ELFObjectFile<ELFT> &ObjFile) {
 
   if (!SplitDWO.empty())
     SplitDWOToFile<ELFT>(ObjFile, SplitDWO.getValue());
+
+  // Localize:
+
+  if (LocalizeHidden) {
+    Obj->getSymTab()->localize([](const Symbol &Sym) {
+      return Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL;
+    });
+  }
 
   SectionPred RemovePred = [](const SectionBase &) { return false; };
 

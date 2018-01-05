@@ -76,7 +76,7 @@ public:
 
   // Pinned metadata names, which always have the same value.  This is a
   // compile-time performance optimization, not a correctness optimization.
-  enum {
+  enum : unsigned {
     MD_dbg = 0,                       // "dbg"
     MD_tbaa = 1,                      // "tbaa"
     MD_prof = 2,                      // "prof"
@@ -108,7 +108,7 @@ public:
   /// operand bundle tags that LLVM has special knowledge of are listed here.
   /// Additionally, this scheme allows LLVM to efficiently check for specific
   /// operand bundle tags without comparing strings.
-  enum {
+  enum : unsigned {
     OB_deopt = 0,         // "deopt"
     OB_funclet = 1,       // "funclet"
     OB_gc_transition = 2, // "gc-transition"

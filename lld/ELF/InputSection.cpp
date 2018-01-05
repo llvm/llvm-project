@@ -625,7 +625,7 @@ static uint64_t getRelocTargetVA(RelType Type, int64_t A, uint64_t P,
   case R_NEG_TLS:
     return Out::TlsPhdr->p_memsz - Sym.getVA(A);
   case R_SIZE:
-    return A; // Sym.getSize was already folded into the addend.
+    return Sym.getSize() + A;
   case R_TLSDESC:
     return InX::Got->getGlobalDynAddr(Sym) + A;
   case R_TLSDESC_PAGE:

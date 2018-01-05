@@ -28,11 +28,13 @@ RUN:   %S/Inputs/sources_specified/main.covmapping \
 RUN:   %S/Inputs/sources_specified/main.cc %S/Inputs/sources_specified/extra \
 RUN:   > %t.export.json
 
-RUN: not grep '"filename":"/tmp/sources_specified/abs.h"' %t.export.json
-RUN: grep '"filename":"/tmp/sources_specified/main.cc"' %t.export.json
-RUN: grep '"filename":"/tmp/sources_specified/extra/dec.h"' %t.export.json
-RUN: grep '"filename":"/tmp/sources_specified/extra/inc.h"' %t.export.json
+RUN: FileCheck -check-prefix=NO-EXPORT %s < %t.export.json
+RUN: FileCheck -check-prefix=EXPORT %s < %t.export.json
 
+NO-EXPORT-NOT: {{"filename":"(/|\\\\)tmp(/|\\\\)sources_specified(/|\\\\)abs.h"}}
+EXPORT-DAG: {{"filename":"(/|\\\\)tmp(/|\\\\)sources_specified(/|\\\\)main.cc"}}
+EXPORT-DAG: {{"filename":"(/|\\\\)tmp(/|\\\\)sources_specified(/|\\\\)extra(/|\\\\)dec.h"}}
+EXPORT-DAG: {{"filename":"(/|\\\\)tmp(/|\\\\)sources_specified(/|\\\\)extra(/|\\\\)inc.h"}}
 
 Instructions for regenerating the test:
 

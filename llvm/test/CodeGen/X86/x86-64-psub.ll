@@ -30,8 +30,8 @@ entry:
 ; CHECK:   callq getFirstParam
 ; CHECK:   movq %rax, [[TEMP:%[a-z0-9]+]]
 ; CHECK:   callq getSecondParam
-; CHECK:   movd [[TEMP]], [[PARAM1:%[a-z0-9]+]]
-; CHECK:   movd %rax, [[PARAM2:%[a-z0-9]+]]
+; CHECK:   movq [[TEMP]], [[PARAM1:%[a-z0-9]+]]
+; CHECK:   movq %rax, [[PARAM2:%[a-z0-9]+]]
 ; CHECK:   psubb [[PARAM2]], [[PARAM1]]
 ; CHECK: ret
 
@@ -58,8 +58,8 @@ entry:
 ; CHECK:   callq getFirstParam
 ; CHECK:   movq %rax, [[TEMP:%[a-z0-9]+]]
 ; CHECK:   callq getSecondParam
-; CHECK:   movd [[TEMP]], [[PARAM1:%[a-z0-9]+]]
-; CHECK:   movd %rax, [[PARAM2:%[a-z0-9]+]]
+; CHECK:   movq [[TEMP]], [[PARAM1:%[a-z0-9]+]]
+; CHECK:   movq %rax, [[PARAM2:%[a-z0-9]+]]
 ; CHECK:   psubw [[PARAM2]], [[PARAM1]]
 ; CHECK: ret
 
@@ -87,8 +87,8 @@ entry:
 ; CHECK:   callq getFirstParam
 ; CHECK:   movq %rax, [[TEMP:%[a-z0-9]+]]
 ; CHECK:   callq getSecondParam
-; CHECK:   movd [[TEMP]], [[PARAM1:%[a-z0-9]+]]
-; CHECK:   movd %rax, [[PARAM2:%[a-z0-9]+]]
+; CHECK:   movq [[TEMP]], [[PARAM1:%[a-z0-9]+]]
+; CHECK:   movq %rax, [[PARAM2:%[a-z0-9]+]]
 ; CHECK:   psubd [[PARAM2]], [[PARAM1]]
 ; CHECK: ret
 
@@ -115,8 +115,8 @@ entry:
 ; CHECK:   callq getFirstParam
 ; CHECK:   movq %rax, [[TEMP:%[a-z0-9]+]]
 ; CHECK:   callq getSecondParam
-; CHECK:   movd [[TEMP]], [[PARAM1:%[a-z0-9]+]]
-; CHECK:   movd %rax, [[PARAM2:%[a-z0-9]+]]
+; CHECK:   movq [[TEMP]], [[PARAM1:%[a-z0-9]+]]
+; CHECK:   movq %rax, [[PARAM2:%[a-z0-9]+]]
 ; CHECK:   psubsb [[PARAM2]], [[PARAM1]]
 ; CHECK: ret
 
@@ -143,8 +143,8 @@ entry:
 ; CHECK:   callq getFirstParam
 ; CHECK:   movq %rax, [[TEMP:%[a-z0-9]+]]
 ; CHECK:   callq getSecondParam
-; CHECK:   movd [[TEMP]], [[PARAM1:%[a-z0-9]+]]
-; CHECK:   movd %rax, [[PARAM2:%[a-z0-9]+]]
+; CHECK:   movq [[TEMP]], [[PARAM1:%[a-z0-9]+]]
+; CHECK:   movq %rax, [[PARAM2:%[a-z0-9]+]]
 ; CHECK:   psubsw [[PARAM2]], [[PARAM1]]
 ; CHECK: ret
 
@@ -171,8 +171,8 @@ entry:
 ; CHECK:   callq getFirstParam
 ; CHECK:   movq %rax, [[TEMP:%[a-z0-9]+]]
 ; CHECK:   callq getSecondParam
-; CHECK:   movd [[TEMP]], [[PARAM1:%[a-z0-9]+]]
-; CHECK:   movd %rax, [[PARAM2:%[a-z0-9]+]]
+; CHECK:   movq [[TEMP]], [[PARAM1:%[a-z0-9]+]]
+; CHECK:   movq %rax, [[PARAM2:%[a-z0-9]+]]
 ; CHECK:   psubusb [[PARAM2]], [[PARAM1]]
 ; CHECK: ret
 
@@ -199,8 +199,8 @@ entry:
 ; CHECK:   callq getFirstParam
 ; CHECK:   movq %rax, [[TEMP:%[a-z0-9]+]]
 ; CHECK:   callq getSecondParam
-; CHECK:   movd [[TEMP]], [[PARAM1:%[a-z0-9]+]]
-; CHECK:   movd %rax, [[PARAM2:%[a-z0-9]+]]
+; CHECK:   movq [[TEMP]], [[PARAM1:%[a-z0-9]+]]
+; CHECK:   movq %rax, [[PARAM2:%[a-z0-9]+]]
 ; CHECK:   psubusw [[PARAM2]], [[PARAM1]]
 ; CHECK: ret
 
