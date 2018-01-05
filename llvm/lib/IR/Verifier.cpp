@@ -905,9 +905,12 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
   }
 }
 
+/// Detect mutually exclusive flags.
 static bool hasConflictingReferenceFlags(unsigned Flags) {
-  return (Flags & DINode::FlagLValueReference) &&
-         (Flags & DINode::FlagRValueReference);
+  return ((Flags & DINode::FlagLValueReference) &&
+          (Flags & DINode::FlagRValueReference)) ||
+         ((Flags & DINode::FlagTypePassByValue) &&
+          (Flags & DINode::FlagTypePassByReference));
 }
 
 void Verifier::visitTemplateParams(const MDNode &N, const Metadata &RawParams) {
