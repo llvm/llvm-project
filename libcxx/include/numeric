@@ -252,7 +252,7 @@ _Tp
 transform_reduce(_InputIterator1 __first1, _InputIterator1 __last1,
                  _InputIterator2 __first2, _Tp __init)
 {
-    return _VSTD::transform_reduce(__first1, __last1, __first2, __init, 
+    return _VSTD::transform_reduce(__first1, __last1, __first2, _VSTD::move(__init),
                                    _VSTD::plus<>(), _VSTD::multiplies<>());
 }
 #endif
