@@ -21,10 +21,6 @@
 ; CHECK-NEXT: DW_AT_calling_convention	(DW_CC_pass_by_value)
 ; CHECK-NEXT: DW_AT_name	("T")
 
-source_filename = "pass.cpp"
-target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-apple-macosx10.13.0"
-
 %struct.S = type { i8 }
 %struct.T = type { i8 }
 
