@@ -721,8 +721,8 @@ uptr __sanitizer_get_unmapped_bytes() {
   return 1;
 }
 
-uptr __sanitizer_get_estimated_allocated_size(uptr size) {
-  return size;
+uptr __sanitizer_get_estimated_allocated_size(uptr Size) {
+  return Size;
 }
 
 int __sanitizer_get_ownership(const void *Ptr) {
@@ -736,7 +736,7 @@ uptr __sanitizer_get_allocated_size(const void *Ptr) {
 // Interface functions
 
 extern "C" {
-void __scudo_set_rss_limit(unsigned long LimitMb, int HardLimit) {  // NOLINT
+void __scudo_set_rss_limit(uptr LimitMb, s32 HardLimit) {
   if (!SCUDO_CAN_USE_PUBLIC_INTERFACE)
     return;
   Instance.setRssLimit(LimitMb, !!HardLimit);
