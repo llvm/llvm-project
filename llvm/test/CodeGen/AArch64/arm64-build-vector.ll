@@ -1,23 +1,5 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
 
-; Check that building up a vector w/ only one non-zero lane initializes
-; intelligently.
-define void @one_lane(i32* nocapture %out_int, i32 %skip0) nounwind {
-; CHECK-LABEL: one_lane:
-; CHECK: dup.16b v[[REG:[0-9]+]], wzr
-; CHECK-NEXT: mov.b v[[REG]][0], w1
-; v and q are aliases, and str is preferred against st.16b when possible
-; rdar://11246289
-; CHECK: str q[[REG]], [x0]
-; CHECK: ret
-  %conv = trunc i32 %skip0 to i8
-  %vset_lane = insertelement <16 x i8> <i8 undef, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, i8 %conv, i32 0
-  %tmp = bitcast i32* %out_int to <4 x i32>*
-  %tmp1 = bitcast <16 x i8> %vset_lane to <4 x i32>
-  store <4 x i32> %tmp1, <4 x i32>* %tmp, align 16
-  ret void
-}
-
 ; Check that building a vector from floats doesn't insert an unnecessary
 ; copy for lane zero.
 define <4 x float>  @foo(float %a, float %b, float %c, float %d) nounwind {

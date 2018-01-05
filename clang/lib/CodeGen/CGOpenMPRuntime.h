@@ -1048,7 +1048,8 @@ public:
   /// \param RHSExprs List of RHS in \a ReductionOps reduction operations.
   /// \param ReductionOps List of reduction operations in form 'LHS binop RHS'
   /// or 'operator binop(LHS, RHS)'.
-  llvm::Value *emitReductionFunction(CodeGenModule &CGM, llvm::Type *ArgsType,
+  llvm::Value *emitReductionFunction(CodeGenModule &CGM, SourceLocation Loc,
+                                     llvm::Type *ArgsType,
                                      ArrayRef<const Expr *> Privates,
                                      ArrayRef<const Expr *> LHSExprs,
                                      ArrayRef<const Expr *> RHSExprs,

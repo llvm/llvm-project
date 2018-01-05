@@ -20,6 +20,20 @@ SHOW: {{.*}}sources_specified{{.*}}
 SHOW: {{.*}}sources_specified{{.*}}
 SHOW: {{.*}}sources_specified{{.*}}
 
+
+# Test "export" command. Use a temp .json file as output is a single line.
+RUN: llvm-cov export -instr-profile %S/Inputs/sources_specified/main.profdata \
+RUN:   -path-equivalence=/tmp,%S/Inputs \
+RUN:   %S/Inputs/sources_specified/main.covmapping \
+RUN:   %S/Inputs/sources_specified/main.cc %S/Inputs/sources_specified/extra \
+RUN:   > %t.export.json
+
+RUN: not grep '"filename":"/tmp/sources_specified/abs.h"' %t.export.json
+RUN: grep '"filename":"/tmp/sources_specified/main.cc"' %t.export.json
+RUN: grep '"filename":"/tmp/sources_specified/extra/dec.h"' %t.export.json
+RUN: grep '"filename":"/tmp/sources_specified/extra/inc.h"' %t.export.json
+
+
 Instructions for regenerating the test:
 
 # cd %S/Inputs/sources_specified

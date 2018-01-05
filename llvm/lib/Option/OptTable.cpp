@@ -247,6 +247,69 @@ OptTable::findByPrefix(StringRef Cur, unsigned short DisableFlags) const {
   return Ret;
 }
 
+unsigned OptTable::findNearest(StringRef Option, std::string &NearestString,
+                               unsigned FlagsToInclude, unsigned FlagsToExclude,
+                               unsigned MinimumLength) const {
+  assert(!Option.empty());
+
+  // Consider each option as a candidate, finding the closest match.
+  unsigned BestDistance = UINT_MAX;
+  for (const Info &CandidateInfo :
+       ArrayRef<Info>(OptionInfos).drop_front(FirstSearchableIndex)) {
+    StringRef CandidateName = CandidateInfo.Name;
+
+    // Ignore option candidates with empty names, such as "--", or names
+    // that do not meet the minimum length.
+    if (CandidateName.empty() || CandidateName.size() < MinimumLength)
+      continue;
+
+    // If FlagsToInclude were specified, ignore options that don't include
+    // those flags.
+    if (FlagsToInclude && !(CandidateInfo.Flags & FlagsToInclude))
+      continue;
+    // Ignore options that contain the FlagsToExclude.
+    if (CandidateInfo.Flags & FlagsToExclude)
+      continue;
+
+    // Ignore positional argument option candidates (which do not
+    // have prefixes).
+    if (!CandidateInfo.Prefixes)
+      continue;
+    // Find the most appropriate prefix. For example, if a user asks for
+    // "--helm", suggest "--help" over "-help".
+    StringRef Prefix;
+    for (int P = 0; CandidateInfo.Prefixes[P]; P++) {
+      if (Option.startswith(CandidateInfo.Prefixes[P]))
+        Prefix = CandidateInfo.Prefixes[P];
+    }
+
+    // Check if the candidate ends with a character commonly used when
+    // delimiting an option from its value, such as '=' or ':'. If it does,
+    // attempt to split the given option based on that delimiter.
+    std::string Delimiter = "";
+    char Last = CandidateName.back();
+    if (Last == '=' || Last == ':')
+      Delimiter = std::string(1, Last);
+
+    StringRef LHS, RHS;
+    if (Delimiter.empty())
+      LHS = Option;
+    else
+      std::tie(LHS, RHS) = Option.split(Last);
+
+    std::string NormalizedName =
+        (LHS.drop_front(Prefix.size()) + Delimiter).str();
+    unsigned Distance =
+        CandidateName.edit_distance(NormalizedName, /*AllowReplacements=*/true,
+                                    /*MaxEditDistance=*/BestDistance);
+    if (Distance < BestDistance) {
+      BestDistance = Distance;
+      NearestString = (Prefix + CandidateName + RHS).str();
+    }
+  }
+  return BestDistance;
+}
+
 bool OptTable::addValues(const char *Option, const char *Values) {
   for (size_t I = FirstSearchableIndex, E = OptionInfos.size(); I < E; I++) {
     Info &In = OptionInfos[I];

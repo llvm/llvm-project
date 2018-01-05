@@ -8,24 +8,24 @@
 ;__device__ void bar() {}
 ;}
 
-; CHECK: .file   1 "/source/dir{{/|\\\\}}bar.cu"
-; CHECK: .file   2 "/source/dir{{/|\\\\}}foo.h"
+; CHECK: .file   1 "/source/dir{{.+}}bar.cu"
+; CHECK: .file   2 "/source/dir{{.+}}foo.h"
+; CHECK: .visible .func foo()
+; CHECK: .loc 2 1 31
+; CHECK:  ret;
+; CHECK: .visible .func bar()
+; CHECK: .loc 1 2 31
+; CHECK:  ret;
 
-; CHECK-LABEL: @foo
 define void @foo() !dbg !4 {
 bb:
   ret void, !dbg !10
 }
-; CHECK: .loc 2 1
-; CHECK: ret
 
-; CHECK-LABEL: @bar
 define void @bar() !dbg !7 {
 bb:
   ret void, !dbg !11
 }
-; CHECK: .loc 1 2
-; CHECK: ret
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!8, !9}
