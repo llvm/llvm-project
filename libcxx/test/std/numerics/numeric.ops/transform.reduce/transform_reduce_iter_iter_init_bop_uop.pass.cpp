@@ -19,7 +19,9 @@
 #include <numeric>
 #include <cassert>
 #include <utility>
+#include <iterator>
 
+#include "MoveOnly.h"
 #include "test_iterators.h"
 
 struct identity
@@ -81,6 +83,15 @@ void test_return_type()
          decltype(std::transform_reduce(p, p, Init{}, std::plus<>(), identity()))> );
 }
 
+void test_move_only_types()
+{
+    MoveOnly ia[] = {{1}, {2}, {3}};
+    assert(60 ==
+        std::transform_reduce(std::begin(ia), std::end(ia), MoveOnly{0},
+        [](const MoveOnly& lhs, const MoveOnly& rhs) { return MoveOnly{lhs.get() + rhs.get()}; },
+        [](const MoveOnly& target) { return MoveOnly{target.get() * 10}; }).get());
+}
+
 int main()
 {
     test_return_type<char, int>();
@@ -105,4 +116,6 @@ int main()
     unsigned res = std::transform_reduce(v.begin(), v.end(), 1U, std::multiplies<>(), twice());
     assert(res == 46080);       // 6! * 64 will not fit into a char
     }
+
+    test_move_only_types();
 }
