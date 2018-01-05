@@ -2803,9 +2803,18 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
 
   SmallString<256> FullName = getUniqueTagTypeName(Ty, CGM, TheCU);
 
+  // Explicitly record the calling convention for C++ records.
+  auto Flags = llvm::DINode::FlagZero;
+  if (auto CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+    if (CGM.getCXXABI().getRecordArgABI(CXXRD) == CGCXXABI::RAA_Indirect)
+      Flags |= llvm::DINode::FlagTypePassByReference;
+    else
+      Flags |= llvm::DINode::FlagTypePassByValue;
+  }
+
   llvm::DICompositeType *RealDecl = DBuilder.createReplaceableCompositeType(
       getTagForRecord(RD), RDName, RDContext, DefUnit, Line, 0, Size, Align,
-      llvm::DINode::FlagZero, FullName);
+      Flags, FullName);
 
   // Elements of composite types usually have back to the type, creating
   // uniquing cycles.  Distinct nodes are more efficient.
