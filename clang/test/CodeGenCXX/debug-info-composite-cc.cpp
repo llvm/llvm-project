@@ -15,14 +15,6 @@ struct RefCopy {
   RefCopy(RefCopy &Copy) {}
 } refCopy;
 
-// Not trivially copyable because of the explicit move constructor.
-// CHECK-DAG: !DICompositeType({{.*}}, name: "RefMove",{{.*}}flags: DIFlagTypePassByReference
-struct RefMove {
-  int i;
-  RefMove() = default;
-  RefMove(RefMove &&Move) {}
-} refMove;
-
 // POD-like type even though it defines a destructor.
 // CHECK-DAG: !DICompositeType({{.*}}, name: "Podlike", {{.*}}flags: DIFlagTypePassByValue
 struct Podlike {
