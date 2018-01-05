@@ -343,14 +343,6 @@ static void instantiateOMPDeclareSimdDeclAttr(
       Attr.getRange());
 }
 
-static bool DeclContainsAttr(const Decl *D, const Attr *NewAttr) {
-  if (!D->hasAttrs() || NewAttr->duplicatesAllowed())
-    return false;
-  return llvm::find_if(D->getAttrs(), [NewAttr](const Attr *Attr) {
-           return Attr->getKind() == NewAttr->getKind();
-         }) != D->getAttrs().end();
-}
-
 void Sema::InstantiateAttrsForDecl(
     const MultiLevelTemplateArgumentList &TemplateArgs, const Decl *Tmpl,
     Decl *New, LateInstantiatedAttrVec *LateAttrs,
@@ -365,7 +357,7 @@ void Sema::InstantiateAttrsForDecl(
 
       Attr *NewAttr = sema::instantiateTemplateAttributeForDecl(
           TmplAttr, Context, *this, TemplateArgs);
-      if (NewAttr && !DeclContainsAttr(New, NewAttr))
+      if (NewAttr)
         New->addAttr(NewAttr);
     }
   }
@@ -470,8 +462,7 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
 
       Attr *NewAttr = sema::instantiateTemplateAttribute(TmplAttr, Context,
                                                          *this, TemplateArgs);
-
-      if (NewAttr && !DeclContainsAttr(New, NewAttr))
+      if (NewAttr)
         New->addAttr(NewAttr);
     }
   }

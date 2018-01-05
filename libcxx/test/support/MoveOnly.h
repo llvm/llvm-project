@@ -19,7 +19,6 @@
 
 class MoveOnly
 {
-    friend class MoveOnly2;
     MoveOnly(const MoveOnly&);
     MoveOnly& operator=(const MoveOnly&);
 
@@ -35,6 +34,8 @@ public:
 
     bool operator==(const MoveOnly& x) const {return data_ == x.data_;}
     bool operator< (const MoveOnly& x) const {return data_ <  x.data_;}
+    MoveOnly operator+(const MoveOnly& x) const { return MoveOnly{data_ + x.data_}; }
+    MoveOnly operator*(const MoveOnly& x) const { return MoveOnly{data_ * x.data_}; }
 };
 
 namespace std {
