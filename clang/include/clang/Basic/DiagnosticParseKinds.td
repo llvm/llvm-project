@@ -973,6 +973,12 @@ def warn_pragma_init_seg_unsupported_target : Warning<
 def err_pragma_fp_contract_scope : Error<
   "'#pragma fp_contract' can only appear at file scope or at the start of a "
   "compound statement">; 
+// - #pragma stdc unknown
+def ext_stdc_pragma_ignored : ExtWarn<"unknown pragma in STDC namespace">,
+   InGroup<UnknownPragmas>;
+def warn_stdc_fenv_access_not_supported :
+   Warning<"pragma STDC FENV_ACCESS ON is not supported, ignoring pragma">,
+   InGroup<UnknownPragmas>;
 // - #pragma comment
 def err_pragma_comment_malformed : Error<
   "pragma comment requires parenthesized identifier and optional string">;
