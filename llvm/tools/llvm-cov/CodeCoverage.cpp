@@ -33,8 +33,8 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Support/Threading.h"
 #include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/ToolOutputFile.h"
 
 #include <functional>
@@ -637,6 +637,12 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       "summary-only", cl::Optional,
       cl::desc("Export only summary information for each source file"));
 
+  cl::opt<unsigned> NumThreads(
+      "num-threads", cl::init(0),
+      cl::desc("Number of merge threads to use (default: autodetect)"));
+  cl::alias NumThreadsA("j", cl::desc("Alias for --num-threads"),
+                        cl::aliasopt(NumThreads));
+
   auto commandLineParser = [&, this](int argc, const char **argv) -> int {
     cl::ParseCommandLineOptions(argc, argv, "LLVM code coverage tool\n");
     ViewOpts.Debug = DebugDump;
@@ -750,6 +756,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     ViewOpts.ShowRegionSummary = RegionSummary;
     ViewOpts.ShowInstantiationSummary = InstantiationSummary;
     ViewOpts.ExportSummaryOnly = SummaryOnly;
+    ViewOpts.NumThreads = NumThreads;
 
     return 0;
   };
@@ -808,12 +815,6 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
   cl::opt<std::string> ProjectTitle(
       "project-title", cl::Optional,
       cl::desc("Set project title for the coverage report"));
-
-  cl::opt<unsigned> NumThreads(
-      "num-threads", cl::init(0),
-      cl::desc("Number of merge threads to use (default: autodetect)"));
-  cl::alias NumThreadsA("j", cl::desc("Alias for --num-threads"),
-                        cl::aliasopt(NumThreads));
 
   auto Err = commandLineParser(argc, argv);
   if (Err)
@@ -910,6 +911,8 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
   bool ShowFilenames =
       (SourceFiles.size() != 1) || ViewOpts.hasOutputDirectory() ||
       (ViewOpts.Format == CoverageViewOptions::OutputFormat::HTML);
+
+  auto NumThreads = ViewOpts.NumThreads;
 
   // If NumThreads is not specified, auto-detect a good default.
   if (NumThreads == 0)

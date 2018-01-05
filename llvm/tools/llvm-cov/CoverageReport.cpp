@@ -16,6 +16,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/Threading.h"
 #include <numeric>
 
 using namespace llvm;
@@ -319,42 +321,60 @@ void CoverageReport::renderFunctionReports(ArrayRef<std::string> Files,
   }
 }
 
+void CoverageReport::prepareSingleFileReport(const StringRef Filename,
+    const coverage::CoverageMapping *Coverage,
+    const CoverageViewOptions &Options, const unsigned LCP,
+    FileCoverageSummary *FileReport, const CoverageFilter *Filters) {
+  for (const auto &Group : Coverage->getInstantiationGroups(Filename)) {
+    std::vector<FunctionCoverageSummary> InstantiationSummaries;
+    for (const coverage::FunctionRecord *F : Group.getInstantiations()) {
+      if (!Filters->matches(*Coverage, *F))
+        continue;
+      auto InstantiationSummary = FunctionCoverageSummary::get(*Coverage, *F);
+      FileReport->addInstantiation(InstantiationSummary);
+      InstantiationSummaries.push_back(InstantiationSummary);
+    }
+    if (InstantiationSummaries.empty())
+      continue;
+
+    auto GroupSummary =
+        FunctionCoverageSummary::get(Group, InstantiationSummaries);
+
+    if (Options.Debug)
+      outs() << "InstantiationGroup: " << GroupSummary.Name << " with "
+             << "size = " << Group.size() << "\n";
+
+    FileReport->addFunction(GroupSummary);
+  }
+}
+
 std::vector<FileCoverageSummary> CoverageReport::prepareFileReports(
     const coverage::CoverageMapping &Coverage, FileCoverageSummary &Totals,
     ArrayRef<std::string> Files, const CoverageViewOptions &Options,
     const CoverageFilter &Filters) {
-  std::vector<FileCoverageSummary> FileReports;
   unsigned LCP = getRedundantPrefixLen(Files);
+  auto NumThreads = Options.NumThreads;
+
+  // If NumThreads is not specified, auto-detect a good default.
+  if (NumThreads == 0)
+    NumThreads =
+        std::max(1U, std::min(llvm::heavyweight_hardware_concurrency(),
+                              unsigned(Files.size())));
+
+  ThreadPool Pool(NumThreads);
+
+  std::vector<FileCoverageSummary> FileReports;
+  FileReports.reserve(Files.size());
 
   for (StringRef Filename : Files) {
-    FileCoverageSummary Summary(Filename.drop_front(LCP));
-
-    for (const auto &Group : Coverage.getInstantiationGroups(Filename)) {
-      std::vector<FunctionCoverageSummary> InstantiationSummaries;
-      for (const coverage::FunctionRecord *F : Group.getInstantiations()) {
-        if (!Filters.matches(Coverage, *F))
-          continue;
-        auto InstantiationSummary = FunctionCoverageSummary::get(Coverage, *F);
-        Summary.addInstantiation(InstantiationSummary);
-        Totals.addInstantiation(InstantiationSummary);
-        InstantiationSummaries.push_back(InstantiationSummary);
-      }
-      if (InstantiationSummaries.empty())
-        continue;
-
-      auto GroupSummary =
-          FunctionCoverageSummary::get(Group, InstantiationSummaries);
-
-      if (Options.Debug)
-        outs() << "InstantiationGroup: " << GroupSummary.Name << " with "
-               << "size = " << Group.size() << "\n";
-
-      Summary.addFunction(GroupSummary);
-      Totals.addFunction(GroupSummary);
-    }
-
-    FileReports.push_back(Summary);
+    FileReports.emplace_back(Filename.drop_front(LCP));
+    Pool.async(&CoverageReport::prepareSingleFileReport, Filename,
+               &Coverage, Options, LCP, &FileReports.back(), &Filters);
   }
+  Pool.wait();
+
+  for (const auto &FileReport : FileReports)
+    Totals += FileReport;
 
   return FileReports;
 }
