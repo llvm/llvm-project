@@ -3435,9 +3435,7 @@ static unsigned extractPBaseFlags(ASTContext &Ctx, QualType &Type) {
   if (auto *Proto = Type->getAs<FunctionProtoType>()) {
     if (Proto->isNothrow(Ctx)) {
       Flags |= ItaniumRTTIBuilder::PTI_Noexcept;
-      Type = Ctx.getFunctionType(
-          Proto->getReturnType(), Proto->getParamTypes(),
-          Proto->getExtProtoInfo().withExceptionSpec(EST_None));
+      Type = Ctx.getFunctionTypeWithExceptionSpec(Type, EST_None);
     }
   }
 

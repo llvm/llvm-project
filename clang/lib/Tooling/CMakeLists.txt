@@ -9,6 +9,7 @@ add_subdirectory(Refactoring)
 add_subdirectory(ASTDiff)
 
 add_clang_library(clangTooling
+  AllTUsExecution.cpp
   ArgumentsAdjusters.cpp
   CommonOptionsParser.cpp
   CompilationDatabase.cpp
