@@ -997,10 +997,6 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
       continue;
     }
 
-    // The size is not going to change, so we fold it in here.
-    if (Expr == R_SIZE)
-      Addend += Sym.getSize();
-
     // If the produced value is a constant, we just remember to write it
     // when outputting this section. We also have to do it if the format
     // uses Elf_Rel, since in that case the written value is the addend.
