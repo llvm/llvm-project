@@ -281,6 +281,8 @@ ModuleMap::ModuleMap(SourceManager &SourceMgr, DiagnosticsEngine &Diags,
 ModuleMap::~ModuleMap() {
   for (auto &M : Modules)
     delete M.getValue();
+  for (auto *M : ShadowModules)
+    delete M;
 }
 
 void ModuleMap::setTarget(const TargetInfo &Target) {
@@ -774,6 +776,7 @@ Module *ModuleMap::createShadowedModule(StringRef Name, bool IsFramework,
   Result->ShadowingModule = ShadowingModule;
   Result->IsAvailable = false;
   ModuleScopeIDs[Result] = CurrentModuleScopeID;
+  ShadowModules.push_back(Result);
   return Result;
 }
 

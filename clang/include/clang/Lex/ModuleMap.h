@@ -98,6 +98,9 @@ class ModuleMap {
   /// \brief The unshadowed top-level modules that are known.
   llvm::StringMap<Module *> Modules;
 
+  /// Shadow modules created while building this module map.
+  llvm::SmallVector<Module*, 2> ShadowModules;
+
   /// \brief The number of modules we have created in total.
   unsigned NumCreatedModules = 0;
 
