@@ -143,6 +143,26 @@ public:
   std::vector<std::string> findByPrefix(StringRef Cur,
                                         unsigned short DisableFlags) const;
 
+  /// Find the OptTable option that most closely matches the given string.
+  ///
+  /// \param [in] Option - A string, such as "-stdlibs=l", that represents user
+  /// input of an option that may not exist in the OptTable. Note that the
+  /// string includes prefix dashes "-" as well as values "=l".
+  /// \param [out] NearestString - The nearest option string found in the
+  /// OptTable.
+  /// \param [in] FlagsToInclude - Only find options with any of these flags.
+  /// Zero is the default, which includes all flags.
+  /// \param [in] FlagsToExclude - Don't find options with this flag. Zero
+  /// is the default, and means exclude nothing.
+  /// \param [in] MinimumLength - Don't find options shorter than this length.
+  /// For example, a minimum length of 3 prevents "-x" from being considered
+  /// near to "-S".
+  ///
+  /// \return The edit distance of the nearest string found.
+  unsigned findNearest(StringRef Option, std::string &NearestString,
+                       unsigned FlagsToInclude = 0, unsigned FlagsToExclude = 0,
+                       unsigned MinimumLength = 4) const;
+
   /// Add Values to Option's Values class
   ///
   /// \param [in] Option - Prefix + Name of the flag which Values will be

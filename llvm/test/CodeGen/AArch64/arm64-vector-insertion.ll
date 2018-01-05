@@ -8,14 +8,13 @@ entry:
   ret void
 
   ; CHECK-LABEL: test0f
-  ; CHECK: movi.2d v[[TEMP:[0-9]+]], #0000000000000000
+  ; CHECK: movi.4s v[[TEMP:[0-9]+]], #0
   ; CHECK: mov.s v[[TEMP]][0], v{{[0-9]+}}[0]
   ; CHECK: str q[[TEMP]], [x0]
   ; CHECK: ret
 
 
 }
-
 
 define void @test1f(float* nocapture %x, float %a) #0 {
 entry:

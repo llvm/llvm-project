@@ -94,6 +94,9 @@ def remark_module_lock_failure : Remark<
   "could not acquire lock file for module '%0': %1">, InGroup<ModuleBuild>;
 def remark_module_lock_timeout : Remark<
   "timed out waiting to acquire lock file for module '%0'">, InGroup<ModuleBuild>;
+def err_module_shadowed : Error<"import of shadowed module '%0'">, DefaultFatal;
+def err_module_build_shadowed_submodule : Error<
+  "build a shadowed submodule '%0'">, DefaultFatal;
 def err_module_cycle : Error<"cyclic dependency in module '%0': %1">, 
   DefaultFatal;
 def err_module_prebuilt : Error<

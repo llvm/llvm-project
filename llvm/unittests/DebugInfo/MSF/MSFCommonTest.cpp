@@ -46,12 +46,47 @@ TEST(MSFCommonTest, FpmIntervals) {
   EXPECT_EQ(1u, getNumFpmIntervals(L, true));
   SB.NumBlocks = SB.BlockSize;
   EXPECT_EQ(1u, getNumFpmIntervals(L, true));
-  SB.NumBlocks = SB.BlockSize + 1;
-  EXPECT_EQ(2u, getNumFpmIntervals(L, true));
   SB.NumBlocks = SB.BlockSize * 8;
   EXPECT_EQ(8u, getNumFpmIntervals(L, true));
-  SB.NumBlocks = SB.BlockSize * 8 + 1;
-  EXPECT_EQ(9u, getNumFpmIntervals(L, true));
+
+  // The FPM is going to look like this:
+  // |  0  |   1   |   2   |  ...  |  4096  |  4097  |  4098  | ... |
+  // | SB  |  FPM0 | FPM1  | Data  |  Data  |  FPM0  |  FPM1  | ... |
+  //
+  // So when there are up to 4097 blocks (last index 4096), the final blocks
+  // are data blocks.  When there are 4098 blocks (last index 4097), there is
+  // one terminating FPM block, and when there are 4099 blocks, there are two
+  // terminating FPM blocks.  Make sure all these cases are handled.
+
+  // With 4096 or 4097 blocks, the last block is a data block so we only have
+  // 1 interval.
+  for (uint32_t I : {4096, 4097}) {
+    // 1 FPM0 interval
+    EXPECT_EQ(1U, getNumFpmIntervals(4096, I, true, 1));
+    EXPECT_EQ(1U, getNumFpmIntervals(4096, I, false, 1));
+
+    // 1 FPM1 interval
+    EXPECT_EQ(1U, getNumFpmIntervals(4096, I, true, 2));
+    EXPECT_EQ(1U, getNumFpmIntervals(4096, I, false, 2));
+  }
+
+  // With 4098 blocks, the last block belongs to FPM0 so we should have 2 FPM0
+  // intervals.
+  EXPECT_EQ(2U, getNumFpmIntervals(4096, 4098, true, 1));
+  EXPECT_EQ(1U, getNumFpmIntervals(4096, 4098, false, 1));
+
+  // And 1 FPM1 interval.
+  EXPECT_EQ(1U, getNumFpmIntervals(4096, 4098, true, 2));
+  EXPECT_EQ(1U, getNumFpmIntervals(4096, 4098, false, 2));
+
+  // With 4099 blocks, the last block belongs to FPM1 so we should have 2
+  // FPM0 intervals.
+  EXPECT_EQ(2U, getNumFpmIntervals(4096, 4099, true, 1));
+  EXPECT_EQ(1U, getNumFpmIntervals(4096, 4099, false, 1));
+
+  // And 2 FPM1 intervals.
+  EXPECT_EQ(2U, getNumFpmIntervals(4096, 4099, true, 2));
+  EXPECT_EQ(1U, getNumFpmIntervals(4096, 4099, false, 2));
 }
 
 TEST(MSFCommonTest, FpmStreamLayout) {
@@ -95,7 +130,7 @@ TEST(MSFCommonTest, FpmStreamLayout) {
   // 2. When we are including unused FPM data, there should be one FPM block
   //    at every BlockSize interval in the file, even if entire FPM blocks are
   //    unused.
-  SB.NumBlocks = SB.BlockSize * 8 + 1;
+  SB.NumBlocks = SB.BlockSize * 8 + 3;
   SL = getFpmStreamLayout(L, true, false);
   EXPECT_EQ(SB.BlockSize * 9, SL.Length);
   EXPECT_EQ(9u, SL.Blocks.size());

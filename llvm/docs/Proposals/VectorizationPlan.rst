@@ -212,7 +212,7 @@ Related LLVM components
    Polly [7]_.
 
 3. Loop Vectorizer: the Vectorization Plan aims to upgrade the infrastructure of
-   the Loop Vectorizer and extend it to handle outer loops [8,9]_.
+   the Loop Vectorizer and extend it to handle outer loops [8]_, [9]_.
 
 References
 ----------

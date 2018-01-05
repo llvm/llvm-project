@@ -890,7 +890,12 @@ void ArchSpec::MergeFrom(const ArchSpec &other) {
     GetTriple().setOS(other.GetTriple().getOS());
   if (GetTriple().getArch() == llvm::Triple::UnknownArch) {
     GetTriple().setArch(other.GetTriple().getArch());
-    UpdateCore();
+
+    // MachO unknown64 isn't really invalid as the debugger can
+    // still obtain information from the binary, e.g. line tables.
+    // As such, we don't update the core here.
+    if (other.GetCore() != eCore_uknownMach64)
+      UpdateCore();
   }
   if (GetTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
       !TripleVendorWasSpecified()) {

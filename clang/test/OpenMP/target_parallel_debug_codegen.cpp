@@ -116,8 +116,8 @@ int main() {
 // CHECK: !DILocalVariable(name: ".bound_tid.",
 // CHECK-SAME: DIFlagArtificial
 // CHECK: !DILocalVariable(name: "c",
-// CHECK-SAMEi-NOT: DIFlagArtificial
+// CHECK-SAME: line: 11
 // CHECK: !DILocalVariable(name: "a",
-// CHECK-SAMEi-NOT: DIFlagArtificial
+// CHECK-SAME: line: 9
 // CHECK: !DILocalVariable(name: "b",
-// CHECK-SAMEi-NOT: DIFlagArtificial
+// CHECK-SAME: line: 10

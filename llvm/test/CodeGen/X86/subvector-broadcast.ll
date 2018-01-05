@@ -35,7 +35,7 @@ define <8 x double> @test_broadcast_2f64_8f64(<2 x double> *%p) nounwind {
 ; X32-AVX:       # %bb.0:
 ; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X32-AVX-NEXT:    vmovdqa %ymm0, %ymm1
+; X32-AVX-NEXT:    vmovaps %ymm0, %ymm1
 ; X32-AVX-NEXT:    retl
 ;
 ; X32-AVX512-LABEL: test_broadcast_2f64_8f64:
@@ -47,7 +47,7 @@ define <8 x double> @test_broadcast_2f64_8f64(<2 x double> *%p) nounwind {
 ; X64-AVX-LABEL: test_broadcast_2f64_8f64:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X64-AVX-NEXT:    vmovdqa %ymm0, %ymm1
+; X64-AVX-NEXT:    vmovaps %ymm0, %ymm1
 ; X64-AVX-NEXT:    retq
 ;
 ; X64-AVX512-LABEL: test_broadcast_2f64_8f64:
@@ -116,19 +116,12 @@ define <4 x i64> @test_broadcast_2i64_4i64(<2 x i64> *%p) nounwind {
 }
 
 define <8 x i64> @test_broadcast_2i64_8i64(<2 x i64> *%p) nounwind {
-; X32-AVX1-LABEL: test_broadcast_2i64_8i64:
-; X32-AVX1:       # %bb.0:
-; X32-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X32-AVX1-NEXT:    vmovdqa %ymm0, %ymm1
-; X32-AVX1-NEXT:    retl
-;
-; X32-AVX2-LABEL: test_broadcast_2i64_8i64:
-; X32-AVX2:       # %bb.0:
-; X32-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX2-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X32-AVX2-NEXT:    vmovaps %ymm0, %ymm1
-; X32-AVX2-NEXT:    retl
+; X32-AVX-LABEL: test_broadcast_2i64_8i64:
+; X32-AVX:       # %bb.0:
+; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X32-AVX-NEXT:    vmovaps %ymm0, %ymm1
+; X32-AVX-NEXT:    retl
 ;
 ; X32-AVX512-LABEL: test_broadcast_2i64_8i64:
 ; X32-AVX512:       # %bb.0:
@@ -136,17 +129,11 @@ define <8 x i64> @test_broadcast_2i64_8i64(<2 x i64> *%p) nounwind {
 ; X32-AVX512-NEXT:    vbroadcasti32x4 {{.*#+}} zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; X32-AVX512-NEXT:    retl
 ;
-; X64-AVX1-LABEL: test_broadcast_2i64_8i64:
-; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X64-AVX1-NEXT:    vmovdqa %ymm0, %ymm1
-; X64-AVX1-NEXT:    retq
-;
-; X64-AVX2-LABEL: test_broadcast_2i64_8i64:
-; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X64-AVX2-NEXT:    vmovaps %ymm0, %ymm1
-; X64-AVX2-NEXT:    retq
+; X64-AVX-LABEL: test_broadcast_2i64_8i64:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X64-AVX-NEXT:    vmovaps %ymm0, %ymm1
+; X64-AVX-NEXT:    retq
 ;
 ; X64-AVX512-LABEL: test_broadcast_2i64_8i64:
 ; X64-AVX512:       # %bb.0:
@@ -207,7 +194,7 @@ define <16 x float> @test_broadcast_4f32_16f32(<4 x float> *%p) nounwind {
 ; X32-AVX:       # %bb.0:
 ; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X32-AVX-NEXT:    vmovdqa %ymm0, %ymm1
+; X32-AVX-NEXT:    vmovaps %ymm0, %ymm1
 ; X32-AVX-NEXT:    retl
 ;
 ; X32-AVX512-LABEL: test_broadcast_4f32_16f32:
@@ -219,7 +206,7 @@ define <16 x float> @test_broadcast_4f32_16f32(<4 x float> *%p) nounwind {
 ; X64-AVX-LABEL: test_broadcast_4f32_16f32:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X64-AVX-NEXT:    vmovdqa %ymm0, %ymm1
+; X64-AVX-NEXT:    vmovaps %ymm0, %ymm1
 ; X64-AVX-NEXT:    retq
 ;
 ; X64-AVX512-LABEL: test_broadcast_4f32_16f32:
@@ -288,19 +275,12 @@ define <8 x i32> @test_broadcast_4i32_8i32(<4 x i32> *%p) nounwind {
 }
 
 define <16 x i32> @test_broadcast_4i32_16i32(<4 x i32> *%p) nounwind {
-; X32-AVX1-LABEL: test_broadcast_4i32_16i32:
-; X32-AVX1:       # %bb.0:
-; X32-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X32-AVX1-NEXT:    vmovdqa %ymm0, %ymm1
-; X32-AVX1-NEXT:    retl
-;
-; X32-AVX2-LABEL: test_broadcast_4i32_16i32:
-; X32-AVX2:       # %bb.0:
-; X32-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX2-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X32-AVX2-NEXT:    vmovaps %ymm0, %ymm1
-; X32-AVX2-NEXT:    retl
+; X32-AVX-LABEL: test_broadcast_4i32_16i32:
+; X32-AVX:       # %bb.0:
+; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X32-AVX-NEXT:    vmovaps %ymm0, %ymm1
+; X32-AVX-NEXT:    retl
 ;
 ; X32-AVX512-LABEL: test_broadcast_4i32_16i32:
 ; X32-AVX512:       # %bb.0:
@@ -308,17 +288,11 @@ define <16 x i32> @test_broadcast_4i32_16i32(<4 x i32> *%p) nounwind {
 ; X32-AVX512-NEXT:    vbroadcasti32x4 {{.*#+}} zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; X32-AVX512-NEXT:    retl
 ;
-; X64-AVX1-LABEL: test_broadcast_4i32_16i32:
-; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X64-AVX1-NEXT:    vmovdqa %ymm0, %ymm1
-; X64-AVX1-NEXT:    retq
-;
-; X64-AVX2-LABEL: test_broadcast_4i32_16i32:
-; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X64-AVX2-NEXT:    vmovaps %ymm0, %ymm1
-; X64-AVX2-NEXT:    retq
+; X64-AVX-LABEL: test_broadcast_4i32_16i32:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X64-AVX-NEXT:    vmovaps %ymm0, %ymm1
+; X64-AVX-NEXT:    retq
 ;
 ; X64-AVX512-LABEL: test_broadcast_4i32_16i32:
 ; X64-AVX512:       # %bb.0:
@@ -386,19 +360,12 @@ define <16 x i16> @test_broadcast_8i16_16i16(<8 x i16> *%p) nounwind {
 }
 
 define <32 x i16> @test_broadcast_8i16_32i16(<8 x i16> *%p) nounwind {
-; X32-AVX1-LABEL: test_broadcast_8i16_32i16:
-; X32-AVX1:       # %bb.0:
-; X32-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X32-AVX1-NEXT:    vmovdqa %ymm0, %ymm1
-; X32-AVX1-NEXT:    retl
-;
-; X32-AVX2-LABEL: test_broadcast_8i16_32i16:
-; X32-AVX2:       # %bb.0:
-; X32-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX2-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X32-AVX2-NEXT:    vmovaps %ymm0, %ymm1
-; X32-AVX2-NEXT:    retl
+; X32-AVX-LABEL: test_broadcast_8i16_32i16:
+; X32-AVX:       # %bb.0:
+; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X32-AVX-NEXT:    vmovaps %ymm0, %ymm1
+; X32-AVX-NEXT:    retl
 ;
 ; X32-AVX512F-LABEL: test_broadcast_8i16_32i16:
 ; X32-AVX512F:       # %bb.0:
@@ -420,17 +387,11 @@ define <32 x i16> @test_broadcast_8i16_32i16(<8 x i16> *%p) nounwind {
 ; X32-AVX512DQ-NEXT:    vmovdqa %ymm0, %ymm1
 ; X32-AVX512DQ-NEXT:    retl
 ;
-; X64-AVX1-LABEL: test_broadcast_8i16_32i16:
-; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X64-AVX1-NEXT:    vmovdqa %ymm0, %ymm1
-; X64-AVX1-NEXT:    retq
-;
-; X64-AVX2-LABEL: test_broadcast_8i16_32i16:
-; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X64-AVX2-NEXT:    vmovaps %ymm0, %ymm1
-; X64-AVX2-NEXT:    retq
+; X64-AVX-LABEL: test_broadcast_8i16_32i16:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X64-AVX-NEXT:    vmovaps %ymm0, %ymm1
+; X64-AVX-NEXT:    retq
 ;
 ; X64-AVX512F-LABEL: test_broadcast_8i16_32i16:
 ; X64-AVX512F:       # %bb.0:
@@ -536,19 +497,12 @@ define <32 x i8> @test_broadcast_16i8_32i8(<16 x i8> *%p) nounwind {
 }
 
 define <64 x i8> @test_broadcast_16i8_64i8(<16 x i8> *%p) nounwind {
-; X32-AVX1-LABEL: test_broadcast_16i8_64i8:
-; X32-AVX1:       # %bb.0:
-; X32-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X32-AVX1-NEXT:    vmovdqa %ymm0, %ymm1
-; X32-AVX1-NEXT:    retl
-;
-; X32-AVX2-LABEL: test_broadcast_16i8_64i8:
-; X32-AVX2:       # %bb.0:
-; X32-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX2-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X32-AVX2-NEXT:    vmovaps %ymm0, %ymm1
-; X32-AVX2-NEXT:    retl
+; X32-AVX-LABEL: test_broadcast_16i8_64i8:
+; X32-AVX:       # %bb.0:
+; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X32-AVX-NEXT:    vmovaps %ymm0, %ymm1
+; X32-AVX-NEXT:    retl
 ;
 ; X32-AVX512F-LABEL: test_broadcast_16i8_64i8:
 ; X32-AVX512F:       # %bb.0:
@@ -570,17 +524,11 @@ define <64 x i8> @test_broadcast_16i8_64i8(<16 x i8> *%p) nounwind {
 ; X32-AVX512DQ-NEXT:    vmovdqa %ymm0, %ymm1
 ; X32-AVX512DQ-NEXT:    retl
 ;
-; X64-AVX1-LABEL: test_broadcast_16i8_64i8:
-; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X64-AVX1-NEXT:    vmovdqa %ymm0, %ymm1
-; X64-AVX1-NEXT:    retq
-;
-; X64-AVX2-LABEL: test_broadcast_16i8_64i8:
-; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; X64-AVX2-NEXT:    vmovaps %ymm0, %ymm1
-; X64-AVX2-NEXT:    retq
+; X64-AVX-LABEL: test_broadcast_16i8_64i8:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X64-AVX-NEXT:    vmovaps %ymm0, %ymm1
+; X64-AVX-NEXT:    retq
 ;
 ; X64-AVX512F-LABEL: test_broadcast_16i8_64i8:
 ; X64-AVX512F:       # %bb.0:

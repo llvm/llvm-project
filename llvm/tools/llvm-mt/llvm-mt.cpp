@@ -103,8 +103,18 @@ int main(int argc, const char **argv) {
   ArrayRef<const char *> ArgsArr = makeArrayRef(argv + 1, argc);
   opt::InputArgList InputArgs = T.ParseArgs(ArgsArr, MAI, MAC);
 
-  for (auto *Arg : InputArgs.filtered(OPT_INPUT))
-    reportError(Twine("invalid option ") + Arg->getSpelling());
+  for (auto *Arg : InputArgs.filtered(OPT_INPUT)) {
+    auto ArgString = Arg->getAsString(InputArgs);
+    std::string Diag;
+    raw_string_ostream OS(Diag);
+    OS << "invalid option '" << ArgString << "'";
+
+    std::string Nearest;
+    if (T.findNearest(ArgString, Nearest) < 2)
+      OS << ", did you mean '" << Nearest << "'?";
+
+    reportError(OS.str());
+  }
 
   for (auto &Arg : InputArgs) {
     if (Arg->getOption().matches(OPT_unsupported)) {

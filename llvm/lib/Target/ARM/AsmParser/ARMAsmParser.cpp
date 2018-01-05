@@ -1150,10 +1150,30 @@ public:
   bool isToken() const override { return Kind == k_Token; }
   bool isMemBarrierOpt() const { return Kind == k_MemBarrierOpt; }
   bool isInstSyncBarrierOpt() const { return Kind == k_InstSyncBarrierOpt; }
-  bool isMem() const override { return Kind == k_Memory; }
+  bool isMem() const override {
+    if (Kind != k_Memory)
+      return false;
+    if (Memory.BaseRegNum &&
+        !ARMMCRegisterClasses[ARM::GPRRegClassID].contains(Memory.BaseRegNum))
+      return false;
+    if (Memory.OffsetRegNum &&
+        !ARMMCRegisterClasses[ARM::GPRRegClassID].contains(Memory.OffsetRegNum))
+      return false;
+    return true;
+  }
   bool isShifterImm() const { return Kind == k_ShifterImmediate; }
-  bool isRegShiftedReg() const { return Kind == k_ShiftedRegister; }
-  bool isRegShiftedImm() const { return Kind == k_ShiftedImmediate; }
+  bool isRegShiftedReg() const {
+    return Kind == k_ShiftedRegister &&
+           ARMMCRegisterClasses[ARM::GPRRegClassID].contains(
+               RegShiftedReg.SrcReg) &&
+           ARMMCRegisterClasses[ARM::GPRRegClassID].contains(
+               RegShiftedReg.ShiftReg);
+  }
+  bool isRegShiftedImm() const {
+    return Kind == k_ShiftedImmediate &&
+           ARMMCRegisterClasses[ARM::GPRRegClassID].contains(
+               RegShiftedImm.SrcReg);
+  }
   bool isRotImm() const { return Kind == k_RotateImmediate; }
   bool isModImm() const { return Kind == k_ModifiedImmediate; }
 
@@ -1192,9 +1212,12 @@ public:
 
   bool isConstantPoolImm() const { return Kind == k_ConstantPoolImmediate; }
   bool isBitfield() const { return Kind == k_BitfieldDescriptor; }
-  bool isPostIdxRegShifted() const { return Kind == k_PostIndexRegister; }
+  bool isPostIdxRegShifted() const {
+    return Kind == k_PostIndexRegister &&
+           ARMMCRegisterClasses[ARM::GPRRegClassID].contains(PostIdxReg.RegNum);
+  }
   bool isPostIdxReg() const {
-    return Kind == k_PostIndexRegister && PostIdxReg.ShiftTy ==ARM_AM::no_shift;
+    return isPostIdxRegShifted() && PostIdxReg.ShiftTy == ARM_AM::no_shift;
   }
   bool isMemNoOffset(bool alignOK = false, unsigned Alignment = 0) const {
     if (!isMem())
@@ -1331,10 +1354,10 @@ public:
   }
 
   bool isAM3Offset() const {
-    if (Kind != k_Immediate && Kind != k_PostIndexRegister)
+    if (isPostIdxReg())
+      return true;
+    if (!isImm())
       return false;
-    if (Kind == k_PostIndexRegister)
-      return PostIdxReg.ShiftTy == ARM_AM::no_shift;
     // Immediate offset in range [-255, 255].
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
     if (!CE) return false;

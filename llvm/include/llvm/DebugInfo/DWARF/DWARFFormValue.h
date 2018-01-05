@@ -50,6 +50,8 @@ struct DWARFFormParams {
     }
     llvm_unreachable("Invalid Format value");
   }
+
+  explicit operator bool() const { return Version && AddrSize; }
 };
 
 class DWARFFormValue {

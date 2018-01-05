@@ -1475,10 +1475,8 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
     const auto *ToFPT = cast<FunctionProtoType>(ToFn);
     if (FromFPT->isNothrow(Context) && !ToFPT->isNothrow(Context)) {
       FromFn = cast<FunctionType>(
-          Context.getFunctionType(FromFPT->getReturnType(),
-                                  FromFPT->getParamTypes(),
-                                  FromFPT->getExtProtoInfo().withExceptionSpec(
-                                      FunctionProtoType::ExceptionSpecInfo()))
+          Context.getFunctionTypeWithExceptionSpec(QualType(FromFPT, 0),
+                                                   EST_None)
                  .getTypePtr());
       Changed = true;
     }

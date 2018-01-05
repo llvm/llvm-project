@@ -2065,10 +2065,13 @@ void EmitClangAttrClass(RecordKeeper &Records, raw_ostream &OS) {
     ArrayRef<std::pair<Record *, SMRange>> Supers = R.getSuperClasses();
     assert(!Supers.empty() && "Forgot to specify a superclass for the attr");
     std::string SuperName;
+    bool Inheritable = false;
     for (const auto &Super : llvm::reverse(Supers)) {
       const Record *R = Super.first;
       if (R->getName() != "TargetSpecificAttr" && SuperName.empty())
         SuperName = R->getName();
+      if (R->getName() == "InheritableAttr")
+        Inheritable = true;
     }
 
     OS << "class " << R.getName() << "Attr : public " << SuperName << " {\n";
@@ -2162,8 +2165,13 @@ void EmitClangAttrClass(RecordKeeper &Records, raw_ostream &OS) {
 
       OS << "             )\n";
       OS << "    : " << SuperName << "(attr::" << R.getName() << ", R, SI, "
-         << ( R.getValueAsBit("LateParsed") ? "true" : "false" ) << ", "
-         << ( R.getValueAsBit("DuplicatesAllowedWhileMerging") ? "true" : "false" ) << ")\n";
+         << ( R.getValueAsBit("LateParsed") ? "true" : "false" );
+      if (Inheritable) {
+        OS << ", "
+           << (R.getValueAsBit("InheritEvenIfAlreadyPresent") ? "true"
+                                                              : "false");
+      }
+      OS << ")\n";
 
       for (auto const &ai : Args) {
         OS << "              , ";

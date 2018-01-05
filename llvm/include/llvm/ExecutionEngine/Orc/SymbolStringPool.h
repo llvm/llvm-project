@@ -89,8 +89,10 @@ public:
   }
 
   bool operator<(const SymbolStringPtr &Other) const {
-    return S->getValue() < Other.S->getValue();
+    return S < Other.S;
   }
+
+  StringRef operator*() const { return S->first(); }
 
 private:
 

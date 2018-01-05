@@ -2495,7 +2495,7 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
   else if (const auto *UA = dyn_cast<UuidAttr>(Attr))
     NewAttr = S.mergeUuidAttr(D, UA->getRange(), AttrSpellingListIndex,
                               UA->getGuid());
-  else if (Attr->duplicatesAllowed() || !DeclHasAttr(D, Attr))
+  else if (Attr->shouldInheritEvenIfAlreadyPresent() || !DeclHasAttr(D, Attr))
     NewAttr = cast<InheritableAttr>(Attr->clone(S.Context));
 
   if (NewAttr) {

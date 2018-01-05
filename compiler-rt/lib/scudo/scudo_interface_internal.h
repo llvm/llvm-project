@@ -14,9 +14,14 @@
 #ifndef SCUDO_INTERFACE_INTERNAL_H_
 #define SCUDO_INTERFACE_INTERNAL_H_
 
+#include "sanitizer_common/sanitizer_internal_defs.h"
+
+using __sanitizer::uptr;
+using __sanitizer::s32;
+
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE
-void __scudo_set_rss_limit(unsigned long LimitMb, int HardLimit);  // NOLINT
+void __scudo_set_rss_limit(uptr LimitMb, s32 HardLimit);
 }  // extern "C"
 
 #endif  // SCUDO_INTERFACE_INTERNAL_H_

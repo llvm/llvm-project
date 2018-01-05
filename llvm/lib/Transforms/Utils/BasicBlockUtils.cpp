@@ -316,6 +316,7 @@ static void UpdateAnalysisInformation(BasicBlock *OldBB, BasicBlock *NewBB,
   if (!LI)
     return;
 
+  assert(DT && "DT should be available to update LoopInfo!");
   Loop *L = LI->getLoopFor(OldBB);
 
   // If we need to preserve loop analyses, collect some information about how

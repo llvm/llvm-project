@@ -584,33 +584,9 @@ lldb::SectionType IRExecutionUnit::GetSectionTypeFromSectionName(
       default:
         break;
       }
-    } else if (name.startswith("__apple_") || name.startswith(".apple_")) {
-#if 0
-            const uint32_t name_idx = name[0] == '_' ? 8 : 7;
-            llvm::StringRef apple_name(name.substr(name_idx));
-            switch (apple_name[0])
-            {
-                case 'n':
-                    if (apple_name.equals("names"))
-                        sect_type = lldb::eSectionTypeDWARFAppleNames;
-                    else if (apple_name.equals("namespac") || apple_name.equals("namespaces"))
-                        sect_type = lldb::eSectionTypeDWARFAppleNamespaces;
-                    break;
-                case 't':
-                    if (apple_name.equals("types"))
-                        sect_type = lldb::eSectionTypeDWARFAppleTypes;
-                    break;
-                case 'o':
-                    if (apple_name.equals("objc"))
-                        sect_type = lldb::eSectionTypeDWARFAppleObjC;
-                    break;
-                default:
-                    break;
-            }
-#else
+    } else if (name.startswith("__apple_") || name.startswith(".apple_"))
       sect_type = lldb::eSectionTypeInvalid;
-#endif
-    } else if (name.equals("__objc_imageinfo"))
+    else if (name.equals("__objc_imageinfo"))
       sect_type = lldb::eSectionTypeOther;
   }
   return sect_type;
