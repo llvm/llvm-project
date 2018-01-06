@@ -95,16 +95,22 @@ public:
     if (Triple.isMacOSX())
       this->TLSSupported = !Triple.isMacOSXVersionLT(10, 7);
     else if (Triple.isiOS()) {
-      // 64-bit iOS supported it from 8 onwards, 32-bit from 9 onwards.
-      if (Triple.getArch() == llvm::Triple::x86_64 ||
-          Triple.getArch() == llvm::Triple::aarch64)
+      // 64-bit iOS supported it from 8 onwards, 32-bit device from 9 onwards,
+      // 32-bit simulator from 10 onwards.
+      if (Triple.isArch64Bit())
         this->TLSSupported = !Triple.isOSVersionLT(8);
-      else if (Triple.getArch() == llvm::Triple::x86 ||
-               Triple.getArch() == llvm::Triple::arm ||
-               Triple.getArch() == llvm::Triple::thumb)
-        this->TLSSupported = !Triple.isOSVersionLT(9);
-    } else if (Triple.isWatchOS())
-      this->TLSSupported = !Triple.isOSVersionLT(2);
+      else if (Triple.isArch32Bit()) {
+        if (!Triple.isSimulatorEnvironment())
+          this->TLSSupported = !Triple.isOSVersionLT(9);
+        else
+          this->TLSSupported = !Triple.isOSVersionLT(10);
+      }
+    } else if (Triple.isWatchOS()) {
+      if (!Triple.isSimulatorEnvironment())
+        this->TLSSupported = !Triple.isOSVersionLT(2);
+      else
+        this->TLSSupported = !Triple.isOSVersionLT(3);
+    }
 
     this->MCountName = "\01mcount";
   }

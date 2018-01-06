@@ -2900,8 +2900,13 @@ void ento::registerNewDeleteLeaksChecker(CheckerManager &mgr) {
       mgr.getCurrentCheckName();
   // We currently treat NewDeleteLeaks checker as a subchecker of NewDelete
   // checker.
-  if (!checker->ChecksEnabled[MallocChecker::CK_NewDeleteChecker])
+  if (!checker->ChecksEnabled[MallocChecker::CK_NewDeleteChecker]) {
     checker->ChecksEnabled[MallocChecker::CK_NewDeleteChecker] = true;
+    // FIXME: This does not set the correct name, but without this workaround
+    //        no name will be set at all.
+    checker->CheckNames[MallocChecker::CK_NewDeleteChecker] =
+        mgr.getCurrentCheckName();
+  }
 }
 
 #define REGISTER_CHECKER(name)                                                 \
