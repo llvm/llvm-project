@@ -1278,9 +1278,9 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 
 #if defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_BUILDING_LIBRARY)
 # if defined(_DLL)
-#   pragma(lib, "c++.lib")
+#   pragma comment(lib, "c++.lib")
 # else
-#   pragma(lib, "libc++.lib")
+#   pragma comment(lib, "libc++.lib")
 # endif
 #endif // defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_BUILDING_LIBRARY)
 
