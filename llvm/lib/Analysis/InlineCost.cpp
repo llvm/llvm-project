@@ -136,6 +136,7 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
   bool HasReturn;
   bool HasIndirectBr;
   bool HasFrameEscape;
+  bool UsesVarArgs;
 
   /// Number of bytes allocated statically by the callee.
   uint64_t AllocatedSize;
@@ -280,7 +281,7 @@ public:
         IsCallerRecursive(false), IsRecursiveCall(false),
         ExposesReturnsTwice(false), HasDynamicAlloca(false),
         ContainsNoDuplicateCall(false), HasReturn(false), HasIndirectBr(false),
-        HasFrameEscape(false), AllocatedSize(0), NumInstructions(0),
+        HasFrameEscape(false), UsesVarArgs(false), AllocatedSize(0), NumInstructions(0),
         NumVectorInstructions(0), VectorBonus(0), SingleBBBonus(0),
         EnableLoadElimination(true), LoadEliminationCost(0), NumConstantArgs(0),
         NumConstantOffsetPtrArgs(0), NumAllocaArgs(0), NumConstantPtrCmps(0),
@@ -1233,6 +1234,10 @@ bool CallAnalyzer::visitCallSite(CallSite CS) {
       case Intrinsic::localescape:
         HasFrameEscape = true;
         return false;
+      case Intrinsic::vastart:
+      case Intrinsic::vaend:
+        UsesVarArgs = true;
+        return false;
       }
     }
 
@@ -1567,7 +1572,7 @@ bool CallAnalyzer::analyzeBlock(BasicBlock *BB,
     using namespace ore;
     // If the visit this instruction detected an uninlinable pattern, abort.
     if (IsRecursiveCall || ExposesReturnsTwice || HasDynamicAlloca ||
-        HasIndirectBr || HasFrameEscape) {
+        HasIndirectBr || HasFrameEscape || UsesVarArgs) {
       if (ORE)
         ORE->emit([&]() {
           return OptimizationRemarkMissed(DEBUG_TYPE, "NeverInline",
