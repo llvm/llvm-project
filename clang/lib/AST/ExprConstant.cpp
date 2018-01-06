@@ -9170,9 +9170,11 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case Builtin::BI__builtin_huge_val:
   case Builtin::BI__builtin_huge_valf:
   case Builtin::BI__builtin_huge_vall:
+  case Builtin::BI__builtin_huge_valf128:
   case Builtin::BI__builtin_inf:
   case Builtin::BI__builtin_inff:
-  case Builtin::BI__builtin_infl: {
+  case Builtin::BI__builtin_infl:
+  case Builtin::BI__builtin_inff128: {
     const llvm::fltSemantics &Sem =
       Info.Ctx.getFloatTypeSemantics(E->getType());
     Result = llvm::APFloat::getInf(Sem);
@@ -9182,6 +9184,7 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case Builtin::BI__builtin_nans:
   case Builtin::BI__builtin_nansf:
   case Builtin::BI__builtin_nansl:
+  case Builtin::BI__builtin_nansf128:
     if (!TryEvaluateBuiltinNaN(Info.Ctx, E->getType(), E->getArg(0),
                                true, Result))
       return Error(E);
@@ -9190,6 +9193,7 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case Builtin::BI__builtin_nan:
   case Builtin::BI__builtin_nanf:
   case Builtin::BI__builtin_nanl:
+  case Builtin::BI__builtin_nanf128:
     // If this is __builtin_nan() turn this into a nan, otherwise we
     // can't constant fold it.
     if (!TryEvaluateBuiltinNaN(Info.Ctx, E->getType(), E->getArg(0),
@@ -9200,6 +9204,7 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case Builtin::BI__builtin_fabs:
   case Builtin::BI__builtin_fabsf:
   case Builtin::BI__builtin_fabsl:
+  case Builtin::BI__builtin_fabsf128:
     if (!EvaluateFloat(E->getArg(0), Result, Info))
       return false;
 
@@ -9213,7 +9218,8 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
   case Builtin::BI__builtin_copysign:
   case Builtin::BI__builtin_copysignf:
-  case Builtin::BI__builtin_copysignl: {
+  case Builtin::BI__builtin_copysignl:
+  case Builtin::BI__builtin_copysignf128: {
     APFloat RHS(0.);
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluateFloat(E->getArg(1), RHS, Info))

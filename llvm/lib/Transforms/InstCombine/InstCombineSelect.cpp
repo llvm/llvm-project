@@ -1555,8 +1555,8 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
       // MAX(~a, ~b) -> ~MIN(a, b)
       // MIN(~a, ~b) -> ~MAX(a, b)
       Value *A, *B;
-      if (match(LHS, m_Not(m_Value(A))) && LHS->getNumUses() <= 2 &&
-          match(RHS, m_Not(m_Value(B))) && RHS->getNumUses() <= 2) {
+      if (match(LHS, m_Not(m_Value(A))) && match(RHS, m_Not(m_Value(B))) &&
+          (LHS->getNumUses() <= 2 || RHS->getNumUses() <= 2)) {
         CmpInst::Predicate InvertedPred =
             getCmpPredicateForMinMax(getInverseMinMaxSelectPattern(SPF));
         Value *InvertedCmp = Builder.CreateICmp(InvertedPred, A, B);

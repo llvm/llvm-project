@@ -564,12 +564,8 @@ Value *MemCmpExpansion::getMemCmpOneBlock() {
 // This function expands the memcmp call into an inline expansion and returns
 // the memcmp result.
 Value *MemCmpExpansion::getMemCmpExpansion() {
-  // A memcmp with zero-comparison with only one block of load and compare does
-  // not need to set up any extra blocks. This case could be handled in the DAG,
-  // but since we have all of the machinery to flexibly expand any memcpy here,
-  // we choose to handle this case too to avoid fragmented lowering.
-  if ((!IsUsedForZeroCmp && NumLoadsPerBlockForZeroCmp != 1) ||
-      getNumBlocks() != 1) {
+  // Create the basic block framework for a multi-block expansion.
+  if (getNumBlocks() != 1) {
     BasicBlock *StartBlock = CI->getParent();
     EndBlock = StartBlock->splitBasicBlock(CI, "endblock");
     setupEndBlockPHINodes();

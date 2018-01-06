@@ -24,23 +24,27 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare float @atan2f(float, float) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @atan2l(x86_fp80, x86_fp80) [[NOT_READNONE]]
 
-  __builtin_copysign(f,f); __builtin_copysignf(f,f);__builtin_copysignl(f,f);
+  __builtin_copysign(f,f); __builtin_copysignf(f,f); __builtin_copysignl(f,f); __builtin_copysignf128(f,f);
 
 // NO__ERRNO: declare double @llvm.copysign.f64(double, double) [[READNONE_INTRINSIC:#[0-9]+]]
 // NO__ERRNO: declare float @llvm.copysign.f32(float, float) [[READNONE_INTRINSIC]]
 // NO__ERRNO: declare x86_fp80 @llvm.copysign.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare fp128 @llvm.copysign.f128(fp128, fp128) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare double @llvm.copysign.f64(double, double) [[READNONE_INTRINSIC:#[0-9]+]]
 // HAS_ERRNO: declare float @llvm.copysign.f32(float, float) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare x86_fp80 @llvm.copysign.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare fp128 @llvm.copysign.f128(fp128, fp128) [[READNONE_INTRINSIC]]
 
-  __builtin_fabs(f);       __builtin_fabsf(f);      __builtin_fabsl(f);
+  __builtin_fabs(f);       __builtin_fabsf(f);      __builtin_fabsl(f); __builtin_fabsf128(f);
 
 // NO__ERRNO: declare double @llvm.fabs.f64(double) [[READNONE_INTRINSIC]]
 // NO__ERRNO: declare float @llvm.fabs.f32(float) [[READNONE_INTRINSIC]]
 // NO__ERRNO: declare x86_fp80 @llvm.fabs.f80(x86_fp80) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare fp128 @llvm.fabs.f128(fp128) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare double @llvm.fabs.f64(double) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare float @llvm.fabs.f32(float) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare x86_fp80 @llvm.fabs.f80(x86_fp80) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare fp128 @llvm.fabs.f128(fp128) [[READNONE_INTRINSIC]]
 
   __builtin_frexp(f,i);    __builtin_frexpf(f,i);   __builtin_frexpl(f,i);
 
@@ -51,14 +55,14 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare float @frexpf(float, i32*) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @frexpl(x86_fp80, i32*) [[NOT_READNONE]]
 
-  __builtin_huge_val();    __builtin_huge_valf();   __builtin_huge_vall();
+  __builtin_huge_val();    __builtin_huge_valf();   __builtin_huge_vall(); __builtin_huge_valf128();
 
 // NO__ERRNO-NOT: .huge
 // NO__ERRNO-NOT: @huge
 // HAS_ERRNO-NOT: .huge
 // HAS_ERRNO-NOT: @huge
 
-  __builtin_inf();    __builtin_inff();   __builtin_infl();
+  __builtin_inf();    __builtin_inff();   __builtin_infl(); __builtin_inff128();
 
 // NO__ERRNO-NOT: .inf
 // NO__ERRNO-NOT: @inf
@@ -83,23 +87,27 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare float @modff(float, float*) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @modfl(x86_fp80, x86_fp80*) [[NOT_READNONE]]
 
-  __builtin_nan(c);        __builtin_nanf(c);       __builtin_nanl(c);  
+  __builtin_nan(c);        __builtin_nanf(c);       __builtin_nanl(c); __builtin_nanf128(c);
 
 // NO__ERRNO: declare double @nan(i8*) [[READNONE]]
 // NO__ERRNO: declare float @nanf(i8*) [[READNONE]]
 // NO__ERRNO: declare x86_fp80 @nanl(i8*) [[READNONE]]
+// NO__ERRNO: declare fp128 @nanf128(i8*) [[READNONE]]
 // HAS_ERRNO: declare double @nan(i8*) [[READNONE:#[0-9]+]]
 // HAS_ERRNO: declare float @nanf(i8*) [[READNONE]]
 // HAS_ERRNO: declare x86_fp80 @nanl(i8*) [[READNONE]]
+// HAS_ERRNO: declare fp128 @nanf128(i8*) [[READNONE]]
 
-  __builtin_nans(c);        __builtin_nansf(c);       __builtin_nansl(c);  
+  __builtin_nans(c);        __builtin_nansf(c);       __builtin_nansl(c); __builtin_nansf128(c);
 
 // NO__ERRNO: declare double @nans(i8*) [[READNONE]]
 // NO__ERRNO: declare float @nansf(i8*) [[READNONE]]
 // NO__ERRNO: declare x86_fp80 @nansl(i8*) [[READNONE]]
+// NO__ERRNO: declare fp128 @nansf128(i8*) [[READNONE]]
 // HAS_ERRNO: declare double @nans(i8*) [[READNONE]]
 // HAS_ERRNO: declare float @nansf(i8*) [[READNONE]]
 // HAS_ERRNO: declare x86_fp80 @nansl(i8*) [[READNONE]]
+// HAS_ERRNO: declare fp128 @nansf128(i8*) [[READNONE]]
 
   __builtin_pow(f,f);        __builtin_powf(f,f);       __builtin_powl(f,f);
 

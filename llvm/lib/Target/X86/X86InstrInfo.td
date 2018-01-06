@@ -807,36 +807,26 @@ def NoAVX        : Predicate<"!Subtarget->hasAVX()">;
 def HasAVX       : Predicate<"Subtarget->hasAVX()">;
 def HasAVX2      : Predicate<"Subtarget->hasAVX2()">;
 def HasAVX1Only  : Predicate<"Subtarget->hasAVX() && !Subtarget->hasAVX2()">;
-def HasAVX512    : Predicate<"Subtarget->hasAVX512()">,
-                     AssemblerPredicate<"FeatureAVX512", "AVX-512 ISA">;
+def HasAVX512    : Predicate<"Subtarget->hasAVX512()">;
 def UseAVX       : Predicate<"Subtarget->hasAVX() && !Subtarget->hasAVX512()">;
 def UseAVX2      : Predicate<"Subtarget->hasAVX2() && !Subtarget->hasAVX512()">;
 def NoAVX512     : Predicate<"!Subtarget->hasAVX512()">;
-def HasCDI       : Predicate<"Subtarget->hasCDI()">,
-                     AssemblerPredicate<"FeatureCDI", "AVX-512 CD ISA">;
-def HasVPOPCNTDQ : Predicate<"Subtarget->hasVPOPCNTDQ()">,
-                   AssemblerPredicate<"FeatureVPOPCNTDQ", "AVX-512 VPOPCNTDQ ISA">;
-def HasPFI       : Predicate<"Subtarget->hasPFI()">,
-                     AssemblerPredicate<"FeaturePFI", "AVX-512 PF ISA">;
-def HasERI       : Predicate<"Subtarget->hasERI()">,
-                     AssemblerPredicate<"FeatureERI", "AVX-512 ER ISA">;
-def HasDQI       : Predicate<"Subtarget->hasDQI()">,
-                     AssemblerPredicate<"FeatureDQI", "AVX-512 DQ ISA">;
+def HasCDI       : Predicate<"Subtarget->hasCDI()">;
+def HasVPOPCNTDQ : Predicate<"Subtarget->hasVPOPCNTDQ()">;
+def HasPFI       : Predicate<"Subtarget->hasPFI()">;
+def HasERI       : Predicate<"Subtarget->hasERI()">;
+def HasDQI       : Predicate<"Subtarget->hasDQI()">;
 def NoDQI        : Predicate<"!Subtarget->hasDQI()">;
-def HasBWI       : Predicate<"Subtarget->hasBWI()">,
-                     AssemblerPredicate<"FeatureBWI", "AVX-512 BW ISA">;
+def HasBWI       : Predicate<"Subtarget->hasBWI()">;
 def NoBWI        : Predicate<"!Subtarget->hasBWI()">;
-def HasVLX       : Predicate<"Subtarget->hasVLX()">,
-                     AssemblerPredicate<"FeatureVLX", "AVX-512 VL ISA">;
+def HasVLX       : Predicate<"Subtarget->hasVLX()">;
 def NoVLX        : Predicate<"!Subtarget->hasVLX()">;
 def NoVLX_Or_NoBWI : Predicate<"!Subtarget->hasVLX() || !Subtarget->hasBWI()">;
 def NoVLX_Or_NoDQI : Predicate<"!Subtarget->hasVLX() || !Subtarget->hasDQI()">;
 def PKU        : Predicate<"Subtarget->hasPKU()">;
-def HasVNNI    : Predicate<"Subtarget->hasVNNI()">,
-                     AssemblerPredicate<"FeatureVNNI", "AVX-512 VNNI ISA">;
+def HasVNNI    : Predicate<"Subtarget->hasVNNI()">;
 
-def HasBITALG    : Predicate<"Subtarget->hasBITALG()">,
-                     AssemblerPredicate<"FeatureBITALG", "AVX-512 BITALG ISA">;
+def HasBITALG    : Predicate<"Subtarget->hasBITALG()">;
 def HasPOPCNT    : Predicate<"Subtarget->hasPOPCNT()">;
 def HasAES       : Predicate<"Subtarget->hasAES()">;
 def HasVAES      : Predicate<"Subtarget->hasVAES()">;
@@ -866,12 +856,9 @@ def HasLZCNT     : Predicate<"Subtarget->hasLZCNT()">;
 def HasBMI       : Predicate<"Subtarget->hasBMI()">;
 def HasBMI2      : Predicate<"Subtarget->hasBMI2()">;
 def NoBMI2       : Predicate<"!Subtarget->hasBMI2()">;
-def HasVBMI      : Predicate<"Subtarget->hasVBMI()">,
-                     AssemblerPredicate<"FeatureVBMI", "AVX-512 VBMI ISA">;
-def HasVBMI2     : Predicate<"Subtarget->hasVBMI2()">,
-                     AssemblerPredicate<"FeatureVBMI2", "AVX-512 VBMI2 ISA">;
-def HasIFMA      : Predicate<"Subtarget->hasIFMA()">,
-                     AssemblerPredicate<"FeatureIFMA", "AVX-512 IFMA ISA">;
+def HasVBMI      : Predicate<"Subtarget->hasVBMI()">;
+def HasVBMI2     : Predicate<"Subtarget->hasVBMI2()">;
+def HasIFMA      : Predicate<"Subtarget->hasIFMA()">;
 def HasRTM       : Predicate<"Subtarget->hasRTM()">;
 def HasADX       : Predicate<"Subtarget->hasADX()">;
 def HasSHA       : Predicate<"Subtarget->hasSHA()">;
