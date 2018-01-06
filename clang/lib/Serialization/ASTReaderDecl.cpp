@@ -1500,7 +1500,8 @@ void ASTDeclReader::VisitUsingPackDecl(UsingPackDecl *D) {
 void ASTDeclReader::VisitUsingShadowDecl(UsingShadowDecl *D) {
   RedeclarableResult Redecl = VisitRedeclarable(D);
   VisitNamedDecl(D);
-  D->setTargetDecl(ReadDeclAs<NamedDecl>());
+  D->Underlying = ReadDeclAs<NamedDecl>();
+  D->IdentifierNamespace = Record.readInt();
   D->UsingOrNextShadow = ReadDeclAs<NamedDecl>();
   UsingShadowDecl *Pattern = ReadDeclAs<UsingShadowDecl>();
   if (Pattern)

@@ -2387,10 +2387,10 @@ UsingShadowDecl::UsingShadowDecl(Kind K, ASTContext &C, DeclContext *DC,
                                  SourceLocation Loc, UsingDecl *Using,
                                  NamedDecl *Target)
     : NamedDecl(K, DC, Loc, Using ? Using->getDeclName() : DeclarationName()),
-      redeclarable_base(C), Underlying(Target),
+      redeclarable_base(C), Underlying(),
       UsingOrNextShadow(cast<NamedDecl>(Using)) {
   if (Target)
-    IdentifierNamespace = Target->getIdentifierNamespace();
+    setTargetDecl(Target);
   setImplicit();
 }
 

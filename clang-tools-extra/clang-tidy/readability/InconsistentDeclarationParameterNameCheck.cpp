@@ -281,6 +281,11 @@ void formatDiagnostics(
 
 } // anonymous namespace
 
+void InconsistentDeclarationParameterNameCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
+}
+
 void InconsistentDeclarationParameterNameCheck::registerMatchers(
     MatchFinder *Finder) {
   Finder->addMatcher(functionDecl(unless(isImplicit()), hasOtherDeclarations())
@@ -305,6 +310,12 @@ void InconsistentDeclarationParameterNameCheck::check(
                                   *Result.SourceManager);
   if (InconsistentDeclarations.empty()) {
     // Avoid unnecessary further visits.
+    markRedeclarationsAsVisited(OriginalDeclaration);
+    return;
+  }
+
+  SourceLocation StartLoc = OriginalDeclaration->getLocStart();
+  if (StartLoc.isMacroID() && IgnoreMacros) {
     markRedeclarationsAsVisited(OriginalDeclaration);
     return;
   }

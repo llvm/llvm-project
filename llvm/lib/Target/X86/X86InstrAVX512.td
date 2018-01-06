@@ -6456,7 +6456,7 @@ def : Pat<(f64 (uint_to_fp GR64:$src)),
 
 multiclass avx512_cvt_s_int_round<bits<8> opc, X86VectorVTInfo SrcVT,
                                   X86VectorVTInfo DstVT, SDNode OpNode,
-                                  OpndItins itins, string asm> {
+                                  OpndItins itins, string asm, string aliasStr> {
   let Predicates = [HasAVX512] in {
     def rr_Int : SI<opc, MRMSrcReg, (outs DstVT.RC:$dst), (ins SrcVT.RC:$src),
                 !strconcat(asm,"\t{$src, $dst|$dst, $src}"),
@@ -6473,33 +6473,41 @@ multiclass avx512_cvt_s_int_round<bits<8> opc, X86VectorVTInfo SrcVT,
                       (SrcVT.VT SrcVT.ScalarIntMemCPat:$src),
                       (i32 FROUND_CURRENT)))], itins.rm>,
                 EVEX, VEX_LIG, Sched<[itins.Sched.Folded, ReadAfterLd]>;
+
+    def : InstAlias<"v" # asm # aliasStr # "\t{$src, $dst|$dst, $src}",
+            (!cast<Instruction>(NAME # "rr_Int") DstVT.RC:$dst, SrcVT.RC:$src), 0>;
+    def : InstAlias<"v" # asm # aliasStr # "\t{$rc, $src, $dst|$dst, $src, $rc}",
+            (!cast<Instruction>(NAME # "rrb_Int") DstVT.RC:$dst, SrcVT.RC:$src, AVX512RC:$rc), 0>;
+    def : InstAlias<"v" # asm # aliasStr # "\t{$src, $dst|$dst, $src}",
+            (!cast<Instruction>(NAME # "rm_Int") DstVT.RC:$dst,
+                                            SrcVT.IntScalarMemOp:$src), 0>;
   } // Predicates = [HasAVX512]
 }
 
 // Convert float/double to signed/unsigned int 32/64
 defm VCVTSS2SIZ: avx512_cvt_s_int_round<0x2D, f32x_info, i32x_info,
-                                   X86cvts2si, SSE_CVT_SS2SI_32, "cvtss2si">,
+                                   X86cvts2si, SSE_CVT_SS2SI_32, "cvtss2si", "{l}">,
                                    XS, EVEX_CD8<32, CD8VT1>;
 defm VCVTSS2SI64Z: avx512_cvt_s_int_round<0x2D, f32x_info, i64x_info,
-                                   X86cvts2si, SSE_CVT_SS2SI_64, "cvtss2si">,
+                                   X86cvts2si, SSE_CVT_SS2SI_64, "cvtss2si", "{q}">,
                                    XS, VEX_W, EVEX_CD8<32, CD8VT1>;
 defm VCVTSS2USIZ: avx512_cvt_s_int_round<0x79, f32x_info, i32x_info,
-                                   X86cvts2usi, SSE_CVT_SS2SI_32, "cvtss2usi">,
+                                   X86cvts2usi, SSE_CVT_SS2SI_32, "cvtss2usi", "{l}">,
                                    XS, EVEX_CD8<32, CD8VT1>;
 defm VCVTSS2USI64Z: avx512_cvt_s_int_round<0x79, f32x_info, i64x_info,
-                                   X86cvts2usi, SSE_CVT_SS2SI_64, "cvtss2usi">,
+                                   X86cvts2usi, SSE_CVT_SS2SI_64, "cvtss2usi", "{q}">,
                                    XS, VEX_W, EVEX_CD8<32, CD8VT1>;
 defm VCVTSD2SIZ: avx512_cvt_s_int_round<0x2D, f64x_info, i32x_info,
-                                   X86cvts2si, SSE_CVT_SD2SI, "cvtsd2si">,
+                                   X86cvts2si, SSE_CVT_SD2SI, "cvtsd2si", "{l}">,
                                    XD, EVEX_CD8<64, CD8VT1>;
 defm VCVTSD2SI64Z: avx512_cvt_s_int_round<0x2D, f64x_info, i64x_info,
-                                   X86cvts2si, SSE_CVT_SD2SI, "cvtsd2si">,
+                                   X86cvts2si, SSE_CVT_SD2SI, "cvtsd2si", "{q}">,
                                    XD, VEX_W, EVEX_CD8<64, CD8VT1>;
 defm VCVTSD2USIZ:   avx512_cvt_s_int_round<0x79, f64x_info, i32x_info,
-                                   X86cvts2usi, SSE_CVT_SD2SI, "cvtsd2usi">,
+                                   X86cvts2usi, SSE_CVT_SD2SI, "cvtsd2usi", "{l}">,
                                    XD, EVEX_CD8<64, CD8VT1>;
 defm VCVTSD2USI64Z: avx512_cvt_s_int_round<0x79, f64x_info, i64x_info,
-                                   X86cvts2usi, SSE_CVT_SD2SI, "cvtsd2usi">,
+                                   X86cvts2usi, SSE_CVT_SD2SI, "cvtsd2usi", "{q}">,
                                    XD, VEX_W, EVEX_CD8<64, CD8VT1>;
 
 // The SSE version of these instructions are disabled for AVX512.
@@ -6590,7 +6598,7 @@ let Predicates = [HasAVX512] in {
 
   def : InstAlias<asm # aliasStr # "\t{$src, $dst|$dst, $src}",
           (!cast<Instruction>(NAME # "rr") _DstRC.RC:$dst, _SrcRC.FRC:$src), 0>;
-  def : InstAlias<asm # aliasStr # "\t\t{{sae}, $src, $dst|$dst, $src, {sae}}",
+  def : InstAlias<asm # aliasStr # "\t{{sae}, $src, $dst|$dst, $src, {sae}}",
           (!cast<Instruction>(NAME # "rrb") _DstRC.RC:$dst, _SrcRC.FRC:$src), 0>;
   def : InstAlias<asm # aliasStr # "\t{$src, $dst|$dst, $src}",
           (!cast<Instruction>(NAME # "rm") _DstRC.RC:$dst,

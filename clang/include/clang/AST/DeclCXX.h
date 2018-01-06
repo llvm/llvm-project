@@ -3129,10 +3129,14 @@ public:
 
   /// \brief Sets the underlying declaration which has been brought into the
   /// local scope.
-  void setTargetDecl(NamedDecl* ND) {
+  void setTargetDecl(NamedDecl *ND) {
     assert(ND && "Target decl is null!");
     Underlying = ND;
-    IdentifierNamespace = ND->getIdentifierNamespace();
+    // A UsingShadowDecl is never a friend or local extern declaration, even
+    // if it is a shadow declaration for one.
+    IdentifierNamespace =
+        ND->getIdentifierNamespace() &
+        ~(IDNS_OrdinaryFriend | IDNS_TagFriend | IDNS_LocalExtern);
   }
 
   /// \brief Gets the using declaration to which this declaration is tied.

@@ -2924,22 +2924,10 @@ let Predicates = [UseHVX] in {
 def HexagonVZERO: SDNode<"HexagonISD::VZERO", SDTVecLeaf>;
 def vzero: PatFrag<(ops), (HexagonVZERO)>;
 
-def VSxtb: OutPatFrag<(ops node:$Vs),
-           (V6_vshuffvdd (HiVec (V6_vsb $Vs)),
-                         (LoVec (V6_vsb $Vs)),
-                         (A2_tfrsi -2))>;
-def VSxth: OutPatFrag<(ops node:$Vs),
-           (V6_vshuffvdd (HiVec (V6_vsh $Vs)),
-                         (LoVec (V6_vsh $Vs)),
-                         (A2_tfrsi -4))>;
-def VZxtb: OutPatFrag<(ops node:$Vs),
-           (V6_vshuffvdd (HiVec (V6_vzb $Vs)),
-                         (LoVec (V6_vzb $Vs)),
-                         (A2_tfrsi -2))>;
-def VZxth: OutPatFrag<(ops node:$Vs),
-           (V6_vshuffvdd (HiVec (V6_vzh $Vs)),
-                         (LoVec (V6_vzh $Vs)),
-                         (A2_tfrsi -4))>;
+def VSxtb: OutPatFrag<(ops node:$Vs), (V6_vunpackb  $Vs)>;
+def VSxth: OutPatFrag<(ops node:$Vs), (V6_vunpackh  $Vs)>;
+def VZxtb: OutPatFrag<(ops node:$Vs), (V6_vunpackub $Vs)>;
+def VZxth: OutPatFrag<(ops node:$Vs), (V6_vunpackuh $Vs)>;
 
 let Predicates = [UseHVX] in {
   def: Pat<(VecI8  vzero), (V6_vd0)>;
