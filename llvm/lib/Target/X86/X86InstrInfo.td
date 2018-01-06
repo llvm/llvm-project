@@ -3208,10 +3208,12 @@ def : InstAlias<"mov\t{$seg, $mem|$mem, $seg}", (MOV16ms i16mem:$mem, SEGMENT_RE
 // Match 'movq <largeimm>, <reg>' as an alias for movabsq.
 def : InstAlias<"mov{q}\t{$imm, $reg|$reg, $imm}", (MOV64ri GR64:$reg, i64imm:$imm), 0>;
 
-// Match 'movq GR64, MMX' as an alias for movd.
-def : InstAlias<"movq\t{$src, $dst|$dst, $src}",
+// Match 'movd GR64, MMX' as an alias for movq to be compatible with gas,
+// which supports this due to an old AMD documentation bug when 64-bit mode was
+// created.
+def : InstAlias<"movd\t{$src, $dst|$dst, $src}",
                 (MMX_MOVD64to64rr VR64:$dst, GR64:$src), 0>;
-def : InstAlias<"movq\t{$src, $dst|$dst, $src}",
+def : InstAlias<"movd\t{$src, $dst|$dst, $src}",
                 (MMX_MOVD64from64rr GR64:$dst, VR64:$src), 0>;
 
 // movsx aliases

@@ -2744,16 +2744,18 @@ define <2 x i64> @test_v8i64_2_5 (<8 x i64> %v) {
 ; AVX512F-LABEL: test_v8i64_2_5:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
-; AVX512F-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX512F-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX512F-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5,6,7]
+; AVX512F-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,1,2,3]
+; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512F-32-LABEL: test_v8i64_2_5:
 ; AVX512F-32:       # %bb.0:
 ; AVX512F-32-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
-; AVX512F-32-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX512F-32-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX512F-32-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5,6,7]
+; AVX512F-32-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,1,2,3]
+; AVX512F-32-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
 ; AVX512F-32-NEXT:    vzeroupper
 ; AVX512F-32-NEXT:    retl
   %res = shufflevector <8 x i64> %v, <8 x i64> undef, <2 x i32> <i32 2, i32 5>

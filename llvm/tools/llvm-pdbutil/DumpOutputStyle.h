@@ -75,6 +75,8 @@ private:
   Error dumpSymbolStats();
   Error dumpUdtStats();
   Error dumpStringTable();
+  Error dumpStringTableFromPdb();
+  Error dumpStringTableFromObj();
   Error dumpLines();
   Error dumpInlineeLines();
   Error dumpXmi();

@@ -506,6 +506,7 @@ bool invokeCodeComplete(const Context &Ctx,
                                           &DummyDiagsConsumer, false),
       VFS);
   assert(CI && "Couldn't create CompilerInvocation");
+  CI->getFrontendOpts().DisableFree = false;
 
   std::unique_ptr<llvm::MemoryBuffer> ContentsBuffer =
       llvm::MemoryBuffer::getMemBufferCopy(Contents, FileName);

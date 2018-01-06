@@ -8,3 +8,6 @@ vfmsub213ps %zmm8, %zmm8, %zmm8{%k2} {rn-sae}
 
 // ERR: Expected an op-mask register at this point
 vfmsub213ps %zmm8, %zmm8, %zmm8 {rn-sae}
+
+// ERR: invalid operand for instruction
+cvtsd2sil  {rn-sae}, %xmm1, %eax

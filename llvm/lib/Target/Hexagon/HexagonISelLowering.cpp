@@ -1695,6 +1695,8 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setPrefFunctionAlignment(4);
   setMinFunctionAlignment(2);
   setStackPointerRegisterToSaveRestore(HRI.getStackRegister());
+  setBooleanContents(TargetLoweringBase::UndefinedBooleanContent);
+  setBooleanVectorContents(TargetLoweringBase::UndefinedBooleanContent);
 
   setMaxAtomicSizeInBitsSupported(64);
   setMinCmpXchgSizeInBits(32);

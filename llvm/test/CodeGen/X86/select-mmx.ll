@@ -18,9 +18,9 @@ define i64 @test47(i64 %arg)  {
 ; X64-NEXT:    testq %rdi, %rdi
 ; X64-NEXT:    movl $7, %ecx
 ; X64-NEXT:    cmoveq %rcx, %rax
-; X64-NEXT:    movd %rax, %mm0
+; X64-NEXT:    movq %rax, %mm0
 ; X64-NEXT:    psllw %mm0, %mm0
-; X64-NEXT:    movd %mm0, %rax
+; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    retq
 ;
 ; I32-LABEL: test47:
@@ -70,9 +70,9 @@ define i64 @test49(i64 %arg, i64 %x, i64 %y) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    testq %rdi, %rdi
 ; X64-NEXT:    cmovneq %rdx, %rsi
-; X64-NEXT:    movd %rsi, %mm0
+; X64-NEXT:    movq %rsi, %mm0
 ; X64-NEXT:    psllw %mm0, %mm0
-; X64-NEXT:    movd %mm0, %rax
+; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    retq
 ;
 ; I32-LABEL: test49:
