@@ -46,7 +46,10 @@ void AsynchronousSymbolQuery::setDefinition(SymbolStringPtr Name,
     << "OutstandingResolutions = " << OutstandingResolutions << "\n"
     << "OutstandingFinalizations = " << OutstandingFinalizations << "\n"
     << "Symbols.size() = " << Symbols.size() << "\n"
-    << "Symbols.count(Name) = " << Symbols.count(Name) << "\n";
+    << "Symbols.count(Name) = " << Symbols.count(Name) << "\n"
+    << "Callback size = " << sizeof(SymbolsResolvedCallback) << "\n"
+    << "Callback offset = "
+    << (size_t)((char*)&NotifySymbolsResolved - (char*)this) << "\n";
 
   assert(!Symbols.count(Name) &&
          "Symbol has already been assigned an address");

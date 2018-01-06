@@ -26,12 +26,18 @@ TEST(CoreAPIsTest, AsynchronousSymbolQuerySuccessfulResolutionOnly) {
   bool OnReadyRun = false;
   auto OnResolution =
     [&](Expected<SymbolMap> Result) {
+      errs() << "Entered notify\n";
       EXPECT_TRUE(!!Result) << "Resolution unexpectedly returned error";
+      errs() << "Past expect 1\n";
       auto I = Result->find(Foo);
+      errs() << "Past find\n";
       EXPECT_NE(I, Result->end()) << "Could not find symbol definition";
+      errs() << "Past expect 2\n";
       EXPECT_EQ(cantFail(I->second.getAddress()), FakeAddr)
         << "Resolution returned incorrect result";
+      errs() << "Past expect 3\n";
       OnResolutionRun = true;
+      errs() << "Exiting notify\n";
     };
   auto OnReady = 
     [&](Error Err) {

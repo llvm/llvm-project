@@ -36,7 +36,7 @@ public:
   /// @brief Returns true if the pool is empty.
   bool empty() const;
 private:
-  using RefCountType = std::atomic<uint64_t>;
+  using RefCountType = std::atomic<size_t>;
   using PoolMap = StringMap<RefCountType>;
   using PoolMapEntry = StringMapEntry<RefCountType>;
   mutable std::mutex PoolMutex;
