@@ -82,7 +82,7 @@ movq	%gs:(%rdi), %rax
 // CHECK:  encoding: [0xf2,0x48,0x0f,0x38,0xf1,0x43,0x04]
         crc32q	4(%rbx), %rax
 
-// CHECK: movd %r8, %mm1
+// CHECK: movq %r8, %mm1
 // CHECK:  encoding: [0x49,0x0f,0x6e,0xc8]
 movd %r8, %mm1
 
@@ -90,7 +90,7 @@ movd %r8, %mm1
 // CHECK:  encoding: [0x41,0x0f,0x6e,0xc8]
 movd %r8d, %mm1
 
-// CHECK: movd %rdx, %mm1
+// CHECK: movq %rdx, %mm1
 // CHECK:  encoding: [0x48,0x0f,0x6e,0xca]
 movd %rdx, %mm1
 
@@ -98,7 +98,7 @@ movd %rdx, %mm1
 // CHECK:  encoding: [0x0f,0x6e,0xca]
 movd %edx, %mm1
 
-// CHECK: movd %mm1, %r8
+// CHECK: movq %mm1, %r8
 // CHECK:  encoding: [0x49,0x0f,0x7e,0xc8]
 movd %mm1, %r8
 
@@ -106,13 +106,37 @@ movd %mm1, %r8
 // CHECK:  encoding: [0x41,0x0f,0x7e,0xc8]
 movd %mm1, %r8d
 
-// CHECK: movd %mm1, %rdx
+// CHECK: movq %mm1, %rdx
 // CHECK:  encoding: [0x48,0x0f,0x7e,0xca]
 movd %mm1, %rdx
 
 // CHECK: movd %mm1, %edx
 // CHECK:  encoding: [0x0f,0x7e,0xca]
 movd %mm1, %edx
+
+// CHECK: movd %mm1, (%rax)
+// CHECK:  encoding: [0x0f,0x7e,0x08]
+movd %mm1, (%rax)
+
+// CHECK: movd (%rax), %mm1
+// CHECK:  encoding: [0x0f,0x6e,0x08]
+movd (%rax), %mm1
+
+// CHECK: movq %r8, %mm1
+// CHECK:  encoding: [0x49,0x0f,0x6e,0xc8]
+movq %r8, %mm1
+
+// CHECK: movq %rdx, %mm1
+// CHECK:  encoding: [0x48,0x0f,0x6e,0xca]
+movq %rdx, %mm1
+
+// CHECK: movq %mm1, %r8
+// CHECK:  encoding: [0x49,0x0f,0x7e,0xc8]
+movq %mm1, %r8
+
+// CHECK: movq %mm1, %rdx
+// CHECK:  encoding: [0x48,0x0f,0x7e,0xca]
+movq %mm1, %rdx
 
 // rdar://7840289
 // CHECK: pshufb	CPI1_0(%rip), %xmm1

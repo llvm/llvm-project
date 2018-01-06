@@ -7732,12 +7732,12 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_target_parallel:
     case OMPD_target_parallel_for:
     case OMPD_target_parallel_for_simd:
-    case OMPD_target_teams_distribute_parallel_for:
-    case OMPD_target_teams_distribute_parallel_for_simd:
       CaptureRegion = OMPD_target;
       break;
     case OMPD_teams_distribute_parallel_for:
     case OMPD_teams_distribute_parallel_for_simd:
+    case OMPD_target_teams_distribute_parallel_for:
+    case OMPD_target_teams_distribute_parallel_for_simd:
       CaptureRegion = OMPD_teams;
       break;
     case OMPD_parallel:
@@ -7920,20 +7920,16 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     break;
   case OMPC_schedule:
     switch (DKind) {
-    case OMPD_target_parallel_for:
-    case OMPD_target_parallel_for_simd:
-    case OMPD_target_teams_distribute_parallel_for:
-    case OMPD_target_teams_distribute_parallel_for_simd:
-      CaptureRegion = OMPD_target;
-      break;
-    case OMPD_teams_distribute_parallel_for:
-    case OMPD_teams_distribute_parallel_for_simd:
-      CaptureRegion = OMPD_teams;
-      break;
     case OMPD_parallel_for:
     case OMPD_parallel_for_simd:
     case OMPD_distribute_parallel_for:
     case OMPD_distribute_parallel_for_simd:
+    case OMPD_teams_distribute_parallel_for:
+    case OMPD_teams_distribute_parallel_for_simd:
+    case OMPD_target_parallel_for:
+    case OMPD_target_parallel_for_simd:
+    case OMPD_target_teams_distribute_parallel_for:
+    case OMPD_target_teams_distribute_parallel_for_simd:
       CaptureRegion = OMPD_parallel;
       break;
     case OMPD_for:
@@ -7991,18 +7987,14 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_teams_distribute_parallel_for_simd:
     case OMPD_teams_distribute:
     case OMPD_teams_distribute_simd:
-      CaptureRegion = OMPD_teams;
-      break;
     case OMPD_target_teams_distribute_parallel_for:
     case OMPD_target_teams_distribute_parallel_for_simd:
     case OMPD_target_teams_distribute:
     case OMPD_target_teams_distribute_simd:
-      CaptureRegion = OMPD_target;
+      CaptureRegion = OMPD_teams;
       break;
     case OMPD_distribute_parallel_for:
     case OMPD_distribute_parallel_for_simd:
-      CaptureRegion = OMPD_parallel;
-      break;
     case OMPD_distribute:
     case OMPD_distribute_simd:
       // Do not capture thread_limit-clause expressions.

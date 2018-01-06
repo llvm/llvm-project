@@ -2582,26 +2582,24 @@ void ASTContext::adjustDeducedFunctionResultType(FunctionDecl *FD,
 /// specified exception specification. Type sugar that can be present on a
 /// declaration of a function with an exception specification is permitted
 /// and preserved. Other type sugar (for instance, typedefs) is not.
-static QualType getFunctionTypeWithExceptionSpec(
-    ASTContext &Context, QualType Orig,
-    const FunctionProtoType::ExceptionSpecInfo &ESI) {
+QualType ASTContext::getFunctionTypeWithExceptionSpec(
+    QualType Orig, const FunctionProtoType::ExceptionSpecInfo &ESI) {
   // Might have some parens.
   if (auto *PT = dyn_cast<ParenType>(Orig))
-    return Context.getParenType(
-        getFunctionTypeWithExceptionSpec(Context, PT->getInnerType(), ESI));
+    return getParenType(
+        getFunctionTypeWithExceptionSpec(PT->getInnerType(), ESI));
 
   // Might have a calling-convention attribute.
   if (auto *AT = dyn_cast<AttributedType>(Orig))
-    return Context.getAttributedType(
+    return getAttributedType(
         AT->getAttrKind(),
-        getFunctionTypeWithExceptionSpec(Context, AT->getModifiedType(), ESI),
-        getFunctionTypeWithExceptionSpec(Context, AT->getEquivalentType(),
-                                         ESI));
+        getFunctionTypeWithExceptionSpec(AT->getModifiedType(), ESI),
+        getFunctionTypeWithExceptionSpec(AT->getEquivalentType(), ESI));
 
   // Anything else must be a function type. Rebuild it with the new exception
   // specification.
   const FunctionProtoType *Proto = cast<FunctionProtoType>(Orig);
-  return Context.getFunctionType(
+  return getFunctionType(
       Proto->getReturnType(), Proto->getParamTypes(),
       Proto->getExtProtoInfo().withExceptionSpec(ESI));
 }
@@ -2610,8 +2608,8 @@ bool ASTContext::hasSameFunctionTypeIgnoringExceptionSpec(QualType T,
                                                           QualType U) {
   return hasSameType(T, U) ||
          (getLangOpts().CPlusPlus17 &&
-          hasSameType(getFunctionTypeWithExceptionSpec(*this, T, EST_None),
-                      getFunctionTypeWithExceptionSpec(*this, U, EST_None)));
+          hasSameType(getFunctionTypeWithExceptionSpec(T, EST_None),
+                      getFunctionTypeWithExceptionSpec(U, EST_None)));
 }
 
 void ASTContext::adjustExceptionSpec(
@@ -2619,7 +2617,7 @@ void ASTContext::adjustExceptionSpec(
     bool AsWritten) {
   // Update the type.
   QualType Updated =
-      getFunctionTypeWithExceptionSpec(*this, FD->getType(), ESI);
+      getFunctionTypeWithExceptionSpec(FD->getType(), ESI);
   FD->setType(Updated);
 
   if (!AsWritten)
@@ -2630,7 +2628,7 @@ void ASTContext::adjustExceptionSpec(
     // If the type and the type-as-written differ, we may need to update
     // the type-as-written too.
     if (TSInfo->getType() != FD->getType())
-      Updated = getFunctionTypeWithExceptionSpec(*this, TSInfo->getType(), ESI);
+      Updated = getFunctionTypeWithExceptionSpec(TSInfo->getType(), ESI);
 
     // FIXME: When we get proper type location information for exceptions,
     // we'll also have to rebuild the TypeSourceInfo. For now, we just patch

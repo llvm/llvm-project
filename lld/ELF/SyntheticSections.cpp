@@ -1202,6 +1202,19 @@ RelocationBaseSection::RelocationBaseSection(StringRef Name, uint32_t Type,
     : SyntheticSection(SHF_ALLOC, Type, Config->Wordsize, Name),
       DynamicTag(DynamicTag), SizeDynamicTag(SizeDynamicTag) {}
 
+void RelocationBaseSection::addReloc(uint32_t DynType,
+                                     InputSectionBase *InputSec,
+                                     uint64_t OffsetInSec, bool UseSymVA,
+                                     Symbol *Sym, int64_t Addend, RelExpr Expr,
+                                     RelType Type) {
+  // REL type relocations don't have addend fields unlike RELAs, and
+  // their addends are stored to the section to which they are applied.
+  // So, store addends if we need to.
+  if (!Config->IsRela && UseSymVA)
+    InputSec->Relocations.push_back({Expr, Type, OffsetInSec, Addend, Sym});
+  addReloc({DynType, InputSec, OffsetInSec, UseSymVA, Sym, Addend});
+}
+
 void RelocationBaseSection::addReloc(const DynamicReloc &Reloc) {
   if (Reloc.Type == Target->RelativeRel)
     ++NumRelativeRelocs;

@@ -4592,10 +4592,8 @@ def : Pat<(v4i32 immAllOnesV), (MOVIv2d_ns (i32 255))>;
 def : Pat<(v8i16 immAllOnesV), (MOVIv2d_ns (i32 255))>;
 def : Pat<(v16i8 immAllOnesV), (MOVIv2d_ns (i32 255))>;
 
-def : Pat<(v2f64 (AArch64dup (f64 fpimm0))), (MOVIv2d_ns (i32 0))>;
-def : Pat<(v4f32 (AArch64dup (f32 fpimm0))), (MOVIv2d_ns (i32 0))>;
-
 // EDIT per word & halfword: 2s, 4h, 4s, & 8h
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 defm MOVI      : SIMDModifiedImmVectorShift<0, 0b10, 0b00, "movi">;
 
 def : InstAlias<"movi $Vd.4h, $imm", (MOVIv4i16 V64:$Vd,  imm0_255:$imm, 0), 0>;
@@ -4617,6 +4615,7 @@ def : Pat<(v4i16 (AArch64movi_shift imm0_255:$imm8, (i32 imm:$shift))),
 def : Pat<(v8i16 (AArch64movi_shift imm0_255:$imm8, (i32 imm:$shift))),
           (MOVIv8i16 imm0_255:$imm8, imm:$shift)>;
 
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 // EDIT per word: 2s & 4s with MSL shifter
 def MOVIv2s_msl  : SIMDModifiedImmMoveMSL<0, 0, {1,1,0,?}, V64, "movi", ".2s",
                       [(set (v2i32 V64:$Rd),
@@ -4629,13 +4628,31 @@ def MOVIv4s_msl  : SIMDModifiedImmMoveMSL<1, 0, {1,1,0,?}, V128, "movi", ".4s",
 def MOVIv8b_ns   : SIMDModifiedImmVectorNoShift<0, 0, 0, 0b1110, V64,  imm0_255,
                                                  "movi", ".8b",
                        [(set (v8i8 V64:$Rd), (AArch64movi imm0_255:$imm8))]>;
+
 def MOVIv16b_ns  : SIMDModifiedImmVectorNoShift<1, 0, 0, 0b1110, V128, imm0_255,
                                                  "movi", ".16b",
                        [(set (v16i8 V128:$Rd), (AArch64movi imm0_255:$imm8))]>;
+}
+
+// Use the more efficient MOVI instead of DUP from ZR to zero up vectors
+def : Pat<(v2f32 (AArch64dup (f32 fpimm0))), (MOVIv2i32  (i32 0), (i32 0))>;
+
+def : Pat<(v2i32 (AArch64dup (i32 0))), (MOVIv2i32  (i32 0), (i32 0))>;
+def : Pat<(v4i16 (AArch64dup (i32 0))), (MOVIv4i16  (i32 0), (i32 0))>;
+def : Pat<(v8i8  (AArch64dup (i32 0))), (MOVIv8b_ns (i32 0))>;
+
+def : Pat<(v2f64 (AArch64dup (f64 fpimm0))), (MOVIv2d_ns (i32 0))>;
+def : Pat<(v4f32 (AArch64dup (f32 fpimm0))), (MOVIv4i32  (i32 0), (i32 0))>;
+
+def : Pat<(v2i64 (AArch64dup (i64 0))), (MOVIv2d_ns  (i32 0))>;
+def : Pat<(v4i32 (AArch64dup (i32 0))), (MOVIv4i32   (i32 0), (i32 0))>;
+def : Pat<(v8i16 (AArch64dup (i32 0))), (MOVIv8i16   (i32 0), (i32 0))>;
+def : Pat<(v16i8 (AArch64dup (i32 0))), (MOVIv16b_ns (i32 0))>;
 
 // AdvSIMD MVNI
 
 // EDIT per word & halfword: 2s, 4h, 4s, & 8h
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 defm MVNI      : SIMDModifiedImmVectorShift<1, 0b10, 0b00, "mvni">;
 
 def : InstAlias<"mvni $Vd.4h, $imm", (MVNIv4i16 V64:$Vd,  imm0_255:$imm, 0), 0>;
@@ -4658,12 +4675,14 @@ def : Pat<(v8i16 (AArch64mvni_shift imm0_255:$imm8, (i32 imm:$shift))),
           (MVNIv8i16 imm0_255:$imm8, imm:$shift)>;
 
 // EDIT per word: 2s & 4s with MSL shifter
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 def MVNIv2s_msl   : SIMDModifiedImmMoveMSL<0, 1, {1,1,0,?}, V64, "mvni", ".2s",
                       [(set (v2i32 V64:$Rd),
                             (AArch64mvni_msl imm0_255:$imm8, (i32 imm:$shift)))]>;
 def MVNIv4s_msl   : SIMDModifiedImmMoveMSL<1, 1, {1,1,0,?}, V128, "mvni", ".4s",
                       [(set (v4i32 V128:$Rd),
                             (AArch64mvni_msl imm0_255:$imm8, (i32 imm:$shift)))]>;
+}
 
 //----------------------------------------------------------------------------
 // AdvSIMD indexed element

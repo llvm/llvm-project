@@ -924,8 +924,13 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
   if (getLangOpts().CPlusPlus && SanOpts.has(SanitizerKind::Function)) {
     if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D)) {
       if (llvm::Constant *PrologueSig = getPrologueSignature(CGM, FD)) {
+        // Remove any (C++17) exception specifications, to allow calling e.g. a
+        // noexcept function through a non-noexcept pointer.
+        auto ProtoTy =
+          getContext().getFunctionTypeWithExceptionSpec(FD->getType(),
+                                                        EST_None);
         llvm::Constant *FTRTTIConst =
-            CGM.GetAddrOfRTTIDescriptor(FD->getType(), /*ForEH=*/true);
+            CGM.GetAddrOfRTTIDescriptor(ProtoTy, /*ForEH=*/true);
         llvm::Constant *FTRTTIConstEncoded =
             EncodeAddrForUseInPrologue(Fn, FTRTTIConst);
         llvm::Constant *PrologueStructElems[] = {PrologueSig,

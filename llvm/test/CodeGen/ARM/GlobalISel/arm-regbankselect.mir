@@ -44,6 +44,9 @@
 
   define void @test_br() { ret void }
 
+  define void @test_phi_s32() { ret void }
+  define void @test_phi_s64() #0 { ret void }
+
   define void @test_fadd_s32() #0 { ret void }
   define void @test_fadd_s64() #0 { ret void }
 
@@ -798,6 +801,88 @@ body:             |
   bb.2:
     BX_RET 14, %noreg
 
+...
+---
+name:            test_phi_s32
+# CHECK-LABEL: name: test_phi_s32
+legalized:       true
+regBankSelected: false
+# CHECK: regBankSelected: true
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+# CHECK: { id: 0, class: gprb, preferred-register: '' }
+# CHECK: { id: 1, class: gprb, preferred-register: '' }
+# CHECK: { id: 2, class: gprb, preferred-register: '' }
+# CHECK: { id: 3, class: gprb, preferred-register: '' }
+# CHECK: { id: 4, class: gprb, preferred-register: '' }
+body:             |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: %r0, %r1, %r2
+
+    %0(s32) = COPY %r0
+    %1(s1) = G_TRUNC %0(s32)
+
+    %2(s32) = COPY %r1
+    %3(s32) = COPY %r2
+
+    G_BRCOND %1(s1), %bb.1
+    G_BR %bb.2
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+
+  bb.2:
+    %4(s32) = G_PHI %2(s32), %bb.0, %3(s32), %bb.1
+    %r0 = COPY %4(s32)
+    BX_RET 14, %noreg, implicit %r0
+...
+---
+name:            test_phi_s64
+# CHECK-LABEL: name: test_phi_s64
+legalized:       true
+regBankSelected: false
+# CHECK: regBankSelected: true
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+# CHECK: { id: 0, class: gprb, preferred-register: '' }
+# CHECK: { id: 1, class: gprb, preferred-register: '' }
+# CHECK: { id: 2, class: fprb, preferred-register: '' }
+# CHECK: { id: 3, class: fprb, preferred-register: '' }
+# CHECK: { id: 4, class: fprb, preferred-register: '' }
+body:             |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: %r0, %d0, %d1
+
+    %0(s32) = COPY %r0
+    %1(s1) = G_TRUNC %0(s32)
+
+    %2(s64) = COPY %d0
+    %3(s64) = COPY %d1
+
+    G_BRCOND %1(s1), %bb.1
+    G_BR %bb.2
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+
+  bb.2:
+    %4(s64) = G_PHI %2(s64), %bb.0, %3(s64), %bb.1
+    %d0 = COPY %4(s64)
+    BX_RET 14, %noreg, implicit %d0
 ...
 ---
 name:            test_fadd_s32

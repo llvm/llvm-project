@@ -152,3 +152,22 @@ TEST(ArchSpecTest, MergeFrom) {
   EXPECT_EQ(llvm::Triple::OSType::Linux, A.GetTriple().getOS());
   EXPECT_EQ(ArchSpec::eCore_x86_64_x86_64, A.GetCore());
 }
+
+TEST(ArchSpecTest, MergeFromMachOUnknown) {
+  class MyArchSpec : public ArchSpec {
+  public:
+    MyArchSpec() {
+      this->SetTriple("unknown-mach-64");
+      this->m_core = ArchSpec::eCore_uknownMach64;
+      this->m_byte_order = eByteOrderLittle;
+      this->m_flags = 0;
+    }
+  };
+
+  MyArchSpec A;
+  ASSERT_TRUE(A.IsValid());
+  MyArchSpec B;
+  ASSERT_TRUE(B.IsValid());
+  A.MergeFrom(B);
+  ASSERT_EQ(A.GetCore(), ArchSpec::eCore_uknownMach64);
+}

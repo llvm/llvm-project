@@ -125,7 +125,7 @@ enum LocationAtom {
   DW_OP_LLVM_fragment = 0x1000 ///< Only used in LLVM metadata.
 };
 
-enum TypeKind {
+enum TypeKind : uint8_t {
 #define HANDLE_DW_ATE(ID, NAME, VERSION, VENDOR) DW_ATE_##NAME = ID,
 #include "llvm/BinaryFormat/Dwarf.def"
   DW_ATE_lo_user = 0x80,

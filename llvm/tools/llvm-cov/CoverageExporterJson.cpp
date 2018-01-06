@@ -41,11 +41,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CoverageExporterJson.h"
 #include "CoverageReport.h"
-#include "CoverageSummaryInfo.h"
-#include "CoverageViewOptions.h"
-#include "llvm/ProfileData/Coverage/CoverageMapping.h"
-#include <stack>
 
 /// \brief The semantic version combined as a string.
 #define LLVM_COVERAGE_EXPORT_JSON_STR "2.0.0"
@@ -54,381 +51,328 @@
 #define LLVM_COVERAGE_EXPORT_JSON_TYPE_STR "llvm.coverage.json.export"
 
 using namespace llvm;
-using namespace coverage;
 
-class CoverageExporterJson {
-  const CoverageViewOptions &Options;
+CoverageExporterJson::CoverageExporterJson(
+    const coverage::CoverageMapping &CoverageMapping,
+    const CoverageViewOptions &Options, raw_ostream &OS)
+    : CoverageExporter(CoverageMapping, Options, OS) {
+  State.push(JsonState::None);
+}
 
-  /// \brief Output stream to print JSON to.
-  raw_ostream &OS;
+void CoverageExporterJson::emitSerialized(const int64_t Value) { OS << Value; }
 
-  /// \brief The full CoverageMapping object to export.
-  const CoverageMapping &Coverage;
-
-  /// \brief States that the JSON rendering machine can be in.
-  enum JsonState { None, NonEmptyElement, EmptyElement };
-
-  /// \brief Tracks state of the JSON output.
-  std::stack<JsonState> State;
-
-  /// \brief Emit a serialized scalar.
-  void emitSerialized(const int64_t Value) { OS << Value; }
-
-  /// \brief Emit a serialized string.
-  void emitSerialized(const std::string &Value) {
-    OS << "\"";
-    for (char C : Value) {
-      if (C != '\\')
-        OS << C;
-      else
-        OS << "\\\\";
-    }
-    OS << "\"";
+void CoverageExporterJson::emitSerialized(const std::string &Value) {
+  OS << "\"";
+  for (char C : Value) {
+    if (C != '\\')
+      OS << C;
+    else
+      OS << "\\\\";
   }
+  OS << "\"";
+}
 
-  /// \brief Emit a comma if there is a previous element to delimit.
-  void emitComma() {
-    if (State.top() == JsonState::NonEmptyElement) {
-      OS << ",";
-    } else if (State.top() == JsonState::EmptyElement) {
-      State.pop();
-      assert((State.size() >= 1) && "Closed too many JSON elements");
-      State.push(JsonState::NonEmptyElement);
-    }
-  }
-
-  /// \brief Emit a starting dictionary/object character.
-  void emitDictStart() {
-    emitComma();
-    State.push(JsonState::EmptyElement);
-    OS << "{";
-  }
-
-  /// \brief Emit a dictionary/object key but no value.
-  void emitDictKey(const std::string &Key) {
-    emitComma();
-    emitSerialized(Key);
-    OS << ":";
+void CoverageExporterJson::emitComma() {
+  if (State.top() == JsonState::NonEmptyElement) {
+    OS << ",";
+  } else if (State.top() == JsonState::EmptyElement) {
     State.pop();
     assert((State.size() >= 1) && "Closed too many JSON elements");
-
-    // We do not want to emit a comma after this key.
-    State.push(JsonState::EmptyElement);
+    State.push(JsonState::NonEmptyElement);
   }
+}
 
-  /// \brief Emit a dictionary/object key/value pair.
-  template <typename V>
-  void emitDictElement(const std::string &Key, const V &Value) {
-    emitComma();
-    emitSerialized(Key);
-    OS << ":";
-    emitSerialized(Value);
-  }
+void CoverageExporterJson::emitDictStart() {
+  emitComma();
+  State.push(JsonState::EmptyElement);
+  OS << "{";
+}
 
-  /// \brief Emit a closing dictionary/object character.
-  void emitDictEnd() {
-    State.pop();
-    assert((State.size() >= 1) && "Closed too many JSON elements");
-    OS << "}";
-  }
+void CoverageExporterJson::emitDictKey(const std::string &Key) {
+  emitComma();
+  emitSerialized(Key);
+  OS << ":";
+  State.pop();
+  assert((State.size() >= 1) && "Closed too many JSON elements");
 
-  /// \brief Emit a starting array character.
-  void emitArrayStart() {
-    emitComma();
-    State.push(JsonState::EmptyElement);
-    OS << "[";
-  }
+  // We do not want to emit a comma after this key.
+  State.push(JsonState::EmptyElement);
+}
 
-  /// \brief Emit an array element.
-  template <typename V> void emitArrayElement(const V &Value) {
-    emitComma();
-    emitSerialized(Value);
-  }
+void CoverageExporterJson::emitDictEnd() {
+  State.pop();
+  assert((State.size() >= 1) && "Closed too many JSON elements");
+  OS << "}";
+}
 
-  /// \brief emit a closing array character.
-  void emitArrayEnd() {
-    State.pop();
-    assert((State.size() >= 1) && "Closed too many JSON elements");
-    OS << "]";
-  }
+void CoverageExporterJson::emitArrayStart() {
+  emitComma();
+  State.push(JsonState::EmptyElement);
+  OS << "[";
+}
 
-  /// \brief Render the CoverageMapping object.
-  void renderRoot() {
-    // Start Root of JSON object.
-    emitDictStart();
+void CoverageExporterJson::emitArrayEnd() {
+  State.pop();
+  assert((State.size() >= 1) && "Closed too many JSON elements");
+  OS << "]";
+}
 
-    emitDictElement("version", LLVM_COVERAGE_EXPORT_JSON_STR);
-    emitDictElement("type", LLVM_COVERAGE_EXPORT_JSON_TYPE_STR);
-    emitDictKey("data");
+void CoverageExporterJson::renderRoot() {
+  std::vector<std::string> SourceFiles;
+  for (StringRef SF : Coverage.getUniqueSourceFiles())
+    SourceFiles.emplace_back(SF);
+  renderRoot(SourceFiles);
+}
 
-    // Start List of Exports.
-    emitArrayStart();
+void CoverageExporterJson::renderRoot(
+    const std::vector<std::string> &SourceFiles) {
+  // Start Root of JSON object.
+  emitDictStart();
 
-    // Start Export.
-    emitDictStart();
+  emitDictElement("version", LLVM_COVERAGE_EXPORT_JSON_STR);
+  emitDictElement("type", LLVM_COVERAGE_EXPORT_JSON_TYPE_STR);
+  emitDictKey("data");
 
-    emitDictKey("files");
+  // Start List of Exports.
+  emitArrayStart();
 
-    FileCoverageSummary Totals = FileCoverageSummary("Totals");
-    std::vector<std::string> SourceFiles;
-    for (StringRef SF : Coverage.getUniqueSourceFiles())
-      SourceFiles.emplace_back(SF);
-    auto FileReports = CoverageReport::prepareFileReports(Coverage, Totals,
-                                                          SourceFiles, Options);
-    renderFiles(SourceFiles, FileReports);
+  // Start Export.
+  emitDictStart();
 
-    // Skip functions-level information for summary-only export mode.
-    if (!Options.ExportSummaryOnly) {
-      emitDictKey("functions");
-      renderFunctions(Coverage.getCoveredFunctions());
-    }
+  emitDictKey("files");
 
-    emitDictKey("totals");
-    renderSummary(Totals);
+  FileCoverageSummary Totals = FileCoverageSummary("Totals");
+  auto FileReports = CoverageReport::prepareFileReports(Coverage, Totals,
+                                                        SourceFiles, Options);
+  renderFiles(SourceFiles, FileReports);
 
-    // End Export.
-    emitDictEnd();
-
-    // End List of Exports.
-    emitArrayEnd();
-
-    // End Root of JSON Object.
-    emitDictEnd();
-
-    assert((State.top() == JsonState::None) &&
-           "All Elements In JSON were Closed");
-  }
-
-  /// \brief Render an array of all the given functions.
-  void
-  renderFunctions(const iterator_range<FunctionRecordIterator> &Functions) {
-    // Start List of Functions.
-    emitArrayStart();
-
-    for (const auto &Function : Functions) {
-      // Start Function.
-      emitDictStart();
-
-      emitDictElement("name", Function.Name);
-      emitDictElement("count", Function.ExecutionCount);
-      emitDictKey("regions");
-
-      renderRegions(Function.CountedRegions);
-
-      emitDictKey("filenames");
-
-      // Start Filenames for Function.
-      emitArrayStart();
-
-      for (const auto &FileName : Function.Filenames)
-        emitArrayElement(FileName);
-
-      // End Filenames for Function.
-      emitArrayEnd();
-
-      // End Function.
-      emitDictEnd();
-    }
-
-    // End List of Functions.
-    emitArrayEnd();
-  }
-
-  /// \brief Render an array of all the source files, also pass back a Summary.
-  void renderFiles(ArrayRef<std::string> SourceFiles,
-                   ArrayRef<FileCoverageSummary> FileReports) {
-    // Start List of Files.
-    emitArrayStart();
-
-    for (unsigned I = 0, E = SourceFiles.size(); I < E; ++I) {
-      // Render the file.
-      auto FileCoverage = Coverage.getCoverageForFile(SourceFiles[I]);
-      renderFile(FileCoverage, FileReports[I]);
-    }
-
-    // End List of Files.
-    emitArrayEnd();
-  }
-
-  /// \brief Render a single file.
-  void renderFile(const CoverageData &FileCoverage,
-                  const FileCoverageSummary &FileReport) {
-    // Start File.
-    emitDictStart();
-
-    emitDictElement("filename", FileCoverage.getFilename());
-
-    // Skip segments and expansions for summary-only export mode.
-    if (!Options.ExportSummaryOnly) {
-      emitDictKey("segments");
-
-      // Start List of Segments.
-      emitArrayStart();
-
-      for (const auto &Segment : FileCoverage)
-        renderSegment(Segment);
-
-      // End List of Segments.
-      emitArrayEnd();
-
-      emitDictKey("expansions");
-
-      // Start List of Expansions.
-      emitArrayStart();
-
-      for (const auto &Expansion : FileCoverage.getExpansions())
-        renderExpansion(Expansion);
-
-      // End List of Expansions.
-      emitArrayEnd();
-    }
-
-    emitDictKey("summary");
-    renderSummary(FileReport);
-
-    // End File.
-    emitDictEnd();
-  }
-
-  /// \brief Render a CoverageSegment.
-  void renderSegment(const CoverageSegment &Segment) {
-    // Start Segment.
-    emitArrayStart();
-
-    emitArrayElement(Segment.Line);
-    emitArrayElement(Segment.Col);
-    emitArrayElement(Segment.Count);
-    emitArrayElement(Segment.HasCount);
-    emitArrayElement(Segment.IsRegionEntry);
-
-    // End Segment.
-    emitArrayEnd();
-  }
-
-  /// \brief Render an ExpansionRecord.
-  void renderExpansion(const ExpansionRecord &Expansion) {
-    // Start Expansion.
-    emitDictStart();
-
-    // Mark the beginning and end of this expansion in the source file.
-    emitDictKey("source_region");
-    renderRegion(Expansion.Region);
-
-    // Enumerate the coverage information for the expansion.
-    emitDictKey("target_regions");
-    renderRegions(Expansion.Function.CountedRegions);
-
-    emitDictKey("filenames");
-    // Start List of Filenames to map the fileIDs.
-    emitArrayStart();
-    for (const auto &Filename : Expansion.Function.Filenames)
-      emitArrayElement(Filename);
-    // End List of Filenames.
-    emitArrayEnd();
-
-    // End Expansion.
-    emitDictEnd();
-  }
-
-  /// \brief Render a list of CountedRegions.
-  void renderRegions(ArrayRef<CountedRegion> Regions) {
-    // Start List of Regions.
-    emitArrayStart();
-
-    for (const auto &Region : Regions)
-      renderRegion(Region);
-
-    // End List of Regions.
-    emitArrayEnd();
-  }
-
-  /// \brief Render a single CountedRegion.
-  void renderRegion(const CountedRegion &Region) {
-    // Start CountedRegion.
-    emitArrayStart();
-
-    emitArrayElement(Region.LineStart);
-    emitArrayElement(Region.ColumnStart);
-    emitArrayElement(Region.LineEnd);
-    emitArrayElement(Region.ColumnEnd);
-    emitArrayElement(Region.ExecutionCount);
-    emitArrayElement(Region.FileID);
-    emitArrayElement(Region.ExpandedFileID);
-    emitArrayElement(Region.Kind);
-
-    // End CountedRegion.
-    emitArrayEnd();
-  }
-
-  /// \brief Render a FileCoverageSummary.
-  void renderSummary(const FileCoverageSummary &Summary) {
-    // Start Summary for the file.
-    emitDictStart();
-
-    emitDictKey("lines");
-
-    // Start Line Coverage Summary.
-    emitDictStart();
-    emitDictElement("count", Summary.LineCoverage.getNumLines());
-    emitDictElement("covered", Summary.LineCoverage.getCovered());
-    emitDictElement("percent", Summary.LineCoverage.getPercentCovered());
-    // End Line Coverage Summary.
-    emitDictEnd();
-
+  // Skip functions-level information for summary-only export mode.
+  if (!Options.ExportSummaryOnly) {
     emitDictKey("functions");
+    renderFunctions(Coverage.getCoveredFunctions());
+  }
 
-    // Start Function Coverage Summary.
+  emitDictKey("totals");
+  renderSummary(Totals);
+
+  // End Export.
+  emitDictEnd();
+
+  // End List of Exports.
+  emitArrayEnd();
+
+  // End Root of JSON Object.
+  emitDictEnd();
+
+  assert((State.top() == JsonState::None) &&
+         "All Elements In JSON were Closed");
+}
+
+void CoverageExporterJson::renderFunctions(
+    const iterator_range<coverage::FunctionRecordIterator> &Functions) {
+  // Start List of Functions.
+  emitArrayStart();
+
+  for (const auto &Function : Functions) {
+    // Start Function.
     emitDictStart();
-    emitDictElement("count", Summary.FunctionCoverage.getNumFunctions());
-    emitDictElement("covered", Summary.FunctionCoverage.getExecuted());
-    emitDictElement("percent", Summary.FunctionCoverage.getPercentCovered());
-    // End Function Coverage Summary.
-    emitDictEnd();
 
-    emitDictKey("instantiations");
-
-    // Start Instantiation Coverage Summary.
-    emitDictStart();
-    emitDictElement("count", Summary.InstantiationCoverage.getNumFunctions());
-    emitDictElement("covered", Summary.InstantiationCoverage.getExecuted());
-    emitDictElement("percent",
-                    Summary.InstantiationCoverage.getPercentCovered());
-    // End Function Coverage Summary.
-    emitDictEnd();
-
+    emitDictElement("name", Function.Name);
+    emitDictElement("count", Function.ExecutionCount);
     emitDictKey("regions");
 
-    // Start Region Coverage Summary.
-    emitDictStart();
-    emitDictElement("count", Summary.RegionCoverage.getNumRegions());
-    emitDictElement("covered", Summary.RegionCoverage.getCovered());
-    emitDictElement("notcovered",
-                    Summary.RegionCoverage.getNumRegions() -
-                        Summary.RegionCoverage.getCovered());
-    emitDictElement("percent", Summary.RegionCoverage.getPercentCovered());
-    // End Region Coverage Summary.
-    emitDictEnd();
+    renderRegions(Function.CountedRegions);
 
-    // End Summary for the file.
+    emitDictKey("filenames");
+
+    // Start Filenames for Function.
+    emitArrayStart();
+
+    for (const auto &FileName : Function.Filenames)
+      emitArrayElement(FileName);
+
+    // End Filenames for Function.
+    emitArrayEnd();
+
+    // End Function.
     emitDictEnd();
   }
 
-public:
-  CoverageExporterJson(const CoverageMapping &CoverageMapping,
-                       const CoverageViewOptions &Options, raw_ostream &OS)
-      : Options(Options), OS(OS), Coverage(CoverageMapping) {
-    State.push(JsonState::None);
+  // End List of Functions.
+  emitArrayEnd();
+}
+
+void CoverageExporterJson::renderFiles(
+    ArrayRef<std::string> SourceFiles,
+    ArrayRef<FileCoverageSummary> FileReports) {
+  // Start List of Files.
+  emitArrayStart();
+
+  for (unsigned I = 0, E = SourceFiles.size(); I < E; ++I) {
+    // Render the file.
+    auto FileCoverage = Coverage.getCoverageForFile(SourceFiles[I]);
+    renderFile(FileCoverage, FileReports[I]);
   }
 
-  /// \brief Print the CoverageMapping.
-  void print() { renderRoot(); }
-};
+  // End List of Files.
+  emitArrayEnd();
+}
 
-/// \brief Export the given CoverageMapping to a JSON Format.
-void exportCoverageDataToJson(const CoverageMapping &CoverageMapping,
-                              const CoverageViewOptions &Options,
-                              raw_ostream &OS) {
-  auto Exporter = CoverageExporterJson(CoverageMapping, Options, OS);
+void CoverageExporterJson::renderFile(
+    const coverage::CoverageData &FileCoverage,
+    const FileCoverageSummary &FileReport) {
+  // Start File.
+  emitDictStart();
 
-  Exporter.print();
+  emitDictElement("filename", FileCoverage.getFilename());
+
+  // Skip segments and expansions for summary-only export mode.
+  if (!Options.ExportSummaryOnly) {
+    emitDictKey("segments");
+
+    // Start List of Segments.
+    emitArrayStart();
+
+    for (const auto &Segment : FileCoverage)
+      renderSegment(Segment);
+
+    // End List of Segments.
+    emitArrayEnd();
+
+    emitDictKey("expansions");
+
+    // Start List of Expansions.
+    emitArrayStart();
+
+    for (const auto &Expansion : FileCoverage.getExpansions())
+      renderExpansion(Expansion);
+
+    // End List of Expansions.
+    emitArrayEnd();
+  }
+
+  emitDictKey("summary");
+  renderSummary(FileReport);
+
+  // End File.
+  emitDictEnd();
+}
+
+void CoverageExporterJson::renderSegment(
+    const coverage::CoverageSegment &Segment) {
+  // Start Segment.
+  emitArrayStart();
+
+  emitArrayElement(Segment.Line);
+  emitArrayElement(Segment.Col);
+  emitArrayElement(Segment.Count);
+  emitArrayElement(Segment.HasCount);
+  emitArrayElement(Segment.IsRegionEntry);
+
+  // End Segment.
+  emitArrayEnd();
+}
+
+void CoverageExporterJson::renderExpansion(
+    const coverage::ExpansionRecord &Expansion) {
+  // Start Expansion.
+  emitDictStart();
+
+  // Mark the beginning and end of this expansion in the source file.
+  emitDictKey("source_region");
+  renderRegion(Expansion.Region);
+
+  // Enumerate the coverage information for the expansion.
+  emitDictKey("target_regions");
+  renderRegions(Expansion.Function.CountedRegions);
+
+  emitDictKey("filenames");
+  // Start List of Filenames to map the fileIDs.
+  emitArrayStart();
+  for (const auto &Filename : Expansion.Function.Filenames)
+    emitArrayElement(Filename);
+  // End List of Filenames.
+  emitArrayEnd();
+
+  // End Expansion.
+  emitDictEnd();
+}
+
+void CoverageExporterJson::renderRegions(
+    ArrayRef<coverage::CountedRegion> Regions) {
+  // Start List of Regions.
+  emitArrayStart();
+
+  for (const auto &Region : Regions)
+    renderRegion(Region);
+
+  // End List of Regions.
+  emitArrayEnd();
+}
+
+void CoverageExporterJson::renderRegion(const coverage::CountedRegion &Region) {
+  // Start CountedRegion.
+  emitArrayStart();
+
+  emitArrayElement(Region.LineStart);
+  emitArrayElement(Region.ColumnStart);
+  emitArrayElement(Region.LineEnd);
+  emitArrayElement(Region.ColumnEnd);
+  emitArrayElement(Region.ExecutionCount);
+  emitArrayElement(Region.FileID);
+  emitArrayElement(Region.ExpandedFileID);
+  emitArrayElement(Region.Kind);
+
+  // End CountedRegion.
+  emitArrayEnd();
+}
+
+void CoverageExporterJson::renderSummary(const FileCoverageSummary &Summary) {
+  // Start Summary for the file.
+  emitDictStart();
+
+  emitDictKey("lines");
+
+  // Start Line Coverage Summary.
+  emitDictStart();
+  emitDictElement("count", Summary.LineCoverage.getNumLines());
+  emitDictElement("covered", Summary.LineCoverage.getCovered());
+  emitDictElement("percent", Summary.LineCoverage.getPercentCovered());
+  // End Line Coverage Summary.
+  emitDictEnd();
+
+  emitDictKey("functions");
+
+  // Start Function Coverage Summary.
+  emitDictStart();
+  emitDictElement("count", Summary.FunctionCoverage.getNumFunctions());
+  emitDictElement("covered", Summary.FunctionCoverage.getExecuted());
+  emitDictElement("percent", Summary.FunctionCoverage.getPercentCovered());
+  // End Function Coverage Summary.
+  emitDictEnd();
+
+  emitDictKey("instantiations");
+
+  // Start Instantiation Coverage Summary.
+  emitDictStart();
+  emitDictElement("count", Summary.InstantiationCoverage.getNumFunctions());
+  emitDictElement("covered", Summary.InstantiationCoverage.getExecuted());
+  emitDictElement("percent", Summary.InstantiationCoverage.getPercentCovered());
+  // End Function Coverage Summary.
+  emitDictEnd();
+
+  emitDictKey("regions");
+
+  // Start Region Coverage Summary.
+  emitDictStart();
+  emitDictElement("count", Summary.RegionCoverage.getNumRegions());
+  emitDictElement("covered", Summary.RegionCoverage.getCovered());
+  emitDictElement("notcovered", Summary.RegionCoverage.getNumRegions() -
+                                    Summary.RegionCoverage.getCovered());
+  emitDictElement("percent", Summary.RegionCoverage.getPercentCovered());
+  // End Region Coverage Summary.
+  emitDictEnd();
+
+  // End Summary for the file.
+  emitDictEnd();
 }

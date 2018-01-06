@@ -87,8 +87,8 @@ extern void __kmp_validate_locks(void);
 // ----------------------------------------------------------------------------
 //  There are 5 lock implementations:
 //       1. Test and set locks.
-//       2. futex locks (Linux* OS on x86 and Intel(R) Many Integrated Core
-//       architecture)
+//       2. futex locks (Linux* OS on x86 and
+//          Intel(R) Many Integrated Core Architecture)
 //       3. Ticket (Lamport bakery) locks.
 //       4. Queuing locks (with separate spin fields).
 //       5. DRPA (Dynamically Reconfigurable Distributed Polling Area) locks

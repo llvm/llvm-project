@@ -52,8 +52,10 @@ protected:
   unsigned Inherited : 1;
   unsigned IsPackExpansion : 1;
   unsigned Implicit : 1;
+  // FIXME: These are properties of the attribute kind, not state for this
+  // instance of the attribute.
   unsigned IsLateParsed : 1;
-  unsigned DuplicatesAllowed : 1;
+  unsigned InheritEvenIfAlreadyPresent : 1;
 
   void *operator new(size_t bytes) noexcept {
     llvm_unreachable("Attrs cannot be allocated with regular 'new'.");
@@ -74,10 +76,10 @@ public:
 
 protected:
   Attr(attr::Kind AK, SourceRange R, unsigned SpellingListIndex,
-       bool IsLateParsed, bool DuplicatesAllowed)
+       bool IsLateParsed)
     : Range(R), AttrKind(AK), SpellingListIndex(SpellingListIndex),
       Inherited(false), IsPackExpansion(false), Implicit(false),
-      IsLateParsed(IsLateParsed), DuplicatesAllowed(DuplicatesAllowed) {}
+      IsLateParsed(IsLateParsed), InheritEvenIfAlreadyPresent(false) {}
 
 public:
 
@@ -109,18 +111,13 @@ public:
 
   // Pretty print this attribute.
   void printPretty(raw_ostream &OS, const PrintingPolicy &Policy) const;
-
-  /// \brief By default, attributes cannot be duplicated when being merged;
-  /// however, an attribute can override this. Returns true if the attribute
-  /// can be duplicated when merging.
-  bool duplicatesAllowed() const { return DuplicatesAllowed; }
 };
 
 class StmtAttr : public Attr {
 protected:
   StmtAttr(attr::Kind AK, SourceRange R, unsigned SpellingListIndex,
-                  bool IsLateParsed, bool DuplicatesAllowed)
-      : Attr(AK, R, SpellingListIndex, IsLateParsed, DuplicatesAllowed) {}
+                  bool IsLateParsed)
+      : Attr(AK, R, SpellingListIndex, IsLateParsed) {}
 
 public:
   static bool classof(const Attr *A) {
@@ -132,11 +129,19 @@ public:
 class InheritableAttr : public Attr {
 protected:
   InheritableAttr(attr::Kind AK, SourceRange R, unsigned SpellingListIndex,
-                  bool IsLateParsed, bool DuplicatesAllowed)
-      : Attr(AK, R, SpellingListIndex, IsLateParsed, DuplicatesAllowed) {}
+                  bool IsLateParsed, bool InheritEvenIfAlreadyPresent)
+      : Attr(AK, R, SpellingListIndex, IsLateParsed) {
+    this->InheritEvenIfAlreadyPresent = InheritEvenIfAlreadyPresent;
+  }
 
 public:
   void setInherited(bool I) { Inherited = I; }
+
+  /// Should this attribute be inherited from a prior declaration even if it's
+  /// explicitly provided in the current declaration?
+  bool shouldInheritEvenIfAlreadyPresent() const {
+    return InheritEvenIfAlreadyPresent;
+  }
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Attr *A) {
@@ -148,9 +153,9 @@ public:
 class InheritableParamAttr : public InheritableAttr {
 protected:
   InheritableParamAttr(attr::Kind AK, SourceRange R, unsigned SpellingListIndex,
-                       bool IsLateParsed, bool DuplicatesAllowed)
+                       bool IsLateParsed, bool InheritEvenIfAlreadyPresent)
       : InheritableAttr(AK, R, SpellingListIndex, IsLateParsed,
-                        DuplicatesAllowed) {}
+                        InheritEvenIfAlreadyPresent) {}
 
 public:
   // Implement isa/cast/dyncast/etc.
@@ -166,9 +171,9 @@ class ParameterABIAttr : public InheritableParamAttr {
 protected:
   ParameterABIAttr(attr::Kind AK, SourceRange R,
                    unsigned SpellingListIndex, bool IsLateParsed,
-                   bool DuplicatesAllowed)
+                   bool InheritEvenIfAlreadyPresent)
     : InheritableParamAttr(AK, R, SpellingListIndex, IsLateParsed,
-                           DuplicatesAllowed) {}
+                           InheritEvenIfAlreadyPresent) {}
 
 public:
   ParameterABI getABI() const {

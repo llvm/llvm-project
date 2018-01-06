@@ -38,6 +38,8 @@ the command line. To get you set up, follow the
 You can learn more about how to use arc to interact with
 Phabricator in the `Arcanist User Guide`_.
 
+.. _phabricator-request-review-web:
+
 Requesting a review via the web interface
 -----------------------------------------
 
