@@ -214,6 +214,7 @@ public:
   const SectionBase *getStrTab() const { return SymbolNames; }
   const Symbol *getSymbolByIndex(uint32_t Index) const;
   void removeSectionReferences(const SectionBase *Sec) override;
+  void localize(std::function<bool(const Symbol &)> ToLocalize);
   void initialize(SectionTableRef SecTable) override;
   void finalize() override;
 
@@ -384,7 +385,7 @@ public:
   Object(const object::ELFObjectFile<ELFT> &Obj);
   virtual ~Object() = default;
 
-  const SymbolTableSection *getSymTab() const { return SymbolTable; }
+  SymbolTableSection *getSymTab() const { return SymbolTable; }
   const SectionBase *getSectionHeaderStrTab() const { return SectionNames; }
   void removeSections(std::function<bool(const SectionBase &)> ToRemove);
   void addSection(StringRef SecName, ArrayRef<uint8_t> Data);

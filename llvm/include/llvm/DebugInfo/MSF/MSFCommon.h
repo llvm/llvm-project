@@ -52,6 +52,16 @@ struct SuperBlock {
 struct MSFLayout {
   MSFLayout() = default;
 
+  uint32_t mainFpmBlock() const {
+    assert(SB->FreeBlockMapBlock == 1 || SB->FreeBlockMapBlock == 2);
+    return SB->FreeBlockMapBlock;
+  }
+
+  uint32_t alternateFpmBlock() const {
+    // If mainFpmBlock is 1, this is 2.  If mainFpmBlock is 2, this is 1.
+    return 3U - mainFpmBlock();
+  }
+
   const SuperBlock *SB = nullptr;
   BitVector FreePageMap;
   ArrayRef<support::ulittle32_t> DirectoryBlocks;
@@ -108,14 +118,40 @@ inline uint32_t getFpmIntervalLength(const MSFLayout &L) {
   return L.SB->BlockSize;
 }
 
-inline uint32_t getNumFpmIntervals(const MSFLayout &L,
-                                   bool IncludeUnusedFpmData = false) {
-  if (IncludeUnusedFpmData)
-    return divideCeil(L.SB->NumBlocks, L.SB->BlockSize);
+/// Given an MSF with the specified block size and number of blocks, determine
+/// how many pieces the specified Fpm is split into.
+/// \p BlockSize - the block size of the MSF
+/// \p NumBlocks - the total number of blocks in the MSF
+/// \p IncludeUnusedFpmData - When true, this will count every block that is
+///    both in the file and matches the form of an FPM block, even if some of
+///    those FPM blocks are unused (a single FPM block can describe the
+///    allocation status of up to 32,767 blocks, although one appears only
+///    every 4,096 blocks).  So there are 8x as many blocks that match the
+///    form as there are blocks that are necessary to describe the allocation
+///    status of the file.  When this parameter is false, these extraneous
+///    trailing blocks are not counted.
+inline uint32_t getNumFpmIntervals(uint32_t BlockSize, uint32_t NumBlocks,
+                                   bool IncludeUnusedFpmData, int FpmNumber) {
+  assert(FpmNumber == 1 || FpmNumber == 2);
+  if (IncludeUnusedFpmData) {
+    // This calculation determines how many times a number of the form
+    // BlockSize * k + N appears in the range [0, NumBlocks).  We only need to
+    // do this when unused data is included, since the number of blocks dwarfs
+    // the number of fpm blocks.
+    return divideCeil(NumBlocks - FpmNumber, BlockSize);
+  }
 
   // We want the minimum number of intervals required, where each interval can
   // represent BlockSize * 8 blocks.
-  return divideCeil(L.SB->NumBlocks, 8 * L.SB->BlockSize);
+  return divideCeil(NumBlocks, 8 * BlockSize);
+}
+
+inline uint32_t getNumFpmIntervals(const MSFLayout &L,
+                                   bool IncludeUnusedFpmData = false,
+                                   bool AltFpm = false) {
+  return getNumFpmIntervals(L.SB->BlockSize, L.SB->NumBlocks,
+                            IncludeUnusedFpmData,
+                            AltFpm ? L.alternateFpmBlock() : L.mainFpmBlock());
 }
 
 Error validateSuperBlock(const SuperBlock &SB);

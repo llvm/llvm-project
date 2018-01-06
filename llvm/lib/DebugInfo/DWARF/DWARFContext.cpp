@@ -82,7 +82,8 @@ static void dumpUUID(raw_ostream &OS, const ObjectFile &Obj) {
       OS << "UUID: ";
       memcpy(&UUID, LC.Ptr+sizeof(LC.C), sizeof(UUID));
       OS.write_uuid(UUID);
-      OS << ' ' << MachO->getFileFormatName();
+      Triple T = MachO->getArchTriple();
+      OS << " (" << T.getArchName() << ')';
       OS << ' ' << MachO->getFileName() << '\n';
     }
   }

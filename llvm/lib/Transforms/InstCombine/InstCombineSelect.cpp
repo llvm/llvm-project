@@ -1551,6 +1551,18 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
         Value *NewCast = Builder.CreateCast(CastOp, NewSI, SelType);
         return replaceInstUsesWith(SI, NewCast);
       }
+
+      // MAX(~a, ~b) -> ~MIN(a, b)
+      // MIN(~a, ~b) -> ~MAX(a, b)
+      Value *A, *B;
+      if (match(LHS, m_Not(m_Value(A))) && LHS->getNumUses() <= 2 &&
+          match(RHS, m_Not(m_Value(B))) && RHS->getNumUses() <= 2) {
+        CmpInst::Predicate InvertedPred =
+            getCmpPredicateForMinMax(getInverseMinMaxSelectPattern(SPF));
+        Value *InvertedCmp = Builder.CreateICmp(InvertedPred, A, B);
+        Value *NewSel = Builder.CreateSelect(InvertedCmp, A, B);
+        return BinaryOperator::CreateNot(NewSel);
+      }
     }
 
     if (SPF) {
@@ -1568,28 +1580,6 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
         if (Instruction *R = foldSPFofSPF(cast<Instruction>(RHS),SPF2,LHS2,RHS2,
                                           SI, SPF, LHS))
           return R;
-    }
-
-    // MAX(~a, ~b) -> ~MIN(a, b)
-    if ((SPF == SPF_SMAX || SPF == SPF_UMAX) &&
-        IsFreeToInvert(LHS, LHS->hasNUses(2)) &&
-        IsFreeToInvert(RHS, RHS->hasNUses(2))) {
-      // For this transform to be profitable, we need to eliminate at least two
-      // 'not' instructions if we're going to add one 'not' instruction.
-      int NumberOfNots =
-          (LHS->hasNUses(2) && match(LHS, m_Not(m_Value()))) +
-          (RHS->hasNUses(2) && match(RHS, m_Not(m_Value()))) +
-          (SI.hasOneUse() && match(*SI.user_begin(), m_Not(m_Value())));
-
-      if (NumberOfNots >= 2) {
-        Value *NewLHS = Builder.CreateNot(LHS);
-        Value *NewRHS = Builder.CreateNot(RHS);
-        Value *NewCmp = SPF == SPF_SMAX ? Builder.CreateICmpSLT(NewLHS, NewRHS)
-                                        : Builder.CreateICmpULT(NewLHS, NewRHS);
-        Value *NewSI =
-            Builder.CreateNot(Builder.CreateSelect(NewCmp, NewLHS, NewRHS));
-        return replaceInstUsesWith(SI, NewSI);
-      }
     }
 
     // TODO.

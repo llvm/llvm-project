@@ -19,7 +19,6 @@ except ImportError:
 import optrecord
 import argparse
 from collections import defaultdict
-from multiprocessing import cpu_count, Pool
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=desc)
@@ -34,7 +33,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--jobs',
         '-j',
-        default=cpu_count(),
+        default=None,
         type=int,
         help='Max job count (defaults to %(default)s, the current CPU count)')
     parser.add_argument(

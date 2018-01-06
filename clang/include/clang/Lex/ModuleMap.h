@@ -198,16 +198,14 @@ private:
   /// header.
   llvm::DenseMap<const DirectoryEntry *, Module *> UmbrellaDirs;
 
-  /// \brief The set of modules provided explicitly (e.g. by -fmodule-map-file),
-  /// which are allowed to shadow other implicitly discovered modules.
-  llvm::DenseSet<const Module *> ExplicitlyProvidedModules;
+  /// \brief A generation counter that is used to test whether modules of the
+  /// same name may shadow or are illegal redefintions.
+  ///
+  /// Modules from earlier scopes may shadow modules from later ones.
+  /// Modules from the same scope may not have the same name.
+  unsigned CurrentModuleScopeID = 0;
 
-  bool mayShadowModuleBeingParsed(Module *ExistingModule,
-                                  bool IsExplicitlyProvided) {
-    assert(!ExistingModule->Parent && "expected top-level module");
-    return !IsExplicitlyProvided &&
-           ExplicitlyProvidedModules.count(ExistingModule);
-  }
+  llvm::DenseMap<Module *, unsigned> ModuleScopeIDs;
 
   /// \brief The set of attributes that can be attached to a module.
   struct Attributes {
@@ -489,9 +487,9 @@ public:
   ///
   /// \returns The found or newly-created module, along with a boolean value
   /// that will be true if the module is newly-created.
-  std::pair<Module *, bool>
-  findOrCreateModule(StringRef Name, Module *Parent, bool IsFramework,
-                     bool IsExplicit, bool UsesExplicitModuleMapFile = false);
+  std::pair<Module *, bool> findOrCreateModule(StringRef Name, Module *Parent,
+                                               bool IsFramework,
+                                               bool IsExplicit);
 
   /// \brief Create a 'global module' for a C++ Modules TS module interface
   /// unit.
@@ -520,6 +518,19 @@ public:
   /// \p ShadowingModule.
   Module *createShadowedModule(StringRef Name, bool IsFramework,
                                Module *ShadowingModule);
+
+  /// \brief Creates a new declaration scope for module names, allowing
+  /// previously defined modules to shadow definitions from the new scope.
+  ///
+  /// \note Module names from earlier scopes will shadow names from the new
+  /// scope, which is the opposite of how shadowing works for variables.
+  void finishModuleDeclarationScope() { CurrentModuleScopeID += 1; }
+
+  bool mayShadowNewModule(Module *ExistingModule) {
+    assert(!ExistingModule->Parent && "expected top-level module");
+    assert(ModuleScopeIDs.count(ExistingModule) && "unknown module");
+    return ModuleScopeIDs[ExistingModule] < CurrentModuleScopeID;
+  }
 
   /// \brief Retrieve the module map file containing the definition of the given
   /// module.
@@ -606,8 +617,6 @@ public:
   /// \brief Marks this header as being excluded from the given module.
   void excludeHeader(Module *Mod, Module::Header Header);
 
-  void setExplicitlyProvided(Module *Mod);
-
   /// \brief Parse the given module map file, and record any modules we 
   /// encounter.
   ///
@@ -634,7 +643,6 @@ public:
   /// \returns true if an error occurred, false otherwise.
   bool parseModuleMapFile(const FileEntry *File, bool IsSystem,
                           const DirectoryEntry *HomeDir,
-                          bool IsExplicitlyProvided = false,
                           FileID ID = FileID(), unsigned *Offset = nullptr,
                           SourceLocation ExternModuleLoc = SourceLocation());
 

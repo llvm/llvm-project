@@ -277,7 +277,7 @@ int AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
       // same as the second operand. In this case, we will generate a "long"
       // version of the widening instruction.
       if (auto *Cast = dyn_cast<CastInst>(SingleUser->getOperand(1)))
-        if (I->getOpcode() == Cast->getOpcode() &&
+        if (I->getOpcode() == unsigned(Cast->getOpcode()) &&
             cast<CastInst>(I)->getSrcTy() == Cast->getSrcTy())
           return 0;
     }
