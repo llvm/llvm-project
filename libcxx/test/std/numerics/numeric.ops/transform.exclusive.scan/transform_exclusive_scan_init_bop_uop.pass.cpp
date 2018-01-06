@@ -105,7 +105,7 @@ void basic_tests()
     std::iota(v.begin(), v.end(), 0);
     std::transform_exclusive_scan(v.begin(), v.end(), v.begin(), 30, std::plus<>(), add_ten{});
     for (size_t i = 0; i < v.size(); ++i)
-        assert(v[i] == 30 + triangle(i - 1) + i * 10);
+        assert(v[i] == 30 + triangle(i - 1) + (int) i * 10);
     }
 
     {
@@ -113,7 +113,7 @@ void basic_tests()
     std::iota(v.begin(), v.end(), 1);
     std::transform_exclusive_scan(v.begin(), v.end(), v.begin(), 40, std::plus<>(), add_ten{});
     for (size_t i = 0; i < v.size(); ++i)
-        assert(v[i] == 40 + triangle(i) + i * 10);
+        assert(v[i] == 40 + triangle(i) + (int) i * 10);
     }
 
     {

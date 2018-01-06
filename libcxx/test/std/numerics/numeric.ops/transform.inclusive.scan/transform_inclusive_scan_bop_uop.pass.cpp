@@ -96,7 +96,7 @@ void basic_tests()
     std::iota(v.begin(), v.end(), 0);
     std::transform_inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), add_ten{});
     for (size_t i = 0; i < v.size(); ++i)
-        assert(v[i] == triangle(i) + (i + 1) * 10);
+        assert(v[i] == triangle(i) + (int)(i + 1) * 10);
     }
 
     {
@@ -104,7 +104,7 @@ void basic_tests()
     std::iota(v.begin(), v.end(), 1);
     std::transform_inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), add_ten{});
     for (size_t i = 0; i < v.size(); ++i)
-        assert(v[i] == triangle(i + 1) + (i + 1) * 10);
+        assert(v[i] == triangle(i + 1) + (int)(i + 1) * 10);
     }
 
     {
