@@ -10572,8 +10572,8 @@ multiclass GF2P8MULB_avx512_common<bits<8> Op, string OpStr, SDNode OpNode> {
   }
 }
 
-defm GF2P8MULB : GF2P8MULB_avx512_common<0xCF, "vgf2p8mulb", X86GF2P8mulb>,
-                 EVEX_CD8<8, CD8VF>, T8PD;
+defm VGF2P8MULB : GF2P8MULB_avx512_common<0xCF, "vgf2p8mulb", X86GF2P8mulb>,
+                  EVEX_CD8<8, CD8VF>, T8PD;
 
 multiclass GF2P8AFFINE_avx512_rmb_imm<bits<8> Op, string OpStr, SDNode OpNode,
                                       OpndItins itins, X86VectorVTInfo VTI,
@@ -10603,10 +10603,10 @@ multiclass GF2P8AFFINE_avx512_common<bits<8> Op, string OpStr, SDNode OpNode,
   }
 }
 
-defm GF2P8AFFINEINVQB : GF2P8AFFINE_avx512_common<0xCF, "vgf2p8affineinvqb",
-                        X86GF2P8affineinvqb, SSE_INTMUL_ITINS_P>,
-                        EVEX_4V, EVEX_CD8<8, CD8VF>, VEX_W, AVX512AIi8Base;
-defm GF2P8AFFINEQB    : GF2P8AFFINE_avx512_common<0xCE, "vgf2p8affineqb",
-                        X86GF2P8affineqb, SSE_INTMUL_ITINS_P>,
-                        EVEX_4V, EVEX_CD8<8, CD8VF>, VEX_W, AVX512AIi8Base;
+defm VGF2P8AFFINEINVQB : GF2P8AFFINE_avx512_common<0xCF, "vgf2p8affineinvqb",
+                         X86GF2P8affineinvqb, SSE_INTMUL_ITINS_P>,
+                         EVEX_4V, EVEX_CD8<8, CD8VF>, VEX_W, AVX512AIi8Base;
+defm VGF2P8AFFINEQB    : GF2P8AFFINE_avx512_common<0xCE, "vgf2p8affineqb",
+                         X86GF2P8affineqb, SSE_INTMUL_ITINS_P>,
+                         EVEX_4V, EVEX_CD8<8, CD8VF>, VEX_W, AVX512AIi8Base;
 
