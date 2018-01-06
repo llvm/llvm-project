@@ -1289,8 +1289,8 @@ void llvm::findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues, Value *V) {
           DbgValues.push_back(DVI);
 }
 
-static void findDbgUsers(SmallVectorImpl<DbgInfoIntrinsic *> &DbgUsers,
-                         Value *V) {
+void llvm::findDbgUsers(SmallVectorImpl<DbgInfoIntrinsic *> &DbgUsers,
+                        Value *V) {
   if (auto *L = LocalAsMetadata::getIfExists(V))
     if (auto *MDV = MetadataAsValue::getIfExists(V->getContext(), L))
       for (User *U : MDV->users())
@@ -1365,63 +1365,59 @@ void llvm::replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
 }
 
 void llvm::salvageDebugInfo(Instruction &I) {
-  SmallVector<DbgValueInst *, 1> DbgValues;
+  SmallVector<DbgInfoIntrinsic *, 1> DbgUsers;
+  findDbgUsers(DbgUsers, &I);
+  if (DbgUsers.empty())
+    return;
+
   auto &M = *I.getModule();
 
   auto wrapMD = [&](Value *V) {
     return MetadataAsValue::get(I.getContext(), ValueAsMetadata::get(V));
   };
 
-  auto applyOffset = [&](DbgValueInst *DVI, uint64_t Offset) {
-    auto *DIExpr = DVI->getExpression();
+  auto applyOffset = [&](DbgInfoIntrinsic *DII, uint64_t Offset) {
+    auto *DIExpr = DII->getExpression();
     DIExpr = DIExpression::prepend(DIExpr, DIExpression::NoDeref, Offset,
                                    DIExpression::NoDeref,
                                    DIExpression::WithStackValue);
-    DVI->setOperand(0, wrapMD(I.getOperand(0)));
-    DVI->setOperand(2, MetadataAsValue::get(I.getContext(), DIExpr));
-    DEBUG(dbgs() << "SALVAGE: " << *DVI << '\n');
+    DII->setOperand(0, wrapMD(I.getOperand(0)));
+    DII->setOperand(2, MetadataAsValue::get(I.getContext(), DIExpr));
+    DEBUG(dbgs() << "SALVAGE: " << *DII << '\n');
   };
 
   if (isa<BitCastInst>(&I) || isa<IntToPtrInst>(&I)) {
     // Bitcasts are entirely irrelevant for debug info. Rewrite dbg.value,
     // dbg.addr, and dbg.declare to use the cast's source.
-    SmallVector<DbgInfoIntrinsic *, 1> DbgUsers;
-    findDbgUsers(DbgUsers, &I);
     for (auto *DII : DbgUsers) {
       DII->setOperand(0, wrapMD(I.getOperand(0)));
       DEBUG(dbgs() << "SALVAGE: " << *DII << '\n');
     }
   } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
-    findDbgValues(DbgValues, &I);
-    for (auto *DVI : DbgValues) {
-      unsigned BitWidth =
-          M.getDataLayout().getPointerSizeInBits(GEP->getPointerAddressSpace());
-      APInt Offset(BitWidth, 0);
-      // Rewrite a constant GEP into a DIExpression.  Since we are performing
-      // arithmetic to compute the variable's *value* in the DIExpression, we
-      // need to mark the expression with a DW_OP_stack_value.
-      if (GEP->accumulateConstantOffset(M.getDataLayout(), Offset))
-        // GEP offsets are i32 and thus always fit into an int64_t.
-        applyOffset(DVI, Offset.getSExtValue());
-    }
+    unsigned BitWidth =
+        M.getDataLayout().getPointerSizeInBits(GEP->getPointerAddressSpace());
+    // Rewrite a constant GEP into a DIExpression.  Since we are performing
+    // arithmetic to compute the variable's *value* in the DIExpression, we
+    // need to mark the expression with a DW_OP_stack_value.
+    APInt Offset(BitWidth, 0);
+    if (GEP->accumulateConstantOffset(M.getDataLayout(), Offset))
+      for (auto *DII : DbgUsers)
+        applyOffset(DII, Offset.getSExtValue());
   } else if (auto *BI = dyn_cast<BinaryOperator>(&I)) {
     if (BI->getOpcode() == Instruction::Add)
       if (auto *ConstInt = dyn_cast<ConstantInt>(I.getOperand(1)))
-        if (ConstInt->getBitWidth() <= 64) {
-          APInt Offset = ConstInt->getValue();
-          findDbgValues(DbgValues, &I);
-          for (auto *DVI : DbgValues)
-            applyOffset(DVI, Offset.getSExtValue());
-        }
+        if (ConstInt->getBitWidth() <= 64)
+          for (auto *DII : DbgUsers)
+            applyOffset(DII, ConstInt->getSExtValue());
   } else if (isa<LoadInst>(&I)) {
-    findDbgValues(DbgValues, &I);
-    for (auto *DVI : DbgValues) {
+    MetadataAsValue *AddrMD = wrapMD(I.getOperand(0));
+    for (auto *DII : DbgUsers) {
       // Rewrite the load into DW_OP_deref.
-      auto *DIExpr = DVI->getExpression();
+      auto *DIExpr = DII->getExpression();
       DIExpr = DIExpression::prepend(DIExpr, DIExpression::WithDeref);
-      DVI->setOperand(0, wrapMD(I.getOperand(0)));
-      DVI->setOperand(2, MetadataAsValue::get(I.getContext(), DIExpr));
-      DEBUG(dbgs() << "SALVAGE:  " << *DVI << '\n');
+      DII->setOperand(0, AddrMD);
+      DII->setOperand(2, MetadataAsValue::get(I.getContext(), DIExpr));
+      DEBUG(dbgs() << "SALVAGE:  " << *DII << '\n');
     }
   }
 }

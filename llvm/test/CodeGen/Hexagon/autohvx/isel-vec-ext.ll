@@ -4,7 +4,7 @@ target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i
 target triple = "hexagon"
 
 ; CHECK-LABEL: danny:
-; CHECK: vsxt
+; CHECK: vunpack
 ; CHECK-NOT: vinsert
 define void @danny() local_unnamed_addr #0 {
 b2:
@@ -15,7 +15,7 @@ b2:
 }
 
 ; CHECK-LABEL: sammy:
-; CHECK: vsxt
+; CHECK: vunpack
 ; CHECK-NOT: vinsert
 define void @sammy() local_unnamed_addr #1 {
 b2:

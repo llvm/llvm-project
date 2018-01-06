@@ -16,8 +16,11 @@
 //
 
 #include <numeric>
-#include <vector>
+#include <algorithm>
 #include <cassert>
+#include <functional>
+#include <iterator>
+#include <vector>
 
 #include "test_iterators.h"
 

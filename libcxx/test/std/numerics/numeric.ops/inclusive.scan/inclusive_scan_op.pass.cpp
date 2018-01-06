@@ -17,9 +17,12 @@
 //                    BinaryOperation binary_op); // C++17
 
 #include <numeric>
-#include <vector>
+#include <algorithm>
 #include <cassert>
+#include <functional>
 #include <iostream>
+#include <iterator>
+#include <vector>
 
 #include "test_iterators.h"
 

@@ -30,12 +30,12 @@ static NSString* const k_Alpha = @"SecondNotAlpha";
 // CHECK-FIXES: static NSString* const k_Alpha = @"SecondNotAlpha";
 
 static NSString* const kGood = @"hello";
-// CHECK-MESSAGES-NOT: :[[@LINE-1]]:24: warning: const global variable 'kGood' must have a name which starts with 'k[A-Z]' [google-objc-global-variable-declaration]
 static NSString* gMyIntGood = 0;
-// CHECK-MESSAGES-NOT: :[[@LINE-1]]:18: warning: non-const global variable 'gMyIntGood' must have a name which starts with 'g[A-Z]' [google-objc-global-variable-declaration]
+
 @implementation Foo
 - (void)f {
     int x = 0;
-// CHECK-MESSAGES-NOT: :[[@LINE-1]]:9: warning: non-const global variable 'gMyIntGood' must have a name which starts with 'g[A-Z]' [google-objc-global-variable-declaration]
+    static int bar;
+    static const int baz = 42;
 }
 @end
