@@ -505,16 +505,11 @@ def warn_pragma_message : Warning<"%0">,
 def err_pragma_message : Error<"%0">;
 def warn_pragma_ignored : Warning<"unknown pragma ignored">,
    InGroup<UnknownPragmas>, DefaultIgnore;
-def ext_stdc_pragma_ignored : ExtWarn<"unknown pragma in STDC namespace">,
-   InGroup<UnknownPragmas>;
 def ext_on_off_switch_syntax :
    ExtWarn<"expected 'ON' or 'OFF' or 'DEFAULT' in pragma">,
    InGroup<UnknownPragmas>;
 def ext_pragma_syntax_eod :
    ExtWarn<"expected end of directive in pragma">,
-   InGroup<UnknownPragmas>;
-def warn_stdc_fenv_access_not_supported :
-   Warning<"pragma STDC FENV_ACCESS ON is not supported, ignoring pragma">,
    InGroup<UnknownPragmas>;
 def warn_pragma_diagnostic_invalid :
    ExtWarn<"pragma diagnostic expected 'error', 'warning', 'ignored', 'fatal',"

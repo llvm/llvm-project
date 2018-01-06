@@ -17,8 +17,11 @@
 //                    T init, BinaryOperation binary_op); // C++17
 
 #include <numeric>
-#include <vector>
+#include <algorithm>
 #include <cassert>
+#include <functional>
+#include <iterator>
+#include <vector>
 
 #include "test_iterators.h"
 
@@ -70,7 +73,7 @@ int main()
 //  Make sure that the calculations are done using the init typedef
     {
     std::vector<unsigned char> v(10);
-    std::iota(v.begin(), v.end(), 1);
+    std::iota(v.begin(), v.end(), static_cast<unsigned char>(1));
     std::vector<int> res;
     std::exclusive_scan(v.begin(), v.end(), std::back_inserter(res), 1, std::multiplies<>());
 

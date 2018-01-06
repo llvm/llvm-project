@@ -188,9 +188,19 @@ InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings,
   // Check for unsupported options.
   for (const Arg *A : Args) {
     if (A->getOption().hasFlag(options::Unsupported)) {
-      Diag(diag::err_drv_unsupported_opt) << A->getAsString(Args);
-      ContainsError |= Diags.getDiagnosticLevel(diag::err_drv_unsupported_opt,
-                                                SourceLocation()) >
+      unsigned DiagID;
+      auto ArgString = A->getAsString(Args);
+      std::string Nearest;
+      if (getOpts().findNearest(
+            ArgString, Nearest, IncludedFlagsBitmask,
+            ExcludedFlagsBitmask | options::Unsupported) > 1) {
+        DiagID = diag::err_drv_unsupported_opt;
+        Diag(DiagID) << ArgString;
+      } else {
+        DiagID = diag::err_drv_unsupported_opt_with_suggestion;
+        Diag(DiagID) << ArgString << Nearest;
+      }
+      ContainsError |= Diags.getDiagnosticLevel(DiagID, SourceLocation()) >
                        DiagnosticsEngine::Warning;
       continue;
     }
@@ -205,11 +215,20 @@ InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings,
   }
 
   for (const Arg *A : Args.filtered(options::OPT_UNKNOWN)) {
-    auto ID = IsCLMode() ? diag::warn_drv_unknown_argument_clang_cl
-                         : diag::err_drv_unknown_argument;
-
-    Diags.Report(ID) << A->getAsString(Args);
-    ContainsError |= Diags.getDiagnosticLevel(ID, SourceLocation()) >
+    unsigned DiagID;
+    auto ArgString = A->getAsString(Args);
+    std::string Nearest;
+    if (getOpts().findNearest(
+          ArgString, Nearest, IncludedFlagsBitmask, ExcludedFlagsBitmask) > 1) {
+      DiagID = IsCLMode() ? diag::warn_drv_unknown_argument_clang_cl
+                          : diag::err_drv_unknown_argument;
+      Diags.Report(DiagID) << ArgString;
+    } else {
+      DiagID = IsCLMode() ? diag::warn_drv_unknown_argument_clang_cl_with_suggestion
+                          : diag::err_drv_unknown_argument_with_suggestion;
+      Diags.Report(DiagID) << ArgString << Nearest;
+    }
+    ContainsError |= Diags.getDiagnosticLevel(DiagID, SourceLocation()) >
                      DiagnosticsEngine::Warning;
   }
 

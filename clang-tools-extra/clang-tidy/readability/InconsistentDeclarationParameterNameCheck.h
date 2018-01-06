@@ -27,8 +27,10 @@ class InconsistentDeclarationParameterNameCheck : public ClangTidyCheck {
 public:
   InconsistentDeclarationParameterNameCheck(StringRef Name,
                                             ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+      : ClangTidyCheck(Name, Context),
+        IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", 1) != 0) {}
 
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
@@ -36,6 +38,7 @@ private:
   void markRedeclarationsAsVisited(const FunctionDecl *FunctionDeclaration);
 
   llvm::DenseSet<const FunctionDecl *> VisitedDeclarations;
+  const bool IgnoreMacros;
 };
 
 } // namespace readability
