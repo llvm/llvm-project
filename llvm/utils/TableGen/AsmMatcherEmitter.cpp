@@ -620,6 +620,10 @@ struct MatchableInfo {
     if (Mnemonic != RHS.Mnemonic)
       return false;
 
+    // Different variants can't conflict.
+    if (AsmVariantID != RHS.AsmVariantID)
+      return false;
+
     // The number of operands is unambiguous.
     if (AsmOperands.size() != RHS.AsmOperands.size())
       return false;
@@ -769,6 +773,8 @@ public:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MatchableInfo::dump() const {
   errs() << TheDef->getName() << " -- " << "flattened:\"" << AsmString <<"\"\n";
+
+  errs() << "  variant: " << AsmVariantID << "\n";
 
   for (unsigned i = 0, e = AsmOperands.size(); i != e; ++i) {
     const AsmOperand &Op = AsmOperands[i];
