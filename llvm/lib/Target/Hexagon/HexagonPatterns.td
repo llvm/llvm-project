@@ -932,6 +932,11 @@ def: Pat<(v2i32 (HexagonVSPLAT s8_0ImmPred:$s8)),
          (A2_combineii imm:$s8, imm:$s8)>;
 def: Pat<(v2i32 (HexagonVSPLAT I32:$Rs)), (Combinew I32:$Rs, I32:$Rs)>;
 
+let AddedComplexity = 10 in
+def: Pat<(v8i8 (HexagonVSPLAT I32:$Rs)), (S6_vsplatrbp I32:$Rs)>,
+     Requires<[HasV62T]>;
+def: Pat<(v8i8 (HexagonVSPLAT I32:$Rs)),
+         (Combinew (S2_vsplatrb I32:$Rs), (S2_vsplatrb I32:$Rs))>;
 
 // --(8) Shift/permute ---------------------------------------------------
 //
@@ -2995,4 +3000,9 @@ let Predicates = [UseHVX] in {
   def: Pat<(VecI32 (zext_invec HVI16:$Vs)), (LoVec (VZxth $Vs))>;
   def: Pat<(VecI32 (zext_invec HVI8:$Vs)),
            (LoVec (VZxth (LoVec (VZxtb $Vs))))>;
+
+  def: Pat<(VecI8 (trunc HWI16:$Vss)),
+           (V6_vpackeb (HiVec $Vss), (LoVec $Vss))>;
+  def: Pat<(VecI16 (trunc HWI32:$Vss)),
+           (V6_vpackeh (HiVec $Vss), (LoVec $Vss))>;
 }

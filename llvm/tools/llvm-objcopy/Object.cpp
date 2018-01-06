@@ -175,6 +175,25 @@ void SymbolTableSection::removeSectionReferences(const SectionBase *Sec) {
   Symbols.erase(Iter, std::end(Symbols));
 }
 
+void SymbolTableSection::localize(
+    std::function<bool(const Symbol &)> ToLocalize) {
+  for (const auto &Sym : Symbols) {
+    if (ToLocalize(*Sym))
+      Sym->Binding = STB_LOCAL;
+  }
+
+  // Now that the local symbols aren't grouped at the start we have to reorder
+  // the symbols to respect this property.
+  std::stable_partition(
+      std::begin(Symbols), std::end(Symbols),
+      [](const SymPtr &Sym) { return Sym->Binding == STB_LOCAL; });
+
+  // Lastly we fix the symbol indexes.
+  uint32_t Index = 0;
+  for (auto &Sym : Symbols)
+    Sym->Index = Index++;
+}
+
 void SymbolTableSection::initialize(SectionTableRef SecTable) {
   Size = 0;
   setStrTab(SecTable.getSectionOfType<StringTableSection>(

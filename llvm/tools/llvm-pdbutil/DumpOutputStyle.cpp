@@ -848,14 +848,7 @@ Error DumpOutputStyle::dumpXme() {
   return Error::success();
 }
 
-Error DumpOutputStyle::dumpStringTable() {
-  printHeader(P, "String Table");
-
-  if (File.isObj()) {
-    P.formatLine("Dumping string table is not supported for object files");
-    return Error::success();
-  }
-
+Error DumpOutputStyle::dumpStringTableFromPdb() {
   AutoIndent Indent(P);
   auto IS = getPdb().getStringTable();
   if (!IS) {
@@ -893,6 +886,36 @@ Error DumpOutputStyle::dumpStringTable() {
       P.formatLine("{0} | {1}", fmt_align(I, AlignStyle::Right, Digits), Str);
   }
   return Error::success();
+}
+
+Error DumpOutputStyle::dumpStringTableFromObj() {
+  iterateModuleSubsections<DebugStringTableSubsectionRef>(
+      File, PrintScope{P, 4},
+      [&](uint32_t Modi, const SymbolGroup &Strings,
+          DebugStringTableSubsectionRef &Strings2) {
+        BinaryStreamRef StringTableBuffer = Strings2.getBuffer();
+        BinaryStreamReader Reader(StringTableBuffer);
+        while (Reader.bytesRemaining() > 0) {
+          StringRef Str;
+          uint32_t Offset = Reader.getOffset();
+          cantFail(Reader.readCString(Str));
+          if (Str.empty())
+            continue;
+
+          P.formatLine("{0} | {1}", fmt_align(Offset, AlignStyle::Right, 4),
+                       Str);
+        }
+      });
+  return Error::success();
+}
+
+Error DumpOutputStyle::dumpStringTable() {
+  printHeader(P, "String Table");
+
+  if (File.isPdb())
+    return dumpStringTableFromPdb();
+
+  return dumpStringTableFromObj();
 }
 
 static void buildDepSet(LazyRandomTypeCollection &Types,
@@ -1124,6 +1147,7 @@ Error DumpOutputStyle::dumpModuleSymsForObj() {
       File, PrintScope{P, 2},
       [&](uint32_t Modi, const SymbolGroup &Strings,
           DebugSymbolsSubsectionRef &Symbols) {
+        Dumper.setSymbolGroup(&Strings);
         for (auto Symbol : Symbols) {
           if (auto EC = Visitor.visitSymbolRecord(Symbol)) {
             SymbolError = llvm::make_unique<Error>(std::move(EC));
@@ -1165,8 +1189,8 @@ Error DumpOutputStyle::dumpModuleSymsForPdb() {
 
         SymbolVisitorCallbackPipeline Pipeline;
         SymbolDeserializer Deserializer(nullptr, CodeViewContainer::Pdb);
-        MinimalSymbolDumper Dumper(P, opts::dump::DumpSymRecordBytes, Ids,
-                                   Types);
+        MinimalSymbolDumper Dumper(P, opts::dump::DumpSymRecordBytes, Strings,
+                                   Ids, Types);
 
         Pipeline.addCallbackToPipeline(Deserializer);
         Pipeline.addCallbackToPipeline(Dumper);

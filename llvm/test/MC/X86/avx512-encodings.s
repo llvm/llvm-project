@@ -19677,3 +19677,11 @@ vpermilpd $0x23, 0x400(%rbx), %zmm2
 // CHECK: vcvttsd2usi   (%rcx), %eax
 // CHECK: encoding: [0x62,0xf1,0x7f,0x08,0x78,0x01]
           vcvttsd2usil   (%rcx), %eax
+
+// CHECK: vmovq  %rax, %xmm16
+// CHECK: encoding: [0x62,0xe1,0xfd,0x08,0x6e,0xc0]
+          vmovd  %rax, %xmm16
+
+// CHECK: vmovq %xmm31, %rax
+// CHECK: encoding: [0x62,0x61,0xfd,0x08,0x7e,0xf8]
+          vmovd %xmm31, %rax

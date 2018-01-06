@@ -6250,7 +6250,8 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     // The instruction must be predicable.
     if (!MCID.isPredicable())
       return Error(Loc, "instructions in IT block must be predicable");
-    unsigned Cond = Inst.getOperand(MCID.findFirstPredOperandIdx()).getImm();
+    ARMCC::CondCodes Cond = ARMCC::CondCodes(
+        Inst.getOperand(MCID.findFirstPredOperandIdx()).getImm());
     if (Cond != currentITCond()) {
       // Find the condition code Operand to get its SMLoc information.
       SMLoc CondLoc;
@@ -6258,9 +6259,9 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
         if (static_cast<ARMOperand &>(*Operands[I]).isCondCode())
           CondLoc = Operands[I]->getStartLoc();
       return Error(CondLoc, "incorrect condition in IT block; got '" +
-                   StringRef(ARMCondCodeToString(ARMCC::CondCodes(Cond))) +
-                   "', but expected '" +
-                   ARMCondCodeToString(ARMCC::CondCodes(currentITCond())) + "'");
+                                StringRef(ARMCondCodeToString(Cond)) +
+                                "', but expected '" +
+                                ARMCondCodeToString(currentITCond()) + "'");
     }
   // Check for non-'al' condition codes outside of the IT block.
   } else if (isThumbTwo() && MCID.isPredicable() &&

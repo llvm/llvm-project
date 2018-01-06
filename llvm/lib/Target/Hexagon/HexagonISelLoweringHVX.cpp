@@ -442,7 +442,8 @@ HexagonTargetLowering::LowerHvxMul(SDValue Op, SelectionDAG &DAG) const {
         ShuffMask.push_back(I+VecLen);  // Pick odd element.
       }
       VectorPair P = opSplit(opCastElem(M, ElemTy, DAG), dl, DAG);
-      return getByteShuffle(dl, P.first, P.second, ShuffMask, DAG);
+      SDValue BS = getByteShuffle(dl, P.first, P.second, ShuffMask, DAG);
+      return DAG.getBitcast(ResTy, BS);
     }
     case MVT::i32: {
       // Use the following sequence for signed word multiply:

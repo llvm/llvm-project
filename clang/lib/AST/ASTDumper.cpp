@@ -539,6 +539,7 @@ namespace  {
     void VisitAddrLabelExpr(const AddrLabelExpr *Node);
     void VisitBlockExpr(const BlockExpr *Node);
     void VisitOpaqueValueExpr(const OpaqueValueExpr *Node);
+    void VisitGenericSelectionExpr(const GenericSelectionExpr *E);
 
     // C++
     void VisitCXXNamedCastExpr(const CXXNamedCastExpr *Node);
@@ -1946,8 +1947,13 @@ void ASTDumper::dumpStmt(const Stmt *S) {
       return;
     }
 
+    // Some statements have custom mechanisms for dumping their children.
     if (const DeclStmt *DS = dyn_cast<DeclStmt>(S)) {
       VisitDeclStmt(DS);
+      return;
+    }
+    if (const GenericSelectionExpr *GSE = dyn_cast<GenericSelectionExpr>(S)) {
+      VisitGenericSelectionExpr(GSE);
       return;
     }
 
@@ -2270,6 +2276,32 @@ void ASTDumper::VisitOpaqueValueExpr(const OpaqueValueExpr *Node) {
 
   if (Expr *Source = Node->getSourceExpr())
     dumpStmt(Source);
+}
+
+void ASTDumper::VisitGenericSelectionExpr(const GenericSelectionExpr *E) {
+  VisitExpr(E);
+  if (E->isResultDependent())
+    OS << " result_dependent";
+  dumpStmt(E->getControllingExpr());
+  dumpTypeAsChild(E->getControllingExpr()->getType()); // FIXME: remove
+
+  for (unsigned I = 0, N = E->getNumAssocs(); I != N; ++I) {
+    dumpChild([=] {
+      if (const TypeSourceInfo *TSI = E->getAssocTypeSourceInfo(I)) {
+        OS << "case ";
+        dumpType(TSI->getType());
+      } else {
+        OS << "default";
+      }
+
+      if (!E->isResultDependent() && E->getResultIndex() == I)
+        OS << " selected";
+
+      if (const TypeSourceInfo *TSI = E->getAssocTypeSourceInfo(I))
+        dumpTypeAsChild(TSI->getType());
+      dumpStmt(E->getAssocExpr(I));
+    });
+  }
 }
 
 // GNU extensions.
