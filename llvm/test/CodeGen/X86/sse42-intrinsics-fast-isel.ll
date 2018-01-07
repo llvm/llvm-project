@@ -354,9 +354,8 @@ declare i32 @llvm.x86.sse42.pcmpistriz128(<16 x i8>, <16 x i8>, i8) nounwind rea
 define i32 @test_mm_crc32_u8(i32 %a0, i8 %a1) {
 ; X32-LABEL: test_mm_crc32_u8:
 ; X32:       # %bb.0:
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    crc32b %cl, %eax
+; X32-NEXT:    crc32b {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_crc32_u8:
@@ -372,9 +371,8 @@ declare i32 @llvm.x86.sse42.crc32.32.8(i32, i8) nounwind readnone
 define i32 @test_mm_crc32_u16(i32 %a0, i16 %a1) {
 ; X32-LABEL: test_mm_crc32_u16:
 ; X32:       # %bb.0:
-; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    crc32w %cx, %eax
+; X32-NEXT:    crc32w {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_crc32_u16:

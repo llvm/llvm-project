@@ -62,10 +62,22 @@ define <2 x i64> @stack_fold_aeskeygenassist(<2 x i64> %a0) {
 }
 declare <2 x i64> @llvm.x86.aesni.aeskeygenassist(<2 x i64>, i8) nounwind readnone
 
-;TODO stack_fold_crc32_32_8
+define i32 @stack_fold_crc32_32_8(i32 %a0, i8 %a1) {
+  ;CHECK-LABEL: stack_fold_crc32_32_8
+  ;CHECK:       crc32b {{-?[0-9]*}}(%rsp), %eax {{.*#+}} 1-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
+  %2 = call i32 @llvm.x86.sse42.crc32.32.8(i32 %a0, i8 %a1)
+  ret i32 %2
+}
 declare i32 @llvm.x86.sse42.crc32.32.8(i32, i8) nounwind
 
-;TODO stack_fold_crc32_32_16
+define i32 @stack_fold_crc32_32_16(i32 %a0, i16 %a1) {
+  ;CHECK-LABEL: stack_fold_crc32_32_16
+  ;CHECK:       crc32w {{-?[0-9]*}}(%rsp), %eax {{.*#+}} 2-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
+  %2 = call i32 @llvm.x86.sse42.crc32.32.16(i32 %a0, i16 %a1)
+  ret i32 %2
+}
 declare i32 @llvm.x86.sse42.crc32.32.16(i32, i16) nounwind
 
 define i32 @stack_fold_crc32_32_32(i32 %a0, i32 %a1) {
@@ -76,9 +88,6 @@ define i32 @stack_fold_crc32_32_32(i32 %a0, i32 %a1) {
   ret i32 %2
 }
 declare i32 @llvm.x86.sse42.crc32.32.32(i32, i32) nounwind
-
-;TODO stack_fold_crc32_64_8
-declare i64 @llvm.x86.sse42.crc32.64.8(i64, i8) nounwind
 
 define i64 @stack_fold_crc32_64_64(i64 %a0, i64 %a1) {
   ;CHECK-LABEL: stack_fold_crc32_64_64
