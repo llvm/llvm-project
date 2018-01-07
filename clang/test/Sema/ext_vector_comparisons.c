@@ -6,12 +6,12 @@ static int4 test1() {
   int4 vec, rv;
 
   // comparisons to self...
-  return vec == vec; // expected-warning{{self-comparison always evaluates to a constant}}
-  return vec != vec; // expected-warning{{self-comparison always evaluates to a constant}}
-  return vec < vec; // expected-warning{{self-comparison always evaluates to a constant}}
-  return vec <= vec; // expected-warning{{self-comparison always evaluates to a constant}}
-  return vec > vec; // expected-warning{{self-comparison always evaluates to a constant}}
-  return vec >= vec; // expected-warning{{self-comparison always evaluates to a constant}}
+  return vec == vec; // expected-warning{{self-comparison always evaluates to true}}
+  return vec != vec; // expected-warning{{self-comparison always evaluates to false}}
+  return vec < vec; // expected-warning{{self-comparison always evaluates to false}}
+  return vec <= vec; // expected-warning{{self-comparison always evaluates to true}}
+  return vec > vec; // expected-warning{{self-comparison always evaluates to false}}
+  return vec >= vec; // expected-warning{{self-comparison always evaluates to true}}
 }
 
 
