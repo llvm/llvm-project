@@ -1,4 +1,4 @@
-; RUN: llc -O3 -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw,+avx512dq,+avx512vbmi,+avx512cd < %s | FileCheck %s
+; RUN: llc -O3 -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw,+avx512dq,+avx512vbmi,+avx512cd,+avx512vpopcntdq < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"
@@ -1213,6 +1213,24 @@ define <8 x i64> @stack_fold_pmovzxwq_maskz_zmm(<8 x i16> %a0, i8 %mask) {
   %4 = select <8 x i1> %3, <8 x i64> %2, <8 x i64> zeroinitializer
   ret <8 x i64> %4
 }
+
+define <16 x i32> @stack_fold_vpopcntd(<16 x i32> %a0) {
+  ;CHECK-LABEL: stack_fold_vpopcntd
+  ;CHECK:       vpopcntd {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}} {{.*#+}} 64-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = call <16 x i32> @llvm.ctpop.v16i32(<16 x i32> %a0)
+  ret <16 x i32> %2
+}
+declare <16 x i32> @llvm.ctpop.v16i32(<16 x i32>) nounwind readonly
+
+define <8 x i64> @stack_fold_vpopcntq(<8 x i64> %a0) {
+  ;CHECK-LABEL: stack_fold_vpopcntq
+  ;CHECK:       vpopcntq {{-?[0-9]*}}(%rsp), {{%zmm[0-9][0-9]*}} {{.*#+}} 64-byte Folded Reload
+  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
+  %2 = call <8 x i64> @llvm.ctpop.v8i64(<8 x i64> %a0)
+  ret <8 x i64> %2
+}
+declare <8 x i64> @llvm.ctpop.v8i64(<8 x i64>) nounwind readnone
 
 define <8 x i64> @stack_fold_psadbw(<64 x i8> %a0, <64 x i8> %a1) {
   ;CHECK-LABEL: stack_fold_psadbw

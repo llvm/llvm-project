@@ -9357,7 +9357,7 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue NewInt = DAG.getNode(N->getOpcode(), dl, VTs, N->getOperand(0),
                                  N->getOperand(1));
 
-    Results.push_back(NewInt);
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, MVT::i1, NewInt));
     Results.push_back(NewInt.getValue(1));
     break;
   }

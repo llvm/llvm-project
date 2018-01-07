@@ -829,6 +829,11 @@ namespace llvm {
     /// Vector-sized comparisons are fast using PCMPEQ + PMOVMSK or PTEST.
     MVT hasFastEqualityCompare(unsigned NumBits) const override;
 
+    /// Allow multiple load pairs per block for smaller and faster code.
+    unsigned getMemcmpEqZeroLoadsPerBlock() const override {
+      return 2;
+    }
+
     /// Return the value type to use for ISD::SETCC.
     EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                            EVT VT) const override;
