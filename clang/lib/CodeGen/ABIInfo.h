@@ -137,8 +137,7 @@ namespace swiftcall {
 
     bool supportsSwift() const final override { return true; }
 
-    virtual bool shouldPassIndirectlyForSwift(CharUnits totalSize,
-                                              ArrayRef<llvm::Type*> types,
+    virtual bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> types,
                                               bool asReturnValue) const = 0;
 
     virtual bool isLegalVectorTypeForSwift(CharUnits totalSize,
