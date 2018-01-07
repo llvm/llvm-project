@@ -636,10 +636,6 @@ public:
   /// \param ExternModuleLoc The location of the "extern module" declaration
   ///        that caused us to load this module map file, if any.
   ///
-  /// \param IsExplicitlyProvided Whether this module map file was provided
-  /// explicitly by the user (e.g. -fmodule-map-file), rather than found
-  /// implicitly.
-  ///
   /// \returns true if an error occurred, false otherwise.
   bool parseModuleMapFile(const FileEntry *File, bool IsSystem,
                           const DirectoryEntry *HomeDir,

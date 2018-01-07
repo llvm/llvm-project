@@ -966,6 +966,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
     case Builtin::BI__builtin_copysign:
     case Builtin::BI__builtin_copysignf:
     case Builtin::BI__builtin_copysignl:
+    case Builtin::BI__builtin_copysignf128:
       return RValue::get(emitBinaryBuiltin(*this, E, Intrinsic::copysign));
 
     case Builtin::BIcos:
@@ -998,6 +999,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
     case Builtin::BI__builtin_fabs:
     case Builtin::BI__builtin_fabsf:
     case Builtin::BI__builtin_fabsl:
+    case Builtin::BI__builtin_fabsf128:
       return RValue::get(emitUnaryBuiltin(*this, E, Intrinsic::fabs));
 
     case Builtin::BIfloor:
