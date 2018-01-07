@@ -1077,7 +1077,7 @@ public:
     template <typename _K2>
     _LIBCPP_INLINE_VISIBILITY
     typename enable_if<__is_transparent<_Compare, _K2>::value,size_type>::type
-    count(const _K2& __k)                  {return __tree_.__count_multi(__k);}
+    count(const _K2& __k) const            {return __tree_.__count_multi(__k);}
 #endif
 
     _LIBCPP_INLINE_VISIBILITY
