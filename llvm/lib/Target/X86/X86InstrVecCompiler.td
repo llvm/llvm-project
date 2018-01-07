@@ -495,6 +495,18 @@ let Predicates = [HasBWI, HasVLX] in {
 
 // If the bits are not zero we have to fall back to explicitly zeroing by
 // using shifts.
+let Predicates = [HasAVX512] in {
+  def : Pat<(v16i1 (insert_subvector (v16i1 immAllZerosV),
+                                     (v2i1 VK2:$mask), (iPTR 0))),
+            (KSHIFTRWri (KSHIFTLWri (COPY_TO_REGCLASS VK2:$mask, VK16),
+                                    (i8 14)), (i8 14))>;
+
+  def : Pat<(v16i1 (insert_subvector (v16i1 immAllZerosV),
+                                     (v4i1 VK4:$mask), (iPTR 0))),
+            (KSHIFTRWri (KSHIFTLWri (COPY_TO_REGCLASS VK4:$mask, VK16),
+                                    (i8 12)), (i8 12))>;
+}
+
 let Predicates = [HasAVX512, NoDQI] in {
   def : Pat<(v16i1 (insert_subvector (v16i1 immAllZerosV),
                                      (v8i1 VK8:$mask), (iPTR 0))),
@@ -506,9 +518,7 @@ let Predicates = [HasDQI] in {
   def : Pat<(v16i1 (insert_subvector (v16i1 immAllZerosV),
                                      (v8i1 VK8:$mask), (iPTR 0))),
             (COPY_TO_REGCLASS (KMOVBkk VK8:$mask), VK16)>;
-}
 
-let Predicates = [HasVLX, HasDQI] in {
   def : Pat<(v8i1 (insert_subvector (v8i1 immAllZerosV),
                                     (v2i1 VK2:$mask), (iPTR 0))),
             (KSHIFTRBri (KSHIFTLBri (COPY_TO_REGCLASS VK2:$mask, VK8),
@@ -517,17 +527,6 @@ let Predicates = [HasVLX, HasDQI] in {
                                     (v4i1 VK4:$mask), (iPTR 0))),
             (KSHIFTRBri (KSHIFTLBri (COPY_TO_REGCLASS VK4:$mask, VK8),
                                     (i8 4)), (i8 4))>;
-}
-
-let Predicates = [HasVLX] in {
-  def : Pat<(v16i1 (insert_subvector (v16i1 immAllZerosV),
-                                     (v2i1 VK2:$mask), (iPTR 0))),
-            (KSHIFTRWri (KSHIFTLWri (COPY_TO_REGCLASS VK2:$mask, VK16),
-                                    (i8 14)), (i8 14))>;
-  def : Pat<(v16i1 (insert_subvector (v16i1 immAllZerosV),
-                                     (v4i1 VK4:$mask), (iPTR 0))),
-            (KSHIFTRWri (KSHIFTLWri (COPY_TO_REGCLASS VK4:$mask, VK16),
-                                    (i8 12)), (i8 12))>;
 }
 
 let Predicates = [HasBWI] in {

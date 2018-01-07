@@ -10,17 +10,44 @@
 ;
 
 define void @signum32a(<4 x float>*) {
-; AVX-LABEL: signum32a:
-; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vmovaps (%rdi), %xmm0
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vcmpltps %xmm1, %xmm0, %xmm2
-; AVX-NEXT:    vcvtdq2ps %xmm2, %xmm2
-; AVX-NEXT:    vcmpltps %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vcvtdq2ps %xmm0, %xmm0
-; AVX-NEXT:    vsubps %xmm0, %xmm2, %xmm0
-; AVX-NEXT:    vmovaps %xmm0, (%rdi)
-; AVX-NEXT:    retq
+; AVX1-LABEL: signum32a:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vmovaps (%rdi), %xmm0
+; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vcmpltps %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vcvtdq2ps %xmm2, %xmm2
+; AVX1-NEXT:    vcmpltps %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; AVX1-NEXT:    vsubps %xmm0, %xmm2, %xmm0
+; AVX1-NEXT:    vmovaps %xmm0, (%rdi)
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: signum32a:
+; AVX2:       # %bb.0: # %entry
+; AVX2-NEXT:    vmovaps (%rdi), %xmm0
+; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vcmpltps %xmm1, %xmm0, %xmm2
+; AVX2-NEXT:    vcvtdq2ps %xmm2, %xmm2
+; AVX2-NEXT:    vcmpltps %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; AVX2-NEXT:    vsubps %xmm0, %xmm2, %xmm0
+; AVX2-NEXT:    vmovaps %xmm0, (%rdi)
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: signum32a:
+; AVX512F:       # %bb.0: # %entry
+; AVX512F-NEXT:    vmovaps (%rdi), %xmm0
+; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    vcmpltps %zmm1, %zmm0, %k1
+; AVX512F-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; AVX512F-NEXT:    vcvtdq2ps %xmm2, %xmm2
+; AVX512F-NEXT:    vcmpltps %zmm0, %zmm1, %k1
+; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; AVX512F-NEXT:    vsubps %xmm0, %xmm2, %xmm0
+; AVX512F-NEXT:    vmovaps %xmm0, (%rdi)
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
 entry:
   %1 = load <4 x float>, <4 x float>* %0
   %2 = fcmp olt <4 x float> %1, zeroinitializer
@@ -33,19 +60,48 @@ entry:
 }
 
 define void @signum64a(<2 x double>*) {
-; AVX-LABEL: signum64a:
-; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vmovapd (%rdi), %xmm0
-; AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vcmpltpd %xmm1, %xmm0, %xmm2
-; AVX-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; AVX-NEXT:    vcvtdq2pd %xmm2, %xmm2
-; AVX-NEXT:    vcmpltpd %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; AVX-NEXT:    vcvtdq2pd %xmm0, %xmm0
-; AVX-NEXT:    vsubpd %xmm0, %xmm2, %xmm0
-; AVX-NEXT:    vmovapd %xmm0, (%rdi)
-; AVX-NEXT:    retq
+; AVX1-LABEL: signum64a:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vmovapd (%rdi), %xmm0
+; AVX1-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vcmpltpd %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; AVX1-NEXT:    vcvtdq2pd %xmm2, %xmm2
+; AVX1-NEXT:    vcmpltpd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX1-NEXT:    vcvtdq2pd %xmm0, %xmm0
+; AVX1-NEXT:    vsubpd %xmm0, %xmm2, %xmm0
+; AVX1-NEXT:    vmovapd %xmm0, (%rdi)
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: signum64a:
+; AVX2:       # %bb.0: # %entry
+; AVX2-NEXT:    vmovapd (%rdi), %xmm0
+; AVX2-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vcmpltpd %xmm1, %xmm0, %xmm2
+; AVX2-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; AVX2-NEXT:    vcvtdq2pd %xmm2, %xmm2
+; AVX2-NEXT:    vcmpltpd %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX2-NEXT:    vcvtdq2pd %xmm0, %xmm0
+; AVX2-NEXT:    vsubpd %xmm0, %xmm2, %xmm0
+; AVX2-NEXT:    vmovapd %xmm0, (%rdi)
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: signum64a:
+; AVX512F:       # %bb.0: # %entry
+; AVX512F-NEXT:    vmovapd (%rdi), %xmm0
+; AVX512F-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    vcmpltpd %zmm1, %zmm0, %k1
+; AVX512F-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; AVX512F-NEXT:    vcvtdq2pd %xmm2, %xmm2
+; AVX512F-NEXT:    vcmpltpd %zmm0, %zmm1, %k1
+; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vcvtdq2pd %xmm0, %xmm0
+; AVX512F-NEXT:    vsubpd %xmm0, %xmm2, %xmm0
+; AVX512F-NEXT:    vmovapd %xmm0, (%rdi)
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
 entry:
   %1 = load <2 x double>, <2 x double>* %0
   %2 = fcmp olt <2 x double> %1, zeroinitializer
@@ -152,11 +208,11 @@ define void @signum64b(<4 x double>*) {
 ; AVX512F:       # %bb.0: # %entry
 ; AVX512F-NEXT:    vmovapd (%rdi), %ymm0
 ; AVX512F-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vcmpltpd %ymm1, %ymm0, %ymm2
-; AVX512F-NEXT:    vpmovqd %zmm2, %ymm2
+; AVX512F-NEXT:    vcmpltpd %zmm1, %zmm0, %k1
+; AVX512F-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
 ; AVX512F-NEXT:    vcvtdq2pd %xmm2, %ymm2
-; AVX512F-NEXT:    vcmpltpd %ymm0, %ymm1, %ymm0
-; AVX512F-NEXT:    vpmovqd %zmm0, %ymm0
+; AVX512F-NEXT:    vcmpltpd %zmm0, %zmm1, %k1
+; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; AVX512F-NEXT:    vsubpd %ymm0, %ymm2, %ymm0
 ; AVX512F-NEXT:    vmovapd %ymm0, (%rdi)
