@@ -30,6 +30,7 @@ struct A
 {
     explicit A(int);
     A(int, double);
+    A(int, long, double);
 #if TEST_STD_VER >= 11
 private:
 #endif
@@ -106,6 +107,16 @@ void test_is_constructible()
 #endif
 }
 
+template <class T, class A0, class A1, class A2>
+void test_is_constructible()
+{
+    static_assert(( std::is_constructible<T, A0, A1, A2>::value), "");
+    LIBCPP11_STATIC_ASSERT((std::__libcpp_is_constructible<T, A0, A1, A2>::type::value), "");
+#if TEST_STD_VER > 14
+    static_assert(( std::is_constructible_v<T, A0, A1, A2>), "");
+#endif
+}
+
 template <class T>
 void test_is_not_constructible()
 {
@@ -146,6 +157,7 @@ int main()
     test_is_constructible<int, const int> ();
     test_is_constructible<A, int> ();
     test_is_constructible<A, int, double> ();
+    test_is_constructible<A, int, long, double> ();
     test_is_constructible<int&, int&> ();
 
     test_is_not_constructible<A> ();

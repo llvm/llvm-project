@@ -14,7 +14,9 @@ tablegen(LLVM X86GenEVEX2VEXTables.inc -gen-x86-EVEX2VEX-tables)
 tablegen(LLVM X86GenRegisterBank.inc -gen-register-bank)
 tablegen(LLVM X86GenGlobalISel.inc -gen-global-isel)
 
-tablegen(LLVM X86GenFoldTables.inc -gen-x86-fold-tables)
+if (X86_GEN_FOLD_TABLES)
+  tablegen(LLVM X86GenFoldTables.inc -gen-x86-fold-tables)
+endif()
 
 add_public_tablegen_target(X86CommonTableGen)
 

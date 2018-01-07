@@ -3,6 +3,14 @@
 
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -fsyntax-only -pedantic -verify -Wsign-compare -std=c++2a %s
 
+void self_compare() {
+  int a;
+  int b[3], c[3];
+  (void)(a <=> a); // expected-warning {{self-comparison always evaluates to 'std::strong_ordering::equal'}}
+  (void)(b <=> b); // expected-warning {{self-comparison always evaluates to 'std::strong_ordering::equal'}}
+  (void)(b <=> c); // expected-warning {{array comparison always evaluates to a constant}}
+}
+
 void test0(long a, unsigned long b) {
   enum EnumA {A};
   enum EnumB {B};

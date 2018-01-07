@@ -597,7 +597,7 @@ public:
   unsigned getTreeSize() const { return VectorizableTree.size(); }
 
   /// \brief Perform LICM and CSE on the newly generated gather sequences.
-  void optimizeGatherSequence(Function &F);
+  void optimizeGatherSequence();
 
   /// \returns true if it is beneficial to reverse the vector order.
   bool shouldReorder() const {
@@ -3310,7 +3310,7 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
   return VectorizableTree[0].VectorizedValue;
 }
 
-void BoUpSLP::optimizeGatherSequence(Function &F) {
+void BoUpSLP::optimizeGatherSequence() {
   DEBUG(dbgs() << "SLP: Optimizing " << GatherSeq.size()
         << " gather sequences instructions.\n");
   // LICM InsertElementInst sequences.
@@ -3344,16 +3344,30 @@ void BoUpSLP::optimizeGatherSequence(Function &F) {
     Insert->moveBefore(PreHeader->getTerminator());
   }
 
+  // Make a list of all reachable blocks in our CSE queue.
+  SmallVector<const DomTreeNode *, 8> CSEWorkList;
+  CSEWorkList.reserve(CSEBlocks.size());
+  for (BasicBlock *BB : CSEBlocks)
+    if (DomTreeNode *N = DT->getNode(BB)) {
+      assert(DT->isReachableFromEntry(N));
+      CSEWorkList.push_back(N);
+    }
+
+  // Sort blocks by domination. This ensures we visit a block after all blocks
+  // dominating it are visited.
+  std::stable_sort(CSEWorkList.begin(), CSEWorkList.end(),
+                   [this](const DomTreeNode *A, const DomTreeNode *B) {
+    return DT->properlyDominates(A, B);
+  });
+
   // Perform O(N^2) search over the gather sequences and merge identical
   // instructions. TODO: We can further optimize this scan if we split the
   // instructions into different buckets based on the insert lane.
   SmallVector<Instruction *, 16> Visited;
-  ReversePostOrderTraversal<Function *> RPOT(&F);
-  for (auto BB : RPOT) {
-    // Traverse CSEBlocks by RPOT order.
-    if (!CSEBlocks.count(BB))
-      continue;
-
+  for (auto I = CSEWorkList.begin(), E = CSEWorkList.end(); I != E; ++I) {
+    assert((I == CSEWorkList.begin() || !DT->dominates(*I, *std::prev(I))) &&
+           "Worklist not sorted properly!");
+    BasicBlock *BB = (*I)->getBlock();
     // For all instructions in blocks containing gather sequences:
     for (BasicBlock::iterator it = BB->begin(), e = BB->end(); it != e;) {
       Instruction *In = &*it++;
@@ -4222,7 +4236,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
   }
 
   if (Changed) {
-    R.optimizeGatherSequence(F);
+    R.optimizeGatherSequence();
     DEBUG(dbgs() << "SLP: vectorized \"" << F.getName() << "\"\n");
     DEBUG(verifyFunction(F));
   }

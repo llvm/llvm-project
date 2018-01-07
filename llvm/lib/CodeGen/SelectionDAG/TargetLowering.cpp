@@ -1220,6 +1220,12 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
                                                  Sign, ShAmt));
       }
     }
+    // If this is a bitcast, let computeKnownBits handle it.  Only do this on a
+    // recursive call where Known may be useful to the caller.
+    if (Depth > 0) {
+      TLO.DAG.computeKnownBits(Op, Known, Depth);
+      return false;
+    }
     break;
   case ISD::ADD:
   case ISD::MUL:

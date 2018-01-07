@@ -47,8 +47,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
-#include "VPlan.h"
-#include "VPlanBuilder.h"
+#include "LoopVectorizationPlanner.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -280,8 +279,6 @@ createMissedAnalysis(const char *PassName, StringRef RemarkName, Loop *TheLoop,
 
 namespace {
 
-class LoopVectorizationLegality;
-class LoopVectorizationCostModel;
 class LoopVectorizationRequirements;
 
 } // end anonymous namespace
@@ -1519,7 +1516,7 @@ static void emitMissedWarning(Function *F, Loop *L,
   }
 }
 
-namespace {
+namespace llvm {
 
 /// LoopVectorizationLegality checks if it is legal to vectorize a loop, and
 /// to what vectorization factor.
@@ -1860,15 +1857,6 @@ public:
   /// \return An upper bound for the vectorization factor, or None if
   /// vectorization should be avoided up front.
   Optional<unsigned> computeMaxVF(bool OptForSize);
-
-  /// Information about vectorization costs
-  struct VectorizationFactor {
-    // Vector width with best cost
-    unsigned Width;
-
-    // Cost of the loop with that width
-    unsigned Cost;
-  };
 
   /// \return The most profitable vectorization factor and the cost of that VF.
   /// This method checks every power of two up to MaxVF. If UserVF is not ZERO
@@ -2227,189 +2215,6 @@ public:
 
   /// Values to ignore in the cost model when VF > 1.
   SmallPtrSet<const Value *, 16> VecValuesToIgnore;
-};
-
-} // end anonymous namespace
-
-namespace llvm {
-
-/// InnerLoopVectorizer vectorizes loops which contain only one basic
-/// LoopVectorizationPlanner - drives the vectorization process after having
-/// passed Legality checks.
-/// The planner builds and optimizes the Vectorization Plans which record the
-/// decisions how to vectorize the given loop. In particular, represent the
-/// control-flow of the vectorized version, the replication of instructions that
-/// are to be scalarized, and interleave access groups.
-class LoopVectorizationPlanner {
-  /// The loop that we evaluate.
-  Loop *OrigLoop;
-
-  /// Loop Info analysis.
-  LoopInfo *LI;
-
-  /// Target Library Info.
-  const TargetLibraryInfo *TLI;
-
-  /// Target Transform Info.
-  const TargetTransformInfo *TTI;
-
-  /// The legality analysis.
-  LoopVectorizationLegality *Legal;
-
-  /// The profitablity analysis.
-  LoopVectorizationCostModel &CM;
-
-  using VPlanPtr = std::unique_ptr<VPlan>;
-
-  SmallVector<VPlanPtr, 4> VPlans;
-
-  /// This class is used to enable the VPlan to invoke a method of ILV. This is
-  /// needed until the method is refactored out of ILV and becomes reusable.
-  struct VPCallbackILV : public VPCallback {
-    InnerLoopVectorizer &ILV;
-
-    VPCallbackILV(InnerLoopVectorizer &ILV) : ILV(ILV) {}
-
-    Value *getOrCreateVectorValues(Value *V, unsigned Part) override {
-      return ILV.getOrCreateVectorValue(V, Part);
-    }
-  };
-
-  /// A builder used to construct the current plan.
-  VPBuilder Builder;
-
-  /// When we if-convert we need to create edge masks. We have to cache values
-  /// so that we don't end up with exponential recursion/IR. Note that
-  /// if-conversion currently takes place during VPlan-construction, so these
-  /// caches are only used at that stage.
-  using EdgeMaskCacheTy =
-      DenseMap<std::pair<BasicBlock *, BasicBlock *>, VPValue *>;
-  using BlockMaskCacheTy = DenseMap<BasicBlock *, VPValue *>;
-  EdgeMaskCacheTy EdgeMaskCache;
-  BlockMaskCacheTy BlockMaskCache;
-
-  unsigned BestVF = 0;
-  unsigned BestUF = 0;
-
-public:
-  LoopVectorizationPlanner(Loop *L, LoopInfo *LI, const TargetLibraryInfo *TLI,
-                           const TargetTransformInfo *TTI,
-                           LoopVectorizationLegality *Legal,
-                           LoopVectorizationCostModel &CM)
-      : OrigLoop(L), LI(LI), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM) {}
-
-  /// Plan how to best vectorize, return the best VF and its cost.
-  LoopVectorizationCostModel::VectorizationFactor plan(bool OptForSize,
-                                                       unsigned UserVF);
-
-  /// Finalize the best decision and dispose of all other VPlans.
-  void setBestPlan(unsigned VF, unsigned UF);
-
-  /// Generate the IR code for the body of the vectorized loop according to the
-  /// best selected VPlan.
-  void executePlan(InnerLoopVectorizer &LB, DominatorTree *DT);
-
-  void printPlans(raw_ostream &O) {
-    for (const auto &Plan : VPlans)
-      O << *Plan;
-  }
-
-protected:
-  /// Collect the instructions from the original loop that would be trivially
-  /// dead in the vectorized loop if generated.
-  void collectTriviallyDeadInstructions(
-      SmallPtrSetImpl<Instruction *> &DeadInstructions);
-
-  /// A range of powers-of-2 vectorization factors with fixed start and
-  /// adjustable end. The range includes start and excludes end, e.g.,:
-  /// [1, 9) = {1, 2, 4, 8}
-  struct VFRange {
-    // A power of 2.
-    const unsigned Start;
-
-    // Need not be a power of 2. If End <= Start range is empty.
-    unsigned End;
-  };
-
-  /// Test a \p Predicate on a \p Range of VF's. Return the value of applying
-  /// \p Predicate on Range.Start, possibly decreasing Range.End such that the
-  /// returned value holds for the entire \p Range.
-  bool getDecisionAndClampRange(const std::function<bool(unsigned)> &Predicate,
-                                VFRange &Range);
-
-  /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
-  /// according to the information gathered by Legal when it checked if it is
-  /// legal to vectorize the loop.
-  void buildVPlans(unsigned MinVF, unsigned MaxVF);
-
-private:
-  /// A helper function that computes the predicate of the block BB, assuming
-  /// that the header block of the loop is set to True. It returns the *entry*
-  /// mask for the block BB.
-  VPValue *createBlockInMask(BasicBlock *BB, VPlanPtr &Plan);
-
-  /// A helper function that computes the predicate of the edge between SRC
-  /// and DST.
-  VPValue *createEdgeMask(BasicBlock *Src, BasicBlock *Dst, VPlanPtr &Plan);
-
-  /// Check if \I belongs to an Interleave Group within the given VF \p Range,
-  /// \return true in the first returned value if so and false otherwise.
-  /// Build a new VPInterleaveGroup Recipe if \I is the primary member of an IG
-  /// for \p Range.Start, and provide it as the second returned value.
-  /// Note that if \I is an adjunct member of an IG for \p Range.Start, the
-  /// \return value is <true, nullptr>, as it is handled by another recipe.
-  /// \p Range.End may be decreased to ensure same decision from \p Range.Start
-  /// to \p Range.End.
-  VPInterleaveRecipe *tryToInterleaveMemory(Instruction *I, VFRange &Range);
-
-  // Check if \I is a memory instruction to be widened for \p Range.Start and
-  // potentially masked. Such instructions are handled by a recipe that takes an
-  // additional VPInstruction for the mask.
-  VPWidenMemoryInstructionRecipe *tryToWidenMemory(Instruction *I,
-                                                   VFRange &Range,
-                                                   VPlanPtr &Plan);
-
-  /// Check if an induction recipe should be constructed for \I within the given
-  /// VF \p Range. If so build and return it. If not, return null. \p Range.End
-  /// may be decreased to ensure same decision from \p Range.Start to
-  /// \p Range.End.
-  VPWidenIntOrFpInductionRecipe *tryToOptimizeInduction(Instruction *I,
-                                                        VFRange &Range);
-
-  /// Handle non-loop phi nodes. Currently all such phi nodes are turned into
-  /// a sequence of select instructions as the vectorizer currently performs
-  /// full if-conversion.
-  VPBlendRecipe *tryToBlend(Instruction *I, VPlanPtr &Plan);
-
-  /// Check if \p I can be widened within the given VF \p Range. If \p I can be
-  /// widened for \p Range.Start, check if the last recipe of \p VPBB can be
-  /// extended to include \p I or else build a new VPWidenRecipe for it and
-  /// append it to \p VPBB. Return true if \p I can be widened for Range.Start,
-  /// false otherwise. Range.End may be decreased to ensure same decision from
-  /// \p Range.Start to \p Range.End.
-  bool tryToWiden(Instruction *I, VPBasicBlock *VPBB, VFRange &Range);
-
-  /// Build a VPReplicationRecipe for \p I and enclose it within a Region if it
-  /// is predicated. \return \p VPBB augmented with this new recipe if \p I is
-  /// not predicated, otherwise \return a new VPBasicBlock that succeeds the new
-  /// Region. Update the packing decision of predicated instructions if they
-  /// feed \p I. Range.End may be decreased to ensure same recipe behavior from
-  /// \p Range.Start to \p Range.End.
-  VPBasicBlock *handleReplication(
-      Instruction *I, VFRange &Range, VPBasicBlock *VPBB,
-      DenseMap<Instruction *, VPReplicateRecipe *> &PredInst2Recipe,
-      VPlanPtr &Plan);
-
-  /// Create a replicating region for instruction \p I that requires
-  /// predication. \p PredRecipe is a VPReplicateRecipe holding \p I.
-  VPRegionBlock *createReplicateRegion(Instruction *I, VPRecipeBase *PredRecipe,
-                                       VPlanPtr &Plan);
-
-  /// Build a VPlan according to the information gathered by Legal. \return a
-  /// VPlan for vectorization factors \p Range.Start and up to \p Range.End
-  /// exclusive, possibly decreasing \p Range.End.
-  VPlanPtr buildVPlan(VFRange &Range,
-                                    const SmallPtrSetImpl<Value *> &NeedDef);
 };
 
 } // end namespace llvm
@@ -6355,7 +6160,7 @@ LoopVectorizationCostModel::computeFeasibleMaxVF(bool OptForSize,
   return MaxVF;
 }
 
-LoopVectorizationCostModel::VectorizationFactor
+VectorizationFactor
 LoopVectorizationCostModel::selectVectorizationFactor(unsigned MaxVF) {
   float Cost = expectedCost(1).first;
 #ifndef NDEBUG
@@ -7576,11 +7381,10 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
   }
 }
 
-LoopVectorizationCostModel::VectorizationFactor
+VectorizationFactor
 LoopVectorizationPlanner::plan(bool OptForSize, unsigned UserVF) {
   // Width 1 means no vectorize, cost 0 means uncomputed cost.
-  const LoopVectorizationCostModel::VectorizationFactor NoVectorization = {1U,
-                                                                           0U};
+  const VectorizationFactor NoVectorization = {1U, 0U};
   Optional<unsigned> MaybeMaxVF = CM.computeMaxVF(OptForSize);
   if (!MaybeMaxVF.hasValue()) // Cases considered too costly to vectorize.
     return NoVectorization;
@@ -8301,6 +8105,11 @@ LoopVectorizationPlanner::buildVPlan(VFRange &Range,
   return Plan;
 }
 
+Value* LoopVectorizationPlanner::VPCallbackILV::
+getOrCreateVectorValues(Value *V, unsigned Part) {
+      return ILV.getOrCreateVectorValue(V, Part);
+}
+
 void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent) const {
   O << " +\n"
     << Indent << "\"INTERLEAVE-GROUP with factor " << IG->getFactor() << " at ";
@@ -8589,8 +8398,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   unsigned UserVF = Hints.getWidth();
 
   // Plan how to best vectorize, return the best VF and its cost.
-  LoopVectorizationCostModel::VectorizationFactor VF =
-      LVP.plan(OptForSize, UserVF);
+  VectorizationFactor VF = LVP.plan(OptForSize, UserVF);
 
   // Select the interleave count.
   unsigned IC = CM.selectInterleaveCount(OptForSize, VF.Width, VF.Cost);
