@@ -3616,6 +3616,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_SETCC(SDNode *N) {
   SDValue InOp0 = GetWidenedVector(N->getOperand(0));
   SDValue InOp1 = GetWidenedVector(N->getOperand(1));
   SDLoc dl(N);
+  EVT VT = N->getValueType(0);
 
   // WARNING: In this code we widen the compare instruction with garbage.
   // This garbage may contain denormal floats which may be slow. Is this a real
@@ -3625,18 +3626,23 @@ SDValue DAGTypeLegalizer::WidenVecOp_SETCC(SDNode *N) {
   // Only some of the compared elements are legal.
   EVT SVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
                                    InOp0.getValueType());
+  // The result type is legal, if its vXi1, keep vXi1 for the new SETCC.
+  if (VT.getScalarType() == MVT::i1)
+    SVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
+                           SVT.getVectorNumElements());
+
   SDValue WideSETCC = DAG.getNode(ISD::SETCC, SDLoc(N),
-                     SVT, InOp0, InOp1, N->getOperand(2));
+                                  SVT, InOp0, InOp1, N->getOperand(2));
 
   // Extract the needed results from the result vector.
   EVT ResVT = EVT::getVectorVT(*DAG.getContext(),
                                SVT.getVectorElementType(),
-                               N->getValueType(0).getVectorNumElements());
+                               VT.getVectorNumElements());
   SDValue CC = DAG.getNode(
       ISD::EXTRACT_SUBVECTOR, dl, ResVT, WideSETCC,
       DAG.getConstant(0, dl, TLI.getVectorIdxTy(DAG.getDataLayout())));
 
-  return PromoteTargetBoolean(CC, N->getValueType(0));
+  return PromoteTargetBoolean(CC, VT);
 }
 
 
