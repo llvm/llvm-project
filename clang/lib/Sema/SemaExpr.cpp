@@ -9300,16 +9300,6 @@ QualType Sema::CheckShiftOperands(ExprResult &LHS, ExprResult &RHS,
   return LHSType;
 }
 
-static bool IsWithinTemplateSpecialization(Decl *D) {
-  if (DeclContext *DC = D->getDeclContext()) {
-    if (isa<ClassTemplateSpecializationDecl>(DC))
-      return true;
-    if (FunctionDecl *FD = dyn_cast<FunctionDecl>(DC))
-      return FD->isFunctionTemplateSpecialization();
-  }
-  return false;
-}
-
 /// If two different enums are compared, raise a warning.
 static void checkEnumComparison(Sema &S, SourceLocation Loc, Expr *LHS,
                                 Expr *RHS) {
@@ -9621,13 +9611,13 @@ static void diagnoseTautologicalComparison(Sema &S, SourceLocation Loc,
   //
   // NOTE: Don't warn about comparison expressions resulting from macro
   // expansion. Also don't warn about comparisons which are only self
-  // comparisons within a template specialization. The warnings should catch
+  // comparisons within a template instantiation. The warnings should catch
   // obvious cases in the definition of the template anyways. The idea is to
   // warn when the typed comparison operator will always evaluate to the same
   // result.
   ValueDecl *DL = getCompareDecl(LHSStripped);
   ValueDecl *DR = getCompareDecl(RHSStripped);
-  if (DL && DR && DL == DR && !IsWithinTemplateSpecialization(DL)) {
+  if (DL && DR && declaresSameEntity(DL, DR)) {
     StringRef Result;
     switch (Opc) {
     case BO_EQ: case BO_LE: case BO_GE:
@@ -9648,10 +9638,9 @@ static void diagnoseTautologicalComparison(Sema &S, SourceLocation Loc,
                               << Result);
   } else if (DL && DR && LHSType->isArrayType() && RHSType->isArrayType() &&
              !DL->getType()->isReferenceType() &&
-             !DR->getType()->isReferenceType()) {
+             !DR->getType()->isReferenceType() &&
+             !DL->isWeak() && !DR->isWeak()) {
     // What is it always going to evaluate to?
-    // FIXME: This is wrong if DL and DR are different Decls for the same
-    // entity. It's also wrong if DL and/or DR are weak declarations.
     StringRef Result;
     switch(Opc) {
     case BO_EQ: // e.g. array1 == array2

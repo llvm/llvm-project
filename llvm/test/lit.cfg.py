@@ -194,6 +194,36 @@ if loadable_module:
 if not config.build_shared_libs and not config.link_llvm_dylib:
     config.available_features.add('static-libs')
 
+def have_cxx_shared_library():
+    readobj_exe = lit.util.which('llvm-readobj', config.llvm_tools_dir)
+    if not readobj_exe:
+        print('llvm-readobj not found')
+        return False
+
+    try:
+        readobj_cmd = subprocess.Popen(
+            [readobj_exe, '-needed-libs', readobj_exe], stdout=subprocess.PIPE)
+    except OSError:
+        print('could not exec llvm-readobj')
+        return False
+
+    readobj_out = readobj_cmd.stdout.read().decode('ascii')
+    readobj_cmd.wait()
+
+    regex = re.compile(r'(libc\+\+|libstdc\+\+|msvcp).*\.(so|dylib|dll)')
+    needed_libs = False
+    for line in readobj_out.splitlines():
+        if 'NeededLibraries [' in line:
+            needed_libs = True
+        if ']' in line:
+            needed_libs = False
+        if needed_libs and regex.search(line.lower()):
+            return True
+    return False
+
+if have_cxx_shared_library():
+    config.available_features.add('cxx-shared-library')
+
 # Direct object generation
 if not 'hexagon' in config.target_triple:
     config.available_features.add('object-emission')

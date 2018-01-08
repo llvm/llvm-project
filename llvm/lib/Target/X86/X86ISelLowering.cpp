@@ -14286,21 +14286,8 @@ static SDValue lower1BitVectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
     break;
   }
 
-  if (ISD::isBuildVectorAllZeros(V1.getNode()))
-    V1 = getZeroVector(ExtVT, Subtarget, DAG, DL);
-  else if (ISD::isBuildVectorAllOnes(V1.getNode()))
-    V1 = getOnesVector(ExtVT, DAG, DL);
-  else
-    V1 = DAG.getNode(ISD::SIGN_EXTEND, DL, ExtVT, V1);
-
-  if (V2.isUndef())
-    V2 = DAG.getUNDEF(ExtVT);
-  else if (ISD::isBuildVectorAllZeros(V2.getNode()))
-    V2 = getZeroVector(ExtVT, Subtarget, DAG, DL);
-  else if (ISD::isBuildVectorAllOnes(V2.getNode()))
-    V2 = getOnesVector(ExtVT, DAG, DL);
-  else
-    V2 = DAG.getNode(ISD::SIGN_EXTEND, DL, ExtVT, V2);
+  V1 = DAG.getNode(ISD::SIGN_EXTEND, DL, ExtVT, V1);
+  V2 = DAG.getNode(ISD::SIGN_EXTEND, DL, ExtVT, V2);
 
   SDValue Shuffle = DAG.getVectorShuffle(ExtVT, DL, V1, V2, Mask);
   // i1 was sign extended we can use X86ISD::CVT2MASK.
