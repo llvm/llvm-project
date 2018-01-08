@@ -100,7 +100,7 @@ sections:
         Checksums:
           - FileName:        'd:\src\llvmbuild\cl\debug\x64\b.cpp'
             Kind:            MD5
-            Checksum:        2B9F08E2C7D63D3033E1997500CE3C53
+            Checksum:        8B4E383DAF442E63771294D52BF55155
       - !StringTable
         Strings:
           - 'd:\src\llvmbuild\cl\debug\x64\b.cpp'
@@ -1287,8 +1287,16 @@ sections:
               VarName:         __formal
           - Kind:            S_DEFRANGE_REGISTER
             DefRangeRegisterSym:
+              Register:        18
+              MayHaveNoName:   0
+              Range:
+                OffsetStart:     0
+                ISectStart:      0
+                Range:           10
+              Gaps:
           - Kind:            S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE
             DefRangeFramePointerRelFullScopeSym:
+              Register:        48
           - Kind:            S_CALLEES
             CallerSym:
               FuncID:          [ 4099 ]
@@ -1300,6 +1308,13 @@ sections:
               Name:            y
           - Kind:            S_DEFRANGE_REGISTER
             DefRangeRegisterSym:
+              Register:        18
+              MayHaveNoName:   0
+              Range:
+                OffsetStart:     10
+                ISectStart:      0
+                Range:           9
+              Gaps:
           - Kind:            S_FRAMEPROC
             FrameProcSym:
               TotalFrameBytes: 40
@@ -1326,19 +1341,19 @@ sections:
           - FileName:        'd:\src\llvmbuild\cl\debug\x64\b.cpp'
             Lines:
               - Offset:          0
-                LineStart:       5
-                IsStatement:     true
-                EndDelta:        0
-              - Offset:          4
-                LineStart:       6
-                IsStatement:     true
-                EndDelta:        0
-              - Offset:          14
                 LineStart:       7
                 IsStatement:     true
                 EndDelta:        0
-              - Offset:          19
+              - Offset:          4
                 LineStart:       8
+                IsStatement:     true
+                EndDelta:        0
+              - Offset:          14
+                LineStart:       9
+                IsStatement:     true
+                EndDelta:        0
+              - Offset:          19
+                LineStart:       10
                 IsStatement:     true
                 EndDelta:        0
             Columns:

@@ -14,7 +14,7 @@ define void @test() {
 ; CHECK-NEXT:    br label [[BB283:%.*]]
 ; CHECK:       bb283:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x float> [ undef, [[BB279:%.*]] ], [ [[TMP11:%.*]], [[EXIT:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x float> [ undef, [[BB279]] ], [ [[TMP15:%.*]], [[EXIT]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x float> [ undef, [[BB279]] ], [ [[TMP13:%.*]], [[EXIT]] ]
 ; CHECK-NEXT:    br label [[BB284:%.*]]
 ; CHECK:       bb284:
 ; CHECK-NEXT:    [[TMP2:%.*]] = fpext <2 x float> [[TMP0]] to <2 x double>
@@ -35,10 +35,10 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> undef, [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = fadd <2 x double> undef, [[TMP9]]
 ; CHECK-NEXT:    [[TMP11]] = fptrunc <2 x double> [[TMP10]] to <2 x float>
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x float> undef, i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x float> undef, float [[TMP12]], i32 0
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x float> undef, i32 1
-; CHECK-NEXT:    [[TMP15]] = insertelement <2 x float> [[TMP13]], float [[TMP14]], i32 1
+; CHECK-NEXT:    [[TMP317:%.*]] = fptrunc double undef to float
+; CHECK-NEXT:    [[TMP319:%.*]] = fptrunc double undef to float
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x float> undef, float [[TMP317]], i32 0
+; CHECK-NEXT:    [[TMP13]] = insertelement <2 x float> [[TMP12]], float [[TMP319]], i32 1
 ; CHECK-NEXT:    br label [[BB283]]
 ;
 bb279:
@@ -95,10 +95,8 @@ exit:
 define <4 x double> @constant_folding() {
 ; CHECK-LABEL: @constant_folding(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x double> <double 1.000000e+00, double 2.000000e+00>, i32 0
-; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x double> undef, double [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> <double 1.000000e+00, double 2.000000e+00>, i32 1
-; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x double> [[I1]], double [[TMP1]], i32 0
+; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x double> undef, double 1.000000e+00, i32 1
+; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x double> [[I1]], double 2.000000e+00, i32 0
 ; CHECK-NEXT:    ret <4 x double> [[I2]]
 ;
 entry:

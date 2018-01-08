@@ -920,9 +920,19 @@ public:
     return false;
   }
 
+  /// \brief Identify whether this taret supports multiversioning of functions,
+  /// which requires support for cpu_supports and cpu_is functionality.
+  virtual bool supportsMultiVersioning() const { return false; }
+
   // \brief Validate the contents of the __builtin_cpu_supports(const char*)
   // argument.
   virtual bool validateCpuSupports(StringRef Name) const { return false; }
+
+  // \brief Return the target-specific priority for features/cpus/vendors so
+  // that they can be properly sorted for checking.
+  virtual unsigned multiVersionSortPriority(StringRef Name) const {
+    return 0;
+  }
 
   // \brief Validate the contents of the __builtin_cpu_is(const char*)
   // argument.

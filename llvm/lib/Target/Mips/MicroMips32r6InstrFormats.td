@@ -174,22 +174,6 @@ class ADDI_FM_MMR6<string instr_asm, bits<6> op> : MMR6Arch<instr_asm> {
   let Inst{15-0}  = imm16;
 }
 
-class POOL32C_ST_EVA_FM_MMR6<bits<6> op, bits<3> funct> : MipsR6Inst {
-  bits<21> addr;
-  bits<5> hint;
-  bits<5> base = addr{20-16};
-  bits<9> offset = addr{8-0};
-
-  bits<32> Inst;
-
-  let Inst{31-26} = op;
-  let Inst{25-21} = hint;
-  let Inst{20-16} = base;
-  let Inst{15-12} = 0b1010;
-  let Inst{11-9} = funct;
-  let Inst{8-0}  = offset;
-}
-
 class LB32_FM_MMR6 : MipsR6Inst {
   bits<21> addr;
   bits<5> rt;
@@ -216,20 +200,6 @@ class LBU32_FM_MMR6 : MipsR6Inst {
   let Inst{25-21} = rt;
   let Inst{20-16} = base;
   let Inst{15-0}  = offset;
-}
-
-class POOL32C_LB_LBU_FM_MMR6<bits<3> funct> : MipsR6Inst {
-  bits<21> addr;
-  bits<5> rt;
-
-  bits<32> Inst;
-
-  let Inst{31-26} = 0b011000;
-  let Inst{25-21} = rt;
-  let Inst{20-16} = addr{20-16};
-  let Inst{15-12} = 0b0110;
-  let Inst{11-9} = funct;
-  let Inst{8-0}  = addr{8-0};
 }
 
 class SIGN_EXTEND_FM_MMR6<string instr_asm, bits<10> funct>
@@ -436,38 +406,6 @@ class SB32_SH32_STORE_FM_MMR6<bits<6> op> {
   let Inst{15-0}  = offset;
 }
 
-class POOL32C_STORE_EVA_FM_MMR6<bits<3> funct> {
-  bits<5> rt;
-  bits<21> addr;
-  bits<5> base = addr{20-16};
-  bits<9> offset = addr{8-0};
-
-  bits<32> Inst;
-
-  let Inst{31-26} = 0b011000;
-  let Inst{25-21} = rt;
-  let Inst{20-16} = base;
-  let Inst{15-12} = 0b1010;
-  let Inst{11-9}  = funct;
-  let Inst{8-0}   = offset;
-}
-
-class LOAD_WORD_EVA_FM_MMR6<bits<3> funct> {
-  bits<5> rt;
-  bits<21> addr;
-  bits<5> base = addr{20-16};
-  bits<9> offset = addr{8-0};
-
-  bits<32> Inst;
-
-  let Inst{31-26} = 0b011000;
-  let Inst{25-21} = rt;
-  let Inst{20-16} = base;
-  let Inst{15-12} = 0b0110;
-  let Inst{11-9}  = funct;
-  let Inst{8-0}   = offset;
-}
-
 class LOAD_WORD_FM_MMR6 {
   bits<5> rt;
   bits<21> addr;
@@ -629,23 +567,6 @@ class SW32_FM_MMR6<string instr_asm, bits<6> op> : MMR6Arch<instr_asm> {
   let Inst{25-21} = rt;
   let Inst{20-16} = addr{20-16};
   let Inst{15-0}  = addr{15-0};
-}
-
-class POOL32C_SWE_FM_MMR6<string instr_asm, bits<6> op, bits<4> fmt,
-    bits<3> funct> : MMR6Arch<instr_asm> {
-  bits<5> rt;
-  bits<21> addr;
-  bits<5> base = addr{20-16};
-  bits<9> offset = addr{8-0};
-
-  bits<32> Inst;
-
-  let Inst{31-26} = op;
-  let Inst{25-21} = rt;
-  let Inst{20-16} = base;
-  let Inst{15-12} = fmt;
-  let Inst{11-9} = funct;
-  let Inst{8-0}  = offset;
 }
 
 class POOL32F_ARITH_FM_MMR6<string instr_asm, bits<2> fmt, bits<8> funct>

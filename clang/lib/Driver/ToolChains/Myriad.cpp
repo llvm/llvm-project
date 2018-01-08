@@ -107,7 +107,6 @@ void tools::SHAVE::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(
         Args.MakeArgString(std::string("-i:") + A->getValue(0)));
   }
-  CmdArgs.push_back("-elf"); // Output format.
   CmdArgs.push_back(II.getFilename());
   CmdArgs.push_back(
       Args.MakeArgString(std::string("-o:") + Output.getFilename()));
