@@ -1927,32 +1927,9 @@ static bool runIPSCCP(Module &M, const DataLayout &DL,
         if (!I) continue;
 
         bool Folded = ConstantFoldTerminator(I->getParent());
-        if (!Folded) {
-          // The constant folder may not have been able to fold the terminator
-          // if this is a branch or switch on undef.  Fold it manually as a
-          // branch to the first successor.
-#ifndef NDEBUG
-          if (auto *BI = dyn_cast<BranchInst>(I)) {
-            assert(BI->isConditional() && isa<UndefValue>(BI->getCondition()) &&
-                   "Branch should be foldable!");
-          } else if (auto *SI = dyn_cast<SwitchInst>(I)) {
-            assert(isa<UndefValue>(SI->getCondition()) && "Switch should fold");
-          } else {
-            llvm_unreachable("Didn't fold away reference to block!");
-          }
-#endif
-
-          // Make this an uncond branch to the first successor.
-          TerminatorInst *TI = I->getParent()->getTerminator();
-          BranchInst::Create(TI->getSuccessor(0), TI);
-
-          // Remove entries in successor phi nodes to remove edges.
-          for (unsigned i = 1, e = TI->getNumSuccessors(); i != e; ++i)
-            TI->getSuccessor(i)->removePredecessor(TI->getParent());
-
-          // Remove the old terminator.
-          TI->eraseFromParent();
-        }
+        assert(Folded &&
+              "Expect TermInst on constantint or blockaddress to be folded");
+        (void) Folded;
       }
 
       // Finally, delete the basic block.

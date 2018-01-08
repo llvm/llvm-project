@@ -43,10 +43,22 @@ define <8 x i16> @signbit_sel_v8i16(<8 x i16> %x, <8 x i16> %y, <8 x i16> %mask)
 }
 
 define <4 x i32> @signbit_sel_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> %mask) {
-; AVX12F-LABEL: signbit_sel_v4i32:
-; AVX12F:       # %bb.0:
-; AVX12F-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
-; AVX12F-NEXT:    retq
+; AVX12-LABEL: signbit_sel_v4i32:
+; AVX12:       # %bb.0:
+; AVX12-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
+; AVX12-NEXT:    retq
+;
+; AVX512F-LABEL: signbit_sel_v4i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def %xmm2 killed %xmm2 def %zmm2
+; AVX512F-NEXT:    # kill: def %xmm1 killed %xmm1 def %zmm1
+; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
+; AVX512F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512F-NEXT:    vpcmpgtd %zmm2, %zmm3, %k1
+; AVX512F-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: signbit_sel_v4i32:
 ; AVX512VL:       # %bb.0:
@@ -60,10 +72,22 @@ define <4 x i32> @signbit_sel_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> %mask)
 }
 
 define <2 x i64> @signbit_sel_v2i64(<2 x i64> %x, <2 x i64> %y, <2 x i64> %mask) {
-; AVX12F-LABEL: signbit_sel_v2i64:
-; AVX12F:       # %bb.0:
-; AVX12F-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; AVX12F-NEXT:    retq
+; AVX12-LABEL: signbit_sel_v2i64:
+; AVX12:       # %bb.0:
+; AVX12-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
+; AVX12-NEXT:    retq
+;
+; AVX512F-LABEL: signbit_sel_v2i64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def %xmm2 killed %xmm2 def %zmm2
+; AVX512F-NEXT:    # kill: def %xmm1 killed %xmm1 def %zmm1
+; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
+; AVX512F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512F-NEXT:    vpcmpgtq %zmm2, %zmm3, %k1
+; AVX512F-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: signbit_sel_v2i64:
 ; AVX512VL:       # %bb.0:
@@ -77,10 +101,22 @@ define <2 x i64> @signbit_sel_v2i64(<2 x i64> %x, <2 x i64> %y, <2 x i64> %mask)
 }
 
 define <4 x float> @signbit_sel_v4f32(<4 x float> %x, <4 x float> %y, <4 x i32> %mask) {
-; AVX12F-LABEL: signbit_sel_v4f32:
-; AVX12F:       # %bb.0:
-; AVX12F-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
-; AVX12F-NEXT:    retq
+; AVX12-LABEL: signbit_sel_v4f32:
+; AVX12:       # %bb.0:
+; AVX12-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
+; AVX12-NEXT:    retq
+;
+; AVX512F-LABEL: signbit_sel_v4f32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def %xmm2 killed %xmm2 def %zmm2
+; AVX512F-NEXT:    # kill: def %xmm1 killed %xmm1 def %zmm1
+; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
+; AVX512F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512F-NEXT:    vpcmpgtd %zmm2, %zmm3, %k1
+; AVX512F-NEXT:    vblendmps %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: signbit_sel_v4f32:
 ; AVX512VL:       # %bb.0:
@@ -94,10 +130,22 @@ define <4 x float> @signbit_sel_v4f32(<4 x float> %x, <4 x float> %y, <4 x i32> 
 }
 
 define <2 x double> @signbit_sel_v2f64(<2 x double> %x, <2 x double> %y, <2 x i64> %mask) {
-; AVX12F-LABEL: signbit_sel_v2f64:
-; AVX12F:       # %bb.0:
-; AVX12F-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; AVX12F-NEXT:    retq
+; AVX12-LABEL: signbit_sel_v2f64:
+; AVX12:       # %bb.0:
+; AVX12-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
+; AVX12-NEXT:    retq
+;
+; AVX512F-LABEL: signbit_sel_v2f64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def %xmm2 killed %xmm2 def %zmm2
+; AVX512F-NEXT:    # kill: def %xmm1 killed %xmm1 def %zmm1
+; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
+; AVX512F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512F-NEXT:    vpcmpgtq %zmm2, %zmm3, %k1
+; AVX512F-NEXT:    vblendmpd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: signbit_sel_v2f64:
 ; AVX512VL:       # %bb.0:
@@ -203,10 +251,21 @@ define <8 x i32> @signbit_sel_v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i32> %mask)
 }
 
 define <4 x i64> @signbit_sel_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %mask) {
-; AVX12F-LABEL: signbit_sel_v4i64:
-; AVX12F:       # %bb.0:
-; AVX12F-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
-; AVX12F-NEXT:    retq
+; AVX12-LABEL: signbit_sel_v4i64:
+; AVX12:       # %bb.0:
+; AVX12-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
+; AVX12-NEXT:    retq
+;
+; AVX512F-LABEL: signbit_sel_v4i64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def %ymm2 killed %ymm2 def %zmm2
+; AVX512F-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; AVX512F-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; AVX512F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512F-NEXT:    vpcmpgtq %zmm2, %zmm3, %k1
+; AVX512F-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: signbit_sel_v4i64:
 ; AVX512VL:       # %bb.0:
@@ -220,10 +279,21 @@ define <4 x i64> @signbit_sel_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %mask)
 }
 
 define <4 x double> @signbit_sel_v4f64(<4 x double> %x, <4 x double> %y, <4 x i64> %mask) {
-; AVX12F-LABEL: signbit_sel_v4f64:
-; AVX12F:       # %bb.0:
-; AVX12F-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
-; AVX12F-NEXT:    retq
+; AVX12-LABEL: signbit_sel_v4f64:
+; AVX12:       # %bb.0:
+; AVX12-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
+; AVX12-NEXT:    retq
+;
+; AVX512F-LABEL: signbit_sel_v4f64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def %ymm2 killed %ymm2 def %zmm2
+; AVX512F-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; AVX512F-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; AVX512F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512F-NEXT:    vpcmpgtq %zmm2, %zmm3, %k1
+; AVX512F-NEXT:    vblendmpd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: signbit_sel_v4f64:
 ; AVX512VL:       # %bb.0:
@@ -256,8 +326,13 @@ define <4 x double> @signbit_sel_v4f64_small_mask(<4 x double> %x, <4 x double> 
 ;
 ; AVX512F-LABEL: signbit_sel_v4f64_small_mask:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpmovsxdq %xmm2, %ymm2
-; AVX512F-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
+; AVX512F-NEXT:    # kill: def %xmm2 killed %xmm2 def %zmm2
+; AVX512F-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; AVX512F-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; AVX512F-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512F-NEXT:    vpcmpgtd %zmm2, %zmm3, %k1
+; AVX512F-NEXT:    vblendmpd %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: signbit_sel_v4f64_small_mask:
@@ -296,12 +371,23 @@ define <8 x double> @signbit_sel_v8f64(<8 x double> %x, <8 x double> %y, <8 x i6
 ; (2) FIXME: If we don't care about signed-zero (and NaN?), the compare should still get folded.
 
 define <4 x float> @signbit_sel_v4f32_fcmp(<4 x float> %x, <4 x float> %y, <4 x float> %mask) #0 {
-; AVX12F-LABEL: signbit_sel_v4f32_fcmp:
-; AVX12F:       # %bb.0:
-; AVX12F-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX12F-NEXT:    vcmpltps %xmm2, %xmm0, %xmm2
-; AVX12F-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
-; AVX12F-NEXT:    retq
+; AVX12-LABEL: signbit_sel_v4f32_fcmp:
+; AVX12:       # %bb.0:
+; AVX12-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX12-NEXT:    vcmpltps %xmm2, %xmm0, %xmm2
+; AVX12-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
+; AVX12-NEXT:    retq
+;
+; AVX512F-LABEL: signbit_sel_v4f32_fcmp:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def %xmm1 killed %xmm1 def %zmm1
+; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
+; AVX512F-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX512F-NEXT:    vcmpltps %zmm2, %zmm0, %k1
+; AVX512F-NEXT:    vblendmps %zmm0, %zmm1, %zmm0 {%k1}
+; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: signbit_sel_v4f32_fcmp:
 ; AVX512VL:       # %bb.0:

@@ -1,0 +1,26 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-readobj -needed-libs %t.o | FileCheck %s
+
+# CHECK:      NeededLibraries [
+# CHECK-NEXT:   /usr/lib/libSystem.B.dylib
+# CHECK-NEXT: ]
+
+!mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           1
+  sizeofcmds:      56
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 81985536
+      compatibility_version: 65536
+    PayloadString:   /usr/lib/libSystem.B.dylib

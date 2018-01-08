@@ -99,10 +99,15 @@ define <2 x double> @test6(<2 x i64> %trigger, <2 x double>* %addr, <2 x double>
 ;
 ; AVX512F-LABEL: test6:
 ; AVX512F:       ## %bb.0:
+; AVX512F-NEXT:    ## kill: def %xmm1 killed %xmm1 def %zmm1
+; AVX512F-NEXT:    ## kill: def %xmm0 killed %xmm0 def %zmm0
 ; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpcmpeqq %xmm2, %xmm0, %xmm0
-; AVX512F-NEXT:    vmaskmovpd (%rdi), %xmm0, %xmm2
-; AVX512F-NEXT:    vblendvpd %xmm0, %xmm2, %xmm1, %xmm0
+; AVX512F-NEXT:    vpcmpeqq %zmm2, %zmm0, %k0
+; AVX512F-NEXT:    kshiftlw $14, %k0, %k0
+; AVX512F-NEXT:    kshiftrw $14, %k0, %k1
+; AVX512F-NEXT:    vblendmpd (%rdi), %zmm1, %zmm0 {%k1}
+; AVX512F-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: test6:
@@ -127,10 +132,15 @@ define <4 x float> @test7(<4 x i32> %trigger, <4 x float>* %addr, <4 x float> %d
 ;
 ; AVX512F-LABEL: test7:
 ; AVX512F:       ## %bb.0:
+; AVX512F-NEXT:    ## kill: def %xmm1 killed %xmm1 def %zmm1
+; AVX512F-NEXT:    ## kill: def %xmm0 killed %xmm0 def %zmm0
 ; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
-; AVX512F-NEXT:    vmaskmovps (%rdi), %xmm0, %xmm2
-; AVX512F-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
+; AVX512F-NEXT:    vpcmpeqd %zmm2, %zmm0, %k0
+; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
+; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
+; AVX512F-NEXT:    vblendmps (%rdi), %zmm1, %zmm0 {%k1}
+; AVX512F-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: test7:
@@ -163,10 +173,15 @@ define <4 x i32> @test8(<4 x i32> %trigger, <4 x i32>* %addr, <4 x i32> %dst) {
 ;
 ; AVX512F-LABEL: test8:
 ; AVX512F:       ## %bb.0:
+; AVX512F-NEXT:    ## kill: def %xmm1 killed %xmm1 def %zmm1
+; AVX512F-NEXT:    ## kill: def %xmm0 killed %xmm0 def %zmm0
 ; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
-; AVX512F-NEXT:    vpmaskmovd (%rdi), %xmm0, %xmm2
-; AVX512F-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
+; AVX512F-NEXT:    vpcmpeqd %zmm2, %zmm0, %k0
+; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
+; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
+; AVX512F-NEXT:    vpblendmd (%rdi), %zmm1, %zmm0 {%k1}
+; AVX512F-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: test8:
@@ -197,9 +212,14 @@ define void @test9(<4 x i32> %trigger, <4 x i32>* %addr, <4 x i32> %val) {
 ;
 ; AVX512F-LABEL: test9:
 ; AVX512F:       ## %bb.0:
+; AVX512F-NEXT:    ## kill: def %xmm1 killed %xmm1 def %zmm1
+; AVX512F-NEXT:    ## kill: def %xmm0 killed %xmm0 def %zmm0
 ; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
-; AVX512F-NEXT:    vpmaskmovd %xmm1, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpcmpeqd %zmm2, %zmm0, %k0
+; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
+; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
+; AVX512F-NEXT:    vmovdqu32 %zmm1, (%rdi) {%k1}
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: test9:
@@ -237,11 +257,14 @@ define <4 x double> @test10(<4 x i32> %trigger, <4 x double>* %addr, <4 x double
 ;
 ; AVX512F-LABEL: test10:
 ; AVX512F:       ## %bb.0:
+; AVX512F-NEXT:    ## kill: def %ymm1 killed %ymm1 def %zmm1
+; AVX512F-NEXT:    ## kill: def %xmm0 killed %xmm0 def %zmm0
 ; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
-; AVX512F-NEXT:    vpmovsxdq %xmm0, %ymm0
-; AVX512F-NEXT:    vmaskmovpd (%rdi), %ymm0, %ymm2
-; AVX512F-NEXT:    vblendvpd %ymm0, %ymm2, %ymm1, %ymm0
+; AVX512F-NEXT:    vpcmpeqd %zmm2, %zmm0, %k0
+; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
+; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
+; AVX512F-NEXT:    vblendmpd (%rdi), %zmm1, %zmm0 {%k1}
+; AVX512F-NEXT:    ## kill: def %ymm0 killed %ymm0 killed %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: test10:
@@ -277,10 +300,13 @@ define <4 x double> @test10b(<4 x i32> %trigger, <4 x double>* %addr, <4 x doubl
 ;
 ; AVX512F-LABEL: test10b:
 ; AVX512F:       ## %bb.0:
+; AVX512F-NEXT:    ## kill: def %xmm0 killed %xmm0 def %zmm0
 ; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; AVX512F-NEXT:    vpmovsxdq %xmm0, %ymm0
-; AVX512F-NEXT:    vmaskmovpd (%rdi), %ymm0, %ymm0
+; AVX512F-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
+; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
+; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
+; AVX512F-NEXT:    vmovupd (%rdi), %zmm0 {%k1} {z}
+; AVX512F-NEXT:    ## kill: def %ymm0 killed %ymm0 killed %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: test10b:
@@ -525,11 +551,14 @@ define void @test14(<2 x i32> %trigger, <2 x float>* %addr, <2 x float> %val) {
 ;
 ; AVX512F-LABEL: test14:
 ; AVX512F:       ## %bb.0:
+; AVX512F-NEXT:    ## kill: def %xmm1 killed %xmm1 def %zmm1
 ; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; AVX512F-NEXT:    vpcmpeqq %xmm2, %xmm0, %xmm0
-; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
-; AVX512F-NEXT:    vmaskmovps %xmm1, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpcmpeqq %zmm2, %zmm0, %k0
+; AVX512F-NEXT:    kshiftlw $14, %k0, %k0
+; AVX512F-NEXT:    kshiftrw $14, %k0, %k1
+; AVX512F-NEXT:    vmovups %zmm1, (%rdi) {%k1}
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: test14:
@@ -569,10 +598,12 @@ define void @test15(<2 x i32> %trigger, <2 x i32>* %addr, <2 x i32> %val) {
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; AVX512F-NEXT:    vpcmpeqq %xmm2, %xmm0, %xmm0
-; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
-; AVX512F-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; AVX512F-NEXT:    vpmaskmovd %xmm1, %xmm0, (%rdi)
+; AVX512F-NEXT:    vpcmpeqq %zmm2, %zmm0, %k0
+; AVX512F-NEXT:    kshiftlw $14, %k0, %k0
+; AVX512F-NEXT:    kshiftrw $14, %k0, %k1
+; AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
+; AVX512F-NEXT:    vmovdqu32 %zmm0, (%rdi) {%k1}
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: test15:
@@ -610,12 +641,15 @@ define <2 x float> @test16(<2 x i32> %trigger, <2 x float>* %addr, <2 x float> %
 ;
 ; AVX512F-LABEL: test16:
 ; AVX512F:       ## %bb.0:
+; AVX512F-NEXT:    ## kill: def %xmm1 killed %xmm1 def %zmm1
 ; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; AVX512F-NEXT:    vpcmpeqq %xmm2, %xmm0, %xmm0
-; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
-; AVX512F-NEXT:    vmaskmovps (%rdi), %xmm0, %xmm2
-; AVX512F-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
+; AVX512F-NEXT:    vpcmpeqq %zmm2, %zmm0, %k0
+; AVX512F-NEXT:    kshiftlw $14, %k0, %k0
+; AVX512F-NEXT:    kshiftrw $14, %k0, %k1
+; AVX512F-NEXT:    vblendmps (%rdi), %zmm1, %zmm0 {%k1}
+; AVX512F-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: test16:
@@ -659,12 +693,13 @@ define <2 x i32> @test17(<2 x i32> %trigger, <2 x i32>* %addr, <2 x i32> %dst) {
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; AVX512F-NEXT:    vpcmpeqq %xmm2, %xmm0, %xmm0
-; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
-; AVX512F-NEXT:    vpmaskmovd (%rdi), %xmm0, %xmm2
-; AVX512F-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; AVX512F-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
+; AVX512F-NEXT:    vpcmpeqq %zmm2, %zmm0, %k0
+; AVX512F-NEXT:    kshiftlw $14, %k0, %k0
+; AVX512F-NEXT:    kshiftrw $14, %k0, %k1
+; AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
+; AVX512F-NEXT:    vmovdqu32 (%rdi), %zmm0 {%k1}
 ; AVX512F-NEXT:    vpmovsxdq %xmm0, %xmm0
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: test17:
@@ -704,9 +739,12 @@ define <2 x float> @test18(<2 x i32> %trigger, <2 x float>* %addr) {
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512F-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
-; AVX512F-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
-; AVX512F-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
-; AVX512F-NEXT:    vmaskmovps (%rdi), %xmm0, %xmm0
+; AVX512F-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0
+; AVX512F-NEXT:    kshiftlw $14, %k0, %k0
+; AVX512F-NEXT:    kshiftrw $14, %k0, %k1
+; AVX512F-NEXT:    vmovups (%rdi), %zmm0 {%k1} {z}
+; AVX512F-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: test18:
@@ -729,8 +767,11 @@ define <4 x float> @load_all(<4 x i32> %trigger, <4 x float>* %addr) {
 ;
 ; AVX512F-LABEL: load_all:
 ; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512F-NEXT:    vmaskmovps (%rdi), %xmm0, %xmm0
+; AVX512F-NEXT:    movw $15, %ax
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vmovups (%rdi), %zmm0 {%k1} {z}
+; AVX512F-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: load_all:
@@ -755,9 +796,12 @@ define <4 x float> @mload_constmask_v4f32(<4 x float>* %addr, <4 x float> %dst) 
 ;
 ; AVX512F-LABEL: mload_constmask_v4f32:
 ; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    vmovaps {{.*#+}} xmm1 = [4294967295,0,4294967295,4294967295]
-; AVX512F-NEXT:    vmaskmovps (%rdi), %xmm1, %xmm2
-; AVX512F-NEXT:    vblendvps %xmm1, %xmm2, %xmm0, %xmm0
+; AVX512F-NEXT:    ## kill: def %xmm0 killed %xmm0 def %zmm0
+; AVX512F-NEXT:    movw $13, %ax
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vmovups (%rdi), %zmm0 {%k1}
+; AVX512F-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: mload_constmask_v4f32:
@@ -789,9 +833,12 @@ define <4 x i32> @mload_constmask_v4i32(<4 x i32>* %addr, <4 x i32> %dst) {
 ;
 ; AVX512F-LABEL: mload_constmask_v4i32:
 ; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,4294967295,4294967295,4294967295]
-; AVX512F-NEXT:    vpmaskmovd (%rdi), %xmm1, %xmm2
-; AVX512F-NEXT:    vblendvps %xmm1, %xmm2, %xmm0, %xmm0
+; AVX512F-NEXT:    ## kill: def %xmm0 killed %xmm0 def %zmm0
+; AVX512F-NEXT:    movw $14, %ax
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vmovdqu32 (%rdi), %zmm0 {%k1}
+; AVX512F-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: mload_constmask_v4i32:
@@ -843,9 +890,11 @@ define <4 x double> @mload_constmask_v4f64(<4 x double>* %addr, <4 x double> %ds
 ;
 ; AVX512F-LABEL: mload_constmask_v4f64:
 ; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    vmovapd {{.*#+}} ymm1 = [18446744073709551615,18446744073709551615,18446744073709551615,0]
-; AVX512F-NEXT:    vmaskmovpd (%rdi), %ymm1, %ymm2
-; AVX512F-NEXT:    vblendvpd %ymm1, %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    ## kill: def %ymm0 killed %ymm0 def %zmm0
+; AVX512F-NEXT:    movb $7, %al
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vmovupd (%rdi), %zmm0 {%k1}
+; AVX512F-NEXT:    ## kill: def %ymm0 killed %ymm0 killed %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: mload_constmask_v4f64:
@@ -898,9 +947,11 @@ define <4 x i64> @mload_constmask_v4i64(<4 x i64>* %addr, <4 x i64> %dst) {
 ;
 ; AVX512F-LABEL: mload_constmask_v4i64:
 ; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm1 = [18446744073709551615,0,0,18446744073709551615]
-; AVX512F-NEXT:    vpmaskmovq (%rdi), %ymm1, %ymm2
-; AVX512F-NEXT:    vblendvpd %ymm1, %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    ## kill: def %ymm0 killed %ymm0 def %zmm0
+; AVX512F-NEXT:    movb $9, %al
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0 {%k1}
+; AVX512F-NEXT:    ## kill: def %ymm0 killed %ymm0 killed %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: mload_constmask_v4i64:
@@ -950,8 +1001,10 @@ define <4 x double> @mload_constmask_v4f64_undef_passthrough(<4 x double>* %addr
 ;
 ; AVX512F-LABEL: mload_constmask_v4f64_undef_passthrough:
 ; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    vmovapd {{.*#+}} ymm0 = [18446744073709551615,18446744073709551615,18446744073709551615,0]
-; AVX512F-NEXT:    vmaskmovpd (%rdi), %ymm0, %ymm0
+; AVX512F-NEXT:    movb $7, %al
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vmovupd (%rdi), %zmm0 {%k1} {z}
+; AVX512F-NEXT:    ## kill: def %ymm0 killed %ymm0 killed %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: mload_constmask_v4f64_undef_passthrough:
@@ -979,8 +1032,10 @@ define <4 x i64> @mload_constmask_v4i64_undef_passthrough(<4 x i64>* %addr) {
 ;
 ; AVX512F-LABEL: mload_constmask_v4i64_undef_passthrough:
 ; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm0 = [0,18446744073709551615,18446744073709551615,0]
-; AVX512F-NEXT:    vpmaskmovq (%rdi), %ymm0, %ymm0
+; AVX512F-NEXT:    movb $6, %al
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0 {%k1} {z}
+; AVX512F-NEXT:    ## kill: def %ymm0 killed %ymm0 killed %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: mload_constmask_v4i64_undef_passthrough:
@@ -1008,8 +1063,11 @@ define void @test21(<4 x i32> %trigger, <4 x i32>* %addr, <4 x i32> %val) {
 ;
 ; AVX512F-LABEL: test21:
 ; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512F-NEXT:    vpmaskmovd %xmm1, %xmm0, (%rdi)
+; AVX512F-NEXT:    ## kill: def %xmm1 killed %xmm1 def %zmm1
+; AVX512F-NEXT:    movw $15, %ax
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vmovdqu32 %zmm1, (%rdi) {%k1}
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: test21:
@@ -1225,7 +1283,14 @@ define void @trunc_mask(<4 x float> %x, <4 x float>* %ptr, <4 x float> %y, <4 x 
 ;
 ; AVX512F-LABEL: trunc_mask:
 ; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    vmaskmovps %xmm0, %xmm2, (%rdi)
+; AVX512F-NEXT:    ## kill: def %xmm2 killed %xmm2 def %zmm2
+; AVX512F-NEXT:    ## kill: def %xmm0 killed %xmm0 def %zmm0
+; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    vpcmpgtd %zmm2, %zmm1, %k0
+; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
+; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
+; AVX512F-NEXT:    vmovups %zmm0, (%rdi) {%k1}
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; SKX-LABEL: trunc_mask:

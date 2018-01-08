@@ -726,7 +726,6 @@ private:
   LoadModuleMapResult loadModuleMapFileImpl(const FileEntry *File,
                                             bool IsSystem,
                                             const DirectoryEntry *Dir,
-                                            bool IsExplicitlyProvided,
                                             FileID ID = FileID(),
                                             unsigned *Offset = nullptr);
 

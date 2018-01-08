@@ -535,15 +535,6 @@ define <4 x double> @stack_fold_cvtps2pd_ymm_int(<4 x float> %a0) {
 }
 declare <4 x double> @llvm.x86.avx.cvt.ps2.pd.256(<4 x float>) nounwind readnone
 
-define <8 x i16> @stack_fold_cvtps2ph(<4 x float> %a0) {
-  ;CHECK-LABEL: stack_fold_cvtps2ph
-  ;CHECK:   vcvtps2ph $0, {{%xmm[0-9][0-9]*}}, {{-?[0-9]*}}(%rsp) {{.*#+}} 16-byte Folded Spill
-  %1 = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> %a0, i32 0)
-  %2 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  ret <8 x i16> %1
-}
-declare <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float>, i32) nounwind readonly
-
 define <8 x i16> @stack_fold_cvtps2ph_ymm(<8 x float> %a0) {
   ;CHECK-LABEL: stack_fold_cvtps2ph_ymm
   ;CHECK:   vcvtps2ph $0, {{%ymm[0-9][0-9]*}}, {{-?[0-9]*}}(%rsp) {{.*#+}} 16-byte Folded Spill

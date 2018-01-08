@@ -503,6 +503,16 @@ define i32 @test_x86_avx512_cvttss2si(<4 x float> %a0) {
 }
 declare i32 @llvm.x86.avx512.cvttss2si(<4 x float>, i32) nounwind readnone
 
+define i32 @test_x86_avx512_cvttss2si_load(<4 x float>* %a0) {
+; CHECK-LABEL: test_x86_avx512_cvttss2si_load:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vcvttss2si (%rdi), %eax
+; CHECK-NEXT:    retq
+  %a1 = load <4 x float>, <4 x float>* %a0
+  %res = call i32 @llvm.x86.avx512.cvttss2si(<4 x float> %a1, i32 4) ;
+  ret i32 %res
+}
+
 define i64 @test_x86_avx512_cvttss2si64(<4 x float> %a0) {
 ; CHECK-LABEL: test_x86_avx512_cvttss2si64:
 ; CHECK:       ## %bb.0:

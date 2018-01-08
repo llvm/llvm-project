@@ -4,10 +4,12 @@ target triple = "thumbv7-apple-macosx10.6.7"
 
 ;CHECK: sub-register DW_OP_regx
 ;CHECK-NEXT: 256
+;CHECK-NEXT: @
 ;CHECK-NEXT: DW_OP_piece
 ;CHECK-NEXT: 8
 ;CHECK-NEXT: sub-register DW_OP_regx
 ;CHECK-NEXT: 257
+;CHECK-NEXT: @
 ;CHECK-NEXT: DW_OP_piece
 ;CHECK-NEXT: 8
 

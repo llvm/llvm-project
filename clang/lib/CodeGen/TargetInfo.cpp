@@ -1028,8 +1028,7 @@ public:
       IsMCUABI(CGT.getTarget().getTriple().isOSIAMCU()),
       DefaultNumRegisterParameters(NumRegisterParameters) {}
 
-  bool shouldPassIndirectlyForSwift(CharUnits totalSize,
-                                    ArrayRef<llvm::Type*> scalars,
+  bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> scalars,
                                     bool asReturnValue) const override {
     // LLVM's x86-32 lowering currently only assigns up to three
     // integer registers and three fp registers.  Oddly, it'll use up to
@@ -2168,8 +2167,7 @@ public:
     return Has64BitPointers;
   }
 
-  bool shouldPassIndirectlyForSwift(CharUnits totalSize,
-                                    ArrayRef<llvm::Type*> scalars,
+  bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> scalars,
                                     bool asReturnValue) const override {
     return occupiesMoreThan(CGT, scalars, /*total*/ 4);
   }  
@@ -2201,8 +2199,7 @@ public:
     return isX86VectorCallAggregateSmallEnough(NumMembers);
   }
 
-  bool shouldPassIndirectlyForSwift(CharUnits totalSize,
-                                    ArrayRef<llvm::Type *> scalars,
+  bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type *> scalars,
                                     bool asReturnValue) const override {
     return occupiesMoreThan(CGT, scalars, /*total*/ 4);
   }
@@ -4922,8 +4919,7 @@ private:
   Address EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
                       QualType Ty) const override;
 
-  bool shouldPassIndirectlyForSwift(CharUnits totalSize,
-                                    ArrayRef<llvm::Type*> scalars,
+  bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> scalars,
                                     bool asReturnValue) const override {
     return occupiesMoreThan(CGT, scalars, /*total*/ 4);
   }
@@ -5521,8 +5517,7 @@ private:
   llvm::CallingConv::ID getABIDefaultCC() const;
   void setCCs();
 
-  bool shouldPassIndirectlyForSwift(CharUnits totalSize,
-                                    ArrayRef<llvm::Type*> scalars,
+  bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> scalars,
                                     bool asReturnValue) const override {
     return occupiesMoreThan(CGT, scalars, /*total*/ 4);
   }
@@ -6313,8 +6308,7 @@ public:
   Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                     QualType Ty) const override;
 
-  bool shouldPassIndirectlyForSwift(CharUnits totalSize,
-                                    ArrayRef<llvm::Type*> scalars,
+  bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> scalars,
                                     bool asReturnValue) const override {
     return occupiesMoreThan(CGT, scalars, /*total*/ 4);
   }

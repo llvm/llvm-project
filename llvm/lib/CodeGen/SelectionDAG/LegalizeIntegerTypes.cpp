@@ -599,20 +599,9 @@ SDValue DAGTypeLegalizer::PromoteIntRes_SETCC(SDNode *N) {
   assert(SVT.isVector() == N->getOperand(0).getValueType().isVector() &&
          "Vector compare must return a vector result!");
 
-  SDValue LHS = N->getOperand(0);
-  SDValue RHS = N->getOperand(1);
-  if (LHS.getValueType() != RHS.getValueType()) {
-    if (getTypeAction(LHS.getValueType()) == TargetLowering::TypePromoteInteger &&
-        !LHS.getValueType().isVector())
-      LHS = GetPromotedInteger(LHS);
-    if (getTypeAction(RHS.getValueType()) == TargetLowering::TypePromoteInteger &&
-        !RHS.getValueType().isVector())
-      RHS = GetPromotedInteger(RHS);
-  }
-
   // Get the SETCC result using the canonical SETCC type.
-  SDValue SetCC = DAG.getNode(N->getOpcode(), dl, SVT, LHS, RHS,
-                              N->getOperand(2));
+  SDValue SetCC = DAG.getNode(N->getOpcode(), dl, SVT, N->getOperand(0),
+                              N->getOperand(1), N->getOperand(2));
 
   // Convert to the expected type.
   return DAG.getSExtOrTrunc(SetCC, dl, NVT);

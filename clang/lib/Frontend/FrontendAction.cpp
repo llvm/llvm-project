@@ -858,6 +858,13 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       CI.getDiagnostics().Report(diag::err_module_map_not_found) << Filename;
   }
 
+  // Add a module declaration scope so that modules from -fmodule-map-file
+  // arguments may shadow modules found implicitly in search paths.
+  CI.getPreprocessor()
+      .getHeaderSearchInfo()
+      .getModuleMap()
+      .finishModuleDeclarationScope();
+
   // If we were asked to load any module files, do so now.
   for (const auto &ModuleFile : CI.getFrontendOpts().ModuleFiles)
     if (!CI.loadModuleFile(ModuleFile))

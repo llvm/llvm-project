@@ -19,9 +19,10 @@
 
 namespace llvm {
 
-/// Utility function to encode a SLEB128 value to an output stream.
-inline void encodeSLEB128(int64_t Value, raw_ostream &OS,
-                          unsigned PadTo = 0) {
+/// Utility function to encode a SLEB128 value to an output stream. Returns
+/// the length in bytes of the encoded value.
+inline unsigned encodeSLEB128(int64_t Value, raw_ostream &OS,
+                              unsigned PadTo = 0) {
   bool More;
   unsigned Count = 0;
   do {
@@ -42,7 +43,9 @@ inline void encodeSLEB128(int64_t Value, raw_ostream &OS,
     for (; Count < PadTo - 1; ++Count)
       OS << char(PadValue | 0x80);
     OS << char(PadValue);
+    Count++;
   }
+  return Count;
 }
 
 /// Utility function to encode a SLEB128 value to a buffer. Returns
@@ -73,9 +76,10 @@ inline unsigned encodeSLEB128(int64_t Value, uint8_t *p, unsigned PadTo = 0) {
   return (unsigned)(p - orig_p);
 }
 
-/// Utility function to encode a ULEB128 value to an output stream.
-inline void encodeULEB128(uint64_t Value, raw_ostream &OS,
-                          unsigned PadTo = 0) {
+/// Utility function to encode a ULEB128 value to an output stream. Returns
+/// the length in bytes of the encoded value.
+inline unsigned encodeULEB128(uint64_t Value, raw_ostream &OS,
+                              unsigned PadTo = 0) {
   unsigned Count = 0;
   do {
     uint8_t Byte = Value & 0x7f;
@@ -93,6 +97,7 @@ inline void encodeULEB128(uint64_t Value, raw_ostream &OS,
     OS << '\x00';
     Count++;
   }
+  return Count;
 }
 
 /// Utility function to encode a ULEB128 value to a buffer. Returns
