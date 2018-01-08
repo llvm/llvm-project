@@ -31,6 +31,7 @@
 #include "support/runtime/exception_glibcxx.ipp"
 #include "support/runtime/exception_pointer_glibcxx.ipp"
 #else
+#include "include/atomic_support.h"
 #include "support/runtime/exception_fallback.ipp"
 #include "support/runtime/exception_pointer_unimplemented.ipp"
 #endif

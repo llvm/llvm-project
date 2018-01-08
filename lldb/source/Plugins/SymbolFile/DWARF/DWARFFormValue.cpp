@@ -725,3 +725,39 @@ int DWARFFormValue::Compare(const DWARFFormValue &a_value,
   }
   return -1;
 }
+
+bool DWARFFormValue::FormIsSupported(dw_form_t form) {
+  switch (form) {
+    case DW_FORM_addr:
+    case DW_FORM_block2:
+    case DW_FORM_block4:
+    case DW_FORM_data2:
+    case DW_FORM_data4:
+    case DW_FORM_data8:
+    case DW_FORM_string:
+    case DW_FORM_block:
+    case DW_FORM_block1:
+    case DW_FORM_data1:
+    case DW_FORM_flag:
+    case DW_FORM_sdata:
+    case DW_FORM_strp:
+    case DW_FORM_udata:
+    case DW_FORM_ref_addr:
+    case DW_FORM_ref1:
+    case DW_FORM_ref2:
+    case DW_FORM_ref4:
+    case DW_FORM_ref8:
+    case DW_FORM_ref_udata:
+    case DW_FORM_indirect:
+    case DW_FORM_sec_offset:
+    case DW_FORM_exprloc:
+    case DW_FORM_flag_present:
+    case DW_FORM_ref_sig8:
+    case DW_FORM_GNU_str_index:
+    case DW_FORM_GNU_addr_index:
+      return true;
+    default:
+      break;
+  }
+  return false;
+}

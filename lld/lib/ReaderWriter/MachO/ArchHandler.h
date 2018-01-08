@@ -13,7 +13,7 @@
 #include "Atoms.h"
 #include "File.h"
 #include "MachONormalizedFile.h"
-#include "lld/Core/LLVM.h"
+#include "lld/Common/LLVM.h"
 #include "lld/Core/Error.h"
 #include "lld/Core/Reference.h"
 #include "lld/Core/Simple.h"
@@ -111,6 +111,10 @@ public:
   /// Used by normalizedFromAtoms() to know where to generated lazy binding
   /// info in final executables.
   virtual bool isLazyPointer(const Reference &);
+
+  /// Reference from an __stub_helper entry to the required offset of the
+  /// lazy bind commands.
+  virtual Reference::KindValue lazyImmediateLocationKind() = 0;
 
   /// Returns true if the specified relocation is paired to the next relocation.
   virtual bool isPairedReloc(const normalized::Relocation &) = 0;

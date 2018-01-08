@@ -11,7 +11,6 @@
 
 #include "lldb/Core/Address.h"      // for Address
 #include "lldb/Core/AddressRange.h" // for AddressRange
-#include "lldb/Core/ArchSpec.h"     // for ArchSpec
 #include "lldb/Core/Module.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/Scalar.h" // for Scalar, operator!=
@@ -166,9 +165,8 @@ bool ValueObjectVariable::UpdateValue() {
                 target);
     }
     Value old_value(m_value);
-    if (expr.Evaluate(&exe_ctx, nullptr, nullptr, nullptr,
-                      loclist_base_load_addr, nullptr, nullptr, m_value,
-                      &m_error)) {
+    if (expr.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr, nullptr,
+                      nullptr, m_value, &m_error)) {
       m_resolved_value = m_value;
       m_value.SetContext(Value::eContextTypeVariable, variable);
 

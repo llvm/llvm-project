@@ -25,13 +25,13 @@
 ; CHECK-NEXT:    p0: %tmp14
 ; CHECK-NEXT:    p1: {0,+,(0 smax %tmp)}<%bb12>
 ; CHECK-NEXT:    Arrays {
-; CHECK-NEXT:        i64 MemRef_tmp13; // Element size 8
 ; CHECK-NEXT:        i64 MemRef_arg1[*]; // Element size 8
+; CHECK-NEXT:        i64 MemRef_tmp13; // Element size 8
 ; CHECK-NEXT:        [1000 x double]* MemRef_arg4[*]; // Element size 8
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    Arrays (Bounds as pw_affs) {
-; CHECK-NEXT:        i64 MemRef_tmp13; // Element size 8
 ; CHECK-NEXT:        i64 MemRef_arg1[*]; // Element size 8
+; CHECK-NEXT:        i64 MemRef_tmp13; // Element size 8
 ; CHECK-NEXT:        [1000 x double]* MemRef_arg4[*]; // Element size 8
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    Alias Groups (0):
@@ -76,15 +76,15 @@
 ; NONAFFINE-NEXT:    p0: %tmp9
 ; NONAFFINE-NEXT:    p1: %tmp14
 ; NONAFFINE-NEXT:    Arrays {
-; NONAFFINE-NEXT:        i64 MemRef_arg1[*]; // Element size 8
 ; NONAFFINE-NEXT:        i64 MemRef_arg[*]; // Element size 8
+; NONAFFINE-NEXT:        i64 MemRef_arg1[*]; // Element size 8
 ; NONAFFINE-NEXT:        i64 MemRef_tmp7; // Element size 8
 ; NONAFFINE-NEXT:        i64 MemRef_tmp8; // Element size 8
 ; NONAFFINE-NEXT:        [1000 x double]* MemRef_arg4[*]; // Element size 8
 ; NONAFFINE-NEXT:    }
 ; NONAFFINE-NEXT:    Arrays (Bounds as pw_affs) {
-; NONAFFINE-NEXT:        i64 MemRef_arg1[*]; // Element size 8
 ; NONAFFINE-NEXT:        i64 MemRef_arg[*]; // Element size 8
+; NONAFFINE-NEXT:        i64 MemRef_arg1[*]; // Element size 8
 ; NONAFFINE-NEXT:        i64 MemRef_tmp7; // Element size 8
 ; NONAFFINE-NEXT:        i64 MemRef_tmp8; // Element size 8
 ; NONAFFINE-NEXT:        [1000 x double]* MemRef_arg4[*]; // Element size 8

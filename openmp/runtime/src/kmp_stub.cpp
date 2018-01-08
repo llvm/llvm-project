@@ -2,7 +2,6 @@
  * kmp_stub.cpp -- stub versions of user-callable OpenMP RT functions.
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #include <errno.h>
 #include <limits.h>
@@ -72,13 +70,13 @@ static size_t __kmps_init() {
     BOOL status = QueryPerformanceFrequency(&freq);
     if (status) {
       frequency = double(freq.QuadPart);
-    }; // if
+    }
 #endif
 
     initialized = 1;
-  }; // if
+  }
   return dummy;
-}; // __kmps_init
+} // __kmps_init
 
 #define i __kmps_init();
 
@@ -141,34 +139,59 @@ void kmp_set_disp_num_buffers(omp_int_t arg) { i; }
 /* KMP memory management functions. */
 void *kmp_malloc(size_t size) {
   i;
-  return malloc(size);
+  void *res;
+#if KMP_OS_WINDOWS
+  // If succesfull returns a pointer to the memory block, otherwise returns
+  // NULL.
+  // Sets errno to ENOMEM or EINVAL if memory allocation failed or parameter
+  // validation failed.
+  res = _aligned_malloc(size, 1);
+#else
+  res = malloc(size);
+#endif
+  return res;
 }
 void *kmp_aligned_malloc(size_t sz, size_t a) {
   i;
-#if KMP_OS_WINDOWS
-  errno = ENOSYS; // not supported
-  return NULL; // no standard aligned allocator on Windows (pre - C11)
-#else
-  void *res;
   int err;
+  void *res;
+#if KMP_OS_WINDOWS
+  res = _aligned_malloc(sz, a);
+#else
   if (err = posix_memalign(&res, a, sz)) {
     errno = err; // can be EINVAL or ENOMEM
-    return NULL;
+    res = NULL;
   }
-  return res;
 #endif
+  return res;
 }
 void *kmp_calloc(size_t nelem, size_t elsize) {
   i;
-  return calloc(nelem, elsize);
+  void *res;
+#if KMP_OS_WINDOWS
+  res = _aligned_recalloc(NULL, nelem, elsize, 1);
+#else
+  res = calloc(nelem, elsize);
+#endif
+  return res;
 }
 void *kmp_realloc(void *ptr, size_t size) {
   i;
-  return realloc(ptr, size);
+  void *res;
+#if KMP_OS_WINDOWS
+  res = _aligned_realloc(ptr, size, 1);
+#else
+  res = realloc(ptr, size);
+#endif
+  return res;
 }
 void kmp_free(void *ptr) {
   i;
+#if KMP_OS_WINDOWS
+  _aligned_free(ptr);
+#else
   free(ptr);
+#endif
 }
 
 static int __kmps_blocktime = INT_MAX;
@@ -272,8 +295,8 @@ double __kmps_get_wtime(void) {
     BOOL status = QueryPerformanceCounter(&now);
     if (status) {
       wtime = double(now.QuadPart) / frequency;
-    }; // if
-  }; // if
+    }
+  }
 #else
   // gettimeofday() returns seconds and microseconds since the Epoch.
   struct timeval tval;
@@ -283,10 +306,10 @@ double __kmps_get_wtime(void) {
     wtime = (double)(tval.tv_sec) + 1.0E-06 * (double)(tval.tv_usec);
   } else {
     // TODO: Assert or abort here.
-  }; // if
+  }
 #endif
   return wtime;
-}; // __kmps_get_wtime
+} // __kmps_get_wtime
 
 double __kmps_get_wtick(void) {
   // Number of seconds between successive clock ticks.
@@ -304,13 +327,13 @@ double __kmps_get_wtick(void) {
     } else {
       // TODO: Assert or abort here.
       wtick = 1.0E-03;
-    }; // if
+    }
   }
 #else
   // TODO: gettimeofday() returns in microseconds, but what the precision?
   wtick = 1.0E-06;
 #endif
   return wtick;
-}; // __kmps_get_wtick
+} // __kmps_get_wtick
 
 // end of file //

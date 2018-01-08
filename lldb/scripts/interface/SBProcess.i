@@ -417,6 +417,18 @@ public:
     lldb::SBMemoryRegionInfoList
     GetMemoryRegions();
 
+    %feature("autodoc", "
+    Get information about the process.
+    Valid process info will only be returned when the process is alive,
+    use IsValid() to check if the info returned is valid.
+
+    process_info = process.GetProcessInfo()
+    if process_info.IsValid():
+        process_info.GetProcessID()
+    ") GetProcessInfo;
+    lldb::SBProcessInfo
+    GetProcessInfo();
+
     %pythoncode %{
         def __get_is_alive__(self):
             '''Returns "True" if the process is currently alive, "False" otherwise'''

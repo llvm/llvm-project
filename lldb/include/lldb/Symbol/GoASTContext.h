@@ -325,12 +325,6 @@ public:
     return 0;
   }
 
-  CompilerType GetTemplateArgument(lldb::opaque_compiler_type_t type,
-                                   size_t idx,
-                                   lldb::TemplateArgumentKind &kind) override {
-    return CompilerType();
-  }
-
   //----------------------------------------------------------------------
   // Dumping types
   //----------------------------------------------------------------------

@@ -102,7 +102,7 @@ int main()
         L2 l1;
         try
         {
-            std::try_lock(l0, l1);
+            (void)std::try_lock(l0, l1);
             assert(false);
         }
         catch (int)
@@ -116,7 +116,7 @@ int main()
         L0 l1;
         try
         {
-            std::try_lock(l0, l1);
+            (void)std::try_lock(l0, l1);
             assert(false);
         }
         catch (int)
@@ -152,7 +152,7 @@ int main()
         L2 l2;
         try
         {
-            std::try_lock(l0, l1, l2);
+            (void)std::try_lock(l0, l1, l2);
             assert(false);
         }
         catch (int)
@@ -206,7 +206,7 @@ int main()
         L2 l2;
         try
         {
-            std::try_lock(l0, l1, l2);
+            (void)std::try_lock(l0, l1, l2);
             assert(false);
         }
         catch (int)
@@ -222,7 +222,7 @@ int main()
         L0 l2;
         try
         {
-            std::try_lock(l0, l1, l2);
+            (void)std::try_lock(l0, l1, l2);
             assert(false);
         }
         catch (int)
@@ -238,7 +238,7 @@ int main()
         L0 l2;
         try
         {
-            std::try_lock(l0, l1, l2);
+            (void)std::try_lock(l0, l1, l2);
             assert(false);
         }
         catch (int)
@@ -301,7 +301,7 @@ int main()
         L1 l2;
         try
         {
-            std::try_lock(l0, l1, l2);
+            (void)std::try_lock(l0, l1, l2);
             assert(false);
         }
         catch (int)
@@ -317,7 +317,7 @@ int main()
         L0 l2;
         try
         {
-            std::try_lock(l0, l1, l2);
+            (void)std::try_lock(l0, l1, l2);
             assert(false);
         }
         catch (int)
@@ -333,7 +333,7 @@ int main()
         L2 l2;
         try
         {
-            std::try_lock(l0, l1, l2);
+            (void)std::try_lock(l0, l1, l2);
             assert(false);
         }
         catch (int)
@@ -349,7 +349,7 @@ int main()
         L2 l2;
         try
         {
-            std::try_lock(l0, l1, l2);
+            (void)std::try_lock(l0, l1, l2);
             assert(false);
         }
         catch (int)
@@ -365,7 +365,7 @@ int main()
         L1 l2;
         try
         {
-            std::try_lock(l0, l1, l2);
+            (void)std::try_lock(l0, l1, l2);
             assert(false);
         }
         catch (int)
@@ -381,7 +381,7 @@ int main()
         L2 l2;
         try
         {
-            std::try_lock(l0, l1, l2);
+            (void)std::try_lock(l0, l1, l2);
             assert(false);
         }
         catch (int)
@@ -406,7 +406,7 @@ int main()
         L1 l2;
         try
         {
-            std::try_lock(l0, l1, l2);
+            (void)std::try_lock(l0, l1, l2);
             assert(false);
         }
         catch (int)
@@ -440,7 +440,7 @@ int main()
         L1 l2;
         try
         {
-            std::try_lock(l0, l1, l2);
+            (void)std::try_lock(l0, l1, l2);
             assert(false);
         }
         catch (int)
@@ -456,7 +456,7 @@ int main()
         L0 l2;
         try
         {
-            std::try_lock(l0, l1, l2);
+            (void)std::try_lock(l0, l1, l2);
             assert(false);
         }
         catch (int)

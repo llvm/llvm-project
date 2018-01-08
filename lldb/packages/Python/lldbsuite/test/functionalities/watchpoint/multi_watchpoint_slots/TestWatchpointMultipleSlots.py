@@ -30,8 +30,6 @@ class WatchpointSlotsTestCase(TestBase):
         self.exe_name = 'a.out'
         self.d = {'C_SOURCES': self.source, 'EXE': self.exe_name}
 
-    # Watchpoints not supported
-    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     # This is a arm and aarch64 specific test case. No other architectures tested.
     @skipIf(archs=no_match(['arm', 'aarch64']))
     def test_multiple_watchpoints_on_same_word(self):

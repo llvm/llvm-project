@@ -14,9 +14,6 @@ class TestStepTarget(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def getCategories(self):
-        return ['basic_process']
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)

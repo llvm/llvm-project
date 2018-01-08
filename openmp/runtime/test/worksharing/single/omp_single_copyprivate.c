@@ -13,7 +13,7 @@ int test_omp_single_copyprivate()
 
   result = 0;
   nr_iterations = 0;
-  #pragma omp parallel
+  #pragma omp parallel num_threads(4)
   {
     int i;
     for (i = 0; i < LOOPCOUNT; i++)

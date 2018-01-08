@@ -2,7 +2,6 @@
  * kmp_wrapper_getpid.h -- getpid() declaration.
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #ifndef KMP_WRAPPER_GETPID_H
 #define KMP_WRAPPER_GETPID_H

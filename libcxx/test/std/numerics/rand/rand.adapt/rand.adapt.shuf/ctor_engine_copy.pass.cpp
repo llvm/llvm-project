@@ -24,8 +24,10 @@ int main()
         typedef std::knuth_b Adaptor;
         Engine e;
         Adaptor a(e);
-        for (unsigned k = 0; k <= Adaptor::table_size; ++k)
-            e();
+        for (unsigned k = 0; k <= Adaptor::table_size; ++k) {
+            (void)e();
+        }
+
         assert(a.base() == e);
     }
 }

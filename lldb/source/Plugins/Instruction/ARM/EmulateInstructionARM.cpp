@@ -12,12 +12,12 @@
 #include "EmulateInstructionARM.h"
 #include "EmulationStateARM.h"
 #include "lldb/Core/Address.h"
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Interpreter/OptionValueArray.h"
 #include "lldb/Interpreter/OptionValueDictionary.h"
 #include "lldb/Symbol/UnwindPlan.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Stream.h"
 

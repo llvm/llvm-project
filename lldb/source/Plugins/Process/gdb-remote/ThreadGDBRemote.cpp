@@ -10,7 +10,6 @@
 #include "ThreadGDBRemote.h"
 
 #include "lldb/Breakpoint/Watchpoint.h"
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/State.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"

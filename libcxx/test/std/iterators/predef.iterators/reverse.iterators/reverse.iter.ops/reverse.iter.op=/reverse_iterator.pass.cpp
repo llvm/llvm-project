@@ -16,7 +16,7 @@
 //   constexpr reverse_iterator&
 //   operator=(const reverse_iterator<U>& u);
 //
-//   constexpr in c++17
+//   constexpr in C++17
 
 #include <iterator>
 #include <cassert>

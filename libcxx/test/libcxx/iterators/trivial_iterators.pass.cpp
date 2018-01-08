@@ -126,42 +126,42 @@ int main()
     static_assert((!std::__libcpp_is_trivial_iterator<NonThrowingIterator   <char *> >::value), "");
 
 
-//	Iterator classification
-	static_assert(( std::__is_input_iterator        <char *>::value), "" );
-	static_assert(( std::__is_forward_iterator      <char *>::value), "" );
-	static_assert(( std::__is_bidirectional_iterator<char *>::value), "" );
-	static_assert(( std::__is_random_access_iterator<char *>::value), "" );
-	static_assert((!std::__is_exactly_input_iterator<char *>::value), "" );
+//  Iterator classification
+    static_assert(( std::__is_input_iterator        <char *>::value), "" );
+    static_assert(( std::__is_forward_iterator      <char *>::value), "" );
+    static_assert(( std::__is_bidirectional_iterator<char *>::value), "" );
+    static_assert(( std::__is_random_access_iterator<char *>::value), "" );
+    static_assert((!std::__is_exactly_input_iterator<char *>::value), "" );
 
-	static_assert(( std::__is_input_iterator        <input_iterator<char *> >::value), "" );
-	static_assert((!std::__is_forward_iterator      <input_iterator<char *> >::value), "" );
-	static_assert((!std::__is_bidirectional_iterator<input_iterator<char *> >::value), "" );
-	static_assert((!std::__is_random_access_iterator<input_iterator<char *> >::value), "" );
-	static_assert(( std::__is_exactly_input_iterator<input_iterator<char *> >::value), "" );
+    static_assert(( std::__is_input_iterator        <input_iterator<char *> >::value), "" );
+    static_assert((!std::__is_forward_iterator      <input_iterator<char *> >::value), "" );
+    static_assert((!std::__is_bidirectional_iterator<input_iterator<char *> >::value), "" );
+    static_assert((!std::__is_random_access_iterator<input_iterator<char *> >::value), "" );
+    static_assert(( std::__is_exactly_input_iterator<input_iterator<char *> >::value), "" );
 
-	static_assert(( std::__is_input_iterator        <forward_iterator<char *> >::value), "" );
-	static_assert(( std::__is_forward_iterator      <forward_iterator<char *> >::value), "" );
-	static_assert((!std::__is_bidirectional_iterator<forward_iterator<char *> >::value), "" );
-	static_assert((!std::__is_random_access_iterator<forward_iterator<char *> >::value), "" );
-	static_assert((!std::__is_exactly_input_iterator<forward_iterator<char *> >::value), "" );
+    static_assert(( std::__is_input_iterator        <forward_iterator<char *> >::value), "" );
+    static_assert(( std::__is_forward_iterator      <forward_iterator<char *> >::value), "" );
+    static_assert((!std::__is_bidirectional_iterator<forward_iterator<char *> >::value), "" );
+    static_assert((!std::__is_random_access_iterator<forward_iterator<char *> >::value), "" );
+    static_assert((!std::__is_exactly_input_iterator<forward_iterator<char *> >::value), "" );
 
-	static_assert(( std::__is_input_iterator        <bidirectional_iterator<char *> >::value), "" );
-	static_assert(( std::__is_forward_iterator      <bidirectional_iterator<char *> >::value), "" );
-	static_assert(( std::__is_bidirectional_iterator<bidirectional_iterator<char *> >::value), "" );
-	static_assert((!std::__is_random_access_iterator<bidirectional_iterator<char *> >::value), "" );
-	static_assert((!std::__is_exactly_input_iterator<bidirectional_iterator<char *> >::value), "" );
+    static_assert(( std::__is_input_iterator        <bidirectional_iterator<char *> >::value), "" );
+    static_assert(( std::__is_forward_iterator      <bidirectional_iterator<char *> >::value), "" );
+    static_assert(( std::__is_bidirectional_iterator<bidirectional_iterator<char *> >::value), "" );
+    static_assert((!std::__is_random_access_iterator<bidirectional_iterator<char *> >::value), "" );
+    static_assert((!std::__is_exactly_input_iterator<bidirectional_iterator<char *> >::value), "" );
 
-	static_assert(( std::__is_input_iterator        <random_access_iterator<char *> >::value), "" );
-	static_assert(( std::__is_forward_iterator      <random_access_iterator<char *> >::value), "" );
-	static_assert(( std::__is_bidirectional_iterator<random_access_iterator<char *> >::value), "" );
-	static_assert(( std::__is_random_access_iterator<random_access_iterator<char *> >::value), "" );
-	static_assert((!std::__is_exactly_input_iterator<random_access_iterator<char *> >::value), "" );
+    static_assert(( std::__is_input_iterator        <random_access_iterator<char *> >::value), "" );
+    static_assert(( std::__is_forward_iterator      <random_access_iterator<char *> >::value), "" );
+    static_assert(( std::__is_bidirectional_iterator<random_access_iterator<char *> >::value), "" );
+    static_assert(( std::__is_random_access_iterator<random_access_iterator<char *> >::value), "" );
+    static_assert((!std::__is_exactly_input_iterator<random_access_iterator<char *> >::value), "" );
 
-	static_assert(( std::__is_input_iterator        <my_input_iterator<char *> >::value), "" );
-	static_assert((!std::__is_forward_iterator      <my_input_iterator<char *> >::value), "" );
-	static_assert((!std::__is_bidirectional_iterator<my_input_iterator<char *> >::value), "" );
-	static_assert((!std::__is_random_access_iterator<my_input_iterator<char *> >::value), "" );
-	static_assert(( std::__is_exactly_input_iterator<my_input_iterator<char *> >::value), "" );
+    static_assert(( std::__is_input_iterator        <my_input_iterator<char *> >::value), "" );
+    static_assert((!std::__is_forward_iterator      <my_input_iterator<char *> >::value), "" );
+    static_assert((!std::__is_bidirectional_iterator<my_input_iterator<char *> >::value), "" );
+    static_assert((!std::__is_random_access_iterator<my_input_iterator<char *> >::value), "" );
+    static_assert(( std::__is_exactly_input_iterator<my_input_iterator<char *> >::value), "" );
 
 //
 //  iterators from libc++'s containers

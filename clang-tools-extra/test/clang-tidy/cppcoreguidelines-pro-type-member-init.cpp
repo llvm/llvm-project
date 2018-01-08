@@ -312,6 +312,19 @@ union PositiveUnion {
   // CHECK-FIXES-NOT: float Y{};
 };
 
+union PositiveUnionReversed {
+  PositiveUnionReversed() : X() {} // No message as a union can only initialize one member.
+  PositiveUnionReversed(int) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: union constructor should initialize one of these fields: Y, X
+
+  // Make sure we don't give Y an initializer.
+  TestEnum Y;
+  // CHECK-FIXES-NOT: TestEnum Y{};
+
+  int X;
+  // CHECK-FIXES: int X{};
+};
+
 struct PositiveAnonymousUnionAndStruct {
   PositiveAnonymousUnionAndStruct() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: constructor does not initialize these fields: A, B, Y, Z, C, D, E, F, X

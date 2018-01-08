@@ -9,11 +9,6 @@
 
 #include "lldb/Interpreter/OptionGroupFormat.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Target/ExecutionContext.h"

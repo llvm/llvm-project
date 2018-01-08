@@ -52,19 +52,25 @@ int isl_options_get_schedule_carry_self_first(isl_ctx *ctx);
 
 __isl_give isl_schedule_constraints *isl_schedule_constraints_copy(
 	__isl_keep isl_schedule_constraints *sc);
+__isl_export
 __isl_give isl_schedule_constraints *isl_schedule_constraints_on_domain(
 	__isl_take isl_union_set *domain);
+__isl_export
 __isl_give isl_schedule_constraints *isl_schedule_constraints_set_context(
 	__isl_take isl_schedule_constraints *sc, __isl_take isl_set *context);
+__isl_export
 __isl_give isl_schedule_constraints *isl_schedule_constraints_set_validity(
 	__isl_take isl_schedule_constraints *sc,
 	__isl_take isl_union_map *validity);
+__isl_export
 __isl_give isl_schedule_constraints *isl_schedule_constraints_set_coincidence(
 	__isl_take isl_schedule_constraints *sc,
 	__isl_take isl_union_map *coincidence);
+__isl_export
 __isl_give isl_schedule_constraints *isl_schedule_constraints_set_proximity(
 	__isl_take isl_schedule_constraints *sc,
 	__isl_take isl_union_map *proximity);
+__isl_export
 __isl_give isl_schedule_constraints *
 isl_schedule_constraints_set_conditional_validity(
 	__isl_take isl_schedule_constraints *sc,
@@ -113,6 +119,7 @@ void isl_schedule_constraints_dump(__isl_keep isl_schedule_constraints *sc);
 __isl_give char *isl_schedule_constraints_to_str(
 	__isl_keep isl_schedule_constraints *sc);
 
+__isl_export
 __isl_give isl_schedule *isl_schedule_constraints_compute_schedule(
 	__isl_take isl_schedule_constraints *sc);
 

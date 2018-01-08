@@ -38,12 +38,11 @@
 #include "polly/ScopInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "isl/flow.h"
+#include "isl/isl-noexceptions.h"
 #include "isl/map.h"
 #include "isl/set.h"
 #include "isl/union_map.h"
 #include "isl/union_set.h"
-
-#include "isl-noexceptions.h"
 
 using namespace llvm;
 using namespace polly;
@@ -94,8 +93,8 @@ char DeadCodeElim::ID = 0;
 // this means may-writes are in the current situation always live, there is
 // no point in trying to remove them from the live-out set.
 isl::union_set DeadCodeElim::getLiveOut(Scop &S) {
-  isl::union_map Schedule = isl::manage(S.getSchedule());
-  isl::union_map MustWrites = isl::manage(S.getMustWrites());
+  isl::union_map Schedule = S.getSchedule();
+  isl::union_map MustWrites = S.getMustWrites();
   isl::union_map WriteIterations = MustWrites.reverse();
   isl::union_map WriteTimes = WriteIterations.apply_range(Schedule);
 
@@ -104,7 +103,7 @@ isl::union_set DeadCodeElim::getLiveOut(Scop &S) {
       LastWriteTimes.apply_range(Schedule.reverse());
 
   isl::union_set Live = LastWriteIterations.range();
-  isl::union_map MayWrites = isl::manage(S.getMayWrites());
+  isl::union_map MayWrites = S.getMayWrites();
   Live = Live.unite(MayWrites.domain());
   return Live.coalesce();
 }
@@ -132,7 +131,7 @@ bool DeadCodeElim::eliminateDeadCode(Scop &S, int PreciseSteps) {
   if (PreciseSteps == -1)
     Live = Live.affine_hull();
 
-  isl::union_set OriginalDomain = isl::manage(S.getDomains());
+  isl::union_set OriginalDomain = S.getDomains();
   int Steps = 0;
   while (true) {
     Steps++;
@@ -154,7 +153,7 @@ bool DeadCodeElim::eliminateDeadCode(Scop &S, int PreciseSteps) {
 
   Live = Live.coalesce();
 
-  bool Changed = S.restrictDomains(Live.copy());
+  bool Changed = S.restrictDomains(Live);
 
   // FIXME: We can probably avoid the recomputation of all dependences by
   // updating them explicitly.

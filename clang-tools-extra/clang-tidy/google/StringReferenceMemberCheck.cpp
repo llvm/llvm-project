@@ -27,8 +27,8 @@ void StringReferenceMemberCheck::registerMatchers(
     return;
 
   // Look for const references to std::string or ::string.
-  auto String = anyOf(recordDecl(hasName("::std::basic_string")),
-                      recordDecl(hasName("::string")));
+  auto String = anyOf(namedDecl(hasName("::std::string")),
+                      namedDecl(hasName("::string")));
   auto ConstString = qualType(isConstQualified(), hasDeclaration(String));
 
   // Ignore members in template instantiations.

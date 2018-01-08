@@ -8,220 +8,98 @@
 //===---------------------------------------------------------------------===//
 
 #include "ClangdUnit.h"
-
-#include "clang/Frontend/ASTUnit.h"
+#include "Compiler.h"
+#include "Logger.h"
+#include "Trace.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/Utils.h"
-#include "clang/Index/IndexingAction.h"
 #include "clang/Index/IndexDataConsumer.h"
+#include "clang/Index/IndexingAction.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/Sema.h"
+#include "clang/Serialization/ASTWriter.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Format.h"
-
 #include <algorithm>
+#include <chrono>
 
 using namespace clang::clangd;
 using namespace clang;
 
-ClangdUnit::ClangdUnit(PathRef FileName, StringRef Contents,
-                       StringRef ResourceDir,
-                       std::shared_ptr<PCHContainerOperations> PCHs,
-                       std::vector<tooling::CompileCommand> Commands,
-                       IntrusiveRefCntPtr<vfs::FileSystem> VFS)
-    : FileName(FileName), PCHs(PCHs) {
-  assert(!Commands.empty() && "No compile commands provided");
-
-  // Inject the resource dir.
-  // FIXME: Don't overwrite it if it's already there.
-  Commands.front().CommandLine.push_back("-resource-dir=" +
-                                         std::string(ResourceDir));
-
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(new DiagnosticOptions);
-
-  std::vector<const char *> ArgStrs;
-  for (const auto &S : Commands.front().CommandLine)
-    ArgStrs.push_back(S.c_str());
-
-  ASTUnit::RemappedFile RemappedSource(
-      FileName,
-      llvm::MemoryBuffer::getMemBufferCopy(Contents, FileName).release());
-
-  auto ArgP = &*ArgStrs.begin();
-  Unit = std::unique_ptr<ASTUnit>(ASTUnit::LoadFromCommandLine(
-      ArgP, ArgP + ArgStrs.size(), PCHs, Diags, ResourceDir,
-      /*OnlyLocalDecls=*/false, /*CaptureDiagnostics=*/true, RemappedSource,
-      /*RemappedFilesKeepOriginalName=*/true,
-      /*PrecompilePreambleAfterNParses=*/1, /*TUKind=*/TU_Prefix,
-      /*CacheCodeCompletionResults=*/true,
-      /*IncludeBriefCommentsInCodeCompletion=*/true,
-      /*AllowPCHWithCompilerErrors=*/true,
-      /*SkipFunctionBodies=*/false,
-      /*SingleFileParse=*/false,
-      /*UserFilesAreVolatile=*/false, /*ForSerialization=*/false,
-      /*ModuleFormat=*/llvm::None,
-      /*ErrAST=*/nullptr, VFS));
-  assert(Unit && "Unit wasn't created");
-}
-
-void ClangdUnit::reparse(StringRef Contents,
-                         IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
-  // Do a reparse if this wasn't the first parse.
-  // FIXME: This might have the wrong working directory if it changed in the
-  // meantime.
-  ASTUnit::RemappedFile RemappedSource(
-      FileName,
-      llvm::MemoryBuffer::getMemBufferCopy(Contents, FileName).release());
-
-  Unit->Reparse(PCHs, RemappedSource, VFS);
-}
-
 namespace {
 
-CompletionItemKind getKind(CXCursorKind K) {
-  switch (K) {
-  case CXCursor_MacroInstantiation:
-  case CXCursor_MacroDefinition:
-    return CompletionItemKind::Text;
-  case CXCursor_CXXMethod:
-    return CompletionItemKind::Method;
-  case CXCursor_FunctionDecl:
-  case CXCursor_FunctionTemplate:
-    return CompletionItemKind::Function;
-  case CXCursor_Constructor:
-  case CXCursor_Destructor:
-    return CompletionItemKind::Constructor;
-  case CXCursor_FieldDecl:
-    return CompletionItemKind::Field;
-  case CXCursor_VarDecl:
-  case CXCursor_ParmDecl:
-    return CompletionItemKind::Variable;
-  case CXCursor_ClassDecl:
-  case CXCursor_StructDecl:
-  case CXCursor_UnionDecl:
-  case CXCursor_ClassTemplate:
-  case CXCursor_ClassTemplatePartialSpecialization:
-    return CompletionItemKind::Class;
-  case CXCursor_Namespace:
-  case CXCursor_NamespaceAlias:
-  case CXCursor_NamespaceRef:
-    return CompletionItemKind::Module;
-  case CXCursor_EnumConstantDecl:
-    return CompletionItemKind::Value;
-  case CXCursor_EnumDecl:
-    return CompletionItemKind::Enum;
-  case CXCursor_TypeAliasDecl:
-  case CXCursor_TypeAliasTemplateDecl:
-  case CXCursor_TypedefDecl:
-  case CXCursor_MemberRef:
-  case CXCursor_TypeRef:
-    return CompletionItemKind::Reference;
-  default:
-    return CompletionItemKind::Missing;
-  }
-}
-
-class CompletionItemsCollector : public CodeCompleteConsumer {
-  std::vector<CompletionItem> *Items;
-  std::shared_ptr<clang::GlobalCodeCompletionAllocator> Allocator;
-  CodeCompletionTUInfo CCTUInfo;
-
+class DeclTrackingASTConsumer : public ASTConsumer {
 public:
-  CompletionItemsCollector(std::vector<CompletionItem> *Items,
-                           const CodeCompleteOptions &CodeCompleteOpts)
-      : CodeCompleteConsumer(CodeCompleteOpts, /*OutputIsBinary=*/false),
-        Items(Items),
-        Allocator(std::make_shared<clang::GlobalCodeCompletionAllocator>()),
-        CCTUInfo(Allocator) {}
+  DeclTrackingASTConsumer(std::vector<const Decl *> &TopLevelDecls)
+      : TopLevelDecls(TopLevelDecls) {}
 
-  void ProcessCodeCompleteResults(Sema &S, CodeCompletionContext Context,
-                                  CodeCompletionResult *Results,
-                                  unsigned NumResults) override {
-    for (unsigned I = 0; I != NumResults; ++I) {
-      CodeCompletionResult &Result = Results[I];
-      CodeCompletionString *CCS = Result.CreateCodeCompletionString(
-          S, Context, *Allocator, CCTUInfo,
-          CodeCompleteOpts.IncludeBriefComments);
-      if (CCS) {
-        CompletionItem Item;
-        for (CodeCompletionString::Chunk C : *CCS) {
-          switch (C.Kind) {
-          case CodeCompletionString::CK_ResultType:
-            Item.detail = C.Text;
-            break;
-          case CodeCompletionString::CK_Optional:
-            break;
-          default:
-            Item.label += C.Text;
-            break;
-          }
-        }
-        assert(CCS->getTypedText());
-        Item.kind = getKind(Result.CursorKind);
-        // Priority is a 16-bit integer, hence at most 5 digits.
-        // Since identifiers with higher priority need to come first,
-        // we subtract the priority from 99999.
-        // For example, the sort text of the identifier 'a' with priority 35
-        // is 99964a.
-        assert(CCS->getPriority() < 99999 && "Expecting code completion result "
-                                             "priority to have at most "
-                                             "5-digits");
-        llvm::raw_string_ostream(Item.sortText) << llvm::format(
-            "%05d%s", 99999 - CCS->getPriority(), CCS->getTypedText());
-        Item.insertText = Item.filterText = CCS->getTypedText();
-        if (CCS->getBriefComment())
-          Item.documentation = CCS->getBriefComment();
-        Items->push_back(std::move(Item));
-      }
+  bool HandleTopLevelDecl(DeclGroupRef DG) override {
+    for (const Decl *D : DG) {
+      // ObjCMethodDecl are not actually top-level decls.
+      if (isa<ObjCMethodDecl>(D))
+        continue;
+
+      TopLevelDecls.push_back(D);
+    }
+    return true;
+  }
+
+private:
+  std::vector<const Decl *> &TopLevelDecls;
+};
+
+class ClangdFrontendAction : public SyntaxOnlyAction {
+public:
+  std::vector<const Decl *> takeTopLevelDecls() {
+    return std::move(TopLevelDecls);
+  }
+
+protected:
+  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
+                                                 StringRef InFile) override {
+    return llvm::make_unique<DeclTrackingASTConsumer>(/*ref*/ TopLevelDecls);
+  }
+
+private:
+  std::vector<const Decl *> TopLevelDecls;
+};
+
+class CppFilePreambleCallbacks : public PreambleCallbacks {
+public:
+  std::vector<serialization::DeclID> takeTopLevelDeclIDs() {
+    return std::move(TopLevelDeclIDs);
+  }
+
+  void AfterPCHEmitted(ASTWriter &Writer) override {
+    TopLevelDeclIDs.reserve(TopLevelDecls.size());
+    for (Decl *D : TopLevelDecls) {
+      // Invalid top-level decls may not have been serialized.
+      if (D->isInvalidDecl())
+        continue;
+      TopLevelDeclIDs.push_back(Writer.getDeclID(D));
     }
   }
 
-  GlobalCodeCompletionAllocator &getAllocator() override { return *Allocator; }
+  void HandleTopLevelDecl(DeclGroupRef DG) override {
+    for (Decl *D : DG) {
+      if (isa<ObjCMethodDecl>(D))
+        continue;
+      TopLevelDecls.push_back(D);
+    }
+  }
 
-  CodeCompletionTUInfo &getCodeCompletionTUInfo() override { return CCTUInfo; }
+private:
+  std::vector<Decl *> TopLevelDecls;
+  std::vector<serialization::DeclID> TopLevelDeclIDs;
 };
-} // namespace
 
-std::vector<CompletionItem>
-ClangdUnit::codeComplete(StringRef Contents, Position Pos,
-                         IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
-  CodeCompleteOptions CCO;
-  CCO.IncludeBriefComments = 1;
-  // This is where code completion stores dirty buffers. Need to free after
-  // completion.
-  SmallVector<const llvm::MemoryBuffer *, 4> OwnedBuffers;
-  SmallVector<StoredDiagnostic, 4> StoredDiagnostics;
-  IntrusiveRefCntPtr<DiagnosticsEngine> DiagEngine(
-      new DiagnosticsEngine(new DiagnosticIDs, new DiagnosticOptions));
-  std::vector<CompletionItem> Items;
-  CompletionItemsCollector Collector(&Items, CCO);
-
-  ASTUnit::RemappedFile RemappedSource(
-      FileName,
-      llvm::MemoryBuffer::getMemBufferCopy(Contents, FileName).release());
-
-  IntrusiveRefCntPtr<FileManager> FileMgr(
-      new FileManager(Unit->getFileSystemOpts(), VFS));
-  IntrusiveRefCntPtr<SourceManager> SourceMgr(
-      new SourceManager(*DiagEngine, *FileMgr));
-  // CodeComplete seems to require fresh LangOptions.
-  LangOptions LangOpts = Unit->getLangOpts();
-  // The language server protocol uses zero-based line and column numbers.
-  // The clang code completion uses one-based numbers.
-  Unit->CodeComplete(FileName, Pos.line + 1, Pos.character + 1, RemappedSource,
-                     CCO.IncludeMacros, CCO.IncludeCodePatterns,
-                     CCO.IncludeBriefComments, Collector, PCHs, *DiagEngine,
-                     LangOpts, *SourceMgr, *FileMgr, StoredDiagnostics,
-                     OwnedBuffers);
-  for (const llvm::MemoryBuffer *Buffer : OwnedBuffers)
-    delete Buffer;
-  return Items;
-}
-
-namespace {
 /// Convert from clang diagnostic level to LSP severity.
 static int getSeverity(DiagnosticsEngine::Level L) {
   switch (L) {
@@ -239,151 +117,582 @@ static int getSeverity(DiagnosticsEngine::Level L) {
   }
   llvm_unreachable("Unknown diagnostic level!");
 }
-} // namespace
 
-std::vector<DiagWithFixIts> ClangdUnit::getLocalDiagnostics() const {
-  std::vector<DiagWithFixIts> Result;
-  for (ASTUnit::stored_diag_iterator D = Unit->stored_diag_begin(),
-                                     DEnd = Unit->stored_diag_end();
-       D != DEnd; ++D) {
-    if (!D->getLocation().isValid() ||
-        !D->getLocation().getManager().isInMainFile(D->getLocation()))
-      continue;
-    Position P;
-    P.line = D->getLocation().getSpellingLineNumber() - 1;
-    P.character = D->getLocation().getSpellingColumnNumber();
-    Range R = {P, P};
-    clangd::Diagnostic Diag = {R, getSeverity(D->getLevel()), D->getMessage()};
+// Checks whether a location is within a half-open range.
+// Note that clang also uses closed source ranges, which this can't handle!
+bool locationInRange(SourceLocation L, CharSourceRange R,
+                     const SourceManager &M) {
+  assert(R.isCharRange());
+  if (!R.isValid() || M.getFileID(R.getBegin()) != M.getFileID(R.getEnd()) ||
+      M.getFileID(R.getBegin()) != M.getFileID(L))
+    return false;
+  return L != R.getEnd() && M.isPointWithin(L, R.getBegin(), R.getEnd());
+}
 
-    llvm::SmallVector<tooling::Replacement, 1> FixItsForDiagnostic;
-    for (const FixItHint &Fix : D->getFixIts()) {
-      FixItsForDiagnostic.push_back(clang::tooling::Replacement(
-          Unit->getSourceManager(), Fix.RemoveRange, Fix.CodeToInsert));
-    }
-    Result.push_back({Diag, std::move(FixItsForDiagnostic)});
+// Converts a half-open clang source range to an LSP range.
+// Note that clang also uses closed source ranges, which this can't handle!
+Range toRange(CharSourceRange R, const SourceManager &M) {
+  // Clang is 1-based, LSP uses 0-based indexes.
+  return {{static_cast<int>(M.getSpellingLineNumber(R.getBegin())) - 1,
+           static_cast<int>(M.getSpellingColumnNumber(R.getBegin())) - 1},
+          {static_cast<int>(M.getSpellingLineNumber(R.getEnd())) - 1,
+           static_cast<int>(M.getSpellingColumnNumber(R.getEnd())) - 1}};
+}
+
+// Clang diags have a location (shown as ^) and 0 or more ranges (~~~~).
+// LSP needs a single range.
+Range diagnosticRange(const clang::Diagnostic &D, const LangOptions &L) {
+  auto &M = D.getSourceManager();
+  auto Loc = M.getFileLoc(D.getLocation());
+  // Accept the first range that contains the location.
+  for (const auto &CR : D.getRanges()) {
+    auto R = Lexer::makeFileCharRange(CR, M, L);
+    if (locationInRange(Loc, R, M))
+      return toRange(R, M);
   }
+  // The range may be given as a fixit hint instead.
+  for (const auto &F : D.getFixItHints()) {
+    auto R = Lexer::makeFileCharRange(F.RemoveRange, M, L);
+    if (locationInRange(Loc, R, M))
+      return toRange(R, M);
+  }
+  // If no suitable range is found, just use the token at the location.
+  auto R = Lexer::makeFileCharRange(CharSourceRange::getTokenRange(Loc), M, L);
+  if (!R.isValid()) // Fall back to location only, let the editor deal with it.
+    R = CharSourceRange::getCharRange(Loc);
+  return toRange(R, M);
+}
+
+TextEdit toTextEdit(const FixItHint &FixIt, const SourceManager &M,
+                    const LangOptions &L) {
+  TextEdit Result;
+  Result.range = toRange(Lexer::makeFileCharRange(FixIt.RemoveRange, M, L), M);
+  Result.newText = FixIt.CodeToInsert;
   return Result;
 }
 
-void ClangdUnit::dumpAST(llvm::raw_ostream &OS) const {
-  Unit->getASTContext().getTranslationUnitDecl()->dump(OS, true);
+llvm::Optional<DiagWithFixIts> toClangdDiag(const clang::Diagnostic &D,
+                                            DiagnosticsEngine::Level Level,
+                                            const LangOptions &LangOpts) {
+  if (!D.hasSourceManager() || !D.getLocation().isValid() ||
+      !D.getSourceManager().isInMainFile(D.getLocation()))
+    return llvm::None;
+
+  DiagWithFixIts Result;
+  Result.Diag.range = diagnosticRange(D, LangOpts);
+  Result.Diag.severity = getSeverity(Level);
+  SmallString<64> Message;
+  D.FormatDiagnostic(Message);
+  Result.Diag.message = Message.str();
+  for (const FixItHint &Fix : D.getFixItHints())
+    Result.FixIts.push_back(toTextEdit(Fix, D.getSourceManager(), LangOpts));
+  return std::move(Result);
 }
 
-namespace {
-/// Finds declarations locations that a given source location refers to.
-class DeclarationLocationsFinder : public index::IndexDataConsumer {
-  std::vector<Location> DeclarationLocations;
-  const SourceLocation &SearchedLocation;
-  ASTUnit &Unit;
+class StoreDiagsConsumer : public DiagnosticConsumer {
 public:
-  DeclarationLocationsFinder(raw_ostream &OS,
-      const SourceLocation &SearchedLocation, ASTUnit &Unit) :
-      SearchedLocation(SearchedLocation), Unit(Unit) {}
+  StoreDiagsConsumer(std::vector<DiagWithFixIts> &Output) : Output(Output) {}
 
-  std::vector<Location> takeLocations() {
-    // Don't keep the same location multiple times.
-    // This can happen when nodes in the AST are visited twice.
-    std::sort(DeclarationLocations.begin(), DeclarationLocations.end());
-    auto last =
-        std::unique(DeclarationLocations.begin(), DeclarationLocations.end());
-    DeclarationLocations.erase(last, DeclarationLocations.end());
-    return std::move(DeclarationLocations);
+  // Track language options in case we need to expand token ranges.
+  void BeginSourceFile(const LangOptions &Opts, const Preprocessor *) override {
+    LangOpts = Opts;
   }
 
-  bool handleDeclOccurence(const Decl* D, index::SymbolRoleSet Roles,
-      ArrayRef<index::SymbolRelation> Relations, FileID FID, unsigned Offset,
-      index::IndexDataConsumer::ASTNodeInfo ASTNode) override
-      {
-    if (isSearchedLocation(FID, Offset)) {
-      addDeclarationLocation(D->getSourceRange());
-    }
-    return true;
+  void EndSourceFile() override { LangOpts = llvm::None; }
+
+  void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
+                        const clang::Diagnostic &Info) override {
+    DiagnosticConsumer::HandleDiagnostic(DiagLevel, Info);
+
+    if (LangOpts)
+      if (auto D = toClangdDiag(Info, DiagLevel, *LangOpts))
+        Output.push_back(std::move(*D));
   }
 
 private:
-  bool isSearchedLocation(FileID FID, unsigned Offset) const {
-    const SourceManager &SourceMgr = Unit.getSourceManager();
-    return SourceMgr.getFileOffset(SearchedLocation) == Offset
-        && SourceMgr.getFileID(SearchedLocation) == FID;
-  }
-
-  void addDeclarationLocation(const SourceRange& ValSourceRange) {
-    const SourceManager& SourceMgr = Unit.getSourceManager();
-    const LangOptions& LangOpts = Unit.getLangOpts();
-    SourceLocation LocStart = ValSourceRange.getBegin();
-    SourceLocation LocEnd = Lexer::getLocForEndOfToken(ValSourceRange.getEnd(),
-        0, SourceMgr, LangOpts);
-    Position Begin;
-    Begin.line = SourceMgr.getSpellingLineNumber(LocStart) - 1;
-    Begin.character = SourceMgr.getSpellingColumnNumber(LocStart) - 1;
-    Position End;
-    End.line = SourceMgr.getSpellingLineNumber(LocEnd) - 1;
-    End.character = SourceMgr.getSpellingColumnNumber(LocEnd) - 1;
-    Range R = {Begin, End};
-    Location L;
-    L.uri = URI::fromFile(
-        SourceMgr.getFilename(SourceMgr.getSpellingLoc(LocStart)));
-    L.range = R;
-    DeclarationLocations.push_back(L);
-  }
-
-  void finish() override {
-    // Also handle possible macro at the searched location.
-    Token Result;
-    if (!Lexer::getRawToken(SearchedLocation, Result, Unit.getSourceManager(),
-        Unit.getASTContext().getLangOpts(), false)) {
-      if (Result.is(tok::raw_identifier)) {
-        Unit.getPreprocessor().LookUpIdentifierInfo(Result);
-      }
-      IdentifierInfo* IdentifierInfo = Result.getIdentifierInfo();
-      if (IdentifierInfo && IdentifierInfo->hadMacroDefinition()) {
-        std::pair<FileID, unsigned int> DecLoc =
-            Unit.getSourceManager().getDecomposedExpansionLoc(SearchedLocation);
-        // Get the definition just before the searched location so that a macro
-        // referenced in a '#undef MACRO' can still be found.
-        SourceLocation BeforeSearchedLocation = Unit.getLocation(
-            Unit.getSourceManager().getFileEntryForID(DecLoc.first),
-            DecLoc.second - 1);
-        MacroDefinition MacroDef =
-            Unit.getPreprocessor().getMacroDefinitionAtLoc(IdentifierInfo,
-                BeforeSearchedLocation);
-        MacroInfo* MacroInf = MacroDef.getMacroInfo();
-        if (MacroInf) {
-          addDeclarationLocation(
-              SourceRange(MacroInf->getDefinitionLoc(),
-                  MacroInf->getDefinitionEndLoc()));
-        }
-      }
-    }
-  }
+  std::vector<DiagWithFixIts> &Output;
+  llvm::Optional<LangOptions> LangOpts;
 };
-} // namespace
 
-std::vector<Location> ClangdUnit::findDefinitions(Position Pos) {
-  const FileEntry *FE = Unit->getFileManager().getFile(Unit->getMainFileName());
-  if (!FE)
-    return {};
-
-  SourceLocation SourceLocationBeg = getBeginningOfIdentifier(Pos, FE);
-
-  auto DeclLocationsFinder = std::make_shared<DeclarationLocationsFinder>(
-      llvm::errs(), SourceLocationBeg, *Unit);
-  index::IndexingOptions IndexOpts;
-  IndexOpts.SystemSymbolFilter =
-      index::IndexingOptions::SystemSymbolFilterKind::All;
-  IndexOpts.IndexFunctionLocals = true;
-  index::indexASTUnit(*Unit, DeclLocationsFinder, IndexOpts);
-
-  return DeclLocationsFinder->takeLocations();
+template <class T> bool futureIsReady(std::shared_future<T> const &Future) {
+  return Future.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
 }
 
-SourceLocation ClangdUnit::getBeginningOfIdentifier(const Position &Pos,
-    const FileEntry *FE) const {
+} // namespace
+
+void clangd::dumpAST(ParsedAST &AST, llvm::raw_ostream &OS) {
+  AST.getASTContext().getTranslationUnitDecl()->dump(OS, true);
+}
+
+llvm::Optional<ParsedAST>
+ParsedAST::Build(const Context &Ctx,
+                 std::unique_ptr<clang::CompilerInvocation> CI,
+                 std::shared_ptr<const PreambleData> Preamble,
+                 std::unique_ptr<llvm::MemoryBuffer> Buffer,
+                 std::shared_ptr<PCHContainerOperations> PCHs,
+                 IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
+
+  std::vector<DiagWithFixIts> ASTDiags;
+  StoreDiagsConsumer UnitDiagsConsumer(/*ref*/ ASTDiags);
+
+  const PrecompiledPreamble *PreamblePCH =
+      Preamble ? &Preamble->Preamble : nullptr;
+  auto Clang = prepareCompilerInstance(
+      std::move(CI), PreamblePCH, std::move(Buffer), std::move(PCHs),
+      std::move(VFS), /*ref*/ UnitDiagsConsumer);
+
+  // Recover resources if we crash before exiting this method.
+  llvm::CrashRecoveryContextCleanupRegistrar<CompilerInstance> CICleanup(
+      Clang.get());
+
+  auto Action = llvm::make_unique<ClangdFrontendAction>();
+  const FrontendInputFile &MainInput = Clang->getFrontendOpts().Inputs[0];
+  if (!Action->BeginSourceFile(*Clang, MainInput)) {
+    log(Ctx, "BeginSourceFile() failed when building AST for " +
+                 MainInput.getFile());
+    return llvm::None;
+  }
+  if (!Action->Execute())
+    log(Ctx, "Execute() failed when building AST for " + MainInput.getFile());
+
+  // UnitDiagsConsumer is local, we can not store it in CompilerInstance that
+  // has a longer lifetime.
+  Clang->getDiagnostics().setClient(new IgnoreDiagnostics);
+
+  std::vector<const Decl *> ParsedDecls = Action->takeTopLevelDecls();
+  return ParsedAST(std::move(Preamble), std::move(Clang), std::move(Action),
+                   std::move(ParsedDecls), std::move(ASTDiags));
+}
+
+namespace {
+
+SourceLocation getMacroArgExpandedLocation(const SourceManager &Mgr,
+                                           const FileEntry *FE, Position Pos) {
+  SourceLocation InputLoc =
+      Mgr.translateFileLineCol(FE, Pos.line + 1, Pos.character + 1);
+  return Mgr.getMacroArgExpandedLocation(InputLoc);
+}
+
+
+} // namespace
+
+void ParsedAST::ensurePreambleDeclsDeserialized() {
+  if (PreambleDeclsDeserialized || !Preamble)
+    return;
+
+  std::vector<const Decl *> Resolved;
+  Resolved.reserve(Preamble->TopLevelDeclIDs.size());
+
+  ExternalASTSource &Source = *getASTContext().getExternalSource();
+  for (serialization::DeclID TopLevelDecl : Preamble->TopLevelDeclIDs) {
+    // Resolve the declaration ID to an actual declaration, possibly
+    // deserializing the declaration in the process.
+    if (Decl *D = Source.GetExternalDecl(TopLevelDecl))
+      Resolved.push_back(D);
+  }
+
+  TopLevelDecls.reserve(TopLevelDecls.size() +
+                        Preamble->TopLevelDeclIDs.size());
+  TopLevelDecls.insert(TopLevelDecls.begin(), Resolved.begin(), Resolved.end());
+
+  PreambleDeclsDeserialized = true;
+}
+
+ParsedAST::ParsedAST(ParsedAST &&Other) = default;
+
+ParsedAST &ParsedAST::operator=(ParsedAST &&Other) = default;
+
+ParsedAST::~ParsedAST() {
+  if (Action) {
+    Action->EndSourceFile();
+  }
+}
+
+ASTContext &ParsedAST::getASTContext() { return Clang->getASTContext(); }
+
+const ASTContext &ParsedAST::getASTContext() const {
+  return Clang->getASTContext();
+}
+
+Preprocessor &ParsedAST::getPreprocessor() { return Clang->getPreprocessor(); }
+
+const Preprocessor &ParsedAST::getPreprocessor() const {
+  return Clang->getPreprocessor();
+}
+
+ArrayRef<const Decl *> ParsedAST::getTopLevelDecls() {
+  ensurePreambleDeclsDeserialized();
+  return TopLevelDecls;
+}
+
+const std::vector<DiagWithFixIts> &ParsedAST::getDiagnostics() const {
+  return Diags;
+}
+
+PreambleData::PreambleData(PrecompiledPreamble Preamble,
+                           std::vector<serialization::DeclID> TopLevelDeclIDs,
+                           std::vector<DiagWithFixIts> Diags)
+    : Preamble(std::move(Preamble)),
+      TopLevelDeclIDs(std::move(TopLevelDeclIDs)), Diags(std::move(Diags)) {}
+
+ParsedAST::ParsedAST(std::shared_ptr<const PreambleData> Preamble,
+                     std::unique_ptr<CompilerInstance> Clang,
+                     std::unique_ptr<FrontendAction> Action,
+                     std::vector<const Decl *> TopLevelDecls,
+                     std::vector<DiagWithFixIts> Diags)
+    : Preamble(std::move(Preamble)), Clang(std::move(Clang)),
+      Action(std::move(Action)), Diags(std::move(Diags)),
+      TopLevelDecls(std::move(TopLevelDecls)),
+      PreambleDeclsDeserialized(false) {
+  assert(this->Clang);
+  assert(this->Action);
+}
+
+ParsedASTWrapper::ParsedASTWrapper(ParsedASTWrapper &&Wrapper)
+    : AST(std::move(Wrapper.AST)) {}
+
+ParsedASTWrapper::ParsedASTWrapper(llvm::Optional<ParsedAST> AST)
+    : AST(std::move(AST)) {}
+
+std::shared_ptr<CppFile>
+CppFile::Create(PathRef FileName, tooling::CompileCommand Command,
+                bool StorePreamblesInMemory,
+                std::shared_ptr<PCHContainerOperations> PCHs,
+                ASTParsedCallback ASTCallback) {
+  return std::shared_ptr<CppFile>(
+      new CppFile(FileName, std::move(Command), StorePreamblesInMemory,
+                  std::move(PCHs), std::move(ASTCallback)));
+}
+
+CppFile::CppFile(PathRef FileName, tooling::CompileCommand Command,
+                 bool StorePreamblesInMemory,
+                 std::shared_ptr<PCHContainerOperations> PCHs,
+                 ASTParsedCallback ASTCallback)
+    : FileName(FileName), Command(std::move(Command)),
+      StorePreamblesInMemory(StorePreamblesInMemory), RebuildCounter(0),
+      RebuildInProgress(false), PCHs(std::move(PCHs)),
+      ASTCallback(std::move(ASTCallback)) {
+  // FIXME(ibiryukov): we should pass a proper Context here.
+  log(Context::empty(), "Opened file " + FileName + " with command [" +
+                            this->Command.Directory + "] " +
+                            llvm::join(this->Command.CommandLine, " "));
+
+  std::lock_guard<std::mutex> Lock(Mutex);
+  LatestAvailablePreamble = nullptr;
+  PreamblePromise.set_value(nullptr);
+  PreambleFuture = PreamblePromise.get_future();
+
+  ASTPromise.set_value(std::make_shared<ParsedASTWrapper>(llvm::None));
+  ASTFuture = ASTPromise.get_future();
+}
+
+void CppFile::cancelRebuild() { deferCancelRebuild()(); }
+
+UniqueFunction<void()> CppFile::deferCancelRebuild() {
+  std::unique_lock<std::mutex> Lock(Mutex);
+  // Cancel an ongoing rebuild, if any, and wait for it to finish.
+  unsigned RequestRebuildCounter = ++this->RebuildCounter;
+  // Rebuild asserts that futures aren't ready if rebuild is cancelled.
+  // We want to keep this invariant.
+  if (futureIsReady(PreambleFuture)) {
+    PreamblePromise = std::promise<std::shared_ptr<const PreambleData>>();
+    PreambleFuture = PreamblePromise.get_future();
+  }
+  if (futureIsReady(ASTFuture)) {
+    ASTPromise = std::promise<std::shared_ptr<ParsedASTWrapper>>();
+    ASTFuture = ASTPromise.get_future();
+  }
+
+  Lock.unlock();
+  // Notify about changes to RebuildCounter.
+  RebuildCond.notify_all();
+
+  std::shared_ptr<CppFile> That = shared_from_this();
+  return [That, RequestRebuildCounter]() {
+    std::unique_lock<std::mutex> Lock(That->Mutex);
+    CppFile *This = &*That;
+    This->RebuildCond.wait(Lock, [This, RequestRebuildCounter]() {
+      return !This->RebuildInProgress ||
+             This->RebuildCounter != RequestRebuildCounter;
+    });
+
+    // This computation got cancelled itself, do nothing.
+    if (This->RebuildCounter != RequestRebuildCounter)
+      return;
+
+    // Set empty results for Promises.
+    That->PreamblePromise.set_value(nullptr);
+    That->ASTPromise.set_value(std::make_shared<ParsedASTWrapper>(llvm::None));
+  };
+}
+
+llvm::Optional<std::vector<DiagWithFixIts>>
+CppFile::rebuild(const Context &Ctx, StringRef NewContents,
+                 IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
+  return deferRebuild(NewContents, std::move(VFS))(Ctx);
+}
+
+UniqueFunction<llvm::Optional<std::vector<DiagWithFixIts>>(const Context &)>
+CppFile::deferRebuild(StringRef NewContents,
+                      IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
+  std::shared_ptr<const PreambleData> OldPreamble;
+  std::shared_ptr<PCHContainerOperations> PCHs;
+  unsigned RequestRebuildCounter;
+  {
+    std::unique_lock<std::mutex> Lock(Mutex);
+    // Increase RebuildCounter to cancel all ongoing FinishRebuild operations.
+    // They will try to exit as early as possible and won't call set_value on
+    // our promises.
+    RequestRebuildCounter = ++this->RebuildCounter;
+    PCHs = this->PCHs;
+
+    // Remember the preamble to be used during rebuild.
+    OldPreamble = this->LatestAvailablePreamble;
+    // Setup std::promises and std::futures for Preamble and AST. Corresponding
+    // futures will wait until the rebuild process is finished.
+    if (futureIsReady(this->PreambleFuture)) {
+      this->PreamblePromise =
+          std::promise<std::shared_ptr<const PreambleData>>();
+      this->PreambleFuture = this->PreamblePromise.get_future();
+    }
+    if (futureIsReady(this->ASTFuture)) {
+      this->ASTPromise = std::promise<std::shared_ptr<ParsedASTWrapper>>();
+      this->ASTFuture = this->ASTPromise.get_future();
+    }
+  } // unlock Mutex.
+  // Notify about changes to RebuildCounter.
+  RebuildCond.notify_all();
+
+  // A helper to function to finish the rebuild. May be run on a different
+  // thread.
+
+  // Don't let this CppFile die before rebuild is finished.
+  std::shared_ptr<CppFile> That = shared_from_this();
+  auto FinishRebuild =
+      [OldPreamble, VFS, RequestRebuildCounter, PCHs,
+       That](std::string NewContents,
+             const Context &Ctx) mutable /* to allow changing OldPreamble. */
+      -> llvm::Optional<std::vector<DiagWithFixIts>> {
+    // Only one execution of this method is possible at a time.
+    // RebuildGuard will wait for any ongoing rebuilds to finish and will put us
+    // into a state for doing a rebuild.
+    RebuildGuard Rebuild(*That, RequestRebuildCounter);
+    if (Rebuild.wasCancelledBeforeConstruction())
+      return llvm::None;
+
+    std::vector<const char *> ArgStrs;
+    for (const auto &S : That->Command.CommandLine)
+      ArgStrs.push_back(S.c_str());
+
+    VFS->setCurrentWorkingDirectory(That->Command.Directory);
+
+    std::unique_ptr<CompilerInvocation> CI;
+    {
+      // FIXME(ibiryukov): store diagnostics from CommandLine when we start
+      // reporting them.
+      IgnoreDiagnostics IgnoreDiagnostics;
+      IntrusiveRefCntPtr<DiagnosticsEngine> CommandLineDiagsEngine =
+          CompilerInstance::createDiagnostics(new DiagnosticOptions,
+                                              &IgnoreDiagnostics, false);
+      CI =
+          createInvocationFromCommandLine(ArgStrs, CommandLineDiagsEngine, VFS);
+      // createInvocationFromCommandLine sets DisableFree.
+      CI->getFrontendOpts().DisableFree = false;
+    }
+    assert(CI && "Couldn't create CompilerInvocation");
+
+    std::unique_ptr<llvm::MemoryBuffer> ContentsBuffer =
+        llvm::MemoryBuffer::getMemBufferCopy(NewContents, That->FileName);
+
+    // A helper function to rebuild the preamble or reuse the existing one. Does
+    // not mutate any fields of CppFile, only does the actual computation.
+    // Lamdba is marked mutable to call reset() on OldPreamble.
+    auto DoRebuildPreamble =
+        [&]() mutable -> std::shared_ptr<const PreambleData> {
+      auto Bounds =
+          ComputePreambleBounds(*CI->getLangOpts(), ContentsBuffer.get(), 0);
+      if (OldPreamble && OldPreamble->Preamble.CanReuse(
+                             *CI, ContentsBuffer.get(), Bounds, VFS.get())) {
+        log(Ctx, "Reusing preamble for file " + Twine(That->FileName));
+        return OldPreamble;
+      }
+      log(Ctx, "Premble for file " + Twine(That->FileName) +
+                   " cannot be reused. Attempting to rebuild it.");
+      // We won't need the OldPreamble anymore, release it so it can be
+      // deleted (if there are no other references to it).
+      OldPreamble.reset();
+
+      trace::Span Tracer(Ctx, "Preamble");
+      SPAN_ATTACH(Tracer, "File", That->FileName);
+      std::vector<DiagWithFixIts> PreambleDiags;
+      StoreDiagsConsumer PreambleDiagnosticsConsumer(/*ref*/ PreambleDiags);
+      IntrusiveRefCntPtr<DiagnosticsEngine> PreambleDiagsEngine =
+          CompilerInstance::createDiagnostics(
+              &CI->getDiagnosticOpts(), &PreambleDiagnosticsConsumer, false);
+
+      // Skip function bodies when building the preamble to speed up building
+      // the preamble and make it smaller.
+      assert(!CI->getFrontendOpts().SkipFunctionBodies);
+      CI->getFrontendOpts().SkipFunctionBodies = true;
+
+      CppFilePreambleCallbacks SerializedDeclsCollector;
+      auto BuiltPreamble = PrecompiledPreamble::Build(
+          *CI, ContentsBuffer.get(), Bounds, *PreambleDiagsEngine, VFS, PCHs,
+          /*StoreInMemory=*/That->StorePreamblesInMemory,
+          SerializedDeclsCollector);
+
+      // When building the AST for the main file, we do want the function
+      // bodies.
+      CI->getFrontendOpts().SkipFunctionBodies = false;
+
+      if (BuiltPreamble) {
+        log(Ctx, "Built preamble of size " + Twine(BuiltPreamble->getSize()) +
+                     " for file " + Twine(That->FileName));
+
+        return std::make_shared<PreambleData>(
+            std::move(*BuiltPreamble),
+            SerializedDeclsCollector.takeTopLevelDeclIDs(),
+            std::move(PreambleDiags));
+      } else {
+        log(Ctx,
+            "Could not build a preamble for file " + Twine(That->FileName));
+        return nullptr;
+      }
+    };
+
+    // Compute updated Preamble.
+    std::shared_ptr<const PreambleData> NewPreamble = DoRebuildPreamble();
+    // Publish the new Preamble.
+    {
+      std::lock_guard<std::mutex> Lock(That->Mutex);
+      // We always set LatestAvailablePreamble to the new value, hoping that it
+      // will still be usable in the further requests.
+      That->LatestAvailablePreamble = NewPreamble;
+      if (RequestRebuildCounter != That->RebuildCounter)
+        return llvm::None; // Our rebuild request was cancelled, do nothing.
+      That->PreamblePromise.set_value(NewPreamble);
+    } // unlock Mutex
+
+    // Prepare the Preamble and supplementary data for rebuilding AST.
+    std::vector<DiagWithFixIts> Diagnostics;
+    if (NewPreamble) {
+      Diagnostics.insert(Diagnostics.begin(), NewPreamble->Diags.begin(),
+                         NewPreamble->Diags.end());
+    }
+
+    // Compute updated AST.
+    llvm::Optional<ParsedAST> NewAST;
+    {
+      trace::Span Tracer(Ctx, "Build");
+      SPAN_ATTACH(Tracer, "File", That->FileName);
+      NewAST = ParsedAST::Build(Ctx, std::move(CI), std::move(NewPreamble),
+                                std::move(ContentsBuffer), PCHs, VFS);
+    }
+
+    if (NewAST) {
+      Diagnostics.insert(Diagnostics.end(), NewAST->getDiagnostics().begin(),
+                         NewAST->getDiagnostics().end());
+      if (That->ASTCallback)
+        That->ASTCallback(Ctx, That->FileName, NewAST.getPointer());
+    } else {
+      // Don't report even Preamble diagnostics if we coulnd't build AST.
+      Diagnostics.clear();
+    }
+
+    // Publish the new AST.
+    {
+      std::lock_guard<std::mutex> Lock(That->Mutex);
+      if (RequestRebuildCounter != That->RebuildCounter)
+        return Diagnostics; // Our rebuild request was cancelled, don't set
+                            // ASTPromise.
+
+      That->ASTPromise.set_value(
+          std::make_shared<ParsedASTWrapper>(std::move(NewAST)));
+    } // unlock Mutex
+
+    return Diagnostics;
+  };
+
+  return BindWithForward(FinishRebuild, NewContents.str());
+}
+
+std::shared_future<std::shared_ptr<const PreambleData>>
+CppFile::getPreamble() const {
+  std::lock_guard<std::mutex> Lock(Mutex);
+  return PreambleFuture;
+}
+
+std::shared_ptr<const PreambleData> CppFile::getPossiblyStalePreamble() const {
+  std::lock_guard<std::mutex> Lock(Mutex);
+  return LatestAvailablePreamble;
+}
+
+std::shared_future<std::shared_ptr<ParsedASTWrapper>> CppFile::getAST() const {
+  std::lock_guard<std::mutex> Lock(Mutex);
+  return ASTFuture;
+}
+
+tooling::CompileCommand const &CppFile::getCompileCommand() const {
+  return Command;
+}
+
+CppFile::RebuildGuard::RebuildGuard(CppFile &File,
+                                    unsigned RequestRebuildCounter)
+    : File(File), RequestRebuildCounter(RequestRebuildCounter) {
+  std::unique_lock<std::mutex> Lock(File.Mutex);
+  WasCancelledBeforeConstruction = File.RebuildCounter != RequestRebuildCounter;
+  if (WasCancelledBeforeConstruction)
+    return;
+
+  File.RebuildCond.wait(Lock, [&File, RequestRebuildCounter]() {
+    return !File.RebuildInProgress ||
+           File.RebuildCounter != RequestRebuildCounter;
+  });
+
+  WasCancelledBeforeConstruction = File.RebuildCounter != RequestRebuildCounter;
+  if (WasCancelledBeforeConstruction)
+    return;
+
+  File.RebuildInProgress = true;
+}
+
+bool CppFile::RebuildGuard::wasCancelledBeforeConstruction() const {
+  return WasCancelledBeforeConstruction;
+}
+
+CppFile::RebuildGuard::~RebuildGuard() {
+  if (WasCancelledBeforeConstruction)
+    return;
+
+  std::unique_lock<std::mutex> Lock(File.Mutex);
+  assert(File.RebuildInProgress);
+  File.RebuildInProgress = false;
+
+  if (File.RebuildCounter == RequestRebuildCounter) {
+    // Our rebuild request was successful.
+    assert(futureIsReady(File.ASTFuture));
+    assert(futureIsReady(File.PreambleFuture));
+  } else {
+    // Our rebuild request was cancelled, because further reparse was requested.
+    assert(!futureIsReady(File.ASTFuture));
+    assert(!futureIsReady(File.PreambleFuture));
+  }
+
+  Lock.unlock();
+  File.RebuildCond.notify_all();
+}
+
+SourceLocation clangd::getBeginningOfIdentifier(ParsedAST &Unit,
+                                                const Position &Pos,
+                                                const FileEntry *FE) {
   // The language server protocol uses zero-based line and column numbers.
   // Clang uses one-based numbers.
-  SourceLocation InputLocation = Unit->getLocation(FE, Pos.line + 1,
-      Pos.character + 1);
 
+  const ASTContext &AST = Unit.getASTContext();
+  const SourceManager &SourceMgr = AST.getSourceManager();
+
+  SourceLocation InputLocation =
+      getMacroArgExpandedLocation(SourceMgr, FE, Pos);
   if (Pos.character == 0) {
     return InputLocation;
   }
@@ -396,19 +705,18 @@ SourceLocation ClangdUnit::getBeginningOfIdentifier(const Position &Pos,
   // token. If so, Take the beginning of this token.
   // (It should be the same identifier because you can't have two adjacent
   // identifiers without another token in between.)
-  SourceLocation PeekBeforeLocation = Unit->getLocation(FE, Pos.line + 1,
-      Pos.character);
-  const SourceManager &SourceMgr = Unit->getSourceManager();
+  SourceLocation PeekBeforeLocation = getMacroArgExpandedLocation(
+      SourceMgr, FE, Position{Pos.line, Pos.character - 1});
   Token Result;
   if (Lexer::getRawToken(PeekBeforeLocation, Result, SourceMgr,
-                         Unit->getASTContext().getLangOpts(), false)) {
+                         AST.getLangOpts(), false)) {
     // getRawToken failed, just use InputLocation.
     return InputLocation;
   }
 
   if (Result.is(tok::raw_identifier)) {
     return Lexer::GetBeginningOfToken(PeekBeforeLocation, SourceMgr,
-        Unit->getASTContext().getLangOpts());
+                                      AST.getLangOpts());
   }
 
   return InputLocation;

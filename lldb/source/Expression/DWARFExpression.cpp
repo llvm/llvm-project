@@ -24,9 +24,6 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/VMRange.h"
 
-#include "Plugins/ExpressionParser/Clang/ClangExpressionDeclMap.h"
-#include "Plugins/ExpressionParser/Clang/ClangExpressionVariable.h"
-
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/Endian.h"
 
@@ -1245,23 +1242,21 @@ bool DWARFExpression::DumpLocationForAddress(Stream *s,
 }
 
 bool DWARFExpression::Evaluate(ExecutionContextScope *exe_scope,
-                               ClangExpressionVariableList *expr_locals,
-                               ClangExpressionDeclMap *decl_map,
                                lldb::addr_t loclist_base_load_addr,
                                const Value *initial_value_ptr,
                                const Value *object_address_ptr, Value &result,
                                Status *error_ptr) const {
   ExecutionContext exe_ctx(exe_scope);
-  return Evaluate(&exe_ctx, expr_locals, decl_map, nullptr,
-                  loclist_base_load_addr, initial_value_ptr, object_address_ptr,
-                  result, error_ptr);
+  return Evaluate(&exe_ctx, nullptr, loclist_base_load_addr, initial_value_ptr,
+                  object_address_ptr, result, error_ptr);
 }
 
-bool DWARFExpression::Evaluate(
-    ExecutionContext *exe_ctx, ClangExpressionVariableList *expr_locals,
-    ClangExpressionDeclMap *decl_map, RegisterContext *reg_ctx,
-    lldb::addr_t loclist_base_load_addr, const Value *initial_value_ptr,
-    const Value *object_address_ptr, Value &result, Status *error_ptr) const {
+bool DWARFExpression::Evaluate(ExecutionContext *exe_ctx,
+                               RegisterContext *reg_ctx,
+                               lldb::addr_t loclist_base_load_addr,
+                               const Value *initial_value_ptr,
+                               const Value *object_address_ptr, Value &result,
+                               Status *error_ptr) const {
   ModuleSP module_sp = m_module_wp.lock();
 
   if (IsLocationList()) {
@@ -1307,9 +1302,9 @@ bool DWARFExpression::Evaluate(
 
         if (length > 0 && lo_pc <= pc && pc < hi_pc) {
           return DWARFExpression::Evaluate(
-              exe_ctx, expr_locals, decl_map, reg_ctx, module_sp, m_data,
-              m_dwarf_cu, offset, length, m_reg_kind, initial_value_ptr,
-              object_address_ptr, result, error_ptr);
+              exe_ctx, reg_ctx, module_sp, m_data, m_dwarf_cu, offset, length,
+              m_reg_kind, initial_value_ptr, object_address_ptr, result,
+              error_ptr);
         }
         offset += length;
       }
@@ -1321,14 +1316,12 @@ bool DWARFExpression::Evaluate(
 
   // Not a location list, just a single expression.
   return DWARFExpression::Evaluate(
-      exe_ctx, expr_locals, decl_map, reg_ctx, module_sp, m_data, m_dwarf_cu, 0,
-      m_data.GetByteSize(), m_reg_kind, initial_value_ptr, object_address_ptr,
-      result, error_ptr);
+      exe_ctx, reg_ctx, module_sp, m_data, m_dwarf_cu, 0, m_data.GetByteSize(),
+      m_reg_kind, initial_value_ptr, object_address_ptr, result, error_ptr);
 }
 
 bool DWARFExpression::Evaluate(
-    ExecutionContext *exe_ctx, ClangExpressionVariableList *expr_locals,
-    ClangExpressionDeclMap *decl_map, RegisterContext *reg_ctx,
+    ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
     lldb::ModuleSP module_sp, const DataExtractor &opcodes,
     DWARFCompileUnit *dwarf_cu, const lldb::offset_t opcodes_offset,
     const lldb::offset_t opcodes_length, const lldb::RegisterKind reg_kind,

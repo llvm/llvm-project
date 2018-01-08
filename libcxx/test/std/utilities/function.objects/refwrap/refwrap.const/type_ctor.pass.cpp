@@ -17,7 +17,6 @@
 #include <cassert>
 
 class functor1
-    : public std::unary_function<int, char>
 {
 };
 

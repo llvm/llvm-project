@@ -11,11 +11,17 @@
 
   .text
 
+#if !defined(__USING_SJLJ_EXCEPTIONS__)
+
 #if defined(__i386__)
 DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_x866jumptoEv)
 #
 # void libunwind::Registers_x86::jumpto()
 #
+#if defined(_WIN32)
+# On windows, the 'this' pointer is passed in ecx instead of on the stack
+  movl   %ecx, %eax
+#else
 # On entry:
 #  +                       +
 #  +-----------------------+
@@ -25,6 +31,7 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_x866jumptoEv)
 #  +-----------------------+   <-- SP
 #  +                       +
   movl   4(%esp), %eax
+#endif
   # set up eax and ret on new stack location
   movl  28(%eax), %edx # edx holds new stack pointer
   subl  $8,%edx
@@ -58,7 +65,16 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind16Registers_x86_646jumptoEv)
 #
 # void libunwind::Registers_x86_64::jumpto()
 #
+#if defined(_WIN64)
+# On entry, thread_state pointer is in rcx; move it into rdi
+# to share restore code below. Since this routine restores and
+# overwrites all registers, we can use the same registers for
+# pointers and temporaries as on unix even though win64 normally
+# mustn't clobber some of them.
+  movq  %rcx, %rdi
+#else
 # On entry, thread_state pointer is in rdi
+#endif
 
   movq  56(%rdi), %rax # rax holds new stack pointer
   subq  $16, %rax
@@ -88,6 +104,25 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind16Registers_x86_646jumptoEv)
   # skip cs
   # skip fs
   # skip gs
+
+#if defined(_WIN64)
+  movdqu 176(%rdi),%xmm0
+  movdqu 192(%rdi),%xmm1
+  movdqu 208(%rdi),%xmm2
+  movdqu 224(%rdi),%xmm3
+  movdqu 240(%rdi),%xmm4
+  movdqu 256(%rdi),%xmm5
+  movdqu 272(%rdi),%xmm6
+  movdqu 288(%rdi),%xmm7
+  movdqu 304(%rdi),%xmm8
+  movdqu 320(%rdi),%xmm9
+  movdqu 336(%rdi),%xmm10
+  movdqu 352(%rdi),%xmm11
+  movdqu 368(%rdi),%xmm12
+  movdqu 384(%rdi),%xmm13
+  movdqu 400(%rdi),%xmm14
+  movdqu 416(%rdi),%xmm15
+#endif
   movq  56(%rdi), %rsp  # cut back rsp to new location
   pop    %rdi      # rdi was saved here earlier
   ret            # rip was saved here
@@ -356,7 +391,9 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_arm20restoreCoreAndJu
 @  values pointer is in r0
 @
   .p2align 2
+#if defined(__ELF__)
   .fpu vfpv3-d16
+#endif
 DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_arm19restoreVFPWithFLDMDEPy)
   @ VFP and iwMMX instructions are only available when compiling with the flags
   @ that enable them. We do not want to do that in the library (because we do not
@@ -375,7 +412,9 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_arm19restoreVFPWithFL
 @  values pointer is in r0
 @
   .p2align 2
+#if defined(__ELF__)
   .fpu vfpv3-d16
+#endif
 DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_arm19restoreVFPWithFLDMXEPy)
   vldmia r0, {d0-d15} @ fldmiax is deprecated in ARMv7+ and now behaves like vldmia
   JMP(lr)
@@ -387,7 +426,9 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_arm19restoreVFPWithFL
 @  values pointer is in r0
 @
   .p2align 2
+#if defined(__ELF__)
   .fpu vfpv3
+#endif
 DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_arm12restoreVFPv3EPy)
   vldmia r0, {d16-d31}
   JMP(lr)
@@ -401,7 +442,9 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_arm12restoreVFPv3EPy)
 @  values pointer is in r0
 @
   .p2align 2
+#if defined(__ELF__)
   .arch armv5te
+#endif
 DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_arm12restoreiWMMXEPy)
   ldcl p1, cr0, [r0], #8  @ wldrd wR0, [r0], #8
   ldcl p1, cr1, [r0], #8  @ wldrd wR1, [r0], #8
@@ -428,7 +471,9 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_arm12restoreiWMMXEPy)
 @  values pointer is in r0
 @
   .p2align 2
+#if defined(__ELF__)
   .arch armv5te
+#endif
 DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_arm19restoreiWMMXControlEPj)
   ldc2 p1, cr8, [r0], #4  @ wldrw wCGR0, [r0], #4
   ldc2 p1, cr9, [r0], #4  @ wldrw wCGR1, [r0], #4
@@ -489,7 +534,121 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind14Registers_or1k6jumptoEv)
   l.jr     r9
    l.nop
 
+#elif defined(__mips__) && defined(_ABIO32) && defined(__mips_soft_float)
+
+//
+// void libunwind::Registers_mips_o32::jumpto()
+//
+// On entry:
+//  thread state pointer is in a0 ($4)
+//
+DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind18Registers_mips_o326jumptoEv)
+  .set push
+  .set noat
+  .set noreorder
+  .set nomacro
+  // restore hi and lo
+  lw    $8, (4 * 33)($4)
+  mthi  $8
+  lw    $8, (4 * 34)($4)
+  mtlo  $8
+  // r0 is zero
+  lw    $1, (4 * 1)($4)
+  lw    $2, (4 * 2)($4)
+  lw    $3, (4 * 3)($4)
+  // skip a0 for now
+  lw    $5, (4 * 5)($4)
+  lw    $6, (4 * 6)($4)
+  lw    $7, (4 * 7)($4)
+  lw    $8, (4 * 8)($4)
+  lw    $9, (4 * 9)($4)
+  lw    $10, (4 * 10)($4)
+  lw    $11, (4 * 11)($4)
+  lw    $12, (4 * 12)($4)
+  lw    $13, (4 * 13)($4)
+  lw    $14, (4 * 14)($4)
+  lw    $15, (4 * 15)($4)
+  lw    $16, (4 * 16)($4)
+  lw    $17, (4 * 17)($4)
+  lw    $18, (4 * 18)($4)
+  lw    $19, (4 * 19)($4)
+  lw    $20, (4 * 20)($4)
+  lw    $21, (4 * 21)($4)
+  lw    $22, (4 * 22)($4)
+  lw    $23, (4 * 23)($4)
+  lw    $24, (4 * 24)($4)
+  lw    $25, (4 * 25)($4)
+  lw    $26, (4 * 26)($4)
+  lw    $27, (4 * 27)($4)
+  lw    $28, (4 * 28)($4)
+  lw    $29, (4 * 29)($4)
+  lw    $30, (4 * 30)($4)
+  // load new pc into ra
+  lw    $31, (4 * 32)($4)
+  // jump to ra, load a0 in the delay slot
+  jr    $31
+  lw    $4, (4 * 4)($4)
+  .set pop
+
+#elif defined(__mips__) && defined(_ABI64) && defined(__mips_soft_float)
+
+//
+// void libunwind::Registers_mips_n64::jumpto()
+//
+// On entry:
+//  thread state pointer is in a0 ($4)
+//
+DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind18Registers_mips_n646jumptoEv)
+  .set push
+  .set noat
+  .set noreorder
+  .set nomacro
+  // restore hi and lo
+  ld    $8, (8 * 33)($4)
+  mthi  $8
+  ld    $8, (8 * 34)($4)
+  mtlo  $8
+  // r0 is zero
+  ld    $1, (8 * 1)($4)
+  ld    $2, (8 * 2)($4)
+  ld    $3, (8 * 3)($4)
+  // skip a0 for now
+  ld    $5, (8 * 5)($4)
+  ld    $6, (8 * 6)($4)
+  ld    $7, (8 * 7)($4)
+  ld    $8, (8 * 8)($4)
+  ld    $9, (8 * 9)($4)
+  ld    $10, (8 * 10)($4)
+  ld    $11, (8 * 11)($4)
+  ld    $12, (8 * 12)($4)
+  ld    $13, (8 * 13)($4)
+  ld    $14, (8 * 14)($4)
+  ld    $15, (8 * 15)($4)
+  ld    $16, (8 * 16)($4)
+  ld    $17, (8 * 17)($4)
+  ld    $18, (8 * 18)($4)
+  ld    $19, (8 * 19)($4)
+  ld    $20, (8 * 20)($4)
+  ld    $21, (8 * 21)($4)
+  ld    $22, (8 * 22)($4)
+  ld    $23, (8 * 23)($4)
+  ld    $24, (8 * 24)($4)
+  ld    $25, (8 * 25)($4)
+  ld    $26, (8 * 26)($4)
+  ld    $27, (8 * 27)($4)
+  ld    $28, (8 * 28)($4)
+  ld    $29, (8 * 29)($4)
+  ld    $30, (8 * 30)($4)
+  // load new pc into ra
+  ld    $31, (8 * 32)($4)
+  // jump to ra, load a0 in the delay slot
+  jr    $31
+  ld    $4, (8 * 4)($4)
+  .set pop
+
 #endif
+
+#endif /* !defined(__USING_SJLJ_EXCEPTIONS__) */
 
 NO_EXEC_STACK_DIRECTIVE
 

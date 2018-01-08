@@ -33,7 +33,6 @@ int main()
 {
     {
         typedef std::student_t_distribution<> D;
-        typedef D::param_type P;
         typedef std::minstd_rand G;
         G g;
         D d(5.5);
@@ -69,7 +68,6 @@ int main()
     }
     {
         typedef std::student_t_distribution<> D;
-        typedef D::param_type P;
         typedef std::minstd_rand G;
         G g;
         D d(10);
@@ -105,7 +103,6 @@ int main()
     }
     {
         typedef std::student_t_distribution<> D;
-        typedef D::param_type P;
         typedef std::minstd_rand G;
         G g;
         D d(100);

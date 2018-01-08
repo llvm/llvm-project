@@ -2323,6 +2323,8 @@
 {'type': 'I', 'is_defined': True, 'name': '___cxa_current_exception_type'}
 {'type': 'U', 'is_defined': False, 'name': '___cxa_current_primary_exception'}
 {'type': 'U', 'is_defined': False, 'name': '___cxa_decrement_exception_refcount'}
+{'type': 'U', 'is_defined': False, 'name': '___cxa_deleted_virtual'}
+{'type': 'I', 'is_defined': True, 'name': '___cxa_deleted_virtual'}
 {'type': 'U', 'is_defined': False, 'name': '___cxa_demangle'}
 {'type': 'I', 'is_defined': True, 'name': '___cxa_demangle'}
 {'type': 'U', 'is_defined': False, 'name': '___cxa_end_catch'}

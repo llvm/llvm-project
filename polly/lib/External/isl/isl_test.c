@@ -190,6 +190,8 @@ struct {
 	{ "{ [x] -> [] : exists (a, b: 0 <= a <= 1 and 0 <= b <= 3 and "
 			    "2b <= x - 8a and 2b >= -1 + x - 8a) }",
 	  "{ [x] -> [] : 0 <= x <= 15 }" },
+	{ "{ [x] -> [x] : }",
+	  "{ [x] -> [x] }" },
 };
 
 int test_parse(struct isl_ctx *ctx)

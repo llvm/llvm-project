@@ -25,8 +25,10 @@ int main()
         Engine e;
         Engine e0 = e;
         Adaptor a(std::move(e0));
-        for (unsigned k = 0; k <= Adaptor::table_size; ++k)
-            e();
+        for (unsigned k = 0; k <= Adaptor::table_size; ++k) {
+            (void)e();
+        }
+
         assert(a.base() == e);
     }
 }

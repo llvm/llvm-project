@@ -43,6 +43,7 @@
 ; CHECK-NEXT:        for (int c3 = 0; c3 <= 31; c3 += 1)
 ; CHECK-NEXT:          for (int c4 = 0; c4 <= min(47, -48 * c2 + 127); c4 += 1)
 ; CHECK-NEXT:            for (int c5 = 0; c5 <= 511; c5 += 1) {
+; CHECK-NEXT:              // Loop Vectorizer Disabled
 ; CHECK-NEXT:              // Register tiling - Points
 ; CHECK-NEXT:              {
 ; CHECK-NEXT:                Stmt_for_body6(384 * c2 + 8 * c4, 32 * c3, 512 * c1 + c5);

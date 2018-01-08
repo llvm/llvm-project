@@ -44,7 +44,6 @@ void
 test1()
 {
     typedef std::piecewise_linear_distribution<> D;
-    typedef D::param_type P;
     typedef std::mt19937_64 G;
     G g;
     double b[] = {10, 14, 16, 17};
@@ -97,7 +96,6 @@ void
 test2()
 {
     typedef std::piecewise_linear_distribution<> D;
-    typedef D::param_type P;
     typedef std::mt19937_64 G;
     G g;
     double b[] = {10, 14, 16, 17};
@@ -150,7 +148,6 @@ void
 test3()
 {
     typedef std::piecewise_linear_distribution<> D;
-    typedef D::param_type P;
     typedef std::mt19937_64 G;
     G g;
     double b[] = {10, 14, 16, 17};
@@ -203,7 +200,6 @@ void
 test4()
 {
     typedef std::piecewise_linear_distribution<> D;
-    typedef D::param_type P;
     typedef std::mt19937_64 G;
     G g;
     double b[] = {10, 14, 16};
@@ -257,7 +253,6 @@ void
 test5()
 {
     typedef std::piecewise_linear_distribution<> D;
-    typedef D::param_type P;
     typedef std::mt19937_64 G;
     G g;
     double b[] = {10, 14};
@@ -312,7 +307,6 @@ void
 test6()
 {
     typedef std::piecewise_linear_distribution<> D;
-    typedef D::param_type P;
     typedef std::mt19937_64 G;
     G g;
     double b[] = {10, 14, 16, 17};

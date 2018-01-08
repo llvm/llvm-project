@@ -68,8 +68,8 @@ public:
     outer_allocator_type& outer_allocator() noexcept;
     const outer_allocator_type& outer_allocator() const noexcept;
 
-    pointer allocate(size_type n);
-    pointer allocate(size_type n, const_void_pointer hint);
+    pointer allocate(size_type n);                           // [[nodiscard]] in C++20
+    pointer allocate(size_type n, const_void_pointer hint);  // [[nodiscard]] in C++20
     void deallocate(pointer p, size_type n) noexcept;
 
     size_type max_size() const;
@@ -477,11 +477,11 @@ public:
     const outer_allocator_type& outer_allocator() const _NOEXCEPT
         {return base::outer_allocator();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
     pointer allocate(size_type __n)
         {return allocator_traits<outer_allocator_type>::
             allocate(outer_allocator(), __n);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
     pointer allocate(size_type __n, const_void_pointer __hint)
         {return allocator_traits<outer_allocator_type>::
             allocate(outer_allocator(), __n, __hint);}

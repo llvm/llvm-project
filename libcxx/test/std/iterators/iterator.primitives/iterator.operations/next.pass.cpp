@@ -24,6 +24,9 @@ void
 test(It i, typename std::iterator_traits<It>::difference_type n, It x)
 {
     assert(std::next(i, n) == x);
+
+    It (*next)(It, typename std::iterator_traits<It>::difference_type) = std::next;
+    assert(next(i, n) == x);
 }
 
 template <class It>

@@ -26,7 +26,7 @@
 #include "uses_alloc_types.hpp"
 #include "controlled_allocators.hpp"
 
-// — If uses_allocator_v<T, inner_allocator_type> is false and
+// - If uses_allocator_v<T, inner_allocator_type> is false and
 //   is_constructible_v<T, Args...> is true, calls
 //   OUTERMOST_ALLOC_TRAITS(*this)::construct(
 //      OUTERMOST (*this), p, std::forward<Args>(args)...).

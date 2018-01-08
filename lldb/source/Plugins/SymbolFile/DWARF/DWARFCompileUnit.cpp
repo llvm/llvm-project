@@ -39,68 +39,48 @@ using namespace std;
 extern int g_verbose;
 
 DWARFCompileUnit::DWARFCompileUnit(SymbolFileDWARF *dwarf2Data)
-    : m_dwarf2Data(dwarf2Data), m_abbrevs(NULL), m_user_data(NULL),
-      m_die_array(), m_func_aranges_ap(), m_base_addr(0),
-      m_offset(DW_INVALID_OFFSET), m_length(0), m_version(0),
-      m_addr_size(DWARFCompileUnit::GetDefaultAddressSize()),
-      m_producer(eProducerInvalid), m_producer_version_major(0),
-      m_producer_version_minor(0), m_producer_version_update(0),
-      m_language_type(eLanguageTypeUnknown), m_is_dwarf64(false),
-      m_is_optimized(eLazyBoolCalculate), m_addr_base(0),
-      m_ranges_base(0), m_base_obj_offset(DW_INVALID_OFFSET) {}
+    : m_dwarf2Data(dwarf2Data) {}
 
 DWARFCompileUnit::~DWARFCompileUnit() {}
 
-void DWARFCompileUnit::Clear() {
-  m_offset = DW_INVALID_OFFSET;
-  m_length = 0;
-  m_version = 0;
-  m_abbrevs = NULL;
-  m_addr_size = DWARFCompileUnit::GetDefaultAddressSize();
-  m_base_addr = 0;
-  m_die_array.clear();
-  m_func_aranges_ap.reset();
-  m_user_data = NULL;
-  m_producer = eProducerInvalid;
-  m_language_type = eLanguageTypeUnknown;
-  m_is_dwarf64 = false;
-  m_is_optimized = eLazyBoolCalculate;
-  m_addr_base = 0;
-  m_base_obj_offset = DW_INVALID_OFFSET;
-}
+DWARFCompileUnitSP DWARFCompileUnit::Extract(SymbolFileDWARF *dwarf2Data,
+    lldb::offset_t *offset_ptr) {
+  DWARFCompileUnitSP cu_sp(new DWARFCompileUnit(dwarf2Data));
+  // Out of memory?
+  if (cu_sp.get() == NULL)
+    return nullptr;
 
-bool DWARFCompileUnit::Extract(const DWARFDataExtractor &debug_info,
-                               lldb::offset_t *offset_ptr) {
-  Clear();
+  const DWARFDataExtractor &debug_info = dwarf2Data->get_debug_info_data();
 
-  m_offset = *offset_ptr;
+  cu_sp->m_offset = *offset_ptr;
 
   if (debug_info.ValidOffset(*offset_ptr)) {
     dw_offset_t abbr_offset;
-    const DWARFDebugAbbrev *abbr = m_dwarf2Data->DebugAbbrev();
-    m_length = debug_info.GetDWARFInitialLength(offset_ptr);
-    m_is_dwarf64 = debug_info.IsDWARF64();
-    m_version = debug_info.GetU16(offset_ptr);
+    const DWARFDebugAbbrev *abbr = dwarf2Data->DebugAbbrev();
+    cu_sp->m_length = debug_info.GetDWARFInitialLength(offset_ptr);
+    cu_sp->m_is_dwarf64 = debug_info.IsDWARF64();
+    cu_sp->m_version = debug_info.GetU16(offset_ptr);
     abbr_offset = debug_info.GetDWARFOffset(offset_ptr);
-    m_addr_size = debug_info.GetU8(offset_ptr);
+    cu_sp->m_addr_size = debug_info.GetU8(offset_ptr);
 
-    bool length_OK = debug_info.ValidOffset(GetNextCompileUnitOffset() - 1);
-    bool version_OK = SymbolFileDWARF::SupportedVersion(m_version);
+    bool length_OK =
+        debug_info.ValidOffset(cu_sp->GetNextCompileUnitOffset() - 1);
+    bool version_OK = SymbolFileDWARF::SupportedVersion(cu_sp->m_version);
     bool abbr_offset_OK =
-        m_dwarf2Data->get_debug_abbrev_data().ValidOffset(abbr_offset);
-    bool addr_size_OK = ((m_addr_size == 4) || (m_addr_size == 8));
+        dwarf2Data->get_debug_abbrev_data().ValidOffset(abbr_offset);
+    bool addr_size_OK = (cu_sp->m_addr_size == 4) || (cu_sp->m_addr_size == 8);
 
     if (length_OK && version_OK && addr_size_OK && abbr_offset_OK &&
         abbr != NULL) {
-      m_abbrevs = abbr->GetAbbreviationDeclarationSet(abbr_offset);
-      return true;
+      cu_sp->m_abbrevs = abbr->GetAbbreviationDeclarationSet(abbr_offset);
+      return cu_sp;
     }
 
     // reset the offset to where we tried to parse from if anything went wrong
-    *offset_ptr = m_offset;
+    *offset_ptr = cu_sp->m_offset;
   }
 
-  return false;
+  return nullptr;
 }
 
 void DWARFCompileUnit::ClearDIEs(bool keep_compile_unit_die) {
@@ -620,6 +600,10 @@ void DWARFCompileUnit::Index(NameToDIE &func_basenames,
                              NameToDIE &objc_class_selectors,
                              NameToDIE &globals, NameToDIE &types,
                              NameToDIE &namespaces) {
+  assert(!m_dwarf2Data->GetBaseCompileUnit() &&
+         "DWARFCompileUnit associated with .dwo or .dwp "
+         "should not be indexed directly");
+
   Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_LOOKUPS));
 
   if (log) {

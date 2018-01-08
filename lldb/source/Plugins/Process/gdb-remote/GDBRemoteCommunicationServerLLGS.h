@@ -43,32 +43,7 @@ public:
       MainLoop &mainloop,
       const NativeProcessProtocol::Factory &process_factory);
 
-  //------------------------------------------------------------------
-  /// Specify the program to launch and its arguments.
-  ///
-  /// @param[in] args
-  ///     The command line to launch.
-  ///
-  /// @param[in] argc
-  ///     The number of elements in the args array of cstring pointers.
-  ///
-  /// @return
-  ///     An Status object indicating the success or failure of making
-  ///     the setting.
-  //------------------------------------------------------------------
-  Status SetLaunchArguments(const char *const args[], int argc);
-
-  //------------------------------------------------------------------
-  /// Specify the launch flags for the process.
-  ///
-  /// @param[in] launch_flags
-  ///     The launch flags to use when launching this process.
-  ///
-  /// @return
-  ///     An Status object indicating the success or failure of making
-  ///     the setting.
-  //------------------------------------------------------------------
-  Status SetLaunchFlags(unsigned int launch_flags);
+  void SetLaunchInfo(const ProcessLaunchInfo &info);
 
   //------------------------------------------------------------------
   /// Launch a process with the current launch settings.
@@ -234,7 +209,7 @@ private:
 
   void HandleInferiorState_Stopped(NativeProcessProtocol *process);
 
-  NativeThreadProtocolSP GetThreadFromSuffix(StringExtractorGDBRemote &packet);
+  NativeThreadProtocol *GetThreadFromSuffix(StringExtractorGDBRemote &packet);
 
   uint32_t GetNextSavedRegistersID();
 

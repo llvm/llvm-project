@@ -348,3 +348,14 @@ void fun() {
   ExpensiveToCopyType E;
   NegativeUsingConstructor S(E);
 }
+
+template<typename T>
+void templateFunction(T) {
+}
+
+template<>
+void templateFunction<ExpensiveToCopyType>(ExpensiveToCopyType E) {
+  // CHECK-MESSAGES: [[@LINE-1]]:64: warning: the parameter 'E' is copied
+  // CHECK-FIXES: void templateFunction<ExpensiveToCopyType>(ExpensiveToCopyType E) {
+  E.constReference();
+}

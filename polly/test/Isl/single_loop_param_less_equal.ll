@@ -57,5 +57,5 @@ ret:
 ; CODEGEN: polly.loop_preheader:
 ; CODEGEN:   br label %polly.loop_header
 
-; LOOPS: Loop at depth 1 containing: %loop.header<header><exiting>,%loop.body,%loop.backedge<latch>
-; LOOPS: Loop at depth 1 containing: %polly.loop_header<header>,%polly.stmt.loop.body<latch><exiting>
+; LOOPS-DAG: Loop at depth 1 containing: %loop.header<header><exiting>,%loop.body,%loop.backedge<latch>
+; LOOPS-DAG: Loop at depth 1 containing: %polly.loop_header<header>,%polly.stmt.loop.body<latch><exiting>

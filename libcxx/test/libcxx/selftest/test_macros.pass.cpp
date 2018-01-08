@@ -56,7 +56,7 @@ void test_libcxx_macros()
 # endif
 #endif
 
-//  ===== C++1z features =====
+//  ===== C++17 features =====
 }
 
 int main()

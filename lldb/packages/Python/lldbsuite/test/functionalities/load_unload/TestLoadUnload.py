@@ -17,9 +17,6 @@ from lldbsuite.test import lldbutil
 @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
 class LoadUnloadTestCase(TestBase):
 
-    def getCategories(self):
-        return ['basic_process']
-
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):

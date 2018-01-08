@@ -2,7 +2,6 @@
  * kmp_import.cpp
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 /* Object generated from this source file is linked to Windows* OS DLL import
    library (libompmd.lib) only! It is not a part of regular static or dynamic

@@ -14,6 +14,11 @@
 #pragma GCC diagnostic error "-Wformat"
 #pragma GCC diagnostic fatal "-Wformat"
 
+void foo() {
+#pragma clang __debug captured
+{ }
+}
+
 // CHECK: ---
 // CHECK-NEXT: - Callback: PragmaDirective
 // CHECK-NEXT:   Loc: "{{.*}}{{[/\\]}}pp-trace-pragma-general.cpp:3:1"
@@ -103,5 +108,11 @@
 // CHECK-NEXT:   Namespace: GCC
 // CHECK-NEXT:   Mapping: MAP_FATAL
 // CHECK-NEXT:   Str: -Wformat
+// CHECK-NEXT: - Callback: PragmaDirective
+// CHECK-NEXT:   Loc: "{{.*}}{{[/\\]}}pp-trace-pragma-general.cpp:18:1"
+// CHECK-NEXT:   Introducer: PIK_HashPragma
+// CHECK-NEXT: - Callback: PragmaDebug
+// CHECK-NEXT:   Loc: "{{.*}}{{[/\\]}}pp-trace-pragma-general.cpp:18:23"
+// CHECK-NEXT:   DebugType: captured
 // CHECK-NEXT: - Callback: EndOfMainFile
 // CHECK-NEXT: ...

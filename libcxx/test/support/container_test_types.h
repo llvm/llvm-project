@@ -167,8 +167,10 @@ struct AllocatorConstructController {
   // Return true if the construction was expected and false otherwise.
   // This should only be called by 'Allocator.construct'.
   bool check(detail::TypeID const& tid) {
-    if (!m_expected_args)
+    if (!m_expected_args) {
       assert(m_allow_unchecked);
+      return m_allow_unchecked;
+    }
     bool res = *m_expected_args == tid;
     if (m_expected_count == -1 || --m_expected_count == -1)
       m_expected_args = nullptr;
@@ -233,6 +235,19 @@ inline ConstructController* getConstructController() {
   static ConstructController c;
   return &c;
 }
+
+template <class ...Args>
+struct ExpectConstructGuard {
+  ExpectConstructGuard(int N)  {
+    auto CC = getConstructController();
+    assert(!CC->unchecked());
+    CC->expect<Args...>(N);
+  }
+
+  ~ExpectConstructGuard() {
+    assert(!getConstructController()->unchecked());
+  }
+};
 
 //===----------------------------------------------------------------------===//
 //                       ContainerTestAllocator
@@ -417,7 +432,12 @@ namespace std {
       return arg.data;
     }
   };
-
+  template <class T, class Alloc>
+  class vector;
+  template <class T, class Alloc>
+  class deque;
+  template <class T, class Alloc>
+  class list;
   template <class _Key, class _Value, class _Less, class _Alloc>
   class map;
   template <class _Key, class _Value, class _Less, class _Alloc>
@@ -443,6 +463,13 @@ _LIBCPP_END_NAMESPACE_STD
 
 // TCT - Test container type
 namespace TCT {
+
+template <class T = CopyInsertable<1>>
+using vector = std::vector<T, ContainerTestAllocator<T, T> >;
+template <class T = CopyInsertable<1>>
+using deque = std::deque<T, ContainerTestAllocator<T, T> >;
+template <class T = CopyInsertable<1>>
+using list = std::list<T, ContainerTestAllocator<T, T> >;
 
 template <class Key = CopyInsertable<1>, class Value = CopyInsertable<2>,
           class ValueTp = std::pair<const Key, Value> >
@@ -487,6 +514,5 @@ using multiset =
     std::multiset<Value, std::less<Value>, ContainerTestAllocator<Value, Value> >;
 
 } // end namespace TCT
-
 
 #endif // SUPPORT_CONTAINER_TEST_TYPES_H

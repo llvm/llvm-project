@@ -19,4 +19,4 @@ bb14:                                             ; preds = %bb5, %bb4, %bb3, %e
   ret void
 }
 
-; CHECK: Invalid Scop!
+; CHECK-NOT: Function:

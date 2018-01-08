@@ -13,7 +13,7 @@
 
 // constexpr reference operator*() const;
 //
-// constexpr in c++17
+// constexpr in C++17
 
 // Be sure to respect LWG 198:
 //    http://www.open-std.org/jtc1/sc22/wg21/docs/lwg-defects.html#198

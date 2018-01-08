@@ -2,7 +2,6 @@
  * kmp_os.h -- KPTS runtime header file.
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #ifndef KMP_OS_H
 #define KMP_OS_H
@@ -63,7 +61,7 @@
 #error Unknown compiler
 #endif
 
-#if (KMP_OS_LINUX || KMP_OS_WINDOWS) && !KMP_OS_CNK && !KMP_ARCH_PPC64
+#if (KMP_OS_LINUX || KMP_OS_WINDOWS) && !KMP_OS_CNK
 #define KMP_AFFINITY_SUPPORTED 1
 #if KMP_OS_WINDOWS && KMP_ARCH_X86_64
 #define KMP_GROUP_AFFINITY 1
@@ -247,9 +245,9 @@ template <> struct traits_t<unsigned long long> {
 #include <windows.h>
 
 static inline int KMP_GET_PAGE_SIZE(void) {
-    SYSTEM_INFO si;
-    GetSystemInfo(&si);
-    return si.dwPageSize;
+  SYSTEM_INFO si;
+  GetSystemInfo(&si);
+  return si.dwPageSize;
 }
 #else
 #define KMP_GET_PAGE_SIZE() getpagesize()
@@ -280,19 +278,59 @@ extern "C" {
 
 #define KMP_CACHE_PREFETCH(ADDR) /* nothing */
 
+// Define attribute that indicates a function does not return
+#if __cplusplus >= 201103L
+#define KMP_NORETURN [[noreturn]]
+#elif KMP_OS_WINDOWS
+#define KMP_NORETURN __declspec(noreturn)
+#else
+#define KMP_NORETURN __attribute__((noreturn))
+#endif
+
+#if KMP_OS_WINDOWS
+#define KMP_ALIGN(bytes) __declspec(align(bytes))
+#define KMP_THREAD_LOCAL __declspec(thread)
+#define KMP_ALIAS /* Nothing */
+#else
+#define KMP_ALIGN(bytes) __attribute__((aligned(bytes)))
+#define KMP_THREAD_LOCAL __thread
+#define KMP_ALIAS(alias_of) __attribute__((alias(alias_of)))
+#endif
+
+#if KMP_HAVE_WEAK_ATTRIBUTE
+#define KMP_WEAK_ATTRIBUTE __attribute__((weak))
+#else
+#define KMP_WEAK_ATTRIBUTE /* Nothing */
+#endif
+
+// Define KMP_VERSION_SYMBOL and KMP_EXPAND_NAME
+#ifdef KMP_USE_VERSION_SYMBOLS
+#define KMP_STR(x) _KMP_STR(x)
+#define _KMP_STR(x) #x
+// If using versioned symbols, KMP_EXPAND_NAME prepends
+// __kmp_api_ to the real API name
+#define KMP_EXPAND_NAME(api_name) _KMP_EXPAND_NAME(api_name)
+#define _KMP_EXPAND_NAME(api_name) __kmp_api_##api_name
+#define KMP_VERSION_SYMBOL(api_name, ver_num, ver_str)                         \
+  _KMP_VERSION_SYMBOL(api_name, ver_num, ver_str, "VERSION")
+#define _KMP_VERSION_SYMBOL(api_name, ver_num, ver_str, default_ver)            \
+  __typeof__(__kmp_api_##api_name) __kmp_api_##api_name##_##ver_num##_alias     \
+      __attribute__((alias(KMP_STR(__kmp_api_##api_name))));                    \
+  __asm__(                                                                      \
+      ".symver " KMP_STR(__kmp_api_##api_name##_##ver_num##_alias) "," KMP_STR( \
+          api_name) "@" ver_str "\n\t");                                        \
+  __asm__(".symver " KMP_STR(__kmp_api_##api_name) "," KMP_STR(                 \
+      api_name) "@@" default_ver "\n\t")
+#else // KMP_USE_VERSION_SYMBOLS
+#define KMP_EXPAND_NAME(api_name) api_name
+#define KMP_VERSION_SYMBOL(api_name, ver_num, ver_str) /* Nothing */
+#endif // KMP_USE_VERSION_SYMBOLS
+
 /* Temporary note: if performance testing of this passes, we can remove
    all references to KMP_DO_ALIGN and replace with KMP_ALIGN.  */
-#if KMP_OS_UNIX && defined(__GNUC__)
-#define KMP_DO_ALIGN(bytes) __attribute__((aligned(bytes)))
-#define KMP_ALIGN_CACHE __attribute__((aligned(CACHE_LINE)))
-#define KMP_ALIGN_CACHE_INTERNODE __attribute__((aligned(INTERNODE_CACHE_LINE)))
-#define KMP_ALIGN(bytes) __attribute__((aligned(bytes)))
-#else
-#define KMP_DO_ALIGN(bytes) __declspec(align(bytes))
-#define KMP_ALIGN_CACHE __declspec(align(CACHE_LINE))
-#define KMP_ALIGN_CACHE_INTERNODE __declspec(align(INTERNODE_CACHE_LINE))
-#define KMP_ALIGN(bytes) __declspec(align(bytes))
-#endif
+#define KMP_DO_ALIGN(bytes) KMP_ALIGN(bytes)
+#define KMP_ALIGN_CACHE KMP_ALIGN(CACHE_LINE)
+#define KMP_ALIGN_CACHE_INTERNODE KMP_ALIGN(INTERNODE_CACHE_LINE)
 
 /* General purpose fence types for memory operations */
 enum kmp_mem_fence_type {
@@ -820,11 +858,7 @@ typedef void (*microtask_t)(int *gtid, int *npr, ...);
 #define KMP_USE_BGET 1
 #endif
 
-
 // Switches for OSS builds
-#ifndef USE_SYSFS_INFO
-#define USE_SYSFS_INFO 0
-#endif
 #ifndef USE_CMPXCHG_FIX
 #define USE_CMPXCHG_FIX 1
 #endif
@@ -834,7 +868,8 @@ typedef void (*microtask_t)(int *gtid, int *npr, ...);
 #define KMP_USE_DYNAMIC_LOCK 1
 #endif
 
-// Enable TSX if dynamic user lock is turned on
+// Enable Intel(R) Transactional Synchronization Extensions (Intel(R) TSX) if
+// dynamic user lock is turned on
 #if KMP_USE_DYNAMIC_LOCK
 // Visual studio can't handle the asm sections in this code
 #define KMP_USE_TSX (KMP_ARCH_X86 || KMP_ARCH_X86_64) && !KMP_COMPILER_MSVC

@@ -2,7 +2,6 @@
  * kmp_threadprivate.cpp -- OpenMP threadprivate support library
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #include "kmp.h"
 #include "kmp_i18n.h"
@@ -227,6 +225,13 @@ void __kmp_common_destroy(void) {
 void __kmp_common_destroy_gtid(int gtid) {
   struct private_common *tn;
   struct shared_common *d_tn;
+
+  if (!TCR_4(__kmp_init_gtid)) {
+    // This is possible when one of multiple roots initiates early library
+    // termination in a sequential region while other teams are active, and its
+    // child threads are about to end.
+    return;
+  }
 
   KC_TRACE(10, ("__kmp_common_destroy_gtid: T#%d called\n", gtid));
   if ((__kmp_foreign_tp) ? (!KMP_INITIAL_GTID(gtid)) : (!KMP_UBER_GTID(gtid))) {
@@ -444,10 +449,6 @@ struct private_common *kmp_threadprivate_insert(int gtid, void *pc_addr,
 
   tn->link = __kmp_threads[gtid]->th.th_pri_head;
   __kmp_threads[gtid]->th.th_pri_head = tn;
-
-#ifdef BUILD_TV
-  __kmp_tv_threadprivate_store(__kmp_threads[gtid], tn->gbl_addr, tn->par_addr);
-#endif
 
   if ((__kmp_foreign_tp) ? (KMP_INITIAL_GTID(gtid)) : (KMP_UBER_GTID(gtid)))
     return tn;

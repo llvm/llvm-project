@@ -161,9 +161,9 @@ bool DWARFDebugInfoEntry::FastExtract(
           case DW_FORM_strp:
           case DW_FORM_sec_offset:
             if (cu->IsDWARF64())
-              debug_info_data.GetU64(offset_ptr);
+              debug_info_data.GetU64(&offset);
             else
-              debug_info_data.GetU32(offset_ptr);
+              debug_info_data.GetU32(&offset);
             break;
 
           default:
@@ -325,9 +325,9 @@ bool DWARFDebugInfoEntry::Extract(SymbolFileDWARF *dwarf2Data,
               case DW_FORM_strp:
               case DW_FORM_sec_offset:
                 if (cu->IsDWARF64())
-                  debug_info_data.GetU64(offset_ptr);
+                  debug_info_data.GetU64(&offset);
                 else
-                  debug_info_data.GetU32(offset_ptr);
+                  debug_info_data.GetU32(&offset);
                 break;
 
               default:
@@ -1318,19 +1318,6 @@ bool DWARFDebugInfoEntry::AppendTypeName(SymbolFileDWARF *dwarf2Data,
         }
         return result;
       }
-    }
-  }
-  return false;
-}
-
-bool DWARFDebugInfoEntry::Contains(const DWARFDebugInfoEntry *die) const {
-  if (die) {
-    const dw_offset_t die_offset = die->GetOffset();
-    if (die_offset > GetOffset()) {
-      const DWARFDebugInfoEntry *sibling = GetSibling();
-      assert(sibling); // TODO: take this out
-      if (sibling)
-        return die_offset < sibling->GetOffset();
     }
   }
   return false;

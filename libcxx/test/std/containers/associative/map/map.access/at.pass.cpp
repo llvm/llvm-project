@@ -46,7 +46,7 @@ int main()
 #ifndef TEST_HAS_NO_EXCEPTIONS
         try
         {
-            m.at(6);
+            TEST_IGNORE_NODISCARD m.at(6);
             assert(false);
         }
         catch (std::out_of_range&)
@@ -79,7 +79,7 @@ int main()
 #ifndef TEST_HAS_NO_EXCEPTIONS
         try
         {
-            m.at(6);
+            TEST_IGNORE_NODISCARD m.at(6);
             assert(false);
         }
         catch (std::out_of_range&)
@@ -115,7 +115,7 @@ int main()
 #ifndef TEST_HAS_NO_EXCEPTIONS
         try
         {
-            m.at(6);
+            TEST_IGNORE_NODISCARD m.at(6);
             assert(false);
         }
         catch (std::out_of_range&)
@@ -148,7 +148,7 @@ int main()
 #ifndef TEST_HAS_NO_EXCEPTIONS
         try
         {
-            m.at(6);
+            TEST_IGNORE_NODISCARD m.at(6);
             assert(false);
         }
         catch (std::out_of_range&)

@@ -192,6 +192,10 @@ void MisplacedWideningCastCheck::check(const MatchFinder::MatchResult &Result) {
   if (Calc->getLocStart().isMacroID())
     return;
 
+  if (Cast->isTypeDependent() || Cast->isValueDependent() ||
+      Calc->isTypeDependent() || Calc->isValueDependent())
+    return;
+
   ASTContext &Context = *Result.Context;
 
   QualType CastType = Cast->getType();

@@ -33,7 +33,8 @@ void InefficientStringConcatenationCheck::registerMatchers(
     return;
 
   const auto BasicStringType =
-      hasType(cxxRecordDecl(hasName("::std::basic_string")));
+      hasType(qualType(hasUnqualifiedDesugaredType(recordType(
+          hasDeclaration(cxxRecordDecl(hasName("::std::basic_string")))))));
 
   const auto BasicStringPlusOperator = cxxOperatorCallExpr(
       hasOverloadedOperatorName("+"),

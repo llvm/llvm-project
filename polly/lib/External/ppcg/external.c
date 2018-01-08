@@ -7,15 +7,6 @@
   abort(); \
 }
 
-void ppcg_start_block() {
-  die();
-}
-void ppcg_end_block(){
-  die();
-}
-void ppcg_print_macros(){
-  die();
-}
 void pet_scop_compute_outer_to_any(){
   die();
 }
@@ -55,12 +46,7 @@ void pet_expr_access_get_ref_id(){
 void print_cpu(){
   die();
 }
-void ppcg_print_exposed_declarations(){
-  die();
-}
-void ppcg_print_declaration(){
-  die();
-}
+
 void pet_stmt_print_body(){
   die();
 }
@@ -137,5 +123,59 @@ void generate_cpu() {
   die();
 }
 void pet_stmt_build_ast_exprs() {
+  die();
+}
+ void pet_scop_get_tagged_may_reads() {
+  die();
+}
+ void pet_scop_get_may_reads() {
+  die();
+}
+void pet_scop_get_may_writes() {
+  die();
+}
+void pet_scop_get_must_writes() {
+  die();
+}
+void pet_scop_get_tagged_may_writes() {
+  die();
+}
+void pet_scop_get_tagged_must_writes() {
+die();
+}
+void pet_scop_get_must_kills() {
+  die();
+}
+void pet_scop_get_tagged_must_kills() {
+  die();
+}
+void pet_expr_call_get_name() {
+  die();
+}
+void pet_expr_call_set_name() {
+  die();
+}
+void pet_expr_get_arg() {
+  die();
+}
+void pet_expr_new_cast() {
+  die();
+}
+void pet_expr_set_arg() {
+  die();
+}
+void pet_tree_copy() {
+  die();
+}
+void pet_tree_free() {
+  die();
+}
+void pet_tree_map_call_expr() {
+  die();
+}
+void pet_expr_access_get_may_read() {
+  die();
+}
+void pet_expr_access_get_may_write() {
   die();
 }

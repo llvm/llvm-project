@@ -128,15 +128,6 @@ bool ClangUtilityFunction::Install(DiagnosticManager &diagnostic_manager,
       m_execution_unit_sp->CreateJITModule(FunctionName());
   }
 
-#if 0
-	// jingham: look here
-    StreamFile logfile ("/tmp/exprs.txt", "a");
-    logfile.Printf ("0x%16.16" PRIx64 ": func = %s, source =\n%s\n",
-                    m_jit_start_addr, 
-                    m_function_name.c_str(), 
-                    m_function_text.c_str());
-#endif
-
   DeclMap()->DidParse();
 
   ResetDeclMap();

@@ -10,7 +10,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/ModuleCache.h"
-#include "unittests/Utility/Helpers/TestUtilities.h"
+#include "TestingSupport/TestUtilities.h"
 
 using namespace lldb_private;
 using namespace lldb;

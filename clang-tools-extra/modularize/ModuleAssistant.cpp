@@ -25,7 +25,7 @@
 // to modularize.  It then calls a writeModuleMap function to set up the
 // module map file output and walk the module tree, outputting the module
 // map file using a stream obtained and managed by an
-// llvm::tool_output_file object.
+// llvm::ToolOutputFile object.
 //
 //===---------------------------------------------------------------------===//
 
@@ -271,7 +271,7 @@ static bool writeModuleMap(llvm::StringRef ModuleMapPath,
 
   // Set up module map output file.
   std::error_code EC;
-  llvm::tool_output_file Out(FilePath, EC, llvm::sys::fs::F_Text);
+  llvm::ToolOutputFile Out(FilePath, EC, llvm::sys::fs::F_Text);
   if (EC) {
     llvm::errs() << Argv0 << ": error opening " << FilePath << ":"
                  << EC.message() << "\n";
@@ -289,7 +289,7 @@ static bool writeModuleMap(llvm::StringRef ModuleMapPath,
   if (!RootModule->output(OS, 0))
     return false;
 
-  // Tell tool_output_file that we want to keep the file.
+  // Tell ToolOutputFile that we want to keep the file.
   Out.keep();
 
   return true;

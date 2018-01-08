@@ -30,8 +30,7 @@ class NativeProcessNetBSD;
 class NativeRegisterContextNetBSD_x86_64 : public NativeRegisterContextNetBSD {
 public:
   NativeRegisterContextNetBSD_x86_64(const ArchSpec &target_arch,
-                                     NativeThreadProtocol &native_thread,
-                                     uint32_t concrete_frame_idx);
+                                     NativeThreadProtocol &native_thread);
   uint32_t GetRegisterSetCount() const override;
 
   const RegisterSet *GetRegisterSet(uint32_t set_index) const override;

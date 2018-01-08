@@ -12,9 +12,13 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "FasterStringFindCheck.h"
 #include "ForRangeCopyCheck.h"
-#include "ImplicitCastInLoopCheck.h"
+#include "ImplicitConversionInLoopCheck.h"
+#include "InefficientAlgorithmCheck.h"
 #include "InefficientStringConcatenationCheck.h"
 #include "InefficientVectorOperationCheck.h"
+#include "MoveConstArgCheck.h"
+#include "MoveConstructorInitCheck.h"
+#include "NoexceptMoveConstructorCheck.h"
 #include "TypePromotionInMathFnCheck.h"
 #include "UnnecessaryCopyInitialization.h"
 #include "UnnecessaryValueParamCheck.h"
@@ -30,12 +34,20 @@ public:
         "performance-faster-string-find");
     CheckFactories.registerCheck<ForRangeCopyCheck>(
         "performance-for-range-copy");
-    CheckFactories.registerCheck<ImplicitCastInLoopCheck>(
-        "performance-implicit-cast-in-loop");
+    CheckFactories.registerCheck<ImplicitConversionInLoopCheck>(
+        "performance-implicit-conversion-in-loop");
+    CheckFactories.registerCheck<InefficientAlgorithmCheck>(
+        "performance-inefficient-algorithm");
     CheckFactories.registerCheck<InefficientStringConcatenationCheck>(
         "performance-inefficient-string-concatenation");
     CheckFactories.registerCheck<InefficientVectorOperationCheck>(
         "performance-inefficient-vector-operation");
+    CheckFactories.registerCheck<MoveConstArgCheck>(
+        "performance-move-const-arg");
+    CheckFactories.registerCheck<MoveConstructorInitCheck>(
+        "performance-move-constructor-init");
+    CheckFactories.registerCheck<NoexceptMoveConstructorCheck>(
+        "performance-noexcept-move-constructor");
     CheckFactories.registerCheck<TypePromotionInMathFnCheck>(
         "performance-type-promotion-in-math-fn");
     CheckFactories.registerCheck<UnnecessaryCopyInitialization>(

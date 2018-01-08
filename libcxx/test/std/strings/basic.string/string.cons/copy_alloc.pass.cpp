@@ -69,9 +69,9 @@ bool operator!=(const poca_alloc<T>& lhs, const poca_alloc<U>& rhs)
 template <class S>
 void test_assign(S &s1, const S& s2)
 {
-	try { s1 = s2; }
-	catch ( std::bad_alloc &) { return; }
-	assert(false);
+    try { s1 = s2; }
+    catch ( std::bad_alloc &) { return; }
+    assert(false);
 }
 #endif
 
@@ -110,21 +110,21 @@ int main()
     {
     typedef poca_alloc<char> A;
     typedef std::basic_string<char, std::char_traits<char>, A> S;
-	const char * p1 = "This is my first string";
-	const char * p2 = "This is my second string";
+    const char * p1 = "This is my first string";
+    const char * p2 = "This is my second string";
 
     alloc_imp<char> imp1;
     alloc_imp<char> imp2;
-	S s1(p1, A(&imp1));
-	S s2(p2, A(&imp2));
+    S s1(p1, A(&imp1));
+    S s2(p2, A(&imp2));
 
-	assert(s1 == p1);
-	assert(s2 == p2);
+    assert(s1 == p1);
+    assert(s2 == p2);
 
-	imp2.deactivate();
-	test_assign(s1, s2);
-	assert(s1 == p1);
-	assert(s2 == p2);
+    imp2.deactivate();
+    test_assign(s1, s2);
+    assert(s1 == p1);
+    assert(s2 == p2);
     }
 #endif
 #endif

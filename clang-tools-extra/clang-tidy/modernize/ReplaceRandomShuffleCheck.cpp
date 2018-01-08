@@ -25,7 +25,7 @@ ReplaceRandomShuffleCheck::ReplaceRandomShuffleCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
-          Options.get("IncludeStyle", "llvm"))) {}
+          Options.getLocalOrGlobal("IncludeStyle", "llvm"))) {}
 
 void ReplaceRandomShuffleCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus11)

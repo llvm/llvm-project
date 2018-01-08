@@ -2,6 +2,7 @@
 // RUN:   -I%S/Inputs/modernize-smart-ptr
 
 #include "unique_ptr.h"
+#include "initializer_list.h"
 // CHECK-FIXES: #include <memory>
 
 struct Base {
@@ -25,6 +26,30 @@ struct DPair {
 };
 
 struct Empty {};
+
+struct E {
+  E(std::initializer_list<int>);
+  E();
+};
+
+struct F {
+  F(std::initializer_list<int>);
+  F();
+  int a;
+};
+
+struct G {
+  G(std::initializer_list<int>);
+  G(int);
+};
+
+struct H {
+  H(std::vector<int>);
+};
+
+struct I {
+  I(G);
+};
 
 namespace {
 class Foo {};
@@ -225,6 +250,94 @@ void initialization(int T, Base b) {
   // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: use std::make_unique instead
   // CHECK-FIXES: std::unique_ptr<Empty> PEmpty = std::make_unique<Empty>(Empty{});
 
+  // Initialization with default constructor.
+  std::unique_ptr<E> PE1 = std::unique_ptr<E>(new E{});
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
+  // CHECK-FIXES: std::unique_ptr<E> PE1 = std::make_unique<E>();
+  PE1.reset(new E{});
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
+  // CHECK-FIXES: PE1 = std::make_unique<E>();
+
+  //============================================================================
+  //  NOTE: For initlializer-list constructors, the check only gives warnings,
+  //  and no fixes are generated.
+  //============================================================================
+
+  // Initialization with the initializer-list constructor.
+  std::unique_ptr<E> PE2 = std::unique_ptr<E>(new E{1, 2});
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
+  // CHECK-FIXES: std::unique_ptr<E> PE2 = std::unique_ptr<E>(new E{1, 2});
+  PE2.reset(new E{1, 2});
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
+  // CHECK-FIXES: PE2.reset(new E{1, 2});
+
+  // Initialization with default constructor.
+  std::unique_ptr<F> PF1 = std::unique_ptr<F>(new F());
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
+  // CHECK-FIXES: std::unique_ptr<F> PF1 = std::make_unique<F>();
+  PF1.reset(new F());
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
+  // CHECK-FIXES: PF1 = std::make_unique<F>();
+
+  // Initialization with default constructor.
+  std::unique_ptr<F> PF2 = std::unique_ptr<F>(new F{});
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
+  // CHECK-FIXES: std::unique_ptr<F> PF2 = std::make_unique<F>();
+  PF2.reset(new F());
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
+  // CHECK-FIXES: PF2 = std::make_unique<F>();
+
+  // Initialization with the initializer-list constructor.
+  std::unique_ptr<F> PF3 = std::unique_ptr<F>(new F{1});
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
+  // CHECK-FIXES: std::unique_ptr<F> PF3 = std::unique_ptr<F>(new F{1});
+  PF3.reset(new F{1});
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
+  // CHECK-FIXES: PF3.reset(new F{1});
+
+  // Initialization with the initializer-list constructor.
+  std::unique_ptr<F> PF4 = std::unique_ptr<F>(new F{1, 2});
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
+  // CHECK-FIXES: std::unique_ptr<F> PF4 = std::unique_ptr<F>(new F{1, 2});
+
+  // Initialization with the initializer-list constructor.
+  std::unique_ptr<F> PF5 = std::unique_ptr<F>(new F({1, 2}));
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
+  // CHECK-FIXES: std::unique_ptr<F> PF5 = std::unique_ptr<F>(new F({1, 2}));
+
+  // Initialization with the initializer-list constructor as the default
+  // constructor is not present.
+  std::unique_ptr<G> PG1 = std::unique_ptr<G>(new G{});
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
+  // CHECK-FIXES: std::unique_ptr<G> PG1 = std::unique_ptr<G>(new G{});
+  PG1.reset(new G{});
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
+  // CHECK-FIXES: PG1.reset(new G{});
+
+  // Initialization with the initializer-list constructor.
+  std::unique_ptr<G> PG2 = std::unique_ptr<G>(new G{1});
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
+  // CHECK-FIXES: std::unique_ptr<G> PG2 = std::unique_ptr<G>(new G{1});
+
+  // Initialization with the initializer-list constructor.
+  std::unique_ptr<G> PG3 = std::unique_ptr<G>(new G{1, 2});
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
+  // CHECK-FIXES: std::unique_ptr<G> PG3 = std::unique_ptr<G>(new G{1, 2});
+
+  std::unique_ptr<H> PH1 = std::unique_ptr<H>(new H({1, 2, 3}));
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
+  // CHECK-FIXES: std::unique_ptr<H> PH1 = std::unique_ptr<H>(new H({1, 2, 3}));
+  PH1.reset(new H({1, 2, 3}));
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
+  // CHECK-FIXES: PH1.reset(new H({1, 2, 3}));
+
+  std::unique_ptr<I> PI1 = std::unique_ptr<I>(new I(G({1, 2, 3})));
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
+  // CHECK-FIXES: std::unique_ptr<I> PI1 = std::make_unique<I>(G({1, 2, 3}));
+  PI1.reset(new I(G({1, 2, 3})));
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
+  // CHECK-FIXES: PI1 = std::make_unique<I>(G({1, 2, 3}));
+
   std::unique_ptr<Foo> FF = std::unique_ptr<Foo>(new Foo());
   // CHECK-MESSAGES: :[[@LINE-1]]:29: warning:
   // CHECK-FIXES: std::unique_ptr<Foo> FF = std::make_unique<Foo>();
@@ -335,4 +448,40 @@ void reset() {
   Q->reset(new int());
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use std::make_unique instead
   // CHECK-FIXES: *Q = std::make_unique<int>();
+}
+
+#define DEFINE(...) __VA_ARGS__
+template<typename T>
+void g2(std::unique_ptr<Foo> *t) {
+  DEFINE(auto p = std::unique_ptr<Foo>(new Foo); t->reset(new Foo););
+}
+void macro() {
+  std::unique_ptr<Foo> *t;
+  g2<bar::Bar>(t);
+}
+#undef DEFINE
+
+class UniqueFoo : public std::unique_ptr<Foo> {
+ public:
+  void foo() {
+    reset(new Foo);
+    this->reset(new Foo);
+    // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use std::make_unique instead
+    // CHECK-FIXES: *this = std::make_unique<Foo>();
+    (*this).reset(new Foo);
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use std::make_unique instead
+    // CHECK-FIXES: (*this) = std::make_unique<Foo>();
+  }
+};
+
+// Ignore statements inside a template instantiation.
+template<typename T>
+void template_fun(T* t) {
+  std::unique_ptr<T> t2 = std::unique_ptr<T>(new T);
+  t2.reset(new T);
+}
+
+void invoke_template() {
+  Foo* foo;
+  template_fun(foo);
 }

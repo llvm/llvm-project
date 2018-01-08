@@ -62,7 +62,7 @@ Log *GetLogIfAllCategoriesSet(uint32_t mask);
 
 Log *GetLogIfAnyCategoriesSet(uint32_t mask);
 
-void InitializeLog();
+void InitializeLldbChannel();
 
 } // namespace lldb_private
 

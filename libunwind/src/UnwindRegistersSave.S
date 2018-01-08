@@ -11,6 +11,8 @@
 
     .text
 
+#if !defined(__USING_SJLJ_EXCEPTIONS__)
+
 #if defined(__i386__)
 
 #
@@ -61,31 +63,170 @@ DEFINE_LIBUNWIND_FUNCTION(unw_getcontext)
 #  thread_state pointer is in rdi
 #
 DEFINE_LIBUNWIND_FUNCTION(unw_getcontext)
-  movq  %rax,   (%rdi)
-  movq  %rbx,  8(%rdi)
-  movq  %rcx, 16(%rdi)
-  movq  %rdx, 24(%rdi)
-  movq  %rdi, 32(%rdi)
-  movq  %rsi, 40(%rdi)
-  movq  %rbp, 48(%rdi)
-  movq  %rsp, 56(%rdi)
-  addq  $8,   56(%rdi)
-  movq  %r8,  64(%rdi)
-  movq  %r9,  72(%rdi)
-  movq  %r10, 80(%rdi)
-  movq  %r11, 88(%rdi)
-  movq  %r12, 96(%rdi)
-  movq  %r13,104(%rdi)
-  movq  %r14,112(%rdi)
-  movq  %r15,120(%rdi)
-  movq  (%rsp),%rsi
-  movq  %rsi,128(%rdi) # store return address as rip
+#if defined(_WIN64)
+#define PTR %rcx
+#define TMP %rdx
+#else
+#define PTR %rdi
+#define TMP %rsi
+#endif
+
+  movq  %rax,   (PTR)
+  movq  %rbx,  8(PTR)
+  movq  %rcx, 16(PTR)
+  movq  %rdx, 24(PTR)
+  movq  %rdi, 32(PTR)
+  movq  %rsi, 40(PTR)
+  movq  %rbp, 48(PTR)
+  movq  %rsp, 56(PTR)
+  addq  $8,   56(PTR)
+  movq  %r8,  64(PTR)
+  movq  %r9,  72(PTR)
+  movq  %r10, 80(PTR)
+  movq  %r11, 88(PTR)
+  movq  %r12, 96(PTR)
+  movq  %r13,104(PTR)
+  movq  %r14,112(PTR)
+  movq  %r15,120(PTR)
+  movq  (%rsp),TMP
+  movq  TMP,128(PTR) # store return address as rip
   # skip rflags
   # skip cs
   # skip fs
   # skip gs
+
+#if defined(_WIN64)
+  movdqu %xmm0,176(PTR)
+  movdqu %xmm1,192(PTR)
+  movdqu %xmm2,208(PTR)
+  movdqu %xmm3,224(PTR)
+  movdqu %xmm4,240(PTR)
+  movdqu %xmm5,256(PTR)
+  movdqu %xmm6,272(PTR)
+  movdqu %xmm7,288(PTR)
+  movdqu %xmm8,304(PTR)
+  movdqu %xmm9,320(PTR)
+  movdqu %xmm10,336(PTR)
+  movdqu %xmm11,352(PTR)
+  movdqu %xmm12,368(PTR)
+  movdqu %xmm13,384(PTR)
+  movdqu %xmm14,400(PTR)
+  movdqu %xmm15,416(PTR)
+#endif
   xorl  %eax, %eax    # return UNW_ESUCCESS
   ret
+
+#elif defined(__mips__) && defined(_ABIO32) && defined(__mips_soft_float)
+
+#
+# extern int unw_getcontext(unw_context_t* thread_state)
+#
+# On entry:
+#  thread_state pointer is in a0 ($4)
+#
+DEFINE_LIBUNWIND_FUNCTION(unw_getcontext)
+  .set push
+  .set noat
+  .set noreorder
+  .set nomacro
+  sw    $1, (4 * 1)($4)
+  sw    $2, (4 * 2)($4)
+  sw    $3, (4 * 3)($4)
+  sw    $4, (4 * 4)($4)
+  sw    $5, (4 * 5)($4)
+  sw    $6, (4 * 6)($4)
+  sw    $7, (4 * 7)($4)
+  sw    $8, (4 * 8)($4)
+  sw    $9, (4 * 9)($4)
+  sw    $10, (4 * 10)($4)
+  sw    $11, (4 * 11)($4)
+  sw    $12, (4 * 12)($4)
+  sw    $13, (4 * 13)($4)
+  sw    $14, (4 * 14)($4)
+  sw    $15, (4 * 15)($4)
+  sw    $16, (4 * 16)($4)
+  sw    $17, (4 * 17)($4)
+  sw    $18, (4 * 18)($4)
+  sw    $19, (4 * 19)($4)
+  sw    $20, (4 * 20)($4)
+  sw    $21, (4 * 21)($4)
+  sw    $22, (4 * 22)($4)
+  sw    $23, (4 * 23)($4)
+  sw    $24, (4 * 24)($4)
+  sw    $25, (4 * 25)($4)
+  sw    $26, (4 * 26)($4)
+  sw    $27, (4 * 27)($4)
+  sw    $28, (4 * 28)($4)
+  sw    $29, (4 * 29)($4)
+  sw    $30, (4 * 30)($4)
+  sw    $31, (4 * 31)($4)
+  # Store return address to pc
+  sw    $31, (4 * 32)($4)
+  # hi and lo
+  mfhi  $8
+  sw    $8,  (4 * 33)($4)
+  mflo  $8
+  sw    $8,  (4 * 34)($4)
+  jr	$31
+  # return UNW_ESUCCESS
+  or    $2, $0, $0
+  .set pop
+
+#elif defined(__mips__) && defined(_ABI64) && defined(__mips_soft_float)
+
+#
+# extern int unw_getcontext(unw_context_t* thread_state)
+#
+# On entry:
+#  thread_state pointer is in a0 ($4)
+#
+DEFINE_LIBUNWIND_FUNCTION(unw_getcontext)
+  .set push
+  .set noat
+  .set noreorder
+  .set nomacro
+  sd    $1, (8 * 1)($4)
+  sd    $2, (8 * 2)($4)
+  sd    $3, (8 * 3)($4)
+  sd    $4, (8 * 4)($4)
+  sd    $5, (8 * 5)($4)
+  sd    $6, (8 * 6)($4)
+  sd    $7, (8 * 7)($4)
+  sd    $8, (8 * 8)($4)
+  sd    $9, (8 * 9)($4)
+  sd    $10, (8 * 10)($4)
+  sd    $11, (8 * 11)($4)
+  sd    $12, (8 * 12)($4)
+  sd    $13, (8 * 13)($4)
+  sd    $14, (8 * 14)($4)
+  sd    $15, (8 * 15)($4)
+  sd    $16, (8 * 16)($4)
+  sd    $17, (8 * 17)($4)
+  sd    $18, (8 * 18)($4)
+  sd    $19, (8 * 19)($4)
+  sd    $20, (8 * 20)($4)
+  sd    $21, (8 * 21)($4)
+  sd    $22, (8 * 22)($4)
+  sd    $23, (8 * 23)($4)
+  sd    $24, (8 * 24)($4)
+  sd    $25, (8 * 25)($4)
+  sd    $26, (8 * 26)($4)
+  sd    $27, (8 * 27)($4)
+  sd    $28, (8 * 28)($4)
+  sd    $29, (8 * 29)($4)
+  sd    $30, (8 * 30)($4)
+  sd    $31, (8 * 31)($4)
+  # Store return address to pc
+  sd    $31, (8 * 32)($4)
+  # hi and lo
+  mfhi  $8
+  sd    $8,  (8 * 33)($4)
+  mflo  $8
+  sd    $8,  (8 * 34)($4)
+  jr	$31
+  # return UNW_ESUCCESS
+  or    $2, $0, $0
+  .set pop
 
 # elif defined(__mips__)
 
@@ -346,7 +487,9 @@ DEFINE_LIBUNWIND_FUNCTION(unw_getcontext)
 @  values pointer is in r0
 @
   .p2align 2
+#if defined(__ELF__)
   .fpu vfpv3-d16
+#endif
 DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_arm16saveVFPWithFSTMDEPy)
   vstmia r0, {d0-d15}
   JMP(lr)
@@ -358,7 +501,9 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_arm16saveVFPWithFSTMD
 @  values pointer is in r0
 @
   .p2align 2
+#if defined(__ELF__)
   .fpu vfpv3-d16
+#endif
 DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_arm16saveVFPWithFSTMXEPy)
   vstmia r0, {d0-d15} @ fstmiax is deprecated in ARMv7+ and now behaves like vstmia
   JMP(lr)
@@ -370,7 +515,9 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_arm16saveVFPWithFSTMX
 @  values pointer is in r0
 @
   .p2align 2
+#if defined(__ELF__)
   .fpu vfpv3
+#endif
 DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_arm9saveVFPv3EPy)
   @ VFP and iwMMX instructions are only available when compiling with the flags
   @ that enable them. We do not want to do that in the library (because we do not
@@ -391,7 +538,9 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_arm9saveVFPv3EPy)
 @  values pointer is in r0
 @
   .p2align 2
+#if defined(__ELF__)
   .arch armv5te
+#endif
 DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_arm9saveiWMMXEPy)
   stcl p1, cr0, [r0], #8  @ wstrd wR0, [r0], #8
   stcl p1, cr1, [r0], #8  @ wstrd wR1, [r0], #8
@@ -418,7 +567,9 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_arm9saveiWMMXEPy)
 @  values pointer is in r0
 @
   .p2align 2
+#if defined(__ELF__)
   .arch armv5te
+#endif
 DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_arm16saveiWMMXControlEPj)
   stc2 p1, cr8, [r0], #4  @ wstrw wCGR0, [r0], #4
   stc2 p1, cr9, [r0], #4  @ wstrw wCGR1, [r0], #4
@@ -470,6 +621,8 @@ DEFINE_LIBUNWIND_FUNCTION(unw_getcontext)
   l.sw     120(r3), r30
   l.sw     124(r3), r31
 #endif
+
+#endif /* !defined(__USING_SJLJ_EXCEPTIONS__) */
 
 NO_EXEC_STACK_DIRECTIVE
 

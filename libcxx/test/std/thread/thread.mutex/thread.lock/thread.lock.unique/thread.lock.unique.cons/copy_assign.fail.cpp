@@ -20,8 +20,8 @@ int main()
 {
     {
     typedef std::mutex M;
-	M m0;
-	M m1;
+    M m0;
+    M m1;
     std::unique_lock<M> lk0(m0);
     std::unique_lock<M> lk1(m1);
     lk1 = lk0;

@@ -31,5 +31,5 @@
 int main()
 {
 //  LWG#2566 says that the first template param must match the second one's value type
-	std::priority_queue<double, std::deque<int>> t;
+    std::priority_queue<double, std::deque<int>> t;
 }

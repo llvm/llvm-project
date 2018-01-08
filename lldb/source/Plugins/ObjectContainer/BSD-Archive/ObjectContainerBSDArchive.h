@@ -10,10 +10,9 @@
 #ifndef liblldb_ObjectContainerBSDArchive_h_
 #define liblldb_ObjectContainerBSDArchive_h_
 
-// Project includes
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Symbol/ObjectContainer.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 

@@ -450,7 +450,7 @@ NativeSocket Socket::AcceptSocket(NativeSocket sockfd, struct sockaddr *addr,
     close(fd);
   }
   return fd;
-#elif defined(SOCK_CLOEXEC)
+#elif defined(SOCK_CLOEXEC) && defined(HAVE_ACCEPT4)
   int flags = 0;
   if (!child_processes_inherit) {
     flags |= SOCK_CLOEXEC;

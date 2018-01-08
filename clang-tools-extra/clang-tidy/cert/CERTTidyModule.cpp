@@ -11,11 +11,11 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "../google/UnnamedNamespaceInHeaderCheck.h"
-#include "../misc/MoveConstructorInitCheck.h"
 #include "../misc/NewDeleteOverloadsCheck.h"
 #include "../misc/NonCopyableObjects.h"
 #include "../misc/StaticAssertCheck.h"
 #include "../misc/ThrowByValueCatchByReferenceCheck.h"
+#include "../performance/MoveConstructorInitCheck.h"
 #include "CommandProcessorCheck.h"
 #include "DontModifyStdNamespaceCheck.h"
 #include "FloatLoopCounter.h"
@@ -46,7 +46,7 @@ public:
     CheckFactories.registerCheck<google::build::UnnamedNamespaceInHeaderCheck>(
         "cert-dcl59-cpp");
     // OOP
-    CheckFactories.registerCheck<misc::MoveConstructorInitCheck>(
+    CheckFactories.registerCheck<performance::MoveConstructorInitCheck>(
         "cert-oop11-cpp");
     // ERR
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(

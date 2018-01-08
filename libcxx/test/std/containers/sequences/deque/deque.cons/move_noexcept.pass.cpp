@@ -45,9 +45,9 @@ int main()
         typedef std::deque<MoveOnly, other_allocator<MoveOnly>> C;
         static_assert(std::is_nothrow_move_constructible<C>::value, "");
     }
-#endif // _LIBCPP_VERSION
     {
         typedef std::deque<MoveOnly, some_alloc<MoveOnly>> C;
         static_assert(!std::is_nothrow_move_constructible<C>::value, "");
     }
+#endif // _LIBCPP_VERSION
 }

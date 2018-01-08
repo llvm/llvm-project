@@ -296,24 +296,43 @@ void recursive_directory_iterator::__advance(error_code* ec) {
 }
 
 bool recursive_directory_iterator::__try_recursion(error_code *ec) {
-
     bool rec_sym =
         bool(options() & directory_options::follow_directory_symlink);
+
     auto& curr_it = __imp_->__stack_.top();
 
-    if (is_directory(curr_it.__entry_.status()) &&
-        (!is_symlink(curr_it.__entry_.symlink_status()) || rec_sym))
-    {
-        std::error_code m_ec;
+    bool skip_rec = false;
+    std::error_code m_ec;
+    if (!rec_sym) {
+      file_status st = curr_it.__entry_.symlink_status(m_ec);
+      if (m_ec && status_known(st))
+        m_ec.clear();
+      if (m_ec || is_symlink(st) || !is_directory(st))
+        skip_rec = true;
+    } else {
+      file_status st = curr_it.__entry_.status(m_ec);
+      if (m_ec && status_known(st))
+        m_ec.clear();
+      if (m_ec || !is_directory(st))
+        skip_rec = true;
+    }
+
+    if (!skip_rec) {
         __dir_stream new_it(curr_it.__entry_.path(), __imp_->__options_, m_ec);
         if (new_it.good()) {
             __imp_->__stack_.push(_VSTD::move(new_it));
             return true;
         }
-        if (m_ec) {
-            __imp_.reset();
-            set_or_throw(m_ec, ec,
-                               "recursive_directory_iterator::operator++()");
+    }
+    if (m_ec) {
+        const bool allow_eacess = bool(__imp_->__options_
+            & directory_options::skip_permission_denied);
+        if (m_ec.value() == EACCES && allow_eacess) {
+          if (ec) ec->clear();
+        } else {
+          __imp_.reset();
+          set_or_throw(m_ec, ec,
+                       "recursive_directory_iterator::operator++()");
         }
     }
     return false;

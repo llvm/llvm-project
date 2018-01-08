@@ -37,8 +37,10 @@ int ppcg_extract_base_name(char *name, const char *input);
  *	to a reference identifier
  * "live_out" contains the potential write accesses that are potentially
  *	not killed by any kills or any other writes.
- * "tagged_must_kills" contains all definite kill accesses with
- *	a reference identifier in the domain.
+ * "must_kills" contains all definite kill accesses.
+ * "tagged_must_kills" is the same as "must_kills", except that the domain
+ *	is a wrapped relation mapping an iteration domain
+ *	to a reference identifier.
  *
  * "tagger" maps tagged iteration domains to the corresponding untagged
  *	iteration domain.
@@ -87,6 +89,7 @@ struct ppcg_scop {
 	isl_union_map *must_writes;
 	isl_union_map *live_out;
 	isl_union_map *tagged_must_kills;
+	isl_union_map *must_kills;
 
 	isl_union_pw_multi_aff *tagger;
 
@@ -114,8 +117,12 @@ int ppcg_transform(isl_ctx *ctx, const char *input, FILE *out,
 	__isl_give isl_printer *(*fn)(__isl_take isl_printer *p,
 		struct ppcg_scop *scop, void *user), void *user);
 
+__isl_give isl_schedule *ppcg_compute_schedule(
+	__isl_take isl_schedule_constraints *sc,
+	__isl_keep isl_schedule *schedule, struct ppcg_options *options);
+
 void compute_tagger(struct ppcg_scop *ps);
 void compute_dependences(struct ppcg_scop *scop);
+void eliminate_dead_code(struct ppcg_scop *ps);
 void *ppcg_scop_free(struct ppcg_scop *ps);
-
 #endif

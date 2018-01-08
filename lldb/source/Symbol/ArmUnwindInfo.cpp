@@ -46,7 +46,7 @@ bool ArmUnwindInfo::ArmExidxEntry::operator<(const ArmExidxEntry &other) const {
   return address < other.address;
 }
 
-ArmUnwindInfo::ArmUnwindInfo(const ObjectFile &objfile, SectionSP &arm_exidx,
+ArmUnwindInfo::ArmUnwindInfo(ObjectFile &objfile, SectionSP &arm_exidx,
                              SectionSP &arm_extab)
     : m_byte_order(objfile.GetByteOrder()), m_arm_exidx_sp(arm_exidx),
       m_arm_extab_sp(arm_extab) {

@@ -217,6 +217,9 @@ else
 	ifeq "$(ARCH)" "powerpc64"
 		override ARCH := $(subst powerpc64,64,$(ARCH))
 	endif
+	ifeq "$(ARCH)" "powerpc64le"
+		override ARCH := $(subst powerpc64le,64,$(ARCH))
+	endif
 	ifeq "$(ARCH)" "aarch64"
 		override ARCH :=
 		override ARCHFLAG :=
@@ -260,29 +263,27 @@ ifneq (,$(findstring arm,$(ARCH)))
 	SWIFTFLAGS += -static-stdlib
 endif
 
-CFLAGS += $(FRAMEWORK_INCLUDES) $(CFLAGS_EXTRAS) -I$(LLDB_BASE_DIR)include
 ifeq "$(OS)" "Darwin"
 	ifneq "$(SDKROOT)" ""
 		CFLAGS += -isysroot "$(SDKROOT)"
 	endif
 endif
 
-CFLAGS += -include $(THIS_FILE_DIR)test_common.h -I$(THIS_FILE_DIR) $(ARCH_CFLAGS)
-CFLAGS_NO_ARCH := $(CFLAGS)
-
-ifeq "$(ARCHFLAG)" "-arch"
-    CFLAGS += $(ARCHFLAG) $(ARCH)
+ifeq "$(OS)" "Darwin"
+	CFLAGS += $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES) -I$(LLDB_BASE_DIR)include
 else
-    CFLAGS += $(ARCHFLAG)$(ARCH)
+	CFLAGS += $(ARCHFLAG)$(ARCH) $(FRAMEWORK_INCLUDES) -I$(LLDB_BASE_DIR)include
 endif
 
+CFLAGS += -include $(THIS_FILE_DIR)test_common.h -I$(THIS_FILE_DIR)
+CFLAGS += $(NO_LIMIT_DEBUG_INFO_FLAGS) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS)
 SWIFTFLAGS += $(TRIPLE_SWIFTFLAGS)
 
 # Use this one if you want to build one part of the result without debug information:
 ifeq "$(OS)" "Darwin"
-	CFLAGS_NO_DEBUG = -O0 $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES) $(CFLAGS_EXTRAS) $(ARCH_CFLAGS)
+	CFLAGS_NO_DEBUG = -O0 $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS)
 else
-	CFLAGS_NO_DEBUG = -O0 $(ARCHFLAG)$(ARCH) $(FRAMEWORK_INCLUDES) $(CFLAGS_EXTRAS) $(ARCH_CFLAGS)
+	CFLAGS_NO_DEBUG = -O0 $(ARCHFLAG)$(ARCH) $(FRAMEWORK_INCLUDES) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS)
 endif
 
 ifeq "$(MAKE_DWO)" "YES"

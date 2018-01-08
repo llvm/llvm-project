@@ -33,25 +33,25 @@ struct indirect_less
 };
 
 struct S {
-	S() : i_(0) {}
-	S(int i) : i_(i) {}
+    S() : i_(0) {}
+    S(int i) : i_(i) {}
 
-	S(const S&  rhs) : i_(rhs.i_) {}
-	S(      S&& rhs) : i_(rhs.i_) { rhs.i_ = -1; }
+    S(const S&  rhs) : i_(rhs.i_) {}
+    S(      S&& rhs) : i_(rhs.i_) { rhs.i_ = -1; }
 
-	S& operator =(const S&  rhs) { i_ = rhs.i_;              return *this; }
-	S& operator =(      S&& rhs) { i_ = rhs.i_; rhs.i_ = -2; assert(this != &rhs); return *this; }
-	S& operator =(int i)         { i_ = i;                   return *this; }
+    S& operator =(const S&  rhs) { i_ = rhs.i_;              return *this; }
+    S& operator =(      S&& rhs) { i_ = rhs.i_; rhs.i_ = -2; assert(this != &rhs); return *this; }
+    S& operator =(int i)         { i_ = i;                   return *this; }
 
-	bool operator  <(const S&  rhs) const { return i_ < rhs.i_; }
-	bool operator  >(const S&  rhs) const { return i_ > rhs.i_; }
-	bool operator ==(const S&  rhs) const { return i_ == rhs.i_; }
-	bool operator ==(int i)         const { return i_ == i; }
+    bool operator  <(const S&  rhs) const { return i_ < rhs.i_; }
+    bool operator  >(const S&  rhs) const { return i_ > rhs.i_; }
+    bool operator ==(const S&  rhs) const { return i_ == rhs.i_; }
+    bool operator ==(int i)         const { return i_ == i; }
 
-	void set(int i) { i_ = i; }
+    void set(int i) { i_ = i; }
 
-	int i_;
-	};
+    int i_;
+    };
 
 
 #endif  // TEST_STD_VER >= 11
@@ -116,6 +116,26 @@ test()
     test<Iter>(1000);
 }
 
+struct less_by_first {
+  template <typename Pair>
+  bool operator()(const Pair& lhs, const Pair& rhs) {
+    return std::less<typename Pair::first_type>()(lhs.first, rhs.first);
+  }
+};
+
+void test_PR31166 ()
+{
+    typedef std::pair<int, int> P;
+    typedef std::vector<P> V;
+    P vec[5] = {P(1, 0), P(2, 0), P(2, 1), P(2, 2), P(2, 3)};
+    for ( int i = 0; i < 5; ++i ) {
+        V res(vec, vec + 5);
+        std::inplace_merge(res.begin(), res.begin() + i, res.end(), less_by_first());
+        assert(res.size() == 5);
+        assert(std::equal(res.begin(), res.end(), vec));
+    }
+}
+
 int main()
 {
     test<bidirectional_iterator<int*> >();
@@ -146,4 +166,6 @@ int main()
     delete [] ia;
     }
 #endif  // TEST_STD_VER >= 11
+
+    test_PR31166();
 }

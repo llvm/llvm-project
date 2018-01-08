@@ -27,7 +27,7 @@
 constexpr bool check_idx( size_t idx, double val )
 {
     std::array<double, 3> arr = {1, 2, 3.5};
-	return arr.at(idx) == val;
+    return arr.at(idx) == val;
 }
 #endif
 
@@ -50,7 +50,7 @@ int main()
 #ifndef TEST_HAS_NO_EXCEPTIONS
         try
         {
-            (void) c.at(3);
+            TEST_IGNORE_NODISCARD  c.at(3);
             assert(false);
         }
         catch (const std::out_of_range &) {}
@@ -69,7 +69,7 @@ int main()
 #ifndef TEST_HAS_NO_EXCEPTIONS
         try
         {
-            (void) c.at(3);
+            TEST_IGNORE_NODISCARD  c.at(3);
             assert(false);
         }
         catch (const std::out_of_range &) {}

@@ -32,15 +32,14 @@
 ; CODEGEN:  {{%.*}} = load double, double* %polly.access.E, align 8, !alias.scope [[TAG0:![0-9]+]], !noalias [[TAG2:![0-9]+]]
 ; CODEGEN:  store double {{%.*}}, double* %scevgep36, align 8, !alias.scope [[TAG5:![0-9]+]], !noalias [[TAG8:![0-9]+]]
 ;
-; CODEGEN-DAG: [[TAG0]] = distinct !{[[TAG0]], [[TAG1:![0-9]+]], !"polly.alias.scope.E"}
-; CODEGEN-DAG: [[TAG1]] = distinct !{[[TAG1]], !"polly.alias.scope.domain"}
-; CODEGEN-DAG: [[TAG2]] = !{[[TAG3:![0-9]+]], [[TAG4:![0-9]+]], [[TAG5:![0-9]+]], [[TAG6:![0-9]+]], [[TAG7:![0-9]+]]}
-; CODEGEN-DAG: [[TAG3]] = distinct !{[[TAG3]], [[TAG1]], !"polly.alias.scope.MemRef_B"}
-; CODEGEN-DAG: [[TAG4]] = distinct !{[[TAG4]], [[TAG1]], !"polly.alias.scope.MemRef_beta"}
-; CODEGEN-DAG: [[TAG5]] = distinct !{[[TAG5]], [[TAG1]], !"polly.alias.scope.MemRef_A"}
-; CODEGEN-DAG: [[TAG6]] = distinct !{[[TAG6]], [[TAG1]], !"polly.alias.scope.D"}
-; CODEGEN-DAG: [[TAG7]] = distinct !{[[TAG7]], [[TAG1]], !"polly.alias.scope.F"}
-; CODEGEN-DAG: [[TAG8]] = !{[[TAG3]], [[TAG4]], [[TAG6]], [[TAG0]], [[TAG7]]}
+; CODEGEN: [[TAG0]] = distinct !{[[TAG0]], [[TAG1:![0-9]+]], !"polly.alias.scope.E"}
+; CODEGEN: [[TAG1]] = distinct !{[[TAG1]], !"polly.alias.scope.domain"}
+; CODEGEN: [[TAG2]] = !{[[TAG3:![0-9]+]], [[TAG4:![0-9]+]], [[TAG5:![0-9]+]], [[TAG6:![0-9]+]]}
+; CODEGEN: [[TAG3]] = distinct !{[[TAG3]], [[TAG1]], !"polly.alias.scope.MemRef_B"}
+; CODEGEN: [[TAG4]] = distinct !{[[TAG4]], [[TAG1]], !"polly.alias.scope.MemRef_A"}
+; CODEGEN: [[TAG5]] = distinct !{[[TAG5]], [[TAG1]], !"polly.alias.scope.D"}
+; CODEGEN: [[TAG6]] = distinct !{[[TAG6]], [[TAG1]], !"polly.alias.scope.F"}
+; CODEGEN: [[TAG7:![0-9]+]] = !{[[TAG3]], [[TAG5]], [[TAG0]], [[TAG6]]}
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"

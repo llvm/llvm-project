@@ -12,7 +12,7 @@
 // template<cReturnable S, ClassType T>
 //   const_mem_fun_t<S,T>
 //   mem_fun(S (T::*f)() const);
-// Removed in c++1z
+// Removed in c++17
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 
 #include <functional>

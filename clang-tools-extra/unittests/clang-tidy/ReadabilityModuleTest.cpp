@@ -487,11 +487,17 @@ TEST(BracesAroundStatementsCheckTest, ImplicitCastInReturn) {
   ClangTidyOptions Opts;
   Opts.CheckOptions["test-check-0.ShortStatementLines"] = "1";
 
-  EXPECT_NO_CHANGES_WITH_OPTS(BracesAroundStatementsCheck, Opts,
-                              "const char *f() {\n"
+  StringRef Input = "const char *f() {\n"
                               "  if (true) return \"\";\n"
                               "  return \"abc\";\n"
-                              "}\n");
+                              "}\n";
+  EXPECT_NO_CHANGES_WITH_OPTS(BracesAroundStatementsCheck, Opts, Input);
+  EXPECT_EQ("const char *f() {\n"
+            "  if (true) { return \"\";\n"
+            "}\n"
+            "  return \"abc\";\n"
+            "}\n",
+            runCheckOnCode<BracesAroundStatementsCheck>(Input));
 }
 
 } // namespace test

@@ -9,13 +9,13 @@ Depending on the operator expressions may be
 
 - redundant,
 
-- always be ``true``,
+- always ``true``,
 
-- always be ``false``,
+- always ``false``,
 
-- always be a constant (zero or one).
+- always a constant (zero or one).
 
-Example:
+Examples:
 
 .. code-block:: c++
 

@@ -23,8 +23,20 @@ At the moment, `Visual Studio Code <https://code.visualstudio.com/>`_ is mainly
 used in order to test :program:`Clangd` but more clients are likely to make
 use of :program:`Clangd` in the future as it matures and becomes a production
 quality tool. If you are interested in trying :program:`Clangd` in combination
-with Visual Studio Code, you can start by `building Clangd`_, then open Visual
-Studio Code in the clangd-vscode folder and launch the extension.
+with Visual Studio Code, you can start by `installing Clangd`_ or
+`building Clangd`_, then open Visual Studio Code in the clangd-vscode folder and
+launch the extension.
+
+Installing Clangd
+==================
+
+Packages are available for debian-based distributions, see the `LLVM packages
+page <http://apt.llvm.org/>`_. :program:`Clangd` is included in the
+`clang-tools` package.
+However, it is a good idea to check your distribution's packaging system first
+as it might already be available.
+
+Otherwise, you can install :program:`Clangd` by `building Clangd`_ first.
 
 Building Clangd
 ==================
@@ -41,7 +53,8 @@ Here is a list of features that could be useful with the status of whether or
 not they are already implemented in :program:`Clangd` and specified in the
 Language Server Protocol. Note that for some of the features, it is not clear
 whether or not they should be part of the Language Server Protocol, so those
-features might be eventually developed outside :program:`Clangd`.
+features might be eventually developed outside :program:`Clangd` or as an
+extension to the protocol.
 
 +-------------------------------------+------------+----------+
 | C/C++ Editor feature                |  LSP       |  Clangd  |
@@ -56,17 +69,21 @@ features might be eventually developed outside :program:`Clangd`.
 +-------------------------------------+------------+----------+
 | Go to Definition                    | Yes        |   Yes    |
 +-------------------------------------+------------+----------+
-| Source hover                        | Yes        |   No     |
+| Signature Help                      | Yes        |   Yes    |
 +-------------------------------------+------------+----------+
-| Signature Help                      | Yes        |   No     |
+| Document Highlights                 | Yes        |   Yes    |
++-------------------------------------+------------+----------+
+| Rename                              | Yes        |   Yes    |
++-------------------------------------+------------+----------+
+| Source hover                        | Yes        |   No     |
 +-------------------------------------+------------+----------+
 | Find References                     | Yes        |   No     |
 +-------------------------------------+------------+----------+
-| Document Highlights                 | Yes        |   No     |
-+-------------------------------------+------------+----------+
-| Rename                              | Yes        |   No     |
-+-------------------------------------+------------+----------+
 | Code Lens                           | Yes        |   No     |
++-------------------------------------+------------+----------+
+| Document Symbols                    | Yes        |   No     |
++-------------------------------------+------------+----------+
+| Workspace Symbols                   | Yes        |   No     |
 +-------------------------------------+------------+----------+
 | Syntax and Semantic Coloring        | No         |   No     |
 +-------------------------------------+------------+----------+

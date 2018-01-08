@@ -10,6 +10,7 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <stdio.h>
 #include <string.h>
 
 #include <isl/set.h>
@@ -17,41 +18,6 @@
 #include <isl/constraint.h>
 
 #include "schedule.h"
-
-/* Construct a map from a len-dimensional domain to
- * a (len-n)-dimensional domain that projects out the n coordinates
- * starting at first.
- * "dim" prescribes the parameters.
- */
-__isl_give isl_map *project_out(__isl_take isl_space *dim,
-    int len, int first, int n)
-{
-    int i, j;
-    isl_basic_map *bmap;
-
-    dim = isl_space_add_dims(dim, isl_dim_in, len);
-    dim = isl_space_add_dims(dim, isl_dim_out, len - n);
-    bmap = isl_basic_map_universe(dim);
-
-    for (i = 0, j = 0; i < len; ++i) {
-        if (i >= first && i < first + n)
-            continue;
-	bmap = isl_basic_map_equate(bmap, isl_dim_in, i, isl_dim_out, j);
-        ++j;
-    }
-
-    return isl_map_from_basic_map(bmap);
-}
-
-/* Construct a projection that maps a src_len dimensional domain
- * to its first dst_len coordinates.
- * "dim" prescribes the parameters.
- */
-__isl_give isl_map *projection(__isl_take isl_space *dim,
-    int src_len, int dst_len)
-{
-    return project_out(dim, src_len, dst_len, src_len - dst_len);
-}
 
 /* Add parameters with identifiers "ids" to "set".
  */
@@ -114,79 +80,86 @@ __isl_give isl_set *parametrization(__isl_take isl_space *space,
 	return parametrize(set, first, ids);
 }
 
-/* Extend "set" with unconstrained coordinates to a total length of "dst_len".
+/* Load and return a schedule from a file called "filename".
  */
-__isl_give isl_set *extend(__isl_take isl_set *set, int dst_len)
+static __isl_give isl_schedule *load_schedule(isl_ctx *ctx,
+	const char *filename)
 {
-    int n_set;
-    isl_space *dim;
-    isl_map *map;
+	FILE *file;
+	isl_schedule *schedule;
 
-    dim = isl_set_get_space(set);
-    n_set = isl_space_dim(dim, isl_dim_set);
-    dim = isl_space_drop_dims(dim, isl_dim_set, 0, n_set);
-    map = projection(dim, dst_len, n_set);
-    map = isl_map_reverse(map);
+	file = fopen(filename, "r");
+	if (!file) {
+		fprintf(stderr, "Unable to open '%s' for reading\n", filename);
+		return NULL;
+	}
+	schedule = isl_schedule_read_from_file(ctx, file);
+	fclose(file);
 
-    return isl_set_apply(set, map);
+	return schedule;
 }
 
-/* Set max_out to the maximal number of output dimensions over
- * all maps.
+/* Save the schedule "schedule" to a file called "filename".
+ * The schedule is printed in block style.
  */
-static isl_stat update_max_out(__isl_take isl_map *map, void *user)
+static void save_schedule(__isl_keep isl_schedule *schedule,
+	const char *filename)
 {
-	int *max_out = user;
-	int n_out = isl_map_dim(map, isl_dim_out);
+	FILE *file;
+	isl_ctx *ctx;
+	isl_printer *p;
 
-	if (n_out > *max_out)
-		*max_out = n_out;
+	if (!schedule)
+		return;
 
-	isl_map_free(map);
-	return isl_stat_ok;
+	file = fopen(filename, "w");
+	if (!file) {
+		fprintf(stderr, "Unable to open '%s' for writing\n", filename);
+		return;
+	}
+	ctx = isl_schedule_get_ctx(schedule);
+	p = isl_printer_to_file(ctx, file);
+	p = isl_printer_set_yaml_style(p, ISL_YAML_STYLE_BLOCK);
+	p = isl_printer_print_schedule(p, schedule);
+	isl_printer_free(p);
+	fclose(file);
 }
 
-struct align_range_data {
-	int max_out;
-	isl_union_map *res;
-};
-
-/* Extend the dimension of the range of the given map to data->max_out and
- * then add the result to data->res.
+/* Obtain a schedule, either by reading it form a file
+ * or by computing it using "compute".
+ * Also take care of saving the computed schedule and/or
+ * dumping the obtained schedule if requested by the user.
  */
-static isl_stat map_align_range(__isl_take isl_map *map, void *user)
+__isl_give isl_schedule *ppcg_get_schedule(isl_ctx *ctx,
+	struct ppcg_options *options,
+	__isl_give isl_schedule *(*compute)(void *user), void *user)
 {
-	struct align_range_data *data = user;
-	int i;
-	isl_space *dim;
-	isl_map *proj;
-	int n_out = isl_map_dim(map, isl_dim_out);
+	isl_schedule *schedule;
 
-	dim = isl_union_map_get_space(data->res);
-	proj = isl_map_reverse(projection(dim, data->max_out, n_out));
-	for (i = n_out; i < data->max_out; ++i)
-		proj = isl_map_fix_si(proj, isl_dim_out, i, 0);
+	if (options->load_schedule_file) {
+		schedule = load_schedule(ctx, options->load_schedule_file);
+	} else {
+		schedule = compute(user);
+		if (options->save_schedule_file)
+			save_schedule(schedule, options->save_schedule_file);
+	}
+	if (options->debug->dump_schedule)
+		isl_schedule_dump(schedule);
 
-	map = isl_map_apply_range(map, proj);
-
-	data->res = isl_union_map_add_map(data->res, map);
-
-	return isl_stat_ok;
+	return schedule;
 }
 
-/* Extend the ranges of the maps in the union map such they all have
- * the same dimension.
+/* Mark all dimensions in the band node "node" to be of "type".
  */
-__isl_give isl_union_map *align_range(__isl_take isl_union_map *umap)
+__isl_give isl_schedule_node *ppcg_set_schedule_node_type(
+	__isl_take isl_schedule_node *node, enum isl_ast_loop_type type)
 {
-	struct align_range_data data;
+	int i, n;
 
-	data.max_out = 0;
-	isl_union_map_foreach_map(umap, &update_max_out, &data.max_out);
+	n = isl_schedule_node_band_n_member(node);
+	for (i = 0; i < n; ++i)
+		node = isl_schedule_node_band_member_set_ast_loop_type(node, i,
+							type);
 
-	data.res = isl_union_map_empty(isl_union_map_get_space(umap));
-	isl_union_map_foreach_map(umap, &map_align_range, &data);
-
-	isl_union_map_free(umap);
-	return data.res;
+	return node;
 }

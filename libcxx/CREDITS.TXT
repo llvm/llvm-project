@@ -41,6 +41,10 @@ N: Jonathan B Coe
 E: jbcoe@me.com
 D: Implementation of propagate_const.
 
+N: Glen Joseph Fernandes
+E: glenjofe@gmail.com
+D: Implementation of to_address.
+
 N: Eric Fiselier
 E: eric@efcs.ca
 D: LFTS support, patches and bug fixes.
@@ -97,7 +101,7 @@ E: nico.rieck@gmail.com
 D: Windows fixes
 
 N: Jon Roelofs
-E: jonathan@codesourcery.com
+E: jroelofS@jroelofs.com
 D: Remote testing, Newlib port, baremetal/single-threaded support.
 
 N: Jonathan Sauer

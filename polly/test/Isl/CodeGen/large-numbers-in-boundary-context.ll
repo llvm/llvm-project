@@ -1,13 +1,13 @@
 ; RUN: opt %loadPolly -S -polly-codegen < %s | FileCheck %s
+; XFAIL: *
 ;
 ; The boundary context contains a constant that does not fit in 64 bits. Hence,
-; we will check that we use an appropriaty typed constant, here with 65 bits.
-; An alternative would be to bail out early but that would not be as easy.
+; make sure we bail out. On certain systems, e.g. AOSP, no runtime support for
+; 128bit operations is available and consequently the code generation of large
+; values might cause linker errors.
 ;
-; CHECK: {{.*}} = icmp sle i65 {{.*}}, -9223372036854775810
-;
-; CHECK: polly.start
-;
+; CHECK: br i1 false, label %polly.start, label %bb11.pre_entry_bb
+
 target triple = "x86_64-unknown-linux-gnu"
 
 @global = external global i32, align 4

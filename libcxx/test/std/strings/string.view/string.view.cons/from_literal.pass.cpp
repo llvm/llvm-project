@@ -30,7 +30,11 @@ size_t StrLen ( const CharT *s ) {
 
 template<typename CharT>
 void test ( const CharT *s ) {
-    std::basic_string_view<CharT> sv1 ( s );
+    typedef std::basic_string_view<CharT> SV;
+//  I'd love to do this, but it would require traits::length() to be noexcept
+//  LIBCPP_ASSERT_NOEXCEPT(SV(s));
+
+    SV sv1 ( s );
     assert ( sv1.size() == StrLen( s ));
     assert ( sv1.data() == s );
     }

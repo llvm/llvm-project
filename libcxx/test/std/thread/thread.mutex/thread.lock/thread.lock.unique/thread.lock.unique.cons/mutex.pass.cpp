@@ -54,7 +54,7 @@ int main()
     t.join();
 
 #ifdef __cpp_deduction_guides
-	std::unique_lock ul(m);
+    std::unique_lock ul(m);
     static_assert((std::is_same<decltype(ul), std::unique_lock<decltype(m)>>::value), "" );
 #endif
 }

@@ -201,7 +201,8 @@ protected:
                           llvm::StringRef expr_prefix,
                           lldb::ValueObjectSP &result_valobj_sp);
 
-  virtual llvm::StringRef GetLibdlFunctionDeclarations();
+  virtual
+  llvm::StringRef GetLibdlFunctionDeclarations(lldb_private::Process *process);
 
 private:
   DISALLOW_COPY_AND_ASSIGN(PlatformPOSIX);

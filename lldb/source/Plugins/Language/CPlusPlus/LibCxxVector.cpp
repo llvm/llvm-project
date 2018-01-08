@@ -290,8 +290,7 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEndCreator(
   CompilerType type = valobj_sp->GetCompilerType();
   if (!type.IsValid() || type.GetNumTemplateArguments() == 0)
     return nullptr;
-  TemplateArgumentKind kind;
-  CompilerType arg_type = type.GetTemplateArgument(0, kind);
+  CompilerType arg_type = type.GetTypeTemplateArgument(0);
   if (arg_type.GetTypeName() == ConstString("bool"))
     return new LibcxxVectorBoolSyntheticFrontEnd(valobj_sp);
   return new LibcxxStdVectorSyntheticFrontEnd(valobj_sp);

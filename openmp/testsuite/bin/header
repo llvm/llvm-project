@@ -1,6 +1,0 @@
-; RUN: %clang -lomp -lm %s -o %t && %t 2>&1 | FileCheck %s
-; CHECK-NOT: Test failed
-; CHECK: Directive worked without errors
-
-
-

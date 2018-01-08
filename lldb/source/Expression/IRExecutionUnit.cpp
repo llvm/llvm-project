@@ -279,16 +279,12 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
 
   llvm::Triple triple(m_module->getTargetTriple());
   llvm::Reloc::Model relocModel;
-  llvm::CodeModel::Model codeModel;
 
   if (triple.isOSBinFormatELF()) {
     relocModel = llvm::Reloc::Static;
   } else {
     relocModel = llvm::Reloc::PIC_;
   }
-
-  // This will be small for 32-bit and large for 64-bit.
-  codeModel = llvm::CodeModel::JITDefault;
 
   m_module_ap->getContext().setInlineAsmDiagnosticHandler(ReportInlineAsmError,
                                                           &error);
@@ -300,9 +296,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
       .setRelocationModel(relocModel)
       .setMCJITMemoryManager(
           std::unique_ptr<MemoryManager>(new MemoryManager(*this)))
-      .setCodeModel(codeModel)
-      .setOptLevel(llvm::CodeGenOpt::Less)
-      .setUseOrcMCJITReplacement(true);
+      .setOptLevel(llvm::CodeGenOpt::Less);
 
   llvm::StringRef mArch;
   llvm::StringRef mCPU;
@@ -1128,6 +1122,7 @@ bool IRExecutionUnit::CommitOneAllocation(lldb::ProcessSP &process_sp,
   case lldb::eSectionTypeDWARFDebugAbbrev:
   case lldb::eSectionTypeDWARFDebugAddr:
   case lldb::eSectionTypeDWARFDebugAranges:
+  case lldb::eSectionTypeDWARFDebugCuIndex:
   case lldb::eSectionTypeDWARFDebugFrame:
   case lldb::eSectionTypeDWARFDebugInfo:
   case lldb::eSectionTypeDWARFDebugLine:

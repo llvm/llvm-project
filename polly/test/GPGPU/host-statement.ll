@@ -18,11 +18,7 @@ declare void @llvm.lifetime.start(i64, i8* nocapture) #0
 ; This test case tests that we can correctly handle a ScopStmt that is
 ; scheduled on the host, instead of within a kernel.
 
-; CODE-LABEL: Code
-; CODE-NEXT: ====
-; CODE-NEXT: # host
-; CODE-NEXT: {
-; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(dev_MemRef_A, MemRef_A, (512) * (512) * sizeof(double), cudaMemcpyHostToDevice));
+; CODE:        cudaCheckReturn(cudaMemcpy(dev_MemRef_A, MemRef_A, (512) * (512) * sizeof(double), cudaMemcpyHostToDevice));
 ; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(dev_MemRef_R, MemRef_R, (p_0 + 1) * (512) * sizeof(double), cudaMemcpyHostToDevice));
 ; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(dev_MemRef_Q, MemRef_Q, (512) * (512) * sizeof(double), cudaMemcpyHostToDevice));
 ; CODE-NEXT:   {

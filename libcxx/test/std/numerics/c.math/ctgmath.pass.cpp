@@ -14,6 +14,7 @@
 int main()
 {
     std::complex<double> cd;
+    (void)cd;
     double x = std::sin(0);
     ((void)x); // Prevent unused warning
 }

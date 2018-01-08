@@ -54,6 +54,7 @@ const AssertionDialogAvoider assertion_dialog_avoider{};
 
     // Silence compiler warnings.
     #pragma warning(disable: 4180) // qualifier applied to function type has no meaning; ignored
+    #pragma warning(disable: 4324) // structure was padded due to alignment specifier
     #pragma warning(disable: 4521) // multiple copy constructors specified
     #pragma warning(disable: 4702) // unreachable code
     #pragma warning(disable: 28251) // Inconsistent annotation for 'new': this instance has no annotations.
@@ -68,11 +69,6 @@ const AssertionDialogAvoider assertion_dialog_avoider{};
 #ifndef _LIBCXX_IN_DEVCRT
     // atomic_is_lock_free.pass.cpp needs this VS 2015 Update 2 fix.
     #define _ENABLE_ATOMIC_ALIGNMENT_FIX
-
-    // Enable features that /std:c++latest removes by default.
-    #define _HAS_AUTO_PTR_ETC          1
-    #define _HAS_FUNCTION_ASSIGN       1
-    #define _HAS_OLD_IOSTREAMS_MEMBERS 1
 
     // Silence warnings about raw pointers and other unchecked iterators.
     #define _SCL_SECURE_NO_WARNINGS

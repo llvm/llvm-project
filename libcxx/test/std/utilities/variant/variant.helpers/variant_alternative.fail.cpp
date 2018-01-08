@@ -28,5 +28,5 @@
 
 int main() {
     using V = std::variant<int, void *, const void *, long double>;
-    typename std::variant_alternative<4, V>::type foo;  // expected-error@variant:* {{Index out of bounds in std::variant_alternative<>}}
+    std::variant_alternative<4, V>::type foo;  // expected-error@variant:* {{Index out of bounds in std::variant_alternative<>}}
 }

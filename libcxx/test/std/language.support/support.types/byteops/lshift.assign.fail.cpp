@@ -22,10 +22,10 @@
 
 
 constexpr std::byte test(std::byte b) {
-	return b <<= 2.0;
-	}
+    return b <<= 2.0;
+    }
 
 
 int main () {
-	constexpr std::byte b1 = test(std::byte{1});
+    constexpr std::byte b1 = test(std::byte{1});
 }

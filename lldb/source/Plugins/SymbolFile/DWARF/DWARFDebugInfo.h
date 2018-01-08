@@ -50,10 +50,6 @@ public:
   static void Verify(lldb_private::Stream *s, SymbolFileDWARF *dwarf2Data);
   static void Dump(lldb_private::Stream *s, SymbolFileDWARF *dwarf2Data,
                    const uint32_t die_offset, const uint32_t recurse_depth);
-  bool Find(const char *name, bool ignore_case,
-            std::vector<dw_offset_t> &die_offsets) const;
-  bool Find(lldb_private::RegularExpression &re,
-            std::vector<dw_offset_t> &die_offsets) const;
 
   enum {
     eDumpFlag_Verbose = (1 << 0),  // Verbose dumping
@@ -65,8 +61,6 @@ public:
   DWARFDebugAranges &GetCompileUnitAranges();
 
 protected:
-  typedef std::shared_ptr<DWARFCompileUnit> DWARFCompileUnitSP;
-
   static bool OffsetLessThanCompileUnitOffset(dw_offset_t offset,
                                               const DWARFCompileUnitSP &cu_sp);
 

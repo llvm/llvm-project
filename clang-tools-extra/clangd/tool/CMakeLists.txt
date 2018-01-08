@@ -4,9 +4,12 @@ add_clang_tool(clangd
   ClangdMain.cpp
   )
 
-install(TARGETS clangd RUNTIME DESTINATION bin)
+set(LLVM_LINK_COMPONENTS
+  support
+  )
 
 target_link_libraries(clangd
+  PRIVATE
   clangBasic
   clangDaemon
   clangFormat
@@ -14,5 +17,4 @@ target_link_libraries(clangd
   clangSema
   clangTooling
   clangToolingCore
-  LLVMSupport
   )

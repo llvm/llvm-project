@@ -22,13 +22,13 @@
 #define RTTI_ASSERT(X)
 #endif
 
-template <class _Tp>
+template <class T>
   struct IsSmallObject
     : public std::integral_constant<bool
-        , sizeof(_Tp) <= (sizeof(void*)*3)
+        , sizeof(T) <= (sizeof(void*)*3)
           && std::alignment_of<void*>::value
-             % std::alignment_of<_Tp>::value == 0
-          && std::is_nothrow_move_constructible<_Tp>::value
+             % std::alignment_of<T>::value == 0
+          && std::is_nothrow_move_constructible<T>::value
         >
   {};
 

@@ -1,16 +1,18 @@
 @AUTO_GEN_COMMENT@
 
-config.test_compiler = "@LIBOMP_TEST_COMPILER@"
-config.test_filecheck = "@FILECHECK_EXECUTABLE@"
-config.test_openmp_flag = "@LIBOMP_TEST_OPENMP_FLAG@"
-config.test_extra_cflags = "@LIBOMP_TEST_CFLAGS@"
+config.test_c_compiler = "@OPENMP_TEST_C_COMPILER@"
+config.test_cxx_compiler = "@OPENMP_TEST_CXX_COMPILER@"
+config.test_compiler_features = @OPENMP_TEST_COMPILER_FEATURES@
+config.test_filecheck = "@OPENMP_FILECHECK_EXECUTABLE@"
+config.test_openmp_flags = "@OPENMP_TEST_OPENMP_FLAGS@"
+config.test_extra_flags = "@OPENMP_TEST_FLAGS@"
 config.libomp_obj_root = "@CMAKE_CURRENT_BINARY_DIR@"
 config.library_dir = "@LIBOMP_LIBRARY_DIR@"
 config.omp_header_directory = "@LIBOMP_BINARY_DIR@/src"
 config.operating_system = "@CMAKE_SYSTEM_NAME@"
 config.hwloc_library_dir = "@LIBOMP_HWLOC_LIBRARY_DIR@"
 config.using_hwloc = @LIBOMP_USE_HWLOC@
-config.has_ompt = @LIBOMP_OMPT_SUPPORT@ and @LIBOMP_OMPT_BLAME@ and @LIBOMP_OMPT_TRACE@
+config.has_ompt = @LIBOMP_OMPT_SUPPORT@ and @LIBOMP_OMPT_OPTIONAL@
 config.has_libm = @LIBOMP_HAVE_LIBM@
 config.has_libatomic = @LIBOMP_HAVE_LIBATOMIC@
 

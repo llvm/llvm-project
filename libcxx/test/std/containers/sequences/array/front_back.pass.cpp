@@ -27,13 +27,13 @@
 constexpr bool check_front( double val )
 {
     std::array<double, 3> arr = {1, 2, 3.5};
-	return arr.front() == val;
+    return arr.front() == val;
 }
 
 constexpr bool check_back( double val )
 {
     std::array<double, 3> arr = {1, 2, 3.5};
-	return arr.back() == val;
+    return arr.back() == val;
 }
 #endif
 

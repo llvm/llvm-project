@@ -32,7 +32,7 @@ int main()
     int ia[] = {0, 1, 2, 2, 0, 1, 2, 3};
     const unsigned sa = sizeof(ia)/sizeof(ia[0]);
     int ib[] = {0, 1, 2, 3, 0, 1, 2, 3};
-    const unsigned sb = sizeof(ib)/sizeof(ib[0]); ((void)sb); // unused in c++11
+    const unsigned sb = sizeof(ib)/sizeof(ib[0]); ((void)sb); // unused in C++11
 
     typedef input_iterator<const int*> II;
     typedef random_access_iterator<const int*>  RAI;

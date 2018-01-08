@@ -50,13 +50,15 @@ private:
   const utils::IncludeSorter::IncludeStyle IncludeStyle;
   const std::string MakeSmartPtrFunctionHeader;
   const std::string MakeSmartPtrFunctionName;
+  const bool IgnoreMacros;
 
   void checkConstruct(SourceManager &SM, const CXXConstructExpr *Construct,
                       const QualType *Type, const CXXNewExpr *New);
   void checkReset(SourceManager &SM, const CXXMemberCallExpr *Member,
                   const CXXNewExpr *New);
 
-  void replaceNew(DiagnosticBuilder &Diag, const CXXNewExpr *New,
+  /// Returns true when the fixes for replacing CXXNewExpr are generated.
+  bool replaceNew(DiagnosticBuilder &Diag, const CXXNewExpr *New,
                   SourceManager &SM);
   void insertHeader(DiagnosticBuilder &Diag, FileID FD);
 };

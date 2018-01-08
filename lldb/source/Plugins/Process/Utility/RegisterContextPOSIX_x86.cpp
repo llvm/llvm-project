@@ -365,12 +365,6 @@ RegisterContextPOSIX_x86::RegisterContextPOSIX_x86(
     break;
   }
 
-  // Initialize m_iovec to point to the buffer and buffer size
-  // using the conventions of Berkeley style UIO structures, as required
-  // by PTRACE extensions.
-  m_iovec.iov_base = &m_fpr.xstate.xsave;
-  m_iovec.iov_len = sizeof(m_fpr.xstate.xsave);
-
   ::memset(&m_fpr, 0, sizeof(FPR));
 
   m_fpr_type = eNotValid;
@@ -481,19 +475,19 @@ bool RegisterContextPOSIX_x86::CopyYMMtoXSTATE(uint32_t reg,
     return false;
 
   if (byte_order == eByteOrderLittle) {
-    ::memcpy(m_fpr.xstate.fxsave.xmm[reg - m_reg_info.first_ymm].bytes,
+    ::memcpy(m_fpr.fxsave.xmm[reg - m_reg_info.first_ymm].bytes,
              m_ymm_set.ymm[reg - m_reg_info.first_ymm].bytes, sizeof(XMMReg));
-    ::memcpy(m_fpr.xstate.xsave.ymmh[reg - m_reg_info.first_ymm].bytes,
+    ::memcpy(m_fpr.xsave.ymmh[reg - m_reg_info.first_ymm].bytes,
              m_ymm_set.ymm[reg - m_reg_info.first_ymm].bytes + sizeof(XMMReg),
              sizeof(YMMHReg));
     return true;
   }
 
   if (byte_order == eByteOrderBig) {
-    ::memcpy(m_fpr.xstate.fxsave.xmm[reg - m_reg_info.first_ymm].bytes,
+    ::memcpy(m_fpr.fxsave.xmm[reg - m_reg_info.first_ymm].bytes,
              m_ymm_set.ymm[reg - m_reg_info.first_ymm].bytes + sizeof(XMMReg),
              sizeof(XMMReg));
-    ::memcpy(m_fpr.xstate.xsave.ymmh[reg - m_reg_info.first_ymm].bytes,
+    ::memcpy(m_fpr.xsave.ymmh[reg - m_reg_info.first_ymm].bytes,
              m_ymm_set.ymm[reg - m_reg_info.first_ymm].bytes, sizeof(YMMHReg));
     return true;
   }
@@ -508,20 +502,20 @@ bool RegisterContextPOSIX_x86::CopyXSTATEtoYMM(uint32_t reg,
 
   if (byte_order == eByteOrderLittle) {
     ::memcpy(m_ymm_set.ymm[reg - m_reg_info.first_ymm].bytes,
-             m_fpr.xstate.fxsave.xmm[reg - m_reg_info.first_ymm].bytes,
+             m_fpr.fxsave.xmm[reg - m_reg_info.first_ymm].bytes,
              sizeof(XMMReg));
     ::memcpy(m_ymm_set.ymm[reg - m_reg_info.first_ymm].bytes + sizeof(XMMReg),
-             m_fpr.xstate.xsave.ymmh[reg - m_reg_info.first_ymm].bytes,
+             m_fpr.xsave.ymmh[reg - m_reg_info.first_ymm].bytes,
              sizeof(YMMHReg));
     return true;
   }
 
   if (byte_order == eByteOrderBig) {
     ::memcpy(m_ymm_set.ymm[reg - m_reg_info.first_ymm].bytes + sizeof(XMMReg),
-             m_fpr.xstate.fxsave.xmm[reg - m_reg_info.first_ymm].bytes,
+             m_fpr.fxsave.xmm[reg - m_reg_info.first_ymm].bytes,
              sizeof(XMMReg));
     ::memcpy(m_ymm_set.ymm[reg - m_reg_info.first_ymm].bytes,
-             m_fpr.xstate.xsave.ymmh[reg - m_reg_info.first_ymm].bytes,
+             m_fpr.xsave.ymmh[reg - m_reg_info.first_ymm].bytes,
              sizeof(YMMHReg));
     return true;
   }

@@ -54,4 +54,10 @@ int main()
     static_assert( L"ABC"sv.size() == 3, "");
     static_assert( u"ABC"sv.size() == 3, "");
     static_assert( U"ABC"sv.size() == 3, "");
+
+    static_assert(noexcept(  "ABC"sv), "");
+    static_assert(noexcept(u8"ABC"sv), "");
+    static_assert(noexcept( L"ABC"sv), "");
+    static_assert(noexcept( u"ABC"sv), "");
+    static_assert(noexcept( U"ABC"sv), "");
 }

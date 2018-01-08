@@ -372,7 +372,7 @@ PlatformLinux::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
     // Hook up process PTY if we have one (which we should for local debugging
     // with llgs).
     int pty_fd = launch_info.GetPTY().ReleaseMasterFileDescriptor();
-    if (pty_fd != lldb_utility::PseudoTerminal::invalid_fd) {
+    if (pty_fd != PseudoTerminal::invalid_fd) {
       process_sp->SetSTDIOFileDescriptor(pty_fd);
       LLDB_LOG(log, "hooked up STDIO pty to process");
     } else
@@ -390,8 +390,10 @@ void PlatformLinux::CalculateTrapHandlerSymbolNames() {
   m_trap_handlers.push_back(ConstString("_sigtramp"));
 }
 
-uint64_t PlatformLinux::ConvertMmapFlagsToPlatform(const ArchSpec &arch,
-                                                   unsigned flags) {
+MmapArgList PlatformLinux::GetMmapArgumentList(const ArchSpec &arch,
+                                               addr_t addr, addr_t length,
+                                               unsigned prot, unsigned flags,
+                                               addr_t fd, addr_t offset) {
   uint64_t flags_platform = 0;
   uint64_t map_anon = MAP_ANON;
 
@@ -406,6 +408,8 @@ uint64_t PlatformLinux::ConvertMmapFlagsToPlatform(const ArchSpec &arch,
     flags_platform |= MAP_PRIVATE;
   if (flags & eMmapFlagsAnon)
     flags_platform |= map_anon;
-  return flags_platform;
+
+  MmapArgList args({addr, length, prot, flags_platform, fd, offset});
+  return args;
 }
 

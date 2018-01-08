@@ -2,6 +2,7 @@
 #define PPCG_OPTIONS_H
 
 #include <isl/arg.h>
+#include <isl/options.h>
 
 struct ppcg_debug_options {
 	int dump_schedule_constraints;
@@ -12,7 +13,11 @@ struct ppcg_debug_options {
 };
 
 struct ppcg_options {
+	struct isl_options *isl;
 	struct ppcg_debug_options *debug;
+
+	/* Group chains of consecutive statements before scheduling. */
+	int group_chains;
 
 	/* Use isl to compute a schedule replacing the original schedule. */
 	int reschedule;
@@ -24,7 +29,12 @@ struct ppcg_options {
 	char *ctx;
 	char *sizes;
 
+	/* Perform tiling (C target). */
+	int tile;
 	int tile_size;
+
+	/* Isolate full tiles from partial tiles. */
+	int isolate_full_tiles;
 
 	/* Take advantage of private memory. */
 	int use_private_memory;
@@ -44,8 +54,19 @@ struct ppcg_options {
 	/* Linearize all device arrays. */
 	int linearize_device_arrays;
 
+	/* Allow the use of GNU extensions in generated code. */
+	int allow_gnu_extensions;
+
 	/* Allow live range to be reordered. */
 	int live_range_reordering;
+
+	/* Allow hybrid tiling whenever a suitable input pattern is found. */
+	int hybrid;
+
+	/* Unroll the code for copying to/from shared memory. */
+	int unroll_copy_shared;
+	/* Unroll code inside tile on GPU targets. */
+	int unroll_gpu_tile;
 
 	/* Options to pass to the OpenCL compiler.  */
 	char *opencl_compiler_options;
@@ -73,5 +94,7 @@ ISL_ARG_DECL(ppcg_options, struct ppcg_options, ppcg_options_args)
 #define		PPCG_TARGET_C		0
 #define		PPCG_TARGET_CUDA	1
 #define		PPCG_TARGET_OPENCL      2
+
+void ppcg_options_set_target_defaults(struct ppcg_options *options);
 
 #endif

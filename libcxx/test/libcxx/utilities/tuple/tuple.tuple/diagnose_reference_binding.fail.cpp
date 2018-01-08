@@ -22,7 +22,7 @@
 int main() {
     std::allocator<void> alloc;
 
-    // expected-error@tuple:* 4 {{static_assert failed "Attempted to construct a reference element in a tuple with an rvalue"}}
+    // expected-error-re@tuple:* 4 {{static_assert failed{{.*}} "Attempted to construct a reference element in a tuple with an rvalue"}}
 
     // bind lvalue to rvalue
     std::tuple<int const&> t(42); // expected-note {{requested here}}

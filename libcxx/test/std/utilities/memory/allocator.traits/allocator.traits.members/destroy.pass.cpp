@@ -23,6 +23,7 @@
 #include <cassert>
 
 #include "test_macros.h"
+#include "incomplete_type_helper.h"
 
 template <class T>
 struct A
@@ -64,6 +65,13 @@ int main()
         assert(A0::count == 0);
         std::allocator_traits<A<int> >::destroy(a, (A0*)&a0);
         assert(A0::count == 1);
+    }
+    {
+      typedef IncompleteHolder* VT;
+      typedef A<VT> Alloc;
+      Alloc a;
+      std::aligned_storage<sizeof(VT)>::type store;
+      std::allocator_traits<Alloc>::destroy(a, (VT*)&store);
     }
 #if TEST_STD_VER >= 11
     {

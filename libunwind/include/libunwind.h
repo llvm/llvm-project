@@ -72,11 +72,10 @@ typedef struct unw_cursor_t unw_cursor_t;
 typedef struct unw_addr_space *unw_addr_space_t;
 
 typedef int unw_regnum_t;
-#if defined(_LIBUNWIND_ARM_EHABI)
-typedef uint32_t unw_word_t;
+typedef uintptr_t unw_word_t;
+#if defined(__arm__)
 typedef uint64_t unw_fpreg_t;
 #else
-typedef uint64_t unw_word_t;
 typedef double unw_fpreg_t;
 #endif
 
@@ -188,7 +187,24 @@ enum {
   UNW_X86_64_R12 = 12,
   UNW_X86_64_R13 = 13,
   UNW_X86_64_R14 = 14,
-  UNW_X86_64_R15 = 15
+  UNW_X86_64_R15 = 15,
+  UNW_X86_64_RIP = 16,
+  UNW_X86_64_XMM0 = 17,
+  UNW_X86_64_XMM1 = 18,
+  UNW_X86_64_XMM2 = 19,
+  UNW_X86_64_XMM3 = 20,
+  UNW_X86_64_XMM4 = 21,
+  UNW_X86_64_XMM5 = 22,
+  UNW_X86_64_XMM6 = 23,
+  UNW_X86_64_XMM7 = 24,
+  UNW_X86_64_XMM8 = 25,
+  UNW_X86_64_XMM9 = 26,
+  UNW_X86_64_XMM10 = 27,
+  UNW_X86_64_XMM11 = 28,
+  UNW_X86_64_XMM12 = 29,
+  UNW_X86_64_XMM13 = 30,
+  UNW_X86_64_XMM14 = 31,
+  UNW_X86_64_XMM15 = 32,
 };
 
 
@@ -545,6 +561,44 @@ enum {
   UNW_OR1K_R29 = 29,
   UNW_OR1K_R30 = 30,
   UNW_OR1K_R31 = 31,
+};
+
+// MIPS registers
+enum {
+  UNW_MIPS_R0  = 0,
+  UNW_MIPS_R1  = 1,
+  UNW_MIPS_R2  = 2,
+  UNW_MIPS_R3  = 3,
+  UNW_MIPS_R4  = 4,
+  UNW_MIPS_R5  = 5,
+  UNW_MIPS_R6  = 6,
+  UNW_MIPS_R7  = 7,
+  UNW_MIPS_R8  = 8,
+  UNW_MIPS_R9  = 9,
+  UNW_MIPS_R10 = 10,
+  UNW_MIPS_R11 = 11,
+  UNW_MIPS_R12 = 12,
+  UNW_MIPS_R13 = 13,
+  UNW_MIPS_R14 = 14,
+  UNW_MIPS_R15 = 15,
+  UNW_MIPS_R16 = 16,
+  UNW_MIPS_R17 = 17,
+  UNW_MIPS_R18 = 18,
+  UNW_MIPS_R19 = 19,
+  UNW_MIPS_R20 = 20,
+  UNW_MIPS_R21 = 21,
+  UNW_MIPS_R22 = 22,
+  UNW_MIPS_R23 = 23,
+  UNW_MIPS_R24 = 24,
+  UNW_MIPS_R25 = 25,
+  UNW_MIPS_R26 = 26,
+  UNW_MIPS_R27 = 27,
+  UNW_MIPS_R28 = 28,
+  UNW_MIPS_R29 = 29,
+  UNW_MIPS_R30 = 30,
+  UNW_MIPS_R31 = 31,
+  UNW_MIPS_HI = 64,
+  UNW_MIPS_LO = 65,
 };
 
 #endif

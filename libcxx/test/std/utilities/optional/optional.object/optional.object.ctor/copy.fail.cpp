@@ -21,11 +21,11 @@
 #include "test_macros.h"
 
 struct S {
-	constexpr S()   : v_(0) {}
-	S(int v)        : v_(v) {}
-	S(const S &rhs) : v_(rhs.v_) {}  // make it not trivially copyable
-	int v_;
-	};
+    constexpr S()   : v_(0) {}
+    S(int v)        : v_(v) {}
+    S(const S &rhs) : v_(rhs.v_) {}  // make it not trivially copyable
+    int v_;
+    };
 
 
 int main()

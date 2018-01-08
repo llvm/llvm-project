@@ -55,5 +55,6 @@ int main()
     A test1 = {3, 2, 1};
 #if TEST_STD_VER > 11
     constexpr B test2 = {3, 2, 1};
+    (void)test2;
 #endif  // TEST_STD_VER > 11
 }

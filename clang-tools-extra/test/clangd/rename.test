@@ -1,0 +1,50 @@
+# RUN: clangd -pretty -run-synchronously < %s | FileCheck -strict-whitespace %s
+# It is absolutely vital that this file has CRLF line endings.
+#
+Content-Length: 125
+
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+
+Content-Length: 150
+
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///foo.cpp","languageId":"cpp","version":1,"text":"int foo;"}}}
+
+Content-Length: 159
+
+{"jsonrpc":"2.0","id":1,"method":"textDocument/rename","params":{"textDocument":{"uri":"file:///foo.cpp"},"position":{"line":0,"character":5},"newName":"bar"}}
+#      CHECK:  "id": 1,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": {
+# CHECK-NEXT:    "changes": {
+# CHECK-NEXT:      "file:///foo.cpp": [
+# CHECK-NEXT:        {
+# CHECK-NEXT:          "newText": "bar",
+# CHECK-NEXT:          "range": {
+# CHECK-NEXT:            "end": {
+# CHECK-NEXT:              "character": 7
+# CHECK-NEXT:              "line": 0
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "start": {
+# CHECK-NEXT:              "character": 4
+# CHECK-NEXT:              "line": 0
+# CHECK-NEXT:            }
+# CHECK-NEXT:          }
+# CHECK-NEXT:        }
+# CHECK-NEXT:      ]
+# CHECK-NEXT:    }
+# CHECK-NEXT:  }
+Content-Length: 159
+
+{"jsonrpc":"2.0","id":2,"method":"textDocument/rename","params":{"textDocument":{"uri":"file:///foo.cpp"},"position":{"line":0,"character":2},"newName":"bar"}}
+#      CHECK:  "error": {
+# CHECK-NEXT:    "code": -32603,
+# CHECK-NEXT:    "message": "clang diagnostic"
+# CHECK-NEXT:  },
+# CHECK-NEXT:  "id": 2,
+# CHECK-NEXT:  "jsonrpc": "2.0"
+Content-Length: 44
+
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+Content-Length: 33
+
+{"jsonrpc":"2.0":"method":"exit"}

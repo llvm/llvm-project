@@ -14,6 +14,7 @@
 
 #include "polly/FlattenAlgo.h"
 #include "polly/Support/ISLOStream.h"
+#include "polly/Support/ISLTools.h"
 #include "llvm/Support/Debug.h"
 #define DEBUG_TYPE "polly-flatten-algo"
 
@@ -67,49 +68,6 @@ bool isVariableDim(const isl::union_map &UMap) {
       return isl::stat::error;
     return isl::stat::ok;
   }) == isl::stat::ok;
-}
-
-/// If @p PwAff maps to a constant, return said constant. If @p Max/@p Min, it
-/// can also be a piecewise constant and it would return the minimum/maximum
-/// value. Otherwise, return NaN.
-isl::val getConstant(isl::pw_aff PwAff, bool Max, bool Min) {
-  assert(!Max || !Min);
-  isl::val Result;
-  PwAff.foreach_piece([=, &Result](isl::set Set, isl::aff Aff) -> isl::stat {
-    if (Result && Result.is_nan())
-      return isl::stat::ok;
-
-    // TODO: If Min/Max, we can also determine a minimum/maximum value if
-    // Set is constant-bounded.
-    if (!Aff.is_cst()) {
-      Result = isl::val::nan(Aff.get_ctx());
-      return isl::stat::error;
-    }
-
-    auto ThisVal = Aff.get_constant_val();
-    if (!Result) {
-      Result = ThisVal;
-      return isl::stat::ok;
-    }
-
-    if (Result.eq(ThisVal))
-      return isl::stat::ok;
-
-    if (Max && ThisVal.gt(Result)) {
-      Result = ThisVal;
-      return isl::stat::ok;
-    }
-
-    if (Min && ThisVal.lt(Result)) {
-      Result = ThisVal;
-      return isl::stat::ok;
-    }
-
-    // Not compatible
-    Result = isl::val::nan(Aff.get_ctx());
-    return isl::stat::error;
-  });
-  return Result;
 }
 
 /// Compute @p UPwAff - @p Val.

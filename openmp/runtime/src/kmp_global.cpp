@@ -2,7 +2,6 @@
  * kmp_global.cpp -- KPTS global variables for runtime support library
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #include "kmp.h"
 #include "kmp_affinity.h"
@@ -32,7 +30,7 @@ kmp_tas_lock_t __kmp_stats_lock;
 kmp_stats_list *__kmp_stats_list;
 
 // thread local pointer to stats node within list
-__thread kmp_stats_list *__kmp_stats_thread_ptr = NULL;
+KMP_THREAD_LOCAL kmp_stats_list *__kmp_stats_thread_ptr = NULL;
 
 // gives reference tick for all events (considered the 0 tick)
 tsc_tick_count __kmp_stats_start_time;
@@ -78,25 +76,16 @@ size_t __kmp_malloc_pool_incr = KMP_DEFAULT_MALLOC_POOL_INCR;
 
 // Barrier method defaults, settings, and strings.
 // branch factor = 2^branch_bits (only relevant for tree & hyper barrier types)
-#if KMP_ARCH_X86_64
 kmp_uint32 __kmp_barrier_gather_bb_dflt = 2;
 /* branch_factor = 4 */ /* hyper2: C78980 */
 kmp_uint32 __kmp_barrier_release_bb_dflt = 2;
 /* branch_factor = 4 */ /* hyper2: C78980 */
-#else
-kmp_uint32 __kmp_barrier_gather_bb_dflt = 2;
-/* branch_factor = 4 */ /* communication in core for MIC */
-kmp_uint32 __kmp_barrier_release_bb_dflt = 2;
-/* branch_factor = 4 */ /* communication in core for MIC */
-#endif // KMP_ARCH_X86_64
-#if KMP_ARCH_X86_64
-kmp_bar_pat_e __kmp_barrier_gather_pat_dflt = bp_hyper_bar; /* hyper2: C78980 */
-kmp_bar_pat_e __kmp_barrier_release_pat_dflt =
-    bp_hyper_bar; /* hyper2: C78980 */
-#else
-kmp_bar_pat_e __kmp_barrier_gather_pat_dflt = bp_linear_bar;
-kmp_bar_pat_e __kmp_barrier_release_pat_dflt = bp_linear_bar;
-#endif
+
+kmp_bar_pat_e __kmp_barrier_gather_pat_dflt = bp_hyper_bar;
+/* hyper2: C78980 */
+kmp_bar_pat_e __kmp_barrier_release_pat_dflt = bp_hyper_bar;
+/* hyper2: C78980 */
+
 kmp_uint32 __kmp_barrier_gather_branch_bits[bs_last_barrier] = {0};
 kmp_uint32 __kmp_barrier_release_branch_bits[bs_last_barrier] = {0};
 kmp_bar_pat_e __kmp_barrier_gather_pattern[bs_last_barrier] = {bp_linear_bar};
@@ -127,7 +116,6 @@ char const *__kmp_barrier_pattern_name[bp_last_bar] = {"linear", "tree",
 int __kmp_allThreadsSpecified = 0;
 size_t __kmp_align_alloc = CACHE_LINE;
 
-
 int __kmp_generate_warnings = kmp_warnings_low;
 int __kmp_reserve_warn = 0;
 int __kmp_xproc = 0;
@@ -135,6 +123,8 @@ int __kmp_avail_proc = 0;
 size_t __kmp_sys_min_stksize = KMP_MIN_STKSIZE;
 int __kmp_sys_max_nth = KMP_MAX_NTH;
 int __kmp_max_nth = 0;
+int __kmp_cg_max_nth = 0;
+int __kmp_teams_max_nth = 0;
 int __kmp_threads_capacity = 0;
 int __kmp_dflt_team_nth = 0;
 int __kmp_dflt_team_nth_ub = 0;
@@ -183,12 +173,7 @@ int __kmp_gtid_mode = 0; /* select method to get gtid based on #threads */
 int __kmp_adjust_gtid_mode = TRUE;
 #endif /* KMP_OS_LINUX && defined(KMP_TDATA_GTID) */
 #ifdef KMP_TDATA_GTID
-#if KMP_OS_WINDOWS
-__declspec(thread) int __kmp_gtid = KMP_GTID_DNE;
-#else
-__thread int __kmp_gtid = KMP_GTID_DNE;
-#endif /* KMP_OS_WINDOWS - workaround because Intel(R) Many Integrated Core    \
-          compiler 20110316 doesn't accept __declspec */
+KMP_THREAD_LOCAL int __kmp_gtid = KMP_GTID_DNE;
 #endif /* KMP_TDATA_GTID */
 int __kmp_tls_gtid_min = INT_MAX;
 int __kmp_foreign_tp = TRUE;
@@ -249,6 +234,8 @@ KMPAffinity *__kmp_affinity_dispatch = NULL;
 #if KMP_USE_HWLOC
 int __kmp_hwloc_error = FALSE;
 hwloc_topology_t __kmp_hwloc_topology = NULL;
+int __kmp_numa_detected = FALSE;
+int __kmp_tile_depth = 0;
 #endif
 
 #if KMP_OS_WINDOWS
@@ -277,7 +264,7 @@ char *__kmp_affinity_proclist = NULL;
 kmp_affin_mask_t *__kmp_affinity_masks = NULL;
 unsigned __kmp_affinity_num_masks = 0;
 
-char const *__kmp_cpuinfo_file = NULL;
+char *__kmp_cpuinfo_file = NULL;
 
 #endif /* KMP_AFFINITY_SUPPORTED */
 
@@ -311,8 +298,7 @@ kmp_uint64 __kmp_taskloop_min_tasks = 0;
    be redefined to have exactly 32 bits. */
 KMP_BUILD_ASSERT(sizeof(kmp_tasking_flags_t) == 4);
 
-kmp_int32 __kmp_task_stealing_constraint =
-    1; /* Constrain task stealing by default */
+int __kmp_task_stealing_constraint = 1; /* Constrain task stealing by default */
 
 #ifdef DEBUG_SUSPEND
 int __kmp_suspend_count = 0;
@@ -376,12 +362,7 @@ int __kmp_need_register_atfork =
     TRUE; /* At initialization, call pthread_atfork to install fork handler */
 int __kmp_need_register_atfork_specified = TRUE;
 
-int __kmp_env_chunk = FALSE; /* KMP_CHUNK specified?     */
 int __kmp_env_stksize = FALSE; /* KMP_STACKSIZE specified? */
-int __kmp_env_omp_stksize = FALSE; /* OMP_STACKSIZE specified? */
-int __kmp_env_all_threads =
-    FALSE; /* KMP_ALL_THREADS or KMP_MAX_THREADS specified? */
-int __kmp_env_omp_all_threads = FALSE; /* OMP_THREAD_LIMIT specified? */
 int __kmp_env_blocktime = FALSE; /* KMP_BLOCKTIME specified? */
 int __kmp_env_checks = FALSE; /* KMP_CHECKS specified?    */
 int __kmp_env_consistency_check = FALSE; /* KMP_CONSISTENCY_CHECK specified? */
@@ -504,13 +485,6 @@ kmp_lock_t __kmp_debug_lock; /* Control I/O access for KMP_DEBUG */
    by Steve R., and will be available soon. */
 int __kmp_handle_signals = FALSE;
 #endif
-
-/* ----------------------------------------------- */
-#ifdef BUILD_TV
-kmp_key_t __kmp_tv_key = 0;
-#endif
-
-/* ------------------------------------------------------------------------ */
 
 #ifdef DEBUG_SUSPEND
 int get_suspend_count_(void) {

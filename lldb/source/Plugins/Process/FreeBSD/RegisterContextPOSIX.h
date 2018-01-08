@@ -14,8 +14,8 @@
 // C++ Includes
 // Other libraries and framework includes
 #include "RegisterInfoInterface.h"
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Utility/ArchSpec.h"
 
 //------------------------------------------------------------------------------
 /// @class POSIXBreakpointProtocol

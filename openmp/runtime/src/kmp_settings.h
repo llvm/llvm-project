@@ -2,7 +2,6 @@
  * kmp_settings.h -- Initialize environment variables
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #ifndef KMP_SETTINGS_H
 #define KMP_SETTINGS_H

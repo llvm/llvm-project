@@ -705,11 +705,11 @@ __isl_give MULTI(BASE) *FN(MULTI(BASE),drop_dims)(
 	if (first + n > dim || first + n < first)
 		isl_die(FN(MULTI(BASE),get_ctx)(multi), isl_error_invalid,
 			"index out of bounds",
-			return FN(MULTI(BASE),cow)(multi));
+			return FN(MULTI(BASE),free)(multi));
 
 	multi->space = isl_space_drop_dims(multi->space, type, first, n);
 	if (!multi->space)
-		return FN(MULTI(BASE),cow)(multi);
+		return FN(MULTI(BASE),free)(multi);
 
 	if (type == isl_dim_out) {
 		for (i = 0; i < n; ++i)
@@ -724,7 +724,7 @@ __isl_give MULTI(BASE) *FN(MULTI(BASE),drop_dims)(
 	for (i = 0; i < multi->n; ++i) {
 		multi->p[i] = FN(EL,drop_dims)(multi->p[i], type, first, n);
 		if (!multi->p[i])
-			return FN(MULTI(BASE),cow)(multi);
+			return FN(MULTI(BASE),free)(multi);
 	}
 
 	return multi;

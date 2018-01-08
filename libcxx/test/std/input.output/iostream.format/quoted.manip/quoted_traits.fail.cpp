@@ -20,7 +20,7 @@
 
 #if TEST_STD_VER > 11
 
-//	Test that mismatches in the traits between the quoted object and the dest string are diagnosed.
+//  Test that mismatches in the traits between the quoted object and the dest string are diagnosed.
 
 template <class charT>
 struct test_traits

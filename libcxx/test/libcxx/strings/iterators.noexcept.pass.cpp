@@ -20,7 +20,7 @@
 //
 
 // MODULES_DEFINES: _LIBCPP_NO_EXCEPTIONS
-#define	_LIBCPP_NO_EXCEPTIONS
+#define _LIBCPP_NO_EXCEPTIONS
 
 #include <iterator>
 #include <cassert>

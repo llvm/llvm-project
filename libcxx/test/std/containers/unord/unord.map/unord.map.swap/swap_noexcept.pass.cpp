@@ -122,7 +122,7 @@ struct some_alloc3
 
 int main()
 {
-	typedef std::pair<const MoveOnly, MoveOnly> MapType;
+    typedef std::pair<const MoveOnly, MoveOnly> MapType;
     {
         typedef std::unordered_map<MoveOnly, MoveOnly> C;
         static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");

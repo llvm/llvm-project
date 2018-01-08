@@ -74,7 +74,7 @@ TEST(GlobList, WhitespacesAtBegin) {
 }
 
 TEST(GlobList, Complex) {
-  GlobList Filter("*,-a.*, -b.*,   a.1.* ,-a.1.A.*,-..,-...,-..+,-*$, -*qwe* ");
+  GlobList Filter("*,-a.*, -b.*, \r  \n  a.1.* ,-a.1.A.*,-..,-...,-..+,-*$, -*qwe* ");
 
   EXPECT_TRUE(Filter.contains("aaa"));
   EXPECT_TRUE(Filter.contains("qqq"));

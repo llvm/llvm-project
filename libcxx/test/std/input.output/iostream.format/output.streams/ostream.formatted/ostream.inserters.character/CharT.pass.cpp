@@ -35,18 +35,18 @@ public:
 protected:
 
     virtual typename base::int_type
-        overflow(typename base::int_type __c = base::traits_type::eof())
+        overflow(typename base::int_type ch = base::traits_type::eof())
         {
-            if (__c != base::traits_type::eof())
+            if (ch != base::traits_type::eof())
             {
                 int n = static_cast<int>(str_.size());
-                str_.push_back(__c);
+                str_.push_back(ch);
                 str_.resize(str_.capacity());
                 base::setp(const_cast<CharT*>(str_.data()),
                            const_cast<CharT*>(str_.data() + str_.size()));
                 base::pbump(n+1);
             }
-            return __c;
+            return ch;
         }
 };
 

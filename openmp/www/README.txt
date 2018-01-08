@@ -36,12 +36,12 @@ Out-of-tree build:
 
 $ cd where-you-want-to-live
 Check out openmp
-$ cd where-you-want-to-live/openmp/runtime
+$ cd where-you-want-to-live/openmp
 $ mkdir build && cd build
 $ cmake path/to/openmp -DCMAKE_C_COMPILER=<C compiler> -DCMAKE_CXX_COMPILER=<C++ compiler>
 $ make
 
-For details about building, please look at Build_With_CMake.txt
+For details about building, please look at README.rst.
 
 Architectures Supported
 =======================

@@ -1369,3 +1369,13 @@ lldb::SBMemoryRegionInfoList SBProcess::GetMemoryRegions() {
   }
   return sb_region_list;
 }
+
+lldb::SBProcessInfo SBProcess::GetProcessInfo() {
+  lldb::SBProcessInfo sb_proc_info;
+  ProcessSP process_sp(GetSP());
+  ProcessInstanceInfo proc_info;
+  if (process_sp && process_sp->GetProcessInfo(proc_info)) {
+    sb_proc_info.SetProcessInfo(proc_info);
+  }
+  return sb_proc_info;
+}

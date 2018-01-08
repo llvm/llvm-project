@@ -33,7 +33,7 @@ TypePromotionInMathFnCheck::TypePromotionInMathFnCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
-          Options.get("IncludeStyle", "llvm"))) {}
+          Options.getLocalOrGlobal("IncludeStyle", "llvm"))) {}
 
 void TypePromotionInMathFnCheck::registerPPCallbacks(
     CompilerInstance &Compiler) {

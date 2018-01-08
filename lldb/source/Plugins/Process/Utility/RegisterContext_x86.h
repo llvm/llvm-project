@@ -13,8 +13,10 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Support/Compiler.h"
 
+namespace lldb_private {
 //---------------------------------------------------------------------------
 // i386 ehframe, dwarf regnums
 //---------------------------------------------------------------------------
@@ -313,13 +315,28 @@ struct MPX {
 
 LLVM_PACKED_START
 struct XSAVE_HDR {
-  uint64_t xstate_bv; // OS enabled xstate mask to determine the extended states
+  enum class XFeature : uint64_t {
+    FP = 1,
+    SSE = FP << 1,
+    YMM = SSE << 1,
+    BNDREGS = YMM << 1,
+    BNDCSR = BNDREGS << 1,
+    OPMASK = BNDCSR << 1,
+    ZMM_Hi256 = OPMASK << 1,
+    Hi16_ZMM = ZMM_Hi256 << 1,
+    PT = Hi16_ZMM << 1,
+    PKRU = PT << 1,
+    LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue*/ PKRU)
+  };
+
+  XFeature xstate_bv; // OS enabled xstate mask to determine the extended states
                       // supported by the processor
-  uint64_t xcomp_bv;  // Mask to indicate the format of the XSAVE area and of
+  XFeature xcomp_bv;  // Mask to indicate the format of the XSAVE area and of
                       // the XRSTOR instruction
   uint64_t reserved1[1];
   uint64_t reserved2[5];
 };
+static_assert(sizeof(XSAVE_HDR) == 64, "XSAVE_HDR layout incorrect");
 LLVM_PACKED_END
 
 // x86 extensions to FXSAVE (i.e. for AVX and MPX processors)
@@ -338,21 +355,13 @@ struct LLVM_ALIGNAS(64) XSAVE {
 LLVM_PACKED_END
 
 // Floating-point registers
-struct FPR {
-  // Thread state for the floating-point unit of the processor read by ptrace.
-  union XSTATE {
-    FXSAVE fxsave; // Generic floating-point registers.
-    XSAVE xsave;   // x86 extended processor state.
-  } xstate;
+union FPR {
+  FXSAVE fxsave; // Generic floating-point registers.
+  XSAVE xsave;   // x86 extended processor state.
 };
 
-//---------------------------------------------------------------------------
-// ptrace PTRACE_GETREGSET, PTRACE_SETREGSET structure
-//---------------------------------------------------------------------------
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
-struct IOVEC {
-  void *iov_base; // pointer to XSAVE
-  size_t iov_len; // sizeof(XSAVE)
-};
+} // namespace lldb_private
 
 #endif

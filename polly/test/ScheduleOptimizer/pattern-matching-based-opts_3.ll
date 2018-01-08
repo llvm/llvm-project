@@ -100,6 +100,7 @@
 ; EXTRACTION-OF-MACRO-KERNEL-NEXT:          for (int c3 = 0; c3 <= 131; c3 += 1)
 ; EXTRACTION-OF-MACRO-KERNEL-NEXT:            for (int c4 = 0; c4 <= 23; c4 += 1)
 ; EXTRACTION-OF-MACRO-KERNEL-NEXT:              for (int c5 = 0; c5 <= 255; c5 += 1) {
+; EXTRACTION-OF-MACRO-KERNEL-NEXT:                // Loop Vectorizer Disabled
 ; EXTRACTION-OF-MACRO-KERNEL-NEXT:                // Register tiling - Points
 ; EXTRACTION-OF-MACRO-KERNEL-NEXT:                {
 ; EXTRACTION-OF-MACRO-KERNEL-NEXT:                  Stmt_Copy_0(96 * c2 + 4 * c4, 8 * c3, 256 * c1 + c5);

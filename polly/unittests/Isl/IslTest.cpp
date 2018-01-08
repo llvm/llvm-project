@@ -783,6 +783,63 @@ TEST(DeLICM, computeArrayUnused) {
               computeArrayUnused(UMAP("{ Write[] -> [0] }"),
                                  UMAP("{ Write[] -> Elt[] }"), UMAP("{}"),
                                  ReadEltInSameInst, false, true));
+
+    // Two writes
+    EXPECT_EQ(
+        UMAP("{ Elt[] -> [i] : i <= 10 }"),
+        computeArrayUnused(UMAP("{ WriteA[] -> [0];  WriteB[] -> [10] }"),
+                           UMAP("{ WriteA[] -> Elt[]; WriteB[] -> Elt[] }"),
+                           UMAP("{}"), ReadEltInSameInst, false, true));
+
+    // Two unused zones
+    // read,write,read,write
+    EXPECT_EQ(
+        UMAP("{ Elt[] -> [i] : 0 < i <= 10; Elt[] -> [i] : 20 < i <= 30 }"),
+        computeArrayUnused(UMAP("{ ReadA[] -> [0]; WriteA[] -> [10]; ReadB[] "
+                                "-> [20]; WriteB[] -> [30] }"),
+                           UMAP("{ WriteA[] -> Elt[]; WriteB[] -> Elt[] }"),
+                           UMAP("{ ReadA[] -> Elt[];  ReadB[] -> Elt[] }"),
+                           ReadEltInSameInst, false, true));
+
+    // write, write
+    EXPECT_EQ(
+        UMAP("{ Elt[] -> [i] : i <= 10 }"),
+        computeArrayUnused(
+            UMAP("{ WriteA[] -> [0];  WriteB[] -> [10];  Read[] -> [20] }"),
+            UMAP("{ WriteA[] -> Elt[]; WriteB[] -> Elt[] }"),
+            UMAP("{ Read[] -> Elt[] }"), ReadEltInSameInst, false, true));
+
+    // write, read
+    EXPECT_EQ(UMAP("{ Elt[] -> [i] : i <= 0 }"),
+              computeArrayUnused(UMAP("{ Write[] -> [0]; Read[] -> [10] }"),
+                                 UMAP("{ Write[] -> Elt[] }"),
+                                 UMAP("{ Read[] -> Elt[] }"), ReadEltInSameInst,
+                                 false, true));
+
+    // read, write, read
+    EXPECT_EQ(UMAP("{ Elt[] -> [i] : 0 < i <= 10 }"),
+              computeArrayUnused(
+                  UMAP("{ ReadA[] -> [0]; Write[] -> [10]; ReadB[] -> [20] }"),
+                  UMAP("{ Write[] -> Elt[] }"),
+                  UMAP("{ ReadA[] -> Elt[];  ReadB[] -> Elt[] }"),
+                  ReadEltInSameInst, false, true));
+
+    // read, write, write
+    EXPECT_EQ(
+        UMAP("{ Elt[] -> [i] : 0 < i <= 20 }"),
+        computeArrayUnused(
+            UMAP("{ Read[] -> [0]; WriteA[] -> [10];  WriteB[] -> [20] }"),
+            UMAP("{ WriteA[] -> Elt[]; WriteB[] -> Elt[] }"),
+            UMAP("{ Read[] -> Elt[] }"), ReadEltInSameInst, false, true));
+
+    // read, write, write, read
+    EXPECT_EQ(
+        UMAP("{ Elt[] -> [i] : 0 < i <= 20 }"),
+        computeArrayUnused(UMAP("{ ReadA[] -> [0]; WriteA[] -> [10];  WriteB[] "
+                                "-> [20]; ReadB[] -> [30] }"),
+                           UMAP("{ WriteA[] -> Elt[]; WriteB[] -> Elt[] }"),
+                           UMAP("{ ReadA[] -> Elt[];  ReadB[] -> Elt[] }"),
+                           ReadEltInSameInst, false, true));
   }
 
   // Read and write in same statement

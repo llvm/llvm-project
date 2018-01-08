@@ -73,39 +73,59 @@ string do_strerror_r(int ev) {
   std::snprintf(buffer, strerror_buff_size, "unknown error %d", ev);
   return string(buffer);
 }
-#elif defined(__linux__) && !defined(_LIBCPP_HAS_MUSL_LIBC) &&                 \
-    (!defined(__ANDROID__) || __ANDROID_API__ >= 23)
-// GNU Extended version
-string do_strerror_r(int ev) {
-    char buffer[strerror_buff_size];
-    char* ret = ::strerror_r(ev, buffer, strerror_buff_size);
-    return string(ret);
-}
 #else
-// POSIX version
+
+// Only one of the two following functions will be used, depending on
+// the return type of strerror_r:
+
+// For the GNU variant, a char* return value:
+__attribute__((unused)) const char *
+handle_strerror_r_return(char *strerror_return, char *buffer) {
+  // GNU always returns a string pointer in its return value. The
+  // string might point to either the input buffer, or a static
+  // buffer, but we don't care which.
+  return strerror_return;
+}
+
+// For the POSIX variant: an int return value.
+__attribute__((unused)) const char *
+handle_strerror_r_return(int strerror_return, char *buffer) {
+  // The POSIX variant either:
+  // - fills in the provided buffer and returns 0
+  // - returns a positive error value, or
+  // - returns -1 and fills in errno with an error value.
+  if (strerror_return == 0)
+    return buffer;
+
+  // Only handle EINVAL. Other errors abort.
+  int new_errno = strerror_return == -1 ? errno : strerror_return;
+  if (new_errno == EINVAL)
+    return "";
+
+  _LIBCPP_ASSERT(new_errno == ERANGE, "unexpected error from ::strerror_r");
+  // FIXME maybe? 'strerror_buff_size' is likely to exceed the
+  // maximum error size so ERANGE shouldn't be returned.
+  std::abort();
+}
+
+// This function handles both GNU and POSIX variants, dispatching to
+// one of the two above functions.
 string do_strerror_r(int ev) {
     char buffer[strerror_buff_size];
+    // Preserve errno around the call. (The C++ standard requires that
+    // system_error functions not modify errno).
     const int old_errno = errno;
-    int ret;
-    if ((ret = ::strerror_r(ev, buffer, strerror_buff_size)) != 0) {
-        // If `ret == -1` then the error is specified using `errno`, otherwise
-        // `ret` represents the error.
-        const int new_errno = ret == -1 ? errno : ret;
-        errno = old_errno;
-        if (new_errno == EINVAL) {
-            std::snprintf(buffer, strerror_buff_size, "Unknown error %d", ev);
-            return string(buffer);
-        } else {
-            _LIBCPP_ASSERT(new_errno == ERANGE, "unexpected error from ::strerr_r");
-            // FIXME maybe? 'strerror_buff_size' is likely to exceed the
-            // maximum error size so ERANGE shouldn't be returned.
-            std::abort();
-        }
+    const char *error_message = handle_strerror_r_return(
+        ::strerror_r(ev, buffer, strerror_buff_size), buffer);
+    // If we didn't get any message, print one now.
+    if (!error_message[0]) {
+      std::snprintf(buffer, strerror_buff_size, "Unknown error %d", ev);
+      error_message = buffer;
     }
-    return string(buffer);
+    errno = old_errno;
+    return string(error_message);
 }
 #endif
-
 } // end namespace
 #endif
 

@@ -1,4 +1,4 @@
-//===--- ClangdUnitStore.h - A ClangdUnits container -------------*-C++-*-===//
+//===--- ClangdUnitStore.h - A container of CppFiles -------------*-C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,98 +10,87 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_CLANGDUNITSTORE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CLANGDUNITSTORE_H
 
-#include <mutex>
-
 #include "ClangdUnit.h"
 #include "GlobalCompilationDatabase.h"
+#include "Logger.h"
 #include "Path.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include <mutex>
 
 namespace clang {
 namespace clangd {
 
-/// Thread-safe collection of ASTs built for specific files. Provides
-/// synchronized access to ASTs.
-class ClangdUnitStore {
+class Logger;
+
+/// Thread-safe mapping from FileNames to CppFile.
+class CppFileCollection {
 public:
-  /// Run specified \p Action on the ClangdUnit for \p File.
-  /// If the file is not present in ClangdUnitStore, a new ClangdUnit will be
-  /// created from the \p FileContents. If the file is already present in the
-  /// store, ClangdUnit::reparse will be called with the new contents before
-  /// running \p Action.
-  template <class Func>
-  void runOnUnit(PathRef File, StringRef FileContents, StringRef ResourceDir,
-                 GlobalCompilationDatabase &CDB,
-                 std::shared_ptr<PCHContainerOperations> PCHs,
-                 IntrusiveRefCntPtr<vfs::FileSystem> VFS, Func Action) {
-    runOnUnitImpl(File, FileContents, ResourceDir, CDB, PCHs,
-                  /*ReparseBeforeAction=*/true, VFS,
-                  std::forward<Func>(Action));
-  }
+  /// \p ASTCallback is called when a file is parsed synchronously. This should
+  /// not be expensive since it blocks diagnostics.
+  explicit CppFileCollection(ASTParsedCallback ASTCallback)
+      : ASTCallback(std::move(ASTCallback)) {}
 
-  /// Run specified \p Action on the ClangdUnit for \p File.
-  /// If the file is not present in ClangdUnitStore, a new ClangdUnit will be
-  /// created from the \p FileContents. If the file is already present in the
-  /// store, the \p Action will be run directly on it.
-  template <class Func>
-  void runOnUnitWithoutReparse(PathRef File, StringRef FileContents,
-                               StringRef ResourceDir,
-                               GlobalCompilationDatabase &CDB,
-                               std::shared_ptr<PCHContainerOperations> PCHs,
-                               IntrusiveRefCntPtr<vfs::FileSystem> VFS,
-                               Func Action) {
-    runOnUnitImpl(File, FileContents, ResourceDir, CDB, PCHs,
-                  /*ReparseBeforeAction=*/false, VFS,
-                  std::forward<Func>(Action));
-  }
-
-  /// Run the specified \p Action on the ClangdUnit for \p File.
-  /// Unit for \p File should exist in the store.
-  template <class Func> void runOnExistingUnit(PathRef File, Func Action) {
+  std::shared_ptr<CppFile>
+  getOrCreateFile(PathRef File, PathRef ResourceDir,
+                  GlobalCompilationDatabase &CDB, bool StorePreamblesInMemory,
+                  std::shared_ptr<PCHContainerOperations> PCHs) {
     std::lock_guard<std::mutex> Lock(Mutex);
-
-    auto It = OpenedFiles.find(File);
-    assert(It != OpenedFiles.end() && "File is not in OpenedFiles");
-
-    Action(It->second);
-  }
-
-  /// Remove ClangdUnit for \p File, if any
-  void removeUnitIfPresent(PathRef File);
-
-private:
-  /// Run specified \p Action on the ClangdUnit for \p File.
-  template <class Func>
-  void runOnUnitImpl(PathRef File, StringRef FileContents,
-                     StringRef ResourceDir, GlobalCompilationDatabase &CDB,
-                     std::shared_ptr<PCHContainerOperations> PCHs,
-                     bool ReparseBeforeAction,
-                     IntrusiveRefCntPtr<vfs::FileSystem> VFS, Func Action) {
-    std::lock_guard<std::mutex> Lock(Mutex);
-
-    auto Commands = getCompileCommands(CDB, File);
-    assert(!Commands.empty() &&
-           "getCompileCommands should add default command");
-    VFS->setCurrentWorkingDirectory(Commands.front().Directory);
 
     auto It = OpenedFiles.find(File);
     if (It == OpenedFiles.end()) {
+      auto Command = getCompileCommand(CDB, File, ResourceDir);
+
       It = OpenedFiles
-               .insert(std::make_pair(File, ClangdUnit(File, FileContents,
-                                                       ResourceDir, PCHs,
-                                                       Commands, VFS)))
+               .try_emplace(File, CppFile::Create(File, std::move(Command),
+                                                  StorePreamblesInMemory,
+                                                  std::move(PCHs), ASTCallback))
                .first;
-    } else if (ReparseBeforeAction) {
-      It->second.reparse(FileContents, VFS);
     }
-    return Action(It->second);
+    return It->second;
   }
 
-  std::vector<tooling::CompileCommand>
-  getCompileCommands(GlobalCompilationDatabase &CDB, PathRef File);
+  struct RecreateResult {
+    /// A CppFile, stored in this CppFileCollection for the corresponding
+    /// filepath after calling recreateFileIfCompileCommandChanged.
+    std::shared_ptr<CppFile> FileInCollection;
+    /// If a new CppFile had to be created to account for changed
+    /// CompileCommand, a previous CppFile instance will be returned in this
+    /// field.
+    std::shared_ptr<CppFile> RemovedFile;
+  };
+
+  /// Similar to getOrCreateFile, but will replace a current CppFile for \p File
+  /// with a new one if CompileCommand, provided by \p CDB has changed.
+  /// If a currently stored CppFile had to be replaced, the previous instance
+  /// will be returned in RecreateResult.RemovedFile.
+  RecreateResult recreateFileIfCompileCommandChanged(
+      PathRef File, PathRef ResourceDir, GlobalCompilationDatabase &CDB,
+      bool StorePreamblesInMemory,
+      std::shared_ptr<PCHContainerOperations> PCHs);
+
+  std::shared_ptr<CppFile> getFile(PathRef File) {
+    std::lock_guard<std::mutex> Lock(Mutex);
+
+    auto It = OpenedFiles.find(File);
+    if (It == OpenedFiles.end())
+      return nullptr;
+    return It->second;
+  }
+
+  /// Removes a CppFile, stored for \p File, if it's inside collection and
+  /// returns it.
+  std::shared_ptr<CppFile> removeIfPresent(PathRef File);
+
+private:
+  tooling::CompileCommand getCompileCommand(GlobalCompilationDatabase &CDB,
+                                            PathRef File, PathRef ResourceDir);
+
+  bool compileCommandsAreEqual(tooling::CompileCommand const &LHS,
+                               tooling::CompileCommand const &RHS);
 
   std::mutex Mutex;
-  llvm::StringMap<ClangdUnit> OpenedFiles;
+  llvm::StringMap<std::shared_ptr<CppFile>> OpenedFiles;
+  ASTParsedCallback ASTCallback;
 };
 } // namespace clangd
 } // namespace clang

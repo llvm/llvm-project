@@ -1,5 +1,3 @@
-include(${LLDB_PROJECT_ROOT}/cmake/LLDBDependencies.cmake)
-
 if ((CMAKE_SYSTEM_NAME MATCHES "Windows") OR
     (CMAKE_SYSTEM_NAME MATCHES "NetBSD" ))
   # These targets do not have getopt support, so they rely on the one provided by

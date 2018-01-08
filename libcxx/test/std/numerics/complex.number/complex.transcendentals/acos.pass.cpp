@@ -34,7 +34,6 @@ test()
 
 void test_edges()
 {
-    typedef std::complex<double> C;
     const double pi = std::atan2(+0., -0.);
     const unsigned N = sizeof(testcases) / sizeof(testcases[0]);
     for (unsigned i = 0; i < N; ++i)

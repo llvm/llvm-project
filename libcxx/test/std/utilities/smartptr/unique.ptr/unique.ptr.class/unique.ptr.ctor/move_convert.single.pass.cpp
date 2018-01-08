@@ -14,7 +14,7 @@
 
 // Test unique_ptr converting move ctor
 
-// NOTE: unique_ptr does not provide converting constructors in c++03
+// NOTE: unique_ptr does not provide converting constructors in C++03
 // UNSUPPORTED: c++98, c++03
 
 #include <memory>

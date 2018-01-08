@@ -405,6 +405,38 @@ static void static_Function() {
 
   using ::FOO_NS::InlineNamespace::CE_function;
 // CHECK-FIXES: {{^}}  using ::foo_ns::inline_namespace::ce_function;{{$}}
+
+  unsigned MY_LOCAL_array[] = {1,2,3};
+// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: invalid case style for local variable 'MY_LOCAL_array'
+// CHECK-FIXES: {{^}}  unsigned my_local_array[] = {1,2,3};{{$}}
+
+  unsigned const MyConstLocal_array[] = {1,2,3};
+// CHECK-MESSAGES: :[[@LINE-1]]:18: warning: invalid case style for local constant 'MyConstLocal_array'
+// CHECK-FIXES: {{^}}  unsigned const kMyConstLocalArray[] = {1,2,3};{{$}}
+
+  static unsigned MY_STATIC_array[] = {1,2,3};
+// CHECK-MESSAGES: :[[@LINE-1]]:19: warning: invalid case style for static variable 'MY_STATIC_array'
+// CHECK-FIXES: {{^}}  static unsigned s_myStaticArray[] = {1,2,3};{{$}}
+
+  static unsigned const MyConstStatic_array[] = {1,2,3};
+// CHECK-MESSAGES: :[[@LINE-1]]:25: warning: invalid case style for static constant 'MyConstStatic_array'
+// CHECK-FIXES: {{^}}  static unsigned const MY_CONST_STATIC_ARRAY[] = {1,2,3};{{$}}
+
+  char MY_LOCAL_string[] = "123";
+// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for local variable 'MY_LOCAL_string'
+// CHECK-FIXES: {{^}}  char my_local_string[] = "123";{{$}}
+
+  char const MyConstLocal_string[] = "123";
+// CHECK-MESSAGES: :[[@LINE-1]]:14: warning: invalid case style for local constant 'MyConstLocal_string'
+// CHECK-FIXES: {{^}}  char const kMyConstLocalString[] = "123";{{$}}
+
+  static char MY_STATIC_string[] = "123";
+// CHECK-MESSAGES: :[[@LINE-1]]:15: warning: invalid case style for static variable 'MY_STATIC_string'
+// CHECK-FIXES: {{^}}  static char s_myStaticString[] = "123";{{$}}
+
+  static char const MyConstStatic_string[] = "123";
+// CHECK-MESSAGES: :[[@LINE-1]]:21: warning: invalid case style for static constant 'MyConstStatic_string'
+// CHECK-FIXES: {{^}}  static char const MY_CONST_STATIC_STRING[] = "123";{{$}}
 }
 
 #define MY_TEST_Macro(X) X()
@@ -418,6 +450,27 @@ void MY_TEST_Macro(function) {}
 
 template <typename t_t> struct a {
   typename t_t::template b<> c;
+
+  char const MY_ConstMember_string[4] = "123";
+// CHECK-MESSAGES: :[[@LINE-1]]:14: warning: invalid case style for constant member 'MY_ConstMember_string'
+// CHECK-FIXES: {{^}}  char const my_const_member_string[4] = "123";{{$}}
+
+  static char const MyConstClass_string[];
+// CHECK-MESSAGES: :[[@LINE-1]]:21: warning: invalid case style for class constant 'MyConstClass_string'
+// CHECK-FIXES: {{^}}  static char const kMyConstClassString[];{{$}}
 };
 
+template<typename t_t>
+char const a<t_t>::MyConstClass_string[] = "123";
+// CHECK-MESSAGES: :[[@LINE-1]]:20: warning: invalid case style for class constant 'MyConstClass_string'
+// CHECK-FIXES: {{^}}char const a<t_t>::kMyConstClassString[] = "123";{{$}}
+
 template <template <typename> class A> struct b { A<int> c; };
+
+unsigned MY_GLOBAL_array[] = {1,2,3};
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: invalid case style for global variable 'MY_GLOBAL_array'
+// CHECK-FIXES: {{^}}unsigned g_my_global_array[] = {1,2,3};{{$}}
+
+unsigned const MyConstGlobal_array[] = {1,2,3};
+// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: invalid case style for global constant 'MyConstGlobal_array'
+// CHECK-FIXES: {{^}}unsigned const MY_CONST_GLOBAL_ARRAY[] = {1,2,3};{{$}}

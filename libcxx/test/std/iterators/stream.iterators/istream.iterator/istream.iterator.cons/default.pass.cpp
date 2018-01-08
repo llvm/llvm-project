@@ -9,7 +9,7 @@
 
 // Usage of is_trivially_constructible is broken with these compilers.
 // See https://bugs.llvm.org/show_bug.cgi?id=31016
-// XFAIL: clang-3.7, apple-clang-7 && c++1z
+// XFAIL: clang-3.7, apple-clang-7 && c++17
 
 // <iterator>
 
@@ -32,6 +32,7 @@ template <typename T, bool isTrivial = std::is_trivially_default_constructible_v
 struct test_trivial {
 void operator ()() const {
     constexpr std::istream_iterator<T> it;
+    (void)it;
     }
 };
 
@@ -50,6 +51,7 @@ int main()
     assert(it == T());
 #if TEST_STD_VER >= 11
     constexpr T it2;
+    (void)it2;
 #endif
     }
 

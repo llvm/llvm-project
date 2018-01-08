@@ -12,13 +12,13 @@
 ; This test case checks whether Polly generates second level alias metadata
 ; to distinguish the specific accesses in case of the ublas gemm kernel.
 ;
-; CHECK: !13 = distinct !{!13, !0, !"second level alias metadata"}
+; CHECK: !11 = distinct !{!11, !0, !"second level alias metadata"}
+; CHECK: !12 = distinct !{!12, !0, !"second level alias metadata"}
+; CHECK: !13 = !{!3, !4, !5, !6, !11}
 ; CHECK: !14 = distinct !{!14, !0, !"second level alias metadata"}
-; CHECK: !15 = !{!3, !4, !5, !6, !7, !8, !13}
+; CHECK: !15 = !{!3, !4, !5, !6, !11, !12}
 ; CHECK: !16 = distinct !{!16, !0, !"second level alias metadata"}
-; CHECK: !17 = !{!3, !4, !5, !6, !7, !8, !13, !14}
-; CHECK: !18 = distinct !{!18, !0, !"second level alias metadata"}
-; CHECK: !19 = !{!3, !4, !5, !6, !7, !8, !13, !14, !16}
+; CHECK: !17 = !{!3, !4, !5, !6, !11, !12, !14}
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"

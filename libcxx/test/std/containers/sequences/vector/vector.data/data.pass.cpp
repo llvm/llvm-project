@@ -18,13 +18,13 @@
 #include "asan_testing.h"
 
 struct Nasty {
-	Nasty() : i_(0) {}
-	Nasty(int i) : i_(i) {}
-	~Nasty() {}
+    Nasty() : i_(0) {}
+    Nasty(int i) : i_(i) {}
+    ~Nasty() {}
 
-	Nasty * operator&() const { assert(false); return nullptr; }
-	int i_;
-	};
+    Nasty * operator&() const { assert(false); return nullptr; }
+    int i_;
+    };
 
 int main()
 {

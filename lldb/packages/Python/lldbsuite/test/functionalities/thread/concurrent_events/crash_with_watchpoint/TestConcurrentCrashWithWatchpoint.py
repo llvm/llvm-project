@@ -13,9 +13,9 @@ class ConcurrentCrashWithWatchpoint(ConcurrentEventsBase):
     mydir = ConcurrentEventsBase.compute_mydir(__file__)
 
     @skipIfFreeBSD  # timing out on buildbot
-    @skipIfRemoteDueToDeadlock
     # Atomic sequences are not supported yet for MIPS in LLDB.
     @skipIf(triple='^mips')
+    @add_test_categories(["watchpoint"])
     def test(self):
         """ Test a thread that crashes while another thread hits a watchpoint."""
         self.build(dictionary=self.getBuildFlags())

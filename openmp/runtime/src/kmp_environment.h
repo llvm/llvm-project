@@ -2,7 +2,6 @@
  * kmp_environment.h -- Handle environment varoiables OS-independently.
  */
 
-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,7 +10,6 @@
 // Source Licenses. See LICENSE.txt for details.
 //
 //===----------------------------------------------------------------------===//
-
 
 #ifndef KMP_ENVIRONMENT_H
 #define KMP_ENVIRONMENT_H
@@ -49,19 +47,19 @@ __kmp_env_blk_init( & block, "KMP_WARNING=1|KMP_AFFINITY=none" ); // from string
 __kmp_env_blk_sort( & block ); // Optionally, sort list.
 for ( i = 0; i < block.count; ++ i ) {
     // Process block.vars[ i ].name and block.vars[ i ].value...
-}; // for i
+}
 __kmp_env_block_free( & block );
 */
 
 struct __kmp_env_var {
-  char const *name;
-  char const *value;
+  char *name;
+  char *value;
 };
 typedef struct __kmp_env_var kmp_env_var_t;
 
 struct __kmp_env_blk {
-  char const *bulk;
-  kmp_env_var_t const *vars;
+  char *bulk;
+  kmp_env_var_t *vars;
   int count;
 };
 typedef struct __kmp_env_blk kmp_env_blk_t;

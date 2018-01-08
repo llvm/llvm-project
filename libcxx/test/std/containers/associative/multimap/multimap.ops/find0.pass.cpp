@@ -30,10 +30,12 @@ int main()
 {
     {
     typedef std::multimap<int, double, transparent_less> M;
-    M().find(C2Int{5});
+    M example;
+    assert(example.find(C2Int{5}) == example.end());
     }
     {
     typedef std::multimap<int, double, transparent_less_not_referenceable> M;
-    M().find(C2Int{5});
+    M example;
+    assert(example.find(C2Int{5}) == example.end());
     }
 }

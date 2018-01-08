@@ -41,7 +41,7 @@ void nullDeleter(void*) {}
 
 struct Foo : virtual public std::enable_shared_from_this<Foo>
 {
-	virtual ~Foo() {}
+    virtual ~Foo() {}
 };
 
 struct Bar : public Foo {
@@ -80,12 +80,11 @@ int main()
     }
     {
       typedef std::shared_ptr<PrivateBase> APtr;
-      typedef std::weak_ptr<PrivateBase> WeakAPtr;
       APtr a1 = std::make_shared<PrivateBase>();
       assert(a1.use_count() == 1);
     }
     // Test LWG issue 2529. Only reset '__weak_ptr_' when it's already expired.
-    // http://cplusplus.github.io/LWG/lwg-active.html#2529.
+    // https://cplusplus.github.io/LWG/lwg-defects.html#2529
     // Test two different ways:
     // * Using 'weak_from_this().expired()' in C++17.
     // * Using 'shared_from_this()' in all dialects.
@@ -135,7 +134,7 @@ int main()
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
         try {
-            ptr->shared_from_this();
+            TEST_IGNORE_NODISCARD ptr->shared_from_this();
             assert(false);
         } catch (std::bad_weak_ptr const&) {
         } catch (...) { assert(false); }

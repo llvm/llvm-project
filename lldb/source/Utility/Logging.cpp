@@ -51,7 +51,7 @@ static constexpr Log::Category g_categories[] = {
 
 static Log::Channel g_log_channel(g_categories, LIBLLDB_LOG_DEFAULT);
 
-void lldb_private::InitializeLog() {
+void lldb_private::InitializeLldbChannel() {
   Log::Register("lldb", g_log_channel);
 }
 

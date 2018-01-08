@@ -14,13 +14,26 @@ from lldbsuite.test import lldbutil
 
 class ExecTestCase(TestBase):
 
+    NO_DEBUG_INFO_TESTCASE = True
+
     mydir = TestBase.compute_mydir(__file__)
 
     @skipUnlessDarwin
+    @expectedFailureAll(oslist=['macosx'], bugnumber="rdar://36134350") # when building with cmake on green gragon or on ci.swift.org, this test fails.
     @expectedFailureAll(archs=['i386'], bugnumber="rdar://28656532")
     @expectedFailureAll(oslist=['macosx'], bugnumber="rdar://29291115")
     @expectedFailureAll(oslist=["ios", "tvos", "watchos", "bridgeos"], bugnumber="rdar://problem/34559552") # this exec test has problems on ios systems
-    def test(self):
+    def test_hitting_exec (self):
+        self.do_test(False)
+
+    @skipUnlessDarwin
+    @expectedFailureAll(oslist=['macosx'], bugnumber="rdar://36134350") # when building with cmake on green gragon or on ci.swift.org, this test fails.
+    @expectedFailureAll(archs=['i386'], bugnumber="rdar://28656532")
+    @expectedFailureAll(oslist=["ios", "tvos", "watchos", "bridgeos"], bugnumber="rdar://problem/34559552") # this exec test has problems on ios systems
+    def test_skipping_exec (self):
+        self.do_test(False)
+
+    def do_test(self, skip_exec):
         if self.getArchitecture() == 'x86_64':
             source = os.path.join(os.getcwd(), "main.cpp")
             o_file = os.path.join(os.getcwd(), "main.o")

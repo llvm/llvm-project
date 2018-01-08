@@ -825,32 +825,6 @@ uint32_t ProcessFreeBSD::UpdateThreadListIfNeeded() {
   return m_thread_list.GetSize(false);
 }
 
-#if 0
-bool
-ProcessFreeBSD::UpdateThreadList(ThreadList &old_thread_list, ThreadList &new_thread_list)
-{
-    Log *log (ProcessPOSIXLog::GetLogIfAllCategoriesSet (POSIX_LOG_THREAD));
-    if (log && log->GetMask().Test(POSIX_LOG_VERBOSE))
-        log->Printf ("ProcessFreeBSD::%s() (pid = %" PRIi64 ")", __FUNCTION__, GetID());
-
-    bool has_updated = false;
-    // Update the process thread list with this new thread.
-    // FIXME: We should be using tid, not pid.
-    assert(m_monitor);
-    ThreadSP thread_sp (old_thread_list.FindThreadByID (GetID(), false));
-    if (!thread_sp) {
-        thread_sp.reset(CreateNewFreeBSDThread(*this, GetID()));
-        has_updated = true;
-    }
-
-    if (log && log->GetMask().Test(POSIX_LOG_VERBOSE))
-        log->Printf ("ProcessFreeBSD::%s() updated pid = %" PRIi64, __FUNCTION__, GetID());
-    new_thread_list.AddThread(thread_sp);
-
-    return has_updated; // the list has been updated
-}
-#endif
-
 ByteOrder ProcessFreeBSD::GetByteOrder() const {
   // FIXME: We should be able to extract this value directly.  See comment in
   // ProcessFreeBSD().

@@ -65,9 +65,9 @@ public:
     }
     DEBUG(dbgs() << "Dumping module to " << Dumpfile << '\n');
 
-    std::unique_ptr<tool_output_file> Out;
+    std::unique_ptr<ToolOutputFile> Out;
     std::error_code EC;
-    Out.reset(new tool_output_file(Dumpfile, EC, sys::fs::F_None));
+    Out.reset(new ToolOutputFile(Dumpfile, EC, sys::fs::F_None));
     if (EC) {
       errs() << EC.message() << '\n';
       return false;

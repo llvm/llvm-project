@@ -43,3 +43,8 @@ Options
 
    A string specifying which include-style is used, `llvm` or `google`. Default
    is `llvm`.
+
+.. option:: IgnoreMacros
+
+   If set to non-zero, the check will not give warnings inside macros. Default
+   is `1`.

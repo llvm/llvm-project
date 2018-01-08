@@ -1022,10 +1022,7 @@ void GDBRemoteCommunicationClient::MaybeEnableCompression(
   std::string avail_name;
 
 #if defined(HAVE_LIBCOMPRESSION)
-  // libcompression is weak linked so test if compression_decode_buffer() is
-  // available
-  if (compression_decode_buffer != NULL &&
-      avail_type == CompressionType::None) {
+  if (avail_type == CompressionType::None) {
     for (auto compression : supported_compressions) {
       if (compression == "lzfse") {
         avail_type = CompressionType::LZFSE;
@@ -1037,10 +1034,7 @@ void GDBRemoteCommunicationClient::MaybeEnableCompression(
 #endif
 
 #if defined(HAVE_LIBCOMPRESSION)
-  // libcompression is weak linked so test if compression_decode_buffer() is
-  // available
-  if (compression_decode_buffer != NULL &&
-      avail_type == CompressionType::None) {
+  if (avail_type == CompressionType::None) {
     for (auto compression : supported_compressions) {
       if (compression == "zlib-deflate") {
         avail_type = CompressionType::ZlibDeflate;
@@ -1064,10 +1058,7 @@ void GDBRemoteCommunicationClient::MaybeEnableCompression(
 #endif
 
 #if defined(HAVE_LIBCOMPRESSION)
-  // libcompression is weak linked so test if compression_decode_buffer() is
-  // available
-  if (compression_decode_buffer != NULL &&
-      avail_type == CompressionType::None) {
+  if (avail_type == CompressionType::None) {
     for (auto compression : supported_compressions) {
       if (compression == "lz4") {
         avail_type = CompressionType::LZ4;
@@ -1079,10 +1070,7 @@ void GDBRemoteCommunicationClient::MaybeEnableCompression(
 #endif
 
 #if defined(HAVE_LIBCOMPRESSION)
-  // libcompression is weak linked so test if compression_decode_buffer() is
-  // available
-  if (compression_decode_buffer != NULL &&
-      avail_type == CompressionType::None) {
+  if (avail_type == CompressionType::None) {
     for (auto compression : supported_compressions) {
       if (compression == "lzma") {
         avail_type = CompressionType::LZMA;
@@ -1601,21 +1589,24 @@ GDBRemoteCommunicationClient::GetWatchpointsTriggerAfterInstruction(
   // and we only want to override this behavior if we have explicitly
   // received a qHostInfo telling us otherwise
   if (m_qHostInfo_is_valid != eLazyBoolYes) {
-    // On targets like MIPS, watchpoint exceptions are always generated
-    // before the instruction is executed. The connected target may not
-    // support qHostInfo or qWatchpointSupportInfo packets.
+    // On targets like MIPS and ppc64le, watchpoint exceptions are always
+    // generated before the instruction is executed. The connected target
+    // may not support qHostInfo or qWatchpointSupportInfo packets.
     if (atype == llvm::Triple::mips || atype == llvm::Triple::mipsel ||
-        atype == llvm::Triple::mips64 || atype == llvm::Triple::mips64el)
+        atype == llvm::Triple::mips64 || atype == llvm::Triple::mips64el ||
+        atype == llvm::Triple::ppc64le)
       after = false;
     else
       after = true;
   } else {
-    // For MIPS, set m_watchpoints_trigger_after_instruction to eLazyBoolNo
-    // if it is not calculated before.
-    if (m_watchpoints_trigger_after_instruction == eLazyBoolCalculate &&
-        (atype == llvm::Triple::mips || atype == llvm::Triple::mipsel ||
-         atype == llvm::Triple::mips64 || atype == llvm::Triple::mips64el))
+    // For MIPS and ppc64le, set m_watchpoints_trigger_after_instruction to
+    // eLazyBoolNo if it is not calculated before.
+    if ((m_watchpoints_trigger_after_instruction == eLazyBoolCalculate &&
+         (atype == llvm::Triple::mips || atype == llvm::Triple::mipsel ||
+          atype == llvm::Triple::mips64 || atype == llvm::Triple::mips64el)) ||
+        atype == llvm::Triple::ppc64le) {
       m_watchpoints_trigger_after_instruction = eLazyBoolNo;
+    }
 
     after = (m_watchpoints_trigger_after_instruction != eLazyBoolNo);
   }
@@ -2624,8 +2615,8 @@ size_t GDBRemoteCommunicationClient::GetCurrentThreadIDs(
      * tid.
      * Assume pid=tid=1 in such cases.
     */
-    if (response.IsUnsupportedResponse() && thread_ids.size() == 0 &&
-        IsConnected()) {
+    if ((response.IsUnsupportedResponse() || response.IsNormalResponse()) &&
+        thread_ids.size() == 0 && IsConnected()) {
       thread_ids.push_back(1);
     }
   } else {
@@ -3451,7 +3442,9 @@ ParseModuleSpec(StructuredData::Dictionary *dict) {
 
   if (!dict->GetValueForKeyAsString("uuid", string))
     return llvm::None;
-  result.GetUUID().SetFromStringRef(string, string.size());
+  if (result.GetUUID().SetFromStringRef(string, string.size() / 2) !=
+      string.size())
+    return llvm::None;
 
   if (!dict->GetValueForKeyAsInteger("file_offset", integer))
     return llvm::None;

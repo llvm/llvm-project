@@ -25,6 +25,7 @@
 
 // Other libraries and framework includes
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ExternalASTMerger.h"
 #include "clang/AST/TemplateBase.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -409,7 +410,8 @@ public:
   CompilerType CreateEnumerationType(const char *name,
                                      clang::DeclContext *decl_ctx,
                                      const Declaration &decl,
-                                     const CompilerType &integer_qual_type);
+                                     const CompilerType &integer_qual_type,
+                                     bool is_scoped);
 
   //------------------------------------------------------------------
   // Integer type functions
@@ -806,9 +808,14 @@ public:
 
   size_t GetNumTemplateArguments(lldb::opaque_compiler_type_t type) override;
 
-  CompilerType GetTemplateArgument(lldb::opaque_compiler_type_t type,
-                                   size_t idx,
-                                   lldb::TemplateArgumentKind &kind) override;
+  lldb::TemplateArgumentKind
+  GetTemplateArgumentKind(lldb::opaque_compiler_type_t type,
+                          size_t idx) override;
+  CompilerType GetTypeTemplateArgument(lldb::opaque_compiler_type_t type,
+                                       size_t idx) override;
+  llvm::Optional<CompilerType::IntegralTemplateArgument>
+  GetIntegralTemplateArgument(lldb::opaque_compiler_type_t type,
+                              size_t idx) override;
 
   CompilerType GetTypeForFormatters(void *type) override;
 
@@ -991,8 +998,14 @@ public:
 
   clang::DeclarationName
   GetDeclarationName(const char *name, const CompilerType &function_clang_type);
-
+  
+  virtual const clang::ExternalASTMerger::OriginMap &GetOriginMap() {
+    return m_origins;
+  }
 protected:
+  const clang::ClassTemplateSpecializationDecl *
+  GetAsTemplateSpecialization(lldb::opaque_compiler_type_t type);
+
   //------------------------------------------------------------------
   // Classes that inherit from ClangASTContext can see and modify these
   //------------------------------------------------------------------
@@ -1017,6 +1030,7 @@ protected:
     CompleteTagDeclCallback                         m_callback_tag_decl;
     CompleteObjCInterfaceDeclCallback               m_callback_objc_decl;
     void *                                          m_callback_baton;
+    clang::ExternalASTMerger::OriginMap             m_origins;
     uint32_t                                        m_pointer_byte_size;
     bool                                            m_ast_owned;
     bool                                            m_can_evaluate_expressions;
@@ -1050,7 +1064,12 @@ public:
                                       const char *name) override;
 
   PersistentExpressionState *GetPersistentExpressionState() override;
-
+  
+  clang::ExternalASTMerger &GetMergerUnchecked();
+  
+  const clang::ExternalASTMerger::OriginMap &GetOriginMap() override {
+    return GetMergerUnchecked().GetOrigins();
+  }
 private:
   lldb::TargetWP m_target_wp;
   lldb::ClangPersistentVariablesUP m_persistent_variables; ///< These are the
