@@ -29,10 +29,10 @@
 
 #include "test_iterators.h"
 
-struct add_ten {
+struct add_one {
     template <typename T>
     constexpr auto operator()(T x) const noexcept {
-        return static_cast<T>(x + 10);
+        return static_cast<T>(x + 1);
     }
 };
 
@@ -57,20 +57,20 @@ template <class Iter>
 void
 test()
 {
-          int ia[]     = {  1,  3,   5,   7,    9};
-    const int pResI0[] = { 11, 24,  39,  56,   75};        // with add_ten
-    const int mResI0[] = { 11, 143, 2145, 36465, 692835};
-    const int pResN0[] = { -1, -4,  -9, -16,  -25};        // with negate
-    const int mResN0[] = { -1,  3, -15, 105, -945};
-    const unsigned sa = sizeof(ia) / sizeof(ia[0]);
+          int ia[]     = {  1,  3,   5,   7,    9 };
+    const int pResI0[] = {  2,  6,  12,  20,   30 };        // with add_one
+    const int mResI0[] = {  2,  8, 48,  384, 3840 };
+    const int pResN0[] = { -1, -4,  -9, -16,  -25 };        // with negate
+    const int mResN0[] = { -1,  3, -15, 105, -945 };
+    const unsigned sa = sizeof(ia) / sizeof(ia[0] );
     static_assert(sa == sizeof(pResI0) / sizeof(pResI0[0]));       // just to be sure
     static_assert(sa == sizeof(mResI0) / sizeof(mResI0[0]));       // just to be sure
     static_assert(sa == sizeof(pResN0) / sizeof(pResN0[0]));       // just to be sure
     static_assert(sa == sizeof(mResN0) / sizeof(mResN0[0]));       // just to be sure
 
     for (unsigned int i = 0; i < sa; ++i ) {
-        test(Iter(ia), Iter(ia + i), std::plus<>(),       add_ten{},       pResI0, pResI0 + i);
-        test(Iter(ia), Iter(ia + i), std::multiplies<>(), add_ten{},       mResI0, mResI0 + i);
+        test(Iter(ia), Iter(ia + i), std::plus<>(),       add_one{},       pResI0, pResI0 + i);
+        test(Iter(ia), Iter(ia + i), std::multiplies<>(), add_one{},       mResI0, mResI0 + i);
         test(Iter(ia), Iter(ia + i), std::plus<>(),       std::negate<>(), pResN0, pResN0 + i);
         test(Iter(ia), Iter(ia + i), std::multiplies<>(), std::negate<>(), mResN0, mResN0 + i);
         }
@@ -84,32 +84,32 @@ void basic_tests()
     {
     std::vector<int> v(10);
     std::fill(v.begin(), v.end(), 3);
-    std::transform_inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), add_ten{});
+    std::transform_inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), add_one{});
     std::copy(v.begin(), v.end(), std::ostream_iterator<int>(std::cout, " "));
     std::cout << std::endl;
     for (size_t i = 0; i < v.size(); ++i)
-        assert(v[i] == (int)(i+1) * 13);
+        assert(v[i] == (int)(i+1) * 4);
     }
 
     {
     std::vector<int> v(10);
     std::iota(v.begin(), v.end(), 0);
-    std::transform_inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), add_ten{});
+    std::transform_inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), add_one{});
     for (size_t i = 0; i < v.size(); ++i)
-        assert(v[i] == triangle(i) + (int)(i + 1) * 10);
+        assert(v[i] == triangle(i) + (int)(i + 1));
     }
 
     {
     std::vector<int> v(10);
     std::iota(v.begin(), v.end(), 1);
-    std::transform_inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), add_ten{});
+    std::transform_inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), add_one{});
     for (size_t i = 0; i < v.size(); ++i)
-        assert(v[i] == triangle(i + 1) + (int)(i + 1) * 10);
+        assert(v[i] == triangle(i + 1) + (int)(i + 1));
     }
 
     {
     std::vector<int> v, res;
-    std::transform_inclusive_scan(v.begin(), v.end(), std::back_inserter(res), std::plus<>(), add_ten{});
+    std::transform_inclusive_scan(v.begin(), v.end(), std::back_inserter(res), std::plus<>(), add_one{});
     assert(res.empty());
     }
 }
