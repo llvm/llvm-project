@@ -304,9 +304,6 @@ namespace llvm {
       // Vector FP round.
       VFPROUND, VFPROUND_RND, VFPROUNDS_RND,
 
-      // Convert a vector to mask, set bits base on MSB.
-      CVT2MASK,
-
       // 128-bit vector logical left / right shift
       VSHLDQ, VSRLDQ,
 
