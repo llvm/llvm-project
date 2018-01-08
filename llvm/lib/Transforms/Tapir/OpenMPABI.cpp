@@ -343,10 +343,10 @@ Value *getOrCreateDefaultLocation(Module *M) {
 
 //##############################################################################
 
-llvm::tapir::OpenMPABI::OpenMPABI() {}
+llvm::OpenMPABI::OpenMPABI() {}
 
 /// \brief Get/Create the worker count for the spawning function.
-Value* llvm::tapir::OpenMPABI::GetOrCreateWorker8(Function &F) {
+Value *llvm::OpenMPABI::GetOrCreateWorker8(Function &F) {
   /*
   // Value* W8 = F.getValueSymbolTable()->lookup(worker8_name);
   // if (W8) return W8;
@@ -359,7 +359,7 @@ Value* llvm::tapir::OpenMPABI::GetOrCreateWorker8(Function &F) {
   return nullptr;
 }
 
-void llvm::tapir::OpenMPABI::createSync(SyncInst &SI, ValueToValueMapTy &DetachCtxToStackFrame) {
+void llvm::OpenMPABI::createSync(SyncInst &SI, ValueToValueMapTy &DetachCtxToStackFrame) {
   std::vector<Value *> Args = {DefaultOpenMPLocation,
                             getThreadID(SI.getParent()->getParent())};
   IRBuilder<> builder(&SI);
@@ -570,9 +570,9 @@ Function* formatFunctionToTask(Function* extracted, CallInst* cal) {
   return OutlinedFn;
 }
 
-Function *llvm::tapir::OpenMPABI::createDetach(DetachInst &detach,
-                                   ValueToValueMapTy &DetachCtxToStackFrame,
-                                   DominatorTree &DT, AssumptionCache &AC) {
+Function *llvm::OpenMPABI::createDetach(DetachInst &detach,
+                                        ValueToValueMapTy &DetachCtxToStackFrame,
+                                        DominatorTree &DT, AssumptionCache &AC) {
   BasicBlock *detB = detach.getParent();
   Function &F = *(detB->getParent());
 
@@ -600,7 +600,7 @@ Function *llvm::tapir::OpenMPABI::createDetach(DetachInst &detach,
   return extracted;
 }
 
-void llvm::tapir::OpenMPABI::preProcessFunction(Function &F) {
+void llvm::OpenMPABI::preProcessFunction(Function &F) {
   auto M = (Module *)F.getParent();
   getOrCreateIdentTy(M);
   getOrCreateDefaultLocation(M);
@@ -609,7 +609,7 @@ void llvm::tapir::OpenMPABI::preProcessFunction(Function &F) {
 
 cl::opt<bool> fastOpenMP("fast-openmp", cl::init(false), cl::Hidden,
                        cl::desc("Attempt faster OpenMP implementation, assuming parallel outside set"));
-void llvm::tapir::OpenMPABI::postProcessFunction(Function &F) {
+void llvm::OpenMPABI::postProcessFunction(Function &F) {
   if (fastOpenMP) return;
 
   auto& Context = F.getContext();
@@ -788,5 +788,5 @@ void llvm::tapir::OpenMPABI::postProcessFunction(Function &F) {
   RegionFn->eraseFromParent();
 }
 
-void llvm::tapir::OpenMPABI::postProcessHelper(Function &F) {
+void llvm::OpenMPABI::postProcessHelper(Function &F) {
 }

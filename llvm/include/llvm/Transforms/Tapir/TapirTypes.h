@@ -16,7 +16,6 @@
 #define TAPIR_TYPES_H_
 
 namespace llvm {
-namespace tapir {
 class TapirTarget;
 enum class TapirTargetType : int {
   None = 0,
@@ -25,7 +24,6 @@ enum class TapirTargetType : int {
   OpenMP = 3,
   CilkR = 4,
 };
-}
 }
 
 #endif

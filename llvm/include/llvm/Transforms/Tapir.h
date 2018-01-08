@@ -26,7 +26,7 @@ class FunctionPass;
 //
 // LoopSpawning - Create a loop spawning pass.
 //
-Pass *createLoopSpawningPass(tapir::TapirTarget*);
+Pass *createLoopSpawningPass(TapirTarget*);
 
 //===----------------------------------------------------------------------===//
 //
@@ -62,7 +62,7 @@ FunctionPass *createSpawnUnswitchPass();
 //
 // PromoteDetachToCilk
 //
-ModulePass *createLowerTapirToTargetPass(tapir::TapirTarget*);
+ModulePass *createLowerTapirToTargetPass(TapirTarget*);
 
 } // End llvm namespace
 

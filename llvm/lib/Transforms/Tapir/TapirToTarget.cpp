@@ -23,7 +23,6 @@
 #define DEBUG_TYPE "tapir2target"
 
 using namespace llvm;
-using namespace llvm::tapir;
 
 namespace {
 

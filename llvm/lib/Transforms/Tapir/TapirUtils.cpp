@@ -9,8 +9,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "tapir"
 
-bool llvm::tapir::verifyDetachedCFG(const DetachInst &Detach, DominatorTree &DT,
-                                   bool error) {
+bool llvm::verifyDetachedCFG(const DetachInst &Detach, DominatorTree &DT,
+                             bool error) {
   BasicBlock *Spawned  = Detach.getDetached();
   BasicBlock *Continue = Detach.getContinue();
   BasicBlockEdge DetachEdge(Detach.getParent(), Spawned);
@@ -91,7 +91,7 @@ bool llvm::tapir::verifyDetachedCFG(const DetachInst &Detach, DominatorTree &DT,
   return true;
 }
 
-bool llvm::tapir::populateDetachedCFG(
+bool llvm::populateDetachedCFG(
     const DetachInst &Detach, DominatorTree &DT,
     SmallPtrSetImpl<BasicBlock *> &functionPieces,
     SmallVectorImpl<BasicBlock *> &reattachB,
@@ -207,10 +207,10 @@ bool llvm::tapir::populateDetachedCFG(
 }
 
 //Returns true if success
-Function *llvm::tapir::extractDetachBodyToFunction(DetachInst &detach,
-                                                  DominatorTree &DT,
-                                                  AssumptionCache &AC,
-                                                  CallInst **call) {
+Function *llvm::extractDetachBodyToFunction(DetachInst &detach,
+                                            DominatorTree &DT,
+                                            AssumptionCache &AC,
+                                            CallInst **call) {
   BasicBlock *Detacher = detach.getParent();
   Function &F = *(Detacher->getParent());
 

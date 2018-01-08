@@ -138,7 +138,7 @@ public:
   unsigned SizeLevel;
 
   /// What runtime tapir instructions should be lowered to (nullptr if no lowering)
-  tapir::TapirTarget* tapirTarget;
+  TapirTarget* tapirTarget;
 
   /// LibraryInfo - Specifies information about the runtime library for the
   /// optimizer.  If this is non-null, it is added to both the function and

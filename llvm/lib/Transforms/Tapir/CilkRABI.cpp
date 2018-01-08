@@ -28,9 +28,9 @@ using namespace llvm;
 
 typedef void *__CILK_JUMP_BUFFER[5];
 
-// typedef tapir::CilkRABI::__cilkrts_pedigree __cilkrts_pedigree;
-typedef tapir::CilkRABI::__cilkrts_stack_frame __cilkrts_stack_frame;
-typedef tapir::CilkRABI::__cilkrts_worker __cilkrts_worker;
+// typedef CilkRABI::__cilkrts_pedigree __cilkrts_pedigree;
+typedef CilkRABI::__cilkrts_stack_frame __cilkrts_stack_frame;
+typedef CilkRABI::__cilkrts_worker __cilkrts_worker;
 
 enum {
   __CILKRTS_ABI_VERSION = 1
@@ -119,6 +119,7 @@ DEFAULT_GET_CILKRTS_FUNC(get_tls_worker)
 
 typedef std::map<LLVMContext*, StructType*> TypeBuilderCache;
 
+namespace llvm {
 /// Specializations of TypeBuilder for:
 ///   __cilkrts_pedigree,
 ///   __cilkrts_worker,
@@ -260,6 +261,7 @@ public:
     magic,
   };
 };
+} // end namespace llvm
 
 /// Helper typedefs for cilk struct TypeBuilders.
 typedef TypeBuilder<__cilkrts_stack_frame, false> StackFrameBuilder;
@@ -930,10 +932,10 @@ bool makeFunctionDetachable(Function &extracted,
 
 //##############################################################################
 
-tapir::CilkRABI::CilkRABI() {}
+CilkRABI::CilkRABI() {}
 
 /// \brief Get/Create the worker count for the spawning function.
-Value* tapir::CilkRABI::GetOrCreateWorker8(Function &F) {
+Value *CilkRABI::GetOrCreateWorker8(Function &F) {
   // Value* W8 = F.getValueSymbolTable()->lookup(worker8_name);
   // if (W8) return W8;
   IRBuilder<> B(F.getEntryBlock().getFirstNonPHIOrDbgOrLifetime());
@@ -942,7 +944,7 @@ Value* tapir::CilkRABI::GetOrCreateWorker8(Function &F) {
   return P8;
 }
 
-void tapir::CilkRABI::createSync(SyncInst &SI, ValueToValueMapTy &DetachCtxToStackFrame) {
+void CilkRABI::createSync(SyncInst &SI, ValueToValueMapTy &DetachCtxToStackFrame) {
   Function &Fn = *(SI.getParent()->getParent());
   Module &M = *(Fn.getParent());
 
@@ -958,9 +960,9 @@ void tapir::CilkRABI::createSync(SyncInst &SI, ValueToValueMapTy &DetachCtxToSta
   BranchInst::Create(Succ, CI->getParent());
 }
 
-Function *tapir::CilkRABI::createDetach(DetachInst &detach,
-                                        ValueToValueMapTy &DetachCtxToStackFrame,
-                                        DominatorTree &DT, AssumptionCache &AC) {
+Function *CilkRABI::createDetach(DetachInst &detach,
+                                 ValueToValueMapTy &DetachCtxToStackFrame,
+                                 DominatorTree &DT, AssumptionCache &AC) {
   BasicBlock *detB = detach.getParent();
   Function &F = *(detB->getParent());
 
@@ -1045,15 +1047,15 @@ static inline void inlineCilkFunctions(Function &F) {
   }
 }
 
-void tapir::CilkRABI::preProcessFunction(Function &F) {
+void CilkRABI::preProcessFunction(Function &F) {
   if (F.getName() == "main")
     F.setName("cilk_main");
 }
 
-void tapir::CilkRABI::postProcessFunction(Function &F) {
+void CilkRABI::postProcessFunction(Function &F) {
   inlineCilkFunctions(F);
 }
 
-void tapir::CilkRABI::postProcessHelper(Function &F) {
+void CilkRABI::postProcessHelper(Function &F) {
   inlineCilkFunctions(F);
 }

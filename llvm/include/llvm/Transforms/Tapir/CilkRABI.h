@@ -1,4 +1,4 @@
-//===- CilkRABI.h - Interface to the Intel Cilk Plus runtime ----*- C++ -*--===//
+//===- CilkRABI.h - Interface to the Intel Cilk Plus runtime ---*- C++ -*--===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -37,7 +37,6 @@
 #include <deque>
 
 namespace llvm {
-namespace tapir {
 
 class CilkRABI : public TapirTarget {
 public:
@@ -58,7 +57,6 @@ public:
   struct __cilkrts_worker {};
 };
 
-}  // end of tapir namespace
 }  // end of llvm namespace
 
 #endif

@@ -34,9 +34,9 @@ extern cl::opt<bool> fastCilk;
 
 typedef void *__CILK_JUMP_BUFFER[5];
 
-typedef tapir::CilkABI::__cilkrts_pedigree __cilkrts_pedigree;
-typedef tapir::CilkABI::__cilkrts_stack_frame __cilkrts_stack_frame;
-typedef tapir::CilkABI::__cilkrts_worker __cilkrts_worker;
+typedef CilkABI::__cilkrts_pedigree __cilkrts_pedigree;
+typedef CilkABI::__cilkrts_stack_frame __cilkrts_stack_frame;
+typedef CilkABI::__cilkrts_worker __cilkrts_worker;
 
 enum {
   __CILKRTS_ABI_VERSION = 1
@@ -181,6 +181,7 @@ DEFAULT_GET_CILKRTS_FUNC(cilk_for_64)
 
 typedef std::map<LLVMContext*, StructType*> TypeBuilderCache;
 
+namespace llvm {
 /// Specializations of TypeBuilder for:
 ///   __cilkrts_pedigree,
 ///   __cilkrts_worker,
@@ -320,6 +321,7 @@ public:
     parent_pedigree
   };
 };
+} // end namespace llvm
 
 /// Helper typedefs for cilk struct TypeBuilders.
 typedef TypeBuilder<__cilkrts_stack_frame, false> StackFrameBuilder;
@@ -1148,10 +1150,10 @@ bool makeFunctionDetachable(Function &extracted,
 
 //##############################################################################
 
-tapir::CilkABI::CilkABI() {}
+CilkABI::CilkABI() {}
 
 /// \brief Get/Create the worker count for the spawning function.
-Value* tapir::CilkABI::GetOrCreateWorker8(Function &F) {
+Value *CilkABI::GetOrCreateWorker8(Function &F) {
   // Value* W8 = F.getValueSymbolTable()->lookup(worker8_name);
   // if (W8) return W8;
   IRBuilder<> B(F.getEntryBlock().getFirstNonPHIOrDbgOrLifetime());
@@ -1160,7 +1162,7 @@ Value* tapir::CilkABI::GetOrCreateWorker8(Function &F) {
   return P8;
 }
 
-void tapir::CilkABI::createSync(SyncInst &SI, ValueToValueMapTy &DetachCtxToStackFrame) {
+void CilkABI::createSync(SyncInst &SI, ValueToValueMapTy &DetachCtxToStackFrame) {
   Function &Fn = *(SI.getParent()->getParent());
   Module &M = *(Fn.getParent());
 
@@ -1176,9 +1178,9 @@ void tapir::CilkABI::createSync(SyncInst &SI, ValueToValueMapTy &DetachCtxToStac
   BranchInst::Create(Succ, CI->getParent());
 }
 
-Function *tapir::CilkABI::createDetach(DetachInst &detach,
-                                       ValueToValueMapTy &DetachCtxToStackFrame,
-                                       DominatorTree &DT, AssumptionCache &AC) {
+Function *CilkABI::createDetach(DetachInst &detach,
+                                ValueToValueMapTy &DetachCtxToStackFrame,
+                                DominatorTree &DT, AssumptionCache &AC) {
   BasicBlock *detB = detach.getParent();
   Function &F = *(detB->getParent());
 
@@ -1265,7 +1267,7 @@ static inline void inlineCilkFunctions(Function &F) {
 
 cl::opt<bool> fastCilk("fast-cilk", cl::init(false), cl::Hidden,
                        cl::desc("Attempt faster cilk call implementation"));
-void tapir::CilkABI::preProcessFunction(Function &F) {
+void CilkABI::preProcessFunction(Function &F) {
   if (fastCilk && F.getName()=="main") {
     IRBuilder<> start(F.getEntryBlock().getFirstNonPHIOrDbg());
     auto m = start.CreateCall(CILKRTS_FUNC(init, *F.getParent()));
@@ -1273,11 +1275,11 @@ void tapir::CilkABI::preProcessFunction(Function &F) {
   }
 }
 
-void tapir::CilkABI::postProcessFunction(Function &F) {
+void CilkABI::postProcessFunction(Function &F) {
     inlineCilkFunctions(F);
 }
 
-void tapir::CilkABI::postProcessHelper(Function &F) {
+void CilkABI::postProcessHelper(Function &F) {
     inlineCilkFunctions(F);
 }
 
@@ -1286,7 +1288,7 @@ void tapir::CilkABI::postProcessHelper(Function &F) {
 /// equal to the limit.
 ///
 /// This method assumes that the loop has a single loop latch.
-Value* tapir::CilkABILoopSpawning::canonicalizeLoopLatch(PHINode *IV, Value *Limit) {
+Value* CilkABILoopSpawning::canonicalizeLoopLatch(PHINode *IV, Value *Limit) {
   Loop *L = OrigLoop;
 
   Value *NewCondition;
@@ -1319,7 +1321,7 @@ Value* tapir::CilkABILoopSpawning::canonicalizeLoopLatch(PHINode *IV, Value *Lim
 
 /// Top-level call to convert a Tapir loop to be processed using an appropriate
 /// Cilk ABI call.
-bool tapir::CilkABILoopSpawning::processLoop() {
+bool CilkABILoopSpawning::processLoop() {
   Loop *L = OrigLoop;
 
   BasicBlock *Header = L->getHeader();

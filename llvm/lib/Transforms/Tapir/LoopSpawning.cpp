@@ -59,7 +59,6 @@
 using std::make_pair;
 
 using namespace llvm;
-using namespace llvm::tapir;
 
 #define DEBUG_TYPE LS_NAME
 
@@ -1783,7 +1782,7 @@ struct LoopSpawning : public FunctionPass {
   explicit LoopSpawning(TapirTarget* tapirTarget = nullptr) : FunctionPass(ID),
     tapirTarget(tapirTarget) {
       if (!this->tapirTarget && cilkTarget) {
-        this->tapirTarget = new tapir::CilkABI();
+        this->tapirTarget = new CilkABI();
       }
       assert(this->tapirTarget);
       initializeLoopSpawningPass(*PassRegistry::getPassRegistry());

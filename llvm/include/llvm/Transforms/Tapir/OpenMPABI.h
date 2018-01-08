@@ -39,6 +39,7 @@
 #include <deque>
 
 namespace llvm {
+
 enum OpenMPRuntimeFunction {
   OMPRTL__kmpc_fork_call,
   OMPRTL__kmpc_for_static_init_4,
@@ -56,8 +57,6 @@ enum OpenMPSchedType {
   OMP_sch_static = 34,
 };
 
-namespace tapir {
-
 class OpenMPABI : public TapirTarget {
 public:
 OpenMPABI();
@@ -72,7 +71,6 @@ void postProcessFunction(Function &F) override final;
 void postProcessHelper(Function &F) override final;
 };
 
-}  // end of tapir namespace
 }  // end of llvm namespace
 
 #endif

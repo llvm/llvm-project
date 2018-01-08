@@ -95,7 +95,7 @@ protected:
 
 /// The LoopSpawning Pass.
 struct LoopSpawningPass : public PassInfoMixin<LoopSpawningPass> {
-  tapir::TapirTarget* tapirTarget;
+  TapirTarget* tapirTarget;
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 }

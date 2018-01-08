@@ -40,7 +40,6 @@
 #include <deque>
 
 namespace llvm {
-namespace tapir {
 
 /// CilkABILoopSpawning uses the Cilk Plus ABI to handle Tapir loops.
 class CilkABILoopSpawning : public LoopOutline {
@@ -87,9 +86,9 @@ public:
   struct __cilkrts_pedigree {};
   struct __cilkrts_stack_frame {};
   struct __cilkrts_worker {};
+
 };
 
-}  // end of tapir namespace
 }  // end of llvm namespace
 
 #endif
