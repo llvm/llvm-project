@@ -740,12 +740,12 @@ static bool maybeReportUndefined(Symbol &Sym, InputSectionBase &Sec,
 // this for the N32 ABI. Iterate over relocation with the same offset and put
 // theirs types into the single bit-set.
 template <class RelTy> static RelType getMipsN32RelType(RelTy *&Rel, RelTy *End) {
-  RelType Type = Rel->getType(Config->IsMips64EL);
+  RelType Type = 0;
   uint64_t Offset = Rel->r_offset;
 
   int N = 0;
-  while (Rel + 1 != End && (Rel + 1)->r_offset == Offset)
-    Type |= (++Rel)->getType(Config->IsMips64EL) << (8 * ++N);
+  while (Rel != End && Rel->r_offset == Offset)
+    Type |= (Rel++)->getType(Config->IsMips64EL) << (8 * N++);
   return Type;
 }
 
@@ -850,169 +850,178 @@ template <class ELFT> static void addGotEntry(Symbol &Sym, bool Preemptible) {
 // complicates things for the dynamic linker and means we would have to reserve
 // space for the extra PT_LOAD even if we end up not using it.
 template <class ELFT, class RelTy>
+static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
+                      RelTy *End) {
+  const RelTy &Rel = *I;
+  Symbol &Sym = Sec.getFile<ELFT>()->getRelocTargetSym(Rel);
+  RelType Type;
+
+  // Deal with MIPS oddity.
+  if (Config->MipsN32Abi) {
+    Type = getMipsN32RelType(I, End);
+  } else {
+    Type = Rel.getType(Config->IsMips64EL);
+    ++I;
+  }
+
+  // Get an offset in an output section this relocation is applied to.
+  uint64_t Offset = GetOffset.get(Rel.r_offset);
+  if (Offset == uint64_t(-1))
+    return;
+
+  // Skip if the target symbol is an erroneous undefined symbol.
+  if (maybeReportUndefined(Sym, Sec, Rel.r_offset))
+    return;
+
+  const uint8_t *RelocatedAddr = Sec.Data.begin() + Rel.r_offset;
+  RelExpr Expr = Target->getRelExpr(Type, Sym, RelocatedAddr);
+
+  // Ignore "hint" relocations because they are only markers for relaxation.
+  if (isRelExprOneOf<R_HINT, R_NONE>(Expr))
+    return;
+
+  // In case of MIPS GP-relative relocations always resolve to a definition
+  // in a regular input file, ignoring the one-definition rule. So we,
+  // for example, should not attempt to create a dynamic relocation even
+  // if the target symbol is preemptible. There are two two MIPS GP-relative
+  // relocations R_MIPS_GPREL16 and R_MIPS_GPREL32. But only R_MIPS_GPREL16
+  // can be against a preemptible symbol.
+  if (Expr == R_MIPS_GOTREL) {
+    int64_t Addend = computeAddend<ELFT>(Rel, End, Sec, Expr, Sym.isLocal());
+    Sec.Relocations.push_back({R_MIPS_GOTREL, Type, Offset, Addend, &Sym});
+    return;
+  }
+
+  bool Preemptible = Sym.IsPreemptible;
+
+  // Strenghten or relax relocations.
+  //
+  // GNU ifunc symbols must be accessed via PLT because their addresses
+  // are determined by runtime.
+  //
+  // On the other hand, if we know that a PLT entry will be resolved within
+  // the same ELF module, we can skip PLT access and directly jump to the
+  // destination function. For example, if we are linking a main exectuable,
+  // all dynamic symbols that can be resolved within the executable will
+  // actually be resolved that way at runtime, because the main exectuable
+  // is always at the beginning of a search list. We can leverage that fact.
+  if (Sym.isGnuIFunc())
+    Expr = toPlt(Expr);
+  else if (!Preemptible && Expr == R_GOT_PC && !isAbsoluteValue(Sym))
+    Expr = Target->adjustRelaxExpr(Type, RelocatedAddr, Expr);
+  else if (!Preemptible)
+    Expr = fromPlt(Expr);
+
+  bool IsConstant =
+      isStaticLinkTimeConstant(Expr, Type, Sym, Sec, Rel.r_offset);
+
+  Expr = adjustExpr<ELFT>(Sym, Expr, Type, Sec, Rel.r_offset, IsConstant);
+  if (errorCount())
+    return;
+
+  // This relocation does not require got entry, but it is relative to got and
+  // needs it to be created. Here we request for that.
+  if (isRelExprOneOf<R_GOTONLY_PC, R_GOTONLY_PC_FROM_END, R_GOTREL,
+                     R_GOTREL_FROM_END, R_PPC_TOC>(Expr))
+    InX::Got->HasGotOffRel = true;
+
+  // Read an addend.
+  int64_t Addend = computeAddend<ELFT>(Rel, End, Sec, Expr, Sym.isLocal());
+
+  // Process some TLS relocations, including relaxing TLS relocations.
+  // Note that this function does not handle all TLS relocations.
+  if (unsigned Processed =
+          handleTlsRelocation<ELFT>(Type, Sym, Sec, Offset, Addend, Expr)) {
+    I += (Processed - 1);
+    return;
+  }
+
+  // If a relocation needs PLT, we create PLT and GOTPLT slots for the symbol.
+  if (needsPlt(Expr) && !Sym.isInPlt()) {
+    if (Sym.isGnuIFunc() && !Preemptible)
+      addPltEntry<ELFT>(InX::Iplt, InX::IgotPlt, InX::RelaIplt,
+                        Target->IRelativeRel, Sym, true);
+    else
+      addPltEntry<ELFT>(InX::Plt, InX::GotPlt, InX::RelaPlt, Target->PltRel,
+                        Sym, !Preemptible);
+  }
+
+  // Create a GOT slot if a relocation needs GOT.
+  if (needsGot(Expr)) {
+    if (Config->EMachine == EM_MIPS) {
+      // MIPS ABI has special rules to process GOT entries and doesn't
+      // require relocation entries for them. A special case is TLS
+      // relocations. In that case dynamic loader applies dynamic
+      // relocations to initialize TLS GOT entries.
+      // See "Global Offset Table" in Chapter 5 in the following document
+      // for detailed description:
+      // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
+      InX::MipsGot->addEntry(Sym, Addend, Expr);
+      if (Sym.isTls() && Sym.IsPreemptible)
+        InX::RelaDyn->addReloc({Target->TlsGotRel, InX::MipsGot,
+                                Sym.getGotOffset(), false, &Sym, 0});
+    } else if (!Sym.isInGot()) {
+      addGotEntry<ELFT>(Sym, Preemptible);
+    }
+  }
+
+  if (!needsPlt(Expr) && !needsGot(Expr) && Sym.IsPreemptible) {
+    // We don't know anything about the finaly symbol. Just ask the dynamic
+    // linker to handle the relocation for us.
+    if (!Target->isPicRel(Type))
+      errorOrWarn("relocation " + toString(Type) +
+                  " cannot be used against symbol " + toString(Sym) +
+                  "; recompile with -fPIC" + getLocation(Sec, Sym, Offset));
+
+    InX::RelaDyn->addReloc(
+        {Target->getDynRel(Type), &Sec, Offset, false, &Sym, Addend});
+
+    // MIPS ABI turns using of GOT and dynamic relocations inside out.
+    // While regular ABI uses dynamic relocations to fill up GOT entries
+    // MIPS ABI requires dynamic linker to fills up GOT entries using
+    // specially sorted dynamic symbol table. This affects even dynamic
+    // relocations against symbols which do not require GOT entries
+    // creation explicitly, i.e. do not have any GOT-relocations. So if
+    // a preemptible symbol has a dynamic relocation we anyway have
+    // to create a GOT entry for it.
+    // If a non-preemptible symbol has a dynamic relocation against it,
+    // dynamic linker takes it st_value, adds offset and writes down
+    // result of the dynamic relocation. In case of preemptible symbol
+    // dynamic linker performs symbol resolution, writes the symbol value
+    // to the GOT entry and reads the GOT entry when it needs to perform
+    // a dynamic relocation.
+    // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf p.4-19
+    if (Config->EMachine == EM_MIPS)
+      InX::MipsGot->addEntry(Sym, Addend, Expr);
+    return;
+  }
+
+  // If the produced value is a constant, we just remember to write it
+  // when outputting this section. We also have to do it if the format
+  // uses Elf_Rel, since in that case the written value is the addend.
+  if (IsConstant) {
+    Sec.Relocations.push_back({Expr, Type, Offset, Addend, &Sym});
+    return;
+  }
+
+  // If the output being produced is position independent, the final value
+  // is still not known. In that case we still need some help from the
+  // dynamic linker. We can however do better than just copying the incoming
+  // relocation. We can process some of it and and just ask the dynamic
+  // linker to add the load address.
+  InX::RelaDyn->addReloc(Target->RelativeRel, &Sec, Offset, true, &Sym, Addend,
+                         Expr, Type);
+}
+
+template <class ELFT, class RelTy>
 static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
   OffsetGetter GetOffset(Sec);
 
   // Not all relocations end up in Sec.Relocations, but a lot do.
   Sec.Relocations.reserve(Rels.size());
 
-  for (auto I = Rels.begin(), End = Rels.end(); I != End; ++I) {
-    const RelTy &Rel = *I;
-    Symbol &Sym = Sec.getFile<ELFT>()->getRelocTargetSym(Rel);
-    RelType Type = Rel.getType(Config->IsMips64EL);
-
-    // Deal with MIPS oddity.
-    if (Config->MipsN32Abi)
-      Type = getMipsN32RelType(I, End);
-
-    // Get an offset in an output section this relocation is applied to.
-    uint64_t Offset = GetOffset.get(Rel.r_offset);
-    if (Offset == uint64_t(-1))
-      continue;
-
-    // Skip if the target symbol is an erroneous undefined symbol.
-    if (maybeReportUndefined(Sym, Sec, Rel.r_offset))
-      continue;
-
-    const uint8_t *RelocatedAddr = Sec.Data.begin() + Rel.r_offset;
-    RelExpr Expr = Target->getRelExpr(Type, Sym, RelocatedAddr);
-
-    // Ignore "hint" relocations because they are only markers for relaxation.
-    if (isRelExprOneOf<R_HINT, R_NONE>(Expr))
-      continue;
-
-    // In case of MIPS GP-relative relocations always resolve to a definition
-    // in a regular input file, ignoring the one-definition rule. So we,
-    // for example, should not attempt to create a dynamic relocation even
-    // if the target symbol is preemptible. There are two two MIPS GP-relative
-    // relocations R_MIPS_GPREL16 and R_MIPS_GPREL32. But only R_MIPS_GPREL16
-    // can be against a preemptible symbol.
-    if (Expr == R_MIPS_GOTREL) {
-      int64_t Addend = computeAddend<ELFT>(Rel, End, Sec, Expr, Sym.isLocal());
-      Sec.Relocations.push_back({R_MIPS_GOTREL, Type, Offset, Addend, &Sym});
-      continue;
-    }
-
-    bool Preemptible = Sym.IsPreemptible;
-
-    // Strenghten or relax relocations.
-    //
-    // GNU ifunc symbols must be accessed via PLT because their addresses
-    // are determined by runtime.
-    //
-    // On the other hand, if we know that a PLT entry will be resolved within
-    // the same ELF module, we can skip PLT access and directly jump to the
-    // destination function. For example, if we are linking a main exectuable,
-    // all dynamic symbols that can be resolved within the executable will
-    // actually be resolved that way at runtime, because the main exectuable
-    // is always at the beginning of a search list. We can leverage that fact.
-    if (Sym.isGnuIFunc())
-      Expr = toPlt(Expr);
-    else if (!Preemptible && Expr == R_GOT_PC && !isAbsoluteValue(Sym))
-      Expr = Target->adjustRelaxExpr(Type, RelocatedAddr, Expr);
-    else if (!Preemptible)
-      Expr = fromPlt(Expr);
-
-    bool IsConstant =
-        isStaticLinkTimeConstant(Expr, Type, Sym, Sec, Rel.r_offset);
-
-    Expr = adjustExpr<ELFT>(Sym, Expr, Type, Sec, Rel.r_offset, IsConstant);
-    if (errorCount())
-      continue;
-
-    // This relocation does not require got entry, but it is relative to got and
-    // needs it to be created. Here we request for that.
-    if (isRelExprOneOf<R_GOTONLY_PC, R_GOTONLY_PC_FROM_END, R_GOTREL,
-                       R_GOTREL_FROM_END, R_PPC_TOC>(Expr))
-      InX::Got->HasGotOffRel = true;
-
-    // Read an addend.
-    int64_t Addend = computeAddend<ELFT>(Rel, End, Sec, Expr, Sym.isLocal());
-
-    // Process some TLS relocations, including relaxing TLS relocations.
-    // Note that this function does not handle all TLS relocations.
-    if (unsigned Processed =
-            handleTlsRelocation<ELFT>(Type, Sym, Sec, Offset, Addend, Expr)) {
-      I += (Processed - 1);
-      continue;
-    }
-
-    // If a relocation needs PLT, we create PLT and GOTPLT slots for the symbol.
-    if (needsPlt(Expr) && !Sym.isInPlt()) {
-      if (Sym.isGnuIFunc() && !Preemptible)
-        addPltEntry<ELFT>(InX::Iplt, InX::IgotPlt, InX::RelaIplt,
-                          Target->IRelativeRel, Sym, true);
-      else
-        addPltEntry<ELFT>(InX::Plt, InX::GotPlt, InX::RelaPlt, Target->PltRel,
-                          Sym, !Preemptible);
-    }
-
-    // Create a GOT slot if a relocation needs GOT.
-    if (needsGot(Expr)) {
-      if (Config->EMachine == EM_MIPS) {
-        // MIPS ABI has special rules to process GOT entries and doesn't
-        // require relocation entries for them. A special case is TLS
-        // relocations. In that case dynamic loader applies dynamic
-        // relocations to initialize TLS GOT entries.
-        // See "Global Offset Table" in Chapter 5 in the following document
-        // for detailed description:
-        // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-        InX::MipsGot->addEntry(Sym, Addend, Expr);
-        if (Sym.isTls() && Sym.IsPreemptible)
-          InX::RelaDyn->addReloc({Target->TlsGotRel, InX::MipsGot,
-                                  Sym.getGotOffset(), false, &Sym, 0});
-      } else if (!Sym.isInGot()) {
-        addGotEntry<ELFT>(Sym, Preemptible);
-      }
-    }
-
-    if (!needsPlt(Expr) && !needsGot(Expr) && Sym.IsPreemptible) {
-      // We don't know anything about the finaly symbol. Just ask the dynamic
-      // linker to handle the relocation for us.
-      if (!Target->isPicRel(Type))
-        errorOrWarn("relocation " + toString(Type) +
-                    " cannot be used against symbol " + toString(Sym) +
-                    "; recompile with -fPIC" + getLocation(Sec, Sym, Offset));
-
-      InX::RelaDyn->addReloc(
-          {Target->getDynRel(Type), &Sec, Offset, false, &Sym, Addend});
-
-      // MIPS ABI turns using of GOT and dynamic relocations inside out.
-      // While regular ABI uses dynamic relocations to fill up GOT entries
-      // MIPS ABI requires dynamic linker to fills up GOT entries using
-      // specially sorted dynamic symbol table. This affects even dynamic
-      // relocations against symbols which do not require GOT entries
-      // creation explicitly, i.e. do not have any GOT-relocations. So if
-      // a preemptible symbol has a dynamic relocation we anyway have
-      // to create a GOT entry for it.
-      // If a non-preemptible symbol has a dynamic relocation against it,
-      // dynamic linker takes it st_value, adds offset and writes down
-      // result of the dynamic relocation. In case of preemptible symbol
-      // dynamic linker performs symbol resolution, writes the symbol value
-      // to the GOT entry and reads the GOT entry when it needs to perform
-      // a dynamic relocation.
-      // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf p.4-19
-      if (Config->EMachine == EM_MIPS)
-        InX::MipsGot->addEntry(Sym, Addend, Expr);
-      continue;
-    }
-
-    // If the produced value is a constant, we just remember to write it
-    // when outputting this section. We also have to do it if the format
-    // uses Elf_Rel, since in that case the written value is the addend.
-    if (IsConstant) {
-      Sec.Relocations.push_back({Expr, Type, Offset, Addend, &Sym});
-      continue;
-    }
-
-    // If the output being produced is position independent, the final value
-    // is still not known. In that case we still need some help from the
-    // dynamic linker. We can however do better than just copying the incoming
-    // relocation. We can process some of it and and just ask the dynamic
-    // linker to add the load address.
-    InX::RelaDyn->addReloc(Target->RelativeRel, &Sec, Offset, true, &Sym,
-                           Addend, Expr, Type);
-  }
+  for (auto I = Rels.begin(), End = Rels.end(); I != End;)
+    scanReloc<ELFT>(Sec, GetOffset, I, End);
 }
 
 template <class ELFT> void elf::scanRelocations(InputSectionBase &S) {
