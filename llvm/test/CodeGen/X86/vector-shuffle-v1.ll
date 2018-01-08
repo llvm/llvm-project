@@ -6,7 +6,14 @@
 define <2 x i1> @shuf2i1_1_0(<2 x i1> %a) {
 ; AVX512F-LABEL: shuf2i1_1_0:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; AVX512F-NEXT:    vpsllq $63, %xmm0, %xmm0
+; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
+; AVX512F-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
+; AVX512F-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: shuf2i1_1_0:
@@ -36,9 +43,16 @@ define <2 x i1> @shuf2i1_1_0(<2 x i1> %a) {
 define <2 x i1> @shuf2i1_1_2(<2 x i1> %a) {
 ; AVX512F-LABEL: shuf2i1_1_2:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    movl $1, %eax
+; AVX512F-NEXT:    vpsllq $63, %xmm0, %xmm0
+; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
+; AVX512F-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    movq $-1, %rax
 ; AVX512F-NEXT:    vmovq %rax, %xmm1
 ; AVX512F-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[8,9,10,11,12,13,14,15],xmm1[0,1,2,3,4,5,6,7]
+; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
+; AVX512F-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: shuf2i1_1_2:
@@ -73,7 +87,14 @@ define <2 x i1> @shuf2i1_1_2(<2 x i1> %a) {
 define <4 x i1> @shuf4i1_3_2_10(<4 x i1> %a) {
 ; AVX512F-LABEL: shuf4i1_3_2_10:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,2,1,0]
+; AVX512F-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,2,1,0]
+; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: shuf4i1_3_2_10:

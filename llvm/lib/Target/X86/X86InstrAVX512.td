@@ -2962,46 +2962,103 @@ multiclass avx512_mask_shiftop_w<bits<8> opc1, bits<8> opc2, string OpcodeStr,
 defm KSHIFTL : avx512_mask_shiftop_w<0x32, 0x33, "kshiftl", X86kshiftl, SSE_PSHUF>;
 defm KSHIFTR : avx512_mask_shiftop_w<0x30, 0x31, "kshiftr", X86kshiftr, SSE_PSHUF>;
 
-multiclass axv512_icmp_packed_no_vlx_lowering<SDNode OpNode, string InstStr> {
-def : Pat<(v8i1 (OpNode (v8i32 VR256X:$src1), (v8i32 VR256X:$src2))),
-            (COPY_TO_REGCLASS (!cast<Instruction>(InstStr##Zrr)
-            (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)),
-            (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src2, sub_ymm))), VK8)>;
+multiclass axv512_icmp_packed_no_vlx_lowering<SDNode OpNode, string InstStr,
+                                              X86VectorVTInfo Narrow,
+                                              X86VectorVTInfo Wide> {
+def : Pat<(Narrow.KVT (OpNode (Narrow.VT Narrow.RC:$src1),
+                              (Narrow.VT Narrow.RC:$src2))),
+          (COPY_TO_REGCLASS
+           (!cast<Instruction>(InstStr##Zrr)
+            (Wide.VT (INSERT_SUBREG (IMPLICIT_DEF), Narrow.RC:$src1, Narrow.SubRegIdx)),
+            (Wide.VT (INSERT_SUBREG (IMPLICIT_DEF), Narrow.RC:$src2, Narrow.SubRegIdx))),
+           Narrow.KRC)>;
 
-def : Pat<(v8i1 (and VK8:$mask,
-                     (OpNode (v8i32 VR256X:$src1), (v8i32 VR256X:$src2)))),
+def : Pat<(Narrow.KVT (and Narrow.KRC:$mask,
+                           (OpNode (Narrow.VT Narrow.RC:$src1),
+                                   (Narrow.VT Narrow.RC:$src2)))),
           (COPY_TO_REGCLASS
            (!cast<Instruction>(InstStr##Zrrk)
-            (COPY_TO_REGCLASS VK8:$mask, VK16),
-            (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)),
-            (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src2, sub_ymm))),
-           VK8)>;
+            (COPY_TO_REGCLASS Narrow.KRC:$mask, Wide.KRC),
+            (Wide.VT (INSERT_SUBREG (IMPLICIT_DEF), Narrow.RC:$src1, Narrow.SubRegIdx)),
+            (Wide.VT (INSERT_SUBREG (IMPLICIT_DEF), Narrow.RC:$src2, Narrow.SubRegIdx))),
+           Narrow.KRC)>;
 }
 
 multiclass axv512_icmp_packed_cc_no_vlx_lowering<SDNode OpNode, string InstStr,
-                                                AVX512VLVectorVTInfo _> {
-def : Pat<(v8i1 (OpNode (_.info256.VT VR256X:$src1), (_.info256.VT VR256X:$src2), imm:$cc)),
-            (COPY_TO_REGCLASS (!cast<Instruction>(InstStr##Zrri)
-            (_.info512.VT (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)),
-            (_.info512.VT (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src2, sub_ymm)),
-            imm:$cc), VK8)>;
+                                                 X86VectorVTInfo Narrow,
+                                                 X86VectorVTInfo Wide> {
+def : Pat<(Narrow.KVT (OpNode (Narrow.VT Narrow.RC:$src1),
+                              (Narrow.VT Narrow.RC:$src2), imm:$cc)),
+          (COPY_TO_REGCLASS
+           (!cast<Instruction>(InstStr##Zrri)
+            (Wide.VT (INSERT_SUBREG (IMPLICIT_DEF), Narrow.RC:$src1, Narrow.SubRegIdx)),
+            (Wide.VT (INSERT_SUBREG (IMPLICIT_DEF), Narrow.RC:$src2, Narrow.SubRegIdx)),
+            imm:$cc), Narrow.KRC)>;
 
-def : Pat<(v8i1 (and VK8:$mask, (OpNode (_.info256.VT VR256X:$src1),
-                                        (_.info256.VT VR256X:$src2), imm:$cc))),
-            (COPY_TO_REGCLASS (!cast<Instruction>(InstStr##Zrrik)
-            (COPY_TO_REGCLASS VK8:$mask, VK16),
-            (_.info512.VT (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)),
-            (_.info512.VT (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src2, sub_ymm)),
-            imm:$cc), VK8)>;
+def : Pat<(Narrow.KVT (and Narrow.KRC:$mask,
+                           (OpNode (Narrow.VT Narrow.RC:$src1),
+                                   (Narrow.VT Narrow.RC:$src2), imm:$cc))),
+          (COPY_TO_REGCLASS (!cast<Instruction>(InstStr##Zrrik)
+           (COPY_TO_REGCLASS Narrow.KRC:$mask, Wide.KRC),
+           (Wide.VT (INSERT_SUBREG (IMPLICIT_DEF), Narrow.RC:$src1, Narrow.SubRegIdx)),
+           (Wide.VT (INSERT_SUBREG (IMPLICIT_DEF), Narrow.RC:$src2, Narrow.SubRegIdx)),
+           imm:$cc), Narrow.KRC)>;
 }
 
 let Predicates = [HasAVX512, NoVLX] in {
-  defm : axv512_icmp_packed_no_vlx_lowering<X86pcmpgtm, "VPCMPGTD">;
-  defm : axv512_icmp_packed_no_vlx_lowering<X86pcmpeqm, "VPCMPEQD">;
+  defm : axv512_icmp_packed_no_vlx_lowering<X86pcmpgtm, "VPCMPGTD", v8i32x_info, v16i32_info>;
+  defm : axv512_icmp_packed_no_vlx_lowering<X86pcmpeqm, "VPCMPEQD", v8i32x_info, v16i32_info>;
 
-  defm : axv512_icmp_packed_cc_no_vlx_lowering<X86cmpm, "VCMPPS", avx512vl_f32_info>;
-  defm : axv512_icmp_packed_cc_no_vlx_lowering<X86cmpm, "VPCMPD", avx512vl_i32_info>;
-  defm : axv512_icmp_packed_cc_no_vlx_lowering<X86cmpmu, "VPCMPUD", avx512vl_i32_info>;
+  defm : axv512_icmp_packed_no_vlx_lowering<X86pcmpgtm, "VPCMPGTD", v4i32x_info, v16i32_info>;
+  defm : axv512_icmp_packed_no_vlx_lowering<X86pcmpeqm, "VPCMPEQD", v4i32x_info, v16i32_info>;
+
+  defm : axv512_icmp_packed_no_vlx_lowering<X86pcmpgtm, "VPCMPGTQ", v4i64x_info, v8i64_info>;
+  defm : axv512_icmp_packed_no_vlx_lowering<X86pcmpeqm, "VPCMPEQQ", v4i64x_info, v8i64_info>;
+
+  defm : axv512_icmp_packed_no_vlx_lowering<X86pcmpgtm, "VPCMPGTQ", v2i64x_info, v8i64_info>;
+  defm : axv512_icmp_packed_no_vlx_lowering<X86pcmpeqm, "VPCMPEQQ", v2i64x_info, v8i64_info>;
+
+  defm : axv512_icmp_packed_cc_no_vlx_lowering<X86cmpm, "VCMPPS", v8f32x_info, v16f32_info>;
+  defm : axv512_icmp_packed_cc_no_vlx_lowering<X86cmpm, "VPCMPD", v8i32x_info, v16i32_info>;
+  defm : axv512_icmp_packed_cc_no_vlx_lowering<X86cmpmu, "VPCMPUD", v8i32x_info, v16i32_info>;
+
+  defm : axv512_icmp_packed_cc_no_vlx_lowering<X86cmpm, "VCMPPS", v4f32x_info, v16f32_info>;
+  defm : axv512_icmp_packed_cc_no_vlx_lowering<X86cmpm, "VPCMPD", v4i32x_info, v16i32_info>;
+  defm : axv512_icmp_packed_cc_no_vlx_lowering<X86cmpmu, "VPCMPUD", v4i32x_info, v16i32_info>;
+
+  defm : axv512_icmp_packed_cc_no_vlx_lowering<X86cmpm, "VCMPPD", v4f64x_info, v8f64_info>;
+  defm : axv512_icmp_packed_cc_no_vlx_lowering<X86cmpm, "VPCMPQ", v4i64x_info, v8i64_info>;
+  defm : axv512_icmp_packed_cc_no_vlx_lowering<X86cmpmu, "VPCMPUQ", v4i64x_info, v8i64_info>;
+
+  defm : axv512_icmp_packed_cc_no_vlx_lowering<X86cmpm, "VCMPPD", v2f64x_info, v8f64_info>;
+  defm : axv512_icmp_packed_cc_no_vlx_lowering<X86cmpm, "VPCMPQ", v2i64x_info, v8i64_info>;
+  defm : axv512_icmp_packed_cc_no_vlx_lowering<X86cmpmu, "VPCMPUQ", v2i64x_info, v8i64_info>;
+}
+
+let Predicates = [HasBWI, NoVLX] in {
+  defm : axv512_icmp_packed_no_vlx_lowering<X86pcmpgtm, "VPCMPGTB", v32i8x_info, v64i8_info>;
+  defm : axv512_icmp_packed_no_vlx_lowering<X86pcmpeqm, "VPCMPEQB", v32i8x_info, v64i8_info>;
+
+  defm : axv512_icmp_packed_no_vlx_lowering<X86pcmpgtm, "VPCMPGTB", v16i8x_info, v64i8_info>;
+  defm : axv512_icmp_packed_no_vlx_lowering<X86pcmpeqm, "VPCMPEQB", v16i8x_info, v64i8_info>;
+
+  defm : axv512_icmp_packed_no_vlx_lowering<X86pcmpgtm, "VPCMPGTW", v16i16x_info, v32i16_info>;
+  defm : axv512_icmp_packed_no_vlx_lowering<X86pcmpeqm, "VPCMPEQW", v16i16x_info, v32i16_info>;
+
+  defm : axv512_icmp_packed_no_vlx_lowering<X86pcmpgtm, "VPCMPGTW", v8i16x_info, v32i16_info>;
+  defm : axv512_icmp_packed_no_vlx_lowering<X86pcmpeqm, "VPCMPEQW", v8i16x_info, v32i16_info>;
+
+  defm : axv512_icmp_packed_cc_no_vlx_lowering<X86cmpm, "VPCMPB", v32i8x_info, v64i8_info>;
+  defm : axv512_icmp_packed_cc_no_vlx_lowering<X86cmpmu, "VPCMPUB", v32i8x_info, v64i8_info>;
+
+  defm : axv512_icmp_packed_cc_no_vlx_lowering<X86cmpm, "VPCMPB", v16i8x_info, v64i8_info>;
+  defm : axv512_icmp_packed_cc_no_vlx_lowering<X86cmpmu, "VPCMPUB", v16i8x_info, v64i8_info>;
+
+  defm : axv512_icmp_packed_cc_no_vlx_lowering<X86cmpm, "VPCMPW", v16i16x_info, v32i16_info>;
+  defm : axv512_icmp_packed_cc_no_vlx_lowering<X86cmpmu, "VPCMPUW", v16i16x_info, v32i16_info>;
+
+  defm : axv512_icmp_packed_cc_no_vlx_lowering<X86cmpm, "VPCMPW", v8i16x_info, v32i16_info>;
+  defm : axv512_icmp_packed_cc_no_vlx_lowering<X86cmpmu, "VPCMPUW", v8i16x_info, v32i16_info>;
 }
 
 // Mask setting all 0s or 1s
@@ -3376,8 +3433,15 @@ multiclass mask_move_lowering<string InstrStr, X86VectorVTInfo Narrow,
 // Patterns for handling v8i1 selects of 256-bit vectors when VLX isn't
 // available. Use a 512-bit operation and extract.
 let Predicates = [HasAVX512, NoVLX] in {
+  defm : mask_move_lowering<"VMOVAPSZ", v4f32x_info, v16f32_info>;
+  defm : mask_move_lowering<"VMOVDQA32Z", v4i32x_info, v16i32_info>;
   defm : mask_move_lowering<"VMOVAPSZ", v8f32x_info, v16f32_info>;
   defm : mask_move_lowering<"VMOVDQA32Z", v8i32x_info, v16i32_info>;
+
+  defm : mask_move_lowering<"VMOVAPDZ", v2f64x_info, v8f64_info>;
+  defm : mask_move_lowering<"VMOVDQA64Z", v2i64x_info, v8i64_info>;
+  defm : mask_move_lowering<"VMOVAPDZ", v4f64x_info, v8f64_info>;
+  defm : mask_move_lowering<"VMOVDQA64Z", v4i64x_info, v8i64_info>;
 }
 
 let Predicates = [HasAVX512] in {
@@ -8687,7 +8751,7 @@ defm VPMOVM2Q : cvt_mask_by_elt_width<0x38, avx512vl_i64_info, "vpmovm2", HasDQI
 multiclass convert_vector_to_mask_common<bits<8> opc, X86VectorVTInfo _, string OpcodeStr > {
     def rr : AVX512XS8I<opc, MRMSrcReg, (outs _.KRC:$dst), (ins _.RC:$src),
                         !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
-                        [(set _.KRC:$dst, (X86cvt2mask (_.VT _.RC:$src)))],
+                        [(set _.KRC:$dst, (X86pcmpgtm _.ImmAllZerosV, (_.VT _.RC:$src)))],
                         IIC_SSE_MOV_S_RR>, EVEX, Sched<[WriteMove]>;
 }
 
@@ -8695,7 +8759,7 @@ multiclass convert_vector_to_mask_common<bits<8> opc, X86VectorVTInfo _, string 
 multiclass convert_vector_to_mask_lowering<X86VectorVTInfo ExtendInfo,
                                                             X86VectorVTInfo _> {
 
-  def : Pat<(_.KVT (X86cvt2mask (_.VT _.RC:$src))),
+  def : Pat<(_.KVT (X86pcmpgtm _.ImmAllZerosV, (_.VT _.RC:$src))),
             (_.KVT (COPY_TO_REGCLASS
                      (!cast<Instruction>(NAME#"Zrr")
                        (INSERT_SUBREG (ExtendInfo.VT (IMPLICIT_DEF)),

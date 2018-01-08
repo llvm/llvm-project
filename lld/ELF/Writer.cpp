@@ -427,13 +427,14 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (errorCount())
     return;
 
+  Script->assignAddresses();
+
   // If -compressed-debug-sections is specified, we need to compress
   // .debug_* sections. Do it right now because it changes the size of
   // output sections.
   parallelForEach(OutputSections,
                   [](OutputSection *Sec) { Sec->maybeCompress<ELFT>(); });
 
-  Script->assignAddresses();
   Script->allocateHeaders(Phdrs);
 
   // Remove empty PT_LOAD to avoid causing the dynamic linker to try to mmap a

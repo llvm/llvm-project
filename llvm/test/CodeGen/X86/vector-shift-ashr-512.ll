@@ -463,8 +463,7 @@ define <64 x i8> @ashr_const7_v64i8(<64 x i8> %a) {
 ;
 ; AVX512BW-LABEL: ashr_const7_v64i8:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512BW-NEXT:    vpcmpgtb %zmm0, %zmm1, %k0
+; AVX512BW-NEXT:    vpmovb2m %zmm0, %k0
 ; AVX512BW-NEXT:    vpmovm2b %k0, %zmm0
 ; AVX512BW-NEXT:    retq
   %res = ashr <64 x i8> %a, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
