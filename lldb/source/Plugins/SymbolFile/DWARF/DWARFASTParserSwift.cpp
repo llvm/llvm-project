@@ -220,7 +220,7 @@ Function *DWARFASTParserSwift::ParseFunctionFromDWARF(const SymbolContext &sc,
       // mangled name (even though the information is often there)
       // because Swift reserves the right to omit it from the name
       // if it doesn't need it.  So instead we look for the
-      // DW_TAG_thrown_error:
+      // DW_TAG_thrown_type:
       
       bool can_throw = false;
       
