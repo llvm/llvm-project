@@ -183,15 +183,6 @@ template <class ELFT> void OutputSection::maybeCompress() {
       !Name.startswith(".debug_"))
     return;
 
-  // Calculate the section offsets and size pre-compression.
-  Size = 0;
-  for (BaseCommand *Cmd : SectionCommands)
-    if (auto *ISD = dyn_cast<InputSectionDescription>(Cmd))
-      for (InputSection *IS : ISD->Sections) {
-        IS->OutSecOff = alignTo(Size, IS->Alignment);
-        this->Size = IS->OutSecOff + IS->getSize();
-      }
-
   // Create a section header.
   ZDebugHeader.resize(sizeof(Elf_Chdr));
   auto *Hdr = reinterpret_cast<Elf_Chdr *>(ZDebugHeader.data());
