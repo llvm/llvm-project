@@ -6,7 +6,7 @@
 
 # REQUIRES: x86
 
-# CHECK-NOT: xxx
+# CHECK-NOT: Name: xxx
 
 .file "xxx"
 .file ""
