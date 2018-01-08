@@ -598,12 +598,6 @@ template <class ELFT> void SymbolTable::scanShlibUndefined() {
       if (!Sym || !Sym->isDefined())
         continue;
       Sym->ExportDynamic = true;
-
-      // If -dynamic-list is given, the default version is set to
-      // VER_NDX_LOCAL, which prevents a symbol to be exported via .dynsym.
-      // Set to VER_NDX_GLOBAL so the symbol will be handled as if it were
-      // specified by -dynamic-list.
-      Sym->VersionId = VER_NDX_GLOBAL;
     }
   }
 }
