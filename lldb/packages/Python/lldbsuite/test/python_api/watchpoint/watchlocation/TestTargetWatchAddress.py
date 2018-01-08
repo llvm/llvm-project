@@ -30,8 +30,6 @@ class TargetWatchAddressAPITestCase(TestBase):
         self.violating_func = "do_bad_thing_with_location"
 
     @add_test_categories(['pyapi'])
-    # Watchpoints not supported
-    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
@@ -107,8 +105,6 @@ class TargetWatchAddressAPITestCase(TestBase):
         # This finishes our test.
 
     @add_test_categories(['pyapi'])
-    # Watchpoints not supported
-    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     # No size constraint on MIPS for watches
     @skipIf(archs=['mips', 'mipsel', 'mips64', 'mips64el'])
     @skipIf(archs=['s390x'])  # Likewise on SystemZ

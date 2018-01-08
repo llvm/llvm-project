@@ -17,6 +17,8 @@ local_array_test_inner()
 {
     char array[] = { 0x01, 0x02, 0x03, 0x04 };
     char *first_element_ptr = &array[0];
+    char g = g_CharArray[0];
+    char s = s_CharArray[0];
     // BP_local_array_test_inner
     return;
 }

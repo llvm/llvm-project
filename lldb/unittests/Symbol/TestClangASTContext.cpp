@@ -376,3 +376,59 @@ TEST_F(TestClangASTContext, TestRecordHasFields) {
   EXPECT_TRUE(
       ClangASTContext::RecordHasFields(empty_derived_non_empty_vbase_decl));
 }
+
+TEST_F(TestClangASTContext, TemplateArguments) {
+  ClangASTContext::TemplateParameterInfos infos;
+  infos.names.push_back("T");
+  infos.args.push_back(TemplateArgument(m_ast->getASTContext()->IntTy));
+  infos.names.push_back("I");
+  llvm::APSInt arg(llvm::APInt(8, 47));
+  infos.args.push_back(TemplateArgument(*m_ast->getASTContext(), arg,
+                                        m_ast->getASTContext()->IntTy));
+
+  // template<typename T, int I> struct foo;
+  ClassTemplateDecl *decl = m_ast->CreateClassTemplateDecl(
+      m_ast->GetTranslationUnitDecl(), eAccessPublic, "foo", TTK_Struct, infos);
+  ASSERT_NE(decl, nullptr);
+
+  // foo<int, 47>
+  ClassTemplateSpecializationDecl *spec_decl =
+      m_ast->CreateClassTemplateSpecializationDecl(
+          m_ast->GetTranslationUnitDecl(), decl, TTK_Struct, infos);
+  ASSERT_NE(spec_decl, nullptr);
+  CompilerType type = m_ast->CreateClassTemplateSpecializationType(spec_decl);
+  ASSERT_TRUE(type);
+  m_ast->StartTagDeclarationDefinition(type);
+  m_ast->CompleteTagDeclarationDefinition(type);
+
+  // typedef foo<int, 47> foo_def;
+  CompilerType typedef_type = m_ast->CreateTypedefType(
+      type, "foo_def",
+      CompilerDeclContext(m_ast.get(), m_ast->GetTranslationUnitDecl()));
+
+  CompilerType auto_type(m_ast->getASTContext(),
+                         m_ast->getASTContext()->getAutoType(
+                             ClangUtil::GetCanonicalQualType(typedef_type),
+                             clang::AutoTypeKeyword::Auto, false));
+
+  CompilerType int_type(m_ast->getASTContext(), m_ast->getASTContext()->IntTy);
+  for(CompilerType t: { type, typedef_type, auto_type }) {
+    SCOPED_TRACE(t.GetTypeName().AsCString());
+
+    EXPECT_EQ(m_ast->GetTemplateArgumentKind(t.GetOpaqueQualType(), 0),
+              eTemplateArgumentKindType);
+    EXPECT_EQ(m_ast->GetTypeTemplateArgument(t.GetOpaqueQualType(), 0),
+              int_type);
+    EXPECT_EQ(llvm::None,
+              m_ast->GetIntegralTemplateArgument(t.GetOpaqueQualType(), 0));
+
+    EXPECT_EQ(m_ast->GetTemplateArgumentKind(t.GetOpaqueQualType(), 1),
+              eTemplateArgumentKindIntegral);
+    EXPECT_EQ(m_ast->GetTypeTemplateArgument(t.GetOpaqueQualType(), 1),
+              CompilerType());
+    auto result = m_ast->GetIntegralTemplateArgument(t.GetOpaqueQualType(), 1);
+    ASSERT_NE(llvm::None, result);
+    EXPECT_EQ(arg, result->value);
+    EXPECT_EQ(int_type, result->type);
+  }
+}

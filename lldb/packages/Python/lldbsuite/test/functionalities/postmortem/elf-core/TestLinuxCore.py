@@ -24,11 +24,13 @@ class LinuxCoreTestCase(TestBase):
     _mips64_n64_pid = 25619
     _mips64_n32_pid = 3670
     _mips_o32_pid = 3532
+    _ppc64le_pid = 28147
 
     _i386_regions = 4
     _x86_64_regions = 5
     _s390x_regions = 2
     _mips_regions = 5
+    _ppc64le_regions = 2
 
     def setUp(self):
         super(LinuxCoreTestCase, self).setUp()
@@ -55,6 +57,12 @@ class LinuxCoreTestCase(TestBase):
     def test_mips_n64(self):
         """Test that lldb can read the process information from an MIPS N64 linux core file """
         self.do_test("linux-mips64el-gnuabi64", self._mips64_n64_pid, self._mips_regions)
+
+    @skipIf(oslist=['windows'])
+    @skipIf(triple='^mips')
+    def test_ppc64le(self):
+        """Test that lldb can read the process information from an ppc64le linux core file."""
+        self.do_test("linux-ppc64le", self._ppc64le_pid, self._ppc64le_regions)
 
     @skipIf(oslist=['windows'])
     @skipIf(triple='^mips')
@@ -244,12 +252,42 @@ class LinuxCoreTestCase(TestBase):
             end_region.GetRegionBase())
         self.assertEqual(end_region.GetRegionEnd(), lldb.LLDB_INVALID_ADDRESS)
 
+    def check_state(self, process):
+        with open(os.devnull) as devnul:
+            # sanitize test output
+            self.dbg.SetOutputFileHandle(devnul, False)
+            self.dbg.SetErrorFileHandle(devnul, False)
+
+            self.assertTrue(process.is_stopped)
+
+            # Process.Continue
+            error = process.Continue()
+            self.assertFalse(error.Success())
+            self.assertTrue(process.is_stopped)
+
+            # Thread.StepOut
+            thread = process.GetSelectedThread()
+            thread.StepOut()
+            self.assertTrue(process.is_stopped)
+
+            # command line
+            self.dbg.HandleCommand('s')
+            self.assertTrue(process.is_stopped)
+            self.dbg.HandleCommand('c')
+            self.assertTrue(process.is_stopped)
+
+            # restore file handles
+            self.dbg.SetOutputFileHandle(None, False)
+            self.dbg.SetErrorFileHandle(None, False)
+
     def do_test(self, filename, pid, region_count):
         target = self.dbg.CreateTarget(filename + ".out")
         process = target.LoadCore(filename + ".core")
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertEqual(process.GetNumThreads(), 1)
         self.assertEqual(process.GetProcessID(), pid)
+
+        self.check_state(process)
 
         thread = process.GetSelectedThread()
         self.assertTrue(thread)

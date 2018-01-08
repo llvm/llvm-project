@@ -163,8 +163,7 @@ Status CommandObjectDisassemble::CommandOptions::SetOptionValue(
       auto target_sp =
           execution_context ? execution_context->GetTargetSP() : TargetSP();
       auto platform_sp = target_sp ? target_sp->GetPlatform() : PlatformSP();
-      if (!arch.SetTriple(option_arg, platform_sp.get()))
-        arch.SetTriple(option_arg);
+      arch = Platform::GetAugmentedArchSpec(platform_sp.get(), option_arg);
     }
     break;
 

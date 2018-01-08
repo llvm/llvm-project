@@ -49,7 +49,7 @@ void FileSpecList::Append(const FileSpec &file_spec) {
 // contained a copy of "file_spec".
 //------------------------------------------------------------------
 bool FileSpecList::AppendIfUnique(const FileSpec &file_spec) {
-  collection::iterator pos, end = m_files.end();
+  collection::iterator end = m_files.end();
   if (find(m_files.begin(), end, file_spec) == end) {
     m_files.push_back(file_spec);
     return true;
@@ -147,36 +147,5 @@ size_t FileSpecList::GetSize() const { return m_files.size(); }
 size_t FileSpecList::GetFilesMatchingPartialPath(const char *path,
                                                  bool dir_okay,
                                                  FileSpecList &matches) {
-#if 0 // FIXME: Just sketching...
-    matches.Clear();
-    using namespace llvm::sys::fs;
-    file_status stats;
-    if (status(path, stats, false))
-      return 0;
-    if (exists(stats)) {
-      if (is_symlink_file(stats)) {
-        // Shouldn't there be a method that realpath's a file?
-      }
-      if (is_regular_file(stats) || (is_directory(stats) && dir_okay)) {
-        matches.Append(FileSpec(path));
-        return 1;
-      } else if (is_directory(stats)) {
-        // Fill the match list with all the files in the directory:
-      } else {
-        return 0;
-      }
-    } else {
-        ConstString dir_name = path_spec.GetDirectory();
-        ConstString file_name = GetFilename();
-        if (dir_name == nullptr)
-        {
-            // Match files in the CWD.
-        }
-        else
-        {
-            // Match files in the given directory:
-        }
-    }
-#endif
   return 0;
 }

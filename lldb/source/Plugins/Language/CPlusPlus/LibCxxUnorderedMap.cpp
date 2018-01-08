@@ -121,11 +121,10 @@ lldb::ValueObjectSP lldb_private::formatters::
         if (!first_sp)
           return nullptr;
         m_element_type = first_sp->GetCompilerType();
-        lldb::TemplateArgumentKind kind;
-        m_element_type = m_element_type.GetTemplateArgument(0, kind);
+        m_element_type = m_element_type.GetTypeTemplateArgument(0);
         m_element_type = m_element_type.GetPointeeType();
         m_node_type = m_element_type;
-        m_element_type = m_element_type.GetTemplateArgument(0, kind);
+        m_element_type = m_element_type.GetTypeTemplateArgument(0);
         std::string name;
         m_element_type =
             m_element_type.GetFieldAtIndex(0, name, nullptr, nullptr, nullptr);

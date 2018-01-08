@@ -272,6 +272,13 @@ lldb::offset_t lldb_private::DumpDataExtractor(
     case eFormatChar:
     case eFormatCharPrintable:
     case eFormatCharArray: {
+      // Reject invalid item_byte_size.
+      if (item_byte_size > 8) {
+        s->Printf("error: unsupported byte size (%" PRIu64 ") for char format",
+                  (uint64_t)item_byte_size);
+        return offset;
+      }
+
       // If we are only printing one character surround it with single
       // quotes
       if (item_count == 1 && item_format == eFormatChar)

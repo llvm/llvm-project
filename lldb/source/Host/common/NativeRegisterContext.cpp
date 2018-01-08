@@ -19,9 +19,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-NativeRegisterContext::NativeRegisterContext(NativeThreadProtocol &thread,
-                                             uint32_t concrete_frame_idx)
-    : m_thread(thread), m_concrete_frame_idx(concrete_frame_idx) {}
+NativeRegisterContext::NativeRegisterContext(NativeThreadProtocol &thread)
+    : m_thread(thread) {}
 
 //----------------------------------------------------------------------
 // Destructor
@@ -368,13 +367,8 @@ Status NativeRegisterContext::ReadRegisterValueFromMemory(
   // TODO: we might need to add a parameter to this function in case the byte
   // order of the memory data doesn't match the process. For now we are assuming
   // they are the same.
-  lldb::ByteOrder byte_order;
-  if (process.GetByteOrder(byte_order)) {
-    error.SetErrorString("NativeProcessProtocol::GetByteOrder () failed");
-    return error;
-  }
-
-  reg_value.SetFromMemoryData(reg_info, src, src_len, byte_order, error);
+  reg_value.SetFromMemoryData(reg_info, src, src_len, process.GetByteOrder(),
+                              error);
 
   return error;
 }
@@ -393,12 +387,8 @@ Status NativeRegisterContext::WriteRegisterValueToMemory(
   // order of the memory data doesn't match the process. For now we are
   // assuming
   // they are the same.
-  lldb::ByteOrder byte_order;
-  if (!process.GetByteOrder(byte_order))
-    return Status("NativeProcessProtocol::GetByteOrder () failed");
-
-  const size_t bytes_copied =
-      reg_value.GetAsMemoryData(reg_info, dst, dst_len, byte_order, error);
+  const size_t bytes_copied = reg_value.GetAsMemoryData(
+      reg_info, dst, dst_len, process.GetByteOrder(), error);
 
   if (error.Success()) {
     if (bytes_copied == 0) {

@@ -21,6 +21,7 @@
 #include "AdbClient.h"
 #include "PlatformAndroid.h"
 #include "PlatformAndroidRemoteGDBServer.h"
+#include "lldb/Target/Target.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -366,9 +367,22 @@ bool PlatformAndroid::GetRemoteOSVersion() {
   return m_major_os_version != 0;
 }
 
-llvm::StringRef PlatformAndroid::GetLibdlFunctionDeclarations() {
+llvm::StringRef
+PlatformAndroid::GetLibdlFunctionDeclarations(lldb_private::Process *process) {
+  SymbolContextList matching_symbols;
+  std::vector<const char *> dl_open_names = { "__dl_dlopen", "dlopen" };
+  const char *dl_open_name = nullptr;
+  Target &target = process->GetTarget();
+  for (auto name: dl_open_names) {
+    if (target.GetImages().FindFunctionSymbols(ConstString(name),
+                                               eFunctionNameTypeFull,
+                                               matching_symbols)) {
+       dl_open_name = name;
+       break;
+    }
+  }
   // Older platform versions have the dl function symbols mangled
-  if (GetSdkVersion() < 26)
+  if (dl_open_name == dl_open_names[0])
     return R"(
               extern "C" void* dlopen(const char*, int) asm("__dl_dlopen");
               extern "C" void* dlsym(void*, const char*) asm("__dl_dlsym");
@@ -376,7 +390,7 @@ llvm::StringRef PlatformAndroid::GetLibdlFunctionDeclarations() {
               extern "C" char* dlerror(void) asm("__dl_dlerror");
              )";
 
-  return PlatformPOSIX::GetLibdlFunctionDeclarations();
+  return PlatformPOSIX::GetLibdlFunctionDeclarations(process);
 }
 
 AdbClient::SyncService *PlatformAndroid::GetSyncService(Status &error) {

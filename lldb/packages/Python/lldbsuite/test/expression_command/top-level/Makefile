@@ -1,12 +1,13 @@
 LEVEL = ../../make
 
-default: a.out dummy
-
 CXX_SOURCES := main.cpp test.cpp
 
-dummy: dummy.cpp
+include $(LEVEL)/Makefile.rules
+
+a.out: dummy
+
+dummy:
+	$(MAKE) -f dummy.mk
 
 clean::
-	rm -rf dummy dummy.dSYM
-
-include $(LEVEL)/Makefile.rules
+	$(MAKE) -f dummy.mk clean

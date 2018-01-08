@@ -13,12 +13,11 @@
 #include <csignal>
 #include <unordered_set>
 
-// Other libraries and framework includes
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Host/Debug.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/linux/Support.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-types.h"
 
@@ -87,7 +86,7 @@ public:
 
   size_t UpdateThreads() override;
 
-  bool GetArchitecture(ArchSpec &arch) const override;
+  const ArchSpec &GetArchitecture() const override { return m_arch; }
 
   Status SetBreakpoint(lldb::addr_t addr, uint32_t size,
                        bool hardware) override;
@@ -102,7 +101,7 @@ public:
   Status GetFileLoadAddress(const llvm::StringRef &file_name,
                             lldb::addr_t &load_addr) override;
 
-  NativeThreadLinuxSP GetThreadByID(lldb::tid_t id);
+  NativeThreadLinux *GetThreadByID(lldb::tid_t id);
 
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   GetAuxvData() const override {
@@ -203,7 +202,7 @@ private:
 
   bool StopTrackingThread(lldb::tid_t thread_id);
 
-  NativeThreadLinuxSP AddThread(lldb::tid_t thread_id);
+  NativeThreadLinux &AddThread(lldb::tid_t thread_id);
 
   Status GetSoftwareBreakpointPCOffset(uint32_t &actual_opcode_size);
 

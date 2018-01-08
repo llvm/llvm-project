@@ -324,8 +324,6 @@ public:
 
     clang::ASTContext &ast_ctx(interface_decl->getASTContext());
 
-    clang::QualType return_qual_type;
-
     const bool isInstance = instance;
     const bool isVariadic = false;
     const bool isSynthesized = false;
@@ -652,4 +650,12 @@ AppleObjCDeclVendor::FindDecls(const ConstString &name, bool append,
   } while (0);
 
   return ret;
+}
+
+clang::ExternalASTMerger::ImporterSource
+AppleObjCDeclVendor::GetImporterSource() {
+        return {*m_ast_ctx.getASTContext(),
+                *m_ast_ctx.getFileManager(),
+                m_ast_ctx.GetOriginMap()
+        };
 }

@@ -12,12 +12,11 @@
 
 #include "llvm-c/Disassembler.h"
 
+#include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
-
-#include "lldb/Core/ArchSpec.h"
-#include "lldb/Utility/ConstString.h"
 
 #include <map>
 #include <vector>

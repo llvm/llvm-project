@@ -73,7 +73,14 @@ GetFreeBSDProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
   if (!cstr)
     return false;
 
-  process_info.GetExecutableFile().SetFile(cstr, false);
+  // Get pathname for pid. If that fails fall back to argv[0].
+  char pathname[MAXPATHLEN];
+  size_t pathname_len = sizeof(pathname);
+  mib[2] = KERN_PROC_PATHNAME;
+  if (::sysctl(mib, 4, pathname, &pathname_len, NULL, 0) == 0)
+    process_info.GetExecutableFile().SetFile(pathname, false);
+  else
+    process_info.GetExecutableFile().SetFile(cstr, false);
 
   if (!(match_info_ptr == NULL ||
         NameMatches(process_info.GetExecutableFile().GetFilename().GetCString(),

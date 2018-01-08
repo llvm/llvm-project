@@ -14,6 +14,12 @@
 
 #include <locale.h>
 
+#if defined (_WIN32)
+#define TEST_ENCODING ".932"  // On Windows, test codepage 932
+#else
+#define TEST_ENCODING "C"     // ...otherwise, any widely available uni-byte LC
+#endif
+
 using namespace lldb_private;
 using namespace llvm;
 
@@ -46,7 +52,8 @@ TEST(VASprintfTest, EncodingError) {
   // Save the current locale first.
   std::string Current(::setlocale(LC_ALL, nullptr));
 
-  setlocale(LC_ALL, ".932");
+  // Ensure tested locale is successfully set
+  ASSERT_TRUE(setlocale(LC_ALL, TEST_ENCODING));
 
   wchar_t Invalid[2];
   Invalid[0] = 0x100;
@@ -55,5 +62,6 @@ TEST(VASprintfTest, EncodingError) {
   EXPECT_FALSE(Sprintf(Buffer, "%ls", Invalid));
   EXPECT_EQ("<Encoding error>", Buffer);
 
-  setlocale(LC_ALL, Current.c_str());
+  // Ensure we've restored the original locale once tested
+  ASSERT_TRUE(setlocale(LC_ALL, Current.c_str()));
 }

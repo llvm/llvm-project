@@ -17,6 +17,7 @@
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
+#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
@@ -103,6 +104,20 @@ static inline uint64_t ReadSwapInt64(const void *ptr) {
   uint64_t value;
   memcpy(&value, ptr, 8);
   return llvm::ByteSwap_64(value);
+}
+
+static inline uint64_t ReadMaxInt64(const uint8_t *data, size_t byte_size,
+                                    ByteOrder byte_order) {
+  uint64_t res = 0;
+  if (byte_order == eByteOrderBig)
+    for (size_t i = 0; i < byte_size; ++i)
+      res = (res << 8) | data[i];
+  else {
+    assert(byte_order == eByteOrderLittle);
+    for (size_t i = 0; i < byte_size; ++i)
+      res = (res << 8) | data[byte_size - 1 - i];
+  }
+  return res;
 }
 
 DataExtractor::DataExtractor()
@@ -551,107 +566,59 @@ void *DataExtractor::GetU64(offset_t *offset_ptr, void *void_dst,
   return nullptr;
 }
 
-//----------------------------------------------------------------------
-// Extract a single integer value from the data and update the offset
-// pointed to by "offset_ptr". The size of the extracted integer
-// is specified by the "byte_size" argument. "byte_size" should have
-// a value between 1 and 4 since the return value is only 32 bits
-// wide. Any "byte_size" values less than 1 or greater than 4 will
-// result in nothing being extracted, and zero being returned.
-//
-// RETURNS the integer value that was extracted, or zero on failure.
-//----------------------------------------------------------------------
 uint32_t DataExtractor::GetMaxU32(offset_t *offset_ptr,
                                   size_t byte_size) const {
+  lldbassert(byte_size > 0 && byte_size <= 4 && "GetMaxU32 invalid byte_size!");
+  return GetMaxU64(offset_ptr, byte_size);
+}
+
+uint64_t DataExtractor::GetMaxU64(offset_t *offset_ptr,
+                                  size_t byte_size) const {
+  lldbassert(byte_size > 0 && byte_size <= 8 && "GetMaxU64 invalid byte_size!");
   switch (byte_size) {
   case 1:
     return GetU8(offset_ptr);
-    break;
   case 2:
     return GetU16(offset_ptr);
-    break;
   case 4:
     return GetU32(offset_ptr);
-    break;
-  default:
-    assert(false && "GetMaxU32 unhandled case!");
-    break;
-  }
-  return 0;
-}
-
-//----------------------------------------------------------------------
-// Extract a single integer value from the data and update the offset
-// pointed to by "offset_ptr". The size of the extracted integer
-// is specified by the "byte_size" argument. "byte_size" should have
-// a value >= 1 and <= 8 since the return value is only 64 bits
-// wide. Any "byte_size" values less than 1 or greater than 8 will
-// result in nothing being extracted, and zero being returned.
-//
-// RETURNS the integer value that was extracted, or zero on failure.
-//----------------------------------------------------------------------
-uint64_t DataExtractor::GetMaxU64(offset_t *offset_ptr, size_t size) const {
-  switch (size) {
-  case 1:
-    return GetU8(offset_ptr);
-    break;
-  case 2:
-    return GetU16(offset_ptr);
-    break;
-  case 4:
-    return GetU32(offset_ptr);
-    break;
   case 8:
     return GetU64(offset_ptr);
-    break;
-  default:
-    assert(false && "GetMax64 unhandled case!");
-    break;
+  default: {
+    // General case.
+    const uint8_t *data =
+        static_cast<const uint8_t *>(GetData(offset_ptr, byte_size));
+    if (data == nullptr)
+      return 0;
+    return ReadMaxInt64(data, byte_size, m_byte_order);
+  }
   }
   return 0;
 }
 
 uint64_t DataExtractor::GetMaxU64_unchecked(offset_t *offset_ptr,
-                                            size_t size) const {
-  switch (size) {
+                                            size_t byte_size) const {
+  switch (byte_size) {
   case 1:
     return GetU8_unchecked(offset_ptr);
-    break;
   case 2:
     return GetU16_unchecked(offset_ptr);
-    break;
   case 4:
     return GetU32_unchecked(offset_ptr);
-    break;
   case 8:
     return GetU64_unchecked(offset_ptr);
-    break;
-  default:
-    assert(false && "GetMax64 unhandled case!");
-    break;
+  default: {
+    uint64_t res = ReadMaxInt64(&m_start[*offset_ptr], byte_size, m_byte_order);
+    *offset_ptr += byte_size;
+    return res;
+  }
   }
   return 0;
 }
 
-int64_t DataExtractor::GetMaxS64(offset_t *offset_ptr, size_t size) const {
-  switch (size) {
-  case 1:
-    return (int8_t)GetU8(offset_ptr);
-    break;
-  case 2:
-    return (int16_t)GetU16(offset_ptr);
-    break;
-  case 4:
-    return (int32_t)GetU32(offset_ptr);
-    break;
-  case 8:
-    return (int64_t)GetU64(offset_ptr);
-    break;
-  default:
-    assert(false && "GetMax64 unhandled case!");
-    break;
-  }
-  return 0;
+int64_t DataExtractor::GetMaxS64(offset_t *offset_ptr, size_t byte_size) const {
+  uint64_t u64 = GetMaxU64(offset_ptr, byte_size);
+  return llvm::SignExtend64(u64, 8 * byte_size);
 }
 
 uint64_t DataExtractor::GetMaxU64Bitfield(offset_t *offset_ptr, size_t size,

@@ -700,18 +700,18 @@ void FileSpec::EnumerateDirectory(llvm::StringRef dir_path,
   fs::recursive_directory_iterator End;
   for (; Iter != End && !EC; Iter.increment(EC)) {
     const auto &Item = *Iter;
-    fs::file_status Status;
-    if ((EC = Item.status(Status)))
+    llvm::ErrorOr<fs::basic_file_status> Status = Item.status();
+    if (!Status)
       break;
-    if (!find_files && fs::is_regular_file(Status))
+    if (!find_files && fs::is_regular_file(*Status))
       continue;
-    if (!find_directories && fs::is_directory(Status))
+    if (!find_directories && fs::is_directory(*Status))
       continue;
-    if (!find_other && fs::is_other(Status))
+    if (!find_other && fs::is_other(*Status))
       continue;
 
     FileSpec Spec(Item.path(), false);
-    auto Result = callback(callback_baton, Status.type(), Spec);
+    auto Result = callback(callback_baton, Status->type(), Spec);
     if (Result == eEnumerateDirectoryResultQuit)
       return;
     if (Result == eEnumerateDirectoryResultNext) {

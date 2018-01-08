@@ -10,7 +10,7 @@
 #ifndef lldb_Host_HostInfoBase_h_
 #define lldb_Host_HostInfoBase_h_
 
-#include "lldb/Core/ArchSpec.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-enumerations.h"
 
@@ -61,6 +61,8 @@ public:
   static const ArchSpec &
   GetArchitecture(ArchitectureKind arch_kind = eArchKindDefault);
 
+  static llvm::Optional<ArchitectureKind> ParseArchitectureKind(llvm::StringRef kind);
+
   //------------------------------------------------------------------
   /// Find a resource files that are related to LLDB.
   ///
@@ -80,6 +82,13 @@ public:
   ///     \b true if \a resource_path was resolved, \a false otherwise.
   //------------------------------------------------------------------
   static bool GetLLDBPath(lldb::PathType type, FileSpec &file_spec);
+
+  //---------------------------------------------------------------------------
+  /// If the triple does not specify the vendor, os, and environment parts, we
+  /// "augment" these using information from the host and return the resulting
+  /// ArchSpec object.
+  //---------------------------------------------------------------------------
+  static ArchSpec GetAugmentedArchSpec(llvm::StringRef triple);
 
 protected:
   static bool ComputeSharedLibraryDirectory(FileSpec &file_spec);

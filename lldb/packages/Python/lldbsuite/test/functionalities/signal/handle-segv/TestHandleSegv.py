@@ -18,9 +18,6 @@ class HandleSegvTestCase(TestBase):
 
     @skipIfWindows  # signals do not exist on Windows
     @skipIfDarwin
-    @expectedFailureAll(
-        oslist=['freebsd'],
-        bugnumber="llvm.org/pr23699 SIGSEGV is reported as exception, not signal")
     def test_inferior_handle_sigsegv(self):
         self.build()
         exe = os.path.join(os.getcwd(), "a.out")

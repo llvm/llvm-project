@@ -7,11 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
-#include "lldb/Core/ArchSpec.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
@@ -19,6 +14,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/ArchSpec.h"
 
 #include "RegisterContextMacOSXFrameBackchain.h"
 
@@ -84,8 +80,6 @@ size_t UnwindMacOSXFrameBackchain::GetStackFrameData_i386(
   Process *process = exe_ctx.GetProcessPtr();
   if (process == NULL)
     return 0;
-
-  std::pair<lldb::addr_t, lldb::addr_t> fp_pc_pair;
 
   struct Frame_i386 {
     uint32_t fp;
@@ -178,8 +172,6 @@ size_t UnwindMacOSXFrameBackchain::GetStackFrameData_x86_64(
     return 0;
 
   StackFrame *first_frame = exe_ctx.GetFramePtr();
-
-  std::pair<lldb::addr_t, lldb::addr_t> fp_pc_pair;
 
   struct Frame_x86_64 {
     uint64_t fp;

@@ -112,26 +112,24 @@ static const RegisterSet g_reg_sets_arm64[k_num_register_sets] = {
     {"Floating Point Registers", "fpu", k_num_fpr_registers_arm64,
      g_fpu_regnums_arm64}};
 
-NativeRegisterContextLinux *
+std::unique_ptr<NativeRegisterContextLinux>
 NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
-    const ArchSpec &target_arch, NativeThreadProtocol &native_thread,
-    uint32_t concrete_frame_idx) {
+    const ArchSpec &target_arch, NativeThreadProtocol &native_thread) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::arm:
-    return new NativeRegisterContextLinux_arm(target_arch, native_thread,
-                                              concrete_frame_idx);
+    return llvm::make_unique<NativeRegisterContextLinux_arm>(target_arch,
+                                                             native_thread);
   case llvm::Triple::aarch64:
-    return new NativeRegisterContextLinux_arm64(target_arch, native_thread,
-                                                concrete_frame_idx);
+    return llvm::make_unique<NativeRegisterContextLinux_arm64>(target_arch,
+                                                               native_thread);
   default:
     llvm_unreachable("have no register context for architecture");
   }
 }
 
 NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
-    const ArchSpec &target_arch, NativeThreadProtocol &native_thread,
-    uint32_t concrete_frame_idx)
-    : NativeRegisterContextLinux(native_thread, concrete_frame_idx,
+    const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
+    : NativeRegisterContextLinux(native_thread,
                                  new RegisterInfoPOSIX_arm64(target_arch)) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::aarch64:
@@ -872,12 +870,8 @@ Status NativeRegisterContextLinux_arm64::DoReadRegisterValue(
     error = NativeProcessLinux::PtraceWrapper(
         PTRACE_GETREGSET, m_thread.GetID(), &regset, &ioVec, sizeof regs);
     if (error.Success()) {
-      ArchSpec arch;
-      if (m_thread.GetProcess().GetArchitecture(arch))
-        value.SetBytes((void *)(((unsigned char *)(&regs)) + offset), 16,
-                       arch.GetByteOrder());
-      else
-        error.SetErrorString("failed to get architecture");
+      value.SetBytes((void *)(((unsigned char *)(&regs)) + offset), 16,
+                     m_thread.GetProcess().GetByteOrder());
     }
   } else {
     elf_gregset_t regs;
@@ -889,12 +883,8 @@ Status NativeRegisterContextLinux_arm64::DoReadRegisterValue(
     error = NativeProcessLinux::PtraceWrapper(
         PTRACE_GETREGSET, m_thread.GetID(), &regset, &ioVec, sizeof regs);
     if (error.Success()) {
-      ArchSpec arch;
-      if (m_thread.GetProcess().GetArchitecture(arch))
-        value.SetBytes((void *)(((unsigned char *)(regs)) + offset), 8,
-                       arch.GetByteOrder());
-      else
-        error.SetErrorString("failed to get architecture");
+      value.SetBytes((void *)(((unsigned char *)(regs)) + offset), 8,
+                     m_thread.GetProcess().GetByteOrder());
     }
   }
   return error;

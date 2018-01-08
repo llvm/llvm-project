@@ -133,7 +133,7 @@ PlatformOpenBSD::PlatformOpenBSD(bool is_host)
 PlatformOpenBSD::~PlatformOpenBSD() = default;
 
 bool PlatformOpenBSD::GetSupportedArchitectureAtIndex(uint32_t idx,
-						      ArchSpec &arch) {
+                                                      ArchSpec &arch) {
   if (IsHost()) {
     ArchSpec hostArch = HostInfo::GetArchitecture(HostInfo::eArchKindDefault);
     if (hostArch.GetTriple().isOSOpenBSD()) {
@@ -211,13 +211,17 @@ void PlatformOpenBSD::CalculateTrapHandlerSymbolNames() {
   m_trap_handlers.push_back(ConstString("_sigtramp"));
 }
 
-uint64_t PlatformOpenBSD::ConvertMmapFlagsToPlatform(const ArchSpec &arch,
-						     unsigned flags) {
+MmapArgList PlatformOpenBSD::GetMmapArgumentList(const ArchSpec &arch,
+                                                 addr_t addr, addr_t length,
+                                                 unsigned prot, unsigned flags,
+                                                 addr_t fd, addr_t offset) {
   uint64_t flags_platform = 0;
 
   if (flags & eMmapFlagsPrivate)
     flags_platform |= MAP_PRIVATE;
   if (flags & eMmapFlagsAnon)
     flags_platform |= MAP_ANON;
-  return flags_platform;
+
+  MmapArgList args({addr, length, prot, flags_platform, fd, offset});
+  return args;
 }

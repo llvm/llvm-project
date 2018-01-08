@@ -105,6 +105,32 @@ class LLDBTestResult(unittest2.TextTestResult):
         else:
             return str(test)
 
+    @staticmethod
+    def _getFileBasedCategories(test):
+        """
+        Returns the list of categories to which this test case belongs by
+        looking for a ".categories" file. We start at the folder the test is in
+        an traverse the hierarchy upwards - we guarantee a .categories to exist
+        at the top level directory so we do not end up looping endlessly.
+        """
+        import inspect
+        import os.path
+        folder = inspect.getfile(test.__class__)
+        folder = os.path.dirname(folder)
+        while folder != '/':
+            categories_file_name = os.path.join(folder, ".categories")
+            if os.path.exists(categories_file_name):
+                categories_file = open(categories_file_name, 'r')
+                categories = categories_file.readline()
+                categories_file.close()
+                categories = str.replace(categories, '\n', '')
+                categories = str.replace(categories, '\r', '')
+                return categories.split(',')
+            else:
+                folder = os.path.dirname(folder)
+                continue
+
+
     def getCategoriesForTest(self, test):
         """
         Gets all the categories for the currently running test method in test case
@@ -114,7 +140,7 @@ class LLDBTestResult(unittest2.TextTestResult):
         if test_method is not None and hasattr(test_method, "categories"):
             test_categories.extend(test_method.categories)
 
-        test_categories.extend(test.getCategories())
+        test_categories.extend(self._getFileBasedCategories(test))
 
         return test_categories
 

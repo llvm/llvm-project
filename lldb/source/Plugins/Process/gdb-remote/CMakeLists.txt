@@ -9,6 +9,10 @@ set(LLDB_PLUGINS
   lldbPluginPlatformMacOSX
 )
 
+if(HAVE_LIBCOMPRESSION)
+  set(LIBCOMPRESSION compression)
+endif()
+
 add_lldb_library(lldbPluginProcessGDBRemote PLUGIN
   GDBRemoteClientBase.cpp
   GDBRemoteCommunication.cpp
@@ -32,6 +36,7 @@ add_lldb_library(lldbPluginProcessGDBRemote PLUGIN
     lldbTarget
     lldbUtility
     ${LLDB_PLUGINS}
+    ${LIBCOMPRESSION}
   LINK_COMPONENTS
     Support
   )

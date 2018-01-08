@@ -61,7 +61,7 @@ namespace lldb_private {
 //----------------------------------------------------------------------
 class FileSpec {
 public:
-  enum PathSyntax {
+  enum PathSyntax : unsigned char {
     ePathSyntaxPosix,
     ePathSyntaxWindows,
     ePathSyntaxHostNative

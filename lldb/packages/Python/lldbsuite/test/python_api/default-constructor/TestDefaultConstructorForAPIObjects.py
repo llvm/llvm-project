@@ -266,6 +266,17 @@ class APIDefaultConstructorTestCase(TestBase):
 
     @add_test_categories(['pyapi'])
     @no_debug_info_test
+    def test_SBProcessInfo(self):
+        obj = lldb.SBProcessInfo()
+        if self.TraceOn():
+            print(obj)
+        self.assertFalse(obj)
+        # Do fuzz testing on the invalid obj, it should not crash lldb.
+        import sb_process_info
+        sb_process_info.fuzz_obj(obj)
+
+    @add_test_categories(['pyapi'])
+    @no_debug_info_test
     def test_SBSection(self):
         obj = lldb.SBSection()
         if self.TraceOn():

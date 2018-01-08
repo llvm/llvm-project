@@ -86,6 +86,7 @@ public:
   Args(llvm::StringRef command = llvm::StringRef());
 
   Args(const Args &rhs);
+  explicit Args(const StringList &list);
 
   Args &operator=(const Args &rhs);
 

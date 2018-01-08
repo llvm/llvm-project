@@ -1371,10 +1371,9 @@ class Base(unittest2.TestCase):
         self.dumpSessionInfo()."""
         arch = self.getArchitecture()
         comp = self.getCompiler()
+        option_str = ""
         if arch:
             option_str = "-A " + arch
-        else:
-            option_str = ""
         if comp:
             option_str += " -C " + comp
         return option_str
@@ -1511,6 +1510,7 @@ class Base(unittest2.TestCase):
             clean=True):
         """Platform specific way to build binaries with dsym info."""
         module = builder_module()
+        dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
         if not module.buildDsym(
                 self,
                 architecture,
@@ -1561,6 +1561,7 @@ class Base(unittest2.TestCase):
             clean=True):
         """Platform specific way to build binaries with gmodules info."""
         module = builder_module()
+        dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
         if not module.buildGModules(
                 self,
                 architecture,
@@ -1832,30 +1833,6 @@ class TestBase(Base):
     # Time to wait before the next launching attempt in second(s).
     # Can be overridden by the LLDB_TIME_WAIT_NEXT_LAUNCH environment variable.
     timeWaitNextLaunch = 1.0
-
-    # Returns the list of categories to which this test case belongs
-    # by default, look for a ".categories" file, and read its contents
-    # if no such file exists, traverse the hierarchy - we guarantee
-    # a .categories to exist at the top level directory so we do not end up
-    # looping endlessly - subclasses are free to define their own categories
-    # in whatever way makes sense to them
-    def getCategories(self):
-        import inspect
-        import os.path
-        folder = inspect.getfile(self.__class__)
-        folder = os.path.dirname(folder)
-        while folder != '/':
-            categories_file_name = os.path.join(folder, ".categories")
-            if os.path.exists(categories_file_name):
-                categories_file = open(categories_file_name, 'r')
-                categories = categories_file.readline()
-                categories_file.close()
-                categories = str.replace(categories, '\n', '')
-                categories = str.replace(categories, '\r', '')
-                return categories.split(',')
-            else:
-                folder = os.path.dirname(folder)
-                continue
 
     def generateSource(self, source):
         template = source + '.template'
