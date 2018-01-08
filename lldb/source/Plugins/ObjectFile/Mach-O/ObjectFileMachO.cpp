@@ -4641,6 +4641,7 @@ size_t ObjectFileMachO::ParseSymtab() {
 
             if (symbol_name && symbol_name[0] == '_') {
               symbol_name_is_mangled = symbol_name[1] == '_';
+              symbol_name_is_mangled |= symbol_name[1] == '$';
               symbol_name++; // Skip the leading underscore
             }
 
