@@ -1402,8 +1402,7 @@ define <16 x float> @sbto16f32(<16 x i32> %a) {
 ;
 ; DQ-LABEL: sbto16f32:
 ; DQ:       # %bb.0:
-; DQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; DQ-NEXT:    vpcmpgtd %zmm0, %zmm1, %k0
+; DQ-NEXT:    vpmovd2m %zmm0, %k0
 ; DQ-NEXT:    vpmovm2d %k0, %zmm0
 ; DQ-NEXT:    vcvtdq2ps %zmm0, %zmm0
 ; DQ-NEXT:    retq
@@ -1889,131 +1888,221 @@ define <16 x float> @usto16f32(<16 x i16> %a) {
 }
 
 define <16 x float> @ubto16f32(<16 x i32> %a) {
-; ALL-LABEL: ubto16f32:
-; ALL:       # %bb.0:
-; ALL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
-; ALL-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
-; ALL-NEXT:    vcvtdq2ps %zmm0, %zmm0
-; ALL-NEXT:    retq
+; NODQ-LABEL: ubto16f32:
+; NODQ:       # %bb.0:
+; NODQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; NODQ-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
+; NODQ-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
+; NODQ-NEXT:    vcvtdq2ps %zmm0, %zmm0
+; NODQ-NEXT:    retq
+;
+; DQ-LABEL: ubto16f32:
+; DQ:       # %bb.0:
+; DQ-NEXT:    vpmovd2m %zmm0, %k1
+; DQ-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
+; DQ-NEXT:    vcvtdq2ps %zmm0, %zmm0
+; DQ-NEXT:    retq
   %mask = icmp slt <16 x i32> %a, zeroinitializer
   %1 = uitofp <16 x i1> %mask to <16 x float>
   ret <16 x float> %1
 }
 
 define <16 x double> @ubto16f64(<16 x i32> %a) {
-; NOVL-LABEL: ubto16f64:
-; NOVL:       # %bb.0:
-; NOVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; NOVL-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
-; NOVL-NEXT:    movl {{.*}}(%rip), %eax
-; NOVL-NEXT:    vpbroadcastd %eax, %zmm0 {%k1} {z}
-; NOVL-NEXT:    vcvtdq2pd %ymm0, %zmm0
-; NOVL-NEXT:    kshiftrw $8, %k1, %k1
-; NOVL-NEXT:    vpbroadcastd %eax, %zmm1 {%k1} {z}
-; NOVL-NEXT:    vcvtdq2pd %ymm1, %zmm1
-; NOVL-NEXT:    retq
+; NOVLDQ-LABEL: ubto16f64:
+; NOVLDQ:       # %bb.0:
+; NOVLDQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; NOVLDQ-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
+; NOVLDQ-NEXT:    movl {{.*}}(%rip), %eax
+; NOVLDQ-NEXT:    vpbroadcastd %eax, %zmm0 {%k1} {z}
+; NOVLDQ-NEXT:    vcvtdq2pd %ymm0, %zmm0
+; NOVLDQ-NEXT:    kshiftrw $8, %k1, %k1
+; NOVLDQ-NEXT:    vpbroadcastd %eax, %zmm1 {%k1} {z}
+; NOVLDQ-NEXT:    vcvtdq2pd %ymm1, %zmm1
+; NOVLDQ-NEXT:    retq
 ;
-; VL-LABEL: ubto16f64:
-; VL:       # %bb.0:
-; VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; VL-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
-; VL-NEXT:    movl {{.*}}(%rip), %eax
-; VL-NEXT:    vpbroadcastd %eax, %ymm0 {%k1} {z}
-; VL-NEXT:    vcvtdq2pd %ymm0, %zmm0
-; VL-NEXT:    kshiftrw $8, %k1, %k1
-; VL-NEXT:    vpbroadcastd %eax, %ymm1 {%k1} {z}
-; VL-NEXT:    vcvtdq2pd %ymm1, %zmm1
-; VL-NEXT:    retq
+; VLDQ-LABEL: ubto16f64:
+; VLDQ:       # %bb.0:
+; VLDQ-NEXT:    vpmovd2m %zmm0, %k1
+; VLDQ-NEXT:    movl {{.*}}(%rip), %eax
+; VLDQ-NEXT:    vpbroadcastd %eax, %ymm0 {%k1} {z}
+; VLDQ-NEXT:    vcvtdq2pd %ymm0, %zmm0
+; VLDQ-NEXT:    kshiftrw $8, %k1, %k1
+; VLDQ-NEXT:    vpbroadcastd %eax, %ymm1 {%k1} {z}
+; VLDQ-NEXT:    vcvtdq2pd %ymm1, %zmm1
+; VLDQ-NEXT:    retq
+;
+; VLNODQ-LABEL: ubto16f64:
+; VLNODQ:       # %bb.0:
+; VLNODQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; VLNODQ-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
+; VLNODQ-NEXT:    movl {{.*}}(%rip), %eax
+; VLNODQ-NEXT:    vpbroadcastd %eax, %ymm0 {%k1} {z}
+; VLNODQ-NEXT:    vcvtdq2pd %ymm0, %zmm0
+; VLNODQ-NEXT:    kshiftrw $8, %k1, %k1
+; VLNODQ-NEXT:    vpbroadcastd %eax, %ymm1 {%k1} {z}
+; VLNODQ-NEXT:    vcvtdq2pd %ymm1, %zmm1
+; VLNODQ-NEXT:    retq
+;
+; AVX512DQ-LABEL: ubto16f64:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    vpmovd2m %zmm0, %k1
+; AVX512DQ-NEXT:    movl {{.*}}(%rip), %eax
+; AVX512DQ-NEXT:    vpbroadcastd %eax, %zmm0 {%k1} {z}
+; AVX512DQ-NEXT:    vcvtdq2pd %ymm0, %zmm0
+; AVX512DQ-NEXT:    kshiftrw $8, %k1, %k1
+; AVX512DQ-NEXT:    vpbroadcastd %eax, %zmm1 {%k1} {z}
+; AVX512DQ-NEXT:    vcvtdq2pd %ymm1, %zmm1
+; AVX512DQ-NEXT:    retq
   %mask = icmp slt <16 x i32> %a, zeroinitializer
   %1 = uitofp <16 x i1> %mask to <16 x double>
   ret <16 x double> %1
 }
 
 define <8 x float> @ubto8f32(<8 x i32> %a) {
-; NOVL-LABEL: ubto8f32:
-; NOVL:       # %bb.0:
-; NOVL-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
-; NOVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; NOVL-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
-; NOVL-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
-; NOVL-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; NOVL-NEXT:    retq
+; NOVLDQ-LABEL: ubto8f32:
+; NOVLDQ:       # %bb.0:
+; NOVLDQ-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; NOVLDQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; NOVLDQ-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
+; NOVLDQ-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
+; NOVLDQ-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; NOVLDQ-NEXT:    retq
 ;
-; VL-LABEL: ubto8f32:
-; VL:       # %bb.0:
-; VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; VL-NEXT:    vpcmpgtd %ymm0, %ymm1, %k1
-; VL-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm0 {%k1} {z}
-; VL-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; VL-NEXT:    retq
+; VLDQ-LABEL: ubto8f32:
+; VLDQ:       # %bb.0:
+; VLDQ-NEXT:    vpmovd2m %ymm0, %k1
+; VLDQ-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm0 {%k1} {z}
+; VLDQ-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; VLDQ-NEXT:    retq
+;
+; VLNODQ-LABEL: ubto8f32:
+; VLNODQ:       # %bb.0:
+; VLNODQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; VLNODQ-NEXT:    vpcmpgtd %ymm0, %ymm1, %k1
+; VLNODQ-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm0 {%k1} {z}
+; VLNODQ-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; VLNODQ-NEXT:    retq
+;
+; AVX512DQ-LABEL: ubto8f32:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; AVX512DQ-NEXT:    vpmovd2m %zmm0, %k1
+; AVX512DQ-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
+; AVX512DQ-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; AVX512DQ-NEXT:    retq
   %mask = icmp slt <8 x i32> %a, zeroinitializer
   %1 = uitofp <8 x i1> %mask to <8 x float>
   ret <8 x float> %1
 }
 
 define <8 x double> @ubto8f64(<8 x i32> %a) {
-; NOVL-LABEL: ubto8f64:
-; NOVL:       # %bb.0:
-; NOVL-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
-; NOVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; NOVL-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
-; NOVL-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
-; NOVL-NEXT:    vcvtdq2pd %ymm0, %zmm0
-; NOVL-NEXT:    retq
+; NOVLDQ-LABEL: ubto8f64:
+; NOVLDQ:       # %bb.0:
+; NOVLDQ-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; NOVLDQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; NOVLDQ-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
+; NOVLDQ-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
+; NOVLDQ-NEXT:    vcvtdq2pd %ymm0, %zmm0
+; NOVLDQ-NEXT:    retq
 ;
-; VL-LABEL: ubto8f64:
-; VL:       # %bb.0:
-; VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; VL-NEXT:    vpcmpgtd %ymm0, %ymm1, %k1
-; VL-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm0 {%k1} {z}
-; VL-NEXT:    vcvtdq2pd %ymm0, %zmm0
-; VL-NEXT:    retq
+; VLDQ-LABEL: ubto8f64:
+; VLDQ:       # %bb.0:
+; VLDQ-NEXT:    vpmovd2m %ymm0, %k1
+; VLDQ-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm0 {%k1} {z}
+; VLDQ-NEXT:    vcvtdq2pd %ymm0, %zmm0
+; VLDQ-NEXT:    retq
+;
+; VLNODQ-LABEL: ubto8f64:
+; VLNODQ:       # %bb.0:
+; VLNODQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; VLNODQ-NEXT:    vpcmpgtd %ymm0, %ymm1, %k1
+; VLNODQ-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm0 {%k1} {z}
+; VLNODQ-NEXT:    vcvtdq2pd %ymm0, %zmm0
+; VLNODQ-NEXT:    retq
+;
+; AVX512DQ-LABEL: ubto8f64:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; AVX512DQ-NEXT:    vpmovd2m %zmm0, %k1
+; AVX512DQ-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
+; AVX512DQ-NEXT:    vcvtdq2pd %ymm0, %zmm0
+; AVX512DQ-NEXT:    retq
   %mask = icmp slt <8 x i32> %a, zeroinitializer
   %1 = uitofp <8 x i1> %mask to <8 x double>
   ret <8 x double> %1
 }
 
 define <4 x float> @ubto4f32(<4 x i32> %a) {
-; NOVL-LABEL: ubto4f32:
-; NOVL:       # %bb.0:
-; NOVL-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
-; NOVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; NOVL-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
-; NOVL-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
-; NOVL-NEXT:    vcvtdq2ps %xmm0, %xmm0
-; NOVL-NEXT:    vzeroupper
-; NOVL-NEXT:    retq
+; NOVLDQ-LABEL: ubto4f32:
+; NOVLDQ:       # %bb.0:
+; NOVLDQ-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
+; NOVLDQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; NOVLDQ-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
+; NOVLDQ-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
+; NOVLDQ-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; NOVLDQ-NEXT:    vzeroupper
+; NOVLDQ-NEXT:    retq
 ;
-; VL-LABEL: ubto4f32:
-; VL:       # %bb.0:
-; VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; VL-NEXT:    vpcmpgtd %xmm0, %xmm1, %k1
-; VL-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm0 {%k1} {z}
-; VL-NEXT:    vcvtdq2ps %xmm0, %xmm0
-; VL-NEXT:    retq
+; VLDQ-LABEL: ubto4f32:
+; VLDQ:       # %bb.0:
+; VLDQ-NEXT:    vpmovd2m %xmm0, %k1
+; VLDQ-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm0 {%k1} {z}
+; VLDQ-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; VLDQ-NEXT:    retq
+;
+; VLNODQ-LABEL: ubto4f32:
+; VLNODQ:       # %bb.0:
+; VLNODQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; VLNODQ-NEXT:    vpcmpgtd %xmm0, %xmm1, %k1
+; VLNODQ-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm0 {%k1} {z}
+; VLNODQ-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; VLNODQ-NEXT:    retq
+;
+; AVX512DQ-LABEL: ubto4f32:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
+; AVX512DQ-NEXT:    vpmovd2m %zmm0, %k1
+; AVX512DQ-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
+; AVX512DQ-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; AVX512DQ-NEXT:    vzeroupper
+; AVX512DQ-NEXT:    retq
   %mask = icmp slt <4 x i32> %a, zeroinitializer
   %1 = uitofp <4 x i1> %mask to <4 x float>
   ret <4 x float> %1
 }
 
 define <4 x double> @ubto4f64(<4 x i32> %a) {
-; NOVL-LABEL: ubto4f64:
-; NOVL:       # %bb.0:
-; NOVL-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
-; NOVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; NOVL-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
-; NOVL-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
-; NOVL-NEXT:    vcvtdq2pd %xmm0, %ymm0
-; NOVL-NEXT:    retq
+; NOVLDQ-LABEL: ubto4f64:
+; NOVLDQ:       # %bb.0:
+; NOVLDQ-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
+; NOVLDQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; NOVLDQ-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
+; NOVLDQ-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
+; NOVLDQ-NEXT:    vcvtdq2pd %xmm0, %ymm0
+; NOVLDQ-NEXT:    retq
 ;
-; VL-LABEL: ubto4f64:
-; VL:       # %bb.0:
-; VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; VL-NEXT:    vpcmpgtd %xmm0, %xmm1, %k1
-; VL-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm0 {%k1} {z}
-; VL-NEXT:    vcvtdq2pd %xmm0, %ymm0
-; VL-NEXT:    retq
+; VLDQ-LABEL: ubto4f64:
+; VLDQ:       # %bb.0:
+; VLDQ-NEXT:    vpmovd2m %xmm0, %k1
+; VLDQ-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm0 {%k1} {z}
+; VLDQ-NEXT:    vcvtdq2pd %xmm0, %ymm0
+; VLDQ-NEXT:    retq
+;
+; VLNODQ-LABEL: ubto4f64:
+; VLNODQ:       # %bb.0:
+; VLNODQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; VLNODQ-NEXT:    vpcmpgtd %xmm0, %xmm1, %k1
+; VLNODQ-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm0 {%k1} {z}
+; VLNODQ-NEXT:    vcvtdq2pd %xmm0, %ymm0
+; VLNODQ-NEXT:    retq
+;
+; AVX512DQ-LABEL: ubto4f64:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 def %zmm0
+; AVX512DQ-NEXT:    vpmovd2m %zmm0, %k1
+; AVX512DQ-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
+; AVX512DQ-NEXT:    vcvtdq2pd %xmm0, %ymm0
+; AVX512DQ-NEXT:    retq
   %mask = icmp slt <4 x i32> %a, zeroinitializer
   %1 = uitofp <4 x i1> %mask to <4 x double>
   ret <4 x double> %1

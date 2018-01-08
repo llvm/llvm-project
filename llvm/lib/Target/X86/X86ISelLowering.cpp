@@ -14294,7 +14294,8 @@ static SDValue lower1BitVectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   int NumElems = VT.getVectorNumElements();
   if ((Subtarget.hasBWI() && (NumElems >= 32)) ||
       (Subtarget.hasDQI() && (NumElems < 32)))
-    return DAG.getNode(X86ISD::CVT2MASK, DL, VT, Shuffle);
+    return DAG.getNode(X86ISD::PCMPGTM, DL, VT, DAG.getConstant(0, DL, ExtVT),
+                       Shuffle);
 
   return DAG.getNode(ISD::TRUNCATE, DL, VT, Shuffle);
 }
@@ -16494,7 +16495,8 @@ static SDValue LowerTruncateVecI1(SDValue Op, SelectionDAG &DAG,
                          DAG.getConstant(ShiftInx, DL, ExtVT));
         In = DAG.getBitcast(InVT, In);
       }
-      return DAG.getNode(X86ISD::CVT2MASK, DL, VT, In);
+      return DAG.getNode(X86ISD::PCMPGTM, DL, VT, DAG.getConstant(0, DL, InVT),
+                         In);
     }
     // Use TESTD/Q, extended vector to packed dword/qword.
     assert((InVT.is256BitVector() || InVT.is128BitVector()) &&
@@ -17840,12 +17842,7 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
     // In AVX-512 architecture setcc returns mask with i1 elements,
     // But there is no compare instruction for i8 and i16 elements in KNL.
     // In this case use SSE compare
-    bool UseAVX512Inst =
-      (OpVT.is512BitVector() ||
-       OpVT.getScalarSizeInBits() >= 32 ||
-       (Subtarget.hasBWI() && Subtarget.hasVLX()));
-
-    if (UseAVX512Inst)
+    if (OpVT.getScalarSizeInBits() >= 32 || Subtarget.hasBWI())
       return LowerIntVSETCC_AVX512(Op, DAG);
 
     return DAG.getNode(ISD::TRUNCATE, dl, VT,
@@ -20526,7 +20523,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       MVT MaskVT = MVT::getVectorVT(MVT::i1, SrcVT.getVectorNumElements());
       MVT BitcastVT = MVT::getVectorVT(MVT::i1, VT.getSizeInBits());
 
-      SDValue CvtMask = DAG.getNode(IntrData->Opc0, dl, MaskVT,
+      SDValue CvtMask = DAG.getNode(X86ISD::PCMPGTM, dl, MaskVT,
+                                    DAG.getConstant(0, dl, SrcVT),
                                     Op.getOperand(1));
       SDValue Res = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, BitcastVT,
                                 DAG.getUNDEF(BitcastVT), CvtMask,
@@ -23153,7 +23151,8 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
         V0 = DAG.getBitcast(VT, V0);
         V1 = DAG.getBitcast(VT, V1);
         Sel = DAG.getBitcast(VT, Sel);
-        Sel = DAG.getNode(X86ISD::CVT2MASK, dl, MaskVT, Sel);
+        Sel = DAG.getNode(X86ISD::PCMPGTM, dl, MaskVT,
+                          DAG.getConstant(0, dl, VT), Sel);
         return DAG.getBitcast(SelVT, DAG.getSelect(dl, VT, Sel, V0, V1));
       } else if (Subtarget.hasSSE41()) {
         // On SSE41 targets we make use of the fact that VSELECT lowers
@@ -25277,7 +25276,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::VFPROUND:           return "X86ISD::VFPROUND";
   case X86ISD::VFPROUND_RND:       return "X86ISD::VFPROUND_RND";
   case X86ISD::VFPROUNDS_RND:      return "X86ISD::VFPROUNDS_RND";
-  case X86ISD::CVT2MASK:           return "X86ISD::CVT2MASK";
   case X86ISD::VSHLDQ:             return "X86ISD::VSHLDQ";
   case X86ISD::VSRLDQ:             return "X86ISD::VSRLDQ";
   case X86ISD::VSHL:               return "X86ISD::VSHL";
