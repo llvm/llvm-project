@@ -117,9 +117,8 @@ public:
   static std::unique_ptr<MemoryBuffer>
   getMemBufferCopy(StringRef InputData, const Twine &BufferName = "");
 
-  /// Allocate a new zero-initialized MemoryBuffer of the specified size. Note
-  /// that the caller need not initialize the memory allocated by this method.
-  /// The memory is owned by the MemoryBuffer object.
+  // TODO: Remove after all callers are switched to
+  // WritableMemoryBuffer::getNewMemBuffer
   static std::unique_ptr<MemoryBuffer>
   getNewMemBuffer(size_t Size, StringRef BufferName = "");
 
@@ -196,6 +195,12 @@ public:
   static std::unique_ptr<WritableMemoryBuffer>
   getNewUninitMemBuffer(size_t Size, const Twine &BufferName = "");
 
+  /// Allocate a new zero-initialized MemoryBuffer of the specified size. Note
+  /// that the caller need not initialize the memory allocated by this method.
+  /// The memory is owned by the MemoryBuffer object.
+  static std::unique_ptr<WritableMemoryBuffer>
+  getNewMemBuffer(size_t Size, const Twine &BufferName = "");
+
 private:
   // Hide these base class factory function so one can't write
   //   WritableMemoryBuffer::getXXX()
@@ -204,7 +209,6 @@ private:
   using MemoryBuffer::getFileOrSTDIN;
   using MemoryBuffer::getMemBuffer;
   using MemoryBuffer::getMemBufferCopy;
-  using MemoryBuffer::getNewMemBuffer;
   using MemoryBuffer::getOpenFile;
   using MemoryBuffer::getOpenFileSlice;
   using MemoryBuffer::getSTDIN;

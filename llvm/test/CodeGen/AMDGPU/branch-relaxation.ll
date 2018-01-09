@@ -100,7 +100,8 @@ bb3:
 ; GCN-LABEL: {{^}}uniform_conditional_min_long_forward_vcnd_branch:
 ; GCN: s_load_dword [[CND:s[0-9]+]]
 ; GCN-DAG: v_mov_b32_e32 [[V_CND:v[0-9]+]], [[CND]]
-; GCN-DAG: v_cmp_eq_f32_e64 vcc, [[CND]], 0
+; GCN-DAG: v_cmp_eq_f32_e64 [[UNMASKED:s\[[0-9]+:[0-9]+\]]], [[CND]], 0
+; GCN-DAG: s_and_b64 vcc, exec, [[UNMASKED]]
 ; GCN: s_cbranch_vccz [[LONGBB:BB[0-9]+_[0-9]+]]
 
 ; GCN-NEXT: [[LONG_JUMP:BB[0-9]+_[0-9]+]]: ; %bb0
@@ -500,8 +501,7 @@ ret:
 ; GCN: s_setpc_b64
 
 ; GCN: [[LONG_BR_DEST0]]
-; GCN: v_cmp_ne_u32_e32
-; GCN-NEXT: s_cbranch_vccz
+; GCN: s_cbranch_vccz
 ; GCN: s_setpc_b64
 
 ; GCN: s_endpgm
@@ -520,6 +520,11 @@ bb9:                                              ; preds = %bb
   br i1 %tmp12, label %bb19, label %bb14
 
 bb13:                                             ; preds = %bb
+  call void asm sideeffect
+  "v_nop_e64
+   v_nop_e64
+   v_nop_e64
+   v_nop_e64", ""() #0
   br i1 %tmp6, label %bb19, label %bb14
 
 bb14:                                             ; preds = %bb13, %bb9

@@ -26,6 +26,7 @@
 #include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/SchedulerRegistry.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -44,8 +45,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
-#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Transforms/Coroutines.h"
+#include "llvm/Transforms/GCOVProfiler.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
@@ -471,6 +472,23 @@ static void initTargetOptions(llvm::TargetOptions &Options,
       Options.MCOptions.IASSearchPaths.push_back(
           Entry.IgnoreSysRoot ? Entry.Path : HSOpts.Sysroot + Entry.Path);
 }
+static Optional<GCOVOptions> getGCOVOptions(const CodeGenOptions &CodeGenOpts) {
+  if (CodeGenOpts.DisableGCov)
+    return None;
+  if (!CodeGenOpts.EmitGcovArcs && !CodeGenOpts.EmitGcovNotes)
+    return None;
+  // Not using 'GCOVOptions::getDefault' allows us to avoid exiting if
+  // LLVM's -default-gcov-version flag is set to something invalid.
+  GCOVOptions Options;
+  Options.EmitNotes = CodeGenOpts.EmitGcovNotes;
+  Options.EmitData = CodeGenOpts.EmitGcovArcs;
+  llvm::copy(CodeGenOpts.CoverageVersion, std::begin(Options.Version));
+  Options.UseCfgChecksum = CodeGenOpts.CoverageExtraChecksum;
+  Options.NoRedZone = CodeGenOpts.DisableRedZone;
+  Options.FunctionNamesInData = !CodeGenOpts.CoverageNoFunctionNamesInData;
+  Options.ExitBlockBeforeBody = CodeGenOpts.CoverageExitBlockBeforeBody;
+  return Options;
+}
 
 void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
                                       legacy::FunctionPassManager &FPM) {
@@ -613,20 +631,8 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
   if (!CodeGenOpts.RewriteMapFiles.empty())
     addSymbolRewriterPass(CodeGenOpts, &MPM);
 
-  if (!CodeGenOpts.DisableGCov &&
-      (CodeGenOpts.EmitGcovArcs || CodeGenOpts.EmitGcovNotes)) {
-    // Not using 'GCOVOptions::getDefault' allows us to avoid exiting if
-    // LLVM's -default-gcov-version flag is set to something invalid.
-    GCOVOptions Options;
-    Options.EmitNotes = CodeGenOpts.EmitGcovNotes;
-    Options.EmitData = CodeGenOpts.EmitGcovArcs;
-    memcpy(Options.Version, CodeGenOpts.CoverageVersion, 4);
-    Options.UseCfgChecksum = CodeGenOpts.CoverageExtraChecksum;
-    Options.NoRedZone = CodeGenOpts.DisableRedZone;
-    Options.FunctionNamesInData =
-        !CodeGenOpts.CoverageNoFunctionNamesInData;
-    Options.ExitBlockBeforeBody = CodeGenOpts.CoverageExitBlockBeforeBody;
-    MPM.add(createGCOVProfilerPass(Options));
+  if (Optional<GCOVOptions> Options = getGCOVOptions(CodeGenOpts)) {
+    MPM.add(createGCOVProfilerPass(*Options));
     if (CodeGenOpts.getDebugInfo() == codegenoptions::NoDebugInfo)
       MPM.add(createStripSymbolsPass(true));
   }
@@ -953,6 +959,9 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
         MPM = PB.buildPerModuleDefaultPipeline(Level,
                                                CodeGenOpts.DebugPassManager);
       }
+    }
+    if (Optional<GCOVOptions> Options = getGCOVOptions(CodeGenOpts)) {
+      MPM.addPass(GCOVProfilerPass(*Options));
     }
   }
 

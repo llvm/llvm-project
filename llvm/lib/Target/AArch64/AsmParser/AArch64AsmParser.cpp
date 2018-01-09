@@ -2826,7 +2826,7 @@ AArch64AsmParser::tryParseSVEPredicateVector(OperandVector &Operands) {
   Parser.Lex(); // Eat the slash.
 
   // Zeroing or merging?
-  StringRef Pred = Parser.getTok().getString().lower();
+  auto Pred = Parser.getTok().getString().lower();
   if (Pred != "z" && Pred != "m") {
     Error(getLoc(), "expecting 'm' or 'z' predication");
     return MatchOperand_ParseFail;

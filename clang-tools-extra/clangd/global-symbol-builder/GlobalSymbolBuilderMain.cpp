@@ -17,15 +17,15 @@
 #include "index/SymbolCollector.h"
 #include "index/SymbolYAML.h"
 #include "clang/Frontend/FrontendActions.h"
-#include "clang/Index/IndexingAction.h"
 #include "clang/Index/IndexDataConsumer.h"
+#include "clang/Index/IndexingAction.h"
 #include "clang/Tooling/CommonOptionsParser.h"
+#include "clang/Tooling/Execution.h"
 #include "clang/Tooling/Tooling.h"
-#include "clang/Tooling/CommonOptionsParser.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Signals.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/ThreadPool.h"
 
 using namespace llvm;
@@ -37,18 +37,46 @@ namespace clangd {
 
 class SymbolIndexActionFactory : public tooling::FrontendActionFactory {
 public:
-  SymbolIndexActionFactory() = default;
+  SymbolIndexActionFactory(tooling::ExecutionContext *Ctx) : Ctx(Ctx) {}
 
   clang::FrontendAction *create() override {
+    // Wraps the index action and reports collected symbols to the execution
+    // context at the end of each translation unit.
+    class WrappedIndexAction : public WrapperFrontendAction {
+    public:
+      WrappedIndexAction(std::shared_ptr<SymbolCollector> C,
+                         const index::IndexingOptions &Opts,
+                         tooling::ExecutionContext *Ctx)
+          : WrapperFrontendAction(
+                index::createIndexingAction(C, Opts, nullptr)),
+            Ctx(Ctx), Collector(C) {}
+
+      void EndSourceFileAction() override {
+        WrapperFrontendAction::EndSourceFileAction();
+
+        auto Symbols = Collector->takeSymbols();
+        for (const auto &Sym : Symbols) {
+          std::string IDStr;
+          llvm::raw_string_ostream OS(IDStr);
+          OS << Sym.ID;
+          Ctx->reportResult(OS.str(), SymbolToYAML(Sym));
+        }
+      }
+
+    private:
+      tooling::ExecutionContext *Ctx;
+      std::shared_ptr<SymbolCollector> Collector;
+    };
+
     index::IndexingOptions IndexOpts;
     IndexOpts.SystemSymbolFilter =
         index::IndexingOptions::SystemSymbolFilterKind::All;
     IndexOpts.IndexFunctionLocals = false;
-    Collector = std::make_shared<SymbolCollector>();
-    return index::createIndexingAction(Collector, IndexOpts, nullptr).release();
+    return new WrappedIndexAction(std::make_shared<SymbolCollector>(),
+                                  IndexOpts, Ctx);
   }
 
-  std::shared_ptr<SymbolCollector> Collector;
+  tooling::ExecutionContext *Ctx;
 };
 
 } // namespace clangd
@@ -61,50 +89,22 @@ int main(int argc, const char **argv) {
       "This is an **experimental** tool to generate YAML-format "
       "project-wide symbols for clangd (global code completion). It would be "
       "changed and deprecated eventually. Don't use it in production code!";
-  CommonOptionsParser OptionsParser(argc, argv, cl::GeneralCategory,
-                                    /*Overview=*/Overview);
+  auto Executor = clang::tooling::createExecutorFromCommandLineArgs(
+      argc, argv, cl::GeneralCategory, Overview);
 
-  // No compilation database found, fallback to single TU analysis, this is
-  // mainly for debugging purpose:
-  //   global-symbol-buidler /tmp/t.cc -- -std=c++11.
-  if (OptionsParser.getCompilations().getAllFiles().empty()) {
-    llvm::errs() << "No compilation database found, processing individual "
-                    "files with flags from command-line\n.";
-    ClangTool Tool(OptionsParser.getCompilations(),
-                   OptionsParser.getSourcePathList());
-    clang::clangd::SymbolIndexActionFactory IndexAction;
-    Tool.run(&IndexAction);
-    llvm::outs() << SymbolToYAML(IndexAction.Collector->takeSymbols());
-    return 0;
+  if (!Executor) {
+    llvm::errs() << llvm::toString(Executor.takeError()) << "\n";
+    return 1;
   }
 
-  // Found compilation database, we iterate all TUs from database to get all
-  // symbols, and then merge them into a single SymbolSlab.
-  SymbolSlab::Builder GlobalSymbols;
-  std::mutex SymbolMutex;
-  auto AddSymbols = [&](const SymbolSlab& NewSymbols) {
-    // Synchronize set accesses.
-    std::unique_lock<std::mutex> LockGuard(SymbolMutex);
-    for (auto Sym : NewSymbols) {
-      // FIXME: Better handling the overlap symbols, currently we overwrite it
-      // with the latest one, but we always want to good declarations (class
-      // definitions, instead of forward declarations).
-      GlobalSymbols.insert(Sym);
-    }
-  };
-
-  {
-    llvm::ThreadPool Pool;
-    for (auto& file : OptionsParser.getCompilations().getAllFiles()) {
-      Pool.async([&OptionsParser, &AddSymbols](llvm::StringRef Path) {
-        ClangTool Tool(OptionsParser.getCompilations(), {Path});
-        clang::clangd::SymbolIndexActionFactory IndexAction;
-        Tool.run(&IndexAction);
-        AddSymbols(IndexAction.Collector->takeSymbols());
-      }, file);
-    }
+  auto Err = Executor->get()->execute(
+      llvm::make_unique<clang::clangd::SymbolIndexActionFactory>(
+          Executor->get()->getExecutionContext()));
+  if (Err) {
+    llvm::errs() << llvm::toString(std::move(Err)) << "\n";
   }
 
-  llvm::outs() << SymbolToYAML(std::move(GlobalSymbols).build());
+  Executor->get()->getToolResults()->forEachResult(
+      [](llvm::StringRef, llvm::StringRef Value) { llvm::outs() << Value; });
   return 0;
 }

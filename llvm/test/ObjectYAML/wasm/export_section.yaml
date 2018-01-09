@@ -7,12 +7,14 @@ Sections:
     FunctionTypes: [ 0, 0 ]
   - Type:            GLOBAL
     Globals:
-      - Type:        I32
+      - Index:       0
+        Type:        I32
         Mutable:     false
         InitExpr:
           Opcode:          I64_CONST
           Value:           32
-      - Type:        I32
+      - Index:       1
+        Type:        I32
         Mutable:     false
         InitExpr:
           Opcode:          I64_CONST

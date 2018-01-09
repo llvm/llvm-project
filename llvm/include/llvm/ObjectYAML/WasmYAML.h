@@ -66,6 +66,7 @@ struct ElemSegment {
 };
 
 struct Global {
+  uint32_t Index;
   ValueType Type;
   bool Mutable;
   wasm::WasmInitExpr InitExpr;
@@ -89,6 +90,7 @@ struct LocalDecl {
 };
 
 struct Function {
+  uint32_t Index;
   std::vector<LocalDecl> Locals;
   yaml::BinaryRef Body;
 };

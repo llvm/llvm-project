@@ -66,6 +66,7 @@ struct WasmInitExpr {
 };
 
 struct WasmGlobal {
+  uint32_t Index;
   int32_t Type;
   bool Mutable;
   WasmInitExpr InitExpr;
@@ -89,6 +90,7 @@ struct WasmLocalDecl {
 };
 
 struct WasmFunction {
+  uint32_t Index;
   std::vector<WasmLocalDecl> Locals;
   ArrayRef<uint8_t> Body;
   uint32_t CodeSectionOffset;

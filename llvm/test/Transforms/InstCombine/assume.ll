@@ -275,6 +275,23 @@ define i1 @nonnull4(i32** %a) {
   ret i1 %rval
 }
 
+; PR35846 - https://bugs.llvm.org/show_bug.cgi?id=35846
+
+define i32 @assumption_conflicts_with_known_bits(i32 %a, i32 %b) {
+; CHECK-LABEL: @assumption_conflicts_with_known_bits(
+; CHECK-NEXT:    tail call void @llvm.assume(i1 false)
+; CHECK-NEXT:    ret i32 0
+;
+  %and1 = and i32 %b, 3
+  %B1 = lshr i32 %and1, %and1
+  %B3 = shl nuw nsw i32 %and1, %B1
+  %cmp = icmp eq i32 %B3, 1
+  tail call void @llvm.assume(i1 %cmp)
+  %cmp2 = icmp eq i32 %B1, %B3
+  tail call void @llvm.assume(i1 %cmp2)
+  ret i32 %and1
+}
+
 
 attributes #0 = { nounwind uwtable }
 attributes #1 = { nounwind }

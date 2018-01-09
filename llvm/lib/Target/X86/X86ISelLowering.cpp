@@ -35996,6 +35996,45 @@ static SDValue combineToExtendVectorInReg(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Attempt to combine a (sext/zext (setcc)) to a setcc with a xmm/ymm/zmm
+// result type.
+static SDValue combineExtSetcc(SDNode *N, SelectionDAG &DAG,
+                               const X86Subtarget &Subtarget) {
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  SDLoc dl(N);
+
+  // Only do this combine with AVX512 for vector extends.
+  if (!Subtarget.hasAVX512() || !VT.isVector() || N0->getOpcode() != ISD::SETCC)
+    return SDValue();
+
+  // Only combine legal element types.
+  EVT SVT = VT.getVectorElementType();
+  if (SVT != MVT::i8 && SVT != MVT::i16 && SVT != MVT::i32 &&
+      SVT != MVT::i64 && SVT != MVT::f32 && SVT != MVT::f64)
+    return SDValue();
+
+  // We can only do this if the vector size in 256 bits or less.
+  unsigned Size = VT.getSizeInBits();
+  if (Size > 256)
+    return SDValue();
+
+  // Don't fold if the condition code can't be handled by PCMPEQ/PCMPGT since
+  // that's the only integer compares with we have.
+  ISD::CondCode CC = cast<CondCodeSDNode>(N0->getOperand(2))->get();
+  if (ISD::isUnsignedIntSetCC(CC) || CC == ISD::SETLE || CC == ISD::SETGE ||
+      CC == ISD::SETNE)
+    return SDValue();
+
+  // Only do this combine if the extension will be fully consumed by the setcc.
+  EVT N00VT = N0.getOperand(0).getValueType();
+  EVT MatchingVecType = N00VT.changeVectorElementTypeToInteger();
+  if (Size != MatchingVecType.getSizeInBits())
+    return SDValue();
+
+  return DAG.getSetCC(dl, VT, N0.getOperand(0), N0.getOperand(1), CC);
+}
+
 static SDValue combineSext(SDNode *N, SelectionDAG &DAG,
                            TargetLowering::DAGCombinerInfo &DCI,
                            const X86Subtarget &Subtarget) {
@@ -36012,6 +36051,9 @@ static SDValue combineSext(SDNode *N, SelectionDAG &DAG,
 
   if (!DCI.isBeforeLegalizeOps())
     return SDValue();
+
+  if (SDValue V = combineExtSetcc(N, DAG, Subtarget))
+    return V;
 
   if (InVT == MVT::i1 && N0.getOpcode() == ISD::XOR &&
       isAllOnesConstant(N0.getOperand(1)) && N0.hasOneUse()) {

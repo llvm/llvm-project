@@ -283,6 +283,8 @@ TEST(Option, FindNearest) {
   EXPECT_EQ(Nearest, "-blorp");
   EXPECT_EQ(1U, T.findNearest("--blorm", Nearest));
   EXPECT_EQ(Nearest, "--blorp");
+  EXPECT_EQ(1U, T.findNearest("-fjormp", Nearest));
+  EXPECT_EQ(Nearest, "--fjormp");
 
   // The nearest candidate respects the prefix and value delimiter
   // of the original string.

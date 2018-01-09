@@ -34,4 +34,5 @@ def Cramb : Joined<["/"], "cramb:">, HelpText<"The cramb option">, MetaVarName<"
 def Doopf1 : Flag<["-"], "doopf1">, HelpText<"The doopf1 option">, Flags<[OptFlag1]>;
 def Doopf2 : Flag<["-"], "doopf2">, HelpText<"The doopf2 option">, Flags<[OptFlag2]>;
 def Ermgh : Joined<["--"], "ermgh">, HelpText<"The ermgh option">, MetaVarName<"ERMGH">, Flags<[OptFlag1]>;
+def Fjormp : Flag<["--"], "fjormp">, HelpText<"The fjormp option">, Flags<[OptFlag1]>;
 def DashDash : Option<["--"], "", KIND_REMAINING_ARGS>;

@@ -26,8 +26,8 @@ declare i32 @ret32(float) local_unnamed_addr #1
 ; CHECK-NEXT:    FunctionTypes:   [ 0, 1 ]
 ; CHECK:       - Type:            CODE
 ; CHECK-NEXT:    Functions:
-; CHECK:           - Locals:
-; CHECK:           - Locals:
+; CHECK:           - Index:       0
+; CHECK:           - Index:       1
 ; CHECK:         Name:            name
 ; CHECK-NEXT:    FunctionNames:
 ; CHECK-NEXT:      - Index:           0

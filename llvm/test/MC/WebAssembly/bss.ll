@@ -9,22 +9,26 @@
 
 ; CHECK:        - Type:            GLOBAL
 ; CHECK-NEXT:     Globals:         
-; CHECK-NEXT:       - Type:            I32
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:        
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           0
-; CHECK-NEXT:       - Type:            I32
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:        
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           4
-; CHECK-NEXT:       - Type:            I32
+; CHECK-NEXT:       - Index:           2
+; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:        
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           8
-; CHECK-NEXT:       - Type:            I32
+; CHECK-NEXT:       - Index:           3
+; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:        
 ; CHECK-NEXT:           Opcode:          I32_CONST

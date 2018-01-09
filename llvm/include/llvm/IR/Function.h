@@ -237,10 +237,11 @@ public:
   /// \brief Set the entry count for this function.
   ///
   /// Entry count is the number of times this function was executed based on
-  /// pgo data. \p Imports points to a set of GUIDs that needs to be imported
-  /// by the function for sample PGO, to enable the same inlines as the
-  /// profiled optimized binary.
-  void setEntryCount(uint64_t Count,
+  /// pgo data. \p Synthetic indicates the count is synthesized by analysis and
+  /// not from a profile run. \p Imports points to a set of GUIDs that needs to
+  /// be imported by the function for sample PGO, to enable the same inlines as
+  /// the profiled optimized binary.
+  void setEntryCount(uint64_t Count, bool Synthetic = false,
                      const DenseSet<GlobalValue::GUID> *Imports = nullptr);
 
   /// \brief Get the entry count for this function.

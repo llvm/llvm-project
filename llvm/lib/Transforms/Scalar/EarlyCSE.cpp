@@ -717,6 +717,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
     // Dead instructions should just be removed.
     if (isInstructionTriviallyDead(Inst, &TLI)) {
       DEBUG(dbgs() << "EarlyCSE DCE: " << *Inst << '\n');
+      salvageDebugInfo(*Inst);
       removeMSSA(Inst);
       Inst->eraseFromParent();
       Changed = true;

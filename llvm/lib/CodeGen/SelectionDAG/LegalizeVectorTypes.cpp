@@ -169,9 +169,15 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_MERGE_VALUES(SDNode *N,
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_BITCAST(SDNode *N) {
+  SDValue Op = N->getOperand(0);
+  if (Op.getValueType().isVector()
+      && Op.getValueType().getVectorNumElements() == 1) {
+    assert(!isSimpleLegalType(Op.getValueType()));
+    Op = GetScalarizedVector(Op);
+  }
   EVT NewVT = N->getValueType(0).getVectorElementType();
   return DAG.getNode(ISD::BITCAST, SDLoc(N),
-                     NewVT, N->getOperand(0));
+                     NewVT, Op);
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_BUILD_VECTOR(SDNode *N) {

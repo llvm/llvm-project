@@ -58,10 +58,14 @@ MDNode *MDBuilder::createUnpredictable() {
 }
 
 MDNode *MDBuilder::createFunctionEntryCount(
-    uint64_t Count, const DenseSet<GlobalValue::GUID> *Imports) {
+    uint64_t Count, bool Synthetic,
+    const DenseSet<GlobalValue::GUID> *Imports) {
   Type *Int64Ty = Type::getInt64Ty(Context);
   SmallVector<Metadata *, 8> Ops;
-  Ops.push_back(createString("function_entry_count"));
+  if (Synthetic)
+    Ops.push_back(createString("synthetic_function_entry_count"));
+  else
+    Ops.push_back(createString("function_entry_count"));
   Ops.push_back(createConstant(ConstantInt::get(Int64Ty, Count)));
   if (Imports) {
     SmallVector<GlobalValue::GUID, 2> OrderID(Imports->begin(), Imports->end());

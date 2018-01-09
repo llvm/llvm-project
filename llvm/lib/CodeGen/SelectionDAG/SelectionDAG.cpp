@@ -903,12 +903,13 @@ SelectionDAG::SelectionDAG(const TargetMachine &tm, CodeGenOpt::Level OL)
 
 void SelectionDAG::init(MachineFunction &NewMF,
                         OptimizationRemarkEmitter &NewORE,
-                        Pass *PassPtr) {
+                        Pass *PassPtr, const TargetLibraryInfo *LibraryInfo) {
   MF = &NewMF;
   SDAGISelPass = PassPtr;
   ORE = &NewORE;
   TLI = getSubtarget().getTargetLowering();
   TSI = getSubtarget().getSelectionDAGInfo();
+  LibInfo = LibraryInfo;
   Context = &MF->getFunction().getContext();
 }
 

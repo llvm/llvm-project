@@ -21,9 +21,7 @@ define <4 x i32> @commute_cmpps_eq(<4 x float>* %a0, <4 x float> %a1) {
 ;
 ; AVX512-LABEL: commute_cmpps_eq:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpeqps (%rdi), %xmm0, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vcmpeqps (%rdi), %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = load <4 x float>, <4 x float>* %a0
   %2 = fcmp oeq <4 x float> %1, %a1
@@ -44,9 +42,7 @@ define <4 x i32> @commute_cmpps_ne(<4 x float>* %a0, <4 x float> %a1) {
 ;
 ; AVX512-LABEL: commute_cmpps_ne:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpneqps (%rdi), %xmm0, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vcmpneqps (%rdi), %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = load <4 x float>, <4 x float>* %a0
   %2 = fcmp une <4 x float> %1, %a1
@@ -67,9 +63,7 @@ define <4 x i32> @commute_cmpps_ord(<4 x float>* %a0, <4 x float> %a1) {
 ;
 ; AVX512-LABEL: commute_cmpps_ord:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpordps (%rdi), %xmm0, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vcmpordps (%rdi), %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = load <4 x float>, <4 x float>* %a0
   %2 = fcmp ord <4 x float> %1, %a1
@@ -90,9 +84,7 @@ define <4 x i32> @commute_cmpps_uno(<4 x float>* %a0, <4 x float> %a1) {
 ;
 ; AVX512-LABEL: commute_cmpps_uno:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpunordps (%rdi), %xmm0, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vcmpunordps (%rdi), %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = load <4 x float>, <4 x float>* %a0
   %2 = fcmp uno <4 x float> %1, %a1
@@ -117,9 +109,7 @@ define <4 x i32> @commute_cmpps_ueq(<4 x float>* %a0, <4 x float> %a1) {
 ;
 ; AVX512-LABEL: commute_cmpps_ueq:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpeq_uqps (%rdi), %xmm0, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vcmpeq_uqps (%rdi), %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = load <4 x float>, <4 x float>* %a0
   %2 = fcmp ueq <4 x float> %1, %a1
@@ -144,9 +134,7 @@ define <4 x i32> @commute_cmpps_one(<4 x float>* %a0, <4 x float> %a1) {
 ;
 ; AVX512-LABEL: commute_cmpps_one:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpneq_oqps (%rdi), %xmm0, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vcmpneq_oqps (%rdi), %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = load <4 x float>, <4 x float>* %a0
   %2 = fcmp one <4 x float> %1, %a1
@@ -171,9 +159,7 @@ define <4 x i32> @commute_cmpps_lt(<4 x float>* %a0, <4 x float> %a1) {
 ; AVX512-LABEL: commute_cmpps_lt:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovaps (%rdi), %xmm1
-; AVX512-NEXT:    vcmpltps %xmm0, %xmm1, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vcmpltps %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %1 = load <4 x float>, <4 x float>* %a0
   %2 = fcmp olt <4 x float> %1, %a1
@@ -198,9 +184,7 @@ define <4 x i32> @commute_cmpps_le(<4 x float>* %a0, <4 x float> %a1) {
 ; AVX512-LABEL: commute_cmpps_le:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovaps (%rdi), %xmm1
-; AVX512-NEXT:    vcmpleps %xmm0, %xmm1, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vcmpleps %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %1 = load <4 x float>, <4 x float>* %a0
   %2 = fcmp ole <4 x float> %1, %a1
@@ -222,9 +206,7 @@ define <8 x i32> @commute_cmpps_eq_ymm(<8 x float>* %a0, <8 x float> %a1) {
 ;
 ; AVX512-LABEL: commute_cmpps_eq_ymm:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpeqps (%rdi), %ymm0, %k1
-; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
+; AVX512-NEXT:    vcmpeqps (%rdi), %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %1 = load <8 x float>, <8 x float>* %a0
   %2 = fcmp oeq <8 x float> %1, %a1
@@ -246,9 +228,7 @@ define <8 x i32> @commute_cmpps_ne_ymm(<8 x float>* %a0, <8 x float> %a1) {
 ;
 ; AVX512-LABEL: commute_cmpps_ne_ymm:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpneqps (%rdi), %ymm0, %k1
-; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
+; AVX512-NEXT:    vcmpneqps (%rdi), %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %1 = load <8 x float>, <8 x float>* %a0
   %2 = fcmp une <8 x float> %1, %a1
@@ -270,9 +250,7 @@ define <8 x i32> @commute_cmpps_ord_ymm(<8 x float>* %a0, <8 x float> %a1) {
 ;
 ; AVX512-LABEL: commute_cmpps_ord_ymm:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpordps (%rdi), %ymm0, %k1
-; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
+; AVX512-NEXT:    vcmpordps (%rdi), %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %1 = load <8 x float>, <8 x float>* %a0
   %2 = fcmp ord <8 x float> %1, %a1
@@ -294,9 +272,7 @@ define <8 x i32> @commute_cmpps_uno_ymm(<8 x float>* %a0, <8 x float> %a1) {
 ;
 ; AVX512-LABEL: commute_cmpps_uno_ymm:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpunordps (%rdi), %ymm0, %k1
-; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
+; AVX512-NEXT:    vcmpunordps (%rdi), %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %1 = load <8 x float>, <8 x float>* %a0
   %2 = fcmp uno <8 x float> %1, %a1
@@ -326,9 +302,7 @@ define <8 x i32> @commute_cmpps_ueq_ymm(<8 x float>* %a0, <8 x float> %a1) {
 ;
 ; AVX512-LABEL: commute_cmpps_ueq_ymm:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpeq_uqps (%rdi), %ymm0, %k1
-; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
+; AVX512-NEXT:    vcmpeq_uqps (%rdi), %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %1 = load <8 x float>, <8 x float>* %a0
   %2 = fcmp ueq <8 x float> %1, %a1
@@ -358,9 +332,7 @@ define <8 x i32> @commute_cmpps_one_ymm(<8 x float>* %a0, <8 x float> %a1) {
 ;
 ; AVX512-LABEL: commute_cmpps_one_ymm:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpneq_oqps (%rdi), %ymm0, %k1
-; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
+; AVX512-NEXT:    vcmpneq_oqps (%rdi), %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %1 = load <8 x float>, <8 x float>* %a0
   %2 = fcmp one <8 x float> %1, %a1
@@ -388,9 +360,7 @@ define <8 x i32> @commute_cmpps_lt_ymm(<8 x float>* %a0, <8 x float> %a1) {
 ; AVX512-LABEL: commute_cmpps_lt_ymm:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovaps (%rdi), %ymm1
-; AVX512-NEXT:    vcmpltps %ymm0, %ymm1, %k1
-; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
+; AVX512-NEXT:    vcmpltps %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    retq
   %1 = load <8 x float>, <8 x float>* %a0
   %2 = fcmp olt <8 x float> %1, %a1
@@ -418,9 +388,7 @@ define <8 x i32> @commute_cmpps_le_ymm(<8 x float>* %a0, <8 x float> %a1) {
 ; AVX512-LABEL: commute_cmpps_le_ymm:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovaps (%rdi), %ymm1
-; AVX512-NEXT:    vcmpleps %ymm0, %ymm1, %k1
-; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
+; AVX512-NEXT:    vcmpleps %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    retq
   %1 = load <8 x float>, <8 x float>* %a0
   %2 = fcmp ole <8 x float> %1, %a1
@@ -446,9 +414,7 @@ define <2 x i64> @commute_cmppd_eq(<2 x double>* %a0, <2 x double> %a1) {
 ;
 ; AVX512-LABEL: commute_cmppd_eq:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpeqpd (%rdi), %xmm0, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vcmpeqpd (%rdi), %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = load <2 x double>, <2 x double>* %a0
   %2 = fcmp oeq <2 x double> %1, %a1
@@ -469,9 +435,7 @@ define <2 x i64> @commute_cmppd_ne(<2 x double>* %a0, <2 x double> %a1) {
 ;
 ; AVX512-LABEL: commute_cmppd_ne:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpneqpd (%rdi), %xmm0, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vcmpneqpd (%rdi), %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = load <2 x double>, <2 x double>* %a0
   %2 = fcmp une <2 x double> %1, %a1
@@ -492,9 +456,7 @@ define <2 x i64> @commute_cmppd_ord(<2 x double>* %a0, <2 x double> %a1) {
 ;
 ; AVX512-LABEL: commute_cmppd_ord:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpordpd (%rdi), %xmm0, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vcmpordpd (%rdi), %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = load <2 x double>, <2 x double>* %a0
   %2 = fcmp ord <2 x double> %1, %a1
@@ -519,9 +481,7 @@ define <2 x i64> @commute_cmppd_ueq(<2 x double>* %a0, <2 x double> %a1) {
 ;
 ; AVX512-LABEL: commute_cmppd_ueq:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpeq_uqpd (%rdi), %xmm0, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vcmpeq_uqpd (%rdi), %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = load <2 x double>, <2 x double>* %a0
   %2 = fcmp ueq <2 x double> %1, %a1
@@ -546,9 +506,7 @@ define <2 x i64> @commute_cmppd_one(<2 x double>* %a0, <2 x double> %a1) {
 ;
 ; AVX512-LABEL: commute_cmppd_one:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpneq_oqpd (%rdi), %xmm0, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vcmpneq_oqpd (%rdi), %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = load <2 x double>, <2 x double>* %a0
   %2 = fcmp one <2 x double> %1, %a1
@@ -569,9 +527,7 @@ define <2 x i64> @commute_cmppd_uno(<2 x double>* %a0, <2 x double> %a1) {
 ;
 ; AVX512-LABEL: commute_cmppd_uno:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpunordpd (%rdi), %xmm0, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vcmpunordpd (%rdi), %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = load <2 x double>, <2 x double>* %a0
   %2 = fcmp uno <2 x double> %1, %a1
@@ -596,9 +552,7 @@ define <2 x i64> @commute_cmppd_lt(<2 x double>* %a0, <2 x double> %a1) {
 ; AVX512-LABEL: commute_cmppd_lt:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovapd (%rdi), %xmm1
-; AVX512-NEXT:    vcmpltpd %xmm0, %xmm1, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vcmpltpd %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %1 = load <2 x double>, <2 x double>* %a0
   %2 = fcmp olt <2 x double> %1, %a1
@@ -623,9 +577,7 @@ define <2 x i64> @commute_cmppd_le(<2 x double>* %a0, <2 x double> %a1) {
 ; AVX512-LABEL: commute_cmppd_le:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovapd (%rdi), %xmm1
-; AVX512-NEXT:    vcmplepd %xmm0, %xmm1, %k1
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
+; AVX512-NEXT:    vcmplepd %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %1 = load <2 x double>, <2 x double>* %a0
   %2 = fcmp ole <2 x double> %1, %a1
@@ -647,9 +599,7 @@ define <4 x i64> @commute_cmppd_eq_ymmm(<4 x double>* %a0, <4 x double> %a1) {
 ;
 ; AVX512-LABEL: commute_cmppd_eq_ymmm:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpeqpd (%rdi), %ymm0, %k1
-; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX512-NEXT:    vmovdqa64 %ymm0, %ymm0 {%k1} {z}
+; AVX512-NEXT:    vcmpeqpd (%rdi), %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %1 = load <4 x double>, <4 x double>* %a0
   %2 = fcmp oeq <4 x double> %1, %a1
@@ -671,9 +621,7 @@ define <4 x i64> @commute_cmppd_ne_ymmm(<4 x double>* %a0, <4 x double> %a1) {
 ;
 ; AVX512-LABEL: commute_cmppd_ne_ymmm:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpneqpd (%rdi), %ymm0, %k1
-; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX512-NEXT:    vmovdqa64 %ymm0, %ymm0 {%k1} {z}
+; AVX512-NEXT:    vcmpneqpd (%rdi), %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %1 = load <4 x double>, <4 x double>* %a0
   %2 = fcmp une <4 x double> %1, %a1
@@ -695,9 +643,7 @@ define <4 x i64> @commute_cmppd_ord_ymmm(<4 x double>* %a0, <4 x double> %a1) {
 ;
 ; AVX512-LABEL: commute_cmppd_ord_ymmm:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpordpd (%rdi), %ymm0, %k1
-; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX512-NEXT:    vmovdqa64 %ymm0, %ymm0 {%k1} {z}
+; AVX512-NEXT:    vcmpordpd (%rdi), %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %1 = load <4 x double>, <4 x double>* %a0
   %2 = fcmp ord <4 x double> %1, %a1
@@ -719,9 +665,7 @@ define <4 x i64> @commute_cmppd_uno_ymmm(<4 x double>* %a0, <4 x double> %a1) {
 ;
 ; AVX512-LABEL: commute_cmppd_uno_ymmm:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpunordpd (%rdi), %ymm0, %k1
-; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX512-NEXT:    vmovdqa64 %ymm0, %ymm0 {%k1} {z}
+; AVX512-NEXT:    vcmpunordpd (%rdi), %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %1 = load <4 x double>, <4 x double>* %a0
   %2 = fcmp uno <4 x double> %1, %a1
@@ -751,9 +695,7 @@ define <4 x i64> @commute_cmppd_ueq_ymmm(<4 x double>* %a0, <4 x double> %a1) {
 ;
 ; AVX512-LABEL: commute_cmppd_ueq_ymmm:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpeq_uqpd (%rdi), %ymm0, %k1
-; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX512-NEXT:    vmovdqa64 %ymm0, %ymm0 {%k1} {z}
+; AVX512-NEXT:    vcmpeq_uqpd (%rdi), %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %1 = load <4 x double>, <4 x double>* %a0
   %2 = fcmp ueq <4 x double> %1, %a1
@@ -783,9 +725,7 @@ define <4 x i64> @commute_cmppd_one_ymmm(<4 x double>* %a0, <4 x double> %a1) {
 ;
 ; AVX512-LABEL: commute_cmppd_one_ymmm:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcmpneq_oqpd (%rdi), %ymm0, %k1
-; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX512-NEXT:    vmovdqa64 %ymm0, %ymm0 {%k1} {z}
+; AVX512-NEXT:    vcmpneq_oqpd (%rdi), %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %1 = load <4 x double>, <4 x double>* %a0
   %2 = fcmp one <4 x double> %1, %a1
@@ -813,9 +753,7 @@ define <4 x i64> @commute_cmppd_lt_ymmm(<4 x double>* %a0, <4 x double> %a1) {
 ; AVX512-LABEL: commute_cmppd_lt_ymmm:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovapd (%rdi), %ymm1
-; AVX512-NEXT:    vcmpltpd %ymm0, %ymm1, %k1
-; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX512-NEXT:    vmovdqa64 %ymm0, %ymm0 {%k1} {z}
+; AVX512-NEXT:    vcmpltpd %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    retq
   %1 = load <4 x double>, <4 x double>* %a0
   %2 = fcmp olt <4 x double> %1, %a1
@@ -843,9 +781,7 @@ define <4 x i64> @commute_cmppd_le_ymmm(<4 x double>* %a0, <4 x double> %a1) {
 ; AVX512-LABEL: commute_cmppd_le_ymmm:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovapd (%rdi), %ymm1
-; AVX512-NEXT:    vcmplepd %ymm0, %ymm1, %k1
-; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX512-NEXT:    vmovdqa64 %ymm0, %ymm0 {%k1} {z}
+; AVX512-NEXT:    vcmplepd %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    retq
   %1 = load <4 x double>, <4 x double>* %a0
   %2 = fcmp ole <4 x double> %1, %a1

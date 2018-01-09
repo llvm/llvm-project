@@ -2,8 +2,9 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse2 | FileCheck %s --check-prefixes=SSE2-SSSE3,SSE2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+ssse3 | FileCheck %s --check-prefixes=SSE2-SSSE3,SSSE3
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=AVX12,AVX1
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=AVX12,AVX2
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512vl,+avx512bw | FileCheck %s --check-prefixes=AVX512
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=AVX12,AVX2,AVX2-SLOW
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-shuffle | FileCheck %s --check-prefixes=AVX12,AVX2,AVX2-FAST
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512vl,+avx512bw,+fast-variable-shuffle | FileCheck %s --check-prefix=AVX512
 
 ;
 ; 128-bit vectors
@@ -379,19 +380,31 @@ define <32 x i8> @ext_i32_32i8(i32 %a0) {
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: ext_i32_32i8:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovd %edi, %xmm0
-; AVX2-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; AVX2-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[0,0,1,1,4,5,6,7]
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,1,1]
-; AVX2-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[2,2,3,3,4,5,6,7]
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
-; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [9241421688590303745,9241421688590303745,9241421688590303745,9241421688590303745]
-; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    retq
+; AVX2-SLOW-LABEL: ext_i32_32i8:
+; AVX2-SLOW:       # %bb.0:
+; AVX2-SLOW-NEXT:    vmovd %edi, %xmm0
+; AVX2-SLOW-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; AVX2-SLOW-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[0,0,1,1,4,5,6,7]
+; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,1,1]
+; AVX2-SLOW-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[2,2,3,3,4,5,6,7]
+; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; AVX2-SLOW-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX2-SLOW-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [9241421688590303745,9241421688590303745,9241421688590303745,9241421688590303745]
+; AVX2-SLOW-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX2-SLOW-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
+; AVX2-SLOW-NEXT:    retq
+;
+; AVX2-FAST-LABEL: ext_i32_32i8:
+; AVX2-FAST:       # %bb.0:
+; AVX2-FAST-NEXT:    vmovd %edi, %xmm0
+; AVX2-FAST-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[0,1,0,1,0,1,0,1,2,3,2,3,2,3,2,3]
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,4,5,4,5,4,5,6,7,6,7,6,7,6,7]
+; AVX2-FAST-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX2-FAST-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [9241421688590303745,9241421688590303745,9241421688590303745,9241421688590303745]
+; AVX2-FAST-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX2-FAST-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
+; AVX2-FAST-NEXT:    retq
 ;
 ; AVX512-LABEL: ext_i32_32i8:
 ; AVX512:       # %bb.0:
@@ -683,26 +696,43 @@ define <64 x i8> @ext_i64_64i8(i64 %a0) {
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: ext_i64_64i8:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovq %rdi, %xmm0
-; AVX2-NEXT:    vpunpcklbw {{.*#+}} xmm1 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; AVX2-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm1[0,0,1,1,4,5,6,7]
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
-; AVX2-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm1[2,2,3,3,4,5,6,7]
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,0,1,1]
-; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [9241421688590303745,9241421688590303745,9241421688590303745,9241421688590303745]
-; AVX2-NEXT:    vpand %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpcmpeqb %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpshufhw {{.*#+}} xmm3 = xmm1[0,1,2,3,4,4,5,5]
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[2,2,3,3]
-; AVX2-NEXT:    vpshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,6,6,7,7]
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,2,3,3]
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm3, %ymm1
-; AVX2-NEXT:    vpand %ymm2, %ymm1, %ymm1
-; AVX2-NEXT:    vpcmpeqb %ymm2, %ymm1, %ymm1
-; AVX2-NEXT:    retq
+; AVX2-SLOW-LABEL: ext_i64_64i8:
+; AVX2-SLOW:       # %bb.0:
+; AVX2-SLOW-NEXT:    vmovq %rdi, %xmm0
+; AVX2-SLOW-NEXT:    vpunpcklbw {{.*#+}} xmm1 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; AVX2-SLOW-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm1[0,0,1,1,4,5,6,7]
+; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; AVX2-SLOW-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm1[2,2,3,3,4,5,6,7]
+; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,0,1,1]
+; AVX2-SLOW-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; AVX2-SLOW-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [9241421688590303745,9241421688590303745,9241421688590303745,9241421688590303745]
+; AVX2-SLOW-NEXT:    vpand %ymm2, %ymm0, %ymm0
+; AVX2-SLOW-NEXT:    vpcmpeqb %ymm2, %ymm0, %ymm0
+; AVX2-SLOW-NEXT:    vpshufhw {{.*#+}} xmm3 = xmm1[0,1,2,3,4,4,5,5]
+; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[2,2,3,3]
+; AVX2-SLOW-NEXT:    vpshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,6,6,7,7]
+; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,2,3,3]
+; AVX2-SLOW-NEXT:    vinserti128 $1, %xmm1, %ymm3, %ymm1
+; AVX2-SLOW-NEXT:    vpand %ymm2, %ymm1, %ymm1
+; AVX2-SLOW-NEXT:    vpcmpeqb %ymm2, %ymm1, %ymm1
+; AVX2-SLOW-NEXT:    retq
+;
+; AVX2-FAST-LABEL: ext_i64_64i8:
+; AVX2-FAST:       # %bb.0:
+; AVX2-FAST-NEXT:    vmovq %rdi, %xmm0
+; AVX2-FAST-NEXT:    vpunpcklbw {{.*#+}} xmm1 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm1[0,1,0,1,0,1,0,1,2,3,2,3,2,3,2,3]
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm2 = xmm1[4,5,4,5,4,5,4,5,6,7,6,7,6,7,6,7]
+; AVX2-FAST-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; AVX2-FAST-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [9241421688590303745,9241421688590303745,9241421688590303745,9241421688590303745]
+; AVX2-FAST-NEXT:    vpand %ymm2, %ymm0, %ymm0
+; AVX2-FAST-NEXT:    vpcmpeqb %ymm2, %ymm0, %ymm0
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm3 = xmm1[8,9,8,9,8,9,8,9,10,11,10,11,10,11,10,11]
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[12,13,12,13,12,13,12,13,14,15,14,15,14,15,14,15]
+; AVX2-FAST-NEXT:    vinserti128 $1, %xmm1, %ymm3, %ymm1
+; AVX2-FAST-NEXT:    vpand %ymm2, %ymm1, %ymm1
+; AVX2-FAST-NEXT:    vpcmpeqb %ymm2, %ymm1, %ymm1
+; AVX2-FAST-NEXT:    retq
 ;
 ; AVX512-LABEL: ext_i64_64i8:
 ; AVX512:       # %bb.0:
