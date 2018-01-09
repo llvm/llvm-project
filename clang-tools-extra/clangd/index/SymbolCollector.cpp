@@ -80,8 +80,15 @@ bool SymbolCollector::handleDeclOccurence(
     return true;
 
   if (const NamedDecl *ND = llvm::dyn_cast<NamedDecl>(D)) {
-    // FIXME: Should we include the internal linkage symbols?
-    if (!ND->hasExternalFormalLinkage() || ND->isInAnonymousNamespace())
+    // FIXME: figure out a way to handle internal linkage symbols (e.g. static
+    // variables, function) defined in the .cc files. Also we skip the symbols
+    // in anonymous namespace as the qualifier names of these symbols are like
+    // `foo::<anonymous>::bar`, which need a special handling.
+    // In real world projects, we have a relatively large set of header files
+    // that define static variables (like "static const int A = 1;"), we still
+    // want to collect these symbols, although they cause potential ODR
+    // violations.
+    if (ND->isInAnonymousNamespace())
       return true;
 
     llvm::SmallString<128> USR;
