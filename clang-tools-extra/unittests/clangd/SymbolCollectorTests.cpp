@@ -29,6 +29,7 @@
 using testing::Eq;
 using testing::Field;
 using testing::UnorderedElementsAre;
+using testing::UnorderedElementsAreArray;
 
 // GMock helpers for matching Symbol.
 MATCHER_P(QName, Name, "") {
@@ -97,16 +98,53 @@ TEST_F(SymbolCollectorTest, CollectSymbol) {
     };
     void f1();
     inline void f2() {}
+    static const int KInt = 2;
+    const char* kStr = "123";
   )";
   const std::string Main = R"(
     namespace {
     void ff() {} // ignore
     }
+
     void f1() {}
+
+    namespace foo {
+    // Type alias
+    typedef int int32;
+    using int32_t = int32;
+
+    // Variable
+    int v1;
+
+    // Namespace
+    namespace bar {
+    int v2;
+    }
+    // Namespace alias
+    namespace baz = bar;
+
+    // FIXME: using declaration is not supported as the IndexAction will ignore
+    // implicit declarations (the implicit using shadow declaration) by default,
+    // and there is no way to customize this behavior at the moment.
+    using bar::v2;
+    } // namespace foo
   )";
   runSymbolCollector(Header, Main);
-  EXPECT_THAT(Symbols, UnorderedElementsAre(QName("Foo"), QName("Foo::f"),
-                                            QName("f1"), QName("f2")));
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAreArray(
+                  {QName("Foo"),
+                   QName("Foo::f"),
+                   QName("f1"),
+                   QName("f2"),
+                   QName("KInt"),
+                   QName("kStr"),
+                   QName("foo"),
+                   QName("foo::bar"),
+                   QName("foo::int32"),
+                   QName("foo::int32_t"),
+                   QName("foo::v1"),
+                   QName("foo::bar::v2"),
+                   QName("foo::baz")}));
 }
 
 TEST_F(SymbolCollectorTest, YAMLConversions) {

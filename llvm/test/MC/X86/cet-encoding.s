@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown -mattr=+shstk --show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown -mattr=+shstk -mattr=+ibt --show-encoding %s | FileCheck %s
 
 // CHECK: incsspd %r13d
 // CHECK: # encoding: [0xf3,0x41,0x0f,0xae,0xed]
@@ -167,3 +167,11 @@
 // CHECK: setssbsy
 // CHECK: # encoding: [0xf3,0x0f,0x01,0xe8]
           setssbsy
+
+// CHECK: endbr64
+// CHECK: # encoding: [0xf3,0x0f,0x1e,0xfa]
+          endbr64
+
+// CHECK: endbr32
+// CHECK: # encoding: [0xf3,0x0f,0x1e,0xfb]
+          endbr32

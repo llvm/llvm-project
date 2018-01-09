@@ -11,7 +11,7 @@
 ; CHECK: Before post-MI-sched:
 ; CHECK-LABEL: # Machine code for function test1:
 ; CHECK: SU(2):   STRWui %wzr
-; CHECK: SU(3):   %x21, %x20 = LDPXi %sp
+; CHECK: SU(3):   %x21, %x20 = LDPXi %sp, 2; flags: FrameDestroy
 ; CHECK:  Predecessors:
 ; CHECK-NEXT:   SU(0): Out
 ; CHECK-NEXT:   SU(0): Out

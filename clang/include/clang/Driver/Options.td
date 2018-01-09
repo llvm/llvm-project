@@ -1042,6 +1042,11 @@ def finstrument_functions_after_inlining : Flag<["-"], "finstrument-functions-af
   HelpText<"Like -finstrument-functions, but insert the calls after inlining">;
 def finstrument_function_entry_bare : Flag<["-"], "finstrument-function-entry-bare">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Instrument function entry only, after inlining, without arguments to the instrumentation call">;
+def fcf_protection_EQ : Joined<["-"], "fcf-protection=">, Flags<[CoreOption, CC1Option]>, Group<f_Group>,
+  HelpText<"Instrument control-flow architecture protection. Options: return, branch, full, none.">, Values<"return,branch,full,none">;
+def fcf_protection : Flag<["-"], "fcf-protection">, Group<f_Group>, Flags<[CoreOption, CC1Option]>,
+  Alias<fcf_protection_EQ>, AliasArgs<["full"]>,
+  HelpText<"Enable cf-protection in 'full' mode">;
 
 def fxray_instrument : Flag<["-"], "fxray-instrument">, Group<f_Group>,
   Flags<[CC1Option]>,

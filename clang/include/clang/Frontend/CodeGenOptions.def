@@ -80,7 +80,10 @@ CODEGENOPT(InstrumentFunctionsAfterInlining , 1, 0) ///< Set when
                           ///< -finstrument-functions-after-inlining is enabled.
 CODEGENOPT(InstrumentFunctionEntryBare , 1, 0) ///< Set when
                                ///< -finstrument-function-entry-bare is enabled.
-
+CODEGENOPT(CFProtectionReturn , 1, 0) ///< if -fcf-protection is
+                                      ///< set to full or return.
+CODEGENOPT(CFProtectionBranch , 1, 0) ///< if -fcf-protection is
+                                      ///< set to full or branch.
 CODEGENOPT(XRayInstrumentFunctions , 1, 0) ///< Set when -fxray-instrument is
                                            ///< enabled.
 CODEGENOPT(StackSizeSection  , 1, 0) ///< Set when -fstack-size-section is enabled.

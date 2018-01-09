@@ -5120,14 +5120,13 @@ Expr *ASTNodeImporter::VisitUnaryOperator(UnaryOperator *E) {
   if (!SubExpr)
     return nullptr;
 
-  return new (Importer.getToContext()) UnaryOperator(SubExpr, E->getOpcode(),
-                                                     T, E->getValueKind(),
-                                                     E->getObjectKind(),
-                                         Importer.Import(E->getOperatorLoc()));                                        
+  return new (Importer.getToContext()) UnaryOperator(
+      SubExpr, E->getOpcode(), T, E->getValueKind(), E->getObjectKind(),
+      Importer.Import(E->getOperatorLoc()), E->canOverflow());
 }
 
-Expr *ASTNodeImporter::VisitUnaryExprOrTypeTraitExpr(
-                                            UnaryExprOrTypeTraitExpr *E) {
+Expr *
+ASTNodeImporter::VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *E) {
   QualType ResultType = Importer.Import(E->getType());
   
   if (E->isArgumentType()) {
