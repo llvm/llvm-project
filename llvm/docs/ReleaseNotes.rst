@@ -69,10 +69,13 @@ Non-comprehensive list of changes in this release
 Changes to the LLVM IR
 ----------------------
 
-Changes to the ARM Backend
---------------------------
+Changes to the ARM Target
+-------------------------
 
- During this release ...
+During this release the ARM target has:
+
+* Got support for enabling SjLj exception handling on platforms where it
+  isn't the default.
 
 
 Changes to the MIPS Target
@@ -89,7 +92,10 @@ Changes to the PowerPC Target
 Changes to the X86 Target
 -------------------------
 
- During this release ...
+During this release ...
+
+* Got support for enabling SjLj exception handling on platforms where it
+  isn't the default.
 
 Changes to the AMDGPU Target
 -----------------------------
