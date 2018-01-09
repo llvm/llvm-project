@@ -24,10 +24,11 @@ class ExecTestCase(TestBase):
         self.do_test(False)
 
     @skipUnlessDarwin
+    @expectedFailureAll(oslist=['macosx'], bugnumber="rdar://29291115")
     @expectedFailureAll(archs=['i386'], bugnumber="rdar://28656532")
     @expectedFailureAll(oslist=["ios", "tvos", "watchos", "bridgeos"], bugnumber="rdar://problem/34559552") # this exec test has problems on ios systems
     def test_skipping_exec (self):
-        self.do_test(False)
+        self.do_test(True)
 
     def do_test(self, skip_exec):
         if self.getArchitecture() == 'x86_64':
@@ -44,7 +45,7 @@ class ExecTestCase(TestBase):
                 lldbutil.execute_command("rm -rf '%s'" % (dsym_path))
         else:
             self.build()
-
+            
         exe = os.path.join(os.getcwd(), "a.out")
 
         # Create the target
