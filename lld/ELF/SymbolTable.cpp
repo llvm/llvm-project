@@ -117,7 +117,7 @@ template <class ELFT> void SymbolTable::addFile(InputFile *File) {
 // not in native object file format but in the LLVM bitcode format.
 // This function compiles bitcode files into a few big native files
 // using LLVM functions and replaces bitcode symbols with the results.
-// Because all bitcode files that consist of a program are passed
+// Because all bitcode files that the program consists of are passed
 // to the compiler at once, it can do whole-program optimization.
 template <class ELFT> void SymbolTable::addCombinedLTOObject() {
   if (BitcodeFiles.empty())
@@ -598,12 +598,6 @@ template <class ELFT> void SymbolTable::scanShlibUndefined() {
       if (!Sym || !Sym->isDefined())
         continue;
       Sym->ExportDynamic = true;
-
-      // If -dynamic-list is given, the default version is set to
-      // VER_NDX_LOCAL, which prevents a symbol to be exported via .dynsym.
-      // Set to VER_NDX_GLOBAL so the symbol will be handled as if it were
-      // specified by -dynamic-list.
-      Sym->VersionId = VER_NDX_GLOBAL;
     }
   }
 }
