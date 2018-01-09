@@ -133,12 +133,20 @@ SymbolSlab SymbolFromYAML(llvm::StringRef YAMLContent) {
   return std::move(Syms).build();
 }
 
-std::string SymbolToYAML(const SymbolSlab& Symbols) {
+std::string SymbolsToYAML(const SymbolSlab& Symbols) {
   std::string Str;
   llvm::raw_string_ostream OS(Str);
   llvm::yaml::Output Yout(OS);
   for (Symbol S : Symbols) // copy: Yout<< requires mutability.
     Yout<< S;
+  return OS.str();
+}
+
+std::string SymbolToYAML(Symbol Sym) {
+  std::string Str;
+  llvm::raw_string_ostream OS(Str);
+  llvm::yaml::Output Yout(OS);
+  Yout << Sym;
   return OS.str();
 }
 
