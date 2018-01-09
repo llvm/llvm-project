@@ -4696,6 +4696,11 @@ enum MachineOutlinerClass {
   MachineOutlinerNoLRSave  /// Emit a call and return.
 };
 
+enum MachineOutlinerMBBFlags {
+  LRUnavailableSomewhere = 0x2,
+  HasCalls = 0x4
+};
+
 bool AArch64InstrInfo::canOutlineWithoutLRSave(
     MachineBasicBlock::iterator &CallInsertionPt) const {
   // Was LR saved in the function containing this basic block?
@@ -4785,10 +4790,36 @@ bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(
   return true;
 }
 
-AArch64GenInstrInfo::MachineOutlinerInstrType
-AArch64InstrInfo::getOutliningType(MachineInstr &MI) const {
+unsigned
+AArch64InstrInfo::getMachineOutlinerMBBFlags(MachineBasicBlock &MBB) const {
+  unsigned Flags = 0x0;
+  // Check if there's a call inside this MachineBasicBlock. If there is, then
+  // set a flag.
+  if (std::any_of(MBB.begin(), MBB.end(),
+                  [](MachineInstr &MI) { return MI.isCall(); }))
+    Flags |= MachineOutlinerMBBFlags::HasCalls;
 
-  MachineFunction *MF = MI.getParent()->getParent();
+  // Check if LR is available through all of the MBB. If it's not, then set
+  // a flag.
+  LiveRegUnits LRU(getRegisterInfo());
+  LRU.addLiveOuts(MBB);
+
+  std::for_each(MBB.rbegin(),
+                MBB.rend(),
+                [&LRU](MachineInstr &MI) { LRU.accumulate(MI); });
+
+  if (!LRU.available(AArch64::LR)) 
+      Flags |= MachineOutlinerMBBFlags::LRUnavailableSomewhere;
+
+  return Flags;
+}
+
+AArch64GenInstrInfo::MachineOutlinerInstrType
+AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
+                                   unsigned Flags) const {
+  MachineInstr &MI = *MIT;
+  MachineBasicBlock *MBB = MI.getParent();
+  MachineFunction *MF = MBB->getParent();
   AArch64FunctionInfo *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
 
   // Don't outline LOHs.
@@ -4796,16 +4827,16 @@ AArch64InstrInfo::getOutliningType(MachineInstr &MI) const {
     return MachineOutlinerInstrType::Illegal;
 
   // Don't allow debug values to impact outlining type.
-  if (MI.isDebugValue() || MI.isIndirectDebugValue())
+  if (MI.isDebugValue() || MI.isIndirectDebugValue()) 
     return MachineOutlinerInstrType::Invisible;
-
+  
   // Is this a terminator for a basic block?
   if (MI.isTerminator()) {
 
     // Is this the end of a function?
     if (MI.getParent()->succ_empty())
       return MachineOutlinerInstrType::Legal;
-
+    
     // It's not, so don't outline it.
     return MachineOutlinerInstrType::Illegal;
   }
@@ -4833,7 +4864,7 @@ AArch64InstrInfo::getOutliningType(MachineInstr &MI) const {
     // Only handle functions that we have information about.
     if (!Callee)
       return MachineOutlinerInstrType::Illegal;
-
+    
     // We have a function we have information about. Check it if it's something
     // can safely outline.
 
@@ -4848,27 +4879,28 @@ AArch64InstrInfo::getOutliningType(MachineInstr &MI) const {
     // to outline these since they might be loaded in two instructions.
     for (Argument &Arg : Callee->args()) {
       if (Arg.getType()->isPointerTy() &&
-          Arg.getType()->getPointerElementType()->isAggregateType())
+          Arg.getType()->getPointerElementType()->isAggregateType()) 
         return MachineOutlinerInstrType::Illegal;
     }
 
     // If the thing we're calling doesn't access memory at all, then we're good
     // to go.
-    if (Callee->doesNotAccessMemory())
+    if (Callee->doesNotAccessMemory()) 
       return MachineOutlinerInstrType::Legal;
+    
 
     // It accesses memory. Get the machine function for the callee to see if
     // it's safe to outline.
     MachineFunction *CalleeMF = MF->getMMI().getMachineFunction(*Callee);
 
     // We don't know what's going on with the callee at all. Don't touch it.
-    if (!CalleeMF)
+    if (!CalleeMF) 
       return MachineOutlinerInstrType::Illegal;
 
     // Does it pass anything on the stack? If it does, don't outline it.
     if (CalleeMF->getInfo<AArch64FunctionInfo>()->getBytesInStackArgArea() != 0)
       return MachineOutlinerInstrType::Illegal;
-
+    
     // It doesn't, so it's safe to outline and we're done.
     return MachineOutlinerInstrType::Legal;
   }
@@ -4896,7 +4928,52 @@ AArch64InstrInfo::getOutliningType(MachineInstr &MI) const {
   // Does this use the stack?
   if (MI.modifiesRegister(AArch64::SP, &RI) ||
       MI.readsRegister(AArch64::SP, &RI)) {
+    // True if there is no chance that any outlined candidate from this range
+    // could require stack fixups. That is, both
+    // * LR is available in the range (No save/restore around call)
+    // * The range doesn't include calls (No save/restore in outlined frame)
+    // are true.
+    bool MightNeedStackFixUp =
+        (Flags & (MachineOutlinerMBBFlags::LRUnavailableSomewhere |
+                  MachineOutlinerMBBFlags::HasCalls));
 
+    // If this instruction is in a range where it *never* needs to be fixed
+    // up, then we can *always* outline it. This is true even if it's not
+    // possible to fix that instruction up.
+    //
+    // Why? Consider two equivalent instructions I1, I2 where both I1 and I2
+    // use SP. Suppose that I1 sits within a range that definitely doesn't
+    // need stack fixups, while I2 sits in a range that does.
+    //
+    // First, I1 can be outlined as long as we *never* fix up the stack in
+    // any sequence containing it. I1 is already a safe instruction in the
+    // original program, so as long as we don't modify it we're good to go.
+    // So this leaves us with showing that outlining I2 won't break our
+    // program.
+    //
+    // Suppose I1 and I2 belong to equivalent candidate sequences. When we
+    // look at I2, we need to see if it can be fixed up. Suppose I2, (and
+    // thus I1) cannot be fixed up. Then I2 will be assigned an unique
+    // integer label; thus, I2 cannot belong to any candidate sequence (a
+    // contradiction). Suppose I2 can be fixed up. Then I1 can be fixed up
+    // as well, so we're good. Thus, I1 is always safe to outline.
+    //
+    // This gives us two things: first off, it buys us some more instructions
+    // for our search space by deeming stack instructions illegal only when
+    // they can't be fixed up AND we might have to fix them up. Second off,
+    // This allows us to catch tricky instructions like, say,
+    // %xi = ADDXri %sp, n, 0. We can't safely outline these since they might
+    // be paired with later SUBXris, which might *not* end up being outlined.
+    // If we mess with the stack to save something, then an ADDXri messes with
+    // it *after*, then we aren't going to restore the right something from
+    // the stack if we don't outline the corresponding SUBXri first. ADDXris and
+    // SUBXris are extremely common in prologue/epilogue code, so supporting
+    // them in the outliner can be a pretty big win!
+    if (!MightNeedStackFixUp)
+      return MachineOutlinerInstrType::Legal;
+
+    // At this point, we have a stack instruction that we might need to fix
+    // up. We'll handle it if it's a load or store.
     if (MI.mayLoadOrStore()) {
       unsigned Base;  // Filled with the base regiser of MI.
       int64_t Offset; // Filled with the offset of MI.
