@@ -28,10 +28,10 @@
 
 #include "test_iterators.h"
 
-struct add_ten {
+struct add_one {
     template <typename T>
     constexpr auto operator()(T x) const noexcept {
-        return static_cast<T>(x + 10);
+        return static_cast<T>(x + 1);
     }
 };
 
@@ -56,15 +56,15 @@ template <class Iter>
 void
 test()
 {
-          int ia[]     = { 1,  3,  5,   7,   9};
-    const int pResI0[] = { 0, 11, 24,  39,  56};        // with add_ten
-    const int mResI0[] = { 0,  0,  0,   0,   0};
-    const int pResN0[] = { 0, -1, -4,  -9, -16};        // with negate
-    const int mResN0[] = { 0,  0,  0,   0,   0};
-    const int pResI2[] = { 2, 13, 26,  41,  58};        // with add_ten
-    const int mResI2[] = { 2, 22, 286, 4290, 72930};
-    const int pResN2[] = { 2,  1,  -2,  -7, -14};       // with negate
-    const int mResN2[] = { 2, -2,   6, -30, 210};
+          int ia[]     = { 1,  3,  5,    7,   9 };
+    const int pResI0[] = { 0,  2,  6,   12,  20 };        // with add_one
+    const int mResI0[] = { 0,  0,  0,    0,   0 };
+    const int pResN0[] = { 0, -1, -4,   -9, -16 };        // with negate
+    const int mResN0[] = { 0,  0,  0,    0,   0 };
+    const int pResI2[] = { 2,  4,  8,   14,  22 };        // with add_one
+    const int mResI2[] = { 2,  4, 16,   96, 768 };
+    const int pResN2[] = { 2,  1,  -2,  -7, -14 };        // with negate
+    const int mResN2[] = { 2, -2,   6, -30, 210 };
     const unsigned sa = sizeof(ia) / sizeof(ia[0]);
     static_assert(sa == sizeof(pResI0) / sizeof(pResI0[0]));       // just to be sure
     static_assert(sa == sizeof(mResI0) / sizeof(mResI0[0]));       // just to be sure
@@ -76,12 +76,12 @@ test()
     static_assert(sa == sizeof(mResN2) / sizeof(mResN2[0]));       // just to be sure
 
     for (unsigned int i = 0; i < sa; ++i ) {
-        test(Iter(ia), Iter(ia + i), std::plus<>(),       add_ten{},       0, pResI0, pResI0 + i);
-        test(Iter(ia), Iter(ia + i), std::multiplies<>(), add_ten{},       0, mResI0, mResI0 + i);
+        test(Iter(ia), Iter(ia + i), std::plus<>(),       add_one{},       0, pResI0, pResI0 + i);
+        test(Iter(ia), Iter(ia + i), std::multiplies<>(), add_one{},       0, mResI0, mResI0 + i);
         test(Iter(ia), Iter(ia + i), std::plus<>(),       std::negate<>(), 0, pResN0, pResN0 + i);
         test(Iter(ia), Iter(ia + i), std::multiplies<>(), std::negate<>(), 0, mResN0, mResN0 + i);
-        test(Iter(ia), Iter(ia + i), std::plus<>(),       add_ten{},       2, pResI2, pResI2 + i);
-        test(Iter(ia), Iter(ia + i), std::multiplies<>(), add_ten{},       2, mResI2, mResI2 + i);
+        test(Iter(ia), Iter(ia + i), std::plus<>(),       add_one{},       2, pResI2, pResI2 + i);
+        test(Iter(ia), Iter(ia + i), std::multiplies<>(), add_one{},       2, mResI2, mResI2 + i);
         test(Iter(ia), Iter(ia + i), std::plus<>(),       std::negate<>(), 2, pResN2, pResN2 + i);
         test(Iter(ia), Iter(ia + i), std::multiplies<>(), std::negate<>(), 2, mResN2, mResN2 + i);
         }
@@ -95,30 +95,30 @@ void basic_tests()
     {
     std::vector<int> v(10);
     std::fill(v.begin(), v.end(), 3);
-    std::transform_exclusive_scan(v.begin(), v.end(), v.begin(), 50, std::plus<>(), add_ten{});
+    std::transform_exclusive_scan(v.begin(), v.end(), v.begin(), 50, std::plus<>(), add_one{});
     for (size_t i = 0; i < v.size(); ++i)
-        assert(v[i] == 50 + (int) i * 13);
+        assert(v[i] == 50 + (int) i * 4);
     }
 
     {
     std::vector<int> v(10);
     std::iota(v.begin(), v.end(), 0);
-    std::transform_exclusive_scan(v.begin(), v.end(), v.begin(), 30, std::plus<>(), add_ten{});
+    std::transform_exclusive_scan(v.begin(), v.end(), v.begin(), 30, std::plus<>(), add_one{});
     for (size_t i = 0; i < v.size(); ++i)
-        assert(v[i] == 30 + triangle(i - 1) + (int) i * 10);
+        assert(v[i] == 30 + triangle(i - 1) + (int) i);
     }
 
     {
     std::vector<int> v(10);
     std::iota(v.begin(), v.end(), 1);
-    std::transform_exclusive_scan(v.begin(), v.end(), v.begin(), 40, std::plus<>(), add_ten{});
+    std::transform_exclusive_scan(v.begin(), v.end(), v.begin(), 40, std::plus<>(), add_one{});
     for (size_t i = 0; i < v.size(); ++i)
-        assert(v[i] == 40 + triangle(i) + (int) i * 10);
+        assert(v[i] == 40 + triangle(i) + (int) i);
     }
 
     {
     std::vector<int> v, res;
-    std::transform_exclusive_scan(v.begin(), v.end(), std::back_inserter(res), 40, std::plus<>(), add_ten{});
+    std::transform_exclusive_scan(v.begin(), v.end(), std::back_inserter(res), 40, std::plus<>(), add_one{});
     assert(res.empty());
     }
 
@@ -127,14 +127,14 @@ void basic_tests()
     std::vector<unsigned char> v(10);
     std::iota(v.begin(), v.end(), static_cast<unsigned char>(1));
     std::vector<int> res;
-    std::transform_exclusive_scan(v.begin(), v.end(), std::back_inserter(res), 1, std::multiplies<>(), add_ten{});
+    std::transform_exclusive_scan(v.begin(), v.end(), std::back_inserter(res), 1, std::multiplies<>(), add_one{});
 
     assert(res.size() == 10);
     int j = 1;
     assert(res[0] == 1);
     for (size_t i = 1; i < res.size(); ++i)
     {
-        j *= i + 10;
+        j *= i + 1;
         assert(res[i] == j);
     }
     }

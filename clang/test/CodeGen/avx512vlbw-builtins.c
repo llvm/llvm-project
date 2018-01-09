@@ -2601,13 +2601,15 @@ __mmask16 test_mm256_mask_testn_epi16_mask(__mmask16 __U, __m256i __A, __m256i _
 
 __mmask16 test_mm_movepi8_mask(__m128i __A) {
   // CHECK-LABEL: @test_mm_movepi8_mask
-  // CHECK: @llvm.x86.avx512.cvtb2mask.128
+  // CHECK: [[CMP:%.*]] = icmp slt <16 x i8> %{{.*}}, zeroinitializer
+  // CHECK: bitcast <16 x i1> [[CMP]] to i16
   return _mm_movepi8_mask(__A); 
 }
 
 __mmask32 test_mm256_movepi8_mask(__m256i __A) {
   // CHECK-LABEL: @test_mm256_movepi8_mask
-  // CHECK: @llvm.x86.avx512.cvtb2mask.256
+  // CHECK: [[CMP:%.*]] = icmp slt <32 x i8> %{{.*}}, zeroinitializer
+  // CHECK: bitcast <32 x i1> [[CMP]] to i32
   return _mm256_movepi8_mask(__A); 
 }
 
@@ -2985,13 +2987,15 @@ __m256i test_mm256_maskz_dbsad_epu8(__mmask16 __U, __m256i __A, __m256i __B) {
 }
 __mmask8 test_mm_movepi16_mask(__m128i __A) {
   // CHECK-LABEL: @test_mm_movepi16_mask
-  // CHECK: @llvm.x86.avx512.cvtw2mask.128
+  // CHECK: [[CMP:%.*]] = icmp slt <8 x i16> %{{.*}}, zeroinitializer
+  // CHECK: bitcast <8 x i1> [[CMP]] to i8
   return _mm_movepi16_mask(__A); 
 }
 
 __mmask16 test_mm256_movepi16_mask(__m256i __A) {
   // CHECK-LABEL: @test_mm256_movepi16_mask
-  // CHECK: @llvm.x86.avx512.cvtw2mask.256
+  // CHECK: [[CMP:%.*]] = icmp slt <16 x i16> %{{.*}}, zeroinitializer
+  // CHECK: bitcast <16 x i1> [[CMP]] to i16
   return _mm256_movepi16_mask(__A); 
 }
 

@@ -9332,4 +9332,35 @@ def warn_shadow_field :
   InGroup<ShadowField>, DefaultIgnore;
 def note_shadow_field : Note<"declared here">;
 
+def err_target_required_in_redecl : Error<
+  "function declaration is missing 'target' attribute in a multiversioned "
+  "function">;
+def note_multiversioning_caused_here : Note<
+  "function multiversioning caused by this declaration">;
+def err_multiversion_after_used : Error<
+  "function declaration cannot become a multiversioned function after first "
+  "usage">;
+def err_bad_multiversion_option : Error<
+  "function multiversioning doesn't support %select{feature|architecture}0 "
+  "'%1'">;
+def err_multiversion_duplicate : Error<
+  "multiversioned function redeclarations require identical target attributes">;
+def err_multiversion_noproto : Error<
+  "multiversioned function must have a prototype">;
+def err_multiversion_no_other_attrs : Error<
+  "attribute 'target' multiversioning cannot be combined with other "
+  "attributes">;
+def err_multiversion_diff : Error<
+  "multiversioned function declaration has a different %select{calling convention"
+  "|return type|constexpr specification|inline specification|storage class|"
+  "linkage}0">;
+def err_multiversion_doesnt_support : Error<
+  "multiversioned functions do not yet support %select{function templates|"
+  "virtual functions|deduced return types|constructors|destructors|"
+  "deleted functions|defaulted functions}0">;
+def err_multiversion_not_allowed_on_main : Error<
+  "'main' cannot be a multiversioned function">;
+def err_multiversion_not_supported : Error<
+ "function multiversioning is not supported on the current target">;
+
 } // end of sema component.

@@ -84,12 +84,10 @@ define i8 @umin_not_2_extra_use(i8 %x, i8 %y) {
 
 define i8 @umin3_not(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @umin3_not(
-; CHECK-NEXT:    [[CMPYX:%.*]] = icmp ult i8 %y, %x
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i8 %x, %z
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i8 %x, i8 %z
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i8 %y, %z
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i8 %y, i8 %z
-; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[CMPYX]], i8 [[TMP2]], i8 [[TMP4]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i8 [[TMP2]], %y
+; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[TMP3]], i8 [[TMP2]], i8 %y
 ; CHECK-NEXT:    [[R:%.*]] = xor i8 [[R:%.*]].v, -1
 ; CHECK-NEXT:    ret i8 [[R]]
 ;

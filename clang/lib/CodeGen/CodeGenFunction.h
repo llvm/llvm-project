@@ -3988,6 +3988,29 @@ public:
 
   void EmitSanitizerStatReport(llvm::SanitizerStatKind SSK);
 
+  struct MultiVersionResolverOption {
+    llvm::Function *Function;
+    TargetAttr::ParsedTargetAttr ParsedAttribute;
+    unsigned Priority;
+    MultiVersionResolverOption(const TargetInfo &TargInfo, llvm::Function *F,
+                               const clang::TargetAttr::ParsedTargetAttr &PT)
+        : Function(F), ParsedAttribute(PT), Priority(0u) {
+      for (StringRef Feat : PT.Features)
+        Priority = std::max(Priority,
+                            TargInfo.multiVersionSortPriority(Feat.substr(1)));
+
+      if (!PT.Architecture.empty())
+        Priority = std::max(Priority,
+                            TargInfo.multiVersionSortPriority(PT.Architecture));
+    }
+
+    bool operator>(const MultiVersionResolverOption &Other) const {
+      return Priority > Other.Priority;
+    }
+  };
+  void EmitMultiVersionResolver(llvm::Function *Resolver,
+                                ArrayRef<MultiVersionResolverOption> Options);
+
 private:
   QualType getVarArgType(const Expr *Arg);
 
@@ -4004,6 +4027,7 @@ private:
   llvm::Value *EmitX86CpuSupports(const CallExpr *E);
   llvm::Value *EmitX86CpuSupports(ArrayRef<StringRef> FeatureStrs);
   llvm::Value *EmitX86CpuInit();
+  llvm::Value *FormResolverCondition(const MultiVersionResolverOption &RO);
 };
 
 /// Helper class with most of the code for saving a value for a

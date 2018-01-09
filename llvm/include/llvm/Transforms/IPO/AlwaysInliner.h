@@ -27,7 +27,13 @@ namespace llvm {
 /// be the simplest possible pass to remove always_inline function definitions'
 /// uses by inlining them. The \c GlobalDCE pass can be used to remove these
 /// functions once all users are gone.
-struct AlwaysInlinerPass : PassInfoMixin<AlwaysInlinerPass> {
+class AlwaysInlinerPass : public PassInfoMixin<AlwaysInlinerPass> {
+  bool InsertLifetime;
+
+public:
+  AlwaysInlinerPass(bool InsertLifetime = true)
+      : InsertLifetime(InsertLifetime) {}
+
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
 

@@ -629,12 +629,14 @@ void Writer::assignSymbolIndexes() {
         Sym->setOutputIndex(GlobalIndex++);
       }
     }
+  }
 
+  for (ObjFile *File : Symtab->ObjectFiles) {
     for (Symbol *Sym : File->getTableSymbols()) {
-      if (!Sym->hasTableIndex()) {
-        Sym->setTableIndex(TableIndex++);
-        IndirectFunctions.emplace_back(Sym);
-      }
+      if (Sym->hasTableIndex() || !Sym->hasOutputIndex())
+        continue;
+      Sym->setTableIndex(TableIndex++);
+      IndirectFunctions.emplace_back(Sym);
     }
   }
 }

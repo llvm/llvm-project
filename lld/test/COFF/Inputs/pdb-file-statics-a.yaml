@@ -100,12 +100,12 @@ sections:
         Checksums:
           - FileName:        'd:\src\llvmbuild\cl\debug\x64\a.cpp'
             Kind:            MD5
-            Checksum:        108D915B38B79821EA2169DBD317C259
+            Checksum:        70DD90BF2C1A2E8D7C450DFA55E3062D
       - !InlineeLines
         HasExtraFiles:   false
         Sites:
           - FileName:        'd:\src\llvmbuild\cl\debug\x64\a.cpp'
-            LineNum:         6
+            LineNum:         8
             Inlinee:         4099
       - !StringTable
         Strings:
@@ -1312,8 +1312,16 @@ sections:
               VarName:         __formal
           - Kind:            S_DEFRANGE_REGISTER
             DefRangeRegisterSym:
+              Register:        18
+              MayHaveNoName:   0
+              Range:
+                OffsetStart:     0
+                ISectStart:      0
+                Range:           10
+              Gaps:
           - Kind:            S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE
             DefRangeFramePointerRelFullScopeSym:
+              Register:        48
           - Kind:            S_CALLEES
             CallerSym:
               FuncID:          [ 4103 ]
@@ -1325,6 +1333,13 @@ sections:
               Name:            x
           - Kind:            S_DEFRANGE_REGISTER
             DefRangeRegisterSym:
+              Register:        18
+              MayHaveNoName:   0
+              Range:
+                OffsetStart:     10
+                ISectStart:      0
+                Range:           9
+              Gaps:
           - Kind:            S_FRAMEPROC
             FrameProcSym:
               TotalFrameBytes: 40
@@ -1351,19 +1366,19 @@ sections:
           - FileName:        'd:\src\llvmbuild\cl\debug\x64\a.cpp'
             Lines:
               - Offset:          0
-                LineStart:       5
-                IsStatement:     true
-                EndDelta:        0
-              - Offset:          4
-                LineStart:       6
-                IsStatement:     true
-                EndDelta:        0
-              - Offset:          14
                 LineStart:       7
                 IsStatement:     true
                 EndDelta:        0
-              - Offset:          19
+              - Offset:          4
                 LineStart:       8
+                IsStatement:     true
+                EndDelta:        0
+              - Offset:          14
+                LineStart:       9
+                IsStatement:     true
+                EndDelta:        0
+              - Offset:          19
+                LineStart:       10
                 IsStatement:     true
                 EndDelta:        0
             Columns:
@@ -1427,10 +1442,25 @@ sections:
               VarName:         argc
           - Kind:            S_DEFRANGE_REGISTER
             DefRangeRegisterSym:
+              Register:        18
+              MayHaveNoName:   0
+              Range:
+                OffsetStart:     0
+                ISectStart:      0
+                Range:           16
+              Gaps:
           - Kind:            S_DEFRANGE_REGISTER
             DefRangeRegisterSym:
+              Register:        18
+              MayHaveNoName:   1
+              Range:
+                OffsetStart:     27
+                ISectStart:      0
+                Range:           5
+              Gaps:
           - Kind:            S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE
             DefRangeFramePointerRelFullScopeSym:
+              Register:        48
           - Kind:            S_LOCAL
             LocalSym:
               Type:            4098
@@ -1438,10 +1468,25 @@ sections:
               VarName:         argv
           - Kind:            S_DEFRANGE_REGISTER
             DefRangeRegisterSym:
+              Register:        331
+              MayHaveNoName:   0
+              Range:
+                OffsetStart:     0
+                ISectStart:      0
+                Range:           21
+              Gaps:
           - Kind:            S_DEFRANGE_REGISTER
             DefRangeRegisterSym:
+              Register:        331
+              MayHaveNoName:   1
+              Range:
+                OffsetStart:     27
+                ISectStart:      0
+                Range:           5
+              Gaps:
           - Kind:            S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE
             DefRangeFramePointerRelFullScopeSym:
+              Register:        56
           - Kind:            S_INLINESITE
             InlineSiteSym:
               Inlinee:         4099
@@ -1458,6 +1503,15 @@ sections:
               Name:            x
           - Kind:            S_DEFRANGE_REGISTER
             DefRangeRegisterSym:
+              Register:        17
+              MayHaveNoName:   0
+              Range:
+                OffsetStart:     10
+                ISectStart:      0
+                Range:           22
+              Gaps:
+                - GapStartOffset:  11
+                  Range:           6
           - Kind:            S_FRAMEPROC
             FrameProcSym:
               TotalFrameBytes: 40
@@ -1493,15 +1547,15 @@ sections:
           - FileName:        'd:\src\llvmbuild\cl\debug\x64\a.cpp'
             Lines:
               - Offset:          0
-                LineStart:       10
+                LineStart:       12
                 IsStatement:     true
                 EndDelta:        0
               - Offset:          4
-                LineStart:       11
+                LineStart:       13
                 IsStatement:     true
                 EndDelta:        0
               - Offset:          27
-                LineStart:       13
+                LineStart:       15
                 IsStatement:     true
                 EndDelta:        0
             Columns:

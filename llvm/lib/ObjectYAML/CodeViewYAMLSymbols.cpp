@@ -40,6 +40,7 @@ using namespace llvm::CodeViewYAML::detail;
 using namespace llvm::yaml;
 
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(TypeIndex)
+LLVM_YAML_IS_SEQUENCE_VECTOR(LocalVariableAddrGap)
 
 // We only need to declare these, the definitions are in CodeViewYAMLTypes.cpp
 LLVM_YAML_DECLARE_SCALAR_TRAITS(APSInt, QuotingType::None)
@@ -179,6 +180,24 @@ void ScalarEnumerationTraits<FrameCookieKind>::enumeration(
                 static_cast<FrameCookieKind>(E.Value));
   }
 }
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingTraits<LocalVariableAddrRange> {
+  static void mapping(IO &io, LocalVariableAddrRange &Range) {
+    io.mapRequired("OffsetStart", Range.OffsetStart);
+    io.mapRequired("ISectStart", Range.ISectStart);
+    io.mapRequired("Range", Range.Range);
+  }
+};
+template <> struct MappingTraits<LocalVariableAddrGap> {
+  static void mapping(IO &io, LocalVariableAddrGap &Gap) {
+    io.mapRequired("GapStartOffset", Gap.GapStartOffset);
+    io.mapRequired("Range", Gap.Range);
+  }
+};
+} // namespace yaml
+} // namespace llvm
 
 namespace llvm {
 namespace CodeViewYAML {
@@ -353,32 +372,50 @@ template <> void SymbolRecordImpl<LocalSym>::map(IO &IO) {
 }
 
 template <> void SymbolRecordImpl<DefRangeSym>::map(IO &IO) {
-  // TODO: Print the subfields
+  IO.mapRequired("Program", Symbol.Program);
+  IO.mapRequired("Range", Symbol.Range);
+  IO.mapRequired("Gaps", Symbol.Gaps);
 }
 
 template <> void SymbolRecordImpl<DefRangeSubfieldSym>::map(IO &IO) {
-  // TODO: Print the subfields
+  IO.mapRequired("Program", Symbol.Program);
+  IO.mapRequired("OffsetInParent", Symbol.OffsetInParent);
+  IO.mapRequired("Range", Symbol.Range);
+  IO.mapRequired("Gaps", Symbol.Gaps);
 }
 
 template <> void SymbolRecordImpl<DefRangeRegisterSym>::map(IO &IO) {
-  // TODO: Print the subfields
+  IO.mapRequired("Register", Symbol.Hdr.Register);
+  IO.mapRequired("MayHaveNoName", Symbol.Hdr.MayHaveNoName);
+  IO.mapRequired("Range", Symbol.Range);
+  IO.mapRequired("Gaps", Symbol.Gaps);
 }
 
 template <> void SymbolRecordImpl<DefRangeFramePointerRelSym>::map(IO &IO) {
-  // TODO: Print the subfields
+  IO.mapRequired("Offset", Symbol.Offset);
+  IO.mapRequired("Range", Symbol.Range);
+  IO.mapRequired("Gaps", Symbol.Gaps);
 }
 
 template <> void SymbolRecordImpl<DefRangeSubfieldRegisterSym>::map(IO &IO) {
-  // TODO: Print the subfields
+  IO.mapRequired("Register", Symbol.Hdr.Register);
+  IO.mapRequired("MayHaveNoName", Symbol.Hdr.MayHaveNoName);
+  IO.mapRequired("OffsetInParent", Symbol.Hdr.OffsetInParent);
+  IO.mapRequired("Range", Symbol.Range);
+  IO.mapRequired("Gaps", Symbol.Gaps);
 }
 
 template <>
 void SymbolRecordImpl<DefRangeFramePointerRelFullScopeSym>::map(IO &IO) {
-  // TODO: Print the subfields
+  IO.mapRequired("Register", Symbol.Offset);
 }
 
 template <> void SymbolRecordImpl<DefRangeRegisterRelSym>::map(IO &IO) {
-  // TODO: Print the subfields
+  IO.mapRequired("Register", Symbol.Hdr.Register);
+  IO.mapRequired("Flags", Symbol.Hdr.Flags);
+  IO.mapRequired("BasePointerOffset", Symbol.Hdr.BasePointerOffset);
+  IO.mapRequired("Range", Symbol.Range);
+  IO.mapRequired("Gaps", Symbol.Gaps);
 }
 
 template <> void SymbolRecordImpl<BlockSym>::map(IO &IO) {

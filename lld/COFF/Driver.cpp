@@ -60,7 +60,6 @@ bool link(ArrayRef<const char *> Args, bool CanExitEarly, raw_ostream &Diag) {
   errorHandler().ExitEarly = CanExitEarly;
   Config = make<Configuration>();
   Config->Argv = {Args.begin(), Args.end()};
-  Config->CanExitEarly = CanExitEarly;
 
   Symtab = make<SymbolTable>();
 

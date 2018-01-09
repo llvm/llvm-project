@@ -1474,6 +1474,24 @@ for the function.
 Example "subtarget features" from the x86 backend include: "mmx", "sse", "sse4.2",
 "avx", "xop" and largely correspond to the machine specific options handled by
 the front end.
+
+Additionally, this attribute supports function multiversioning for ELF based
+x86/x86-64 targets, which can be used to create multiple implementations of the
+same function that will be resolved at runtime based on the priority of their
+``target`` attribute strings. A function is considered a multiversioned function
+if either two declarations of the function have different ``target`` attribute
+  strings, or if it has a ``target`` attribute string of ``default``.  For
+  example:
+
+  .. code-block:: c++
+  __attribute__((target("arch=atom")))
+  void foo() {} // will be called on 'atom' processors.
+  __attribute__((target("default")))
+  void foo() {} // will be called on any other processors.
+
+All multiversioned functions must contain a ``default`` (fallback)
+implementation, otherwise usages of the function are considered invalid.
+Additionally, a function may not become multiversioned after its first use.
 }];
 }
 
