@@ -64,7 +64,7 @@ L1:
 // expected-error@+1 {{unexpected OpenMP clause 'default' in directive '#pragma omp target teams distribute simd'}}
 #pragma omp target teams distribute simd default(none)
   for (int i = 0; i < 10; ++i)
-    ++argc; // expected-error {{ariable 'argc' must have explicitly specified data sharing attributes}}
+    ++argc;
 
   goto L2; // expected-error {{use of undeclared label 'L2'}}
 #pragma omp target teams distribute simd

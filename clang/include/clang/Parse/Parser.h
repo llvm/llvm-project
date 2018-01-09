@@ -2675,30 +2675,42 @@ private:
   /// \brief Parses clause with a single expression of a kind \a Kind.
   ///
   /// \param Kind Kind of current clause.
+  /// \param ParseOnly true to skip the clause's semantic actions and return
+  /// nullptr.
   ///
-  OMPClause *ParseOpenMPSingleExprClause(OpenMPClauseKind Kind);
+  OMPClause *ParseOpenMPSingleExprClause(OpenMPClauseKind Kind,
+                                         bool ParseOnly);
   /// \brief Parses simple clause of a kind \a Kind.
   ///
   /// \param Kind Kind of current clause.
+  /// \param ParseOnly true to skip the clause's semantic actions and return
+  /// nullptr.
   ///
-  OMPClause *ParseOpenMPSimpleClause(OpenMPClauseKind Kind);
+  OMPClause *ParseOpenMPSimpleClause(OpenMPClauseKind Kind, bool ParseOnly);
   /// \brief Parses clause with a single expression and an additional argument
   /// of a kind \a Kind.
   ///
   /// \param Kind Kind of current clause.
+  /// \param ParseOnly true to skip the clause's semantic actions and return
+  /// nullptr.
   ///
-  OMPClause *ParseOpenMPSingleExprWithArgClause(OpenMPClauseKind Kind);
+  OMPClause *ParseOpenMPSingleExprWithArgClause(OpenMPClauseKind Kind,
+                                                bool ParseOnly);
   /// \brief Parses clause without any additional arguments.
   ///
   /// \param Kind Kind of current clause.
+  /// \param ParseOnly true to skip the clause's semantic actions and return
+  /// nullptr.
   ///
-  OMPClause *ParseOpenMPClause(OpenMPClauseKind Kind);
+  OMPClause *ParseOpenMPClause(OpenMPClauseKind Kind, bool ParseOnly = false);
   /// \brief Parses clause with the list of variables of a kind \a Kind.
   ///
   /// \param Kind Kind of current clause.
+  /// \param ParseOnly true to skip the clause's semantic actions and return
+  /// nullptr.
   ///
   OMPClause *ParseOpenMPVarListClause(OpenMPDirectiveKind DKind,
-                                      OpenMPClauseKind Kind);
+                                      OpenMPClauseKind Kind, bool ParseOnly);
 
 public:
   /// Parses simple expression in parens for single-expression clauses of OpenMP

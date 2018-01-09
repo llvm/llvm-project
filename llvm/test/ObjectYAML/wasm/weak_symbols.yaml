@@ -5,13 +5,15 @@ FileHeader:
 Sections:
   - Type:            TYPE
     Signatures:
-      - ReturnType:      I32
+      - Index:           0
+        ReturnType:      I32
         ParamTypes:
   - Type:            FUNCTION
     FunctionTypes:   [ 0, 0 ]
   - Type:            GLOBAL
     Globals:         
-      - Type:        I32
+      - Index:       0
+        Type:        I32
         Mutable:     false
         InitExpr:
           Opcode:          I32_CONST

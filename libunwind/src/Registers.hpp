@@ -2825,13 +2825,13 @@ inline const char *Registers_mips_o32::getRegisterName(int regNum) {
 }
 #endif // _LIBUNWIND_TARGET_MIPS_O32
 
-#if defined(_LIBUNWIND_TARGET_MIPS_N64)
-/// Registers_mips_n64 holds the register state of a thread in a 64-bit MIPS
-/// process.
-class _LIBUNWIND_HIDDEN Registers_mips_n64 {
+#if defined(_LIBUNWIND_TARGET_MIPS_NEWABI)
+/// Registers_mips_newabi holds the register state of a thread in a
+/// MIPS process using NEWABI (the N32 or N64 ABIs).
+class _LIBUNWIND_HIDDEN Registers_mips_newabi {
 public:
-  Registers_mips_n64();
-  Registers_mips_n64(const void *registers);
+  Registers_mips_newabi();
+  Registers_mips_newabi(const void *registers);
 
   bool        validRegister(int num) const;
   uint64_t    getRegister(int num) const;
@@ -2852,28 +2852,28 @@ public:
   void      setIP(uint64_t value) { _registers.__pc = value; }
 
 private:
-  struct mips_n64_thread_state_t {
+  struct mips_newabi_thread_state_t {
     uint64_t __r[32];
     uint64_t __pc;
     uint64_t __hi;
     uint64_t __lo;
   };
 
-  mips_n64_thread_state_t _registers;
+  mips_newabi_thread_state_t _registers;
 };
 
-inline Registers_mips_n64::Registers_mips_n64(const void *registers) {
-  static_assert((check_fit<Registers_mips_n64, unw_context_t>::does_fit),
-                "mips_n64 registers do not fit into unw_context_t");
+inline Registers_mips_newabi::Registers_mips_newabi(const void *registers) {
+  static_assert((check_fit<Registers_mips_newabi, unw_context_t>::does_fit),
+                "mips_newabi registers do not fit into unw_context_t");
   memcpy(&_registers, static_cast<const uint8_t *>(registers),
          sizeof(_registers));
 }
 
-inline Registers_mips_n64::Registers_mips_n64() {
+inline Registers_mips_newabi::Registers_mips_newabi() {
   memset(&_registers, 0, sizeof(_registers));
 }
 
-inline bool Registers_mips_n64::validRegister(int regNum) const {
+inline bool Registers_mips_newabi::validRegister(int regNum) const {
   if (regNum == UNW_REG_IP)
     return true;
   if (regNum == UNW_REG_SP)
@@ -2890,7 +2890,7 @@ inline bool Registers_mips_n64::validRegister(int regNum) const {
   return false;
 }
 
-inline uint64_t Registers_mips_n64::getRegister(int regNum) const {
+inline uint64_t Registers_mips_newabi::getRegister(int regNum) const {
   if (regNum >= UNW_MIPS_R0 && regNum <= UNW_MIPS_R31)
     return _registers.__r[regNum - UNW_MIPS_R0];
 
@@ -2904,10 +2904,10 @@ inline uint64_t Registers_mips_n64::getRegister(int regNum) const {
   case UNW_MIPS_LO:
     return _registers.__lo;
   }
-  _LIBUNWIND_ABORT("unsupported mips_n64 register");
+  _LIBUNWIND_ABORT("unsupported mips_newabi register");
 }
 
-inline void Registers_mips_n64::setRegister(int regNum, uint64_t value) {
+inline void Registers_mips_newabi::setRegister(int regNum, uint64_t value) {
   if (regNum >= UNW_MIPS_R0 && regNum <= UNW_MIPS_R31) {
     _registers.__r[regNum - UNW_MIPS_R0] = value;
     return;
@@ -2927,35 +2927,35 @@ inline void Registers_mips_n64::setRegister(int regNum, uint64_t value) {
     _registers.__lo = value;
     return;
   }
-  _LIBUNWIND_ABORT("unsupported mips_n64 register");
+  _LIBUNWIND_ABORT("unsupported mips_newabi register");
 }
 
-inline bool Registers_mips_n64::validFloatRegister(int /* regNum */) const {
+inline bool Registers_mips_newabi::validFloatRegister(int /* regNum */) const {
   return false;
 }
 
-inline double Registers_mips_n64::getFloatRegister(int /* regNum */) const {
-  _LIBUNWIND_ABORT("mips_n64 float support not implemented");
+inline double Registers_mips_newabi::getFloatRegister(int /* regNum */) const {
+  _LIBUNWIND_ABORT("mips_newabi float support not implemented");
 }
 
-inline void Registers_mips_n64::setFloatRegister(int /* regNum */,
+inline void Registers_mips_newabi::setFloatRegister(int /* regNum */,
                                                  double /* value */) {
-  _LIBUNWIND_ABORT("mips_n64 float support not implemented");
+  _LIBUNWIND_ABORT("mips_newabi float support not implemented");
 }
 
-inline bool Registers_mips_n64::validVectorRegister(int /* regNum */) const {
+inline bool Registers_mips_newabi::validVectorRegister(int /* regNum */) const {
   return false;
 }
 
-inline v128 Registers_mips_n64::getVectorRegister(int /* regNum */) const {
-  _LIBUNWIND_ABORT("mips_n64 vector support not implemented");
+inline v128 Registers_mips_newabi::getVectorRegister(int /* regNum */) const {
+  _LIBUNWIND_ABORT("mips_newabi vector support not implemented");
 }
 
-inline void Registers_mips_n64::setVectorRegister(int /* regNum */, v128 /* value */) {
-  _LIBUNWIND_ABORT("mips_n64 vector support not implemented");
+inline void Registers_mips_newabi::setVectorRegister(int /* regNum */, v128 /* value */) {
+  _LIBUNWIND_ABORT("mips_newabi vector support not implemented");
 }
 
-inline const char *Registers_mips_n64::getRegisterName(int regNum) {
+inline const char *Registers_mips_newabi::getRegisterName(int regNum) {
   switch (regNum) {
   case UNW_MIPS_R0:
     return "$0";
@@ -3029,7 +3029,7 @@ inline const char *Registers_mips_n64::getRegisterName(int regNum) {
     return "unknown register";
   }
 }
-#endif // _LIBUNWIND_TARGET_MIPS_N64
+#endif // _LIBUNWIND_TARGET_MIPS_NEWABI
 } // namespace libunwind
 
 #endif // __REGISTERS_HPP__

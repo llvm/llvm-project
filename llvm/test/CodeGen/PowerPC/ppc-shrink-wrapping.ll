@@ -110,7 +110,7 @@ declare i32 @doSomething(i32, i32*)
 ;
 ; Epilogue code.
 ; CHECK: mtlr {{[0-9]+}}
-; CHECK-NEXT: blr
+; CHECK: blr
 ;
 ; ENABLE: .[[ELSE_LABEL]]: # %if.else
 ; Shift second argument by one and store into returned register.
@@ -171,7 +171,7 @@ declare i32 @something(...)
 ; Next BB
 ; CHECK: %for.end
 ; CHECK: mtlr {{[0-9]+}}
-; CHECK-NEXT: blr
+; CHECK: blr
 define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) {
 entry:
   br label %for.preheader
@@ -209,9 +209,9 @@ for.end:                                          ; preds = %for.body
 ; Make sure we save the link register 
 ; CHECK: mflr {{[0-9]+}}
 ;
+; DISABLE: std
+; DISABLE-NEXT: std
 ; DISABLE: cmplwi 0, 3, 0
-; DISABLE-NEXT: std
-; DISABLE-NEXT: std
 ; DISABLE-NEXT: beq 0, .[[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; Loop preheader
@@ -240,7 +240,7 @@ for.end:                                          ; preds = %for.body
 ; DISABLE: .[[EPILOG_BB]]: # %if.end
 ; Epilog code
 ; CHECK: mtlr {{[0-9]+}}
-; CHECK-NEXT: blr
+; CHECK: blr
 ; 
 ; ENABLE: .[[ELSE_LABEL]]: # %if.else
 ; Shift second argument by one and store into returned register.
@@ -291,9 +291,9 @@ declare void @somethingElse(...)
 ; Make sure we save the link register
 ; CHECK: mflr {{[0-9]+}}
 ;
+; DISABLE: std
+; DISABLE-NEXT: std
 ; DISABLE: cmplwi 0, 3, 0
-; DISABLE-NEXT: std
-; DISABLE-NEXT: std
 ; DISABLE-NEXT: beq 0, .[[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; CHECK: bl somethingElse
@@ -322,7 +322,7 @@ declare void @somethingElse(...)
 ;
 ; Epilogue code.
 ; CHECK: mtlr {{[0-9]+}}
-; CHECK-NEXT: blr
+; CHECK: blr
 ;
 ; ENABLE: .[[ELSE_LABEL]]: # %if.else
 ; Shift second argument by one and store into returned register.

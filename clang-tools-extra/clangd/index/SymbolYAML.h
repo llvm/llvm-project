@@ -27,9 +27,13 @@ namespace clangd {
 // Read symbols from a YAML-format string.
 SymbolSlab SymbolFromYAML(llvm::StringRef YAMLContent);
 
+// Convert a single symbol to YAML-format string.
+// The YAML result is safe to concatenate.
+std::string SymbolToYAML(Symbol Sym);
+
 // Convert symbols to a YAML-format string.
 // The YAML result is safe to concatenate if you have multiple symbol slabs.
-std::string SymbolToYAML(const SymbolSlab& Symbols);
+std::string SymbolsToYAML(const SymbolSlab& Symbols);
 
 } // namespace clangd
 } // namespace clang

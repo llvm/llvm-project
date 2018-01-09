@@ -316,6 +316,10 @@ const ASTContext &ParsedAST::getASTContext() const {
 
 Preprocessor &ParsedAST::getPreprocessor() { return Clang->getPreprocessor(); }
 
+std::shared_ptr<Preprocessor> ParsedAST::getPreprocessorPtr() {
+  return Clang->getPreprocessorPtr();
+}
+
 const Preprocessor &ParsedAST::getPreprocessor() const {
   return Clang->getPreprocessor();
 }

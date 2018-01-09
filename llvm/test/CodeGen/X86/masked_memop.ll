@@ -814,6 +814,20 @@ define <4 x float> @mload_constmask_v4f32(<4 x float>* %addr, <4 x float> %dst) 
   ret <4 x float> %res
 }
 
+define <2 x double> @mload_constmask_v2f64(<2 x double>* %addr, <2 x double> %dst) {
+; AVX-LABEL: mload_constmask_v2f64:
+; AVX:       ## %bb.0:
+; AVX-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: mload_constmask_v2f64:
+; AVX512:       ## %bb.0:
+; AVX512-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; AVX512-NEXT:    retq
+  %res = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* %addr, i32 4, <2 x i1> <i1 0, i1 1>, <2 x double> %dst)
+  ret <2 x double> %res
+}
+
 ; 128-bit integer vectors are supported with AVX2.
 
 define <4 x i32> @mload_constmask_v4i32(<4 x i32>* %addr, <4 x i32> %dst) {
@@ -849,6 +863,20 @@ define <4 x i32> @mload_constmask_v4i32(<4 x i32>* %addr, <4 x i32> %dst) {
 ; SKX-NEXT:    retq
   %res = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %addr, i32 4, <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x i32> %dst)
   ret <4 x i32> %res
+}
+
+define <2 x i64> @mload_constmask_v2i64(<2 x i64>* %addr, <2 x i64> %dst) {
+; AVX-LABEL: mload_constmask_v2i64:
+; AVX:       ## %bb.0:
+; AVX-NEXT:    vpinsrq $1, 8(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: mload_constmask_v2i64:
+; AVX512:       ## %bb.0:
+; AVX512-NEXT:    vpinsrq $1, 8(%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %res = call <2 x i64> @llvm.masked.load.v2i64.p0v2i64(<2 x i64>* %addr, i32 4, <2 x i1> <i1 0, i1 1>, <2 x i64> %dst)
+  ret <2 x i64> %res
 }
 
 ; 256-bit FP vectors are supported with AVX.
@@ -1307,6 +1335,7 @@ define void @trunc_mask(<4 x float> %x, <4 x float>* %ptr, <4 x float> %y, <4 x 
 declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32, <4 x i1>, <4 x i32>)
 declare <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>*, i32, <2 x i1>, <2 x i32>)
 declare <4 x i64> @llvm.masked.load.v4i64.p0v4i64(<4 x i64>*, i32, <4 x i1>, <4 x i64>)
+declare <2 x i64> @llvm.masked.load.v2i64.p0v2i64(<2 x i64>*, i32, <2 x i1>, <2 x i64>)
 declare void @llvm.masked.store.v8i32.p0v8i32(<8 x i32>, <8 x i32>*, i32, <8 x i1>)
 declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32, <4 x i1>)
 declare void @llvm.masked.store.v4i64.p0v4i64(<4 x i64>, <4 x i64>*, i32, <4 x i1>)

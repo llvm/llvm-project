@@ -1893,11 +1893,8 @@ Instruction *InstCombiner::foldICmpShlConstant(ICmpInst &Cmp,
       APInt ShiftedC = C.ashr(*ShiftAmt);
       return new ICmpInst(Pred, X, ConstantInt::get(ShType, ShiftedC));
     }
-    if (Pred == ICmpInst::ICMP_EQ || Pred == ICmpInst::ICMP_NE) {
-      // This is the same code as the SGT case, but assert the pre-condition
-      // that is needed for this to work with equality predicates.
-      assert(C.ashr(*ShiftAmt).shl(*ShiftAmt) == C &&
-             "Compare known true or false was not folded");
+    if ((Pred == ICmpInst::ICMP_EQ || Pred == ICmpInst::ICMP_NE) &&
+        C.ashr(*ShiftAmt).shl(*ShiftAmt) == C) {
       APInt ShiftedC = C.ashr(*ShiftAmt);
       return new ICmpInst(Pred, X, ConstantInt::get(ShType, ShiftedC));
     }
@@ -1926,11 +1923,8 @@ Instruction *InstCombiner::foldICmpShlConstant(ICmpInst &Cmp,
       APInt ShiftedC = C.lshr(*ShiftAmt);
       return new ICmpInst(Pred, X, ConstantInt::get(ShType, ShiftedC));
     }
-    if (Pred == ICmpInst::ICMP_EQ || Pred == ICmpInst::ICMP_NE) {
-      // This is the same code as the UGT case, but assert the pre-condition
-      // that is needed for this to work with equality predicates.
-      assert(C.lshr(*ShiftAmt).shl(*ShiftAmt) == C &&
-             "Compare known true or false was not folded");
+    if ((Pred == ICmpInst::ICMP_EQ || Pred == ICmpInst::ICMP_NE) &&
+        C.lshr(*ShiftAmt).shl(*ShiftAmt) == C) {
       APInt ShiftedC = C.lshr(*ShiftAmt);
       return new ICmpInst(Pred, X, ConstantInt::get(ShType, ShiftedC));
     }

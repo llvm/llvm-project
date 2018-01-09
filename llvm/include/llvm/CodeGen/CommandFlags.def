@@ -326,6 +326,26 @@ LLVM_ATTRIBUTE_UNUSED static std::string getFeaturesStr() {
   return Features.getString();
 }
 
+LLVM_ATTRIBUTE_UNUSED static std::vector<std::string> getFeatureList() {
+  SubtargetFeatures Features;
+
+  // If user asked for the 'native' CPU, we need to autodetect features.
+  // This is necessary for x86 where the CPU might not support all the
+  // features the autodetected CPU name lists in the target. For example,
+  // not all Sandybridge processors support AVX.
+  if (MCPU == "native") {
+    StringMap<bool> HostFeatures;
+    if (sys::getHostCPUFeatures(HostFeatures))
+      for (auto &F : HostFeatures)
+        Features.AddFeature(F.first(), F.second);
+  }
+
+  for (unsigned i = 0; i != MAttrs.size(); ++i)
+    Features.AddFeature(MAttrs[i]);
+
+  return Features.getFeatures();
+}
+
 /// \brief Set function attributes of functions in Module M based on CPU,
 /// Features, and command line flags.
 LLVM_ATTRIBUTE_UNUSED static void

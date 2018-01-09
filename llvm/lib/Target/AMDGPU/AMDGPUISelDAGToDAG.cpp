@@ -1674,6 +1674,26 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
   unsigned CondReg = UseSCCBr ? AMDGPU::SCC : AMDGPU::VCC;
   SDLoc SL(N);
 
+  if (!UseSCCBr) {
+    // This is the case that we are selecting to S_CBRANCH_VCCNZ.  We have not
+    // analyzed what generates the vcc value, so we do not know whether vcc
+    // bits for disabled lanes are 0.  Thus we need to mask out bits for
+    // disabled lanes.
+    //
+    // For the case that we select S_CBRANCH_SCC1 and it gets
+    // changed to S_CBRANCH_VCCNZ in SIFixSGPRCopies, SIFixSGPRCopies calls
+    // SIInstrInfo::moveToVALU which inserts the S_AND).
+    //
+    // We could add an analysis of what generates the vcc value here and omit
+    // the S_AND when is unnecessary. But it would be better to add a separate
+    // pass after SIFixSGPRCopies to do the unnecessary S_AND removal, so it
+    // catches both cases.
+    Cond = SDValue(CurDAG->getMachineNode(AMDGPU::S_AND_B64, SL, MVT::i1,
+                               CurDAG->getRegister(AMDGPU::EXEC, MVT::i1),
+                               Cond),
+                   0);
+  }
+
   SDValue VCC = CurDAG->getCopyToReg(N->getOperand(0), SL, CondReg, Cond);
   CurDAG->SelectNodeTo(N, BrOp, MVT::Other,
                        N->getOperand(2), // Basic Block
