@@ -83,7 +83,7 @@ uint32_t ObjFile::relocateTypeIndex(uint32_t Original) const {
 
 uint32_t ObjFile::relocateTableIndex(uint32_t Original) const {
   Symbol *Sym = getTableSymbol(Original);
-  uint32_t Index = Sym->getTableIndex();
+  uint32_t Index = Sym->hasTableIndex() ? Sym->getTableIndex() : 0;
   DEBUG(dbgs() << "relocateTableIndex: " << toString(*Sym) << ": " << Original
                << " -> " << Index << "\n");
   return Index;
@@ -91,7 +91,7 @@ uint32_t ObjFile::relocateTableIndex(uint32_t Original) const {
 
 uint32_t ObjFile::relocateGlobalIndex(uint32_t Original) const {
   Symbol *Sym = getGlobalSymbol(Original);
-  uint32_t Index = Sym->getOutputIndex();
+  uint32_t Index = Sym->hasOutputIndex() ? Sym->getOutputIndex() : 0;
   DEBUG(dbgs() << "relocateGlobalIndex: " << toString(*Sym) << ": " << Original
                << " -> " << Index << "\n");
   return Index;
