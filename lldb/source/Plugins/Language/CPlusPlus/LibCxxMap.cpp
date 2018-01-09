@@ -268,12 +268,13 @@ bool lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetDataType() {
     m_element_type = deref->GetCompilerType();
     return true;
   }
+  lldb::TemplateArgumentKind kind;
   deref = m_backend.GetChildAtNamePath({g_tree_, g_pair3});
   if (!deref)
     return false;
-  m_element_type = deref->GetCompilerType()
-                       .GetTypeTemplateArgument(1)
-                       .GetTypeTemplateArgument(1);
+  m_element_type =
+      deref->GetCompilerType().GetTemplateArgument(1, kind).GetTemplateArgument(
+          1, kind);
   if (m_element_type) {
     std::string name;
     uint64_t bit_offset_ptr;
@@ -284,7 +285,7 @@ bool lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetDataType() {
     m_element_type = m_element_type.GetTypedefedType();
     return m_element_type.IsValid();
   } else {
-    m_element_type = m_backend.GetCompilerType().GetTypeTemplateArgument(0);
+    m_element_type = m_backend.GetCompilerType().GetTemplateArgument(0, kind);
     return m_element_type.IsValid();
   }
 }

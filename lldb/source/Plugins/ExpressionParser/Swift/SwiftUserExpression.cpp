@@ -282,8 +282,11 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
             log->Printf("  [SUE::SC] Class generic arguments:");
 
           for (size_t ai = 0, ae = num_template_args; ai != ae; ++ai) {
+            lldb::TemplateArgumentKind template_arg_kind;
+
             CompilerType template_arg_type =
-                self_type.GetGenericArgumentType(ai);
+                self_type.GetTemplateArgument(ai, template_arg_kind);
+
             ConstString template_arg_name = template_arg_type.GetTypeName();
 
             if (log)
@@ -310,8 +313,11 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
           for (size_t ai = 0, ae = self_unbound_type.GetNumTemplateArguments();
                ai != ae; ++ai) {
+            lldb::TemplateArgumentKind template_arg_kind;
+
             CompilerType template_arg_type =
-                self_unbound_type.GetGenericArgumentType(ai);
+                self_unbound_type.GetTemplateArgument(ai, template_arg_kind);
+
             ConstString template_arg_name = template_arg_type.GetTypeName();
 
             if (log)
@@ -365,7 +371,8 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
         lldb::TemplateArgumentKind template_arg_kind;
 
         CompilerType template_arg_type =
-            function_type.GetGenericArgumentType(ai);
+            function_type.GetTemplateArgument(ai, template_arg_kind);
+
         ConstString template_arg_name = template_arg_type.GetTypeName();
 
         if (log)

@@ -12,7 +12,6 @@
 
 #include "Plugins/Process/Utility/RegisterContextPOSIX_x86.h"
 #include "RegisterContextPOSIX.h"
-#include <sys/uio.h>
 
 class RegisterContextPOSIXProcessMonitor_x86_64
     : public RegisterContextPOSIX_x86,
@@ -76,7 +75,6 @@ private:
   ProcessMonitor &GetMonitor();
   uint32_t
       m_fctrl_offset_in_userarea; // Offset of 'fctrl' in 'UserArea' Structure
-  struct iovec m_iovec;
 };
 
 #endif

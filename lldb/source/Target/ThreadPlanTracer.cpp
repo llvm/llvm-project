@@ -11,6 +11,9 @@
 // C++ Includes
 #include <cstring>
 
+// Other libraries and framework includes
+// Project includes
+#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"

@@ -31,7 +31,6 @@ add_host_subdirectory(common
   common/SoftwareBreakpoint.cpp
   common/StringConvert.cpp
   common/Symbols.cpp
-  common/TaskPool.cpp
   common/TCPSocket.cpp
   common/Terminal.cpp
   common/ThreadLauncher.cpp

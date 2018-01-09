@@ -15,6 +15,9 @@ from lldbsuite.test import lldbutil
 
 class HelloWatchpointTestCase(TestBase):
 
+    def getCategories(self):
+        return ['basic_process']
+
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -31,10 +34,14 @@ class HelloWatchpointTestCase(TestBase):
         self.exe_name = 'a.out'
         self.d = {'C_SOURCES': self.source, 'EXE': self.exe_name}
 
+    # Watchpoints not supported
+    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
-    @add_test_categories(["basic_process"])
+    @expectedFailureAll(
+        oslist=["linux"],
+        bugnumber="https://bugs.swift.org/browse/SR-5555 MyFirstWatchpoint test fails on Ubuntu 16.04")
     def test_hello_watchpoint_using_watchpoint_set(self):
         """Test a simple sequence of watchpoint creation and watchpoint hit."""
         self.build(dictionary=self.d)

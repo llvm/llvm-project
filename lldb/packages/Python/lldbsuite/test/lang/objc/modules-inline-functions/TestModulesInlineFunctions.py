@@ -28,6 +28,7 @@ class ModulesInlineFunctionsTestCase(TestBase):
 
     @skipUnlessDarwin
     @skipIf(macos_version=["<", "10.12"])
+    @expectedFailureDarwin("llvm.org/pr25743")
     def test_expr(self):
         self.build()
         exe = os.path.join(os.getcwd(), "a.out")

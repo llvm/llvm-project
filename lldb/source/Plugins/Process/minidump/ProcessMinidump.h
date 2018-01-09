@@ -82,14 +82,6 @@ public:
 
   bool GetProcessInfo(ProcessInstanceInfo &info) override;
 
-  Status WillResume() override {
-    Status error;
-    error.SetErrorStringWithFormat(
-        "error: %s does not support resuming processes",
-        GetPluginName().GetCString());
-    return error;
-  }
-
   MinidumpParser m_minidump_parser;
 
 protected:

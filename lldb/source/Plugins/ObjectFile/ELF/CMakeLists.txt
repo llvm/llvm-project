@@ -9,6 +9,5 @@ add_lldb_library(lldbPluginObjectFileELF PLUGIN
     lldbTarget
   LINK_COMPONENTS
     BinaryFormat
-    Object
     Support
   )

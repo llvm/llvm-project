@@ -27,9 +27,7 @@ using namespace lldb_private::process_netbsd;
 NativeThreadNetBSD::NativeThreadNetBSD(NativeProcessNetBSD &process,
                                        lldb::tid_t tid)
     : NativeThreadProtocol(process, tid), m_state(StateType::eStateInvalid),
-      m_stop_info(), m_reg_context_up(
-NativeRegisterContextNetBSD::CreateHostNativeRegisterContextNetBSD(process.GetArchitecture(), *this)
-), m_stop_description() {}
+      m_stop_info(), m_reg_context_sp(), m_stop_description() {}
 
 void NativeThreadNetBSD::SetStoppedBySignal(uint32_t signo,
                                             const siginfo_t *info) {
@@ -79,10 +77,10 @@ void NativeThreadNetBSD::SetStoppedByWatchpoint(uint32_t wp_index) {
   lldbassert(wp_index != LLDB_INVALID_INDEX32 && "wp_index cannot be invalid");
 
   std::ostringstream ostr;
-  ostr << GetRegisterContext().GetWatchpointAddress(wp_index) << " ";
+  ostr << GetRegisterContext()->GetWatchpointAddress(wp_index) << " ";
   ostr << wp_index;
 
-  ostr << " " << GetRegisterContext().GetWatchpointHitAddress(wp_index);
+  ostr << " " << GetRegisterContext()->GetWatchpointHitAddress(wp_index);
 
   m_stop_description = ostr.str();
 
@@ -141,9 +139,21 @@ bool NativeThreadNetBSD::GetStopReason(ThreadStopInfo &stop_info,
   llvm_unreachable("unhandled StateType!");
 }
 
-NativeRegisterContext& NativeThreadNetBSD::GetRegisterContext() {
-  assert(m_reg_context_up);
-return  *m_reg_context_up;
+NativeRegisterContextSP NativeThreadNetBSD::GetRegisterContext() {
+  // Return the register context if we already created it.
+  if (m_reg_context_sp)
+    return m_reg_context_sp;
+
+  ArchSpec target_arch;
+  if (!m_process.GetArchitecture(target_arch))
+    return NativeRegisterContextSP();
+
+  const uint32_t concrete_frame_idx = 0;
+  m_reg_context_sp.reset(
+      NativeRegisterContextNetBSD::CreateHostNativeRegisterContextNetBSD(
+          target_arch, *this, concrete_frame_idx));
+
+  return m_reg_context_sp;
 }
 
 Status NativeThreadNetBSD::SetWatchpoint(lldb::addr_t addr, size_t size,
@@ -155,7 +165,8 @@ Status NativeThreadNetBSD::SetWatchpoint(lldb::addr_t addr, size_t size,
   Status error = RemoveWatchpoint(addr);
   if (error.Fail())
     return error;
-  uint32_t wp_index = GetRegisterContext().SetHardwareWatchpoint(addr, size, watch_flags);
+  NativeRegisterContextSP reg_ctx = GetRegisterContext();
+  uint32_t wp_index = reg_ctx->SetHardwareWatchpoint(addr, size, watch_flags);
   if (wp_index == LLDB_INVALID_INDEX32)
     return Status("Setting hardware watchpoint failed.");
   m_watchpoint_index_map.insert({addr, wp_index});
@@ -168,7 +179,7 @@ Status NativeThreadNetBSD::RemoveWatchpoint(lldb::addr_t addr) {
     return Status();
   uint32_t wp_index = wp->second;
   m_watchpoint_index_map.erase(wp);
-  if (GetRegisterContext().ClearHardwareWatchpoint(wp_index))
+  if (GetRegisterContext()->ClearHardwareWatchpoint(wp_index))
     return Status();
   return Status("Clearing hardware watchpoint failed.");
 }
@@ -182,7 +193,8 @@ Status NativeThreadNetBSD::SetHardwareBreakpoint(lldb::addr_t addr,
   if (error.Fail())
     return error;
 
-  uint32_t bp_index = GetRegisterContext().SetHardwareBreakpoint(addr, size);
+  NativeRegisterContextSP reg_ctx = GetRegisterContext();
+  uint32_t bp_index = reg_ctx->SetHardwareBreakpoint(addr, size);
 
   if (bp_index == LLDB_INVALID_INDEX32)
     return Status("Setting hardware breakpoint failed.");
@@ -197,7 +209,7 @@ Status NativeThreadNetBSD::RemoveHardwareBreakpoint(lldb::addr_t addr) {
     return Status();
 
   uint32_t bp_index = bp->second;
-  if (GetRegisterContext().ClearHardwareBreakpoint(bp_index)) {
+  if (GetRegisterContext()->ClearHardwareBreakpoint(bp_index)) {
     m_hw_break_index_map.erase(bp);
     return Status();
   }

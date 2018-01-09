@@ -385,6 +385,11 @@ public:
     return ret;
   }
 
+  lldb::addr_t MallocPointer() {
+    return Malloc(m_target_data.getPointerSize(),
+                  m_target_data.getPointerPrefAlignment());
+  }
+
   lldb::addr_t Malloc(llvm::Type *type) {
     lldb_private::Status alloc_error;
 

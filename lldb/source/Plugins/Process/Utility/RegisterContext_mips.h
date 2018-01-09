@@ -241,6 +241,11 @@ enum {
   dwarf_config5_mips64,
 };
 
+struct IOVEC_mips {
+  void *iov_base;
+  size_t iov_len;
+};
+
 // GP registers
 struct GPR_linux_mips {
   uint64_t zero;

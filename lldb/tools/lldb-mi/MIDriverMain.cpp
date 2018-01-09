@@ -33,7 +33,6 @@
 
 // Third party headers:
 #include "lldb/API/SBHostOS.h"
-#include <atomic>
 #include <csignal>
 #include <stdio.h>
 
@@ -73,13 +72,14 @@ void sigint_handler(int vSigno) {
 #ifdef _WIN32 // Restore handler as it is not persistent on Windows
   signal(SIGINT, sigint_handler);
 #endif
-  static std::atomic_flag g_interrupt_sent = ATOMIC_FLAG_INIT;
+  static bool g_interrupt_sent = false;
   CMIDriverMgr &rDriverMgr = CMIDriverMgr::Instance();
   lldb::SBDebugger *pDebugger = rDriverMgr.DriverGetTheDebugger();
   if (pDebugger != nullptr) {
-    if (!g_interrupt_sent.test_and_set()) {
+    if (!g_interrupt_sent) {
+      g_interrupt_sent = true;
       pDebugger->DispatchInputInterrupt();
-      g_interrupt_sent.clear();
+      g_interrupt_sent = false;
     }
   }
 

@@ -16,8 +16,10 @@
 // C++ Includes
 #include <vector>
 
+// Other libraries and framework includes
+// Project includes
+#include "lldb/Core/ArchSpec.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-private.h"
@@ -140,13 +142,6 @@ public:
 
   ObjectFile::Strata CalculateStrata() override;
 
-  size_t ReadSectionData(lldb_private::Section *section,
-                         lldb::offset_t section_offset, void *dst,
-                         size_t dst_len) override;
-
-  size_t ReadSectionData(lldb_private::Section *section,
-                         lldb_private::DataExtractor &section_data) override;
-
   // Returns number of program headers found in the ELF file.
   size_t GetProgramHeaderCount();
 
@@ -158,8 +153,6 @@ public:
 
   llvm::StringRef
   StripLinkerSymbolAnnotations(llvm::StringRef symbol_name) const override;
-
-  void RelocateSection(lldb_private::Section *section) override;
 
 private:
   ObjectFileELF(const lldb::ModuleSP &module_sp, lldb::DataBufferSP &data_sp,
@@ -303,18 +296,17 @@ private:
 
   /// Relocates debug sections
   unsigned RelocateDebugSections(const elf::ELFSectionHeader *rel_hdr,
-                                 lldb::user_id_t rel_id,
-                                 lldb_private::Symtab *thetab);
+                                 lldb::user_id_t rel_id);
 
-  unsigned ApplyRelocations(lldb_private::Symtab *symtab,
-                            const elf::ELFHeader *hdr,
-                            const elf::ELFSectionHeader *rel_hdr,
-                            const elf::ELFSectionHeader *symtab_hdr,
-                            const elf::ELFSectionHeader *debug_hdr,
-                            lldb_private::DataExtractor &rel_data,
-                            lldb_private::DataExtractor &symtab_data,
-                            lldb_private::DataExtractor &debug_data,
-                            lldb_private::Section *rel_section);
+  unsigned RelocateSection(lldb_private::Symtab *symtab,
+                           const elf::ELFHeader *hdr,
+                           const elf::ELFSectionHeader *rel_hdr,
+                           const elf::ELFSectionHeader *symtab_hdr,
+                           const elf::ELFSectionHeader *debug_hdr,
+                           lldb_private::DataExtractor &rel_data,
+                           lldb_private::DataExtractor &symtab_data,
+                           lldb_private::DataExtractor &debug_data,
+                           lldb_private::Section *rel_section);
 
   /// Loads the section name string table into m_shstr_data.  Returns the
   /// number of bytes constituting the table.

@@ -513,8 +513,10 @@ public:
   ///
   /// Extract a single integer value and update the offset pointed to
   /// by \a offset_ptr. The size of the extracted integer is specified
-  /// by the \a byte_size argument. \a byte_size must have a value
-  /// >= 1 and <= 4 since the return value is only 32 bits wide.
+  /// by the \a byte_size argument. \a byte_size should have a value
+  /// >= 1 and <= 4 since the return value is only 32 bits wide. Any
+  /// \a byte_size values less than 1 or greater than 4 will result in
+  /// nothing being extracted, and zero being returned.
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -537,9 +539,11 @@ public:
   ///
   /// Extract a single unsigned integer value and update the offset
   /// pointed to by \a offset_ptr. The size of the extracted integer
-  /// is specified by the \a byte_size argument. \a byte_size must
+  /// is specified by the \a byte_size argument. \a byte_size should
   /// have a value greater than or equal to one and less than or equal
-  /// to eight since the return value is 64 bits wide.
+  /// to eight since the return value is 64 bits wide. Any
+  /// \a byte_size values less than 1 or greater than 8 will result in
+  /// nothing being extracted, and zero being returned.
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -566,9 +570,10 @@ public:
   /// Extract a single signed integer value (sign extending if required)
   /// and update the offset pointed to by \a offset_ptr. The size of
   /// the extracted integer is specified by the \a byte_size argument.
-  /// \a byte_size must have a value greater than or equal to one and
-  /// less than or equal to eight since the return value is 64 bits
-  /// wide.
+  /// \a byte_size should have a value greater than or equal to one
+  /// and less than or equal to eight since the return value is 64
+  /// bits wide. Any \a byte_size values less than 1 or greater than
+  /// 8 will result in nothing being extracted, and zero being returned.
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -584,7 +589,7 @@ public:
   ///     The sign extended signed integer value that was extracted,
   ///     or zero on failure.
   //------------------------------------------------------------------
-  int64_t GetMaxS64(lldb::offset_t *offset_ptr, size_t byte_size) const;
+  int64_t GetMaxS64(lldb::offset_t *offset_ptr, size_t size) const;
 
   //------------------------------------------------------------------
   /// Extract an unsigned integer of size \a byte_size from \a
@@ -593,9 +598,11 @@ public:
   ///
   /// Extract a single unsigned integer value and update the offset
   /// pointed to by \a offset_ptr. The size of the extracted integer
-  /// is specified by the \a byte_size argument. \a byte_size must
+  /// is specified by the \a byte_size argument. \a byte_size should
   /// have a value greater than or equal to one and less than or equal
-  /// to 8 since the return value is 64 bits wide.
+  /// to 8 since the return value is 64 bits wide. Any
+  /// \a byte_size values less than 1 or greater than 8 will result in
+  /// nothing being extracted, and zero being returned.
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -634,9 +641,10 @@ public:
   /// Extract a single signed integer value (sign extending if required)
   /// and update the offset pointed to by \a offset_ptr. The size of
   /// the extracted integer is specified by the \a byte_size argument.
-  /// \a byte_size must have a value greater than or equal to one and
-  /// less than or equal to eight since the return value is 64 bits
-  /// wide.
+  /// \a byte_size should have a value greater than or equal to one
+  /// and less than or equal to eight since the return value is 64
+  /// bits wide. Any \a byte_size values less than 1 or greater than
+  /// 8 will result in nothing being extracted, and zero being returned.
   ///
   /// @param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced

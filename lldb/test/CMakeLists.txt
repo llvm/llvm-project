@@ -15,11 +15,6 @@ endfunction()
 
 set(LLDB_TEST_DEPS lldb)
 
-# darwin-debug is an hard dependency for the testsuite.
-if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
-  list(APPEND LLDB_TEST_DEPS darwin-debug)
-endif()
-
 if(TARGET lldb-server)
   list(APPEND LLDB_TEST_DEPS lldb-server)
 endif()
@@ -30,6 +25,10 @@ endif()
 
 if(TARGET lldb-mi)
   list(APPEND LLDB_TEST_DEPS lldb-mi)
+endif()
+
+if ("${LLDB_TEST_COMPILER}" STREQUAL "")
+    string(REGEX REPLACE ".*ccache\ +" "" LLDB_TEST_COMPILER ${CMAKE_C_COMPILER} ${CMAKE_C_COMPILER_ARG1})
 endif()
 
 # The default architecture with which to compile test executables is the default LLVM target
@@ -69,7 +68,7 @@ set(LLDB_TEST_COMMON_ARGS
   -S nm
   -u CXXFLAGS
   -u CFLAGS
-  -C ${LLDB_TEST_C_COMPILER}
+  -C ${LLDB_TEST_COMPILER}
   ${SWIFT_TEST_ARGS}
   )
 
@@ -126,21 +125,6 @@ add_python_test_target(check-lldb
   "-q;${LLDB_DOTEST_ARGS}"
   "Testing LLDB (parallel execution, with a separate subprocess per test)"
   )
-
-# If we're building with an in-tree clang, then list clang as a dependency
-# to run tests.
-if (TARGET clang)
-  add_dependencies(check-lldb clang)
-endif()
-
-# LLD is required to link test executables on Windows.
-if (CMAKE_SYSTEM_NAME MATCHES "Windows")
-  if (TARGET lld)
-    add_dependencies(check-lldb lld)
-  else ()
-    message(WARNING "lld required to test LLDB on Windows")
-  endif ()
-endif ()
 
 add_custom_target(lldb-test-depends DEPENDS ${LLDB_TEST_DEPENDS})
 # This will add LLDB's test dependencies to the depenednecies for check-all and

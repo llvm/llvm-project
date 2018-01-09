@@ -77,7 +77,7 @@ public:
 
   void SetDefaultValue(const FileSpec &value) { m_default_value = value; }
 
-  const lldb::DataBufferSP &GetFileContents();
+  const lldb::DataBufferSP &GetFileContents(bool null_terminate);
 
   void SetCompletionMask(uint32_t mask) { m_completion_mask = mask; }
 

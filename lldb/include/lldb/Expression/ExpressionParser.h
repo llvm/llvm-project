@@ -11,7 +11,6 @@
 #define liblldb_ExpressionParser_h_
 
 #include "lldb/Utility/Status.h"
-#include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-public.h"
 
 namespace lldb_private {

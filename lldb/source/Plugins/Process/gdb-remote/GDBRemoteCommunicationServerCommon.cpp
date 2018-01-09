@@ -403,8 +403,8 @@ GDBRemoteCommunicationServerCommon::Handle_qfProcessInfo(
         match_info.SetMatchAllUsers(
             Args::StringToBoolean(value, false, &success));
       } else if (key.equals("triple")) {
-        match_info.GetProcessInfo().GetArchitecture() =
-            HostInfo::GetAugmentedArchSpec(value);
+        match_info.GetProcessInfo().GetArchitecture().SetTriple(
+            value.str().c_str(), NULL);
       } else {
         success = false;
       }
@@ -973,7 +973,8 @@ GDBRemoteCommunicationServerCommon::Handle_QLaunchArch(
   const uint32_t bytes_left = packet.GetBytesLeft();
   if (bytes_left > 0) {
     const char *arch_triple = packet.Peek();
-    m_process_launch_info.SetArchitecture(HostInfo::GetAugmentedArchSpec(arch_triple));
+    ArchSpec arch_spec(arch_triple, NULL);
+    m_process_launch_info.SetArchitecture(arch_spec);
     return SendOKResponse();
   }
   return SendErrorResponse(13);

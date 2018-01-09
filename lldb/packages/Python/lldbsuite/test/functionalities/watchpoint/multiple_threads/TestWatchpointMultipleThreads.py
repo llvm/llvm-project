@@ -18,6 +18,8 @@ class WatchpointForMultipleThreadsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    # Watchpoints not supported
+    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
@@ -27,6 +29,8 @@ class WatchpointForMultipleThreadsTestCase(TestBase):
         self.setTearDownCleanup()
         self.hello_multiple_threads()
 
+    # Watchpoints not supported
+    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")

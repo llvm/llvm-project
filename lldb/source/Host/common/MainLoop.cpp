@@ -28,8 +28,6 @@
 #include <sys/event.h>
 #elif defined(LLVM_ON_WIN32)
 #include <winsock2.h>
-#elif defined(__ANDROID__)
-#include <sys/syscall.h>
 #else
 #include <poll.h>
 #endif
@@ -38,6 +36,10 @@
 #define POLL WSAPoll
 #else
 #define POLL poll
+#endif
+
+#ifdef __ANDROID__
+#define FORCE_PSELECT
 #endif
 
 #if SIGNAL_POLLING_UNSUPPORTED
@@ -84,7 +86,7 @@ private:
   int num_events = -1;
 
 #else
-#ifdef __ANDROID__
+#ifdef FORCE_PSELECT
   fd_set read_fd_set;
 #else
   std::vector<struct pollfd> read_fds;
@@ -132,7 +134,7 @@ void MainLoop::RunImpl::ProcessEvents() {
 }
 #else
 MainLoop::RunImpl::RunImpl(MainLoop &loop) : loop(loop) {
-#ifndef __ANDROID__
+#ifndef FORCE_PSELECT
   read_fds.reserve(loop.m_read_fds.size());
 #endif
 }
@@ -152,14 +154,8 @@ sigset_t MainLoop::RunImpl::get_sigmask() {
 #endif
 }
 
-#ifdef __ANDROID__
+#ifdef FORCE_PSELECT
 Status MainLoop::RunImpl::Poll() {
-  // ppoll(2) is not supported on older all android versions. Also, older
-  // versions android (API <= 19) implemented pselect in a non-atomic way, as a
-  // combination of pthread_sigmask and select. This is not sufficient for us,
-  // as we rely on the atomicity to correctly implement signal polling, so we
-  // call the underlying syscall ourselves.
-
   FD_ZERO(&read_fd_set);
   int nfds = 0;
   for (const auto &fd : loop.m_read_fds) {
@@ -167,19 +163,8 @@ Status MainLoop::RunImpl::Poll() {
     nfds = std::max(nfds, fd.first + 1);
   }
 
-  union {
-    sigset_t set;
-    uint64_t pad;
-  } kernel_sigset;
-  memset(&kernel_sigset, 0, sizeof(kernel_sigset));
-  kernel_sigset.set = get_sigmask();
-
-  struct {
-    void *sigset_ptr;
-    size_t sigset_len;
-  } extra_data = {&kernel_sigset, sizeof(kernel_sigset)};
-  if (syscall(__NR_pselect6, nfds, &read_fd_set, nullptr, nullptr, nullptr,
-              &extra_data) == -1 &&
+  sigset_t sigmask = get_sigmask();
+  if (pselect(nfds, &read_fd_set, nullptr, nullptr, nullptr, &sigmask) == -1 &&
       errno != EINTR)
     return Status(errno, eErrorTypePOSIX);
 
@@ -208,7 +193,7 @@ Status MainLoop::RunImpl::Poll() {
 #endif
 
 void MainLoop::RunImpl::ProcessEvents() {
-#ifdef __ANDROID__
+#ifdef FORCE_PSELECT
   // Collect first all readable file descriptors into a separate vector and then
   // iterate over it to invoke callbacks. Iterating directly over
   // loop.m_read_fds is not possible because the callbacks can modify the
@@ -221,7 +206,7 @@ void MainLoop::RunImpl::ProcessEvents() {
   for (const auto &handle : fds) {
 #else
   for (const auto &fd : read_fds) {
-    if ((fd.revents & (POLLIN | POLLHUP)) == 0)
+    if ((fd.revents & POLLIN) == 0)
       continue;
     IOObject::WaitableHandle handle = fd.fd;
 #endif

@@ -27,6 +27,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Breakpoint/BreakpointSiteList.h"
+#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Communication.h"
 #include "lldb/Core/Event.h"
@@ -45,7 +46,6 @@
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/QueueList.h"
 #include "lldb/Target/ThreadList.h"
-#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/NameMatches.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
@@ -2535,6 +2535,10 @@ public:
 
   OperatingSystem *GetOperatingSystem() { return m_os_ap.get(); }
 
+  ArchSpec::StopInfoOverrideCallbackType GetStopInfoOverrideCallback() const {
+    return m_stop_info_override_callback;
+  }
+
   virtual LanguageRuntime *GetLanguageRuntime(lldb::LanguageType language,
                                               bool retry_if_null = true);
 
@@ -3126,6 +3130,7 @@ protected:
   std::vector<PreResumeCallbackAndBaton> m_pre_resume_actions;
   ProcessRunLock m_public_run_lock;
   ProcessRunLock m_private_run_lock;
+  ArchSpec::StopInfoOverrideCallbackType m_stop_info_override_callback;
   bool m_currently_handling_do_on_removals;
   bool m_resume_requested; // If m_currently_handling_event or
                            // m_currently_handling_do_on_removals are true,

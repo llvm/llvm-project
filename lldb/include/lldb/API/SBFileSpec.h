@@ -65,7 +65,6 @@ private:
   friend class SBModuleSpec;
   friend class SBPlatform;
   friend class SBProcess;
-  friend class SBProcessInfo;
   friend class SBSourceManager;
   friend class SBThread;
   friend class SBTarget;

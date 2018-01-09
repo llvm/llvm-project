@@ -94,7 +94,7 @@ public:
     bool all_threads = false;
     if (command.GetArgumentCount() == 0) {
       Thread *thread = m_exe_ctx.GetThreadPtr();
-      if (!thread || !HandleOneThread(thread->GetID(), result))
+      if (!HandleOneThread(thread->GetID(), result))
         return false;
       return result.Succeeded();
     } else if (command.GetArgumentCount() == 1) {
@@ -774,12 +774,6 @@ protected:
         error = process->ResumeSynchronous(&stream);
       else
         error = process->Resume();
-
-      if (!error.Success()) {
-        result.AppendMessage(error.AsCString());
-        result.SetStatus(eReturnStatusFailed);
-        return false;
-      }
 
       // There is a race condition where this thread will return up the call
       // stack to the main command handler

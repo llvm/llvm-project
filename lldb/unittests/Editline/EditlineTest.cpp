@@ -25,8 +25,6 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StringList.h"
 
-using namespace lldb_private;
-
 namespace {
 const size_t TIMEOUT_MILLIS = 5000;
 }
@@ -83,7 +81,7 @@ private:
 
   std::unique_ptr<lldb_private::Editline> _editline_sp;
 
-  PseudoTerminal _pty;
+  lldb_utility::PseudoTerminal _pty;
   int _pty_master_fd;
   int _pty_slave_fd;
 

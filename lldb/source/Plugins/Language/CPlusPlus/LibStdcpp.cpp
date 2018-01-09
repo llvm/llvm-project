@@ -117,8 +117,11 @@ bool LibstdcppMapIteratorSyntheticFrontEnd::Update() {
 
   CompilerType my_type(valobj_sp->GetCompilerType());
   if (my_type.GetNumTemplateArguments() >= 1) {
-    CompilerType pair_type = my_type.GetTypeTemplateArgument(0);
-    if (!pair_type)
+    TemplateArgumentKind kind;
+    CompilerType pair_type = my_type.GetTemplateArgument(0, kind);
+    if (kind != eTemplateArgumentKindType &&
+        kind != eTemplateArgumentKindTemplate &&
+        kind != eTemplateArgumentKindTemplateExpansion)
       return false;
     m_pair_type = pair_type;
   } else

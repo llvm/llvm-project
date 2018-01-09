@@ -12,10 +12,11 @@
 
 #include <string>
 
-#include "lldb/Core/Address.h" // for Address
+#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Opcode.h"
 #include "lldb/Core/PluginInterface.h"
-#include "lldb/Utility/ArchSpec.h"
+
+#include "lldb/Core/Address.h"              // for Address
 #include "lldb/lldb-defines.h"              // for DISALLOW_COPY_AND_ASSIGN
 #include "lldb/lldb-enumerations.h"         // for RegisterKind, ByteOrder
 #include "lldb/lldb-private-enumerations.h" // for InstructionType

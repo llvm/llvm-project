@@ -29,6 +29,7 @@
 #include <sstream>
 
 #include "lldb/Breakpoint/Watchpoint.h"
+#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -243,7 +244,7 @@ bool ProcessGDBRemote::CanDebug(lldb::TargetSP target_sp,
 //----------------------------------------------------------------------
 ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
                                    ListenerSP listener_sp)
-    : Process(target_sp, listener_sp),
+    : Process(target_sp, listener_sp), m_flags(0), m_gdb_comm(),
       m_debugserver_pid(LLDB_INVALID_PROCESS_ID), m_last_stop_packet_mutex(),
       m_register_info(),
       m_async_broadcaster(NULL, "lldb.process.gdb-remote.async-broadcaster"),
@@ -817,7 +818,7 @@ Status ProcessGDBRemote::DoLaunch(Module *exe_module,
   if (object_file) {
     error = EstablishConnectionIfNeeded(launch_info);
     if (error.Success()) {
-      PseudoTerminal pty;
+      lldb_utility::PseudoTerminal pty;
       const bool disable_stdio = (launch_flags & eLaunchFlagDisableSTDIO) != 0;
 
       PlatformSP platform_sp(GetTarget().GetPlatform());
@@ -946,7 +947,8 @@ Status ProcessGDBRemote::DoLaunch(Module *exe_module,
         SetPrivateState(SetThreadStopInfo(response));
 
         if (!disable_stdio) {
-          if (pty.GetMasterFileDescriptor() != PseudoTerminal::invalid_fd)
+          if (pty.GetMasterFileDescriptor() !=
+              lldb_utility::PseudoTerminal::invalid_fd)
             SetSTDIOFileDescriptor(pty.ReleaseMasterFileDescriptor());
         }
       }
@@ -3253,6 +3255,7 @@ Status ProcessGDBRemote::DisableWatchpoint(Watchpoint *wp, bool notify) {
 }
 
 void ProcessGDBRemote::Clear() {
+  m_flags = 0;
   m_thread_list_real.Clear();
   m_thread_list.Clear();
 }
@@ -3286,8 +3289,12 @@ ProcessGDBRemote::EstablishConnectionIfNeeded(const ProcessInfo &process_info) {
   }
   return error;
 }
-#if !defined(_WIN32)
-#define USE_SOCKETPAIR_FOR_LOCAL_CONNECTION 1
+#if defined(__APPLE__)
+// CI bots that use the code-signed debugserver from Xcode don't yet have a
+// debugserver that supports the socketpair "--fd" argument.  We need to
+// disable this until we have an Apple codesigned version of debugserver that
+// supports it.
+// #define USE_SOCKETPAIR_FOR_LOCAL_CONNECTION 1
 #endif
 
 #ifdef USE_SOCKETPAIR_FOR_LOCAL_CONNECTION
@@ -3330,8 +3337,8 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
     lldb_utility::CleanUp<int, int> our_socket(-1, -1, close);
     lldb_utility::CleanUp<int, int> gdb_socket(-1, -1, close);
 
-    // Use a socketpair on non-Windows systems for security and performance
-    // reasons.
+    // Use a socketpair on Apple for now until other platforms can verify it
+    // works and is fast enough
     {
       int sockets[2]; /* the pair of socket descriptors */
       if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) == -1) {
@@ -4165,6 +4172,7 @@ struct GdbServerTargetInfo {
   std::string osabi;
   stringVec includes;
   RegisterSetMap reg_set_map;
+  XMLNode feature_node;
 };
 
 bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
@@ -4370,8 +4378,8 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
 
     XMLNode target_node = xml_document.GetRootElement("target");
     if (target_node) {
-      std::vector<XMLNode> feature_nodes;
-      target_node.ForEachChildElement([&target_info, &feature_nodes](
+      XMLNode feature_node;
+      target_node.ForEachChildElement([&target_info, &feature_node](
                                           const XMLNode &node) -> bool {
         llvm::StringRef name = node.GetName();
         if (name == "architecture") {
@@ -4383,7 +4391,7 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
           if (!href.empty())
             target_info.includes.push_back(href.str());
         } else if (name == "feature") {
-          feature_nodes.push_back(node);
+          feature_node = node;
         } else if (name == "groups") {
           node.ForEachChildElementWithName(
               "group", [&target_info](const XMLNode &node) -> bool {
@@ -4419,7 +4427,7 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
       // set the Target's architecture yet, so the ABI is also potentially
       // incorrect.
       ABISP abi_to_use_sp = ABI::FindPlugin(shared_from_this(), arch_to_use);
-      for (auto &feature_node : feature_nodes) {
+      if (feature_node) {
         ParseRegisters(feature_node, target_info, this->m_register_info,
                        abi_to_use_sp, cur_reg_num, reg_offset);
       }

@@ -1,2 +1,1 @@
-# one more level of indirection to stress the command interpreter reentrancy
-command source commands.txt
+script import my

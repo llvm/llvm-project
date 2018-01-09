@@ -21,7 +21,6 @@
 #include "lldb/Core/ClangForward.h"
 #include "lldb/Core/SwiftForward.h"
 #include "lldb/lldb-private.h"
-#include "llvm/ADT/APSInt.h"
 
 namespace lldb_private {
 
@@ -302,8 +301,6 @@ public:
   // Exploring the type
   //----------------------------------------------------------------------
 
-  struct IntegralTemplateArgument;
-
   uint64_t GetByteSize(ExecutionContextScope *exe_scope) const;
 
   uint64_t GetBitSize(ExecutionContextScope *exe_scope) const;
@@ -383,15 +380,8 @@ public:
 
   size_t GetNumTemplateArguments() const;
 
-  lldb::TemplateArgumentKind GetTemplateArgumentKind(size_t idx) const;
-  CompilerType GetTypeTemplateArgument(size_t idx) const;
-
-  lldb::GenericKind GetGenericArgumentKind(size_t idx) const;
-  CompilerType GetGenericArgumentType(size_t idx) const;
-
-  // Returns the value of the template argument and its type.
-  llvm::Optional<IntegralTemplateArgument>
-  GetIntegralTemplateArgument(size_t idx) const;
+  CompilerType GetTemplateArgument(size_t idx,
+                                   lldb::TemplateArgumentKind &kind) const;
 
   CompilerType GetTypeForFormatters() const;
 
@@ -453,11 +443,6 @@ private:
 
 bool operator==(const CompilerType &lhs, const CompilerType &rhs);
 bool operator!=(const CompilerType &lhs, const CompilerType &rhs);
-
-struct CompilerType::IntegralTemplateArgument {
-  llvm::APSInt value;
-  CompilerType type;
-};
 
 } // namespace lldb_private
 

@@ -33,9 +33,6 @@ public:
   lldb_private::DWARFExpression::LocationListFormat
   GetLocationListFormat() const override;
 
-  size_t GetObjCMethodDIEOffsets(lldb_private::ConstString class_name,
-                                 DIEArray &method_die_offsets) override;
-
   lldb_private::TypeSystem *
   GetTypeSystemForLanguage(lldb::LanguageType language) override;
 
@@ -47,8 +44,6 @@ public:
                                  const DWARFDebugInfoEntry &cu_die) override {
     return nullptr;
   }
-
-  DWARFCompileUnit *GetBaseCompileUnit() override;
 
 protected:
   void LoadSectionData(lldb::SectionType sect_type,
@@ -66,10 +61,6 @@ protected:
 
   lldb::TypeSP FindDefinitionTypeForDWARFDeclContext(
       const DWARFDeclContext &die_decl_ctx) override;
-
-  lldb::TypeSP FindCompleteObjCDefinitionTypeForDIE(
-      const DWARFDIE &die, const lldb_private::ConstString &type_name,
-      bool must_be_implementation) override;
 
   SymbolFileDWARF *GetBaseSymbolFile();
 

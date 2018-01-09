@@ -94,8 +94,9 @@ bool lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::
 
   m_start = nullptr;
   m_num_elements = 0;
-  m_element_type = m_backend.GetCompilerType().GetTypeTemplateArgument(0);
-  if (!m_element_type.IsValid())
+  lldb::TemplateArgumentKind kind;
+  m_element_type = m_backend.GetCompilerType().GetTemplateArgument(0, kind);
+  if (kind != lldb::eTemplateArgumentKindType || !m_element_type.IsValid())
     return false;
 
   m_element_size = m_element_type.GetByteSize(nullptr);

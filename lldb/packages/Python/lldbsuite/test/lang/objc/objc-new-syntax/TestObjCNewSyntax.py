@@ -47,6 +47,12 @@ class ObjCNewSyntaxTestCase(TestBase):
                     substrs=[' resolved, hit count = 1'])
 
     @skipUnlessDarwin
+    @expectedFailureAll(
+        oslist=['macosx'],
+        compiler='clang',
+        compiler_version=[
+            '<',
+            '7.0.0'])
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
     def test_read_array(self):
@@ -63,6 +69,12 @@ class ObjCNewSyntaxTestCase(TestBase):
             substrs=["foo"])
 
     @skipUnlessDarwin
+    @expectedFailureAll(
+        oslist=['macosx'],
+        compiler='clang',
+        compiler_version=[
+            '<',
+            '7.0.0'])
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
     def test_update_array(self):
@@ -79,6 +91,12 @@ class ObjCNewSyntaxTestCase(TestBase):
             substrs=["bar"])
 
     @skipUnlessDarwin
+    @expectedFailureAll(
+        oslist=['macosx'],
+        compiler='clang',
+        compiler_version=[
+            '<',
+            '7.0.0'])
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
     def test_read_dictionary(self):
@@ -95,6 +113,12 @@ class ObjCNewSyntaxTestCase(TestBase):
             substrs=["value"])
 
     @skipUnlessDarwin
+    @expectedFailureAll(
+        oslist=['macosx'],
+        compiler='clang',
+        compiler_version=[
+            '<',
+            '7.0.0'])
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
     @expectedFailureAll(debug_info="gmodules",
@@ -113,6 +137,12 @@ class ObjCNewSyntaxTestCase(TestBase):
             substrs=["object"])
 
     @skipUnlessDarwin
+    @expectedFailureAll(
+        oslist=['macosx'],
+        compiler='clang',
+        compiler_version=[
+            '<',
+            '7.0.0'])
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
     def test_array_literal(self):
@@ -127,6 +157,12 @@ class ObjCNewSyntaxTestCase(TestBase):
                 "bar"])
 
     @skipUnlessDarwin
+    @expectedFailureAll(
+        oslist=['macosx'],
+        compiler='clang',
+        compiler_version=[
+            '<',
+            '7.0.0'])
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
     @expectedFailureAll(debug_info="gmodules",
@@ -142,6 +178,12 @@ class ObjCNewSyntaxTestCase(TestBase):
                 "object"])
 
     @skipUnlessDarwin
+    @expectedFailureAll(
+        oslist=['macosx'],
+        compiler='clang',
+        compiler_version=[
+            '<',
+            '7.0.0'])
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
     def test_char_literal(self):
@@ -151,6 +193,12 @@ class ObjCNewSyntaxTestCase(TestBase):
                     VARIABLES_DISPLAYED_CORRECTLY, substrs=[str(ord('a'))])
 
     @skipUnlessDarwin
+    @expectedFailureAll(
+        oslist=['macosx'],
+        compiler='clang',
+        compiler_version=[
+            '<',
+            '7.0.0'])
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
     def test_integer_literals(self):
@@ -182,6 +230,12 @@ class ObjCNewSyntaxTestCase(TestBase):
             substrs=["1"])
 
     @skipUnlessDarwin
+    @expectedFailureAll(
+        oslist=['macosx'],
+        compiler='clang',
+        compiler_version=[
+            '<',
+            '7.0.0'])
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
     def test_float_literal(self):
@@ -191,6 +245,12 @@ class ObjCNewSyntaxTestCase(TestBase):
                     substrs=["NSNumber", "123.45"])
 
     @skipUnlessDarwin
+    @expectedFailureAll(
+        oslist=['macosx'],
+        compiler='clang',
+        compiler_version=[
+            '<',
+            '7.0.0'])
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
     def test_expressions_in_literals(self):

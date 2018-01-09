@@ -13,6 +13,9 @@ from lldbsuite.test import lldbutil
 
 class TestObjCStepping(TestBase):
 
+    def getCategories(self):
+        return ['basic_process']
+
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -32,7 +35,7 @@ class TestObjCStepping(TestBase):
             self.main_source, '// Step over nil should stop here.')
 
     @skipUnlessDarwin
-    @add_test_categories(['pyapi', 'basic_process'])
+    @add_test_categories(['pyapi'])
     def test_with_python_api(self):
         """Test stepping through ObjC method dispatch in various forms."""
         self.build()

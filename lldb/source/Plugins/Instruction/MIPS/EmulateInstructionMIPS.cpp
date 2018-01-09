@@ -12,12 +12,12 @@
 #include <stdlib.h>
 
 #include "lldb/Core/Address.h"
+#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Opcode.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Stream.h"
@@ -212,7 +212,10 @@ EmulateInstructionMIPS::CreateInstance(const ArchSpec &arch,
           inst_type)) {
     if (arch.GetTriple().getArch() == llvm::Triple::mips ||
         arch.GetTriple().getArch() == llvm::Triple::mipsel) {
-      return new EmulateInstructionMIPS(arch);
+      std::auto_ptr<EmulateInstructionMIPS> emulate_insn_ap(
+          new EmulateInstructionMIPS(arch));
+      if (emulate_insn_ap.get())
+        return emulate_insn_ap.release();
     }
   }
 

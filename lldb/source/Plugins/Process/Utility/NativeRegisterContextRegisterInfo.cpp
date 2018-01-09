@@ -14,9 +14,9 @@
 using namespace lldb_private;
 
 NativeRegisterContextRegisterInfo::NativeRegisterContextRegisterInfo(
-    NativeThreadProtocol &thread,
+    NativeThreadProtocol &thread, uint32_t concrete_frame_idx,
     RegisterInfoInterface *register_info_interface)
-    : NativeRegisterContext(thread),
+    : NativeRegisterContext(thread, concrete_frame_idx),
       m_register_info_interface_up(register_info_interface) {
   assert(register_info_interface && "null register_info_interface");
 }
