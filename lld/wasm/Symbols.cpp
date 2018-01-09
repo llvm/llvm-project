@@ -40,7 +40,7 @@ uint32_t Symbol::getVirtualAddress() const {
   assert(isGlobal());
   DEBUG(dbgs() << "getVirtualAddress: " << getName() << "\n");
   if (isUndefined())
-    return UINT32_MAX;
+    return 0;
   if (VirtualAddress.hasValue())
     return VirtualAddress.getValue();
 
@@ -51,12 +51,6 @@ uint32_t Symbol::getVirtualAddress() const {
   assert(Global.Type == llvm::wasm::WASM_TYPE_I32);
   assert(Segment);
   return Segment->translateVA(Global.InitExpr.Value.Int32);
-}
-
-uint32_t Symbol::getOutputIndex() const {
-  if (isUndefined() && isWeak())
-    return 0;
-  return OutputIndex.getValue();
 }
 
 void Symbol::setVirtualAddress(uint32_t Value) {

@@ -157,6 +157,10 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.mask.cmp.q") || // Added in 5.0
       Name.startswith("avx512.mask.cmp.w") || // Added in 5.0
       Name.startswith("avx512.mask.ucmp.") || // Added in 5.0
+      Name.startswith("avx512.cvtb2mask.") || // Added in 7.0
+      Name.startswith("avx512.cvtw2mask.") || // Added in 7.0
+      Name.startswith("avx512.cvtd2mask.") || // Added in 7.0
+      Name.startswith("avx512.cvtq2mask.") || // Added in 7.0
       Name == "avx512.mask.add.pd.128" || // Added in 4.0
       Name == "avx512.mask.add.pd.256" || // Added in 4.0
       Name == "avx512.mask.add.ps.128" || // Added in 4.0
@@ -829,9 +833,11 @@ static Value *upgradeIntMinMax(IRBuilder<> &Builder, CallInst &CI,
 // Applying mask on vector of i1's and make sure result is at least 8 bits wide.
 static Value *ApplyX86MaskOn1BitsVec(IRBuilder<> &Builder,Value *Vec, Value *Mask,
                                      unsigned NumElts) {
-  const auto *C = dyn_cast<Constant>(Mask);
-  if (!C || !C->isAllOnesValue())
-    Vec = Builder.CreateAnd(Vec, getX86MaskVec(Builder, Mask, NumElts));
+  if (Mask) {
+    const auto *C = dyn_cast<Constant>(Mask);
+    if (!C || !C->isAllOnesValue())
+      Vec = Builder.CreateAnd(Vec, getX86MaskVec(Builder, Mask, NumElts));
+  }
 
   if (NumElts < 8) {
     uint32_t Indices[8];
@@ -1115,6 +1121,15 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     } else if (IsX86 && Name.startswith("avx512.mask.ucmp")) {
       unsigned Imm = cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
       Rep = upgradeMaskedCompare(Builder, *CI, Imm, false);
+    } else if (IsX86 && (Name.startswith("avx512.cvtb2mask.") ||
+                         Name.startswith("avx512.cvtw2mask.") ||
+                         Name.startswith("avx512.cvtd2mask.") ||
+                         Name.startswith("avx512.cvtq2mask."))) {
+      Value *Op = CI->getArgOperand(0);
+      Value *Zero = llvm::Constant::getNullValue(Op->getType());
+      Rep = Builder.CreateICmp(ICmpInst::ICMP_SLT, Op, Zero);
+      Rep = ApplyX86MaskOn1BitsVec(Builder, Rep, nullptr,
+                                   Op->getType()->getVectorNumElements());
     } else if(IsX86 && (Name == "ssse3.pabs.b.128" ||
                         Name == "ssse3.pabs.w.128" ||
                         Name == "ssse3.pabs.d.128" ||

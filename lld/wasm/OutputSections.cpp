@@ -157,16 +157,12 @@ static void calcRelocations(const ObjFile &File,
 
     if (Config->EmitRelocs)
       NewReloc.NewIndex = calcNewIndex(File, Reloc);
-    else
-      NewReloc.NewIndex = UINT32_MAX;
 
     switch (Reloc.Type) {
     case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
     case R_WEBASSEMBLY_MEMORY_ADDR_I32:
     case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
-      NewReloc.Value = File.getRelocatedAddress(Reloc.Index);
-      if (NewReloc.Value != UINT32_MAX)
-        NewReloc.Value += Reloc.Addend;
+      NewReloc.Value = File.getRelocatedAddress(Reloc.Index) + Reloc.Addend;
       break;
     default:
       NewReloc.Value = calcNewIndex(File, Reloc);

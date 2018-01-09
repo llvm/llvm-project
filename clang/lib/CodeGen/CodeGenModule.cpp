@@ -813,7 +813,11 @@ void CodeGenModule::UpdateMultiVersionNames(GlobalDecl GD,
     // This is so that if the initial version was already the 'default'
     // version, we don't try to update it.
     if (OtherName != NonTargetName) {
-      Manglings.erase(NonTargetName);
+      // Remove instead of erase, since others may have stored the StringRef
+      // to this.
+      const auto ExistingRecord = Manglings.find(NonTargetName);
+      if (ExistingRecord != std::end(Manglings))
+        Manglings.remove(&(*ExistingRecord));
       auto Result = Manglings.insert(std::make_pair(OtherName, OtherGD));
       MangledDeclNames[OtherGD.getCanonicalDecl()] = Result.first->first();
       if (llvm::GlobalValue *Entry = GetGlobalValue(NonTargetName))

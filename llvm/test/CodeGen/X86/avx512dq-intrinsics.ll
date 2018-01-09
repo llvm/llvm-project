@@ -438,29 +438,3 @@ define i8 @test_int_x86_avx512_mask_fpclass_ss_load(<4 x float>* %x0ptr, i8 %x1)
   %res = call i8 @llvm.x86.avx512.mask.fpclass.ss(<4 x float> %x0, i32 4, i8 -1)
   ret i8 %res
 }
-
-declare i16 @llvm.x86.avx512.cvtd2mask.512(<16 x i32>)
-
-define i16@test_int_x86_avx512_cvtd2mask_512(<16 x i32> %x0) {
-; CHECK-LABEL: test_int_x86_avx512_cvtd2mask_512:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpmovd2m %zmm0, %k0
-; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
-; CHECK-NEXT:    retq
-  %res = call i16 @llvm.x86.avx512.cvtd2mask.512(<16 x i32> %x0)
-  ret i16 %res
-}
-
-declare i8 @llvm.x86.avx512.cvtq2mask.512(<8 x i64>)
-
-define i8@test_int_x86_avx512_cvtq2mask_512(<8 x i64> %x0) {
-; CHECK-LABEL: test_int_x86_avx512_cvtq2mask_512:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpmovq2m %zmm0, %k0
-; CHECK-NEXT:    kmovw %k0, %eax
-; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
-; CHECK-NEXT:    retq
-  %res = call i8 @llvm.x86.avx512.cvtq2mask.512(<8 x i64> %x0)
-  ret i8 %res
-}

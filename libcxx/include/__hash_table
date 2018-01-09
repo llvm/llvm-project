@@ -2136,7 +2136,7 @@ template <class _Tp, class _Hash, class _Equal, class _Alloc>
 void
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::rehash(size_type __n)
 {
-    if (__n < 2)
+    if (__n == 1)
         __n = 2;
     else if (__n & (__n - 1))
         __n = __next_prime(__n);
