@@ -763,6 +763,11 @@ void SymbolTable::scanVersionScript() {
     Sym->parseSymbolVersion();
 }
 
+template void SymbolTable::addFile<ELF32LE>(InputFile *);
+template void SymbolTable::addFile<ELF32BE>(InputFile *);
+template void SymbolTable::addFile<ELF64LE>(InputFile *);
+template void SymbolTable::addFile<ELF64BE>(InputFile *);
+
 template void SymbolTable::addSymbolWrap<ELF32LE>(StringRef);
 template void SymbolTable::addSymbolWrap<ELF32BE>(StringRef);
 template void SymbolTable::addSymbolWrap<ELF64LE>(StringRef);
