@@ -86,7 +86,6 @@ public:
     if (arg)
       m_env_vec.push_back(arg);
   }
-  void PushEnvironmentIfNeeded(const char *arg);
   void ClearEnvironment() {
     m_env_vec.erase(m_env_vec.begin(), m_env_vec.end());
   }

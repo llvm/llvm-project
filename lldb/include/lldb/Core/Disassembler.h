@@ -11,6 +11,7 @@
 #define liblldb_Disassembler_h_
 
 #include "lldb/Core/Address.h"
+#include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Core/FormatEntity.h" // for FormatEntity
 #include "lldb/Core/Opcode.h"
@@ -18,8 +19,7 @@
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Symbol/LineEntry.h"
 #include "lldb/Target/ExecutionContext.h" // for ExecutionContext
-#include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/ConstString.h" // for ConstString
+#include "lldb/Utility/ConstString.h"     // for ConstString
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-defines.h"      // for DISALLOW_COPY_AND_ASSIGN
 #include "lldb/lldb-enumerations.h" // for AddressClass, AddressClass...

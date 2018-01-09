@@ -100,7 +100,8 @@ def finalize_build_dictionary(dictionary):
         if dictionary is None:
             dictionary = {}
         dictionary["OS"] = "Android"
-        dictionary["PIE"] = 1
+        if android_device_api() >= 16:
+            dictionary["PIE"] = 1
     return dictionary
 
 
@@ -174,6 +175,6 @@ def createPlatformContext():
 def hasChattyStderr(test_case):
     """Some targets produce garbage on the standard error output. This utility function
     determines whether the tests can be strict about the expected stderr contents."""
-    if match_android_device(test_case.getArchitecture(), ['aarch64'], range(22, 25+1)):
+    if match_android_device(test_case.getArchitecture(), ['aarch64'], [22]):
         return True  # The dynamic linker on the device will complain about unknown DT entries
     return False

@@ -65,7 +65,7 @@ lldb::user_id_t DIERef::GetUID(SymbolFileDWARF *dwarf) const {
   //
   // SymbolFileDWARFDwo sets the ID to the compile unit offset.
   //----------------------------------------------------------------------
-  if (dwarf && die_offset != DW_INVALID_OFFSET)
+  if (dwarf)
     return dwarf->GetID() | die_offset;
   else
     return LLDB_INVALID_UID;

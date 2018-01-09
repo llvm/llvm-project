@@ -14,6 +14,9 @@ class MiTestCaseBase(Base):
     myexe = "a.out"
     mylog = "child.log"
 
+    def getCategories(self):
+        return ['lldb-mi']
+
     @classmethod
     def classCleanup(cls):
         TestBase.RemoveTempFile(cls.myexe)

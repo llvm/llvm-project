@@ -8,7 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/ValueObjectMemory.h"
-#include "lldb/Core/Scalar.h" // for Scalar, operator!=
+
+#include "lldb/Core/ArchSpec.h" // for ArchSpec
+#include "lldb/Core/Scalar.h"   // for Scalar, operator!=
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Symbol/Type.h"

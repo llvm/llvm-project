@@ -18,6 +18,7 @@ class TestQueues(TestBase):
 
     @skipUnlessDarwin
     @add_test_categories(['pyapi'])
+    @expectedFailureAll(bugnumber="rdar://30915340")
     def test_with_python_api(self):
         """Test queues inspection SB APIs."""
         self.build()
@@ -230,9 +231,8 @@ class TestQueues(TestBase):
                 "requested_qos.printable_name",
                 stream),
             "Get QoS printable string for unspecified QoS thread")
-        qosName = stream.GetData()
         self.assertTrue(
-            qosName == "User Initiated" or qosName == "Default",
+            stream.GetData() == "User Initiated",
             "unspecified QoS thread name is valid")
         stream.Clear()
         self.assertTrue(

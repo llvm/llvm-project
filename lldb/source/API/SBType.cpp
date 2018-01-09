@@ -427,31 +427,21 @@ uint32_t SBType::GetNumberOfTemplateArguments() {
 }
 
 lldb::SBType SBType::GetTemplateArgumentType(uint32_t idx) {
-  if (!IsValid())
-    return SBType();
-
-  CompilerType type;
-  switch(GetTemplateArgumentKind(idx)) {
-    case eTemplateArgumentKindType:
-      type = m_opaque_sp->GetCompilerType(false).GetTypeTemplateArgument(idx);
-      break;
-    case eTemplateArgumentKindIntegral:
-      type = m_opaque_sp->GetCompilerType(false)
-                 .GetIntegralTemplateArgument(idx)
-                 ->type;
-      break;
-    default:
-      break;
+  if (IsValid()) {
+    TemplateArgumentKind kind = eTemplateArgumentKindNull;
+    CompilerType template_arg_type =
+        m_opaque_sp->GetCompilerType(false).GetTemplateArgument(idx, kind);
+    if (template_arg_type.IsValid())
+      return SBType(template_arg_type);
   }
-  if (type.IsValid())
-    return SBType(type);
   return SBType();
 }
 
 lldb::TemplateArgumentKind SBType::GetTemplateArgumentKind(uint32_t idx) {
+  TemplateArgumentKind kind = eTemplateArgumentKindNull;
   if (IsValid())
-    return m_opaque_sp->GetCompilerType(false).GetTemplateArgumentKind(idx);
-  return eTemplateArgumentKindNull;
+    m_opaque_sp->GetCompilerType(false).GetTemplateArgument(idx, kind);
+  return kind;
 }
 
 SBTypeList::SBTypeList() : m_opaque_ap(new TypeListImpl()) {}

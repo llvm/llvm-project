@@ -14,6 +14,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Breakpoint/Watchpoint.h"
+#include "lldb/Core/ArchSpec.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/ExecutionContext.h"

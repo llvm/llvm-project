@@ -356,6 +356,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   //
 
   ApplyObjcCastHack(m_expr_text);
+  // ApplyUnicharHack(m_expr_text);
 
   std::string prefix = m_expr_prefix;
 

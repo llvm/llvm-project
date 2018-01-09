@@ -30,6 +30,8 @@ class WatchLocationUsingWatchpointSetTestCase(TestBase):
         # Build dictionary to have unique executable names for each test
         # method.
 
+    # Watchpoints not supported
+    @expectedFailureAndroid(archs=['arm', 'aarch64'])
     @expectedFailureAll(
         oslist=["linux"],
         archs=[

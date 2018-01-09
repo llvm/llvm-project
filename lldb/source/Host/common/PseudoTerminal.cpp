@@ -24,7 +24,7 @@
 int posix_openpt(int flags);
 #endif
 
-using namespace lldb_private;
+using namespace lldb_utility;
 
 //----------------------------------------------------------------------
 // PseudoTerminal constructor

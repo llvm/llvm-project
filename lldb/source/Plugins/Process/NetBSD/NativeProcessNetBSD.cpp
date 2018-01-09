@@ -109,8 +109,10 @@ NativeProcessNetBSD::Factory::Launch(ProcessLaunchInfo &launch_info,
   if (status.Fail())
     return status.ToError();
 
-  for (const auto &thread : process_up->m_threads)
-    static_cast<NativeThreadNetBSD &>(*thread).SetStoppedBySignal(SIGSTOP);
+  for (const auto &thread_sp : process_up->m_threads) {
+    static_pointer_cast<NativeThreadNetBSD>(thread_sp)->SetStoppedBySignal(
+        SIGSTOP);
+  }
   process_up->SetState(StateType::eStateStopped);
 
   return std::move(process_up);
@@ -196,9 +198,9 @@ void NativeProcessNetBSD::MonitorSIGSTOP(lldb::pid_t pid) {
     // Handle SIGSTOP from LLGS (LLDB GDB Server)
     if (info.psi_siginfo.si_code == SI_USER &&
         info.psi_siginfo.si_pid == ::getpid()) {
-      /* Stop Tracking all Threads attached to Process */
-      for (const auto &thread : m_threads) {
-        static_cast<NativeThreadNetBSD &>(*thread).SetStoppedBySignal(
+      /* Stop Tracking All Threads attached to Process */
+      for (const auto &thread_sp : m_threads) {
+        static_pointer_cast<NativeThreadNetBSD>(thread_sp)->SetStoppedBySignal(
             SIGSTOP, &info.psi_siginfo);
       }
     }
@@ -219,15 +221,18 @@ void NativeProcessNetBSD::MonitorSIGTRAP(lldb::pid_t pid) {
 
   switch (info.psi_siginfo.si_code) {
   case TRAP_BRKPT:
-    for (const auto &thread : m_threads) {
-      static_cast<NativeThreadNetBSD &>(*thread).SetStoppedByBreakpoint();
-      FixupBreakpointPCAsNeeded(static_cast<NativeThreadNetBSD &>(*thread));
+    for (const auto &thread_sp : m_threads) {
+      static_pointer_cast<NativeThreadNetBSD>(thread_sp)
+          ->SetStoppedByBreakpoint();
+      FixupBreakpointPCAsNeeded(
+          *static_pointer_cast<NativeThreadNetBSD>(thread_sp));
     }
     SetState(StateType::eStateStopped, true);
     break;
   case TRAP_TRACE:
-    for (const auto &thread : m_threads)
-      static_cast<NativeThreadNetBSD &>(*thread).SetStoppedByTrace();
+    for (const auto &thread_sp : m_threads) {
+      static_pointer_cast<NativeThreadNetBSD>(thread_sp)->SetStoppedByTrace();
+    }
     SetState(StateType::eStateStopped, true);
     break;
   case TRAP_EXEC: {
@@ -240,35 +245,38 @@ void NativeProcessNetBSD::MonitorSIGTRAP(lldb::pid_t pid) {
     // Let our delegate know we have just exec'd.
     NotifyDidExec();
 
-    for (const auto &thread : m_threads)
-      static_cast<NativeThreadNetBSD &>(*thread).SetStoppedByExec();
+    for (const auto &thread_sp : m_threads) {
+      static_pointer_cast<NativeThreadNetBSD>(thread_sp)->SetStoppedByExec();
+    }
     SetState(StateType::eStateStopped, true);
   } break;
   case TRAP_DBREG: {
     // If a watchpoint was hit, report it
     uint32_t wp_index;
-    Status error = static_cast<NativeThreadNetBSD &>(*m_threads[info.psi_lwpid])
-                       .GetRegisterContext()
-                       .GetWatchpointHitIndex(
-                           wp_index, (uintptr_t)info.psi_siginfo.si_addr);
+    Status error =
+        static_pointer_cast<NativeThreadNetBSD>(m_threads[info.psi_lwpid])
+            ->GetRegisterContext()
+            ->GetWatchpointHitIndex(wp_index,
+                                    (uintptr_t)info.psi_siginfo.si_addr);
     if (error.Fail())
       LLDB_LOG(log,
                "received error while checking for watchpoint hits, pid = "
                "{0}, LWP = {1}, error = {2}",
                GetID(), info.psi_lwpid, error);
     if (wp_index != LLDB_INVALID_INDEX32) {
-      for (const auto &thread : m_threads)
-        static_cast<NativeThreadNetBSD &>(*thread).SetStoppedByWatchpoint(
-            wp_index);
+      for (const auto &thread_sp : m_threads) {
+        static_pointer_cast<NativeThreadNetBSD>(thread_sp)
+            ->SetStoppedByWatchpoint(wp_index);
+      }
       SetState(StateType::eStateStopped, true);
       break;
     }
 
     // If a breakpoint was hit, report it
     uint32_t bp_index;
-    error = static_cast<NativeThreadNetBSD &>(*m_threads[info.psi_lwpid])
-                .GetRegisterContext()
-                .GetHardwareBreakHitIndex(bp_index,
+    error = static_pointer_cast<NativeThreadNetBSD>(m_threads[info.psi_lwpid])
+                ->GetRegisterContext()
+                ->GetHardwareBreakHitIndex(bp_index,
                                            (uintptr_t)info.psi_siginfo.si_addr);
     if (error.Fail())
       LLDB_LOG(log,
@@ -276,8 +284,10 @@ void NativeProcessNetBSD::MonitorSIGTRAP(lldb::pid_t pid) {
                "breakpoint hits, pid = {0}, LWP = {1}, error = {2}",
                GetID(), info.psi_lwpid, error);
     if (bp_index != LLDB_INVALID_INDEX32) {
-      for (const auto &thread : m_threads)
-        static_cast<NativeThreadNetBSD &>(*thread).SetStoppedByBreakpoint();
+      for (const auto &thread_sp : m_threads) {
+        static_pointer_cast<NativeThreadNetBSD>(thread_sp)
+            ->SetStoppedByBreakpoint();
+      }
       SetState(StateType::eStateStopped, true);
       break;
     }
@@ -290,8 +300,8 @@ void NativeProcessNetBSD::MonitorSignal(lldb::pid_t pid, int signal) {
   const auto siginfo_err =
       PtraceWrapper(PT_GET_SIGINFO, pid, &info, sizeof(info));
 
-  for (const auto &thread : m_threads) {
-    static_cast<NativeThreadNetBSD &>(*thread).SetStoppedBySignal(
+  for (const auto &thread_sp : m_threads) {
+    static_pointer_cast<NativeThreadNetBSD>(thread_sp)->SetStoppedBySignal(
         info.psi_siginfo.si_signo, &info.psi_siginfo);
   }
   SetState(StateType::eStateStopped, true);
@@ -341,7 +351,12 @@ NativeProcessNetBSD::FixupBreakpointPCAsNeeded(NativeThreadNetBSD &thread) {
   Status error;
   // Find out the size of a breakpoint (might depend on where we are in the
   // code).
-  NativeRegisterContext& context = thread.GetRegisterContext();
+  NativeRegisterContextSP context_sp = thread.GetRegisterContext();
+  if (!context_sp) {
+    error.SetErrorString("cannot get a NativeRegisterContext for the thread");
+    LLDB_LOG(log, "failed: {0}", error);
+    return error;
+  }
   uint32_t breakpoint_size = 0;
   error = GetSoftwareBreakpointPCOffset(breakpoint_size);
   if (error.Fail()) {
@@ -352,7 +367,7 @@ NativeProcessNetBSD::FixupBreakpointPCAsNeeded(NativeThreadNetBSD &thread) {
   // First try probing for a breakpoint at a software breakpoint location: PC
   // - breakpoint size.
   const lldb::addr_t initial_pc_addr =
-      context.GetPCfromBreakpointLocation();
+      context_sp->GetPCfromBreakpointLocation();
   lldb::addr_t breakpoint_addr = initial_pc_addr;
   if (breakpoint_size > 0) {
     // Do not allow breakpoint probe to wrap around.
@@ -405,7 +420,7 @@ NativeProcessNetBSD::FixupBreakpointPCAsNeeded(NativeThreadNetBSD &thread) {
   // Change the program counter.
   LLDB_LOG(log, "pid {0} tid {1}: changing PC from {2:x} to {3:x}", GetID(),
            thread.GetID(), initial_pc_addr, breakpoint_addr);
-  error = context.SetPC(breakpoint_addr);
+  error = context_sp->SetPC(breakpoint_addr);
   if (error.Fail()) {
     LLDB_LOG(log, "pid {0} tid {1}: failed to set PC: {2}", GetID(),
              thread.GetID(), error);
@@ -418,13 +433,13 @@ Status NativeProcessNetBSD::Resume(const ResumeActionList &resume_actions) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
   LLDB_LOG(log, "pid {0}", GetID());
 
-  const auto &thread = m_threads[0];
+  const auto &thread_sp = m_threads[0];
   const ResumeAction *const action =
-      resume_actions.GetActionForThread(thread->GetID(), true);
+      resume_actions.GetActionForThread(thread_sp->GetID(), true);
 
   if (action == nullptr) {
     LLDB_LOG(log, "no action specified for pid {0} tid {1}", GetID(),
-             thread->GetID());
+             thread_sp->GetID());
     return Status();
   }
 
@@ -437,8 +452,9 @@ Status NativeProcessNetBSD::Resume(const ResumeActionList &resume_actions) {
                                                action->signal);
     if (!error.Success())
       return error;
-    for (const auto &thread : m_threads)
-      static_cast<NativeThreadNetBSD &>(*thread).SetRunning();
+    for (const auto &thread_sp : m_threads) {
+      static_pointer_cast<NativeThreadNetBSD>(thread_sp)->SetRunning();
+    }
     SetState(eStateRunning, true);
     break;
   }
@@ -448,8 +464,9 @@ Status NativeProcessNetBSD::Resume(const ResumeActionList &resume_actions) {
                                                action->signal);
     if (!error.Success())
       return error;
-    for (const auto &thread : m_threads)
-      static_cast<NativeThreadNetBSD &>(*thread).SetStepping();
+    for (const auto &thread_sp : m_threads) {
+      static_pointer_cast<NativeThreadNetBSD>(thread_sp)->SetStepping();
+    }
     SetState(eStateStepping, true);
     break;
 
@@ -461,7 +478,7 @@ Status NativeProcessNetBSD::Resume(const ResumeActionList &resume_actions) {
     return Status("NativeProcessNetBSD::%s (): unexpected state %s specified "
                   "for pid %" PRIu64 ", tid %" PRIu64,
                   __FUNCTION__, StateAsCString(action->state), GetID(),
-                  thread->GetID());
+                  thread_sp->GetID());
   }
 
   return Status();
@@ -673,6 +690,11 @@ lldb::addr_t NativeProcessNetBSD::GetSharedLibraryInfoAddress() {
 
 size_t NativeProcessNetBSD::UpdateThreads() { return m_threads.size(); }
 
+bool NativeProcessNetBSD::GetArchitecture(ArchSpec &arch) const {
+  arch = m_arch;
+  return true;
+}
+
 Status NativeProcessNetBSD::SetBreakpoint(lldb::addr_t addr, uint32_t size,
                                           bool hardware) {
   if (hardware)
@@ -742,9 +764,9 @@ void NativeProcessNetBSD::SigchldHandler() {
 }
 
 bool NativeProcessNetBSD::HasThreadNoLock(lldb::tid_t thread_id) {
-  for (const auto &thread : m_threads) {
-    assert(thread && "thread list should not contain NULL threads");
-    if (thread->GetID() == thread_id) {
+  for (auto thread_sp : m_threads) {
+    assert(thread_sp && "thread list should not contain NULL threads");
+    if (thread_sp->GetID() == thread_id) {
       // We have this thread.
       return true;
     }
@@ -754,7 +776,7 @@ bool NativeProcessNetBSD::HasThreadNoLock(lldb::tid_t thread_id) {
   return false;
 }
 
-NativeThreadNetBSD &NativeProcessNetBSD::AddThread(lldb::tid_t thread_id) {
+NativeThreadNetBSDSP NativeProcessNetBSD::AddThread(lldb::tid_t thread_id) {
 
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
   LLDB_LOG(log, "pid {0} adding thread with tid {1}", GetID(), thread_id);
@@ -766,8 +788,9 @@ NativeThreadNetBSD &NativeProcessNetBSD::AddThread(lldb::tid_t thread_id) {
   if (m_threads.empty())
     SetCurrentThreadID(thread_id);
 
-  m_threads.push_back(llvm::make_unique<NativeThreadNetBSD>(*this, thread_id));
-  return static_cast<NativeThreadNetBSD &>(*m_threads.back());
+  auto thread_sp = std::make_shared<NativeThreadNetBSD>(*this, thread_id);
+  m_threads.push_back(thread_sp);
+  return thread_sp;
 }
 
 Status NativeProcessNetBSD::Attach() {
@@ -788,8 +811,10 @@ Status NativeProcessNetBSD::Attach() {
   if (status.Fail())
     return status;
 
-  for (const auto &thread : m_threads)
-    static_cast<NativeThreadNetBSD &>(*thread).SetStoppedBySignal(SIGSTOP);
+  for (const auto &thread_sp : m_threads) {
+    static_pointer_cast<NativeThreadNetBSD>(thread_sp)->SetStoppedBySignal(
+        SIGSTOP);
+  }
 
   // Let our process instance know the thread has stopped.
   SetState(StateType::eStateStopped);
@@ -903,7 +928,7 @@ Status NativeProcessNetBSD::ReinitializeThreads() {
   }
   // Reinitialize from scratch threads and register them in process
   while (info.pl_lwpid != 0) {
-    AddThread(info.pl_lwpid);
+    NativeThreadNetBSDSP thread_sp = AddThread(info.pl_lwpid);
     error = PtraceWrapper(PT_LWPINFO, GetID(), &info, sizeof(info));
     if (error.Fail()) {
       return error;

@@ -86,7 +86,6 @@ public:
   void ForEachMacro(const ModuleVector &modules,
                     std::function<bool(const std::string &)> handler) override;
 
-  clang::ExternalASTMerger::ImporterSource GetImporterSource() override;
 private:
   void
   ReportModuleExportsHelper(std::set<ClangModulesDeclVendor::ModuleID> &exports,
@@ -111,7 +110,6 @@ private:
   typedef std::set<ModuleID> ImportedModuleSet;
   ImportedModuleMap m_imported_modules;
   ImportedModuleSet m_user_imported_modules;
-  const clang::ExternalASTMerger::OriginMap m_origin_map;
 };
 } // anonymous namespace
 
@@ -549,12 +547,6 @@ ClangModulesDeclVendorImpl::DoGetModule(clang::ModuleIdPath path,
 
   return m_compiler_instance->loadModule(path.front().second, path, visibility,
                                          is_inclusion_directive);
-}
-
-clang::ExternalASTMerger::ImporterSource
-ClangModulesDeclVendorImpl::GetImporterSource() {
-  return {m_compiler_instance->getASTContext(),
-          m_compiler_instance->getFileManager(), m_origin_map};
 }
 
 static const char *ModuleImportBufferName = "LLDBModulesMemoryBuffer";

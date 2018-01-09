@@ -15,7 +15,6 @@
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
 #include "Plugins/Process/Utility/RegisterContext_mips.h"
 #include "Plugins/Process/Utility/lldb-mips-linux-register-enums.h"
-#include <sys/uio.h>
 
 #define MAX_NUM_WP 8
 
@@ -27,7 +26,8 @@ class NativeProcessLinux;
 class NativeRegisterContextLinux_mips64 : public NativeRegisterContextLinux {
 public:
   NativeRegisterContextLinux_mips64(const ArchSpec &target_arch,
-                                    NativeThreadProtocol &native_thread);
+                                    NativeThreadProtocol &native_thread,
+                                    uint32_t concrete_frame_idx);
 
   uint32_t GetRegisterSetCount() const override;
 
@@ -129,7 +129,7 @@ private:
 
   lldb::addr_t hw_addr_map[MAX_NUM_WP];
 
-  struct iovec m_iovec;
+  IOVEC_mips m_iovec;
 };
 
 } // namespace process_linux

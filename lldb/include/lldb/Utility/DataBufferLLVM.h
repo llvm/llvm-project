@@ -17,7 +17,7 @@
 #include <stdint.h> // for uint8_t, uint64_t
 
 namespace llvm {
-class WritableMemoryBuffer;
+class MemoryBuffer;
 class Twine;
 }
 
@@ -28,10 +28,10 @@ public:
   ~DataBufferLLVM();
 
   static std::shared_ptr<DataBufferLLVM>
-  CreateSliceFromPath(const llvm::Twine &Path, uint64_t Size, uint64_t Offset);
+  CreateSliceFromPath(const llvm::Twine &Path, uint64_t Size, uint64_t Offset, bool Private = false);
 
   static std::shared_ptr<DataBufferLLVM>
-  CreateFromPath(const llvm::Twine &Path);
+  CreateFromPath(const llvm::Twine &Path, bool NullTerminate = false, bool Private = false);
 
   uint8_t *GetBytes() override;
   const uint8_t *GetBytes() const override;
@@ -42,9 +42,10 @@ public:
 private:
   /// \brief Construct a DataBufferLLVM from \p Buffer.  \p Buffer must be a
   /// valid pointer.
-  explicit DataBufferLLVM(std::unique_ptr<llvm::WritableMemoryBuffer> Buffer);
+  explicit DataBufferLLVM(std::unique_ptr<llvm::MemoryBuffer> Buffer);
+  const uint8_t *GetBuffer() const;
 
-  std::unique_ptr<llvm::WritableMemoryBuffer> Buffer;
+  std::unique_ptr<llvm::MemoryBuffer> Buffer;
 };
 }
 

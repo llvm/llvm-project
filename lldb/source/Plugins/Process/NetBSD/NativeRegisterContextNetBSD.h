@@ -21,6 +21,7 @@ namespace process_netbsd {
 class NativeRegisterContextNetBSD : public NativeRegisterContextRegisterInfo {
 public:
   NativeRegisterContextNetBSD(NativeThreadProtocol &native_thread,
+                              uint32_t concrete_frame_idx,
                               RegisterInfoInterface *reg_info_interface_p);
 
   // This function is implemented in the NativeRegisterContextNetBSD_*
@@ -30,7 +31,8 @@ public:
   // executable.
   static NativeRegisterContextNetBSD *
   CreateHostNativeRegisterContextNetBSD(const ArchSpec &target_arch,
-                                        NativeThreadProtocol &native_thread);
+                                        NativeThreadProtocol &native_thread,
+                                        uint32_t concrete_frame_idx);
 
 protected:
   virtual Status ReadGPR();

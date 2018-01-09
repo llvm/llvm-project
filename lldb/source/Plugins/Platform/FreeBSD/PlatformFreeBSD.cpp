@@ -314,19 +314,13 @@ void PlatformFreeBSD::CalculateTrapHandlerSymbolNames() {
   m_trap_handlers.push_back(ConstString("_sigtramp"));
 }
 
-MmapArgList PlatformFreeBSD::GetMmapArgumentList(const ArchSpec &arch,
-                                                 addr_t addr, addr_t length,
-                                                 unsigned prot, unsigned flags,
-                                                 addr_t fd, addr_t offset) {
+uint64_t PlatformFreeBSD::ConvertMmapFlagsToPlatform(const ArchSpec &arch,
+                                                     unsigned flags) {
   uint64_t flags_platform = 0;
 
   if (flags & eMmapFlagsPrivate)
     flags_platform |= MAP_PRIVATE;
   if (flags & eMmapFlagsAnon)
     flags_platform |= MAP_ANON;
-
-  MmapArgList args({addr, length, prot, flags_platform, fd, offset});
-  if (arch.GetTriple().getArch() == llvm::Triple::x86)
-    args.push_back(0);
-  return args;
+  return flags_platform;
 }

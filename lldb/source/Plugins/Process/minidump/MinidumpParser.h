@@ -14,7 +14,8 @@
 // Project includes
 #include "MinidumpTypes.h"
 
-#include "lldb/Utility/ArchSpec.h"
+// Other libraries and framework includes
+#include "lldb/Core/ArchSpec.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/Status.h"
 

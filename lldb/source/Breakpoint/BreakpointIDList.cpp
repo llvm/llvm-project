@@ -139,6 +139,7 @@ void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
       return;
     }
 
+    llvm::StringRef range_expr;
     Status error;
 
     std::tie(range_from, range_to) =

@@ -27,7 +27,8 @@ public:
   //------------------------------------------------------------------
   // Constructors and Destructors
   //------------------------------------------------------------------
-  NativeRegisterContext(NativeThreadProtocol &thread);
+  NativeRegisterContext(NativeThreadProtocol &thread,
+                        uint32_t concrete_frame_idx);
 
   virtual ~NativeRegisterContext();
 
@@ -183,6 +184,8 @@ protected:
   //------------------------------------------------------------------
   NativeThreadProtocol
       &m_thread; // The thread that this register context belongs to.
+  uint32_t m_concrete_frame_idx; // The concrete frame index for this register
+                                 // context
   // uint32_t m_stop_id;             // The stop ID that any data in this
   // context is valid for
 

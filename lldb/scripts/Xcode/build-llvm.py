@@ -224,7 +224,7 @@ def apply_patches(spec):
             f, spec['name'] + '.*.diff')]
     for p in patches:
         run_in_directory(["patch",
-                          "-p1",
+                          "-p0",
                           "-i",
                           os.path.join(lldb_source_path(),
                                        'scripts',

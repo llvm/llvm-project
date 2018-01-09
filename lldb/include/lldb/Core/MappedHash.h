@@ -357,24 +357,21 @@ public:
     }
 
     uint32_t GetHashIndex(uint32_t bucket_idx) const {
-      uint32_t result = UINT32_MAX;
       if (m_hash_indexes && bucket_idx < m_header.bucket_count)
-        memcpy(&result, m_hash_indexes + bucket_idx, sizeof(uint32_t));
-      return result;
+        return m_hash_indexes[bucket_idx];
+      return UINT32_MAX;
     }
 
     uint32_t GetHashValue(uint32_t hash_idx) const {
-      uint32_t result = UINT32_MAX;
       if (m_hash_values && hash_idx < m_header.hashes_count)
-        memcpy(&result, m_hash_values + hash_idx, sizeof(uint32_t));
-      return result;
+        return m_hash_values[hash_idx];
+      return UINT32_MAX;
     }
 
     uint32_t GetHashDataOffset(uint32_t hash_idx) const {
-      uint32_t result = UINT32_MAX;
       if (m_hash_offsets && hash_idx < m_header.hashes_count)
-        memcpy(&result, m_hash_offsets + hash_idx, sizeof(uint32_t));
-      return result;
+        return m_hash_offsets[hash_idx];
+      return UINT32_MAX;
     }
 
     bool Find(const char *name, Pair &pair) const {

@@ -10,8 +10,7 @@
 #ifndef liblldb_NativeThreadLinux_H_
 #define liblldb_NativeThreadLinux_H_
 
-#include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
-#include "Plugins/Process/Linux/SingleStepCheck.h"
+#include "SingleStepCheck.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
 #include "lldb/lldb-private-forward.h"
 
@@ -41,9 +40,7 @@ public:
   bool GetStopReason(ThreadStopInfo &stop_info,
                      std::string &description) override;
 
-  NativeRegisterContextLinux &GetRegisterContext() override {
-    return *m_reg_context_up;
-  }
+  NativeRegisterContextSP GetRegisterContext() override;
 
   Status SetWatchpoint(lldb::addr_t addr, size_t size, uint32_t watch_flags,
                        bool hardware) override;
@@ -106,13 +103,15 @@ private:
   // ---------------------------------------------------------------------
   lldb::StateType m_state;
   ThreadStopInfo m_stop_info;
-  std::unique_ptr<NativeRegisterContextLinux> m_reg_context_up;
+  NativeRegisterContextSP m_reg_context_sp;
   std::string m_stop_description;
   using WatchpointIndexMap = std::map<lldb::addr_t, uint32_t>;
   WatchpointIndexMap m_watchpoint_index_map;
   WatchpointIndexMap m_hw_break_index_map;
   std::unique_ptr<SingleStepWorkaround> m_step_workaround;
 };
+
+typedef std::shared_ptr<NativeThreadLinux> NativeThreadLinuxSP;
 } // namespace process_linux
 } // namespace lldb_private
 

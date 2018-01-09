@@ -16,7 +16,6 @@
 #include "lldb/Symbol/ClangExternalASTSourceCommon.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Target.h"
-#include "clang/AST/ExternalASTMerger.h"
 #include "clang/Basic/IdentifierTable.h"
 
 #include "llvm/ADT/SmallSet.h"
@@ -42,10 +41,14 @@ public:
   ///
   /// Initializes class variables.
   ///
-  /// @param[in] target
-  ///     A reference to the target containing debug information to use.
+  /// @param[in] declMap
+  ///     A reference to the LLDB object that handles entity lookup.
   //------------------------------------------------------------------
-  ClangASTSource(const lldb::TargetSP &target);
+  ClangASTSource(const lldb::TargetSP &target)
+      : m_import_in_progress(false), m_lookups_enabled(false), m_target(target),
+        m_ast_context(NULL), m_active_lexical_decls(), m_active_lookups() {
+    m_ast_importer_sp = m_target->GetClangASTImporter();
+  }
 
   //------------------------------------------------------------------
   /// Destructor
@@ -67,9 +70,10 @@ public:
   }
   void MaterializeVisibleDecls(const clang::DeclContext *DC) { return; }
 
-  void InstallASTContext(clang::ASTContext &ast_context,
-                         clang::FileManager &file_manager,
-                         bool is_shared_context = false);
+  void InstallASTContext(clang::ASTContext *ast_context) {
+    m_ast_context = ast_context;
+    m_ast_importer_sp->InstallMapCompleter(ast_context, *this);
+  }
 
   //
   // APIs for ExternalASTSource
@@ -309,7 +313,7 @@ protected:
   ///     the complete interface otherwise.
   //------------------------------------------------------------------
   clang::ObjCInterfaceDecl *
-  GetCompleteObjCInterface(const clang::ObjCInterfaceDecl *interface_decl);
+  GetCompleteObjCInterface(clang::ObjCInterfaceDecl *interface_decl);
 
   //------------------------------------------------------------------
   /// Find all entities matching a given name in a given module,
@@ -372,7 +376,7 @@ protected:
   //------------------------------------------------------------------
   CompilerType GuardedCopyType(const CompilerType &src_type);
 
-public:
+  
   //------------------------------------------------------------------
   /// Returns true if a name should be ignored by name lookup.
   ///
@@ -388,73 +392,6 @@ public:
   //------------------------------------------------------------------
   bool IgnoreName(const ConstString name, bool ignore_all_dollar_names);
 
-public:
-  //------------------------------------------------------------------
-  /// Copies a single Decl into the parser's AST context.
-  ///
-  /// @param[in] src_decl
-  ///     The Decl to copy.
-  ///
-  /// @return
-  ///     A copy of the Decl in m_ast_context, or NULL if the copy failed.
-  //------------------------------------------------------------------
-  clang::Decl *CopyDecl(clang::Decl *src_decl);
-                         
-  //------------------------------------------------------------------
-  /// Copies a single Type to the target of the given ExternalASTMerger.
-  ///
-  /// @param[in] src_context
-  ///     The ASTContext containing the type.
-  ///
-  /// @param[in] merger
-  ///     The merger to use.  This isn't just *m_merger_up because it might be
-  ///     the persistent AST context's merger.
-  ///
-  /// @param[in] type
-  ///     The type to copy.
-  ///
-  /// @return
-  ///     A copy of the Type in the merger's target context.
-  //------------------------------------------------------------------
-	clang::QualType CopyTypeWithMerger(clang::ASTContext &src_context,
-                                     clang::ExternalASTMerger &merger,
-                                     clang::QualType type);
-
-  //------------------------------------------------------------------
-  /// Determined the origin of a single Decl, if it can be found.
-  ///
-  /// @param[in] decl
-  ///     The Decl whose origin is to be found.
-  ///
-  /// @param[out] original_decl
-  ///     A pointer whose target is filled in with the original Decl.
-  ///
-  /// @param[in] original_ctx
-  ///     A pointer whose target is filled in with the original's ASTContext.
-  ///
-  /// @return
-  ///     True if lookup succeeded; false otherwise.
-  //------------------------------------------------------------------
-  bool ResolveDeclOrigin(const clang::Decl *decl, clang::Decl **original_decl,
-                         clang::ASTContext **original_ctx);
- 
-  //------------------------------------------------------------------
-  /// Returns m_merger_up.  Only call this if the target is configured to use
-  /// modern lookup,
-  //------------------------------------------------------------------
-	clang::ExternalASTMerger &GetMergerUnchecked();
- 
-  //------------------------------------------------------------------
-  /// Returns true if there is a merger.  This only occurs if the target is
-  /// using modern lookup.
-  //------------------------------------------------------------------
-  bool HasMerger() { return (bool)m_merger_up; }
-
-protected:
-  bool FindObjCMethodDeclsWithOrigin(
-      unsigned int current_id, NameSearchContext &context,
-      clang::ObjCInterfaceDecl *original_interface_decl, const char *log_info);
-
   friend struct NameSearchContext;
 
   bool m_import_in_progress;
@@ -464,11 +401,7 @@ protected:
       m_target; ///< The target to use in finding variables and types.
   clang::ASTContext
       *m_ast_context; ///< The AST context requests are coming in for.
-  clang::FileManager
-      *m_file_manager; ///< The file manager paired with the AST context.
   lldb::ClangASTImporterSP m_ast_importer_sp; ///< The target's AST importer.
-  std::unique_ptr<clang::ExternalASTMerger> m_merger_up;
-      ///< The ExternalASTMerger for this parse.
   std::set<const clang::Decl *> m_active_lexical_decls;
   std::set<const char *> m_active_lookups;
 };
