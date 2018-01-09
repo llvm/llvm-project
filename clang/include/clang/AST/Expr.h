@@ -1720,19 +1720,19 @@ public:
 
 private:
   unsigned Opc : 5;
+  unsigned CanOverflow : 1;
   SourceLocation Loc;
   Stmt *Val;
 public:
-
-  UnaryOperator(Expr *input, Opcode opc, QualType type,
-                ExprValueKind VK, ExprObjectKind OK, SourceLocation l)
-    : Expr(UnaryOperatorClass, type, VK, OK,
-           input->isTypeDependent() || type->isDependentType(),
-           input->isValueDependent(),
-           (input->isInstantiationDependent() ||
-            type->isInstantiationDependentType()),
-           input->containsUnexpandedParameterPack()),
-      Opc(opc), Loc(l), Val(input) {}
+  UnaryOperator(Expr *input, Opcode opc, QualType type, ExprValueKind VK,
+                ExprObjectKind OK, SourceLocation l, bool CanOverflow)
+      : Expr(UnaryOperatorClass, type, VK, OK,
+             input->isTypeDependent() || type->isDependentType(),
+             input->isValueDependent(),
+             (input->isInstantiationDependent() ||
+              type->isInstantiationDependentType()),
+             input->containsUnexpandedParameterPack()),
+        Opc(opc), CanOverflow(CanOverflow), Loc(l), Val(input) {}
 
   /// \brief Build an empty unary operator.
   explicit UnaryOperator(EmptyShell Empty)
@@ -1747,6 +1747,15 @@ public:
   /// getOperatorLoc - Return the location of the operator.
   SourceLocation getOperatorLoc() const { return Loc; }
   void setOperatorLoc(SourceLocation L) { Loc = L; }
+
+  /// Returns true if the unary operator can cause an overflow. For instance,
+  ///   signed int i = INT_MAX; i++;
+  ///   signed char c = CHAR_MAX; c++;
+  /// Due to integer promotions, c++ is promoted to an int before the postfix
+  /// increment, and the result is an int that cannot overflow. However, i++
+  /// can overflow.
+  bool canOverflow() const { return CanOverflow; }
+  void setCanOverflow(bool C) { CanOverflow = C; }
 
   /// isPostfix - Return true if this is a postfix operation, like x++.
   static bool isPostfix(Opcode Op) {

@@ -365,11 +365,16 @@ machine instructions.
 Instruction Flags
 ^^^^^^^^^^^^^^^^^
 
-The flag ``frame-setup`` can be specified before the instruction's name:
+The flag ``frame-setup`` or ``frame-destroy`` can be specified before the
+instruction's name:
 
 .. code-block:: text
 
     %fp = frame-setup ADDXri %sp, 0, 0
+
+.. code-block:: text
+
+    %x21, %x20 = frame-destroy LDPXi %sp
 
 .. _registers:
 

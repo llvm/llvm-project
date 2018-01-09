@@ -426,6 +426,8 @@ void X86PassConfig::addPreEmitPass() {
   if (getOptLevel() != CodeGenOpt::None)
     addPass(new X86ExecutionDepsFix());
 
+  addPass(createX86IndirectBranchTrackingPass());
+
   if (UseVZeroUpper)
     addPass(createX86IssueVZeroUpperPass());
 

@@ -536,6 +536,11 @@ let SchedRW = [WriteSystem], Predicates = [HasSHSTK]  in{
   } // Defs SSP
 } // SchedRW && HasSHSTK
 
+let Predicates = [HasIBT]  in {
+    def ENDBR64 : I<0x1E, MRM_FA, (outs), (ins), "endbr64", []>, XS;
+    def ENDBR32 : I<0x1E, MRM_FB, (outs), (ins), "endbr32", []>, XS;
+} // HasIBT
+
 //===----------------------------------------------------------------------===//
 // XSAVE instructions
 let SchedRW = [WriteSystem] in {

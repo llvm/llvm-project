@@ -502,6 +502,20 @@ void CodeGenModule::Release() {
     getModule().addModuleFlag(llvm::Module::Override, "Cross-DSO CFI", 1);
   }
 
+  if (CodeGenOpts.CFProtectionReturn &&
+      Target.checkCFProtectionReturnSupported(getDiags())) {
+    // Indicate that we want to instrument return control flow protection.
+    getModule().addModuleFlag(llvm::Module::Override, "cf-protection-return",
+                              1);
+  }
+
+  if (CodeGenOpts.CFProtectionBranch &&
+      Target.checkCFProtectionBranchSupported(getDiags())) {
+    // Indicate that we want to instrument branch control flow protection.
+    getModule().addModuleFlag(llvm::Module::Override, "cf-protection-branch",
+                              1);
+  }
+
   if (LangOpts.CUDAIsDevice && getTriple().isNVPTX()) {
     // Indicate whether __nvvm_reflect should be configured to flush denormal
     // floating point values to 0.  (This corresponds to its "__CUDA_FTZ"

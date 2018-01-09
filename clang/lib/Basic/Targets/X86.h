@@ -158,6 +158,12 @@ public:
 
   bool validateInputSize(StringRef Constraint, unsigned Size) const override;
 
+  virtual bool
+  checkCFProtectionReturnSupported(DiagnosticsEngine &Diags) const override;
+
+  virtual bool
+  checkCFProtectionBranchSupported(DiagnosticsEngine &Diags) const override;
+
   virtual bool validateOperandSize(StringRef Constraint, unsigned Size) const;
 
   std::string convertConstraint(const char *&Constraint) const override;

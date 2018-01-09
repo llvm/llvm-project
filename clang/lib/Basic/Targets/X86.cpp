@@ -101,6 +101,26 @@ bool X86TargetInfo::setFPMath(StringRef Name) {
   return false;
 }
 
+bool X86TargetInfo::checkCFProtectionReturnSupported(
+    DiagnosticsEngine &Diags) const {
+  if (HasSHSTK)
+    return true;
+
+  Diags.Report(diag::err_opt_not_valid_without_opt) << "cf-protection=return"
+                                                    << "-mshstk";
+  return false;
+}
+
+bool X86TargetInfo::checkCFProtectionBranchSupported(
+    DiagnosticsEngine &Diags) const {
+  if (HasIBT)
+    return true;
+
+  Diags.Report(diag::err_opt_not_valid_without_opt) << "cf-protection=branch"
+                                                    << "-mibt";
+  return false;
+}
+
 bool X86TargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeaturesVec) const {

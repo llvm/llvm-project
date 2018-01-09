@@ -2483,7 +2483,7 @@ void CodeGenFunction::EmitSections(const OMPExecutableDirective &S) {
                         OK_Ordinary, S.getLocStart(), FPOptions());
     // Increment for loop counter.
     UnaryOperator Inc(&IVRefExpr, UO_PreInc, KmpInt32Ty, VK_RValue, OK_Ordinary,
-                      S.getLocStart());
+                      S.getLocStart(), true);
     auto BodyGen = [Stmt, CS, &S, &IV](CodeGenFunction &CGF) {
       // Iterate through all sections and emit a switch construct:
       // switch (IV) {
