@@ -17,3 +17,38 @@ sub z0.h, z8.h, z8.b
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: sub z0.h, z8.h, z8.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+// Invalid predicate suffix '/a'
+sub z29.d, p7/a, z29.d, z8.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: expecting 'm' or 'z' predication
+// CHECK-NEXT: sub z29.d, p7/a, z29.d, z8.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+// Missing predicate suffix
+sub z29.d, p7, z29.d, z8.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK-NEXT: sub z29.d, p7, z29.d, z8.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+// --------------------------------------------------------------------------//
+// error: restricted predicate has range [0, 7].
+
+sub z26.b, p8/m, z26.b, z27.b
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
+// CHECK-NEXT: sub z26.b, p8/m, z26.b, z27.b
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+sub z14.h, p8/m, z14.h, z18.h
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
+// CHECK-NEXT: sub z14.h, p8/m, z14.h, z18.h
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+sub z30.s, p8/m, z30.s, z23.s
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
+// CHECK-NEXT: sub z30.s, p8/m, z30.s, z23.s
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+sub z29.d, p8/m, z29.d, z3.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
+// CHECK-NEXT: sub z29.d, p8/m, z29.d, z3.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

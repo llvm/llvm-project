@@ -55,6 +55,23 @@ static void own(Symbol &S, DenseSet<StringRef> &Strings,
   Intern(S.Name);
   Intern(S.Scope);
   Intern(S.CanonicalDeclaration.FilePath);
+
+  Intern(S.CompletionLabel);
+  Intern(S.CompletionFilterText);
+  Intern(S.CompletionPlainInsertText);
+  Intern(S.CompletionSnippetInsertText);
+
+  if (S.Detail) {
+    // Copy values of StringRefs into arena.
+    auto *Detail = Arena.Allocate<Symbol::Details>();
+    Detail->Documentation = S.Detail->Documentation;
+    Detail->CompletionDetail = S.Detail->CompletionDetail;
+    S.Detail = Detail;
+
+    // Intern the actual strings.
+    Intern(S.Detail->Documentation);
+    Intern(S.Detail->CompletionDetail);
+  }
 }
 
 void SymbolSlab::Builder::insert(const Symbol &S) {

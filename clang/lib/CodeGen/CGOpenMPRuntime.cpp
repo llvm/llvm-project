@@ -7662,7 +7662,7 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
     if (D.hasClausesOfKind<OMPDependClause>())
       CGF.EmitOMPTargetTaskBasedDirective(D, ThenGen, InputInfo);
     else
-      emitInlinedDirective(CGF, OMPD_target_update, ThenGen);
+      emitInlinedDirective(CGF, D.getDirectiveKind(), ThenGen);
   };
 
   if (IfCond)

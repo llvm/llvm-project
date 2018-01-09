@@ -29,6 +29,7 @@ add_llvm_library(LLVMipo
   SampleProfile.cpp
   StripDeadPrototypes.cpp
   StripSymbols.cpp
+  SyntheticCountsPropagation.cpp
   ThinLTOBitcodeWriter.cpp
   WholeProgramDevirt.cpp
 

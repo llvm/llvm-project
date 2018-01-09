@@ -860,10 +860,8 @@ define <2 x i64> @test_pcmpeqq(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ;
 ; SKX-LABEL: test_pcmpeqq:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpcmpeqq %xmm1, %xmm0, %k0 # sched: [3:1.00]
-; SKX-NEXT:    vpmovm2q %k0, %xmm0 # sched: [1:0.25]
-; SKX-NEXT:    vpcmpeqq (%rdi), %xmm0, %k0 # sched: [9:1.00]
-; SKX-NEXT:    vpmovm2q %k0, %xmm0 # sched: [1:0.25]
+; SKX-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
+; SKX-NEXT:    vpcmpeqq (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_pcmpeqq:

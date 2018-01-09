@@ -33,3 +33,35 @@ int TestOpaqueValueExpr = 0 ?: 1;
 // CHECK-NEXT:   OpaqueValueExpr
 // CHECK-NEXT:     IntegerLiteral
 // CHECK-NEXT:   IntegerLiteral
+
+void TestUnaryOperatorExpr(void) {
+  char T1 = 1;
+  int T2 = 1;
+
+  T1++;
+  T2++;
+  // CHECK:      UnaryOperator{{.*}}postfix '++' cannot overflow
+  // CHECK-NEXT:   DeclRefExpr{{.*}}'T1' 'char'
+  // CHECK-NOT:  UnaryOperator{{.*}}postfix '++' cannot overflow
+  // CHECK:        DeclRefExpr{{.*}}'T2' 'int'
+
+  -T1;
+  -T2;
+  // CHECK:      UnaryOperator{{.*}}prefix '-' cannot overflow
+  // CHECK-NEXT:   ImplicitCastExpr
+  // CHECK-NEXT:     ImplicitCastExpr
+  // CHECK-NEXT:       DeclRefExpr{{.*}}'T1' 'char'
+  // CHECK-NOT:  UnaryOperator{{.*}}prefix '-' cannot overflow
+  // CHECK:        ImplicitCastExpr
+  // CHECK:          DeclRefExpr{{.*}}'T2' 'int'
+
+  ~T1;
+  ~T2;
+  // CHECK:      UnaryOperator{{.*}}prefix '~' cannot overflow
+  // CHECK-NEXT:   ImplicitCastExpr
+  // CHECK-NEXT:     ImplicitCastExpr
+  // CHECK-NEXT:       DeclRefExpr{{.*}}'T1' 'char'
+  // CHECK:  	 UnaryOperator{{.*}}prefix '~' cannot overflow
+  // CHECK-NEXT:     ImplicitCastExpr
+  // CHECK-NEXT:       DeclRefExpr{{.*}}'T2' 'int'
+}

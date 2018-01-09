@@ -1467,7 +1467,7 @@ bool SampleProfileLoader::emitAnnotations(Function &F) {
     // Sets the GUIDs that are inlined in the profiled binary. This is used
     // for ThinLink to make correct liveness analysis, and also make the IR
     // match the profiled binary before annotation.
-    F.setEntryCount(Samples->getHeadSamples() + 1, &InlinedGUIDs);
+    F.setEntryCount(Samples->getHeadSamples() + 1, false, &InlinedGUIDs);
 
     // Compute dominance and loop info needed for propagation.
     computeDominanceAndLoopInfo(F);

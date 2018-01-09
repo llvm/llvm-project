@@ -8,8 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SymbolCollector.h"
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/Decl.h"
+#include "../CodeCompletionStrings.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Index/IndexSymbol.h"
@@ -56,7 +55,6 @@ std::string makeAbsolutePath(const SourceManager &SM, StringRef Path) {
   return AbsolutePath.str();
 }
 
-// Split a qualified symbol name into scope and unqualified name, e.g. given
 // "a::b::c", return {"a::b", "c"}. Scope is empty if it doesn't exist.
 std::pair<llvm::StringRef, llvm::StringRef>
 splitQualifiedName(llvm::StringRef QName) {
@@ -69,6 +67,13 @@ splitQualifiedName(llvm::StringRef QName) {
 
 } // namespace
 
+void SymbolCollector::initialize(ASTContext &Ctx) {
+  ASTCtx = &Ctx;
+  CompletionAllocator = std::make_shared<GlobalCodeCompletionAllocator>();
+  CompletionTUInfo =
+      llvm::make_unique<CodeCompletionTUInfo>(CompletionAllocator);
+}
+
 // Always return true to continue indexing.
 bool SymbolCollector::handleDeclOccurence(
     const Decl *D, index::SymbolRoleSet Roles,
@@ -79,9 +84,18 @@ bool SymbolCollector::handleDeclOccurence(
         Roles & static_cast<unsigned>(index::SymbolRole::Definition)))
     return true;
 
+  assert(CompletionAllocator && CompletionTUInfo);
+
   if (const NamedDecl *ND = llvm::dyn_cast<NamedDecl>(D)) {
-    // FIXME: Should we include the internal linkage symbols?
-    if (!ND->hasExternalFormalLinkage() || ND->isInAnonymousNamespace())
+    // FIXME: figure out a way to handle internal linkage symbols (e.g. static
+    // variables, function) defined in the .cc files. Also we skip the symbols
+    // in anonymous namespace as the qualifier names of these symbols are like
+    // `foo::<anonymous>::bar`, which need a special handling.
+    // In real world projects, we have a relatively large set of header files
+    // that define static variables (like "static const int A = 1;"), we still
+    // want to collect these symbols, although they cause potential ODR
+    // violations.
+    if (ND->isInAnonymousNamespace())
       return true;
 
     llvm::SmallString<128> USR;
@@ -106,6 +120,35 @@ bool SymbolCollector::handleDeclOccurence(
     S.Name = ScopeAndName.second;
     S.SymInfo = index::getSymbolInfo(D);
     S.CanonicalDeclaration = Location;
+
+    // Add completion info.
+    assert(ASTCtx && PP.get() && "ASTContext and Preprocessor must be set.");
+    CodeCompletionResult SymbolCompletion(ND, 0);
+    const auto *CCS = SymbolCompletion.CreateCodeCompletionString(
+        *ASTCtx, *PP, CodeCompletionContext::CCC_Name, *CompletionAllocator,
+        *CompletionTUInfo,
+        /*IncludeBriefComments*/ true);
+    std::string Label;
+    std::string SnippetInsertText;
+    std::string IgnoredLabel;
+    std::string PlainInsertText;
+    getLabelAndInsertText(*CCS, &Label, &SnippetInsertText,
+                          /*EnableSnippets=*/true);
+    getLabelAndInsertText(*CCS, &IgnoredLabel, &PlainInsertText,
+                          /*EnableSnippets=*/false);
+    std::string FilterText = getFilterText(*CCS);
+    std::string Documentation = getDocumentation(*CCS);
+    std::string CompletionDetail = getDetail(*CCS);
+
+    S.CompletionFilterText = FilterText;
+    S.CompletionLabel = Label;
+    S.CompletionPlainInsertText = PlainInsertText;
+    S.CompletionSnippetInsertText = SnippetInsertText;
+    Symbol::Details Detail;
+    Detail.Documentation = Documentation;
+    Detail.CompletionDetail = CompletionDetail;
+    S.Detail = &Detail;
+
     Symbols.insert(S);
   }
 

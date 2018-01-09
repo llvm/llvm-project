@@ -116,13 +116,13 @@ TEST_F(MemoryBufferTest, make_new) {
   EXPECT_TRUE(nullptr != Two.get());
 
   // 0-initialized buffer with no name
-  OwningBuffer Three(MemoryBuffer::getNewMemBuffer(321, data));
+  OwningBuffer Three(WritableMemoryBuffer::getNewMemBuffer(321, data));
   EXPECT_TRUE(nullptr != Three.get());
   for (size_t i = 0; i < 321; ++i)
     EXPECT_EQ(0, Three->getBufferStart()[0]);
 
   // 0-initialized buffer with name
-  OwningBuffer Four(MemoryBuffer::getNewMemBuffer(123, "zeros"));
+  OwningBuffer Four(WritableMemoryBuffer::getNewMemBuffer(123, "zeros"));
   EXPECT_TRUE(nullptr != Four.get());
   for (size_t i = 0; i < 123; ++i)
     EXPECT_EQ(0, Four->getBufferStart()[0]);

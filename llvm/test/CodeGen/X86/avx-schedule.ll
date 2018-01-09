@@ -947,11 +947,9 @@ define <4 x double> @test_cmppd(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ;
 ; SKX-LABEL: test_cmppd:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vcmpeqpd %ymm1, %ymm0, %k0 # sched: [3:1.00]
-; SKX-NEXT:    vcmpeqpd (%rdi), %ymm0, %k1 # sched: [10:1.00]
-; SKX-NEXT:    vpmovm2q %k0, %ymm0 # sched: [1:0.25]
-; SKX-NEXT:    vpmovm2q %k1, %ymm1 # sched: [1:0.25]
-; SKX-NEXT:    vpor %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
+; SKX-NEXT:    vcmpeqpd %ymm1, %ymm0, %ymm1 # sched: [4:0.33]
+; SKX-NEXT:    vcmpeqpd (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
+; SKX-NEXT:    vorpd %ymm0, %ymm1, %ymm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_cmppd:
@@ -1015,11 +1013,9 @@ define <8 x float> @test_cmpps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a
 ;
 ; SKX-LABEL: test_cmpps:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vcmpeqps %ymm1, %ymm0, %k0 # sched: [3:1.00]
-; SKX-NEXT:    vcmpeqps (%rdi), %ymm0, %k1 # sched: [10:1.00]
-; SKX-NEXT:    vpmovm2d %k0, %ymm0 # sched: [1:0.25]
-; SKX-NEXT:    vpmovm2d %k1, %ymm1 # sched: [1:0.25]
-; SKX-NEXT:    vpor %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
+; SKX-NEXT:    vcmpeqps %ymm1, %ymm0, %ymm1 # sched: [4:0.33]
+; SKX-NEXT:    vcmpeqps (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
+; SKX-NEXT:    vorps %ymm0, %ymm1, %ymm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_cmpps:

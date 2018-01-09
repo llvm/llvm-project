@@ -55,7 +55,8 @@ declare void @func3()
 ; CHECK-NEXT:     FunctionTypes:   [ 0, 1, 0, 1 ]
 ; CHECK-NEXT:   - Type:            GLOBAL
 ; CHECK-NEXT:     Globals:         
-; CHECK-NEXT:       - Type:            I32
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:        
 ; CHECK-NEXT:           Opcode:          I32_CONST
@@ -110,13 +111,17 @@ declare void @func3()
 ; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:         Offset:          0x00000045
 ; CHECK-NEXT:     Functions:       
-; CHECK-NEXT:       - Locals:          
+; CHECK-NEXT:       - Index:           5
+; CHECK-NEXT:         Locals:          
 ; CHECK-NEXT:         Body:            1080808080000B
-; CHECK-NEXT:       - Locals:          
+; CHECK-NEXT:       - Index:           6
+; CHECK-NEXT:         Locals:          
 ; CHECK-NEXT:         Body:            0240418080808000410041FFFFFFFF7F1081808080000D000F0B00000B
-; CHECK-NEXT:       - Locals:          
+; CHECK-NEXT:       - Index:           7
+; CHECK-NEXT:         Locals:          
 ; CHECK-NEXT:         Body:            1082808080000B
-; CHECK-NEXT:       - Locals:          
+; CHECK-NEXT:       - Index:           8
+; CHECK-NEXT:         Locals:          
 ; CHECK-NEXT:         Body:            0240418180808000410041FFFFFFFF7F1081808080000D000F0B00000B
 ; CHECK-NEXT:   - Type:            DATA
 ; CHECK-NEXT:     Segments:        

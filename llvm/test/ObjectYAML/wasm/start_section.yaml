@@ -6,7 +6,8 @@ FileHeader:
 Sections:
   - Type:            TYPE
     Signatures:
-      - ReturnType:      I32
+      - Index:           0
+        ReturnType:      I32
         ParamTypes:
           - F32
           - F32

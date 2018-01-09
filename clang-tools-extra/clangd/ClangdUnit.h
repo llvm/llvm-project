@@ -79,6 +79,7 @@ public:
   const ASTContext &getASTContext() const;
 
   Preprocessor &getPreprocessor();
+  std::shared_ptr<Preprocessor> getPreprocessorPtr();
   const Preprocessor &getPreprocessor() const;
 
   /// This function returns all top-level decls, including those that come

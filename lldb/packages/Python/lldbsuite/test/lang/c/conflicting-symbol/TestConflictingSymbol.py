@@ -16,13 +16,6 @@ class TestConflictingSymbols(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
-    def setUp(self):
-        TestBase.setUp(self)
-
-        self.One_line = line_number('One/One.c', '// break here')
-        self.Two_line = line_number('Two/Two.c', '// break here')
-        self.main_line = line_number('main.c', '// break here')
-
     def test_conflicting_symbols(self):
         self.build()
         exe = os.path.join(os.getcwd(), "a.out")
@@ -34,12 +27,12 @@ class TestConflictingSymbols(TestBase):
         environment = self.registerSharedLibrariesWithTarget(
             target, ['One', 'Two'])
 
-        lldbutil.run_break_set_command(
-            self, 'breakpoint set -f One.c -l %s' % (self.One_line))
-        lldbutil.run_break_set_command(
-            self, 'breakpoint set -f Two.c -l %s' % (self.Two_line))
-        lldbutil.run_break_set_by_file_and_line(
-            self, 'main.c', self.main_line, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_source_regexp(self, '// break here',
+                extra_options='-f One.c')
+        lldbutil.run_break_set_by_source_regexp(self, '// break here',
+                extra_options='-f Two.c')
+        lldbutil.run_break_set_by_source_regexp(self, '// break here',
+                extra_options='-f main.c', num_expected_locations=1)
 
         process = target.LaunchSimple(
             None, environment, self.get_process_working_directory())
@@ -105,7 +98,8 @@ class TestConflictingSymbols(TestBase):
         environment = self.registerSharedLibrariesWithTarget(
             target, ['One', 'Two'])
 
-        lldbutil.run_break_set_by_file_and_line(self, 'main.c', self.main_line)
+        lldbutil.run_break_set_by_source_regexp(self, '// break here',
+                extra_options='-f main.c', num_expected_locations=1)
 
         process = target.LaunchSimple(
             None, environment, self.get_process_working_directory())

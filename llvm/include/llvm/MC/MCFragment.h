@@ -437,13 +437,13 @@ public:
 };
 
 class MCOrgFragment : public MCFragment {
-  /// Offset - The offset this fragment should start at.
+  /// The offset this fragment should start at.
   const MCExpr *Offset;
 
-  /// Value - Value to use for filling bytes.
+  /// Value to use for filling bytes.
   int8_t Value;
 
-  /// Loc - Source location of the directive that this fragment was created for.
+  /// Source location of the directive that this fragment was created for.
   SMLoc Loc;
 
 public:

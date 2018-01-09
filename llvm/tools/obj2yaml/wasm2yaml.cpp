@@ -186,6 +186,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
       auto GlobalSec = make_unique<WasmYAML::GlobalSection>();
       for (auto &Global : Obj.globals()) {
         WasmYAML::Global G;
+        G.Index = Global.Index;
         G.Type = Global.Type;
         G.Mutable = Global.Mutable;
         G.InitExpr = Global.InitExpr;
@@ -230,6 +231,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
       auto CodeSec = make_unique<WasmYAML::CodeSection>();
       for (auto &Func : Obj.functions()) {
         WasmYAML::Function Function;
+        Function.Index = Func.Index;
         for (auto &Local : Func.Locals) {
           WasmYAML::LocalDecl LocalDecl;
           LocalDecl.Type = Local.Type;

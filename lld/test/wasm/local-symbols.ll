@@ -38,7 +38,8 @@ entry:
 ; CHECK-NEXT:       - Initial:         0x00000002
 ; CHECK-NEXT:   - Type:            GLOBAL
 ; CHECK-NEXT:     Globals:
-; CHECK-NEXT:       - Type:            I32
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         true
 ; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
@@ -53,9 +54,11 @@ entry:
 ; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:   - Type:            CODE
 ; CHECK-NEXT:     Functions:
-; CHECK-NEXT:       - Locals:
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            41020B
-; CHECK-NEXT:       - Locals:
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            41010B
 ; CHECK-NEXT:   - Type:            DATA
 ; CHECK-NEXT:     Segments:
