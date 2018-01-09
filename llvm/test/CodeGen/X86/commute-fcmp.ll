@@ -112,14 +112,12 @@ define <4 x i32> @commute_cmpps_ueq(<4 x float>* %a0, <4 x float> %a1) {
 ;
 ; AVX-LABEL: commute_cmpps_ueq:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps (%rdi), %xmm1
-; AVX-NEXT:    vcmpeq_uqps %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vcmpeq_uqps (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: commute_cmpps_ueq:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovaps (%rdi), %xmm1
-; AVX512-NEXT:    vcmpeq_uqps %xmm0, %xmm1, %k1
+; AVX512-NEXT:    vcmpeq_uqps (%rdi), %xmm0, %k1
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
@@ -141,14 +139,12 @@ define <4 x i32> @commute_cmpps_one(<4 x float>* %a0, <4 x float> %a1) {
 ;
 ; AVX-LABEL: commute_cmpps_one:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps (%rdi), %xmm1
-; AVX-NEXT:    vcmpneq_oqps %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vcmpneq_oqps (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: commute_cmpps_one:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovaps (%rdi), %xmm1
-; AVX512-NEXT:    vcmpneq_oqps %xmm0, %xmm1, %k1
+; AVX512-NEXT:    vcmpneq_oqps (%rdi), %xmm0, %k1
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
@@ -325,14 +321,12 @@ define <8 x i32> @commute_cmpps_ueq_ymm(<8 x float>* %a0, <8 x float> %a1) {
 ;
 ; AVX-LABEL: commute_cmpps_ueq_ymm:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps (%rdi), %ymm1
-; AVX-NEXT:    vcmpeq_uqps %ymm0, %ymm1, %ymm0
+; AVX-NEXT:    vcmpeq_uqps (%rdi), %ymm0, %ymm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: commute_cmpps_ueq_ymm:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovaps (%rdi), %ymm1
-; AVX512-NEXT:    vcmpeq_uqps %ymm0, %ymm1, %k1
+; AVX512-NEXT:    vcmpeq_uqps (%rdi), %ymm0, %k1
 ; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
 ; AVX512-NEXT:    retq
@@ -359,14 +353,12 @@ define <8 x i32> @commute_cmpps_one_ymm(<8 x float>* %a0, <8 x float> %a1) {
 ;
 ; AVX-LABEL: commute_cmpps_one_ymm:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps (%rdi), %ymm1
-; AVX-NEXT:    vcmpneq_oqps %ymm0, %ymm1, %ymm0
+; AVX-NEXT:    vcmpneq_oqps (%rdi), %ymm0, %ymm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: commute_cmpps_one_ymm:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovaps (%rdi), %ymm1
-; AVX512-NEXT:    vcmpneq_oqps %ymm0, %ymm1, %k1
+; AVX512-NEXT:    vcmpneq_oqps (%rdi), %ymm0, %k1
 ; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
 ; AVX512-NEXT:    retq
@@ -522,14 +514,12 @@ define <2 x i64> @commute_cmppd_ueq(<2 x double>* %a0, <2 x double> %a1) {
 ;
 ; AVX-LABEL: commute_cmppd_ueq:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovapd (%rdi), %xmm1
-; AVX-NEXT:    vcmpeq_uqpd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vcmpeq_uqpd (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: commute_cmppd_ueq:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovapd (%rdi), %xmm1
-; AVX512-NEXT:    vcmpeq_uqpd %xmm0, %xmm1, %k1
+; AVX512-NEXT:    vcmpeq_uqpd (%rdi), %xmm0, %k1
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
@@ -551,14 +541,12 @@ define <2 x i64> @commute_cmppd_one(<2 x double>* %a0, <2 x double> %a1) {
 ;
 ; AVX-LABEL: commute_cmppd_one:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovapd (%rdi), %xmm1
-; AVX-NEXT:    vcmpneq_oqpd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vcmpneq_oqpd (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: commute_cmppd_one:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovapd (%rdi), %xmm1
-; AVX512-NEXT:    vcmpneq_oqpd %xmm0, %xmm1, %k1
+; AVX512-NEXT:    vcmpneq_oqpd (%rdi), %xmm0, %k1
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa64 %xmm0, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
@@ -758,14 +746,12 @@ define <4 x i64> @commute_cmppd_ueq_ymmm(<4 x double>* %a0, <4 x double> %a1) {
 ;
 ; AVX-LABEL: commute_cmppd_ueq_ymmm:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovapd (%rdi), %ymm1
-; AVX-NEXT:    vcmpeq_uqpd %ymm0, %ymm1, %ymm0
+; AVX-NEXT:    vcmpeq_uqpd (%rdi), %ymm0, %ymm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: commute_cmppd_ueq_ymmm:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovapd (%rdi), %ymm1
-; AVX512-NEXT:    vcmpeq_uqpd %ymm0, %ymm1, %k1
+; AVX512-NEXT:    vcmpeq_uqpd (%rdi), %ymm0, %k1
 ; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; AVX512-NEXT:    vmovdqa64 %ymm0, %ymm0 {%k1} {z}
 ; AVX512-NEXT:    retq
@@ -792,14 +778,12 @@ define <4 x i64> @commute_cmppd_one_ymmm(<4 x double>* %a0, <4 x double> %a1) {
 ;
 ; AVX-LABEL: commute_cmppd_one_ymmm:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovapd (%rdi), %ymm1
-; AVX-NEXT:    vcmpneq_oqpd %ymm0, %ymm1, %ymm0
+; AVX-NEXT:    vcmpneq_oqpd (%rdi), %ymm0, %ymm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: commute_cmppd_one_ymmm:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovapd (%rdi), %ymm1
-; AVX512-NEXT:    vcmpneq_oqpd %ymm0, %ymm1, %k1
+; AVX512-NEXT:    vcmpneq_oqpd (%rdi), %ymm0, %k1
 ; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; AVX512-NEXT:    vmovdqa64 %ymm0, %ymm0 {%k1} {z}
 ; AVX512-NEXT:    retq

@@ -13,11 +13,27 @@
 //   requires HasEqualTo<Iter1::value_type, Iter2::value_type>
 //   Iter1
 //   search(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2);
+//
+//   template<class ForwardIterator, class Searcher>
+//   ForwardIterator search(ForwardIterator first, ForwardIterator last,
+//                          const Searcher& searcher); // C++17
 
 #include <algorithm>
 #include <cassert>
 
 #include "test_iterators.h"
+
+int searcher_called = 0;
+
+struct MySearcher {
+    template <typename Iterator>
+    std::pair<Iterator, Iterator>
+    operator() (Iterator b, Iterator e) const
+    {
+        ++searcher_called;
+        return std::make_pair(b, e);
+    }
+};
 
 template <class Iter1, class Iter2>
 void
@@ -69,4 +85,16 @@ int main()
     test<random_access_iterator<const int*>, forward_iterator<const int*> >();
     test<random_access_iterator<const int*>, bidirectional_iterator<const int*> >();
     test<random_access_iterator<const int*>, random_access_iterator<const int*> >();
+
+#if TEST_STD_VERS > 14
+{
+    typedef int * RI;
+    static_assert((std::is_same<RI, decltype(std::search(RI(), RI(), MySearcher()))>::value), "" );
+
+    RI it(nullptr);
+    assert(it == std::search(it, it, MySearcher()));
+    assert(searcher_called == 1);
+}
+#endif
+
 }

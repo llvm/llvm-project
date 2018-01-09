@@ -497,7 +497,7 @@ bool LiveDebugValues::transferTerminatorInst(MachineInstr &MI,
                                              const VarLocMap &VarLocIDs) {
   bool Changed = false;
   const MachineBasicBlock *CurMBB = MI.getParent();
-  if (!(MI.isTerminator() || (&MI == &CurMBB->instr_back())))
+  if (!(MI.isTerminator() || (&MI == &CurMBB->back())))
     return false;
 
   if (OpenRanges.empty())

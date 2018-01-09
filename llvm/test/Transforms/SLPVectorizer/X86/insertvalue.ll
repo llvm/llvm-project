@@ -19,8 +19,8 @@ define void @julia_2xdouble([2 x double]* sret, [2 x double]*, [2 x double]*, [2
 ; CHECK-NEXT:    [[TMP10:%.*]] = load <2 x double>, <2 x double>* [[TMP9]], align 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd <2 x double> [[TMP8]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[TMP11]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x double> [[TMP11]], i32 1
 ; CHECK-NEXT:    [[I0:%.*]] = insertvalue [2 x double] undef, double [[TMP12]], 0
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x double> [[TMP11]], i32 1
 ; CHECK-NEXT:    [[I1:%.*]] = insertvalue [2 x double] [[I0]], double [[TMP13]], 1
 ; CHECK-NEXT:    store [2 x double] [[I1]], [2 x double]* [[TMP0:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -72,12 +72,12 @@ define void @julia_4xfloat([4 x float]* sret, [4 x float]*, [4 x float]*, [4 x f
 ; CHECK-NEXT:    [[TMP10:%.*]] = load <4 x float>, <4 x float>* [[TMP9]], align 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd <4 x float> [[TMP8]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x float> [[TMP11]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x float> [[TMP11]], i32 1
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x float> [[TMP11]], i32 2
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x float> [[TMP11]], i32 3
 ; CHECK-NEXT:    [[I0:%.*]] = insertvalue [4 x float] undef, float [[TMP12]], 0
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x float> [[TMP11]], i32 1
 ; CHECK-NEXT:    [[I1:%.*]] = insertvalue [4 x float] [[I0]], float [[TMP13]], 1
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x float> [[TMP11]], i32 2
 ; CHECK-NEXT:    [[I2:%.*]] = insertvalue [4 x float] [[I1]], float [[TMP14]], 2
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x float> [[TMP11]], i32 3
 ; CHECK-NEXT:    [[I3:%.*]] = insertvalue [4 x float] [[I2]], float [[TMP15]], 3
 ; CHECK-NEXT:    store [4 x float] [[I3]], [4 x float]* [[TMP0:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -134,12 +134,12 @@ define void @julia_load_array_of_float([4 x float]* %a, [4 x float]* %b, [4 x fl
 ; CHECK-NEXT:    [[B_ARR:%.*]] = load [4 x float], [4 x float]* [[B]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub <4 x float> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP4]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[TMP4]], i32 3
 ; CHECK-NEXT:    [[C_ARR0:%.*]] = insertvalue [4 x float] undef, float [[TMP5]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP4]], i32 1
 ; CHECK-NEXT:    [[C_ARR1:%.*]] = insertvalue [4 x float] [[C_ARR0]], float [[TMP6]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[TMP4]], i32 2
 ; CHECK-NEXT:    [[C_ARR2:%.*]] = insertvalue [4 x float] [[C_ARR1]], float [[TMP7]], 2
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[TMP4]], i32 3
 ; CHECK-NEXT:    [[C_ARR3:%.*]] = insertvalue [4 x float] [[C_ARR2]], float [[TMP8]], 3
 ; CHECK-NEXT:    store [4 x float] [[C_ARR3]], [4 x float]* [[C:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -178,12 +178,12 @@ define void @julia_load_array_of_i32([4 x i32]* %a, [4 x i32]* %b, [4 x i32]* %c
 ; CHECK-NEXT:    [[B_ARR:%.*]] = load [4 x i32], [4 x i32]* [[B]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub <4 x i32> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP4]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP4]], i32 3
 ; CHECK-NEXT:    [[C_ARR0:%.*]] = insertvalue [4 x i32] undef, i32 [[TMP5]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP4]], i32 1
 ; CHECK-NEXT:    [[C_ARR1:%.*]] = insertvalue [4 x i32] [[C_ARR0]], i32 [[TMP6]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP4]], i32 2
 ; CHECK-NEXT:    [[C_ARR2:%.*]] = insertvalue [4 x i32] [[C_ARR1]], i32 [[TMP7]], 2
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP4]], i32 3
 ; CHECK-NEXT:    [[C_ARR3:%.*]] = insertvalue [4 x i32] [[C_ARR2]], i32 [[TMP8]], 3
 ; CHECK-NEXT:    store [4 x i32] [[C_ARR3]], [4 x i32]* [[C:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -273,12 +273,12 @@ define void @julia_load_struct_of_float(%pseudovec* %a, %pseudovec* %b, %pseudov
 ; CHECK-NEXT:    [[B_STRUCT:%.*]] = load [[PSEUDOVEC]], %pseudovec* [[B]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub <4 x float> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP4]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[TMP4]], i32 3
 ; CHECK-NEXT:    [[C_STRUCT0:%.*]] = insertvalue [[PSEUDOVEC]] undef, float [[TMP5]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP4]], i32 1
 ; CHECK-NEXT:    [[C_STRUCT1:%.*]] = insertvalue [[PSEUDOVEC]] %c_struct0, float [[TMP6]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[TMP4]], i32 2
 ; CHECK-NEXT:    [[C_STRUCT2:%.*]] = insertvalue [[PSEUDOVEC]] %c_struct1, float [[TMP7]], 2
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[TMP4]], i32 3
 ; CHECK-NEXT:    [[C_STRUCT3:%.*]] = insertvalue [[PSEUDOVEC]] %c_struct2, float [[TMP8]], 3
 ; CHECK-NEXT:    store [[PSEUDOVEC]] %c_struct3, %pseudovec* [[C:%.*]], align 4
 ; CHECK-NEXT:    ret void

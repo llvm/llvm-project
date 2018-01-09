@@ -2398,8 +2398,8 @@ let Constraints = "$src1 = $dst" in {
 }
 
 def CommutableCMPCC : PatLeaf<(imm), [{
-  return (N->getZExtValue() == 0x00 || N->getZExtValue() == 0x03 ||
-          N->getZExtValue() == 0x04 || N->getZExtValue() == 0x07);
+  uint64_t Imm = N->getZExtValue() & 0x7;
+  return (Imm == 0x00 || Imm == 0x03 || Imm == 0x04 || Imm == 0x07);
 }]>;
 
 // Patterns to select compares with loads in first operand.

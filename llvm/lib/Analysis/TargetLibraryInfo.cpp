@@ -245,50 +245,6 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
       TLI.setUnavailable(LibFunc_tanhf);
     }
 
-    // These definitions are due to math-finite.h header on Linux
-    TLI.setUnavailable(LibFunc_acos_finite);
-    TLI.setUnavailable(LibFunc_acosf_finite);
-    TLI.setUnavailable(LibFunc_acosl_finite);
-    TLI.setUnavailable(LibFunc_acosh_finite);
-    TLI.setUnavailable(LibFunc_acoshf_finite);
-    TLI.setUnavailable(LibFunc_acoshl_finite);
-    TLI.setUnavailable(LibFunc_asin_finite);
-    TLI.setUnavailable(LibFunc_asinf_finite);
-    TLI.setUnavailable(LibFunc_asinl_finite);
-    TLI.setUnavailable(LibFunc_atan2_finite);
-    TLI.setUnavailable(LibFunc_atan2f_finite);
-    TLI.setUnavailable(LibFunc_atan2l_finite);
-    TLI.setUnavailable(LibFunc_atanh_finite);
-    TLI.setUnavailable(LibFunc_atanhf_finite);
-    TLI.setUnavailable(LibFunc_atanhl_finite);
-    TLI.setUnavailable(LibFunc_cosh_finite);
-    TLI.setUnavailable(LibFunc_coshf_finite);
-    TLI.setUnavailable(LibFunc_coshl_finite);
-    TLI.setUnavailable(LibFunc_exp10_finite);
-    TLI.setUnavailable(LibFunc_exp10f_finite);
-    TLI.setUnavailable(LibFunc_exp10l_finite);
-    TLI.setUnavailable(LibFunc_exp2_finite);
-    TLI.setUnavailable(LibFunc_exp2f_finite);
-    TLI.setUnavailable(LibFunc_exp2l_finite);
-    TLI.setUnavailable(LibFunc_exp_finite);
-    TLI.setUnavailable(LibFunc_expf_finite);
-    TLI.setUnavailable(LibFunc_expl_finite);
-    TLI.setUnavailable(LibFunc_log10_finite);
-    TLI.setUnavailable(LibFunc_log10f_finite);
-    TLI.setUnavailable(LibFunc_log10l_finite);
-    TLI.setUnavailable(LibFunc_log2_finite);
-    TLI.setUnavailable(LibFunc_log2f_finite);
-    TLI.setUnavailable(LibFunc_log2l_finite);
-    TLI.setUnavailable(LibFunc_log_finite);
-    TLI.setUnavailable(LibFunc_logf_finite);
-    TLI.setUnavailable(LibFunc_logl_finite);
-    TLI.setUnavailable(LibFunc_pow_finite);
-    TLI.setUnavailable(LibFunc_powf_finite);
-    TLI.setUnavailable(LibFunc_powl_finite);
-    TLI.setUnavailable(LibFunc_sinh_finite);
-    TLI.setUnavailable(LibFunc_sinhf_finite);
-    TLI.setUnavailable(LibFunc_sinhl_finite);
-
     // Win32 does *not* provide provide these functions, but they are
     // generally available on POSIX-compliant systems:
     TLI.setUnavailable(LibFunc_access);
@@ -460,6 +416,50 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_stat64);
     TLI.setUnavailable(LibFunc_statvfs64);
     TLI.setUnavailable(LibFunc_tmpfile64);
+
+    // Relaxed math functions are included in math-finite.h on Linux (GLIBC).
+    TLI.setUnavailable(LibFunc_acos_finite);
+    TLI.setUnavailable(LibFunc_acosf_finite);
+    TLI.setUnavailable(LibFunc_acosl_finite);
+    TLI.setUnavailable(LibFunc_acosh_finite);
+    TLI.setUnavailable(LibFunc_acoshf_finite);
+    TLI.setUnavailable(LibFunc_acoshl_finite);
+    TLI.setUnavailable(LibFunc_asin_finite);
+    TLI.setUnavailable(LibFunc_asinf_finite);
+    TLI.setUnavailable(LibFunc_asinl_finite);
+    TLI.setUnavailable(LibFunc_atan2_finite);
+    TLI.setUnavailable(LibFunc_atan2f_finite);
+    TLI.setUnavailable(LibFunc_atan2l_finite);
+    TLI.setUnavailable(LibFunc_atanh_finite);
+    TLI.setUnavailable(LibFunc_atanhf_finite);
+    TLI.setUnavailable(LibFunc_atanhl_finite);
+    TLI.setUnavailable(LibFunc_cosh_finite);
+    TLI.setUnavailable(LibFunc_coshf_finite);
+    TLI.setUnavailable(LibFunc_coshl_finite);
+    TLI.setUnavailable(LibFunc_exp10_finite);
+    TLI.setUnavailable(LibFunc_exp10f_finite);
+    TLI.setUnavailable(LibFunc_exp10l_finite);
+    TLI.setUnavailable(LibFunc_exp2_finite);
+    TLI.setUnavailable(LibFunc_exp2f_finite);
+    TLI.setUnavailable(LibFunc_exp2l_finite);
+    TLI.setUnavailable(LibFunc_exp_finite);
+    TLI.setUnavailable(LibFunc_expf_finite);
+    TLI.setUnavailable(LibFunc_expl_finite);
+    TLI.setUnavailable(LibFunc_log10_finite);
+    TLI.setUnavailable(LibFunc_log10f_finite);
+    TLI.setUnavailable(LibFunc_log10l_finite);
+    TLI.setUnavailable(LibFunc_log2_finite);
+    TLI.setUnavailable(LibFunc_log2f_finite);
+    TLI.setUnavailable(LibFunc_log2l_finite);
+    TLI.setUnavailable(LibFunc_log_finite);
+    TLI.setUnavailable(LibFunc_logf_finite);
+    TLI.setUnavailable(LibFunc_logl_finite);
+    TLI.setUnavailable(LibFunc_pow_finite);
+    TLI.setUnavailable(LibFunc_powf_finite);
+    TLI.setUnavailable(LibFunc_powl_finite);
+    TLI.setUnavailable(LibFunc_sinh_finite);
+    TLI.setUnavailable(LibFunc_sinhf_finite);
+    TLI.setUnavailable(LibFunc_sinhl_finite);
   }
 
   // As currently implemented in clang, NVPTX code has no standard library to

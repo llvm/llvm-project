@@ -159,7 +159,7 @@ declare i32 @foo_import() local_unnamed_addr
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           16
-; CHECK-NEXT:         Content:         FFFFFFFF
+; CHECK-NEXT:         Content:         '00000000'
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
 ; CHECK-NEXT:     DataSize:        20
