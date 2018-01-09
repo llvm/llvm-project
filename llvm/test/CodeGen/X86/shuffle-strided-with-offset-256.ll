@@ -3,9 +3,9 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefix=AVX --check-prefix=AVX2 --check-prefix=AVX2-SLOW
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-shuffle | FileCheck %s --check-prefix=AVX --check-prefix=AVX2 --check-prefix=AVX2-FAST
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s --check-prefix=AVX512 --check-prefix=AVX512F
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl | FileCheck %s --check-prefix=AVX512 --check-prefix=AVX512VL
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw | FileCheck %s --check-prefix=AVX512 --check-prefix=AVX512BW
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw,+avx512vl | FileCheck %s --check-prefix=AVX512 --check-prefix=AVX512BWVL
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+fast-variable-shuffle | FileCheck %s --check-prefixes=AVX512,AVX512VL
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw,+fast-variable-shuffle | FileCheck %s --check-prefixes=AVX512,AVX512BW
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw,+avx512vl,+fast-variable-shuffle | FileCheck %s --check-prefixes=AVX512,AVX512BWVL
 
 define void @shuffle_v32i8_to_v16i8_1(<32 x i8>* %L, <16 x i8>* %S) nounwind {
 ; AVX1-LABEL: shuffle_v32i8_to_v16i8_1:
@@ -405,10 +405,9 @@ define void @shuffle_v16i16_to_v4i16_1(<16 x i16>* %L, <4 x i16>* %S) nounwind {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512VL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; AVX512VL-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[1,1,3,3,4,5,6,7]
-; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; AVX512VL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,1,3,3,4,5,6,7]
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm2 = [2,3,2,3,10,11,10,11,8,9,10,11,12,13,14,15]
+; AVX512VL-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX512VL-NEXT:    vpmovdw %xmm0, (%rsi)
 ; AVX512VL-NEXT:    vzeroupper
@@ -418,10 +417,9 @@ define void @shuffle_v16i16_to_v4i16_1(<16 x i16>* %L, <4 x i16>* %S) nounwind {
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; AVX512BW-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[1,3,2,3,4,5,6,7]
-; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; AVX512BW-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,3,2,3,4,5,6,7]
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm2 = [2,3,10,11,8,9,10,11,8,9,10,11,12,13,14,15]
+; AVX512BW-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; AVX512BW-NEXT:    vmovq %xmm0, (%rsi)
 ; AVX512BW-NEXT:    vzeroupper
@@ -431,10 +429,9 @@ define void @shuffle_v16i16_to_v4i16_1(<16 x i16>* %L, <4 x i16>* %S) nounwind {
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512BWVL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512BWVL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; AVX512BWVL-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[1,1,3,3,4,5,6,7]
-; AVX512BWVL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; AVX512BWVL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,1,3,3,4,5,6,7]
+; AVX512BWVL-NEXT:    vmovdqa {{.*#+}} xmm2 = [2,3,2,3,10,11,10,11,8,9,10,11,12,13,14,15]
+; AVX512BWVL-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; AVX512BWVL-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX512BWVL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX512BWVL-NEXT:    vpmovdw %xmm0, (%rsi)
 ; AVX512BWVL-NEXT:    vzeroupper
@@ -510,10 +507,9 @@ define void @shuffle_v16i16_to_v4i16_2(<16 x i16>* %L, <4 x i16>* %S) nounwind {
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[3,1,2,3]
-; AVX512BW-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[2,0,2,3,4,5,6,7]
-; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512BW-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[2,0,2,3,4,5,6,7]
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm2 = [4,5,12,13,4,5,6,7,8,9,10,11,12,13,14,15]
+; AVX512BW-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; AVX512BW-NEXT:    vmovq %xmm0, (%rsi)
 ; AVX512BW-NEXT:    vzeroupper
@@ -589,10 +585,9 @@ define void @shuffle_v16i16_to_v4i16_3(<16 x i16>* %L, <4 x i16>* %S) nounwind {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512VL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[3,1,2,3]
-; AVX512VL-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[3,1,1,3,4,5,6,7]
-; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512VL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[3,1,1,3,4,5,6,7]
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm2 = [6,7,14,15,14,15,6,7,8,9,10,11,12,13,14,15]
+; AVX512VL-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX512VL-NEXT:    vpmovdw %xmm0, (%rsi)
 ; AVX512VL-NEXT:    vzeroupper
@@ -602,10 +597,9 @@ define void @shuffle_v16i16_to_v4i16_3(<16 x i16>* %L, <4 x i16>* %S) nounwind {
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[3,1,2,3]
-; AVX512BW-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[3,1,2,3,4,5,6,7]
-; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512BW-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[3,1,2,3,4,5,6,7]
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm2 = [6,7,14,15,4,5,6,7,8,9,10,11,12,13,14,15]
+; AVX512BW-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; AVX512BW-NEXT:    vmovq %xmm0, (%rsi)
 ; AVX512BW-NEXT:    vzeroupper
@@ -615,10 +609,9 @@ define void @shuffle_v16i16_to_v4i16_3(<16 x i16>* %L, <4 x i16>* %S) nounwind {
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512BWVL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512BWVL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[3,1,2,3]
-; AVX512BWVL-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[3,1,1,3,4,5,6,7]
-; AVX512BWVL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512BWVL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[3,1,1,3,4,5,6,7]
+; AVX512BWVL-NEXT:    vmovdqa {{.*#+}} xmm2 = [6,7,14,15,14,15,6,7,8,9,10,11,12,13,14,15]
+; AVX512BWVL-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; AVX512BWVL-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX512BWVL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX512BWVL-NEXT:    vpmovdw %xmm0, (%rsi)
 ; AVX512BWVL-NEXT:    vzeroupper
@@ -748,10 +741,9 @@ define void @shuffle_v32i8_to_v4i8_2(<32 x i8>* %L, <4 x i8>* %S) nounwind {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512VL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; AVX512VL-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[1,1,3,3,4,5,6,7]
-; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; AVX512VL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,1,3,3,4,5,6,7]
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm2 = [2,3,2,3,10,11,10,11,8,9,10,11,12,13,14,15]
+; AVX512VL-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX512VL-NEXT:    vpmovdb %xmm0, (%rsi)
 ; AVX512VL-NEXT:    vzeroupper
@@ -773,10 +765,9 @@ define void @shuffle_v32i8_to_v4i8_2(<32 x i8>* %L, <4 x i8>* %S) nounwind {
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512BWVL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512BWVL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; AVX512BWVL-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[1,1,3,3,4,5,6,7]
-; AVX512BWVL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; AVX512BWVL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,1,3,3,4,5,6,7]
+; AVX512BWVL-NEXT:    vmovdqa {{.*#+}} xmm2 = [2,3,2,3,10,11,10,11,8,9,10,11,12,13,14,15]
+; AVX512BWVL-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; AVX512BWVL-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX512BWVL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX512BWVL-NEXT:    vpmovdb %xmm0, (%rsi)
 ; AVX512BWVL-NEXT:    vzeroupper
@@ -1056,10 +1047,9 @@ define void @shuffle_v32i8_to_v4i8_6(<32 x i8>* %L, <4 x i8>* %S) nounwind {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512VL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[3,1,2,3]
-; AVX512VL-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[3,1,1,3,4,5,6,7]
-; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512VL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[3,1,1,3,4,5,6,7]
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm2 = [6,7,14,15,14,15,6,7,8,9,10,11,12,13,14,15]
+; AVX512VL-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX512VL-NEXT:    vpmovdb %xmm0, (%rsi)
 ; AVX512VL-NEXT:    vzeroupper
@@ -1081,10 +1071,9 @@ define void @shuffle_v32i8_to_v4i8_6(<32 x i8>* %L, <4 x i8>* %S) nounwind {
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512BWVL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512BWVL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[3,1,2,3]
-; AVX512BWVL-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[3,1,1,3,4,5,6,7]
-; AVX512BWVL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512BWVL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[3,1,1,3,4,5,6,7]
+; AVX512BWVL-NEXT:    vmovdqa {{.*#+}} xmm2 = [6,7,14,15,14,15,6,7,8,9,10,11,12,13,14,15]
+; AVX512BWVL-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; AVX512BWVL-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX512BWVL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX512BWVL-NEXT:    vpmovdb %xmm0, (%rsi)
 ; AVX512BWVL-NEXT:    vzeroupper

@@ -670,6 +670,9 @@ void MIPrinter::print(const MachineInstr &MI) {
     OS << " = ";
   if (MI.getFlag(MachineInstr::FrameSetup))
     OS << "frame-setup ";
+  else if (MI.getFlag(MachineInstr::FrameDestroy))
+    OS << "frame-destroy ";
+
   OS << TII->getName(MI.getOpcode());
   if (I < E)
     OS << ' ';

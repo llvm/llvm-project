@@ -581,7 +581,7 @@ static StringRef getArchSynonym(StringRef Arch) {
       .Case("v7r", "v7-r")
       .Case("v7m", "v7-m")
       .Case("v7em", "v7e-m")
-      .Cases("v8", "v8a", "aarch64", "arm64", "v8-a")
+      .Cases("v8", "v8a", "v8l", "aarch64", "arm64", "v8-a")
       .Case("v8.1a", "v8.1-a")
       .Case("v8.2a", "v8.2-a")
       .Case("v8.3a", "v8.3-a")

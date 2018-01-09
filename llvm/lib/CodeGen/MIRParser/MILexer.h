@@ -63,6 +63,7 @@ struct MIToken {
     kw_renamable,
     kw_tied_def,
     kw_frame_setup,
+    kw_frame_destroy,
     kw_debug_location,
     kw_cfi_same_value,
     kw_cfi_offset,

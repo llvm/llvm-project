@@ -414,7 +414,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
 
   SplitCriticalSideEffectEdges(const_cast<Function &>(Fn), DT, LI);
 
-  CurDAG->init(*MF, *ORE, this);
+  CurDAG->init(*MF, *ORE, this, LibInfo);
   FuncInfo->set(Fn, *MF, CurDAG);
 
   // Now get the optional analyzes if we want to.

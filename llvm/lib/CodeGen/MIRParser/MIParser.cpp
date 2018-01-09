@@ -925,6 +925,9 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
   if (Token.is(MIToken::kw_frame_setup)) {
     Flags |= MachineInstr::FrameSetup;
     lex();
+  } else if (Token.is(MIToken::kw_frame_destroy)) {
+    Flags |= MachineInstr::FrameDestroy;
+    lex();
   }
   if (Token.isNot(MIToken::Identifier))
     return error("expected a machine instruction");

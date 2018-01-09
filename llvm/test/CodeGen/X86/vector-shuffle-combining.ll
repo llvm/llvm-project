@@ -3,7 +3,8 @@
 ; RUN: llc < %s -mcpu=x86-64 -mattr=+ssse3 | FileCheck %s --check-prefix=ALL --check-prefix=SSE --check-prefix=SSSE3
 ; RUN: llc < %s -mcpu=x86-64 -mattr=+sse4.1 | FileCheck %s --check-prefix=ALL --check-prefix=SSE --check-prefix=SSE41
 ; RUN: llc < %s -mcpu=x86-64 -mattr=+avx | FileCheck %s --check-prefix=ALL --check-prefix=AVX --check-prefix=AVX1
-; RUN: llc < %s -mcpu=x86-64 -mattr=+avx2 | FileCheck %s --check-prefix=ALL --check-prefix=AVX --check-prefix=AVX2
+; RUN: llc < %s -mcpu=x86-64 -mattr=+avx2 | FileCheck %s --check-prefixes=ALL,AVX,AVX2,AVX2-SLOW
+; RUN: llc < %s -mcpu=x86-64 -mattr=+avx2,+fast-variable-shuffle | FileCheck %s --check-prefixes=ALL,AVX,AVX2,AVX2-FAST
 ;
 ; Verify that the DAG combiner correctly folds bitwise operations across
 ; shuffles, nested shuffles with undef, pairs of nested shuffles, and other
@@ -2536,12 +2537,19 @@ define <8 x i32> @combine_unneeded_subvector1(<8 x i32> %a) {
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,2,3]
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: combine_unneeded_subvector1:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpaddd {{.*}}(%rip), %ymm0, %ymm0
-; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,2,3]
-; AVX2-NEXT:    retq
+; AVX2-SLOW-LABEL: combine_unneeded_subvector1:
+; AVX2-SLOW:       # %bb.0:
+; AVX2-SLOW-NEXT:    vpaddd {{.*}}(%rip), %ymm0, %ymm0
+; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
+; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,2,3]
+; AVX2-SLOW-NEXT:    retq
+;
+; AVX2-FAST-LABEL: combine_unneeded_subvector1:
+; AVX2-FAST:       # %bb.0:
+; AVX2-FAST-NEXT:    vpaddd {{.*}}(%rip), %ymm0, %ymm0
+; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm1 = [7,6,5,4,7,6,5,4]
+; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX2-FAST-NEXT:    retq
   %b = add <8 x i32> %a, <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
   %c = shufflevector <8 x i32> %b, <8 x i32> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 7, i32 6, i32 5, i32 4>
   ret <8 x i32> %c
@@ -2873,12 +2881,19 @@ define <8 x float> @PR22412(<8 x float> %a, <8 x float> %b) {
 ; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,0],ymm1[3,2],ymm0[5,4],ymm1[7,6]
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: PR22412:
-; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3]
-; AVX2-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,0,3,2,5,4,7,6]
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,3,2,1]
-; AVX2-NEXT:    retq
+; AVX2-SLOW-LABEL: PR22412:
+; AVX2-SLOW:       # %bb.0: # %entry
+; AVX2-SLOW-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3]
+; AVX2-SLOW-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,0,3,2,5,4,7,6]
+; AVX2-SLOW-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,3,2,1]
+; AVX2-SLOW-NEXT:    retq
+;
+; AVX2-FAST-LABEL: PR22412:
+; AVX2-FAST:       # %bb.0: # %entry
+; AVX2-FAST-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3]
+; AVX2-FAST-NEXT:    vmovapd {{.*#+}} ymm1 = [1,0,7,6,5,4,3,2]
+; AVX2-FAST-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; AVX2-FAST-NEXT:    retq
 entry:
   %s1 = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 0, i32 1, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %s2 = shufflevector <8 x float> %s1, <8 x float> undef, <8 x i32> <i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2>

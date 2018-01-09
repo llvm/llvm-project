@@ -141,11 +141,7 @@ MemoryBuffer::getMemBufferCopy(StringRef InputData, const Twine &BufferName) {
 
 std::unique_ptr<MemoryBuffer>
 MemoryBuffer::getNewMemBuffer(size_t Size, StringRef BufferName) {
-  auto SB = WritableMemoryBuffer::getNewUninitMemBuffer(Size, BufferName);
-  if (!SB)
-    return nullptr;
-  memset(SB->getBufferStart(), 0, Size);
-  return std::move(SB);
+  return WritableMemoryBuffer::getNewMemBuffer(Size, BufferName);
 }
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>
@@ -304,6 +300,15 @@ WritableMemoryBuffer::getNewUninitMemBuffer(size_t Size, const Twine &BufferName
 
   auto *Ret = new (Mem) MemBuffer(StringRef(Buf, Size), true);
   return std::unique_ptr<WritableMemoryBuffer>(Ret);
+}
+
+std::unique_ptr<WritableMemoryBuffer>
+WritableMemoryBuffer::getNewMemBuffer(size_t Size, const Twine &BufferName) {
+  auto SB = WritableMemoryBuffer::getNewUninitMemBuffer(Size, BufferName);
+  if (!SB)
+    return nullptr;
+  memset(SB->getBufferStart(), 0, Size);
+  return SB;
 }
 
 static bool shouldUseMmap(int FD,

@@ -144,7 +144,7 @@ DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, const Value *V
   else if (auto *I = dyn_cast<Instruction>(V))
     Loc = I->getDebugLoc();
 
-  // Only include names that correspond to user variables.  FIXME: we should use
+  // Only include names that correspond to user variables.  FIXME: We should use
   // debug info if available to get the name of the user variable.
   if (isa<llvm::Argument>(V) || isa<GlobalValue>(V))
     Val = GlobalValue::dropLLVMManglingEscape(V->getName());

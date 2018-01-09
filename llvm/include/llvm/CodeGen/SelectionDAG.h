@@ -73,6 +73,7 @@ class OptimizationRemarkEmitter;
 class SDDbgValue;
 class SelectionDAG;
 class SelectionDAGTargetInfo;
+class TargetLibraryInfo;
 class TargetLowering;
 class TargetMachine;
 class TargetSubtargetInfo;
@@ -210,6 +211,7 @@ class SelectionDAG {
   const TargetMachine &TM;
   const SelectionDAGTargetInfo *TSI = nullptr;
   const TargetLowering *TLI = nullptr;
+  const TargetLibraryInfo *LibInfo = nullptr;
   MachineFunction *MF;
   Pass *SDAGISelPass = nullptr;
   LLVMContext *Context;
@@ -376,7 +378,7 @@ public:
 
   /// Prepare this SelectionDAG to process code in the given MachineFunction.
   void init(MachineFunction &NewMF, OptimizationRemarkEmitter &NewORE,
-            Pass *PassPtr);
+            Pass *PassPtr, const TargetLibraryInfo *LibraryInfo);
 
   /// Clear state and free memory necessary to make this
   /// SelectionDAG ready to process a new block.
@@ -389,6 +391,7 @@ public:
   const TargetMachine &getTarget() const { return TM; }
   const TargetSubtargetInfo &getSubtarget() const { return MF->getSubtarget(); }
   const TargetLowering &getTargetLoweringInfo() const { return *TLI; }
+  const TargetLibraryInfo &getLibInfo() const { return *LibInfo; }
   const SelectionDAGTargetInfo &getSelectionDAGInfo() const { return *TSI; }
   LLVMContext *getContext() const {return Context; }
   OptimizationRemarkEmitter &getORE() const { return *ORE; }

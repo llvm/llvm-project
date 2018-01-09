@@ -170,11 +170,11 @@ void CriticalAntiDepBreaker::PrescanInstruction(MachineInstr &MI) {
   // FIXME: The issue with predicated instruction is more complex. We are being
   // conservative here because the kill markers cannot be trusted after
   // if-conversion:
-  // %r6 = LDR %sp, %reg0, 92, pred:14, pred:%reg0; mem:LD4[FixedStack14]
+  // %r6 = LDR %sp, %reg0, 92, 14, %reg0; mem:LD4[FixedStack14]
   // ...
-  // STR %r0, killed %r6, %reg0, 0, pred:0, pred:%cpsr; mem:ST4[%395]
-  // %r6 = LDR %sp, %reg0, 100, pred:0, pred:%cpsr; mem:LD4[FixedStack12]
-  // STR %r0, killed %r6, %reg0, 0, pred:14, pred:%reg0; mem:ST4[%396](align=8)
+  // STR %r0, killed %r6, %reg0, 0, 0, %cpsr; mem:ST4[%395]
+  // %r6 = LDR %sp, %reg0, 100, 0, %cpsr; mem:LD4[FixedStack12]
+  // STR %r0, killed %r6, %reg0, 0, 14, %reg0; mem:ST4[%396](align=8)
   //
   // The first R6 kill is not really a kill since it's killed by a predicated
   // instruction which may not be executed. The second R6 def may or may not

@@ -91,9 +91,9 @@ static DecodeStatus DecodeZPRRegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus DecodePPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Address,
                                            const void *Decode);
-LLVM_ATTRIBUTE_UNUSED static DecodeStatus
-DecodePPR_3bRegisterClass(llvm::MCInst &Inst, unsigned RegNo, uint64_t Address,
-                          const void *Decode);
+static DecodeStatus DecodePPR_3bRegisterClass(MCInst &Inst, unsigned RegNo,
+                                              uint64_t Address,
+                                              const void *Decode);
 
 static DecodeStatus DecodeFixedPointScaleImm32(MCInst &Inst, unsigned Imm,
                                                uint64_t Address,
