@@ -16,6 +16,10 @@ option(LLDB_TEST_SWIFT "Use in-tree swift when testing lldb" Off)
 set(LLDB_TEST_C_COMPILER "" CACHE STRING "C compiler to use when testing LLDB")
 set(LLDB_TEST_CXX_COMPILER "" CACHE STRING "C++ compiler to use when testing LLDB")
 
+# the value is not canonicalized within LLVM
+llvm_canonicalize_cmake_booleans(
+  LLVM_ENABLE_ZLIB)
+
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg)
