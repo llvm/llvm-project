@@ -92,7 +92,8 @@ template <> struct MappingTraits<Symbol> {
 
     IO.mapOptional("CompletionSnippetInsertText",
                    Sym.CompletionSnippetInsertText);
-    IO.mapOptional("Detail", Sym.Detail);
+    if (!IO.outputting() || Sym.Detail)
+      IO.mapOptional("Detail", Sym.Detail);
   }
 };
 
