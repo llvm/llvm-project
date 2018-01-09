@@ -27,4 +27,4 @@ int main(int argc, const char *argv[]) { // GCOV: -:    [[@LINE]]:int main(
 }                                        // GCOV: -:    [[@LINE]]:}
 
 // llvm-cov doesn't work on big endian yet
-// XFAIL: powerpc64-, s390x, mips-, mips64-, sparc
+// XFAIL: powerpc-, powerpc64-, s390x, mips-, mips64-, sparc
