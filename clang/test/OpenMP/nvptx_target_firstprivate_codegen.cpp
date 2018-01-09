@@ -219,3 +219,9 @@ int bar(int n, double *ptr) {
 // TCHECK: ret void
 
 #endif
+
+// TCHECK-DAG: distinct !DISubprogram(linkageName: "__omp_offloading_{{.+}}_worker",
+// TCHECK-DAG: distinct !DISubprogram(linkageName: "__omp_offloading_{{.+}}_worker",
+// TCHECK-DAG: distinct !DISubprogram(linkageName: "__omp_offloading_{{.+}}_worker",
+// TCHECK-DAG: distinct !DISubprogram(linkageName: "__omp_offloading_{{.+}}_worker",
+// TCHECK-DAG: distinct !DISubprogram(linkageName: "__omp_offloading_{{.+}}_worker",

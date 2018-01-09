@@ -887,7 +887,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
   }
 
   // Apply xray attributes to the function (as a string, for now)
-  if (D && ShouldXRayInstrumentFunction()) {
+  bool InstrumentXray = ShouldXRayInstrumentFunction();
+  if (D && InstrumentXray) {
     if (const auto *XRayAttr = D->getAttr<XRayInstrumentAttr>()) {
       if (XRayAttr->alwaysXRayInstrument())
         Fn->addFnAttr("function-instrument", "xray-always");
@@ -2303,6 +2304,60 @@ void CodeGenFunction::EmitSanitizerStatReport(llvm::SanitizerStatKind SSK) {
   llvm::IRBuilder<> IRB(Builder.GetInsertBlock(), Builder.GetInsertPoint());
   IRB.SetCurrentDebugLocation(Builder.getCurrentDebugLocation());
   CGM.getSanStats().create(IRB, SSK);
+}
+
+llvm::Value *
+CodeGenFunction::FormResolverCondition(const MultiVersionResolverOption &RO) {
+  llvm::Value *TrueCondition = nullptr;
+  if (!RO.ParsedAttribute.Architecture.empty())
+    TrueCondition = EmitX86CpuIs(RO.ParsedAttribute.Architecture);
+
+  if (!RO.ParsedAttribute.Features.empty()) {
+    SmallVector<StringRef, 8> FeatureList;
+    llvm::for_each(RO.ParsedAttribute.Features,
+                   [&FeatureList](const std::string &Feature) {
+                     FeatureList.push_back(StringRef{Feature}.substr(1));
+                   });
+    llvm::Value *FeatureCmp = EmitX86CpuSupports(FeatureList);
+    TrueCondition = TrueCondition ? Builder.CreateAnd(TrueCondition, FeatureCmp)
+                                  : FeatureCmp;
+  }
+  return TrueCondition;
+}
+
+void CodeGenFunction::EmitMultiVersionResolver(
+    llvm::Function *Resolver, ArrayRef<MultiVersionResolverOption> Options) {
+  assert((getContext().getTargetInfo().getTriple().getArch() ==
+              llvm::Triple::x86 ||
+          getContext().getTargetInfo().getTriple().getArch() ==
+              llvm::Triple::x86_64) &&
+         "Only implemented for x86 targets");
+
+  // Main function's basic block.
+  llvm::BasicBlock *CurBlock = createBasicBlock("entry", Resolver);
+  Builder.SetInsertPoint(CurBlock);
+  EmitX86CpuInit();
+
+  llvm::Function *DefaultFunc = nullptr;
+  for (const MultiVersionResolverOption &RO : Options) {
+    Builder.SetInsertPoint(CurBlock);
+    llvm::Value *TrueCondition = FormResolverCondition(RO);
+
+    if (!TrueCondition) {
+      DefaultFunc = RO.Function;
+    } else {
+      llvm::BasicBlock *RetBlock = createBasicBlock("ro_ret", Resolver);
+      llvm::IRBuilder<> RetBuilder(RetBlock);
+      RetBuilder.CreateRet(RO.Function);
+      CurBlock = createBasicBlock("ro_else", Resolver);
+      Builder.CreateCondBr(TrueCondition, RetBlock, CurBlock);
+    }
+  }
+
+  assert(DefaultFunc && "No default version?");
+  // Emit return from the 'else-ist' block.
+  Builder.SetInsertPoint(CurBlock);
+  Builder.CreateRet(DefaultFunc);
 }
 
 llvm::DebugLoc CodeGenFunction::SourceLocToDebugLoc(SourceLocation Location) {

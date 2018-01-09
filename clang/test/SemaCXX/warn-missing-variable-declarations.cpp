@@ -1,4 +1,4 @@
-// RUN: %clang -Wmissing-variable-declarations -fsyntax-only -Xclang -verify %s
+// RUN: %clang -Wmissing-variable-declarations -fsyntax-only -Xclang -verify -std=c++17 %s
 
 // Variable declarations that should trigger a warning.
 int vbad1; // expected-warning{{no previous extern declaration for non-static variable 'vbad1'}}
@@ -52,3 +52,24 @@ class C {
 namespace {
   int vgood4;
 }
+
+inline int inline_var = 0;
+const int const_var = 0;
+constexpr int constexpr_var = 0;
+inline constexpr int inline_constexpr_var = 0;
+extern const int extern_const_var = 0; // expected-warning {{no previous extern declaration}}
+extern constexpr int extern_constexpr_var = 0; // expected-warning {{no previous extern declaration}}
+
+template<typename> int var_template = 0;
+template<typename> constexpr int const_var_template = 0;
+template<typename> static int static_var_template = 0;
+
+template int var_template<int[1]>;
+int use_var_template() { return var_template<int[2]>; }
+template int var_template<int[3]>;
+extern template int var_template<int[4]>;
+template<> int var_template<int[5]>; // expected-warning {{no previous extern declaration}}
+
+// FIXME: We give this specialization internal linkage rather than inheriting
+// the linkage from the template! We should not warn here.
+template<> int static_var_template<int[5]>; // expected-warning {{no previous extern declaration}}

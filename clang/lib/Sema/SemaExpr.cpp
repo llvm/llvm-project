@@ -9598,7 +9598,6 @@ static void diagnoseTautologicalComparison(Sema &S, SourceLocation Loc,
   Expr *RHSStripped = RHS->IgnoreParenImpCasts();
 
   QualType LHSType = LHS->getType();
-  QualType RHSType = RHS->getType();
   if (LHSType->hasFloatingRepresentation() ||
       (LHSType->isBlockPointerType() && !BinaryOperator::isEqualityOp(Opc)) ||
       LHS->getLocStart().isMacroID() || RHS->getLocStart().isMacroID() ||
@@ -9636,9 +9635,8 @@ static void diagnoseTautologicalComparison(Sema &S, SourceLocation Loc,
                           S.PDiag(diag::warn_comparison_always)
                               << 0 /*self-comparison*/ << !Result.empty()
                               << Result);
-  } else if (DL && DR && LHSType->isArrayType() && RHSType->isArrayType() &&
-             !DL->getType()->isReferenceType() &&
-             !DR->getType()->isReferenceType() &&
+  } else if (DL && DR &&
+             DL->getType()->isArrayType() && DR->getType()->isArrayType() &&
              !DL->isWeak() && !DR->isWeak()) {
     // What is it always going to evaluate to?
     StringRef Result;
@@ -9689,10 +9687,53 @@ static void diagnoseTautologicalComparison(Sema &S, SourceLocation Loc,
   }
 }
 
+static QualType checkArithmeticOrEnumeralCompare(Sema &S, ExprResult &LHS,
+                                                 ExprResult &RHS,
+                                                 SourceLocation Loc,
+                                                 BinaryOperatorKind Opc) {
+  // C99 6.5.8p3 / C99 6.5.9p4
+  QualType Type = S.UsualArithmeticConversions(LHS, RHS);
+  if (LHS.isInvalid() || RHS.isInvalid())
+    return QualType();
+  if (Type.isNull())
+    return S.InvalidOperands(Loc, LHS, RHS);
+  assert(Type->isArithmeticType() || Type->isEnumeralType());
+
+  checkEnumComparison(S, Loc, LHS.get(), RHS.get());
+
+  enum { StrongEquality, PartialOrdering, StrongOrdering } Ordering;
+  if (Type->isAnyComplexType())
+    Ordering = StrongEquality;
+  else if (Type->isFloatingType())
+    Ordering = PartialOrdering;
+  else
+    Ordering = StrongOrdering;
+
+  if (Ordering == StrongEquality && BinaryOperator::isRelationalOp(Opc))
+    return S.InvalidOperands(Loc, LHS, RHS);
+
+  // Check for comparisons of floating point operands using != and ==.
+  if (Type->hasFloatingRepresentation() && BinaryOperator::isEqualityOp(Opc))
+    S.CheckFloatComparison(Loc, LHS.get(), RHS.get());
+
+  // The result of comparisons is 'bool' in C++, 'int' in C.
+  // FIXME: For BO_Cmp, return the relevant comparison category type.
+  return S.Context.getLogicalOperationType();
+}
+
 // C99 6.5.8, C++ [expr.rel]
 QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
                                     SourceLocation Loc, BinaryOperatorKind Opc,
                                     bool IsRelational) {
+  // Comparisons expect an rvalue, so convert to rvalue before any
+  // type-related checks.
+  LHS = DefaultFunctionArrayLvalueConversion(LHS.get());
+  if (LHS.isInvalid())
+    return QualType();
+  RHS = DefaultFunctionArrayLvalueConversion(RHS.get());
+  if (RHS.isInvalid())
+    return QualType();
+
   checkArithmeticNull(*this, LHS, RHS, Loc, /*isCompare=*/true);
 
   // Handle vector comparisons separately.
@@ -9700,35 +9741,16 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
       RHS.get()->getType()->isVectorType())
     return CheckVectorCompareOperands(LHS, RHS, Loc, Opc);
 
-  QualType LHSType = LHS.get()->getType();
-  QualType RHSType = RHS.get()->getType();
-
-  checkEnumComparison(*this, Loc, LHS.get(), RHS.get());
   diagnoseLogicalNotOnLHSofCheck(*this, LHS, RHS, Loc, Opc);
   diagnoseTautologicalComparison(*this, Loc, LHS.get(), RHS.get(), Opc);
 
-  // C99 6.5.8p3 / C99 6.5.9p4
-  UsualArithmeticConversions(LHS, RHS);
-  if (LHS.isInvalid() || RHS.isInvalid())
-    return QualType();
+  QualType LHSType = LHS.get()->getType();
+  QualType RHSType = RHS.get()->getType();
+  if ((LHSType->isArithmeticType() || LHSType->isEnumeralType()) &&
+      (RHSType->isArithmeticType() || RHSType->isEnumeralType()))
+    return checkArithmeticOrEnumeralCompare(*this, LHS, RHS, Loc, Opc);
 
-  LHSType = LHS.get()->getType();
-  RHSType = RHS.get()->getType();
-
-  // The result of comparisons is 'bool' in C++, 'int' in C.
   QualType ResultTy = Context.getLogicalOperationType();
-
-  if (IsRelational) {
-    if (LHSType->isRealType() && RHSType->isRealType())
-      return ResultTy;
-  } else {
-    // Check for comparisons of floating point operands using != and ==.
-    if (LHSType->hasFloatingRepresentation())
-      CheckFloatComparison(Loc, LHS.get(), RHS.get());
-
-    if (LHSType->isArithmeticType() && RHSType->isArithmeticType())
-      return ResultTy;
-  }
 
   const Expr::NullPointerConstantKind LHSNullKind =
       LHS.get()->isNullPointerConstant(Context, Expr::NPC_ValueDependentIsNull);
@@ -9903,13 +9925,6 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
       else
         return ResultTy;
     }
-
-    // Handle scoped enumeration types specifically, since they don't promote
-    // to integers.
-    if (LHS.get()->getType()->isEnumeralType() &&
-        Context.hasSameUnqualifiedType(LHS.get()->getType(),
-                                       RHS.get()->getType()))
-      return ResultTy;
   }
 
   // Handle block pointer types.

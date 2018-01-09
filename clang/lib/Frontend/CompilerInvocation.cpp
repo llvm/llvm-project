@@ -682,6 +682,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
                                        OPT_fno_function_sections, false);
   Opts.DataSections = Args.hasFlag(OPT_fdata_sections,
                                    OPT_fno_data_sections, false);
+  Opts.StackSizeSection =
+      Args.hasFlag(OPT_fstack_size_section, OPT_fno_stack_size_section, false);
   Opts.UniqueSectionNames = Args.hasFlag(OPT_funique_section_names,
                                          OPT_fno_unique_section_names, true);
 
@@ -795,6 +797,21 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.InstrumentForProfiling = Args.hasArg(OPT_pg);
   Opts.CallFEntry = Args.hasArg(OPT_mfentry);
   Opts.EmitOpenCLArgMetadata = Args.hasArg(OPT_cl_kernel_arg_info);
+
+  if (const Arg *A = Args.getLastArg(OPT_fcf_protection_EQ)) {
+    StringRef Name = A->getValue();
+    if (Name == "full") {
+      Opts.CFProtectionReturn = 1;
+      Opts.CFProtectionBranch = 1;
+    } else if (Name == "return")
+      Opts.CFProtectionReturn = 1;
+    else if (Name == "branch")
+      Opts.CFProtectionBranch = 1;
+    else if (Name != "none") {
+      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Name;
+      Success = false;
+    }
+  }
 
   if (const Arg *A = Args.getLastArg(OPT_compress_debug_sections,
                                      OPT_compress_debug_sections_EQ)) {

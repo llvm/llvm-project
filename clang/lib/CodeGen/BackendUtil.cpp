@@ -448,6 +448,7 @@ static void initTargetOptions(llvm::TargetOptions &Options,
   Options.UniqueSectionNames = CodeGenOpts.UniqueSectionNames;
   Options.EmulatedTLS = CodeGenOpts.EmulatedTLS;
   Options.DebuggerTuning = CodeGenOpts.getDebuggerTuning();
+  Options.EmitStackSizeSection = CodeGenOpts.StackSizeSection;
 
   if (CodeGenOpts.EnableSplitDwarf)
     Options.MCOptions.SplitDwarfFile = CodeGenOpts.SplitDwarfFile;

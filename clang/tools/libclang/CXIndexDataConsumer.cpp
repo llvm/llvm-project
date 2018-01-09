@@ -890,7 +890,7 @@ bool CXIndexDataConsumer::handleReference(const NamedDecl *D, SourceLocation Loc
                                       const DeclContext *DC,
                                       const Expr *E,
                                       CXIdxEntityRefKind Kind) {
-  if (!D)
+  if (!D || !DC)
     return false;
 
   CXCursor Cursor = E ? MakeCXCursor(E, cast<Decl>(DC), CXTU)
@@ -907,7 +907,7 @@ bool CXIndexDataConsumer::handleReference(const NamedDecl *D, SourceLocation Loc
   if (!CB.indexEntityReference)
     return false;
 
-  if (!D)
+  if (!D || !DC)
     return false;
   if (Loc.isInvalid())
     return false;

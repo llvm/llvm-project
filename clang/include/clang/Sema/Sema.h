@@ -10452,7 +10452,10 @@ private:
                           const AttrVec *Attrs = nullptr,
                           const FunctionDecl *FD = nullptr);
 
-  void CheckFloatComparison(SourceLocation Loc, Expr* LHS, Expr* RHS);
+public:
+  void CheckFloatComparison(SourceLocation Loc, Expr *LHS, Expr *RHS);
+
+private:
   void CheckImplicitConversions(Expr *E, SourceLocation CC = SourceLocation());
   void CheckBoolLikeConversion(Expr *E, SourceLocation CC);
   void CheckForIntOverflow(Expr *E);

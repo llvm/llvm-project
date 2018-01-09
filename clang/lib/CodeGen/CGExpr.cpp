@@ -1034,8 +1034,12 @@ Address CodeGenFunction::EmitPointerWithAlignment(const Expr *E,
     // Derived-to-base conversions.
     case CK_UncheckedDerivedToBase:
     case CK_DerivedToBase: {
-      Address Addr = EmitPointerWithAlignment(CE->getSubExpr(), BaseInfo,
-                                              TBAAInfo);
+      // TODO: Support accesses to members of base classes in TBAA. For now, we
+      // conservatively pretend that the complete object is of the base class
+      // type.
+      if (TBAAInfo)
+        *TBAAInfo = CGM.getTBAAAccessInfo(E->getType());
+      Address Addr = EmitPointerWithAlignment(CE->getSubExpr(), BaseInfo);
       auto Derived = CE->getSubExpr()->getType()->getPointeeCXXRecordDecl();
       return GetAddressOfBaseClass(Addr, Derived,
                                    CE->path_begin(), CE->path_end(),

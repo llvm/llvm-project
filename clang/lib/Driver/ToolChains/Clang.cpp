@@ -3818,6 +3818,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(A->getValue());
   }
 
+  if (Args.hasFlag(options::OPT_fstack_size_section,
+                   options::OPT_fno_stack_size_section, RawTriple.isPS4()))
+    CmdArgs.push_back("-fstack-size-section");
+
   CmdArgs.push_back("-ferror-limit");
   if (Arg *A = Args.getLastArg(options::OPT_ferror_limit_EQ))
     CmdArgs.push_back(A->getValue());
@@ -4023,6 +4027,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Forward -cl options to -cc1
   RenderOpenCLOptions(Args, CmdArgs);
+
+  if (Arg *A = Args.getLastArg(options::OPT_fcf_protection_EQ)) {
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-fcf-protection=") + A->getValue()));
+  }
 
   // Forward -f options with positive and negative forms; we translate
   // these by hand.

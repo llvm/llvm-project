@@ -12,6 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef PROC_WITH_FEAT
+#define PROC_WITH_FEAT(ENUM, STRING, IS64BIT, KEYFEATURE)                      \
+  PROC(ENUM, STRING, IS64BIT)
+#endif
 
 #ifndef PROC
 #define PROC(ENUM, STRING, IS64BIT)
@@ -19,6 +23,10 @@
 
 #ifndef PROC_ALIAS
 #define PROC_ALIAS(ENUM, ALIAS)
+#endif
+
+#ifndef FEATURE
+#define FEATURE(ENUM)
 #endif
 
 #define PROC_64_BIT true
@@ -77,7 +85,7 @@ PROC(Nocona, "nocona", PROC_64_BIT)
 /// \name Core
 /// Core microarchitecture based processors.
 //@{
-PROC(Core2, "core2", PROC_64_BIT)
+PROC_WITH_FEAT(Core2, "core2", PROC_64_BIT, FEATURE_SSSE3)
 
 /// This enumerator, like Yonah, is a bit odd. It is another
 /// codename which GCC no longer accepts as an option to -march, but Clang
@@ -89,10 +97,10 @@ PROC(Penryn, "penryn", PROC_64_BIT)
 /// \name Atom
 /// Atom processors
 //@{
-PROC(Bonnell, "bonnell", PROC_64_BIT)
+PROC_WITH_FEAT(Bonnell, "bonnell", PROC_64_BIT, FEATURE_SSSE3)
 PROC_ALIAS(Bonnell, "atom")
 
-PROC(Silvermont, "silvermont", PROC_64_BIT)
+PROC_WITH_FEAT(Silvermont, "silvermont", PROC_64_BIT, FEATURE_SSE4_2)
 PROC_ALIAS(Silvermont, "slm")
 
 PROC(Goldmont, "goldmont", PROC_64_BIT)
@@ -100,44 +108,44 @@ PROC(Goldmont, "goldmont", PROC_64_BIT)
 
 /// \name Nehalem
 /// Nehalem microarchitecture based processors.
-PROC(Nehalem, "nehalem", PROC_64_BIT)
+PROC_WITH_FEAT(Nehalem, "nehalem", PROC_64_BIT, FEATURE_SSE4_2)
 PROC_ALIAS(Nehalem, "corei7")
 
 /// \name Westmere
 /// Westmere microarchitecture based processors.
-PROC(Westmere, "westmere", PROC_64_BIT)
+PROC_WITH_FEAT(Westmere, "westmere", PROC_64_BIT, FEATURE_PCLMUL)
 
 /// \name Sandy Bridge
 /// Sandy Bridge microarchitecture based processors.
-PROC(SandyBridge, "sandybridge", PROC_64_BIT)
+PROC_WITH_FEAT(SandyBridge, "sandybridge", PROC_64_BIT, FEATURE_AVX)
 PROC_ALIAS(SandyBridge, "corei7-avx")
 
 /// \name Ivy Bridge
 /// Ivy Bridge microarchitecture based processors.
-PROC(IvyBridge, "ivybridge", PROC_64_BIT)
+PROC_WITH_FEAT(IvyBridge, "ivybridge", PROC_64_BIT, FEATURE_AVX)
 PROC_ALIAS(IvyBridge, "core-avx-i")
 
 /// \name Haswell
 /// Haswell microarchitecture based processors.
-PROC(Haswell, "haswell", PROC_64_BIT)
+PROC_WITH_FEAT(Haswell, "haswell", PROC_64_BIT, FEATURE_AVX2)
 PROC_ALIAS(Haswell, "core-avx2")
 
 /// \name Broadwell
 /// Broadwell microarchitecture based processors.
-PROC(Broadwell, "broadwell", PROC_64_BIT)
+PROC_WITH_FEAT(Broadwell, "broadwell", PROC_64_BIT, FEATURE_AVX2)
 
 /// \name Skylake Client
 /// Skylake client microarchitecture based processors.
-PROC(SkylakeClient, "skylake", PROC_64_BIT)
+PROC_WITH_FEAT(SkylakeClient, "skylake", PROC_64_BIT, FEATURE_AVX2)
 
 /// \name Skylake Server
 /// Skylake server microarchitecture based processors.
-PROC(SkylakeServer, "skylake-avx512", PROC_64_BIT)
+PROC_WITH_FEAT(SkylakeServer, "skylake-avx512", PROC_64_BIT, FEATURE_AVX512F)
 PROC_ALIAS(SkylakeServer, "skx")
 
 /// \name Cannonlake Client
 /// Cannonlake client microarchitecture based processors.
-PROC(Cannonlake, "cannonlake", PROC_64_BIT)
+PROC_WITH_FEAT(Cannonlake, "cannonlake", PROC_64_BIT, FEATURE_AVX512VBMI)
 
 /// \name Icelake Client
 /// Icelake client microarchitecture based processors.
@@ -145,11 +153,11 @@ PROC(Icelake, "icelake", PROC_64_BIT)
 
 /// \name Knights Landing
 /// Knights Landing processor.
-PROC(KNL, "knl", PROC_64_BIT)
+PROC_WITH_FEAT(KNL, "knl", PROC_64_BIT, FEATURE_AVX512F)
 
 /// \name Knights Mill
 /// Knights Mill processor.
-PROC(KNM, "knm", PROC_64_BIT)
+PROC_WITH_FEAT(KNM, "knm", PROC_64_BIT, FEATURE_AVX5124FMAPS)
 
 /// \name Lakemont
 /// Lakemont microarchitecture based processors.
@@ -186,30 +194,30 @@ PROC(K8SSE3, "k8-sse3", PROC_64_BIT)
 PROC_ALIAS(K8SSE3, "athlon64-sse3")
 PROC_ALIAS(K8SSE3, "opteron-sse3")
 
-PROC(AMDFAM10, "amdfam10", PROC_64_BIT)
+PROC_WITH_FEAT(AMDFAM10, "amdfam10", PROC_64_BIT, FEATURE_SSE4_A)
 PROC_ALIAS(AMDFAM10, "barcelona")
 //@}
 
 /// \name Bobcat
 /// Bobcat architecture processors.
 //@{
-PROC(BTVER1, "btver1", PROC_64_BIT)
-PROC(BTVER2, "btver2", PROC_64_BIT)
+PROC_WITH_FEAT(BTVER1, "btver1", PROC_64_BIT, FEATURE_SSE4_A)
+PROC_WITH_FEAT(BTVER2, "btver2", PROC_64_BIT, FEATURE_BMI)
 //@}
 
 /// \name Bulldozer
 /// Bulldozer architecture processors.
 //@{
-PROC(BDVER1, "bdver1", PROC_64_BIT)
-PROC(BDVER2, "bdver2", PROC_64_BIT)
-PROC(BDVER3, "bdver3", PROC_64_BIT)
-PROC(BDVER4, "bdver4", PROC_64_BIT)
+PROC_WITH_FEAT(BDVER1, "bdver1", PROC_64_BIT, FEATURE_XOP)
+PROC_WITH_FEAT(BDVER2, "bdver2", PROC_64_BIT, FEATURE_FMA)
+PROC_WITH_FEAT(BDVER3, "bdver3", PROC_64_BIT, FEATURE_FMA)
+PROC_WITH_FEAT(BDVER4, "bdver4", PROC_64_BIT, FEATURE_AVX2)
 //@}
 
 /// \name zen
 /// Zen architecture processors.
 //@{
-PROC(ZNVER1, "znver1", PROC_64_BIT)
+PROC_WITH_FEAT(ZNVER1, "znver1", PROC_64_BIT, FEATURE_AVX2)
 //@}
 
 /// This specification is deprecated and will be removed in the future.
@@ -225,8 +233,45 @@ PROC(x86_64, "x86-64", PROC_64_BIT)
 PROC(Geode, "geode", PROC_32_BIT)
 //@}
 
+// List of CPU Supports features in order.  These need to remain in the order
+// required by attribute 'target' checking.  Note that not all are supported/
+// prioritized by GCC, so synchronization with GCC's implementation may require
+// changing some existing values.
+FEATURE(FEATURE_CMOV)
+FEATURE(FEATURE_MMX)
+FEATURE(FEATURE_SSE)
+FEATURE(FEATURE_SSE2)
+FEATURE(FEATURE_SSE3)
+FEATURE(FEATURE_SSSE3)
+FEATURE(FEATURE_SSE4_A)
+FEATURE(FEATURE_SSE4_1)
+FEATURE(FEATURE_SSE4_2)
+FEATURE(FEATURE_POPCNT)
+FEATURE(FEATURE_AES)
+FEATURE(FEATURE_PCLMUL)
+FEATURE(FEATURE_AVX)
+FEATURE(FEATURE_BMI)
+FEATURE(FEATURE_FMA4)
+FEATURE(FEATURE_XOP)
+FEATURE(FEATURE_FMA)
+FEATURE(FEATURE_BMI2)
+FEATURE(FEATURE_AVX2)
+FEATURE(FEATURE_AVX512F)
+FEATURE(FEATURE_AVX512VL)
+FEATURE(FEATURE_AVX512BW)
+FEATURE(FEATURE_AVX512DQ)
+FEATURE(FEATURE_AVX512CD)
+FEATURE(FEATURE_AVX512ER)
+FEATURE(FEATURE_AVX512PF)
+FEATURE(FEATURE_AVX512VBMI)
+FEATURE(FEATURE_AVX512IFMA)
+FEATURE(FEATURE_AVX5124VNNIW)
+FEATURE(FEATURE_AVX5124FMAPS)
+FEATURE(FEATURE_AVX512VPOPCNTDQ)
 
 #undef PROC_64_BIT
 #undef PROC_32_BIT
+#undef FEATURE
 #undef PROC
 #undef PROC_ALIAS
+#undef PROC_WITH_FEAT
