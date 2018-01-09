@@ -758,6 +758,19 @@ CompilerType CompilerType::GetTypeTemplateArgument(size_t idx) const {
   return CompilerType();
 }
 
+GenericKind CompilerType::GetGenericArgumentKind(size_t idx) const {
+  if (IsValid())
+    return m_type_system->GetGenericArgumentKind(m_type, idx);
+  return eNullGenericKindType;
+}
+
+CompilerType CompilerType::GetGenericArgumentType(size_t idx) const {
+  if (IsValid()) {
+    return m_type_system->GetGenericArgumentType(m_type, idx);
+  }
+  return CompilerType();
+}
+
 llvm::Optional<CompilerType::IntegralTemplateArgument>
 CompilerType::GetIntegralTemplateArgument(size_t idx) const {
   if (IsValid())

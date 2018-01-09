@@ -776,7 +776,14 @@ enum TemplateArgumentKind {
   eTemplateArgumentKindTemplateExpansion,
   eTemplateArgumentKindExpression,
   eTemplateArgumentKindPack,
-  eTemplateArgumentKindNullPtr,
+  eTemplateArgumentKindNullPtr
+};
+
+// Kind of argument for generics, either bound or unbound.
+enum GenericKind {
+  eNullGenericKindType = 0,
+  eBoundGenericKindType,
+  eUnboundGenericKindType
 };
 
 //----------------------------------------------------------------------

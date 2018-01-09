@@ -70,36 +70,14 @@ using namespace lld::elf;
 // >>> defined in /home/alice/src/foo.o
 // >>> referenced by bar.c:12 (/home/alice/src/bar.c:12)
 // >>>               /home/alice/src/bar.o:(.text+0x1)
-template <class ELFT>
 static std::string getLocation(InputSectionBase &S, const Symbol &Sym,
                                uint64_t Off) {
   std::string Msg =
       "\n>>> defined in " + toString(Sym.File) + "\n>>> referenced by ";
-  std::string Src = S.getSrcMsg<ELFT>(Sym, Off);
+  std::string Src = S.getSrcMsg(Sym, Off);
   if (!Src.empty())
     Msg += Src + "\n>>>               ";
   return Msg + S.getObjMsg(Off);
-}
-
-// This is a MIPS-specific rule.
-//
-// In case of MIPS GP-relative relocations always resolve to a definition
-// in a regular input file, ignoring the one-definition rule. So we,
-// for example, should not attempt to create a dynamic relocation even
-// if the target symbol is preemptible. There are two two MIPS GP-relative
-// relocations R_MIPS_GPREL16 and R_MIPS_GPREL32. But only R_MIPS_GPREL16
-// can be against a preemptible symbol.
-//
-// To get MIPS relocation type we apply 0xff mask. In case of O32 ABI all
-// relocation types occupy eight bit. In case of N64 ABI we extract first
-// relocation from 3-in-1 packet because only the first relocation can
-// be against a real symbol.
-static bool isMipsGprel(RelType Type) {
-  if (Config->EMachine != EM_MIPS)
-    return false;
-  Type &= 0xff;
-  return Type == R_MIPS_GPREL16 || Type == R_MICROMIPS_GPREL16 ||
-         Type == R_MICROMIPS_GPREL7_S2;
 }
 
 // This function is similar to the `handleTlsRelocation`. MIPS does not
@@ -365,11 +343,10 @@ static bool isRelExpr(RelExpr Expr) {
 //
 // If this function returns false, that means we need to emit a
 // dynamic relocation so that the relocation will be fixed at load-time.
-template <class ELFT>
 static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
                                      InputSectionBase &S, uint64_t RelOff) {
   // These expressions always compute a constant
-  if (isRelExprOneOf<R_SIZE, R_GOT_FROM_END, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE,
+  if (isRelExprOneOf<R_GOT_FROM_END, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE,
                      R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC,
                      R_MIPS_TLSGD, R_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC,
                      R_GOTONLY_PC_FROM_END, R_PLT_PC, R_TLSGD_PC, R_TLSGD,
@@ -384,6 +361,10 @@ static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
   if (Sym.IsPreemptible)
     return false;
   if (!Config->Pic)
+    return true;
+
+  // The size of a non preemptible symbol is a constant.
+  if (E == R_SIZE)
     return true;
 
   // For the target and the relocation, we want to know if they are
@@ -410,44 +391,50 @@ static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
     return true;
 
   error("relocation " + toString(Type) + " cannot refer to absolute symbol: " +
-        toString(Sym) + getLocation<ELFT>(S, Sym, RelOff));
+        toString(Sym) + getLocation(S, Sym, RelOff));
   return true;
 }
 
 static RelExpr toPlt(RelExpr Expr) {
-  if (Expr == R_PPC_OPD)
+  switch (Expr) {
+  case R_PPC_OPD:
     return R_PPC_PLT_OPD;
-  if (Expr == R_PC)
+  case R_PC:
     return R_PLT_PC;
-  if (Expr == R_PAGE_PC)
+  case R_PAGE_PC:
     return R_PLT_PAGE_PC;
-  if (Expr == R_ABS)
+  case R_ABS:
     return R_PLT;
-  return Expr;
+  default:
+    return Expr;
+  }
 }
 
 static RelExpr fromPlt(RelExpr Expr) {
   // We decided not to use a plt. Optimize a reference to the plt to a
   // reference to the symbol itself.
-  if (Expr == R_PLT_PC)
+  switch (Expr) {
+  case R_PLT_PC:
     return R_PC;
-  if (Expr == R_PPC_PLT_OPD)
+  case R_PPC_PLT_OPD:
     return R_PPC_OPD;
-  if (Expr == R_PLT)
+  case R_PLT:
     return R_ABS;
-  return Expr;
+  default:
+    return Expr;
+  }
 }
 
 // Returns true if a given shared symbol is in a read-only segment in a DSO.
-template <class ELFT> static bool isReadOnly(SharedSymbol *SS) {
+template <class ELFT> static bool isReadOnly(SharedSymbol &SS) {
   typedef typename ELFT::Phdr Elf_Phdr;
 
   // Determine if the symbol is read-only by scanning the DSO's program headers.
-  const SharedFile<ELFT> *File = SS->getFile<ELFT>();
-  for (const Elf_Phdr &Phdr : check(File->getObj().program_headers()))
+  const SharedFile<ELFT> &File = SS.getFile<ELFT>();
+  for (const Elf_Phdr &Phdr : check(File.getObj().program_headers()))
     if ((Phdr.p_type == ELF::PT_LOAD || Phdr.p_type == ELF::PT_GNU_RELRO) &&
-        !(Phdr.p_flags & ELF::PF_W) && SS->Value >= Phdr.p_vaddr &&
-        SS->Value < Phdr.p_vaddr + Phdr.p_memsz)
+        !(Phdr.p_flags & ELF::PF_W) && SS.Value >= Phdr.p_vaddr &&
+        SS.Value < Phdr.p_vaddr + Phdr.p_memsz)
       return true;
   return false;
 }
@@ -458,17 +445,17 @@ template <class ELFT> static bool isReadOnly(SharedSymbol *SS) {
 // them are copied by a copy relocation, all of them need to be copied.
 // Otherwise, they would refer different places at runtime.
 template <class ELFT>
-static std::vector<SharedSymbol *> getSymbolsAt(SharedSymbol *SS) {
+static std::vector<SharedSymbol *> getSymbolsAt(SharedSymbol &SS) {
   typedef typename ELFT::Sym Elf_Sym;
 
-  SharedFile<ELFT> *File = SS->getFile<ELFT>();
+  SharedFile<ELFT> &File = SS.getFile<ELFT>();
 
   std::vector<SharedSymbol *> Ret;
-  for (const Elf_Sym &S : File->getGlobalELFSyms()) {
+  for (const Elf_Sym &S : File.getGlobalELFSyms()) {
     if (S.st_shndx == SHN_UNDEF || S.st_shndx == SHN_ABS ||
-        S.st_value != SS->Value)
+        S.st_value != SS.Value)
       continue;
-    StringRef Name = check(S.getName(File->getStringTable()));
+    StringRef Name = check(S.getName(File.getStringTable()));
     Symbol *Sym = Symtab->find(Name);
     if (auto *Alias = dyn_cast_or_null<SharedSymbol>(Sym))
       Ret.push_back(Alias);
@@ -518,17 +505,17 @@ static std::vector<SharedSymbol *> getSymbolsAt(SharedSymbol *SS) {
 // to the variable in .bss. This kind of issue is sometimes very hard to
 // debug. What's a solution? Instead of exporting a varaible V from a DSO,
 // define an accessor getV().
-template <class ELFT> static void addCopyRelSymbol(SharedSymbol *SS) {
+template <class ELFT> static void addCopyRelSymbol(SharedSymbol &SS) {
   // Copy relocation against zero-sized symbol doesn't make sense.
-  uint64_t SymSize = SS->getSize();
+  uint64_t SymSize = SS.getSize();
   if (SymSize == 0)
-    fatal("cannot create a copy relocation for symbol " + toString(*SS));
+    fatal("cannot create a copy relocation for symbol " + toString(SS));
 
   // See if this symbol is in a read-only segment. If so, preserve the symbol's
   // memory protection by reserving space in the .bss.rel.ro section.
   bool IsReadOnly = isReadOnly<ELFT>(SS);
   BssSection *Sec = make<BssSection>(IsReadOnly ? ".bss.rel.ro" : ".bss",
-                                     SymSize, SS->Alignment);
+                                     SymSize, SS.Alignment);
   if (IsReadOnly)
     InX::BssRelRo->getParent()->addSection(Sec);
   else
@@ -544,7 +531,7 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol *SS) {
     Sym->Used = true;
   }
 
-  InX::RelaDyn->addReloc({Target->CopyRel, Sec, 0, false, SS, 0});
+  InX::RelaDyn->addReloc({Target->CopyRel, Sec, 0, false, &SS, 0});
 }
 
 static void errorOrWarn(const Twine &Msg) {
@@ -554,48 +541,54 @@ static void errorOrWarn(const Twine &Msg) {
     warn(Msg);
 }
 
+// This modifies the expression if we can use a copy relocation or point the
+// symbol to the PLT.
 template <class ELFT>
 static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
-                          InputSectionBase &S, uint64_t RelOff) {
-  // We can create any dynamic relocation if a section is simply writable.
-  if (S.Flags & SHF_WRITE)
-    return Expr;
-
-  // Or, if we are allowed to create dynamic relocations against
-  // read-only sections (i.e. unless "-z notext" is given),
-  // we can create a dynamic relocation as we want, too.
-  if (!Config->ZText)
-    return Expr;
-
+                          InputSectionBase &S, uint64_t RelOff,
+                          bool &IsConstant) {
   // If a relocation can be applied at link-time, we don't need to
   // create a dynamic relocation in the first place.
-  if (isStaticLinkTimeConstant<ELFT>(Expr, Type, Sym, S, RelOff))
+  if (IsConstant)
     return Expr;
 
-  // If we got here we know that this relocation would require the dynamic
-  // linker to write a value to read only memory.
+  // We can create any dynamic relocation supported by the dynamic linker if a
+  // section is writable or we are passed -z notext.
+  bool CanWrite = (S.Flags & SHF_WRITE) || !Config->ZText;
+  if (CanWrite && Target->isPicRel(Type))
+    return Expr;
 
-  // If the relocation is to a weak undef, give up on it and produce a
-  // non preemptible 0.
-  if (Sym.isUndefWeak()) {
+  // If the relocation is to a weak undef, and we are producing
+  // executable, give up on it and produce a non preemptible 0.
+  if (!Config->Shared && Sym.isUndefWeak()) {
     Sym.IsPreemptible = false;
+    IsConstant = true;
     return Expr;
   }
 
+  // If we got here we know that this relocation would require the dynamic
+  // linker to write a value to read only memory or use an unsupported
+  // relocation.
+
   // We can hack around it if we are producing an executable and
   // the refered symbol can be preemepted to refer to the executable.
-  if (Config->Shared || (Config->Pic && !isRelExpr(Expr))) {
+  if (!CanWrite && (Config->Shared || (Config->Pic && !isRelExpr(Expr)))) {
     error(
         "can't create dynamic relocation " + toString(Type) + " against " +
         (Sym.getName().empty() ? "local symbol" : "symbol: " + toString(Sym)) +
         " in readonly segment; recompile object files with -fPIC" +
-        getLocation<ELFT>(S, Sym, RelOff));
+        getLocation(S, Sym, RelOff));
     return Expr;
   }
 
+  // Copy relocations are only possible if we are creating an executable and the
+  // symbol is shared.
+  if (!Sym.isShared() || Config->Shared)
+    return Expr;
+
   if (Sym.getVisibility() != STV_DEFAULT) {
     error("cannot preempt symbol: " + toString(Sym) +
-          getLocation<ELFT>(S, Sym, RelOff));
+          getLocation(S, Sym, RelOff));
     return Expr;
   }
 
@@ -607,10 +600,11 @@ static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
         error("unresolvable relocation " + toString(Type) +
               " against symbol '" + toString(*B) +
               "'; recompile with -fPIC or remove '-z nocopyreloc'" +
-              getLocation<ELFT>(S, Sym, RelOff));
+              getLocation(S, Sym, RelOff));
 
-      addCopyRelSymbol<ELFT>(B);
+      addCopyRelSymbol<ELFT>(*B);
     }
+    IsConstant = true;
     return Expr;
   }
 
@@ -637,11 +631,12 @@ static RelExpr adjustExpr(Symbol &Sym, RelExpr Expr, RelType Type,
     // R_386_JMP_SLOT, etc).
     Sym.NeedsPltAddr = true;
     Sym.IsPreemptible = false;
+    IsConstant = true;
     return toPlt(Expr);
   }
 
-  errorOrWarn("symbol '" + toString(Sym) + "' defined in " +
-              toString(Sym.File) + " has no type");
+  errorOrWarn("symbol '" + toString(Sym) + "' has no type" +
+              getLocation(S, Sym, RelOff));
   return Expr;
 }
 
@@ -708,7 +703,6 @@ static int64_t computeAddend(const RelTy &Rel, const RelTy *End,
 
 // Report an undefined symbol if necessary.
 // Returns true if this function printed out an error message.
-template <class ELFT>
 static bool maybeReportUndefined(Symbol &Sym, InputSectionBase &Sec,
                                  uint64_t Offset) {
   if (Config->UnresolvedSymbols == UnresolvedPolicy::IgnoreAll)
@@ -725,7 +719,7 @@ static bool maybeReportUndefined(Symbol &Sym, InputSectionBase &Sec,
   std::string Msg =
       "undefined symbol: " + toString(Sym) + "\n>>> referenced by ";
 
-  std::string Src = Sec.getSrcMsg<ELFT>(Sym, Offset);
+  std::string Src = Sec.getSrcMsg(Sym, Offset);
   if (!Src.empty())
     Msg += Src + "\n>>>               ";
   Msg += Sec.getObjMsg(Offset);
@@ -838,16 +832,8 @@ template <class ELFT> static void addGotEntry(Symbol &Sym, bool Preemptible) {
     Type = Target->RelativeRel;
   else
     Type = Target->GotRel;
-  InX::RelaDyn->addReloc({Type, InX::Got, Off, !Preemptible, &Sym, 0});
-
-  // REL type relocations don't have addend fields unlike RELAs, and
-  // their addends are stored to the section to which they are applied.
-  // So, store addends if we need to.
-  //
-  // This is ugly -- the difference between REL and RELA should be
-  // handled in a better way. It's a TODO.
-  if (!Config->IsRela)
-    InX::Got->Relocations.push_back({R_ABS, Target->GotRel, Off, 0, &Sym});
+  InX::RelaDyn->addReloc(Type, InX::Got, Off, !Preemptible, &Sym, 0, R_ABS,
+                         Target->GotRel);
 }
 
 // The reason we have to do this early scan is as follows
@@ -885,18 +871,23 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
       continue;
 
     // Skip if the target symbol is an erroneous undefined symbol.
-    if (maybeReportUndefined<ELFT>(Sym, Sec, Rel.r_offset))
+    if (maybeReportUndefined(Sym, Sec, Rel.r_offset))
       continue;
 
-    RelExpr Expr =
-        Target->getRelExpr(Type, Sym, Sec.Data.begin() + Rel.r_offset);
+    const uint8_t *RelocatedAddr = Sec.Data.begin() + Rel.r_offset;
+    RelExpr Expr = Target->getRelExpr(Type, Sym, RelocatedAddr);
 
     // Ignore "hint" relocations because they are only markers for relaxation.
     if (isRelExprOneOf<R_HINT, R_NONE>(Expr))
       continue;
 
-    // Handle yet another MIPS-ness.
-    if (isMipsGprel(Type)) {
+    // In case of MIPS GP-relative relocations always resolve to a definition
+    // in a regular input file, ignoring the one-definition rule. So we,
+    // for example, should not attempt to create a dynamic relocation even
+    // if the target symbol is preemptible. There are two two MIPS GP-relative
+    // relocations R_MIPS_GPREL16 and R_MIPS_GPREL32. But only R_MIPS_GPREL16
+    // can be against a preemptible symbol.
+    if (Expr == R_MIPS_GOTREL) {
       int64_t Addend = computeAddend<ELFT>(Rel, End, Sec, Expr, Sym.isLocal());
       Sec.Relocations.push_back({R_MIPS_GOTREL, Type, Offset, Addend, &Sym});
       continue;
@@ -904,7 +895,7 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
 
     bool Preemptible = Sym.IsPreemptible;
 
-    // Strenghten or relax a PLT access.
+    // Strenghten or relax relocations.
     //
     // GNU ifunc symbols must be accessed via PLT because their addresses
     // are determined by runtime.
@@ -918,12 +909,14 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
     if (Sym.isGnuIFunc())
       Expr = toPlt(Expr);
     else if (!Preemptible && Expr == R_GOT_PC && !isAbsoluteValue(Sym))
-      Expr =
-          Target->adjustRelaxExpr(Type, Sec.Data.data() + Rel.r_offset, Expr);
+      Expr = Target->adjustRelaxExpr(Type, RelocatedAddr, Expr);
     else if (!Preemptible)
       Expr = fromPlt(Expr);
 
-    Expr = adjustExpr<ELFT>(Sym, Expr, Type, Sec, Rel.r_offset);
+    bool IsConstant =
+        isStaticLinkTimeConstant(Expr, Type, Sym, Sec, Rel.r_offset);
+
+    Expr = adjustExpr<ELFT>(Sym, Expr, Type, Sec, Rel.r_offset, IsConstant);
     if (errorCount())
       continue;
 
@@ -977,10 +970,9 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
       // We don't know anything about the finaly symbol. Just ask the dynamic
       // linker to handle the relocation for us.
       if (!Target->isPicRel(Type))
-        errorOrWarn(
-            "relocation " + toString(Type) +
-            " cannot be used against shared object; recompile with -fPIC" +
-            getLocation<ELFT>(Sec, Sym, Offset));
+        errorOrWarn("relocation " + toString(Type) +
+                    " cannot be used against symbol " + toString(Sym) +
+                    "; recompile with -fPIC" + getLocation(Sec, Sym, Offset));
 
       InX::RelaDyn->addReloc(
           {Target->getDynRel(Type), &Sec, Offset, false, &Sym, Addend});
@@ -1005,14 +997,6 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
       continue;
     }
 
-    // If the relocation points to something in the file, we can process it.
-    bool IsConstant =
-        isStaticLinkTimeConstant<ELFT>(Expr, Type, Sym, Sec, Rel.r_offset);
-
-    // The size is not going to change, so we fold it in here.
-    if (Expr == R_SIZE)
-      Addend += Sym.getSize();
-
     // If the produced value is a constant, we just remember to write it
     // when outputting this section. We also have to do it if the format
     // uses Elf_Rel, since in that case the written value is the addend.
@@ -1026,15 +1010,8 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
     // dynamic linker. We can however do better than just copying the incoming
     // relocation. We can process some of it and and just ask the dynamic
     // linker to add the load address.
-    if (Config->IsRela) {
-      InX::RelaDyn->addReloc(
-          {Target->RelativeRel, &Sec, Offset, true, &Sym, Addend});
-    } else {
-      // In REL, addends are stored to the target section.
-      InX::RelaDyn->addReloc(
-          {Target->RelativeRel, &Sec, Offset, true, &Sym, 0});
-      Sec.Relocations.push_back({Expr, Type, Offset, Addend, &Sym});
-    }
+    InX::RelaDyn->addReloc(Target->RelativeRel, &Sec, Offset, true, &Sym,
+                           Addend, Expr, Type);
   }
 }
 

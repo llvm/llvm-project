@@ -44,8 +44,8 @@ static InputFile *getFirstElf() {
 // All input object files must be for the same architecture
 // (e.g. it does not make sense to link x86 object files with
 // MIPS object files.) This function checks for that error.
-template <class ELFT> static bool isCompatible(InputFile *F) {
-  if (!isa<ELFFileBase<ELFT>>(F) && !isa<BitcodeFile>(F))
+static bool isCompatible(InputFile *F) {
+  if (!F->isElf() && !isa<BitcodeFile>(F))
     return true;
 
   if (F->EKind == Config->EKind && F->EMachine == Config->EMachine) {
@@ -64,13 +64,13 @@ template <class ELFT> static bool isCompatible(InputFile *F) {
 
 // Add symbols in File to the symbol table.
 template <class ELFT> void SymbolTable::addFile(InputFile *File) {
-  if (!isCompatible<ELFT>(File))
+  if (!isCompatible(File))
     return;
 
   // Binary file
   if (auto *F = dyn_cast<BinaryFile>(File)) {
     BinaryFiles.push_back(F);
-    F->parse<ELFT>();
+    F->parse();
     return;
   }
 
@@ -135,11 +135,10 @@ template <class ELFT> void SymbolTable::addCombinedLTOObject() {
   }
 }
 
-template <class ELFT>
 Defined *SymbolTable::addAbsolute(StringRef Name, uint8_t Visibility,
                                   uint8_t Binding) {
-  Symbol *Sym = addRegular<ELFT>(Name, Visibility, STT_NOTYPE, 0, 0, Binding,
-                                 nullptr, nullptr);
+  Symbol *Sym =
+      addRegular(Name, Visibility, STT_NOTYPE, 0, 0, Binding, nullptr, nullptr);
   return cast<Defined>(Sym);
 }
 
@@ -306,7 +305,7 @@ Symbol *SymbolTable::addUndefined(StringRef Name, uint8_t Binding,
   if (Binding != STB_WEAK) {
     if (auto *SS = dyn_cast<SharedSymbol>(S))
       if (!Config->GcSections)
-        SS->getFile<ELFT>()->IsNeeded = true;
+        SS->getFile<ELFT>().IsNeeded = true;
   }
   if (auto *L = dyn_cast<Lazy>(S)) {
     // An undefined weak will not fetch archive members. See comment on Lazy in
@@ -377,19 +376,19 @@ static int compareDefinedNonCommon(Symbol *S, bool WasInserted, uint8_t Binding,
 
 Symbol *SymbolTable::addCommon(StringRef N, uint64_t Size, uint32_t Alignment,
                                uint8_t Binding, uint8_t StOther, uint8_t Type,
-                               InputFile *File) {
+                               InputFile &File) {
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(N, Type, getVisibility(StOther),
-                                    /*CanOmitFromDynSym*/ false, File);
+                                    /*CanOmitFromDynSym*/ false, &File);
   int Cmp = compareDefined(S, WasInserted, Binding, N);
   if (Cmp > 0) {
     auto *Bss = make<BssSection>("COMMON", Size, Alignment);
-    Bss->File = File;
+    Bss->File = &File;
     Bss->Live = !Config->GcSections;
     InputSections.push_back(Bss);
 
-    replaceSymbol<Defined>(S, File, N, Binding, StOther, Type, 0, Size, Bss);
+    replaceSymbol<Defined>(S, &File, N, Binding, StOther, Type, 0, Size, Bss);
   } else if (Cmp == 0) {
     auto *D = cast<Defined>(S);
     auto *Bss = dyn_cast_or_null<BssSection>(D->Section);
@@ -405,7 +404,7 @@ Symbol *SymbolTable::addCommon(StringRef N, uint64_t Size, uint32_t Alignment,
 
     Bss->Alignment = std::max(Bss->Alignment, Alignment);
     if (Size > Bss->Size) {
-      D->File = Bss->File = File;
+      D->File = Bss->File = &File;
       D->Size = Bss->Size = Size;
     }
   }
@@ -424,9 +423,8 @@ static void reportDuplicate(Symbol *Sym, InputFile *NewFile) {
               toString(Sym->File) + "\n>>> defined in " + toString(NewFile));
 }
 
-template <class ELFT>
 static void reportDuplicate(Symbol *Sym, InputSectionBase *ErrSec,
-                            typename ELFT::uint ErrOffset) {
+                            uint64_t ErrOffset) {
   Defined *D = cast<Defined>(Sym);
   if (!D->Section || !ErrSec) {
     reportDuplicate(Sym, ErrSec ? ErrSec->File : nullptr);
@@ -441,9 +439,9 @@ static void reportDuplicate(Symbol *Sym, InputSectionBase *ErrSec,
   //   >>> defined at baz.c:563
   //   >>>            baz.o in archive libbaz.a
   auto *Sec1 = cast<InputSectionBase>(D->Section);
-  std::string Src1 = Sec1->getSrcMsg<ELFT>(*Sym, D->Value);
+  std::string Src1 = Sec1->getSrcMsg(*Sym, D->Value);
   std::string Obj1 = Sec1->getObjMsg(D->Value);
-  std::string Src2 = ErrSec->getSrcMsg<ELFT>(*Sym, ErrOffset);
+  std::string Src2 = ErrSec->getSrcMsg(*Sym, ErrOffset);
   std::string Obj2 = ErrSec->getObjMsg(ErrOffset);
 
   std::string Msg = "duplicate symbol: " + toString(*Sym) + "\n>>> defined at ";
@@ -456,7 +454,6 @@ static void reportDuplicate(Symbol *Sym, InputSectionBase *ErrSec,
   warnOrError(Msg);
 }
 
-template <typename ELFT>
 Symbol *SymbolTable::addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
                                 uint64_t Value, uint64_t Size, uint8_t Binding,
                                 SectionBase *Section, InputFile *File) {
@@ -470,13 +467,12 @@ Symbol *SymbolTable::addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
     replaceSymbol<Defined>(S, File, Name, Binding, StOther, Type, Value, Size,
                            Section);
   else if (Cmp == 0)
-    reportDuplicate<ELFT>(S, dyn_cast_or_null<InputSectionBase>(Section),
-                          Value);
+    reportDuplicate(S, dyn_cast_or_null<InputSectionBase>(Section), Value);
   return S;
 }
 
 template <typename ELFT>
-void SymbolTable::addShared(StringRef Name, SharedFile<ELFT> *File,
+void SymbolTable::addShared(StringRef Name, SharedFile<ELFT> &File,
                             const typename ELFT::Sym &Sym, uint32_t Alignment,
                             uint32_t VerdefIndex) {
   // DSO symbols do not affect visibility in the output, so we pass STV_DEFAULT
@@ -485,7 +481,7 @@ void SymbolTable::addShared(StringRef Name, SharedFile<ELFT> *File,
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name, Sym.getType(), STV_DEFAULT,
-                                    /*CanOmitFromDynSym*/ true, File);
+                                    /*CanOmitFromDynSym*/ true, &File);
   // Make sure we preempt DSO symbols with default visibility.
   if (Sym.getVisibility() == STV_DEFAULT)
     S->ExportDynamic = true;
@@ -501,24 +497,24 @@ void SymbolTable::addShared(StringRef Name, SharedFile<ELFT> *File,
     if (!WasInserted) {
       S->Binding = Binding;
       if (!S->isWeak() && !Config->GcSections)
-        File->IsNeeded = true;
+        File.IsNeeded = true;
     }
   }
 }
 
 Symbol *SymbolTable::addBitcode(StringRef Name, uint8_t Binding,
                                 uint8_t StOther, uint8_t Type,
-                                bool CanOmitFromDynSym, BitcodeFile *F) {
+                                bool CanOmitFromDynSym, BitcodeFile &F) {
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) =
-      insert(Name, Type, getVisibility(StOther), CanOmitFromDynSym, F);
+      insert(Name, Type, getVisibility(StOther), CanOmitFromDynSym, &F);
   int Cmp = compareDefinedNonCommon(S, WasInserted, Binding,
                                     /*IsAbs*/ false, /*Value*/ 0, Name);
   if (Cmp > 0)
-    replaceSymbol<Defined>(S, F, Name, Binding, StOther, Type, 0, 0, nullptr);
+    replaceSymbol<Defined>(S, &F, Name, Binding, StOther, Type, 0, 0, nullptr);
   else if (Cmp == 0)
-    reportDuplicate(S, F);
+    reportDuplicate(S, &F);
   return S;
 }
 
@@ -532,7 +528,7 @@ Symbol *SymbolTable::find(StringRef Name) {
 }
 
 template <class ELFT>
-Symbol *SymbolTable::addLazyArchive(StringRef Name, ArchiveFile *F,
+Symbol *SymbolTable::addLazyArchive(StringRef Name, ArchiveFile &F,
                                     const object::Archive::Symbol Sym) {
   Symbol *S;
   bool WasInserted;
@@ -551,9 +547,9 @@ Symbol *SymbolTable::addLazyArchive(StringRef Name, ArchiveFile *F,
     S->Binding = STB_WEAK;
     return S;
   }
-  std::pair<MemoryBufferRef, uint64_t> MBInfo = F->getMember(&Sym);
+  std::pair<MemoryBufferRef, uint64_t> MBInfo = F.getMember(&Sym);
   if (!MBInfo.first.getBuffer().empty())
-    addFile<ELFT>(createObjectFile(MBInfo.first, F->getName(), MBInfo.second));
+    addFile<ELFT>(createObjectFile(MBInfo.first, F.getName(), MBInfo.second));
   return S;
 }
 
@@ -563,7 +559,7 @@ void SymbolTable::addLazyObject(StringRef Name, LazyObjFile &Obj) {
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);
   if (WasInserted) {
-    replaceSymbol<LazyObject>(S, &Obj, Name, Symbol::UnknownType);
+    replaceSymbol<LazyObject>(S, Obj, Name, Symbol::UnknownType);
     return;
   }
   if (!S->isUndefined())
@@ -571,7 +567,7 @@ void SymbolTable::addLazyObject(StringRef Name, LazyObjFile &Obj) {
 
   // See comment for addLazyArchive above.
   if (S->isWeak())
-    replaceSymbol<LazyObject>(S, &Obj, Name, S->Type);
+    replaceSymbol<LazyObject>(S, Obj, Name, S->Type);
   else if (InputFile *F = Obj.fetch())
     addFile<ELFT>(F);
 }
@@ -582,7 +578,7 @@ template <class ELFT> void SymbolTable::fetchIfLazy(StringRef Name) {
     // Mark the symbol not to be eliminated by LTO
     // even if it is a bitcode symbol.
     B->IsUsedInRegularObj = true;
-    if (auto *L = dyn_cast_or_null<Lazy>(B))
+    if (auto *L = dyn_cast<Lazy>(B))
       if (InputFile *File = L->fetch())
         addFile<ELFT>(File);
   }
@@ -797,39 +793,17 @@ template void SymbolTable::addCombinedLTOObject<ELF32BE>();
 template void SymbolTable::addCombinedLTOObject<ELF64LE>();
 template void SymbolTable::addCombinedLTOObject<ELF64BE>();
 
-template Symbol *SymbolTable::addRegular<ELF32LE>(StringRef, uint8_t, uint8_t,
-                                                  uint64_t, uint64_t, uint8_t,
-                                                  SectionBase *, InputFile *);
-template Symbol *SymbolTable::addRegular<ELF32BE>(StringRef, uint8_t, uint8_t,
-                                                  uint64_t, uint64_t, uint8_t,
-                                                  SectionBase *, InputFile *);
-template Symbol *SymbolTable::addRegular<ELF64LE>(StringRef, uint8_t, uint8_t,
-                                                  uint64_t, uint64_t, uint8_t,
-                                                  SectionBase *, InputFile *);
-template Symbol *SymbolTable::addRegular<ELF64BE>(StringRef, uint8_t, uint8_t,
-                                                  uint64_t, uint64_t, uint8_t,
-                                                  SectionBase *, InputFile *);
-
-template Defined *SymbolTable::addAbsolute<ELF32LE>(StringRef, uint8_t,
-                                                    uint8_t);
-template Defined *SymbolTable::addAbsolute<ELF32BE>(StringRef, uint8_t,
-                                                    uint8_t);
-template Defined *SymbolTable::addAbsolute<ELF64LE>(StringRef, uint8_t,
-                                                    uint8_t);
-template Defined *SymbolTable::addAbsolute<ELF64BE>(StringRef, uint8_t,
-                                                    uint8_t);
-
 template Symbol *
-SymbolTable::addLazyArchive<ELF32LE>(StringRef, ArchiveFile *,
+SymbolTable::addLazyArchive<ELF32LE>(StringRef, ArchiveFile &,
                                      const object::Archive::Symbol);
 template Symbol *
-SymbolTable::addLazyArchive<ELF32BE>(StringRef, ArchiveFile *,
+SymbolTable::addLazyArchive<ELF32BE>(StringRef, ArchiveFile &,
                                      const object::Archive::Symbol);
 template Symbol *
-SymbolTable::addLazyArchive<ELF64LE>(StringRef, ArchiveFile *,
+SymbolTable::addLazyArchive<ELF64LE>(StringRef, ArchiveFile &,
                                      const object::Archive::Symbol);
 template Symbol *
-SymbolTable::addLazyArchive<ELF64BE>(StringRef, ArchiveFile *,
+SymbolTable::addLazyArchive<ELF64BE>(StringRef, ArchiveFile &,
                                      const object::Archive::Symbol);
 
 template void SymbolTable::addLazyObject<ELF32LE>(StringRef, LazyObjFile &);
@@ -837,16 +811,16 @@ template void SymbolTable::addLazyObject<ELF32BE>(StringRef, LazyObjFile &);
 template void SymbolTable::addLazyObject<ELF64LE>(StringRef, LazyObjFile &);
 template void SymbolTable::addLazyObject<ELF64BE>(StringRef, LazyObjFile &);
 
-template void SymbolTable::addShared<ELF32LE>(StringRef, SharedFile<ELF32LE> *,
+template void SymbolTable::addShared<ELF32LE>(StringRef, SharedFile<ELF32LE> &,
                                               const typename ELF32LE::Sym &,
                                               uint32_t Alignment, uint32_t);
-template void SymbolTable::addShared<ELF32BE>(StringRef, SharedFile<ELF32BE> *,
+template void SymbolTable::addShared<ELF32BE>(StringRef, SharedFile<ELF32BE> &,
                                               const typename ELF32BE::Sym &,
                                               uint32_t Alignment, uint32_t);
-template void SymbolTable::addShared<ELF64LE>(StringRef, SharedFile<ELF64LE> *,
+template void SymbolTable::addShared<ELF64LE>(StringRef, SharedFile<ELF64LE> &,
                                               const typename ELF64LE::Sym &,
                                               uint32_t Alignment, uint32_t);
-template void SymbolTable::addShared<ELF64BE>(StringRef, SharedFile<ELF64BE> *,
+template void SymbolTable::addShared<ELF64BE>(StringRef, SharedFile<ELF64BE> &,
                                               const typename ELF64BE::Sym &,
                                               uint32_t Alignment, uint32_t);
 

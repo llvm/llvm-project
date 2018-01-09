@@ -501,10 +501,29 @@ private:
   }
 #endif
 
+#if defined(_LIBUNWIND_TARGET_PPC64)
+  int stepWithCompactEncoding(Registers_ppc64 &) {
+    return UNW_EINVAL;
+  }
+#endif
+
+
 #if defined(_LIBUNWIND_TARGET_AARCH64)
   int stepWithCompactEncoding(Registers_arm64 &) {
     return CompactUnwinder_arm64<A>::stepWithCompactEncoding(
         _info.format, _info.start_ip, _addressSpace, _registers);
+  }
+#endif
+
+#if defined(_LIBUNWIND_TARGET_MIPS_O32)
+  int stepWithCompactEncoding(Registers_mips_o32 &) {
+    return UNW_EINVAL;
+  }
+#endif
+
+#if defined(_LIBUNWIND_TARGET_MIPS_N64)
+  int stepWithCompactEncoding(Registers_mips_n64 &) {
+    return UNW_EINVAL;
   }
 #endif
 
@@ -541,6 +560,12 @@ private:
   }
 #endif
 
+#if defined(_LIBUNWIND_TARGET_PPC64)
+  bool compactSaysUseDwarf(Registers_ppc64 &, uint32_t *) const {
+    return true;
+  }
+#endif
+
 #if defined(_LIBUNWIND_TARGET_AARCH64)
   bool compactSaysUseDwarf(Registers_arm64 &, uint32_t *offset) const {
     if ((_info.format & UNWIND_ARM64_MODE_MASK) == UNWIND_ARM64_MODE_DWARF) {
@@ -549,6 +574,18 @@ private:
       return true;
     }
     return false;
+  }
+#endif
+
+#if defined(_LIBUNWIND_TARGET_MIPS_O32)
+  bool compactSaysUseDwarf(Registers_mips_o32 &, uint32_t *) const {
+    return true;
+  }
+#endif
+
+#if defined(_LIBUNWIND_TARGET_MIPS_N64)
+  bool compactSaysUseDwarf(Registers_mips_n64 &, uint32_t *) const {
+    return true;
   }
 #endif
 #endif // defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
@@ -577,6 +614,12 @@ private:
   }
 #endif
 
+#if defined(_LIBUNWIND_TARGET_PPC64)
+  compact_unwind_encoding_t dwarfEncoding(Registers_ppc64 &) const {
+    return 0;
+  }
+#endif
+
 #if defined(_LIBUNWIND_TARGET_AARCH64)
   compact_unwind_encoding_t dwarfEncoding(Registers_arm64 &) const {
     return UNWIND_ARM64_MODE_DWARF;
@@ -591,6 +634,18 @@ private:
 
 #if defined (_LIBUNWIND_TARGET_OR1K)
   compact_unwind_encoding_t dwarfEncoding(Registers_or1k &) const {
+    return 0;
+  }
+#endif
+
+#if defined (_LIBUNWIND_TARGET_MIPS_O32)
+  compact_unwind_encoding_t dwarfEncoding(Registers_mips_o32 &) const {
+    return 0;
+  }
+#endif
+
+#if defined (_LIBUNWIND_TARGET_MIPS_N64)
+  compact_unwind_encoding_t dwarfEncoding(Registers_mips_n64 &) const {
     return 0;
   }
 #endif

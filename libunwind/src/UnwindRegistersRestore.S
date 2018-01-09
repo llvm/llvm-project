@@ -128,6 +128,101 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind16Registers_x86_646jumptoEv)
   ret            # rip was saved here
 
 
+#elif defined(__powerpc64__)
+
+DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind15Registers_ppc646jumptoEv)
+//
+// void libunwind::Registers_ppc64::jumpto()
+//
+// On entry:
+//  thread_state pointer is in r3
+//
+
+  // restore integral registers
+  // skip r0 for now
+  // skip r1 for now
+  ld    %r2,   32(%r3)
+  // skip r3 for now
+  // skip r4 for now
+  // skip r5 for now
+  ld    %r6,   64(%r3)
+  ld    %r7,   72(%r3)
+  ld    %r8,   80(%r3)
+  ld    %r9,   88(%r3)
+  ld    %r10,  96(%r3)
+  ld    %r11, 104(%r3)
+  ld    %r12, 112(%r3)
+  ld    %r13, 120(%r3)
+  ld    %r14, 128(%r3)
+  ld    %r15, 136(%r3)
+  ld    %r16, 144(%r3)
+  ld    %r17, 152(%r3)
+  ld    %r18, 160(%r3)
+  ld    %r19, 168(%r3)
+  ld    %r20, 176(%r3)
+  ld    %r21, 184(%r3)
+  ld    %r22, 192(%r3)
+  ld    %r23, 200(%r3)
+  ld    %r24, 208(%r3)
+  ld    %r25, 216(%r3)
+  ld    %r26, 224(%r3)
+  ld    %r27, 232(%r3)
+  ld    %r28, 240(%r3)
+  ld    %r29, 248(%r3)
+  ld    %r30, 256(%r3)
+  ld    %r31, 264(%r3)
+
+  //restore float registers
+  lfd   %f0,  312(%r3)
+  lfd   %f1,  320(%r3)
+  lfd   %f2,  328(%r3)
+  lfd   %f3,  336(%r3)
+  lfd   %f4,  344(%r3)
+  lfd   %f5,  352(%r3)
+  lfd   %f6,  360(%r3)
+  lfd   %f7,  368(%r3)
+  lfd   %f8,  376(%r3)
+  lfd   %f9,  384(%r3)
+  lfd   %f10, 392(%r3)
+  lfd   %f11, 400(%r3)
+  lfd   %f12, 408(%r3)
+  lfd   %f13, 416(%r3)
+  lfd   %f14, 424(%r3)
+  lfd   %f15, 432(%r3)
+  lfd   %f16, 440(%r3)
+  lfd   %f17, 448(%r3)
+  lfd   %f18, 456(%r3)
+  lfd   %f19, 464(%r3)
+  lfd   %f20, 472(%r3)
+  lfd   %f21, 480(%r3)
+  lfd   %f22, 488(%r3)
+  lfd   %f23, 496(%r3)
+  lfd   %f24, 504(%r3)
+  lfd   %f25, 512(%r3)
+  lfd   %f26, 520(%r3)
+  lfd   %f27, 528(%r3)
+  lfd   %f28, 536(%r3)
+  lfd   %f29, 544(%r3)
+  lfd   %f30, 552(%r3)
+  lfd   %f31, 560(%r3)
+
+  //TODO: restore vector registers
+
+  // Lnovec:
+  ld    %r0, 272(%r3) // __cr
+  mtcr  %r0
+  ld    %r0, 296(%r3) // __ctr
+  mtctr %r0
+  ld    %r0,   0(%r3) // __ssr0
+  mtctr %r0
+
+  ld    %r0,   16(%r3)
+  ld    %r5,   56(%r3)
+  ld    %r4,   48(%r3)
+  ld    %r1,   24(%r3)
+  ld    %r3,   40(%r3)
+  bctr
+
 #elif defined(__ppc__)
 
 DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_ppc6jumptoEv)
@@ -533,6 +628,118 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind14Registers_or1k6jumptoEv)
   # jump to pc
   l.jr     r9
    l.nop
+
+#elif defined(__mips__) && defined(_ABIO32) && defined(__mips_soft_float)
+
+//
+// void libunwind::Registers_mips_o32::jumpto()
+//
+// On entry:
+//  thread state pointer is in a0 ($4)
+//
+DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind18Registers_mips_o326jumptoEv)
+  .set push
+  .set noat
+  .set noreorder
+  .set nomacro
+  // restore hi and lo
+  lw    $8, (4 * 33)($4)
+  mthi  $8
+  lw    $8, (4 * 34)($4)
+  mtlo  $8
+  // r0 is zero
+  lw    $1, (4 * 1)($4)
+  lw    $2, (4 * 2)($4)
+  lw    $3, (4 * 3)($4)
+  // skip a0 for now
+  lw    $5, (4 * 5)($4)
+  lw    $6, (4 * 6)($4)
+  lw    $7, (4 * 7)($4)
+  lw    $8, (4 * 8)($4)
+  lw    $9, (4 * 9)($4)
+  lw    $10, (4 * 10)($4)
+  lw    $11, (4 * 11)($4)
+  lw    $12, (4 * 12)($4)
+  lw    $13, (4 * 13)($4)
+  lw    $14, (4 * 14)($4)
+  lw    $15, (4 * 15)($4)
+  lw    $16, (4 * 16)($4)
+  lw    $17, (4 * 17)($4)
+  lw    $18, (4 * 18)($4)
+  lw    $19, (4 * 19)($4)
+  lw    $20, (4 * 20)($4)
+  lw    $21, (4 * 21)($4)
+  lw    $22, (4 * 22)($4)
+  lw    $23, (4 * 23)($4)
+  lw    $24, (4 * 24)($4)
+  lw    $25, (4 * 25)($4)
+  lw    $26, (4 * 26)($4)
+  lw    $27, (4 * 27)($4)
+  lw    $28, (4 * 28)($4)
+  lw    $29, (4 * 29)($4)
+  lw    $30, (4 * 30)($4)
+  // load new pc into ra
+  lw    $31, (4 * 32)($4)
+  // jump to ra, load a0 in the delay slot
+  jr    $31
+  lw    $4, (4 * 4)($4)
+  .set pop
+
+#elif defined(__mips__) && defined(_ABI64) && defined(__mips_soft_float)
+
+//
+// void libunwind::Registers_mips_n64::jumpto()
+//
+// On entry:
+//  thread state pointer is in a0 ($4)
+//
+DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind18Registers_mips_n646jumptoEv)
+  .set push
+  .set noat
+  .set noreorder
+  .set nomacro
+  // restore hi and lo
+  ld    $8, (8 * 33)($4)
+  mthi  $8
+  ld    $8, (8 * 34)($4)
+  mtlo  $8
+  // r0 is zero
+  ld    $1, (8 * 1)($4)
+  ld    $2, (8 * 2)($4)
+  ld    $3, (8 * 3)($4)
+  // skip a0 for now
+  ld    $5, (8 * 5)($4)
+  ld    $6, (8 * 6)($4)
+  ld    $7, (8 * 7)($4)
+  ld    $8, (8 * 8)($4)
+  ld    $9, (8 * 9)($4)
+  ld    $10, (8 * 10)($4)
+  ld    $11, (8 * 11)($4)
+  ld    $12, (8 * 12)($4)
+  ld    $13, (8 * 13)($4)
+  ld    $14, (8 * 14)($4)
+  ld    $15, (8 * 15)($4)
+  ld    $16, (8 * 16)($4)
+  ld    $17, (8 * 17)($4)
+  ld    $18, (8 * 18)($4)
+  ld    $19, (8 * 19)($4)
+  ld    $20, (8 * 20)($4)
+  ld    $21, (8 * 21)($4)
+  ld    $22, (8 * 22)($4)
+  ld    $23, (8 * 23)($4)
+  ld    $24, (8 * 24)($4)
+  ld    $25, (8 * 25)($4)
+  ld    $26, (8 * 26)($4)
+  ld    $27, (8 * 27)($4)
+  ld    $28, (8 * 28)($4)
+  ld    $29, (8 * 29)($4)
+  ld    $30, (8 * 30)($4)
+  // load new pc into ra
+  ld    $31, (8 * 32)($4)
+  // jump to ra, load a0 in the delay slot
+  jr    $31
+  ld    $4, (8 * 4)($4)
+  .set pop
 
 #endif
 

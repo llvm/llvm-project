@@ -4,8 +4,8 @@
 || **Status** |
 |---|---|
 |**macOS**         |[![Build Status](https://ci.swift.org/job/oss-lldb-incremental-osx/badge/icon)](https://ci.swift.org/job/oss-lldb-incremental-osx)|
-|**Ubuntu 14.04** |[![Build Status](https://ci.swift.org/job/oss-lldb-incremental-linux-ubuntu-14_04/badge/icon)](https://ci.swift.org/job/oss-lldb-incremental-linux-ubuntu-14_04)|
-|**Ubuntu 15.10** |[![Build Status](https://ci.swift.org/job/oss-lldb-incremental-linux-ubuntu-15_10/badge/icon)](https://ci.swift.org/job/oss-lldb-incremental-linux-ubuntu-15_10)|
+|**Ubuntu 16.04** |[![Build Status](https://ci.swift.org/job/oss-lldb-incremental-linux-ubuntu-16_04/badge/icon)](https://ci.swift.org/job/oss-lldb-incremental-linux-ubuntu-16_04)|
+|**Ubuntu 16.10** |[![Build Status](https://ci.swift.org/job/oss-lldb-incremental-linux-ubuntu-16_10/badge/icon)](https://ci.swift.org/job/oss-lldb-incremental-linux-ubuntu-16_10)|
 
 **Welcome to the Swift Debugger and REPL!**
 
@@ -21,11 +21,11 @@ top of the LLDB Debugger.
 To build LLDB for Swift, you must have the following prerequisites
 installed on your development system:
 
-* OS X Requirements
+* macOS Requirements
 
-  * OS X 10.11 (El Capitan) or later.
+  * macOS 10.12.6 or later.
 
-  * [Xcode 7.2 Beta 4][xcode-download] or later.
+  * [Xcode 9.2][xcode-download] or later.
 
   * [Cmake][cmake] (version 2.8.12.2 or later)
 

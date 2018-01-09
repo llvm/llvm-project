@@ -40672,7 +40672,8 @@ SWIGINTERN PyObject *_wrap_SBProcess_GetSTDOUT(PyObject *SWIGUNUSEDPARM(self), P
   {
     Py_XDECREF(resultobj);   /* Blow away any previous result */
     if (result == 0) {
-      resultobj = Py_None;
+      lldb_private::PythonString string("");
+      resultobj = string.release();
       Py_INCREF(resultobj);
     } else {
       llvm::StringRef ref(static_cast<const char*>(arg2), result);
@@ -40725,7 +40726,8 @@ SWIGINTERN PyObject *_wrap_SBProcess_GetSTDERR(PyObject *SWIGUNUSEDPARM(self), P
   {
     Py_XDECREF(resultobj);   /* Blow away any previous result */
     if (result == 0) {
-      resultobj = Py_None;
+      lldb_private::PythonString string("");
+      resultobj = string.release();
       Py_INCREF(resultobj);
     } else {
       llvm::StringRef ref(static_cast<const char*>(arg2), result);
@@ -40778,7 +40780,8 @@ SWIGINTERN PyObject *_wrap_SBProcess_GetAsyncProfileData(PyObject *SWIGUNUSEDPAR
   {
     Py_XDECREF(resultobj);   /* Blow away any previous result */
     if (result == 0) {
-      resultobj = Py_None;
+      lldb_private::PythonString string("");
+      resultobj = string.release();
       Py_INCREF(resultobj);
     } else {
       llvm::StringRef ref(static_cast<const char*>(arg2), result);
@@ -42204,7 +42207,8 @@ SWIGINTERN PyObject *_wrap_SBProcess_ReadCStringFromMemory(PyObject *SWIGUNUSEDP
   {
     Py_XDECREF(resultobj);   /* Blow away any previous result */
     if (result == 0) {
-      resultobj = Py_None;
+      lldb_private::PythonString string("");
+      resultobj = string.release();
       Py_INCREF(resultobj);
     } else {
       llvm::StringRef ref(static_cast<const char*>(arg3), result);
@@ -46940,7 +46944,8 @@ SWIGINTERN PyObject *_wrap_SBStructuredData_GetStringValue(PyObject *SWIGUNUSEDP
   {
     Py_XDECREF(resultobj);   /* Blow away any previous result */
     if (result == 0) {
-      resultobj = Py_None;
+      lldb_private::PythonString string("");
+      resultobj = string.release();
       Py_INCREF(resultobj);
     } else {
       llvm::StringRef ref(static_cast<const char*>(arg2), result);
@@ -56081,7 +56086,8 @@ SWIGINTERN PyObject *_wrap_SBThread_GetStopDescription(PyObject *SWIGUNUSEDPARM(
   {
     Py_XDECREF(resultobj);   /* Blow away any previous result */
     if (result == 0) {
-      resultobj = Py_None;
+      lldb_private::PythonString string("");
+      resultobj = string.release();
       Py_INCREF(resultobj);
     } else {
       llvm::StringRef ref(static_cast<const char*>(arg2), result);
@@ -79883,6 +79889,10 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "eTemplateArgumentKindTemplateExpansion",SWIG_From_int(static_cast< int >(lldb::eTemplateArgumentKindTemplateExpansion)));
   SWIG_Python_SetConstant(d, "eTemplateArgumentKindExpression",SWIG_From_int(static_cast< int >(lldb::eTemplateArgumentKindExpression)));
   SWIG_Python_SetConstant(d, "eTemplateArgumentKindPack",SWIG_From_int(static_cast< int >(lldb::eTemplateArgumentKindPack)));
+  SWIG_Python_SetConstant(d, "eTemplateArgumentKindNullPtr",SWIG_From_int(static_cast< int >(lldb::eTemplateArgumentKindNullPtr)));
+  SWIG_Python_SetConstant(d, "eNullGenericKindType",SWIG_From_int(static_cast< int >(lldb::eNullGenericKindType)));
+  SWIG_Python_SetConstant(d, "eBoundGenericKindType",SWIG_From_int(static_cast< int >(lldb::eBoundGenericKindType)));
+  SWIG_Python_SetConstant(d, "eUnboundGenericKindType",SWIG_From_int(static_cast< int >(lldb::eUnboundGenericKindType)));
   SWIG_Python_SetConstant(d, "eTypeOptionNone",SWIG_From_int(static_cast< int >(lldb::eTypeOptionNone)));
   SWIG_Python_SetConstant(d, "eTypeOptionCascade",SWIG_From_int(static_cast< int >(lldb::eTypeOptionCascade)));
   SWIG_Python_SetConstant(d, "eTypeOptionSkipPointers",SWIG_From_int(static_cast< int >(lldb::eTypeOptionSkipPointers)));
@@ -79942,8 +79952,8 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "eExpressionEvaluationIRGen",SWIG_From_int(static_cast< int >(lldb::eExpressionEvaluationIRGen)));
   SWIG_Python_SetConstant(d, "eExpressionEvaluationExecution",SWIG_From_int(static_cast< int >(lldb::eExpressionEvaluationExecution)));
   SWIG_Python_SetConstant(d, "eExpressionEvaluationComplete",SWIG_From_int(static_cast< int >(lldb::eExpressionEvaluationComplete)));
-  SWIG_Python_SetConstant(d, "eWatchpointKindRead",SWIG_From_int(static_cast< int >(lldb::eWatchpointKindRead)));
   SWIG_Python_SetConstant(d, "eWatchpointKindWrite",SWIG_From_int(static_cast< int >(lldb::eWatchpointKindWrite)));
+  SWIG_Python_SetConstant(d, "eWatchpointKindRead",SWIG_From_int(static_cast< int >(lldb::eWatchpointKindRead)));
   SWIG_Python_SetConstant(d, "eGdbSignalBadAccess",SWIG_From_int(static_cast< int >(lldb::eGdbSignalBadAccess)));
   SWIG_Python_SetConstant(d, "eGdbSignalBadInstruction",SWIG_From_int(static_cast< int >(lldb::eGdbSignalBadInstruction)));
   SWIG_Python_SetConstant(d, "eGdbSignalArithmetic",SWIG_From_int(static_cast< int >(lldb::eGdbSignalArithmetic)));

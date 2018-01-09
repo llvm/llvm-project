@@ -1127,6 +1127,11 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
       features_str += "+dspr2,";
   }
 
+  // If any AArch64 variant, enable the ARMv8.2 ISA
+  // extensions so we can disassemble newer instructions.
+  if (triple.getArch() == llvm::Triple::aarch64)
+    features_str += "+v8.2a";
+
   m_disasm_ap.reset(new LLVMCDisassembler(triple_str, cpu, features_str.c_str(),
                                           flavor, *this));
   if (!m_disasm_ap->IsValid()) {

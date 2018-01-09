@@ -174,7 +174,7 @@ void Writer::createImportSection() {
     Import.Field = Sym->getName();
     Import.Kind = WASM_EXTERNAL_GLOBAL;
     Import.Global.Mutable = false;
-    Import.Global.Type = WASM_TYPE_I32; // Sym->getGlobalType();
+    Import.Global.Type = WASM_TYPE_I32;
     writeImport(OS, Import);
   }
 }
@@ -183,9 +183,8 @@ void Writer::createTypeSection() {
   SyntheticSection *Section = createSyntheticSection(WASM_SEC_TYPE);
   raw_ostream &OS = Section->getStream();
   writeUleb128(OS, Types.size(), "type count");
-  for (const WasmSignature *Sig : Types) {
+  for (const WasmSignature *Sig : Types)
     writeSig(OS, *Sig);
-  }
 }
 
 void Writer::createFunctionSection() {
@@ -196,11 +195,9 @@ void Writer::createFunctionSection() {
   raw_ostream &OS = Section->getStream();
 
   writeUleb128(OS, NumFunctions, "function count");
-  for (ObjFile *File : Symtab->ObjectFiles) {
-    for (uint32_t Sig : File->getWasmObj()->functionTypes()) {
+  for (ObjFile *File : Symtab->ObjectFiles)
+    for (uint32_t Sig : File->getWasmObj()->functionTypes())
       writeUleb128(OS, File->relocateTypeIndex(Sig), "sig index");
-    }
-  }
 }
 
 void Writer::createMemorySection() {
@@ -358,7 +355,7 @@ void Writer::createDataSection() {
   OutputSections.push_back(Section);
 }
 
-// Create reloctions sections in the final output.
+// Create relocations sections in the final output.
 // These are only created when relocatable output is requested.
 void Writer::createRelocSections() {
   log("createRelocSections");
@@ -376,7 +373,7 @@ void Writer::createRelocSections() {
     else if (S->Type == WASM_SEC_CODE)
       name = "reloc.CODE";
     else
-      llvm_unreachable("relocations only support for code and data");
+      llvm_unreachable("relocations only supported for code and data");
 
     SyntheticSection *Section = createSyntheticSection(WASM_SEC_CUSTOM, name);
     raw_ostream &OS = Section->getStream();
@@ -398,13 +395,37 @@ void Writer::createLinkingSection() {
   DataSizeSubSection.finalizeContents();
   DataSizeSubSection.writeToStream(OS);
 
-  if (Segments.size() && Config->Relocatable) {
+  if (!Config->Relocatable)
+    return;
+
+  if (Segments.size()) {
     SubSection SubSection(WASM_SEGMENT_INFO);
     writeUleb128(SubSection.getStream(), Segments.size(), "num data segments");
     for (const OutputSegment *S : Segments) {
       writeStr(SubSection.getStream(), S->Name, "segment name");
       writeUleb128(SubSection.getStream(), S->Alignment, "alignment");
       writeUleb128(SubSection.getStream(), 0, "flags");
+    }
+    SubSection.finalizeContents();
+    SubSection.writeToStream(OS);
+  }
+
+  std::vector<WasmInitFunc> InitFunctions;
+  for (ObjFile *File : Symtab->ObjectFiles) {
+    const WasmLinkingData &L = File->getWasmObj()->linkingData();
+    InitFunctions.reserve(InitFunctions.size() + L.InitFunctions.size());
+    for (const WasmInitFunc &F : L.InitFunctions)
+      InitFunctions.emplace_back(WasmInitFunc{
+          F.Priority, File->relocateFunctionIndex(F.FunctionIndex)});
+  }
+
+  if (!InitFunctions.empty()) {
+    SubSection SubSection(WASM_INIT_FUNCS);
+    writeUleb128(SubSection.getStream(), InitFunctions.size(),
+                 "num init functionsw");
+    for (const WasmInitFunc &F : InitFunctions) {
+      writeUleb128(SubSection.getStream(), F.Priority, "priority");
+      writeUleb128(SubSection.getStream(), F.FunctionIndex, "function index");
     }
     SubSection.finalizeContents();
     SubSection.writeToStream(OS);
@@ -501,7 +522,7 @@ void Writer::layoutMemory() {
 SyntheticSection *Writer::createSyntheticSection(uint32_t Type,
                                                  std::string Name) {
   auto Sec = make<SyntheticSection>(Type, Name);
-  log("createSection: " + toString(Sec));
+  log("createSection: " + toString(*Sec));
   OutputSections.push_back(Sec);
   return Sec;
 }
@@ -550,18 +571,16 @@ void Writer::calculateOffsets() {
 }
 
 void Writer::calculateImports() {
-  for (ObjFile *File : Symtab->ObjectFiles) {
-    for (Symbol *Sym : File->getSymbols()) {
-      if (Sym->hasOutputIndex() || Sym->isDefined() || Sym->isWeak())
-        continue;
+  for (Symbol *Sym : Symtab->getSymbols()) {
+    if (!Sym->isUndefined() || Sym->isWeak())
+      continue;
 
-      if (Sym->isFunction()) {
-        Sym->setOutputIndex(FunctionImports.size());
-        FunctionImports.push_back(Sym);
-      } else {
-        Sym->setOutputIndex(GlobalImports.size());
-        GlobalImports.push_back(Sym);
-      }
+    if (Sym->isFunction()) {
+      Sym->setOutputIndex(FunctionImports.size());
+      FunctionImports.push_back(Sym);
+    } else {
+      Sym->setOutputIndex(GlobalImports.size());
+      GlobalImports.push_back(Sym);
     }
   }
 }
@@ -648,12 +667,6 @@ void Writer::createOutputSegments() {
       }
       S->addInputSegment(Segment);
       DEBUG(dbgs() << "added data: " << Name << ": " << S->Size << "\n");
-      for (const WasmRelocation &R : File->DataSection->Relocations) {
-        if (R.Offset >= Segment->getInputSectionOffset() &&
-            R.Offset < Segment->getInputSectionOffset() + Segment->getSize()) {
-          Segment->Relocations.push_back(R);
-        }
-      }
     }
   }
 }

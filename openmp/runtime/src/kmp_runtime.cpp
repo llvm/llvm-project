@@ -2199,7 +2199,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
 #endif /* USE_ITT_NOTIFY */
           if ((__itt_frame_begin_v3_ptr || KMP_ITT_DEBUG) &&
               __kmp_forkjoin_frames && !__kmp_forkjoin_frames_mode) {
-        // Mark start of "parallel" region for VTune.
+        // Mark start of "parallel" region for Intel(R) VTune(TM) analyzer.
         __kmp_itt_region_forking(gtid, team->t.t_nproc, 0);
       }
     }
@@ -2394,7 +2394,7 @@ void __kmp_join_call(ident_t *loc, int gtid
             .t_stack_id); // destroy the stack stitching id after join barrier
   }
 
-  // Mark end of "parallel" region for VTune.
+  // Mark end of "parallel" region for Intel(R) VTune(TM) analyzer.
   if (team->t.t_active_level == 1
 #if OMP_40_ENABLED
       && !master_th->th.th_teams_microtask /* not in teams construct */

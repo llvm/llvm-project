@@ -135,8 +135,16 @@ InputSegment *ObjFile::getSegment(const WasmSymbol &WasmSym) {
       return Segment;
     }
   }
-  error("Symbol not found in any segment: " + WasmSym.Name);
+  error("symbol not found in any segment: " + WasmSym.Name);
   return nullptr;
+}
+
+static void copyRelocationsRange(std::vector<WasmRelocation> &To,
+                                 ArrayRef<WasmRelocation> From, size_t Start,
+                                 size_t End) {
+  for (const WasmRelocation &R : From)
+    if (R.Offset >= Start && R.Offset < End)
+      To.push_back(R);
 }
 
 void ObjFile::initializeSymbols() {
@@ -156,8 +164,13 @@ void ObjFile::initializeSymbols() {
   FunctionSymbols.resize(FunctionImports + WasmObj->functions().size());
   GlobalSymbols.resize(GlobalImports + WasmObj->globals().size());
 
-  for (const WasmSegment &Seg : WasmObj->dataSegments())
-    Segments.emplace_back(make<InputSegment>(&Seg, this));
+  for (const WasmSegment &S : WasmObj->dataSegments()) {
+    InputSegment *Seg = make<InputSegment>(&S, this);
+    copyRelocationsRange(Seg->Relocations, DataSection->Relocations,
+                         Seg->getInputSectionOffset(),
+                         Seg->getInputSectionOffset() + Seg->getSize());
+    Segments.emplace_back(Seg);
+  }
 
   // Populate `FunctionSymbols` and `GlobalSymbols` based on the WasmSymbols
   // in the object
@@ -185,12 +198,21 @@ void ObjFile::initializeSymbols() {
       DEBUG(dbgs() << "Function: " << WasmSym.ElementIndex << " -> "
                    << toString(*S) << "\n");
       FunctionSymbols[WasmSym.ElementIndex] = S;
+      if (WasmSym.HasAltIndex)
+        FunctionSymbols[WasmSym.AltIndex] = S;
     } else {
       DEBUG(dbgs() << "Global: " << WasmSym.ElementIndex << " -> "
                    << toString(*S) << "\n");
       GlobalSymbols[WasmSym.ElementIndex] = S;
+      if (WasmSym.HasAltIndex)
+        GlobalSymbols[WasmSym.AltIndex] = S;
     }
   }
+
+  DEBUG(for (size_t I = 0; I < FunctionSymbols.size(); ++I)
+            assert(FunctionSymbols[I] != nullptr);
+        for (size_t I = 0; I < GlobalSymbols.size(); ++I)
+            assert(GlobalSymbols[I] != nullptr););
 
   // Populate `TableSymbols` with all symbols that are called indirectly
   uint32_t SegmentCount = WasmObj->elements().size();

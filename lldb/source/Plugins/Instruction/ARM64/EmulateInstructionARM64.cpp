@@ -76,19 +76,6 @@ static inline bool IsZero(uint64_t x) { return x == 0; }
 
 static inline uint64_t NOT(uint64_t x) { return ~x; }
 
-#if 0
-// LSL_C() 
-// =======
-static inline uint64_t
-LSL_C (uint64_t x, integer shift, bool &carry_out)
-{
-    assert (shift >= 0); 
-    uint64_t result = x << shift;
-    carry_out = ((1ull << (64-1)) >> (shift - 1)) != 0;
-    return result;
-}
-#endif
-
 // LSL()
 // =====
 

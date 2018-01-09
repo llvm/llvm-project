@@ -257,7 +257,7 @@ template <> struct ScalarTraits<SectionAlignment> {
     return StringRef(); // returning empty string means success
   }
 
-  static bool mustQuote(StringRef) { return false; }
+  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 
 template <>
@@ -522,7 +522,7 @@ struct ScalarTraits<VMProtect> {
     // Return the empty string on success,
     return StringRef();
   }
-  static bool mustQuote(StringRef) { return false; }
+  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 
 
@@ -706,7 +706,7 @@ struct ScalarTraits<PackedVersion> {
     // Return the empty string on success,
     return StringRef();
   }
-  static bool mustQuote(StringRef) { return false; }
+  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 
 template <>

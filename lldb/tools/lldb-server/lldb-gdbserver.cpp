@@ -177,27 +177,28 @@ void handle_attach(GDBRemoteCommunicationServerLLGS &gdb_server,
 
 void handle_launch(GDBRemoteCommunicationServerLLGS &gdb_server, int argc,
                    const char *const argv[]) {
-  Status error;
-  error = gdb_server.SetLaunchArguments(argv, argc);
-  if (error.Fail()) {
-    fprintf(stderr, "error: failed to set launch args for '%s': %s\n", argv[0],
-            error.AsCString());
+  ProcessLaunchInfo info;
+  info.GetFlags().Set(eLaunchFlagStopAtEntry | eLaunchFlagDebug |
+                      eLaunchFlagDisableASLR);
+  info.SetArguments(const_cast<const char **>(argv), true);
+
+  llvm::SmallString<64> cwd;
+  if (std::error_code ec = llvm::sys::fs::current_path(cwd)) {
+    llvm::errs() << "Error getting current directory: " << ec.message() << "\n";
     exit(1);
   }
+  info.SetWorkingDirectory(FileSpec(cwd, true));
 
-  unsigned int launch_flags = eLaunchFlagStopAtEntry | eLaunchFlagDebug;
+  StringList env;
+  Host::GetEnvironment(env);
+  info.GetEnvironmentEntries() = Args(env);
 
-  error = gdb_server.SetLaunchFlags(launch_flags);
+  gdb_server.SetLaunchInfo(info);
+
+  Status error = gdb_server.LaunchProcess();
   if (error.Fail()) {
-    fprintf(stderr, "error: failed to set launch flags for '%s': %s\n", argv[0],
-            error.AsCString());
-    exit(1);
-  }
-
-  error = gdb_server.LaunchProcess();
-  if (error.Fail()) {
-    fprintf(stderr, "error: failed to launch '%s': %s\n", argv[0],
-            error.AsCString());
+    llvm::errs() << llvm::formatv("error: failed to launch '{0}': {1}\n",
+                                  argv[0], error);
     exit(1);
   }
 }

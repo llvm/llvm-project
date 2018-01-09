@@ -36,7 +36,7 @@ class SyntheticSection : public InputSection {
 public:
   SyntheticSection(uint64_t Flags, uint32_t Type, uint32_t Alignment,
                    StringRef Name)
-      : InputSection(Flags, Type, Alignment, {}, Name,
+      : InputSection(nullptr, Flags, Type, Alignment, {}, Name,
                      InputSectionBase::Synthetic) {
     this->Live = true;
   }
@@ -347,8 +347,6 @@ public:
   size_t getSize() const override { return Size; }
 
 private:
-  void addEntries();
-
   void add(int32_t Tag, std::function<uint64_t()> Fn);
   void addInt(int32_t Tag, uint64_t Val);
   void addInSec(int32_t Tag, InputSection *Sec);
@@ -363,6 +361,9 @@ class RelocationBaseSection : public SyntheticSection {
 public:
   RelocationBaseSection(StringRef Name, uint32_t Type, int32_t DynamicTag,
                         int32_t SizeDynamicTag);
+  void addReloc(uint32_t DynType, InputSectionBase *InputSec,
+                uint64_t OffsetInSec, bool UseSymVA, Symbol *Sym,
+                int64_t Addend, RelExpr Expr, RelType Type);
   void addReloc(const DynamicReloc &Reloc);
   bool empty() const override { return Relocs.empty(); }
   size_t getSize() const override { return Relocs.size() * this->Entsize; }
@@ -787,6 +788,9 @@ public:
   ARMExidxSentinelSection();
   size_t getSize() const override { return 8; }
   void writeTo(uint8_t *Buf) override;
+  bool empty() const override;
+
+  InputSection *Highest = 0;
 };
 
 // A container for one or more linker generated thunks. Instances of these
@@ -811,12 +815,12 @@ private:
 };
 
 InputSection *createInterpSection();
-template <class ELFT> MergeInputSection *createCommentSection();
+MergeInputSection *createCommentSection();
 void decompressSections();
 void mergeSections();
 
 Symbol *addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
-                          uint64_t Size, InputSectionBase *Section);
+                          uint64_t Size, InputSectionBase &Section);
 
 // Linker generated sections which can be used as inputs.
 struct InX {

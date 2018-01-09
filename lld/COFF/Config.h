@@ -89,6 +89,7 @@ struct Configuration {
   bool Force = false;
   bool Debug = false;
   bool DebugDwarf = false;
+  bool DebugGHashes = false;
   unsigned DebugTypes = static_cast<unsigned>(DebugType::None);
   llvm::SmallString<128> PDBPath;
   std::vector<llvm::StringRef> Argv;
@@ -173,6 +174,7 @@ struct Configuration {
   bool HighEntropyVA = false;
   bool AppContainer = false;
   bool MinGW = false;
+  bool WarnLocallyDefinedImported = true;
 };
 
 extern Configuration *Config;

@@ -164,9 +164,9 @@ void AArch64ABSLongThunk::writeTo(uint8_t *Buf, ThunkSection &IS) const {
 void AArch64ABSLongThunk::addSymbols(ThunkSection &IS) {
   ThunkSym = addSyntheticLocal(
       Saver.save("__AArch64AbsLongThunk_" + Destination.getName()), STT_FUNC,
-      Offset, size(), &IS);
-  addSyntheticLocal("$x", STT_NOTYPE, Offset, 0, &IS);
-  addSyntheticLocal("$d", STT_NOTYPE, Offset + 8, 0, &IS);
+      Offset, size(), IS);
+  addSyntheticLocal("$x", STT_NOTYPE, Offset, 0, IS);
+  addSyntheticLocal("$d", STT_NOTYPE, Offset + 8, 0, IS);
 }
 
 // This Thunk has a maximum range of 4Gb, this is sufficient for all programs
@@ -192,8 +192,8 @@ void AArch64ADRPThunk::addSymbols(ThunkSection &IS)
 {
   ThunkSym = addSyntheticLocal(
       Saver.save("__AArch64ADRPThunk_" + Destination.getName()), STT_FUNC,
-      Offset, size(), &IS);
-  addSyntheticLocal("$x", STT_NOTYPE, Offset, 0, &IS);
+      Offset, size(), IS);
+  addSyntheticLocal("$x", STT_NOTYPE, Offset, 0, IS);
 }
 
 // ARM Target Thunks
@@ -217,8 +217,8 @@ void ARMV7ABSLongThunk::writeTo(uint8_t *Buf, ThunkSection &IS) const {
 void ARMV7ABSLongThunk::addSymbols(ThunkSection &IS) {
   ThunkSym = addSyntheticLocal(
       Saver.save("__ARMv7ABSLongThunk_" + Destination.getName()), STT_FUNC,
-      Offset, size(), &IS);
-  addSyntheticLocal("$a", STT_NOTYPE, Offset, 0, &IS);
+      Offset, size(), IS);
+  addSyntheticLocal("$a", STT_NOTYPE, Offset, 0, IS);
 }
 
 bool ARMV7ABSLongThunk::isCompatibleWith(RelType Type) const {
@@ -241,8 +241,8 @@ void ThumbV7ABSLongThunk::writeTo(uint8_t *Buf, ThunkSection &IS) const {
 void ThumbV7ABSLongThunk::addSymbols(ThunkSection &IS) {
   ThunkSym = addSyntheticLocal(
       Saver.save("__Thumbv7ABSLongThunk_" + Destination.getName()), STT_FUNC,
-      Offset | 0x1, size(), &IS);
-  addSyntheticLocal("$t", STT_NOTYPE, Offset, 0, &IS);
+      Offset | 0x1, size(), IS);
+  addSyntheticLocal("$t", STT_NOTYPE, Offset, 0, IS);
 }
 
 bool ThumbV7ABSLongThunk::isCompatibleWith(RelType Type) const {
@@ -268,8 +268,8 @@ void ARMV7PILongThunk::writeTo(uint8_t *Buf, ThunkSection &IS) const {
 void ARMV7PILongThunk::addSymbols(ThunkSection &IS) {
   ThunkSym = addSyntheticLocal(
       Saver.save("__ARMV7PILongThunk_" + Destination.getName()), STT_FUNC,
-      Offset, size(), &IS);
-  addSyntheticLocal("$a", STT_NOTYPE, Offset, 0, &IS);
+      Offset, size(), IS);
+  addSyntheticLocal("$a", STT_NOTYPE, Offset, 0, IS);
 }
 
 bool ARMV7PILongThunk::isCompatibleWith(RelType Type) const {
@@ -295,8 +295,8 @@ void ThumbV7PILongThunk::writeTo(uint8_t *Buf, ThunkSection &IS) const {
 void ThumbV7PILongThunk::addSymbols(ThunkSection &IS) {
   ThunkSym = addSyntheticLocal(
       Saver.save("__ThumbV7PILongThunk_" + Destination.getName()), STT_FUNC,
-      Offset | 0x1, size(), &IS);
-  addSyntheticLocal("$t", STT_NOTYPE, Offset, 0, &IS);
+      Offset | 0x1, size(), IS);
+  addSyntheticLocal("$t", STT_NOTYPE, Offset, 0, IS);
 }
 
 bool ThumbV7PILongThunk::isCompatibleWith(RelType Type) const {
@@ -318,7 +318,7 @@ void MipsThunk::writeTo(uint8_t *Buf, ThunkSection &) const {
 void MipsThunk::addSymbols(ThunkSection &IS) {
   ThunkSym =
       addSyntheticLocal(Saver.save("__LA25Thunk_" + Destination.getName()),
-                        STT_FUNC, Offset, size(), &IS);
+                        STT_FUNC, Offset, size(), IS);
 }
 
 InputSection *MipsThunk::getTargetInputSection() const {
@@ -342,7 +342,7 @@ void MicroMipsThunk::writeTo(uint8_t *Buf, ThunkSection &) const {
 void MicroMipsThunk::addSymbols(ThunkSection &IS) {
   ThunkSym =
       addSyntheticLocal(Saver.save("__microLA25Thunk_" + Destination.getName()),
-                        STT_FUNC, Offset, size(), &IS);
+                        STT_FUNC, Offset, size(), IS);
   ThunkSym->StOther |= STO_MIPS_MICROMIPS;
 }
 
@@ -367,7 +367,7 @@ void MicroMipsR6Thunk::writeTo(uint8_t *Buf, ThunkSection &) const {
 void MicroMipsR6Thunk::addSymbols(ThunkSection &IS) {
   ThunkSym =
       addSyntheticLocal(Saver.save("__microLA25Thunk_" + Destination.getName()),
-                        STT_FUNC, Offset, size(), &IS);
+                        STT_FUNC, Offset, size(), IS);
   ThunkSym->StOther |= STO_MIPS_MICROMIPS;
 }
 

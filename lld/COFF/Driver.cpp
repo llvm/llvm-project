@@ -227,7 +227,7 @@ static bool isDecorated(StringRef Sym) {
 void LinkerDriver::parseDirectives(StringRef S) {
   ArgParser Parser;
   // .drectve is always tokenized using Windows shell rules.
-  opt::InputArgList Args = Parser.parse(S);
+  opt::InputArgList Args = Parser.parseDirectives(S);
 
   for (auto *Arg : Args) {
     switch (Arg->getOption().getUnaliasedOption().getID()) {
@@ -245,6 +245,13 @@ void LinkerDriver::parseDirectives(StringRef S) {
       Config->Entry = addUndefined(mangle(Arg->getValue()));
       break;
     case OPT_export: {
+      // If a common header file contains dllexported function
+      // declarations, many object files may end up with having the
+      // same /EXPORT options. In order to save cost of parsing them,
+      // we dedup them first.
+      if (!DirectivesExports.insert(Arg->getValue()).second)
+        break;
+
       Export E = parseExport(Arg->getValue());
       if (Config->Machine == I386 && Config->MinGW) {
         if (!isDecorated(E.Name))
@@ -795,6 +802,13 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     SearchPaths.push_back(Arg->getValue());
   addLibSearchPaths();
 
+  // Handle /ignore
+  for (auto *Arg : Args.filtered(OPT_ignore)) {
+    if (StringRef(Arg->getValue()) == "4217")
+      Config->WarnLocallyDefinedImported = false;
+    // Other warning numbers are ignored.
+  }
+
   // Handle /out
   if (auto *Arg = Args.getLastArg(OPT_out))
     Config->OutputFile = Arg->getValue();
@@ -805,11 +819,11 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   errorHandler().Verbose = Config->Verbose;
 
   // Handle /force or /force:unresolved
-  if (Args.hasArg(OPT_force) || Args.hasArg(OPT_force_unresolved))
+  if (Args.hasArg(OPT_force, OPT_force_unresolved))
     Config->Force = true;
 
   // Handle /debug
-  if (Args.hasArg(OPT_debug) || Args.hasArg(OPT_debug_dwarf)) {
+  if (Args.hasArg(OPT_debug, OPT_debug_dwarf, OPT_debug_ghash)) {
     Config->Debug = true;
     if (auto *Arg = Args.getLastArg(OPT_debugtype))
       Config->DebugTypes = parseDebugType(Arg->getValue());
@@ -817,9 +831,11 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       Config->DebugTypes = getDefaultDebugType(Args);
   }
 
-  // Create a dummy PDB file to satisfy build sytem rules.
-  if (auto *Arg = Args.getLastArg(OPT_pdb))
-    Config->PDBPath = Arg->getValue();
+  // Handle /pdb
+  bool ShouldCreatePDB = Args.hasArg(OPT_debug, OPT_debug_ghash);
+  if (ShouldCreatePDB)
+    if (auto *Arg = Args.getLastArg(OPT_pdb))
+      Config->PDBPath = Arg->getValue();
 
   // Handle /noentry
   if (Args.hasArg(OPT_noentry)) {
@@ -1018,6 +1034,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->NxCompat = Args.hasFlag(OPT_nxcompat, OPT_nxcompat_no, true);
   Config->TerminalServerAware = Args.hasFlag(OPT_tsaware, OPT_tsaware_no, true);
   Config->DebugDwarf = Args.hasArg(OPT_debug_dwarf);
+  Config->DebugGHashes = Args.hasArg(OPT_debug_ghash);
 
   Config->MapFile = getMapFile(Args);
 
@@ -1144,14 +1161,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   }
 
   // Put the PDB next to the image if no /pdb flag was passed.
-  if (Config->Debug && Config->PDBPath.empty()) {
+  if (ShouldCreatePDB && Config->PDBPath.empty()) {
     Config->PDBPath = Config->OutputFile;
     sys::path::replace_extension(Config->PDBPath, ".pdb");
   }
-
-  // Disable PDB generation if the user requested it.
-  if (Args.hasArg(OPT_nopdb) || Args.hasArg(OPT_debug_dwarf))
-    Config->PDBPath = "";
 
   // Set default image base if /base is not given.
   if (Config->ImageBase == uint64_t(-1))

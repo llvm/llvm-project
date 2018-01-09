@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lld/Common/Driver.h"
+#include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringExtras.h"
@@ -29,11 +30,6 @@
 
 using namespace lld;
 using namespace llvm;
-
-LLVM_ATTRIBUTE_NORETURN static void error(const Twine &Msg) {
-  errs() << Msg << "\n";
-  exit(1);
-}
 
 // Create OptTable
 enum {
@@ -73,11 +69,11 @@ opt::InputArgList MinGWOptTable::parse(ArrayRef<const char *> Argv) {
   opt::InputArgList Args = this->ParseArgs(Vec, MissingIndex, MissingCount);
 
   if (MissingCount)
-    error(StringRef(Args.getArgString(MissingIndex)) + ": missing argument");
+    fatal(StringRef(Args.getArgString(MissingIndex)) + ": missing argument");
   for (auto *Arg : Args.filtered(OPT_UNKNOWN))
-    error("unknown argument: " + Arg->getSpelling());
+    fatal("unknown argument: " + Arg->getSpelling());
   if (!Args.hasArg(OPT_INPUT) && !Args.hasArg(OPT_l))
-    error("no input files");
+    fatal("no input files");
   return Args;
 }
 
@@ -97,7 +93,7 @@ searchLibrary(StringRef Name, ArrayRef<StringRef> SearchPaths, bool BStatic) {
     for (StringRef Dir : SearchPaths)
       if (Optional<std::string> S = findFile(Dir, Name.substr(1)))
         return *S;
-    error("unable to find library -l" + Name);
+    fatal("unable to find library -l" + Name);
   }
 
   for (StringRef Dir : SearchPaths) {
@@ -107,7 +103,7 @@ searchLibrary(StringRef Name, ArrayRef<StringRef> SearchPaths, bool BStatic) {
     if (Optional<std::string> S = findFile(Dir, "lib" + Name + ".a"))
       return *S;
   }
-  error("unable to find library -l" + Name);
+  fatal("unable to find library -l" + Name);
 }
 
 // Convert Unix-ish command line arguments to Windows-ish ones and
@@ -175,7 +171,7 @@ bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
     else if (S == "safe" || S == "none")
       Add("-opt:noicf");
     else
-      error("unknown parameter: --icf=" + S);
+      fatal("unknown parameter: --icf=" + S);
   } else {
     Add("-opt:noicf");
   }
@@ -191,7 +187,7 @@ bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
     else if (S == "arm64pe")
       Add("-machine:arm64");
     else
-      error("unknown parameter: -m" + S);
+      fatal("unknown parameter: -m" + S);
   }
 
   for (auto *A : Args.filtered(OPT_mllvm))

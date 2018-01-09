@@ -1,5 +1,5 @@
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %p/Inputs/many-funcs.ll -o %t.many.o
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-uknown-wasm %s -o %t.o
+; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %p/Inputs/many-funcs.ll -o %t.many.o
+; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %s -o %t.o
 ; RUN: lld -flavor wasm -r -o %t.wasm %t.many.o %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
@@ -688,9 +688,8 @@ entry:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            .data.g0
 ; CHECK-NEXT:         Alignment:       4
-; CHECK-NEXT:         Flags:           0
+; CHECK-NEXT:         Flags:           [ ]
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Name:            .data.foo
 ; CHECK-NEXT:         Alignment:       4
-; CHECK-NEXT:         Flags:           0
-
+; CHECK-NEXT:         Flags:           [ ]

@@ -2221,11 +2221,10 @@ SwiftLanguageRuntime::DoArchetypeBindingForType(StackFrame &stack_frame,
             if (swift::ArchetypeType *candidate_archetype =
                     llvm::dyn_cast_or_null<swift::ArchetypeType>(
                         candidate_type.getPointer())) {
-              llvm::StringRef candidate_name =
-                  candidate_archetype->getFullName();
+              ConstString candidate_name(candidate_archetype->getFullName());
 
               CompilerType concrete_type = this->GetConcreteType(
-                  &stack_frame, ConstString(candidate_name));
+                  &stack_frame, candidate_name);
               Status import_error;
               CompilerType target_concrete_type =
                   ast_context->ImportType(concrete_type, import_error);
@@ -2812,6 +2811,7 @@ GetThunkKind(llvm::StringRef symbol_name)
     if (node_ptr->getFirstChild()->getKind() 
            == swift::Demangle::Node::Kind::Class)
       return ThunkKind::AllocatingInit;
+    break;
   default:
     break;
   }

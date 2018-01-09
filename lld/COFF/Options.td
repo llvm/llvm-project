@@ -29,6 +29,7 @@ def export  : P<"export", "Export a function">;
 // No help text because /failifmismatch is not intended to be used by the user.
 def failifmismatch : P<"failifmismatch", "">;
 def heap    : P<"heap", "Size of the heap">;
+def ignore : P<"ignore", "Specify warning codes to ignore">;
 def implib  : P<"implib", "Import library name">;
 def libpath : P<"libpath", "Additional library search path">;
 def linkrepro : P<"linkrepro", "Dump linker invocation and input files for debugging">;
@@ -117,9 +118,9 @@ def help : F<"help">;
 def help_q : Flag<["/?", "-?"], "">, Alias<help>;
 
 // LLD extensions
+def debug_ghash : F<"debug:ghash">;
 def debug_dwarf : F<"debug:dwarf">;
 def export_all_symbols : F<"export-all-symbols">;
-def nopdb : F<"nopdb">, HelpText<"Disable PDB generation for DWARF users">;
 def lldmingw : F<"lldmingw">;
 def msvclto : F<"msvclto">;
 def output_def : Joined<["/", "-"], "output-def:">;
@@ -155,7 +156,6 @@ def fastfail : F<"fastfail">;
 def delay : QF<"delay">;
 def errorreport : QF<"errorreport">;
 def idlout : QF<"idlout">;
-def ignore : QF<"ignore">;
 def maxilksize : QF<"maxilksize">;
 def natvis : QF<"natvis">;
 def pdbaltpath : QF<"pdbaltpath">;

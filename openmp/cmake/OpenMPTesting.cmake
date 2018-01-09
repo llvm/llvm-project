@@ -124,6 +124,8 @@ endif()
 function(set_test_compiler_features)
   if ("${OPENMP_TEST_COMPILER_ID}" STREQUAL "GNU")
     set(comp "gcc")
+  elseif ("${OPENMP_TEST_COMPILER_ID}" STREQUAL "Intel")
+    set(comp "icc")
   else()
     # Just use the lowercase of the compiler ID as fallback.
     string(TOLOWER "${OPENMP_TEST_COMPILER_ID}" comp)

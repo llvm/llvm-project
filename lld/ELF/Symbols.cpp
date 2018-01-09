@@ -45,8 +45,6 @@ static uint64_t getSymVA(const Symbol &Sym, int64_t &Addend) {
   case Symbol::DefinedKind: {
     auto &D = cast<Defined>(Sym);
     SectionBase *IS = D.Section;
-    if (auto *ISB = dyn_cast_or_null<InputSectionBase>(IS))
-      IS = ISB->Repl;
 
     // According to the ELF spec reference to a local symbol from outside
     // the group are not allowed. Unfortunately .eh_frame breaks that rule
@@ -59,6 +57,7 @@ static uint64_t getSymVA(const Symbol &Sym, int64_t &Addend) {
     if (!IS)
       return D.Value;
 
+    IS = IS->Repl;
     uint64_t Offset = D.Value;
 
     // An object in an SHF_MERGE section might be referenced via a
@@ -117,12 +116,6 @@ static uint64_t getSymVA(const Symbol &Sym, int64_t &Addend) {
   llvm_unreachable("invalid symbol kind");
 }
 
-// Returns true if this is a weak undefined symbol.
-bool Symbol::isUndefWeak() const {
-  // See comment on Lazy in Symbols.h for the details.
-  return isWeak() && (isUndefined() || isLazy());
-}
-
 uint64_t Symbol::getVA(int64_t Addend) const {
   uint64_t OutVA = getSymVA(*this, Addend);
   return OutVA + Addend;
@@ -161,8 +154,8 @@ uint64_t Symbol::getSize() const {
 
 OutputSection *Symbol::getOutputSection() const {
   if (auto *S = dyn_cast<Defined>(this)) {
-    if (S->Section)
-      return S->Section->getOutputSection();
+    if (auto *Sec = S->Section)
+      return Sec->Repl->getOutputSection();
     return nullptr;
   }
 
@@ -225,21 +218,21 @@ InputFile *Lazy::fetch() {
   return cast<LazyObject>(this)->fetch();
 }
 
-ArchiveFile *LazyArchive::getFile() { return cast<ArchiveFile>(File); }
+ArchiveFile &LazyArchive::getFile() { return *cast<ArchiveFile>(File); }
 
 InputFile *LazyArchive::fetch() {
-  std::pair<MemoryBufferRef, uint64_t> MBInfo = getFile()->getMember(&Sym);
+  std::pair<MemoryBufferRef, uint64_t> MBInfo = getFile().getMember(&Sym);
 
   // getMember returns an empty buffer if the member was already
   // read from the library.
   if (MBInfo.first.getBuffer().empty())
     return nullptr;
-  return createObjectFile(MBInfo.first, getFile()->getName(), MBInfo.second);
+  return createObjectFile(MBInfo.first, getFile().getName(), MBInfo.second);
 }
 
-LazyObjFile *LazyObject::getFile() { return cast<LazyObjFile>(File); }
+LazyObjFile &LazyObject::getFile() { return *cast<LazyObjFile>(File); }
 
-InputFile *LazyObject::fetch() { return getFile()->fetch(); }
+InputFile *LazyObject::fetch() { return getFile().fetch(); }
 
 uint8_t Symbol::computeBinding() const {
   if (Config->Relocatable)

@@ -24,7 +24,7 @@
 #include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/DataBufferLLVM.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
@@ -32,6 +32,7 @@
 
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Object/Decompressor.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -405,8 +406,7 @@ ObjectFile *ObjectFileELF::CreateInstance(const lldb::ModuleSP &module_sp,
                                           lldb::offset_t file_offset,
                                           lldb::offset_t length) {
   if (!data_sp) {
-    data_sp =
-        DataBufferLLVM::CreateSliceFromPath(file->GetPath(), length, file_offset, true);
+    data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp)
       return nullptr;
     data_offset = 0;
@@ -423,8 +423,7 @@ ObjectFile *ObjectFileELF::CreateInstance(const lldb::ModuleSP &module_sp,
 
   // Update the data to contain the entire file if it doesn't already
   if (data_sp->GetByteSize() < length) {
-    data_sp =
-        DataBufferLLVM::CreateSliceFromPath(file->GetPath(), length, file_offset, true);
+    data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp)
       return nullptr;
     data_offset = 0;
@@ -683,8 +682,7 @@ size_t ObjectFileELF::GetModuleSpecifications(
           size_t section_header_end = header.e_shoff + header.e_shentsize;
           if (header.HasHeaderExtension() &&
             section_header_end > data_sp->GetByteSize()) {
-            data_sp = DataBufferLLVM::CreateSliceFromPath(
-                file.GetPath(), section_header_end, file_offset);
+            data_sp = MapFileData(file, section_header_end, file_offset);
             if (data_sp) {
               data.SetData(data_sp);
               lldb::offset_t header_offset = data_offset;
@@ -697,8 +695,7 @@ size_t ObjectFileELF::GetModuleSpecifications(
           section_header_end =
               header.e_shoff + header.e_shnum * header.e_shentsize;
           if (section_header_end > data_sp->GetByteSize()) {
-            data_sp = DataBufferLLVM::CreateSliceFromPath(
-                file.GetPath(), section_header_end, file_offset);
+            data_sp = MapFileData(file, section_header_end, file_offset);
             if (data_sp)
               data.SetData(data_sp);
           }
@@ -740,8 +737,7 @@ size_t ObjectFileELF::GetModuleSpecifications(
                 size_t program_headers_end =
                     header.e_phoff + header.e_phnum * header.e_phentsize;
                 if (program_headers_end > data_sp->GetByteSize()) {
-                  data_sp = DataBufferLLVM::CreateSliceFromPath(
-                      file.GetPath(), program_headers_end, file_offset);
+                  data_sp = MapFileData(file, program_headers_end, file_offset);
                   if (data_sp)
                     data.SetData(data_sp);
                 }
@@ -756,8 +752,7 @@ size_t ObjectFileELF::GetModuleSpecifications(
                 }
 
                 if (segment_data_end > data_sp->GetByteSize()) {
-                  data_sp = DataBufferLLVM::CreateSliceFromPath(
-                      file.GetPath(), segment_data_end, file_offset);
+                  data_sp = MapFileData(file, segment_data_end, file_offset);
                   if (data_sp)
                     data.SetData(data_sp);
                 }
@@ -766,8 +761,7 @@ size_t ObjectFileELF::GetModuleSpecifications(
                     CalculateELFNotesSegmentsCRC32(program_headers, data);
               } else {
                 // Need to map entire file into memory to calculate the crc.
-                data_sp = DataBufferLLVM::CreateSliceFromPath(file.GetPath(), -1,
-                                                         file_offset);
+                data_sp = MapFileData(file, -1, file_offset);
                 if (data_sp) {
                   data.SetData(data_sp);
                   gnu_debuglink_crc = calc_gnu_debuglink_crc32(
@@ -3473,4 +3467,57 @@ ObjectFile::Strata ObjectFileELF::CalculateStrata() {
     break;
   }
   return eStrataUnknown;
+}
+
+size_t ObjectFileELF::ReadSectionData(Section *section,
+                       lldb::offset_t section_offset, void *dst,
+                       size_t dst_len) {
+  // If some other objectfile owns this data, pass this to them.
+  if (section->GetObjectFile() != this)
+    return section->GetObjectFile()->ReadSectionData(section, section_offset,
+                                                     dst, dst_len);
+
+  if (!section->Test(SHF_COMPRESSED))
+    return ObjectFile::ReadSectionData(section, section_offset, dst, dst_len);
+
+  // For compressed sections we need to read to full data to be able to
+  // decompress.
+  DataExtractor data;
+  ReadSectionData(section, data);
+  return data.CopyData(section_offset, dst_len, dst);
+}
+
+size_t ObjectFileELF::ReadSectionData(Section *section,
+                                      DataExtractor &section_data) {
+  // If some other objectfile owns this data, pass this to them.
+  if (section->GetObjectFile() != this)
+    return section->GetObjectFile()->ReadSectionData(section, section_data);
+
+  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_MODULES);
+
+  size_t result = ObjectFile::ReadSectionData(section, section_data);
+  if (result == 0 || !section->Test(SHF_COMPRESSED))
+    return result;
+
+  auto Decompressor = llvm::object::Decompressor::create(
+      section->GetName().GetStringRef(),
+      {reinterpret_cast<const char *>(section_data.GetDataStart()),
+       size_t(section_data.GetByteSize())},
+      GetByteOrder() == eByteOrderLittle, GetAddressByteSize() == 8);
+  if (!Decompressor) {
+    LLDB_LOG(log, "Unable to initialize decompressor for section {0}: {1}",
+             section->GetName(), llvm::toString(Decompressor.takeError()));
+    return result;
+  }
+  auto buffer_sp =
+      std::make_shared<DataBufferHeap>(Decompressor->getDecompressedSize(), 0);
+  if (auto Error = Decompressor->decompress(
+          {reinterpret_cast<char *>(buffer_sp->GetBytes()),
+           size_t(buffer_sp->GetByteSize())})) {
+    LLDB_LOG(log, "Decompression of section {0} failed: {1}",
+             section->GetName(), llvm::toString(std::move(Error)));
+    return result;
+  }
+  section_data.SetData(buffer_sp);
+  return buffer_sp->GetByteSize();
 }
