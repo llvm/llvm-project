@@ -2640,6 +2640,12 @@ public:
   /// it is not used.
   bool DeclMustBeEmitted(const Decl *D);
 
+  /// \brief Visits all versions of a multiversioned function with the passed
+  /// predicate.
+  void forEachMultiversionedFunctionVersion(
+      const FunctionDecl *FD,
+      llvm::function_ref<void(const FunctionDecl *)> Pred) const;
+
   const CXXConstructorDecl *
   getCopyConstructorForExceptionObject(CXXRecordDecl *RD);
 

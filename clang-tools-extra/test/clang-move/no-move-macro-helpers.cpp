@@ -1,6 +1,6 @@
 // RUN: mkdir -p %T/no-move-macro-helper
-// RUN: cp %S/Inputs/macro_helper_test.h  %T/no-move-macro-helper/macro_helper_test.h
-// RUN: cp %S/Inputs/macro_helper_test.cpp %T/no-move-macro-helper/macro_helper_test.cpp
+// RUN: cat %S/Inputs/macro_helper_test.h > %T/no-move-macro-helper/macro_helper_test.h
+// RUN: cat %S/Inputs/macro_helper_test.cpp > %T/no-move-macro-helper/macro_helper_test.cpp
 // RUN: cd %T/no-move-macro-helper
 //
 // -----------------------------------------------------------------------------
@@ -24,8 +24,8 @@
 // -----------------------------------------------------------------------------
 // Test moving all.
 // -----------------------------------------------------------------------------
-// RUN: cp %S/Inputs/macro_helper_test.h  %T/no-move-macro-helper/macro_helper_test.h
-// RUN: cp %S/Inputs/macro_helper_test.cpp %T/no-move-macro-helper/macro_helper_test.cpp
+// RUN: cat %S/Inputs/macro_helper_test.h > %T/no-move-macro-helper/macro_helper_test.h
+// RUN: cat %S/Inputs/macro_helper_test.cpp > %T/no-move-macro-helper/macro_helper_test.cpp
 // RUN: clang-move -names="A, f1" -new_cc=%T/no-move-macro-helper/new_test.cpp -new_header=%T/no-move-macro-helper/new_test.h -old_cc=%T/no-move-macro-helper/macro_helper_test.cpp -old_header=%T/no-move-macro-helper/macro_helper_test.h %T/no-move-macro-helper/macro_helper_test.cpp -- -std=c++11
 //
 // RUN: FileCheck -input-file=%T/no-move-macro-helper/new_test.h -check-prefix=CHECK-NEW-TEST-CASE2-H %s

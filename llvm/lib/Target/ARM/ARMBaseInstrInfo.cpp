@@ -2277,9 +2277,9 @@ bool llvm::tryFoldSPUpdateIntoPushPop(const ARMSubtarget &Subtarget,
        --CurRegEnc) {
     unsigned CurReg = RegClass->getRegister(CurRegEnc);
     if (!IsPop) {
-      // Pushing any register is completely harmless, mark the
-      // register involved as undef since we don't care about it in
-      // the slightest.
+      // Pushing any register is completely harmless, mark the register involved
+      // as undef since we don't care about its value and must not restore it
+      // during stack unwinding.
       RegList.push_back(MachineOperand::CreateReg(CurReg, false, false,
                                                   false, false, true));
       --RegsNeeded;

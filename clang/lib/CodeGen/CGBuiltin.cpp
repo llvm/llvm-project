@@ -7791,7 +7791,9 @@ static Value *EmitX86Select(CodeGenFunction &CGF,
 }
 
 static Value *EmitX86MaskedCompare(CodeGenFunction &CGF, unsigned CC,
-                                   bool Signed, SmallVectorImpl<Value *> &Ops) {
+                                   bool Signed, ArrayRef<Value *> Ops) {
+  assert((Ops.size() == 2 || Ops.size() == 4) &&
+         "Unexpected number of arguments");
   unsigned NumElts = Ops[0]->getType()->getVectorNumElements();
   Value *Cmp;
 
@@ -7815,9 +7817,11 @@ static Value *EmitX86MaskedCompare(CodeGenFunction &CGF, unsigned CC,
     Cmp = CGF.Builder.CreateICmp(Pred, Ops[0], Ops[1]);
   }
 
-  const auto *C = dyn_cast<Constant>(Ops.back());
-  if (!C || !C->isAllOnesValue())
-    Cmp = CGF.Builder.CreateAnd(Cmp, getMaskVecValue(CGF, Ops.back(), NumElts));
+  if (Ops.size() == 4) {
+    const auto *C = dyn_cast<Constant>(Ops[3]);
+    if (!C || !C->isAllOnesValue())
+      Cmp = CGF.Builder.CreateAnd(Cmp, getMaskVecValue(CGF, Ops[3], NumElts));
+  }
 
   if (NumElts < 8) {
     uint32_t Indices[8];
@@ -7831,6 +7835,11 @@ static Value *EmitX86MaskedCompare(CodeGenFunction &CGF, unsigned CC,
   return CGF.Builder.CreateBitCast(Cmp,
                                    IntegerType::get(CGF.getLLVMContext(),
                                                     std::max(NumElts, 8U)));
+}
+
+static Value *EmitX86ConvertToMask(CodeGenFunction &CGF, Value *In) {
+  Value *Zero = Constant::getNullValue(In->getType());
+  return EmitX86MaskedCompare(CGF, 1, true, { In, Zero });
 }
 
 static Value *EmitX86Abs(CodeGenFunction &CGF, ArrayRef<Value *> Ops) {
@@ -8178,6 +8187,20 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_cvtmask2q256:
   case X86::BI__builtin_ia32_cvtmask2q512:
     return EmitX86SExtMask(*this, Ops[0], ConvertType(E->getType()));
+
+  case X86::BI__builtin_ia32_cvtb2mask128:
+  case X86::BI__builtin_ia32_cvtb2mask256:
+  case X86::BI__builtin_ia32_cvtb2mask512:
+  case X86::BI__builtin_ia32_cvtw2mask128:
+  case X86::BI__builtin_ia32_cvtw2mask256:
+  case X86::BI__builtin_ia32_cvtw2mask512:
+  case X86::BI__builtin_ia32_cvtd2mask128:
+  case X86::BI__builtin_ia32_cvtd2mask256:
+  case X86::BI__builtin_ia32_cvtd2mask512:
+  case X86::BI__builtin_ia32_cvtq2mask128:
+  case X86::BI__builtin_ia32_cvtq2mask256:
+  case X86::BI__builtin_ia32_cvtq2mask512:
+    return EmitX86ConvertToMask(*this, Ops[0]);
 
   case X86::BI__builtin_ia32_movdqa32store128_mask:
   case X86::BI__builtin_ia32_movdqa64store128_mask:

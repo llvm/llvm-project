@@ -720,11 +720,13 @@ struct InstructionMapper {
   void convertToUnsignedVec(MachineBasicBlock &MBB,
                             const TargetRegisterInfo &TRI,
                             const TargetInstrInfo &TII) {
+    unsigned Flags = TII.getMachineOutlinerMBBFlags(MBB);
+
     for (MachineBasicBlock::iterator It = MBB.begin(), Et = MBB.end(); It != Et;
          It++) {
 
       // Keep track of where this instruction is in the module.
-      switch (TII.getOutliningType(*It)) {
+      switch (TII.getOutliningType(It, Flags)) {
       case TargetInstrInfo::MachineOutlinerInstrType::Illegal:
         mapToIllegalUnsigned(It);
         break;
@@ -1237,7 +1239,6 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
   }
 
   TII.insertOutlinerEpilogue(MBB, MF, OF.MInfo);
-
   return &MF;
 }
 
@@ -1341,7 +1342,7 @@ bool MachineOutliner::runOnModule(Module &M) {
       MMI.getOrCreateMachineFunction(*M.begin()).getSubtarget();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
   const TargetInstrInfo *TII = STI.getInstrInfo();
-
+  
   InstructionMapper Mapper;
 
   // Build instruction mappings for each function in the module.

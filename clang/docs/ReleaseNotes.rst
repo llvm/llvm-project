@@ -80,6 +80,12 @@ Clang now supports the ...
 Attribute Changes in Clang
 --------------------------
 
+- Clang now supports function multiversioning with attribute 'target' on ELF
+  based x86/x86-64 environments by using indirect functions. This implementation
+  has a few minor limitations over the GCC implementation for the sake of AST
+  sanity, however it is otherwise compatible with existing code using this
+  feature for GCC. Consult the documentation for the target attribute for more
+  information.
 - ...
 
 Windows Support

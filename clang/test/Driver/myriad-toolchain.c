@@ -41,7 +41,7 @@
 // RUN:   | FileCheck %s -check-prefix=MOVICOMPILE
 // MOVICOMPILE: moviCompile{{(.exe)?}}" "-S" "-fno-exceptions" "-DMYRIAD2" "-mcpu=myriad2.2" "-isystem" "somewhere" "-I" "common"
 // MOVICOMPILE: moviAsm{{(.exe)?}}" "-no6thSlotCompression" "-cv:myriad2.2" "-noSPrefixing" "-a"
-// MOVICOMPILE: "-yippee" "-i:somewhere" "-i:common" "-elf"
+// MOVICOMPILE: "-yippee" "-i:somewhere" "-i:common"
 
 // RUN: %clang -target shave-myriad -c -### %s -DEFINE_ME -UNDEFINE_ME 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=DEFINES
