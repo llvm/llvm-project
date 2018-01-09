@@ -203,6 +203,8 @@ def err_target_unsupported_execute_only : Error<
   "execute only is not supported for the %0 sub-architecture">;
 def err_opt_not_valid_with_opt : Error<
   "option '%0' cannot be specified with '%1'">;
+def err_opt_not_valid_without_opt : Error<
+  "option '%0' cannot be specified without '%1'">;
 
 // Source manager
 def err_cannot_open_file : Error<"cannot open file '%0': %1">, DefaultFatal;

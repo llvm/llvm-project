@@ -503,3 +503,17 @@
 // CHECK-WINDOWS-ISO10646: "-fwchar-type=int"
 // CHECK-WINDOWS-ISO10646: "-fsigned-wchar"
 
+// RUN: %clang -### -S -fcf-protection %s 2>&1 | FileCheck -check-prefix=CHECK-CF-PROTECTION-FULL %s
+// RUN: %clang -### -S %s 2>&1 | FileCheck -check-prefix=CHECK-NO-CF-PROTECTION-FULL %s
+// RUN: %clang -### -S -fcf-protection=full %s 2>&1 | FileCheck -check-prefix=CHECK-CF-PROTECTION-FULL %s
+// RUN: %clang -### -S %s 2>&1 | FileCheck -check-prefix=CHECK-NO-CF-PROTECTION-FULL %s
+// CHECK-CF-PROTECTION-FULL: -fcf-protection=full
+// CHECK-NO-CF-PROTECTION-FULL-NOT: -fcf-protection=full
+// RUN: %clang -### -S -fcf-protection=return %s 2>&1 | FileCheck -check-prefix=CHECK-CF-PROTECTION-RETURN %s
+// RUN: %clang -### -S %s 2>&1 | FileCheck -check-prefix=CHECK-NO-CF-PROTECTION-RETURN %s
+// CHECK-CF-PROTECTION-RETURN: -fcf-protection=return
+// CHECK-NO-CF-PROTECTION-RETURN-NOT: -fcf-protection=return
+// RUN: %clang -### -S -fcf-protection=branch %s 2>&1 | FileCheck -check-prefix=CHECK-CF-PROTECTION-BRANCH %s
+// RUN: %clang -### -S %s 2>&1 | FileCheck -check-prefix=CHECK-NO-CF-PROTECTION-BRANCH %s
+// CHECK-CF-PROTECTION-BRANCH: -fcf-protection=branch
+// CHECK-NO-CF-PROTECTION-BRANCH-NOT: -fcf-protection=branch

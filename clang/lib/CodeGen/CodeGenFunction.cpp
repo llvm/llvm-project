@@ -887,7 +887,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
   }
 
   // Apply xray attributes to the function (as a string, for now)
-  if (D && ShouldXRayInstrumentFunction()) {
+  bool InstrumentXray = ShouldXRayInstrumentFunction();
+  if (D && InstrumentXray) {
     if (const auto *XRayAttr = D->getAttr<XRayInstrumentAttr>()) {
       if (XRayAttr->alwaysXRayInstrument())
         Fn->addFnAttr("function-instrument", "xray-always");
