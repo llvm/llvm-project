@@ -185,7 +185,7 @@ CanonicalDeclaration:
               UnorderedElementsAre(QName("clang::Foo2")));
 
   std::string ConcatenatedYAML =
-      SymbolToYAML(Symbols1) + SymbolToYAML(Symbols2);
+      SymbolsToYAML(Symbols1) + SymbolsToYAML(Symbols2);
   auto ConcatenatedSymbols = SymbolFromYAML(ConcatenatedYAML);
   EXPECT_THAT(ConcatenatedSymbols,
               UnorderedElementsAre(QName("clang::Foo1"),
