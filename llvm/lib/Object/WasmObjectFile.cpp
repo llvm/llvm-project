@@ -632,6 +632,7 @@ Error WasmObjectFile::parseGlobalSection(const uint8_t *Ptr, const uint8_t *End)
   Globals.reserve(Count);
   while (Count--) {
     wasm::WasmGlobal Global;
+    Global.Index = NumImportedGlobals + Globals.size();
     Global.Type = readVarint7(Ptr);
     Global.Mutable = readVaruint1(Ptr);
     if (Error Err = readInitExpr(Global.InitExpr, Ptr))
@@ -706,6 +707,7 @@ Error WasmObjectFile::parseCodeSection(const uint8_t *Ptr, const uint8_t *End) {
     uint32_t Size = readVaruint32(Ptr);
     const uint8_t *FunctionEnd = Ptr + Size;
 
+    Function.Index = NumImportedFunctions + Functions.size();
     Function.CodeSectionOffset = FunctionStart - CodeSectionStart;
     Function.Size = FunctionEnd - FunctionStart;
 
@@ -858,7 +860,7 @@ uint64_t WasmObjectFile::getWasmSymbolValue(const WasmSymbol& Sym) const {
   case WasmSymbol::SymbolType::GLOBAL_EXPORT: {
     uint32_t GlobalIndex = Sym.ElementIndex - NumImportedGlobals;
     assert(GlobalIndex < Globals.size());
-    const wasm::WasmGlobal& Global = Globals[GlobalIndex];
+    const wasm::WasmGlobal &Global = Globals[GlobalIndex];
     // WasmSymbols correspond only to I32_CONST globals
     assert(Global.InitExpr.Opcode == wasm::WASM_OPCODE_I32_CONST);
     return Global.InitExpr.Value.Int32;

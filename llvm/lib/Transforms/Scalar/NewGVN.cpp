@@ -4058,7 +4058,8 @@ bool NewGVN::eliminateInstructions(Function &F) {
           Value *DominatingLeader = EliminationStack.back();
 
           auto *II = dyn_cast<IntrinsicInst>(DominatingLeader);
-          if (II && II->getIntrinsicID() == Intrinsic::ssa_copy)
+          bool isSSACopy = II && II->getIntrinsicID() == Intrinsic::ssa_copy;
+          if (isSSACopy)
             DominatingLeader = II->getOperand(0);
 
           // Don't replace our existing users with ourselves.
@@ -4081,7 +4082,9 @@ bool NewGVN::eliminateInstructions(Function &F) {
           // It's about to be alive again.
           if (LeaderUseCount == 0 && isa<Instruction>(DominatingLeader))
             ProbablyDead.erase(cast<Instruction>(DominatingLeader));
-          if (LeaderUseCount == 0 && II)
+          // Copy instructions, however, are still dead beacuse we use their
+          // operand as the leader.
+          if (LeaderUseCount == 0 && isSSACopy)
             ProbablyDead.insert(II);
           ++LeaderUseCount;
           AnythingReplaced = true;

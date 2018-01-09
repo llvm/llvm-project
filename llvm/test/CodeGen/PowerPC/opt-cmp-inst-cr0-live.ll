@@ -7,11 +7,11 @@ define signext i32 @fn1(i32 %baz) {
   %2 = zext i32 %1 to i64
   %3 = shl i64 %2, 48
   %4 = ashr exact i64 %3, 48
-; CHECK: ANDIo8 killed {{[^,]+}}, 65520, implicit-def dead %cr0;
+; CHECK: ANDIo8 killed {{[^,]+}}, 65520, implicit-def dead %cr0
 ; CHECK: CMPLDI
 ; CHECK: BCC
 
-; CHECK: ANDIo8 {{[^,]+}}, 65520, implicit-def %cr0;
+; CHECK: ANDIo8 {{[^,]+}}, 65520, implicit-def %cr0
 ; CHECK: COPY %cr0
 ; CHECK: BCC
   %5 = icmp eq i64 %4, 0
@@ -26,8 +26,8 @@ bar:
 
 ; CHECK-LABEL: fn2
 define signext i32 @fn2(i64 %a, i64 %b) {
-; CHECK: OR8o {{[^, ]+}}, {{[^, ]+}}, implicit-def %cr0;
-; CHECK: [[CREG:[^, ]+]]:crrc = COPY killed %cr0
+; CHECK: OR8o {{[^, ]+}}, {{[^, ]+}}, implicit-def %cr0
+; CHECK: [[CREG:[^, ]+]]:crrc = COPY killed %cr
 ; CHECK: BCC 12, killed [[CREG]]
   %1 = or i64 %b, %a
   %2 = icmp sgt i64 %1, -1
@@ -42,7 +42,7 @@ bar:
 
 ; CHECK-LABEL: fn3
 define signext i32 @fn3(i32 %a) {
-; CHECK: ANDIo killed {{[%0-9]+}}, 10, implicit-def %cr0;
+; CHECK: ANDIo killed {{[%0-9]+}}, 10, implicit-def %cr0
 ; CHECK: [[CREG:[^, ]+]]:crrc = COPY %cr0
 ; CHECK: BCC 76, killed [[CREG]]
   %1 = and i32 %a, 10

@@ -6,7 +6,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefix=AVX --check-prefix=AVX2 --check-prefix=AVX2-SLOW
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-shuffle | FileCheck %s --check-prefix=AVX --check-prefix=AVX2 --check-prefix=AVX2-FAST
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s --check-prefix=AVX --check-prefix=AVX512 --check-prefix=AVX512F
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefix=AVX --check-prefix=AVX512 --check-prefix=AVX512BW
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw,+fast-variable-shuffle | FileCheck %s --check-prefixes=AVX,AVX512,AVX512BW
 
 define <8 x i16> @zext_16i8_to_8i16(<16 x i8> %A) nounwind uwtable readnone ssp {
 ; SSE2-LABEL: zext_16i8_to_8i16:
@@ -1929,11 +1929,16 @@ define <4 x i32> @shuf_zext_8i16_to_4i32_offset1(<8 x i16> %A) nounwind uwtable 
 ; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,3],zero,zero,xmm0[4,5],zero,zero,xmm0[6,7],zero,zero,xmm0[8,9],zero,zero
 ; AVX2-FAST-NEXT:    retq
 ;
-; AVX512-LABEL: shuf_zext_8i16_to_4i32_offset1:
-; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[2,3,4,5,6,7,8,9,10,11,12,13,14,15],zero,zero
-; AVX512-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: shuf_zext_8i16_to_4i32_offset1:
+; AVX512F:       # %bb.0: # %entry
+; AVX512F-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[2,3,4,5,6,7,8,9,10,11,12,13,14,15],zero,zero
+; AVX512F-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: shuf_zext_8i16_to_4i32_offset1:
+; AVX512BW:       # %bb.0: # %entry
+; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,3],zero,zero,xmm0[4,5],zero,zero,xmm0[6,7],zero,zero,xmm0[8,9],zero,zero
+; AVX512BW-NEXT:    retq
 entry:
   %B = shufflevector <8 x i16> %A, <8 x i16> zeroinitializer, <8 x i32> <i32 1, i32 8, i32 2, i32 8, i32 3, i32 8, i32 4, i32 8>
   %Z = bitcast <8 x i16> %B to <4 x i32>

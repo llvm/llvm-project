@@ -45,6 +45,8 @@ private:
   int writeSectionContent(raw_ostream &OS, WasmYAML::NameSection &Section);
   int writeSectionContent(raw_ostream &OS, WasmYAML::LinkingSection &Section);
   WasmYAML::Object &Obj;
+  uint32_t NumImportedFunctions = 0;
+  uint32_t NumImportedGlobals = 0;
 };
 
 static int writeUint64(raw_ostream &OS, uint64_t Value) {
@@ -101,7 +103,7 @@ static int writeInitExpr(const wasm::WasmInitExpr &InitExpr, raw_ostream &OS) {
     encodeULEB128(InitExpr.Value.Global, OS);
     break;
   default:
-    errs() << "Unknown opcode in init_expr: " << InitExpr.Opcode;
+    errs() << "Unknown opcode in init_expr: " << InitExpr.Opcode << "\n";
     return 1;
   }
   writeUint8(OS, wasm::WASM_OPCODE_END);
@@ -211,7 +213,13 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
 int WasmWriter::writeSectionContent(raw_ostream &OS,
                                     WasmYAML::TypeSection &Section) {
   encodeULEB128(Section.Signatures.size(), OS);
+  uint32_t ExpectedIndex = 0;
   for (const WasmYAML::Signature &Sig : Section.Signatures) {
+    if (Sig.Index != ExpectedIndex) {
+      errs() << "Unexpected type index: " << Sig.Index << "\n";
+      return 1;
+    }
+    ++ExpectedIndex;
     encodeSLEB128(Sig.Form, OS);
     encodeULEB128(Sig.ParamTypes.size(), OS);
     for (auto ParamType : Sig.ParamTypes)
@@ -236,10 +244,12 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
     switch (Import.Kind) {
     case wasm::WASM_EXTERNAL_FUNCTION:
       encodeULEB128(Import.SigIndex, OS);
+      NumImportedFunctions++;
       break;
     case wasm::WASM_EXTERNAL_GLOBAL:
       encodeSLEB128(Import.GlobalImport.Type, OS);
       writeUint8(OS, Import.GlobalImport.Mutable);
+      NumImportedGlobals++;
       break;
     case wasm::WASM_EXTERNAL_MEMORY:
       writeLimits(Import.Memory, OS);
@@ -249,7 +259,7 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
       writeLimits(Import.TableImport.TableLimits, OS);
       break;
     default:
-      errs() << "Unknown import type: " << Import.Kind;
+      errs() << "Unknown import type: " << Import.Kind << "\n";
       return 1;
     }
   }
@@ -304,7 +314,13 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
 int WasmWriter::writeSectionContent(raw_ostream &OS,
                                     WasmYAML::GlobalSection &Section) {
   encodeULEB128(Section.Globals.size(), OS);
+  uint32_t ExpectedIndex = NumImportedGlobals;
   for (auto &Global : Section.Globals) {
+    if (Global.Index != ExpectedIndex) {
+      errs() << "Unexpected global index: " << Global.Index << "\n";
+      return 1;
+    }
+    ++ExpectedIndex;
     encodeSLEB128(Global.Type, OS);
     writeUint8(OS, Global.Mutable);
     writeInitExpr(Global.InitExpr, OS);
@@ -330,9 +346,15 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
 int WasmWriter::writeSectionContent(raw_ostream &OS,
                                     WasmYAML::CodeSection &Section) {
   encodeULEB128(Section.Functions.size(), OS);
+  uint32_t ExpectedIndex = NumImportedFunctions;
   for (auto &Func : Section.Functions) {
     std::string OutString;
     raw_string_ostream StringStream(OutString);
+    if (Func.Index != ExpectedIndex) {
+      errs() << "Unexpected function index: " << Func.Index << "\n";
+      return 1;
+    }
+    ++ExpectedIndex;
 
     encodeULEB128(Func.Locals.size(), StringStream);
     for (auto &LocalDecl : Func.Locals) {
@@ -402,9 +424,18 @@ int WasmWriter::writeWasm(raw_ostream &OS) {
   writeUint32(OS, Obj.Header.Version);
 
   // Write each section
+  uint32_t LastType = 0;
   for (const std::unique_ptr<WasmYAML::Section> &Sec : Obj.Sections) {
-    encodeULEB128(Sec->Type, OS);
+    uint32_t Type = Sec->Type;
+    if (Type != wasm::WASM_SEC_CUSTOM) {
+      if (Type < LastType) {
+        errs() << "Out of order section type: " << Type << "\n";
+        return 1;
+      }
+      LastType = Type;
+    }
 
+    encodeULEB128(Sec->Type, OS);
     std::string OutString;
     raw_string_ostream StringStream(OutString);
     if (auto S = dyn_cast<WasmYAML::CustomSection>(Sec.get())) {

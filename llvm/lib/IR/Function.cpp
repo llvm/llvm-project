@@ -1320,10 +1320,11 @@ void Function::setValueSubclassDataBit(unsigned Bit, bool On) {
     setValueSubclassData(getSubclassDataFromValue() & ~(1 << Bit));
 }
 
-void Function::setEntryCount(uint64_t Count,
+void Function::setEntryCount(uint64_t Count, bool Synthetic,
                              const DenseSet<GlobalValue::GUID> *S) {
   MDBuilder MDB(getContext());
-  setMetadata(LLVMContext::MD_prof, MDB.createFunctionEntryCount(Count, S));
+  setMetadata(LLVMContext::MD_prof,
+              MDB.createFunctionEntryCount(Count, Synthetic, S));
 }
 
 Optional<uint64_t> Function::getEntryCount() const {

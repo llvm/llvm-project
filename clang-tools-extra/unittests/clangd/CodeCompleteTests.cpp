@@ -68,6 +68,8 @@ MATCHER_P(Named, Name, "") { return arg.insertText == Name; }
 MATCHER_P(Labeled, Label, "") { return arg.label == Label; }
 MATCHER_P(Kind, K, "") { return arg.kind == K; }
 MATCHER_P(Filter, F, "") { return arg.filterText == F; }
+MATCHER_P(Doc, D, "") { return arg.documentation == D; }
+MATCHER_P(Detail, D, "") { return arg.detail == D; }
 MATCHER_P(PlainText, Text, "") {
   return arg.insertTextFormat == clangd::InsertTextFormat::PlainText &&
          arg.insertText == Text;
@@ -472,6 +474,7 @@ std::unique_ptr<SymbolIndex> simpleIndexFromSymbols(
       Sym.Name = QName.substr(Pos + 2);
       Sym.Scope = QName.substr(0, Pos);
     }
+    Sym.CompletionPlainInsertText = Sym.Name;
     Sym.SymInfo.Kind = Pair.second;
     Slab.insert(Sym);
   }
@@ -561,13 +564,17 @@ TEST(CompletionTest, ASTIndexMultiFile) {
 
   Server
       .addDocument(Context::empty(), getVirtualTestFilePath("foo.cpp"), R"cpp(
-      namespace ns { class XYZ {}; void foo() {} }
+      namespace ns { class XYZ {}; void foo(int x) {} }
   )cpp")
       .wait();
 
   auto File = getVirtualTestFilePath("bar.cpp");
   Annotations Test(R"cpp(
-      namespace ns { class XXX {}; void fooooo() {} }
+      namespace ns {
+      class XXX {};
+      /// Doooc
+      void fooooo() {}
+      }
       void f() { ns::^ }
   )cpp");
   Server.addDocument(Context::empty(), File, Test.code()).wait();
@@ -580,7 +587,9 @@ TEST(CompletionTest, ASTIndexMultiFile) {
   EXPECT_THAT(Results.items, Has("XYZ", CompletionItemKind::Class));
   EXPECT_THAT(Results.items, Has("foo", CompletionItemKind::Function));
   EXPECT_THAT(Results.items, Has("XXX", CompletionItemKind::Class));
-  EXPECT_THAT(Results.items, Has("fooooo", CompletionItemKind::Function));
+  EXPECT_THAT(Results.items, Contains(AllOf(Named("fooooo"), Filter("fooooo"),
+                                            Kind(CompletionItemKind::Function),
+                                            Doc("Doooc"), Detail("void"))));
 }
 
 } // namespace

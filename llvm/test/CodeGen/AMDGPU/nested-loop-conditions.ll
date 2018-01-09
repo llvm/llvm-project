@@ -63,8 +63,7 @@
 ; GCN-NEXT: s_cbranch_scc1
 
 ; FIXME: Should fold to unconditional branch?
-; GCN: s_mov_b64 vcc, -1
-; GCN-NEXT: ; implicit-def
+; GCN: ; implicit-def
 ; GCN: s_cbranch_vccz
 
 ; GCN: ds_read_b32

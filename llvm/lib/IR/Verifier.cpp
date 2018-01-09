@@ -1695,8 +1695,11 @@ void Verifier::verifyFunctionMetadata(
              "expected string with name of the !prof annotation", MD);
       MDString *MDS = cast<MDString>(MD->getOperand(0));
       StringRef ProfName = MDS->getString();
-      Assert(ProfName.equals("function_entry_count"),
-             "first operand should be 'function_entry_count'", MD);
+      Assert(ProfName.equals("function_entry_count") ||
+                 ProfName.equals("synthetic_function_entry_count"),
+             "first operand should be 'function_entry_count'"
+             " or 'synthetic_function_entry_count'",
+             MD);
 
       // Check second operand.
       Assert(MD->getOperand(1) != nullptr, "second operand should not be null",

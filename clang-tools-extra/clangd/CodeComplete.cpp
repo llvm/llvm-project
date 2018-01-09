@@ -556,16 +556,19 @@ CompletionItem indexCompletionItem(const Symbol &Sym, llvm::StringRef Filter,
   Item.kind = toCompletionItemKind(Sym.SymInfo.Kind);
   Item.label = Sym.Name;
   // FIXME(ioeric): support inserting/replacing scope qualifiers.
-  Item.insertText = Sym.Name;
+
   // FIXME(ioeric): support snippets.
+  Item.insertText = Sym.CompletionPlainInsertText;
   Item.insertTextFormat = InsertTextFormat::PlainText;
   Item.filterText = Sym.Name;
 
   // FIXME(ioeric): sort symbols appropriately.
   Item.sortText = "";
 
-  // FIXME(ioeric): use more symbol information (e.g. documentation, label) to
-  // populate the completion item.
+  if (Sym.Detail) {
+    Item.documentation = Sym.Detail->Documentation;
+    Item.detail = Sym.Detail->CompletionDetail;
+  }
 
   return Item;
 }

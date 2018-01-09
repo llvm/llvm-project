@@ -192,13 +192,8 @@ public:
 
   void EmitGPRel32Value(const MCExpr *Value) override;
 
-
-  void emitFill(uint64_t NumBytes, uint8_t FillValue) override;
-
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
                 SMLoc Loc = SMLoc()) override;
-
-  void emitFill(uint64_t NumValues, int64_t Size, int64_t Expr) override;
 
   void emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
                 SMLoc Loc = SMLoc()) override;
@@ -965,17 +960,12 @@ void MCAsmStreamer::EmitGPRel32Value(const MCExpr *Value) {
   EmitEOL();
 }
 
-/// emitFill - Emit NumBytes bytes worth of the value specified by
-/// FillValue.  This implements directives such as '.space'.
-void MCAsmStreamer::emitFill(uint64_t NumBytes, uint8_t FillValue) {
-  if (NumBytes == 0) return;
-
-  const MCExpr *E = MCConstantExpr::create(NumBytes, getContext());
-  emitFill(*E, FillValue);
-}
-
 void MCAsmStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue,
                              SMLoc Loc) {
+  int64_t IntNumBytes;
+  if (NumBytes.evaluateAsAbsolute(IntNumBytes) && IntNumBytes == 0)
+    return;
+
   if (const char *ZeroDirective = MAI->getZeroDirective()) {
     // FIXME: Emit location directives
     OS << ZeroDirective;
@@ -987,14 +977,6 @@ void MCAsmStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue,
   }
 
   MCStreamer::emitFill(NumBytes, FillValue);
-}
-
-void MCAsmStreamer::emitFill(uint64_t NumValues, int64_t Size, int64_t Expr) {
-  if (NumValues == 0)
-    return;
-
-  const MCExpr *E = MCConstantExpr::create(NumValues, getContext());
-  emitFill(*E, Size, Expr);
 }
 
 void MCAsmStreamer::emitFill(const MCExpr &NumValues, int64_t Size,

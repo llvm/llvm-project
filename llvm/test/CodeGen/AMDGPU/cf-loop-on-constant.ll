@@ -95,7 +95,7 @@ for.body:
 
 ; GCN-LABEL: {{^}}loop_arg_0:
 ; GCN: v_and_b32_e32 v{{[0-9]+}}, 1, v{{[0-9]+}}
-; GCN: v_cmp_eq_u32_e32 vcc, 1,
+; GCN: v_cmp_eq_u32{{[^,]*}}, 1,
 
 ; GCN: [[LOOPBB:BB[0-9]+_[0-9]+]]
 ; GCN: s_add_i32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80

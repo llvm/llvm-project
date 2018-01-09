@@ -5,10 +5,12 @@ FileHeader:
 Sections:
   - Type:            TYPE
     Signatures:
-      - ReturnType:      F32
+      - Index:           0
+        ReturnType:      F32
         ParamTypes:
           - I32
-      - ReturnType:      NORESULT
+      - Index:           1
+        ReturnType:      NORESULT
         ParamTypes:
           - I32
           - I64
@@ -25,11 +27,13 @@ Sections:
         Index:           1
         Offset:          0x00000025
     Functions:
-      - Locals:
+      - Index:              0
+        Locals:
          - Type:            I32
            Count:           3
         Body:            418080808000210020002101200111808080800000210220020F0B
-      - Locals:
+      - Index:              1
+        Locals:
          - Type:            I32
            Count:           1
         Body:            108180808000210020000F0B
@@ -58,11 +62,13 @@ Sections:
 # CHECK:        Index:           1
 # CHECK:        Offset:          0x00000025
 # CHECK:    Functions:
-# CHECK:      - Locals:
+# CHECK:      - Index:              0
+# CHECK:        Locals:
 # CHECK:         - Type:            I32
 # CHECK:           Count:           3
 # CHECK:        Body:            418080808000210020002101200111808080800000210220020F0B
-# CHECK:      - Locals:
+# CHECK:      - Index:              1
+# CHECK:        Locals:
 # CHECK:         - Type:            I32
 # CHECK:           Count:           1
 # CHECK:        Body:            108180808000210020000F0B

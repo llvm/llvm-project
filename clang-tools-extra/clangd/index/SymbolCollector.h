@@ -8,8 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "Index.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
 #include "clang/Index/IndexDataConsumer.h"
 #include "clang/Index/IndexSymbol.h"
+#include "clang/Sema/CodeCompleteConsumer.h"
 
 namespace clang {
 namespace clangd {
@@ -21,7 +24,11 @@ namespace clangd {
 // changed.
 class SymbolCollector : public index::IndexDataConsumer {
 public:
-  SymbolCollector() = default;
+  void initialize(ASTContext &Ctx) override;
+
+  void setPreprocessor(std::shared_ptr<Preprocessor> PP) override {
+    this->PP = std::move(PP);
+  }
 
   bool
   handleDeclOccurence(const Decl *D, index::SymbolRoleSet Roles,
@@ -34,6 +41,10 @@ public:
 private:
   // All Symbols collected from the AST.
   SymbolSlab::Builder Symbols;
+  ASTContext *ASTCtx;
+  std::shared_ptr<Preprocessor> PP;
+  std::shared_ptr<GlobalCodeCompletionAllocator> CompletionAllocator;
+  std::unique_ptr<CodeCompletionTUInfo> CompletionTUInfo;
 };
 
 } // namespace clangd

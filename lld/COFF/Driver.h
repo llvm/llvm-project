@@ -56,8 +56,10 @@ public:
   llvm::opt::InputArgList parse(StringRef S) { return parse(tokenize(S)); }
 
   // Tokenizes a given string and then parses as command line options in
-  // .drectve section.
-  llvm::opt::InputArgList parseDirectives(StringRef S);
+  // .drectve section. /EXPORT options are returned in second element
+  // to be processed in fastpath.
+  std::pair<llvm::opt::InputArgList, std::vector<StringRef>>
+  parseDirectives(StringRef S);
 
 private:
   // Parses command line options.

@@ -377,33 +377,14 @@ define <16 x i8> @vselect_packss(<16 x i16> %a0, <16 x i16> %a1, <16 x i8> %a2, 
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512NOBW-LABEL: vselect_packss:
-; AVX512NOBW:       # %bb.0:
-; AVX512NOBW-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
-; AVX512NOBW-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512NOBW-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
-; AVX512NOBW-NEXT:    vpblendvb %xmm0, %xmm2, %xmm3, %xmm0
-; AVX512NOBW-NEXT:    vzeroupper
-; AVX512NOBW-NEXT:    retq
-;
-; AVX512BWNOVL-LABEL: vselect_packss:
-; AVX512BWNOVL:       # %bb.0:
-; AVX512BWNOVL-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
-; AVX512BWNOVL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512BWNOVL-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
-; AVX512BWNOVL-NEXT:    vpblendvb %xmm0, %xmm2, %xmm3, %xmm0
-; AVX512BWNOVL-NEXT:    vzeroupper
-; AVX512BWNOVL-NEXT:    retq
-;
-; AVX512BWVL-LABEL: vselect_packss:
-; AVX512BWVL:       # %bb.0:
-; AVX512BWVL-NEXT:    vpcmpeqw %ymm1, %ymm0, %k0
-; AVX512BWVL-NEXT:    vpmovm2w %k0, %ymm0
-; AVX512BWVL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512BWVL-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
-; AVX512BWVL-NEXT:    vpblendvb %xmm0, %xmm2, %xmm3, %xmm0
-; AVX512BWVL-NEXT:    vzeroupper
-; AVX512BWVL-NEXT:    retq
+; AVX512-LABEL: vselect_packss:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpblendvb %xmm0, %xmm2, %xmm3, %xmm0
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %1 = icmp eq <16 x i16> %a0, %a1
   %2 = sext <16 x i1> %1 to <16 x i16>
   %3 = shufflevector <16 x i16> %2, <16 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>

@@ -1659,7 +1659,7 @@ bool ARMBaseInstrInfo::produceSameValue(const MachineInstr &MI0,
     }
 
     for (unsigned i = 3, e = MI0.getNumOperands(); i != e; ++i) {
-      // %12 = PICLDR %11, 0, pred:14, pred:%noreg
+      // %12 = PICLDR %11, 0, 14, %noreg
       const MachineOperand &MO0 = MI0.getOperand(i);
       const MachineOperand &MO1 = MI1.getOperand(i);
       if (!MO0.isIdenticalTo(MO1))
@@ -3467,8 +3467,8 @@ bool ARMBaseInstrInfo::isLDMBaseRegInList(const MachineInstr &MI) const {
 }
 unsigned
 ARMBaseInstrInfo::getLDMVariableDefsSize(const MachineInstr &MI) const {
-  // ins GPR:$Rn, pred:$p (2xOp), reglist:$regs, variable_ops
-  // (outs GPR:$wb), (ins GPR:$Rn, pred:$p (2xOp), reglist:$regs, variable_ops)
+  // ins GPR:$Rn, $p (2xOp), reglist:$regs, variable_ops
+  // (outs GPR:$wb), (ins GPR:$Rn, $p (2xOp), reglist:$regs, variable_ops)
   return MI.getNumOperands() + 1 - MI.getDesc().getNumOperands();
 }
 

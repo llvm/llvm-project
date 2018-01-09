@@ -236,7 +236,7 @@ void ScalarEnumerationTraits<WasmYAML::SectionType>::enumeration(
 
 void MappingTraits<WasmYAML::Signature>::mapping(
     IO &IO, WasmYAML::Signature &Signature) {
-  IO.mapOptional("Index", Signature.Index);
+  IO.mapRequired("Index", Signature.Index);
   IO.mapRequired("ReturnType", Signature.ReturnType);
   IO.mapRequired("ParamTypes", Signature.ParamTypes);
 }
@@ -248,6 +248,7 @@ void MappingTraits<WasmYAML::Table>::mapping(IO &IO, WasmYAML::Table &Table) {
 
 void MappingTraits<WasmYAML::Function>::mapping(IO &IO,
                                                 WasmYAML::Function &Function) {
+  IO.mapRequired("Index", Function.Index);
   IO.mapRequired("Locals", Function.Locals);
   IO.mapRequired("Body", Function.Body);
 }
@@ -323,6 +324,7 @@ void MappingTraits<WasmYAML::Export>::mapping(IO &IO,
 
 void MappingTraits<WasmYAML::Global>::mapping(IO &IO,
                                               WasmYAML::Global &Global) {
+  IO.mapRequired("Index", Global.Index);
   IO.mapRequired("Type", Global.Type);
   IO.mapRequired("Mutable", Global.Mutable);
   IO.mapRequired("InitExpr", Global.InitExpr);
