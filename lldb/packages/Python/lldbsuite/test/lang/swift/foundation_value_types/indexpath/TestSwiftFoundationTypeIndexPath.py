@@ -13,7 +13,4 @@ import lldbsuite.test.lldbinline as lldbinline
 import lldbsuite.test.decorators as decorators
 
 lldbinline.MakeInlineTest(
-    __file__, globals(), decorators=[
-        decorators.expectedFailureAll(
-                        bugnumber="rdar://problem/32040811"),
-        decorators.skipUnlessDarwin])
+    __file__, globals(), decorators=[decorators.skipUnlessDarwin])
