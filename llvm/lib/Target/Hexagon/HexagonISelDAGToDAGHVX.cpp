@@ -821,7 +821,6 @@ namespace llvm {
                 MutableArrayRef<int> NewMask, unsigned Options = None);
     OpRef packp(ShuffleMask SM, OpRef Va, OpRef Vb, ResultStack &Results,
                 MutableArrayRef<int> NewMask);
-    OpRef zerous(ShuffleMask SM, OpRef Va, ResultStack &Results);
     OpRef vmuxs(ArrayRef<uint8_t> Bytes, OpRef Va, OpRef Vb,
                 ResultStack &Results);
     OpRef vmuxp(ArrayRef<uint8_t> Bytes, OpRef Va, OpRef Vb,
@@ -1137,25 +1136,6 @@ OpRef HvxSelector::packp(ShuffleMask SM, OpRef Va, OpRef Vb,
   }
 
   return concat(Out[0], Out[1], Results);
-}
-
-OpRef HvxSelector::zerous(ShuffleMask SM, OpRef Va, ResultStack &Results) {
-  DEBUG_WITH_TYPE("isel", {dbgs() << __func__ << '\n';});
-
-  int VecLen = SM.Mask.size();
-  SmallVector<uint8_t,128> UsedBytes(VecLen);
-  bool HasUnused = false;
-  for (int I = 0; I != VecLen; ++I) {
-    if (SM.Mask[I] != -1)
-      UsedBytes[I] = 0xFF;
-    else
-      HasUnused = true;
-  }
-  if (!HasUnused)
-    return Va;
-  SDValue B = getVectorConstant(UsedBytes, SDLoc(Results.InpNode));
-  Results.push(Hexagon::V6_vand, getSingleVT(MVT::i8), {Va, OpRef(B)});
-  return OpRef::res(Results.top());
 }
 
 OpRef HvxSelector::vmuxs(ArrayRef<uint8_t> Bytes, OpRef Va, OpRef Vb,

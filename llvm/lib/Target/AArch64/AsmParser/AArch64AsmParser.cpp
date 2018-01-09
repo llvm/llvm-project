@@ -2808,6 +2808,36 @@ AArch64AsmParser::tryParseSVEPredicateVector(OperandVector &Operands) {
       AArch64Operand::CreateReg(RegNum, RegKind::SVEPredicateVector,
                                 ElementWidth, S, getLoc(), getContext()));
 
+  // Not all predicates are followed by a '/m' or '/z'.
+  MCAsmParser &Parser = getParser();
+  if (Parser.getTok().isNot(AsmToken::Slash))
+    return MatchOperand_Success;
+
+  // But when they do they shouldn't have an element type suffix.
+  if (!Kind.empty()) {
+    Error(S, "not expecting size suffix");
+    return MatchOperand_ParseFail;
+  }
+
+  // Add a literal slash as operand
+  Operands.push_back(
+      AArch64Operand::CreateToken("/" , false, getLoc(), getContext()));
+
+  Parser.Lex(); // Eat the slash.
+
+  // Zeroing or merging?
+  StringRef Pred = Parser.getTok().getString().lower();
+  if (Pred != "z" && Pred != "m") {
+    Error(getLoc(), "expecting 'm' or 'z' predication");
+    return MatchOperand_ParseFail;
+  }
+
+  // Add zero/merge token.
+  const char *ZM = Pred == "z" ? "z" : "m";
+  Operands.push_back(
+    AArch64Operand::CreateToken(ZM, false, getLoc(), getContext()));
+
+  Parser.Lex(); // Eat zero/merge token.
   return MatchOperand_Success;
 }
 

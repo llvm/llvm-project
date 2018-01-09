@@ -403,15 +403,16 @@ bool PPCCTRLoops::mightUseCTR(BasicBlock *BB) {
         }
 
         if (Opcode) {
-          MVT VTy = TLI->getSimpleValueType(
-              *DL, CI->getArgOperand(0)->getType(), true);
-          if (VTy == MVT::Other)
+          EVT EVTy =
+              TLI->getValueType(*DL, CI->getArgOperand(0)->getType(), true);
+
+          if (EVTy == MVT::Other)
             return true;
 
-          if (TLI->isOperationLegalOrCustom(Opcode, VTy))
+          if (TLI->isOperationLegalOrCustom(Opcode, EVTy))
             continue;
-          else if (VTy.isVector() &&
-                   TLI->isOperationLegalOrCustom(Opcode, VTy.getScalarType()))
+          else if (EVTy.isVector() &&
+                   TLI->isOperationLegalOrCustom(Opcode, EVTy.getScalarType()))
             continue;
 
           return true;

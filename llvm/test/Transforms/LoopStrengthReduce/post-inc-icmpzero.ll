@@ -6,11 +6,12 @@
 
 ; CHECK:   [[r1:%[a-z0-9\.]+]] = sub i64 %sub.ptr.lhs.cast, %sub.ptr.rhs.cast
 ; CHECK:   [[r2:%[a-z0-9\.]+]] = lshr exact i64 [[r1]], 1
+; CHECK:   [[r3:%[a-z0-9\.]+]] = bitcast i64 [[r2]] to i64
 ; CHECK: for.body.lr.ph:
-; CHECK:   [[r3:%[a-z0-9]+]] = shl i64 [[r2]], 1
+; CHECK:   [[r4:%[a-z0-9]+]] = shl i64 [[r3]], 1
 ; CHECK:   br label %for.body
 ; CHECK: for.body:
-; CHECK:   %lsr.iv2 = phi i64 [ %lsr.iv.next, %for.body ], [ [[r3]], %for.body.lr.ph ]
+; CHECK:   %lsr.iv2 = phi i64 [ %lsr.iv.next, %for.body ], [ [[r4]], %for.body.lr.ph ]
 ; CHECK:   %lsr.iv.next = add i64 %lsr.iv2, -2
 ; CHECK:   %lsr.iv.next3 = inttoptr i64 %lsr.iv.next to i16*
 ; CHECK:   %cmp27 = icmp eq i16* %lsr.iv.next3, null

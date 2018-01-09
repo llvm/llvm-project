@@ -1051,6 +1051,18 @@ public:
     return false;
   }
 
+  /// Check if the target supports CFProtection branch.
+  virtual bool
+  checkCFProtectionBranchSupported(DiagnosticsEngine &Diags) const {
+    return false;
+  }
+
+  /// Check if the target supports CFProtection branch.
+  virtual bool
+  checkCFProtectionReturnSupported(DiagnosticsEngine &Diags) const {
+    return false;
+  }
+
   /// \brief Whether target allows to overalign ABI-specified preferred alignment
   virtual bool allowsLargerPreferedTypeAlignment() const { return true; }
 

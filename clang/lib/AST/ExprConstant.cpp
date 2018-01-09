@@ -3247,11 +3247,6 @@ static bool handleAssignment(EvalInfo &Info, const Expr *E, const LValue &LVal,
   return Obj && modifySubobject(Info, E, Obj, LVal.Designator, Val);
 }
 
-static bool isOverflowingIntegerType(ASTContext &Ctx, QualType T) {
-  return T->isSignedIntegerType() &&
-         Ctx.getIntWidth(T) >= Ctx.getIntWidth(Ctx.IntTy);
-}
-
 namespace {
 struct CompoundAssignSubobjectHandler {
   EvalInfo &Info;
@@ -3373,7 +3368,7 @@ static bool handleCompoundAssignment(
 namespace {
 struct IncDecSubobjectHandler {
   EvalInfo &Info;
-  const Expr *E;
+  const UnaryOperator *E;
   AccessKinds AccessKind;
   APValue *Old;
 
@@ -3445,16 +3440,14 @@ struct IncDecSubobjectHandler {
     if (AccessKind == AK_Increment) {
       ++Value;
 
-      if (!WasNegative && Value.isNegative() &&
-          isOverflowingIntegerType(Info.Ctx, SubobjType)) {
+      if (!WasNegative && Value.isNegative() && E->canOverflow()) {
         APSInt ActualValue(Value, /*IsUnsigned*/true);
         return HandleOverflow(Info, E, ActualValue, SubobjType);
       }
     } else {
       --Value;
 
-      if (WasNegative && !Value.isNegative() &&
-          isOverflowingIntegerType(Info.Ctx, SubobjType)) {
+      if (WasNegative && !Value.isNegative() && E->canOverflow()) {
         unsigned BitWidth = Value.getBitWidth();
         APSInt ActualValue(Value.sext(BitWidth + 1), /*IsUnsigned*/false);
         ActualValue.setBit(BitWidth);
@@ -3515,7 +3508,7 @@ static bool handleIncDec(EvalInfo &Info, const Expr *E, const LValue &LVal,
 
   AccessKinds AK = IsIncrement ? AK_Increment : AK_Decrement;
   CompleteObject Obj = findCompleteObject(Info, E, AK, LVal, LValType);
-  IncDecSubobjectHandler Handler = { Info, E, AK, Old };
+  IncDecSubobjectHandler Handler = {Info, cast<UnaryOperator>(E), AK, Old};
   return Obj && findSubobject(Info, E, Obj, LVal.Designator, Handler);
 }
 
@@ -8878,7 +8871,7 @@ bool IntExprEvaluator::VisitUnaryOperator(const UnaryOperator *E) {
       return false;
     if (!Result.isInt()) return Error(E);
     const APSInt &Value = Result.getInt();
-    if (Value.isSigned() && Value.isMinSignedValue() &&
+    if (Value.isSigned() && Value.isMinSignedValue() && E->canOverflow() &&
         !HandleOverflow(Info, E, -Value.extend(Value.getBitWidth() + 1),
                         E->getType()))
       return false;

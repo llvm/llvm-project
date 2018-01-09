@@ -4008,6 +4008,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Forward -cl options to -cc1
   RenderOpenCLOptions(Args, CmdArgs);
 
+  if (Arg *A = Args.getLastArg(options::OPT_fcf_protection_EQ)) {
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-fcf-protection=") + A->getValue()));
+  }
+
   // Forward -f options with positive and negative forms; we translate
   // these by hand.
   if (Arg *A = getLastProfileSampleUseArg(Args)) {

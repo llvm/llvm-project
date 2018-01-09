@@ -509,6 +509,7 @@ void ASTStmtWriter::VisitUnaryOperator(UnaryOperator *E) {
   Record.AddStmt(E->getSubExpr());
   Record.push_back(E->getOpcode()); // FIXME: stable encoding
   Record.AddSourceLocation(E->getOperatorLoc());
+  Record.push_back(E->canOverflow());
   Code = serialization::EXPR_UNARY_OPERATOR;
 }
 

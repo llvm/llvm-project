@@ -4276,9 +4276,9 @@ Expr *Sema::stripARCUnbridgedCast(Expr *e) {
   } else if (UnaryOperator *uo = dyn_cast<UnaryOperator>(e)) {
     assert(uo->getOpcode() == UO_Extension);
     Expr *sub = stripARCUnbridgedCast(uo->getSubExpr());
-    return new (Context) UnaryOperator(sub, UO_Extension, sub->getType(),
-                                   sub->getValueKind(), sub->getObjectKind(),
-                                       uo->getOperatorLoc());
+    return new (Context)
+        UnaryOperator(sub, UO_Extension, sub->getType(), sub->getValueKind(),
+                      sub->getObjectKind(), uo->getOperatorLoc(), false);
   } else if (GenericSelectionExpr *gse = dyn_cast<GenericSelectionExpr>(e)) {
     assert(!gse->isResultDependent());
 

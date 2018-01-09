@@ -3268,12 +3268,12 @@ CodeGenFunction::GenerateObjCAtomicSetterCopyHelperFunction(
   DeclRefExpr DstExpr(&DstDecl, false, DestTy,
                       VK_RValue, SourceLocation());
   UnaryOperator DST(&DstExpr, UO_Deref, DestTy->getPointeeType(),
-                    VK_LValue, OK_Ordinary, SourceLocation());
+                    VK_LValue, OK_Ordinary, SourceLocation(), false);
   
   DeclRefExpr SrcExpr(&SrcDecl, false, SrcTy,
                       VK_RValue, SourceLocation());
   UnaryOperator SRC(&SrcExpr, UO_Deref, SrcTy->getPointeeType(),
-                    VK_LValue, OK_Ordinary, SourceLocation());
+                    VK_LValue, OK_Ordinary, SourceLocation(), false);
   
   Expr *Args[2] = { &DST, &SRC };
   CallExpr *CalleeExp = cast<CallExpr>(PID->getSetterCXXAssignment());
@@ -3351,7 +3351,7 @@ CodeGenFunction::GenerateObjCAtomicGetterCopyHelperFunction(
                       VK_RValue, SourceLocation());
   
   UnaryOperator SRC(&SrcExpr, UO_Deref, SrcTy->getPointeeType(),
-                    VK_LValue, OK_Ordinary, SourceLocation());
+                    VK_LValue, OK_Ordinary, SourceLocation(), false);
   
   CXXConstructExpr *CXXConstExpr = 
     cast<CXXConstructExpr>(PID->getGetterCXXConstructor());

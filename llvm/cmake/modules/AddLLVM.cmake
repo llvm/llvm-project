@@ -1473,7 +1473,7 @@ function(add_llvm_tool_symlink link_name target)
   if(NOT ARG_OUTPUT_DIR)
     # If you're not overriding the OUTPUT_DIR, we can make the link relative in
     # the same directory.
-    if(UNIX)
+    if(CMAKE_HOST_UNIX)
       set(dest_binary "$<TARGET_FILE_NAME:${target}>")
     endif()
     if(CMAKE_CONFIGURATION_TYPES)
@@ -1499,7 +1499,7 @@ function(add_llvm_tool_symlink link_name target)
     endif()
   endif()
 
-  if(UNIX)
+  if(CMAKE_HOST_UNIX)
     set(LLVM_LINK_OR_COPY create_symlink)
   else()
     set(LLVM_LINK_OR_COPY copy)
