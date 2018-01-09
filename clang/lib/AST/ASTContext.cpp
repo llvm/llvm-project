@@ -9483,6 +9483,23 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
   return false;
 }
 
+void ASTContext::forEachMultiversionedFunctionVersion(
+    const FunctionDecl *FD,
+    llvm::function_ref<void(const FunctionDecl *)> Pred) const {
+  assert(FD->isMultiVersion() && "Only valid for multiversioned functions");
+  llvm::SmallDenseSet<const FunctionDecl*, 4> SeenDecls;
+  FD = FD->getCanonicalDecl();
+  for (auto *CurDecl :
+       FD->getDeclContext()->getRedeclContext()->lookup(FD->getDeclName())) {
+    FunctionDecl *CurFD = CurDecl->getAsFunction()->getCanonicalDecl();
+    if (CurFD && hasSameType(CurFD->getType(), FD->getType()) &&
+        std::end(SeenDecls) == llvm::find(SeenDecls, CurFD)) {
+      SeenDecls.insert(CurFD);
+      Pred(CurFD);
+    }
+  }
+}
+
 CallingConv ASTContext::getDefaultCallingConvention(bool IsVariadic,
                                                     bool IsCXXMethod) const {
   // Pass through to the C++ ABI object

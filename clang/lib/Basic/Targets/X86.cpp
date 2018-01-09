@@ -17,6 +17,7 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/TargetParser.h"
 
 namespace clang {
 namespace targets {
@@ -1336,6 +1337,63 @@ bool X86TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
 #define X86_FEATURE_COMPAT(VAL, ENUM, STR) .Case(STR, true)
 #include "llvm/Support/X86TargetParser.def"
       .Default(false);
+}
+
+static llvm::X86::ProcessorFeatures getFeature(StringRef Name) {
+  return llvm::StringSwitch<llvm::X86::ProcessorFeatures>(Name)
+#define X86_FEATURE_COMPAT(VAL, ENUM, STR) .Case(STR, llvm::X86::ENUM)
+#include "llvm/Support/X86TargetParser.def"
+      ;
+  // Note, this function should only be used after ensuring the value is
+  // correct, so it asserts if the value is out of range.
+}
+
+static unsigned getFeaturePriority(llvm::X86::ProcessorFeatures Feat) {
+  enum class FeatPriority {
+#define FEATURE(FEAT) FEAT,
+#include "clang/Basic/X86Target.def"
+  };
+  switch (Feat) {
+#define FEATURE(FEAT)                                                          \
+  case llvm::X86::FEAT:                                                        \
+    return static_cast<unsigned>(FeatPriority::FEAT);
+#include "clang/Basic/X86Target.def"
+  default:
+    llvm_unreachable("No Feature Priority for non-CPUSupports Features");
+  }
+}
+
+unsigned X86TargetInfo::multiVersionSortPriority(StringRef Name) const {
+  // Valid CPUs have a 'key feature' that compares just better than its key
+  // feature.
+  CPUKind Kind = getCPUKind(Name);
+  if (Kind != CK_Generic) {
+    switch (Kind) {
+    default:
+      llvm_unreachable(
+          "CPU Type without a key feature used in 'target' attribute");
+#define PROC_WITH_FEAT(ENUM, STR, IS64, KEY_FEAT)                              \
+  case CK_##ENUM:                                                              \
+    return (getFeaturePriority(llvm::X86::KEY_FEAT) << 1) + 1;
+#include "clang/Basic/X86Target.def"
+    }
+  }
+
+  // Now we know we have a feature, so get its priority and shift it a few so
+  // that we have sufficient room for the CPUs (above).
+  return getFeaturePriority(getFeature(Name)) << 1;
+}
+
+std::string X86TargetInfo::getCPUKindCanonicalName(CPUKind Kind) const {
+  switch (Kind) {
+  case CK_Generic:
+    return "";
+#define PROC(ENUM, STRING, IS64BIT)                                            \
+  case CK_##ENUM:                                                              \
+    return STRING;
+#include "clang/Basic/X86Target.def"
+  }
+  llvm_unreachable("Invalid CPUKind");
 }
 
 // We can't use a generic validation scheme for the cpus accepted here

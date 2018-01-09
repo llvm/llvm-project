@@ -923,7 +923,8 @@ __m128d test_mm_maskz_reduce_round_sd(__mmask8 __U, __m128d __A, __m128d __B) {
 
 __mmask16 test_mm512_movepi32_mask(__m512i __A) {
   // CHECK-LABEL: @test_mm512_movepi32_mask
-  // CHECK: @llvm.x86.avx512.cvtd2mask.512
+  // CHECK: [[CMP:%.*]] = icmp slt <16 x i32> %{{.*}}, zeroinitializer
+  // CHECK: bitcast <16 x i1> [[CMP]] to i16
   return _mm512_movepi32_mask(__A); 
 }
 
@@ -943,7 +944,8 @@ __m512i test_mm512_movm_epi64(__mmask8 __A) {
 
 __mmask8 test_mm512_movepi64_mask(__m512i __A) {
   // CHECK-LABEL: @test_mm512_movepi64_mask
-  // CHECK: @llvm.x86.avx512.cvtq2mask.512
+  // CHECK: [[CMP:%.*]] = icmp slt <8 x i64> %{{.*}}, zeroinitializer
+  // CHECK: bitcast <8 x i1> [[CMP]] to i8
   return _mm512_movepi64_mask(__A); 
 }
 

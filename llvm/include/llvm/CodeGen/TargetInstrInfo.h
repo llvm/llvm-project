@@ -1607,9 +1607,16 @@ public:
   enum MachineOutlinerInstrType { Legal, Illegal, Invisible };
 
   /// Returns how or if \p MI should be outlined.
-  virtual MachineOutlinerInstrType getOutliningType(MachineInstr &MI) const {
+  virtual MachineOutlinerInstrType
+  getOutliningType(MachineBasicBlock::iterator &MIT, unsigned Flags) const {
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::getOutliningType!");
+  }
+
+  /// \brief Returns target-defined flags defining properties of the MBB for
+  /// the outliner.
+  virtual unsigned getMachineOutlinerMBBFlags(MachineBasicBlock &MBB) const {
+    return 0x0;
   }
 
   /// Insert a custom epilogue for outlined functions.

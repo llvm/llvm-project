@@ -92,18 +92,18 @@ int main() {
 // CHECK: addrspacecast [10 x [10 x [10 x i32]]] addrspace(1)* %{{.+}} to [10 x [10 x [10 x i32]]]*
 // CHECK: addrspacecast i32 addrspace(1)* %{{.+}} to i32*
 // CHECK: addrspacecast [10 x [10 x i32]] addrspace(1)* %{{.+}} to [10 x [10 x i32]]*
-// CHECK: call void [[NONDEBUG_WRAPPER:@.+]](i32* {{[^,]+}}, i32* {{[^,]+}}, [10 x [10 x [10 x i32]]]* {{[^,]+}}, i32* {{[^,]+}}, [10 x [10 x i32]]* {{[^,]+}}, i8* {{[^)]+}})
+// CHECK: call void @[[NONDEBUG_WRAPPER:.+]](i32* {{[^,]+}}, i32* {{[^,]+}}, [10 x [10 x [10 x i32]]]* {{[^,]+}}, i32* {{[^,]+}}, [10 x [10 x i32]]* {{[^,]+}}, i8* {{[^)]+}})
 
-// CHECK: define internal void [[DEBUG_PARALLEL:@.+]](i32* {{[^,]+}}, i32* {{[^,]+}}, [10 x [10 x [10 x i32]]] addrspace(1)* noalias{{[^,]+}}, i32 addrspace(1)* noalias{{[^,]+}}, [10 x [10 x i32]] addrspace(1)* noalias{{[^,]+}}, i8 addrspace(1)* noalias{{[^)]+}})
+// CHECK: define internal void @[[DEBUG_PARALLEL:.+]](i32* {{[^,]+}}, i32* {{[^,]+}}, [10 x [10 x [10 x i32]]] addrspace(1)* noalias{{[^,]+}}, i32 addrspace(1)* noalias{{[^,]+}}, [10 x [10 x i32]] addrspace(1)* noalias{{[^,]+}}, i8 addrspace(1)* noalias{{[^)]+}})
 // CHECK: addrspacecast [10 x [10 x [10 x i32]]] addrspace(1)* %{{.+}} to [10 x [10 x [10 x i32]]]*
 // CHECK: addrspacecast i32 addrspace(1)* %{{.+}} to i32*
 // CHECK: addrspacecast [10 x [10 x i32]] addrspace(1)* %{{.+}} to [10 x [10 x i32]]*
 
-// CHECK: define internal void [[NONDEBUG_WRAPPER]](i32* {{[^,]+}}, i32* {{[^,]+}}, [10 x [10 x [10 x i32]]]* dereferenceable{{[^,]+}}, i32* dereferenceable{{[^,]+}}, [10 x [10 x i32]]* dereferenceable{{[^,]+}}, i8* dereferenceable{{[^)]+}})
+// CHECK: define internal void @[[NONDEBUG_WRAPPER]](i32* {{[^,]+}}, i32* {{[^,]+}}, [10 x [10 x [10 x i32]]]* dereferenceable{{[^,]+}}, i32* dereferenceable{{[^,]+}}, [10 x [10 x i32]]* dereferenceable{{[^,]+}}, i8* dereferenceable{{[^)]+}})
 // CHECK: addrspacecast [10 x [10 x [10 x i32]]]* %{{.+}} to [10 x [10 x [10 x i32]]] addrspace(1)*
 // CHECK: addrspacecast i32* %{{.+}} to i32 addrspace(1)*
 // CHECK: addrspacecast [10 x [10 x i32]]* %{{.+}} to [10 x [10 x i32]] addrspace(1)*
-// CHECK: call void [[DEBUG_PARALLEL]](i32* {{[^,]+}}, i32* {{[^,]+}}, [10 x [10 x [10 x i32]]] addrspace(1)* {{[^,]+}}, i32 addrspace(1)* {{[^,]+}}, [10 x [10 x i32]] addrspace(1)* {{[^,]+}}, i8 addrspace(1)* {{[^)]+}})
+// CHECK: call void @[[DEBUG_PARALLEL]](i32* {{[^,]+}}, i32* {{[^,]+}}, [10 x [10 x [10 x i32]]] addrspace(1)* {{[^,]+}}, i32 addrspace(1)* {{[^,]+}}, [10 x [10 x i32]] addrspace(1)* {{[^,]+}}, i8 addrspace(1)* {{[^)]+}})
 
 // CHECK: define void @__omp_offloading_{{[^(]+}}([10 x [10 x [10 x i32]]]* dereferenceable{{[^,]+}}, i32* dereferenceable{{[^,]+}}, [10 x [10 x i32]]* dereferenceable{{[^,]+}}, i8* dereferenceable{{[^)]+}})
 // CHECK: addrspacecast [10 x [10 x [10 x i32]]]* %{{.+}} to [10 x [10 x [10 x i32]]] addrspace(1)*
@@ -121,3 +121,6 @@ int main() {
 // CHECK-SAME: line: 9
 // CHECK: !DILocalVariable(name: "b",
 // CHECK-SAME: line: 10
+
+// CHECK-DAG: distinct !DISubprogram(name: "[[NONDEBUG_WRAPPER]]",
+// CHECK-DAG: distinct !DISubprogram(name: "[[DEBUG_PARALLEL]]",

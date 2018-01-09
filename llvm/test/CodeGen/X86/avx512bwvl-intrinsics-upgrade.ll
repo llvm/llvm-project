@@ -3826,3 +3826,55 @@ define i16@test_int_x86_avx512_ptestnm_w_256(<16 x i16> %x0, <16 x i16> %x1, i16
   ret i16 %res2
 }
 
+declare i16 @llvm.x86.avx512.cvtb2mask.128(<16 x i8>)
+
+define i16@test_int_x86_avx512_cvtb2mask_128(<16 x i8> %x0) {
+; CHECK-LABEL: test_int_x86_avx512_cvtb2mask_128:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpmovb2m %xmm0, %k0 ## encoding: [0x62,0xf2,0x7e,0x08,0x29,0xc0]
+; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
+; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+    %res = call i16 @llvm.x86.avx512.cvtb2mask.128(<16 x i8> %x0)
+    ret i16 %res
+}
+
+declare i32 @llvm.x86.avx512.cvtb2mask.256(<32 x i8>)
+
+define i32@test_int_x86_avx512_cvtb2mask_256(<32 x i8> %x0) {
+; CHECK-LABEL: test_int_x86_avx512_cvtb2mask_256:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpmovb2m %ymm0, %k0 ## encoding: [0x62,0xf2,0x7e,0x28,0x29,0xc0]
+; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
+; CHECK-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+    %res = call i32 @llvm.x86.avx512.cvtb2mask.256(<32 x i8> %x0)
+    ret i32 %res
+}
+
+declare i8 @llvm.x86.avx512.cvtw2mask.128(<8 x i16>)
+
+define i8@test_int_x86_avx512_cvtw2mask_128(<8 x i16> %x0) {
+; CHECK-LABEL: test_int_x86_avx512_cvtw2mask_128:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpmovw2m %xmm0, %k0 ## encoding: [0x62,0xf2,0xfe,0x08,0x29,0xc0]
+; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
+; CHECK-NEXT:    ## kill: def %al killed %al killed %eax
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+    %res = call i8 @llvm.x86.avx512.cvtw2mask.128(<8 x i16> %x0)
+    ret i8 %res
+}
+
+declare i16 @llvm.x86.avx512.cvtw2mask.256(<16 x i16>)
+
+define i16@test_int_x86_avx512_cvtw2mask_256(<16 x i16> %x0) {
+; CHECK-LABEL: test_int_x86_avx512_cvtw2mask_256:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpmovw2m %ymm0, %k0 ## encoding: [0x62,0xf2,0xfe,0x28,0x29,0xc0]
+; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
+; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
+; CHECK-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+    %res = call i16 @llvm.x86.avx512.cvtw2mask.256(<16 x i16> %x0)
+    ret i16 %res
+}

@@ -7947,11 +7947,8 @@ bool SelectionDAG::areNonVolatileConsecutiveLoads(LoadSDNode *LD,
   if (VT.getSizeInBits() / 8 != Bytes)
     return false;
 
-  SDValue Loc = LD->getOperand(1);
-  SDValue BaseLoc = Base->getOperand(1);
-
-  auto BaseLocDecomp = BaseIndexOffset::match(BaseLoc, *this);
-  auto LocDecomp = BaseIndexOffset::match(Loc, *this);
+  auto BaseLocDecomp = BaseIndexOffset::match(Base, *this);
+  auto LocDecomp = BaseIndexOffset::match(LD, *this);
 
   int64_t Offset = 0;
   if (BaseLocDecomp.equalBaseIndex(LocDecomp, *this, Offset))

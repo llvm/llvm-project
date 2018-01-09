@@ -10937,8 +10937,8 @@ bool X86InstrInfo::isFunctionSafeToOutlineFrom(MachineFunction &MF,
 }
 
 X86GenInstrInfo::MachineOutlinerInstrType
-X86InstrInfo::getOutliningType(MachineInstr &MI) const {
-
+X86InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,  unsigned Flags) const {
+  MachineInstr &MI = *MIT;
   // Don't allow debug values to impact outlining type.
   if (MI.isDebugValue() || MI.isIndirectDebugValue())
     return MachineOutlinerInstrType::Invisible;

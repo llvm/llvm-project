@@ -262,7 +262,7 @@ void CGOpenMPRuntimeNVPTX::WorkerFunctionState::createWorkerFunction(
 
   WorkerFn = llvm::Function::Create(
       CGM.getTypes().GetFunctionType(*CGFI), llvm::GlobalValue::InternalLinkage,
-      /* placeholder */ "_worker", &CGM.getModule());
+      /*placeholder=*/"_worker", &CGM.getModule());
   CGM.SetInternalFunctionAttributes(/*D=*/nullptr, WorkerFn, *CGFI);
 }
 
@@ -323,12 +323,12 @@ void CGOpenMPRuntimeNVPTX::emitGenericKernel(const OMPExecutableDirective &D,
   emitTargetOutlinedFunctionHelper(D, ParentName, OutlinedFn, OutlinedFnID,
                                    IsOffloadEntry, CodeGen);
 
-  // Create the worker function
-  emitWorkerFunction(WST);
-
   // Now change the name of the worker function to correspond to this target
   // region's entry function.
   WST.WorkerFn->setName(OutlinedFn->getName() + "_worker");
+
+  // Create the worker function
+  emitWorkerFunction(WST);
 }
 
 // Setup NVPTX threads for master-worker OpenMP scheme.

@@ -1743,7 +1743,8 @@ __mmask32 test_mm512_mask_testn_epi16_mask(__mmask32 __U, __m512i __A, __m512i _
 
 __mmask64 test_mm512_movepi8_mask(__m512i __A) {
   // CHECK-LABEL: @test_mm512_movepi8_mask
-  // CHECK: @llvm.x86.avx512.cvtb2mask.512
+  // CHECK: [[CMP:%.*]] = icmp slt <64 x i8> %{{.*}}, zeroinitializer
+  // CHECK: bitcast <64 x i1> [[CMP]] to i64
   return _mm512_movepi8_mask(__A); 
 }
 
@@ -1941,7 +1942,8 @@ __m512i test_mm512_sad_epu8(__m512i __A, __m512i __B) {
 
 __mmask32 test_mm512_movepi16_mask(__m512i __A) {
   // CHECK-LABEL: @test_mm512_movepi16_mask
-  // CHECK: @llvm.x86.avx512.cvtw2mask.512
+  // CHECK: [[CMP:%.*]] = icmp slt <32 x i16> %{{.*}}, zeroinitializer
+  // CHECK: bitcast <32 x i1> [[CMP]] to i32
   return _mm512_movepi16_mask(__A); 
 }
 

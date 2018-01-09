@@ -234,7 +234,9 @@ class LinuxLocalTI(DefaultTargetInfo):
             flags += ['-lunwind', '-ldl']
         else:
             flags += ['-lgcc_s']
-        flags += ['-lgcc']
+        compiler_rt = self.full_config.get_lit_bool('compiler_rt', False)
+        if not compiler_rt:
+            flags += ['-lgcc']
         use_libatomic = self.full_config.get_lit_bool('use_libatomic', False)
         if use_libatomic:
             flags += ['-latomic']

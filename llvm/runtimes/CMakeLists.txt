@@ -354,6 +354,9 @@ else() # if this is included from LLVM's CMake
                              CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                         -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
                                         -DLLVM_LIBRARY_DIR=${LLVM_LIBRARY_DIR}
+                                        -DCMAKE_C_COMPILER_TARGET=${TARGET_TRIPLE}
+                                        -DCMAKE_CXX_COMPILER_TARGET=${TARGET_TRIPLE}
+                                        -DCMAKE_ASM_COMPILER_TARGET=${TARGET_TRIPLE}
                                         -DCMAKE_C_COMPILER_WORKS=ON
                                         -DCMAKE_CXX_COMPILER_WORKS=ON
                                         -DCMAKE_ASM_COMPILER_WORKS=ON

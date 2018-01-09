@@ -963,7 +963,7 @@ PreservedAnalyses ArgumentPromotionPass::run(LazyCallGraph::SCC &C,
         return FAM.getResult<AAManager>(F);
       };
 
-      Function *NewF = promoteArguments(&OldF, AARGetter, 3u, None);
+      Function *NewF = promoteArguments(&OldF, AARGetter, MaxElements, None);
       if (!NewF)
         continue;
       LocalChange = true;

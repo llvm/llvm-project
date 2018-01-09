@@ -1,0 +1,188 @@
+# RUN: llc -run-pass=livedebugvalues -march=mips -o - %s | FileCheck %s
+#
+#"last-instr-bundled.c"
+#extern void set_cond(int, int*);
+#extern void do_something(char *,int);
+#
+#void foo (int argument)
+#{
+#  int condition;
+#  char *string;
+#
+#  set_cond(argument,&condition);
+#
+#  if (condition)
+#    do_something(string,argument);
+#}
+#
+# reproduce:
+# clang --target=mips-linux-gnu -g -O1 -S -emit-llvm last-instr-bundled
+# llc -stop-before=livedebugvalues < last-instr-bundled.ll > last-instr-bundled.mir
+#
+# Check that last bundled instruction of block gets recognized as end of basic block.
+# CHECK: bb.2.if.end
+# CHECK-NEXT: DBG_VALUE debug-use %s0, debug-use %noreg, !12, !DIExpression(), debug-location !17
+
+--- |
+  ; ModuleID = '<stdin>'
+  source_filename = "last-inst-bundled.c"
+  target datalayout = "E-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64"
+  target triple = "mips--linux-gnu"
+
+  define void @foo(i32 signext %argument) local_unnamed_addr !dbg !7 {
+  entry:
+    %condition = alloca i32, align 4
+    call void @llvm.dbg.value(metadata i32 %argument, metadata !12, metadata !DIExpression()), !dbg !17
+    %0 = bitcast i32* %condition to i8*, !dbg !18
+    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %0), !dbg !18
+    call void @llvm.dbg.value(metadata i32* %condition, metadata !13, metadata !DIExpression()), !dbg !19
+    call void @set_cond(i32 signext %argument, i32* nonnull %condition), !dbg !20
+    %1 = load i32, i32* %condition, align 4, !dbg !21, !tbaa !23
+    call void @llvm.dbg.value(metadata i32 %1, metadata !13, metadata !DIExpression()), !dbg !19
+    %tobool = icmp eq i32 %1, 0, !dbg !21
+    br i1 %tobool, label %if.end, label %if.then, !dbg !27
+
+  if.then:                                          ; preds = %entry
+    call void @do_something(i8* undef, i32 signext %argument), !dbg !28
+    br label %if.end, !dbg !28
+
+  if.end:                                           ; preds = %if.then, %entry
+    %2 = bitcast i32* %condition to i8*
+    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %2), !dbg !29
+    ret void, !dbg !29
+  }
+
+  ; Function Attrs: argmemonly nounwind
+  declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #0
+
+  declare void @set_cond(i32 signext, i32*) local_unnamed_addr
+
+  declare void @do_something(i8*, i32 signext) local_unnamed_addr
+
+  ; Function Attrs: argmemonly nounwind
+  declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #0
+
+  ; Function Attrs: nounwind readnone speculatable
+  declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #2
+
+  attributes #0 = { argmemonly nounwind }
+  attributes #1 = { nounwind readnone speculatable }
+  attributes #2 = { nounwind }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3, !4, !5}
+  !llvm.ident = !{!6}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 6.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+  !1 = !DIFile(filename: "last-inst-bundled.c", directory: "/")
+  !2 = !{}
+  !3 = !{i32 2, !"Dwarf Version", i32 4}
+  !4 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = !{i32 1, !"wchar_size", i32 4}
+  !6 = !{!"clang version 6.0.0 "}
+  !7 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 4, type: !8, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !11)
+  !8 = !DISubroutineType(types: !9)
+  !9 = !{null, !10}
+  !10 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !11 = !{!12, !13, !14}
+  !12 = !DILocalVariable(name: "argument", arg: 1, scope: !7, file: !1, line: 4, type: !10)
+  !13 = !DILocalVariable(name: "condition", scope: !7, file: !1, line: 6, type: !10)
+  !14 = !DILocalVariable(name: "string", scope: !7, file: !1, line: 7, type: !15)
+  !15 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !16, size: 32)
+  !16 = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)
+  !17 = !DILocation(line: 4, column: 15, scope: !7)
+  !18 = !DILocation(line: 6, column: 3, scope: !7)
+  !19 = !DILocation(line: 6, column: 7, scope: !7)
+  !20 = !DILocation(line: 9, column: 3, scope: !7)
+  !21 = !DILocation(line: 11, column: 7, scope: !22)
+  !22 = distinct !DILexicalBlock(scope: !7, file: !1, line: 11, column: 7)
+  !23 = !{!24, !24, i64 0}
+  !24 = !{!"int", !25, i64 0}
+  !25 = !{!"omnipotent char", !26, i64 0}
+  !26 = !{!"Simple C/C++ TBAA"}
+  !27 = !DILocation(line: 11, column: 7, scope: !7)
+  !28 = !DILocation(line: 12, column: 5, scope: !22)
+  !29 = !DILocation(line: 13, column: 1, scope: !7)
+
+...
+---
+name:            foo
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: false
+registers:
+liveins:
+  - { reg: '%a0', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       32
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 16
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+  - { id: 0, name: condition, type: default, offset: -12, size: 4, alignment: 4,
+      stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
+      di-variable: '', di-expression: '', di-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4,
+      stack-id: 0, callee-saved-register: '%ra', callee-saved-restored: true,
+      di-variable: '', di-expression: '', di-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4,
+      stack-id: 0, callee-saved-register: '%s0', callee-saved-restored: true,
+      di-variable: '', di-expression: '', di-location: '' }
+constants:
+body:             |
+  bb.0.entry:
+    successors: %bb.2(0x30000000), %bb.1(0x50000000)
+
+    %sp = ADDiu %sp, -32
+    CFI_INSTRUCTION def_cfa_offset 32
+    SW killed %ra, %sp, 28 :: (store 4 into %stack.1)
+    SW killed %s0, %sp, 24 :: (store 4 into %stack.2)
+    CFI_INSTRUCTION offset %ra_64, -4
+    CFI_INSTRUCTION offset %s0_64, -8
+    DBG_VALUE debug-use %a0, debug-use %noreg, !12, !DIExpression(), debug-location !17
+    %s0 = OR %a0, %zero
+    DBG_VALUE debug-use %s0, debug-use %noreg, !12, !DIExpression(), debug-location !17
+    DBG_VALUE %sp, 0, !13, !DIExpression(DW_OP_plus_uconst, 20), debug-location !19
+    JAL @set_cond, csr_o32, implicit-def dead %ra, implicit %a0, implicit %a1, implicit-def %sp, debug-location !20 {
+      renamable %a1 = LEA_ADDiu %sp, 20
+    }
+    renamable %at = LW %sp, 20, debug-location !21 :: (dereferenceable load 4 from %ir.condition, !tbaa !23)
+    DBG_VALUE debug-use %at, debug-use %noreg, !13, !DIExpression(), debug-location !19
+    BEQ killed renamable %at, %zero, %bb.2, implicit-def %at, debug-location !27 {
+      NOP debug-location !27
+    }
+
+  bb.1.if.then:
+    successors: %bb.2(0x80000000)
+
+    JAL @do_something, csr_o32, implicit-def dead %ra, implicit undef %a0, implicit %a1, implicit-def %sp, debug-location !28 {
+      %a1 = OR killed %s0, %zero, debug-location !28
+    }
+
+  bb.2.if.end:
+    %s0 = LW %sp, 24, debug-location !29 :: (load 4 from %stack.2)
+    %ra = LW %sp, 28, debug-location !29 :: (load 4 from %stack.1)
+    PseudoReturn undef %ra, debug-location !29 {
+      %sp = ADDiu %sp, 32
+    }
+
+...

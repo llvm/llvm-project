@@ -111,6 +111,8 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
 
   CPUKind getCPUKind(StringRef CPU) const;
 
+  std::string getCPUKindCanonicalName(CPUKind Kind) const;
+
   enum FPMathKind { FP_Default, FP_SSE, FP_387 } FPMath = FP_Default;
 
 public:
@@ -255,6 +257,11 @@ public:
   bool setCPU(const std::string &Name) override {
     return checkCPUKind(CPU = getCPUKind(Name));
   }
+
+  bool supportsMultiVersioning() const override {
+    return getTriple().isOSBinFormatELF();
+  }
+  unsigned multiVersionSortPriority(StringRef Name) const override;
 
   bool setFPMath(StringRef Name) override;
 
