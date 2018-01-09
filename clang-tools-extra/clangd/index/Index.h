@@ -15,6 +15,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringExtras.h"
 #include <array>
 #include <string>
@@ -126,10 +127,39 @@ struct Symbol {
   //     (not a definition), which is usually declared in ".h" file.
   SymbolLocation CanonicalDeclaration;
 
+  /// A brief description of the symbol that can be displayed in the completion
+  /// candidate list. For example, "Foo(X x, Y y) const" is a labal for a
+  /// function.
+  llvm::StringRef CompletionLabel;
+  /// The piece of text that the user is expected to type to match the
+  /// code-completion string, typically a keyword or the name of a declarator or
+  /// macro.
+  llvm::StringRef CompletionFilterText;
+  /// What to insert when completing this symbol (plain text version).
+  llvm::StringRef CompletionPlainInsertText;
+  /// What to insert when completing this symbol (snippet version). This is
+  /// empty if it is the same as the plain insert text above.
+  llvm::StringRef CompletionSnippetInsertText;
+
+  /// Optional symbol details that are not required to be set. For example, an
+  /// index fuzzy match can return a large number of symbol candidates, and it
+  /// is preferable to send only core symbol information in the batched results
+  /// and have clients resolve full symbol information for a specific candidate
+  /// if needed.
+  struct Details {
+    // Documentation including comment for the symbol declaration.
+    llvm::StringRef Documentation;
+    // This is what goes into the LSP detail field in a completion item. For
+    // example, the result type of a function.
+    llvm::StringRef CompletionDetail;
+  };
+
+  // Optional details of the symbol.
+  Details *Detail = nullptr;
+
   // FIXME: add definition location of the symbol.
   // FIXME: add all occurrences support.
   // FIXME: add extra fields for index scoring signals.
-  // FIXME: add code completion information.
 };
 
 // An immutable symbol container that stores a set of symbols.
