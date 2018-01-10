@@ -423,16 +423,7 @@ Status PlatformRemoteGDBServer::LaunchProcess(ProcessLaunchInfo &launch_info) {
   }
 
   // Send the environment and the program + arguments after we connect
-  const char **envp =
-      launch_info.GetEnvironmentEntries().GetConstArgumentVector();
-
-  if (envp) {
-    const char *env_entry;
-    for (int i = 0; (env_entry = envp[i]); ++i) {
-      if (m_gdb_client.SendEnvironmentPacket(env_entry) != 0)
-        break;
-    }
-  }
+  m_gdb_client.SendEnvironment(launch_info.GetEnvironment());
 
   ArchSpec arch_spec = launch_info.GetArchitecture();
   const char *arch_triple = arch_spec.GetTriple().str().c_str();

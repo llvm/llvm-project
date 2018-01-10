@@ -5822,17 +5822,23 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     SDValue Ops[5];
     unsigned rw = cast<ConstantInt>(I.getArgOperand(1))->getZExtValue();
     auto Flags = rw == 0 ? MachineMemOperand::MOLoad :MachineMemOperand::MOStore;
-    Ops[0] = getRoot();
+    Ops[0] = DAG.getRoot();
     Ops[1] = getValue(I.getArgOperand(0));
     Ops[2] = getValue(I.getArgOperand(1));
     Ops[3] = getValue(I.getArgOperand(2));
     Ops[4] = getValue(I.getArgOperand(3));
-    DAG.setRoot(DAG.getMemIntrinsicNode(ISD::PREFETCH, sdl,
-                                        DAG.getVTList(MVT::Other), Ops,
-                                        EVT::getIntegerVT(*Context, 8),
-                                        MachinePointerInfo(I.getArgOperand(0)),
-                                        0, /* align */
-                                        Flags));
+    SDValue Result = DAG.getMemIntrinsicNode(ISD::PREFETCH, sdl,
+                                             DAG.getVTList(MVT::Other), Ops,
+                                             EVT::getIntegerVT(*Context, 8),
+                                             MachinePointerInfo(I.getArgOperand(0)),
+                                             0, /* align */
+                                             Flags);
+
+    // Chain the prefetch in parallell with any pending loads, to stay out of
+    // the way of later optimizations.
+    PendingLoads.push_back(Result);
+    Result = getRoot();
+    DAG.setRoot(Result);
     return nullptr;
   }
   case Intrinsic::lifetime_start:

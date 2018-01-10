@@ -125,7 +125,6 @@ class VSO {
   friend class ExecutionSession;
 
 public:
-  /// @brief
   enum RelativeLinkageStrength {
     NewDefinitionIsStronger,
     DuplicateDefinition,

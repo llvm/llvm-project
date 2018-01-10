@@ -1,6 +1,11 @@
 ; RUN: opt < %s -inline -S | FileCheck %s
 ; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
 
+; The verifier does catch problems with inlining of byval arguments that has a
+; different address space compared to the alloca. But running instcombine
+; after inline used to trigger asserts unless we disallow such inlining.
+; RUN: opt < %s -inline -instcombine -disable-output 2>/dev/null
+
 target datalayout = "p:32:32-p1:64:64-p2:16:16-n16:32:64"
 
 ; Inlining a byval struct should cause an explicit copy into an alloca.
@@ -131,6 +136,11 @@ entry:
 ; CHECK-NOT: load i32, i32* getelementptr inbounds (%struct.S0, %struct.S0* @b, i64 0, i32 0), align 4
 }
 
+; Inlining a byval struct that is in a different address space compared to the
+; alloca address space is at the moment not expected. That would need
+; adjustments inside the inlined function since the address space attribute of
+; the inlined argument changes.
+
 %struct.S1 = type { i32 }
 
 @d = addrspace(1) global %struct.S1 { i32 1 }, align 4
@@ -151,6 +161,5 @@ entry:
 	%0 = load i32, i32 addrspace(1)* @c, align 4
 	ret i32 %0
 ; CHECK: @test5_as1()
-; CHECK: store i32 0, i32 addrspace(1)* getelementptr inbounds (%struct.S1, %struct.S1 addrspace(1)* @d, i64 0, i32 0), align 4
-; CHECK-NOT: load i32, i32 addrspace(1)* getelementptr inbounds (%struct.S1, %struct.S1 addrspace(1)* @d, i64 0, i32 0), align 4
+; CHECK: call void @f5_as1
 }

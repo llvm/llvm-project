@@ -30,9 +30,14 @@
 
   define void @test_movti16_0xffff() #2 { ret void }
 
+  define void @test_vnmuls() #3 { ret void }
+  define void @test_vnmuls_reassociate() #3 { ret void }
+  define void @test_vnmuld() #3 { ret void }
+
   attributes #0 = { "target-features"="+v6" }
   attributes #1 = { "target-features"="-v6" }
   attributes #2 = { "target-features"="+v6t2" }
+  attributes #3 = { "target-features"="+vfp2" }
 ...
 ---
 name:            test_mla
@@ -862,4 +867,97 @@ body:             |
 
     BX_RET 14, %noreg, implicit %r0
     ; CHECK: BX_RET 14, %noreg, implicit %r0
+...
+---
+name:            test_vnmuls
+# CHECK-LABEL: name: test_vnmuls
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: fprb }
+  - { id: 3, class: fprb }
+body:             |
+  bb.0:
+    liveins: %s0, %s1
+
+    %0(s32) = COPY %s0
+    %1(s32) = COPY %s1
+    ; CHECK-DAG: [[VREGX:%[0-9]+]]:spr = COPY %s0
+    ; CHECK-DAG: [[VREGY:%[0-9]+]]:spr = COPY %s1
+
+    %2(s32) = G_FMUL %0, %1
+    %3(s32) = G_FNEG %2
+    ; CHECK: [[VREGR:%[0-9]+]]:spr = VNMULS [[VREGX]], [[VREGY]], 14, %noreg
+
+    %s0 = COPY %3(s32)
+    ; CHECK: %s0 = COPY [[VREGR]]
+
+    BX_RET 14, %noreg, implicit %s0
+    ; CHECK: BX_RET 14, %noreg, implicit %s0
+...
+---
+name:            test_vnmuls_reassociate
+# CHECK-LABEL: name: test_vnmuls_reassociate
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: fprb }
+  - { id: 3, class: fprb }
+body:             |
+  bb.0:
+    liveins: %s0, %s1
+
+    %0(s32) = COPY %s0
+    %1(s32) = COPY %s1
+    ; CHECK-DAG: [[VREGX:%[0-9]+]]:spr = COPY %s0
+    ; CHECK-DAG: [[VREGY:%[0-9]+]]:spr = COPY %s1
+
+    %2(s32) = G_FNEG %0
+    %3(s32) = G_FMUL %1, %2
+    ; CHECK: [[VREGR:%[0-9]+]]:spr = VNMULS [[VREGX]], [[VREGY]], 14, %noreg
+
+    %s0 = COPY %3(s32)
+    ; CHECK: %s0 = COPY [[VREGR]]
+
+    BX_RET 14, %noreg, implicit %s0
+    ; CHECK: BX_RET 14, %noreg, implicit %s0
+...
+---
+name:            test_vnmuld
+# CHECK-LABEL: name: test_vnmuld
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: fprb }
+  - { id: 3, class: fprb }
+body:             |
+  bb.0:
+    liveins: %d0, %d1
+
+    %0(s64) = COPY %d0
+    %1(s64) = COPY %d1
+    ; CHECK-DAG: [[VREGX:%[0-9]+]]:dpr = COPY %d0
+    ; CHECK-DAG: [[VREGY:%[0-9]+]]:dpr = COPY %d1
+
+    %2(s64) = G_FMUL %0, %1
+    %3(s64) = G_FNEG %2
+    ; CHECK: [[VREGR:%[0-9]+]]:dpr = VNMULD [[VREGX]], [[VREGY]], 14, %noreg
+
+    %d0 = COPY %3(s64)
+    ; CHECK: %d0 = COPY [[VREGR]]
+
+    BX_RET 14, %noreg, implicit %d0
+    ; CHECK: BX_RET 14, %noreg, implicit %d0
 ...

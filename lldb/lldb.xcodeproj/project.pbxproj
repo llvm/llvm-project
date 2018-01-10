@@ -53,6 +53,7 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		22DC561A20064C9700A7E9E8 /* Environment.cpp in CopyFiles */ = {isa = PBXBuildFile; fileRef = 22DC561920064C9600A7E9E8 /* Environment.cpp */; };
 		23042D121976CA1D00621B2C /* PlatformKalimba.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23042D101976CA0A00621B2C /* PlatformKalimba.cpp */; };
 		23059A0719532B96007B8189 /* LinuxSignals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23059A0519532B96007B8189 /* LinuxSignals.cpp */; };
 		23059A101958B319007B8189 /* SBUnixSignals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23059A0F1958B319007B8189 /* SBUnixSignals.cpp */; };
@@ -1246,6 +1247,7 @@
 			dstSubfolderSpec = 0;
 			files = (
 				9A20570F1F3B821A00F6C293 /* test-dwarf.cpp in CopyFiles */,
+				22DC561A20064C9700A7E9E8 /* Environment.cpp in CopyFiles */,
 				9A2057101F3B821A00F6C293 /* test-dwarf.exe in CopyFiles */,
 				AF90106515AB7D3600FF120D /* lldb.1 in CopyFiles */,
 			);
@@ -1268,6 +1270,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		22DC561920064C9600A7E9E8 /* Environment.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Environment.cpp; path = source/Utility/Environment.cpp; sourceTree = "<group>"; };
 		23042D101976CA0A00621B2C /* PlatformKalimba.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformKalimba.cpp; sourceTree = "<group>"; };
 		23042D111976CA0A00621B2C /* PlatformKalimba.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PlatformKalimba.h; sourceTree = "<group>"; };
 		23059A0519532B96007B8189 /* LinuxSignals.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LinuxSignals.cpp; path = Utility/LinuxSignals.cpp; sourceTree = "<group>"; };
@@ -4372,6 +4375,7 @@
 		2682F168115ED9C800CCFF99 /* Utility */ = {
 			isa = PBXGroup;
 			children = (
+				22DC561920064C9600A7E9E8 /* Environment.cpp */,
 				AF6CA6651FBBAF27005A0DC3 /* ArchSpec.cpp */,
 				AF6CA6671FBBAF37005A0DC3 /* ArchSpec.h */,
 				26BC7D5710F1B77400F91463 /* Connection.h */,
