@@ -41,6 +41,11 @@ public:
                             MachineBasicBlock::iterator MBBI, unsigned DstReg,
                             int FrameIndex, const TargetRegisterClass *RC,
                             const TargetRegisterInfo *TRI) const override;
+
+  // Materializes the given int32 Val into DstReg.
+  void movImm32(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                const DebugLoc &DL, unsigned DstReg, uint64_t Val,
+                MachineInstr::MIFlag Flag = MachineInstr::NoFlags) const;
 };
 }
 #endif

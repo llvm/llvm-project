@@ -59,6 +59,9 @@
   define void @test_fdiv_s32() #0 { ret void }
   define void @test_fdiv_s64() #0 { ret void }
 
+  define void @test_fneg_s32() #0 { ret void }
+  define void @test_fneg_s64() #0 { ret void }
+
   define void @test_soft_fp_s64() #0 { ret void }
 
   attributes #0 = { "target-features"="+vfp2"}
@@ -1089,6 +1092,52 @@ body:             |
     %1(s64) = COPY %d1
     %2(s64) = G_FDIV %0, %1
     %d0 = COPY %2(s64)
+    BX_RET 14, %noreg, implicit %d0
+
+...
+---
+name:            test_fneg_s32
+# CHECK-LABEL: name: test_fneg_s32
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK: registers:
+# CHECK: - { id: 0, class: fprb, preferred-register: '' }
+# CHECK: - { id: 1, class: fprb, preferred-register: '' }
+
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    liveins: %s0
+
+    %0(s32) = COPY %s0
+    %1(s32) = G_FNEG %0
+    %s0 = COPY %1(s32)
+    BX_RET 14, %noreg, implicit %s0
+
+...
+---
+name:            test_fneg_s64
+# CHECK-LABEL: name: test_fneg_s64
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK: registers:
+# CHECK: - { id: 0, class: fprb, preferred-register: '' }
+# CHECK: - { id: 1, class: fprb, preferred-register: '' }
+
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    liveins: %d0
+
+    %0(s64) = COPY %d0
+    %1(s64) = G_FNEG %0
+    %d0 = COPY %1(s64)
     BX_RET 14, %noreg, implicit %d0
 
 ...

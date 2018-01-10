@@ -1,6 +1,8 @@
 # RUN: llc -mtriple=aarch64--- -run-pass=machine-outliner %s -o - | FileCheck %s
 --- |
 
+  @x = common global i32 0, align 4
+
   define void @baz() #0 {
     ret void
   }
@@ -58,6 +60,7 @@ body:             |
     %w16 = ORRWri %wzr, 1
     %w16 = ORRWri %wzr, 1
     %w16 = ORRWri %wzr, 1
+    renamable %x9 = ADRP target-flags(aarch64-page) @x
     %x16 = ADDXri %sp, 48, 0;
     STRHHroW %w16, %x9, %w30, 1, 1
     %lr = ORRXri %xzr, 1
@@ -70,6 +73,7 @@ body:             |
     %w16 = ORRWri %wzr, 1
     %w16 = ORRWri %wzr, 1
     %w16 = ORRWri %wzr, 1
+    renamable %x9 = ADRP target-flags(aarch64-page) @x
     %x16 = ADDXri %sp, 48, 0;
     STRHHroW %w16, %x9, %w30, 1, 1
     %lr = ORRXri %xzr, 1 
@@ -83,6 +87,7 @@ body:             |
     %w16 = ORRWri %wzr, 1
     %w16 = ORRWri %wzr, 1
     %w16 = ORRWri %wzr, 1
+    renamable %x9 = ADRP target-flags(aarch64-page) @x
     %x16 = ADDXri %sp, 48, 0;
     STRHHroW %w16, %x9, %w30, 1, 1
     %lr = ORRXri %xzr, 1

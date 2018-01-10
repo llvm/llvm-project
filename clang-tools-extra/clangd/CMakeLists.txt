@@ -30,6 +30,7 @@ add_clang_library(clangDaemon
 
   LINK_LIBS
   clangAST
+  clangASTMatchers
   clangBasic
   clangFormat
   clangFrontend

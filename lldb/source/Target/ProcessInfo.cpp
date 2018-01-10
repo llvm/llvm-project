@@ -35,7 +35,7 @@ ProcessInfo::ProcessInfo(const char *name, const ArchSpec &arch,
 void ProcessInfo::Clear() {
   m_executable.Clear();
   m_arguments.Clear();
-  m_environment.Clear();
+  m_environment.clear();
   m_uid = UINT32_MAX;
   m_gid = UINT32_MAX;
   m_arch.Clear();
@@ -59,8 +59,7 @@ void ProcessInfo::Dump(Stream &s, Platform *platform) const {
   s << "Arguments:\n";
   m_arguments.Dump(s);
 
-  s << "Environment:\n";
-  m_environment.Dump(s, "env");
+  s.Format("Environment:\n{0}", m_environment);
 }
 
 void ProcessInfo::SetExecutableFile(const FileSpec &exe_file,

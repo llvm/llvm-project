@@ -91,10 +91,7 @@ Expected<std::unique_ptr<TestClient>> TestClient::launchCustom(StringRef Log, Ar
   ProcessLaunchInfo Info;
   Info.SetArchitecture(arch_spec);
   Info.SetArguments(args, true);
-
-  StringList Env;
-  Host::GetEnvironment(Env);
-  Info.GetEnvironmentEntries() = Args(Env);
+  Info.GetEnvironment() = Host::GetEnvironment();
 
   status = Host::LaunchProcess(Info);
   if (status.Fail())
@@ -114,14 +111,9 @@ Expected<std::unique_ptr<TestClient>> TestClient::launchCustom(StringRef Log, Ar
 }
 
 Error TestClient::SetInferior(llvm::ArrayRef<std::string> inferior_args) {
-  StringList env;
-  Host::GetEnvironment(env);
-  for (size_t i = 0; i < env.GetSize(); ++i) {
-    if (SendEnvironmentPacket(env[i].c_str()) != 0) {
-      return make_error<StringError>(
-          formatv("Failed to set environment variable: {0}", env[i]).str(),
-          inconvertibleErrorCode());
-    }
+  if (SendEnvironment(Host::GetEnvironment()) != 0) {
+    return make_error<StringError>("Failed to set launch environment",
+                                   inconvertibleErrorCode());
   }
   std::stringstream command;
   command << "A";

@@ -307,16 +307,7 @@ void ProcessInstanceInfo::Dump(Stream &s, Platform *platform) const {
     }
   }
 
-  const uint32_t envc = m_environment.GetArgumentCount();
-  if (envc > 0) {
-    for (uint32_t i = 0; i < envc; i++) {
-      const char *env = m_environment.GetArgumentAtIndex(i);
-      if (i < 10)
-        s.Printf(" env[%u] = %s\n", i, env);
-      else
-        s.Printf("env[%u] = %s\n", i, env);
-    }
-  }
+  s.Format("{0}", m_environment);
 
   if (m_arch.IsValid()) {
     s.Printf("   arch = ");
@@ -529,7 +520,7 @@ Status ProcessLaunchCommandOptions::SetOptionValue(
     break;
 
   case 'v':
-    launch_info.GetEnvironmentEntries().AppendArgument(option_arg);
+    launch_info.GetEnvironment().insert(option_arg);
     break;
 
   default:

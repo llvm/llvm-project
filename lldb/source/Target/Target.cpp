@@ -3611,36 +3611,19 @@ protected:
                 nullptr, idx, g_properties[idx].default_uint_value != 0)) {
           PlatformSP platform_sp(m_target->GetPlatform());
           if (platform_sp) {
-            StringList env;
-            if (platform_sp->GetEnvironment(env)) {
-              OptionValueDictionary *env_dict =
-                  GetPropertyAtIndexAsOptionValueDictionary(nullptr,
-                                                            ePropertyEnvVars);
-              if (env_dict) {
-                const bool can_replace = false;
-                const size_t envc = env.GetSize();
-                for (size_t idx = 0; idx < envc; idx++) {
-                  const char *env_entry = env.GetStringAtIndex(idx);
-                  if (env_entry) {
-                    const char *equal_pos = ::strchr(env_entry, '=');
-                    ConstString key;
-                    // It is ok to have environment variables with no values
-                    const char *value = nullptr;
-                    if (equal_pos) {
-                      key.SetCStringWithLength(env_entry,
-                                               equal_pos - env_entry);
-                      if (equal_pos[1])
-                        value = equal_pos + 1;
-                    } else {
-                      key.SetCString(env_entry);
-                    }
-                    // Don't allow existing keys to be replaced with ones we get
-                    // from the platform environment
-                    env_dict->SetValueForKey(
-                        key, OptionValueSP(new OptionValueString(value)),
-                        can_replace);
-                  }
-                }
+            Environment env = platform_sp->GetEnvironment();
+            OptionValueDictionary *env_dict =
+                GetPropertyAtIndexAsOptionValueDictionary(nullptr,
+                                                          ePropertyEnvVars);
+            if (env_dict) {
+              const bool can_replace = false;
+              for (const auto &KV : env) {
+                // Don't allow existing keys to be replaced with ones we get
+                // from the platform environment
+                env_dict->SetValueForKey(
+                    ConstString(KV.first()),
+                    OptionValueSP(new OptionValueString(KV.second.c_str())),
+                    can_replace);
               }
             }
           }
@@ -3906,15 +3889,19 @@ void TargetProperties::SetRunArguments(const Args &args) {
   m_launch_info.GetArguments() = args;
 }
 
-size_t TargetProperties::GetEnvironmentAsArgs(Args &env) const {
+Environment TargetProperties::GetEnvironment() const {
+  // TODO: Get rid of the Args intermediate step
+  Args env;
   const uint32_t idx = ePropertyEnvVars;
-  return m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, idx, env);
+  m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, idx, env);
+  return Environment(env);
 }
 
-void TargetProperties::SetEnvironmentFromArgs(const Args &env) {
+void TargetProperties::SetEnvironment(Environment env) {
+  // TODO: Get rid of the Args intermediate step
   const uint32_t idx = ePropertyEnvVars;
-  m_collection_sp->SetPropertyAtIndexFromArgs(nullptr, idx, env);
-  m_launch_info.GetEnvironmentEntries() = env;
+  m_collection_sp->SetPropertyAtIndexFromArgs(nullptr, idx, Args(env));
+  m_launch_info.GetEnvironment() = std::move(env);
 }
 
 bool TargetProperties::GetSkipPrologue() const {
@@ -4152,7 +4139,7 @@ void TargetProperties::SetProcessLaunchInfo(
   m_launch_info = launch_info;
   SetArg0(launch_info.GetArg0());
   SetRunArguments(launch_info.GetArguments());
-  SetEnvironmentFromArgs(launch_info.GetEnvironmentEntries());
+  SetEnvironment(launch_info.GetEnvironment());
   const FileAction *input_file_action =
       launch_info.GetFileActionForFD(STDIN_FILENO);
   if (input_file_action) {
@@ -4193,9 +4180,7 @@ void TargetProperties::EnvVarsValueChangedCallback(void *target_property_ptr,
                                                    OptionValue *) {
   TargetProperties *this_ =
       reinterpret_cast<TargetProperties *>(target_property_ptr);
-  Args args;
-  if (this_->GetEnvironmentAsArgs(args))
-    this_->m_launch_info.GetEnvironmentEntries() = args;
+  this_->m_launch_info.GetEnvironment() = this_->GetEnvironment();
 }
 
 void TargetProperties::InputPathValueChangedCallback(void *target_property_ptr,

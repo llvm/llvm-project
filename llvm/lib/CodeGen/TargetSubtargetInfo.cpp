@@ -111,3 +111,6 @@ std::string TargetSubtargetInfo::getSchedInfoStr(MCInst const &MCI) const {
       TSchedModel.computeInstrRThroughput(MCI.getOpcode());
   return createSchedInfoStr(Latency, RThroughput);
 }
+
+void TargetSubtargetInfo::mirFileLoaded(MachineFunction &MF) const {
+}

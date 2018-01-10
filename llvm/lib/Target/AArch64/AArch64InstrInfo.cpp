@@ -4841,6 +4841,12 @@ AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
     return MachineOutlinerInstrType::Illegal;
   }
 
+  // Special cases for instructions that can always be outlined, but will fail
+  // the later tests. e.g, ADRPs, which are PC-relative use LR, but can always
+  // be outlined because they don't require a *specific* value to be in LR.
+  if (MI.getOpcode() == AArch64::ADRP)
+    return MachineOutlinerInstrType::Legal;
+
   // Outline calls without stack parameters or aggregate parameters.
   if (MI.isCall()) {
     const Module *M = MF->getFunction().getParent();

@@ -140,7 +140,7 @@ bool SBProcess::RemoteLaunch(char const **argv, char const **envp,
       if (argv)
         launch_info.GetArguments().AppendArguments(argv);
       if (envp)
-        launch_info.GetEnvironmentEntries().SetArguments(envp);
+        launch_info.GetEnvironment() = Environment(envp);
       error.SetError(process_sp->Launch(launch_info));
     } else {
       error.SetErrorString("must be in eStateConnected to call RemoteLaunch");

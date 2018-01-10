@@ -34,17 +34,30 @@ class OutputSegment;
 
 class InputChunk {
 public:
-  InputChunk(const ObjFile &F) : File(F) {}
-  virtual ~InputChunk() = default;
+  virtual uint32_t getSize() const = 0;
+
   void copyRelocations(const WasmSection &Section);
 
+  void writeTo(uint8_t *SectionStart) const;
+
+  void setOutputOffset(uint32_t Offset) {
+    OutputOffset = Offset;
+    calcRelocations();
+  }
+
+  uint32_t getOutputOffset() const { return OutputOffset; }
+
+  std::vector<OutputRelocation> OutRelocations;
+
+protected:
+  InputChunk(const ObjFile &F) : File(F) {}
+  virtual ~InputChunk() = default;
+  void calcRelocations();
   virtual const uint8_t *getData() const = 0;
-  virtual uint32_t getSize() const = 0;
   virtual uint32_t getInputSectionOffset() const = 0;
 
-  int32_t OutputOffset = 0;
   std::vector<WasmRelocation> Relocations;
-  std::vector<OutputRelocation> OutRelocations;
+  int32_t OutputOffset = 0;
   const ObjFile &File;
 };
 
@@ -69,22 +82,24 @@ public:
 
   void setOutputSegment(const OutputSegment *Segment, uint32_t Offset) {
     OutputSeg = Segment;
-    OutputOffset = Offset;
+    OutputSegmentOffset = Offset;
   }
 
   const uint8_t *getData() const override {
     return Segment.Data.Content.data();
   }
   uint32_t getSize() const override { return Segment.Data.Content.size(); }
-  uint32_t getInputSectionOffset() const override {
-    return Segment.SectionOffset;
-  }
   uint32_t getAlignment() const { return Segment.Data.Alignment; }
   uint32_t startVA() const { return Segment.Data.Offset.Value.Int32; }
   uint32_t endVA() const { return startVA() + getSize(); }
   StringRef getName() const { return Segment.Data.Name; }
 
+  int32_t OutputSegmentOffset = 0;
+
 protected:
+  uint32_t getInputSectionOffset() const override {
+    return Segment.SectionOffset;
+  }
   const WasmSegment &Segment;
   const OutputSegment *OutputSeg = nullptr;
 };
@@ -99,11 +114,8 @@ public:
 
   uint32_t getSize() const override { return Function.Size; }
   const uint8_t *getData() const override {
-    return File.CodeSection->Content.data() + Function.CodeSectionOffset;
+    return File.CodeSection->Content.data() + getInputSectionOffset();
   }
-  uint32_t getInputSectionOffset() const override {
-    return Function.CodeSectionOffset;
-  };
 
   uint32_t getOutputIndex() const { return OutputIndex.getValue(); };
   bool hasOutputIndex() const { return OutputIndex.hasValue(); };
@@ -115,6 +127,9 @@ public:
   const WasmSignature &Signature;
 
 protected:
+  uint32_t getInputSectionOffset() const override {
+    return Function.CodeSectionOffset;
+  }
   const WasmFunction &Function;
   llvm::Optional<uint32_t> OutputIndex;
 };

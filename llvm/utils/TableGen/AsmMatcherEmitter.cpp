@@ -503,6 +503,20 @@ struct MatchableInfo {
   /// removed.
   SmallVector<AsmOperand, 8> AsmOperands;
 
+  /// AsmOperandEqualityConstraints - an array of pairs holding operand
+  /// constraints.
+  /// Each constraint is represented as a pair holding position of the token of
+  /// the operand asm name.
+  /// For example, an "AsmString" "add $Vd.s, $Vn.s, $Xn" would be
+  /// split in the following list of tokens:
+  ///
+  ///    ['add', '$Vd', '.s', '$Vn', '.s', '$Xn']
+  ///
+  /// A constraint "$Vd = $Vn" (e.g. for a destructive operation) is rendered
+  /// as the pair {1,3} into this set (note that tokens are numbered starting
+  /// from 0).
+  SmallVector<std::pair<unsigned,unsigned>, 1> AsmOperandTiedConstraints;
+
   /// Predicates - The required subtarget features to match this instruction.
   SmallVector<const SubtargetFeatureInfo *, 4> RequiredFeatures;
 
@@ -885,6 +899,22 @@ extractSingletonRegisterForAsmOperand(MatchableInfo::AsmOperand &Op,
   // be some random non-register token, just ignore it.
 }
 
+static Optional<size_t>
+getAsmOperandIdx(const SmallVectorImpl<MatchableInfo::AsmOperand> &AsmOperands,
+                 std::string Name) {
+  const auto SymbolicName = std::string("$") + Name;
+  const auto Pos =
+      std::find_if(AsmOperands.begin(), AsmOperands.end(),
+                   [&SymbolicName](const MatchableInfo::AsmOperand &A) {
+        return A.Token == SymbolicName;
+      });
+
+  if (Pos == AsmOperands.end())
+    return Optional<size_t>();
+
+  return Optional<size_t>(std::distance(AsmOperands.begin(), Pos));
+}
+
 void MatchableInfo::initialize(const AsmMatcherInfo &Info,
                                SmallPtrSetImpl<Record*> &SingletonRegisters,
                                AsmVariantInfo const &Variant,
@@ -933,6 +963,37 @@ void MatchableInfo::initialize(const AsmMatcherInfo &Info,
 
   HasDeprecation =
       DepMask ? !DepMask->getValue()->getAsUnquotedString().empty() : false;
+
+  // Do not generate tied operand info if the instruction does not
+  // use the default AsmMatchConverter.
+  if (TheDef->getValue("AsmMatchConverter") &&
+      !TheDef->getValueAsString("AsmMatchConverter").empty())
+    return;
+
+  // Generate tied operand contraints info.
+  const auto &CGIOperands = getResultInst()->Operands;
+  for (const auto &CGIOp : CGIOperands) {
+    int TiedReg = CGIOp.getTiedRegister();
+    if (TiedReg == -1)
+      continue;
+
+    Optional<size_t> LHSIdx = getAsmOperandIdx(AsmOperands, CGIOp.Name);
+    Optional<size_t> RHSIdx =
+        getAsmOperandIdx(AsmOperands, CGIOperands[TiedReg].Name);
+    // Skipping operands with constraint but no reference in the
+    // AsmString. No need to throw a warning, as it's normal to have
+    // a $dst operand in the outs dag that is constrained to a $src
+    // operand in the ins dag but that does not appear in the AsmString.
+    if (!LHSIdx || !RHSIdx)
+      continue;
+
+    // Add the constraint. Using min/max as we consider constraint
+    // pair {A,B} and {B,A} the same
+    size_t AddMnemonicIdx = HasMnemonicFirst;
+    AsmOperandTiedConstraints.emplace_back(
+        std::min(*LHSIdx, *RHSIdx) + AddMnemonicIdx,
+        std::max(*LHSIdx, *RHSIdx) + AddMnemonicIdx);
+  }
 }
 
 /// Append an AsmOperand for the given substring of AsmString.
@@ -2831,6 +2892,80 @@ static void emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
   OS << "}\n\n";
 }
 
+static void emitAsmTiedOperandConstraints(CodeGenTarget &Target,
+                                          AsmMatcherInfo &Info,
+                                          raw_ostream &OS) {
+  std::string Buf;
+  raw_string_ostream TmpOS(Buf);
+  TmpOS << "namespace {\n";
+  TmpOS << "  struct TiedAsmOpndPair {\n";
+  TmpOS << "    unsigned Opcode;\n";
+  TmpOS << "    unsigned Opnd1;\n";
+  TmpOS << "    unsigned Opnd2;\n";
+  TmpOS << "    TiedAsmOpndPair(unsigned Opcode, unsigned Opnd1, unsigned "
+           "Opnd2)\n";
+  TmpOS << "      : Opcode(Opcode), Opnd1(Opnd1), Opnd2(Opnd2) {}\n";
+  TmpOS << "  };\n";
+  TmpOS << "} // end anonymous namespace\n\n";
+  TmpOS << "static const TiedAsmOpndPair TiedAsmOperandsTable[] = {\n";
+  bool TableEmpty = true;
+  for (const auto &Inst : Target.getInstructionsByEnumValue()) {
+    auto It = std::find_if(Info.Matchables.begin(), Info.Matchables.end(),
+                           [&Inst](const std::unique_ptr<MatchableInfo> &MI) {
+      return (MI->TheDef->getID() == Inst->TheDef->getID());
+    });
+
+    if (It == Info.Matchables.end())
+      continue;
+
+    auto &Constraints = (**It).AsmOperandTiedConstraints;
+    if (Constraints.empty())
+      continue;
+
+    std::string Namespace = Inst->TheDef->getValueAsString("Namespace");
+
+    for (const auto &C : Constraints) {
+      TableEmpty = false;
+      TmpOS << "  {";
+      TmpOS << Namespace << "::"<< (**It).TheDef->getName() << ", ";
+      TmpOS << C.first << ", " << C.second;
+      TmpOS << "},\n";
+    }
+  }
+  TmpOS << "};\n\n";
+  if (!TableEmpty)
+    OS << TmpOS.str();
+
+  OS << "static bool ";
+  OS << "checkAsmTiedOperandConstraints(const MCInst &Inst,\n";
+  OS << "                               const OperandVector &Operands,\n";
+  OS << "                               SMLoc &Loc) {\n";
+
+  if (TableEmpty) {
+    OS << "return true;\n}\n\n";
+    return;
+  }
+
+  OS << "  const TiedAsmOpndPair SearchValue(Inst.getOpcode(), 0, 0);\n";
+  OS << "  const auto Range = std::equal_range(\n";
+  OS << "      std::begin(TiedAsmOperandsTable), std::end(TiedAsmOperandsTable),\n";
+  OS << "      SearchValue, [](const TiedAsmOpndPair &a,\n";
+  OS << "                      const TiedAsmOpndPair &b) {\n";
+  OS << "        return (a.Opcode < b.Opcode);\n";
+  OS << "      });\n\n";
+  OS << "  for (auto Item = Range.first;  Item != Range.second; ++Item) {\n";
+  OS << "    MCParsedAsmOperand &Op1 = *Operands[Item->Opnd1];\n";
+  OS << "    MCParsedAsmOperand &Op2 = *Operands[Item->Opnd2];\n";
+  OS << "    if ((Op1.isReg() && Op2.isReg()) &&\n";
+  OS << "        (Op1.getReg() != Op2.getReg())) {\n";
+  OS << "      Loc = Op2.getStartLoc();\n";
+  OS << "      return false;\n";
+  OS << "    }\n";
+  OS << "  }\n";
+  OS << "  return true;\n";
+  OS << "}\n\n";
+}
+
 static void emitMnemonicSpellChecker(raw_ostream &OS, CodeGenTarget &Target,
                                      unsigned VariantCount) {
   OS << "static std::string " << Target.getName()
@@ -3077,6 +3212,9 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
       Info.Target.getName(), ClassName, "ComputeAvailableFeatures",
       Info.SubtargetFeatures, OS);
+
+  if (!ReportMultipleNearMisses)
+    emitAsmTiedOperandConstraints(Target, Info, OS);
 
   StringToOffsetTable StringTable;
 
@@ -3501,6 +3639,14 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
 
   OS << "    if (matchingInlineAsm) {\n";
   OS << "      convertToMapAndConstraints(it->ConvertFn, Operands);\n";
+  if (!ReportMultipleNearMisses) {
+    OS << "      SMLoc Loc;\n";
+    OS << "      if (!checkAsmTiedOperandConstraints(Inst, Operands, Loc)) {\n";
+    OS << "        ErrorInfo = " << (HasMnemonicFirst ? "1" : "SIndex") << ";\n";
+    OS << "        return Match_InvalidTiedOperand;\n";
+    OS << "      }\n";
+    OS << "\n";
+  }
   OS << "      return Match_Success;\n";
   OS << "    }\n\n";
   OS << "    // We have selected a definite instruction, convert the parsed\n"
@@ -3573,6 +3719,15 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
        << "Operand&)*Operands[0]).getStartLoc();\n";
     OS << "      getParser().Warning(Loc, Info, None);\n";
     OS << "    }\n";
+  }
+
+  if (!ReportMultipleNearMisses) {
+    OS << "      SMLoc Loc;\n";
+    OS << "      if (!checkAsmTiedOperandConstraints(Inst, Operands, Loc)) {\n";
+    OS << "        ErrorInfo = " << (HasMnemonicFirst ? "1" : "SIndex") << ";\n";
+    OS << "        return Match_InvalidTiedOperand;\n";
+    OS << "      }\n";
+    OS << "\n";
   }
 
   OS << "    DEBUG_WITH_TYPE(\n";

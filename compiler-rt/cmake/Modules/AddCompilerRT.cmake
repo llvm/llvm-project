@@ -439,7 +439,7 @@ macro(add_compiler_rt_resource_file target_name file_name component)
   add_custom_target(${target_name} DEPENDS ${dst_file})
   # Install in Clang resource directory.
   install(FILES ${file_name}
-    DESTINATION ${COMPILER_RT_INSTALL_PATH}/share
+    DESTINATION ${COMPILER_RT_INSTALL_PATH}
     COMPONENT ${component})
   add_dependencies(${component} ${target_name})
 

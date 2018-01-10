@@ -1508,6 +1508,12 @@ bool X86DAGToDAGISel::matchAddressBase(SDValue N, X86ISelAddressMode &AM) {
 bool X86DAGToDAGISel::matchVectorAddress(SDValue N, X86ISelAddressMode &AM) {
   // TODO: Support other operations.
   switch (N.getOpcode()) {
+  case ISD::Constant: {
+    uint64_t Val = cast<ConstantSDNode>(N)->getSExtValue();
+    if (!foldOffsetIntoAddress(Val, AM))
+      return false;
+    break;
+  }
   case X86ISD::Wrapper:
     if (!matchWrapper(N, AM))
       return false;
@@ -1523,7 +1529,7 @@ bool X86DAGToDAGISel::selectVectorAddr(SDNode *Parent, SDValue N, SDValue &Base,
   X86ISelAddressMode AM;
   auto *Mgs = cast<X86MaskedGatherScatterSDNode>(Parent);
   AM.IndexReg = Mgs->getIndex();
-  AM.Scale = Mgs->getValue().getScalarValueSizeInBits() / 8;
+  AM.Scale = cast<ConstantSDNode>(Mgs->getScale())->getZExtValue();
 
   unsigned AddrSpace = cast<MemSDNode>(Parent)->getPointerInfo().getAddrSpace();
   // AddrSpace 256 -> GS, 257 -> FS, 258 -> SS.
@@ -1534,14 +1540,8 @@ bool X86DAGToDAGISel::selectVectorAddr(SDNode *Parent, SDValue N, SDValue &Base,
   if (AddrSpace == 258)
     AM.Segment = CurDAG->getRegister(X86::SS, MVT::i16);
 
-  // If Base is 0, the whole address is in index and the Scale is 1
-  if (isa<ConstantSDNode>(N)) {
-    assert(cast<ConstantSDNode>(N)->isNullValue() &&
-           "Unexpected base in gather/scatter");
-    AM.Scale = 1;
-  }
-  // Otherwise, try to match into the base and displacement fields.
-  else if (matchVectorAddress(N, AM))
+  // Try to match into the base and displacement fields.
+  if (matchVectorAddress(N, AM))
     return false;
 
   MVT VT = N.getSimpleValueType();

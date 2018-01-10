@@ -267,6 +267,9 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
   case AMDGPU::FLAT_SCR:
     O << "flat_scratch";
     return;
+  case AMDGPU::XNACK_MASK:
+    O << "xnack_mask";
+    return;
   case AMDGPU::VCC_LO:
     O << "vcc_lo";
     return;
@@ -296,6 +299,12 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
     return;
   case AMDGPU::FLAT_SCR_HI:
     O << "flat_scratch_hi";
+    return;
+  case AMDGPU::XNACK_MASK_LO:
+    O << "xnack_mask_lo";
+    return;
+  case AMDGPU::XNACK_MASK_HI:
+    O << "xnack_mask_hi";
     return;
   case AMDGPU::FP_REG:
   case AMDGPU::SP_REG:

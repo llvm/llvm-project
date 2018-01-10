@@ -945,8 +945,7 @@ GDBRemoteCommunicationServerCommon::Handle_QEnvironment(
   packet.SetFilePos(::strlen("QEnvironment:"));
   const uint32_t bytes_left = packet.GetBytesLeft();
   if (bytes_left > 0) {
-    m_process_launch_info.GetEnvironmentEntries().AppendArgument(
-        llvm::StringRef::withNullAsEmpty(packet.Peek()));
+    m_process_launch_info.GetEnvironment().insert(packet.Peek());
     return SendOKResponse();
   }
   return SendErrorResponse(12);
@@ -960,7 +959,7 @@ GDBRemoteCommunicationServerCommon::Handle_QEnvironmentHexEncoded(
   if (bytes_left > 0) {
     std::string str;
     packet.GetHexByteString(str);
-    m_process_launch_info.GetEnvironmentEntries().AppendArgument(str);
+    m_process_launch_info.GetEnvironment().insert(str);
     return SendOKResponse();
   }
   return SendErrorResponse(12);

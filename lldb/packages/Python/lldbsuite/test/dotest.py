@@ -1117,7 +1117,6 @@ def run_suite():
         signal.signal(signal.SIGINT, signal.SIG_IGN)
 
     setupSysPath()
-    configuration.setupCrashInfoHook()
 
     #
     # If '-l' is specified, do not skip the long running tests.
