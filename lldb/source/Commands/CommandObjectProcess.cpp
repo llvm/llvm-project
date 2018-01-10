@@ -205,11 +205,7 @@ protected:
     if (target->GetDisableSTDIO())
       m_options.launch_info.GetFlags().Set(eLaunchFlagDisableSTDIO);
 
-    Args environment;
-    target->GetEnvironmentAsArgs(environment);
-    if (environment.GetArgumentCount() > 0)
-      m_options.launch_info.GetEnvironmentEntries().AppendArguments(
-          environment);
+    m_options.launch_info.GetEnvironment() = target->GetEnvironment();
 
     if (!target_settings_argv0.empty()) {
       m_options.launch_info.GetArguments().AppendArgument(

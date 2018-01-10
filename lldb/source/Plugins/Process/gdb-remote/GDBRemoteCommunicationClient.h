@@ -121,6 +121,7 @@ public:
   ///     response was received.
   //------------------------------------------------------------------
   int SendEnvironmentPacket(char const *name_equal_value);
+  int SendEnvironment(const Environment &env);
 
   int SendLaunchArchPacket(const char *arch);
 

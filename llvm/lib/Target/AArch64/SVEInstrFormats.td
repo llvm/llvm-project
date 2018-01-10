@@ -12,6 +12,41 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
+// SVE Permute - Cross Lane Group
+//===----------------------------------------------------------------------===//
+
+class sve_int_perm_dup_r<bits<2> sz8_64, string asm, ZPRRegOp zprty,
+                         RegisterClass srcRegType>
+: I<(outs zprty:$Zd), (ins srcRegType:$Rn),
+  asm, "\t$Zd, $Rn",
+  "",
+  []>, Sched<[]> {
+  bits<5> Rn;
+  bits<5> Zd;
+  let Inst{31-24} = 0b00000101;
+  let Inst{23-22} = sz8_64;
+  let Inst{21-10} = 0b100000001110;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve_int_perm_dup_r<string asm> {
+  def _B : sve_int_perm_dup_r<0b00, asm, ZPR8, GPR32sp>;
+  def _H : sve_int_perm_dup_r<0b01, asm, ZPR16, GPR32sp>;
+  def _S : sve_int_perm_dup_r<0b10, asm, ZPR32, GPR32sp>;
+  def _D : sve_int_perm_dup_r<0b11, asm, ZPR64, GPR64sp>;
+
+  def : InstAlias<"mov $Zd, $Rn",
+                  (!cast<Instruction>(NAME # _B) ZPR8:$Zd, GPR32sp:$Rn), 1>;
+  def : InstAlias<"mov $Zd, $Rn",
+                  (!cast<Instruction>(NAME # _H) ZPR16:$Zd, GPR32sp:$Rn), 1>;
+  def : InstAlias<"mov $Zd, $Rn",
+                  (!cast<Instruction>(NAME # _S) ZPR32:$Zd, GPR32sp:$Rn), 1>;
+  def : InstAlias<"mov $Zd, $Rn",
+                  (!cast<Instruction>(NAME # _D) ZPR64:$Zd, GPR64sp:$Rn), 1>;
+}
+
+//===----------------------------------------------------------------------===//
 // SVE Integer Arithmetic -  Unpredicated Group.
 //===----------------------------------------------------------------------===//
 

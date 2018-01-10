@@ -822,6 +822,15 @@ int GDBRemoteCommunicationClient::SendArgumentsPacket(
   return -1;
 }
 
+int GDBRemoteCommunicationClient::SendEnvironment(const Environment &env) {
+  for (const auto &KV : env) {
+    int r = SendEnvironmentPacket(Environment::compose(KV).c_str());
+    if (r != 0)
+      return r;
+  }
+  return 0;
+}
+
 int GDBRemoteCommunicationClient::SendEnvironmentPacket(
     char const *name_equal_value) {
   if (name_equal_value && name_equal_value[0]) {
