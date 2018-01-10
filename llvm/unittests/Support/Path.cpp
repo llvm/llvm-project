@@ -564,6 +564,25 @@ TEST_F(FileSystemTest, RealPath) {
   ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory) + "/test1"));
 }
 
+#ifdef LLVM_ON_UNIX
+TEST_F(FileSystemTest, RealPathNoReadPerm) {
+  SmallString<64> Expanded;
+
+  ASSERT_NO_ERROR(
+    fs::create_directories(Twine(TestDirectory) + "/noreadperm"));
+  ASSERT_TRUE(fs::exists(Twine(TestDirectory) + "/noreadperm"));
+
+  fs::setPermissions(Twine(TestDirectory) + "/noreadperm", fs::no_perms);
+  fs::setPermissions(Twine(TestDirectory) + "/noreadperm", fs::all_exe);
+
+  ASSERT_NO_ERROR(fs::real_path(Twine(TestDirectory) + "/noreadperm", Expanded,
+                                false));
+
+  ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory) + "/noreadperm"));
+}
+#endif
+
+
 TEST_F(FileSystemTest, TempFileKeepDiscard) {
   // We can keep then discard.
   auto TempFileOrError = fs::TempFile::create(TestDirectory + "/test-%%%%");
