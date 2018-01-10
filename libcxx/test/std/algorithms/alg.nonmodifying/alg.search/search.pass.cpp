@@ -86,7 +86,7 @@ int main()
     test<random_access_iterator<const int*>, bidirectional_iterator<const int*> >();
     test<random_access_iterator<const int*>, random_access_iterator<const int*> >();
 
-#if TEST_STD_VERS > 14
+#if TEST_STD_VER > 14
 {
     typedef int * RI;
     static_assert((std::is_same<RI, decltype(std::search(RI(), RI(), MySearcher()))>::value), "" );
