@@ -22,6 +22,7 @@ namespace clang {
 namespace clangd {
 
 class JSONOutput;
+class SymbolIndex;
 
 /// This class provides implementation of an LSP server, glueing the JSON
 /// dispatch and ClangdServer together.
@@ -35,7 +36,8 @@ public:
                   const clangd::CodeCompleteOptions &CCOpts,
                   llvm::Optional<StringRef> ResourceDir,
                   llvm::Optional<Path> CompileCommandsDir,
-                  bool BuildDynamicSymbolIndex);
+                  bool BuildDynamicSymbolIndex,
+                  SymbolIndex *StaticIdx = nullptr);
 
   /// Run LSP server loop, receiving input for it from \p In. \p In must be
   /// opened in binary mode. Output will be written using Out variable passed to

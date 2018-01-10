@@ -134,10 +134,11 @@ ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
                            FileSystemProvider &FSProvider,
                            unsigned AsyncThreadsCount,
                            bool StorePreamblesInMemory,
-                           bool BuildDynamicSymbolIndex,
+                           bool BuildDynamicSymbolIndex, SymbolIndex *StaticIdx,
                            llvm::Optional<StringRef> ResourceDir)
     : CDB(CDB), DiagConsumer(DiagConsumer), FSProvider(FSProvider),
       FileIdx(BuildDynamicSymbolIndex ? new FileIndex() : nullptr),
+      StaticIdx(StaticIdx),
       // Pass a callback into `Units` to extract symbols from a newly parsed
       // file and rebuild the file index synchronously each time an AST is
       // parsed.
@@ -251,6 +252,8 @@ void ClangdServer::codeComplete(
   auto CodeCompleteOpts = Opts;
   if (FileIdx)
     CodeCompleteOpts.Index = FileIdx.get();
+  if (StaticIdx)
+    CodeCompleteOpts.StaticIndex = StaticIdx;
 
   // Copy File, as it is a PathRef that will go out of scope before Task is
   // executed.

@@ -200,11 +200,15 @@ public:
   /// If \p BuildDynamicSymbolIndex is true, ClangdServer builds a dynamic
   /// in-memory index for symbols in all opened files and uses the index to
   /// augment code completion results.
+  ///
+  /// If \p StaticIdx is set, ClangdServer uses the index for global code
+  /// completion.
   ClangdServer(GlobalCompilationDatabase &CDB,
                DiagnosticsConsumer &DiagConsumer,
                FileSystemProvider &FSProvider, unsigned AsyncThreadsCount,
                bool StorePreamblesInMemory,
                bool BuildDynamicSymbolIndex = false,
+               SymbolIndex *StaticIdx = nullptr,
                llvm::Optional<StringRef> ResourceDir = llvm::None);
 
   /// Set the root path of the workspace.
@@ -338,6 +342,11 @@ private:
   DraftStore DraftMgr;
   /// If set, this manages index for symbols in opened files.
   std::unique_ptr<FileIndex> FileIdx;
+  /// If set, this provides static index for project-wide global symbols.
+  /// clangd global code completion result will come from the static index and
+  /// the `FileIdx` above.
+  /// No owned, the life time is managed by clangd embedders.
+  SymbolIndex *StaticIdx;
   CppFileCollection Units;
   std::string ResourceDir;
   // If set, this represents the workspace path.

@@ -455,12 +455,6 @@ TEST(SignatureHelpTest, ActiveArg) {
 
 std::unique_ptr<SymbolIndex> simpleIndexFromSymbols(
     std::vector<std::pair<std::string, index::SymbolKind>> Symbols) {
-  auto I = llvm::make_unique<MemIndex>();
-  struct Snapshot {
-    SymbolSlab Slab;
-    std::vector<const Symbol *> Pointers;
-  };
-  auto Snap = std::make_shared<Snapshot>();
   SymbolSlab::Builder Slab;
   for (const auto &Pair : Symbols) {
     Symbol Sym;
@@ -478,13 +472,7 @@ std::unique_ptr<SymbolIndex> simpleIndexFromSymbols(
     Sym.SymInfo.Kind = Pair.second;
     Slab.insert(Sym);
   }
-  Snap->Slab = std::move(Slab).build();
-  for (auto &Iter : Snap->Slab)
-    Snap->Pointers.push_back(&Iter);
-  auto S = std::shared_ptr<std::vector<const Symbol *>>(std::move(Snap),
-                                                        &Snap->Pointers);
-  I->build(std::move(S));
-  return std::move(I);
+  return MemIndex::build(std::move(Slab).build());
 }
 
 TEST(CompletionTest, NoIndex) {
@@ -497,6 +485,23 @@ TEST(CompletionTest, NoIndex) {
   )cpp",
                              Opts);
   EXPECT_THAT(Results.items, Has("No"));
+}
+
+TEST(CompletionTest, StaticAndDynamicIndex) {
+  clangd::CodeCompleteOptions Opts;
+  auto StaticIdx =
+      simpleIndexFromSymbols({{"ns::XYZ", index::SymbolKind::Class}});
+  Opts.StaticIndex = StaticIdx.get();
+  auto DynamicIdx =
+      simpleIndexFromSymbols({{"ns::foo", index::SymbolKind::Function}});
+  Opts.Index = DynamicIdx.get();
+
+  auto Results = completions(R"cpp(
+      void f() { ::ns::^ }
+  )cpp",
+                             Opts);
+  EXPECT_THAT(Results.items, Contains(Labeled("[G]XYZ")));
+  EXPECT_THAT(Results.items, Contains(Labeled("foo")));
 }
 
 TEST(CompletionTest, SimpleIndexBased) {
