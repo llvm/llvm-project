@@ -172,7 +172,7 @@ body: |
     STRXui %x0, %sp, 0 :: (store 8)
     STRXui killed %x0, %sp, 2 :: (store 8)
     %x0 = LDRXui %sp, 0 :: (load 8)
-    BL $bar, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %x0, implicit-def %sp
+    BL &bar, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %x0, implicit-def %sp
     RET %lr
 ...
 # CHECK-LABEL: name: promote-load-from-store-trivial-kills
@@ -180,4 +180,4 @@ body: |
 # CHECK: STRXui %x0, %sp, 2
 # CHECK-NOT: LDRXui
 # CHECK-NOT: ORR
-# CHECK: BL $bar, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %x0, implicit-def %sp
+# CHECK: BL &bar, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %x0, implicit-def %sp

@@ -196,6 +196,7 @@ protected:
   MCSection *PDataSection;
   MCSection *XDataSection;
   MCSection *SXDataSection;
+  MCSection *GFIDsSection;
 
 public:
   void InitMCObjectFileInfo(const Triple &TT, bool PIC, MCContext &ctx,
@@ -349,6 +350,7 @@ public:
   MCSection *getPDataSection() const { return PDataSection; }
   MCSection *getXDataSection() const { return XDataSection; }
   MCSection *getSXDataSection() const { return SXDataSection; }
+  MCSection *getGFIDsSection() const { return GFIDsSection; }
 
   MCSection *getEHFrameSection() {
     return EHFrameSection;

@@ -50,7 +50,7 @@ body: |
     %sp = STMDB_UPD %sp, 14, _, %lr
     CFI_INSTRUCTION def_cfa_offset 12
     CFI_INSTRUCTION offset %lr, -12
-    BL $__morestack, implicit-def %lr, implicit %sp
+    BL &__morestack, implicit-def %lr, implicit %sp
     %sp = LDMIA_UPD %sp, 14, _, %lr
     %sp = LDMIA_UPD %sp, 14, _, %r4, %r5
     CFI_INSTRUCTION def_cfa_offset 0

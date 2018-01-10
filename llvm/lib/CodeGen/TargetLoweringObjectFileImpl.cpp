@@ -1254,15 +1254,17 @@ void TargetLoweringObjectFileCOFF::emitLinkerFlagsForGlobal(
 //                                  Wasm
 //===----------------------------------------------------------------------===//
 
-static void checkWasmComdat(const GlobalValue *GV) {
+static const Comdat *getWasmComdat(const GlobalValue *GV) {
   const Comdat *C = GV->getComdat();
   if (!C)
-    return;
+    return nullptr;
 
-  // TODO(sbc): At some point we may need COMDAT support but currently
-  // they are not supported.
-  report_fatal_error("WebAssembly doesn't support COMDATs, '" + C->getName() +
-                     "' cannot be lowered.");
+  if (C->getSelectionKind() != Comdat::Any)
+    report_fatal_error("WebAssembly COMDATs only support "
+                       "SelectionKind::Any, '" + C->getName() + "' cannot be "
+                       "lowered.");
+
+  return C;
 }
 
 static SectionKind getWasmKindForNamedSection(StringRef Name, SectionKind K) {
@@ -1278,16 +1280,25 @@ static SectionKind getWasmKindForNamedSection(StringRef Name, SectionKind K) {
 MCSection *TargetLoweringObjectFileWasm::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   StringRef Name = GO->getSection();
-  checkWasmComdat(GO);
+
   Kind = getWasmKindForNamedSection(Name, Kind);
-  return getContext().getWasmSection(Name, Kind);
+
+  StringRef Group = "";
+  if (const Comdat *C = getWasmComdat(GO)) {
+    Group = C->getName();
+  }
+
+  return getContext().getWasmSection(Name, Kind, Group,
+                                     MCContext::GenericSectionID);
 }
 
 static MCSectionWasm *selectWasmSectionForGlobal(
     MCContext &Ctx, const GlobalObject *GO, SectionKind Kind, Mangler &Mang,
     const TargetMachine &TM, bool EmitUniqueSection, unsigned *NextUniqueID) {
   StringRef Group = "";
-  checkWasmComdat(GO);
+  if (const Comdat *C = getWasmComdat(GO)) {
+    Group = C->getName();
+  }
 
   bool UniqueSectionNames = TM.getUniqueSectionNames();
   SmallString<128> Name = getSectionPrefixForGlobal(Kind);

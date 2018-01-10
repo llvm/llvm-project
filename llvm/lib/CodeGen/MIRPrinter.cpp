@@ -863,7 +863,7 @@ void MIPrinter::print(const LLVMContext &Context, const TargetInstrInfo &TII,
           OS, /*PrintType=*/false, MST);
       break;
     case PseudoSourceValue::ExternalSymbolCallEntry:
-      OS << "call-entry $";
+      OS << "call-entry &";
       printLLVMNameWithoutPrefix(
           OS, cast<ExternalSymbolPseudoSourceValue>(PVal)->getSymbol());
       break;

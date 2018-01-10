@@ -1156,7 +1156,7 @@ define void @test_memcpy(i8* %dst, i8* %src, i64 %size) {
 ; CHECK: %x0 = COPY [[DST]]
 ; CHECK: %x1 = COPY [[SRC]]
 ; CHECK: %x2 = COPY [[SIZE]]
-; CHECK: BL $memcpy, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %x0, implicit %x1, implicit %x2
+; CHECK: BL &memcpy, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %x0, implicit %x1, implicit %x2
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %size, i32 1, i1 0)
   ret void
 }
@@ -1170,7 +1170,7 @@ define void @test_memmove(i8* %dst, i8* %src, i64 %size) {
 ; CHECK: %x0 = COPY [[DST]]
 ; CHECK: %x1 = COPY [[SRC]]
 ; CHECK: %x2 = COPY [[SIZE]]
-; CHECK: BL $memmove, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %x0, implicit %x1, implicit %x2
+; CHECK: BL &memmove, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %x0, implicit %x1, implicit %x2
   call void @llvm.memmove.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %size, i32 1, i1 0)
   ret void
 }
@@ -1186,7 +1186,7 @@ define void @test_memset(i8* %dst, i8 %val, i64 %size) {
 ; CHECK: [[SRC_TMP:%[0-9]+]]:_(s32) = G_ANYEXT [[SRC]]
 ; CHECK: %w1 = COPY [[SRC_TMP]]
 ; CHECK: %x2 = COPY [[SIZE]]
-; CHECK: BL $memset, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %x0, implicit %w1, implicit %x2
+; CHECK: BL &memset, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %x0, implicit %w1, implicit %x2
   call void @llvm.memset.p0i8.i64(i8* %dst, i8 %val, i64 %size, i32 1, i1 0)
   ret void
 }
@@ -1370,8 +1370,8 @@ define double @test_fneg_f64(double %x) {
 
 define void @test_trivial_inlineasm() {
 ; CHECK-LABEL: name: test_trivial_inlineasm
-; CHECK: INLINEASM $wibble, 1
-; CHECK: INLINEASM $wibble, 0
+; CHECK: INLINEASM &wibble, 1
+; CHECK: INLINEASM &wibble, 0
   call void asm sideeffect "wibble", ""()
   call void asm "wibble", ""()
   ret void

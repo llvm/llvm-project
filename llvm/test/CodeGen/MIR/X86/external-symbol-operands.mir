@@ -49,16 +49,16 @@ body: |
     RETQ %eax
 
   bb.2.entry:
-    ; CHECK:      CALL64pcrel32 $__stack_chk_fail,
-    ; CHECK-NEXT: CALL64pcrel32 $__stack_chk_fail.09-_,
-    ; CHECK-NEXT: CALL64pcrel32 $"__stack_chk_fail$",
-    ; CHECK-NEXT: CALL64pcrel32 $"$Quoted \09 External symbol \11 ",
-    ; CHECK-NEXT: CALL64pcrel32 $__stack_chk_fail + 2,
-    ; CHECK-NEXT: CALL64pcrel32 $" check stack - 20" - 20,
-    CALL64pcrel32 $__stack_chk_fail, csr_64, implicit %rsp, implicit-def %rsp
-    CALL64pcrel32 $__stack_chk_fail.09-_, csr_64, implicit %rsp, implicit-def %rsp
-    CALL64pcrel32 $__stack_chk_fail$, csr_64, implicit %rsp, implicit-def %rsp
-    CALL64pcrel32 $"$Quoted \09 External symbol \11 ", csr_64, implicit %rsp, implicit-def %rsp
-    CALL64pcrel32 $__stack_chk_fail + 2, csr_64, implicit %rsp, implicit-def %rsp
-    CALL64pcrel32 $" check stack - 20" - 20, csr_64, implicit %rsp, implicit-def %rsp
+    ; CHECK:      CALL64pcrel32 &__stack_chk_fail,
+    ; CHECK-NEXT: CALL64pcrel32 &__stack_chk_fail.09-_,
+    ; CHECK-NEXT: CALL64pcrel32 &"__stack_chk_fail$",
+    ; CHECK-NEXT: CALL64pcrel32 &"$Quoted \09 External symbol \11 ",
+    ; CHECK-NEXT: CALL64pcrel32 &__stack_chk_fail + 2,
+    ; CHECK-NEXT: CALL64pcrel32 &" check stack - 20" - 20,
+    CALL64pcrel32 &__stack_chk_fail, csr_64, implicit %rsp, implicit-def %rsp
+    CALL64pcrel32 &__stack_chk_fail.09-_, csr_64, implicit %rsp, implicit-def %rsp
+    CALL64pcrel32 &__stack_chk_fail$, csr_64, implicit %rsp, implicit-def %rsp
+    CALL64pcrel32 &"$Quoted \09 External symbol \11 ", csr_64, implicit %rsp, implicit-def %rsp
+    CALL64pcrel32 &__stack_chk_fail + 2, csr_64, implicit %rsp, implicit-def %rsp
+    CALL64pcrel32 &" check stack - 20" - 20, csr_64, implicit %rsp, implicit-def %rsp
 ...

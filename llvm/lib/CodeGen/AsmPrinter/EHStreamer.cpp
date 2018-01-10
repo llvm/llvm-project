@@ -149,7 +149,7 @@ computeActionsTable(const SmallVectorImpl<const LandingPadInfo*> &LandingPads,
       FirstAction = SizeActions + SizeSiteActions - SizeAction + 1;
     } // else identical - re-use previous FirstAction
 
-    // Information used when created the call-site table. The action record
+    // Information used when creating the call-site table. The action record
     // field of the call site record is the offset of the first associated
     // action record, relative to the start of the actions table. This value is
     // biased by 1 (1 indicating the start of the actions table), and 0

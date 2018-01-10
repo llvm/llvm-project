@@ -151,6 +151,7 @@ public:
   void EmitCOFFSymbolType(int Type) override;
   void EndCOFFSymbolDef() override;
   void EmitCOFFSafeSEH(MCSymbol const *Symbol) override;
+  void EmitCOFFSymbolIndex(MCSymbol const *Symbol) override;
   void EmitCOFFSectionIndex(MCSymbol const *Symbol) override;
   void EmitCOFFSecRel32(MCSymbol const *Symbol, uint64_t Offset) override;
   void emitELFSize(MCSymbol *Symbol, const MCExpr *Value) override;
@@ -212,6 +213,7 @@ public:
   void EmitFileDirective(StringRef Filename) override;
   unsigned EmitDwarfFileDirective(unsigned FileNo, StringRef Directory,
                                   StringRef Filename,
+                                  MD5::MD5Result *Checksum = 0,
                                   unsigned CUID = 0) override;
   void EmitDwarfLocDirective(unsigned FileNo, unsigned Line,
                              unsigned Column, unsigned Flags,
@@ -648,6 +650,12 @@ void MCAsmStreamer::EmitCOFFSafeSEH(MCSymbol const *Symbol) {
   EmitEOL();
 }
 
+void MCAsmStreamer::EmitCOFFSymbolIndex(MCSymbol const *Symbol) {
+  OS << "\t.symidx\t";
+  Symbol->print(OS, MAI);
+  EmitEOL();
+}
+
 void MCAsmStreamer::EmitCOFFSectionIndex(MCSymbol const *Symbol) {
   OS << "\t.secidx\t";
   Symbol->print(OS, MAI);
@@ -1068,12 +1076,13 @@ void MCAsmStreamer::EmitFileDirective(StringRef Filename) {
 unsigned MCAsmStreamer::EmitDwarfFileDirective(unsigned FileNo,
                                                StringRef Directory,
                                                StringRef Filename,
+                                               MD5::MD5Result *Checksum,
                                                unsigned CUID) {
   assert(CUID == 0);
 
   MCDwarfLineTable &Table = getContext().getMCDwarfLineTable(CUID);
   unsigned NumFiles = Table.getMCDwarfFiles().size();
-  FileNo = Table.getFile(Directory, Filename, FileNo);
+  FileNo = Table.getFile(Directory, Filename, Checksum, FileNo);
   if (FileNo == 0)
     return 0;
   if (NumFiles == Table.getMCDwarfFiles().size())

@@ -16,7 +16,7 @@ registers:
   - { id: 1, class: float32regs }
 body: |
   bb.0.entry:
-    %0 = LD_f32_avar 0, 4, 1, 2, 32, $test_param_0
+    %0 = LD_f32_avar 0, 4, 1, 2, 32, &test_param_0
   ; CHECK: [[@LINE+1]]:33: floating point constant does not have type 'float'
     %1 = FADD_rnf32ri %0, float 0xH3C00
     StoreRetvalF32 %1, 0

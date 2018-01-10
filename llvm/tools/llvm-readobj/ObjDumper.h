@@ -101,7 +101,8 @@ std::error_code createWasmDumper(const object::ObjectFile *Obj,
                                  ScopedPrinter &Writer,
                                  std::unique_ptr<ObjDumper> &Result);
 
-void dumpCOFFImportFile(const object::COFFImportFile *File);
+void dumpCOFFImportFile(const object::COFFImportFile *File,
+                        ScopedPrinter &Writer);
 
 void dumpCodeViewMergedTypes(
     ScopedPrinter &Writer, llvm::codeview::MergingTypeTableBuilder &IDTable,

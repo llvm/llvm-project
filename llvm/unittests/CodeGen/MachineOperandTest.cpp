@@ -215,7 +215,7 @@ TEST(MachineOperandTest, PrintExternalSymbol) {
   {
     raw_string_ostream OS(str);
     MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
-    ASSERT_TRUE(OS.str() == "$foo");
+    ASSERT_TRUE(OS.str() == "&foo");
   }
 
   str.clear();
@@ -225,7 +225,7 @@ TEST(MachineOperandTest, PrintExternalSymbol) {
   {
     raw_string_ostream OS(str);
     MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
-    ASSERT_TRUE(OS.str() == "$foo + 12");
+    ASSERT_TRUE(OS.str() == "&foo + 12");
   }
 
   str.clear();
@@ -235,7 +235,7 @@ TEST(MachineOperandTest, PrintExternalSymbol) {
   {
     raw_string_ostream OS(str);
     MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
-    ASSERT_TRUE(OS.str() == "$foo - 12");
+    ASSERT_TRUE(OS.str() == "&foo - 12");
   }
 }
 

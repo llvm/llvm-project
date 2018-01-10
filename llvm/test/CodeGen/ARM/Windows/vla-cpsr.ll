@@ -9,5 +9,5 @@ entry:
   ret void
 }
 
-; CHECK: tBL 14, %noreg, $__chkstk, implicit-def %lr, implicit %sp, implicit killed %r4, implicit-def %r4, implicit-def dead %r12, implicit-def dead %cpsr
+; CHECK: tBL 14, %noreg, &__chkstk, implicit-def %lr, implicit %sp, implicit killed %r4, implicit-def %r4, implicit-def dead %r12, implicit-def dead %cpsr
 
