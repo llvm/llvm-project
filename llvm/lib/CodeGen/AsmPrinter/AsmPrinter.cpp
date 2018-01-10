@@ -16,6 +16,7 @@
 #include "CodeViewDebug.h"
 #include "DwarfDebug.h"
 #include "DwarfException.h"
+#include "WinCFGuard.h"
 #include "WinException.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -130,6 +131,8 @@ static const char *const DbgTimerName = "emit";
 static const char *const DbgTimerDescription = "Debug Info Emission";
 static const char *const EHTimerName = "write_exception";
 static const char *const EHTimerDescription = "DWARF Exception Writer";
+static const char *const CFGuardName = "Control Flow Guard";
+static const char *const CFGuardDescription = "Control Flow Guard Tables";
 static const char *const CodeViewLineTablesGroupName = "linetables";
 static const char *const CodeViewLineTablesGroupDescription =
   "CodeView Line Tables";
@@ -354,6 +357,13 @@ bool AsmPrinter::doInitialization(Module &M) {
   if (ES)
     Handlers.push_back(HandlerInfo(ES, EHTimerName, EHTimerDescription,
                                    DWARFGroupName, DWARFGroupDescription));
+
+  if (mdconst::extract_or_null<ConstantInt>(
+          MMI->getModule()->getModuleFlag("cfguard")))
+    Handlers.push_back(HandlerInfo(new WinCFGuard(this), CFGuardName,
+                                   CFGuardDescription, DWARFGroupName,
+                                   DWARFGroupDescription));
+
   return false;
 }
 

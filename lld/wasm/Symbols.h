@@ -15,9 +15,6 @@
 #include "llvm/Object/Wasm.h"
 
 using llvm::object::Archive;
-using llvm::object::WasmSymbol;
-using llvm::wasm::WasmExport;
-using llvm::wasm::WasmImport;
 using llvm::wasm::WasmSignature;
 
 namespace lld {
@@ -25,6 +22,7 @@ namespace wasm {
 
 class InputFile;
 class InputSegment;
+class InputFunction;
 
 class Symbol {
 public:
@@ -40,8 +38,8 @@ public:
     InvalidKind,
   };
 
-  Symbol(StringRef Name, bool IsLocal)
-      : WrittenToSymtab(0), WrittenToNameSec(0), IsLocal(IsLocal), Name(Name) {}
+  Symbol(StringRef Name, uint32_t Flags)
+      : WrittenToSymtab(0), WrittenToNameSec(0), Flags(Flags), Name(Name) {}
 
   Kind getKind() const { return SymbolKind; }
 
@@ -56,7 +54,7 @@ public:
            SymbolKind == UndefinedFunctionKind;
   }
   bool isGlobal() const { return !isFunction(); }
-  bool isLocal() const { return IsLocal; }
+  bool isLocal() const;
   bool isWeak() const;
   bool isHidden() const;
 
@@ -66,16 +64,14 @@ public:
   // Returns the file from which this symbol was created.
   InputFile *getFile() const { return File; }
 
-  uint32_t getGlobalIndex() const;
-  uint32_t getFunctionIndex() const;
-
   bool hasFunctionType() const { return FunctionType != nullptr; }
   const WasmSignature &getFunctionType() const;
+  void setFunctionType(const WasmSignature *Type);
 
-  uint32_t getOutputIndex() const { return OutputIndex.getValue(); }
+  uint32_t getOutputIndex() const;
 
   // Returns true if an output index has been set for this symbol
-  bool hasOutputIndex() const { return OutputIndex.hasValue(); }
+  bool hasOutputIndex() const;
 
   // Set the output index of the symbol (in the function or global index
   // space of the output object.
@@ -95,9 +91,10 @@ public:
 
   void setVirtualAddress(uint32_t VA);
 
-  void update(Kind K, InputFile *F = nullptr, const WasmSymbol *Sym = nullptr,
+  void update(Kind K, InputFile *F = nullptr, uint32_t Flags = 0,
               const InputSegment *Segment = nullptr,
-              const WasmSignature *Sig = nullptr);
+              const InputFunction *Function = nullptr,
+              uint32_t Address = UINT32_MAX);
 
   void setArchiveSymbol(const Archive::Symbol &Sym) { ArchiveSymbol = Sym; }
   const Archive::Symbol &getArchiveSymbol() { return ArchiveSymbol; }
@@ -108,18 +105,18 @@ public:
   unsigned WrittenToNameSec : 1;
 
 protected:
-  unsigned IsLocal : 1;
+  uint32_t Flags;
+  uint32_t VirtualAddress = 0;
 
   StringRef Name;
   Archive::Symbol ArchiveSymbol = {nullptr, 0, 0};
   Kind SymbolKind = InvalidKind;
   InputFile *File = nullptr;
-  const WasmSymbol *Sym = nullptr;
   const InputSegment *Segment = nullptr;
+  const InputFunction *Function = nullptr;
   llvm::Optional<uint32_t> OutputIndex;
   llvm::Optional<uint32_t> TableIndex;
-  llvm::Optional<uint32_t> VirtualAddress;
-  const WasmSignature *FunctionType;
+  const WasmSignature *FunctionType = nullptr;
 };
 
 } // namespace wasm

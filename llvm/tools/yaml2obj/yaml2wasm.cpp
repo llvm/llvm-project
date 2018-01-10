@@ -175,6 +175,23 @@ int WasmWriter::writeSectionContent(raw_ostream &OS, WasmYAML::LinkingSection &S
     }
     SubSection.Done();
   }
+
+  // COMDAT_INFO subsection
+  if (Section.Comdats.size()) {
+    encodeULEB128(wasm::WASM_COMDAT_INFO, OS);
+    encodeULEB128(Section.Comdats.size(), SubSection.GetStream());
+    for (const auto &C : Section.Comdats) {
+      writeStringRef(C.Name, SubSection.GetStream());
+      encodeULEB128(0, SubSection.GetStream()); // flags for future use
+      encodeULEB128(C.Entries.size(), SubSection.GetStream());
+      for (const WasmYAML::ComdatEntry &Entry : C.Entries) {
+        encodeULEB128(Entry.Kind, SubSection.GetStream());
+        encodeULEB128(Entry.Index, SubSection.GetStream());
+      }
+    }
+    SubSection.Done();
+  }
+
   return 0;
 }
 

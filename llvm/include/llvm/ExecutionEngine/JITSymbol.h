@@ -145,6 +145,8 @@ private:
 /// @brief Represents a symbol that has been evaluated to an address already.
 class JITEvaluatedSymbol {
 public:
+  JITEvaluatedSymbol() = default;
+
   /// @brief Create a 'null' symbol.
   JITEvaluatedSymbol(std::nullptr_t) {}
 

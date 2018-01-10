@@ -46,7 +46,7 @@ body:             |
     Save16 %ra, 24, implicit-def %sp, implicit %sp
     CFI_INSTRUCTION def_cfa_offset 24
     CFI_INSTRUCTION offset %ra_64, -4
-    %v0, %v1 = GotPrologue16 $_gp_disp, $_gp_disp
+    %v0, %v1 = GotPrologue16 &_gp_disp, &_gp_disp
     %v0 = SllX16 killed %v0, 16
     %v0 = AdduRxRyRz16 killed %v1, killed %v0
   ; CHECK-LABEL: name: test
@@ -84,13 +84,13 @@ body:             |
     CFI_INSTRUCTION offset %ra_64, -4
     CFI_INSTRUCTION offset %s2_64, -8
     CFI_INSTRUCTION offset %s0_64, -12
-    %v0, %v1 = GotPrologue16 $_gp_disp, $_gp_disp
+    %v0, %v1 = GotPrologue16 &_gp_disp, &_gp_disp
     %v0 = SllX16 killed %v0, 16
     %s0 = AdduRxRyRz16 killed %v1, killed %v0
     %v0 = LwRxRyOffMemX16 %s0, @g :: (load 4 from call-entry @g)
   ; CHECK-LABEL: test2
-  ; CHECK: %v1 = LwRxRyOffMemX16 %s0, $__mips16_call_stub_sf_0 :: (load 4 from call-entry $__mips16_call_stub_sf_0)
-    %v1 = LwRxRyOffMemX16 %s0, $__mips16_call_stub_sf_0 :: (load 4 from call-entry $__mips16_call_stub_sf_0)
+  ; CHECK: %v1 = LwRxRyOffMemX16 %s0, &__mips16_call_stub_sf_0 :: (load 4 from call-entry &__mips16_call_stub_sf_0)
+    %v1 = LwRxRyOffMemX16 %s0, &__mips16_call_stub_sf_0 :: (load 4 from call-entry &__mips16_call_stub_sf_0)
     %gp = COPY %s0
     JumpLinkReg16 killed %v1, csr_o32, implicit-def %ra, implicit %v0, implicit killed %gp, implicit-def %sp, implicit-def %v0
     %v1 = LwRxRyOffMemX16 %s0, @__mips16_ret_sf :: (load 4 from call-entry @__mips16_ret_sf)

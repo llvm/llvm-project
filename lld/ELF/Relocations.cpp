@@ -738,6 +738,23 @@ template <class ELFT> static void addGotEntry(Symbol &Sym) {
                          R_ABS, Target->GotRel);
 }
 
+// Return true if we can define a symbol in the executable that
+// contains the value/function of a symbol defined in a shared
+// library.
+static bool canDefineSymbolInExecutable(Symbol &Sym) {
+  // If the symbol has default visibility the symbol defined in the
+  // executable will preempt it.
+  if (Sym.getVisibility() == STV_DEFAULT)
+    return true;
+
+  // If we are allowed to break address equality of functions, defining
+  // a plt entry will allow the program to call the function in the
+  // .so, but the .so and the executable will no agree on the address
+  // of the function. Similar logic for objects.
+  return ((Sym.isFunc() && Config->IgnoreFunctionAddressEquality) ||
+          (Sym.isObject() && Config->IgnoreDataAddressEquality));
+}
+
 // The reason we have to do this early scan is as follows
 // * To mmap the output file, we need to know the size
 // * For that, we need to know how many dynamic relocs we will have.
@@ -823,7 +840,7 @@ static RelExpr processRelocAux(InputSectionBase &Sec, RelExpr Expr,
     return Expr;
   }
 
-  if (Sym.getVisibility() != STV_DEFAULT) {
+  if (!canDefineSymbolInExecutable(Sym)) {
     error("cannot preempt symbol: " + toString(Sym) +
           getLocation(Sec, Sym, Offset));
     return Expr;

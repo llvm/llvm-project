@@ -24,4 +24,4 @@
 ; CHECK-NEXT:         Offset:          
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           8
-; CHECK-NEXT:         Content:         FFFFFFFF
+; CHECK-NEXT:         Content:         '00000000'

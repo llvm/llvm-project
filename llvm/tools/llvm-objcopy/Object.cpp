@@ -18,6 +18,7 @@
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/Path.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -342,6 +343,50 @@ void SectionWithStrTab::initialize(SectionTableRef SecTable) {
 }
 
 void SectionWithStrTab::finalize() { this->Link = StrTab->Index; }
+
+template <class ELFT>
+void GnuDebugLinkSection<ELFT>::init(StringRef File, StringRef Data) {
+  FileName = sys::path::stem(File);
+  // The format for the .gnu_debuglink starts with the stemmed file name and is
+  // followed by a null terminator and then the CRC32 of the file. The CRC32
+  // should be 4 byte aligned. So we add the FileName size, a 1 for the null
+  // byte, and then finally push the size to alignment and add 4.
+  Size = alignTo(FileName.size() + 1, 4) + 4;
+  // The CRC32 will only be aligned if we align the whole section.
+  Align = 4;
+  Type = ELF::SHT_PROGBITS;
+  Name = ".gnu_debuglink";
+  // For sections not found in segments, OriginalOffset is only used to
+  // establish the order that sections should go in. By using the maximum
+  // possible offset we cause this section to wind up at the end.
+  OriginalOffset = std::numeric_limits<uint64_t>::max();
+  JamCRC crc;
+  crc.update(ArrayRef<char>(Data.data(), Data.size()));
+  // The CRC32 value needs to be complemented because the JamCRC dosn't
+  // finalize the CRC32 value. It also dosn't negate the initial CRC32 value
+  // but it starts by default at 0xFFFFFFFF which is the complement of zero.
+  CRC32 = ~crc.getCRC();
+}
+
+template <class ELFT>
+GnuDebugLinkSection<ELFT>::GnuDebugLinkSection(StringRef File)
+    : FileName(File) {
+  // Read in the file to compute the CRC of it.
+  auto DebugOrErr = MemoryBuffer::getFile(File);
+  if (!DebugOrErr)
+    error("'" + File + "': " + DebugOrErr.getError().message());
+  auto Debug = std::move(*DebugOrErr);
+  init(File, Debug->getBuffer());
+}
+
+template <class ELFT>
+void GnuDebugLinkSection<ELFT>::writeSection(FileOutputBuffer &Out) const {
+  auto Buf = Out.getBufferStart() + Offset;
+  char *File = reinterpret_cast<char *>(Buf);
+  Elf_Word *CRC = reinterpret_cast<Elf_Word *>(Buf + Size - sizeof(Elf_Word));
+  *CRC = CRC32;
+  std::copy(std::begin(FileName), std::end(FileName), File);
+}
 
 // Returns true IFF a section is wholly inside the range of a segment
 static bool sectionWithinSegment(const SectionBase &Section,
@@ -708,6 +753,10 @@ void Object<ELFT>::addSection(StringRef SecName, ArrayRef<uint8_t> Data) {
   auto Sec = llvm::make_unique<OwnedDataSection>(SecName, Data);
   Sec->OriginalOffset = ~0ULL;
   Sections.push_back(std::move(Sec));
+}
+
+template <class ELFT> void Object<ELFT>::addGnuDebugLink(StringRef File) {
+  Sections.emplace_back(llvm::make_unique<GnuDebugLinkSection<ELFT>>(File));
 }
 
 template <class ELFT> void ELFObject<ELFT>::sortSections() {

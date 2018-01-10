@@ -46,6 +46,10 @@ private:
 /// @brief Pointer to a pooled string representing a symbol name.
 class SymbolStringPtr {
   friend class SymbolStringPool;
+  friend bool operator==(const SymbolStringPtr &LHS,
+                         const SymbolStringPtr &RHS);
+  friend bool operator<(const SymbolStringPtr &LHS, const SymbolStringPtr &RHS);
+
 public:
   SymbolStringPtr() = default;
   SymbolStringPtr(const SymbolStringPtr &Other)
@@ -80,18 +84,6 @@ public:
       --S->getValue();
   }
 
-  bool operator==(const SymbolStringPtr &Other) const {
-    return S == Other.S;
-  }
-
-  bool operator!=(const SymbolStringPtr &Other) const {
-    return !(*this == Other);
-  }
-
-  bool operator<(const SymbolStringPtr &Other) const {
-    return S < Other.S;
-  }
-
   StringRef operator*() const { return S->first(); }
 
 private:
@@ -105,25 +97,32 @@ private:
   SymbolStringPool::PoolMapEntry *S = nullptr;
 };
 
+inline bool operator==(const SymbolStringPtr &LHS, const SymbolStringPtr &RHS) {
+  return LHS.S == RHS.S;
+}
+
+inline bool operator!=(const SymbolStringPtr &LHS, const SymbolStringPtr &RHS) {
+  return !(LHS == RHS);
+}
+
+inline bool operator<(const SymbolStringPtr &LHS, const SymbolStringPtr &RHS) {
+  return LHS.S < RHS.S;
+}
+
 inline SymbolStringPtr SymbolStringPool::intern(StringRef S) {
   std::lock_guard<std::mutex> Lock(PoolMutex);
-  auto I = Pool.find(S);
-  if (I != Pool.end())
-    return SymbolStringPtr(&*I);
-
+  PoolMap::iterator I;
   bool Added;
   std::tie(I, Added) = Pool.try_emplace(S, 0);
-  assert(Added && "Insert should always succeed here");
   return SymbolStringPtr(&*I);
 }
 
 inline void SymbolStringPool::clearDeadEntries() {
   std::lock_guard<std::mutex> Lock(PoolMutex);
   for (auto I = Pool.begin(), E = Pool.end(); I != E;) {
-    auto Tmp = std::next(I);
-    if (I->second == 0)
-      Pool.erase(I);
-    I = Tmp;
+    auto Tmp = I++;
+    if (Tmp->second == 0)
+      Pool.erase(Tmp);
   }
 }
 

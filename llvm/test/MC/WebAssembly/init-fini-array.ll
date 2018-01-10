@@ -116,13 +116,13 @@ declare void @func3()
 ; CHECK-NEXT:         Body:            1080808080000B
 ; CHECK-NEXT:       - Index:           6
 ; CHECK-NEXT:         Locals:          
-; CHECK-NEXT:         Body:            0240418080808000410041FFFFFFFF7F1081808080000D000F0B00000B
+; CHECK-NEXT:         Body:            024041808080800041004180808080001081808080000D000F0B00000B
 ; CHECK-NEXT:       - Index:           7
 ; CHECK-NEXT:         Locals:          
 ; CHECK-NEXT:         Body:            1082808080000B
 ; CHECK-NEXT:       - Index:           8
 ; CHECK-NEXT:         Locals:          
-; CHECK-NEXT:         Body:            0240418180808000410041FFFFFFFF7F1081808080000D000F0B00000B
+; CHECK-NEXT:         Body:            024041818080800041004180808080001081808080000D000F0B00000B
 ; CHECK-NEXT:   - Type:            DATA
 ; CHECK-NEXT:     Segments:        
 ; CHECK-NEXT:       - SectionOffset:   6

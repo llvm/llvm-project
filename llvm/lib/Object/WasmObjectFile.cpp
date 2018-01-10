@@ -10,6 +10,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/SubtargetFeature.h"
@@ -422,6 +423,10 @@ Error WasmObjectFile::parseLinkingSection(const uint8_t *Ptr,
       }
       break;
     }
+    case wasm::WASM_COMDAT_INFO:
+      if (Error Err = parseLinkingSectionComdat(Ptr, SubSectionEnd))
+        return Err;
+      break;
     default:
       Ptr += Size;
       break;
@@ -433,6 +438,55 @@ Error WasmObjectFile::parseLinkingSection(const uint8_t *Ptr,
   if (Ptr != End)
     return make_error<GenericBinaryError>("Linking section ended prematurely",
                                           object_error::parse_failed);
+  return Error::success();
+}
+
+Error WasmObjectFile::parseLinkingSectionComdat(const uint8_t *&Ptr,
+                                                const uint8_t *End)
+{
+  uint32_t ComdatCount = readVaruint32(Ptr);
+  StringSet<> ComdatSet;
+  while (ComdatCount--) {
+    StringRef Name = readString(Ptr);
+    if (Name.empty() || !ComdatSet.insert(Name).second)
+      return make_error<GenericBinaryError>("Bad/duplicate COMDAT name " + Twine(Name),
+                                            object_error::parse_failed);
+    Comdats.emplace_back(Name);
+    uint32_t Flags = readVaruint32(Ptr);
+    if (Flags != 0)
+      return make_error<GenericBinaryError>("Unsupported COMDAT flags",
+                                            object_error::parse_failed);
+
+    uint32_t EntryCount = readVaruint32(Ptr);
+    while (EntryCount--) {
+      unsigned Kind = readVaruint32(Ptr);
+      unsigned Index = readVaruint32(Ptr);
+      switch (Kind) {
+      default:
+        return make_error<GenericBinaryError>("Invalid COMDAT entry type",
+                                              object_error::parse_failed);
+      case wasm::WASM_COMDAT_DATA:
+        if (Index >= DataSegments.size())
+          return make_error<GenericBinaryError>("COMDAT data index out of range",
+                                                object_error::parse_failed);
+        if (!DataSegments[Index].Data.Comdat.empty())
+          return make_error<GenericBinaryError>("Data segment in two COMDATs",
+                                                object_error::parse_failed);
+        DataSegments[Index].Data.Comdat = Name;
+        break;
+      case wasm::WASM_COMDAT_FUNCTION:
+        if (Index < NumImportedFunctions || !isValidFunctionIndex(Index))
+          return make_error<GenericBinaryError>("COMDAT function index out of range",
+                                                object_error::parse_failed);
+        Index -= NumImportedFunctions;
+        if (!Functions[Index].Comdat.empty())
+          return make_error<GenericBinaryError>("Function in two COMDATs",
+                                                object_error::parse_failed);
+        Functions[Index].Comdat = Name;
+        break;
+      }
+    }
+  }
   return Error::success();
 }
 

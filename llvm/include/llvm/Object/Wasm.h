@@ -149,6 +149,7 @@ public:
   ArrayRef<wasm::WasmElemSegment> elements() const { return ElemSegments; }
   ArrayRef<WasmSegment> dataSegments() const { return DataSegments; }
   ArrayRef<wasm::WasmFunction> functions() const { return Functions; }
+  ArrayRef<StringRef> comdats() const { return Comdats; }
   uint32_t startFunction() const { return StartFunction; }
 
   void moveSymbolNext(DataRefImpl &Symb) const override;
@@ -232,6 +233,7 @@ private:
   // Custom section types
   Error parseNameSection(const uint8_t *Ptr, const uint8_t *End);
   Error parseLinkingSection(const uint8_t *Ptr, const uint8_t *End);
+  Error parseLinkingSectionComdat(const uint8_t *&Ptr, const uint8_t *End);
   Error parseRelocSection(StringRef Name, const uint8_t *Ptr,
                           const uint8_t *End);
 
@@ -250,6 +252,7 @@ private:
   std::vector<WasmSegment> DataSegments;
   std::vector<wasm::WasmFunction> Functions;
   std::vector<WasmSymbol> Symbols;
+  std::vector<StringRef> Comdats;
   uint32_t StartFunction = -1;
   bool HasLinkingSection = false;
   wasm::WasmLinkingData LinkingData;

@@ -75,5 +75,5 @@ body: |
     RETQ %eax
 
   bb.2.entry:
-    CALL64pcrel32 $__stack_chk_fail, csr_64, implicit %rsp, implicit-def %rsp
+    CALL64pcrel32 &__stack_chk_fail, csr_64, implicit %rsp, implicit-def %rsp
 ...

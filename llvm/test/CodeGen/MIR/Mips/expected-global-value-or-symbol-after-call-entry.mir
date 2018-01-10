@@ -27,7 +27,7 @@ body: |
     liveins: %a0, %ra
 
     Save16 %ra, 24, implicit-def %sp, implicit %sp
-    %v0, %v1 = GotPrologue16 $_gp_disp, $_gp_disp
+    %v0, %v1 = GotPrologue16 &_gp_disp, &_gp_disp
     %v0 = SllX16 killed %v0, 16
     %v0 = AdduRxRyRz16 killed %v1, killed %v0
   ; CHECK: [[@LINE+1]]:67: expected a global value or an external symbol after 'call-entry'

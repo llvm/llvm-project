@@ -1,6 +1,6 @@
-; RUN: opt < %s -S -loop-rotate -disable-output -verify-loop-info -verify-dom-info
-; PR5502
+; RUN: opt < %s -S -loop-rotate -o - -verify-loop-info -verify-dom-info | FileCheck %s
 
+; PR5502
 define void @z80_do_opcodes() nounwind {
 entry:
   br label %while.cond
@@ -40,4 +40,35 @@ sw.default42406:                                  ; preds = %sw.bb30351
 indirectgoto:                                     ; preds = %run_opcode, %while.body
   %opcode.0 = phi i8 [ undef, %while.body ], [ %tmp276, %run_opcode ] ; <i8> [#uses=2]
   indirectbr i8* undef, [label %run_opcode, label %if.else295, label %end_opcode]
+}
+
+; CHECK-LABEL: @foo
+define void @foo(i1 %a, i1 %b, i8* %c) {
+; CHECK: entry
+; CHECK-NEXT: br i1 %a, label %return, label %preheader
+entry:
+  br i1 %a, label %return, label %preheader
+
+; CHECK: preheader:
+; CHECK-NEXT:  br label %header
+preheader:
+  br label %header
+
+; CHECK: header:
+; CHECK-NEXT:  br i1 %b, label %return, label %body
+header:
+  br i1 %b, label %return, label %body
+
+; CHECK: body:
+; CHECK-NEXT:  indirectbr i8* %c, [label %return, label %latch]
+body:
+  indirectbr i8* %c, [label %return, label %latch]
+
+; CHECK: latch:
+; CHECK-NEXT:  br label %header
+latch:
+  br label %header
+
+return:
+  ret void
 }

@@ -16,6 +16,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Support/JamCRC.h"
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -345,6 +346,24 @@ public:
   }
 };
 
+template <class ELFT> class GnuDebugLinkSection : public SectionBase {
+private:
+  // Elf_Word is 4-bytes on every format but has the same endianess as the elf
+  // type ELFT. We'll need to write the CRC32 out in the proper endianess so
+  // we'll make sure to use this type.
+  using Elf_Word = typename ELFT::Word;
+
+  StringRef FileName;
+  uint32_t CRC32;
+
+  void init(StringRef File, StringRef Data);
+
+public:
+  // If we add this section from an external source we can use this ctor.
+  GnuDebugLinkSection(StringRef File);
+  void writeSection(FileOutputBuffer &Out) const override;
+};
+
 template <class ELFT> class Object {
 private:
   using SecPtr = std::unique_ptr<SectionBase>;
@@ -389,6 +408,7 @@ public:
   const SectionBase *getSectionHeaderStrTab() const { return SectionNames; }
   void removeSections(std::function<bool(const SectionBase &)> ToRemove);
   void addSection(StringRef SecName, ArrayRef<uint8_t> Data);
+  void addGnuDebugLink(StringRef File);
   virtual size_t totalSize() const = 0;
   virtual void finalize() = 0;
   virtual void write(FileOutputBuffer &Out) const = 0;

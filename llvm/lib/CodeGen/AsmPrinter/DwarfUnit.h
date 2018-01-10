@@ -308,7 +308,8 @@ protected:
 
   /// Look up the source ID with the given directory and source file names. If
   /// none currently exists, create a new ID and insert it in the line table.
-  virtual unsigned getOrCreateSourceID(StringRef File, StringRef Directory) = 0;
+  virtual unsigned getOrCreateSourceID(StringRef File, StringRef Directory,
+                                       MD5::MD5Result *Checksum) = 0;
 
   /// Look in the DwarfDebug map for the MDNode that corresponds to the
   /// reference.
@@ -358,7 +359,8 @@ class DwarfTypeUnit final : public DwarfUnit {
   DwarfCompileUnit &CU;
   MCDwarfDwoLineTable *SplitLineTable;
 
-  unsigned getOrCreateSourceID(StringRef File, StringRef Directory) override;
+  unsigned getOrCreateSourceID(StringRef File, StringRef Directory,
+                               MD5::MD5Result *Checksum) override;
   bool isDwoUnit() const override;
 
 public:
