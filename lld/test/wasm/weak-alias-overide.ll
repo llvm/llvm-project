@@ -43,7 +43,8 @@ entry:
 ; CHECK-NEXT:       - Initial:         0x00000002
 ; CHECK-NEXT:   - Type:            GLOBAL
 ; CHECK-NEXT:     Globals:
-; CHECK-NEXT:       - Type:            I32
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         true
 ; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
@@ -82,21 +83,28 @@ entry:
 ; CHECK-NEXT:         Functions:       [ 0, 2 ]
 ; CHECK-NEXT:   - Type:            CODE
 ; CHECK-NEXT:     Functions:
-; CHECK-NEXT:       - Locals:
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            41010B
-; CHECK-NEXT:       - Locals:
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            1080808080001A0B
-; CHECK-NEXT:       - Locals:
+; CHECK-NEXT:       - Index:           2
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            41000B
-; CHECK-NEXT:       - Locals:
+; CHECK-NEXT:       - Index:           3
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            1082808080000B
-; CHECK-NEXT:       - Locals:
+; CHECK-NEXT:       - Index:           4
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            1080808080000B
-; CHECK-NEXT:       - Locals:          
+; CHECK-NEXT:       - Index:           5
+; CHECK-NEXT:         Locals:          
 ; CHECK-NEXT:           - Type:            I32
 ; CHECK-NEXT:             Count:           2
 ; CHECK-NEXT:         Body:            23808080800041106B220024808080800020004181808080003602081080808080002101200041106A24808080800020010B
-; CHECK-NEXT:       - Locals:          
+; CHECK-NEXT:       - Index:           6
+; CHECK-NEXT:         Locals:          
 ; CHECK-NEXT:           - Type:            I32
 ; CHECK-NEXT:             Count:           2
 ; CHECK-NEXT:         Body:            23808080800041106B220024808080800020004182808080003602081082808080002101200041106A24808080800020010B

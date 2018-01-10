@@ -28,7 +28,7 @@ std::string toString(const wasm::OutputSection &Section);
 namespace wasm {
 
 class OutputSegment;
-class ObjFile;
+class InputFunction;
 
 class OutputSection {
 public:
@@ -104,14 +104,14 @@ public:
 
 class CodeSection : public OutputSection {
 public:
-  explicit CodeSection(uint32_t NumFunctions, ArrayRef<ObjFile *> Objs);
+  explicit CodeSection(ArrayRef<InputFunction *> Functions);
   size_t getSize() const override { return Header.size() + BodySize; }
   void writeTo(uint8_t *Buf) override;
   uint32_t numRelocations() const override;
   void writeRelocations(raw_ostream &OS) const override;
 
 protected:
-  ArrayRef<ObjFile *> InputObjects;
+  ArrayRef<InputFunction *> Functions;
   std::string CodeSectionHeader;
   size_t BodySize = 0;
 };

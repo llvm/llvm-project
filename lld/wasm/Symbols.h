@@ -25,6 +25,7 @@ namespace wasm {
 
 class InputFile;
 class InputSegment;
+class InputFunction;
 
 class Symbol {
 public:
@@ -66,16 +67,14 @@ public:
   // Returns the file from which this symbol was created.
   InputFile *getFile() const { return File; }
 
-  uint32_t getGlobalIndex() const;
-  uint32_t getFunctionIndex() const;
-
   bool hasFunctionType() const { return FunctionType != nullptr; }
   const WasmSignature &getFunctionType() const;
+  void setFunctionType(const WasmSignature *Type);
 
-  uint32_t getOutputIndex() const { return OutputIndex.getValue(); }
+  uint32_t getOutputIndex() const;
 
   // Returns true if an output index has been set for this symbol
-  bool hasOutputIndex() const { return OutputIndex.hasValue(); }
+  bool hasOutputIndex() const;
 
   // Set the output index of the symbol (in the function or global index
   // space of the output object.
@@ -97,7 +96,7 @@ public:
 
   void update(Kind K, InputFile *F = nullptr, const WasmSymbol *Sym = nullptr,
               const InputSegment *Segment = nullptr,
-              const WasmSignature *Sig = nullptr);
+              const InputFunction *Function = nullptr);
 
   void setArchiveSymbol(const Archive::Symbol &Sym) { ArchiveSymbol = Sym; }
   const Archive::Symbol &getArchiveSymbol() { return ArchiveSymbol; }
@@ -116,10 +115,11 @@ protected:
   InputFile *File = nullptr;
   const WasmSymbol *Sym = nullptr;
   const InputSegment *Segment = nullptr;
+  const InputFunction *Function = nullptr;
   llvm::Optional<uint32_t> OutputIndex;
   llvm::Optional<uint32_t> TableIndex;
   llvm::Optional<uint32_t> VirtualAddress;
-  const WasmSignature *FunctionType;
+  const WasmSignature *FunctionType = nullptr;
 };
 
 } // namespace wasm

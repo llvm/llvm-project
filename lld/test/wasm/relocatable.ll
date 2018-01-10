@@ -62,22 +62,26 @@ declare i32 @foo_import() local_unnamed_addr
 ; CHECK-NEXT:       - Initial:         0x00000001
 ; CHECK-NEXT:   - Type:            GLOBAL
 ; CHECK-NEXT:     Globals:
-; CHECK-NEXT:       - Type:            I32
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           0
-; CHECK-NEXT:       - Type:            I32
+; CHECK-NEXT:       - Index:           2
+; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           8
-; CHECK-NEXT:       - Type:            I32
+; CHECK-NEXT:       - Index:           3
+; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           12
-; CHECK-NEXT:       - Type:            I32
+; CHECK-NEXT:       - Index:           4
+; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
@@ -120,9 +124,11 @@ declare i32 @foo_import() local_unnamed_addr
 ; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:         Offset:          0x00000013
 ; CHECK-NEXT:     Functions:
-; CHECK-NEXT:       - Locals:
+; CHECK-NEXT:       - Index:         2
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:          4180808080001080808080000B
-; CHECK-NEXT:       - Locals:
+; CHECK-NEXT:       - Index:         3
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:          1081808080001A41010B
 ; CHECK-NEXT:   - Type:            DATA
 ; CHECK-NEXT:     Relocations:

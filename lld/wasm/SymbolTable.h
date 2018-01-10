@@ -50,8 +50,10 @@ public:
   Symbol *find(StringRef Name);
 
   Symbol *addDefined(InputFile *F, const WasmSymbol *Sym,
-                     const InputSegment *Segment = nullptr);
-  Symbol *addUndefined(InputFile *F, const WasmSymbol *Sym);
+                     const InputSegment *Segment = nullptr,
+                     InputFunction *Function = nullptr);
+  Symbol *addUndefined(InputFile *F, const WasmSymbol *Sym,
+                       const WasmSignature *Signature = nullptr);
   Symbol *addUndefinedFunction(StringRef Name, const WasmSignature *Type);
   Symbol *addDefinedGlobal(StringRef Name);
   void addLazy(ArchiveFile *F, const Archive::Symbol *Sym);

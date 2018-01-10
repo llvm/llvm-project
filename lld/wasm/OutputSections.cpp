@@ -11,6 +11,7 @@
 
 #include "Config.h"
 #include "InputFiles.h"
+#include "InputFunction.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
 #include "lld/Common/ErrorHandler.h"
@@ -150,6 +151,7 @@ static void calcRelocations(const ObjFile &File,
   for (const WasmRelocation &Reloc : Relocs) {
     OutputRelocation NewReloc;
     NewReloc.Reloc = Reloc;
+    assert(Reloc.Offset + OutputOffset > 0);
     NewReloc.Reloc.Offset += OutputOffset;
     DEBUG(dbgs() << "reloc: type=" << Reloc.Type << " index=" << Reloc.Index
                  << " offset=" << Reloc.Offset
@@ -191,27 +193,20 @@ void OutputSection::createHeader(size_t BodySize) {
       " total=" + Twine(getSize()));
 }
 
-CodeSection::CodeSection(uint32_t NumFunctions, ArrayRef<ObjFile *> Objs)
-    : OutputSection(WASM_SEC_CODE), InputObjects(Objs) {
+CodeSection::CodeSection(ArrayRef<InputFunction *> Functions)
+    : OutputSection(WASM_SEC_CODE), Functions(Functions) {
+  assert(Functions.size() > 0);
+
   raw_string_ostream OS(CodeSectionHeader);
-  writeUleb128(OS, NumFunctions, "function count");
+  writeUleb128(OS, Functions.size(), "function count");
   OS.flush();
   BodySize = CodeSectionHeader.size();
 
-  for (ObjFile *File : InputObjects) {
-    if (!File->CodeSection)
-      continue;
-
-    File->CodeOffset = BodySize;
-    ArrayRef<uint8_t> Content = File->CodeSection->Content;
-    unsigned HeaderSize = 0;
-    decodeULEB128(Content.data(), &HeaderSize);
-
-    calcRelocations(*File, File->CodeSection->Relocations,
-                    File->CodeRelocations, BodySize - HeaderSize);
-
-    size_t PayloadSize = Content.size() - HeaderSize;
-    BodySize += PayloadSize;
+  for (InputFunction *Func : Functions) {
+    Func->OutputOffset = BodySize;
+    calcRelocations(Func->File, Func->Relocations, Func->OutRelocations,
+                    Func->OutputOffset - Func->Function.CodeSectionOffset);
+    BodySize += Func->Function.Size;
   }
 
   createHeader(BodySize);
@@ -220,6 +215,8 @@ CodeSection::CodeSection(uint32_t NumFunctions, ArrayRef<ObjFile *> Objs)
 void CodeSection::writeTo(uint8_t *Buf) {
   log("writing " + toString(*this));
   log(" size=" + Twine(getSize()));
+  log(" headersize=" + Twine(Header.size()));
+  log(" codeheadersize=" + Twine(CodeSectionHeader.size()));
   Buf += Offset;
 
   // Write section header
@@ -233,35 +230,25 @@ void CodeSection::writeTo(uint8_t *Buf) {
   Buf += CodeSectionHeader.size();
 
   // Write code section bodies
-  parallelForEach(InputObjects, [ContentsStart](ObjFile *File) {
-    if (!File->CodeSection)
-      return;
-
-    ArrayRef<uint8_t> Content(File->CodeSection->Content);
-
-    // Payload doesn't include the initial header (function count)
-    unsigned HeaderSize = 0;
-    decodeULEB128(Content.data(), &HeaderSize);
-
-    size_t PayloadSize = Content.size() - HeaderSize;
-    memcpy(ContentsStart + File->CodeOffset, Content.data() + HeaderSize,
-           PayloadSize);
-
-    log("applying relocations for: " + File->getName());
-    applyRelocations(ContentsStart, File->CodeRelocations);
+  parallelForEach(Functions, [ContentsStart](InputFunction *Func) {
+    ArrayRef<uint8_t> Content(Func->File.CodeSection->Content);
+    memcpy(ContentsStart + Func->OutputOffset,
+           Content.data() + Func->Function.CodeSectionOffset,
+           Func->Function.Size);
+    applyRelocations(ContentsStart, Func->OutRelocations);
   });
 }
 
 uint32_t CodeSection::numRelocations() const {
   uint32_t Count = 0;
-  for (ObjFile *File : InputObjects)
-    Count += File->CodeRelocations.size();
+  for (const InputFunction *Func : Functions)
+    Count += Func->OutRelocations.size();
   return Count;
 }
 
 void CodeSection::writeRelocations(raw_ostream &OS) const {
-  for (ObjFile *File : InputObjects)
-    for (const OutputRelocation &Reloc : File->CodeRelocations)
+  for (const InputFunction *Func : Functions)
+    for (const OutputRelocation &Reloc : Func->OutRelocations)
       writeReloc(OS, Reloc);
 }
 
@@ -289,7 +276,7 @@ DataSection::DataSection(ArrayRef<OutputSegment *> Segments)
       uint32_t OutputOffset = Segment->getSectionOffset() +
                               Segment->Header.size() +
                               InputSeg->getOutputSegmentOffset();
-      calcRelocations(*InputSeg->File, InputSeg->Relocations,
+      calcRelocations(InputSeg->File, InputSeg->Relocations,
                       InputSeg->OutRelocations, OutputOffset - InputOffset);
     }
     BodySize += Segment->Size;
@@ -319,7 +306,7 @@ void DataSection::writeTo(uint8_t *Buf) {
 
     // Write segment data payload
     for (const InputSegment *Input : Segment->InputSegments) {
-      ArrayRef<uint8_t> Content(Input->Segment->Data.Content);
+      ArrayRef<uint8_t> Content(Input->Segment.Data.Content);
       memcpy(SegStart + Segment->Header.size() +
                  Input->getOutputSegmentOffset(),
              Content.data(), Content.size());

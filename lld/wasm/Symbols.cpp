@@ -11,6 +11,7 @@
 
 #include "Config.h"
 #include "InputFiles.h"
+#include "InputFunction.h"
 #include "InputSegment.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Strings.h"
@@ -21,19 +22,18 @@ using namespace llvm;
 using namespace lld;
 using namespace lld::wasm;
 
-uint32_t Symbol::getGlobalIndex() const {
-  assert(!Sym->isFunction());
-  return Sym->ElementIndex;
-}
-
-uint32_t Symbol::getFunctionIndex() const {
-  assert(Sym->isFunction());
-  return Sym->ElementIndex;
-}
-
 const WasmSignature &Symbol::getFunctionType() const {
+  if (Function != nullptr)
+    return Function->Signature;
+
   assert(FunctionType != nullptr);
   return *FunctionType;
+}
+
+void Symbol::setFunctionType(const WasmSignature *Type) {
+  assert(FunctionType == nullptr);
+  assert(Function == nullptr);
+  FunctionType = Type;
 }
 
 uint32_t Symbol::getVirtualAddress() const {
@@ -44,13 +44,26 @@ uint32_t Symbol::getVirtualAddress() const {
   if (VirtualAddress.hasValue())
     return VirtualAddress.getValue();
 
-  assert(Sym != nullptr);
   ObjFile *Obj = cast<ObjFile>(File);
+  assert(Sym != nullptr);
   const WasmGlobal &Global =
-      Obj->getWasmObj()->globals()[getGlobalIndex() - Obj->NumGlobalImports()];
+      Obj->getWasmObj()
+          ->globals()[Sym->ElementIndex - Obj->getNumGlobalImports()];
   assert(Global.Type == llvm::wasm::WASM_TYPE_I32);
   assert(Segment);
   return Segment->translateVA(Global.InitExpr.Value.Int32);
+}
+
+bool Symbol::hasOutputIndex() const {
+  if (Function)
+    return Function->hasOutputIndex();
+  return OutputIndex.hasValue();
+}
+
+uint32_t Symbol::getOutputIndex() const {
+  if (Function)
+    return Function->getOutputIndex();
+  return OutputIndex.getValue();
 }
 
 void Symbol::setVirtualAddress(uint32_t Value) {
@@ -61,6 +74,7 @@ void Symbol::setVirtualAddress(uint32_t Value) {
 
 void Symbol::setOutputIndex(uint32_t Index) {
   DEBUG(dbgs() << "setOutputIndex " << Name << " -> " << Index << "\n");
+  assert(!Function);
   assert(!OutputIndex.hasValue());
   OutputIndex = Index;
 }
@@ -72,12 +86,12 @@ void Symbol::setTableIndex(uint32_t Index) {
 }
 
 void Symbol::update(Kind K, InputFile *F, const WasmSymbol *WasmSym,
-                    const InputSegment *Seg, const WasmSignature *Sig) {
+                    const InputSegment *Seg, const InputFunction *Func) {
   SymbolKind = K;
   File = F;
   Sym = WasmSym;
   Segment = Seg;
-  FunctionType = Sig;
+  Function = Func;
 }
 
 bool Symbol::isWeak() const { return Sym && Sym->isWeak(); }

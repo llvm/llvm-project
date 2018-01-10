@@ -36,7 +36,7 @@ class OutputSegment;
 
 class InputSegment {
 public:
-  InputSegment(const WasmSegment *Seg, const ObjFile *F)
+  InputSegment(const WasmSegment &Seg, const ObjFile &F)
       : Segment(Seg), File(F) {}
 
   // Translate an offset in the input segment to an offset in the output
@@ -47,21 +47,21 @@ public:
 
   uint32_t getOutputSegmentOffset() const { return OutputSegmentOffset; }
 
-  uint32_t getInputSectionOffset() const { return Segment->SectionOffset; }
+  uint32_t getInputSectionOffset() const { return Segment.SectionOffset; }
 
   void setOutputSegment(const OutputSegment *Segment, uint32_t Offset) {
     OutputSeg = Segment;
     OutputSegmentOffset = Offset;
   }
 
-  uint32_t getSize() const { return Segment->Data.Content.size(); }
-  uint32_t getAlignment() const { return Segment->Data.Alignment; }
-  uint32_t startVA() const { return Segment->Data.Offset.Value.Int32; }
+  uint32_t getSize() const { return Segment.Data.Content.size(); }
+  uint32_t getAlignment() const { return Segment.Data.Alignment; }
+  uint32_t startVA() const { return Segment.Data.Offset.Value.Int32; }
   uint32_t endVA() const { return startVA() + getSize(); }
-  StringRef getName() const { return Segment->Data.Name; }
+  StringRef getName() const { return Segment.Data.Name; }
 
-  const WasmSegment *Segment;
-  const ObjFile *File;
+  const WasmSegment &Segment;
+  const ObjFile &File;
   std::vector<WasmRelocation> Relocations;
   std::vector<OutputRelocation> OutRelocations;
 
