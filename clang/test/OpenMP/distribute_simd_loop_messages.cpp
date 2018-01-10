@@ -324,9 +324,7 @@ int test_iteration_spaces() {
 
   #pragma omp target
   #pragma omp teams
-  // expected-error@+3 {{unexpected OpenMP clause 'shared' in directive '#pragma omp distribute simd'}}
-  // expected-note@+2  {{defined as shared}}
-  // expected-error@+2 {{loop iteration variable in the associated loop of 'omp distribute simd' directive may not be shared, predetermined as linear}}
+  // expected-error@+1 {{unexpected OpenMP clause 'shared' in directive '#pragma omp distribute simd'}}
   #pragma omp distribute simd shared(ii)
   for (ii = 0; ii < 10; ii++)
     c[ii] = a[ii];

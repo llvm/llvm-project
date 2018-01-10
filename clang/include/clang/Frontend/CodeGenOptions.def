@@ -38,6 +38,7 @@ CODEGENOPT(AssumeSaneOperatorNew , 1, 1) ///< implicit __attribute__((malloc)) o
 CODEGENOPT(Autolink          , 1, 1) ///< -fno-autolink
 CODEGENOPT(ObjCAutoRefCountExceptions , 1, 0) ///< Whether ARC should be EH-safe.
 CODEGENOPT(Backchain         , 1, 0) ///< -mbackchain
+CODEGENOPT(ControlFlowGuard  , 1, 0) ///< -cfguard
 CODEGENOPT(CoverageExtraChecksum, 1, 0) ///< Whether we need a second checksum for functions in GCNO files.
 CODEGENOPT(CoverageNoFunctionNamesInData, 1, 0) ///< Do not include function names in GCDA files.
 CODEGENOPT(CoverageExitBlockBeforeBody, 1, 0) ///< Whether to emit the exit block before the body blocks in GCNO files.
