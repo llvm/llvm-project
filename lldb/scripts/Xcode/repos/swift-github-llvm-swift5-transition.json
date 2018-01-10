@@ -14,7 +14,7 @@
         {"name": "swift",
          "vcs": "git",
          "url": "https://github.com/apple/swift.git",
-         "ref": "swift-5.0-branch"},
+         "ref": "master-llvm-swift5-transition"},
 
         {"name": "cmark",
          "vcs": "git",
