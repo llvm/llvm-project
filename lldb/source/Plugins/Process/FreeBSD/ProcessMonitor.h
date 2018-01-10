@@ -48,7 +48,7 @@ public:
   /// Launches an inferior process ready for debugging.  Forms the
   /// implementation of Process::DoLaunch.
   ProcessMonitor(ProcessFreeBSD *process, lldb_private::Module *module,
-                 char const *argv[], char const *envp[],
+                 char const *argv[], lldb_private::Environment env,
                  const lldb_private::FileSpec &stdin_file_spec,
                  const lldb_private::FileSpec &stdout_file_spec,
                  const lldb_private::FileSpec &stderr_file_spec,
@@ -219,7 +219,7 @@ private:
   /// launching a child process.
   struct LaunchArgs : OperationArgs {
     LaunchArgs(ProcessMonitor *monitor, lldb_private::Module *module,
-               char const **argv, char const **envp,
+               char const **argv, lldb_private::Environment env,
                const lldb_private::FileSpec &stdin_file_spec,
                const lldb_private::FileSpec &stdout_file_spec,
                const lldb_private::FileSpec &stderr_file_spec,
@@ -229,7 +229,7 @@ private:
 
     lldb_private::Module *m_module; // The executable image to launch.
     char const **m_argv;            // Process arguments.
-    char const **m_envp;            // Process environment.
+    lldb_private::Environment m_env;                // Process environment.
     const lldb_private::FileSpec m_stdin_file_spec; // Redirect stdin or empty.
     const lldb_private::FileSpec
         m_stdout_file_spec; // Redirect stdout or empty.

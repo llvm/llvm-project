@@ -13,6 +13,7 @@
 // LLDB headers
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/Environment.h"
 #include "lldb/Utility/FileSpec.h"
 
 namespace lldb_private {
@@ -81,9 +82,8 @@ public:
 
   void SetArguments(char const **argv, bool first_arg_is_executable);
 
-  Args &GetEnvironmentEntries() { return m_environment; }
-
-  const Args &GetEnvironmentEntries() const { return m_environment; }
+  Environment &GetEnvironment() { return m_environment; }
+  const Environment &GetEnvironment() const { return m_environment; }
 
 protected:
   FileSpec m_executable;
@@ -92,7 +92,7 @@ protected:
   // that differs from the resolved platform executable
   // (which is in m_executable)
   Args m_arguments; // All program arguments except argv[0]
-  Args m_environment;
+  Environment m_environment;
   uint32_t m_uid;
   uint32_t m_gid;
   ArchSpec m_arch;

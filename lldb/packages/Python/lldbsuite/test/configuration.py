@@ -24,40 +24,6 @@ import unittest2
 import lldbsuite
 
 
-def __setCrashInfoHook_Mac(text):
-    from . import crashinfo
-    crashinfo.setCrashReporterDescription(text)
-
-
-def setupCrashInfoHook():
-    if platform.system() == "Darwin":
-        from . import lock
-        test_dir = os.environ['LLDB_TEST']
-        if not test_dir or not os.path.exists(test_dir):
-            return
-        dylib_lock = os.path.join(test_dir, "crashinfo.lock")
-        dylib_src = os.path.join(test_dir, "crashinfo.c")
-        dylib_dst = os.path.join(test_dir, "crashinfo.so")
-        try:
-            compile_lock = lock.Lock(dylib_lock)
-            compile_lock.acquire()
-            if not os.path.isfile(dylib_dst) or os.path.getmtime(
-                    dylib_dst) < os.path.getmtime(dylib_src):
-                # we need to compile
-                cmd = "SDKROOT= xcrun clang %s -o %s -framework Python -Xlinker -dylib" % (
-                    dylib_src, dylib_dst)
-                if subprocess.call(
-                        cmd, shell=True) != 0 or not os.path.isfile(dylib_dst):
-                    raise Exception('command failed: "{}"'.format(cmd))
-        finally:
-            compile_lock.release()
-            del compile_lock
-
-        setCrashInfoHook = __setCrashInfoHook_Mac
-
-    else:
-        pass
-
 # The test suite.
 suite = unittest2.TestSuite()
 

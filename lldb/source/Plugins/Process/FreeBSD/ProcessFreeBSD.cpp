@@ -407,9 +407,8 @@ Status ProcessFreeBSD::DoLaunch(Module *module,
 
   m_monitor = new ProcessMonitor(
       this, module, launch_info.GetArguments().GetConstArgumentVector(),
-      launch_info.GetEnvironmentEntries().GetConstArgumentVector(),
-      stdin_file_spec, stdout_file_spec, stderr_file_spec, working_dir,
-      launch_info, error);
+      launch_info.GetEnvironment(), stdin_file_spec, stdout_file_spec,
+      stderr_file_spec, working_dir, launch_info, error);
 
   m_module = module;
 

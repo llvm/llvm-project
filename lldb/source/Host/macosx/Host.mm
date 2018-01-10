@@ -431,33 +431,16 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
     command.PutCString(" --disable-aslr");
 
   // We are launching on this host in a terminal. So compare the environment on
-  // the host
-  // to what is supplied in the launch_info. Any items that aren't in the host
-  // environment
-  // need to be sent to darwin-debug. If we send all environment entries, we
-  // might blow the
-  // max command line length, so we only send user modified entries.
-  const char **envp =
-      launch_info.GetEnvironmentEntries().GetConstArgumentVector();
+  // the host to what is supplied in the launch_info. Any items that aren't in
+  // the host environment need to be sent to darwin-debug. If we send all
+  // environment entries, we might blow the max command line length, so we only
+  // send user modified entries.
+  Environment host_env = Host::GetEnvironment();
 
-  StringList host_env;
-  const size_t host_env_count = Host::GetEnvironment(host_env);
-
-  if (envp && envp[0]) {
-    const char *env_entry;
-    for (size_t env_idx = 0; (env_entry = envp[env_idx]) != NULL; ++env_idx) {
-      bool add_entry = true;
-      for (size_t i = 0; i < host_env_count; ++i) {
-        const char *host_env_entry = host_env.GetStringAtIndex(i);
-        if (strcmp(env_entry, host_env_entry) == 0) {
-          add_entry = false;
-          break;
-        }
-      }
-      if (add_entry) {
-        command.Printf(" --env='%s'", env_entry);
-      }
-    }
+  for (const auto &KV : launch_info.GetEnvironment()) {
+    auto host_entry = host_env.find(KV.first());
+    if (host_entry == host_env.end() || host_entry->second != KV.second)
+      command.Format(" --env='{0}'", Environment::compose(KV));
   }
 
   command.PutCString(" -- ");
@@ -641,14 +624,7 @@ bool Host::OpenFileInExternalEditor(const FileSpec &file_spec,
 #endif // #if !defined(__arm__) && !defined(__arm64__) && !defined(__aarch64__)
 }
 
-size_t Host::GetEnvironment(StringList &env) {
-  char **host_env = *_NSGetEnviron();
-  char *env_entry;
-  size_t i;
-  for (i = 0; (env_entry = host_env[i]) != NULL; ++i)
-    env.AppendString(env_entry);
-  return i;
-}
+Environment Host::GetEnvironment() { return Environment(*_NSGetEnviron()); }
 
 static bool GetMacOSXProcessCPUType(ProcessInstanceInfo &process_info) {
   if (process_info.ProcessIDIsValid()) {
@@ -770,7 +746,7 @@ static bool GetMacOSXProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
               proc_args.AppendArgument(llvm::StringRef(cstr));
           }
 
-          Args &proc_env = process_info.GetEnvironmentEntries();
+          Environment &proc_env = process_info.GetEnvironment();
           while ((cstr = data.GetCStr(&offset))) {
             if (cstr[0] == '\0')
               break;
@@ -785,7 +761,7 @@ static bool GetMacOSXProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
                     llvm::Triple::MacOSX);
             }
 
-            proc_env.AppendArgument(llvm::StringRef(cstr));
+            proc_env.insert(cstr);
           }
           return true;
         }
@@ -936,6 +912,17 @@ static void PackageXPCArguments(xpc_object_t message, const char *prefix,
     memset(buf, 0, 50);
     sprintf(buf, "%s%zi", prefix, i);
     xpc_dictionary_set_string(message, buf, args.GetArgumentAtIndex(i));
+  }
+}
+
+static void PackageXPCEnvironment(xpc_object_t message, llvm::StringRef prefix,
+                                  const Environment &env) {
+  xpc_dictionary_set_int64(message, (prefix + "Count").str().c_str(),
+                           env.size());
+  size_t i = 0;
+  for (const auto &KV : env) {
+    xpc_dictionary_set_string(message, (prefix + llvm::Twine(i)).str().c_str(),
+                              Environment::compose(KV).c_str());
   }
 }
 
@@ -1141,8 +1128,8 @@ static Status LaunchProcessXPC(const char *exe_path,
 
   PackageXPCArguments(message, LauncherXPCServiceArgPrefxKey,
                       launch_info.GetArguments());
-  PackageXPCArguments(message, LauncherXPCServiceEnvPrefxKey,
-                      launch_info.GetEnvironmentEntries());
+  PackageXPCEnvironment(message, LauncherXPCServiceEnvPrefxKey,
+                        launch_info.GetEnvironment());
 
   // Posix spawn stuff.
   xpc_dictionary_set_int64(message, LauncherXPCServiceCPUTypeKey,
@@ -1356,8 +1343,7 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
   const char *tmp_argv[2];
   char *const *argv = const_cast<char *const *>(
       launch_info.GetArguments().GetConstArgumentVector());
-  char *const *envp = const_cast<char *const *>(
-      launch_info.GetEnvironmentEntries().GetConstArgumentVector());
+  Environment::Envp envp = launch_info.GetEnvironment().getEnvp();
   if (argv == NULL) {
     // posix_spawn gets very unhappy if it doesn't have at least the program
     // name in argv[0]. One of the side affects I have noticed is the
@@ -1425,7 +1411,8 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
                "error: {0}, ::posix_spawnp(pid => {1}, path = '{2}', "
                "file_actions = {3}, "
                "attr = {4}, argv = {5}, envp = {6} )",
-               error, result_pid, exe_path, &file_actions, &attr, argv, envp);
+               error, result_pid, exe_path, &file_actions, &attr, argv,
+               envp.get());
       if (log) {
         for (int ii = 0; argv[ii]; ++ii)
           LLDB_LOG(log, "argv[{0}] = '{1}'", ii, argv[ii]);
@@ -1441,7 +1428,7 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
       LLDB_LOG(log,
                "error: {0}, ::posix_spawnp ( pid => {1}, path = '{2}', "
                "file_actions = NULL, attr = {3}, argv = {4}, envp = {5} )",
-               error, result_pid, exe_path, &attr, argv, envp);
+               error, result_pid, exe_path, &attr, argv, envp.get());
       if (log) {
         for (int ii = 0; argv[ii]; ++ii)
           LLDB_LOG(log, "argv[{0}] = '{1}'", ii, argv[ii]);

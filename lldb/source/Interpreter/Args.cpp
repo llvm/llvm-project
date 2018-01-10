@@ -900,50 +900,6 @@ uint32_t Args::StringToGenericRegister(llvm::StringRef s) {
   return result;
 }
 
-void Args::AddOrReplaceEnvironmentVariable(llvm::StringRef env_var_name,
-                                           llvm::StringRef new_value) {
-  if (env_var_name.empty())
-    return;
-
-  // Build the new entry.
-  std::string var_string(env_var_name);
-  if (!new_value.empty()) {
-    var_string += "=";
-    var_string += new_value;
-  }
-
-  size_t index = 0;
-  if (ContainsEnvironmentVariable(env_var_name, &index)) {
-    ReplaceArgumentAtIndex(index, var_string);
-    return;
-  }
-
-  // We didn't find it.  Append it instead.
-  AppendArgument(var_string);
-}
-
-bool Args::ContainsEnvironmentVariable(llvm::StringRef env_var_name,
-                                       size_t *argument_index) const {
-  // Validate args.
-  if (env_var_name.empty())
-    return false;
-
-  // Check each arg to see if it matches the env var name.
-  for (auto arg : llvm::enumerate(m_entries)) {
-    llvm::StringRef name, value;
-    std::tie(name, value) = arg.value().ref.split('=');
-    if (name != env_var_name)
-      continue;
-
-    if (argument_index)
-      *argument_index = arg.index();
-    return true;
-  }
-
-  // We didn't find a match.
-  return false;
-}
-
 size_t Args::FindArgumentIndexForOption(Option *long_options,
                                         int long_options_index) const {
   char short_buffer[3];

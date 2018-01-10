@@ -48,6 +48,7 @@ add_lldb_library(lldbUtility
   DataBufferLLVM.cpp
   DataEncoder.cpp
   DataExtractor.cpp
+  Environment.cpp
   FastDemangle.cpp
   FileSpec.cpp
   History.cpp

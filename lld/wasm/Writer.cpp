@@ -10,6 +10,7 @@
 #include "Writer.h"
 
 #include "Config.h"
+#include "InputChunks.h"
 #include "OutputSections.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
@@ -67,8 +68,9 @@ public:
 private:
   void openFile();
 
-  uint32_t getTypeIndex(const WasmSignature &Sig);
-  void assignSymbolIndexes();
+  uint32_t lookupType(const WasmSignature &Sig);
+  uint32_t registerType(const WasmSignature &Sig);
+  void assignIndexes();
   void calculateImports();
   void calculateOffsets();
   void calculateTypes();
@@ -77,7 +79,7 @@ private:
   void createHeader();
   void createSections();
   SyntheticSection *createSyntheticSection(uint32_t Type,
-                                           std::string Name = "");
+                                           StringRef Name = "");
 
   // Builtin sections
   void createTypeSection();
@@ -102,15 +104,15 @@ private:
 
   uint64_t FileSize = 0;
   uint32_t DataSize = 0;
-  uint32_t NumFunctions = 0;
   uint32_t NumMemoryPages = 0;
   uint32_t InitialTableOffset = 0;
 
   std::vector<const WasmSignature *> Types;
   DenseMap<WasmSignature, int32_t, WasmSignatureDenseMapInfo> TypeIndices;
-  std::vector<const Symbol *> FunctionImports;
-  std::vector<const Symbol *> GlobalImports;
+  std::vector<const Symbol *> ImportedFunctions;
+  std::vector<const Symbol *> ImportedGlobals;
   std::vector<const Symbol *> DefinedGlobals;
+  std::vector<InputFunction *> DefinedFunctions;
   std::vector<const Symbol *> IndirectFunctions;
 
   // Elements that are used to construct the final output
@@ -136,7 +138,7 @@ static void debugPrint(const char *fmt, ...) {
 }
 
 void Writer::createImportSection() {
-  uint32_t NumImports = FunctionImports.size() + GlobalImports.size();
+  uint32_t NumImports = ImportedFunctions.size() + ImportedGlobals.size();
   if (Config->ImportMemory)
     ++NumImports;
 
@@ -148,13 +150,12 @@ void Writer::createImportSection() {
 
   writeUleb128(OS, NumImports, "import count");
 
-  for (const Symbol *Sym : FunctionImports) {
+  for (const Symbol *Sym : ImportedFunctions) {
     WasmImport Import;
     Import.Module = "env";
     Import.Field = Sym->getName();
     Import.Kind = WASM_EXTERNAL_FUNCTION;
-    assert(TypeIndices.count(Sym->getFunctionType()) > 0);
-    Import.SigIndex = TypeIndices.lookup(Sym->getFunctionType());
+    Import.SigIndex = lookupType(Sym->getFunctionType());
     writeImport(OS, Import);
   }
 
@@ -168,7 +169,7 @@ void Writer::createImportSection() {
     writeImport(OS, Import);
   }
 
-  for (const Symbol *Sym : GlobalImports) {
+  for (const Symbol *Sym : ImportedGlobals) {
     WasmImport Import;
     Import.Module = "env";
     Import.Field = Sym->getName();
@@ -188,16 +189,15 @@ void Writer::createTypeSection() {
 }
 
 void Writer::createFunctionSection() {
-  if (!NumFunctions)
+  if (DefinedFunctions.empty())
     return;
 
   SyntheticSection *Section = createSyntheticSection(WASM_SEC_FUNCTION);
   raw_ostream &OS = Section->getStream();
 
-  writeUleb128(OS, NumFunctions, "function count");
-  for (ObjFile *File : Symtab->ObjectFiles)
-    for (uint32_t Sig : File->getWasmObj()->functionTypes())
-      writeUleb128(OS, File->relocateTypeIndex(Sig), "sig index");
+  writeUleb128(OS, DefinedFunctions.size(), "function count");
+  for (const InputFunction *Func : DefinedFunctions)
+    writeUleb128(OS, lookupType(Func->Signature), "sig index");
 }
 
 void Writer::createMemorySection() {
@@ -337,12 +337,12 @@ void Writer::createElemSection() {
 }
 
 void Writer::createCodeSection() {
-  if (!NumFunctions)
+  if (DefinedFunctions.empty())
     return;
 
   log("createCodeSection");
 
-  auto Section = make<CodeSection>(NumFunctions, Symtab->ObjectFiles);
+  auto Section = make<CodeSection>(DefinedFunctions);
   OutputSections.push_back(Section);
 }
 
@@ -520,7 +520,7 @@ void Writer::layoutMemory() {
 }
 
 SyntheticSection *Writer::createSyntheticSection(uint32_t Type,
-                                                 std::string Name) {
+                                                 StringRef Name) {
   auto Sec = make<SyntheticSection>(Type, Name);
   log("createSection: " + toString(*Sec));
   OutputSections.push_back(Sec);
@@ -555,40 +555,36 @@ void Writer::createSections() {
   }
 }
 
-void Writer::calculateOffsets() {
-  for (ObjFile *File : Symtab->ObjectFiles) {
-    const WasmObjectFile *WasmFile = File->getWasmObj();
-
-    // Function Index
-    File->FunctionIndexOffset =
-        FunctionImports.size() - File->NumFunctionImports() + NumFunctions;
-    NumFunctions += WasmFile->functions().size();
-
-    // Memory
-    if (WasmFile->memories().size() > 1)
-      fatal(File->getName() + ": contains more than one memory");
-  }
-}
-
 void Writer::calculateImports() {
   for (Symbol *Sym : Symtab->getSymbols()) {
     if (!Sym->isUndefined() || Sym->isWeak())
       continue;
 
     if (Sym->isFunction()) {
-      Sym->setOutputIndex(FunctionImports.size());
-      FunctionImports.push_back(Sym);
+      Sym->setOutputIndex(ImportedFunctions.size());
+      ImportedFunctions.push_back(Sym);
     } else {
-      Sym->setOutputIndex(GlobalImports.size());
-      GlobalImports.push_back(Sym);
+      Sym->setOutputIndex(ImportedGlobals.size());
+      ImportedGlobals.push_back(Sym);
     }
   }
 }
 
-uint32_t Writer::getTypeIndex(const WasmSignature &Sig) {
+uint32_t Writer::lookupType(const WasmSignature &Sig) {
+  auto It = TypeIndices.find(Sig);
+  if (It == TypeIndices.end()) {
+    error("type not found: " + toString(Sig));
+    return 0;
+  }
+  return It->second;
+}
+
+uint32_t Writer::registerType(const WasmSignature &Sig) {
   auto Pair = TypeIndices.insert(std::make_pair(Sig, Types.size()));
-  if (Pair.second)
+  if (Pair.second) {
+    DEBUG(dbgs() << "type " << toString(Sig) << "\n");
     Types.push_back(&Sig);
+  }
   return Pair.first->second;
 }
 
@@ -596,12 +592,13 @@ void Writer::calculateTypes() {
   for (ObjFile *File : Symtab->ObjectFiles) {
     File->TypeMap.reserve(File->getWasmObj()->types().size());
     for (const WasmSignature &Sig : File->getWasmObj()->types())
-      File->TypeMap.push_back(getTypeIndex(Sig));
+      File->TypeMap.push_back(registerType(Sig));
   }
 }
 
-void Writer::assignSymbolIndexes() {
-  uint32_t GlobalIndex = GlobalImports.size();
+void Writer::assignIndexes() {
+  uint32_t GlobalIndex = ImportedGlobals.size();
+  uint32_t FunctionIndex = ImportedFunctions.size();
 
   if (Config->StackPointerSymbol) {
     DefinedGlobals.emplace_back(Config->StackPointerSymbol);
@@ -614,17 +611,15 @@ void Writer::assignSymbolIndexes() {
   uint32_t TableIndex = InitialTableOffset;
 
   for (ObjFile *File : Symtab->ObjectFiles) {
-    DEBUG(dbgs() << "assignSymbolIndexes: " << File->getName() << "\n");
+    if (Config->EmitRelocs) {
+      DEBUG(dbgs() << "Globals: " << File->getName() << "\n");
+      for (Symbol *Sym : File->getSymbols()) {
+        // Create wasm globals for data symbols defined in this file
+        if (!Sym->isDefined() || File != Sym->getFile())
+          continue;
+        if (Sym->isFunction())
+          continue;
 
-    for (Symbol *Sym : File->getSymbols()) {
-      // Assign indexes for symbols defined with this file.
-      if (!Sym->isDefined() || File != Sym->getFile())
-        continue;
-      if (Sym->isFunction()) {
-        auto *Obj = cast<ObjFile>(Sym->getFile());
-        Sym->setOutputIndex(Obj->FunctionIndexOffset +
-                            Sym->getFunctionIndex());
-      } else if (Config->EmitRelocs) {
         DefinedGlobals.emplace_back(Sym);
         Sym->setOutputIndex(GlobalIndex++);
       }
@@ -632,6 +627,15 @@ void Writer::assignSymbolIndexes() {
   }
 
   for (ObjFile *File : Symtab->ObjectFiles) {
+    DEBUG(dbgs() << "Functions: " << File->getName() << "\n");
+    for (InputFunction *Func : File->Functions) {
+      DefinedFunctions.emplace_back(Func);
+      Func->setOutputIndex(FunctionIndex++);
+    }
+  }
+
+  for (ObjFile *File : Symtab->ObjectFiles) {
+    DEBUG(dbgs() << "Table Indexes: " << File->getName() << "\n");
     for (Symbol *Sym : File->getTableSymbols()) {
       if (Sym->hasTableIndex() || !Sym->hasOutputIndex())
         continue;
@@ -681,22 +685,20 @@ void Writer::run() {
   calculateTypes();
   log("-- calculateImports");
   calculateImports();
-  log("-- calculateOffsets");
-  calculateOffsets();
+  log("-- assignIndexes");
+  assignIndexes();
 
   if (errorHandler().Verbose) {
-    log("Defined Functions: " + Twine(NumFunctions));
+    log("Defined Functions: " + Twine(DefinedFunctions.size()));
     log("Defined Globals  : " + Twine(DefinedGlobals.size()));
-    log("Function Imports : " + Twine(FunctionImports.size()));
-    log("Global Imports   : " + Twine(GlobalImports.size()));
+    log("Function Imports : " + Twine(ImportedFunctions.size()));
+    log("Global Imports   : " + Twine(ImportedGlobals.size()));
     log("Total Imports    : " +
-        Twine(FunctionImports.size() + GlobalImports.size()));
+        Twine(ImportedFunctions.size() + ImportedGlobals.size()));
     for (ObjFile *File : Symtab->ObjectFiles)
       File->dumpInfo();
   }
 
-  log("-- assignSymbolIndexes");
-  assignSymbolIndexes();
   log("-- layoutMemory");
   layoutMemory();
 

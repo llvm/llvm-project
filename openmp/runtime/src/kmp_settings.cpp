@@ -5126,6 +5126,15 @@ void __kmp_env_initialize(char const *string) {
 #if KMP_AFFINITY_SUPPORTED
 
   if (!TCR_4(__kmp_init_middle)) {
+#if KMP_USE_HWLOC
+    // Force using hwloc when either tiles or numa nodes requested within
+    // KMP_HW_SUBSET and no other topology method is requested
+    if ((__kmp_hws_node.num > 0 || __kmp_hws_tile.num > 0 ||
+         __kmp_affinity_gran == affinity_gran_tile) &&
+        (__kmp_affinity_top_method == affinity_top_method_default)) {
+      __kmp_affinity_top_method = affinity_top_method_hwloc;
+    }
+#endif
     // Determine if the machine/OS is actually capable of supporting
     // affinity.
     const char *var = "KMP_AFFINITY";

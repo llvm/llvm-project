@@ -888,16 +888,7 @@ Status ProcessGDBRemote::DoLaunch(Module *exe_module,
       }
 
       // Send the environment and the program + arguments after we connect
-      const Args &environment = launch_info.GetEnvironmentEntries();
-      if (environment.GetArgumentCount()) {
-        size_t num_environment_entries = environment.GetArgumentCount();
-        for (size_t i = 0; i < num_environment_entries; ++i) {
-          const char *env_entry = environment.GetArgumentAtIndex(i);
-          if (env_entry == NULL ||
-              m_gdb_comm.SendEnvironmentPacket(env_entry) != 0)
-            break;
-        }
-      }
+      m_gdb_comm.SendEnvironment(launch_info.GetEnvironment());
 
       {
         // Scope for the scoped timeout object
@@ -5154,10 +5145,11 @@ public:
 
       bool send_async = true;
       StringExtractorGDBRemote response;
-      process->GetGDBRemote().SendPacketAndWaitForResponse(
-          packet.GetString(), response, send_async);
-      result.SetStatus(eReturnStatusSuccessFinishResult);
       Stream &output_strm = result.GetOutputStream();
+      process->GetGDBRemote().SendPacketAndReceiveResponseWithOutputSupport(
+          packet.GetString(), response, send_async,
+          [&output_strm](llvm::StringRef output) { output_strm << output; });
+      result.SetStatus(eReturnStatusSuccessFinishResult);
       output_strm.Printf("  packet: %s\n", packet.GetData());
       const std::string &response_str = response.GetStringRef();
 
