@@ -50,6 +50,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
@@ -3294,8 +3295,8 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
 }
 
 /// parseDirectiveFile
-/// ::= .file [number] filename
-/// ::= .file number directory filename
+/// ::= .file filename
+/// ::= .file number [directory] filename [md5 checksum]
 bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
   // FIXME: I'm not sure what this is.
   int64_t FileNumber = -1;
@@ -3331,19 +3332,43 @@ bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
     Filename = Path;
   }
 
-  if (parseToken(AsmToken::EndOfStatement,
-                 "unexpected token in '.file' directive"))
-    return true;
+  std::string Checksum;
+  if (!parseOptionalToken(AsmToken::EndOfStatement)) {
+    StringRef Keyword;
+    if (check(getTok().isNot(AsmToken::Identifier),
+              "unexpected token in '.file' directive") ||
+        parseIdentifier(Keyword) ||
+        check(Keyword != "md5", "unexpected token in '.file' directive"))
+      return true;
+    if (getLexer().is(AsmToken::String) &&
+        check(FileNumber == -1, "MD5 checksum specified, but no file number"))
+      return true;
+    if (check(getTok().isNot(AsmToken::String),
+              "unexpected token in '.file' directive") ||
+        parseEscapedString(Checksum) ||
+        check(Checksum.size() != 32, "invalid MD5 checksum specified") ||
+        parseToken(AsmToken::EndOfStatement,
+                   "unexpected token in '.file' directive"))
+      return true;
+  }
 
   if (FileNumber == -1)
     getStreamer().EmitFileDirective(Filename);
   else {
+    MD5::MD5Result *CKMem = nullptr;
+    if (!Checksum.empty()) {
+      Checksum = fromHex(Checksum);
+      if (check(Checksum.size() != 16, "invalid MD5 checksum specified"))
+        return true;
+      CKMem = (MD5::MD5Result *)Ctx.allocate(sizeof(MD5::MD5Result), 1);
+      memcpy(&CKMem->Bytes, Checksum.data(), 16);
+    }
     // If there is -g option as well as debug info from directive file,
     // we turn off -g option, directly use the existing debug info instead.
     if (getContext().getGenDwarfForAssembly())
       getContext().setGenDwarfForAssembly(false);
-    else if (getStreamer().EmitDwarfFileDirective(FileNumber, Directory, Filename) ==
-        0)
+    else if (getStreamer().EmitDwarfFileDirective(FileNumber, Directory,
+                                                  Filename, CKMem) == 0)
       return Error(FileNumberLoc, "file number already allocated");
   }
 

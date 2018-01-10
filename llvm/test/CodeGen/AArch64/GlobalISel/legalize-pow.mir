@@ -25,14 +25,14 @@ body: |
 
     ; CHECK: %d0 = COPY %0
     ; CHECK: %d1 = COPY %1
-    ; CHECK: BL $pow, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %d0, implicit %d1, implicit-def %d0
+    ; CHECK: BL &pow, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %d0, implicit %d1, implicit-def %d0
     ; CHECK: %4:_(s64) = COPY %d0
     %4:_(s64) = G_FPOW %0, %1
     %x0 = COPY %4
 
     ; CHECK: %s0 = COPY %2
     ; CHECK: %s1 = COPY %3
-    ; CHECK: BL $powf, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %s0, implicit %s1, implicit-def %s0
+    ; CHECK: BL &powf, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %s0, implicit %s1, implicit-def %s0
     ; CHECK: %5:_(s32) = COPY %s0
     %5:_(s32) = G_FPOW %2, %3
     %w0 = COPY %5

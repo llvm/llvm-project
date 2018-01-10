@@ -193,6 +193,17 @@ void MCWinCOFFStreamer::EmitCOFFSafeSEH(MCSymbol const *Symbol) {
                    << COFF::SCT_COMPLEX_TYPE_SHIFT);
 }
 
+void MCWinCOFFStreamer::EmitCOFFSymbolIndex(MCSymbol const *Symbol) {
+  MCSection *Sec = getCurrentSectionOnly();
+  getAssembler().registerSection(*Sec);
+  if (Sec->getAlignment() < 4)
+    Sec->setAlignment(4);
+
+  new MCSymbolIdFragment(Symbol, getCurrentSectionOnly());
+
+  getAssembler().registerSymbol(*Symbol);
+}
+
 void MCWinCOFFStreamer::EmitCOFFSectionIndex(const MCSymbol *Symbol) {
   visitUsedSymbol(*Symbol);
   MCDataFragment *DF = getOrCreateDataFragment();
@@ -257,20 +268,13 @@ void MCWinCOFFStreamer::EmitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
   auto *Symbol = cast<MCSymbolCOFF>(S);
 
   MCSection *Section = getContext().getObjectFileInfo()->getBSSSection();
-  getAssembler().registerSection(*Section);
-  if (Section->getAlignment() < ByteAlignment)
-    Section->setAlignment(ByteAlignment);
-
-  getAssembler().registerSymbol(*Symbol);
+  PushSection();
+  SwitchSection(Section);
+  EmitValueToAlignment(ByteAlignment, 0, 1, 0);
+  EmitLabel(Symbol);
   Symbol->setExternal(false);
-
-  if (ByteAlignment != 1)
-    new MCAlignFragment(ByteAlignment, /*Value=*/0, /*ValueSize=*/0,
-                        ByteAlignment, Section);
-
-  MCFillFragment *Fragment = new MCFillFragment(
-      /*Value=*/0, Size, Section);
-  Symbol->setFragment(Fragment);
+  EmitZeros(Size);
+  PopSection();
 }
 
 void MCWinCOFFStreamer::EmitZerofill(MCSection *Section, MCSymbol *Symbol,

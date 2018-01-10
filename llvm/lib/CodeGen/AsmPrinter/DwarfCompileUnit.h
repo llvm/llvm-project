@@ -141,7 +141,8 @@ public:
 
   DwarfCompileUnit &getCU() override { return *this; }
 
-  unsigned getOrCreateSourceID(StringRef FileName, StringRef DirName) override;
+  unsigned getOrCreateSourceID(StringRef FileName, StringRef DirName,
+                               MD5::MD5Result *Checksum) override;
 
   void addImportedEntity(const DIImportedEntity* IE) {
     DIScope *Scope = IE->getScope();

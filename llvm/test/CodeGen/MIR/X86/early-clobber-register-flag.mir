@@ -35,8 +35,8 @@ body: |
     CFI_INSTRUCTION def_cfa_offset 16
     %ecx = COPY %edi
     %ecx = ADD32rr killed %ecx, killed %esi, implicit-def dead %eflags
-  ; CHECK: INLINEASM $nop, 1, 12, implicit-def dead early-clobber %ax, 12, implicit-def dead early-clobber %di
-    INLINEASM $nop, 1, 12, implicit-def dead early-clobber %ax, 12, implicit-def dead early-clobber %di
+  ; CHECK: INLINEASM &nop, 1, 12, implicit-def dead early-clobber %ax, 12, implicit-def dead early-clobber %di
+    INLINEASM &nop, 1, 12, implicit-def dead early-clobber %ax, 12, implicit-def dead early-clobber %di
     %edi = COPY killed %ecx
     CALL64pcrel32 @foo, csr_64, implicit %rsp, implicit %edi, implicit-def %rsp
     %rax = POP64r implicit-def %rsp, implicit %rsp

@@ -166,9 +166,9 @@ body:             |
     %16 = LW killed %15, 0 :: (dereferenceable load 4 from @v)
     %0 = ADDu killed %12, killed %16
     ADJCALLSTACKDOWN 0, 0, implicit-def dead %sp, implicit %sp
-    %17 = LUi64 target-flags(mips-call-hi16) $__tls_get_addr
+    %17 = LUi64 target-flags(mips-call-hi16) &__tls_get_addr
     %18 = DADDu killed %17, %6
-    %19 = LD killed %18, target-flags(mips-call-lo16) $__tls_get_addr :: (load 8 from call-entry $__tls_get_addr)
+    %19 = LD killed %18, target-flags(mips-call-lo16) &__tls_get_addr :: (load 8 from call-entry &__tls_get_addr)
     %20 = DADDiu %6, target-flags(mips-tlsldm) @__tls_guard
     %a0_64 = COPY %20
     %gp_64 = COPY %6
@@ -184,9 +184,9 @@ body:             |
     successors: %bb.3._ZTW1k.exit(0x80000000)
 
     ADJCALLSTACKDOWN 0, 0, implicit-def dead %sp, implicit %sp
-    %39 = LUi64 target-flags(mips-call-hi16) $__tls_get_addr
+    %39 = LUi64 target-flags(mips-call-hi16) &__tls_get_addr
     %40 = DADDu killed %39, %6
-    %41 = LD killed %40, target-flags(mips-call-lo16) $__tls_get_addr :: (load 8 from call-entry $__tls_get_addr)
+    %41 = LD killed %40, target-flags(mips-call-lo16) &__tls_get_addr :: (load 8 from call-entry &__tls_get_addr)
     %42 = DADDiu %6, target-flags(mips-tlsgd) @k
     %a0_64 = COPY %42
     %gp_64 = COPY %6
@@ -200,9 +200,9 @@ body:             |
     successors: %bb.3._ZTW1k.exit(0x80000000)
 
     ADJCALLSTACKDOWN 0, 0, implicit-def dead %sp, implicit %sp
-    %24 = LUi64 target-flags(mips-call-hi16) $__tls_get_addr
+    %24 = LUi64 target-flags(mips-call-hi16) &__tls_get_addr
     %25 = DADDu killed %24, %6
-    %26 = LD %25, target-flags(mips-call-lo16) $__tls_get_addr :: (load 8 from call-entry $__tls_get_addr)
+    %26 = LD %25, target-flags(mips-call-lo16) &__tls_get_addr :: (load 8 from call-entry &__tls_get_addr)
     %27 = DADDiu %6, target-flags(mips-tlsldm) @__tls_guard
     %a0_64 = COPY %27
     %gp_64 = COPY %6
@@ -223,7 +223,7 @@ body:             |
     ADJCALLSTACKUP 0, 0, implicit-def dead %sp, implicit %sp
     %35 = COPY %v0
     ADJCALLSTACKDOWN 0, 0, implicit-def dead %sp, implicit %sp
-    %36 = LD %25, target-flags(mips-call-lo16) $__tls_get_addr :: (load 8 from call-entry $__tls_get_addr)
+    %36 = LD %25, target-flags(mips-call-lo16) &__tls_get_addr :: (load 8 from call-entry &__tls_get_addr)
     %37 = DADDiu %6, target-flags(mips-tlsgd) @k
     %a0_64 = COPY %37
     %gp_64 = COPY %6
@@ -257,9 +257,9 @@ body:             |
 
   bb.5._ZTW1j.exit:
     ADJCALLSTACKDOWN 0, 0, implicit-def dead %sp, implicit %sp
-    %50 = LUi64 target-flags(mips-call-hi16) $__tls_get_addr
+    %50 = LUi64 target-flags(mips-call-hi16) &__tls_get_addr
     %51 = DADDu killed %50, %6
-    %52 = LD killed %51, target-flags(mips-call-lo16) $__tls_get_addr :: (load 8 from call-entry $__tls_get_addr)
+    %52 = LD killed %51, target-flags(mips-call-lo16) &__tls_get_addr :: (load 8 from call-entry &__tls_get_addr)
     %53 = DADDiu %6, target-flags(mips-tlsgd) @j
     %a0_64 = COPY %53
     %gp_64 = COPY %6

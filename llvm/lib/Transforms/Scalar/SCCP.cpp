@@ -1900,7 +1900,7 @@ static bool runIPSCCP(Module &M, const DataLayout &DL,
         if (Inst->getType()->isVoidTy())
           continue;
         if (tryToReplaceWithConstant(Solver, Inst)) {
-          if (!isa<CallInst>(Inst) && !isa<TerminatorInst>(Inst))
+          if (Inst->isSafeToRemove())
             Inst->eraseFromParent();
           // Hey, we just changed something!
           MadeChanges = true;

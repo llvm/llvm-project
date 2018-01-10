@@ -752,7 +752,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     break;
   case MachineOperand::MO_ExternalSymbol: {
     StringRef Name = getSymbolName();
-    OS << '$';
+    OS << '&';
     if (Name.empty()) {
       OS << "\"\"";
     } else {

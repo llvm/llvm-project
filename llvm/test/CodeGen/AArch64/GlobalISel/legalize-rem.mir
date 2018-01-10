@@ -135,7 +135,7 @@ body: |
     ; CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def %sp, implicit %sp
     ; CHECK: %d0 = COPY [[COPY]](s64)
     ; CHECK: %d1 = COPY [[COPY1]](s64)
-    ; CHECK: BL $fmod, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %d0, implicit %d1, implicit-def %d0
+    ; CHECK: BL &fmod, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %d0, implicit %d1, implicit-def %d0
     ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY %d0
     ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def %sp, implicit %sp
     ; CHECK: %x0 = COPY [[COPY2]](s64)
@@ -144,7 +144,7 @@ body: |
     ; CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def %sp, implicit %sp
     ; CHECK: %s0 = COPY [[TRUNC]](s32)
     ; CHECK: %s1 = COPY [[TRUNC1]](s32)
-    ; CHECK: BL $fmodf, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %s0, implicit %s1, implicit-def %s0
+    ; CHECK: BL &fmodf, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %s0, implicit %s1, implicit-def %s0
     ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY %s0
     ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def %sp, implicit %sp
     ; CHECK: %w0 = COPY [[COPY3]](s32)

@@ -15,34 +15,44 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/COFFImportFile.h"
+#include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm::object;
 
 namespace llvm {
 
-void dumpCOFFImportFile(const COFFImportFile *File) {
-  outs() << '\n';
-  outs() << "File: " << File->getFileName() << "\n";
-  outs() << "Format: COFF-import-file\n";
+void dumpCOFFImportFile(const COFFImportFile *File, ScopedPrinter &Writer) {
+  Writer.startLine() << '\n';
+  Writer.printString("File", File->getFileName());
+  Writer.printString("Format", "COFF-import-file");
 
   const coff_import_header *H = File->getCOFFImportHeader();
   switch (H->getType()) {
-  case COFF::IMPORT_CODE:  outs() << "Type: code\n"; break;
-  case COFF::IMPORT_DATA:  outs() << "Type: data\n"; break;
-  case COFF::IMPORT_CONST: outs() << "Type: const\n"; break;
+  case COFF::IMPORT_CODE:  Writer.printString("Type", "code"); break;
+  case COFF::IMPORT_DATA:  Writer.printString("Type", "data"); break;
+  case COFF::IMPORT_CONST: Writer.printString("Type", "const"); break;
   }
 
   switch (H->getNameType()) {
-  case COFF::IMPORT_ORDINAL: outs() << "Name type: ordinal\n"; break;
-  case COFF::IMPORT_NAME: outs() << "Name type: name\n"; break;
-  case COFF::IMPORT_NAME_NOPREFIX: outs() << "Name type: noprefix\n"; break;
-  case COFF::IMPORT_NAME_UNDECORATE: outs() << "Name type: undecorate\n"; break;
+  case COFF::IMPORT_ORDINAL:
+    Writer.printString("Name type", "ordinal");
+    break;
+  case COFF::IMPORT_NAME:
+    Writer.printString("Name type", "name");
+    break;
+  case COFF::IMPORT_NAME_NOPREFIX:
+    Writer.printString("Name type", "noprefix");
+    break;
+  case COFF::IMPORT_NAME_UNDECORATE:
+    Writer.printString("Name type", "undecorate");
+    break;
   }
 
   for (const object::BasicSymbolRef &Sym : File->symbols()) {
-    outs() << "Symbol: ";
-    Sym.printName(outs());
-    outs() << "\n";
+    raw_ostream &OS = Writer.startLine();
+    OS << "Symbol: ";
+    Sym.printName(OS);
+    OS << "\n";
   }
 }
 

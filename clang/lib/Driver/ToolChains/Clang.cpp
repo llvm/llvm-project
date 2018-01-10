@@ -5079,6 +5079,10 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     else
       CmdArgs.push_back("msvc");
   }
+
+  if (Args.hasArg(options::OPT__SLASH_Guard) &&
+      Args.getLastArgValue(options::OPT__SLASH_Guard).equals_lower("cf"))
+    CmdArgs.push_back("-cfguard");
 }
 
 visualstudio::Compiler *Clang::getCLFallback() const {

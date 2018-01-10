@@ -660,9 +660,9 @@ public:
     return getArch() == Triple::aarch64 || getArch() == Triple::aarch64_be;
   }
 
-  /// Tests wether the target supports comdat
+  /// Tests whether the target supports comdat
   bool supportsCOMDAT() const {
-    return !isOSBinFormatMachO() && !isOSBinFormatWasm();
+    return !isOSBinFormatMachO();
   }
 
   /// @}

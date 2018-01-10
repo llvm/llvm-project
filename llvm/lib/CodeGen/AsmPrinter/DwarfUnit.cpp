@@ -263,9 +263,12 @@ void DwarfUnit::addSectionOffset(DIE &Die, dwarf::Attribute Attribute,
     addUInt(Die, Attribute, dwarf::DW_FORM_data4, Integer);
 }
 
-unsigned DwarfTypeUnit::getOrCreateSourceID(StringRef FileName, StringRef DirName) {
-  return SplitLineTable ? SplitLineTable->getFile(DirName, FileName)
-                        : getCU().getOrCreateSourceID(FileName, DirName);
+unsigned DwarfTypeUnit::getOrCreateSourceID(StringRef FileName,
+                                            StringRef DirName,
+                                            MD5::MD5Result *Checksum) {
+  return SplitLineTable
+             ? SplitLineTable->getFile(DirName, FileName, Checksum)
+             : getCU().getOrCreateSourceID(FileName, DirName, Checksum);
 }
 
 void DwarfUnit::addOpAddress(DIELoc &Die, const MCSymbol *Sym) {
@@ -340,7 +343,7 @@ void DwarfUnit::addSourceLine(DIE &Die, unsigned Line, StringRef File,
   if (Line == 0)
     return;
 
-  unsigned FileID = getOrCreateSourceID(File, Directory);
+  unsigned FileID = getOrCreateSourceID(File, Directory, nullptr);
   assert(FileID && "Invalid file id");
   addUInt(Die, dwarf::DW_AT_decl_file, None, FileID);
   addUInt(Die, dwarf::DW_AT_decl_line, None, Line);
@@ -1161,9 +1164,10 @@ bool DwarfUnit::applySubprogramDefinitionAttributes(const DISubprogram *SP,
     // Look at the Decl's linkage name only if we emitted it.
     if (DD->useAllLinkageNames())
       DeclLinkageName = SPDecl->getLinkageName();
-    unsigned DeclID =
-        getOrCreateSourceID(SPDecl->getFilename(), SPDecl->getDirectory());
-    unsigned DefID = getOrCreateSourceID(SP->getFilename(), SP->getDirectory());
+    unsigned DeclID = getOrCreateSourceID(SPDecl->getFilename(),
+                                          SPDecl->getDirectory(), nullptr);
+    unsigned DefID =
+        getOrCreateSourceID(SP->getFilename(), SP->getDirectory(), nullptr);
     if (DeclID != DefID)
       addUInt(SPDie, dwarf::DW_AT_decl_file, None, DefID);
 
