@@ -1477,7 +1477,7 @@ bool bugreporter::trackNullOrUndefValue(const ExplodedNode *N,
   if (Inner && ExplodedGraph::isInterestingLValueExpr(Inner)) {
     const ExplodedNode *LVNode = findNodeForExpression(N, Inner);
     ProgramStateRef LVState = LVNode->getState();
-    SVal LVal = LVNode->getSVal(Inner);
+    SVal LVal = LVState->getSVal(Inner, LVNode->getLocationContext());
 
     const MemRegion *RR = getLocationRegionIfReference(Inner, N);
     bool LVIsNull = LVState->isNull(LVal).isConstrainedTrue();
@@ -1496,7 +1496,7 @@ bool bugreporter::trackNullOrUndefValue(const ExplodedNode *N,
     // If the LVal is null, check if we are dealing with null reference.
     // For those, we want to track the location of the reference.
     const MemRegion *R = (RR && LVIsNull) ? RR :
-        LVNode->getSVal(Inner).getAsRegion();
+        LVState->getSVal(Inner, LVNode->getLocationContext()).getAsRegion();
 
     if (R) {
       // Mark both the variable region and its contents as interesting.
