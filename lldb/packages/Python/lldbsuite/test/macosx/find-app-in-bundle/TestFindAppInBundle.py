@@ -14,6 +14,7 @@ import lldbsuite.test.lldbutil as lldbutil
 import lldbsuite.test.lldbplatformutil as lldbplatformutil
 from lldbsuite.test.lldbtest import *
 
+@decorators.skipUnlessDarwin
 class FindAppInMacOSAppBundle(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
