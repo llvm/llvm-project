@@ -10,7 +10,7 @@
 #include "Writer.h"
 
 #include "Config.h"
-#include "InputFunction.h"
+#include "InputChunks.h"
 #include "OutputSections.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"

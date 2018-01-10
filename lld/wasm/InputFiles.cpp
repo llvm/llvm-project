@@ -10,8 +10,7 @@
 #include "InputFiles.h"
 
 #include "Config.h"
-#include "InputFunction.h"
-#include "InputSegment.h"
+#include "InputChunks.h"
 #include "SymbolTable.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
@@ -126,12 +125,13 @@ InputSegment *ObjFile::getSegment(const WasmSymbol &WasmSym) const {
   return nullptr;
 }
 
-static void copyRelocationsRange(std::vector<WasmRelocation> &To,
-                                 ArrayRef<WasmRelocation> From, size_t Start,
-                                 size_t Size) {
-  for (const WasmRelocation &R : From)
-    if (R.Offset >= Start && R.Offset < Start + Size)
-      To.push_back(R);
+// Get the value stored in the wasm global represented by this symbol.
+// This represents the virtual address of the symbol in the input file.
+uint32_t ObjFile::getGlobalValue(const WasmSymbol &Sym) const {
+  const WasmGlobal &Global =
+      getWasmObj()->globals()[Sym.ElementIndex - NumGlobalImports];
+  assert(Global.Type == llvm::wasm::WASM_TYPE_I32);
+  return Global.InitExpr.Value.Int32;
 }
 
 // Get the signature for a given function symbol, either by looking
@@ -166,8 +166,7 @@ void ObjFile::initializeSymbols() {
 
   for (const WasmSegment &S : WasmObj->dataSegments()) {
     InputSegment *Seg = make<InputSegment>(S, *this);
-    copyRelocationsRange(Seg->Relocations, DataSection->Relocations,
-                         Seg->getInputSectionOffset(), Seg->getSize());
+    Seg->copyRelocations(*DataSection);
     Segments.emplace_back(Seg);
   }
 
@@ -177,10 +176,9 @@ void ObjFile::initializeSymbols() {
   for (size_t I = 0; I < Funcs.size(); ++I) {
     const WasmFunction &Func = Funcs[I];
     const WasmSignature &Sig = Types[FuncTypes[I]];
-    InputFunction *Function = make<InputFunction>(Sig, Func, *this);
-    copyRelocationsRange(Function->Relocations, CodeSection->Relocations,
-                         Func.CodeSectionOffset, Func.Size);
-    Functions.emplace_back(Function);
+    InputFunction *F = make<InputFunction>(Sig, Func, *this);
+    F->copyRelocations(*CodeSection);
+    Functions.emplace_back(F);
   }
 
   // Populate `FunctionSymbols` and `GlobalSymbols` based on the WasmSymbols
@@ -190,16 +188,19 @@ void ObjFile::initializeSymbols() {
     Symbol *S;
     switch (WasmSym.Type) {
     case WasmSymbol::SymbolType::FUNCTION_IMPORT:
-      S = createUndefined(WasmSym, getFunctionSig(WasmSym));
+      S = createUndefined(WasmSym, Symbol::Kind::UndefinedFunctionKind,
+                          getFunctionSig(WasmSym));
       break;
     case WasmSymbol::SymbolType::GLOBAL_IMPORT:
-      S = createUndefined(WasmSym);
+      S = createUndefined(WasmSym, Symbol::Kind::UndefinedGlobalKind);
       break;
     case WasmSymbol::SymbolType::GLOBAL_EXPORT:
-      S = createDefined(WasmSym, getSegment(WasmSym), nullptr);
+      S = createDefined(WasmSym, Symbol::Kind::DefinedGlobalKind,
+                        getSegment(WasmSym), nullptr, getGlobalValue(WasmSym));
       break;
     case WasmSymbol::SymbolType::FUNCTION_EXPORT:
-      S = createDefined(WasmSym, nullptr, getFunction(WasmSym));
+      S = createDefined(WasmSym, Symbol::Kind::DefinedFunctionKind, nullptr,
+                        getFunction(WasmSym));
       break;
     case WasmSymbol::SymbolType::DEBUG_FUNCTION_NAME:
       // These are for debugging only, no need to create linker symbols for them
@@ -249,28 +250,22 @@ void ObjFile::initializeSymbols() {
   DEBUG(dbgs() << "Globals     : " << GlobalSymbols.size() << "\n");
 }
 
-Symbol *ObjFile::createUndefined(const WasmSymbol &Sym,
+Symbol *ObjFile::createUndefined(const WasmSymbol &Sym, Symbol::Kind Kind,
                                  const WasmSignature *Signature) {
-  return Symtab->addUndefined(this, &Sym, Signature);
+  return Symtab->addUndefined(Sym.Name, Kind, Sym.Flags, this, Signature);
 }
 
-Symbol *ObjFile::createDefined(const WasmSymbol &Sym,
+Symbol *ObjFile::createDefined(const WasmSymbol &Sym, Symbol::Kind Kind,
                                const InputSegment *Segment,
-                               InputFunction *Function) {
+                               InputFunction *Function, uint32_t Address) {
   Symbol *S;
   if (Sym.isLocal()) {
     S = make<Symbol>(Sym.Name, true);
-    Symbol::Kind Kind;
-    if (Sym.Type == WasmSymbol::SymbolType::FUNCTION_EXPORT)
-      Kind = Symbol::Kind::DefinedFunctionKind;
-    else if (Sym.Type == WasmSymbol::SymbolType::GLOBAL_EXPORT)
-      Kind = Symbol::Kind::DefinedGlobalKind;
-    else
-      llvm_unreachable("invalid local symbol type");
-    S->update(Kind, this, &Sym, Segment, Function);
+    S->update(Kind, this, Sym.Flags, Segment, Function, Address);
     return S;
   }
-  return Symtab->addDefined(this, &Sym, Segment, Function);
+  return Symtab->addDefined(Sym.Name, Kind, Sym.Flags, this, Segment, Function,
+                            Address);
 }
 
 void ArchiveFile::parse() {

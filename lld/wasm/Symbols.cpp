@@ -10,15 +10,15 @@
 #include "Symbols.h"
 
 #include "Config.h"
+#include "InputChunks.h"
 #include "InputFiles.h"
-#include "InputFunction.h"
-#include "InputSegment.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Strings.h"
 
 #define DEBUG_TYPE "lld"
 
 using namespace llvm;
+using namespace llvm::wasm;
 using namespace lld;
 using namespace lld::wasm;
 
@@ -39,19 +39,7 @@ void Symbol::setFunctionType(const WasmSignature *Type) {
 uint32_t Symbol::getVirtualAddress() const {
   assert(isGlobal());
   DEBUG(dbgs() << "getVirtualAddress: " << getName() << "\n");
-  if (isUndefined())
-    return 0;
-  if (VirtualAddress.hasValue())
-    return VirtualAddress.getValue();
-
-  ObjFile *Obj = cast<ObjFile>(File);
-  assert(Sym != nullptr);
-  const WasmGlobal &Global =
-      Obj->getWasmObj()
-          ->globals()[Sym->ElementIndex - Obj->getNumGlobalImports()];
-  assert(Global.Type == llvm::wasm::WASM_TYPE_I32);
-  assert(Segment);
-  return Segment->translateVA(Global.InitExpr.Value.Int32);
+  return Segment ? Segment->translateVA(VirtualAddress) : VirtualAddress;
 }
 
 bool Symbol::hasOutputIndex() const {
@@ -68,7 +56,7 @@ uint32_t Symbol::getOutputIndex() const {
 
 void Symbol::setVirtualAddress(uint32_t Value) {
   DEBUG(dbgs() << "setVirtualAddress " << Name << " -> " << Value << "\n");
-  assert(!VirtualAddress.hasValue());
+  assert(isGlobal());
   VirtualAddress = Value;
 }
 
@@ -85,18 +73,29 @@ void Symbol::setTableIndex(uint32_t Index) {
   TableIndex = Index;
 }
 
-void Symbol::update(Kind K, InputFile *F, const WasmSymbol *WasmSym,
-                    const InputSegment *Seg, const InputFunction *Func) {
+void Symbol::update(Kind K, InputFile *F, uint32_t Flags_,
+                    const InputSegment *Seg, const InputFunction *Func,
+                    uint32_t Address) {
   SymbolKind = K;
   File = F;
-  Sym = WasmSym;
+  Flags = Flags_;
   Segment = Seg;
   Function = Func;
+  if (Address != UINT32_MAX)
+    setVirtualAddress(Address);
 }
 
-bool Symbol::isWeak() const { return Sym && Sym->isWeak(); }
+bool Symbol::isWeak() const {
+  return (Flags & WASM_SYMBOL_BINDING_MASK) == WASM_SYMBOL_BINDING_WEAK;
+}
 
-bool Symbol::isHidden() const { return Sym && Sym->isHidden(); }
+bool Symbol::isLocal() const {
+  return (Flags & WASM_SYMBOL_BINDING_MASK) == WASM_SYMBOL_BINDING_LOCAL;
+}
+
+bool Symbol::isHidden() const {
+  return (Flags & WASM_SYMBOL_VISIBILITY_MASK) == WASM_SYMBOL_VISIBILITY_HIDDEN;
+}
 
 std::string lld::toString(const wasm::Symbol &Sym) {
   if (Config->Demangle)

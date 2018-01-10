@@ -17,6 +17,7 @@
 #include "llvm/Object/Wasm.h"
 #include "llvm/Support/MemoryBuffer.h"
 
+#include "Symbols.h"
 #include "WriterUtils.h"
 
 #include <vector>
@@ -31,7 +32,6 @@ using llvm::wasm::WasmSignature;
 namespace lld {
 namespace wasm {
 
-class Symbol;
 class InputFunction;
 class InputSegment;
 
@@ -97,9 +97,8 @@ public:
   uint32_t relocateTableIndex(uint32_t Original) const;
   uint32_t getRelocatedAddress(uint32_t Index) const;
 
-  size_t getNumGlobalImports() const { return NumGlobalImports; }
-
   const WasmSection *CodeSection = nullptr;
+  const WasmSection *DataSection = nullptr;
 
   std::vector<uint32_t> TypeMap;
   std::vector<InputSegment *> Segments;
@@ -109,14 +108,16 @@ public:
   ArrayRef<Symbol *> getTableSymbols() { return TableSymbols; }
 
 private:
-  Symbol *createDefined(const WasmSymbol &Sym,
+  Symbol *createDefined(const WasmSymbol &Sym, Symbol::Kind Kind,
                         const InputSegment *Segment = nullptr,
-                        InputFunction *Function = nullptr);
-  Symbol *createUndefined(const WasmSymbol &Sym,
+                        InputFunction *Function = nullptr,
+                        uint32_t Address = UINT32_MAX);
+  Symbol *createUndefined(const WasmSymbol &Sym, Symbol::Kind Kind,
                           const WasmSignature *Signature = nullptr);
   void initializeSymbols();
   InputSegment *getSegment(const WasmSymbol &WasmSym) const;
   const WasmSignature *getFunctionSig(const WasmSymbol &Sym) const;
+  uint32_t getGlobalValue(const WasmSymbol &Sym) const;
   InputFunction *getFunction(const WasmSymbol &Sym) const;
 
   // List of all symbols referenced or defined by this file.
@@ -131,7 +132,6 @@ private:
   // List of all indirect symbols indexed by table index space.
   std::vector<Symbol *> TableSymbols;
 
-  const WasmSection *DataSection = nullptr;
   uint32_t NumGlobalImports = 0;
   uint32_t NumFunctionImports = 0;
   std::unique_ptr<WasmObjectFile> WasmObj;

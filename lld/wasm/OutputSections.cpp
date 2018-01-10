@@ -10,8 +10,8 @@
 #include "OutputSections.h"
 
 #include "Config.h"
+#include "InputChunks.h"
 #include "InputFiles.h"
-#include "InputFunction.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
 #include "lld/Common/ErrorHandler.h"
@@ -202,11 +202,11 @@ CodeSection::CodeSection(ArrayRef<InputFunction *> Functions)
   OS.flush();
   BodySize = CodeSectionHeader.size();
 
-  for (InputFunction *Func : Functions) {
+  for (InputChunk *Func : Functions) {
     Func->OutputOffset = BodySize;
     calcRelocations(Func->File, Func->Relocations, Func->OutRelocations,
-                    Func->OutputOffset - Func->Function.CodeSectionOffset);
-    BodySize += Func->Function.Size;
+                    Func->OutputOffset - Func->getInputSectionOffset());
+    BodySize += Func->getSize();
   }
 
   createHeader(BodySize);
@@ -230,24 +230,22 @@ void CodeSection::writeTo(uint8_t *Buf) {
   Buf += CodeSectionHeader.size();
 
   // Write code section bodies
-  parallelForEach(Functions, [ContentsStart](InputFunction *Func) {
-    ArrayRef<uint8_t> Content(Func->File.CodeSection->Content);
-    memcpy(ContentsStart + Func->OutputOffset,
-           Content.data() + Func->Function.CodeSectionOffset,
-           Func->Function.Size);
+  parallelForEach(Functions, [ContentsStart](InputChunk *Func) {
+    memcpy(ContentsStart + Func->OutputOffset, Func->getData(),
+           Func->getSize());
     applyRelocations(ContentsStart, Func->OutRelocations);
   });
 }
 
 uint32_t CodeSection::numRelocations() const {
   uint32_t Count = 0;
-  for (const InputFunction *Func : Functions)
+  for (const InputChunk *Func : Functions)
     Count += Func->OutRelocations.size();
   return Count;
 }
 
 void CodeSection::writeRelocations(raw_ostream &OS) const {
-  for (const InputFunction *Func : Functions)
+  for (const InputChunk *Func : Functions)
     for (const OutputRelocation &Reloc : Func->OutRelocations)
       writeReloc(OS, Reloc);
 }
@@ -271,13 +269,12 @@ DataSection::DataSection(ArrayRef<OutputSegment *> Segments)
     Segment->setSectionOffset(BodySize);
     BodySize += Segment->Header.size();
     log("Data segment: size=" + Twine(Segment->Size));
-    for (InputSegment *InputSeg : Segment->InputSegments) {
-      uint32_t InputOffset = InputSeg->getInputSectionOffset();
+    for (InputChunk *InputSeg : Segment->InputSegments) {
       uint32_t OutputOffset = Segment->getSectionOffset() +
-                              Segment->Header.size() +
-                              InputSeg->getOutputSegmentOffset();
+                              Segment->Header.size() + InputSeg->OutputOffset;
       calcRelocations(InputSeg->File, InputSeg->Relocations,
-                      InputSeg->OutRelocations, OutputOffset - InputOffset);
+                      InputSeg->OutRelocations,
+                      OutputOffset - InputSeg->getInputSectionOffset());
     }
     BodySize += Segment->Size;
   }
@@ -305,11 +302,9 @@ void DataSection::writeTo(uint8_t *Buf) {
     memcpy(SegStart, Segment->Header.data(), Segment->Header.size());
 
     // Write segment data payload
-    for (const InputSegment *Input : Segment->InputSegments) {
-      ArrayRef<uint8_t> Content(Input->Segment.Data.Content);
-      memcpy(SegStart + Segment->Header.size() +
-                 Input->getOutputSegmentOffset(),
-             Content.data(), Content.size());
+    for (const InputChunk *Input : Segment->InputSegments) {
+      memcpy(SegStart + Segment->Header.size() + Input->OutputOffset,
+             Input->getData(), Input->getSize());
       applyRelocations(ContentsStart, Input->OutRelocations);
     }
   });
@@ -318,14 +313,14 @@ void DataSection::writeTo(uint8_t *Buf) {
 uint32_t DataSection::numRelocations() const {
   uint32_t Count = 0;
   for (const OutputSegment *Seg : Segments)
-    for (const InputSegment *InputSeg : Seg->InputSegments)
+    for (const InputChunk *InputSeg : Seg->InputSegments)
       Count += InputSeg->OutRelocations.size();
   return Count;
 }
 
 void DataSection::writeRelocations(raw_ostream &OS) const {
   for (const OutputSegment *Seg : Segments)
-    for (const InputSegment *InputSeg : Seg->InputSegments)
+    for (const InputChunk *InputSeg : Seg->InputSegments)
       for (const OutputRelocation &Reloc : InputSeg->OutRelocations)
         writeReloc(OS, Reloc);
 }

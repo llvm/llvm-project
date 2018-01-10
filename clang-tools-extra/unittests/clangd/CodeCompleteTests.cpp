@@ -592,6 +592,22 @@ TEST(CompletionTest, ASTIndexMultiFile) {
                                             Doc("Doooc"), Detail("void"))));
 }
 
+TEST(CompletionTest, NoDuplicates) {
+  auto Items = completions(R"cpp(
+struct Adapter {
+  void method();
+};
+
+void Adapter::method() {
+  Adapter^
+}
+  )cpp")
+                   .items;
+
+  // Make sure there are no duplicate entries of 'Adapter'.
+  EXPECT_THAT(Items, ElementsAre(Named("Adapter"), Named("~Adapter")));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

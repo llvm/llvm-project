@@ -10,7 +10,7 @@
 #ifndef LLD_WASM_OUTPUT_SECTIONS_H
 #define LLD_WASM_OUTPUT_SECTIONS_H
 
-#include "InputSegment.h"
+#include "InputChunks.h"
 #include "WriterUtils.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/DenseMap.h"
@@ -28,7 +28,6 @@ std::string toString(const wasm::OutputSection &Section);
 namespace wasm {
 
 class OutputSegment;
-class InputFunction;
 
 class OutputSection {
 public:
