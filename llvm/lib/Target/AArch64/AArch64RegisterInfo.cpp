@@ -225,11 +225,13 @@ bool AArch64RegisterInfo::requiresVirtualBaseRegisters(
 
 bool
 AArch64RegisterInfo::useFPForScavengingIndex(const MachineFunction &MF) const {
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
-  // AArch64FrameLowering::resolveFrameIndexReference() can always fall back
-  // to the stack pointer, so only put the emergency spill slot next to the
-  // FP when there's no better way to access it (SP or base pointer).
-  return MFI.hasVarSizedObjects() && !hasBasePointer(MF);
+  // This function indicates whether the emergency spillslot should be placed
+  // close to the beginning of the stackframe (closer to FP) or the end
+  // (closer to SP).
+  //
+  // The beginning works most reliably if we have a frame pointer.
+  const AArch64FrameLowering &TFI = *getFrameLowering(MF);
+  return TFI.hasFP(MF);
 }
 
 bool AArch64RegisterInfo::requiresFrameIndexScavenging(

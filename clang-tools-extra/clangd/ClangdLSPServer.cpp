@@ -283,10 +283,12 @@ ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, unsigned AsyncThreadsCount,
                                  const clangd::CodeCompleteOptions &CCOpts,
                                  llvm::Optional<StringRef> ResourceDir,
                                  llvm::Optional<Path> CompileCommandsDir,
-                                 bool BuildDynamicSymbolIndex)
+                                 bool BuildDynamicSymbolIndex,
+                                 SymbolIndex *StaticIdx)
     : Out(Out), CDB(std::move(CompileCommandsDir)), CCOpts(CCOpts),
       Server(CDB, /*DiagConsumer=*/*this, FSProvider, AsyncThreadsCount,
-             StorePreamblesInMemory, BuildDynamicSymbolIndex, ResourceDir) {}
+             StorePreamblesInMemory, BuildDynamicSymbolIndex, StaticIdx,
+             ResourceDir) {}
 
 bool ClangdLSPServer::run(std::istream &In) {
   assert(!IsDone && "Run was called before");
@@ -323,7 +325,8 @@ std::vector<TextEdit> ClangdLSPServer::getFixIts(StringRef File,
 }
 
 void ClangdLSPServer::onDiagnosticsReady(
-    PathRef File, Tagged<std::vector<DiagWithFixIts>> Diagnostics) {
+    const Context &Ctx, PathRef File,
+    Tagged<std::vector<DiagWithFixIts>> Diagnostics) {
   json::ary DiagnosticsJSON;
 
   DiagnosticToReplacementMap LocalFixIts; // Temporary storage

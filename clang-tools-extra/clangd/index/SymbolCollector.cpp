@@ -10,6 +10,7 @@
 #include "SymbolCollector.h"
 #include "../CodeCompletionStrings.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Index/USRGeneration.h"
@@ -65,7 +66,38 @@ splitQualifiedName(llvm::StringRef QName) {
   return {QName.substr(0, Pos), QName.substr(Pos + 2)};
 }
 
+bool shouldFilterDecl(const NamedDecl *ND, ASTContext *ASTCtx,
+                      const SymbolCollector::Options &Opts) {
+  using namespace clang::ast_matchers;
+  if (ND->isImplicit())
+    return true;
+  // FIXME: figure out a way to handle internal linkage symbols (e.g. static
+  // variables, function) defined in the .cc files. Also we skip the symbols
+  // in anonymous namespace as the qualifier names of these symbols are like
+  // `foo::<anonymous>::bar`, which need a special handling.
+  // In real world projects, we have a relatively large set of header files
+  // that define static variables (like "static const int A = 1;"), we still
+  // want to collect these symbols, although they cause potential ODR
+  // violations.
+  if (ND->isInAnonymousNamespace())
+    return true;
+
+  // We only want symbols in namespaces or translation unit scopes (e.g. no
+  // class members).
+  if (match(decl(allOf(
+                Opts.IndexMainFiles ? decl()
+                                    : decl(unless(isExpansionInMainFile())),
+                hasDeclContext(anyOf(namespaceDecl(), translationUnitDecl())))),
+            *ND, *ASTCtx)
+          .empty())
+    return true;
+
+  return false;
+}
+
 } // namespace
+
+SymbolCollector::SymbolCollector(Options Opts) : Opts(std::move(Opts)) {}
 
 void SymbolCollector::initialize(ASTContext &Ctx) {
   ASTCtx = &Ctx;
@@ -79,6 +111,8 @@ bool SymbolCollector::handleDeclOccurence(
     const Decl *D, index::SymbolRoleSet Roles,
     ArrayRef<index::SymbolRelation> Relations, FileID FID, unsigned Offset,
     index::IndexDataConsumer::ASTNodeInfo ASTNode) {
+  assert(ASTCtx && PP.get() && "ASTContext and Preprocessor must be set.");
+
   // FIXME: collect all symbol references.
   if (!(Roles & static_cast<unsigned>(index::SymbolRole::Declaration) ||
         Roles & static_cast<unsigned>(index::SymbolRole::Definition)))
@@ -87,17 +121,8 @@ bool SymbolCollector::handleDeclOccurence(
   assert(CompletionAllocator && CompletionTUInfo);
 
   if (const NamedDecl *ND = llvm::dyn_cast<NamedDecl>(D)) {
-    // FIXME: figure out a way to handle internal linkage symbols (e.g. static
-    // variables, function) defined in the .cc files. Also we skip the symbols
-    // in anonymous namespace as the qualifier names of these symbols are like
-    // `foo::<anonymous>::bar`, which need a special handling.
-    // In real world projects, we have a relatively large set of header files
-    // that define static variables (like "static const int A = 1;"), we still
-    // want to collect these symbols, although they cause potential ODR
-    // violations.
-    if (ND->isInAnonymousNamespace())
+    if (shouldFilterDecl(ND, ASTCtx, Opts))
       return true;
-
     llvm::SmallString<128> USR;
     if (index::generateUSRForDecl(ND, USR))
       return true;

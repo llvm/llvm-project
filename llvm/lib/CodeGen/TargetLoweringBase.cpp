@@ -132,9 +132,18 @@ void TargetLoweringBase::InitLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::FPEXT_F16_F32, "__extendhfsf2");
     setLibcallName(RTLIB::FPROUND_F32_F16, "__truncsfhf2");
 
-    // Darwin 10 and higher has an optimized __bzero.
-    if (!TT.isMacOSX() || !TT.isMacOSXVersionLT(10, 6) || TT.isArch64Bit()) {
-      setLibcallName(RTLIB::BZERO, TT.isAArch64() ? "bzero" : "__bzero");
+    // Some darwins have an optimized __bzero/bzero function.
+    switch (TT.getArch()) {
+    case Triple::x86:
+    case Triple::x86_64:
+      if (TT.isMacOSX() && !TT.isMacOSXVersionLT(10, 6))
+        setLibcallName(RTLIB::BZERO, "__bzero");
+      break;
+    case Triple::aarch64:
+      setLibcallName(RTLIB::BZERO, "bzero");
+      break;
+    default:
+      break;
     }
 
     if (darwinHasSinCos(TT)) {

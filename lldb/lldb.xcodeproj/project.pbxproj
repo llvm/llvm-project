@@ -53,7 +53,6 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
-		22DC561A20064C9700A7E9E8 /* Environment.cpp in CopyFiles */ = {isa = PBXBuildFile; fileRef = 22DC561920064C9600A7E9E8 /* Environment.cpp */; };
 		23042D121976CA1D00621B2C /* PlatformKalimba.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23042D101976CA0A00621B2C /* PlatformKalimba.cpp */; };
 		23059A0719532B96007B8189 /* LinuxSignals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23059A0519532B96007B8189 /* LinuxSignals.cpp */; };
 		23059A101958B319007B8189 /* SBUnixSignals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23059A0F1958B319007B8189 /* SBUnixSignals.cpp */; };
@@ -753,6 +752,8 @@
 		4CF52AF51428291E0051E832 /* SBFileSpecList.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CF52AF41428291E0051E832 /* SBFileSpecList.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4CF52AF8142829390051E832 /* SBFileSpecList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CF52AF7142829390051E832 /* SBFileSpecList.cpp */; };
 		54067BF11DF2041B00749AA5 /* UBSanRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 54067BEC1DF2034B00749AA5 /* UBSanRuntime.cpp */; };
+		6B74D89B200696BB0074051B /* Environment.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 22DC561920064C9600A7E9E8 /* Environment.cpp */; };
+		6B74D89D2006972E0074051B /* Environment.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 6B74D89C2006972D0074051B /* Environment.h */; };
 		6D0F61431C80AAAE00A4ECEE /* JavaASTContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61411C80AAAA00A4ECEE /* JavaASTContext.cpp */; };
 		6D0F61481C80AAD600A4ECEE /* DWARFASTParserJava.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61441C80AACF00A4ECEE /* DWARFASTParserJava.cpp */; };
 		6D0F614E1C80AB0700A4ECEE /* JavaLanguageRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F614A1C80AB0400A4ECEE /* JavaLanguageRuntime.cpp */; };
@@ -1246,8 +1247,8 @@
 			dstPath = "$(DEVELOPER_INSTALL_DIR)/usr/share/man/man1";
 			dstSubfolderSpec = 0;
 			files = (
+				6B74D89D2006972E0074051B /* Environment.h in CopyFiles */,
 				9A20570F1F3B821A00F6C293 /* test-dwarf.cpp in CopyFiles */,
-				22DC561A20064C9700A7E9E8 /* Environment.cpp in CopyFiles */,
 				9A2057101F3B821A00F6C293 /* test-dwarf.exe in CopyFiles */,
 				AF90106515AB7D3600FF120D /* lldb.1 in CopyFiles */,
 			);
@@ -2642,6 +2643,7 @@
 		54067BED1DF2034B00749AA5 /* UBSanRuntime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UBSanRuntime.h; sourceTree = "<group>"; };
 		69A01E1C1236C5D400C660B5 /* Host.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Host.cpp; sourceTree = "<group>"; };
 		69A01E1F1236C5D400C660B5 /* Symbols.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Symbols.cpp; sourceTree = "<group>"; };
+		6B74D89C2006972D0074051B /* Environment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Environment.h; path = include/lldb/Utility/Environment.h; sourceTree = "<group>"; };
 		6D0F613C1C80AA8900A4ECEE /* DebugMacros.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DebugMacros.h; path = include/lldb/Symbol/DebugMacros.h; sourceTree = "<group>"; };
 		6D0F613D1C80AA8900A4ECEE /* JavaASTContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = JavaASTContext.h; path = include/lldb/Symbol/JavaASTContext.h; sourceTree = "<group>"; };
 		6D0F61411C80AAAA00A4ECEE /* JavaASTContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = JavaASTContext.cpp; path = source/Symbol/JavaASTContext.cpp; sourceTree = "<group>"; };
@@ -4375,6 +4377,7 @@
 		2682F168115ED9C800CCFF99 /* Utility */ = {
 			isa = PBXGroup;
 			children = (
+				6B74D89C2006972D0074051B /* Environment.h */,
 				22DC561920064C9600A7E9E8 /* Environment.cpp */,
 				AF6CA6651FBBAF27005A0DC3 /* ArchSpec.cpp */,
 				AF6CA6671FBBAF37005A0DC3 /* ArchSpec.h */,
@@ -7687,6 +7690,7 @@
 				3FDFE56C19AF9C44009756A7 /* HostProcessPosix.cpp in Sources */,
 				268900B413353E5000698AC0 /* RegisterContextMacOSXFrameBackchain.cpp in Sources */,
 				AE44FB321BB07EBC0033EB62 /* GoParser.cpp in Sources */,
+				6B74D89B200696BB0074051B /* Environment.cpp in Sources */,
 				3F8169311ABB7A6D001DA9DF /* SystemInitializer.cpp in Sources */,
 				949EEDB21BA76731008C63CF /* NSIndexPath.cpp in Sources */,
 				3FDFED2D19C257A0009756A7 /* HostProcess.cpp in Sources */,

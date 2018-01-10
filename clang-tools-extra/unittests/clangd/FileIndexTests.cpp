@@ -166,15 +166,16 @@ TEST(FileIndexTest, RemoveNonExisting) {
   EXPECT_THAT(match(M, FuzzyFindRequest()), UnorderedElementsAre());
 }
 
-TEST(FileIndexTest, ClassMembers) {
+TEST(FileIndexTest, IgnoreClassMembers) {
   FileIndex M;
   auto Ctx = Context::empty();
   M.update(Ctx, "f1",
-           build("f1", "class X { static int m1; int m2;};").getPointer());
+           build("f1", "class X { static int m1; int m2; static void f(); };")
+               .getPointer());
 
   FuzzyFindRequest Req;
   Req.Query = "";
-  EXPECT_THAT(match(M, Req), UnorderedElementsAre("X", "X::m1", "X::m2"));
+  EXPECT_THAT(match(M, Req), UnorderedElementsAre("X"));
 }
 
 } // namespace

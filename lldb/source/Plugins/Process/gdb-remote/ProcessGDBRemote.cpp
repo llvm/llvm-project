@@ -5145,10 +5145,11 @@ public:
 
       bool send_async = true;
       StringExtractorGDBRemote response;
-      process->GetGDBRemote().SendPacketAndWaitForResponse(
-          packet.GetString(), response, send_async);
-      result.SetStatus(eReturnStatusSuccessFinishResult);
       Stream &output_strm = result.GetOutputStream();
+      process->GetGDBRemote().SendPacketAndReceiveResponseWithOutputSupport(
+          packet.GetString(), response, send_async,
+          [&output_strm](llvm::StringRef output) { output_strm << output; });
+      result.SetStatus(eReturnStatusSuccessFinishResult);
       output_strm.Printf("  packet: %s\n", packet.GetData());
       const std::string &response_str = response.GetStringRef();
 

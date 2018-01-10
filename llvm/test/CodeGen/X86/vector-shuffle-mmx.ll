@@ -96,4 +96,61 @@ entry:
   ret void
 }
 
+define <4 x float> @pr35869() nounwind {
+; X32-LABEL: pr35869:
+; X32:       ## %bb.0:
+; X32-NEXT:    subl $28, %esp
+; X32-NEXT:    movl $64, %eax
+; X32-NEXT:    movd %eax, %xmm0
+; X32-NEXT:    movq %xmm0, (%esp)
+; X32-NEXT:    pxor %xmm0, %xmm0
+; X32-NEXT:    movq %xmm0, {{[0-9]+}}(%esp)
+; X32-NEXT:    movq (%esp), %mm0
+; X32-NEXT:    punpcklbw {{[0-9]+}}(%esp), %mm0 ## mm0 = mm0[0],mem[0],mm0[1],mem[1],mm0[2],mem[2],mm0[3],mem[3]
+; X32-NEXT:    movq %xmm0, {{[0-9]+}}(%esp)
+; X32-NEXT:    movq {{[0-9]+}}(%esp), %mm1
+; X32-NEXT:    pcmpgtw %mm0, %mm1
+; X32-NEXT:    movq %mm0, %mm2
+; X32-NEXT:    punpckhwd %mm1, %mm2 ## mm2 = mm2[2],mm1[2],mm2[3],mm1[3]
+; X32-NEXT:    cvtpi2ps %mm2, %xmm0
+; X32-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0,0]
+; X32-NEXT:    punpcklwd %mm1, %mm0 ## mm0 = mm0[0],mm1[0],mm0[1],mm1[1]
+; X32-NEXT:    cvtpi2ps %mm0, %xmm0
+; X32-NEXT:    addl $28, %esp
+; X32-NEXT:    retl
+;
+; X64-LABEL: pr35869:
+; X64:       ## %bb.0:
+; X64-NEXT:    movl $64, %eax
+; X64-NEXT:    movd %eax, %xmm0
+; X64-NEXT:    movq %xmm0, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    pxor %xmm0, %xmm0
+; X64-NEXT:    movq %xmm0, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %mm0
+; X64-NEXT:    punpcklbw -{{[0-9]+}}(%rsp), %mm0 ## mm0 = mm0[0],mem[0],mm0[1],mem[1],mm0[2],mem[2],mm0[3],mem[3]
+; X64-NEXT:    movq %xmm0, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %mm1
+; X64-NEXT:    pcmpgtw %mm0, %mm1
+; X64-NEXT:    movq %mm0, %mm2
+; X64-NEXT:    punpckhwd %mm1, %mm2 ## mm2 = mm2[2],mm1[2],mm2[3],mm1[3]
+; X64-NEXT:    cvtpi2ps %mm2, %xmm0
+; X64-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0,0]
+; X64-NEXT:    punpcklwd %mm1, %mm0 ## mm0 = mm0[0],mm1[0],mm0[1],mm1[1]
+; X64-NEXT:    cvtpi2ps %mm0, %xmm0
+; X64-NEXT:    retq
+  %1 = tail call x86_mmx @llvm.x86.mmx.punpcklbw(x86_mmx bitcast (<8 x i8> <i8 64, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0> to x86_mmx), x86_mmx bitcast (<8 x i8> zeroinitializer to x86_mmx))
+  %2 = tail call x86_mmx @llvm.x86.mmx.pcmpgt.w(x86_mmx bitcast (<4 x i16> zeroinitializer to x86_mmx), x86_mmx %1)
+  %3 = tail call x86_mmx @llvm.x86.mmx.punpckhwd(x86_mmx %1, x86_mmx %2)
+  %4 = tail call <4 x float> @llvm.x86.sse.cvtpi2ps(<4 x float> zeroinitializer, x86_mmx %3)
+  %5 = shufflevector <4 x float> %4, <4 x float> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+  %6 = tail call x86_mmx @llvm.x86.mmx.punpcklwd(x86_mmx %1, x86_mmx %2)
+  %7 = tail call <4 x float> @llvm.x86.sse.cvtpi2ps(<4 x float> %5, x86_mmx %6)
+  ret <4 x float> %7
+}
+
 declare void @llvm.x86.mmx.maskmovq(x86_mmx, x86_mmx, i8*)
+declare x86_mmx @llvm.x86.mmx.pcmpgt.w(x86_mmx, x86_mmx)
+declare x86_mmx @llvm.x86.mmx.punpcklbw(x86_mmx, x86_mmx)
+declare x86_mmx @llvm.x86.mmx.punpcklwd(x86_mmx, x86_mmx)
+declare x86_mmx @llvm.x86.mmx.punpckhwd(x86_mmx, x86_mmx)
+declare <4 x float> @llvm.x86.sse.cvtpi2ps(<4 x float>, x86_mmx)

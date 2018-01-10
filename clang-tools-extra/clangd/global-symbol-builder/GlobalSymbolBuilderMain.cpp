@@ -72,8 +72,9 @@ public:
     IndexOpts.SystemSymbolFilter =
         index::IndexingOptions::SystemSymbolFilterKind::All;
     IndexOpts.IndexFunctionLocals = false;
-    return new WrappedIndexAction(std::make_shared<SymbolCollector>(),
-                                  IndexOpts, Ctx);
+    return new WrappedIndexAction(
+        std::make_shared<SymbolCollector>(SymbolCollector::Options()),
+        IndexOpts, Ctx);
   }
 
   tooling::ExecutionContext *Ctx;

@@ -6726,6 +6726,7 @@ SDValue DAGCombiner::visitMSCATTER(SDNode *N) {
   SDValue DataLo, DataHi;
   std::tie(DataLo, DataHi) = DAG.SplitVector(Data, DL);
 
+  SDValue Scale = MSC->getScale();
   SDValue BasePtr = MSC->getBasePtr();
   SDValue IndexLo, IndexHi;
   std::tie(IndexLo, IndexHi) = DAG.SplitVector(MSC->getIndex(), DL);
@@ -6735,11 +6736,11 @@ SDValue DAGCombiner::visitMSCATTER(SDNode *N) {
                           MachineMemOperand::MOStore,  LoMemVT.getStoreSize(),
                           Alignment, MSC->getAAInfo(), MSC->getRanges());
 
-  SDValue OpsLo[] = { Chain, DataLo, MaskLo, BasePtr, IndexLo };
+  SDValue OpsLo[] = { Chain, DataLo, MaskLo, BasePtr, IndexLo, Scale };
   Lo = DAG.getMaskedScatter(DAG.getVTList(MVT::Other), DataLo.getValueType(),
                             DL, OpsLo, MMO);
 
-  SDValue OpsHi[] = {Chain, DataHi, MaskHi, BasePtr, IndexHi};
+  SDValue OpsHi[] = { Chain, DataHi, MaskHi, BasePtr, IndexHi, Scale };
   Hi = DAG.getMaskedScatter(DAG.getVTList(MVT::Other), DataHi.getValueType(),
                             DL, OpsHi, MMO);
 
@@ -6859,6 +6860,7 @@ SDValue DAGCombiner::visitMGATHER(SDNode *N) {
   EVT LoMemVT, HiMemVT;
   std::tie(LoMemVT, HiMemVT) = DAG.GetSplitDestVTs(MemoryVT);
 
+  SDValue Scale = MGT->getScale();
   SDValue BasePtr = MGT->getBasePtr();
   SDValue Index = MGT->getIndex();
   SDValue IndexLo, IndexHi;
@@ -6869,13 +6871,13 @@ SDValue DAGCombiner::visitMGATHER(SDNode *N) {
                           MachineMemOperand::MOLoad,  LoMemVT.getStoreSize(),
                           Alignment, MGT->getAAInfo(), MGT->getRanges());
 
-  SDValue OpsLo[] = { Chain, Src0Lo, MaskLo, BasePtr, IndexLo };
+  SDValue OpsLo[] = { Chain, Src0Lo, MaskLo, BasePtr, IndexLo, Scale };
   Lo = DAG.getMaskedGather(DAG.getVTList(LoVT, MVT::Other), LoVT, DL, OpsLo,
-                            MMO);
+                           MMO);
 
-  SDValue OpsHi[] = {Chain, Src0Hi, MaskHi, BasePtr, IndexHi};
+  SDValue OpsHi[] = { Chain, Src0Hi, MaskHi, BasePtr, IndexHi, Scale };
   Hi = DAG.getMaskedGather(DAG.getVTList(HiVT, MVT::Other), HiVT, DL, OpsHi,
-                            MMO);
+                           MMO);
 
   AddToWorklist(Lo.getNode());
   AddToWorklist(Hi.getNode());

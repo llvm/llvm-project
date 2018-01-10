@@ -1253,16 +1253,22 @@ void __kmp_disable(int *old_state) {
 #endif
 }
 
-static void __kmp_atfork_prepare(void) { /*  nothing to do  */
+static void __kmp_atfork_prepare(void) {
+  __kmp_acquire_bootstrap_lock(&__kmp_initz_lock);
+  __kmp_acquire_bootstrap_lock(&__kmp_forkjoin_lock);
 }
 
-static void __kmp_atfork_parent(void) { /*  nothing to do  */
+static void __kmp_atfork_parent(void) {
+  __kmp_release_bootstrap_lock(&__kmp_initz_lock);
+  __kmp_release_bootstrap_lock(&__kmp_forkjoin_lock);
 }
 
 /* Reset the library so execution in the child starts "all over again" with
    clean data structures in initial states.  Don't worry about freeing memory
    allocated by parent, just abandon it to be safe. */
 static void __kmp_atfork_child(void) {
+  __kmp_release_bootstrap_lock(&__kmp_initz_lock);
+  __kmp_release_bootstrap_lock(&__kmp_forkjoin_lock);
   /* TODO make sure this is done right for nested/sibling */
   // ATT:  Memory leaks are here? TODO: Check it and fix.
   /* KMP_ASSERT( 0 ); */
@@ -1307,6 +1313,10 @@ static void __kmp_atfork_child(void) {
   __kmp_all_nth = 0;
   TCW_4(__kmp_nth, 0);
 
+  __kmp_thread_pool = NULL;
+  __kmp_thread_pool_insert_pt = NULL;
+  __kmp_team_pool = NULL;
+
   /* Must actually zero all the *cache arguments passed to __kmpc_threadprivate
      here so threadprivate doesn't use stale data */
   KA_TRACE(10, ("__kmp_atfork_child: checking cache address list %p\n",
@@ -1329,6 +1339,9 @@ static void __kmp_atfork_child(void) {
   __kmp_init_bootstrap_lock(&__kmp_initz_lock);
   __kmp_init_bootstrap_lock(&__kmp_stdio_lock);
   __kmp_init_bootstrap_lock(&__kmp_console_lock);
+  __kmp_init_bootstrap_lock(&__kmp_task_team_lock);
+
+  __kmp_itt_reset(); // reset ITT's global state
 
   /* This is necessary to make sure no stale data is left around */
   /* AC: customers complain that we use unsafe routines in the atfork

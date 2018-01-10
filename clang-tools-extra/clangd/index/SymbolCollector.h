@@ -17,13 +17,23 @@
 namespace clang {
 namespace clangd {
 
-// Collect all symbols from an AST.
-//
-// Clients (e.g. clangd) can use SymbolCollector together with
-// index::indexTopLevelDecls to retrieve all symbols when the source file is
-// changed.
+/// \brief Collect top-level symbols from an AST. These are symbols defined
+/// immediately inside a namespace or a translation unit scope. For example,
+/// symbols in classes or functions are not collected.
+///
+/// Clients (e.g. clangd) can use SymbolCollector together with
+/// index::indexTopLevelDecls to retrieve all symbols when the source file is
+/// changed.
 class SymbolCollector : public index::IndexDataConsumer {
 public:
+  struct Options {
+    /// Whether to collect symbols in main files (e.g. the source file
+    /// corresponding to a TU).
+    bool IndexMainFiles = false;
+  };
+
+  SymbolCollector(Options Opts);
+
   void initialize(ASTContext &Ctx) override;
 
   void setPreprocessor(std::shared_ptr<Preprocessor> PP) override {
@@ -45,6 +55,7 @@ private:
   std::shared_ptr<Preprocessor> PP;
   std::shared_ptr<GlobalCodeCompletionAllocator> CompletionAllocator;
   std::unique_ptr<CodeCompletionTUInfo> CompletionTUInfo;
+  Options Opts;
 };
 
 } // namespace clangd

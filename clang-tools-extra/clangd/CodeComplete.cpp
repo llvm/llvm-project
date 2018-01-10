@@ -23,6 +23,7 @@
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/Support/Format.h"
 #include <queue>
 
 namespace clang {
@@ -558,10 +559,27 @@ bool invokeCodeComplete(const Context &Ctx,
 }
 
 CompletionItem indexCompletionItem(const Symbol &Sym, llvm::StringRef Filter,
-                                   const SpecifiedScope &SSInfo) {
+                                   const SpecifiedScope &SSInfo,
+                                   llvm::StringRef DebuggingLabel = "") {
   CompletionItem Item;
   Item.kind = toCompletionItemKind(Sym.SymInfo.Kind);
-  Item.label = Sym.Name;
+  // Add DebuggingLabel to the completion results if DebuggingLabel is not
+  // empty.
+  //
+  // For symbols from static index, there are prefix "[G]" in the
+  // results (which is used for debugging purpose).
+  // So completion list will be like:
+  //   clang::symbol_from_dynamic_index
+  //   [G]clang::symbol_from_static_index
+  //
+  // FIXME: Find out a better way to show the index source.
+  if (!DebuggingLabel.empty()) {
+    llvm::raw_string_ostream Label(Item.label);
+    Label << llvm::format("[%s]%s", DebuggingLabel.str().c_str(),
+                          Sym.Name.str().c_str());
+  } else {
+    Item.label = Sym.Name;
+  }
   // FIXME(ioeric): support inserting/replacing scope qualifiers.
 
   // FIXME(ioeric): support snippets.
@@ -582,7 +600,8 @@ CompletionItem indexCompletionItem(const Symbol &Sym, llvm::StringRef Filter,
 
 void completeWithIndex(const Context &Ctx, const SymbolIndex &Index,
                        llvm::StringRef Code, const SpecifiedScope &SSInfo,
-                       llvm::StringRef Filter, CompletionList *Items) {
+                       llvm::StringRef Filter, CompletionList *Items,
+                       llvm::StringRef DebuggingLabel = "") {
   FuzzyFindRequest Req;
   Req.Query = Filter;
   // FIXME(ioeric): add more possible scopes based on using namespaces and
@@ -590,8 +609,9 @@ void completeWithIndex(const Context &Ctx, const SymbolIndex &Index,
   StringRef Scope = SSInfo.Resolved.empty() ? SSInfo.Written : SSInfo.Resolved;
   Req.Scopes = {Scope.trim(':').str()};
 
-  Items->isIncomplete = !Index.fuzzyFind(Ctx, Req, [&](const Symbol &Sym) {
-    Items->items.push_back(indexCompletionItem(Sym, Filter, SSInfo));
+  Items->isIncomplete |= !Index.fuzzyFind(Ctx, Req, [&](const Symbol &Sym) {
+    Items->items.push_back(
+        indexCompletionItem(Sym, Filter, SSInfo, DebuggingLabel));
   });
 }
 
@@ -644,13 +664,19 @@ CompletionList codeComplete(const Context &Ctx, PathRef FileName,
   invokeCodeComplete(Ctx, std::move(Consumer), Opts.getClangCompleteOpts(),
                      FileName, Command, Preamble, Contents, Pos, std::move(VFS),
                      std::move(PCHs));
-  if (Opts.Index && CompletedName.SSInfo) {
-    if (!Results.items.empty())
-      log(Ctx, "WARNING: Got completion results from sema for completion on "
-               "qualified ID while symbol index is provided.");
-    Results.items.clear();
-    completeWithIndex(Ctx, *Opts.Index, Contents, *CompletedName.SSInfo,
-                      CompletedName.Filter, &Results);
+
+  // Got scope specifier (ns::f^) for code completion from sema, try to query
+  // global symbols from indexes.
+  if (CompletedName.SSInfo) {
+    // FIXME: figure out a good algorithm to merge symbols from different
+    // sources (dynamic index, static index, AST symbols from clang's completion
+    // engine).
+    if (Opts.Index)
+      completeWithIndex(Ctx, *Opts.Index, Contents, *CompletedName.SSInfo,
+                        CompletedName.Filter, &Results);
+    if (Opts.StaticIndex)
+      completeWithIndex(Ctx, *Opts.StaticIndex, Contents, *CompletedName.SSInfo,
+                        CompletedName.Filter, &Results, /*DebuggingLabel=*/"G");
   }
   return Results;
 }

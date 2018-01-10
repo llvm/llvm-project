@@ -690,9 +690,8 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg32(unsigned Val) const {
   switch (Val) {
   case 102: return createRegOperand(FLAT_SCR_LO);
   case 103: return createRegOperand(FLAT_SCR_HI);
-    // ToDo: no support for xnack_mask_lo/_hi register
-  case 104:
-  case 105: break;
+  case 104: return createRegOperand(XNACK_MASK_LO);
+  case 105: return createRegOperand(XNACK_MASK_HI);
   case 106: return createRegOperand(VCC_LO);
   case 107: return createRegOperand(VCC_HI);
   case 108: assert(!isGFX9()); return createRegOperand(TBA_LO);
@@ -722,6 +721,7 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg64(unsigned Val) const {
 
   switch (Val) {
   case 102: return createRegOperand(FLAT_SCR);
+  case 104: return createRegOperand(XNACK_MASK);
   case 106: return createRegOperand(VCC);
   case 108: assert(!isGFX9()); return createRegOperand(TBA);
   case 110: assert(!isGFX9()); return createRegOperand(TMA);
