@@ -161,8 +161,9 @@ template <class ELFT> static uint32_t getHash(InputSection *S) {
 
 // Returns true if section S is subject of ICF.
 static bool isEligible(InputSection *S) {
-  // Don't merge read only data sections unless --icf-data was passed.
-  if (!(S->Flags & SHF_EXECINSTR) && !Config->ICFData)
+  // Don't merge read only data sections unless
+  // --ignore-data-address-equality was passed.
+  if (!(S->Flags & SHF_EXECINSTR) && !Config->IgnoreDataAddressEquality)
     return false;
 
   // .init and .fini contains instructions that must be executed to
