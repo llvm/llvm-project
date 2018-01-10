@@ -268,7 +268,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
 
   // If the loop could not be converted to canonical form, it must have an
   // indirectbr in it, just give up.
-  if (!OrigPreheader)
+  if (!OrigPreheader || !L->hasDedicatedExits())
     return false;
 
   // Anything ScalarEvolution may know about this loop or the PHI nodes
