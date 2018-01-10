@@ -385,7 +385,17 @@ void coro::Shape::buildFrom(Function &F) {
       auto SI = Suspend->value_begin(), SE = Suspend->value_end();
       auto RI = ResultTys.begin(), RE = ResultTys.end();
       for (; SI != SE && RI != RE; ++SI, ++RI) {
-        if ((*SI)->getType() != *RI) {
+        auto SrcTy = (*SI)->getType();
+        if (SrcTy != *RI) {
+          // The optimizer likes to eliminate bitcasts leading into variadic
+          // calls, but that messes with our invariants.  Re-insert the
+          // bitcast and ignore this type mismatch.
+          if (CastInst::isBitCastable(SrcTy, *RI)) {
+            auto BCI = new BitCastInst(*SI, *RI, "", Suspend);
+            SI->set(BCI);
+            continue;
+          }
+
 #ifndef NDEBUG
           Suspend->dump();
           Prototype->getFunctionType()->dump();
