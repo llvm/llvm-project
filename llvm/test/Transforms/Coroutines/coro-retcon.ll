@@ -78,6 +78,25 @@ entry:
 ; CHECK-NEXT:    call void @print(i32 [[INC]])
 ; CHECK-NEXT:    ret i32 0
 
+define hidden { i8*, i8* } @g(i8* %buffer, i16* %ptr) {
+entry:
+  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, i8* %buffer, i8* bitcast ({ i8*, i8* } (i8*, i1)* @g_prototype to i8*), i8* bitcast (i8* (i32)* @allocate to i8*), i8* bitcast (void (i8*)* @deallocate to i8*))
+  %hdl = call i8* @llvm.coro.begin(token %id, i8* null)
+  br label %loop
+
+loop:
+  %ptr2 = bitcast i16* %ptr to i8*
+  %unwind0 = call i1 (...) @llvm.coro.suspend.retcon.i1(i8* %ptr2)
+  br i1 %unwind0, label %cleanup, label %resume
+
+resume:
+  br label %loop
+
+cleanup:
+  call i1 @llvm.coro.end(i8* %hdl, i1 0)
+  unreachable
+}
+
 declare token @llvm.coro.id.retcon(i32, i32, i8*, i8*, i8*, i8*)
 declare i8* @llvm.coro.begin(token, i8*)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
@@ -85,6 +104,7 @@ declare i1 @llvm.coro.end(i8*, i1)
 declare i8* @llvm.coro.prepare.retcon(i8*)
 
 declare i8* @prototype(i8*, i1 zeroext)
+declare {i8*,i8*} @g_prototype(i8*, i1 zeroext)
 
 declare noalias i8* @allocate(i32 %size)
 declare void @deallocate(i8* %ptr)
