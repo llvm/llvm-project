@@ -61,6 +61,8 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const RISCVInstrInfo *TII = MF.getSubtarget<RISCVSubtarget>().getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
 
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
@@ -72,13 +74,30 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   assert(MF.getSubtarget().getFrameLowering()->hasFP(MF) &&
          "eliminateFrameIndex currently requires hasFP");
 
-  // Offsets must be directly encoded in a 12-bit immediate field
-  if (!isInt<12>(Offset)) {
+  if (!isInt<32>(Offset)) {
     report_fatal_error(
-        "Frame offsets outside of the signed 12-bit range not supported");
+        "Frame offsets outside of the signed 32-bit range not supported");
   }
 
-  MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, false);
+  MachineBasicBlock &MBB = *MI.getParent();
+  bool FrameRegIsKill = false;
+
+  if (!isInt<12>(Offset)) {
+    assert(isInt<32>(Offset) && "Int32 expected");
+    // The offset won't fit in an immediate, so use a scratch register instead
+    // Modify Offset and FrameReg appropriately
+    unsigned ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    TII->movImm32(MBB, II, DL, ScratchReg, Offset);
+    BuildMI(MBB, II, DL, TII->get(RISCV::ADD), ScratchReg)
+        .addReg(FrameReg)
+        .addReg(ScratchReg, RegState::Kill);
+    Offset = 0;
+    FrameReg = ScratchReg;
+    FrameRegIsKill = true;
+  }
+
+  MI.getOperand(FIOperandNum)
+      .ChangeToRegister(FrameReg, false, false, FrameRegIsKill);
   MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
 }
 

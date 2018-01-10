@@ -75,3 +75,23 @@ void RISCVInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   else
     llvm_unreachable("Can't load this register from stack slot");
 }
+
+void RISCVInstrInfo::movImm32(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MBBI,
+                              const DebugLoc &DL, unsigned DstReg, uint64_t Val,
+                              MachineInstr::MIFlag Flag) const {
+  assert(isInt<32>(Val) && "Can only materialize 32-bit constants");
+
+  // TODO: If the value can be materialized using only one instruction, only
+  // insert a single instruction.
+
+  uint64_t Hi20 = ((Val + 0x800) >> 12) & 0xfffff;
+  uint64_t Lo12 = SignExtend64<12>(Val);
+  BuildMI(MBB, MBBI, DL, get(RISCV::LUI), DstReg)
+      .addImm(Hi20)
+      .setMIFlag(Flag);
+  BuildMI(MBB, MBBI, DL, get(RISCV::ADDI), DstReg)
+      .addReg(DstReg, RegState::Kill)
+      .addImm(Lo12)
+      .setMIFlag(Flag);
+}

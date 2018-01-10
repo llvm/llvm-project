@@ -53,5 +53,21 @@ bool MemIndex::fuzzyFind(
   return true;
 }
 
+std::unique_ptr<SymbolIndex> MemIndex::build(SymbolSlab Slab) {
+  struct Snapshot {
+    SymbolSlab Slab;
+    std::vector<const Symbol *> Pointers;
+  };
+  auto Snap = std::make_shared<Snapshot>();
+  Snap->Slab = std::move(Slab);
+  for (auto &Sym : Snap->Slab)
+    Snap->Pointers.push_back(&Sym);
+  auto S = std::shared_ptr<std::vector<const Symbol *>>(std::move(Snap),
+                                                        &Snap->Pointers);
+  auto MemIdx = llvm::make_unique<MemIndex>();
+  MemIdx->build(std::move(S));
+  return std::move(MemIdx);
+}
+
 } // namespace clangd
 } // namespace clang
