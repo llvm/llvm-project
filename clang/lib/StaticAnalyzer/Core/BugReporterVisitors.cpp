@@ -480,6 +480,127 @@ static bool isInitializationOfVar(const ExplodedNode *N, const VarRegion *VR) {
   return FrameSpace->getStackFrame() == LCtx->getCurrentStackFrame();
 }
 
+/// Show diagnostics for initializing or declaring a region \p R with a bad value.
+void showBRDiagnostics(const char *action,
+    llvm::raw_svector_ostream& os,
+    const MemRegion *R,
+    SVal V,
+    const DeclStmt *DS) {
+  if (R->canPrintPretty()) {
+    R->printPretty(os);
+    os << " ";
+  }
+
+  if (V.getAs<loc::ConcreteInt>()) {
+    bool b = false;
+    if (R->isBoundable()) {
+      if (const TypedValueRegion *TR = dyn_cast<TypedValueRegion>(R)) {
+        if (TR->getValueType()->isObjCObjectPointerType()) {
+          os << action << "nil";
+          b = true;
+        }
+      }
+    }
+    if (!b)
+      os << action << "a null pointer value";
+
+  } else if (auto CVal = V.getAs<nonloc::ConcreteInt>()) {
+    os << action << CVal->getValue();
+  } else if (DS) {
+    if (V.isUndef()) {
+      if (isa<VarRegion>(R)) {
+        const VarDecl *VD = cast<VarDecl>(DS->getSingleDecl());
+        if (VD->getInit()) {
+          os << (R->canPrintPretty() ? "initialized" : "Initializing")
+            << " to a garbage value";
+        } else {
+          os << (R->canPrintPretty() ? "declared" : "Declaring")
+            << " without an initial value";
+        }
+      }
+    } else {
+      os << (R->canPrintPretty() ? "initialized" : "Initialized")
+        << " here";
+    }
+  }
+}
+
+/// Display diagnostics for passing bad region as a parameter.
+static void showBRParamDiagnostics(llvm::raw_svector_ostream& os,
+    const VarRegion *VR,
+    SVal V) {
+  const auto *Param = cast<ParmVarDecl>(VR->getDecl());
+
+  os << "Passing ";
+
+  if (V.getAs<loc::ConcreteInt>()) {
+    if (Param->getType()->isObjCObjectPointerType())
+      os << "nil object reference";
+    else
+      os << "null pointer value";
+  } else if (V.isUndef()) {
+    os << "uninitialized value";
+  } else if (auto CI = V.getAs<nonloc::ConcreteInt>()) {
+    os << "the value " << CI->getValue();
+  } else {
+    os << "value";
+  }
+
+  // Printed parameter indexes are 1-based, not 0-based.
+  unsigned Idx = Param->getFunctionScopeIndex() + 1;
+  os << " via " << Idx << llvm::getOrdinalSuffix(Idx) << " parameter";
+  if (VR->canPrintPretty()) {
+    os << " ";
+    VR->printPretty(os);
+  }
+}
+
+/// Show default diagnostics for storing bad region.
+static void showBRDefaultDiagnostics(llvm::raw_svector_ostream& os,
+    const MemRegion *R,
+    SVal V) {
+  if (V.getAs<loc::ConcreteInt>()) {
+    bool b = false;
+    if (R->isBoundable()) {
+      if (const TypedValueRegion *TR = dyn_cast<TypedValueRegion>(R)) {
+        if (TR->getValueType()->isObjCObjectPointerType()) {
+          os << "nil object reference stored";
+          b = true;
+        }
+      }
+    }
+    if (!b) {
+      if (R->canPrintPretty())
+        os << "Null pointer value stored";
+      else
+        os << "Storing null pointer value";
+    }
+
+  } else if (V.isUndef()) {
+    if (R->canPrintPretty())
+      os << "Uninitialized value stored";
+    else
+      os << "Storing uninitialized value";
+
+  } else if (auto CV = V.getAs<nonloc::ConcreteInt>()) {
+    if (R->canPrintPretty())
+      os << "The value " << CV->getValue() << " is assigned";
+    else
+      os << "Assigning " << CV->getValue();
+
+  } else {
+    if (R->canPrintPretty())
+      os << "Value assigned";
+    else
+      os << "Assigning value";
+  }
+
+  if (R->canPrintPretty()) {
+    os << " to ";
+    R->printPretty(os);
+  }
+}
+
 std::shared_ptr<PathDiagnosticPiece>
 FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
                                   const ExplodedNode *Pred,
@@ -608,122 +729,16 @@ FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
         }
       }
     }
+    if (action)
+      showBRDiagnostics(action, os, R, V, DS);
 
-    if (action) {
-      if (R->canPrintPretty()) {
-        R->printPretty(os);
-        os << " ";
-      }
-
-      if (V.getAs<loc::ConcreteInt>()) {
-        bool b = false;
-        if (R->isBoundable()) {
-          if (const TypedValueRegion *TR = dyn_cast<TypedValueRegion>(R)) {
-            if (TR->getValueType()->isObjCObjectPointerType()) {
-              os << action << "nil";
-              b = true;
-            }
-          }
-        }
-
-        if (!b)
-          os << action << "a null pointer value";
-      } else if (Optional<nonloc::ConcreteInt> CVal =
-                     V.getAs<nonloc::ConcreteInt>()) {
-        os << action << CVal->getValue();
-      }
-      else if (DS) {
-        if (V.isUndef()) {
-          if (isa<VarRegion>(R)) {
-            const VarDecl *VD = cast<VarDecl>(DS->getSingleDecl());
-            if (VD->getInit()) {
-              os << (R->canPrintPretty() ? "initialized" : "Initializing")
-                 << " to a garbage value";
-            } else {
-              os << (R->canPrintPretty() ? "declared" : "Declaring")
-                 << " without an initial value";
-            }
-          }
-        }
-        else {
-          os << (R->canPrintPretty() ? "initialized" : "Initialized")
-             << " here";
-        }
-      }
-    }
   } else if (StoreSite->getLocation().getAs<CallEnter>()) {
-    if (const VarRegion *VR = dyn_cast<VarRegion>(R)) {
-      const ParmVarDecl *Param = cast<ParmVarDecl>(VR->getDecl());
-
-      os << "Passing ";
-
-      if (V.getAs<loc::ConcreteInt>()) {
-        if (Param->getType()->isObjCObjectPointerType())
-          os << "nil object reference";
-        else
-          os << "null pointer value";
-      } else if (V.isUndef()) {
-        os << "uninitialized value";
-      } else if (Optional<nonloc::ConcreteInt> CI =
-                     V.getAs<nonloc::ConcreteInt>()) {
-        os << "the value " << CI->getValue();
-      } else {
-        os << "value";
-      }
-
-      // Printed parameter indexes are 1-based, not 0-based.
-      unsigned Idx = Param->getFunctionScopeIndex() + 1;
-      os << " via " << Idx << llvm::getOrdinalSuffix(Idx) << " parameter";
-      if (R->canPrintPretty()) {
-        os << " ";
-        R->printPretty(os);
-      }
-    }
+    if (const VarRegion *VR = dyn_cast<VarRegion>(R))
+      showBRParamDiagnostics(os, VR, V);
   }
 
-  if (os.str().empty()) {
-    if (V.getAs<loc::ConcreteInt>()) {
-      bool b = false;
-      if (R->isBoundable()) {
-        if (const TypedValueRegion *TR = dyn_cast<TypedValueRegion>(R)) {
-          if (TR->getValueType()->isObjCObjectPointerType()) {
-            os << "nil object reference stored";
-            b = true;
-          }
-        }
-      }
-      if (!b) {
-        if (R->canPrintPretty())
-          os << "Null pointer value stored";
-        else
-          os << "Storing null pointer value";
-      }
-
-    } else if (V.isUndef()) {
-      if (R->canPrintPretty())
-        os << "Uninitialized value stored";
-      else
-        os << "Storing uninitialized value";
-
-    } else if (Optional<nonloc::ConcreteInt> CV =
-                   V.getAs<nonloc::ConcreteInt>()) {
-      if (R->canPrintPretty())
-        os << "The value " << CV->getValue() << " is assigned";
-      else
-        os << "Assigning " << CV->getValue();
-
-    } else {
-      if (R->canPrintPretty())
-        os << "Value assigned";
-      else
-        os << "Assigning value";
-    }
-
-    if (R->canPrintPretty()) {
-      os << " to ";
-      R->printPretty(os);
-    }
-  }
+  if (os.str().empty())
+    showBRDefaultDiagnostics(os, R, V);
 
   // Construct a new PathDiagnosticPiece.
   ProgramPoint P = StoreSite->getLocation();
