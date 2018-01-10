@@ -546,7 +546,24 @@ void CoroCloner::create() {
 
   SmallVector<ReturnInst *, 4> Returns;
 
+  // Ignore attempts to change certain attributes of the function.
+  // TODO: maybe there should be a way to suppress this during cloning?
+  auto savedVisibility = NewF->getVisibility();
+  auto savedUnnamedAddr = NewF->getUnnamedAddr();
+  auto savedDLLStorageClass = NewF->getDLLStorageClass();
+
+  // NewF's linkage (which CloneFunctionInto does *not* change) might not
+  // be compatible with the visibility of OrigF (which it *does* change),
+  // so protect against that.
+  auto savedLinkage = NewF->getLinkage();
+  NewF->setLinkage(llvm::GlobalValue::ExternalLinkage);
+
   CloneFunctionInto(NewF, &OrigF, VMap, /*ModuleLevelChanges=*/true, Returns);
+
+  NewF->setLinkage(savedLinkage);
+  NewF->setVisibility(savedVisibility);
+  NewF->setUnnamedAddr(savedUnnamedAddr);
+  NewF->setDLLStorageClass(savedDLLStorageClass);
 
   auto &Context = NewF->getContext();
 
