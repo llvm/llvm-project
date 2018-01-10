@@ -883,8 +883,8 @@ The selection kind must be one of the following:
     The linker may choose any COMDAT key but the sections must contain the
     same amount of data.
 
-Note that the Mach-O platform doesn't support COMDATs and ELF only supports
-``any`` as a selection kind.
+Note that the Mach-O platform doesn't support COMDATs, and ELF and WebAssembly
+only support ``any`` as a selection kind.
 
 Here is an example of a COMDAT group where a function will only be selected if
 the COMDAT key's section is the largest:

@@ -37,6 +37,7 @@ LLVM_YAML_STRONG_TYPEDEF(uint32_t, RelocType)
 LLVM_YAML_STRONG_TYPEDEF(uint32_t, SymbolFlags)
 LLVM_YAML_STRONG_TYPEDEF(uint32_t, SegmentFlags)
 LLVM_YAML_STRONG_TYPEDEF(uint32_t, LimitFlags)
+LLVM_YAML_STRONG_TYPEDEF(uint32_t, ComdatKind)
 
 struct FileHeader {
   yaml::Hex32 Version;
@@ -66,6 +67,7 @@ struct ElemSegment {
 };
 
 struct Global {
+  uint32_t Index;
   ValueType Type;
   bool Mutable;
   wasm::WasmInitExpr InitExpr;
@@ -89,6 +91,7 @@ struct LocalDecl {
 };
 
 struct Function {
+  uint32_t Index;
   std::vector<LocalDecl> Locals;
   yaml::BinaryRef Body;
 };
@@ -136,6 +139,16 @@ struct InitFunction {
   uint32_t FunctionIndex;
 };
 
+struct ComdatEntry {
+  ComdatKind Kind;
+  uint32_t Index;
+};
+
+struct Comdat {
+  StringRef Name;
+  std::vector<ComdatEntry> Entries;
+};
+
 struct Section {
   explicit Section(SectionType SecType) : Type(SecType) {}
   virtual ~Section();
@@ -179,6 +192,7 @@ struct LinkingSection : CustomSection {
   std::vector<SymbolInfo> SymbolInfos;
   std::vector<SegmentInfo> SegmentInfos;
   std::vector<InitFunction> InitFunctions;
+  std::vector<Comdat> Comdats;
 };
 
 struct TypeSection : Section {
@@ -316,6 +330,8 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::NameEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::SegmentInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::SymbolInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::InitFunction)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::ComdatEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::Comdat)
 
 namespace llvm {
 namespace yaml {
@@ -410,6 +426,18 @@ template <> struct MappingTraits<WasmYAML::SymbolInfo> {
 
 template <> struct MappingTraits<WasmYAML::InitFunction> {
   static void mapping(IO &IO, WasmYAML::InitFunction &Init);
+};
+
+template <> struct ScalarEnumerationTraits<WasmYAML::ComdatKind> {
+  static void enumeration(IO &IO, WasmYAML::ComdatKind &Kind);
+};
+
+template <> struct MappingTraits<WasmYAML::ComdatEntry> {
+  static void mapping(IO &IO, WasmYAML::ComdatEntry &ComdatEntry);
+};
+
+template <> struct MappingTraits<WasmYAML::Comdat> {
+  static void mapping(IO &IO, WasmYAML::Comdat &Comdat);
 };
 
 template <> struct ScalarEnumerationTraits<WasmYAML::ValueType> {

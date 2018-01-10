@@ -23,6 +23,7 @@
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCWinEH.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/TargetParser.h"
 #include <cassert>
@@ -499,6 +500,9 @@ public:
 
   virtual void EmitCOFFSafeSEH(MCSymbol const *Symbol);
 
+  /// \brief Emits the symbol table index of a Symbol into the current section.
+  virtual void EmitCOFFSymbolIndex(MCSymbol const *Symbol);
+
   /// \brief Emits a COFF section index.
   ///
   /// \param Symbol - Symbol the section number relocation should point to.
@@ -662,7 +666,7 @@ public:
 
   /// \brief Emit NumBytes bytes worth of the value specified by FillValue.
   /// This implements directives such as '.space'.
-  virtual void emitFill(uint64_t NumBytes, uint8_t FillValue);
+  void emitFill(uint64_t NumBytes, uint8_t FillValue);
 
   /// \brief Emit \p Size bytes worth of the value specified by \p FillValue.
   ///
@@ -682,7 +686,6 @@ public:
   /// \param NumValues - The number of copies of \p Size bytes to emit.
   /// \param Size - The size (in bytes) of each repeated value.
   /// \param Expr - The expression from which \p Size bytes are used.
-  virtual void emitFill(uint64_t NumValues, int64_t Size, int64_t Expr);
   virtual void emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
                         SMLoc Loc = SMLoc());
 
@@ -755,6 +758,7 @@ public:
   /// implements the DWARF2 '.file 4 "foo.c"' assembler directive.
   virtual unsigned EmitDwarfFileDirective(unsigned FileNo, StringRef Directory,
                                           StringRef Filename,
+                                          MD5::MD5Result *Checksum = nullptr,
                                           unsigned CUID = 0);
 
   /// \brief This implements the DWARF2 '.loc fileno lineno ...' assembler

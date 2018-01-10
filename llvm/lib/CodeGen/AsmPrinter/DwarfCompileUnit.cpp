@@ -95,14 +95,15 @@ void DwarfCompileUnit::addLocalLabelAddress(DIE &Die,
 }
 
 unsigned DwarfCompileUnit::getOrCreateSourceID(StringRef FileName,
-                                               StringRef DirName) {
+                                               StringRef DirName,
+                                               MD5::MD5Result *Checksum) {
   // If we print assembly, we can't separate .file entries according to
   // compile units. Thus all files will belong to the default compile unit.
 
   // FIXME: add a better feature test than hasRawTextSupport. Even better,
   // extend .file to support this.
   return Asm->OutStreamer->EmitDwarfFileDirective(
-      0, DirName, FileName,
+      0, DirName, FileName, Checksum,
       Asm->OutStreamer->hasRawTextSupport() ? 0 : getUniqueID());
 }
 
@@ -443,7 +444,7 @@ DIE *DwarfCompileUnit::constructInlinedScopeDIE(LexicalScope *Scope) {
   // Add the call site information to the DIE.
   const DILocation *IA = Scope->getInlinedAt();
   addUInt(*ScopeDIE, dwarf::DW_AT_call_file, None,
-          getOrCreateSourceID(IA->getFilename(), IA->getDirectory()));
+          getOrCreateSourceID(IA->getFilename(), IA->getDirectory(), nullptr));
   addUInt(*ScopeDIE, dwarf::DW_AT_call_line, None, IA->getLine());
   if (IA->getDiscriminator() && DD->getDwarfVersion() >= 4)
     addUInt(*ScopeDIE, dwarf::DW_AT_GNU_discriminator, None,

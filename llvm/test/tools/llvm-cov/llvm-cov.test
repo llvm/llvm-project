@@ -115,4 +115,4 @@ RUN: llvm-cov gcov test.c -gcda=test_func_checksum_fail.gcda
 RUN: llvm-cov gcov test_exit_block_arcs.c 2>&1 | FileCheck %s -check-prefix=EXIT_BLOCK_ARCS
 EXIT_BLOCK_ARCS: (main) has arcs from exit block.
 
-XFAIL: powerpc64-, s390x, mips-, mips64-, sparc
+XFAIL: powerpc-, powerpc64-, s390x, mips-, mips64-, sparc

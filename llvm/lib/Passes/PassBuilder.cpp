@@ -80,6 +80,7 @@
 #include "llvm/Transforms/IPO/PartialInlining.h"
 #include "llvm/Transforms/IPO/SCCP.h"
 #include "llvm/Transforms/IPO/StripDeadPrototypes.h"
+#include "llvm/Transforms/IPO/SyntheticCountsPropagation.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/InstrProfiling.h"
@@ -175,6 +176,11 @@ static cl::opt<bool> EnableGVNHoist(
 static cl::opt<bool> EnableGVNSink(
     "enable-npm-gvn-sink", cl::init(false), cl::Hidden,
     cl::desc("Enable the GVN hoisting pass for the new PM (default = off)"));
+
+static cl::opt<bool> EnableSyntheticCounts(
+    "enable-npm-synthetic-counts", cl::init(false), cl::Hidden, cl::ZeroOrMore,
+    cl::desc("Run synthetic function entry count generation "
+             "pass"));
 
 static Regex DefaultAliasRegex(
     "^(default|thinlto-pre-link|thinlto|lto-pre-link|lto)<(O[0123sz])>$");
@@ -621,6 +627,10 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
                       PGOOpt->ProfileGenFile, PGOOpt->ProfileUseFile);
     MPM.addPass(PGOIndirectCallPromotion(false, false));
   }
+
+  // Synthesize function entry counts for non-PGO compilation.
+  if (EnableSyntheticCounts && !PGOOpt)
+    MPM.addPass(SyntheticCountsPropagation());
 
   // Require the GlobalsAA analysis for the module so we can query it within
   // the CGSCC pipeline.

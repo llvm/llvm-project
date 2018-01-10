@@ -4,7 +4,7 @@
 
 ; GCN-FUNC: {{^}}vccz_workaround:
 ; GCN: s_load_dword s{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0x0
-; GCN: v_cmp_neq_f32_e64 vcc, s{{[0-9]+}}, 0{{$}}
+; GCN: v_cmp_neq_f32_e64 {{[^,]*}}, s{{[0-9]+}}, 0{{$}}
 ; VCCZ-BUG: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VCCZ-BUG: s_mov_b64 vcc, vcc
 ; NOVCCZ-BUG-NOT: s_mov_b64 vcc, vcc

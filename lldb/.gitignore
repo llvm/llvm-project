@@ -37,8 +37,6 @@ ninja/
 *xcuserdata
 test/20*
 __pycache__/
-*.lock
-*.so
 
 clang-module-cache
 
@@ -52,8 +50,4 @@ tags
 
 # Ignore test trace directories.
 20??-??-??-??_??_??/
-
-# Ignore crashlog support files.
-crashinfo.lock
-crashinfo.so
 

@@ -54,7 +54,7 @@ body:             |
     liveins: %sgpr7, %vgpr4
 
     %m0 = S_MOV_B32 killed %sgpr7
-    INLINEASM $"; no-op", 1, 327690, def %vgpr5
+    INLINEASM &"; no-op", 1, 327690, def %vgpr5
     %vgpr0 = V_INTERP_P1_F32 killed %vgpr4, 0, 0, implicit %m0, implicit %exec
     SI_RETURN_TO_EPILOG killed %vgpr5, killed %vgpr0
 ...

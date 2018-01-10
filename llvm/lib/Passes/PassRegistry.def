@@ -73,6 +73,7 @@ MODULE_PASS("rewrite-symbols", RewriteSymbolPass())
 MODULE_PASS("rpo-functionattrs", ReversePostOrderFunctionAttrsPass())
 MODULE_PASS("sample-profile", SampleProfileLoaderPass())
 MODULE_PASS("strip-dead-prototypes", StripDeadPrototypesPass())
+MODULE_PASS("synthetic-counts-propagation", SyntheticCountsPropagation())
 MODULE_PASS("wholeprogramdevirt", WholeProgramDevirtPass())
 MODULE_PASS("verify", VerifierPass())
 #undef MODULE_PASS

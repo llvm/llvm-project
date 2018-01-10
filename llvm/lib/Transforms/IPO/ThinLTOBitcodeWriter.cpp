@@ -357,6 +357,31 @@ void splitAndWriteThinLTOBitcode(
       NMD->addOperand(MD);
   }
 
+  SmallVector<MDNode *, 8> FunctionAliases;
+  for (auto &A : M.aliases()) {
+    if (!isa<Function>(A.getAliasee()))
+      continue;
+
+    auto *F = cast<Function>(A.getAliasee());
+    auto &Ctx = MergedM->getContext();
+    SmallVector<Metadata *, 4> Elts;
+
+    Elts.push_back(MDString::get(Ctx, A.getName()));
+    Elts.push_back(MDString::get(Ctx, F->getName()));
+    Elts.push_back(ConstantAsMetadata::get(
+        llvm::ConstantInt::get(Type::getInt8Ty(Ctx), A.getVisibility())));
+    Elts.push_back(ConstantAsMetadata::get(
+        llvm::ConstantInt::get(Type::getInt8Ty(Ctx), A.isWeakForLinker())));
+
+    FunctionAliases.push_back(MDTuple::get(Ctx, Elts));
+  }
+
+  if (!FunctionAliases.empty()) {
+    NamedMDNode *NMD = MergedM->getOrInsertNamedMetadata("aliases");
+    for (auto MD : FunctionAliases)
+      NMD->addOperand(MD);
+  }
+
   simplifyExternals(*MergedM);
 
   // FIXME: Try to re-use BSI and PFI from the original module here.

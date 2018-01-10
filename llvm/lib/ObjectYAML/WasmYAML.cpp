@@ -61,6 +61,7 @@ static void sectionMapping(IO &IO, WasmYAML::LinkingSection &Section) {
   IO.mapOptional("SymbolInfo", Section.SymbolInfos);
   IO.mapOptional("SegmentInfo", Section.SegmentInfos);
   IO.mapOptional("InitFunctions", Section.InitFunctions);
+  IO.mapOptional("Comdats", Section.Comdats);
 }
 
 static void sectionMapping(IO &IO, WasmYAML::CustomSection &Section) {
@@ -236,7 +237,7 @@ void ScalarEnumerationTraits<WasmYAML::SectionType>::enumeration(
 
 void MappingTraits<WasmYAML::Signature>::mapping(
     IO &IO, WasmYAML::Signature &Signature) {
-  IO.mapOptional("Index", Signature.Index);
+  IO.mapRequired("Index", Signature.Index);
   IO.mapRequired("ReturnType", Signature.ReturnType);
   IO.mapRequired("ParamTypes", Signature.ParamTypes);
 }
@@ -248,6 +249,7 @@ void MappingTraits<WasmYAML::Table>::mapping(IO &IO, WasmYAML::Table &Table) {
 
 void MappingTraits<WasmYAML::Function>::mapping(IO &IO,
                                                 WasmYAML::Function &Function) {
+  IO.mapRequired("Index", Function.Index);
   IO.mapRequired("Locals", Function.Locals);
   IO.mapRequired("Body", Function.Body);
 }
@@ -323,6 +325,7 @@ void MappingTraits<WasmYAML::Export>::mapping(IO &IO,
 
 void MappingTraits<WasmYAML::Global>::mapping(IO &IO,
                                               WasmYAML::Global &Global) {
+  IO.mapRequired("Index", Global.Index);
   IO.mapRequired("Type", Global.Type);
   IO.mapRequired("Mutable", Global.Mutable);
   IO.mapRequired("InitExpr", Global.InitExpr);
@@ -364,6 +367,26 @@ void MappingTraits<WasmYAML::InitFunction>::mapping(
     IO &IO, WasmYAML::InitFunction &Init) {
   IO.mapRequired("Priority", Init.Priority);
   IO.mapRequired("FunctionIndex", Init.FunctionIndex);
+}
+
+void ScalarEnumerationTraits<WasmYAML::ComdatKind>::enumeration(
+    IO &IO, WasmYAML::ComdatKind &Kind) {
+#define ECase(X) IO.enumCase(Kind, #X, wasm::WASM_COMDAT_##X);
+  ECase(FUNCTION);
+  ECase(DATA);
+#undef ECase
+}
+
+void MappingTraits<WasmYAML::ComdatEntry>::mapping(
+    IO &IO, WasmYAML::ComdatEntry &ComdatEntry) {
+  IO.mapRequired("Kind", ComdatEntry.Kind);
+  IO.mapRequired("Index", ComdatEntry.Index);
+}
+
+void MappingTraits<WasmYAML::Comdat>::mapping(
+    IO &IO, WasmYAML::Comdat &Comdat) {
+  IO.mapRequired("Name", Comdat.Name);
+  IO.mapRequired("Entries", Comdat.Entries);
 }
 
 void MappingTraits<WasmYAML::SymbolInfo>::mapping(IO &IO,

@@ -532,7 +532,6 @@ ExecutionEngine *EngineBuilder::create(TargetMachine *TM) {
   // Unless the interpreter was explicitly selected or the JIT is not linked,
   // try making a JIT.
   if ((WhichEngine & EngineKind::JIT) && TheTM) {
-    Triple TT(M->getTargetTriple());
     if (!TM->getTarget().hasJIT()) {
       errs() << "WARNING: This target JIT is not designed for the host"
              << " you are running.  If bad things happen, please choose"

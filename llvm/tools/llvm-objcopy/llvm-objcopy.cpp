@@ -121,6 +121,10 @@ static cl::opt<bool> LocalizeHidden(
     "localize-hidden",
     cl::desc(
         "Mark all symbols that have hidden or internal visibility as local"));
+static cl::opt<std::string>
+    AddGnuDebugLink("add-gnu-debuglink",
+                    cl::desc("adds a .gnu_debuglink for <debug-file>"),
+                    cl::value_desc("debug-file"));
 
 using SectionPred = std::function<bool(const SectionBase &Sec)>;
 
@@ -316,6 +320,10 @@ template <class ELFT> void CopyBinary(const ELFObjectFile<ELFT> &ObjFile) {
       auto BufSize = Buf->getBufferSize();
       Obj->addSection(SecName, ArrayRef<uint8_t>(BufPtr, BufSize));
     }
+  }
+
+  if (!AddGnuDebugLink.empty()) {
+    Obj->addGnuDebugLink(AddGnuDebugLink);
   }
 
   Obj->finalize();
