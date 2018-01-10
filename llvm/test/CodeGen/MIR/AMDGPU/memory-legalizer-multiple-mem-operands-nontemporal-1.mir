@@ -113,9 +113,9 @@ body:             |
     liveins: %sgpr0_sgpr1, %sgpr3
 
     %sgpr2 = S_LOAD_DWORD_IMM %sgpr0_sgpr1, 44, 0 :: (non-temporal dereferenceable invariant load 4 from `i32 addrspace(2)* undef`)
-    %sgpr8 = S_MOV_B32 $SCRATCH_RSRC_DWORD0, implicit-def %sgpr8_sgpr9_sgpr10_sgpr11
+    %sgpr8 = S_MOV_B32 &SCRATCH_RSRC_DWORD0, implicit-def %sgpr8_sgpr9_sgpr10_sgpr11
     %sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM %sgpr0_sgpr1, 36, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    %sgpr9 = S_MOV_B32 $SCRATCH_RSRC_DWORD1, implicit-def %sgpr8_sgpr9_sgpr10_sgpr11
+    %sgpr9 = S_MOV_B32 &SCRATCH_RSRC_DWORD1, implicit-def %sgpr8_sgpr9_sgpr10_sgpr11
     %sgpr10 = S_MOV_B32 4294967295, implicit-def %sgpr8_sgpr9_sgpr10_sgpr11
     %sgpr11 = S_MOV_B32 15204352, implicit-def %sgpr8_sgpr9_sgpr10_sgpr11
     %vgpr0 = V_MOV_B32_e32 1, implicit %exec

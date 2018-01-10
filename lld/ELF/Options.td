@@ -143,10 +143,13 @@ def help: F<"help">, HelpText<"Print option help">;
 
 def icf_all: F<"icf=all">, HelpText<"Enable identical code folding">;
 
-def icf_data: F<"icf-data">,
-  HelpText<"Enable ICF to also fold identical read only data">;
-
 def icf_none: F<"icf=none">, HelpText<"Disable identical code folding">;
+
+def ignore_function_address_equality: F<"ignore-function-address-equality">,
+  HelpText<"lld can break the address equality of functions">;
+
+def ignore_data_address_equality: F<"ignore-data-address-equality">,
+  HelpText<"lld can break the address equality of data">;
 
 defm image_base : Eq<"image-base">, HelpText<"Set the base address">;
 

@@ -20,6 +20,7 @@ add_llvm_library(LLVMAsmPrinter
   EHStreamer.cpp
   ErlangGCPrinter.cpp
   OcamlGCPrinter.cpp
+  WinCFGuard.cpp
   WinException.cpp
   CodeViewDebug.cpp
 

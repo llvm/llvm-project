@@ -18,7 +18,7 @@ body: |
     liveins: %rdi
 
   ; CHECK: [[@LINE+1]]:70: expected tied-def or low-level type after '('
-    INLINEASM $"$foo", 1, 2818058, def %rdi, 2147483657, killed %rdi(3)
+    INLINEASM &"$foo", 1, 2818058, def %rdi, 2147483657, killed %rdi(3)
     %rax = COPY killed %rdi
     RETQ killed %rax
 ...

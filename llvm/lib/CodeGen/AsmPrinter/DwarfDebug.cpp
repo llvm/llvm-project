@@ -1378,7 +1378,7 @@ void DwarfDebug::recordSourceLine(unsigned Line, unsigned Col, const MDNode *S,
 
     unsigned CUID = Asm->OutStreamer->getContext().getDwarfCompileUnitID();
     Src = static_cast<DwarfCompileUnit &>(*InfoHolder.getUnits()[CUID])
-              .getOrCreateSourceID(Fn, Dir);
+              .getOrCreateSourceID(Fn, Dir, nullptr);
   }
   Asm->OutStreamer->EmitDwarfLocDirective(Src, Line, Col, Flags, 0,
                                           Discriminator, Fn);
@@ -1975,7 +1975,8 @@ void DwarfDebug::emitMacroFile(DIMacroFile &F, DwarfCompileUnit &U) {
   Asm->EmitULEB128(F.getLine());
   DIFile *File = F.getFile();
   unsigned FID =
-      U.getOrCreateSourceID(File->getFilename(), File->getDirectory());
+      U.getOrCreateSourceID(File->getFilename(), File->getDirectory(),
+                            nullptr); // FIXME: MD5?
   Asm->EmitULEB128(FID);
   handleMacroNodes(F.getElements(), U);
   Asm->EmitULEB128(dwarf::DW_MACINFO_end_file);

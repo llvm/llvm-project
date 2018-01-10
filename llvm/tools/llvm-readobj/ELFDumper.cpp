@@ -1841,9 +1841,8 @@ void ELFDumper<ELFT>::printNeededLibraries() {
 
   std::stable_sort(Libs.begin(), Libs.end());
 
-  for (const auto &L : Libs) {
-    outs() << "  " << L << "\n";
-  }
+  for (const auto &L : Libs)
+     W.startLine() << L << "\n";
 }
 
 
@@ -1877,7 +1876,7 @@ void ELFDumper<ELFT>::printGnuHashTable() {
 }
 
 template <typename ELFT> void ELFDumper<ELFT>::printLoadName() {
-  outs() << "LoadName: " << SOName << '\n';
+  W.printString("LoadName", SOName);
 }
 
 template <class ELFT>
@@ -2361,8 +2360,8 @@ template <class ELFT> void ELFDumper<ELFT>::printStackMap() const {
   ArrayRef<uint8_t> StackMapContentsArray =
       unwrapOrError(Obj->getSectionContents(StackMapSection));
 
-  prettyPrintStackMap(outs(), StackMapV2Parser<ELFT::TargetEndianness>(
-                                  StackMapContentsArray));
+  prettyPrintStackMap(
+      W, StackMapV2Parser<ELFT::TargetEndianness>(StackMapContentsArray));
 }
 
 template <class ELFT> void ELFDumper<ELFT>::printGroupSections() {

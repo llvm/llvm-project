@@ -6,6 +6,38 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
+// This pass merges loads/stores to/from sequential memory addresses into vector
+// loads/stores.  Although there's nothing GPU-specific in here, this pass is
+// motivated by the microarchitectural quirks of nVidia and AMD GPUs.
+//
+// (For simplicity below we talk about loads only, but everything also applies
+// to stores.)
+//
+// This pass is intended to be run late in the pipeline, after other
+// vectorization opportunities have been exploited.  So the assumption here is
+// that immediately following our new vector load we'll need to extract out the
+// individual elements of the load, so we can operate on them individually.
+//
+// On CPUs this transformation is usually not beneficial, because extracting the
+// elements of a vector register is expensive on most architectures.  It's
+// usually better just to load each element individually into its own scalar
+// register.
+//
+// However, nVidia and AMD GPUs don't have proper vector registers.  Instead, a
+// "vector load" loads directly into a series of scalar registers.  In effect,
+// extracting the elements of the vector is free.  It's therefore always
+// beneficial to vectorize a sequence of loads on these architectures.
+//
+// Vectorizing (perhaps a better name might be "coalescing") loads can have
+// large performance impacts on GPU kernels, and opportunities for vectorizing
+// are common in GPU code.  This pass tries very hard to find such
+// opportunities; its runtime is quadratic in the number of loads in a BB.
+//
+// Some CPU architectures, such as ARM, have instructions that load into
+// multiple scalar registers, similar to a GPU vectorized load.  In theory ARM
+// could use this pass (with some modifications), but currently it implements
+// its own pass to do something similar to what we do here.
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"

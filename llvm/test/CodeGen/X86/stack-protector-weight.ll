@@ -6,7 +6,7 @@
 ; DARWIN-SELDAG: # Machine code for function test_branch_weights:
 ; DARWIN-SELDAG: Successors according to CFG: %bb.[[SUCCESS:[0-9]+]]({{[0-9a-fx/= ]+}}100.00%) %bb.[[FAILURE:[0-9]+]]
 ; DARWIN-SELDAG: %bb.[[FAILURE]]:
-; DARWIN-SELDAG: CALL64pcrel32 $__stack_chk_fail
+; DARWIN-SELDAG: CALL64pcrel32 &__stack_chk_fail
 ; DARWIN-SELDAG: %bb.[[SUCCESS]]:
 
 ; DARWIN-IR: # Machine code for function test_branch_weights:

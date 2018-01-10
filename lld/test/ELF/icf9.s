@@ -11,7 +11,7 @@
 # CHECK-NOT: selected .rodata.d2
 
 # We do merge rodata if passed --icf-data
-# RUN: ld.lld %t -o %t2 --icf=all --verbose --icf-data 2>&1 | FileCheck --check-prefix=DATA %s
+# RUN: ld.lld %t -o %t2 --icf=all --verbose --ignore-data-address-equality 2>&1 | FileCheck --check-prefix=DATA %s
 # RUN: llvm-readelf -S -W %t2 | FileCheck --check-prefix=DATA-SEC %s
 
 # DATA: selected .rodata.d1

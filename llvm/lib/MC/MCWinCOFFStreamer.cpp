@@ -193,6 +193,17 @@ void MCWinCOFFStreamer::EmitCOFFSafeSEH(MCSymbol const *Symbol) {
                    << COFF::SCT_COMPLEX_TYPE_SHIFT);
 }
 
+void MCWinCOFFStreamer::EmitCOFFSymbolIndex(MCSymbol const *Symbol) {
+  MCSection *Sec = getCurrentSectionOnly();
+  getAssembler().registerSection(*Sec);
+  if (Sec->getAlignment() < 4)
+    Sec->setAlignment(4);
+
+  new MCSymbolIdFragment(Symbol, getCurrentSectionOnly());
+
+  getAssembler().registerSymbol(*Symbol);
+}
+
 void MCWinCOFFStreamer::EmitCOFFSectionIndex(const MCSymbol *Symbol) {
   visitUsedSymbol(*Symbol);
   MCDataFragment *DF = getOrCreateDataFragment();

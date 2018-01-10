@@ -582,19 +582,8 @@ void MCObjectStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue,
   MCDataFragment *DF = getOrCreateDataFragment();
   flushPendingLabels(DF, DF->getContents().size());
 
-  int64_t IntNumBytes;
-  if (!NumBytes.evaluateAsAbsolute(IntNumBytes, getAssembler())) {
-    getContext().reportError(Loc, "expected absolute expression");
-    return;
-  }
-
-  if (IntNumBytes < 0) {
-    getContext().reportError(Loc, "invalid number of bytes");
-    return;
-  }
-
   assert(getCurrentSectionOnly() && "need a section");
-  insert(new MCFillFragment(FillValue, IntNumBytes));
+  insert(new MCFillFragment(FillValue, NumBytes, Loc));
 }
 
 void MCObjectStreamer::emitFill(const MCExpr &NumValues, int64_t Size,

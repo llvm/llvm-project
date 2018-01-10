@@ -82,8 +82,8 @@ body:             |
     BL8_NOP @__raw_read_unlock, csr_svr464_altivec, implicit-def %lr8, implicit %rm, implicit %x3, implicit %x2, implicit-def %r1, implicit-def dead %x3
     %r3 = LI 0
     STW killed %r3, 0, killed %x30 :: (volatile store 4 into %ir.p2)
-    INLINEASM $"#compiler barrier", 25
-    INLINEASM $"\0Alwsync \0A1:\09lwarx\09$0,0,$1\09\09# atomic_dec_return\0A\09addic\09$0,$0,-1\0A\09stwcx.\09$0,0,$1\0A\09bne-\091b\0Async \0A", 25, 131083, def early-clobber %r3, 851977, killed %x29, 12, implicit-def dead early-clobber %cr0
+    INLINEASM &"#compiler barrier", 25
+    INLINEASM &"\0Alwsync \0A1:\09lwarx\09$0,0,$1\09\09# atomic_dec_return\0A\09addic\09$0,$0,-1\0A\09stwcx.\09$0,0,$1\0A\09bne-\091b\0Async \0A", 25, 131083, def early-clobber %r3, 851977, killed %x29, 12, implicit-def dead early-clobber %cr0
     ; CHECK-LABEL: @mm_update_next_owner
     ; CHECK-NOT: lwarx 29, 0, 29
     ; CHECK-NOT: stwcx. 29, 0, 29
