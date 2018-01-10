@@ -463,7 +463,7 @@ static Function *Get__cilkrts_detach(Module &M) {
   Value *Tail = LoadField(B, W, WorkerBuilder::tail);
 
   // StoreStore_fence();
-  B.CreateFence(AtomicOrdering::SequentiallyConsistent);
+  B.CreateFence(AtomicOrdering::Release);
 
   // *tail++ = parent;
   B.CreateStore(Parent, Tail);
