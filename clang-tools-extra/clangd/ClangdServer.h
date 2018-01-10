@@ -72,7 +72,7 @@ public:
 
   /// Called by ClangdServer when \p Diagnostics for \p File are ready.
   virtual void
-  onDiagnosticsReady(PathRef File,
+  onDiagnosticsReady(const Context &Ctx, PathRef File,
                      Tagged<std::vector<DiagWithFixIts>> Diagnostics) = 0;
 };
 

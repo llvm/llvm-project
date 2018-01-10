@@ -50,7 +50,7 @@ public:
 private:
   // Implement DiagnosticsConsumer.
   virtual void
-  onDiagnosticsReady(PathRef File,
+  onDiagnosticsReady(const Context &Ctx, PathRef File,
                      Tagged<std::vector<DiagWithFixIts>> Diagnostics) override;
 
   // Implement ProtocolCallbacks.

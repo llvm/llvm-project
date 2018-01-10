@@ -49,7 +49,7 @@ static bool diagsContainErrors(ArrayRef<DiagWithFixIts> Diagnostics) {
 class ErrorCheckingDiagConsumer : public DiagnosticsConsumer {
 public:
   void
-  onDiagnosticsReady(PathRef File,
+  onDiagnosticsReady(const Context &Ctx, PathRef File,
                      Tagged<std::vector<DiagWithFixIts>> Diagnostics) override {
     bool HadError = diagsContainErrors(Diagnostics.Value);
 
@@ -470,7 +470,7 @@ int d;
     TestDiagConsumer() : Stats(FilesCount, FileStat()) {}
 
     void onDiagnosticsReady(
-        PathRef File,
+        const Context &Ctx, PathRef File,
         Tagged<std::vector<DiagWithFixIts>> Diagnostics) override {
       StringRef FileIndexStr = llvm::sys::path::stem(File);
       ASSERT_TRUE(FileIndexStr.consume_front("Foo"));
@@ -758,7 +758,7 @@ TEST_F(ClangdThreadingTest, NoConcurrentDiagnostics) {
         : StartSecondReparse(std::move(StartSecondReparse)) {}
 
     void onDiagnosticsReady(
-        PathRef File,
+        const Context &Ctx, PathRef File,
         Tagged<std::vector<DiagWithFixIts>> Diagnostics) override {
 
       std::unique_lock<std::mutex> Lock(Mutex, std::try_to_lock_t());

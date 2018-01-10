@@ -586,7 +586,7 @@ std::future<Context> ClangdServer::scheduleReparseAndDiags(
       return;
     LastReportedDiagsVersion = Version;
 
-    DiagConsumer.onDiagnosticsReady(FileStr,
+    DiagConsumer.onDiagnosticsReady(Ctx, FileStr,
                                     make_tagged(std::move(*Diags), Tag));
   };
 

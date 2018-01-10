@@ -59,8 +59,10 @@ using ::testing::ElementsAre;
 using ::testing::Not;
 
 class IgnoreDiagnostics : public DiagnosticsConsumer {
-  void onDiagnosticsReady(
-      PathRef File, Tagged<std::vector<DiagWithFixIts>> Diagnostics) override {}
+  void
+  onDiagnosticsReady(const Context &Ctx, PathRef File,
+                     Tagged<std::vector<DiagWithFixIts>> Diagnostics) override {
+  }
 };
 
 // GMock helpers for matching completion items.

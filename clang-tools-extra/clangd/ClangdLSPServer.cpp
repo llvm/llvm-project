@@ -325,7 +325,8 @@ std::vector<TextEdit> ClangdLSPServer::getFixIts(StringRef File,
 }
 
 void ClangdLSPServer::onDiagnosticsReady(
-    PathRef File, Tagged<std::vector<DiagWithFixIts>> Diagnostics) {
+    const Context &Ctx, PathRef File,
+    Tagged<std::vector<DiagWithFixIts>> Diagnostics) {
   json::ary DiagnosticsJSON;
 
   DiagnosticToReplacementMap LocalFixIts; // Temporary storage
