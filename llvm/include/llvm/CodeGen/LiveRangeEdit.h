@@ -121,6 +121,9 @@ private:
   /// main live range of \p LI or in one of the matching subregister ranges.
   bool useIsKill(const LiveInterval &LI, const MachineOperand &MO) const;
 
+  /// Create a new empty interval based on OldReg.
+  LiveInterval &createEmptyIntervalFrom(unsigned OldReg, bool createSubRanges);
+
 public:
   /// Create a LiveRangeEdit for breaking down parent into smaller pieces.
   /// @param parent The register being spilled or split.
@@ -174,16 +177,13 @@ public:
     return makeArrayRef(NewRegs).slice(FirstNew);
   }
 
-  /// createEmptyIntervalFrom - Create a new empty interval based on OldReg.
-  LiveInterval &createEmptyIntervalFrom(unsigned OldReg);
-
   /// createFrom - Create a new virtual register based on OldReg.
   unsigned createFrom(unsigned OldReg);
 
   /// create - Create a new register with the same class and original slot as
   /// parent.
   LiveInterval &createEmptyInterval() {
-    return createEmptyIntervalFrom(getReg());
+    return createEmptyIntervalFrom(getReg(), true);
   }
 
   unsigned create() { return createFrom(getReg()); }

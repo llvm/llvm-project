@@ -83,6 +83,29 @@ uint32_t ObjFile::relocateGlobalIndex(uint32_t Original) const {
   return Index;
 }
 
+// Relocations contain an index into the function, global or table index
+// space of the input file.  This function takes a relocation and returns the
+// relocated index (i.e. translates from the input index space to the output
+// index space).
+uint32_t ObjFile::calcNewIndex(const WasmRelocation &Reloc) const {
+  switch (Reloc.Type) {
+  case R_WEBASSEMBLY_TYPE_INDEX_LEB:
+    return relocateTypeIndex(Reloc.Index);
+  case R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
+    return relocateFunctionIndex(Reloc.Index);
+  case R_WEBASSEMBLY_TABLE_INDEX_I32:
+  case R_WEBASSEMBLY_TABLE_INDEX_SLEB:
+    return relocateTableIndex(Reloc.Index);
+  case R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
+  case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
+  case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
+  case R_WEBASSEMBLY_MEMORY_ADDR_I32:
+    return relocateGlobalIndex(Reloc.Index);
+  default:
+    llvm_unreachable("unknown relocation type");
+  }
+}
+
 void ObjFile::parse() {
   // Parse a memory buffer as a wasm file.
   DEBUG(dbgs() << "Parsing object: " << toString(this) << "\n");

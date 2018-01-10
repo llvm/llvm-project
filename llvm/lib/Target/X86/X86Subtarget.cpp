@@ -260,6 +260,7 @@ void X86Subtarget::initializeEnvironment() {
   X86SSELevel = NoSSE;
   X863DNowLevel = NoThreeDNow;
   HasX87 = false;
+  HasNOPL = false;
   HasCMov = false;
   HasX86_64 = false;
   HasPOPCNT = false;

@@ -76,6 +76,16 @@ def SRC_SHARED_LIMIT : SIReg<"src_shared_limit", 236>;
 def SRC_PRIVATE_BASE : SIReg<"src_private_base", 237>;
 def SRC_PRIVATE_LIMIT : SIReg<"src_private_limit", 238>;
 
+def XNACK_MASK_LO : SIReg<"xnack_mask_lo", 104>;
+def XNACK_MASK_HI : SIReg<"xnack_mask_hi", 105>;
+
+def XNACK_MASK : RegisterWithSubRegs<"xnack_mask", [XNACK_MASK_LO, XNACK_MASK_HI]>,
+                 DwarfRegAlias<XNACK_MASK_LO> {
+  let Namespace = "AMDGPU";
+  let SubRegIndices = [sub0, sub1];
+  let HWEncoding = 104;
+}
+
 // Trap handler registers
 def TBA_LO : SIReg<"tba_lo", 108>;
 def TBA_HI : SIReg<"tba_hi", 109>;
@@ -403,7 +413,7 @@ def Pseudo_SReg_128 : RegisterClass<"AMDGPU", [v4i32, v2i64], 32,
 // Subset of SReg_32 without M0 for SMRD instructions and alike.
 // See comments in SIInstructions.td for more info.
 def SReg_32_XM0_XEXEC : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
-  (add SGPR_32, VCC_LO, VCC_HI, FLAT_SCR_LO, FLAT_SCR_HI,
+  (add SGPR_32, VCC_LO, VCC_HI, FLAT_SCR_LO, FLAT_SCR_HI, XNACK_MASK_LO, XNACK_MASK_HI,
    TTMP_32, TMA_LO, TMA_HI, TBA_LO, TBA_HI, SRC_SHARED_BASE, SRC_SHARED_LIMIT,
    SRC_PRIVATE_BASE, SRC_PRIVATE_LIMIT)> {
   let AllocationPriority = 7;
@@ -435,7 +445,7 @@ def TTMP_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64], 32, (add TTMP_64Regs)> 
 }
 
 def SReg_64_XEXEC : RegisterClass<"AMDGPU", [v2i32, i64, f64, i1], 32,
-  (add SGPR_64, VCC, FLAT_SCR, TTMP_64, TBA, TMA)> {
+  (add SGPR_64, VCC, FLAT_SCR, XNACK_MASK, TTMP_64, TBA, TMA)> {
   let CopyCost = 1;
   let AllocationPriority = 8;
 }

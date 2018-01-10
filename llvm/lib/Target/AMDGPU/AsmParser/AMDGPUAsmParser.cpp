@@ -896,6 +896,10 @@ public:
     KernelScope.initialize(getContext());
   }
 
+  bool hasXNACK() const {
+    return AMDGPU::hasXNACK(getSTI());
+  }
+
   bool isSI() const {
     return AMDGPU::isSI(getSTI());
   }
@@ -1521,12 +1525,15 @@ static unsigned getSpecialRegForName(StringRef RegName) {
     .Case("exec", AMDGPU::EXEC)
     .Case("vcc", AMDGPU::VCC)
     .Case("flat_scratch", AMDGPU::FLAT_SCR)
+    .Case("xnack_mask", AMDGPU::XNACK_MASK)
     .Case("m0", AMDGPU::M0)
     .Case("scc", AMDGPU::SCC)
     .Case("tba", AMDGPU::TBA)
     .Case("tma", AMDGPU::TMA)
     .Case("flat_scratch_lo", AMDGPU::FLAT_SCR_LO)
     .Case("flat_scratch_hi", AMDGPU::FLAT_SCR_HI)
+    .Case("xnack_mask_lo", AMDGPU::XNACK_MASK_LO)
+    .Case("xnack_mask_hi", AMDGPU::XNACK_MASK_HI)
     .Case("vcc_lo", AMDGPU::VCC_LO)
     .Case("vcc_hi", AMDGPU::VCC_HI)
     .Case("exec_lo", AMDGPU::EXEC_LO)
@@ -1561,6 +1568,11 @@ bool AMDGPUAsmParser::AddNextRegisterToList(unsigned &Reg, unsigned &RegWidth,
     }
     if (Reg == AMDGPU::FLAT_SCR_LO && Reg1 == AMDGPU::FLAT_SCR_HI) {
       Reg = AMDGPU::FLAT_SCR;
+      RegWidth = 2;
+      return true;
+    }
+    if (Reg == AMDGPU::XNACK_MASK_LO && Reg1 == AMDGPU::XNACK_MASK_HI) {
+      Reg = AMDGPU::XNACK_MASK;
       RegWidth = 2;
       return true;
     }
@@ -2617,6 +2629,10 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
   case AMDGPU::TMA_LO:
   case AMDGPU::TMA_HI:
     return !isGFX9();
+  case AMDGPU::XNACK_MASK:
+  case AMDGPU::XNACK_MASK_LO:
+  case AMDGPU::XNACK_MASK_HI:
+    return !isCI() && !isSI() && hasXNACK();
   default:
     break;
   }

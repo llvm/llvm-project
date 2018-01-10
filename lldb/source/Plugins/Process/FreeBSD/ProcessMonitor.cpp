@@ -38,10 +38,6 @@
 #include "ProcessFreeBSD.h"
 #include "ProcessMonitor.h"
 
-extern "C" {
-extern char **environ;
-}
-
 using namespace lldb;
 using namespace lldb_private;
 
@@ -695,13 +691,14 @@ ProcessMonitor::OperationArgs::~OperationArgs() { sem_destroy(&m_semaphore); }
 
 ProcessMonitor::LaunchArgs::LaunchArgs(ProcessMonitor *monitor,
                                        lldb_private::Module *module,
-                                       char const **argv, char const **envp,
+                                       char const **argv, Environment env,
                                        const FileSpec &stdin_file_spec,
                                        const FileSpec &stdout_file_spec,
                                        const FileSpec &stderr_file_spec,
                                        const FileSpec &working_dir)
-    : OperationArgs(monitor), m_module(module), m_argv(argv), m_envp(envp),
-      m_stdin_file_spec(stdin_file_spec), m_stdout_file_spec(stdout_file_spec),
+    : OperationArgs(monitor), m_module(module), m_argv(argv),
+      m_env(std::move(env)), m_stdin_file_spec(stdin_file_spec),
+      m_stdout_file_spec(stdout_file_spec),
       m_stderr_file_spec(stderr_file_spec), m_working_dir(working_dir) {}
 
 ProcessMonitor::LaunchArgs::~LaunchArgs() {}
@@ -726,7 +723,7 @@ ProcessMonitor::AttachArgs::~AttachArgs() {}
 /// on the Operation class for more info as to why this is needed.
 ProcessMonitor::ProcessMonitor(
     ProcessFreeBSD *process, Module *module, const char *argv[],
-    const char *envp[], const FileSpec &stdin_file_spec,
+    Environment env, const FileSpec &stdin_file_spec,
     const FileSpec &stdout_file_spec, const FileSpec &stderr_file_spec,
     const FileSpec &working_dir,
     const lldb_private::ProcessLaunchInfo & /* launch_info */,
@@ -736,7 +733,7 @@ ProcessMonitor::ProcessMonitor(
   using namespace std::placeholders;
 
   std::unique_ptr<LaunchArgs> args(
-      new LaunchArgs(this, module, argv, envp, stdin_file_spec,
+      new LaunchArgs(this, module, argv, std::move(env), stdin_file_spec,
                      stdout_file_spec, stderr_file_spec, working_dir));
 
   sem_init(&m_operation_pending, 0, 0);
@@ -837,7 +834,6 @@ bool ProcessMonitor::Launch(LaunchArgs *args) {
   ProcessMonitor *monitor = args->m_monitor;
   ProcessFreeBSD &process = monitor->GetProcess();
   const char **argv = args->m_argv;
-  const char **envp = args->m_envp;
   const FileSpec &stdin_file_spec = args->m_stdin_file_spec;
   const FileSpec &stdout_file_spec = args->m_stdout_file_spec;
   const FileSpec &stderr_file_spec = args->m_stderr_file_spec;
@@ -849,8 +845,8 @@ bool ProcessMonitor::Launch(LaunchArgs *args) {
   ::pid_t pid;
 
   // Propagate the environment if one is not supplied.
-  if (envp == NULL || envp[0] == NULL)
-    envp = const_cast<const char **>(environ);
+  Environment::Envp envp =
+      (args->m_env.empty() ? Host::GetEnvironment() : args->m_env).getEnvp();
 
   if ((pid = terminal.Fork(err_str, err_len)) == -1) {
     args->m_error.SetErrorToGenericError();
@@ -908,8 +904,7 @@ bool ProcessMonitor::Launch(LaunchArgs *args) {
       exit(eChdirFailed);
 
     // Execute.  We should never return.
-    execve(argv[0], const_cast<char *const *>(argv),
-           const_cast<char *const *>(envp));
+    execve(argv[0], const_cast<char *const *>(argv), envp);
     exit(eExecFailed);
   }
 

@@ -31,21 +31,24 @@ STATISTIC(NumFracRanges,     "Number of live ranges fractured by DCE");
 
 void LiveRangeEdit::Delegate::anchor() { }
 
-LiveInterval &LiveRangeEdit::createEmptyIntervalFrom(unsigned OldReg) {
+LiveInterval &LiveRangeEdit::createEmptyIntervalFrom(unsigned OldReg,
+                                                     bool createSubRanges) {
   unsigned VReg = MRI.createVirtualRegister(MRI.getRegClass(OldReg));
-  if (VRM) {
+  if (VRM)
     VRM->setIsSplitFromReg(VReg, VRM->getOriginal(OldReg));
-  }
+
   LiveInterval &LI = LIS.createEmptyInterval(VReg);
   if (Parent && !Parent->isSpillable())
     LI.markNotSpillable();
-  // Create empty subranges if the OldReg's interval has them. Do not create
-  // the main range here---it will be constructed later after the subranges
-  // have been finalized.
-  LiveInterval &OldLI = LIS.getInterval(OldReg);
-  VNInfo::Allocator &Alloc = LIS.getVNInfoAllocator();
-  for (LiveInterval::SubRange &S : OldLI.subranges())
-    LI.createSubRange(Alloc, S.LaneMask);
+  if (createSubRanges) {
+    // Create empty subranges if the OldReg's interval has them. Do not create
+    // the main range here---it will be constructed later after the subranges
+    // have been finalized.
+    LiveInterval &OldLI = LIS.getInterval(OldReg);
+    VNInfo::Allocator &Alloc = LIS.getVNInfoAllocator();
+    for (LiveInterval::SubRange &S : OldLI.subranges())
+      LI.createSubRange(Alloc, S.LaneMask);
+  }
   return LI;
 }
 
@@ -357,8 +360,7 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink,
     // LiveRangeEdit::DeadRemats and will be deleted after all the
     // allocations of the func are done.
     if (isOrigDef && DeadRemats && TII.isTriviallyReMaterializable(*MI, AA)) {
-      LiveInterval &NewLI = createEmptyIntervalFrom(Dest);
-      NewLI.removeEmptySubRanges();
+      LiveInterval &NewLI = createEmptyIntervalFrom(Dest, false);
       VNInfo *VNI = NewLI.getNextValue(Idx, LIS.getVNInfoAllocator());
       NewLI.addSegment(LiveInterval::Segment(Idx, Idx.getDeadSlot(), VNI));
       pop_back();

@@ -663,6 +663,11 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
         case AMDGPU::FLAT_SCR_HI:
           continue;
 
+        case AMDGPU::XNACK_MASK:
+        case AMDGPU::XNACK_MASK_LO:
+        case AMDGPU::XNACK_MASK_HI:
+          llvm_unreachable("xnack_mask registers should not be used");
+
         case AMDGPU::TBA:
         case AMDGPU::TBA_LO:
         case AMDGPU::TBA_HI:

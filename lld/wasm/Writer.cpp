@@ -68,7 +68,8 @@ public:
 private:
   void openFile();
 
-  uint32_t getTypeIndex(const WasmSignature &Sig);
+  uint32_t lookupType(const WasmSignature &Sig);
+  uint32_t registerType(const WasmSignature &Sig);
   void assignIndexes();
   void calculateImports();
   void calculateOffsets();
@@ -78,7 +79,7 @@ private:
   void createHeader();
   void createSections();
   SyntheticSection *createSyntheticSection(uint32_t Type,
-                                           std::string Name = "");
+                                           StringRef Name = "");
 
   // Builtin sections
   void createTypeSection();
@@ -154,8 +155,7 @@ void Writer::createImportSection() {
     Import.Module = "env";
     Import.Field = Sym->getName();
     Import.Kind = WASM_EXTERNAL_FUNCTION;
-    assert(TypeIndices.count(Sym->getFunctionType()) > 0);
-    Import.SigIndex = TypeIndices.lookup(Sym->getFunctionType());
+    Import.SigIndex = lookupType(Sym->getFunctionType());
     writeImport(OS, Import);
   }
 
@@ -197,7 +197,7 @@ void Writer::createFunctionSection() {
 
   writeUleb128(OS, DefinedFunctions.size(), "function count");
   for (const InputFunction *Func : DefinedFunctions)
-    writeUleb128(OS, TypeIndices.lookup(Func->Signature), "sig index");
+    writeUleb128(OS, lookupType(Func->Signature), "sig index");
 }
 
 void Writer::createMemorySection() {
@@ -520,7 +520,7 @@ void Writer::layoutMemory() {
 }
 
 SyntheticSection *Writer::createSyntheticSection(uint32_t Type,
-                                                 std::string Name) {
+                                                 StringRef Name) {
   auto Sec = make<SyntheticSection>(Type, Name);
   log("createSection: " + toString(*Sec));
   OutputSections.push_back(Sec);
@@ -570,10 +570,21 @@ void Writer::calculateImports() {
   }
 }
 
-uint32_t Writer::getTypeIndex(const WasmSignature &Sig) {
+uint32_t Writer::lookupType(const WasmSignature &Sig) {
+  auto It = TypeIndices.find(Sig);
+  if (It == TypeIndices.end()) {
+    error("type not found: " + toString(Sig));
+    return 0;
+  }
+  return It->second;
+}
+
+uint32_t Writer::registerType(const WasmSignature &Sig) {
   auto Pair = TypeIndices.insert(std::make_pair(Sig, Types.size()));
-  if (Pair.second)
+  if (Pair.second) {
+    DEBUG(dbgs() << "type " << toString(Sig) << "\n");
     Types.push_back(&Sig);
+  }
   return Pair.first->second;
 }
 
@@ -581,7 +592,7 @@ void Writer::calculateTypes() {
   for (ObjFile *File : Symtab->ObjectFiles) {
     File->TypeMap.reserve(File->getWasmObj()->types().size());
     for (const WasmSignature &Sig : File->getWasmObj()->types())
-      File->TypeMap.push_back(getTypeIndex(Sig));
+      File->TypeMap.push_back(registerType(Sig));
   }
 }
 

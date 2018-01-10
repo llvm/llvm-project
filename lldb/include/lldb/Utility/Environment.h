@@ -46,6 +46,7 @@ public:
   using Base::begin;
   using Base::clear;
   using Base::count;
+  using Base::empty;
   using Base::end;
   using Base::erase;
   using Base::find;

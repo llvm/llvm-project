@@ -24317,6 +24317,7 @@ static SDValue LowerMSCATTER(SDValue Op, const X86Subtarget &Subtarget,
   assert(VT.getScalarSizeInBits() >= 32 && "Unsupported scatter op");
   SDLoc dl(Op);
 
+  SDValue Scale = N->getScale();
   SDValue Index = N->getIndex();
   SDValue Mask = N->getMask();
   SDValue Chain = N->getChain();
@@ -24383,7 +24384,7 @@ static SDValue LowerMSCATTER(SDValue Op, const X86Subtarget &Subtarget,
 
   // The mask is killed by scatter, add it to the values
   SDVTList VTs = DAG.getVTList(Mask.getValueType(), MVT::Other);
-  SDValue Ops[] = {Chain, Src, Mask, BasePtr, Index};
+  SDValue Ops[] = {Chain, Src, Mask, BasePtr, Index, Scale};
   SDValue NewScatter = DAG.getTargetMemSDNode<X86MaskedScatterSDNode>(
       VTs, Ops, dl, N->getMemoryVT(), N->getMemOperand());
   DAG.ReplaceAllUsesWith(Op, SDValue(NewScatter.getNode(), 1));
@@ -24489,6 +24490,7 @@ static SDValue LowerMGATHER(SDValue Op, const X86Subtarget &Subtarget,
   MaskedGatherSDNode *N = cast<MaskedGatherSDNode>(Op.getNode());
   SDLoc dl(Op);
   MVT VT = Op.getSimpleValueType();
+  SDValue Scale = N->getScale();
   SDValue Index = N->getIndex();
   SDValue Mask = N->getMask();
   SDValue Src0 = N->getValue();
@@ -24509,7 +24511,8 @@ static SDValue LowerMGATHER(SDValue Op, const X86Subtarget &Subtarget,
     // the vector contains 8 elements, we just sign-extend the index
     if (NumElts == 8) {
       Index = DAG.getNode(ISD::SIGN_EXTEND, dl, MVT::v8i64, Index);
-      SDValue Ops[] = { N->getChain(), Src0, Mask, N->getBasePtr(), Index };
+      SDValue Ops[] = { N->getChain(), Src0, Mask, N->getBasePtr(), Index,
+                        Scale };
       SDValue NewGather = DAG.getTargetMemSDNode<X86MaskedGatherSDNode>(
           DAG.getVTList(VT, MaskVT, MVT::Other), Ops, dl, N->getMemoryVT(),
           N->getMemOperand());
@@ -24533,7 +24536,7 @@ static SDValue LowerMGATHER(SDValue Op, const X86Subtarget &Subtarget,
     MVT NewVT = MVT::getVectorVT(VT.getScalarType(), NumElts);
     Src0 = ExtendToType(Src0, NewVT, DAG);
 
-    SDValue Ops[] = { N->getChain(), Src0, Mask, N->getBasePtr(), Index };
+    SDValue Ops[] = { N->getChain(), Src0, Mask, N->getBasePtr(), Index, Scale };
     SDValue NewGather = DAG.getTargetMemSDNode<X86MaskedGatherSDNode>(
         DAG.getVTList(NewVT, MaskVT, MVT::Other), Ops, dl, N->getMemoryVT(),
         N->getMemOperand());
@@ -24544,7 +24547,7 @@ static SDValue LowerMGATHER(SDValue Op, const X86Subtarget &Subtarget,
     return DAG.getMergeValues(RetOps, dl);
   }
 
-  SDValue Ops[] = { N->getChain(), Src0, Mask, N->getBasePtr(), Index };
+  SDValue Ops[] = { N->getChain(), Src0, Mask, N->getBasePtr(), Index, Scale };
   SDValue NewGather = DAG.getTargetMemSDNode<X86MaskedGatherSDNode>(
       DAG.getVTList(VT, MaskVT, MVT::Other), Ops, dl, N->getMemoryVT(),
       N->getMemOperand());
@@ -25080,7 +25083,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
         Mask = DAG.getNode(ISD::SIGN_EXTEND, dl, MVT::v4i32, Mask);
       }
       SDValue Ops[] = { Gather->getChain(), Src0, Mask, Gather->getBasePtr(),
-                        Index };
+                        Index, Gather->getScale() };
       SDValue Res = DAG.getTargetMemSDNode<X86MaskedGatherSDNode>(
         DAG.getVTList(MVT::v4f32, Mask.getValueType(), MVT::Other), Ops, dl,
         Gather->getMemoryVT(), Gather->getMemOperand());
@@ -25107,7 +25110,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
           Mask = DAG.getNode(ISD::SIGN_EXTEND, dl, MVT::v4i32, Mask);
         }
         SDValue Ops[] = { Gather->getChain(), Src0, Mask, Gather->getBasePtr(),
-                          Index };
+                          Index, Gather->getScale() };
         SDValue Res = DAG.getTargetMemSDNode<X86MaskedGatherSDNode>(
           DAG.getVTList(MVT::v4i32, Mask.getValueType(), MVT::Other), Ops, dl,
           Gather->getMemoryVT(), Gather->getMemOperand());
@@ -25128,7 +25131,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       Mask = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4i1, Mask,
                          DAG.getConstant(0, dl, MVT::v2i1));
       SDValue Ops[] = { Gather->getChain(), Src0, Mask, Gather->getBasePtr(),
-                        Index };
+                        Index, Gather->getScale() };
       SDValue Res = DAG.getMaskedGather(DAG.getVTList(MVT::v4i32, MVT::Other),
                                         Gather->getMemoryVT(), dl, Ops,
                                         Gather->getMemOperand());
@@ -30401,34 +30404,33 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
   // Since MMX types are special and don't usually play with other vector types,
   // it's better to handle them early to be sure we emit efficient code by
   // avoiding store-load conversions.
+  if (VT == MVT::x86mmx) {
+    // Detect bitcasts between i32 to x86mmx low word.
+    if (N0.getOpcode() == ISD::BUILD_VECTOR && SrcVT == MVT::v2i32 &&
+        isNullConstant(N0.getOperand(1))) {
+      SDValue N00 = N0.getOperand(0);
+      if (N00.getValueType() == MVT::i32)
+        return DAG.getNode(X86ISD::MMX_MOVW2D, SDLoc(N00), VT, N00);
+    }
 
-  // Detect bitcasts between i32 to x86mmx low word.
-  if (VT == MVT::x86mmx && N0.getOpcode() == ISD::BUILD_VECTOR &&
-      SrcVT == MVT::v2i32 && isNullConstant(N0.getOperand(1))) {
-    SDValue N00 = N0->getOperand(0);
-    if (N00.getValueType() == MVT::i32)
-      return DAG.getNode(X86ISD::MMX_MOVW2D, SDLoc(N00), VT, N00);
-  }
+    // Detect bitcasts between element or subvector extraction to x86mmx.
+    if ((N0.getOpcode() == ISD::EXTRACT_VECTOR_ELT ||
+         N0.getOpcode() == ISD::EXTRACT_SUBVECTOR) &&
+        isNullConstant(N0.getOperand(1))) {
+      SDValue N00 = N0.getOperand(0);
+      if (N00.getValueType().is128BitVector())
+        return DAG.getNode(X86ISD::MOVDQ2Q, SDLoc(N00), VT,
+                           DAG.getBitcast(MVT::v2i64, N00));
+    }
 
-  // Detect bitcasts between element or subvector extraction to x86mmx.
-  if (VT == MVT::x86mmx &&
-      (N0.getOpcode() == ISD::EXTRACT_VECTOR_ELT ||
-       N0.getOpcode() == ISD::EXTRACT_SUBVECTOR) &&
-      isNullConstant(N0.getOperand(1))) {
-    SDValue N00 = N0->getOperand(0);
-    if (N00.getValueType().is128BitVector())
-      return DAG.getNode(X86ISD::MOVDQ2Q, SDLoc(N00), VT,
-                         DAG.getBitcast(MVT::v2i64, N00));
-  }
-
-  // Detect bitcasts from FP_TO_SINT to x86mmx.
-  if (VT == MVT::x86mmx && SrcVT == MVT::v2i32 &&
-      N0.getOpcode() == ISD::FP_TO_SINT) {
-    SDLoc DL(N0);
-    SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i32, N0,
-                              DAG.getUNDEF(MVT::v2i32));
-    return DAG.getNode(X86ISD::MOVDQ2Q, DL, VT,
-                       DAG.getBitcast(MVT::v2i64, Res));
+    // Detect bitcasts from FP_TO_SINT to x86mmx.
+    if (SrcVT == MVT::v2i32 && N0.getOpcode() == ISD::FP_TO_SINT) {
+      SDLoc DL(N0);
+      SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i32, N0,
+                                DAG.getUNDEF(MVT::v2i32));
+      return DAG.getNode(X86ISD::MOVDQ2Q, DL, VT,
+                         DAG.getBitcast(MVT::v2i64, Res));
+    }
   }
 
   // Convert a bitcasted integer logic operation that has one bitcasted

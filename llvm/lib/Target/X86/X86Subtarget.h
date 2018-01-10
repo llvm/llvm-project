@@ -92,6 +92,10 @@ protected:
   /// True if the processor supports X87 instructions.
   bool HasX87;
 
+  /// True if this processor has NOPL instruction
+  /// (generally pentium pro+).
+  bool HasNOPL;
+
   /// True if this processor has conditional move instructions
   /// (generally pentium pro+).
   bool HasCMov;
@@ -469,6 +473,7 @@ public:
   void setPICStyle(PICStyles::Style Style)  { PICStyle = Style; }
 
   bool hasX87() const { return HasX87; }
+  bool hasNOPL() const { return HasNOPL; }
   bool hasCMov() const { return HasCMov; }
   bool hasSSE1() const { return X86SSELevel >= SSE1; }
   bool hasSSE2() const { return X86SSELevel >= SSE2; }
