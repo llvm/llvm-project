@@ -199,7 +199,7 @@ static bool GetProcessAndStatInfo(::pid_t pid,
   while (!Rest.empty()) {
     llvm::StringRef Var;
     std::tie(Var, Rest) = Rest.split('\0');
-    process_info.GetEnvironmentEntries().AppendArgument(Var);
+    process_info.GetEnvironment().insert(Var);
   }
 
   llvm::StringRef Arg0;
@@ -297,14 +297,7 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
   return GetProcessAndStatInfo(pid, process_info, State, tracerpid);
 }
 
-size_t Host::GetEnvironment(StringList &env) {
-  char **host_env = environ;
-  char *env_entry;
-  size_t i;
-  for (i = 0; (env_entry = host_env[i]) != NULL; ++i)
-    env.AppendString(env_entry);
-  return i;
-}
+Environment Host::GetEnvironment() { return Environment(environ); }
 
 Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
   return Status("unimplemented");

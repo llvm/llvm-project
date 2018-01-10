@@ -1206,11 +1206,7 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
     }
 
     // Copy the current environment to the gdbserver/debugserver instance
-    StringList env;
-    if (Host::GetEnvironment(env)) {
-      for (size_t i = 0; i < env.GetSize(); ++i)
-        launch_info.GetEnvironmentEntries().AppendArgument(env[i]);
-    }
+    launch_info.GetEnvironment() = Host::GetEnvironment();
 
     // Close STDIN, STDOUT and STDERR.
     launch_info.AppendCloseFileAction(STDIN_FILENO);

@@ -298,7 +298,35 @@ define <2 x double> @shuffle_v2f64_21(<2 x double> %a, <2 x double> %b) {
   %shuffle = shufflevector <2 x double> %a, <2 x double> %b, <2 x i32> <i32 2, i32 1>
   ret <2 x double> %shuffle
 }
-
+define <2 x double> @shuffle_v2f64_u2(<2 x double> %a, <2 x double> %b) {
+; SSE2-LABEL: shuffle_v2f64_u2:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0,0]
+; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE3-LABEL: shuffle_v2f64_u2:
+; SSE3:       # %bb.0:
+; SSE3-NEXT:    movddup {{.*#+}} xmm0 = xmm1[0,0]
+; SSE3-NEXT:    retq
+;
+; SSSE3-LABEL: shuffle_v2f64_u2:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    movddup {{.*#+}} xmm0 = xmm1[0,0]
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: shuffle_v2f64_u2:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movddup {{.*#+}} xmm0 = xmm1[0,0]
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: shuffle_v2f64_u2:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = xmm1[0,0]
+; AVX-NEXT:    retq
+  %shuffle = shufflevector <2 x double> %a, <2 x double> %b, <2 x i32> <i32 undef, i32 2>
+  ret <2 x double> %shuffle
+}
 
 define <2 x i64> @shuffle_v2i64_02(<2 x i64> %a, <2 x i64> %b) {
 ; SSE-LABEL: shuffle_v2i64_02:

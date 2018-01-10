@@ -294,6 +294,13 @@ public:
     std::priority_queue<CompletionCandidate> Candidates;
     for (unsigned I = 0; I < NumResults; ++I) {
       auto &Result = Results[I];
+      // We drop hidden items, as they cannot be found by the lookup after
+      // inserting the corresponding completion item and only produce noise and
+      // duplicates in the completion list. However, there is one exception. If
+      // Result has a Qualifier which is non-informative, we can refer to an
+      // item by adding that qualifier, so we don't filter out this item.
+      if (Result.Hidden && (!Result.Qualifier || Result.QualifierIsInformative))
+        continue;
       if (!ClangdOpts.IncludeIneligibleResults &&
           (Result.Availability == CXAvailability_NotAvailable ||
            Result.Availability == CXAvailability_NotAccessible))

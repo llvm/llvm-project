@@ -1282,14 +1282,8 @@ PlatformDarwin::GetResumeCountForLaunchInfo(ProcessLaunchInfo &launch_info) {
     // /bin/sh re-exec's itself as /bin/bash requiring another resume.
     // But it only does this if the COMMAND_MODE environment variable
     // is set to "legacy".
-    const char **envp =
-        launch_info.GetEnvironmentEntries().GetConstArgumentVector();
-    if (envp != NULL) {
-      for (int i = 0; envp[i] != NULL; i++) {
-        if (strcmp(envp[i], "COMMAND_MODE=legacy") == 0)
-          return 2;
-      }
-    }
+    if (launch_info.GetEnvironment().lookup("COMMAND_MODE") == "legacy")
+      return 2;
     return 1;
   } else if (strcmp(shell_name, "csh") == 0 ||
              strcmp(shell_name, "tcsh") == 0 ||
@@ -1667,25 +1661,13 @@ bool PlatformDarwin::GetOSVersion(uint32_t &major, uint32_t &minor,
   if (process && strstr(GetPluginName().GetCString(), "-simulator")) {
     lldb_private::ProcessInstanceInfo proc_info;
     if (Host::GetProcessInfo(process->GetID(), proc_info)) {
-      Args &env = proc_info.GetEnvironmentEntries();
-      const size_t n = env.GetArgumentCount();
-      const llvm::StringRef k_runtime_version("SIMULATOR_RUNTIME_VERSION=");
-      const llvm::StringRef k_dyld_root_path("DYLD_ROOT_PATH=");
-      std::string dyld_root_path;
+      const Environment &env = proc_info.GetEnvironment();
 
-      for (size_t i = 0; i < n; ++i) {
-        const char *env_cstr = env.GetArgumentAtIndex(i);
-        if (env_cstr) {
-          llvm::StringRef env_str(env_cstr);
-          if (env_str.consume_front(k_runtime_version)) {
-            if (Args::StringToVersion(env_str, major, minor, update))
-              return true;
-          } else if (env_str.consume_front(k_dyld_root_path)) {
-            dyld_root_path = env_str;
-          }
-        }
-      }
+      if (Args::StringToVersion(env.lookup("SIMULATOR_RUNTIME_VERSION"), major,
+                                minor, update))
+        return true;
 
+      std::string dyld_root_path = env.lookup("DYLD_ROOT_PATH");
       if (!dyld_root_path.empty()) {
         dyld_root_path += "/System/Library/CoreServices/SystemVersion.plist";
         ApplePropertyList system_version_plist(dyld_root_path.c_str());
@@ -1756,14 +1738,12 @@ PlatformDarwin::LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info) {
   // LLDB *not* to muck with the OS_ACTIVITY_DT_MODE flag when they
   // specifically want it unset.
   const char *disable_env_var = "IDE_DISABLED_OS_ACTIVITY_DT_MODE";
-  auto &env_vars = launch_info.GetEnvironmentEntries();
-  if (!env_vars.ContainsEnvironmentVariable(llvm::StringRef(disable_env_var))) {
+  auto &env_vars = launch_info.GetEnvironment();
+  if (!env_vars.count(disable_env_var)) {
     // We want to make sure that OS_ACTIVITY_DT_MODE is set so that
     // we get os_log and NSLog messages mirrored to the target process
     // stderr.
-    if (!env_vars.ContainsEnvironmentVariable(
-            llvm::StringRef("OS_ACTIVITY_DT_MODE")))
-      env_vars.AppendArgument(llvm::StringRef("OS_ACTIVITY_DT_MODE=enable"));
+    env_vars.try_emplace("OS_ACTIVITY_DT_MODE", "enable");
   }
 
   // Let our parent class do the real launching.

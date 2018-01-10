@@ -1623,6 +1623,8 @@ void __kmp_join_barrier(int gtid) {
           ompt_sync_region_barrier, ompt_scope_begin, my_parallel_data,
           my_task_data, codeptr);
     }
+    if (!KMP_MASTER_TID(ds_tid))
+      this_thr->th.ompt_thread_info.task_data = *OMPT_CUR_TASK_DATA(this_thr);
 #endif
     this_thr->th.ompt_thread_info.state = omp_state_wait_barrier_implicit;
   }

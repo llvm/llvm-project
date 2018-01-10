@@ -171,9 +171,6 @@ class LLDBTestResult(unittest2.TextTestResult):
             (str(test), inspect.getfile(
                 test.__class__)))
         self.counter += 1
-        # if self.counter == 4:
-        #    import crashinfo
-        #    crashinfo.testCrashReporterDescription(None)
         test.test_number = self.counter
         if self.showAll:
             self.stream.write(self.fmt % self.counter)

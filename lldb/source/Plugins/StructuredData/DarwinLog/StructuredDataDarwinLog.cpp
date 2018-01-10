@@ -1514,7 +1514,6 @@ Status StructuredDataDarwinLog::FilterLaunchInfo(ProcessLaunchInfo &launch_info,
     SetGlobalEnableOptions(debugger_sp, options_sp);
   }
 
-  auto &env_vars = launch_info.GetEnvironmentEntries();
   if (!options_sp->GetEchoToStdErr()) {
     // The user doesn't want to see os_log/NSLog messages echo to stderr.
     // That mechanism is entirely separate from the DarwinLog support.
@@ -1523,16 +1522,11 @@ Status StructuredDataDarwinLog::FilterLaunchInfo(ProcessLaunchInfo &launch_info,
 
     // Here we need to strip out any OS_ACTIVITY_DT_MODE setting to prevent
     // echoing of os_log()/NSLog() to stderr in the target program.
-    size_t argument_index;
-    if (env_vars.ContainsEnvironmentVariable(
-            llvm::StringRef("OS_ACTIVITY_DT_MODE"), &argument_index))
-      env_vars.DeleteArgumentAtIndex(argument_index);
+    launch_info.GetEnvironment().erase("OS_ACTIVITY_DT_MODE");
 
     // We will also set the env var that tells any downstream launcher
     // from adding OS_ACTIVITY_DT_MODE.
-    env_vars.AddOrReplaceEnvironmentVariable(
-        llvm::StringRef("IDE_DISABLED_OS_ACTIVITY_DT_MODE"),
-        llvm::StringRef("1"));
+    launch_info.GetEnvironment()["IDE_DISABLED_OS_ACTIVITY_DT_MODE"] = "1";
   }
 
   // Set the OS_ACTIVITY_MODE env var appropriately to enable/disable
@@ -1545,10 +1539,7 @@ Status StructuredDataDarwinLog::FilterLaunchInfo(ProcessLaunchInfo &launch_info,
   else
     env_var_value = "default";
 
-  if (env_var_value) {
-    launch_info.GetEnvironmentEntries().AddOrReplaceEnvironmentVariable(
-        llvm::StringRef("OS_ACTIVITY_MODE"), llvm::StringRef(env_var_value));
-  }
+  launch_info.GetEnvironment()["OS_ACTIVITY_MODE"] = env_var_value;
 
   return error;
 }

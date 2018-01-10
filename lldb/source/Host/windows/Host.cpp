@@ -258,13 +258,12 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
   return error;
 }
 
-size_t Host::GetEnvironment(StringList &env) {
+Environment Host::GetEnvironment() {
+  Environment env;
   // The environment block on Windows is a contiguous buffer of NULL terminated
-  // strings,
-  // where the end of the environment block is indicated by two consecutive
-  // NULLs.
+  // strings, where the end of the environment block is indicated by two
+  // consecutive NULLs.
   LPWCH environment_block = ::GetEnvironmentStringsW();
-  env.Clear();
   while (*environment_block != L'\0') {
     std::string current_var;
     auto current_var_size = wcslen(environment_block) + 1;
@@ -273,9 +272,9 @@ size_t Host::GetEnvironment(StringList &env) {
       continue;
     }
     if (current_var[0] != '=')
-      env.AppendString(current_var);
+      env.insert(current_var);
 
     environment_block += current_var_size;
   }
-  return env.GetSize();
+  return env;
 }
