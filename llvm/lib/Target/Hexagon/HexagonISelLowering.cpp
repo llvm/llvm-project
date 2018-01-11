@@ -2652,7 +2652,7 @@ HexagonTargetLowering::buildVector64(ArrayRef<SDValue> Elem, const SDLoc &dl,
     uint64_t Mask = (ElemTy == MVT::i8)  ? 0xFFull
                   : (ElemTy == MVT::i16) ? 0xFFFFull : 0xFFFFFFFFull;
     for (unsigned i = 0; i != Num; ++i)
-      Val = (Val << W) | (Consts[i]->getZExtValue() & Mask);
+      Val = (Val << W) | (Consts[Num-1-i]->getZExtValue() & Mask);
     SDValue V0 = DAG.getConstant(Val, dl, MVT::i64);
     return DAG.getBitcast(VecTy, V0);
   }
