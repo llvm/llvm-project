@@ -1480,8 +1480,9 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
         IRBuilder<> B(&I);
         IRBuilder<>::FastMathFlagGuard Guard(B);
         B.setFastMathFlags(I.getFastMathFlags());
-        Value *Tan = emitUnaryFloatFnCall(A, TLI.getName(LibFunc_tan),
-                                          B, I.getFunction()->getAttributes());
+        Value *Tan = emitUnaryFloatFnCall(
+            A, TLI.getName(LibFunc_tan), B,
+            CallSite(Op0).getCalledFunction()->getAttributes());
         return replaceInstUsesWith(I, Tan);
       }
     }
