@@ -16,9 +16,12 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCilk.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
+#include "clang/AST/Stmt.h"
+#include "clang/AST/StmtCilk.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtOpenMP.h"
@@ -1310,4 +1313,67 @@ bool CapturedStmt::capturesVariable(const VarDecl *Var) const {
   }
 
   return false;
+}
+
+// CilkSpawnStmt
+const Stmt* CilkSpawnStmt::getSpawnedStmt() const {
+  return SpawnedStmt;
+}
+
+Stmt* CilkSpawnStmt::getSpawnedStmt() {
+  return SpawnedStmt;
+}
+
+// CilkForStmt
+CilkForStmt::CilkForStmt(const ASTContext &C, Stmt *Init,
+                         Expr *Cond, /* VarDecl *condVar, */
+                         Expr *Inc, VarDecl *LoopVar, Stmt *Body,
+                         SourceLocation CFL, SourceLocation LP, SourceLocation RP)
+  : Stmt(CilkForStmtClass), CilkForLoc(CFL), LParenLoc(LP), RParenLoc(RP)
+{
+  SubExprs[INIT] = Init;
+  SubExprs[COND] = Cond;
+  // setConditionVariable(C, condVar);
+  SubExprs[INC] = Inc;
+  setLoopVariable(C, LoopVar);
+  SubExprs[BODY] = Body;
+  // SubExprs[LOOP_COUNT] = LoopCount;
+}
+
+// VarDecl *CilkForStmt::getConditionVariable() const {
+//   if (!SubExprs[CONDVAR])
+//     return nullptr;
+
+//   DeclStmt *DS = cast<DeclStmt>(SubExprs[CONDVAR]);
+//   return cast<VarDecl>(DS->getSingleDecl());
+// }
+
+// void CilkForStmt::setConditionVariable(const ASTContext &C, VarDecl *V) {
+//   if (!V) {
+//     SubExprs[CONDVAR] = nullptr;
+//     return;
+//   }
+
+//   SourceRange VarRange = V->getSourceRange();
+//   SubExprs[CONDVAR] = new (C) DeclStmt(DeclGroupRef(V), VarRange.getBegin(),
+//                                        VarRange.getEnd());
+// }
+
+VarDecl *CilkForStmt::getLoopVariable() const {
+  if (!SubExprs[LOOPVAR])
+    return nullptr;
+
+  DeclStmt *DS = cast<DeclStmt>(SubExprs[LOOPVAR]);
+  return cast<VarDecl>(DS->getSingleDecl());
+}
+
+void CilkForStmt::setLoopVariable(const ASTContext &C, VarDecl *V) {
+  if (!V) {
+    SubExprs[LOOPVAR] = nullptr;
+    return;
+  }
+
+  SourceRange VarRange = V->getSourceRange();
+  SubExprs[LOOPVAR] = new (C) DeclStmt(DeclGroupRef(V), VarRange.getBegin(),
+                                       VarRange.getEnd());
 }

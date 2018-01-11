@@ -535,6 +535,9 @@ namespace clang {
     ExpectedStmt VisitObjCAtSynchronizedStmt(ObjCAtSynchronizedStmt *S);
     ExpectedStmt VisitObjCAtThrowStmt(ObjCAtThrowStmt *S);
     ExpectedStmt VisitObjCAutoreleasePoolStmt(ObjCAutoreleasePoolStmt *S);
+    ExpectedStmt VisitCilkSpawnStmt(CilkSpawnStmt *S);
+    ExpectedStmt VisitCilkSyncStmt(CilkSyncStmt *S);
+    ExpectedStmt VisitCilkForStmt(CilkForStmt *S);
 
     // Importing expressions
     ExpectedStmt VisitExpr(Expr *E);
@@ -6116,6 +6119,58 @@ ExpectedStmt ASTNodeImporter::VisitObjCAutoreleasePoolStmt(
     return ToSubStmtOrErr.takeError();
   return new (Importer.getToContext()) ObjCAutoreleasePoolStmt(*ToAtLocOrErr,
                                                                *ToSubStmtOrErr);
+}
+
+Stmt *ASTNodeImporter::VisitCilkSpawnStmt(CilkSpawnStmt *S) {
+  SourceLocation SpawnLoc = Importer.Import(S->getSpawnLoc());
+  Stmt *Child = Importer.Import(S->getSpawnedStmt());
+  if (!Child && S->getSpawnedStmt())
+    return nullptr;
+  return new (Importer.getToContext()) CilkSpawnStmt(SpawnLoc, Child);
+}
+
+Stmt *ASTNodeImporter::VisitCilkSyncStmt(CilkSyncStmt *S) {
+  SourceLocation SyncLoc = Importer.Import(S->getSyncLoc());
+  return new (Importer.getToContext()) CilkSyncStmt(SyncLoc);
+}
+
+Stmt *ASTNodeImporter::VisitCilkForStmt(CilkForStmt *S) {
+  Stmt *ToInit = Importer.Import(S->getInit());
+  if (!ToInit && S->getInit())
+    return nullptr;
+  Expr *ToCondition = Importer.Import(S->getCond());
+  if (!ToCondition && S->getCond())
+    return nullptr;
+  // VarDecl *ToConditionVariable = nullptr;
+  // if (VarDecl *FromConditionVariable = S->getConditionVariable()) {
+  //   ToConditionVariable =
+  //     dyn_cast_or_null<VarDecl>(Importer.Import(FromConditionVariable));
+  //   if (!ToConditionVariable)
+  //     return nullptr;
+  // }
+  VarDecl *ToLoopVariable = nullptr;
+  if (VarDecl *FromLoopVariable = S->getLoopVariable()) {
+    ToLoopVariable =
+      dyn_cast_or_null<VarDecl>(Importer.Import(FromLoopVariable));
+    if (!ToLoopVariable)
+      return nullptr;
+  }
+  Expr *ToInc = Importer.Import(S->getInc());
+  if (!ToInc && S->getInc())
+    return nullptr;
+  Stmt *ToBody = Importer.Import(S->getBody());
+  if (!ToBody && S->getBody())
+    return nullptr;
+  SourceLocation ToForLoc = Importer.Import(S->getCilkForLoc());
+  SourceLocation ToLParenLoc = Importer.Import(S->getLParenLoc());
+  SourceLocation ToRParenLoc = Importer.Import(S->getRParenLoc());
+  return new (Importer.getToContext()) CilkForStmt(Importer.getToContext(),
+                                                   ToInit,
+                                                   ToCondition,
+                                                   // ToConditionVariable,
+                                                   ToInc, ToLoopVariable, ToBody,
+                                                   ToForLoc, ToLParenLoc,
+                                                   ToRParenLoc);
 }
 
 //----------------------------------------------------------------------------

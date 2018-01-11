@@ -451,6 +451,10 @@ public:
   Value *VisitUnaryCoawait(const UnaryOperator *E) {
     return Visit(E->getSubExpr());
   }
+  Value *VisitCilkSpawnExpr(CilkSpawnExpr *CSE) {
+    CGF.PushDetachScope();
+    return Visit(CSE->getSpawnedExpr());
+  }
 
   // Leaves.
   Value *VisitIntegerLiteral(const IntegerLiteral *E) {
@@ -3917,6 +3921,35 @@ Value *ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
     break;
 
   case Qualifiers::OCL_None:
+    if (isa<CilkSpawnExpr>(E->getRHS()->IgnoreImplicit())) {
+      assert(!CGF.IsSpawned &&
+             "_Cilk_spawn statement found in spawning environment.");
+
+      // Compute the address to store into.
+      LHS = EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
+
+      // Prepare to detach.
+      CGF.IsSpawned = true;
+
+      // Emit the spawned RHS.
+      RHS = Visit(E->getRHS());
+
+      // Store the value into the LHS.  Bit-fields are handled specially because
+      // the result is altered by the store, i.e., [C99 6.5.16p1] 'An assignment
+      // expression has the value of the left operand after the assignment...'.
+      if (LHS.isBitField())
+        CGF.EmitStoreThroughBitfieldLValue(RValue::get(RHS), LHS, &RHS);
+      else
+        CGF.EmitStoreThroughLValue(RValue::get(RHS), LHS);
+
+      // Finish the detach.
+      assert(CGF.CurDetachScope && CGF.CurDetachScope->IsDetachStarted() &&
+             "Processing _Cilk_spawn of expression did not produce detach.");
+      CGF.IsSpawned = false;
+      CGF.PopDetachScope();
+
+      break;
+    }
     // __block variables need to have the rhs evaluated first, plus
     // this should improve codegen just a little.
     RHS = Visit(E->getRHS());

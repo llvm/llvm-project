@@ -120,6 +120,37 @@ set(files
   xsaveoptintrin.h
   xsavesintrin.h
   xtestintrin.h
+  cilk/cilk.h
+  cilk/cilk_api.h
+  cilk/cilk_api_linux.h
+  cilk/cilk_stub.h
+  cilk/cilk_undocumented.h
+  cilk/common.h
+  cilk/holder.h
+  cilk/hyperobject_base.h
+  cilk/metaprogramming.h
+  cilk/reducer.h
+  cilk/reducer_file.h
+  cilk/reducer_list.h
+  cilk/reducer_max.h
+  cilk/reducer_min.h
+  cilk/reducer_min_max.h
+  cilk/reducer_opadd.h
+  cilk/reducer_opand.h
+  cilk/reducer_opmul.h
+  cilk/reducer_opor.h
+  cilk/reducer_opxor.h
+  cilk/reducer_ostream.h
+  cilk/reducer_string.h
+  cilktools/cilkscreen.h
+  cilktools/cilkview.h
+  cilktools/fake_mutex.h
+  cilktools/lock_guard.h
+  internal/abi.h
+  internal/cilk_fake.h
+  internal/cilk_version.h
+  internal/metacall.h
+  internal/rev.mk
   )
 
 set(cuda_wrapper_files

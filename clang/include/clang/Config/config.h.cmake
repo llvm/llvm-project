@@ -35,6 +35,9 @@
 /* Default architecture for OpenMP offloading to Nvidia GPUs. */
 #define CLANG_OPENMP_NVPTX_DEFAULT_ARCH "${CLANG_OPENMP_NVPTX_DEFAULT_ARCH}"
 
+/* Default Tapir runtime used by -ftapir. */
+#define CLANG_DEFAULT_TAPIR_RUNTIME "${CLANG_DEFAULT_TAPIR_RUNTIME}"
+
 /* Multilib suffix for libdir. */
 #define CLANG_LIBDIR_SUFFIX "${CLANG_LIBDIR_SUFFIX}"
 

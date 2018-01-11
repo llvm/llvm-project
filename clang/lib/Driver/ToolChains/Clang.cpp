@@ -4511,6 +4511,19 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fdiagnostics_show_template_tree);
   Args.AddLastArg(CmdArgs, options::OPT_fno_elide_type);
 
+  // Forward flags for Cilk.
+  Args.AddLastArg(CmdArgs, options::OPT_fcilkplus);
+  Args.AddLastArg(CmdArgs, options::OPT_fdetach);
+  Args.AddLastArg(CmdArgs, options::OPT_ftapir);
+  Args.AddLastArg(CmdArgs, options::OPT_frhino);
+  if (Args.hasArg(options::OPT_fcilkplus) ||
+      Args.hasArg(options::OPT_ftapir) ||
+      Args.hasArg(options::OPT_fdetach))
+    if (getToolChain().getTriple().getOS() != llvm::Triple::Linux &&
+        getToolChain().getTriple().getOS() != llvm::Triple::UnknownOS &&
+        !getToolChain().getTriple().isMacOSX())
+      D.Diag(diag::err_drv_cilk_unsupported);
+
   // Forward flags for OpenMP. We don't do this if the current action is an
   // device offloading action other than OpenMP.
   if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
@@ -4571,6 +4584,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   const SanitizerArgs &Sanitize = TC.getSanitizerArgs();
   Sanitize.addArgs(TC, Args, CmdArgs, InputType);
+
+  if (Args.hasArg(options::OPT_fcsi))
+    Args.AddLastArg(CmdArgs, options::OPT_fcsi);
 
   const XRayArgs &XRay = TC.getXRayArgs();
   XRay.addArgs(TC, Args, CmdArgs, InputType);

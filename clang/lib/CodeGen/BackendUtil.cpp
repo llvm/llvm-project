@@ -67,9 +67,16 @@
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/CanonicalizeAliases.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
+#include "llvm/Transforms/Tapir/TapirTypes.h"
+#include "llvm/Transforms/Tapir/TapirUtils.h"
+#include "llvm/Transforms/Tapir/CilkABI.h"
+#include "llvm/Transforms/Tapir/CilkRABI.h"
+#include "llvm/Transforms/Tapir/OpenMPABI.h"
 #include "llvm/Transforms/Utils/NameAnonGlobals.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
 #include <memory>
+
+#include <iostream>
 using namespace clang;
 using namespace llvm;
 
@@ -324,6 +331,17 @@ static void addDataFlowSanitizerPass(const PassManagerBuilder &Builder,
   PM.add(createDataFlowSanitizerPass(LangOpts.SanitizerBlacklistFiles));
 }
 
+static void addCilkSanitizerPass(const PassManagerBuilder &Builder,
+                                 legacy::PassManagerBase &PM) {
+  PM.add(createCilkSanitizerPass());
+}
+
+static void
+addComprehensiveStaticInstrumentationPass(const PassManagerBuilder &Builder,
+                                          PassManagerBase &PM) {
+  PM.add(createComprehensiveStaticInstrumentationPass());
+}
+
 static TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
                                          const CodeGenOptions &CodeGenOpts) {
   TargetLibraryInfoImpl *TLII = new TargetLibraryInfoImpl(TargetTriple);
@@ -561,6 +579,27 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
   }
 
   PMBuilder.OptLevel = CodeGenOpts.OptimizationLevel;
+
+  switch(LangOpts.Tapir){
+    case TapirTargetType::Cilk:
+      PMBuilder.tapirTarget = new llvm::CilkABI();
+      break;
+    case TapirTargetType::CilkR:
+      PMBuilder.tapirTarget = new llvm::CilkRABI();
+      break;
+    case TapirTargetType::OpenMP:
+      PMBuilder.tapirTarget = new llvm::OpenMPABI();
+      break;
+    case TapirTargetType::Serial:
+      assert(0 && "TODO MAKE OTHER TAPIR OPTS");
+    case TapirTargetType::None:
+      PMBuilder.tapirTarget = nullptr;
+      break;
+  }
+
+  if (LangOpts.Detach) PMBuilder.DisableTapirOpts = true;
+  if (LangOpts.Rhino) PMBuilder.Rhino = true;
+
   PMBuilder.SizeLevel = CodeGenOpts.OptimizeSize;
   PMBuilder.SLPVectorize = CodeGenOpts.VectorizeSLP;
   PMBuilder.LoopVectorize = CodeGenOpts.VectorizeLoop;
@@ -667,6 +706,25 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
                            addDataFlowSanitizerPass);
     PMBuilder.addExtension(PassManagerBuilder::EP_EnabledOnOptLevel0,
                            addDataFlowSanitizerPass);
+  }
+
+  if (LangOpts.Sanitize.has(SanitizerKind::Cilk)) {
+    // PMBuilder.InstrumentCilk = true;
+    // PMBuilder.addExtension(PassManagerBuilder::EP_OptimizerLast,
+    //                        addThreadSanitizerPass);
+    // PMBuilder.addExtension(PassManagerBuilder::EP_EnabledOnOptLevel0,
+    //                        addThreadSanitizerPass);
+    PMBuilder.addExtension(PassManagerBuilder::EP_TapirLate,
+                           addCilkSanitizerPass);
+    PMBuilder.addExtension(PassManagerBuilder::EP_EnabledOnOptLevel0,
+                           addCilkSanitizerPass);
+  }
+
+  if (LangOpts.ComprehensiveStaticInstrumentation) {
+    PMBuilder.addExtension(PassManagerBuilder::EP_TapirLate,
+                           addComprehensiveStaticInstrumentationPass);
+    PMBuilder.addExtension(PassManagerBuilder::EP_EnabledOnOptLevel0,
+                           addComprehensiveStaticInstrumentationPass);
   }
 
   // Set up the per-function pass manager.

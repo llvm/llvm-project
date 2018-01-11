@@ -163,6 +163,12 @@ struct PragmaOpenMPHandler : public PragmaHandler {
                     Token &FirstToken) override;
 };
 
+struct PragmaCilkHintHandler : public PragmaHandler {
+  PragmaCilkHintHandler() : PragmaHandler("cilk") { }
+  void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
+                    Token &FirstToken) override;
+};
+
 /// PragmaCommentHandler - "\#pragma comment ...".
 struct PragmaCommentHandler : public PragmaHandler {
   PragmaCommentHandler(Sema &Actions)
@@ -356,6 +362,11 @@ void Parser::initializePragmaHandlers() {
     PP.AddPragmaHandler("clang", CUDAForceHostDeviceHandler.get());
   }
 
+  // if (getLangOpts().Cilk) {
+    CilkHintHandler = llvm::make_unique<PragmaCilkHintHandler>();
+    PP.AddPragmaHandler(CilkHintHandler.get());
+  // }
+
   OptimizeHandler = llvm::make_unique<PragmaOptimizeHandler>(Actions);
   PP.AddPragmaHandler("clang", OptimizeHandler.get());
 
@@ -452,6 +463,11 @@ void Parser::resetPragmaHandlers() {
     CUDAForceHostDeviceHandler.reset();
   }
 
+  // if (getLangOpts().Cilk) {
+    PP.RemovePragmaHandler(CilkHintHandler.get());
+    CilkHintHandler.reset();
+  // }
+
   PP.RemovePragmaHandler("STDC", FPContractHandler.get());
   FPContractHandler.reset();
 
@@ -521,20 +537,15 @@ void Parser::HandlePragmaPack() {
   assert(Tok.is(tok::annot_pragma_pack));
   PragmaPackInfo *Info =
     static_cast<PragmaPackInfo *>(Tok.getAnnotationValue());
-  SourceLocation PragmaLoc = Tok.getLocation();
+  SourceLocation PragmaLoc = ConsumeAnnotationToken();
   ExprResult Alignment;
   if (Info->Alignment.is(tok::numeric_constant)) {
     Alignment = Actions.ActOnNumericConstant(Info->Alignment);
-    if (Alignment.isInvalid()) {
-      ConsumeAnnotationToken();
+    if (Alignment.isInvalid())
       return;
-    }
   }
   Actions.ActOnPragmaPack(PragmaLoc, Info->Action, Info->SlotLabel,
                           Alignment.get());
-  // Consume the token after processing the pragma to enable pragma-specific
-  // #include warnings.
-  ConsumeAnnotationToken();
 }
 
 void Parser::HandlePragmaMSStruct() {
@@ -1012,6 +1023,9 @@ static std::string PragmaLoopHintString(Token PragmaName, Token Option) {
     PragmaString += Option.getIdentifierInfo()->getName();
   } else if (PragmaName.getIdentifierInfo()->getName() == "unroll_and_jam") {
     PragmaString = "unroll_and_jam";
+  } else if (PragmaName.getIdentifierInfo()->getName() == "cilk") {
+    PragmaString = "cilk ";
+    PragmaString += Option.getIdentifierInfo()->getName();
   } else {
     assert(PragmaName.getIdentifierInfo()->getName() == "unroll" &&
            "Unexpected pragma name");
@@ -3006,6 +3020,72 @@ void PragmaUnrollHintHandler::HandlePragma(Preprocessor &PP,
   TokenArray[0].setAnnotationValue(static_cast<void *>(Info));
   PP.EnterTokenStream(std::move(TokenArray), 1,
                       /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
+}
+
+/// Handle the cilk_for loop pragmas.
+///  #pragma cilk grainsize tapir-grainsize-value
+///  #pragma cilk grainsize '(' tapir-grainsize-value ')'
+///
+///  tapir-grainsize-value:
+///    constant-expression
+///
+void PragmaCilkHintHandler::HandlePragma(Preprocessor &PP,
+                                         PragmaIntroducerKind Introducer,
+                                         Token &Tok) {
+  // Incoming token is "cilk" for "#pragma cilk grainsize".
+  Token PragmaName = Tok;
+  SmallVector<Token, 1> TokenList;
+
+  PP.Lex(Tok);
+  if (Tok.isNot(tok::identifier)) {
+    PP.Diag(Tok.getLocation(), diag::err_pragma_loop_invalid_option)
+        << /*MissingOption=*/true << "";
+    return;
+  }
+
+  while (Tok.is(tok::identifier)) {
+    Token Option = Tok;
+    IdentifierInfo *OptionInfo = Tok.getIdentifierInfo();
+
+    bool OptionValid = llvm::StringSwitch<bool>(OptionInfo->getName())
+                           .Case("grainsize", true)
+                           .Default(false);
+    if (!OptionValid) {
+      PP.Diag(Tok.getLocation(), diag::err_pragma_cilk_invalid_option)
+        << /*MissingOption=*/false << OptionInfo;
+      return;
+    }
+    PP.Lex(Tok);
+
+    // Read '(' if it exists.
+    bool ValueInParens = Tok.is(tok::l_paren);
+    if (ValueInParens)
+      PP.Lex(Tok);
+
+    auto *Info = new (PP.getPreprocessorAllocator()) PragmaLoopHintInfo;
+    if (ParseLoopHintValue(PP, Tok, PragmaName, Option, ValueInParens, *Info))
+      return;
+
+    // Generate the loop hint token.
+    Token LoopHintTok;
+    LoopHintTok.startToken();
+    LoopHintTok.setKind(tok::annot_pragma_loop_hint);
+    LoopHintTok.setLocation(PragmaName.getLocation());
+    LoopHintTok.setAnnotationEndLoc(PragmaName.getLocation());
+    LoopHintTok.setAnnotationValue(static_cast<void *>(Info));
+    TokenList.push_back(LoopHintTok);
+  }
+  if (Tok.isNot(tok::eod)) {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
+      << "cilk grainsize";
+    return;
+  }
+
+  auto TokenArray = llvm::make_unique<Token[]>(TokenList.size());
+  std::copy(TokenList.begin(), TokenList.end(), TokenArray.get());
+
+  PP.EnterTokenStream(std::move(TokenArray), TokenList.size(),
+                      /*DisableMacroExpansion=*/false);
 }
 
 /// Handle the Microsoft \#pragma intrinsic extension.

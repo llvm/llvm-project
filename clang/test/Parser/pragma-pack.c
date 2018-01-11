@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wno-pragma-pack -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 
 // Note that this puts the expected lines before the directives to work around
 // limitations in the -verify mode.

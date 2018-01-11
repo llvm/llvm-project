@@ -435,6 +435,11 @@ KEYWORD(L__FUNCSIG__                , KEYMS)
 TYPE_TRAIT_1(__is_interface_class, IsInterfaceClass, KEYMS)
 TYPE_TRAIT_1(__is_sealed, IsSealed, KEYMS)
 
+// Cilk Extensions
+KEYWORD(_Cilk_spawn                 , KEYALL)
+KEYWORD(_Cilk_sync                  , KEYALL)
+KEYWORD(_Cilk_for                   , KEYALL)
+
 // MSVC12.0 / VS2013 Type Traits
 TYPE_TRAIT_1(__is_destructible, IsDestructible, KEYMS)
 TYPE_TRAIT_1(__is_trivially_destructible, IsTriviallyDestructible, KEYCXX)

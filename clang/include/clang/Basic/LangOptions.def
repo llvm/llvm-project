@@ -297,6 +297,10 @@ VALUE_LANGOPT(VtorDispMode, 2, 1, "How many vtordisps to insert")
 
 LANGOPT(ApplePragmaPack, 1, 0, "Apple gcc-compatible #pragma pack handling")
 
+LANGOPT(Cilk, 1, 0, "Enable Cilk language extensions")
+LANGOPT(Rhino, 1, 0, "Rhino parallel extensions")
+LANGOPT(Detach, 1, 0, "Disable Parallel Memory Opts")
+
 LANGOPT(RetainCommentsFromSystemHeaders, 1, 0, "retain documentation comments from system headers in the AST")
 
 LANGOPT(SanitizeAddressFieldPadding, 2, 0, "controls how aggressive is ASan "
@@ -304,6 +308,8 @@ LANGOPT(SanitizeAddressFieldPadding, 2, 0, "controls how aggressive is ASan "
                                            "aggressive, 2: more aggressive)")
 
 LANGOPT(Cmse, 1, 0, "ARM Security extensions support")
+
+LANGOPT(ComprehensiveStaticInstrumentation, 1, 0, "turn on Comprehensive Static Instrumentation")
 
 LANGOPT(XRayInstrument, 1, 0, "controls whether to do XRay instrumentation")
 LANGOPT(XRayAlwaysEmitCustomEvents, 1, 0,

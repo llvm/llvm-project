@@ -20,6 +20,7 @@
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCilk.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
@@ -396,6 +397,18 @@ void StmtPrinter::VisitContinueStmt(ContinueStmt *Node) {
 void StmtPrinter::VisitBreakStmt(BreakStmt *Node) {
   Indent() << "break;";
   if (Policy.IncludeNewlines) OS << NL;
+}
+
+void StmtPrinter::VisitCilkSpawnStmt(CilkSpawnStmt *Node) {
+  Indent() << "_Cilk_spawn ";
+  PrintStmt(Node->getSpawnedStmt());
+  OS << ";";
+  if (Policy.IncludeNewlines) OS << "\n";
+}
+
+void StmtPrinter::VisitCilkSpawnExpr(CilkSpawnExpr *Node) {
+  Indent() << "_Cilk_spawn ";
+  PrintExpr(Node->getSpawnedExpr());
 }
 
 void StmtPrinter::VisitReturnStmt(ReturnStmt *Node) {
@@ -2401,6 +2414,48 @@ void StmtPrinter::VisitAsTypeExpr(AsTypeExpr *Node) {
   OS << ", ";
   Node->getType().print(OS, Policy);
   OS << ")";
+}
+
+void StmtPrinter::VisitCilkSyncStmt(CilkSyncStmt *) {
+  Indent() << "_Cilk_sync;";
+  if (Policy.IncludeNewlines) OS << "\n";
+}
+
+void StmtPrinter::VisitCilkForStmt(CilkForStmt *Node) {
+  Indent() << "_Cilk_for (";
+  if (Node->getInit()) {
+    if (DeclStmt *DS = dyn_cast<DeclStmt>(Node->getInit()))
+      PrintRawDeclStmt(DS);
+    else
+      PrintExpr(cast<Expr>(Node->getInit()));
+  }
+  OS << ";";
+  if (Node->getCond()) {
+    OS << " ";
+    PrintExpr(Node->getCond());
+  }
+  OS << ";";
+  if (Node->getInc()) {
+    OS << " ";
+    PrintExpr(Node->getInc());
+  }
+  OS << ") ";
+
+  if (const DeclStmt *DS = Node->getLoopVarDecl()) {
+    OS << "{\n";
+    PrintRawDeclStmt(DS);
+  }
+
+  if (CompoundStmt *CS = dyn_cast<CompoundStmt>(Node->getBody())) {
+    PrintRawCompoundStmt(CS);
+    OS << "\n";
+  } else {
+    OS << "\n";
+    PrintStmt(Node->getBody());
+  }
+
+  if (Node->getLoopVarDecl())
+    Indent() << "}";
 }
 
 //===----------------------------------------------------------------------===//

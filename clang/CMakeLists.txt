@@ -302,6 +302,9 @@ if (NOT DEFINED MATCHED_ARCH OR "${CMAKE_MATCH_1}" LESS 35)
     "Default architecture for OpenMP offloading to Nvidia GPUs." FORCE)
 endif()
 
+set(CLANG_DEFAULT_TAPIR_RUNTIME "cilk" CACHE STRING
+  "Default Tapir runtime used by -ftapir.")
+
 set(CLANG_VENDOR ${PACKAGE_VENDOR} CACHE STRING
   "Vendor-specific text for showing with version information.")
 
