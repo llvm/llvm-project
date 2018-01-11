@@ -45,7 +45,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Confirm via a variable with a non-C identifier section that we are getting
 ; the expected internalization.
-; CHECK-DAG: @var_with_nonC_section = internal dso_local global i32 0, section ".nonCsection"
+; CHECK-DAG: @var_with_nonC_section = internal global i32 0, section ".nonCsection"
 @var_with_nonC_section = global i32 0, section ".nonCsection"
 
 ; We should not internalize @deadfunc_with_section due to section
@@ -57,7 +57,7 @@ define void @deadfunc_with_section() section "some_other_section" {
 
 ; Confirm via a function with a non-C identifier section that we are getting
 ; the expected internalization.
-; CHECK-DAG: define internal dso_local void @deadfunc_with_nonC_section() section ".nonCsection"
+; CHECK-DAG: define internal void @deadfunc_with_nonC_section() section ".nonCsection"
 define void @deadfunc_with_nonC_section() section ".nonCsection" {
   call void @deadfunc2_called_from_nonC_section()
   ret void
@@ -65,7 +65,7 @@ define void @deadfunc_with_nonC_section() section ".nonCsection" {
 
 ; In RegularLTO mode, where we have combined all the IR,
 ; @deadfunc2_called_from_section can be internalized.
-; CHECK2-REGULARLTO: define internal dso_local void @deadfunc2_called_from_section
+; CHECK2-REGULARLTO: define internal void @deadfunc2_called_from_section
 ; In ThinLTO mode, we can't internalize it as it needs to be preserved
 ; (due to the access from @deadfunc_with_section which must be preserved), and
 ; can't be internalized since the reference is from a different module.
@@ -74,6 +74,6 @@ declare void @deadfunc2_called_from_section()
 
 ; Confirm when called from a function with a non-C identifier section that we
 ; are getting the expected internalization.
-; CHECK2-REGULARLTO: define internal dso_local void @deadfunc2_called_from_nonC_section
-; CHECK2-THINLTO: define internal dso_local void @deadfunc2_called_from_nonC_section
+; CHECK2-REGULARLTO: define internal void @deadfunc2_called_from_nonC_section
+; CHECK2-THINLTO: define internal void @deadfunc2_called_from_nonC_section
 declare void @deadfunc2_called_from_nonC_section()

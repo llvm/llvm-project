@@ -661,8 +661,10 @@ path __read_symlink(const path& p, std::error_code *ec) {
 
 bool __remove(const path& p, std::error_code *ec) {
     if (ec) ec->clear();
+
     if (::remove(p.c_str()) == -1) {
-        set_or_throw(ec, "remove", p);
+        if (errno != ENOENT)
+            set_or_throw(ec, "remove", p);
         return false;
     }
     return true;
@@ -692,13 +694,18 @@ std::uintmax_t remove_all_impl(path const & p, std::error_code& ec)
 } // end namespace
 
 std::uintmax_t __remove_all(const path& p, std::error_code *ec) {
+    if (ec) ec->clear();
+
     std::error_code mec;
     auto count = remove_all_impl(p, mec);
     if (mec) {
-        set_or_throw(mec, ec, "remove_all", p);
-        return static_cast<std::uintmax_t>(-1);
+        if (mec == errc::no_such_file_or_directory) {
+            return 0;
+        } else {
+            set_or_throw(mec, ec, "remove_all", p);
+            return static_cast<std::uintmax_t>(-1);
+        }
     }
-    if (ec) ec->clear();
     return count;
 }
 
