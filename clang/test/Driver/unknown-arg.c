@@ -1,6 +1,6 @@
 // RUN: not %clang %s -cake-is-lie -%0 -%d -HHHH -munknown-to-clang-option -print-stats -funknown-to-clang-option -### 2>&1 | \
 // RUN: FileCheck %s
-// RUN: not %clang %s -stdlibs=foo -hell -### 2>&1 | \
+// RUN: not %clang %s -stdlibs=foo -hell -version -### 2>&1 | \
 // RUN: FileCheck %s --check-prefix=DID-YOU-MEAN
 // RUN: %clang_cl -cake-is-lie -%0 -%d -HHHH -munknown-to-clang-option -print-stats -funknown-to-clang-option -### -c -- %s 2>&1 | \
 // RUN: FileCheck %s --check-prefix=CL
@@ -22,6 +22,7 @@
 // CHECK: error: unknown argument: '-funknown-to-clang-option'
 // DID-YOU-MEAN: error: unknown argument '-stdlibs=foo', did you mean '-stdlib=foo'?
 // DID-YOU-MEAN: error: unknown argument '-hell', did you mean '-help'?
+// DID-YOU-MEAN: error: unknown argument '-version', did you mean '--version'?
 // CL: warning: unknown argument ignored in clang-cl: '-cake-is-lie'
 // CL: warning: unknown argument ignored in clang-cl: '-%0'
 // CL: warning: unknown argument ignored in clang-cl: '-%d'
