@@ -584,7 +584,8 @@ static bool getCompressDebugSections(opt::InputArgList &Args) {
 static int parseInt(StringRef S, opt::Arg *Arg) {
   int V = 0;
   if (!to_integer(S, V, 10))
-    error(Arg->getSpelling() + ": number expected, but got '" + S + "'");
+    error(Arg->getSpelling() + "=" + Arg->getValue() +
+          ": number expected, but got '" + S + "'");
   return V;
 }
 
@@ -683,7 +684,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZWxneeded = hasZOption(Args, "wxneeded");
 
   // Parse LTO plugin-related options for compatibility with gold.
-  for (auto *Arg : Args.filtered(OPT_plugin_opt, OPT_plugin_opt_eq)) {
+  for (auto *Arg : Args.filtered(OPT_plugin_opt)) {
     StringRef S = Arg->getValue();
     if (S == "disable-verify")
       Config->DisableVerify = true;
