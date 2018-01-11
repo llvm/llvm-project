@@ -167,14 +167,15 @@ void AsmPrinter::emitDwarfSymbolReference(const MCSymbol *Label,
   EmitLabelDifference(Label, Label->getSection().getBeginSymbol(), 4);
 }
 
-void AsmPrinter::emitDwarfStringOffset(DwarfStringPoolEntryRef S) const {
+void AsmPrinter::emitDwarfStringOffset(DwarfStringPoolEntry S) const {
   if (MAI->doesDwarfUseRelocationsAcrossSections()) {
-    emitDwarfSymbolReference(S.getSymbol());
+    assert(S.Symbol && "No symbol available");
+    emitDwarfSymbolReference(S.Symbol);
     return;
   }
 
   // Just emit the offset directly; no need for symbol math.
-  EmitInt32(S.getOffset());
+  EmitInt32(S.Offset);
 }
 
 //===----------------------------------------------------------------------===//

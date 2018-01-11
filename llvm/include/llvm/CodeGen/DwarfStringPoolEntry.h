@@ -41,6 +41,8 @@ public:
   unsigned getOffset() const { return I->second.Offset; }
   unsigned getIndex() const { return I->second.Index; }
   StringRef getString() const { return I->first(); }
+  /// Return the entire string pool entry for convenience.
+  DwarfStringPoolEntry getEntry() const { return I->getValue(); }
 
   bool operator==(const DwarfStringPoolEntryRef &X) const { return I == X.I; }
   bool operator!=(const DwarfStringPoolEntryRef &X) const { return I != X.I; }
