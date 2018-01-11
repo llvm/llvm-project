@@ -6887,7 +6887,7 @@ static int64_t GetInstanceVariableOffset_Symbol(ExecutionContext *exe_ctx,
 
       if (the_value_decl) {
         swift::irgen::IRGenMangler mangler;
-        std::string buffer = mangler.mangleFieldOffsetFull(the_value_decl, false);
+        std::string buffer = mangler.mangleFieldOffset(the_value_decl);
 
         StreamString symbol_name;
         symbol_name.Printf("%s", buffer.c_str());
