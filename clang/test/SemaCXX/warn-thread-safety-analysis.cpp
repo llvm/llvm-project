@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_ASSERT_CAPABILITY=0 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_ASSERT_CAPABILITY=1 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wthread-safety -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_ASSERT_CAPABILITY=0 %s
 
 // FIXME: should also run  %clang_cc1 -fsyntax-only -verify -Wthread-safety -std=c++11 -Wc++98-compat %s
 // FIXME: should also run  %clang_cc1 -fsyntax-only -verify -Wthread-safety %s
@@ -5248,3 +5249,28 @@ struct C {
 C c;
 void f() { c[A()]->g(); }
 } // namespace PR34800
+
+namespace ReturnScopedLockable {
+  template<typename Object> class SCOPED_LOCKABLE ReadLockedPtr {
+  public:
+    ReadLockedPtr(Object *ptr) SHARED_LOCK_FUNCTION((*this)->mutex);
+    ReadLockedPtr(ReadLockedPtr &&) SHARED_LOCK_FUNCTION((*this)->mutex);
+    ~ReadLockedPtr() UNLOCK_FUNCTION();
+
+    Object *operator->() const { return object; }
+
+  private:
+    Object *object;
+  };
+
+  struct Object {
+    int f() SHARED_LOCKS_REQUIRED(mutex);
+    Mutex mutex;
+  };
+
+  ReadLockedPtr<Object> get();
+  int use() {
+    auto ptr = get();
+    return ptr->f();
+  }
+}

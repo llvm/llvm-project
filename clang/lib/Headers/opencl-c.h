@@ -15421,8 +15421,8 @@ int __ovld __cnfn get_image_channel_data_type(read_write image2d_array_msaa_dept
 #define CLK_DEPTH_STENCIL     0x10BE
 #if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
 #define CLK_sRGB              0x10BF
-#define CLK_sRGBA             0x10C1
 #define CLK_sRGBx             0x10C0
+#define CLK_sRGBA             0x10C1
 #define CLK_sBGRA             0x10C2
 #define CLK_ABGR              0x10C3
 #endif //__OPENCL_C_VERSION__ >= CL_VERSION_2_0

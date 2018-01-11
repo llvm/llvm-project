@@ -8,13 +8,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "Gnu.h"
-#include "Linux.h"
 #include "Arch/ARM.h"
 #include "Arch/Mips.h"
 #include "Arch/PPC.h"
+#include "Arch/RISCV.h"
 #include "Arch/Sparc.h"
 #include "Arch/SystemZ.h"
 #include "CommonArgs.h"
+#include "Linux.h"
 #include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Config/config.h" // for GCC_INSTALL_PREFIX
 #include "clang/Driver/Compilation.h"
@@ -271,6 +272,10 @@ static const char *getLDMOption(const llvm::Triple &T, const ArgList &Args) {
     return "elf64ppc";
   case llvm::Triple::ppc64le:
     return "elf64lppc";
+  case llvm::Triple::riscv32:
+    return "elf32lriscv";
+  case llvm::Triple::riscv64:
+    return "elf64lriscv";
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel:
     return "elf32_sparc";
@@ -856,6 +861,10 @@ static bool isMicroMips(const ArgList &Args) {
   return A && A->getOption().matches(options::OPT_mmicromips);
 }
 
+static bool isRISCV(llvm::Triple::ArchType Arch) {
+  return Arch == llvm::Triple::riscv32 || Arch == llvm::Triple::riscv64;
+}
+
 static Multilib makeMultilib(StringRef commonSuffix) {
   return Multilib(commonSuffix, commonSuffix, commonSuffix);
 }
@@ -1401,6 +1410,41 @@ static void findAndroidArmMultilibs(const Driver &D,
     Result.Multilibs = AndroidArmMultilibs;
 }
 
+static void findRISCVMultilibs(const Driver &D,
+                               const llvm::Triple &TargetTriple, StringRef Path,
+                               const ArgList &Args, DetectedMultilibs &Result) {
+
+  FilterNonExistent NonExistent(Path, "/crtbegin.o", D.getVFS());
+  Multilib Ilp32 = makeMultilib("lib32/ilp32").flag("+m32").flag("+mabi=ilp32");
+  Multilib Ilp32f =
+      makeMultilib("lib32/ilp32f").flag("+m32").flag("+mabi=ilp32f");
+  Multilib Ilp32d =
+      makeMultilib("lib32/ilp32d").flag("+m32").flag("+mabi=ilp32d");
+  Multilib Lp64 = makeMultilib("lib64/lp64").flag("+m64").flag("+mabi=lp64");
+  Multilib Lp64f = makeMultilib("lib64/lp64f").flag("+m64").flag("+mabi=lp64f");
+  Multilib Lp64d = makeMultilib("lib64/lp64d").flag("+m64").flag("+mabi=lp64d");
+  MultilibSet RISCVMultilibs =
+      MultilibSet()
+          .Either({Ilp32, Ilp32f, Ilp32d, Lp64, Lp64f, Lp64d})
+          .FilterOut(NonExistent);
+
+  Multilib::flags_list Flags;
+  bool IsRV64 = TargetTriple.getArch() == llvm::Triple::riscv64;
+  StringRef ABIName = tools::riscv::getRISCVABI(Args, TargetTriple);
+
+  addMultilibFlag(!IsRV64, "m32", Flags);
+  addMultilibFlag(IsRV64, "m64", Flags);
+  addMultilibFlag(ABIName == "ilp32", "mabi=ilp32", Flags);
+  addMultilibFlag(ABIName == "ilp32f", "mabi=ilp32f", Flags);
+  addMultilibFlag(ABIName == "ilp32d", "mabi=ilp32d", Flags);
+  addMultilibFlag(ABIName == "lp64", "mabi=lp64", Flags);
+  addMultilibFlag(ABIName == "lp64f", "mabi=lp64f", Flags);
+  addMultilibFlag(ABIName == "lp64d", "mabi=lp64d", Flags);
+
+  if (RISCVMultilibs.select(Flags, Result.SelectedMultilib))
+    Result.Multilibs = RISCVMultilibs;
+}
+
 static bool findBiarchMultilibs(const Driver &D,
                                 const llvm::Triple &TargetTriple,
                                 StringRef Path, const ArgList &Args,
@@ -1783,6 +1827,10 @@ bool Generic_GCC::GCCInstallationDetector::getBiarchSibling(Multilib &M) const {
       "powerpc64le-linux-gnu", "powerpc64le-unknown-linux-gnu",
       "powerpc64le-suse-linux", "ppc64le-redhat-linux"};
 
+  static const char *const RISCV32LibDirs[] = {"/lib", "/lib32"};
+  static const char *const RISCVTriples[] = {"riscv32-unknown-linux-gnu",
+                                             "riscv64-unknown-linux-gnu"};
+
   static const char *const SPARCv8LibDirs[] = {"/lib32", "/lib"};
   static const char *const SPARCv8Triples[] = {"sparc-linux-gnu",
                                                "sparcv8-linux-gnu"};
@@ -1928,6 +1976,12 @@ bool Generic_GCC::GCCInstallationDetector::getBiarchSibling(Multilib &M) const {
     LibDirs.append(begin(PPC64LELibDirs), end(PPC64LELibDirs));
     TripleAliases.append(begin(PPC64LETriples), end(PPC64LETriples));
     break;
+  case llvm::Triple::riscv32:
+    LibDirs.append(begin(RISCV32LibDirs), end(RISCV32LibDirs));
+    BiarchLibDirs.append(begin(RISCV32LibDirs), end(RISCV32LibDirs));
+    TripleAliases.append(begin(RISCVTriples), end(RISCVTriples));
+    BiarchTripleAliases.append(begin(RISCVTriples), end(RISCVTriples));
+    break;
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel:
     LibDirs.append(begin(SPARCv8LibDirs), end(SPARCv8LibDirs));
@@ -2025,6 +2079,8 @@ bool Generic_GCC::GCCInstallationDetector::ScanGCCForMultilibs(
   } else if (tools::isMipsArch(TargetArch)) {
     if (!findMIPSMultilibs(D, TargetTriple, Path, Args, Detected))
       return false;
+  } else if (isRISCV(TargetArch)) {
+    findRISCVMultilibs(D, TargetTriple, Path, Args, Detected);
   } else if (!findBiarchMultilibs(D, TargetTriple, Path, Args,
                                   NeedsBiarchSuffix, Detected)) {
     return false;
@@ -2240,6 +2296,8 @@ bool Generic_GCC::IsIntegratedAssemblerDefault() const {
   case llvm::Triple::ppc:
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
   case llvm::Triple::systemz:
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:

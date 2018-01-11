@@ -70,6 +70,7 @@ Clang-Tidy Checks
    cppcoreguidelines-special-member-functions
    fuchsia-default-arguments
    fuchsia-overloaded-operator
+   fuchsia-statically-constructed-objects
    fuchsia-virtual-inheritance
    google-build-explicit-make-pair
    google-build-namespaces

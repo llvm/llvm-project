@@ -12,6 +12,7 @@
 #include "Arch/ARM.h"
 #include "Arch/Mips.h"
 #include "Arch/PPC.h"
+#include "Arch/RISCV.h"
 #include "Arch/Sparc.h"
 #include "Arch/SystemZ.h"
 #include "Arch/X86.h"
@@ -327,6 +328,10 @@ static void getTargetFeatures(const ToolChain &TC, const llvm::Triple &Triple,
   case llvm::Triple::ppc64le:
     ppc::getPPCTargetFeatures(D, Triple, Args, Features);
     break;
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
+    riscv::getRISCVTargetFeatures(D, Args, Features);
+    break;
   case llvm::Triple::systemz:
     systemz::getSystemZTargetFeatures(Args, Features);
     break;
@@ -545,6 +550,14 @@ static bool useFramePointerForTargetByDefault(const ArgList &Args,
     default:
       return true;
     }
+  }
+
+  switch (Triple.getArch()) {
+    case llvm::Triple::riscv32:
+    case llvm::Triple::riscv64:
+      return !areOptimizationsEnabled(Args);
+    default:
+      break;
   }
 
   if (Triple.isOSWindows()) {
@@ -1282,6 +1295,8 @@ static bool isSignedCharDefault(const llvm::Triple &Triple) {
 
   case llvm::Triple::hexagon:
   case llvm::Triple::ppc64le:
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
   case llvm::Triple::systemz:
   case llvm::Triple::xcore:
     return false;
@@ -1389,6 +1404,11 @@ void Clang::RenderTargetOptions(const llvm::Triple &EffectiveTriple,
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
     AddPPCTargetArgs(Args, CmdArgs);
+    break;
+
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
+    AddRISCVTargetArgs(Args, CmdArgs);
     break;
 
   case llvm::Triple::sparc:
@@ -1666,6 +1686,25 @@ void Clang::AddPPCTargetArgs(const ArgList &Args,
     CmdArgs.push_back("-target-abi");
     CmdArgs.push_back(ABIName);
   }
+}
+
+void Clang::AddRISCVTargetArgs(const ArgList &Args,
+                               ArgStringList &CmdArgs) const {
+  // FIXME: currently defaults to the soft-float ABIs. Will need to be
+  // expanded to select ilp32f, ilp32d, lp64f, lp64d when appropiate.
+  const char *ABIName = nullptr;
+  const llvm::Triple &Triple = getToolChain().getTriple();
+  if (Arg *A = Args.getLastArg(options::OPT_mabi_EQ))
+    ABIName = A->getValue();
+  else if (Triple.getArch() == llvm::Triple::riscv32)
+    ABIName = "ilp32";
+  else if (Triple.getArch() == llvm::Triple::riscv64)
+    ABIName = "lp64";
+  else
+    llvm_unreachable("Unexpected triple!");
+
+  CmdArgs.push_back("-target-abi");
+  CmdArgs.push_back(ABIName);
 }
 
 void Clang::AddSparcTargetArgs(const ArgList &Args,

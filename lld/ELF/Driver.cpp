@@ -584,7 +584,8 @@ static bool getCompressDebugSections(opt::InputArgList &Args) {
 static int parseInt(StringRef S, opt::Arg *Arg) {
   int V = 0;
   if (!to_integer(S, V, 10))
-    error(Arg->getSpelling() + ": number expected, but got '" + S + "'");
+    error(Arg->getSpelling() + "=" + Arg->getValue() +
+          ": number expected, but got '" + S + "'");
   return V;
 }
 
