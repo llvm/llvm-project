@@ -54,7 +54,7 @@ class FindAppInMacOSAppBundle(TestBase):
             error = lldb.SBError()
             process = target.Launch(launch_info, error)
             
-            self.assertTrue(process, "Could not create a valid process for TestApp: %s"%(error.GetCString()))
+            self.assertTrue(process.IsValid(), "Could not create a valid process for TestApp: %s"%(error.GetCString()))
             
             # Frame #0 should be at our breakpoint.
             threads = lldbutil.get_threads_stopped_at_breakpoint(process, bkpt)
