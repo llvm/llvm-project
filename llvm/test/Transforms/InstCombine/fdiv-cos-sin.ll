@@ -27,9 +27,9 @@ define double @fdiv_strict_cos_strict_sin_fast(double %a) {
   ret double %div
 }
 
-define double @fdiv_fast_cos_strict_sin_strict(double %a) {
+define double @fdiv_fast_cos_strict_sin_strict(double %a, i32* dereferenceable(2) %dummy) {
 ; CHECK-LABEL: @fdiv_fast_cos_strict_sin_strict(
-; CHECK-NEXT:    [[TAN:%.*]] = call fast double @tan(double [[A:%.*]])
+; CHECK-NEXT:    [[TAN:%.*]] = call fast double @tan(double [[A:%.*]]) #1
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv fast double 1.000000e+00, [[TAN]]
 ; CHECK-NEXT:    ret double [[TMP1]]
 ;
@@ -41,7 +41,7 @@ define double @fdiv_fast_cos_strict_sin_strict(double %a) {
 
 define double @fdiv_fast_cos_fast_sin_strict(double %a) {
 ; CHECK-LABEL: @fdiv_fast_cos_fast_sin_strict(
-; CHECK-NEXT:    [[TAN:%.*]] = call fast double @tan(double [[A:%.*]])
+; CHECK-NEXT:    [[TAN:%.*]] = call fast double @tan(double [[A:%.*]]) #1
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv fast double 1.000000e+00, [[TAN]]
 ; CHECK-NEXT:    ret double [[TMP1]]
 ;
@@ -68,7 +68,7 @@ define double @fdiv_cos_sin_fast_multiple_uses(double %a) {
 
 define double @fdiv_cos_sin_fast(double %a) {
 ; CHECK-LABEL: @fdiv_cos_sin_fast(
-; CHECK-NEXT:    [[TAN:%.*]] = call fast double @tan(double [[A:%.*]])
+; CHECK-NEXT:    [[TAN:%.*]] = call fast double @tan(double [[A:%.*]]) #1
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv fast double 1.000000e+00, [[TAN]]
 ; CHECK-NEXT:    ret double [[TMP1]]
 ;
@@ -80,7 +80,7 @@ define double @fdiv_cos_sin_fast(double %a) {
 
 define float @fdiv_cosf_sinf_fast(float %a) {
 ; CHECK-LABEL: @fdiv_cosf_sinf_fast(
-; CHECK-NEXT:    [[TANF:%.*]] = call fast float @tanf(float [[A:%.*]])
+; CHECK-NEXT:    [[TANF:%.*]] = call fast float @tanf(float [[A:%.*]]) #1
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv fast float 1.000000e+00, [[TANF]]
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
@@ -92,7 +92,7 @@ define float @fdiv_cosf_sinf_fast(float %a) {
 
 define fp128 @fdiv_cosfp128_sinfp128_fast(fp128 %a) {
 ; CHECK-LABEL: @fdiv_cosfp128_sinfp128_fast(
-; CHECK-NEXT:    [[TANL:%.*]] = call fast fp128 @tanl(fp128 [[A:%.*]])
+; CHECK-NEXT:    [[TANL:%.*]] = call fast fp128 @tanl(fp128 [[A:%.*]]) #1
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv fast fp128 0xL00000000000000003FFF000000000000, [[TANL]]
 ; CHECK-NEXT:    ret fp128 [[TMP1]]
 ;
@@ -102,12 +102,15 @@ define fp128 @fdiv_cosfp128_sinfp128_fast(fp128 %a) {
   ret fp128 %div
 }
 
-declare double @llvm.cos.f64(double)
-declare float @llvm.cos.f32(float)
-declare fp128 @llvm.cos.fp128(fp128)
+declare double @llvm.cos.f64(double) #1
+declare float @llvm.cos.f32(float) #1
+declare fp128 @llvm.cos.fp128(fp128) #1
 
-declare double @llvm.sin.f64(double)
-declare float @llvm.sin.f32(float)
-declare fp128 @llvm.sin.fp128(fp128)
+declare double @llvm.sin.f64(double) #1
+declare float @llvm.sin.f32(float) #1
+declare fp128 @llvm.sin.fp128(fp128) #1
 
 declare void @use(double)
+
+attributes #0 = { nounwind readnone speculatable }
+attributes #1 = { nounwind readnone }

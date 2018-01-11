@@ -11,6 +11,7 @@
 #include "HexagonISelDAGToDAG.h"
 #include "HexagonISelLowering.h"
 #include "HexagonTargetMachine.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/Intrinsics.h"
@@ -909,7 +910,7 @@ bool HvxSelector::selectVectorConstants(SDNode *N) {
   // selection algorithm is not aware of them. Select them directly
   // here.
   SmallVector<SDNode*,4> Loads;
-  SmallVector<SDNode*,16> WorkQ;
+  SetVector<SDNode*> WorkQ;
 
   // The DAG can change (due to CSE) during selection, so cache all the
   // unselected nodes first to avoid traversing a mutating DAG.
@@ -925,7 +926,7 @@ bool HvxSelector::selectVectorConstants(SDNode *N) {
     return false;
   };
 
-  WorkQ.push_back(N);
+  WorkQ.insert(N);
   for (unsigned i = 0; i != WorkQ.size(); ++i) {
     SDNode *W = WorkQ[i];
     if (IsLoadToSelect(W)) {
@@ -933,7 +934,7 @@ bool HvxSelector::selectVectorConstants(SDNode *N) {
       continue;
     }
     for (unsigned j = 0, f = W->getNumOperands(); j != f; ++j)
-      WorkQ.push_back(W->getOperand(j).getNode());
+      WorkQ.insert(W->getOperand(j).getNode());
   }
 
   for (SDNode *L : Loads)

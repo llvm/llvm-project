@@ -2095,25 +2095,18 @@ define <16 x i16> @psubus_16i32_max(<16 x i16> %x, <16 x i32> %y) nounwind {
 ;
 ; AVX1-LABEL: psubus_16i32_max:
 ; AVX1:       # %bb.0: # %vector.ph
-; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [65535,65535,65535,65535]
-; AVX1-NEXT:    vpminud %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vpminud %xmm4, %xmm2, %xmm2
-; AVX1-NEXT:    vpackusdw %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [65535,65535,65535,65535]
 ; AVX1-NEXT:    vpminud %xmm4, %xmm3, %xmm3
 ; AVX1-NEXT:    vpminud %xmm4, %xmm1, %xmm1
 ; AVX1-NEXT:    vpackusdw %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
+; AVX1-NEXT:    vpminud %xmm4, %xmm3, %xmm3
+; AVX1-NEXT:    vpminud %xmm4, %xmm2, %xmm2
+; AVX1-NEXT:    vpackusdw %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vpsubusw %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpsubusw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm3 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
-; AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm2 = xmm2[4],xmm4[4],xmm2[5],xmm4[5],xmm2[6],xmm4[6],xmm2[7],xmm4[7]
-; AVX1-NEXT:    vpackusdw %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4],xmm4[4],xmm0[5],xmm4[5],xmm0[6],xmm4[6],xmm0[7],xmm4[7]
-; AVX1-NEXT:    vpackusdw %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;

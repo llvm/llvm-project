@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 
 using namespace llvm;
 
@@ -223,4 +224,22 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // unconditionally spill the frame pointer and return address.
   SavedRegs.set(RISCV::X1);
   SavedRegs.set(RISCV::X8);
+}
+
+void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
+    MachineFunction &MF, RegScavenger *RS) const {
+  const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  const TargetRegisterClass *RC = &RISCV::GPRRegClass;
+  // estimateStackSize has been observed to under-estimate the final stack
+  // size, so give ourselves wiggle-room by checking for stack size
+  // representable an 11-bit signed field rather than 12-bits.
+  // FIXME: It may be possible to craft a function with a small stack that
+  // still needs an emergency spill slot for branch relaxation. This case
+  // would currently be missed.
+  if (!isInt<11>(MFI.estimateStackSize(MF))) {
+    int RegScavFI = MFI.CreateStackObject(
+        RegInfo->getSpillSize(*RC), RegInfo->getSpillAlignment(*RC), false);
+    RS->addScavengingFrameIndex(RegScavFI);
+  }
 }

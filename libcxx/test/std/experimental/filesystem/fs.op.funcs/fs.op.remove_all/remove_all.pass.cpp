@@ -64,15 +64,27 @@ TEST_CASE(test_error_reporting)
     permissions(bad_perms_file, perms::none);
 
     const path testCases[] = {
-        env.make_env_path("dne"),
         file_in_bad_dir
     };
     const auto BadRet = static_cast<std::uintmax_t>(-1);
     for (auto& p : testCases) {
         std::error_code ec;
+
         TEST_CHECK(fs::remove_all(p, ec) == BadRet);
         TEST_CHECK(ec);
         TEST_CHECK(checkThrow(p, ec));
+    }
+
+    // PR#35780
+    const path testCasesNonexistant[] = {
+        "",
+        env.make_env_path("dne")
+    };
+    for (auto &p : testCasesNonexistant) {
+        std::error_code ec;
+
+        TEST_CHECK(fs::remove_all(p) == 0);
+        TEST_CHECK(!ec);
     }
 }
 
