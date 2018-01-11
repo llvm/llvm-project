@@ -7800,7 +7800,10 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
         SDValue Op = N0.getOperand(0);
         Op = DAG.getZeroExtendInReg(Op, SDLoc(N), MinVT.getScalarType());
         AddToWorklist(Op.getNode());
-        return DAG.getZExtOrTrunc(Op, SDLoc(N), VT);
+        SDValue ZExtOrTrunc = DAG.getZExtOrTrunc(Op, SDLoc(N), VT);
+        // Transfer the debug info; the new node is equivalent to N0.
+        DAG.transferDbgValues(N0, ZExtOrTrunc);
+        return ZExtOrTrunc;
       }
     }
 
