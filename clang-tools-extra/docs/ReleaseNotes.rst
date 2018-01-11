@@ -57,7 +57,12 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
-- ...
+- New `fuchsia-statically-constructed-objects
+  <http://clang.llvm.org/extra/clang-tidy/checks/fuchsia-statically-constructed-objects.html>`_ check
+
+  Warns if global, non-trivial objects with static storage are constructed, unless the 
+  object is statically initialized with a ``constexpr`` constructor or has no 
+  explicit constructor.
 
 Improvements to include-fixer
 -----------------------------

@@ -7,10 +7,15 @@ declare void @func1()
 declare void @func2()
 declare void @func3()
 
-@llvm.global_ctors = appending global [2 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @func0, i8* null }, { i32, void ()*, i8* } { i32 42, void ()* @func1, i8* null }] 
+@llvm.global_ctors = appending global [2 x { i32, void ()*, i8* }] [
+  { i32, void ()*, i8* } { i32 65535, void ()* @func0, i8* null },
+  { i32, void ()*, i8* } { i32 42,    void ()* @func1, i8* null }
+]
 
-@llvm.global_dtors = appending global [2 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @func2, i8* null }, { i32, void ()*, i8* } { i32 42, void ()* @func3, i8* null }] 
-  
+@llvm.global_dtors = appending global [2 x { i32, void ()*, i8* }] [
+  { i32, void ()*, i8* } { i32 65535, void ()* @func2, i8* null },
+  { i32, void ()*, i8* } { i32 42,    void ()* @func3, i8* null }
+]
 
 ; CHECK:        - Type:            IMPORT
 ; CHECK-NEXT:     Imports:         

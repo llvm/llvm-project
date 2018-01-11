@@ -55,6 +55,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -967,8 +968,23 @@ void Verifier::visitDISubroutineType(const DISubroutineType &N) {
 
 void Verifier::visitDIFile(const DIFile &N) {
   AssertDI(N.getTag() == dwarf::DW_TAG_file_type, "invalid tag", &N);
-  AssertDI((N.getChecksumKind() != DIFile::CSK_None ||
-            N.getChecksum().empty()), "invalid checksum kind", &N);
+  AssertDI(N.getChecksumKind() <= DIFile::CSK_Last, "invalid checksum kind",
+           &N);
+  size_t Size;
+  switch (N.getChecksumKind()) {
+  case DIFile::CSK_None:
+    Size = 0;
+    break;
+  case DIFile::CSK_MD5:
+    Size = 32;
+    break;
+  case DIFile::CSK_SHA1:
+    Size = 40;
+    break;
+  }
+  AssertDI(N.getChecksum().size() == Size, "invalid checksum length", &N);
+  AssertDI(N.getChecksum().find_if_not(llvm::isHexDigit) == StringRef::npos,
+           "invalid checksum", &N);
 }
 
 void Verifier::visitDICompileUnit(const DICompileUnit &N) {
