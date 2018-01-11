@@ -103,6 +103,37 @@ define i8 @umin3_not(i8 %x, i8 %y, i8 %z) {
   ret i8 %r
 }
 
+; PR35875 - https://bugs.llvm.org/show_bug.cgi?id=35875
+
+define i8 @umin3_not_more_uses(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @umin3_not_more_uses(
+; CHECK-NEXT:    [[NX:%.*]] = xor i8 %x, -1
+; CHECK-NEXT:    [[NY:%.*]] = xor i8 %y, -1
+; CHECK-NEXT:    [[NZ:%.*]] = xor i8 %z, -1
+; CHECK-NEXT:    [[CMPXZ:%.*]] = icmp ult i8 [[NX]], [[NZ]]
+; CHECK-NEXT:    [[MINXZ:%.*]] = select i1 [[CMPXZ]], i8 [[NX]], i8 [[NZ]]
+; CHECK-NEXT:    [[CMPYZ:%.*]] = icmp ult i8 [[NY]], [[NZ]]
+; CHECK-NEXT:    [[MINYZ:%.*]] = select i1 [[CMPYZ]], i8 [[NY]], i8 [[NZ]]
+; CHECK-NEXT:    [[CMPYX:%.*]] = icmp ult i8 %y, %x
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMPYX]], i8 [[MINXZ]], i8 [[MINYZ]]
+; CHECK-NEXT:    call void @extra_use(i8 [[NX]])
+; CHECK-NEXT:    call void @extra_use(i8 [[NY]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %nx = xor i8 %x, -1
+  %ny = xor i8 %y, -1
+  %nz = xor i8 %z, -1
+  %cmpxz = icmp ult i8 %nx, %nz
+  %minxz = select i1 %cmpxz, i8 %nx, i8 %nz
+  %cmpyz = icmp ult i8 %ny, %nz
+  %minyz = select i1 %cmpyz, i8 %ny, i8 %nz
+  %cmpyx = icmp ult i8 %y, %x
+  %r = select i1 %cmpyx, i8 %minxz, i8 %minyz
+  call void @extra_use(i8 %nx)
+  call void @extra_use(i8 %ny)
+  ret i8 %r
+}
+
 define i32 @compute_min_3(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @compute_min_3(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 %x, %y
