@@ -250,13 +250,3 @@ std::unique_ptr<PBQPRAConstraint>
 AArch64Subtarget::getCustomPBQPConstraints() const {
   return balanceFPOps() ? llvm::make_unique<A57ChainingConstraint>() : nullptr;
 }
-
-void AArch64Subtarget::mirFileLoaded(MachineFunction &MF) const {
-  // We usually compute max call frame size after ISel. Do the computation now
-  // if the .mir file didn't specify it. Note that this will probably give you
-  // bogus values after PEI has eliminated the callframe setup/destroy pseudo
-  // instructions, specify explicitely if you need it to be correct.
-  MachineFrameInfo &MFI = MF.getFrameInfo();
-  if (!MFI.isMaxCallFrameSizeComputed())
-    MFI.computeMaxCallFrameSize(MF);
-}

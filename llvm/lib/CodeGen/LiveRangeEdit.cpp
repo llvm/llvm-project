@@ -364,7 +364,7 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink,
       VNInfo *VNI = NewLI.getNextValue(Idx, LIS.getVNInfoAllocator());
       NewLI.addSegment(LiveInterval::Segment(Idx, Idx.getDeadSlot(), VNI));
       pop_back();
-      markDeadRemat(MI);
+      DeadRemats->insert(MI);
       const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
       MI->substituteRegister(Dest, NewLI.reg, 0, TRI);
       MI->getOperand(0).setIsDead(true);

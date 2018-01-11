@@ -753,7 +753,6 @@
 		4CF52AF8142829390051E832 /* SBFileSpecList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CF52AF7142829390051E832 /* SBFileSpecList.cpp */; };
 		54067BF11DF2041B00749AA5 /* UBSanRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 54067BEC1DF2034B00749AA5 /* UBSanRuntime.cpp */; };
 		6B74D89B200696BB0074051B /* Environment.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 22DC561920064C9600A7E9E8 /* Environment.cpp */; };
-		6B74D89D2006972E0074051B /* Environment.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 6B74D89C2006972D0074051B /* Environment.h */; };
 		6D0F61431C80AAAE00A4ECEE /* JavaASTContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61411C80AAAA00A4ECEE /* JavaASTContext.cpp */; };
 		6D0F61481C80AAD600A4ECEE /* DWARFASTParserJava.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61441C80AACF00A4ECEE /* DWARFASTParserJava.cpp */; };
 		6D0F614E1C80AB0700A4ECEE /* JavaLanguageRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F614A1C80AB0400A4ECEE /* JavaLanguageRuntime.cpp */; };
@@ -886,8 +885,6 @@
 		9A1E595D1EB2B141002206A5 /* SBTraceOptions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A1E59531EB2B0B9002206A5 /* SBTraceOptions.cpp */; };
 		9A2057031F3A605200F6C293 /* VASprintfTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A3D43C41F3150D200EB767C /* VASprintfTest.cpp */; };
 		9A2057081F3B819100F6C293 /* MemoryRegionInfoTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A2057061F3B818600F6C293 /* MemoryRegionInfoTest.cpp */; };
-		9A20570F1F3B821A00F6C293 /* test-dwarf.cpp in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9A20570D1F3B821A00F6C293 /* test-dwarf.cpp */; };
-		9A2057101F3B821A00F6C293 /* test-dwarf.exe in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9A20570E1F3B821A00F6C293 /* test-dwarf.exe */; };
 		9A2057121F3B824B00F6C293 /* SymbolFileDWARFTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A20570A1F3B81F300F6C293 /* SymbolFileDWARFTests.cpp */; };
 		9A2057171F3B861400F6C293 /* TestDWARFCallFrameInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A2057131F3B860D00F6C293 /* TestDWARFCallFrameInfo.cpp */; };
 		9A2057181F3B861400F6C293 /* TestType.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A2057141F3B860D00F6C293 /* TestType.cpp */; };
@@ -1247,9 +1244,6 @@
 			dstPath = "$(DEVELOPER_INSTALL_DIR)/usr/share/man/man1";
 			dstSubfolderSpec = 0;
 			files = (
-				6B74D89D2006972E0074051B /* Environment.h in CopyFiles */,
-				9A20570F1F3B821A00F6C293 /* test-dwarf.cpp in CopyFiles */,
-				9A2057101F3B821A00F6C293 /* test-dwarf.exe in CopyFiles */,
 				AF90106515AB7D3600FF120D /* lldb.1 in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 1;
@@ -2895,8 +2889,6 @@
 		9A1E59591EB2B10D002206A5 /* SBTraceOptions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBTraceOptions.h; path = include/lldb/API/SBTraceOptions.h; sourceTree = "<group>"; };
 		9A2057061F3B818600F6C293 /* MemoryRegionInfoTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MemoryRegionInfoTest.cpp; path = Target/MemoryRegionInfoTest.cpp; sourceTree = "<group>"; };
 		9A20570A1F3B81F300F6C293 /* SymbolFileDWARFTests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SymbolFileDWARFTests.cpp; path = DWARF/SymbolFileDWARFTests.cpp; sourceTree = "<group>"; };
-		9A20570D1F3B821A00F6C293 /* test-dwarf.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = "test-dwarf.cpp"; path = "DWARF/Inputs/test-dwarf.cpp"; sourceTree = "<group>"; };
-		9A20570E1F3B821A00F6C293 /* test-dwarf.exe */ = {isa = PBXFileReference; lastKnownFileType = file; name = "test-dwarf.exe"; path = "DWARF/Inputs/test-dwarf.exe"; sourceTree = "<group>"; };
 		9A2057131F3B860D00F6C293 /* TestDWARFCallFrameInfo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TestDWARFCallFrameInfo.cpp; sourceTree = "<group>"; };
 		9A2057141F3B860D00F6C293 /* TestType.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TestType.cpp; sourceTree = "<group>"; };
 		9A20571A1F3B866F00F6C293 /* PlatformDarwinTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PlatformDarwinTest.cpp; path = Platform/PlatformDarwinTest.cpp; sourceTree = "<group>"; };
@@ -3150,6 +3142,8 @@
 		AFDFDFD019E34D3400EAE509 /* ConnectionFileDescriptorPosix.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ConnectionFileDescriptorPosix.cpp; sourceTree = "<group>"; };
 		AFEC3361194A8ABA00FF05C6 /* StructuredData.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StructuredData.cpp; path = source/Utility/StructuredData.cpp; sourceTree = "<group>"; };
 		AFEC5FD51D94F9380076A480 /* Testx86AssemblyInspectionEngine.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Testx86AssemblyInspectionEngine.cpp; path = UnwindAssembly/x86/Testx86AssemblyInspectionEngine.cpp; sourceTree = "<group>"; };
+		AFF62FDC2006D4D4003644F9 /* test-dwarf.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = "test-dwarf.cpp"; path = "DWARF/Inputs/test-dwarf.cpp"; sourceTree = "<group>"; };
+		AFF62FDD2006D4D4003644F9 /* test-dwarf.exe */ = {isa = PBXFileReference; lastKnownFileType = file; name = "test-dwarf.exe"; path = "DWARF/Inputs/test-dwarf.exe"; sourceTree = "<group>"; };
 		AFF87C86150FF669000E1742 /* com.apple.debugserver.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = com.apple.debugserver.plist; path = tools/debugserver/source/com.apple.debugserver.plist; sourceTree = "<group>"; };
 		AFF87C8A150FF677000E1742 /* com.apple.debugserver.applist.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = com.apple.debugserver.applist.plist; path = tools/debugserver/source/com.apple.debugserver.applist.plist; sourceTree = "<group>"; };
 		AFF87C8C150FF680000E1742 /* com.apple.debugserver.applist.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = com.apple.debugserver.applist.plist; path = tools/debugserver/source/com.apple.debugserver.applist.plist; sourceTree = "<group>"; };
@@ -6408,8 +6402,8 @@
 		9A20570C1F3B81F800F6C293 /* Inputs */ = {
 			isa = PBXGroup;
 			children = (
-				9A20570D1F3B821A00F6C293 /* test-dwarf.cpp */,
-				9A20570E1F3B821A00F6C293 /* test-dwarf.exe */,
+				AFF62FDC2006D4D4003644F9 /* test-dwarf.cpp */,
+				AFF62FDD2006D4D4003644F9 /* test-dwarf.exe */,
 			);
 			name = Inputs;
 			sourceTree = "<group>";
