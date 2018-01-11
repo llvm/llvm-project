@@ -65,14 +65,14 @@ To upload a new patch:
 * Click *Differential*.
 * Click *+ Create Diff*.
 * Paste the text diff or browse to the patch file. Click *Create Diff*.
-* Leave the Repository field blank.
+* In the Repository field, enter the name of the project (LLVM, Clang,
+  etc.) to which the review should be sent.
 * Leave the drop down on *Create a new Revision...* and click *Continue*.
 * Enter a descriptive title and summary.  The title and summary are usually
   in the form of a :ref:`commit message <commit messages>`.
-* Add reviewers (see below for advice) and subscribe mailing
-  lists that you want to be included in the review. If your patch is
-  for LLVM, add llvm-commits as a Subscriber; if your patch is for Clang,
-  add cfe-commits.
+* Add reviewers (see below for advice). (If you set the Repository field
+  correctly, llvm-commits or cfe-commits will be subscribed automatically;
+  otherwise, you will have to manually subscribe them.)
 * Leave the Repository and Project fields blank.
 * Click *Save*.
 
