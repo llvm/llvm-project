@@ -595,6 +595,7 @@ void CoroCloner::create() {
   NewF->setLinkage(llvm::GlobalValue::ExternalLinkage);
 
   CloneFunctionInto(NewF, &OrigF, VMap, /*ModuleLevelChanges=*/true, Returns);
+  NewF->setDSOLocal(true);
 
   NewF->setLinkage(savedLinkage);
   NewF->setVisibility(savedVisibility);

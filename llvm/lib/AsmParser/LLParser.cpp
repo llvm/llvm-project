@@ -715,6 +715,13 @@ static bool isValidVisibilityForLinkage(unsigned V, unsigned L) {
          (GlobalValue::VisibilityTypes)V == GlobalValue::DefaultVisibility;
 }
 
+// If there was an explicit dso_local, update GV. In the absence of an explicit
+// dso_local we keep the default value.
+static void maybeSetDSOLocal(bool DSOLocal, GlobalValue &GV) {
+  if (DSOLocal)
+    GV.setDSOLocal(true);
+}
+
 /// parseIndirectSymbol:
 ///   ::= GlobalVar '=' OptionalLinkage OptionalPreemptionSpecifier 
 ///                     OptionalVisibility OptionalDLLStorageClass
@@ -826,7 +833,7 @@ bool LLParser::parseIndirectSymbol(const std::string &Name, LocTy NameLoc,
   GA->setVisibility((GlobalValue::VisibilityTypes)Visibility);
   GA->setDLLStorageClass((GlobalValue::DLLStorageClassTypes)DLLStorageClass);
   GA->setUnnamedAddr(UnnamedAddr);
-  GA->setDSOLocal(DSOLocal);
+  maybeSetDSOLocal(DSOLocal, *GA);
 
   if (Name.empty())
     NumberedVals.push_back(GA.get());
@@ -947,7 +954,7 @@ bool LLParser::ParseGlobal(const std::string &Name, LocTy NameLoc,
     GV->setInitializer(Init);
   GV->setConstant(IsConstant);
   GV->setLinkage((GlobalValue::LinkageTypes)Linkage);
-  GV->setDSOLocal(DSOLocal);
+  maybeSetDSOLocal(DSOLocal, *GV);
   GV->setVisibility((GlobalValue::VisibilityTypes)Visibility);
   GV->setDLLStorageClass((GlobalValue::DLLStorageClassTypes)DLLStorageClass);
   GV->setExternallyInitialized(IsExternallyInitialized);
@@ -4923,7 +4930,7 @@ bool LLParser::ParseFunctionHeader(Function *&Fn, bool isDefine) {
     NumberedVals.push_back(Fn);
 
   Fn->setLinkage((GlobalValue::LinkageTypes)Linkage);
-  Fn->setDSOLocal(DSOLocal);
+  maybeSetDSOLocal(DSOLocal, *Fn);
   Fn->setVisibility((GlobalValue::VisibilityTypes)Visibility);
   Fn->setDLLStorageClass((GlobalValue::DLLStorageClassTypes)DLLStorageClass);
   Fn->setCallingConv(CC);

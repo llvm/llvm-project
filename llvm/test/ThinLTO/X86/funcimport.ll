@@ -9,12 +9,12 @@
 ; Ensure statics are promoted/renamed correctly from this file (all but
 ; constant variable need promotion).
 ; RUN: llvm-lto -thinlto-action=promote %t.bc -thinlto-index=%t3.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=EXPORTSTATIC
-; EXPORTSTATIC-DAG: @staticvar.llvm.0 = hidden global
+; EXPORTSTATIC-DAG: @staticvar.llvm.0 = dso_local hidden global
 ; Eventually @staticconstvar can be exported as a copy and not promoted
-; EXPORTSTATIC-DAG: @staticconstvar.llvm.0 = hidden unnamed_addr constant
-; EXPORTSTATIC-DAG: @P.llvm.0 = hidden global void ()* null
-; EXPORTSTATIC-DAG: define hidden i32 @staticfunc.llvm.0
-; EXPORTSTATIC-DAG: define hidden void @staticfunc2.llvm.0
+; EXPORTSTATIC-DAG: @staticconstvar.llvm.0 = dso_local hidden unnamed_addr constant
+; EXPORTSTATIC-DAG: @P.llvm.0 = dso_local hidden global void ()* null
+; EXPORTSTATIC-DAG: define dso_local hidden i32 @staticfunc.llvm.0
+; EXPORTSTATIC-DAG: define dso_local hidden void @staticfunc2.llvm.0
 
 ; Ensure that weak alias to an imported function is correctly turned into
 ; a declaration.

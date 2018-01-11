@@ -146,7 +146,7 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
       GV->hasExternalWeakLinkage())
     return false;
 
-  if (GV && (GV->hasLocalLinkage() || !GV->hasDefaultVisibility()))
+  if (GV && !GV->hasDefaultVisibility())
     return true;
 
   if (TT.isOSBinFormatMachO()) {

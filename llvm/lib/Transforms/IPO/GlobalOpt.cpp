@@ -2486,6 +2486,7 @@ OptimizeGlobalAliases(Module &M,
       // Give the aliasee the name, linkage and other attributes of the alias.
       Target->takeName(&*J);
       Target->setLinkage(J->getLinkage());
+      Target->setDSOLocal(J->isDSOLocal());
       Target->setVisibility(J->getVisibility());
       Target->setDLLStorageClass(J->getDLLStorageClass());
 
