@@ -1934,19 +1934,5 @@ define <8 x float> @stack_fold_xorps_ymm(<8 x float> %a0, <8 x float> %a1) {
   ret <8 x float> %6
 }
 
-define <4 x float> @stack_nofold_insertps(<8 x float> %a0, <8 x float> %a1) {
-; Cannot fold this without changing the immediate.
-; CHECK-LABEL: stack_nofold_insertps
-; CHECK:       32-byte Spill
-; CHECK:       nop
-; CHECK:       32-byte Reload
-; CHECK:       vinsertps $179, {{%xmm., %xmm., %xmm.}}
-  %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %v0 = shufflevector <8 x float> %a0, <8 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v1 = shufflevector <8 x float> %a1, <8 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %res = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %v0, <4 x float> %v1, i8 179)
-  ret <4 x float> %res
-}
-
 attributes #0 = { "unsafe-fp-math"="false" }
 attributes #1 = { "unsafe-fp-math"="true" }
