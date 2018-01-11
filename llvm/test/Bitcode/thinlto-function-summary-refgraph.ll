@@ -50,7 +50,7 @@
 ; a reference to it when reached while earlier analyzing the phi using its
 ; return value:
 ; op0=Y op4=func2
-; CHECK-DAG:    <PERMODULE {{.*}} op0=8 op1=8 {{.*}} op4=0 op5=3/>
+; CHECK-DAG:    <PERMODULE {{.*}} op0=8 op1=72 {{.*}} op4=0 op5=3/>
 ; Function Z contains call to func2, and ensures we don't incorrectly add
 ; a reference to it when reached while analyzing subsequent use of its return
 ; value:

@@ -1122,7 +1122,8 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
       continue;
 
     // If the symbol is not defined in this translation unit, import it.
-    if (!WS.isDefined(/*SetUsed=*/false) || WS.isVariable()) {
+    if ((!WS.isDefined(/*SetUsed=*/false) && !WS.isComdat()) ||
+        WS.isVariable()) {
       WasmImport Import;
       Import.ModuleName = WS.getModuleName();
       Import.FieldName = WS.getName();

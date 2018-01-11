@@ -13,12 +13,12 @@
 ; Ensure statics are promoted/renamed correctly from this file (all but
 ; constant variable need promotion).
 ; RUN: llvm-link %t.bc -summary-index=%t3.thinlto.bc -S | FileCheck %s --check-prefix=EXPORTSTATIC
-; EXPORTSTATIC-DAG: @staticvar.llvm.{{.*}} = hidden global
+; EXPORTSTATIC-DAG: @staticvar.llvm.{{.*}} = dso_local hidden global
 ; Eventually @staticconstvar can be exported as a copy and not promoted
-; EXPORTSTATIC-DAG: @staticconstvar.llvm.0 = hidden unnamed_addr constant
-; EXPORTSTATIC-DAG: @P.llvm.{{.*}} = hidden global void ()* null
-; EXPORTSTATIC-DAG: define hidden i32 @staticfunc.llvm.
-; EXPORTSTATIC-DAG: define hidden void @staticfunc2.llvm.
+; EXPORTSTATIC-DAG: @staticconstvar.llvm.0 = dso_local hidden unnamed_addr constant
+; EXPORTSTATIC-DAG: @P.llvm.{{.*}} = dso_local hidden global void ()* null
+; EXPORTSTATIC-DAG: define dso_local hidden i32 @staticfunc.llvm.
+; EXPORTSTATIC-DAG: define dso_local hidden void @staticfunc2.llvm.
 
 ; Ensure that both weak alias to an imported function and strong alias to a
 ; non-imported function are correctly turned into declarations.
@@ -67,13 +67,13 @@
 ; Ensure that imported static variable and function references are correctly
 ; promoted and renamed (including static constant variable).
 ; RUN: llvm-link %t2.bc -summary-index=%t3.thinlto.bc -import=referencestatics:%t.bc -S | FileCheck %s --check-prefix=IMPORTSTATIC
-; IMPORTSTATIC-DAG: @staticvar.llvm.{{.*}} = external hidden global
+; IMPORTSTATIC-DAG: @staticvar.llvm.{{.*}} = external dso_local hidden global
 ; Eventually @staticconstvar can be imported as a copy
-; IMPORTSTATIC-DAG: @staticconstvar.llvm.{{.*}} = external hidden unnamed_addr constant
+; IMPORTSTATIC-DAG: @staticconstvar.llvm.{{.*}} = external dso_local hidden unnamed_addr constant
 ; IMPORTSTATIC-DAG: define available_externally i32 @referencestatics
 ; IMPORTSTATIC-DAG: %call = call i32 @staticfunc.llvm.
 ; IMPORTSTATIC-DAG: %0 = load i32, i32* @staticvar.llvm.
-; IMPORTSTATIC-DAG: declare hidden i32 @staticfunc.llvm.
+; IMPORTSTATIC-DAG: declare dso_local hidden i32 @staticfunc.llvm.
 
 ; Ensure that imported global (external) function and variable references
 ; are handled correctly (including referenced variable imported as
@@ -90,7 +90,7 @@
 
 ; Ensure that imported static function pointer correctly promoted and renamed.
 ; RUN: llvm-link %t2.bc -summary-index=%t3.thinlto.bc -import=callfuncptr:%t.bc -S | FileCheck %s --check-prefix=IMPORTFUNCPTR
-; IMPORTFUNCPTR-DAG: @P.llvm.{{.*}} = external hidden global void ()*
+; IMPORTFUNCPTR-DAG: @P.llvm.{{.*}} = external dso_local hidden global void ()*
 ; IMPORTFUNCPTR-DAG: define available_externally void @callfuncptr
 ; IMPORTFUNCPTR-DAG: %0 = load void ()*, void ()** @P.llvm.
 

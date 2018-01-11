@@ -12,8 +12,8 @@
 ; BCA0: <GLOBALVAL_SUMMARY_BLOCK
 ; BCA1-NOT: <GLOBALVAL_SUMMARY_BLOCK
 
-; M0: @"g$581d7631532fa146ba4061179da39272" = external hidden global i8{{$}}
-; M1: @"g$581d7631532fa146ba4061179da39272" = hidden global i8 42, !type !0
+; M0: @"g$581d7631532fa146ba4061179da39272" = external dso_local hidden global i8{{$}}
+; M1: @"g$581d7631532fa146ba4061179da39272" = dso_local hidden global i8 42, !type !0
 @g = internal global i8 42, !type !0
 
 ; M0: define i8* @f()
