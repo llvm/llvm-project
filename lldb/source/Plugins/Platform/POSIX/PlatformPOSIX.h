@@ -85,7 +85,7 @@ public:
 
   const lldb::UnixSignalsSP &GetRemoteUnixSignals() override;
 
-  size_t GetEnvironment(lldb_private::StringList &environment) override;
+  lldb_private::Environment GetEnvironment() override;
 
   bool IsConnected() const override;
 

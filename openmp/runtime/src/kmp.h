@@ -2788,6 +2788,7 @@ extern char const *__kmp_barrier_pattern_name[bp_last_bar];
 /* Global Locks */
 extern kmp_bootstrap_lock_t __kmp_initz_lock; /* control initialization */
 extern kmp_bootstrap_lock_t __kmp_forkjoin_lock; /* control fork/join access */
+extern kmp_bootstrap_lock_t __kmp_task_team_lock;
 extern kmp_bootstrap_lock_t
     __kmp_exit_lock; /* exit() is not always thread-safe */
 #if KMP_USE_MONITOR
@@ -2976,6 +2977,7 @@ extern kmp_info_t **__kmp_threads; /* Descriptors for the threads */
 /* read/write: lock */
 extern volatile kmp_team_t *__kmp_team_pool;
 extern volatile kmp_info_t *__kmp_thread_pool;
+extern kmp_info_t *__kmp_thread_pool_insert_pt;
 
 // total num threads reachable from some root thread including all root threads
 extern volatile int __kmp_nth;

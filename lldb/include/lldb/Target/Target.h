@@ -115,9 +115,8 @@ public:
 
   void SetRunArguments(const Args &args);
 
-  size_t GetEnvironmentAsArgs(Args &env) const;
-
-  void SetEnvironmentFromArgs(const Args &env);
+  Environment GetEnvironment() const;
+  void SetEnvironment(Environment env);
 
   bool GetSkipPrologue() const;
 

@@ -21,6 +21,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 // Project includes
+#include "lldb/Utility/Environment.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-types.h"
 #include "lldb/lldb-types.h"
@@ -94,6 +95,12 @@ public:
   /// Destructor.
   //------------------------------------------------------------------
   ~Args();
+
+  explicit Args(const Environment &env) : Args() {
+    SetArguments(const_cast<const char **>(env.getEnvp().get()));
+  }
+
+  explicit operator Environment() const { return GetConstArgumentVector(); }
 
   //------------------------------------------------------------------
   /// Dump all entries to the stream \a s using label \a label_name.
@@ -432,38 +439,6 @@ public:
 
   static std::string EscapeLLDBCommandArgument(const std::string &arg,
                                                char quote_char);
-
-  //------------------------------------------------------------------
-  /// Add or replace an environment variable with the given value.
-  ///
-  /// This command adds the environment variable if it is not already
-  /// present using the given value.  If the environment variable is
-  /// already in the list, it replaces the first such occurrence
-  /// with the new value.
-  //------------------------------------------------------------------
-  void AddOrReplaceEnvironmentVariable(llvm::StringRef env_var_name,
-                                       llvm::StringRef new_value);
-
-  /// Return whether a given environment variable exists.
-  ///
-  /// This command treats Args like a list of environment variables,
-  /// as used in ProcessLaunchInfo.  It treats each argument as
-  /// an {env_var_name}={value} or an {env_var_name} entry.
-  ///
-  /// @param[in] env_var_name
-  ///     Specifies the name of the environment variable to check.
-  ///
-  /// @param[out] argument_index
-  ///     If non-null, then when the environment variable is found,
-  ///     the index of the argument position will be returned in
-  ///     the size_t pointed to by this argument.
-  ///
-  /// @return
-  ///     true if the specified env var name exists in the list in
-  ///     either of the above-mentioned formats; otherwise, false.
-  //------------------------------------------------------------------
-  bool ContainsEnvironmentVariable(llvm::StringRef env_var_name,
-                                   size_t *argument_index = nullptr) const;
 
 private:
   size_t FindArgumentIndexForOption(Option *long_options,

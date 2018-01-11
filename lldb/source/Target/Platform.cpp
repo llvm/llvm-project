@@ -1539,10 +1539,7 @@ lldb_private::Status OptionGroupPlatformCaching::SetOptionValue(
   return error;
 }
 
-size_t Platform::GetEnvironment(StringList &environment) {
-  environment.Clear();
-  return false;
-}
+Environment Platform::GetEnvironment() { return Environment(); }
 
 const std::vector<ConstString> &Platform::GetTrapHandlerSymbolNames() {
   if (!m_calculated_trap_handlers) {
