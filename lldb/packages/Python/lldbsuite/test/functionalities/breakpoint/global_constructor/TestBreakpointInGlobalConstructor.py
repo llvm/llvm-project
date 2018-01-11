@@ -17,23 +17,23 @@ class TestBreakpointInGlobalConstructors(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
-    def test(self):
-        self.build()
+    def setUp(self):
+        TestBase.setUp(self)
         self.line_foo = line_number('foo.cpp', '// !BR_foo')
         self.line_main = line_number('main.cpp', '// !BR_main')
 
-        target = self.dbg.CreateTarget("a.out")
-        self.assertTrue(target, VALID_TARGET)
-
-        env= self.registerSharedLibrariesWithTarget(target, ["foo"])
+    @expectedFailureAll(bugnumber="llvm.org/pr35480", oslist=["linux"])
+    def test(self):
+        self.build()
+        exe = os.path.join(os.getcwd(), "a.out")
+        self.runCmd("file %s" % exe)
 
         bp_main = lldbutil.run_break_set_by_file_and_line(
             self, 'main.cpp', self.line_main)
         bp_foo = lldbutil.run_break_set_by_file_and_line(
             self, 'foo.cpp', self.line_foo)
 
-        process = target.LaunchSimple(
-            None, env, self.get_process_working_directory())
+        self.runCmd("run")
 
         self.assertIsNotNone(
             lldbutil.get_one_thread_stopped_at_breakpoint_id(

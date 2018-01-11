@@ -233,12 +233,6 @@ public:
     return Rematted.count(ParentVNI);
   }
 
-  void markDeadRemat(MachineInstr *inst) {
-    // DeadRemats is an optional field.
-    if (DeadRemats)
-      DeadRemats->insert(inst);
-  }
-
   /// eraseVirtReg - Notify the delegate that Reg is no longer in use, and try
   /// to erase it from LIS.
   void eraseVirtReg(unsigned Reg);
