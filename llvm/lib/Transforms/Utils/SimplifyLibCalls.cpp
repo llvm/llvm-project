@@ -104,21 +104,6 @@ static bool callHasFloatingPointArgument(const CallInst *CI) {
   });
 }
 
-/// \brief Check whether the overloaded unary floating point function
-/// corresponding to \a Ty is available.
-static bool hasUnaryFloatFn(const TargetLibraryInfo *TLI, Type *Ty,
-                            LibFunc DoubleFn, LibFunc FloatFn,
-                            LibFunc LongDoubleFn) {
-  switch (Ty->getTypeID()) {
-  case Type::FloatTyID:
-    return TLI->has(FloatFn);
-  case Type::DoubleTyID:
-    return TLI->has(DoubleFn);
-  default:
-    return TLI->has(LongDoubleFn);
-  }
-}
-
 //===----------------------------------------------------------------------===//
 // String and Memory Library Call Optimizations
 //===----------------------------------------------------------------------===//

@@ -1094,11 +1094,9 @@ define void @test20(<2 x float>%a1, <2 x float*> %ptr, <2 x i1> %mask) {
 ;
 ; SKX-LABEL: test20:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    # kill: def %xmm1 killed %xmm1 def %ymm1
 ; SKX-NEXT:    vpsllq $63, %xmm2, %xmm2
 ; SKX-NEXT:    vptestmq %xmm2, %xmm2, %k1
-; SKX-NEXT:    vscatterqps %xmm0, (,%ymm1) {%k1}
-; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    vscatterqps %xmm0, (,%xmm1) {%k1}
 ; SKX-NEXT:    retq
 ;
 ; SKX_32-LABEL: test20:
@@ -1119,45 +1117,41 @@ define void @test21(<2 x i32>%a1, <2 x i32*> %ptr, <2 x i1>%mask) {
 ; KNL_64-NEXT:    # kill: def %xmm1 killed %xmm1 def %zmm1
 ; KNL_64-NEXT:    vpsllq $63, %xmm2, %xmm2
 ; KNL_64-NEXT:    vptestmq %zmm2, %zmm2, %k0
+; KNL_64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; KNL_64-NEXT:    kshiftlw $14, %k0, %k0
 ; KNL_64-NEXT:    kshiftrw $14, %k0, %k1
-; KNL_64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; KNL_64-NEXT:    vpscatterqd %ymm0, (,%zmm1) {%k1}
 ; KNL_64-NEXT:    vzeroupper
 ; KNL_64-NEXT:    retq
 ;
 ; KNL_32-LABEL: test21:
 ; KNL_32:       # %bb.0:
-; KNL_32-NEXT:    vpsllq $32, %xmm1, %xmm1
-; KNL_32-NEXT:    vpsraq $32, %zmm1, %zmm1
 ; KNL_32-NEXT:    vpsllq $63, %xmm2, %xmm2
 ; KNL_32-NEXT:    vptestmq %zmm2, %zmm2, %k0
+; KNL_32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; KNL_32-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; KNL_32-NEXT:    vpmovsxdq %ymm1, %zmm1
 ; KNL_32-NEXT:    kshiftlw $14, %k0, %k0
 ; KNL_32-NEXT:    kshiftrw $14, %k0, %k1
-; KNL_32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; KNL_32-NEXT:    vpscatterqd %ymm0, (,%zmm1) {%k1}
 ; KNL_32-NEXT:    vzeroupper
 ; KNL_32-NEXT:    retl
 ;
 ; SKX-LABEL: test21:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    # kill: def %xmm1 killed %xmm1 def %ymm1
 ; SKX-NEXT:    vpsllq $63, %xmm2, %xmm2
 ; SKX-NEXT:    vptestmq %xmm2, %xmm2, %k1
 ; SKX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SKX-NEXT:    vpscatterqd %xmm0, (,%ymm1) {%k1}
-; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    vpscatterqd %xmm0, (,%xmm1) {%k1}
 ; SKX-NEXT:    retq
 ;
 ; SKX_32-LABEL: test21:
 ; SKX_32:       # %bb.0:
-; SKX_32-NEXT:    vpsllq $32, %xmm1, %xmm1
-; SKX_32-NEXT:    vpsraq $32, %xmm1, %xmm1
 ; SKX_32-NEXT:    vpsllq $63, %xmm2, %xmm2
 ; SKX_32-NEXT:    vptestmq %xmm2, %xmm2, %k1
 ; SKX_32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SKX_32-NEXT:    vpscatterqd %xmm0, (,%ymm1) {%k1}
-; SKX_32-NEXT:    vzeroupper
+; SKX_32-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; SKX_32-NEXT:    vpscatterdd %xmm0, (,%xmm1) {%k1}
 ; SKX_32-NEXT:    retl
   call void @llvm.masked.scatter.v2i32.v2p0i32(<2 x i32> %a1, <2 x i32*> %ptr, i32 4, <2 x i1> %mask)
   ret void
@@ -1594,9 +1588,9 @@ define void @test28(<2 x i32>%a1, <2 x i32*> %ptr) {
 ;
 ; KNL_32-LABEL: test28:
 ; KNL_32:       # %bb.0:
-; KNL_32-NEXT:    vpsllq $32, %xmm1, %xmm1
-; KNL_32-NEXT:    vpsraq $32, %zmm1, %zmm1
 ; KNL_32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; KNL_32-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; KNL_32-NEXT:    vpmovsxdq %ymm1, %zmm1
 ; KNL_32-NEXT:    movb $3, %al
 ; KNL_32-NEXT:    kmovw %eax, %k1
 ; KNL_32-NEXT:    vpscatterqd %ymm0, (,%zmm1) {%k1}
@@ -1605,23 +1599,18 @@ define void @test28(<2 x i32>%a1, <2 x i32*> %ptr) {
 ;
 ; SKX-LABEL: test28:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    # kill: def %xmm1 killed %xmm1 def %ymm1
-; SKX-NEXT:    movb $3, %al
-; SKX-NEXT:    kmovw %eax, %k1
 ; SKX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SKX-NEXT:    vpscatterqd %xmm0, (,%ymm1) {%k1}
-; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    kxnorw %k0, %k0, %k1
+; SKX-NEXT:    vpscatterqd %xmm0, (,%xmm1) {%k1}
 ; SKX-NEXT:    retq
 ;
 ; SKX_32-LABEL: test28:
 ; SKX_32:       # %bb.0:
-; SKX_32-NEXT:    vpsllq $32, %xmm1, %xmm1
-; SKX_32-NEXT:    vpsraq $32, %xmm1, %xmm1
 ; SKX_32-NEXT:    movb $3, %al
 ; SKX_32-NEXT:    kmovw %eax, %k1
 ; SKX_32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SKX_32-NEXT:    vpscatterqd %xmm0, (,%ymm1) {%k1}
-; SKX_32-NEXT:    vzeroupper
+; SKX_32-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; SKX_32-NEXT:    vpscatterdd %xmm0, (,%xmm1) {%k1}
 ; SKX_32-NEXT:    retl
   call void @llvm.masked.scatter.v2i32.v2p0i32(<2 x i32> %a1, <2 x i32*> %ptr, i32 4, <2 x i1> <i1 true, i1 true>)
   ret void
