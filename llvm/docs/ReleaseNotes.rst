@@ -122,7 +122,19 @@ Changes to the C API
 External Open Source Projects Using LLVM 6
 ==========================================
 
-* A project...
+JFS - JIT Fuzzing Solver
+------------------------
+
+`JFS <https://github.com/delcypher/jfs>`_ is an experimental constraint solver
+designed to investigate using coverage guided fuzzing as an incomplete strategy
+for solving boolean, BitVector, and floating-point constraints.
+It is built on top of LLVM, Clang, LibFuzzer, and Z3.
+
+The solver works by generating a C++ program where the reachability of an
+`abort()` statement is equivalent to finding a satisfying assignment to the
+constraints. This program is then compiled by Clang with `SanitizerCoverage
+<https://releases.llvm.org/6.0.0/tools/clang/docs/SanitizerCoverage.html>`_
+instrumentation and then fuzzed using :doc:`LibFuzzer <LibFuzzer>`.
 
 
 Additional Information
