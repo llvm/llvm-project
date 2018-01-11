@@ -391,7 +391,7 @@ def : WriteRes<WriteBarrier, []> { let Latency = 1; }
 def : WriteRes<WriteHint,    []> { let Latency = 1; }
 
 def : WriteRes<WriteAtomic,  []> {
-  let Unsupported = 1;
+  let Latency = 4;
   let NumMicroOps = 2;
 }
 
