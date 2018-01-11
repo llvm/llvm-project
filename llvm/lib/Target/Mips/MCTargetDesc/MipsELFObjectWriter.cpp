@@ -225,6 +225,8 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
   switch (Kind) {
   case Mips::fixup_Mips_NONE:
     return ELF::R_MIPS_NONE;
+  case FK_Data_1:
+    report_fatal_error("MIPS does not support one byte relocations");
   case Mips::fixup_Mips_16:
   case FK_Data_2:
     return IsPCRel ? ELF::R_MIPS_PC16 : ELF::R_MIPS_16;
