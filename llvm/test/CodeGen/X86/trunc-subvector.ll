@@ -7,26 +7,13 @@
 define <4 x i32> @test1(<8 x i32> %v) {
 ; SSE2-LABEL: test1:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE2-NEXT:    retq
 ;
-; AVX2-LABEL: test1:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmovsxdq %xmm0, %ymm0
-; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,2,3,4,6,6,7]
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; AVX2-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: test1:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovsxdq %ymm0, %zmm0
-; AVX512-NEXT:    vpmovqd %zmm0, %ymm0
-; AVX512-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX-LABEL: test1:
+; AVX:       # %bb.0:
+; AVX-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
   %x = sext <8 x i32> %v to <8 x i64>
   %s = shufflevector <8 x i64> %x, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %t = trunc <4 x i64> %s to <4 x i32>
@@ -36,29 +23,14 @@ define <4 x i32> @test1(<8 x i32> %v) {
 define <4 x i32> @test2(<8 x i32> %v) {
 ; SSE2-LABEL: test2:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
-; AVX2-LABEL: test2:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vpmovsxdq %xmm0, %ymm0
-; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,2,3,4,6,6,7]
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; AVX2-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: test2:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovsxdq %ymm0, %zmm0
-; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
-; AVX512-NEXT:    vpmovqd %zmm0, %ymm0
-; AVX512-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX-LABEL: test2:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
   %x = sext <8 x i32> %v to <8 x i64>
   %s = shufflevector <8 x i64> %x, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %t = trunc <4 x i64> %s to <4 x i32>
@@ -164,19 +136,11 @@ define <4 x i32> @test6(<8 x i32> %v) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    retq
 ;
-; AVX2-LABEL: test6:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: test6:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
-; AVX512-NEXT:    vpmovqd %zmm0, %ymm0
-; AVX512-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX-LABEL: test6:
+; AVX:       # %bb.0:
+; AVX-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
   %x = zext <8 x i32> %v to <8 x i64>
   %s = shufflevector <8 x i64> %x, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %t = trunc <4 x i64> %s to <4 x i32>
@@ -189,20 +153,11 @@ define <4 x i32> @test7(<8 x i32> %v) {
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
-; AVX2-LABEL: test7:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: test7:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
-; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
-; AVX512-NEXT:    vpmovqd %zmm0, %ymm0
-; AVX512-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX-LABEL: test7:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
   %x = zext <8 x i32> %v to <8 x i64>
   %s = shufflevector <8 x i64> %x, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %t = trunc <4 x i64> %s to <4 x i32>
