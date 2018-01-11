@@ -1341,7 +1341,9 @@ static void __kmp_atfork_child(void) {
   __kmp_init_bootstrap_lock(&__kmp_console_lock);
   __kmp_init_bootstrap_lock(&__kmp_task_team_lock);
 
+#if USE_ITT_BUILD
   __kmp_itt_reset(); // reset ITT's global state
+#endif /* USE_ITT_BUILD */
 
   /* This is necessary to make sure no stale data is left around */
   /* AC: customers complain that we use unsafe routines in the atfork
