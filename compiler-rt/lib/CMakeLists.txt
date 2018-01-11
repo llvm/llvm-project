@@ -59,3 +59,16 @@ endif()
 if(COMPILER_RT_BUILD_LIBFUZZER)
   compiler_rt_build_runtime(fuzzer)
 endif()
+
+if(COMPILER_RT_BUILD_CSI)
+  compiler_rt_build_runtime(csi)
+endif()
+
+if(COMPILER_RT_BUILD_CILKTOOLS)
+  compiler_rt_build_runtime(cilksan)
+  if(NOT COMPILER_RT_HAS_SNAPPY)
+    mesage(FATAL_ERROR
+      "The snappy compression library is required to build Cilksan.")
+  endif()
+  compiler_rt_build_runtime(cilkscale)
+endif()
