@@ -19,7 +19,9 @@ namespace {
 std::unique_ptr<SymbolSlab> indexAST(ASTContext &Ctx,
                                      std::shared_ptr<Preprocessor> PP,
                                      llvm::ArrayRef<const Decl *> Decls) {
-  auto Collector = std::make_shared<SymbolCollector>();
+  SymbolCollector::Options CollectorOpts;
+  CollectorOpts.IndexMainFiles = true;
+  auto Collector = std::make_shared<SymbolCollector>(std::move(CollectorOpts));
   Collector->setPreprocessor(std::move(PP));
   index::IndexingOptions IndexOpts;
   IndexOpts.SystemSymbolFilter =

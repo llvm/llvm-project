@@ -587,14 +587,14 @@ void PlatformWindows::GetStatus(Stream &strm) {
 
 bool PlatformWindows::CanDebugProcess() { return true; }
 
-size_t PlatformWindows::GetEnvironment(StringList &env) {
+Environment PlatformWindows::GetEnvironment() {
   if (IsRemote()) {
     if (m_remote_platform_sp)
-      return m_remote_platform_sp->GetEnvironment(env);
-    return 0;
+      return m_remote_platform_sp->GetEnvironment();
+    return Environment();
   }
 
-  return Host::GetEnvironment(env);
+  return Host::GetEnvironment();
 }
 
 ConstString PlatformWindows::GetFullNameForDylib(ConstString basename) {

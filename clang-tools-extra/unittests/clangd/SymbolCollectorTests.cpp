@@ -53,20 +53,22 @@ namespace clangd {
 namespace {
 class SymbolIndexActionFactory : public tooling::FrontendActionFactory {
 public:
-  SymbolIndexActionFactory() = default;
+  SymbolIndexActionFactory(SymbolCollector::Options COpts)
+      : COpts(std::move(COpts)) {}
 
   clang::FrontendAction *create() override {
     index::IndexingOptions IndexOpts;
     IndexOpts.SystemSymbolFilter =
         index::IndexingOptions::SystemSymbolFilterKind::All;
     IndexOpts.IndexFunctionLocals = false;
-    Collector = std::make_shared<SymbolCollector>();
+    Collector = std::make_shared<SymbolCollector>(COpts);
     FrontendAction *Action =
         index::createIndexingAction(Collector, IndexOpts, nullptr).release();
     return Action;
   }
 
   std::shared_ptr<SymbolCollector> Collector;
+  SymbolCollector::Options COpts;
 };
 
 class SymbolCollectorTest : public ::testing::Test {
@@ -79,7 +81,7 @@ public:
 
     const std::string FileName = "symbol.cc";
     const std::string HeaderName = "symbols.h";
-    auto Factory = llvm::make_unique<SymbolIndexActionFactory>();
+    auto Factory = llvm::make_unique<SymbolIndexActionFactory>(CollectorOpts);
 
     tooling::ToolInvocation Invocation(
         {"symbol_collector", "-fsyntax-only", "-std=c++11", FileName},
@@ -100,9 +102,11 @@ public:
 
 protected:
   SymbolSlab Symbols;
+  SymbolCollector::Options CollectorOpts;
 };
 
-TEST_F(SymbolCollectorTest, CollectSymbol) {
+TEST_F(SymbolCollectorTest, CollectSymbols) {
+  CollectorOpts.IndexMainFiles = true;
   const std::string Header = R"(
     class Foo {
       void f();
@@ -144,7 +148,6 @@ TEST_F(SymbolCollectorTest, CollectSymbol) {
   EXPECT_THAT(Symbols,
               UnorderedElementsAreArray(
                   {QName("Foo"),
-                   QName("Foo::f"),
                    QName("f1"),
                    QName("f2"),
                    QName("KInt"),
@@ -158,14 +161,70 @@ TEST_F(SymbolCollectorTest, CollectSymbol) {
                    QName("foo::baz")}));
 }
 
-TEST_F(SymbolCollectorTest, SymbolWithDocumentation) {
+TEST_F(SymbolCollectorTest, IgnoreSymbolsInMainFile) {
+  CollectorOpts.IndexMainFiles = false;
+  const std::string Header = R"(
+    class Foo {};
+    void f1();
+    inline void f2() {}
+  )";
   const std::string Main = R"(
+    namespace {
+    void ff() {} // ignore
+    }
+    void main_f() {} // ignore
+    void f1() {}
+  )";
+  runSymbolCollector(Header, Main);
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(QName("Foo"), QName("f1"), QName("f2")));
+}
+
+TEST_F(SymbolCollectorTest, IncludeSymbolsInMainFile) {
+  CollectorOpts.IndexMainFiles = true;
+  const std::string Header = R"(
+    class Foo {};
+    void f1();
+    inline void f2() {}
+  )";
+  const std::string Main = R"(
+    namespace {
+    void ff() {} // ignore
+    }
+    void main_f() {}
+    void f1() {}
+  )";
+  runSymbolCollector(Header, Main);
+  EXPECT_THAT(Symbols, UnorderedElementsAre(QName("Foo"), QName("f1"),
+                                            QName("f2"), QName("main_f")));
+}
+
+TEST_F(SymbolCollectorTest, IgnoreClassMembers) {
+  const std::string Header = R"(
+    class Foo {
+      void f() {}
+      void g();
+      static void sf() {}
+      static void ssf();
+      static int x;
+    };
+  )";
+  const std::string Main = R"(
+    void Foo::g() {}
+    void Foo::ssf() {}
+  )";
+  runSymbolCollector(Header, Main);
+  EXPECT_THAT(Symbols, UnorderedElementsAre(QName("Foo")));
+}
+
+TEST_F(SymbolCollectorTest, SymbolWithDocumentation) {
+  const std::string Header = R"(
     namespace nx {
     /// Foo comment.
     int ff(int x, double y) { return 0; }
     }
   )";
-  runSymbolCollector(/*Header=*/"", Main);
+  runSymbolCollector(Header, /*Main=*/"");
   EXPECT_THAT(Symbols,
               UnorderedElementsAre(QName("nx"),
                                    AllOf(QName("nx::ff"),
@@ -174,13 +233,13 @@ TEST_F(SymbolCollectorTest, SymbolWithDocumentation) {
 }
 
 TEST_F(SymbolCollectorTest, PlainAndSnippet) {
-  const std::string Main = R"(
+  const std::string Header = R"(
     namespace nx {
     void f() {}
     int ff(int x, double y) { return 0; }
     }
   )";
-  runSymbolCollector(/*Header=*/"", Main);
+  runSymbolCollector(Header, /*Main=*/"");
   EXPECT_THAT(
       Symbols,
       UnorderedElementsAre(

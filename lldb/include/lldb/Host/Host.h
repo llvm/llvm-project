@@ -12,8 +12,8 @@
 
 #include "lldb/Host/File.h"
 #include "lldb/Host/HostThread.h"
+#include "lldb/Utility/Environment.h"
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/StringList.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-private.h"
 #include <cerrno>
@@ -242,7 +242,7 @@ public:
   static bool OpenFileInExternalEditor(const FileSpec &file_spec,
                                        uint32_t line_no);
 
-  static size_t GetEnvironment(StringList &env);
+  static Environment GetEnvironment();
 
   static std::unique_ptr<Connection>
   CreateDefaultConnection(llvm::StringRef url);

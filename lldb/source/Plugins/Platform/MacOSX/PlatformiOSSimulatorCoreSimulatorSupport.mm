@@ -478,25 +478,16 @@ CoreSimulatorSupport::Device::Spawn(ProcessLaunchInfo &launch_info) {
     [options setObject:args_array forKey:kSimDeviceSpawnArguments];
   }
 
-  if (launch_info.GetEnvironmentEntries().GetArgumentCount()) {
-    const Args &envs(launch_info.GetEnvironmentEntries());
-    NSMutableDictionary *env_dict = [[NSMutableDictionary alloc] init];
-    for (size_t idx = 0; idx < envs.GetArgumentCount(); idx++) {
-      llvm::StringRef arg_sr(envs.GetArgumentAtIndex(idx));
-      auto first_eq = arg_sr.find('=');
-      if (first_eq == llvm::StringRef::npos)
-        continue;
-      llvm::StringRef key = arg_sr.substr(0, first_eq);
-      llvm::StringRef value = arg_sr.substr(first_eq + 1);
+  NSMutableDictionary *env_dict = [[NSMutableDictionary alloc] init];
 
-      NSString *key_ns = [NSString stringWithUTF8String:key.str().c_str()];
-      NSString *value_ns = [NSString stringWithUTF8String:value.str().c_str()];
+  for (const auto &KV : launch_info.GetEnvironment()) {
+    NSString *key_ns = [NSString stringWithUTF8String:KV.first().str().c_str()];
+    NSString *value_ns = [NSString stringWithUTF8String:KV.second.c_str()];
 
-      [env_dict setValue:value_ns forKey:key_ns];
-    }
-
-    [options setObject:env_dict forKey:kSimDeviceSpawnEnvironment];
+    [env_dict setValue:value_ns forKey:key_ns];
   }
+
+  [options setObject:env_dict forKey:kSimDeviceSpawnEnvironment];
 
   Status error;
   File stdin_file;

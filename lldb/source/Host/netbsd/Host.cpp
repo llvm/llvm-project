@@ -48,14 +48,7 @@ extern char **environ;
 using namespace lldb;
 using namespace lldb_private;
 
-size_t Host::GetEnvironment(StringList &env) {
-  char **host_env = environ;
-  char *env_entry;
-  size_t i;
-  for (i = 0; (env_entry = host_env[i]) != NULL; ++i)
-    env.AppendString(env_entry);
-  return i;
-}
+Environment Host::GetEnvironment() { return Environment(environ); }
 
 static bool GetNetBSDProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
                                  ProcessInstanceInfo &process_info) {
