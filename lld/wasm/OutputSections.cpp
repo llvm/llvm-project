@@ -9,16 +9,12 @@
 
 #include "OutputSections.h"
 
-#include "Config.h"
 #include "InputChunks.h"
 #include "InputFiles.h"
 #include "OutputSegment.h"
-#include "SymbolTable.h"
 #include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Memory.h"
 #include "lld/Common/Threads.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Support/LEB128.h"
 
 #define DEBUG_TYPE "lld"
 
@@ -26,12 +22,6 @@ using namespace llvm;
 using namespace llvm::wasm;
 using namespace lld;
 using namespace lld::wasm;
-
-enum class RelocEncoding {
-  Uleb128,
-  Sleb128,
-  I32,
-};
 
 static StringRef sectionTypeToString(uint32_t SectionType) {
   switch (SectionType) {
@@ -71,110 +61,6 @@ std::string lld::toString(const OutputSection &Section) {
   return rtn;
 }
 
-static void applyRelocation(uint8_t *Buf, const OutputRelocation &Reloc) {
-  DEBUG(dbgs() << "write reloc: type=" << Reloc.Reloc.Type
-               << " index=" << Reloc.Reloc.Index << " value=" << Reloc.Value
-               << " offset=" << Reloc.Reloc.Offset << "\n");
-  Buf += Reloc.Reloc.Offset;
-  int64_t ExistingValue;
-  switch (Reloc.Reloc.Type) {
-  case R_WEBASSEMBLY_TYPE_INDEX_LEB:
-  case R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
-    ExistingValue = decodeULEB128(Buf);
-    if (ExistingValue != Reloc.Reloc.Index) {
-      DEBUG(dbgs() << "existing value: " << decodeULEB128(Buf) << "\n");
-      assert(decodeULEB128(Buf) == Reloc.Reloc.Index);
-    }
-    LLVM_FALLTHROUGH;
-  case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
-  case R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
-    encodeULEB128(Reloc.Value, Buf, 5);
-    break;
-  case R_WEBASSEMBLY_TABLE_INDEX_SLEB:
-    ExistingValue = decodeSLEB128(Buf);
-    if (ExistingValue != Reloc.Reloc.Index) {
-      DEBUG(dbgs() << "existing value: " << decodeSLEB128(Buf) << "\n");
-      assert(decodeSLEB128(Buf) == Reloc.Reloc.Index);
-    }
-    LLVM_FALLTHROUGH;
-  case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
-    encodeSLEB128(static_cast<int32_t>(Reloc.Value), Buf, 5);
-    break;
-  case R_WEBASSEMBLY_TABLE_INDEX_I32:
-  case R_WEBASSEMBLY_MEMORY_ADDR_I32:
-    support::endian::write32<support::little>(Buf, Reloc.Value);
-    break;
-  default:
-    llvm_unreachable("unknown relocation type");
-  }
-}
-
-static void applyRelocations(uint8_t *Buf, ArrayRef<OutputRelocation> Relocs) {
-  if (!Relocs.size())
-    return;
-  log("applyRelocations: count=" + Twine(Relocs.size()));
-  for (const OutputRelocation &Reloc : Relocs)
-    applyRelocation(Buf, Reloc);
-}
-
-// Relocations contain an index into the function, global or table index
-// space of the input file.  This function takes a relocation and returns the
-// relocated index (i.e. translates from the input index space to the output
-// index space).
-static uint32_t calcNewIndex(const ObjFile &File, const WasmRelocation &Reloc) {
-  switch (Reloc.Type) {
-  case R_WEBASSEMBLY_TYPE_INDEX_LEB:
-    return File.relocateTypeIndex(Reloc.Index);
-  case R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
-    return File.relocateFunctionIndex(Reloc.Index);
-  case R_WEBASSEMBLY_TABLE_INDEX_I32:
-  case R_WEBASSEMBLY_TABLE_INDEX_SLEB:
-    return File.relocateTableIndex(Reloc.Index);
-  case R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
-  case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
-  case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
-  case R_WEBASSEMBLY_MEMORY_ADDR_I32:
-    return File.relocateGlobalIndex(Reloc.Index);
-  default:
-    llvm_unreachable("unknown relocation type");
-  }
-}
-
-// Take a vector of relocations from an input file and create output
-// relocations based on them. Calculates the updated index and offset for
-// each relocation as well as the value to write out in the final binary.
-static void calcRelocations(const ObjFile &File,
-                            ArrayRef<WasmRelocation> Relocs,
-                            std::vector<OutputRelocation> &OutputRelocs,
-                            int32_t OutputOffset) {
-  log("calcRelocations: " + File.getName() + " offset=" + Twine(OutputOffset));
-  for (const WasmRelocation &Reloc : Relocs) {
-    OutputRelocation NewReloc;
-    NewReloc.Reloc = Reloc;
-    assert(Reloc.Offset + OutputOffset > 0);
-    NewReloc.Reloc.Offset += OutputOffset;
-    DEBUG(dbgs() << "reloc: type=" << Reloc.Type << " index=" << Reloc.Index
-                 << " offset=" << Reloc.Offset
-                 << " newOffset=" << NewReloc.Reloc.Offset << "\n");
-
-    if (Config->EmitRelocs)
-      NewReloc.NewIndex = calcNewIndex(File, Reloc);
-
-    switch (Reloc.Type) {
-    case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
-    case R_WEBASSEMBLY_MEMORY_ADDR_I32:
-    case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
-      NewReloc.Value = File.getRelocatedAddress(Reloc.Index) + Reloc.Addend;
-      break;
-    default:
-      NewReloc.Value = calcNewIndex(File, Reloc);
-      break;
-    }
-
-    OutputRelocs.emplace_back(NewReloc);
-  }
-}
-
 std::string OutputSection::getSectionName() const {
   return sectionTypeToString(Type);
 }
@@ -203,9 +89,7 @@ CodeSection::CodeSection(ArrayRef<InputFunction *> Functions)
   BodySize = CodeSectionHeader.size();
 
   for (InputChunk *Func : Functions) {
-    Func->OutputOffset = BodySize;
-    calcRelocations(Func->File, Func->Relocations, Func->OutRelocations,
-                    Func->OutputOffset - Func->getInputSectionOffset());
+    Func->setOutputOffset(BodySize);
     BodySize += Func->getSize();
   }
 
@@ -230,10 +114,8 @@ void CodeSection::writeTo(uint8_t *Buf) {
   Buf += CodeSectionHeader.size();
 
   // Write code section bodies
-  parallelForEach(Functions, [ContentsStart](InputChunk *Func) {
-    memcpy(ContentsStart + Func->OutputOffset, Func->getData(),
-           Func->getSize());
-    applyRelocations(ContentsStart, Func->OutRelocations);
+  parallelForEach(Functions, [ContentsStart](const InputChunk *Chunk) {
+    Chunk->writeTo(ContentsStart);
   });
 }
 
@@ -267,16 +149,12 @@ DataSection::DataSection(ArrayRef<OutputSegment *> Segments)
     writeUleb128(OS, Segment->Size, "segment size");
     OS.flush();
     Segment->setSectionOffset(BodySize);
-    BodySize += Segment->Header.size();
+    BodySize += Segment->Header.size() + Segment->Size;
     log("Data segment: size=" + Twine(Segment->Size));
-    for (InputChunk *InputSeg : Segment->InputSegments) {
-      uint32_t OutputOffset = Segment->getSectionOffset() +
-                              Segment->Header.size() + InputSeg->OutputOffset;
-      calcRelocations(InputSeg->File, InputSeg->Relocations,
-                      InputSeg->OutRelocations,
-                      OutputOffset - InputSeg->getInputSectionOffset());
-    }
-    BodySize += Segment->Size;
+    for (InputSegment *InputSeg : Segment->InputSegments)
+      InputSeg->setOutputOffset(Segment->getSectionOffset() +
+                                Segment->Header.size() +
+                                InputSeg->OutputSegmentOffset);
   }
 
   createHeader(BodySize);
@@ -302,11 +180,8 @@ void DataSection::writeTo(uint8_t *Buf) {
     memcpy(SegStart, Segment->Header.data(), Segment->Header.size());
 
     // Write segment data payload
-    for (const InputChunk *Input : Segment->InputSegments) {
-      memcpy(SegStart + Segment->Header.size() + Input->OutputOffset,
-             Input->getData(), Input->getSize());
-      applyRelocations(ContentsStart, Input->OutRelocations);
-    }
+    for (const InputChunk *Chunk : Segment->InputSegments)
+      Chunk->writeTo(ContentsStart);
   });
 }
 

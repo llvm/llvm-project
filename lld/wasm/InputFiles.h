@@ -28,6 +28,7 @@ using llvm::object::WasmSection;
 using llvm::object::WasmSymbol;
 using llvm::wasm::WasmImport;
 using llvm::wasm::WasmSignature;
+using llvm::wasm::WasmRelocation;
 
 namespace lld {
 namespace wasm {
@@ -91,11 +92,9 @@ public:
 
   void dumpInfo() const;
 
-  uint32_t relocateTypeIndex(uint32_t Original) const;
   uint32_t relocateFunctionIndex(uint32_t Original) const;
-  uint32_t relocateGlobalIndex(uint32_t Original) const;
-  uint32_t relocateTableIndex(uint32_t Original) const;
   uint32_t getRelocatedAddress(uint32_t Index) const;
+  uint32_t calcNewIndex(const WasmRelocation &Reloc) const;
 
   const WasmSection *CodeSection = nullptr;
   const WasmSection *DataSection = nullptr;
@@ -108,6 +107,10 @@ public:
   ArrayRef<Symbol *> getTableSymbols() { return TableSymbols; }
 
 private:
+  uint32_t relocateTypeIndex(uint32_t Original) const;
+  uint32_t relocateGlobalIndex(uint32_t Original) const;
+  uint32_t relocateTableIndex(uint32_t Original) const;
+
   Symbol *createDefined(const WasmSymbol &Sym, Symbol::Kind Kind,
                         const InputSegment *Segment = nullptr,
                         InputFunction *Function = nullptr,
