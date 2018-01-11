@@ -11,49 +11,38 @@ define void @foo(i32 %a, i32 *%b, i1 %c) {
 ; RV32I-NEXT:    addi s0, sp, 16
 ; RV32I-NEXT:    lw a3, 0(a1)
 ; RV32I-NEXT:    beq a3, a0, .LBB0_12
-; RV32I-NEXT:    j .LBB0_1
-; RV32I-NEXT:  .LBB0_1: # %test2
+; RV32I-NEXT:  # %bb.1: # %test2
 ; RV32I-NEXT:    lw a3, 0(a1)
 ; RV32I-NEXT:    bne a3, a0, .LBB0_12
-; RV32I-NEXT:    j .LBB0_2
-; RV32I-NEXT:  .LBB0_2: # %test3
+; RV32I-NEXT:  # %bb.2: # %test3
 ; RV32I-NEXT:    lw a3, 0(a1)
 ; RV32I-NEXT:    blt a3, a0, .LBB0_12
-; RV32I-NEXT:    j .LBB0_3
-; RV32I-NEXT:  .LBB0_3: # %test4
+; RV32I-NEXT:  # %bb.3: # %test4
 ; RV32I-NEXT:    lw a3, 0(a1)
 ; RV32I-NEXT:    bge a3, a0, .LBB0_12
-; RV32I-NEXT:    j .LBB0_4
-; RV32I-NEXT:  .LBB0_4: # %test5
+; RV32I-NEXT:  # %bb.4: # %test5
 ; RV32I-NEXT:    lw a3, 0(a1)
 ; RV32I-NEXT:    bltu a3, a0, .LBB0_12
-; RV32I-NEXT:    j .LBB0_5
-; RV32I-NEXT:  .LBB0_5: # %test6
+; RV32I-NEXT:  # %bb.5: # %test6
 ; RV32I-NEXT:    lw a3, 0(a1)
 ; RV32I-NEXT:    bgeu a3, a0, .LBB0_12
-; RV32I-NEXT:    j .LBB0_6
-; RV32I-NEXT:  .LBB0_6: # %test7
+; RV32I-NEXT:  # %bb.6: # %test7
 ; RV32I-NEXT:    lw a3, 0(a1)
 ; RV32I-NEXT:    blt a0, a3, .LBB0_12
-; RV32I-NEXT:    j .LBB0_7
-; RV32I-NEXT:  .LBB0_7: # %test8
+; RV32I-NEXT:  # %bb.7: # %test8
 ; RV32I-NEXT:    lw a3, 0(a1)
 ; RV32I-NEXT:    bge a0, a3, .LBB0_12
-; RV32I-NEXT:    j .LBB0_8
-; RV32I-NEXT:  .LBB0_8: # %test9
+; RV32I-NEXT:  # %bb.8: # %test9
 ; RV32I-NEXT:    lw a3, 0(a1)
 ; RV32I-NEXT:    bltu a0, a3, .LBB0_12
-; RV32I-NEXT:    j .LBB0_9
-; RV32I-NEXT:  .LBB0_9: # %test10
+; RV32I-NEXT:  # %bb.9: # %test10
 ; RV32I-NEXT:    lw a3, 0(a1)
 ; RV32I-NEXT:    bgeu a0, a3, .LBB0_12
-; RV32I-NEXT:    j .LBB0_10
-; RV32I-NEXT:  .LBB0_10: # %test11
+; RV32I-NEXT:  # %bb.10: # %test11
 ; RV32I-NEXT:    lw a0, 0(a1)
 ; RV32I-NEXT:    andi a0, a2, 1
 ; RV32I-NEXT:    bnez a0, .LBB0_12
-; RV32I-NEXT:    j .LBB0_11
-; RV32I-NEXT:  .LBB0_11: # %test12
+; RV32I-NEXT:  # %bb.11: # %test12
 ; RV32I-NEXT:    lw a0, 0(a1)
 ; RV32I-NEXT:  .LBB0_12: # %end
 ; RV32I-NEXT:    lw s0, 8(sp)

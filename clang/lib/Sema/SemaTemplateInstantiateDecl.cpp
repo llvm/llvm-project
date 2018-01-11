@@ -4151,7 +4151,8 @@ void Sema::BuildVariableInstantiation(
   // it right away if the type contains 'auto'.
   if ((!isa<VarTemplateSpecializationDecl>(NewVar) &&
        !InstantiatingVarTemplate &&
-       !(OldVar->isInline() && OldVar->isThisDeclarationADefinition())) ||
+       !(OldVar->isInline() && OldVar->isThisDeclarationADefinition() &&
+         !NewVar->isThisDeclarationADefinition())) ||
       NewVar->getType()->isUndeducedType())
     InstantiateVariableInitializer(NewVar, OldVar, TemplateArgs);
 

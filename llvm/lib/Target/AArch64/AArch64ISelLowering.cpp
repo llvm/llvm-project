@@ -10974,8 +10974,3 @@ AArch64TargetLowering::getVaListSizeInBits(const DataLayout &DL) const {
 
   return 3 * getPointerTy(DL).getSizeInBits() + 2 * 32;
 }
-
-void AArch64TargetLowering::finalizeLowering(MachineFunction &MF) const {
-  MF.getFrameInfo().computeMaxCallFrameSize(MF);
-  TargetLoweringBase::finalizeLowering(MF);
-}
