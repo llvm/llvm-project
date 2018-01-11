@@ -1442,6 +1442,7 @@ namespace llvm {
     const SDValue &getIndex()   const { return getOperand(4); }
     const SDValue &getMask()    const { return getOperand(2); }
     const SDValue &getValue()   const { return getOperand(1); }
+    const SDValue &getScale()   const { return getOperand(5); }
 
     static bool classof(const SDNode *N) {
       return N->getOpcode() == X86ISD::MGATHER ||

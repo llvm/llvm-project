@@ -163,6 +163,9 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   reserveRegisterTuples(Reserved, AMDGPU::SRC_PRIVATE_BASE);
   reserveRegisterTuples(Reserved, AMDGPU::SRC_PRIVATE_LIMIT);
 
+  // Reserve xnack_mask registers - support is not implemented in Codegen.
+  reserveRegisterTuples(Reserved, AMDGPU::XNACK_MASK);
+
   // Reserve Trap Handler registers - support is not implemented in Codegen.
   reserveRegisterTuples(Reserved, AMDGPU::TBA);
   reserveRegisterTuples(Reserved, AMDGPU::TMA);

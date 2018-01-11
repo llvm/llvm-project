@@ -1281,6 +1281,8 @@ TypeIndex CodeViewDebug::lowerType(const DIType *Ty, const DIType *ClassTy) {
     return lowerTypeClass(cast<DICompositeType>(Ty));
   case dwarf::DW_TAG_union_type:
     return lowerTypeUnion(cast<DICompositeType>(Ty));
+  case dwarf::DW_TAG_unspecified_type:
+    return TypeIndex::None();
   default:
     // Use the null type index.
     return TypeIndex();
@@ -1573,6 +1575,11 @@ TypeIndex CodeViewDebug::lowerTypeFunction(const DISubroutineType *Ty) {
   for (DITypeRef ArgTypeRef : Ty->getTypeArray())
     ReturnAndArgTypeIndices.push_back(getTypeIndex(ArgTypeRef));
 
+  // MSVC uses type none for variadic argument.
+  if (ReturnAndArgTypeIndices.size() > 1 &&
+      ReturnAndArgTypeIndices.back() == TypeIndex::Void()) {
+    ReturnAndArgTypeIndices.back() = TypeIndex::None();
+  }
   TypeIndex ReturnTypeIndex = TypeIndex::Void();
   ArrayRef<TypeIndex> ArgTypeIndices = None;
   if (!ReturnAndArgTypeIndices.empty()) {
@@ -1602,6 +1609,11 @@ TypeIndex CodeViewDebug::lowerTypeMemberFunction(const DISubroutineType *Ty,
   for (DITypeRef ArgTypeRef : Ty->getTypeArray())
     ReturnAndArgTypeIndices.push_back(getTypeIndex(ArgTypeRef));
 
+  // MSVC uses type none for variadic argument.
+  if (ReturnAndArgTypeIndices.size() > 1 &&
+      ReturnAndArgTypeIndices.back() == TypeIndex::Void()) {
+    ReturnAndArgTypeIndices.back() = TypeIndex::None();
+  }
   TypeIndex ReturnTypeIndex = TypeIndex::Void();
   ArrayRef<TypeIndex> ArgTypeIndices = None;
   if (!ReturnAndArgTypeIndices.empty()) {

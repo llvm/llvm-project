@@ -598,6 +598,10 @@ bool isEntryFunctionCC(CallingConv::ID CC) {
   }
 }
 
+bool hasXNACK(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureXNACK];
+}
+
 bool isSI(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureSouthernIslands];
 }

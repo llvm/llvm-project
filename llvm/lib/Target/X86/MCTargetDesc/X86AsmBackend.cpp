@@ -67,19 +67,10 @@ public:
 };
 
 class X86AsmBackend : public MCAsmBackend {
-  const StringRef CPU;
-  bool HasNopl;
-  const uint64_t MaxNopLength;
+  const MCSubtargetInfo &STI;
 public:
-  X86AsmBackend(const Target &T, StringRef CPU)
-      : MCAsmBackend(), CPU(CPU),
-        MaxNopLength((CPU == "slm" || CPU == "silvermont") ? 7 : 15) {
-    HasNopl = CPU != "generic" && CPU != "i386" && CPU != "i486" &&
-              CPU != "i586" && CPU != "pentium" && CPU != "pentium-mmx" &&
-              CPU != "i686" && CPU != "k6" && CPU != "k6-2" && CPU != "k6-3" &&
-              CPU != "geode" && CPU != "winchip-c6" && CPU != "winchip2" &&
-              CPU != "c3" && CPU != "c3-2" && CPU != "lakemont" && CPU != "";
-  }
+  X86AsmBackend(const Target &T, const MCSubtargetInfo &STI)
+      : MCAsmBackend(), STI(STI) {}
 
   unsigned getNumFixupKinds() const override {
     return X86::NumTargetFixupKinds;
@@ -346,13 +337,14 @@ bool X86AsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
   };
 
   // This CPU doesn't support long nops. If needed add more.
-  // FIXME: Can we get this from the subtarget somehow?
   // FIXME: We could generated something better than plain 0x90.
-  if (!HasNopl) {
+  if (!STI.getFeatureBits()[X86::FeatureNOPL]) {
     for (uint64_t i = 0; i < Count; ++i)
       OW->write8(0x90);
     return true;
   }
+
+  uint64_t MaxNopLength = STI.getFeatureBits()[X86::ProcIntelSLM] ? 7 : 15;
 
   // 15 is the longest single nop instruction.  Emit as many 15-byte nops as
   // needed, then emit a nop of the remaining length.
@@ -377,14 +369,15 @@ namespace {
 class ELFX86AsmBackend : public X86AsmBackend {
 public:
   uint8_t OSABI;
-  ELFX86AsmBackend(const Target &T, uint8_t OSABI, StringRef CPU)
-      : X86AsmBackend(T, CPU), OSABI(OSABI) {}
+  ELFX86AsmBackend(const Target &T, uint8_t OSABI, const MCSubtargetInfo &STI)
+      : X86AsmBackend(T, STI), OSABI(OSABI) {}
 };
 
 class ELFX86_32AsmBackend : public ELFX86AsmBackend {
 public:
-  ELFX86_32AsmBackend(const Target &T, uint8_t OSABI, StringRef CPU)
-    : ELFX86AsmBackend(T, OSABI, CPU) {}
+  ELFX86_32AsmBackend(const Target &T, uint8_t OSABI,
+                      const MCSubtargetInfo &STI)
+    : ELFX86AsmBackend(T, OSABI, STI) {}
 
   std::unique_ptr<MCObjectWriter>
   createObjectWriter(raw_pwrite_stream &OS) const override {
@@ -394,8 +387,9 @@ public:
 
 class ELFX86_X32AsmBackend : public ELFX86AsmBackend {
 public:
-  ELFX86_X32AsmBackend(const Target &T, uint8_t OSABI, StringRef CPU)
-      : ELFX86AsmBackend(T, OSABI, CPU) {}
+  ELFX86_X32AsmBackend(const Target &T, uint8_t OSABI,
+                       const MCSubtargetInfo &STI)
+      : ELFX86AsmBackend(T, OSABI, STI) {}
 
   std::unique_ptr<MCObjectWriter>
   createObjectWriter(raw_pwrite_stream &OS) const override {
@@ -406,8 +400,9 @@ public:
 
 class ELFX86_IAMCUAsmBackend : public ELFX86AsmBackend {
 public:
-  ELFX86_IAMCUAsmBackend(const Target &T, uint8_t OSABI, StringRef CPU)
-      : ELFX86AsmBackend(T, OSABI, CPU) {}
+  ELFX86_IAMCUAsmBackend(const Target &T, uint8_t OSABI,
+                         const MCSubtargetInfo &STI)
+      : ELFX86AsmBackend(T, OSABI, STI) {}
 
   std::unique_ptr<MCObjectWriter>
   createObjectWriter(raw_pwrite_stream &OS) const override {
@@ -418,8 +413,9 @@ public:
 
 class ELFX86_64AsmBackend : public ELFX86AsmBackend {
 public:
-  ELFX86_64AsmBackend(const Target &T, uint8_t OSABI, StringRef CPU)
-    : ELFX86AsmBackend(T, OSABI, CPU) {}
+  ELFX86_64AsmBackend(const Target &T, uint8_t OSABI,
+                      const MCSubtargetInfo &STI)
+    : ELFX86AsmBackend(T, OSABI, STI) {}
 
   std::unique_ptr<MCObjectWriter>
   createObjectWriter(raw_pwrite_stream &OS) const override {
@@ -431,8 +427,9 @@ class WindowsX86AsmBackend : public X86AsmBackend {
   bool Is64Bit;
 
 public:
-  WindowsX86AsmBackend(const Target &T, bool is64Bit, StringRef CPU)
-    : X86AsmBackend(T, CPU)
+  WindowsX86AsmBackend(const Target &T, bool is64Bit,
+                       const MCSubtargetInfo &STI)
+    : X86AsmBackend(T, STI)
     , Is64Bit(is64Bit) {
   }
 
@@ -790,9 +787,9 @@ private:
   }
 
 public:
-  DarwinX86AsmBackend(const Target &T, const MCRegisterInfo &MRI, StringRef CPU,
-                      bool Is64Bit)
-    : X86AsmBackend(T, CPU), MRI(MRI), Is64Bit(Is64Bit) {
+  DarwinX86AsmBackend(const Target &T, const MCRegisterInfo &MRI,
+                      const MCSubtargetInfo &STI, bool Is64Bit)
+    : X86AsmBackend(T, STI), MRI(MRI), Is64Bit(Is64Bit) {
     memset(SavedRegs, 0, sizeof(SavedRegs));
     OffsetSize = Is64Bit ? 8 : 4;
     MoveInstrSize = Is64Bit ? 3 : 2;
@@ -803,8 +800,8 @@ public:
 class DarwinX86_32AsmBackend : public DarwinX86AsmBackend {
 public:
   DarwinX86_32AsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                         StringRef CPU)
-      : DarwinX86AsmBackend(T, MRI, CPU, false) {}
+                         const MCSubtargetInfo &STI)
+      : DarwinX86AsmBackend(T, MRI, STI, false) {}
 
   std::unique_ptr<MCObjectWriter>
   createObjectWriter(raw_pwrite_stream &OS) const override {
@@ -824,8 +821,8 @@ class DarwinX86_64AsmBackend : public DarwinX86AsmBackend {
   const MachO::CPUSubTypeX86 Subtype;
 public:
   DarwinX86_64AsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                         StringRef CPU, MachO::CPUSubTypeX86 st)
-      : DarwinX86AsmBackend(T, MRI, CPU, true), Subtype(st) {}
+                         const MCSubtargetInfo &STI, MachO::CPUSubTypeX86 st)
+      : DarwinX86AsmBackend(T, MRI, STI, true), Subtype(st) {}
 
   std::unique_ptr<MCObjectWriter>
   createObjectWriter(raw_pwrite_stream &OS) const override {
@@ -847,19 +844,18 @@ MCAsmBackend *llvm::createX86_32AsmBackend(const Target &T,
                                            const MCRegisterInfo &MRI,
                                            const MCTargetOptions &Options) {
   const Triple &TheTriple = STI.getTargetTriple();
-  StringRef CPU = STI.getCPU();
   if (TheTriple.isOSBinFormatMachO())
-    return new DarwinX86_32AsmBackend(T, MRI, CPU);
+    return new DarwinX86_32AsmBackend(T, MRI, STI);
 
   if (TheTriple.isOSWindows() && TheTriple.isOSBinFormatCOFF())
-    return new WindowsX86AsmBackend(T, false, CPU);
+    return new WindowsX86AsmBackend(T, false, STI);
 
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
 
   if (TheTriple.isOSIAMCU())
-    return new ELFX86_IAMCUAsmBackend(T, OSABI, CPU);
+    return new ELFX86_IAMCUAsmBackend(T, OSABI, STI);
 
-  return new ELFX86_32AsmBackend(T, OSABI, CPU);
+  return new ELFX86_32AsmBackend(T, OSABI, STI);
 }
 
 MCAsmBackend *llvm::createX86_64AsmBackend(const Target &T,
@@ -867,21 +863,20 @@ MCAsmBackend *llvm::createX86_64AsmBackend(const Target &T,
                                            const MCRegisterInfo &MRI,
                                            const MCTargetOptions &Options) {
   const Triple &TheTriple = STI.getTargetTriple();
-  StringRef CPU = STI.getCPU();
   if (TheTriple.isOSBinFormatMachO()) {
     MachO::CPUSubTypeX86 CS =
         StringSwitch<MachO::CPUSubTypeX86>(TheTriple.getArchName())
             .Case("x86_64h", MachO::CPU_SUBTYPE_X86_64_H)
             .Default(MachO::CPU_SUBTYPE_X86_64_ALL);
-    return new DarwinX86_64AsmBackend(T, MRI, CPU, CS);
+    return new DarwinX86_64AsmBackend(T, MRI, STI, CS);
   }
 
   if (TheTriple.isOSWindows() && TheTriple.isOSBinFormatCOFF())
-    return new WindowsX86AsmBackend(T, true, CPU);
+    return new WindowsX86AsmBackend(T, true, STI);
 
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
 
   if (TheTriple.getEnvironment() == Triple::GNUX32)
-    return new ELFX86_X32AsmBackend(T, OSABI, CPU);
-  return new ELFX86_64AsmBackend(T, OSABI, CPU);
+    return new ELFX86_X32AsmBackend(T, OSABI, STI);
+  return new ELFX86_64AsmBackend(T, OSABI, STI);
 }
