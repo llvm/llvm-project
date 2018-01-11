@@ -15,6 +15,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_BUILDLIBCALLS_H
 #define LLVM_TRANSFORMS_UTILS_BUILDLIBCALLS_H
 
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/IRBuilder.h"
 
 namespace llvm {
@@ -28,6 +29,12 @@ namespace llvm {
   ///
   /// Returns true if any attributes were set and false otherwise.
   bool inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI);
+
+  /// Check whether the overloaded unary floating point function
+  /// corresponding to \a Ty is available.
+  bool hasUnaryFloatFn(const TargetLibraryInfo *TLI, Type *Ty,
+                       LibFunc DoubleFn, LibFunc FloatFn,
+                       LibFunc LongDoubleFn);
 
   /// Return V if it is an i8*, otherwise cast it to i8*.
   Value *castToCStr(Value *V, IRBuilder<> &B);

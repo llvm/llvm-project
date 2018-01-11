@@ -52,3 +52,26 @@ add z29.d, p8/m, z29.d, z8.d
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
 // CHECK-NEXT: add z29.d, p8/m, z29.d, z8.d
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+// --------------------------------------------------------------------------//
+// Source and Destination Registers must match
+
+add z19.b, p4/m, z20.b, z13.b
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: operand must match destination register
+// CHECK-NEXT: add z19.b, p4/m, z20.b, z13.b
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+add z9.h, p3/m, z10.h, z28.h
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: operand must match destination register
+// CHECK-NEXT: add z9.h, p3/m, z10.h, z28.h
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+add z5.s, p3/m, z6.s, z18.s
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: operand must match destination register
+// CHECK-NEXT: add z5.s, p3/m, z6.s, z18.s
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+add z9.d, p4/m, z10.d, z7.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: operand must match destination register
+// CHECK-NEXT: add z9.d, p4/m, z10.d, z7.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

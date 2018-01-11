@@ -33,6 +33,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombineWorklist.h"
+#include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -1465,6 +1466,40 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
         T->setDebugLoc(I.getDebugLoc());
       SimpR->setFastMathFlags(I.getFastMathFlags());
       return SimpR;
+    }
+  }
+
+  if (AllowReassociate &&
+      Op0->hasOneUse() && Op1->hasOneUse()) {
+    Value *A;
+    // sin(a) / cos(a) -> tan(a)
+    if (match(Op0, m_Intrinsic<Intrinsic::sin>(m_Value(A))) &&
+        match(Op1, m_Intrinsic<Intrinsic::cos>(m_Specific(A)))) {
+      if (hasUnaryFloatFn(&TLI, I.getType(), LibFunc_tan,
+                          LibFunc_tanf, LibFunc_tanl)) {
+        IRBuilder<> B(&I);
+        IRBuilder<>::FastMathFlagGuard Guard(B);
+        B.setFastMathFlags(I.getFastMathFlags());
+        Value *Tan = emitUnaryFloatFnCall(A, TLI.getName(LibFunc_tan),
+                                          B, I.getFunction()->getAttributes());
+        return replaceInstUsesWith(I, Tan);
+      }
+    }
+
+    // cos(a) / sin(a) -> 1/tan(a)
+    if (match(Op0, m_Intrinsic<Intrinsic::cos>(m_Value(A))) &&
+        match(Op1, m_Intrinsic<Intrinsic::sin>(m_Specific(A)))) {
+      if (hasUnaryFloatFn(&TLI, I.getType(), LibFunc_tan,
+                          LibFunc_tanf, LibFunc_tanl)) {
+        IRBuilder<> B(&I);
+        IRBuilder<>::FastMathFlagGuard Guard(B);
+        B.setFastMathFlags(I.getFastMathFlags());
+        Value *Tan = emitUnaryFloatFnCall(A, TLI.getName(LibFunc_tan),
+                                          B, I.getFunction()->getAttributes());
+        Value *One = ConstantFP::get(Tan->getType(), 1.0);
+        Value *Div = B.CreateFDiv(One, Tan);
+        return replaceInstUsesWith(I, Div);
+      }
     }
   }
 
