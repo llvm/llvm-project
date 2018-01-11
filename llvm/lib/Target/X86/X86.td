@@ -34,6 +34,9 @@ def Mode16Bit : SubtargetFeature<"16bit-mode", "In16BitMode", "true",
 def FeatureX87     : SubtargetFeature<"x87","HasX87", "true",
                                       "Enable X87 float instructions">;
 
+def FeatureNOPL    : SubtargetFeature<"nopl", "HasNOPL", "true",
+                                      "Enable NOPL instruction">;
+
 def FeatureCMOV    : SubtargetFeature<"cmov","HasCMov", "true",
                                       "Enable conditional move instructions">;
 
@@ -390,16 +393,16 @@ def : Proc<"i586",            [FeatureX87, FeatureSlowUAMem16]>;
 def : Proc<"pentium",         [FeatureX87, FeatureSlowUAMem16]>;
 def : Proc<"pentium-mmx",     [FeatureX87, FeatureSlowUAMem16, FeatureMMX]>;
 
-foreach P = ["i686", "pentiumpro"] in {
-  def : Proc<P, [FeatureX87, FeatureSlowUAMem16, FeatureCMOV]>;
-}
+def : Proc<"i686", [FeatureX87, FeatureSlowUAMem16, FeatureCMOV]>;
+def : Proc<"pentiumpro", [FeatureX87, FeatureSlowUAMem16, FeatureCMOV,
+                          FeatureNOPL]>;
 
 def : Proc<"pentium2",        [FeatureX87, FeatureSlowUAMem16, FeatureMMX,
-                               FeatureCMOV, FeatureFXSR]>;
+                               FeatureCMOV, FeatureFXSR, FeatureNOPL]>;
 
 foreach P = ["pentium3", "pentium3m"] in {
   def : Proc<P, [FeatureX87, FeatureSlowUAMem16, FeatureMMX, FeatureSSE1,
-                 FeatureFXSR]>;
+                 FeatureFXSR, FeatureNOPL]>;
 }
 
 // Enable the PostRAScheduler for SSE2 and SSE3 class cpus.
@@ -414,12 +417,12 @@ foreach P = ["pentium3", "pentium3m"] in {
 
 def : ProcessorModel<"pentium-m", GenericPostRAModel,
                      [FeatureX87, FeatureSlowUAMem16, FeatureMMX,
-                      FeatureSSE2, FeatureFXSR]>;
+                      FeatureSSE2, FeatureFXSR, FeatureNOPL]>;
 
 foreach P = ["pentium4", "pentium4m"] in {
   def : ProcessorModel<P, GenericPostRAModel,
                        [FeatureX87, FeatureSlowUAMem16, FeatureMMX,
-                        FeatureSSE2, FeatureFXSR]>;
+                        FeatureSSE2, FeatureFXSR, FeatureNOPL]>;
 }
 
 // Intel Quark.
@@ -428,18 +431,19 @@ def : Proc<"lakemont",        []>;
 // Intel Core Duo.
 def : ProcessorModel<"yonah", SandyBridgeModel,
                      [FeatureX87, FeatureSlowUAMem16, FeatureMMX, FeatureSSE3,
-                      FeatureFXSR]>;
+                      FeatureFXSR, FeatureNOPL]>;
 
 // NetBurst.
 def : ProcessorModel<"prescott", GenericPostRAModel,
                      [FeatureX87, FeatureSlowUAMem16, FeatureMMX, FeatureSSE3,
-                      FeatureFXSR]>;
+                      FeatureFXSR, FeatureNOPL]>;
 def : ProcessorModel<"nocona", GenericPostRAModel, [
   FeatureX87,
   FeatureSlowUAMem16,
   FeatureMMX,
   FeatureSSE3,
   FeatureFXSR,
+  FeatureNOPL,
   FeatureCMPXCHG16B
 ]>;
 
@@ -450,6 +454,7 @@ def : ProcessorModel<"core2", SandyBridgeModel, [
   FeatureMMX,
   FeatureSSSE3,
   FeatureFXSR,
+  FeatureNOPL,
   FeatureCMPXCHG16B,
   FeatureLAHFSAHF,
   FeatureMacroFusion
@@ -460,6 +465,7 @@ def : ProcessorModel<"penryn", SandyBridgeModel, [
   FeatureMMX,
   FeatureSSE41,
   FeatureFXSR,
+  FeatureNOPL,
   FeatureCMPXCHG16B,
   FeatureLAHFSAHF,
   FeatureMacroFusion
@@ -473,6 +479,7 @@ class BonnellProc<string Name> : ProcessorModel<Name, AtomModel, [
   FeatureMMX,
   FeatureSSSE3,
   FeatureFXSR,
+  FeatureNOPL,
   FeatureCMPXCHG16B,
   FeatureMOVBE,
   FeatureLEAForSP,
@@ -492,6 +499,7 @@ class SilvermontProc<string Name> : ProcessorModel<Name, SLMModel, [
   FeatureMMX,
   FeatureSSE42,
   FeatureFXSR,
+  FeatureNOPL,
   FeatureCMPXCHG16B,
   FeatureMOVBE,
   FeaturePOPCNT,
@@ -514,6 +522,7 @@ class GoldmontProc<string Name> : ProcessorModel<Name, SLMModel, [
   FeatureMMX,
   FeatureSSE42,
   FeatureFXSR,
+  FeatureNOPL,
   FeatureCMPXCHG16B,
   FeatureMOVBE,
   FeaturePOPCNT,
@@ -543,6 +552,7 @@ class NehalemProc<string Name> : ProcessorModel<Name, SandyBridgeModel, [
   FeatureMMX,
   FeatureSSE42,
   FeatureFXSR,
+  FeatureNOPL,
   FeatureCMPXCHG16B,
   FeaturePOPCNT,
   FeatureLAHFSAHF,
@@ -558,6 +568,7 @@ class WestmereProc<string Name> : ProcessorModel<Name, SandyBridgeModel, [
   FeatureMMX,
   FeatureSSE42,
   FeatureFXSR,
+  FeatureNOPL,
   FeatureCMPXCHG16B,
   FeaturePOPCNT,
   FeatureAES,
@@ -584,6 +595,7 @@ def SNBFeatures : ProcessorFeatures<[], [
   FeatureMMX,
   FeatureAVX,
   FeatureFXSR,
+  FeatureNOPL,
   FeatureCMPXCHG16B,
   FeaturePOPCNT,
   FeatureAES,
@@ -757,27 +769,28 @@ def : Proc<"k6-2",            [FeatureX87, FeatureSlowUAMem16, Feature3DNow]>;
 def : Proc<"k6-3",            [FeatureX87, FeatureSlowUAMem16, Feature3DNow]>;
 
 foreach P = ["athlon", "athlon-tbird"] in {
-  def : Proc<P, [FeatureX87, FeatureSlowUAMem16, Feature3DNowA, FeatureSlowSHLD]>;
+  def : Proc<P, [FeatureX87, FeatureSlowUAMem16, Feature3DNowA,
+                 FeatureNOPL, FeatureSlowSHLD]>;
 }
 
 foreach P = ["athlon-4", "athlon-xp", "athlon-mp"] in {
   def : Proc<P, [FeatureX87, FeatureSlowUAMem16, FeatureSSE1,
-                 Feature3DNowA, FeatureFXSR, FeatureSlowSHLD]>;
+                 Feature3DNowA, FeatureFXSR, FeatureNOPL, FeatureSlowSHLD]>;
 }
 
 foreach P = ["k8", "opteron", "athlon64", "athlon-fx"] in {
   def : Proc<P, [FeatureX87, FeatureSlowUAMem16, FeatureSSE2, Feature3DNowA,
-                 FeatureFXSR, Feature64Bit, FeatureSlowSHLD]>;
+                 FeatureFXSR, FeatureNOPL, Feature64Bit, FeatureSlowSHLD]>;
 }
 
 foreach P = ["k8-sse3", "opteron-sse3", "athlon64-sse3"] in {
   def : Proc<P, [FeatureX87, FeatureSlowUAMem16, FeatureSSE3, Feature3DNowA,
-                 FeatureFXSR, FeatureCMPXCHG16B, FeatureSlowSHLD]>;
+                 FeatureFXSR, FeatureNOPL, FeatureCMPXCHG16B, FeatureSlowSHLD]>;
 }
 
 foreach P = ["amdfam10", "barcelona"] in {
   def : Proc<P, [FeatureX87, FeatureSSE4A, Feature3DNowA, FeatureFXSR,
-                 FeatureCMPXCHG16B, FeatureLZCNT, FeaturePOPCNT,
+                 FeatureNOPL, FeatureCMPXCHG16B, FeatureLZCNT, FeaturePOPCNT,
                  FeatureSlowSHLD, FeatureLAHFSAHF]>;
 }
 
@@ -788,6 +801,7 @@ def : Proc<"btver1", [
   FeatureSSSE3,
   FeatureSSE4A,
   FeatureFXSR,
+  FeatureNOPL,
   FeatureCMPXCHG16B,
   FeaturePRFCHW,
   FeatureLZCNT,
@@ -802,6 +816,7 @@ def : ProcessorModel<"btver2", BtVer2Model, [
   FeatureMMX,
   FeatureAVX,
   FeatureFXSR,
+  FeatureNOPL,
   FeatureSSE4A,
   FeatureCMPXCHG16B,
   FeaturePRFCHW,
@@ -832,6 +847,7 @@ def : Proc<"bdver1", [
   FeatureMMX,
   FeatureAVX,
   FeatureFXSR,
+  FeatureNOPL,
   FeatureSSE4A,
   FeatureLZCNT,
   FeaturePOPCNT,
@@ -853,6 +869,7 @@ def : Proc<"bdver2", [
   FeatureMMX,
   FeatureAVX,
   FeatureFXSR,
+  FeatureNOPL,
   FeatureSSE4A,
   FeatureF16C,
   FeatureLZCNT,
@@ -879,6 +896,7 @@ def : Proc<"bdver3", [
   FeatureMMX,
   FeatureAVX,
   FeatureFXSR,
+  FeatureNOPL,
   FeatureSSE4A,
   FeatureF16C,
   FeatureLZCNT,
@@ -901,6 +919,7 @@ def : Proc<"bdver4", [
   FeatureMMX,
   FeatureAVX2,
   FeatureFXSR,
+  FeatureNOPL,
   FeatureXOP,
   FeatureFMA4,
   FeatureCMPXCHG16B,
@@ -938,6 +957,7 @@ def: ProcessorModel<"znver1", Znver1Model, [
   FeatureFMA,
   FeatureFSGSBase,
   FeatureFXSR,
+  FeatureNOPL,
   FeatureFastLZCNT,
   FeatureLAHFSAHF,
   FeatureLZCNT,
@@ -982,6 +1002,7 @@ def : ProcessorModel<"x86-64", SandyBridgeModel, [
   FeatureMMX,
   FeatureSSE2,
   FeatureFXSR,
+  FeatureNOPL,
   Feature64Bit,
   FeatureSlow3OpsLEA,
   FeatureSlowIncDec,

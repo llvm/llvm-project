@@ -16,3 +16,14 @@ namespace CompleteType {
 
   constexpr int n = X<true>::value;
 }
+
+template <typename T> struct A {
+  static const int n;
+  static const int m;
+  constexpr int f() { return n; }
+  constexpr int g() { return n; }
+};
+template <typename T> constexpr int A<T>::n = sizeof(A) + sizeof(T);
+template <typename T> inline constexpr int A<T>::m = sizeof(A) + sizeof(T);
+static_assert(A<int>().f() == 5);
+static_assert(A<int>().g() == 5);

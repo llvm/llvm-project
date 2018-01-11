@@ -709,6 +709,19 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
   }
 }
 
+bool llvm::hasUnaryFloatFn(const TargetLibraryInfo *TLI, Type *Ty,
+                           LibFunc DoubleFn, LibFunc FloatFn,
+                           LibFunc LongDoubleFn) {
+  switch (Ty->getTypeID()) {
+  case Type::FloatTyID:
+    return TLI->has(FloatFn);
+  case Type::DoubleTyID:
+    return TLI->has(DoubleFn);
+  default:
+    return TLI->has(LongDoubleFn);
+  }
+}
+
 //- Emit LibCalls ------------------------------------------------------------//
 
 Value *llvm::castToCStr(Value *V, IRBuilder<> &B) {

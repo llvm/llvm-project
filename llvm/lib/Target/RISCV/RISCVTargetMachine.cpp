@@ -75,6 +75,7 @@ public:
   }
 
   bool addInstSelector() override;
+  void addPreEmitPass() override;
 };
 }
 
@@ -87,3 +88,5 @@ bool RISCVPassConfig::addInstSelector() {
 
   return false;
 }
+
+void RISCVPassConfig::addPreEmitPass() { addPass(&BranchRelaxationPassID); }

@@ -508,7 +508,12 @@ public:
   /// When possible, emit a DwarfStringPool section offset without any
   /// relocations, and without using the symbol.  Otherwise, defers to \a
   /// emitDwarfSymbolReference().
-  void emitDwarfStringOffset(DwarfStringPoolEntryRef S) const;
+  void emitDwarfStringOffset(DwarfStringPoolEntry S) const;
+
+  /// Emit the 4-byte offset of a string from the start of its section.
+  void emitDwarfStringOffset(DwarfStringPoolEntryRef S) const {
+    emitDwarfStringOffset(S.getEntry());
+  }
 
   /// Get the value for DW_AT_APPLE_isa. Zero if no isa encoding specified.
   virtual unsigned getISAEncoding() { return 0; }

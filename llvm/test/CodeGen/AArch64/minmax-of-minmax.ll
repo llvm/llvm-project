@@ -3,8 +3,9 @@
 
 ; There are 4 commuted variants (abbc/abcb/bcab/bcba) *
 ;           4 predicate variants ([*][lg][te]) *
-;           4 min/max flavors (smin/smax/umin/umax)
-;           = 64 tests
+;           4 min/max flavors (smin/smax/umin/umax) *
+;           2 notted variants  
+;           = 128 tests
 
 define <4 x i32> @smin_ab_bc(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; CHECK-LABEL: smin_ab_bc:
@@ -1026,6 +1027,1478 @@ define <4 x i32> @umax_bc_ba_eq_swap_pred(<4 x i32> %a, <4 x i32> %b, <4 x i32> 
   %cmp_ba = icmp ugt <4 x i32> %b, %a
   %min_ba = select <4 x i1> %cmp_ba, <4 x i32> %b, <4 x i32> %a
   %cmp_ca = icmp ule <4 x i32> %a, %c
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ba
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smin_ab_bc(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smin_ab_bc:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smin v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    smin v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    cmgt v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp slt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_bc = icmp slt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ac = icmp slt <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_bc
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smin_ab_cb(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smin_ab_cb:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smin v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    smin v1.4s, v4.4s, v1.4s
+; CHECK-NEXT:    cmgt v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp slt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_cb = icmp slt <4 x i32> %c, %b
+  %min_cb = select <4 x i1> %cmp_cb, <4 x i32> %c, <4 x i32> %b
+  %cmp_ac = icmp slt <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_cb
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smin_bc_ab(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smin_bc_ab:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smin v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    smin v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    cmgt v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp slt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ab = icmp slt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_ca = icmp slt <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ab
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smin_bc_ba(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smin_bc_ba:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smin v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    smin v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    cmgt v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp slt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ba = icmp slt <4 x i32> %b, %a
+  %min_ba = select <4 x i1> %cmp_ba, <4 x i32> %b, <4 x i32> %a
+  %cmp_ca = icmp slt <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ba
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smin_ab_bc_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smin_ab_bc_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smin v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    smin v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    cmgt v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp slt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_bc = icmp slt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ac = icmp sgt <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_bc
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smin_ab_cb_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smin_ab_cb_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smin v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    smin v1.4s, v4.4s, v1.4s
+; CHECK-NEXT:    cmgt v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp slt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_cb = icmp slt <4 x i32> %c, %b
+  %min_cb = select <4 x i1> %cmp_cb, <4 x i32> %c, <4 x i32> %b
+  %cmp_ac = icmp sgt <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_cb
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smin_bc_ab_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smin_bc_ab_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smin v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    smin v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    cmgt v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp slt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ab = icmp slt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_ca = icmp sgt <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ab
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smin_bc_ba_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smin_bc_ba_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smin v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    smin v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    cmgt v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp slt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ba = icmp slt <4 x i32> %b, %a
+  %min_ba = select <4 x i1> %cmp_ba, <4 x i32> %b, <4 x i32> %a
+  %cmp_ca = icmp sgt <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ba
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smin_ab_bc_eq_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smin_ab_bc_eq_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smin v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    smin v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    cmge v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp slt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_bc = icmp slt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ac = icmp sle <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_bc
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smin_ab_cb_eq_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smin_ab_cb_eq_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smin v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    smin v1.4s, v4.4s, v1.4s
+; CHECK-NEXT:    cmge v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp slt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_cb = icmp slt <4 x i32> %c, %b
+  %min_cb = select <4 x i1> %cmp_cb, <4 x i32> %c, <4 x i32> %b
+  %cmp_ac = icmp sle <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_cb
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smin_bc_ab_eq_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smin_bc_ab_eq_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smin v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    smin v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    cmge v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp slt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ab = icmp slt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_ca = icmp sle <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ab
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smin_bc_ba_eq_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smin_bc_ba_eq_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smin v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    smin v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    cmge v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp slt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ba = icmp slt <4 x i32> %b, %a
+  %min_ba = select <4 x i1> %cmp_ba, <4 x i32> %b, <4 x i32> %a
+  %cmp_ca = icmp sle <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ba
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smin_ab_bc_eq_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smin_ab_bc_eq_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smin v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    smin v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    cmge v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp slt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_bc = icmp slt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ac = icmp sge <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_bc
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smin_ab_cb_eq_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smin_ab_cb_eq_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smin v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    smin v1.4s, v4.4s, v1.4s
+; CHECK-NEXT:    cmge v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp slt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_cb = icmp slt <4 x i32> %c, %b
+  %min_cb = select <4 x i1> %cmp_cb, <4 x i32> %c, <4 x i32> %b
+  %cmp_ac = icmp sge <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_cb
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smin_bc_ab_eq_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smin_bc_ab_eq_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smin v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    smin v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    cmge v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp slt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ab = icmp slt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_ca = icmp sge <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ab
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smin_bc_ba_eq_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smin_bc_ba_eq_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smin v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    smin v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    cmge v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp slt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ba = icmp slt <4 x i32> %b, %a
+  %min_ba = select <4 x i1> %cmp_ba, <4 x i32> %b, <4 x i32> %a
+  %cmp_ca = icmp sge <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ba
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smax_ab_bc(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smax_ab_bc:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smax v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    smax v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    cmgt v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp sgt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_bc = icmp sgt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ac = icmp sgt <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_bc
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smax_ab_cb(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smax_ab_cb:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smax v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    smax v1.4s, v4.4s, v1.4s
+; CHECK-NEXT:    cmgt v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp sgt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_cb = icmp sgt <4 x i32> %c, %b
+  %min_cb = select <4 x i1> %cmp_cb, <4 x i32> %c, <4 x i32> %b
+  %cmp_ac = icmp sgt <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_cb
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smax_bc_ab(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smax_bc_ab:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smax v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    smax v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    cmgt v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp sgt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ab = icmp sgt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_ca = icmp sgt <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ab
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smax_bc_ba(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smax_bc_ba:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smax v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    smax v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    cmgt v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp sgt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ba = icmp sgt <4 x i32> %b, %a
+  %min_ba = select <4 x i1> %cmp_ba, <4 x i32> %b, <4 x i32> %a
+  %cmp_ca = icmp sgt <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ba
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smax_ab_bc_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smax_ab_bc_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smax v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    smax v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    cmgt v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp sgt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_bc = icmp sgt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ac = icmp slt <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_bc
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smax_ab_cb_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smax_ab_cb_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smax v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    smax v1.4s, v4.4s, v1.4s
+; CHECK-NEXT:    cmgt v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp sgt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_cb = icmp sgt <4 x i32> %c, %b
+  %min_cb = select <4 x i1> %cmp_cb, <4 x i32> %c, <4 x i32> %b
+  %cmp_ac = icmp slt <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_cb
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smax_bc_ab_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smax_bc_ab_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smax v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    smax v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    cmgt v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp sgt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ab = icmp sgt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_ca = icmp slt <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ab
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smax_bc_ba_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smax_bc_ba_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smax v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    smax v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    cmgt v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp sgt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ba = icmp sgt <4 x i32> %b, %a
+  %min_ba = select <4 x i1> %cmp_ba, <4 x i32> %b, <4 x i32> %a
+  %cmp_ca = icmp slt <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ba
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smax_ab_bc_eq_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smax_ab_bc_eq_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smax v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    smax v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    cmge v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp sgt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_bc = icmp sgt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ac = icmp sge <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_bc
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smax_ab_cb_eq_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smax_ab_cb_eq_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smax v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    smax v1.4s, v4.4s, v1.4s
+; CHECK-NEXT:    cmge v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp sgt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_cb = icmp sgt <4 x i32> %c, %b
+  %min_cb = select <4 x i1> %cmp_cb, <4 x i32> %c, <4 x i32> %b
+  %cmp_ac = icmp sge <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_cb
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smax_bc_ab_eq_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smax_bc_ab_eq_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smax v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    smax v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    cmge v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp sgt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ab = icmp sgt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_ca = icmp sge <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ab
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smax_bc_ba_eq_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smax_bc_ba_eq_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smax v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    smax v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    cmge v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp sgt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ba = icmp sgt <4 x i32> %b, %a
+  %min_ba = select <4 x i1> %cmp_ba, <4 x i32> %b, <4 x i32> %a
+  %cmp_ca = icmp sge <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ba
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smax_ab_bc_eq_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smax_ab_bc_eq_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smax v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    smax v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    cmge v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp sgt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_bc = icmp sgt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ac = icmp sle <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_bc
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smax_ab_cb_eq_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smax_ab_cb_eq_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smax v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    smax v1.4s, v4.4s, v1.4s
+; CHECK-NEXT:    cmge v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp sgt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_cb = icmp sgt <4 x i32> %c, %b
+  %min_cb = select <4 x i1> %cmp_cb, <4 x i32> %c, <4 x i32> %b
+  %cmp_ac = icmp sle <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_cb
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smax_bc_ab_eq_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smax_bc_ab_eq_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smax v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    smax v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    cmge v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp sgt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ab = icmp sgt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_ca = icmp sle <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ab
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_smax_bc_ba_eq_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_smax_bc_ba_eq_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    smax v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    smax v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    cmge v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp sgt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ba = icmp sgt <4 x i32> %b, %a
+  %min_ba = select <4 x i1> %cmp_ba, <4 x i32> %b, <4 x i32> %a
+  %cmp_ca = icmp sle <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ba
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umin_ab_bc(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umin_ab_bc:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umin v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    umin v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    cmhi v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp ult <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_bc = icmp ult <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ac = icmp ult <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_bc
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umin_ab_cb(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umin_ab_cb:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umin v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    umin v1.4s, v4.4s, v1.4s
+; CHECK-NEXT:    cmhi v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp ult <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_cb = icmp ult <4 x i32> %c, %b
+  %min_cb = select <4 x i1> %cmp_cb, <4 x i32> %c, <4 x i32> %b
+  %cmp_ac = icmp ult <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_cb
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umin_bc_ab(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umin_bc_ab:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umin v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    umin v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    cmhi v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp ult <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ab = icmp ult <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_ca = icmp ult <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ab
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umin_bc_ba(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umin_bc_ba:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umin v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    umin v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    cmhi v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp ult <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ba = icmp ult <4 x i32> %b, %a
+  %min_ba = select <4 x i1> %cmp_ba, <4 x i32> %b, <4 x i32> %a
+  %cmp_ca = icmp ult <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ba
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umin_ab_bc_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umin_ab_bc_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umin v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    umin v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    cmhi v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp ult <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_bc = icmp ult <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ac = icmp ugt <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_bc
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umin_ab_cb_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umin_ab_cb_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umin v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    umin v1.4s, v4.4s, v1.4s
+; CHECK-NEXT:    cmhi v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp ult <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_cb = icmp ult <4 x i32> %c, %b
+  %min_cb = select <4 x i1> %cmp_cb, <4 x i32> %c, <4 x i32> %b
+  %cmp_ac = icmp ugt <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_cb
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umin_bc_ab_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umin_bc_ab_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umin v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    umin v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    cmhi v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp ult <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ab = icmp ult <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_ca = icmp ugt <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ab
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umin_bc_ba_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umin_bc_ba_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umin v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    umin v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    cmhi v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp ult <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ba = icmp ult <4 x i32> %b, %a
+  %min_ba = select <4 x i1> %cmp_ba, <4 x i32> %b, <4 x i32> %a
+  %cmp_ca = icmp ugt <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ba
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umin_ab_bc_eq_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umin_ab_bc_eq_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umin v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    umin v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    cmhs v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp ult <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_bc = icmp ult <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ac = icmp ule <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_bc
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umin_ab_cb_eq_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umin_ab_cb_eq_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umin v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    umin v1.4s, v4.4s, v1.4s
+; CHECK-NEXT:    cmhs v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp ult <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_cb = icmp ult <4 x i32> %c, %b
+  %min_cb = select <4 x i1> %cmp_cb, <4 x i32> %c, <4 x i32> %b
+  %cmp_ac = icmp ule <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_cb
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umin_bc_ab_eq_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umin_bc_ab_eq_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umin v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    umin v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    cmhs v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp ult <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ab = icmp ult <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_ca = icmp ule <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ab
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umin_bc_ba_eq_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umin_bc_ba_eq_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umin v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    umin v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    cmhs v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp ult <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ba = icmp ult <4 x i32> %b, %a
+  %min_ba = select <4 x i1> %cmp_ba, <4 x i32> %b, <4 x i32> %a
+  %cmp_ca = icmp ule <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ba
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umin_ab_bc_eq_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umin_ab_bc_eq_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umin v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    umin v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    cmhs v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp ult <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_bc = icmp ult <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ac = icmp uge <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_bc
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umin_ab_cb_eq_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umin_ab_cb_eq_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umin v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    umin v1.4s, v4.4s, v1.4s
+; CHECK-NEXT:    cmhs v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp ult <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_cb = icmp ult <4 x i32> %c, %b
+  %min_cb = select <4 x i1> %cmp_cb, <4 x i32> %c, <4 x i32> %b
+  %cmp_ac = icmp uge <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_cb
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umin_bc_ab_eq_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umin_bc_ab_eq_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umin v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    umin v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    cmhs v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp ult <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ab = icmp ult <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_ca = icmp uge <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ab
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umin_bc_ba_eq_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umin_bc_ba_eq_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umin v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    umin v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    cmhs v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp ult <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ba = icmp ult <4 x i32> %b, %a
+  %min_ba = select <4 x i1> %cmp_ba, <4 x i32> %b, <4 x i32> %a
+  %cmp_ca = icmp uge <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ba
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umax_ab_bc(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umax_ab_bc:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umax v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    umax v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    cmhi v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp ugt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_bc = icmp ugt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ac = icmp ugt <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_bc
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umax_ab_cb(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umax_ab_cb:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umax v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    umax v1.4s, v4.4s, v1.4s
+; CHECK-NEXT:    cmhi v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp ugt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_cb = icmp ugt <4 x i32> %c, %b
+  %min_cb = select <4 x i1> %cmp_cb, <4 x i32> %c, <4 x i32> %b
+  %cmp_ac = icmp ugt <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_cb
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umax_bc_ab(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umax_bc_ab:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umax v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    umax v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    cmhi v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp ugt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ab = icmp ugt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_ca = icmp ugt <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ab
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umax_bc_ba(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umax_bc_ba:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umax v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    umax v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    cmhi v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp ugt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ba = icmp ugt <4 x i32> %b, %a
+  %min_ba = select <4 x i1> %cmp_ba, <4 x i32> %b, <4 x i32> %a
+  %cmp_ca = icmp ugt <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ba
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umax_ab_bc_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umax_ab_bc_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umax v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    umax v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    cmhi v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp ugt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_bc = icmp ugt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ac = icmp ult <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_bc
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umax_ab_cb_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umax_ab_cb_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umax v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    umax v1.4s, v4.4s, v1.4s
+; CHECK-NEXT:    cmhi v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp ugt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_cb = icmp ugt <4 x i32> %c, %b
+  %min_cb = select <4 x i1> %cmp_cb, <4 x i32> %c, <4 x i32> %b
+  %cmp_ac = icmp ult <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_cb
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umax_bc_ab_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umax_bc_ab_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umax v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    umax v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    cmhi v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp ugt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ab = icmp ugt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_ca = icmp ult <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ab
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umax_bc_ba_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umax_bc_ba_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umax v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    umax v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    cmhi v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp ugt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ba = icmp ugt <4 x i32> %b, %a
+  %min_ba = select <4 x i1> %cmp_ba, <4 x i32> %b, <4 x i32> %a
+  %cmp_ca = icmp ult <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ba
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umax_ab_bc_eq_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umax_ab_bc_eq_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umax v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    umax v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    cmhs v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp ugt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_bc = icmp ugt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ac = icmp uge <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_bc
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umax_ab_cb_eq_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umax_ab_cb_eq_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umax v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    umax v1.4s, v4.4s, v1.4s
+; CHECK-NEXT:    cmhs v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp ugt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_cb = icmp ugt <4 x i32> %c, %b
+  %min_cb = select <4 x i1> %cmp_cb, <4 x i32> %c, <4 x i32> %b
+  %cmp_ac = icmp uge <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_cb
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umax_bc_ab_eq_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umax_bc_ab_eq_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umax v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    umax v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    cmhs v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp ugt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ab = icmp ugt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_ca = icmp uge <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ab
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umax_bc_ba_eq_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umax_bc_ba_eq_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umax v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    umax v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    cmhs v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp ugt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ba = icmp ugt <4 x i32> %b, %a
+  %min_ba = select <4 x i1> %cmp_ba, <4 x i32> %b, <4 x i32> %a
+  %cmp_ca = icmp uge <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ba
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umax_ab_bc_eq_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umax_ab_bc_eq_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umax v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    umax v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    cmhs v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp ugt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_bc = icmp ugt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ac = icmp ule <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_bc
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umax_ab_cb_eq_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umax_ab_cb_eq_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umax v3.4s, v3.4s, v1.4s
+; CHECK-NEXT:    umax v1.4s, v4.4s, v1.4s
+; CHECK-NEXT:    cmhs v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_ab = icmp ugt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_cb = icmp ugt <4 x i32> %c, %b
+  %min_cb = select <4 x i1> %cmp_cb, <4 x i32> %c, <4 x i32> %b
+  %cmp_ac = icmp ule <4 x i32> %x, %z
+  %r = select <4 x i1> %cmp_ac, <4 x i32> %min_ab, <4 x i32> %min_cb
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umax_bc_ab_eq_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umax_bc_ab_eq_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umax v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    umax v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    cmhs v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp ugt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ab = icmp ugt <4 x i32> %a, %b
+  %min_ab = select <4 x i1> %cmp_ab, <4 x i32> %a, <4 x i32> %b
+  %cmp_ca = icmp ule <4 x i32> %z, %x
+  %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ab
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @notted_umax_bc_ba_eq_swap_pred(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: notted_umax_bc_ba_eq_swap_pred:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn v3.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    mvn v4.16b, v2.16b
+; CHECK-NEXT:    umax v4.4s, v1.4s, v4.4s
+; CHECK-NEXT:    umax v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    cmhs v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; CHECK-NEXT:    ret
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %cmp_bc = icmp ugt <4 x i32> %b, %c
+  %min_bc = select <4 x i1> %cmp_bc, <4 x i32> %b, <4 x i32> %c
+  %cmp_ba = icmp ugt <4 x i32> %b, %a
+  %min_ba = select <4 x i1> %cmp_ba, <4 x i32> %b, <4 x i32> %a
+  %cmp_ca = icmp ule <4 x i32> %z, %x
   %r = select <4 x i1> %cmp_ca, <4 x i32> %min_bc, <4 x i32> %min_ba
   ret <4 x i32> %r
 }

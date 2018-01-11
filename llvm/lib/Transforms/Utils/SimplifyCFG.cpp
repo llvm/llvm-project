@@ -4670,30 +4670,31 @@ GetCaseResults(SwitchInst *SI, ConstantInt *CaseVal, BasicBlock *CaseDest,
 }
 
 // Helper function used to add CaseVal to the list of cases that generate
-// Result.
-static void MapCaseToResult(ConstantInt *CaseVal,
-                            SwitchCaseResultVectorTy &UniqueResults,
-                            Constant *Result) {
+// Result. Returns the updated number of cases that generate this result.
+static uintptr_t MapCaseToResult(ConstantInt *CaseVal,
+                                 SwitchCaseResultVectorTy &UniqueResults,
+                                 Constant *Result) {
   for (auto &I : UniqueResults) {
     if (I.first == Result) {
       I.second.push_back(CaseVal);
-      return;
+      return I.second.size();
     }
   }
   UniqueResults.push_back(
       std::make_pair(Result, SmallVector<ConstantInt *, 4>(1, CaseVal)));
+  return 1;
 }
 
 // Helper function that initializes a map containing
 // results for the PHI node of the common destination block for a switch
 // instruction. Returns false if multiple PHI nodes have been found or if
 // there is not a common destination block for the switch.
-static bool InitializeUniqueCases(SwitchInst *SI, PHINode *&PHI,
-                                  BasicBlock *&CommonDest,
-                                  SwitchCaseResultVectorTy &UniqueResults,
-                                  Constant *&DefaultResult,
-                                  const DataLayout &DL,
-                                  const TargetTransformInfo &TTI) {
+static bool
+InitializeUniqueCases(SwitchInst *SI, PHINode *&PHI, BasicBlock *&CommonDest,
+                      SwitchCaseResultVectorTy &UniqueResults,
+                      Constant *&DefaultResult, const DataLayout &DL,
+                      const TargetTransformInfo &TTI,
+                      uintptr_t MaxUniqueResults, uintptr_t MaxCasesPerResult) {
   for (auto &I : SI->cases()) {
     ConstantInt *CaseVal = I.getCaseValue();
 
@@ -4703,10 +4704,21 @@ static bool InitializeUniqueCases(SwitchInst *SI, PHINode *&PHI,
                         DL, TTI))
       return false;
 
-    // Only one value per case is permitted
+    // Only one value per case is permitted.
     if (Results.size() > 1)
       return false;
-    MapCaseToResult(CaseVal, UniqueResults, Results.begin()->second);
+
+    // Add the case->result mapping to UniqueResults.
+    const uintptr_t NumCasesForResult =
+        MapCaseToResult(CaseVal, UniqueResults, Results.begin()->second);
+
+    // Early out if there are too many cases for this result.
+    if (NumCasesForResult > MaxCasesPerResult)
+      return false;
+
+    // Early out if there are too many unique results.
+    if (UniqueResults.size() > MaxUniqueResults)
+      return false;
 
     // Check the PHI consistency.
     if (!PHI)
@@ -4806,7 +4818,7 @@ static bool switchToSelect(SwitchInst *SI, IRBuilder<> &Builder,
   SwitchCaseResultVectorTy UniqueResults;
   // Collect all the cases that will deliver the same value from the switch.
   if (!InitializeUniqueCases(SI, PHI, CommonDest, UniqueResults, DefaultResult,
-                             DL, TTI))
+                             DL, TTI, 2, 1))
     return false;
   // Selects choose between maximum two values.
   if (UniqueResults.size() != 2)

@@ -153,31 +153,10 @@ void DynamicLoaderPOSIXDYLD::DidAttach() {
     UpdateLoadedSections(executable_sp, LLDB_INVALID_ADDRESS, load_offset,
                          true);
 
-    // When attaching to a target, there are two possible states:
-    // (1) We already crossed the entry point and therefore the rendezvous
-    //     structure is ready to be used and we can load the list of modules
-    //     and place the rendezvous breakpoint.
-    // (2) We didn't cross the entry point yet, so these structures are not
-    //     ready; we should behave as if we just launched the target and
-    //     call ProbeEntry(). This will place a breakpoint on the entry
-    //     point which itself will be hit after the rendezvous structure is
-    //     set up and will perform actions described in (1).
-    if (m_rendezvous.Resolve()) {
-      if (log)
-        log->Printf("DynamicLoaderPOSIXDYLD::%s() pid %" PRIu64
-                    " rendezvous could resolve: attach assuming dynamic loader "
-                    "info is available now",
-                    __FUNCTION__,
-                    m_process ? m_process->GetID() : LLDB_INVALID_PROCESS_ID);
-      LoadAllCurrentModules();
-      SetRendezvousBreakpoint();
-    } else {
-      if (log)
-        log->Printf("DynamicLoaderPOSIXDYLD::%s() pid %" PRIu64
-                    " rendezvous could not yet resolve: adding breakpoint to "
-                    "catch future rendezvous setup",
-                    __FUNCTION__,
-                    m_process ? m_process->GetID() : LLDB_INVALID_PROCESS_ID);
+    LoadAllCurrentModules();
+    if (!SetRendezvousBreakpoint()) {
+      // If we cannot establish rendezvous breakpoint right now
+      // we'll try again at entry point.
       ProbeEntry();
     }
 
@@ -225,6 +204,7 @@ void DynamicLoaderPOSIXDYLD::DidLaunch() {
       ProbeEntry();
     }
 
+    LoadVDSO();
     m_process->GetTarget().ModulesDidLoad(module_list);
   }
 }
@@ -582,6 +562,8 @@ void DynamicLoaderPOSIXDYLD::LoadAllCurrentModules() {
   ModuleList module_list;
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
 
+  LoadVDSO();
+
   if (!m_rendezvous.Resolve()) {
     if (log)
       log->Printf("DynamicLoaderPOSIXDYLD::%s unable to resolve POSIX DYLD "
@@ -594,7 +576,6 @@ void DynamicLoaderPOSIXDYLD::LoadAllCurrentModules() {
   // that ourselves here.
   ModuleSP executable = GetTargetExecutable();
   m_loaded_modules[executable] = m_rendezvous.GetLinkMapAddress();
-  LoadVDSO();
 
   std::vector<FileSpec> module_names;
   for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I)
