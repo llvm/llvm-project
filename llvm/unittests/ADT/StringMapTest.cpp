@@ -12,6 +12,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/DataTypes.h"
 #include "gtest/gtest.h"
+#include <limits>
 #include <tuple>
 using namespace llvm;
 
@@ -490,6 +491,45 @@ TEST(StringMapCustomTest, EmplaceTest) {
   Map.try_emplace("abcd", 42);
   EXPECT_EQ(1u, Map.count("abcd"));
   EXPECT_EQ(42, Map["abcd"].Data);
+}
+
+// Test that StringMapEntryBase can handle size_t wide sizes.
+TEST(StringMapCustomTest, StringMapEntryBaseSize) {
+  size_t LargeValue;
+
+  // Test that the entry can represent max-unsigned.
+  if (sizeof(size_t) <= sizeof(unsigned))
+    LargeValue = std::numeric_limits<unsigned>::max();
+  else
+    LargeValue = std::numeric_limits<unsigned>::max() + 1ULL;
+  StringMapEntryBase LargeBase(LargeValue);
+  EXPECT_EQ(LargeValue, LargeBase.getKeyLength());
+
+  // Test that the entry can hold at least max size_t.
+  LargeValue = std::numeric_limits<size_t>::max();
+  StringMapEntryBase LargerBase(LargeValue);
+  LargeValue = std::numeric_limits<size_t>::max();
+  EXPECT_EQ(LargeValue, LargerBase.getKeyLength());
+}
+
+// Test that StringMapEntry can handle size_t wide sizes.
+TEST(StringMapCustomTest, StringMapEntrySize) {
+  size_t LargeValue;
+
+  // Test that the entry can represent max-unsigned.
+  if (sizeof(size_t) <= sizeof(unsigned))
+    LargeValue = std::numeric_limits<unsigned>::max();
+  else
+    LargeValue = std::numeric_limits<unsigned>::max() + 1ULL;
+  StringMapEntry<int> LargeEntry(LargeValue);
+  StringRef Key = LargeEntry.getKey();
+  EXPECT_EQ(LargeValue, Key.size());
+
+  // Test that the entry can hold at least max size_t.
+  LargeValue = std::numeric_limits<size_t>::max();
+  StringMapEntry<int> LargerEntry(LargeValue);
+  Key = LargerEntry.getKey();
+  EXPECT_EQ(LargeValue, Key.size());
 }
 
 } // end anonymous namespace
