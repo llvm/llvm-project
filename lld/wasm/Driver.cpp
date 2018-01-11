@@ -161,16 +161,36 @@ opt::InputArgList WasmOptTable::parse(ArrayRef<const char *> Argv) {
   return Args;
 }
 
+// Currently we allow a ".imports" to live alongside a library. This can
+// be used to specify a list of symbols which can be undefined at link
+// time (imported from the environment.  For example libc.a include an
+// import file that lists the syscall functions it relies on at runtime.
+// In the long run this information would be better stored as a symbol
+// attribute/flag in the object file itself.
+// See: https://github.com/WebAssembly/tool-conventions/issues/35
+static void readImportFile(StringRef Filename) {
+  if (Optional<MemoryBufferRef> Buf = readFile(Filename))
+    for (StringRef Sym : args::getLines(*Buf))
+      Config->AllowUndefinedSymbols.insert(Sym);
+}
+
 void LinkerDriver::addFile(StringRef Path) {
   Optional<MemoryBufferRef> Buffer = readFile(Path);
   if (!Buffer.hasValue())
     return;
   MemoryBufferRef MBRef = *Buffer;
 
-  if (identify_magic(MBRef.getBuffer()) == file_magic::archive)
+  if (identify_magic(MBRef.getBuffer()) == file_magic::archive) {
+    SmallString<128> ImportFile = Path;
+    path::replace_extension(ImportFile, ".imports");
+    if (fs::exists(ImportFile))
+      readImportFile(ImportFile.str());
+
     Files.push_back(make<ArchiveFile>(MBRef));
-  else
-    Files.push_back(make<ObjFile>(MBRef));
+    return;
+  }
+
+  Files.push_back(make<ObjFile>(MBRef));
 }
 
 // Add a given library by searching it from input search paths.
@@ -257,9 +277,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       args::getZOptionValue(Args, OPT_z, "stack-size", WasmPageSize);
 
   if (auto *Arg = Args.getLastArg(OPT_allow_undefined_file))
-    if (Optional<MemoryBufferRef> Buf = readFile(Arg->getValue()))
-      for (StringRef Sym : args::getLines(*Buf))
-        Config->AllowUndefinedSymbols.insert(Sym);
+    readImportFile(Arg->getValue());
 
   if (Config->OutputFile.empty())
     error("no output file specified");
