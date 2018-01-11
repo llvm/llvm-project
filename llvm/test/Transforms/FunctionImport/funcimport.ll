@@ -55,7 +55,7 @@ declare i32 @referencestatics(...) #1
 ; Ensure that the call is to the properly-renamed function.
 ; INSTLIMDEF-DAG: Import staticfunc
 ; INSTLIMDEF-DAG: %call = call i32 @staticfunc.llvm.
-; INSTLIMDEF-DAG: define available_externally hidden i32 @staticfunc.llvm.{{.*}} !thinlto_src_module !0 {
+; INSTLIMDEF-DAG: define available_externally dso_local hidden i32 @staticfunc.llvm.{{.*}} !thinlto_src_module !0 {
 
 ; INSTLIMDEF-DAG: Import referenceglobals
 ; CHECK-DAG: define available_externally i32 @referenceglobals(i32 %i) !thinlto_src_module !0 {
@@ -80,7 +80,7 @@ declare void @callfuncptr(...) #1
 
 ; Ensure that all uses of local variable @P which has used in setfuncptr
 ; and callfuncptr are to the same promoted/renamed global.
-; CHECK-DAG: @P.llvm.{{.*}} = external hidden global void ()*
+; CHECK-DAG: @P.llvm.{{.*}} = external dso_local hidden global void ()*
 ; CHECK-DAG: %0 = load void ()*, void ()** @P.llvm.
 ; CHECK-DAG: store void ()* @staticfunc2.llvm.{{.*}}, void ()** @P.llvm.
 
@@ -99,8 +99,8 @@ declare void @weakfunc(...) #1
 declare void @linkoncefunc2(...) #1
 
 ; INSTLIMDEF-DAG: Import funcwithpersonality
-; INSTLIMDEF-DAG: define available_externally hidden void @funcwithpersonality.llvm.{{.*}}() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !thinlto_src_module !0 {
-; INSTLIM5-DAG: declare hidden void @funcwithpersonality.llvm.{{.*}}()
+; INSTLIMDEF-DAG: define available_externally dso_local hidden void @funcwithpersonality.llvm.{{.*}}() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !thinlto_src_module !0 {
+; INSTLIM5-DAG: declare dso_local hidden void @funcwithpersonality.llvm.{{.*}}()
 
 ; CHECK-DAG: declare void @variadic(...)
 declare void @variadic(...)

@@ -65,7 +65,7 @@ entry:
   ret void
 }
 
-; CHECK: define amdgpu_kernel void @__test_block_invoke_kernel({{.*}}) #[[AT1:[0-9]+]]
+; CHECK: define dso_local amdgpu_kernel void @__test_block_invoke_kernel({{.*}}) #[[AT1:[0-9]+]]
 define internal amdgpu_kernel void @__test_block_invoke_kernel(<{ i32, i32, i8 addrspace(4)*, i8 addrspace(1)*, i8 }> %arg) #0
   !kernel_arg_addr_space !14 !kernel_arg_access_qual !15 !kernel_arg_type !16 !kernel_arg_base_type !16 !kernel_arg_type_qual !17 {
 entry:
@@ -77,7 +77,7 @@ entry:
 
 declare i32 @__enqueue_kernel_basic(%opencl.queue_t addrspace(1)*, i32, %struct.ndrange_t*, i8 addrspace(4)*) local_unnamed_addr
 
-; CHECK: define amdgpu_kernel void @__test_block_invoke_2_kernel({{.*}}) #[[AT2:[0-9]+]]
+; CHECK: define dso_local amdgpu_kernel void @__test_block_invoke_2_kernel({{.*}}) #[[AT2:[0-9]+]]
 define internal amdgpu_kernel void @__test_block_invoke_2_kernel(<{ i32, i32, i8 addrspace(4)*, i8 addrspace(1)*,
   i64 addrspace(1)*, i64, i8 }> %arg) #0 !kernel_arg_addr_space !14 !kernel_arg_access_qual !15
   !kernel_arg_type !16 !kernel_arg_base_type !16 !kernel_arg_type_qual !17 {

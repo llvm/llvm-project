@@ -21,7 +21,7 @@ attributes #0 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-ma
 !llvm.ident = !{!6}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
-!1 = !DIFile(filename: "a.c", directory: "/", checksumkind: CSK_MD5, checksum: "")
+!1 = !DIFile(filename: "a.c", directory: "/", checksumkind: CSK_MD5, checksum: "12345678901234567890123456789012")
 !2 = !{}
 !3 = !{i32 2, !"CodeView", i32 1}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
@@ -102,9 +102,9 @@ attributes #0 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-ma
 ; CHECK:   Subsection [
 ; CHECK:     SubSectionType: FileChecksums (0xF4)
 ; CHECK:     FileChecksum {
-; CHECK:       ChecksumSize: 0x0
+; CHECK:       ChecksumSize: 0x10
 ; CHECK:       ChecksumKind: MD5 (0x1)
-; CHECK:       ChecksumBytes: ()
+; CHECK:       ChecksumBytes: (12 34 56 78 90 12 34 56 78 90 12 34 56 78 90 12)
 ; CHECK:     }
 ; CHECK:   ]
 ; CHECK:   Subsection [
