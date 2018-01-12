@@ -4089,6 +4089,13 @@ SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
                      .getPointer();
 
     if (found_type) {
+      // If we have an inout type at the top level, turn it into an lvalue type.
+      // Function parameters that are inout are treated the same as mutable vars
+      // here.
+      if (auto *inout_type = found_type->getAs<swift::InOutType>()) {
+        found_type = swift::LValueType::get(inout_type->getObjectType());
+      }
+
       CacheDemangledType(mangled_name.GetCString(), found_type);
       CompilerType result_type(ast_ctx, found_type);
       if (log)
