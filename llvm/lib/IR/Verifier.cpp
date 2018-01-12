@@ -570,6 +570,11 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
     Assert(!GV.isDSOLocal(),
            "GlobalValue with DLLImport Storage is dso_local!", &GV);
 
+  if (GV.hasLocalLinkage())
+    Assert(GV.isDSOLocal(),
+           "GlobalValue with private or internal linkage must be dso_local!",
+           &GV);
+
   forEachUser(&GV, GlobalValueVisited, [&](const Value *V) -> bool {
     if (const Instruction *I = dyn_cast<Instruction>(V)) {
       if (!I->getParent() || !I->getParent()->getParent())

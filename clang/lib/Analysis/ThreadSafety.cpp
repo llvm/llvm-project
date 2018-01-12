@@ -1689,7 +1689,7 @@ void BuildLockset::handleCall(Expr *Exp, const NamedDecl *D, VarDecl *VD) {
   CapExprSet ScopedExclusiveReqs, ScopedSharedReqs;
   StringRef CapDiagKind = "mutex";
 
-  // Figure out if we're calling the constructor of scoped lockable class
+  // Figure out if we're constructing an object of scoped lockable class
   bool isScopedVar = false;
   if (VD) {
     if (const CXXConstructorDecl *CD = dyn_cast<const CXXConstructorDecl>(D)) {
@@ -1991,6 +1991,33 @@ void BuildLockset::VisitCXXConstructExpr(CXXConstructExpr *Exp) {
   // FIXME -- only handles constructors in DeclStmt below.
 }
 
+static CXXConstructorDecl *
+findConstructorForByValueReturn(const CXXRecordDecl *RD) {
+  // Prefer a move constructor over a copy constructor. If there's more than
+  // one copy constructor or more than one move constructor, we arbitrarily
+  // pick the first declared such constructor rather than trying to guess which
+  // one is more appropriate.
+  CXXConstructorDecl *CopyCtor = nullptr;
+  for (CXXConstructorDecl *Ctor : RD->ctors()) {
+    if (Ctor->isDeleted())
+      continue;
+    if (Ctor->isMoveConstructor())
+      return Ctor;
+    if (!CopyCtor && Ctor->isCopyConstructor())
+      CopyCtor = Ctor;
+  }
+  return CopyCtor;
+}
+
+static Expr *buildFakeCtorCall(CXXConstructorDecl *CD, ArrayRef<Expr *> Args,
+                               SourceLocation Loc) {
+  ASTContext &Ctx = CD->getASTContext();
+  return CXXConstructExpr::Create(Ctx, Ctx.getRecordType(CD->getParent()), Loc,
+                                  CD, true, Args, false, false, false, false,
+                                  CXXConstructExpr::CK_Complete,
+                                  SourceRange(Loc, Loc));
+}
+
 void BuildLockset::VisitDeclStmt(DeclStmt *S) {
   // adjust the context
   LVarCtx = Analyzer->LocalVarMap.getNextContext(CtxIndex, S, LVarCtx);
@@ -1998,15 +2025,34 @@ void BuildLockset::VisitDeclStmt(DeclStmt *S) {
   for (auto *D : S->getDeclGroup()) {
     if (VarDecl *VD = dyn_cast_or_null<VarDecl>(D)) {
       Expr *E = VD->getInit();
-      // handle constructors that involve temporaries
-      if (ExprWithCleanups *EWC = dyn_cast_or_null<ExprWithCleanups>(E))
-        E = EWC->getSubExpr();
+      if (!E)
+        continue;
+      E = E->IgnoreParens();
 
-      if (CXXConstructExpr *CE = dyn_cast_or_null<CXXConstructExpr>(E)) {
+      // handle constructors that involve temporaries
+      if (auto *EWC = dyn_cast<ExprWithCleanups>(E))
+        E = EWC->getSubExpr();
+      if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(E))
+        E = BTE->getSubExpr();
+
+      if (CXXConstructExpr *CE = dyn_cast<CXXConstructExpr>(E)) {
         NamedDecl *CtorD = dyn_cast_or_null<NamedDecl>(CE->getConstructor());
         if (!CtorD || !CtorD->hasAttrs())
-          return;
-        handleCall(CE, CtorD, VD);
+          continue;
+        handleCall(E, CtorD, VD);
+      } else if (isa<CallExpr>(E) && E->isRValue()) {
+        // If the object is initialized by a function call that returns a
+        // scoped lockable by value, use the attributes on the copy or move
+        // constructor to figure out what effect that should have on the
+        // lockset.
+        // FIXME: Is this really the best way to handle this situation?
+        auto *RD = E->getType()->getAsCXXRecordDecl();
+        if (!RD || !RD->hasAttr<ScopedLockableAttr>())
+          continue;
+        CXXConstructorDecl *CtorD = findConstructorForByValueReturn(RD);
+        if (!CtorD || !CtorD->hasAttrs())
+          continue;
+        handleCall(buildFakeCtorCall(CtorD, {E}, E->getLocStart()), CtorD, VD);
       }
     }
   }

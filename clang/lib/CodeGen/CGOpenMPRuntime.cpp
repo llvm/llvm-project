@@ -5912,6 +5912,7 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
   if (CGM.getLangOpts().OpenMPIsDevice) {
     OutlinedFnID = llvm::ConstantExpr::getBitCast(OutlinedFn, CGM.Int8PtrTy);
     OutlinedFn->setLinkage(llvm::GlobalValue::ExternalLinkage);
+    OutlinedFn->setDSOLocal(false);
   } else
     OutlinedFnID = new llvm::GlobalVariable(
         CGM.getModule(), CGM.Int8Ty, /*isConstant=*/true,

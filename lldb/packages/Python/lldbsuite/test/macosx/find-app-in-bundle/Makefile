@@ -1,7 +1,7 @@
 CC ?= clang
 
 ifeq "$(ARCH)" ""
-	ARCH = x86_64
+     ARCH = x86_64
 endif
 
 CFLAGS ?= -g -O0 -arch $(ARCH)
@@ -14,3 +14,4 @@ TestApp:
 	mv TestApp.dSYM TestApp.app.dSYM
 clean:
 	rm -rf TestApp.app/Contents/MacOS/TestApp TestApp.app.dSYM
+

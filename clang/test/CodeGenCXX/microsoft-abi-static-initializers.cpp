@@ -28,11 +28,11 @@ S s;
 // See @llvm.global_ctors above.
 __declspec(selectany) S selectany1;
 __declspec(selectany) S selectany2;
-// CHECK: define linkonce_odr void @"\01??__Eselectany1@@YAXXZ"() {{.*}} comdat
+// CHECK: define linkonce_odr dso_local void @"\01??__Eselectany1@@YAXXZ"() {{.*}} comdat
 // CHECK-NOT: @"\01??_Bselectany1
 // CHECK: call x86_thiscallcc %struct.S* @"\01??0S@@QAE@XZ"
 // CHECK: ret void
-// CHECK: define linkonce_odr void @"\01??__Eselectany2@@YAXXZ"() {{.*}} comdat
+// CHECK: define linkonce_odr dso_local void @"\01??__Eselectany2@@YAXXZ"() {{.*}} comdat
 // CHECK-NOT: @"\01??_Bselectany2
 // CHECK: call x86_thiscallcc %struct.S* @"\01??0S@@QAE@XZ"
 // CHECK: ret void
@@ -231,7 +231,7 @@ void force_usage() {
   DynamicDLLImportInitVSMangling::switch_test3();
 }
 
-// CHECK: define linkonce_odr void @"\01??__Efoo@?$B@H@@2VA@@A@YAXXZ"() {{.*}} comdat
+// CHECK: define linkonce_odr dso_local void @"\01??__Efoo@?$B@H@@2VA@@A@YAXXZ"() {{.*}} comdat
 // CHECK-NOT: and
 // CHECK-NOT: ?_Bfoo@
 // CHECK: call x86_thiscallcc %class.A* @"\01??0A@@QAE@XZ"
