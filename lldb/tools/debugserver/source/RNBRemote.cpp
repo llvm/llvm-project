@@ -4981,6 +4981,13 @@ void UpdateTargetXML() {
   s << g_target_xml_header << std::endl;
 
   // Set the architecture
+  //
+  // On raw targets (no OS, vendor info), I've seen replies like
+  // <architecture>i386:x86-64</architecture> (for x86_64 systems - from vmware)
+  // <architecture>arm</architecture> (for an unspecified arm device - from a Segger JLink)
+  // For good interop, I'm not sure what's expected here.  e.g. will anyone understand
+  // <architecture>x86_64</architecture> ? Or is i386:x86_64 the expected phrasing?
+  //
   // s << "<architecture>" << arch "</architecture>" << std::endl;
 
   // Set the OSABI
