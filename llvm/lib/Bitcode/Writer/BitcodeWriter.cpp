@@ -1302,7 +1302,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
   // Emit the ifunc information.
   for (const GlobalIFunc &I : M.ifuncs()) {
     // IFUNC: [strtab offset, strtab size, ifunc type, address space, resolver
-    //         val#, linkage, visibility]
+    //         val#, linkage, visibility, DSO_Local]
     Vals.push_back(addToStrtab(I.getName()));
     Vals.push_back(I.getName().size());
     Vals.push_back(VE.getTypeID(I.getValueType()));
@@ -1310,6 +1310,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     Vals.push_back(VE.getValueID(I.getResolver()));
     Vals.push_back(getEncodedLinkage(I));
     Vals.push_back(getEncodedVisibility(I));
+    Vals.push_back(I.isDSOLocal());
     Stream.EmitRecord(bitc::MODULE_CODE_IFUNC, Vals);
     Vals.clear();
   }

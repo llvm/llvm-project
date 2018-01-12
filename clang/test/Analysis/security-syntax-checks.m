@@ -146,6 +146,16 @@ void test_strcpy() {
   strcpy(x, y); //expected-warning{{Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'. CWE-119}}
 }
 
+void test_strcpy_2() {
+  char x[4];
+  strcpy(x, "abcd"); //expected-warning{{Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'. CWE-119}}
+}
+
+void test_strcpy_safe() {
+  char x[5];
+  strcpy(x, "abcd");
+}
+
 //===----------------------------------------------------------------------===
 // strcat()
 //===----------------------------------------------------------------------===

@@ -11,7 +11,7 @@ target triple = "x86_64-unknown-unknown"
 define i32 @stack_fold_bextri_u32(i32 %a0) {
   ;CHECK-LABEL: stack_fold_bextri_u32
   ;CHECK:       # %bb.0:
-  ;CHECK:       bextr $2814, {{-?[0-9]*}}(%rsp), %eax {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       bextrl $2814, {{-?[0-9]*}}(%rsp), %eax {{.*#+}} 4-byte Folded Reload
   %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   %2 = tail call i32 @llvm.x86.tbm.bextri.u32(i32 %a0, i32 2814)
   ret i32 %2
@@ -21,7 +21,7 @@ declare i32 @llvm.x86.tbm.bextri.u32(i32, i32)
 define i64 @stack_fold_bextri_u64(i64 %a0) {
   ;CHECK-LABEL: stack_fold_bextri_u64
   ;CHECK:       # %bb.0:
-  ;CHECK:       bextr $2814, {{-?[0-9]*}}(%rsp), %rax {{.*#+}} 8-byte Folded Reload
+  ;CHECK:       bextrq $2814, {{-?[0-9]*}}(%rsp), %rax {{.*#+}} 8-byte Folded Reload
   %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   %2 = tail call i64 @llvm.x86.tbm.bextri.u64(i64 %a0, i64 2814)
   ret i64 %2
@@ -30,7 +30,7 @@ declare i64 @llvm.x86.tbm.bextri.u64(i64, i64)
 
 define i32 @stack_fold_blcfill_u32(i32 %a0) {
   ;CHECK-LABEL: stack_fold_blcfill_u32
-  ;CHECK:       blcfill {{-?[0-9]*}}(%rsp), %eax {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       blcfilll {{-?[0-9]*}}(%rsp), %eax {{.*#+}} 4-byte Folded Reload
   %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   %2 = add i32 %a0, 1
   %3 = and i32 %a0, %2
@@ -39,7 +39,7 @@ define i32 @stack_fold_blcfill_u32(i32 %a0) {
 
 define i64 @stack_fold_blcfill_u64(i64 %a0) {
   ;CHECK-LABEL: stack_fold_blcfill_u64
-  ;CHECK:       blcfill {{-?[0-9]*}}(%rsp), %rax {{.*#+}} 8-byte Folded Reload
+  ;CHECK:       blcfillq {{-?[0-9]*}}(%rsp), %rax {{.*#+}} 8-byte Folded Reload
   %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   %2 = add i64 %a0, 1
   %3 = and i64 %a0, %2
@@ -48,7 +48,7 @@ define i64 @stack_fold_blcfill_u64(i64 %a0) {
 
 define i32 @stack_fold_blci_u32(i32 %a0) {
   ;CHECK-LABEL: stack_fold_blci_u32
-  ;CHECK:       blci {{-?[0-9]*}}(%rsp), %eax {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       blcil {{-?[0-9]*}}(%rsp), %eax {{.*#+}} 4-byte Folded Reload
   %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   %2 = add i32 %a0, 1
   %3 = xor i32 %2, -1
@@ -58,7 +58,7 @@ define i32 @stack_fold_blci_u32(i32 %a0) {
 
 define i64 @stack_fold_blci_u64(i64 %a0) {
   ;CHECK-LABEL: stack_fold_blci_u64
-  ;CHECK:       blci {{-?[0-9]*}}(%rsp), %rax {{.*#+}} 8-byte Folded Reload
+  ;CHECK:       blciq {{-?[0-9]*}}(%rsp), %rax {{.*#+}} 8-byte Folded Reload
   %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   %2 = add i64 %a0, 1
   %3 = xor i64 %2, -1
@@ -68,7 +68,7 @@ define i64 @stack_fold_blci_u64(i64 %a0) {
 
 define i32 @stack_fold_blcic_u32(i32 %a0) {
   ;CHECK-LABEL: stack_fold_blcic_u32
-  ;CHECK:       blcic {{-?[0-9]*}}(%rsp), %eax {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       blcicl {{-?[0-9]*}}(%rsp), %eax {{.*#+}} 4-byte Folded Reload
   %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   %2 = add i32 %a0, 1
   %3 = xor i32 %a0, -1
@@ -78,7 +78,7 @@ define i32 @stack_fold_blcic_u32(i32 %a0) {
 
 define i64 @stack_fold_blcic_u64(i64 %a0) {
   ;CHECK-LABEL: stack_fold_blcic_u64
-  ;CHECK:       blcic {{-?[0-9]*}}(%rsp), %rax {{.*#+}} 8-byte Folded Reload
+  ;CHECK:       blcicq {{-?[0-9]*}}(%rsp), %rax {{.*#+}} 8-byte Folded Reload
   %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   %2 = add i64 %a0, 1
   %3 = xor i64 %a0, -1
@@ -88,7 +88,7 @@ define i64 @stack_fold_blcic_u64(i64 %a0) {
 
 define i32 @stack_fold_blcmsk_u32(i32 %a0) {
   ;CHECK-LABEL: stack_fold_blcmsk_u32
-  ;CHECK:       blcmsk {{-?[0-9]*}}(%rsp), %eax {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       blcmskl {{-?[0-9]*}}(%rsp), %eax {{.*#+}} 4-byte Folded Reload
   %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   %2 = add i32 %a0, 1
   %3 = xor i32 %a0, %2
@@ -97,7 +97,7 @@ define i32 @stack_fold_blcmsk_u32(i32 %a0) {
 
 define i64 @stack_fold_blcmsk_u64(i64 %a0) {
   ;CHECK-LABEL: stack_fold_blcmsk_u64
-  ;CHECK:       blcmsk {{-?[0-9]*}}(%rsp), %rax {{.*#+}} 8-byte Folded Reload
+  ;CHECK:       blcmskq {{-?[0-9]*}}(%rsp), %rax {{.*#+}} 8-byte Folded Reload
   %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   %2 = add i64 %a0, 1
   %3 = xor i64 %a0, %2
@@ -106,7 +106,7 @@ define i64 @stack_fold_blcmsk_u64(i64 %a0) {
 
 define i32 @stack_fold_blcs_u32(i32 %a0) {
   ;CHECK-LABEL: stack_fold_blcs_u32
-  ;CHECK:       blcs {{-?[0-9]*}}(%rsp), %eax {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       blcsl {{-?[0-9]*}}(%rsp), %eax {{.*#+}} 4-byte Folded Reload
   %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   %2 = add i32 %a0, 1
   %3 = or i32 %a0, %2
@@ -115,7 +115,7 @@ define i32 @stack_fold_blcs_u32(i32 %a0) {
 
 define i64 @stack_fold_blcs_u64(i64 %a0) {
   ;CHECK-LABEL: stack_fold_blcs_u64
-  ;CHECK:       blcs {{-?[0-9]*}}(%rsp), %rax {{.*#+}} 8-byte Folded Reload
+  ;CHECK:       blcsq {{-?[0-9]*}}(%rsp), %rax {{.*#+}} 8-byte Folded Reload
   %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   %2 = add i64 %a0, 1
   %3 = or i64 %a0, %2
@@ -124,7 +124,7 @@ define i64 @stack_fold_blcs_u64(i64 %a0) {
 
 define i32 @stack_fold_blsfill_u32(i32 %a0) {
   ;CHECK-LABEL: stack_fold_blsfill_u32
-  ;CHECK:       blsfill {{-?[0-9]*}}(%rsp), %eax {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       blsfilll {{-?[0-9]*}}(%rsp), %eax {{.*#+}} 4-byte Folded Reload
   %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   %2 = sub i32 %a0, 1
   %3 = or i32 %a0, %2
@@ -133,7 +133,7 @@ define i32 @stack_fold_blsfill_u32(i32 %a0) {
 
 define i64 @stack_fold_blsfill_u64(i64 %a0) {
   ;CHECK-LABEL: stack_fold_blsfill_u64
-  ;CHECK:       blsfill {{-?[0-9]*}}(%rsp), %rax {{.*#+}} 8-byte Folded Reload
+  ;CHECK:       blsfillq {{-?[0-9]*}}(%rsp), %rax {{.*#+}} 8-byte Folded Reload
   %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   %2 = sub i64 %a0, 1
   %3 = or i64 %a0, %2
@@ -142,7 +142,7 @@ define i64 @stack_fold_blsfill_u64(i64 %a0) {
 
 define i32 @stack_fold_blsic_u32(i32 %a0) {
   ;CHECK-LABEL: stack_fold_blsic_u32
-  ;CHECK:       blsic {{-?[0-9]*}}(%rsp), %eax {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       blsicl {{-?[0-9]*}}(%rsp), %eax {{.*#+}} 4-byte Folded Reload
   %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   %2 = sub i32 %a0, 1
   %3 = xor i32 %a0, -1
@@ -152,7 +152,7 @@ define i32 @stack_fold_blsic_u32(i32 %a0) {
 
 define i64 @stack_fold_blsic_u64(i64 %a0) {
   ;CHECK-LABEL: stack_fold_blsic_u64
-  ;CHECK:       blsic {{-?[0-9]*}}(%rsp), %rax {{.*#+}} 8-byte Folded Reload
+  ;CHECK:       blsicq {{-?[0-9]*}}(%rsp), %rax {{.*#+}} 8-byte Folded Reload
   %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   %2 = sub i64 %a0, 1
   %3 = xor i64 %a0, -1
@@ -162,7 +162,7 @@ define i64 @stack_fold_blsic_u64(i64 %a0) {
 
 define i32 @stack_fold_t1mskc_u32(i32 %a0) {
   ;CHECK-LABEL: stack_fold_t1mskc_u32
-  ;CHECK:       t1mskc {{-?[0-9]*}}(%rsp), %eax {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       t1mskcl {{-?[0-9]*}}(%rsp), %eax {{.*#+}} 4-byte Folded Reload
   %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   %2 = add i32 %a0, 1
   %3 = xor i32 %a0, -1
@@ -172,7 +172,7 @@ define i32 @stack_fold_t1mskc_u32(i32 %a0) {
 
 define i64 @stack_fold_t1mskc_u64(i64 %a0) {
   ;CHECK-LABEL: stack_fold_t1mskc_u64
-  ;CHECK:       t1mskc {{-?[0-9]*}}(%rsp), %rax {{.*#+}} 8-byte Folded Reload
+  ;CHECK:       t1mskcq {{-?[0-9]*}}(%rsp), %rax {{.*#+}} 8-byte Folded Reload
   %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   %2 = add i64 %a0, 1
   %3 = xor i64 %a0, -1
@@ -182,7 +182,7 @@ define i64 @stack_fold_t1mskc_u64(i64 %a0) {
 
 define i32 @stack_fold_tzmsk_u32(i32 %a0) {
   ;CHECK-LABEL: stack_fold_tzmsk_u32
-  ;CHECK:       tzmsk {{-?[0-9]*}}(%rsp), %eax {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       tzmskl {{-?[0-9]*}}(%rsp), %eax {{.*#+}} 4-byte Folded Reload
   %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   %2 = sub i32 %a0, 1
   %3 = xor i32 %a0, -1
@@ -192,7 +192,7 @@ define i32 @stack_fold_tzmsk_u32(i32 %a0) {
 
 define i64 @stack_fold_tzmsk_u64(i64 %a0) {
   ;CHECK-LABEL: stack_fold_tzmsk_u64
-  ;CHECK:       tzmsk {{-?[0-9]*}}(%rsp), %rax {{.*#+}} 8-byte Folded Reload
+  ;CHECK:       tzmskq {{-?[0-9]*}}(%rsp), %rax {{.*#+}} 8-byte Folded Reload
   %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   %2 = sub i64 %a0, 1
   %3 = xor i64 %a0, -1

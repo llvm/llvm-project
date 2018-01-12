@@ -188,7 +188,7 @@ void ObjFile::initializeSymbols() {
   GlobalSymbols.resize(NumGlobalImports + WasmObj->globals().size());
 
   for (const WasmSegment &S : WasmObj->dataSegments()) {
-    InputSegment *Seg = make<InputSegment>(S, *this);
+    InputSegment *Seg = make<InputSegment>(S, this);
     Seg->copyRelocations(*DataSection);
     Segments.emplace_back(Seg);
   }
@@ -199,7 +199,7 @@ void ObjFile::initializeSymbols() {
   for (size_t I = 0; I < Funcs.size(); ++I) {
     const WasmFunction &Func = Funcs[I];
     const WasmSignature &Sig = Types[FuncTypes[I]];
-    InputFunction *F = make<InputFunction>(Sig, Func, *this);
+    InputFunction *F = make<InputFunction>(Sig, &Func, this);
     F->copyRelocations(*CodeSection);
     Functions.emplace_back(F);
   }
@@ -232,14 +232,10 @@ void ObjFile::initializeSymbols() {
 
     Symbols.push_back(S);
     if (WasmSym.isFunction()) {
-      DEBUG(dbgs() << "Function: " << WasmSym.ElementIndex << " -> "
-                   << toString(*S) << "\n");
       FunctionSymbols[WasmSym.ElementIndex] = S;
       if (WasmSym.HasAltIndex)
         FunctionSymbols[WasmSym.AltIndex] = S;
     } else {
-      DEBUG(dbgs() << "Global: " << WasmSym.ElementIndex << " -> "
-                   << toString(*S) << "\n");
       GlobalSymbols[WasmSym.ElementIndex] = S;
       if (WasmSym.HasAltIndex)
         GlobalSymbols[WasmSym.AltIndex] = S;

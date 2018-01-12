@@ -475,6 +475,8 @@ TEST_F(LexerTest, GetBeginningOfTokenWithEscapedNewLine) {
 
 TEST_F(LexerTest, AvoidPastEndOfStringDereference) {
   EXPECT_TRUE(Lex("  //  \\\n").empty());
+  EXPECT_TRUE(Lex("#include <\\\\").empty());
+  EXPECT_TRUE(Lex("#include <\\\\\n").empty());
 }
 
 TEST_F(LexerTest, StringizingRasString) {

@@ -74,8 +74,12 @@ class CoverageExporterJson : public CoverageExporter {
                    ArrayRef<FileCoverageSummary> FileReports);
 
   /// \brief Render a single file.
-  void renderFile(const coverage::CoverageData &FileCoverage,
+  void renderFile(const std::string &Filename,
                   const FileCoverageSummary &FileReport);
+
+  /// \brief Render summary for a single file.
+  void renderFileCoverage(const coverage::CoverageData &FileCoverage,
+                          const FileCoverageSummary &FileReport);
 
   /// \brief Render a CoverageSegment.
   void renderSegment(const coverage::CoverageSegment &Segment);

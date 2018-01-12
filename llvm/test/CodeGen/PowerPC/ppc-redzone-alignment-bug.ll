@@ -16,12 +16,12 @@ entry:
 ; stfd 14, 416(1)
 
 ; After the fix by patch D34337:
-; CHECK-LE:std 15, -280(1)
-; CHECK-LE:stfd 14, -144(1)
 ; CHECK-LE: stdu 1, -528(1)
-; CHECK-BE:std 15, -280(1)
-; CHECK-BE:stfd 14, -144(1)
+; CHECK-LE:std 15, 248(1)
+; CHECK-LE:stfd 14, 384(1)
 ; CHECK-BE: stdu 1, -544(1)
+; CHECK-BE:std 15, 264(1)
+; CHECK-BE:stfd 14, 400(1)
 }
 
 define signext i32 @foo() {

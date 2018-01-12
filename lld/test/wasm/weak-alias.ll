@@ -23,8 +23,11 @@ entry:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         ReturnType:      I32
 ; CHECK-NEXT:         ParamTypes:
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         ReturnType:      NORESULT
+; CHECK-NEXT:         ParamTypes:   
 ; CHECK-NEXT:   - Type:            FUNCTION
-; CHECK-NEXT:     FunctionTypes:   [ 0, 0, 0, 0, 0, 0 ]
+; CHECK-NEXT:     FunctionTypes:   [ 0, 0, 0, 0, 0, 0, 1 ]
 ; CHECK-NEXT:   - Type:            TABLE
 ; CHECK-NEXT:     Tables:
 ; CHECK-NEXT:       - ElemType:        ANYFUNC
@@ -99,6 +102,9 @@ entry:
 ; CHECK-NEXT:           - Type:            I32
 ; CHECK-NEXT:             Count:           2
 ; CHECK-NEXT:         Body:            23808080800041106B220024808080800020004182808080003602081081808080002101200041106A24808080800020010B
+; CHECK-NEXT:       - Index:           6
+; CHECK-NEXT:         Locals:
+; CHECK-NEXT:         Body:            0B
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
 ; CHECK-NEXT:     DataSize:        0
@@ -117,4 +123,6 @@ entry:
 ; CHECK-NEXT:         Name:            call_alias_ptr
 ; CHECK-NEXT:       - Index:           5
 ; CHECK-NEXT:         Name:            call_direct_ptr
+; CHECK-NEXT:       - Index:           6
+; CHECK-NEXT:         Name:            __wasm_call_ctors
 ; CHECK-NEXT: ...

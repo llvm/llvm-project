@@ -45,16 +45,22 @@
 
 using namespace llvm;
 
-void llvm::DeleteDeadBlock(BasicBlock *BB) {
+void llvm::DeleteDeadBlock(BasicBlock *BB, DeferredDominance *DDT) {
   assert((pred_begin(BB) == pred_end(BB) ||
          // Can delete self loop.
          BB->getSinglePredecessor() == BB) && "Block is not dead!");
   TerminatorInst *BBTerm = BB->getTerminator();
+  std::vector<DominatorTree::UpdateType> Updates;
 
   // Loop through all of our successors and make sure they know that one
   // of their predecessors is going away.
-  for (BasicBlock *Succ : BBTerm->successors())
+  if (DDT)
+    Updates.reserve(BBTerm->getNumSuccessors());
+  for (BasicBlock *Succ : BBTerm->successors()) {
     Succ->removePredecessor(BB);
+    if (DDT)
+      Updates.push_back({DominatorTree::Delete, BB, Succ});
+  }
 
   // Zap all the instructions in the block.
   while (!BB->empty()) {
@@ -69,8 +75,12 @@ void llvm::DeleteDeadBlock(BasicBlock *BB) {
     BB->getInstList().pop_back();
   }
 
-  // Zap the block!
-  BB->eraseFromParent();
+  if (DDT) {
+    DDT->applyUpdates(Updates);
+    DDT->deleteBB(BB); // Deferred deletion of BB.
+  } else {
+    BB->eraseFromParent(); // Zap the block!
+  }
 }
 
 void llvm::FoldSingleEntryPHINodes(BasicBlock *BB,

@@ -823,39 +823,6 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   assert((isPPC64 || !MustSaveCR) &&
          "Prologue CR saving supported only in 64-bit mode");
 
-  // Check if we can move the stack update instruction (stdu) down the prologue
-  //  past the callee saves. Hopefully this will avoid the situation where the
-  //  saves are waiting for the update on the store with update to complete.
-  MachineBasicBlock::iterator StackUpdateLoc = MBBI;
-  bool MovingStackUpdateDown = false;
-  // This optimization has a number of guards. At this point we are being very
-  //  cautious and we do not try to do this when we have a fast call or
-  //  we are using PIC base or we are using a frame pointer or a base pointer.
-  //  It would be possible to turn on this optimization under these conditions
-  //  as well but it would require further modifications to the prologue and
-  //  epilogue. For example, if we want to turn on this optimization for
-  //  functions that use frame pointers we would have to take into consideration
-  //  the fact that spills to the stack may be using r30 instead of r1.
-  // Aside form that we need to have a non-zero frame and we need to have a
-  //  non-large frame size. Notice that we did not use !isLargeFrame but we used
-  //  isInt<16>(FrameSize) instead. This is important because this guard has to
-  //  be identical to the one in the epilogue and in the epilogue the variable
-  //  is defined as bool isLargeFrame = !isInt<16>(FrameSize);
-  if (FrameSize && !FI->hasFastCall() && !FI->usesPICBase() && !HasFP &&
-      !HasBP && isInt<16>(FrameSize)) {
-    const std::vector<CalleeSavedInfo> &Info = MFI.getCalleeSavedInfo();
-    for (unsigned i=0; i<Info.size(); i++) {
-      int FrIdx = Info[i].getFrameIdx();
-      if (FrIdx < 0) {
-        if (MFI.isFixedObjectIndex(FrIdx) && MFI.getObjectOffset(FrIdx) < 0) {
-          MFI.setObjectOffset(FrIdx, MFI.getObjectOffset(FrIdx) + NegFrameSize);
-          StackUpdateLoc++;
-          MovingStackUpdateDown = true;
-        }
-      }
-    }
-  }
-
   // If we need to spill the CR and the LR but we don't have two separate
   // registers available, we must spill them one at a time
   if (MustSaveCR && SingleScratchReg && MustSaveLR) {
@@ -919,7 +886,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   if (MustSaveLR)
-    BuildMI(MBB, StackUpdateLoc, dl, StoreInst)
+    BuildMI(MBB, MBBI, dl, StoreInst)
       .addReg(ScratchReg, getKillRegState(true))
       .addImm(LROffset)
       .addReg(SPReg);
@@ -987,7 +954,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
     HasSTUX = true;
 
   } else if (!isLargeFrame) {
-    BuildMI(MBB, StackUpdateLoc, dl, StoreUpdtInst, SPReg)
+    BuildMI(MBB, MBBI, dl, StoreUpdtInst, SPReg)
       .addReg(SPReg)
       .addImm(NegFrameSize)
       .addReg(SPReg);
@@ -1227,12 +1194,6 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
       }
 
       int Offset = MFI.getObjectOffset(CSI[I].getFrameIdx());
-      // We have changed the object offset above but we do not want to change
-      //  the actual offsets in the CFI instruction so we have to undo the
-      //  offset change here.
-      if (MovingStackUpdateDown)
-        Offset -= NegFrameSize;
-
       unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
           nullptr, MRI->getDwarfRegNum(Reg, true), Offset));
       BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
@@ -1378,23 +1339,6 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
   unsigned RBReg = SPReg;
   unsigned SPAdd = 0;
 
-  // Check if we can move the stack update instruction up the epilogue
-  //  past the callee saves. This will allow the move to LR instruction
-  //  to be executed before the restores of the callee saves which means
-  //  that the callee saves can hide the latency from the MTLR instrcution.
-  MachineBasicBlock::iterator StackUpdateLoc = MBBI;
-  if (FrameSize && !FI->hasFastCall() && !FI->usesPICBase() && !HasFP &&
-      !HasBP && !isLargeFrame) {
-    const std::vector< CalleeSavedInfo > & Info = MFI.getCalleeSavedInfo();
-    for (unsigned i=0; i<Info.size(); i++) {
-      int FrIdx = Info[i].getFrameIdx();
-      if (FrIdx < 0) {
-        if (MFI.isFixedObjectIndex(FrIdx) && MFI.getObjectOffset(FrIdx) < 0)
-          StackUpdateLoc--;
-      }
-    }
-  }
-
   if (FrameSize) {
     // In the prologue, the loaded (or persistent) stack pointer value is
     // offset by the STDU/STDUX/STWU/STWUX instruction. For targets with red
@@ -1424,7 +1368,7 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
       }
     } else if (!isLargeFrame && !HasBP && !MFI.hasVarSizedObjects()) {
       if (HasRedZone) {
-        BuildMI(MBB, StackUpdateLoc, dl, AddImmInst, SPReg)
+        BuildMI(MBB, MBBI, dl, AddImmInst, SPReg)
           .addReg(SPReg)
           .addImm(FrameSize);
       } else {
@@ -1448,7 +1392,7 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
             .addReg(FPReg);
         RBReg = FPReg;
       }
-      BuildMI(MBB, StackUpdateLoc, dl, LoadInst, RBReg)
+      BuildMI(MBB, MBBI, dl, LoadInst, RBReg)
         .addImm(0)
         .addReg(SPReg);
     }
@@ -1481,7 +1425,7 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
   // a base register anyway, because it may happen to be R0.
   bool LoadedLR = false;
   if (MustSaveLR && RBReg == SPReg && isInt<16>(LROffset+SPAdd)) {
-    BuildMI(MBB, StackUpdateLoc, dl, LoadInst, ScratchReg)
+    BuildMI(MBB, MBBI, dl, LoadInst, ScratchReg)
       .addImm(LROffset+SPAdd)
       .addReg(RBReg);
     LoadedLR = true;
@@ -1553,7 +1497,7 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
         .addReg(TempReg, getKillRegState(i == e-1));
 
   if (MustSaveLR)
-    BuildMI(MBB, StackUpdateLoc, dl, MTLRInst).addReg(ScratchReg);
+    BuildMI(MBB, MBBI, dl, MTLRInst).addReg(ScratchReg);
 
   // Callee pop calling convention. Pop parameter/linkage area. Used for tail
   // call optimization

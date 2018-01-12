@@ -44,7 +44,7 @@ template <class ELFT> struct Elf_Chdr_Impl;
 template <endianness E, bool Is64> struct ELFType {
 private:
   template <typename Ty>
-  using packed = support::detail::packed_endian_specific_integral<Ty, E, 2>;
+  using packed = support::detail::packed_endian_specific_integral<Ty, E, 1>;
 
 public:
   static const endianness TargetEndianness = E;
@@ -90,46 +90,7 @@ using ELF64BE = ELFType<support::big, true>;
 // Use an alignment of 2 for the typedefs since that is the worst case for
 // ELF files in archives.
 
-// Templates to choose Elf_Addr and Elf_Off depending on is64Bits.
-template <endianness target_endianness> struct ELFDataTypeTypedefHelperCommon {
-  using Elf_Half = support::detail::packed_endian_specific_integral<
-      uint16_t, target_endianness, 2>;
-  using Elf_Word = support::detail::packed_endian_specific_integral<
-      uint32_t, target_endianness, 2>;
-  using Elf_Sword = support::detail::packed_endian_specific_integral<
-      int32_t, target_endianness, 2>;
-  using Elf_Xword = support::detail::packed_endian_specific_integral<
-      uint64_t, target_endianness, 2>;
-  using Elf_Sxword = support::detail::packed_endian_specific_integral<
-      int64_t, target_endianness, 2>;
-};
-
-template <class ELFT> struct ELFDataTypeTypedefHelper;
-
-/// ELF 32bit types.
-template <endianness TargetEndianness>
-struct ELFDataTypeTypedefHelper<ELFType<TargetEndianness, false>>
-    : ELFDataTypeTypedefHelperCommon<TargetEndianness> {
-  using value_type = uint32_t;
-  using Elf_Addr = support::detail::packed_endian_specific_integral<
-      value_type, TargetEndianness, 2>;
-  using Elf_Off = support::detail::packed_endian_specific_integral<
-      value_type, TargetEndianness, 2>;
-};
-
-/// ELF 64bit types.
-template <endianness TargetEndianness>
-struct ELFDataTypeTypedefHelper<ELFType<TargetEndianness, true>>
-    : ELFDataTypeTypedefHelperCommon<TargetEndianness> {
-  using value_type = uint64_t;
-  using Elf_Addr = support::detail::packed_endian_specific_integral<
-      value_type, TargetEndianness, 2>;
-  using Elf_Off = support::detail::packed_endian_specific_integral<
-      value_type, TargetEndianness, 2>;
-};
-
 // I really don't like doing this, but the alternative is copypasta.
-
 #define LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)                                       \
   using Elf_Addr = typename ELFT::Addr;                                        \
   using Elf_Off = typename ELFT::Off;                                          \

@@ -9,6 +9,7 @@
 
 #include "Writer.h"
 
+#include "llvm/ADT/DenseSet.h"
 #include "Config.h"
 #include "InputChunks.h"
 #include "OutputSections.h"
@@ -70,6 +71,8 @@ private:
 
   uint32_t lookupType(const WasmSignature &Sig);
   uint32_t registerType(const WasmSignature &Sig);
+  void createCtorFunction();
+  void calculateInitFunctions();
   void assignIndexes();
   void calculateImports();
   void calculateOffsets();
@@ -114,12 +117,15 @@ private:
   std::vector<const Symbol *> DefinedGlobals;
   std::vector<InputFunction *> DefinedFunctions;
   std::vector<const Symbol *> IndirectFunctions;
+  std::vector<WasmInitFunc> InitFunctions;
 
   // Elements that are used to construct the final output
   std::string Header;
   std::vector<OutputSection *> OutputSections;
 
   std::unique_ptr<FileOutputBuffer> Buffer;
+  std::unique_ptr<SyntheticFunction> CtorFunction;
+  std::string CtorFunctionBody;
 
   std::vector<OutputSegment *> Segments;
   llvm::SmallDenseMap<StringRef, OutputSegment *> SegmentMap;
@@ -410,15 +416,6 @@ void Writer::createLinkingSection() {
     SubSection.writeToStream(OS);
   }
 
-  std::vector<WasmInitFunc> InitFunctions;
-  for (ObjFile *File : Symtab->ObjectFiles) {
-    const WasmLinkingData &L = File->getWasmObj()->linkingData();
-    InitFunctions.reserve(InitFunctions.size() + L.InitFunctions.size());
-    for (const WasmInitFunc &F : L.InitFunctions)
-      InitFunctions.emplace_back(WasmInitFunc{
-          F.Priority, File->relocateFunctionIndex(F.FunctionIndex)});
-  }
-
   if (!InitFunctions.empty()) {
     SubSection SubSection(WASM_INIT_FUNCS);
     writeUleb128(SubSection.getStream(), InitFunctions.size(),
@@ -437,14 +434,38 @@ void Writer::createNameSection() {
   // Create an array of all function sorted by function index space
   std::vector<const Symbol *> Names;
 
+  auto AddToNames = [&](Symbol* S) {
+    if (!S->isFunction() || S->WrittenToNameSec)
+        return;
+    // We also need to guard against two different symbols (two different
+    // names) for the same wasm function.  While this is possible (aliases)
+    // it is not legal in the "name" section.
+    InputFunction *Function = S->getFunction();
+    if (Function) {
+      if (Function->WrittenToNameSec)
+        return;
+      Function->WrittenToNameSec = true;
+    }
+    S->WrittenToNameSec = true;
+    Names.emplace_back(S);
+  };
+
   for (ObjFile *File : Symtab->ObjectFiles) {
     Names.reserve(Names.size() + File->getSymbols().size());
+    DEBUG(dbgs() << "adding names from: " << File->getName() << "\n");
     for (Symbol *S : File->getSymbols()) {
-      if (!S->isFunction() || S->isWeak() || S->WrittenToNameSec)
+      if (S->isWeak())
         continue;
-      S->WrittenToNameSec = true;
-      Names.emplace_back(S);
+      AddToNames(S);
     }
+  }
+
+  DEBUG(dbgs() << "adding symtab names\n");
+  for (Symbol *S : Symtab->getSymbols()) {
+    DEBUG(dbgs() << "sym: " << S->getName() << "\n");
+    if (S->getFile())
+      continue;
+    AddToNames(S);
   }
 
   SyntheticSection *Section = createSyntheticSection(WASM_SEC_CUSTOM, "name");
@@ -594,11 +615,15 @@ void Writer::calculateTypes() {
     for (const WasmSignature &Sig : File->getWasmObj()->types())
       File->TypeMap.push_back(registerType(Sig));
   }
+
+  for (Symbol *Sym : Symtab->getSymbols())
+    if (Sym->isFunction())
+      registerType(Sym->getFunctionType());
 }
 
 void Writer::assignIndexes() {
-  uint32_t GlobalIndex = ImportedGlobals.size();
-  uint32_t FunctionIndex = ImportedFunctions.size();
+  uint32_t GlobalIndex = ImportedGlobals.size() + DefinedGlobals.size();
+  uint32_t FunctionIndex = ImportedFunctions.size() + DefinedFunctions.size();
 
   if (Config->StackPointerSymbol) {
     DefinedGlobals.emplace_back(Config->StackPointerSymbol);
@@ -677,6 +702,57 @@ void Writer::createOutputSegments() {
   }
 }
 
+static const int OPCODE_CALL = 0x10;
+static const int OPCODE_END = 0xb;
+
+// Create synthetic "__wasm_call_ctors" function based on ctor functions
+// in input object.
+void Writer::createCtorFunction() {
+  uint32_t FunctionIndex = ImportedFunctions.size() + DefinedFunctions.size();
+  Config->CtorSymbol->setOutputIndex(FunctionIndex);
+
+  // First write the body bytes to a string.
+  std::string FunctionBody;
+  static WasmSignature Signature = {{}, WASM_TYPE_NORESULT};
+  {
+    raw_string_ostream OS(FunctionBody);
+    writeUleb128(OS, 0, "num locals");
+    for (const WasmInitFunc &F : InitFunctions) {
+      writeU8(OS, OPCODE_CALL, "CALL");
+      writeUleb128(OS, F.FunctionIndex, "function index");
+    }
+    writeU8(OS, OPCODE_END, "END");
+  }
+
+  // Once we know the size of the body we can create the final function body
+  raw_string_ostream OS(CtorFunctionBody);
+  writeUleb128(OS, FunctionBody.size(), "function size");
+  OS.flush();
+  CtorFunctionBody += FunctionBody;
+  CtorFunction =
+      llvm::make_unique<SyntheticFunction>(Signature, CtorFunctionBody);
+  DefinedFunctions.emplace_back(CtorFunction.get());
+}
+
+// Populate InitFunctions vector with init functions from all input objects.
+// This is then used either when creating the output linking section or to
+// synthesize the "__wasm_call_ctors" function.
+void Writer::calculateInitFunctions() {
+  for (ObjFile *File : Symtab->ObjectFiles) {
+    const WasmLinkingData &L = File->getWasmObj()->linkingData();
+    InitFunctions.reserve(InitFunctions.size() + L.InitFunctions.size());
+    for (const WasmInitFunc &F : L.InitFunctions)
+      InitFunctions.emplace_back(WasmInitFunc{
+          F.Priority, File->relocateFunctionIndex(F.FunctionIndex)});
+  }
+  // Sort in order of priority (lowest first) so that they are called
+  // in the correct order.
+  std::sort(InitFunctions.begin(), InitFunctions.end(),
+            [](const WasmInitFunc &L, const WasmInitFunc &R) {
+              return L.Priority < R.Priority;
+            });
+}
+
 void Writer::run() {
   if (!Config->Relocatable)
     InitialTableOffset = 1;
@@ -687,6 +763,10 @@ void Writer::run() {
   calculateImports();
   log("-- assignIndexes");
   assignIndexes();
+  log("-- calculateInitFunctions");
+  calculateInitFunctions();
+  if (!Config->Relocatable)
+    createCtorFunction();
 
   if (errorHandler().Verbose) {
     log("Defined Functions: " + Twine(DefinedFunctions.size()));

@@ -934,6 +934,12 @@ public:
     return CodeCompleteOpts.IncludeBriefComments;
   }
 
+  /// \brief Hint whether to load data from the external AST in order to provide
+  /// full results. If false, declarations from the preamble may be omitted.
+  bool loadExternal() const {
+    return CodeCompleteOpts.LoadExternal;
+  }
+
   /// \brief Determine whether the output of this consumer is binary.
   bool isOutputBinary() const { return OutputIsBinary; }
 

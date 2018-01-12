@@ -196,7 +196,7 @@ AddrSinkNewPhis("addr-sink-new-phis", cl::Hidden, cl::init(false),
                 cl::desc("Allow creation of Phis in Address sinking."));
 
 static cl::opt<bool>
-AddrSinkNewSelects("addr-sink-new-select", cl::Hidden, cl::init(false),
+AddrSinkNewSelects("addr-sink-new-select", cl::Hidden, cl::init(true),
                    cl::desc("Allow creation of selects in Address sinking."));
 
 static cl::opt<bool> AddrSinkCombineBaseReg(
@@ -1610,7 +1610,7 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
       if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(MI))
         Align = std::min(Align, getKnownAlignment(MTI->getSource(), *DL));
       if (Align > MI->getAlignment())
-        MI->setAlignment(ConstantInt::get(MI->getAlignmentType(), Align));
+        MI->setAlignment(Align);
     }
   }
 

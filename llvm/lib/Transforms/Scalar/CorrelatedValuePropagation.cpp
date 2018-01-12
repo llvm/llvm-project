@@ -78,6 +78,7 @@ namespace {
     bool runOnFunction(Function &F) override;
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.addRequired<DominatorTreeWrapperPass>();
       AU.addRequired<LazyValueInfoWrapperPass>();
       AU.addPreserved<GlobalsAAWrapperPass>();
     }
@@ -89,6 +90,7 @@ char CorrelatedValuePropagation::ID = 0;
 
 INITIALIZE_PASS_BEGIN(CorrelatedValuePropagation, "correlated-propagation",
                 "Value Propagation", false, false)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LazyValueInfoWrapperPass)
 INITIALIZE_PASS_END(CorrelatedValuePropagation, "correlated-propagation",
                 "Value Propagation", false, false)

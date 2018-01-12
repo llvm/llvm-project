@@ -142,6 +142,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
   setOperationAction(ISD::BITREVERSE, MVT::i64, Legal);
 
+  // Sub-word ATOMIC_CMP_SWAP need to ensure that the input is zero-extended.
+  setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i32, Custom);
+
   // PowerPC has an i16 but no i8 (or i1) SEXTLOAD.
   for (MVT VT : MVT::integer_valuetypes()) {
     setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1, Promote);
@@ -1154,6 +1157,8 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::Hi:              return "PPCISD::Hi";
   case PPCISD::Lo:              return "PPCISD::Lo";
   case PPCISD::TOC_ENTRY:       return "PPCISD::TOC_ENTRY";
+  case PPCISD::ATOMIC_CMP_SWAP_8: return "PPCISD::ATOMIC_CMP_SWAP_8";
+  case PPCISD::ATOMIC_CMP_SWAP_16: return "PPCISD::ATOMIC_CMP_SWAP_16";
   case PPCISD::DYNALLOC:        return "PPCISD::DYNALLOC";
   case PPCISD::DYNAREAOFFSET:   return "PPCISD::DYNAREAOFFSET";
   case PPCISD::GlobalBaseReg:   return "PPCISD::GlobalBaseReg";
@@ -8834,6 +8839,42 @@ SDValue PPCTargetLowering::LowerBSWAP(SDValue Op, SelectionDAG &DAG) const {
   return Op;
 }
 
+// ATOMIC_CMP_SWAP for i8/i16 needs to zero-extend its input since it will be
+// compared to a value that is atomically loaded (atomic loads zero-extend).
+SDValue PPCTargetLowering::LowerATOMIC_CMP_SWAP(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  assert(Op.getOpcode() == ISD::ATOMIC_CMP_SWAP &&
+         "Expecting an atomic compare-and-swap here.");
+  SDLoc dl(Op);
+  auto *AtomicNode = cast<AtomicSDNode>(Op.getNode());
+  EVT MemVT = AtomicNode->getMemoryVT();
+  if (MemVT.getSizeInBits() >= 32)
+    return Op;
+
+  SDValue CmpOp = Op.getOperand(2);
+  // If this is already correctly zero-extended, leave it alone.
+  auto HighBits = APInt::getHighBitsSet(32, 32 - MemVT.getSizeInBits());
+  if (DAG.MaskedValueIsZero(CmpOp, HighBits))
+    return Op;
+
+  // Clear the high bits of the compare operand.
+  unsigned MaskVal = (1 << MemVT.getSizeInBits()) - 1;
+  SDValue NewCmpOp =
+    DAG.getNode(ISD::AND, dl, MVT::i32, CmpOp,
+                DAG.getConstant(MaskVal, dl, MVT::i32));
+
+  // Replace the existing compare operand with the properly zero-extended one.
+  SmallVector<SDValue, 4> Ops;
+  for (int i = 0, e = AtomicNode->getNumOperands(); i < e; i++)
+    Ops.push_back(AtomicNode->getOperand(i));
+  Ops[2] = NewCmpOp;
+  MachineMemOperand *MMO = AtomicNode->getMemOperand();
+  SDVTList Tys = DAG.getVTList(MVT::i32, MVT::Other);
+  auto NodeTy =
+    (MemVT == MVT::i8) ? PPCISD::ATOMIC_CMP_SWAP_8 : PPCISD::ATOMIC_CMP_SWAP_16;
+  return DAG.getMemIntrinsicNode(NodeTy, dl, Tys, Ops, MemVT, MMO);
+}
+
 SDValue PPCTargetLowering::LowerSIGN_EXTEND_INREG(SDValue Op,
                                                   SelectionDAG &DAG) const {
   SDLoc dl(Op);
@@ -9325,6 +9366,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerREM(Op, DAG);
   case ISD::BSWAP:
     return LowerBSWAP(Op, DAG);
+  case ISD::ATOMIC_CMP_SWAP:
+    return LowerATOMIC_CMP_SWAP(Op, DAG);
   }
 }
 

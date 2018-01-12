@@ -35,9 +35,14 @@ public:
   /// Show brief documentation comments in code completion results.
   unsigned IncludeBriefComments : 1;
 
+  /// Hint whether to load data from the external AST in order to provide
+  /// full results. If false, declarations from the preamble may be omitted.
+  unsigned LoadExternal : 1;
+
   CodeCompleteOptions()
       : IncludeMacros(0), IncludeCodePatterns(0), IncludeGlobals(1),
-        IncludeNamespaceLevelDecls(1), IncludeBriefComments(0) {}
+        IncludeNamespaceLevelDecls(1), IncludeBriefComments(0),
+        LoadExternal(1) {}
 };
 
 } // namespace clang

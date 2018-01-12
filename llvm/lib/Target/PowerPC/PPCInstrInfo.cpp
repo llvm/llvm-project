@@ -2444,6 +2444,8 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
       Is64BitLI = Opc != PPC::RLDICL_32;
       NewImm = InVal.getSExtValue();
       SetCR = Opc == PPC::RLDICLo;
+      if (SetCR && (SExtImm & NewImm) != NewImm)
+        return false;
       break;
     }
     return false;
@@ -2471,6 +2473,8 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
       Is64BitLI = Opc == PPC::RLWINM8 || Opc == PPC::RLWINM8o;
       NewImm = InVal.getSExtValue();
       SetCR = Opc == PPC::RLWINMo || Opc == PPC::RLWINM8o;
+      if (SetCR && (SExtImm & NewImm) != NewImm)
+        return false;
       break;
     }
     return false;

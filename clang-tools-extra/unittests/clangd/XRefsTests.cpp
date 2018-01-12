@@ -203,6 +203,18 @@ TEST(GoToDefinition, All) {
         #define MACRO 2
         #undef macro
       )cpp",
+
+      R"cpp(// Forward class declaration
+        class Foo;
+        [[class Foo {}]];
+        F^oo* foo();
+      )cpp",
+
+      R"cpp(// Function declaration
+        void foo();
+        void g() { f^oo(); }
+        [[void foo() {}]]
+      )cpp",
   };
   for (const char *Test : Tests) {
     Annotations T(Test);

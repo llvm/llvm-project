@@ -1385,10 +1385,10 @@ void DFSanVisitor::visitMemTransferInst(MemTransferInst &I) {
   Value *AlignShadow;
   if (ClPreserveAlignment) {
     AlignShadow = IRB.CreateMul(I.getAlignmentCst(),
-                                ConstantInt::get(I.getAlignmentCst()->getType(),
+                                ConstantInt::get(I.getAlignmentType(),
                                                  DFSF.DFS.ShadowWidth / 8));
   } else {
-    AlignShadow = ConstantInt::get(I.getAlignmentCst()->getType(),
+    AlignShadow = ConstantInt::get(I.getAlignmentType(),
                                    DFSF.DFS.ShadowWidth / 8);
   }
   Type *Int8Ptr = Type::getInt8PtrTy(*DFSF.DFS.Ctx);

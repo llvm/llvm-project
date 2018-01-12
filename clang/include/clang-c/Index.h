@@ -5161,7 +5161,14 @@ enum CXCodeComplete_Flags {
    * \brief Whether to include brief documentation within the set of code
    * completions returned.
    */
-  CXCodeComplete_IncludeBriefComments = 0x04
+  CXCodeComplete_IncludeBriefComments = 0x04,
+
+  /**
+   * \brief Whether to speed up completion by omitting some entities which are
+   * defined in the preamble. There's no guarantee any particular entity will
+   * be omitted. This may be useful if the headers are indexed externally.
+   */
+  CXCodeComplete_SkipPreamble = 0x08
 };
 
 /**

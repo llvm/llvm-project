@@ -4,7 +4,7 @@
 define i32 @test_x86_tbm_bextri_u32(i32 %a) nounwind readnone {
 ; CHECK-LABEL: test_x86_tbm_bextri_u32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    bextr $2814, %edi, %eax # imm = 0xAFE
+; CHECK-NEXT:    bextrl $2814, %edi, %eax # imm = 0xAFE
 ; CHECK-NEXT:    retq
 entry:
   %0 = tail call i32 @llvm.x86.tbm.bextri.u32(i32 %a, i32 2814)
@@ -16,7 +16,7 @@ declare i32 @llvm.x86.tbm.bextri.u32(i32, i32) nounwind readnone
 define i32 @test_x86_tbm_bextri_u32_m(i32* nocapture %a) nounwind readonly {
 ; CHECK-LABEL: test_x86_tbm_bextri_u32_m:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    bextr $2814, (%rdi), %eax # imm = 0xAFE
+; CHECK-NEXT:    bextrl $2814, (%rdi), %eax # imm = 0xAFE
 ; CHECK-NEXT:    retq
 entry:
   %tmp1 = load i32, i32* %a, align 4
@@ -27,7 +27,7 @@ entry:
 define i32 @test_x86_tbm_bextri_u32_z(i32 %a, i32 %b) nounwind readonly {
 ; CHECK-LABEL: test_x86_tbm_bextri_u32_z:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    bextr $2814, %edi, %eax # imm = 0xAFE
+; CHECK-NEXT:    bextrl $2814, %edi, %eax # imm = 0xAFE
 ; CHECK-NEXT:    cmovel %esi, %eax
 ; CHECK-NEXT:    retq
 entry:
@@ -40,7 +40,7 @@ entry:
 define i64 @test_x86_tbm_bextri_u64(i64 %a) nounwind readnone {
 ; CHECK-LABEL: test_x86_tbm_bextri_u64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    bextr $2814, %rdi, %rax # imm = 0xAFE
+; CHECK-NEXT:    bextrq $2814, %rdi, %rax # imm = 0xAFE
 ; CHECK-NEXT:    retq
 entry:
   %0 = tail call i64 @llvm.x86.tbm.bextri.u64(i64 %a, i64 2814)
@@ -52,7 +52,7 @@ declare i64 @llvm.x86.tbm.bextri.u64(i64, i64) nounwind readnone
 define i64 @test_x86_tbm_bextri_u64_m(i64* nocapture %a) nounwind readonly {
 ; CHECK-LABEL: test_x86_tbm_bextri_u64_m:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    bextr $2814, (%rdi), %rax # imm = 0xAFE
+; CHECK-NEXT:    bextrq $2814, (%rdi), %rax # imm = 0xAFE
 ; CHECK-NEXT:    retq
 entry:
   %tmp1 = load i64, i64* %a, align 8
@@ -63,7 +63,7 @@ entry:
 define i64 @test_x86_tbm_bextri_u64_z(i64 %a, i64 %b) nounwind readnone {
 ; CHECK-LABEL: test_x86_tbm_bextri_u64_z:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    bextr $2814, %rdi, %rax # imm = 0xAFE
+; CHECK-NEXT:    bextrq $2814, %rdi, %rax # imm = 0xAFE
 ; CHECK-NEXT:    cmoveq %rsi, %rax
 ; CHECK-NEXT:    retq
 entry:
