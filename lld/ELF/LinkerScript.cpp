@@ -667,6 +667,15 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
     Ctx->LMAOffset = [=] { return Sec->LMAExpr().getValue() - D; };
   }
 
+  if (!Sec->LMARegionName.empty()) {
+    if (MemoryRegion *MR = MemoryRegions.lookup(Sec->LMARegionName)) {
+      uint64_t Offset = MR->Origin - Dot;
+      Ctx->LMAOffset = [=] { return Offset; };
+    } else {
+      error("memory region '" + Sec->LMARegionName + "' not declared");
+    }
+  }
+
   switchTo(Sec);
 
   // The Size previously denoted how many InputSections had been added to this

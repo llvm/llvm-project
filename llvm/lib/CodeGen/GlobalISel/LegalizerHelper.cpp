@@ -103,6 +103,9 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
     return Size == 64 ? RTLIB::REM_F64 : RTLIB::REM_F32;
   case TargetOpcode::G_FPOW:
     return Size == 64 ? RTLIB::POW_F64 : RTLIB::POW_F32;
+  case TargetOpcode::G_FMA:
+    assert((Size == 32 || Size == 64) && "Unsupported size");
+    return Size == 64 ? RTLIB::FMA_F64 : RTLIB::FMA_F32;
   }
   llvm_unreachable("Unknown libcall function");
 }
@@ -127,9 +130,12 @@ static LegalizerHelper::LegalizeResult
 simpleLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder, unsigned Size,
               Type *OpType) {
   auto Libcall = getRTLibDesc(MI.getOpcode(), Size);
+
+  SmallVector<CallLowering::ArgInfo, 3> Args;
+  for (unsigned i = 1; i < MI.getNumOperands(); i++)
+    Args.push_back({MI.getOperand(i).getReg(), OpType});
   return createLibcall(MIRBuilder, Libcall, {MI.getOperand(0).getReg(), OpType},
-                       {{MI.getOperand(1).getReg(), OpType},
-                        {MI.getOperand(2).getReg(), OpType}});
+                       Args);
 }
 
 LegalizerHelper::LegalizeResult
@@ -157,6 +163,7 @@ LegalizerHelper::libcall(MachineInstr &MI) {
   case TargetOpcode::G_FSUB:
   case TargetOpcode::G_FMUL:
   case TargetOpcode::G_FDIV:
+  case TargetOpcode::G_FMA:
   case TargetOpcode::G_FPOW:
   case TargetOpcode::G_FREM: {
     Type *HLTy = Size == 64 ? Type::getDoubleTy(Ctx) : Type::getFloatTy(Ctx);
