@@ -105,6 +105,14 @@ def ARMSmlaldx       : SDNode<"ARMISD::SMLALDX", SDT_LongMac>;
 def ARMSmlsld        : SDNode<"ARMISD::SMLSLD", SDT_LongMac>;
 def ARMSmlsldx       : SDNode<"ARMISD::SMLSLDX", SDT_LongMac>;
 
+def SDT_MulHSR       : SDTypeProfile<1, 3, [SDTCisVT<0,i32>,
+                                            SDTCisSameAs<0, 1>,
+                                            SDTCisSameAs<0, 2>,
+                                            SDTCisSameAs<0, 3>]>;
+
+def ARMsmmlar      : SDNode<"ARMISD::SMMLAR", SDT_MulHSR>;
+def ARMsmmlsr      : SDNode<"ARMISD::SMMLSR", SDT_MulHSR>;
+
 // Node definitions.
 def ARMWrapper       : SDNode<"ARMISD::Wrapper",     SDTIntUnaryOp>;
 def ARMWrapperPIC    : SDNode<"ARMISD::WrapperPIC",  SDTIntUnaryOp>;
@@ -4143,7 +4151,8 @@ def SMMUL : AMul2I <0b0111010, 0b0001, (outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm),
 }
 
 def SMMULR : AMul2I <0b0111010, 0b0011, (outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm),
-               IIC_iMUL32, "smmulr", "\t$Rd, $Rn, $Rm", []>,
+               IIC_iMUL32, "smmulr", "\t$Rd, $Rn, $Rm",
+               [(set GPR:$Rd, (ARMsmmlar GPR:$Rn, GPR:$Rm, (i32 0)))]>,
             Requires<[IsARM, HasV6]>,
              Sched<[WriteMUL32, ReadMUL, ReadMUL]>  {
   let Inst{15-12} = 0b1111;
@@ -4158,7 +4167,8 @@ def SMMLA : AMul2Ia <0b0111010, 0b0001, (outs GPR:$Rd),
 
 def SMMLAR : AMul2Ia <0b0111010, 0b0011, (outs GPR:$Rd),
                (ins GPR:$Rn, GPR:$Rm, GPR:$Ra),
-               IIC_iMAC32, "smmlar", "\t$Rd, $Rn, $Rm, $Ra", []>,
+               IIC_iMAC32, "smmlar", "\t$Rd, $Rn, $Rm, $Ra",
+               [(set GPR:$Rd, (ARMsmmlar GPR:$Rn, GPR:$Rm, GPR:$Ra))]>,
             Requires<[IsARM, HasV6]>,
              Sched<[WriteMAC32, ReadMUL, ReadMUL, ReadMAC]>;
 
@@ -4170,7 +4180,8 @@ def SMMLS : AMul2Ia <0b0111010, 0b1101, (outs GPR:$Rd),
 
 def SMMLSR : AMul2Ia <0b0111010, 0b1111, (outs GPR:$Rd),
                (ins GPR:$Rn, GPR:$Rm, GPR:$Ra),
-               IIC_iMAC32, "smmlsr", "\t$Rd, $Rn, $Rm, $Ra", []>,
+               IIC_iMAC32, "smmlsr", "\t$Rd, $Rn, $Rm, $Ra",
+               [(set GPR:$Rd, (ARMsmmlsr GPR:$Rn, GPR:$Rm, GPR:$Ra))]>,
             Requires<[IsARM, HasV6]>,
              Sched<[WriteMAC32, ReadMUL, ReadMUL, ReadMAC]>;
 

@@ -198,6 +198,13 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
       setFCmpLibcallsGNU();
   }
 
+  if (!ST.useSoftFloat() && ST.hasVFP4())
+    for (auto Ty : {s32, s64})
+      setAction({G_FMA, Ty}, Legal);
+  else
+    for (auto Ty : {s32, s64})
+      setAction({G_FMA, Ty}, Libcall);
+
   for (unsigned Op : {G_FREM, G_FPOW})
     for (auto Ty : {s32, s64})
       setAction({Op, Ty}, Libcall);

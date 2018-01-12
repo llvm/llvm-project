@@ -3,7 +3,7 @@
 ; CHECK: irce: loop has 1 inductive range checks:
 ; CHECK-NEXT: InductiveRangeCheck:
 ; CHECK-NEXT:   Kind: RANGE_CHECK_LOWER
-; CHECK-NEXT:   Begin: (-1 + %n)  Step: -1  End: (null)
+; CHECK-NEXT:   Begin: (-1 + %n)  Step: -1  End: 2147483647
 ; CHECK-NEXT:   CheckUse:   br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !1 Operand: 0
 ; CHECK-NEXT: irce: in function only_lower_check: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 
