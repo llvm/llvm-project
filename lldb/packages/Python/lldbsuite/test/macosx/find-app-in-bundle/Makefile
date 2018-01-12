@@ -6,12 +6,11 @@ endif
 
 CFLAGS ?= -g -O0 -arch $(ARCH)
 
-all: clean TestApp
+all:  TestApp.app/Contents/MacOS/TestApp
 
-TestApp:
+TestApp.app/Contents/MacOS/TestApp: 
 	$(CC) $(CFLAGS) -o TestApp main.c
-	mv TestApp TestApp.app/Contents/MacOs/TestApp
+	mv TestApp TestApp.app/Contents/MacOS/TestApp
 	mv TestApp.dSYM TestApp.app.dSYM
 clean:
 	rm -rf TestApp.app/Contents/MacOS/TestApp TestApp.app.dSYM
-
