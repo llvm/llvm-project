@@ -299,7 +299,7 @@ void Writer::createExportSection() {
   }
 
   for (const Symbol *Sym : SymbolExports) {
-    log("Export: " + Sym->getName());
+    DEBUG(dbgs() << "Export: " << Sym->getName() << "\n");
     WasmExport Export;
     Export.Name = Sym->getName();
     Export.Index = Sym->getOutputIndex();
@@ -492,7 +492,7 @@ void Writer::layoutMemory() {
   for (OutputSegment *Seg : Segments) {
     MemoryPtr = alignTo(MemoryPtr, Seg->Alignment);
     Seg->StartVA = MemoryPtr;
-    debugPrint("mem: %-10s offset=%-8d size=%-4d align=%d\n",
+    debugPrint("mem: %-15s offset=%-8d size=%-8d align=%d\n",
                Seg->Name.str().c_str(), MemoryPtr, Seg->Size, Seg->Alignment);
     MemoryPtr += Seg->Size;
   }

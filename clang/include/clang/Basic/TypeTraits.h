@@ -80,7 +80,8 @@ namespace clang {
     BTT_IsAssignable,
     BTT_IsNothrowAssignable,
     BTT_IsTriviallyAssignable,
-    BTT_Last = BTT_IsTriviallyAssignable,
+    BTT_ReferenceBindsToTemporary,
+    BTT_Last = BTT_ReferenceBindsToTemporary,
     TT_IsConstructible,
     TT_IsNothrowConstructible,
     TT_IsTriviallyConstructible
