@@ -108,8 +108,6 @@ namespace swiftcall {
     virtual bool isHomogeneousAggregateSmallEnough(const Type *Base,
                                                    uint64_t Members) const;
 
-    virtual bool shouldSignExtUnsignedType(QualType Ty) const;
-
     bool isHomogeneousAggregate(QualType Ty, const Type *&Base,
                                 uint64_t &Members) const;
 

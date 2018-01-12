@@ -1366,19 +1366,17 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
 void DwarfDebug::recordSourceLine(unsigned Line, unsigned Col, const MDNode *S,
                                   unsigned Flags) {
   StringRef Fn;
-  StringRef Dir;
   unsigned Src = 1;
   unsigned Discriminator = 0;
   if (auto *Scope = cast_or_null<DIScope>(S)) {
     Fn = Scope->getFilename();
-    Dir = Scope->getDirectory();
     if (Line != 0 && getDwarfVersion() >= 4)
       if (auto *LBF = dyn_cast<DILexicalBlockFile>(Scope))
         Discriminator = LBF->getDiscriminator();
 
     unsigned CUID = Asm->OutStreamer->getContext().getDwarfCompileUnitID();
     Src = static_cast<DwarfCompileUnit &>(*InfoHolder.getUnits()[CUID])
-              .getOrCreateSourceID(Fn, Dir, nullptr);
+              .getOrCreateSourceID(Scope->getFile());
   }
   Asm->OutStreamer->EmitDwarfLocDirective(Src, Line, Col, Flags, 0,
                                           Discriminator, Fn);
@@ -1973,11 +1971,7 @@ void DwarfDebug::emitMacroFile(DIMacroFile &F, DwarfCompileUnit &U) {
   assert(F.getMacinfoType() == dwarf::DW_MACINFO_start_file);
   Asm->EmitULEB128(dwarf::DW_MACINFO_start_file);
   Asm->EmitULEB128(F.getLine());
-  DIFile *File = F.getFile();
-  unsigned FID =
-      U.getOrCreateSourceID(File->getFilename(), File->getDirectory(),
-                            nullptr); // FIXME: MD5?
-  Asm->EmitULEB128(FID);
+  Asm->EmitULEB128(U.getOrCreateSourceID(F.getFile()));
   handleMacroNodes(F.getElements(), U);
   Asm->EmitULEB128(dwarf::DW_MACINFO_end_file);
 }

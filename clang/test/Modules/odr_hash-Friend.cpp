@@ -8,6 +8,8 @@
 // RUN:  -fmodules-cache-path=%t/modules.cache \
 // RUN:  -std=c++11 -x c++ %s -verify
 
+// UNSUPPORTED: windows
+
 // expected-no-diagnostics
 
 #include "Box.h"

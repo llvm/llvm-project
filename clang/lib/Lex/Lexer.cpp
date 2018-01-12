@@ -2009,18 +2009,21 @@ bool Lexer::LexAngledStringLiteral(Token &Result, const char *CurPtr) {
   const char *AfterLessPos = CurPtr;
   char C = getAndAdvanceChar(CurPtr, Result);
   while (C != '>') {
-    // Skip escaped characters.
-    if (C == '\\' && CurPtr < BufferEnd) {
-      // Skip the escaped character.
-      getAndAdvanceChar(CurPtr, Result);
-    } else if (C == '\n' || C == '\r' ||             // Newline.
-               (C == 0 && (CurPtr-1 == BufferEnd ||  // End of file.
-                           isCodeCompletionPoint(CurPtr-1)))) {
+    // Skip escaped characters.  Escaped newlines will already be processed by
+    // getAndAdvanceChar.
+    if (C == '\\')
+      C = getAndAdvanceChar(CurPtr, Result);
+
+    if (C == '\n' || C == '\r' ||             // Newline.
+        (C == 0 && (CurPtr-1 == BufferEnd ||  // End of file.
+                    isCodeCompletionPoint(CurPtr-1)))) {
       // If the filename is unterminated, then it must just be a lone <
       // character.  Return this as such.
       FormTokenWithChars(Result, AfterLessPos, tok::less);
       return true;
-    } else if (C == 0) {
+    }
+
+    if (C == 0) {
       NulCharacter = CurPtr-1;
     }
     C = getAndAdvanceChar(CurPtr, Result);

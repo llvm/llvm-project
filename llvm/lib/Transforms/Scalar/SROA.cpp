@@ -2684,8 +2684,7 @@ private:
       assert(!IsSplit);
       assert(NewBeginOffset == BeginOffset);
       II.setDest(getNewAllocaSlicePtr(IRB, OldPtr->getType()));
-      Type *CstTy = II.getAlignmentCst()->getType();
-      II.setAlignment(ConstantInt::get(CstTy, getSliceAlign()));
+      II.setAlignment(getSliceAlign());
 
       deleteIfTriviallyDead(OldPtr);
       return false;
@@ -2807,9 +2806,7 @@ private:
         II.setSource(AdjustedPtr);
 
       if (II.getAlignment() > SliceAlign) {
-        Type *CstTy = II.getAlignmentCst()->getType();
-        II.setAlignment(
-            ConstantInt::get(CstTy, MinAlign(II.getAlignment(), SliceAlign)));
+        II.setAlignment(MinAlign(II.getAlignment(), SliceAlign));
       }
 
       DEBUG(dbgs() << "          to: " << II << "\n");

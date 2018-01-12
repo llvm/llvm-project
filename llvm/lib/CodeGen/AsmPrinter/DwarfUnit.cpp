@@ -19,6 +19,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/None.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -30,6 +31,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
@@ -263,12 +265,25 @@ void DwarfUnit::addSectionOffset(DIE &Die, dwarf::Attribute Attribute,
     addUInt(Die, Attribute, dwarf::DW_FORM_data4, Integer);
 }
 
-unsigned DwarfTypeUnit::getOrCreateSourceID(StringRef FileName,
-                                            StringRef DirName,
-                                            MD5::MD5Result *Checksum) {
+MD5::MD5Result *DwarfUnit::getMD5AsBytes(const DIFile *File) {
+  assert(File);
+  if (File->getChecksumKind() != DIFile::CSK_MD5)
+    return nullptr;
+
+  // Convert the string checksum to an MD5Result for the streamer.
+  // The verifier validates the checksum so we assume it's okay.
+  // An MD5 checksum is 16 bytes.
+  std::string Checksum = fromHex(File->getChecksum());
+  void *CKMem = Asm->OutStreamer->getContext().allocate(16, 1);
+  memcpy(CKMem, Checksum.data(), 16);
+  return reinterpret_cast<MD5::MD5Result *>(CKMem);
+}
+
+unsigned DwarfTypeUnit::getOrCreateSourceID(const DIFile *File) {
   return SplitLineTable
-             ? SplitLineTable->getFile(DirName, FileName, Checksum)
-             : getCU().getOrCreateSourceID(FileName, DirName, Checksum);
+             ? SplitLineTable->getFile(File->getDirectory(),
+                                       File->getFilename(), getMD5AsBytes(File))
+             : getCU().getOrCreateSourceID(File);
 }
 
 void DwarfUnit::addOpAddress(DIELoc &Die, const MCSymbol *Sym) {
@@ -338,12 +353,11 @@ void DwarfUnit::addBlock(DIE &Die, dwarf::Attribute Attribute,
   Die.addValue(DIEValueAllocator, Attribute, Block->BestForm(), Block);
 }
 
-void DwarfUnit::addSourceLine(DIE &Die, unsigned Line, StringRef File,
-                              StringRef Directory) {
+void DwarfUnit::addSourceLine(DIE &Die, unsigned Line, const DIFile *File) {
   if (Line == 0)
     return;
 
-  unsigned FileID = getOrCreateSourceID(File, Directory, nullptr);
+  unsigned FileID = getOrCreateSourceID(File);
   assert(FileID && "Invalid file id");
   addUInt(Die, dwarf::DW_AT_decl_file, None, FileID);
   addUInt(Die, dwarf::DW_AT_decl_line, None, Line);
@@ -352,32 +366,31 @@ void DwarfUnit::addSourceLine(DIE &Die, unsigned Line, StringRef File,
 void DwarfUnit::addSourceLine(DIE &Die, const DILocalVariable *V) {
   assert(V);
 
-  addSourceLine(Die, V->getLine(), V->getScope()->getFilename(),
-                V->getScope()->getDirectory());
+  addSourceLine(Die, V->getLine(), V->getFile());
 }
 
 void DwarfUnit::addSourceLine(DIE &Die, const DIGlobalVariable *G) {
   assert(G);
 
-  addSourceLine(Die, G->getLine(), G->getFilename(), G->getDirectory());
+  addSourceLine(Die, G->getLine(), G->getFile());
 }
 
 void DwarfUnit::addSourceLine(DIE &Die, const DISubprogram *SP) {
   assert(SP);
 
-  addSourceLine(Die, SP->getLine(), SP->getFilename(), SP->getDirectory());
+  addSourceLine(Die, SP->getLine(), SP->getFile());
 }
 
 void DwarfUnit::addSourceLine(DIE &Die, const DIType *Ty) {
   assert(Ty);
 
-  addSourceLine(Die, Ty->getLine(), Ty->getFilename(), Ty->getDirectory());
+  addSourceLine(Die, Ty->getLine(), Ty->getFile());
 }
 
 void DwarfUnit::addSourceLine(DIE &Die, const DIObjCProperty *Ty) {
   assert(Ty);
 
-  addSourceLine(Die, Ty->getLine(), Ty->getFilename(), Ty->getDirectory());
+  addSourceLine(Die, Ty->getLine(), Ty->getFile());
 }
 
 /* Byref variables, in Blocks, are declared by the programmer as "SomeType
@@ -1164,10 +1177,8 @@ bool DwarfUnit::applySubprogramDefinitionAttributes(const DISubprogram *SP,
     // Look at the Decl's linkage name only if we emitted it.
     if (DD->useAllLinkageNames())
       DeclLinkageName = SPDecl->getLinkageName();
-    unsigned DeclID = getOrCreateSourceID(SPDecl->getFilename(),
-                                          SPDecl->getDirectory(), nullptr);
-    unsigned DefID =
-        getOrCreateSourceID(SP->getFilename(), SP->getDirectory(), nullptr);
+    unsigned DeclID = getOrCreateSourceID(SPDecl->getFile());
+    unsigned DefID = getOrCreateSourceID(SP->getFile());
     if (DeclID != DefID)
       addUInt(SPDie, dwarf::DW_AT_decl_file, None, DefID);
 

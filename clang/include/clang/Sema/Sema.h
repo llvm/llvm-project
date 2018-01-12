@@ -3199,11 +3199,13 @@ public:
 
   void LookupVisibleDecls(Scope *S, LookupNameKind Kind,
                           VisibleDeclConsumer &Consumer,
-                          bool IncludeGlobalScope = true);
+                          bool IncludeGlobalScope = true,
+                          bool LoadExternal = true);
   void LookupVisibleDecls(DeclContext *Ctx, LookupNameKind Kind,
                           VisibleDeclConsumer &Consumer,
                           bool IncludeGlobalScope = true,
-                          bool IncludeDependentBases = false);
+                          bool IncludeDependentBases = false,
+                          bool LoadExternal = true);
 
   enum CorrectTypoKind {
     CTK_NonError,     // CorrectTypo used in a non error recovery situation.

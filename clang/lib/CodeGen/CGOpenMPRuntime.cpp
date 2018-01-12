@@ -1371,7 +1371,10 @@ llvm::Value *CGOpenMPRuntime::emitTaskOutlinedFunction(
   CodeGen.setAction(Action);
   assert(!ThreadIDVar->getType()->isPointerType() &&
          "thread id variable must be of type kmp_int32 for tasks");
-  auto *CS = cast<CapturedStmt>(D.getAssociatedStmt());
+  const OpenMPDirectiveKind Region =
+      isOpenMPTaskLoopDirective(D.getDirectiveKind()) ? OMPD_taskloop
+                                                      : OMPD_task;
+  auto *CS = D.getCapturedStmt(Region);
   auto *TD = dyn_cast<OMPTaskDirective>(&D);
   CodeGenFunction CGF(CGM, true);
   CGOpenMPTaskOutlinedRegionInfo CGInfo(*CS, ThreadIDVar, CodeGen,
@@ -5885,7 +5888,7 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
        << llvm::format("_%x_", FileID) << ParentName << "_l" << Line;
   }
 
-  const CapturedStmt &CS = *cast<CapturedStmt>(D.getAssociatedStmt());
+  const CapturedStmt &CS = *D.getCapturedStmt(OMPD_target);
 
   CodeGenFunction CGF(CGM, true);
   CGOpenMPTargetRegionInfo CGInfo(CS, CodeGen, EntryFnName);
@@ -5979,7 +5982,7 @@ emitNumTeamsForTargetDirective(CGOpenMPRuntime &OMPRuntime,
   // the expression is captured in the enclosing target environment when the
   // teams directive is not combined with target.
 
-  const CapturedStmt &CS = *cast<CapturedStmt>(D.getAssociatedStmt());
+  const CapturedStmt &CS = *D.getCapturedStmt(OMPD_target);
 
   if (auto *TeamsDir = dyn_cast_or_null<OMPExecutableDirective>(
           ignoreCompoundStmts(CS.getCapturedStmt()))) {
@@ -6082,7 +6085,7 @@ emitNumThreadsForTargetDirective(CGOpenMPRuntime &OMPRuntime,
   // the expression is captured in the enclosing target environment when the
   // teams directive is not combined with target.
 
-  const CapturedStmt &CS = *cast<CapturedStmt>(D.getAssociatedStmt());
+  const CapturedStmt &CS = *D.getCapturedStmt(OMPD_target);
 
   if (auto *TeamsDir = dyn_cast_or_null<OMPExecutableDirective>(
           ignoreCompoundStmts(CS.getCapturedStmt()))) {
@@ -7059,7 +7062,7 @@ void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
   // Get mappable expression information.
   MappableExprsHandler MEHandler(D, CGF);
 
-  const CapturedStmt &CS = *cast<CapturedStmt>(D.getAssociatedStmt());
+  const CapturedStmt &CS = *D.getCapturedStmt(OMPD_target);
   auto RI = CS.getCapturedRecordDecl()->field_begin();
   auto CV = CapturedVars.begin();
   for (CapturedStmt::const_capture_iterator CI = CS.capture_begin(),
@@ -7314,12 +7317,11 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
   }
 
   if (const OMPExecutableDirective *E = dyn_cast<OMPExecutableDirective>(S)) {
-    if (!E->hasAssociatedStmt())
+    if (!E->hasAssociatedStmt() || !E->getAssociatedStmt())
       return;
 
     scanForTargetRegionsFunctions(
-        cast<CapturedStmt>(E->getAssociatedStmt())->getCapturedStmt(),
-        ParentName);
+        E->getInnermostCapturedStmt()->getCapturedStmt(), ParentName);
     return;
   }
 

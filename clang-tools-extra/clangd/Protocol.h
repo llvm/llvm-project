@@ -446,6 +446,17 @@ enum class InsertTextFormat {
   Snippet = 2,
 };
 
+/// Provides details for how a completion item was scored.
+/// This can be used for client-side filtering of completion items as the
+/// user keeps typing.
+/// This is a clangd extension.
+struct CompletionItemScores {
+  float finalScore;  /// The score that items are ranked by.
+                     /// This is filterScore * symbolScore.
+  float filterScore; /// How the partial identifier matched filterText. [0-1]
+  float symbolScore; /// How the symbol fits, ignoring the partial identifier.
+};
+
 struct CompletionItem {
   /// The label of this completion item. By default also the text that is
   /// inserted when selecting this completion.
@@ -465,6 +476,9 @@ struct CompletionItem {
   /// A string that should be used when comparing this item with other items.
   /// When `falsy` the label is used.
   std::string sortText;
+
+  /// Details about the quality of this completion item. (clangd extension)
+  llvm::Optional<CompletionItemScores> scoreInfo;
 
   /// A string that should be used when filtering a set of completion items.
   /// When `falsy` the label is used.

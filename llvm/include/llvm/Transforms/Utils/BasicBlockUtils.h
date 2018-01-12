@@ -27,6 +27,7 @@ namespace llvm {
 
 class BlockFrequencyInfo;
 class BranchProbabilityInfo;
+class DeferredDominance;
 class DominatorTree;
 class Function;
 class Instruction;
@@ -38,7 +39,7 @@ class TargetLibraryInfo;
 class Value;
 
 /// Delete the specified block, which must have no predecessors.
-void DeleteDeadBlock(BasicBlock *BB);
+void DeleteDeadBlock(BasicBlock *BB, DeferredDominance *DDT = nullptr);
 
 /// We know that BB has one predecessor. If there are any single-entry PHI nodes
 /// in it, fold them away. This handles the case when all entries to the PHI

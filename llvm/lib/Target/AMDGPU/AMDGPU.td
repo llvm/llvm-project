@@ -292,6 +292,12 @@ def FeatureIntClamp : SubtargetFeature<"int-clamp-insts",
   "Support clamp for integer destination"
 >;
 
+def FeatureUnpackedD16VMem : SubtargetFeature<"unpacked-d16-vmem",
+  "HasUnpackedD16VMem",
+  "true",
+  "Has unpacked d16 vmem instructions"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -547,23 +553,27 @@ def FeatureISAVersion7_0_4 : SubtargetFeatureISAVersion <7,0,4,
 def FeatureISAVersion8_0_0 : SubtargetFeatureISAVersion <8,0,0,
   [FeatureVolcanicIslands,
    FeatureLDSBankCount32,
-   FeatureSGPRInitBug]>;
+   FeatureSGPRInitBug,
+   FeatureUnpackedD16VMem]>;
 
 def FeatureISAVersion8_0_1 : SubtargetFeatureISAVersion <8,0,1,
   [FeatureVolcanicIslands,
    FeatureFastFMAF32,
    HalfRate64Ops,
    FeatureLDSBankCount32,
-   FeatureXNACK]>;
+   FeatureXNACK,
+   FeatureUnpackedD16VMem]>;
 
 def FeatureISAVersion8_0_2 : SubtargetFeatureISAVersion <8,0,2,
   [FeatureVolcanicIslands,
    FeatureLDSBankCount32,
-   FeatureSGPRInitBug]>;
+   FeatureSGPRInitBug,
+   FeatureUnpackedD16VMem]>;
 
 def FeatureISAVersion8_0_3 : SubtargetFeatureISAVersion <8,0,3,
   [FeatureVolcanicIslands,
-   FeatureLDSBankCount32]>;
+   FeatureLDSBankCount32,
+   FeatureUnpackedD16VMem]>;
 
 def FeatureISAVersion8_1_0 : SubtargetFeatureISAVersion <8,1,0,
   [FeatureVolcanicIslands,
@@ -714,6 +724,11 @@ def HasFlatScratchInsts : Predicate<"Subtarget->hasFlatScratchInsts()">,
   AssemblerPredicate<"FeatureFlatScratchInsts">;
 def HasD16LoadStore : Predicate<"Subtarget->hasD16LoadStore()">,
   AssemblerPredicate<"FeatureGFX9Insts">;
+
+def HasUnpackedD16VMem : Predicate<"Subtarget->hasUnpackedD16VMem()">,
+  AssemblerPredicate<"FeatureUnpackedD16VMem">;
+def HasPackedD16VMem : Predicate<"!Subtarget->hasUnpackedD16VMem()">,
+  AssemblerPredicate<"!FeatureUnpackedD16VMem">;
 
 
 def LDSRequiresM0Init : Predicate<"Subtarget->ldsRequiresM0Init()">;

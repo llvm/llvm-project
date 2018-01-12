@@ -1337,11 +1337,6 @@ defm VPBROADCASTDr : avx512_int_broadcast_reg_vl<0x7C, avx512vl_i32_info,
 defm VPBROADCASTQr : avx512_int_broadcast_reg_vl<0x7C, avx512vl_i64_info,
                                                  X86VBroadcast, GR64, HasAVX512>, VEX_W;
 
-def : Pat <(v16i32 (X86vzext VK16WM:$mask)),
-           (VPBROADCASTDrZrkz VK16WM:$mask, (i32 (MOV32ri 0x1)))>;
-def : Pat <(v8i64 (X86vzext VK8WM:$mask)),
-           (VPBROADCASTQrZrkz VK8WM:$mask, (i64 (MOV64ri 0x1)))>;
-
 // Provide aliases for broadcast from the same register class that
 // automatically does the extract.
 multiclass avx512_int_broadcast_rm_lowering<X86VectorVTInfo DestInfo,

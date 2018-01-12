@@ -119,6 +119,22 @@ static void checkSymbolTypes(const Symbol &Existing, const InputFile &F,
         " in " + F.getName());
 }
 
+Symbol *SymbolTable::addDefinedFunction(StringRef Name,
+                                        const WasmSignature *Type,
+                                        uint32_t Flags) {
+  DEBUG(dbgs() << "addDefinedFunction: " << Name << "\n");
+  Symbol *S;
+  bool WasInserted;
+  std::tie(S, WasInserted) = insert(Name);
+  if (WasInserted) {
+    S->update(Symbol::DefinedFunctionKind, nullptr, Flags);
+    S->setFunctionType(Type);
+  } else if (!S->isFunction()) {
+    error("symbol type mismatch: " + Name);
+  }
+  return S;
+}
+
 Symbol *SymbolTable::addDefinedGlobal(StringRef Name) {
   DEBUG(dbgs() << "addDefinedGlobal: " << Name << "\n");
   Symbol *S;
