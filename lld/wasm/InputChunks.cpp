@@ -78,7 +78,7 @@ static void applyRelocation(uint8_t *Buf, const OutputRelocation &Reloc) {
 static void applyRelocations(uint8_t *Buf, ArrayRef<OutputRelocation> Relocs) {
   if (!Relocs.size())
     return;
-  log("applyRelocations: count=" + Twine(Relocs.size()));
+  DEBUG(dbgs() << "applyRelocations: count=" << Relocs.size() << "\n");
   for (const OutputRelocation &Reloc : Relocs)
     applyRelocation(Buf, Reloc);
 }
@@ -93,7 +93,8 @@ void InputChunk::writeTo(uint8_t *SectionStart) const {
 // as well as the value to write out in the final binary.
 void InputChunk::calcRelocations() {
   int32_t Off = getOutputOffset() - getInputSectionOffset();
-  log("calcRelocations: " + File.getName() + " offset=" + Twine(Off));
+  DEBUG(dbgs() << "calcRelocations: " << File.getName()
+               << " offset=" << Twine(Off) << "\n");
   for (const WasmRelocation &Reloc : Relocations) {
     OutputRelocation NewReloc;
     NewReloc.Reloc = Reloc;
