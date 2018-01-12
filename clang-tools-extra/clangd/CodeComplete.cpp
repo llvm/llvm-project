@@ -642,8 +642,10 @@ clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts() const {
   Result.IncludeGlobals = IncludeGlobals;
   Result.IncludeBriefComments = IncludeBriefComments;
 
-  // Enable index-based code completion when Index is provided.
-  Result.IncludeNamespaceLevelDecls = !Index;
+  // When an is used, Sema is responsible for completing the main file,
+  // the index can provide results from the preamble.
+  // Tell Sema not to deserialize the preamble to look for results.
+  Result.LoadExternal = !Index;
 
   return Result;
 }

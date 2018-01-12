@@ -74,7 +74,7 @@ void Symbol::setTableIndex(uint32_t Index) {
 }
 
 void Symbol::update(Kind K, InputFile *F, uint32_t Flags_,
-                    const InputSegment *Seg, const InputFunction *Func,
+                    const InputSegment *Seg, InputFunction *Func,
                     uint32_t Address) {
   SymbolKind = K;
   File = F;

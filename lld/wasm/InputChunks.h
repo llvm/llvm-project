@@ -110,7 +110,7 @@ class InputFunction : public InputChunk {
 public:
   InputFunction(const WasmSignature &S, const WasmFunction &Func,
                 const ObjFile &F)
-      : InputChunk(F), Signature(S), Function(Func) {}
+      : InputChunk(F), Signature(S), WrittenToNameSec(false), Function(Func) {}
 
   uint32_t getSize() const override { return Function.Size; }
   const uint8_t *getData() const override {
@@ -125,6 +125,8 @@ public:
   };
 
   const WasmSignature &Signature;
+
+  unsigned WrittenToNameSec : 1;
 
 protected:
   uint32_t getInputSectionOffset() const override {

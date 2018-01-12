@@ -442,6 +442,15 @@ void Writer::createNameSection() {
     for (Symbol *S : File->getSymbols()) {
       if (!S->isFunction() || S->isWeak() || S->WrittenToNameSec)
         continue;
+      // We also need to guard against two different symbols (two different
+      // names) for the same wasm function.  While this is possible (aliases)
+      // it is not legal in the "name" section.
+      InputFunction *Function = S->getFunction();
+      if (Function) {
+        if (Function->WrittenToNameSec)
+          continue;
+        Function->WrittenToNameSec = true;
+      }
       S->WrittenToNameSec = true;
       Names.emplace_back(S);
     }
