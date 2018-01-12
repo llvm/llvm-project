@@ -671,10 +671,10 @@ CompletionList codeComplete(const Context &Ctx, PathRef FileName,
     // engine).
     if (Opts.Index)
       completeWithIndex(Ctx, *Opts.Index, Contents, *CompletedName.SSInfo,
-                        CompletedName.Filter, &Results);
+                        CompletedName.Filter, &Results, /*DebuggingLabel=*/"D");
     if (Opts.StaticIndex)
       completeWithIndex(Ctx, *Opts.StaticIndex, Contents, *CompletedName.SSInfo,
-                        CompletedName.Filter, &Results, /*DebuggingLabel=*/"G");
+                        CompletedName.Filter, &Results, /*DebuggingLabel=*/"S");
   }
   return Results;
 }

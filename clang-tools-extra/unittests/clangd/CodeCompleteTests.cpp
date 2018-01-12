@@ -526,8 +526,8 @@ TEST(CompletionTest, StaticAndDynamicIndex) {
       void f() { ::ns::^ }
   )cpp",
                              Opts);
-  EXPECT_THAT(Results.items, Contains(Labeled("[G]XYZ")));
-  EXPECT_THAT(Results.items, Contains(Labeled("foo")));
+  EXPECT_THAT(Results.items, Contains(Labeled("[S]XYZ")));
+  EXPECT_THAT(Results.items, Contains(Labeled("[D]foo")));
 }
 
 TEST(CompletionTest, SimpleIndexBased) {
