@@ -77,28 +77,28 @@ using namespace ELF;
 
 #define TYPEDEF_ELF_TYPES(ELFT)                                                \
   using ELFO = ELFFile<ELFT>;                                                  \
-  using Elf_Addr = typename ELFO::Elf_Addr;                                    \
-  using Elf_Shdr = typename ELFO::Elf_Shdr;                                    \
-  using Elf_Sym = typename ELFO::Elf_Sym;                                      \
-  using Elf_Dyn = typename ELFO::Elf_Dyn;                                      \
-  using Elf_Dyn_Range = typename ELFO::Elf_Dyn_Range;                          \
-  using Elf_Rel = typename ELFO::Elf_Rel;                                      \
-  using Elf_Rela = typename ELFO::Elf_Rela;                                    \
-  using Elf_Rel_Range = typename ELFO::Elf_Rel_Range;                          \
-  using Elf_Rela_Range = typename ELFO::Elf_Rela_Range;                        \
-  using Elf_Phdr = typename ELFO::Elf_Phdr;                                    \
-  using Elf_Half = typename ELFO::Elf_Half;                                    \
-  using Elf_Ehdr = typename ELFO::Elf_Ehdr;                                    \
-  using Elf_Word = typename ELFO::Elf_Word;                                    \
-  using Elf_Hash = typename ELFO::Elf_Hash;                                    \
-  using Elf_GnuHash = typename ELFO::Elf_GnuHash;                              \
-  using Elf_Sym_Range = typename ELFO::Elf_Sym_Range;                          \
-  using Elf_Versym = typename ELFO::Elf_Versym;                                \
-  using Elf_Verneed = typename ELFO::Elf_Verneed;                              \
-  using Elf_Vernaux = typename ELFO::Elf_Vernaux;                              \
-  using Elf_Verdef = typename ELFO::Elf_Verdef;                                \
-  using Elf_Verdaux = typename ELFO::Elf_Verdaux;                              \
-  using uintX_t = typename ELFO::uintX_t;
+  using Elf_Addr = typename ELFT::Addr;                                        \
+  using Elf_Shdr = typename ELFT::Shdr;                                        \
+  using Elf_Sym = typename ELFT::Sym;                                          \
+  using Elf_Dyn = typename ELFT::Dyn;                                          \
+  using Elf_Dyn_Range = typename ELFT::DynRange;                               \
+  using Elf_Rel = typename ELFT::Rel;                                          \
+  using Elf_Rela = typename ELFT::Rela;                                        \
+  using Elf_Rel_Range = typename ELFT::RelRange;                               \
+  using Elf_Rela_Range = typename ELFT::RelaRange;                             \
+  using Elf_Phdr = typename ELFT::Phdr;                                        \
+  using Elf_Half = typename ELFT::Half;                                        \
+  using Elf_Ehdr = typename ELFT::Ehdr;                                        \
+  using Elf_Word = typename ELFT::Word;                                        \
+  using Elf_Hash = typename ELFT::Hash;                                        \
+  using Elf_GnuHash = typename ELFT::GnuHash;                                  \
+  using Elf_Sym_Range = typename ELFT::SymRange;                               \
+  using Elf_Versym = typename ELFT::Versym;                                    \
+  using Elf_Verneed = typename ELFT::Verneed;                                  \
+  using Elf_Vernaux = typename ELFT::Vernaux;                                  \
+  using Elf_Verdef = typename ELFT::Verdef;                                    \
+  using Elf_Verdaux = typename ELFT::Verdaux;                                  \
+  using uintX_t = typename ELFT::uint;
 
 namespace {
 
@@ -295,8 +295,8 @@ template <class ELFT> class MipsGOTParser;
 
 template <typename ELFT> class DumpStyle {
 public:
-  using Elf_Shdr = typename ELFFile<ELFT>::Elf_Shdr;
-  using Elf_Sym = typename ELFFile<ELFT>::Elf_Sym;
+  using Elf_Shdr = typename ELFT::Shdr;
+  using Elf_Sym = typename ELFT::Sym;
 
   DumpStyle(ELFDumper<ELFT> *Dumper) : Dumper(Dumper) {}
   virtual ~DumpStyle() = default;
@@ -1776,11 +1776,10 @@ void ELFDumper<ELFT>::printUnwindInfo() {
 
 namespace {
 
-template <> void ELFDumper<ELFType<support::little, false>>::printUnwindInfo() {
+template <> void ELFDumper<ELF32LE>::printUnwindInfo() {
   const unsigned Machine = Obj->getHeader()->e_machine;
   if (Machine == EM_ARM) {
-    ARM::EHABI::PrinterContext<ELFType<support::little, false>> Ctx(
-        W, Obj, DotSymtabSec);
+    ARM::EHABI::PrinterContext<ELF32LE> Ctx(W, Obj, DotSymtabSec);
     return Ctx.PrintUnwindInformation();
   }
   W.startLine() << "UnwindInfo not implemented.\n";
@@ -1886,7 +1885,7 @@ void ELFDumper<ELFT>::printAttributes() {
 
 namespace {
 
-template <> void ELFDumper<ELFType<support::little, false>>::printAttributes() {
+template <> void ELFDumper<ELF32LE>::printAttributes() {
   if (Obj->getHeader()->e_machine != EM_ARM) {
     W.startLine() << "Attributes not implemented.\n";
     return;
@@ -2445,9 +2444,9 @@ struct GroupSection {
 
 template <class ELFT>
 std::vector<GroupSection> getGroups(const ELFFile<ELFT> *Obj) {
-  using Elf_Shdr = typename ELFFile<ELFT>::Elf_Shdr;
-  using Elf_Sym = typename ELFFile<ELFT>::Elf_Sym;
-  using Elf_Word = typename ELFFile<ELFT>::Elf_Word;
+  using Elf_Shdr = typename ELFT::Shdr;
+  using Elf_Sym = typename ELFT::Sym;
+  using Elf_Word = typename ELFT::Word;
 
   std::vector<GroupSection> Ret;
   uint64_t I = 0;
@@ -3422,8 +3421,7 @@ static std::string getAMDGPUNoteTypeName(const uint32_t NT) {
 
 template <typename ELFT>
 static void printGNUNote(raw_ostream &OS, uint32_t NoteType,
-                         ArrayRef<typename ELFFile<ELFT>::Elf_Word> Words,
-                         size_t Size) {
+                         ArrayRef<typename ELFT::Word> Words, size_t Size) {
   switch (NoteType) {
   default:
     return;
@@ -3462,8 +3460,7 @@ static void printGNUNote(raw_ostream &OS, uint32_t NoteType,
 
 template <typename ELFT>
 static void printAMDGPUNote(raw_ostream &OS, uint32_t NoteType,
-                            ArrayRef<typename ELFFile<ELFT>::Elf_Word> Words,
-                            size_t Size) {
+                            ArrayRef<typename ELFT::Word> Words, size_t Size) {
   switch (NoteType) {
   default:
     return;
@@ -3498,8 +3495,8 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
   const Elf_Ehdr *e = Obj->getHeader();
   bool IsCore = e->e_type == ELF::ET_CORE;
 
-  auto process = [&](const typename ELFFile<ELFT>::Elf_Off Offset,
-                     const typename ELFFile<ELFT>::Elf_Addr Size) {
+  auto process = [&](const typename ELFT::Off Offset,
+                     const typename ELFT::Addr Size) {
     if (Size <= 0)
       return;
 

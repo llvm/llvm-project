@@ -14,9 +14,11 @@ define <3 x i16> @zext_i8(<3 x i8>) {
 ; SSE3-NEXT:    pinsrw $1, %eax, %xmm0
 ; SSE3-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; SSE3-NEXT:    pinsrw $2, %eax, %xmm0
-; SSE3-NEXT:    pextrw $0, %xmm0, %eax
+; SSE3-NEXT:    pxor %xmm1, %xmm1
 ; SSE3-NEXT:    pextrw $1, %xmm0, %edx
 ; SSE3-NEXT:    pextrw $2, %xmm0, %ecx
+; SSE3-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; SSE3-NEXT:    movd %xmm0, %eax
 ; SSE3-NEXT:    # kill: def %ax killed %ax killed %eax
 ; SSE3-NEXT:    # kill: def %dx killed %dx killed %edx
 ; SSE3-NEXT:    # kill: def %cx killed %cx killed %ecx

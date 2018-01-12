@@ -427,6 +427,15 @@ int OnExit() {
     *begin = *end = 0;                                                         \
   }
 
+#define COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, dst, v, size) \
+  {                                                       \
+    COMMON_INTERCEPTOR_ENTER(ctx, memset, dst, v, size);  \
+    if (common_flags()->intercept_intrin &&               \
+        MEM_IS_APP(GetAddressFromPointer(dst)))           \
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dst, size);     \
+    return REAL(memset)(dst, v, size);                    \
+  }
+
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
 #include "sanitizer_common/sanitizer_common_interceptors.inc"
 #include "sanitizer_common/sanitizer_signal_interceptors.inc"

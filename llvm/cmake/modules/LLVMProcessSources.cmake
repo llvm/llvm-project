@@ -52,7 +52,7 @@ function(llvm_process_sources OUT_VAR)
   cmake_parse_arguments(ARG "" "" "ADDITIONAL_HEADERS;ADDITIONAL_HEADER_DIRS" ${ARGN})
   set(sources ${ARG_UNPARSED_ARGUMENTS})
   llvm_check_source_file_list( ${sources} )
-  if( MSVC_IDE OR XCODE )
+  if( LLVM_ENABLE_IDE )
     # This adds .td and .h files to the Visual Studio solution:
     add_td_sources(sources)
     find_all_header_files(hdrs "${ARG_ADDITIONAL_HEADER_DIRS}")

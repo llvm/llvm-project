@@ -502,7 +502,7 @@ WasmObjectWriter::getProvisionalValue(const WasmRelocationEntry &RelEntry) {
   const MCSymbolWasm *Sym = ResolveSymbol(*RelEntry.Symbol);
 
   // For undefined symbols, use zero
-  if (!Sym->isDefined(/*SetUsed=*/false))
+  if (!Sym->isDefined())
     return 0;
 
   uint32_t GlobalIndex = SymbolIndices[Sym];
@@ -1122,7 +1122,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
       continue;
 
     // If the symbol is not defined in this translation unit, import it.
-    if ((!WS.isDefined(/*SetUsed=*/false) && !WS.isComdat()) ||
+    if ((!WS.isDefined() && !WS.isComdat()) ||
         WS.isVariable()) {
       WasmImport Import;
       Import.ModuleName = WS.getModuleName();
@@ -1206,7 +1206,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
     unsigned Index;
 
     if (WS.isFunction()) {
-      if (WS.isDefined(/*SetUsed=*/false)) {
+      if (WS.isDefined()) {
         if (WS.getOffset() != 0)
           report_fatal_error(
               "function sections must contain one function each");
@@ -1234,7 +1234,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
       if (WS.isTemporary() && !WS.getSize())
         continue;
 
-      if (!WS.isDefined(/*SetUsed=*/false))
+      if (!WS.isDefined())
         continue;
 
       if (!WS.getSize())
@@ -1263,7 +1263,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
     }
 
     // If the symbol is visible outside this translation unit, export it.
-    if (WS.isDefined(/*SetUsed=*/false)) {
+    if (WS.isDefined()) {
       WasmExport Export;
       Export.FieldName = WS.getName();
       Export.Index = Index;
@@ -1278,7 +1278,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
         SymbolFlags.emplace_back(WS.getName(), wasm::WASM_SYMBOL_BINDING_LOCAL);
 
       if (WS.isFunction()) {
-        auto &Section = static_cast<MCSectionWasm &>(WS.getSection(false));
+        auto &Section = static_cast<MCSectionWasm &>(WS.getSection());
         if (const MCSymbolWasm *C = Section.getGroup())
           Comdats[C->getName()].emplace_back(
               WasmComdatEntry{wasm::WASM_COMDAT_FUNCTION, Index});
@@ -1293,7 +1293,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
     if (!S.isVariable())
       continue;
 
-    assert(S.isDefined(/*SetUsed=*/false));
+    assert(S.isDefined());
 
     // Find the target symbol of this weak alias and export that index
     const auto &WS = static_cast<const MCSymbolWasm &>(S);

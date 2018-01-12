@@ -313,5 +313,11 @@ VSO::LookupResult VSO::lookup(AsynchronousSymbolQuery &Query,
   return {std::move(MaterializationWork), std::move(Names)};
 }
 
+VModuleKey ExecutionSession::allocateVModule() { return ++LastKey; }
+
+void ExecutionSession::releaseVModule(VModuleKey VMod) {
+  // FIXME: Recycle keys.
+}
+
 } // End namespace orc.
 } // End namespace llvm.
