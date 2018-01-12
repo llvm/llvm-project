@@ -39,7 +39,9 @@ class FindAppInMacOSAppBundle(TestBase):
         # It optionally takes an SBLaunchOption argument if you want to pass
         # arguments or environment variables.
         exe = os.path.join(os.getcwd(), "TestApp.app")
-        target = self.dbg.CreateTarget(exe)
+        error = lldb.SBError()
+        target = self.dbg.CreateTarget(exe, None, None, False, error)
+        self.assertTrue(error.Success(), "Could not create target: %s"%(error.GetCString()))
         self.assertTrue(target.IsValid(), "Target: TestApp.app is not valid.")
         exe_module_spec = target.GetExecutable()
         self.assertTrue(exe_module_spec.GetFilename(), "TestApp")

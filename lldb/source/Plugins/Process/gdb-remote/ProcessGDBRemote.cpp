@@ -4400,6 +4400,19 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
         return true; // Keep iterating through all children of the target_node
       });
 
+      // If the target.xml includes an architecture entry like
+      //   <architecture>i386:x86-64</architecture> (seen from VMWare ESXi)
+      //   <architecture>arm</architecture> (seen from Segger JLink on unspecified arm board)
+      // use that if we don't have anything better.
+      if (!arch_to_use.IsValid() && !target_info.arch.empty()) {
+        if (target_info.arch == "i386:x86-64")
+        {
+          // We don't have any information about vendor or OS.
+          arch_to_use.SetTriple("x86_64--");
+          GetTarget().MergeArchitecture(arch_to_use);
+        }
+      }
+
       // Initialize these outside of ParseRegisters, since they should not be
       // reset inside each include feature
       uint32_t cur_reg_num = 0;
