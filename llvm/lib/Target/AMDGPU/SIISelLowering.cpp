@@ -207,11 +207,14 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::v4f32, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::v2f16, Custom);
 
+  setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::v2f16, Custom);
+  setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::v4f16, Custom);
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
 
   setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_VOID, MVT::v2i16, Custom);
   setOperationAction(ISD::INTRINSIC_VOID, MVT::v2f16, Custom);
+  setOperationAction(ISD::INTRINSIC_VOID, MVT::v4f16, Custom);
 
   setOperationAction(ISD::BRCOND, MVT::Other, Custom);
   setOperationAction(ISD::BR_CC, MVT::i1, Expand);
@@ -3501,6 +3504,78 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   return SDValue();
 }
 
+static SDValue adjustLoadValueType(SDValue Result, EVT LoadVT, SDLoc DL,
+                                   SelectionDAG &DAG, bool Unpacked) {
+  if (Unpacked) { // From v2i32/v4i32 back to v2f16/v4f16.
+    // Truncate to v2i16/v4i16.
+    EVT IntLoadVT = LoadVT.changeTypeToInteger();
+    SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, IntLoadVT, Result);
+    // Bitcast to original type (v2f16/v4f16).
+    return DAG.getNode(ISD::BITCAST, DL, LoadVT, Trunc);
+  }
+  // Cast back to the original packed type.
+  return DAG.getNode(ISD::BITCAST, DL, LoadVT, Result);
+}
+
+// This is to lower INTRINSIC_W_CHAIN with illegal result types.
+SDValue SITargetLowering::lowerIntrinsicWChain_IllegalReturnType(SDValue Op,
+                                     SDValue &Chain, SelectionDAG &DAG) const {
+  EVT LoadVT = Op.getValueType();
+  // TODO: handle v3f16.
+  if (LoadVT != MVT::v2f16 && LoadVT != MVT::v4f16)
+    return SDValue();
+
+  bool Unpacked = Subtarget->hasUnpackedD16VMem();
+  EVT UnpackedLoadVT = (LoadVT == MVT::v2f16) ? MVT::v2i32 : MVT::v4i32;
+  EVT EquivLoadVT = Unpacked ? UnpackedLoadVT :
+                               getEquivalentMemType(*DAG.getContext(), LoadVT);
+  // Change from v4f16/v2f16 to EquivLoadVT.
+  SDVTList VTList = DAG.getVTList(EquivLoadVT, MVT::Other);
+
+  SDValue Res;
+  SDLoc DL(Op);
+  MemSDNode *M = cast<MemSDNode>(Op);
+  unsigned IID = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
+  switch (IID) {
+  case Intrinsic::amdgcn_tbuffer_load: {
+    SDValue Ops[] = {
+        Op.getOperand(0),  // Chain
+        Op.getOperand(2),  // rsrc
+        Op.getOperand(3),  // vindex
+        Op.getOperand(4),  // voffset
+        Op.getOperand(5),  // soffset
+        Op.getOperand(6),  // offset
+        Op.getOperand(7),  // dfmt
+        Op.getOperand(8),  // nfmt
+        Op.getOperand(9),  // glc
+        Op.getOperand(10)  // slc
+    };
+    Res = DAG.getMemIntrinsicNode(AMDGPUISD::TBUFFER_LOAD_FORMAT_D16, DL,
+                                  VTList, Ops, M->getMemoryVT(),
+                                  M->getMemOperand());
+    Chain = Res.getValue(1);
+    return adjustLoadValueType(Res, LoadVT, DL, DAG, Unpacked);
+  }
+  case Intrinsic::amdgcn_buffer_load_format: {
+      SDValue Ops[] = {
+        Op.getOperand(0), // Chain
+        Op.getOperand(2), // rsrc
+        Op.getOperand(3), // vindex
+        Op.getOperand(4), // offset
+        Op.getOperand(5), // glc
+        Op.getOperand(6)  // slc
+      };
+      Res = DAG.getMemIntrinsicNode(AMDGPUISD::BUFFER_LOAD_FORMAT_D16,
+                                     DL, VTList, Ops, M->getMemoryVT(),
+                                     M->getMemOperand());
+      Chain = Res.getValue(1);
+      return adjustLoadValueType(Res, LoadVT, DL, DAG, Unpacked);
+  }
+  default:
+    return SDValue();
+  }
+}
+
 void SITargetLowering::ReplaceNodeResults(SDNode *N,
                                           SmallVectorImpl<SDValue> &Results,
                                           SelectionDAG &DAG) const {
@@ -3524,6 +3599,16 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue Cvt = DAG.getNode(AMDGPUISD::CVT_PKRTZ_F16_F32, SL, MVT::i32,
                                 Src0, Src1);
       Results.push_back(DAG.getNode(ISD::BITCAST, SL, MVT::v2f16, Cvt));
+      return;
+    }
+    break;
+  }
+  case ISD::INTRINSIC_W_CHAIN: {
+    SDValue Chain;
+    if (SDValue Res = lowerIntrinsicWChain_IllegalReturnType(SDValue(N, 0),
+                                                             Chain, DAG)) {
+      Results.push_back(Res);
+      Results.push_back(Chain);
       return;
     }
     break;
@@ -4656,6 +4741,31 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   }
 }
 
+SDValue SITargetLowering::handleD16VData(SDValue VData,
+                                         SelectionDAG &DAG) const {
+  EVT StoreVT = VData.getValueType();
+  SDLoc DL(VData);
+
+  if (StoreVT.isVector()) {
+    assert ((StoreVT.getVectorNumElements() != 3) && "Handle v3f16");
+    if (!Subtarget->hasUnpackedD16VMem()) {
+      if (!isTypeLegal(StoreVT)) {
+        // If Target supports packed vmem, we just need to workaround
+        // the illegal type by casting to an equivalent one.
+        EVT EquivStoreVT = getEquivalentMemType(*DAG.getContext(), StoreVT);
+        return DAG.getNode(ISD::BITCAST, DL, EquivStoreVT, VData);
+      }
+    } else { // We need to unpack the packed data to store.
+      EVT IntStoreVT = StoreVT.changeTypeToInteger();
+      SDValue IntVData = DAG.getNode(ISD::BITCAST, DL, IntStoreVT, VData);
+      EVT EquivStoreVT = (StoreVT == MVT::v2f16) ? MVT::v2i32 : MVT::v4i32;
+      return DAG.getNode(ISD::ZERO_EXTEND, DL, EquivStoreVT, IntVData);
+    }
+  }
+  // No change for f16 and legal vector D16 types.
+  return VData;
+}
+
 SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                                               SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -4798,9 +4908,13 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   }
 
   case Intrinsic::amdgcn_tbuffer_store: {
+    SDValue VData = Op.getOperand(2);
+    bool IsD16 = (VData.getValueType().getScalarType() == MVT::f16);
+    if (IsD16)
+      VData = handleD16VData(VData, DAG);
     SDValue Ops[] = {
       Chain,
-      Op.getOperand(2),  // vdata
+      VData,             // vdata
       Op.getOperand(3),  // rsrc
       Op.getOperand(4),  // vindex
       Op.getOperand(5),  // voffset
@@ -4811,37 +4925,34 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       Op.getOperand(10), // glc
       Op.getOperand(11)  // slc
     };
-    EVT VT = Op.getOperand(3).getValueType();
-    MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(),
-      MachineMemOperand::MOStore,
-      VT.getStoreSize(), 4);
-    return DAG.getMemIntrinsicNode(AMDGPUISD::TBUFFER_STORE_FORMAT, DL,
-                                   Op->getVTList(), Ops, VT, MMO);
+    unsigned Opc = IsD16 ? AMDGPUISD::TBUFFER_STORE_FORMAT_D16 :
+                           AMDGPUISD::TBUFFER_STORE_FORMAT;
+    MemSDNode *M = cast<MemSDNode>(Op);
+    return DAG.getMemIntrinsicNode(Opc, DL, Op->getVTList(), Ops,
+                                   M->getMemoryVT(), M->getMemOperand());
   }
 
   case Intrinsic::amdgcn_buffer_store:
   case Intrinsic::amdgcn_buffer_store_format: {
+    SDValue VData = Op.getOperand(2);
+    bool IsD16 = (VData.getValueType().getScalarType() == MVT::f16);
+    if (IsD16)
+      VData = handleD16VData(VData, DAG);
     SDValue Ops[] = {
       Chain,
-      Op.getOperand(2), // vdata
+      VData,            // vdata
       Op.getOperand(3), // rsrc
       Op.getOperand(4), // vindex
       Op.getOperand(5), // offset
       Op.getOperand(6), // glc
       Op.getOperand(7)  // slc
     };
-    EVT VT = Op.getOperand(3).getValueType();
-    MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(),
-      MachineMemOperand::MOStore |
-      MachineMemOperand::MODereferenceable,
-      VT.getStoreSize(), 4);
-
-    unsigned Opcode = IntrinsicID == Intrinsic::amdgcn_buffer_store ?
-                        AMDGPUISD::BUFFER_STORE :
-                        AMDGPUISD::BUFFER_STORE_FORMAT;
-    return DAG.getMemIntrinsicNode(Opcode, DL, Op->getVTList(), Ops, VT, MMO);
+    unsigned Opc = IntrinsicID == Intrinsic::amdgcn_buffer_store ?
+                   AMDGPUISD::BUFFER_STORE : AMDGPUISD::BUFFER_STORE_FORMAT;
+    Opc = IsD16 ? AMDGPUISD::BUFFER_STORE_FORMAT_D16 : Opc;
+    MemSDNode *M = cast<MemSDNode>(Op);
+    return DAG.getMemIntrinsicNode(Opc, DL, Op->getVTList(), Ops,
+                                   M->getMemoryVT(), M->getMemOperand());
   }
 
   default:

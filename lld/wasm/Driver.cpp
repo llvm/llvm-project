@@ -291,15 +291,16 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     error("undefined symbols specified for relocatable output file");
 
   if (!Config->Relocatable) {
-    if (!Config->Entry.empty()) {
-      static WasmSignature Signature = {{}, WASM_TYPE_NORESULT};
+    static WasmSignature Signature = {{}, WASM_TYPE_NORESULT};
+    if (!Config->Entry.empty())
       addSyntheticUndefinedFunction(Config->Entry, &Signature);
-    }
 
     // Handle the `--undefined <sym>` options.
-    for (StringRef S : args::getStrings(Args, OPT_undefined))
-      addSyntheticUndefinedFunction(S, nullptr);
+    for (auto* Arg : Args.filtered(OPT_undefined))
+      addSyntheticUndefinedFunction(Arg->getValue(), nullptr);
 
+    Config->CtorSymbol = Symtab->addDefinedFunction(
+        "__wasm_call_ctors", &Signature, WASM_SYMBOL_VISIBILITY_HIDDEN);
     Config->StackPointerSymbol = Symtab->addDefinedGlobal("__stack_pointer");
   }
 
@@ -320,14 +321,23 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     // -u/--undefined since these undefined symbols have only names and no
     // function signature, which means they cannot be written to the final
     // output.
-    for (StringRef S : args::getStrings(Args, OPT_undefined)) {
-      Symbol *Sym = Symtab->find(S);
+    for (auto* Arg : Args.filtered(OPT_undefined)) {
+      Symbol *Sym = Symtab->find(Arg->getValue());
       if (!Sym->isDefined())
         error("function forced with --undefined not found: " + Sym->getName());
     }
   }
   if (errorCount())
     return;
+
+  for (auto *Arg : Args.filtered(OPT_export)) {
+    Symbol *Sym = Symtab->find(Arg->getValue());
+    if (!Sym || !Sym->isDefined())
+      error("symbol exported via --export not found: " +
+            Twine(Arg->getValue()));
+    else
+      Sym->setHidden(false);
+  }
 
   if (!Config->Entry.empty() && !Symtab->find(Config->Entry)->isDefined())
     error("entry point not found: " + Config->Entry);

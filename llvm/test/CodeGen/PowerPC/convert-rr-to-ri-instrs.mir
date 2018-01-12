@@ -561,6 +561,16 @@
   }
   
   ; Function Attrs: norecurse nounwind readnone
+  define i64 @testRLDICLo2(i64 %a, i64 %b) local_unnamed_addr #0 {
+  entry:
+    %shr = lshr i64 %a, 11
+    %and = and i64 %shr, 16777215
+    %tobool = icmp eq i64 %and, 0
+    %cond = select i1 %tobool, i64 %b, i64 %and
+    ret i64 %cond
+  }
+
+  ; Function Attrs: norecurse nounwind readnone
   define zeroext i32 @testRLWINM(i32 zeroext %a) local_unnamed_addr #0 {
   entry:
     %shl = shl i32 %a, 4
@@ -601,6 +611,15 @@
     ret i32 %cond
   }
   
+  ; Function Attrs: norecurse nounwind readnone
+  define zeroext i32 @testRLWINMo2(i32 zeroext %a, i32 zeroext %b) local_unnamed_addr #0 {
+  entry:
+    %and = and i32 %a, 255
+    %tobool = icmp eq i32 %and, 0
+    %cond = select i1 %tobool, i32 %b, i32 %a
+    ret i32 %cond
+  }
+
   ; Function Attrs: norecurse nounwind readnone
   define i64 @testRLWINM8o(i64 %a, i64 %b) local_unnamed_addr #0 {
   entry:
@@ -3904,6 +3923,59 @@ body:             |
 
 ...
 ---
+name:            testRLDICLo2
+# CHECK-ALL: name: testRLDICLo2
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: g8rc, preferred-register: '' }
+  - { id: 1, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 2, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 3, class: crrc, preferred-register: '' }
+  - { id: 4, class: g8rc, preferred-register: '' }
+liveins:         
+  - { reg: '%x3', virtual-reg: '%0' }
+  - { reg: '%x4', virtual-reg: '%1' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: %x3, %x4
+  
+    %1 = COPY %x4
+    %0 = LI8 200
+    %2 = RLDICLo %0, 61, 3, implicit-def %cr0
+    ; CHECK-NOT: ANDI
+    ; CHECK-LATE-NOT: andi.
+    %3 = COPY killed %cr0
+    %4 = ISEL8 %1, %2, %3.sub_eq
+    %x3 = COPY %4
+    BLR8 implicit %lr8, implicit %rm, implicit %x3
+
+...
+---
 name:            testRLWINM
 # CHECK-ALL: name: testRLWINM
 alignment:       4
@@ -4160,6 +4232,69 @@ body:             |
     ; CHECK: ANDIo %3, 234
     ; CHECK-LATE: li 3, -22
     ; CHECK-LATE: andi. 5, 3, 234
+    %5 = COPY killed %cr0
+    %6 = ISEL %2, %3, %5.sub_eq
+    %8 = IMPLICIT_DEF
+    %7 = INSERT_SUBREG %8, killed %6, 1
+    %9 = RLDICL killed %7, 0, 32
+    %x3 = COPY %9
+    BLR8 implicit %lr8, implicit %rm, implicit %x3
+
+...
+---
+name:            testRLWINMo2
+# CHECK-ALL: name: testRLWINMo2
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: g8rc, preferred-register: '' }
+  - { id: 1, class: g8rc, preferred-register: '' }
+  - { id: 2, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 3, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 4, class: gprc, preferred-register: '' }
+  - { id: 5, class: crrc, preferred-register: '' }
+  - { id: 6, class: gprc, preferred-register: '' }
+  - { id: 7, class: g8rc, preferred-register: '' }
+  - { id: 8, class: g8rc, preferred-register: '' }
+  - { id: 9, class: g8rc, preferred-register: '' }
+liveins:         
+  - { reg: '%x3', virtual-reg: '%0' }
+  - { reg: '%x4', virtual-reg: '%1' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+stack:           
+constants:       
+body:             |
+  bb.0.entry:
+    liveins: %x3, %x4
+  
+    %1 = COPY %x4
+    %0 = COPY %x3
+    %2 = COPY %1.sub_32
+    %3 = LI -22
+    %4 = RLWINMo %3, 5, 24, 31, implicit-def %cr0
+    ; CHECK-NOT: ANDI
+    ; CHECK-LATE-NOT: andi.
     %5 = COPY killed %cr0
     %6 = ISEL %2, %3, %5.sub_eq
     %8 = IMPLICIT_DEF

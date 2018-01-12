@@ -61,7 +61,8 @@ enum SIEncodingFamily {
   VI = 1,
   SDWA = 2,
   SDWA9 = 3,
-  GFX9 = 4
+  GFX80 = 4,
+  GFX9 = 5
 };
 
 static SIEncodingFamily subtargetEncodingFamily(const AMDGPUSubtarget &ST) {

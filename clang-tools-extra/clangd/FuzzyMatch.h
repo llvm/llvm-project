@@ -35,6 +35,8 @@ public:
   // Characters beyond MaxWord are ignored.
   llvm::Optional<float> match(llvm::StringRef Word);
 
+  bool empty() { return PatN == 0; }
+
   // Dump internal state from the last match() to the stream, for debugging.
   // Returns the pattern with [] around matched characters, e.g.
   //   [u_p] + "unique_ptr" --> "[u]nique[_p]tr"

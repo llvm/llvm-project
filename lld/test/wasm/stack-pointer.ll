@@ -18,8 +18,11 @@ entry:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         ReturnType:      I32
 ; CHECK-NEXT:         ParamTypes:
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         ReturnType:      NORESULT
+; CHECK-NEXT:         ParamTypes:   
 ; CHECK-NEXT:   - Type:            FUNCTION
-; CHECK-NEXT:     FunctionTypes:   [ 0 ]
+; CHECK-NEXT:     FunctionTypes:   [ 0, 1 ]
 ; CHECK-NEXT:   - Type:            TABLE
 ; CHECK-NEXT:     Tables:
 ; CHECK-NEXT:       - ElemType:        ANYFUNC
@@ -46,6 +49,9 @@ entry:
 ; CHECK-NEXT:       - Name:            _start
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           0
+; CHECK-NEXT:       - Name:            __wasm_call_ctors
+; CHECK-NEXT:         Kind:            FUNCTION
+; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:   - Type:            CODE
 ; CHECK-NEXT:     Relocations:
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_GLOBAL_INDEX_LEB
@@ -55,6 +61,9 @@ entry:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            23808080800041106B1A41000B
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         Locals:
+; CHECK-NEXT:         Body:            0B
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
 ; CHECK-NEXT:     DataSize:        0
@@ -63,4 +72,6 @@ entry:
 ; CHECK-NEXT:     FunctionNames:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            _start
+; CHECK-NEXT:       - Index:           1
+; CHECK-NEXT:         Name:            __wasm_call_ctors
 ; CHECK-NEXT: ...

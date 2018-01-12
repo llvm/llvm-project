@@ -50,7 +50,7 @@ public:
   std::vector<OutputRelocation> OutRelocations;
 
 protected:
-  InputChunk(const ObjFile &F) : File(F) {}
+  InputChunk(const ObjFile *F) : File(F) {}
   virtual ~InputChunk() = default;
   void calcRelocations();
   virtual const uint8_t *getData() const = 0;
@@ -58,7 +58,7 @@ protected:
 
   std::vector<WasmRelocation> Relocations;
   int32_t OutputOffset = 0;
-  const ObjFile &File;
+  const ObjFile *File;
 };
 
 // Represents a WebAssembly data segment which can be included as part of
@@ -71,7 +71,7 @@ protected:
 // each global variable.
 class InputSegment : public InputChunk {
 public:
-  InputSegment(const WasmSegment &Seg, const ObjFile &F)
+  InputSegment(const WasmSegment &Seg, const ObjFile *F)
       : InputChunk(F), Segment(Seg) {}
 
   // Translate an offset in the input segment to an offset in the output
@@ -108,30 +108,43 @@ protected:
 // combined to create the final output CODE section.
 class InputFunction : public InputChunk {
 public:
-  InputFunction(const WasmSignature &S, const WasmFunction &Func,
-                const ObjFile &F)
-      : InputChunk(F), Signature(S), Function(Func) {}
+  InputFunction(const WasmSignature &S, const WasmFunction *Func,
+                const ObjFile *F)
+      : InputChunk(F), Signature(S), WrittenToNameSec(false), Function(Func) {}
 
-  uint32_t getSize() const override { return Function.Size; }
+  uint32_t getSize() const override { return Function->Size; }
   const uint8_t *getData() const override {
-    return File.CodeSection->Content.data() + getInputSectionOffset();
+    return File->CodeSection->Content.data() + getInputSectionOffset();
   }
 
   uint32_t getOutputIndex() const { return OutputIndex.getValue(); };
   bool hasOutputIndex() const { return OutputIndex.hasValue(); };
-  void setOutputIndex(uint32_t Index) {
-    assert(!hasOutputIndex());
-    OutputIndex = Index;
-  };
+  void setOutputIndex(uint32_t Index);
 
   const WasmSignature &Signature;
 
+  unsigned WrittenToNameSec : 1;
+
 protected:
   uint32_t getInputSectionOffset() const override {
-    return Function.CodeSectionOffset;
+    return Function->CodeSectionOffset;
   }
-  const WasmFunction &Function;
+  const WasmFunction *Function;
   llvm::Optional<uint32_t> OutputIndex;
+};
+
+class SyntheticFunction : public InputFunction {
+public:
+  SyntheticFunction(const WasmSignature &S, StringRef Body)
+      : InputFunction(S, nullptr, nullptr), Body(Body) {}
+
+  uint32_t getSize() const override { return Body.size(); }
+  const uint8_t *getData() const override {
+    return reinterpret_cast<const uint8_t *>(Body.data());
+  }
+
+protected:
+  StringRef Body;
 };
 
 } // namespace wasm

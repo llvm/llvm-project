@@ -177,8 +177,8 @@ private:
     llvm_unreachable("Constructor throws?");
   }
 
-  MCSection *getSectionPtr(bool SetUsed = true) const {
-    if (MCFragment *F = getFragment(SetUsed)) {
+  MCSection *getSectionPtr() const {
+    if (MCFragment *F = getFragment()) {
       assert(F != AbsolutePseudoFragment);
       return F->getParent();
     }
@@ -221,7 +221,6 @@ public:
 
   /// isUsed - Check if this is used.
   bool isUsed() const { return IsUsed; }
-  void setUsed(bool Value) const { IsUsed |= Value; }
 
   /// \brief Check if this symbol is redefinable.
   bool isRedefinable() const { return IsRedefinable; }
@@ -246,28 +245,28 @@ public:
   /// isDefined - Check if this symbol is defined (i.e., it has an address).
   ///
   /// Defined symbols are either absolute or in some section.
-  bool isDefined(bool SetUsed = true) const {
-    return getFragment(SetUsed) != nullptr;
-  }
+  bool isDefined() const { return !isUndefined(); }
 
   /// isInSection - Check if this symbol is defined in some section (i.e., it
   /// is defined but not absolute).
-  bool isInSection(bool SetUsed = true) const {
-    return isDefined(SetUsed) && !isAbsolute(SetUsed);
+  bool isInSection() const {
+    return isDefined() && !isAbsolute();
   }
 
   /// isUndefined - Check if this symbol undefined (i.e., implicitly defined).
-  bool isUndefined(bool SetUsed = true) const { return !isDefined(SetUsed); }
+  bool isUndefined(bool SetUsed = true) const {
+    return getFragment(SetUsed) == nullptr;
+  }
 
   /// isAbsolute - Check if this is an absolute symbol.
-  bool isAbsolute(bool SetUsed = true) const {
-    return getFragment(SetUsed) == AbsolutePseudoFragment;
+  bool isAbsolute() const {
+    return getFragment() == AbsolutePseudoFragment;
   }
 
   /// Get the section associated with a defined, non-absolute symbol.
-  MCSection &getSection(bool SetUsed = true) const {
-    assert(isInSection(SetUsed) && "Invalid accessor!");
-    return *getSectionPtr(SetUsed);
+  MCSection &getSection() const {
+    assert(isInSection() && "Invalid accessor!");
+    return *getSectionPtr();
   }
 
   /// Mark the symbol as defined in the fragment \p F.

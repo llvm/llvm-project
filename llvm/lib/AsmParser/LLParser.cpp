@@ -756,11 +756,6 @@ bool LLParser::parseIndirectSymbol(const std::string &Name, LocTy NameLoc,
     return Error(NameLoc,
                  "symbol with local linkage must have default visibility");
 
-  if (DSOLocal && !IsAlias) {
-    return Error(NameLoc,
-                 "dso_local is invalid on ifunc");
-  }
-
   Type *Ty;
   LocTy ExplicitTypeLoc = Lex.getLoc();
   if (ParseType(Ty) ||

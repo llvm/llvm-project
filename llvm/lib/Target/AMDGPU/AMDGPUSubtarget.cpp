@@ -162,6 +162,7 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     FlatGlobalInsts(false),
     FlatScratchInsts(false),
     AddNoCarryInsts(false),
+    HasUnpackedD16VMem(false),
 
     R600ALUInst(false),
     CaymanISA(false),

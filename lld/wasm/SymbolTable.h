@@ -55,6 +55,8 @@ public:
                        InputFile *F, const WasmSignature *Signature = nullptr);
   Symbol *addUndefinedFunction(StringRef Name, const WasmSignature *Type);
   Symbol *addDefinedGlobal(StringRef Name);
+  Symbol *addDefinedFunction(StringRef Name, const WasmSignature *Type,
+                             uint32_t Flags);
   void addLazy(ArchiveFile *F, const Archive::Symbol *Sym);
 
 private:
