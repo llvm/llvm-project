@@ -380,6 +380,30 @@ TEST(CompletionTest, Kinds) {
   EXPECT_THAT(Results.items, Has("namespace", CompletionItemKind::Snippet));
 }
 
+TEST(CompletionTest, NoDuplicates) {
+  auto Items = completions(R"cpp(
+struct Adapter {
+  void method();
+};
+
+void Adapter::method() {
+  Adapter^
+}
+  )cpp")
+                   .items;
+
+  // Make sure there are no duplicate entries of 'Adapter'.
+  EXPECT_THAT(Items, ElementsAre(Named("Adapter"), Named("~Adapter")));
+}
+
+TEST(CompletionTest, FuzzyRanking) {
+  auto Items = completions(R"cpp(
+      struct fake { int BigBang, Babble, Ball; };
+      int main() { fake().bb^ }")cpp").items;
+  // BigBang is a better match than Babble. Ball doesn't match at all.
+  EXPECT_THAT(Items, ElementsAre(Named("BigBang"), Named("Babble")));
+}
+
 SignatureHelp signatures(StringRef Text) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
@@ -597,22 +621,6 @@ TEST(CompletionTest, ASTIndexMultiFile) {
   EXPECT_THAT(Results.items, Contains(AllOf(Named("fooooo"), Filter("fooooo"),
                                             Kind(CompletionItemKind::Function),
                                             Doc("Doooc"), Detail("void"))));
-}
-
-TEST(CompletionTest, NoDuplicates) {
-  auto Items = completions(R"cpp(
-struct Adapter {
-  void method();
-};
-
-void Adapter::method() {
-  Adapter^
-}
-  )cpp")
-                   .items;
-
-  // Make sure there are no duplicate entries of 'Adapter'.
-  EXPECT_THAT(Items, ElementsAre(Named("Adapter"), Named("~Adapter")));
 }
 
 } // namespace

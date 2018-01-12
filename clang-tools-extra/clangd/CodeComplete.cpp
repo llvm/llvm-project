@@ -17,6 +17,7 @@
 #include "CodeComplete.h"
 #include "CodeCompletionStrings.h"
 #include "Compiler.h"
+#include "FuzzyMatch.h"
 #include "Logger.h"
 #include "index/Index.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -186,17 +187,25 @@ getOptionalParameters(const CodeCompletionString &CCS,
 
 /// A scored code completion result.
 /// It may be promoted to a CompletionItem if it's among the top-ranked results.
+///
+/// We score candidates by multiplying the symbolScore ("quality" of the result)
+/// with the filterScore (how well it matched the query).
+/// This is sensitive to the distribution of both component scores!
 struct CompletionCandidate {
-  CompletionCandidate(CodeCompletionResult &Result)
-      : Result(&Result), Score(score(Result)) {}
+  CompletionCandidate(CodeCompletionResult &Result, float FilterScore)
+      : Result(&Result) {
+    Scores.symbolScore = score(Result);  // Higher is better.
+    Scores.filterScore = FilterScore;    // 0-1, higher is better.
+    Scores.finalScore = Scores.symbolScore * Scores.filterScore;
+  }
 
   CodeCompletionResult *Result;
-  float Score; // 0 to 1, higher is better.
+  CompletionItemScores Scores;
 
   // Comparison reflects rank: better candidates are smaller.
   bool operator<(const CompletionCandidate &C) const {
-    if (Score != C.Score)
-      return Score > C.Score;
+    if (Scores.finalScore != C.Scores.finalScore)
+      return Scores.finalScore > C.Scores.finalScore;
     return *Result < *C.Result;
   }
 
@@ -206,8 +215,8 @@ struct CompletionCandidate {
   std::string sortText() const {
     std::string S, NameStorage;
     llvm::raw_string_ostream OS(S);
-    write_hex(OS, encodeFloat(-Score), llvm::HexPrintStyle::Lower,
-              /*Width=*/2 * sizeof(Score));
+    write_hex(OS, encodeFloat(-Scores.finalScore), llvm::HexPrintStyle::Lower,
+              /*Width=*/2 * sizeof(Scores.finalScore));
     OS << Result->getOrderedName(NameStorage);
     return OS.str();
   }
@@ -288,6 +297,7 @@ public:
   void ProcessCodeCompleteResults(Sema &S, CodeCompletionContext Context,
                                   CodeCompletionResult *Results,
                                   unsigned NumResults) override final {
+    FuzzyMatcher Filter(S.getPreprocessor().getCodeCompletionFilter());
     if (auto SS = Context.getCXXScopeSpecifier())
       CompletedName.SSInfo = extraCompletionScope(S, **SS);
 
@@ -306,10 +316,10 @@ public:
           (Result.Availability == CXAvailability_NotAvailable ||
            Result.Availability == CXAvailability_NotAccessible))
         continue;
-      if (!CompletedName.Filter.empty() &&
-          !fuzzyMatch(S, Context, CompletedName.Filter, Result))
+      auto FilterScore = fuzzyMatch(S, Context, Filter, Result);
+      if (!FilterScore)
         continue;
-      Candidates.emplace(Result);
+      Candidates.emplace(Result, *FilterScore);
       if (ClangdOpts.Limit && Candidates.size() > ClangdOpts.Limit) {
         Candidates.pop();
         Items.isIncomplete = true;
@@ -332,37 +342,24 @@ public:
   CodeCompletionTUInfo &getCodeCompletionTUInfo() override { return CCTUInfo; }
 
 private:
-  bool fuzzyMatch(Sema &S, const CodeCompletionContext &CCCtx, StringRef Filter,
-                  CodeCompletionResult Result) {
+  llvm::Optional<float> fuzzyMatch(Sema &S, const CodeCompletionContext &CCCtx,
+                                   FuzzyMatcher &Filter,
+                                   CodeCompletionResult Result) {
     switch (Result.Kind) {
     case CodeCompletionResult::RK_Declaration:
       if (auto *ID = Result.Declaration->getIdentifier())
-        return fuzzyMatch(Filter, ID->getName());
+        return Filter.match(ID->getName());
       break;
     case CodeCompletionResult::RK_Keyword:
-      return fuzzyMatch(Filter, Result.Keyword);
+      return Filter.match(Result.Keyword);
     case CodeCompletionResult::RK_Macro:
-      return fuzzyMatch(Filter, Result.Macro->getName());
+      return Filter.match(Result.Macro->getName());
     case CodeCompletionResult::RK_Pattern:
-      return fuzzyMatch(Filter, Result.Pattern->getTypedText());
+      return Filter.match(Result.Pattern->getTypedText());
     }
     auto *CCS = Result.CreateCodeCompletionString(
         S, CCCtx, *Allocator, CCTUInfo, /*IncludeBriefComments=*/false);
-    return fuzzyMatch(Filter, CCS->getTypedText());
-  }
-
-  // Checks whether Target matches the Filter.
-  // Currently just requires a case-insensitive subsequence match.
-  // FIXME: make stricter and word-based: 'unique_ptr' should not match 'que'.
-  // FIXME: return a score to be incorporated into ranking.
-  static bool fuzzyMatch(StringRef Filter, StringRef Target) {
-    size_t TPos = 0;
-    for (char C : Filter) {
-      TPos = Target.find_lower(C, TPos);
-      if (TPos == StringRef::npos)
-        return false;
-    }
-    return true;
+    return Filter.match(CCS->getTypedText());
   }
 
   CompletionItem
@@ -375,6 +372,7 @@ private:
 
     Item.documentation = getDocumentation(CCS);
     Item.sortText = Candidate.sortText();
+    Item.scoreInfo = Candidate.Scores;
 
     Item.detail = getDetail(CCS);
     Item.filterText = getFilterText(CCS);
