@@ -1356,6 +1356,32 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT = nullptr,
     DT->deleteEdge(Preheader, L->getHeader());
   }
 
+  // Given LCSSA form is satisfied, we should not have users of instructions
+  // within the dead loop outside of the loop. However, LCSSA doesn't take
+  // unreachable uses into account. We handle them here.
+  // We could do it after drop all references (in this case all users in the
+  // loop will be already eliminated and we have less work to do but according
+  // to API doc of User::dropAllReferences only valid operation after dropping
+  // references, is deletion. So let's substitute all usages of
+  // instruction from the loop with undef value of corresponding type first.
+  for (auto *Block : L->blocks())
+    for (Instruction &I : *Block) {
+      auto *Undef = UndefValue::get(I.getType());
+      for (Value::use_iterator UI = I.use_begin(), E = I.use_end(); UI != E;) {
+        Use &U = *UI;
+        ++UI;
+        if (auto *Usr = dyn_cast<Instruction>(U.getUser()))
+          if (L->contains(Usr->getParent()))
+            continue;
+        // If we have a DT then we can check that uses outside a loop only in
+        // unreachable block.
+        if (DT)
+          assert(!DT->isReachableFromEntry(U) &&
+                 "Unexpected user in reachable block");
+        U.set(Undef);
+      }
+    }
+
   // Remove the block from the reference counting scheme, so that we can
   // delete it freely later.
   for (auto *Block : L->blocks())

@@ -83,7 +83,7 @@ TEST_CASE(test_error_reporting)
     for (auto &p : testCasesNonexistant) {
         std::error_code ec;
 
-        TEST_CHECK(fs::remove_all(p) == 0);
+        TEST_CHECK(fs::remove_all(p, ec) == 0);
         TEST_CHECK(!ec);
     }
 }

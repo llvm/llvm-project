@@ -179,10 +179,7 @@ public:
     OS << "  Step: ";
     Step->print(OS);
     OS << "  End: ";
-    if (End)
-      End->print(OS);
-    else
-      OS << "(null)";
+    End->print(OS);
     OS << "\n  CheckUse: ";
     getCheckUse()->getUser()->print(OS);
     OS << " Operand: " << getCheckUse()->getOperandNo() << "\n";
@@ -394,8 +391,23 @@ void InductiveRangeCheck::extractRangeChecksFromCond(
   if (!IsAffineIndex)
     return;
 
+  const SCEV *End = nullptr;
+  // We strengthen "0 <= I" to "0 <= I < INT_SMAX" and "I < L" to "0 <= I < L".
+  // We can potentially do much better here.
+  if (Length)
+    End = SE.getSCEV(Length);
+  else {
+    assert(RCKind == InductiveRangeCheck::RANGE_CHECK_LOWER && "invariant!");
+    // So far we can only reach this point for Signed range check. This may
+    // change in future. In this case we will need to pick Unsigned max for the
+    // unsigned range check.
+    unsigned BitWidth = cast<IntegerType>(IndexAddRec->getType())->getBitWidth();
+    const SCEV *SIntMax = SE.getConstant(APInt::getSignedMaxValue(BitWidth));
+    End = SIntMax;
+  }
+
   InductiveRangeCheck IRC;
-  IRC.End = Length ? SE.getSCEV(Length) : nullptr;
+  IRC.End = End;
   IRC.Begin = IndexAddRec->getStart();
   IRC.Step = IndexAddRec->getStepRecurrence(SE);
   IRC.CheckUse = &ConditionUse;
@@ -1663,17 +1675,7 @@ InductiveRangeCheck::computeSafeIterationSpace(
   const SCEV *M = SE.getMinusSCEV(C, A);
   const SCEV *Zero = SE.getZero(M->getType());
   const SCEV *Begin = ClampedSubstract(Zero, M);
-  const SCEV *L = nullptr;
-
-  // We strengthen "0 <= I" to "0 <= I < INT_SMAX" and "I < L" to "0 <= I < L".
-  // We can potentially do much better here.
-  if (const SCEV *EndLimit = getEnd())
-    L = EndLimit;
-  else {
-    assert(Kind == InductiveRangeCheck::RANGE_CHECK_LOWER && "invariant!");
-    L = SIntMax;
-  }
-  const SCEV *End = ClampedSubstract(L, M);
+  const SCEV *End = ClampedSubstract(getEnd(), M);
   return InductiveRangeCheck::Range(Begin, End);
 }
 

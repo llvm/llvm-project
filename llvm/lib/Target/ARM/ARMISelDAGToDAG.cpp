@@ -2765,7 +2765,7 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     }
   }
   case ARMISD::SUBE: {
-    if (!Subtarget->hasV6Ops())
+    if (!Subtarget->hasV6Ops() || !Subtarget->hasDSP())
       break;
     // Look for a pattern to match SMMLS
     // (sube a, (smul_loHi a, b), (subc 0, (smul_LOhi(a, b))))

@@ -478,6 +478,8 @@ void ODRHash::AddFunctionDecl(const FunctionDecl *Function) {
 
   // TODO: Fix hashing for class methods.
   if (isa<CXXMethodDecl>(Function)) return;
+  // And friend functions.
+  if (Function->getFriendObjectKind()) return;
 
   // Skip functions that are specializations or in specialization context.
   const DeclContext *DC = Function;
