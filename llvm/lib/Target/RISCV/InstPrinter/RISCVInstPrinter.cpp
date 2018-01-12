@@ -17,6 +17,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -37,8 +38,8 @@ NoAliases("riscv-no-aliases",
 
 void RISCVInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
                                  StringRef Annot, const MCSubtargetInfo &STI) {
-  if (NoAliases || !printAliasInstr(MI, O))
-    printInstruction(MI, O);
+  if (NoAliases || !printAliasInstr(MI, STI, O))
+    printInstruction(MI, STI, O);
   printAnnotation(O, Annot);
 }
 
@@ -47,6 +48,7 @@ void RISCVInstPrinter::printRegName(raw_ostream &O, unsigned RegNo) const {
 }
 
 void RISCVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
+                                    const MCSubtargetInfo &STI,
                                     raw_ostream &O, const char *Modifier) {
   assert((Modifier == 0 || Modifier[0] == 0) && "No modifiers supported");
   const MCOperand &MO = MI->getOperand(OpNo);
@@ -66,6 +68,7 @@ void RISCVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
 }
 
 void RISCVInstPrinter::printFenceArg(const MCInst *MI, unsigned OpNo,
+                                     const MCSubtargetInfo &STI,
                                      raw_ostream &O) {
   unsigned FenceArg = MI->getOperand(OpNo).getImm();
   if ((FenceArg & RISCVFenceField::I) != 0)
@@ -79,6 +82,7 @@ void RISCVInstPrinter::printFenceArg(const MCInst *MI, unsigned OpNo,
 }
 
 void RISCVInstPrinter::printFRMArg(const MCInst *MI, unsigned OpNo,
+                                   const MCSubtargetInfo &STI,
                                    raw_ostream &O) {
   auto FRMArg =
       static_cast<RISCVFPRndMode::RoundingMode>(MI->getOperand(OpNo).getImm());

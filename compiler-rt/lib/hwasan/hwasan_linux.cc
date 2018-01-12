@@ -74,20 +74,24 @@ static void ProtectGap(uptr addr, uptr size) {
   Die();
 }
 
+// LowMem covers as much of the first 4GB as possible.
+const uptr kLowMemEnd = 1UL<<32;
+const uptr kLowShadowEnd = kLowMemEnd >> kShadowScale;
+const uptr kLowShadowStart = kLowShadowEnd >> kShadowScale;
+static uptr kHighShadowStart;
+static uptr kHighShadowEnd;
+static uptr kHighMemStart;
+
 bool InitShadow() {
   const uptr maxVirtualAddress = GetMaxUserVirtualAddress();
 
-  // LowMem covers as much of the first 4GB as possible.
-  const uptr kLowMemEnd = 1UL<<32;
-  const uptr kLowShadowEnd = kLowMemEnd >> kShadowScale;
-  const uptr kLowShadowStart = kLowShadowEnd >> kShadowScale;
 
   // HighMem covers the upper part of the address space.
-  const uptr kHighShadowEnd = (maxVirtualAddress >> kShadowScale) + 1;
-  const uptr kHighShadowStart = Max(kLowMemEnd, kHighShadowEnd >> kShadowScale);
+  kHighShadowEnd = (maxVirtualAddress >> kShadowScale) + 1;
+  kHighShadowStart = Max(kLowMemEnd, kHighShadowEnd >> kShadowScale);
   CHECK(kHighShadowStart < kHighShadowEnd);
 
-  const uptr kHighMemStart = kHighShadowStart << kShadowScale;
+  kHighMemStart = kHighShadowStart << kShadowScale;
   CHECK(kHighShadowEnd <= kHighMemStart);
 
   if (Verbosity()) {
@@ -118,6 +122,11 @@ bool InitShadow() {
     ProtectGap(kHighShadowEnd, kHighMemStart - kHighShadowEnd);
 
   return true;
+}
+
+bool MemIsApp(uptr p) {
+  CHECK(GetTagFromPointer(p) == 0);
+  return p >= kHighMemStart || (p >= kLowShadowEnd && p < kLowMemEnd);
 }
 
 static void HwasanAtExit(void) {

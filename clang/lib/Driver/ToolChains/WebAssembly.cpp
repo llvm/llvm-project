@@ -62,8 +62,6 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (Args.hasArg(options::OPT_pthread))
       CmdArgs.push_back("-lpthread");
 
-    CmdArgs.push_back("-allow-undefined-file");
-    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("wasm.syms")));
     CmdArgs.push_back("-lc");
     AddRunTimeLibs(ToolChain, ToolChain.getDriver(), CmdArgs, Args);
   }

@@ -148,7 +148,7 @@ template <typename ELFT>
 static Expected<std::unique_ptr<DyldELFObject<ELFT>>>
 createRTDyldELFObject(MemoryBufferRef Buffer, const ObjectFile &SourceObject,
                       const LoadedELFObjectInfo &L) {
-  typedef typename ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
+  typedef typename ELFT::Shdr Elf_Shdr;
   typedef typename ELFDataTypeTypedefHelper<ELFT>::value_type addr_type;
 
   Expected<std::unique_ptr<DyldELFObject<ELFT>>> ObjOrErr =
