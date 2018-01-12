@@ -849,6 +849,13 @@ else()
   set(LLVM_ENABLE_PLUGINS ON)
 endif()
 
+set(LLVM_ENABLE_IDE_default OFF)
+if (XCODE OR MSVC_IDE OR CMAKE_EXTRA_GENERATOR)
+  set(LLVM_ENABLE_IDE_default ON)
+endif()
+option(LLVM_ENABLE_IDE "Generate targets and process sources for use with an IDE"
+    ${LLVM_ENABLE_IDE_default})
+
 function(get_compile_definitions)
   get_directory_property(top_dir_definitions DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS)
   foreach(definition ${top_dir_definitions})

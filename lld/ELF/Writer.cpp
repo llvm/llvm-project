@@ -369,9 +369,9 @@ template <class ELFT> static void createSyntheticSections() {
       false /*Sort*/);
   Add(InX::RelaIplt);
 
-  InX::Plt = make<PltSection>(Target->PltHeaderSize);
+  InX::Plt = make<PltSection>(Target->PltHeaderSize, false /*IsIplt*/);
   Add(InX::Plt);
-  InX::Iplt = make<PltSection>(0);
+  InX::Iplt = make<PltSection>(0 /*HeaderSize*/, true /*IsIplt*/);
   Add(InX::Iplt);
 
   if (!Config->Relocatable) {

@@ -7,12 +7,12 @@
 define i32 @test__bextri_u32(i32 %a0) {
 ; X32-LABEL: test__bextri_u32:
 ; X32:       # %bb.0:
-; X32-NEXT:    bextr $1, {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    bextrl $1, {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test__bextri_u32:
 ; X64:       # %bb.0:
-; X64-NEXT:    bextr $1, %edi, %eax
+; X64-NEXT:    bextrl $1, %edi, %eax
 ; X64-NEXT:    retq
   %1 = call i32 @llvm.x86.tbm.bextri.u32(i32 %a0, i32 1)
   ret i32 %1

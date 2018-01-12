@@ -7,17 +7,17 @@
 define i32 @test_x86_tbm_bextri_u32(i32 %a0, i32* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_bextri_u32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    bextr $3076, %edi, %ecx # imm = 0xC04
+; GENERIC-NEXT:    bextrl $3076, %edi, %ecx # imm = 0xC04
 ; GENERIC-NEXT:    # sched: [1:0.33]
-; GENERIC-NEXT:    bextr $3076, (%rsi), %eax # imm = 0xC04
+; GENERIC-NEXT:    bextrl $3076, (%rsi), %eax # imm = 0xC04
 ; GENERIC-NEXT:    # sched: [5:0.50]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER-LABEL: test_x86_tbm_bextri_u32:
 ; BDVER:       # %bb.0:
-; BDVER-NEXT:    bextr $3076, %edi, %ecx # imm = 0xC04
-; BDVER-NEXT:    bextr $3076, (%rsi), %eax # imm = 0xC04
+; BDVER-NEXT:    bextrl $3076, %edi, %ecx # imm = 0xC04
+; BDVER-NEXT:    bextrl $3076, (%rsi), %eax # imm = 0xC04
 ; BDVER-NEXT:    addl %ecx, %eax
 ; BDVER-NEXT:    retq
   %a1 = load i32, i32* %p1
@@ -32,17 +32,17 @@ define i32 @test_x86_tbm_bextri_u32(i32 %a0, i32* nocapture %p1) nounwind {
 define i64 @test_x86_tbm_bextri_u64(i64 %a0, i64* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_bextri_u64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    bextr $3076, %edi, %ecx # imm = 0xC04
+; GENERIC-NEXT:    bextrl $3076, %edi, %ecx # imm = 0xC04
 ; GENERIC-NEXT:    # sched: [1:0.33]
-; GENERIC-NEXT:    bextr $3076, (%rsi), %eax # imm = 0xC04
+; GENERIC-NEXT:    bextrl $3076, (%rsi), %eax # imm = 0xC04
 ; GENERIC-NEXT:    # sched: [5:0.50]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER-LABEL: test_x86_tbm_bextri_u64:
 ; BDVER:       # %bb.0:
-; BDVER-NEXT:    bextr $3076, %edi, %ecx # imm = 0xC04
-; BDVER-NEXT:    bextr $3076, (%rsi), %eax # imm = 0xC04
+; BDVER-NEXT:    bextrl $3076, %edi, %ecx # imm = 0xC04
+; BDVER-NEXT:    bextrl $3076, (%rsi), %eax # imm = 0xC04
 ; BDVER-NEXT:    addq %rcx, %rax
 ; BDVER-NEXT:    retq
   %a1 = load i64, i64* %p1
@@ -57,15 +57,15 @@ define i64 @test_x86_tbm_bextri_u64(i64 %a0, i64* nocapture %p1) nounwind {
 define i32 @test_x86_tbm_blcfill_u32(i32 %a0, i32* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blcfill_u32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    blcfill %edi, %ecx # sched: [1:0.33]
-; GENERIC-NEXT:    blcfill (%rsi), %eax # sched: [5:0.50]
+; GENERIC-NEXT:    blcfilll %edi, %ecx # sched: [1:0.33]
+; GENERIC-NEXT:    blcfilll (%rsi), %eax # sched: [5:0.50]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER-LABEL: test_x86_tbm_blcfill_u32:
 ; BDVER:       # %bb.0:
-; BDVER-NEXT:    blcfill %edi, %ecx
-; BDVER-NEXT:    blcfill (%rsi), %eax
+; BDVER-NEXT:    blcfilll %edi, %ecx
+; BDVER-NEXT:    blcfilll (%rsi), %eax
 ; BDVER-NEXT:    addl %ecx, %eax
 ; BDVER-NEXT:    retq
   %a1 = load i32, i32* %p1
@@ -80,15 +80,15 @@ define i32 @test_x86_tbm_blcfill_u32(i32 %a0, i32* nocapture %p1) nounwind {
 define i64 @test_x86_tbm_blcfill_u64(i64 %a0, i64* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blcfill_u64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    blcfill %rdi, %rcx # sched: [1:0.33]
-; GENERIC-NEXT:    blcfill (%rsi), %rax # sched: [5:0.50]
+; GENERIC-NEXT:    blcfillq %rdi, %rcx # sched: [1:0.33]
+; GENERIC-NEXT:    blcfillq (%rsi), %rax # sched: [5:0.50]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER-LABEL: test_x86_tbm_blcfill_u64:
 ; BDVER:       # %bb.0:
-; BDVER-NEXT:    blcfill %rdi, %rcx
-; BDVER-NEXT:    blcfill (%rsi), %rax
+; BDVER-NEXT:    blcfillq %rdi, %rcx
+; BDVER-NEXT:    blcfillq (%rsi), %rax
 ; BDVER-NEXT:    addq %rcx, %rax
 ; BDVER-NEXT:    retq
   %a1 = load i64, i64* %p1
@@ -103,15 +103,15 @@ define i64 @test_x86_tbm_blcfill_u64(i64 %a0, i64* nocapture %p1) nounwind {
 define i32 @test_x86_tbm_blci_u32(i32 %a0, i32* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blci_u32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    blci %edi, %ecx # sched: [1:0.33]
-; GENERIC-NEXT:    blci (%rsi), %eax # sched: [5:0.50]
+; GENERIC-NEXT:    blcil %edi, %ecx # sched: [1:0.33]
+; GENERIC-NEXT:    blcil (%rsi), %eax # sched: [5:0.50]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER-LABEL: test_x86_tbm_blci_u32:
 ; BDVER:       # %bb.0:
-; BDVER-NEXT:    blci %edi, %ecx
-; BDVER-NEXT:    blci (%rsi), %eax
+; BDVER-NEXT:    blcil %edi, %ecx
+; BDVER-NEXT:    blcil (%rsi), %eax
 ; BDVER-NEXT:    addl %ecx, %eax
 ; BDVER-NEXT:    retq
   %a1 = load i32, i32* %p1
@@ -128,15 +128,15 @@ define i32 @test_x86_tbm_blci_u32(i32 %a0, i32* nocapture %p1) nounwind {
 define i64 @test_x86_tbm_blci_u64(i64 %a0, i64* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blci_u64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    blci %rdi, %rcx # sched: [1:0.33]
-; GENERIC-NEXT:    blci (%rsi), %rax # sched: [5:0.50]
+; GENERIC-NEXT:    blciq %rdi, %rcx # sched: [1:0.33]
+; GENERIC-NEXT:    blciq (%rsi), %rax # sched: [5:0.50]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER-LABEL: test_x86_tbm_blci_u64:
 ; BDVER:       # %bb.0:
-; BDVER-NEXT:    blci %rdi, %rcx
-; BDVER-NEXT:    blci (%rsi), %rax
+; BDVER-NEXT:    blciq %rdi, %rcx
+; BDVER-NEXT:    blciq (%rsi), %rax
 ; BDVER-NEXT:    addq %rcx, %rax
 ; BDVER-NEXT:    retq
   %a1 = load i64, i64* %p1
@@ -153,15 +153,15 @@ define i64 @test_x86_tbm_blci_u64(i64 %a0, i64* nocapture %p1) nounwind {
 define i32 @test_x86_tbm_blcic_u32(i32 %a0, i32* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blcic_u32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    blcic %edi, %ecx # sched: [1:0.33]
-; GENERIC-NEXT:    blcic (%rsi), %eax # sched: [5:0.50]
+; GENERIC-NEXT:    blcicl %edi, %ecx # sched: [1:0.33]
+; GENERIC-NEXT:    blcicl (%rsi), %eax # sched: [5:0.50]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER-LABEL: test_x86_tbm_blcic_u32:
 ; BDVER:       # %bb.0:
-; BDVER-NEXT:    blcic %edi, %ecx
-; BDVER-NEXT:    blcic (%rsi), %eax
+; BDVER-NEXT:    blcicl %edi, %ecx
+; BDVER-NEXT:    blcicl (%rsi), %eax
 ; BDVER-NEXT:    addl %ecx, %eax
 ; BDVER-NEXT:    retq
   %a1 = load i32, i32* %p1
@@ -178,15 +178,15 @@ define i32 @test_x86_tbm_blcic_u32(i32 %a0, i32* nocapture %p1) nounwind {
 define i64 @test_x86_tbm_blcic_u64(i64 %a0, i64* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blcic_u64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    blcic %rdi, %rcx # sched: [1:0.33]
-; GENERIC-NEXT:    blcic (%rsi), %rax # sched: [5:0.50]
+; GENERIC-NEXT:    blcicq %rdi, %rcx # sched: [1:0.33]
+; GENERIC-NEXT:    blcicq (%rsi), %rax # sched: [5:0.50]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER-LABEL: test_x86_tbm_blcic_u64:
 ; BDVER:       # %bb.0:
-; BDVER-NEXT:    blcic %rdi, %rcx
-; BDVER-NEXT:    blcic (%rsi), %rax
+; BDVER-NEXT:    blcicq %rdi, %rcx
+; BDVER-NEXT:    blcicq (%rsi), %rax
 ; BDVER-NEXT:    addq %rcx, %rax
 ; BDVER-NEXT:    retq
   %a1 = load i64, i64* %p1
@@ -203,15 +203,15 @@ define i64 @test_x86_tbm_blcic_u64(i64 %a0, i64* nocapture %p1) nounwind {
 define i32 @test_x86_tbm_blcmsk_u32(i32 %a0, i32* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blcmsk_u32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    blcmsk %edi, %ecx # sched: [1:0.33]
-; GENERIC-NEXT:    blcmsk (%rsi), %eax # sched: [5:0.50]
+; GENERIC-NEXT:    blcmskl %edi, %ecx # sched: [1:0.33]
+; GENERIC-NEXT:    blcmskl (%rsi), %eax # sched: [5:0.50]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER-LABEL: test_x86_tbm_blcmsk_u32:
 ; BDVER:       # %bb.0:
-; BDVER-NEXT:    blcmsk %edi, %ecx
-; BDVER-NEXT:    blcmsk (%rsi), %eax
+; BDVER-NEXT:    blcmskl %edi, %ecx
+; BDVER-NEXT:    blcmskl (%rsi), %eax
 ; BDVER-NEXT:    addl %ecx, %eax
 ; BDVER-NEXT:    retq
   %a1 = load i32, i32* %p1
@@ -226,15 +226,15 @@ define i32 @test_x86_tbm_blcmsk_u32(i32 %a0, i32* nocapture %p1) nounwind {
 define i64 @test_x86_tbm_blcmsk_u64(i64 %a0, i64* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blcmsk_u64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    blcmsk %rdi, %rcx # sched: [1:0.33]
-; GENERIC-NEXT:    blcmsk (%rsi), %rax # sched: [5:0.50]
+; GENERIC-NEXT:    blcmskq %rdi, %rcx # sched: [1:0.33]
+; GENERIC-NEXT:    blcmskq (%rsi), %rax # sched: [5:0.50]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER-LABEL: test_x86_tbm_blcmsk_u64:
 ; BDVER:       # %bb.0:
-; BDVER-NEXT:    blcmsk %rdi, %rcx
-; BDVER-NEXT:    blcmsk (%rsi), %rax
+; BDVER-NEXT:    blcmskq %rdi, %rcx
+; BDVER-NEXT:    blcmskq (%rsi), %rax
 ; BDVER-NEXT:    addq %rcx, %rax
 ; BDVER-NEXT:    retq
   %a1 = load i64, i64* %p1
@@ -249,15 +249,15 @@ define i64 @test_x86_tbm_blcmsk_u64(i64 %a0, i64* nocapture %p1) nounwind {
 define i32 @test_x86_tbm_blcs_u32(i32 %a0, i32* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blcs_u32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    blcs %edi, %ecx # sched: [1:0.33]
-; GENERIC-NEXT:    blcs (%rsi), %eax # sched: [5:0.50]
+; GENERIC-NEXT:    blcsl %edi, %ecx # sched: [1:0.33]
+; GENERIC-NEXT:    blcsl (%rsi), %eax # sched: [5:0.50]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER-LABEL: test_x86_tbm_blcs_u32:
 ; BDVER:       # %bb.0:
-; BDVER-NEXT:    blcs %edi, %ecx
-; BDVER-NEXT:    blcs (%rsi), %eax
+; BDVER-NEXT:    blcsl %edi, %ecx
+; BDVER-NEXT:    blcsl (%rsi), %eax
 ; BDVER-NEXT:    addl %ecx, %eax
 ; BDVER-NEXT:    retq
   %a1 = load i32, i32* %p1
@@ -272,15 +272,15 @@ define i32 @test_x86_tbm_blcs_u32(i32 %a0, i32* nocapture %p1) nounwind {
 define i64 @test_x86_tbm_blcs_u64(i64 %a0, i64* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blcs_u64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    blcs %rdi, %rcx # sched: [1:0.33]
-; GENERIC-NEXT:    blcs (%rsi), %rax # sched: [5:0.50]
+; GENERIC-NEXT:    blcsq %rdi, %rcx # sched: [1:0.33]
+; GENERIC-NEXT:    blcsq (%rsi), %rax # sched: [5:0.50]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER-LABEL: test_x86_tbm_blcs_u64:
 ; BDVER:       # %bb.0:
-; BDVER-NEXT:    blcs %rdi, %rcx
-; BDVER-NEXT:    blcs (%rsi), %rax
+; BDVER-NEXT:    blcsq %rdi, %rcx
+; BDVER-NEXT:    blcsq (%rsi), %rax
 ; BDVER-NEXT:    addq %rcx, %rax
 ; BDVER-NEXT:    retq
   %a1 = load i64, i64* %p1
@@ -295,15 +295,15 @@ define i64 @test_x86_tbm_blcs_u64(i64 %a0, i64* nocapture %p1) nounwind {
 define i32 @test_x86_tbm_blsfill_u32(i32 %a0, i32* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blsfill_u32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    blsfill %edi, %ecx # sched: [1:0.33]
-; GENERIC-NEXT:    blsfill (%rsi), %eax # sched: [5:0.50]
+; GENERIC-NEXT:    blsfilll %edi, %ecx # sched: [1:0.33]
+; GENERIC-NEXT:    blsfilll (%rsi), %eax # sched: [5:0.50]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER-LABEL: test_x86_tbm_blsfill_u32:
 ; BDVER:       # %bb.0:
-; BDVER-NEXT:    blsfill %edi, %ecx
-; BDVER-NEXT:    blsfill (%rsi), %eax
+; BDVER-NEXT:    blsfilll %edi, %ecx
+; BDVER-NEXT:    blsfilll (%rsi), %eax
 ; BDVER-NEXT:    addl %ecx, %eax
 ; BDVER-NEXT:    retq
   %a1 = load i32, i32* %p1
@@ -318,15 +318,15 @@ define i32 @test_x86_tbm_blsfill_u32(i32 %a0, i32* nocapture %p1) nounwind {
 define i64 @test_x86_tbm_blsfill_u64(i64 %a0, i64* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blsfill_u64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    blsfill %rdi, %rcx # sched: [1:0.33]
-; GENERIC-NEXT:    blsfill (%rsi), %rax # sched: [5:0.50]
+; GENERIC-NEXT:    blsfillq %rdi, %rcx # sched: [1:0.33]
+; GENERIC-NEXT:    blsfillq (%rsi), %rax # sched: [5:0.50]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER-LABEL: test_x86_tbm_blsfill_u64:
 ; BDVER:       # %bb.0:
-; BDVER-NEXT:    blsfill %rdi, %rcx
-; BDVER-NEXT:    blsfill (%rsi), %rax
+; BDVER-NEXT:    blsfillq %rdi, %rcx
+; BDVER-NEXT:    blsfillq (%rsi), %rax
 ; BDVER-NEXT:    addq %rcx, %rax
 ; BDVER-NEXT:    retq
   %a1 = load i64, i64* %p1
@@ -341,15 +341,15 @@ define i64 @test_x86_tbm_blsfill_u64(i64 %a0, i64* nocapture %p1) nounwind {
 define i32 @test_x86_tbm_blsic_u32(i32 %a0, i32* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blsic_u32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    blsic %edi, %ecx # sched: [1:0.33]
-; GENERIC-NEXT:    blsic (%rsi), %eax # sched: [5:0.50]
+; GENERIC-NEXT:    blsicl %edi, %ecx # sched: [1:0.33]
+; GENERIC-NEXT:    blsicl (%rsi), %eax # sched: [5:0.50]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER-LABEL: test_x86_tbm_blsic_u32:
 ; BDVER:       # %bb.0:
-; BDVER-NEXT:    blsic %edi, %ecx
-; BDVER-NEXT:    blsic (%rsi), %eax
+; BDVER-NEXT:    blsicl %edi, %ecx
+; BDVER-NEXT:    blsicl (%rsi), %eax
 ; BDVER-NEXT:    addl %ecx, %eax
 ; BDVER-NEXT:    retq
   %a1 = load i32, i32* %p1
@@ -366,15 +366,15 @@ define i32 @test_x86_tbm_blsic_u32(i32 %a0, i32* nocapture %p1) nounwind {
 define i64 @test_x86_tbm_blsic_u64(i64 %a0, i64* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_blsic_u64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    blsic %rdi, %rcx # sched: [1:0.33]
-; GENERIC-NEXT:    blsic (%rsi), %rax # sched: [5:0.50]
+; GENERIC-NEXT:    blsicq %rdi, %rcx # sched: [1:0.33]
+; GENERIC-NEXT:    blsicq (%rsi), %rax # sched: [5:0.50]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER-LABEL: test_x86_tbm_blsic_u64:
 ; BDVER:       # %bb.0:
-; BDVER-NEXT:    blsic %rdi, %rcx
-; BDVER-NEXT:    blsic (%rsi), %rax
+; BDVER-NEXT:    blsicq %rdi, %rcx
+; BDVER-NEXT:    blsicq (%rsi), %rax
 ; BDVER-NEXT:    addq %rcx, %rax
 ; BDVER-NEXT:    retq
   %a1 = load i64, i64* %p1
@@ -391,15 +391,15 @@ define i64 @test_x86_tbm_blsic_u64(i64 %a0, i64* nocapture %p1) nounwind {
 define i32 @test_x86_tbm_t1mskc_u32(i32 %a0, i32* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_t1mskc_u32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    t1mskc %edi, %ecx # sched: [1:0.33]
-; GENERIC-NEXT:    t1mskc (%rsi), %eax # sched: [5:0.50]
+; GENERIC-NEXT:    t1mskcl %edi, %ecx # sched: [1:0.33]
+; GENERIC-NEXT:    t1mskcl (%rsi), %eax # sched: [5:0.50]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER-LABEL: test_x86_tbm_t1mskc_u32:
 ; BDVER:       # %bb.0:
-; BDVER-NEXT:    t1mskc %edi, %ecx
-; BDVER-NEXT:    t1mskc (%rsi), %eax
+; BDVER-NEXT:    t1mskcl %edi, %ecx
+; BDVER-NEXT:    t1mskcl (%rsi), %eax
 ; BDVER-NEXT:    addl %ecx, %eax
 ; BDVER-NEXT:    retq
   %a1 = load i32, i32* %p1
@@ -416,15 +416,15 @@ define i32 @test_x86_tbm_t1mskc_u32(i32 %a0, i32* nocapture %p1) nounwind {
 define i64 @test_x86_tbm_t1mskc_u64(i64 %a0, i64* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_t1mskc_u64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    t1mskc %rdi, %rcx # sched: [1:0.33]
-; GENERIC-NEXT:    t1mskc (%rsi), %rax # sched: [5:0.50]
+; GENERIC-NEXT:    t1mskcq %rdi, %rcx # sched: [1:0.33]
+; GENERIC-NEXT:    t1mskcq (%rsi), %rax # sched: [5:0.50]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER-LABEL: test_x86_tbm_t1mskc_u64:
 ; BDVER:       # %bb.0:
-; BDVER-NEXT:    t1mskc %rdi, %rcx
-; BDVER-NEXT:    t1mskc (%rsi), %rax
+; BDVER-NEXT:    t1mskcq %rdi, %rcx
+; BDVER-NEXT:    t1mskcq (%rsi), %rax
 ; BDVER-NEXT:    addq %rcx, %rax
 ; BDVER-NEXT:    retq
   %a1 = load i64, i64* %p1
@@ -441,15 +441,15 @@ define i64 @test_x86_tbm_t1mskc_u64(i64 %a0, i64* nocapture %p1) nounwind {
 define i32 @test_x86_tbm_tzmsk_u32(i32 %a0, i32* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_tzmsk_u32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    tzmsk %edi, %ecx # sched: [1:0.33]
-; GENERIC-NEXT:    tzmsk (%rsi), %eax # sched: [5:0.50]
+; GENERIC-NEXT:    tzmskl %edi, %ecx # sched: [1:0.33]
+; GENERIC-NEXT:    tzmskl (%rsi), %eax # sched: [5:0.50]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER-LABEL: test_x86_tbm_tzmsk_u32:
 ; BDVER:       # %bb.0:
-; BDVER-NEXT:    tzmsk %edi, %ecx
-; BDVER-NEXT:    tzmsk (%rsi), %eax
+; BDVER-NEXT:    tzmskl %edi, %ecx
+; BDVER-NEXT:    tzmskl (%rsi), %eax
 ; BDVER-NEXT:    addl %ecx, %eax
 ; BDVER-NEXT:    retq
   %a1 = load i32, i32* %p1
@@ -466,15 +466,15 @@ define i32 @test_x86_tbm_tzmsk_u32(i32 %a0, i32* nocapture %p1) nounwind {
 define i64 @test_x86_tbm_tzmsk_u64(i64 %a0, i64* nocapture %p1) nounwind {
 ; GENERIC-LABEL: test_x86_tbm_tzmsk_u64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    tzmsk %rdi, %rcx # sched: [1:0.33]
-; GENERIC-NEXT:    tzmsk (%rsi), %rax # sched: [5:0.50]
+; GENERIC-NEXT:    tzmskq %rdi, %rcx # sched: [1:0.33]
+; GENERIC-NEXT:    tzmskq (%rsi), %rax # sched: [5:0.50]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER-LABEL: test_x86_tbm_tzmsk_u64:
 ; BDVER:       # %bb.0:
-; BDVER-NEXT:    tzmsk %rdi, %rcx
-; BDVER-NEXT:    tzmsk (%rsi), %rax
+; BDVER-NEXT:    tzmskq %rdi, %rcx
+; BDVER-NEXT:    tzmskq (%rsi), %rax
 ; BDVER-NEXT:    addq %rcx, %rax
 ; BDVER-NEXT:    retq
   %a1 = load i64, i64* %p1
