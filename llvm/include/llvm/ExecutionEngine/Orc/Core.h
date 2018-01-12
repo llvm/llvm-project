@@ -17,7 +17,6 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 
-#include <deque>
 #include <map>
 #include <memory>
 #include <set>
@@ -25,6 +24,10 @@
 
 namespace llvm {
 namespace orc {
+
+/// VModuleKey provides a unique identifier (allocated and managed by
+/// ExecutionSessions) for a module added to the JIT.
+using VModuleKey = uint64_t;
 
 class VSO;
 
@@ -226,6 +229,21 @@ private:
   };
 
   std::map<SymbolStringPtr, SymbolTableEntry> Symbols;
+};
+
+/// @brief An ExecutionSession represents a running JIT program.
+class ExecutionSession {
+public:
+  /// @brief Allocate a module key for a new module to add to the JIT.
+  VModuleKey allocateVModule();
+
+  /// @brief Return a module key to the ExecutionSession so that it can be
+  ///        re-used. This should only be done once all resources associated
+  ////       with the original key have been released.
+  void releaseVModule(VModuleKey Key);
+
+public:
+  VModuleKey LastKey = 0;
 };
 
 } // End namespace orc

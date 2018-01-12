@@ -1376,7 +1376,8 @@ def MOVSW : I<0xA5, RawFrmDstSrc, (outs), (ins dstidx16:$dst, srcidx16:$src),
 def MOVSL : I<0xA5, RawFrmDstSrc, (outs), (ins dstidx32:$dst, srcidx32:$src),
               "movs{l|d}\t{$src, $dst|$dst, $src}", [], IIC_MOVS>, OpSize32;
 def MOVSQ : RI<0xA5, RawFrmDstSrc, (outs), (ins dstidx64:$dst, srcidx64:$src),
-               "movsq\t{$src, $dst|$dst, $src}", [], IIC_MOVS>;
+               "movsq\t{$src, $dst|$dst, $src}", [], IIC_MOVS>,
+               Requires<[In64BitMode]>;
 }
 
 // These uses the DF flag in the EFLAGS register to inc or dec EDI and ESI
@@ -1391,7 +1392,8 @@ def STOSL : I<0xAB, RawFrmDst, (outs), (ins dstidx32:$dst),
               "stos{l|d}\t{%eax, $dst|$dst, eax}", [], IIC_STOS>, OpSize32;
 let Defs = [RDI], Uses = [RAX,RDI,EFLAGS] in
 def STOSQ : RI<0xAB, RawFrmDst, (outs), (ins dstidx64:$dst),
-               "stosq\t{%rax, $dst|$dst, rax}", [], IIC_STOS>;
+               "stosq\t{%rax, $dst|$dst, rax}", [], IIC_STOS>,
+               Requires<[In64BitMode]>;
 
 // These uses the DF flag in the EFLAGS register to inc or dec EDI and ESI
 let Defs = [EDI,EFLAGS], Uses = [AL,EDI,EFLAGS] in
@@ -1405,7 +1407,8 @@ def SCASL : I<0xAF, RawFrmDst, (outs), (ins dstidx32:$dst),
               "scas{l|d}\t{$dst, %eax|eax, $dst}", [], IIC_SCAS>, OpSize32;
 let Defs = [EDI,EFLAGS], Uses = [RAX,EDI,EFLAGS] in
 def SCASQ : RI<0xAF, RawFrmDst, (outs), (ins dstidx64:$dst),
-               "scasq\t{$dst, %rax|rax, $dst}", [], IIC_SCAS>;
+               "scasq\t{$dst, %rax|rax, $dst}", [], IIC_SCAS>,
+               Requires<[In64BitMode]>;
 
 // These uses the DF flag in the EFLAGS register to inc or dec EDI and ESI
 let Defs = [EDI,ESI,EFLAGS], Uses = [EDI,ESI,EFLAGS] in {
@@ -1416,7 +1419,8 @@ def CMPSW : I<0xA7, RawFrmDstSrc, (outs), (ins dstidx16:$dst, srcidx16:$src),
 def CMPSL : I<0xA7, RawFrmDstSrc, (outs), (ins dstidx32:$dst, srcidx32:$src),
               "cmps{l|d}\t{$dst, $src|$src, $dst}", [], IIC_CMPS>, OpSize32;
 def CMPSQ : RI<0xA7, RawFrmDstSrc, (outs), (ins dstidx64:$dst, srcidx64:$src),
-               "cmpsq\t{$dst, $src|$src, $dst}", [], IIC_CMPS>;
+               "cmpsq\t{$dst, $src|$src, $dst}", [], IIC_CMPS>,
+               Requires<[In64BitMode]>;
 }
 } // SchedRW
 
@@ -2077,7 +2081,8 @@ def LODSL : I<0xAD, RawFrmSrc, (outs), (ins srcidx32:$src),
               "lods{l|d}\t{$src, %eax|eax, $src}", [], IIC_LODS>, OpSize32;
 let Defs = [RAX,ESI], Uses = [ESI,EFLAGS] in
 def LODSQ : RI<0xAD, RawFrmSrc, (outs), (ins srcidx64:$src),
-               "lodsq\t{$src, %rax|rax, $src}", [], IIC_LODS>;
+               "lodsq\t{$src, %rax|rax, $src}", [], IIC_LODS>,
+               Requires<[In64BitMode]>;
 }
 
 let SchedRW = [WriteSystem] in {

@@ -359,6 +359,10 @@ void __hwasan_store16_noabort(uptr p) {
   CheckAddress<ErrorAction::Recover, AccessType::Store, 4>(p);
 }
 
+void __hwasan_tag_memory(uptr p, u8 tag, uptr sz) {
+  TagMemoryAligned(p, sz, tag);
+}
+
 #if !SANITIZER_SUPPORTS_WEAK_HOOKS
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE

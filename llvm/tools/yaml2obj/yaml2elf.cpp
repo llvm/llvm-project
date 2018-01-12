@@ -107,12 +107,12 @@ namespace {
 /// point of truth".
 template <class ELFT>
 class ELFState {
-  typedef typename object::ELFFile<ELFT>::Elf_Ehdr Elf_Ehdr;
-  typedef typename object::ELFFile<ELFT>::Elf_Phdr Elf_Phdr;
-  typedef typename object::ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
-  typedef typename object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
-  typedef typename object::ELFFile<ELFT>::Elf_Rel Elf_Rel;
-  typedef typename object::ELFFile<ELFT>::Elf_Rela Elf_Rela;
+  typedef typename ELFT::Ehdr Elf_Ehdr;
+  typedef typename ELFT::Phdr Elf_Phdr;
+  typedef typename ELFT::Shdr Elf_Shdr;
+  typedef typename ELFT::Sym Elf_Sym;
+  typedef typename ELFT::Rel Elf_Rel;
+  typedef typename ELFT::Rela Elf_Rela;
 
   enum class SymtabType { Static, Dynamic };
 
@@ -513,7 +513,7 @@ template <class ELFT>
 bool ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::Group &Section,
                                          ContiguousBlobAccumulator &CBA) {
-  typedef typename object::ELFFile<ELFT>::Elf_Word Elf_Word;
+  typedef typename ELFT::Word Elf_Word;
   assert(Section.Type == llvm::ELF::SHT_GROUP &&
          "Section type is not SHT_GROUP");
 
@@ -692,20 +692,15 @@ static bool isLittleEndian(const ELFYAML::Object &Doc) {
 }
 
 int yaml2elf(llvm::ELFYAML::Object &Doc, raw_ostream &Out) {
-  using object::ELFType;
-  typedef ELFType<support::little, true> LE64;
-  typedef ELFType<support::big, true> BE64;
-  typedef ELFType<support::little, false> LE32;
-  typedef ELFType<support::big, false> BE32;
   if (is64Bit(Doc)) {
     if (isLittleEndian(Doc))
-      return ELFState<LE64>::writeELF(Out, Doc);
+      return ELFState<object::ELF64LE>::writeELF(Out, Doc);
     else
-      return ELFState<BE64>::writeELF(Out, Doc);
+      return ELFState<object::ELF64BE>::writeELF(Out, Doc);
   } else {
     if (isLittleEndian(Doc))
-      return ELFState<LE32>::writeELF(Out, Doc);
+      return ELFState<object::ELF32LE>::writeELF(Out, Doc);
     else
-      return ELFState<BE32>::writeELF(Out, Doc);
+      return ELFState<object::ELF32BE>::writeELF(Out, Doc);
   }
 }

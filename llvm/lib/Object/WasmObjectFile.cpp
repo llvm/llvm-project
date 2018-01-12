@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -268,6 +269,8 @@ Error WasmObjectFile::parseSection(WasmSection &Sec) {
 }
 
 Error WasmObjectFile::parseNameSection(const uint8_t *Ptr, const uint8_t *End) {
+  llvm::DenseSet<uint64_t> Seen;
+
   while (Ptr < End) {
     uint8_t Type = readVarint7(Ptr);
     uint32_t Size = readVaruint32(Ptr);
@@ -277,6 +280,9 @@ Error WasmObjectFile::parseNameSection(const uint8_t *Ptr, const uint8_t *End) {
       uint32_t Count = readVaruint32(Ptr);
       while (Count--) {
         uint32_t Index = readVaruint32(Ptr);
+        if (!Seen.insert(Index).second)
+          return make_error<GenericBinaryError>("Function named more than once",
+                                                object_error::parse_failed);
         StringRef Name = readString(Ptr);
         if (!Name.empty())
           Symbols.emplace_back(Name,
@@ -375,7 +381,6 @@ Error WasmObjectFile::parseLinkingSection(const uint8_t *Ptr,
       uint32_t Count = readVaruint32(Ptr);
       while (Count--) {
         StringRef Symbol = readString(Ptr);
-        DEBUG(dbgs() << "reading syminfo: " << Symbol << "\n");
         uint32_t Flags = readVaruint32(Ptr);
         auto iter = SymbolMap.find(Symbol);
         if (iter == SymbolMap.end()) {

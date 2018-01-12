@@ -139,9 +139,9 @@ struct ELFDataTypeTypedefHelper<ELFType<TargetEndianness, true>>
   using Elf_Xword = typename ELFT::Xword;                                      \
   using Elf_Sxword = typename ELFT::Sxword;
 
-#define LLD_ELF_COMMA ,
+#define LLVM_ELF_COMMA ,
 #define LLVM_ELF_IMPORT_TYPES(E, W)                                            \
-  LLVM_ELF_IMPORT_TYPES_ELFT(ELFType<E LLD_ELF_COMMA W>)
+  LLVM_ELF_IMPORT_TYPES_ELFT(ELFType<E LLVM_ELF_COMMA W>)
 
 // Section header.
 template <class ELFT> struct Elf_Shdr_Base;

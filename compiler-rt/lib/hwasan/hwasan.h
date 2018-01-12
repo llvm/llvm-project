@@ -40,7 +40,7 @@ const uptr kShadowAlignment = 1UL << kShadowScale;
 #define MEM_TO_SHADOW(mem) ((uptr)(mem) >> kShadowScale)
 #define SHADOW_TO_MEM(shadow) ((uptr)(shadow) << kShadowScale)
 
-#define MEM_IS_APP(mem) true
+#define MEM_IS_APP(mem) MemIsApp((uptr)(mem))
 
 // TBI (Top Byte Ignore) feature of AArch64: bits [63:56] are ignored in address
 // translation and can be used to store a tag.
@@ -68,6 +68,8 @@ namespace __hwasan {
 extern int hwasan_inited;
 extern bool hwasan_init_is_running;
 extern int hwasan_report_count;
+
+bool MemIsApp(uptr p);
 
 bool ProtectRange(uptr beg, uptr end);
 bool InitShadow();
