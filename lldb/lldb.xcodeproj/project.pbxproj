@@ -8650,7 +8650,7 @@
 				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
 				LLVM_CONFIGURATION = ReleaseAssert;
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"-fno-rtti",
@@ -8679,7 +8679,20 @@
 				STRIP_INSTALLED_PRODUCT = NO;
 				STRIP_STYLE = debugging;
 				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = "";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_SOURCE_DIR)/tools/swift/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/swift/include $(LLVM_SOURCE_DIR)/tools/swift/lib $(LLVM_BUILD_DIR)/$(SWIFT_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM $(CONFIGURATION_BUILD_DIR)";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_SOURCE_DIR)/tools/swift/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/swift/include",
+					"$(LLVM_SOURCE_DIR)/tools/swift/lib",
+					"$(LLVM_BUILD_DIR)/$(SWIFT_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
+					"$(CONFIGURATION_BUILD_DIR)",
+				);
 				WARNING_CFLAGS = (
 					"-Wreorder",
 					"-Wno-newline-eof",
@@ -8782,7 +8795,7 @@
 				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
 				LLVM_CONFIGURATION = ReleaseAssert;
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"-fno-rtti",
@@ -8811,7 +8824,20 @@
 				STRIP_INSTALLED_PRODUCT = YES;
 				STRIP_STYLE = debugging;
 				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = "";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_SOURCE_DIR)/tools/swift/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/swift/include $(LLVM_SOURCE_DIR)/tools/swift/lib $(LLVM_BUILD_DIR)/$(SWIFT_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM $(CONFIGURATION_BUILD_DIR)";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_SOURCE_DIR)/tools/swift/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/swift/include",
+					"$(LLVM_SOURCE_DIR)/tools/swift/lib",
+					"$(LLVM_BUILD_DIR)/$(SWIFT_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
+					"$(CONFIGURATION_BUILD_DIR)",
+				);
 				WARNING_CFLAGS = (
 					"-Wreorder",
 					"-Wno-newline-eof",
@@ -9117,7 +9143,16 @@
 				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(LLDB_PATH_TO_LLVM_SOURCE)/include",
+					"$(LLDB_PATH_TO_CLANG_SOURCE)/include",
+					"$(LLDB_PATH_TO_SWIFT_SOURCE)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include",
+					"$(LLDB_PATH_TO_SWIFT_BUILD)/include",
+					"$(SRCROOT)/source",
+				);
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = "CustomSwift-RelWithDebInfo";
@@ -9131,7 +9166,15 @@
 				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_NAME = "darwin-debug";
 				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
+				);
 			};
 			name = "CustomSwift-RelWithDebInfo";
 		};
@@ -9267,7 +9310,16 @@
 				PRODUCT_NAME = "lldb-server";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(LLDB_PATH_TO_LLVM_SOURCE)/include",
+					"$(LLDB_PATH_TO_CLANG_SOURCE)/include",
+					"$(LLDB_PATH_TO_SWIFT_SOURCE)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include",
+					"$(LLDB_PATH_TO_SWIFT_BUILD)/include",
+					"$(SRCROOT)/source",
+				);
 			};
 			name = "CustomSwift-RelWithDebInfo";
 		};
@@ -9335,7 +9387,15 @@
 				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 3.0;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
+				);
 			};
 			name = "CustomSwift-RelWithDebInfo";
 		};
@@ -9376,7 +9436,17 @@
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source $(CONFIGURATION_BUILD_DIR)";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(LLDB_PATH_TO_LLVM_SOURCE)/include",
+					"$(LLDB_PATH_TO_CLANG_SOURCE)/include",
+					"$(LLDB_PATH_TO_SWIFT_SOURCE)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include",
+					"$(LLDB_PATH_TO_SWIFT_BUILD)/include",
+					"$(SRCROOT)/source",
+					"$(CONFIGURATION_BUILD_DIR)",
+				);
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = "CustomSwift-RelWithDebInfo";
@@ -9473,7 +9543,16 @@
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
 				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(LLDB_PATH_TO_LLVM_SOURCE)/include",
+					"$(LLDB_PATH_TO_CLANG_SOURCE)/include",
+					"$(LLDB_PATH_TO_SWIFT_SOURCE)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include",
+					"$(LLDB_PATH_TO_SWIFT_BUILD)/include",
+					"$(SRCROOT)/source",
+				);
 			};
 			name = "CustomSwift-RelWithDebInfo";
 		};
@@ -10103,7 +10182,15 @@
 				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
+				);
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
@@ -10191,7 +10278,15 @@
 				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
+				);
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
@@ -10507,7 +10602,7 @@
 				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
 				LLVM_CONFIGURATION = BuildAndIntegration;
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				OTHER_CFLAGS = (
 					"-fno-rtti",
 					"-flimit-debug-info",
@@ -10535,7 +10630,20 @@
 				STRIP_INSTALLED_PRODUCT = NO;
 				STRIP_STYLE = debugging;
 				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = "";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_SOURCE_DIR)/tools/swift/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/swift/include $(LLVM_SOURCE_DIR)/tools/swift/lib $(LLVM_BUILD_DIR)/$(SWIFT_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM $(CONFIGURATION_BUILD_DIR)";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_SOURCE_DIR)/tools/swift/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/swift/include",
+					"$(LLVM_SOURCE_DIR)/tools/swift/lib",
+					"$(LLVM_BUILD_DIR)/$(SWIFT_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
+					"$(CONFIGURATION_BUILD_DIR)",
+				);
 				WARNING_CFLAGS = (
 					"-Wreorder",
 					"-Wno-newline-eof",
@@ -10669,7 +10777,15 @@
 				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
+				);
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = BuildAndIntegration;
@@ -10706,7 +10822,17 @@
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/llvm-macosx-$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/llvm-macosx-$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
+				);
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
@@ -10743,7 +10869,17 @@
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/llvm-macosx-$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/llvm-macosx-$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
+				);
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = DebugClang;
@@ -10776,7 +10912,17 @@
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/llvm-macosx-$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/llvm-macosx-$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
+				);
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
@@ -10824,7 +10970,20 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				STRIP_INSTALLED_PRODUCT = YES;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_SOURCE_DIR)/tools/swift/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/swift/include $(LLVM_SOURCE_DIR)/tools/swift/lib $(LLVM_BUILD_DIR)/$(SWIFT_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM $(CONFIGURATION_BUILD_DIR)";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_SOURCE_DIR)/tools/swift/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/swift/include",
+					"$(LLVM_SOURCE_DIR)/tools/swift/lib",
+					"$(LLVM_BUILD_DIR)/$(SWIFT_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
+					"$(CONFIGURATION_BUILD_DIR)",
+				);
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = BuildAndIntegration;
@@ -10990,7 +11149,15 @@
 				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
+				);
 			};
 			name = Debug;
 		};
@@ -11074,7 +11241,15 @@
 				PRODUCT_NAME = "lldb-server";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
+				);
 			};
 			name = Release;
 		};
@@ -11163,7 +11338,15 @@
 				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
+				);
 			};
 			name = BuildAndIntegration;
 		};
@@ -11533,7 +11716,7 @@
 				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
 				LLVM_CONFIGURATION = DebugAssert;
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"-fno-rtti",
@@ -11561,7 +11744,20 @@
 				STRIP_INSTALLED_PRODUCT = NO;
 				STRIP_STYLE = debugging;
 				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = "";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_SOURCE_DIR)/tools/swift/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/swift/include $(LLVM_SOURCE_DIR)/tools/swift/lib $(LLVM_BUILD_DIR)/$(SWIFT_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM $(CONFIGURATION_BUILD_DIR)";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_SOURCE_DIR)/tools/swift/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/swift/include",
+					"$(LLVM_SOURCE_DIR)/tools/swift/lib",
+					"$(LLVM_BUILD_DIR)/$(SWIFT_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
+					"$(CONFIGURATION_BUILD_DIR)",
+				);
 				WARNING_CFLAGS = (
 					"-Wreorder",
 					"-Wno-newline-eof",
@@ -11705,7 +11901,15 @@
 				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
+				);
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = DebugClang;
@@ -11860,7 +12064,15 @@
 				SKIP_INSTALL = YES;
 				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
+				);
 			};
 			name = DebugClang;
 		};
@@ -12246,7 +12458,7 @@
 				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
 				LLVM_CONFIGURATION = DebugPresubmission;
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"-fno-rtti",
@@ -12275,7 +12487,19 @@
 				STRIP_INSTALLED_PRODUCT = NO;
 				STRIP_STYLE = debugging;
 				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = "";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_SOURCE_DIR)/tools/swift/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/swift/include $(LLVM_SOURCE_DIR)/tools/swift/lib $(LLVM_BUILD_DIR)/$(SWIFT_BUILD_DIR_ARCH)/include $(CONFIGURATION_BUILD_DIR)";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_SOURCE_DIR)/tools/swift/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/swift/include",
+					"$(LLVM_SOURCE_DIR)/tools/swift/lib",
+					"$(LLVM_BUILD_DIR)/$(SWIFT_BUILD_DIR_ARCH)/include",
+					"$(CONFIGURATION_BUILD_DIR)",
+				);
 				WARNING_CFLAGS = (
 					"-Wreorder",
 					"-Wno-newline-eof",
@@ -12419,7 +12643,14 @@
 				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+				);
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = DebugPresubmission;
@@ -12575,7 +12806,14 @@
 				SKIP_INSTALL = YES;
 				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+				);
 			};
 			name = DebugPresubmission;
 		};
@@ -12680,7 +12918,17 @@
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/llvm-macosx-$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/llvm-macosx-$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
+				);
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = DebugPresubmission;
@@ -12756,7 +13004,17 @@
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
 				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_SOURCE_DIR)/tools/swift/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/swift/include $(LLVM_SOURCE_DIR)/tools/swift/lib";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_SOURCE_DIR)/tools/swift/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/swift/include",
+					"$(LLVM_SOURCE_DIR)/tools/swift/lib",
+				);
 			};
 			name = DebugPresubmission;
 		};
@@ -12866,7 +13124,17 @@
 				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_SOURCE_DIR)/tools/swift/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/swift/include $(LLVM_SOURCE_DIR)/tools/swift/lib";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_SOURCE_DIR)/tools/swift/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/swift/include",
+					"$(LLVM_SOURCE_DIR)/tools/swift/lib",
+				);
 			};
 			name = Debug;
 		};
@@ -12941,7 +13209,17 @@
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
 				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_SOURCE_DIR)/tools/swift/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/swift/include $(LLVM_SOURCE_DIR)/tools/swift/lib";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_SOURCE_DIR)/tools/swift/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/swift/include",
+					"$(LLVM_SOURCE_DIR)/tools/swift/lib",
+				);
 			};
 			name = DebugClang;
 		};
@@ -13013,7 +13291,17 @@
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
 				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_SOURCE_DIR)/tools/swift/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/swift/include $(LLVM_SOURCE_DIR)/tools/swift/lib";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_SOURCE_DIR)/tools/swift/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/swift/include",
+					"$(LLVM_SOURCE_DIR)/tools/swift/lib",
+				);
 			};
 			name = Release;
 		};
@@ -13095,7 +13383,17 @@
 				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_SOURCE_DIR)/tools/swift/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/swift/include $(LLVM_SOURCE_DIR)/tools/swift/lib";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_SOURCE_DIR)/tools/swift/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/swift/include",
+					"$(LLVM_SOURCE_DIR)/tools/swift/lib",
+				);
 			};
 			name = BuildAndIntegration;
 		};
@@ -13195,7 +13493,7 @@
 				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
 				LLVM_CONFIGURATION = DebugAssert;
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				OBJROOT = "$(SYMROOT)";
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
@@ -13225,7 +13523,17 @@
 				STRIP_STYLE = debugging;
 				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = "";
 				SYMROOT = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/lldb-macosx-x86_64";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source $(CONFIGURATION_BUILD_DIR)";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(LLDB_PATH_TO_LLVM_SOURCE)/include",
+					"$(LLDB_PATH_TO_CLANG_SOURCE)/include",
+					"$(LLDB_PATH_TO_SWIFT_SOURCE)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include",
+					"$(LLDB_PATH_TO_SWIFT_BUILD)/include",
+					"$(SRCROOT)/source",
+					"$(CONFIGURATION_BUILD_DIR)",
+				);
 				WARNING_CFLAGS = (
 					"-Wreorder",
 					"-Wno-newline-eof",
@@ -13369,7 +13677,16 @@
 				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(LLDB_PATH_TO_LLVM_SOURCE)/include",
+					"$(LLDB_PATH_TO_CLANG_SOURCE)/include",
+					"$(LLDB_PATH_TO_SWIFT_SOURCE)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include",
+					"$(LLDB_PATH_TO_SWIFT_BUILD)/include",
+					"$(SRCROOT)/source",
+				);
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = "CustomSwift-Debug";
@@ -13514,7 +13831,16 @@
 				SKIP_INSTALL = YES;
 				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(LLDB_PATH_TO_LLVM_SOURCE)/include",
+					"$(LLDB_PATH_TO_CLANG_SOURCE)/include",
+					"$(LLDB_PATH_TO_SWIFT_SOURCE)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include",
+					"$(LLDB_PATH_TO_SWIFT_BUILD)/include",
+					"$(SRCROOT)/source",
+				);
 			};
 			name = "CustomSwift-Debug";
 		};
@@ -13623,7 +13949,17 @@
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source $(CONFIGURATION_BUILD_DIR)";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(LLDB_PATH_TO_LLVM_SOURCE)/include",
+					"$(LLDB_PATH_TO_CLANG_SOURCE)/include",
+					"$(LLDB_PATH_TO_SWIFT_SOURCE)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include",
+					"$(LLDB_PATH_TO_SWIFT_BUILD)/include",
+					"$(SRCROOT)/source",
+					"$(CONFIGURATION_BUILD_DIR)",
+				);
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = "CustomSwift-Debug";
@@ -13698,7 +14034,16 @@
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
 				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(LLDB_PATH_TO_LLVM_SOURCE)/include",
+					"$(LLDB_PATH_TO_CLANG_SOURCE)/include",
+					"$(LLDB_PATH_TO_SWIFT_SOURCE)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include",
+					"$(LLDB_PATH_TO_SWIFT_BUILD)/include",
+					"$(SRCROOT)/source",
+				);
 			};
 			name = "CustomSwift-Debug";
 		};
@@ -13796,7 +14141,7 @@
 				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
 				LLVM_CONFIGURATION = ReleaseAssert;
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				OBJROOT = "$(SYMROOT)";
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
@@ -13827,7 +14172,17 @@
 				STRIP_STYLE = debugging;
 				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = "";
 				SYMROOT = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/lldb-macosx-x86_64";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source $(CONFIGURATION_BUILD_DIR)";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(LLDB_PATH_TO_LLVM_SOURCE)/include",
+					"$(LLDB_PATH_TO_CLANG_SOURCE)/include",
+					"$(LLDB_PATH_TO_SWIFT_SOURCE)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include",
+					"$(LLDB_PATH_TO_SWIFT_BUILD)/include",
+					"$(SRCROOT)/source",
+					"$(CONFIGURATION_BUILD_DIR)",
+				);
 				WARNING_CFLAGS = (
 					"-Wreorder",
 					"-Wno-newline-eof",
@@ -13964,7 +14319,16 @@
 				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(LLDB_PATH_TO_LLVM_SOURCE)/include",
+					"$(LLDB_PATH_TO_CLANG_SOURCE)/include",
+					"$(LLDB_PATH_TO_SWIFT_SOURCE)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include",
+					"$(LLDB_PATH_TO_SWIFT_BUILD)/include",
+					"$(SRCROOT)/source",
+				);
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = "CustomSwift-Release";
@@ -13978,7 +14342,15 @@
 				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_NAME = "darwin-debug";
 				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
+				);
 			};
 			name = "CustomSwift-Release";
 		};
@@ -14112,7 +14484,16 @@
 				PRODUCT_NAME = "lldb-server";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(LLDB_PATH_TO_LLVM_SOURCE)/include",
+					"$(LLDB_PATH_TO_CLANG_SOURCE)/include",
+					"$(LLDB_PATH_TO_SWIFT_SOURCE)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include",
+					"$(LLDB_PATH_TO_SWIFT_BUILD)/include",
+					"$(SRCROOT)/source",
+				);
 			};
 			name = "CustomSwift-Release";
 		};
@@ -14164,7 +14545,15 @@
 				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 3.0;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(SRCROOT)/source",
+					"$(LLVM_SOURCE_DIR)/include",
+					"$(LLVM_SOURCE_DIR)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM",
+				);
 			};
 			name = "CustomSwift-Release";
 		};
@@ -14205,7 +14594,17 @@
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source $(CONFIGURATION_BUILD_DIR)";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(LLDB_PATH_TO_LLVM_SOURCE)/include",
+					"$(LLDB_PATH_TO_CLANG_SOURCE)/include",
+					"$(LLDB_PATH_TO_SWIFT_SOURCE)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include",
+					"$(LLDB_PATH_TO_SWIFT_BUILD)/include",
+					"$(SRCROOT)/source",
+					"$(CONFIGURATION_BUILD_DIR)",
+				);
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = "CustomSwift-Release";
@@ -14275,7 +14674,16 @@
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
 				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
 				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source";
+				USER_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/include",
+					"$(LLDB_PATH_TO_LLVM_SOURCE)/include",
+					"$(LLDB_PATH_TO_CLANG_SOURCE)/include",
+					"$(LLDB_PATH_TO_SWIFT_SOURCE)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/include",
+					"$(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include",
+					"$(LLDB_PATH_TO_SWIFT_BUILD)/include",
+					"$(SRCROOT)/source",
+				);
 			};
 			name = "CustomSwift-Release";
 		};
