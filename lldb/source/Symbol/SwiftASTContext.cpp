@@ -28,6 +28,7 @@
 #include "swift/AST/IRGenOptions.h"
 #include "swift/AST/NameLookup.h"
 #include "swift/AST/SearchPathOptions.h"
+#include "swift/AST/SubstitutionMap.h"
 #include "swift/AST/Type.h"
 #include "swift/AST/Types.h"
 #include "swift/ASTSectionImporter/ASTSectionImporter.h"
@@ -66,10 +67,8 @@
 #include "swift/../../lib/IRGen/FixedTypeInfo.h"
 #include "swift/../../lib/IRGen/GenEnum.h"
 #include "swift/../../lib/IRGen/GenHeap.h"
-#include "swift/../../lib/IRGen/IRGenMangler.h"
 #include "swift/../../lib/IRGen/IRGenModule.h"
 #include "swift/../../lib/IRGen/TypeInfo.h"
-#include "swift/../../lib/IRGen/IRGenMangler.h"
 
 #include "swift/Serialization/SerializedModuleLoader.h"
 #include "swift/Strings.h"
@@ -6769,73 +6768,6 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(void *type) {
   return 0;
 }
 
-static int64_t GetInstanceVariableOffset_Symbol(ExecutionContext *exe_ctx,
-                                                const CompilerType &type,
-                                                const char *ivar_name,
-                                                const CompilerType &ivar_type) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
-
-  ConstString class_name(type.GetTypeSymbolName());
-  Target *target = exe_ctx->GetTargetPtr();
-
-  if (log)
-    log->Printf("[GetInstanceVariableOffset_Symbol] ivar_name = %s, type = %s "
-                "class_name = %s",
-                ivar_name, type.GetTypeName().AsCString(),
-                class_name.AsCString());
-
-  if (target && class_name && ivar_type.IsValid() && ivar_name) {
-    swift::NominalTypeDecl *nominal_decl =
-        GetSwiftType(type)->getNominalOrBoundGenericNominal();
-
-    if (nominal_decl) {
-      swift::ValueDecl *the_value_decl = nullptr;
-      SwiftASTContext *swift_ast_ctx =
-          llvm::dyn_cast_or_null<SwiftASTContext>(type.GetTypeSystem());
-
-      auto decls = nominal_decl->lookupDirect(swift::DeclName(
-          swift_ast_ctx->GetASTContext()->getIdentifier(ivar_name)));
-      for (auto &decl : decls) {
-        swift::VarDecl *var_decl = llvm::dyn_cast_or_null<swift::VarDecl>(decl);
-        if (var_decl && var_decl->hasStorage()) {
-          the_value_decl = var_decl;
-          break;
-        }
-      }
-
-      if (the_value_decl) {
-        swift::irgen::IRGenMangler mangler;
-        std::string buffer = mangler.mangleFieldOffset(the_value_decl);
-
-        StreamString symbol_name;
-        symbol_name.Printf("%s", buffer.c_str());
-        ConstString ivar_const_str(symbol_name.GetString());
-
-        lldb::addr_t ivar_offset_ptr =
-            target->FindLoadAddrForNameInSymbolsAndPersistentVariables(
-                ivar_const_str, eSymbolTypeIVarOffset);
-
-        if (log)
-          log->Printf("[GetInstanceVariableOffset_Symbol] symbol_name = %s "
-                      "ivar_offset_ptr = 0x%" PRIx64,
-                      ivar_const_str.AsCString(), ivar_offset_ptr);
-
-        if (ivar_offset_ptr != LLDB_INVALID_ADDRESS) {
-          Status error;
-          return target->ReadUnsignedIntegerFromMemory(
-              ivar_offset_ptr,
-              false,                     // prefer_file_cache
-              type.GetPointerByteSize(), // byte size of integer to read
-              LLDB_INVALID_IVAR_OFFSET, error);
-        }
-      } else if (log)
-        log->Printf("[GetInstanceVariableOffset_Symbol] no the_value_decl");
-    } else if (log)
-      log->Printf("[GetInstanceVariableOffset_Symbol] no nominal_decl");
-  }
-  return LLDB_INVALID_IVAR_OFFSET;
-}
-
 static int64_t GetInstanceVariableOffset_Metadata(
     ValueObject *valobj, ExecutionContext *exe_ctx, const CompilerType &type,
     ConstString ivar_name, const CompilerType &ivar_type) {
@@ -6882,36 +6814,8 @@ static int64_t GetInstanceVariableOffset(ValueObject *valobj,
     if (exe_ctx) {
       Target *target = exe_ctx->GetTargetPtr();
       if (target) {
-        // Given a type there are three cases:
-        //   non generic type - field offset symbols are emitted
-        //   generic type:
-        //     iVar offsets depend on the type arguments - no field offsets
-        //     emitted
-        //     iVar offsets do not depend on the type arguments - field offsets
-        //     emitted for the *unbound* type
-
-        bool is_generic = (class_type.GetTypeInfo() & eTypeIsGeneric);
-
-        bool try_symbol = false;
-        bool try_metadata = true;
-
-        if (!is_generic)
-          try_symbol = true;
-
-        if (try_symbol) {
-          offset = GetInstanceVariableOffset_Symbol(exe_ctx, class_type,
-                                                    ivar_name, ivar_type);
-          if (offset != LLDB_INVALID_IVAR_OFFSET)
-            return offset;
-        }
-
-        if (try_metadata) {
-          offset = GetInstanceVariableOffset_Symbol(exe_ctx, class_type,
-                                                    ivar_name, ivar_type);
-          if (offset == LLDB_INVALID_IVAR_OFFSET)
-            offset = GetInstanceVariableOffset_Metadata(
-                valobj, exe_ctx, class_type, ConstString(ivar_name), ivar_type);
-        }
+        offset = GetInstanceVariableOffset_Metadata(
+            valobj, exe_ctx, class_type, ConstString(ivar_name), ivar_type);
       }
     }
   }
