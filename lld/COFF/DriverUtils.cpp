@@ -418,15 +418,15 @@ static std::string createManifestXml() {
   return createManifestXmlWithExternalMt(DefaultXml);
 }
 
-static std::unique_ptr<MemoryBuffer>
+static std::unique_ptr<WritableMemoryBuffer>
 createMemoryBufferForManifestRes(size_t ManifestSize) {
   size_t ResSize = alignTo(
       object::WIN_RES_MAGIC_SIZE + object::WIN_RES_NULL_ENTRY_SIZE +
           sizeof(object::WinResHeaderPrefix) + sizeof(object::WinResIDs) +
           sizeof(object::WinResHeaderSuffix) + ManifestSize,
       object::WIN_RES_DATA_ALIGNMENT);
-  return MemoryBuffer::getNewMemBuffer(ResSize,
-                                       Config->OutputFile + ".manifest.res");
+  return WritableMemoryBuffer::getNewMemBuffer(ResSize, Config->OutputFile +
+                                                            ".manifest.res");
 }
 
 static void writeResFileHeader(char *&Buf) {
@@ -465,16 +465,16 @@ static void writeResEntryHeader(char *&Buf, size_t ManifestSize) {
 std::unique_ptr<MemoryBuffer> createManifestRes() {
   std::string Manifest = createManifestXml();
 
-  std::unique_ptr<MemoryBuffer> Res =
+  std::unique_ptr<WritableMemoryBuffer> Res =
       createMemoryBufferForManifestRes(Manifest.size());
 
-  char *Buf = const_cast<char *>(Res->getBufferStart());
+  char *Buf = Res->getBufferStart();
   writeResFileHeader(Buf);
   writeResEntryHeader(Buf, Manifest.size());
 
   // Copy the manifest data into the .res file.
   std::copy(Manifest.begin(), Manifest.end(), Buf);
-  return Res;
+  return std::move(Res);
 }
 
 void createSideBySideManifest() {
