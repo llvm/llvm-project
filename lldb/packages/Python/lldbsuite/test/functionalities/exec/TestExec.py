@@ -29,14 +29,12 @@ class ExecTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipUnlessDarwin
-    @expectedFailureAll(oslist=['macosx'], bugnumber="rdar://36134350") # when building with cmake on green gragon or on ci.swift.org, this test fails.
     @expectedFailureAll(archs=['i386'], bugnumber="rdar://28656532")
     @expectedFailureAll(oslist=["ios", "tvos", "watchos", "bridgeos"], bugnumber="rdar://problem/34559552") # this exec test has problems on ios systems
     def test_hitting_exec (self):
         self.do_test(False)
 
     @skipUnlessDarwin
-    @expectedFailureAll(oslist=['macosx'], bugnumber="rdar://36134350") # when building with cmake on green gragon or on ci.swift.org, this test fails.
     @expectedFailureAll(archs=['i386'], bugnumber="rdar://28656532")
     @expectedFailureAll(oslist=["ios", "tvos", "watchos", "bridgeos"], bugnumber="rdar://problem/34559552") # this exec test has problems on ios systems
     def test_skipping_exec (self):
@@ -74,7 +72,7 @@ class ExecTestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         if skip_exec:
-            self.debugger.HandleCommand("settings set target.process.stop-on-exec false")
+            self.dbg.HandleCommand("settings set target.process.stop-on-exec false")
             def cleanup():
                 self.runCmd("settings set target.process.stop-on-exec false",
                             check=False)
