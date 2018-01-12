@@ -11,6 +11,7 @@
 #include "CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
+#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
 
@@ -117,6 +118,12 @@ ToolChain::RuntimeLibType WebAssembly::GetDefaultRuntimeLibType() const {
 }
 
 ToolChain::CXXStdlibType WebAssembly::GetCXXStdlibType(const ArgList &Args) const {
+  if (Arg *A = Args.getLastArg(options::OPT_stdlib_EQ)) {
+    StringRef Value = A->getValue();
+    if (Value != "libc++")
+      getDriver().Diag(diag::err_drv_invalid_stdlib_name)
+          << A->getAsString(Args);
+  }
   return ToolChain::CST_Libcxx;
 }
 
@@ -132,6 +139,19 @@ void WebAssembly::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
       !DriverArgs.hasArg(options::OPT_nostdincxx))
     addSystemInclude(DriverArgs, CC1Args,
                      getDriver().SysRoot + "/include/c++/v1");
+}
+
+void WebAssembly::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
+                                      llvm::opt::ArgStringList &CmdArgs) const {
+
+  switch (GetCXXStdlibType(Args)) {
+  case ToolChain::CST_Libcxx:
+    CmdArgs.push_back("-lc++");
+    CmdArgs.push_back("-lc++abi");
+    break;
+  case ToolChain::CST_Libstdcxx:
+    llvm_unreachable("invalid stdlib name");
+  }
 }
 
 std::string WebAssembly::getThreadModel() const {

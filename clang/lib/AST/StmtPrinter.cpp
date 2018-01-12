@@ -1034,12 +1034,8 @@ void StmtPrinter::PrintOMPExecutableDirective(OMPExecutableDirective *S,
       OS << ' ';
     }
   OS << "\n";
-  if (S->hasAssociatedStmt() && S->getAssociatedStmt() && !ForceNoStmt) {
-    assert(isa<CapturedStmt>(S->getAssociatedStmt()) &&
-           "Expected captured statement!");
-    Stmt *CS = cast<CapturedStmt>(S->getAssociatedStmt())->getCapturedStmt();
-    PrintStmt(CS);
-  }
+  if (!ForceNoStmt && S->hasAssociatedStmt())
+    PrintStmt(S->getInnermostCapturedStmt()->getCapturedStmt());
 }
 
 void StmtPrinter::VisitOMPParallelDirective(OMPParallelDirective *Node) {
@@ -1142,7 +1138,7 @@ void StmtPrinter::VisitOMPFlushDirective(OMPFlushDirective *Node) {
 
 void StmtPrinter::VisitOMPOrderedDirective(OMPOrderedDirective *Node) {
   Indent() << "#pragma omp ordered ";
-  PrintOMPExecutableDirective(Node);
+  PrintOMPExecutableDirective(Node, Node->hasClausesOfKind<OMPDependClause>());
 }
 
 void StmtPrinter::VisitOMPAtomicDirective(OMPAtomicDirective *Node) {

@@ -4048,9 +4048,13 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
     Assert(AlignCI,
            "alignment argument of memory intrinsics must be a constant int",
            CS);
-    const APInt &AlignVal = AlignCI->getValue();
-    Assert(AlignCI->isZero() || AlignVal.isPowerOf2(),
-           "alignment argument of memory intrinsics must be a power of 2", CS);
+    const auto *MI = cast<MemIntrinsic>(CS.getInstruction());
+    auto IsValidAlignment = [&](unsigned Alignment) -> bool {
+      return Alignment == 0 || isPowerOf2_32(Alignment);
+    };
+    Assert(IsValidAlignment(MI->getAlignment()),
+           "alignment argument of memory intrinsics must be 0 or a power of 2",
+           CS);
     Assert(isa<ConstantInt>(CS.getArgOperand(4)),
            "isvolatile argument of memory intrinsics must be a constant int",
            CS);

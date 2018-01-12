@@ -140,16 +140,6 @@ int main() {
     // LAMBDA: [[SIVAR_ADDR:%.+]] = alloca i{{[0-9]+}},
     // LAMBDA: [[G1_TMP:%.+]] = alloca i32*,
     // skip loop vars
-    // LAMBDA: alloca i32,
-    // LAMBDA: alloca i32,
-    // LAMBDA: alloca i32,
-    // LAMBDA: alloca i32,
-    // LAMBDA: alloca i32,
-    // LAMBDA: alloca i32,
-    // LAMBDA: [[G_PRIV:%.+]] = alloca i{{[0-9]+}},
-    // LAMBDA: [[G1_PRIV:%.+]] = alloca i{{[0-9]+}},
-    // LAMBDA: [[G1_TMP_PRIV:%.+]] = alloca i{{[0-9]+}}*,
-    // LAMBDA: [[SIVAR_PRIV:%.+]] = alloca i{{[0-9]+}},
     // LAMBDA-DAG: store {{.+}}, {{.+}} [[G_ADDR]],
     // LAMBDA-DAG: store {{.+}}, {{.+}} [[G1_ADDR]],
     // LAMBDA-DAG: store {{.+}}, {{.+}} [[SIVAR_ADDR]],
@@ -159,10 +149,10 @@ int main() {
     // LAMBDA-DAG: store{{.+}} [[G1_CONV]], {{.+}} [[G1_TMP]],
 
     // use of private vars
-    // LAMBDA-DAG: store{{.+}} 1, {{.+}} [[G_PRIV]],
-    // LAMBDA-DAG: [[G1:%.+]] = load{{.+}}, {{.+}}* [[G1_TMP_PRIV]]
+    // LAMBDA-DAG: store{{.+}} 1, {{.+}} [[G_CONV]],
+    // LAMBDA-DAG: [[G1:%.+]] = load{{.+}}, {{.+}}* [[G1_TMP]]
     // LAMBDA-DAG: store{{.+}} 1, {{.+}} [[G1]],
-    // LAMBDA-DAG: store{{.+}} 2, {{.+}} [[SIVAR_PRIV]],
+    // LAMBDA-DAG: store{{.+}} 2, {{.+}} [[SIVAR_CONV]],
     // LAMBDA-DAG: [[G1_REF:%.+]] = load{{.+}}, {{.+}} [[G1_TMP]],
     // LAMBDA: call void [[INNER_LAMBDA:@.+]](
     // LAMBDA: call void @__kmpc_for_static_fini(

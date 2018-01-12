@@ -414,7 +414,9 @@ namespace llvm {
       return !getVolatileCst()->isZero();
     }
 
-    void setAlignment(Constant *A) { setArgOperand(ARG_ALIGN, A); }
+    void setAlignment(unsigned Align) {
+      setArgOperand(ARG_ALIGN, ConstantInt::get(getAlignmentType(), Align));
+    }
 
     void setVolatile(Constant *V) { setArgOperand(ARG_VOLATILE, V); }
 

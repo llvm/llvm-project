@@ -437,8 +437,7 @@ public:
   void setLinkage(LinkageTypes LT) {
     if (isLocalLinkage(LT)) {
       Visibility = DefaultVisibility;
-      if (getValueID() != Value::GlobalIFuncVal)
-        setDSOLocal(true);
+      setDSOLocal(true);
     }
     Linkage = LT;
   }

@@ -67,6 +67,7 @@ public:
   bool hasFunctionType() const { return FunctionType != nullptr; }
   const WasmSignature &getFunctionType() const;
   void setFunctionType(const WasmSignature *Type);
+  void setHidden(bool IsHidden);
 
   uint32_t getOutputIndex() const;
 
@@ -93,11 +94,11 @@ public:
 
   void update(Kind K, InputFile *F = nullptr, uint32_t Flags = 0,
               const InputSegment *Segment = nullptr,
-              const InputFunction *Function = nullptr,
-              uint32_t Address = UINT32_MAX);
+              InputFunction *Function = nullptr, uint32_t Address = UINT32_MAX);
 
   void setArchiveSymbol(const Archive::Symbol &Sym) { ArchiveSymbol = Sym; }
   const Archive::Symbol &getArchiveSymbol() { return ArchiveSymbol; }
+  InputFunction *getFunction() { return Function; }
 
   // This bit is used by Writer::writeNameSection() to prevent
   // symbols from being written to the symbol table more than once.
@@ -113,7 +114,7 @@ protected:
   Kind SymbolKind = InvalidKind;
   InputFile *File = nullptr;
   const InputSegment *Segment = nullptr;
-  const InputFunction *Function = nullptr;
+  InputFunction *Function = nullptr;
   llvm::Optional<uint32_t> OutputIndex;
   llvm::Optional<uint32_t> TableIndex;
   const WasmSignature *FunctionType = nullptr;

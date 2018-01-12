@@ -1109,6 +1109,10 @@ unsigned MCAsmStreamer::EmitDwarfFileDirective(unsigned FileNo,
     OS1 << ' ';
   }
   PrintQuotedString(Filename, OS1);
+  if (Checksum) {
+    OS1 << " md5 ";
+    PrintQuotedString(Checksum->digest(), OS1);
+  }
   if (MCTargetStreamer *TS = getTargetStreamer()) {
     TS->emitDwarfFileDirective(OS1.str());
   } else {

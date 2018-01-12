@@ -355,7 +355,8 @@ int foo(int n) {
 //
 //
 // CHECK:       define internal {{.*}}void [[OMP_OUTLINED]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i[[SZ]] {{[^)]+}})
-// CHECK:       alloca i16,
+// CHECK:       alloca i[[SZ]],
+// CHECK:       bitcast i[[SZ]]* {{.+}} to i16*
 // CHECK:       ret void
 // CHECK-NEXT:  }
 

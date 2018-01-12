@@ -1,3 +1,4 @@
+UNSUPPORTED: freebsd
 RUN: %cpp_compiler -fsanitize-coverage=0 -fsanitize-coverage=trace-pc-guard %S/DSO1.cpp -fPIC -shared -o %t-DSO1.so
 RUN: %cpp_compiler -fsanitize-coverage=0 -fsanitize-coverage=trace-pc-guard %S/DSO2.cpp -fPIC -shared -o %t-DSO2.so
 RUN: %cpp_compiler -fsanitize-coverage=0 -fsanitize-coverage=trace-pc-guard %S/DSOTestMain.cpp %S/DSOTestExtra.cpp -L. %t-DSO1.so %t-DSO2.so -o %t-DSOTest

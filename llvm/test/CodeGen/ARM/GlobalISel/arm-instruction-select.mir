@@ -27,6 +27,9 @@
   define void @test_fneg_s32() #0 { ret void }
   define void @test_fneg_s64() #0 { ret void }
 
+  define void @test_fma_s32() #4 { ret void }
+  define void @test_fma_s64() #4 { ret void }
+
   define void @test_sub_s32() { ret void }
   define void @test_sub_imm_s32() { ret void }
   define void @test_sub_rev_imm_s32() { ret void }
@@ -70,6 +73,7 @@
   attributes #1 = { "target-features"="+v6" }
   attributes #2 = { "target-features"="+hwdiv-arm" }
   attributes #3 = { "target-features"="+v6t2" }
+  attributes #4 = { "target-features"="+vfp4,-neonfp" }
 ...
 ---
 name:            test_trunc_and_zext_s1
@@ -659,6 +663,74 @@ body:             |
 
     %d0 = COPY %1(s64)
     ; CHECK: %d0 = COPY [[VREGSUM]]
+
+    BX_RET 14, %noreg, implicit %d0
+    ; CHECK: BX_RET 14, %noreg, implicit %d0
+...
+---
+name:            test_fma_s32
+# CHECK-LABEL: name: test_fma_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: fprb }
+  - { id: 3, class: fprb }
+body:             |
+  bb.0:
+    liveins: %s0, %s1, %s2
+
+    %0(s32) = COPY %s0
+    ; CHECK: [[VREGX:%[0-9]+]]:spr = COPY %s0
+
+    %1(s32) = COPY %s1
+    ; CHECK: [[VREGY:%[0-9]+]]:spr = COPY %s1
+
+    %2(s32) = COPY %s2
+    ; CHECK: [[VREGZ:%[0-9]+]]:spr = COPY %s2
+
+    %3(s32) = G_FMA %0, %1, %2
+    ; CHECK: [[VREGR:%[0-9]+]]:spr = VFMAS [[VREGZ]], [[VREGX]], [[VREGY]], 14, %noreg
+
+    %s0 = COPY %3(s32)
+    ; CHECK: %s0 = COPY [[VREGR]]
+
+    BX_RET 14, %noreg, implicit %s0
+    ; CHECK: BX_RET 14, %noreg, implicit %s0
+...
+---
+name:            test_fma_s64
+# CHECK-LABEL: name: test_fma_s64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: fprb }
+  - { id: 3, class: fprb }
+body:             |
+  bb.0:
+    liveins: %d0, %d1, %d2
+
+    %0(s64) = COPY %d0
+    ; CHECK: [[VREGX:%[0-9]+]]:dpr = COPY %d0
+
+    %1(s64) = COPY %d1
+    ; CHECK: [[VREGY:%[0-9]+]]:dpr = COPY %d1
+
+    %2(s64) = COPY %d2
+    ; CHECK: [[VREGZ:%[0-9]+]]:dpr = COPY %d2
+
+    %3(s64) = G_FMA %0, %1, %2
+    ; CHECK: [[VREGR:%[0-9]+]]:dpr = VFMAD [[VREGZ]], [[VREGX]], [[VREGY]], 14, %noreg
+
+    %d0 = COPY %3(s64)
+    ; CHECK: %d0 = COPY [[VREGR]]
 
     BX_RET 14, %noreg, implicit %d0
     ; CHECK: BX_RET 14, %noreg, implicit %d0

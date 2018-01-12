@@ -65,7 +65,7 @@ template <class ELFT> class DyldELFObject : public ELFObjectFile<ELFT> {
 
   typedef Elf_Ehdr_Impl<ELFT> Elf_Ehdr;
 
-  typedef typename ELFDataTypeTypedefHelper<ELFT>::value_type addr_type;
+  typedef typename ELFT::uint addr_type;
 
   DyldELFObject(ELFObjectFile<ELFT> &&Obj);
 
@@ -149,7 +149,7 @@ static Expected<std::unique_ptr<DyldELFObject<ELFT>>>
 createRTDyldELFObject(MemoryBufferRef Buffer, const ObjectFile &SourceObject,
                       const LoadedELFObjectInfo &L) {
   typedef typename ELFT::Shdr Elf_Shdr;
-  typedef typename ELFDataTypeTypedefHelper<ELFT>::value_type addr_type;
+  typedef typename ELFT::uint addr_type;
 
   Expected<std::unique_ptr<DyldELFObject<ELFT>>> ObjOrErr =
       DyldELFObject<ELFT>::create(Buffer);

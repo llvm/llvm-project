@@ -1,0 +1,3 @@
+namespace ns {
+int foo;
+}
