@@ -770,8 +770,10 @@ void Writer::createCtorFunction() {
   writeUleb128(OS, FunctionBody.size(), "function size");
   OS.flush();
   CtorFunctionBody += FunctionBody;
-  CtorFunction =
-      llvm::make_unique<SyntheticFunction>(Signature, CtorFunctionBody);
+  ArrayRef<uint8_t> BodyArray(
+      reinterpret_cast<const uint8_t *>(CtorFunctionBody.data()),
+      CtorFunctionBody.size());
+  CtorFunction = llvm::make_unique<SyntheticFunction>(Signature, BodyArray);
   DefinedFunctions.emplace_back(CtorFunction.get());
 }
 
