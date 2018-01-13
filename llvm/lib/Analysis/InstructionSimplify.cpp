@@ -1423,27 +1423,28 @@ static Value *simplifyAndOrOfICmpsWithZero(ICmpInst *Cmp0, ICmpInst *Cmp1,
   if ((IsAnd && P0 != ICmpInst::ICMP_NE) || (!IsAnd && P1 != ICmpInst::ICMP_EQ))
     return nullptr;
 
-  // We have one of:
-  //   or (icmp eq X, 0), (icmp eq Y, 0)
-  //   and (icmp ne X, 0), (icmp ne Y, 0)
+  // We have either "(X == 0 || Y == 0)" or "(X != 0 && Y != 0)".
   Value *X = Cmp0->getOperand(0);
   Value *Y = Cmp1->getOperand(0);
 
   // If one of the compares is a masked version of a (not) null check, then
-  // that compare implies the other, so we eliminate the other.
+  // that compare implies the other, so we eliminate the other. Optionally, look
+  // through a pointer-to-int cast to match a null check of a pointer type.
 
-  // or (icmp eq X, 0), (icmp eq (and X, ?), 0) --> icmp eq (and X, ?), 0
-  // or (icmp eq X, 0), (icmp eq (and ?, X), 0) --> icmp eq (and ?, X), 0
-  // and (icmp ne X, 0), (icmp ne (and X, ?), 0) --> icmp ne (and X, ?), 0
-  // and (icmp ne X, 0), (icmp ne (and ?, X), 0) --> icmp ne (and ?, X), 0
-  if (match(Y, m_c_And(m_Specific(X), m_Value())))
+  // (X == 0) || (([ptrtoint] X && ?) == 0) --> ([ptrtoint] X && ?) == 0
+  // (X == 0) || ((? && [ptrtoint] X) == 0) --> (? && [ptrtoint] X) == 0
+  // (X != 0) && (([ptrtoint] X && ?) != 0) --> ([ptrtoint] X && ?) != 0
+  // (X != 0) && ((? && [ptrtoint] X) != 0) --> (? && [ptrtoint] X) != 0
+  if (match(Y, m_c_And(m_Specific(X), m_Value())) ||
+      match(Y, m_c_And(m_PtrToInt(m_Specific(X)), m_Value())))
     return Cmp1;
 
-  // or (icmp eq (and Y, ?), 0), (icmp eq Y, 0) --> icmp eq (and Y, ?), 0
-  // or (icmp eq (and ?, Y), 0), (icmp eq Y, 0) --> icmp eq (and ?, Y), 0
-  // and (icmp ne (and Y, ?), 0), (icmp ne Y, 0) --> icmp ne (and Y, ?), 0
-  // and (icmp ne (and ?, Y), 0), (icmp ne Y, 0) --> icmp ne (and ?, Y), 0
-  if (match(X, m_c_And(m_Specific(Y), m_Value())))
+  // (([ptrtoint] Y && ?) == 0) || (Y == 0) --> ([ptrtoint] Y && ?) == 0
+  // ((? && [ptrtoint] Y) == 0) || (Y == 0) --> (? && [ptrtoint] Y) == 0
+  // (([ptrtoint] Y && ?) != 0) && (Y != 0) --> ([ptrtoint] Y && ?) != 0
+  // ((? && [ptrtoint] Y) != 0) && (Y != 0) --> (? && [ptrtoint] Y) != 0
+  if (match(X, m_c_And(m_Specific(Y), m_Value())) ||
+      match(X, m_c_And(m_PtrToInt(m_Specific(Y)), m_Value())))
     return Cmp0;
 
   return nullptr;

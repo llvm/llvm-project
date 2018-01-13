@@ -129,12 +129,10 @@ define i1 @and_cmps_eq_zero_with_mask_commute4(i64 %x, i64 %y) {
 
 define i1 @or_cmps_ptr_eq_zero_with_mask_commute1(i64* %p, i64 %y) {
 ; CHECK-LABEL: @or_cmps_ptr_eq_zero_with_mask_commute1(
-; CHECK-NEXT:    [[ISNULL:%.*]] = icmp eq i64* %p, null
 ; CHECK-NEXT:    [[X:%.*]] = ptrtoint i64* %p to i64
 ; CHECK-NEXT:    [[SOMEBITS:%.*]] = and i64 [[X]], %y
 ; CHECK-NEXT:    [[SOMEBITS_ARE_ZERO:%.*]] = icmp eq i64 [[SOMEBITS]], 0
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[SOMEBITS_ARE_ZERO]], [[ISNULL]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[SOMEBITS_ARE_ZERO]]
 ;
   %isnull = icmp eq i64* %p, null
   %x = ptrtoint i64* %p to i64
@@ -148,12 +146,10 @@ define i1 @or_cmps_ptr_eq_zero_with_mask_commute1(i64* %p, i64 %y) {
 
 define <2 x i1> @or_cmps_ptr_eq_zero_with_mask_commute2(<2 x i64*> %p, <2 x i64> %y) {
 ; CHECK-LABEL: @or_cmps_ptr_eq_zero_with_mask_commute2(
-; CHECK-NEXT:    [[ISNULL:%.*]] = icmp eq <2 x i64*> %p, zeroinitializer
 ; CHECK-NEXT:    [[X:%.*]] = ptrtoint <2 x i64*> %p to <2 x i64>
 ; CHECK-NEXT:    [[SOMEBITS:%.*]] = and <2 x i64> [[X]], %y
 ; CHECK-NEXT:    [[SOMEBITS_ARE_ZERO:%.*]] = icmp eq <2 x i64> [[SOMEBITS]], zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[ISNULL]], [[SOMEBITS_ARE_ZERO]]
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> [[SOMEBITS_ARE_ZERO]]
 ;
   %isnull = icmp eq <2 x i64*> %p, zeroinitializer
   %x = ptrtoint <2 x i64*> %p to <2 x i64>
@@ -167,12 +163,10 @@ define <2 x i1> @or_cmps_ptr_eq_zero_with_mask_commute2(<2 x i64*> %p, <2 x i64>
 
 define i1 @or_cmps_ptr_eq_zero_with_mask_commute3(i4* %p, i4 %y) {
 ; CHECK-LABEL: @or_cmps_ptr_eq_zero_with_mask_commute3(
-; CHECK-NEXT:    [[ISNULL:%.*]] = icmp eq i4* %p, null
 ; CHECK-NEXT:    [[X:%.*]] = ptrtoint i4* %p to i4
 ; CHECK-NEXT:    [[SOMEBITS:%.*]] = and i4 %y, [[X]]
 ; CHECK-NEXT:    [[SOMEBITS_ARE_ZERO:%.*]] = icmp eq i4 [[SOMEBITS]], 0
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[SOMEBITS_ARE_ZERO]], [[ISNULL]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[SOMEBITS_ARE_ZERO]]
 ;
   %isnull = icmp eq i4* %p, null
   %x = ptrtoint i4* %p to i4
@@ -186,12 +180,10 @@ define i1 @or_cmps_ptr_eq_zero_with_mask_commute3(i4* %p, i4 %y) {
 
 define <2 x i1> @or_cmps_ptr_eq_zero_with_mask_commute4(<2 x i4*> %p, <2 x i4> %y) {
 ; CHECK-LABEL: @or_cmps_ptr_eq_zero_with_mask_commute4(
-; CHECK-NEXT:    [[ISNULL:%.*]] = icmp eq <2 x i4*> %p, zeroinitializer
 ; CHECK-NEXT:    [[X:%.*]] = ptrtoint <2 x i4*> %p to <2 x i4>
 ; CHECK-NEXT:    [[SOMEBITS:%.*]] = and <2 x i4> %y, [[X]]
 ; CHECK-NEXT:    [[SOMEBITS_ARE_ZERO:%.*]] = icmp eq <2 x i4> [[SOMEBITS]], zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[ISNULL]], [[SOMEBITS_ARE_ZERO]]
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> [[SOMEBITS_ARE_ZERO]]
 ;
   %isnull = icmp eq <2 x i4*> %p, zeroinitializer
   %x = ptrtoint <2 x i4*> %p to <2 x i4>
@@ -205,12 +197,10 @@ define <2 x i1> @or_cmps_ptr_eq_zero_with_mask_commute4(<2 x i4*> %p, <2 x i4> %
 
 define <3 x i1> @and_cmps_ptr_eq_zero_with_mask_commute1(<3 x i4*> %p, <3 x i4> %y) {
 ; CHECK-LABEL: @and_cmps_ptr_eq_zero_with_mask_commute1(
-; CHECK-NEXT:    [[ISNOTNULL:%.*]] = icmp ne <3 x i4*> %p, zeroinitializer
 ; CHECK-NEXT:    [[X:%.*]] = ptrtoint <3 x i4*> %p to <3 x i4>
 ; CHECK-NEXT:    [[SOMEBITS:%.*]] = and <3 x i4> [[X]], %y
 ; CHECK-NEXT:    [[SOMEBITS_ARE_NOT_ZERO:%.*]] = icmp ne <3 x i4> [[SOMEBITS]], zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = and <3 x i1> [[SOMEBITS_ARE_NOT_ZERO]], [[ISNOTNULL]]
-; CHECK-NEXT:    ret <3 x i1> [[R]]
+; CHECK-NEXT:    ret <3 x i1> [[SOMEBITS_ARE_NOT_ZERO]]
 ;
   %isnotnull = icmp ne <3 x i4*> %p, zeroinitializer
   %x = ptrtoint <3 x i4*> %p to <3 x i4>
@@ -224,12 +214,10 @@ define <3 x i1> @and_cmps_ptr_eq_zero_with_mask_commute1(<3 x i4*> %p, <3 x i4> 
 
 define i1 @and_cmps_ptr_eq_zero_with_mask_commute2(i4* %p, i4 %y) {
 ; CHECK-LABEL: @and_cmps_ptr_eq_zero_with_mask_commute2(
-; CHECK-NEXT:    [[ISNOTNULL:%.*]] = icmp ne i4* %p, null
 ; CHECK-NEXT:    [[X:%.*]] = ptrtoint i4* %p to i4
 ; CHECK-NEXT:    [[SOMEBITS:%.*]] = and i4 [[X]], %y
 ; CHECK-NEXT:    [[SOMEBITS_ARE_NOT_ZERO:%.*]] = icmp ne i4 [[SOMEBITS]], 0
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[ISNOTNULL]], [[SOMEBITS_ARE_NOT_ZERO]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[SOMEBITS_ARE_NOT_ZERO]]
 ;
   %isnotnull = icmp ne i4* %p, null
   %x = ptrtoint i4* %p to i4
@@ -243,12 +231,10 @@ define i1 @and_cmps_ptr_eq_zero_with_mask_commute2(i4* %p, i4 %y) {
 
 define <3 x i1> @and_cmps_ptr_eq_zero_with_mask_commute3(<3 x i64*> %p, <3 x i64> %y) {
 ; CHECK-LABEL: @and_cmps_ptr_eq_zero_with_mask_commute3(
-; CHECK-NEXT:    [[ISNOTNULL:%.*]] = icmp ne <3 x i64*> %p, zeroinitializer
 ; CHECK-NEXT:    [[X:%.*]] = ptrtoint <3 x i64*> %p to <3 x i64>
 ; CHECK-NEXT:    [[SOMEBITS:%.*]] = and <3 x i64> %y, [[X]]
 ; CHECK-NEXT:    [[SOMEBITS_ARE_NOT_ZERO:%.*]] = icmp ne <3 x i64> [[SOMEBITS]], zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = and <3 x i1> [[SOMEBITS_ARE_NOT_ZERO]], [[ISNOTNULL]]
-; CHECK-NEXT:    ret <3 x i1> [[R]]
+; CHECK-NEXT:    ret <3 x i1> [[SOMEBITS_ARE_NOT_ZERO]]
 ;
   %isnotnull = icmp ne <3 x i64*> %p, zeroinitializer
   %x = ptrtoint <3 x i64*> %p to <3 x i64>
@@ -262,12 +248,10 @@ define <3 x i1> @and_cmps_ptr_eq_zero_with_mask_commute3(<3 x i64*> %p, <3 x i64
 
 define i1 @and_cmps_ptr_eq_zero_with_mask_commute4(i64* %p, i64 %y) {
 ; CHECK-LABEL: @and_cmps_ptr_eq_zero_with_mask_commute4(
-; CHECK-NEXT:    [[ISNOTNULL:%.*]] = icmp ne i64* %p, null
 ; CHECK-NEXT:    [[X:%.*]] = ptrtoint i64* %p to i64
 ; CHECK-NEXT:    [[SOMEBITS:%.*]] = and i64 %y, [[X]]
 ; CHECK-NEXT:    [[SOMEBITS_ARE_NOT_ZERO:%.*]] = icmp ne i64 [[SOMEBITS]], 0
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[ISNOTNULL]], [[SOMEBITS_ARE_NOT_ZERO]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[SOMEBITS_ARE_NOT_ZERO]]
 ;
   %isnotnull = icmp ne i64* %p, null
   %x = ptrtoint i64* %p to i64
