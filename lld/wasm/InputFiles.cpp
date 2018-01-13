@@ -170,6 +170,11 @@ InputFunction *ObjFile::getFunction(const WasmSymbol &Sym) const {
   return Functions[FunctionIndex];
 }
 
+bool ObjFile::isExcludedByComdat(InputChunk *Chunk) const {
+  StringRef Comdat = Chunk->getComdat();
+  return !Comdat.empty() && Symtab->findComdat(Comdat) != this;
+}
+
 void ObjFile::initializeSymbols() {
   Symbols.reserve(WasmObj->getNumberOfSymbols());
 
@@ -187,19 +192,27 @@ void ObjFile::initializeSymbols() {
   FunctionSymbols.resize(NumFunctionImports + WasmObj->functions().size());
   GlobalSymbols.resize(NumGlobalImports + WasmObj->globals().size());
 
+  ArrayRef<WasmFunction> Funcs = WasmObj->functions();
+  ArrayRef<uint32_t> FuncTypes = WasmObj->functionTypes();
+  ArrayRef<WasmSignature> Types = WasmObj->types();
+  ArrayRef<WasmGlobal> Globals = WasmObj->globals();
+
+  for (const auto &C : WasmObj->comdats())
+    Symtab->addComdat(C, this);
+
+  FunctionSymbols.resize(NumFunctionImports + Funcs.size());
+  GlobalSymbols.resize(NumGlobalImports + Globals.size());
+
   for (const WasmSegment &S : WasmObj->dataSegments()) {
-    InputSegment *Seg = make<InputSegment>(S, *this);
+    InputSegment *Seg = make<InputSegment>(S, this);
     Seg->copyRelocations(*DataSection);
     Segments.emplace_back(Seg);
   }
 
-  ArrayRef<WasmFunction> Funcs = WasmObj->functions();
-  ArrayRef<uint32_t> FuncTypes = WasmObj->functionTypes();
-  ArrayRef<WasmSignature> Types = WasmObj->types();
   for (size_t I = 0; I < Funcs.size(); ++I) {
     const WasmFunction &Func = Funcs[I];
     const WasmSignature &Sig = Types[FuncTypes[I]];
-    InputFunction *F = make<InputFunction>(Sig, Func, *this);
+    InputFunction *F = make<InputFunction>(Sig, &Func, this);
     F->copyRelocations(*CodeSection);
     Functions.emplace_back(F);
   }
@@ -210,20 +223,34 @@ void ObjFile::initializeSymbols() {
     const WasmSymbol &WasmSym = WasmObj->getWasmSymbol(Sym.getRawDataRefImpl());
     Symbol *S;
     switch (WasmSym.Type) {
+    case WasmSymbol::SymbolType::FUNCTION_EXPORT: {
+      InputFunction *Function = getFunction(WasmSym);
+      if (!isExcludedByComdat(Function)) {
+        S = createDefined(WasmSym, Symbol::Kind::DefinedFunctionKind, nullptr,
+                          Function);
+        break;
+      } else {
+        Function->Discarded = true;
+        LLVM_FALLTHROUGH; // Exclude function, and add the symbol as undefined
+      }
+    }
     case WasmSymbol::SymbolType::FUNCTION_IMPORT:
       S = createUndefined(WasmSym, Symbol::Kind::UndefinedFunctionKind,
                           getFunctionSig(WasmSym));
       break;
+    case WasmSymbol::SymbolType::GLOBAL_EXPORT: {
+      InputSegment *Segment = getSegment(WasmSym);
+      if (!isExcludedByComdat(Segment)) {
+        S = createDefined(WasmSym, Symbol::Kind::DefinedGlobalKind,
+                          Segment, nullptr, getGlobalValue(WasmSym));
+        break;
+      } else {
+        Segment->Discarded = true;
+        LLVM_FALLTHROUGH; // Exclude global, and add the symbol as undefined
+      }
+    }
     case WasmSymbol::SymbolType::GLOBAL_IMPORT:
       S = createUndefined(WasmSym, Symbol::Kind::UndefinedGlobalKind);
-      break;
-    case WasmSymbol::SymbolType::GLOBAL_EXPORT:
-      S = createDefined(WasmSym, Symbol::Kind::DefinedGlobalKind,
-                        getSegment(WasmSym), nullptr, getGlobalValue(WasmSym));
-      break;
-    case WasmSymbol::SymbolType::FUNCTION_EXPORT:
-      S = createDefined(WasmSym, Symbol::Kind::DefinedFunctionKind, nullptr,
-                        getFunction(WasmSym));
       break;
     case WasmSymbol::SymbolType::DEBUG_FUNCTION_NAME:
       // These are for debugging only, no need to create linker symbols for them
@@ -232,14 +259,10 @@ void ObjFile::initializeSymbols() {
 
     Symbols.push_back(S);
     if (WasmSym.isFunction()) {
-      DEBUG(dbgs() << "Function: " << WasmSym.ElementIndex << " -> "
-                   << toString(*S) << "\n");
       FunctionSymbols[WasmSym.ElementIndex] = S;
       if (WasmSym.HasAltIndex)
         FunctionSymbols[WasmSym.AltIndex] = S;
     } else {
-      DEBUG(dbgs() << "Global: " << WasmSym.ElementIndex << " -> "
-                   << toString(*S) << "\n");
       GlobalSymbols[WasmSym.ElementIndex] = S;
       if (WasmSym.HasAltIndex)
         GlobalSymbols[WasmSym.AltIndex] = S;

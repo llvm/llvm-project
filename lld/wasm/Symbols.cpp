@@ -97,6 +97,14 @@ bool Symbol::isHidden() const {
   return (Flags & WASM_SYMBOL_VISIBILITY_MASK) == WASM_SYMBOL_VISIBILITY_HIDDEN;
 }
 
+void Symbol::setHidden(bool IsHidden) {
+  Flags &= ~WASM_SYMBOL_VISIBILITY_MASK;
+  if (IsHidden)
+    Flags |= WASM_SYMBOL_VISIBILITY_HIDDEN;
+  else
+    Flags |= WASM_SYMBOL_VISIBILITY_DEFAULT;
+}
+
 std::string lld::toString(const wasm::Symbol &Sym) {
   if (Config->Demangle)
     if (Optional<std::string> S = demangleItanium(Sym.getName()))

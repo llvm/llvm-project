@@ -67,6 +67,7 @@ public:
   bool hasFunctionType() const { return FunctionType != nullptr; }
   const WasmSignature &getFunctionType() const;
   void setFunctionType(const WasmSignature *Type);
+  void setHidden(bool IsHidden);
 
   uint32_t getOutputIndex() const;
 

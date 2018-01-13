@@ -47,6 +47,7 @@ public:
 
   ArrayRef<Symbol *> getSymbols() const { return SymVector; }
   Symbol *find(StringRef Name);
+  ObjFile *findComdat(StringRef Name) const;
 
   Symbol *addDefined(StringRef Name, Symbol::Kind Kind, uint32_t Flags,
                      InputFile *F, const InputSegment *Segment = nullptr,
@@ -55,11 +56,15 @@ public:
                        InputFile *F, const WasmSignature *Signature = nullptr);
   Symbol *addUndefinedFunction(StringRef Name, const WasmSignature *Type);
   Symbol *addDefinedGlobal(StringRef Name);
+  Symbol *addDefinedFunction(StringRef Name, const WasmSignature *Type,
+                             uint32_t Flags);
   void addLazy(ArchiveFile *F, const Archive::Symbol *Sym);
+  bool addComdat(StringRef Name, ObjFile *);
 
 private:
   std::pair<Symbol *, bool> insert(StringRef Name);
 
+  llvm::DenseMap<llvm::CachedHashStringRef, ObjFile *> ComdatMap;
   llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> SymMap;
   std::vector<Symbol *> SymVector;
 };
