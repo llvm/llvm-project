@@ -3771,63 +3771,35 @@ define <64 x i1> @test_cmp_v64i16(<64 x i16> %a0, <64 x i16> %a1) nounwind {
 ;
 ; AVX512F-LABEL: test_cmp_v64i16:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpcmpgtw %ymm6, %ymm2, %ymm2
-; AVX512F-NEXT:    vpmovsxwd %ymm2, %zmm2
-; AVX512F-NEXT:    vpmovdb %zmm2, %xmm2
 ; AVX512F-NEXT:    vpcmpgtw %ymm7, %ymm3, %ymm3
-; AVX512F-NEXT:    vpmovsxwd %ymm3, %zmm3
-; AVX512F-NEXT:    vpmovdb %zmm3, %xmm3
-; AVX512F-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
-; AVX512F-NEXT:    vpsllw $7, %ymm2, %ymm2
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm3 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
-; AVX512F-NEXT:    vpand %ymm3, %ymm2, %ymm2
-; AVX512F-NEXT:    vpxor %xmm6, %xmm6, %xmm6
-; AVX512F-NEXT:    vpcmpgtb %ymm2, %ymm6, %ymm2
+; AVX512F-NEXT:    vpcmpgtw %ymm6, %ymm2, %ymm2
+; AVX512F-NEXT:    vpcmpgtw %ymm5, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpcmpgtw %ymm4, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpmovsxwd %ymm0, %zmm0
 ; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
-; AVX512F-NEXT:    vpcmpgtw %ymm5, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpmovsxwd %ymm1, %zmm1
 ; AVX512F-NEXT:    vpmovdb %zmm1, %xmm1
-; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512F-NEXT:    vpsllw $7, %ymm0, %ymm0
-; AVX512F-NEXT:    vpand %ymm3, %ymm0, %ymm0
-; AVX512F-NEXT:    vpcmpgtb %ymm0, %ymm6, %ymm0
-; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512F-NEXT:    vextracti128 $1, %ymm2, %xmm3
-; AVX512F-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
-; AVX512F-NEXT:    # kill: def %xmm2 killed %xmm2 killed %ymm2
+; AVX512F-NEXT:    vpmovsxwd %ymm2, %zmm2
+; AVX512F-NEXT:    vpmovdb %zmm2, %xmm2
+; AVX512F-NEXT:    vpmovsxwd %ymm3, %zmm3
+; AVX512F-NEXT:    vpmovdb %zmm3, %xmm3
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: test_cmp_v64i16:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vpcmpgtw %ymm6, %ymm2, %ymm2
-; AVX512DQ-NEXT:    vpmovsxwd %ymm2, %zmm2
-; AVX512DQ-NEXT:    vpmovdb %zmm2, %xmm2
 ; AVX512DQ-NEXT:    vpcmpgtw %ymm7, %ymm3, %ymm3
-; AVX512DQ-NEXT:    vpmovsxwd %ymm3, %zmm3
-; AVX512DQ-NEXT:    vpmovdb %zmm3, %xmm3
-; AVX512DQ-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
-; AVX512DQ-NEXT:    vpsllw $7, %ymm2, %ymm2
-; AVX512DQ-NEXT:    vmovdqa {{.*#+}} ymm3 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
-; AVX512DQ-NEXT:    vpand %ymm3, %ymm2, %ymm2
-; AVX512DQ-NEXT:    vpxor %xmm6, %xmm6, %xmm6
-; AVX512DQ-NEXT:    vpcmpgtb %ymm2, %ymm6, %ymm2
+; AVX512DQ-NEXT:    vpcmpgtw %ymm6, %ymm2, %ymm2
+; AVX512DQ-NEXT:    vpcmpgtw %ymm5, %ymm1, %ymm1
 ; AVX512DQ-NEXT:    vpcmpgtw %ymm4, %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vpmovsxwd %ymm0, %zmm0
 ; AVX512DQ-NEXT:    vpmovdb %zmm0, %xmm0
-; AVX512DQ-NEXT:    vpcmpgtw %ymm5, %ymm1, %ymm1
 ; AVX512DQ-NEXT:    vpmovsxwd %ymm1, %zmm1
 ; AVX512DQ-NEXT:    vpmovdb %zmm1, %xmm1
-; AVX512DQ-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512DQ-NEXT:    vpsllw $7, %ymm0, %ymm0
-; AVX512DQ-NEXT:    vpand %ymm3, %ymm0, %ymm0
-; AVX512DQ-NEXT:    vpcmpgtb %ymm0, %ymm6, %ymm0
-; AVX512DQ-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512DQ-NEXT:    vextracti128 $1, %ymm2, %xmm3
-; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
-; AVX512DQ-NEXT:    # kill: def %xmm2 killed %xmm2 killed %ymm2
+; AVX512DQ-NEXT:    vpmovsxwd %ymm2, %zmm2
+; AVX512DQ-NEXT:    vpmovdb %zmm2, %xmm2
+; AVX512DQ-NEXT:    vpmovsxwd %ymm3, %zmm3
+; AVX512DQ-NEXT:    vpmovdb %zmm3, %xmm3
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
