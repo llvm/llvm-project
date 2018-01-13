@@ -808,7 +808,7 @@ static bool foldReturnAndProcessPred(
 
       bool EliminatedTail =
         eliminateRecursiveTailCall(CI, RI, OldEntry, TailCallsAreMarkedTail,
-                                   ArgumentPHIs, AA);
+                                   ArgumentPHIs, AA, ORE);
 
       // If a recursive tail was eliminated, fix up the syncs and sync region in
       // the CFG.

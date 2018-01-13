@@ -67,8 +67,7 @@ static bool hasLifetimeMarkers(AllocaInst *AI) {
 // lifetime markers behind for those static allocas.  Returns true if the cloned
 // block still contains dynamic allocas, which cannot be moved.
 bool llvm::MoveStaticAllocasInBlock(
-    BasicBlock *Entry,
-    BasicBlock *Block,
+    BasicBlock *Entry, BasicBlock *Block,
     SmallVectorImpl<Instruction *> &ExitPoints) {
   Function *F = Entry->getParent();
   SmallVector<AllocaInst *, 4> StaticAllocas;
@@ -103,7 +102,8 @@ bool llvm::MoveStaticAllocasInBlock(
   // Move any dbg.declares describing the allocas into the entry basic block.
   DIBuilder DIB(*F->getParent());
   for (auto &AI : StaticAllocas)
-    replaceDbgDeclareForAlloca(AI, AI, DIB, /*Deref=*/false);
+    replaceDbgDeclareForAlloca(AI, AI, DIB, DIExpression::NoDeref, 0,
+                               DIExpression::NoDeref);
 
   // Move any syncregion_start's into the entry basic block.
   for (BasicBlock::iterator I = Block->begin(),

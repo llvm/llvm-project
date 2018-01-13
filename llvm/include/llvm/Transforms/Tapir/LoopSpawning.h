@@ -14,22 +14,23 @@
 #ifndef LLVM_TRANSFORMS_TAPIR_LOOPSPAWNING_H
 #define LLVM_TRANSFORMS_TAPIR_LOOPSPAWNING_H
 
-#include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/BasicAliasAnalysis.h"
-#include "llvm/Analysis/LoopAccessAnalysis.h"
-#include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
-#include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/IR/Function.h"
+#include "llvm/Analysis/LoopIterator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Transforms/Tapir/TapirTypes.h"
 
 #define LS_NAME "loop-spawning"
 
 namespace llvm {
+
+class AssumptionCache;
+class DominatorTree;
+class Function;
+class LoopAccessInfo;
+class LoopInfo;
+class OptimizationRemarkEmitter;
+class ScalarEvolution;
+class TargetTransformInfo;
 
 /// LoopOutline serves as a base class for different variants of LoopSpawning.
 /// LoopOutline implements common parts of LoopSpawning transformations, namely,

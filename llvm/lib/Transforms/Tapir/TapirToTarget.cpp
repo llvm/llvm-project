@@ -15,6 +15,8 @@
 #include "llvm/Transforms/Tapir/CilkABI.h"
 #include "llvm/Transforms/Tapir/OpenMPABI.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Tapir.h"

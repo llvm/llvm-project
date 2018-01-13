@@ -91,9 +91,6 @@ static cl::opt<bool> EnableLoopInterchange(
 static cl::opt<bool> EnableUnrollAndJam("enable-unroll-and-jam",
                                         cl::init(false), cl::Hidden,
                                         cl::desc("Enable Unroll And Jam Pass"));
-static cl::opt<bool> EnableLoopFuse(
-    "enable-loop-fuse", cl::init(false), cl::Hidden,
-    cl::desc("Enable the new, experimental LoopFusion Pass"));
 
 static cl::opt<bool>
     EnablePrepareForThinLTO("prepare-for-thinlto", cl::init(false), cl::Hidden,
@@ -535,7 +532,7 @@ void PassManagerBuilder::populateModulePassManager(
   do {
     RerunAfterTapirLowering =
        !TapirHasBeenLowered && tapirTarget && !PrepareForThinLTO;
-      
+
   // Infer attributes about declarations if possible.
   MPM.add(createInferFunctionAttrsLegacyPass());
 

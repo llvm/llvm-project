@@ -1,6 +1,20 @@
+//===- TapirUtils.cpp - Utility functions for handling Tapir --------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements several utility functions for operating with Tapir.
+//
+//===----------------------------------------------------------------------===//
+
 #include "llvm/Transforms/Tapir/CilkABI.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Transforms/Tapir/Outline.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/TapirUtils.h"

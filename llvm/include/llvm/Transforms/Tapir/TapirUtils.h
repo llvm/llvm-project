@@ -1,4 +1,4 @@
-//===- TapirUtils.h - Tapir Helper functions                ----*- C++ -*--===//
+//===- TapirUtils.h - Utility functions for handling Tapir -----*- C++ -*--===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,23 +7,26 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass is a simple pass wrapper around the PromoteMemToReg function call
-// exposed by the Utils library.
+// This file implements several utility functions for operating with Tapir.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef TAPIR_UTILS_H_
 #define TAPIR_UTILS_H_
 
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/IR/Dominators.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/Transforms/Tapir/TapirTypes.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
 namespace llvm {
+
+class AssumptionCache;
+class BasicBlock;
+class CallInst;
+class DetachInst;
+class DominatorTree;
+class Function;
+class SyncInst;
+class Value;
 
 bool verifyDetachedCFG(const DetachInst &Detach, DominatorTree &DT,
                        bool error = true);

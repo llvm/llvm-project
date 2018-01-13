@@ -1279,9 +1279,17 @@ static bool HoistThenElseCodeToIf(BranchInst *BI,
     // is a `br`, and `musttail` calls expect to be followed by a return.
     auto *C1 = dyn_cast<CallInst>(I1);
     auto *C2 = dyn_cast<CallInst>(I2);
-    if (C1 && C2)
+    if (C1 && C2) {
       if (C1->isMustTailCall() != C2->isMustTailCall())
         return Changed;
+
+      // Disallow hoisting of setjmp.  Although hoisting the setjmp technically
+      // produces valid IR, it seems hard to generate appropariate machine code
+      // from this IR, e.g., for X86.
+      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(C1))
+        if (Intrinsic::eh_sjlj_setjmp == II->getIntrinsicID())
+          return Changed;
+    }
 
     if (!TTI.isProfitableToHoist(I1) || !TTI.isProfitableToHoist(I2))
       return Changed;

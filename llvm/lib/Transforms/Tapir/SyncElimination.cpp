@@ -150,10 +150,6 @@ private:
     }
   }
 
-  bool willMod(const ModRefInfo &Info) {
-    return (Info == MRI_Mod || Info == MRI_ModRef);
-  }
-
   bool instTouchesMemory(const Instruction &Inst) {
     return Inst.getOpcode() == Instruction::Load ||
            Inst.getOpcode() == Instruction::Store ||
@@ -194,14 +190,14 @@ private:
             if (!!RC) {
               // If RI is a call/invoke
               if (instTouchesMemory(VI) &&
-                  AA->getModRefInfo(const_cast<Instruction *>(&VI), RC) != MRI_NoModRef) {
+                  isModOrRefSet(AA->getModRefInfo(const_cast<Instruction *>(&VI), RC))) {
                 errs() << "SyncElimination:     Conflict found between " << RI << " and " << VI << "\n";
                 return false;
               }
             } else if (!!VC) {
               // If VI is a call/invoke
               if (instTouchesMemory(RI) &&
-                  AA->getModRefInfo(const_cast<Instruction *>(&RI), VC) != MRI_NoModRef) {
+                  isModOrRefSet(AA->getModRefInfo(const_cast<Instruction *>(&RI), VC))) {
                 errs() << "SyncElimination:     Conflict found between " << RI << " and " << VI << "\n";
                 return false;
               }
@@ -214,7 +210,7 @@ private:
               MemoryLocation VML = MemoryLocation::get(&VI);
               MemoryLocation RML = MemoryLocation::get(&RI);
 
-              if (AA->alias(RML, VML) && (willMod(AA->getModRefInfo(&RI, RML)) || willMod(AA->getModRefInfo(&VI, VML)))) {
+              if (AA->alias(RML, VML) && (isModSet(AA->getModRefInfo(&RI, RML)) || isModSet(AA->getModRefInfo(&VI, VML)))) {
                 // If the two memory location can potentially be aliasing each other, and
                 // at least one instruction modifies its memory location.
                 errs() << "SyncElimination:     Conflict found between " << RI << " and " << VI << "\n";

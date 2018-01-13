@@ -261,9 +261,10 @@ uint64_t ObjectTable::add(Instruction &I,
 
   // Next, if this is an alloca instruction, look for a llvm.dbg.declare
   // intrinsic.
-  if (isa<AllocaInst>(Obj)) {
-    if (auto *DDI = FindAllocaDbgDeclare(Obj)) {
-      auto *LV = DDI->getVariable();
+  if (AllocaInst *AI = dyn_cast<AllocaInst>(Obj)) {
+    TinyPtrVector<DbgInfoIntrinsic *> DbgDeclares = FindDbgAddrUses(AI);
+    if (!DbgDeclares.empty()) {
+      auto *LV = DbgDeclares.front()->getVariable();
       if (LV->getName() != "") {
         add(ID, LV->getLine(), LV->getFilename(), LV->getDirectory(),
             LV->getName());
