@@ -1158,6 +1158,29 @@ def err_opencl_logical_exclusive_or : Error<
 def err_openclcxx_virtual_function : Error<
   "virtual functions are not supported in C++ for OpenCL">;
 
+// Cilk Plus
+def err_cilkplus_disable: Error<
+  "Cilk Plus support disabled - compile with -fcilkplus">;
+def err_cilk_for_missing_control_variable: Error<
+  "missing control variable declaration and initialization in '_Cilk_for'">;
+def err_cilk_for_missing_condition: Error<
+  "missing loop condition expression in '_Cilk_for'">;
+def err_cilk_for_missing_increment: Error<
+  "missing loop increment expression in '_Cilk_for'">;
+def err_cilk_for_missing_semi: Error<
+  "expected ';' in '_Cilk_for'">;
+def err_cilk_for_forrange_loop_not_supported: Error<
+  "'_Cilk_for' not supported on for-range loops">;
+def err_cilk_for_foreach_loop_not_supported: Error<
+  "'_Cilk_for' not supported on for-each loops">;
+def err_pragma_cilk_invalid_option : Error<
+  "%select{invalid|missing}0 option%select{ %1|}0; expected grainsize">;
+def err_pragma_cilk_grainsize_missing_argument : Error<
+  "missing argument; expected an integer value">;
+def warn_cilk_for_following_grainsize: Warning<
+  "'#pragma cilk' ignored, because it is not followed by a '_Cilk_for' loop">,
+  InGroup<SourceUsesCilkPlus>;
+
 // OpenMP support.
 def warn_pragma_omp_ignored : Warning<
   "unexpected '#pragma omp ...' in program">, InGroup<SourceUsesOpenMP>, DefaultIgnore;

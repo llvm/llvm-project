@@ -123,7 +123,7 @@ StmtResult Parser::ParseCilkForStatement(SourceLocation *TrailingElseLoc) {
       ForRangeInit.RangeExpr = ParseExpression();
 
     Diag(Loc, diag::err_for_range_identifier)
-      << ((getLangOpts().CPlusPlus11 && !getLangOpts().CPlusPlus1z)
+      << ((getLangOpts().CPlusPlus11 && !getLangOpts().CPlusPlus17)
               ? FixItHint::CreateInsertion(Loc, "auto &&")
               : FixItHint());
 
@@ -141,7 +141,7 @@ StmtResult Parser::ParseCilkForStatement(SourceLocation *TrailingElseLoc) {
 
     SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
     DeclGroupPtrTy DG = ParseSimpleDeclaration(
-        Declarator::ForContext, DeclEnd, attrs, false,
+        DeclaratorContext::ForContext, DeclEnd, attrs, false,
         MightBeForRangeStmt ? &ForRangeInit : nullptr);
     FirstPart = Actions.ActOnDeclStmt(DG, DeclStart, Tok.getLocation());
     if (ForRangeInit.ParsedForRangeDecl()) {
@@ -277,11 +277,12 @@ StmtResult Parser::ParseCilkForStatement(SourceLocation *TrailingElseLoc) {
   // TODO: Extend _Cilk_for to support these.
   if (ForRange) {
     Diag(ForLoc, diag::err_cilk_for_forrange_loop_not_supported);
-    // ForRangeStmt = Actions.ActOnCXXForRangeStmt(ForLoc, FirstPart.get(),
-    //                                             ForRangeInit.ColonLoc,
-    //                                             ForRangeInit.RangeExpr.get(),
-    //                                             T.getCloseLocation(),
-    //                                             Sema::BFRK_Build);
+    // ExprResult CorrectedRange =
+    //     Actions.CorrectDelayedTyposInExpr(ForRangeInit.RangeExpr.get());
+    // ForRangeStmt = Actions.ActOnCXXForRangeStmt(
+    //     getCurScope(), ForLoc, CoawaitLoc, FirstPart.get(),
+    //     ForRangeInit.ColonLoc, CorrectedRange.get(),
+    //     T.getCloseLocation(), Sema::BFRK_Build);
 
 
   // Similarly, we need to do the semantic analysis for a for-range
@@ -334,14 +335,12 @@ StmtResult Parser::ParseCilkForStatement(SourceLocation *TrailingElseLoc) {
   if (Body.isInvalid())
     return StmtError();
 
-  // if (ForEach) {
-  //   return Actions.FinishObjCForCollectionStmt(ForEachStmt.get(),
-  //                                              Body.get());
-  // }
+  // if (ForEach)
+  //  return Actions.FinishObjCForCollectionStmt(ForEachStmt.get(),
+  //                                             Body.get());
 
-  // if (ForRange) {
+  // if (ForRange)
   //   return Actions.FinishCXXForRangeStmt(ForRangeStmt.get(), Body.get());
-  // }
 
   return Actions.ActOnCilkForStmt(ForLoc, T.getOpenLocation(), FirstPart.get(),
                                   SecondPart, ThirdPart, T.getCloseLocation(),

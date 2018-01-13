@@ -363,8 +363,7 @@ static bool format(StringRef FileName) {
 }  // namespace format
 }  // namespace clang
 
-static void PrintVersion() {
-  raw_ostream &OS = outs();
+static void PrintVersion(raw_ostream &OS) {
   OS << clang::getClangToolFullVersion("clang-format") << '\n';
 }
 

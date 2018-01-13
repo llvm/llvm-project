@@ -780,6 +780,10 @@ def Move : DiagGroup<"move", [
     SelfMove
   ]>;
 
+// Cilk Plus warnings.
+def SourceUsesCilkPlus : DiagGroup<"source-uses-cilk-plus">;
+def CilkPlusLoopControlVarModification : DiagGroup<"cilk-loop-control-var-modification">;
+
 def Extra : DiagGroup<"extra", [
     MissingFieldInitializers,
     IgnoredQualifiers,

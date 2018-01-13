@@ -8837,6 +8837,132 @@ def warn_mig_server_routine_does_not_return_kern_return_t : Warning<
   InGroup<IgnoredAttributes>;
 } // end of sema category
 
+// Cilk Plus warnings and errors
+let CategoryName = "Cilk Issue" in {
+def err_cilk_unevaluated_context : Error<
+  "'%0' cannot be used in an unevaluated context">;
+def err_cilk_outside_function : Error<
+  "'%0' cannot be used outside a function">;
+def err_cilk_spawn_invalid_func_context : Error<
+  "'%1' cannot be used in %select{a constructor|a destructor"
+  "|a copy assignment operator|a move assignment operator|the 'main' function"
+  "|a constexpr function|a function with a deduced return type"
+  "|a varargs function}0">;
+def err_pragma_cilk_precedes_noncilk : Error<
+  "expected a Cilk keyword to follow '%0'">;
+
+// cilk_spawn
+def err_not_a_call : Error<
+  "the argument to _Cilk_spawn must be a function call">;
+def err_spawn_invalid_scope : Error<
+  "_Cilk_spawn not allowed in this scope">;
+def err_spawn_invalid_decl : Error<
+  "_Cilk_spawn not supported in a '%0Decl'">;
+def err_spawn_spawn : Error<
+  "consecutive _Cilk_spawn tokens not allowed">;
+def err_spawn_not_whole_expr : Error<
+  "_Cilk_spawn is not at statement level">;
+def err_cannot_spawn_builtin: Error<
+  "builtin function cannot be spawned">;
+def err_cannot_spawn_function: Error<
+  "function cannot be spawned">;
+def err_cannot_init_static_variable: Error<
+  "cannot spawn initialize a 'static' variable">;
+def err_multiple_spawns: Error<
+  "multiple spawn calls within a full expression">;
+def note_multiple_spawns: Note<
+  "another spawn here">;
+
+// cilk_for
+def err_cilk_for_initializer_expected_variable : Error<
+  "expected a variable for control variable in '_Cilk_for'">;
+def err_cilk_for_initializer_expected_decl : Error<
+  "expected control variable declaration in initializer in '_Cilk_for'">;
+def err_cilk_for_decl_multiple_variables : Error<
+  "cannot declare more than one loop control variable in '_Cilk_for'">;
+def err_cilk_for_init_multiple_variables : Error<
+  "cannot initialize more than one loop control variable in '_Cilk_for'">;
+def err_cilk_for_control_variable_not_initialized : Error<
+  "_Cilk_for loop control variable must be initialized">;
+def err_cilk_for_initialization_must_be_decl : Error<
+  "loop initialization must be a declaration in '_Cilk_for'">;
+
+def err_cilk_for_control_variable_storage_class : Error<
+  "loop control variable cannot have storage class '%0' in '_Cilk_for'">;
+def err_cilk_for_control_variable_qualifier : Error<
+  "loop control variable cannot be '%0' in '_Cilk_for'">;
+def err_cilk_for_control_variable_not_local : Error<
+  "non-local loop control variable in '_Cilk_for'">;
+def err_cilk_for_control_variable_type : Error<
+  "loop control variable must have an integral, pointer, or class type "
+  "in '_Cilk_for'">;
+
+def err_cilk_for_invalid_cond_expr: Error<
+  "expected binary comparison operator in '_Cilk_for' loop condition">;
+def err_cilk_for_invalid_cond_operator: Error<
+  "loop condition operator must be one of '<', '<=', '>', '>=', or '!=' "
+  "in '_Cilk_for'">;
+def err_cilk_for_cond_test_control_var: Error<
+  "loop condition does not test control variable %0 in '_Cilk_for'">;
+def note_cilk_for_cond_allowed: Note<
+  "allowed forms are %0 OP expr, and expr OP %0">;
+def err_cilk_for_difference_ill_formed: Error<
+  "end - begin must be well-formed in '_Cilk_for'">;
+def err_non_integral_cilk_for_difference_type: Error<
+  "end - begin must have integral type in '_Cilk_for' - got %0">;
+
+def err_cilk_for_increment_not_control_var: Error<
+  "loop increment does not modify control variable %0 in '_Cilk_for'">;
+def err_cilk_for_invalid_increment : Error<
+  "loop increment operator must be one of operators '++', '--', '+=', or '-=' in '_Cilk_for'">;
+def err_cilk_for_invalid_increment_rhs : Error<
+  "right-hand side of '%0' must have integral or enum type in '_Cilk_for' increment">;
+def err_cilk_for_increment_inconsistent : Error<
+  "loop increment is inconsistent with condition in '_Cilk_for': expected %select{negative|positive}0 stride">;
+def err_cilk_for_increment_zero : Error<
+  "loop increment must be non-zero in '_Cilk_for'">;
+def err_cilk_for_loop_modifies_control_var : Error<
+  "Modifying the loop control variable inside a '_Cilk_for' has undefined behavior">;
+def warn_cilk_for_loop_control_var_func : Warning<
+  "Modifying the loop control variable inside a '_Cilk_for' using a function call has undefined behavior">, InGroup<CilkPlusLoopControlVarModification>, DefaultIgnore;
+def warn_cilk_for_loop_control_var_aliased: Warning<
+  "Modifying the loop control variable '%0' through an alias in '_Cilk_for' has undefined behavior">, InGroup<CilkPlusLoopControlVarModification>, DefaultIgnore;
+def note_cilk_for_loop_control_var_declared_here: Note<
+  "'_Cilk_for' loop control variable declared here">;
+def warn_empty_cilk_for_body : Warning<
+  "Cilk for loop has empty body">, InGroup<EmptyBody>;
+
+def note_cilk_for_begin_expr: Note<
+  "loop begin expression here">;
+def note_cilk_for_end_expr: Note<
+  "loop end expression here">;
+def note_constant_stride: Note<
+  "constant stride is %0">;
+def warn_cilk_for_cond_user_defined_conv: Warning<
+  "user-defined conversion from %0 to %1 will not be used when calculating the "
+  "number of iterations in '_Cilk_for'">, InGroup<Conversion>, DefaultWarn;
+def note_cilk_for_conversion_here : Note<
+  "conversion to type %0 declared here">;
+def err_cilk_for_cannot_return: Error<
+  "cannot return from within a '_Cilk_for' loop">;
+def err_cilk_for_cannot_break: Error<
+  "cannot break from a '_Cilk_for' loop">;
+def warn_cilk_for_loop_count_downcast: Warning<
+  "implicit loop count downcast from %0 to %1 in '_Cilk_for'">,
+  InGroup<Conversion>, DefaultWarn;
+
+def err_cilk_for_grainsize_negative: Error<
+  "the behavior of Cilk for is unspecified for a negative grainsize">;
+def note_cilk_for_grainsize_conversion : Note<
+  "grainsize must evaluate to a type convertible to %0">;
+
+def warn_cilk_for_wraparound: Warning<
+  "%0 stride causes %1 wraparound">, InGroup<SourceUsesCilkPlus>, DefaultWarn;
+
+def note_cilk_for_wraparound_undefined: Note<
+  "wraparounds cause undefined behavior in Cilk for">;
+} // end of Cilk category
+
 let CategoryName = "OpenMP Issue" in {
 // OpenMP support.
 def err_omp_expected_var_arg : Error<
