@@ -287,48 +287,21 @@ enum ThrowState {
   FoundPathWithNoThrowOutFunction,
 };
 
-static bool isThrowCaught(const CXXThrowExpr *Throw,
-                          const CXXCatchStmt *Catch) {
-  const Type *CaughtType = Catch->getCaughtType().getTypePtrOrNull();
-  if (!CaughtType)
-    return true;
-  const Type *ThrowType = nullptr;
-  if (Throw->getSubExpr())
-    ThrowType = Throw->getSubExpr()->getType().getTypePtrOrNull();
-  if (!ThrowType)
-    return false;
-  if (ThrowType->isReferenceType())
-    ThrowType = ThrowType->castAs<ReferenceType>()
-                    ->getPointeeType()
-                    ->getUnqualifiedDesugaredType();
-  if (CaughtType->isReferenceType())
-    CaughtType = CaughtType->castAs<ReferenceType>()
-                     ->getPointeeType()
-                     ->getUnqualifiedDesugaredType();
-  if (ThrowType->isPointerType() && CaughtType->isPointerType()) {
-    ThrowType = ThrowType->getPointeeType()->getUnqualifiedDesugaredType();
-    CaughtType = CaughtType->getPointeeType()->getUnqualifiedDesugaredType();
-  }
-  if (CaughtType == ThrowType)
-    return true;
-  const CXXRecordDecl *CaughtAsRecordType =
-      CaughtType->getAsCXXRecordDecl();
-  const CXXRecordDecl *ThrowTypeAsRecordType = ThrowType->getAsCXXRecordDecl();
-  if (CaughtAsRecordType && ThrowTypeAsRecordType)
-    return ThrowTypeAsRecordType->isDerivedFrom(CaughtAsRecordType);
-  return false;
-}
-
-static bool isThrowCaughtByHandlers(const CXXThrowExpr *CE,
+static bool isThrowCaughtByHandlers(Sema &S,
+                                    const CXXThrowExpr *CE,
                                     const CXXTryStmt *TryStmt) {
   for (unsigned H = 0, E = TryStmt->getNumHandlers(); H < E; ++H) {
-    if (isThrowCaught(CE, TryStmt->getHandler(H)))
+    QualType Caught = TryStmt->getHandler(H)->getCaughtType();
+    if (Caught.isNull() || // catch (...) catches everything
+        (CE->getSubExpr() && // throw; is only caught by ...
+         S.handlerCanCatch(Caught, CE->getSubExpr()->getType())))
       return true;
   }
   return false;
 }
 
-static bool doesThrowEscapePath(CFGBlock Block, SourceLocation &OpLoc) {
+static bool doesThrowEscapePath(Sema &S, CFGBlock Block,
+                                SourceLocation &OpLoc) {
   for (const auto &B : Block) {
     if (B.getKind() != CFGElement::Statement)
       continue;
@@ -342,7 +315,7 @@ static bool doesThrowEscapePath(CFGBlock Block, SourceLocation &OpLoc) {
         continue;
       if (const auto *Terminator =
               dyn_cast_or_null<CXXTryStmt>(I->getTerminator()))
-        if (isThrowCaughtByHandlers(CE, Terminator))
+        if (isThrowCaughtByHandlers(S, CE, Terminator))
           return false;
     }
     return true;
@@ -350,8 +323,8 @@ static bool doesThrowEscapePath(CFGBlock Block, SourceLocation &OpLoc) {
   return false;
 }
 
-static bool hasThrowOutNonThrowingFunc(SourceLocation &OpLoc, CFG *BodyCFG) {
-
+static bool hasThrowOutNonThrowingFunc(Sema &S, SourceLocation &OpLoc,
+                                       CFG *BodyCFG) {
   unsigned ExitID = BodyCFG->getExit().getBlockID();
 
   SmallVector<ThrowState, 16> States(BodyCFG->getNumBlockIDs(),
@@ -369,7 +342,7 @@ static bool hasThrowOutNonThrowingFunc(SourceLocation &OpLoc, CFG *BodyCFG) {
       if (ExitID == ID)
         continue;
 
-      if (doesThrowEscapePath(*CurBlock, OpLoc))
+      if (doesThrowEscapePath(S, *CurBlock, OpLoc))
         CurState = FoundPathForThrow;
     }
 
@@ -419,7 +392,7 @@ static void checkThrowInNonThrowingFunc(Sema &S, const FunctionDecl *FD,
   if (BodyCFG->getExit().pred_empty())
     return;
   SourceLocation OpLoc;
-  if (hasThrowOutNonThrowingFunc(OpLoc, BodyCFG))
+  if (hasThrowOutNonThrowingFunc(S, OpLoc, BodyCFG))
     EmitDiagForCXXThrowInNonThrowingFunc(S, OpLoc, FD);
 }
 
