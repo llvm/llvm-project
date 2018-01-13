@@ -124,7 +124,7 @@ void HexagonMCELFStreamer::HexagonMCEmitCommonSymbol(MCSymbol *Symbol,
     MCSectionSubPair P = getCurrentSection();
     SwitchSection(&Section);
 
-    if (ELFSymbol->isUndefined(false)) {
+    if (ELFSymbol->isUndefined()) {
       EmitValueToAlignment(ByteAlignment, 0, 1, 0);
       EmitLabel(Symbol);
       EmitZeros(Size);

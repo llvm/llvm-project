@@ -95,18 +95,13 @@ namespace {
 // Benes network is a forward delta network immediately followed by
 // a reverse delta network.
 
+enum class ColorKind { None, Red, Black };
 
 // Graph coloring utility used to partition nodes into two groups:
 // they will correspond to nodes routed to the upper and lower networks.
 struct Coloring {
-  enum : uint8_t {
-    None = 0,
-    Red,
-    Black
-  };
-
   using Node = int;
-  using MapType = std::map<Node,uint8_t>;
+  using MapType = std::map<Node, ColorKind>;
   static constexpr Node Ignore = Node(-1);
 
   Coloring(ArrayRef<Node> Ord) : Order(Ord) {
@@ -119,10 +114,10 @@ struct Coloring {
     return Colors;
   }
 
-  uint8_t other(uint8_t Color) {
-    if (Color == None)
-      return Red;
-    return Color == Red ? Black : Red;
+  ColorKind other(ColorKind Color) {
+    if (Color == ColorKind::None)
+      return ColorKind::Red;
+    return Color == ColorKind::Red ? ColorKind::Black : ColorKind::Red;
   }
 
   void dump() const;
@@ -140,28 +135,28 @@ private:
     return (Pos < Num/2) ? Pos + Num/2 : Pos - Num/2;
   }
 
-  uint8_t getColor(Node N) {
+  ColorKind getColor(Node N) {
     auto F = Colors.find(N);
-    return F != Colors.end() ? F->second : (uint8_t)None;
+    return F != Colors.end() ? F->second : ColorKind::None;
   }
 
-  std::pair<bool,uint8_t> getUniqueColor(const NodeSet &Nodes);
+  std::pair<bool, ColorKind> getUniqueColor(const NodeSet &Nodes);
 
   void build();
   bool color();
 };
 } // namespace
 
-std::pair<bool,uint8_t> Coloring::getUniqueColor(const NodeSet &Nodes) {
-  uint8_t Color = None;
+std::pair<bool, ColorKind> Coloring::getUniqueColor(const NodeSet &Nodes) {
+  auto Color = ColorKind::None;
   for (Node N : Nodes) {
-    uint8_t ColorN = getColor(N);
-    if (ColorN == None)
+    ColorKind ColorN = getColor(N);
+    if (ColorN == ColorKind::None)
       continue;
-    if (Color == None)
+    if (Color == ColorKind::None)
       Color = ColorN;
-    else if (Color != None && Color != ColorN)
-      return { false, None };
+    else if (Color != ColorKind::None && Color != ColorN)
+      return { false, ColorKind::None };
   }
   return { true, Color };
 }
@@ -246,12 +241,12 @@ bool Coloring::color() {
 
     // Coloring failed. Split this node.
     Node C = conj(N);
-    uint8_t ColorN = other(None);
-    uint8_t ColorC = other(ColorN);
+    ColorKind ColorN = other(ColorKind::None);
+    ColorKind ColorC = other(ColorN);
     NodeSet &Cs = Edges[C];
     NodeSet CopyNs = Ns;
     for (Node M : CopyNs) {
-      uint8_t ColorM = getColor(M);
+      ColorKind ColorM = getColor(M);
       if (ColorM == ColorC) {
         // Connect M with C, disconnect M from N.
         Cs.insert(M);
@@ -267,7 +262,7 @@ bool Coloring::color() {
   // Explicitly assign "None" all all uncolored nodes.
   for (unsigned I = 0; I != Order.size(); ++I)
     if (Colors.count(I) == 0)
-      Colors[I] = None;
+      Colors[I] = ColorKind::None;
 
   return true;
 }
@@ -297,10 +292,21 @@ void Coloring::dump() const {
   }
   dbgs() << "  }\n";
 
-  static const char *const Names[] = { "None", "Red", "Black" };
+  auto ColorKindToName = [](ColorKind C) {
+    switch (C) {
+    case ColorKind::None:
+      return "None";
+    case ColorKind::Red:
+      return "Red";
+    case ColorKind::Black:
+      return "Black";
+    }
+    llvm_unreachable("all ColorKinds should be handled by the switch above");
+  };
+
   dbgs() << "  Colors: {\n";
   for (auto C : Colors)
-    dbgs() << "    " << C.first << " -> " << Names[C.second] << "\n";
+    dbgs() << "    " << C.first << " -> " << ColorKindToName(C.second) << "\n";
   dbgs() << "  }\n}\n";
 }
 
@@ -472,21 +478,21 @@ bool ReverseDeltaNetwork::route(ElemType *P, RowType *T, unsigned Size,
   if (M.empty())
     return false;
 
-  uint8_t ColorUp = Coloring::None;
+  ColorKind ColorUp = ColorKind::None;
   for (ElemType J = 0; J != Num; ++J) {
     ElemType I = P[J];
     // I is the position in the input,
     // J is the position in the output.
     if (I == Ignore)
       continue;
-    uint8_t C = M.at(I);
-    if (C == Coloring::None)
+    ColorKind C = M.at(I);
+    if (C == ColorKind::None)
       continue;
     // During "Step", inputs cannot switch halves, so if the "up" color
     // is still unknown, make sure that it is selected in such a way that
     // "I" will stay in the same half.
     bool InpUp = I < Num/2;
-    if (ColorUp == Coloring::None)
+    if (ColorUp == ColorKind::None)
       ColorUp = InpUp ? C : G.other(C);
     if ((C == ColorUp) != InpUp) {
       // If I should go to a different half than where is it now, give up.
@@ -546,16 +552,16 @@ bool BenesNetwork::route(ElemType *P, RowType *T, unsigned Size,
   // Both assignments, i.e. Red->Up and Red->Down are valid, but they will
   // result in different controls. Let's pick the one where the first
   // control will be "Pass".
-  uint8_t ColorUp = Coloring::None;
+  ColorKind ColorUp = ColorKind::None;
   for (ElemType J = 0; J != Num; ++J) {
     ElemType I = P[J];
     if (I == Ignore)
       continue;
-    uint8_t C = M.at(I);
-    if (C == Coloring::None)
+    ColorKind C = M.at(I);
+    if (C == ColorKind::None)
       continue;
-    if (ColorUp == Coloring::None) {
-      ColorUp = (I < Num/2) ? Coloring::Red : Coloring::Black;
+    if (ColorUp == ColorKind::None) {
+      ColorUp = (I < Num / 2) ? ColorKind::Red : ColorKind::Black;
     }
     unsigned CI = (I < Num/2) ? I+Num/2 : I-Num/2;
     if (C == ColorUp) {

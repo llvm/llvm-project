@@ -374,8 +374,7 @@ bool AlignmentFromAssumptionsPass::processAssumption(CallInst *ACall) {
           NewAlignment = std::max(NewAlignment, AltSrcAlignment);
 
         if (NewAlignment > MI->getAlignment()) {
-          MI->setAlignment(ConstantInt::get(Type::getInt32Ty(
-            MI->getParent()->getContext()), NewAlignment));
+          MI->setAlignment(NewAlignment);
           ++NumMemIntAlignChanged;
         }
 
@@ -385,8 +384,7 @@ bool AlignmentFromAssumptionsPass::processAssumption(CallInst *ACall) {
         assert((!isa<MemIntrinsic>(MI) || isa<MemSetInst>(MI)) &&
                "Unknown memory intrinsic");
 
-        MI->setAlignment(ConstantInt::get(Type::getInt32Ty(
-          MI->getParent()->getContext()), NewDestAlignment));
+        MI->setAlignment(NewDestAlignment);
         ++NumMemIntAlignChanged;
       }
     }

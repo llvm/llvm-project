@@ -165,6 +165,7 @@ protected:
   bool FlatGlobalInsts;
   bool FlatScratchInsts;
   bool AddNoCarryInsts;
+  bool HasUnpackedD16VMem;
   bool R600ALUInst;
   bool CaymanISA;
   bool CFALUBug;
@@ -479,6 +480,10 @@ public:
 
   bool hasAddNoCarry() const {
     return AddNoCarryInsts;
+  }
+
+  bool hasUnpackedD16VMem() const {
+    return HasUnpackedD16VMem;
   }
 
   bool isMesaKernel(const MachineFunction &MF) const {

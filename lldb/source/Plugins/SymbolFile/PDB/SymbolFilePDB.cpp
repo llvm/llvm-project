@@ -18,6 +18,7 @@
 #include "lldb/Symbol/LineTable.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Utility/RegularExpression.h"
 
@@ -43,6 +44,7 @@
 
 #include <regex>
 
+using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::pdb;
 
@@ -92,7 +94,8 @@ SymbolFilePDB::CreateInstance(lldb_private::ObjectFile *obj_file) {
 }
 
 SymbolFilePDB::SymbolFilePDB(lldb_private::ObjectFile *object_file)
-    : SymbolFile(object_file), m_cached_compile_unit_count(0) {}
+    : SymbolFile(object_file), m_session_up(), m_global_scope_up(),
+      m_cached_compile_unit_count(0), m_tu_decl_ctx_up() {}
 
 SymbolFilePDB::~SymbolFilePDB() {}
 
@@ -152,41 +155,93 @@ uint32_t SymbolFilePDB::CalculateAbilities() {
 
 void SymbolFilePDB::InitializeObject() {
   lldb::addr_t obj_load_address = m_obj_file->GetFileOffset();
+  lldbassert(obj_load_address &&
+             obj_load_address != LLDB_INVALID_ADDRESS);
   m_session_up->setLoadAddress(obj_load_address);
+  if (!m_global_scope_up)
+    m_global_scope_up = m_session_up->getGlobalScope();
+  lldbassert(m_global_scope_up.get());
 
   TypeSystem *type_system =
       GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
   ClangASTContext *clang_type_system =
       llvm::dyn_cast_or_null<ClangASTContext>(type_system);
+  lldbassert(clang_type_system);
   m_tu_decl_ctx_up = llvm::make_unique<CompilerDeclContext>(
       type_system, clang_type_system->GetTranslationUnitDecl());
 }
 
 uint32_t SymbolFilePDB::GetNumCompileUnits() {
   if (m_cached_compile_unit_count == 0) {
-    auto global = m_session_up->getGlobalScope();
-    auto compilands = global->findAllChildren<PDBSymbolCompiland>();
+    auto compilands = m_global_scope_up->findAllChildren<PDBSymbolCompiland>();
+    if (!compilands)
+      return 0;
+
+    // The linker could link *.dll (compiland language = LINK), or import
+    // *.dll. For example, a compiland with name `Import:KERNEL32.dll`
+    // could be found as a child of the global scope (PDB executable).
+    // Usually, such compilands contain `thunk` symbols in which we are not
+    // interested for now. However we still count them in the compiland list.
+    // If we perform any compiland related activity, like finding symbols
+    // through llvm::pdb::IPDBSession methods, such compilands will all be
+    // searched automatically no matter whether we include them or not.
     m_cached_compile_unit_count = compilands->getChildCount();
 
     // The linker can inject an additional "dummy" compilation unit into the
     // PDB. Ignore this special compile unit for our purposes, if it is there.
     // It is always the last one.
-    auto last_cu = compilands->getChildAtIndex(m_cached_compile_unit_count - 1);
-    std::string name = last_cu->getName();
+    auto last_compiland_up =
+        compilands->getChildAtIndex(m_cached_compile_unit_count - 1);
+    lldbassert(last_compiland_up.get());
+    std::string name = last_compiland_up->getName();
     if (name == "* Linker *")
       --m_cached_compile_unit_count;
   }
   return m_cached_compile_unit_count;
 }
 
+void SymbolFilePDB::GetCompileUnitIndex(
+    const llvm::pdb::PDBSymbolCompiland *pdb_compiland,
+    uint32_t &index) {
+  if (!pdb_compiland)
+    return;
+
+  auto results_up = m_global_scope_up->findAllChildren<PDBSymbolCompiland>();
+  if (!results_up)
+    return;
+  auto uid = pdb_compiland->getSymIndexId();
+  for (int cu_idx = 0; cu_idx < GetNumCompileUnits(); ++cu_idx) {
+    auto compiland_up = results_up->getChildAtIndex(cu_idx);
+    if (!compiland_up)
+      continue;
+    if (compiland_up->getSymIndexId() == uid) {
+      index = cu_idx;
+      return;
+    }
+  }
+  index = UINT32_MAX;
+  return;
+}
+
+std::unique_ptr<llvm::pdb::PDBSymbolCompiland>
+SymbolFilePDB::GetPDBCompilandByUID(uint32_t uid) {
+  return m_session_up->getConcreteSymbolById<PDBSymbolCompiland>(uid);
+}
+
 lldb::CompUnitSP SymbolFilePDB::ParseCompileUnitAtIndex(uint32_t index) {
-  auto global = m_session_up->getGlobalScope();
-  auto compilands = global->findAllChildren<PDBSymbolCompiland>();
-  auto cu = compilands->getChildAtIndex(index);
+  if (index >= GetNumCompileUnits())
+    return CompUnitSP();
 
-  uint32_t id = cu->getSymIndexId();
-
-  return ParseCompileUnitForSymIndex(id);
+  // Assuming we always retrieve same compilands listed in same order through
+  // `PDBSymbolExe::findAllChildren` method, otherwise using `index` to get a
+  // compile unit makes no sense.
+  auto results = m_global_scope_up->findAllChildren<PDBSymbolCompiland>();
+  if (!results)
+    return CompUnitSP();
+  auto compiland_up = results->getChildAtIndex(index);
+  if (!compiland_up)
+    return CompUnitSP();
+  return ParseCompileUnitForUID(compiland_up->getSymIndexId(), index);
 }
 
 lldb::LanguageType
@@ -196,11 +251,10 @@ SymbolFilePDB::ParseCompileUnitLanguage(const lldb_private::SymbolContext &sc) {
   if (!sc.comp_unit)
     return lldb::eLanguageTypeUnknown;
 
-  auto cu = m_session_up->getConcreteSymbolById<PDBSymbolCompiland>(
-      sc.comp_unit->GetID());
-  if (!cu)
+  auto compiland_up = GetPDBCompilandByUID(sc.comp_unit->GetID());
+  if (!compiland_up)
     return lldb::eLanguageTypeUnknown;
-  auto details = cu->findOneChild<PDBSymbolCompilandDetails>();
+  auto details = compiland_up->findOneChild<PDBSymbolCompilandDetails>();
   if (!details)
     return lldb::eLanguageTypeUnknown;
   return TranslateLanguage(details->getLanguage());
@@ -214,6 +268,9 @@ size_t SymbolFilePDB::ParseCompileUnitFunctions(
 
 bool SymbolFilePDB::ParseCompileUnitLineTable(
     const lldb_private::SymbolContext &sc) {
+  lldbassert(sc.comp_unit);
+  if (sc.comp_unit->GetLineTable())
+    return true;
   return ParseCompileUnitLineTable(sc, 0);
 }
 
@@ -226,25 +283,23 @@ bool SymbolFilePDB::ParseCompileUnitDebugMacros(
 bool SymbolFilePDB::ParseCompileUnitSupportFiles(
     const lldb_private::SymbolContext &sc,
     lldb_private::FileSpecList &support_files) {
-  if (!sc.comp_unit)
-    return false;
+  lldbassert(sc.comp_unit);
 
   // In theory this is unnecessary work for us, because all of this information
   // is easily (and quickly) accessible from DebugInfoPDB, so caching it a
   // second time seems like a waste.  Unfortunately, there's no good way around
   // this short of a moderate refactor since SymbolVendor depends on being able
   // to cache this list.
-  auto cu = m_session_up->getConcreteSymbolById<PDBSymbolCompiland>(
-      sc.comp_unit->GetID());
-  if (!cu)
+  auto compiland_up = GetPDBCompilandByUID(sc.comp_unit->GetID());
+  if (!compiland_up)
     return false;
-  auto files = m_session_up->getSourceFilesForCompiland(*cu);
+  auto files = m_session_up->getSourceFilesForCompiland(*compiland_up);
   if (!files || files->getChildCount() == 0)
     return false;
 
   while (auto file = files->getNext()) {
-    FileSpec spec(file->getFileName(), false);
-    support_files.Append(spec);
+    FileSpec spec(file->getFileName(), false, FileSpec::ePathSyntaxWindows);
+    support_files.AppendIfUnique(spec);
   }
   return true;
 }
@@ -331,9 +386,62 @@ SymbolFilePDB::ResolveSymbolContext(const lldb_private::Address &so_addr,
   return uint32_t();
 }
 
+std::string SymbolFilePDB::GetSourceFileNameForPDBCompiland(
+    const PDBSymbolCompiland *pdb_compiland) {
+  if (!pdb_compiland)
+    return std::string();
+
+  std::string source_file_name;
+  // `getSourceFileName` returns the basename of the original source file
+  // used to generate this compiland.  It does not return the full path.
+  // Currently the only way to get that is to do a basename lookup to get the
+  // IPDBSourceFile, but this is ambiguous in the case of two source files
+  // with the same name contributing to the same compiland. This is an edge
+  // case that we ignore for now, although we need to a long-term solution.
+  std::string file_name = pdb_compiland->getSourceFileName();
+  if (!file_name.empty()) {
+    auto one_src_file_up =
+      m_session_up->findOneSourceFile(pdb_compiland, file_name,
+                                      PDB_NameSearchFlags::NS_CaseInsensitive);
+    if (one_src_file_up)
+      source_file_name = one_src_file_up->getFileName();
+  }
+  // For some reason, source file name could be empty, so we will walk through
+  // all source files of this compiland, and determine the right source file
+  // if any that is used to generate this compiland based on language
+  // indicated in compilanddetails language field.
+  if (!source_file_name.empty())
+    return source_file_name;
+
+  auto details_up = pdb_compiland->findOneChild<PDBSymbolCompilandDetails>();
+  PDB_Lang pdb_lang = details_up ? details_up->getLanguage() : PDB_Lang::Cpp;
+  auto src_files_up =
+    m_session_up->getSourceFilesForCompiland(*pdb_compiland);
+  if (src_files_up) {
+    while (auto file_up = src_files_up->getNext()) {
+      FileSpec file_spec(file_up->getFileName(), false,
+                         FileSpec::ePathSyntaxWindows);
+      auto file_extension = file_spec.GetFileNameExtension();
+      if (pdb_lang == PDB_Lang::Cpp || pdb_lang == PDB_Lang::C) {
+        static const char* exts[] = { "cpp", "c", "cc", "cxx" };
+        if (llvm::is_contained(exts, file_extension.GetStringRef().lower()))
+          source_file_name = file_up->getFileName();
+        break;
+      } else if (pdb_lang == PDB_Lang::Masm &&
+                 ConstString::Compare(file_extension, ConstString("ASM"),
+                                      false) == 0) {
+        source_file_name = file_up->getFileName();
+        break;
+      }
+    }
+  }
+  return source_file_name;
+}
+
 uint32_t SymbolFilePDB::ResolveSymbolContext(
     const lldb_private::FileSpec &file_spec, uint32_t line, bool check_inlines,
     uint32_t resolve_scope, lldb_private::SymbolContextList &sc_list) {
+  const size_t old_size = sc_list.GetSize();
   if (resolve_scope & lldb::eSymbolContextCompUnit) {
     // Locate all compilation units with line numbers referencing the specified
     // file.  For example, if `file_spec` is <vector>, then this should return
@@ -341,6 +449,9 @@ uint32_t SymbolFilePDB::ResolveSymbolContext(
     // directly or indirectly.
     auto compilands = m_session_up->findCompilandsForSourceFile(
         file_spec.GetPath(), PDB_NameSearchFlags::NS_CaseInsensitive);
+
+    if (!compilands)
+      return 0;
 
     // For each one, either find its previously parsed data or parse it afresh
     // and add it to the symbol context list.
@@ -355,18 +466,20 @@ uint32_t SymbolFilePDB::ResolveSymbolContext(
         // files with the same name contributing to the same compiland.  This is
         // a moderately extreme edge case, so we consider this OK for now,
         // although we need to find a long-term solution.
-        std::string source_file = compiland->getSourceFileName();
-        auto pdb_file = m_session_up->findOneSourceFile(
-            compiland.get(), source_file,
-            PDB_NameSearchFlags::NS_CaseInsensitive);
-        source_file = pdb_file->getFileName();
+        std::string source_file =
+            GetSourceFileNameForPDBCompiland(compiland.get());
+        if (source_file.empty())
+          continue;
         FileSpec this_spec(source_file, false, FileSpec::ePathSyntaxWindows);
-        if (!file_spec.FileEquals(this_spec))
+        bool need_full_match = !file_spec.GetDirectory().IsEmpty();
+        if (FileSpec::Compare(file_spec, this_spec, need_full_match) != 0)
           continue;
       }
 
       SymbolContext sc;
-      auto cu = ParseCompileUnitForSymIndex(compiland->getSymIndexId());
+      auto cu = ParseCompileUnitForUID(compiland->getSymIndexId());
+      if (!cu.get())
+        continue;
       sc.comp_unit = cu.get();
       sc.module_sp = cu->GetModule();
       sc_list.Append(sc);
@@ -377,7 +490,7 @@ uint32_t SymbolFilePDB::ResolveSymbolContext(
         ParseCompileUnitLineTable(sc, line);
     }
   }
-  return sc_list.GetSize();
+  return sc_list.GetSize() - old_size;
 }
 
 uint32_t SymbolFilePDB::FindGlobalVariables(
@@ -448,13 +561,15 @@ SymbolFilePDB::FindTypesByRegex(const lldb_private::RegularExpression &regex,
   // and do a regex comparison against each of them.
   PDB_SymType tags_to_search[] = {PDB_SymType::Enum, PDB_SymType::Typedef,
                                   PDB_SymType::UDT};
-  auto global = m_session_up->getGlobalScope();
   std::unique_ptr<IPDBEnumSymbols> results;
 
   uint32_t matches = 0;
 
   for (auto tag : tags_to_search) {
-    results = global->findAllChildren(tag);
+    results = m_global_scope_up->findAllChildren(tag);
+    if (!results)
+      continue;
+
     while (auto result = results->getNext()) {
       if (max_matches > 0 && matches >= max_matches)
         break;
@@ -493,10 +608,11 @@ SymbolFilePDB::FindTypesByRegex(const lldb_private::RegularExpression &regex,
 void SymbolFilePDB::FindTypesByName(const std::string &name,
                                     uint32_t max_matches,
                                     lldb_private::TypeMap &types) {
-  auto global = m_session_up->getGlobalScope();
   std::unique_ptr<IPDBEnumSymbols> results;
-  results = global->findChildren(PDB_SymType::None, name,
-                                 PDB_NameSearchFlags::NS_Default);
+  results = m_global_scope_up->findChildren(PDB_SymType::None, name,
+                                            PDB_NameSearchFlags::NS_Default);
+  if (!results)
+    return;
 
   uint32_t matches = 0;
 
@@ -570,27 +686,21 @@ const IPDBSession &SymbolFilePDB::GetPDBSession() const {
   return *m_session_up;
 }
 
-lldb::CompUnitSP SymbolFilePDB::ParseCompileUnitForSymIndex(uint32_t id) {
+lldb::CompUnitSP
+SymbolFilePDB::ParseCompileUnitForUID(uint32_t id, uint32_t index) {
   auto found_cu = m_comp_units.find(id);
   if (found_cu != m_comp_units.end())
     return found_cu->second;
 
-  auto cu = m_session_up->getConcreteSymbolById<PDBSymbolCompiland>(id);
-
-  // `getSourceFileName` returns the basename of the original source file used
-  // to generate this compiland.  It does not return the full path.  Currently
-  // the only way to get that is to do a basename lookup to get the
-  // IPDBSourceFile, but this is ambiguous in the case of two source files with
-  // the same name contributing to the same compiland. This is a moderately
-  // extreme edge case, so we consider this OK for now, although we need to find
-  // a long-term solution.
-  auto file =
-      m_session_up->findOneSourceFile(cu.get(), cu->getSourceFileName(),
-                                      PDB_NameSearchFlags::NS_CaseInsensitive);
-  std::string path = file->getFileName();
+  auto compiland_up = GetPDBCompilandByUID(id);
+  if (!compiland_up)
+    return CompUnitSP();
+  std::string path = GetSourceFileNameForPDBCompiland(compiland_up.get());
+  if (path.empty())
+    return CompUnitSP();
 
   lldb::LanguageType lang;
-  auto details = cu->findOneChild<PDBSymbolCompilandDetails>();
+  auto details = compiland_up->findOneChild<PDBSymbolCompilandDetails>();
   if (!details)
     lang = lldb::eLanguageTypeC_plus_plus;
   else
@@ -599,36 +709,51 @@ lldb::CompUnitSP SymbolFilePDB::ParseCompileUnitForSymIndex(uint32_t id) {
   // Don't support optimized code for now, DebugInfoPDB does not return this
   // information.
   LazyBool optimized = eLazyBoolNo;
-  auto result = std::make_shared<CompileUnit>(
+  auto cu_sp = std::make_shared<CompileUnit>(
       m_obj_file->GetModule(), nullptr, path.c_str(), id, lang, optimized);
-  m_comp_units.insert(std::make_pair(id, result));
-  return result;
+
+  if (!cu_sp)
+    return CompUnitSP();
+
+  m_comp_units.insert(std::make_pair(id, cu_sp));
+  if (index == UINT32_MAX)
+    GetCompileUnitIndex(compiland_up.get(), index);
+  lldbassert(index != UINT32_MAX);
+  m_obj_file->GetModule()->GetSymbolVendor()->SetCompileUnitAtIndex(
+      index, cu_sp);
+  return cu_sp;
 }
 
 bool SymbolFilePDB::ParseCompileUnitLineTable(
     const lldb_private::SymbolContext &sc, uint32_t match_line) {
-  auto global = m_session_up->getGlobalScope();
-  auto cu = m_session_up->getConcreteSymbolById<PDBSymbolCompiland>(
-      sc.comp_unit->GetID());
+  lldbassert(sc.comp_unit);
+
+  auto compiland_up = GetPDBCompilandByUID(sc.comp_unit->GetID());
+  if (!compiland_up)
+    return false;
 
   // LineEntry needs the *index* of the file into the list of support files
   // returned by ParseCompileUnitSupportFiles.  But the underlying SDK gives us
   // a globally unique idenfitifier in the namespace of the PDB.  So, we have to
   // do a mapping so that we can hand out indices.
   llvm::DenseMap<uint32_t, uint32_t> index_map;
-  BuildSupportFileIdToSupportFileIndexMap(*cu, index_map);
+  BuildSupportFileIdToSupportFileIndexMap(*compiland_up, index_map);
   auto line_table = llvm::make_unique<LineTable>(sc.comp_unit);
 
-  // Find contributions to `cu` from all source and header files.
+  // Find contributions to `compiland` from all source and header files.
   std::string path = sc.comp_unit->GetPath();
-  auto files = m_session_up->getSourceFilesForCompiland(*cu);
+  auto files = m_session_up->getSourceFilesForCompiland(*compiland_up);
+  if (!files)
+    return false;
 
   // For each source and header file, create a LineSequence for contributions to
-  // the cu from that file, and add the sequence.
+  // the compiland from that file, and add the sequence.
   while (auto file = files->getNext()) {
     std::unique_ptr<LineSequence> sequence(
         line_table->CreateLineSequenceContainer());
-    auto lines = m_session_up->findLineNumbers(*cu, *file);
+    auto lines = m_session_up->findLineNumbers(*compiland_up, *file);
+    if (!lines)
+      continue;
     int entry_count = lines->getChildCount();
 
     uint64_t prev_addr;
@@ -667,10 +792,12 @@ bool SymbolFilePDB::ParseCompileUnitLineTable(
             m_session_up->findSymbolByAddress(addr, PDB_SymType::Function);
         if (func) {
           auto prologue = func->findOneChild<PDBSymbolFuncDebugStart>();
-          is_prologue = (addr == prologue->getVirtualAddress());
+          if (prologue)
+            is_prologue = (addr == prologue->getVirtualAddress());
 
           auto epilogue = func->findOneChild<PDBSymbolFuncDebugEnd>();
-          is_epilogue = (addr == epilogue->getVirtualAddress());
+          if (epilogue)
+            is_epilogue = (addr == epilogue->getVirtualAddress());
         }
 
         line_table->AppendLineEntryToSequence(sequence.get(), addr, lno, col,
@@ -694,19 +821,24 @@ bool SymbolFilePDB::ParseCompileUnitLineTable(
     line_table->InsertSequence(sequence.release());
   }
 
-  sc.comp_unit->SetLineTable(line_table.release());
-  return true;
+  if (line_table->GetSize()) {
+    sc.comp_unit->SetLineTable(line_table.release());
+    return true;
+  }
+  return false;
 }
 
 void SymbolFilePDB::BuildSupportFileIdToSupportFileIndexMap(
-    const PDBSymbolCompiland &cu,
+    const PDBSymbolCompiland &compiland,
     llvm::DenseMap<uint32_t, uint32_t> &index_map) const {
   // This is a hack, but we need to convert the source id into an index into the
   // support files array.  We don't want to do path comparisons to avoid
   // basename / full path issues that may or may not even be a problem, so we
   // use the globally unique source file identifiers.  Ideally we could use the
   // global identifiers everywhere, but LineEntry currently assumes indices.
-  auto source_files = m_session_up->getSourceFilesForCompiland(cu);
+  auto source_files = m_session_up->getSourceFilesForCompiland(compiland);
+  if (!source_files)
+    return;
   int index = 0;
 
   while (auto file = source_files->getNext()) {

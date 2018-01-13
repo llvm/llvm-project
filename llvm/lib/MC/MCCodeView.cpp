@@ -507,7 +507,7 @@ void CodeViewContext::encodeInlineLineTable(MCAsmLayout &Layout,
   if (!LocAfter.empty()) {
     // Only try to compute this difference if we're in the same section.
     const MCCVLineEntry &Loc = LocAfter[0];
-    if (&Loc.getLabel()->getSection(false) == &LastLabel->getSection(false))
+    if (&Loc.getLabel()->getSection() == &LastLabel->getSection())
       LocAfterLength = computeLabelDiff(Layout, LastLabel, Loc.getLabel());
   }
 

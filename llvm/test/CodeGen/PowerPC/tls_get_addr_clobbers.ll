@@ -6,7 +6,7 @@ define void @test_foo(i32* nocapture %x01, i32* nocapture %x02, i32* nocapture %
 entry:
 
 ; CHECK-LABEL: test_foo:
-; CHECK-DAG: stdu 1, {{-?[0-9]+}}(1)
+; CHECK: stdu 1, {{-?[0-9]+}}(1)
 ; CHECK-DAG: mr [[BACKUP_3:[0-9]+]], 3
 ; CHECK-DAG: mr [[BACKUP_4:[0-9]+]], 4
 ; CHECK-DAG: mr [[BACKUP_5:[0-9]+]], 5
@@ -15,14 +15,14 @@ entry:
 ; CHECK-DAG: mr [[BACKUP_8:[0-9]+]], 8
 ; CHECK-DAG: mr [[BACKUP_9:[0-9]+]], 9
 ; CHECK-DAG: mr [[BACKUP_10:[0-9]+]], 10
-; CHECK-DAG: std [[BACKUP_3]], {{-?[0-9]+}}(1)
-; CHECK-DAG: std [[BACKUP_4]], {{-?[0-9]+}}(1)
-; CHECK-DAG: std [[BACKUP_5]], {{-?[0-9]+}}(1)
-; CHECK-DAG: std [[BACKUP_6]], {{-?[0-9]+}}(1)
-; CHECK-DAG: std [[BACKUP_7]], {{-?[0-9]+}}(1)
-; CHECK-DAG: std [[BACKUP_8]], {{-?[0-9]+}}(1)
-; CHECK-DAG: std [[BACKUP_9]], {{-?[0-9]+}}(1)
-; CHECK-DAG: std [[BACKUP_10]], {{-?[0-9]+}}(1)
+; CHECK-DAG: std [[BACKUP_3]], {{[0-9]+}}(1)
+; CHECK-DAG: std [[BACKUP_4]], {{[0-9]+}}(1)
+; CHECK-DAG: std [[BACKUP_5]], {{[0-9]+}}(1)
+; CHECK-DAG: std [[BACKUP_6]], {{[0-9]+}}(1)
+; CHECK-DAG: std [[BACKUP_7]], {{[0-9]+}}(1)
+; CHECK-DAG: std [[BACKUP_8]], {{[0-9]+}}(1)
+; CHECK-DAG: std [[BACKUP_9]], {{[0-9]+}}(1)
+; CHECK-DAG: std [[BACKUP_10]], {{[0-9]+}}(1)
 ; CHECK: bl __tls_get_addr
 ; CHECK-DAG: stw 3, 0([[BACKUP_3]])
 ; CHECK-DAG: stw 3, 0([[BACKUP_4]])

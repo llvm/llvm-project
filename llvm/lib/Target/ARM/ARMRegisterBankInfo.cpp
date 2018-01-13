@@ -271,6 +271,20 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                           : &ARM::ValueMappings[ARM::SPR3OpsIdx];
     break;
   }
+  case G_FMA: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    OperandsMapping =
+        Ty.getSizeInBits() == 64
+            ? getOperandsMapping({&ARM::ValueMappings[ARM::DPR3OpsIdx],
+                                  &ARM::ValueMappings[ARM::DPR3OpsIdx],
+                                  &ARM::ValueMappings[ARM::DPR3OpsIdx],
+                                  &ARM::ValueMappings[ARM::DPR3OpsIdx]})
+            : getOperandsMapping({&ARM::ValueMappings[ARM::SPR3OpsIdx],
+                                  &ARM::ValueMappings[ARM::SPR3OpsIdx],
+                                  &ARM::ValueMappings[ARM::SPR3OpsIdx],
+                                  &ARM::ValueMappings[ARM::SPR3OpsIdx]});
+    break;
+  }
   case G_CONSTANT:
   case G_FRAME_INDEX:
   case G_GLOBAL_VALUE:

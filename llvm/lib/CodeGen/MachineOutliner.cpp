@@ -1357,8 +1357,8 @@ bool MachineOutliner::runOnModule(Module &M) {
     // If it is, look at each MachineBasicBlock in the function.
     for (MachineBasicBlock &MBB : MF) {
 
-      // Is there anything in MBB?
-      if (MBB.empty())
+      // Is there anything in MBB? And is it the target of an indirect branch?
+      if (MBB.empty() || MBB.hasAddressTaken())
         continue;
 
       // If yes, map it.
