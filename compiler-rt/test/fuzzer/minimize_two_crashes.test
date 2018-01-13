@@ -1,4 +1,5 @@
 # Test that the minimizer stops when it sees a differe bug.
+UNSUPPORTED: freebsd
 
 RUN: %cpp_compiler %S/TwoDifferentBugsTest.cpp -o %t-TwoDifferentBugsTest
 

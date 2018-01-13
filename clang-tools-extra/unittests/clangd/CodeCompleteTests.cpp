@@ -57,6 +57,7 @@ using ::testing::Contains;
 using ::testing::Each;
 using ::testing::ElementsAre;
 using ::testing::Not;
+using ::testing::UnorderedElementsAre;
 
 class IgnoreDiagnostics : public DiagnosticsConsumer {
   void
@@ -104,7 +105,7 @@ CompletionList completions(StringRef Text,
                       /*StorePreamblesInMemory=*/true);
   auto File = getVirtualTestFilePath("foo.cpp");
   Annotations Test(Text);
-  Server.addDocument(Context::empty(), File, Test.code());
+  Server.addDocument(Context::empty(), File, Test.code()).wait();
   auto CompletionList =
       Server.codeComplete(Context::empty(), File, Test.point(), Opts)
           .get()
@@ -380,6 +381,30 @@ TEST(CompletionTest, Kinds) {
   EXPECT_THAT(Results.items, Has("namespace", CompletionItemKind::Snippet));
 }
 
+TEST(CompletionTest, NoDuplicates) {
+  auto Items = completions(R"cpp(
+struct Adapter {
+  void method();
+};
+
+void Adapter::method() {
+  Adapter^
+}
+  )cpp")
+                   .items;
+
+  // Make sure there are no duplicate entries of 'Adapter'.
+  EXPECT_THAT(Items, ElementsAre(Named("Adapter"), Named("~Adapter")));
+}
+
+TEST(CompletionTest, FuzzyRanking) {
+  auto Items = completions(R"cpp(
+      struct fake { int BigBang, Babble, Ball; };
+      int main() { fake().bb^ }")cpp").items;
+  // BigBang is a better match than Babble. Ball doesn't match at all.
+  EXPECT_THAT(Items, ElementsAre(Named("BigBang"), Named("Babble")));
+}
+
 SignatureHelp signatures(StringRef Text) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
@@ -482,11 +507,11 @@ TEST(CompletionTest, NoIndex) {
   Opts.Index = nullptr;
 
   auto Results = completions(R"cpp(
-      namespace ns { class No {}; }
+      namespace ns { class Local {}; }
       void f() { ns::^ }
   )cpp",
                              Opts);
-  EXPECT_THAT(Results.items, Has("No"));
+  EXPECT_THAT(Results.items, Has("Local"));
 }
 
 TEST(CompletionTest, StaticAndDynamicIndex) {
@@ -502,8 +527,8 @@ TEST(CompletionTest, StaticAndDynamicIndex) {
       void f() { ::ns::^ }
   )cpp",
                              Opts);
-  EXPECT_THAT(Results.items, Contains(Labeled("[G]XYZ")));
-  EXPECT_THAT(Results.items, Contains(Labeled("foo")));
+  EXPECT_THAT(Results.items, Contains(Labeled("[S]XYZ")));
+  EXPECT_THAT(Results.items, Contains(Labeled("[D]foo")));
 }
 
 TEST(CompletionTest, SimpleIndexBased) {
@@ -514,13 +539,13 @@ TEST(CompletionTest, SimpleIndexBased) {
   Opts.Index = I.get();
 
   auto Results = completions(R"cpp(
-      namespace ns { class No {}; }
+      namespace ns { int local; }
       void f() { ns::^ }
   )cpp",
                              Opts);
   EXPECT_THAT(Results.items, Has("XYZ", CompletionItemKind::Class));
   EXPECT_THAT(Results.items, Has("foo", CompletionItemKind::Function));
-  EXPECT_THAT(Results.items, Not(Has("No")));
+  EXPECT_THAT(Results.items, Has("local"));
 }
 
 TEST(CompletionTest, IndexBasedWithFilter) {
@@ -561,6 +586,41 @@ TEST(CompletionTest, FullyQualifiedScope) {
   EXPECT_THAT(Results.items, Has("XYZ", CompletionItemKind::Class));
 }
 
+TEST(CompletionTest, IndexSuppressesPreambleCompletions) {
+  MockFSProvider FS;
+  MockCompilationDatabase CDB;
+  IgnoreDiagnostics DiagConsumer;
+  ClangdServer Server(CDB, DiagConsumer, FS, getDefaultAsyncThreadsCount(),
+                      /*StorePreamblesInMemory=*/true);
+
+  FS.Files[getVirtualTestFilePath("bar.h")] =
+      R"cpp(namespace ns { int preamble; })cpp";
+  auto File = getVirtualTestFilePath("foo.cpp");
+  Annotations Test(R"cpp(
+      #include "bar.h"
+      namespace ns { int local; }
+      void f() { ns::^ }
+  )cpp");
+  Server.addDocument(Context::empty(), File, Test.code()).wait();
+  clangd::CodeCompleteOptions Opts = {};
+
+  auto WithoutIndex =
+      Server.codeComplete(Context::empty(), File, Test.point(), Opts)
+          .get()
+          .second.Value;
+  EXPECT_THAT(WithoutIndex.items,
+              UnorderedElementsAre(Named("local"), Named("preamble")));
+
+  auto I = simpleIndexFromSymbols({{"ns::index", index::SymbolKind::Variable}});
+  Opts.Index = I.get();
+  auto WithIndex =
+      Server.codeComplete(Context::empty(), File, Test.point(), Opts)
+          .get()
+          .second.Value;
+  EXPECT_THAT(WithIndex.items,
+              UnorderedElementsAre(Named("local"), Named("index")));
+}
+
 TEST(CompletionTest, ASTIndexMultiFile) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
@@ -597,22 +657,6 @@ TEST(CompletionTest, ASTIndexMultiFile) {
   EXPECT_THAT(Results.items, Contains(AllOf(Named("fooooo"), Filter("fooooo"),
                                             Kind(CompletionItemKind::Function),
                                             Doc("Doooc"), Detail("void"))));
-}
-
-TEST(CompletionTest, NoDuplicates) {
-  auto Items = completions(R"cpp(
-struct Adapter {
-  void method();
-};
-
-void Adapter::method() {
-  Adapter^
-}
-  )cpp")
-                   .items;
-
-  // Make sure there are no duplicate entries of 'Adapter'.
-  EXPECT_THAT(Items, ElementsAre(Named("Adapter"), Named("~Adapter")));
 }
 
 } // namespace

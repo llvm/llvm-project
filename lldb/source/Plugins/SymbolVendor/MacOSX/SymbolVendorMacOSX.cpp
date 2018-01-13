@@ -179,21 +179,6 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                       std::string DBGBuildSourcePath;
                       std::string DBGSourcePath;
 
-                      plist.GetValueAsString("DBGBuildSourcePath",
-                                             DBGBuildSourcePath);
-                      plist.GetValueAsString("DBGSourcePath", DBGSourcePath);
-                      if (!DBGBuildSourcePath.empty() &&
-                          !DBGSourcePath.empty()) {
-                        if (DBGSourcePath[0] == '~') {
-                          FileSpec resolved_source_path(DBGSourcePath.c_str(),
-                                                        true);
-                          DBGSourcePath = resolved_source_path.GetPath();
-                        }
-                        module_sp->GetSourceMappingList().Append(
-                            ConstString(DBGBuildSourcePath),
-                            ConstString(DBGSourcePath), true);
-                      }
-
                       // DBGSourcePathRemapping is a dictionary in the plist
                       // with
                       // keys which are DBGBuildSourcePath file paths and
@@ -286,6 +271,24 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                               }
                               return true;
                             });
+                      }
+
+                      // If we have a DBGBuildSourcePath + DBGSourcePath pair,
+                      // append those to the source path remappings.
+
+                      plist.GetValueAsString("DBGBuildSourcePath",
+                                             DBGBuildSourcePath);
+                      plist.GetValueAsString("DBGSourcePath", DBGSourcePath);
+                      if (!DBGBuildSourcePath.empty() &&
+                          !DBGSourcePath.empty()) {
+                        if (DBGSourcePath[0] == '~') {
+                          FileSpec resolved_source_path(DBGSourcePath.c_str(),
+                                                        true);
+                          DBGSourcePath = resolved_source_path.GetPath();
+                        }
+                        module_sp->GetSourceMappingList().Append(
+                            ConstString(DBGBuildSourcePath),
+                            ConstString(DBGSourcePath), true);
                       }
                     }
                   }

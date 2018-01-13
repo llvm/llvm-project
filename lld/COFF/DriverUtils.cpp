@@ -474,7 +474,7 @@ std::unique_ptr<MemoryBuffer> createManifestRes() {
 
   // Copy the manifest data into the .res file.
   std::copy(Manifest.begin(), Manifest.end(), Buf);
-  return Res;
+  return std::move(Res);
 }
 
 void createSideBySideManifest() {

@@ -36,7 +36,7 @@
 #endif
 
 // TLS is handled differently on different platforms
-#if SANITIZER_LINUX || SANITIZER_NETBSD
+#if SANITIZER_LINUX || SANITIZER_NETBSD || SANITIZER_FREEBSD
 # define SANITIZER_TLS_INITIAL_EXEC_ATTRIBUTE \
     __attribute__((tls_model("initial-exec"))) thread_local
 #else

@@ -1858,9 +1858,9 @@ void HashTableSection::writeTo(uint8_t *Buf) {
   }
 }
 
-PltSection::PltSection(size_t HeaderSize, bool IsIplt)
+PltSection::PltSection(bool IsIplt)
     : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 16, ".plt"),
-      HeaderSize(HeaderSize), IsIplt(IsIplt) {
+      HeaderSize(IsIplt ? 0 : Target->PltHeaderSize), IsIplt(IsIplt) {
   // The PLT needs to be writable on SPARC as the dynamic linker will
   // modify the instructions in the PLT entries.
   if (Config->EMachine == EM_SPARCV9)

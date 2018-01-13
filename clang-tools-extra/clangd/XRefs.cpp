@@ -14,6 +14,20 @@ namespace clangd {
 using namespace llvm;
 namespace {
 
+// Get the definition from a given declaration `D`.
+// Return nullptr if no definition is found, or the declaration type of `D` is
+// not supported.
+const Decl* GetDefinition(const Decl* D) {
+  assert(D);
+  if (const auto *TD = dyn_cast<TagDecl>(D))
+    return TD->getDefinition();
+  else if (const auto *VD = dyn_cast<VarDecl>(D))
+    return VD->getDefinition();
+  else if (const auto *FD = dyn_cast<FunctionDecl>(D))
+    return FD->getDefinition();
+  return nullptr;
+}
+
 /// Finds declarations locations that a given source location refers to.
 class DeclarationAndMacrosFinder : public index::IndexDataConsumer {
   std::vector<const Decl *> Decls;
@@ -50,8 +64,18 @@ public:
                       ArrayRef<index::SymbolRelation> Relations, FileID FID,
                       unsigned Offset,
                       index::IndexDataConsumer::ASTNodeInfo ASTNode) override {
-    if (isSearchedLocation(FID, Offset))
-      Decls.push_back(D);
+    if (isSearchedLocation(FID, Offset)) {
+      // Find and add definition declarations (for GoToDefinition).
+      // We don't use parameter `D`, as Parameter `D` is the canonical
+      // declaration, which is the first declaration of a redeclarable
+      // declaration, and it could be a forward declaration.
+      if (const auto* Def = GetDefinition(D)) {
+        Decls.push_back(Def);
+      } else {
+        // Couldn't find a definition, fall back to use `D`.
+        Decls.push_back(D);
+      }
+    }
     return true;
   }
 

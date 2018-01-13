@@ -40,6 +40,7 @@ struct Configuration {
   llvm::StringSet<> AllowUndefinedSymbols;
   std::vector<llvm::StringRef> SearchPaths;
   Symbol *StackPointerSymbol = nullptr;
+  Symbol *CtorSymbol = nullptr;
 };
 
 // The only instance of Configuration struct.

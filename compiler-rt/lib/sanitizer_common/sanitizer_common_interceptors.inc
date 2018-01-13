@@ -2125,8 +2125,19 @@ INTERCEPTOR(int, getitimer, int which, void *curr_value) {
 INTERCEPTOR(int, setitimer, int which, const void *new_value, void *old_value) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, setitimer, which, new_value, old_value);
-  if (new_value)
-    COMMON_INTERCEPTOR_READ_RANGE(ctx, new_value, struct_itimerval_sz);
+  if (new_value) {
+    // itimerval can contain padding that may be legitimately uninitialized
+    const struct __sanitizer_itimerval *nv =
+        (const struct __sanitizer_itimerval *)new_value;
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, &nv->it_interval.tv_sec,
+                                  sizeof(__sanitizer_time_t));
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, &nv->it_interval.tv_usec,
+                                  sizeof(__sanitizer_suseconds_t));
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, &nv->it_value.tv_sec,
+                                  sizeof(__sanitizer_time_t));
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, &nv->it_value.tv_usec,
+                                  sizeof(__sanitizer_suseconds_t));
+  }
   // FIXME: under ASan the call below may write to freed memory and corrupt
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
