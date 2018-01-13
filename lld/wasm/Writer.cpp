@@ -443,8 +443,10 @@ void Writer::createLinkingSection() {
     if (InputSegments.empty())
       continue;
     StringRef Comdat = InputSegments[0]->getComdat();
+#ifndef NDEBUG
     for (const InputSegment *IS : InputSegments)
       assert(IS->getComdat() == Comdat);
+#endif
     if (!Comdat.empty())
       Comdats[Comdat].emplace_back(ComdatEntry{WASM_COMDAT_DATA, I});
   }

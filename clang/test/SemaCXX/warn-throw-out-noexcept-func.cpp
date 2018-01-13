@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s  -fdelayed-template-parsing -fcxx-exceptions -fsyntax-only -Wexceptions -verify -fdeclspec -std=c++11
+// RUN: %clang_cc1 %s  -fdelayed-template-parsing -fcxx-exceptions -fsyntax-only -Wexceptions -verify -fdeclspec -std=c++17
 struct A_ShouldDiag {
   ~A_ShouldDiag(); // implicitly noexcept(true)
 };
@@ -324,4 +324,85 @@ int main() {
   dependent_warn_both<noexcept_fun> f3; //expected-note {{in instantiation of member function}}
   ShouldDiagnose obj;
   ShouldNotDiagnose obj1;
+}
+
+namespace ExceptionInNamespace {
+  namespace N {
+    struct E {};
+  }
+  void run() throw() {
+    try {
+      throw N::E();
+    } catch (const N::E &e) {
+    }
+  }
+}
+
+namespace HandlerSpecialCases {
+  struct A {};
+  using CA = const A;
+
+  struct B : A {};
+  using CB = const B;
+
+  struct AmbigBase {};
+  struct AmbigMiddle : AmbigBase {};
+  struct AmbigDerived : AmbigBase, AmbigMiddle {}; // expected-warning {{inaccessible}}
+
+  struct PrivateBase {};
+  struct PrivateDerived : private PrivateBase { friend void bad3() throw(); };
+
+  void good() throw() {
+    try { throw CA(); } catch (volatile A&) {}
+    try { throw B(); } catch (A&) {}
+    try { throw B(); } catch (const volatile A&) {}
+    try { throw CB(); } catch (A&) {}
+    try { throw (int*)0; } catch (void* const volatile) {}
+    try { throw (int*)0; } catch (void* const &) {}
+    try { throw (B*)0; } catch (A*) {}
+    try { throw (B*)0; } catch (A* const &) {}
+    try { throw (void(*)() noexcept)0; } catch (void (*)()) {}
+    try { throw (void(*)() noexcept)0; } catch (void (*const &)()) {}
+    try { throw (int**)0; } catch (const int * const*) {}
+    try { throw (int**)0; } catch (const int * const* const&) {}
+    try { throw nullptr; } catch (int*) {}
+    try { throw nullptr; } catch (int* const&) {}
+  }
+
+  void bad1() throw() { // expected-note {{here}}
+    try { throw A(); } catch (const B&) {} // expected-warning {{still throw}}
+  }
+  void bad2() throw() { // expected-note {{here}}
+    try { throw AmbigDerived(); } catch (const AmbigBase&) {} // expected-warning {{still throw}}
+  }
+  void bad3() throw() { // expected-note {{here}}
+    try { throw PrivateDerived(); } catch (const PrivateBase&) {} // expected-warning {{still throw}}
+  }
+  void bad4() throw() { // expected-note {{here}}
+    try { throw (int*)0; } catch (void* &) {} // expected-warning {{still throw}}
+  }
+  void bad5() throw() { // expected-note {{here}}
+    try { throw (int*)0; } catch (void* const volatile &) {} // expected-warning {{still throw}}
+  }
+  void bad6() throw() { // expected-note {{here}}
+    try { throw (int* volatile)0; } catch (void* const volatile &) {} // expected-warning {{still throw}}
+  }
+  void bad7() throw() { // expected-note {{here}}
+    try { throw (AmbigDerived*)0; } catch (AmbigBase*) {} // expected-warning {{still throw}}
+  }
+  void bad8() throw() { // expected-note {{here}}
+    try { throw (PrivateDerived*)0; } catch (PrivateBase*) {} // expected-warning {{still throw}}
+  }
+  void bad9() throw() { // expected-note {{here}}
+    try { throw (B*)0; } catch (A* &) {} // expected-warning {{still throw}}
+  }
+  void bad10() throw() { // expected-note {{here}}
+    try { throw (void(*)())0; } catch (void (*)() noexcept) {} // expected-warning {{still throw}}
+  }
+  void bad11() throw() { // expected-note {{here}}
+    try { throw (int**)0; } catch (const int **) {} // expected-warning {{still throw}}
+  }
+  void bad12() throw() { // expected-note {{here}}
+    try { throw nullptr; } catch (int) {} // expected-warning {{still throw}}
+  }
 }

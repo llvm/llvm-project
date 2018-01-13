@@ -24,6 +24,13 @@
 
 #include <mach/mach.h>
 
+// Only introduced in Mac OS X 10.9.
+#ifdef VM_MEMORY_OS_ALLOC_ONCE
+static const int kSanitizerVmMemoryOsAllocOnce = VM_MEMORY_OS_ALLOC_ONCE;
+#else
+static const int kSanitizerVmMemoryOsAllocOnce = 73;
+#endif
+
 namespace __lsan {
 
 typedef struct {
@@ -157,7 +164,7 @@ void ProcessPlatformSpecificAllocations(Frontier *frontier) {
 
     // libxpc stashes some pointers in the Kernel Alloc Once page,
     // make sure not to report those as leaks.
-    if (info.user_tag == VM_MEMORY_OS_ALLOC_ONCE) {
+    if (info.user_tag == kSanitizerVmMemoryOsAllocOnce) {
       ScanRangeForPointers(address, end_address, frontier, "GLOBAL",
                            kReachable);
 
