@@ -365,7 +365,8 @@ llvm::DIFile::ChecksumKind
 CGDebugInfo::computeChecksum(FileID FID, SmallString<32> &Checksum) const {
   Checksum.clear();
 
-  if (!CGM.getCodeGenOpts().EmitCodeView)
+  if (!CGM.getCodeGenOpts().EmitCodeView &&
+      CGM.getCodeGenOpts().DwarfVersion < 5)
     return llvm::DIFile::CSK_None;
 
   SourceManager &SM = CGM.getContext().getSourceManager();

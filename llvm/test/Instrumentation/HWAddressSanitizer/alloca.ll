@@ -1,6 +1,7 @@
 ; Test basic address sanitizer instrumentation.
 ;
 ; RUN: opt < %s -hwasan -S | FileCheck %s
+; RUN: opt < %s -hwasan -hwasan-generate-tags-with-calls -S | FileCheck %s --check-prefix=WITH-CALLS
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android"
@@ -43,3 +44,9 @@ entry:
   ret void
 }
 
+; WITH-CALLS-LABEL: @test_alloca(
+; WITH-CALLS: %[[T1:[^ ]*]] = call i8 @__hwasan_generate_tag()
+; WITH-CALLS: %[[A:[^ ]*]] = zext i8 %[[T1]] to i64
+; WITH-CALLS: %[[B:[^ ]*]] = ptrtoint i32* %x to i64
+; WITH-CALLS: %[[C:[^ ]*]] = shl i64 %[[A]], 56
+; WITH-CALLS: or i64 %[[B]], %[[C]]
