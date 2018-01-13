@@ -74,7 +74,7 @@ void Symbol::setTableIndex(uint32_t Index) {
 }
 
 void Symbol::update(Kind K, InputFile *F, uint32_t Flags_,
-                    const InputSegment *Seg, const InputFunction *Func,
+                    const InputSegment *Seg, InputFunction *Func,
                     uint32_t Address) {
   SymbolKind = K;
   File = F;
@@ -95,6 +95,14 @@ bool Symbol::isLocal() const {
 
 bool Symbol::isHidden() const {
   return (Flags & WASM_SYMBOL_VISIBILITY_MASK) == WASM_SYMBOL_VISIBILITY_HIDDEN;
+}
+
+void Symbol::setHidden(bool IsHidden) {
+  Flags &= ~WASM_SYMBOL_VISIBILITY_MASK;
+  if (IsHidden)
+    Flags |= WASM_SYMBOL_VISIBILITY_HIDDEN;
+  else
+    Flags |= WASM_SYMBOL_VISIBILITY_DEFAULT;
 }
 
 std::string lld::toString(const wasm::Symbol &Sym) {

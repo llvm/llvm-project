@@ -74,6 +74,9 @@ def error_limit: J<"error-limit=">,
 
 // The follow flags are unique to wasm
 
+defm export: Eq<"export">,
+  HelpText<"Force a symbol to be exported">;
+
 def global_base: J<"global-base=">,
   HelpText<"Where to start to place global data">;
 
