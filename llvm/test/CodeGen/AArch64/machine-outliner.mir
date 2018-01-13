@@ -23,6 +23,7 @@
 # - Don't outline anything to do with LR or W30
 # - Save LR when it's not available
 # - Don't outline stack instructions when we might need to save + restore
+# - Functions whose addresses are taken can still be outlined
 #
 # CHECK-LABEL: name: main
 
@@ -48,6 +49,7 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     %sp = frame-setup SUBXri %sp, 16, 0
+    renamable %x9 = ADRP target-flags(aarch64-page) @bar
     %x9 = ORRXri %xzr, 1
     %w16 = ORRWri %wzr, 1
     %w30 = ORRWri %wzr, 1

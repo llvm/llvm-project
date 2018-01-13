@@ -91,6 +91,11 @@ static cl::opt<bool> ClInstrumentStack("hwasan-instrument-stack",
                                        cl::desc("instrument stack (allocas)"),
                                        cl::Hidden, cl::init(true));
 
+static cl::opt<bool> ClGenerateTagsWithCalls(
+    "hwasan-generate-tags-with-calls",
+    cl::desc("generate new tags with runtime library calls"), cl::Hidden,
+    cl::init(false));
+
 namespace {
 
 /// \brief An instrumentation pass implementing detection of addressability bugs
@@ -121,6 +126,11 @@ public:
   bool tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag);
   bool instrumentStack(SmallVectorImpl<AllocaInst *> &Allocas,
                        SmallVectorImpl<Instruction *> &RetVec);
+  Value *getNextTagWithCall(IRBuilder<> &IRB);
+  Value *getStackBaseTag(IRBuilder<> &IRB);
+  Value *getAllocaTag(IRBuilder<> &IRB, Value *StackTag, AllocaInst *AI,
+                     unsigned AllocaNo);
+  Value *getUARTag(IRBuilder<> &IRB, Value *StackTag);
 
 private:
   LLVMContext *C;
@@ -135,6 +145,7 @@ private:
   Function *HwasanMemoryAccessCallbackSized[2];
 
   Function *HwasanTagMemoryFunc;
+  Function *HwasanGenerateTagFunc;
 };
 
 } // end anonymous namespace
@@ -198,6 +209,8 @@ void HWAddressSanitizer::initializeCallbacks(Module &M) {
 
   HwasanTagMemoryFunc = checkSanitizerInterfaceFunction(M.getOrInsertFunction(
       "__hwasan_tag_memory", IRB.getVoidTy(), IntptrTy, Int8Ty, IntptrTy));
+  HwasanGenerateTagFunc = checkSanitizerInterfaceFunction(
+      M.getOrInsertFunction("__hwasan_generate_tag", Int8Ty));
 }
 
 Value *HWAddressSanitizer::isInterestingMemoryAccess(Instruction *I,
@@ -373,18 +386,20 @@ static unsigned RetagMask(unsigned AllocaNo) {
   return FastMasks[AllocaNo % (sizeof(FastMasks) / sizeof(FastMasks[0]))];
 }
 
-bool HWAddressSanitizer::instrumentStack(
-    SmallVectorImpl<AllocaInst *> &Allocas,
-    SmallVectorImpl<Instruction *> &RetVec) {
-  Function *F = Allocas[0]->getParent()->getParent();
-  Module *M = F->getParent();
-  Instruction *InsertPt = &*F->getEntryBlock().begin();
-  IRBuilder<> IRB(InsertPt);
+Value *HWAddressSanitizer::getNextTagWithCall(IRBuilder<> &IRB) {
+  return IRB.CreateZExt(IRB.CreateCall(HwasanGenerateTagFunc), IntptrTy);
+}
 
+Value *HWAddressSanitizer::getStackBaseTag(IRBuilder<> &IRB) {
+  if (ClGenerateTagsWithCalls)
+    return nullptr;
   // FIXME: use addressofreturnaddress (but implement it in aarch64 backend
   // first).
-  auto GetStackPointerFn = Intrinsic::getDeclaration(M, Intrinsic::frameaddress);
-  Value *StackPointer = IRB.CreateCall(GetStackPointerFn, {Constant::getNullValue(IRB.getInt32Ty())});
+  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+  auto GetStackPointerFn =
+      Intrinsic::getDeclaration(M, Intrinsic::frameaddress);
+  Value *StackPointer = IRB.CreateCall(
+      GetStackPointerFn, {Constant::getNullValue(IRB.getInt32Ty())});
 
   // Extract some entropy from the stack pointer for the tags.
   // Take bits 20..28 (ASLR entropy) and xor with bits 0..8 (these differ
@@ -393,6 +408,31 @@ bool HWAddressSanitizer::instrumentStack(
   Value *StackTag =
       IRB.CreateXor(StackPointerLong, IRB.CreateLShr(StackPointerLong, 20),
                     "hwasan.stack.base.tag");
+  return StackTag;
+}
+
+Value *HWAddressSanitizer::getAllocaTag(IRBuilder<> &IRB, Value *StackTag,
+                                        AllocaInst *AI, unsigned AllocaNo) {
+  if (ClGenerateTagsWithCalls)
+    return getNextTagWithCall(IRB);
+  return IRB.CreateXor(StackTag,
+                       ConstantInt::get(IntptrTy, RetagMask(AllocaNo)));
+}
+
+Value *HWAddressSanitizer::getUARTag(IRBuilder<> &IRB, Value *StackTag) {
+  if (ClGenerateTagsWithCalls)
+    return getNextTagWithCall(IRB);
+  return IRB.CreateXor(StackTag, ConstantInt::get(IntptrTy, 0xFFU));
+}
+
+bool HWAddressSanitizer::instrumentStack(
+    SmallVectorImpl<AllocaInst *> &Allocas,
+    SmallVectorImpl<Instruction *> &RetVec) {
+  Function *F = Allocas[0]->getParent()->getParent();
+  Instruction *InsertPt = &*F->getEntryBlock().begin();
+  IRBuilder<> IRB(InsertPt);
+
+  Value *StackTag = getStackBaseTag(IRB);
 
   // Ideally, we want to calculate tagged stack base pointer, and rewrite all
   // alloca addresses using that. Unfortunately, offsets are not known yet
@@ -404,17 +444,15 @@ bool HWAddressSanitizer::instrumentStack(
     IRB.SetInsertPoint(AI->getNextNode());
 
     // Replace uses of the alloca with tagged address.
+    Value *Tag = getAllocaTag(IRB, StackTag, AI, N);
+    Value *AILong = IRB.CreatePointerCast(AI, IntptrTy);
     std::string Name =
         AI->hasName() ? AI->getName().str() : "alloca." + itostr(N);
-    Value *Tag =
-        IRB.CreateXor(StackTag, ConstantInt::get(IntptrTy, RetagMask(N)));
-    Value *AILong = IRB.CreatePointerCast(AI, IntptrTy);
     Value *Replacement = IRB.CreateIntToPtr(
         IRB.CreateOr(AILong, IRB.CreateShl(Tag, kPointerTagShift)),
         AI->getType(), Name + ".hwasan");
 
-    for (auto UI = AI->use_begin(), UE = AI->use_end();
-         UI != UE;) {
+    for (auto UI = AI->use_begin(), UE = AI->use_end(); UI != UE;) {
       Use &U = *UI++;
       if (U.getUser() != AILong)
         U.set(Replacement);
@@ -426,7 +464,7 @@ bool HWAddressSanitizer::instrumentStack(
       IRB.SetInsertPoint(RI);
 
       // Re-tag alloca memory with the special UAR tag.
-      Value *Tag = IRB.CreateXor(StackTag, ConstantInt::get(IntptrTy, 0xFFU));
+      Value *Tag = getUARTag(IRB, StackTag);
       tagAlloca(IRB, AI, Tag);
     }
   }

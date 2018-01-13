@@ -50,15 +50,11 @@ public:
   }
 
   bool isAliased(const MachineFrameInfo *) const override {
-    // FIXME: If we ever change image intrinsics to accept fat pointers, then
-    // this could be true for some cases.
-    return false;
+    return true;
   }
 
   bool mayAlias(const MachineFrameInfo *) const override {
-    // FIXME: If we ever change image intrinsics to accept fat pointers, then
-    // this could be true for some cases.
-    return false;
+    return true;
   }
 };
 

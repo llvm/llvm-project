@@ -1,4 +1,4 @@
-//===- InputSegment.cpp ---------------------------------------------------===//
+//===- InputChunks.cpp ----------------------------------------------------===//
 //
 //                             The LLVM Linker
 //
@@ -86,7 +86,7 @@ static void applyRelocations(uint8_t *Buf, ArrayRef<OutputRelocation> Relocs) {
 }
 
 void InputChunk::writeTo(uint8_t *SectionStart) const {
-  memcpy(SectionStart + getOutputOffset(), getData(), getSize());
+  memcpy(SectionStart + getOutputOffset(), data().data(), data().size());
   applyRelocations(SectionStart, OutRelocations);
 }
 
@@ -130,4 +130,4 @@ void InputFunction::setOutputIndex(uint32_t Index) {
   DEBUG(dbgs() << "InputFunction::setOutputIndex: " << Index << "\n");
   assert(!hasOutputIndex());
   OutputIndex = Index;
-};
+}

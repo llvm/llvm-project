@@ -25,6 +25,7 @@
 #include "llvm/Support/LEB128.h"
 
 #include <cstdarg>
+#include <map>
 
 #define DEBUG_TYPE "lld"
 
@@ -427,6 +428,42 @@ void Writer::createLinkingSection() {
     SubSection.finalizeContents();
     SubSection.writeToStream(OS);
   }
+
+  struct ComdatEntry { unsigned Kind; uint32_t Index; };
+  std::map<StringRef,std::vector<ComdatEntry>> Comdats;
+
+  for (const InputFunction *F : DefinedFunctions) {
+    StringRef Comdat = F->getComdat();
+    if (!Comdat.empty())
+      Comdats[Comdat].emplace_back(
+          ComdatEntry{WASM_COMDAT_FUNCTION, F->getOutputIndex()});
+  }
+  for (uint32_t I = 0; I < Segments.size(); ++I) {
+    const auto &InputSegments = Segments[I]->InputSegments;
+    if (InputSegments.empty())
+      continue;
+    StringRef Comdat = InputSegments[0]->getComdat();
+    for (const InputSegment *IS : InputSegments)
+      assert(IS->getComdat() == Comdat);
+    if (!Comdat.empty())
+      Comdats[Comdat].emplace_back(ComdatEntry{WASM_COMDAT_DATA, I});
+  }
+
+  if (!Comdats.empty()) {
+    SubSection SubSection(WASM_COMDAT_INFO);
+    writeUleb128(SubSection.getStream(), Comdats.size(), "num comdats");
+    for (const auto &C : Comdats) {
+      writeStr(SubSection.getStream(), C.first, "comdat name");
+      writeUleb128(SubSection.getStream(), 0, "comdat flags"); // flags for future use
+      writeUleb128(SubSection.getStream(), C.second.size(), "num entries");
+      for (const ComdatEntry &Entry : C.second) {
+        writeUleb128(SubSection.getStream(), Entry.Kind, "entry kind");
+        writeUleb128(SubSection.getStream(), Entry.Index, "entry index");
+      }
+    }
+    SubSection.finalizeContents();
+    SubSection.writeToStream(OS);
+  }
 }
 
 // Create the custom "name" section containing debug symbol names.
@@ -654,6 +691,8 @@ void Writer::assignIndexes() {
   for (ObjFile *File : Symtab->ObjectFiles) {
     DEBUG(dbgs() << "Functions: " << File->getName() << "\n");
     for (InputFunction *Func : File->Functions) {
+      if (Func->Discarded)
+        continue;
       DefinedFunctions.emplace_back(Func);
       Func->setOutputIndex(FunctionIndex++);
     }
@@ -689,6 +728,8 @@ static StringRef getOutputDataSegmentName(StringRef Name) {
 void Writer::createOutputSegments() {
   for (ObjFile *File : Symtab->ObjectFiles) {
     for (InputSegment *Segment : File->Segments) {
+      if (Segment->Discarded)
+        continue;
       StringRef Name = getOutputDataSegmentName(Segment->getName());
       OutputSegment *&S = SegmentMap[Name];
       if (S == nullptr) {
@@ -729,8 +770,10 @@ void Writer::createCtorFunction() {
   writeUleb128(OS, FunctionBody.size(), "function size");
   OS.flush();
   CtorFunctionBody += FunctionBody;
-  CtorFunction =
-      llvm::make_unique<SyntheticFunction>(Signature, CtorFunctionBody);
+  ArrayRef<uint8_t> BodyArray(
+      reinterpret_cast<const uint8_t *>(CtorFunctionBody.data()),
+      CtorFunctionBody.size());
+  CtorFunction = llvm::make_unique<SyntheticFunction>(Signature, BodyArray);
   DefinedFunctions.emplace_back(CtorFunction.get());
 }
 

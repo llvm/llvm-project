@@ -608,13 +608,6 @@ void LinkerScript::switchTo(OutputSection *Sec) {
 
   Ctx->OutSec = Sec;
   Ctx->OutSec->Addr = advance(0, Ctx->OutSec->Alignment);
-
-  // If neither AT nor AT> is specified for an allocatable section, the linker
-  // will set the LMA such that the difference between VMA and LMA for the
-  // section is the same as the preceding output section in the same region
-  // https://sourceware.org/binutils/docs-2.20/ld/Output-Section-LMA.html
-  if (Ctx->LMAOffset)
-    Ctx->OutSec->LMAOffset = Ctx->LMAOffset();
 }
 
 // This function searches for a memory region to place the given output
@@ -662,6 +655,8 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
   if (Ctx->MemRegion)
     Dot = Ctx->MemRegionOffset[Ctx->MemRegion];
 
+  switchTo(Sec);
+
   if (Sec->LMAExpr) {
     uint64_t D = Dot;
     Ctx->LMAOffset = [=] { return Sec->LMAExpr().getValue() - D; };
@@ -676,7 +671,12 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
     }
   }
 
-  switchTo(Sec);
+  // If neither AT nor AT> is specified for an allocatable section, the linker
+  // will set the LMA such that the difference between VMA and LMA for the
+  // section is the same as the preceding output section in the same region
+  // https://sourceware.org/binutils/docs-2.20/ld/Output-Section-LMA.html
+  if (Ctx->LMAOffset)
+    Ctx->OutSec->LMAOffset = Ctx->LMAOffset();
 
   // The Size previously denoted how many InputSections had been added to this
   // section, and was used for sorting SHF_LINK_ORDER sections. Reset it to
