@@ -58,6 +58,7 @@ testing::Matcher<StringRef> matches(StringRef M) {
 }
 
 TEST(FuzzyMatch, Matches) {
+  EXPECT_THAT("", matches("unique_ptr"));
   EXPECT_THAT("u_p", matches("[u]nique[_p]tr"));
   EXPECT_THAT("up", matches("[u]nique_[p]tr"));
   EXPECT_THAT("uq", matches("[u]ni[q]ue_ptr"));
