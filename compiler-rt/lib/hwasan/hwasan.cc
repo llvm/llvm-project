@@ -363,6 +363,14 @@ void __hwasan_tag_memory(uptr p, u8 tag, uptr sz) {
   TagMemoryAligned(p, sz, tag);
 }
 
+static const u8 kFallbackTag = 0xBB;
+
+u8 __hwasan_generate_tag() {
+  HwasanThread *t = GetCurrentThread();
+  if (!t) return kFallbackTag;
+  return t->GenerateRandomTag();
+}
+
 #if !SANITIZER_SUPPORTS_WEAK_HOOKS
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE

@@ -1459,6 +1459,7 @@ public:
       const PartialDiagnostic &DiagID, const PartialDiagnostic & NoteID,
       const FunctionProtoType *Old, SourceLocation OldLoc,
       const FunctionProtoType *New, SourceLocation NewLoc);
+  bool handlerCanCatch(QualType HandlerType, QualType ExceptionType);
   bool CheckExceptionSpecSubset(const PartialDiagnostic &DiagID,
                                 const PartialDiagnostic &NestedDiagID,
                                 const PartialDiagnostic &NoteID,

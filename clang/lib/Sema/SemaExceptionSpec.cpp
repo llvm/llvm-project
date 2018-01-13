@@ -626,6 +626,90 @@ bool Sema::CheckEquivalentExceptionSpec(const PartialDiagnostic &DiagID,
                                           New, NewLoc);
 }
 
+bool Sema::handlerCanCatch(QualType HandlerType, QualType ExceptionType) {
+  // [except.handle]p3:
+  //   A handler is a match for an exception object of type E if:
+
+  // HandlerType must be ExceptionType or derived from it, or pointer or
+  // reference to such types.
+  const ReferenceType *RefTy = HandlerType->getAs<ReferenceType>();
+  if (RefTy)
+    HandlerType = RefTy->getPointeeType();
+
+  //   -- the handler is of type cv T or cv T& and E and T are the same type
+  if (Context.hasSameUnqualifiedType(ExceptionType, HandlerType))
+    return true;
+
+  // FIXME: ObjC pointer types?
+  if (HandlerType->isPointerType() || HandlerType->isMemberPointerType()) {
+    if (RefTy && (!HandlerType.isConstQualified() ||
+                  HandlerType.isVolatileQualified()))
+      return false;
+
+    // -- the handler is of type cv T or const T& where T is a pointer or
+    //    pointer to member type and E is std::nullptr_t
+    if (ExceptionType->isNullPtrType())
+      return true;
+
+    // -- the handler is of type cv T or const T& where T is a pointer or
+    //    pointer to member type and E is a pointer or pointer to member type
+    //    that can be converted to T by one or more of
+    //    -- a qualification conversion
+    //    -- a function pointer conversion
+    bool LifetimeConv;
+    QualType Result;
+    // FIXME: Should we treat the exception as catchable if a lifetime
+    // conversion is required?
+    if (IsQualificationConversion(ExceptionType, HandlerType, false,
+                                  LifetimeConv) ||
+        IsFunctionConversion(ExceptionType, HandlerType, Result))
+      return true;
+
+    //    -- a standard pointer conversion [...]
+    if (!ExceptionType->isPointerType() || !HandlerType->isPointerType())
+      return false;
+
+    // Handle the "qualification conversion" portion.
+    Qualifiers EQuals, HQuals;
+    ExceptionType = Context.getUnqualifiedArrayType(
+        ExceptionType->getPointeeType(), EQuals);
+    HandlerType = Context.getUnqualifiedArrayType(
+        HandlerType->getPointeeType(), HQuals);
+    if (!HQuals.compatiblyIncludes(EQuals))
+      return false;
+
+    if (HandlerType->isVoidType() && ExceptionType->isObjectType())
+      return true;
+
+    // The only remaining case is a derived-to-base conversion.
+  }
+
+  //   -- the handler is of type cg T or cv T& and T is an unambiguous public
+  //      base class of E
+  if (!ExceptionType->isRecordType() || !HandlerType->isRecordType())
+    return false;
+  CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
+                     /*DetectVirtual=*/false);
+  if (!IsDerivedFrom(SourceLocation(), ExceptionType, HandlerType, Paths) ||
+      Paths.isAmbiguous(Context.getCanonicalType(HandlerType)))
+    return false;
+
+  // Do this check from a context without privileges.
+  switch (CheckBaseClassAccess(SourceLocation(), HandlerType, ExceptionType,
+                               Paths.front(),
+                               /*Diagnostic*/ 0,
+                               /*ForceCheck*/ true,
+                               /*ForceUnprivileged*/ true)) {
+  case AR_accessible: return true;
+  case AR_inaccessible: return false;
+  case AR_dependent:
+    llvm_unreachable("access check dependent for unprivileged context");
+  case AR_delayed:
+    llvm_unreachable("access check delayed in non-declaration");
+  }
+  llvm_unreachable("unexpected access check result");
+}
+
 /// CheckExceptionSpecSubset - Check whether the second function type's
 /// exception specification is a subset (or equivalent) of the first function
 /// type. This is used by override and pointer assignment checks.
@@ -722,75 +806,23 @@ bool Sema::CheckExceptionSpecSubset(const PartialDiagnostic &DiagID,
          "Exception spec subset: non-dynamic case slipped through.");
 
   // Neither contains everything or nothing. Do a proper comparison.
-  for (const auto &SubI : Subset->exceptions()) {
-    // Take one type from the subset.
-    QualType CanonicalSubT = Context.getCanonicalType(SubI);
-    // Unwrap pointers and references so that we can do checks within a class
-    // hierarchy. Don't unwrap member pointers; they don't have hierarchy
-    // conversions on the pointee.
-    bool SubIsPointer = false;
-    if (const ReferenceType *RefTy = CanonicalSubT->getAs<ReferenceType>())
-      CanonicalSubT = RefTy->getPointeeType();
-    if (const PointerType *PtrTy = CanonicalSubT->getAs<PointerType>()) {
-      CanonicalSubT = PtrTy->getPointeeType();
-      SubIsPointer = true;
-    }
-    bool SubIsClass = CanonicalSubT->isRecordType();
-    CanonicalSubT = CanonicalSubT.getLocalUnqualifiedType();
+  for (QualType SubI : Subset->exceptions()) {
+    if (const ReferenceType *RefTy = SubI->getAs<ReferenceType>())
+      SubI = RefTy->getPointeeType();
 
-    CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
-                       /*DetectVirtual=*/false);
-
-    bool Contained = false;
     // Make sure it's in the superset.
-    for (const auto &SuperI : Superset->exceptions()) {
-      QualType CanonicalSuperT = Context.getCanonicalType(SuperI);
-      // SubT must be SuperT or derived from it, or pointer or reference to
-      // such types.
-      if (const ReferenceType *RefTy = CanonicalSuperT->getAs<ReferenceType>())
-        CanonicalSuperT = RefTy->getPointeeType();
-      if (SubIsPointer) {
-        if (const PointerType *PtrTy = CanonicalSuperT->getAs<PointerType>())
-          CanonicalSuperT = PtrTy->getPointeeType();
-        else {
-          continue;
-        }
-      }
-      CanonicalSuperT = CanonicalSuperT.getLocalUnqualifiedType();
-      // If the types are the same, move on to the next type in the subset.
-      if (CanonicalSubT == CanonicalSuperT) {
+    bool Contained = false;
+    for (QualType SuperI : Superset->exceptions()) {
+      // [except.spec]p5:
+      //   the target entity shall allow at least the exceptions allowed by the
+      //   source
+      //
+      // We interpret this as meaning that a handler for some target type would
+      // catch an exception of each source type.
+      if (handlerCanCatch(SuperI, SubI)) {
         Contained = true;
         break;
       }
-
-      // Otherwise we need to check the inheritance.
-      if (!SubIsClass || !CanonicalSuperT->isRecordType())
-        continue;
-
-      Paths.clear();
-      if (!IsDerivedFrom(SubLoc, CanonicalSubT, CanonicalSuperT, Paths))
-        continue;
-
-      if (Paths.isAmbiguous(Context.getCanonicalType(CanonicalSuperT)))
-        continue;
-
-      // Do this check from a context without privileges.
-      switch (CheckBaseClassAccess(SourceLocation(),
-                                   CanonicalSuperT, CanonicalSubT,
-                                   Paths.front(),
-                                   /*Diagnostic*/ 0,
-                                   /*ForceCheck*/ true,
-                                   /*ForceUnprivileged*/ true)) {
-      case AR_accessible: break;
-      case AR_inaccessible: continue;
-      case AR_dependent:
-        llvm_unreachable("access check dependent for unprivileged context");
-      case AR_delayed:
-        llvm_unreachable("access check delayed in non-declaration");
-      }
-
-      Contained = true;
-      break;
     }
     if (!Contained) {
       Diag(SubLoc, DiagID);

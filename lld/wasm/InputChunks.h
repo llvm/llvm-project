@@ -47,13 +47,16 @@ public:
 
   uint32_t getOutputOffset() const { return OutputOffset; }
 
+  virtual StringRef getComdat() const = 0;
+
+  bool Discarded = false;
   std::vector<OutputRelocation> OutRelocations;
 
 protected:
   InputChunk(const ObjFile *F) : File(F) {}
   virtual ~InputChunk() = default;
   void calcRelocations();
-  virtual const uint8_t *getData() const = 0;
+  virtual ArrayRef<uint8_t> data() const = 0;
   virtual uint32_t getInputSectionOffset() const = 0;
 
   std::vector<WasmRelocation> Relocations;
@@ -85,21 +88,21 @@ public:
     OutputSegmentOffset = Offset;
   }
 
-  const uint8_t *getData() const override {
-    return Segment.Data.Content.data();
-  }
   uint32_t getSize() const override { return Segment.Data.Content.size(); }
   uint32_t getAlignment() const { return Segment.Data.Alignment; }
   uint32_t startVA() const { return Segment.Data.Offset.Value.Int32; }
   uint32_t endVA() const { return startVA() + getSize(); }
   StringRef getName() const { return Segment.Data.Name; }
+  StringRef getComdat() const override { return Segment.Data.Comdat; }
 
   int32_t OutputSegmentOffset = 0;
 
 protected:
+  ArrayRef<uint8_t> data() const override { return Segment.Data.Content; }
   uint32_t getInputSectionOffset() const override {
     return Segment.SectionOffset;
   }
+
   const WasmSegment &Segment;
   const OutputSegment *OutputSeg = nullptr;
 };
@@ -113,10 +116,7 @@ public:
       : InputChunk(F), Signature(S), WrittenToNameSec(false), Function(Func) {}
 
   uint32_t getSize() const override { return Function->Size; }
-  const uint8_t *getData() const override {
-    return File->CodeSection->Content.data() + getInputSectionOffset();
-  }
-
+  StringRef getComdat() const override { return Function->Comdat; }
   uint32_t getOutputIndex() const { return OutputIndex.getValue(); };
   bool hasOutputIndex() const { return OutputIndex.hasValue(); };
   void setOutputIndex(uint32_t Index);
@@ -126,25 +126,28 @@ public:
   unsigned WrittenToNameSec : 1;
 
 protected:
+  ArrayRef<uint8_t> data() const override {
+    return File->CodeSection->Content.slice(getInputSectionOffset(), getSize());
+  }
   uint32_t getInputSectionOffset() const override {
     return Function->CodeSectionOffset;
   }
+
   const WasmFunction *Function;
   llvm::Optional<uint32_t> OutputIndex;
 };
 
 class SyntheticFunction : public InputFunction {
 public:
-  SyntheticFunction(const WasmSignature &S, StringRef Body)
+  SyntheticFunction(const WasmSignature &S, ArrayRef<uint8_t> Body)
       : InputFunction(S, nullptr, nullptr), Body(Body) {}
 
   uint32_t getSize() const override { return Body.size(); }
-  const uint8_t *getData() const override {
-    return reinterpret_cast<const uint8_t *>(Body.data());
-  }
 
 protected:
-  StringRef Body;
+  ArrayRef<uint8_t> data() const override { return Body; }
+
+  ArrayRef<uint8_t> Body;
 };
 
 } // namespace wasm
