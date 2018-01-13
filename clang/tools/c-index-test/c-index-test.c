@@ -2330,6 +2330,8 @@ int perform_code_completion(int argc, const char **argv, int timing_only) {
     completionOptions |= CXCodeComplete_IncludeCodePatterns;
   if (getenv("CINDEXTEST_COMPLETION_BRIEF_COMMENTS"))
     completionOptions |= CXCodeComplete_IncludeBriefComments;
+  if (getenv("CINDEXTEST_COMPLETION_SKIP_PREAMBLE"))
+    completionOptions |= CXCodeComplete_SkipPreamble;
   
   if (timing_only)
     input += strlen("-code-completion-timing=");

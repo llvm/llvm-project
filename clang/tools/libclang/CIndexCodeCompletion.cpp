@@ -643,6 +643,7 @@ clang_codeCompleteAt_Impl(CXTranslationUnit TU, const char *complete_filename,
                           ArrayRef<CXUnsavedFile> unsaved_files,
                           unsigned options) {
   bool IncludeBriefComments = options & CXCodeComplete_IncludeBriefComments;
+  bool SkipPreamble = options & CXCodeComplete_SkipPreamble;
 
 #ifdef UDP_CODE_COMPLETION_LOGGER
 #ifdef UDP_CODE_COMPLETION_LOGGER_PORT
@@ -689,6 +690,7 @@ clang_codeCompleteAt_Impl(CXTranslationUnit TU, const char *complete_filename,
   // Create a code-completion consumer to capture the results.
   CodeCompleteOptions Opts;
   Opts.IncludeBriefComments = IncludeBriefComments;
+  Opts.LoadExternal = !SkipPreamble;
   CaptureCompletionResults Capture(Opts, *Results, &TU);
 
   // Perform completion.

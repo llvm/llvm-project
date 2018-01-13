@@ -70,7 +70,7 @@ CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext)
       IsSanitizerScope(false), CurFuncIsThunk(false), AutoreleaseResult(false),
       SawAsmBlock(false), IsOutlinedSEHHelper(false), BlockInfo(nullptr),
       BlockPointer(nullptr), LambdaThisCaptureField(nullptr),
-      NormalCleanupDest(nullptr), NextCleanupDestIndex(1),
+      NormalCleanupDest(Address::invalid()), NextCleanupDestIndex(1),
       FirstBlockInfo(nullptr), EHResumeBlock(nullptr), ExceptionSlot(nullptr),
       EHSelectorSlot(nullptr), DebugInfo(CGM.getModuleDebugInfo()),
       DisableDebugInfo(false), DidCallStackSave(false), IndirectBranch(nullptr),
@@ -439,10 +439,11 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   // if compiled with no optimizations. We do it for coroutine as the lifetime
   // of CleanupDestSlot alloca make correct coroutine frame building very
   // difficult.
-  if (NormalCleanupDest && isCoroutine()) {
+  if (NormalCleanupDest.isValid() && isCoroutine()) {
     llvm::DominatorTree DT(*CurFn);
-    llvm::PromoteMemToReg(NormalCleanupDest, DT);
-    NormalCleanupDest = nullptr;
+    llvm::PromoteMemToReg(
+        cast<llvm::AllocaInst>(NormalCleanupDest.getPointer()), DT);
+    NormalCleanupDest = Address::invalid();
   }
 }
 

@@ -222,6 +222,25 @@ public:
     llvm_unreachable("Incorrect RegionKind specified for directive.");
   }
 
+  /// Get innermost captured statement for the construct.
+  CapturedStmt *getInnermostCapturedStmt() {
+    assert(hasAssociatedStmt() && getAssociatedStmt() &&
+           "Must have associated statement.");
+    SmallVector<OpenMPDirectiveKind, 4> CaptureRegions;
+    getOpenMPCaptureRegions(CaptureRegions, getDirectiveKind());
+    assert(!CaptureRegions.empty() &&
+           "At least one captured statement must be provided.");
+    auto *CS = cast<CapturedStmt>(getAssociatedStmt());
+    for (unsigned Level = CaptureRegions.size(); Level > 1; --Level)
+      CS = cast<CapturedStmt>(CS->getCapturedStmt());
+    return CS;
+  }
+
+  const CapturedStmt *getInnermostCapturedStmt() const {
+    return const_cast<OMPExecutableDirective *>(this)
+        ->getInnermostCapturedStmt();
+  }
+
   OpenMPDirectiveKind getDirectiveKind() const { return Kind; }
 
   static bool classof(const Stmt *S) {
@@ -903,9 +922,8 @@ public:
   }
   const Stmt *getBody() const {
     // This relies on the loop form is already checked by Sema.
-    const Stmt *Body = getAssociatedStmt()->IgnoreContainers(true);
-    while(const auto *CS = dyn_cast<CapturedStmt>(Body))
-      Body = CS->getCapturedStmt();
+    const Stmt *Body =
+        getInnermostCapturedStmt()->getCapturedStmt()->IgnoreContainers();
     Body = cast<ForStmt>(Body)->getBody();
     for (unsigned Cnt = 1; Cnt < CollapsedNum; ++Cnt) {
       Body = Body->IgnoreContainers();
