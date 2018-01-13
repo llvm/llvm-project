@@ -33,6 +33,7 @@ using llvm::wasm::WasmRelocation;
 namespace lld {
 namespace wasm {
 
+class InputChunk;
 class InputFunction;
 class InputSegment;
 
@@ -122,6 +123,7 @@ private:
   const WasmSignature *getFunctionSig(const WasmSymbol &Sym) const;
   uint32_t getGlobalValue(const WasmSymbol &Sym) const;
   InputFunction *getFunction(const WasmSymbol &Sym) const;
+  bool isExcludedByComdat(InputChunk *Chunk) const;
 
   // List of all symbols referenced or defined by this file.
   std::vector<Symbol *> Symbols;
