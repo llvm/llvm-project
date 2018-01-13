@@ -128,8 +128,6 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
       return nullptr;
     std::string name = type_def->getName();
     uint64_t bytes = type_def->getLength();
-    if (!target_type)
-      return nullptr;
     CompilerType target_ast_type = target_type->GetFullCompilerType();
     CompilerDeclContext target_decl_ctx =
         m_ast.GetSymbolFile()->GetDeclContextForUID(target_type->GetID());

@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 
 class SymbolFilePDB : public lldb_private::SymbolFile {
 public:
@@ -167,23 +168,34 @@ public:
   const llvm::pdb::IPDBSession &GetPDBSession() const;
 
 private:
-  lldb::CompUnitSP ParseCompileUnitForSymIndex(uint32_t id);
+  lldb::CompUnitSP
+  ParseCompileUnitForUID(uint32_t id, uint32_t index = UINT32_MAX);
 
   bool ParseCompileUnitLineTable(const lldb_private::SymbolContext &sc,
                                  uint32_t match_line);
 
   void BuildSupportFileIdToSupportFileIndexMap(
-      const llvm::pdb::PDBSymbolCompiland &cu,
+      const llvm::pdb::PDBSymbolCompiland &pdb_compiland,
       llvm::DenseMap<uint32_t, uint32_t> &index_map) const;
 
   void FindTypesByName(const std::string &name, uint32_t max_matches,
                        lldb_private::TypeMap &types);
+
+  void GetCompileUnitIndex(const llvm::pdb::PDBSymbolCompiland *pdb_compiland,
+                           uint32_t &index);
+
+  std::string GetSourceFileNameForPDBCompiland(
+      const llvm::pdb::PDBSymbolCompiland *pdb_compiland);
+
+  std::unique_ptr<llvm::pdb::PDBSymbolCompiland>
+  GetPDBCompilandByUID(uint32_t uid);
 
   llvm::DenseMap<uint32_t, lldb::CompUnitSP> m_comp_units;
   llvm::DenseMap<uint32_t, lldb::TypeSP> m_types;
 
   std::vector<lldb::TypeSP> m_builtin_types;
   std::unique_ptr<llvm::pdb::IPDBSession> m_session_up;
+  std::unique_ptr<llvm::pdb::PDBSymbolExe> m_global_scope_up;
   uint32_t m_cached_compile_unit_count;
   std::unique_ptr<lldb_private::CompilerDeclContext> m_tu_decl_ctx_up;
 };
