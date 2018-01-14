@@ -1431,18 +1431,18 @@ static Value *simplifyAndOrOfICmpsWithZero(ICmpInst *Cmp0, ICmpInst *Cmp1,
   // that compare implies the other, so we eliminate the other. Optionally, look
   // through a pointer-to-int cast to match a null check of a pointer type.
 
-  // (X == 0) || (([ptrtoint] X && ?) == 0) --> ([ptrtoint] X && ?) == 0
-  // (X == 0) || ((? && [ptrtoint] X) == 0) --> (? && [ptrtoint] X) == 0
-  // (X != 0) && (([ptrtoint] X && ?) != 0) --> ([ptrtoint] X && ?) != 0
-  // (X != 0) && ((? && [ptrtoint] X) != 0) --> (? && [ptrtoint] X) != 0
+  // (X == 0) || (([ptrtoint] X & ?) == 0) --> ([ptrtoint] X & ?) == 0
+  // (X == 0) || ((? & [ptrtoint] X) == 0) --> (? & [ptrtoint] X) == 0
+  // (X != 0) && (([ptrtoint] X & ?) != 0) --> ([ptrtoint] X & ?) != 0
+  // (X != 0) && ((? & [ptrtoint] X) != 0) --> (? & [ptrtoint] X) != 0
   if (match(Y, m_c_And(m_Specific(X), m_Value())) ||
       match(Y, m_c_And(m_PtrToInt(m_Specific(X)), m_Value())))
     return Cmp1;
 
-  // (([ptrtoint] Y && ?) == 0) || (Y == 0) --> ([ptrtoint] Y && ?) == 0
-  // ((? && [ptrtoint] Y) == 0) || (Y == 0) --> (? && [ptrtoint] Y) == 0
-  // (([ptrtoint] Y && ?) != 0) && (Y != 0) --> ([ptrtoint] Y && ?) != 0
-  // ((? && [ptrtoint] Y) != 0) && (Y != 0) --> (? && [ptrtoint] Y) != 0
+  // (([ptrtoint] Y & ?) == 0) || (Y == 0) --> ([ptrtoint] Y & ?) == 0
+  // ((? & [ptrtoint] Y) == 0) || (Y == 0) --> (? & [ptrtoint] Y) == 0
+  // (([ptrtoint] Y & ?) != 0) && (Y != 0) --> ([ptrtoint] Y & ?) != 0
+  // ((? & [ptrtoint] Y) != 0) && (Y != 0) --> (? & [ptrtoint] Y) != 0
   if (match(X, m_c_And(m_Specific(Y), m_Value())) ||
       match(X, m_c_And(m_PtrToInt(m_Specific(Y)), m_Value())))
     return Cmp0;

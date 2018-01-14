@@ -6261,12 +6261,12 @@ int test_mm512_kortestz(__mmask16 __A, __mmask16 __B) {
 
 __mmask16 test_mm512_kunpackb(__m512i __A, __m512i __B, __m512i __C, __m512i __D, __m512i __E, __m512i __F) {
   // CHECK-LABEL: @test_mm512_kunpackb
-  // CHECK: bitcast <16 x i1> %{{.*}} to i16
-  // CHECK: bitcast <16 x i1> %{{.*}} to i16
-  // CHECK: and i32 %{{.*}}, 255
-  // CHECK: shl i32 %{{.*}}, 8
-  // CHECK: or i32 %{{.*}}, %{{.*}}
-  // CHECK: bitcast i16 %{{.*}} to <16 x i1>
+  // CHECK: [[LHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // CHECK: [[RHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // CHECK: [[LHS2:%.*]] = shufflevector <16 x i1> [[LHS]], <16 x i1> [[LHS]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // CHECK: [[RHS2:%.*]] = shufflevector <16 x i1> [[RHS]], <16 x i1> [[RHS]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // CHECK: [[CONCAT:%.*]] = shufflevector <8 x i1> [[LHS2]], <8 x i1> [[RHS2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  // CHECK: bitcast <16 x i1> [[CONCAT]] to i16
   return _mm512_mask_cmpneq_epu32_mask(_mm512_kunpackb(_mm512_cmpneq_epu32_mask(__A, __B),
                                                        _mm512_cmpneq_epu32_mask(__C, __D)),
                                                        __E, __F);
