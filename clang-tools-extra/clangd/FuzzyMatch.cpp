@@ -87,14 +87,15 @@ FuzzyMatcher::FuzzyMatcher(StringRef Pattern)
     for (int W = 0; W < P; ++W)
       for (Action A : {Miss, Match})
         Scores[P][W][A] = {AwfulScore, Miss};
-  calculateRoles(Pat, PatRole, PatN);
+  if (PatN > 0)
+    calculateRoles(Pat, PatRole, PatN);
 }
 
 Optional<float> FuzzyMatcher::match(StringRef Word) {
-  if (!PatN)
-    return 1;
   if (!(WordContainsPattern = init(Word)))
     return None;
+  if (!PatN)
+    return 1;
   buildGraph();
   auto Best = std::max(Scores[PatN][WordN][Miss].Score,
                        Scores[PatN][WordN][Match].Score);
@@ -177,6 +178,7 @@ template <typename T> static T packedLookup(const uint8_t *Data, int I) {
   return static_cast<T>((Data[I >> 2] >> ((I & 3) * 2)) & 3);
 }
 void FuzzyMatcher::calculateRoles(const char *Text, CharRole *Out, int N) {
+  assert(N > 0);
   // Types holds a sliding window of (Prev, Curr, Next) types.
   // Initial value is (Empty, Empty, type of Text[0]).
   int Types = packedLookup<CharType>(CharTypes, Text[0]);
@@ -199,6 +201,8 @@ bool FuzzyMatcher::init(StringRef NewWord) {
   if (PatN > WordN)
     return false;
   memcpy(Word, NewWord.data(), WordN);
+  if (PatN == 0)
+    return true;
   for (int I = 0; I < WordN; ++I)
     LowWord[I] = lower(Word[I]);
 
@@ -293,6 +297,14 @@ llvm::SmallString<256> FuzzyMatcher::dumpLast(llvm::raw_ostream &OS) const {
   llvm::SmallString<256> Result;
   OS << "=== Match \"" << StringRef(Word, WordN) << "\" against ["
      << StringRef(Pat, PatN) << "] ===\n";
+  if (PatN == 0) {
+    OS << "Pattern is empty: perfect match.\n";
+    return Result = StringRef(Word, WordN);
+  }
+  if (WordN == 0) {
+    OS << "Word is empty: no match.\n";
+    return Result;
+  }
   if (!WordContainsPattern) {
     OS << "Substring check failed.\n";
     return Result;

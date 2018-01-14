@@ -431,7 +431,7 @@ endfunction()
 
 macro(add_compiler_rt_resource_file target_name file_name component)
   set(src_file "${CMAKE_CURRENT_SOURCE_DIR}/${file_name}")
-  set(dst_file "${COMPILER_RT_OUTPUT_DIR}/${file_name}")
+  set(dst_file "${COMPILER_RT_OUTPUT_DIR}/share/${file_name}")
   add_custom_command(OUTPUT ${dst_file}
     DEPENDS ${src_file}
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src_file} ${dst_file}
@@ -439,7 +439,7 @@ macro(add_compiler_rt_resource_file target_name file_name component)
   add_custom_target(${target_name} DEPENDS ${dst_file})
   # Install in Clang resource directory.
   install(FILES ${file_name}
-    DESTINATION ${COMPILER_RT_INSTALL_PATH}
+    DESTINATION ${COMPILER_RT_INSTALL_PATH}/share
     COMPONENT ${component})
   add_dependencies(${component} ${target_name})
 
