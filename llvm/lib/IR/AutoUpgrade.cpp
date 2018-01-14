@@ -1070,11 +1070,23 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
                           CI->getArgOperand(1));
     } else if (IsX86 && (Name.startswith("avx512.kunpck"))) {
-      uint64_t Shift = CI->getType()->getScalarSizeInBits() / 2;
-      uint64_t And = (1ULL << Shift) - 1; 
-      Value* LowBits =  Builder.CreateAnd(CI->getArgOperand(0), And);
-      Value* HighBits =  Builder.CreateShl(CI->getArgOperand(1), Shift);
-      Rep = Builder.CreateOr(LowBits, HighBits);
+      unsigned NumElts = CI->getType()->getScalarSizeInBits();
+      Value *LHS = getX86MaskVec(Builder, CI->getArgOperand(0), NumElts);
+      Value *RHS = getX86MaskVec(Builder, CI->getArgOperand(1), NumElts);
+      uint32_t Indices[64];
+      for (unsigned i = 0; i != NumElts; ++i)
+        Indices[i] = i;
+
+      // First extract half of each vector. This gives better codegen than
+      // doing it in a single shuffle.
+      LHS = Builder.CreateShuffleVector(LHS, LHS,
+                                        makeArrayRef(Indices, NumElts / 2));
+      RHS = Builder.CreateShuffleVector(RHS, RHS,
+                                        makeArrayRef(Indices, NumElts / 2));
+      // Concat the vectors.
+      Rep = Builder.CreateShuffleVector(LHS, RHS,
+                                        makeArrayRef(Indices, NumElts));
+      Rep = Builder.CreateBitCast(Rep, CI->getType());
     } else if (IsX86 && (Name == "sse.add.ss" || Name == "sse2.add.sd")) {
       Type *I32Ty = Type::getInt32Ty(C);
       Value *Elt0 = Builder.CreateExtractElement(CI->getArgOperand(0),
