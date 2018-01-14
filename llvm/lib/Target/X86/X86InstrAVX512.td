@@ -3437,6 +3437,14 @@ let Predicates = [HasAVX512, NoVLX] in {
   defm : mask_move_lowering<"VMOVDQA64Z", v4i64x_info, v8i64_info>;
 }
 
+let Predicates = [HasBWI, NoVLX] in {
+  defm : mask_move_lowering<"VMOVDQU8Z", v16i8x_info, v64i8_info>;
+  defm : mask_move_lowering<"VMOVDQU8Z", v32i8x_info, v64i8_info>;
+
+  defm : mask_move_lowering<"VMOVDQU16Z", v8i16x_info, v32i16_info>;
+  defm : mask_move_lowering<"VMOVDQU16Z", v16i16x_info, v32i16_info>;
+}
+
 let Predicates = [HasAVX512] in {
   // 512-bit store.
   def : Pat<(alignedstore (v32i16 VR512:$src), addr:$dst),
