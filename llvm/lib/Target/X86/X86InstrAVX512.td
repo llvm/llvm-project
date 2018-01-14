@@ -8127,26 +8127,28 @@ multiclass avx512_trunc_mr_lowering<X86VectorVTInfo SrcInfo,
                             addr:$dst, SrcInfo.KRCWM:$mask, SrcInfo.RC:$src)>;
 }
 
-multiclass avx512_trunc<bits<8> opc, string OpcodeStr, SDNode OpNode,
-         OpndItins itins, AVX512VLVectorVTInfo VTSrcInfo, X86VectorVTInfo DestInfoZ128,
-         X86VectorVTInfo DestInfoZ256, X86VectorVTInfo DestInfoZ,
-         X86MemOperand x86memopZ128, X86MemOperand x86memopZ256,
-         X86MemOperand x86memopZ, PatFrag truncFrag, PatFrag mtruncFrag,
-                                                     Predicate prd = HasAVX512>{
+multiclass avx512_trunc<bits<8> opc, string OpcodeStr, SDNode OpNode128,
+                        SDNode OpNode256, SDNode OpNode512, OpndItins itins,
+                        AVX512VLVectorVTInfo VTSrcInfo,
+                        X86VectorVTInfo DestInfoZ128,
+                        X86VectorVTInfo DestInfoZ256, X86VectorVTInfo DestInfoZ,
+                        X86MemOperand x86memopZ128, X86MemOperand x86memopZ256,
+                        X86MemOperand x86memopZ, PatFrag truncFrag,
+                        PatFrag mtruncFrag, Predicate prd = HasAVX512>{
 
   let Predicates = [HasVLX, prd] in {
-    defm Z128:  avx512_trunc_common<opc, OpcodeStr, OpNode, itins,
+    defm Z128:  avx512_trunc_common<opc, OpcodeStr, OpNode128, itins,
                              VTSrcInfo.info128, DestInfoZ128, x86memopZ128>,
                 avx512_trunc_mr_lowering<VTSrcInfo.info128, DestInfoZ128,
                              truncFrag, mtruncFrag>, EVEX_V128;
 
-    defm Z256:  avx512_trunc_common<opc, OpcodeStr, OpNode, itins,
+    defm Z256:  avx512_trunc_common<opc, OpcodeStr, OpNode256, itins,
                              VTSrcInfo.info256, DestInfoZ256, x86memopZ256>,
                 avx512_trunc_mr_lowering<VTSrcInfo.info256, DestInfoZ256,
                              truncFrag, mtruncFrag>, EVEX_V256;
   }
   let Predicates = [prd] in
-    defm Z:     avx512_trunc_common<opc, OpcodeStr, OpNode, itins,
+    defm Z:     avx512_trunc_common<opc, OpcodeStr, OpNode512, itins,
                              VTSrcInfo.info512, DestInfoZ, x86memopZ>,
                 avx512_trunc_mr_lowering<VTSrcInfo.info512, DestInfoZ,
                              truncFrag, mtruncFrag>, EVEX_V512;
@@ -8154,107 +8156,113 @@ multiclass avx512_trunc<bits<8> opc, string OpcodeStr, SDNode OpNode,
 
 multiclass avx512_trunc_qb<bits<8> opc, string OpcodeStr, SDNode OpNode,
                            OpndItins itins, PatFrag StoreNode,
-                           PatFrag MaskedStoreNode> {
-  defm NAME: avx512_trunc<opc, OpcodeStr, OpNode, itins, avx512vl_i64_info,
-               v16i8x_info, v16i8x_info, v16i8x_info, i16mem, i32mem, i64mem,
-               StoreNode, MaskedStoreNode>, EVEX_CD8<8, CD8VO>;
+                           PatFrag MaskedStoreNode, SDNode InVecNode = OpNode> {
+  defm NAME: avx512_trunc<opc, OpcodeStr, InVecNode, InVecNode, InVecNode, itins,
+                          avx512vl_i64_info, v16i8x_info, v16i8x_info,
+                          v16i8x_info, i16mem, i32mem, i64mem, StoreNode,
+                          MaskedStoreNode>, EVEX_CD8<8, CD8VO>;
 }
 
 multiclass avx512_trunc_qw<bits<8> opc, string OpcodeStr, SDNode OpNode,
                            OpndItins itins, PatFrag StoreNode,
-                           PatFrag MaskedStoreNode> {
-  defm NAME: avx512_trunc<opc, OpcodeStr, OpNode, itins, avx512vl_i64_info,
-               v8i16x_info, v8i16x_info, v8i16x_info, i32mem, i64mem, i128mem,
-               StoreNode, MaskedStoreNode>, EVEX_CD8<16, CD8VQ>;
+                           PatFrag MaskedStoreNode, SDNode InVecNode = OpNode> {
+  defm NAME: avx512_trunc<opc, OpcodeStr, InVecNode, InVecNode, OpNode, itins,
+                          avx512vl_i64_info, v8i16x_info, v8i16x_info,
+                          v8i16x_info, i32mem, i64mem, i128mem, StoreNode,
+                          MaskedStoreNode>, EVEX_CD8<16, CD8VQ>;
 }
 
 multiclass avx512_trunc_qd<bits<8> opc, string OpcodeStr, SDNode OpNode,
                            OpndItins itins, PatFrag StoreNode,
-                           PatFrag MaskedStoreNode> {
-  defm NAME: avx512_trunc<opc, OpcodeStr, OpNode, itins, avx512vl_i64_info,
-               v4i32x_info, v4i32x_info, v8i32x_info, i64mem, i128mem, i256mem,
-               StoreNode, MaskedStoreNode>, EVEX_CD8<32, CD8VH>;
+                           PatFrag MaskedStoreNode, SDNode InVecNode = OpNode> {
+  defm NAME: avx512_trunc<opc, OpcodeStr, InVecNode, OpNode, OpNode, itins,
+                          avx512vl_i64_info, v4i32x_info, v4i32x_info,
+                          v8i32x_info, i64mem, i128mem, i256mem, StoreNode,
+                          MaskedStoreNode>, EVEX_CD8<32, CD8VH>;
 }
 
 multiclass avx512_trunc_db<bits<8> opc, string OpcodeStr, SDNode OpNode,
                            OpndItins itins, PatFrag StoreNode,
-                           PatFrag MaskedStoreNode> {
-  defm NAME: avx512_trunc<opc, OpcodeStr, OpNode, itins, avx512vl_i32_info,
-               v16i8x_info, v16i8x_info, v16i8x_info, i32mem, i64mem, i128mem,
-               StoreNode, MaskedStoreNode>, EVEX_CD8<8, CD8VQ>;
+                           PatFrag MaskedStoreNode, SDNode InVecNode = OpNode> {
+  defm NAME: avx512_trunc<opc, OpcodeStr, InVecNode, InVecNode, OpNode, itins,
+                          avx512vl_i32_info, v16i8x_info, v16i8x_info,
+                          v16i8x_info, i32mem, i64mem, i128mem, StoreNode,
+                          MaskedStoreNode>, EVEX_CD8<8, CD8VQ>;
 }
 
 multiclass avx512_trunc_dw<bits<8> opc, string OpcodeStr, SDNode OpNode,
                            OpndItins itins, PatFrag StoreNode,
-                           PatFrag MaskedStoreNode> {
-  defm NAME: avx512_trunc<opc, OpcodeStr, OpNode, itins, avx512vl_i32_info,
-              v8i16x_info, v8i16x_info, v16i16x_info, i64mem, i128mem, i256mem,
-              StoreNode, MaskedStoreNode>, EVEX_CD8<16, CD8VH>;
+                           PatFrag MaskedStoreNode, SDNode InVecNode = OpNode> {
+  defm NAME: avx512_trunc<opc, OpcodeStr, InVecNode, OpNode, OpNode, itins,
+                          avx512vl_i32_info, v8i16x_info, v8i16x_info,
+                          v16i16x_info, i64mem, i128mem, i256mem, StoreNode,
+                          MaskedStoreNode>, EVEX_CD8<16, CD8VH>;
 }
 
 multiclass avx512_trunc_wb<bits<8> opc, string OpcodeStr, SDNode OpNode,
                            OpndItins itins, PatFrag StoreNode,
-                           PatFrag MaskedStoreNode> {
-  defm NAME: avx512_trunc<opc, OpcodeStr, OpNode, itins, avx512vl_i16_info,
-              v16i8x_info, v16i8x_info, v32i8x_info, i64mem, i128mem, i256mem,
-              StoreNode, MaskedStoreNode, HasBWI>, EVEX_CD8<16, CD8VH>;
+                           PatFrag MaskedStoreNode, SDNode InVecNode = OpNode> {
+  defm NAME: avx512_trunc<opc, OpcodeStr, InVecNode, OpNode, OpNode,
+                          itins, avx512vl_i16_info, v16i8x_info, v16i8x_info,
+                          v32i8x_info, i64mem, i128mem, i256mem, StoreNode,
+                          MaskedStoreNode, HasBWI>, EVEX_CD8<16, CD8VH>;
 }
 
-defm VPMOVQB    : avx512_trunc_qb<0x32, "vpmovqb",   X86vtrunc, AVX512_TRUNCATE,
-                                  truncstorevi8, masked_truncstorevi8>;
+defm VPMOVQB    : avx512_trunc_qb<0x32, "vpmovqb",   trunc, AVX512_TRUNCATE,
+                                  truncstorevi8, masked_truncstorevi8, X86vtrunc>;
 defm VPMOVSQB   : avx512_trunc_qb<0x22, "vpmovsqb",  X86vtruncs, AVX512_TRUNCATE,
                                   truncstore_s_vi8, masked_truncstore_s_vi8>;
 defm VPMOVUSQB  : avx512_trunc_qb<0x12, "vpmovusqb", X86vtruncus, AVX512_TRUNCATE,
                                   truncstore_us_vi8, masked_truncstore_us_vi8>;
 
-defm VPMOVQW    : avx512_trunc_qw<0x34, "vpmovqw",   X86vtrunc, AVX512_TRUNCATE,
-                                  truncstorevi16, masked_truncstorevi16>;
+defm VPMOVQW    : avx512_trunc_qw<0x34, "vpmovqw",   trunc, AVX512_TRUNCATE,
+                                  truncstorevi16, masked_truncstorevi16, X86vtrunc>;
 defm VPMOVSQW   : avx512_trunc_qw<0x24, "vpmovsqw",  X86vtruncs, AVX512_TRUNCATE,
                                   truncstore_s_vi16, masked_truncstore_s_vi16>;
 defm VPMOVUSQW  : avx512_trunc_qw<0x14, "vpmovusqw", X86vtruncus, AVX512_TRUNCATE,
                                   truncstore_us_vi16, masked_truncstore_us_vi16>;
 
-defm VPMOVQD    : avx512_trunc_qd<0x35, "vpmovqd",   X86vtrunc, AVX512_TRUNCATE,
-                                  truncstorevi32, masked_truncstorevi32>;
+defm VPMOVQD    : avx512_trunc_qd<0x35, "vpmovqd",   trunc, AVX512_TRUNCATE,
+                                  truncstorevi32, masked_truncstorevi32, X86vtrunc>;
 defm VPMOVSQD   : avx512_trunc_qd<0x25, "vpmovsqd",  X86vtruncs, AVX512_TRUNCATE,
                                   truncstore_s_vi32, masked_truncstore_s_vi32>;
 defm VPMOVUSQD  : avx512_trunc_qd<0x15, "vpmovusqd", X86vtruncus, AVX512_TRUNCATE,
                                   truncstore_us_vi32, masked_truncstore_us_vi32>;
 
-defm VPMOVDB    : avx512_trunc_db<0x31, "vpmovdb", X86vtrunc, AVX512_TRUNCATE,
-                                  truncstorevi8, masked_truncstorevi8>;
+defm VPMOVDB    : avx512_trunc_db<0x31, "vpmovdb", trunc, AVX512_TRUNCATE,
+                                  truncstorevi8, masked_truncstorevi8, X86vtrunc>;
 defm VPMOVSDB   : avx512_trunc_db<0x21, "vpmovsdb",   X86vtruncs, AVX512_TRUNCATE,
                                   truncstore_s_vi8, masked_truncstore_s_vi8>;
 defm VPMOVUSDB  : avx512_trunc_db<0x11, "vpmovusdb",  X86vtruncus, AVX512_TRUNCATE,
                                   truncstore_us_vi8, masked_truncstore_us_vi8>;
 
-defm VPMOVDW    : avx512_trunc_dw<0x33, "vpmovdw", X86vtrunc, AVX512_TRUNCATE,
-                                  truncstorevi16, masked_truncstorevi16>;
+defm VPMOVDW    : avx512_trunc_dw<0x33, "vpmovdw", trunc, AVX512_TRUNCATE,
+                                  truncstorevi16, masked_truncstorevi16, X86vtrunc>;
 defm VPMOVSDW   : avx512_trunc_dw<0x23, "vpmovsdw",   X86vtruncs, AVX512_TRUNCATE,
                                   truncstore_s_vi16, masked_truncstore_s_vi16>;
 defm VPMOVUSDW  : avx512_trunc_dw<0x13, "vpmovusdw",  X86vtruncus, AVX512_TRUNCATE,
                                   truncstore_us_vi16, masked_truncstore_us_vi16>;
 
-defm VPMOVWB    : avx512_trunc_wb<0x30, "vpmovwb", X86vtrunc, AVX512_TRUNCATE,
-                                  truncstorevi8, masked_truncstorevi8>;
+defm VPMOVWB    : avx512_trunc_wb<0x30, "vpmovwb", trunc, AVX512_TRUNCATE,
+                                  truncstorevi8, masked_truncstorevi8, X86vtrunc>;
 defm VPMOVSWB   : avx512_trunc_wb<0x20, "vpmovswb",   X86vtruncs, AVX512_TRUNCATE,
                                   truncstore_s_vi8, masked_truncstore_s_vi8>;
 defm VPMOVUSWB  : avx512_trunc_wb<0x10, "vpmovuswb",  X86vtruncus, AVX512_TRUNCATE,
                                   truncstore_us_vi8, masked_truncstore_us_vi8>;
 
 let Predicates = [HasAVX512, NoVLX] in {
-def: Pat<(v8i16 (X86vtrunc (v8i32 VR256X:$src))),
+def: Pat<(v8i16 (trunc (v8i32 VR256X:$src))),
          (v8i16 (EXTRACT_SUBREG
                  (v16i16 (VPMOVDWZrr (v16i32 (INSERT_SUBREG (IMPLICIT_DEF),
                                           VR256X:$src, sub_ymm)))), sub_xmm))>;
-def: Pat<(v4i32 (X86vtrunc (v4i64 VR256X:$src))),
+def: Pat<(v4i32 (trunc (v4i64 VR256X:$src))),
          (v4i32 (EXTRACT_SUBREG
                  (v8i32 (VPMOVQDZrr (v8i64 (INSERT_SUBREG (IMPLICIT_DEF),
                                            VR256X:$src, sub_ymm)))), sub_xmm))>;
 }
 
 let Predicates = [HasBWI, NoVLX] in {
-def: Pat<(v16i8 (X86vtrunc (v16i16 VR256X:$src))),
+def: Pat<(v16i8 (trunc (v16i16 VR256X:$src))),
          (v16i8 (EXTRACT_SUBREG (VPMOVWBZrr (v32i16 (INSERT_SUBREG (IMPLICIT_DEF),
                                             VR256X:$src, sub_ymm))), sub_xmm))>;
 }

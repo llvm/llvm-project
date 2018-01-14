@@ -112,7 +112,7 @@ static bool getDefaultBlacklist(const Driver &D, SanitizerMask Kinds,
 
   if (BlacklistFile) {
     clang::SmallString<64> Path(D.ResourceDir);
-    llvm::sys::path::append(Path, BlacklistFile);
+    llvm::sys::path::append(Path, "share", BlacklistFile);
     BLPath = Path.str();
     return true;
   }
