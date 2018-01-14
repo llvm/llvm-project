@@ -880,13 +880,6 @@ Expr ScriptParser::readConstant() {
 // "0x" or suffixed with "H") and decimal numbers. Decimal numbers may
 // have "K" (Ki) or "M" (Mi) suffixes.
 static Optional<uint64_t> parseInt(StringRef Tok) {
-  // Negative number
-  if (Tok.startswith("-")) {
-    if (Optional<uint64_t> Val = parseInt(Tok.substr(1)))
-      return -*Val;
-    return None;
-  }
-
   // Hexadecimal
   uint64_t Val;
   if (Tok.startswith_lower("0x")) {
