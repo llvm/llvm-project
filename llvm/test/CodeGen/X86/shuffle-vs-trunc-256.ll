@@ -81,16 +81,14 @@ define void @trunc_v16i16_to_v16i8(<32 x i8>* %L, <16 x i8>* %S) nounwind {
 ; AVX512F-LABEL: trunc_v16i16_to_v16i8:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpmovsxwd (%rdi), %zmm0
-; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
-; AVX512F-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX512F-NEXT:    vpmovdb %zmm0, (%rsi)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: trunc_v16i16_to_v16i8:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpmovsxwd (%rdi), %zmm0
-; AVX512VL-NEXT:    vpmovdb %zmm0, %xmm0
-; AVX512VL-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX512VL-NEXT:    vpmovdb %zmm0, (%rsi)
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
