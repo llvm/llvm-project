@@ -1075,7 +1075,7 @@ location.
 Building a relocatable precompiled header requires two additional
 arguments. First, pass the ``--relocatable-pch`` flag to indicate that
 the resulting PCH file should be relocatable. Second, pass
-`-isysroot /path/to/build`, which makes all includes for your library
+``-isysroot /path/to/build``, which makes all includes for your library
 relative to the build directory. For example:
 
 .. code-block:: console
@@ -1085,9 +1085,9 @@ relative to the build directory. For example:
 When loading the relocatable PCH file, the various headers used in the
 PCH file are found from the system header root. For example, ``mylib.h``
 can be found in ``/usr/include/mylib.h``. If the headers are installed
-in some other system root, the `-isysroot` option can be used provide
+in some other system root, the ``-isysroot`` option can be used provide
 a different system root from which the headers will be based. For
-example, `-isysroot /Developer/SDKs/MacOSX10.4u.sdk` will look for
+example, ``-isysroot /Developer/SDKs/MacOSX10.4u.sdk`` will look for
 ``mylib.h`` in ``/Developer/SDKs/MacOSX10.4u.sdk/usr/include/mylib.h``.
 
 Relocatable precompiled headers are intended to be used in a limited
