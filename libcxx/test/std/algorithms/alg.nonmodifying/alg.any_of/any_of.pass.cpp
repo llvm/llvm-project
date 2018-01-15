@@ -16,15 +16,26 @@
 #include <algorithm>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 
 struct test1
 {
-    bool operator()(const int& i) const
+    TEST_CONSTEXPR bool operator()(const int& i) const
     {
         return i % 2 == 0;
     }
 };
+
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR int test_constexpr() {
+    int ia[] = {2, 4, 6, 8};
+    int ib[] = {1, 3, 5, 7};
+    return  std::any_of(std::begin(ia), std::end(ia), test1())
+        && !std::any_of(std::begin(ib), std::end(ib), test1())
+        ;
+    }
+#endif
 
 int main()
 {
@@ -52,4 +63,8 @@ int main()
         assert(std::any_of(input_iterator<const int*>(ia),
                            input_iterator<const int*>(ia), test1()) == false);
     }
+
+#if TEST_STD_VER > 17
+    static_assert(test_constexpr());
+#endif
 }

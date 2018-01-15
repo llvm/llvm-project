@@ -20,15 +20,15 @@ namespace std
 {
 
 template <class InputIterator, class Predicate>
-    bool
+    constexpr bool     // constexpr in C++20
     all_of(InputIterator first, InputIterator last, Predicate pred);
 
 template <class InputIterator, class Predicate>
-    bool
+    constexpr bool     // constexpr in C++20
     any_of(InputIterator first, InputIterator last, Predicate pred);
 
 template <class InputIterator, class Predicate>
-    bool
+    constexpr bool     // constexpr in C++20
     none_of(InputIterator first, InputIterator last, Predicate pred);
 
 template <class InputIterator, class Function>
@@ -919,7 +919,7 @@ inline _LIBCPP_INLINE_VISIBILITY int __pop_count(unsigned long long __x) {
 // all_of
 
 template <class _InputIterator, class _Predicate>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 bool
 all_of(_InputIterator __first, _InputIterator __last, _Predicate __pred)
 {
@@ -932,7 +932,7 @@ all_of(_InputIterator __first, _InputIterator __last, _Predicate __pred)
 // any_of
 
 template <class _InputIterator, class _Predicate>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 bool
 any_of(_InputIterator __first, _InputIterator __last, _Predicate __pred)
 {
@@ -945,7 +945,7 @@ any_of(_InputIterator __first, _InputIterator __last, _Predicate __pred)
 // none_of
 
 template <class _InputIterator, class _Predicate>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 bool
 none_of(_InputIterator __first, _InputIterator __last, _Predicate __pred)
 {
