@@ -12,21 +12,41 @@
 // template<ForwardIterator Iter1, ForwardIterator Iter2,
 //          Predicate<auto, Iter1::value_type, Iter2::value_type> Pred>
 //   requires CopyConstructible<Pred>
-//   Iter1
+//   constexpr Iter1  // constexpr after C++17
 //   find_end(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2, Pred pred);
 
 #include <algorithm>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 
 struct count_equal
 {
     static unsigned count;
     template <class T>
-    bool operator()(const T& x, const T& y)
+    TEST_CONSTEXPR bool operator()(const T& x, const T& y)
         {++count; return x == y;}
 };
+
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool test_constexpr() {
+    int ia[] = {0, 1, 2};
+    int ib[] = {4, 5, 6};
+    int ic[] = {0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 0, 1, 2, 3, 0, 1, 2, 0, 1, 0};
+    typedef forward_iterator<int*>       FI;
+    typedef bidirectional_iterator<int*> BI;
+    typedef random_access_iterator<int*> RI;
+    std::equal_to<int> eq;
+    return    (std::find_end(FI(std::begin(ic)), FI(std::end(ic)), FI(std::begin(ia)), FI(std::end(ia)), eq) == FI(ic+15))
+           && (std::find_end(FI(std::begin(ic)), FI(std::end(ic)), FI(std::begin(ib)), FI(std::end(ib)), eq) == FI(std::end(ic)))
+           && (std::find_end(BI(std::begin(ic)), BI(std::end(ic)), BI(std::begin(ia)), BI(std::end(ia)), eq) == BI(ic+15))
+           && (std::find_end(BI(std::begin(ic)), BI(std::end(ic)), BI(std::begin(ib)), BI(std::end(ib)), eq) == BI(std::end(ic)))
+           && (std::find_end(RI(std::begin(ic)), RI(std::end(ic)), RI(std::begin(ia)), RI(std::end(ia)), eq) == RI(ic+15))
+           && (std::find_end(RI(std::begin(ic)), RI(std::end(ic)), RI(std::begin(ib)), RI(std::end(ib)), eq) == RI(std::end(ic)))
+           ;
+    }
+#endif
 
 unsigned count_equal::count = 0;
 
@@ -83,4 +103,8 @@ int main()
     test<random_access_iterator<const int*>, forward_iterator<const int*> >();
     test<random_access_iterator<const int*>, bidirectional_iterator<const int*> >();
     test<random_access_iterator<const int*>, random_access_iterator<const int*> >();
+
+#if TEST_STD_VER > 17
+    static_assert(test_constexpr());
+#endif
 }
