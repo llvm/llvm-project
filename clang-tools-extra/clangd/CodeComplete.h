@@ -67,10 +67,6 @@ struct CodeCompleteOptions {
   /// FIXME(ioeric): we might want a better way to pass the index around inside
   /// clangd.
   const SymbolIndex *Index = nullptr;
-
-  // Populated internally by clangd, do not set.
-  /// Static index for project-wide global symbols.
-  const SymbolIndex *StaticIndex = nullptr;
 };
 
 /// Get code completions at a specified \p Pos in \p FileName.

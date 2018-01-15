@@ -667,17 +667,10 @@ CompletionList codeComplete(const Context &Ctx, PathRef FileName,
 
   // Got scope specifier (ns::f^) for code completion from sema, try to query
   // global symbols from indexes.
-  if (CompletedName.SSInfo) {
-    // FIXME: figure out a good algorithm to merge symbols from different
-    // sources (dynamic index, static index, AST symbols from clang's completion
-    // engine).
-    if (Opts.Index)
-      completeWithIndex(Ctx, *Opts.Index, Contents, *CompletedName.SSInfo,
-                        CompletedName.Filter, &Results, /*DebuggingLabel=*/"D");
-    if (Opts.StaticIndex)
-      completeWithIndex(Ctx, *Opts.StaticIndex, Contents, *CompletedName.SSInfo,
-                        CompletedName.Filter, &Results, /*DebuggingLabel=*/"S");
-  }
+  // FIXME: merge with Sema results, and respect limits.
+  if (CompletedName.SSInfo && Opts.Index)
+    completeWithIndex(Ctx, *Opts.Index, Contents, *CompletedName.SSInfo,
+                      CompletedName.Filter, &Results, /*DebuggingLabel=*/"I");
   return Results;
 }
 
