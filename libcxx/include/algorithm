@@ -79,11 +79,11 @@ template <class ForwardIterator, class BinaryPredicate>
     adjacent_find(ForwardIterator first, ForwardIterator last, BinaryPredicate pred);
 
 template <class InputIterator, class T>
-    typename iterator_traits<InputIterator>::difference_type
+    constexpr typename iterator_traits<InputIterator>::difference_type  // constexpr in C++20
     count(InputIterator first, InputIterator last, const T& value);
 
 template <class InputIterator, class Predicate>
-    typename iterator_traits<InputIterator>::difference_type
+    constexpr typename iterator_traits<InputIterator>::difference_type // constexpr in C++20
     count_if(InputIterator first, InputIterator last, Predicate pred);
 
 template <class InputIterator1, class InputIterator2>
@@ -333,11 +333,11 @@ template <class ForwardIterator, class Compare>
     is_sorted(ForwardIterator first, ForwardIterator last, Compare comp);
 
 template<class ForwardIterator>
-    ForwardIterator
+    constexpr ForwardIterator    // constexpr in C++20
     is_sorted_until(ForwardIterator first, ForwardIterator last);
 
 template <class ForwardIterator, class Compare>
-    ForwardIterator
+    constexpr ForwardIterator    // constexpr in C++20
     is_sorted_until(ForwardIterator first, ForwardIterator last, Compare comp);
 
 template <class RandomAccessIterator>
@@ -1240,7 +1240,7 @@ adjacent_find(_ForwardIterator __first, _ForwardIterator __last)
 // count
 
 template <class _InputIterator, class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 typename iterator_traits<_InputIterator>::difference_type
 count(_InputIterator __first, _InputIterator __last, const _Tp& __value_)
 {
@@ -1254,7 +1254,7 @@ count(_InputIterator __first, _InputIterator __last, const _Tp& __value_)
 // count_if
 
 template <class _InputIterator, class _Predicate>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 typename iterator_traits<_InputIterator>::difference_type
 count_if(_InputIterator __first, _InputIterator __last, _Predicate __pred)
 {
