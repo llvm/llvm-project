@@ -27,7 +27,7 @@ struct is_odd {
 };
 
 #if TEST_STD_VER > 17
-TEST_CONSTEXPR int test_constexpr() {
+TEST_CONSTEXPR bool test_constexpr() {
     int ia[] = {1, 3, 5, 2, 4, 6};
     int ib[] = {1, 2, 3, 4, 5, 6};
     return     std::is_partitioned(std::begin(ia), std::end(ia), is_odd())

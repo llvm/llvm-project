@@ -20,7 +20,7 @@
 #include "test_iterators.h"
 
 #if TEST_STD_VER > 17
-TEST_CONSTEXPR int test_constexpr() {
+TEST_CONSTEXPR bool test_constexpr() {
     int ia[] = {0, 0, 1, 1};
     int ib[] = {1, 1, 0, 0};
     return     std::is_sorted(std::begin(ia), std::end(ia))

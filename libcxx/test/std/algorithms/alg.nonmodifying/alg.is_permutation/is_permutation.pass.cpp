@@ -22,7 +22,7 @@
 #include "test_macros.h"
 
 #if TEST_STD_VER > 17
-TEST_CONSTEXPR int test_constexpr() {
+TEST_CONSTEXPR bool test_constexpr() {
     int ia[] = {0, 0, 0};
     int ib[] = {1, 1, 0};
     int ic[] = {1, 0, 1};
