@@ -149,6 +149,7 @@ class VOP3_Real <VOP3_Pseudo ps, int EncodingFamily> :
   let TSFlags            = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let Uses                 = ps.Uses;
+  let Defs                 = ps.Defs;
 
   VOPProfile Pfl = ps.Pfl;
 }

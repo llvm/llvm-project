@@ -239,9 +239,9 @@ public:
       : MCObjectWriter(OS, /*IsLittleEndian=*/true),
         TargetObjectWriter(std::move(MOTW)) {}
 
-private:
   ~WasmObjectWriter() override;
 
+private:
   void reset() override {
     CodeRelocations.clear();
     DataRelocations.clear();
@@ -1423,8 +1423,5 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
 std::unique_ptr<MCObjectWriter>
 llvm::createWasmObjectWriter(std::unique_ptr<MCWasmObjectTargetWriter> MOTW,
                              raw_pwrite_stream &OS) {
-  // FIXME: Can't use make_unique<WasmObjectWriter>(...) as WasmObjectWriter's
-  //        destructor is private. Is that necessary?
-  return std::unique_ptr<MCObjectWriter>(
-      new WasmObjectWriter(std::move(MOTW), OS));
+  return llvm::make_unique<WasmObjectWriter>(std::move(MOTW), OS);
 }

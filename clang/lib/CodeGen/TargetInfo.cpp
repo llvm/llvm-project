@@ -8770,6 +8770,182 @@ static bool getTypeString(SmallStringEnc &Enc, const Decl *D,
   return false;
 }
 
+//===----------------------------------------------------------------------===//
+// RISCV ABI Implementation
+//===----------------------------------------------------------------------===//
+
+namespace {
+class RISCVABIInfo : public DefaultABIInfo {
+private:
+  unsigned XLen; // Size of the integer ('x') registers in bits.
+  static const int NumArgGPRs = 8;
+
+public:
+  RISCVABIInfo(CodeGen::CodeGenTypes &CGT, unsigned XLen)
+      : DefaultABIInfo(CGT), XLen(XLen) {}
+
+  // DefaultABIInfo's classifyReturnType and classifyArgumentType are
+  // non-virtual, but computeInfo is virtual, so we overload it.
+  void computeInfo(CGFunctionInfo &FI) const override;
+
+  ABIArgInfo classifyArgumentType(QualType Ty, bool IsFixed,
+                                  int &ArgGPRsLeft) const;
+  ABIArgInfo classifyReturnType(QualType RetTy) const;
+
+  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                    QualType Ty) const override;
+
+  ABIArgInfo extendType(QualType Ty) const;
+};
+} // end anonymous namespace
+
+void RISCVABIInfo::computeInfo(CGFunctionInfo &FI) const {
+  QualType RetTy = FI.getReturnType();
+  if (!getCXXABI().classifyReturnType(FI))
+    FI.getReturnInfo() = classifyReturnType(RetTy);
+
+  // IsRetIndirect is true if classifyArgumentType indicated the value should
+  // be passed indirect or if the type size is greater than 2*xlen. e.g. fp128
+  // is passed direct in LLVM IR, relying on the backend lowering code to
+  // rewrite the argument list and pass indirectly on RV32.
+  bool IsRetIndirect = FI.getReturnInfo().getKind() == ABIArgInfo::Indirect ||
+                       getContext().getTypeSize(RetTy) > (2 * XLen);
+
+  // We must track the number of GPRs used in order to conform to the RISC-V
+  // ABI, as integer scalars passed in registers should have signext/zeroext
+  // when promoted, but are anyext if passed on the stack. As GPR usage is
+  // different for variadic arguments, we must also track whether we are
+  // examining a vararg or not.
+  int ArgGPRsLeft = IsRetIndirect ? NumArgGPRs - 1 : NumArgGPRs;
+  int NumFixedArgs = FI.getNumRequiredArgs();
+
+  int ArgNum = 0;
+  for (auto &ArgInfo : FI.arguments()) {
+    bool IsFixed = ArgNum < NumFixedArgs;
+    ArgInfo.info = classifyArgumentType(ArgInfo.type, IsFixed, ArgGPRsLeft);
+    ArgNum++;
+  }
+}
+
+ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
+                                              int &ArgGPRsLeft) const {
+  assert(ArgGPRsLeft <= NumArgGPRs && "Arg GPR tracking underflow");
+  Ty = useFirstFieldIfTransparentUnion(Ty);
+
+  // Structures with either a non-trivial destructor or a non-trivial
+  // copy constructor are always passed indirectly.
+  if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
+    if (ArgGPRsLeft)
+      ArgGPRsLeft -= 1;
+    return getNaturalAlignIndirect(Ty, /*ByVal=*/RAA ==
+                                           CGCXXABI::RAA_DirectInMemory);
+  }
+
+  // Ignore empty structs/unions.
+  if (isEmptyRecord(getContext(), Ty, true))
+    return ABIArgInfo::getIgnore();
+
+  uint64_t Size = getContext().getTypeSize(Ty);
+  uint64_t NeededAlign = getContext().getTypeAlign(Ty);
+  bool MustUseStack = false;
+  // Determine the number of GPRs needed to pass the current argument
+  // according to the ABI. 2*XLen-aligned varargs are passed in "aligned"
+  // register pairs, so may consume 3 registers.
+  int NeededArgGPRs = 1;
+  if (!IsFixed && NeededAlign == 2 * XLen)
+    NeededArgGPRs = 2 + (ArgGPRsLeft % 2);
+  else if (Size > XLen && Size <= 2 * XLen)
+    NeededArgGPRs = 2;
+
+  if (NeededArgGPRs > ArgGPRsLeft) {
+    MustUseStack = true;
+    NeededArgGPRs = ArgGPRsLeft;
+  }
+
+  ArgGPRsLeft -= NeededArgGPRs;
+
+  if (!isAggregateTypeForABI(Ty) && !Ty->isVectorType()) {
+    // Treat an enum type as its underlying type.
+    if (const EnumType *EnumTy = Ty->getAs<EnumType>())
+      Ty = EnumTy->getDecl()->getIntegerType();
+
+    // All integral types are promoted to XLen width, unless passed on the
+    // stack.
+    if (Size < XLen && Ty->isIntegralOrEnumerationType() && !MustUseStack) {
+      return extendType(Ty);
+    }
+
+    return ABIArgInfo::getDirect();
+  }
+
+  // Aggregates which are <= 2*XLen will be passed in registers if possible,
+  // so coerce to integers.
+  if (Size <= 2 * XLen) {
+    unsigned Alignment = getContext().getTypeAlign(Ty);
+
+    // Use a single XLen int if possible, 2*XLen if 2*XLen alignment is
+    // required, and a 2-element XLen array if only XLen alignment is required.
+    if (Size <= XLen) {
+      return ABIArgInfo::getDirect(
+          llvm::IntegerType::get(getVMContext(), XLen));
+    } else if (Alignment == 2 * XLen) {
+      return ABIArgInfo::getDirect(
+          llvm::IntegerType::get(getVMContext(), 2 * XLen));
+    } else {
+      return ABIArgInfo::getDirect(llvm::ArrayType::get(
+          llvm::IntegerType::get(getVMContext(), XLen), 2));
+    }
+  }
+  return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+}
+
+ABIArgInfo RISCVABIInfo::classifyReturnType(QualType RetTy) const {
+  if (RetTy->isVoidType())
+    return ABIArgInfo::getIgnore();
+
+  int ArgGPRsLeft = 2;
+
+  // The rules for return and argument types are the same, so defer to
+  // classifyArgumentType.
+  return classifyArgumentType(RetTy, /*IsFixed=*/true, ArgGPRsLeft);
+}
+
+Address RISCVABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                QualType Ty) const {
+  CharUnits SlotSize = CharUnits::fromQuantity(XLen / 8);
+
+  // Empty records are ignored for parameter passing purposes.
+  if (isEmptyRecord(getContext(), Ty, true)) {
+    Address Addr(CGF.Builder.CreateLoad(VAListAddr), SlotSize);
+    Addr = CGF.Builder.CreateElementBitCast(Addr, CGF.ConvertTypeForMem(Ty));
+    return Addr;
+  }
+
+  std::pair<CharUnits, CharUnits> SizeAndAlign =
+      getContext().getTypeInfoInChars(Ty);
+
+  // Arguments bigger than 2*Xlen bytes are passed indirectly.
+  bool IsIndirect = SizeAndAlign.first > 2 * SlotSize;
+
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect, SizeAndAlign,
+                          SlotSize, /*AllowHigherAlign=*/true);
+}
+
+ABIArgInfo RISCVABIInfo::extendType(QualType Ty) const {
+  int TySize = getContext().getTypeSize(Ty);
+  // RV64 ABI requires unsigned 32 bit integers to be sign extended.
+  if (XLen == 64 && Ty->isUnsignedIntegerOrEnumerationType() && TySize == 32)
+    return ABIArgInfo::getSignExtend(Ty);
+  return ABIArgInfo::getExtend(Ty);
+}
+
+namespace {
+class RISCVTargetCodeGenInfo : public TargetCodeGenInfo {
+public:
+  RISCVTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT, unsigned XLen)
+      : TargetCodeGenInfo(new RISCVABIInfo(CGT, XLen)) {}
+};
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // Driver code
@@ -8883,6 +9059,11 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
 
   case llvm::Triple::msp430:
     return SetCGInfo(new MSP430TargetCodeGenInfo(Types));
+
+  case llvm::Triple::riscv32:
+    return SetCGInfo(new RISCVTargetCodeGenInfo(Types, 32));
+  case llvm::Triple::riscv64:
+    return SetCGInfo(new RISCVTargetCodeGenInfo(Types, 64));
 
   case llvm::Triple::systemz: {
     bool HasVector = getTarget().getABI() == "vector";

@@ -9,6 +9,7 @@ struct unique_ptr {
   T& operator*() const;
   T* operator->() const;
   T* get() const;
+  explicit operator bool() const noexcept;
 };
 
 template <typename T>
@@ -16,6 +17,7 @@ struct shared_ptr {
   T& operator*() const;
   T* operator->() const;
   T* get() const;
+  explicit operator bool() const noexcept;
 };
 
 }  // namespace std
@@ -28,6 +30,7 @@ struct BarPtr {
   Bar* operator->();
   Bar& operator*();
   Bar* get();
+  explicit operator bool() const;
 };
 struct int_ptr {
   int* get();
@@ -110,6 +113,23 @@ void Positive() {
   // CHECK-MESSAGES: uu.get() == nullptr;
   // CHECK-FIXES: bool bb = uu == nullptr;
 
+  if (up->get());
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant get() call
+  // CHECK-MESSAGES: if (up->get());
+  // CHECK-FIXES: if (*up);
+  if ((uu.get()));
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: redundant get() call
+  // CHECK-MESSAGES: if ((uu.get()));
+  // CHECK-FIXES: if ((uu));
+  bb = !ss->get();
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: redundant get() call
+  // CHECK-MESSAGES: bb = !ss->get();
+  // CHECK-FIXES: bb = !*ss;
+  bb = u.get() ? true : false;
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: redundant get() call
+  // CHECK-MESSAGES: bb = u.get() ? true : false;
+  // CHECK-FIXES: bb = u ? true : false;
+
   bb = nullptr != ss->get();
   // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: redundant get() call
   // CHECK-MESSAGES: nullptr != ss->get();
@@ -146,10 +166,6 @@ void Positive() {
   // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: redundant get() call
   // CHECK-MESSAGES: if (NULL == x.get());
   // CHECK-FIXES: if (NULL == x);
-  if (x.get());
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant get() call
-  // CHECK-MESSAGES: if (x.get());
-  // CHECK-FIXES: if (x);
 }
 
 void Negative() {
@@ -175,4 +191,6 @@ void Negative() {
 
   int_ptr ip;
   bool bb = ip.get() == nullptr;
+  bb = !ip.get();
+  bb = ip.get() ? true : false;
 }

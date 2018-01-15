@@ -218,13 +218,13 @@ int foo(int n) {
   // CHECK-32:       store i32 [[A_VAL]], i32* [[A_CADDR:%.+]],
   // CHECK-32:       [[A_CVAL:%.+]] = load i[[SZ]], i[[SZ]]* [[A_CADDR]],
 
+  // CHECK:       [[IF:%.+]] = icmp sgt i32 {{[^,]+}}, 20
+  // CHECK:       br i1 [[IF]], label %[[TRY:[^,]+]], label %[[FAIL:[^,]+]]
+  // CHECK:       [[TRY]]
   // CHECK:       [[BNSIZE:%.+]] = mul nuw i[[SZ]] [[VLA0:%.+]], 4
   // CHECK:       [[CNELEMSIZE2:%.+]] = mul nuw i[[SZ]] 5, [[VLA1:%.+]]
   // CHECK:       [[CNSIZE:%.+]] = mul nuw i[[SZ]] [[CNELEMSIZE2]], 8
 
-  // CHECK:       [[IF:%.+]] = icmp sgt i32 {{[^,]+}}, 20
-  // CHECK:       br i1 [[IF]], label %[[TRY:[^,]+]], label %[[FAIL:[^,]+]]
-  // CHECK:       [[TRY]]
   // CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 10, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i[[SZ]]* [[SR:%[^,]+]], i64* getelementptr inbounds ([10 x i64], [10 x i64]* [[MAPT4]], i32 0, i32 0), i32 1, i32 0)
   // CHECK-DAG:   [[BPR]] = getelementptr inbounds [10 x i8*], [10 x i8*]* [[BP:%[^,]+]], i32 0, i32 0
   // CHECK-DAG:   [[PR]] = getelementptr inbounds [10 x i8*], [10 x i8*]* [[P:%[^,]+]], i32 0, i32 0
@@ -558,13 +558,13 @@ int bar(int n){
 // CHECK-32:       store i32 %{{.+}}, i32* [[B_ADDR:%.+]],
 // CHECK-32:       [[B_CVAL:%.+]] = load i[[SZ]], i[[SZ]]* [[B_ADDR]],
 
+// CHECK:       [[IF:%.+]] = icmp sgt i32 {{[^,]+}}, 60
+// CHECK:       br i1 [[IF]], label %[[TRY:[^,]+]], label %[[FAIL:[^,]+]]
+// CHECK:       [[TRY]]
 // We capture 2 VLA sizes in this target region
 // CHECK:       [[CELEMSIZE2:%.+]] = mul nuw i[[SZ]] 2, [[VLA0:%.+]]
 // CHECK:       [[CSIZE:%.+]] = mul nuw i[[SZ]] [[CELEMSIZE2]], 2
 
-// CHECK:       [[IF:%.+]] = icmp sgt i32 {{[^,]+}}, 60
-// CHECK:       br i1 [[IF]], label %[[TRY:[^,]+]], label %[[FAIL:[^,]+]]
-// CHECK:       [[TRY]]
 // CHECK-DAG:   [[RET:%.+]] = call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 5, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i[[SZ]]* [[SR:%[^,]+]], i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[MAPT7]], i32 0, i32 0), i32 1, i32 0)
 // CHECK-DAG:   [[BPR]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[BP:%.+]], i32 0, i32 0
 // CHECK-DAG:   [[PR]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[P:%.+]], i32 0, i32 0

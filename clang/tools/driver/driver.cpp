@@ -311,7 +311,8 @@ static int ExecuteCC1Tool(ArrayRef<const char *> argv, StringRef Tool) {
     return cc1as_main(argv.slice(2), argv[0], GetExecutablePathVP);
 
   // Reject unknown tools.
-  llvm::errs() << "error: unknown integrated tool '" << Tool << "'\n";
+  llvm::errs() << "error: unknown integrated tool '" << Tool << "'. "
+               << "Valid tools include '-cc1' and '-cc1as'.\n";
   return 1;
 }
 

@@ -8019,7 +8019,7 @@ multiclass avx512_rndscale_scalar<bits<8> opc, string OpcodeStr,
                                 _.ScalarIntMemCPat:$src2, (i32 imm:$src3))), itins.rm>,
                          Sched<[itins.Sched.Folded, ReadAfterLd]>;
 
-  let isCodeGenOnly = 1, hasSideEffects = 0 in {
+  let isCodeGenOnly = 1, hasSideEffects = 0, Predicates = [HasAVX512] in {
     def r : I<opc, MRMSrcReg, (outs _.FRC:$dst),
                (ins _.FRC:$src1, _.FRC:$src2, i32u8imm:$src3),
                OpcodeStr#"\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",

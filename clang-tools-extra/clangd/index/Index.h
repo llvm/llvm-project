@@ -106,8 +106,9 @@ namespace clangd {
 // WARNING: Symbols do not own much of their underlying data - typically strings
 // are owned by a SymbolSlab. They should be treated as non-owning references.
 // Copies are shallow.
-// When adding new unowned data fields to Symbol, remember to update
-// SymbolSlab::Builder in Index.cpp to copy them to the slab's storage.
+// When adding new unowned data fields to Symbol, remember to update:
+//   - SymbolSlab::Builder in Index.cpp, to copy them to the slab's storage.
+//   - mergeSymbol in Merge.cpp, to properly combine two Symbols.
 struct Symbol {
   // The ID of the symbol.
   SymbolID ID;
@@ -155,7 +156,7 @@ struct Symbol {
   };
 
   // Optional details of the symbol.
-  Details *Detail = nullptr;
+  const Details *Detail = nullptr;
 
   // FIXME: add definition location of the symbol.
   // FIXME: add all occurrences support.
@@ -227,7 +228,8 @@ struct FuzzyFindRequest {
   /// A scope must be fully qualified without leading or trailing "::" e.g.
   /// "n1::n2". "" is interpreted as the global namespace, and "::" is invalid.
   std::vector<std::string> Scopes;
-  /// \brief The maxinum number of candidates to return.
+  /// \brief The number of top candidates to return. The index may choose to
+  /// return more than this, e.g. if it doesn't know which candidates are best.
   size_t MaxCandidateCount = UINT_MAX;
 };
 
@@ -239,6 +241,7 @@ public:
 
   /// \brief Matches symbols in the index fuzzily and applies \p Callback on
   /// each matched symbol before returning.
+  /// If returned Symbols are used outside Callback, they must be deep-copied!
   ///
   /// Returns true if the result list is complete, false if it was truncated due
   /// to MaxCandidateCount

@@ -569,6 +569,18 @@ def WriteVMULYPSLd: SchedWriteRes<[JLAGU, JFPU1]> {
 }
 def : InstRW<[WriteVMULYPSLd, ReadAfterLd], (instregex "VMULPSYrm", "VRCPPSYm", "VRSQRTPSYm")>;
 
+def WriteVMULPD: SchedWriteRes<[JFPU1]> {
+  let Latency = 4;
+  let ResourceCycles = [2];
+}
+def : InstRW<[WriteVMULPD], (instregex "VMULPDrr", "VMULSDrr")>;
+
+def WriteVMULPDLd: SchedWriteRes<[JLAGU, JFPU1]> {
+  let Latency = 9;
+  let ResourceCycles = [1, 2];
+}
+def : InstRW<[WriteVMULPDLd], (instregex "VMULPDrm", "VMULSDrm")>;
+
 def WriteVCVTY: SchedWriteRes<[JSTC]> {
   let Latency = 3;
   let ResourceCycles = [2];
@@ -587,12 +599,39 @@ def : InstRW<[WriteVCVTYLd, ReadAfterLd], (instregex "VROUNDYP(S|D)m")>;
 def : InstRW<[WriteVCVTYLd, ReadAfterLd], (instregex "VCVTPS2DQYrm")>;
 def : InstRW<[WriteVCVTYLd, ReadAfterLd], (instregex "VCVTTPS2DQYrm")>;
 
-def WriteVMONTPSt: SchedWriteRes<[JSTC, JLAGU]> {
+def WriteVMOVNTDQSt: SchedWriteRes<[JSTC, JSAGU]> {
+  let Latency = 2;
+}
+def : InstRW<[WriteVMOVNTDQSt], (instregex "VMOVNTDQmr")>;
+
+def WriteMOVNTSt: SchedWriteRes<[JSTC, JSAGU]> {
+  let Latency = 3;
+}
+def : InstRW<[WriteMOVNTSt], (instregex "VMOVNTP(S|D)mr")>;
+def : InstRW<[WriteMOVNTSt], (instregex "MOVNTS(S|D)")>;
+
+def WriteVMOVNTPYSt: SchedWriteRes<[JSTC, JSAGU]> {
   let Latency = 3;
   let ResourceCycles = [2,1];
 }
-def : InstRW<[WriteVMONTPSt], (instregex "VMOVNTP(S|D)Ymr")>;
-def : InstRW<[WriteVMONTPSt], (instregex "VMOVNTDQYmr")>;
+def : InstRW<[WriteVMOVNTPYSt], (instregex "VMOVNTP(S|D)Ymr")>;
+def : InstRW<[WriteVMOVNTPYSt], (instregex "VMOVNTDQYmr")>;
+
+def WriteFCmp: SchedWriteRes<[JFPU0]> {
+  let Latency = 2;
+}
+
+def : InstRW<[WriteFCmp], (instregex "VMAXP(D|S)rr", "VMAXS(D|S)rr")>;
+def : InstRW<[WriteFCmp], (instregex "VMINP(D|S)rr", "VMINS(D|S)rr")>;
+def : InstRW<[WriteFCmp], (instregex "VCMPP(S|D)rri", "VCMPS(S|D)rri")>;
+
+def WriteFCmpLd: SchedWriteRes<[JLAGU, JFPU0]> {
+  let Latency = 7;
+}
+
+def : InstRW<[WriteFCmpLd], (instregex "VMAXP(D|S)rm", "VMAXS(D|S)rm")>;
+def : InstRW<[WriteFCmpLd], (instregex "VMINP(D|S)rm", "VMINS(D|S)rm")>;
+def : InstRW<[WriteFCmpLd], (instregex "VCMPP(S|D)rmi", "VCMPS(S|D)rmi")>;
 
 def WriteVCVTPDY: SchedWriteRes<[JSTC, JFPU01]> {
   let Latency = 6;
