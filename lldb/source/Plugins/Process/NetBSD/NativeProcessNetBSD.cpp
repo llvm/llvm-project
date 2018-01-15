@@ -871,13 +871,13 @@ NativeProcessNetBSD::GetAuxvData() const {
    */
   size_t auxv_size = 100 * sizeof(AuxInfo);
 
-  ErrorOr<std::unique_ptr<MemoryBuffer>> buf =
-      llvm::MemoryBuffer::getNewMemBuffer(auxv_size);
+  ErrorOr<std::unique_ptr<WritableMemoryBuffer>> buf =
+      llvm::WritableMemoryBuffer::getNewMemBuffer(auxv_size);
 
   struct ptrace_io_desc io;
   io.piod_op = PIOD_READ_AUXV;
   io.piod_offs = 0;
-  io.piod_addr = const_cast<void *>(static_cast<const void *>(buf.get()->getBufferStart()));
+  io.piod_addr = static_cast<void *>(buf.get()->getBufferStart());
   io.piod_len = auxv_size;
 
   Status error = NativeProcessNetBSD::PtraceWrapper(PT_IO, GetID(), &io);
@@ -888,7 +888,7 @@ NativeProcessNetBSD::GetAuxvData() const {
   if (io.piod_len < 1)
     return std::error_code(ECANCELED, std::generic_category());
 
-  return buf;
+  return std::move(buf);
 }
 
 Status NativeProcessNetBSD::ReinitializeThreads() {
