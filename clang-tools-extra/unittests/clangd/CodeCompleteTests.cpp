@@ -17,6 +17,7 @@
 #include "SourceCode.h"
 #include "TestFS.h"
 #include "index/MemIndex.h"
+#include "index/Merge.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -518,17 +519,17 @@ TEST(CompletionTest, StaticAndDynamicIndex) {
   clangd::CodeCompleteOptions Opts;
   auto StaticIdx =
       simpleIndexFromSymbols({{"ns::XYZ", index::SymbolKind::Class}});
-  Opts.StaticIndex = StaticIdx.get();
   auto DynamicIdx =
       simpleIndexFromSymbols({{"ns::foo", index::SymbolKind::Function}});
-  Opts.Index = DynamicIdx.get();
+  auto Merge = mergeIndex(DynamicIdx.get(), StaticIdx.get());
+  Opts.Index = Merge.get();
 
   auto Results = completions(R"cpp(
       void f() { ::ns::^ }
   )cpp",
                              Opts);
-  EXPECT_THAT(Results.items, Contains(Labeled("[S]XYZ")));
-  EXPECT_THAT(Results.items, Contains(Labeled("[D]foo")));
+  EXPECT_THAT(Results.items, Contains(Labeled("[I]XYZ")));
+  EXPECT_THAT(Results.items, Contains(Labeled("[I]foo")));
 }
 
 TEST(CompletionTest, SimpleIndexBased) {

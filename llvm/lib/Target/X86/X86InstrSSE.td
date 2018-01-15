@@ -3595,8 +3595,7 @@ def VMOVDQUYrr_REV : VSSI<0x7F, MRMDestReg, (outs VR256:$dst), (ins VR256:$src),
 }
 
 let canFoldAsLoad = 1, mayLoad = 1, isReMaterializable = 1,
-    hasSideEffects = 0, SchedRW = [WriteLoad] in {
-let Predicates = [HasAVX,NoVLX] in
+    hasSideEffects = 0, SchedRW = [WriteLoad], Predicates = [HasAVX,NoVLX] in {
 def VMOVDQArm  : VPDI<0x6F, MRMSrcMem, (outs VR128:$dst), (ins i128mem:$src),
                    "movdqa\t{$src, $dst|$dst, $src}",
                    [(set VR128:$dst, (alignedloadv2i64 addr:$src))],
@@ -3604,7 +3603,6 @@ def VMOVDQArm  : VPDI<0x6F, MRMSrcMem, (outs VR128:$dst), (ins i128mem:$src),
 def VMOVDQAYrm : VPDI<0x6F, MRMSrcMem, (outs VR256:$dst), (ins i256mem:$src),
                    "movdqa\t{$src, $dst|$dst, $src}", [], IIC_SSE_MOVA_P_RM>,
                    VEX, VEX_L, VEX_WIG;
-let Predicates = [HasAVX,NoVLX] in
 def VMOVDQUrm  : I<0x6F, MRMSrcMem, (outs VR128:$dst), (ins i128mem:$src),
                   "vmovdqu\t{$src, $dst|$dst, $src}",
                   [(set VR128:$dst, (loadv2i64 addr:$src))],
@@ -3614,8 +3612,8 @@ def VMOVDQUYrm : I<0x6F, MRMSrcMem, (outs VR256:$dst), (ins i256mem:$src),
                   XS, VEX, VEX_L, VEX_WIG;
 }
 
-let mayStore = 1, hasSideEffects = 0, SchedRW = [WriteStore] in {
-let Predicates = [HasAVX,NoVLX] in
+let mayStore = 1, hasSideEffects = 0, SchedRW = [WriteStore],
+    Predicates = [HasAVX,NoVLX] in {
 def VMOVDQAmr  : VPDI<0x7F, MRMDestMem, (outs),
                      (ins i128mem:$dst, VR128:$src),
                      "movdqa\t{$src, $dst|$dst, $src}",
@@ -3625,7 +3623,6 @@ def VMOVDQAYmr : VPDI<0x7F, MRMDestMem, (outs),
                      (ins i256mem:$dst, VR256:$src),
                      "movdqa\t{$src, $dst|$dst, $src}", [], IIC_SSE_MOVA_P_MR>,
                      VEX, VEX_L, VEX_WIG;
-let Predicates = [HasAVX,NoVLX] in
 def VMOVDQUmr  : I<0x7F, MRMDestMem, (outs), (ins i128mem:$dst, VR128:$src),
                   "vmovdqu\t{$src, $dst|$dst, $src}",
                   [(store (v2i64 VR128:$src), addr:$dst)], IIC_SSE_MOVU_P_MR>,

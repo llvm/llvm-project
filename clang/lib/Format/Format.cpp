@@ -859,7 +859,7 @@ std::error_code parseConfiguration(StringRef Text, FormatStyle *Style) {
   assert(Language != FormatStyle::LK_None);
   if (Text.trim().empty())
     return make_error_code(ParseError::Error);
-
+  Style->StyleSet.Clear();
   std::vector<FormatStyle> Styles;
   llvm::yaml::Input Input(Text);
   // DocumentListTraits<vector<FormatStyle>> uses the context to get default
@@ -888,15 +888,23 @@ std::error_code parseConfiguration(StringRef Text, FormatStyle *Style) {
   // Look for a suitable configuration starting from the end, so we can
   // find the configuration for the specific language first, and the default
   // configuration (which can only be at slot 0) after it.
+  FormatStyle::FormatStyleSet StyleSet;
+  bool LanguageFound = false;
   for (int i = Styles.size() - 1; i >= 0; --i) {
-    if (Styles[i].Language == Language ||
-        Styles[i].Language == FormatStyle::LK_None) {
-      *Style = Styles[i];
-      Style->Language = Language;
-      return make_error_code(ParseError::Success);
-    }
+    if (Styles[i].Language != FormatStyle::LK_None)
+      StyleSet.Add(Styles[i]);
+    if (Styles[i].Language == Language)
+      LanguageFound = true;
   }
-  return make_error_code(ParseError::Unsuitable);
+  if (!LanguageFound) {
+    if (Styles.empty() || Styles[0].Language != FormatStyle::LK_None)
+      return make_error_code(ParseError::Unsuitable);
+    FormatStyle DefaultStyle = Styles[0];
+    DefaultStyle.Language = Language;
+    StyleSet.Add(std::move(DefaultStyle));
+  }
+  *Style = *StyleSet.Get(Language);
+  return make_error_code(ParseError::Success);
 }
 
 std::string configurationAsText(const FormatStyle &Style) {
@@ -908,6 +916,38 @@ std::string configurationAsText(const FormatStyle &Style) {
   FormatStyle NonConstStyle = expandPresets(Style);
   Output << NonConstStyle;
   return Stream.str();
+}
+
+llvm::Optional<FormatStyle>
+FormatStyle::FormatStyleSet::Get(FormatStyle::LanguageKind Language) const {
+  if (!Styles)
+    return None;
+  auto It = Styles->find(Language);
+  if (It == Styles->end())
+    return None;
+  FormatStyle Style = It->second;
+  Style.StyleSet = *this;
+  return Style;
+}
+
+void FormatStyle::FormatStyleSet::Add(FormatStyle Style) {
+  assert(Style.Language != LK_None &&
+         "Cannot add a style for LK_None to a StyleSet");
+  assert(
+      !Style.StyleSet.Styles &&
+      "Cannot add a style associated with an existing StyleSet to a StyleSet");
+  if (!Styles)
+    Styles = std::make_shared<MapType>();
+  (*Styles)[Style.Language] = std::move(Style);
+}
+
+void FormatStyle::FormatStyleSet::Clear() {
+  Styles.reset();
+}
+
+llvm::Optional<FormatStyle>
+FormatStyle::GetLanguageStyle(FormatStyle::LanguageKind Language) const {
+  return StyleSet.Get(Language);
 }
 
 namespace {
