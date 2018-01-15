@@ -282,10 +282,8 @@ ArchSpec HostInfoBase::GetAugmentedArchSpec(llvm::StringRef triple) {
 
 bool HostInfoBase::ComputeSharedLibraryDirectory(FileSpec &file_spec) {
   // To get paths related to LLDB we get the path to the executable that
-  // contains this function. On MacOSX this will be "LLDB.framework/.../LLDB",
-  // on linux this is assumed to be the "lldb" main executable. If LLDB on
-  // linux is actually in a shared library (liblldb.so) then this function will
-  // need to be modified to "do the right thing".
+  // contains this function. On MacOSX this will be "LLDB.framework/.../LLDB".
+  // On other posix systems, we will get .../lib(64|32)?/liblldb.so.
 
   FileSpec lldb_file_spec(
       Host::GetModuleFileSpecForHostAddress(reinterpret_cast<void *>(
