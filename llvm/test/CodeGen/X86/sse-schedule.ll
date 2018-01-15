@@ -353,8 +353,8 @@ define <4 x float> @test_cmpps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; BTVER2-LABEL: test_cmpps:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm1 # sched: [3:1.00]
-; BTVER2-NEXT:    vcmpeqps (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
+; BTVER2-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm1 # sched: [2:1.00]
+; BTVER2-NEXT:    vcmpeqps (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
 ; BTVER2-NEXT:    vorps %xmm0, %xmm1, %xmm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -1311,8 +1311,8 @@ define <4 x float> @test_maxps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; BTVER2-LABEL: test_maxps:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vmaxps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vmaxps (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
+; BTVER2-NEXT:    vmaxps %xmm1, %xmm0, %xmm0 # sched: [2:1.00]
+; BTVER2-NEXT:    vmaxps (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_maxps:
@@ -1378,8 +1378,8 @@ define <4 x float> @test_maxss(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; BTVER2-LABEL: test_maxss:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vmaxss %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vmaxss (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
+; BTVER2-NEXT:    vmaxss %xmm1, %xmm0, %xmm0 # sched: [2:1.00]
+; BTVER2-NEXT:    vmaxss (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_maxss:
@@ -1445,8 +1445,8 @@ define <4 x float> @test_minps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; BTVER2-LABEL: test_minps:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vminps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vminps (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
+; BTVER2-NEXT:    vminps %xmm1, %xmm0, %xmm0 # sched: [2:1.00]
+; BTVER2-NEXT:    vminps (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_minps:
@@ -1512,8 +1512,8 @@ define <4 x float> @test_minss(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a
 ;
 ; BTVER2-LABEL: test_minss:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vminss %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vminss (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
+; BTVER2-NEXT:    vminss %xmm1, %xmm0, %xmm0 # sched: [2:1.00]
+; BTVER2-NEXT:    vminss (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_minss:
@@ -2003,7 +2003,7 @@ define void @test_movntps(<4 x float> %a0, <4 x float> *%a1) {
 ;
 ; BTVER2-LABEL: test_movntps:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vmovntps %xmm0, (%rdi) # sched: [1:1.00]
+; BTVER2-NEXT:    vmovntps %xmm0, (%rdi) # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movntps:

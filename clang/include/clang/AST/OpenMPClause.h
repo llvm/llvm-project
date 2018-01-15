@@ -3192,14 +3192,17 @@ public:
   /// \brief Build 'device' clause.
   ///
   /// \param E Expression associated with this clause.
+  /// \param CaptureRegion Innermost OpenMP region where expressions in this
+  /// clause must be captured.
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
-  OMPDeviceClause(Expr *E, Stmt *HelperE, SourceLocation StartLoc,
-                  SourceLocation LParenLoc, SourceLocation EndLoc)
+  OMPDeviceClause(Expr *E, Stmt *HelperE, OpenMPDirectiveKind CaptureRegion,
+                  SourceLocation StartLoc, SourceLocation LParenLoc,
+                  SourceLocation EndLoc)
       : OMPClause(OMPC_device, StartLoc, EndLoc), OMPClauseWithPreInit(this),
         LParenLoc(LParenLoc), Device(E) {
-    setPreInitStmt(HelperE);
+    setPreInitStmt(HelperE, CaptureRegion);
   }
 
   /// \brief Build an empty clause.

@@ -86,9 +86,11 @@ private:
                      SmallVectorImpl<MachineInstr *> &CCUsers);
   bool convertToLoadAndTrap(MachineInstr &MI, MachineInstr &Compare,
                             SmallVectorImpl<MachineInstr *> &CCUsers);
-  bool convertToLoadAndTest(MachineInstr &MI);
+  bool convertToLoadAndTest(MachineInstr &MI, MachineInstr &Compare,
+                            SmallVectorImpl<MachineInstr *> &CCUsers);
   bool adjustCCMasksForInstr(MachineInstr &MI, MachineInstr &Compare,
-                             SmallVectorImpl<MachineInstr *> &CCUsers);
+                             SmallVectorImpl<MachineInstr *> &CCUsers,
+                             unsigned ConvOpc = 0);
   bool optimizeCompareZero(MachineInstr &Compare,
                            SmallVectorImpl<MachineInstr *> &CCUsers);
   bool fuseCompareOperations(MachineInstr &Compare,
@@ -282,9 +284,13 @@ bool SystemZElimCompare::convertToLoadAndTrap(
 
 // If MI is a load instruction, try to convert it into a LOAD AND TEST.
 // Return true on success.
-bool SystemZElimCompare::convertToLoadAndTest(MachineInstr &MI) {
+bool SystemZElimCompare::convertToLoadAndTest(
+    MachineInstr &MI, MachineInstr &Compare,
+    SmallVectorImpl<MachineInstr *> &CCUsers) {
+
+  // Try to adjust CC masks for the LOAD AND TEST opcode that could replace MI.
   unsigned Opcode = TII->getLoadAndTest(MI.getOpcode());
-  if (!Opcode)
+  if (!Opcode || !adjustCCMasksForInstr(MI, Compare, CCUsers, Opcode))
     return false;
 
   MI.setDesc(TII->get(Opcode));
@@ -294,14 +300,16 @@ bool SystemZElimCompare::convertToLoadAndTest(MachineInstr &MI) {
 }
 
 // The CC users in CCUsers are testing the result of a comparison of some
-// value X against zero and we know that any CC value produced by MI
-// would also reflect the value of X.  Try to adjust CCUsers so that
-// they test the result of MI directly, returning true on success.
-// Leave everything unchanged on failure.
+// value X against zero and we know that any CC value produced by MI would
+// also reflect the value of X.  ConvOpc may be used to pass the transfomed
+// opcode MI will have if this succeeds.  Try to adjust CCUsers so that they
+// test the result of MI directly, returning true on success.  Leave
+// everything unchanged on failure.
 bool SystemZElimCompare::adjustCCMasksForInstr(
     MachineInstr &MI, MachineInstr &Compare,
-    SmallVectorImpl<MachineInstr *> &CCUsers) {
-  int Opcode = MI.getOpcode();
+    SmallVectorImpl<MachineInstr *> &CCUsers,
+    unsigned ConvOpc) {
+  int Opcode = (ConvOpc ? ConvOpc : MI.getOpcode());
   const MCInstrDesc &Desc = TII->get(Opcode);
   unsigned MIFlags = Desc.TSFlags;
 
@@ -319,53 +327,72 @@ bool SystemZElimCompare::adjustCCMasksForInstr(
   unsigned CCValues = SystemZII::getCCValues(MIFlags);
   assert((ReusableCCMask & ~CCValues) == 0 && "Invalid CCValues");
 
-  // Now check whether these flags are enough for all users.
-  SmallVector<MachineOperand *, 4> AlterMasks;
-  for (unsigned int I = 0, E = CCUsers.size(); I != E; ++I) {
-    MachineInstr *MI = CCUsers[I];
+  bool MIEquivalentToCmp =
+    (ReusableCCMask == CCValues &&
+     CCValues == SystemZII::getCCValues(CompareFlags));
 
-    // Fail if this isn't a use of CC that we understand.
-    unsigned Flags = MI->getDesc().TSFlags;
-    unsigned FirstOpNum;
-    if (Flags & SystemZII::CCMaskFirst)
-      FirstOpNum = 0;
-    else if (Flags & SystemZII::CCMaskLast)
-      FirstOpNum = MI->getNumExplicitOperands() - 2;
-    else
-      return false;
+  if (!MIEquivalentToCmp) {
+    // Now check whether these flags are enough for all users.
+    SmallVector<MachineOperand *, 4> AlterMasks;
+    for (unsigned int I = 0, E = CCUsers.size(); I != E; ++I) {
+      MachineInstr *MI = CCUsers[I];
 
-    // Check whether the instruction predicate treats all CC values
-    // outside of ReusableCCMask in the same way.  In that case it
-    // doesn't matter what those CC values mean.
-    unsigned CCValid = MI->getOperand(FirstOpNum).getImm();
-    unsigned CCMask = MI->getOperand(FirstOpNum + 1).getImm();
-    unsigned OutValid = ~ReusableCCMask & CCValid;
-    unsigned OutMask = ~ReusableCCMask & CCMask;
-    if (OutMask != 0 && OutMask != OutValid)
-      return false;
+      // Fail if this isn't a use of CC that we understand.
+      unsigned Flags = MI->getDesc().TSFlags;
+      unsigned FirstOpNum;
+      if (Flags & SystemZII::CCMaskFirst)
+        FirstOpNum = 0;
+      else if (Flags & SystemZII::CCMaskLast)
+        FirstOpNum = MI->getNumExplicitOperands() - 2;
+      else
+        return false;
 
-    AlterMasks.push_back(&MI->getOperand(FirstOpNum));
-    AlterMasks.push_back(&MI->getOperand(FirstOpNum + 1));
-  }
+      // Check whether the instruction predicate treats all CC values
+      // outside of ReusableCCMask in the same way.  In that case it
+      // doesn't matter what those CC values mean.
+      unsigned CCValid = MI->getOperand(FirstOpNum).getImm();
+      unsigned CCMask = MI->getOperand(FirstOpNum + 1).getImm();
+      unsigned OutValid = ~ReusableCCMask & CCValid;
+      unsigned OutMask = ~ReusableCCMask & CCMask;
+      if (OutMask != 0 && OutMask != OutValid)
+        return false;
 
-  // All users are OK.  Adjust the masks for MI.
-  for (unsigned I = 0, E = AlterMasks.size(); I != E; I += 2) {
-    AlterMasks[I]->setImm(CCValues);
-    unsigned CCMask = AlterMasks[I + 1]->getImm();
-    if (CCMask & ~ReusableCCMask)
-      AlterMasks[I + 1]->setImm((CCMask & ReusableCCMask) |
-                                (CCValues & ~ReusableCCMask));
+      AlterMasks.push_back(&MI->getOperand(FirstOpNum));
+      AlterMasks.push_back(&MI->getOperand(FirstOpNum + 1));
+    }
+
+    // All users are OK.  Adjust the masks for MI.
+    for (unsigned I = 0, E = AlterMasks.size(); I != E; I += 2) {
+      AlterMasks[I]->setImm(CCValues);
+      unsigned CCMask = AlterMasks[I + 1]->getImm();
+      if (CCMask & ~ReusableCCMask)
+        AlterMasks[I + 1]->setImm((CCMask & ReusableCCMask) |
+                                  (CCValues & ~ReusableCCMask));
+    }
   }
 
   // CC is now live after MI.
-  int CCDef = MI.findRegisterDefOperandIdx(SystemZ::CC, false, true, TRI);
-  assert(CCDef >= 0 && "Couldn't find CC set");
-  MI.getOperand(CCDef).setIsDead(false);
+  if (!ConvOpc) {
+    int CCDef = MI.findRegisterDefOperandIdx(SystemZ::CC, false, true, TRI);
+    assert(CCDef >= 0 && "Couldn't find CC set");
+    MI.getOperand(CCDef).setIsDead(false);
+  }
+
+  // Check if MI lies before Compare.
+  bool BeforeCmp = false;
+  MachineBasicBlock::iterator MBBI = MI, MBBE = MI.getParent()->end();
+  for (++MBBI; MBBI != MBBE; ++MBBI)
+    if (MBBI == Compare) {
+      BeforeCmp = true;
+      break;
+    }
 
   // Clear any intervening kills of CC.
-  MachineBasicBlock::iterator MBBI = MI, MBBE = Compare;
-  for (++MBBI; MBBI != MBBE; ++MBBI)
-    MBBI->clearRegisterKills(SystemZ::CC, TRI);
+  if (BeforeCmp) {
+    MachineBasicBlock::iterator MBBI = MI, MBBE = Compare;
+    for (++MBBI; MBBI != MBBE; ++MBBI)
+      MBBI->clearRegisterKills(SystemZ::CC, TRI);
+  }
 
   return true;
 }
@@ -419,7 +446,7 @@ bool SystemZElimCompare::optimizeCompareZero(
         }
       }
       // Try to eliminate Compare by reusing a CC result from MI.
-      if ((!CCRefs && convertToLoadAndTest(MI)) ||
+      if ((!CCRefs && convertToLoadAndTest(MI, Compare, CCUsers)) ||
           (!CCRefs.Def && adjustCCMasksForInstr(MI, Compare, CCUsers))) {
         EliminatedComparisons += 1;
         return true;
@@ -441,7 +468,7 @@ bool SystemZElimCompare::optimizeCompareZero(
     MachineInstr &MI = *MBBI;
     if (preservesValueOf(MI, SrcReg)) {
       // Try to eliminate Compare by reusing a CC result from MI.
-      if (convertToLoadAndTest(MI)) {
+      if (convertToLoadAndTest(MI, Compare, CCUsers)) {
         EliminatedComparisons += 1;
         return true;
       }

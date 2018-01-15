@@ -10,7 +10,7 @@
 // <algorithm>
 
 // template <class InputIterator, class Predicate>
-//     bool
+//     constpexr bool       // constexpr after C++17
 //     is_partitioned(InputIterator first, InputIterator last, Predicate pred);
 
 #include <algorithm>
@@ -18,12 +18,23 @@
 #include <cstddef>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 #include "counting_predicates.hpp"
 
 struct is_odd {
-  bool operator()(const int &i) const { return i & 1; }
+  TEST_CONSTEXPR bool operator()(const int &i) const { return i & 1; }
 };
+
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool test_constexpr() {
+    int ia[] = {1, 3, 5, 2, 4, 6};
+    int ib[] = {1, 2, 3, 4, 5, 6};
+    return     std::is_partitioned(std::begin(ia), std::end(ia), is_odd())
+           && !std::is_partitioned(std::begin(ib), std::end(ib), is_odd());
+    }
+#endif
+
 
 int main() {
   {
@@ -80,4 +91,8 @@ int main() {
     assert(static_cast<std::ptrdiff_t>(pred.count()) <=
            std::distance(std::begin(ia), std::end(ia)));
   }
+
+#if TEST_STD_VER > 17
+    static_assert(test_constexpr());
+#endif
 }
