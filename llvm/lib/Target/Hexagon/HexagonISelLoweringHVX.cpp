@@ -412,8 +412,7 @@ HexagonTargetLowering::LowerHvxInsertSubvector(SDValue Op, SelectionDAG &DAG)
 SDValue
 HexagonTargetLowering::LowerHvxMul(SDValue Op, SelectionDAG &DAG) const {
   MVT ResTy = ty(Op);
-  if (!ResTy.isVector())
-    return SDValue();
+  assert(ResTy.isVector());
   const SDLoc &dl(Op);
   SmallVector<int,256> ShuffMask;
 
@@ -424,7 +423,7 @@ HexagonTargetLowering::LowerHvxMul(SDValue Op, SelectionDAG &DAG) const {
 
   switch (ElemTy.SimpleTy) {
     case MVT::i8:
-    case MVT::i16: {
+    case MVT::i16: { // V6_vmpyih
       // For i8 vectors Vs = (a0, a1, ...), Vt = (b0, b1, ...),
       // V6_vmpybv Vs, Vt produces a pair of i16 vectors Hi:Lo,
       // where Lo = (a0*b0, a2*b2, ...), Hi = (a1*b1, a3*b3, ...).
@@ -461,6 +460,112 @@ HexagonTargetLowering::LowerHvxMul(SDValue Op, SelectionDAG &DAG) const {
       break;
   }
   return SDValue();
+}
+
+SDValue
+HexagonTargetLowering::LowerHvxMulh(SDValue Op, SelectionDAG &DAG) const {
+  MVT ResTy = ty(Op);
+  assert(ResTy.isVector());
+  const SDLoc &dl(Op);
+  SmallVector<int,256> ShuffMask;
+
+  MVT ElemTy = ResTy.getVectorElementType();
+  unsigned VecLen = ResTy.getVectorNumElements();
+  SDValue Vs = Op.getOperand(0);
+  SDValue Vt = Op.getOperand(1);
+  bool IsSigned = Op.getOpcode() == ISD::MULHS;
+
+  if (ElemTy == MVT::i8 || ElemTy == MVT::i16) {
+    // For i8 vectors Vs = (a0, a1, ...), Vt = (b0, b1, ...),
+    // V6_vmpybv Vs, Vt produces a pair of i16 vectors Hi:Lo,
+    // where Lo = (a0*b0, a2*b2, ...), Hi = (a1*b1, a3*b3, ...).
+    // For i16, use V6_vmpyhv, which behaves in an analogous way to
+    // V6_vmpybv: results Lo and Hi are products of even/odd elements
+    // respectively.
+    MVT ExtTy = typeExtElem(ResTy, 2);
+    unsigned MpyOpc = ElemTy == MVT::i8
+        ? (IsSigned ? Hexagon::V6_vmpybv : Hexagon::V6_vmpyubv)
+        : (IsSigned ? Hexagon::V6_vmpyhv : Hexagon::V6_vmpyuhv);
+    SDValue M = getNode(MpyOpc, dl, ExtTy, {Vs, Vt}, DAG);
+
+    // Discard low halves of the resulting values, collect the high halves.
+    for (unsigned I = 0; I < VecLen; I += 2) {
+      ShuffMask.push_back(I+1);         // Pick even element.
+      ShuffMask.push_back(I+VecLen+1);  // Pick odd element.
+    }
+    VectorPair P = opSplit(opCastElem(M, ElemTy, DAG), dl, DAG);
+    SDValue BS = getByteShuffle(dl, P.first, P.second, ShuffMask, DAG);
+    return DAG.getBitcast(ResTy, BS);
+  }
+
+  assert(ElemTy == MVT::i32);
+  SDValue S16 = DAG.getConstant(16, dl, MVT::i32);
+
+  if (IsSigned) {
+    // mulhs(Vs,Vt) =
+    //   = [(Hi(Vs)*2^16 + Lo(Vs)) *s (Hi(Vt)*2^16 + Lo(Vt))] >> 32
+    //   = [Hi(Vs)*2^16 *s Hi(Vt)*2^16 + Hi(Vs) *su Lo(Vt)*2^16
+    //      + Lo(Vs) *us (Hi(Vt)*2^16 + Lo(Vt))] >> 32
+    //   = [Hi(Vs) *s Hi(Vt)*2^32 + Hi(Vs) *su Lo(Vt)*2^16
+    //      + Lo(Vs) *us Vt] >> 32
+    // The low half of Lo(Vs)*Lo(Vt) will be discarded (it's not added to
+    // anything, so it cannot produce any carry over to higher bits),
+    // so everything in [] can be shifted by 16 without loss of precision.
+    //   = [Hi(Vs) *s Hi(Vt)*2^16 + Hi(Vs)*su Lo(Vt) + Lo(Vs)*Vt >> 16] >> 16
+    //   = [Hi(Vs) *s Hi(Vt)*2^16 + Hi(Vs)*su Lo(Vt) + V6_vmpyewuh(Vs,Vt)] >> 16
+    // Denote Hi(Vs) = Vs':
+    //   = [Vs'*s Hi(Vt)*2^16 + Vs' *su Lo(Vt) + V6_vmpyewuh(Vt,Vs)] >> 16
+    //   = Vs'*s Hi(Vt) + (V6_vmpyiewuh(Vs',Vt) + V6_vmpyewuh(Vt,Vs)) >> 16
+    SDValue T0 = getNode(Hexagon::V6_vmpyewuh, dl, ResTy, {Vt, Vs}, DAG);
+    // Get Vs':
+    SDValue S0 = getNode(Hexagon::V6_vasrw, dl, ResTy, {Vs, S16}, DAG);
+    SDValue T1 = getNode(Hexagon::V6_vmpyiewuh_acc, dl, ResTy,
+                         {T0, S0, Vt}, DAG);
+    // Shift by 16:
+    SDValue S2 = getNode(Hexagon::V6_vasrw, dl, ResTy, {T1, S16}, DAG);
+    // Get Vs'*Hi(Vt):
+    SDValue T2 = getNode(Hexagon::V6_vmpyiowh, dl, ResTy, {S0, Vt}, DAG);
+    // Add:
+    SDValue T3 = DAG.getNode(ISD::ADD, dl, ResTy, {S2, T2});
+    return T3;
+  }
+
+  // Unsigned mulhw. (Would expansion using signed mulhw be better?)
+
+  auto LoVec = [&DAG,ResTy,dl] (SDValue Pair) {
+    return DAG.getTargetExtractSubreg(Hexagon::vsub_lo, dl, ResTy, Pair);
+  };
+  auto HiVec = [&DAG,ResTy,dl] (SDValue Pair) {
+    return DAG.getTargetExtractSubreg(Hexagon::vsub_hi, dl, ResTy, Pair);
+  };
+
+  MVT PairTy = typeJoin({ResTy, ResTy});
+  SDValue P = getNode(Hexagon::V6_lvsplatw, dl, ResTy,
+                      {DAG.getConstant(0x02020202, dl, MVT::i32)}, DAG);
+  // Multiply-unsigned halfwords:
+  //   LoVec = Vs.uh[2i] * Vt.uh[2i],
+  //   HiVec = Vs.uh[2i+1] * Vt.uh[2i+1]
+  SDValue T0 = getNode(Hexagon::V6_vmpyuhv, dl, PairTy, {Vs, Vt}, DAG);
+  // The low halves in the LoVec of the pair can be discarded. They are
+  // not added to anything (in the full-precision product), so they cannot
+  // produce a carry into the higher bits.
+  SDValue T1 = getNode(Hexagon::V6_vlsrw, dl, ResTy, {LoVec(T0), S16}, DAG);
+  // Swap low and high halves in Vt, and do the halfword multiplication
+  // to get products Vs.uh[2i] * Vt.uh[2i+1] and Vs.uh[2i+1] * Vt.uh[2i].
+  SDValue D0 = getNode(Hexagon::V6_vdelta, dl, ResTy, {Vt, P}, DAG);
+  SDValue T2 = getNode(Hexagon::V6_vmpyuhv, dl, PairTy, {Vs, D0}, DAG);
+  // T2 has mixed products of halfwords: Lo(Vt)*Hi(Vs) and Hi(Vt)*Lo(Vs).
+  // These products are words, but cannot be added directly because the
+  // sums could overflow. Add these products, by halfwords, where each sum
+  // of a pair of halfwords gives a word.
+  SDValue T3 = getNode(Hexagon::V6_vadduhw, dl, PairTy,
+                       {LoVec(T2), HiVec(T2)}, DAG);
+  // Add the high halfwords from the products of the low halfwords.
+  SDValue T4 = DAG.getNode(ISD::ADD, dl, ResTy, {T1, LoVec(T3)});
+  SDValue T5 = getNode(Hexagon::V6_vlsrw, dl, ResTy, {T4, S16}, DAG);
+  SDValue T6 = DAG.getNode(ISD::ADD, dl, ResTy, {HiVec(T0), HiVec(T3)});
+  SDValue T7 = DAG.getNode(ISD::ADD, dl, ResTy, {T5, T6});
+  return T7;
 }
 
 SDValue

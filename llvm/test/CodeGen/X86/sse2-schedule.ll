@@ -428,8 +428,8 @@ define <2 x double> @test_cmppd(<2 x double> %a0, <2 x double> %a1, <2 x double>
 ;
 ; BTVER2-LABEL: test_cmppd:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vcmpeqpd %xmm1, %xmm0, %xmm1 # sched: [3:1.00]
-; BTVER2-NEXT:    vcmpeqpd (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
+; BTVER2-NEXT:    vcmpeqpd %xmm1, %xmm0, %xmm1 # sched: [2:1.00]
+; BTVER2-NEXT:    vcmpeqpd (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
 ; BTVER2-NEXT:    vorpd %xmm0, %xmm1, %xmm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -2309,8 +2309,8 @@ define <2 x double> @test_maxpd(<2 x double> %a0, <2 x double> %a1, <2 x double>
 ;
 ; BTVER2-LABEL: test_maxpd:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vmaxpd (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
+; BTVER2-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0 # sched: [2:1.00]
+; BTVER2-NEXT:    vmaxpd (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_maxpd:
@@ -2376,8 +2376,8 @@ define <2 x double> @test_maxsd(<2 x double> %a0, <2 x double> %a1, <2 x double>
 ;
 ; BTVER2-LABEL: test_maxsd:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vmaxsd (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
+; BTVER2-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0 # sched: [2:1.00]
+; BTVER2-NEXT:    vmaxsd (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_maxsd:
@@ -2443,8 +2443,8 @@ define <2 x double> @test_minpd(<2 x double> %a0, <2 x double> %a1, <2 x double>
 ;
 ; BTVER2-LABEL: test_minpd:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vminpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vminpd (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
+; BTVER2-NEXT:    vminpd %xmm1, %xmm0, %xmm0 # sched: [2:1.00]
+; BTVER2-NEXT:    vminpd (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_minpd:
@@ -2510,8 +2510,8 @@ define <2 x double> @test_minsd(<2 x double> %a0, <2 x double> %a1, <2 x double>
 ;
 ; BTVER2-LABEL: test_minsd:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vminsd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vminsd (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
+; BTVER2-NEXT:    vminsd %xmm1, %xmm0, %xmm0 # sched: [2:1.00]
+; BTVER2-NEXT:    vminsd (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_minsd:
@@ -3245,7 +3245,7 @@ define void @test_movntdqa(<2 x i64> %a0, <2 x i64> *%a1) {
 ; BTVER2-LABEL: test_movntdqa:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vpaddq %xmm0, %xmm0, %xmm0 # sched: [1:0.50]
-; BTVER2-NEXT:    vmovntdq %xmm0, (%rdi) # sched: [1:1.00]
+; BTVER2-NEXT:    vmovntdq %xmm0, (%rdi) # sched: [2:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movntdqa:
@@ -3310,7 +3310,7 @@ define void @test_movntpd(<2 x double> %a0, <2 x double> *%a1) {
 ; BTVER2-LABEL: test_movntpd:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vaddpd %xmm0, %xmm0, %xmm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vmovntpd %xmm0, (%rdi) # sched: [1:1.00]
+; BTVER2-NEXT:    vmovntpd %xmm0, (%rdi) # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movntpd:
@@ -3732,8 +3732,8 @@ define <2 x double> @test_mulpd(<2 x double> %a0, <2 x double> %a1, <2 x double>
 ;
 ; BTVER2-LABEL: test_mulpd:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vmulpd %xmm1, %xmm0, %xmm0 # sched: [2:1.00]
-; BTVER2-NEXT:    vmulpd (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; BTVER2-NEXT:    vmulpd %xmm1, %xmm0, %xmm0 # sched: [4:2.00]
+; BTVER2-NEXT:    vmulpd (%rdi), %xmm0, %xmm0 # sched: [9:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_mulpd:
@@ -3798,8 +3798,8 @@ define double @test_mulsd(double %a0, double %a1, double *%a2) {
 ;
 ; BTVER2-LABEL: test_mulsd:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vmulsd %xmm1, %xmm0, %xmm0 # sched: [2:1.00]
-; BTVER2-NEXT:    vmulsd (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; BTVER2-NEXT:    vmulsd %xmm1, %xmm0, %xmm0 # sched: [4:2.00]
+; BTVER2-NEXT:    vmulsd (%rdi), %xmm0, %xmm0 # sched: [9:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_mulsd:

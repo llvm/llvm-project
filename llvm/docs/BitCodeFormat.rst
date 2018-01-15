@@ -62,10 +62,12 @@ understanding the encoding.
 Magic Numbers
 -------------
 
-The first two bytes of a bitcode file are 'BC' (``0x42``, ``0x43``).  The second
-two bytes are an application-specific magic number.  Generic bitcode tools can
-look at only the first two bytes to verify the file is bitcode, while
-application-specific programs will want to look at all four.
+The first four bytes of a bitstream are used as an application-specific magic
+number.  Generic bitcode tools may look at the first four bytes to determine
+whether the stream is a known stream type.  However, these tools should *not*
+determine whether a bitstream is valid based on its magic number alone.  New
+application-specific bitstream formats are being developed all the time; tools
+should not reject them just because they have a hitherto unseen magic number.
 
 .. _primitives:
 
@@ -496,11 +498,8 @@ LLVM IR Magic Number
 The magic number for LLVM IR files is:
 
 :raw-html:`<tt><blockquote>`
-[0x0\ :sub:`4`, 0xC\ :sub:`4`, 0xE\ :sub:`4`, 0xD\ :sub:`4`]
+['B'\ :sub:`8`, 'C'\ :sub:`8`, 0x0\ :sub:`4`, 0xC\ :sub:`4`, 0xE\ :sub:`4`, 0xD\ :sub:`4`]
 :raw-html:`</blockquote></tt>`
-
-When combined with the bitcode magic number and viewed as bytes, this is
-``"BC 0xC0DE"``.
 
 .. _Signed VBRs:
 

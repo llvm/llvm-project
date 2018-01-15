@@ -64,13 +64,12 @@ static void own(Symbol &S, DenseSet<StringRef> &Strings,
   if (S.Detail) {
     // Copy values of StringRefs into arena.
     auto *Detail = Arena.Allocate<Symbol::Details>();
-    Detail->Documentation = S.Detail->Documentation;
-    Detail->CompletionDetail = S.Detail->CompletionDetail;
-    S.Detail = Detail;
-
+    *Detail = *S.Detail;
     // Intern the actual strings.
-    Intern(S.Detail->Documentation);
-    Intern(S.Detail->CompletionDetail);
+    Intern(Detail->Documentation);
+    Intern(Detail->CompletionDetail);
+    // Replace the detail pointer with our copy.
+    S.Detail = Detail;
   }
 }
 
