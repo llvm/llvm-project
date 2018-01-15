@@ -25,7 +25,7 @@ struct count_equal
 {
     static unsigned count;
     template <class T>
-    TEST_CONSTEXPR bool operator()(const T& x, const T& y)
+    TEST_CONSTEXPR_CXX14 bool operator()(const T& x, const T& y)
         {++count; return x == y;}
 };
 
