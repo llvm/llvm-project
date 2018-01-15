@@ -33,7 +33,7 @@ Standalone directives
 
 * #pragma omp target update: :good:`Complete`.
 
-* #pragma omp target: :partial:`Partial`.  No support for the `depend` clauses.
+* #pragma omp target: :good:`Complete`.
 
 * #pragma omp declare target: :partial:`Partial`.  No full codegen support.
 

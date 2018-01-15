@@ -3091,12 +3091,14 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
     }
     // Privatize all private variables except for in_reduction items.
     (void)Scope.Privatize();
-    InputInfo.BasePointersArray = CGF.Builder.CreateConstArrayGEP(
-        CGF.GetAddrOfLocalVar(BPVD), /*Index=*/0, CGF.getPointerSize());
-    InputInfo.PointersArray = CGF.Builder.CreateConstArrayGEP(
-        CGF.GetAddrOfLocalVar(PVD), /*Index=*/0, CGF.getPointerSize());
-    InputInfo.SizesArray = CGF.Builder.CreateConstArrayGEP(
-        CGF.GetAddrOfLocalVar(SVD), /*Index=*/0, CGF.getSizeSize());
+    if (InputInfo.NumberOfTargetItems > 0) {
+      InputInfo.BasePointersArray = CGF.Builder.CreateConstArrayGEP(
+          CGF.GetAddrOfLocalVar(BPVD), /*Index=*/0, CGF.getPointerSize());
+      InputInfo.PointersArray = CGF.Builder.CreateConstArrayGEP(
+          CGF.GetAddrOfLocalVar(PVD), /*Index=*/0, CGF.getPointerSize());
+      InputInfo.SizesArray = CGF.Builder.CreateConstArrayGEP(
+          CGF.GetAddrOfLocalVar(SVD), /*Index=*/0, CGF.getSizeSize());
+    }
 
     Action.Enter(CGF);
     OMPLexicalScope LexScope(CGF, S, OMPD_task, /*EmitPreInitStmt=*/false);
@@ -3910,7 +3912,6 @@ static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
                                          const RegionCodeGenTy &CodeGen) {
   assert(isOpenMPTargetExecutionDirective(S.getDirectiveKind()));
   CodeGenModule &CGM = CGF.CGM;
-  const CapturedStmt &CS = *S.getCapturedStmt(OMPD_target);
 
   llvm::Function *Fn = nullptr;
   llvm::Constant *FnID = nullptr;
@@ -3958,11 +3959,8 @@ static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
   // Emit target region as a standalone region.
   CGM.getOpenMPRuntime().emitTargetOutlinedFunction(S, ParentName, Fn, FnID,
                                                     IsOffloadEntry, CodeGen);
-  OMPLexicalScope Scope(CGF, S);
-  llvm::SmallVector<llvm::Value *, 16> CapturedVars;
-  CGF.GenerateOpenMPCapturedVars(CS, CapturedVars);
-  CGM.getOpenMPRuntime().emitTargetCall(CGF, S, Fn, FnID, IfCond, Device,
-                                        CapturedVars);
+  OMPLexicalScope Scope(CGF, S, OMPD_task);
+  CGM.getOpenMPRuntime().emitTargetCall(CGF, S, Fn, FnID, IfCond, Device);
 }
 
 static void emitTargetRegion(CodeGenFunction &CGF, const OMPTargetDirective &S,

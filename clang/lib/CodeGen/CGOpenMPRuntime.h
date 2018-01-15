@@ -1207,13 +1207,11 @@ public:
   /// directive, or null if no if clause is used.
   /// \param Device Expression evaluated in device clause associated with the
   /// target directive, or null if no device clause is used.
-  /// \param CapturedVars Values captured in the current region.
   virtual void emitTargetCall(CodeGenFunction &CGF,
                               const OMPExecutableDirective &D,
                               llvm::Value *OutlinedFn,
                               llvm::Value *OutlinedFnID, const Expr *IfCond,
-                              const Expr *Device,
-                              ArrayRef<llvm::Value *> CapturedVars);
+                              const Expr *Device);
 
   /// \brief Emit the target regions enclosed in \a GD function definition or
   /// the function itself in case it is a valid device function. Returns true if
@@ -1833,11 +1831,9 @@ public:
   /// directive, or null if no if clause is used.
   /// \param Device Expression evaluated in device clause associated with the
   /// target directive, or null if no device clause is used.
-  /// \param CapturedVars Values captured in the current region.
   void emitTargetCall(CodeGenFunction &CGF, const OMPExecutableDirective &D,
                       llvm::Value *OutlinedFn, llvm::Value *OutlinedFnID,
-                      const Expr *IfCond, const Expr *Device,
-                      ArrayRef<llvm::Value *> CapturedVars) override;
+                      const Expr *IfCond, const Expr *Device) override;
 
   /// \brief Emit the target regions enclosed in \a GD function definition or
   /// the function itself in case it is a valid device function. Returns true if

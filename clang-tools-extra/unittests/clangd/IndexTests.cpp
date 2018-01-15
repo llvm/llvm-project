@@ -9,6 +9,7 @@
 
 #include "index/Index.h"
 #include "index/MemIndex.h"
+#include "index/Merge.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -205,6 +206,42 @@ TEST(MemIndexTest, IgnoreCases) {
   Req.Scopes = {"ns"};
   auto Matches = match(I, Req);
   EXPECT_THAT(match(I, Req), UnorderedElementsAre("ns::ABC", "ns::abc"));
+}
+
+TEST(MergeTest, MergeIndex) {
+  MemIndex I, J;
+  I.build(generateSymbols({"ns::A", "ns::B"}));
+  J.build(generateSymbols({"ns::B", "ns::C"}));
+  FuzzyFindRequest Req;
+  Req.Scopes = {"ns"};
+  EXPECT_THAT(match(*mergeIndex(&I, &J), Req),
+              UnorderedElementsAre("ns::A", "ns::B", "ns::C"));
+}
+
+TEST(MergeTest, Merge) {
+  Symbol L, R;
+  L.ID = R.ID = SymbolID("hello");
+  L.Name = R.Name = "Foo";                    // same in both
+  L.CanonicalDeclaration.FilePath = "left.h"; // differs
+  R.CanonicalDeclaration.FilePath = "right.h";
+  L.CompletionPlainInsertText = "f00";        // present in left only
+  R.CompletionSnippetInsertText = "f0{$1:0}"; // present in right only
+  Symbol::Details DetL, DetR;
+  DetL.CompletionDetail = "DetL";
+  DetR.CompletionDetail = "DetR";
+  DetR.Documentation = "--doc--";
+  L.Detail = &DetL;
+  R.Detail = &DetR;
+
+  Symbol::Details Scratch;
+  Symbol M = mergeSymbol(L, R, &Scratch);
+  EXPECT_EQ(M.Name, "Foo");
+  EXPECT_EQ(M.CanonicalDeclaration.FilePath, "left.h");
+  EXPECT_EQ(M.CompletionPlainInsertText, "f00");
+  EXPECT_EQ(M.CompletionSnippetInsertText, "f0{$1:0}");
+  ASSERT_TRUE(M.Detail);
+  EXPECT_EQ(M.Detail->CompletionDetail, "DetL");
+  EXPECT_EQ(M.Detail->Documentation, "--doc--");
 }
 
 } // namespace

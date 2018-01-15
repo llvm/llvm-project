@@ -10,7 +10,7 @@
 // <algorithm>
 
 // template<class ForwardIterator1, class ForwardIterator2>
-//   bool
+//   constexpr bool   // constexpr after C++17
 //   is_permutation(ForwardIterator1 first1, ForwardIterator1 last1,
 //                  ForwardIterator2 first2);
 
@@ -20,6 +20,21 @@
 #include "test_iterators.h"
 
 #include "test_macros.h"
+
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR int test_constexpr() {
+    int ia[] = {0, 0, 0};
+    int ib[] = {1, 1, 0};
+    int ic[] = {1, 0, 1};
+    int id[] = {1};
+    return !std::is_permutation(std::begin(ia), std::end(ia), std::begin(ib))
+        && !std::is_permutation(std::begin(ia), std::end(ia), std::begin(ib), std::end(ib))
+        &&  std::is_permutation(std::begin(ib), std::end(ib), std::begin(ic))
+        &&  std::is_permutation(std::begin(ib), std::end(ib), std::begin(ic), std::end(ic))
+        && !std::is_permutation(std::begin(ic), std::end(ic), std::begin(id), std::end(id))
+        ;
+    }
+#endif
 
 int main()
 {
@@ -600,4 +615,8 @@ int main()
                                    forward_iterator<const int*>(ib + sa)) == false);
 #endif
     }
+
+#if TEST_STD_VER > 17
+    static_assert(test_constexpr());
+#endif
 }
