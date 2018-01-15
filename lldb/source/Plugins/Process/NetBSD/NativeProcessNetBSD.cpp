@@ -872,7 +872,7 @@ NativeProcessNetBSD::GetAuxvData() const {
   size_t auxv_size = 100 * sizeof(AuxInfo);
 
   ErrorOr<std::unique_ptr<WritableMemoryBuffer>> buf =
-      llvm::MemoryBuffer::getNewMemBuffer(auxv_size);
+      llvm::WritableMemoryBuffer::getNewMemBuffer(auxv_size);
 
   struct ptrace_io_desc io;
   io.piod_op = PIOD_READ_AUXV;
