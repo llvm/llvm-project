@@ -1221,11 +1221,12 @@ multiclass avx512_broadcast_rm<bits<8> opc, string OpcodeStr,
 
 multiclass avx512_fp_broadcast_sd<bits<8> opc, string OpcodeStr,
                                                        AVX512VLVectorVTInfo _> {
-  let Predicates = [HasAVX512] in
+  let Predicates = [HasAVX512] in {
     defm Z  : avx512_broadcast_rm<opc, OpcodeStr, WriteFShuffle256, 
                                   WriteFShuffle256Ld, _.info512, _.info128>,
               avx512_broadcast_scalar<opc, OpcodeStr, _.info512, _.info128>,
                                       EVEX_V512;
+  }
 
   let Predicates = [HasVLX] in {
     defm Z256  : avx512_broadcast_rm<opc, OpcodeStr, WriteFShuffle256,
@@ -1237,11 +1238,12 @@ multiclass avx512_fp_broadcast_sd<bits<8> opc, string OpcodeStr,
 
 multiclass avx512_fp_broadcast_ss<bits<8> opc, string OpcodeStr,
                                                        AVX512VLVectorVTInfo _> {
-  let Predicates = [HasAVX512] in
+  let Predicates = [HasAVX512] in {
     defm Z  : avx512_broadcast_rm<opc, OpcodeStr, WriteFShuffle256,
                                   WriteFShuffle256Ld, _.info512, _.info128>,
               avx512_broadcast_scalar<opc, OpcodeStr, _.info512, _.info128>,
                                EVEX_V512;
+  }
 
   let Predicates = [HasVLX] in {
     defm Z256  : avx512_broadcast_rm<opc, OpcodeStr, WriteFShuffle256,
@@ -7921,21 +7923,21 @@ multiclass avx512_sqrt_packed_all_round<bits<8> opc, string OpcodeStr> {
 multiclass avx512_sqrt_scalar<bits<8> opc, string OpcodeStr, OpndItins itins,
                               X86VectorVTInfo _, string SUFF, Intrinsic Intr> {
   let ExeDomain = _.ExeDomain in {
-  defm r_Int : AVX512_maskable_scalar<opc, MRMSrcReg, _, (outs _.RC:$dst),
+    defm r_Int : AVX512_maskable_scalar<opc, MRMSrcReg, _, (outs _.RC:$dst),
                          (ins _.RC:$src1, _.RC:$src2), OpcodeStr,
                          "$src2, $src1", "$src1, $src2",
                          (X86fsqrtRnds (_.VT _.RC:$src1),
                                     (_.VT _.RC:$src2),
                                     (i32 FROUND_CURRENT)), itins.rr>,
                          Sched<[itins.Sched]>;
-  defm m_Int : AVX512_maskable_scalar<opc, MRMSrcMem, _, (outs _.RC:$dst),
-                       (ins _.RC:$src1, _.IntScalarMemOp:$src2), OpcodeStr,
-                       "$src2, $src1", "$src1, $src2",
-                       (X86fsqrtRnds (_.VT _.RC:$src1),
-                                  _.ScalarIntMemCPat:$src2,
-                                  (i32 FROUND_CURRENT)), itins.rm>,
-                       Sched<[itins.Sched.Folded, ReadAfterLd]>;
-  defm rb_Int : AVX512_maskable_scalar<opc, MRMSrcReg, _, (outs _.RC:$dst),
+    defm m_Int : AVX512_maskable_scalar<opc, MRMSrcMem, _, (outs _.RC:$dst),
+                         (ins _.RC:$src1, _.IntScalarMemOp:$src2), OpcodeStr,
+                         "$src2, $src1", "$src1, $src2",
+                         (X86fsqrtRnds (_.VT _.RC:$src1),
+                                    _.ScalarIntMemCPat:$src2,
+                                    (i32 FROUND_CURRENT)), itins.rm>,
+                         Sched<[itins.Sched.Folded, ReadAfterLd]>;
+    defm rb_Int : AVX512_maskable_scalar<opc, MRMSrcReg, _, (outs _.RC:$dst),
                          (ins _.RC:$src1, _.RC:$src2, AVX512RC:$rc), OpcodeStr,
                          "$rc, $src2, $src1", "$src1, $src2, $rc",
                          (X86fsqrtRnds (_.VT _.RC:$src1),
@@ -7943,39 +7945,38 @@ multiclass avx512_sqrt_scalar<bits<8> opc, string OpcodeStr, OpndItins itins,
                                      (i32 imm:$rc)), itins.rr>,
                          EVEX_B, EVEX_RC, Sched<[itins.Sched]>;
 
-  let isCodeGenOnly = 1, hasSideEffects = 0 in {
-    def r : I<opc, MRMSrcReg, (outs _.FRC:$dst),
-               (ins _.FRC:$src1, _.FRC:$src2),
-               OpcodeStr#"\t{$src2, $src1, $dst|$dst, $src1, $src2}", [], itins.rr>,
-               Sched<[itins.Sched]>;
-    let mayLoad = 1 in
-      def m : I<opc, MRMSrcMem, (outs _.FRC:$dst),
-                 (ins _.FRC:$src1, _.ScalarMemOp:$src2),
-                 OpcodeStr#"\t{$src2, $src1, $dst|$dst, $src1, $src2}", [], itins.rm>,
-                 Sched<[itins.Sched.Folded, ReadAfterLd]>;
-  }
+    let isCodeGenOnly = 1, hasSideEffects = 0, Predicates=[HasAVX512] in {
+      def r : I<opc, MRMSrcReg, (outs _.FRC:$dst),
+                 (ins _.FRC:$src1, _.FRC:$src2),
+                 OpcodeStr#"\t{$src2, $src1, $dst|$dst, $src1, $src2}", [],
+		 itins.rr>, Sched<[itins.Sched]>;
+      let mayLoad = 1 in
+        def m : I<opc, MRMSrcMem, (outs _.FRC:$dst),
+                   (ins _.FRC:$src1, _.ScalarMemOp:$src2),
+                   OpcodeStr#"\t{$src2, $src1, $dst|$dst, $src1, $src2}", [],
+		   itins.rm>, Sched<[itins.Sched.Folded, ReadAfterLd]>;
+    }
   }
 
-let Predicates = [HasAVX512] in {
-  def : Pat<(_.EltVT (fsqrt _.FRC:$src)),
-            (!cast<Instruction>(NAME#SUFF#Zr)
-                (_.EltVT (IMPLICIT_DEF)), _.FRC:$src)>;
+  let Predicates = [HasAVX512] in {
+    def : Pat<(_.EltVT (fsqrt _.FRC:$src)),
+              (!cast<Instruction>(NAME#SUFF#Zr)
+                  (_.EltVT (IMPLICIT_DEF)), _.FRC:$src)>;
 
-   def : Pat<(Intr VR128X:$src),
-             (!cast<Instruction>(NAME#SUFF#Zr_Int) VR128X:$src,
+     def : Pat<(Intr VR128X:$src),
+               (!cast<Instruction>(NAME#SUFF#Zr_Int) VR128X:$src,
                                  VR128X:$src)>;
-}
+  }
 
-let Predicates = [HasAVX512, OptForSize] in {
-  def : Pat<(_.EltVT (fsqrt (load addr:$src))),
-            (!cast<Instruction>(NAME#SUFF#Zm)
-                (_.EltVT (IMPLICIT_DEF)), addr:$src)>;
+  let Predicates = [HasAVX512, OptForSize] in {
+    def : Pat<(_.EltVT (fsqrt (load addr:$src))),
+              (!cast<Instruction>(NAME#SUFF#Zm)
+                  (_.EltVT (IMPLICIT_DEF)), addr:$src)>;
 
-  def : Pat<(Intr _.ScalarIntMemCPat:$src2),
-            (!cast<Instruction>(NAME#SUFF#Zm_Int)
-                  (_.VT (IMPLICIT_DEF)), addr:$src2)>;
-}
-
+    def : Pat<(Intr _.ScalarIntMemCPat:$src2),
+              (!cast<Instruction>(NAME#SUFF#Zm_Int)
+                    (_.VT (IMPLICIT_DEF)), addr:$src2)>;
+  }
 }
 
 multiclass avx512_sqrt_scalar_all<bits<8> opc, string OpcodeStr> {
