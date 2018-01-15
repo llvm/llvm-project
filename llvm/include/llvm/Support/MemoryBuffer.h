@@ -117,11 +117,6 @@ public:
   static std::unique_ptr<MemoryBuffer>
   getMemBufferCopy(StringRef InputData, const Twine &BufferName = "");
 
-  // TODO: Remove after all callers are switched to
-  // WritableMemoryBuffer::getNewMemBuffer
-  static std::unique_ptr<MemoryBuffer>
-  getNewMemBuffer(size_t Size, StringRef BufferName = "");
-
   /// Read all of stdin into a file buffer, and return it.
   static ErrorOr<std::unique_ptr<MemoryBuffer>> getSTDIN();
 

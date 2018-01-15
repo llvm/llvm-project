@@ -1152,8 +1152,8 @@ define <2 x double> @add_sd_mask(<2 x double> %a, <2 x double> %b, <2 x double> 
 ; SSE41-NEXT:    testb $1, %dil
 ; SSE41-NEXT:    jne .LBB63_1
 ; SSE41-NEXT:  # %bb.2:
-; SSE41-NEXT:    movapd %xmm2, %xmm1
-; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; SSE41-NEXT:    movaps %xmm2, %xmm1
+; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
 ; SSE41-NEXT:    retq
 ; SSE41-NEXT:  .LBB63_1:
 ; SSE41-NEXT:    addsd %xmm0, %xmm1

@@ -24,12 +24,12 @@ define <2 x i64> @test_mm_blend_epi16(<2 x i64> %a0, <2 x i64> %a1) {
 define <2 x double> @test_mm_blend_pd(<2 x double> %a0, <2 x double> %a1) {
 ; X32-LABEL: test_mm_blend_pd:
 ; X32:       # %bb.0:
-; X32-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; X32-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_blend_pd:
 ; X64:       # %bb.0:
-; X64-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; X64-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; X64-NEXT:    retq
   %res = shufflevector <2 x double> %a0, <2 x double> %a1, <2 x i32> <i32 0, i32 3>
   ret <2 x double> %res

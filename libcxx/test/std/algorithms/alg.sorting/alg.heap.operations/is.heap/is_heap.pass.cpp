@@ -20,7 +20,7 @@
 #include "test_macros.h"
 
 #if TEST_STD_VER > 17
-TEST_CONSTEXPR int test_constexpr() {
+TEST_CONSTEXPR bool test_constexpr() {
     int ia[] = {1, 1, 1, 1, 0, 1, 1};
     int ib[] = {0, 0, 1, 0, 0, 0, 0};
     return     std::is_heap(std::begin(ia), std::end(ia))

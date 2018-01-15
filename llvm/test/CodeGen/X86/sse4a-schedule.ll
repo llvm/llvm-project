@@ -91,7 +91,7 @@ define void @test_movntsd(i8* %p, <2 x double> %a) {
 ;
 ; BTVER2-LABEL: test_movntsd:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movntsd %xmm0, (%rdi) # sched: [1:1.00]
+; BTVER2-NEXT:    movntsd %xmm0, (%rdi) # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movntsd:
@@ -111,7 +111,7 @@ define void @test_movntss(i8* %p, <4 x float> %a) {
 ;
 ; BTVER2-LABEL: test_movntss:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movntss %xmm0, (%rdi) # sched: [1:1.00]
+; BTVER2-NEXT:    movntss %xmm0, (%rdi) # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_movntss:

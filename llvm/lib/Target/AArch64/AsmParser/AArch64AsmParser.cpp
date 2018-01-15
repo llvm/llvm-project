@@ -470,50 +470,22 @@ public:
 
   bool isImm() const override { return Kind == k_Immediate; }
   bool isMem() const override { return false; }
-  bool isSImm9() const {
+
+  template <int Width> bool isSImm() const { return isSImmScaled<Width, 1>(); }
+
+  template <int Bits, int Scale> bool isSImmScaled() const {
     if (!isImm())
       return false;
     const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
     if (!MCE)
       return false;
+
+    int64_t Shift = Bits - 1;
+    int64_t MinVal = (int64_t(1) << Shift) * -Scale;
+    int64_t MaxVal = ((int64_t(1) << Shift) - 1) * Scale;
+
     int64_t Val = MCE->getValue();
-    return (Val >= -256 && Val < 256);
-  }
-  bool isSImm10s8() const {
-    if (!isImm())
-      return false;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return false;
-    int64_t Val = MCE->getValue();
-    return (Val >= -4096 && Val < 4089 && (Val & 7) == 0);
-  }
-  bool isSImm7s4() const {
-    if (!isImm())
-      return false;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return false;
-    int64_t Val = MCE->getValue();
-    return (Val >= -256 && Val <= 252 && (Val & 3) == 0);
-  }
-  bool isSImm7s8() const {
-    if (!isImm())
-      return false;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return false;
-    int64_t Val = MCE->getValue();
-    return (Val >= -512 && Val <= 504 && (Val & 7) == 0);
-  }
-  bool isSImm7s16() const {
-    if (!isImm())
-      return false;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return false;
-    int64_t Val = MCE->getValue();
-    return (Val >= -1024 && Val <= 1008 && (Val & 15) == 0);
+    return Val >= MinVal && Val <= MaxVal && (Val % Scale) == 0;
   }
 
   bool isSymbolicUImm12Offset(const MCExpr *Expr, unsigned Scale) const {
@@ -1081,7 +1053,7 @@ public:
   // ambiguity in the matcher.
   template<int Width>
   bool isSImm9OffsetFB() const {
-    return isSImm9() && !isUImm12Offset<Width / 8>();
+    return isSImm<9>() && !isUImm12Offset<Width / 8>();
   }
 
   bool isAdrpLabel() const {

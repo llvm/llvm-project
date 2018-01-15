@@ -1284,7 +1284,7 @@ define <32 x i8> @shuffle_v32i8_01_zz_02_zz_04_uu_06_07_08_09_10_11_12_13_14_15_
 ; AVX1-LABEL: shuffle_v32i8_01_zz_02_zz_04_uu_06_07_08_09_10_11_12_13_14_15_u6_17_18_19_20_21_22_23_24_25_26_27_28_29_30_31:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[1],zero,xmm0[2],zero,xmm0[4,u,6,7,8,9,10,11,12,13,14,15]
-; AVX1-NEXT:    vblendpd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3]
+; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2OR512VL-LABEL: shuffle_v32i8_01_zz_02_zz_04_uu_06_07_08_09_10_11_12_13_14_15_u6_17_18_19_20_21_22_23_24_25_26_27_28_29_30_31:

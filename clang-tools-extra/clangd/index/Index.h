@@ -156,7 +156,7 @@ struct Symbol {
   };
 
   // Optional details of the symbol.
-  Details *Detail = nullptr; // FIXME: should be const
+  const Details *Detail = nullptr;
 
   // FIXME: add definition location of the symbol.
   // FIXME: add all occurrences support.

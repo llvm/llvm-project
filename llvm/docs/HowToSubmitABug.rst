@@ -38,7 +38,7 @@ Crashing Bugs
 
 More often than not, bugs in the compiler cause it to crash---often due to
 an assertion failure of some sort. The most important piece of the puzzle
-is to figure out if it is crashing in the GCC front-end or if it is one of
+is to figure out if it is crashing in the Clang front-end or if it is one of
 the LLVM libraries (e.g. the optimizer or code generator) that has
 problems.
 

@@ -141,12 +141,12 @@ define <8 x float> @test_mm256_andnot_ps(<8 x float> %a0, <8 x float> %a1) nounw
 define <4 x double> @test_mm256_blend_pd(<4 x double> %a0, <4 x double> %a1) nounwind {
 ; X32-LABEL: test_mm256_blend_pd:
 ; X32:       # %bb.0:
-; X32-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3]
+; X32-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5],ymm0[6,7]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_blend_pd:
 ; X64:       # %bb.0:
-; X64-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3]
+; X64-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5],ymm0[6,7]
 ; X64-NEXT:    retq
   %res = shufflevector <4 x double> %a0, <4 x double> %a1, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
   ret <4 x double> %res
@@ -1044,13 +1044,13 @@ define <4 x double> @test_mm256_insertf128_pd(<4 x double> %a0, <2 x double> %a1
 ; X32-LABEL: test_mm256_insertf128_pd:
 ; X32:       # %bb.0:
 ; X32-NEXT:    # kill: def %xmm1 killed %xmm1 def %ymm1
-; X32-NEXT:    vblendpd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3]
+; X32-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_insertf128_pd:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def %xmm1 killed %xmm1 def %ymm1
-; X64-NEXT:    vblendpd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3]
+; X64-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; X64-NEXT:    retq
   %ext = shufflevector <2 x double> %a1, <2 x double> %a1, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %res = shufflevector <4 x double> %a0, <4 x double> %ext, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
@@ -1076,13 +1076,13 @@ define <4 x i64> @test_mm256_insertf128_si256(<4 x i64> %a0, <2 x i64> %a1) noun
 ; X32-LABEL: test_mm256_insertf128_si256:
 ; X32:       # %bb.0:
 ; X32-NEXT:    # kill: def %xmm1 killed %xmm1 def %ymm1
-; X32-NEXT:    vblendpd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3]
+; X32-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_insertf128_si256:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def %xmm1 killed %xmm1 def %ymm1
-; X64-NEXT:    vblendpd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3]
+; X64-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; X64-NEXT:    retq
   %ext = shufflevector <2 x i64> %a1, <2 x i64> %a1, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %res = shufflevector <4 x i64> %a0, <4 x i64> %ext, <4 x i32> <i32 4, i32 5, i32 2, i32 3>

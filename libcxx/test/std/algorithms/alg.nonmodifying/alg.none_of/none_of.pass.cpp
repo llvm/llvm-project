@@ -28,7 +28,7 @@ struct test1
 };
 
 #if TEST_STD_VER > 17
-TEST_CONSTEXPR int test_constexpr() {
+TEST_CONSTEXPR bool test_constexpr() {
     int ia[] = {1, 3, 6, 7};
     int ib[] = {1, 3, 5, 7};
     return !std::none_of(std::begin(ia), std::end(ia), test1())

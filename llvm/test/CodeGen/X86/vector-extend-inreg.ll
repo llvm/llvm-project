@@ -72,16 +72,16 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) noun
 ; X32-AVX-NEXT:    subl $384, %esp # imm = 0x180
 ; X32-AVX-NEXT:    movl 40(%ebp), %ecx
 ; X32-AVX-NEXT:    vbroadcastsd 32(%ebp), %ymm0
-; X32-AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; X32-AVX-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3]
-; X32-AVX-NEXT:    vmovapd %ymm1, {{[0-9]+}}(%esp)
-; X32-AVX-NEXT:    vmovapd %ymm1, {{[0-9]+}}(%esp)
-; X32-AVX-NEXT:    vmovapd %ymm1, {{[0-9]+}}(%esp)
-; X32-AVX-NEXT:    vmovapd %ymm0, {{[0-9]+}}(%esp)
-; X32-AVX-NEXT:    vmovapd %ymm1, {{[0-9]+}}(%esp)
-; X32-AVX-NEXT:    vmovapd %ymm1, {{[0-9]+}}(%esp)
-; X32-AVX-NEXT:    vmovapd %ymm1, (%esp)
-; X32-AVX-NEXT:    vmovapd %ymm0, {{[0-9]+}}(%esp)
+; X32-AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X32-AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5,6,7]
+; X32-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
+; X32-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
+; X32-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
+; X32-AVX-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
+; X32-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
+; X32-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
+; X32-AVX-NEXT:    vmovaps %ymm1, (%esp)
+; X32-AVX-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
 ; X32-AVX-NEXT:    leal (%ecx,%ecx), %eax
 ; X32-AVX-NEXT:    andl $31, %eax
 ; X32-AVX-NEXT:    movl 128(%esp,%eax,4), %eax
@@ -101,12 +101,12 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) noun
 ; X64-AVX-NEXT:    subq $256, %rsp # imm = 0x100
 ; X64-AVX-NEXT:    # kill: def %edi killed %edi def %rdi
 ; X64-AVX-NEXT:    vpermpd {{.*#+}} ymm0 = ymm3[3,1,2,3]
-; X64-AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; X64-AVX-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3]
-; X64-AVX-NEXT:    vmovapd %ymm1, {{[0-9]+}}(%rsp)
-; X64-AVX-NEXT:    vmovapd %ymm1, {{[0-9]+}}(%rsp)
-; X64-AVX-NEXT:    vmovapd %ymm1, (%rsp)
-; X64-AVX-NEXT:    vmovapd %ymm0, {{[0-9]+}}(%rsp)
+; X64-AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X64-AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5,6,7]
+; X64-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; X64-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; X64-AVX-NEXT:    vmovaps %ymm1, (%rsp)
+; X64-AVX-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
 ; X64-AVX-NEXT:    andl $15, %edi
 ; X64-AVX-NEXT:    movq (%rsp,%rdi,8), %rax
 ; X64-AVX-NEXT:    movq %rbp, %rsp

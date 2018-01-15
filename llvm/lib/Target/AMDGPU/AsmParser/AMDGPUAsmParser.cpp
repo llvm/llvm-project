@@ -3179,7 +3179,10 @@ bool AMDGPUAsmParser::parseHwregConstruct(OperandInfoTy &HwReg, int64_t &Offset,
     HwReg.IsSymbolic = true;
     HwReg.Id = ID_UNKNOWN_;
     const StringRef tok = Parser.getTok().getString();
-    for (int i = ID_SYMBOLIC_FIRST_; i < ID_SYMBOLIC_LAST_; ++i) {
+    int Last = ID_SYMBOLIC_LAST_;
+    if (isSI() || isCI() || isVI())
+      Last = ID_SYMBOLIC_FIRST_GFX9_;
+    for (int i = ID_SYMBOLIC_FIRST_; i < Last; ++i) {
       if (tok == IdSymbolic[i]) {
         HwReg.Id = i;
         break;

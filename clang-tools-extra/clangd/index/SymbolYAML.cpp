@@ -60,27 +60,39 @@ template <> struct MappingTraits<SymbolInfo> {
   }
 };
 
-template <>
-struct MappingTraits<Symbol::Details *> {
-  static void mapping(IO &io, Symbol::Details *&Detail) {
-    if (!io.outputting()) {
-      assert(io.getContext() && "Expecting an arena (as context) to allocate "
-                                "data for new symbols.");
-      Detail = static_cast<llvm::BumpPtrAllocator *>(io.getContext())
-                   ->Allocate<Symbol::Details>();
-    } else if (!Detail) {
-      // Detail is optional in outputting.
-      return;
-    }
-    assert(Detail);
-    io.mapOptional("Documentation", Detail->Documentation);
-    io.mapOptional("CompletionDetail", Detail->CompletionDetail);
+template <> struct MappingTraits<Symbol::Details> {
+  static void mapping(IO &io, Symbol::Details &Detail) {
+    io.mapOptional("Documentation", Detail.Documentation);
+    io.mapOptional("CompletionDetail", Detail.CompletionDetail);
   }
+};
+
+// A YamlIO normalizer for fields of type "const T*" allocated on an arena.
+// Normalizes to Optional<T>, so traits should be provided for T.
+template <typename T> struct ArenaPtr {
+  ArenaPtr(IO &) {}
+  ArenaPtr(IO &, const T *D) {
+    if (D)
+      Opt = *D;
+  }
+
+  const T *denormalize(IO &IO) {
+    assert(IO.getContext() && "Expecting an arena (as context) to allocate "
+                              "data for read symbols.");
+    if (!Opt)
+      return nullptr;
+    return new (*static_cast<llvm::BumpPtrAllocator *>(IO.getContext()))
+        T(std::move(*Opt)); // Allocate a copy of Opt on the arena.
+  }
+
+  llvm::Optional<T> Opt;
 };
 
 template <> struct MappingTraits<Symbol> {
   static void mapping(IO &IO, Symbol &Sym) {
     MappingNormalization<NormalizedSymbolID, SymbolID> NSymbolID(IO, Sym.ID);
+    MappingNormalization<ArenaPtr<Symbol::Details>, const Symbol::Details *>
+        NDetail(IO, Sym.Detail);
     IO.mapRequired("ID", NSymbolID->HexString);
     IO.mapRequired("Name", Sym.Name);
     IO.mapRequired("Scope", Sym.Scope);
@@ -92,8 +104,7 @@ template <> struct MappingTraits<Symbol> {
 
     IO.mapOptional("CompletionSnippetInsertText",
                    Sym.CompletionSnippetInsertText);
-    if (!IO.outputting() || Sym.Detail)
-      IO.mapOptional("Detail", Sym.Detail);
+    IO.mapOptional("Detail", NDetail->Opt);
   }
 };
 

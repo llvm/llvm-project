@@ -21,7 +21,7 @@
 #include "test_iterators.h"
 
 #if TEST_STD_VER > 17
-TEST_CONSTEXPR int test_constexpr() {
+TEST_CONSTEXPR bool test_constexpr() {
     int ia[] = {1, 0, 1};
     int ib[] = {1, 1, 0};
     return    (std::is_sorted_until(std::begin(ia), std::end(ia), std::greater<int>()) == ia+2)

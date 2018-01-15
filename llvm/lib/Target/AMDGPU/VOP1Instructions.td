@@ -86,6 +86,7 @@ class VOP1_Real <VOP1_Pseudo ps, int EncodingFamily> :
   let TSFlags            = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let Uses                 = ps.Uses;
+  let Defs                 = ps.Defs;
 }
 
 class VOP1_SDWA_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :

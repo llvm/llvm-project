@@ -1263,7 +1263,10 @@ void AMDGPUInstPrinter::printHwreg(const MCInst *MI, unsigned OpNo,
   const unsigned Width = ((SImm16 & WIDTH_M1_MASK_) >> WIDTH_M1_SHIFT_) + 1;
 
   O << "hwreg(";
-  if (ID_SYMBOLIC_FIRST_ <= Id && Id < ID_SYMBOLIC_LAST_) {
+  unsigned Last = ID_SYMBOLIC_LAST_;
+  if (AMDGPU::isSI(STI) || AMDGPU::isCI(STI) || AMDGPU::isVI(STI))
+    Last = ID_SYMBOLIC_FIRST_GFX9_;
+  if (ID_SYMBOLIC_FIRST_ <= Id && Id < Last && IdSymbolic[Id]) {
     O << IdSymbolic[Id];
   } else {
     O << Id;
