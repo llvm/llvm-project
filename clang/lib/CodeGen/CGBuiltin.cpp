@@ -8456,6 +8456,28 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
                                  Builder.getInt16Ty());
   }
 
+  case X86::BI__builtin_ia32_kunpckdi:
+  case X86::BI__builtin_ia32_kunpcksi:
+  case X86::BI__builtin_ia32_kunpckhi: {
+    unsigned NumElts = Ops[0]->getType()->getScalarSizeInBits();
+    Value *LHS = getMaskVecValue(*this, Ops[0], NumElts);
+    Value *RHS = getMaskVecValue(*this, Ops[1], NumElts);
+    uint32_t Indices[64];
+    for (unsigned i = 0; i != NumElts; ++i)
+      Indices[i] = i;
+
+    // First extract half of each vector. This gives better codegen than
+    // doing it in a single shuffle.
+    LHS = Builder.CreateShuffleVector(LHS, LHS,
+                                      makeArrayRef(Indices, NumElts / 2));
+    RHS = Builder.CreateShuffleVector(RHS, RHS,
+                                      makeArrayRef(Indices, NumElts / 2));
+    // Concat the vectors.
+    Value *Res = Builder.CreateShuffleVector(LHS, RHS,
+                                             makeArrayRef(Indices, NumElts));
+    return Builder.CreateBitCast(Res, Ops[0]->getType());
+  }
+
   case X86::BI__builtin_ia32_vplzcntd_128_mask:
   case X86::BI__builtin_ia32_vplzcntd_256_mask:
   case X86::BI__builtin_ia32_vplzcntd_512_mask:
