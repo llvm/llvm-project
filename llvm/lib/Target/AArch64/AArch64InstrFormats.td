@@ -193,6 +193,7 @@ def SIMDImmType10Operand : AsmOperandClass { let Name = "SIMDImmType10"; }
 def SImm10s8Operand : AsmOperandClass {
   let Name = "SImm10s8";
   let DiagnosticType = "InvalidMemoryIndexedSImm10";
+  let PredicateMethod = "isSImmScaled<10, 8>";
 }
 
 //===----------------------------------------------------------------------===//
@@ -221,19 +222,23 @@ def adrlabel : Operand<i64> {
   let ParserMatchClass = AdrOperand;
 }
 
+class SImmOperand<int width> : AsmOperandClass {
+  let Name = "SImm" # width;
+  let DiagnosticType = "InvalidMemoryIndexedSImm" # width;
+  let RenderMethod = "addImmOperands";
+  let PredicateMethod = "isSImm<" # width # ">";
+}
+
 def simm10Scaled : Operand<i64> {
   let ParserMatchClass = SImm10s8Operand;
   let DecoderMethod = "DecodeSImm<10>";
   let PrintMethod = "printImmScale<8>";
 }
 
-// simm9 predicate - True if the immediate is in the range [-256, 255].
-def SImm9Operand : AsmOperandClass {
-  let Name = "SImm9";
-  let DiagnosticType = "InvalidMemoryIndexedSImm9";
-}
+def SImm9Operand : SImmOperand<9>;
 def simm9 : Operand<i64>, ImmLeaf<i64, [{ return Imm >= -256 && Imm < 256; }]> {
   let ParserMatchClass = SImm9Operand;
+  let DecoderMethod = "DecodeSImm<9>";
 }
 
 // simm7sN predicate - True if the immediate is a multiple of N in the range
@@ -241,6 +246,7 @@ def simm9 : Operand<i64>, ImmLeaf<i64, [{ return Imm >= -256 && Imm < 256; }]> {
 class SImm7Scaled<int Scale> : AsmOperandClass {
   let Name = "SImm7s" # Scale;
   let DiagnosticType = "InvalidMemoryIndexed" # Scale # "SImm7";
+  let PredicateMethod = "isSImmScaled<7, " # Scale # ">";
 }
 
 def SImm7s4Operand : SImm7Scaled<4>;
