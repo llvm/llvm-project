@@ -193,7 +193,7 @@ public:
   Use *getCheckUse() const { return CheckUse; }
 
   /// Represents an signed integer range [Range.getBegin(), Range.getEnd()).  If
-  /// R.getEnd() sle R.getBegin(), then R denotes the empty range.
+  /// R.getEnd() le R.getBegin(), then R denotes the empty range.
 
   class Range {
     const SCEV *Begin;

@@ -15,16 +15,10 @@ define i64 @test_mm512_kunpackd(<8 x i64> %__A, <8 x i64> %__B, <8 x i64> %__C, 
 ; X32-NEXT:    andl $-64, %esp
 ; X32-NEXT:    subl $64, %esp
 ; X32-NEXT:    vmovdqa64 136(%ebp), %zmm3
-; X32-NEXT:    vmovdqa64 72(%ebp), %zmm4
-; X32-NEXT:    vmovdqa64 8(%ebp), %zmm5
 ; X32-NEXT:    vpcmpneqb %zmm0, %zmm1, %k0
-; X32-NEXT:    kmovq %k0, {{[0-9]+}}(%esp)
-; X32-NEXT:    vpcmpneqb %zmm5, %zmm2, %k0
-; X32-NEXT:    kmovq %k0, {{[0-9]+}}(%esp)
-; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k0
-; X32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
+; X32-NEXT:    vpcmpneqb 8(%ebp), %zmm2, %k1
 ; X32-NEXT:    kunpckdq %k0, %k1, %k1
-; X32-NEXT:    vpcmpneqb %zmm3, %zmm4, %k0 {%k1}
+; X32-NEXT:    vpcmpneqb 72(%ebp), %zmm3, %k0 {%k1}
 ; X32-NEXT:    kmovq %k0, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -43,22 +37,19 @@ define i64 @test_mm512_kunpackd(<8 x i64> %__A, <8 x i64> %__B, <8 x i64> %__C, 
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
-  %0 = bitcast <8 x i64> %__B to <64 x i8>
-  %1 = bitcast <8 x i64> %__A to <64 x i8>
-  %2 = icmp ne <64 x i8> %0, %1
-  %3 = bitcast <64 x i1> %2 to i64
-  %4 = bitcast <8 x i64> %__C to <64 x i8>
-  %5 = bitcast <8 x i64> %__D to <64 x i8>
-  %6 = icmp ne <64 x i8> %4, %5
-  %7 = bitcast <64 x i1> %6 to i64
-  %and.i = and i64 %7, 4294967295
-  %shl.i = shl i64 %3, 32
-  %or.i = or i64 %and.i, %shl.i
-  %8 = bitcast <8 x i64> %__E to <64 x i8>
-  %9 = bitcast <8 x i64> %__F to <64 x i8>
-  %10 = icmp ne <64 x i8> %8, %9
-  %11 = bitcast i64 %or.i to <64 x i1>
-  %12 = and <64 x i1> %10, %11
+  %0 = bitcast <8 x i64> %__E to <64 x i8>
+  %1 = bitcast <8 x i64> %__F to <64 x i8>
+  %2 = bitcast <8 x i64> %__B to <64 x i8>
+  %3 = bitcast <8 x i64> %__A to <64 x i8>
+  %4 = icmp ne <64 x i8> %2, %3
+  %5 = bitcast <8 x i64> %__C to <64 x i8>
+  %6 = bitcast <8 x i64> %__D to <64 x i8>
+  %7 = icmp ne <64 x i8> %5, %6
+  %8 = shufflevector <64 x i1> %4, <64 x i1> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %9 = shufflevector <64 x i1> %7, <64 x i1> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %10 = shufflevector <32 x i1> %8, <32 x i1> %9, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+  %11 = icmp ne <64 x i8> %0, %1
+  %12 = and <64 x i1> %11, %10
   %13 = bitcast <64 x i1> %12 to i64
   ret i64 %13
 }
@@ -94,22 +85,19 @@ define i32 @test_mm512_kunpackw(<8 x i64> %__A, <8 x i64> %__B, <8 x i64> %__C, 
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
-  %0 = bitcast <8 x i64> %__B to <32 x i16>
-  %1 = bitcast <8 x i64> %__A to <32 x i16>
-  %2 = icmp ne <32 x i16> %0, %1
-  %3 = bitcast <32 x i1> %2 to i32
-  %4 = bitcast <8 x i64> %__C to <32 x i16>
-  %5 = bitcast <8 x i64> %__D to <32 x i16>
-  %6 = icmp ne <32 x i16> %4, %5
-  %7 = bitcast <32 x i1> %6 to i32
-  %and.i = and i32 %7, 65535
-  %shl.i = shl i32 %3, 16
-  %or.i = or i32 %and.i, %shl.i
-  %8 = bitcast <8 x i64> %__E to <32 x i16>
-  %9 = bitcast <8 x i64> %__F to <32 x i16>
-  %10 = icmp ne <32 x i16> %8, %9
-  %11 = bitcast i32 %or.i to <32 x i1>
-  %12 = and <32 x i1> %10, %11
+  %0 = bitcast <8 x i64> %__E to <32 x i16>
+  %1 = bitcast <8 x i64> %__F to <32 x i16>
+  %2 = bitcast <8 x i64> %__B to <32 x i16>
+  %3 = bitcast <8 x i64> %__A to <32 x i16>
+  %4 = icmp ne <32 x i16> %2, %3
+  %5 = bitcast <8 x i64> %__C to <32 x i16>
+  %6 = bitcast <8 x i64> %__D to <32 x i16>
+  %7 = icmp ne <32 x i16> %5, %6
+  %8 = shufflevector <32 x i1> %4, <32 x i1> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %9 = shufflevector <32 x i1> %7, <32 x i1> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %10 = shufflevector <16 x i1> %8, <16 x i1> %9, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %11 = icmp ne <32 x i16> %0, %1
+  %12 = and <32 x i1> %11, %10
   %13 = bitcast <32 x i1> %12 to i32
   ret i32 %13
 }
