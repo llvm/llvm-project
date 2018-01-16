@@ -62,13 +62,11 @@ static void dumpRanges(const DWARFObject &Obj, raw_ostream &OS,
   if (DumpOpts.Verbose)
     SectionNames = Obj.getSectionNames();
 
-  for (size_t I = 0; I < Ranges.size(); ++I) {
-    const DWARFAddressRange &R = Ranges[I];
+  for (const DWARFAddressRange &R : Ranges) {
 
     OS << '\n';
     OS.indent(Indent);
-    OS << format("[0x%0*" PRIx64 " - 0x%0*" PRIx64 ")", AddressSize * 2,
-                 R.LowPC, AddressSize * 2, R.HighPC);
+    R.dump(OS, AddressSize);
 
     if (SectionNames.empty() || R.SectionIndex == -1ULL)
       continue;

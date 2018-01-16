@@ -9,10 +9,10 @@
 ; RUN: llc -O0 -fast-isel=true -mtriple=x86_64-apple-darwin -filetype=obj -o - %s | llvm-dwarfdump -v - | FileCheck %s
 ; RUN: llc -O0 -fast-isel=false -mtriple=x86_64-apple-darwin -filetype=obj -o - %s | llvm-dwarfdump -v - | FileCheck %s
 ; CHECK: _ZN1B9AInstanceEv
-; CHECK: DW_TAG_variable  
+; CHECK: DW_TAG_variable
 ; CHECK-NEXT:   DW_AT_location [DW_FORM_sec_offset] (0x00000000
-; CHECK-NEXT:     {{.*}} - {{.*}}: DW_OP_breg5 RDI+0
-; CHECK-NEXT:     {{.*}} - {{.*}}: DW_OP_breg6 RBP-24, DW_OP_deref)
+; CHECK-NEXT:     [{{.*}}, {{.*}}): DW_OP_breg5 RDI+0
+; CHECK-NEXT:     [{{.*}}, {{.*}}): DW_OP_breg6 RBP-24, DW_OP_deref)
 ; CHECK-NEXT:   DW_AT_name {{.*}}"a"
 
 %class.A = type { i32 (...)**, i32 }

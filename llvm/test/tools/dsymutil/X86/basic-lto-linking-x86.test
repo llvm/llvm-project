@@ -77,7 +77,7 @@ CHECK:      DW_TAG_formal_parameter
 CHECK:        DW_AT_name ("arg")
 CHECK:        DW_AT_type (0x0000000000000063
 CHECK:        DW_AT_location (0x00000000
-CHECK:          0x0000000000000000 - 0x000000000000000e: DW_OP_reg5 RDI, DW_OP_piece 0x4)
+CHECK:          [0x0000000000000000, 0x000000000000000e): DW_OP_reg5 RDI, DW_OP_piece 0x4)
 CHECK:      DW_TAG_inlined_subroutine
 CHECK:        DW_AT_abstract_origin (cu + 0x00a7 "inc")
 CHECK:        DW_AT_low_pc (0x0000000100000f63)
@@ -115,16 +115,16 @@ CHECK:      DW_TAG_formal_parameter
 CHECK:        DW_AT_name ("arg")
 CHECK:        DW_AT_type (0x0000000000000063
 CHECK:        DW_AT_location (0x00000025
-CHECK:          0x0000000000000000 - 0x000000000000000f: DW_OP_reg5 RDI, DW_OP_piece 0x4
-CHECK:          0x0000000000000019 - 0x000000000000001d: DW_OP_reg5 RDI, DW_OP_piece 0x4)
+CHECK:          [0x0000000000000000, 0x000000000000000f): DW_OP_reg5 RDI, DW_OP_piece 0x4
+CHECK:          [0x0000000000000019, 0x000000000000001d): DW_OP_reg5 RDI, DW_OP_piece 0x4)
 CHECK:      DW_TAG_lexical_block
 CHECK:        DW_AT_low_pc (0x0000000100000f94)
 CHECK:        DW_AT_high_pc (0x0000000100000fa7)
 CHECK:        DW_TAG_inlined_subroutine
 CHECK:          DW_AT_abstract_origin (cu + 0x009a "inc")
 CHECK:          DW_AT_ranges (0x00000000
-CHECK:             [0x0000000100000f94 - 0x0000000100000f9a)
-CHECK:             [0x0000000100000f9f - 0x0000000100000fa7))
+CHECK:             [0x0000000100000f94, 0x0000000100000f9a)
+CHECK:             [0x0000000100000f9f, 0x0000000100000fa7))
 CHECK:        NULL
 CHECK:      NULL
 CHECK:    DW_TAG_subprogram
@@ -134,19 +134,19 @@ CHECK:    NULL
 
 CHECK: .debug_loc contents:
 CHECK-NEXT: 0x00000000:
-CHECK-NEXT:              0x0000000000000000 - 0x000000000000000e: DW_OP_reg5 RDI, DW_OP_piece 0x4
+CHECK-NEXT:              [0x0000000000000000, 0x000000000000000e): DW_OP_reg5 RDI, DW_OP_piece 0x4
 CHECK-NOT: :
 CHECK:      0x00000025:
-CHECK-NEXT:              0x0000000000000000 - 0x000000000000000f: DW_OP_reg5 RDI, DW_OP_piece 0x4
-CHECK-NEXT:              0x0000000000000019 - 0x000000000000001d: DW_OP_reg5 RDI, DW_OP_piece 0x4
+CHECK-NEXT:              [0x0000000000000000, 0x000000000000000f): DW_OP_reg5 RDI, DW_OP_piece 0x4
+CHECK-NEXT:              [0x0000000000000019, 0x000000000000001d): DW_OP_reg5 RDI, DW_OP_piece 0x4
 
 CHECK: .debug_aranges contents:
 CHECK-NEXT: Address Range Header: length = 0x0000002c, version = 0x0002, cu_offset = 0x00000000, addr_size = 0x08, seg_size = 0x00
-CHECK-NEXT: [0x0000000100000f40 - 0x0000000100000f4b)
+CHECK-NEXT: [0x0000000100000f40, 0x0000000100000f4b)
 CHECK-NEXT: Address Range Header: length = 0x0000002c, version = 0x0002, cu_offset = 0x00000081, addr_size = 0x08, seg_size = 0x00
-CHECK-NEXT: [0x0000000100000f50 - 0x0000000100000f89)
+CHECK-NEXT: [0x0000000100000f50, 0x0000000100000f89)
 CHECK-NEXT: Address Range Header: length = 0x0000002c, version = 0x0002, cu_offset = 0x0000013a, addr_size = 0x08, seg_size = 0x00
-CHECK-NEXT: [0x0000000100000f90 - 0x0000000100000fb4)
+CHECK-NEXT: [0x0000000100000f90, 0x0000000100000fb4)
 
 
 CHECK: .debug_line contents

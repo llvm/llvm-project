@@ -4,8 +4,8 @@
 # CHECK: DW_TAG_formal_parameter
 # CHECK: DW_TAG_formal_parameter
 # CHECK-NEXT: DW_AT_location
-# CHECK-NEXT:   0x0000000000000000 - 0x0000000000000014: DW_OP_reg1 W1
-# CHECK-NEXT:   0x0000000000000014 - 0x0000000000000038: DW_OP_breg31 WSP+8
+# CHECK-NEXT:   [0x0000000000000000, 0x0000000000000014): DW_OP_reg1 W1
+# CHECK-NEXT:   [0x0000000000000014, 0x0000000000000038): DW_OP_breg31 WSP+8
 # CHECK-NEXT: DW_AT_name {{.*}}"y"
 
 --- |
@@ -24,9 +24,9 @@
   source_filename = "/tmp/clobber.c"
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
   target triple = "arm64-apple-ios"
-  
+
   %struct.Rect = type { double, double, double, double }
-  
+
   ; Function Attrs: nounwind optsize ssp
   define i32 @f(i32 %x, i32 %y, [4 x double] %s.coerce) local_unnamed_addr #0 !dbg !7 {
   entry:
@@ -38,32 +38,32 @@
     tail call void @g([4 x double] %s.coerce) #4, !dbg !30
     %tobool = icmp eq i32 %y, 0, !dbg !31
     br i1 %tobool, label %if.end, label %if.then, !dbg !33
-  
+
   if.then:                                          ; preds = %entry
     tail call void @llvm.dbg.value(metadata i32* %x.addr, i64 0, metadata !19, metadata !22), !dbg !23
     call void @h(i32* nonnull %x.addr) #4, !dbg !34
     br label %if.end, !dbg !34
-  
+
   if.end:                                           ; preds = %if.then, %entry
     ret i32 0, !dbg !35
   }
-  
+
   declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
   declare void @g([4 x double]) local_unnamed_addr #2
   declare void @h(i32*) local_unnamed_addr #2
   declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
   declare void @llvm.stackprotector(i8*, i8**) #3
-  
+
   attributes #0 = { nounwind optsize ssp }
   attributes #1 = { nounwind readnone speculatable }
   attributes #2 = { optsize }
   attributes #3 = { nounwind }
   attributes #4 = { nounwind optsize }
-  
+
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!3, !4, !5}
   !llvm.ident = !{!6}
-  
+
   !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 5.0.0 (trunk 302682) (llvm/trunk 302683)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
   !1 = !DIFile(filename: "/tmp/clobber.c", directory: "/Volumes/Data/apple-internal/swift")
   !2 = !{}
@@ -111,14 +111,14 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-liveins:         
+liveins:
   - { reg: '%w0' }
   - { reg: '%w1' }
   - { reg: '%d0' }
   - { reg: '%d1' }
   - { reg: '%d2' }
   - { reg: '%d3' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -132,7 +132,7 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-stack:           
+stack:
   - { id: 0, name: x.addr, offset: -20, size: 4, alignment: 4, local-offset: -4 }
   - { id: 1, type: spill-slot, offset: -24, size: 4, alignment: 4 }
   - { id: 2, type: spill-slot, offset: -8, size: 8, alignment: 8, callee-saved-register: '%lr' }
@@ -141,7 +141,7 @@ body:             |
   bb.0.entry:
     successors: %bb.2.if.end(0x40000000), %bb.1.if.then(0x40000000)
     liveins: %w0, %w1, %d0, %d1, %d2, %d3, %lr
-  
+
     %sp = frame-setup SUBXri %sp, 32, 0
     frame-setup STPXi killed %fp, killed %lr, %sp, 2 :: (store 8 into %stack.3), (store 8 into %stack.2)
     %fp = frame-setup ADDXri %sp, 16, 0
@@ -153,15 +153,15 @@ body:             |
     BL @g, csr_aarch64_aapcs, implicit-def dead %lr, implicit %sp, implicit killed %d0, implicit killed %d1, implicit killed %d2, implicit killed %d3, implicit-def %sp, debug-location !30
     %w0 = LDRWui %sp, 2, debug-location !33 :: (load 4 from %stack.1)
     CBZW killed %w0, %bb.2.if.end, debug-location !33
-  
+
   bb.1.if.then:
     successors: %bb.2.if.end(0x80000000)
-  
+
     DBG_VALUE debug-use %sp, 0, !20, !36, debug-location !28
     %x0 = SUBXri %fp, 4, 0
     DBG_VALUE debug-use %x0, debug-use _, !19, !22, debug-location !23
     BL @h, csr_aarch64_aapcs, implicit-def dead %lr, implicit %sp, implicit killed %x0, debug-location !34
-  
+
   bb.2.if.end:
     DBG_VALUE debug-use %sp, 0, !20, !36, debug-location !28
     %w8 = MOVZWi 0, 0
