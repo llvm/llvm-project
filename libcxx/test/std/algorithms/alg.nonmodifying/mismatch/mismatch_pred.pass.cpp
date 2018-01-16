@@ -111,4 +111,8 @@ int main()
     assert(std::mismatch(ia, ia + sa, ib, ib + 2, EQ()) ==
            (std::pair<int*,int*>(ia+2,ib+2)));
 #endif
+
+#if TEST_STD_VER > 17
+    static_assert(test_constexpr());
+#endif
 }

@@ -86,4 +86,8 @@ int main()
     assert(std::mismatch(II(ia), II(ia + sa), II(ib), II(ib+2))
             == (std::pair<II, II>(II(ia+2), II(ib+2))));
 #endif
+
+#if TEST_STD_VER > 17
+    static_assert(test_constexpr());
+#endif
 }
