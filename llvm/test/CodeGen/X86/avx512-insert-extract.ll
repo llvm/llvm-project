@@ -1622,8 +1622,7 @@ define zeroext i8 @test_extractelement_varible_v16i1(<16 x i32> %a, <16 x i32> %
 ; KNL-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; KNL-NEXT:    vpcmpnleud %zmm1, %zmm0, %k1
 ; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    vpmovdb %zmm0, %xmm0
-; KNL-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
+; KNL-NEXT:    vpmovdb %zmm0, -{{[0-9]+}}(%rsp)
 ; KNL-NEXT:    andl $15, %edi
 ; KNL-NEXT:    movzbl -24(%rsp,%rdi), %eax
 ; KNL-NEXT:    andl $1, %eax

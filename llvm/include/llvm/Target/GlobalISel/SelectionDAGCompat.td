@@ -112,3 +112,9 @@ def : GINodeEquiv<G_ATOMICRMW_UMAX, atomic_load_umax>;
 class GIComplexPatternEquiv<ComplexPattern seldag> {
   ComplexPattern SelDAGEquivalent = seldag;
 }
+
+// Specifies the GlobalISel equivalents for SelectionDAG's SDNodeXForm.
+// Should be used on defs that subclass GICustomOperandRenderer<>.
+class GISDNodeXFormEquiv<SDNodeXForm seldag> {
+  SDNodeXForm SelDAGEquivalent = seldag;
+}

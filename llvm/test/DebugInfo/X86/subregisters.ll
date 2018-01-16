@@ -9,7 +9,7 @@
 ; CHECK:  .debug_info contents:
 ; CHECK:  DW_TAG_variable
 ; CHECK-NEXT:  DW_AT_location [DW_FORM_data4]	(
-; CHECK-NEXT:    {{.*}} - {{.*}}: DW_OP_reg4 RSI)
+; CHECK-NEXT:    [{{.*}}, {{.*}}): DW_OP_reg4 RSI)
 ; CHECK-NEXT:  DW_AT_name [DW_FORM_strp]{{.*}} "a"
 ;
 ; struct bar {

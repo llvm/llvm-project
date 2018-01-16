@@ -90,6 +90,15 @@ def MMX_CVT_PS_ITINS : OpndItins<
 >;
 }
 
+// Alias instruction that maps zero vector to pxor mmx.
+// This is expanded by ExpandPostRAPseudos to an pxor.
+// We set canFoldAsLoad because this can be converted to a constant-pool
+// load of an all-zeros value if folding it would be beneficial.
+let isReMaterializable = 1, isAsCheapAsAMove = 1, canFoldAsLoad = 1,
+    isPseudo = 1, SchedRW = [WriteZero] in {
+def MMX_SET0 : I<0, Pseudo, (outs VR64:$dst), (ins), "", []>;
+}
+
 let Constraints = "$src1 = $dst" in {
   // MMXI_binop_rm_int - Simple MMX binary operator based on intrinsic.
   // When this is cleaned up, remove the FIXME from X86RecognizableInstr.cpp.
@@ -235,9 +244,12 @@ let Predicates = [HasMMX] in {
   let AddedComplexity = 15 in
     def : Pat<(x86mmx (MMX_X86movw2d GR32:$src)),
               (MMX_MOVD64rr GR32:$src)>;
-  let AddedComplexity = 20 in
+  let AddedComplexity = 20 in {
+    def : Pat<(x86mmx (MMX_X86movw2d (i32 0))),
+              (MMX_SET0)>;
     def : Pat<(x86mmx (MMX_X86movw2d (loadi32 addr:$src))),
               (MMX_MOVD64rm addr:$src)>;
+  }
 }
 
 let mayStore = 1 in

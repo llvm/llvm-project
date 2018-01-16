@@ -72,7 +72,7 @@ define <2 x double> @test_negative_zero_2(<2 x double> %A) {
 ;
 ; SSE41-LABEL: test_negative_zero_2:
 ; SSE41:       # %bb.0: # %entry
-; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],mem[1]
+; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0,1],mem[2,3]
 ; SSE41-NEXT:    retq
 entry:
   %0 = extractelement <2 x double> %A, i32 0

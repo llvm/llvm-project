@@ -1,3 +1,0 @@
-namespace ns {
-int foo;
-}

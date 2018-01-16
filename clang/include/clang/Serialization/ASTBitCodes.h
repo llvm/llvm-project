@@ -198,6 +198,25 @@ namespace serialization {
       }
     };
 
+    /// \brief Source range of a skipped preprocessor region
+    struct PPSkippedRange {
+      /// \brief Raw source location of beginning of range.
+      unsigned Begin;
+      /// \brief Raw source location of end of range.
+      unsigned End;
+
+      PPSkippedRange(SourceRange R)
+        : Begin(R.getBegin().getRawEncoding()),
+          End(R.getEnd().getRawEncoding()) { }
+
+      SourceLocation getBegin() const {
+        return SourceLocation::getFromRawEncoding(Begin);
+      }
+      SourceLocation getEnd() const {
+        return SourceLocation::getFromRawEncoding(End);
+      }
+    };
+
     /// \brief Source range/offset of a preprocessed entity.
     struct DeclOffset {
       /// \brief Raw source location.
@@ -627,6 +646,9 @@ namespace serialization {
 
       /// \brief The stack of open #ifs/#ifdefs recorded in a preamble.
       PP_CONDITIONAL_STACK = 62,
+
+      /// \brief A table of skipped ranges within the preprocessing record.
+      PPD_SKIPPED_RANGES = 63
     };
 
     /// \brief Record types used within a source manager block.

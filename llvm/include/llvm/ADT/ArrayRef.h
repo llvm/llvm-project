@@ -45,6 +45,7 @@ namespace llvm {
     using const_iterator = const T *;
     using size_type = size_t;
     using reverse_iterator = std::reverse_iterator<iterator>;
+    using value_type = typename std::remove_cv<T>::type;
 
   private:
     /// The start of the array, in an external buffer.

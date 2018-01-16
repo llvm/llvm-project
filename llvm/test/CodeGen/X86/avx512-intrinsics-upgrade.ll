@@ -6,9 +6,10 @@ declare i16 @llvm.x86.avx512.kunpck.bw(i16, i16) nounwind readnone
 define i16 @unpckbw_test(i16 %a0, i16 %a1) {
 ; CHECK-LABEL: unpckbw_test:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movzbl %dil, %eax
-; CHECK-NEXT:    shll $8, %esi
-; CHECK-NEXT:    orl %esi, %eax
+; CHECK-NEXT:    kmovw %edi, %k0
+; CHECK-NEXT:    kmovw %esi, %k1
+; CHECK-NEXT:    kunpckbw %k0, %k1, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    ## kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    retq
   %res = call i16 @llvm.x86.avx512.kunpck.bw(i16 %a0, i16 %a1)

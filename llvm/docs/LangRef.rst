@@ -4494,7 +4494,7 @@ The current supported vocabulary is limited:
 - ``DW_OP_plus_uconst, 93`` adds ``93`` to the working expression.
 - ``DW_OP_LLVM_fragment, 16, 8`` specifies the offset and size (``16`` and ``8``
   here, respectively) of the variable fragment from the working expression. Note
-  that contrary to DW_OP_bit_piece, the offset is describing the the location
+  that contrary to DW_OP_bit_piece, the offset is describing the location
   within the described source variable.
 - ``DW_OP_swap`` swaps top two stack entries.
 - ``DW_OP_xderef`` provides extended dereference mechanism. The entry at the top
@@ -13207,7 +13207,7 @@ Semantics:
 
 This function returns the nonnegative square root of the specified value.
 If the value is less than negative zero, a floating point exception occurs
-and the the return value is architecture specific.
+and the return value is architecture specific.
 
 
 '``llvm.experimental.constrained.pow``' Intrinsic

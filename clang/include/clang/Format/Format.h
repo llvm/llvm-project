@@ -1685,6 +1685,43 @@ struct FormatStyle {
            Standard == R.Standard && TabWidth == R.TabWidth &&
            UseTab == R.UseTab;
   }
+
+  llvm::Optional<FormatStyle> GetLanguageStyle(LanguageKind Language) const;
+
+  // Stores per-language styles. A FormatStyle instance inside has an empty
+  // StyleSet. A FormatStyle instance returned by the Get method has its
+  // StyleSet set to a copy of the originating StyleSet, effectively keeping the
+  // internal representation of that StyleSet alive.
+  //
+  // The memory management and ownership reminds of a birds nest: chicks
+  // leaving the nest take photos of the nest with them.
+  struct FormatStyleSet {
+    typedef std::map<FormatStyle::LanguageKind, FormatStyle> MapType;
+
+    llvm::Optional<FormatStyle> Get(FormatStyle::LanguageKind Language) const;
+
+    // Adds \p Style to this FormatStyleSet. Style must not have an associated
+    // FormatStyleSet.
+    // Style.Language should be different than LK_None. If this FormatStyleSet
+    // already contains an entry for Style.Language, that gets replaced with the
+    // passed Style.
+    void Add(FormatStyle Style);
+
+    // Clears this FormatStyleSet.
+    void Clear();
+
+  private:
+    std::shared_ptr<MapType> Styles;
+  };
+
+  static FormatStyleSet BuildStyleSetFromConfiguration(
+      const FormatStyle &MainStyle,
+      const std::vector<FormatStyle> &ConfigurationStyles);
+
+private:
+  FormatStyleSet StyleSet;
+
+  friend std::error_code parseConfiguration(StringRef Text, FormatStyle *Style);
 };
 
 /// \brief Returns a format style complying with the LLVM coding standards:
@@ -1729,6 +1766,8 @@ bool getPredefinedStyle(StringRef Name, FormatStyle::LanguageKind Language,
 ///
 /// Style->Language is used to get the base style, if the ``BasedOnStyle``
 /// option is present.
+///
+/// The FormatStyleSet of Style is reset.
 ///
 /// When ``BasedOnStyle`` is not present, options not present in the YAML
 /// document, are retained in \p Style.

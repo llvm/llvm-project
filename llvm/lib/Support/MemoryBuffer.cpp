@@ -139,11 +139,6 @@ MemoryBuffer::getMemBufferCopy(StringRef InputData, const Twine &BufferName) {
   return nullptr;
 }
 
-std::unique_ptr<MemoryBuffer>
-MemoryBuffer::getNewMemBuffer(size_t Size, StringRef BufferName) {
-  return WritableMemoryBuffer::getNewMemBuffer(Size, BufferName);
-}
-
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 MemoryBuffer::getFileOrSTDIN(const Twine &Filename, int64_t FileSize,
                              bool RequiresNullTerminator) {

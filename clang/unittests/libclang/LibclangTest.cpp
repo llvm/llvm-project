@@ -572,3 +572,114 @@ TEST_F(LibclangReparseTest, clang_parseTranslationUnit2FullArgv) {
   EXPECT_EQ(0U, clang_getNumDiagnostics(ClangTU));
   DisplayDiagnostics();
 }
+
+class LibclangPrintingPolicyTest : public LibclangParseTest {
+public:
+  CXPrintingPolicy Policy = nullptr;
+
+  void SetUp() override {
+    LibclangParseTest::SetUp();
+    std::string File = "file.cpp";
+    WriteFile(File, "int i;\n");
+    ClangTU = clang_parseTranslationUnit(Index, File.c_str(), nullptr, 0,
+                                         nullptr, 0, TUFlags);
+    CXCursor TUCursor = clang_getTranslationUnitCursor(ClangTU);
+    Policy = clang_getCursorPrintingPolicy(TUCursor);
+  }
+  void TearDown() override {
+    clang_PrintingPolicy_dispose(Policy);
+    LibclangParseTest::TearDown();
+  }
+};
+
+TEST_F(LibclangPrintingPolicyTest, SetAndGetProperties) {
+  for (unsigned Value = 0; Value < 2; ++Value) {
+    for (int I = 0; I < CXPrintingPolicy_LastProperty; ++I) {
+      auto Property = static_cast<enum CXPrintingPolicyProperty>(I);
+
+      clang_PrintingPolicy_setProperty(Policy, Property, Value);
+      EXPECT_EQ(Value, clang_PrintingPolicy_getProperty(Policy, Property));
+    }
+  }
+}
+
+TEST_F(LibclangReparseTest, PreprocessorSkippedRanges) {
+  std::string Header = "header.h", Main = "main.cpp";
+  WriteFile(Header,
+    "#ifdef MANGOS\n"
+    "printf(\"mmm\");\n"
+    "#endif");
+  WriteFile(Main,
+    "#include \"header.h\"\n"
+    "#ifdef GUAVA\n"
+    "#endif\n"
+    "#ifdef KIWIS\n"
+    "printf(\"mmm!!\");\n"
+    "#endif");
+
+  for (int i = 0; i != 3; ++i) {
+    unsigned flags = TUFlags | CXTranslationUnit_PrecompiledPreamble;
+    if (i == 2)
+      flags |= CXTranslationUnit_CreatePreambleOnFirstParse;
+
+    if (i != 0)
+       clang_disposeTranslationUnit(ClangTU);  // dispose from previous iter
+
+    // parse once
+    ClangTU = clang_parseTranslationUnit(Index, Main.c_str(), nullptr, 0,
+                                         nullptr, 0, flags);
+    if (i != 0) {
+      // reparse
+      ASSERT_TRUE(ReparseTU(0, nullptr /* No unsaved files. */));
+    }
+
+    // Check all ranges are there
+    CXSourceRangeList *Ranges = clang_getAllSkippedRanges(ClangTU);
+    EXPECT_EQ(3U, Ranges->count);
+
+    CXSourceLocation cxl;
+    unsigned line;
+    cxl = clang_getRangeStart(Ranges->ranges[0]);
+    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
+    EXPECT_EQ(1U, line);
+    cxl = clang_getRangeEnd(Ranges->ranges[0]);
+    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
+    EXPECT_EQ(3U, line);
+
+    cxl = clang_getRangeStart(Ranges->ranges[1]);
+    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
+    EXPECT_EQ(2U, line);
+    cxl = clang_getRangeEnd(Ranges->ranges[1]);
+    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
+    EXPECT_EQ(3U, line);
+
+    cxl = clang_getRangeStart(Ranges->ranges[2]);
+    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
+    EXPECT_EQ(4U, line);
+    cxl = clang_getRangeEnd(Ranges->ranges[2]);
+    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
+    EXPECT_EQ(6U, line);
+
+    clang_disposeSourceRangeList(Ranges);
+
+    // Check obtaining ranges by each file works
+    CXFile cxf = clang_getFile(ClangTU, Header.c_str());
+    Ranges = clang_getSkippedRanges(ClangTU, cxf);
+    EXPECT_EQ(1U, Ranges->count);
+    cxl = clang_getRangeStart(Ranges->ranges[0]);
+    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
+    EXPECT_EQ(1U, line);
+    clang_disposeSourceRangeList(Ranges);
+
+    cxf = clang_getFile(ClangTU, Main.c_str());
+    Ranges = clang_getSkippedRanges(ClangTU, cxf);
+    EXPECT_EQ(2U, Ranges->count);
+    cxl = clang_getRangeStart(Ranges->ranges[0]);
+    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
+    EXPECT_EQ(2U, line);
+    cxl = clang_getRangeStart(Ranges->ranges[1]);
+    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
+    EXPECT_EQ(4U, line);
+    clang_disposeSourceRangeList(Ranges);
+  }
+}

@@ -32,7 +32,7 @@
 ; CHECK: DW_OP_breg5
 ; DWARF:       DW_TAG_formal_parameter
 ; DWARF:         DW_AT_location
-; DWARF-NEXT:      {{.*}} - {{.*}}: DW_OP_breg5 RDI+0, DW_OP_deref
+; DWARF-NEXT:      [{{.*}}, {{.*}}): DW_OP_breg5 RDI+0, DW_OP_deref
 
 ; Then it's addressed via %rsp:
 ; CHECK:      .quad [[START_LABEL]]-.Lfunc_begin0
@@ -40,7 +40,7 @@
 ; CHECK: DW_OP_breg7
 ; CHECK-NEXT: [[OFFSET]]
 ; CHECK: DW_OP_deref
-; DWARF-NEXT:      {{.*}} - {{.*}}: DW_OP_breg7 RSP+{{[0-9]+}}, DW_OP_deref, DW_OP_deref)
+; DWARF-NEXT:      [{{.*}}, {{.*}}): DW_OP_breg7 RSP+{{[0-9]+}}, DW_OP_deref, DW_OP_deref)
 
 ; ModuleID = 'test.cc'
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

@@ -16,7 +16,7 @@ define <4 x double> @insert_f64(<4 x double> %y, double %f, <4 x double> %x) {
 ; ALL-LABEL: insert_f64:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    # kill: def %xmm1 killed %xmm1 def %ymm1
-; ALL-NEXT:    vblendpd {{.*#+}} ymm0 = ymm1[0],ymm0[1,2,3]
+; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3,4,5,6,7]
 ; ALL-NEXT:    retq
   %i0 = insertelement <4 x double> %y, double %f, i32 0
   ret <4 x double> %i0

@@ -119,7 +119,7 @@ TEST(MachineOperandTest, PrintSubRegIndex) {
   std::string str;
   raw_string_ostream OS(str);
   ModuleSlotTracker DummyMST(nullptr);
-  MachineOperand::printSubregIdx(OS, MO.getImm(), nullptr);
+  MachineOperand::printSubRegIdx(OS, MO.getImm(), nullptr);
   ASSERT_TRUE(OS.str() == "%subreg.3");
 }
 

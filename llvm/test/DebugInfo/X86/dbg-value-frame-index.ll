@@ -22,7 +22,7 @@ while.end:
 ; CHECK-LABEL: test
 ; CHECK:       #DEBUG_VALUE: test:w <- [DW_OP_plus_uconst 8] [%rsp+0]
 ; DWARF:  DW_AT_location [DW_FORM_sec_offset] (
-; DWARF-NEXT:   {{.*}} - {{.*}}: DW_OP_breg7 RSP+8)
+; DWARF-NEXT:   [{{.*}}, {{.*}}): DW_OP_breg7 RSP+8)
 
 declare i1 @fn(i64*, i64*, i64*, i8*, i64, i64*, i32*, i8*)
 declare void @llvm.dbg.value(metadata, metadata, metadata)

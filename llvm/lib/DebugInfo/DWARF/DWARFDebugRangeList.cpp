@@ -17,9 +17,15 @@
 
 using namespace llvm;
 
+void DWARFAddressRange::dump(raw_ostream &OS, uint32_t AddressSize) const {
+
+  OS << format("[0x%*.*" PRIx64 ", ", AddressSize * 2, AddressSize * 2, LowPC)
+     << format(" 0x%*.*" PRIx64 ")", AddressSize * 2, AddressSize * 2, HighPC);
+}
+
 raw_ostream &llvm::operator<<(raw_ostream &OS, const DWARFAddressRange &R) {
-  return OS << format("[0x%16.16" PRIx64 ", 0x%16.16" PRIx64 ")", R.LowPC,
-                      R.HighPC);
+  R.dump(OS, /* AddressSize */ 8);
+  return OS;
 }
 
 void DWARFDebugRangeList::clear() {

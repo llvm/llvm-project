@@ -329,6 +329,23 @@ unsigned PreprocessingRecord::allocateLoadedEntities(unsigned NumEntities) {
   return Result;
 }
 
+unsigned PreprocessingRecord::allocateSkippedRanges(unsigned NumRanges) {
+  unsigned Result = SkippedRanges.size();
+  SkippedRanges.resize(SkippedRanges.size() + NumRanges);
+  SkippedRangesAllLoaded = false;
+  return Result;
+}
+
+void PreprocessingRecord::ensureSkippedRangesLoaded() {
+  if (SkippedRangesAllLoaded || !ExternalSource)
+    return;
+  for (unsigned Index = 0; Index != SkippedRanges.size(); ++Index) {
+    if (SkippedRanges[Index].isInvalid())
+      SkippedRanges[Index] = ExternalSource->ReadSkippedRange(Index);
+  }
+  SkippedRangesAllLoaded = true;
+}
+
 void PreprocessingRecord::RegisterMacroDefinition(MacroInfo *Macro,
                                                   MacroDefinitionRecord *Def) {
   MacroDefinitions[Macro] = Def;
@@ -418,6 +435,7 @@ void PreprocessingRecord::Defined(const Token &MacroNameTok,
 
 void PreprocessingRecord::SourceRangeSkipped(SourceRange Range,
                                              SourceLocation EndifLoc) {
+  assert(Range.isValid());
   SkippedRanges.emplace_back(Range.getBegin(), EndifLoc);
 }
 
@@ -497,5 +515,6 @@ size_t PreprocessingRecord::getTotalMemory() const {
   return BumpAlloc.getTotalMemory()
     + llvm::capacity_in_bytes(MacroDefinitions)
     + llvm::capacity_in_bytes(PreprocessedEntities)
-    + llvm::capacity_in_bytes(LoadedPreprocessedEntities);
+    + llvm::capacity_in_bytes(LoadedPreprocessedEntities)
+    + llvm::capacity_in_bytes(SkippedRanges);
 }

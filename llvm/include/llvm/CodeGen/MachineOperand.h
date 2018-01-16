@@ -238,7 +238,7 @@ public:
   /// MO_Immediate operands can also be subreg idices. If it's the case, the
   /// subreg index name will be printed. MachineInstr::isOperandSubregIdx can be
   /// called to check this.
-  static void printSubregIdx(raw_ostream &OS, uint64_t Index,
+  static void printSubRegIdx(raw_ostream &OS, uint64_t Index,
                              const TargetRegisterInfo *TRI);
 
   /// Print operand target flags.

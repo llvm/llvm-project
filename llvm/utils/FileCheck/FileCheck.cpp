@@ -718,6 +718,9 @@ static size_t CheckTypeSize(Check::CheckType Ty) {
 }
 
 static Check::CheckType FindCheckType(StringRef Buffer, StringRef Prefix) {
+  if (Buffer.size() <= Prefix.size())
+    return Check::CheckNone;
+
   char NextChar = Buffer[Prefix.size()];
 
   // Verify that the : is present after the prefix.

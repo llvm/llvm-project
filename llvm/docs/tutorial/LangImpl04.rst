@@ -380,7 +380,7 @@ demonstrates very basic functionality, but can we do more?
 
 Function definitions and calls also work, but something went very wrong on that
 last line. The call looks valid, so what happened? As you may have guessed from
-the the API a Module is a unit of allocation for the JIT, and testfunc was part
+the API a Module is a unit of allocation for the JIT, and testfunc was part
 of the same module that contained anonymous expression. When we removed that
 module from the JIT to free the memory for the anonymous expression, we deleted
 the definition of ``testfunc`` along with it. Then, when we tried to call

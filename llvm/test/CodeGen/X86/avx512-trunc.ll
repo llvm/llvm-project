@@ -498,8 +498,7 @@ define void @trunc_wb_256_mem(<16 x i16> %i, <16 x i8>* %res) #0 {
 ; KNL-LABEL: trunc_wb_256_mem:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
-; KNL-NEXT:    vpmovdb %zmm0, %xmm0
-; KNL-NEXT:    vmovdqa %xmm0, (%rdi)
+; KNL-NEXT:    vpmovdb %zmm0, (%rdi)
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
@@ -543,8 +542,7 @@ define void @usat_trunc_wb_256_mem(<16 x i16> %i, <16 x i8>* %res) {
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpminuw {{.*}}(%rip), %ymm0, %ymm0
 ; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
-; KNL-NEXT:    vpmovdb %zmm0, %xmm0
-; KNL-NEXT:    vmovdqu %xmm0, (%rdi)
+; KNL-NEXT:    vpmovdb %zmm0, (%rdi)
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
@@ -748,7 +746,7 @@ define <16 x i8> @usat_trunc_db_256(<8 x i32> %x) {
 ; KNL-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [255,255,255,255,255,255,255,255]
 ; KNL-NEXT:    vpminud %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
-; KNL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; KNL-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
@@ -756,7 +754,7 @@ define <16 x i8> @usat_trunc_db_256(<8 x i32> %x) {
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpminud {{.*}}(%rip){1to8}, %ymm0, %ymm0
 ; SKX-NEXT:    vpmovdw %ymm0, %xmm0
-; SKX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; SKX-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %tmp1 = icmp ult <8 x i32> %x, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>

@@ -7910,6 +7910,8 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return Expand2AddrUndef(MIB, get(X86::SBB32rr));
   case X86::SETB_C64r:
     return Expand2AddrUndef(MIB, get(X86::SBB64rr));
+  case X86::MMX_SET0:
+    return Expand2AddrUndef(MIB, get(X86::MMX_PXORirr));
   case X86::V_SET0:
   case X86::FsFLD0SS:
   case X86::FsFLD0SD:
@@ -8877,6 +8879,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     case X86::AVX512_128_SET0:
       Alignment = 16;
       break;
+    case X86::MMX_SET0:
     case X86::FsFLD0SD:
     case X86::AVX512_FsFLD0SD:
       Alignment = 8;
@@ -8910,6 +8913,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
 
   SmallVector<MachineOperand,X86::AddrNumOperands> MOs;
   switch (LoadMI.getOpcode()) {
+  case X86::MMX_SET0:
   case X86::V_SET0:
   case X86::V_SETALLONES:
   case X86::AVX2_SETALLONES:
@@ -8957,6 +8961,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     else if (Opc == X86::AVX2_SETALLONES || Opc == X86::AVX_SET0 ||
              Opc == X86::AVX512_256_SET0 || Opc == X86::AVX1_SETALLONES)
       Ty = VectorType::get(Type::getInt32Ty(MF.getFunction().getContext()), 8);
+    else if (Opc == X86::MMX_SET0)
+      Ty = VectorType::get(Type::getInt32Ty(MF.getFunction().getContext()), 2);
     else
       Ty = VectorType::get(Type::getInt32Ty(MF.getFunction().getContext()), 4);
 
@@ -9694,8 +9700,6 @@ static const uint16_t ReplaceableInstrsAVX2[][3] = {
   { X86::VBROADCASTSDYrr, X86::VBROADCASTSDYrr, X86::VPBROADCASTQYrr},
   { X86::VBROADCASTSDYrm, X86::VBROADCASTSDYrm, X86::VPBROADCASTQYrm},
   { X86::VBROADCASTF128,  X86::VBROADCASTF128,  X86::VBROADCASTI128 },
-  { X86::VBLENDPSrri,     X86::VBLENDPSrri,     X86::VPBLENDDrri },
-  { X86::VBLENDPSrmi,     X86::VBLENDPSrmi,     X86::VPBLENDDrmi },
   { X86::VBLENDPSYrri,    X86::VBLENDPSYrri,    X86::VPBLENDDYrri },
   { X86::VBLENDPSYrmi,    X86::VBLENDPSYrmi,    X86::VPBLENDDYrmi },
   { X86::VPERMILPSYmi,    X86::VPERMILPSYmi,    X86::VPSHUFDYmi },
@@ -9949,6 +9953,24 @@ static const uint16_t ReplaceableInstrsAVX512DQMasked[][4] = {
     X86::VPXORQZrmbkz,    X86::VPXORDZrmbkz    },
 };
 
+// NOTE: These should only be used by the custom domain methods.
+static const uint16_t ReplaceableCustomInstrs[][3] = {
+  //PackedSingle             PackedDouble             PackedInt
+  { X86::BLENDPSrmi,         X86::BLENDPDrmi,         X86::PBLENDWrmi   },
+  { X86::BLENDPSrri,         X86::BLENDPDrri,         X86::PBLENDWrri   },
+  { X86::VBLENDPSrmi,        X86::VBLENDPDrmi,        X86::VPBLENDWrmi  },
+  { X86::VBLENDPSrri,        X86::VBLENDPDrri,        X86::VPBLENDWrri  },
+  { X86::VBLENDPSYrmi,       X86::VBLENDPDYrmi,       X86::VPBLENDWYrmi },
+  { X86::VBLENDPSYrri,       X86::VBLENDPDYrri,       X86::VPBLENDWYrri },
+};
+static const uint16_t ReplaceableCustomAVX2Instrs[][3] = {
+  //PackedSingle             PackedDouble             PackedInt
+  { X86::VBLENDPSrmi,        X86::VBLENDPDrmi,        X86::VPBLENDDrmi  },
+  { X86::VBLENDPSrri,        X86::VBLENDPDrri,        X86::VPBLENDDrri  },
+  { X86::VBLENDPSYrmi,       X86::VBLENDPDYrmi,       X86::VPBLENDDYrmi },
+  { X86::VBLENDPSYrri,       X86::VBLENDPDYrri,       X86::VPBLENDDYrri },
+};
+
 // FIXME: Some shuffle and unpack instructions have equivalents in different
 // domains, but they require a bit more work than just switching opcodes.
 
@@ -9969,13 +9991,177 @@ static const uint16_t *lookupAVX512(unsigned opcode, unsigned domain,
   return nullptr;
 }
 
+// Helper to attempt to widen/narrow blend masks.
+static bool AdjustBlendMask(unsigned OldMask, unsigned OldWidth,
+                            unsigned NewWidth, unsigned *pNewMask = nullptr) {
+  assert(((OldWidth % NewWidth) == 0 || (NewWidth % OldWidth) == 0) &&
+         "Illegal blend mask scale");
+  unsigned NewMask = 0;
+
+  if ((OldWidth % NewWidth) == 0) {
+    unsigned Scale = OldWidth / NewWidth;
+    unsigned SubMask = (1u << Scale) - 1;
+    for (unsigned i = 0; i != NewWidth; ++i) {
+      unsigned Sub = (OldMask >> (i * Scale)) & SubMask;
+      if (Sub == SubMask)
+        NewMask |= (1u << i);
+      else if (Sub != 0x0)
+        return false;
+    }
+  } else {
+    unsigned Scale = NewWidth / OldWidth;
+    unsigned SubMask = (1u << Scale) - 1;
+    for (unsigned i = 0; i != OldWidth; ++i) {
+      if (OldMask & (1 << i)) {
+        NewMask |= (SubMask << (i * Scale));
+      }
+    }
+  }
+
+  if (pNewMask)
+    *pNewMask = NewMask;
+  return true;
+}
+
+uint16_t X86InstrInfo::getExecutionDomainCustom(const MachineInstr &MI) const {
+  unsigned Opcode = MI.getOpcode();
+  unsigned NumOperands = MI.getNumOperands();
+
+  auto GetBlendDomains = [&](unsigned ImmWidth, bool Is256) {
+    uint16_t validDomains = 0;
+    if (MI.getOperand(NumOperands - 1).isImm()) {
+      unsigned Imm = MI.getOperand(NumOperands - 1).getImm();
+      if (AdjustBlendMask(Imm, ImmWidth, Is256 ? 8 : 4))
+        validDomains |= 0x2; // PackedSingle
+      if (AdjustBlendMask(Imm, ImmWidth, Is256 ? 4 : 2))
+        validDomains |= 0x4; // PackedDouble
+      if (!Is256 || Subtarget.hasAVX2())
+        validDomains |= 0x8; // PackedInt
+    }
+    return validDomains;
+  };
+
+  switch (Opcode) {
+  case X86::BLENDPDrmi:
+  case X86::BLENDPDrri:
+  case X86::VBLENDPDrmi:
+  case X86::VBLENDPDrri:
+    return GetBlendDomains(2, false);
+  case X86::VBLENDPDYrmi:
+  case X86::VBLENDPDYrri:
+    return GetBlendDomains(4, true);
+  case X86::BLENDPSrmi:
+  case X86::BLENDPSrri:
+  case X86::VBLENDPSrmi:
+  case X86::VBLENDPSrri:
+  case X86::VPBLENDDrmi:
+  case X86::VPBLENDDrri:
+    return GetBlendDomains(4, false);
+  case X86::VBLENDPSYrmi:
+  case X86::VBLENDPSYrri:
+  case X86::VPBLENDDYrmi:
+  case X86::VPBLENDDYrri:
+    return GetBlendDomains(8, true);
+  case X86::PBLENDWrmi:
+  case X86::PBLENDWrri:
+  case X86::VPBLENDWrmi:
+  case X86::VPBLENDWrri:
+  // Treat VPBLENDWY as a 128-bit vector as it repeats the lo/hi masks.
+  case X86::VPBLENDWYrmi:
+  case X86::VPBLENDWYrri:
+    return GetBlendDomains(8, false);
+  }
+  return 0;
+}
+
+bool X86InstrInfo::setExecutionDomainCustom(MachineInstr &MI,
+                                            unsigned Domain) const {
+  assert(Domain > 0 && Domain < 4 && "Invalid execution domain");
+  uint16_t dom = (MI.getDesc().TSFlags >> X86II::SSEDomainShift) & 3;
+  assert(dom && "Not an SSE instruction");
+
+  unsigned Opcode = MI.getOpcode();
+  unsigned NumOperands = MI.getNumOperands();
+
+  auto SetBlendDomain = [&](unsigned ImmWidth, bool Is256) {
+    if (MI.getOperand(NumOperands - 1).isImm()) {
+      unsigned Imm = MI.getOperand(NumOperands - 1).getImm() & 255;
+      Imm = (ImmWidth == 16 ? ((Imm << 8) | Imm) : Imm);
+      unsigned NewImm = Imm;
+
+      const uint16_t *table = lookup(Opcode, dom, ReplaceableCustomInstrs);
+      if (!table)
+        table = lookup(Opcode, dom, ReplaceableCustomAVX2Instrs);
+
+      if (Domain == 1) { // PackedSingle
+        AdjustBlendMask(Imm, ImmWidth, Is256 ? 8 : 4, &NewImm);
+      } else if (Domain == 2) { // PackedDouble
+        AdjustBlendMask(Imm, ImmWidth, Is256 ? 4 : 2, &NewImm);
+      } else if (Domain == 3) { // PackedInt
+        if (Subtarget.hasAVX2()) {
+          // If we are already VPBLENDW use that, else use VPBLENDD.
+          if ((ImmWidth / (Is256 ? 2 : 1)) != 8) {
+            table = lookup(Opcode, dom, ReplaceableCustomAVX2Instrs);
+            AdjustBlendMask(Imm, ImmWidth, Is256 ? 8 : 4, &NewImm);
+          }
+        } else {
+          assert(!Is256 && "128-bit vector expected");
+          AdjustBlendMask(Imm, ImmWidth, 8, &NewImm);
+        }
+      }
+
+      assert(table && table[Domain - 1] && "Unknown domain op");
+      MI.setDesc(get(table[Domain - 1]));
+      MI.getOperand(NumOperands - 1).setImm(NewImm & 255);
+    }
+    return true;
+  };
+
+  switch (Opcode) {
+  case X86::BLENDPDrmi:
+  case X86::BLENDPDrri:
+  case X86::VBLENDPDrmi:
+  case X86::VBLENDPDrri:
+    return SetBlendDomain(2, false);
+  case X86::VBLENDPDYrmi:
+  case X86::VBLENDPDYrri:
+    return SetBlendDomain(4, true);
+  case X86::BLENDPSrmi:
+  case X86::BLENDPSrri:
+  case X86::VBLENDPSrmi:
+  case X86::VBLENDPSrri:
+  case X86::VPBLENDDrmi:
+  case X86::VPBLENDDrri:
+    return SetBlendDomain(4, false);
+  case X86::VBLENDPSYrmi:
+  case X86::VBLENDPSYrri:
+  case X86::VPBLENDDYrmi:
+  case X86::VPBLENDDYrri:
+    return SetBlendDomain(8, true);
+  case X86::PBLENDWrmi:
+  case X86::PBLENDWrri:
+  case X86::VPBLENDWrmi:
+  case X86::VPBLENDWrri:
+    return SetBlendDomain(8, false);
+  case X86::VPBLENDWYrmi:
+  case X86::VPBLENDWYrri:
+    return SetBlendDomain(16, true);
+  }
+  return false;
+}
+
 std::pair<uint16_t, uint16_t>
 X86InstrInfo::getExecutionDomain(const MachineInstr &MI) const {
   uint16_t domain = (MI.getDesc().TSFlags >> X86II::SSEDomainShift) & 3;
   unsigned opcode = MI.getOpcode();
   uint16_t validDomains = 0;
   if (domain) {
-    if (lookup(MI.getOpcode(), domain, ReplaceableInstrs)) {
+    // Attempt to match for custom instructions.
+    validDomains = getExecutionDomainCustom(MI);
+    if (validDomains)
+      return std::make_pair(domain, validDomains);
+
+    if (lookup(opcode, domain, ReplaceableInstrs)) {
       validDomains = 0xe;
     } else if (lookup(opcode, domain, ReplaceableInstrsAVX2)) {
       validDomains = Subtarget.hasAVX2() ? 0xe : 0x6;
@@ -10007,6 +10193,11 @@ void X86InstrInfo::setExecutionDomain(MachineInstr &MI, unsigned Domain) const {
   assert(Domain>0 && Domain<4 && "Invalid execution domain");
   uint16_t dom = (MI.getDesc().TSFlags >> X86II::SSEDomainShift) & 3;
   assert(dom && "Not an SSE instruction");
+
+  // Attempt to match for custom instructions.
+  if (setExecutionDomainCustom(MI, Domain))
+    return;
+
   const uint16_t *table = lookup(MI.getOpcode(), dom, ReplaceableInstrs);
   if (!table) { // try the other table
     assert((Subtarget.hasAVX2() || Domain < 3) &&

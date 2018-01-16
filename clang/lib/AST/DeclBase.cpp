@@ -1588,17 +1588,7 @@ DeclContext::noload_lookup(DeclarationName Name) {
   if (PrimaryContext != this)
     return PrimaryContext->noload_lookup(Name);
 
-  // If we have any lazy lexical declarations not in our lookup map, add them
-  // now. Don't import any external declarations, not even if we know we have
-  // some missing from the external visible lookups.
-  if (HasLazyLocalLexicalLookups) {
-    SmallVector<DeclContext *, 2> Contexts;
-    collectAllContexts(Contexts);
-    for (unsigned I = 0, N = Contexts.size(); I != N; ++I)
-      buildLookupImpl(Contexts[I], hasExternalVisibleStorage());
-    HasLazyLocalLexicalLookups = false;
-  }
-
+  loadLazyLocalLexicalLookups();
   StoredDeclsMap *Map = LookupPtr;
   if (!Map)
     return lookup_result();
@@ -1606,6 +1596,19 @@ DeclContext::noload_lookup(DeclarationName Name) {
   StoredDeclsMap::iterator I = Map->find(Name);
   return I != Map->end() ? I->second.getLookupResult()
                          : lookup_result();
+}
+
+// If we have any lazy lexical declarations not in our lookup map, add them
+// now. Don't import any external declarations, not even if we know we have
+// some missing from the external visible lookups.
+void DeclContext::loadLazyLocalLexicalLookups() {
+  if (HasLazyLocalLexicalLookups) {
+    SmallVector<DeclContext *, 2> Contexts;
+    collectAllContexts(Contexts);
+    for (unsigned I = 0, N = Contexts.size(); I != N; ++I)
+      buildLookupImpl(Contexts[I], hasExternalVisibleStorage());
+    HasLazyLocalLexicalLookups = false;
+  }
 }
 
 void DeclContext::localUncachedLookup(DeclarationName Name,

@@ -121,8 +121,8 @@ public:
     }
   }
 
-  typedef std::pair<uint16_t, LegalizeAction> SizeAndAction;
-  typedef std::vector<SizeAndAction> SizeAndActionsVec;
+  using SizeAndAction = std::pair<uint16_t, LegalizeAction>;
+  using SizeAndActionsVec = std::vector<SizeAndAction>;
   using SizeChangeStrategy =
       std::function<SizeAndActionsVec(const SizeAndActionsVec &v)>;
 
@@ -441,7 +441,7 @@ private:
   static const int LastOp = TargetOpcode::PRE_ISEL_GENERIC_OPCODE_END;
 
   // Data structures used temporarily during construction of legality data:
-  typedef DenseMap<LLT, LegalizeAction> TypeMap;
+  using TypeMap = DenseMap<LLT, LegalizeAction>;
   SmallVector<TypeMap, 1> SpecifiedActions[LastOp - FirstOp + 1];
   SmallVector<SizeChangeStrategy, 1>
       ScalarSizeChangeStrategies[LastOp - FirstOp + 1];

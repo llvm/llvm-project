@@ -1999,6 +1999,7 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::SETCC,          MVT::v2i16, Custom);
   setOperationAction(ISD::VSELECT,        MVT::v2i16, Custom);
+  setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v4i8,  Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v4i16, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v8i8,  Custom);
 
@@ -2094,6 +2095,8 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
       }
 
       setOperationAction(ISD::MUL,                T, Custom);
+      setOperationAction(ISD::MULHS,              T, Custom);
+      setOperationAction(ISD::MULHU,              T, Custom);
       setOperationAction(ISD::SETCC,              T, Custom);
       setOperationAction(ISD::BUILD_VECTOR,       T, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR,   T, Custom);
@@ -2377,49 +2380,125 @@ HexagonTargetLowering::getPreferredVectorAction(EVT VT) const {
 SDValue
 HexagonTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG)
       const {
-  const ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op);
-  SDValue V1 = Op.getOperand(0);
-  SDValue V2 = Op.getOperand(1);
-  SDLoc dl(Op);
-  EVT VT = Op.getValueType();
+  const auto *SVN = cast<ShuffleVectorSDNode>(Op);
+  ArrayRef<int> AM = SVN->getMask();
+  assert(AM.size() <= 8 && "Unexpected shuffle mask");
+  unsigned VecLen = AM.size();
 
-  if (V2.isUndef())
-    V2 = V1;
+  MVT VecTy = ty(Op);
+  assert(VecTy.getSizeInBits() <= 64 && "Unexpected vector length");
 
-  if (SVN->isSplat()) {
-    int Lane = SVN->getSplatIndex();
-    if (Lane == -1) Lane = 0;
+  SDValue Op0 = Op.getOperand(0);
+  SDValue Op1 = Op.getOperand(1);
+  // If the inputs are not the same as the output, bail. This is not an
+  // error situation, but complicates the handling and the default expansion
+  // (into BUILD_VECTOR) should be adequate.
+  if (ty(Op0) != VecTy || ty(Op1) != VecTy)
+    return SDValue();
 
-    // Test if V1 is a SCALAR_TO_VECTOR.
-    if (Lane == 0 && V1.getOpcode() == ISD::SCALAR_TO_VECTOR)
-      return DAG.getNode(HexagonISD::VSPLAT, dl, VT, V1.getOperand(0));
-
-    // Test if V1 is a BUILD_VECTOR which is equivalent to a SCALAR_TO_VECTOR
-    // (and probably will turn into a SCALAR_TO_VECTOR once legalization
-    // reaches it).
-    if (Lane == 0 && V1.getOpcode() == ISD::BUILD_VECTOR &&
-        !isa<ConstantSDNode>(V1.getOperand(0))) {
-      bool IsScalarToVector = true;
-      for (unsigned i = 1, e = V1.getNumOperands(); i != e; ++i) {
-        if (!V1.getOperand(i).isUndef()) {
-          IsScalarToVector = false;
-          break;
-        }
-      }
-      if (IsScalarToVector)
-        return DAG.getNode(HexagonISD::VSPLAT, dl, VT, V1.getOperand(0));
-    }
-    return DAG.getNode(HexagonISD::VSPLAT, dl, VT,
-                       DAG.getConstant(Lane, dl, MVT::i32));
+  // Normalize the mask so that the first non-negative index comes from
+  // the first operand.
+  SmallVector<int,8> Mask(AM.begin(), AM.end());
+  unsigned F = llvm::find_if(AM, [](int M) { return M >= 0; }) - AM.data();
+  if (F == AM.size())
+    return DAG.getUNDEF(VecTy);
+  if (AM[F] >= int(VecLen)) {
+    ShuffleVectorSDNode::commuteMask(Mask);
+    std::swap(Op0, Op1);
   }
 
-  // FIXME: We need to support more general vector shuffles.  See
-  // below the comment from the ARM backend that deals in the general
-  // case with the vector shuffles.  For now, let expand handle these.
-  return SDValue();
+  // Express the shuffle mask in terms of bytes.
+  SmallVector<int,8> ByteMask;
+  unsigned ElemBytes = VecTy.getVectorElementType().getSizeInBits() / 8;
+  for (unsigned i = 0, e = Mask.size(); i != e; ++i) {
+    int M = Mask[i];
+    if (M < 0) {
+      for (unsigned j = 0; j != ElemBytes; ++j)
+        ByteMask.push_back(-1);
+    } else {
+      for (unsigned j = 0; j != ElemBytes; ++j)
+        ByteMask.push_back(M*ElemBytes + j);
+    }
+  }
+  assert(ByteMask.size() <= 8);
 
-  // If the shuffle is not directly supported and it has 4 elements, use
-  // the PerfectShuffle-generated table to synthesize it from other shuffles.
+  // All non-undef (non-negative) indexes are well within [0..127], so they
+  // fit in a single byte. Build two 64-bit words:
+  // - MaskIdx where each byte is the corresponding index (for non-negative
+  //   indexes), and 0xFF for negative indexes, and
+  // - MaskUnd that has 0xFF for each negative index.
+  uint64_t MaskIdx = 0;
+  uint64_t MaskUnd = 0;
+  for (unsigned i = 0, e = ByteMask.size(); i != e; ++i) {
+    unsigned S = 8*i;
+    uint64_t M = ByteMask[i] & 0xFF;
+    if (M == 0xFF)
+      MaskUnd |= M << S;
+    MaskIdx |= M << S;
+  }
+
+  const SDLoc &dl(Op);
+
+  if (ByteMask.size() == 4) {
+    // Identity.
+    if (MaskIdx == (0x03020100 | MaskUnd))
+      return Op0;
+    // Byte swap.
+    if (MaskIdx == (0x00010203 | MaskUnd)) {
+      SDValue T0 = DAG.getBitcast(MVT::i32, Op0);
+      SDValue T1 = DAG.getNode(ISD::BSWAP, dl, MVT::i32, T0);
+      return DAG.getBitcast(VecTy, T1);
+    }
+
+    // Byte packs.
+    SDValue Concat10 = DAG.getNode(HexagonISD::COMBINE, dl,
+                                   typeJoin({ty(Op1), ty(Op0)}), {Op1, Op0});
+    if (MaskIdx == (0x06040200 | MaskUnd))
+      return getNode(Hexagon::S2_vtrunehb, dl, VecTy, {Concat10}, DAG);
+    if (MaskIdx == (0x07050301 | MaskUnd))
+      return getNode(Hexagon::S2_vtrunohb, dl, VecTy, {Concat10}, DAG);
+
+    SDValue Concat01 = DAG.getNode(HexagonISD::COMBINE, dl,
+                                   typeJoin({ty(Op0), ty(Op1)}), {Op0, Op1});
+    if (MaskIdx == (0x02000604 | MaskUnd))
+      return getNode(Hexagon::S2_vtrunehb, dl, VecTy, {Concat01}, DAG);
+    if (MaskIdx == (0x03010705 | MaskUnd))
+      return getNode(Hexagon::S2_vtrunohb, dl, VecTy, {Concat01}, DAG);
+  }
+
+  if (ByteMask.size() == 8) {
+    // Identity.
+    if (MaskIdx == (0x0706050403020100ull | MaskUnd))
+      return Op0;
+    // Byte swap.
+    if (MaskIdx == (0x0001020304050607ull | MaskUnd)) {
+      SDValue T0 = DAG.getBitcast(MVT::i64, Op0);
+      SDValue T1 = DAG.getNode(ISD::BSWAP, dl, MVT::i64, T0);
+      return DAG.getBitcast(VecTy, T1);
+    }
+
+    // Halfword picks.
+    if (MaskIdx == (0x0d0c050409080100ull | MaskUnd))
+      return getNode(Hexagon::S2_shuffeh, dl, VecTy, {Op1, Op0}, DAG);
+    if (MaskIdx == (0x0f0e07060b0a0302ull | MaskUnd))
+      return getNode(Hexagon::S2_shuffoh, dl, VecTy, {Op1, Op0}, DAG);
+    if (MaskIdx == (0x0d0c090805040100ull | MaskUnd))
+      return getNode(Hexagon::S2_vtrunewh, dl, VecTy, {Op1, Op0}, DAG);
+    if (MaskIdx == (0x0f0e0b0a07060302ull | MaskUnd))
+      return getNode(Hexagon::S2_vtrunowh, dl, VecTy, {Op1, Op0}, DAG);
+    if (MaskIdx == (0x0706030205040100ull | MaskUnd)) {
+      VectorPair P = opSplit(Op0, dl, DAG);
+      return getNode(Hexagon::S2_packhl, dl, VecTy, {P.second, P.first}, DAG);
+    }
+
+    // Byte packs.
+    if (MaskIdx == (0x0e060c040a020800ull | MaskUnd))
+      return getNode(Hexagon::S2_shuffeb, dl, VecTy, {Op1, Op0}, DAG);
+    if (MaskIdx == (0x0f070d050b030901ull | MaskUnd))
+      return getNode(Hexagon::S2_shuffob, dl, VecTy, {Op1, Op0}, DAG);
+  }
+
+  return SDValue();
 }
 
 // If BUILD_VECTOR has same base element repeated several times,
@@ -2940,6 +3019,11 @@ HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::MUL:
       if (Subtarget.useHVXOps())
         return LowerHvxMul(Op, DAG);
+      break;
+    case ISD::MULHS:
+    case ISD::MULHU:
+      if (Subtarget.useHVXOps())
+        return LowerHvxMulh(Op, DAG);
       break;
   }
   return SDValue();
