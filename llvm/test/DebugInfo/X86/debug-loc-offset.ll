@@ -43,8 +43,8 @@
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK-NOT: DW_TAG
 ; CHECK:       DW_AT_location [DW_FORM_sec_offset]   ({{.*}}
-; CHECK-NEXT:    0x0000000000000000 - 0x0000000000000017: DW_OP_breg0 EAX+0, DW_OP_deref
-; CHECK-NEXT:    0x0000000000000017 - 0x0000000000000043: DW_OP_breg5 EBP-8, DW_OP_deref, DW_OP_deref
+; CHECK-NEXT:    [0x00000000, 0x00000017): DW_OP_breg0 EAX+0, DW_OP_deref
+; CHECK-NEXT:    [0x00000017, 0x00000043): DW_OP_breg5 EBP-8, DW_OP_deref, DW_OP_deref
 ; CHECK-NEXT:  DW_AT_name [DW_FORM_strp]{{.*}}"a"
 
 ; CHECK: DW_TAG_variable
@@ -62,17 +62,17 @@
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK-NOT: DW_TAG
 ; CHECK:       DW_AT_location [DW_FORM_sec_offset]   ({{.*}}
-; CHECK-NEXT:    0x0000000000000000 - 0x000000000000000a: DW_OP_consts +0, DW_OP_stack_value
-; CHECK-NEXT:    0x000000000000000a - 0x0000000000000017: DW_OP_consts +1, DW_OP_stack_value)
+; CHECK-NEXT:    [0x00000000, 0x0000000a): DW_OP_consts +0, DW_OP_stack_value
+; CHECK-NEXT:    [0x0000000a, 0x00000017): DW_OP_consts +1, DW_OP_stack_value)
 ; CHECK-NEXT:  DW_AT_name [DW_FORM_strp]{{.*}}"b"
 
 ; CHECK: .debug_loc contents:
 ; CHECK:       0x00000000:
-; CHECK-NEXT:    0x0000000000000000 - 0x000000000000000a: DW_OP_consts +0, DW_OP_stack_value
-; CHECK-NEXT:    0x000000000000000a - 0x0000000000000017: DW_OP_consts +1, DW_OP_stack_value
+; CHECK-NEXT:    [0x00000000, 0x0000000a): DW_OP_consts +0, DW_OP_stack_value
+; CHECK-NEXT:    [0x0000000a, 0x00000017): DW_OP_consts +1, DW_OP_stack_value
 ; CHECK:       0x00000022:
-; CHECK-NEXT:    0x0000000000000000 - 0x0000000000000017: DW_OP_breg0 EAX+0, DW_OP_deref
-; CHECK-NEXT:    0x0000000000000017 - 0x0000000000000043: DW_OP_breg5 EBP-8, DW_OP_deref, DW_OP_deref
+; CHECK-NEXT:    [0x00000000, 0x00000017): DW_OP_breg0 EAX+0, DW_OP_deref
+; CHECK-NEXT:    [0x00000017, 0x00000043): DW_OP_breg5 EBP-8, DW_OP_deref, DW_OP_deref
 
 %struct.A = type { i32 (...)**, i32 }
 

@@ -42,13 +42,13 @@
 
 ; DWARF:      DW_TAG_variable
 ; DWARF-NEXT:   DW_AT_location        (
-; DWARF-NEXT:      {{.*}} - {{.*}}: DW_OP_breg7 RSP+36
-; DWARF-NEXT:      {{.*}} - {{.*}}: DW_OP_reg0 RAX)
+; DWARF-NEXT:      [{{.*}}, {{.*}}): DW_OP_breg7 RSP+36
+; DWARF-NEXT:      [{{.*}}, {{.*}}): DW_OP_reg0 RAX)
 ; DWARF-NEXT:   DW_AT_name    ("x")
 
 ; DWARF:      DW_TAG_variable
 ; DWARF-NEXT:   DW_AT_location        (
-; DWARF-NEXT:      {{.*}} - {{.*}}: DW_OP_reg4 RSI)
+; DWARF-NEXT:      [{{.*}},  {{.*}}): DW_OP_reg4 RSI)
 ; DWARF-NEXT:   DW_AT_name    ("y")
 
 ; ModuleID = 'spill-nospill.c'

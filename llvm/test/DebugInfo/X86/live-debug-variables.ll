@@ -10,11 +10,11 @@
 ; Generated from:
 ;
 ; extern int foobar(int, int, int, int, int);
-; 
+;
 ; int F(int i1, int i2, int i3, int i4, int i5) {
 ;   return foobar(i1, i2, i3, i4, i5);
 ; }
-; 
+;
 ; int foo(int a, int b, int c, int d, int e) {
 ;   return F(a,b,c,d,e) +
 ;          F(a,b,c,d,e) +
@@ -25,7 +25,7 @@
 ; CHECK:      .debug_loc contents:
 ; CHECK-NEXT: 0x00000000:
 ;   We currently emit an entry for the function prologue, too, which could be optimized away.
-; CHECK:              0x000000000000001f - 0x000000000000003c: DW_OP_reg3 RBX
+; CHECK:              [0x000000000000001f, 0x000000000000003c): DW_OP_reg3 RBX
 ;   We should only have one entry inside the function.
 ; CHECK-NOT: :
 

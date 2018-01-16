@@ -27,8 +27,8 @@
 ; CHECK-NOT:  NULL
 ; CHECK:      DW_TAG_variable
 ; CHECK:      DW_AT_location [DW_FORM_sec_offset] ({{.*}}
-; CHECK-NEXT:   {{0x.*}} - {{0x.*}}: DW_OP_reg0 RAX
-; CHECK-NEXT:   {{0x.*}} - {{0x.*}}: DW_OP_breg7 RSP+4, DW_OP_deref)
+; CHECK-NEXT:   [{{0x.*}}, {{0x.*}}): DW_OP_reg0 RAX
+; CHECK-NEXT:   [{{0x.*}}, {{0x.*}}): DW_OP_breg7 RSP+4, DW_OP_deref)
 ; CHECK-NEXT: DW_AT_name {{.*}}"val"
 
 ; ModuleID = 'frame.c'
