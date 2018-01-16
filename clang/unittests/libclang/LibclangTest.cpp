@@ -574,7 +574,6 @@ TEST_F(LibclangReparseTest, clang_parseTranslationUnit2FullArgv) {
   DisplayDiagnostics();
 }
 
-<<<<<<< HEAD
 TEST(libclang, RefactoringAction) {
   std::string Name =
       clang_getCString(clang_RefactoringActionType_getName(CXRefactor_Rename));
