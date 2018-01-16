@@ -809,11 +809,10 @@ void ASTDumper::dumpLookups(const DeclContext *DC, bool DumpDecls) {
 
     bool HasUndeserializedLookups = Primary->hasExternalVisibleStorage();
 
-    for (auto I = Deserialize ? Primary->lookups_begin()
-                              : Primary->noload_lookups_begin(),
-              E = Deserialize ? Primary->lookups_end()
-                              : Primary->noload_lookups_end();
-         I != E; ++I) {
+    auto Range = Deserialize
+                     ? Primary->lookups()
+                     : Primary->noload_lookups(/*PreserveInternalState=*/true);
+    for (auto I = Range.begin(), E = Range.end(); I != E; ++I) {
       DeclarationName Name = I.getLookupName();
       DeclContextLookupResult R = *I;
 
