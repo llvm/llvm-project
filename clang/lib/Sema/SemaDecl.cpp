@@ -9175,9 +9175,9 @@ static bool CheckMultiVersionValue(Sema &S, const FunctionDecl *FD) {
     return true;
   }
 
-  for (const auto &Feature : ParseInfo.Features) {
-    auto BareFeat = StringRef{Feature}.substr(1);
-    if (Feature[0] == '-') {
+  for (const auto &Feat : ParseInfo.Features) {
+    auto BareFeat = StringRef{Feat}.substr(1);
+    if (Feat[0] == '-') {
       S.Diag(FD->getLocation(), diag::err_bad_multiversion_option)
           << Feature << ("no-" + BareFeat).str();
       return true;

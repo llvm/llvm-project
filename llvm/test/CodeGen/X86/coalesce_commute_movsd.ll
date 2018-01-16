@@ -15,12 +15,12 @@ define <2 x double> @insert_f64(double %a0, <2 x double> %a1) {
 ;
 ; SSE41-LABEL: insert_f64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: insert_f64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: insert_f64:

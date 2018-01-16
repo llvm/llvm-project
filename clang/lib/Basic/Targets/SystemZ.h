@@ -62,6 +62,8 @@ public:
     return None;
   }
 
+  ArrayRef<TargetInfo::AddlRegName> getGCCAddlRegNames() const override;
+
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &info) const override;
 

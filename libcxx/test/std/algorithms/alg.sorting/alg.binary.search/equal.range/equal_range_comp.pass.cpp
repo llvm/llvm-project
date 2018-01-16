@@ -10,9 +10,7 @@
 // <algorithm>
 
 // template<ForwardIterator Iter, class T, CopyConstructible Compare>
-//   requires Predicate<Compare, T, Iter::value_type>
-//         && Predicate<Compare, Iter::value_type, T>
-//   pair<Iter, Iter>
+//   constexpr pair<Iter, Iter>   // constexpr after c++17
 //   equal_range(Iter first, Iter last, const T& value, Compare comp);
 
 #include <algorithm>
@@ -21,7 +19,21 @@
 #include <cassert>
 #include <cstddef>
 
+#include "test_macros.h"
 #include "test_iterators.h"
+
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool lt(int a, int b) { return a < b; }
+
+TEST_CONSTEXPR bool test_constexpr() {
+    int ia[] = {1, 3, 3, 6, 7};
+
+    return (std::equal_range(std::begin(ia), std::end(ia), 1, lt) == std::pair<int *, int *>(ia+0, ia+1))
+        && (std::equal_range(std::begin(ia), std::end(ia), 3, lt) == std::pair<int *, int *>(ia+1, ia+3))
+        && (std::equal_range(std::begin(ia), std::end(ia), 9, lt) == std::pair<int *, int *>(std::end(ia), std::end(ia)))
+        ;
+    }
+#endif
 
 template <class Iter, class T>
 void
@@ -68,4 +80,8 @@ int main()
     test<bidirectional_iterator<const int*> >();
     test<random_access_iterator<const int*> >();
     test<const int*>();
+
+#if TEST_STD_VER > 17
+    static_assert(test_constexpr());
+#endif
 }

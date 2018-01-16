@@ -49,17 +49,17 @@ define <2 x double> @combine_pshufb_as_movsd(<2 x double> %a0, <2 x double> %a1)
 ;
 ; SSE41-LABEL: combine_pshufb_as_movsd:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_pshufb_as_movsd:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_pshufb_as_movsd:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: combine_pshufb_as_movsd:

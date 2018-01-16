@@ -582,20 +582,15 @@ declare x86_mmx @llvm.x86.mmx.psrl.q(x86_mmx, x86_mmx)
 define void @test_psrlq_by_volatile_shift_amount(x86_mmx* %t) nounwind {
 ; X86-LABEL: test_psrlq_by_volatile_shift_amount:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movl 8(%ebp), %eax
-; X86-NEXT:    movl $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    movd {{[0-9]+}}(%esp), %mm0
-; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl $255, {{[0-9]+}}(%esp)
-; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm1
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $1, (%esp)
+; X86-NEXT:    movd (%esp), %mm0
+; X86-NEXT:    movl $255, %ecx
+; X86-NEXT:    movd %ecx, %mm1
 ; X86-NEXT:    psrlq %mm0, %mm1
 ; X86-NEXT:    movq %mm1, (%eax)
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
+; X86-NEXT:    popl %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_psrlq_by_volatile_shift_amount:
@@ -603,7 +598,7 @@ define void @test_psrlq_by_volatile_shift_amount(x86_mmx* %t) nounwind {
 ; X64-NEXT:    movl $1, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movd -{{[0-9]+}}(%rsp), %mm0
 ; X64-NEXT:    movl $255, %eax
-; X64-NEXT:    movq %rax, %mm1
+; X64-NEXT:    movd %eax, %mm1
 ; X64-NEXT:    psrlq %mm0, %mm1
 ; X64-NEXT:    movq %mm1, (%rdi)
 ; X64-NEXT:    retq

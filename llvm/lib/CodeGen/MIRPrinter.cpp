@@ -744,7 +744,7 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
   case MachineOperand::MO_Immediate:
     if (MI.isOperandSubregIdx(OpIdx)) {
       MachineOperand::printTargetFlags(OS, Op);
-      MachineOperand::printSubregIdx(OS, Op.getImm(), TRI);
+      MachineOperand::printSubRegIdx(OS, Op.getImm(), TRI);
       break;
     }
     LLVM_FALLTHROUGH;

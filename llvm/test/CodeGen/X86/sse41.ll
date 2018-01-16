@@ -564,14 +564,14 @@ define <4 x float> @shuf_X0YC(<4 x float> %x, <4 x float> %a) {
 define <4 x i32> @i32_shuf_XYZ0(<4 x i32> %x, <4 x i32> %a) {
 ; X32-LABEL: i32_shuf_XYZ0:
 ; X32:       ## %bb.0:
-; X32-NEXT:    pxor %xmm1, %xmm1
-; X32-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5],xmm1[6,7]
+; X32-NEXT:    xorps %xmm1, %xmm1
+; X32-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: i32_shuf_XYZ0:
 ; X64:       ## %bb.0:
-; X64-NEXT:    pxor %xmm1, %xmm1
-; X64-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5],xmm1[6,7]
+; X64-NEXT:    xorps %xmm1, %xmm1
+; X64-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
 ; X64-NEXT:    retq
   %vecext = extractelement <4 x i32> %x, i32 0
   %vecinit = insertelement <4 x i32> undef, i32 %vecext, i32 0

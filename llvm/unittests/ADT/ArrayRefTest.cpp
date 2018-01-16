@@ -52,6 +52,14 @@ static_assert(
     "Assigning from an initializer list");
 #endif
 
+// Check Typedefs.
+static_assert(
+    std::is_same<ArrayRef<int>::value_type, int>::value,
+    "erroneous value_type");
+static_assert(
+    std::is_same<ArrayRef<const int>::value_type, int>::value,
+    "erroneous value_type");
+
 namespace {
 
 TEST(ArrayRefTest, AllocatorCopy) {

@@ -16,7 +16,7 @@
 ; // This ref is not relocatable on Darwin, and is relocatable elsewhere.
 ; extern int g(int, int);
 ; extern int a;
-; 
+;
 ; void f(void) {
 ;   int x;
 ;   a = g(0, 0);
@@ -34,10 +34,10 @@
 ; CHECK-NEXT:   DW_AT_location [DW_FORM_sec_offset] (0x00000000
 ; Check that the location contains only 4 ranges - this verifies that the 4th
 ; and 5th ranges were successfully merged into a single range.
-; CHECK-NEXT:   0x{{[0-9a-f]*}} - 0x{{[0-9a-f]*}}:
-; CHECK-NEXT:   0x{{[0-9a-f]*}} - 0x{{[0-9a-f]*}}:
-; CHECK-NEXT:   0x{{[0-9a-f]*}} - 0x{{[0-9a-f]*}}:
-; CHECK-NEXT:   0x{{[0-9a-f]*}} - 0x{{[0-9a-f]*}}: {{.*}})
+; CHECK-NEXT:   [0x{{[0-9a-f]*}}, 0x{{[0-9a-f]*}}):
+; CHECK-NEXT:   [0x{{[0-9a-f]*}}, 0x{{[0-9a-f]*}}):
+; CHECK-NEXT:   [0x{{[0-9a-f]*}}, 0x{{[0-9a-f]*}}):
+; CHECK-NEXT:   [0x{{[0-9a-f]*}}, 0x{{[0-9a-f]*}}): {{.*}})
 ; CHECK-NEXT:   DW_AT_name {{.*}} "x"
 ; CHECK-NEXT:   DW_AT_decl_file
 ; CHECK-NEXT:   DW_AT_decl_line

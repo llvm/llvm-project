@@ -32,7 +32,7 @@
  * compatible, thus CINDEX_VERSION_MAJOR is expected to remain stable.
  */
 #define CINDEX_VERSION_MAJOR 0
-#define CINDEX_VERSION_MINOR 46
+#define CINDEX_VERSION_MINOR 47
 
 #define CINDEX_VERSION_ENCODE(major, minor) ( \
       ((major) * 10000)                       \
@@ -4090,6 +4090,89 @@ CINDEX_LINKAGE CXString clang_getCursorSpelling(CXCursor);
 CINDEX_LINKAGE CXSourceRange clang_Cursor_getSpellingNameRange(CXCursor,
                                                           unsigned pieceIndex,
                                                           unsigned options);
+
+/**
+ * \brief Opaque pointer representing a policy that controls pretty printing
+ * for \c clang_getCursorPrettyPrinted.
+ */
+typedef void *CXPrintingPolicy;
+
+/**
+ * \brief Properties for the printing policy.
+ *
+ * See \c clang::PrintingPolicy for more information.
+ */
+enum CXPrintingPolicyProperty {
+  CXPrintingPolicy_Indentation,
+  CXPrintingPolicy_SuppressSpecifiers,
+  CXPrintingPolicy_SuppressTagKeyword,
+  CXPrintingPolicy_IncludeTagDefinition,
+  CXPrintingPolicy_SuppressScope,
+  CXPrintingPolicy_SuppressUnwrittenScope,
+  CXPrintingPolicy_SuppressInitializers,
+  CXPrintingPolicy_ConstantArraySizeAsWritten,
+  CXPrintingPolicy_AnonymousTagLocations,
+  CXPrintingPolicy_SuppressStrongLifetime,
+  CXPrintingPolicy_SuppressLifetimeQualifiers,
+  CXPrintingPolicy_SuppressTemplateArgsInCXXConstructors,
+  CXPrintingPolicy_Bool,
+  CXPrintingPolicy_Restrict,
+  CXPrintingPolicy_Alignof,
+  CXPrintingPolicy_UnderscoreAlignof,
+  CXPrintingPolicy_UseVoidForZeroParams,
+  CXPrintingPolicy_TerseOutput,
+  CXPrintingPolicy_PolishForDeclaration,
+  CXPrintingPolicy_Half,
+  CXPrintingPolicy_MSWChar,
+  CXPrintingPolicy_IncludeNewlines,
+  CXPrintingPolicy_MSVCFormatting,
+  CXPrintingPolicy_ConstantsAsWritten,
+  CXPrintingPolicy_SuppressImplicitBase,
+  CXPrintingPolicy_FullyQualifiedName,
+
+  CXPrintingPolicy_LastProperty = CXPrintingPolicy_FullyQualifiedName
+};
+
+/**
+ * \brief Get a property value for the given printing policy.
+ */
+CINDEX_LINKAGE unsigned
+clang_PrintingPolicy_getProperty(CXPrintingPolicy Policy,
+                                 enum CXPrintingPolicyProperty Property);
+
+/**
+ * \brief Set a property value for the given printing policy.
+ */
+CINDEX_LINKAGE void clang_PrintingPolicy_setProperty(CXPrintingPolicy Policy,
+                                                     enum CXPrintingPolicyProperty Property,
+                                                     unsigned Value);
+
+/**
+ * \brief Retrieve the default policy for the cursor.
+ *
+ * The policy should be released after use with \c
+ * clang_PrintingPolicy_dispose.
+ */
+CINDEX_LINKAGE CXPrintingPolicy clang_getCursorPrintingPolicy(CXCursor);
+
+/**
+ * \brief Release a printing policy.
+ */
+CINDEX_LINKAGE void clang_PrintingPolicy_dispose(CXPrintingPolicy Policy);
+
+/**
+ * \brief Pretty print declarations.
+ *
+ * \param Cursor The cursor representing a declaration.
+ *
+ * \param Policy The policy to control the entities being printed. If
+ * NULL, a default policy is used.
+ *
+ * \returns The pretty printed declaration or the empty string for
+ * other cursors.
+ */
+CINDEX_LINKAGE CXString clang_getCursorPrettyPrinted(CXCursor Cursor,
+                                                     CXPrintingPolicy Policy);
 
 /**
  * \brief Retrieve the display name for the entity referenced by this cursor.

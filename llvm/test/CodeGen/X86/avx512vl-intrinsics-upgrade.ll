@@ -3256,8 +3256,8 @@ declare <8 x float> @llvm.x86.avx512.mask.shuf.f32x4.256(<8 x float>, <8 x float
 define <8 x float>@test_int_x86_avx512_mask_shuf_f32x4_256(<8 x float> %x0, <8 x float> %x1, <8 x float> %x3, i8 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_shuf_f32x4_256:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vblendpd $12, %ymm1, %ymm0, %ymm0 ## encoding: [0xc4,0xe3,0x7d,0x0d,0xc1,0x0c]
-; CHECK-NEXT:    ## ymm0 = ymm0[0,1],ymm1[2,3]
+; CHECK-NEXT:    vblendps $240, %ymm1, %ymm0, %ymm0 ## encoding: [0xc4,0xe3,0x7d,0x0c,0xc1,0xf0]
+; CHECK-NEXT:    ## ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
 ; CHECK-NEXT:    vmovaps %ymm0, %ymm2 {%k1} ## encoding: [0x62,0xf1,0x7c,0x29,0x28,0xd0]
 ; CHECK-NEXT:    vmovaps %ymm0, %ymm1 {%k1} {z} ## encoding: [0x62,0xf1,0x7c,0xa9,0x28,0xc8]

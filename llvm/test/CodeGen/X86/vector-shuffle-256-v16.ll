@@ -887,15 +887,10 @@ define <16 x i16> @shuffle_v16i16_00_01_18_19_04_05_22_23_08_09_26_27_12_13_30_3
 }
 
 define <16 x i16> @shuffle_v16i16_16_17_18_19_04_05_06_07_24_25_26_27_12_13_14_15(<16 x i16> %a, <16 x i16> %b) {
-; AVX1-LABEL: shuffle_v16i16_16_17_18_19_04_05_06_07_24_25_26_27_12_13_14_15:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vblendpd {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3]
-; AVX1-NEXT:    retq
-;
-; AVX2OR512VL-LABEL: shuffle_v16i16_16_17_18_19_04_05_06_07_24_25_26_27_12_13_14_15:
-; AVX2OR512VL:       # %bb.0:
-; AVX2OR512VL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3],ymm1[4,5],ymm0[6,7]
-; AVX2OR512VL-NEXT:    retq
+; ALL-LABEL: shuffle_v16i16_16_17_18_19_04_05_06_07_24_25_26_27_12_13_14_15:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3],ymm1[4,5],ymm0[6,7]
+; ALL-NEXT:    retq
   %shuffle = shufflevector <16 x i16> %a, <16 x i16> %b, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 4, i32 5, i32 6, i32 7, i32 24, i32 25, i32 26, i32 27, i32 12, i32 13, i32 14, i32 15>
   ret <16 x i16> %shuffle
 }
@@ -3113,7 +3108,7 @@ define <16 x i16> @shuffle_v16i16_01_zz_02_zz_04_uu_06_07_08_09_10_11_12_13_14_1
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[1,1,2,3,4,5,6,7]
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3],xmm1[4,5,6,7]
-; AVX1-NEXT:    vblendpd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3]
+; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2OR512VL-LABEL: shuffle_v16i16_01_zz_02_zz_04_uu_06_07_08_09_10_11_12_13_14_15:
@@ -4469,15 +4464,10 @@ define <16 x i16> @insert_v16i16_0elt_into_zero_vector(i16* %ptr) {
 }
 
 define <16 x i16> @concat_v16i16_0_1_2_3_4_5_6_7_24_25_26_27_28_29_30_31(<16 x i16> %a, <16 x i16> %b) {
-; AVX1-LABEL: concat_v16i16_0_1_2_3_4_5_6_7_24_25_26_27_28_29_30_31:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3]
-; AVX1-NEXT:    retq
-;
-; AVX2OR512VL-LABEL: concat_v16i16_0_1_2_3_4_5_6_7_24_25_26_27_28_29_30_31:
-; AVX2OR512VL:       # %bb.0:
-; AVX2OR512VL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
-; AVX2OR512VL-NEXT:    retq
+; ALL-LABEL: concat_v16i16_0_1_2_3_4_5_6_7_24_25_26_27_28_29_30_31:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; ALL-NEXT:    retq
   %alo = shufflevector <16 x i16> %a, <16 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %bhi = shufflevector <16 x i16> %b, <16 x i16> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %shuf = shufflevector <8 x i16> %alo, <8 x i16> %bhi, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>

@@ -8,15 +8,13 @@ define double @mmx_zero(double, double, double, double) nounwind {
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $24, %esp
+; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movq 8(%ebp), %mm0
 ; X86-NEXT:    movq 16(%ebp), %mm5
-; X86-NEXT:    movq %mm5, {{[0-9]+}}(%esp) # 8-byte Spill
+; X86-NEXT:    movq %mm5, (%esp) # 8-byte Spill
 ; X86-NEXT:    movq %mm0, %mm3
 ; X86-NEXT:    paddd %mm5, %mm3
-; X86-NEXT:    xorps %xmm0, %xmm0
-; X86-NEXT:    movdq2q %xmm0, %mm1
-; X86-NEXT:    movq %mm1, (%esp) # 8-byte Spill
+; X86-NEXT:    pxor %mm1, %mm1
 ; X86-NEXT:    movq %mm3, %mm6
 ; X86-NEXT:    pmuludq %mm1, %mm6
 ; X86-NEXT:    movq 24(%ebp), %mm4
@@ -34,10 +32,10 @@ define double @mmx_zero(double, double, double, double) nounwind {
 ; X86-NEXT:    paddw %mm2, %mm0
 ; X86-NEXT:    paddw %mm6, %mm0
 ; X86-NEXT:    pmuludq %mm3, %mm0
-; X86-NEXT:    paddw (%esp), %mm0 # 8-byte Folded Reload
+; X86-NEXT:    paddw {{\.LCPI.*}}, %mm0
 ; X86-NEXT:    paddw %mm1, %mm0
 ; X86-NEXT:    pmuludq %mm7, %mm0
-; X86-NEXT:    pmuludq {{[0-9]+}}(%esp), %mm0 # 8-byte Folded Reload
+; X86-NEXT:    pmuludq (%esp), %mm0 # 8-byte Folded Reload
 ; X86-NEXT:    paddw %mm5, %mm0
 ; X86-NEXT:    paddw %mm2, %mm0
 ; X86-NEXT:    movq2dq %mm0, %xmm0
@@ -54,9 +52,7 @@ define double @mmx_zero(double, double, double, double) nounwind {
 ; X64-NEXT:    movq %mm5, -{{[0-9]+}}(%rsp) # 8-byte Spill
 ; X64-NEXT:    movq %mm0, %mm3
 ; X64-NEXT:    paddd %mm5, %mm3
-; X64-NEXT:    xorps %xmm0, %xmm0
-; X64-NEXT:    movdq2q %xmm0, %mm1
-; X64-NEXT:    movq %mm1, -{{[0-9]+}}(%rsp) # 8-byte Spill
+; X64-NEXT:    pxor %mm1, %mm1
 ; X64-NEXT:    movq %mm3, %mm6
 ; X64-NEXT:    pmuludq %mm1, %mm6
 ; X64-NEXT:    movdq2q %xmm2, %mm4
@@ -74,7 +70,7 @@ define double @mmx_zero(double, double, double, double) nounwind {
 ; X64-NEXT:    paddw %mm2, %mm0
 ; X64-NEXT:    paddw %mm6, %mm0
 ; X64-NEXT:    pmuludq %mm3, %mm0
-; X64-NEXT:    paddw -{{[0-9]+}}(%rsp), %mm0 # 8-byte Folded Reload
+; X64-NEXT:    paddw {{\.LCPI.*}}, %mm0
 ; X64-NEXT:    paddw %mm1, %mm0
 ; X64-NEXT:    pmuludq %mm7, %mm0
 ; X64-NEXT:    pmuludq -{{[0-9]+}}(%rsp), %mm0 # 8-byte Folded Reload

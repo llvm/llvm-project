@@ -1354,8 +1354,8 @@ pclmullqhqdq (%rdi), %xmm1
 pclmulqdq $0, (%rdi), %xmm1
 
 // PR10345
-// CHECK: xchgq %rax, %rax
-// CHECK: encoding: [0x48,0x90]
+// CHECK: nop
+// CHECK: encoding: [0x90]
 xchgq %rax, %rax
 
 // CHECK: xchgl %eax, %eax

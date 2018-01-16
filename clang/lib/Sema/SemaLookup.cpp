@@ -3543,7 +3543,8 @@ static void LookupVisibleDecls(DeclContext *Ctx, LookupResult &Result,
 
   // Enumerate all of the results in this context.
   for (DeclContextLookupResult R :
-       LoadExternal ? Ctx->lookups() : Ctx->noload_lookups()) {
+       LoadExternal ? Ctx->lookups()
+                    : Ctx->noload_lookups(/*PreserveInternalState=*/false)) {
     for (auto *D : R) {
       if (auto *ND = Result.getAcceptableDecl(D)) {
         Consumer.FoundDecl(ND, Visited.checkHidden(ND), Ctx, InBaseClass);

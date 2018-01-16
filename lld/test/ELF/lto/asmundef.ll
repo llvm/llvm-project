@@ -20,5 +20,5 @@ define void @_start() {
   ret void
 }
 
-; CHECK: define void @foo
+; CHECK: define dso_local void @foo
 

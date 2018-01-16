@@ -10,7 +10,7 @@ define <4 x float> @foo() {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],mem[1,2,3]
+; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],mem[2,3,4,5,6,7]
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[0,2],xmm0[2,0]
 ; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,1,3]
