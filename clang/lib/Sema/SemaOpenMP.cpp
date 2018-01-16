@@ -2137,6 +2137,11 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     };
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
                              Params);
+    // Mark this captured region as inlined, because we don't use outlined
+    // function directly.
+    getCurCapturedRegion()->TheCapturedDecl->addAttr(
+        AlwaysInlineAttr::CreateImplicit(
+            Context, AlwaysInlineAttr::Keyword_forceinline, SourceRange()));
     Sema::CapturedParamNameType ParamsTarget[] = {
         std::make_pair(StringRef(), QualType()) // __context with shared vars
     };
@@ -2302,6 +2307,11 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     };
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
                              Params);
+    // Mark this captured region as inlined, because we don't use outlined
+    // function directly.
+    getCurCapturedRegion()->TheCapturedDecl->addAttr(
+        AlwaysInlineAttr::CreateImplicit(
+            Context, AlwaysInlineAttr::Keyword_forceinline, SourceRange()));
     Sema::CapturedParamNameType ParamsTarget[] = {
         std::make_pair(StringRef(), QualType()) // __context with shared vars
     };
@@ -8146,18 +8156,18 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_target_enter_data:
     case OMPD_target_exit_data:
     case OMPD_target:
-      CaptureRegion = OMPD_task;
-      break;
+    case OMPD_target_simd:
     case OMPD_target_teams:
+    case OMPD_target_parallel:
     case OMPD_target_teams_distribute:
     case OMPD_target_teams_distribute_simd:
-    case OMPD_target_teams_distribute_parallel_for:
-    case OMPD_target_teams_distribute_parallel_for_simd:
-    case OMPD_target_data:
-    case OMPD_target_simd:
-    case OMPD_target_parallel:
     case OMPD_target_parallel_for:
     case OMPD_target_parallel_for_simd:
+    case OMPD_target_teams_distribute_parallel_for:
+    case OMPD_target_teams_distribute_parallel_for_simd:
+      CaptureRegion = OMPD_task;
+      break;
+    case OMPD_target_data:
       // Do not capture device-clause expressions.
       break;
     case OMPD_teams_distribute_parallel_for:

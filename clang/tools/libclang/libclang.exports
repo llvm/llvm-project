@@ -178,6 +178,8 @@ clang_getCursorAvailability
 clang_getCursorCompletionString
 clang_getCursorDefinition
 clang_getCursorDisplayName
+clang_getCursorPrintingPolicy
+clang_getCursorPrettyPrinted
 clang_getCursorExtent
 clang_getCursorExceptionSpecificationType
 clang_getCursorKind
@@ -359,3 +361,6 @@ clang_EvalResult_isUnsignedInt
 clang_EvalResult_getAsDouble
 clang_EvalResult_getAsStr
 clang_EvalResult_dispose
+clang_PrintingPolicy_getProperty
+clang_PrintingPolicy_setProperty
+clang_PrintingPolicy_dispose

@@ -235,6 +235,11 @@ enum {
   /// - RendererID - The renderer to call
   /// - RenderOpID - The suboperand to render.
   GIR_ComplexSubOperandRenderer,
+  /// Render operands to the specified instruction using a custom function
+  /// - InsnID - Instruction ID to modify
+  /// - OldInsnID - Instruction ID to get the matched operand from
+  /// - RendererFnID - Custom renderer function to call
+  GIR_CustomRenderer,
 
   /// Render a G_CONSTANT operator as a sign-extended immediate.
   /// - NewInsnID - Instruction ID to modify
@@ -311,11 +316,13 @@ protected:
   };
 
 public:
-  template <class PredicateBitset, class ComplexMatcherMemFn>
-  struct MatcherInfoTy {
+  template <class PredicateBitset, class ComplexMatcherMemFn,
+            class CustomRendererFn>
+  struct ISelInfoTy {
     const LLT *TypeObjects;
     const PredicateBitset *FeatureBitsets;
     const ComplexMatcherMemFn *ComplexPredicates;
+    const CustomRendererFn *CustomRenderers;
   };
 
 protected:
@@ -324,10 +331,11 @@ protected:
   /// Execute a given matcher table and return true if the match was successful
   /// and false otherwise.
   template <class TgtInstructionSelector, class PredicateBitset,
-            class ComplexMatcherMemFn>
+            class ComplexMatcherMemFn, class CustomRendererFn>
   bool executeMatchTable(
       TgtInstructionSelector &ISel, NewMIVector &OutMIs, MatcherState &State,
-      const MatcherInfoTy<PredicateBitset, ComplexMatcherMemFn> &MatcherInfo,
+      const ISelInfoTy<PredicateBitset, ComplexMatcherMemFn, CustomRendererFn>
+          &ISelInfo,
       const int64_t *MatchTable, const TargetInstrInfo &TII,
       MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
       const RegisterBankInfo &RBI, const PredicateBitset &AvailableFeatures,

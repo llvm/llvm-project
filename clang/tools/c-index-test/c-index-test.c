@@ -86,6 +86,69 @@ static unsigned getDefaultParsingOptions() {
   return options;
 }
 
+static void ModifyPrintingPolicyAccordingToEnv(CXPrintingPolicy Policy) {
+  struct Mapping {
+    const char *name;
+    enum CXPrintingPolicyProperty property;
+  };
+  struct Mapping mappings[] = {
+      {"CINDEXTEST_PRINTINGPOLICY_INDENTATION", CXPrintingPolicy_Indentation},
+      {"CINDEXTEST_PRINTINGPOLICY_SUPPRESSSPECIFIERS",
+       CXPrintingPolicy_SuppressSpecifiers},
+      {"CINDEXTEST_PRINTINGPOLICY_SUPPRESSTAGKEYWORD",
+       CXPrintingPolicy_SuppressTagKeyword},
+      {"CINDEXTEST_PRINTINGPOLICY_INCLUDETAGDEFINITION",
+       CXPrintingPolicy_IncludeTagDefinition},
+      {"CINDEXTEST_PRINTINGPOLICY_SUPPRESSSCOPE",
+       CXPrintingPolicy_SuppressScope},
+      {"CINDEXTEST_PRINTINGPOLICY_SUPPRESSUNWRITTENSCOPE",
+       CXPrintingPolicy_SuppressUnwrittenScope},
+      {"CINDEXTEST_PRINTINGPOLICY_SUPPRESSINITIALIZERS",
+       CXPrintingPolicy_SuppressInitializers},
+      {"CINDEXTEST_PRINTINGPOLICY_CONSTANTARRAYSIZEASWRITTEN",
+       CXPrintingPolicy_ConstantArraySizeAsWritten},
+      {"CINDEXTEST_PRINTINGPOLICY_ANONYMOUSTAGLOCATIONS",
+       CXPrintingPolicy_AnonymousTagLocations},
+      {"CINDEXTEST_PRINTINGPOLICY_SUPPRESSSTRONGLIFETIME",
+       CXPrintingPolicy_SuppressStrongLifetime},
+      {"CINDEXTEST_PRINTINGPOLICY_SUPPRESSLIFETIMEQUALIFIERS",
+       CXPrintingPolicy_SuppressLifetimeQualifiers},
+      {"CINDEXTEST_PRINTINGPOLICY_SUPPRESSTEMPLATEARGSINCXXCONSTRUCTORS",
+       CXPrintingPolicy_SuppressTemplateArgsInCXXConstructors},
+      {"CINDEXTEST_PRINTINGPOLICY_BOOL", CXPrintingPolicy_Bool},
+      {"CINDEXTEST_PRINTINGPOLICY_RESTRICT", CXPrintingPolicy_Restrict},
+      {"CINDEXTEST_PRINTINGPOLICY_ALIGNOF", CXPrintingPolicy_Alignof},
+      {"CINDEXTEST_PRINTINGPOLICY_UNDERSCOREALIGNOF",
+       CXPrintingPolicy_UnderscoreAlignof},
+      {"CINDEXTEST_PRINTINGPOLICY_USEVOIDFORZEROPARAMS",
+       CXPrintingPolicy_UseVoidForZeroParams},
+      {"CINDEXTEST_PRINTINGPOLICY_TERSEOUTPUT", CXPrintingPolicy_TerseOutput},
+      {"CINDEXTEST_PRINTINGPOLICY_POLISHFORDECLARATION",
+       CXPrintingPolicy_PolishForDeclaration},
+      {"CINDEXTEST_PRINTINGPOLICY_HALF", CXPrintingPolicy_Half},
+      {"CINDEXTEST_PRINTINGPOLICY_MSWCHAR", CXPrintingPolicy_MSWChar},
+      {"CINDEXTEST_PRINTINGPOLICY_INCLUDENEWLINES",
+       CXPrintingPolicy_IncludeNewlines},
+      {"CINDEXTEST_PRINTINGPOLICY_MSVCFORMATTING",
+       CXPrintingPolicy_MSVCFormatting},
+      {"CINDEXTEST_PRINTINGPOLICY_CONSTANTSASWRITTEN",
+       CXPrintingPolicy_ConstantsAsWritten},
+      {"CINDEXTEST_PRINTINGPOLICY_SUPPRESSIMPLICITBASE",
+       CXPrintingPolicy_SuppressImplicitBase},
+      {"CINDEXTEST_PRINTINGPOLICY_FULLYQUALIFIEDNAME",
+       CXPrintingPolicy_FullyQualifiedName},
+  };
+
+  unsigned i;
+  for (i = 0; i < sizeof(mappings) / sizeof(struct Mapping); i++) {
+    char *value = getenv(mappings[i].name);
+    if (value) {
+      clang_PrintingPolicy_setProperty(Policy, mappings[i].property,
+                                       (unsigned)strtoul(value, 0L, 10));
+    }
+  }
+}
+
 /** \brief Returns 0 in case of success, non-zero in case of a failure. */
 static int checkForErrors(CXTranslationUnit TU);
 
@@ -356,7 +419,11 @@ static void PrintRange(CXSourceRange R, const char *str) {
   PrintExtent(stdout, begin_line, begin_column, end_line, end_column);
 }
 
-int want_display_name = 0;
+static enum DisplayType {
+    DisplayType_Spelling,
+    DisplayType_DisplayName,
+    DisplayType_Pretty
+} wanted_display_type = DisplayType_Spelling;
 
 static void printVersion(const char *Prefix, CXVersion Version) {
   if (Version.Major < 0)
@@ -656,6 +723,23 @@ static int lineCol_cmp(const void *p1, const void *p2) {
   return (int)lhs->col - (int)rhs->col;
 }
 
+static CXString CursorToText(CXCursor Cursor) {
+  switch (wanted_display_type) {
+  case DisplayType_Spelling:
+    return clang_getCursorSpelling(Cursor);
+  case DisplayType_DisplayName:
+    return clang_getCursorDisplayName(Cursor);
+  case DisplayType_Pretty: {
+    CXString text;
+    CXPrintingPolicy Policy = clang_getCursorPrintingPolicy(Cursor);
+    ModifyPrintingPolicyAccordingToEnv(Policy);
+    text = clang_getCursorPrettyPrinted(Cursor, Policy);
+    clang_PrintingPolicy_dispose(Policy);
+    return text;
+  }
+  }
+}
+
 static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
   CXTranslationUnit TU = clang_Cursor_getTranslationUnit(Cursor);
   if (clang_isInvalid(Cursor.kind)) {
@@ -682,8 +766,7 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
     int I;
 
     ks = clang_getCursorKindSpelling(Cursor.kind);
-    string = want_display_name? clang_getCursorDisplayName(Cursor) 
-                              : clang_getCursorSpelling(Cursor);
+    string = CursorToText(Cursor);
     printf("%s=%s", clang_getCString(ks),
                     clang_getCString(string));
     clang_disposeString(ks);
@@ -1686,7 +1769,12 @@ static int perform_test_load(CXIndex Idx, CXTranslationUnit TU,
     else if (!strcmp(filter, "all-display") || 
              !strcmp(filter, "local-display")) {
       ck = NULL;
-      want_display_name = 1;
+      wanted_display_type = DisplayType_DisplayName;
+    }
+    else if (!strcmp(filter, "all-pretty") ||
+             !strcmp(filter, "local-pretty")) {
+      ck = NULL;
+      wanted_display_type = DisplayType_Pretty;
     }
     else if (!strcmp(filter, "none")) K = (enum CXCursorKind) ~0;
     else if (!strcmp(filter, "category")) K = CXCursor_ObjCCategoryDecl;
@@ -1754,8 +1842,11 @@ int perform_test_load_source(int argc, const char **argv,
   const char *InvocationPath;
 
   Idx = clang_createIndex(/* excludeDeclsFromPCH */
-                          (!strcmp(filter, "local") || 
-                           !strcmp(filter, "local-display"))? 1 : 0,
+                          (!strcmp(filter, "local") ||
+                           !strcmp(filter, "local-display") ||
+                           !strcmp(filter, "local-pretty"))
+                              ? 1
+                              : 0,
                           /* displayDiagnostics=*/1);
   InvocationPath = getenv("CINDEXTEST_INVOCATION_EMISSION_PATH");
   if (InvocationPath)

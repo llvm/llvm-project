@@ -30,7 +30,7 @@ int bar() {
 // CHECK: %s = alloca %struct.S, align 1
 // CHECK: %call = call i32 @_ZN1S3fooEi.ifunc(%struct.S* %s, i32 0)
 
-// CHECK: define i32 (%struct.S*, i32)* @_ZN1S3fooEi.resolver()
+// CHECK: define i32 (%struct.S*, i32)* @_ZN1S3fooEi.resolver() comdat
 // CHECK: ret i32 (%struct.S*, i32)* @_ZN1S3fooEi.arch_sandybridge
 // CHECK: ret i32 (%struct.S*, i32)* @_ZN1S3fooEi.arch_ivybridge
 // CHECK: ret i32 (%struct.S*, i32)* @_ZN1S3fooEi.sse4.2

@@ -2185,6 +2185,9 @@ void CodeGenModule::emitMultiVersionFunctions() {
 
     llvm::Function *ResolverFunc = cast<llvm::Function>(
         GetGlobalValue((getMangledName(GD) + ".resolver").str()));
+    if (supportsCOMDAT())
+      ResolverFunc->setComdat(
+          getModule().getOrInsertComdat(ResolverFunc->getName()));
     std::stable_sort(
         Options.begin(), Options.end(),
         std::greater<CodeGenFunction::MultiVersionResolverOption>());

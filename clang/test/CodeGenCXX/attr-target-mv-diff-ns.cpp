@@ -38,13 +38,13 @@ int bar() {
 // CHECK: call i32 @_Z3fooi.ifunc(i32 1)
 // CHECK: call i32 @_ZN2ns3fooEi.ifunc(i32 2)
 
-// CHECK: define i32 (i32)* @_Z3fooi.resolver()
+// CHECK: define i32 (i32)* @_Z3fooi.resolver() comdat
 // CHECK: ret i32 (i32)* @_Z3fooi.arch_sandybridge
 // CHECK: ret i32 (i32)* @_Z3fooi.arch_ivybridge
 // CHECK: ret i32 (i32)* @_Z3fooi.sse4.2
 // CHECK: ret i32 (i32)* @_Z3fooi
 //
-// CHECK: define i32 (i32)* @_ZN2ns3fooEi.resolver()
+// CHECK: define i32 (i32)* @_ZN2ns3fooEi.resolver() comdat
 // CHECK: ret i32 (i32)* @_ZN2ns3fooEi.arch_sandybridge
 // CHECK: ret i32 (i32)* @_ZN2ns3fooEi.arch_ivybridge
 // CHECK: ret i32 (i32)* @_ZN2ns3fooEi.sse4.2

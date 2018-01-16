@@ -48,21 +48,21 @@ Combined directives
 
 * #pragma omp parallel for simd: :good:`Complete`.
 
-* #pragma omp target parallel: :partial:`Partial`.  No support for the `depend` clauses.
+* #pragma omp target parallel: :good:`Complete`.
 
-* #pragma omp target parallel for [simd]: :partial:`Partial`.  No support for the `depend` clauses.
+* #pragma omp target parallel for [simd]: :good:`Complete`.
 
-* #pragma omp target simd: :partial:`Partial`.  No support for the `depend` clauses.
+* #pragma omp target simd: :good:`Complete`.
 
-* #pragma omp target teams: :partial:`Partial`.  No support for the `depend` clauses.
+* #pragma omp target teams: :good:`Complete`.
 
 * #pragma omp teams distribute [simd]: :good:`Complete`.
 
-* #pragma omp target teams distribute [simd]: :partial:`Partial`.  No support for the `depend` clauses.
+* #pragma omp target teams distribute [simd]: :good:`Complete`.
 
 * #pragma omp teams distribute parallel for [simd]: :good:`Complete`.
 
-* #pragma omp target teams distribute parallel for [simd]: :partial:`Partial`.  No support for the `depend` clauses.
+* #pragma omp target teams distribute parallel for [simd]: :good:`Complete`.
 
 Clang does not support any constructs/updates from upcoming OpenMP 5.0 except for `reduction`-based clauses in the `task` and `target`-based directives.
 

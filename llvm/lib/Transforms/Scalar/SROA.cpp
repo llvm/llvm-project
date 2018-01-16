@@ -124,11 +124,6 @@ static cl::opt<bool> SROARandomShuffleSlices("sroa-random-shuffle-slices",
 static cl::opt<bool> SROAStrictInbounds("sroa-strict-inbounds", cl::init(false),
                                         cl::Hidden);
 
-/// Hidden option to allow more aggressive splitting.
-static cl::opt<bool>
-SROASplitNonWholeAllocaSlices("sroa-split-nonwhole-alloca-slices",
-                              cl::init(false), cl::Hidden);
-
 namespace {
 
 /// \brief A custom IRBuilder inserter which prefixes all names, but only in
@@ -3931,10 +3926,10 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   // exact same type as the original, and with the same access offsets. In that
   // case, re-use the existing alloca, but still run through the rewriter to
   // perform phi and select speculation.
+  // P.beginOffset() can be non-zero even with the same type in a case with
+  // out-of-bounds access (e.g. @PR35657 function in SROA/basictest.ll).
   AllocaInst *NewAI;
-  if (SliceTy == AI.getAllocatedType()) {
-    assert(P.beginOffset() == 0 &&
-           "Non-zero begin offset but same alloca type");
+  if (SliceTy == AI.getAllocatedType() && P.beginOffset() == 0) {
     NewAI = &AI;
     // FIXME: We should be able to bail at this point with "nothing changed".
     // FIXME: We might want to defer PHI speculation until after here.
@@ -4060,7 +4055,7 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
 
   uint64_t AllocaSize = DL.getTypeAllocSize(AI.getAllocatedType());
   const uint64_t MaxBitVectorSize = 1024;
-  if (SROASplitNonWholeAllocaSlices && AllocaSize <= MaxBitVectorSize) {
+  if (AllocaSize <= MaxBitVectorSize) {
     // If a byte boundary is included in any load or store, a slice starting or
     // ending at the boundary is not splittable.
     SmallBitVector SplittableOffset(AllocaSize + 1, true);

@@ -573,6 +573,36 @@ TEST_F(LibclangReparseTest, clang_parseTranslationUnit2FullArgv) {
   DisplayDiagnostics();
 }
 
+class LibclangPrintingPolicyTest : public LibclangParseTest {
+public:
+  CXPrintingPolicy Policy = nullptr;
+
+  void SetUp() override {
+    LibclangParseTest::SetUp();
+    std::string File = "file.cpp";
+    WriteFile(File, "int i;\n");
+    ClangTU = clang_parseTranslationUnit(Index, File.c_str(), nullptr, 0,
+                                         nullptr, 0, TUFlags);
+    CXCursor TUCursor = clang_getTranslationUnitCursor(ClangTU);
+    Policy = clang_getCursorPrintingPolicy(TUCursor);
+  }
+  void TearDown() override {
+    clang_PrintingPolicy_dispose(Policy);
+    LibclangParseTest::TearDown();
+  }
+};
+
+TEST_F(LibclangPrintingPolicyTest, SetAndGetProperties) {
+  for (unsigned Value = 0; Value < 2; ++Value) {
+    for (int I = 0; I < CXPrintingPolicy_LastProperty; ++I) {
+      auto Property = static_cast<enum CXPrintingPolicyProperty>(I);
+
+      clang_PrintingPolicy_setProperty(Policy, Property, Value);
+      EXPECT_EQ(Value, clang_PrintingPolicy_getProperty(Policy, Property));
+    }
+  }
+}
+
 TEST_F(LibclangReparseTest, PreprocessorSkippedRanges) {
   std::string Header = "header.h", Main = "main.cpp";
   WriteFile(Header,

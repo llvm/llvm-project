@@ -28,14 +28,14 @@ define <2 x double> @insert_v2f64_z1(<2 x double> %a) {
 ;
 ; SSE41-LABEL: insert_v2f64_z1:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    xorpd %xmm1, %xmm1
-; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; SSE41-NEXT:    xorps %xmm1, %xmm1
+; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: insert_v2f64_z1:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
 ; AVX-NEXT:    retq
   %1 = insertelement <2 x double> %a, double 0.0, i32 0
   ret <2 x double> %1
@@ -66,14 +66,14 @@ define <4 x double> @insert_v4f64_0zz3(<4 x double> %a) {
 ; SSE41-LABEL: insert_v4f64_0zz3:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
-; SSE41-NEXT:    xorpd %xmm2, %xmm2
-; SSE41-NEXT:    blendpd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
+; SSE41-NEXT:    xorps %xmm2, %xmm2
+; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: insert_v4f64_0zz3:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3]
+; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5],ymm0[6,7]
 ; AVX-NEXT:    retq
   %1 = insertelement <4 x double> %a, double 0.0, i32 1
   %2 = insertelement <4 x double> %1, double 0.0, i32 2
@@ -101,21 +101,15 @@ define <2 x i64> @insert_v2i64_z1(<2 x i64> %a) {
 ;
 ; SSE41-LABEL: insert_v2i64_z1:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pxor %xmm1, %xmm1
-; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5,6,7]
+; SSE41-NEXT:    xorps %xmm1, %xmm1
+; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: insert_v2i64_z1:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5,6,7]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: insert_v2i64_z1:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
-; AVX2-NEXT:    retq
+; AVX-LABEL: insert_v2i64_z1:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; AVX-NEXT:    retq
   %1 = insertelement <2 x i64> %a, i64 0, i32 0
   ret <2 x i64> %1
 }
@@ -141,21 +135,15 @@ define <4 x i64> @insert_v4i64_01z3(<4 x i64> %a) {
 ;
 ; SSE41-LABEL: insert_v4i64_01z3:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pxor %xmm2, %xmm2
-; SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm2[0,1,2,3],xmm1[4,5,6,7]
+; SSE41-NEXT:    xorps %xmm2, %xmm2
+; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3]
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: insert_v4i64_01z3:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2],ymm0[3]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: insert_v4i64_01z3:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5],ymm0[6,7]
-; AVX2-NEXT:    retq
+; AVX-LABEL: insert_v4i64_01z3:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5],ymm0[6,7]
+; AVX-NEXT:    retq
   %1 = insertelement <4 x i64> %a, i64 0, i32 2
   ret <4 x i64> %1
 }
@@ -263,21 +251,15 @@ define <4 x i32> @insert_v4i32_01z3(<4 x i32> %a) {
 ;
 ; SSE41-LABEL: insert_v4i32_01z3:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pxor %xmm1, %xmm1
-; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5],xmm0[6,7]
+; SSE41-NEXT:    xorps %xmm1, %xmm1
+; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2],xmm0[3]
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: insert_v4i32_01z3:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5],xmm0[6,7]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: insert_v4i32_01z3:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2],xmm0[3]
-; AVX2-NEXT:    retq
+; AVX-LABEL: insert_v4i32_01z3:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2],xmm0[3]
+; AVX-NEXT:    retq
   %1 = insertelement <4 x i32> %a, i32 0, i32 2
   ret <4 x i32> %1
 }
@@ -312,9 +294,9 @@ define <8 x i32> @insert_v8i32_z12345z7(<8 x i32> %a) {
 ;
 ; SSE41-LABEL: insert_v8i32_z12345z7:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pxor %xmm2, %xmm2
-; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm2[0,1],xmm0[2,3,4,5,6,7]
-; SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm2[4,5],xmm1[6,7]
+; SSE41-NEXT:    xorps %xmm2, %xmm2
+; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3]
+; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm1[0,1],xmm2[2],xmm1[3]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: insert_v8i32_z12345z7:
