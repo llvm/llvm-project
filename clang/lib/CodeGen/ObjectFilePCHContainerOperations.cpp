@@ -229,6 +229,11 @@ public:
       Builder->getModuleDebugInfo()->completeRequiredType(RD);
   }
 
+  void HandleImplicitImportDecl(ImportDecl *D) override {
+    if (!D->getImportedOwningModule())
+      Builder->getModuleDebugInfo()->EmitImportDecl(*D);
+  }
+
   /// Emit a container holding the serialized AST.
   void HandleTranslationUnit(ASTContext &Ctx) override {
     assert(M && VMContext && Builder);
