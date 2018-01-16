@@ -159,8 +159,7 @@ void BitcodeCompiler::add(BitcodeFile &F) {
                             (R.Prevailing && Sym->includeInDynsym()) ||
                             UsedStartStop.count(ObjSym.getSectionName());
     R.FinalDefinitionInLinkageUnit =
-        Sym->isDefined() &&
-        (IsExecutable || Sym->getVisibility() != STV_DEFAULT);
+        Sym->isDefined() && (IsExecutable || Sym->Visibility != STV_DEFAULT);
 
     if (R.Prevailing)
       undefine(Sym);
