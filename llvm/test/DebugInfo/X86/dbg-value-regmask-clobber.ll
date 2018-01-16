@@ -23,7 +23,7 @@
 ; DWARF: .debug_info contents:
 ; DWARF:  DW_TAG_formal_parameter
 ; DWARF-NEXT:    DW_AT_location [DW_FORM_sec_offset]   ({{0x.*}}
-; DWARF-NEXT:      0x0000000000000000 - 0x0000000000000013: DW_OP_reg2 RCX)
+; DWARF-NEXT:      [0x0000000000000000, 0x0000000000000013): DW_OP_reg2 RCX)
 ; DWARF-NEXT:    DW_AT_name [DW_FORM_strp]     {{.*}} "argc"
 
 ; ModuleID = 't.cpp'

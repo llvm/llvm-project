@@ -95,36 +95,30 @@ entry:
 define <4 x float> @pr35869() nounwind {
 ; X32-LABEL: pr35869:
 ; X32:       ## %bb.0:
-; X32-NEXT:    subl $12, %esp
 ; X32-NEXT:    movl $64, %eax
-; X32-NEXT:    movd %eax, %xmm0
-; X32-NEXT:    movq %xmm0, (%esp)
-; X32-NEXT:    movq (%esp), %mm0
+; X32-NEXT:    movd %eax, %mm0
 ; X32-NEXT:    pxor %mm1, %mm1
 ; X32-NEXT:    punpcklbw %mm1, %mm0 ## mm0 = mm0[0],mm1[0],mm0[1],mm1[1],mm0[2],mm1[2],mm0[3],mm1[3]
-; X32-NEXT:    pxor %xmm0, %xmm0
 ; X32-NEXT:    pcmpgtw %mm0, %mm1
 ; X32-NEXT:    movq %mm0, %mm2
 ; X32-NEXT:    punpckhwd %mm1, %mm2 ## mm2 = mm2[2],mm1[2],mm2[3],mm1[3]
+; X32-NEXT:    xorps %xmm0, %xmm0
 ; X32-NEXT:    cvtpi2ps %mm2, %xmm0
 ; X32-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0,0]
 ; X32-NEXT:    punpcklwd %mm1, %mm0 ## mm0 = mm0[0],mm1[0],mm0[1],mm1[1]
 ; X32-NEXT:    cvtpi2ps %mm0, %xmm0
-; X32-NEXT:    addl $12, %esp
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: pr35869:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    movl $64, %eax
-; X64-NEXT:    movd %eax, %xmm0
-; X64-NEXT:    movq %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %mm0
+; X64-NEXT:    movd %eax, %mm0
 ; X64-NEXT:    pxor %mm1, %mm1
 ; X64-NEXT:    punpcklbw %mm1, %mm0 ## mm0 = mm0[0],mm1[0],mm0[1],mm1[1],mm0[2],mm1[2],mm0[3],mm1[3]
-; X64-NEXT:    pxor %xmm0, %xmm0
 ; X64-NEXT:    pcmpgtw %mm0, %mm1
 ; X64-NEXT:    movq %mm0, %mm2
 ; X64-NEXT:    punpckhwd %mm1, %mm2 ## mm2 = mm2[2],mm1[2],mm2[3],mm1[3]
+; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    cvtpi2ps %mm2, %xmm0
 ; X64-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0,0]
 ; X64-NEXT:    punpcklwd %mm1, %mm0 ## mm0 = mm0[0],mm1[0],mm0[1],mm1[1]

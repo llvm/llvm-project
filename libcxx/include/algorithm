@@ -148,21 +148,21 @@ template<class ForwardIterator1, class ForwardIterator2, class BinaryPredicate>
                    BinaryPredicate pred);  // **C++14**
 
 template <class ForwardIterator1, class ForwardIterator2>
-    ForwardIterator1
+    constexpr ForwardIterator1      // constexpr in C++20
     search(ForwardIterator1 first1, ForwardIterator1 last1,
            ForwardIterator2 first2, ForwardIterator2 last2);
 
 template <class ForwardIterator1, class ForwardIterator2, class BinaryPredicate>
-    ForwardIterator1
+    constexpr ForwardIterator1      // constexpr in C++20
     search(ForwardIterator1 first1, ForwardIterator1 last1,
            ForwardIterator2 first2, ForwardIterator2 last2, BinaryPredicate pred);
 
 template <class ForwardIterator, class Size, class T>
-    ForwardIterator
+    constexpr ForwardIterator       // constexpr in C++20
     search_n(ForwardIterator first, ForwardIterator last, Size count, const T& value);
 
 template <class ForwardIterator, class Size, class T, class BinaryPredicate>
-    ForwardIterator
+    constexpr ForwardIterator       // constexpr in C++20
     search_n(ForwardIterator first, ForwardIterator last,
              Size count, const T& value, BinaryPredicate pred);
 
@@ -1544,7 +1544,7 @@ is_permutation(_ForwardIterator1 __first1, _ForwardIterator1 __last1,
 // __search is in <functional>
 
 template <class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _ForwardIterator1
 search(_ForwardIterator1 __first1, _ForwardIterator1 __last1,
        _ForwardIterator2 __first2, _ForwardIterator2 __last2, _BinaryPredicate __pred)
@@ -1557,7 +1557,7 @@ search(_ForwardIterator1 __first1, _ForwardIterator1 __last1,
 }
 
 template <class _ForwardIterator1, class _ForwardIterator2>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _ForwardIterator1
 search(_ForwardIterator1 __first1, _ForwardIterator1 __last1,
        _ForwardIterator2 __first2, _ForwardIterator2 __last2)
@@ -1570,7 +1570,7 @@ search(_ForwardIterator1 __first1, _ForwardIterator1 __last1,
 
 #if _LIBCPP_STD_VER > 14
 template <class _ForwardIterator, class _Searcher>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _ForwardIterator search(_ForwardIterator __f, _ForwardIterator __l, const _Searcher &__s)
 { return __s(__f, __l).first; }
 #endif
@@ -1578,7 +1578,7 @@ _ForwardIterator search(_ForwardIterator __f, _ForwardIterator __l, const _Searc
 // search_n
 
 template <class _BinaryPredicate, class _ForwardIterator, class _Size, class _Tp>
-_ForwardIterator
+_LIBCPP_CONSTEXPR_AFTER_CXX17 _ForwardIterator
 __search_n(_ForwardIterator __first, _ForwardIterator __last,
            _Size __count, const _Tp& __value_, _BinaryPredicate __pred, forward_iterator_tag)
 {
@@ -1615,7 +1615,7 @@ __search_n(_ForwardIterator __first, _ForwardIterator __last,
 }
 
 template <class _BinaryPredicate, class _RandomAccessIterator, class _Size, class _Tp>
-_RandomAccessIterator
+_LIBCPP_CONSTEXPR_AFTER_CXX17 _RandomAccessIterator
 __search_n(_RandomAccessIterator __first, _RandomAccessIterator __last,
            _Size __count, const _Tp& __value_, _BinaryPredicate __pred, random_access_iterator_tag)
 {
@@ -1655,7 +1655,7 @@ __search_n(_RandomAccessIterator __first, _RandomAccessIterator __last,
 }
 
 template <class _ForwardIterator, class _Size, class _Tp, class _BinaryPredicate>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _ForwardIterator
 search_n(_ForwardIterator __first, _ForwardIterator __last,
          _Size __count, const _Tp& __value_, _BinaryPredicate __pred)
@@ -1666,7 +1666,7 @@ search_n(_ForwardIterator __first, _ForwardIterator __last,
 }
 
 template <class _ForwardIterator, class _Size, class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _ForwardIterator
 search_n(_ForwardIterator __first, _ForwardIterator __last, _Size __count, const _Tp& __value_)
 {

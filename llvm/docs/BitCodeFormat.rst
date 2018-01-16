@@ -903,7 +903,7 @@ PARAMATTR_CODE_ENTRY Record
 
 The ``ENTRY`` record (code 2) contains a variable number of values describing a
 unique set of function parameter attributes. Each *attrgrp* value is used as a
-key with which to look up an entry in the the attribute group table described
+key with which to look up an entry in the attribute group table described
 in the ``PARAMATTR_GROUP_BLOCK`` block.
 
 .. _PARAMATTR_CODE_ENTRY_OLD:
