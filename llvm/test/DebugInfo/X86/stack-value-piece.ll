@@ -7,7 +7,7 @@
 ;   I r = {i, 0};
 ;   return r;
 ; }
-;  
+;
 ; typedef struct { float a, b; } F;
 ; F f(float f) {
 ;   F r = {f, 0};
@@ -19,21 +19,21 @@
 ; CHECK:   DW_AT_name {{.*}} "i"
 ; CHECK:   DW_TAG_variable
 ; CHECK-NEXT:   DW_AT_location {{.*}} ([[I:.*]]
-; CHECK-NEXT:     {{.*}} - {{.*}}: DW_OP_reg5 RDI, DW_OP_piece 0x4, DW_OP_constu 0x0, DW_OP_stack_value, DW_OP_piece 0x4)
+; CHECK-NEXT:     [{{.*}}, {{.*}}): DW_OP_reg5 RDI, DW_OP_piece 0x4, DW_OP_constu 0x0, DW_OP_stack_value, DW_OP_piece 0x4)
 ; CHECK-NEXT:   DW_AT_name {{.*}} "r"
 ;
 ; CHECK: DW_TAG_subprogram
 ; CHECK:   DW_AT_name {{.*}} "f"
 ; CHECK:   DW_TAG_variable
 ; CHECK-NEXT:   DW_AT_location {{.*}} ([[F:.*]]
-; CHECK-NEXT:     {{.*}} - {{.*}}: DW_OP_reg17 XMM0, DW_OP_piece 0x4, DW_OP_constu 0x0, DW_OP_stack_value, DW_OP_piece 0x4)
+; CHECK-NEXT:     [{{.*}}, {{.*}}): DW_OP_reg17 XMM0, DW_OP_piece 0x4, DW_OP_constu 0x0, DW_OP_stack_value, DW_OP_piece 0x4)
 ; CHECK-NEXT:   DW_AT_name {{.*}} "r"
 ;
 ; CHECK: .debug_loc contents:
 ; CHECK:      [[I]]:
-; CHECK-NEXT:   {{.*}} - {{.*}}: DW_OP_reg5 RDI, DW_OP_piece 0x4, DW_OP_constu 0x0, DW_OP_stack_value, DW_OP_piece 0x4
+; CHECK-NEXT:   [{{.*}}, {{.*}}): DW_OP_reg5 RDI, DW_OP_piece 0x4, DW_OP_constu 0x0, DW_OP_stack_value, DW_OP_piece 0x4
 ; CHECK:      [[F]]:
-; CHECK-NEXT:   {{.*}} - {{.*}}: DW_OP_reg17 XMM0, DW_OP_piece 0x4, DW_OP_constu 0x0, DW_OP_stack_value, DW_OP_piece 0x4
+; CHECK-NEXT:   [{{.*}}, {{.*}}): DW_OP_reg17 XMM0, DW_OP_piece 0x4, DW_OP_constu 0x0, DW_OP_stack_value, DW_OP_piece 0x4
 
 source_filename = "stack-value-piece.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
