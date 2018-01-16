@@ -134,6 +134,8 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     if (auto *Cmd = dyn_cast<SymbolAssignment>(Base))
       ScriptSymbols.insert(Cmd->Name);
 
+  bool IsExecutable = !Config->Shared && !Config->Relocatable;
+
   // Provide a resolution to the LTO API for each symbol.
   for (const lto::InputFile::Symbol &ObjSym : Obj.symbols()) {
     Symbol *Sym = Syms[SymNum];
@@ -156,6 +158,10 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     R.VisibleToRegularObj = Config->Relocatable || Sym->IsUsedInRegularObj ||
                             (R.Prevailing && Sym->includeInDynsym()) ||
                             UsedStartStop.count(ObjSym.getSectionName());
+    R.FinalDefinitionInLinkageUnit =
+        Sym->isDefined() &&
+        (IsExecutable || Sym->getVisibility() != STV_DEFAULT);
+
     if (R.Prevailing)
       undefine(Sym);
 

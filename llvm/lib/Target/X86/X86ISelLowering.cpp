@@ -30424,10 +30424,11 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
     }
 
     // Detect bitcasts between i32 to x86mmx low word.
-    if (N0.getOpcode() == ISD::BUILD_VECTOR && SrcVT == MVT::v2i32 &&
-        isNullConstant(N0.getOperand(1))) {
+    if (N0.getOpcode() == ISD::BUILD_VECTOR && SrcVT == MVT::v2i32) {
       SDValue N00 = N0.getOperand(0);
-      if (N00.getValueType() == MVT::i32)
+      SDValue N01 = N0.getOperand(1);
+      if (N00.getValueType() == MVT::i32 &&
+          (N01.getOpcode() == ISD::UNDEF || isNullConstant(N01)))
         return DAG.getNode(X86ISD::MMX_MOVW2D, SDLoc(N00), VT, N00);
     }
 
