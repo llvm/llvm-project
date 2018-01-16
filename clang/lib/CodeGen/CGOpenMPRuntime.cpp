@@ -7357,6 +7357,12 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
           CGM, ParentName,
           cast<OMPTargetTeamsDistributeParallelForDirective>(*S));
       break;
+    case Stmt::OMPTargetTeamsDistributeParallelForSimdDirectiveClass:
+      CodeGenFunction::
+          EmitOMPTargetTeamsDistributeParallelForSimdDeviceFunction(
+              CGM, ParentName,
+              cast<OMPTargetTeamsDistributeParallelForSimdDirective>(*S));
+      break;
     default:
       llvm_unreachable("Unknown target directive for OpenMP device codegen.");
     }

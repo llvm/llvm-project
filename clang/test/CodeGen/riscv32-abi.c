@@ -269,8 +269,7 @@ int f_va_1(char *fmt, ...) {
 // correct offsets are used.
 
 // CHECK-LABEL: @f_va_2(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[FMT_ADDR:%.*]] = alloca i8*, align 4
+// CHECK:         [[FMT_ADDR:%.*]] = alloca i8*, align 4
 // CHECK-NEXT:    [[VA:%.*]] = alloca i8*, align 4
 // CHECK-NEXT:    [[V:%.*]] = alloca double, align 8
 // CHECK-NEXT:    store i8* [[FMT:%.*]], i8** [[FMT_ADDR]], align 4
@@ -303,8 +302,7 @@ double f_va_2(char *fmt, ...) {
 // Two "aligned" register pairs.
 
 // CHECK-LABEL: @f_va_3(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[FMT_ADDR:%.*]] = alloca i8*, align 4
+// CHECK:         [[FMT_ADDR:%.*]] = alloca i8*, align 4
 // CHECK-NEXT:    [[VA:%.*]] = alloca i8*, align 4
 // CHECK-NEXT:    [[V:%.*]] = alloca double, align 8
 // CHECK-NEXT:    [[W:%.*]] = alloca i32, align 4
@@ -357,8 +355,7 @@ double f_va_3(char *fmt, ...) {
 }
 
 // CHECK-LABEL: define i32 @f_va_4(i8* %fmt, ...) {{.*}} {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[FMT_ADDR:%.*]] = alloca i8*, align 4
+// CHECK:         [[FMT_ADDR:%.*]] = alloca i8*, align 4
 // CHECK-NEXT:    [[VA:%.*]] = alloca i8*, align 4
 // CHECK-NEXT:    [[V:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[LD:%.*]] = alloca fp128, align 16

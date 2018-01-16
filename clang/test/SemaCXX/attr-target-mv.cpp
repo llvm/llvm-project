@@ -1,4 +1,11 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu  -fsyntax-only -verify -fexceptions -fcxx-exceptions %s -std=c++14
+void __attribute__((target("default"))) invalid_features(void);
+//expected-error@+2 {{function multiversioning doesn't support feature 'hello_world'}}
+//expected-warning@+1 {{ignoring unsupported 'hello_world' in the target attribute string}}
+void __attribute__((target("hello_world"))) invalid_features(void);
+//expected-error@+1 {{function multiversioning doesn't support feature 'no-sse4.2'}}
+void __attribute__((target("no-sse4.2"))) invalid_features(void);
+
 void __attribute__((target("sse4.2"))) no_default(void);
 void __attribute__((target("arch=sandybridge")))  no_default(void);
 
