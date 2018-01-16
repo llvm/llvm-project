@@ -4032,7 +4032,7 @@ void __kmpc_doacross_post(ident_t *loc, int gtid, long long *vec) {
 }
 
 void __kmpc_doacross_fini(ident_t *loc, int gtid) {
-  kmp_int64 num_done;
+  kmp_int32 num_done;
   kmp_info_t *th = __kmp_threads[gtid];
   kmp_team_t *team = th->th.th_team;
   kmp_disp_t *pr_buf = th->th.th_dispatch;
@@ -4042,7 +4042,7 @@ void __kmpc_doacross_fini(ident_t *loc, int gtid) {
     KA_TRACE(20, ("__kmpc_doacross_fini() exit: serialized team %p\n", team));
     return; // nothing to do
   }
-  num_done = KMP_TEST_THEN_INC64((kmp_int64 *)pr_buf->th_doacross_info[1]) + 1;
+  num_done = KMP_TEST_THEN_INC32((kmp_int32 *)pr_buf->th_doacross_info[1]) + 1;
   if (num_done == th->th.th_team_nproc) {
     // we are the last thread, need to free shared resources
     int idx = pr_buf->th_doacross_buf_idx - 1;
@@ -4050,7 +4050,7 @@ void __kmpc_doacross_fini(ident_t *loc, int gtid) {
         &team->t.t_disp_buffer[idx % __kmp_dispatch_num_buffers];
     KMP_DEBUG_ASSERT(pr_buf->th_doacross_info[1] ==
                      (kmp_int64)&sh_buf->doacross_num_done);
-    KMP_DEBUG_ASSERT(num_done == (kmp_int64)sh_buf->doacross_num_done);
+    KMP_DEBUG_ASSERT(num_done == sh_buf->doacross_num_done);
     KMP_DEBUG_ASSERT(idx == sh_buf->doacross_buf_idx);
     __kmp_thread_free(th, CCAST(kmp_uint32 *, sh_buf->doacross_flags));
     sh_buf->doacross_flags = NULL;
