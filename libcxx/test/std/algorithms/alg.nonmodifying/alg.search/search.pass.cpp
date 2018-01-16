@@ -11,7 +11,7 @@
 
 // template<ForwardIterator Iter1, ForwardIterator Iter2>
 //   requires HasEqualTo<Iter1::value_type, Iter2::value_type>
-//   Iter1
+//   constexpr Iter1     // constexpr after C++17
 //   search(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2);
 //
 //   template<class ForwardIterator, class Searcher>
@@ -21,7 +21,29 @@
 #include <algorithm>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
+
+struct MySearcherC {
+    template <typename Iterator>
+    std::pair<Iterator, Iterator>
+    TEST_CONSTEXPR operator() (Iterator b, Iterator e) const
+    {
+        return std::make_pair(b, e);
+    }
+};
+
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool test_constexpr() {
+    int ia[] = {0, 1, 2, 3};
+    int ib[] = {0, 1, 5, 3};
+    int ic[] = {0, 1, 2, 0, 1, 2, 3, 0, 1, 2, 3, 4};
+    return    (std::search(std::begin(ic), std::end(ic), std::begin(ia), std::end(ia)) == ic+3)
+           && (std::search(std::begin(ic), std::end(ic), std::begin(ib), std::end(ib)) == std::end(ic))
+           && (std::search(std::begin(ic), std::end(ic), MySearcherC()) == std::begin(ic))
+           ;
+    }
+#endif
 
 int searcher_called = 0;
 
@@ -97,4 +119,7 @@ int main()
 }
 #endif
 
+#if TEST_STD_VER > 17
+    static_assert(test_constexpr());
+#endif
 }

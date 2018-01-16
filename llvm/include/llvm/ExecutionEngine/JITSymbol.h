@@ -89,7 +89,7 @@ public:
   }
 
   /// @brief Returns true if the symbol isn't weak or common.
-  bool isStrongDefinition() const {
+  bool isStrong() const {
     return !isWeak() && !isCommon();
   }
 

@@ -43,8 +43,10 @@ void DWARFDebugLoc::LocationList::dump(raw_ostream &OS, bool IsLittleEndian,
   for (const Entry &E : Entries) {
     OS << '\n';
     OS.indent(Indent);
-    OS << format("0x%016" PRIx64, E.Begin) << " - "
-       << format("0x%016" PRIx64, E.End) << ": ";
+    OS << format("[0x%*.*" PRIx64 ", ", AddressSize * 2, AddressSize * 2,
+                 E.Begin)
+       << format(" 0x%*.*" PRIx64 ")", AddressSize * 2, AddressSize * 2, E.End);
+    OS << ": ";
 
     dumpExpression(OS, E.Loc, IsLittleEndian, AddressSize, MRI);
   }

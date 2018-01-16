@@ -255,26 +255,26 @@ void TestGlobalScopeCompletion(clangd::CodeCompleteOptions Opts) {
 }
 
 TEST(CompletionTest, CompletionOptions) {
-  clangd::CodeCompleteOptions Opts;
-  for (bool IncludeMacros : {true, false}) {
-    Opts.IncludeMacros = IncludeMacros;
-    for (bool IncludeGlobals : {true, false}) {
-      Opts.IncludeGlobals = IncludeGlobals;
-      for (bool IncludeBriefComments : {true, false}) {
-        Opts.IncludeBriefComments = IncludeBriefComments;
-        for (bool EnableSnippets : {true, false}) {
-          Opts.EnableSnippets = EnableSnippets;
-          for (bool IncludeCodePatterns : {true, false}) {
-            Opts.IncludeCodePatterns = IncludeCodePatterns;
-            for (bool IncludeIneligibleResults : {true, false}) {
-              Opts.IncludeIneligibleResults = IncludeIneligibleResults;
-              TestAfterDotCompletion(Opts);
-              TestGlobalScopeCompletion(Opts);
-            }
-          }
-        }
-      }
-    }
+  auto Test = [&](const clangd::CodeCompleteOptions &Opts) {
+    TestAfterDotCompletion(Opts);
+    TestGlobalScopeCompletion(Opts);
+  };
+  // We used to test every combination of options, but that got too slow (2^N).
+  auto Flags = {
+    &clangd::CodeCompleteOptions::IncludeMacros,
+    &clangd::CodeCompleteOptions::IncludeGlobals,
+    &clangd::CodeCompleteOptions::IncludeBriefComments,
+    &clangd::CodeCompleteOptions::EnableSnippets,
+    &clangd::CodeCompleteOptions::IncludeCodePatterns,
+    &clangd::CodeCompleteOptions::IncludeIneligibleResults,
+  };
+  // Test default options.
+  Test({});
+  // Test with one flag flipped.
+  for (auto &F : Flags) {
+    clangd::CodeCompleteOptions O;
+    O.*F ^= true;
+    Test(O);
   }
 }
 

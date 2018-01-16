@@ -2493,18 +2493,13 @@ define <8 x i16> @mask_v8i16_012345ef(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; SSE41-LABEL: mask_v8i16_012345ef:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1,2,3,4,5],xmm0[6,7]
+; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[3]
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: mask_v8i16_012345ef:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3,4,5],xmm0[6,7]
-; AVX1-NEXT:    retq
-;
-; AVX2OR512VL-LABEL: mask_v8i16_012345ef:
-; AVX2OR512VL:       # %bb.0:
-; AVX2OR512VL-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[3]
-; AVX2OR512VL-NEXT:    retq
+; AVX-LABEL: mask_v8i16_012345ef:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[3]
+; AVX-NEXT:    retq
   %1 = bitcast <8 x i16> %a to <2 x i64>
   %2 = bitcast <8 x i16> %b to <2 x i64>
   %3 = and <2 x i64> %1, <i64 0, i64 -4294967296>

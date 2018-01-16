@@ -1823,7 +1823,9 @@ public:
   using lookups_range = llvm::iterator_range<all_lookups_iterator>;
 
   lookups_range lookups() const;
-  lookups_range noload_lookups() const;
+  // Like lookups(), but avoids loading external declarations.
+  // If PreserveInternalState, avoids building lookup data structures too.
+  lookups_range noload_lookups(bool PreserveInternalState) const;
 
   /// \brief Iterators over all possible lookups within this context.
   all_lookups_iterator lookups_begin() const;
@@ -1943,6 +1945,7 @@ private:
 
   StoredDeclsMap *CreateStoredDeclsMap(ASTContext &C) const;
 
+  void loadLazyLocalLexicalLookups();
   void buildLookupImpl(DeclContext *DCtx, bool Internal);
   void makeDeclVisibleInContextWithFlags(NamedDecl *D, bool Internal,
                                          bool Rediscoverable);

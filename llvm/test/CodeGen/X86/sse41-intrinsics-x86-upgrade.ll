@@ -7,7 +7,7 @@
 define <2 x double> @test_x86_sse41_blendpd(<2 x double> %a0, <2 x double> %a1) {
 ; CHECK-LABEL: test_x86_sse41_blendpd:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; CHECK-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; CHECK-NEXT:    retl
   %res = call <2 x double> @llvm.x86.sse41.blendpd(<2 x double> %a0, <2 x double> %a1, i32 6) ; <<2 x double>> [#uses=1]
   ret <2 x double> %res

@@ -522,8 +522,8 @@ define <4 x i64> @combine_pshufb_as_zext128(<32 x i8> %a0) {
 define <4 x double> @combine_pshufb_as_vzmovl_64(<4 x double> %a0) {
 ; X32-AVX2-LABEL: combine_pshufb_as_vzmovl_64:
 ; X32-AVX2:       # %bb.0:
-; X32-AVX2-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; X32-AVX2-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3]
+; X32-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X32-AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5,6,7]
 ; X32-AVX2-NEXT:    retl
 ;
 ; X32-AVX512-LABEL: combine_pshufb_as_vzmovl_64:
@@ -534,8 +534,8 @@ define <4 x double> @combine_pshufb_as_vzmovl_64(<4 x double> %a0) {
 ;
 ; X64-AVX2-LABEL: combine_pshufb_as_vzmovl_64:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; X64-AVX2-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3]
+; X64-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X64-AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5,6,7]
 ; X64-AVX2-NEXT:    retq
 ;
 ; X64-AVX512-LABEL: combine_pshufb_as_vzmovl_64:
@@ -978,20 +978,20 @@ define internal fastcc <8 x float> @PR34577(<8 x float> %inp0, <8 x float> %inp1
 ; X32-AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; X32-AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; X32-AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
-; X32-AVX2-NEXT:    vmovapd {{.*#+}} ymm2 = <u,u,7,2,u,u,3,2>
-; X32-AVX2-NEXT:    vpermps %ymm1, %ymm2, %ymm1
-; X32-AVX2-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3]
+; X32-AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = <u,u,7,2,u,u,3,2>
+; X32-AVX2-NEXT:    vpermd %ymm1, %ymm2, %ymm1
+; X32-AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
 ; X32-AVX2-NEXT:    retl
 ;
 ; X32-AVX512-LABEL: PR34577:
 ; X32-AVX512:       # %bb.0: # %entry
-; X32-AVX512-NEXT:    vmovapd {{.*#+}} ymm2 = <1,u,u,u,2,u,5,0>
+; X32-AVX512-NEXT:    vmovaps {{.*#+}} ymm2 = <1,u,u,u,2,u,5,0>
 ; X32-AVX512-NEXT:    vpermps %ymm0, %ymm2, %ymm0
-; X32-AVX512-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; X32-AVX512-NEXT:    vblendpd {{.*#+}} ymm0 = ymm2[0,1],ymm0[2,3]
-; X32-AVX512-NEXT:    vmovapd {{.*#+}} ymm2 = <u,u,7,2,u,u,3,2>
+; X32-AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; X32-AVX512-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
+; X32-AVX512-NEXT:    vmovaps {{.*#+}} ymm2 = <u,u,7,2,u,u,3,2>
 ; X32-AVX512-NEXT:    vpermps %ymm1, %ymm2, %ymm1
-; X32-AVX512-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3]
+; X32-AVX512-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
 ; X32-AVX512-NEXT:    retl
 ;
 ; X64-AVX2-LABEL: PR34577:
@@ -999,20 +999,20 @@ define internal fastcc <8 x float> @PR34577(<8 x float> %inp0, <8 x float> %inp1
 ; X64-AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; X64-AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; X64-AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
-; X64-AVX2-NEXT:    vmovapd {{.*#+}} ymm2 = <u,u,7,2,u,u,3,2>
-; X64-AVX2-NEXT:    vpermps %ymm1, %ymm2, %ymm1
-; X64-AVX2-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3]
+; X64-AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = <u,u,7,2,u,u,3,2>
+; X64-AVX2-NEXT:    vpermd %ymm1, %ymm2, %ymm1
+; X64-AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
 ; X64-AVX2-NEXT:    retq
 ;
 ; X64-AVX512-LABEL: PR34577:
 ; X64-AVX512:       # %bb.0: # %entry
-; X64-AVX512-NEXT:    vmovapd {{.*#+}} ymm2 = <1,u,u,u,2,u,5,0>
+; X64-AVX512-NEXT:    vmovaps {{.*#+}} ymm2 = <1,u,u,u,2,u,5,0>
 ; X64-AVX512-NEXT:    vpermps %ymm0, %ymm2, %ymm0
-; X64-AVX512-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; X64-AVX512-NEXT:    vblendpd {{.*#+}} ymm0 = ymm2[0,1],ymm0[2,3]
-; X64-AVX512-NEXT:    vmovapd {{.*#+}} ymm2 = <u,u,7,2,u,u,3,2>
+; X64-AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; X64-AVX512-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
+; X64-AVX512-NEXT:    vmovaps {{.*#+}} ymm2 = <u,u,7,2,u,u,3,2>
 ; X64-AVX512-NEXT:    vpermps %ymm1, %ymm2, %ymm1
-; X64-AVX512-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3]
+; X64-AVX512-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
 ; X64-AVX512-NEXT:    retq
 entry:
   %shuf0 = shufflevector <8 x float> %inp0, <8 x float> %inp2, <8 x i32> <i32 1, i32 10, i32 11, i32 13, i32 2, i32 13, i32 5, i32 0>

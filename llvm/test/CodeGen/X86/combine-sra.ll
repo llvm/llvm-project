@@ -215,7 +215,7 @@ define <4 x i32> @combine_vec_ashr_trunc_lshr(<4 x i64> %x) {
 ; SSE-NEXT:    movaps %xmm0, %xmm2
 ; SSE-NEXT:    movaps %xmm0, %xmm1
 ; SSE-NEXT:    psrad $2, %xmm1
-; SSE-NEXT:    blendpd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
+; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0,1,2,3],xmm1[4,5,6,7]
 ; SSE-NEXT:    psrad $3, %xmm0
 ; SSE-NEXT:    psrad $1, %xmm2
 ; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm0[4,5,6,7]
@@ -258,7 +258,7 @@ define <4 x i32> @combine_vec_ashr_trunc_ashr(<4 x i64> %x) {
 ; SSE-NEXT:    movaps %xmm0, %xmm2
 ; SSE-NEXT:    movaps %xmm0, %xmm1
 ; SSE-NEXT:    psrad $2, %xmm1
-; SSE-NEXT:    blendpd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
+; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0,1,2,3],xmm1[4,5,6,7]
 ; SSE-NEXT:    psrad $3, %xmm0
 ; SSE-NEXT:    psrad $1, %xmm2
 ; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm0[4,5,6,7]

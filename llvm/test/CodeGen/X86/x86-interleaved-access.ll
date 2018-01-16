@@ -691,7 +691,7 @@ define <32 x i1> @interleaved_load_vf32_i8_stride4(<128 x i8>* %ptr) {
 ; AVX1-NEXT:    vpshufb %xmm0, %xmm10, %xmm0
 ; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm5[4,5,6,7]
-; AVX1-NEXT:    vblendpd {{.*#+}} ymm8 = ymm0[0,1],ymm8[2,3]
+; AVX1-NEXT:    vblendps {{.*#+}} ymm8 = ymm0[0,1,2,3],ymm8[4,5,6,7]
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm0 = <u,u,u,u,1,5,9,13,u,u,u,u,u,u,u,u>
 ; AVX1-NEXT:    vpshufb %xmm0, %xmm11, %xmm4
 ; AVX1-NEXT:    vpshufb %xmm0, %xmm3, %xmm5
@@ -709,7 +709,7 @@ define <32 x i1> @interleaved_load_vf32_i8_stride4(<128 x i8>* %ptr) {
 ; AVX1-NEXT:    vpshufb %xmm5, %xmm10, %xmm5
 ; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm4 = xmm5[0],xmm4[0],xmm5[1],xmm4[1]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm4[0,1,2,3],xmm0[4,5,6,7]
-; AVX1-NEXT:    vblendpd {{.*#+}} ymm9 = ymm0[0,1],ymm1[2,3]
+; AVX1-NEXT:    vblendps {{.*#+}} ymm9 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm0 = <u,u,u,u,2,6,10,14,u,u,u,u,u,u,u,u>
 ; AVX1-NEXT:    vpshufb %xmm0, %xmm11, %xmm1
 ; AVX1-NEXT:    vpshufb %xmm0, %xmm3, %xmm4
@@ -727,7 +727,7 @@ define <32 x i1> @interleaved_load_vf32_i8_stride4(<128 x i8>* %ptr) {
 ; AVX1-NEXT:    vpshufb %xmm4, %xmm10, %xmm4
 ; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm4[0,1,2,3],xmm0[4,5,6,7]
-; AVX1-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3]
+; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = <u,u,u,u,3,7,11,15,u,u,u,u,u,u,u,u>
 ; AVX1-NEXT:    vpshufb %xmm1, %xmm11, %xmm4
 ; AVX1-NEXT:    vpshufb %xmm1, %xmm3, %xmm3
@@ -745,7 +745,7 @@ define <32 x i1> @interleaved_load_vf32_i8_stride4(<128 x i8>* %ptr) {
 ; AVX1-NEXT:    vpshufb %xmm4, %xmm10, %xmm4
 ; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm3[0,1,2,3],xmm1[4,5,6,7]
-; AVX1-NEXT:    vblendpd {{.*#+}} ymm1 = ymm1[0,1],ymm2[2,3]
+; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
 ; AVX1-NEXT:    vpcmpeqb %xmm9, %xmm8, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm9, %xmm3
 ; AVX1-NEXT:    vextractf128 $1, %ymm8, %xmm4

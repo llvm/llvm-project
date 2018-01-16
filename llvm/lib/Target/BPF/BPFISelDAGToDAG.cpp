@@ -519,6 +519,37 @@ void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
   if (!MaskN)
     return;
 
+  // The Reg operand should be a virtual register, which is defined
+  // outside the current basic block. DAG combiner has done a pretty
+  // good job in removing truncating inside a single basic block except
+  // when the Reg operand comes from bpf_load_[byte | half | word] for
+  // which the generic optimizer doesn't understand their results are
+  // zero extended.
+  SDValue BaseV = Node->getOperand(0);
+  if (BaseV.getOpcode() == ISD::INTRINSIC_W_CHAIN) {
+    unsigned IntNo = cast<ConstantSDNode>(BaseV->getOperand(1))->getZExtValue();
+    uint64_t MaskV = MaskN->getZExtValue();
+
+    if (!((IntNo == Intrinsic::bpf_load_byte && MaskV == 0xFF) ||
+          (IntNo == Intrinsic::bpf_load_half && MaskV == 0xFFFF) ||
+          (IntNo == Intrinsic::bpf_load_word && MaskV == 0xFFFFFFFF)))
+      return;
+
+    DEBUG(dbgs() << "Remove the redundant AND operation in: "; Node->dump();
+          dbgs() << '\n');
+
+    I--;
+    CurDAG->ReplaceAllUsesWith(SDValue(Node, 0), BaseV);
+    I++;
+    CurDAG->DeleteNode(Node);
+
+    return;
+  }
+
+  // Multiple basic blocks case.
+  if (BaseV.getOpcode() != ISD::CopyFromReg)
+    return;
+
   unsigned match_load_op = 0;
   switch (MaskN->getZExtValue()) {
   default:
@@ -533,13 +564,6 @@ void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
     match_load_op = BPF::LDB;
     break;
   }
-
-  // The Reg operand should be a virtual register, which is defined
-  // outside the current basic block. DAG combiner has done a pretty
-  // good job in removing truncating inside a single basic block.
-  SDValue BaseV = Node->getOperand(0);
-  if (BaseV.getOpcode() != ISD::CopyFromReg)
-    return;
 
   const RegisterSDNode *RegN =
       dyn_cast<RegisterSDNode>(BaseV.getNode()->getOperand(1));

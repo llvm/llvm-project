@@ -456,7 +456,7 @@ let isReturn = 1, isTerminator = 1, hasDelaySlot=0, isBarrier = 1,
 }
 
 // ADJCALLSTACKDOWN/UP pseudo insns
-let Defs = [R11], Uses = [R11] in {
+let Defs = [R11], Uses = [R11], isCodeGenOnly = 1 in {
 def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i64imm:$amt1, i64imm:$amt2),
                               "#ADJCALLSTACKDOWN $amt1 $amt2",
                               [(BPFcallseq_start timm:$amt1, timm:$amt2)]>;
@@ -465,7 +465,7 @@ def ADJCALLSTACKUP   : Pseudo<(outs), (ins i64imm:$amt1, i64imm:$amt2),
                               [(BPFcallseq_end timm:$amt1, timm:$amt2)]>;
 }
 
-let usesCustomInserter = 1 in {
+let usesCustomInserter = 1, isCodeGenOnly = 1 in {
   def Select : Pseudo<(outs GPR:$dst),
                       (ins GPR:$lhs, GPR:$rhs, i64imm:$imm, GPR:$src, GPR:$src2),
                       "# Select PSEUDO $dst = $lhs $imm $rhs ? $src : $src2",

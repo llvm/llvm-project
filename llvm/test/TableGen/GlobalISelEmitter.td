@@ -45,6 +45,16 @@ def gi_complex_rr :
     GIComplexOperandMatcher<s32, "selectComplexPatternRR">,
     GIComplexPatternEquiv<complex_rr>;
 
+def cimm8_xform : SDNodeXForm<imm, [{
+    uint64_t Val = N->getZExtValue() << 1;
+    return CurDAG->getTargetConstant(Val, SDLoc(N), MVT::i64);
+  }]>;
+
+def cimm8 : Operand<i32>, ImmLeaf<i32, [{return isInt<8>(Imm);}], cimm8_xform>;
+
+def gi_cimm8 : GICustomOperandRenderer<"renderImm8">,
+                GISDNodeXFormEquiv<cimm8_xform>;
+
 def m1 : OperandWithDefaultOps <i32, (ops (i32 -1))>;
 def Z : OperandWithDefaultOps <i32, (ops R0)>;
 def m1Z : OperandWithDefaultOps <i32, (ops (i32 -1), R0)>;
@@ -61,8 +71,10 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-LABEL: #ifdef GET_GLOBALISEL_TEMPORARIES_DECL
 // CHECK-NEXT:    mutable MatcherState State;
 // CHECK-NEXT:    typedef ComplexRendererFns(MyTargetInstructionSelector::*ComplexMatcherMemFn)(MachineOperand &) const;
-// CHECK-NEXT:    const MatcherInfoTy<PredicateBitset, ComplexMatcherMemFn> MatcherInfo;
+// CHECK-NEXT:    typedef void(MyTargetInstructionSelector::*CustomRendererFn)(MachineInstrBuilder &, const MachineInstr&) const;
+// CHECK-NEXT:    const ISelInfoTy<PredicateBitset, ComplexMatcherMemFn, CustomRendererFn> ISelInfo;
 // CHECK-NEXT:    static MyTargetInstructionSelector::ComplexMatcherMemFn ComplexPredicateFns[];
+// CHECK-NEXT:    static MyTargetInstructionSelector::CustomRendererFn CustomRenderers[];
 // CHECK-NEXT:    bool testImmPredicate_I64(unsigned PredicateID, int64_t Imm) const override;
 // CHECK-NEXT:    bool testImmPredicate_APInt(unsigned PredicateID, const APInt &Imm) const override;
 // CHECK-NEXT:    bool testImmPredicate_APFloat(unsigned PredicateID, const APFloat &Imm) const override;
@@ -70,7 +82,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // CHECK-LABEL: #ifdef GET_GLOBALISEL_TEMPORARIES_INIT
 // CHECK-NEXT:    , State(2),
-// CHECK-NEXT:    MatcherInfo({TypeObjects, FeatureBitsets, ComplexPredicateFns})
+// CHECK-NEXT:    ISelInfo({TypeObjects, FeatureBitsets, ComplexPredicateFns, CustomRenderers})
 // CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_INIT
 
 // CHECK-LABEL: enum SubtargetFeatureBits : uint8_t {
@@ -128,19 +140,27 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // CHECK-LABEL: // PatFrag predicates.
 // CHECK-NEXT:  enum {
-// CHECK-NEXT:    GIPFP_I64_Predicate_simm8 = GIPFP_I64_Invalid + 1,
+// CHECK-NEXT:    GIPFP_I64_Predicate_cimm8 = GIPFP_I64_Invalid + 1,
+// CHECK-NEXT:    GIPFP_I64_Predicate_simm8,
 // CHECK-NEXT:  };
-// CHECK-NEXT:  bool MyTargetInstructionSelector::testImmPredicate_I64(unsigned PredicateID, int64_t Imm) const {
-// CHECK-NEXT:    switch (PredicateID) {
-// CHECK-NEXT:    case GIPFP_I64_Predicate_simm8: {
+
+
+// CHECK-NEXT: bool MyTargetInstructionSelector::testImmPredicate_I64(unsigned PredicateID, int64_t Imm) const {
+// CHECK-NEXT:   switch (PredicateID) {
+// CHECK-NEXT:   case GIPFP_I64_Predicate_cimm8: {
+// CHECK-NEXT:     return isInt<8>(Imm);
+// CHECK-NEXT:     llvm_unreachable("ImmediateCode should have returned");
+// CHECK-NEXT:     return false;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   case GIPFP_I64_Predicate_simm8: {
 // CHECK-NEXT:      return isInt<8>(Imm);
-// CHECK-NEXT:      llvm_unreachable("ImmediateCode should have returned");
-// CHECK-NEXT:      return false;
-// CHECK-NEXT:    }
-// CHECK-NEXT:    }
-// CHECK-NEXT:    llvm_unreachable("Unknown predicate");
-// CHECK-NEXT:    return false;
-// CHECK-NEXT:  }
+// CHECK-NEXT:     llvm_unreachable("ImmediateCode should have returned");
+// CHECK-NEXT:     return false;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   }
+// CHECK-NEXT:   llvm_unreachable("Unknown predicate");
+// CHECK-NEXT:   return false;
+// CHECK-NEXT: }
 
 // CHECK-LABEL: // PatFrag predicates.
 // CHECK-NEXT:  enum {
@@ -180,6 +200,17 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    &MyTargetInstructionSelector::selectComplexPattern, // gi_complex
 // CHECK-NEXT:    &MyTargetInstructionSelector::selectComplexPatternRR, // gi_complex_rr
 // CHECK-NEXT:  }
+
+// CHECK-LABEL: // Custom renderers.
+// CHECK-NEXT: enum {
+// CHECK-NEXT:   GICR_Invalid,
+// CHECK-NEXT:   GICR_renderImm8,
+// CHECK-NEXT: };
+// CHECK-NEXT: MyTargetInstructionSelector::CustomRendererFn
+// CHECK-NEXT: MyTargetInstructionSelector::CustomRenderers[] = {
+// CHECK-NEXT:   nullptr, // GICP_Invalid
+// CHECK-NEXT:   &MyTargetInstructionSelector::renderImm8, // gi_cimm8
+// CHECK-NEXT: };
 
 // CHECK: bool MyTargetInstructionSelector::selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const {
 // CHECK-NEXT: MachineFunction &MF = *I.getParent()->getParent();
@@ -892,12 +923,33 @@ def MOVimm9 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, simm9:$i
 // CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
+
+def MOVimm : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, imm:$imm)]>;
+
+
+//===- Test a pattern with a custom renderer. -----------------------------===//
+// CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ [[LABEL:[0-9]+]],
+// CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
+// NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_CONSTANT,
+// CHECK-NEXT:    GIM_CheckI64ImmPredicate, /*MI*/0, /*Predicate*/GIPFP_I64_Predicate_cimm8,
+// CHECK-NEXT:    // MIs[0] dst
+// CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
+// CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
+// CHECK-NEXT:    // MIs[0] Operand 1
+// CHECK-NEXT:    // No operand predicates
+// CHECK-NEXT:    // (imm:{ *:[i32] })<<P:Predicate_cimm8>><<X:cimm8_xform>>:$imm  =>  (MOVcimm8:{ *:[i32] } (cimm8_xform:{ *:[i32] } (imm:{ *:[i32] }):$imm))
+// CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MOVcimm8,
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT:    GIR_CustomRenderer, /*InsnID*/0, /*OldInsnID*/0, /*Renderer*/GICR_renderImm8, // imm
+// CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_Done,
+// CHECK-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
 // Closing the G_CONSTANT group.
 // OPT-NEXT:      GIM_Reject,
 // OPT-NEXT:  GIR_Done,
 // OPT-NEXT:  // Label [[GRP_LABEL_NUM]]: @[[GRP_LABEL]]
-
-def MOVimm : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, imm:$imm)]>;
+def MOVcimm8 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, cimm8:$imm)]>;
 
 //===- Test a simple pattern with a FP immediate and a predicate. ---------===//
 
@@ -1020,6 +1072,6 @@ def BR : I<(outs), (ins unknown:$target),
 
 // CHECK-NEXT:    GIM_Reject,
 // CHECK-NEXT:  };
-// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable0, TII, MRI, TRI, RBI, AvailableFeatures, CoverageInfo)) {
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, ISelInfo, MatchTable0, TII, MRI, TRI, RBI, AvailableFeatures, CoverageInfo)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }

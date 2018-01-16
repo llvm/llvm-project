@@ -17,4 +17,4 @@ define hidden void @f() {
 @llvm.used = appending global [1 x i8*] [ i8* bitcast (void ()* @f to i8*)]
 
 ; Check that f is not internalized.
-; CHECK: define hidden void @f()
+; CHECK: define dso_local hidden void @f()

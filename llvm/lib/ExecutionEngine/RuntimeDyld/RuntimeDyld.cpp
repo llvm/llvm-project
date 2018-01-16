@@ -247,7 +247,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
         // Then check the symbol resolver to see if there's a definition
         // elsewhere in this logical dylib.
         if (auto Sym = Resolver.findSymbolInLogicalDylib(Name)) {
-          if (Sym.getFlags().isStrongDefinition())
+          if (Sym.getFlags().isStrong())
             continue;
         } else if (auto Err = Sym.takeError())
           return std::move(Err);

@@ -40,7 +40,7 @@ define <8 x i32> @test_x86_avx_vinsertf128_si_256_2(<8 x i32> %a0, <4 x i32> %a1
 ; CHECK-LABEL: test_x86_avx_vinsertf128_si_256_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def %xmm1 killed %xmm1 def %ymm1
-; CHECK-NEXT:    vblendpd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3]
+; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = call <8 x i32> @llvm.x86.avx.vinsertf128.si.256(<8 x i32> %a0, <4 x i32> %a1, i8 2)
   ret <8 x i32> %res
@@ -133,7 +133,7 @@ declare <8 x float> @llvm.x86.avx.vbroadcastf128.ps.256(i8*) nounwind readonly
 define <4 x double> @test_x86_avx_blend_pd_256(<4 x double> %a0, <4 x double> %a1) {
 ; CHECK-LABEL: test_x86_avx_blend_pd_256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vblendpd {{.*#+}} ymm0 = ymm1[0,1,2],ymm0[3]
+; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = call <4 x double> @llvm.x86.avx.blend.pd.256(<4 x double> %a0, <4 x double> %a1, i32 7) ; <<4 x double>> [#uses=1]
   ret <4 x double> %res
@@ -188,7 +188,7 @@ declare <2 x i64> @llvm.x86.sse2.psrl.dq(<2 x i64>, i32) nounwind readnone
 define <2 x double> @test_x86_sse41_blendpd(<2 x double> %a0, <2 x double> %a1) {
 ; CHECK-LABEL: test_x86_sse41_blendpd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %res = call <2 x double> @llvm.x86.sse41.blendpd(<2 x double> %a0, <2 x double> %a1, i8 2) ; <<2 x double>> [#uses=1]
   ret <2 x double> %res
