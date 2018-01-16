@@ -321,7 +321,7 @@ template <class ForwardIterator, class Predicate>
     stable_partition(ForwardIterator first, ForwardIterator last, Predicate pred);
 
 template<class ForwardIterator, class Predicate>
-    ForwardIterator  // constexpr in C++20
+    constexpr ForwardIterator  // constexpr in C++20
     partition_point(ForwardIterator first, ForwardIterator last, Predicate pred);
 
 template <class ForwardIterator>
@@ -383,35 +383,35 @@ template <class RandomAccessIterator, class Compare>
     nth_element(RandomAccessIterator first, RandomAccessIterator nth, RandomAccessIterator last, Compare comp);
 
 template <class ForwardIterator, class T>
-    ForwardIterator
+    constexpr ForwardIterator                         // constexpr in C++20
     lower_bound(ForwardIterator first, ForwardIterator last, const T& value);
 
 template <class ForwardIterator, class T, class Compare>
-    ForwardIterator
+    constexpr ForwardIterator                         // constexpr in C++20
     lower_bound(ForwardIterator first, ForwardIterator last, const T& value, Compare comp);
 
 template <class ForwardIterator, class T>
-    ForwardIterator
+    constexpr ForwardIterator                         // constexpr in C++20
     upper_bound(ForwardIterator first, ForwardIterator last, const T& value);
 
 template <class ForwardIterator, class T, class Compare>
-    ForwardIterator
+    constexpr ForwardIterator                         // constexpr in C++20
     upper_bound(ForwardIterator first, ForwardIterator last, const T& value, Compare comp);
 
 template <class ForwardIterator, class T>
-    pair<ForwardIterator, ForwardIterator>
+    constexpr pair<ForwardIterator, ForwardIterator>  // constexpr in C++20
     equal_range(ForwardIterator first, ForwardIterator last, const T& value);
 
 template <class ForwardIterator, class T, class Compare>
-    pair<ForwardIterator, ForwardIterator>
+    constexpr pair<ForwardIterator, ForwardIterator>  // constexpr in C++20
     equal_range(ForwardIterator first, ForwardIterator last, const T& value, Compare comp);
 
 template <class ForwardIterator, class T>
-    bool
+    constexpr bool                                    // constexpr in C++20
     binary_search(ForwardIterator first, ForwardIterator last, const T& value);
 
 template <class ForwardIterator, class T, class Compare>
-    bool
+    bool  // constexpr in C++20
     binary_search(ForwardIterator first, ForwardIterator last, const T& value, Compare comp);
 
 template <class InputIterator1, class InputIterator2, class OutputIterator>
@@ -4195,7 +4195,7 @@ _LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS unsigned __sort5<__less<long double>&, 
 // lower_bound
 
 template <class _Compare, class _ForwardIterator, class _Tp>
-_ForwardIterator
+_LIBCPP_CONSTEXPR_AFTER_CXX17 _ForwardIterator
 __lower_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value_, _Compare __comp)
 {
     typedef typename iterator_traits<_ForwardIterator>::difference_type difference_type;
@@ -4217,7 +4217,7 @@ __lower_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __va
 }
 
 template <class _ForwardIterator, class _Tp, class _Compare>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _ForwardIterator
 lower_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value_, _Compare __comp)
 {
@@ -4232,7 +4232,7 @@ lower_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __valu
 }
 
 template <class _ForwardIterator, class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _ForwardIterator
 lower_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value_)
 {
@@ -4243,7 +4243,7 @@ lower_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __valu
 // upper_bound
 
 template <class _Compare, class _ForwardIterator, class _Tp>
-_ForwardIterator
+_LIBCPP_CONSTEXPR_AFTER_CXX17 _ForwardIterator
 __upper_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value_, _Compare __comp)
 {
     typedef typename iterator_traits<_ForwardIterator>::difference_type difference_type;
@@ -4265,7 +4265,7 @@ __upper_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __va
 }
 
 template <class _ForwardIterator, class _Tp, class _Compare>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _ForwardIterator
 upper_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value_, _Compare __comp)
 {
@@ -4280,7 +4280,7 @@ upper_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __valu
 }
 
 template <class _ForwardIterator, class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _ForwardIterator
 upper_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value_)
 {
@@ -4291,7 +4291,7 @@ upper_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __valu
 // equal_range
 
 template <class _Compare, class _ForwardIterator, class _Tp>
-pair<_ForwardIterator, _ForwardIterator>
+_LIBCPP_CONSTEXPR_AFTER_CXX17 pair<_ForwardIterator, _ForwardIterator>
 __equal_range(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value_, _Compare __comp)
 {
     typedef typename iterator_traits<_ForwardIterator>::difference_type difference_type;
@@ -4325,7 +4325,7 @@ __equal_range(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __va
 }
 
 template <class _ForwardIterator, class _Tp, class _Compare>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 pair<_ForwardIterator, _ForwardIterator>
 equal_range(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value_, _Compare __comp)
 {
@@ -4340,7 +4340,7 @@ equal_range(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __valu
 }
 
 template <class _ForwardIterator, class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 pair<_ForwardIterator, _ForwardIterator>
 equal_range(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value_)
 {
@@ -4351,7 +4351,7 @@ equal_range(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __valu
 // binary_search
 
 template <class _Compare, class _ForwardIterator, class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 bool
 __binary_search(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value_, _Compare __comp)
 {
@@ -4360,7 +4360,7 @@ __binary_search(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __
 }
 
 template <class _ForwardIterator, class _Tp, class _Compare>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 bool
 binary_search(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value_, _Compare __comp)
 {
@@ -4375,7 +4375,7 @@ binary_search(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __va
 }
 
 template <class _ForwardIterator, class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 bool
 binary_search(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value_)
 {

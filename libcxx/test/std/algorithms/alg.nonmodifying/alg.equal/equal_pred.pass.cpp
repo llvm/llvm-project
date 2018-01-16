@@ -15,7 +15,7 @@
 //   constexpr bool     // constexpr after c++17
 //   equal(Iter1 first1, Iter1 last1, Iter2 first2, Pred pred);
 //
-//	Introduced in C++14:
+// Introduced in C++14:
 // template<InputIterator Iter1, InputIterator Iter2,
 //          Predicate<auto, Iter1::value_type, Iter2::value_type> Pred>
 //   requires CopyConstructible<Pred>
