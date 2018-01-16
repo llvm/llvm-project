@@ -373,7 +373,9 @@ int test_mixed_sign_mull_overflow_unsigned(int x, unsigned y) {
 // CHECK-NEXT:  [[NotNull:%.*]] = icmp ne i32 [[UnsignedResult]], 0
 // CHECK-NEXT:  [[Underflow:%.*]] = and i1 [[IsNeg]], [[NotNull]]
 // CHECK-NEXT:  [[OFlow:%.*]] = or i1 [[UnsignedOFlow]], [[Underflow]]
-// CHECK-NEXT:  store i32 [[UnsignedResult]], i32* %{{.*}}, align 4
+// CHECK-NEXT:  [[NegatedResult:%.*]] = sub i32 0, [[UnsignedResult]]
+// CHECK-NEXT:  [[Result:%.*]] = select i1 [[IsNeg]], i32 [[NegatedResult]], i32 [[UnsignedResult]]
+// CHECK-NEXT:  store i32 [[Result]], i32* %{{.*}}, align 4
 // CHECK:       br i1 [[OFlow]]
 
   unsigned result;
@@ -432,7 +434,9 @@ long long test_mixed_sign_mulll_overflow_trunc_unsigned(long long x, unsigned lo
 // CHECK-NEXT:  [[OVERFLOW_PRE_TRUNC:%.*]] = or i1 {{.*}}, [[UNDERFLOW]]
 // CHECK-NEXT:  [[TRUNC_OVERFLOW:%.*]] = icmp ugt i64 [[UNSIGNED_RESULT]], 4294967295
 // CHECK-NEXT:  [[OVERFLOW:%.*]] = or i1 [[OVERFLOW_PRE_TRUNC]], [[TRUNC_OVERFLOW]]
-// CHECK-NEXT:  trunc i64 [[UNSIGNED_RESULT]] to i32
+// CHECK-NEXT:  [[NEGATED:%.*]] = sub i64 0, [[UNSIGNED_RESULT]]
+// CHECK-NEXT:  [[RESULT:%.*]] = select i1 {{.*}}, i64 [[NEGATED]], i64 [[UNSIGNED_RESULT]]
+// CHECK-NEXT:  trunc i64 [[RESULT]] to i32
 // CHECK-NEXT:  store
   unsigned result;
   if (__builtin_mul_overflow(y, x, &result))
