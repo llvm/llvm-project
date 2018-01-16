@@ -87,41 +87,41 @@ template <class InputIterator, class Predicate>
     count_if(InputIterator first, InputIterator last, Predicate pred);
 
 template <class InputIterator1, class InputIterator2>
-    pair<InputIterator1, InputIterator2>
+    constexpr pair<InputIterator1, InputIterator2>   // constexpr in C++20
     mismatch(InputIterator1 first1, InputIterator1 last1, InputIterator2 first2);
 
 template <class InputIterator1, class InputIterator2>
-    pair<InputIterator1, InputIterator2>
+    constexpr pair<InputIterator1, InputIterator2>   // constexpr in C++20
     mismatch(InputIterator1 first1, InputIterator1 last1,
              InputIterator2 first2, InputIterator2 last2); // **C++14**
 
 template <class InputIterator1, class InputIterator2, class BinaryPredicate>
-    pair<InputIterator1, InputIterator2>
+    constexpr pair<InputIterator1, InputIterator2>   // constexpr in C++20
     mismatch(InputIterator1 first1, InputIterator1 last1,
              InputIterator2 first2, BinaryPredicate pred);
 
 template <class InputIterator1, class InputIterator2, class BinaryPredicate>
-    pair<InputIterator1, InputIterator2>
+    constexpr pair<InputIterator1, InputIterator2>   // constexpr in C++20
     mismatch(InputIterator1 first1, InputIterator1 last1,
              InputIterator2 first2, InputIterator2 last2,
              BinaryPredicate pred); // **C++14**
 
 template <class InputIterator1, class InputIterator2>
-    bool
+    constexpr bool      // constexpr in C++20
     equal(InputIterator1 first1, InputIterator1 last1, InputIterator2 first2);
 
 template <class InputIterator1, class InputIterator2>
-    bool
+    constexpr bool      // constexpr in C++20
     equal(InputIterator1 first1, InputIterator1 last1,
           InputIterator2 first2, InputIterator2 last2); // **C++14**
 
 template <class InputIterator1, class InputIterator2, class BinaryPredicate>
-    bool
+    constexpr bool      // constexpr in C++20
     equal(InputIterator1 first1, InputIterator1 last1,
           InputIterator2 first2, BinaryPredicate pred);
 
 template <class InputIterator1, class InputIterator2, class BinaryPredicate>
-    bool
+    constexpr bool      // constexpr in C++20
     equal(InputIterator1 first1, InputIterator1 last1,
           InputIterator2 first2, InputIterator2 last2,
           BinaryPredicate pred); // **C++14**
@@ -1268,7 +1268,7 @@ count_if(_InputIterator __first, _InputIterator __last, _Predicate __pred)
 // mismatch
 
 template <class _InputIterator1, class _InputIterator2, class _BinaryPredicate>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 pair<_InputIterator1, _InputIterator2>
 mismatch(_InputIterator1 __first1, _InputIterator1 __last1,
          _InputIterator2 __first2, _BinaryPredicate __pred)
@@ -1280,7 +1280,7 @@ mismatch(_InputIterator1 __first1, _InputIterator1 __last1,
 }
 
 template <class _InputIterator1, class _InputIterator2>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 pair<_InputIterator1, _InputIterator2>
 mismatch(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2)
 {
@@ -1291,7 +1291,7 @@ mismatch(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __fi
 
 #if _LIBCPP_STD_VER > 11
 template <class _InputIterator1, class _InputIterator2, class _BinaryPredicate>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 pair<_InputIterator1, _InputIterator2>
 mismatch(_InputIterator1 __first1, _InputIterator1 __last1,
          _InputIterator2 __first2, _InputIterator2 __last2,
@@ -1304,7 +1304,7 @@ mismatch(_InputIterator1 __first1, _InputIterator1 __last1,
 }
 
 template <class _InputIterator1, class _InputIterator2>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 pair<_InputIterator1, _InputIterator2>
 mismatch(_InputIterator1 __first1, _InputIterator1 __last1,
          _InputIterator2 __first2, _InputIterator2 __last2)
@@ -1318,7 +1318,7 @@ mismatch(_InputIterator1 __first1, _InputIterator1 __last1,
 // equal
 
 template <class _InputIterator1, class _InputIterator2, class _BinaryPredicate>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 bool
 equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _BinaryPredicate __pred)
 {
@@ -1329,7 +1329,7 @@ equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first
 }
 
 template <class _InputIterator1, class _InputIterator2>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 bool
 equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2)
 {
@@ -1340,7 +1340,7 @@ equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first
 
 #if _LIBCPP_STD_VER > 11
 template <class _BinaryPredicate, class _InputIterator1, class _InputIterator2>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 bool
 __equal(_InputIterator1 __first1, _InputIterator1 __last1,
         _InputIterator2 __first2, _InputIterator2 __last2, _BinaryPredicate __pred,
@@ -1353,7 +1353,7 @@ __equal(_InputIterator1 __first1, _InputIterator1 __last1,
 }
 
 template <class _BinaryPredicate, class _RandomAccessIterator1, class _RandomAccessIterator2>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 bool
 __equal(_RandomAccessIterator1 __first1, _RandomAccessIterator1 __last1,
         _RandomAccessIterator2 __first2, _RandomAccessIterator2 __last2, _BinaryPredicate __pred,
@@ -1367,7 +1367,7 @@ __equal(_RandomAccessIterator1 __first1, _RandomAccessIterator1 __last1,
 }
 
 template <class _InputIterator1, class _InputIterator2, class _BinaryPredicate>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 bool
 equal(_InputIterator1 __first1, _InputIterator1 __last1,
       _InputIterator2 __first2, _InputIterator2 __last2, _BinaryPredicate __pred )
@@ -1379,7 +1379,7 @@ equal(_InputIterator1 __first1, _InputIterator1 __last1,
 }
 
 template <class _InputIterator1, class _InputIterator2>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 bool
 equal(_InputIterator1 __first1, _InputIterator1 __last1,
       _InputIterator2 __first2, _InputIterator2 __last2)
