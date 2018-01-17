@@ -75,7 +75,7 @@ static constexpr int PerfectBonus = 3; // Perfect per-pattern-char score.
 
 FuzzyMatcher::FuzzyMatcher(StringRef Pattern)
     : PatN(std::min<int>(MaxPat, Pattern.size())), CaseSensitive(false),
-      ScoreScale(float{1} / (PerfectBonus * PatN)), WordN(0) {
+      ScoreScale(PatN ? float{1} / (PerfectBonus * PatN) : 0), WordN(0) {
   memcpy(Pat, Pattern.data(), PatN);
   for (int I = 0; I < PatN; ++I) {
     LowPat[I] = lower(Pat[I]);
