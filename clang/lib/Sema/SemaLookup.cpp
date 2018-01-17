@@ -3507,6 +3507,8 @@ static void LookupVisibleDecls(DeclContext *Ctx, LookupResult &Result,
   if (Visited.visitedContext(Ctx->getPrimaryContext()))
     return;
 
+  Consumer.EnteredContext(Ctx);
+
   // Outside C++, lookup results for the TU live on identifiers.
   if (isa<TranslationUnitDecl>(Ctx) &&
       !Result.getSema().getLangOpts().CPlusPlus) {

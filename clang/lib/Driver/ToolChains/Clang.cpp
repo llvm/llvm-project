@@ -1761,6 +1761,9 @@ void Clang::AddX86TargetArgs(const ArgList &Args,
       getToolChain().getDriver().Diag(diag::err_drv_unsupported_option_argument)
           << A->getOption().getName() << Value;
     }
+  } else if (getToolChain().getDriver().IsCLMode()) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-x86-asm-syntax=intel");
   }
 
   // Set flags to support MCU ABI.

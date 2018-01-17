@@ -420,7 +420,7 @@ void Writer::createLinkingSection() {
   if (!InitFunctions.empty()) {
     SubSection SubSection(WASM_INIT_FUNCS);
     writeUleb128(SubSection.getStream(), InitFunctions.size(),
-                 "num init functionsw");
+                 "num init functions");
     for (const WasmInitFunc &F : InitFunctions) {
       writeUleb128(SubSection.getStream(), F.Priority, "priority");
       writeUleb128(SubSection.getStream(), F.FunctionIndex, "function index");
