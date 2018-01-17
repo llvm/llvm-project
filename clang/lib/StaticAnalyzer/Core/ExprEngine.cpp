@@ -2209,9 +2209,17 @@ void ExprEngine::VisitArraySubscriptExpr(const ArraySubscriptExpr *A,
     ProgramStateRef state = Node->getState();
 
     if (IsGLValueLike) {
-      SVal V = state->getLValue(A->getType(),
-          state->getSVal(Idx, LCtx),
-          state->getSVal(Base, LCtx));
+      QualType T = A->getType();
+
+      // One of the forbidden LValue types! We still need to have sensible
+      // symbolic locations to represent this stuff. Note that arithmetic on
+      // void pointers is a GCC extension.
+      if (T->isVoidType())
+        T = getContext().CharTy;
+
+      SVal V = state->getLValue(T,
+                                state->getSVal(Idx, LCtx),
+                                state->getSVal(Base, LCtx));
       Bldr.generateNode(A, Node, state->BindExpr(A, LCtx, V), nullptr,
           ProgramPoint::PostLValueKind);
     } else if (IsVectorType) {
