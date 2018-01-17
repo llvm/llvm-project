@@ -260,7 +260,10 @@ bool InferAddressSpaces::rewriteIntrinsicOperands(IntrinsicInst *II,
 
   switch (II->getIntrinsicID()) {
   case Intrinsic::amdgcn_atomic_inc:
-  case Intrinsic::amdgcn_atomic_dec:{
+  case Intrinsic::amdgcn_atomic_dec:
+  case Intrinsic::amdgcn_atomic_fadd:
+  case Intrinsic::amdgcn_atomic_fmin:
+  case Intrinsic::amdgcn_atomic_fmax: {
     const ConstantInt *IsVolatile = dyn_cast<ConstantInt>(II->getArgOperand(4));
     if (!IsVolatile || !IsVolatile->isZero())
       return false;
@@ -289,6 +292,9 @@ void InferAddressSpaces::collectRewritableIntrinsicOperands(
   case Intrinsic::objectsize:
   case Intrinsic::amdgcn_atomic_inc:
   case Intrinsic::amdgcn_atomic_dec:
+  case Intrinsic::amdgcn_atomic_fadd:
+  case Intrinsic::amdgcn_atomic_fmin:
+  case Intrinsic::amdgcn_atomic_fmax:
     appendsFlatAddressExpressionToPostorderStack(II->getArgOperand(0),
                                                  PostorderStack, Visited);
     break;

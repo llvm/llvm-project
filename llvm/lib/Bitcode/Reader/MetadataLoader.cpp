@@ -165,7 +165,7 @@ public:
   /// necessary.
   Metadata *getMetadataFwdRef(unsigned Idx);
 
-  /// Return the the given metadata only if it is fully resolved.
+  /// Return the given metadata only if it is fully resolved.
   ///
   /// Gives the same result as \a lookup(), unless \a MDNode::isResolved()
   /// would give \c false.

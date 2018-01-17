@@ -356,7 +356,6 @@ ClangdServer::formatOnType(StringRef Code, PathRef File, Position Pos) {
 Expected<std::vector<tooling::Replacement>>
 ClangdServer::rename(const Context &Ctx, PathRef File, Position Pos,
                      llvm::StringRef NewName) {
-  std::string Code = getDocument(File);
   std::shared_ptr<CppFile> Resources = Units.getFile(File);
   RefactoringResultCollector ResultCollector;
   Resources->getAST().get()->runUnderLock([&](ParsedAST *AST) {
@@ -402,15 +401,17 @@ ClangdServer::rename(const Context &Ctx, PathRef File, Position Pos,
   return Replacements;
 }
 
-std::string ClangdServer::getDocument(PathRef File) {
-  auto draft = DraftMgr.getDraft(File);
-  assert(draft.Draft && "File is not tracked, cannot get contents");
-  return *draft.Draft;
+llvm::Optional<std::string> ClangdServer::getDocument(PathRef File) {
+  auto Latest = DraftMgr.getDraft(File);
+  if (!Latest.Draft)
+    return llvm::None;
+  return std::move(*Latest.Draft);
 }
 
 std::string ClangdServer::dumpAST(PathRef File) {
   std::shared_ptr<CppFile> Resources = Units.getFile(File);
-  assert(Resources && "dumpAST is called for non-added document");
+  if (!Resources)
+    return "<non-added file>";
 
   std::string Result;
   Resources->getAST().get()->runUnderLock([&Result](ParsedAST *AST) {

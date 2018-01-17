@@ -976,8 +976,7 @@ void AsmPrinter::emitStackSizeSection(const MachineFunction &MF) {
 
   const MCSymbol *FunctionSymbol = getSymbol(&MF.getFunction());
   uint64_t StackSize = FrameInfo.getStackSize();
-  OutStreamer->EmitValue(MCSymbolRefExpr::create(FunctionSymbol, OutContext),
-                         /* size = */ 8);
+  OutStreamer->EmitSymbolValue(FunctionSymbol, TM.getPointerSize());
   OutStreamer->EmitULEB128IntValue(StackSize);
 
   OutStreamer->PopSection();

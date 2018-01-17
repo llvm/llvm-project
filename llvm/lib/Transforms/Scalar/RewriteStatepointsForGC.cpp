@@ -2461,22 +2461,8 @@ static void stripNonValidDataFromBody(Function &F) {
         continue;
       }
 
-    if (const MDNode *MD = I.getMetadata(LLVMContext::MD_tbaa)) {
-      assert(MD->getNumOperands() < 5 && "unrecognized metadata shape!");
-      bool IsImmutableTBAA =
-          MD->getNumOperands() == 4 &&
-          mdconst::extract<ConstantInt>(MD->getOperand(3))->getValue() == 1;
-
-      if (!IsImmutableTBAA)
-        continue; // no work to do, MD_tbaa is already marked mutable
-
-      MDNode *Base = cast<MDNode>(MD->getOperand(0));
-      MDNode *Access = cast<MDNode>(MD->getOperand(1));
-      uint64_t Offset =
-          mdconst::extract<ConstantInt>(MD->getOperand(2))->getZExtValue();
-
-      MDNode *MutableTBAA =
-          Builder.createTBAAStructTagNode(Base, Access, Offset);
+    if (MDNode *Tag = I.getMetadata(LLVMContext::MD_tbaa)) {
+      MDNode *MutableTBAA = Builder.createMutableTBAAAccessTag(Tag);
       I.setMetadata(LLVMContext::MD_tbaa, MutableTBAA);
     }
 

@@ -14,7 +14,7 @@
 // RUN: %sancov print merged-cov 2>&1 | FileCheck %s --check-prefix=CHECK-SANCOV2
 // RUN: %env_asan_opts=coverage=1:verbosity=1 not %run %t foo bar 4    2>&1 | FileCheck %s --check-prefix=CHECK-report
 // RUN: %env_asan_opts=coverage=1:verbosity=1 not %run %t foo bar 4 5  2>&1 | FileCheck %s --check-prefix=CHECK-segv
-// RUN: rm -r %T/coverage
+// RUN: cd .. && rm -r %T/coverage
 //
 // https://code.google.com/p/address-sanitizer/issues/detail?id=263
 // XFAIL: android

@@ -10408,16 +10408,21 @@ TEST_F(FormatTest, ParsesConfiguration) {
 
   Style.RawStringFormats.clear();
   std::vector<FormatStyle::RawStringFormat> ExpectedRawStringFormats = {
-      {"pb", FormatStyle::LK_TextProto, "llvm"},
-      {"cpp", FormatStyle::LK_Cpp, "google"}};
+      {FormatStyle::LK_TextProto, {"pb", "proto"}, "llvm"},
+      {FormatStyle::LK_Cpp, {"cc", "cpp"}, "google"},
+  };
 
   CHECK_PARSE("RawStringFormats:\n"
-              "  - Delimiter: 'pb'\n"
-              "    Language: TextProto\n"
+              "  - Language: TextProto\n"
+              "    Delimiters:\n"
+              "      - 'pb'\n"
+              "      - 'proto'\n"
               "    BasedOnStyle: llvm\n"
-              "  - Delimiter: 'cpp'\n"
-              "    Language: Cpp\n"
-              "    BasedOnStyle: google",
+              "  - Language: Cpp\n"
+              "    Delimiters:\n"
+              "      - 'cc'\n"
+              "      - 'cpp'\n"
+              "    BasedOnStyle: google\n",
               RawStringFormats, ExpectedRawStringFormats);
 }
 
