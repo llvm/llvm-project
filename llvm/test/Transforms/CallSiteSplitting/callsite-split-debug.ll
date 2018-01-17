@@ -48,10 +48,10 @@ attributes #0 = { nounwind readnone speculatable }
 ; CallSiteBB.
 
 ; CHECK-LABEL: @foo
-; CHECK-LABEL: CallsiteBB.predBB1.split:
+; CHECK-LABEL: CallsiteBB.predBB.split:
 ; CHECK: [[TMP1:%[0-9]+]] = call i16 @bar(i16 1, i16 5)
-; CHECK-LABEL: CallsiteBB.predBB2.split:
+; CHECK-LABEL: CallsiteBB.predBB.split1:
 ; CHECK: [[TMP2:%[0-9]+]] = call i16 @bar(i16 0, i16 5)
 ; CHECK-LABEL: CallsiteBB
-; CHECK: %phi.call = phi i16 [ [[TMP1]], %CallsiteBB.predBB1.split ], [ [[TMP2]], %CallsiteBB.predBB2.split
+; CHECK: %phi.call = phi i16 [ [[TMP1]], %CallsiteBB.predBB.split ], [ [[TMP2]], %CallsiteBB.predBB.split1
 

@@ -868,10 +868,10 @@ AArch64::ArchKind AArch64::parseArch(StringRef Arch) {
   return ArchKind::INVALID;
 }
 
-unsigned llvm::AArch64::parseArchExt(StringRef ArchExt) {
+AArch64::ArchExtKind llvm::AArch64::parseArchExt(StringRef ArchExt) {
   for (const auto A : AArch64ARCHExtNames) {
     if (ArchExt == A.getName())
-      return A.ID;
+      return static_cast<ArchExtKind>(A.ID);
   }
   return AArch64::AEK_INVALID;
 }

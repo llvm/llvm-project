@@ -27,6 +27,9 @@ entry:
 ; CHECK-NEXT:       - Name:            ret64
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           2
+; CHECK-NEXT:       - Name:            __heap_base
+; CHECK-NEXT:         Kind:            GLOBAL
+; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:   - Type:
 
 

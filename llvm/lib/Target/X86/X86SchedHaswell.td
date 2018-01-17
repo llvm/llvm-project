@@ -4249,7 +4249,6 @@ def HWWriteResGroup177 : SchedWriteRes<[HWPort0,HWPort01,HWPort23,HWPort05,HWPor
   let ResourceCycles = [2,2,8,1,10,2,39];
 }
 def: InstRW<[HWWriteResGroup177], (instregex "FLDENVm")>;
-def: InstRW<[HWWriteResGroup177], (instregex "FLDENVm")>;
 
 def HWWriteResGroup178 : SchedWriteRes<[HWPort0,HWPort6,HWPort23,HWPort05,HWPort06,HWPort15,HWPort0156]> {
   let Latency = 64;
@@ -4291,7 +4290,6 @@ def HWWriteResGroup183 : SchedWriteRes<[HWPort0,HWPort1,HWPort4,HWPort5,HWPort6,
   let NumMicroOps = 100;
   let ResourceCycles = [9,9,11,8,1,11,21,30];
 }
-def: InstRW<[HWWriteResGroup183], (instregex "FSTENVm")>;
 def: InstRW<[HWWriteResGroup183], (instregex "FSTENVm")>;
 
 def HWWriteResGroup184 : SchedWriteRes<[HWPort0, HWPort5, HWPort15, HWPort015, HWPort06, HWPort23]> {

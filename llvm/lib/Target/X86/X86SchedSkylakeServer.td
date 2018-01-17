@@ -6432,7 +6432,6 @@ def SKXWriteResGroup258 : SchedWriteRes<[SKXPort0,SKXPort23,SKXPort05,SKXPort06,
   let ResourceCycles = [2,8,5,10,39];
 }
 def: InstRW<[SKXWriteResGroup258], (instregex "FLDENVm")>;
-def: InstRW<[SKXWriteResGroup258], (instregex "FLDENVm")>;
 
 def SKXWriteResGroup259 : SchedWriteRes<[SKXPort0,SKXPort6,SKXPort23,SKXPort05,SKXPort06,SKXPort15,SKXPort0156]> {
   let Latency = 63;
@@ -6488,7 +6487,6 @@ def SKXWriteResGroup266 : SchedWriteRes<[SKXPort0,SKXPort1,SKXPort4,SKXPort5,SKX
   let NumMicroOps = 100;
   let ResourceCycles = [9,1,11,16,1,11,21,30];
 }
-def: InstRW<[SKXWriteResGroup266], (instregex "FSTENVm")>;
 def: InstRW<[SKXWriteResGroup266], (instregex "FSTENVm")>;
 
 def SKXWriteResGroup267 : SchedWriteRes<[SKXPort6,SKXPort0156]> {
