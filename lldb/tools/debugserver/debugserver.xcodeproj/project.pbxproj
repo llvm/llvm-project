@@ -720,7 +720,6 @@
 				LLDB_USE_OS_LOG = 0;
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "";
 				STRIP_INSTALLED_PRODUCT = NO;
@@ -764,7 +763,6 @@
 				LLDB_USE_OS_LOG = 0;
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "";
 				STRIPFLAGS = "-x";
@@ -806,7 +804,6 @@
 				LLDB_USE_OS_LOG = 1;
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				OTHER_CFLAGS = "";
 				STRIPFLAGS = "-x";
 				STRIP_STYLE = debugging;
@@ -858,7 +855,6 @@
 				"LLDB_ENERGY_LFLAGS[sdk=macosx*]" = "-weak-lpmenergy -weak-lpmsample";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				OTHER_CFLAGS = (
 					"-Wparentheses",
 					"$(LLDB_ENERGY_CFLAGS)",
@@ -962,7 +958,6 @@
 				"LLDB_ENERGY_LFLAGS[sdk=macosx.internal]" = "-weak-lpmenergy -weak-lpmsample";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				OTHER_CFLAGS = (
 					"-Wparentheses",
 					"$(LLDB_ENERGY_CFLAGS)",
@@ -1065,7 +1060,6 @@
 				"LLDB_ENERGY_LFLAGS[sdk=macosx.internal]" = "-weak-lpmenergy -weak-lpmsample";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				OTHER_CFLAGS = (
 					"-Wparentheses",
 					"$(LLDB_ENERGY_CFLAGS)",
@@ -1177,7 +1171,6 @@
 				"LLDB_ENERGY_LFLAGS[sdk=macosx.internal]" = "-weak-lpmenergy -weak-lpmsample";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "";
 				"OTHER_CFLAGS[sdk=iphoneos*][arch=*]" = (
@@ -1249,7 +1242,6 @@
 				"LLDB_ENERGY_CFLAGS[sdk=macosx.internal]" = "-DLLDB_ENERGY";
 				LLDB_ENERGY_LFLAGS = "";
 				"LLDB_ENERGY_LFLAGS[sdk=macosx.internal]" = "-weak-lpmenergy -weak-lpmsample";
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				OTHER_CFLAGS = (
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_ZLIB_CFLAGS)",
@@ -1323,7 +1315,6 @@
 				"LLDB_ENERGY_CFLAGS[sdk=macosx.internal]" = "-DLLDB_ENERGY";
 				LLDB_ENERGY_LFLAGS = "";
 				"LLDB_ENERGY_LFLAGS[sdk=macosx.internal]" = "-weak-lpmenergy -weak-lpmsample";
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				OTHER_CFLAGS = (
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_ZLIB_CFLAGS)",
@@ -1401,7 +1392,6 @@
 				"LLDB_ENERGY_CFLAGS[sdk=macosx*]" = "-DLLDB_ENERGY";
 				LLDB_ENERGY_LFLAGS = "";
 				"LLDB_ENERGY_LFLAGS[sdk=macosx*]" = "-weak-lpmenergy -weak-lpmsample";
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				OTHER_CFLAGS = (
 					"-Wparentheses",
 					"$(LLDB_ENERGY_CFLAGS)",
@@ -1475,7 +1465,6 @@
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_OS_LOG_CFLAGS = "-DLLDB_USE_OS_LOG=$(LLDB_USE_OS_LOG)";
 				LLDB_USE_OS_LOG = 0;
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx.internal;
 				"SDKROOT[arch=i386]" = macosx;
@@ -1529,7 +1518,6 @@
 				"LLDB_ENERGY_LFLAGS[sdk=macosx.internal]" = "-weak-lpmenergy -weak-lpmsample";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				OTHER_CFLAGS = (
 					"-Wparentheses",
 					"$(LLDB_ENERGY_CFLAGS)",
@@ -1622,7 +1610,6 @@
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_OS_LOG_CFLAGS = "-DLLDB_USE_OS_LOG=$(LLDB_USE_OS_LOG)";
 				LLDB_USE_OS_LOG = 0;
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx.internal;
 				"SDKROOT[arch=i386]" = macosx;
@@ -1676,7 +1663,6 @@
 				"LLDB_ENERGY_LFLAGS[sdk=macosx.internal]" = "-weak-lpmenergy -weak-lpmsample";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				OTHER_CFLAGS = (
 					"-Wparentheses",
 					"$(LLDB_ENERGY_CFLAGS)",
@@ -1764,7 +1750,6 @@
 				"LLDB_ENERGY_CFLAGS[sdk=macosx.internal]" = "-DLLDB_ENERGY";
 				LLDB_ENERGY_LFLAGS = "";
 				"LLDB_ENERGY_LFLAGS[sdk=macosx.internal]" = "-weak-lpmenergy -weak-lpmsample";
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				OTHER_CFLAGS = (
 					"-Wparentheses",
 					"$(LLDB_ENERGY_CFLAGS)",
@@ -1811,7 +1796,6 @@
 		94BA9B361B1A7C5700035A23 /* CustomSwift-Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				PRODUCT_NAME = "lldb-debugserver-nonui";
 			};
 			name = "CustomSwift-Debug";
@@ -1819,7 +1803,6 @@
 		94BA9B371B1A7C5700035A23 /* CustomSwift-Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				PRODUCT_NAME = "lldb-debugserver-nonui";
 			};
 			name = "CustomSwift-Release";
@@ -1856,7 +1839,6 @@
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_OS_LOG_CFLAGS = "-DLLDB_USE_OS_LOG=$(LLDB_USE_OS_LOG)";
 				LLDB_USE_OS_LOG = 0;
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx.internal;
 				"SDKROOT[arch=i386]" = macosx;
@@ -1900,7 +1882,6 @@
 				"LLDB_ENERGY_LFLAGS[sdk=macosx.internal]" = "-weak-lpmenergy -weak-lpmsample";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				OTHER_CFLAGS = (
 					"-Wparentheses",
 					"$(LLDB_ENERGY_CFLAGS)",
@@ -1993,7 +1974,6 @@
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_OS_LOG_CFLAGS = "-DLLDB_USE_OS_LOG=$(LLDB_USE_OS_LOG)";
 				LLDB_USE_OS_LOG = 0;
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx.internal;
 				"SDKROOT[arch=i386]" = macosx;
@@ -2038,7 +2018,6 @@
 				"LLDB_ENERGY_LFLAGS[sdk=macosx.internal]" = "-weak-lpmenergy -weak-lpmsample";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				OTHER_CFLAGS = (
 					"-Wparentheses",
 					"$(LLDB_ENERGY_CFLAGS)",
