@@ -103,6 +103,9 @@ private:
 
   /// \return Executed lines from \p D in JSON format.
   std::string serializeExecutedLines(const PathDiagnostic &D);
+
+  /// \return Javascript for displaying shortcuts help;
+  std::string showHelpJavascript();
 };
 
 } // end anonymous namespace
@@ -514,12 +517,6 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
 <h3>Annotated Source Code</h3>
 <p>Press <a href="#" onclick="toggleHelp(); return false;">'?'</a>
    to see keyboard shortcuts</p>
-<input type="checkbox" class="spoilerhider" id="showinvocation" />
-<label for="showinvocation" >Show analyzer invocation</label>
-<div class="spoiler">clang -cc1 )<<<";
-    os << html::EscapeText(AnalyzerOpts.FullCompilerInvocation);
-    os << R"<<<(
-</div>
 <div id='tooltiphint' hidden="true">
   <p>Keyboard shortcuts: </p>
   <ul>
@@ -585,6 +582,34 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
   }
 
   html::AddHeaderFooterInternalBuiltinCSS(R, FID, Entry->getName());
+}
+
+std::string HTMLDiagnostics::showHelpJavascript() {
+  return R"<<<(
+<script type='text/javascript'>
+
+var toggleHelp = function() {
+    var hint = document.querySelector("#tooltiphint");
+    var attributeName = "hidden";
+    if (hint.hasAttribute(attributeName)) {
+      hint.removeAttribute(attributeName);
+    } else {
+      hint.setAttribute("hidden", "true");
+    }
+};
+window.addEventListener("keydown", function (event) {
+  if (event.defaultPrevented) {
+    return;
+  }
+  if (event.key == "?") {
+    toggleHelp();
+  } else {
+    return;
+  }
+  event.preventDefault();
+});
+</script>
+)<<<";
 }
 
 std::string
