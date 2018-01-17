@@ -3172,6 +3172,14 @@ template <class _A0, class _A1>
 false_type
 __is_constructible2_test(__any, _A0&, _A1&);
 
+template <class _Tp, class _A0, class _A1, class _A2>
+decltype((_Tp(_VSTD::declval<_A0>(), _VSTD::declval<_A1>(), _VSTD::declval<_A2>()), true_type()))
+__is_constructible3_test(_Tp&, _A0&, _A1&, _A2&);
+
+template <class _A0, class _A1, class _A2>
+false_type
+__is_constructible3_test(__any, _A0&, _A1&, _A2&);
+
 template <bool, class _Tp>
 struct __is_constructible0_imp // false, _Tp is not a scalar
     : public common_type
@@ -3196,6 +3204,14 @@ struct __is_constructible2_imp // false, _Tp is not a scalar
              >::type
     {};
 
+template <bool, class _Tp, class _A0, class _A1, class _A2>
+struct __is_constructible3_imp // false, _Tp is not a scalar
+    : public common_type
+             <
+                 decltype(__is_constructible3_test(declval<_Tp&>(), declval<_A0>(), declval<_A1>(), declval<_A2>()))
+             >::type
+    {};
+
 //      handle scalars and reference types
 
 //      Scalars are default constructible, references are not
@@ -3212,6 +3228,11 @@ struct __is_constructible1_imp<true, _Tp, _A0>
 
 template <class _Tp, class _A0, class _A1>
 struct __is_constructible2_imp<true, _Tp, _A0, _A1>
+    : public false_type
+    {};
+
+template <class _Tp, class _A0, class _A1, class _A2>
+struct __is_constructible3_imp<true, _Tp, _A0, _A1, _A2>
     : public false_type
     {};
 
@@ -3235,6 +3256,12 @@ struct __is_constructible2_void_check
                                 _Tp, _A0, _A1>
     {};
 
+template <bool, class _Tp, class _A0, class _A1, class _A2>
+struct __is_constructible3_void_check
+    : public __is_constructible3_imp<is_scalar<_Tp>::value || is_reference<_Tp>::value,
+                                _Tp, _A0, _A1, _A2>
+    {};
+
 //      If any of T or Args is void, is_constructible should be false
 
 template <class _Tp>
@@ -3252,17 +3279,24 @@ struct __is_constructible2_void_check<true, _Tp, _A0, _A1>
     : public false_type
     {};
 
+template <class _Tp, class _A0, class _A1, class _A2>
+struct __is_constructible3_void_check<true, _Tp, _A0, _A1, _A2>
+    : public false_type
+    {};
+
 //      is_constructible entry point
 
 template <class _Tp, class _A0 = __is_construct::__nat,
-                     class _A1 = __is_construct::__nat>
+                     class _A1 = __is_construct::__nat,
+                     class _A2 = __is_construct::__nat>
 struct _LIBCPP_TEMPLATE_VIS is_constructible
-    : public __is_constructible2_void_check<is_void<_Tp>::value
+    : public __is_constructible3_void_check<is_void<_Tp>::value
                                         || is_abstract<_Tp>::value
                                         || is_function<_Tp>::value
                                         || is_void<_A0>::value
-                                        || is_void<_A1>::value,
-                                           _Tp, _A0, _A1>
+                                        || is_void<_A1>::value
+                                        || is_void<_A2>::value,
+                                           _Tp, _A0, _A1, _A2>
     {};
 
 template <class _Tp>
@@ -3280,6 +3314,16 @@ struct _LIBCPP_TEMPLATE_VIS is_constructible<_Tp, _A0, __is_construct::__nat>
                                         || is_function<_Tp>::value
                                         || is_void<_A0>::value,
                                            _Tp, _A0>
+    {};
+
+template <class _Tp, class _A0, class _A1>
+struct _LIBCPP_TEMPLATE_VIS is_constructible<_Tp, _A0, _A1, __is_construct::__nat>
+    : public __is_constructible2_void_check<is_void<_Tp>::value
+                                        || is_abstract<_Tp>::value
+                                        || is_function<_Tp>::value
+                                        || is_void<_A0>::value
+                                        || is_void<_A1>::value,
+                                           _Tp, _A0, _A1>
     {};
 
 //      Array types are default constructible if their element type
@@ -3300,6 +3344,11 @@ struct __is_constructible2_imp<false, _Ap[_Np], _A0, _A1>
     : public false_type
     {};
 
+template <class _Ap, size_t _Np, class _A0, class _A1, class _A2>
+struct __is_constructible3_imp<false, _Ap[_Np], _A0, _A1, _A2>
+    : public false_type
+    {};
+
 //      Incomplete array types are not constructible
 
 template <class _Ap>
@@ -3314,6 +3363,11 @@ struct __is_constructible1_imp<false, _Ap[], _A0>
 
 template <class _Ap, class _A0, class _A1>
 struct __is_constructible2_imp<false, _Ap[], _A0, _A1>
+    : public false_type
+    {};
+
+template <class _Ap, class _A0, class _A1, class _A2>
+struct __is_constructible3_imp<false, _Ap[], _A0, _A1, _A2>
     : public false_type
     {};
 
