@@ -502,6 +502,10 @@ DeduceTemplateArguments(Sema &S,
                         SmallVectorImpl<DeducedTemplateArgument> &Deduced) {
   assert(Arg.isCanonical() && "Argument type must be canonical");
 
+  // Treat an injected-class-name as its underlying template-id.
+  if (auto *Injected = dyn_cast<InjectedClassNameType>(Arg))
+    Arg = Injected->getInjectedSpecializationType();
+
   // Check whether the template argument is a dependent template-id.
   if (const TemplateSpecializationType *SpecArg
         = dyn_cast<TemplateSpecializationType>(Arg)) {
