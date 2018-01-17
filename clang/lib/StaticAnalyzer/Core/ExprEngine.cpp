@@ -95,7 +95,7 @@ REGISTER_TRAIT_WITH_PROGRAMSTATE(CXXNewAllocatorValues,
 
 typedef llvm::ImmutableMap<std::pair<const CXXNewExpr *,
                            const LocationContext *>, SVal>
-    CXXNewAllocatorValuesTy;
+    CXXNewAllocatorValuesMap;
 
 // Keeps track of return values of various operator new() calls between
 // evaluation of the inlined operator new(), through the constructor call,
@@ -105,7 +105,8 @@ typedef llvm::ImmutableMap<std::pair<const CXXNewExpr *,
 // is evaluated, and removed from the stack when the whole CXXNewExpr
 // is fully evaluated.
 // Probably do something similar to the previous trait as well.
-REGISTER_TRAIT_WITH_PROGRAMSTATE(CXXNewAllocatorValues, CXXNewAllocatorValuesTy)
+REGISTER_TRAIT_WITH_PROGRAMSTATE(CXXNewAllocatorValues,
+                                 CXXNewAllocatorValuesMap)
 
 //===----------------------------------------------------------------------===//
 // Engine construction and deletion.
