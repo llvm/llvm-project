@@ -23,6 +23,7 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Target/SectionLoadList.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
@@ -535,12 +536,29 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
       if (!m_filter_sp->ModulePasses(module_sp))
         continue;
 
+      BreakpointLocationCollection locations_with_no_section;
       for (BreakpointLocationSP break_loc_sp :
            m_locations.BreakpointLocations()) {
+
+        // If the section for this location was deleted, that means
+        // it's Module has gone away but somebody forgot to tell us.
+        // Let's clean it up here.
+        Address section_addr(break_loc_sp->GetAddress());
+        if (section_addr.SectionWasDeleted()) {
+          locations_with_no_section.Add(break_loc_sp);
+          continue;
+        }
+          
         if (!break_loc_sp->IsEnabled())
           continue;
-        SectionSP section_sp(break_loc_sp->GetAddress().GetSection());
-        if (!section_sp || section_sp->GetModule() == module_sp) {
+        
+        SectionSP section_sp(section_addr.GetSection());
+        
+        // If we don't have a Section, that means this location is a raw address
+        // that we haven't resolved to a section yet.  So we'll have to look
+        // in all the new modules to resolve this location.
+        // Otherwise, if it was set in this module, re-resolve it here.
+        if (section_sp && section_sp->GetModule() == module_sp) {
           if (!seen)
             seen = true;
 
@@ -552,6 +570,11 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
           }
         }
       }
+      
+      size_t num_to_delete = locations_with_no_section.GetSize();
+      
+      for (size_t i = 0; i < num_to_delete; i++)
+        m_locations.RemoveLocation(locations_with_no_section.GetByIndex(i));
 
       if (!seen)
         new_modules.AppendIfNeeded(module_sp);
