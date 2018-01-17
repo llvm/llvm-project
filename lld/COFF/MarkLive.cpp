@@ -9,16 +9,21 @@
 
 #include "Chunks.h"
 #include "Symbols.h"
+#include "lld/Common/Timer.h"
 #include "llvm/ADT/STLExtras.h"
 #include <vector>
 
 namespace lld {
 namespace coff {
 
+static Timer GCTimer("GC", Timer::root());
+
 // Set live bit on for each reachable chunk. Unmarked (unreachable)
 // COMDAT chunks will be ignored by Writer, so they will be excluded
 // from the final output.
 void markLive(ArrayRef<Chunk *> Chunks) {
+  ScopedTimer T(GCTimer);
+
   // We build up a worklist of sections which have been marked as live. We only
   // push into the worklist when we discover an unmarked section, and we mark
   // as we push, so sections never appear twice in the list.
