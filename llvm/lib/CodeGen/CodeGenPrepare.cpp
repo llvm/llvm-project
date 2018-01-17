@@ -2700,8 +2700,13 @@ public:
     // we still need to collect it due to original value is different.
     // And later we will need all original values as anchors during
     // finding the common Phi node.
+    // We also must reject the case when base offset is different and
+    // scale reg is not null, we cannot handle this case due to merge of
+    // different offsets will be used as ScaleReg.
     if (DifferentField != ExtAddrMode::MultipleFields &&
-        DifferentField != ExtAddrMode::ScaleField) {
+        DifferentField != ExtAddrMode::ScaleField &&
+        (DifferentField != ExtAddrMode::BaseOffsField ||
+         !NewAddrMode.ScaledReg)) {
       AddrModes.emplace_back(NewAddrMode);
       return true;
     }
