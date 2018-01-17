@@ -74,10 +74,7 @@ public:
 
   bool hasEndLoc() const { return LocEnd.hasValue(); }
 
-  void setEndLoc(SourceLocation Loc) {
-    assert(Loc.isValid() && "Setting an invalid end location");
-    LocEnd = Loc;
-  }
+  void setEndLoc(SourceLocation Loc) { LocEnd = Loc; }
 
   SourceLocation getEndLoc() const {
     assert(LocEnd && "Region has no end location");
