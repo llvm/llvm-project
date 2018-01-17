@@ -277,19 +277,12 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
       state = state->BindExpr(CCE, callerCtx, ThisV);
     }
 
-    if (const auto *CNE = dyn_cast<CXXNewExpr>(CE)) {
+    if (const CXXNewExpr *CNE = dyn_cast<CXXNewExpr>(CE)) {
       // We are currently evaluating a CXXNewAllocator CFGElement. It takes a
       // while to reach the actual CXXNewExpr element from here, so keep the
       // region for later use.
-      // Additionally cast the return value of the inlined operator new
-      // (which is of type 'void *') to the correct object type.
-      SVal AllocV = state->getSVal(CNE, callerCtx);
-      AllocV = svalBuilder.evalCast(
-          AllocV, CNE->getType(),
-          getContext().getPointerType(getContext().VoidTy));
-
-      state =
-          setCXXNewAllocatorValue(state, CNE, calleeCtx->getParent(), AllocV);
+      state = setCXXNewAllocatorValue(state, CNE, calleeCtx->getParent(),
+                                      state->getSVal(CE, callerCtx));
     }
   }
 
@@ -653,8 +646,18 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     // initializers for array fields in default move/copy constructors.
     // We still allow construction into ElementRegion targets when they don't
     // represent array elements.
-    if (CallOpts.IsArrayConstructorOrDestructor)
-      return CIP_DisallowedOnce;
+    const MemRegion *Target = Ctor.getCXXThisVal().getAsRegion();
+    if (Target && isa<ElementRegion>(Target)) {
+      if (ParentExpr)
+        if (const CXXNewExpr *NewExpr = dyn_cast<CXXNewExpr>(ParentExpr))
+          if (NewExpr->isArray())
+            return CIP_DisallowedOnce;
+
+      if (const TypedValueRegion *TR = dyn_cast<TypedValueRegion>(
+              cast<SubRegion>(Target)->getSuperRegion()))
+        if (TR->getValueType()->isArrayType())
+          return CIP_DisallowedOnce;
+    }
 
     // Inlining constructors requires including initializers in the CFG.
     const AnalysisDeclContext *ADC = CallerSFC->getAnalysisDeclContext();
@@ -673,7 +676,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     // FIXME: This is a hack. We don't handle temporary destructors
     // right now, so we shouldn't inline their constructors.
     if (CtorExpr->getConstructionKind() == CXXConstructExpr::CK_Complete)
-      if (CallOpts.IsConstructorWithImproperlyModeledTargetRegion)
+      if (!Target || isa<CXXTempObjectRegion>(Target))
         return CIP_DisallowedOnce;
 
     break;
