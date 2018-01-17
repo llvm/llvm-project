@@ -32,6 +32,7 @@
 #include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Path.h"
@@ -457,6 +458,7 @@ template <> struct MappingTraits<FormatStyle::RawStringFormat> {
   static void mapping(IO &IO, FormatStyle::RawStringFormat &Format) {
     IO.mapOptional("Language", Format.Language);
     IO.mapOptional("Delimiters", Format.Delimiters);
+    IO.mapOptional("EnclosingFunctions", Format.EnclosingFunctions);
     IO.mapOptional("BasedOnStyle", Format.BasedOnStyle);
   }
 };
@@ -705,6 +707,12 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
           "textproto",
           "TEXTPROTO",
       },
+      /*EnclosingFunctionNames=*/
+       {
+           "EqualsProto",
+           "PARSE_TEXT_PROTO",
+           "ParseTextProto",
+       },
       /*BasedOnStyle=*/"google",
   }};
   GoogleStyle.SpacesBeforeTrailingComments = 2;
@@ -1391,6 +1399,103 @@ private:
 
   // Tokens to be deleted.
   std::set<FormatToken *, FormatTokenLess> DeletedTokens;
+};
+
+class ObjCHeaderStyleGuesser : public TokenAnalyzer {
+public:
+  ObjCHeaderStyleGuesser(const Environment &Env, const FormatStyle &Style)
+      : TokenAnalyzer(Env, Style), IsObjC(false) {}
+
+  std::pair<tooling::Replacements, unsigned>
+  analyze(TokenAnnotator &Annotator,
+          SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
+          FormatTokenLexer &Tokens) override {
+    assert(Style.Language == FormatStyle::LK_Cpp);
+    IsObjC = guessIsObjC(AnnotatedLines, Tokens.getKeywords());
+    tooling::Replacements Result;
+    return {Result, 0};
+  }
+
+  bool isObjC() { return IsObjC; }
+
+private:
+  static bool guessIsObjC(const SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
+                          const AdditionalKeywords &Keywords) {
+    // Keep this array sorted, since we are binary searching over it.
+    static constexpr llvm::StringLiteral FoundationIdentifiers[] = {
+        "CGFloat",
+        "NSAffineTransform",
+        "NSArray",
+        "NSAttributedString",
+        "NSCache",
+        "NSCharacterSet",
+        "NSCountedSet",
+        "NSData",
+        "NSDataDetector",
+        "NSDecimal",
+        "NSDecimalNumber",
+        "NSDictionary",
+        "NSEdgeInsets",
+        "NSHashTable",
+        "NSIndexPath",
+        "NSIndexSet",
+        "NSInteger",
+        "NSLocale",
+        "NSMapTable",
+        "NSMutableArray",
+        "NSMutableAttributedString",
+        "NSMutableCharacterSet",
+        "NSMutableData",
+        "NSMutableDictionary",
+        "NSMutableIndexSet",
+        "NSMutableOrderedSet",
+        "NSMutableSet",
+        "NSMutableString",
+        "NSNumber",
+        "NSNumberFormatter",
+        "NSOrderedSet",
+        "NSPoint",
+        "NSPointerArray",
+        "NSRange",
+        "NSRect",
+        "NSRegularExpression",
+        "NSSet",
+        "NSSize",
+        "NSString",
+        "NSUInteger",
+        "NSURL",
+        "NSURLComponents",
+        "NSURLQueryItem",
+        "NSUUID",
+    };
+
+    for (auto &Line : AnnotatedLines) {
+      for (FormatToken *FormatTok = Line->First->Next; FormatTok;
+           FormatTok = FormatTok->Next) {
+        if ((FormatTok->Previous->is(tok::at) &&
+             (FormatTok->isObjCAtKeyword(tok::objc_interface) ||
+              FormatTok->isObjCAtKeyword(tok::objc_implementation) ||
+              FormatTok->isObjCAtKeyword(tok::objc_protocol) ||
+              FormatTok->isObjCAtKeyword(tok::objc_end) ||
+              FormatTok->isOneOf(tok::numeric_constant, tok::l_square,
+                                 tok::l_brace))) ||
+            (FormatTok->Tok.isAnyIdentifier() &&
+             std::binary_search(std::begin(FoundationIdentifiers),
+                                std::end(FoundationIdentifiers),
+                                FormatTok->TokenText)) ||
+            FormatTok->is(TT_ObjCStringLiteral) ||
+            FormatTok->isOneOf(Keywords.kw_NS_ENUM, Keywords.kw_NS_OPTIONS,
+                               TT_ObjCBlockLBrace, TT_ObjCBlockLParen,
+                               TT_ObjCDecl, TT_ObjCForIn, TT_ObjCMethodExpr,
+                               TT_ObjCMethodSpecifier, TT_ObjCProperty)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  bool IsObjC;
 };
 
 struct IncludeDirective {
@@ -2178,14 +2283,15 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
   FormatStyle Style = getLLVMStyle();
   Style.Language = getLanguageByFileName(FileName);
 
-  // This is a very crude detection of whether a header contains ObjC code that
-  // should be improved over time and probably be done on tokens, not one the
-  // bare content of the file.
-  if (Style.Language == FormatStyle::LK_Cpp && FileName.endswith(".h") &&
-      (Code.contains("\n- (") || Code.contains("\n+ (") ||
-       Code.contains("\n@end\n") || Code.contains("\n@end ") ||
-       Code.endswith("@end")))
-    Style.Language = FormatStyle::LK_ObjC;
+  if (Style.Language == FormatStyle::LK_Cpp && FileName.endswith(".h")) {
+    std::unique_ptr<Environment> Env =
+        Environment::CreateVirtualEnvironment(Code, FileName, /*Ranges=*/{});
+    ObjCHeaderStyleGuesser Guesser(*Env, Style);
+    Guesser.process();
+    if (Guesser.isObjC()) {
+      Style.Language = FormatStyle::LK_ObjC;
+    }
+  }
 
   FormatStyle FallbackStyle = getNoStyle();
   if (!getPredefinedStyle(FallbackStyleName, Style.Language, &FallbackStyle))

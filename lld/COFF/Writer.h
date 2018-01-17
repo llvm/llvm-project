@@ -13,6 +13,7 @@
 #include "Chunks.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/COFF.h"
+#include <chrono>
 #include <cstdint>
 #include <vector>
 

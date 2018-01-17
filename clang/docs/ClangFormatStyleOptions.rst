@@ -994,9 +994,9 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      Constructor()
-          : initializer1(),
-            initializer2()
+    Constructor()
+        : initializer1(),
+          initializer2()
 
   * ``BCIS_BeforeComma`` (in configuration: ``BeforeComma``)
     Break constructor initializers before the colon and commas, and align
@@ -1004,18 +1004,18 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      Constructor()
-          : initializer1()
-          , initializer2()
+    Constructor()
+        : initializer1()
+        , initializer2()
 
   * ``BCIS_AfterColon`` (in configuration: ``AfterColon``)
     Break constructor initializers after the colon and commas.
 
     .. code-block:: c++
 
-      Constructor() :
-          initializer1(),
-          initializer2()
+    Constructor() :
+        initializer1(),
+        initializer2()
 
 
 
@@ -1201,7 +1201,8 @@ the configuration (without a prefix: ``Auto``).
 
   * ``IBS_Regroup`` (in configuration: ``Regroup``)
     Merge multiple ``#include`` blocks together and sort as one.
-    Then split into groups based on category priority. See ``IncludeCategories``.
+    Then split into groups based on category priority. See
+    ``IncludeCategories``.
 
     .. code-block:: c++
 
@@ -1577,24 +1578,38 @@ the configuration (without a prefix: ``Auto``).
 
 
 **RawStringFormats** (``std::vector<RawStringFormat>``)
-  Raw string delimiters denoting that the raw string contents are
-  code in a particular language and can be reformatted.
+  Defines hints for detecting supported languages code blocks in raw
+  strings.
 
-  A raw string with a matching delimiter will be reformatted assuming the
-  specified language based on a predefined style given by 'BasedOnStyle'.
-  If 'BasedOnStyle' is not found, the formatting is based on llvm style.
+  A raw string with a matching delimiter or a matching enclosing function
+  name will be reformatted assuming the specified language based on the
+  style for that language defined in the .clang-format file. If no style has
+  been defined in the .clang-format file for the specific language, a
+  predefined style given by 'BasedOnStyle' is used. If 'BasedOnStyle' is not
+  found, the formatting is based on llvm style. A matching delimiter takes
+  precedence over a matching enclosing function name for determining the
+  language of the raw string contents.
+
+  There should be at most one specification per language and each delimiter
+  and enclosing function should not occur in multiple specifications.
 
   To configure this in the .clang-format file, use:
 
   .. code-block:: yaml
 
     RawStringFormats:
-      - Delimiter: 'pb'
-        Language:  TextProto
-        BasedOnStyle: llvm
-      - Delimiter: 'proto'
-        Language:  TextProto
-        BasedOnStyle: google
+      - Language: TextProto
+          Delimiters:
+            - 'pb'
+            - 'proto'
+          EnclosingFunctions:
+            - 'PARSE_TEXT_PROTO'
+          BasedOnStyle: google
+      - Language: Cpp
+          Delimiters:
+            - 'cc'
+            - 'cpp'
+          BasedOnStyle: llvm
 
 **ReflowComments** (``bool``)
   If ``true``, clang-format will attempt to re-flow comments.

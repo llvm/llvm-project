@@ -94,6 +94,66 @@ TEST(FormatTestObjCStyle, DetectsObjCInHeaders) {
   Style = getStyle("LLVM", "a.h", "none", "void f() {}");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);
+
+  Style = getStyle("{}", "a.h", "none", "@interface Foo\n@end\n");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
+
+  Style = getStyle("{}", "a.h", "none",
+                   "const int interface = 1;\nconst int end = 2;\n");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);
+
+  Style = getStyle("{}", "a.h", "none", "@protocol Foo\n@end\n");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
+
+  Style = getStyle("{}", "a.h", "none",
+                   "const int protocol = 1;\nconst int end = 2;\n");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);
+
+  Style = getStyle("{}", "a.h", "none", "extern NSString *kFoo;\n");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
+
+  Style =
+      getStyle("{}", "a.h", "none", "typedef NS_ENUM(NSInteger, Foo) {};\n");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
+
+  Style = getStyle("{}", "a.h", "none", "enum Foo {};");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);
+
+  Style = getStyle("{}", "a.h", "none", "extern NSInteger Foo();\n");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
+
+  Style =
+      getStyle("{}", "a.h", "none", "inline void Foo() { Log(@\"Foo\"); }\n");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
+
+  Style =
+      getStyle("{}", "a.h", "none", "inline void Foo() { Log(\"Foo\"); }\n");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);
+
+  Style =
+      getStyle("{}", "a.h", "none", "inline void Foo() { id = @[1, 2, 3]; }\n");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
+
+  Style = getStyle("{}", "a.h", "none",
+                   "inline void Foo() { id foo = @{1: 2, 3: 4, 5: 6}; }\n");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
+
+  Style = getStyle("{}", "a.h", "none",
+                   "inline void Foo() { int foo[] = {1, 2, 3}; }\n");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);
 }
 
 TEST_F(FormatTestObjC, FormatObjCTryCatch) {

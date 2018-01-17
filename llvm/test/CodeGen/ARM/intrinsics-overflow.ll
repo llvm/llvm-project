@@ -33,10 +33,10 @@ define i32 @sadd_overflow(i32 %a, i32 %b) #0 {
 
   ; CHECK-LABEL: sadd_overflow:
 
-  ; ARM: add r[[R2:[0-9]+]], r[[R0:[0-9]+]], r[[R1:[0-9]+]]
-  ; ARM: mov r[[R1]], #1
-  ; ARM: cmp r[[R2]], r[[R0]]
-  ; ARM: movvc r[[R1]], #0
+  ; ARM: adds r[[R2:[0-9]+]], r[[R0:[0-9]+]], r[[R1:[0-9]+]]
+  ; ARM: mov r[[R0]], #1
+  ; ARM: movvc r[[R0]], #0
+  ; ARM: mov pc, lr
 
   ; THUMBV6: mov  r[[R2:[0-9]+]], r[[R0:[0-9]+]]
   ; THUMBV6: adds r[[R3:[0-9]+]], r[[R2]], r[[R1:[0-9]+]]
@@ -47,11 +47,10 @@ define i32 @sadd_overflow(i32 %a, i32 %b) #0 {
   ; THUMBV6: mov  r[[R0]], r[[R1]]
   ; THUMBV6: .L[[LABEL]]:
 
-  ; THUMBV7: movs  r[[R1]], #1
-  ; THUMBV7: cmp   r[[R2]], r[[R0]]
+  ; THUMBV7: adds  r[[R2:[0-9]+]], r[[R0]], r[[R1:[0-9]+]]
+  ; THUMBV7: mov.w r[[R0:[0-9]+]], #1
   ; THUMBV7: it    vc
-  ; THUMBV7: movvc r[[R1]], #0
-  ; THUMBV7: mov   r[[R0]], r[[R1]]
+  ; THUMBV7: movvc r[[R0]], #0
 }
 
 define i32 @usub_overflow(i32 %a, i32 %b) #0 {

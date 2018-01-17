@@ -105,28 +105,40 @@ static llvm::Optional<StringRef> getRawStringDelimiter(StringRef TokenText) {
 RawStringFormatStyleManager::RawStringFormatStyleManager(
     const FormatStyle &CodeStyle) {
   for (const auto &RawStringFormat : CodeStyle.RawStringFormats) {
-    for (StringRef Delimiter : RawStringFormat.Delimiters) {
-      llvm::Optional<FormatStyle> LanguageStyle =
-          CodeStyle.GetLanguageStyle(RawStringFormat.Language);
-      if (!LanguageStyle) {
-        FormatStyle PredefinedStyle;
-        if (!getPredefinedStyle(RawStringFormat.BasedOnStyle,
-                                RawStringFormat.Language, &PredefinedStyle)) {
-          PredefinedStyle = getLLVMStyle();
-          PredefinedStyle.Language = RawStringFormat.Language;
-        }
-        LanguageStyle = PredefinedStyle;
+    llvm::Optional<FormatStyle> LanguageStyle =
+        CodeStyle.GetLanguageStyle(RawStringFormat.Language);
+    if (!LanguageStyle) {
+      FormatStyle PredefinedStyle;
+      if (!getPredefinedStyle(RawStringFormat.BasedOnStyle,
+                              RawStringFormat.Language, &PredefinedStyle)) {
+        PredefinedStyle = getLLVMStyle();
+        PredefinedStyle.Language = RawStringFormat.Language;
       }
-      LanguageStyle->ColumnLimit = CodeStyle.ColumnLimit;
+      LanguageStyle = PredefinedStyle;
+    }
+    LanguageStyle->ColumnLimit = CodeStyle.ColumnLimit;
+    for (StringRef Delimiter : RawStringFormat.Delimiters) {
       DelimiterStyle.insert({Delimiter, *LanguageStyle});
+    }
+    for (StringRef EnclosingFunction : RawStringFormat.EnclosingFunctions) {
+      EnclosingFunctionStyle.insert({EnclosingFunction, *LanguageStyle});
     }
   }
 }
 
 llvm::Optional<FormatStyle>
-RawStringFormatStyleManager::get(StringRef Delimiter) const {
+RawStringFormatStyleManager::getDelimiterStyle(StringRef Delimiter) const {
   auto It = DelimiterStyle.find(Delimiter);
   if (It == DelimiterStyle.end())
+    return None;
+  return It->second;
+}
+
+llvm::Optional<FormatStyle>
+RawStringFormatStyleManager::getEnclosingFunctionStyle(
+    StringRef EnclosingFunction) const {
+  auto It = EnclosingFunctionStyle.find(EnclosingFunction);
+  if (It == EnclosingFunctionStyle.end())
     return None;
   return It->second;
 }
@@ -1437,6 +1449,26 @@ unsigned ContinuationIndenter::handleEndOfLine(const FormatToken &Current,
   return Penalty;
 }
 
+// Returns the enclosing function name of a token, or the empty string if not
+// found.
+static StringRef getEnclosingFunctionName(const FormatToken &Current) {
+  // Look for: 'function(' or 'function<templates>(' before Current.
+  auto Tok = Current.getPreviousNonComment();
+  if (!Tok || !Tok->is(tok::l_paren))
+    return "";
+  Tok = Tok->getPreviousNonComment();
+  if (!Tok)
+    return "";
+  if (Tok->is(TT_TemplateCloser)) {
+    Tok = Tok->MatchingParen;
+    if (Tok)
+      Tok = Tok->getPreviousNonComment();
+  }
+  if (!Tok || !Tok->is(tok::identifier))
+    return "";
+  return Tok->TokenText;
+}
+
 llvm::Optional<FormatStyle>
 ContinuationIndenter::getRawStringStyle(const FormatToken &Current,
                                         const LineState &State) {
@@ -1445,7 +1477,10 @@ ContinuationIndenter::getRawStringStyle(const FormatToken &Current,
   auto Delimiter = getRawStringDelimiter(Current.TokenText);
   if (!Delimiter)
     return None;
-  auto RawStringStyle = RawStringFormats.get(*Delimiter);
+  auto RawStringStyle = RawStringFormats.getDelimiterStyle(*Delimiter);
+  if (!RawStringStyle)
+    RawStringStyle = RawStringFormats.getEnclosingFunctionStyle(
+        getEnclosingFunctionName(Current));
   if (!RawStringStyle)
     return None;
   RawStringStyle->ColumnLimit = getColumnLimit(State);

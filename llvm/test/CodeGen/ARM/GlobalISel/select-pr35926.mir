@@ -1,0 +1,40 @@
+# RUN: llc -mtriple arm-gnueabihf -mattr=+vfp4 -run-pass=instruction-select -global-isel -o - %s | FileCheck %s
+--- |
+  declare double @llvm.fma.f64(double, double, double) #0
+  
+  define double @vfnmsd(double %x, double %y, double %z) #1 {
+    %minus.y = fsub double -0.000000e+00, %y
+    %fma = tail call double @llvm.fma.f64(double %x, double %minus.y, double %z)
+    %minus.fma = fsub double -0.000000e+00, %fma
+    ret double %minus.fma
+  }
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #2
+  
+  attributes #0 = { nounwind readnone speculatable "target-features"="+vfp4" }
+  attributes #1 = { "target-features"="+vfp4" }
+  attributes #2 = { nounwind }
+
+...
+---
+name:            vfnmsd
+legalized:       true
+regBankSelected: true
+selected:        false
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %d0, %d1, %d2
+  
+    %0:fprb(s64) = COPY %d0
+    %1:fprb(s64) = COPY %d1
+    %2:fprb(s64) = COPY %d2
+    %3:fprb(s64) = G_FNEG %1
+    %4:fprb(s64) = G_FMA %0, %3, %2
+    %5:fprb(s64) = G_FNEG %4
+    %d0 = COPY %5(s64)
+    MOVPCLR 14, %noreg, implicit %d0
+
+# CHECK: %{{[0-9]+}}:dpr = VFNMSD %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 14, %noreg
+
+...

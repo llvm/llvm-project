@@ -39,7 +39,6 @@ public:
     FUNCTION_EXPORT,
     GLOBAL_IMPORT,
     GLOBAL_EXPORT,
-    DEBUG_FUNCTION_NAME,
   };
 
   WasmSymbol(StringRef Name, SymbolType Type, uint32_t Section,
@@ -70,8 +69,7 @@ public:
 
   bool isFunction() const {
     return Type == WasmSymbol::SymbolType::FUNCTION_IMPORT ||
-           Type == WasmSymbol::SymbolType::FUNCTION_EXPORT ||
-           Type == WasmSymbol::SymbolType::DEBUG_FUNCTION_NAME;
+           Type == WasmSymbol::SymbolType::FUNCTION_EXPORT;
   }
 
 
@@ -150,6 +148,7 @@ public:
   ArrayRef<WasmSegment> dataSegments() const { return DataSegments; }
   ArrayRef<wasm::WasmFunction> functions() const { return Functions; }
   ArrayRef<StringRef> comdats() const { return Comdats; }
+  ArrayRef<wasm::WasmFunctionName> debugNames() const { return DebugNames; }
   uint32_t startFunction() const { return StartFunction; }
 
   void moveSymbolNext(DataRefImpl &Symb) const override;
@@ -253,6 +252,7 @@ private:
   std::vector<wasm::WasmFunction> Functions;
   std::vector<WasmSymbol> Symbols;
   std::vector<StringRef> Comdats;
+  std::vector<wasm::WasmFunctionName> DebugNames;
   uint32_t StartFunction = -1;
   bool HasLinkingSection = false;
   wasm::WasmLinkingData LinkingData;

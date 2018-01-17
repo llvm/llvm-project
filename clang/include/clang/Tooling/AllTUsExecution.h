@@ -22,7 +22,7 @@ namespace clang {
 namespace tooling {
 
 /// \brief Executes given frontend actions on all files/TUs in the compilation
-/// database. The final results will be deduplicated by the result key.
+/// database.
 class AllTUsToolExecutor : public ToolExecutor {
 public:
   static const char *ExecutorName;

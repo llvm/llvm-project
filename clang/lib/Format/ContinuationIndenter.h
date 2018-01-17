@@ -38,10 +38,14 @@ class WhitespaceManager;
 
 struct RawStringFormatStyleManager {
   llvm::StringMap<FormatStyle> DelimiterStyle;
+  llvm::StringMap<FormatStyle> EnclosingFunctionStyle;
 
   RawStringFormatStyleManager(const FormatStyle &CodeStyle);
 
-  llvm::Optional<FormatStyle> get(StringRef Delimiter) const;
+  llvm::Optional<FormatStyle> getDelimiterStyle(StringRef Delimiter) const;
+
+  llvm::Optional<FormatStyle>
+  getEnclosingFunctionStyle(StringRef EnclosingFunction) const;
 };
 
 class ContinuationIndenter {

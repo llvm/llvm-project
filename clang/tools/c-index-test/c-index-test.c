@@ -724,13 +724,13 @@ static int lineCol_cmp(const void *p1, const void *p2) {
 }
 
 static CXString CursorToText(CXCursor Cursor) {
+  CXString text;
   switch (wanted_display_type) {
   case DisplayType_Spelling:
     return clang_getCursorSpelling(Cursor);
   case DisplayType_DisplayName:
     return clang_getCursorDisplayName(Cursor);
   case DisplayType_Pretty: {
-    CXString text;
     CXPrintingPolicy Policy = clang_getCursorPrintingPolicy(Cursor);
     ModifyPrintingPolicyAccordingToEnv(Policy);
     text = clang_getCursorPrettyPrinted(Cursor, Policy);
@@ -738,6 +738,8 @@ static CXString CursorToText(CXCursor Cursor) {
     return text;
   }
   }
+  assert(0 && "unknown display type"); /* no llvm_unreachable in C. */
+  return /*garbage*/ text;
 }
 
 static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {

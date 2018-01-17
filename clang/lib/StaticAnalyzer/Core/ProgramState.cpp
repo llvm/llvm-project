@@ -781,8 +781,7 @@ bool ProgramState::isTainted(SymbolRef Sym, TaintTagType Kind) const {
           // complete. For example, this would not currently identify
           // overlapping fields in a union as tainted. To identify this we can
           // check for overlapping/nested byte offsets.
-          if (Kind == I.second &&
-              (R == I.first || R->isSubRegionOf(I.first)))
+          if (Kind == I.second && R->isSubRegionOf(I.first))
             return true;
         }
       }

@@ -2799,9 +2799,7 @@ void RetainCountChecker::checkPostStmt(const BlockExpr *BE,
     return;
 
   ProgramStateRef state = C.getState();
-  const BlockDataRegion *R =
-    cast<BlockDataRegion>(state->getSVal(BE,
-                                         C.getLocationContext()).getAsRegion());
+  auto *R = cast<BlockDataRegion>(C.getSVal(BE).getAsRegion());
 
   BlockDataRegion::referenced_vars_iterator I = R->referenced_vars_begin(),
                                             E = R->referenced_vars_end();
@@ -2851,7 +2849,7 @@ void RetainCountChecker::checkPostStmt(const CastExpr *CE,
   }
 
   ProgramStateRef state = C.getState();
-  SymbolRef Sym = state->getSVal(CE, C.getLocationContext()).getAsLocSymbol();
+  SymbolRef Sym = C.getSVal(CE).getAsLocSymbol();
   if (!Sym)
     return;
   const RefVal* T = getRefBinding(state, Sym);
@@ -2874,7 +2872,7 @@ void RetainCountChecker::processObjCLiterals(CheckerContext &C,
   ProgramStateRef state = C.getState();
   const ExplodedNode *pred = C.getPredecessor();
   for (const Stmt *Child : Ex->children()) {
-    SVal V = state->getSVal(Child, pred->getLocationContext());
+    SVal V = pred->getSVal(Child);
     if (SymbolRef sym = V.getAsSymbol())
       if (const RefVal* T = getRefBinding(state, sym)) {
         RefVal::Kind hasErr = (RefVal::Kind) 0;
@@ -2913,10 +2911,9 @@ void RetainCountChecker::checkPostStmt(const ObjCDictionaryLiteral *DL,
 void RetainCountChecker::checkPostStmt(const ObjCBoxedExpr *Ex,
                                        CheckerContext &C) const {
   const ExplodedNode *Pred = C.getPredecessor();
-  const LocationContext *LCtx = Pred->getLocationContext();
   ProgramStateRef State = Pred->getState();
 
-  if (SymbolRef Sym = State->getSVal(Ex, LCtx).getAsSymbol()) {
+  if (SymbolRef Sym = Pred->getSVal(Ex).getAsSymbol()) {
     QualType ResultTy = Ex->getType();
     State = setRefBinding(State, Sym,
                           RefVal::makeNotOwned(RetEffect::ObjC, ResultTy));

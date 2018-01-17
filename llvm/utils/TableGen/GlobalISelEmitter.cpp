@@ -1692,6 +1692,19 @@ public:
                             RuleMatcher &Rule) const override {
     InsnMatcher->emitPredicateOpcodes(Table, Rule);
   }
+
+  bool isHigherPriorityThan(const OperandPredicateMatcher &B) const override {
+    if (OperandPredicateMatcher::isHigherPriorityThan(B))
+      return true;
+    if (B.OperandPredicateMatcher::isHigherPriorityThan(*this))
+      return false;
+
+    if (const InstructionOperandMatcher *BP =
+            dyn_cast<InstructionOperandMatcher>(&B))
+      if (InsnMatcher->isHigherPriorityThan(*BP->InsnMatcher))
+        return true;
+    return false;
+  }
 };
 
 //===- Actions ------------------------------------------------------------===//

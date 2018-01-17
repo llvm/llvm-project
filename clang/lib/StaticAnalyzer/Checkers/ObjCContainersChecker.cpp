@@ -39,7 +39,7 @@ class ObjCContainersChecker : public Checker< check::PreStmt<CallExpr>,
   }
 
   inline SymbolRef getArraySym(const Expr *E, CheckerContext &C) const {
-    SVal ArrayRef = C.getState()->getSVal(E, C.getLocationContext());
+    SVal ArrayRef = C.getSVal(E);
     SymbolRef ArraySym = ArrayRef.getAsSymbol();
     return ArraySym;
   }
@@ -66,13 +66,13 @@ REGISTER_MAP_WITH_PROGRAMSTATE(ArraySizeMap, SymbolRef, DefinedSVal)
 void ObjCContainersChecker::addSizeInfo(const Expr *Array, const Expr *Size,
                                         CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-  SVal SizeV = State->getSVal(Size, C.getLocationContext());
+  SVal SizeV = C.getSVal(Size);
   // Undefined is reported by another checker.
   if (SizeV.isUnknownOrUndef())
     return;
 
   // Get the ArrayRef symbol.
-  SVal ArrayRef = State->getSVal(Array, C.getLocationContext());
+  SVal ArrayRef = C.getSVal(Array);
   SymbolRef ArraySym = ArrayRef.getAsSymbol();
   if (!ArraySym)
     return;
@@ -128,7 +128,7 @@ void ObjCContainersChecker::checkPreStmt(const CallExpr *CE,
 
     // Get the index.
     const Expr *IdxExpr = CE->getArg(1);
-    SVal IdxVal = State->getSVal(IdxExpr, C.getLocationContext());
+    SVal IdxVal = C.getSVal(IdxExpr);
     if (IdxVal.isUnknownOrUndef())
       return;
     DefinedSVal Idx = IdxVal.castAs<DefinedSVal>();

@@ -66,6 +66,10 @@ static const char *ARCCondCodeToString(ARCCC::CondCode CC) {
     return "gt";
   case ARCCC::GE:
     return "ge";
+  case ARCCC::VS:
+    return "vs";
+  case ARCCC::VC:
+    return "vc";
   case ARCCC::LT:
     return "lt";
   case ARCCC::LE:

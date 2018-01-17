@@ -101,6 +101,9 @@ private:
 
   /// \return Executed lines from \p D in JSON format.
   std::string serializeExecutedLines(const PathDiagnostic &D);
+
+  /// \return Javascript for displaying shortcuts help;
+  std::string showHelpJavascript();
 };
 
 } // end anonymous namespace
@@ -347,6 +350,8 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
   int LineNumber = path.back()->getLocation().asLocation().getExpansionLineNumber();
   int ColumnNumber = path.back()->getLocation().asLocation().getExpansionColumnNumber();
 
+  R.InsertTextBefore(SMgr.getLocForStartOfFile(FID), showHelpJavascript());
+
   R.InsertTextBefore(SMgr.getLocForStartOfFile(FID),
                      generateKeyboardNavigationJavascript());
 
@@ -399,9 +404,17 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
 </table>
 <!-- REPORTSUMMARYEXTRA -->
 <h3>Annotated Source Code</h3>
-<p><span class='macro'>[?]
-  <span class='expansion'>Use j/k keys for keyboard navigation</span>
-</span></p>
+<p>Press <a href="#" onclick="toggleHelp(); return false;">'?'</a>
+   to see keyboard shortcuts</p>
+<div id='tooltiphint' hidden="true">
+  <p>Keyboard shortcuts: </p>
+  <ul>
+    <li>Use 'j/k' keys for keyboard navigation</li>
+    <li>Use 'Shift+S' to show/hide relevant lines</li>
+    <li>Use '?' to toggle this window</li>
+  </ul>
+  <a href="#" onclick="toggleHelp(); return false;">Close</a>
+</div>
 )<<<";
 
     R.InsertTextBefore(SMgr.getLocForStartOfFile(FID), os.str());
@@ -459,6 +472,34 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
   }
 
   html::AddHeaderFooterInternalBuiltinCSS(R, FID, Entry->getName());
+}
+
+std::string HTMLDiagnostics::showHelpJavascript() {
+  return R"<<<(
+<script type='text/javascript'>
+
+var toggleHelp = function() {
+    var hint = document.querySelector("#tooltiphint");
+    var attributeName = "hidden";
+    if (hint.hasAttribute(attributeName)) {
+      hint.removeAttribute(attributeName);
+    } else {
+      hint.setAttribute("hidden", "true");
+    }
+};
+window.addEventListener("keydown", function (event) {
+  if (event.defaultPrevented) {
+    return;
+  }
+  if (event.key == "?") {
+    toggleHelp();
+  } else {
+    return;
+  }
+  event.preventDefault();
+});
+</script>
+)<<<";
 }
 
 std::string

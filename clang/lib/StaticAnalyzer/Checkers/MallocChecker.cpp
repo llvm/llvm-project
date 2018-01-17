@@ -758,7 +758,7 @@ llvm::Optional<ProgramStateRef> MallocChecker::performKernelMalloc(
     return None;
 
   const Expr *FlagsEx = CE->getArg(CE->getNumArgs() - 1);
-  const SVal V = State->getSVal(FlagsEx, C.getLocationContext());
+  const SVal V = C.getSVal(FlagsEx);
   if (!V.getAs<NonLoc>()) {
     // The case where 'V' can be a location can only be due to a bad header,
     // so in this case bail out.
@@ -972,8 +972,7 @@ ProgramStateRef MallocChecker::ProcessZeroAllocation(CheckerContext &C,
 
   assert(Arg);
 
-  Optional<DefinedSVal> DefArgVal =
-      State->getSVal(Arg, C.getLocationContext()).getAs<DefinedSVal>();
+  Optional<DefinedSVal> DefArgVal = C.getSVal(Arg).getAs<DefinedSVal>();
 
   if (!DefArgVal)
     return State;
@@ -988,7 +987,7 @@ ProgramStateRef MallocChecker::ProcessZeroAllocation(CheckerContext &C,
       State->assume(SvalBuilder.evalEQ(State, *DefArgVal, Zero));
 
   if (TrueState && !FalseState) {
-    SVal retVal = State->getSVal(E, C.getLocationContext());
+    SVal retVal = C.getSVal(E);
     SymbolRef Sym = retVal.getAsLocSymbol();
     if (!Sym)
       return State;
@@ -1092,7 +1091,7 @@ ProgramStateRef MallocChecker::addExtentSize(CheckerContext &C,
   const SubRegion *Region;
   if (NE->isArray()) {
     const Expr *SizeExpr = NE->getArraySize();
-    ElementCount = State->getSVal(SizeExpr, C.getLocationContext());
+    ElementCount = C.getSVal(SizeExpr);
     // Store the extent size for the (symbolic)region
     // containing the elements.
     Region = (State->getSVal(NE, LCtx))
@@ -1212,8 +1211,7 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
   if (!State)
     return nullptr;
 
-  return MallocMemAux(C, CE, State->getSVal(SizeEx, C.getLocationContext()),
-                      Init, State, Family);
+  return MallocMemAux(C, CE, C.getSVal(SizeEx), Init, State, Family);
 }
 
 ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
@@ -1268,7 +1266,7 @@ ProgramStateRef MallocChecker::MallocUpdateRefState(CheckerContext &C,
     return nullptr;
 
   // Get the return value.
-  SVal retVal = State->getSVal(E, C.getLocationContext());
+  SVal retVal = C.getSVal(E);
 
   // We expect the malloc functions to return a pointer.
   if (!retVal.getAs<Loc>())
@@ -1457,7 +1455,7 @@ ProgramStateRef MallocChecker::FreeMemAux(CheckerContext &C,
   if (!State)
     return nullptr;
 
-  SVal ArgVal = State->getSVal(ArgExpr, C.getLocationContext());
+  SVal ArgVal = C.getSVal(ArgExpr);
   if (!ArgVal.getAs<DefinedOrUnknownSVal>())
     return nullptr;
   DefinedOrUnknownSVal location = ArgVal.castAs<DefinedOrUnknownSVal>();
@@ -2084,8 +2082,7 @@ ProgramStateRef MallocChecker::ReallocMemAux(CheckerContext &C,
     return nullptr;
 
   const Expr *arg0Expr = CE->getArg(0);
-  const LocationContext *LCtx = C.getLocationContext();
-  SVal Arg0Val = State->getSVal(arg0Expr, LCtx);
+  SVal Arg0Val = C.getSVal(arg0Expr);
   if (!Arg0Val.getAs<DefinedOrUnknownSVal>())
     return nullptr;
   DefinedOrUnknownSVal arg0Val = Arg0Val.castAs<DefinedOrUnknownSVal>();
@@ -2099,7 +2096,7 @@ ProgramStateRef MallocChecker::ReallocMemAux(CheckerContext &C,
   const Expr *Arg1 = CE->getArg(1);
 
   // Get the value of the size argument.
-  SVal TotalSize = State->getSVal(Arg1, LCtx);
+  SVal TotalSize = C.getSVal(Arg1);
   if (SuffixWithN)
     TotalSize = evalMulForBufferSize(C, Arg1, CE->getArg(2));
   if (!TotalSize.getAs<DefinedOrUnknownSVal>())
@@ -2133,7 +2130,7 @@ ProgramStateRef MallocChecker::ReallocMemAux(CheckerContext &C,
   // Get the from and to pointer symbols as in toPtr = realloc(fromPtr, size).
   assert(!PrtIsNull);
   SymbolRef FromPtr = arg0Val.getAsSymbol();
-  SVal RetVal = State->getSVal(CE, LCtx);
+  SVal RetVal = C.getSVal(CE);
   SymbolRef ToPtr = RetVal.getAsSymbol();
   if (!FromPtr || !ToPtr)
     return nullptr;
@@ -2406,7 +2403,7 @@ void MallocChecker::checkPreStmt(const ReturnStmt *S, CheckerContext &C) const {
 
   // Check if we are returning a symbol.
   ProgramStateRef State = C.getState();
-  SVal RetVal = State->getSVal(E, C.getLocationContext());
+  SVal RetVal = C.getSVal(E);
   SymbolRef Sym = RetVal.getAsSymbol();
   if (!Sym)
     // If we are returning a field of the allocated struct or an array element,
@@ -2436,8 +2433,7 @@ void MallocChecker::checkPostStmt(const BlockExpr *BE,
 
   ProgramStateRef state = C.getState();
   const BlockDataRegion *R =
-    cast<BlockDataRegion>(state->getSVal(BE,
-                                         C.getLocationContext()).getAsRegion());
+    cast<BlockDataRegion>(C.getSVal(BE).getAsRegion());
 
   BlockDataRegion::referenced_vars_iterator I = R->referenced_vars_begin(),
                                             E = R->referenced_vars_end();

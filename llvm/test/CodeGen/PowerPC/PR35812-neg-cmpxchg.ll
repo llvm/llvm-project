@@ -26,9 +26,7 @@ define signext i32 @main() {
 ; CHECK:  .LBB0_3: # %L.entry
 ; CHECK:    sthcx. 3, 0, 5
 ; CHECK:  .LBB0_4: # %L.entry
-; Once D41798 lands, this should be the check:
-; FIXME:    cmplwi 3, 33059
-; CHECK:    cmpwi 3, -32477
+; CHECK:    cmplwi 3, 33059
 ; CHECK:    lwsync
 ; CHECK:    lhz 3, 46(1)
 ; CHECK:    cmplwi 3, 234
@@ -64,9 +62,7 @@ define signext i32 @main() {
 ; CHECK-P7:  .LBB0_4: # %L.entry
 ; CHECK-P7:    srw 3, 6, 3
 ; CHECK-P7:    lwsync
-; Once D41798 lands, this should be the check:
-; FIXME:    cmplwi 3, 33059
-; CHECK-P7:    cmpwi 3, -32477
+; CHECK-P7:    cmplwi 3, 33059
 ; CHECK-P7:    lhz 3, 46(1)
 ; CHECK-P7:    cmplwi 3, 234
 L.entry:

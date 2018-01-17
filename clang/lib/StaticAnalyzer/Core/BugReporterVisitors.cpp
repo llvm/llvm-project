@@ -235,7 +235,7 @@ public:
 
     // Check the return value.
     ProgramStateRef State = Node->getState();
-    SVal RetVal = State->getSVal(S, Node->getLocationContext());
+    SVal RetVal = Node->getSVal(S);
 
     // Handle cases where a reference is returned and then immediately used.
     if (cast<Expr>(S)->isGLValue())
@@ -717,7 +717,7 @@ FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
       if (VR) {
         // See if we can get the BlockVarRegion.
         ProgramStateRef State = StoreSite->getState();
-        SVal V = State->getSVal(S, PS->getLocationContext());
+        SVal V = StoreSite->getSVal(S);
         if (const BlockDataRegion *BDR =
               dyn_cast_or_null<BlockDataRegion>(V.getAsRegion())) {
           if (const VarRegion *OriginalR = BDR->getOriginalRegion(VR)) {
@@ -1104,7 +1104,7 @@ bool bugreporter::trackNullOrUndefValue(const ExplodedNode *N,
   if (Inner && ExplodedGraph::isInterestingLValueExpr(Inner)) {
     const ExplodedNode *LVNode = findNodeForExpression(N, Inner);
     ProgramStateRef LVState = LVNode->getState();
-    SVal LVal = LVState->getSVal(Inner, LVNode->getLocationContext());
+    SVal LVal = LVNode->getSVal(Inner);
 
     const MemRegion *RR = getLocationRegionIfReference(Inner, N);
     bool LVIsNull = LVState->isNull(LVal).isConstrainedTrue();
@@ -1123,7 +1123,7 @@ bool bugreporter::trackNullOrUndefValue(const ExplodedNode *N,
     // If the LVal is null, check if we are dealing with null reference.
     // For those, we want to track the location of the reference.
     const MemRegion *R = (RR && LVIsNull) ? RR :
-        LVState->getSVal(Inner, LVNode->getLocationContext()).getAsRegion();
+        LVNode->getSVal(Inner).getAsRegion();
 
     if (R) {
       // Mark both the variable region and its contents as interesting.
@@ -1203,7 +1203,7 @@ const Expr *NilReceiverBRVisitor::getNilReceiver(const Stmt *S,
     return nullptr;
   if (const Expr *Receiver = ME->getInstanceReceiver()) {
     ProgramStateRef state = N->getState();
-    SVal V = state->getSVal(Receiver, N->getLocationContext());
+    SVal V = N->getSVal(Receiver);
     if (state->isNull(V).isConstrainedTrue())
       return Receiver;
   }
@@ -1259,8 +1259,7 @@ void FindLastStoreBRVisitor::registerStatementVarDecls(BugReport &BR,
     const Stmt *Head = WorkList.front();
     WorkList.pop_front();
 
-    ProgramStateRef state = N->getState();
-    ProgramStateManager &StateMgr = state->getStateManager();
+    ProgramStateManager &StateMgr = N->getState()->getStateManager();
 
     if (const DeclRefExpr *DR = dyn_cast<DeclRefExpr>(Head)) {
       if (const VarDecl *VD = dyn_cast<VarDecl>(DR->getDecl())) {
@@ -1268,7 +1267,7 @@ void FindLastStoreBRVisitor::registerStatementVarDecls(BugReport &BR,
         StateMgr.getRegionManager().getVarRegion(VD, N->getLocationContext());
 
         // What did we load?
-        SVal V = state->getSVal(S, N->getLocationContext());
+        SVal V = N->getSVal(S);
 
         if (V.getAs<loc::ConcreteInt>() || V.getAs<nonloc::ConcreteInt>()) {
           // Register a new visitor with the BugReport.
@@ -1838,7 +1837,7 @@ UndefOrNullArgVisitor::VisitNode(const ExplodedNode *N,
     const MemRegion *ArgReg = Call->getArgSVal(Idx).getAsRegion();
 
     // Are we tracking the argument or its subregion?
-    if ( !ArgReg || (ArgReg != R && !R->isSubRegionOf(ArgReg->StripCasts())))
+    if ( !ArgReg || !R->isSubRegionOf(ArgReg->StripCasts()))
       continue;
 
     // Check the function parameter type.

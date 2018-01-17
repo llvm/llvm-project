@@ -562,7 +562,7 @@ void DynamicTypePropagation::checkPostStmt(const CastExpr *CE,
       DestObjectPtrType->isUnspecialized())
     return;
 
-  SymbolRef Sym = State->getSVal(CE, C.getLocationContext()).getAsSymbol();
+  SymbolRef Sym = C.getSVal(CE).getAsSymbol();
   if (!Sym)
     return;
 

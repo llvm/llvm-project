@@ -132,6 +132,7 @@ def dash_dash_version : Flag<["--"], "version">,
 // Flags for debugging
 def lldmap : F<"lldmap">;
 def lldmap_file : Joined<["/", "-"], "lldmap:">;
+def show_timing : F<"time">;
 
 //==============================================================================
 // The flags below do nothing. They are defined only for link.exe compatibility.

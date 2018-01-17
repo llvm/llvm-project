@@ -422,7 +422,11 @@ bool SIAnnotateControlFlow::runOnFunction(Function &F) {
     openIf(Term);
   }
 
-  assert(Stack.empty());
+  if (!Stack.empty()) {
+    // CFG was probably not structured.
+    report_fatal_error("failed to annotate CFG");
+  }
+
   return true;
 }
 
