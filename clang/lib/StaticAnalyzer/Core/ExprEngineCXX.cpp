@@ -119,17 +119,9 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
         if (AMgr.getAnalyzerOptions().mayInlineCXXAllocator()) {
           // TODO: Detect when the allocator returns a null pointer.
           // Constructor shall not be called in this case.
-          if (const SubRegion *MR = dyn_cast_or_null<SubRegion>(
-                  getCXXNewAllocatorValue(State, CNE, LCtx).getAsRegion())) {
-            if (CNE->isArray()) {
-              // TODO: This code exists only to trigger the suppression for
-              // array constructors. In fact, we need to call the constructor
-              // for every allocated element, not just the first one!
-              return getStoreManager().GetElementZeroRegion(
-                  MR, CNE->getType()->getPointeeType());
-            }
+          if (const MemRegion *MR =
+                  getCXXNewAllocatorValue(State, CNE, LCtx).getAsRegion())
             return MR;
-          }
         }
       } else if (auto *DS = dyn_cast<DeclStmt>(StmtElem->getStmt())) {
         if (const auto *Var = dyn_cast<VarDecl>(DS->getSingleDecl())) {
@@ -479,31 +471,23 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
 
   ExplodedNodeSet DstPostCall;
   StmtNodeBuilder CallBldr(DstPreCall, DstPostCall, *currBldrCtx);
-  for (auto I : DstPreCall) {
-    // FIXME: Provide evalCall for checkers?
+  for (auto I : DstPreCall)
     defaultEvalCall(CallBldr, I, *Call);
-  }
-  // If the call is inlined, DstPostCall will be empty and we bail out now.
 
   // Store return value of operator new() for future use, until the actual
   // CXXNewExpr gets processed.
   ExplodedNodeSet DstPostValue;
   StmtNodeBuilder ValueBldr(DstPostCall, DstPostValue, *currBldrCtx);
   for (auto I : DstPostCall) {
-    // FIXME: Because CNE serves as the "call site" for the allocator (due to
-    // lack of a better expression in the AST), the conjured return value symbol
-    // is going to be of the same type (C++ object pointer type). Technically
-    // this is not correct because the operator new's prototype always says that
-    // it returns a 'void *'. So we should change the type of the symbol,
-    // and then evaluate the cast over the symbolic pointer from 'void *' to
-    // the object pointer type. But without changing the symbol's type it
-    // is breaking too much to evaluate the no-op symbolic cast over it, so we
-    // skip it for now.
     ProgramStateRef State = I->getState();
     ValueBldr.generateNode(
         CNE, I,
         setCXXNewAllocatorValue(State, CNE, LCtx, State->getSVal(CNE, LCtx)));
   }
+
+  getCheckerManager().runCheckersForPostCall(Dst, DstPostValue,
+                                             *Call, *this);
+}
 
   ExplodedNodeSet DstPostPostCallCallback;
   getCheckerManager().runCheckersForPostCall(DstPostPostCallCallback,
@@ -528,6 +512,14 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
 
   bool IsStandardGlobalOpNewFunction =
       FD->isReplaceableGlobalAllocationFunction();
+
+  ProgramStateRef State = Pred->getState();
+
+  // Retrieve the stored operator new() return value.
+  if (AMgr.getAnalyzerOptions().mayInlineCXXAllocator()) {
+    symVal = getCXXNewAllocatorValue(State, CNE, LCtx);
+    State = clearCXXNewAllocatorValue(State, CNE, LCtx);
+  }
 
   ProgramStateRef State = Pred->getState();
 
