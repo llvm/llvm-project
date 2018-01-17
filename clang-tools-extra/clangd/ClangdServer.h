@@ -308,11 +308,11 @@ public:
                                                      PathRef File, Position Pos,
                                                      llvm::StringRef NewName);
 
-  /// Gets current document contents for \p File. \p File must point to a
-  /// currently tracked file.
+  /// Gets current document contents for \p File. Returns None if \p File is not
+  /// currently tracked.
   /// FIXME(ibiryukov): This function is here to allow offset-to-Position
   /// conversions in outside code, maybe there's a way to get rid of it.
-  std::string getDocument(PathRef File);
+  llvm::Optional<std::string> getDocument(PathRef File);
 
   /// Only for testing purposes.
   /// Waits until all requests to worker thread are finished and dumps AST for

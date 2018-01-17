@@ -14,6 +14,10 @@
 #include <unistd.h>
 #include <string>
 
+#ifndef MAP_FILE
+#define MAP_FILE 0
+#endif
+
 char array[4096];
 int main(int argc, char **argv) {
   int fd = open((std::string(argv[0]) + ".m").c_str(), O_RDWR | O_CREAT, 0700);

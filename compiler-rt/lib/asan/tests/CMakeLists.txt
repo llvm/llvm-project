@@ -237,6 +237,9 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID)
   if(APPLE)
     darwin_filter_host_archs(ASAN_SUPPORTED_ARCH ASAN_TEST_ARCH)
   endif()
+  if(OS_NAME MATCHES "SunOS")
+    list(REMOVE_ITEM ASAN_TEST_ARCH x86_64)
+  endif()
 
   foreach(arch ${ASAN_TEST_ARCH})
 
