@@ -479,8 +479,10 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
 
   ExplodedNodeSet DstPostCall;
   StmtNodeBuilder CallBldr(DstPreCall, DstPostCall, *currBldrCtx);
-  for (auto I : DstPreCall)
+  for (auto I : DstPreCall) {
+    // FIXME: Provide evalCall for checkers?
     defaultEvalCall(CallBldr, I, *Call);
+  }
   // If the call is inlined, DstPostCall will be empty and we bail out now.
 
   // Store return value of operator new() for future use, until the actual
@@ -507,7 +509,6 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
                                              *Call, *this);
 }
 
-
 void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
                                    ExplodedNodeSet &Dst) {
   // FIXME: Much of this should eventually migrate to CXXAllocatorCall.
@@ -520,18 +521,8 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
   SVal symVal = UnknownVal();
   FunctionDecl *FD = CNE->getOperatorNew();
 
-  bool IsStandardGlobalOpNewFunction = false;
-  if (FD && !isa<CXXMethodDecl>(FD) && !FD->isVariadic()) {
-    if (FD->getNumParams() == 2) {
-      QualType T = FD->getParamDecl(1)->getType();
-      if (const IdentifierInfo *II = T.getBaseTypeIdentifier())
-        // NoThrow placement new behaves as a standard new.
-        IsStandardGlobalOpNewFunction = II->getName().equals("nothrow_t");
-    }
-    else
-      // Placement forms are considered non-standard.
-      IsStandardGlobalOpNewFunction = (FD->getNumParams() == 1);
-  }
+  bool IsStandardGlobalOpNewFunction =
+      FD->isReplaceableGlobalAllocationFunction();
 
   ProgramStateRef State = Pred->getState();
 
@@ -587,9 +578,8 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
   if (CNE->isArray()) {
     // FIXME: allocating an array requires simulating the constructors.
     // For now, just return a symbolicated region.
-    if (!AMgr.getAnalyzerOptions().mayInlineCXXAllocator()) {
-      const SubRegion *NewReg =
-          symVal.castAs<loc::MemRegionVal>().getRegionAs<SubRegion>();
+    if (const SubRegion *NewReg =
+            dyn_cast_or_null<SubRegion>(symVal.getAsRegion())) {
       QualType ObjTy = CNE->getType()->getAs<PointerType>()->getPointeeType();
       const ElementRegion *EleReg =
           getStoreManager().GetElementZeroRegion(NewReg, ObjTy);
