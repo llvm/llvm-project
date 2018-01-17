@@ -277,12 +277,19 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
       state = state->BindExpr(CCE, callerCtx, ThisV);
     }
 
-    if (const CXXNewExpr *CNE = dyn_cast<CXXNewExpr>(CE)) {
+    if (const auto *CNE = dyn_cast<CXXNewExpr>(CE)) {
       // We are currently evaluating a CXXNewAllocator CFGElement. It takes a
       // while to reach the actual CXXNewExpr element from here, so keep the
       // region for later use.
-      state = setCXXNewAllocatorValue(state, CNE, calleeCtx->getParent(),
-                                      state->getSVal(CE, callerCtx));
+      // Additionally cast the return value of the inlined operator new
+      // (which is of type 'void *') to the correct object type.
+      SVal AllocV = state->getSVal(CNE, callerCtx);
+      AllocV = svalBuilder.evalCast(
+          AllocV, CNE->getType(),
+          getContext().getPointerType(getContext().VoidTy));
+
+      state =
+          setCXXNewAllocatorValue(state, CNE, calleeCtx->getParent(), AllocV);
     }
   }
 
