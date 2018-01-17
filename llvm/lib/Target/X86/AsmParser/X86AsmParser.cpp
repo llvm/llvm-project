@@ -2376,6 +2376,13 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
             .Cases("repne", "repnz", X86::IP_HAS_REPEAT_NE)
             .Default(X86::IP_NO_PREFIX); // Invalid prefix (impossible)
     Flags |= Prefix;
+    if (getLexer().is(AsmToken::EndOfStatement)) {
+      // We don't have real instr with the given prefix
+      //  let's use the prefix as the instr.
+      // TODO: there could be several prefixes one after another
+      Flags = X86::IP_NO_PREFIX;
+      break;
+    }
     Name = Parser.getTok().getString();
     Parser.Lex(); // eat the prefix
     // Hack: we could have something like "rep # some comment" or

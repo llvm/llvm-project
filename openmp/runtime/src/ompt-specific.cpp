@@ -219,16 +219,20 @@ omp_state_t __ompt_get_state_internal(ompt_wait_id_t *ompt_wait_id) {
 int __ompt_get_parallel_info_internal(int ancestor_level,
                                       ompt_data_t **parallel_data,
                                       int *team_size) {
-  ompt_team_info_t *info;
-  if (team_size) {
-    info = __ompt_get_teaminfo(ancestor_level, team_size);
+  if (__kmp_get_gtid() >= 0) {
+    ompt_team_info_t *info;
+    if (team_size) {
+      info = __ompt_get_teaminfo(ancestor_level, team_size);
+    } else {
+      info = __ompt_get_teaminfo(ancestor_level, NULL);
+    }
+    if (parallel_data) {
+      *parallel_data = info ? &(info->parallel_data) : NULL;
+    }
+    return info ? 2 : 0;
   } else {
-    info = __ompt_get_teaminfo(ancestor_level, NULL);
+    return 0;
   }
-  if (parallel_data) {
-    *parallel_data = info ? &(info->parallel_data) : NULL;
-  }
-  return info ? 2 : 0;
 }
 
 //----------------------------------------------------------
@@ -314,6 +318,9 @@ int __ompt_get_task_info_internal(int ancestor_level, int *type,
                                   ompt_frame_t **task_frame,
                                   ompt_data_t **parallel_data,
                                   int *thread_num) {
+  if (__kmp_get_gtid() < 0)
+    return 0;
+
   if (ancestor_level < 0)
     return 0;
 

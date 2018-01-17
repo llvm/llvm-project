@@ -190,6 +190,10 @@ public:
                               uint64_t Offset, uint64_t Size,
                               bool IsImmutable = false);
 
+  /// \brief Return mutable version of the given mutable or immutable TBAA
+  /// access tag.
+  MDNode *createMutableTBAAAccessTag(MDNode *Tag);
+
   /// \brief Return metadata containing an irreducible loop header weight.
   MDNode *createIrrLoopHeaderWeight(uint64_t Weight);
 };

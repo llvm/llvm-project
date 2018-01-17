@@ -198,7 +198,7 @@ class ImplicitNullChecks : public MachineFunctionPass {
   SuitabilityResult isSuitableMemoryOp(MachineInstr &MI, unsigned PointerReg,
                                        ArrayRef<MachineInstr *> PrevInsts);
 
-  /// Return true if \p FaultingMI can be hoisted from after the the
+  /// Return true if \p FaultingMI can be hoisted from after the
   /// instructions in \p InstsSeenSoFar to before them.  Set \p Dependence to a
   /// non-null value if we also need to (and legally can) hoist a depedency.
   bool canHoistInst(MachineInstr *FaultingMI, unsigned PointerReg,

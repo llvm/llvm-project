@@ -6,13 +6,14 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 // MSVC provides _alloca instead of alloca.
 #if defined(_MSC_VER) && !defined(alloca)
 # define alloca _alloca
-#elif defined(__FreeBSD__) || defined(__NetBSD__)
-#include <stdlib.h>
-#else
+#endif
+
+#if defined(__sun__) && defined(__svr4__)
 #include <alloca.h>
 #endif
 

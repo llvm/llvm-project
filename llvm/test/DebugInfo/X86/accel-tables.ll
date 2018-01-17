@@ -1,27 +1,16 @@
-; Verify target-based defaults for "debugger tuning," and the ability to
-; override defaults.
-; We use the DW_AT_APPLE_optimized attribute and the DW_OP_form_tls_address
-; vs. DW_OP_GNU_push_tls_address opcodes to distinguish the debuggers.
+; Verify the emission of accelerator tables for various targets.
 
-; Verify defaults for various targets.
-; RUN: llc -mtriple=x86_64-scei-ps4 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=SCE %s
-; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=LLDB %s
-; RUN: llc -mtriple=x86_64-pc-freebsd -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=GDB %s
-; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=GDB %s
+; Darwin has the tables unless we specifically tune for gdb
+; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj < %s | llvm-readobj -sections - | FileCheck --check-prefix=CHECK1 %s
+; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj -debugger-tune=gdb < %s | llvm-readobj -sections - | FileCheck --check-prefix=CHECK2 %s
 
-; We can override defaults.
-; RUN: llc -mtriple=x86_64-scei-ps4 -filetype=obj -debugger-tune=gdb < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=GDB %s
-; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -debugger-tune=lldb < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=LLDB %s
-; RUN: llc -mtriple=x86_64-apple-darwin12 -filetype=obj -debugger-tune=sce < %s | llvm-dwarfdump -debug-info - | FileCheck --check-prefix=SCE %s
+; Linux does not have the tables even if we explicitly tune for lldb
+; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj < %s | llvm-readobj -sections - | FileCheck --check-prefix=CHECK2 %s
+; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -debugger-tune=lldb < %s | llvm-readobj -sections - | FileCheck --check-prefix=CHECK2 %s
 
-; GDB-NOT: DW_AT_APPLE_optimized
-; GDB-NOT: DW_OP_form_tls_address
+; CHECK1: apple_names
 
-; LLDB: DW_AT_APPLE_optimized
-; LLDB: DW_OP_form_tls_address
-
-; SCE-NOT: DW_AT_APPLE_optimized
-; SCE-NOT: DW_OP_GNU_push_tls_address
+; CHECK2-NOT: apple_names
 
 @var = thread_local global i32 0, align 4, !dbg !0
 

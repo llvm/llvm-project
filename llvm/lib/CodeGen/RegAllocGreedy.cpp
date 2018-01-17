@@ -399,7 +399,7 @@ class RAGreedy : public MachineFunctionPass,
   /// obtained from the TargetSubtargetInfo.
   bool EnableLocalReassign;
 
-  /// Enable or not the the consideration of the cost of local intervals created
+  /// Enable or not the consideration of the cost of local intervals created
   /// by a split candidate when choosing the best split candidate.
   bool EnableAdvancedRASplitCost;
 
@@ -1448,7 +1448,7 @@ bool RAGreedy::splitCanCauseEvictionChain(unsigned Evictee,
       getCheapestEvicteeWeight(Order, LIS->getInterval(Evictee),
                                Cand.Intf.first(), Cand.Intf.last(), &MaxWeight);
 
-  // The bad eviction chain occurs when either the split candidate the the
+  // The bad eviction chain occurs when either the split candidate the
   // evited reg or one of the split artifact will evict the evicting reg.
   if ((PhysReg != Cand.PhysReg) && (PhysReg != FutureEvictedPhysReg))
     return false;
