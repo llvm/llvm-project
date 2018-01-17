@@ -203,7 +203,7 @@ StringRef getDefaultCPU(StringRef Arch);
 // Parser
 unsigned parseFPU(StringRef FPU);
 AArch64::ArchKind parseArch(StringRef Arch);
-unsigned parseArchExt(StringRef ArchExt);
+ArchExtKind parseArchExt(StringRef ArchExt);
 ArchKind parseCPUArch(StringRef CPU);
 ARM::ISAKind parseArchISA(StringRef Arch);
 ARM::EndianKind parseArchEndian(StringRef Arch);

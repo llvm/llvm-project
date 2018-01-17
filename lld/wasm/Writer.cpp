@@ -572,6 +572,11 @@ void Writer::layoutMemory() {
     MemoryPtr += Config->ZStackSize;
     Config->StackPointerSymbol->setVirtualAddress(MemoryPtr);
     debugPrint("mem: stack top   = %d\n", MemoryPtr);
+    // Set `__heap_base` to directly follow the end of the stack.  We don't
+    // allocate any heap memory up front, but instead really on the malloc/brk
+    // implementation growing the memory at runtime.
+    Config->HeapBaseSymbol->setVirtualAddress(MemoryPtr);
+    debugPrint("mem: heap base   = %d\n", MemoryPtr);
   }
 
   uint32_t MemSize = alignTo(MemoryPtr, WasmPageSize);
@@ -667,6 +672,11 @@ void Writer::assignIndexes() {
   if (Config->StackPointerSymbol) {
     DefinedGlobals.emplace_back(Config->StackPointerSymbol);
     Config->StackPointerSymbol->setOutputIndex(GlobalIndex++);
+  }
+
+  if (Config->HeapBaseSymbol) {
+    DefinedGlobals.emplace_back(Config->HeapBaseSymbol);
+    Config->HeapBaseSymbol->setOutputIndex(GlobalIndex++);
   }
 
   if (Config->EmitRelocs)
