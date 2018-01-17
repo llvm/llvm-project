@@ -678,6 +678,9 @@ def trunc_imm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i32);
 }]>;
 
+def gi_trunc_imm : GICustomOperandRenderer<"renderTruncImm">,
+  GISDNodeXFormEquiv<trunc_imm>;
+
 def : Pat<(i64 i64imm_32bit:$src),
           (SUBREG_TO_REG (i64 0), (MOVi32imm (trunc_imm imm:$src)), sub_32)>;
 

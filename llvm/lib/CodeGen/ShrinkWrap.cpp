@@ -240,10 +240,6 @@ INITIALIZE_PASS_END(ShrinkWrap, DEBUG_TYPE, "Shrink Wrap Pass", false, false)
 
 bool ShrinkWrap::useOrDefCSROrFI(const MachineInstr &MI,
                                  RegScavenger *RS) const {
-  // Ignore DBG_VALUE and other meta instructions that must not affect codegen.
-  if (MI.isMetaInstruction())
-    return false;
-
   if (MI.getOpcode() == FrameSetupOpcode ||
       MI.getOpcode() == FrameDestroyOpcode) {
     DEBUG(dbgs() << "Frame instruction: " << MI << '\n');
@@ -252,6 +248,9 @@ bool ShrinkWrap::useOrDefCSROrFI(const MachineInstr &MI,
   for (const MachineOperand &MO : MI.operands()) {
     bool UseOrDefCSR = false;
     if (MO.isReg()) {
+      // Ignore instructions like DBG_VALUE which don't read/def the register.
+      if (!MO.isDef() && !MO.readsReg())
+        continue;
       unsigned PhysReg = MO.getReg();
       if (!PhysReg)
         continue;
@@ -267,7 +266,8 @@ bool ShrinkWrap::useOrDefCSROrFI(const MachineInstr &MI,
         }
       }
     }
-    if (UseOrDefCSR || MO.isFI()) {
+    // Skip FrameIndex operands in DBG_VALUE instructions.
+    if (UseOrDefCSR || (MO.isFI() && !MI.isDebugValue())) {
       DEBUG(dbgs() << "Use or define CSR(" << UseOrDefCSR << ") or FI("
                    << MO.isFI() << "): " << MI << '\n');
       return true;

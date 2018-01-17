@@ -189,6 +189,8 @@ void FunctionDumper::start(const PDBSymbolFunc &Symbol, PointerType Pointer) {
       if (++Index < Arguments->getChildCount())
         Printer << ", ";
     }
+    if (Signature->isCVarArgs())
+      Printer << ", ...";
   }
   Printer << ")";
   if (Symbol.isConstType())
