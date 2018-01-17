@@ -469,6 +469,46 @@ void CheckerManager::runCheckersForBranchCondition(const Stmt *Condition,
   expandGraphWithCheckers(C, Dst, Src);
 }
 
+namespace {
+  struct CheckNewAllocatorContext {
+    typedef std::vector<CheckerManager::CheckNewAllocatorFunc> CheckersTy;
+    const CheckersTy &Checkers;
+    const CXXNewExpr *NE;
+    SVal Target;
+    bool WasInlined;
+    ExprEngine &Eng;
+
+    CheckersTy::const_iterator checkers_begin() { return Checkers.begin(); }
+    CheckersTy::const_iterator checkers_end() { return Checkers.end(); }
+
+    CheckNewAllocatorContext(const CheckersTy &Checkers, const CXXNewExpr *NE,
+                             SVal Target, bool WasInlined, ExprEngine &Eng)
+        : Checkers(Checkers), NE(NE), Target(Target), WasInlined(WasInlined),
+          Eng(Eng) {}
+
+    void runChecker(CheckerManager::CheckNewAllocatorFunc checkFn,
+                    NodeBuilder &Bldr, ExplodedNode *Pred) {
+      // TODO: Does this deserve a custom program point? For now we're re-using
+      // PostImplicitCall because we're guaranteed to use the non-implicit
+      // PostStmt for the PostCall callback, because we have some sort of
+      // call site (CXXNewExpr) in this scenario.
+      ProgramPoint L = PostImplicitCall(NE->getOperatorNew(), NE->getLocStart(),
+                                        Pred->getLocationContext());
+      CheckerContext C(Bldr, Eng, Pred, L, WasInlined);
+      checkFn(NE, Target, C);
+    }
+  };
+}
+
+void CheckerManager::runCheckersForNewAllocator(
+    const CXXNewExpr *NE, SVal Target, ExplodedNodeSet &Dst, ExplodedNode *Pred,
+    ExprEngine &Eng, bool WasInlined) {
+  ExplodedNodeSet Src;
+  Src.insert(Pred);
+  CheckNewAllocatorContext C(NewAllocatorCheckers, NE, Target, WasInlined, Eng);
+  expandGraphWithCheckers(C, Dst, Src);
+}
+
 /// \brief Run checkers for live symbols.
 void CheckerManager::runCheckersForLiveSymbols(ProgramStateRef state,
                                                SymbolReaper &SymReaper) {
@@ -709,6 +749,10 @@ void CheckerManager::_registerForEndFunction(CheckEndFunctionFunc checkfn) {
 void CheckerManager::_registerForBranchCondition(
                                              CheckBranchConditionFunc checkfn) {
   BranchConditionCheckers.push_back(checkfn);
+}
+
+void CheckerManager::_registerForNewAllocator(CheckNewAllocatorFunc checkfn) {
+  NewAllocatorCheckers.push_back(checkfn);
 }
 
 void CheckerManager::_registerForLiveSymbols(CheckLiveSymbolsFunc checkfn) {

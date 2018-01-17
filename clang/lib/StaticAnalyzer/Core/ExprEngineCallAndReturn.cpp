@@ -350,10 +350,23 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
     CallEventRef<> UpdatedCall = Call.cloneWithState(CEEState);
 
     ExplodedNodeSet DstPostCall;
-    getCheckerManager().runCheckersForPostCall(DstPostCall, CEENode,
-                                               *UpdatedCall, *this,
-                                               /*WasInlined=*/true);
-
+    if (const CXXNewExpr *CNE = dyn_cast_or_null<CXXNewExpr>(CE)) {
+      ExplodedNodeSet DstPostPostCallCallback;
+      getCheckerManager().runCheckersForPostCall(DstPostPostCallCallback,
+                                                 CEENode, *UpdatedCall, *this,
+                                                 /*WasInlined=*/true);
+      for (auto I : DstPostPostCallCallback) {
+        getCheckerManager().runCheckersForNewAllocator(
+            CNE, getCXXNewAllocatorValue(I->getState(), CNE,
+                                         calleeCtx->getParent()),
+            DstPostCall, I, *this,
+            /*WasInlined=*/true);
+      }
+    } else {
+      getCheckerManager().runCheckersForPostCall(DstPostCall, CEENode,
+                                                 *UpdatedCall, *this,
+                                                 /*WasInlined=*/true);
+    }
     ExplodedNodeSet Dst;
     if (const ObjCMethodCall *Msg = dyn_cast<ObjCMethodCall>(Call)) {
       getCheckerManager().runCheckersForPostObjCMessage(Dst, DstPostCall, *Msg,
