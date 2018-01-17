@@ -7893,6 +7893,11 @@ LowerBUILD_VECTORAsVariablePermute(SDValue V, SelectionDAG &DAG,
     IndicesVT = MVT::getVectorVT(MVT::getIntegerVT(VT.getScalarSizeInBits()),
                                  VT.getVectorNumElements());
   IndicesVec = DAG.getZExtOrTrunc(IndicesVec, SDLoc(IndicesVec), IndicesVT);
+  if (SrcVec.getValueSizeInBits() < IndicesVT.getSizeInBits()) {
+    SrcVec =
+        DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(SrcVec), VT, DAG.getUNDEF(VT),
+                    SrcVec, DAG.getIntPtrConstant(0, SDLoc(SrcVec)));
+  }
   return DAG.getNode(VT == MVT::v16i8 ? X86ISD::PSHUFB : X86ISD::VPERMV,
                      SDLoc(V), VT, IndicesVec, SrcVec);
 }

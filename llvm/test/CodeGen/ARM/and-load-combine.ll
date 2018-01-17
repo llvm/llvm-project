@@ -852,8 +852,7 @@ define arm_aapcscc i1 @test6(i8* %x, i8 %y, i8 %z) {
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrb r0, [r0]
 ; ARM-NEXT:    uxtb r2, r2
-; ARM-NEXT:    and r0, r0, r1
-; ARM-NEXT:    uxtb r1, r0
+; ARM-NEXT:    and r1, r0, r1
 ; ARM-NEXT:    mov r0, #0
 ; ARM-NEXT:    cmp r1, r2
 ; ARM-NEXT:    movweq r0, #1
@@ -863,8 +862,7 @@ define arm_aapcscc i1 @test6(i8* %x, i8 %y, i8 %z) {
 ; ARMEB:       @ %bb.0: @ %entry
 ; ARMEB-NEXT:    ldrb r0, [r0]
 ; ARMEB-NEXT:    uxtb r2, r2
-; ARMEB-NEXT:    and r0, r0, r1
-; ARMEB-NEXT:    uxtb r1, r0
+; ARMEB-NEXT:    and r1, r0, r1
 ; ARMEB-NEXT:    mov r0, #0
 ; ARMEB-NEXT:    cmp r1, r2
 ; ARMEB-NEXT:    movweq r0, #1
@@ -872,9 +870,8 @@ define arm_aapcscc i1 @test6(i8* %x, i8 %y, i8 %z) {
 ;
 ; THUMB1-LABEL: test6:
 ; THUMB1:       @ %bb.0: @ %entry
-; THUMB1-NEXT:    ldrb r0, [r0]
-; THUMB1-NEXT:    ands r0, r1
-; THUMB1-NEXT:    uxtb r3, r0
+; THUMB1-NEXT:    ldrb r3, [r0]
+; THUMB1-NEXT:    ands r3, r1
 ; THUMB1-NEXT:    uxtb r2, r2
 ; THUMB1-NEXT:    movs r0, #1
 ; THUMB1-NEXT:    movs r1, #0
@@ -889,8 +886,7 @@ define arm_aapcscc i1 @test6(i8* %x, i8 %y, i8 %z) {
 ; THUMB2:       @ %bb.0: @ %entry
 ; THUMB2-NEXT:    ldrb r0, [r0]
 ; THUMB2-NEXT:    uxtb r2, r2
-; THUMB2-NEXT:    ands r0, r1
-; THUMB2-NEXT:    uxtb r1, r0
+; THUMB2-NEXT:    ands r1, r0
 ; THUMB2-NEXT:    movs r0, #0
 ; THUMB2-NEXT:    cmp r1, r2
 ; THUMB2-NEXT:    it eq

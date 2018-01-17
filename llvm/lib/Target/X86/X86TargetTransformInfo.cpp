@@ -754,7 +754,8 @@ int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
   // type remains the same.
   if (Kind == TTI::SK_PermuteSingleSrc && LT.first != 1) {
     MVT LegalVT = LT.second;
-    if (LegalVT.getVectorElementType().getSizeInBits() ==
+    if (LegalVT.isVector() &&
+        LegalVT.getVectorElementType().getSizeInBits() ==
             Tp->getVectorElementType()->getPrimitiveSizeInBits() &&
         LegalVT.getVectorNumElements() < Tp->getVectorNumElements()) {
 

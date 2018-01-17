@@ -66,9 +66,10 @@ ENDIF:                                            ; preds = %LOOP
 
 ; OPT-LABEL: define amdgpu_kernel void @multi_if_break_loop(
 ; OPT: llvm.amdgcn.break
+; OPT: llvm.amdgcn.break
+; OPT: llvm.amdgcn.if.break
+; OPT: llvm.amdgcn.if.break
 ; OPT: llvm.amdgcn.loop
-; OPT: llvm.amdgcn.if.break
-; OPT: llvm.amdgcn.if.break
 ; OPT: llvm.amdgcn.end.cf
 
 ; GCN-LABEL: {{^}}multi_if_break_loop:

@@ -21,6 +21,9 @@ using namespace llvm;
 
 bool BaseIndexOffset::equalBaseIndex(BaseIndexOffset &Other,
                                      const SelectionDAG &DAG, int64_t &Off) {
+  // Conservatively fail if we a match failed..
+  if (!Base.getNode() || !Other.Base.getNode())
+    return false;
   // Initial Offset difference.
   Off = Other.Offset - Offset;
 
@@ -72,12 +75,28 @@ bool BaseIndexOffset::equalBaseIndex(BaseIndexOffset &Other,
 }
 
 /// Parses tree in Ptr for base, index, offset addresses.
-BaseIndexOffset BaseIndexOffset::match(SDValue Ptr, const SelectionDAG &DAG) {
+BaseIndexOffset BaseIndexOffset::match(LSBaseSDNode *N,
+                                       const SelectionDAG &DAG) {
+  SDValue Ptr = N->getBasePtr();
+
   // (((B + I*M) + c)) + c ...
   SDValue Base = DAG.getTargetLoweringInfo().unwrapAddress(Ptr);
   SDValue Index = SDValue();
   int64_t Offset = 0;
   bool IsIndexSignExt = false;
+
+  // pre-inc/pre-dec ops are components of EA.
+  if (N->getAddressingMode() == ISD::PRE_INC) {
+    if (auto *C = dyn_cast<ConstantSDNode>(N->getOffset()))
+      Offset += C->getSExtValue();
+    else // If unknown, give up now.
+      return BaseIndexOffset(SDValue(), SDValue(), 0, false);
+  } else if (N->getAddressingMode() == ISD::PRE_DEC) {
+    if (auto *C = dyn_cast<ConstantSDNode>(N->getOffset()))
+      Offset -= C->getSExtValue();
+    else // If unknown, give up now.
+      return BaseIndexOffset(SDValue(), SDValue(), 0, false);
+  }
 
   // Consume constant adds & ors with appropriate masking.
   while (Base->getOpcode() == ISD::ADD || Base->getOpcode() == ISD::OR) {
