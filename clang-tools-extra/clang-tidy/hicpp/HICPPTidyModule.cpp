@@ -11,6 +11,7 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/UseAfterMoveCheck.h"
+#include "../cppcoreguidelines/AvoidGotoCheck.h"
 #include "../cppcoreguidelines/NoMallocCheck.h"
 #include "../cppcoreguidelines/ProBoundsArrayToPointerDecayCheck.h"
 #include "../cppcoreguidelines/ProTypeMemberInitCheck.h"
@@ -45,6 +46,8 @@ namespace hicpp {
 class HICPPModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<cppcoreguidelines::AvoidGotoCheck>(
+        "hicpp-avoid-goto");
     CheckFactories.registerCheck<readability::BracesAroundStatementsCheck>(
         "hicpp-braces-around-statements");
     CheckFactories.registerCheck<modernize::DeprecatedHeadersCheck>(
