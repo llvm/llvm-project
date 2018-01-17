@@ -5144,16 +5144,14 @@ public:
   /// or class type construction ("ClassType(x,y,z)")
   /// or creation of a value-initialized type ("int()").
   ExprResult ActOnCXXTypeConstructExpr(ParsedType TypeRep,
-                                       SourceLocation LParenOrBraceLoc,
+                                       SourceLocation LParenLoc,
                                        MultiExprArg Exprs,
-                                       SourceLocation RParenOrBraceLoc,
-                                       bool ListInitialization);
+                                       SourceLocation RParenLoc);
 
   ExprResult BuildCXXTypeConstructExpr(TypeSourceInfo *Type,
                                        SourceLocation LParenLoc,
                                        MultiExprArg Exprs,
-                                       SourceLocation RParenLoc,
-                                       bool ListInitialization);
+                                       SourceLocation RParenLoc);
 
   /// ActOnCXXNew - Parsed a C++ 'new' expression.
   ExprResult ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,

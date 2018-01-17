@@ -539,15 +539,8 @@ public:
   }
 
   static InitializationKind CreateDirectList(SourceLocation InitLoc) {
-    return InitializationKind(IK_DirectList, IC_Normal, InitLoc, InitLoc,
-                              InitLoc);
-  }
-
-  static InitializationKind CreateDirectList(SourceLocation InitLoc,
-                                             SourceLocation LBraceLoc,
-                                             SourceLocation RBraceLoc) {
-    return InitializationKind(IK_DirectList, IC_Normal, InitLoc, LBraceLoc,
-                              RBraceLoc);
+    return InitializationKind(IK_DirectList, IC_Normal,
+                              InitLoc, InitLoc, InitLoc);
   }
 
   /// \brief Create a direct initialization due to a cast that isn't a C-style 
@@ -605,8 +598,7 @@ public:
                                           Expr *Init) {
     if (!Init) return CreateDefault(Loc);
     if (!DirectInit) return CreateCopy(Loc, Init->getLocStart());
-    if (isa<InitListExpr>(Init))
-      return CreateDirectList(Loc, Init->getLocStart(), Init->getLocEnd());
+    if (isa<InitListExpr>(Init)) return CreateDirectList(Loc);
     return CreateDirect(Loc, Init->getLocStart(), Init->getLocEnd());
   }
   
@@ -668,20 +660,12 @@ public:
   bool allowExplicitConversionFunctionsInRefBinding() const {
     return !isCopyInit() || Context == IC_ExplicitConvs;
   }
-
-  /// Determine whether this initialization has a source range containing the
-  /// locations of open and closing parentheses or braces.
-  bool hasParenOrBraceRange() const {
-    return Kind == IK_Direct || Kind == IK_Value || Kind == IK_DirectList;
-  }
   
   /// \brief Retrieve the source range containing the locations of the open
-  /// and closing parentheses or braces for value, direct, and direct list
-  /// initializations.
-  SourceRange getParenOrBraceRange() const {
-    assert(hasParenOrBraceRange() && "Only direct, value, and direct-list "
-                                     "initialization have parentheses or "
-                                     "braces");
+  /// and closing parentheses for value and direct initializations.
+  SourceRange getParenRange() const {
+    assert((Kind == IK_Direct || Kind == IK_Value) &&
+           "Only direct- and value-initialization have parentheses");
     return SourceRange(Locations[1], Locations[2]);
   }
 };
