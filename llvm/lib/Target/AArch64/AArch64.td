@@ -73,6 +73,9 @@ def FeatureReserveX18 : SubtargetFeature<"reserve-x18", "ReserveX18", "true",
 def FeatureUseAA : SubtargetFeature<"use-aa", "UseAA", "true",
                                     "Use alias analysis during codegen">;
 
+def FeatureLimit16FPRegs : SubtargetFeature<"limit-16-fpregs", "Limit16FPRegs",
+    "true", "only use the first 16 FP registers">;
+
 def FeatureBalanceFPOps : SubtargetFeature<"balance-fp-ops", "BalanceFPOps",
     "true",
     "balance mix of odd and even D-registers for fp multiply(-accumulate) ops">;
