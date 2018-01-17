@@ -626,6 +626,12 @@ namespace std {
 #endif // _LIBCPP_COMPILER_[CLANG|GCC|MSVC|IBM]
 
 #if defined(_LIBCPP_OBJECT_FORMAT_COFF)
+#ifdef _DLL
+# define _LIBCPP_CRT_FUNC __declspec(dllimport)
+#else
+# define _LIBCPP_CRT_FUNC
+#endif
+
 #if defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
 # define _LIBCPP_DLL_VIS
 # define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS
