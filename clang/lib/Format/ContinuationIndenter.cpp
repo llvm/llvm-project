@@ -105,14 +105,21 @@ static llvm::Optional<StringRef> getRawStringDelimiter(StringRef TokenText) {
 RawStringFormatStyleManager::RawStringFormatStyleManager(
     const FormatStyle &CodeStyle) {
   for (const auto &RawStringFormat : CodeStyle.RawStringFormats) {
-    FormatStyle Style;
-    if (!getPredefinedStyle(RawStringFormat.BasedOnStyle,
-                            RawStringFormat.Language, &Style)) {
-      Style = getLLVMStyle();
-      Style.Language = RawStringFormat.Language;
+    for (StringRef Delimiter : RawStringFormat.Delimiters) {
+      llvm::Optional<FormatStyle> LanguageStyle =
+          CodeStyle.GetLanguageStyle(RawStringFormat.Language);
+      if (!LanguageStyle) {
+        FormatStyle PredefinedStyle;
+        if (!getPredefinedStyle(RawStringFormat.BasedOnStyle,
+                                RawStringFormat.Language, &PredefinedStyle)) {
+          PredefinedStyle = getLLVMStyle();
+          PredefinedStyle.Language = RawStringFormat.Language;
+        }
+        LanguageStyle = PredefinedStyle;
+      }
+      LanguageStyle->ColumnLimit = CodeStyle.ColumnLimit;
+      DelimiterStyle.insert({Delimiter, *LanguageStyle});
     }
-    Style.ColumnLimit = CodeStyle.ColumnLimit;
-    DelimiterStyle.insert({RawStringFormat.Delimiter, Style});
   }
 }
 

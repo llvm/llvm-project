@@ -455,8 +455,8 @@ template <> struct ScalarEnumerationTraits<FormatStyle::IncludeBlocksStyle> {
 
 template <> struct MappingTraits<FormatStyle::RawStringFormat> {
   static void mapping(IO &IO, FormatStyle::RawStringFormat &Format) {
-    IO.mapOptional("Delimiter", Format.Delimiter);
     IO.mapOptional("Language", Format.Language);
+    IO.mapOptional("Delimiters", Format.Delimiters);
     IO.mapOptional("BasedOnStyle", Format.BasedOnStyle);
   }
 };
@@ -641,7 +641,6 @@ FormatStyle getLLVMStyle() {
   LLVMStyle.SpacesBeforeTrailingComments = 1;
   LLVMStyle.Standard = FormatStyle::LS_Cpp11;
   LLVMStyle.UseTab = FormatStyle::UT_Never;
-  LLVMStyle.RawStringFormats = {{"pb", FormatStyle::LK_TextProto, "google"}};
   LLVMStyle.ReflowComments = true;
   LLVMStyle.SpacesInParentheses = false;
   LLVMStyle.SpacesInSquareBrackets = false;
@@ -695,6 +694,19 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   GoogleStyle.ObjCSpaceAfterProperty = false;
   GoogleStyle.ObjCSpaceBeforeProtocolList = false;
   GoogleStyle.PointerAlignment = FormatStyle::PAS_Left;
+  GoogleStyle.RawStringFormats = {{
+      FormatStyle::LK_TextProto,
+      /*Delimiters=*/
+      {
+          "pb",
+          "PB",
+          "proto",
+          "PROTO",
+          "textproto",
+          "TEXTPROTO",
+      },
+      /*BasedOnStyle=*/"google",
+  }};
   GoogleStyle.SpacesBeforeTrailingComments = 2;
   GoogleStyle.Standard = FormatStyle::LS_Auto;
 

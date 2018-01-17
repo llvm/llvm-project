@@ -1,0 +1,45 @@
+# RUN: clangd -pretty -run-synchronously < %s | FileCheck -strict-whitespace %s
+# It is absolutely vital that this file has CRLF line endings.
+#
+Content-Length: 125
+
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+#
+Content-Length: 746
+
+{"jsonrpc":"2.0","id":2,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"file:///foo.c"},"range":{"start":{"line":104,"character":13},"end":{"line":0,"character":35}},"context":{"diagnostics":[{"range":{"start": {"line": 0, "character": 32}, "end": {"line": 0, "character": 37}},"severity":2,"message":"using the result of an assignment as a condition without parentheses"},{"range":{"start": {"line": 0, "character": 34}, "end": {"line": 0, "character": 35}},"severity":3,"message":"place parentheses around the assignment to silence this warning"},{"range":{"start": {"line": 0, "character": 34}, "end": {"line": 0, "character": 35}},"severity":3,"message":"use '==' to turn this assignment into an equality comparison"}]}}}
+#      CHECK:  "error": {
+# CHECK-NEXT:    "code": -32602
+# CHECK-NEXT:    "message": "onCodeAction called for non-added file"
+# CHECK-NEXT:  },
+# CHECK-NEXT:  "id": 2,
+Content-Length: 233
+
+{"jsonrpc":"2.0","id":3,"method":"textDocument/rangeFormatting","params":{"textDocument":{"uri":"file:///foo.c"},"range":{"start":{"line":1,"character":4},"end":{"line":1,"character":12}},"options":{"tabSize":4,"insertSpaces":true}}}
+#      CHECK:  "error": {
+# CHECK-NEXT:    "code": -32602
+# CHECK-NEXT:    "message": "onDocumentRangeFormatting called for non-added file"
+# CHECK-NEXT:  },
+# CHECK-NEXT:  "id": 3,
+Content-Length: 153
+
+{"jsonrpc":"2.0","id":4,"method":"textDocument/formatting","params":{"textDocument":{"uri":"file:///foo.c"},"options":{"tabSize":4,"insertSpaces":true}}}
+#      CHECK:  "error": {
+# CHECK-NEXT:    "code": -32602
+# CHECK-NEXT:    "message": "onDocumentFormatting called for non-added file"
+# CHECK-NEXT:  },
+# CHECK-NEXT:  "id": 4,
+Content-Length: 204
+
+{"jsonrpc":"2.0","id":5,"method":"textDocument/onTypeFormatting","params":{"textDocument":{"uri":"file:///foo.c"},"position":{"line":3,"character":1},"ch":"}","options":{"tabSize":4,"insertSpaces":true}}}
+#      CHECK:  "error": {
+# CHECK-NEXT:    "code": -32602
+# CHECK-NEXT:    "message": "onDocumentOnTypeFormatting called for non-added file"
+# CHECK-NEXT:  },
+# CHECK-NEXT:  "id": 5,
+Content-Length: 44
+
+{"jsonrpc":"2.0","id":6,"method":"shutdown"}
+Content-Length: 33
+
+{"jsonrpc":"2.0","method":"exit"}

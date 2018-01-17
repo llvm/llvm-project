@@ -295,6 +295,21 @@ class AMDGPUAtomicIncIntrin : Intrinsic<[llvm_anyint_ty],
 def int_amdgcn_atomic_inc : AMDGPUAtomicIncIntrin;
 def int_amdgcn_atomic_dec : AMDGPUAtomicIncIntrin;
 
+class AMDGPUAtomicF32Intrin<string clang_builtin> :
+  GCCBuiltin<clang_builtin>,
+  Intrinsic<[llvm_float_ty],
+    [LLVMAnyPointerType<llvm_float_ty>,
+    llvm_float_ty,
+    llvm_i32_ty, // ordering
+    llvm_i32_ty, // scope
+    llvm_i1_ty], // isVolatile
+    [IntrArgMemOnly, NoCapture<0>]
+>;
+
+def int_amdgcn_atomic_fadd : AMDGPUAtomicF32Intrin<"__builtin_amdgcn_ds_fadd">;
+def int_amdgcn_atomic_fmin : AMDGPUAtomicF32Intrin<"__builtin_amdgcn_ds_fmin">;
+def int_amdgcn_atomic_fmax : AMDGPUAtomicF32Intrin<"__builtin_amdgcn_ds_fmax">;
+
 class AMDGPUImageLoad<bit NoMem = 0> : Intrinsic <
   [llvm_anyfloat_ty], // vdata(VGPR)
   [llvm_anyint_ty,    // vaddr(VGPR)

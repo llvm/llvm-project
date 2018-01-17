@@ -288,9 +288,11 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
   else
     DebuggerTuning = DebuggerKind::GDB;
 
-  // Turn on accelerator tables for LLDB by default.
+  // Turn on accelerator tables by default, if tuning for LLDB and the target is
+  // supported.
   if (DwarfAccelTables == Default)
-    HasDwarfAccelTables = tuneForLLDB();
+    HasDwarfAccelTables =
+        tuneForLLDB() && A->TM.getTargetTriple().isOSBinFormatMachO();
   else
     HasDwarfAccelTables = DwarfAccelTables == Enable;
 

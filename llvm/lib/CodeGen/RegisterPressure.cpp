@@ -587,7 +587,7 @@ void RegisterOperands::adjustLaneLiveness(const LiveIntervals &LIS,
   for (auto I = Defs.begin(); I != Defs.end(); ) {
     LaneBitmask LiveAfter = getLiveLanesAt(LIS, MRI, true, I->RegUnit,
                                            Pos.getDeadSlot());
-    // If the the def is all that is live after the instruction, then in case
+    // If the def is all that is live after the instruction, then in case
     // of a subregister def we need a read-undef flag.
     unsigned RegUnit = I->RegUnit;
     if (TargetRegisterInfo::isVirtualRegister(RegUnit) &&

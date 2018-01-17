@@ -52,6 +52,7 @@ Clang-Tidy Checks
    cert-msc30-c (redirects to cert-msc50-cpp) <cert-msc30-c>
    cert-msc50-cpp
    cert-oop11-cpp (redirects to performance-move-constructor-init) <cert-oop11-cpp>
+   cppcoreguidelines-avoid-goto
    cppcoreguidelines-c-copy-assignment-signature (redirects to misc-unconventional-assign-operator) <cppcoreguidelines-c-copy-assignment-signature>
    cppcoreguidelines-interfaces-global-init
    cppcoreguidelines-no-malloc
@@ -90,6 +91,7 @@ Clang-Tidy Checks
    google-runtime-member-string-references
    google-runtime-operator
    google-runtime-references
+   hicpp-avoid-goto (redirects to cppcoreguidelines-avoid-goto) <hicpp-avoid-goto>
    hicpp-braces-around-statements (redirects to readability-braces-around-statements) <hicpp-braces-around-statements>
    hicpp-deprecated-headers (redirects to modernize-deprecated-headers) <hicpp-deprecated-headers>
    hicpp-exception-baseclass

@@ -1830,7 +1830,7 @@ void LazyValueInfoAnnotatedWriter::emitInstructionAnnot(
   };
 
   printResult(ParentBB);
-  // Print the LVI analysis results for the the immediate successor blocks, that
+  // Print the LVI analysis results for the immediate successor blocks, that
   // are dominated by `ParentBB`.
   for (auto *BBSucc : successors(ParentBB))
     if (DT.dominates(ParentBB, BBSucc))
