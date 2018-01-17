@@ -2417,9 +2417,16 @@ bool Sema::AttachBaseSpecifiers(CXXRecordDecl *Class,
   // Attach the remaining base class specifiers to the derived class.
   Class->setBases(Bases.data(), NumGoodBases);
 
+  // Check that the only base classes that are duplicate are virtual.
   for (unsigned idx = 0; idx < NumGoodBases; ++idx) {
     // Check whether this direct base is inaccessible due to ambiguity.
     QualType BaseType = Bases[idx]->getType();
+
+    // Skip all dependent types in templates being used as base specifiers.
+    // Checks below assume that the base specifier is a CXXRecord.
+    if (BaseType->isDependentType())
+      continue;
+
     CanQualType CanonicalBase = Context.getCanonicalType(BaseType)
       .getUnqualifiedType();
 
