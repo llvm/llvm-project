@@ -1838,7 +1838,7 @@ UndefOrNullArgVisitor::VisitNode(const ExplodedNode *N,
     const MemRegion *ArgReg = Call->getArgSVal(Idx).getAsRegion();
 
     // Are we tracking the argument or its subregion?
-    if ( !ArgReg || (ArgReg != R && !R->isSubRegionOf(ArgReg->StripCasts())))
+    if ( !ArgReg || !R->isSubRegionOf(ArgReg->StripCasts()))
       continue;
 
     // Check the function parameter type.
