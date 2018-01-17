@@ -93,6 +93,20 @@ typedef llvm::ImmutableMap<std::pair<const CXXNewExpr *,
 REGISTER_TRAIT_WITH_PROGRAMSTATE(CXXNewAllocatorValues,
                                  CXXNewAllocatorValuesMap)
 
+typedef llvm::ImmutableMap<std::pair<const CXXNewExpr *,
+                           const LocationContext *>, SVal>
+    CXXNewAllocatorValuesTy;
+
+// Keeps track of return values of various operator new() calls between
+// evaluation of the inlined operator new(), through the constructor call,
+// to the actual evaluation of the CXXNewExpr.
+// TODO: Refactor the key for this trait into a LocationContext sub-class,
+// which would be put on the stack of location contexts before operator new()
+// is evaluated, and removed from the stack when the whole CXXNewExpr
+// is fully evaluated.
+// Probably do something similar to the previous trait as well.
+REGISTER_TRAIT_WITH_PROGRAMSTATE(CXXNewAllocatorValues, CXXNewAllocatorValuesTy)
+
 //===----------------------------------------------------------------------===//
 // Engine construction and deletion.
 //===----------------------------------------------------------------------===//
@@ -361,59 +375,6 @@ ExprEngine::createTemporaryRegionIfNeeded(ProgramStateRef State,
   return State;
 }
 
-ProgramStateRef ExprEngine::addInitializedTemporary(
-    ProgramStateRef State, const CXXBindTemporaryExpr *BTE,
-    const LocationContext *LC, const CXXTempObjectRegion *R) {
-  const auto &Key = std::make_pair(BTE, LC->getCurrentStackFrame());
-  if (!State->contains<InitializedTemporaries>(Key)) {
-    return State->set<InitializedTemporaries>(Key, R);
-  }
-
-  // FIXME: Currently the state might already contain the marker due to
-  // incorrect handling of temporaries bound to default parameters; for
-  // those, we currently skip the CXXBindTemporaryExpr but rely on adding
-  // temporary destructor nodes. Otherwise, this branch should be unreachable.
-  return State;
-}
-
-bool ExprEngine::areInitializedTemporariesClear(ProgramStateRef State,
-                                                const LocationContext *FromLC,
-                                                const LocationContext *ToLC) {
-  const LocationContext *LC = FromLC;
-  while (LC != ToLC) {
-    assert(LC && "ToLC must be a parent of FromLC!");
-    for (auto I : State->get<InitializedTemporaries>())
-      if (I.first.second == LC)
-        return false;
-
-    LC = LC->getParent();
-  }
-  return true;
-}
-
-ProgramStateRef ExprEngine::addTemporaryMaterialization(
-    ProgramStateRef State, const MaterializeTemporaryExpr *MTE,
-    const LocationContext *LC, const CXXTempObjectRegion *R) {
-  const auto &Key = std::make_pair(MTE, LC->getCurrentStackFrame());
-  assert(!State->contains<TemporaryMaterializations>(Key));
-  return State->set<TemporaryMaterializations>(Key, R);
-}
-
-bool ExprEngine::areTemporaryMaterializationsClear(
-    ProgramStateRef State, const LocationContext *FromLC,
-    const LocationContext *ToLC) {
-  const LocationContext *LC = FromLC;
-  while (LC != ToLC) {
-    assert(LC && "ToLC must be a parent of FromLC!");
-    for (auto I : State->get<TemporaryMaterializations>())
-      if (I.first.second == LC)
-        return false;
-
-    LC = LC->getParent();
-  }
-  return true;
-}
-
 ProgramStateRef
 ExprEngine::setCXXNewAllocatorValue(ProgramStateRef State,
                                     const CXXNewExpr *CNE,
@@ -440,14 +401,14 @@ bool ExprEngine::areCXXNewAllocatorValuesClear(ProgramStateRef State,
                                                const LocationContext *FromLC,
                                                const LocationContext *ToLC) {
   const LocationContext *LC = FromLC;
-  while (LC != ToLC) {
-    assert(LC && "ToLC must be a parent of FromLC!");
+  do {
     for (auto I : State->get<CXXNewAllocatorValues>())
       if (I.first.second == LC)
         return false;
 
     LC = LC->getParent();
-  }
+    assert(LC && "ToLC must be a parent of FromLC!");
+  } while (LC != ToLC);
   return true;
 }
 
@@ -657,14 +618,6 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
 
   const StackFrameContext *SFC = LC ? LC->getCurrentStackFrame() : nullptr;
   SymbolReaper SymReaper(SFC, ReferenceStmt, SymMgr, getStoreManager());
-
-  for (auto I : CleanedState->get<InitializedTemporaries>())
-    if (I.second)
-      SymReaper.markLive(I.second);
-
-  for (auto I : CleanedState->get<TemporaryMaterializations>())
-    if (I.second)
-      SymReaper.markLive(I.second);
 
   for (auto I : CleanedState->get<CXXNewAllocatorValues>()) {
     if (SymbolRef Sym = I.second.getAsSymbol())
