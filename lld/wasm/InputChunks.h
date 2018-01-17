@@ -34,7 +34,7 @@ class OutputSegment;
 
 class InputChunk {
 public:
-  virtual uint32_t getSize() const = 0;
+  uint32_t getSize() const { return data().size(); }
 
   void copyRelocations(const WasmSection &Section);
 
@@ -88,7 +88,6 @@ public:
     OutputSegmentOffset = Offset;
   }
 
-  uint32_t getSize() const override { return Segment.Data.Content.size(); }
   uint32_t getAlignment() const { return Segment.Data.Alignment; }
   uint32_t startVA() const { return Segment.Data.Offset.Value.Int32; }
   uint32_t endVA() const { return startVA() + getSize(); }
@@ -115,10 +114,9 @@ public:
                 const ObjFile *F)
       : InputChunk(F), Signature(S), WrittenToNameSec(false), Function(Func) {}
 
-  uint32_t getSize() const override { return Function->Size; }
   StringRef getComdat() const override { return Function->Comdat; }
-  uint32_t getOutputIndex() const { return OutputIndex.getValue(); };
-  bool hasOutputIndex() const { return OutputIndex.hasValue(); };
+  uint32_t getOutputIndex() const { return OutputIndex.getValue(); }
+  bool hasOutputIndex() const { return OutputIndex.hasValue(); }
   void setOutputIndex(uint32_t Index);
 
   const WasmSignature &Signature;
@@ -127,7 +125,8 @@ public:
 
 protected:
   ArrayRef<uint8_t> data() const override {
-    return File->CodeSection->Content.slice(getInputSectionOffset(), getSize());
+    return File->CodeSection->Content.slice(getInputSectionOffset(),
+                                            Function->Size);
   }
   uint32_t getInputSectionOffset() const override {
     return Function->CodeSectionOffset;
@@ -141,8 +140,6 @@ class SyntheticFunction : public InputFunction {
 public:
   SyntheticFunction(const WasmSignature &S, ArrayRef<uint8_t> Body)
       : InputFunction(S, nullptr, nullptr), Body(Body) {}
-
-  uint32_t getSize() const override { return Body.size(); }
 
 protected:
   ArrayRef<uint8_t> data() const override { return Body; }

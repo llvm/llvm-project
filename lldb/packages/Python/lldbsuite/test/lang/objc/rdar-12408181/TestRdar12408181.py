@@ -13,7 +13,9 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipUnlessDarwin
+# TODO: Switch back to @skipUnlessDarwin when the bug preventing the test app
+# from launching is resolved.
+@skipIf
 class Rdar12408181TestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)

@@ -830,6 +830,13 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
     case OPT_INPUT:
       addFile(Arg->getValue(), /*WithLOption=*/false);
       break;
+    case OPT_defsym: {
+      StringRef From;
+      StringRef To;
+      std::tie(From, To) = StringRef(Arg->getValue()).split('=');
+      readDefsym(From, MemoryBufferRef(To, "-defsym"));
+      break;
+    }
     case OPT_script:
       if (Optional<std::string> Path = searchLinkerScript(Arg->getValue())) {
         if (Optional<MemoryBufferRef> MB = readFile(*Path))
@@ -1010,14 +1017,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // symbols that we need to the symbol table.
   for (InputFile *F : Files)
     Symtab->addFile<ELFT>(F);
-
-  // Process -defsym option.
-  for (auto *Arg : Args.filtered(OPT_defsym)) {
-    StringRef From;
-    StringRef To;
-    std::tie(From, To) = StringRef(Arg->getValue()).split('=');
-    readDefsym(From, MemoryBufferRef(To, "-defsym"));
-  }
 
   // Now that we have every file, we can decide if we will need a
   // dynamic symbol table.
