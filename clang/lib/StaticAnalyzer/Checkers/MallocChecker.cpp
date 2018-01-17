@@ -1012,8 +1012,7 @@ ProgramStateRef MallocChecker::ProcessZeroAllocation(
       State->assume(SvalBuilder.evalEQ(State, *DefArgVal, Zero));
 
   if (TrueState && !FalseState) {
-    SVal retVal = C.getSVal(E);
-    SymbolRef Sym = retVal.getAsLocSymbol();
+    SymbolRef Sym = RetVal->getAsLocSymbol();
     if (!Sym)
       return State;
 
@@ -1303,7 +1302,8 @@ ProgramStateRef MallocChecker::MallocUpdateRefState(CheckerContext &C,
     return nullptr;
 
   // Get the return value.
-  SVal retVal = C.getSVal(E);
+  if (!RetVal)
+    RetVal = C.getSVal(E);
 
   // We expect the malloc functions to return a pointer.
   if (!RetVal->getAs<Loc>())
