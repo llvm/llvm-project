@@ -3914,10 +3914,16 @@ bool DAGCombiner::BackwardsPropagateMask(SDNode *N, SelectionDAG &DAG) {
 
     // Narrow any constants that need it.
     for (auto *LogicN : NodesWithConsts) {
-      auto *C = cast<ConstantSDNode>(LogicN->getOperand(1));
-      SDValue And = DAG.getNode(ISD::AND, SDLoc(C), C->getValueType(0),
-                                SDValue(C, 0), MaskOp);
-      DAG.UpdateNodeOperands(LogicN, LogicN->getOperand(0), And);
+      SDValue Op0 = LogicN->getOperand(0);
+      SDValue Op1 = LogicN->getOperand(1);
+
+      if (isa<ConstantSDNode>(Op0))
+          std::swap(Op0, Op1);
+
+      SDValue And = DAG.getNode(ISD::AND, SDLoc(Op1), Op1.getValueType(),
+                                Op1, MaskOp);
+
+      DAG.UpdateNodeOperands(LogicN, Op0, And);
     }
 
     // Create narrow loads.
