@@ -18,7 +18,7 @@ int bar() {
 // CHECK: define i32 @bar()
 // CHECK: call i32 (i32, ...) @foo.ifunc(i32 1, i32 97, double
 // CHECK: call i32 (i32, ...) @foo.ifunc(i32 2, double 2.2{{[0-9Ee+]+}}, i8* getelementptr inbounds 
-// CHECK: define i32 (i32, ...)* @foo.resolver()
+// CHECK: define i32 (i32, ...)* @foo.resolver() comdat
 // CHECK: ret i32 (i32, ...)* @foo.arch_sandybridge
 // CHECK: ret i32 (i32, ...)* @foo.arch_ivybridge
 // CHECK: ret i32 (i32, ...)* @foo.sse4.2

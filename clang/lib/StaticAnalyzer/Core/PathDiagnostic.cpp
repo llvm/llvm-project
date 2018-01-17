@@ -98,20 +98,18 @@ void PathPieces::flattenTo(PathPieces &Primary, PathPieces &Current,
 
 PathDiagnostic::~PathDiagnostic() {}
 
-PathDiagnostic::PathDiagnostic(StringRef CheckName, const Decl *declWithIssue,
-                               StringRef bugtype, StringRef verboseDesc,
-                               StringRef shortDesc, StringRef category,
-                               PathDiagnosticLocation LocationToUnique,
-                               const Decl *DeclToUnique)
-  : CheckName(CheckName),
-    DeclWithIssue(declWithIssue),
-    BugType(StripTrailingDots(bugtype)),
-    VerboseDesc(StripTrailingDots(verboseDesc)),
-    ShortDesc(StripTrailingDots(shortDesc)),
-    Category(StripTrailingDots(category)),
-    UniqueingLoc(LocationToUnique),
-    UniqueingDecl(DeclToUnique),
-    path(pathImpl) {}
+PathDiagnostic::PathDiagnostic(
+    StringRef CheckName, const Decl *declWithIssue, StringRef bugtype,
+    StringRef verboseDesc, StringRef shortDesc, StringRef category,
+    PathDiagnosticLocation LocationToUnique, const Decl *DeclToUnique,
+    std::unique_ptr<FilesToLineNumsMap> ExecutedLines)
+    : CheckName(CheckName), DeclWithIssue(declWithIssue),
+      BugType(StripTrailingDots(bugtype)),
+      VerboseDesc(StripTrailingDots(verboseDesc)),
+      ShortDesc(StripTrailingDots(shortDesc)),
+      Category(StripTrailingDots(category)), UniqueingLoc(LocationToUnique),
+      UniqueingDecl(DeclToUnique), ExecutedLines(std::move(ExecutedLines)),
+      path(pathImpl) {}
 
 static PathDiagnosticCallPiece *
 getFirstStackedCallToHeaderFile(PathDiagnosticCallPiece *CP,

@@ -310,6 +310,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     Config->CtorSymbol = Symtab->addDefinedFunction(
         "__wasm_call_ctors", &Signature, WASM_SYMBOL_VISIBILITY_HIDDEN);
     Config->StackPointerSymbol = Symtab->addDefinedGlobal("__stack_pointer");
+    Config->HeapBaseSymbol = Symtab->addDefinedGlobal("__heap_base");
     Symtab->addDefinedGlobal("__dso_handle")->setVirtualAddress(0);
   }
 
