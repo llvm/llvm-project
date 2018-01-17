@@ -72,11 +72,7 @@ class ExecTestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         if skip_exec:
-<<<<<<< HEAD
             self.dbg.HandleCommand("settings set target.process.stop-on-exec false")
-=======
-            self.debugger.HandleCommand("settings set target.process.stop-on-exec false")
->>>>>>> b43f294c47d... Add target.process.stop-on-exec setting, and obey it.
             def cleanup():
                 self.runCmd("settings set target.process.stop-on-exec false",
                             check=False)
