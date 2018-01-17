@@ -549,6 +549,7 @@ def Aligned : InheritableAttr {
                                           Keyword<"_Alignas">]>,
                    Accessor<"isDeclspec",[Declspec<"align">]>];
   let Documentation = [Undocumented];
+  let DuplicatesAllowedWhileMerging = 1;
 }
 
 def AlignValue : Attr {
