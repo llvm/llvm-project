@@ -1277,3 +1277,183 @@ define <8 x float> @var_shuffle_v8f32(<8 x float> %v, <8 x i32> %indices) nounwi
   %ret7 = insertelement <8 x float> %ret6, float %v7, i32 7
   ret <8 x float> %ret7
 }
+
+define <8 x i32> @pr35820(<4 x i32> %v, <8 x i32> %indices) unnamed_addr nounwind {
+; AVX1-LABEL: pr35820:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vpextrq $1, %xmm1, %r8
+; AVX1-NEXT:    movq %r8, %r10
+; AVX1-NEXT:    shrq $30, %r10
+; AVX1-NEXT:    vmovq %xmm1, %r9
+; AVX1-NEXT:    movq %r9, %rsi
+; AVX1-NEXT:    shrq $30, %rsi
+; AVX1-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
+; AVX1-NEXT:    andl $3, %r9d
+; AVX1-NEXT:    andl $12, %esi
+; AVX1-NEXT:    andl $3, %r8d
+; AVX1-NEXT:    andl $12, %r10d
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm0
+; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX1-NEXT:    movq %rax, %rdi
+; AVX1-NEXT:    shrq $30, %rdi
+; AVX1-NEXT:    vmovq %xmm0, %rcx
+; AVX1-NEXT:    movq %rcx, %rdx
+; AVX1-NEXT:    shrq $30, %rdx
+; AVX1-NEXT:    andl $3, %ecx
+; AVX1-NEXT:    andl $12, %edx
+; AVX1-NEXT:    andl $3, %eax
+; AVX1-NEXT:    andl $12, %edi
+; AVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX1-NEXT:    vpinsrd $1, -24(%rsp,%rdx), %xmm0, %xmm0
+; AVX1-NEXT:    vpinsrd $2, -24(%rsp,%rax,4), %xmm0, %xmm0
+; AVX1-NEXT:    vpinsrd $3, -24(%rsp,%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX1-NEXT:    vpinsrd $1, -24(%rsp,%rsi), %xmm1, %xmm1
+; AVX1-NEXT:    vpinsrd $2, -24(%rsp,%r8,4), %xmm1, %xmm1
+; AVX1-NEXT:    vpinsrd $3, -24(%rsp,%r10), %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    retq
+;
+; INT256-LABEL: pr35820:
+; INT256:       # %bb.0: # %entry
+; INT256-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
+; INT256-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; INT256-NEXT:    retq
+entry:
+  %tmp1 = extractelement <8 x i32> %indices, i32 0
+  %vecext2.8 = extractelement <4 x i32> %v, i32 %tmp1
+  %tmp2 = extractelement <8 x i32> %indices, i32 1
+  %vecext2.9 = extractelement <4 x i32> %v, i32 %tmp2
+  %tmp3 = extractelement <8 x i32> %indices, i32 2
+  %vecext2.10 = extractelement <4 x i32> %v, i32 %tmp3
+  %tmp4 = extractelement <8 x i32> %indices, i32 3
+  %vecext2.11 = extractelement <4 x i32> %v, i32 %tmp4
+  %tmp5 = extractelement <8 x i32> %indices, i32 4
+  %vecext2.12 = extractelement <4 x i32> %v, i32 %tmp5
+  %tmp6 = extractelement <8 x i32> %indices, i32 5
+  %vecext2.13 = extractelement <4 x i32> %v, i32 %tmp6
+  %tmp7 = extractelement <8 x i32> %indices, i32 6
+  %vecext2.14 = extractelement <4 x i32> %v, i32 %tmp7
+  %tmp8 = extractelement <8 x i32> %indices, i32 7
+  %vecext2.15 = extractelement <4 x i32> %v, i32 %tmp8
+  %tmp9 = insertelement <8 x i32> undef, i32 %vecext2.8, i32 0
+  %tmp10 = insertelement <8 x i32> %tmp9, i32 %vecext2.9, i32 1
+  %tmp11 = insertelement <8 x i32> %tmp10, i32 %vecext2.10, i32 2
+  %tmp12 = insertelement <8 x i32> %tmp11, i32 %vecext2.11, i32 3
+  %tmp13 = insertelement <8 x i32> %tmp12, i32 %vecext2.12, i32 4
+  %tmp14 = insertelement <8 x i32> %tmp13, i32 %vecext2.13, i32 5
+  %tmp15 = insertelement <8 x i32> %tmp14, i32 %vecext2.14, i32 6
+  %tmp16 = insertelement <8 x i32> %tmp15, i32 %vecext2.15, i32 7
+  ret <8 x i32> %tmp16
+}
+
+define <8 x float> @pr35820_float(<4 x float> %v, <8 x i32> %indices) unnamed_addr nounwind {
+; AVX1-LABEL: pr35820_float:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vpextrq $1, %xmm1, %r8
+; AVX1-NEXT:    movq %r8, %r10
+; AVX1-NEXT:    shrq $30, %r10
+; AVX1-NEXT:    vmovq %xmm1, %r9
+; AVX1-NEXT:    movq %r9, %rdx
+; AVX1-NEXT:    shrq $30, %rdx
+; AVX1-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
+; AVX1-NEXT:    andl $3, %r9d
+; AVX1-NEXT:    andl $12, %edx
+; AVX1-NEXT:    andl $3, %r8d
+; AVX1-NEXT:    andl $12, %r10d
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm0
+; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX1-NEXT:    movq %rax, %rdi
+; AVX1-NEXT:    shrq $30, %rdi
+; AVX1-NEXT:    vmovq %xmm0, %rcx
+; AVX1-NEXT:    movq %rcx, %rsi
+; AVX1-NEXT:    shrq $30, %rsi
+; AVX1-NEXT:    andl $3, %ecx
+; AVX1-NEXT:    andl $12, %esi
+; AVX1-NEXT:    andl $3, %eax
+; AVX1-NEXT:    andl $12, %edi
+; AVX1-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; AVX1-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    retq
+;
+; INT256-LABEL: pr35820_float:
+; INT256:       # %bb.0: # %entry
+; INT256-NEXT:    # kill: def %xmm0 killed %xmm0 def %ymm0
+; INT256-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; INT256-NEXT:    retq
+entry:
+  %tmp1 = extractelement <8 x i32> %indices, i32 0
+  %vecext2.8 = extractelement <4 x float> %v, i32 %tmp1
+  %tmp2 = extractelement <8 x i32> %indices, i32 1
+  %vecext2.9 = extractelement <4 x float> %v, i32 %tmp2
+  %tmp3 = extractelement <8 x i32> %indices, i32 2
+  %vecext2.10 = extractelement <4 x float> %v, i32 %tmp3
+  %tmp4 = extractelement <8 x i32> %indices, i32 3
+  %vecext2.11 = extractelement <4 x float> %v, i32 %tmp4
+  %tmp5 = extractelement <8 x i32> %indices, i32 4
+  %vecext2.12 = extractelement <4 x float> %v, i32 %tmp5
+  %tmp6 = extractelement <8 x i32> %indices, i32 5
+  %vecext2.13 = extractelement <4 x float> %v, i32 %tmp6
+  %tmp7 = extractelement <8 x i32> %indices, i32 6
+  %vecext2.14 = extractelement <4 x float> %v, i32 %tmp7
+  %tmp8 = extractelement <8 x i32> %indices, i32 7
+  %vecext2.15 = extractelement <4 x float> %v, i32 %tmp8
+  %tmp9 = insertelement <8 x float> undef, float %vecext2.8, i32 0
+  %tmp10 = insertelement <8 x float> %tmp9, float %vecext2.9, i32 1
+  %tmp11 = insertelement <8 x float> %tmp10, float %vecext2.10, i32 2
+  %tmp12 = insertelement <8 x float> %tmp11, float %vecext2.11, i32 3
+  %tmp13 = insertelement <8 x float> %tmp12, float %vecext2.12, i32 4
+  %tmp14 = insertelement <8 x float> %tmp13, float %vecext2.13, i32 5
+  %tmp15 = insertelement <8 x float> %tmp14, float %vecext2.14, i32 6
+  %tmp16 = insertelement <8 x float> %tmp15, float %vecext2.15, i32 7
+  ret <8 x float> %tmp16
+}
+
+define <4 x i32> @big_source(<8 x i32> %v, <4 x i32> %indices) unnamed_addr nounwind {
+; AVX-LABEL: big_source:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    pushq %rbp
+; AVX-NEXT:    movq %rsp, %rbp
+; AVX-NEXT:    andq $-32, %rsp
+; AVX-NEXT:    subq $64, %rsp
+; AVX-NEXT:    vmovq %xmm1, %rax
+; AVX-NEXT:    movq %rax, %rcx
+; AVX-NEXT:    shrq $30, %rcx
+; AVX-NEXT:    andl $28, %ecx
+; AVX-NEXT:    vpextrq $1, %xmm1, %rdx
+; AVX-NEXT:    movq %rdx, %rsi
+; AVX-NEXT:    sarq $32, %rsi
+; AVX-NEXT:    andl $7, %eax
+; AVX-NEXT:    andl $7, %edx
+; AVX-NEXT:    vmovaps %ymm0, (%rsp)
+; AVX-NEXT:    andl $7, %esi
+; AVX-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vpinsrd $1, (%rsp,%rcx), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrd $2, (%rsp,%rdx,4), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrd $3, (%rsp,%rsi,4), %xmm0, %xmm0
+; AVX-NEXT:    movq %rbp, %rsp
+; AVX-NEXT:    popq %rbp
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+entry:
+  %tmp1 = extractelement <4 x i32> %indices, i32 0
+  %vecext2.8 = extractelement <8 x i32> %v, i32 %tmp1
+  %tmp2 = extractelement <4 x i32> %indices, i32 1
+  %vecext2.9 = extractelement <8 x i32> %v, i32 %tmp2
+  %tmp3 = extractelement <4 x i32> %indices, i32 2
+  %vecext2.10 = extractelement <8 x i32> %v, i32 %tmp3
+  %tmp4 = extractelement <4 x i32> %indices, i32 3
+  %vecext2.11 = extractelement <8 x i32> %v, i32 %tmp4
+  %tmp9 = insertelement <4 x i32> undef, i32 %vecext2.8, i32 0
+  %tmp10 = insertelement <4 x i32> %tmp9, i32 %vecext2.9, i32 1
+  %tmp11 = insertelement <4 x i32> %tmp10, i32 %vecext2.10, i32 2
+  %tmp12 = insertelement <4 x i32> %tmp11, i32 %vecext2.11, i32 3
+  ret <4 x i32> %tmp12
+}
