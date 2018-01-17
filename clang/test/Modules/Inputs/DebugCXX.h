@@ -1,4 +1,7 @@
 /* -*- C++ -*- */
+
+#include "dummy.h"
+
 namespace DebugCXX {
   // Records.
   struct Struct {

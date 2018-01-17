@@ -1720,13 +1720,6 @@ void *smallocWarn(size_t size) {
   }
 }
 
-char *dupstrWarn(const char *s) {
-  const int len = strlen(s);
-  char *p = (char*) smallocWarn(len + 1);
-  strcpy(p, s); // expected-warning{{String copy function overflows destination buffer}}
-  return p;
-}
-
 int *radar15580979() {
   int *data = (int *)malloc(32);
   int *p = data ?: (int*)malloc(32); // no warning
