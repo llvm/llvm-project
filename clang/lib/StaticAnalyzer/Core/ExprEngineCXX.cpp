@@ -108,47 +108,30 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
   ProgramStateRef State = Pred->getState();
   MemRegionManager &MRMgr = getSValBuilder().getRegionManager();
 
-  // See if we're constructing an existing region by looking at the
-  // current construction context.
-  if (CC) {
-    if (const Stmt *TriggerStmt = CC->getTriggerStmt()) {
-      if (const CXXNewExpr *CNE = dyn_cast<CXXNewExpr>(TriggerStmt)) {
+  // See if we're constructing an existing region by looking at the next
+  // element in the CFG.
+
+  if (auto Elem = findElementDirectlyInitializedByCurrentConstructor()) {
+    if (Optional<CFGStmt> StmtElem = Elem->getAs<CFGStmt>()) {
+      if (const CXXNewExpr *CNE = dyn_cast<CXXNewExpr>(StmtElem->getStmt())) {
         if (AMgr.getAnalyzerOptions().mayInlineCXXAllocator()) {
           // TODO: Detect when the allocator returns a null pointer.
           // Constructor shall not be called in this case.
-          if (const SubRegion *MR = dyn_cast_or_null<SubRegion>(
-                  getCXXNewAllocatorValue(State, CNE, LCtx).getAsRegion())) {
-            if (CNE->isArray()) {
-              // TODO: In fact, we need to call the constructor for every
-              // allocated element, not just the first one!
-              CallOpts.IsArrayCtorOrDtor = true;
-              return getStoreManager().GetElementZeroRegion(
-                  MR, CNE->getType()->getPointeeType());
-            }
+          if (const MemRegion *MR =
+                  getCXXNewAllocatorValue(State, CNE, LCtx).getAsRegion())
             return MR;
+        }
+      } else if (auto *DS = dyn_cast<DeclStmt>(StmtElem->getStmt())) {
+        if (const auto *Var = dyn_cast<VarDecl>(DS->getSingleDecl())) {
+          if (Var->getInit() && Var->getInit()->IgnoreImplicit() == CE) {
+            SVal LValue = State->getLValue(Var, LCtx);
+            QualType Ty = Var->getType();
+            LValue = makeZeroElementRegion(State, LValue, Ty);
+            return LValue.getAsRegion();
           }
         }
-      } else if (auto *DS = dyn_cast<DeclStmt>(TriggerStmt)) {
-        const auto *Var = cast<VarDecl>(DS->getSingleDecl());
-        SVal LValue = State->getLValue(Var, LCtx);
-        QualType Ty = Var->getType();
-        LValue = makeZeroElementRegion(State, LValue, Ty,
-                                       CallOpts.IsArrayCtorOrDtor);
-        return LValue.getAsRegion();
-      } else if (isa<ReturnStmt>(TriggerStmt)) {
-        // TODO: We should construct into a CXXBindTemporaryExpr or a
-        // MaterializeTemporaryExpr around the call-expression on the previous
-        // stack frame. Currently we re-bind the temporary to the correct region
-        // later, but that's not semantically correct. This of course does not
-        // apply when we're in the top frame. But if we are in an inlined
-        // function, we should be able to take the call-site CFG element,
-        // and it should contain (but right now it wouldn't) some sort of
-        // construction context that'd give us the right temporary expression.
-        CallOpts.IsTemporaryCtorOrDtor = true;
-        return MRMgr.getCXXTempObjectRegion(CE, LCtx);
-      } else if (isa<CXXBindTemporaryExpr>(TriggerStmt)) {
-        CallOpts.IsTemporaryCtorOrDtor = true;
-        return MRMgr.getCXXTempObjectRegion(CE, LCtx);
+      } else {
+        llvm_unreachable("Unexpected directly initialized element!");
       }
       // TODO: Consider other directly initialized elements.
     } else if (const CXXCtorInitializer *Init = CC->getTriggerInit()) {
@@ -182,6 +165,53 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
   // constructing a temporary. Notify the caller of our failure.
   CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion = true;
   return MRMgr.getCXXTempObjectRegion(CE, LCtx);
+}
+
+/// Returns true if the initializer for \Elem can be a direct
+/// constructor.
+static bool canHaveDirectConstructor(CFGElement Elem){
+  // DeclStmts and CXXCtorInitializers for fields can be directly constructed.
+
+  if (Optional<CFGStmt> StmtElem = Elem.getAs<CFGStmt>()) {
+    if (isa<DeclStmt>(StmtElem->getStmt())) {
+      return true;
+    }
+    if (isa<CXXNewExpr>(StmtElem->getStmt())) {
+      return true;
+    }
+  }
+
+  if (Elem.getKind() == CFGElement::Initializer) {
+    return true;
+  }
+
+  return false;
+}
+
+Optional<CFGElement>
+ExprEngine::findElementDirectlyInitializedByCurrentConstructor() {
+  const NodeBuilderContext &CurrBldrCtx = getBuilderContext();
+  // See if we're constructing an existing region by looking at the next
+  // element in the CFG.
+  const CFGBlock *B = CurrBldrCtx.getBlock();
+  assert(isa<CXXConstructExpr>(((*B)[currStmtIdx]).castAs<CFGStmt>().getStmt()));
+  unsigned int NextStmtIdx = currStmtIdx + 1;
+  if (NextStmtIdx >= B->size())
+    return None;
+
+  CFGElement Next = (*B)[NextStmtIdx];
+
+  // Is this a destructor? If so, we might be in the middle of an assignment
+  // to a local or member: look ahead one more element to see what we find.
+  while (Next.getAs<CFGImplicitDtor>() && NextStmtIdx + 1 < B->size()) {
+    ++NextStmtIdx;
+    Next = (*B)[NextStmtIdx];
+  }
+
+  if (canHaveDirectConstructor(Next))
+    return Next;
+
+  return None;
 }
 
 const CXXConstructExpr *
@@ -460,42 +490,23 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
 
   ExplodedNodeSet DstPostCall;
   StmtNodeBuilder CallBldr(DstPreCall, DstPostCall, *currBldrCtx);
-  for (auto I : DstPreCall) {
-    // FIXME: Provide evalCall for checkers?
+  for (auto I : DstPreCall)
     defaultEvalCall(CallBldr, I, *Call);
-  }
-  // If the call is inlined, DstPostCall will be empty and we bail out now.
 
   // Store return value of operator new() for future use, until the actual
   // CXXNewExpr gets processed.
   ExplodedNodeSet DstPostValue;
   StmtNodeBuilder ValueBldr(DstPostCall, DstPostValue, *currBldrCtx);
   for (auto I : DstPostCall) {
-    // FIXME: Because CNE serves as the "call site" for the allocator (due to
-    // lack of a better expression in the AST), the conjured return value symbol
-    // is going to be of the same type (C++ object pointer type). Technically
-    // this is not correct because the operator new's prototype always says that
-    // it returns a 'void *'. So we should change the type of the symbol,
-    // and then evaluate the cast over the symbolic pointer from 'void *' to
-    // the object pointer type. But without changing the symbol's type it
-    // is breaking too much to evaluate the no-op symbolic cast over it, so we
-    // skip it for now.
     ProgramStateRef State = I->getState();
-    SVal RetVal = State->getSVal(CNE, LCtx);
+    ValueBldr.generateNode(
+        CNE, I,
+        setCXXNewAllocatorValue(State, CNE, LCtx, State->getSVal(CNE, LCtx)));
+  }
 
-    // If this allocation function is not declared as non-throwing, failures
-    // /must/ be signalled by exceptions, and thus the return value will never
-    // be NULL. -fno-exceptions does not influence this semantics.
-    // FIXME: GCC has a -fcheck-new option, which forces it to consider the case
-    // where new can return NULL. If we end up supporting that option, we can
-    // consider adding a check for it here.
-    // C++11 [basic.stc.dynamic.allocation]p3.
-    if (const FunctionDecl *FD = CNE->getOperatorNew()) {
-      QualType Ty = FD->getType();
-      if (const auto *ProtoType = Ty->getAs<FunctionProtoType>())
-        if (!ProtoType->isNothrow(getContext()))
-          State = State->assume(RetVal.castAs<DefinedOrUnknownSVal>(), true);
-    }
+  getCheckerManager().runCheckersForPostCall(Dst, DstPostValue,
+                                             *Call, *this);
+}
 
     ValueBldr.generateNode(CNE, I,
                            setCXXNewAllocatorValue(State, CNE, LCtx, RetVal));
@@ -533,6 +544,14 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
     State = clearCXXNewAllocatorValue(State, CNE, LCtx);
   }
 
+  ProgramStateRef State = Pred->getState();
+
+  // Retrieve the stored operator new() return value.
+  if (AMgr.getAnalyzerOptions().mayInlineCXXAllocator()) {
+    symVal = getCXXNewAllocatorValue(State, CNE, LCtx);
+    State = clearCXXNewAllocatorValue(State, CNE, LCtx);
+  }
+
   // We assume all standard global 'operator new' functions allocate memory in
   // heap. We realize this is an approximation that might not correctly model
   // a custom global allocator.
@@ -555,21 +574,21 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
     State = Call->invalidateRegions(blockCount);
     if (!State)
       return;
+  }
 
-    // If this allocation function is not declared as non-throwing, failures
-    // /must/ be signalled by exceptions, and thus the return value will never
-    // be NULL. -fno-exceptions does not influence this semantics.
-    // FIXME: GCC has a -fcheck-new option, which forces it to consider the case
-    // where new can return NULL. If we end up supporting that option, we can
-    // consider adding a check for it here.
-    // C++11 [basic.stc.dynamic.allocation]p3.
-    if (FD) {
-      QualType Ty = FD->getType();
-      if (const auto *ProtoType = Ty->getAs<FunctionProtoType>())
-        if (!ProtoType->isNothrow(getContext()))
-          if (auto dSymVal = symVal.getAs<DefinedOrUnknownSVal>())
-            State = State->assume(*dSymVal, true);
-    }
+  // If this allocation function is not declared as non-throwing, failures
+  // /must/ be signalled by exceptions, and thus the return value will never be
+  // NULL. -fno-exceptions does not influence this semantics.
+  // FIXME: GCC has a -fcheck-new option, which forces it to consider the case
+  // where new can return NULL. If we end up supporting that option, we can
+  // consider adding a check for it here.
+  // C++11 [basic.stc.dynamic.allocation]p3.
+  if (FD) {
+    QualType Ty = FD->getType();
+    if (const FunctionProtoType *ProtoType = Ty->getAs<FunctionProtoType>())
+      if (!ProtoType->isNothrow(getContext()))
+        if (auto dSymVal = symVal.getAs<DefinedOrUnknownSVal>())
+          State = State->assume(*dSymVal, true);
   }
 
   StmtNodeBuilder Bldr(Pred, Dst, *currBldrCtx);
