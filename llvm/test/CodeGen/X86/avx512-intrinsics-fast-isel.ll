@@ -485,16 +485,11 @@ entry:
 define <8 x i64> @test_mm512_mask_set1_epi64(<8 x i64> %__O, i8 zeroext %__M, i64 %__A) {
 ; X32-LABEL: test_mm512_mask_set1_epi64:
 ; X32:       # %bb.0: # %entry
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    vmovd %edx, %xmm1
-; X32-NEXT:    vpinsrd $1, %ecx, %xmm1, %xmm1
-; X32-NEXT:    vpinsrd $2, %edx, %xmm1, %xmm1
-; X32-NEXT:    vpinsrd $3, %ecx, %xmm1, %xmm1
-; X32-NEXT:    vinserti128 $1, %xmm1, %ymm1, %ymm1
+; X32-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X32-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm1, %xmm1
 ; X32-NEXT:    kmovw %eax, %k1
-; X32-NEXT:    vinserti64x4 $1, %ymm1, %zmm1, %zmm0 {%k1}
+; X32-NEXT:    vpbroadcastq %xmm1, %zmm0 {%k1}
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_mask_set1_epi64:
@@ -513,16 +508,11 @@ entry:
 define <8 x i64> @test_mm512_maskz_set1_epi64(i8 zeroext %__M, i64 %__A)  {
 ; X32-LABEL: test_mm512_maskz_set1_epi64:
 ; X32:       # %bb.0: # %entry
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    vmovd %edx, %xmm0
-; X32-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
-; X32-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
-; X32-NEXT:    vpinsrd $3, %ecx, %xmm0, %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; X32-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
 ; X32-NEXT:    kmovw %eax, %k1
-; X32-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0 {%k1} {z}
+; X32-NEXT:    vpbroadcastq %xmm0, %zmm0 {%k1} {z}
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_maskz_set1_epi64:

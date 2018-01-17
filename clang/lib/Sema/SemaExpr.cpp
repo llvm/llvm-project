@@ -11601,8 +11601,8 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     // C++11 5.17p9:
     //   The meaning of x = {v} [...] is that of x = T(v) [...]. The meaning
     //   of x = {} is x = T().
-    InitializationKind Kind =
-        InitializationKind::CreateDirectList(RHSExpr->getLocStart());
+    InitializationKind Kind = InitializationKind::CreateDirectList(
+        RHSExpr->getLocStart(), RHSExpr->getLocStart(), RHSExpr->getLocEnd());
     InitializedEntity Entity =
         InitializedEntity::InitializeTemporary(LHSExpr->getType());
     InitializationSequence InitSeq(*this, Entity, Kind, RHSExpr);

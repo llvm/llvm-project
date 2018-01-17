@@ -128,9 +128,7 @@ static QualType GetBaseType(QualType T) {
   // FIXME: This should be on the Type class!
   QualType BaseType = T;
   while (!BaseType->isSpecifierType()) {
-    if (isa<TypedefType>(BaseType))
-      break;
-    else if (const PointerType* PTy = BaseType->getAs<PointerType>())
+    if (const PointerType *PTy = BaseType->getAs<PointerType>())
       BaseType = PTy->getPointeeType();
     else if (const BlockPointerType *BPy = BaseType->getAs<BlockPointerType>())
       BaseType = BPy->getPointeeType();
@@ -144,8 +142,11 @@ static QualType GetBaseType(QualType T) {
       BaseType = RTy->getPointeeType();
     else if (const AutoType *ATy = BaseType->getAs<AutoType>())
       BaseType = ATy->getDeducedType();
+    else if (const ParenType *PTy = BaseType->getAs<ParenType>())
+      BaseType = PTy->desugar();
     else
-      llvm_unreachable("Unknown declarator!");
+      // This must be a syntax error.
+      break;
   }
   return BaseType;
 }

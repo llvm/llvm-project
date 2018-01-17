@@ -80,17 +80,17 @@ add_compiler_rt_runtime(clang_rt.fuzzer_no_main
   PARENT_TARGET fuzzer)
 
 if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND COMPILER_RT_LIBCXX_PATH)
-	macro(partially_link_libcxx name dir arch)
-		set(cxx_${arch}_merge_dir "${CMAKE_CURRENT_BINARY_DIR}/cxx_${arch}_merge.dir")
-		file(MAKE_DIRECTORY ${cxx_${arch}_merge_dir})
-		add_custom_command(TARGET clang_rt.${name}-${arch} POST_BUILD
-			COMMAND ${CMAKE_LINKER} --whole-archive "$<TARGET_LINKER_FILE:clang_rt.${name}-${arch}>" --no-whole-archive ${dir}/lib/libc++.a -r -o ${name}.o
-			COMMAND ${CMAKE_OBJCOPY} --localize-hidden ${name}.o
-			COMMAND ${CMAKE_COMMAND} -E remove "$<TARGET_LINKER_FILE:clang_rt.${name}-${arch}>"
-			COMMAND ${CMAKE_AR} qcs "$<TARGET_LINKER_FILE:clang_rt.${name}-${arch}>" ${name}.o
-			WORKING_DIRECTORY ${cxx_${arch}_merge_dir}
-		)
-	endmacro()
+  macro(partially_link_libcxx name dir arch)
+    set(cxx_${arch}_merge_dir "${CMAKE_CURRENT_BINARY_DIR}/cxx_${arch}_merge.dir")
+    file(MAKE_DIRECTORY ${cxx_${arch}_merge_dir})
+    add_custom_command(TARGET clang_rt.${name}-${arch} POST_BUILD
+      COMMAND ${CMAKE_LINKER} --whole-archive "$<TARGET_LINKER_FILE:clang_rt.${name}-${arch}>" --no-whole-archive ${dir}/lib/libc++.a -r -o ${name}.o
+      COMMAND ${CMAKE_OBJCOPY} --localize-hidden ${name}.o
+      COMMAND ${CMAKE_COMMAND} -E remove "$<TARGET_LINKER_FILE:clang_rt.${name}-${arch}>"
+      COMMAND ${CMAKE_AR} qcs "$<TARGET_LINKER_FILE:clang_rt.${name}-${arch}>" ${name}.o
+      WORKING_DIRECTORY ${cxx_${arch}_merge_dir}
+    )
+  endmacro()
 
   foreach(arch ${FUZZER_SUPPORTED_ARCH})
     get_target_flags_for_arch(${arch} TARGET_CFLAGS)

@@ -3567,6 +3567,24 @@ AST_POLYMORPHIC_MATCHER_P(parameterCountIs,
   return Node.getNumParams() == N;
 }
 
+/// \brief Matches \c FunctionDecls that have a noreturn attribute.
+///
+/// Given
+/// \code
+///   void nope();
+///   [[noreturn]] void a();
+///   __attribute__((noreturn)) void b();
+///   struct c { [[noreturn]] c(); };
+/// \endcode
+/// functionDecl(isNoReturn())
+///   matches all of those except
+/// \code
+///   void nope();
+/// \endcode
+AST_MATCHER(FunctionDecl, isNoReturn) {
+  return Node.isNoReturn();
+}
+
 /// \brief Matches the return type of a function declaration.
 ///
 /// Given:

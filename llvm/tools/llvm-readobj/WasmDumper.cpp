@@ -28,7 +28,6 @@ static const EnumEntry<unsigned> WasmSymbolTypes[] = {
   ENUM_ENTRY(FUNCTION_EXPORT),
   ENUM_ENTRY(GLOBAL_IMPORT),
   ENUM_ENTRY(GLOBAL_EXPORT),
-  ENUM_ENTRY(DEBUG_FUNCTION_NAME),
 #undef ENUM_ENTRY
 };
 

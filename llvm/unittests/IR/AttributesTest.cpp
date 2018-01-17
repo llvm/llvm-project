@@ -63,6 +63,76 @@ TEST(Attributes, AddAttributes) {
   EXPECT_TRUE(AL.hasFnAttribute(Attribute::NoReturn));
 }
 
+TEST(Attributes, RemoveAlign) {
+  LLVMContext C;
+
+  Attribute AlignAttr = Attribute::getWithAlignment(C, 8);
+  Attribute StackAlignAttr = Attribute::getWithStackAlignment(C, 32);
+  AttrBuilder B_align_readonly;
+  B_align_readonly.addAttribute(AlignAttr);
+  B_align_readonly.addAttribute(Attribute::ReadOnly);
+  AttrBuilder B_align;
+  B_align.addAttribute(AlignAttr);
+  AttrBuilder B_stackalign_optnone;
+  B_stackalign_optnone.addAttribute(StackAlignAttr);
+  B_stackalign_optnone.addAttribute(Attribute::OptimizeNone);
+  AttrBuilder B_stackalign;
+  B_stackalign.addAttribute(StackAlignAttr);
+
+  AttributeSet AS = AttributeSet::get(C, B_align_readonly);
+  EXPECT_TRUE(AS.getAlignment() == 8);
+  EXPECT_TRUE(AS.hasAttribute(Attribute::ReadOnly));
+  AS = AS.removeAttribute(C, Attribute::Alignment);
+  EXPECT_FALSE(AS.hasAttribute(Attribute::Alignment));
+  EXPECT_TRUE(AS.hasAttribute(Attribute::ReadOnly));
+  AS = AttributeSet::get(C, B_align_readonly);
+  AS = AS.removeAttributes(C, B_align);
+  EXPECT_TRUE(AS.getAlignment() == 0);
+  EXPECT_TRUE(AS.hasAttribute(Attribute::ReadOnly));
+
+  AttributeList AL;
+  AL = AL.addParamAttributes(C, 0, B_align_readonly);
+  AL = AL.addAttributes(C, 0, B_stackalign_optnone);
+  EXPECT_TRUE(AL.hasAttributes(0));
+  EXPECT_TRUE(AL.hasAttribute(0, Attribute::StackAlignment));
+  EXPECT_TRUE(AL.hasAttribute(0, Attribute::OptimizeNone));
+  EXPECT_TRUE(AL.getStackAlignment(0) == 32);
+  EXPECT_TRUE(AL.hasParamAttrs(0));
+  EXPECT_TRUE(AL.hasParamAttr(0, Attribute::Alignment));
+  EXPECT_TRUE(AL.hasParamAttr(0, Attribute::ReadOnly));
+  EXPECT_TRUE(AL.getParamAlignment(0) == 8);
+
+  AL = AL.removeParamAttribute(C, 0, Attribute::Alignment);
+  EXPECT_FALSE(AL.hasParamAttr(0, Attribute::Alignment));
+  EXPECT_TRUE(AL.hasParamAttr(0, Attribute::ReadOnly));
+  EXPECT_TRUE(AL.hasAttribute(0, Attribute::StackAlignment));
+  EXPECT_TRUE(AL.hasAttribute(0, Attribute::OptimizeNone));
+  EXPECT_TRUE(AL.getStackAlignment(0) == 32);
+
+  AL = AL.removeAttribute(C, 0, Attribute::StackAlignment);
+  EXPECT_FALSE(AL.hasParamAttr(0, Attribute::Alignment));
+  EXPECT_TRUE(AL.hasParamAttr(0, Attribute::ReadOnly));
+  EXPECT_FALSE(AL.hasAttribute(0, Attribute::StackAlignment));
+  EXPECT_TRUE(AL.hasAttribute(0, Attribute::OptimizeNone));
+
+  AttributeList AL2;
+  AL2 = AL2.addParamAttributes(C, 0, B_align_readonly);
+  AL2 = AL2.addAttributes(C, 0, B_stackalign_optnone);
+
+  AL2 = AL2.removeParamAttributes(C, 0, B_align);
+  EXPECT_FALSE(AL2.hasParamAttr(0, Attribute::Alignment));
+  EXPECT_TRUE(AL2.hasParamAttr(0, Attribute::ReadOnly));
+  EXPECT_TRUE(AL2.hasAttribute(0, Attribute::StackAlignment));
+  EXPECT_TRUE(AL2.hasAttribute(0, Attribute::OptimizeNone));
+  EXPECT_TRUE(AL2.getStackAlignment(0) == 32);
+
+  AL2 = AL2.removeAttributes(C, 0, B_stackalign);
+  EXPECT_FALSE(AL2.hasParamAttr(0, Attribute::Alignment));
+  EXPECT_TRUE(AL2.hasParamAttr(0, Attribute::ReadOnly));
+  EXPECT_FALSE(AL2.hasAttribute(0, Attribute::StackAlignment));
+  EXPECT_TRUE(AL2.hasAttribute(0, Attribute::OptimizeNone));
+}
+
 TEST(Attributes, AddMatchingAlignAttr) {
   LLVMContext C;
   AttributeList AL;

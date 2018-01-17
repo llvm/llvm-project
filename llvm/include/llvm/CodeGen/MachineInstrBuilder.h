@@ -20,6 +20,7 @@
 #define LLVM_CODEGEN_MACHINEINSTRBUILDER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -282,6 +283,12 @@ public:
   copyImplicitOps(const MachineInstr &OtherMI) const {
     MI->copyImplicitOps(*MF, OtherMI);
     return *this;
+  }
+
+  bool constrainAllUses(const TargetInstrInfo &TII,
+                        const TargetRegisterInfo &TRI,
+                        const RegisterBankInfo &RBI) const {
+    return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
   }
 };
 

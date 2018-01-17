@@ -10408,8 +10408,18 @@ TEST_F(FormatTest, ParsesConfiguration) {
 
   Style.RawStringFormats.clear();
   std::vector<FormatStyle::RawStringFormat> ExpectedRawStringFormats = {
-      {FormatStyle::LK_TextProto, {"pb", "proto"}, "llvm"},
-      {FormatStyle::LK_Cpp, {"cc", "cpp"}, "google"},
+      {
+          FormatStyle::LK_TextProto,
+          {"pb", "proto"},
+          {"PARSE_TEXT_PROTO"},
+          "llvm",
+      },
+      {
+          FormatStyle::LK_Cpp,
+          {"cc", "cpp"},
+          {"C_CODEBLOCK", "CPPEVAL"},
+          "",
+      },
   };
 
   CHECK_PARSE("RawStringFormats:\n"
@@ -10417,12 +10427,16 @@ TEST_F(FormatTest, ParsesConfiguration) {
               "    Delimiters:\n"
               "      - 'pb'\n"
               "      - 'proto'\n"
+              "    EnclosingFunctions:\n"
+              "      - 'PARSE_TEXT_PROTO'\n"
               "    BasedOnStyle: llvm\n"
               "  - Language: Cpp\n"
               "    Delimiters:\n"
               "      - 'cc'\n"
               "      - 'cpp'\n"
-              "    BasedOnStyle: google\n",
+              "    EnclosingFunctions:\n"
+              "      - 'C_CODEBLOCK'\n"
+              "      - 'CPPEVAL'\n",
               RawStringFormats, ExpectedRawStringFormats);
 }
 

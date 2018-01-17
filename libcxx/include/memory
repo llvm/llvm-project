@@ -1992,6 +1992,7 @@ public:
 };
 
 template <class _Tp>
+_LIBCPP_NO_CFI
 pair<_Tp*, ptrdiff_t>
 get_temporary_buffer(ptrdiff_t __n) _NOEXCEPT
 {

@@ -221,6 +221,7 @@ class WasmObjectWriter : public MCObjectWriter {
       FunctionTypeIndices;
   SmallVector<WasmFunctionType, 4> FunctionTypes;
   SmallVector<WasmGlobal, 4> Globals;
+  unsigned NumFunctionImports = 0;
   unsigned NumGlobalImports = 0;
 
   // TargetObjectWriter wrappers.
@@ -252,6 +253,7 @@ private:
     FunctionTypes.clear();
     Globals.clear();
     MCObjectWriter::reset();
+    NumFunctionImports = 0;
     NumGlobalImports = 0;
   }
 
@@ -286,8 +288,7 @@ private:
                         ArrayRef<WasmFunction> Functions);
   void writeDataSection(ArrayRef<WasmDataSegment> Segments);
   void writeNameSection(ArrayRef<WasmFunction> Functions,
-                        ArrayRef<WasmImport> Imports,
-                        uint32_t NumFuncImports);
+                        ArrayRef<WasmImport> Imports);
   void writeCodeRelocSection();
   void writeDataRelocSection();
   void writeLinkingMetaDataSection(
@@ -852,11 +853,9 @@ void WasmObjectWriter::writeDataSection(ArrayRef<WasmDataSegment> Segments) {
   endSection(Section);
 }
 
-void WasmObjectWriter::writeNameSection(
-    ArrayRef<WasmFunction> Functions,
-    ArrayRef<WasmImport> Imports,
-    unsigned NumFuncImports) {
-  uint32_t TotalFunctions = NumFuncImports + Functions.size();
+void WasmObjectWriter::writeNameSection(ArrayRef<WasmFunction> Functions,
+                                        ArrayRef<WasmImport> Imports) {
+  uint32_t TotalFunctions = NumFunctionImports + Functions.size();
   if (TotalFunctions == 0)
     return;
 
@@ -1023,7 +1022,6 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   SmallVector<std::pair<StringRef, uint32_t>, 4> SymbolFlags;
   SmallVector<std::pair<uint16_t, uint32_t>, 2> InitFuncs;
   std::map<StringRef, std::vector<WasmComdatEntry>> Comdats;
-  unsigned NumFuncImports = 0;
   SmallVector<WasmDataSegment, 4> DataSegments;
   uint32_t DataSize = 0;
 
@@ -1113,8 +1111,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
     const auto &WS = static_cast<const MCSymbolWasm &>(S);
 
     // Register types for all functions, including those with private linkage
-    // (making them
-    // because wasm always needs a type signature.
+    // (because wasm always needs a type signature).
     if (WS.isFunction())
       registerFunctionType(WS);
 
@@ -1131,8 +1128,8 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
       if (WS.isFunction()) {
         Import.Kind = wasm::WASM_EXTERNAL_FUNCTION;
         Import.Type = getFunctionType(WS);
-        SymbolIndices[&WS] = NumFuncImports;
-        ++NumFuncImports;
+        SymbolIndices[&WS] = NumFunctionImports;
+        ++NumFunctionImports;
       } else {
         Import.Kind = wasm::WASM_EXTERNAL_GLOBAL;
         Import.Type = int32_t(PtrType);
@@ -1216,7 +1213,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
               "function symbols must have a size set with .size");
 
         // A definition. Take the next available index.
-        Index = NumFuncImports + Functions.size();
+        Index = NumFunctionImports + Functions.size();
 
         // Prepare the function.
         WasmFunction Func;
@@ -1410,7 +1407,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   writeElemSection(TableElems);
   writeCodeSection(Asm, Layout, Functions);
   writeDataSection(DataSegments);
-  writeNameSection(Functions, Imports, NumFuncImports);
+  writeNameSection(Functions, Imports);
   writeCodeRelocSection();
   writeDataRelocSection();
   writeLinkingMetaDataSection(DataSegments, DataSize, SymbolFlags,

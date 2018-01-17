@@ -15,6 +15,7 @@
 #include "Symbols.h"
 #include "Writer.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Timer.h"
 #include "llvm/DebugInfo/CodeView/CVDebugRecord.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
 #include "llvm/DebugInfo/CodeView/GlobalTypeTableBuilder.h"
@@ -61,6 +62,15 @@ using namespace llvm::codeview;
 using llvm::object::coff_section;
 
 static ExitOnError ExitOnErr;
+
+static Timer TotalPdbLinkTimer("PDB Emission (Cumulative)", Timer::root());
+
+static Timer AddObjectsTimer("Add Objects", TotalPdbLinkTimer);
+static Timer TypeMergingTimer("Type Merging", AddObjectsTimer);
+static Timer SymbolMergingTimer("Symbol Merging", AddObjectsTimer);
+static Timer GlobalsLayoutTimer("Globals Stream Layout", TotalPdbLinkTimer);
+static Timer TpiStreamLayoutTimer("TPI Stream Layout", TotalPdbLinkTimer);
+static Timer DiskCommitTimer("Commit to Disk", TotalPdbLinkTimer);
 
 namespace {
 /// Map from type index and item index in a type server PDB to the
@@ -233,6 +243,8 @@ maybeReadTypeServerRecord(CVTypeArray &Types) {
 
 const CVIndexMap &PDBLinker::mergeDebugT(ObjFile *File,
                                          CVIndexMap &ObjectIndexMap) {
+  ScopedTimer T(TypeMergingTimer);
+
   ArrayRef<uint8_t> Data = getDebugSection(File, ".debug$T");
   if (Data.empty())
     return ObjectIndexMap;
@@ -747,6 +759,8 @@ void PDBLinker::addObjFile(ObjFile *File) {
   CVIndexMap ObjectIndexMap;
   const CVIndexMap &IndexMap = mergeDebugT(File, ObjectIndexMap);
 
+  ScopedTimer T(SymbolMergingTimer);
+
   // Now do all live .debug$S sections.
   DebugStringTableSubsectionRef CVStrTab;
   DebugChecksumsSubsectionRef Checksums;
@@ -864,12 +878,15 @@ static PublicSym32 createPublic(Defined *Def) {
 // Add all object files to the PDB. Merge .debug$T sections into IpiData and
 // TpiData.
 void PDBLinker::addObjectsToPDB() {
+  ScopedTimer T1(AddObjectsTimer);
   for (ObjFile *File : ObjFile::Instances)
     addObjFile(File);
 
   Builder.getStringTableBuilder().setStrings(PDBStrTab);
+  T1.stop();
 
   // Construct TPI and IPI stream contents.
+  ScopedTimer T2(TpiStreamLayoutTimer);
   if (Config->DebugGHashes) {
     addTypeInfo(Builder.getTpiBuilder(), GlobalTypeTable);
     addTypeInfo(Builder.getIpiBuilder(), GlobalIDTable);
@@ -877,7 +894,9 @@ void PDBLinker::addObjectsToPDB() {
     addTypeInfo(Builder.getTpiBuilder(), TypeTable);
     addTypeInfo(Builder.getIpiBuilder(), IDTable);
   }
+  T2.stop();
 
+  ScopedTimer T3(GlobalsLayoutTimer);
   // Compute the public and global symbols.
   auto &GsiBuilder = Builder.getGsiBuilder();
   std::vector<PublicSym32> Publics;
@@ -974,10 +993,13 @@ void coff::createPDB(SymbolTable *Symtab,
                      ArrayRef<OutputSection *> OutputSections,
                      ArrayRef<uint8_t> SectionTable,
                      const llvm::codeview::DebugInfo &BuildId) {
+  ScopedTimer T1(TotalPdbLinkTimer);
   PDBLinker PDB(Symtab);
   PDB.initialize(BuildId);
   PDB.addObjectsToPDB();
   PDB.addSections(OutputSections, SectionTable);
+
+  ScopedTimer T2(DiskCommitTimer);
   PDB.commit();
 }
 
