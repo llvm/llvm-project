@@ -187,7 +187,7 @@ void foo() {
 
 // CHECK: !DIGlobalVariable(name: "anon_enum", {{.*}}, type: ![[ANON_ENUM:[0-9]+]]
 // CHECK: !DICompositeType(tag: DW_TAG_enumeration_type, scope: ![[NS]],
-// CHECK-SAME:             line: 16
+// CHECK-SAME:             line: 19
 
 // CHECK: !DIGlobalVariable(name: "GlobalUnion",
 // CHECK-SAME:              type: ![[GLOBAL_UNION:[0-9]+]]
