@@ -98,6 +98,7 @@ protected:
   unsigned MinVectorRegisterBitWidth = 64;
 
   bool UseAA = false;
+  bool Limit16FPRegs = false;
   bool PredictableSelectIsExpensive = false;
   bool BalanceFPOps = false;
   bool CustomAsCheapAsMove = false;
@@ -211,6 +212,7 @@ public:
   }
 
   bool isX18Reserved() const { return ReserveX18; }
+  bool limit16FPRegs() const { return Limit16FPRegs; }
   bool hasFPARMv8() const { return HasFPARMv8; }
   bool hasNEON() const { return HasNEON; }
   bool hasCrypto() const { return HasCrypto; }
