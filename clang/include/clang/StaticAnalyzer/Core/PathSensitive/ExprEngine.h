@@ -704,40 +704,19 @@ private:
   /// constructing into an existing region.
   const CXXConstructExpr *findDirectConstructorForCurrentCFGElement();
 
+  /// For a CXXConstructExpr, walk forward in the current CFG block to find the
+  /// CFGElement for the DeclStmt or CXXInitCtorInitializer or CXXNewExpr which
+  /// is directly constructed by this constructor. Returns None if the current
+  /// constructor expression did not directly construct into an existing
+  /// region.
+  Optional<CFGElement> findElementDirectlyInitializedByCurrentConstructor();
+
   /// For a given constructor, look forward in the current CFG block to
   /// determine the region into which an object will be constructed by \p CE.
   /// When the lookahead fails, a temporary region is returned, and the
   /// IsConstructorWithImproperlyModeledTargetRegion flag is set in \p CallOpts.
   const MemRegion *getRegionForConstructedObject(const CXXConstructExpr *CE,
-                                                 ExplodedNode *Pred,
-                                                 const ConstructionContext *CC,
-                                                 EvalCallOptions &CallOpts);
-
-  /// Store the region of a C++ temporary object corresponding to a
-  /// CXXBindTemporaryExpr for later destruction.
-  static ProgramStateRef addInitializedTemporary(
-      ProgramStateRef State, const CXXBindTemporaryExpr *BTE,
-      const LocationContext *LC, const CXXTempObjectRegion *R);
-
-  /// Check if all initialized temporary regions are clear for the given
-  /// context range (including FromLC, not including ToLC).
-  /// This is useful for assertions.
-  static bool areInitializedTemporariesClear(ProgramStateRef State,
-                                             const LocationContext *FromLC,
-                                             const LocationContext *ToLC);
-
-  /// Store the region of a C++ temporary object corresponding to a
-  /// CXXBindTemporaryExpr for later destruction.
-  static ProgramStateRef addTemporaryMaterialization(
-      ProgramStateRef State, const MaterializeTemporaryExpr *MTE,
-      const LocationContext *LC, const CXXTempObjectRegion *R);
-
-  /// Check if all temporary materialization regions are clear for the given
-  /// context range (including FromLC, not including ToLC).
-  /// This is useful for assertions.
-  static bool areTemporaryMaterializationsClear(ProgramStateRef State,
-                                                const LocationContext *FromLC,
-                                                const LocationContext *ToLC);
+                                                 ExplodedNode *Pred);
 
   /// Store the region returned by operator new() so that the constructor
   /// that follows it knew what location to initialize. The value should be
