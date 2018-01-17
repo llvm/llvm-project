@@ -753,8 +753,12 @@ static void AppendTargetMangling(const CodeGenModule &CGM,
   const auto &Target = CGM.getTarget();
   TargetAttr::ParsedTargetAttr Info =
       Attr->parse([&Target](StringRef LHS, StringRef RHS) {
-                    return Target.multiVersionSortPriority(LHS) >
-                           Target.multiVersionSortPriority(RHS);
+                    // Multiversioning doesn't allow "no-${feature}", so we can
+                    // only have "+" prefixes here.
+                    assert(LHS.startswith("+") && RHS.startswith("+") &&
+                           "Features should always have a prefix.");
+                    return Target.multiVersionSortPriority(LHS.substr(1)) >
+                           Target.multiVersionSortPriority(RHS.substr(1));
                   });
 
   bool IsFirst = true;

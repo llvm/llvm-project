@@ -7894,7 +7894,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
 
   MVT VT = Op.getSimpleValueType();
-  MVT ExtVT = VT.getVectorElementType();
+  MVT EltVT = VT.getVectorElementType();
   unsigned NumElems = Op.getNumOperands();
 
   // Generate vectors for predicate vectors.
@@ -7916,7 +7916,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   if (SDValue BitOp = lowerBuildVectorToBitOp(BV, DAG))
     return BitOp;
 
-  unsigned EVTBits = ExtVT.getSizeInBits();
+  unsigned EVTBits = EltVT.getSizeInBits();
 
   unsigned NumZero  = 0;
   unsigned NumNonZero = 0;
@@ -8002,7 +8002,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     // insertion that way.  Only do this if the value is non-constant or if the
     // value is a constant being inserted into element 0.  It is cheaper to do
     // a constant pool load than it is to do a movd + shuffle.
-    if (ExtVT == MVT::i64 && !Subtarget.is64Bit() &&
+    if (EltVT == MVT::i64 && !Subtarget.is64Bit() &&
         (!IsAllConstants || Idx == 0)) {
       if (DAG.MaskedValueIsZero(Item, APInt::getHighBitsSet(64, 32))) {
         // Handle SSE only.
@@ -8026,8 +8026,8 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
       if (NumZero == 0)
         return DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Item);
 
-      if (ExtVT == MVT::i32 || ExtVT == MVT::f32 || ExtVT == MVT::f64 ||
-          (ExtVT == MVT::i64 && Subtarget.is64Bit())) {
+      if (EltVT == MVT::i32 || EltVT == MVT::f32 || EltVT == MVT::f64 ||
+          (EltVT == MVT::i64 && Subtarget.is64Bit())) {
         assert((VT.is128BitVector() || VT.is256BitVector() ||
                 VT.is512BitVector()) &&
                "Expected an SSE value type!");
@@ -8038,7 +8038,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
 
       // We can't directly insert an i8 or i16 into a vector, so zero extend
       // it to i32 first.
-      if (ExtVT == MVT::i16 || ExtVT == MVT::i8) {
+      if (EltVT == MVT::i16 || EltVT == MVT::i8) {
         Item = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, Item);
         if (VT.getSizeInBits() >= 256) {
           MVT ShufVT = MVT::getVectorVT(MVT::i32, VT.getSizeInBits()/32);
@@ -8120,7 +8120,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   // For AVX-length vectors, build the individual 128-bit pieces and use
   // shuffles to put them in place.
   if (VT.getSizeInBits() > 128) {
-    MVT HVT = MVT::getVectorVT(ExtVT, NumElems/2);
+    MVT HVT = MVT::getVectorVT(EltVT, NumElems/2);
 
     // Build both the lower and upper subvector.
     SDValue Lower =

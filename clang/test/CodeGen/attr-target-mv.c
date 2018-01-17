@@ -25,6 +25,14 @@ void bar3() {
 inline __attribute__((target("default"))) void foo_decls(void) {}
 inline __attribute__((target("sse4.2"))) void foo_decls(void) {}
 
+inline __attribute__((target("default"))) void foo_multi(void) {}
+inline __attribute__((target("avx,sse4.2"))) void foo_multi(void) {}
+inline __attribute__((target("sse4.2,fma4"))) void foo_multi(void) {}
+inline __attribute__((target("arch=ivybridge,fma4,sse4.2"))) void foo_multi(void) {}
+void bar4() {
+  foo_multi();
+}
+
 // CHECK: @foo.ifunc = ifunc i32 (), i32 ()* ()* @foo.resolver
 // CHECK: @foo_inline.ifunc = ifunc i32 (), i32 ()* ()* @foo_inline.resolver
 // CHECK: @foo_decls.ifunc = ifunc void (), void ()* ()* @foo_decls.resolver
@@ -76,4 +84,8 @@ inline __attribute__((target("sse4.2"))) void foo_decls(void) {}
 
 // CHECK: define available_externally void @foo_decls()
 // CHECK: define available_externally void @foo_decls.sse4.2()
+
+// CHECK: define available_externally void @foo_multi.avx_sse4.2()
+// CHECK: define available_externally void @foo_multi.fma4_sse4.2()
+// CHECK: define available_externally void @foo_multi.arch_ivybridge_fma4_sse4.2()
 

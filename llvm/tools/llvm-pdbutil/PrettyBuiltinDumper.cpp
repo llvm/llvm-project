@@ -89,7 +89,5 @@ StringRef BuiltinDumper::getTypeName(const PDBSymbolTypeBuiltin &Symbol) {
     return "HRESULT";
   case PDB_BuiltinType::None:
     return "...";
-  default:
-    return "void";
   }
 }

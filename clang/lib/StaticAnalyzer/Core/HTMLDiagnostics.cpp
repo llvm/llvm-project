@@ -94,6 +94,13 @@ public:
 
   /// \return Javascript for navigating the HTML report using j/k keys.
   std::string generateKeyboardNavigationJavascript();
+
+private:
+  /// \return JavaScript for an option to only show relevant lines.
+  std::string showRelevantLinesJavascript(const PathDiagnostic &D);
+
+  /// \return Executed lines from \p D in JSON format.
+  std::string serializeExecutedLines(const PathDiagnostic &D);
 };
 
 } // end anonymous namespace
@@ -343,6 +350,10 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
   R.InsertTextBefore(SMgr.getLocForStartOfFile(FID),
                      generateKeyboardNavigationJavascript());
 
+  // Checkbox and javascript for filtering the output to the counterexample.
+  R.InsertTextBefore(SMgr.getLocForStartOfFile(FID),
+                     showRelevantLinesJavascript(D));
+
   // Add the name of the file as an <h1> tag.
   {
     std::string s;
@@ -448,6 +459,94 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
   }
 
   html::AddHeaderFooterInternalBuiltinCSS(R, FID, Entry->getName());
+}
+
+std::string
+HTMLDiagnostics::showRelevantLinesJavascript(const PathDiagnostic &D) {
+  std::string s;
+  llvm::raw_string_ostream os(s);
+  os << "<script type='text/javascript'>\n";
+  os << serializeExecutedLines(D);
+  os << R"<<<(
+
+var filterCounterexample = function (hide) {
+  var tables = document.getElementsByClassName("code");
+  for (var t=0; t<tables.length; t++) {
+    var table = tables[t];
+    var file_id = table.getAttribute("data-fileid");
+    var lines_in_fid = relevant_lines[file_id];
+    if (!lines_in_fid) {
+      lines_in_fid = {};
+    }
+    var lines = table.getElementsByClassName("codeline");
+    for (var i=0; i<lines.length; i++) {
+        var el = lines[i];
+        var lineNo = el.getAttribute("data-linenumber");
+        if (!lines_in_fid[lineNo]) {
+          if (hide) {
+            el.setAttribute("hidden", "");
+          } else {
+            el.removeAttribute("hidden");
+          }
+        }
+    }
+  }
+}
+
+window.addEventListener("keydown", function (event) {
+  if (event.defaultPrevented) {
+    return;
+  }
+  if (event.key == "S") {
+    var checked = document.getElementsByName("showCounterexample")[0].checked;
+    filterCounterexample(!checked);
+    document.getElementsByName("showCounterexample")[0].checked = !checked;
+  } else {
+    return;
+  } 
+  event.preventDefault();
+}, true);
+
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelector('input[name="showCounterexample"]').onchange=
+        function (event) {
+      filterCounterexample(this.checked);
+    };
+});
+</script>
+
+<form>
+    <input type="checkbox" name="showCounterexample" />
+    <label for="showCounterexample">
+       Show only relevant lines
+    </label>
+</form>
+)<<<";
+
+  return os.str();
+}
+
+std::string HTMLDiagnostics::serializeExecutedLines(const PathDiagnostic &D) {
+  std::string s;
+  llvm::raw_string_ostream os(s);
+  os << "var relevant_lines = {";
+  for (auto I = D.executedLines_begin(),
+            E = D.executedLines_end(); I != E; ++I) {
+    if (I != D.executedLines_begin())
+      os << ", ";
+
+    os << "\"" << I->first << "\": {";
+    for (unsigned LineNo : I->second) {
+      if (LineNo != *(I->second.begin()))
+        os << ", ";
+
+      os << "\"" << LineNo << "\": 1";
+    }
+    os << "}";
+  }
+
+  os << "};";
+  return os.str();
 }
 
 void HTMLDiagnostics::RewriteFile(Rewriter &R, const SourceManager& SMgr,

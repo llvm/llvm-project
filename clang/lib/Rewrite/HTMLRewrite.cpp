@@ -210,9 +210,9 @@ static void AddLineNumber(RewriteBuffer &RB, unsigned LineNo,
   SmallString<256> Str;
   llvm::raw_svector_ostream OS(Str);
 
-  OS << "<tr><td class=\"num\" id=\"LN"
-     << LineNo << "\">"
-     << LineNo << "</td><td class=\"line\">";
+  OS << "<tr class=\"codeline\" data-linenumber=\"" << LineNo << "\">"
+     << "<td class=\"num\" id=\"LN" << LineNo << "\">" << LineNo
+     << "</td><td class=\"line\">";
 
   if (B == E) { // Handle empty lines.
     OS << " </td></tr>";
@@ -263,7 +263,10 @@ void html::AddLineNumbers(Rewriter& R, FileID FID) {
   }
 
   // Add one big table tag that surrounds all of the code.
-  RB.InsertTextBefore(0, "<table class=\"code\">\n");
+  std::string s;
+  llvm::raw_string_ostream os(s);
+  os << "<table class=\"code\" data-fileid=\"" << FID.getHashValue() << "\">\n";
+  RB.InsertTextBefore(0, os.str());
   RB.InsertTextAfter(FileEnd - FileBeg, "</table>");
 }
 

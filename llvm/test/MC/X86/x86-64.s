@@ -99,7 +99,8 @@
 // CHECK: shll $2, %eax
         sall $2, %eax
 
-// CHECK: rep movsb
+// CHECK: rep
+// CHECK-NEXT: movsb
 rep     # comment
 movsb
 
@@ -1557,3 +1558,38 @@ ptwriteq 0xdeadbeef(%rbx,%rcx,8)
 // CHECK: ptwriteq %rax
 // CHECK:  encoding: [0xf3,0x48,0x0f,0xae,0xe0]
 ptwriteq %rax
+
+//  __asm __volatile(
+//    "pushf        \n\t"
+//    "popf       \n\t"
+//    "rep        \n\t"
+//    ".byte  0x0f, 0xa7, 0xd0"
+//  );
+// CHECK: pushfq
+// CHECK-NEXT: popfq
+// CHECK-NEXT: rep
+// CHECK-NEXT: .byte 15
+// CHECK-NEXT: .byte 167
+// CHECK-NEXT: .byte 208
+pushfq
+popfq
+rep
+.byte 15
+.byte 167
+.byte 208
+
+// CHECK: lock
+// CHECK: cmpxchgl
+        cmp $0, %edx
+        je 1f
+        lock
+1:      cmpxchgl %ecx,(%rdi)
+
+// CHECK: rep
+// CHECK-NEXT: byte
+rep
+.byte 0xa4      # movsb
+
+// CHECK: lock
+// This line has to be the last one in the file
+lock
