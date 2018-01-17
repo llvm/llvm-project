@@ -189,7 +189,7 @@ void ValistChecker::checkPreStmt(const VAArgExpr *VAA,
                                  CheckerContext &C) const {
   ProgramStateRef State = C.getState();
   const Expr *VASubExpr = VAA->getSubExpr();
-  SVal VAListSVal = State->getSVal(VASubExpr, C.getLocationContext());
+  SVal VAListSVal = C.getSVal(VASubExpr);
   bool Symbolic;
   const MemRegion *VAList =
       getVAListAsRegion(VAListSVal, VASubExpr, Symbolic, C);

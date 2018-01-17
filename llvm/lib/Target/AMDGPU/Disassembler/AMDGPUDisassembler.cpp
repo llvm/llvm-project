@@ -732,8 +732,9 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg64(unsigned Val) const {
 }
 
 MCOperand AMDGPUDisassembler::decodeSDWASrc(const OpWidthTy Width,
-                                            unsigned Val) const {
+                                            const unsigned Val) const {
   using namespace AMDGPU::SDWA;
+  using namespace AMDGPU::EncValues;
 
   if (STI.getFeatureBits()[AMDGPU::FeatureGFX9]) {
     // XXX: static_cast<int> is needed to avoid stupid warning:
@@ -754,7 +755,15 @@ MCOperand AMDGPUDisassembler::decodeSDWASrc(const OpWidthTy Width,
                                Val - SDWA9EncValues::SRC_TTMP_MIN);
     }
 
-    return decodeSpecialReg32(Val - SDWA9EncValues::SRC_SGPR_MIN);
+    const unsigned SVal = Val - SDWA9EncValues::SRC_SGPR_MIN;
+
+    if (INLINE_INTEGER_C_MIN <= SVal && SVal <= INLINE_INTEGER_C_MAX)
+      return decodeIntImmed(SVal);
+
+    if (INLINE_FLOATING_C_MIN <= SVal && SVal <= INLINE_FLOATING_C_MAX)
+      return decodeFPImmed(Width, SVal);
+
+    return decodeSpecialReg32(SVal);
   } else if (STI.getFeatureBits()[AMDGPU::FeatureVolcanicIslands]) {
     return createRegOperand(getVgprClassId(Width), Val);
   }

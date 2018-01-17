@@ -1,10 +1,6 @@
 #include <clc/clc.h>
-#include "../clcmacro.h"
 
-_CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, pown, float, int)
+#include <math/clc_pown.h>
 
-#ifdef cl_khr_fp64
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-
-_CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, pown, double, int)
-#endif
+#define __CLC_BODY <pown.inc>
+#include <clc/math/gentype.inc>

@@ -1770,6 +1770,84 @@ TEST(IsExplicitTemplateSpecialization,
     functionDecl(isExplicitTemplateSpecialization())));
 }
 
+TEST(TypeMatching, MatchesNoReturn) {
+  EXPECT_TRUE(notMatches("void func();", functionDecl(isNoReturn())));
+  EXPECT_TRUE(notMatches("void func() {}", functionDecl(isNoReturn())));
+
+  EXPECT_TRUE(notMatchesC("void func();", functionDecl(isNoReturn())));
+  EXPECT_TRUE(notMatchesC("void func() {}", functionDecl(isNoReturn())));
+
+  EXPECT_TRUE(
+      notMatches("struct S { void func(); };", functionDecl(isNoReturn())));
+  EXPECT_TRUE(
+      notMatches("struct S { void func() {} };", functionDecl(isNoReturn())));
+
+  EXPECT_TRUE(notMatches("struct S { static void func(); };",
+                         functionDecl(isNoReturn())));
+  EXPECT_TRUE(notMatches("struct S { static void func() {} };",
+                         functionDecl(isNoReturn())));
+
+  EXPECT_TRUE(notMatches("struct S { S(); };", functionDecl(isNoReturn())));
+  EXPECT_TRUE(notMatches("struct S { S() {} };", functionDecl(isNoReturn())));
+
+  // ---
+
+  EXPECT_TRUE(matches("[[noreturn]] void func();", functionDecl(isNoReturn())));
+  EXPECT_TRUE(
+      matches("[[noreturn]] void func() {}", functionDecl(isNoReturn())));
+
+  EXPECT_TRUE(matches("struct S { [[noreturn]] void func(); };",
+                      functionDecl(isNoReturn())));
+  EXPECT_TRUE(matches("struct S { [[noreturn]] void func() {} };",
+                      functionDecl(isNoReturn())));
+
+  EXPECT_TRUE(matches("struct S { [[noreturn]] static void func(); };",
+                      functionDecl(isNoReturn())));
+  EXPECT_TRUE(matches("struct S { [[noreturn]] static void func() {} };",
+                      functionDecl(isNoReturn())));
+
+  EXPECT_TRUE(
+      matches("struct S { [[noreturn]] S(); };", functionDecl(isNoReturn())));
+  EXPECT_TRUE(matches("struct S { [[noreturn]] S() {} };",
+                      functionDecl(isNoReturn())));
+
+  // ---
+
+  EXPECT_TRUE(matches("__attribute__((noreturn)) void func();",
+                      functionDecl(isNoReturn())));
+  EXPECT_TRUE(matches("__attribute__((noreturn)) void func() {}",
+                      functionDecl(isNoReturn())));
+
+  EXPECT_TRUE(matches("struct S { __attribute__((noreturn)) void func(); };",
+                      functionDecl(isNoReturn())));
+  EXPECT_TRUE(matches("struct S { __attribute__((noreturn)) void func() {} };",
+                      functionDecl(isNoReturn())));
+
+  EXPECT_TRUE(
+      matches("struct S { __attribute__((noreturn)) static void func(); };",
+              functionDecl(isNoReturn())));
+  EXPECT_TRUE(
+      matches("struct S { __attribute__((noreturn)) static void func() {} };",
+              functionDecl(isNoReturn())));
+
+  EXPECT_TRUE(matches("struct S { __attribute__((noreturn)) S(); };",
+                      functionDecl(isNoReturn())));
+  EXPECT_TRUE(matches("struct S { __attribute__((noreturn)) S() {} };",
+                      functionDecl(isNoReturn())));
+
+  // ---
+
+  EXPECT_TRUE(matchesC("__attribute__((noreturn)) void func();",
+                      functionDecl(isNoReturn())));
+  EXPECT_TRUE(matchesC("__attribute__((noreturn)) void func() {}",
+                      functionDecl(isNoReturn())));
+
+  EXPECT_TRUE(matchesC("_Noreturn void func();",
+                      functionDecl(isNoReturn())));
+  EXPECT_TRUE(matchesC("_Noreturn void func() {}",
+                      functionDecl(isNoReturn())));
+}
+
 TEST(TypeMatching, MatchesBool) {
   EXPECT_TRUE(matches("struct S { bool func(); };",
                       cxxMethodDecl(returns(booleanType()))));

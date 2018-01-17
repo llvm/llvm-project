@@ -105,7 +105,22 @@ int main(int argc, const char **argv) {
     llvm::errs() << llvm::toString(std::move(Err)) << "\n";
   }
 
+  // Deduplicate the result by key and keep the longest value.
+  // FIXME(ioeric): Merge occurrences, rather than just dropping all but one.
+  // Definitions and forward declarations have the same key and may both have
+  // information. Usage count will need to be aggregated across occurrences,
+  // too.
+  llvm::StringMap<llvm::StringRef> UniqueSymbols;
   Executor->get()->getToolResults()->forEachResult(
-      [](llvm::StringRef, llvm::StringRef Value) { llvm::outs() << Value; });
+      [&UniqueSymbols](llvm::StringRef Key, llvm::StringRef Value) {
+        auto Ret = UniqueSymbols.try_emplace(Key, Value);
+        if (!Ret.second) {
+          // If key already exists, keep the longest value.
+          llvm::StringRef &V = Ret.first->second;
+          V = V.size() < Value.size() ? Value : V;
+        }
+      });
+  for (const auto &Sym : UniqueSymbols)
+    llvm::outs() << Sym.second;
   return 0;
 }

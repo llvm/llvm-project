@@ -17,6 +17,7 @@
 #include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Timer.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -163,6 +164,9 @@ private:
 namespace lld {
 namespace coff {
 
+static Timer CodeLayoutTimer("Code Layout", Timer::root());
+static Timer DiskCommitTimer("Commit Output File", Timer::root());
+
 void writeResult() { Writer().run(); }
 
 void OutputSection::setRVA(uint64_t RVA) {
@@ -287,6 +291,8 @@ static Optional<codeview::DebugInfo> loadExistingBuildId(StringRef Path) {
 
 // The main function of the writer.
 void Writer::run() {
+  ScopedTimer T1(CodeLayoutTimer);
+
   createSections();
   createMiscChunks();
   createImportTables();
@@ -315,14 +321,16 @@ void Writer::run() {
   sortExceptionTable();
   writeBuildId();
 
-  if (!Config->PDBPath.empty() && Config->Debug) {
+  T1.stop();
 
+  if (!Config->PDBPath.empty() && Config->Debug) {
     assert(BuildId);
     createPDB(Symtab, OutputSections, SectionTable, *BuildId->BuildId);
   }
 
   writeMapFile(OutputSections);
 
+  ScopedTimer T2(DiskCommitTimer);
   if (auto E = Buffer->commit())
     fatal("failed to write the output file: " + toString(std::move(E)));
 }

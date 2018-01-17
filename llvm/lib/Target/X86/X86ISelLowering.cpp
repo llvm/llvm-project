@@ -8117,6 +8117,32 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
       return LD;
   }
 
+  // If this is a splat of pairs of 32-bit elements, we can use a narrower
+  // build_vector and broadcast it.
+  // TODO: We could probably generalize this more.
+  if (Subtarget.hasAVX2() && EVTBits == 32 && Values.size() == 2) {
+    SDValue Ops[4] = { Op.getOperand(0), Op.getOperand(1),
+                       DAG.getUNDEF(EltVT), DAG.getUNDEF(EltVT) };
+    auto CanSplat = [](SDValue Op, unsigned NumElems, ArrayRef<SDValue> Ops) {
+      // Make sure all the even/odd operands match.
+      for (unsigned i = 2; i != NumElems; ++i)
+        if (Ops[i % 2] != Op.getOperand(i))
+          return false;
+      return true;
+    };
+    if (CanSplat(Op, NumElems, Ops)) {
+      MVT WideEltVT = VT.isFloatingPoint() ? MVT::f64 : MVT::i64;
+      MVT NarrowVT = MVT::getVectorVT(EltVT, 4);
+      // Create a new build vector and cast to v2i64/v2f64.
+      SDValue NewBV = DAG.getBitcast(MVT::getVectorVT(WideEltVT, 2),
+                                     DAG.getBuildVector(NarrowVT, dl, Ops));
+      // Broadcast from v2i64/v2f64 and cast to final VT.
+      MVT BcastVT = MVT::getVectorVT(WideEltVT, NumElems/2);
+      return DAG.getBitcast(VT, DAG.getNode(X86ISD::VBROADCAST, dl, BcastVT,
+                                            NewBV));
+    }
+  }
+
   // For AVX-length vectors, build the individual 128-bit pieces and use
   // shuffles to put them in place.
   if (VT.getSizeInBits() > 128) {
@@ -18254,6 +18280,18 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   if ((VT == MVT::f64 || VT == MVT::f32) && Subtarget.hasAVX512()) {
     SDValue Cmp = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v1i1, Cond);
     return DAG.getNode(X86ISD::SELECTS, DL, VT, Cmp, Op1, Op2);
+  }
+
+  // For v64i1 without 64-bit support we need to split and rejoin.
+  if (VT == MVT::v64i1 && !Subtarget.is64Bit()) {
+    assert(Subtarget.hasBWI() && "Expected BWI to be legal");
+    SDValue Op1Lo = extractSubVector(Op1, 0, DAG, DL, 32);
+    SDValue Op2Lo = extractSubVector(Op2, 0, DAG, DL, 32);
+    SDValue Op1Hi = extractSubVector(Op1, 32, DAG, DL, 32);
+    SDValue Op2Hi = extractSubVector(Op2, 32, DAG, DL, 32);
+    SDValue Lo = DAG.getSelect(DL, MVT::v32i1, Cond, Op1Lo, Op2Lo);
+    SDValue Hi = DAG.getSelect(DL, MVT::v32i1, Cond, Op1Hi, Op2Hi);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
   }
 
   if (VT.isVector() && VT.getVectorElementType() == MVT::i1) {

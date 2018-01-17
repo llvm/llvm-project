@@ -35,7 +35,7 @@ void OverloadedOperatorCheck::check(const MatchFinder::MatchResult &Result) {
   
   SourceLocation Loc = D->getLocStart();
   if (Loc.isValid())
-    diag(Loc, "cannot overload %0") << D;
+    diag(Loc, "overloading %0 is disallowed") << D;
 }
 
 } // namespace fuchsia

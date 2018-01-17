@@ -161,9 +161,9 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
     setAction({G_ICMP, 1, Ty}, Legal);
 
   if (!ST.useSoftFloat() && ST.hasVFP2()) {
-    for (unsigned BinOp : {G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FCONSTANT, G_FNEG})
+    for (unsigned Op : {G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FCONSTANT, G_FNEG})
       for (auto Ty : {s32, s64})
-        setAction({BinOp, Ty}, Legal);
+        setAction({Op, Ty}, Legal);
 
     setAction({G_LOAD, s64}, Legal);
     setAction({G_STORE, s64}, Legal);

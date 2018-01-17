@@ -212,3 +212,128 @@ TEST(Local, MergeBasicBlockIntoOnlyPred) {
         EXPECT_TRUE(DT->verify());
       });
 }
+
+TEST(Local, ConstantFoldTerminator) {
+  LLVMContext C;
+
+  std::unique_ptr<Module> M = parseIR(
+      C,
+      "define void @br_same_dest() {\n"
+      "entry:\n"
+      "  br i1 false, label %bb0, label %bb0\n"
+      "bb0:\n"
+      "  ret void\n"
+      "}\n"
+      "\n"
+      "define void @br_different_dest() {\n"
+      "entry:\n"
+      "  br i1 true, label %bb0, label %bb1\n"
+      "bb0:\n"
+      "  br label %exit\n"
+      "bb1:\n"
+      "  br label %exit\n"
+      "exit:\n"
+      "  ret void\n"
+      "}\n"
+      "\n"
+      "define void @switch_2_different_dest() {\n"
+      "entry:\n"
+      "  switch i32 0, label %default [ i32 0, label %bb0 ]\n"
+      "default:\n"
+      "  ret void\n"
+      "bb0:\n"
+      "  ret void\n"
+      "}\n"
+      "define void @switch_2_different_dest_default() {\n"
+      "entry:\n"
+      "  switch i32 1, label %default [ i32 0, label %bb0 ]\n"
+      "default:\n"
+      "  ret void\n"
+      "bb0:\n"
+      "  ret void\n"
+      "}\n"
+      "define void @switch_3_different_dest() {\n"
+      "entry:\n"
+      "  switch i32 0, label %default [ i32 0, label %bb0\n"
+      "                                 i32 1, label %bb1 ]\n"
+      "default:\n"
+      "  ret void\n"
+      "bb0:\n"
+      "  ret void\n"
+      "bb1:\n"
+      "  ret void\n"
+      "}\n"
+      "\n"
+      "define void @switch_variable_2_default_dest(i32 %arg) {\n"
+      "entry:\n"
+      "  switch i32 %arg, label %default [ i32 0, label %default ]\n"
+      "default:\n"
+      "  ret void\n"
+      "}\n"
+      "\n"
+      "define void @switch_constant_2_default_dest() {\n"
+      "entry:\n"
+      "  switch i32 1, label %default [ i32 0, label %default ]\n"
+      "default:\n"
+      "  ret void\n"
+      "}\n"
+      "\n"
+      "define void @switch_constant_3_repeated_dest() {\n"
+      "entry:\n"
+      "  switch i32 0, label %default [ i32 0, label %bb0\n"
+      "                                 i32 1, label %bb0 ]\n"
+      " bb0:\n"
+      "   ret void\n"
+      "default:\n"
+      "  ret void\n"
+      "}\n"
+      "\n"
+      "define void @indirectbr() {\n"
+      "entry:\n"
+      "  indirectbr i8* blockaddress(@indirectbr, %bb0), [label %bb0, label %bb1]\n"
+      "bb0:\n"
+      "  ret void\n"
+      "bb1:\n"
+      "  ret void\n"
+      "}\n"
+      "\n"
+      "define void @indirectbr_repeated() {\n"
+      "entry:\n"
+      "  indirectbr i8* blockaddress(@indirectbr_repeated, %bb0), [label %bb0, label %bb0]\n"
+      "bb0:\n"
+      "  ret void\n"
+      "}\n"
+      "\n"
+      "define void @indirectbr_unreachable() {\n"
+      "entry:\n"
+      "  indirectbr i8* blockaddress(@indirectbr_unreachable, %bb0), [label %bb1]\n"
+      "bb0:\n"
+      "  ret void\n"
+      "bb1:\n"
+      "  ret void\n"
+      "}\n"
+      "\n"
+    );
+
+  auto CFAllTerminators = [&](Function &F, DominatorTree *DT) {
+    DeferredDominance DDT(*DT);
+    for (Function::iterator I = F.begin(), E = F.end(); I != E;) {
+      BasicBlock *BB = &*I++;
+      ConstantFoldTerminator(BB, true, nullptr, &DDT);
+    }
+
+    EXPECT_TRUE(DDT.flush().verify());
+  };
+
+  runWithDomTree(*M, "br_same_dest", CFAllTerminators);
+  runWithDomTree(*M, "br_different_dest", CFAllTerminators);
+  runWithDomTree(*M, "switch_2_different_dest", CFAllTerminators);
+  runWithDomTree(*M, "switch_2_different_dest_default", CFAllTerminators);
+  runWithDomTree(*M, "switch_3_different_dest", CFAllTerminators);
+  runWithDomTree(*M, "switch_variable_2_default_dest", CFAllTerminators);
+  runWithDomTree(*M, "switch_constant_2_default_dest", CFAllTerminators);
+  runWithDomTree(*M, "switch_constant_3_repeated_dest", CFAllTerminators);
+  runWithDomTree(*M, "indirectbr", CFAllTerminators);
+  runWithDomTree(*M, "indirectbr_repeated", CFAllTerminators);
+  runWithDomTree(*M, "indirectbr_unreachable", CFAllTerminators);
+}

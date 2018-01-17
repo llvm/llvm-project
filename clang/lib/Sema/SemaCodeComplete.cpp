@@ -318,6 +318,11 @@ namespace {
     /// \brief Ignore this declaration, if it is seen again.
     void Ignore(const Decl *D) { AllDeclsFound.insert(D->getCanonicalDecl()); }
 
+    /// \brief Add a visited context.
+    void addVisitedContext(DeclContext *Ctx) {
+      CompletionContext.addVisitedContext(Ctx);
+    }
+
     /// \name Name lookup predicates
     ///
     /// These predicates can be passed to the name lookup functions to filter the
@@ -1280,7 +1285,7 @@ namespace {
   class CodeCompletionDeclConsumer : public VisibleDeclConsumer {
     ResultBuilder &Results;
     DeclContext *CurContext;
-    
+
   public:
     CodeCompletionDeclConsumer(ResultBuilder &Results, DeclContext *CurContext)
       : Results(Results), CurContext(CurContext) { }
@@ -1294,6 +1299,10 @@ namespace {
       ResultBuilder::Result Result(ND, Results.getBasePriority(ND), nullptr,
                                    false, Accessible);
       Results.AddResult(Result, CurContext, Hiding, InBaseClass);
+    }
+
+    void EnteredContext(DeclContext* Ctx) override {
+      Results.addVisitedContext(Ctx);
     }
   };
 }

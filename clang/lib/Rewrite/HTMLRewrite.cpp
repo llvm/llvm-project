@@ -311,6 +311,10 @@ void html::AddHeaderFooterInternalBuiltinCSS(Rewriter &R, FileID FID,
           "  -webkit-border-radius:5px;  -webkit-box-shadow:1px 1px 7px #000; "
           "  border-radius:5px;  box-shadow:1px 1px 7px #000; "
           "position: absolute; top: -1em; left:10em; z-index: 1 } \n"
+      " #tooltiphint { position: fixed; width: 50em; margin-left: -25em;"
+                     "left: 50%; padding: 10px; border: 1px solid #b0b0b0;"
+                     "border-radius: 2px; box-shadow: 1px 1px 7px black; "
+                     "background-color: #c0c0c0; z-index: 2; }\n"
       " .macro { color: darkmagenta; background-color:LemonChiffon;"
              // Macros are position: relative to provide base for expansions.
              " position: relative }\n"

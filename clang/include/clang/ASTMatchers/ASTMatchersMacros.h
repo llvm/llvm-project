@@ -359,11 +359,6 @@
               ::clang::ast_matchers::internal::BoundNodesTreeBuilder *Builder) \
           const
 
-/// \brief Creates a variadic matcher for both a specific \c Type as well as
-/// the corresponding \c TypeLoc.
-#define AST_TYPE_MATCHER(NodeType, MatcherName)                                \
-  const ::clang::ast_matchers::internal::VariadicDynCastAllOfMatcher<          \
-      Type, NodeType> MatcherName
 // FIXME: add a matcher for TypeLoc derived classes using its custom casting
 // API (no longer dyn_cast) if/when we need such matching
 

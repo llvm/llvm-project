@@ -103,6 +103,10 @@ static ARCCC::CondCode GetOppositeBranchCondition(ARCCC::CondCode CC) {
     return ARCCC::LE;
   case ARCCC::GE:
     return ARCCC::LT;
+  case ARCCC::VS:
+    return ARCCC::VC;
+  case ARCCC::VC:
+    return ARCCC::VS;
   case ARCCC::LT:
     return ARCCC::GE;
   case ARCCC::LE:

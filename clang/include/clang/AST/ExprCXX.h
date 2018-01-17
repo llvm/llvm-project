@@ -1504,6 +1504,9 @@ public:
   SourceLocation getRParenLoc() const { return RParenLoc; }
   void setRParenLoc(SourceLocation L) { RParenLoc = L; }
 
+  /// Determine whether this expression models list-initialization.
+  bool isListInitialization() const { return LParenLoc.isInvalid(); }
+
   SourceLocation getLocStart() const LLVM_READONLY;
   SourceLocation getLocEnd() const LLVM_READONLY;
 

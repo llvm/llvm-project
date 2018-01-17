@@ -1367,12 +1367,15 @@ struct FormatStyle {
     LanguageKind Language;
     /// \brief A list of raw string delimiters that match this language.
     std::vector<std::string> Delimiters;
+    /// \brief A list of enclosing function names that match this language.
+    std::vector<std::string> EnclosingFunctions;
     /// \brief The style name on which this raw string format is based on.
     /// If not specified, the raw string format is based on the style that this
     /// format is based on.
     std::string BasedOnStyle;
     bool operator==(const RawStringFormat &Other) const {
       return Language == Other.Language && Delimiters == Other.Delimiters &&
+             EnclosingFunctions == Other.EnclosingFunctions &&
              BasedOnStyle == Other.BasedOnStyle;
     }
   };
@@ -1380,12 +1383,17 @@ struct FormatStyle {
   /// \brief Defines hints for detecting supported languages code blocks in raw
   /// strings.
   ///
-  /// A raw string with a matching delimiter will be reformatted assuming the
-  /// specified language based on the style for that language defined in the
-  /// .clang-format file. If no style has been defined in the .clang-format file
-  /// for the specific language, a predefined style given by 'BasedOnStyle' is
-  /// used. If 'BasedOnStyle' is not found, the formatting is based on llvm
-  /// style.
+  /// A raw string with a matching delimiter or a matching enclosing function
+  /// name will be reformatted assuming the specified language based on the
+  /// style for that language defined in the .clang-format file. If no style has
+  /// been defined in the .clang-format file for the specific language, a
+  /// predefined style given by 'BasedOnStyle' is used. If 'BasedOnStyle' is not
+  /// found, the formatting is based on llvm style. A matching delimiter takes
+  /// precedence over a matching enclosing function name for determining the
+  /// language of the raw string contents.
+  ///
+  /// There should be at most one specification per language and each delimiter
+  /// and enclosing function should not occur in multiple specifications.
   ///
   /// To configure this in the .clang-format file, use:
   /// \code{.yaml}
@@ -1394,6 +1402,8 @@ struct FormatStyle {
   ///         Delimiters:
   ///           - 'pb'
   ///           - 'proto'
+  ///         EnclosingFunctions:
+  ///           - 'PARSE_TEXT_PROTO'
   ///         BasedOnStyle: google
   ///     - Language: Cpp
   ///         Delimiters:

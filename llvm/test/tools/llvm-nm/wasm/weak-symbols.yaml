@@ -54,6 +54,20 @@ Sections:
       - Name:            weak_global_data
         Kind:            GLOBAL
         Index:           0x00000003
+  - Type:            CODE
+    Functions:
+      - Index:           1
+        Locals:
+        Body:            00
+      - Index:           2
+        Locals:
+        Body:            00
+      - Index:           3
+        Locals:
+        Body:            00
+      - Index:           4
+        Locals:
+        Body:            00
   - Type:            CUSTOM
     Name:            linking
     DataSize:        0

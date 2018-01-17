@@ -77,7 +77,7 @@ entry:
 ; CHECK-NEXT:     Name:            name
 ; CHECK-NEXT:     FunctionNames:   
 ; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         Name:            start_alias
+; CHECK-NEXT:         Name:            _start
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Name:            __wasm_call_ctors
 ; CHECK-NEXT: ...

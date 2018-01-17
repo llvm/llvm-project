@@ -3428,9 +3428,13 @@ void Scop::foldSizeConstantsToRight() {
 
         int ValInt = 1;
 
-        if (isl_val_is_int(Val))
-          ValInt = isl_val_get_num_si(Val);
-        isl_val_free(Val);
+        if (isl_val_is_int(Val)) {
+          auto ValAPInt = APIntFromVal(Val);
+          if (ValAPInt.isSignedIntN(32))
+            ValInt = ValAPInt.getSExtValue();
+        } else {
+          isl_val_free(Val);
+        }
 
         Int.push_back(ValInt);
 

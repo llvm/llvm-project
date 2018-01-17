@@ -333,7 +333,7 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     KnownBits InputKnown(SrcBitWidth);
     if (SimplifyDemandedBits(I, 0, InputDemandedMask, InputKnown, Depth + 1))
       return I;
-    Known = Known.zextOrTrunc(BitWidth);
+    Known = InputKnown.zextOrTrunc(BitWidth);
     // Any top bits are known to be zero.
     if (BitWidth > SrcBitWidth)
       Known.Zero.setBitsFrom(SrcBitWidth);
