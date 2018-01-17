@@ -498,8 +498,10 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
 
   ExplodedNodeSet DstPostCall;
   StmtNodeBuilder CallBldr(DstPreCall, DstPostCall, *currBldrCtx);
-  for (auto I : DstPreCall)
+  for (auto I : DstPreCall) {
+    // FIXME: Provide evalCall for checkers?
     defaultEvalCall(CallBldr, I, *Call);
+  }
   // If the call is inlined, DstPostCall will be empty and we bail out now.
 
   // Store return value of operator new() for future use, until the actual
@@ -526,19 +528,6 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
                                              *Call, *this);
 }
 
-    ValueBldr.generateNode(CNE, I,
-                           setCXXNewAllocatorValue(State, CNE, LCtx, RetVal));
-  }
-
-  ExplodedNodeSet DstPostPostCallCallback;
-  getCheckerManager().runCheckersForPostCall(DstPostPostCallCallback,
-                                             DstPostValue, *Call, *this);
-  for (auto I : DstPostPostCallCallback) {
-    getCheckerManager().runCheckersForNewAllocator(
-        CNE, getCXXNewAllocatorValue(I->getState(), CNE, LCtx), Dst, I, *this);
-  }
-}
-
 void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
                                    ExplodedNodeSet &Dst) {
   // FIXME: Much of this should eventually migrate to CXXAllocatorCall.
@@ -553,14 +542,6 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
 
   bool IsStandardGlobalOpNewFunction =
       FD->isReplaceableGlobalAllocationFunction();
-
-  ProgramStateRef State = Pred->getState();
-
-  // Retrieve the stored operator new() return value.
-  if (AMgr.getAnalyzerOptions().mayInlineCXXAllocator()) {
-    symVal = getCXXNewAllocatorValue(State, CNE, LCtx);
-    State = clearCXXNewAllocatorValue(State, CNE, LCtx);
-  }
 
   ProgramStateRef State = Pred->getState();
 
@@ -616,9 +597,8 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
   if (CNE->isArray()) {
     // FIXME: allocating an array requires simulating the constructors.
     // For now, just return a symbolicated region.
-    if (!AMgr.getAnalyzerOptions().mayInlineCXXAllocator()) {
-      const SubRegion *NewReg =
-          symVal.castAs<loc::MemRegionVal>().getRegionAs<SubRegion>();
+    if (const SubRegion *NewReg =
+            dyn_cast_or_null<SubRegion>(symVal.getAsRegion())) {
       QualType ObjTy = CNE->getType()->getAs<PointerType>()->getPointeeType();
       const ElementRegion *EleReg =
           getStoreManager().GetElementZeroRegion(NewReg, ObjTy);
