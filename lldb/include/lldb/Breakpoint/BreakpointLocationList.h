@@ -235,6 +235,8 @@ protected:
                     lldb::BreakpointLocationSP from_location_sp);
 
   bool RemoveLocation(const lldb::BreakpointLocationSP &bp_loc_sp);
+  
+  void RemoveLocationByIndex(size_t idx);
 
   void RemoveInvalidLocations(const ArchSpec &arch);
 
