@@ -276,6 +276,14 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
 
       state = state->BindExpr(CCE, callerCtx, ThisV);
     }
+
+    if (const CXXNewExpr *CNE = dyn_cast<CXXNewExpr>(CE)) {
+      // We are currently evaluating a CXXNewAllocator CFGElement. It takes a
+      // while to reach the actual CXXNewExpr element from here, so keep the
+      // region for later use.
+      state = setCXXNewAllocatorValue(state, CNE, calleeCtx->getParent(),
+                                      state->getSVal(CE, callerCtx));
+    }
   }
 
   // Step 3: BindedRetNode -> CleanedNodes
@@ -315,6 +323,10 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
     CallExitEnd Loc(calleeCtx, callerCtx);
     bool isNew;
     ProgramStateRef CEEState = (*I == CEBNode) ? state : (*I)->getState();
+
+    // See if we have any stale C++ allocator values.
+    assert(areCXXNewAllocatorValuesClear(CEEState, calleeCtx, callerCtx));
+
     ExplodedNode *CEENode = G.getNode(Loc, CEEState, false, &isNew);
     CEENode->addPredecessor(*I, G);
     if (!isNew)
@@ -596,21 +608,34 @@ static CallInlinePolicy mayInlineCallKind(const CallEvent &Call,
 
     const CXXConstructorCall &Ctor = cast<CXXConstructorCall>(Call);
 
+    const CXXConstructExpr *CtorExpr = Ctor.getOriginExpr();
+
+    // FIXME: ParentMap is slow and ugly. The callee should provide the
+    // necessary context. Ideally as part of the call event, or maybe as part of
+    // location context.
+    const Stmt *ParentExpr = CurLC->getParentMap().getParent(CtorExpr);
+
+    if (ParentExpr && isa<CXXNewExpr>(ParentExpr) &&
+        !Opts.mayInlineCXXAllocator())
+      return CIP_DisallowedOnce;
+
     // FIXME: We don't handle constructors or destructors for arrays properly.
     // Even once we do, we still need to be careful about implicitly-generated
     // initializers for array fields in default move/copy constructors.
+    // We still allow construction into ElementRegion targets when they don't
+    // represent array elements.
     const MemRegion *Target = Ctor.getCXXThisVal().getAsRegion();
-    if (Target && isa<ElementRegion>(Target))
-      return CIP_DisallowedOnce;
+    if (Target && isa<ElementRegion>(Target)) {
+      if (ParentExpr)
+        if (const CXXNewExpr *NewExpr = dyn_cast<CXXNewExpr>(ParentExpr))
+          if (NewExpr->isArray())
+            return CIP_DisallowedOnce;
 
-    // FIXME: This is a hack. We don't use the correct region for a new
-    // expression, so if we inline the constructor its result will just be
-    // thrown away. This short-term hack is tracked in <rdar://problem/12180598>
-    // and the longer-term possible fix is discussed in PR12014.
-    const CXXConstructExpr *CtorExpr = Ctor.getOriginExpr();
-    if (const Stmt *Parent = CurLC->getParentMap().getParent(CtorExpr))
-      if (isa<CXXNewExpr>(Parent))
-        return CIP_DisallowedOnce;
+      if (const TypedValueRegion *TR = dyn_cast<TypedValueRegion>(
+              cast<SubRegion>(Target)->getSuperRegion()))
+        if (TR->getValueType()->isArrayType())
+          return CIP_DisallowedOnce;
+    }
 
     // Inlining constructors requires including initializers in the CFG.
     const AnalysisDeclContext *ADC = CallerSFC->getAnalysisDeclContext();
@@ -629,7 +654,7 @@ static CallInlinePolicy mayInlineCallKind(const CallEvent &Call,
     // FIXME: This is a hack. We don't handle temporary destructors
     // right now, so we shouldn't inline their constructors.
     if (CtorExpr->getConstructionKind() == CXXConstructExpr::CK_Complete)
-      if (!Target || !isa<DeclRegion>(Target))
+      if (!Target || isa<CXXTempObjectRegion>(Target))
         return CIP_DisallowedOnce;
 
     break;
