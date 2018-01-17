@@ -829,7 +829,7 @@ void __kmpc_ordered(ident_t *loc, kmp_int32 gtid) {
     codeptr_ra = OMPT_LOAD_RETURN_ADDRESS(gtid);
     if (ompt_enabled.ompt_callback_mutex_acquire) {
       ompt_callbacks.ompt_callback(ompt_callback_mutex_acquire)(
-          ompt_mutex_ordered, omp_lock_hint_none, ompt_mutex_impl_spin,
+          ompt_mutex_ordered, omp_lock_hint_none, kmp_mutex_impl_spin,
           (ompt_wait_id_t)lck, codeptr_ra);
     }
   }
@@ -1247,7 +1247,7 @@ static __forceinline kmp_dyna_lockseq_t __kmp_map_hint_to_lock(uintptr_t hint) {
 }
 
 #if OMPT_SUPPORT && OMPT_OPTIONAL
-static ompt_mutex_impl_t
+static kmp_mutex_impl_t
 __ompt_get_mutex_impl_type(void *user_lock, kmp_indirect_lock_t *ilock = 0) {
   if (user_lock) {
     switch (KMP_EXTRACT_D_TAG(user_lock)) {
@@ -1255,16 +1255,16 @@ __ompt_get_mutex_impl_type(void *user_lock, kmp_indirect_lock_t *ilock = 0) {
       break;
 #if KMP_USE_FUTEX
     case locktag_futex:
-      return ompt_mutex_impl_queuing;
+      return kmp_mutex_impl_queuing;
 #endif
     case locktag_tas:
-      return ompt_mutex_impl_spin;
+      return kmp_mutex_impl_spin;
 #if KMP_USE_TSX
     case locktag_hle:
-      return ompt_mutex_impl_speculative;
+      return kmp_mutex_impl_speculative;
 #endif
     default:
-      return ompt_mutex_impl_unknown;
+      return kmp_mutex_impl_unknown;
     }
     ilock = KMP_LOOKUP_I_LOCK(user_lock);
   }
@@ -1273,10 +1273,10 @@ __ompt_get_mutex_impl_type(void *user_lock, kmp_indirect_lock_t *ilock = 0) {
 #if KMP_USE_TSX
   case locktag_adaptive:
   case locktag_rtm:
-    return ompt_mutex_impl_speculative;
+    return kmp_mutex_impl_speculative;
 #endif
   case locktag_nested_tas:
-    return ompt_mutex_impl_spin;
+    return kmp_mutex_impl_spin;
 #if KMP_USE_FUTEX
   case locktag_nested_futex:
 #endif
@@ -1286,32 +1286,32 @@ __ompt_get_mutex_impl_type(void *user_lock, kmp_indirect_lock_t *ilock = 0) {
   case locktag_nested_ticket:
   case locktag_nested_queuing:
   case locktag_nested_drdpa:
-    return ompt_mutex_impl_queuing;
+    return kmp_mutex_impl_queuing;
   default:
-    return ompt_mutex_impl_unknown;
+    return kmp_mutex_impl_unknown;
   }
 }
 
 // For locks without dynamic binding
-static ompt_mutex_impl_t __ompt_get_mutex_impl_type() {
+static kmp_mutex_impl_t __ompt_get_mutex_impl_type() {
   switch (__kmp_user_lock_kind) {
   case lk_tas:
-    return ompt_mutex_impl_spin;
+    return kmp_mutex_impl_spin;
 #if KMP_USE_FUTEX
   case lk_futex:
 #endif
   case lk_ticket:
   case lk_queuing:
   case lk_drdpa:
-    return ompt_mutex_impl_queuing;
+    return kmp_mutex_impl_queuing;
 #if KMP_USE_TSX
   case lk_hle:
   case lk_rtm:
   case lk_adaptive:
-    return ompt_mutex_impl_speculative;
+    return kmp_mutex_impl_speculative;
 #endif
   default:
-    return ompt_mutex_impl_unknown;
+    return kmp_mutex_impl_unknown;
   }
 }
 #endif

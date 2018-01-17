@@ -51,8 +51,7 @@ public:
         "hicpp-deprecated-headers");
     CheckFactories.registerCheck<ExceptionBaseclassCheck>(
         "hicpp-exception-baseclass");
-    CheckFactories.registerCheck<SignedBitwiseCheck>(
-        "hicpp-signed-bitwise");
+    CheckFactories.registerCheck<SignedBitwiseCheck>("hicpp-signed-bitwise");
     CheckFactories.registerCheck<google::ExplicitConstructorCheck>(
         "hicpp-explicit-conversions");
     CheckFactories.registerCheck<readability::FunctionSizeCheck>(
