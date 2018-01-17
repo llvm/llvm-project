@@ -136,6 +136,18 @@ constraints. This program is then compiled by Clang with `SanitizerCoverage
 <https://releases.llvm.org/6.0.0/tools/clang/docs/SanitizerCoverage.html>`_
 instrumentation and then fuzzed using :doc:`LibFuzzer <LibFuzzer>`.
 
+Zig Programming Language
+------------------------
+
+`Zig <http://ziglang.org>`_  is an open-source programming language designed
+for robustness, optimality, and clarity. It is intended to replace C. It
+provides high level features such as Generics,
+Compile Time Function Execution, and Partial Evaluation, yet exposes low level
+LLVM IR features such as Aliases. Zig uses Clang to provide automatic
+import of .h symbols - even inline functions and macros. Zig uses LLD combined
+with lazily building compiler-rt to provide out-of-the-box cross-compiling for
+all supported targets.
+
 
 Additional Information
 ======================
