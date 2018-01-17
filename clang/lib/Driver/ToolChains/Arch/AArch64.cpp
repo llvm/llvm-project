@@ -196,4 +196,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D, const ArgList &Args,
 
   if (Args.hasArg(options::OPT_mno_neg_immediates))
     Features.push_back("+no-neg-immediates");
+
+  if (Args.hasArg(options::OPT_mlimit_16_fpregs))
+    Features.push_back("+limit-16-fpregs");
 }
