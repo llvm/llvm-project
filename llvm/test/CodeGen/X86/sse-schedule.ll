@@ -424,8 +424,8 @@ define float @test_cmpss(float %a0, float %a1, float *%a2) {
 ;
 ; BTVER2-LABEL: test_cmpss:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vcmpeqss (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
+; BTVER2-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0 # sched: [2:1.00]
+; BTVER2-NEXT:    vcmpeqss (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_cmpss:

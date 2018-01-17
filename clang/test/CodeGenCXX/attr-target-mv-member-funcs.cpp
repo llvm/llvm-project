@@ -81,15 +81,15 @@ int templ_use() {
 // CHECK: call dereferenceable(1) %struct.S* @_ZN1SaSERKS_.ifunc(%struct.S* %s2
 // CHECK: call i32 @_ZN1S3fooEi.ifunc(%struct.S* %s, i32 0)
 
-// CHECK: define %struct.S* (%struct.S*, %struct.S*)* @_ZN1SaSERKS_.resolver()
+// CHECK: define %struct.S* (%struct.S*, %struct.S*)* @_ZN1SaSERKS_.resolver() comdat
 // CHECK: ret %struct.S* (%struct.S*, %struct.S*)* @_ZN1SaSERKS_.arch_ivybridge
 // CHECK: ret %struct.S* (%struct.S*, %struct.S*)* @_ZN1SaSERKS_
 
-// CHECK: define void (%struct.ConvertTo*)* @_ZNK9ConvertTocv1SEv.resolver()
+// CHECK: define void (%struct.ConvertTo*)* @_ZNK9ConvertTocv1SEv.resolver() comdat
 // CHECK: ret void (%struct.ConvertTo*)* @_ZNK9ConvertTocv1SEv.arch_ivybridge
 // CHECK: ret void (%struct.ConvertTo*)* @_ZNK9ConvertTocv1SEv
 
-// CHECK: define i32 (%struct.S*, i32)* @_ZN1S3fooEi.resolver()
+// CHECK: define i32 (%struct.S*, i32)* @_ZN1S3fooEi.resolver() comdat 
 // CHECK: ret i32 (%struct.S*, i32)* @_ZN1S3fooEi.arch_sandybridge
 // CHECK: ret i32 (%struct.S*, i32)* @_ZN1S3fooEi.arch_ivybridge
 // CHECK: ret i32 (%struct.S*, i32)* @_ZN1S3fooEi.sse4.2
@@ -97,7 +97,7 @@ int templ_use() {
 
 // CHECK: define i32 @_Z4bar2v()
 // CHECK:call i32 @_ZN2S23fooEi.ifunc
-// define i32 (%struct.S2*, i32)* @_ZN2S23fooEi.resolver()
+// define i32 (%struct.S2*, i32)* @_ZN2S23fooEi.resolver() comdat
 // CHECK: ret i32 (%struct.S2*, i32)* @_ZN2S23fooEi.arch_sandybridge
 // CHECK: ret i32 (%struct.S2*, i32)* @_ZN2S23fooEi.arch_ivybridge
 // CHECK: ret i32 (%struct.S2*, i32)* @_ZN2S23fooEi.sse4.2
@@ -112,13 +112,13 @@ int templ_use() {
 // CHECK:  call i32 @_ZN5templIdE3fooEi.ifunc
 
 
-// CHECK: define i32 (%struct.templ*, i32)* @_ZN5templIiE3fooEi.resolver()
+// CHECK: define i32 (%struct.templ*, i32)* @_ZN5templIiE3fooEi.resolver() comdat
 // CHECK: ret i32 (%struct.templ*, i32)* @_ZN5templIiE3fooEi.arch_sandybridge
 // CHECK: ret i32 (%struct.templ*, i32)* @_ZN5templIiE3fooEi.arch_ivybridge
 // CHECK: ret i32 (%struct.templ*, i32)* @_ZN5templIiE3fooEi.sse4.2
 // CHECK: ret i32 (%struct.templ*, i32)* @_ZN5templIiE3fooEi
 //
-// CHECK: define i32 (%struct.templ.0*, i32)* @_ZN5templIdE3fooEi.resolver()
+// CHECK: define i32 (%struct.templ.0*, i32)* @_ZN5templIdE3fooEi.resolver() comdat
 // CHECK: ret i32 (%struct.templ.0*, i32)* @_ZN5templIdE3fooEi.arch_sandybridge
 // CHECK: ret i32 (%struct.templ.0*, i32)* @_ZN5templIdE3fooEi.arch_ivybridge
 // CHECK: ret i32 (%struct.templ.0*, i32)* @_ZN5templIdE3fooEi.sse4.2

@@ -38,7 +38,7 @@ inline __attribute__((target("sse4.2"))) void foo_decls(void) {}
 // CHECK: define i32 @bar()
 // CHECK: call i32 @foo.ifunc()
 
-// CHECK: define i32 ()* @foo.resolver()
+// CHECK: define i32 ()* @foo.resolver() comdat
 // CHECK: call void @__cpu_indicator_init()
 // CHECK: ret i32 ()* @foo.arch_sandybridge
 // CHECK: ret i32 ()* @foo.arch_ivybridge
@@ -48,7 +48,7 @@ inline __attribute__((target("sse4.2"))) void foo_decls(void) {}
 // CHECK: define i32 @bar2()
 // CHECK: call i32 @foo_inline.ifunc()
 
-// CHECK: define i32 ()* @foo_inline.resolver()
+// CHECK: define i32 ()* @foo_inline.resolver() comdat
 // CHECK: call void @__cpu_indicator_init()
 // CHECK: ret i32 ()* @foo_inline.arch_sandybridge
 // CHECK: ret i32 ()* @foo_inline.arch_ivybridge
@@ -58,7 +58,7 @@ inline __attribute__((target("sse4.2"))) void foo_decls(void) {}
 // CHECK: define void @bar3()
 // CHECK: call void @foo_decls.ifunc()
 
-// CHECK: define void ()* @foo_decls.resolver()
+// CHECK: define void ()* @foo_decls.resolver() comdat
 // CHECK: ret void ()* @foo_decls.sse4.2
 // CHECK: ret void ()* @foo_decls
 

@@ -499,8 +499,8 @@ define double @test_cmpsd(double %a0, double %a1, double *%a2) {
 ;
 ; BTVER2-LABEL: test_cmpsd:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vcmpeqsd (%rdi), %xmm0, %xmm0 # sched: [8:1.00]
+; BTVER2-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0 # sched: [2:1.00]
+; BTVER2-NEXT:    vcmpeqsd (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_cmpsd:

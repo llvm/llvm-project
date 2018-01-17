@@ -194,7 +194,7 @@ void HWAddressSanitizer::initializeCallbacks(Module &M) {
 
     HwasanMemoryAccessCallbackSized[AccessIsWrite] =
         checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-            ClMemoryAccessCallbackPrefix + TypeStr + EndingStr,
+            ClMemoryAccessCallbackPrefix + TypeStr + "N" + EndingStr,
             FunctionType::get(IRB.getVoidTy(), {IntptrTy, IntptrTy}, false)));
 
     for (size_t AccessSizeIndex = 0; AccessSizeIndex < kNumberOfAccessSizes;

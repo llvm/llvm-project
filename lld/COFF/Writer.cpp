@@ -177,6 +177,9 @@ void OutputSection::setFileOffset(uint64_t Off) {
   // by the loader.
   if (Header.SizeOfRawData == 0)
     return;
+
+  // It is possible that this assignment could cause an overflow of the u32,
+  // but that should be caught by the FileSize check in OutputSection::run().
   Header.PointerToRawData = Off;
 }
 
@@ -294,6 +297,10 @@ void Writer::run() {
   removeEmptySections();
   setSectionPermissions();
   createSymbolAndStringTable();
+
+  if (FileSize > UINT32_MAX)
+    fatal("image size (" + Twine(FileSize) + ") " +
+        "exceeds maximum allowable size (" + Twine(UINT32_MAX) + ")");
 
   // We must do this before opening the output file, as it depends on being able
   // to read the contents of the existing output file.
@@ -571,10 +578,8 @@ void Writer::createSymbolAndStringTable() {
   if (OutputSymtab.empty() && Strtab.empty())
     return;
 
-  OutputSection *LastSection = OutputSections.back();
   // We position the symbol table to be adjacent to the end of the last section.
-  uint64_t FileOff = LastSection->getFileOff() +
-                     alignTo(LastSection->getRawSize(), SectorSize);
+  uint64_t FileOff = FileSize;
   PointerToSymbolTable = FileOff;
   FileOff += OutputSymtab.size() * sizeof(coff_symbol16);
   FileOff += 4 + Strtab.size();
@@ -590,7 +595,7 @@ void Writer::assignAddresses() {
   SizeOfHeaders +=
       Config->is64() ? sizeof(pe32plus_header) : sizeof(pe32_header);
   SizeOfHeaders = alignTo(SizeOfHeaders, SectorSize);
-  uint64_t RVA = 0x1000; // The first page is kept unmapped.
+  uint64_t RVA = PageSize; // The first page is kept unmapped.
   FileSize = SizeOfHeaders;
   // Move DISCARDABLE (or non-memory-mapped) sections to the end of file because
   // the loader cannot handle holes.
