@@ -3827,7 +3827,6 @@ def BWWriteResGroup197 : SchedWriteRes<[BWPort0,BWPort01,BWPort23,BWPort05,BWPor
   let ResourceCycles = [2,2,8,1,10,2,39];
 }
 def: InstRW<[BWWriteResGroup197], (instregex "FLDENVm")>;
-def: InstRW<[BWWriteResGroup197], (instregex "FLDENVm")>;
 
 def BWWriteResGroup198 : SchedWriteRes<[BWPort0,BWPort6,BWPort23,BWPort05,BWPort06,BWPort15,BWPort0156]> {
   let Latency = 63;
@@ -3862,7 +3861,6 @@ def BWWriteResGroup202 : SchedWriteRes<[BWPort0,BWPort1,BWPort4,BWPort5,BWPort6,
   let NumMicroOps = 100;
   let ResourceCycles = [9,9,11,8,1,11,21,30];
 }
-def: InstRW<[BWWriteResGroup202], (instregex "FSTENVm")>;
 def: InstRW<[BWWriteResGroup202], (instregex "FSTENVm")>;
 
 } // SchedModel

@@ -3509,6 +3509,66 @@ void BugReporter::FlushReport(BugReportEquivClass& EQ) {
   }
 }
 
+/// Insert all lines participating in the function signature \p Signature
+/// into \p ExecutedLines.
+static void populateExecutedLinesWithFunctionSignature(
+    const Decl *Signature, SourceManager &SM,
+    std::unique_ptr<FilesToLineNumsMap> &ExecutedLines) {
+
+  SourceRange SignatureSourceRange;
+  const Stmt* Body = Signature->getBody();
+  if (auto FD = dyn_cast<FunctionDecl>(Signature)) {
+    SignatureSourceRange = FD->getSourceRange();
+  } else if (auto OD = dyn_cast<ObjCMethodDecl>(Signature)) {
+    SignatureSourceRange = OD->getSourceRange();
+  } else {
+    return;
+  }
+  SourceLocation Start = SignatureSourceRange.getBegin();
+  SourceLocation End = Body ? Body->getSourceRange().getBegin()
+    : SignatureSourceRange.getEnd();
+  unsigned StartLine = SM.getExpansionLineNumber(Start);
+  unsigned EndLine = SM.getExpansionLineNumber(End);
+
+  FileID FID = SM.getFileID(SM.getExpansionLoc(Start));
+  for (unsigned Line = StartLine; Line <= EndLine; Line++)
+    ExecutedLines->operator[](FID.getHashValue()).insert(Line);
+}
+
+/// \return all executed lines including function signatures on the path
+/// starting from \p N.
+static std::unique_ptr<FilesToLineNumsMap>
+findExecutedLines(SourceManager &SM, const ExplodedNode *N) {
+  auto ExecutedLines = llvm::make_unique<FilesToLineNumsMap>();
+
+  while (N) {
+    if (N->getFirstPred() == nullptr) {
+
+      // First node: show signature of the entrance point.
+      const Decl *D = N->getLocationContext()->getDecl();
+      populateExecutedLinesWithFunctionSignature(D, SM, ExecutedLines);
+
+    } else if (auto CE = N->getLocationAs<CallEnter>()) {
+
+      // Inlined function: show signature.
+      const Decl* D = CE->getCalleeContext()->getDecl();
+      populateExecutedLinesWithFunctionSignature(D, SM, ExecutedLines);
+
+    } else if (const Stmt *S = PathDiagnosticLocation::getStmt(N)) {
+
+      // Otherwise: show lines associated with the processed statement.
+      SourceLocation Loc = S->getSourceRange().getBegin();
+      SourceLocation ExpansionLoc = SM.getExpansionLoc(Loc);
+      FileID FID = SM.getFileID(ExpansionLoc);
+      unsigned LineNo = SM.getExpansionLineNumber(ExpansionLoc);
+      ExecutedLines->operator[](FID.getHashValue()).insert(LineNo);
+    }
+
+    N = N->getFirstPred();
+  }
+  return ExecutedLines;
+}
+
 void BugReporter::FlushReport(BugReport *exampleReport,
                               PathDiagnosticConsumer &PD,
                               ArrayRef<BugReport*> bugReports) {
@@ -3517,13 +3577,13 @@ void BugReporter::FlushReport(BugReport *exampleReport,
   // Probably doesn't make a difference in practice.
   BugType& BT = exampleReport->getBugType();
 
-  std::unique_ptr<PathDiagnostic> D(new PathDiagnostic(
+  auto D = llvm::make_unique<PathDiagnostic>(
       exampleReport->getBugType().getCheckName(),
       exampleReport->getDeclWithIssue(), exampleReport->getBugType().getName(),
       exampleReport->getDescription(),
       exampleReport->getShortDescription(/*Fallback=*/false), BT.getCategory(),
-      exampleReport->getUniqueingLocation(),
-      exampleReport->getUniqueingDecl()));
+      exampleReport->getUniqueingLocation(), exampleReport->getUniqueingDecl(),
+      findExecutedLines(getSourceManager(), exampleReport->getErrorNode()));
 
   if (exampleReport->isPathSensitive()) {
     // Generate the full path diagnostic, using the generation scheme

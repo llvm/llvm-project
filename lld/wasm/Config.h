@@ -40,6 +40,7 @@ struct Configuration {
   llvm::StringSet<> AllowUndefinedSymbols;
   std::vector<llvm::StringRef> SearchPaths;
   Symbol *StackPointerSymbol = nullptr;
+  Symbol *HeapBaseSymbol = nullptr;
   Symbol *CtorSymbol = nullptr;
 };
 
