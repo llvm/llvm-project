@@ -1017,8 +1017,7 @@ NonLocalizedStringBRVisitor::VisitNode(const ExplodedNode *Succ,
   if (!LiteralExpr)
     return nullptr;
 
-  ProgramStateRef State = Succ->getState();
-  SVal LiteralSVal = State->getSVal(LiteralExpr, Succ->getLocationContext());
+  SVal LiteralSVal = Succ->getSVal(LiteralExpr);
   if (LiteralSVal.getAsRegion() != NonLocalizedString)
     return nullptr;
 
