@@ -53,13 +53,10 @@ std::unique_ptr<WasmYAML::CustomSection> WasmDumper::dumpCustomSection(const Was
   std::unique_ptr<WasmYAML::CustomSection> CustomSec;
   if (WasmSec.Name == "name") {
     std::unique_ptr<WasmYAML::NameSection> NameSec = make_unique<WasmYAML::NameSection>();
-    for (const object::SymbolRef& Sym: Obj.symbols()) {
-      const object::WasmSymbol Symbol = Obj.getWasmSymbol(Sym);
-      if (Symbol.Type != object::WasmSymbol::SymbolType::DEBUG_FUNCTION_NAME)
-        continue;
+    for (const llvm::wasm::WasmFunctionName &Func: Obj.debugNames()) {
       WasmYAML::NameEntry NameEntry;
-      NameEntry.Name = Symbol.Name;
-      NameEntry.Index = Sym.getValue();
+      NameEntry.Name = Func.Name;
+      NameEntry.Index = Func.Index;
       NameSec->FunctionNames.push_back(NameEntry);
     }
     CustomSec = std::move(NameSec);

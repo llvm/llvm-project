@@ -543,26 +543,21 @@ AttributeSet AttributeSet::addAttributes(LLVMContext &C,
 AttributeSet AttributeSet::removeAttribute(LLVMContext &C,
                                              Attribute::AttrKind Kind) const {
   if (!hasAttribute(Kind)) return *this;
-  AttrBuilder B;
-  B.addAttribute(Kind);
-  return removeAttributes(C, B);
+  AttrBuilder B(*this);
+  B.removeAttribute(Kind);
+  return get(C, B);
 }
 
 AttributeSet AttributeSet::removeAttribute(LLVMContext &C,
                                              StringRef Kind) const {
   if (!hasAttribute(Kind)) return *this;
-  AttrBuilder B;
-  B.addAttribute(Kind);
-  return removeAttributes(C, B);
+  AttrBuilder B(*this);
+  B.removeAttribute(Kind);
+  return get(C, B);
 }
 
 AttributeSet AttributeSet::removeAttributes(LLVMContext &C,
                                               const AttrBuilder &Attrs) const {
-
-  // FIXME it is not obvious how this should work for alignment.
-  // For now, say we can't pass in alignment, which no current use does.
-  assert(!Attrs.hasAlignmentAttr() && "Attempt to change alignment!");
-
   AttrBuilder B(*this);
   B.remove(Attrs);
   return get(C, B);
@@ -1098,17 +1093,27 @@ AttributeList AttributeList::addParamAttribute(LLVMContext &C,
 AttributeList AttributeList::removeAttribute(LLVMContext &C, unsigned Index,
                                              Attribute::AttrKind Kind) const {
   if (!hasAttribute(Index, Kind)) return *this;
-  AttrBuilder B;
-  B.addAttribute(Kind);
-  return removeAttributes(C, Index, B);
+
+  Index = attrIdxToArrayIdx(Index);
+  SmallVector<AttributeSet, 4> AttrSets(this->begin(), this->end());
+  assert(Index < AttrSets.size());
+
+  AttrSets[Index] = AttrSets[Index].removeAttribute(C, Kind);
+
+  return getImpl(C, AttrSets);
 }
 
 AttributeList AttributeList::removeAttribute(LLVMContext &C, unsigned Index,
                                              StringRef Kind) const {
   if (!hasAttribute(Index, Kind)) return *this;
-  AttrBuilder B;
-  B.addAttribute(Kind);
-  return removeAttributes(C, Index, B);
+
+  Index = attrIdxToArrayIdx(Index);
+  SmallVector<AttributeSet, 4> AttrSets(this->begin(), this->end());
+  assert(Index < AttrSets.size());
+
+  AttrSets[Index] = AttrSets[Index].removeAttribute(C, Kind);
+
+  return getImpl(C, AttrSets);
 }
 
 AttributeList
@@ -1117,18 +1122,12 @@ AttributeList::removeAttributes(LLVMContext &C, unsigned Index,
   if (!pImpl)
     return AttributeList();
 
-  // FIXME it is not obvious how this should work for alignment.
-  // For now, say we can't pass in alignment, which no current use does.
-  assert(!AttrsToRemove.hasAlignmentAttr() && "Attempt to change alignment!");
-
   Index = attrIdxToArrayIdx(Index);
   SmallVector<AttributeSet, 4> AttrSets(this->begin(), this->end());
   if (Index >= AttrSets.size())
     AttrSets.resize(Index + 1);
 
-  AttrBuilder B(AttrSets[Index]);
-  B.remove(AttrsToRemove);
-  AttrSets[Index] = AttributeSet::get(C, B);
+  AttrSets[Index] = AttrSets[Index].removeAttributes(C, AttrsToRemove);
 
   return getImpl(C, AttrSets);
 }

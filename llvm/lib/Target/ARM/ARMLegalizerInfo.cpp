@@ -161,9 +161,9 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
     setAction({G_ICMP, 1, Ty}, Legal);
 
   if (!ST.useSoftFloat() && ST.hasVFP2()) {
-    for (unsigned BinOp : {G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FCONSTANT, G_FNEG})
+    for (unsigned Op : {G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FCONSTANT, G_FNEG})
       for (auto Ty : {s32, s64})
-        setAction({BinOp, Ty}, Legal);
+        setAction({Op, Ty}, Legal);
 
     setAction({G_LOAD, s64}, Legal);
     setAction({G_STORE, s64}, Legal);
@@ -178,6 +178,12 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
     setAction({G_MERGE_VALUES, 1, s32}, Legal);
     setAction({G_UNMERGE_VALUES, s32}, Legal);
     setAction({G_UNMERGE_VALUES, 1, s64}, Legal);
+
+    setAction({G_FPEXT, s64}, Legal);
+    setAction({G_FPEXT, 1, s32}, Legal);
+
+    setAction({G_FPTRUNC, s32}, Legal);
+    setAction({G_FPTRUNC, 1, s64}, Legal);
   } else {
     for (unsigned BinOp : {G_FADD, G_FSUB, G_FMUL, G_FDIV})
       for (auto Ty : {s32, s64})
@@ -191,6 +197,12 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
     setAction({G_FCMP, s1}, Legal);
     setAction({G_FCMP, 1, s32}, Custom);
     setAction({G_FCMP, 1, s64}, Custom);
+
+    setAction({G_FPEXT, s64}, Legal);
+    setAction({G_FPEXT, 1, s32}, Libcall);
+
+    setAction({G_FPTRUNC, s32}, Legal);
+    setAction({G_FPTRUNC, 1, s64}, Libcall);
 
     if (AEABI(ST))
       setFCmpLibcallsAEABI();

@@ -565,7 +565,10 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                           unsigned IntrID) const {
   switch (IntrID) {
   case Intrinsic::amdgcn_atomic_inc:
-  case Intrinsic::amdgcn_atomic_dec: {
+  case Intrinsic::amdgcn_atomic_dec:
+  case Intrinsic::amdgcn_atomic_fadd:
+  case Intrinsic::amdgcn_atomic_fmin:
+  case Intrinsic::amdgcn_atomic_fmax: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
@@ -803,7 +806,10 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
                                             Type *&AccessTy) const {
   switch (II->getIntrinsicID()) {
   case Intrinsic::amdgcn_atomic_inc:
-  case Intrinsic::amdgcn_atomic_dec: {
+  case Intrinsic::amdgcn_atomic_dec:
+  case Intrinsic::amdgcn_atomic_fadd:
+  case Intrinsic::amdgcn_atomic_fmin:
+  case Intrinsic::amdgcn_atomic_fmax: {
     Value *Ptr = II->getArgOperand(0);
     AccessTy = II->getType();
     Ops.push_back(Ptr);
@@ -4548,10 +4554,31 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
 
   switch (IntrID) {
   case Intrinsic::amdgcn_atomic_inc:
-  case Intrinsic::amdgcn_atomic_dec: {
+  case Intrinsic::amdgcn_atomic_dec:
+  case Intrinsic::amdgcn_atomic_fadd:
+  case Intrinsic::amdgcn_atomic_fmin:
+  case Intrinsic::amdgcn_atomic_fmax: {
     MemSDNode *M = cast<MemSDNode>(Op);
-    unsigned Opc = (IntrID == Intrinsic::amdgcn_atomic_inc) ?
-      AMDGPUISD::ATOMIC_INC : AMDGPUISD::ATOMIC_DEC;
+    unsigned Opc;
+    switch (IntrID) {
+    case Intrinsic::amdgcn_atomic_inc:
+      Opc = AMDGPUISD::ATOMIC_INC;
+      break;
+    case Intrinsic::amdgcn_atomic_dec:
+      Opc = AMDGPUISD::ATOMIC_DEC;
+      break;
+    case Intrinsic::amdgcn_atomic_fadd:
+      Opc = AMDGPUISD::ATOMIC_LOAD_FADD;
+      break;
+    case Intrinsic::amdgcn_atomic_fmin:
+      Opc = AMDGPUISD::ATOMIC_LOAD_FMIN;
+      break;
+    case Intrinsic::amdgcn_atomic_fmax:
+      Opc = AMDGPUISD::ATOMIC_LOAD_FMAX;
+      break;
+    default:
+      llvm_unreachable("Unknown intrinsic!");
+    }
     SDValue Ops[] = {
       M->getOperand(0), // Chain
       M->getOperand(2), // Ptr
@@ -6817,7 +6844,10 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::ATOMIC_LOAD_UMIN:
   case ISD::ATOMIC_LOAD_UMAX:
   case AMDGPUISD::ATOMIC_INC:
-  case AMDGPUISD::ATOMIC_DEC: // TODO: Target mem intrinsics.
+  case AMDGPUISD::ATOMIC_DEC:
+  case AMDGPUISD::ATOMIC_LOAD_FADD:
+  case AMDGPUISD::ATOMIC_LOAD_FMIN:
+  case AMDGPUISD::ATOMIC_LOAD_FMAX:  // TODO: Target mem intrinsics.
     if (DCI.isBeforeLegalize())
       break;
     return performMemSDNodeCombine(cast<MemSDNode>(N), DCI);

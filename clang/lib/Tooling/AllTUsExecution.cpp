@@ -33,24 +33,20 @@ class ThreadSafeToolResults : public ToolResults {
 public:
   void addResult(StringRef Key, StringRef Value) override {
     std::unique_lock<std::mutex> LockGuard(Mutex);
-    Results[Key] = Value;
+    Results.addResult(Key, Value);
   }
 
   std::vector<std::pair<std::string, std::string>> AllKVResults() override {
-    std::vector<std::pair<std::string, std::string>> KVs;
-    for (const auto &Pair : Results)
-      KVs.emplace_back(Pair.first().str(), Pair.second);
-    return KVs;
+    return Results.AllKVResults();
   }
 
   void forEachResult(llvm::function_ref<void(StringRef Key, StringRef Value)>
                          Callback) override {
-    for (const auto &Pair : Results)
-      Callback(Pair.first(), Pair.second);
+    Results.forEachResult(Callback);
   }
 
 private:
-  llvm::StringMap<std::string> Results;
+  InMemoryToolResults Results;
   std::mutex Mutex;
 };
 
@@ -153,9 +149,8 @@ public:
 };
 
 static ToolExecutorPluginRegistry::Add<AllTUsToolExecutorPlugin>
-    X("all-TUs",
-      "Runs FrontendActions on all TUs in the compilation database. "
-      "Tool results are deduplicated by the result key and stored in memory.");
+    X("all-TUs", "Runs FrontendActions on all TUs in the compilation database. "
+                 "Tool results are stored in memory.");
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the plugin.

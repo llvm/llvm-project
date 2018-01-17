@@ -103,14 +103,9 @@ define <8 x i64> @insert_subvector_into_undef(i32 %x0, i32 %x1) nounwind {
 ; X32_AVX256-NEXT:    subl $8, %esp
 ; X32_AVX256-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X32_AVX256-NEXT:    vmovlps %xmm0, (%esp)
-; X32_AVX256-NEXT:    movl (%esp), %eax
-; X32_AVX256-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32_AVX256-NEXT:    vmovd %eax, %xmm0
-; X32_AVX256-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
-; X32_AVX256-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
-; X32_AVX256-NEXT:    vpinsrd $3, %ecx, %xmm0, %xmm0
-; X32_AVX256-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X32_AVX256-NEXT:    vmovdqa %ymm0, %ymm1
+; X32_AVX256-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32_AVX256-NEXT:    vbroadcastsd %xmm0, %ymm0
+; X32_AVX256-NEXT:    vmovaps %ymm0, %ymm1
 ; X32_AVX256-NEXT:    movl %ebp, %esp
 ; X32_AVX256-NEXT:    popl %ebp
 ; X32_AVX256-NEXT:    retl

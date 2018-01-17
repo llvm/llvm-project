@@ -6463,6 +6463,19 @@ INTERCEPTOR(wchar_t *, wcsncat, wchar_t *dst, const wchar_t *src, SIZE_T n) {
 #define INIT_WCSCAT
 #endif
 
+#if SANITIZER_INTERCEPT_ACCT
+INTERCEPTOR(int, acct, const char *file) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, acct, file);
+  if (file)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, file, REAL(strlen)(file) + 1);
+  return REAL(acct)(file);
+}
+#define INIT_ACCT COMMON_INTERCEPT_FUNCTION(acct)
+#else
+#define INIT_ACCT
+#endif
+
 static void InitializeCommonInterceptors() {
   static u64 metadata_mem[sizeof(MetadataHashMap) / sizeof(u64) + 1];
   interceptor_metadata_map = new((void *)&metadata_mem) MetadataHashMap();
@@ -6674,6 +6687,7 @@ static void InitializeCommonInterceptors() {
   INIT_GETLOADAVG;
   INIT_WCSLEN;
   INIT_WCSCAT;
+  INIT_ACCT;
 
 #if SANITIZER_NETBSD
   COMMON_INTERCEPT_FUNCTION(__libc_mutex_lock);

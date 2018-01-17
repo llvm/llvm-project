@@ -239,4 +239,6 @@ entry:
 ; CHECK-NEXT:         Name:            hello
 ; CHECK-NEXT:       - Index:           3
 ; CHECK-NEXT:         Name:            my_func
+; CHECK-NEXT:       - Index:           4
+; CHECK-NEXT:         Name:            func_comdat
 ; CHECK-NEXT: ...

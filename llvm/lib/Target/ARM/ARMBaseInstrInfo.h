@@ -215,6 +215,8 @@ public:
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
+  bool shouldSink(const MachineInstr &MI) const override;
+
   void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                      unsigned DestReg, unsigned SubIdx,
                      const MachineInstr &Orig,

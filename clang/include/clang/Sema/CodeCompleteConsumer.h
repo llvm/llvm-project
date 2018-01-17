@@ -268,6 +268,8 @@ public:
     CCC_Recovery
   };
 
+  using VisitedContextSet = llvm::SmallPtrSet<DeclContext*, 8>;
+
 private:
   enum Kind Kind;
 
@@ -284,6 +286,10 @@ private:
   /// \brief The scope specifier that comes before the completion token e.g.
   /// "a::b::"
   llvm::Optional<CXXScopeSpec> ScopeSpecifier;
+
+  /// \brief A set of declaration contexts visited by Sema when doing lookup for
+  /// code completion.
+  VisitedContextSet VisitedContexts;
 
 public:
   /// \brief Construct a new code-completion context of the given kind.
@@ -326,6 +332,16 @@ public:
   /// (e.g. "a::b::").
   void setCXXScopeSpecifier(CXXScopeSpec SS) {
     this->ScopeSpecifier = std::move(SS);
+  }
+
+  /// \brief Adds a visited context.
+  void addVisitedContext(DeclContext* Ctx) {
+    VisitedContexts.insert(Ctx);
+  }
+
+  /// \brief Retrieves all visited contexts.
+  const VisitedContextSet &getVisitedContexts() const {
+    return VisitedContexts;
   }
 
   llvm::Optional<const CXXScopeSpec *> getCXXScopeSpecifier() {

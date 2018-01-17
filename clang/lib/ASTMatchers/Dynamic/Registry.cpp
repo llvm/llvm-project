@@ -354,6 +354,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(isMemberInitializer);
   REGISTER_MATCHER(isMoveAssignmentOperator);
   REGISTER_MATCHER(isMoveConstructor);
+  REGISTER_MATCHER(isNoReturn);
   REGISTER_MATCHER(isNoThrow);
   REGISTER_MATCHER(isOverride);
   REGISTER_MATCHER(isPrivate);

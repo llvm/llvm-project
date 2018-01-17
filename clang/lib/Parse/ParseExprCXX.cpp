@@ -1672,9 +1672,9 @@ Parser::ParseCXXTypeConstructExpression(const DeclSpec &DS) {
     if (Init.isInvalid())
       return Init;
     Expr *InitList = Init.get();
-    return Actions.ActOnCXXTypeConstructExpr(TypeRep, SourceLocation(),
-                                             MultiExprArg(&InitList, 1),
-                                             SourceLocation());
+    return Actions.ActOnCXXTypeConstructExpr(
+        TypeRep, InitList->getLocStart(), MultiExprArg(&InitList, 1),
+        InitList->getLocEnd(), /*ListInitialization=*/true);
   } else {
     BalancedDelimiterTracker T(*this, tok::l_paren);
     T.consumeOpen();
@@ -1702,9 +1702,9 @@ Parser::ParseCXXTypeConstructExpression(const DeclSpec &DS) {
 
     assert((Exprs.size() == 0 || Exprs.size()-1 == CommaLocs.size())&&
            "Unexpected number of commas!");
-    return Actions.ActOnCXXTypeConstructExpr(TypeRep, T.getOpenLocation(), 
-                                             Exprs,
-                                             T.getCloseLocation());
+    return Actions.ActOnCXXTypeConstructExpr(TypeRep, T.getOpenLocation(),
+                                             Exprs, T.getCloseLocation(),
+                                             /*ListInitialization=*/false);
   }
 }
 

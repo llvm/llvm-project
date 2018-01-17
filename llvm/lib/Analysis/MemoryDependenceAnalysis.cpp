@@ -154,24 +154,16 @@ static ModRefInfo GetLocation(const Instruction *Inst, MemoryLocation &Loc,
   }
 
   if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
-    AAMDNodes AAInfo;
-
     switch (II->getIntrinsicID()) {
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end:
     case Intrinsic::invariant_start:
-      II->getAAMetadata(AAInfo);
-      Loc = MemoryLocation(
-          II->getArgOperand(1),
-          cast<ConstantInt>(II->getArgOperand(0))->getZExtValue(), AAInfo);
+      Loc = MemoryLocation::getForArgument(II, 1, TLI);
       // These intrinsics don't really modify the memory, but returning Mod
       // will allow them to be handled conservatively.
       return ModRefInfo::Mod;
     case Intrinsic::invariant_end:
-      II->getAAMetadata(AAInfo);
-      Loc = MemoryLocation(
-          II->getArgOperand(2),
-          cast<ConstantInt>(II->getArgOperand(1))->getZExtValue(), AAInfo);
+      Loc = MemoryLocation::getForArgument(II, 2, TLI);
       // These intrinsics don't really modify the memory, but returning Mod
       // will allow them to be handled conservatively.
       return ModRefInfo::Mod;

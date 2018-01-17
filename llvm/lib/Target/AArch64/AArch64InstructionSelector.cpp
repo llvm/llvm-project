@@ -570,11 +570,11 @@ bool AArch64InstructionSelector::selectCompareBranch(
   else
     return false;
 
-  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(CBOpc))
-                 .addUse(LHS)
-                 .addMBB(DestMBB);
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(CBOpc))
+      .addUse(LHS)
+      .addMBB(DestMBB)
+      .constrainAllUses(TII, TRI, RBI);
 
-  constrainSelectedInstRegOperands(*MIB.getInstr(), TII, TRI, RBI);
   I.eraseFromParent();
   return true;
 }

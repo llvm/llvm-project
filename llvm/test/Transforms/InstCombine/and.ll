@@ -368,6 +368,23 @@ define <2 x i32> @and_demanded_bits_splat_vec(<2 x i32> %x) {
   ret <2 x i32> %z
 }
 
+; zext (x >> 8) has all zeros in the high 24-bits:  0x000000xx
+; (y | 255) has all ones in the low 8-bits: 0xyyyyyyff
+; 'and' of those is all known bits - it's just 'z'.
+
+define i32 @and_zext_demanded(i16 %x, i32 %y) {
+; CHECK-LABEL: @and_zext_demanded(
+; CHECK-NEXT:    [[S:%.*]] = lshr i16 %x, 8
+; CHECK-NEXT:    [[Z:%.*]] = zext i16 [[S]] to i32
+; CHECK-NEXT:    ret i32 [[Z]]
+;
+  %s = lshr i16 %x, 8
+  %z = zext i16 %s to i32
+  %o = or i32 %y, 255
+  %a = and i32 %o, %z
+  ret i32 %a
+}
+
 define i32 @test32(i32 %In) {
 ; CHECK-LABEL: @test32(
 ; CHECK-NEXT:    ret i32 0

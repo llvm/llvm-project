@@ -784,6 +784,12 @@ public:
   /// class of the context we searched.
   virtual void FoundDecl(NamedDecl *ND, NamedDecl *Hiding, DeclContext *Ctx,
                          bool InBaseClass) = 0;
+
+  /// \brief Callback to inform the client that Sema entered into a new context
+  /// to find a visible declaration.
+  //
+  /// \param Ctx the context which Sema entered.
+  virtual void EnteredContext(DeclContext *Ctx) {}
 };
 
 /// \brief A class for storing results from argument-dependent lookup.

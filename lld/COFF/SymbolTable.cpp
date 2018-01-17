@@ -14,6 +14,7 @@
 #include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Timer.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -23,6 +24,8 @@ using namespace llvm;
 
 namespace lld {
 namespace coff {
+
+static Timer LTOTimer("LTO", Timer::root());
 
 SymbolTable *Symtab;
 
@@ -384,6 +387,8 @@ std::vector<StringRef> SymbolTable::compileBitcodeFiles() {
 void SymbolTable::addCombinedLTOObjects() {
   if (BitcodeFile::Instances.empty())
     return;
+
+  ScopedTimer T(LTOTimer);
   for (StringRef Object : compileBitcodeFiles()) {
     auto *Obj = make<ObjFile>(MemoryBufferRef(Object, "lto.tmp"));
     Obj->parse();

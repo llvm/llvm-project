@@ -46,6 +46,22 @@ def SIatomic_dec : SDNode<"AMDGPUISD::ATOMIC_DEC", SDTAtomic2,
   [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain]
 >;
 
+def SDTAtomic2_f32 : SDTypeProfile<1, 2, [
+  SDTCisSameAs<0,2>, SDTCisFP<0>, SDTCisPtrTy<1>
+]>;
+
+def SIatomic_fadd : SDNode<"AMDGPUISD::ATOMIC_LOAD_FADD", SDTAtomic2_f32,
+  [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain]
+>;
+
+def SIatomic_fmin : SDNode<"AMDGPUISD::ATOMIC_LOAD_FMIN", SDTAtomic2_f32,
+  [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain]
+>;
+
+def SIatomic_fmax : SDNode<"AMDGPUISD::ATOMIC_LOAD_FMAX", SDTAtomic2_f32,
+  [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain]
+>;
+
 def SDTbuffer_load : SDTypeProfile<1, 9,
   [                     // vdata
    SDTCisVT<1, v4i32>,  // rsrc
@@ -169,6 +185,36 @@ def SIpc_add_rel_offset : SDNode<"AMDGPUISD::PC_ADD_REL_OFFSET",
 >;
 
 //===----------------------------------------------------------------------===//
+// ValueType helpers
+//===----------------------------------------------------------------------===//
+
+// Returns 1 if the source arguments have modifiers, 0 if they do not.
+// XXX - do f16 instructions?
+class isFloatType<ValueType SrcVT> {
+  bit ret =
+    !if(!eq(SrcVT.Value, f16.Value), 1,
+    !if(!eq(SrcVT.Value, f32.Value), 1,
+    !if(!eq(SrcVT.Value, f64.Value), 1,
+    !if(!eq(SrcVT.Value, v2f16.Value), 1,
+    0))));
+}
+
+class isIntType<ValueType SrcVT> {
+  bit ret =
+    !if(!eq(SrcVT.Value, i16.Value), 1,
+    !if(!eq(SrcVT.Value, i32.Value), 1,
+    !if(!eq(SrcVT.Value, i64.Value), 1,
+    0)));
+}
+
+class isPackedType<ValueType SrcVT> {
+  bit ret =
+    !if(!eq(SrcVT.Value, v2i16.Value), 1,
+      !if(!eq(SrcVT.Value, v2f16.Value), 1, 0)
+    );
+}
+
+//===----------------------------------------------------------------------===//
 // PatFrags for global memory operations
 //===----------------------------------------------------------------------===//
 
@@ -177,6 +223,9 @@ defm atomic_dec_global : global_binary_atomic_op<SIatomic_dec>;
 
 def atomic_inc_local : local_binary_atomic_op<SIatomic_inc>;
 def atomic_dec_local : local_binary_atomic_op<SIatomic_dec>;
+def atomic_load_fadd_local : local_binary_atomic_op<SIatomic_fadd>;
+def atomic_load_fmin_local : local_binary_atomic_op<SIatomic_fmin>;
+def atomic_load_fmax_local : local_binary_atomic_op<SIatomic_fmax>;
 
 //===----------------------------------------------------------------------===//
 // SDNodes PatFrags for loads/stores with a glue input.
@@ -311,10 +360,11 @@ def lshl_rev : PatFrag <
   (shl $src0, $src1)
 >;
 
-multiclass SIAtomicM0Glue2 <string op_name, bit is_amdgpu = 0> {
+multiclass SIAtomicM0Glue2 <string op_name, bit is_amdgpu = 0,
+                            SDTypeProfile tc = SDTAtomic2> {
 
   def _glue : SDNode <
-    !if(is_amdgpu, "AMDGPUISD", "ISD")#"::ATOMIC_"#op_name, SDTAtomic2,
+    !if(is_amdgpu, "AMDGPUISD", "ISD")#"::ATOMIC_"#op_name, tc,
     [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand, SDNPInGlue]
   >;
 
@@ -333,6 +383,9 @@ defm atomic_load_xor : SIAtomicM0Glue2 <"LOAD_XOR">;
 defm atomic_load_umin : SIAtomicM0Glue2 <"LOAD_UMIN">;
 defm atomic_load_umax : SIAtomicM0Glue2 <"LOAD_UMAX">;
 defm atomic_swap : SIAtomicM0Glue2 <"SWAP">;
+defm atomic_load_fadd : SIAtomicM0Glue2 <"LOAD_FADD", 1, SDTAtomic2_f32>;
+defm atomic_load_fmin : SIAtomicM0Glue2 <"LOAD_FMIN", 1, SDTAtomic2_f32>;
+defm atomic_load_fmax : SIAtomicM0Glue2 <"LOAD_FMAX", 1, SDTAtomic2_f32>;
 
 def atomic_cmp_swap_glue : SDNode <"ISD::ATOMIC_CMP_SWAP", SDTAtomic3,
   [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand, SDNPInGlue]
@@ -566,19 +619,18 @@ def ExpSrc3 : RegisterOperand<VGPR_32> {
   let ParserMatchClass = VReg32OrOffClass;
 }
 
-class SDWASrc : RegisterOperand<VS_32> {
+class SDWASrc<ValueType vt> : RegisterOperand<VS_32> {
   let OperandNamespace = "AMDGPU";
-  let OperandType = "OPERAND_SDWA_SRC";
+  string Type = !if(isFloatType<vt>.ret, "FP", "INT");
+  let OperandType = "OPERAND_REG_INLINE_C_"#Type#vt.Size;
+  let DecoderMethod = "decodeSDWASrc"#vt.Size;
   let EncoderMethod = "getSDWASrcEncoding";
 }
 
-def SDWASrc32 : SDWASrc {
-  let DecoderMethod = "decodeSDWASrc32";
-}
-
-def SDWASrc16 : SDWASrc {
-  let DecoderMethod = "decodeSDWASrc16";
-}
+def SDWASrc_i32 : SDWASrc<i32>;
+def SDWASrc_i16 : SDWASrc<i16>;
+def SDWASrc_f32 : SDWASrc<f32>;
+def SDWASrc_f16 : SDWASrc<f16>;
 
 def SDWAVopcDst : VOPDstOperand<SReg_64> {
   let OperandNamespace = "AMDGPU";
@@ -761,15 +813,22 @@ class OpSelModsMatchClass : AsmOperandClass {
 def IntOpSelModsMatchClass : OpSelModsMatchClass;
 def IntOpSelMods : InputMods<IntOpSelModsMatchClass>;
 
-def FPRegSDWAInputModsMatchClass : AsmOperandClass {
-  let Name = "SDWARegWithFPInputMods";
-  let ParserMethod = "parseRegWithFPInputMods";
-  let PredicateMethod = "isSDWARegKind";
+class FPSDWAInputModsMatchClass <int opSize> : AsmOperandClass {
+  let Name = "SDWAWithFP"#opSize#"InputMods";
+  let ParserMethod = "parseRegOrImmWithFPInputMods";
+  let PredicateMethod = "isSDWAFP"#opSize#"Operand";
 }
 
-def FPRegSDWAInputMods : InputMods <FPRegSDWAInputModsMatchClass> {
+def FP16SDWAInputModsMatchClass : FPSDWAInputModsMatchClass<16>;
+def FP32SDWAInputModsMatchClass : FPSDWAInputModsMatchClass<32>;
+
+class FPSDWAInputMods <FPSDWAInputModsMatchClass matchClass> :
+  InputMods <matchClass> {
   let PrintMethod = "printOperandAndFPInputMods";
 }
+
+def FP16SDWAInputMods : FPSDWAInputMods<FP16SDWAInputModsMatchClass>;
+def FP32SDWAInputMods : FPSDWAInputMods<FP32SDWAInputModsMatchClass>;
 
 def FPVRegInputModsMatchClass : AsmOperandClass {
   let Name = "VRegWithFPInputMods";
@@ -781,16 +840,22 @@ def FPVRegInputMods : InputMods <FPVRegInputModsMatchClass> {
   let PrintMethod = "printOperandAndFPInputMods";
 }
 
-
-def IntRegSDWAInputModsMatchClass : AsmOperandClass {
-  let Name = "SDWARegWithIntInputMods";
-  let ParserMethod = "parseRegWithIntInputMods";
-  let PredicateMethod = "isSDWARegKind";
+class IntSDWAInputModsMatchClass <int opSize> : AsmOperandClass {
+  let Name = "SDWAWithInt"#opSize#"InputMods";
+  let ParserMethod = "parseRegOrImmWithIntInputMods";
+  let PredicateMethod = "isSDWAInt"#opSize#"Operand";
 }
 
-def IntRegSDWAInputMods : InputMods <IntRegSDWAInputModsMatchClass> {
+def Int16SDWAInputModsMatchClass : IntSDWAInputModsMatchClass<16>;
+def Int32SDWAInputModsMatchClass : IntSDWAInputModsMatchClass<32>;
+
+class IntSDWAInputMods <IntSDWAInputModsMatchClass matchClass> :
+  InputMods <matchClass> {
   let PrintMethod = "printOperandAndIntInputMods";
 }
+
+def Int16SDWAInputMods : IntSDWAInputMods<Int16SDWAInputModsMatchClass>;
+def Int32SDWAInputMods : IntSDWAInputMods<Int32SDWAInputModsMatchClass>;
 
 def IntVRegInputModsMatchClass : AsmOperandClass {
   let Name = "VRegWithIntInputMods";
@@ -1037,7 +1102,12 @@ class getVregSrcForVT<ValueType VT> {
 }
 
 class getSDWASrcForVT <ValueType VT> {
-  RegisterOperand ret = !if(!eq(VT.Size, 16), SDWASrc16, SDWASrc32);
+  bit isFP = !if(!eq(VT.Value, f16.Value), 1,
+             !if(!eq(VT.Value, f32.Value), 1,
+             0));
+  RegisterOperand retFlt = !if(!eq(VT.Size, 16), SDWASrc_f16, SDWASrc_f32);
+  RegisterOperand retInt = !if(!eq(VT.Size, 16), SDWASrc_i16, SDWASrc_i32);
+  RegisterOperand ret = !if(isFP, retFlt, retInt);
 }
 
 // Returns the register class to use for sources of VOP3 instructions for the
@@ -1076,32 +1146,6 @@ class getVOP3SrcForVT<ValueType VT> {
         )
      )
   );
-}
-
-// Returns 1 if the source arguments have modifiers, 0 if they do not.
-// XXX - do f16 instructions?
-class isFloatType<ValueType SrcVT> {
-  bit ret =
-    !if(!eq(SrcVT.Value, f16.Value), 1,
-    !if(!eq(SrcVT.Value, f32.Value), 1,
-    !if(!eq(SrcVT.Value, f64.Value), 1,
-    !if(!eq(SrcVT.Value, v2f16.Value), 1,
-    0))));
-}
-
-class isIntType<ValueType SrcVT> {
-  bit ret =
-    !if(!eq(SrcVT.Value, i16.Value), 1,
-    !if(!eq(SrcVT.Value, i32.Value), 1,
-    !if(!eq(SrcVT.Value, i64.Value), 1,
-    0)));
-}
-
-class isPackedType<ValueType SrcVT> {
-  bit ret =
-    !if(!eq(SrcVT.Value, v2i16.Value), 1,
-      !if(!eq(SrcVT.Value, v2f16.Value), 1, 0)
-    );
 }
 
 // Float or packed int
@@ -1148,11 +1192,10 @@ class getSrcModExt <ValueType VT> {
 
 // Return type of input modifiers operand specified input operand for SDWA
 class getSrcModSDWA <ValueType VT> {
-    bit isFP = !if(!eq(VT.Value, f16.Value), 1,
-               !if(!eq(VT.Value, f32.Value), 1,
-               !if(!eq(VT.Value, f64.Value), 1,
-               0)));
-  Operand ret = !if(isFP, FPRegSDWAInputMods, IntRegSDWAInputMods);
+  Operand ret = !if(!eq(VT.Value, f16.Value), FP16SDWAInputMods,
+                !if(!eq(VT.Value, f32.Value), FP32SDWAInputMods,
+                !if(!eq(VT.Value, i16.Value), Int16SDWAInputMods,
+                Int32SDWAInputMods)));
 }
 
 // Returns the input arguments for VOP[12C] instructions for the given SrcVT.

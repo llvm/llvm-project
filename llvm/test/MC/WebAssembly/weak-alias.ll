@@ -239,12 +239,6 @@ entry:
 ; CHECK-NEXT: ...
 
 ; CHECK-SYMS: SYMBOL TABLE:
-; CHECK-SYMS-NEXT: 00000000 g     F name	foo_alias
-; CHECK-SYMS-NEXT: 00000001 g     F name	foo
-; CHECK-SYMS-NEXT: 00000002 g     F name	call_direct
-; CHECK-SYMS-NEXT: 00000003 g     F name	call_alias
-; CHECK-SYMS-NEXT: 00000004 g     F name	call_direct_ptr
-; CHECK-SYMS-NEXT: 00000005 g     F name	call_alias_ptr
 ; CHECK-SYMS-NEXT: 00000001 gw    F EXPORT	.hidden foo_alias
 ; CHECK-SYMS-NEXT: 00000000 gw      EXPORT	.hidden bar_alias
 ; CHECK-SYMS-NEXT: 00000001 g     F EXPORT	.hidden foo

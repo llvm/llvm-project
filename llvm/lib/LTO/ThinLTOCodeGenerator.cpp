@@ -607,6 +607,20 @@ std::unique_ptr<ModuleSummaryIndex> ThinLTOCodeGenerator::linkCombinedIndex() {
   return CombinedIndex;
 }
 
+static void internalizeAndPromoteInIndex(
+    const StringMap<FunctionImporter::ExportSetTy> &ExportLists,
+    const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
+    ModuleSummaryIndex &Index) {
+  auto isExported = [&](StringRef ModuleIdentifier, GlobalValue::GUID GUID) {
+    const auto &ExportList = ExportLists.find(ModuleIdentifier);
+    return (ExportList != ExportLists.end() &&
+            ExportList->second.count(GUID)) ||
+           GUIDPreservedSymbols.count(GUID);
+  };
+
+  thinLTOInternalizeAndPromoteInIndex(Index, isExported);
+}
+
 /**
  * Perform promotion and renaming of exported internal functions.
  * Index is updated to reflect linkage changes from weak resolution.
@@ -642,13 +656,7 @@ void ThinLTOCodeGenerator::promote(Module &TheModule,
 
   // Promote the exported values in the index, so that they are promoted
   // in the module.
-  auto isExported = [&](StringRef ModuleIdentifier, GlobalValue::GUID GUID) {
-    const auto &ExportList = ExportLists.find(ModuleIdentifier);
-    return (ExportList != ExportLists.end() &&
-            ExportList->second.count(GUID)) ||
-           GUIDPreservedSymbols.count(GUID);
-  };
-  thinLTOInternalizeAndPromoteInIndex(Index, isExported);
+  internalizeAndPromoteInIndex(ExportLists, GUIDPreservedSymbols, Index);
 
   promoteModule(TheModule, Index);
 }
@@ -762,13 +770,7 @@ void ThinLTOCodeGenerator::internalize(Module &TheModule,
     return;
 
   // Internalization
-  auto isExported = [&](StringRef ModuleIdentifier, GlobalValue::GUID GUID) {
-    const auto &ExportList = ExportLists.find(ModuleIdentifier);
-    return (ExportList != ExportLists.end() &&
-            ExportList->second.count(GUID)) ||
-           GUIDPreservedSymbols.count(GUID);
-  };
-  thinLTOInternalizeAndPromoteInIndex(Index, isExported);
+  internalizeAndPromoteInIndex(ExportLists, GUIDPreservedSymbols, Index);
   thinLTOInternalizeModule(TheModule,
                            ModuleToDefinedGVSummaries[ModuleIdentifier]);
 }
@@ -918,17 +920,10 @@ void ThinLTOCodeGenerator::run() {
   // impacts the caching.
   resolveWeakForLinkerInIndex(*Index, ResolvedODR);
 
-  auto isExported = [&](StringRef ModuleIdentifier, GlobalValue::GUID GUID) {
-    const auto &ExportList = ExportLists.find(ModuleIdentifier);
-    return (ExportList != ExportLists.end() &&
-            ExportList->second.count(GUID)) ||
-           GUIDPreservedSymbols.count(GUID);
-  };
-
   // Use global summary-based analysis to identify symbols that can be
   // internalized (because they aren't exported or preserved as per callback).
   // Changes are made in the index, consumed in the ThinLTO backends.
-  thinLTOInternalizeAndPromoteInIndex(*Index, isExported);
+  internalizeAndPromoteInIndex(ExportLists, GUIDPreservedSymbols, *Index);
 
   // Make sure that every module has an entry in the ExportLists and
   // ResolvedODR maps to enable threaded access to these maps below.

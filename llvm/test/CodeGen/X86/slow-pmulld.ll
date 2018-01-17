@@ -36,6 +36,45 @@ define <4 x i32> @foo(<4 x i8> %A) {
   ret <4 x i32> %m
 }
 
+define <4 x i32> @foo16(<4 x i16> %A) {
+; CHECK32-LABEL: foo16:
+; CHECK32:       # %bb.0:
+; CHECK32-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; CHECK32-NEXT:    movdqa {{.*#+}} xmm1 = <18778,18778,18778,18778,u,u,u,u>
+; CHECK32-NEXT:    movdqa %xmm0, %xmm2
+; CHECK32-NEXT:    pmullw %xmm1, %xmm0
+; CHECK32-NEXT:    pmulhuw %xmm1, %xmm2
+; CHECK32-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; CHECK32-NEXT:    retl
+;
+; CHECK64-LABEL: foo16:
+; CHECK64:       # %bb.0:
+; CHECK64-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; CHECK64-NEXT:    movdqa {{.*#+}} xmm1 = <18778,18778,18778,18778,u,u,u,u>
+; CHECK64-NEXT:    movdqa %xmm0, %xmm2
+; CHECK64-NEXT:    pmullw %xmm1, %xmm0
+; CHECK64-NEXT:    pmulhuw %xmm1, %xmm2
+; CHECK64-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; CHECK64-NEXT:    retq
+;
+; SSE4-32-LABEL: foo16:
+; SSE4-32:       # %bb.0:
+; SSE4-32-NEXT:    pxor %xmm1, %xmm1
+; SSE4-32-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
+; SSE4-32-NEXT:    pmulld {{\.LCPI.*}}, %xmm0
+; SSE4-32-NEXT:    retl
+;
+; SSE4-64-LABEL: foo16:
+; SSE4-64:       # %bb.0:
+; SSE4-64-NEXT:    pxor %xmm1, %xmm1
+; SSE4-64-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
+; SSE4-64-NEXT:    pmulld {{.*}}(%rip), %xmm0
+; SSE4-64-NEXT:    retq
+  %z = zext <4 x i16> %A to <4 x i32>
+  %m = mul nuw nsw <4 x i32> %z, <i32 18778, i32 18778, i32 18778, i32 18778>
+  ret <4 x i32> %m
+}
+
 define <4 x i32> @foo_os(<4 x i8> %A) minsize {
 ; CHECK32-LABEL: foo_os:
 ; CHECK32:       # %bb.0:
@@ -61,6 +100,39 @@ define <4 x i32> @foo_os(<4 x i8> %A) minsize {
 ; SSE4-64-NEXT:    pmulld {{.*}}(%rip), %xmm0
 ; SSE4-64-NEXT:    retq
   %z = zext <4 x i8> %A to <4 x i32>
+  %m = mul nuw nsw <4 x i32> %z, <i32 18778, i32 18778, i32 18778, i32 18778>
+  ret <4 x i32> %m
+}
+
+define <4 x i32> @foo_os16(<4 x i16> %A) minsize {
+; CHECK32-LABEL: foo_os16:
+; CHECK32:       # %bb.0:
+; CHECK32-NEXT:    pxor %xmm1, %xmm1
+; CHECK32-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
+; CHECK32-NEXT:    pmulld {{\.LCPI.*}}, %xmm0
+; CHECK32-NEXT:    retl
+;
+; CHECK64-LABEL: foo_os16:
+; CHECK64:       # %bb.0:
+; CHECK64-NEXT:    pxor %xmm1, %xmm1
+; CHECK64-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
+; CHECK64-NEXT:    pmulld {{.*}}(%rip), %xmm0
+; CHECK64-NEXT:    retq
+;
+; SSE4-32-LABEL: foo_os16:
+; SSE4-32:       # %bb.0:
+; SSE4-32-NEXT:    pxor %xmm1, %xmm1
+; SSE4-32-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
+; SSE4-32-NEXT:    pmulld {{\.LCPI.*}}, %xmm0
+; SSE4-32-NEXT:    retl
+;
+; SSE4-64-LABEL: foo_os16:
+; SSE4-64:       # %bb.0:
+; SSE4-64-NEXT:    pxor %xmm1, %xmm1
+; SSE4-64-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
+; SSE4-64-NEXT:    pmulld {{.*}}(%rip), %xmm0
+; SSE4-64-NEXT:    retq
+  %z = zext <4 x i16> %A to <4 x i32>
   %m = mul nuw nsw <4 x i32> %z, <i32 18778, i32 18778, i32 18778, i32 18778>
   ret <4 x i32> %m
 }

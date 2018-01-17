@@ -13,7 +13,13 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+# TODO: The Jenkins testers on OS X fail running this test because they don't
+# have access to WindowServer so NSWindow doesn't work.  We should disable this
+# test if WindowServer isn't available.
+# Note: Simply applying the @skipIf decorator here confuses the test harness
+# and gives a spurious failure.
 @skipUnlessDarwin
+@skipIfDarwin
 class Rdar12408181TestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)

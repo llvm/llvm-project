@@ -1264,7 +1264,7 @@ __ompt_get_mutex_impl_type(void *user_lock, kmp_indirect_lock_t *ilock = 0) {
       return kmp_mutex_impl_speculative;
 #endif
     default:
-      return kmp_mutex_impl_unknown;
+      return ompt_mutex_impl_unknown;
     }
     ilock = KMP_LOOKUP_I_LOCK(user_lock);
   }
@@ -1288,7 +1288,7 @@ __ompt_get_mutex_impl_type(void *user_lock, kmp_indirect_lock_t *ilock = 0) {
   case locktag_nested_drdpa:
     return kmp_mutex_impl_queuing;
   default:
-    return kmp_mutex_impl_unknown;
+    return ompt_mutex_impl_unknown;
   }
 }
 
@@ -1311,7 +1311,7 @@ static kmp_mutex_impl_t __ompt_get_mutex_impl_type() {
     return kmp_mutex_impl_speculative;
 #endif
   default:
-    return kmp_mutex_impl_unknown;
+    return ompt_mutex_impl_unknown;
   }
 }
 #endif
