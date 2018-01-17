@@ -30,6 +30,9 @@
   define void @test_fma_s32() #4 { ret void }
   define void @test_fma_s64() #4 { ret void }
 
+  define void @test_fpext_s32_to_s64() #0 { ret void }
+  define void @test_fptrunc_s64_to_s32() #0 {ret void }
+
   define void @test_sub_s32() { ret void }
   define void @test_sub_imm_s32() { ret void }
   define void @test_sub_rev_imm_s32() { ret void }
@@ -734,6 +737,58 @@ body:             |
 
     BX_RET 14, %noreg, implicit %d0
     ; CHECK: BX_RET 14, %noreg, implicit %d0
+...
+---
+name:            test_fpext_s32_to_s64
+# CHECK-LABEL: name: test_fpext_s32_to_s64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+body:             |
+  bb.0:
+    liveins: %s0
+
+    %0(s32) = COPY %s0
+    ; CHECK: [[VREGX:%[0-9]+]]:spr = COPY %s0
+
+    %1(s64) = G_FPEXT %0(s32)
+    ; CHECK: [[VREGR:%[0-9]+]]:dpr = VCVTDS [[VREGX]], 14, %noreg
+
+    %d0 = COPY %1(s64)
+    ; CHECK: %d0 = COPY [[VREGR]]
+
+    BX_RET 14, %noreg, implicit %d0
+    ; CHECK: BX_RET 14, %noreg, implicit %d0
+...
+---
+name:            test_fptrunc_s64_to_s32
+# CHECK-LABEL: name: test_fptrunc_s64_to_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+body:             |
+  bb.0:
+    liveins: %d0
+
+    %0(s64) = COPY %d0
+    ; CHECK: [[VREGX:%[0-9]+]]:dpr = COPY %d0
+
+    %1(s32) = G_FPTRUNC %0(s64)
+    ; CHECK: [[VREGR:%[0-9]+]]:spr = VCVTSD [[VREGX]], 14, %noreg
+
+    %s0 = COPY %1(s32)
+    ; CHECK: %s0 = COPY [[VREGR]]
+
+    BX_RET 14, %noreg, implicit %s0
+    ; CHECK: BX_RET 14, %noreg, implicit %s0
 ...
 ---
 name:            test_sub_s32

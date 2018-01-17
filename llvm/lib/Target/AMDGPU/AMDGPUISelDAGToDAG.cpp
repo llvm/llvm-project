@@ -450,7 +450,10 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   }
 
   if (isa<AtomicSDNode>(N) ||
-      (Opc == AMDGPUISD::ATOMIC_INC || Opc == AMDGPUISD::ATOMIC_DEC))
+      (Opc == AMDGPUISD::ATOMIC_INC || Opc == AMDGPUISD::ATOMIC_DEC ||
+       Opc == AMDGPUISD::ATOMIC_LOAD_FADD ||
+       Opc == AMDGPUISD::ATOMIC_LOAD_FMIN ||
+       Opc == AMDGPUISD::ATOMIC_LOAD_FMAX))
     N = glueCopyToM0(N);
 
   switch (Opc) {

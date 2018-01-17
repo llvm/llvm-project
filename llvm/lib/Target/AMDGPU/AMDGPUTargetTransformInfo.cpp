@@ -475,6 +475,9 @@ static bool isIntrinsicSourceOfDivergence(const IntrinsicInst *I) {
   case Intrinsic::r600_read_tidig_z:
   case Intrinsic::amdgcn_atomic_inc:
   case Intrinsic::amdgcn_atomic_dec:
+  case Intrinsic::amdgcn_atomic_fadd:
+  case Intrinsic::amdgcn_atomic_fmin:
+  case Intrinsic::amdgcn_atomic_fmax:
   case Intrinsic::amdgcn_image_atomic_swap:
   case Intrinsic::amdgcn_image_atomic_add:
   case Intrinsic::amdgcn_image_atomic_sub:

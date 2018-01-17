@@ -122,9 +122,7 @@ define <8 x i64> @test_mm512_epi64(<8 x i32> %a, <8 x i32> %b) {
 ; X86-AVX512VLCDBW-NEXT:    kmovd %k0, %eax
 ; X86-AVX512VLCDBW-NEXT:    movzbl %al, %eax
 ; X86-AVX512VLCDBW-NEXT:    vmovd %eax, %xmm0
-; X86-AVX512VLCDBW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3],zero,zero,zero,zero,xmm0[0,1,2,3],zero,zero,zero,zero
-; X86-AVX512VLCDBW-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X86-AVX512VLCDBW-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
+; X86-AVX512VLCDBW-NEXT:    vpbroadcastq %xmm0, %zmm0
 ; X86-AVX512VLCDBW-NEXT:    retl
 entry:
   %0 = icmp eq <8 x i32> %a, %b
@@ -160,8 +158,7 @@ define <4 x i64> @test_mm256_epi64(<8 x i32> %a, <8 x i32> %b) {
 ; X86-AVX512VLCDBW-NEXT:    kmovd %k0, %eax
 ; X86-AVX512VLCDBW-NEXT:    movzbl %al, %eax
 ; X86-AVX512VLCDBW-NEXT:    vmovd %eax, %xmm0
-; X86-AVX512VLCDBW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3],zero,zero,zero,zero,xmm0[0,1,2,3],zero,zero,zero,zero
-; X86-AVX512VLCDBW-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; X86-AVX512VLCDBW-NEXT:    vpbroadcastq %xmm0, %ymm0
 ; X86-AVX512VLCDBW-NEXT:    retl
 entry:
   %0 = icmp eq <8 x i32> %a, %b

@@ -90,4 +90,5 @@ StringRef BuiltinDumper::getTypeName(const PDBSymbolTypeBuiltin &Symbol) {
   case PDB_BuiltinType::None:
     return "...";
   }
+  llvm_unreachable("Unknown PDB_BuiltinType");
 }

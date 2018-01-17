@@ -76,7 +76,6 @@ private:
   void calculateInitFunctions();
   void assignIndexes();
   void calculateImports();
-  void calculateOffsets();
   void calculateTypes();
   void createOutputSegments();
   void layoutMemory();

@@ -4788,3 +4788,43 @@ define <2 x double> @test_masked_z_8xdouble_to_2xdouble_perm_mem_mask1(<8 x doub
   ret <2 x double> %res
 }
 
+; PR35977
+define void @test_zext_v8i8_to_v8i16(<8 x i8>* %arg, <8 x i16>* %arg1) {
+; CHECK-LABEL: test_zext_v8i8_to_v8i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; CHECK-NEXT:    vmovdqa %xmm0, (%rsi)
+; CHECK-NEXT:    retq
+  %tmp = getelementptr <8 x i8>, <8 x i8>* %arg, i32 0
+  %tmp2 = load <8 x i8>, <8 x i8>* %tmp
+  %tmp3 = extractelement <8 x i8> %tmp2, i32 0
+  %tmp4 = zext i8 %tmp3 to i16
+  %tmp5 = insertelement <8 x i16> undef, i16 %tmp4, i32 0
+  %tmp6 = extractelement <8 x i8> %tmp2, i32 1
+  %tmp7 = zext i8 %tmp6 to i16
+  %tmp8 = insertelement <8 x i16> %tmp5, i16 %tmp7, i32 1
+  %tmp9 = extractelement <8 x i8> %tmp2, i32 2
+  %tmp10 = zext i8 %tmp9 to i16
+  %tmp11 = insertelement <8 x i16> %tmp8, i16 %tmp10, i32 2
+  %tmp12 = extractelement <8 x i8> %tmp2, i32 3
+  %tmp13 = zext i8 %tmp12 to i16
+  %tmp14 = insertelement <8 x i16> %tmp11, i16 %tmp13, i32 3
+  %tmp15 = extractelement <8 x i8> %tmp2, i32 4
+  %tmp16 = zext i8 %tmp15 to i16
+  %tmp17 = insertelement <8 x i16> %tmp14, i16 %tmp16, i32 4
+  %tmp18 = extractelement <8 x i8> %tmp2, i32 5
+  %tmp19 = zext i8 %tmp18 to i16
+  %tmp20 = insertelement <8 x i16> %tmp17, i16 %tmp19, i32 5
+  %tmp21 = extractelement <8 x i8> %tmp2, i32 6
+  %tmp22 = zext i8 %tmp21 to i16
+  %tmp23 = insertelement <8 x i16> %tmp20, i16 %tmp22, i32 6
+  %tmp24 = extractelement <8 x i8> %tmp2, i32 7
+  %tmp25 = zext i8 %tmp24 to i16
+  %tmp26 = insertelement <8 x i16> %tmp23, i16 %tmp25, i32 7
+  %tmp27 = shl <8 x i16> %tmp26, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %tmp28 = getelementptr <8 x i16>, <8 x i16>* %arg1, i32 0
+  store <8 x i16> %tmp27, <8 x i16>* %tmp28
+  ret void
+}

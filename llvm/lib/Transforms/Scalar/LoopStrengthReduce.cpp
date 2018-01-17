@@ -442,7 +442,7 @@ void Formula::initialMatch(const SCEV *S, Loop *L, ScalarEvolution &SE) {
   canonicalize(*L);
 }
 
-/// \brief Check whether or not this formula statisfies the canonical
+/// \brief Check whether or not this formula satisfies the canonical
 /// representation.
 /// \see Formula::BaseRegs.
 bool Formula::isCanonical(const Loop &L) const {

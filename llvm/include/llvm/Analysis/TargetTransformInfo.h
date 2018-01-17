@@ -541,6 +541,10 @@ public:
   /// containing this constant value for the target.
   bool shouldBuildLookupTablesForConstant(Constant *C) const;
 
+  /// \brief Return true if the input function which is cold at all call sites,
+  ///  should use coldcc calling convention.
+  bool useColdCCForColdCall(Function &F) const;
+
   unsigned getScalarizationOverhead(Type *Ty, bool Insert, bool Extract) const;
 
   unsigned getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
@@ -992,6 +996,7 @@ public:
   virtual unsigned getJumpBufSize() = 0;
   virtual bool shouldBuildLookupTables() = 0;
   virtual bool shouldBuildLookupTablesForConstant(Constant *C) = 0;
+  virtual bool useColdCCForColdCall(Function &F) = 0;
   virtual unsigned
   getScalarizationOverhead(Type *Ty, bool Insert, bool Extract) = 0;
   virtual unsigned getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
@@ -1237,6 +1242,10 @@ public:
   bool shouldBuildLookupTablesForConstant(Constant *C) override {
     return Impl.shouldBuildLookupTablesForConstant(C);
   }
+  bool useColdCCForColdCall(Function &F) override {
+    return Impl.useColdCCForColdCall(F);
+  }
+
   unsigned getScalarizationOverhead(Type *Ty, bool Insert,
                                     bool Extract) override {
     return Impl.getScalarizationOverhead(Ty, Insert, Extract);

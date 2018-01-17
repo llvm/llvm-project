@@ -312,7 +312,7 @@ uint64_t SystemZLongBranch::initMBBInfo() {
 // relaxed if it were placed at address Address.
 bool SystemZLongBranch::mustRelaxBranch(const TerminatorInfo &Terminator,
                                         uint64_t Address) {
-  if (!Terminator.Branch)
+  if (!Terminator.Branch || Terminator.ExtraRelaxSize == 0)
     return false;
 
   const MBBInfo &Target = MBBs[Terminator.TargetBlock];

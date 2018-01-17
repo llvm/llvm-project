@@ -137,7 +137,6 @@ namespace AMDGPU {
     OPERAND_INPUT_MODS,
 
     // Operand for SDWA instructions
-    OPERAND_SDWA_SRC,
     OPERAND_SDWA_VOPC_DST,
 
     /// Operand with 32-bit immediate that uses the constant bus.
