@@ -72,6 +72,7 @@ Clang-Tidy Checks
    fuchsia-default-arguments
    fuchsia-overloaded-operator
    fuchsia-statically-constructed-objects
+   fuchsia-trailing-return
    fuchsia-virtual-inheritance
    google-build-explicit-make-pair
    google-build-namespaces
