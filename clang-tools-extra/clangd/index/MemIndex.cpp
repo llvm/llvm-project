@@ -8,7 +8,9 @@
 //===-------------------------------------------------------------------===//
 
 #include "MemIndex.h"
+#include "../FuzzyMatch.h"
 #include "../Logger.h"
+#include <queue>
 
 namespace clang {
 namespace clangd {
@@ -32,7 +34,9 @@ bool MemIndex::fuzzyFind(
   assert(!StringRef(Req.Query).contains("::") &&
          "There must be no :: in query.");
 
-  unsigned Matched = 0;
+  std::priority_queue<std::pair<float, const Symbol *>> Top;
+  FuzzyMatcher Filter(Req.Query);
+  bool More = false;
   {
     std::lock_guard<std::mutex> Lock(Mutex);
     for (const auto Pair : Index) {
@@ -42,15 +46,18 @@ bool MemIndex::fuzzyFind(
       if (!Req.Scopes.empty() && !llvm::is_contained(Req.Scopes, Sym->Scope))
         continue;
 
-      // FIXME(ioeric): use fuzzy matcher.
-      if (StringRef(Sym->Name).find_lower(Req.Query) != StringRef::npos) {
-        if (++Matched > Req.MaxCandidateCount)
-          return false;
-        Callback(*Sym);
+      if (auto Score = Filter.match(Sym->Name)) {
+        Top.emplace(-*Score, Sym);
+        if (Top.size() > Req.MaxCandidateCount) {
+          More = true;
+          Top.pop();
+        }
       }
     }
+    for (; !Top.empty(); Top.pop())
+      Callback(*Top.top().second);
   }
-  return true;
+  return More;
 }
 
 std::unique_ptr<SymbolIndex> MemIndex::build(SymbolSlab Slab) {
