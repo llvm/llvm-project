@@ -30,14 +30,14 @@ struct count_equal
 };
 
 #if TEST_STD_VER > 17
-TEST_CONSTEXPR bool test_constexpr() {
+constexpr bool test_constexpr() {
     int ia[] = {0, 1, 2};
     int ib[] = {4, 5, 6};
     int ic[] = {0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 0, 1, 2, 3, 0, 1, 2, 0, 1, 0};
     typedef forward_iterator<int*>       FI;
     typedef bidirectional_iterator<int*> BI;
     typedef random_access_iterator<int*> RI;
-    std::equal_to<int> eq;
+    std::equal_to<int> eq{};
     return    (std::find_end(FI(std::begin(ic)), FI(std::end(ic)), FI(std::begin(ia)), FI(std::end(ia)), eq) == FI(ic+15))
            && (std::find_end(FI(std::begin(ic)), FI(std::end(ic)), FI(std::begin(ib)), FI(std::end(ib)), eq) == FI(std::end(ic)))
            && (std::find_end(BI(std::begin(ic)), BI(std::end(ic)), BI(std::begin(ia)), BI(std::end(ia)), eq) == BI(ic+15))

@@ -48,7 +48,6 @@ struct test
         assert(t.pptr()  == old_this.pptr());
         assert(t.epptr() == old_this.epptr());
         assert(t.getloc() == old_this.getloc());
-        return *this;
     }
 
     void setg(CharT* gbeg, CharT* gnext, CharT* gend)
@@ -66,12 +65,12 @@ int main()
     {
         test<char> t;
         test<char> t2;
-        swap(t2, t);
+        t2.swap(t);
     }
     {
         test<wchar_t> t;
         test<wchar_t> t2;
-        swap(t2, t);
+        t2.swap(t);
     }
     {
         char g1, g2, g3, p1, p3;
@@ -79,7 +78,7 @@ int main()
         t.setg(&g1, &g2, &g3);
         t.setp(&p1, &p3);
         test<char> t2;
-        swap(t2, t);
+        t2.swap(t);
     }
     {
         wchar_t g1, g2, g3, p1, p3;
@@ -87,17 +86,17 @@ int main()
         t.setg(&g1, &g2, &g3);
         t.setp(&p1, &p3);
         test<wchar_t> t2;
-        swap(t2, t);
+        t2.swap(t);
     }
     std::locale::global(std::locale(LOCALE_en_US_UTF_8));
     {
         test<char> t;
         test<char> t2;
-        swap(t2, t);
+        t2.swap(t);
     }
     {
         test<wchar_t> t;
         test<wchar_t> t2;
-        swap(t2, t);
+        t2.swap(t);
     }
 }

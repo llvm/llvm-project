@@ -29,7 +29,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 declare hidden void @g()
-; IR: declare dso_local hidden void @g()
+; IR: declare hidden void @g()
 
 define void @f() {
   call void @g()
