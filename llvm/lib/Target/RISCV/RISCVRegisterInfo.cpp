@@ -71,9 +71,6 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       getFrameLowering(MF)->getFrameIndexReference(MF, FrameIndex, FrameReg) +
       MI.getOperand(FIOperandNum + 1).getImm();
 
-  assert(MF.getSubtarget().getFrameLowering()->hasFP(MF) &&
-         "eliminateFrameIndex currently requires hasFP");
-
   if (!isInt<32>(Offset)) {
     report_fatal_error(
         "Frame offsets outside of the signed 32-bit range not supported");
@@ -102,7 +99,8 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 }
 
 unsigned RISCVRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
-  return RISCV::X8;
+  const TargetFrameLowering *TFI = getFrameLowering(MF);
+  return TFI->hasFP(MF) ? RISCV::X8 : RISCV::X2;
 }
 
 const uint32_t *

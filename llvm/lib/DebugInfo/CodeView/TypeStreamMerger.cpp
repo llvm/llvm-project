@@ -346,10 +346,12 @@ Error TypeStreamMerger::doit(const CVTypeArray &Types) {
 }
 
 Error TypeStreamMerger::remapAllTypes(const CVTypeArray &Types) {
-  for (const CVType &Type : Types)
-    if (auto EC = remapType(Type))
-      return EC;
-  return Error::success();
+  BinaryStreamRef Stream = Types.getUnderlyingStream();
+  ArrayRef<uint8_t> Buffer;
+  cantFail(Stream.readBytes(0, Stream.getLength(), Buffer));
+
+  return forEachCodeViewRecord<CVType>(
+      Buffer, [this](const CVType &T) { return remapType(T); });
 }
 
 Error TypeStreamMerger::remapType(const CVType &Type) {

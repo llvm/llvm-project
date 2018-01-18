@@ -23,8 +23,8 @@ The check will only fix 'CamelCase' to 'camelCase'. In some other cases we will
 only provide warning messages since the property name could be complicated.
 Users will need to come up with a proper name by their own.
 
-This check also accepts special acronyms as prefix. Such prefix will suppress
-the check of Lower Camel Case according to the guide:
+This check also accepts special acronyms as prefixes or suffixes. Such prefixes or suffixes
+will suppress the Lower Camel Case check according to the guide:
 https://developer.apple.com/library/content/documentation/Cocoa/Conceptual/CodingGuidelines/Articles/NamingBasics.html#//apple_ref/doc/uid/20001281-1002931-BBCFHEAB
 
 For a full list of well-known acronyms:
@@ -37,7 +37,7 @@ Options
 
 .. option:: Acronyms
 
-   Semicolon-separated list of acronyms that can be used as prefix
-   of property names.
+   Semicolon-separated list of acronyms that can be used as a prefix
+   or a suffix of property names.
 
-   Defaults to `ASCII;PDF;XML;HTML;URL;RTF;HTTP;TIFF;JPG;PNG;GIF;LZW;ROM;RGB;CMYK;MIDI;FTP`.
+   If unset, defaults to "ACL;API;ARGB;ASCII;BGRA;CMYK;DNS;FPS;FTP;GIF;GPS;HD;HDR;HTML;HTTP;HTTPS;HUD;ID;JPG;JS;LAN;LZW;MDNS;MIDI;OS;PDF;PIN;PNG;POI;PSTN;PTR;QA;QOS;RGB;RGBA;RGBX;ROM;RPC;RTF;RTL;SDK;SSO;TCP;TIFF;TTS;UI;URI;URL;VC;VOIP;VPN;VR;WAN;XML".

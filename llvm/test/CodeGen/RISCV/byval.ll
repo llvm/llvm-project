@@ -8,14 +8,7 @@
 define i32 @callee(%struct.Foo* byval %f) nounwind {
 ; RV32I-LABEL: callee:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    sw s0, 8(sp)
-; RV32I-NEXT:    addi s0, sp, 16
 ; RV32I-NEXT:    lw a0, 0(a0)
-; RV32I-NEXT:    lw s0, 8(sp)
-; RV32I-NEXT:    lw ra, 12(sp)
-; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 entry:
   %0 = getelementptr inbounds %struct.Foo, %struct.Foo* %f, i32 0, i32 0
@@ -29,29 +22,26 @@ define void @caller() nounwind {
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    addi sp, sp, -32
 ; RV32I-NEXT:    sw ra, 28(sp)
-; RV32I-NEXT:    sw s0, 24(sp)
-; RV32I-NEXT:    addi s0, sp, 32
 ; RV32I-NEXT:    lui a0, %hi(foo+12)
 ; RV32I-NEXT:    addi a0, a0, %lo(foo+12)
 ; RV32I-NEXT:    lw a0, 0(a0)
-; RV32I-NEXT:    sw a0, -12(s0)
+; RV32I-NEXT:    sw a0, 24(sp)
 ; RV32I-NEXT:    lui a0, %hi(foo+8)
 ; RV32I-NEXT:    addi a0, a0, %lo(foo+8)
 ; RV32I-NEXT:    lw a0, 0(a0)
-; RV32I-NEXT:    sw a0, -16(s0)
+; RV32I-NEXT:    sw a0, 20(sp)
 ; RV32I-NEXT:    lui a0, %hi(foo+4)
 ; RV32I-NEXT:    addi a0, a0, %lo(foo+4)
 ; RV32I-NEXT:    lw a0, 0(a0)
-; RV32I-NEXT:    sw a0, -20(s0)
+; RV32I-NEXT:    sw a0, 16(sp)
 ; RV32I-NEXT:    lui a0, %hi(foo)
 ; RV32I-NEXT:    addi a0, a0, %lo(foo)
 ; RV32I-NEXT:    lw a0, 0(a0)
-; RV32I-NEXT:    sw a0, -24(s0)
+; RV32I-NEXT:    sw a0, 12(sp)
 ; RV32I-NEXT:    lui a0, %hi(callee)
 ; RV32I-NEXT:    addi a1, a0, %lo(callee)
-; RV32I-NEXT:    addi a0, s0, -24
+; RV32I-NEXT:    addi a0, sp, 12
 ; RV32I-NEXT:    jalr a1
-; RV32I-NEXT:    lw s0, 24(sp)
 ; RV32I-NEXT:    lw ra, 28(sp)
 ; RV32I-NEXT:    addi sp, sp, 32
 ; RV32I-NEXT:    ret

@@ -1,8 +1,8 @@
-; RUN: llc < %s -mtriple=arm-eabi  -arm-global-merge                                 | FileCheck %s --check-prefix=CHECK-MERGE
-; RUN: llc < %s -mtriple=arm-eabi  -arm-global-merge -global-merge-on-external=true  | FileCheck %s --check-prefix=CHECK-MERGE
-; RUN: llc < %s -mtriple=arm-eabi  -arm-global-merge -global-merge-on-external=false | FileCheck %s --check-prefix=CHECK-NO-MERGE
-; RUN: llc < %s -mtriple=arm-macho -arm-global-merge                                 | FileCheck %s --check-prefix=CHECK-NO-MERGE
-; RUN: llc < %s -mtriple=arm-eabi  -arm-global-merge -relocation-model=pic           | FileCheck %s --check-prefix=CHECK-NO-MERGE
+; RUN: llc < %s -mtriple=arm-eabi  -arm-global-merge                                 | FileCheck %s --check-prefixes=CHECK,CHECK-MERGE
+; RUN: llc < %s -mtriple=arm-eabi  -arm-global-merge -global-merge-on-external=true  | FileCheck %s --check-prefixes=CHECK,CHECK-MERGE
+; RUN: llc < %s -mtriple=arm-eabi  -arm-global-merge -global-merge-on-external=false | FileCheck %s --check-prefixes=CHECK,CHECK-NO-MERGE
+; RUN: llc < %s -mtriple=arm-macho -arm-global-merge                                 | FileCheck %s --check-prefixes=CHECK,CHECK-NO-MERGE
+; RUN: llc < %s -mtriple=arm-eabi  -arm-global-merge -relocation-model=pic           | FileCheck %s --check-prefixes=CHECK,CHECK-NO-MERGE
 
 @x = global i32 0, align 4
 @y = global i32 0, align 4
@@ -10,7 +10,7 @@
 
 define void @f1(i32 %a1, i32 %a2) {
 ;CHECK:          f1:
-;CHECK:          ldr {{r[0-9]+}}, [[LABEL1:\.LCPI[0-9]+_[0-9]]]
+;CHECK:          ldr {{r[0-9]+}}, [[LABEL1:\.?LCPI[0-9]+_[0-9]]]
 ;CHECK:          [[LABEL1]]:
 ;CHECK-MERGE:    .long .L_MergedGlobals
 ;CHECK-NO-MERGE: .long {{_?x}}
@@ -21,7 +21,7 @@ define void @f1(i32 %a1, i32 %a2) {
 
 define void @g1(i32 %a1, i32 %a2) {
 ;CHECK:          g1:
-;CHECK:          ldr {{r[0-9]+}}, [[LABEL2:\.LCPI[0-9]+_[0-9]]]
+;CHECK:          ldr {{r[0-9]+}}, [[LABEL2:\.?LCPI[0-9]+_[0-9]]]
 ;CHECK:          [[LABEL2]]:
 ;CHECK-MERGE:    .long .L_MergedGlobals
 ;CHECK-NO-MERGE: .long {{_?y}}

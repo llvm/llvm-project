@@ -28,13 +28,16 @@ public:
                         const clang::Diagnostic &Info) override {}
 };
 
-/// Creates a CompilerInstance with the main file contens overridden.
-/// The preamble will be reused unless it is null.
-/// Note that the vfs::FileSystem inside returned instance may differ if
-/// additional file remappings occur in command-line arguments.
-/// On some errors, returns null. When non-null value is returned, it's expected
-/// to be consumed by the FrontendAction as it will have a pointer to the
-/// MainFile buffer that will only be deleted if BeginSourceFile is called.
+/// Creates a compiler instance, configured so that:
+///   - Contents of the parsed file are remapped to \p MainFile.
+///   - Preamble is overriden to use PCH passed to this function. It means the
+///     changes to the preamble headers or files included in the preamble are
+///     not visible to this compiler instance.
+///   - vfs::FileSystem is used for all underlying file accesses. The actual
+///     vfs used by the compiler may be an overlay over the passed vfs.
+/// Returns null on errors. When non-null value is returned, it is expected to
+/// be consumed by FrontendAction::BeginSourceFile to properly destroy \p
+/// MainFile.
 std::unique_ptr<CompilerInstance> prepareCompilerInstance(
     std::unique_ptr<clang::CompilerInvocation>, const PrecompiledPreamble *,
     std::unique_ptr<llvm::MemoryBuffer> MainFile,
