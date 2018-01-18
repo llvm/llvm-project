@@ -372,7 +372,9 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
       getCheckerManager().runCheckersForPostObjCMessage(Dst, DstPostCall, *Msg,
                                                         *this,
                                                         /*WasInlined=*/true);
-    } else if (CE) {
+    } else if (CE &&
+               !(isa<CXXNewExpr>(CE) && // Called when visiting CXXNewExpr.
+                 AMgr.getAnalyzerOptions().mayInlineCXXAllocator())) {
       getCheckerManager().runCheckersForPostStmt(Dst, DstPostCall, CE,
                                                  *this, /*WasInlined=*/true);
     } else {
