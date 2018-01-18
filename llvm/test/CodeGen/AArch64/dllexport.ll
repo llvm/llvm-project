@@ -40,35 +40,34 @@ define weak_odr dllexport void @l() {
 
 ; CHECK: .section .drectve
 ; CHECK-GNU-NOT: -export:f
-; CHECK-GNU: -export:g
-; CHECK-GNU-SAME: -export:h
+; CHECK-GNU: .ascii " -export:g"
+; CHECK-GNU: .ascii " -export:h"
 ; CHECK-GNU-NOT: -export:i
-; CHECK-GNU-SAME: -export:j
-; CHECK-GNU-SAME: -export:k
-; CHECK-GNU-SAME: -export:l
-; CHECK-GNU-SAME: -export:m,data
-; CHECK-GNU-SAME: -export:n,data
-; CHECK-GNU-SAME: -export:o,data
-; CHECK-GNU-SAME: -export:p,data
-; CHECK-GNU-SAME: -export:q,data
-; CHECK-GNU-SAME: -export:r
-; CHECK-GNU-SAME: -export:s
-; CHECK-GNU-SAME: -export:t
-; CHECK-GNU-SAME: -export:u
+; CHECK-GNU: .ascii " -export:j"
+; CHECK-GNU: .ascii " -export:k"
+; CHECK-GNU: .ascii " -export:l"
+; CHECK-GNU: .ascii " -export:m,data"
+; CHECK-GNU: .ascii " -export:n,data"
+; CHECK-GNU: .ascii " -export:o,data"
+; CHECK-GNU: .ascii " -export:p,data"
+; CHECK-GNU: .ascii " -export:q,data"
+; CHECK-GNU: .ascii " -export:r"
+; CHECK-GNU: .ascii " -export:s"
+; CHECK-GNU: .ascii " -export:t"
+; CHECK-GNU: .ascii " -export:u"
 ; CHECK-MSVC-NOT: /EXPORT:f
-; CHECK-MSVC: /EXPORT:g
-; CHECK-MSVC-SAME: /EXPORT:h
+; CHECK-MSVC: .ascii "  /EXPORT:g"
+; CHECK-MSVC: .ascii "  /EXPORT:h"
 ; CHECK-MSVC-NOT: /EXPORT:i
-; CHECK-MSVC-SAME: /EXPORT:j
-; CHECK-MSVC-SAME: /EXPORT:k
-; CHECK-MSVC-SAME: /EXPORT:l
-; CHECK-MSVC-SAME: /EXPORT:m,DATA
-; CHECK-MSVC-SAME: /EXPORT:n,DATA
-; CHECK-MSVC-SAME: /EXPORT:o,DATA
-; CHECK-MSVC-SAME: /EXPORT:p,DATA
-; CHECK-MSVC-SAME: /EXPORT:q,DATA
-; CHECK-MSVC-SAME: /EXPORT:r
-; CHECK-MSVC-SAME: /EXPORT:s
-; CHECK-MSVC-SAME: /EXPORT:t
-; CHECK-MSVC-SAME: /EXPORT:u
-
+; CHECK-MSVC: .ascii "  /EXPORT:j"
+; CHECK-MSVC: .ascii "  /EXPORT:k"
+; CHECK-MSVC: .ascii "  /EXPORT:l"
+; CHECK-MSVC: .ascii "  /EXPORT:m,DATA"
+; CHECK-MSVC: .ascii "  /EXPORT:n,DATA"
+; CHECK-MSVC: .ascii "  /EXPORT:o,DATA"
+; CHECK-MSVC: .ascii "  /EXPORT:p,DATA"
+; CHECK-MSVC: .ascii "  /EXPORT:q,DATA"
+; CHECK-MSVC: .ascii "  /EXPORT:r"
+; CHECK-MSVC: .ascii "  /EXPORT:s"
+; CHECK-MSVC: .ascii "  /EXPORT:t"
+; CHECK-MSVC: .ascii "  /EXPORT:u"

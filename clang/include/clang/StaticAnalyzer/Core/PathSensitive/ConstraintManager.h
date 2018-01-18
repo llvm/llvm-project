@@ -37,6 +37,12 @@ public:
   /// Construct a ConstraintVal indicating the constraint is underconstrained.
   ConditionTruthVal() {}
 
+  /// \return Stored value, assuming that the value is known.
+  /// Crashes otherwise.
+  bool getValue() const {
+    return *Val;
+  }
+
   /// Return true if the constraint is perfectly constrained to 'true'.
   bool isConstrainedTrue() const {
     return Val.hasValue() && Val.getValue();

@@ -1,0 +1,181 @@
+# RUN: llc -run-pass machine-cse -global-isel -verify-machineinstrs -mtriple aarch64-apple-ios %s -o - | FileCheck %s
+---
+name:            irtranslated
+legalized:       false
+regBankSelected: false
+selected:        false
+body:             |
+  ; CHECK-LABEL: name: irtranslated
+  ; CHECK:      %[[ONE:[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; CHECK-NEXT: %[[TWO:[0-9]+]]:_(s32) = G_ADD %[[ONE]], %[[ONE]]
+  ; CHECK-NEXT: %[[SUM:[0-9]+]]:_(s32) = G_ADD %[[TWO]], %[[TWO]]
+  ; CHECK-NEXT: %[[RET:[wx][0-9]+]] = COPY %[[SUM]](s32)
+  ; CHECK-NEXT: RET_ReallyLR implicit %[[RET]]
+  bb.0:
+    %0:_(s32) = G_CONSTANT i32 1
+    %1:_(s32) = G_ADD %0, %0
+    %2:_(s32) = G_ADD %0, %0
+    %3:_(s32) = G_ADD %1, %2
+    %w0 = COPY %3(s32)
+    RET_ReallyLR implicit %w0
+...
+---
+name:            regbankselected
+legalized:       true
+regBankSelected: true
+selected:        false
+body:             |
+  ; CHECK-LABEL: name: regbankselected
+  ; CHECK:      %[[ONE:[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
+  ; CHECK-NEXT: %[[TWO:[0-9]+]]:gpr(s32) = G_ADD %[[ONE]], %[[ONE]]
+  ; CHECK-NEXT: %[[SUM:[0-9]+]]:gpr(s32) = G_ADD %[[TWO]], %[[TWO]]
+  ; CHECK-NEXT: %[[RET:[wx][0-9]+]] = COPY %[[SUM]](s32)
+  ; CHECK-NEXT: RET_ReallyLR implicit %[[RET]]
+  bb.0:
+    %0:gpr(s32) = G_CONSTANT i32 1
+    %1:gpr(s32) = G_ADD %0, %0
+    %2:gpr(s32) = G_ADD %0, %0
+    %3:gpr(s32) = G_ADD %1, %2
+    %w0 = COPY %3(s32)
+    RET_ReallyLR implicit %w0
+...
+---
+name:            legalized
+legalized:       true
+regBankSelected: false
+selected:        false
+body:             |
+  ; CHECK-LABEL: name: legalized
+  ; CHECK:      %[[ONE:[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; CHECK-NEXT: %[[TWO:[0-9]+]]:gpr(s32) = G_ADD %[[ONE]], %[[ONE]]
+  ; CHECK-NEXT: %[[SUM:[0-9]+]]:_(s32) = G_ADD %[[TWO]], %[[TWO]]
+  ; CHECK-NEXT: %[[RET:[wx][0-9]+]] = COPY %[[SUM]](s32)
+  ; CHECK-NEXT: RET_ReallyLR implicit %[[RET]]
+  bb.0:
+    %0:_(s32) = G_CONSTANT i32 1
+    %1:_(s32) = G_ADD %0, %0
+    %2:gpr(s32) = G_ADD %0, %0
+    %3:_(s32) = G_ADD %1, %2
+    %w0 = COPY %3(s32)
+    RET_ReallyLR implicit %w0
+...
+---
+name:            legalized_sym
+legalized:       true
+regBankSelected: false
+selected:        false
+body:             |
+  ; CHECK-LABEL: name: legalized_sym
+  ; CHECK:      %[[ONE:[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; CHECK-NEXT: %[[TWO:[0-9]+]]:gpr(s32) = G_ADD %[[ONE]], %[[ONE]]
+  ; CHECK-NEXT: %[[SUM:[0-9]+]]:_(s32) = G_ADD %[[TWO]], %[[TWO]]
+  ; CHECK-NEXT: %[[RET:[wx][0-9]+]] = COPY %[[SUM]](s32)
+  ; CHECK-NEXT: RET_ReallyLR implicit %[[RET]]
+  bb.0:
+    %0:_(s32) = G_CONSTANT i32 1
+    %1:gpr(s32) = G_ADD %0, %0
+    %2:_(s32) = G_ADD %0, %0
+    %3:_(s32) = G_ADD %1, %2
+    %w0 = COPY %3(s32)
+    RET_ReallyLR implicit %w0
+...
+---
+name:            int_extensions
+alignment:       2
+legalized:       false
+regBankSelected: false
+selected:        false
+body:             |
+  ; CHECK-LABEL: name: int_extensions
+  ; CHECK:      %[[ONE:[0-9]+]]:_(s8) = G_CONSTANT i8 1
+  ; CHECK-NEXT: %[[S16:[0-9]+]]:_(s16) = G_SEXT %[[ONE]](s8)
+  ; CHECK-NEXT: %[[S32:[0-9]+]]:_(s32) = G_SEXT %[[ONE]](s8)
+  ; CHECK-NEXT: %[[S16_Z64:[0-9]+]]:_(s64) = G_ZEXT %[[S16]](s16)
+  ; CHECK-NEXT: %[[S32_Z64:[0-9]+]]:_(s64) = G_ZEXT %[[S32]](s32)
+  ; CHECK-NEXT: %[[SUM:[0-9]+]]:_(s64) = G_ADD %[[S16_Z64]], %[[S32_Z64]]
+  ; CHECK-NEXT: %[[RET:[wx][0-9]+]] = COPY %[[SUM]](s64)
+  ; CHECK-NEXT: RET_ReallyLR implicit %[[RET]]
+  bb.0.entry:
+    %0:_(s8) = G_CONSTANT i8 1
+    %1:_(s16) = G_SEXT %0(s8)
+    %2:_(s32) = G_SEXT %0(s8)
+    %3:_(s64) = G_ZEXT %1(s16)
+    %4:_(s64) = G_ZEXT %2(s32)
+    %5:_(s64) = G_ADD %3, %4
+    %x0 = COPY %5(s64)
+    RET_ReallyLR implicit %x0
+...
+---
+name:            generic
+legalized:       true
+regBankSelected: false
+selected:        false
+body:             |
+  ; CHECK-LABEL: name: generic
+  ; CHECK:      %[[SG:[0-9]+]]:_(s32) = G_ADD %{{[0-9]+}}, %{{[0-9]+}}
+  ; CHECK-NEXT: %{{[0-9]+}}:_(s32) = G_ADD %[[SG]], %[[SG]]
+  bb.0:
+    %0:_(s32) = COPY %w0
+    %1:_(s32) = COPY %w1
+    %2:_(s32) = G_ADD %0, %1
+    %3:_(s32) = COPY %2(s32)
+    %4:_(s32) = G_ADD %3, %3
+    %w0 = COPY %4(s32)
+    RET_ReallyLR implicit %w0
+...
+---
+name:            generic_to_concrete_copy
+legalized:       true
+regBankSelected: false
+selected:        false
+body:             |
+  ; CHECK-LABEL: name: generic_to_concrete_copy
+  ; CHECK:      %[[S1:[0-9]+]]:_(s32) = G_ADD %{{[0-9]+}}, %{{[0-9]+}}
+  ; CHECK-NEXT: %[[S2:[0-9]+]]:gpr32 = COPY %[[S1]](s32)
+  ; CHECK-NEXT: %{{[0-9]+}}:gpr32 = ADDWrr %[[S2]], %[[S2]]
+  bb.0:
+    %0:_(s32) = COPY %w0
+    %1:_(s32) = COPY %w1
+    %2:_(s32) = G_ADD %0, %1
+    %3:gpr32 = COPY %2(s32)
+    %4:gpr32 = ADDWrr %3, %3
+    %w0 = COPY %4
+    RET_ReallyLR implicit %w0
+...
+---
+name:            concrete_to_generic_copy
+legalized:       true
+regBankSelected: false
+selected:        false
+body:             |
+  ; CHECK-LABEL: name: concrete_to_generic_copy
+  ; CHECK:      %[[S1:[0-9]+]]:gpr32 = ADDWrr %{{[0-9]+}}, %{{[0-9]+}}
+  ; CHECK-NEXT: %[[S2:[0-9]+]]:_(s32) = COPY %[[S1]]
+  ; CHECK-NEXT: %{{[0-9]+}}:_(s32) = G_ADD %[[S2]], %[[S2]]
+  bb.0:
+    %0:gpr32 = COPY %w0
+    %1:gpr32 = COPY %w1
+    %2:gpr32 = ADDWrr %0, %1
+    %3:_(s32) = COPY %2
+    %4:_(s32) = G_ADD %3, %3
+    %w0 = COPY %4(s32)
+    RET_ReallyLR implicit %w0
+...
+---
+name:            concrete
+legalized:       true
+regBankSelected: false
+selected:        false
+body:             |
+  ; CHECK-LABEL: name: concrete
+  ; CHECK:      %[[SC:[0-9]+]]:gpr32 = ADDWrr %{{[0-9]+}}, %{{[0-9]+}}
+  ; CHECK-NEXT: %{{[0-9]+}}:gpr32 = ADDWrr %[[SC]], %[[SC]]
+  bb.0:
+    %0:gpr32 = COPY %w0
+    %1:gpr32 = COPY %w1
+    %2:gpr32 = ADDWrr %0, %1
+    %3:gpr32 = COPY %2
+    %4:gpr32 = ADDWrr %3, %3
+    %w0 = COPY %4
+    RET_ReallyLR implicit %w0
+...

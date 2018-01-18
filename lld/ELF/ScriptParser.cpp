@@ -923,7 +923,10 @@ ByteCommand *ScriptParser::readByteCommand(StringRef Tok) {
 
 StringRef ScriptParser::readParenLiteral() {
   expect("(");
+  bool Orig = InExpr;
+  InExpr = false;
   StringRef Tok = next();
+  InExpr = Orig;
   expect(")");
   return Tok;
 }

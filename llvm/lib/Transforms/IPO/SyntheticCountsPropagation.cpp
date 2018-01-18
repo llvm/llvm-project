@@ -41,6 +41,7 @@
 
 using namespace llvm;
 using Scaled64 = ScaledNumber<uint64_t>;
+using ProfileCount = Function::ProfileCount;
 
 #define DEBUG_TYPE "synthetic-counts-propagation"
 
@@ -121,7 +122,8 @@ PreservedAnalyses SyntheticCountsPropagation::run(Module &M,
 
   // Set the counts as metadata.
   for (auto Entry : Counts)
-    Entry.first->setEntryCount(Entry.second, true);
+    Entry.first->setEntryCount(
+        ProfileCount(Entry.second, Function::PCT_Synthetic));
 
   return PreservedAnalyses::all();
 }

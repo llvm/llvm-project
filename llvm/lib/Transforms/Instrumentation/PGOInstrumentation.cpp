@@ -119,6 +119,7 @@
 #include <vector>
 
 using namespace llvm;
+using ProfileCount = Function::ProfileCount;
 
 #define DEBUG_TYPE "pgo-instrumentation"
 
@@ -1139,7 +1140,7 @@ void PGOUseFunc::populateCounters() {
   }
 #endif
   uint64_t FuncEntryCount = getBBInfo(&*F.begin()).CountValue;
-  F.setEntryCount(FuncEntryCount);
+  F.setEntryCount(ProfileCount(FuncEntryCount, Function::PCT_Real));
   uint64_t FuncMaxCount = FuncEntryCount;
   for (auto &BB : F) {
     auto BI = findBBInfo(&BB);

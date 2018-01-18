@@ -574,8 +574,11 @@ getLocationForCaller(const StackFrameContext *SFC,
       return PathDiagnosticLocation::createEnd(CallerBody, SM, CallerCtx);
     return PathDiagnosticLocation::create(CallerInfo->getDecl(), SM);
   }
+  case CFGElement::NewAllocator: {
+    const CFGNewAllocator &Alloc = Source.castAs<CFGNewAllocator>();
+    return PathDiagnosticLocation(Alloc.getAllocatorExpr(), SM, CallerCtx);
+  }
   case CFGElement::TemporaryDtor:
-  case CFGElement::NewAllocator:
     llvm_unreachable("not yet implemented!");
   case CFGElement::LifetimeEnds:
   case CFGElement::LoopExit:

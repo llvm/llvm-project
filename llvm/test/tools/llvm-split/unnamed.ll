@@ -2,16 +2,16 @@
 ; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 %s
 ; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 %s
 
-; CHECK0: declare dso_local hidden void @__llvmsplit_unnamed()
-; CHECK1: define dso_local hidden void @__llvmsplit_unnamed()
+; CHECK0: declare hidden void @__llvmsplit_unnamed()
+; CHECK1: define hidden void @__llvmsplit_unnamed()
 define internal void @0() {
   ; CHECK1: call void @foo()
   call void @foo()
   ret void
 }
 
-; CHECK0: declare dso_local hidden void @__llvmsplit_unnamed.1()
-; CHECK1: define dso_local hidden void @__llvmsplit_unnamed.1()
+; CHECK0: declare hidden void @__llvmsplit_unnamed.1()
+; CHECK1: define hidden void @__llvmsplit_unnamed.1()
 define internal void @1() {
   ; CHECK1: call void @foo()
   ; CHECK1: call void @foo()

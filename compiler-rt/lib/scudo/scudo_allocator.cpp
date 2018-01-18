@@ -17,6 +17,7 @@
 #include "scudo_allocator.h"
 #include "scudo_crc32.h"
 #include "scudo_flags.h"
+#include "scudo_interface_internal.h"
 #include "scudo_tsd.h"
 #include "scudo_utils.h"
 
@@ -735,10 +736,8 @@ uptr __sanitizer_get_allocated_size(const void *Ptr) {
 
 // Interface functions
 
-extern "C" {
 void __scudo_set_rss_limit(uptr LimitMb, s32 HardLimit) {
   if (!SCUDO_CAN_USE_PUBLIC_INTERFACE)
     return;
   Instance.setRssLimit(LimitMb, !!HardLimit);
 }
-}  // extern "C"

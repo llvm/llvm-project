@@ -233,6 +233,8 @@ public:
     assert((!hasLocalLinkage() || V == DefaultVisibility) &&
            "local linkage requires default visibility");
     Visibility = V;
+    if (!hasExternalWeakLinkage() && V != DefaultVisibility)
+      setDSOLocal(true);
   }
 
   /// If the value is "Thread Local", its value isn't shared by the threads.

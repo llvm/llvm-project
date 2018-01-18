@@ -22,11 +22,11 @@ _LIBCPP_CRT_FUNC terminate_handler __cdecl set_terminate(
 _LIBCPP_CRT_FUNC terminate_handler __cdecl _get_terminate();
 
 typedef void (__cdecl* unexpected_handler)();
-_LIBCPP_CRT_FUNC unexpected_handler __cdecl set_unexpected(
+unexpected_handler __cdecl set_unexpected(
     unexpected_handler _NewUnexpectedHandler) throw();
-_LIBCPP_CRT_FUNC unexpected_handler __cdecl _get_unexpected();
+unexpected_handler __cdecl _get_unexpected();
 
-_LIBCPP_CRT_FUNC int __cdecl __uncaught_exceptions();
+int __cdecl __uncaught_exceptions();
 }
 
 namespace std {

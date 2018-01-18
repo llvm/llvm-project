@@ -158,6 +158,10 @@ double ThreadCPUUsage() {
 #elif defined(BENCHMARK_OS_EMSCRIPTEN)
   // Emscripten doesn't support traditional threads
   return ProcessCPUUsage();
+#elif defined(BENCHMARK_OS_RTEMS)
+  // RTEMS doesn't support CLOCK_THREAD_CPUTIME_ID. See
+  // https://github.com/RTEMS/rtems/blob/master/cpukit/posix/src/clockgettime.c
+  return ProcessCPUUsage();
 #elif defined(CLOCK_THREAD_CPUTIME_ID)
   struct timespec ts;
   if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts) == 0) return MakeTime(ts);

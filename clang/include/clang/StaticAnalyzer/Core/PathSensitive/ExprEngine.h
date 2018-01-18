@@ -642,8 +642,8 @@ private:
   const CXXConstructExpr *findDirectConstructorForCurrentCFGElement();
 
   /// For a CXXConstructExpr, walk forward in the current CFG block to find the
-  /// CFGElement for the DeclStmt or CXXInitCtorInitializer for which is
-  /// directly constructed by this constructor. Returns None if the current
+  /// CFGElement for the DeclStmt or CXXInitCtorInitializer or CXXNewExpr which
+  /// is directly constructed by this constructor. Returns None if the current
   /// constructor expression did not directly construct into an existing
   /// region.
   Optional<CFGElement> findElementDirectlyInitializedByCurrentConstructor();
@@ -655,6 +655,30 @@ private:
   /// if not.
   const MemRegion *getRegionForConstructedObject(const CXXConstructExpr *CE,
                                                  ExplodedNode *Pred);
+
+  /// Store the region returned by operator new() so that the constructor
+  /// that follows it knew what location to initialize. The value should be
+  /// cleared once the respective CXXNewExpr CFGStmt element is processed.
+  static ProgramStateRef
+  setCXXNewAllocatorValue(ProgramStateRef State, const CXXNewExpr *CNE,
+                          const LocationContext *CallerLC, SVal V);
+
+  /// Retrieve the location returned by the current operator new().
+  static SVal
+  getCXXNewAllocatorValue(ProgramStateRef State, const CXXNewExpr *CNE,
+                          const LocationContext *CallerLC);
+
+  /// Clear the location returned by the respective operator new(). This needs
+  /// to be done as soon as CXXNewExpr CFG block is evaluated.
+  static ProgramStateRef
+  clearCXXNewAllocatorValue(ProgramStateRef State, const CXXNewExpr *CNE,
+                            const LocationContext *CallerLC);
+
+  /// Check if all allocator values are clear for the given context range
+  /// (including FromLC, not including ToLC). This is useful for assertions.
+  static bool areCXXNewAllocatorValuesClear(ProgramStateRef State,
+                                            const LocationContext *FromLC,
+                                            const LocationContext *ToLC);
 };
 
 /// Traits for storing the call processing policy inside GDM.

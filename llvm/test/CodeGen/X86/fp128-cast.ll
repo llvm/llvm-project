@@ -12,6 +12,7 @@
 @vu64 = common global i64 0, align 8
 @vf32 = common global float 0.000000e+00, align 4
 @vf64 = common global double 0.000000e+00, align 8
+@vf80 = common global x86_fp80 0xK00000000000000000000, align 8
 @vf128 = common global fp128 0xL00000000000000000000000000000000, align 16
 
 define void @TestFPExtF32_F128() {
@@ -50,6 +51,19 @@ entry:
 ; X64-NEXT:  callq      __extenddftf2
 ; X64-NEXT:  movaps     %xmm0, vf128(%rip)
 ; X64:       ret
+}
+
+define void @TestFPExtF80_F128() {
+entry:
+  %0 = load x86_fp80, x86_fp80* @vf80, align 8
+  %conv = fpext x86_fp80 %0 to fp128
+  store fp128 %conv, fp128* @vf128, align 16
+  ret void
+; X32-LABEL: TestFPExtF80_F128:
+; X32:       calll __extendxftf2
+;
+; X64-LABEL: TestFPExtF80_F128:
+; X64:       callq __extendxftf2
 }
 
 define void @TestFPToSIF128_I32() {
@@ -158,6 +172,19 @@ entry:
 ; X64-NEXT:  callq       __trunctfdf2
 ; X64-NEXT:  movsd       %xmm0, vf64(%rip)
 ; X64:       retq
+}
+
+define void @TestFPTruncF128_F80() {
+entry:
+  %0 = load fp128, fp128* @vf128, align 16
+  %conv = fptrunc fp128 %0 to x86_fp80
+  store x86_fp80 %conv, x86_fp80* @vf80, align 8
+  ret void
+; X32-LABEL: TestFPTruncF128_F80:
+; X32:       calll      __trunctfxf2
+;
+; X64-LABEL: TestFPTruncF128_F80:
+; X64:       callq      __trunctfxf2
 }
 
 define void @TestSIToFPI32_F128() {

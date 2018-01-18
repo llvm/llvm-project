@@ -66,6 +66,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Debug.h"
@@ -776,6 +777,9 @@ struct MachineOutliner : public ModulePass {
   /// linkonceodr linkage.
   bool OutlineFromLinkOnceODRs = false;
 
+  // Collection of IR functions created by the outliner.
+  std::vector<Function *> CreatedIRFunctions;
+
   StringRef getPassName() const override { return "Machine Outliner"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -1210,6 +1214,9 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
   F->setLinkage(GlobalValue::PrivateLinkage);
   F->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
 
+  // Save F so that we can add debug info later if we need to.
+  CreatedIRFunctions.push_back(F);
+
   BasicBlock *EntryBB = BasicBlock::Create(C, "entry", F);
   IRBuilder<> Builder(EntryBB);
   Builder.CreateRetVoid();
@@ -1233,12 +1240,12 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
     NewMI->dropMemRefs();
 
     // Don't keep debug information for outlined instructions.
-    // FIXME: This means outlined functions are currently undebuggable.
     NewMI->setDebugLoc(DebugLoc());
     MBB.insert(MBB.end(), NewMI);
   }
 
   TII.insertOutlinerEpilogue(MBB, MF, OF.MInfo);
+
   return &MF;
 }
 
@@ -1379,5 +1386,43 @@ bool MachineOutliner::runOnModule(Module &M) {
   pruneOverlaps(CandidateList, FunctionList, Mapper, MaxCandidateLen, *TII);
 
   // Outline each of the candidates and return true if something was outlined.
-  return outline(M, CandidateList, FunctionList, Mapper);
+  bool OutlinedSomething = outline(M, CandidateList, FunctionList, Mapper);
+
+  // If we have a compile unit, and we've outlined something, then set debug
+  // information on the outlined function.
+  if (M.debug_compile_units_begin() != M.debug_compile_units_end() &&
+      OutlinedSomething) {
+    std::unique_ptr<DIBuilder> DB = llvm::make_unique<DIBuilder>(M);
+
+    // Create a compile unit for the outlined function.
+    DICompileUnit *MCU = *M.debug_compile_units_begin();
+    DIFile *Unit = DB->createFile(M.getName(), "/");
+    DB->createCompileUnit(MCU->getSourceLanguage(), Unit, "machine-outliner",
+                          true, "", MCU->getRuntimeVersion(), StringRef(),
+                          DICompileUnit::DebugEmissionKind::NoDebug);
+
+    // Walk over each IR function we created in the outliner and create
+    // DISubprograms for each function.
+    for (Function *F : CreatedIRFunctions) {
+      DISubprogram *SP = DB->createFunction(
+          Unit /* Context */, F->getName(),
+          StringRef() /* Empty linkage name. */, Unit /* File */,
+          0 /* Line numbers don't matter*/,
+          DB->createSubroutineType(DB->getOrCreateTypeArray(None)), /* void */
+          false, true, 0, /* Line in scope doesn't matter*/
+          DINode::DIFlags::FlagArtificial /* Compiler-generated code. */,
+          true /* Outlined code is optimized code by definition. */);
+
+      // Don't add any new variables to the subprogram.
+      DB->finalizeSubprogram(SP);
+
+      // Attach subprogram to the function.
+      F->setSubprogram(SP);
+    }
+
+    // We're done with the DIBuilder.
+    DB->finalize();
+  }
+
+  return OutlinedSomething;
 }

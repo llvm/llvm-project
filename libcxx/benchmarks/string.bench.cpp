@@ -2,7 +2,7 @@
 #include <vector>
 #include <cstdint>
 
-#include "benchmark/benchmark_api.h"
+#include "benchmark/benchmark.h"
 #include "GenerateInput.hpp"
 
 constexpr std::size_t MAX_STRING_LEN = 8 << 14;
@@ -46,4 +46,4 @@ static void BM_StringFindMatch2(benchmark::State &state) {
 }
 BENCHMARK(BM_StringFindMatch2)->Range(1, MAX_STRING_LEN / 4);
 
-BENCHMARK_MAIN()
+BENCHMARK_MAIN();

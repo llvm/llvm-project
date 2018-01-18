@@ -330,15 +330,23 @@ static StringRef getCodeModel(ArgList &Args, DiagnosticsEngine &Diags) {
   return "default";
 }
 
-static StringRef getRelocModel(ArgList &Args, DiagnosticsEngine &Diags) {
+static llvm::Reloc::Model getRelocModel(ArgList &Args,
+                                        DiagnosticsEngine &Diags) {
   if (Arg *A = Args.getLastArg(OPT_mrelocation_model)) {
     StringRef Value = A->getValue();
-    if (Value == "static" || Value == "pic" || Value == "ropi" ||
-        Value == "rwpi" || Value == "ropi-rwpi" || Value == "dynamic-no-pic")
-      return Value;
+    auto RM = llvm::StringSwitch<llvm::Optional<llvm::Reloc::Model>>(Value)
+                  .Case("static", llvm::Reloc::Static)
+                  .Case("pic", llvm::Reloc::PIC_)
+                  .Case("ropi", llvm::Reloc::ROPI)
+                  .Case("rwpi", llvm::Reloc::RWPI)
+                  .Case("ropi-rwpi", llvm::Reloc::ROPI_RWPI)
+                  .Case("dynamic-no-pic", llvm::Reloc::DynamicNoPIC)
+                  .Default(None);
+    if (RM.hasValue())
+      return *RM;
     Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Value;
   }
-  return "pic";
+  return llvm::Reloc::PIC_;
 }
 
 /// \brief Create a new Regex instance out of the string value in \p RpassArg.

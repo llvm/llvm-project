@@ -97,17 +97,9 @@ define <8 x i64> @insert_subvector_512(i32 %x0, i32 %x1, <8 x i64> %v) nounwind 
 define <8 x i64> @insert_subvector_into_undef(i32 %x0, i32 %x1) nounwind {
 ; X32_AVX256-LABEL: insert_subvector_into_undef:
 ; X32_AVX256:       # %bb.0:
-; X32_AVX256-NEXT:    pushl %ebp
-; X32_AVX256-NEXT:    movl %esp, %ebp
-; X32_AVX256-NEXT:    andl $-8, %esp
-; X32_AVX256-NEXT:    subl $8, %esp
-; X32_AVX256-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32_AVX256-NEXT:    vmovlps %xmm0, (%esp)
 ; X32_AVX256-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X32_AVX256-NEXT:    vbroadcastsd %xmm0, %ymm0
 ; X32_AVX256-NEXT:    vmovaps %ymm0, %ymm1
-; X32_AVX256-NEXT:    movl %ebp, %esp
-; X32_AVX256-NEXT:    popl %ebp
 ; X32_AVX256-NEXT:    retl
 ;
 ; X64_AVX256-LABEL: insert_subvector_into_undef:

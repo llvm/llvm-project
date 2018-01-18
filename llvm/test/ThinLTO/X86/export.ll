@@ -5,8 +5,8 @@
 
 ; Ensure statics are promoted/renamed correctly from this file.
 ; RUN: llvm-lto -thinlto-action=promote %t1.bc -thinlto-index=%t3.bc -o - | llvm-dis -o - | FileCheck %s
-; CHECK-DAG: @staticvar.llvm.0 = dso_local hidden global
-; CHECK-DAG: define dso_local hidden void @staticfunc.llvm.0
+; CHECK-DAG: @staticvar.llvm.0 = hidden global
+; CHECK-DAG: define hidden void @staticfunc.llvm.0
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"
