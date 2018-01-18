@@ -37,12 +37,11 @@ public:
 
 static bool isArrayIndexOutOfBounds(CheckerContext &C, const Expr *Ex) {
   ProgramStateRef state = C.getState();
-  const LocationContext *LCtx = C.getLocationContext();
 
   if (!isa<ArraySubscriptExpr>(Ex))
     return false;
 
-  SVal Loc = state->getSVal(Ex, LCtx);
+  SVal Loc = C.getSVal(Ex);
   if (!Loc.isValid())
     return false;
 
@@ -66,9 +65,7 @@ static bool isShiftOverflow(const BinaryOperator *B, CheckerContext &C) {
 
 void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
                                        CheckerContext &C) const {
-  ProgramStateRef state = C.getState();
-  const LocationContext *LCtx = C.getLocationContext();
-  if (state->getSVal(B, LCtx).isUndef()) {
+  if (C.getSVal(B).isUndef()) {
 
     // Do not report assignments of uninitialized values inside swap functions.
     // This should allow to swap partially uninitialized structs
@@ -92,11 +89,11 @@ void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
     const Expr *Ex = nullptr;
     bool isLeft = true;
 
-    if (state->getSVal(B->getLHS(), LCtx).isUndef()) {
+    if (C.getSVal(B->getLHS()).isUndef()) {
       Ex = B->getLHS()->IgnoreParenCasts();
       isLeft = true;
     }
-    else if (state->getSVal(B->getRHS(), LCtx).isUndef()) {
+    else if (C.getSVal(B->getRHS()).isUndef()) {
       Ex = B->getRHS()->IgnoreParenCasts();
       isLeft = false;
     }

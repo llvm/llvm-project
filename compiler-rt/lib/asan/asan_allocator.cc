@@ -398,7 +398,7 @@ struct Allocator {
     if (UNLIKELY(!asan_inited))
       AsanInitFromRtl();
     if (RssLimitExceeded())
-      return AsanAllocator::FailureHandler::OnOOM();
+      return ReturnNullOrDieOnFailure::OnOOM();
     Flags &fl = *flags();
     CHECK(stack);
     const uptr min_alignment = SHADOW_GRANULARITY;
@@ -433,7 +433,7 @@ struct Allocator {
     if (size > kMaxAllowedMallocSize || needed_size > kMaxAllowedMallocSize) {
       Report("WARNING: AddressSanitizer failed to allocate 0x%zx bytes\n",
              (void*)size);
-      return AsanAllocator::FailureHandler::OnBadRequest();
+      return ReturnNullOrDieOnFailure::OnBadRequest();
     }
 
     AsanThread *t = GetCurrentThread();
@@ -446,8 +446,8 @@ struct Allocator {
       AllocatorCache *cache = &fallback_allocator_cache;
       allocated = allocator.Allocate(cache, needed_size, 8);
     }
-    if (!allocated)
-      return nullptr;
+    if (UNLIKELY(!allocated))
+      return ReturnNullOrDieOnFailure::OnOOM();
 
     if (*(u8 *)MEM_TO_SHADOW((uptr)allocated) == 0 && CanPoisonMemory()) {
       // Heap poisoning is enabled, but the allocator provides an unpoisoned
@@ -660,8 +660,8 @@ struct Allocator {
   }
 
   void *Calloc(uptr nmemb, uptr size, BufferedStackTrace *stack) {
-    if (CheckForCallocOverflow(size, nmemb))
-      return AsanAllocator::FailureHandler::OnBadRequest();
+    if (UNLIKELY(CheckForCallocOverflow(size, nmemb)))
+      return ReturnNullOrDieOnFailure::OnBadRequest();
     void *ptr = Allocate(nmemb * size, 8, stack, FROM_MALLOC, false);
     // If the memory comes from the secondary allocator no need to clear it
     // as it comes directly from mmap.
@@ -883,7 +883,7 @@ void *asan_pvalloc(uptr size, BufferedStackTrace *stack) {
   uptr PageSize = GetPageSizeCached();
   if (UNLIKELY(CheckForPvallocOverflow(size, PageSize))) {
     errno = errno_ENOMEM;
-    return AsanAllocator::FailureHandler::OnBadRequest();
+    return ReturnNullOrDieOnFailure::OnBadRequest();
   }
   // pvalloc(0) should allocate one page.
   size = size ? RoundUpTo(size, PageSize) : PageSize;
@@ -895,7 +895,7 @@ void *asan_memalign(uptr alignment, uptr size, BufferedStackTrace *stack,
                     AllocType alloc_type) {
   if (UNLIKELY(!IsPowerOfTwo(alignment))) {
     errno = errno_EINVAL;
-    return AsanAllocator::FailureHandler::OnBadRequest();
+    return ReturnNullOrDieOnFailure::OnBadRequest();
   }
   return SetErrnoOnNull(
       instance.Allocate(size, alignment, stack, alloc_type, true));
@@ -904,7 +904,7 @@ void *asan_memalign(uptr alignment, uptr size, BufferedStackTrace *stack,
 int asan_posix_memalign(void **memptr, uptr alignment, uptr size,
                         BufferedStackTrace *stack) {
   if (UNLIKELY(!CheckPosixMemalignAlignment(alignment))) {
-    AsanAllocator::FailureHandler::OnBadRequest();
+    ReturnNullOrDieOnFailure::OnBadRequest();
     return errno_EINVAL;
   }
   void *ptr = instance.Allocate(size, alignment, stack, FROM_MALLOC, true);

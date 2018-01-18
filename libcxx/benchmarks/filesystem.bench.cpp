@@ -1,6 +1,6 @@
 #include <experimental/filesystem>
 
-#include "benchmark/benchmark_api.h"
+#include "benchmark/benchmark.h"
 #include "GenerateInput.hpp"
 #include "test_iterators.h"
 
@@ -135,4 +135,4 @@ void BM_PathIterateOnceBackwards(benchmark::State &st, GenInputs gen) {
 BENCHMARK_CAPTURE(BM_PathIterateOnceBackwards, iterate_elements,
   getRandomStringInputs)->Arg(TestNumInputs);
 
-BENCHMARK_MAIN()
+BENCHMARK_MAIN();

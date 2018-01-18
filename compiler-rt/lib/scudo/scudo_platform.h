@@ -43,7 +43,11 @@
 
 // Maximum number of TSDs that can be created for the Shared model.
 #ifndef SCUDO_SHARED_TSD_POOL_SIZE
-# define SCUDO_SHARED_TSD_POOL_SIZE 32U
+# if SANITIZER_ANDROID
+#  define SCUDO_SHARED_TSD_POOL_SIZE 2U
+# else
+#  define SCUDO_SHARED_TSD_POOL_SIZE 32U
+# endif  // SANITIZER_ANDROID
 #endif  // SCUDO_SHARED_TSD_POOL_SIZE
 
 // The following allows the public interface functions to be disabled.

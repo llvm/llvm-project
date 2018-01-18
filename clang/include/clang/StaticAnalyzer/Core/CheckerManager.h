@@ -303,6 +303,13 @@ public:
                                      ExplodedNodeSet &Dst, ExplodedNode *Pred,
                                      ExprEngine &Eng);
 
+  /// \brief Run checkers between C++ operator new and constructor calls.
+  void runCheckersForNewAllocator(const CXXNewExpr *NE, SVal Target,
+                                  ExplodedNodeSet &Dst,
+                                  ExplodedNode *Pred,
+                                  ExprEngine &Eng,
+                                  bool wasInlined = false);
+
   /// \brief Run checkers for live symbols.
   ///
   /// Allows modifying SymbolReaper object. For example, checkers can explicitly
@@ -437,6 +444,9 @@ public:
   
   typedef CheckerFn<void (const Stmt *, CheckerContext &)>
       CheckBranchConditionFunc;
+
+  typedef CheckerFn<void (const CXXNewExpr *, SVal, CheckerContext &)>
+      CheckNewAllocatorFunc;
   
   typedef CheckerFn<void (SymbolReaper &, CheckerContext &)>
       CheckDeadSymbolsFunc;
@@ -493,6 +503,8 @@ public:
   void _registerForEndFunction(CheckEndFunctionFunc checkfn);
 
   void _registerForBranchCondition(CheckBranchConditionFunc checkfn);
+
+  void _registerForNewAllocator(CheckNewAllocatorFunc checkfn);
 
   void _registerForLiveSymbols(CheckLiveSymbolsFunc checkfn);
 
@@ -602,6 +614,8 @@ private:
   std::vector<CheckEndFunctionFunc> EndFunctionCheckers;
 
   std::vector<CheckBranchConditionFunc> BranchConditionCheckers;
+
+  std::vector<CheckNewAllocatorFunc> NewAllocatorCheckers;
 
   std::vector<CheckLiveSymbolsFunc> LiveSymbolsCheckers;
 

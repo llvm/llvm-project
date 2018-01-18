@@ -20,9 +20,8 @@ using namespace clang;
 using namespace ento;
 
 const FunctionDecl *CheckerContext::getCalleeDecl(const CallExpr *CE) const {
-  ProgramStateRef State = getState();
   const Expr *Callee = CE->getCallee();
-  SVal L = State->getSVal(Callee, Pred->getLocationContext());
+  SVal L = Pred->getSVal(Callee);
   return L.getAsFunctionDecl();
 }
 

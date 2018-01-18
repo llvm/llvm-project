@@ -1011,6 +1011,8 @@ _mm_cmpunord_ps(__m128 __a, __m128 __b)
 /// \brief Compares two 32-bit float values in the low-order bits of both
 ///    operands for equality and returns the result of the comparison.
 ///
+///    If either of the two lower 32-bit values is NaN, 0 is returned.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VCOMISS / COMISS </c>
@@ -1022,7 +1024,8 @@ _mm_cmpunord_ps(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
 ///    used in the comparison.
-/// \returns An integer containing the comparison results.
+/// \returns An integer containing the comparison results. If either of the
+///    two lower 32-bit values is NaN, 0 is returned.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comieq_ss(__m128 __a, __m128 __b)
 {
@@ -1033,6 +1036,8 @@ _mm_comieq_ss(__m128 __a, __m128 __b)
 ///    operands to determine if the first operand is less than the second
 ///    operand and returns the result of the comparison.
 ///
+///    If either of the two lower 32-bit values is NaN, 0 is returned.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VCOMISS / COMISS </c>
@@ -1044,7 +1049,8 @@ _mm_comieq_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
 ///    used in the comparison.
-/// \returns An integer containing the comparison results.
+/// \returns An integer containing the comparison results. If either of the two
+///     lower 32-bit values is NaN, 0 is returned.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comilt_ss(__m128 __a, __m128 __b)
 {
@@ -1055,6 +1061,8 @@ _mm_comilt_ss(__m128 __a, __m128 __b)
 ///    operands to determine if the first operand is less than or equal to the
 ///    second operand and returns the result of the comparison.
 ///
+///    If either of the two lower 32-bit values is NaN, 0 is returned.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VCOMISS / COMISS </c> instructions.
@@ -1065,7 +1073,8 @@ _mm_comilt_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
 ///    used in the comparison.
-/// \returns An integer containing the comparison results.
+/// \returns An integer containing the comparison results. If either of the two
+///     lower 32-bit values is NaN, 0 is returned.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comile_ss(__m128 __a, __m128 __b)
 {
@@ -1076,6 +1085,8 @@ _mm_comile_ss(__m128 __a, __m128 __b)
 ///    operands to determine if the first operand is greater than the second
 ///    operand and returns the result of the comparison.
 ///
+///    If either of the two lower 32-bit values is NaN, 0 is returned.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VCOMISS / COMISS </c> instructions.
@@ -1086,7 +1097,8 @@ _mm_comile_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
 ///    used in the comparison.
-/// \returns An integer containing the comparison results.
+/// \returns An integer containing the comparison results. If either of the
+///     two lower 32-bit values is NaN, 0 is returned.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comigt_ss(__m128 __a, __m128 __b)
 {
@@ -1097,6 +1109,8 @@ _mm_comigt_ss(__m128 __a, __m128 __b)
 ///    operands to determine if the first operand is greater than or equal to
 ///    the second operand and returns the result of the comparison.
 ///
+///    If either of the two lower 32-bit values is NaN, 0 is returned.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VCOMISS / COMISS </c> instructions.
@@ -1107,7 +1121,8 @@ _mm_comigt_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
 ///    used in the comparison.
-/// \returns An integer containing the comparison results.
+/// \returns An integer containing the comparison results. If either of the two
+///    lower 32-bit values is NaN, 0 is returned.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comige_ss(__m128 __a, __m128 __b)
 {
@@ -1118,6 +1133,8 @@ _mm_comige_ss(__m128 __a, __m128 __b)
 ///    operands to determine if the first operand is not equal to the second
 ///    operand and returns the result of the comparison.
 ///
+///    If either of the two lower 32-bit values is NaN, 1 is returned.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VCOMISS / COMISS </c> instructions.
@@ -1128,7 +1145,8 @@ _mm_comige_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
 ///    used in the comparison.
-/// \returns An integer containing the comparison results.
+/// \returns An integer containing the comparison results. If either of the
+///     two lower 32-bit values is NaN, 1 is returned.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comineq_ss(__m128 __a, __m128 __b)
 {
@@ -1139,6 +1157,8 @@ _mm_comineq_ss(__m128 __a, __m128 __b)
 ///    the low-order bits of both operands to determine equality and returns
 ///    the result of the comparison.
 ///
+///    If either of the two lower 32-bit values is NaN, 0 is returned.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VUCOMISS / UCOMISS </c> instructions.
@@ -1149,7 +1169,8 @@ _mm_comineq_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
 ///    used in the comparison.
-/// \returns An integer containing the comparison results.
+/// \returns An integer containing the comparison results. If either of the two
+///     lower 32-bit values is NaN, 0 is returned.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_ucomieq_ss(__m128 __a, __m128 __b)
 {
@@ -1160,6 +1181,8 @@ _mm_ucomieq_ss(__m128 __a, __m128 __b)
 ///    the low-order bits of both operands to determine if the first operand is
 ///    less than the second operand and returns the result of the comparison.
 ///
+///    If either of the two lower 32-bit values is NaN, 0 is returned.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VUCOMISS / UCOMISS </c> instructions.
@@ -1170,7 +1193,8 @@ _mm_ucomieq_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
 ///    used in the comparison.
-/// \returns An integer containing the comparison results.
+/// \returns An integer containing the comparison results. If either of the two
+///    lower 32-bit values is NaN, 0 is returned.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_ucomilt_ss(__m128 __a, __m128 __b)
 {
@@ -1182,6 +1206,8 @@ _mm_ucomilt_ss(__m128 __a, __m128 __b)
 ///    less than or equal to the second operand and returns the result of the
 ///    comparison.
 ///
+///    If either of the two lower 32-bit values is NaN, 0 is returned.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VUCOMISS / UCOMISS </c> instructions.
@@ -1192,7 +1218,8 @@ _mm_ucomilt_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
 ///    used in the comparison.
-/// \returns An integer containing the comparison results.
+/// \returns An integer containing the comparison results. If either of the two
+///     lower 32-bit values is NaN, 0 is returned.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_ucomile_ss(__m128 __a, __m128 __b)
 {
@@ -1204,6 +1231,8 @@ _mm_ucomile_ss(__m128 __a, __m128 __b)
 ///    greater than the second operand and returns the result of the
 ///    comparison.
 ///
+///    If either of the two lower 32-bit values is NaN, 0 is returned.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VUCOMISS / UCOMISS </c> instructions.
@@ -1214,7 +1243,8 @@ _mm_ucomile_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
 ///    used in the comparison.
-/// \returns An integer containing the comparison results.
+/// \returns An integer containing the comparison results. If either of the two
+///     lower 32-bit values is NaN, 0 is returned.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_ucomigt_ss(__m128 __a, __m128 __b)
 {
@@ -1226,6 +1256,8 @@ _mm_ucomigt_ss(__m128 __a, __m128 __b)
 ///    greater than or equal to the second operand and returns the result of
 ///    the comparison.
 ///
+///    If either of the two lower 32-bit values is NaN, 0 is returned.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VUCOMISS / UCOMISS </c> instructions.
@@ -1236,7 +1268,8 @@ _mm_ucomigt_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
 ///    used in the comparison.
-/// \returns An integer containing the comparison results.
+/// \returns An integer containing the comparison results. If either of the two
+///     lower 32-bit values is NaN, 0 is returned.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_ucomige_ss(__m128 __a, __m128 __b)
 {
@@ -1247,6 +1280,8 @@ _mm_ucomige_ss(__m128 __a, __m128 __b)
 ///    the low-order bits of both operands to determine inequality and returns
 ///    the result of the comparison.
 ///
+///    If either of the two lower 32-bit values is NaN, 1 is returned.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VUCOMISS / UCOMISS </c> instructions.
@@ -1257,7 +1292,8 @@ _mm_ucomige_ss(__m128 __a, __m128 __b)
 /// \param __b
 ///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
 ///    used in the comparison.
-/// \returns An integer containing the comparison results.
+/// \returns An integer containing the comparison results. If either of the two
+///    lower 32-bit values is NaN, 1 is returned.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_ucomineq_ss(__m128 __a, __m128 __b)
 {
@@ -1571,7 +1607,7 @@ _mm_cvt_pi2ps(__m128 __a, __m64 __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the <c> VMOVSS / MOVSS </c> instruction.
+/// This intrinsic has no corresponding instruction.
 ///
 /// \param __a
 ///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
@@ -1667,7 +1703,7 @@ _mm_load_ss(const float *__p)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the <c> VMOVSS / MOVSS + shuffling </c>
+/// This intrinsic corresponds to the <c> VBROADCASTSS / MOVSS + shuffling </c>
 ///    instruction.
 ///
 /// \param __p
@@ -1696,7 +1732,7 @@ _mm_load1_ps(const float *__p)
 /// \param __p
 ///    A pointer to a 128-bit memory location. The address of the memory
 ///    location has to be 128-bit aligned.
-/// \returns A 128-bit vector of [4 x float] containing the loaded valus.
+/// \returns A 128-bit vector of [4 x float] containing the loaded values.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_load_ps(const float *__p)
 {
@@ -1888,7 +1924,7 @@ _mm_setzero_ps(void)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the <c> VPEXTRQ / MOVQ </c> instruction.
+/// This intrinsic corresponds to the <c> VPEXTRQ / PEXTRQ </c> instruction.
 ///
 /// \param __p
 ///    A pointer to a 64-bit memory location.
@@ -2163,7 +2199,7 @@ void _mm_sfence(void);
 /// __m64 _mm_insert_pi16(__m64 a, int d, int n);
 /// \endcode
 ///
-/// This intrinsic corresponds to the <c> VPINSRW / PINSRW </c> instruction.
+/// This intrinsic corresponds to the <c> PINSRW </c> instruction.
 ///
 /// \param a
 ///    A 64-bit vector of [4 x i16].
@@ -2261,7 +2297,7 @@ _mm_min_pu8(__m64 __a, __m64 __b)
 }
 
 /// \brief Takes the most significant bit from each 8-bit element in a 64-bit
-///    integer vector to create a 16-bit mask value. Zero-extends the value to
+///    integer vector to create an 8-bit mask value. Zero-extends the value to
 ///    32-bit integer and writes it to the destination.
 ///
 /// \headerfile <x86intrin.h>
@@ -2270,8 +2306,8 @@ _mm_min_pu8(__m64 __a, __m64 __b)
 ///
 /// \param __a
 ///    A 64-bit integer vector containing the values with bits to be extracted.
-/// \returns The most significant bit from each 8-bit element in the operand,
-///    written to bits [15:0].
+/// \returns The most significant bit from each 8-bit element in \a __a,
+///    written to bits [7:0].
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_movemask_pi8(__m64 __a)
 {
@@ -2444,7 +2480,7 @@ extern "C" {
 ///    <li>
 ///      For checking rounding modes: _MM_ROUND_NEAREST, _MM_ROUND_DOWN,
 ///      _MM_ROUND_UP, _MM_ROUND_TOWARD_ZERO. There is a convenience wrapper
-///      _MM_GET_ROUNDING_MODE(x) where x is one of these macros.
+///      _MM_GET_ROUNDING_MODE().
 ///    </li>
 ///    <li>
 ///      For checking flush-to-zero mode: _MM_FLUSH_ZERO_ON, _MM_FLUSH_ZERO_OFF.
@@ -2457,11 +2493,11 @@ extern "C" {
 ///    </li>
 ///    </ul>
 ///
-///    For example, the expression below checks if an overflow exception has
+///    For example, the following expression checks if an overflow exception has
 ///    occurred:
 ///      ( _mm_getcsr() & _MM_EXCEPT_OVERFLOW )
 ///
-///    The following example gets the current rounding mode:
+///    The following expression gets the current rounding mode:
 ///      _MM_GET_ROUNDING_MODE()
 ///
 /// \headerfile <x86intrin.h>
@@ -2511,10 +2547,12 @@ unsigned int _mm_getcsr(void);
 ///      _mm_setcsr(_mm_getcsr() | _MM_ROUND_UP)
 ///
 ///    The following example sets the DAZ and FTZ flags:
-///      void setFlags() {
-///        _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON)
-///        _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON)
-///      }
+///    \code
+///    void setFlags() {
+///      _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+///      _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
+///    }
+///    \endcode
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2621,7 +2659,8 @@ _mm_unpacklo_ps(__m128 __a, __m128 __b)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the <c> VMOVSS / MOVSS </c> instruction.
+/// This intrinsic corresponds to the <c> VBLENDPS / BLENDPS / MOVSS </c>
+///    instruction.
 ///
 /// \param __a
 ///    A 128-bit floating-point vector of [4 x float]. The upper 96 bits are

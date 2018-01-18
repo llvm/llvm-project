@@ -275,7 +275,8 @@ void CoreEngine::dispatchWorkItem(ExplodedNode* Pred, ProgramPoint Loc,
              Loc.getAs<PostInitializer>() ||
              Loc.getAs<PostImplicitCall>() ||
              Loc.getAs<CallExitEnd>() ||
-             Loc.getAs<LoopExit>());
+             Loc.getAs<LoopExit>() ||
+             Loc.getAs<PostAllocatorCall>());
       HandlePostStmt(WU.getBlock(), WU.getIndex(), Pred);
       break;
   }

@@ -25,9 +25,9 @@ $nt = comdat any
 ; MERGED-SAME: comdat(${{"?lwt[^ ]+}})
 @lwt_aliasee = private unnamed_addr global [1 x i8*] [i8* null], comdat($lwt), !type !0
 
-; MERGED: {{@"?lwt_nl[^ ]+}} = dso_local hidden unnamed_addr global
+; MERGED: {{@"?lwt_nl[^ ]+}} = hidden unnamed_addr global
 ; MERGED-SAME: comdat(${{"?lwt[^ ]+}})
-; THIN: {{@"?lwt_nl[^ ]+}} = external dso_local hidden
+; THIN: {{@"?lwt_nl[^ ]+}} = external hidden
 @lwt_nl = internal unnamed_addr global i32 0, comdat($lwt)
 
 ; MERGED: @nlwt_aliasee = private unnamed_addr global
@@ -47,11 +47,11 @@ $nt = comdat any
 ; THIN-SAME: comdat($nt)
 @nt_nl = internal unnamed_addr global i32 0, comdat($nt)
 
-; MERGED: {{@"?lwt[^ ]+}} = dso_local hidden unnamed_addr alias
+; MERGED: {{@"?lwt[^ ]+}} = hidden unnamed_addr alias
 ; THIN: {{@"?lwt[^ ]+}} = external hidden
 @lwt = internal unnamed_addr alias [1 x i8*], [1 x i8*]* @lwt_aliasee
 
-; MERGED: {{@"?nlwt_nl[^ ]+}} = dso_local hidden unnamed_addr alias
+; MERGED: {{@"?nlwt_nl[^ ]+}} = hidden unnamed_addr alias
 ; THIN: {{@"?nlwt_nl[^ ]+}} = external hidden
 @nlwt_nl = internal unnamed_addr alias [1 x i8*], [1 x i8*]* @nlwt_aliasee
 

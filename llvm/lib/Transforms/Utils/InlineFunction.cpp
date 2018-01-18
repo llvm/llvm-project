@@ -72,6 +72,7 @@
 #include <vector>
 
 using namespace llvm;
+using ProfileCount = Function::ProfileCount;
 
 static cl::opt<bool>
 EnableNoAliasConversion("enable-noalias-to-md-conversion", cl::init(true),
@@ -1431,29 +1432,29 @@ static void updateCallerBFI(BasicBlock *CallSiteBlock,
 
 /// Update the branch metadata for cloned call instructions.
 static void updateCallProfile(Function *Callee, const ValueToValueMapTy &VMap,
-                              const Optional<uint64_t> &CalleeEntryCount,
+                              const ProfileCount &CalleeEntryCount,
                               const Instruction *TheCall,
                               ProfileSummaryInfo *PSI,
                               BlockFrequencyInfo *CallerBFI) {
-  if (!CalleeEntryCount.hasValue() || CalleeEntryCount.getValue() < 1)
+  if (!CalleeEntryCount.hasValue() || CalleeEntryCount.isSynthetic() ||
+      CalleeEntryCount.getCount() < 1)
     return;
-  Optional<uint64_t> CallSiteCount =
-      PSI ? PSI->getProfileCount(TheCall, CallerBFI) : None;
+  auto CallSiteCount = PSI ? PSI->getProfileCount(TheCall, CallerBFI) : None;
   uint64_t CallCount =
       std::min(CallSiteCount.hasValue() ? CallSiteCount.getValue() : 0,
-               CalleeEntryCount.getValue());
+               CalleeEntryCount.getCount());
 
   for (auto const &Entry : VMap)
     if (isa<CallInst>(Entry.first))
       if (auto *CI = dyn_cast_or_null<CallInst>(Entry.second))
-        CI->updateProfWeight(CallCount, CalleeEntryCount.getValue());
+        CI->updateProfWeight(CallCount, CalleeEntryCount.getCount());
   for (BasicBlock &BB : *Callee)
     // No need to update the callsite if it is pruned during inlining.
     if (VMap.count(&BB))
       for (Instruction &I : BB)
         if (CallInst *CI = dyn_cast<CallInst>(&I))
-          CI->updateProfWeight(CalleeEntryCount.getValue() - CallCount,
-                               CalleeEntryCount.getValue());
+          CI->updateProfWeight(CalleeEntryCount.getCount() - CallCount,
+                               CalleeEntryCount.getCount());
 }
 
 /// Update the entry count of callee after inlining.
@@ -1467,18 +1468,19 @@ static void updateCalleeCount(BlockFrequencyInfo *CallerBFI, BasicBlock *CallBB,
   // callsite is M, the new callee count is set to N - M. M is estimated from
   // the caller's entry count, its entry block frequency and the block frequency
   // of the callsite.
-  Optional<uint64_t> CalleeCount = Callee->getEntryCount();
+  auto CalleeCount = Callee->getEntryCount();
   if (!CalleeCount.hasValue() || !PSI)
     return;
-  Optional<uint64_t> CallCount = PSI->getProfileCount(CallInst, CallerBFI);
+  auto CallCount = PSI->getProfileCount(CallInst, CallerBFI);
   if (!CallCount.hasValue())
     return;
   // Since CallSiteCount is an estimate, it could exceed the original callee
   // count and has to be set to 0.
-  if (CallCount.getValue() > CalleeCount.getValue())
-    Callee->setEntryCount(0);
+  if (CallCount.getValue() > CalleeCount.getCount())
+    CalleeCount.setCount(0);
   else
-    Callee->setEntryCount(CalleeCount.getValue() - CallCount.getValue());
+    CalleeCount.setCount(CalleeCount.getCount() - CallCount.getValue());
+  Callee->setEntryCount(CalleeCount);
 }
 
 /// This function inlines the called function into the basic block of the

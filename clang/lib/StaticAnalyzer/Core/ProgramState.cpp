@@ -354,6 +354,17 @@ ProgramStateRef ProgramState::assumeInBound(DefinedOrUnknownSVal Idx,
   return CM.assume(this, inBound.castAs<DefinedSVal>(), Assumption);
 }
 
+ConditionTruthVal ProgramState::isNonNull(SVal V) const {
+  ConditionTruthVal IsNull = isNull(V);
+  if (IsNull.isUnderconstrained())
+    return IsNull;
+  return ConditionTruthVal(!IsNull.getValue());
+}
+
+ConditionTruthVal ProgramState::areEqual(SVal Lhs, SVal Rhs) const {
+  return stateMgr->getSValBuilder().areEqual(this, Lhs, Rhs);
+}
+
 ConditionTruthVal ProgramState::isNull(SVal V) const {
   if (V.isZeroConstant())
     return true;
@@ -781,8 +792,7 @@ bool ProgramState::isTainted(SymbolRef Sym, TaintTagType Kind) const {
           // complete. For example, this would not currently identify
           // overlapping fields in a union as tainted. To identify this we can
           // check for overlapping/nested byte offsets.
-          if (Kind == I.second &&
-              (R == I.first || R->isSubRegionOf(I.first)))
+          if (Kind == I.second && R->isSubRegionOf(I.first))
             return true;
         }
       }

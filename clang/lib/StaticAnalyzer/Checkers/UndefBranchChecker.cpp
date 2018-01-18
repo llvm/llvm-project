@@ -59,7 +59,7 @@ public:
 
 void UndefBranchChecker::checkBranchCondition(const Stmt *Condition,
                                               CheckerContext &Ctx) const {
-  SVal X = Ctx.getState()->getSVal(Condition, Ctx.getLocationContext());
+  SVal X = Ctx.getSVal(Condition);
   if (X.isUndef()) {
     // Generate a sink node, which implicitly marks both outgoing branches as
     // infeasible.

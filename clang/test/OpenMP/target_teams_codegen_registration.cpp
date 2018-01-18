@@ -393,7 +393,7 @@ struct ST {
 //CHECK:     ret void
 //CHECK:     declare i32 @__tgt_unregister_lib([[DSCTY]]*)
 
-//CHECK:     define linkonce dso_local hidden void @[[REGFN]](i8*)
+//CHECK:     define linkonce hidden void @[[REGFN]](i8*)
 //CHECK-SAME: comdat {
 //CHECK:     call i32 @__tgt_register_lib([[DSCTY]]* [[DESC]])
 //CHECK:     call i32 @__cxa_atexit(void (i8*)* @[[UNREGFN]], i8* bitcast ([[DSCTY]]* [[DESC]] to i8*),

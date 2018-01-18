@@ -123,9 +123,9 @@ static cl::opt<cl::boolOrDefault>
 EnableFastISelOption("fast-isel", cl::Hidden,
   cl::desc("Enable the \"fast\" instruction selector"));
 
-static cl::opt<cl::boolOrDefault>
-    EnableGlobalISel("global-isel", cl::Hidden,
-                     cl::desc("Enable the \"global\" instruction selector"));
+static cl::opt<cl::boolOrDefault> EnableGlobalISelOption(
+    "global-isel", cl::Hidden,
+    cl::desc("Enable the \"global\" instruction selector"));
 
 static cl::opt<std::string> PrintMachineInstrs(
     "print-machineinstrs", cl::ValueOptional, cl::desc("Print machine instrs"),
@@ -704,19 +704,18 @@ void TargetPassConfig::addISelPrepare() {
 }
 
 bool TargetPassConfig::addCoreISelPasses() {
-  // Enable FastISel with -fast, but allow that to be overridden.
+  // Enable FastISel with -fast-isel, but allow that to be overridden.
   TM->setO0WantsFastISel(EnableFastISelOption != cl::BOU_FALSE);
   if (EnableFastISelOption == cl::BOU_TRUE ||
       (TM->getOptLevel() == CodeGenOpt::None && TM->getO0WantsFastISel()))
     TM->setFastISel(true);
 
-  // Ask the target for an isel.
-  // Enable GlobalISel if the target wants to, but allow that to be overriden.
+  // Ask the target for an instruction selector.
   // Explicitly enabling fast-isel should override implicitly enabled
   // global-isel.
-  if (EnableGlobalISel == cl::BOU_TRUE ||
-      (EnableGlobalISel == cl::BOU_UNSET && isGlobalISelEnabled() &&
-       EnableFastISelOption != cl::BOU_TRUE)) {
+  if (EnableGlobalISelOption == cl::BOU_TRUE ||
+      (EnableGlobalISelOption == cl::BOU_UNSET &&
+       TM->Options.EnableGlobalISel && EnableFastISelOption != cl::BOU_TRUE)) {
     if (addIRTranslator())
       return true;
 
@@ -1130,18 +1129,13 @@ void TargetPassConfig::addBlockPlacement() {
 //===---------------------------------------------------------------------===//
 /// GlobalISel Configuration
 //===---------------------------------------------------------------------===//
-
-bool TargetPassConfig::isGlobalISelEnabled() const {
-  return false;
-}
-
 bool TargetPassConfig::isGlobalISelAbortEnabled() const {
   if (EnableGlobalISelAbort.getNumOccurrences() > 0)
     return EnableGlobalISelAbort == 1;
 
   // When no abort behaviour is specified, we don't abort if the target says
   // that GISel is enabled.
-  return !isGlobalISelEnabled();
+  return !TM->Options.EnableGlobalISel;
 }
 
 bool TargetPassConfig::reportDiagnosticWhenGlobalISelFallback() const {

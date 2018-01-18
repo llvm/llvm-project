@@ -1764,8 +1764,8 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
                                    (FromType == S.Context.LongDoubleTy &&
                                     ToType == S.Context.Float128Ty));
       if (Float128AndLongDouble &&
-          (&S.Context.getFloatTypeSemantics(S.Context.LongDoubleTy) !=
-           &llvm::APFloat::IEEEdouble()))
+          (&S.Context.getFloatTypeSemantics(S.Context.LongDoubleTy) ==
+           &llvm::APFloat::PPCDoubleDouble()))
         return false;
     }
     // Floating point conversions (C++ 4.8).

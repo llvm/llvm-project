@@ -81,12 +81,12 @@ define void @vf2(i8*) {
   ret void
 }
 
-; CHECK: define dso_local hidden void @"vf3$merged"(i8*) {
+; CHECK: define hidden void @"vf3$merged"(i8*) {
 define internal void @vf3(i8*) {
   ret void
 }
 
-; CHECK: define dso_local hidden void @"vf4$merged"(i8*) comdat {
+; CHECK: define hidden void @"vf4$merged"(i8*) comdat {
 define internal void @vf4(i8*) comdat {
   ret void
 }

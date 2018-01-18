@@ -1,6 +1,5 @@
-#undef pow
-#define pow __clc_pow
-
-#define __CLC_FUNCTION __clc_pow
-#define __CLC_INTRINSIC "llvm.pow"
-#include <clc/math/binary_intrin.inc>
+#define __CLC_FUNCTION pow
+#define __CLC_BODY <clc/math/binary_decl_tt.inc>
+#include <clc/math/gentype.inc>
+#undef __CLC_BODY
+#undef __CLC_FUNCTION
