@@ -97,7 +97,6 @@ namespace {
     bool runOnLoop(Loop *L, LPPassManager &LPM) override;
 
   private:
-    unsigned getStoreSizeInBytes(StoreInst *SI);
     int getSCEVStride(const SCEVAddRecExpr *StoreEv);
     bool isLegalStore(Loop *CurLoop, StoreInst *SI);
     void collectStores(Loop *CurLoop, BasicBlock *BB,
@@ -1789,15 +1788,6 @@ bool PolynomialMultiplyRecognize::recognize() {
   return true;
 }
 
-
-unsigned HexagonLoopIdiomRecognize::getStoreSizeInBytes(StoreInst *SI) {
-  uint64_t SizeInBits = DL->getTypeSizeInBits(SI->getValueOperand()->getType());
-  assert(((SizeInBits & 7) || (SizeInBits >> 32) == 0) &&
-         "Don't overflow unsigned.");
-  return (unsigned)SizeInBits >> 3;
-}
-
-
 int HexagonLoopIdiomRecognize::getSCEVStride(const SCEVAddRecExpr *S) {
   if (const SCEVConstant *SC = dyn_cast<SCEVConstant>(S->getOperand(1)))
     return SC->getAPInt().getSExtValue();
@@ -1830,7 +1820,7 @@ bool HexagonLoopIdiomRecognize::isLegalStore(Loop *CurLoop, StoreInst *SI) {
   int Stride = getSCEVStride(StoreEv);
   if (Stride == 0)
     return false;
-  unsigned StoreSize = getStoreSizeInBytes(SI);
+  unsigned StoreSize = DL->getTypeStoreSize(SI->getValueOperand()->getType());
   if (StoreSize != unsigned(std::abs(Stride)))
     return false;
 
@@ -1908,7 +1898,7 @@ bool HexagonLoopIdiomRecognize::processCopyingStore(Loop *CurLoop,
   Value *StorePtr = SI->getPointerOperand();
   auto *StoreEv = cast<SCEVAddRecExpr>(SE->getSCEV(StorePtr));
   unsigned Stride = getSCEVStride(StoreEv);
-  unsigned StoreSize = getStoreSizeInBytes(SI);
+  unsigned StoreSize = DL->getTypeStoreSize(SI->getValueOperand()->getType());
   if (Stride != StoreSize)
     return false;
 
