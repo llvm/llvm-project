@@ -517,14 +517,18 @@ bool invokeCodeComplete(const Context &Ctx,
   std::unique_ptr<llvm::MemoryBuffer> ContentsBuffer =
       llvm::MemoryBuffer::getMemBufferCopy(Contents, FileName);
 
-  // Attempt to reuse the PCH from precompiled preamble, if it was built.
+  // We reuse the preamble whether it's valid or not. This is a
+  // correctness/performance tradeoff: building without a preamble is slow, and
+  // completion is latency-sensitive.
   if (Preamble) {
     auto Bounds =
         ComputePreambleBounds(*CI->getLangOpts(), ContentsBuffer.get(), 0);
-    if (!Preamble->CanReuse(*CI, ContentsBuffer.get(), Bounds, VFS.get()))
-      Preamble = nullptr;
+    // FIXME(ibiryukov): Remove this call to CanReuse() after we'll fix
+    // clients relying on getting stats for preamble files during code
+    // completion.
+    // Note that results of CanReuse() are ignored, see the comment above.
+    Preamble->CanReuse(*CI, ContentsBuffer.get(), Bounds, VFS.get());
   }
-
   auto Clang = prepareCompilerInstance(
       std::move(CI), Preamble, std::move(ContentsBuffer), std::move(PCHs),
       std::move(VFS), DummyDiagsConsumer);
