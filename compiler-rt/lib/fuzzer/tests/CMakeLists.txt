@@ -18,6 +18,10 @@ else()
   list(APPEND LIBFUZZER_UNITTEST_LINK_FLAGS -lstdc++ -lpthread)
 endif()
 
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND COMPILER_RT_LIBCXX_PATH)
+  list(APPEND LIBFUZZER_UNITTEST_CFLAGS -nostdinc++ -D_LIBCPP_ABI_VERSION=__Fuzzer)
+endif()
+
 foreach(arch ${FUZZER_SUPPORTED_ARCH})
   set(LIBFUZZER_TEST_RUNTIME RTFuzzerTest.${arch})
   if(APPLE)
@@ -33,14 +37,20 @@ foreach(arch ${FUZZER_SUPPORTED_ARCH})
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     FOLDER "Compiler-RT Runtime tests")
 
+  if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND COMPILER_RT_LIBCXX_PATH)
+    set(LIBFUZZER_TEST_RUNTIME_DEPS libcxx_fuzzer_${arch})
+    set(LIBFUZZER_TEST_RUNTIME_CFLAGS -isystem ${LIBCXX_${arch}_PREFIX}/include/c++/v1)
+    set(LIBFUZZER_TEST_RUNTIME_LINK_FLAGS ${LIBCXX_${arch}_PREFIX}/lib/libc++.a)
+  endif()
+
   set(FuzzerTestObjects)
   generate_compiler_rt_tests(FuzzerTestObjects
     FuzzerUnitTests "Fuzzer-${arch}-Test" ${arch}
     SOURCES FuzzerUnittest.cpp ${COMPILER_RT_GTEST_SOURCE}
     RUNTIME ${LIBFUZZER_TEST_RUNTIME}
-    DEPS gtest
-    CFLAGS ${LIBFUZZER_UNITTEST_CFLAGS}
-    LINK_FLAGS ${LIBFUZZER_UNITTEST_LINK_FLAGS})
+    DEPS gtest ${LIBFUZZER_TEST_RUNTIME_DEPS}
+    CFLAGS ${LIBFUZZER_UNITTEST_CFLAGS} ${LIBFUZZER_TEST_RUNTIME_CFLAGS}
+    LINK_FLAGS ${LIBFUZZER_UNITTEST_LINK_FLAGS} ${LIBFUZZER_TEST_RUNTIME_LINK_FLAGS})
   set_target_properties(FuzzerUnitTests PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 endforeach()

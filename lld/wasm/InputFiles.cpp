@@ -252,9 +252,6 @@ void ObjFile::initializeSymbols() {
     case WasmSymbol::SymbolType::GLOBAL_IMPORT:
       S = createUndefined(WasmSym, Symbol::Kind::UndefinedGlobalKind);
       break;
-    case WasmSymbol::SymbolType::DEBUG_FUNCTION_NAME:
-      // These are for debugging only, no need to create linker symbols for them
-      continue;
     }
 
     Symbols.push_back(S);

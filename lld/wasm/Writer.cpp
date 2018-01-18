@@ -469,58 +469,32 @@ void Writer::createLinkingSection() {
 
 // Create the custom "name" section containing debug symbol names.
 void Writer::createNameSection() {
-  // Create an array of all function sorted by function index space
-  std::vector<const Symbol *> Names;
+  unsigned NumNames = ImportedFunctions.size();
+  for (const InputFunction *F : DefinedFunctions)
+    if (!F->getName().empty())
+      ++NumNames;
 
-  auto AddToNames = [&](Symbol* S) {
-    if (!S->isFunction() || S->WrittenToNameSec)
-        return;
-    // We also need to guard against two different symbols (two different
-    // names) for the same wasm function.  While this is possible (aliases)
-    // it is not legal in the "name" section.
-    InputFunction *Function = S->getFunction();
-    if (Function) {
-      if (Function->WrittenToNameSec)
-        return;
-      Function->WrittenToNameSec = true;
-    }
-    S->WrittenToNameSec = true;
-    Names.emplace_back(S);
-  };
-
-  for (ObjFile *File : Symtab->ObjectFiles) {
-    Names.reserve(Names.size() + File->getSymbols().size());
-    DEBUG(dbgs() << "adding names from: " << File->getName() << "\n");
-    for (Symbol *S : File->getSymbols()) {
-      if (S->isWeak())
-        continue;
-      AddToNames(S);
-    }
-  }
-
-  DEBUG(dbgs() << "adding symtab names\n");
-  for (Symbol *S : Symtab->getSymbols()) {
-    DEBUG(dbgs() << "sym: " << S->getName() << "\n");
-    if (S->getFile())
-      continue;
-    AddToNames(S);
-  }
+  if (NumNames == 0)
+    return;
 
   SyntheticSection *Section = createSyntheticSection(WASM_SEC_CUSTOM, "name");
 
-  std::sort(Names.begin(), Names.end(), [](const Symbol *A, const Symbol *B) {
-    return A->getOutputIndex() < B->getOutputIndex();
-  });
-
   SubSection FunctionSubsection(WASM_NAMES_FUNCTION);
   raw_ostream &OS = FunctionSubsection.getStream();
-  writeUleb128(OS, Names.size(), "name count");
+  writeUleb128(OS, NumNames, "name count");
 
-  // We have to iterate through the inputs twice so that all the imports
-  // appear first before any of the local function names.
-  for (const Symbol *S : Names) {
-    writeUleb128(OS, S->getOutputIndex(), "func index");
+  // Names must appear in function index order.  As it happens ImportedFunctions
+  // and DefinedFunctions are numbers in order with imported functions coming
+  // first.
+  for (const Symbol *S : ImportedFunctions) {
+    writeUleb128(OS, S->getOutputIndex(), "import index");
     writeStr(OS, S->getName(), "symbol name");
+  }
+  for (const InputFunction *F : DefinedFunctions) {
+    if (!F->getName().empty()) {
+      writeUleb128(OS, F->getOutputIndex(), "func index");
+      writeStr(OS, F->getName(), "symbol name");
+    }
   }
 
   FunctionSubsection.finalizeContents();
@@ -784,7 +758,9 @@ void Writer::createCtorFunction() {
   ArrayRef<uint8_t> BodyArray(
       reinterpret_cast<const uint8_t *>(CtorFunctionBody.data()),
       CtorFunctionBody.size());
-  CtorFunction = llvm::make_unique<SyntheticFunction>(Signature, BodyArray);
+  CtorFunction = llvm::make_unique<SyntheticFunction>(
+      Signature, BodyArray, Config->CtorSymbol->getName());
+  CtorFunction->setOutputIndex(FunctionIndex);
   DefinedFunctions.emplace_back(CtorFunction.get());
 }
 

@@ -17,12 +17,9 @@
 // This class can (de)allocate only large chunks of memory using mmap/unmap.
 // The main purpose of this allocator is to cover large and rare allocation
 // sizes not covered by more efficient allocators (e.g. SizeClassAllocator64).
-template <class MapUnmapCallback = NoOpMapUnmapCallback,
-          class FailureHandlerT = ReturnNullOrDieOnFailure>
+template <class MapUnmapCallback = NoOpMapUnmapCallback>
 class LargeMmapAllocator {
  public:
-  typedef FailureHandlerT FailureHandler;
-
   void InitLinkerInitialized() {
     page_size_ = GetPageSizeCached();
   }
@@ -38,12 +35,16 @@ class LargeMmapAllocator {
     if (alignment > page_size_)
       map_size += alignment;
     // Overflow.
-    if (map_size < size)
-      return FailureHandler::OnBadRequest();
+    if (map_size < size) {
+      Report("WARNING: %s: LargeMmapAllocator allocation overflow: "
+             "0x%zx bytes with 0x%zx alignment requested\n",
+             SanitizerToolName, map_size, alignment);
+      return nullptr;
+    }
     uptr map_beg = reinterpret_cast<uptr>(
         MmapOrDieOnFatalError(map_size, "LargeMmapAllocator"));
     if (!map_beg)
-      return FailureHandler::OnOOM();
+      return nullptr;
     CHECK(IsAligned(map_beg, page_size_));
     MapUnmapCallback().OnMap(map_beg, map_size);
     uptr map_end = map_beg + map_size;

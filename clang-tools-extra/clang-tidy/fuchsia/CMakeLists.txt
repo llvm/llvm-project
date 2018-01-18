@@ -5,6 +5,7 @@ add_clang_library(clangTidyFuchsiaModule
   FuchsiaTidyModule.cpp
   OverloadedOperatorCheck.cpp
   StaticallyConstructedObjectsCheck.cpp
+  TrailingReturnCheck.cpp
   VirtualInheritanceCheck.cpp
 
   LINK_LIBS

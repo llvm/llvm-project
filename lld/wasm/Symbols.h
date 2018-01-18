@@ -38,8 +38,7 @@ public:
     InvalidKind,
   };
 
-  Symbol(StringRef Name, uint32_t Flags)
-      : WrittenToNameSec(0), Flags(Flags), Name(Name) {}
+  Symbol(StringRef Name, uint32_t Flags) : Flags(Flags), Name(Name) {}
 
   Kind getKind() const { return SymbolKind; }
 
@@ -99,10 +98,6 @@ public:
   void setArchiveSymbol(const Archive::Symbol &Sym) { ArchiveSymbol = Sym; }
   const Archive::Symbol &getArchiveSymbol() { return ArchiveSymbol; }
   InputFunction *getFunction() { return Function; }
-
-  // This bit is used by Writer::writeNameSection() to prevent
-  // symbols from being written to the symbol table more than once.
-  unsigned WrittenToNameSec : 1;
 
 protected:
   uint32_t Flags;

@@ -47,7 +47,7 @@ typedef SizeClassAllocatorLocalCache<PrimaryInternalAllocator>
     InternalAllocatorCache;
 
 typedef CombinedAllocator<PrimaryInternalAllocator, InternalAllocatorCache,
-                          LargeMmapAllocator<NoOpMapUnmapCallback, DieOnFailure>
+                          LargeMmapAllocator<NoOpMapUnmapCallback>
                          > InternalAllocator;
 
 void *InternalAlloc(uptr size, InternalAllocatorCache *cache = nullptr,
