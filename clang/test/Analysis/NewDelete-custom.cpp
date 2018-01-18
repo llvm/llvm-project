@@ -4,7 +4,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDelete,cplusplus.NewDeleteLeaks,unix.Malloc -std=c++11 -analyzer-config c++-allocator-inlining=true -DLEAKS=1 -DALLOCATOR_INLINING=1 -fblocks -verify %s
 #include "Inputs/system-header-simulator-cxx.h"
 
-#if !LEAKS
+#if !(LEAKS && !ALLOCATOR_INLINING)
 // expected-no-diagnostics
 #endif
 
@@ -61,14 +61,11 @@ void testNewExpr() {
 void testOpNewNoThrow() {
   void *p = operator new(0, std::nothrow); // call is inlined, no warn
 }
-#if LEAKS
-// expected-warning@-2{{Potential leak of memory pointed to by 'p'}}
-#endif
 
 void testNewExprNoThrow() {
   int *p = new(std::nothrow) int;
 }
-#if LEAKS
+#if LEAKS && !ALLOCATOR_INLINING
 // expected-warning@-2{{Potential leak of memory pointed to by 'p'}}
 #endif
 
