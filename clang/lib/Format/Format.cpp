@@ -41,7 +41,6 @@
 #include <algorithm>
 #include <memory>
 #include <string>
-#include <unordered_set>
 
 #define DEBUG_TYPE "format-formatter"
 
@@ -49,16 +48,6 @@ using clang::format::FormatStyle;
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(clang::format::FormatStyle::IncludeCategory)
 LLVM_YAML_IS_SEQUENCE_VECTOR(clang::format::FormatStyle::RawStringFormat)
-
-namespace std {
-// Allow using StringRef in std::unordered_set.
-template <> struct hash<llvm::StringRef> {
-public:
-  size_t operator()(const llvm::StringRef &s) const {
-    return llvm::hash_value(s);
-  }
-};
-} // namespace std
 
 namespace llvm {
 namespace yaml {
@@ -1432,7 +1421,8 @@ public:
 private:
   static bool guessIsObjC(const SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
                           const AdditionalKeywords &Keywords) {
-    static const std::unordered_set<StringRef> FoundationIdentifiers = {
+    // Keep this array sorted, since we are binary searching over it.
+    static constexpr llvm::StringLiteral FoundationIdentifiers[] = {
         "CGFloat",
         "NSAffineTransform",
         "NSArray",
@@ -1490,8 +1480,9 @@ private:
               FormatTok->isOneOf(tok::numeric_constant, tok::l_square,
                                  tok::l_brace))) ||
             (FormatTok->Tok.isAnyIdentifier() &&
-             FoundationIdentifiers.find(FormatTok->TokenText) !=
-                 FoundationIdentifiers.end()) ||
+             std::binary_search(std::begin(FoundationIdentifiers),
+                                std::end(FoundationIdentifiers),
+                                FormatTok->TokenText)) ||
             FormatTok->is(TT_ObjCStringLiteral) ||
             FormatTok->isOneOf(Keywords.kw_NS_ENUM, Keywords.kw_NS_OPTIONS,
                                TT_ObjCBlockLBrace, TT_ObjCBlockLParen,

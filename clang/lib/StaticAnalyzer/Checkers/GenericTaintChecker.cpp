@@ -468,7 +468,7 @@ bool GenericTaintChecker::checkPre(const CallExpr *CE, CheckerContext &C) const{
 Optional<SVal> GenericTaintChecker::getPointedToSVal(CheckerContext &C,
                                                      const Expr *Arg) {
   ProgramStateRef State = C.getState();
-  SVal AddrVal = State->getSVal(Arg->IgnoreParens(), C.getLocationContext());
+  SVal AddrVal = C.getSVal(Arg->IgnoreParens());
   if (AddrVal.isUnknownOrUndef())
     return None;
 
@@ -621,7 +621,7 @@ ProgramStateRef GenericTaintChecker::postRetTaint(const CallExpr *CE,
 
 bool GenericTaintChecker::isStdin(const Expr *E, CheckerContext &C) {
   ProgramStateRef State = C.getState();
-  SVal Val = State->getSVal(E, C.getLocationContext());
+  SVal Val = C.getSVal(E);
 
   // stdin is a pointer, so it would be a region.
   const MemRegion *MemReg = Val.getAsRegion();

@@ -2843,6 +2843,20 @@ namespaceDecl(isInline()) will match n::m.
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isNoReturn0')"><a name="isNoReturn0Anchor">isNoReturn</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isNoReturn0"><pre>Matches FunctionDecls that have a noreturn attribute.
+
+Given
+  void nope();
+  [[noreturn]] void a();
+  __attribute__((noreturn)) void b();
+  struct c { [[noreturn]] c(); };
+functionDecl(isNoReturn())
+  matches all of those except
+  void nope();
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isNoThrow0')"><a name="isNoThrow0Anchor">isNoThrow</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isNoThrow0"><pre>Matches functions that have a non-throwing exception specification.
 
