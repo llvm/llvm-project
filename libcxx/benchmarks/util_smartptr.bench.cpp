@@ -9,7 +9,7 @@
 
 #include <memory>
 
-#include "benchmark/benchmark_api.h"
+#include "benchmark/benchmark.h"
 
 static void BM_SharedPtrCreateDestroy(benchmark::State& st) {
   while (st.KeepRunning()) {
@@ -39,4 +39,4 @@ static void BM_WeakPtrIncDecRef(benchmark::State& st) {
 }
 BENCHMARK(BM_WeakPtrIncDecRef);
 
-BENCHMARK_MAIN()
+BENCHMARK_MAIN();

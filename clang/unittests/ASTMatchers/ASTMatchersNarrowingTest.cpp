@@ -2107,5 +2107,10 @@ TEST(HasDefinition, MatchesUnionDefinition) {
                       cxxRecordDecl(hasDefinition())));
 }
 
+TEST(IsScopedEnum, MatchesScopedEnum) {
+  EXPECT_TRUE(matches("enum class X {};", enumDecl(isScoped())));
+  EXPECT_TRUE(notMatches("enum X {};", enumDecl(isScoped())));
+}
+
 } // namespace ast_matchers
 } // namespace clang

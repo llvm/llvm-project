@@ -2644,6 +2644,15 @@ designatorCountIs(2)
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1EnumDecl.html">EnumDecl</a>&gt;</td><td class="name" onclick="toggle('isScoped0')"><a name="isScoped0Anchor">isScoped</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isScoped0"><pre>Matches C++11 scoped enum declaration.
+
+Example matches Y (matcher = enumDecl(isScoped()))
+enum X {};
+enum class Y {};
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FieldDecl.html">FieldDecl</a>&gt;</td><td class="name" onclick="toggle('hasBitWidth0')"><a name="hasBitWidth0Anchor">hasBitWidth</a></td><td>unsigned Width</td></tr>
 <tr><td colspan="4" class="doc" id="hasBitWidth0"><pre>Matches non-static data members that are bit-fields of the specified
 bit width.
