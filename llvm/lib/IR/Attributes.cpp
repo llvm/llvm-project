@@ -383,6 +383,8 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     return "strictfp";
   if (hasAttribute(Attribute::StructRet))
     return "sret";
+  if (hasAttribute(Attribute::SanitizeCilk))
+    return "sanitize_cilk";
   if (hasAttribute(Attribute::SanitizeThread))
     return "sanitize_thread";
   if (hasAttribute(Attribute::SanitizeMemory))

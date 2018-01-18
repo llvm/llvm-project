@@ -1299,6 +1299,9 @@ static uint64_t getRawAttributeMask(Attribute::AttrKind Val) {
   case Attribute::SanitizeMemTag:
     llvm_unreachable("sanitize_memtag attribute not supported in raw format");
     break;
+  case Attribute::SanitizeCilk:
+    llvm_unreachable("sanitize_cilk attribute not supported in raw format");
+    break;
   }
   llvm_unreachable("Unsupported attribute type");
 }
@@ -1516,6 +1519,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::StructRet;
   case bitc::ATTR_KIND_SANITIZE_ADDRESS:
     return Attribute::SanitizeAddress;
+  case bitc::ATTR_KIND_SANITIZE_CILK:
+    return Attribute::SanitizeCilk;
   case bitc::ATTR_KIND_SANITIZE_HWADDRESS:
     return Attribute::SanitizeHWAddress;
   case bitc::ATTR_KIND_SANITIZE_THREAD:
