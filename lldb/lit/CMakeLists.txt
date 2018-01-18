@@ -11,6 +11,10 @@ else()
   set(ENABLE_SHARED 0)
 endif(BUILD_SHARED_LIBS)
 
+# the value is not canonicalized within LLVM
+llvm_canonicalize_cmake_booleans(
+  LLVM_ENABLE_ZLIB)
+
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg)
