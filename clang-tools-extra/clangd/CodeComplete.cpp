@@ -643,7 +643,7 @@ clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts() const {
   clang::CodeCompleteOptions Result;
   Result.IncludeCodePatterns = EnableSnippets && IncludeCodePatterns;
   Result.IncludeMacros = IncludeMacros;
-  Result.IncludeGlobals = IncludeGlobals;
+  Result.IncludeGlobals = true;
   Result.IncludeBriefComments = IncludeBriefComments;
 
   // When an is used, Sema is responsible for completing the main file,
