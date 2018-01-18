@@ -25,8 +25,8 @@ class REPLNSObjectSubclassTest (lldbrepl.REPLTest):
     mydir = lldbrepl.REPLTest.compute_mydir(__file__)
 
     @decorators.swiftTest
-    @decorators.skipUnlessDarwin
     @decorators.no_debug_info_test
+    @decorators.skipIf
     def testREPL(self):
         lldbrepl.REPLTest.testREPL(self)
 
