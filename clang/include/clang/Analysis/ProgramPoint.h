@@ -589,7 +589,7 @@ public:
 
 private:
   friend class ProgramPoint;
-  PostAllocatorCall() {}
+  PostAllocatorCall() = default;
   static bool isKind(const ProgramPoint &Location) {
     return Location.getKind() == PostAllocatorCallKind;
   }
