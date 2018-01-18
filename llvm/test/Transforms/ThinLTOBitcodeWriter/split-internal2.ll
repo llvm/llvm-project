@@ -16,8 +16,8 @@
 ; M1: @g = global void ()* @"f$13757e0fb71915e385efa4dc9d1e08fd", !type !0
 @g = global void ()* @f, !type !0
 
-; M0: define dso_local hidden void @"f$13757e0fb71915e385efa4dc9d1e08fd"()
-; M1: declare dso_local hidden void @"f$13757e0fb71915e385efa4dc9d1e08fd"()
+; M0: define hidden void @"f$13757e0fb71915e385efa4dc9d1e08fd"()
+; M1: declare hidden void @"f$13757e0fb71915e385efa4dc9d1e08fd"()
 define internal void @f() {
   call void @f2()
   ret void

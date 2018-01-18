@@ -354,6 +354,17 @@ ProgramStateRef ProgramState::assumeInBound(DefinedOrUnknownSVal Idx,
   return CM.assume(this, inBound.castAs<DefinedSVal>(), Assumption);
 }
 
+ConditionTruthVal ProgramState::isNonNull(SVal V) const {
+  ConditionTruthVal IsNull = isNull(V);
+  if (IsNull.isUnderconstrained())
+    return IsNull;
+  return ConditionTruthVal(!IsNull.getValue());
+}
+
+ConditionTruthVal ProgramState::areEqual(SVal Lhs, SVal Rhs) const {
+  return stateMgr->getSValBuilder().areEqual(this, Lhs, Rhs);
+}
+
 ConditionTruthVal ProgramState::isNull(SVal V) const {
   if (V.isZeroConstant())
     return true;

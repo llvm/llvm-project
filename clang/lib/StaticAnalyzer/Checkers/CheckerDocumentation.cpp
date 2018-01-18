@@ -42,6 +42,7 @@ class CheckerDocumentation : public Checker< check::PreStmt<ReturnStmt>,
                                        check::PreCall,
                                        check::PostCall,
                                        check::BranchCondition,
+                                       check::NewAllocator,
                                        check::Location,
                                        check::Bind,
                                        check::DeadSymbols,
@@ -125,6 +126,22 @@ public:
 
   /// \brief Pre-visit of the condition statement of a branch (such as IfStmt).
   void checkBranchCondition(const Stmt *Condition, CheckerContext &Ctx) const {}
+
+  /// \brief Post-visit the C++ operator new's allocation call.
+  ///
+  /// Execution of C++ operator new consists of the following phases: (1) call
+  /// default or overridden operator new() to allocate memory (2) cast the
+  /// return value of operator new() from void pointer type to class pointer
+  /// type, (3) assuming that the value is non-null, call the object's
+  /// constructor over this pointer, (4) declare that the value of the
+  /// new-expression is this pointer. This callback is called between steps
+  /// (2) and (3). Post-call for the allocator is called after step (1).
+  /// Pre-statement for the new-expression is called on step (4) when the value
+  /// of the expression is evaluated.
+  /// \param NE     The C++ new-expression that triggered the allocation.
+  /// \param Target The allocated region, casted to the class type.
+  void checkNewAllocator(const CXXNewExpr *NE, SVal Target,
+                         CheckerContext &) const {}
 
   /// \brief Called on a load from and a store to a location.
   ///

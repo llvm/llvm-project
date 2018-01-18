@@ -14947,6 +14947,29 @@ SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {
   if (ISD::allOperandsUndef(N))
     return DAG.getUNDEF(VT);
 
+  // If this is a splat of a bitcast from another vector, change to a
+  // concat_vector.
+  // For example:
+  //   (build_vector (i64 (bitcast (v2i32 X))), (i64 (bitcast (v2i32 X)))) ->
+  //     (v2i64 (bitcast (concat_vectors (v2i32 X), (v2i32 X))))
+  //
+  // If X is a build_vector itself, the concat can become a larger build_vector.
+  // TODO: Maybe this is useful for non-splat too?
+  if (!LegalOperations) {
+    if (SDValue Splat = cast<BuildVectorSDNode>(N)->getSplatValue()) {
+      Splat = peekThroughBitcast(Splat);
+      EVT SrcVT = Splat.getValueType();
+      if (SrcVT.isVector()) {
+        unsigned NumElts = N->getNumOperands() * SrcVT.getVectorNumElements();
+        EVT NewVT = EVT::getVectorVT(*DAG.getContext(),
+                                     SrcVT.getVectorElementType(), NumElts);
+        SmallVector<SDValue, 8> Ops(N->getNumOperands(), Splat);
+        SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), NewVT, Ops);
+        return DAG.getBitcast(VT, Concat);
+      }
+    }
+  }
+
   // Check if we can express BUILD VECTOR via subvector extract.
   if (!LegalTypes && (N->getNumOperands() > 1)) {
     SDValue Op0 = N->getOperand(0);

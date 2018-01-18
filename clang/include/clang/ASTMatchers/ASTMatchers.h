@@ -3581,9 +3581,7 @@ AST_POLYMORPHIC_MATCHER_P(parameterCountIs,
 /// \code
 ///   void nope();
 /// \endcode
-AST_MATCHER(FunctionDecl, isNoReturn) {
-  return Node.isNoReturn();
-}
+AST_MATCHER(FunctionDecl, isNoReturn) { return Node.isNoReturn(); }
 
 /// \brief Matches the return type of a function declaration.
 ///

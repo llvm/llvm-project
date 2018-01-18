@@ -140,8 +140,8 @@ void *InternalAlloc(uptr size, InternalAllocatorCache *cache, uptr alignment) {
   if (size + sizeof(u64) < size)
     return nullptr;
   void *p = RawInternalAlloc(size + sizeof(u64), cache, alignment);
-  if (!p)
-    return nullptr;
+  if (UNLIKELY(!p))
+    return DieOnFailure::OnOOM();
   ((u64*)p)[0] = kBlockMagic;
   return (char*)p + sizeof(u64);
 }
@@ -155,16 +155,17 @@ void *InternalRealloc(void *addr, uptr size, InternalAllocatorCache *cache) {
   size = size + sizeof(u64);
   CHECK_EQ(kBlockMagic, ((u64*)addr)[0]);
   void *p = RawInternalRealloc(addr, size, cache);
-  if (!p)
-    return nullptr;
+  if (UNLIKELY(!p))
+    return DieOnFailure::OnOOM();
   return (char*)p + sizeof(u64);
 }
 
 void *InternalCalloc(uptr count, uptr size, InternalAllocatorCache *cache) {
   if (UNLIKELY(CheckForCallocOverflow(count, size)))
-    return InternalAllocator::FailureHandler::OnBadRequest();
+    return DieOnFailure::OnBadRequest();
   void *p = InternalAlloc(count * size, cache);
-  if (p) internal_memset(p, 0, count * size);
+  if (LIKELY(p))
+    internal_memset(p, 0, count * size);
   return p;
 }
 

@@ -96,6 +96,15 @@ static cl::opt<bool> ClGenerateTagsWithCalls(
     cl::desc("generate new tags with runtime library calls"), cl::Hidden,
     cl::init(false));
 
+static cl::opt<unsigned long long> ClMappingOffset(
+    "hwasan-mapping-offset",
+    cl::desc("offset of hwasan shadow mapping [EXPERIMENTAL]"), cl::Hidden,
+    cl::init(0));
+
+static cl::opt<bool> ClEnableKhwasan(
+    "hwasan-kernel", cl::desc("Enable KernelHWAddressSanitizer instrumentation"),
+    cl::Hidden, cl::init(false));
+
 namespace {
 
 /// \brief An instrumentation pass implementing detection of addressability bugs
@@ -177,12 +186,14 @@ bool HWAddressSanitizer::doInitialization(Module &M) {
   IntptrTy = IRB.getIntPtrTy(DL);
   Int8Ty = IRB.getInt8Ty();
 
-  std::tie(HwasanCtorFunction, std::ignore) =
-      createSanitizerCtorAndInitFunctions(M, kHwasanModuleCtorName,
-                                          kHwasanInitName,
-                                          /*InitArgTypes=*/{},
-                                          /*InitArgs=*/{});
-  appendToGlobalCtors(M, HwasanCtorFunction, 0);
+  if (!ClEnableKhwasan) {
+    std::tie(HwasanCtorFunction, std::ignore) =
+        createSanitizerCtorAndInitFunctions(M, kHwasanModuleCtorName,
+                                            kHwasanInitName,
+                                            /*InitArgTypes=*/{},
+                                            /*InitArgs=*/{});
+    appendToGlobalCtors(M, HwasanCtorFunction, 0);
+  }
   return true;
 }
 
@@ -282,7 +293,12 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *PtrLong, bool IsWrite,
       IRB.CreateAnd(PtrLong, ConstantInt::get(PtrLong->getType(),
                                               ~(0xFFULL << kPointerTagShift)));
   Value *ShadowLong = IRB.CreateLShr(AddrLong, kShadowScale);
-  Value *MemTag = IRB.CreateLoad(IRB.CreateIntToPtr(ShadowLong, IRB.getInt8PtrTy()));
+  if (ClMappingOffset)
+    ShadowLong = IRB.CreateAdd(
+        ShadowLong, ConstantInt::get(PtrLong->getType(), ClMappingOffset,
+                                     /*isSigned=*/false));
+  Value *MemTag =
+      IRB.CreateLoad(IRB.CreateIntToPtr(ShadowLong, IRB.getInt8PtrTy()));
   Value *TagMismatch = IRB.CreateICmpNE(PtrTag, MemTag);
 
   TerminatorInst *CheckTerm =

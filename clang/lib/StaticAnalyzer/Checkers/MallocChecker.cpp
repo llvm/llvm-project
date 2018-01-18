@@ -162,6 +162,7 @@ class MallocChecker : public Checker<check::DeadSymbols,
                                      check::PreCall,
                                      check::PostStmt<CallExpr>,
                                      check::PostStmt<CXXNewExpr>,
+                                     check::NewAllocator,
                                      check::PreStmt<CXXDeleteExpr>,
                                      check::PostStmt<BlockExpr>,
                                      check::PostObjCMessage,
@@ -207,6 +208,8 @@ public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPostStmt(const CallExpr *CE, CheckerContext &C) const;
   void checkPostStmt(const CXXNewExpr *NE, CheckerContext &C) const;
+  void checkNewAllocator(const CXXNewExpr *NE, SVal Target,
+                         CheckerContext &C) const;
   void checkPreStmt(const CXXDeleteExpr *DE, CheckerContext &C) const;
   void checkPostObjCMessage(const ObjCMethodCall &Call, CheckerContext &C) const;
   void checkPostStmt(const BlockExpr *BE, CheckerContext &C) const;
@@ -281,10 +284,18 @@ private:
   bool isStandardNewDelete(const FunctionDecl *FD, ASTContext &C) const;
   ///@}
 
+  /// \brief Process C++ operator new()'s allocation, which is the part of C++
+  /// new-expression that goes before the constructor.
+  void processNewAllocation(const CXXNewExpr *NE, CheckerContext &C,
+                            SVal Target) const;
+
   /// \brief Perform a zero-allocation check.
+  /// The optional \p RetVal parameter specifies the newly allocated pointer
+  /// value; if unspecified, the value of expression \p E is used.
   ProgramStateRef ProcessZeroAllocation(CheckerContext &C, const Expr *E,
                                         const unsigned AllocationSizeArg,
-                                        ProgramStateRef State) const;
+                                        ProgramStateRef State,
+                                        Optional<SVal> RetVal = None) const;
 
   ProgramStateRef MallocMemReturnsAttr(CheckerContext &C,
                                        const CallExpr *CE,
@@ -300,7 +311,7 @@ private:
                                       AllocationFamily Family = AF_Malloc);
 
   static ProgramStateRef addExtentSize(CheckerContext &C, const CXXNewExpr *NE,
-                                       ProgramStateRef State);
+                                       ProgramStateRef State, SVal Target);
 
   // Check if this malloc() for special flags. At present that means M_ZERO or
   // __GFP_ZERO (in which case, treat it like calloc).
@@ -309,9 +320,12 @@ private:
                       const ProgramStateRef &State) const;
 
   /// Update the RefState to reflect the new memory allocation.
+  /// The optional \p RetVal parameter specifies the newly allocated pointer
+  /// value; if unspecified, the value of expression \p E is used.
   static ProgramStateRef
   MallocUpdateRefState(CheckerContext &C, const Expr *E, ProgramStateRef State,
-                       AllocationFamily Family = AF_Malloc);
+                       AllocationFamily Family = AF_Malloc,
+                       Optional<SVal> RetVal = None);
 
   ProgramStateRef FreeMemAttr(CheckerContext &C, const CallExpr *CE,
                               const OwnershipAttr* Att,
@@ -949,12 +963,14 @@ void MallocChecker::checkPostStmt(const CallExpr *CE, CheckerContext &C) const {
 }
 
 // Performs a 0-sized allocations check.
-ProgramStateRef MallocChecker::ProcessZeroAllocation(CheckerContext &C,
-                                               const Expr *E,
-                                               const unsigned AllocationSizeArg,
-                                               ProgramStateRef State) const {
+ProgramStateRef MallocChecker::ProcessZeroAllocation(
+    CheckerContext &C, const Expr *E, const unsigned AllocationSizeArg,
+    ProgramStateRef State, Optional<SVal> RetVal) const {
   if (!State)
     return nullptr;
+
+  if (!RetVal)
+    RetVal = C.getSVal(E);
 
   const Expr *Arg = nullptr;
 
@@ -987,8 +1003,7 @@ ProgramStateRef MallocChecker::ProcessZeroAllocation(CheckerContext &C,
       State->assume(SvalBuilder.evalEQ(State, *DefArgVal, Zero));
 
   if (TrueState && !FalseState) {
-    SVal retVal = C.getSVal(E);
-    SymbolRef Sym = retVal.getAsLocSymbol();
+    SymbolRef Sym = RetVal->getAsLocSymbol();
     if (!Sym)
       return State;
 
@@ -1049,9 +1064,9 @@ static bool treatUnusedNewEscaped(const CXXNewExpr *NE) {
   return false;
 }
 
-void MallocChecker::checkPostStmt(const CXXNewExpr *NE,
-                                  CheckerContext &C) const {
-
+void MallocChecker::processNewAllocation(const CXXNewExpr *NE,
+                                         CheckerContext &C,
+                                         SVal Target) const {
   if (NE->getNumPlacementArgs())
     for (CXXNewExpr::const_arg_iterator I = NE->placement_arg_begin(),
          E = NE->placement_arg_end(); I != E; ++I)
@@ -1071,10 +1086,22 @@ void MallocChecker::checkPostStmt(const CXXNewExpr *NE,
   // MallocUpdateRefState() instead of MallocMemAux() which breakes the
   // existing binding.
   State = MallocUpdateRefState(C, NE, State, NE->isArray() ? AF_CXXNewArray
-                                                           : AF_CXXNew);
-  State = addExtentSize(C, NE, State);
-  State = ProcessZeroAllocation(C, NE, 0, State);
+                                                           : AF_CXXNew, Target);
+  State = addExtentSize(C, NE, State, Target);
+  State = ProcessZeroAllocation(C, NE, 0, State, Target);
   C.addTransition(State);
+}
+
+void MallocChecker::checkPostStmt(const CXXNewExpr *NE,
+                                  CheckerContext &C) const {
+  if (!C.getAnalysisManager().getAnalyzerOptions().mayInlineCXXAllocator())
+    processNewAllocation(NE, C, C.getSVal(NE));
+}
+
+void MallocChecker::checkNewAllocator(const CXXNewExpr *NE, SVal Target,
+                                      CheckerContext &C) const {
+  if (!C.wasInlined)
+    processNewAllocation(NE, C, Target);
 }
 
 // Sets the extent value of the MemRegion allocated by
@@ -1082,26 +1109,25 @@ void MallocChecker::checkPostStmt(const CXXNewExpr *NE,
 //
 ProgramStateRef MallocChecker::addExtentSize(CheckerContext &C,
                                              const CXXNewExpr *NE,
-                                             ProgramStateRef State) {
+                                             ProgramStateRef State,
+                                             SVal Target) {
   if (!State)
     return nullptr;
   SValBuilder &svalBuilder = C.getSValBuilder();
   SVal ElementCount;
-  const LocationContext *LCtx = C.getLocationContext();
   const SubRegion *Region;
   if (NE->isArray()) {
     const Expr *SizeExpr = NE->getArraySize();
     ElementCount = C.getSVal(SizeExpr);
     // Store the extent size for the (symbolic)region
     // containing the elements.
-    Region = (State->getSVal(NE, LCtx))
-                 .getAsRegion()
+    Region = Target.getAsRegion()
                  ->getAs<SubRegion>()
-                 ->getSuperRegion()
+                 ->StripCasts()
                  ->getAs<SubRegion>();
   } else {
     ElementCount = svalBuilder.makeIntVal(1, true);
-    Region = (State->getSVal(NE, LCtx)).getAsRegion()->getAs<SubRegion>();
+    Region = Target.getAsRegion()->getAs<SubRegion>();
   }
   assert(Region);
 
@@ -1261,18 +1287,22 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
 ProgramStateRef MallocChecker::MallocUpdateRefState(CheckerContext &C,
                                                     const Expr *E,
                                                     ProgramStateRef State,
-                                                    AllocationFamily Family) {
+                                                    AllocationFamily Family,
+                                                    Optional<SVal> RetVal) {
   if (!State)
     return nullptr;
 
   // Get the return value.
-  SVal retVal = C.getSVal(E);
+  if (!RetVal)
+    RetVal = C.getSVal(E);
 
   // We expect the malloc functions to return a pointer.
-  if (!retVal.getAs<Loc>())
+  if (!RetVal->getAs<Loc>())
     return nullptr;
 
-  SymbolRef Sym = retVal.getAsLocSymbol();
+  SymbolRef Sym = RetVal->getAsLocSymbol();
+  // This is a return value of a function that was not inlined, such as malloc()
+  // or new(). We've checked that in the caller. Therefore, it must be a symbol.
   assert(Sym);
 
   // Set the symbol's state to Allocated.

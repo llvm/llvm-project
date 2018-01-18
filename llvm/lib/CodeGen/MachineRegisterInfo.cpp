@@ -65,21 +65,64 @@ void MachineRegisterInfo::setRegBank(unsigned Reg,
   VRegInfo[Reg].first = &RegBank;
 }
 
-const TargetRegisterClass *
-MachineRegisterInfo::constrainRegClass(unsigned Reg,
-                                       const TargetRegisterClass *RC,
-                                       unsigned MinNumRegs) {
-  const TargetRegisterClass *OldRC = getRegClass(Reg);
+static const TargetRegisterClass *
+constrainRegClass(MachineRegisterInfo &MRI, unsigned Reg,
+                  const TargetRegisterClass *OldRC,
+                  const TargetRegisterClass *RC, unsigned MinNumRegs) {
   if (OldRC == RC)
     return RC;
   const TargetRegisterClass *NewRC =
-    getTargetRegisterInfo()->getCommonSubClass(OldRC, RC);
+      MRI.getTargetRegisterInfo()->getCommonSubClass(OldRC, RC);
   if (!NewRC || NewRC == OldRC)
     return NewRC;
   if (NewRC->getNumRegs() < MinNumRegs)
     return nullptr;
-  setRegClass(Reg, NewRC);
+  MRI.setRegClass(Reg, NewRC);
   return NewRC;
+}
+
+const TargetRegisterClass *
+MachineRegisterInfo::constrainRegClass(unsigned Reg,
+                                       const TargetRegisterClass *RC,
+                                       unsigned MinNumRegs) {
+  return ::constrainRegClass(*this, Reg, getRegClass(Reg), RC, MinNumRegs);
+}
+
+bool
+MachineRegisterInfo::constrainRegAttrs(unsigned Reg,
+                                       unsigned ConstrainingReg,
+                                       unsigned MinNumRegs) {
+  auto const *OldRC = getRegClassOrNull(Reg);
+  auto const *RC = getRegClassOrNull(ConstrainingReg);
+  // A virtual register at any point must have either a low-level type
+  // or a class assigned, but not both. The only exception is the internals of
+  // GlobalISel's instruction selection pass, which is allowed to temporarily
+  // introduce registers with types and classes both.
+  assert((OldRC || getType(Reg).isValid()) && "Reg has neither class nor type");
+  assert((!OldRC || !getType(Reg).isValid()) && "Reg has class and type both");
+  assert((RC || getType(ConstrainingReg).isValid()) &&
+         "ConstrainingReg has neither class nor type");
+  assert((!RC || !getType(ConstrainingReg).isValid()) &&
+         "ConstrainingReg has class and type both");
+  if (OldRC && RC)
+    return ::constrainRegClass(*this, Reg, OldRC, RC, MinNumRegs);
+  // If one of the virtual registers is generic (used in generic machine
+  // instructions, has a low-level type, doesn't have a class), and the other is
+  // concrete (used in target specific instructions, doesn't have a low-level
+  // type, has a class), we can not unify them.
+  if (OldRC || RC)
+    return false;
+  // At this point, both registers are guaranteed to have a valid low-level
+  // type, and they must agree.
+  if (getType(Reg) != getType(ConstrainingReg))
+    return false;
+  auto const *OldRB = getRegBankOrNull(Reg);
+  auto const *RB = getRegBankOrNull(ConstrainingReg);
+  if (OldRB)
+    return !RB || RB == OldRB;
+  if (RB)
+    setRegBank(Reg, *RB);
+  return true;
 }
 
 bool

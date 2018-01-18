@@ -98,35 +98,35 @@ entry:
 ; NOTEXPORTED-NOT: exportedButNotDefinedFunction
 
 ; CHECK: .section .drectve
-; WIN32: /EXPORT:f1
-; WIN32-SAME: /EXPORT:f2
-; WIN32-SAME: /EXPORT:lnk1
-; WIN32-SAME: /EXPORT:lnk2
-; WIN32-SAME: /EXPORT:weak1
-; WIN32-SAME: /EXPORT:Var1,DATA
-; WIN32-SAME: /EXPORT:Var2,DATA
-; WIN32-SAME: /EXPORT:Var3,DATA
-; WIN32-SAME: /EXPORT:WeakVar1,DATA
-; WIN32-SAME: /EXPORT:WeakVar2,DATA
-; WIN32-SAME: /EXPORT:WeakVar3,DATA
-; WIN32-SAME: /EXPORT:alias
-; WIN32-SAME: /EXPORT:alias2
-; WIN32-SAME: /EXPORT:alias3
-; WIN32-SAME: /EXPORT:weak_alias
-; WIN32-SAME: /EXPORT:blob_alias
-; MINGW: -export:f1
-; MINGW-SAME: -export:f2
-; MINGW-SAME: -export:lnk1
-; MINGW-SAME: -export:lnk2
-; MINGW-SAME: -export:weak1
-; MINGW-SAME: -export:Var1,data
-; MINGW-SAME: -export:Var2,data
-; MINGW-SAME: -export:Var3,data
-; MINGW-SAME: -export:WeakVar1,data
-; MINGW-SAME: -export:WeakVar2,data
-; MINGW-SAME: -export:WeakVar3,data
-; MINGW-SAME: -export:alias
-; MINGW-SAME: -export:alias2
-; MINGW-SAME: -export:alias3
-; MINGW-SAME: -export:weak_alias
-; MINGW-SAME: -export:blob_alias"
+; WIN32: .ascii " /EXPORT:f1"
+; WIN32: .ascii " /EXPORT:f2"
+; WIN32: .ascii " /EXPORT:lnk1"
+; WIN32: .ascii " /EXPORT:lnk2"
+; WIN32: .ascii " /EXPORT:weak1"
+; WIN32: .ascii " /EXPORT:Var1,DATA"
+; WIN32: .ascii " /EXPORT:Var2,DATA"
+; WIN32: .ascii " /EXPORT:Var3,DATA"
+; WIN32: .ascii " /EXPORT:WeakVar1,DATA"
+; WIN32: .ascii " /EXPORT:WeakVar2,DATA"
+; WIN32: .ascii " /EXPORT:WeakVar3,DATA"
+; WIN32: .ascii " /EXPORT:alias"
+; WIN32: .ascii " /EXPORT:alias2"
+; WIN32: .ascii " /EXPORT:alias3"
+; WIN32: .ascii " /EXPORT:weak_alias"
+; WIN32: .ascii " /EXPORT:blob_alias"
+; MINGW: .ascii " -export:f1"
+; MINGW: .ascii " -export:f2"
+; MINGW: .ascii " -export:lnk1"
+; MINGW: .ascii " -export:lnk2"
+; MINGW: .ascii " -export:weak1"
+; MINGW: .ascii " -export:Var1,data"
+; MINGW: .ascii " -export:Var2,data"
+; MINGW: .ascii " -export:Var3,data"
+; MINGW: .ascii " -export:WeakVar1,data"
+; MINGW: .ascii " -export:WeakVar2,data"
+; MINGW: .ascii " -export:WeakVar3,data"
+; MINGW: .ascii " -export:alias"
+; MINGW: .ascii " -export:alias2"
+; MINGW: .ascii " -export:alias3"
+; MINGW: .ascii " -export:weak_alias"
+; MINGW: .ascii " -export:blob_alias"

@@ -29,12 +29,12 @@ bool counting_equals ( const T &a, const T &b ) {
     }
 
 #if TEST_STD_VER > 17
-TEST_CONSTEXPR bool test_constexpr() {
+constexpr bool test_constexpr() {
     int ia[] = {0, 0, 0};
     int ib[] = {1, 1, 0};
     int ic[] = {1, 0, 1};
     int id[] = {1};
-    std::equal_to<int> c;
+    std::equal_to<int> c{};
     return !std::is_permutation(std::begin(ia), std::end(ia), std::begin(ib)              , c)
         && !std::is_permutation(std::begin(ia), std::end(ia), std::begin(ib), std::end(ib), c)
         &&  std::is_permutation(std::begin(ib), std::end(ib), std::begin(ic)              , c)

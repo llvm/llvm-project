@@ -4,7 +4,7 @@
 #include <iostream>
 #include <ostream>
 
-#include "benchmark/macros.h"
+#include "benchmark/benchmark.h"
 
 namespace benchmark {
 namespace internal {

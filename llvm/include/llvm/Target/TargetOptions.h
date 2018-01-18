@@ -104,7 +104,7 @@ namespace llvm {
           NoSignedZerosFPMath(false),
           HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
           GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
-          EnableFastISel(false), UseInitArray(false),
+          EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
           DisableIntegratedAS(false), RelaxELFRelocations(false),
           FunctionSections(false), DataSections(false),
           UniqueSectionNames(true), TrapUnreachable(false), EmulatedTLS(false),
@@ -185,6 +185,9 @@ namespace llvm {
     /// which trades away generated code quality in favor of reducing
     /// compile time.
     unsigned EnableFastISel : 1;
+
+    /// EnableGlobalISel - This flag enables global instruction selection.
+    unsigned EnableGlobalISel : 1;
 
     /// UseInitArray - Use .init_array instead of .ctors for static
     /// constructors.

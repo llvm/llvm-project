@@ -192,6 +192,9 @@ RTLIB::Libcall RTLIB::getFPEXT(EVT OpVT, EVT RetVT) {
       return FPEXT_F64_F128;
     else if (RetVT == MVT::ppcf128)
       return FPEXT_F64_PPCF128;
+  } else if (OpVT == MVT::f80) {
+    if (RetVT == MVT::f128)
+      return FPEXT_F80_F128;
   }
 
   return UNKNOWN_LIBCALL;
@@ -227,6 +230,9 @@ RTLIB::Libcall RTLIB::getFPROUND(EVT OpVT, EVT RetVT) {
       return FPROUND_F128_F64;
     if (OpVT == MVT::ppcf128)
       return FPROUND_PPCF128_F64;
+  } else if (RetVT == MVT::f80) {
+    if (OpVT == MVT::f128)
+      return FPROUND_F128_F80;
   }
 
   return UNKNOWN_LIBCALL;

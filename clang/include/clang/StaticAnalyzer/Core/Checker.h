@@ -283,6 +283,22 @@ public:
   }
 };
 
+class NewAllocator {
+  template <typename CHECKER>
+  static void _checkNewAllocator(void *checker, const CXXNewExpr *NE,
+                                 SVal Target, CheckerContext &C) {
+    ((const CHECKER *)checker)->checkNewAllocator(NE, Target, C);
+  }
+
+public:
+  template <typename CHECKER>
+  static void _register(CHECKER *checker, CheckerManager &mgr) {
+    mgr._registerForNewAllocator(
+        CheckerManager::CheckNewAllocatorFunc(checker,
+                                              _checkNewAllocator<CHECKER>));
+  }
+};
+
 class LiveSymbols {
   template <typename CHECKER>
   static void _checkLiveSymbols(void *checker, ProgramStateRef state,

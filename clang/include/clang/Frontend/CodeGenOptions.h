@@ -16,6 +16,7 @@
 
 #include "clang/Basic/DebugInfoOptions.h"
 #include "clang/Basic/Sanitizers.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetOptions.h"
 #include <map>
@@ -167,7 +168,7 @@ public:
   std::string SplitDwarfFile;
 
   /// The name of the relocation model to use.
-  std::string RelocationModel;
+  llvm::Reloc::Model RelocationModel;
 
   /// The thread model to use
   std::string ThreadModel;

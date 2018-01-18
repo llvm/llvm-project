@@ -66,6 +66,7 @@
 #include <vector>
 
 using namespace llvm;
+using ProfileCount = Function::ProfileCount;
 
 #define DEBUG_TYPE "code-extractor"
 
@@ -1163,10 +1164,10 @@ Function *CodeExtractor::extractCodeRegion() {
 
   // Update the entry count of the function.
   if (BFI) {
-    Optional<uint64_t> EntryCount =
-        BFI->getProfileCountFromFreq(EntryFreq.getFrequency());
-    if (EntryCount.hasValue())
-      newFunction->setEntryCount(EntryCount.getValue());
+    auto Count = BFI->getProfileCountFromFreq(EntryFreq.getFrequency());
+    if (Count.hasValue())
+      newFunction->setEntryCount(
+          ProfileCount(Count.getValue(), Function::PCT_Real)); // FIXME
     BFI->setBlockFreq(codeReplacer, EntryFreq.getFrequency());
   }
 

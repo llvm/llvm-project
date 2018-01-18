@@ -85,7 +85,7 @@
 
 using namespace llvm;
 using namespace sampleprof;
-
+using ProfileCount = Function::ProfileCount;
 #define DEBUG_TYPE "sample-profile"
 
 // Command line option to specify the file to read samples from. This is
@@ -1467,7 +1467,9 @@ bool SampleProfileLoader::emitAnnotations(Function &F) {
     // Sets the GUIDs that are inlined in the profiled binary. This is used
     // for ThinLink to make correct liveness analysis, and also make the IR
     // match the profiled binary before annotation.
-    F.setEntryCount(Samples->getHeadSamples() + 1, false, &InlinedGUIDs);
+    F.setEntryCount(
+        ProfileCount(Samples->getHeadSamples() + 1, Function::PCT_Real),
+        &InlinedGUIDs);
 
     // Compute dominance and loop info needed for propagation.
     computeDominanceAndLoopInfo(F);
@@ -1587,7 +1589,7 @@ bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) 
   // Initialize the entry count to -1, which will be treated conservatively
   // by getEntryCount as the same as unknown (None). If we have samples this
   // will be overwritten in emitAnnotations.
-  F.setEntryCount(-1);
+  F.setEntryCount(ProfileCount(-1, Function::PCT_Real));
   std::unique_ptr<OptimizationRemarkEmitter> OwnedORE;
   if (AM) {
     auto &FAM =
