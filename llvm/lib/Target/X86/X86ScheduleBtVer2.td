@@ -140,24 +140,26 @@ def WriteSHLDrri : SchedWriteRes<[JALU01]> {
   let ResourceCycles = [6];
   let NumMicroOps = 6;
 }
-def: InstRW<[WriteSHLDrri], (instregex "SHLD(16|32|64)rri8")>;
-def: InstRW<[WriteSHLDrri], (instregex "SHRD(16|32|64)rri8")>;
+def: InstRW<[WriteSHLDrri], (instrs SHLD16rri8, SHLD32rri8, SHLD64rri8,
+                                    SHRD16rri8, SHRD32rri8, SHRD64rri8)>;
 
 def WriteSHLDrrCL : SchedWriteRes<[JALU01]> {
   let Latency = 4;
   let ResourceCycles = [8];
   let NumMicroOps = 7;
 }
-def: InstRW<[WriteSHLDrrCL], (instregex "SHLD(16|32|64)rrCL")>;
-def: InstRW<[WriteSHLDrrCL], (instregex "SHRD(16|32|64)rrCL")>;
+def: InstRW<[WriteSHLDrrCL], (instrs SHLD16rrCL, SHLD32rrCL, SHLD64rrCL,
+                                     SHRD16rrCL, SHRD32rrCL, SHRD64rrCL)>;
 
 def WriteSHLDm : SchedWriteRes<[JLAGU, JALU01]> {
   let Latency = 9;
   let ResourceCycles = [1, 22];
   let NumMicroOps = 8;
 }
-def: InstRW<[WriteSHLDm], (instregex "SHLD(16|32|64)mr(i8|CL)")>;
-def: InstRW<[WriteSHLDm], (instregex "SHRD(16|32|64)mr(i8|CL)")>;
+def: InstRW<[WriteSHLDm],(instrs SHLD16mri8, SHLD32mri8, SHLD64mri8,
+                                 SHLD16mrCL, SHLD32mrCL, SHLD64mrCL,
+                                 SHRD16mri8, SHRD32mri8, SHRD64mri8,
+                                 SHRD16mrCL, SHRD32mrCL, SHRD64mrCL)>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Loads, stores, and moves, not folded with other operations.
@@ -378,13 +380,13 @@ def WriteFHAddY: SchedWriteRes<[JFPU0]> {
   let Latency = 3;
   let ResourceCycles = [2];
 }
-def : InstRW<[WriteFHAddY], (instregex "VH(ADD|SUB)P(S|D)Yrr")>;
+def : InstRW<[WriteFHAddY], (instrs VHADDPDYrr, VHADDPSYrr, VHSUBPDYrr, VHSUBPSYrr)>;
 
 def WriteFHAddYLd: SchedWriteRes<[JLAGU, JFPU0]> {
   let Latency = 8;
   let ResourceCycles = [1, 2];
 }
-def : InstRW<[WriteFHAddYLd], (instregex "VH(ADD|SUB)P(S|D)Yrm")>;
+def : InstRW<[WriteFHAddYLd], (instrs VHADDPDYrm, VHADDPSYrm, VHSUBPDYrm, VHSUBPSYrm)>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Carry-less multiplication instructions.
@@ -524,13 +526,17 @@ def WriteFAddY: SchedWriteRes<[JFPU0]> {
   let Latency = 3;
   let ResourceCycles = [2];
 }
-def : InstRW<[WriteFAddY], (instregex "VADD(SUB)?P(S|D)Yrr", "VSUBP(S|D)Yrr")>;
+def : InstRW<[WriteFAddY], (instrs VADDPDYrr, VADDPSYrr,
+                                   VSUBPDYrr, VSUBPSYrr,
+                                   VADDSUBPDYrr, VADDSUBPSYrr)>;
 
 def WriteFAddYLd: SchedWriteRes<[JLAGU, JFPU0]> {
   let Latency = 8;
   let ResourceCycles = [1, 2];
 }
-def : InstRW<[WriteFAddYLd, ReadAfterLd], (instregex "VADD(SUB)?P(S|D)Yrm", "VSUBP(S|D)Yrm")>;
+def : InstRW<[WriteFAddYLd, ReadAfterLd], (instrs VADDPDYrm, VADDPSYrm,
+                                                  VSUBPDYrm, VSUBPSYrm,
+                                                  VADDSUBPDYrm, VADDSUBPSYrm)>;
 
 def WriteFDivY: SchedWriteRes<[JFPU1]> {
   let Latency = 38;
@@ -584,17 +590,17 @@ def WriteVCVTY: SchedWriteRes<[JSTC]> {
   let Latency = 3;
   let ResourceCycles = [2];
 }
-def : InstRW<[WriteVCVTY], (instregex "VCVTDQ2P(S|D)Yrr")>;
-def : InstRW<[WriteVCVTY], (instregex "VROUNDYP(S|D)r")>;
-def : InstRW<[WriteVCVTY], (instrs VCVTPS2DQYrr, VCVTTPS2DQYrr)>;
+def : InstRW<[WriteVCVTY], (instrs VCVTDQ2PDYrr, VCVTDQ2PSYrr,
+                                   VCVTPS2DQYrr, VCVTTPS2DQYrr,
+                                   VROUNDYPDr,   VROUNDYPSr)>;
 
 def WriteVCVTYLd: SchedWriteRes<[JLAGU, JSTC]> {
   let Latency = 8;
   let ResourceCycles = [1, 2];
 }
-def : InstRW<[WriteVCVTYLd, ReadAfterLd], (instregex "VCVTDQ2P(S|D)Yrm")>;
-def : InstRW<[WriteVCVTYLd, ReadAfterLd], (instregex "VROUNDYP(S|D)m")>;
-def : InstRW<[WriteVCVTYLd, ReadAfterLd], (instrs VCVTPS2DQYrm, VCVTTPS2DQYrm)>;
+def : InstRW<[WriteVCVTYLd, ReadAfterLd], (instrs VCVTDQ2PDYrm, VCVTDQ2PSYrm,
+                                                  VCVTPS2DQYrm, VCVTTPS2DQYrm,
+                                                  VROUNDYPDm,   VROUNDYPSm)>;
 
 def WriteVMOVNTDQSt: SchedWriteRes<[JSTC, JSAGU]> {
   let Latency = 2;
@@ -616,17 +622,15 @@ def WriteFCmp: SchedWriteRes<[JFPU0]> {
   let Latency = 2;
 }
 
-def : InstRW<[WriteFCmp], (instregex "VMAXP(D|S)rr", "VMAXS(D|S)rr")>;
-def : InstRW<[WriteFCmp], (instregex "VMINP(D|S)rr", "VMINS(D|S)rr")>;
-def : InstRW<[WriteFCmp], (instregex "VCMPP(S|D)rri", "VCMPS(S|D)rr")>;
+def : InstRW<[WriteFCmp], (instregex "(V)?M(AX|IN)(P|S)(D|S)rr",
+                                     "(V)?CMPP(S|D)rri", "(V)?CMPS(S|D)rr")>;
 
 def WriteFCmpLd: SchedWriteRes<[JLAGU, JFPU0]> {
   let Latency = 7;
 }
 
-def : InstRW<[WriteFCmpLd], (instregex "VMAXP(D|S)rm", "VMAXS(D|S)rm")>;
-def : InstRW<[WriteFCmpLd], (instregex "VMINP(D|S)rm", "VMINS(D|S)rm")>;
-def : InstRW<[WriteFCmpLd], (instregex "VCMPP(S|D)rmi", "VCMPS(S|D)rm")>;
+def : InstRW<[WriteFCmpLd], (instregex "(V)?M(AX|IN)(P|S)(D|S)rm",
+                                       "(V)?CMPP(S|D)rmi", "(V)?CMPS(S|D)rm")>;
 
 def WriteVCVTPDY: SchedWriteRes<[JSTC, JFPU01]> {
   let Latency = 6;
@@ -674,13 +678,13 @@ def WriteVHAddSubY: SchedWriteRes<[JFPU0]> {
   let Latency = 3;
   let ResourceCycles = [2];
 }
-def : InstRW<[WriteVHAddSubY], (instregex "VH(ADD|SUB)P(D|S)Yrr")>;
+def : InstRW<[WriteVHAddSubY], (instrs VHADDPDYrr, VHADDPSYrr, VHSUBPDYrr, VHSUBPSYrr)>;
 
 def WriteVHAddSubYLd: SchedWriteRes<[JLAGU, JFPU0]> {
   let Latency = 8;
   let ResourceCycles = [1, 2];
 }
-def : InstRW<[WriteVHAddSubYLd], (instregex "VH(ADD|SUB)P(D|S)Yrm")>;
+def : InstRW<[WriteVHAddSubYLd], (instrs VHADDPDYrm, VHADDPSYrm, VHSUBPDYrm, VHSUBPSYrm)>;
 
 def WriteVMaskMovLd: SchedWriteRes<[JLAGU,JFPU01]> {
   let Latency = 6;
@@ -713,7 +717,7 @@ def : InstRW<[WriteVMaskMovYSt], (instrs VMASKMOVPDYmr, VMASKMOVPSYmr)>;
 def WriteVMOVMSK: SchedWriteRes<[JFPU0]> {
   let Latency = 3;
 }
-def : InstRW<[WriteVMOVMSK], (instregex "(V)?MOVMSKP(D|S)(Y)?rr")>;
+def : InstRW<[WriteVMOVMSK], (instrs VMOVMSKPDrr, VMOVMSKPDYrr, VMOVMSKPSrr, VMOVMSKPSYrr)>;
 
 // TODO: In fact we have latency '3+i'. The +i represents an additional 1 cycle transfer
 // operation which moves the floating point result to the integer unit. During this

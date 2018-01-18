@@ -3942,6 +3942,29 @@ ARMTargetLowering::getARMXALUOOp(SDValue Op, SelectionDAG &DAG,
     Value = DAG.getNode(ISD::SUB, dl, Op.getValueType(), LHS, RHS);
     OverflowCmp = DAG.getNode(ARMISD::CMP, dl, MVT::Glue, LHS, RHS);
     break;
+  case ISD::UMULO:
+    // We generate a UMUL_LOHI and then check if the high word is 0.
+    ARMcc = DAG.getConstant(ARMCC::EQ, dl, MVT::i32);
+    Value = DAG.getNode(ISD::UMUL_LOHI, dl,
+                        DAG.getVTList(Op.getValueType(), Op.getValueType()),
+                        LHS, RHS);
+    OverflowCmp = DAG.getNode(ARMISD::CMP, dl, MVT::Glue, Value.getValue(1),
+                              DAG.getConstant(0, dl, MVT::i32));
+    Value = Value.getValue(0); // We only want the low 32 bits for the result.
+    break;
+  case ISD::SMULO:
+    // We generate a SMUL_LOHI and then check if all the bits of the high word
+    // are the same as the sign bit of the low word.
+    ARMcc = DAG.getConstant(ARMCC::EQ, dl, MVT::i32);
+    Value = DAG.getNode(ISD::SMUL_LOHI, dl,
+                        DAG.getVTList(Op.getValueType(), Op.getValueType()),
+                        LHS, RHS);
+    OverflowCmp = DAG.getNode(ARMISD::CMP, dl, MVT::Glue, Value.getValue(1),
+                              DAG.getNode(ISD::SRA, dl, Op.getValueType(),
+                                          Value.getValue(0),
+                                          DAG.getConstant(31, dl, MVT::i32)));
+    Value = Value.getValue(0); // We only want the low 32 bits for the result.
+    break;
   } // switch (...)
 
   return std::make_pair(Value, OverflowCmp);
@@ -4534,10 +4557,12 @@ SDValue ARMTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
   SDValue Dest = Op.getOperand(2);
   SDLoc dl(Op);
 
-  // Optimize {s|u}{add|sub}.with.overflow feeding into a branch instruction.
+  // Optimize {s|u}{add|sub|mul}.with.overflow feeding into a branch
+  // instruction.
   unsigned Opc = Cond.getOpcode();
-  if (Cond.getResNo() == 1 && (Opc == ISD::SADDO || Opc == ISD::UADDO ||
-                               Opc == ISD::SSUBO || Opc == ISD::USUBO)) {
+  if (Cond.getResNo() == 1 &&
+      (Opc == ISD::SADDO || Opc == ISD::UADDO || Opc == ISD::SSUBO ||
+       Opc == ISD::USUBO || Opc == ISD::SMULO || Opc == ISD::UMULO)) {
     // Only lower legal XALUO ops.
     if (!DAG.getTargetLoweringInfo().isTypeLegal(Cond->getValueType(0)))
       return SDValue();
@@ -4581,11 +4606,13 @@ SDValue ARMTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
     }
   }
 
-  // Optimize {s|u}{add|sub}.with.overflow feeding into a branch instruction.
+  // Optimize {s|u}{add|sub|mul}.with.overflow feeding into a branch
+  // instruction.
   unsigned Opc = LHS.getOpcode();
   if (LHS.getResNo() == 1 && (isOneConstant(RHS) || isNullConstant(RHS)) &&
       (Opc == ISD::SADDO || Opc == ISD::UADDO || Opc == ISD::SSUBO ||
-       Opc == ISD::USUBO) && (CC == ISD::SETEQ || CC == ISD::SETNE)) {
+       Opc == ISD::USUBO || Opc == ISD::SMULO || Opc == ISD::UMULO) &&
+      (CC == ISD::SETEQ || CC == ISD::SETNE)) {
     // Only lower legal XALUO ops.
     if (!DAG.getTargetLoweringInfo().isTypeLegal(LHS->getValueType(0)))
       return SDValue();

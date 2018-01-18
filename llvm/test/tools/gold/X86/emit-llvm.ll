@@ -54,8 +54,8 @@ define hidden void @f1() {
   ret void
 }
 
-; CHECK-DAG: define dso_local hidden void @f2()
-; OPT-DAG: define dso_local hidden void @f2()
+; CHECK-DAG: define hidden void @f2()
+; OPT-DAG: define hidden void @f2()
 define hidden void @f2() {
   ret void
 }

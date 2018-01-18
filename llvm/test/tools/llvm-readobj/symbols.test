@@ -74,21 +74,6 @@ ELF-NEXT:   }
 WASM:      Symbols [
 WASM-NEXT:   Symbol {
 WASM-NEXT:     Name: puts
-WASM-NEXT:     Type: DEBUG_FUNCTION_NAME (0x4)
-WASM-NEXT:     Flags: 0x0
-WASM-NEXT:   }
-WASM-NEXT:   Symbol {
-WASM-NEXT:     Name: SomeOtherFunction
-WASM-NEXT:     Type: DEBUG_FUNCTION_NAME (0x4)
-WASM-NEXT:     Flags: 0x0
-WASM-NEXT:   }
-WASM-NEXT:   Symbol {
-WASM-NEXT:     Name: main
-WASM-NEXT:     Type: DEBUG_FUNCTION_NAME (0x4)
-WASM-NEXT:     Flags: 0x0
-WASM-NEXT:   }
-WASM-NEXT:   Symbol {
-WASM-NEXT:     Name: puts
 WASM-NEXT:     Type: FUNCTION_IMPORT (0x0)
 WASM-NEXT:     Flags: 0x0
 WASM-NEXT:   }

@@ -45,29 +45,6 @@ def RetCC_PPC64_AnyReg : CallingConv<[
   CCCustom<"CC_PPC_AnyReg_Error">
 ]>;
 
-// Return-value convention for PowerPC coldcc.
-def RetCC_PPC_Cold : CallingConv<[
-  // Use the same return registers as RetCC_PPC, but limited to only
-  // one return value. The remaining return values will be saved to
-  // the stack.
-  CCIfType<[i32, i1], CCIfSubtarget<"isPPC64()", CCPromoteToType<i64>>>,
-  CCIfType<[i1], CCIfNotSubtarget<"isPPC64()", CCPromoteToType<i32>>>,
-
-  CCIfType<[i32], CCAssignToReg<[R3]>>,
-  CCIfType<[i64], CCAssignToReg<[X3]>>,
-  CCIfType<[i128], CCAssignToReg<[X3]>>,
-
-  CCIfType<[f32], CCAssignToReg<[F1]>>,
-  CCIfType<[f64], CCAssignToReg<[F1]>>,
-
-  CCIfType<[v4f64, v4f32, v4i1],
-           CCIfSubtarget<"hasQPX()", CCAssignToReg<[QF1]>>>,
-
-  CCIfType<[v16i8, v8i16, v4i32, v2i64, v1i128, v4f32, v2f64],
-           CCIfSubtarget<"hasAltivec()",
-           CCAssignToReg<[V2]>>>
-]>;
-
 // Return-value convention for PowerPC
 def RetCC_PPC : CallingConv<[
   CCIfCC<"CallingConv::AnyReg", CCDelegateTo<RetCC_PPC64_AnyReg>>,
@@ -293,36 +270,6 @@ def CSR_SVR464_R2_Altivec : CalleeSavedRegs<(add CSR_SVR464_Altivec, X2)>;
 def CSR_SVR464_R2_Altivec_ViaCopy : CalleeSavedRegs<(add CSR_SVR464_R2_Altivec)>;
 
 def CSR_NoRegs : CalleeSavedRegs<(add)>;
-
-// coldcc calling convection marks most registers as non-volatile.
-// Do not include r1 since the stack pointer is never considered a CSR.
-// Do not include r2, since it is the TOC register and is added depending
-// on wether or not the function uses the TOC and is a non-leaf.
-// Do not include r0,r11,r13 as they are optional in functional linkage
-// and value may be altered by inter-library calls.
-// Do not include r12 as it is used as a scratch register.
-// Do not include return registers r3, f1, v2.
-def CSR_SVR32_ColdCC : CalleeSavedRegs<(add (sequence "R%u", 4, 10),
-                                          (sequence "R%u", 14, 31),
-                                          F0, (sequence "F%u", 2, 31),
-                                          (sequence "CR%u", 0, 7))>;
-
-def CSR_SVR32_ColdCC_Altivec : CalleeSavedRegs<(add CSR_SVR32_ColdCC,
-                                            (sequence "V%u", 0, 1),
-                                            (sequence "V%u", 3, 31))>;
-
-def CSR_SVR64_ColdCC : CalleeSavedRegs<(add  (sequence "X%u", 4, 10),
-                                             (sequence "X%u", 14, 31),
-                                             F0, (sequence "F%u", 2, 31),
-                                             (sequence "CR%u", 0, 7))>;
-
-def CSR_SVR64_ColdCC_R2: CalleeSavedRegs<(add CSR_SVR64_ColdCC, X2)>;
-
-def CSR_SVR64_ColdCC_Altivec : CalleeSavedRegs<(add CSR_SVR64_ColdCC,
-                                             (sequence "V%u", 0, 1),
-                                             (sequence "V%u", 3, 31))>;
-
-def CSR_SVR64_ColdCC_R2_Altivec : CalleeSavedRegs<(add CSR_SVR64_ColdCC_Altivec, X2)>;
 
 def CSR_64_AllRegs: CalleeSavedRegs<(add X0, (sequence "X%u", 3, 10),
                                              (sequence "X%u", 14, 31),

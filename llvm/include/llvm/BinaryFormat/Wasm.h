@@ -95,7 +95,8 @@ struct WasmFunction {
   ArrayRef<uint8_t> Body;
   uint32_t CodeSectionOffset;
   uint32_t Size;
-  StringRef Comdat;
+  StringRef Name; // from the "names" section
+  StringRef Comdat; // from the "comdat info" section
 };
 
 struct WasmDataSegment {
@@ -105,7 +106,7 @@ struct WasmDataSegment {
   StringRef Name;
   uint32_t Alignment;
   uint32_t Flags;
-  StringRef Comdat;
+  StringRef Comdat; // from the "comdat info" section
 };
 
 struct WasmElemSegment {
@@ -116,7 +117,7 @@ struct WasmElemSegment {
 
 struct WasmRelocation {
   uint32_t Type;   // The type of the relocation.
-  uint32_t Index;  // Index into function to global index space.
+  uint32_t Index;  // Index into function or global index space.
   uint64_t Offset; // Offset from the start of the section.
   int64_t Addend;  // A value to add to the symbol.
 };
@@ -124,6 +125,11 @@ struct WasmRelocation {
 struct WasmInitFunc {
   uint32_t Priority;
   uint32_t FunctionIndex;
+};
+
+struct WasmFunctionName {
+  uint32_t Index;
+  StringRef Name;
 };
 
 struct WasmLinkingData {

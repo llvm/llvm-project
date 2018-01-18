@@ -4939,11 +4939,7 @@ SDValue PPCTargetLowering::LowerCallResult(
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCRetInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs,
                     *DAG.getContext());
-
-  CCRetInfo.AnalyzeCallResult(
-      Ins, (Subtarget.isSVR4ABI() && CallConv == CallingConv::Cold)
-               ? RetCC_PPC_Cold
-               : RetCC_PPC);
+  CCRetInfo.AnalyzeCallResult(Ins, RetCC_PPC);
 
   // Copy all of the result registers out of their specified physreg.
   for (unsigned i = 0, e = RVLocs.size(); i != e; ++i) {
@@ -5163,7 +5159,6 @@ SDValue PPCTargetLowering::LowerCall_32SVR4(
   // of the 32-bit SVR4 ABI stack frame layout.
 
   assert((CallConv == CallingConv::C ||
-          CallConv == CallingConv::Cold ||
           CallConv == CallingConv::Fast) && "Unknown calling convention!");
 
   unsigned PtrByteSize = 4;
@@ -6425,10 +6420,7 @@ PPCTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
                                   LLVMContext &Context) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
-  return CCInfo.CheckReturn(
-      Outs, (Subtarget.isSVR4ABI() && CallConv == CallingConv::Cold)
-                ? RetCC_PPC_Cold
-                : RetCC_PPC);
+  return CCInfo.CheckReturn(Outs, RetCC_PPC);
 }
 
 SDValue
@@ -6440,10 +6432,7 @@ PPCTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs,
                  *DAG.getContext());
-  CCInfo.AnalyzeReturn(Outs,
-                       (Subtarget.isSVR4ABI() && CallConv == CallingConv::Cold)
-                           ? RetCC_PPC_Cold
-                           : RetCC_PPC);
+  CCInfo.AnalyzeReturn(Outs, RetCC_PPC);
 
   SDValue Flag;
   SmallVector<SDValue, 4> RetOps(1, Chain);

@@ -646,27 +646,6 @@ void X86AsmPrinter::EmitEndOfAsmFile(Module &M) {
   }
 
   if (TT.isOSBinFormatCOFF()) {
-    const TargetLoweringObjectFileCOFF &TLOFCOFF =
-        static_cast<const TargetLoweringObjectFileCOFF&>(getObjFileLowering());
-
-    std::string Flags;
-    raw_string_ostream FlagsOS(Flags);
-
-    for (const auto &Function : M)
-      TLOFCOFF.emitLinkerFlagsForGlobal(FlagsOS, &Function);
-    for (const auto &Global : M.globals())
-      TLOFCOFF.emitLinkerFlagsForGlobal(FlagsOS, &Global);
-    for (const auto &Alias : M.aliases())
-      TLOFCOFF.emitLinkerFlagsForGlobal(FlagsOS, &Alias);
-
-    FlagsOS.flush();
-
-    // Output collected flags.
-    if (!Flags.empty()) {
-      OutStreamer->SwitchSection(TLOFCOFF.getDrectveSection());
-      OutStreamer->EmitBytes(Flags);
-    }
-
     SM.serializeToStackMapSection();
   }
 

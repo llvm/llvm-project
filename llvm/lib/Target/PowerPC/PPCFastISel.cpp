@@ -206,8 +206,6 @@ CCAssignFn *PPCFastISel::usePPC32CCs(unsigned Flag) {
     return CC_PPC32_SVR4_ByVal;
   else if (Flag == 3)
     return CC_PPC32_SVR4_VarArg;
-  else if (Flag == 4)
-    return RetCC_PPC_Cold;
   else
     return RetCC_PPC;
 }

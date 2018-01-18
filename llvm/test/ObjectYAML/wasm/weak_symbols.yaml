@@ -26,6 +26,14 @@ Sections:
       - Name:            global_export
         Kind:            GLOBAL
         Index:           0
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:
+        Body:            00
+      - Index:           1
+        Locals:
+        Body:            00
   - Type:            CUSTOM
     Name:            linking
     DataSize:        10

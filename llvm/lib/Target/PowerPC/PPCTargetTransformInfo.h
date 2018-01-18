@@ -61,7 +61,7 @@ public:
 
   /// \name Vector TTI Implementations
   /// @{
-  bool useColdCCForColdCall(Function &F);
+
   bool enableAggressiveInterleaving(bool LoopHasReductions);
   const TTI::MemCmpExpansionOptions *enableMemCmpExpansion(
       bool IsZeroCmp) const;

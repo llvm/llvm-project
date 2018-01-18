@@ -2,8 +2,8 @@
 ; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 %s
 ; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 %s
 
-; CHECK0: define dso_local hidden void @foo()
-; CHECK1: declare dso_local hidden void @foo()
+; CHECK0: define hidden void @foo()
+; CHECK1: declare hidden void @foo()
 define internal void @foo() {
   call void @bar()
   ret void
