@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "benchmark/benchmark_api.h"
+#include "benchmark/benchmark.h"
 
 #include "ContainerBenchmarks.hpp"
 #include "GenerateInput.hpp"
@@ -29,4 +29,4 @@ BENCHMARK_CAPTURE(BM_ConstructIterIter,
   getRandomStringInputs)->Arg(TestNumInputs);
 
 
-BENCHMARK_MAIN()
+BENCHMARK_MAIN();

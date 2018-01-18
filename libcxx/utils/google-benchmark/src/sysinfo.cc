@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "sysinfo.h"
 #include "internal_macros.h"
 
 #ifdef BENCHMARK_OS_WINDOWS
@@ -25,21 +24,29 @@
 #include <sys/time.h>
 #include <sys/types.h>  // this header must be included before 'sys/sysctl.h' to avoid compilation error on FreeBSD
 #include <unistd.h>
-#if defined BENCHMARK_OS_FREEBSD || defined BENCHMARK_OS_MACOSX
+#if defined BENCHMARK_OS_FREEBSD || defined BENCHMARK_OS_MACOSX || \
+    defined BENCHMARK_OS_NETBSD
+#define BENCHMARK_HAS_SYSCTL
 #include <sys/sysctl.h>
 #endif
 #endif
 
+#include <algorithm>
+#include <array>
+#include <bitset>
 #include <cerrno>
+#include <climits>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
 #include <iostream>
+#include <iterator>
 #include <limits>
-#include <mutex>
+#include <memory>
+#include <sstream>
 
-#include "arraysize.h"
 #include "check.h"
 #include "cycleclock.h"
 #include "internal_macros.h"
@@ -49,69 +56,350 @@
 
 namespace benchmark {
 namespace {
-std::once_flag cpuinfo_init;
-double cpuinfo_cycles_per_second = 1.0;
-int cpuinfo_num_cpus = 1;  // Conservative guess
 
-#if !defined BENCHMARK_OS_MACOSX
-const int64_t estimate_time_ms = 1000;
+void PrintImp(std::ostream& out) { out << std::endl; }
 
-// Helper function estimates cycles/sec by observing cycles elapsed during
-// sleep(). Using small sleep time decreases accuracy significantly.
-int64_t EstimateCyclesPerSecond() {
-  const int64_t start_ticks = cycleclock::Now();
-  SleepForMilliseconds(estimate_time_ms);
-  return cycleclock::Now() - start_ticks;
+template <class First, class... Rest>
+void PrintImp(std::ostream& out, First&& f, Rest&&... rest) {
+  out << std::forward<First>(f);
+  PrintImp(out, std::forward<Rest>(rest)...);
+}
+
+template <class... Args>
+BENCHMARK_NORETURN void PrintErrorAndDie(Args&&... args) {
+  PrintImp(std::cerr, std::forward<Args>(args)...);
+  std::exit(EXIT_FAILURE);
+}
+
+#ifdef BENCHMARK_HAS_SYSCTL
+
+/// ValueUnion - A type used to correctly alias the byte-for-byte output of
+/// `sysctl` with the result type it's to be interpreted as.
+struct ValueUnion {
+  union DataT {
+    uint32_t uint32_value;
+    uint64_t uint64_value;
+    // For correct aliasing of union members from bytes.
+    char bytes[8];
+  };
+  using DataPtr = std::unique_ptr<DataT, decltype(&std::free)>;
+
+  // The size of the data union member + its trailing array size.
+  size_t Size;
+  DataPtr Buff;
+
+ public:
+  ValueUnion() : Size(0), Buff(nullptr, &std::free) {}
+
+  explicit ValueUnion(size_t BuffSize)
+      : Size(sizeof(DataT) + BuffSize),
+        Buff(::new (std::malloc(Size)) DataT(), &std::free) {}
+
+  ValueUnion(ValueUnion&& other) = default;
+
+  explicit operator bool() const { return bool(Buff); }
+
+  char* data() const { return Buff->bytes; }
+
+  std::string GetAsString() const { return std::string(data()); }
+
+  int64_t GetAsInteger() const {
+    if (Size == sizeof(Buff->uint32_value))
+      return static_cast<int32_t>(Buff->uint32_value);
+    else if (Size == sizeof(Buff->uint64_value))
+      return static_cast<int64_t>(Buff->uint64_value);
+    BENCHMARK_UNREACHABLE();
+  }
+
+  uint64_t GetAsUnsigned() const {
+    if (Size == sizeof(Buff->uint32_value))
+      return Buff->uint32_value;
+    else if (Size == sizeof(Buff->uint64_value))
+      return Buff->uint64_value;
+    BENCHMARK_UNREACHABLE();
+  }
+
+  template <class T, int N>
+  std::array<T, N> GetAsArray() {
+    const int ArrSize = sizeof(T) * N;
+    CHECK_LE(ArrSize, Size);
+    std::array<T, N> Arr;
+    std::memcpy(Arr.data(), data(), ArrSize);
+    return Arr;
+  }
+};
+
+ValueUnion GetSysctlImp(std::string const& Name) {
+  size_t CurBuffSize = 0;
+  if (sysctlbyname(Name.c_str(), nullptr, &CurBuffSize, nullptr, 0) == -1)
+    return ValueUnion();
+
+  ValueUnion buff(CurBuffSize);
+  if (sysctlbyname(Name.c_str(), buff.data(), &buff.Size, nullptr, 0) == 0)
+    return buff;
+  return ValueUnion();
+}
+
+BENCHMARK_MAYBE_UNUSED
+bool GetSysctl(std::string const& Name, std::string* Out) {
+  Out->clear();
+  auto Buff = GetSysctlImp(Name);
+  if (!Buff) return false;
+  Out->assign(Buff.data());
+  return true;
+}
+
+template <class Tp,
+          class = typename std::enable_if<std::is_integral<Tp>::value>::type>
+bool GetSysctl(std::string const& Name, Tp* Out) {
+  *Out = 0;
+  auto Buff = GetSysctlImp(Name);
+  if (!Buff) return false;
+  *Out = static_cast<Tp>(Buff.GetAsUnsigned());
+  return true;
+}
+
+template <class Tp, size_t N>
+bool GetSysctl(std::string const& Name, std::array<Tp, N>* Out) {
+  auto Buff = GetSysctlImp(Name);
+  if (!Buff) return false;
+  *Out = Buff.GetAsArray<Tp, N>();
+  return true;
 }
 #endif
 
-#if defined BENCHMARK_OS_LINUX || defined BENCHMARK_OS_CYGWIN
-// Helper function for reading an int from a file. Returns true if successful
-// and the memory location pointed to by value is set to the value read.
-bool ReadIntFromFile(const char* file, long* value) {
-  bool ret = false;
-  int fd = open(file, O_RDONLY);
-  if (fd != -1) {
-    char line[1024];
-    char* err;
-    memset(line, '\0', sizeof(line));
-    ssize_t read_err = read(fd, line, sizeof(line) - 1);
-    ((void)read_err); // prevent unused warning
-    CHECK(read_err >= 0);
-    const long temp_value = strtol(line, &err, 10);
-    if (line[0] != '\0' && (*err == '\n' || *err == '\0')) {
-      *value = temp_value;
-      ret = true;
+template <class ArgT>
+bool ReadFromFile(std::string const& fname, ArgT* arg) {
+  *arg = ArgT();
+  std::ifstream f(fname.c_str());
+  if (!f.is_open()) return false;
+  f >> *arg;
+  return f.good();
+}
+
+bool CpuScalingEnabled(int num_cpus) {
+  // We don't have a valid CPU count, so don't even bother.
+  if (num_cpus <= 0) return false;
+#ifndef BENCHMARK_OS_WINDOWS
+  // On Linux, the CPUfreq subsystem exposes CPU information as files on the
+  // local file system. If reading the exported files fails, then we may not be
+  // running on Linux, so we silently ignore all the read errors.
+  std::string res;
+  for (int cpu = 0; cpu < num_cpus; ++cpu) {
+    std::string governor_file =
+        StrCat("/sys/devices/system/cpu/cpu", cpu, "/cpufreq/scaling_governor");
+    if (ReadFromFile(governor_file, &res) && res != "performance") return true;
+  }
+#endif
+  return false;
+}
+
+int CountSetBitsInCPUMap(std::string Val) {
+  auto CountBits = [](std::string Part) {
+    using CPUMask = std::bitset<sizeof(std::uintptr_t) * CHAR_BIT>;
+    Part = "0x" + Part;
+    CPUMask Mask(std::stoul(Part, nullptr, 16));
+    return static_cast<int>(Mask.count());
+  };
+  size_t Pos;
+  int total = 0;
+  while ((Pos = Val.find(',')) != std::string::npos) {
+    total += CountBits(Val.substr(0, Pos));
+    Val = Val.substr(Pos + 1);
+  }
+  if (!Val.empty()) {
+    total += CountBits(Val);
+  }
+  return total;
+}
+
+BENCHMARK_MAYBE_UNUSED
+std::vector<CPUInfo::CacheInfo> GetCacheSizesFromKVFS() {
+  std::vector<CPUInfo::CacheInfo> res;
+  std::string dir = "/sys/devices/system/cpu/cpu0/cache/";
+  int Idx = 0;
+  while (true) {
+    CPUInfo::CacheInfo info;
+    std::string FPath = StrCat(dir, "index", Idx++, "/");
+    std::ifstream f(StrCat(FPath, "size").c_str());
+    if (!f.is_open()) break;
+    std::string suffix;
+    f >> info.size;
+    if (f.fail())
+      PrintErrorAndDie("Failed while reading file '", FPath, "size'");
+    if (f.good()) {
+      f >> suffix;
+      if (f.bad())
+        PrintErrorAndDie(
+            "Invalid cache size format: failed to read size suffix");
+      else if (f && suffix != "K")
+        PrintErrorAndDie("Invalid cache size format: Expected bytes ", suffix);
+      else if (suffix == "K")
+        info.size *= 1000;
     }
-    close(fd);
+    if (!ReadFromFile(StrCat(FPath, "type"), &info.type))
+      PrintErrorAndDie("Failed to read from file ", FPath, "type");
+    if (!ReadFromFile(StrCat(FPath, "level"), &info.level))
+      PrintErrorAndDie("Failed to read from file ", FPath, "level");
+    std::string map_str;
+    if (!ReadFromFile(StrCat(FPath, "shared_cpu_map"), &map_str))
+      PrintErrorAndDie("Failed to read from file ", FPath, "shared_cpu_map");
+    info.num_sharing = CountSetBitsInCPUMap(map_str);
+    res.push_back(info);
   }
-  return ret;
+
+  return res;
+}
+
+#ifdef BENCHMARK_OS_MACOSX
+std::vector<CPUInfo::CacheInfo> GetCacheSizesMacOSX() {
+  std::vector<CPUInfo::CacheInfo> res;
+  std::array<uint64_t, 4> CacheCounts{{0, 0, 0, 0}};
+  GetSysctl("hw.cacheconfig", &CacheCounts);
+
+  struct {
+    std::string name;
+    std::string type;
+    int level;
+    size_t num_sharing;
+  } Cases[] = {{"hw.l1dcachesize", "Data", 1, CacheCounts[1]},
+               {"hw.l1icachesize", "Instruction", 1, CacheCounts[1]},
+               {"hw.l2cachesize", "Unified", 2, CacheCounts[2]},
+               {"hw.l3cachesize", "Unified", 3, CacheCounts[3]}};
+  for (auto& C : Cases) {
+    int val;
+    if (!GetSysctl(C.name, &val)) continue;
+    CPUInfo::CacheInfo info;
+    info.type = C.type;
+    info.level = C.level;
+    info.size = val;
+    info.num_sharing = static_cast<int>(C.num_sharing);
+    res.push_back(std::move(info));
+  }
+  return res;
+}
+#elif defined(BENCHMARK_OS_WINDOWS)
+std::vector<CPUInfo::CacheInfo> GetCacheSizesWindows() {
+  std::vector<CPUInfo::CacheInfo> res;
+  DWORD buffer_size = 0;
+  using PInfo = SYSTEM_LOGICAL_PROCESSOR_INFORMATION;
+  using CInfo = CACHE_DESCRIPTOR;
+
+  using UPtr = std::unique_ptr<PInfo, decltype(&std::free)>;
+  GetLogicalProcessorInformation(nullptr, &buffer_size);
+  UPtr buff((PInfo*)malloc(buffer_size), &std::free);
+  if (!GetLogicalProcessorInformation(buff.get(), &buffer_size))
+    PrintErrorAndDie("Failed during call to GetLogicalProcessorInformation: ",
+                     GetLastError());
+
+  PInfo* it = buff.get();
+  PInfo* end = buff.get() + (buffer_size / sizeof(PInfo));
+
+  for (; it != end; ++it) {
+    if (it->Relationship != RelationCache) continue;
+    using BitSet = std::bitset<sizeof(ULONG_PTR) * CHAR_BIT>;
+    BitSet B(it->ProcessorMask);
+    // To prevent duplicates, only consider caches where CPU 0 is specified
+    if (!B.test(0)) continue;
+    CInfo* Cache = &it->Cache;
+    CPUInfo::CacheInfo C;
+    C.num_sharing = B.count();
+    C.level = Cache->Level;
+    C.size = Cache->Size;
+    switch (Cache->Type) {
+      case CacheUnified:
+        C.type = "Unified";
+        break;
+      case CacheInstruction:
+        C.type = "Instruction";
+        break;
+      case CacheData:
+        C.type = "Data";
+        break;
+      case CacheTrace:
+        C.type = "Trace";
+        break;
+      default:
+        C.type = "Unknown";
+        break;
+    }
+    res.push_back(C);
+  }
+  return res;
 }
 #endif
 
-#if defined BENCHMARK_OS_LINUX || defined BENCHMARK_OS_CYGWIN
-static std::string convertToLowerCase(std::string s) {
-  for (auto& ch : s)
-    ch = std::tolower(ch);
-  return s;
-}
-static bool startsWithKey(std::string Value, std::string Key,
-                          bool IgnoreCase = true) {
-  if (IgnoreCase) {
-    Key = convertToLowerCase(std::move(Key));
-    Value = convertToLowerCase(std::move(Value));
-  }
-  return Value.compare(0, Key.size(), Key) == 0;
-}
+std::vector<CPUInfo::CacheInfo> GetCacheSizes() {
+#ifdef BENCHMARK_OS_MACOSX
+  return GetCacheSizesMacOSX();
+#elif defined(BENCHMARK_OS_WINDOWS)
+  return GetCacheSizesWindows();
+#else
+  return GetCacheSizesFromKVFS();
 #endif
+}
 
-void InitializeSystemInfo() {
+int GetNumCPUs() {
+#ifdef BENCHMARK_HAS_SYSCTL
+  int NumCPU = -1;
+  if (GetSysctl("hw.ncpu", &NumCPU)) return NumCPU;
+  fprintf(stderr, "Err: %s\n", strerror(errno));
+  std::exit(EXIT_FAILURE);
+#elif defined(BENCHMARK_OS_WINDOWS)
+  SYSTEM_INFO sysinfo;
+  // Use memset as opposed to = {} to avoid GCC missing initializer false
+  // positives.
+  std::memset(&sysinfo, 0, sizeof(SYSTEM_INFO));
+  GetSystemInfo(&sysinfo);
+  return sysinfo.dwNumberOfProcessors;  // number of logical
+                                        // processors in the current
+                                        // group
+#else
+  int NumCPUs = 0;
+  int MaxID = -1;
+  std::ifstream f("/proc/cpuinfo");
+  if (!f.is_open()) {
+    std::cerr << "failed to open /proc/cpuinfo\n";
+    return -1;
+  }
+  const std::string Key = "processor";
+  std::string ln;
+  while (std::getline(f, ln)) {
+    if (ln.empty()) continue;
+    size_t SplitIdx = ln.find(':');
+    std::string value;
+    if (SplitIdx != std::string::npos) value = ln.substr(SplitIdx + 1);
+    if (ln.size() >= Key.size() && ln.compare(0, Key.size(), Key) == 0) {
+      NumCPUs++;
+      if (!value.empty()) {
+        int CurID = std::stoi(value);
+        MaxID = std::max(CurID, MaxID);
+      }
+    }
+  }
+  if (f.bad()) {
+    std::cerr << "Failure reading /proc/cpuinfo\n";
+    return -1;
+  }
+  if (!f.eof()) {
+    std::cerr << "Failed to read to end of /proc/cpuinfo\n";
+    return -1;
+  }
+  f.close();
+
+  if ((MaxID + 1) != NumCPUs) {
+    fprintf(stderr,
+            "CPU ID assignments in /proc/cpuinfo seem messed up."
+            " This is usually caused by a bad BIOS.\n");
+  }
+  return NumCPUs;
+#endif
+  BENCHMARK_UNREACHABLE();
+}
+
+double GetCPUCyclesPerSecond() {
 #if defined BENCHMARK_OS_LINUX || defined BENCHMARK_OS_CYGWIN
-  char line[1024];
-  char* err;
   long freq;
-
-  bool saw_mhz = false;
 
   // If the kernel is exporting the tsc frequency use that. There are issues
   // where cpuinfo_max_freq cannot be relied on because the BIOS may be
@@ -119,144 +407,80 @@ void InitializeSystemInfo() {
   // processor in a new mode (turbo mode). Essentially, those frequencies
   // cannot always be relied upon. The same reasons apply to /proc/cpuinfo as
   // well.
-  if (!saw_mhz &&
-      ReadIntFromFile("/sys/devices/system/cpu/cpu0/tsc_freq_khz", &freq)) {
+  if (ReadFromFile("/sys/devices/system/cpu/cpu0/tsc_freq_khz", &freq)
+      // If CPU scaling is in effect, we want to use the *maximum* frequency,
+      // not whatever CPU speed some random processor happens to be using now.
+      || ReadFromFile("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq",
+                      &freq)) {
     // The value is in kHz (as the file name suggests).  For example, on a
     // 2GHz warpstation, the file contains the value "2000000".
-    cpuinfo_cycles_per_second = freq * 1000.0;
-    saw_mhz = true;
+    return freq * 1000.0;
   }
 
-  // If CPU scaling is in effect, we want to use the *maximum* frequency,
-  // not whatever CPU speed some random processor happens to be using now.
-  if (!saw_mhz &&
-      ReadIntFromFile("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq",
-                      &freq)) {
-    // The value is in kHz.  For example, on a 2GHz warpstation, the file
-    // contains the value "2000000".
-    cpuinfo_cycles_per_second = freq * 1000.0;
-    saw_mhz = true;
+  const double error_value = -1;
+  double bogo_clock = error_value;
+
+  std::ifstream f("/proc/cpuinfo");
+  if (!f.is_open()) {
+    std::cerr << "failed to open /proc/cpuinfo\n";
+    return error_value;
   }
 
-  // Read /proc/cpuinfo for other values, and if there is no cpuinfo_max_freq.
-  const char* pname = "/proc/cpuinfo";
-  int fd = open(pname, O_RDONLY);
-  if (fd == -1) {
-    perror(pname);
-    if (!saw_mhz) {
-      cpuinfo_cycles_per_second =
-          static_cast<double>(EstimateCyclesPerSecond());
-    }
-    return;
-  }
+  auto startsWithKey = [](std::string const& Value, std::string const& Key) {
+    if (Key.size() > Value.size()) return false;
+    auto Cmp = [&](char X, char Y) {
+      return std::tolower(X) == std::tolower(Y);
+    };
+    return std::equal(Key.begin(), Key.end(), Value.begin(), Cmp);
+  };
 
-  double bogo_clock = 1.0;
-  bool saw_bogo = false;
-  long max_cpu_id = 0;
-  int num_cpus = 0;
-  line[0] = line[1] = '\0';
-  size_t chars_read = 0;
-  do {  // we'll exit when the last read didn't read anything
-    // Move the next line to the beginning of the buffer
-    const size_t oldlinelen = strlen(line);
-    if (sizeof(line) == oldlinelen + 1)  // oldlinelen took up entire line
-      line[0] = '\0';
-    else  // still other lines left to save
-      memmove(line, line + oldlinelen + 1, sizeof(line) - (oldlinelen + 1));
-    // Terminate the new line, reading more if we can't find the newline
-    char* newline = strchr(line, '\n');
-    if (newline == nullptr) {
-      const size_t linelen = strlen(line);
-      const size_t bytes_to_read = sizeof(line) - 1 - linelen;
-      CHECK(bytes_to_read > 0);  // because the memmove recovered >=1 bytes
-      chars_read = read(fd, line + linelen, bytes_to_read);
-      line[linelen + chars_read] = '\0';
-      newline = strchr(line, '\n');
-    }
-    if (newline != nullptr) *newline = '\0';
-
+  std::string ln;
+  while (std::getline(f, ln)) {
+    if (ln.empty()) continue;
+    size_t SplitIdx = ln.find(':');
+    std::string value;
+    if (SplitIdx != std::string::npos) value = ln.substr(SplitIdx + 1);
     // When parsing the "cpu MHz" and "bogomips" (fallback) entries, we only
     // accept postive values. Some environments (virtual machines) report zero,
     // which would cause infinite looping in WallTime_Init.
-    if (!saw_mhz && startsWithKey(line, "cpu MHz")) {
-      const char* freqstr = strchr(line, ':');
-      if (freqstr) {
-        cpuinfo_cycles_per_second = strtod(freqstr + 1, &err) * 1000000.0;
-        if (freqstr[1] != '\0' && *err == '\0' && cpuinfo_cycles_per_second > 0)
-          saw_mhz = true;
+    if (startsWithKey(ln, "cpu MHz")) {
+      if (!value.empty()) {
+        double cycles_per_second = std::stod(value) * 1000000.0;
+        if (cycles_per_second > 0) return cycles_per_second;
       }
-    } else if (startsWithKey(line, "bogomips")) {
-      const char* freqstr = strchr(line, ':');
-      if (freqstr) {
-        bogo_clock = strtod(freqstr + 1, &err) * 1000000.0;
-        if (freqstr[1] != '\0' && *err == '\0' && bogo_clock > 0)
-          saw_bogo = true;
+    } else if (startsWithKey(ln, "bogomips")) {
+      if (!value.empty()) {
+        bogo_clock = std::stod(value) * 1000000.0;
+        if (bogo_clock < 0.0) bogo_clock = error_value;
       }
-    } else if (startsWithKey(line, "processor", /*IgnoreCase*/false)) {
-      // The above comparison is case-sensitive because ARM kernels often
-      // include a "Processor" line that tells you about the CPU, distinct
-      // from the usual "processor" lines that give you CPU ids. No current
-      // Linux architecture is using "Processor" for CPU ids.
-      num_cpus++;  // count up every time we see an "processor :" entry
-      const char* id_str = strchr(line, ':');
-      if (id_str) {
-        const long cpu_id = strtol(id_str + 1, &err, 10);
-        if (id_str[1] != '\0' && *err == '\0' && max_cpu_id < cpu_id)
-          max_cpu_id = cpu_id;
-      }
-    }
-  } while (chars_read > 0);
-  close(fd);
-
-  if (!saw_mhz) {
-    if (saw_bogo) {
-      // If we didn't find anything better, we'll use bogomips, but
-      // we're not happy about it.
-      cpuinfo_cycles_per_second = bogo_clock;
-    } else {
-      // If we don't even have bogomips, we'll use the slow estimation.
-      cpuinfo_cycles_per_second =
-          static_cast<double>(EstimateCyclesPerSecond());
     }
   }
-  if (num_cpus == 0) {
-    fprintf(stderr, "Failed to read num. CPUs correctly from /proc/cpuinfo\n");
-  } else {
-    if ((max_cpu_id + 1) != num_cpus) {
-      fprintf(stderr,
-              "CPU ID assignments in /proc/cpuinfo seem messed up."
-              " This is usually caused by a bad BIOS.\n");
-    }
-    cpuinfo_num_cpus = num_cpus;
+  if (f.bad()) {
+    std::cerr << "Failure reading /proc/cpuinfo\n";
+    return error_value;
   }
+  if (!f.eof()) {
+    std::cerr << "Failed to read to end of /proc/cpuinfo\n";
+    return error_value;
+  }
+  f.close();
+  // If we found the bogomips clock, but nothing better, we'll use it (but
+  // we're not happy about it); otherwise, fallback to the rough estimation
+  // below.
+  if (bogo_clock >= 0.0) return bogo_clock;
 
-#elif defined BENCHMARK_OS_FREEBSD
-// For this sysctl to work, the machine must be configured without
-// SMP, APIC, or APM support.  hz should be 64-bit in freebsd 7.0
-// and later.  Before that, it's a 32-bit quantity (and gives the
-// wrong answer on machines faster than 2^32 Hz).  See
-//  http://lists.freebsd.org/pipermail/freebsd-i386/2004-November/001846.html
-// But also compare FreeBSD 7.0:
-//  http://fxr.watson.org/fxr/source/i386/i386/tsc.c?v=RELENG70#L223
-//  231         error = sysctl_handle_quad(oidp, &freq, 0, req);
-// To FreeBSD 6.3 (it's the same in 6-STABLE):
-//  http://fxr.watson.org/fxr/source/i386/i386/tsc.c?v=RELENG6#L131
-//  139         error = sysctl_handle_int(oidp, &freq, sizeof(freq), req);
-#if __FreeBSD__ >= 7
-  uint64_t hz = 0;
+#elif defined BENCHMARK_HAS_SYSCTL
+  constexpr auto* FreqStr =
+#if defined(BENCHMARK_OS_FREEBSD) || defined(BENCHMARK_OS_NETBSD)
+      "machdep.tsc_freq";
 #else
-  unsigned int hz = 0;
+      "hw.cpufrequency";
 #endif
-  size_t sz = sizeof(hz);
-  const char* sysctl_path = "machdep.tsc_freq";
-  if (sysctlbyname(sysctl_path, &hz, &sz, nullptr, 0) != 0) {
-    fprintf(stderr, "Unable to determine clock rate from sysctl: %s: %s\n",
-            sysctl_path, strerror(errno));
-    cpuinfo_cycles_per_second = static_cast<double>(EstimateCyclesPerSecond());
-  } else {
-    cpuinfo_cycles_per_second = hz;
-  }
-// TODO: also figure out cpuinfo_num_cpus
+  unsigned long long hz = 0;
+  if (GetSysctl(FreqStr, &hz)) return hz;
+
+  fprintf(stderr, "Unable to determine clock rate from sysctl: %s: %s\n",
+          FreqStr, strerror(errno));
 
 #elif defined BENCHMARK_OS_WINDOWS
   // In NT, read MHz from the registry. If we fail to do so or we're in win9x
@@ -267,89 +491,27 @@ void InitializeSystemInfo() {
           SHGetValueA(HKEY_LOCAL_MACHINE,
                       "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
                       "~MHz", nullptr, &data, &data_size)))
-    cpuinfo_cycles_per_second =
-        static_cast<double>((int64_t)data * (int64_t)(1000 * 1000));  // was mhz
-  else
-    cpuinfo_cycles_per_second = static_cast<double>(EstimateCyclesPerSecond());
-
-  SYSTEM_INFO sysinfo;
-  // Use memset as opposed to = {} to avoid GCC missing initializer false
-  // positives.
-  std::memset(&sysinfo, 0, sizeof(SYSTEM_INFO));
-  GetSystemInfo(&sysinfo);
-  cpuinfo_num_cpus = sysinfo.dwNumberOfProcessors;  // number of logical
-                                                    // processors in the current
-                                                    // group
-
-#elif defined BENCHMARK_OS_MACOSX
-  int32_t num_cpus = 0;
-  size_t size = sizeof(num_cpus);
-  if (::sysctlbyname("hw.ncpu", &num_cpus, &size, nullptr, 0) == 0 &&
-      (size == sizeof(num_cpus))) {
-    cpuinfo_num_cpus = num_cpus;
-  } else {
-    fprintf(stderr, "%s\n", strerror(errno));
-    std::exit(EXIT_FAILURE);
-  }
-  int64_t cpu_freq = 0;
-  size = sizeof(cpu_freq);
-  if (::sysctlbyname("hw.cpufrequency", &cpu_freq, &size, nullptr, 0) == 0 &&
-      (size == sizeof(cpu_freq))) {
-    cpuinfo_cycles_per_second = cpu_freq;
-  } else {
-    #if defined BENCHMARK_OS_IOS
-    fprintf(stderr, "CPU frequency cannot be detected. \n");
-    cpuinfo_cycles_per_second = 0;
-    #else
-    fprintf(stderr, "%s\n", strerror(errno));
-    std::exit(EXIT_FAILURE);
-    #endif
-  }
-#else
-  // Generic cycles per second counter
-  cpuinfo_cycles_per_second = static_cast<double>(EstimateCyclesPerSecond());
+    return static_cast<double>((int64_t)data *
+                               (int64_t)(1000 * 1000));  // was mhz
 #endif
+  // If we've fallen through, attempt to roughly estimate the CPU clock rate.
+  const int estimate_time_ms = 1000;
+  const auto start_ticks = cycleclock::Now();
+  SleepForMilliseconds(estimate_time_ms);
+  return static_cast<double>(cycleclock::Now() - start_ticks);
 }
 
 }  // end namespace
 
-double CyclesPerSecond(void) {
-  std::call_once(cpuinfo_init, InitializeSystemInfo);
-  return cpuinfo_cycles_per_second;
+const CPUInfo& CPUInfo::Get() {
+  static const CPUInfo* info = new CPUInfo();
+  return *info;
 }
 
-int NumCPUs(void) {
-  std::call_once(cpuinfo_init, InitializeSystemInfo);
-  return cpuinfo_num_cpus;
-}
-
-// The ""'s catch people who don't pass in a literal for "str"
-#define strliterallen(str) (sizeof("" str "") - 1)
-
-// Must use a string literal for prefix.
-#define memprefix(str, len, prefix)                       \
-  ((((len) >= strliterallen(prefix)) &&                   \
-    std::memcmp(str, prefix, strliterallen(prefix)) == 0) \
-       ? str + strliterallen(prefix)                      \
-       : nullptr)
-
-bool CpuScalingEnabled() {
-#ifndef BENCHMARK_OS_WINDOWS
-  // On Linux, the CPUfreq subsystem exposes CPU information as files on the
-  // local file system. If reading the exported files fails, then we may not be
-  // running on Linux, so we silently ignore all the read errors.
-  for (int cpu = 0, num_cpus = NumCPUs(); cpu < num_cpus; ++cpu) {
-    std::string governor_file =
-        StrCat("/sys/devices/system/cpu/cpu", cpu, "/cpufreq/scaling_governor");
-    FILE* file = fopen(governor_file.c_str(), "r");
-    if (!file) break;
-    char buff[16];
-    size_t bytes_read = fread(buff, 1, sizeof(buff), file);
-    fclose(file);
-    if (memprefix(buff, bytes_read, "performance") == nullptr) return true;
-  }
-#endif
-  return false;
-}
+CPUInfo::CPUInfo()
+    : num_cpus(GetNumCPUs()),
+      cycles_per_second(GetCPUCyclesPerSecond()),
+      caches(GetCacheSizes()),
+      scaling_enabled(CpuScalingEnabled(num_cpus)) {}
 
 }  // end namespace benchmark

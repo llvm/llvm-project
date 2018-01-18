@@ -61,7 +61,7 @@ typedef benchmark::internal::Benchmark* ReturnVal;
 // Test RegisterBenchmark with no additional arguments
 //----------------------------------------------------------------------------//
 void BM_function(benchmark::State& state) {
-  while (state.KeepRunning()) {
+  for (auto _ : state) {
   }
 }
 BENCHMARK(BM_function);
@@ -77,7 +77,7 @@ ADD_CASES({"BM_function"}, {"BM_function_manual_registration"});
 #ifndef BENCHMARK_HAS_NO_VARIADIC_REGISTER_BENCHMARK
 
 void BM_extra_args(benchmark::State& st, const char* label) {
-  while (st.KeepRunning()) {
+  for (auto _ : st) {
   }
   st.SetLabel(label);
 }
@@ -99,7 +99,7 @@ ADD_CASES({"test1", "One"}, {"test2", "Two"}, {"test3", "Three"});
 
 struct CustomFixture {
   void operator()(benchmark::State& st) {
-    while (st.KeepRunning()) {
+    for (auto _ : st) {
     }
   }
 };
@@ -114,22 +114,22 @@ void TestRegistrationAtRuntime() {
 #endif
 #ifndef BENCHMARK_HAS_NO_VARIADIC_REGISTER_BENCHMARK
   {
-    int x = 42;
+    const char* x = "42";
     auto capturing_lam = [=](benchmark::State& st) {
-      while (st.KeepRunning()) {
+      for (auto _ : st) {
       }
-      st.SetLabel(std::to_string(x));
+      st.SetLabel(x);
     };
     benchmark::RegisterBenchmark("lambda_benchmark", capturing_lam);
-    AddCases({{"lambda_benchmark", "42"}});
+    AddCases({{"lambda_benchmark", x}});
   }
 #endif
 }
 
-int main(int argc, char* argv[]) {
+// Test that all benchmarks, registered at either during static init or runtime,
+// are run and the results are passed to the reported.
+void RunTestOne() {
   TestRegistrationAtRuntime();
-
-  benchmark::Initialize(&argc, argv);
 
   TestReporter test_reporter;
   benchmark::RunSpecifiedBenchmarks(&test_reporter);
@@ -143,6 +143,40 @@ int main(int argc, char* argv[]) {
     ++EB;
   }
   assert(EB == ExpectedResults.end());
+}
 
-  return 0;
+// Test that ClearRegisteredBenchmarks() clears all previously registered
+// benchmarks.
+// Also test that new benchmarks can be registered and ran afterwards.
+void RunTestTwo() {
+  assert(ExpectedResults.size() != 0 &&
+         "must have at least one registered benchmark");
+  ExpectedResults.clear();
+  benchmark::ClearRegisteredBenchmarks();
+
+  TestReporter test_reporter;
+  size_t num_ran = benchmark::RunSpecifiedBenchmarks(&test_reporter);
+  assert(num_ran == 0);
+  assert(test_reporter.all_runs_.begin() == test_reporter.all_runs_.end());
+
+  TestRegistrationAtRuntime();
+  num_ran = benchmark::RunSpecifiedBenchmarks(&test_reporter);
+  assert(num_ran == ExpectedResults.size());
+
+  typedef benchmark::BenchmarkReporter::Run Run;
+  auto EB = ExpectedResults.begin();
+
+  for (Run const& run : test_reporter.all_runs_) {
+    assert(EB != ExpectedResults.end());
+    EB->CheckRun(run);
+    ++EB;
+  }
+  assert(EB == ExpectedResults.end());
+}
+
+int main(int argc, char* argv[]) {
+  benchmark::Initialize(&argc, argv);
+
+  RunTestOne();
+  RunTestTwo();
 }
