@@ -13,7 +13,7 @@
 ; promoted name matches the imported copy.
 ; RUN: llvm-lto -thinlto-action=import %t.bc -thinlto-index=%t4.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=IMPORT
 ; IMPORT: call i32 @foo.llvm.[[HASH:[0-9]+]]
-; IMPORT: define available_externally dso_local hidden i32 @foo.llvm.[[HASH]]()
+; IMPORT: define available_externally hidden i32 @foo.llvm.[[HASH]]()
 
 ; The copy in %t2.bc should not be exported/promoted/renamed
 ; RUN: llvm-lto -thinlto-action=promote %t2.bc -thinlto-index=%t4.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=NOEXPORTSTATIC
@@ -21,7 +21,7 @@
 
 ; Make sure foo is promoted and renamed without complaint in %t3.bc.
 ; RUN: llvm-lto -thinlto-action=promote %t3.bc -thinlto-index=%t4.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=EXPORTSTATIC
-; EXPORTSTATIC: define dso_local hidden i32 @foo.llvm.
+; EXPORTSTATIC: define hidden i32 @foo.llvm.
 
 ; ModuleID = 'local_name_conflict_main.o'
 source_filename = "local_name_conflict_main.c"

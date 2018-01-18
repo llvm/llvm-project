@@ -9033,9 +9033,11 @@ This instruction requires several arguments:
    #. Arguments with the :ref:`inalloca <attr_inalloca>` attribute are
       forwarded in place.
 
-   Both markers imply that the callee does not access allocas or varargs from
-   the caller. Calls marked ``musttail`` must obey the following additional
-   rules:
+   Both markers imply that the callee does not access allocas from the caller.
+   The ``tail`` marker additionally implies that the callee does not access
+   varargs from the caller, while ``musttail`` implies that varargs from the
+   caller are passed to the callee. Calls marked ``musttail`` must obey the
+   following additional  rules:
 
    - The call must immediately precede a :ref:`ret <i_ret>` instruction,
      or a pointer bitcast followed by a ret instruction.

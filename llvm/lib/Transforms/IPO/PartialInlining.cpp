@@ -1384,7 +1384,8 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
   if (CalleeEntryCount)
     computeCallsiteToProfCountMap(Cloner.ClonedFunc, CallSiteToProfCountMap);
 
-  uint64_t CalleeEntryCountV = (CalleeEntryCount ? *CalleeEntryCount : 0);
+  uint64_t CalleeEntryCountV =
+      (CalleeEntryCount ? CalleeEntryCount.getCount() : 0);
 
   bool AnyInline = false;
   for (User *User : Users) {
@@ -1433,7 +1434,8 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
   if (AnyInline) {
     Cloner.IsFunctionInlined = true;
     if (CalleeEntryCount)
-      Cloner.OrigFunc->setEntryCount(CalleeEntryCountV);
+      Cloner.OrigFunc->setEntryCount(
+          CalleeEntryCount.setCount(CalleeEntryCountV));
     auto &ORE = (*GetORE)(*Cloner.OrigFunc);
     ORE.emit([&]() {
       return OptimizationRemark(DEBUG_TYPE, "PartiallyInlined", Cloner.OrigFunc)

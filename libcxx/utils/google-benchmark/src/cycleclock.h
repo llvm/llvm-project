@@ -23,7 +23,7 @@
 
 #include <cstdint>
 
-#include "benchmark/macros.h"
+#include "benchmark/benchmark.h"
 #include "internal_macros.h"
 
 #if defined(BENCHMARK_OS_MACOSX)

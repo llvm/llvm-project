@@ -56,6 +56,7 @@
 #include <string>
 
 using namespace llvm;
+using ProfileCount = Function::ProfileCount;
 
 // Explicit instantiations of SymbolTableListTraits since some of the methods
 // are not in the public header file...
@@ -1320,27 +1321,43 @@ void Function::setValueSubclassDataBit(unsigned Bit, bool On) {
     setValueSubclassData(getSubclassDataFromValue() & ~(1 << Bit));
 }
 
-void Function::setEntryCount(uint64_t Count, bool Synthetic,
+void Function::setEntryCount(ProfileCount Count,
                              const DenseSet<GlobalValue::GUID> *S) {
+  assert(Count.hasValue());
+#if !defined(NDEBUG)
+  auto PrevCount = getEntryCount();
+  assert(!PrevCount.hasValue() || PrevCount.getType() == Count.getType());
+#endif
   MDBuilder MDB(getContext());
-  setMetadata(LLVMContext::MD_prof,
-              MDB.createFunctionEntryCount(Count, Synthetic, S));
+  setMetadata(
+      LLVMContext::MD_prof,
+      MDB.createFunctionEntryCount(Count.getCount(), Count.isSynthetic(), S));
 }
 
-Optional<uint64_t> Function::getEntryCount() const {
+void Function::setEntryCount(uint64_t Count, Function::ProfileCountType Type,
+                             const DenseSet<GlobalValue::GUID> *Imports) {
+  setEntryCount(ProfileCount(Count, Type), Imports);
+}
+
+ProfileCount Function::getEntryCount() const {
   MDNode *MD = getMetadata(LLVMContext::MD_prof);
   if (MD && MD->getOperand(0))
-    if (MDString *MDS = dyn_cast<MDString>(MD->getOperand(0)))
+    if (MDString *MDS = dyn_cast<MDString>(MD->getOperand(0))) {
       if (MDS->getString().equals("function_entry_count")) {
         ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(1));
         uint64_t Count = CI->getValue().getZExtValue();
         // A value of -1 is used for SamplePGO when there were no samples.
         // Treat this the same as unknown.
         if (Count == (uint64_t)-1)
-          return None;
-        return Count;
+          return ProfileCount::getInvalid();
+        return ProfileCount(Count, PCT_Real);
+      } else if (MDS->getString().equals("synthetic_function_entry_count")) {
+        ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(1));
+        uint64_t Count = CI->getValue().getZExtValue();
+        return ProfileCount(Count, PCT_Synthetic);
       }
-  return None;
+    }
+  return ProfileCount::getInvalid();
 }
 
 DenseSet<GlobalValue::GUID> Function::getImportGUIDs() const {

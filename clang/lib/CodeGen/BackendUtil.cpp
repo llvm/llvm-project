@@ -362,21 +362,6 @@ getCodeModel(const CodeGenOptions &CodeGenOpts) {
   return static_cast<llvm::CodeModel::Model>(CodeModel);
 }
 
-static llvm::Reloc::Model getRelocModel(const CodeGenOptions &CodeGenOpts) {
-  // Keep this synced with the equivalent code in
-  // lib/Frontend/CompilerInvocation.cpp
-  llvm::Optional<llvm::Reloc::Model> RM;
-  RM = llvm::StringSwitch<llvm::Reloc::Model>(CodeGenOpts.RelocationModel)
-      .Case("static", llvm::Reloc::Static)
-      .Case("pic", llvm::Reloc::PIC_)
-      .Case("ropi", llvm::Reloc::ROPI)
-      .Case("rwpi", llvm::Reloc::RWPI)
-      .Case("ropi-rwpi", llvm::Reloc::ROPI_RWPI)
-      .Case("dynamic-no-pic", llvm::Reloc::DynamicNoPIC);
-  assert(RM.hasValue() && "invalid PIC model!");
-  return *RM;
-}
-
 static TargetMachine::CodeGenFileType getCodeGenFileType(BackendAction Action) {
   if (Action == Backend_EmitObj)
     return TargetMachine::CGFT_ObjectFile;
@@ -692,7 +677,7 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
   Optional<llvm::CodeModel::Model> CM = getCodeModel(CodeGenOpts);
   std::string FeaturesStr =
       llvm::join(TargetOpts.Features.begin(), TargetOpts.Features.end(), ",");
-  llvm::Reloc::Model RM = getRelocModel(CodeGenOpts);
+  llvm::Reloc::Model RM = CodeGenOpts.RelocationModel;
   CodeGenOpt::Level OptLevel = getCGOptLevel(CodeGenOpts);
 
   llvm::TargetOptions Options;
@@ -1113,7 +1098,7 @@ static void runThinLTOBackend(ModuleSummaryIndex *CombinedIndex, Module *M,
   Conf.CPU = TOpts.CPU;
   Conf.CodeModel = getCodeModel(CGOpts);
   Conf.MAttrs = TOpts.Features;
-  Conf.RelocModel = getRelocModel(CGOpts);
+  Conf.RelocModel = CGOpts.RelocationModel;
   Conf.CGOptLevel = getCGOptLevel(CGOpts);
   initTargetOptions(Conf.Options, CGOpts, TOpts, LOpts, HeaderOpts);
   Conf.SampleProfile = std::move(SampleProfile);

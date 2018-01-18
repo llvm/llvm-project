@@ -470,8 +470,6 @@ public:
     return true;
   }
 
-  bool RemoveUnneededCalls(PathPieces &pieces, BugReport *R);
-
   void Register(BugType *BT);
 
   /// \brief Add the given report to the set of reports tracked by BugReporter.

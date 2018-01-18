@@ -1430,6 +1430,22 @@ bool AsmPrinter::doFinalization(Module &M) {
     if (MCSection *S = MAI->getNonexecutableStackSection(OutContext))
       OutStreamer->SwitchSection(S);
 
+  if (TM.getTargetTriple().isOSBinFormatCOFF()) {
+    // Emit /EXPORT: flags for each exported global as necessary.
+    const auto &TLOF = getObjFileLowering();
+    std::string Flags;
+    for (const GlobalValue &GV : M.global_values()) {
+      raw_string_ostream OS(Flags);
+      TLOF.emitLinkerFlagsForGlobal(OS, &GV);
+      OS.flush();
+      if (!Flags.empty()) {
+        OutStreamer->SwitchSection(TLOF.getDrectveSection());
+        OutStreamer->EmitBytes(Flags);
+      }
+      Flags.clear();
+    }
+  }
+
   // Allow the target to emit any magic that it wants at the end of the file,
   // after everything else has gone out.
   EmitEndOfAsmFile(M);

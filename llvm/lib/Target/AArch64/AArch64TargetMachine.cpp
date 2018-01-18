@@ -243,6 +243,10 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
                         getEffectiveCodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian) {
   initAsmInfo();
+
+  // Enable GlobalISel at or below EnableGlobalISelAt0.
+  if (getOptLevel() <= EnableGlobalISelAtO)
+    setGlobalISel(true);
 }
 
 AArch64TargetMachine::~AArch64TargetMachine() = default;
@@ -340,8 +344,6 @@ public:
   void addPostRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
-
-  bool isGlobalISelEnabled() const override;
 };
 
 } // end anonymous namespace
@@ -453,10 +455,6 @@ void AArch64PassConfig::addPreGlobalInstructionSelect() {
 bool AArch64PassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect());
   return false;
-}
-
-bool AArch64PassConfig::isGlobalISelEnabled() const {
-  return TM->getOptLevel() <= EnableGlobalISelAtO;
 }
 
 bool AArch64PassConfig::addILPOpts() {

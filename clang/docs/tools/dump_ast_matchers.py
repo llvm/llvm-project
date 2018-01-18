@@ -237,7 +237,7 @@ def act_on_decl(declaration, comment, allowed_types):
                        (?:,\s*([^\s,]+)\s*
                           ,\s*([^\s,]+)\s*)?
                        (?:,\s*\d+\s*)?
-                      \)\s*{\s*$""", declaration, flags=re.X)
+                      \)\s*{""", declaration, flags=re.X)
     if m:
       p, n, result, name = m.groups()[0:4]
       args = m.groups()[4:]
