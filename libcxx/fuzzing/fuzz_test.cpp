@@ -22,6 +22,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <iterator>
 #include <vector>
 #include <map>
 #include <chrono>
@@ -68,9 +69,9 @@ void test_one(const char *filename, FuzzProc fp)
         std::copy(Iter(f), Iter(), std::back_inserter(v));
         if (verbose)
             std::cout << "File '" << filename << "' contains " << v.size() << " entries" << std::endl;
-        const auto start_time = std::chrono::steady_clock::now();
+        const auto start_time = std::chrono::high_resolution_clock::now();
         int ret = fp (v.data(), v.size());
-        const auto finish_time = std::chrono::steady_clock::now();
+        const auto finish_time = std::chrono::high_resolution_clock::now();
         if (ret != 0)
             std::cerr << "## Failure code: " << ret << std::endl;
         if (verbose)
