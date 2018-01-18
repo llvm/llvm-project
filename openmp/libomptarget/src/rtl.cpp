@@ -19,6 +19,7 @@
 #include <cstring>
 #include <dlfcn.h>
 #include <mutex>
+#include <string>
 
 // List of all plugins that can support offloading.
 static const char *RTLNames[] = {
