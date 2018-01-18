@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32I
 
-define i32 @square(i32 %a) {
+define i32 @square(i32 %a) nounwind {
 ; RV32I-LABEL: square:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -21,7 +21,7 @@ define i32 @square(i32 %a) {
   ret i32 %1
 }
 
-define i32 @mul(i32 %a, i32 %b) {
+define i32 @mul(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: mul:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -39,7 +39,7 @@ define i32 @mul(i32 %a, i32 %b) {
   ret i32 %1
 }
 
-define i32 @mul_constant(i32 %a) {
+define i32 @mul_constant(i32 %a) nounwind {
 ; RV32I-LABEL: mul_constant:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -58,7 +58,7 @@ define i32 @mul_constant(i32 %a) {
   ret i32 %1
 }
 
-define i32 @mul_pow2(i32 %a) {
+define i32 @mul_pow2(i32 %a) nounwind {
 ; RV32I-LABEL: mul_pow2:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -74,7 +74,7 @@ define i32 @mul_pow2(i32 %a) {
   ret i32 %1
 }
 
-define i64 @mul64(i64 %a, i64 %b) {
+define i64 @mul64(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: mul64:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -92,7 +92,7 @@ define i64 @mul64(i64 %a, i64 %b) {
   ret i64 %1
 }
 
-define i64 @mul64_constant(i64 %a) {
+define i64 @mul64_constant(i64 %a) nounwind {
 ; RV32I-LABEL: mul64_constant:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16

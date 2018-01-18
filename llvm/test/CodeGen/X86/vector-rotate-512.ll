@@ -333,7 +333,7 @@ define <32 x i16> @constant_rotate_v32i16(<32 x i16> %a) nounwind {
 ; AVX512F-NEXT:    vpmullw %ymm2, %ymm1, %ymm3
 ; AVX512F-NEXT:    vpmullw %ymm2, %ymm0, %ymm2
 ; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero
-; AVX512F-NEXT:    vmovdqa32 {{.*#+}} zmm4 = [16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1]
+; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm4 = [16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1]
 ; AVX512F-NEXT:    vpsrlvd %zmm4, %zmm1, %zmm1
 ; AVX512F-NEXT:    vpmovdw %zmm1, %ymm1
 ; AVX512F-NEXT:    vpor %ymm1, %ymm3, %ymm1
@@ -349,7 +349,7 @@ define <32 x i16> @constant_rotate_v32i16(<32 x i16> %a) nounwind {
 ; AVX512VL-NEXT:    vpmullw %ymm2, %ymm1, %ymm3
 ; AVX512VL-NEXT:    vpmullw %ymm2, %ymm0, %ymm2
 ; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero
-; AVX512VL-NEXT:    vmovdqa32 {{.*#+}} zmm4 = [16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1]
+; AVX512VL-NEXT:    vmovdqa64 {{.*#+}} zmm4 = [16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1]
 ; AVX512VL-NEXT:    vpsrlvd %zmm4, %zmm1, %zmm1
 ; AVX512VL-NEXT:    vpmovdw %zmm1, %ymm1
 ; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero

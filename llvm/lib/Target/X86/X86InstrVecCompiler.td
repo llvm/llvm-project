@@ -217,13 +217,13 @@ let Predicates = [HasVLX] in {
                                   sub_xmm>;
   defm : subvector_store_lowering<"APSZ128", "UPSZ128", VR256X, v4f32, v8f32,
                                   sub_xmm>;
-  defm : subvector_store_lowering<"DQA32Z128", "DQU32Z128", VR256X, v2i64,
+  defm : subvector_store_lowering<"DQA64Z128", "DQU64Z128", VR256X, v2i64,
                                   v4i64, sub_xmm>;
-  defm : subvector_store_lowering<"DQA32Z128", "DQU32Z128", VR256X, v4i32,
+  defm : subvector_store_lowering<"DQA64Z128", "DQU64Z128", VR256X, v4i32,
                                   v8i32, sub_xmm>;
-  defm : subvector_store_lowering<"DQA32Z128", "DQU32Z128", VR256X, v8i16,
+  defm : subvector_store_lowering<"DQA64Z128", "DQU64Z128", VR256X, v8i16,
                                   v16i16, sub_xmm>;
-  defm : subvector_store_lowering<"DQA32Z128", "DQU32Z128", VR256X, v16i8,
+  defm : subvector_store_lowering<"DQA64Z128", "DQU64Z128", VR256X, v16i8,
                                   v32i8, sub_xmm>;
 
   // Special patterns for storing subvector extracts of lower 128-bits of 512.
@@ -232,13 +232,13 @@ let Predicates = [HasVLX] in {
                                   sub_xmm>;
   defm : subvector_store_lowering<"APSZ128", "UPSZ128", VR512, v4f32, v16f32,
                                   sub_xmm>;
-  defm : subvector_store_lowering<"DQA32Z128", "DQU32Z128", VR512, v2i64,
+  defm : subvector_store_lowering<"DQA64Z128", "DQU64Z128", VR512, v2i64,
                                   v8i64, sub_xmm>;
-  defm : subvector_store_lowering<"DQA32Z128", "DQU32Z128", VR512, v4i32,
+  defm : subvector_store_lowering<"DQA64Z128", "DQU64Z128", VR512, v4i32,
                                   v16i32, sub_xmm>;
-  defm : subvector_store_lowering<"DQA32Z128", "DQU32Z128", VR512, v8i16,
+  defm : subvector_store_lowering<"DQA64Z128", "DQU64Z128", VR512, v8i16,
                                   v32i16, sub_xmm>;
-  defm : subvector_store_lowering<"DQA32Z128", "DQU32Z128", VR512, v16i8,
+  defm : subvector_store_lowering<"DQA64Z128", "DQU64Z128", VR512, v16i8,
                                   v64i8, sub_xmm>;
 
   // Special patterns for storing subvector extracts of lower 256-bits of 512.
@@ -247,13 +247,13 @@ let Predicates = [HasVLX] in {
                                   sub_ymm>;
   defm : subvector_store_lowering<"APSZ256", "UPSZ256", VR512, v8f32, v16f32,
                                   sub_ymm>;
-  defm : subvector_store_lowering<"DQA32Z256", "DQU32Z256", VR512, v4i64,
+  defm : subvector_store_lowering<"DQA64Z256", "DQU64Z256", VR512, v4i64,
                                   v8i64, sub_ymm>;
-  defm : subvector_store_lowering<"DQA32Z256", "DQU32Z256", VR512, v8i32,
+  defm : subvector_store_lowering<"DQA64Z256", "DQU64Z256", VR512, v8i32,
                                   v16i32, sub_ymm>;
-  defm : subvector_store_lowering<"DQA32Z256", "DQU32Z256", VR512, v16i16,
+  defm : subvector_store_lowering<"DQA64Z256", "DQU64Z256", VR512, v16i16,
                                   v32i16, sub_ymm>;
-  defm : subvector_store_lowering<"DQA32Z256", "DQU32Z256", VR512, v32i8,
+  defm : subvector_store_lowering<"DQA64Z256", "DQU64Z256", VR512, v32i8,
                                   v64i8, sub_ymm>;
 }
 

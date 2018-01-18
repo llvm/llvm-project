@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32I
 
-define i32 @udiv(i32 %a, i32 %b) {
+define i32 @udiv(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: udiv:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -20,7 +20,7 @@ define i32 @udiv(i32 %a, i32 %b) {
   ret i32 %1
 }
 
-define i32 @udiv_constant(i32 %a) {
+define i32 @udiv_constant(i32 %a) nounwind {
 ; RV32I-LABEL: udiv_constant:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -39,7 +39,7 @@ define i32 @udiv_constant(i32 %a) {
   ret i32 %1
 }
 
-define i32 @udiv_pow2(i32 %a) {
+define i32 @udiv_pow2(i32 %a) nounwind {
 ; RV32I-LABEL: udiv_pow2:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -55,7 +55,7 @@ define i32 @udiv_pow2(i32 %a) {
   ret i32 %1
 }
 
-define i64 @udiv64(i64 %a, i64 %b) {
+define i64 @udiv64(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: udiv64:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -73,7 +73,7 @@ define i64 @udiv64(i64 %a, i64 %b) {
   ret i64 %1
 }
 
-define i64 @udiv64_constant(i64 %a) {
+define i64 @udiv64_constant(i64 %a) nounwind {
 ; RV32I-LABEL: udiv64_constant:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -93,7 +93,7 @@ define i64 @udiv64_constant(i64 %a) {
   ret i64 %1
 }
 
-define i32 @sdiv(i32 %a, i32 %b) {
+define i32 @sdiv(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: sdiv:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -111,7 +111,7 @@ define i32 @sdiv(i32 %a, i32 %b) {
   ret i32 %1
 }
 
-define i32 @sdiv_constant(i32 %a) {
+define i32 @sdiv_constant(i32 %a) nounwind {
 ; RV32I-LABEL: sdiv_constant:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -130,7 +130,7 @@ define i32 @sdiv_constant(i32 %a) {
   ret i32 %1
 }
 
-define i32 @sdiv_pow2(i32 %a) {
+define i32 @sdiv_pow2(i32 %a) nounwind {
 ; RV32I-LABEL: sdiv_pow2:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -149,7 +149,7 @@ define i32 @sdiv_pow2(i32 %a) {
   ret i32 %1
 }
 
-define i64 @sdiv64(i64 %a, i64 %b) {
+define i64 @sdiv64(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: sdiv64:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -167,7 +167,7 @@ define i64 @sdiv64(i64 %a, i64 %b) {
   ret i64 %1
 }
 
-define i64 @sdiv64_constant(i64 %a) {
+define i64 @sdiv64_constant(i64 %a) nounwind {
 ; RV32I-LABEL: sdiv64_constant:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16

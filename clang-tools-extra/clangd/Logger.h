@@ -16,8 +16,9 @@
 namespace clang {
 namespace clangd {
 
-/// Main logging function. Logs messages to a global logger, which can be set up
-/// by LoggingSesssion.
+/// Main logging function.
+/// Logs messages to a global logger, which can be set up by LoggingSesssion.
+/// If no logger is registered, writes to llvm::errs().
 void log(const Context &Ctx, const llvm::Twine &Message);
 
 /// Interface to allow custom logging in clangd.

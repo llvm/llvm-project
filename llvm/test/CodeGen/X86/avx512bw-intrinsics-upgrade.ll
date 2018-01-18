@@ -119,7 +119,7 @@ define void@test_int_x86_avx512_mask_storeu_b_512(i8* %ptr1, i8* %ptr2, <64 x i8
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    kmovq %rdx, %k1
 ; AVX512BW-NEXT:    vmovdqu8 %zmm0, (%rdi) {%k1}
-; AVX512BW-NEXT:    vmovdqu32 %zmm0, (%rsi)
+; AVX512BW-NEXT:    vmovdqu64 %zmm0, (%rsi)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -129,7 +129,7 @@ define void@test_int_x86_avx512_mask_storeu_b_512(i8* %ptr1, i8* %ptr2, <64 x i8
 ; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; AVX512F-32-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
 ; AVX512F-32-NEXT:    vmovdqu8 %zmm0, (%ecx) {%k1}
-; AVX512F-32-NEXT:    vmovdqu32 %zmm0, (%eax)
+; AVX512F-32-NEXT:    vmovdqu64 %zmm0, (%eax)
 ; AVX512F-32-NEXT:    vzeroupper
 ; AVX512F-32-NEXT:    retl
   call void @llvm.x86.avx512.mask.storeu.b.512(i8* %ptr1, <64 x i8> %x1, i64 %x2)
@@ -144,7 +144,7 @@ define void@test_int_x86_avx512_mask_storeu_w_512(i8* %ptr1, i8* %ptr2, <32 x i1
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    kmovd %edx, %k1
 ; AVX512BW-NEXT:    vmovdqu16 %zmm0, (%rdi) {%k1}
-; AVX512BW-NEXT:    vmovdqu32 %zmm0, (%rsi)
+; AVX512BW-NEXT:    vmovdqu64 %zmm0, (%rsi)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -154,7 +154,7 @@ define void@test_int_x86_avx512_mask_storeu_w_512(i8* %ptr1, i8* %ptr2, <32 x i1
 ; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; AVX512F-32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; AVX512F-32-NEXT:    vmovdqu16 %zmm0, (%ecx) {%k1}
-; AVX512F-32-NEXT:    vmovdqu32 %zmm0, (%eax)
+; AVX512F-32-NEXT:    vmovdqu64 %zmm0, (%eax)
 ; AVX512F-32-NEXT:    vzeroupper
 ; AVX512F-32-NEXT:    retl
   call void @llvm.x86.avx512.mask.storeu.w.512(i8* %ptr1, <32 x i16> %x1, i32 %x2)

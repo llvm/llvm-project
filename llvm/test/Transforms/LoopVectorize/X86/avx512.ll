@@ -7,7 +7,7 @@ target triple = "x86_64-apple-macosx10.9.0"
 ; loop.
 
 ; CHECK-LABEL: f:
-; CHECK: vmovdqu32 %zmm{{.}},
+; CHECK: vmovdqu64 %zmm{{.}},
 ; CHECK-NOT: %ymm
 
 define void @f(i32* %a, i32 %n) {

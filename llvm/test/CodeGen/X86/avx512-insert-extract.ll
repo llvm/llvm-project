@@ -1838,7 +1838,7 @@ define i64 @test_insertelement_variable_v64i1(<64 x i8> %a, i8 %b, i32 %index) {
 ; SKX-NEXT:    andl $63, %esi
 ; SKX-NEXT:    testb %dil, %dil
 ; SKX-NEXT:    vpmovm2b %k0, %zmm0
-; SKX-NEXT:    vmovdqa32 %zmm0, (%rsp)
+; SKX-NEXT:    vmovdqa64 %zmm0, (%rsp)
 ; SKX-NEXT:    setne (%rsp,%rsi)
 ; SKX-NEXT:    vpsllw $7, (%rsp), %zmm0
 ; SKX-NEXT:    vpmovb2m %zmm0, %k0
@@ -2148,9 +2148,9 @@ define i96 @test_insertelement_variable_v96i1(<96 x i8> %a, i8 %b, i32 %index) {
 ; SKX-NEXT:    andl $127, %eax
 ; SKX-NEXT:    cmpb $0, 736(%rbp)
 ; SKX-NEXT:    vpmovm2b %k1, %zmm0
-; SKX-NEXT:    vmovdqa32 %zmm0, {{[0-9]+}}(%rsp)
+; SKX-NEXT:    vmovdqa64 %zmm0, {{[0-9]+}}(%rsp)
 ; SKX-NEXT:    vpmovm2b %k0, %zmm0
-; SKX-NEXT:    vmovdqa32 %zmm0, (%rsp)
+; SKX-NEXT:    vmovdqa64 %zmm0, (%rsp)
 ; SKX-NEXT:    setne (%rsp,%rax)
 ; SKX-NEXT:    vpsllw $7, {{[0-9]+}}(%rsp), %zmm0
 ; SKX-NEXT:    vpmovb2m %zmm0, %k0
@@ -2265,9 +2265,9 @@ define i128 @test_insertelement_variable_v128i1(<128 x i8> %a, i8 %b, i32 %index
 ; SKX-NEXT:    andl $127, %esi
 ; SKX-NEXT:    testb %dil, %dil
 ; SKX-NEXT:    vpmovm2b %k1, %zmm0
-; SKX-NEXT:    vmovdqa32 %zmm0, {{[0-9]+}}(%rsp)
+; SKX-NEXT:    vmovdqa64 %zmm0, {{[0-9]+}}(%rsp)
 ; SKX-NEXT:    vpmovm2b %k0, %zmm0
-; SKX-NEXT:    vmovdqa32 %zmm0, (%rsp)
+; SKX-NEXT:    vmovdqa64 %zmm0, (%rsp)
 ; SKX-NEXT:    setne (%rsp,%rsi)
 ; SKX-NEXT:    vpsllw $7, {{[0-9]+}}(%rsp), %zmm0
 ; SKX-NEXT:    vpmovb2m %zmm0, %k0
