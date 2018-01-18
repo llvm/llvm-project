@@ -18267,6 +18267,18 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(X86ISD::SELECTS, DL, VT, Cmp, Op1, Op2);
   }
 
+  // For v64i1 without 64-bit support we need to split and rejoin.
+  if (VT == MVT::v64i1 && !Subtarget.is64Bit()) {
+    assert(Subtarget.hasBWI() && "Expected BWI to be legal");
+    SDValue Op1Lo = extractSubVector(Op1, 0, DAG, DL, 32);
+    SDValue Op2Lo = extractSubVector(Op2, 0, DAG, DL, 32);
+    SDValue Op1Hi = extractSubVector(Op1, 32, DAG, DL, 32);
+    SDValue Op2Hi = extractSubVector(Op2, 32, DAG, DL, 32);
+    SDValue Lo = DAG.getSelect(DL, MVT::v32i1, Cond, Op1Lo, Op2Lo);
+    SDValue Hi = DAG.getSelect(DL, MVT::v32i1, Cond, Op1Hi, Op2Hi);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+  }
+
   if (VT.isVector() && VT.getVectorElementType() == MVT::i1) {
     SDValue Op1Scalar;
     if (ISD::isBuildVectorOfConstantSDNodes(Op1.getNode()))
@@ -28657,13 +28669,14 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       }
     }
 
+    SDValue NewV1 = V1; // Save operand in case early exit happens.
     if (matchUnaryVectorShuffle(MaskVT, Mask, AllowFloatDomain, AllowIntDomain,
-                                V1, DL, DAG, Subtarget, Shuffle, ShuffleSrcVT,
-                                ShuffleVT) &&
+                                NewV1, DL, DAG, Subtarget, Shuffle,
+                                ShuffleSrcVT, ShuffleVT) &&
         (!IsEVEXShuffle || (NumRootElts == ShuffleVT.getVectorNumElements()))) {
       if (Depth == 1 && Root.getOpcode() == Shuffle)
         return SDValue(); // Nothing to do!
-      Res = DAG.getBitcast(ShuffleSrcVT, V1);
+      Res = DAG.getBitcast(ShuffleSrcVT, NewV1);
       DCI.AddToWorklist(Res.getNode());
       Res = DAG.getNode(Shuffle, DL, ShuffleVT, Res);
       DCI.AddToWorklist(Res.getNode());
@@ -28685,33 +28698,36 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     }
   }
 
+  SDValue NewV1 = V1; // Save operands in case early exit happens.
+  SDValue NewV2 = V2;
   if (matchBinaryVectorShuffle(MaskVT, Mask, AllowFloatDomain, AllowIntDomain,
-                               V1, V2, DL, DAG, Subtarget, Shuffle,
+                               NewV1, NewV2, DL, DAG, Subtarget, Shuffle,
                                ShuffleSrcVT, ShuffleVT, UnaryShuffle) &&
       (!IsEVEXShuffle || (NumRootElts == ShuffleVT.getVectorNumElements()))) {
     if (Depth == 1 && Root.getOpcode() == Shuffle)
       return SDValue(); // Nothing to do!
-    V1 = DAG.getBitcast(ShuffleSrcVT, V1);
-    DCI.AddToWorklist(V1.getNode());
-    V2 = DAG.getBitcast(ShuffleSrcVT, V2);
-    DCI.AddToWorklist(V2.getNode());
-    Res = DAG.getNode(Shuffle, DL, ShuffleVT, V1, V2);
+    NewV1 = DAG.getBitcast(ShuffleSrcVT, NewV1);
+    DCI.AddToWorklist(NewV1.getNode());
+    NewV2 = DAG.getBitcast(ShuffleSrcVT, NewV2);
+    DCI.AddToWorklist(NewV2.getNode());
+    Res = DAG.getNode(Shuffle, DL, ShuffleVT, NewV1, NewV2);
     DCI.AddToWorklist(Res.getNode());
     return DAG.getBitcast(RootVT, Res);
   }
 
-  if (matchBinaryPermuteVectorShuffle(MaskVT, Mask, Zeroable, AllowFloatDomain,
-                                      AllowIntDomain, V1, V2, DL, DAG,
-                                      Subtarget, Shuffle, ShuffleVT,
-                                      PermuteImm) &&
+  NewV1 = V1; // Save operands in case early exit happens.
+  NewV2 = V2;
+  if (matchBinaryPermuteVectorShuffle(
+          MaskVT, Mask, Zeroable, AllowFloatDomain, AllowIntDomain, NewV1,
+          NewV2, DL, DAG, Subtarget, Shuffle, ShuffleVT, PermuteImm) &&
       (!IsEVEXShuffle || (NumRootElts == ShuffleVT.getVectorNumElements()))) {
     if (Depth == 1 && Root.getOpcode() == Shuffle)
       return SDValue(); // Nothing to do!
-    V1 = DAG.getBitcast(ShuffleVT, V1);
-    DCI.AddToWorklist(V1.getNode());
-    V2 = DAG.getBitcast(ShuffleVT, V2);
-    DCI.AddToWorklist(V2.getNode());
-    Res = DAG.getNode(Shuffle, DL, ShuffleVT, V1, V2,
+    NewV1 = DAG.getBitcast(ShuffleVT, NewV1);
+    DCI.AddToWorklist(NewV1.getNode());
+    NewV2 = DAG.getBitcast(ShuffleVT, NewV2);
+    DCI.AddToWorklist(NewV2.getNode());
+    Res = DAG.getNode(Shuffle, DL, ShuffleVT, NewV1, NewV2,
                       DAG.getConstant(PermuteImm, DL, MVT::i8));
     DCI.AddToWorklist(Res.getNode());
     return DAG.getBitcast(RootVT, Res);
