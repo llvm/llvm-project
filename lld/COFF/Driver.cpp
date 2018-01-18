@@ -17,6 +17,7 @@
 #include "lld/Common/Driver.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Timer.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -46,6 +47,8 @@ using llvm::sys::Process;
 
 namespace lld {
 namespace coff {
+
+static Timer InputFileTimer("Input File Reading", Timer::root());
 
 Configuration *Config;
 LinkerDriver *Driver;
@@ -714,6 +717,8 @@ void LinkerDriver::enqueueTask(std::function<void()> Task) {
 }
 
 bool LinkerDriver::run() {
+  ScopedTimer T(InputFileTimer);
+
   bool DidWork = !TaskQueue.empty();
   while (!TaskQueue.empty()) {
     TaskQueue.front()();
@@ -765,6 +770,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     return;
   }
 
+  if (Args.hasArg(OPT_show_timing))
+    Config->ShowTiming = true;
+
+  ScopedTimer T(Timer::root());
   // Handle --version, which is an lld extension. This option is a bit odd
   // because it doesn't start with "/", but we deliberately chose "--" to
   // avoid conflict with /version and for compatibility with clang-cl.
@@ -1295,7 +1304,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // Handle /output-def (MinGW specific).
   if (auto *Arg = Args.getLastArg(OPT_output_def))
     writeDefFile(Arg->getValue());
-
+  
   // Set extra alignment for .comm symbols
   for (auto Pair : Config->AlignComm) {
     StringRef Name = Pair.first;
@@ -1331,6 +1340,11 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Write the result.
   writeResult();
+
+  // Stop early so we can print the results.
+  Timer::root().stop();
+  if (Config->ShowTiming)
+    Timer::root().print();
 }
 
 } // namespace coff

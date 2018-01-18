@@ -1,6 +1,11 @@
-On MacOSX lldb needs to be code signed. The Debug, DebugClang and Release 
-builds  are set to code sign using a code signing certificate named 
-"lldb_codesign". 
+To use the in-tree debug server on macOS, lldb needs to be code signed. The
+Debug, DebugClang and Release builds are set to code sign using a code signing
+certificate named "lldb_codesign". This document explains how to set up the
+signing certificate.
+
+Note that it's possible to build and use lldb on macOS without setting up code
+signing by using the system's debug server. To configure lldb in this way with
+cmake, specify -DLLDB_CODESIGN_IDENTITY=''.
 
 If you have re-installed a new OS, please delete all old lldb_codesign items
 from your keychain. There will be a code signing certification and a public

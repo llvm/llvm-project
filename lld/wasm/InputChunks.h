@@ -112,16 +112,15 @@ class InputFunction : public InputChunk {
 public:
   InputFunction(const WasmSignature &S, const WasmFunction *Func,
                 const ObjFile *F)
-      : InputChunk(F), Signature(S), WrittenToNameSec(false), Function(Func) {}
+      : InputChunk(F), Signature(S), Function(Func) {}
 
+  virtual StringRef getName() const { return Function->Name; }
   StringRef getComdat() const override { return Function->Comdat; }
   uint32_t getOutputIndex() const { return OutputIndex.getValue(); }
   bool hasOutputIndex() const { return OutputIndex.hasValue(); }
   void setOutputIndex(uint32_t Index);
 
   const WasmSignature &Signature;
-
-  unsigned WrittenToNameSec : 1;
 
 protected:
   ArrayRef<uint8_t> data() const override {
@@ -138,12 +137,16 @@ protected:
 
 class SyntheticFunction : public InputFunction {
 public:
-  SyntheticFunction(const WasmSignature &S, ArrayRef<uint8_t> Body)
-      : InputFunction(S, nullptr, nullptr), Body(Body) {}
+  SyntheticFunction(const WasmSignature &S, ArrayRef<uint8_t> Body,
+                    StringRef Name)
+      : InputFunction(S, nullptr, nullptr), Name(Name), Body(Body) {}
+
+  StringRef getName() const override { return Name; }
 
 protected:
   ArrayRef<uint8_t> data() const override { return Body; }
 
+  StringRef Name;
   ArrayRef<uint8_t> Body;
 };
 
