@@ -641,13 +641,13 @@ void MachineOperand::print(raw_ostream &OS, const TargetRegisterInfo *TRI,
                            const TargetIntrinsicInfo *IntrinsicInfo) const {
   tryToGetTargetInfo(*this, TRI, IntrinsicInfo);
   ModuleSlotTracker DummyMST(nullptr);
-  print(OS, DummyMST, LLT{}, /*PrintDef=*/false,
+  print(OS, DummyMST, LLT{}, /*PrintDef=*/false, /*IsStandalone=*/true,
         /*ShouldPrintRegisterTies=*/true,
         /*TiedOperandIdx=*/0, TRI, IntrinsicInfo);
 }
 
 void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
-                           LLT TypeToPrint, bool PrintDef,
+                           LLT TypeToPrint, bool PrintDef, bool IsStandalone,
                            bool ShouldPrintRegisterTies,
                            unsigned TiedOperandIdx,
                            const TargetRegisterInfo *TRI,
@@ -687,7 +687,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     if (TargetRegisterInfo::isVirtualRegister(Reg)) {
       if (const MachineFunction *MF = getMFIfAvailable(*this)) {
         const MachineRegisterInfo &MRI = MF->getRegInfo();
-        if (!PrintDef || MRI.def_empty(Reg)) {
+        if (IsStandalone || !PrintDef || MRI.def_empty(Reg)) {
           OS << ':';
           OS << printRegClassOrBank(Reg, MRI, TRI);
         }

@@ -67,14 +67,7 @@ define i8* @test_frameaddress_3_alloca() nounwind {
 define i8* @test_returnaddress_0() nounwind {
 ; RV32I-LABEL: test_returnaddress_0:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    sw s0, 8(sp)
-; RV32I-NEXT:    addi s0, sp, 16
 ; RV32I-NEXT:    mv a0, ra
-; RV32I-NEXT:    lw s0, 8(sp)
-; RV32I-NEXT:    lw ra, 12(sp)
-; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
   %1 = call i8* @llvm.returnaddress(i32 0)
   ret i8* %1

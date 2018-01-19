@@ -739,7 +739,10 @@ static CXString CursorToText(CXCursor Cursor) {
   }
   }
   assert(0 && "unknown display type"); /* no llvm_unreachable in C. */
-  return /*garbage*/ text;
+  /* Set to NULL to prevent uninitialized variable warnings. */
+  text.data = NULL;
+  text.private_flags = 0;
+  return text;
 }
 
 static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
@@ -1123,6 +1126,13 @@ static const char* GetCursorSource(CXCursor Cursor) {
     clang_disposeString(source);
     return b;
   }
+}
+
+static CXString createCXString(const char *CS) {
+  CXString Str;
+  Str.data = (const void *) CS;
+  Str.private_flags = 0;
+  return Str;
 }
 
 /******************************************************************************/
@@ -3087,7 +3097,7 @@ typedef struct {
   int first_check_printed;
   int fail_for_error;
   int abort;
-  const char *main_filename;
+  CXString main_filename;
   ImportedASTFilesData *importedASTs;
   IndexDataStringList *strings;
   CXTranslationUnit TU;
@@ -3126,6 +3136,7 @@ static void printCXIndexLoc(CXIdxLoc loc, CXClientData client_data) {
   const char *cname;
   CXIdxClientFile file;
   unsigned line, column;
+  const char *main_filename;
   int isMainFile;
   
   index_data = (IndexData *)client_data;
@@ -3140,7 +3151,8 @@ static void printCXIndexLoc(CXIdxLoc loc, CXClientData client_data) {
   }
   filename = clang_getFileName((CXFile)file);
   cname = clang_getCString(filename);
-  if (strcmp(cname, index_data->main_filename) == 0)
+  main_filename = clang_getCString(index_data->main_filename);
+  if (strcmp(cname, main_filename) == 0)
     isMainFile = 1;
   else
     isMainFile = 0;
@@ -3342,14 +3354,11 @@ static void index_diagnostic(CXClientData client_data,
 static CXIdxClientFile index_enteredMainFile(CXClientData client_data,
                                        CXFile file, void *reserved) {
   IndexData *index_data;
-  CXString filename;
 
   index_data = (IndexData *)client_data;
   printCheck(index_data);
 
-  filename = clang_getFileName(file);
-  index_data->main_filename = clang_getCString(filename);
-  clang_disposeString(filename);
+  index_data->main_filename = clang_getFileName(file);
 
   printf("[enteredMainFile]: ");
   printCXIndexFile((CXIdxClientFile)file);
@@ -3588,7 +3597,7 @@ static int index_compile_args(int num_args, const char **args,
   index_data.first_check_printed = 0;
   index_data.fail_for_error = 0;
   index_data.abort = 0;
-  index_data.main_filename = "";
+  index_data.main_filename = createCXString("");
   index_data.importedASTs = importedASTs;
   index_data.strings = NULL;
   index_data.TU = NULL;
@@ -3604,6 +3613,7 @@ static int index_compile_args(int num_args, const char **args,
   if (index_data.fail_for_error)
     result = -1;
 
+  clang_disposeString(index_data.main_filename);
   free_client_data(&index_data);
   return result;
 }
@@ -3625,7 +3635,7 @@ static int index_ast_file(const char *ast_file,
   index_data.first_check_printed = 0;
   index_data.fail_for_error = 0;
   index_data.abort = 0;
-  index_data.main_filename = "";
+  index_data.main_filename = createCXString("");
   index_data.importedASTs = importedASTs;
   index_data.strings = NULL;
   index_data.TU = TU;
@@ -3638,6 +3648,7 @@ static int index_ast_file(const char *ast_file,
     result = -1;
 
   clang_disposeTranslationUnit(TU);
+  clang_disposeString(index_data.main_filename);
   free_client_data(&index_data);
   return result;
 }
@@ -4130,9 +4141,7 @@ int print_usrs(const char **I, const char **E) {
           if (!isUSR(I[2]))
             return not_usr("<class USR>", I[2]);
           else {
-            CXString x;
-            x.data = (void*) I[2];
-            x.private_flags = 0;
+            CXString x = createCXString(I[2]);
             print_usr(clang_constructUSR_ObjCIvar(I[1], x));
           }
 
@@ -4157,9 +4166,7 @@ int print_usrs(const char **I, const char **E) {
           if (!isUSR(I[3]))
             return not_usr("<class USR>", I[3]);
           else {
-            CXString x;
-            x.data = (void*) I[3];
-            x.private_flags = 0;
+            CXString x = createCXString(I[3]);
             print_usr(clang_constructUSR_ObjCMethod(I[1], atoi(I[2]), x));
           }
           I += 4;
@@ -4187,9 +4194,7 @@ int print_usrs(const char **I, const char **E) {
           if (!isUSR(I[2]))
             return not_usr("<class USR>", I[2]);
           else {
-            CXString x;
-            x.data = (void*) I[2];
-            x.private_flags = 0;
+            CXString x = createCXString(I[2]);
             print_usr(clang_constructUSR_ObjCProperty(I[1], x));
           }
           I += 3;

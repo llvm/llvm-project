@@ -45,9 +45,6 @@ struct CodeCompleteOptions {
   /// Add macros to code completion results.
   bool IncludeMacros = true;
 
-  /// Add globals to code completion results.
-  bool IncludeGlobals = true;
-
   /// Add brief comments to completion items, if available.
   /// FIXME(ibiryukov): it looks like turning this option on significantly slows
   /// down completion, investigate if it can be made faster.

@@ -16,7 +16,7 @@ define zeroext i8 @test_extractelement_varible_v64i1(<64 x i8> %a, <64 x i8> %b,
 ; SKX-NEXT:    ## kill: def %edi killed %edi def %rdi
 ; SKX-NEXT:    vpcmpnleub %zmm1, %zmm0, %k0
 ; SKX-NEXT:    vpmovm2b %k0, %zmm0
-; SKX-NEXT:    vmovdqa32 %zmm0, (%rsp)
+; SKX-NEXT:    vmovdqa64 %zmm0, (%rsp)
 ; SKX-NEXT:    andl $63, %edi
 ; SKX-NEXT:    movzbl (%rsp,%rdi), %eax
 ; SKX-NEXT:    andl $1, %eax

@@ -3573,11 +3573,9 @@ void CGOpenMPRuntime::createOffloadEntry(llvm::Constant *ID,
   EntryInit.addInt(CGM.SizeTy, Size);
   EntryInit.addInt(CGM.Int32Ty, Flags);
   EntryInit.addInt(CGM.Int32Ty, 0);
-  llvm::GlobalVariable *Entry =
-    EntryInit.finishAndCreateGlobal(".omp_offloading.entry",
-                                    Align,
-                                    /*constant*/ true,
-                                    llvm::GlobalValue::ExternalLinkage);
+  llvm::GlobalVariable *Entry = EntryInit.finishAndCreateGlobal(
+      Twine(".omp_offloading.entry.") + Name, Align,
+      /*constant*/ true, llvm::GlobalValue::ExternalLinkage);
 
   // The entry has to be created in the section the linker expects it to be.
   Entry->setSection(".omp_offloading.entries");
@@ -3760,6 +3758,7 @@ QualType CGOpenMPRuntime::getTgtOffloadEntryQTy() {
     addFieldToRecordDecl(
         C, RD, C.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/true));
     RD->completeDefinition();
+    RD->addAttr(PackedAttr::CreateImplicit(C));
     TgtOffloadEntryQTy = C.getRecordType(RD);
   }
   return TgtOffloadEntryQTy;

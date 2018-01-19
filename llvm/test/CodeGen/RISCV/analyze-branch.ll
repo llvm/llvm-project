@@ -17,8 +17,6 @@ define void @test_bcc_fallthrough_taken(i32 %in) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    sw s0, 8(sp)
-; RV32I-NEXT:    addi s0, sp, 16
 ; RV32I-NEXT:    addi a1, zero, 42
 ; RV32I-NEXT:    bne a0, a1, .LBB0_3
 ; RV32I-NEXT:  # %bb.1: # %true
@@ -26,7 +24,6 @@ define void @test_bcc_fallthrough_taken(i32 %in) nounwind {
 ; RV32I-NEXT:    addi a0, a0, %lo(test_true)
 ; RV32I-NEXT:  .LBB0_2: # %true
 ; RV32I-NEXT:    jalr a0
-; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -55,8 +52,6 @@ define void @test_bcc_fallthrough_nottaken(i32 %in) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    sw s0, 8(sp)
-; RV32I-NEXT:    addi s0, sp, 16
 ; RV32I-NEXT:    addi a1, zero, 42
 ; RV32I-NEXT:    beq a0, a1, .LBB1_3
 ; RV32I-NEXT:  # %bb.1: # %false
@@ -64,7 +59,6 @@ define void @test_bcc_fallthrough_nottaken(i32 %in) nounwind {
 ; RV32I-NEXT:    addi a0, a0, %lo(test_false)
 ; RV32I-NEXT:  .LBB1_2: # %true
 ; RV32I-NEXT:    jalr a0
-; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret

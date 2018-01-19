@@ -61,6 +61,30 @@ template <typename Kind> struct RemappedRecord {
   SmallVector<std::pair<uint32_t, TypeIndex>, 8> Mappings;
 };
 
+template <typename Record, typename Func>
+Error forEachCodeViewRecord(ArrayRef<uint8_t> StreamBuffer, Func F) {
+  while (!StreamBuffer.empty()) {
+    if (StreamBuffer.size() < sizeof(RecordPrefix))
+      return make_error<CodeViewError>(cv_error_code::corrupt_record);
+
+    const RecordPrefix *Prefix =
+        reinterpret_cast<const RecordPrefix *>(StreamBuffer.data());
+
+    uint16_t RealLen = Prefix->RecordLen + 2;
+    if (StreamBuffer.size() < RealLen)
+      return make_error<CodeViewError>(cv_error_code::corrupt_record);
+
+    ArrayRef<uint8_t> Data = StreamBuffer.take_front(RealLen);
+    StreamBuffer = StreamBuffer.drop_front(RealLen);
+
+    Record R(static_cast<decltype(Record::Type)>((uint16_t)Prefix->RecordKind),
+             Data);
+    if (auto EC = F(R))
+      return EC;
+  }
+  return Error::success();
+}
+
 /// Read a complete record from a stream at a random offset.
 template <typename Kind>
 inline Expected<CVRecord<Kind>> readCVRecordFromStream(BinaryStreamRef Stream,
