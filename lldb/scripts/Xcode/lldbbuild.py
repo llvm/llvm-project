@@ -18,17 +18,26 @@ def building_with_asan_enabled():
     else:
         return False
 
-def build_dir_asan_suffix():
+def building_with_ubsan_enabled():
+    """Return a True if the UBSAN Swift build preset is being used."""
+    if 'ENABLE_UNDEFINED_BEHAVIOR_SANITIZER' in os.environ.keys() and os.environ["ENABLE_UNDEFINED_BEHAVIOR_SANITIZER"] == "YES":
+        return True
+    else:
+        return False
+
+def build_dir_san_suffix():
     if building_with_asan_enabled():
         return "+asan"
+    elif building_with_ubsan_enabled():
+        return "+ubsan"
     else:
         return ""
 
 def LLVM_BUILD_DIRS():
     return {
-        "Debug": "Ninja-RelWithDebInfoAssert" + build_dir_asan_suffix(),
-        "DebugClang": "Ninja-DebugAssert" + build_dir_asan_suffix(),
-        "Release": "Ninja-RelWithDebInfoAssert" + build_dir_asan_suffix(),
+        "Debug": "Ninja-RelWithDebInfoAssert" + build_dir_san_suffix(),
+        "DebugClang": "Ninja-DebugAssert" + build_dir_san_suffix(),
+        "Release": "Ninja-RelWithDebInfoAssert" + build_dir_san_suffix(),
     }
 
 #### INTERFACE TO THE XCODEPROJ ####
