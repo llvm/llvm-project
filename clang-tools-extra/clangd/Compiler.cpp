@@ -14,13 +14,6 @@
 namespace clang {
 namespace clangd {
 
-/// Creates a CompilerInstance from \p CI, with main buffer overriden to \p
-/// Buffer and arguments to read the PCH from \p Preamble, if \p Preamble is not
-/// null. Note that vfs::FileSystem inside returned instance may differ from \p
-/// VFS if additional file remapping were set in command-line arguments.
-/// On some errors, returns null. When non-null value is returned, it's expected
-/// to be consumed by the FrontendAction as it will have a pointer to the \p
-/// Buffer that will only be deleted if BeginSourceFile is called.
 std::unique_ptr<CompilerInstance>
 prepareCompilerInstance(std::unique_ptr<clang::CompilerInvocation> CI,
                         const PrecompiledPreamble *Preamble,
@@ -36,7 +29,7 @@ prepareCompilerInstance(std::unique_ptr<clang::CompilerInvocation> CI,
   // NOTE: we use Buffer.get() when adding remapped files, so we have to make
   // sure it will be released if no error is emitted.
   if (Preamble) {
-    Preamble->AddImplicitPreamble(*CI, VFS, Buffer.get());
+    Preamble->OverridePreamble(*CI, VFS, Buffer.get());
   } else {
     CI->getPreprocessorOpts().addRemappedFile(
         CI->getFrontendOpts().Inputs[0].getFile(), Buffer.get());

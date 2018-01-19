@@ -277,10 +277,10 @@ void TestGlobalScopeCompletion(clangd::CodeCompleteOptions Opts) {
   EXPECT_THAT(Results.items,
               Not(AnyOf(Has("method"), Has("method()"), Has("field"))));
   // Global items.
-  EXPECT_IFF(Opts.IncludeGlobals, Results.items,
-             AllOf(Has("global_var"),
-                   Has(Opts.EnableSnippets ? "global_func()" : "global_func"),
-                   Has("GlobalClass")));
+  EXPECT_THAT(Results.items,
+              AllOf(Has("global_var"),
+                    Has(Opts.EnableSnippets ? "global_func()" : "global_func"),
+                    Has("GlobalClass")));
   // A macro.
   EXPECT_IFF(Opts.IncludeMacros, Results.items, Has("MACRO"));
   // Local items. Must be present always.
@@ -300,7 +300,6 @@ TEST(CompletionTest, CompletionOptions) {
   // We used to test every combination of options, but that got too slow (2^N).
   auto Flags = {
     &clangd::CodeCompleteOptions::IncludeMacros,
-    &clangd::CodeCompleteOptions::IncludeGlobals,
     &clangd::CodeCompleteOptions::IncludeBriefComments,
     &clangd::CodeCompleteOptions::EnableSnippets,
     &clangd::CodeCompleteOptions::IncludeCodePatterns,
