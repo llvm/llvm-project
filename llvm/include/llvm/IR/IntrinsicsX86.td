@@ -63,6 +63,12 @@ let TargetPrefix = "x86" in {
               Intrinsic<[llvm_i64_ty], [llvm_i32_ty], []>;
 }
 
+// Read processor ID.
+let TargetPrefix = "x86" in {
+  def int_x86_rdpid : GCCBuiltin<"__builtin_ia32_rdpid">,
+              Intrinsic<[llvm_i32_ty], [], []>;
+}
+
 //===----------------------------------------------------------------------===//
 // CET SS
 let TargetPrefix = "x86" in {

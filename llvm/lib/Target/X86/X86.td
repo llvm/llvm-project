@@ -249,6 +249,8 @@ def FeatureCLFLUSHOPT : SubtargetFeature<"clflushopt", "HasCLFLUSHOPT", "true",
                                       "Flush A Cache Line Optimized">;
 def FeatureCLWB    : SubtargetFeature<"clwb", "HasCLWB", "true",
                                       "Cache Line Write Back">;
+def FeatureRDPID : SubtargetFeature<"rdpid", "HasRDPID", "true",
+                                    "Support RDPID instructions">;
 // On some processors, instructions that implicitly take two memory operands are
 // slow. In practice, this means that CALL, PUSH, and POP with memory operands
 // should be avoided in favor of a MOV + register CALL/PUSH/POP.
@@ -752,7 +754,8 @@ def ICLFeatures : ProcessorFeatures<CNLFeatures.Value, [
   FeatureVPCLMULQDQ,
   FeatureVPOPCNTDQ,
   FeatureGFNI,
-  FeatureCLWB
+  FeatureCLWB,
+  FeatureRDPID
 ]>;
 
 class IcelakeProc<string Name> : ProcModel<Name, SkylakeServerModel,

@@ -345,6 +345,9 @@ protected:
   /// Processor supports Cache Line Write Back instruction
   bool HasCLWB;
 
+  /// Processor support RDPID instruction
+  bool HasRDPID;
+
   /// Use software floating point for code generation.
   bool UseSoftFloat;
 
@@ -579,6 +582,7 @@ public:
   bool hasIBT() const { return HasIBT; }
   bool hasCLFLUSHOPT() const { return HasCLFLUSHOPT; }
   bool hasCLWB() const { return HasCLWB; }
+  bool hasRDPID() const { return HasRDPID; }
 
   bool isXRaySupported() const override { return is64Bit(); }
 

@@ -503,7 +503,7 @@ void sys::DisableSystemDialogsOnCrash() {
   _set_error_mode(_OUT_TO_STDERR);
 }
 
-/// PrintStackTraceOnErrorSignal - When an error signal (such as SIBABRT or
+/// PrintStackTraceOnErrorSignal - When an error signal (such as SIGABRT or
 /// SIGSEGV) is delivered to the process, print a stack trace and then exit.
 void sys::PrintStackTraceOnErrorSignal(StringRef Argv0,
                                        bool DisableCrashReporting) {
