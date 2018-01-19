@@ -44,13 +44,15 @@ using namespace llvm;
 STATISTIC(LoopsConvertedToCilkABI,
           "Number of Tapir loops converted to use the Cilk ABI for loops");
 
-extern cl::opt<bool> fastCilk;
+static cl::opt<bool> fastCilk(
+    "fast-cilk", cl::init(false), cl::Hidden,
+    cl::desc("Attempt faster Cilk call implementation"));
 
-typedef void *__CILK_JUMP_BUFFER[5];
+using __CILK_JUMP_BUFFER = void *[5];
 
-typedef CilkABI::__cilkrts_pedigree __cilkrts_pedigree;
-typedef CilkABI::__cilkrts_stack_frame __cilkrts_stack_frame;
-typedef CilkABI::__cilkrts_worker __cilkrts_worker;
+using __cilkrts_pedigree = CilkABI::__cilkrts_pedigree;
+using __cilkrts_stack_frame = CilkABI::__cilkrts_stack_frame;
+using __cilkrts_worker = CilkABI::__cilkrts_worker;
 
 enum {
   __CILKRTS_ABI_VERSION = 1
@@ -84,42 +86,44 @@ enum {
                             CILK_FRAME_VERSION_MASK))
 
 
-typedef uint32_t cilk32_t;
-typedef uint64_t cilk64_t;
-typedef void (*__cilk_abi_f32_t)(void *data, cilk32_t low, cilk32_t high);
-typedef void (*__cilk_abi_f64_t)(void *data, cilk64_t low, cilk64_t high);
+using cilk32_t = uint32_t;
+using cilk64_t = uint64_t;
+using __cilk_abi_f32_t = void (*)(void *data, cilk32_t low, cilk32_t high);
+using __cilk_abi_f64_t = void (*)(void *data, cilk64_t low, cilk64_t high);
 
-typedef void (__cilkrts_init)();
+using __cilkrts_init = void ();
 
-typedef void (__cilkrts_enter_frame_1)(__cilkrts_stack_frame *sf);
-typedef void (__cilkrts_enter_frame_fast_1)(__cilkrts_stack_frame *sf);
-typedef void (__cilkrts_leave_frame)(__cilkrts_stack_frame *sf);
-typedef void (__cilkrts_rethrow)(__cilkrts_stack_frame *sf);
-typedef void (__cilkrts_sync)(__cilkrts_stack_frame *sf);
-typedef void (__cilkrts_detach)(__cilkrts_stack_frame *sf);
-typedef void (__cilkrts_pop_frame)(__cilkrts_stack_frame *sf);
-typedef int (__cilkrts_get_nworkers)();
-typedef __cilkrts_worker *(__cilkrts_get_tls_worker)();
-typedef __cilkrts_worker *(__cilkrts_get_tls_worker_fast)();
-typedef __cilkrts_worker *(__cilkrts_bind_thread_1)();
+using __cilkrts_enter_frame_1 = void (__cilkrts_stack_frame *sf);
+using __cilkrts_enter_frame_fast_1 = void (__cilkrts_stack_frame *sf);
+using __cilkrts_leave_frame = void (__cilkrts_stack_frame *sf);
+using __cilkrts_rethrow = void (__cilkrts_stack_frame *sf);
+using __cilkrts_sync = void (__cilkrts_stack_frame *sf);
+using __cilkrts_sync_nothrow = void (__cilkrts_stack_frame *sf);
+using __cilkrts_detach = void (__cilkrts_stack_frame *sf);
+using __cilkrts_pop_frame = void (__cilkrts_stack_frame *sf);
+using __cilkrts_get_nworkers = int ();
+using __cilkrts_get_tls_worker = __cilkrts_worker *();
+using __cilkrts_get_tls_worker_fast = __cilkrts_worker *();
+using __cilkrts_bind_thread_1 = __cilkrts_worker *();
 
-typedef void (cilk_func)(__cilkrts_stack_frame *);
+using cilk_func = void (__cilkrts_stack_frame *);
 
-typedef void (cilk_enter_begin)(uint32_t, __cilkrts_stack_frame *, void *, void *);
-typedef void (cilk_enter_helper_begin)(__cilkrts_stack_frame *, void *, void *);
-typedef void (cilk_enter_end)(__cilkrts_stack_frame *, void *);
-typedef void (cilk_detach_begin)(__cilkrts_stack_frame *);
-typedef void (cilk_detach_end)();
-typedef void (cilk_spawn_prepare)(__cilkrts_stack_frame *);
-typedef void (cilk_spawn_or_continue)(int);
-typedef void (cilk_sync_begin)(__cilkrts_stack_frame *);
-typedef void (cilk_sync_end)(__cilkrts_stack_frame *);
-typedef void (cilk_leave_begin)(__cilkrts_stack_frame *);
-typedef void (cilk_leave_end)();
-typedef void (__cilkrts_cilk_for_32)(__cilk_abi_f32_t body, void *data,
-                                     cilk32_t count, int grain);
-typedef void (__cilkrts_cilk_for_64)(__cilk_abi_f64_t body, void *data,
-                                     cilk64_t count, int grain);
+using cilk_enter_begin = void (uint32_t, __cilkrts_stack_frame *, void *,
+                               void *);
+using cilk_enter_helper_begin = void (__cilkrts_stack_frame *, void *, void *);
+using cilk_enter_end = void (__cilkrts_stack_frame *, void *);
+using cilk_detach_begin = void (__cilkrts_stack_frame *);
+using cilk_detach_end = void ();
+using cilk_spawn_prepare = void (__cilkrts_stack_frame *);
+using cilk_spawn_or_continue = void (int);
+using cilk_sync_begin = void (__cilkrts_stack_frame *);
+using cilk_sync_end = void (__cilkrts_stack_frame *);
+using cilk_leave_begin = void (__cilkrts_stack_frame *);
+using cilk_leave_end = void ();
+using __cilkrts_cilk_for_32 = void (__cilk_abi_f32_t body, void *data,
+                                    cilk32_t count, int grain);
+using __cilkrts_cilk_for_64 = void (__cilk_abi_f64_t body, void *data,
+                                    cilk64_t count, int grain);
 
 #define CILKRTS_FUNC(name, CGF) Get__cilkrts_##name(CGF)
 
@@ -193,7 +197,7 @@ DEFAULT_GET_CILKRTS_FUNC(cilk_for_64)
 // GET_CILK_CSI_FUNC(leave_begin)
 // GET_CILK_CSI_FUNC(leave_end)
 
-typedef std::map<LLVMContext*, StructType*> TypeBuilderCache;
+using TypeBuilderCache = std::map<LLVMContext *, StructType *>;
 
 namespace llvm {
 /// Specializations of TypeBuilder for:
@@ -337,10 +341,10 @@ public:
 };
 } // end namespace llvm
 
-/// Helper typedefs for cilk struct TypeBuilders.
-typedef TypeBuilder<__cilkrts_stack_frame, false> StackFrameBuilder;
-typedef TypeBuilder<__cilkrts_worker, false> WorkerBuilder;
-typedef TypeBuilder<__cilkrts_pedigree, false> PedigreeBuilder;
+/// Helper type definitions for cilk struct TypeBuilders.
+using StackFrameBuilder = TypeBuilder<__cilkrts_stack_frame, false>;
+using WorkerBuilder = TypeBuilder<__cilkrts_worker, false>;
+using PedigreeBuilder = TypeBuilder<__cilkrts_pedigree, false>;
 
 /// Helper methods for storing to and loading from struct fields.
 static Value *GEP(IRBuilder<> &B, Value *Base, int field) {
@@ -362,7 +366,7 @@ static Value *LoadField(IRBuilder<> &B, Value *Src, int field,
 /// \brief Emit inline assembly code to save the floating point
 /// state, for x86 Only.
 static void EmitSaveFloatingPointState(IRBuilder<> &B, Value *SF) {
-  typedef void (AsmPrototype)(uint32_t*, uint16_t*);
+  using AsmPrototype = void (uint32_t *, uint16_t *);
   FunctionType *FTy =
     TypeBuilder<AsmPrototype, false>::get(B.getContext());
 
@@ -371,7 +375,7 @@ static void EmitSaveFloatingPointState(IRBuilder<> &B, Value *SF) {
                               "*m,*m,~{dirflag},~{fpsr},~{flags}",
                               /*sideeffects*/ true);
 
-  Value * args[2] = {
+  Value *args[2] = {
     GEP(B, SF, StackFrameBuilder::mxcsr),
     GEP(B, SF, StackFrameBuilder::fpcsr)
   };
@@ -455,10 +459,10 @@ static CallInst *EmitCilkSetJmp(IRBuilder<> &B, Value *SF, Module& M) {
 ///
 /// __cilkrts_pop_frame(__cilkrts_stack_frame *sf) {
 ///   sf->worker->current_stack_frame = sf->call_parent;
-///   sf->call_parent = 0;
+///   sf->call_parent = nullptr;
 /// }
 static Function *Get__cilkrts_pop_frame(Module &M) {
-  Function *Fn = 0;
+  Function *Fn = nullptr;
 
   if (GetOrCreateFunction<cilk_func>("__cilkrts_pop_frame", M, Fn))
     return Fn;
@@ -499,21 +503,24 @@ static Function *Get__cilkrts_pop_frame(Module &M) {
 ///
 /// void __cilkrts_detach(struct __cilkrts_stack_frame *sf) {
 ///   struct __cilkrts_worker *w = sf->worker;
+///   struct __cilkrts_stack_frame *parent = sf->call_parent;
 ///   struct __cilkrts_stack_frame *volatile *tail = w->tail;
 ///
 ///   sf->spawn_helper_pedigree = w->pedigree;
-///   sf->call_parent->parent_pedigree = w->pedigree;
+///   parent->parent_pedigree = w->pedigree;
 ///
 ///   w->pedigree.rank = 0;
 ///   w->pedigree.next = &sf->spawn_helper_pedigree;
 ///
-///   *tail++ = sf->call_parent;
+///   StoreStore_fence();
+///
+///   *tail++ = parent;
 ///   w->tail = tail;
 ///
 ///   sf->flags |= CILK_FRAME_DETACHED;
 /// }
 static Function *Get__cilkrts_detach(Module &M) {
-  Function *Fn = 0;
+  Function *Fn = nullptr;
 
   if (GetOrCreateFunction<cilk_func>("__cilkrts_detach", M, Fn))
     return Fn;
@@ -695,6 +702,7 @@ static Function *GetCilkSyncFn(Module &M, bool instrument = false) {
   // Rethrow
   if (Rethrow) {
     IRBuilder<> B(Rethrow);
+    // __cilkrts_rethrow(sf);
     B.CreateCall(CILKRTS_FUNC(rethrow, M), SF)->setDoesNotReturn();
     B.CreateUnreachable();
   }
@@ -765,11 +773,13 @@ static Function *Get__cilkrts_enter_frame_1(Module &M) {
   CallInst *W = nullptr;
   {
     IRBuilder<> B(Entry);
+    // struct __cilkrts_worker *w = __cilkrts_get_tls_worker();
     if (fastCilk)
       W = B.CreateCall(CILKRTS_FUNC(get_tls_worker_fast, M));
     else
       W = B.CreateCall(CILKRTS_FUNC(get_tls_worker, M));
 
+    // if (w == 0)
     Value *Cond = B.CreateICmpEQ(W, ConstantPointerNull::get(WorkerPtrTy));
     B.CreateCondBr(Cond, SlowPath, FastPath);
   }
@@ -777,7 +787,9 @@ static Function *Get__cilkrts_enter_frame_1(Module &M) {
   CallInst *Wslow = nullptr;
   {
     IRBuilder<> B(SlowPath);
+    // w = __cilkrts_bind_thread_1();
     Wslow = B.CreateCall(CILKRTS_FUNC(bind_thread_1, M));
+    // sf->flags = CILK_FRAME_LAST | CILK_FRAME_VERSION;
     Type *Ty = SFTy->getElementType(StackFrameBuilder::flags);
     StoreField(B,
                ConstantInt::get(Ty, CILK_FRAME_LAST | CILK_FRAME_VERSION),
@@ -787,6 +799,7 @@ static Function *Get__cilkrts_enter_frame_1(Module &M) {
   // Block  (FastPath)
   {
     IRBuilder<> B(FastPath);
+    // sf->flags = CILK_FRAME_VERSION;
     Type *Ty = SFTy->getElementType(StackFrameBuilder::flags);
     StoreField(B,
                ConstantInt::get(Ty, CILK_FRAME_VERSION),
@@ -1000,8 +1013,8 @@ Value* GetOrInitCilkStackFrame(Function& F,
                                ValueToValueMapTy &DetachCtxToStackFrame,
                                bool Helper = true, bool instrument = false) {
   // Value* V = LookupStackFrame(F);
-  Value *V = DetachCtxToStackFrame[&F];
-  if (V) return V;
+  if (Value *V = DetachCtxToStackFrame[&F])
+    return V;
 
   AllocaInst* alloc = CreateStackFrame(F);
   DetachCtxToStackFrame[&F] = alloc;
@@ -1279,10 +1292,8 @@ static inline void inlineCilkFunctions(Function &F) {
   }
 }
 
-cl::opt<bool> fastCilk("fast-cilk", cl::init(false), cl::Hidden,
-                       cl::desc("Attempt faster cilk call implementation"));
 void CilkABI::preProcessFunction(Function &F) {
-  if (fastCilk && F.getName()=="main") {
+  if (fastCilk && F.getName() == "main") {
     IRBuilder<> start(F.getEntryBlock().getFirstNonPHIOrDbg());
     auto m = start.CreateCall(CILKRTS_FUNC(init, *F.getParent()));
     m->moveBefore(F.getEntryBlock().getTerminator());
@@ -1290,11 +1301,11 @@ void CilkABI::preProcessFunction(Function &F) {
 }
 
 void CilkABI::postProcessFunction(Function &F) {
-    inlineCilkFunctions(F);
+  inlineCilkFunctions(F);
 }
 
 void CilkABI::postProcessHelper(Function &F) {
-    inlineCilkFunctions(F);
+  inlineCilkFunctions(F);
 }
 
 

@@ -35,11 +35,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "cilkrabi"
 
-typedef void *__CILK_JUMP_BUFFER[5];
+using __CILK_JUMP_BUFFER = void *[5];
 
-// typedef CilkRABI::__cilkrts_pedigree __cilkrts_pedigree;
-typedef CilkRABI::__cilkrts_stack_frame __cilkrts_stack_frame;
-typedef CilkRABI::__cilkrts_worker __cilkrts_worker;
+// using __cilkrts_pedigree = CilkRABI::__cilkrts_pedigree;
+using __cilkrts_stack_frame = CilkRABI::__cilkrts_stack_frame;
+using __cilkrts_worker = CilkRABI::__cilkrts_worker;
 
 enum {
   __CILKRTS_ABI_VERSION = 1
@@ -72,20 +72,21 @@ enum {
                             CILK_FRAME_UNWINDING        |       \
                             CILK_FRAME_VERSION_MASK))
 
-typedef void (__cilkrts_init)();
+using __cilkrts_init = void ();
 
-typedef void (__cilkrts_enter_frame)(__cilkrts_stack_frame *sf);
-typedef void (__cilkrts_enter_frame_fast)(__cilkrts_stack_frame *sf);
-typedef void (__cilkrts_leave_frame)(__cilkrts_stack_frame *sf);
-typedef void (__cilkrts_rethrow)(__cilkrts_stack_frame *sf);
-typedef void (__cilkrts_sync)(__cilkrts_stack_frame *sf);
-typedef void (__cilkrts_detach)(__cilkrts_stack_frame *sf);
-typedef void (__cilkrts_pop_frame)(__cilkrts_stack_frame *sf);
-typedef int (__cilkrts_get_nworkers)();
-typedef __cilkrts_worker *(__cilkrts_get_tls_worker)();
-// typedef __cilkrts_worker *(__cilkrts_bind_thread_1)();
+using __cilkrts_enter_frame_1 = void (__cilkrts_stack_frame *sf);
+using __cilkrts_enter_frame_fast_1 = void (__cilkrts_stack_frame *sf);
+using __cilkrts_leave_frame = void (__cilkrts_stack_frame *sf);
+using __cilkrts_rethrow = void (__cilkrts_stack_frame *sf);
+using __cilkrts_sync = void (__cilkrts_stack_frame *sf);
+using __cilkrts_sync_nothrow = void (__cilkrts_stack_frame *sf);
+using __cilkrts_detach = void (__cilkrts_stack_frame *sf);
+using __cilkrts_pop_frame = void (__cilkrts_stack_frame *sf);
+using __cilkrts_get_nworkers = int ();
+using __cilkrts_get_tls_worker = __cilkrts_worker *();
+// using __cilkrts_bind_thread_1 = __cilkrts_worker *();
 
-typedef void (cilk_func)(__cilkrts_stack_frame *);
+using cilk_func = void (__cilkrts_stack_frame *);
 
 #define CILKRTS_FUNC(name, CGF) Get__cilkrts_##name(CGF)
 
@@ -126,7 +127,7 @@ DEFAULT_GET_CILKRTS_FUNC(get_tls_worker)
 // DEFAULT_GET_CILKRTS_FUNC(get_tls_worker_fast)
 // DEFAULT_GET_CILKRTS_FUNC(bind_thread_1)
 
-typedef std::map<LLVMContext*, StructType*> TypeBuilderCache;
+using TypeBuilderCache = std::map<LLVMContext *, StructType *>;
 
 namespace llvm {
 /// Specializations of TypeBuilder for:
@@ -272,10 +273,10 @@ public:
 };
 } // end namespace llvm
 
-/// Helper typedefs for cilk struct TypeBuilders.
-typedef TypeBuilder<__cilkrts_stack_frame, false> StackFrameBuilder;
-typedef TypeBuilder<__cilkrts_worker, false> WorkerBuilder;
-// typedef TypeBuilder<__cilkrts_pedigree, false> PedigreeBuilder;
+/// Helper type definitions for cilk struct TypeBuilders.
+using StackFrameBuilder = TypeBuilder<__cilkrts_stack_frame, false>;
+using WorkerBuilder = TypeBuilder<__cilkrts_worker, false>;
+// using PedigreeBuilder = TypeBuilder<__cilkrts_pedigree, false>;
 
 /// Helper methods for storing to and loading from struct fields.
 static Value *GEP(IRBuilder<> &B, Value *Base, int field) {
@@ -303,7 +304,7 @@ static Value *LoadField(IRBuilder<> &B, Value *Src, int field,
 /// \brief Emit inline assembly code to save the floating point
 /// state, for x86 Only.
 static void EmitSaveFloatingPointState(IRBuilder<> &B, Value *SF) {
-  typedef void (AsmPrototype)(uint32_t*, uint16_t*);
+  using AsmPrototype = void (uint32_t *, uint16_t *);
   FunctionType *FTy =
     TypeBuilder<AsmPrototype, false>::get(B.getContext());
 
@@ -396,10 +397,10 @@ static CallInst *EmitCilkSetJmp(IRBuilder<> &B, Value *SF, Module& M) {
 ///
 /// __cilkrts_pop_frame(__cilkrts_stack_frame *sf) {
 ///   sf->worker->current_stack_frame = sf->call_parent;
-///   sf->call_parent = 0;
+///   sf->call_parent = nullptr;
 /// }
 static Function *Get__cilkrts_pop_frame(Module &M) {
-  Function *Fn = 0;
+  Function *Fn = nullptr;
 
   if (GetOrCreateFunction<cilk_func>("__cilkrts_pop_frame", M, Fn))
     return Fn;
@@ -440,15 +441,15 @@ static Function *Get__cilkrts_pop_frame(Module &M) {
 ///   struct __cilkrts_stack_frame *parent = sf->call_parent;
 ///   struct __cilkrts_stack_frame *volatile *tail = w->tail;
 ///
-///   Release_fence();
-//
+///   StoreStore_fence();
+///
 ///   *tail++ = parent;
 ///   w->tail = tail;
 ///
 ///   sf->flags |= CILK_FRAME_DETACHED;
 /// }
 static Function *Get__cilkrts_detach(Module &M) {
-  Function *Fn = 0;
+  Function *Fn = nullptr;
 
   if (GetOrCreateFunction<cilk_func>("__cilkrts_detach", M, Fn))
     return Fn;
@@ -508,8 +509,8 @@ static Function *Get__cilkrts_detach(Module &M) {
 ///     SAVE_FLOAT_STATE(*sf);
 ///     if (!CILK_SETJMP(sf->ctx))
 ///       __cilkrts_sync(sf);
-///     else if (sf->flags & CILK_FRAME_EXCEPTING)
-///       __cilkrts_rethrow(sf);
+///     // else if (sf->flags & CILK_FRAME_EXCEPTING)
+///     //   __cilkrts_rethrow(sf);
 ///   }
 /// }
 ///
@@ -520,7 +521,7 @@ static Function *GetCilkSyncFn(Module &M) {
 
   if (GetOrCreateFunction<cilk_func>("__cilk_sync", M, Fn,
                                      Function::InternalLinkage,
-                                     /*doesNotThrow*/false))
+                                     /*doesNotThrow*/true))
     return Fn;
 
   // If we get here we need to add the function body
@@ -532,8 +533,7 @@ static Function *GetCilkSyncFn(Module &M) {
   BasicBlock *Entry = BasicBlock::Create(Ctx, "cilk.sync.test", Fn);
   BasicBlock *SaveState = BasicBlock::Create(Ctx, "cilk.sync.savestate", Fn);
   BasicBlock *SyncCall = BasicBlock::Create(Ctx, "cilk.sync.runtimecall", Fn);
-  BasicBlock *Excepting = BasicBlock::Create(Ctx, "cilk.sync.excepting", Fn);
-  // TODO: Detect whether exceptions are needed.
+  // BasicBlock *Excepting = BasicBlock::Create(Ctx, "cilk.sync.excepting", Fn);
   // BasicBlock *Rethrow = BasicBlock::Create(Ctx, "cilk.sync.rethrow", Fn);
   BasicBlock *Exit = BasicBlock::Create(Ctx, "cilk.sync.end", Fn);
 
@@ -559,7 +559,8 @@ static Function *GetCilkSyncFn(Module &M) {
     // if (!CILK_SETJMP(sf.ctx))
     Value *C = EmitCilkSetJmp(B, SF, M);
     C = B.CreateICmpEQ(C, ConstantInt::get(C->getType(), 0));
-    B.CreateCondBr(C, SyncCall, Excepting);
+    // B.CreateCondBr(C, SyncCall, Excepting);
+    B.CreateCondBr(C, SyncCall, Exit);
   }
 
   // SyncCall
@@ -571,22 +572,22 @@ static Function *GetCilkSyncFn(Module &M) {
     B.CreateBr(Exit);
   }
 
-  // Excepting
-  {
-    IRBuilder<> B(Excepting);
-    // if (Rethrow) {
-    //   Value *Flags = LoadField(B, SF, StackFrameBuilder::flags,
-    //                            /*isVolatile=*/true);
-    //   Flags = B.CreateAnd(Flags,
-    //                       ConstantInt::get(Flags->getType(),
-    //                                        CILK_FRAME_EXCEPTING));
-    //   Value *Zero = ConstantInt::get(Flags->getType(), 0);
-    //   Value *CanExcept = B.CreateICmpEQ(Flags, Zero);
-    //   B.CreateCondBr(CanExcept, Exit, Rethrow);
-    // } else {
-      B.CreateBr(Exit);
-    // }
-  }
+  // // Excepting
+  // {
+  //   IRBuilder<> B(Excepting);
+  //   if (Rethrow) {
+  //     Value *Flags = LoadField(B, SF, StackFrameBuilder::flags,
+  //                              /*isVolatile=*/true);
+  //     Flags = B.CreateAnd(Flags,
+  //                         ConstantInt::get(Flags->getType(),
+  //                                          CILK_FRAME_EXCEPTING));
+  //     Value *Zero = ConstantInt::get(Flags->getType(), 0);
+  //     Value *CanExcept = B.CreateICmpEQ(Flags, Zero);
+  //     B.CreateCondBr(CanExcept, Exit, Rethrow);
+  //   } else {
+  //     B.CreateBr(Exit);
+  //   }
+  // }
 
   // // Rethrow
   // if (Rethrow) {
@@ -613,12 +614,12 @@ static Function *GetCilkSyncFn(Module &M) {
 /// void __cilkrts_enter_frame(struct __cilkrts_stack_frame *sf)
 /// {
 ///     struct __cilkrts_worker *w = __cilkrts_get_tls_worker();
-///     if (w == 0) { /* slow path, rare */
-///         w = __cilkrts_bind_thread_1();
-///         sf->flags = CILK_FRAME_LAST | CILK_FRAME_VERSION;
-///     } else {
+///     // if (w == 0) { /* slow path, rare */
+///     //     w = __cilkrts_bind_thread_1();
+///     //     sf->flags = CILK_FRAME_LAST | CILK_FRAME_VERSION;
+///     // } else {
 ///         sf->flags = CILK_FRAME_VERSION;
-///     }
+///     // }
 ///     sf->call_parent = w->current_stack_frame;
 ///     sf->worker = w;
 ///     /* sf->except_data is only valid when CILK_FRAME_EXCEPTING is set */
@@ -647,8 +648,10 @@ static Function *Get__cilkrts_enter_frame(Module &M) {
   CallInst *W = nullptr;
   {
     IRBuilder<> B(Entry);
+    // struct __cilkrts_worker *w = __cilkrts_get_tls_worker();
     W = B.CreateCall(CILKRTS_FUNC(get_tls_worker, M));
 
+    // // if (w == 0)
     // Value *Cond = B.CreateICmpEQ(W, ConstantPointerNull::get(WorkerPtrTy));
     // B.CreateCondBr(Cond, SlowPath, FastPath);
     B.CreateBr(FastPath);
@@ -657,7 +660,9 @@ static Function *Get__cilkrts_enter_frame(Module &M) {
   // CallInst *Wslow = nullptr;
   // {
   //   IRBuilder<> B(SlowPath);
+  //   // w = __cilkrts_bind_thread_1();
   //   Wslow = B.CreateCall(CILKRTS_FUNC(bind_thread_1, M));
+  //   // sf->flags = CILK_FRAME_LAST | CILK_FRAME_VERSION;
   //   Type *Ty = SFTy->getElementType(StackFrameBuilder::flags);
   //   StoreField(B,
   //              ConstantInt::get(Ty, CILK_FRAME_LAST | CILK_FRAME_VERSION),
@@ -667,6 +672,7 @@ static Function *Get__cilkrts_enter_frame(Module &M) {
   // Block  (FastPath)
   {
     IRBuilder<> B(FastPath);
+    // sf->flags = CILK_FRAME_VERSION;
     Type *Ty = SFTy->getElementType(StackFrameBuilder::flags);
     StoreField(B,
                ConstantInt::get(Ty, CILK_FRAME_VERSION),
@@ -723,6 +729,7 @@ static Function *Get__cilkrts_enter_frame_fast(Module &M) {
   IRBuilder<> B(Entry);
   Value *W;
 
+  // struct __cilkrts_worker *w = __cilkrts_get_tls_worker();
   // if (fastCilk)
   //   W = B.CreateCall(CILKRTS_FUNC(get_tls_worker_fast, M));
   // else
