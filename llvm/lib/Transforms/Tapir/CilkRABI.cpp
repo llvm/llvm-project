@@ -285,18 +285,25 @@ static Value *GEP(IRBuilder<> &B, Value *Base, int field) {
   return B.CreateConstInBoundsGEP2_32(nullptr, Base, 0, field);
 }
 
-static void StoreField(IRBuilder<> &B, Value *Val, Value *Dst, int field,
-                       bool isVolatile = false,
-                       AtomicOrdering Ordering = AtomicOrdering::NotAtomic) {
-  Value *FieldDst = GEP(B, Dst, field);
-  StoreInst *S = B.CreateStore(Val, FieldDst, isVolatile);
+static unsigned GetAlignment(const DataLayout &DL, StructType *STy, int field) {
+  return DL.getPrefTypeAlignment(STy->getElementType(field));
+}
+
+static void StoreSTyField(IRBuilder<> &B, const DataLayout &DL, StructType *STy,
+                          Value *Val, Value *Dst, int field,
+                          bool isVolatile = false,
+                          AtomicOrdering Ordering = AtomicOrdering::NotAtomic) {
+  StoreInst *S = B.CreateAlignedStore(Val, GEP(B, Dst, field),
+                                      GetAlignment(DL, STy, field), isVolatile);
   S->setOrdering(Ordering);
 }
 
-static Value *LoadField(IRBuilder<> &B, Value *Src, int field,
-                        bool isVolatile = false,
-                        AtomicOrdering Ordering = AtomicOrdering::NotAtomic) {
-  LoadInst *L = B.CreateLoad(GEP(B, Src, field), isVolatile);
+static Value *LoadSTyField(
+    IRBuilder<> &B, const DataLayout &DL, StructType *STy, Value *Src,
+    int field, bool isVolatile = false,
+    AtomicOrdering Ordering = AtomicOrdering::NotAtomic) {
+  LoadInst *L =  B.CreateAlignedLoad(GEP(B, Src, field),
+                                     GetAlignment(DL, STy, field), isVolatile);
   L->setOrdering(Ordering);
   return L;
 }
@@ -407,6 +414,7 @@ static Function *Get__cilkrts_pop_frame(Module &M) {
 
   // If we get here we need to add the function body
   LLVMContext &Ctx = M.getContext();
+  const DataLayout &DL = M.getDataLayout();
 
   Function::arg_iterator args = Fn->arg_begin();
   Value *SF = &*args;
@@ -414,17 +422,26 @@ static Function *Get__cilkrts_pop_frame(Module &M) {
   BasicBlock *Entry = BasicBlock::Create(Ctx, "entry", Fn);
   IRBuilder<> B(Entry);
 
-  // sf->worker->current_stack_frame = sf.call_parent;
-  StoreField(B,
-             LoadField(B, SF, StackFrameBuilder::call_parent),
-             LoadField(B, SF, StackFrameBuilder::worker),
-             WorkerBuilder::current_stack_frame);
+  // sf->worker->current_stack_frame = sf->call_parent;
+  StoreSTyField(B, DL, WorkerBuilder::get(Ctx),
+                LoadSTyField(B, DL, StackFrameBuilder::get(Ctx), SF,
+                             StackFrameBuilder::call_parent,
+                             /*isVolatile=*/false,
+                             AtomicOrdering::NotAtomic),
+                LoadSTyField(B, DL, StackFrameBuilder::get(Ctx), SF,
+                             StackFrameBuilder::worker,
+                             /*isVolatile=*/false,
+                             AtomicOrdering::Acquire),
+                WorkerBuilder::current_stack_frame,
+                /*isVolatile=*/false,
+                AtomicOrdering::Release);
 
-  // sf->call_parent = 0;
-  StoreField(B,
-             Constant::getNullValue(
-                 TypeBuilder<__cilkrts_stack_frame*, false>::get(Ctx)),
-             SF, StackFrameBuilder::call_parent);
+  // sf->call_parent = nullptr;
+  StoreSTyField(B, DL, StackFrameBuilder::get(Ctx),
+                Constant::getNullValue(
+                    TypeBuilder<__cilkrts_stack_frame*, false>::get(Ctx)),
+                SF, StackFrameBuilder::call_parent, /*isVolatile=*/false,
+                AtomicOrdering::Release);
 
   B.CreateRetVoid();
 
@@ -456,6 +473,7 @@ static Function *Get__cilkrts_detach(Module &M) {
 
   // If we get here we need to add the function body
   LLVMContext &Ctx = M.getContext();
+  const DataLayout &DL = M.getDataLayout();
 
   Function::arg_iterator args = Fn->arg_begin();
   Value *SF = &*args;
@@ -464,29 +482,41 @@ static Function *Get__cilkrts_detach(Module &M) {
   IRBuilder<> B(Entry);
 
   // struct __cilkrts_worker *w = sf->worker;
-  Value *W = LoadField(B, SF, StackFrameBuilder::worker);
+  Value *W = LoadSTyField(B, DL, StackFrameBuilder::get(Ctx), SF,
+                          StackFrameBuilder::worker, /*isVolatile=*/false,
+                          AtomicOrdering::NotAtomic);
 
-    // __cilkrts_stack_frame *parent = sf->call_parent;
-  Value *Parent = LoadField(B, SF, StackFrameBuilder::call_parent);
+  // __cilkrts_stack_frame *parent = sf->call_parent;
+  Value *Parent = LoadSTyField(B, DL, StackFrameBuilder::get(Ctx), SF,
+                               StackFrameBuilder::call_parent,
+                               /*isVolatile=*/false,
+                               AtomicOrdering::NotAtomic);
 
   // __cilkrts_stack_frame *volatile *tail = w->tail;
-  Value *Tail = LoadField(B, W, WorkerBuilder::tail);
+  Value *Tail = LoadSTyField(B, DL, WorkerBuilder::get(Ctx), W,
+                             WorkerBuilder::tail, /*isVolatile=*/false,
+                             AtomicOrdering::Acquire);
 
   // StoreStore_fence();
   B.CreateFence(AtomicOrdering::Release);
 
   // *tail++ = parent;
-  B.CreateStore(Parent, Tail);
+  B.CreateStore(Parent, Tail, /*isVolatile=*/true);
   Tail = B.CreateConstGEP1_32(Tail, 1);
 
   // w->tail = tail;
-  StoreField(B, Tail, W, WorkerBuilder::tail);
+  StoreSTyField(B, DL, WorkerBuilder::get(Ctx), Tail, W, WorkerBuilder::tail,
+                /*isVolatile=*/false, AtomicOrdering::Release);
 
   // sf->flags |= CILK_FRAME_DETACHED;
   {
-    Value *F = LoadField(B, SF, StackFrameBuilder::flags);
+    Value *F = LoadSTyField(B, DL, StackFrameBuilder::get(Ctx), SF,
+                            StackFrameBuilder::flags, /*isVolatile=*/false,
+                            AtomicOrdering::Acquire);
     F = B.CreateOr(F, ConstantInt::get(F->getType(), CILK_FRAME_DETACHED));
-    StoreField(B, F, SF, StackFrameBuilder::flags);
+    StoreSTyField(B, DL, StackFrameBuilder::get(Ctx), F, SF,
+                  StackFrameBuilder::flags, /*isVolatile=*/false,
+                  AtomicOrdering::Release);
   }
 
   B.CreateRetVoid();
@@ -526,6 +556,7 @@ static Function *GetCilkSyncFn(Module &M) {
 
   // If we get here we need to add the function body
   LLVMContext &Ctx = M.getContext();
+  const DataLayout &DL = M.getDataLayout();
 
   Function::arg_iterator args = Fn->arg_begin();
   Value *SF = &*args;
@@ -542,8 +573,9 @@ static Function *GetCilkSyncFn(Module &M) {
     IRBuilder<> B(Entry);
 
     // if (sf->flags & CILK_FRAME_UNSYNCHED)
-    Value *Flags = LoadField(B, SF, StackFrameBuilder::flags,
-                             false);
+    Value *Flags = LoadSTyField(B, DL, StackFrameBuilder::get(Ctx), SF,
+                                StackFrameBuilder::flags, /*isVolatile=*/false,
+                                AtomicOrdering::Acquire);
     Flags = B.CreateAnd(Flags,
                         ConstantInt::get(Flags->getType(),
                                          CILK_FRAME_UNSYNCHED));
@@ -576,8 +608,10 @@ static Function *GetCilkSyncFn(Module &M) {
   // {
   //   IRBuilder<> B(Excepting);
   //   if (Rethrow) {
-  //     Value *Flags = LoadField(B, SF, StackFrameBuilder::flags,
-  //                              /*isVolatile=*/true);
+  //     Value *Flags = LoadSTyField(B, DL, StackFrameBuilder::get(Ctx), SF,
+  //                                 StackFrameBuilder::flags,
+  //                                 /*isVolatile=*/false,
+  //                                 AtomicOrdering::Acquire);
   //     Flags = B.CreateAnd(Flags,
   //                         ConstantInt::get(Flags->getType(),
   //                                          CILK_FRAME_EXCEPTING));
@@ -632,6 +666,8 @@ static Function *Get__cilkrts_enter_frame(Module &M) {
     return Fn;
 
   LLVMContext &Ctx = M.getContext();
+  const DataLayout &DL = M.getDataLayout();
+
   Function::arg_iterator args = Fn->arg_begin();
   Value *SF = &*args;
 
@@ -664,9 +700,10 @@ static Function *Get__cilkrts_enter_frame(Module &M) {
   //   Wslow = B.CreateCall(CILKRTS_FUNC(bind_thread_1, M));
   //   // sf->flags = CILK_FRAME_LAST | CILK_FRAME_VERSION;
   //   Type *Ty = SFTy->getElementType(StackFrameBuilder::flags);
-  //   StoreField(B,
-  //              ConstantInt::get(Ty, CILK_FRAME_LAST | CILK_FRAME_VERSION),
-  //              SF, StackFrameBuilder::flags, /*isVolatile=*/true);
+  //   StoreSTyField(B, DL, StackFrameBuilder::get(Ctx),
+  //                 ConstantInt::get(Ty, CILK_FRAME_LAST | CILK_FRAME_VERSION),
+  //                 SF, StackFrameBuilder::flags, /*isVolatile=*/false,
+  //                 AtomicOrdering::Release);
   //   B.CreateBr(Cont);
   // }
   // Block  (FastPath)
@@ -674,9 +711,10 @@ static Function *Get__cilkrts_enter_frame(Module &M) {
     IRBuilder<> B(FastPath);
     // sf->flags = CILK_FRAME_VERSION;
     Type *Ty = SFTy->getElementType(StackFrameBuilder::flags);
-    StoreField(B,
-               ConstantInt::get(Ty, CILK_FRAME_VERSION),
-               SF, StackFrameBuilder::flags);
+    StoreSTyField(B, DL, StackFrameBuilder::get(Ctx),
+                  ConstantInt::get(Ty, CILK_FRAME_VERSION),
+                  SF, StackFrameBuilder::flags, /*isVolatile=*/false,
+                  AtomicOrdering::Release);
     B.CreateBr(Cont);
   }
   // Block  (Cont)
@@ -687,12 +725,22 @@ static Function *Get__cilkrts_enter_frame(Module &M) {
     // W->addIncoming(Wslow, SlowPath);
     // W->addIncoming(Wfast, FastPath);
     Value *Wkr = B.CreatePointerCast(W, WorkerPtrTy);
-    StoreField(B,
-               LoadField(B, Wkr, WorkerBuilder::current_stack_frame),
-               SF, StackFrameBuilder::call_parent);
-
-    StoreField(B, Wkr, SF, StackFrameBuilder::worker);
-    StoreField(B, SF, Wkr, WorkerBuilder::current_stack_frame);
+    // sf->call_parent = w->current_stack_frame;
+    StoreSTyField(B, DL, StackFrameBuilder::get(Ctx),
+                  LoadSTyField(B, DL, WorkerBuilder::get(Ctx), Wkr,
+                               WorkerBuilder::current_stack_frame,
+                               /*isVolatile=*/false,
+                               AtomicOrdering::Acquire),
+                  SF, StackFrameBuilder::call_parent, /*isVolatile=*/false,
+                  AtomicOrdering::Release);
+    // sf->worker = w;
+    StoreSTyField(B, DL, StackFrameBuilder::get(Ctx), Wkr, SF,
+                  StackFrameBuilder::worker, /*isVolatile=*/false,
+                  AtomicOrdering::Release);
+    // w->current_stack_frame = sf;
+    StoreSTyField(B, DL, WorkerBuilder::get(Ctx), SF, Wkr,
+                  WorkerBuilder::current_stack_frame, /*isVolatile=*/false,
+                  AtomicOrdering::Release);
 
     B.CreateRetVoid();
   }
@@ -721,6 +769,8 @@ static Function *Get__cilkrts_enter_frame_fast(Module &M) {
     return Fn;
 
   LLVMContext &Ctx = M.getContext();
+  const DataLayout &DL = M.getDataLayout();
+
   Function::arg_iterator args = Fn->arg_begin();
   Value *SF = &*args;
 
@@ -738,14 +788,27 @@ static Function *Get__cilkrts_enter_frame_fast(Module &M) {
   StructType *SFTy = StackFrameBuilder::get(Ctx);
   Type *Ty = SFTy->getElementType(StackFrameBuilder::flags);
 
-  StoreField(B,
-             ConstantInt::get(Ty, CILK_FRAME_VERSION),
-             SF, StackFrameBuilder::flags);
-  StoreField(B,
-             LoadField(B, W, WorkerBuilder::current_stack_frame),
-             SF, StackFrameBuilder::call_parent);
-  StoreField(B, W, SF, StackFrameBuilder::worker);
-  StoreField(B, SF, W, WorkerBuilder::current_stack_frame);
+  // sf->flags = CILK_FRAME_VERSION;
+  StoreSTyField(B, DL, StackFrameBuilder::get(Ctx),
+                ConstantInt::get(Ty, CILK_FRAME_VERSION),
+                SF, StackFrameBuilder::flags, /*isVolatile=*/false,
+                AtomicOrdering::Release);
+  // sf->call_parent = w->current_stack_frame;
+  StoreSTyField(B, DL, StackFrameBuilder::get(Ctx),
+                LoadSTyField(B, DL, WorkerBuilder::get(Ctx), W,
+                             WorkerBuilder::current_stack_frame,
+                             /*isVolatile=*/false,
+                             AtomicOrdering::Acquire),
+                SF, StackFrameBuilder::call_parent, /*isVolatile=*/false,
+                AtomicOrdering::Release);
+  // sf->worker = w;
+  StoreSTyField(B, DL, StackFrameBuilder::get(Ctx), W, SF,
+                StackFrameBuilder::worker, /*isVolatile=*/false,
+                AtomicOrdering::Release);
+  // w->current_stack_frame = sf;
+  StoreSTyField(B, DL, WorkerBuilder::get(Ctx), SF, W,
+                WorkerBuilder::current_stack_frame, /*isVolatile=*/false,
+                AtomicOrdering::Release);
 
   B.CreateRetVoid();
 
@@ -770,6 +833,7 @@ static Function *GetCilkParentEpilogue(Module &M) {
 
   // If we get here we need to add the function body
   LLVMContext &Ctx = M.getContext();
+  const DataLayout &DL = M.getDataLayout();
 
   Function::arg_iterator args = Fn->arg_begin();
   Value *SF = &*args;
@@ -786,7 +850,9 @@ static Function *GetCilkParentEpilogue(Module &M) {
     B.CreateCall(CILKRTS_FUNC(pop_frame, M), SF);
 
     // if (sf->flags != CILK_FRAME_VERSION)
-    Value *Flags = LoadField(B, SF, StackFrameBuilder::flags);
+    Value *Flags = LoadSTyField(B, DL, StackFrameBuilder::get(Ctx), SF,
+                                StackFrameBuilder::flags, /*isVolatile=*/false,
+                                AtomicOrdering::Acquire);
     Value *Cond = B.CreateICmpNE(Flags,
                                  ConstantInt::get(Flags->getType(),
                                                   CILK_FRAME_VERSION));
@@ -929,11 +995,16 @@ bool makeFunctionDetachable(Function &extracted,
       // IRBuilder<> B(RI);
       // Value *Exn = AtExit->CreateExtractValue(RI->getValue(),
       //                                         ArrayRef<unsigned>(0));
-      // Value *Flags = LoadField(*AtExit, SF, StackFrameBuilder::flags);
+      // Value *Flags = LoadSTyField(*AtExit, DL, StackFrameBuilder::get(Ctx), SF,
+      //                             StackFrameBuilder::flags,
+      //                             /*isVolatile=*/false,
+      //                             AtomicOrdering::Acquire);
       // Flags = AtExit->CreateOr(Flags,
       //                          ConstantInt::get(Flags->getType(),
       //                                           CILK_FRAME_EXCEPTING));
-      // StoreField(*AtExit, Exn, SF, StackFrameBuilder::except_data);
+      // StoreSTyField(*AtExit, DL, StackFrameBuilder::get(Ctx), Exn, SF,
+      //               StackFrameBuilder::except_data, /*isVolatile=*/false,
+      //               AtomicOrdering::Release);
       /*
         __cilkrts_pop_frame(&sf);
         if (sf->flags)
