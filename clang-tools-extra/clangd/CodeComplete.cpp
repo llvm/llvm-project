@@ -313,7 +313,7 @@ llvm::Optional<SymbolID> getSymbolID(const CodeCompletionResult &R) {
 /// completion (e.g. "ns::ab?").
 struct SpecifiedScope {
   /// The scope specifier as written. For example, for completion "ns::ab?", the
-  /// written scope specifier is "ns".
+  /// written scope specifier is "ns::". Doesn't include leading "::".
   std::string Written;
   // If this scope specifier is recognized in Sema (e.g. as a namespace
   // context), this will be set to the fully qualfied name of the corresponding
@@ -321,8 +321,7 @@ struct SpecifiedScope {
   std::string Resolved;
 
   llvm::StringRef forIndex() {
-    llvm::StringRef Chosen = Resolved.empty() ? Written : Resolved;
-    return Chosen.trim(':');
+    return Resolved.empty() ? Written.ltrim('::') : Resolved;
   }
 };
 
@@ -631,15 +630,14 @@ SpecifiedScope getSpecifiedScope(Sema &S, const CXXScopeSpec &SS) {
   auto SpecifierRange = SS.getRange();
   Info.Written = Lexer::getSourceText(
       CharSourceRange::getCharRange(SpecifierRange), SM, clang::LangOptions());
+  if (!Info.Written.empty())
+    Info.Written += "::"; // Sema excludes the trailing ::.
   if (SS.isValid()) {
     DeclContext *DC = S.computeDeclContext(SS);
     if (auto *NS = llvm::dyn_cast<NamespaceDecl>(DC)) {
-      Info.Resolved = NS->getQualifiedNameAsString();
+      Info.Resolved = NS->getQualifiedNameAsString() + "::";
     } else if (llvm::dyn_cast<TranslationUnitDecl>(DC) != nullptr) {
-      Info.Resolved = "::";
-      // Sema does not include the suffix "::" in the range of SS, so we add
-      // it back here.
-      Info.Written = "::";
+      Info.Resolved = "";
     }
   }
   return Info;
