@@ -161,6 +161,43 @@ TEST_F(SymbolCollectorTest, CollectSymbols) {
                    QName("foo::baz")}));
 }
 
+TEST_F(SymbolCollectorTest, IncludeEnums) {
+  CollectorOpts.IndexMainFiles = false;
+  const std::string Header = R"(
+    enum {
+      Red
+    };
+    enum Color {
+      Green
+    };
+    enum class Color2 {
+      Yellow // ignore
+    };
+    namespace ns {
+    enum {
+      Black
+    };
+    }
+  )";
+  runSymbolCollector(Header, /*Main=*/"");
+  EXPECT_THAT(Symbols, UnorderedElementsAre(QName("Red"), QName("Color"),
+                                            QName("Green"), QName("Color2"),
+                                            QName("ns"),
+                                            QName("ns::Black")));
+}
+
+TEST_F(SymbolCollectorTest, IgnoreNamelessSymbols) {
+  CollectorOpts.IndexMainFiles = false;
+  const std::string Header = R"(
+    struct {
+      int a;
+    } Foo;
+  )";
+  runSymbolCollector(Header, /*Main=*/"");
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(QName("Foo")));
+}
+
 TEST_F(SymbolCollectorTest, IgnoreSymbolsInMainFile) {
   CollectorOpts.IndexMainFiles = false;
   const std::string Header = R"(

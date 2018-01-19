@@ -323,7 +323,7 @@ void NVPTXPassConfig::addOptimizedRegAlloc(FunctionPass *RegAllocPass) {
   addPass(&StackSlotColoringID);
 
   // FIXME: Needs physical registers
-  //addPass(&PostRAMachineLICMID);
+  //addPass(&MachineLICMID);
 
   printAndVerify("After StackSlotColoring");
 }
@@ -358,7 +358,7 @@ void NVPTXPassConfig::addMachineSSAOptimization() {
   if (addILPOpts())
     printAndVerify("After ILP optimizations");
 
-  addPass(&MachineLICMID);
+  addPass(&EarlyMachineLICMID);
   addPass(&MachineCSEID);
 
   addPass(&MachineSinkingID);

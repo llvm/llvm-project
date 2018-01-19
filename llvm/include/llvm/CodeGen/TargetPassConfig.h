@@ -84,16 +84,6 @@ template <> struct isPodLike<IdentifyingPassPtr> {
 /// This is an ImmutablePass solely for the purpose of exposing CodeGen options
 /// to the internals of other CodeGen passes.
 class TargetPassConfig : public ImmutablePass {
-public:
-  /// Pseudo Pass IDs. These are defined within TargetPassConfig because they
-  /// are unregistered pass IDs. They are only useful for use with
-  /// TargetPassConfig APIs to identify multiple occurrences of the same pass.
-  ///
-
-  /// PostRAMachineLICM - A clone of the LICM pass that runs during late machine
-  /// optimization after regalloc.
-  static char PostRAMachineLICMID;
-
 private:
   PassManagerBase *PM = nullptr;
   AnalysisID StartBefore = nullptr;

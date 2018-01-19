@@ -71,7 +71,7 @@ public:
 private:
   bool runOnLoop(Loop *L);
 
-  /// \brief Check if the the stride of the accesses is large enough to
+  /// \brief Check if the stride of the accesses is large enough to
   /// warrant a prefetch.
   bool isStrideLargeEnough(const SCEVAddRecExpr *AR);
 
@@ -275,7 +275,7 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
       if (!LSCEVAddRec)
         continue;
 
-      // Check if the the stride of the accesses is large enough to warrant a
+      // Check if the stride of the accesses is large enough to warrant a
       // prefetch.
       if (!isStrideLargeEnough(LSCEVAddRec))
         continue;

@@ -99,6 +99,7 @@ void initializeConstantMergeLegacyPassPass(PassRegistry&);
 void initializeConstantPropagationPass(PassRegistry&);
 void initializeCorrelatedValuePropagationPass(PassRegistry&);
 void initializeCostModelAnalysisPass(PassRegistry&);
+void initializeEarlyMachineLICMPass(PassRegistry&);
 void initializeEarlyTailDuplicatePass(PassRegistry&);
 void initializeEntryExitInstrumenterPass(PassRegistry&);
 void initializePostInlineEntryExitInstrumenterPass(PassRegistry&);
