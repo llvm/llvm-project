@@ -1370,8 +1370,8 @@ def fno_implicit_modules :
   Group<f_Group>, Flags<[DriverOption, CC1Option]>;
 def fretain_comments_from_system_headers : Flag<["-"], "fretain-comments-from-system-headers">, Group<f_Group>, Flags<[CC1Option]>;
 
-def ftapir : Joined<["-"], "ftapir=">, Group<f_Group>, Flags<[CC1Option]>,
-    HelpText<"Choose the backend for Tapir instructions (i.e., parallel runtime)">, Values<"cilk,cilkr,openmp,serial,none">;
+def ftapir_EQ : Joined<["-"], "ftapir=">, Group<f_Group>, Flags<[CC1Option]>,
+    HelpText<"Choose the backend for Tapir instructions (i.e., parallel runtime)">, Values<"cilk,cilkr,openmp,serial">;
 def fcilkplus : Flag<["-"], "fcilkplus">, Group<f_Group>, Flags<[CC1Option]>, HelpText<"Enable Cilk Plus extensions">;
 def frhino    : Flag <["-"], "frhino">, Group<f_Group>, Flags<[CC1Option]>, HelpText<"Enable Rhino extension to Tapir">;
 def fdetach   : Flag <["-"], "fdetach">, Group<f_Group>, Flags<[CC1Option]>, HelpText<"Disable memory optimizations and immediately lower">;

@@ -112,15 +112,6 @@ public:
 
   enum FileType { FT_Object, FT_Static, FT_Shared };
 
-  enum TapirRuntimeLibType {
-    TRLT_None,
-    TRLT_Serial,
-    TRLT_Cilk,
-    TRLT_OpenMP,
-    TRLT_CilkR,
-    TRLT_Unknown
-  };
-
 private:
   friend class RegisterEffectiveTriple;
 
@@ -600,11 +591,6 @@ public:
   virtual SanitizerMask getDefaultSanitizers() const {
     return SanitizerMask();
   }
-
-  // GetTapirRuntimeLibType - Determine the runtime library type to use with
-  // Tapir.
-  virtual TapirRuntimeLibType GetTapirRuntimeLibType(
-      const llvm::opt::ArgList &Args) const;
 
   /// AddTapirRuntimeLibArgs - Add the specific linker arguments to use for the
   /// given Tapir runtime library type.

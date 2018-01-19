@@ -81,6 +81,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Tapir/TapirTypes.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>
 #include <atomic>
 #include <cassert>
@@ -126,7 +127,7 @@ static unsigned getOptimizationLevel(ArgList &Args, InputKind IK,
   if (IK.getLanguage() == InputKind::OpenCL && !Args.hasArg(OPT_cl_opt_disable))
     DefaultOpt = llvm::CodeGenOpt::Default;
 
-  if (Args.hasArg(OPT_ftapir) || Args.hasArg(OPT_frhino))
+  if (Args.hasArg(OPT_frhino))
     DefaultOpt = 2;
 
   if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
@@ -3407,35 +3408,16 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   LangOpts.FunctionAlignment =
       getLastArgIntValue(Args, OPT_function_alignment, 0, Diags);
 
-  LangOpts.Rhino = Args.hasArg(OPT_frhino);
-  LangOpts.Detach = Args.hasArg(OPT_fdetach);
   LangOpts.Cilk = Args.hasArg(OPT_fcilkplus);
+  LangOpts.Detach = Args.hasArg(OPT_fdetach);
+  LangOpts.Rhino = Args.hasArg(OPT_frhino);
+  TapirTargetType TapirTarget = parseTapirTarget(Args);
+  if (TapirTarget == TapirTargetType::None)
+    if (const Arg *A = Args.getLastArg(OPT_ftapir_EQ))
+      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args)
+                                                << A->getValue();
+  LangOpts.TapirTarget = TapirTarget;
 
-  // FIXME: Fix -ftapir=* parsing to use conventional mechanisms for handling
-  // arguments.
-  if (Args.hasArg(OPT_ftapir)) {
-    if (Arg *A = Args.getLastArg(OPT_ftapir)) {
-      StringRef Name = A->getValue();
-      if (Name == "none")
-        LangOpts.Tapir = llvm::TapirTargetType::None;
-      else if (Name == "cilk") {
-        LangOpts.Tapir = llvm::TapirTargetType::Cilk;
-        LangOpts.Cilk |= true;
-      } else if (Name == "cilkr") {
-        LangOpts.Tapir = llvm::TapirTargetType::CilkR;
-        LangOpts.Cilk |= true;
-      } else if (Name == "openmp")
-        LangOpts.Tapir = llvm::TapirTargetType::OpenMP;
-      else if (Name == "serial")
-        LangOpts.Tapir = llvm::TapirTargetType::Serial;
-      else
-        Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) <<
-          Name;
-    }
-  }
-
-  if (Args.hasArg(OPT_fcilkplus) && !Args.hasArg(OPT_ftapir))
-    LangOpts.Tapir = llvm::TapirTargetType::Cilk;
   if (LangOpts.Cilk && (LangOpts.ObjC1 || LangOpts.ObjC2))
     Diags.Report(diag::err_drv_cilk_objc);
 

@@ -12,6 +12,7 @@
 #include "ToolChains/Clang.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/Sanitizers.h"
+#include "clang/Basic/Tapir.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Driver.h"
@@ -1043,49 +1044,22 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
   return nullptr;
 }
 
-ToolChain::TapirRuntimeLibType ToolChain::GetTapirRuntimeLibType(
-    const ArgList &Args) const {
-  if (Args.hasArg(options::OPT_fcilkplus) || Args.hasArg(options::OPT_fdetach))
-    return ToolChain::TRLT_Cilk;
-
-  if (!Args.hasArg(options::OPT_ftapir))
-    return ToolChain::TRLT_None;
-
-  const Arg *A = Args.getLastArg(options::OPT_ftapir);
-  StringRef LibName = A ? A->getValue() : CLANG_DEFAULT_TAPIR_RUNTIME;
-
-  auto RT = llvm::StringSwitch<ToolChain::TapirRuntimeLibType>(LibName)
-    .Case("none", ToolChain::TRLT_None)
-    .Case("serial", ToolChain::TRLT_Serial)
-    .Case("cilk", ToolChain::TRLT_Cilk)
-    .Case("openmp", ToolChain::TRLT_OpenMP)
-    .Case("cilkr", ToolChain::TRLT_CilkR)
-    .Default(TRLT_Unknown);
-
-  if (TRLT_Unknown == RT) {
-    if (A)
-      getDriver().Diag(diag::err_drv_invalid_tapir_argument)
-        << A->getAsString(Args);
-    else
-      getDriver().Diag(diag::err_drv_invalid_tapir_argument)
-        << "";
-  }
-
-  return RT;
-}
-
 void ToolChain::AddTapirRuntimeLibArgs(const ArgList &Args,
                                        ArgStringList &CmdArgs) const {
-  TapirRuntimeLibType Type = GetTapirRuntimeLibType(Args);
+  TapirTargetType TapirTarget = parseTapirTarget(Args);
+  if (TapirTarget == TapirTargetType::None)
+    if (const Arg *A = Args.getLastArg(options::OPT_ftapir_EQ))
+      getDriver().Diag(diag::err_drv_invalid_value) << A->getAsString(Args)
+                                                    << A->getValue();
 
-  switch (Type) {
-  case ToolChain::TRLT_Cilk:
+  switch (TapirTarget) {
+  case TapirTargetType::Cilk:
     CmdArgs.push_back("-lcilkrts");
     break;
-  case ToolChain::TRLT_OpenMP:
+  case TapirTargetType::OpenMP:
     CmdArgs.push_back("-lomp");
     break;
-  case ToolChain::TRLT_CilkR:
+  case TapirTargetType::CilkR:
     CmdArgs.push_back("-lcilkr");
     CmdArgs.push_back("-lpthread");
     break;

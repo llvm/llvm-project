@@ -18,6 +18,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/Sanitizers.h"
+#include "clang/Basic/Tapir.h"
 #include "clang/Basic/Visibility.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
@@ -252,6 +253,9 @@ public:
   /// Indicates whether the front-end is explicitly told that the
   /// input is a header file (i.e. -x c-header).
   bool IsHeaderFile = false;
+
+  /// \brief Runtime target for Tapir.
+  TapirTargetType TapirTarget = TapirTargetType::None;
 
   LangOptions();
 
