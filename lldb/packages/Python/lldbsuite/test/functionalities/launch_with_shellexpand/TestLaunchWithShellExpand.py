@@ -25,7 +25,7 @@ class LaunchWithShellExpandTestCase(TestBase):
     @skipIfDarwinEmbedded # iOS etc don't launch the binary via a shell, so arg expansion won't happen
     def test(self):
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         self.runCmd("target create %s" % exe)
 

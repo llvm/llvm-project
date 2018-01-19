@@ -23,9 +23,8 @@ class NonOverlappingIndexVariableCase(TestBase):
     def test_eval_index_variable(self):
         """Test expressions of variable 'i' which appears in two for loops."""
         self.build()
-        self.exe_name = 'a.out'
-        exe = os.path.join(os.getcwd(), self.exe_name)
-        self.runCmd("file %s" % exe, CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"),
+                    CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
             self,

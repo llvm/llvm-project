@@ -1,20 +1,20 @@
 {
-    "regexs" : [".*github.*apple.*swift-lldb.*upstream-with-swift.*"],
+    "regexs" : [".*github.*apple.*swift-lldb.*llvm-swift5-transition.*"],
     "repos" : [
         {"name": "llvm",
          "vcs": "git",
          "url": "https://github.com/apple/swift-llvm.git",
-         "ref": "upstream-with-swift"},
+         "ref": "swift-5.0-branch"},
 
         {"name": "clang",
          "vcs": "git",
          "url": "https://github.com/apple/swift-clang.git",
-         "ref": "upstream-with-swift"},
+         "ref": "swift-5.0-branch"},
 
         {"name": "swift",
          "vcs": "git",
          "url": "https://github.com/apple/swift.git",
-         "ref": "master-next"},
+         "ref": "master-llvm-swift5-transition"},
 
         {"name": "cmark",
          "vcs": "git",

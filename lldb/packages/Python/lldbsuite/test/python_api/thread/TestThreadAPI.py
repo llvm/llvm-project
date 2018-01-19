@@ -78,7 +78,7 @@ class ThreadAPITestCase(TestBase):
 
     def get_process(self):
         """Test Python SBThread.GetProcess() API."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
@@ -105,7 +105,7 @@ class ThreadAPITestCase(TestBase):
 
     def get_stop_description(self):
         """Test Python SBThread.GetStopDescription() API."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)

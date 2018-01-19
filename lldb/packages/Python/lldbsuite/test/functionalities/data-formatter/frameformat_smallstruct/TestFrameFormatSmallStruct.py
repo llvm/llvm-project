@@ -25,7 +25,7 @@ class FrameFormatSmallStructTestCase(TestBase):
     def test_with_run_command(self):
         """Test that the user can input a format but it will not prevail over summary format's choices."""
         self.build()
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
             self, "main.cpp", self.line, num_expected_locations=1, loc_exact=True)

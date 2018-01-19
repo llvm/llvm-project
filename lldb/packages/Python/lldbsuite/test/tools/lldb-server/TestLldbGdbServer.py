@@ -558,7 +558,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assertIsNotNone(reg_infos)
         self.assertTrue(len(reg_infos) > 0)
 
-        inferior_exe_path = os.path.abspath("a.out")
+        inferior_exe_path = self.getBuildArtifact("a.out")
         Target = self.dbg.CreateTarget(inferior_exe_path)
         byte_order = Target.GetByteOrder()
 

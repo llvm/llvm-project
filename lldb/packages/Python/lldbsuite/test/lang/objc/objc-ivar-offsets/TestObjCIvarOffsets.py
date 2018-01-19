@@ -28,7 +28,7 @@ class TestObjCIvarOffsets(TestBase):
     def test_with_python_api(self):
         """Test printing ObjC objects that use unbacked properties"""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)

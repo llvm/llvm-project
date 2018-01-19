@@ -45,7 +45,7 @@ class BasicExprCommandsTestCase(TestBase):
         """These basic expression commands should work as expected."""
         self.build()
 
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
             self, "main.cpp", self.line, num_expected_locations=1, loc_exact=False)
@@ -107,7 +107,7 @@ class BasicExprCommandsTestCase(TestBase):
         """Test SBFrame.EvaluateExpression() API for evaluating an expression."""
         self.build()
 
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
@@ -208,7 +208,7 @@ class BasicExprCommandsTestCase(TestBase):
         """Throw some expression commands with quotes at lldb."""
         self.build()
 
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
             self, "main.cpp", self.line, num_expected_locations=1, loc_exact=False)

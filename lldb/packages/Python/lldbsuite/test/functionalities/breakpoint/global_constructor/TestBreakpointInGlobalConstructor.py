@@ -28,6 +28,11 @@ class TestBreakpointInGlobalConstructors(TestBase):
         exe = os.path.join(os.getcwd(), "a.out")
         self.runCmd("file %s" % exe)
 
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+
+        env= self.registerSharedLibrariesWithTarget(target, ["foo"])
+
         bp_main = lldbutil.run_break_set_by_file_and_line(
             self, 'main.cpp', self.line_main)
         bp_foo = lldbutil.run_break_set_by_file_and_line(

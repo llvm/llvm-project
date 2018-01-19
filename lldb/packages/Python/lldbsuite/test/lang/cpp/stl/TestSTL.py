@@ -30,7 +30,7 @@ class STLTestCase(TestBase):
     def test(self):
         """Test some expressions involving STL data types."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # The following two lines, if uncommented, will enable loggings.
         #self.ci.HandleCommand("log enable -f /tmp/lldb.log lldb default", res)
@@ -78,7 +78,7 @@ class STLTestCase(TestBase):
     def test_SBType_template_aspects(self):
         """Test APIs for getting template arguments from an SBType."""
         self.build()
-        exe = os.path.join(os.getcwd(), 'a.out')
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)

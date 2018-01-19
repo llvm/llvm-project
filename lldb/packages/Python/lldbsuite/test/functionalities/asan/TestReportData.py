@@ -39,7 +39,7 @@ class AsanTestReportDataCase(TestBase):
         self.line_crash = line_number('main.c', '// BOOM line')
 
     def asan_tests(self):
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.expect(
             "file " + exe,
             patterns=["Current executable set to .*a.out"])
