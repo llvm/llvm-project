@@ -1456,7 +1456,7 @@ Optional<unsigned> llvm::getLoopEstimatedTripCount(Loop *L) {
   if (!L->getExitingBlock())
     return None;
 
-  // Get the branch weights for the the loop's backedge.
+  // Get the branch weights for the loop's backedge.
   BranchInst *LatchBR =
       dyn_cast<BranchInst>(L->getLoopLatch()->getTerminator());
   if (!LatchBR || LatchBR->getNumSuccessors() != 2)

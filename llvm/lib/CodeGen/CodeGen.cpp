@@ -28,6 +28,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeDetectDeadLanesPass(Registry);
   initializeDwarfEHPreparePass(Registry);
   initializeEarlyIfConverterPass(Registry);
+  initializeEarlyMachineLICMPass(Registry);
   initializeEarlyTailDuplicatePass(Registry);
   initializeExpandISelPseudosPass(Registry);
   initializeExpandMemCmpPassPass(Registry);

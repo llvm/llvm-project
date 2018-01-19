@@ -8,10 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/MonitoringProcessLauncher.h"
-#include "lldb/Core/Module.h"
-#include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/HostProcess.h"
-#include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Utility/Log.h"
@@ -32,36 +29,23 @@ MonitoringProcessLauncher::LaunchProcess(const ProcessLaunchInfo &launch_info,
   ProcessLaunchInfo resolved_info(launch_info);
 
   error.Clear();
-  char exe_path[PATH_MAX];
-
-  PlatformSP host_platform_sp(Platform::GetHostPlatform());
-
-  const ArchSpec &arch_spec = resolved_info.GetArchitecture();
 
   FileSpec exe_spec(resolved_info.GetExecutableFile());
 
   llvm::sys::fs::file_status stats;
   status(exe_spec.GetPath(), stats);
-  if (!is_regular_file(stats)) {
-    ModuleSpec module_spec(exe_spec, arch_spec);
-    lldb::ModuleSP exe_module_sp;
-    error =
-        host_platform_sp->ResolveExecutable(module_spec, exe_module_sp, NULL);
-
-    if (error.Fail())
-      return HostProcess();
-
-    if (exe_module_sp) {
-      exe_spec = exe_module_sp->GetFileSpec();
-      status(exe_spec.GetPath(), stats);
-    }
+  if (!exists(stats)) {
+    exe_spec.ResolvePath();
+    status(exe_spec.GetPath(), stats);
+  }
+  if (!exists(stats)) {
+    exe_spec.ResolveExecutableLocation();
+    status(exe_spec.GetPath(), stats);
   }
 
-  if (exists(stats)) {
-    exe_spec.GetPath(exe_path, sizeof(exe_path));
-  } else {
-    resolved_info.GetExecutableFile().GetPath(exe_path, sizeof(exe_path));
-    error.SetErrorStringWithFormat("executable doesn't exist: '%s'", exe_path);
+  if (!exists(stats)) {
+    error.SetErrorStringWithFormatv("executable doesn't exist: '{0}'",
+                                    exe_spec);
     return HostProcess();
   }
 
