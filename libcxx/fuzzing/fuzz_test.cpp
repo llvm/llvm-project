@@ -19,6 +19,8 @@
 //
 //  Each file should contain a test case.
 
+//  TODO: should add some memory tracking, too.
+
 
 #include <iostream>
 #include <fstream>
@@ -28,6 +30,78 @@
 #include <chrono>
 
 #include "fuzzing.h"
+
+//  ==== Count memory allocations ====
+
+struct MemoryCounters {
+    size_t totalAllocationCount;
+    size_t netAllocationCount;
+    size_t totalBytesAllocated;
+    };
+
+MemoryCounters gMemoryCounters;
+
+void ZeroMemoryCounters() {
+    gMemoryCounters.totalAllocationCount = 0;
+    gMemoryCounters.netAllocationCount = 0;
+    gMemoryCounters.totalBytesAllocated = 0;
+}
+
+void* operator new(std::size_t size)
+{
+    if (size == 0) size = 1;
+    void *p = ::malloc(size);
+    if (p == NULL)
+        throw std::bad_alloc();
+    gMemoryCounters.totalAllocationCount += 1;
+    gMemoryCounters.netAllocationCount  += 1;
+    gMemoryCounters.totalBytesAllocated += size;
+    return p;
+}
+
+void* operator new(std::size_t size, const std::nothrow_t&) noexcept
+{
+    try { return operator new(size); }
+    catch (const std::bad_alloc &) {}
+    return nullptr;
+}
+
+void* operator new[](std::size_t size)
+{
+    return ::operator new(size);
+}
+
+void* operator new[](std::size_t size, const std::nothrow_t&) noexcept
+{
+    try { return operator new(size); }
+    catch (const std::bad_alloc &) {}
+    return nullptr;
+}
+
+void  operator delete(void* ptr) noexcept
+{
+    if (ptr)
+        ::free(ptr);
+    gMemoryCounters.netAllocationCount -= 1;
+}
+
+void  operator delete(void* ptr, const std::nothrow_t&) noexcept
+{
+    ::operator delete(ptr);
+}
+
+void  operator delete[](void* ptr) noexcept
+{
+    ::operator delete(ptr);
+}
+
+void  operator delete[](void* ptr, const std::nothrow_t&) noexcept
+{
+    ::operator delete(ptr);
+}
+
+//  ==== End count memory allocations ====
+
 
 typedef int (*FuzzProc) (const uint8_t *data, size_t size);
 
@@ -64,21 +138,30 @@ void test_one(const char *filename, FuzzProc fp)
     std::ifstream f (filename, std::ios::binary);
     if (!f.is_open())
         std::cerr << "## Can't open '" << filename << "'" << std::endl;
-    else {
+    else
+    {
         typedef std::istream_iterator<uint8_t> Iter;
         std::copy(Iter(f), Iter(), std::back_inserter(v));
         if (verbose)
             std::cout << "File '" << filename << "' contains " << v.size() << " entries" << std::endl;
+        ZeroMemoryCounters();
         const auto start_time = std::chrono::high_resolution_clock::now();
         int ret = fp (v.data(), v.size());
         const auto finish_time = std::chrono::high_resolution_clock::now();
+        MemoryCounters mc = gMemoryCounters;
         if (ret != 0)
             std::cerr << "## Failure code: " << ret << std::endl;
         if (verbose)
+        {
             std::cout << "Execution time: "
                 << std::chrono::duration_cast<std::chrono::milliseconds>(finish_time - start_time).count()
                 << " milliseconds" << std::endl;
+            std::cout << "Memory: " 
+                      << mc.totalBytesAllocated  << " bytes allocated ("
+                      << mc.totalAllocationCount << " allocations); "
+                      << mc.netAllocationCount   << " allocations remain" << std::endl;
         }
+    }
 }
 
 void usage (const char *name)

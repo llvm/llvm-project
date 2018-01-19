@@ -271,7 +271,7 @@ TEST_F(FormatTestObjC, FormatObjCInterface) {
                "@end");
 
   Style = getGoogleStyle(FormatStyle::LK_ObjC);
-  verifyFormat("@interface Foo : NSObject<NSSomeDelegate> {\n"
+  verifyFormat("@interface Foo : NSObject <NSSomeDelegate> {\n"
                " @public\n"
                "  int field1;\n"
                " @protected\n"
@@ -283,15 +283,15 @@ TEST_F(FormatTestObjC, FormatObjCInterface) {
                "}\n"
                "+ (id)init;\n"
                "@end");
-  verifyFormat("@interface Foo : Bar<Baz, Quux>\n"
+  verifyFormat("@interface Foo : Bar <Baz, Quux>\n"
                "+ (id)init;\n"
                "@end");
-  verifyFormat("@interface Foo (HackStuff)<MyProtocol>\n"
+  verifyFormat("@interface Foo (HackStuff) <MyProtocol>\n"
                "+ (id)init;\n"
                "@end");
   Style.BinPackParameters = false;
   Style.ColumnLimit = 80;
-  verifyFormat("@interface aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ()<\n"
+  verifyFormat("@interface aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa () <\n"
                "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
                "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
                "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
@@ -414,7 +414,7 @@ TEST_F(FormatTestObjC, FormatObjCProtocol) {
                "@end");
 
   Style = getGoogleStyle(FormatStyle::LK_ObjC);
-  verifyFormat("@protocol MyProtocol<NSObject>\n"
+  verifyFormat("@protocol MyProtocol <NSObject>\n"
                "- (NSUInteger)numberOfThings;\n"
                "@end");
 }

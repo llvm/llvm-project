@@ -878,6 +878,7 @@ def HasSHSTK     : Predicate<"Subtarget->hasSHSTK()">;
 def HasIBT       : Predicate<"Subtarget->hasIBT()">;
 def HasCLFLUSHOPT : Predicate<"Subtarget->hasCLFLUSHOPT()">;
 def HasCLWB      : Predicate<"Subtarget->hasCLWB()">;
+def HasRDPID     : Predicate<"Subtarget->hasRDPID()">;
 def HasCmpxchg16b: Predicate<"Subtarget->hasCmpxchg16b()">;
 def Not64BitMode : Predicate<"!Subtarget->is64Bit()">,
                              AssemblerPredicate<"!Mode64Bit", "Not 64-bit mode">;

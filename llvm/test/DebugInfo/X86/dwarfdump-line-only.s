@@ -59,11 +59,11 @@ LH_5_params:
         .byte   0x0f            # DW_FORM_udata
         # File table entries
         .byte   2               # Two file entries
-        .byte   2
+        .byte   1
         .asciz "File1"
         .byte   0x51
         .byte   0x52
-        .byte   1
+        .byte   0
         .asciz "File2"
         .byte   0x53
         .byte   0x54
@@ -84,10 +84,10 @@ LH_5_end:
 # CHECK: address_size: 8
 # CHECK: seg_select_size: 0
 # CHECK: max_ops_per_inst: 1
-# CHECK: include_directories[  1] = 'Directory1'
-# CHECK: include_directories[  2] = 'Directory2'
+# CHECK: include_directories[  0] = 'Directory1'
+# CHECK: include_directories[  1] = 'Directory2'
 # CHECK-NOT: include_directories
-# CHECK: file_names[  1]    2 0x00000051 0x00000052 File1{{$}}
-# CHECK: file_names[  2]    1 0x00000053 0x00000054 File2{{$}}
+# CHECK: file_names[  1]    1 0x00000051 0x00000052 File1{{$}}
+# CHECK: file_names[  2]    0 0x00000053 0x00000054 File2{{$}}
 # CHECK-NOT: file_names
 # CHECK: 0x0000000000000000 {{.*}} is_stmt end_sequence

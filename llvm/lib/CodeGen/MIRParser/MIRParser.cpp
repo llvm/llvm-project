@@ -417,6 +417,8 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
 
   computeFunctionProperties(MF);
 
+  MF.getSubtarget().mirFileLoaded(MF);
+
   MF.verify();
   return false;
 }

@@ -223,8 +223,8 @@ bb_end:
 ; parameter.
 define void @foo_sret(%struct.S* sret %agg.result, i32 %val1, %swift_error** swifterror %error_ptr_ref) {
 ; CHECK-APPLE-LABEL: foo_sret:
-; CHECK-APPLE: mov [[SRET:x[0-9]+]], x8
 ; CHECK-APPLE: orr w0, wzr, #0x10
+; CHECK-APPLE: mov [[SRET:x[0-9]+]], x8
 ; CHECK-APPLE: malloc
 ; CHECK-APPLE: orr [[ID:w[0-9]+]], wzr, #0x1
 ; CHECK-APPLE: strb [[ID]], [x0, #8]
@@ -406,7 +406,7 @@ entry:
   ret float %0
 }
 
-; CHECK-APPLE-LABEL: swifterror_clobber
+; CHECK-APPLE-LABEL: swifterror_clobber:
 ; CHECK-APPLE: mov [[REG:x[0-9]+]], x21
 ; CHECK-APPLE: nop
 ; CHECK-APPLE: mov x21, [[REG]]
@@ -415,7 +415,7 @@ define swiftcc void @swifterror_clobber(%swift_error** nocapture swifterror %err
   ret void
 }
 
-; CHECK-APPLE-LABEL: swifterror_reg_clobber
+; CHECK-APPLE-LABEL: swifterror_reg_clobber:
 ; CHECK-APPLE: stp {{.*}}x21
 ; CHECK-APPLE: nop
 ; CHECK-APPLE: ldp  {{.*}}x21
@@ -423,7 +423,7 @@ define swiftcc void @swifterror_reg_clobber(%swift_error** nocapture %err) {
   call void asm sideeffect "nop", "~{x21}"()
   ret void
 }
-; CHECK-APPLE-LABEL: params_in_reg
+; CHECK-APPLE-LABEL: params_in_reg:
 ; Save callee saved registers and swifterror since it will be clobbered by the first call to params_in_reg2.
 ; CHECK-APPLE:  stp     x21, x28, [sp
 ; CHECK-APPLE:  stp     x27, x26, [sp
@@ -431,16 +431,15 @@ define swiftcc void @swifterror_reg_clobber(%swift_error** nocapture %err) {
 ; CHECK-APPLE:  stp     x23, x22, [sp
 ; CHECK-APPLE:  stp     x20, x19, [sp
 ; CHECK-APPLE:  stp     x29, x30, [sp
-; CHECK-APPLE:  str     x20, [sp
+; CHECK-APPLE:  str     x7, [sp
 ; Store argument registers.
-; CHECK-APPLE:  mov      x23, x7
-; CHECK-APPLE:  mov      x24, x6
-; CHECK-APPLE:  mov      x25, x5
-; CHECK-APPLE:  mov      x26, x4
-; CHECK-APPLE:  mov      x27, x3
-; CHECK-APPLE:  mov      x28, x2
-; CHECK-APPLE:  mov      x19, x1
-; CHECK-APPLE:  mov      x22, x0
+; CHECK-APPLE:  mov      x23, x6
+; CHECK-APPLE:  mov      x24, x5
+; CHECK-APPLE:  mov      x25, x4
+; CHECK-APPLE:  mov      x26, x3
+; CHECK-APPLE:  mov      x27, x2
+; CHECK-APPLE:  mov      x28, x1
+; CHECK-APPLE:  mov      x19, x0
 ; Setup call.
 ; CHECK-APPLE:  orr     w0, wzr, #0x1
 ; CHECK-APPLE:  orr     w1, wzr, #0x2
@@ -450,20 +449,20 @@ define swiftcc void @swifterror_reg_clobber(%swift_error** nocapture %err) {
 ; CHECK-APPLE:  orr     w5, wzr, #0x6
 ; CHECK-APPLE:  orr     w6, wzr, #0x7
 ; CHECK-APPLE:  orr     w7, wzr, #0x8
+; CHECK-APPLE:  mov      x22, x20
 ; CHECK-APPLE:  mov      x20, xzr
 ; CHECK-APPLE:  mov      x21, xzr
 ; CHECK-APPLE:  bl      _params_in_reg2
 ; Restore original arguments for next call.
-; CHECK-APPLE:  mov      x0, x22
-; CHECK-APPLE:  mov      x1, x19
-; CHECK-APPLE:  mov      x2, x28
-; CHECK-APPLE:  mov      x3, x27
-; CHECK-APPLE:  mov      x4, x26
-; CHECK-APPLE:  mov      x5, x25
-; CHECK-APPLE:  mov      x6, x24
-; CHECK-APPLE:  mov      x7, x23
+; CHECK-APPLE:  mov      x0, x19
+; CHECK-APPLE:  mov      x1, x28
+; CHECK-APPLE:  mov      x2, x27
+; CHECK-APPLE:  mov      x3, x26
+; CHECK-APPLE:  mov      x4, x25
+; CHECK-APPLE:  mov      x5, x24
 ; Restore original swiftself argument and swifterror %err.
-; CHECK-APPLE:  ldp             x20, x21, [sp
+; CHECK-APPLE:  ldp      x7, x21, [sp
+; CHECK-APPLE:  mov      x20, x22
 ; CHECK-APPLE:  bl      _params_in_reg2
 ; Restore calle save registers but don't clober swifterror x21.
 ; CHECK-APPLE-NOT: x21
@@ -489,9 +488,9 @@ define swiftcc void @params_in_reg(i64, i64, i64, i64, i64, i64, i64, i64, i8* s
 }
 declare swiftcc void @params_in_reg2(i64, i64, i64, i64, i64, i64, i64, i64, i8* swiftself, %swift_error** nocapture swifterror %err)
 
-; CHECK-APPLE-LABEL: params_and_return_in_reg
+; CHECK-APPLE-LABEL: params_and_return_in_reg:
 ; Store callee saved registers.
-; CHECK-APPLE:  stp     x20, x28, [sp, #24
+; CHECK-APPLE:  stp     x7, x28, [sp, #24
 ; CHECK-APPLE:  stp     x27, x26, [sp
 ; CHECK-APPLE:  stp     x25, x24, [sp
 ; CHECK-APPLE:  stp     x23, x22, [sp
@@ -499,14 +498,13 @@ declare swiftcc void @params_in_reg2(i64, i64, i64, i64, i64, i64, i64, i64, i8*
 ; CHECK-APPLE:  stp     x29, x30, [sp
 ; Save original arguments.
 ; CHECK-APPLE:  mov      x23, x21
-; CHECK-APPLE:  str     x7, [sp, #16]
-; CHECK-APPLE:  mov      x24, x6
-; CHECK-APPLE:  mov      x25, x5
-; CHECK-APPLE:  mov      x26, x4
-; CHECK-APPLE:  mov      x27, x3
-; CHECK-APPLE:  mov      x28, x2
-; CHECK-APPLE:  mov      x19, x1
-; CHECK-APPLE:  mov      x22, x0
+; CHECK-APPLE:  str      x6, [sp, #16]
+; CHECK-APPLE:  mov      x24, x5
+; CHECK-APPLE:  mov      x25, x4
+; CHECK-APPLE:  mov      x26, x3
+; CHECK-APPLE:  mov      x27, x2
+; CHECK-APPLE:  mov      x28, x1
+; CHECK-APPLE:  mov      x19, x0
 ; Setup call arguments.
 ; CHECK-APPLE:  orr     w0, wzr, #0x1
 ; CHECK-APPLE:  orr     w1, wzr, #0x2
@@ -516,24 +514,26 @@ declare swiftcc void @params_in_reg2(i64, i64, i64, i64, i64, i64, i64, i64, i8*
 ; CHECK-APPLE:  orr     w5, wzr, #0x6
 ; CHECK-APPLE:  orr     w6, wzr, #0x7
 ; CHECK-APPLE:  orr     w7, wzr, #0x8
+; CHECK-APPLE:  mov      x22, x20
 ; CHECK-APPLE:  mov      x20, xzr
 ; CHECK-APPLE:  mov      x21, xzr
 ; CHECK-APPLE:  bl      _params_in_reg2
 ; Store swifterror %error_ptr_ref.
 ; CHECK-APPLE:  str     x21, [sp, #8]
 ; Setup call arguments from original arguments.
-; CHECK-APPLE:  mov      x0, x22
-; CHECK-APPLE:  mov      x1, x19
-; CHECK-APPLE:  mov      x2, x28
-; CHECK-APPLE:  mov      x3, x27
-; CHECK-APPLE:  mov      x4, x26
-; CHECK-APPLE:  mov      x5, x25
-; CHECK-APPLE:  mov      x6, x24
-; CHECK-APPLE:  ldp     x7, x20, [sp, #16]
+; CHECK-APPLE:  mov      x0, x19
+; CHECK-APPLE:  mov      x1, x28
+; CHECK-APPLE:  mov      x2, x27
+; CHECK-APPLE:  mov      x3, x26
+; CHECK-APPLE:  mov      x4, x25
+; CHECK-APPLE:  mov      x5, x24
+; CHECK-APPLE:  ldp     x6, x7, [sp, #16]
+; CHECK-APPLE:  mov      x20, x22
 ; CHECK-APPLE:  mov      x21, x23
 ; CHECK-APPLE:  bl      _params_and_return_in_reg2
+; Save swifterror %err.
+; CHECK-APPLE:  str      x0, [sp, #24]
 ; Store return values.
-; CHECK-APPLE:  mov      x19, x0
 ; CHECK-APPLE:  mov      x22, x1
 ; CHECK-APPLE:  mov      x24, x2
 ; CHECK-APPLE:  mov      x25, x3
@@ -541,8 +541,6 @@ declare swiftcc void @params_in_reg2(i64, i64, i64, i64, i64, i64, i64, i64, i8*
 ; CHECK-APPLE:  mov      x27, x5
 ; CHECK-APPLE:  mov      x28, x6
 ; CHECK-APPLE:  mov      x23, x7
-; Save swifterror %err.
-; CHECK-APPLE:  str     x21, [sp, #24]
 ; Setup call.
 ; CHECK-APPLE:  orr     w0, wzr, #0x1
 ; CHECK-APPLE:  orr     w1, wzr, #0x2
@@ -552,12 +550,12 @@ declare swiftcc void @params_in_reg2(i64, i64, i64, i64, i64, i64, i64, i64, i8*
 ; CHECK-APPLE:  orr     w5, wzr, #0x6
 ; CHECK-APPLE:  orr     w6, wzr, #0x7
 ; CHECK-APPLE:  orr     w7, wzr, #0x8
+; CHECK-APPLE:  mov      x19, x21
 ; CHECK-APPLE:  mov      x20, xzr
 ; ... setup call with swiferror %error_ptr_ref.
 ; CHECK-APPLE:  ldr     x21, [sp, #8]
 ; CHECK-APPLE:  bl      _params_in_reg2
 ; Restore return values for return from this function.
-; CHECK-APPLE:  mov      x0, x19
 ; CHECK-APPLE:  mov      x1, x22
 ; CHECK-APPLE:  mov      x2, x24
 ; CHECK-APPLE:  mov      x3, x25
@@ -565,13 +563,14 @@ declare swiftcc void @params_in_reg2(i64, i64, i64, i64, i64, i64, i64, i64, i8*
 ; CHECK-APPLE:  mov      x5, x27
 ; CHECK-APPLE:  mov      x6, x28
 ; CHECK-APPLE:  mov      x7, x23
+; CHECK-APPLE:  mov      x21, x19
 ; Restore swifterror %err and callee save registers.
-; CHECK-APPLE:  ldp     x21, x28, [sp, #24
 ; CHECK-APPLE:  ldp     x29, x30, [sp
 ; CHECK-APPLE:  ldp     x20, x19, [sp
 ; CHECK-APPLE:  ldp     x23, x22, [sp
 ; CHECK-APPLE:  ldp     x25, x24, [sp
 ; CHECK-APPLE:  ldp     x27, x26, [sp
+; CHECK-APPLE:  ldp     x0, x28, [sp, #24
 ; CHECK-APPLE:  ret
 define swiftcc { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_reg(i64, i64, i64, i64, i64, i64, i64, i64, i8* swiftself, %swift_error** nocapture swifterror %err) {
   %error_ptr_ref = alloca swifterror %swift_error*, align 8
@@ -601,14 +600,14 @@ entry:
 declare swiftcc void @foo2(%swift_error** swifterror)
 
 ; Make sure we properly assign registers during fast-isel.
-; CHECK-O0-LABEL: testAssign
+; CHECK-O0-LABEL: testAssign:
 ; CHECK-O0: mov     [[TMP:x.*]], xzr
 ; CHECK-O0: mov     x21, [[TMP]]
 ; CHECK-O0: bl      _foo2
 ; CHECK-O0: str     x21, [s[[STK:.*]]]
 ; CHECK-O0: ldr     x0, [s[[STK]]]
 
-; CHECK-APPLE-LABEL: testAssign
+; CHECK-APPLE-LABEL: testAssign:
 ; CHECK-APPLE: mov      x21, xzr
 ; CHECK-APPLE: bl      _foo2
 ; CHECK-APPLE: mov      x0, x21

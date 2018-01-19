@@ -142,6 +142,12 @@ static cl::opt<bool> EnableRedZone("aarch64-redzone",
 
 STATISTIC(NumRedZoneFunctions, "Number of functions using red zone");
 
+/// This is the biggest offset to the stack pointer we can encode in aarch64
+/// instructions (without using a separate calculation and a temp register).
+/// Note that the exception here are vector stores/loads which cannot encode any
+/// displacements (see estimateRSStackSizeLimit(), isAArch64FrameOffsetLegal()).
+static const unsigned DefaultSafeSPDisplacement = 255;
+
 /// Look at each instruction that references stack frames and return the stack
 /// size limit beyond which some of these instructions will require a scratch
 /// register during their expansion later.
@@ -167,7 +173,7 @@ static unsigned estimateRSStackSizeLimit(MachineFunction &MF) {
       }
     }
   }
-  return 255;
+  return DefaultSafeSPDisplacement;
 }
 
 bool AArch64FrameLowering::canUseRedZone(const MachineFunction &MF) const {
@@ -191,11 +197,25 @@ bool AArch64FrameLowering::hasFP(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
   // Retain behavior of always omitting the FP for leaf functions when possible.
-  return (MFI.hasCalls() &&
-          MF.getTarget().Options.DisableFramePointerElim(MF)) ||
-         MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
-         MFI.hasStackMap() || MFI.hasPatchPoint() ||
-         RegInfo->needsStackRealignment(MF);
+  if (MFI.hasCalls() && MF.getTarget().Options.DisableFramePointerElim(MF))
+    return true;
+  if (MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
+      MFI.hasStackMap() || MFI.hasPatchPoint() ||
+      RegInfo->needsStackRealignment(MF))
+    return true;
+  // With large callframes around we may need to use FP to access the scavenging
+  // emergency spillslot.
+  //
+  // Unfortunately some calls to hasFP() like machine verifier ->
+  // getReservedReg() -> hasFP in the middle of global isel are too early
+  // to know the max call frame size. Hopefully conservatively returning "true"
+  // in those cases is fine.
+  // DefaultSafeSPDisplacement is fine as we only emergency spill GP regs.
+  if (!MFI.isMaxCallFrameSizeComputed() ||
+      MFI.getMaxCallFrameSize() > DefaultSafeSPDisplacement)
+    return true;
+
+  return false;
 }
 
 /// hasReservedCallFrame - Under normal circumstances, when a frame pointer is

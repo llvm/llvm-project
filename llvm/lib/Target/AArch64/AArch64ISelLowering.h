@@ -648,6 +648,8 @@ private:
                           SelectionDAG &DAG) const override;
 
   bool shouldNormalizeToSelectSequence(LLVMContext &, EVT) const override;
+
+  void finalizeLowering(MachineFunction &MF) const override;
 };
 
 namespace AArch64 {

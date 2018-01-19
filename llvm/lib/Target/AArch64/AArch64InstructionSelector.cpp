@@ -870,6 +870,40 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
     if (OpFlags & AArch64II::MO_GOT) {
       I.setDesc(TII.get(AArch64::LOADgot));
       I.getOperand(1).setTargetFlags(OpFlags);
+    } else if (TM.getCodeModel() == CodeModel::Large) {
+      // Materialize the global using movz/movk instructions.
+      unsigned MovZDstReg = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+      auto InsertPt = std::next(I.getIterator());
+      auto MovZ =
+          BuildMI(MBB, InsertPt, I.getDebugLoc(), TII.get(AArch64::MOVZXi))
+              .addDef(MovZDstReg);
+      MovZ->addOperand(MF, I.getOperand(1));
+      MovZ->getOperand(1).setTargetFlags(OpFlags | AArch64II::MO_G0 |
+                                         AArch64II::MO_NC);
+      MovZ->addOperand(MF, MachineOperand::CreateImm(0));
+      constrainSelectedInstRegOperands(*MovZ, TII, TRI, RBI);
+
+      auto BuildMovK = [&](unsigned SrcReg, unsigned char Flags,
+                           unsigned Offset, unsigned ForceDstReg) {
+        unsigned DstReg =
+            ForceDstReg ? ForceDstReg
+                        : MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+        auto MovI = BuildMI(MBB, InsertPt, MovZ->getDebugLoc(),
+                            TII.get(AArch64::MOVKXi))
+                        .addDef(DstReg)
+                        .addReg(SrcReg);
+        MovI->addOperand(MF, MachineOperand::CreateGA(
+                                 GV, MovZ->getOperand(1).getOffset(), Flags));
+        MovI->addOperand(MF, MachineOperand::CreateImm(Offset));
+        constrainSelectedInstRegOperands(*MovI, TII, TRI, RBI);
+        return DstReg;
+      };
+      unsigned DstReg = BuildMovK(MovZ->getOperand(0).getReg(),
+                                  AArch64II::MO_G1 | AArch64II::MO_NC, 16, 0);
+      DstReg = BuildMovK(DstReg, AArch64II::MO_G2 | AArch64II::MO_NC, 32, 0);
+      BuildMovK(DstReg, AArch64II::MO_G3, 48, I.getOperand(0).getReg());
+      I.eraseFromParent();
+      return true;
     } else {
       I.setDesc(TII.get(AArch64::MOVaddr));
       I.getOperand(1).setTargetFlags(OpFlags | AArch64II::MO_PAGE);

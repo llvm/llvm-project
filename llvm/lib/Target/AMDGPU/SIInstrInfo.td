@@ -170,6 +170,134 @@ def SIbuffer_atomic_cmpswap : SDNode <"AMDGPUISD::BUFFER_ATOMIC_CMPSWAP",
   [SDNPMemOperand, SDNPHasChain, SDNPMayLoad, SDNPMayStore]
 >;
 
+def SDTImage_load : SDTypeProfile<1, 7,
+    [
+     SDTCisInt<1>,        // vaddr
+     SDTCisInt<2>,        // rsrc
+     SDTCisVT<3, i32>,    // dmask
+     SDTCisVT<4, i1>,     // glc
+     SDTCisVT<5, i1>,     // slc
+     SDTCisVT<6, i1>,     // lwe
+     SDTCisVT<7, i1>      // da
+     ]>;
+def SIImage_load :       SDNode<"AMDGPUISD::IMAGE_LOAD", SDTImage_load,
+                              [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]>;
+def SIImage_load_mip :   SDNode<"AMDGPUISD::IMAGE_LOAD_MIP", SDTImage_load,
+                              [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]>;
+
+def SDTImage_store : SDTypeProfile<0, 8,
+    [
+     SDTCisInt<1>,        // vaddr
+     SDTCisInt<2>,        // rsrc
+     SDTCisVT<3, i32>,    // dmask
+     SDTCisVT<4, i1>,     // glc
+     SDTCisVT<5, i1>,     // slc
+     SDTCisVT<6, i1>,     // lwe
+     SDTCisVT<7, i1>      // da
+     ]>;
+def SIImage_store : SDNode <"AMDGPUISD::IMAGE_STORE",
+                            SDTImage_store,
+                            [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
+def SIImage_store_mip : SDNode <"AMDGPUISD::IMAGE_STORE_MIP",
+                            SDTImage_store,
+                            [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
+
+class SDTImage_sample<string opcode> : SDNode <opcode,
+  SDTypeProfile<1, 9,
+    [
+     SDTCisFP<1>,           // vaddr
+     SDTCisInt<2>,          // rsrc
+     SDTCisVT<3, v4i32>,    // sampler
+     SDTCisVT<4, i32>,      // dmask
+     SDTCisVT<5, i1>,       // unorm
+     SDTCisVT<6, i1>,       // glc
+     SDTCisVT<7, i1>,       // slc
+     SDTCisVT<8, i1>,       // lwe
+     SDTCisVT<9, i1>        // da
+    ]>,
+    [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]
+>;
+
+// Basic sample.
+def SIImage_sample            : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE">;
+def SIImage_sample_cl         : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_CL">;
+def SIImage_sample_d          : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_D">;
+def SIImage_sample_d_cl       : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_D_CL">;
+def SIImage_sample_l          : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_L">;
+def SIImage_sample_b          : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_B">;
+def SIImage_sample_b_cl       : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_B_CL">;
+def SIImage_sample_lz         : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_LZ">;
+def SIImage_sample_cd         : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_CD">;
+def SIImage_sample_cd_cl      : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_CD_CL">;
+
+// Sample with comparison.
+def SIImage_sample_c          : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_C">;
+def SIImage_sample_c_cl       : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_C_CL">;
+def SIImage_sample_c_d        : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_C_D">;
+def SIImage_sample_c_d_cl     : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_C_D_CL">;
+def SIImage_sample_c_l        : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_C_L">;
+def SIImage_sample_c_b        : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_C_B">;
+def SIImage_sample_c_b_cl     : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_C_B_CL">;
+def SIImage_sample_c_lz       : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_C_LZ">;
+def SIImage_sample_c_cd       : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_C_CD">;
+def SIImage_sample_c_cd_cl    : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_C_CD_CL">;
+
+// Sample with offsets.
+def SIImage_sample_o          : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_O">;
+def SIImage_sample_cl_o       : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_CL_O">;
+def SIImage_sample_d_o        : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_D_O">;
+def SIImage_sample_d_cl_o     : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_D_CL_O">;
+def SIImage_sample_l_o        : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_L_O">;
+def SIImage_sample_b_o        : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_B_O">;
+def SIImage_sample_b_cl_o     : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_B_CL_O">;
+def SIImage_sample_lz_o       : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_LZ_O">;
+def SIImage_sample_cd_o       : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_CD_O">;
+def SIImage_sample_cd_cl_o    : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_CD_CL_O">;
+
+// Sample with comparison and offsets.
+def SIImage_sample_c_o        : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_C_O">;
+def SIImage_sample_c_cl_o     : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_C_CL_O">;
+def SIImage_sample_c_d_o      : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_C_D_O">;
+def SIImage_sample_c_d_cl_o   : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_C_D_CL_O">;
+def SIImage_sample_c_l_o      : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_C_L_O">;
+def SIImage_sample_c_b_o      : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_C_B_O">;
+def SIImage_sample_c_b_cl_o   : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_C_B_CL_O">;
+def SIImage_sample_c_lz_o     : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_C_LZ_O">;
+def SIImage_sample_c_cd_o     : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_C_CD_O">;
+def SIImage_sample_c_cd_cl_o  : SDTImage_sample<"AMDGPUISD::IMAGE_SAMPLE_C_CD_CL_O">;
+
+// Basic gather4.
+def SIImage_gather4           : SDTImage_sample<"AMDGPUISD::IMAGE_GATHER4">;
+def SIImage_gather4_cl        : SDTImage_sample<"AMDGPUISD::IMAGE_GATHER4_CL">;
+def SIImage_gather4_l         : SDTImage_sample<"AMDGPUISD::IMAGE_GATHER4_L">;
+def SIImage_gather4_b         : SDTImage_sample<"AMDGPUISD::IMAGE_GATHER4_B">;
+def SIImage_gather4_b_cl      : SDTImage_sample<"AMDGPUISD::IMAGE_GATHER4_B_CL">;
+def SIImage_gather4_lz        : SDTImage_sample<"AMDGPUISD::IMAGE_GATHER4_LZ">;
+
+// Gather4 with comparison.
+def SIImage_gather4_c         : SDTImage_sample<"AMDGPUISD::IMAGE_GATHER4_C">;
+def SIImage_gather4_c_cl      : SDTImage_sample<"AMDGPUISD::IMAGE_GATHER4_C_CL">;
+def SIImage_gather4_c_l       : SDTImage_sample<"AMDGPUISD::IMAGE_GATHER4_C_L">;
+def SIImage_gather4_c_b       : SDTImage_sample<"AMDGPUISD::IMAGE_GATHER4_C_B">;
+def SIImage_gather4_c_b_cl    : SDTImage_sample<"AMDGPUISD::IMAGE_GATHER4_C_B_CL">;
+def SIImage_gather4_c_lz      : SDTImage_sample<"AMDGPUISD::IMAGE_GATHER4_C_LZ">;
+
+// Gather4 with offsets.
+def SIImage_gather4_o         : SDTImage_sample<"AMDGPUISD::IMAGE_GATHER4_O">;
+def SIImage_gather4_cl_o      : SDTImage_sample<"AMDGPUISD::IMAGE_GATHER4_CL_O">;
+def SIImage_gather4_l_o       : SDTImage_sample<"AMDGPUISD::IMAGE_GATHER4_L_O">;
+def SIImage_gather4_b_o       : SDTImage_sample<"AMDGPUISD::IMAGE_GATHER4_B_O">;
+def SIImage_gather4_b_cl_o    : SDTImage_sample<"AMDGPUISD::IMAGE_GATHER4_B_CL_O">;
+def SIImage_gather4_lz_o      : SDTImage_sample<"AMDGPUISD::IMAGE_GATHER4_LZ_O">;
+
+// Gather4 with comparison and offsets.
+def SIImage_gather4_c_o       : SDTImage_sample<"AMDGPUISD::IMAGE_GATHER4_C_O">;
+def SIImage_gather4_c_cl_o    : SDTImage_sample<"AMDGPUISD::IMAGE_GATHER4_C_CL_O">;
+def SIImage_gather4_c_l_o     : SDTImage_sample<"AMDGPUISD::IMAGE_GATHER4_C_L_O">;
+def SIImage_gather4_c_b_o     : SDTImage_sample<"AMDGPUISD::IMAGE_GATHER4_C_B_O">;
+def SIImage_gather4_c_b_cl_o  : SDTImage_sample<"AMDGPUISD::IMAGE_GATHER4_C_B_CL_O">;
+def SIImage_gather4_c_lz_o    : SDTImage_sample<"AMDGPUISD::IMAGE_GATHER4_C_LZ_O">;
+
 class SDSample<string opcode> : SDNode <opcode,
   SDTypeProfile<1, 4, [SDTCisVT<0, v4f32>, SDTCisVT<2, v8i32>,
                        SDTCisVT<3, v4i32>, SDTCisVT<4, i32>]>
