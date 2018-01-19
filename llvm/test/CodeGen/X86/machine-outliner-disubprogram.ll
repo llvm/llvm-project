@@ -108,31 +108,26 @@ entry:
   ret i32 0, !dbg !73
 }
 
-; CHECK [[UNIT:![0-9]+]] = distinct !DICompileUnit
-; CHECK-SAME: file: [[FILE:![0-9]+]],
-; CHECK-SAME: producer: "machine-outliner",
-; CHECK-SAME: isOptimized: true, runtimeVersion: 0, emissionKind: NoDebug
-
 ; CHECK: distinct !DISubprogram(name: "OUTLINED_FUNCTION_1",
-; CHECK-SAME: scope: [[FILE]],
-; CHECK-SAME: file: [[FILE]],
+; CHECK-SAME: scope: !1,
+; CHECK-SAME: file: !1,
 ; CHECK-SAME: type: [[TYPE:![0-9]+]],
 ; CHECK-SAME: isLocal: false, 
 ; CHECK-SAME: isDefinition: true,
 ; CHECK-SAME: flags: DIFlagArtificial,
 ; CHECK-SAME: isOptimized: true,
-; CHECK-SAME: unit: [[UNIT]],
+; CHECK-SAME: unit: !0,
 ; CHECK-SAME: variables: [[VARS:![0-9]+]]
 
-; CHECK: distinct !DISubprogram(name: "OUTLINED_FUNCTION_1",
-; CHECK-SAME: scope: [[FILE]],
-; CHECK-SAME: file: [[FILE]],
+; CHECK: distinct !DISubprogram(name: "OUTLINED_FUNCTION_0",
+; CHECK-SAME: scope: !1,
+; CHECK-SAME: file: !1,
 ; CHECK-SAME: type: [[TYPE]],
 ; CHECK-SAME: isLocal: false, 
 ; CHECK-SAME: isDefinition: true,
 ; CHECK-SAME: flags: DIFlagArtificial,
 ; CHECK-SAME: isOptimized: true,
-; CHECK-SAME: unit: [[UNIT]],
+; CHECK-SAME: unit: !0,
 ; CHECK-SAME: variables: [[VARS]]
 
 attributes #0 = { noinline noredzone nounwind optnone ssp uwtable "no-frame-pointer-elim"="true"  }

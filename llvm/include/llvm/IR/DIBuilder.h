@@ -90,7 +90,10 @@ namespace llvm {
     ///
     /// If \c AllowUnresolved, collect unresolved nodes attached to the module
     /// in order to resolve cycles during \a finalize().
-    explicit DIBuilder(Module &M, bool AllowUnresolved = true);
+    ///
+    /// If \p CU is given a value other than nullptr, then set \p CUNode to CU.
+    explicit DIBuilder(Module &M, bool AllowUnresolved = true,
+                       DICompileUnit *CU = nullptr);
     DIBuilder(const DIBuilder &) = delete;
     DIBuilder &operator=(const DIBuilder &) = delete;
 
