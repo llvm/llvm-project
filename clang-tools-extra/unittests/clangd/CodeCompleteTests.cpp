@@ -155,8 +155,8 @@ Symbol sym(StringRef QName, index::SymbolKind Kind, StringRef USRFormat) {
     Sym.Scope = "";
   } else {
     Sym.Name = QName.substr(Pos + 2);
-    Sym.Scope = QName.substr(0, Pos + 2);
-    USR += "@N@" + replace(QName.substr(0, Pos), "::", "@N@"); // ns:: -> @N@ns
+    Sym.Scope = QName.substr(0, Pos);
+    USR += "@N@" + replace(Sym.Scope, "::", "@N@"); // ns:: -> @N@ns
   }
   USR += Regex("^.*$").sub(USRFormat, Sym.Name); // e.g. func -> @F@func#
   Sym.ID = SymbolID(USR);

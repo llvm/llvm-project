@@ -56,14 +56,14 @@ std::string makeAbsolutePath(const SourceManager &SM, StringRef Path) {
   return AbsolutePath.str();
 }
 
-// "a::b::c", return {"a::b::", "c"}. Scope is empty if there's no qualifier.
+// "a::b::c", return {"a::b", "c"}. Scope is empty if it doesn't exist.
 std::pair<llvm::StringRef, llvm::StringRef>
 splitQualifiedName(llvm::StringRef QName) {
   assert(!QName.startswith("::") && "Qualified names should not start with ::");
   size_t Pos = QName.rfind("::");
   if (Pos == llvm::StringRef::npos)
     return {StringRef(), QName};
-  return {QName.substr(0, Pos + 2), QName.substr(Pos + 2)};
+  return {QName.substr(0, Pos), QName.substr(Pos + 2)};
 }
 
 bool shouldFilterDecl(const NamedDecl *ND, ASTContext *ASTCtx,
@@ -147,10 +147,12 @@ bool SymbolCollector::handleDeclOccurence(
     SymbolLocation Location = {FilePath, SM.getFileOffset(D->getLocStart()),
                                SM.getFileOffset(D->getLocEnd())};
     std::string QName = ND->getQualifiedNameAsString();
+    auto ScopeAndName = splitQualifiedName(QName);
 
     Symbol S;
     S.ID = std::move(ID);
-    std::tie(S.Scope, S.Name) = splitQualifiedName(QName);
+    S.Scope = ScopeAndName.first;
+    S.Name = ScopeAndName.second;
     S.SymInfo = index::getSymbolInfo(D);
     S.CanonicalDeclaration = Location;
 

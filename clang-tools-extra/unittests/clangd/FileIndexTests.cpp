@@ -78,7 +78,8 @@ std::vector<std::string> match(const SymbolIndex &I,
   std::vector<std::string> Matches;
   auto Ctx = Context::empty();
   I.fuzzyFind(Ctx, Req, [&](const Symbol &Sym) {
-    Matches.push_back((Sym.Scope + Sym.Name).str());
+    Matches.push_back(
+        (Sym.Scope + (Sym.Scope.empty() ? "" : "::") + Sym.Name).str());
   });
   return Matches;
 }
@@ -109,7 +110,7 @@ TEST(FileIndexTest, IndexAST) {
 
   FuzzyFindRequest Req;
   Req.Query = "";
-  Req.Scopes = {"ns::"};
+  Req.Scopes = {"ns"};
   EXPECT_THAT(match(M, Req), UnorderedElementsAre("ns::f", "ns::X"));
 }
 
@@ -138,7 +139,7 @@ TEST(FileIndexTest, IndexMultiASTAndDeduplicate) {
 
   FuzzyFindRequest Req;
   Req.Query = "";
-  Req.Scopes = {"ns::"};
+  Req.Scopes = {"ns"};
   EXPECT_THAT(match(M, Req), UnorderedElementsAre("ns::f", "ns::X", "ns::ff"));
 }
 
@@ -151,7 +152,7 @@ TEST(FileIndexTest, RemoveAST) {
 
   FuzzyFindRequest Req;
   Req.Query = "";
-  Req.Scopes = {"ns::"};
+  Req.Scopes = {"ns"};
   EXPECT_THAT(match(M, Req), UnorderedElementsAre("ns::f", "ns::X"));
 
   M.update(Ctx, "f1", nullptr);
