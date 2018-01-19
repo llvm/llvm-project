@@ -64,7 +64,7 @@ struct WasmSignatureDenseMapInfo {
 
 // A Wasm export to be written into the export section.
 struct WasmExportEntry {
-  const Symbol *Symbol;
+  const Symbol *Sym;
   StringRef FieldName; // may not match the Symbol name
 };
 
@@ -286,11 +286,11 @@ void Writer::createExportSection() {
   }
 
   for (const WasmExportEntry &E : ExportedSymbols) {
-    DEBUG(dbgs() << "Export: " << E.Symbol->getName() << "\n");
+    DEBUG(dbgs() << "Export: " << E.Sym->getName() << "\n");
     WasmExport Export;
     Export.Name = E.FieldName;
-    Export.Index = E.Symbol->getOutputIndex();
-    if (E.Symbol->isFunction())
+    Export.Index = E.Sym->getOutputIndex();
+    if (E.Sym->isFunction())
       Export.Kind = WASM_EXTERNAL_FUNCTION;
     else
       Export.Kind = WASM_EXTERNAL_GLOBAL;
@@ -388,9 +388,9 @@ void Writer::createLinkingSection() {
   std::vector<std::pair<StringRef, uint32_t>> SymbolInfo;
   for (const WasmExportEntry &E : ExportedSymbols) {
     uint32_t Flags =
-        (E.Symbol->isLocal() ? WASM_SYMBOL_BINDING_LOCAL :
-         E.Symbol->isWeak() ? WASM_SYMBOL_BINDING_WEAK : 0) |
-        (E.Symbol->isHidden() ? WASM_SYMBOL_VISIBILITY_HIDDEN : 0);
+        (E.Sym->isLocal() ? WASM_SYMBOL_BINDING_LOCAL :
+         E.Sym->isWeak() ? WASM_SYMBOL_BINDING_WEAK : 0) |
+        (E.Sym->isHidden() ? WASM_SYMBOL_VISIBILITY_HIDDEN : 0);
     if (Flags)
       SymbolInfo.emplace_back(E.FieldName, Flags);
   }
