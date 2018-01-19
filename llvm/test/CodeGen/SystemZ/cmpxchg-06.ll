@@ -129,3 +129,54 @@ define i32 @f10(i128 %cmp, i128 %swap, i128 *%src) {
   %res = zext i1 %val to i32
   ret i32 %res
 }
+
+declare void @g()
+
+; Check using the comparison result for a branch.
+; CHECK-LABEL: f11
+; CHECK-DAG: lg %r1, 8(%r3)
+; CHECK-DAG: lg %r0, 0(%r3)
+; CHECK-DAG: lg %r13, 8(%r2)
+; CHECK-DAG: lg %r12, 0(%r2)
+; CHECK:     cdsg %r12, %r0, 0(%r4)
+; CHECK-NEXT: jl [[LABEL:\.[^ ]*]]
+; CHECK: jg g
+; CHECK: [[LABEL]]:
+; CHECK: br %r14
+define void @f11(i128 %cmp, i128 %swap, i128 *%src) {
+  %pairval = cmpxchg i128 *%src, i128 %cmp, i128 %swap seq_cst seq_cst
+  %cond = extractvalue { i128, i1 } %pairval, 1
+  br i1 %cond, label %call, label %exit
+
+call:
+  tail call void @g()
+  br label %exit
+
+exit:
+  ret void
+}
+
+; ... and the same with the inverted direction.
+; CHECK-LABEL: f12
+; CHECK-DAG: lg %r1, 8(%r3)
+; CHECK-DAG: lg %r0, 0(%r3)
+; CHECK-DAG: lg %r13, 8(%r2)
+; CHECK-DAG: lg %r12, 0(%r2)
+; CHECK:     cdsg %r12, %r0, 0(%r4)
+; CHECK-NEXT: jl [[LABEL:\.[^ ]*]]
+; CHECK: br %r14
+; CHECK: [[LABEL]]:
+; CHECK: jg g
+define void @f12(i128 %cmp, i128 %swap, i128 *%src) {
+  %pairval = cmpxchg i128 *%src, i128 %cmp, i128 %swap seq_cst seq_cst
+  %cond = extractvalue { i128, i1 } %pairval, 1
+  br i1 %cond, label %exit, label %call
+
+call:
+  tail call void @g()
+  br label %exit
+
+exit:
+  ret void
+}
+

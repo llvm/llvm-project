@@ -10,7 +10,7 @@ declare i8* @memcpy(i8*, i8*, i32)
 
 define i8* @test_simplify1(i8* %mem1, i8* %mem2, i32 %size) {
 ; CHECK-LABEL: @test_simplify1(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* %mem1, i8* %mem2, i32 %size, i32 1, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %mem1, i8* align 1 %mem2, i32 %size, i1 false)
 ; CHECK-NEXT:    ret i8* %mem1
 ;
   %ret = call i8* @memcpy(i8* %mem1, i8* %mem2, i32 %size)

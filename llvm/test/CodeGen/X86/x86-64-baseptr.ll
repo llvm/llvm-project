@@ -21,16 +21,15 @@ define void @base() #0 {
 ; CHECK-NEXT:    subq $32, %rsp
 ; CHECK-NEXT:    movq %rsp, %rbx
 ; CHECK-NEXT:    callq helper
+; CHECK-NEXT:    movq %rsp, %rcx
 ; CHECK-NEXT:    movl %eax, %eax
 ; CHECK-NEXT:    leaq 31(,%rax,4), %rax
-; CHECK-NEXT:    movabsq $34359738336, %rcx # imm = 0x7FFFFFFE0
-; CHECK-NEXT:    andq %rax, %rcx
-; CHECK-NEXT:    movq %rsp, %rax
-; CHECK-NEXT:    movq %rax, %rdx
-; CHECK-NEXT:    subq %rcx, %rdx
-; CHECK-NEXT:    negq %rcx
+; CHECK-NEXT:    andq $-32, %rax
+; CHECK-NEXT:    movq %rcx, %rdx
+; CHECK-NEXT:    subq %rax, %rdx
 ; CHECK-NEXT:    movq %rdx, %rsp
-; CHECK-NEXT:    movl $0, (%rax,%rcx)
+; CHECK-NEXT:    negq %rax
+; CHECK-NEXT:    movl $0, (%rcx,%rax)
 ; CHECK-NEXT:    leaq -8(%rbp), %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %rbp

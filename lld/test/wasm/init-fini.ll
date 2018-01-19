@@ -108,6 +108,8 @@ entry:
 ; RELOC:          Name:            linking
 ; RELOC-NEXT:     DataSize:        0
 ; RELOC-NEXT:     SymbolInfo:      
+; RELOC-NEXT:       - Name:            __dso_handle
+; RELOC-NEXT:         Flags:           [ BINDING_WEAK, VISIBILITY_HIDDEN ]
 ; RELOC-NEXT:       - Name:            func1
 ; RELOC-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
 ; RELOC-NEXT:       - Name:            func2

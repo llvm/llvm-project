@@ -172,8 +172,7 @@ define void @muladd(%accumulator* nocapture %this, i64 %arg.a, i64 %arg.b) {
 ; CHECK-NEXT:    movq %rdx, %rax
 ; CHECK-NEXT:    mulq %rsi
 ; CHECK-NEXT:    addq %rax, (%rdi)
-; CHECK-NEXT:    adcq 8(%rdi), %rdx
-; CHECK-NEXT:    movq %rdx, 8(%rdi)
+; CHECK-NEXT:    adcq %rdx, 8(%rdi)
 ; CHECK-NEXT:    adcl $0, 16(%rdi)
 ; CHECK-NEXT:    retq
 entry:

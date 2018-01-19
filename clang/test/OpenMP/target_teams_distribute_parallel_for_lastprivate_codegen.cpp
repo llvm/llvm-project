@@ -273,11 +273,11 @@ int main() {
 // CHECK-64-DAG: store {{.+}}, {{.+}} [[TVAR_TGT]],
 // CHECK-32-DAG: store {{.+}}, {{.+}} [[T_VAR_ADDR]],
 // CHECK-DAG: [[VEC_TGT_REF:%.+]] = bitcast {{.+}} [[VEC_TGT]] to
-// CHECK-DAG: call void @llvm.memcpy.{{.+}}(i8* [[VEC_TGT_REF]],
+// CHECK-DAG: call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[VEC_TGT_REF]],
 // CHECK-DAG: [[S_ARR_BEGIN:%.+]] = getelementptr {{.+}} [[S_ARR_TGT]],
 // CHECK-DAG: call void @llvm.memcpy.{{.+}}(
 // CHECK-DAG: [[VAR_TGT_BCAST:%.+]] = bitcast {{.+}} [[VAR_TGT]] to
-// CHECK-DAG: call void @llvm.memcpy.{{.+}}(i8* [[VAR_TGT_BCAST]],
+// CHECK-DAG: call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[VAR_TGT_BCAST]],
 // CHECK-64-DAG: store {{.+}}, {{.+}} [[SVAR_TGT]],
 // CHECK-32-DAG: store {{.+}}, {{.+}} [[SVAR_ADDR]],
 // CHECK: ret void
@@ -331,11 +331,11 @@ int main() {
 // CHECK-64-DAG: store {{.+}}, {{.+}} [[TVAR_TGT]],
 // CHECK-32-DAG: store {{.+}}, {{.+}} [[T_VAR_ADDR]],
 // CHECK-DAG: [[VEC_TGT_REF:%.+]] = bitcast {{.+}} [[VEC_TGT]] to
-// CHECK-DAG: call void @llvm.memcpy.{{.+}}(i8* [[VEC_TGT_REF]],
+// CHECK-DAG: call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[VEC_TGT_REF]],
 // CHECK-DAG: [[S_ARR_BEGIN:%.+]] = getelementptr {{.+}} [[S_ARR_TGT]],
 // CHECK-DAG: call void @llvm.memcpy.{{.+}}(
 // CHECK-DAG: [[VAR_TGT_BCAST:%.+]] = bitcast {{.+}} [[VAR_TGT]] to
-// CHECK-DAG: call void @llvm.memcpy.{{.+}}(i8* [[VAR_TGT_BCAST]],
+// CHECK-DAG: call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[VAR_TGT_BCAST]],
 // CHECK-64-DAG: store {{.+}}, {{.+}} [[SVAR_TGT]],
 // CHECK-32-DAG: store {{.+}}, {{.+}} [[SVAR_ADDR]],
 // CHECK: ret void
@@ -393,11 +393,11 @@ int main() {
 // CHECK-64-DAG: store {{.+}}, {{.+}} [[T_VAR_TGT]],
 // CHECK-32-DAG: store {{.+}}, {{.+}} [[T_VAR_ADDR1]],
 // CHECK-DAG: [[VEC_TGT_BCAST:%.+]] = bitcast {{.+}} [[VEC_TGT]] to
-// CHECK-DAG: call void @llvm.memcpy.{{.+}}(i8* [[VEC_TGT_BCAST]],
+// CHECK-DAG: call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[VEC_TGT_BCAST]],
 // CHECK-DAG: {{.+}} = getelementptr {{.+}} [[S_ARR_TGT]],
 // CHECK: call void @llvm.memcpy.{{.+}}(
 // CHECK-DAG: [[VAR_ADDR_BCAST:%.+]] = bitcast {{.+}} [[VAR_TGT]] to
-// CHECK-DAG: call void @llvm.memcpy.{{.+}}(i8* [[VAR_ADDR_BCAST]],  
+// CHECK-DAG: call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[VAR_ADDR_BCAST]],  
 // CHECK: ret void
 
 // CHECK: define internal void [[TPAR_OUTL:@.+]](i{{[0-9]+}}* noalias [[GTID_ADDR1:%.+]], i{{[0-9]+}}* noalias %{{.+}}, {{.+}}, {{.+}}, [2 x i{{[0-9]+}}]*{{.+}} [[VEC_IN1:%.+]], i{{[0-9]+}}{{.+}} [[T_VAR_IN1:%.+]], [2 x [[S_INT_TY]]]*{{.+}} [[S_ARR_IN1:%.+]], [[S_INT_TY]]*{{.+}} [[VAR_IN1:%.+]])
@@ -444,11 +444,11 @@ int main() {
 // CHECK-64-DAG: store {{.+}}, {{.+}} [[T_VAR_TGT]],
 // CHECK-32-DAG: store {{.+}}, {{.+}} [[T_VAR_ADDR1]],
 // CHECK-DAG: [[VEC_TGT_BCAST:%.+]] = bitcast {{.+}} [[VEC_TGT]] to
-// CHECK-DAG: call void @llvm.memcpy.{{.+}}(i8* [[VEC_TGT_BCAST]],
+// CHECK-DAG: call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[VEC_TGT_BCAST]],
 // CHECK-DAG: {{.+}} = getelementptr {{.+}} [[S_ARR_TGT]],
 // CHECK: call void @llvm.memcpy.{{.+}}(
 // CHECK-DAG: [[VAR_ADDR_BCAST:%.+]] = bitcast {{.+}} [[VAR_TGT]] to
-// CHECK-DAG: call void @llvm.memcpy.{{.+}}(i8* [[VAR_ADDR_BCAST]],  
+// CHECK-DAG: call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[VAR_ADDR_BCAST]],  
 // CHECK: ret void
 
 #endif

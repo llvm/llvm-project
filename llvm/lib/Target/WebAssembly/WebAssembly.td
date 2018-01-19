@@ -32,6 +32,11 @@ def FeatureNontrappingFPToInt :
                        "HasNontrappingFPToInt", "true",
                        "Enable non-trapping float-to-int conversion operators">;
 
+def FeatureSignExt :
+      SubtargetFeature<"sign-ext",
+                       "HasSignExt", "true",
+                       "Enable sign extension operators">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //===----------------------------------------------------------------------===//

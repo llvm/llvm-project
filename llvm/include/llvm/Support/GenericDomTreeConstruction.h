@@ -628,7 +628,7 @@ struct SemiNCAInfo {
         DecreasingLevel>
         Bucket;  // Queue of tree nodes sorted by level in descending order.
     SmallDenseSet<TreeNodePtr, 8> Affected;
-    SmallDenseSet<TreeNodePtr, 8> Visited;
+    SmallDenseMap<TreeNodePtr, unsigned, 8> Visited;
     SmallVector<TreeNodePtr, 8> AffectedQueue;
     SmallVector<TreeNodePtr, 8> VisitedNotAffectedQueue;
   };
@@ -753,14 +753,16 @@ struct SemiNCAInfo {
 
     while (!II.Bucket.empty()) {
       const TreeNodePtr CurrentNode = II.Bucket.top().second;
+      const unsigned  CurrentLevel = CurrentNode->getLevel();
       II.Bucket.pop();
       DEBUG(dbgs() << "\tAdding to Visited and AffectedQueue: "
                    << BlockNamePrinter(CurrentNode) << "\n");
-      II.Visited.insert(CurrentNode);
+
+      II.Visited.insert({CurrentNode, CurrentLevel});
       II.AffectedQueue.push_back(CurrentNode);
 
       // Discover and collect affected successors of the current node.
-      VisitInsertion(DT, BUI, CurrentNode, CurrentNode->getLevel(), NCD, II);
+      VisitInsertion(DT, BUI, CurrentNode, CurrentLevel, NCD, II);
     }
 
     // Finish by updating immediate dominators and levels.
@@ -772,13 +774,17 @@ struct SemiNCAInfo {
                              const TreeNodePtr TN, const unsigned RootLevel,
                              const TreeNodePtr NCD, InsertionInfo &II) {
     const unsigned NCDLevel = NCD->getLevel();
-    DEBUG(dbgs() << "Visiting " << BlockNamePrinter(TN) << "\n");
+    DEBUG(dbgs() << "Visiting " << BlockNamePrinter(TN) << ",  RootLevel "
+                 << RootLevel << "\n");
 
     SmallVector<TreeNodePtr, 8> Stack = {TN};
     assert(TN->getBlock() && II.Visited.count(TN) && "Preconditions!");
 
+    SmallPtrSet<TreeNodePtr, 8> Processed;
+
     do {
       TreeNodePtr Next = Stack.pop_back_val();
+      DEBUG(dbgs() << " Next: " << BlockNamePrinter(Next) << "\n");
 
       for (const NodePtr Succ :
            ChildrenGetter<IsPostDom>::Get(Next->getBlock(), BUI)) {
@@ -786,19 +792,31 @@ struct SemiNCAInfo {
         assert(SuccTN && "Unreachable successor found at reachable insertion");
         const unsigned SuccLevel = SuccTN->getLevel();
 
-        DEBUG(dbgs() << "\tSuccessor " << BlockNamePrinter(Succ)
-                     << ", level = " << SuccLevel << "\n");
+        DEBUG(dbgs() << "\tSuccessor " << BlockNamePrinter(Succ) << ", level = "
+                     << SuccLevel << "\n");
+
+        // Do not process the same node multiple times.
+        if (Processed.count(Next) > 0)
+          continue;
 
         // Succ dominated by subtree From -- not affected.
         // (Based on the lemma 2.5 from the second paper.)
         if (SuccLevel > RootLevel) {
           DEBUG(dbgs() << "\t\tDominated by subtree From\n");
-          if (II.Visited.count(SuccTN) != 0)
-            continue;
+          if (II.Visited.count(SuccTN) != 0) {
+            DEBUG(dbgs() << "\t\t\talready visited at level "
+                         << II.Visited[SuccTN] << "\n\t\t\tcurrent level "
+                         << RootLevel << ")\n");
+
+            // A node can be necessary to visit again if we see it again at
+            // a lower level than before.
+            if (II.Visited[SuccTN] >= RootLevel)
+              continue;
+          }
 
           DEBUG(dbgs() << "\t\tMarking visited not affected "
                        << BlockNamePrinter(Succ) << "\n");
-          II.Visited.insert(SuccTN);
+          II.Visited.insert({SuccTN, RootLevel});
           II.VisitedNotAffectedQueue.push_back(SuccTN);
           Stack.push_back(SuccTN);
         } else if ((SuccLevel > NCDLevel + 1) &&
@@ -809,6 +827,8 @@ struct SemiNCAInfo {
           II.Bucket.push({SuccLevel, SuccTN});
         }
       }
+
+      Processed.insert(Next);
     } while (!Stack.empty());
   }
 

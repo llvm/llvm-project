@@ -2065,7 +2065,10 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
                                                          VL0->getType(), SrcTy, VL0);
 
       VectorType *SrcVecTy = VectorType::get(SrcTy, VL.size());
-      int VecCost = TTI->getCastInstrCost(VL0->getOpcode(), VecTy, SrcVecTy, VL0);
+      int VecCost = 0;
+      // Check if the values are candidates to demote.
+      if (!MinBWs.count(VL0) || VecTy != SrcVecTy)
+        VecCost = TTI->getCastInstrCost(VL0->getOpcode(), VecTy, SrcVecTy, VL0);
       return VecCost - ScalarCost;
     }
     case Instruction::FCmp:
@@ -4014,9 +4017,24 @@ void BoUpSLP::computeMinimumValueSizes() {
   // additional roots that require investigating in Roots.
   SmallVector<Value *, 32> ToDemote;
   SmallVector<Value *, 4> Roots;
-  for (auto *Root : TreeRoot)
+  for (auto *Root : TreeRoot) {
+    // Do not include top zext/sext/trunc operations to those to be demoted, it
+    // produces noise cast<vect>, trunc <vect>, exctract <vect>, cast <extract>
+    // sequence.
+    if (isa<Constant>(Root))
+      continue;
+    auto *I = dyn_cast<Instruction>(Root);
+    if (!I || !I->hasOneUse() || !Expr.count(I))
+      return;
+    if (isa<ZExtInst>(I) || isa<SExtInst>(I))
+      continue;
+    if (auto *TI = dyn_cast<TruncInst>(I)) {
+      Roots.push_back(TI->getOperand(0));
+      continue;
+    }
     if (!collectValuesToDemote(Root, Expr, ToDemote, Roots))
       return;
+  }
 
   // The maximum bit width required to represent all the values that can be
   // demoted without loss of precision. It would be safe to truncate the roots

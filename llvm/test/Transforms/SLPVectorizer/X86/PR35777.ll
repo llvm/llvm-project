@@ -16,13 +16,10 @@ define { i64, i64 } @patatino(double %arg) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP6]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = fptosi <2 x double> [[TMP7]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP9:%.*]] = sext <2 x i32> [[TMP8]] to <2 x i64>
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc <2 x i64> [[TMP9]] to <2 x i32>
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i32> [[TMP10]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = sext i32 [[TMP11]] to i64
-; CHECK-NEXT:    [[TMP16:%.*]] = insertvalue { i64, i64 } undef, i64 [[TMP12]], 0
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i32> [[TMP10]], i32 1
-; CHECK-NEXT:    [[TMP14:%.*]] = sext i32 [[TMP13]] to i64
-; CHECK-NEXT:    [[TMP17:%.*]] = insertvalue { i64, i64 } [[TMP16]], i64 [[TMP14]], 1
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP9]], i32 0
+; CHECK-NEXT:    [[TMP16:%.*]] = insertvalue { i64, i64 } undef, i64 [[TMP10]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i64> [[TMP9]], i32 1
+; CHECK-NEXT:    [[TMP17:%.*]] = insertvalue { i64, i64 } [[TMP16]], i64 [[TMP11]], 1
 ; CHECK-NEXT:    ret { i64, i64 } [[TMP17]]
 ;
 bb:

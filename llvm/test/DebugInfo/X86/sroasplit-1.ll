@@ -43,7 +43,7 @@ entry:
   %arrayidx = getelementptr inbounds [2 x %struct.Inner], [2 x %struct.Inner]* %inner, i32 0, i64 1, !dbg !28
   %0 = bitcast %struct.Inner* %i1 to i8*, !dbg !28
   %1 = bitcast %struct.Inner* %arrayidx to i8*, !dbg !28
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 16, i32 8, i1 false), !dbg !28
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %0, i8* align 8 %1, i64 16, i1 false), !dbg !28
   %a = getelementptr inbounds %struct.Inner, %struct.Inner* %i1, i32 0, i32 0, !dbg !29
   %2 = load i32, i32* %a, align 4, !dbg !29
   ret i32 %2, !dbg !29
@@ -53,7 +53,7 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) #2
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #2
 
 attributes #0 = { nounwind ssp uwtable }
 attributes #1 = { nounwind readnone }

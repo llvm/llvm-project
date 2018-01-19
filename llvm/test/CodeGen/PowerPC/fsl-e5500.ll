@@ -15,8 +15,8 @@ entry:
 ; CHECK-NOT: bl memcpy
   %0 = bitcast %struct.teststruct* %agg.result to i8*
   %1 = bitcast %struct.teststruct* %in to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 100, i32 4, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 %1, i64 100, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind

@@ -46,13 +46,10 @@ entry:
 
 ; PR8753
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32,
-i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 
 define void @test2(i32 %cmd) nounwind {
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* undef, i8* undef, i64 20, i32 1, i1
-false) nounwind
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* null, i8* undef, i64 20, i32 1, i1
-false) nounwind
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* undef, i8* undef, i64 20, i1 false) nounwind
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* null, i8* undef, i64 20, i1 false) nounwind
   ret void
 }

@@ -197,6 +197,38 @@ cont1:
 
 declare void @external_fn(...) local_unnamed_addr #0
 
+define i32 @are_equal(i32* nocapture readonly %a1, i32* nocapture readonly %a2, i32 %n) local_unnamed_addr #0 {
+; CHECK-LABEL: are_equal
+; CHECK: subs r{{[0-9]+}}, r{{[0-9]+}}, #1
+; CHECK-NEXT: bne
+entry:
+  %tobool7 = icmp eq i32 %n, 0
+  br i1 %tobool7, label %while.end, label %land.rhs.preheader
+
+land.rhs.preheader:
+  br label %land.rhs
+
+while.cond:
+  %tobool = icmp eq i32 %dec9, 0
+  br i1 %tobool, label %while.end, label %land.rhs
+
+land.rhs:
+  %dec9.in = phi i32 [ %dec9, %while.cond ], [ %n, %land.rhs.preheader ]
+  %dec9 = add nsw i32 %dec9.in, -1
+  %arrayidx = getelementptr inbounds i32, i32* %a1, i32 %dec9
+  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds i32, i32* %a2, i32 %dec9
+  %1 = load i32, i32* %arrayidx1, align 4
+  %cmp = icmp eq i32 %0, %1
+  br i1 %cmp, label %while.cond, label %while.end
+
+while.end:
+  %n.addr.0.lcssa = phi i32 [ 0, %entry ], [ 0, %while.cond ], [ %dec9.in, %land.rhs ]
+  %cmp2 = icmp slt i32 %n.addr.0.lcssa, 1
+  %conv = zext i1 %cmp2 to i32
+  ret i32 %conv
+}
+
 declare void @llvm.trap() #2
 declare { i32, i1 } @llvm.sadd.with.overflow.i32(i32, i32) #1
 declare { i32, i1 } @llvm.uadd.with.overflow.i32(i32, i32) #1

@@ -31,10 +31,12 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   } SIMDLevel;
 
   bool HasNontrappingFPToInt;
+  bool HasSignExt;
 
 public:
   explicit WebAssemblyTargetInfo(const llvm::Triple &T, const TargetOptions &)
-      : TargetInfo(T), SIMDLevel(NoSIMD), HasNontrappingFPToInt(false) {
+      : TargetInfo(T), SIMDLevel(NoSIMD), HasNontrappingFPToInt(false),
+        HasSignExt(false) {
     NoAsmVariants = true;
     SuitableAlign = 128;
     LargeArrayMinWidth = 128;
@@ -60,6 +62,7 @@ private:
     if (CPU == "bleeding-edge") {
       Features["simd128"] = true;
       Features["nontrapping-fptoint"] = true;
+      Features["sign-ext"] = true;
     }
     return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
   }

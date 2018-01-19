@@ -230,7 +230,7 @@ int main() {
 // firstprivate vec(vec): copy from *_addr into priv1 and then from priv1 into priv2
 // CHECK-DAG: [[VEC_DEST_PRIV:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_PRIV]] to i8* 
 // CHECK-DAG: [[VEC_SRC:%.+]] =  bitcast [2 x i{{[0-9]+}}]* [[VEC_ADDR_VAL]] to i8* 
-// CHECK: call void @llvm.memcpy.{{.+}}(i8* [[VEC_DEST_PRIV]], i8* [[VEC_SRC]], {{.+}})
+// CHECK: call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[VEC_DEST_PRIV]], i8* align {{[0-9]+}} [[VEC_SRC]], {{.+}})
 
 // firstprivate(s_arr)
 // CHECK-DAG: [[S_ARR_PRIV_BGN:%.+]] = getelementptr{{.*}} [2 x [[S_FLOAT_TY]]], [2 x [[S_FLOAT_TY]]]* [[S_ARR_PRIV]],
@@ -316,7 +316,7 @@ int main() {
 // firstprivate vec(vec): copy from *_addr into priv1 and then from priv1 into priv2
 // CHECK-DAG: [[VEC_DEST_PRIV:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_PRIV]] to i8* 
 // CHECK-DAG: [[VEC_SRC:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_ADDR_VAL]] to i8* 
-// CHECK: call void @llvm.memcpy.{{.+}}(i8* [[VEC_DEST_PRIV]], i8* [[VEC_SRC]], {{.+}})
+// CHECK: call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[VEC_DEST_PRIV]], i8* align {{[0-9]+}} [[VEC_SRC]], {{.+}})
 
 // firstprivate(s_arr)
 // CHECK-DAG: [[S_ARR_PRIV_BGN:%.+]] = getelementptr{{.*}} [2 x [[S_INT_TY]]], [2 x [[S_INT_TY]]]* [[S_ARR_PRIV]],

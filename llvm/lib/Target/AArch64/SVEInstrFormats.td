@@ -76,6 +76,43 @@ multiclass sve_int_bin_cons_arit_0<bits<3> opc, string asm> {
 }
 
 //===----------------------------------------------------------------------===//
+// SVE Stack Allocation Group
+//===----------------------------------------------------------------------===//
+
+class sve_int_arith_vl<bit opc, string asm>
+: I<(outs GPR64sp:$Rd), (ins GPR64sp:$Rn, simm6_32b:$imm6),
+  asm, "\t$Rd, $Rn, $imm6",
+  "",
+  []>, Sched<[]> {
+  bits<5> Rd;
+  bits<5> Rn;
+  bits<6> imm6;
+  let Inst{31-23} = 0b000001000;
+  let Inst{22}    = opc;
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Rn;
+  let Inst{15-11} = 0b01010;
+  let Inst{10-5}  = imm6;
+  let Inst{4-0}   = Rd;
+}
+
+class sve_int_read_vl_a<bit op, bits<5> opc2, string asm>
+: I<(outs GPR64:$Rd), (ins simm6_32b:$imm6),
+  asm, "\t$Rd, $imm6",
+  "",
+  []>, Sched<[]> {
+  bits<5> Rd;
+  bits<6> imm6;
+  let Inst{31-23} = 0b000001001;
+  let Inst{22}    = op;
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = opc2{4-0};
+  let Inst{15-11} = 0b01010;
+  let Inst{10-5}  = imm6;
+  let Inst{4-0}   = Rd;
+}
+
+//===----------------------------------------------------------------------===//
 // SVE Permute - In Lane Group
 //===----------------------------------------------------------------------===//
 

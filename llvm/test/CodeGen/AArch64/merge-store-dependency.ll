@@ -14,7 +14,7 @@ entry:
 ; A53: str [[DATA]], {{.*}}
 
   %0 = bitcast %struct1* %fde to i8*
-  tail call void @llvm.memset.p0i8.i64(i8* %0, i8 0, i64 40, i32 8, i1 false)
+  tail call void @llvm.memset.p0i8.i64(i8* align 8 %0, i8 0, i64 40, i1 false)
   %state = getelementptr inbounds %struct1, %struct1* %fde, i64 0, i32 4
   store i16 256, i16* %state, align 8
   %fd1 = getelementptr inbounds %struct1, %struct1* %fde, i64 0, i32 2
@@ -58,6 +58,6 @@ exit:
   ret void
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1)
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
 declare i32 @fcntl(i32, i32, ...)
 declare noalias i8* @foo()

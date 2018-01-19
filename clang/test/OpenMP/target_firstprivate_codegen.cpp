@@ -281,7 +281,7 @@ int foo(int n, double *ptr) {
   //  firstprivate(b): memcpy(b_priv,b_in)
   // TCHECK:  [[B_PRIV_BCAST:%.+]] = bitcast [10 x float]* [[B_PRIV]] to i8*
   // TCHECK:  [[B_ADDR_REF_BCAST:%.+]] = bitcast [10 x float]* [[B_ADDR_REF]] to i8*
-  // TCHECK:  call void @llvm.memcpy.{{.+}}(i8* [[B_PRIV_BCAST]], i8* [[B_ADDR_REF_BCAST]], {{.+}})
+  // TCHECK:  call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[B_PRIV_BCAST]], i8* align {{[0-9]+}} [[B_ADDR_REF_BCAST]], {{.+}})
 
   // TCHECK:  [[RET_STACK:%.+]] = call i8* @llvm.stacksave()
   // TCHECK:  store i8* [[RET_STACK]], i8** [[SSTACK]],
@@ -291,12 +291,12 @@ int foo(int n, double *ptr) {
   // TCHECK:  [[BN_COPY_SZ:%.+]] = mul{{.+}} i{{[0-9]+}} [[BN_SZ_VAL]], 4
   // TCHECK:  [[BN_PRIV__BCAST:%.+]] = bitcast float* [[BN_PRIV]] to i8*
   // TCHECK:  [[BN_REF_IN_BCAST:%.+]] = bitcast float* [[BN_ADDR_REF]] to i8*
-  // TCHECK:  call void @llvm.memcpy.{{.+}}(i8* [[BN_PRIV__BCAST]], i8* [[BN_REF_IN_BCAST]], i{{[0-9]+}} [[BN_COPY_SZ]],{{.+}})
+  // TCHECK:  call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[BN_PRIV__BCAST]], i8* align {{[0-9]+}} [[BN_REF_IN_BCAST]], i{{[0-9]+}} [[BN_COPY_SZ]],{{.+}})
 
   // firstprivate(c)
   // TCHECK:  [[C_PRIV_BCAST:%.+]] = bitcast [5 x [10 x double]]* [[C_PRIV]] to i8*
   // TCHECK:  [[C_IN_BCAST:%.+]] = bitcast [5 x [10 x double]]* [[C_ADDR_REF]] to i8*
-  // TCHECK:  call void @llvm.memcpy.{{.+}}(i8* [[C_PRIV_BCAST]], i8* [[C_IN_BCAST]],{{.+}})
+  // TCHECK:  call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[C_PRIV_BCAST]], i8* align {{[0-9]+}} [[C_IN_BCAST]],{{.+}})
   
   // firstprivate(cn)
   // TCHECK:  [[CN_SZ:%.+]] = mul{{.+}} i{{[0-9]+}} [[CN_SZ1_VAL]], [[CN_SZ2_VAL]]
@@ -305,12 +305,12 @@ int foo(int n, double *ptr) {
   // TCHECK:  [[CN_SZ2_CPY:%.+]] = mul{{.+}} i{{[0-9]+}} [[CN_SZ2]], 8
   // TCHECK:  [[CN_PRIV_BCAST:%.+]] = bitcast double* [[CN_PRIV]] to i8*
   // TCHECK:  [[CN_IN_BCAST:%.+]] = bitcast double* [[CN_ADDR_REF]] to i8*
-  // TCHECK:  call void @llvm.memcpy.{{.+}}(i8* [[CN_PRIV_BCAST]], i8* [[CN_IN_BCAST]], i{{[0-9]+}} [[CN_SZ2_CPY]],{{.+}})
+  // TCHECK:  call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[CN_PRIV_BCAST]], i8* align {{[0-9]+}} [[CN_IN_BCAST]], i{{[0-9]+}} [[CN_SZ2_CPY]],{{.+}})
   
   // firstprivate(d)
   // TCHECK:  [[D_PRIV_BCAST:%.+]] = bitcast [[TT]]* [[D_PRIV]] to i8*
   // TCHECK:  [[D_IN_BCAST:%.+]] = bitcast [[TT]]* [[D_ADDR_REF]] to i8*
-  // TCHECK:  call void @llvm.memcpy.{{.+}}(i8* [[D_PRIV_BCAST]], i8* [[D_IN_BCAST]],{{.+}})
+  // TCHECK:  call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[D_PRIV_BCAST]], i8* align {{[0-9]+}} [[D_IN_BCAST]],{{.+}})
 
   
   #pragma omp target firstprivate(ptr)
@@ -391,7 +391,7 @@ int fstatic(int n) {
 // firstprivate(b)
 // TCHECK:  [[B_PRIV_BCAST:%.+]] = bitcast [10 x i{{[0-9]+}}]* [[B_PRIV]] to i8*
 // TCHECK:  [[B_IN_BCAST:%.+]] = bitcast [10 x i{{[0-9]+}}]* [[B_ADDR_REF]] to i8*
-// TCHECK:  call void @llvm.memcpy.{{.+}}(i8* [[B_PRIV_BCAST]], i8* [[B_IN_BCAST]],{{.+}})
+// TCHECK:  call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[B_PRIV_BCAST]], i8* align {{[0-9]+}} [[B_IN_BCAST]],{{.+}})
 
 // TCHECK:  ret void
 
@@ -499,7 +499,7 @@ struct S1 {
   // TCHECK:  [[C_SZ_CPY:%.+]] = mul{{.+}} i{{[0-9]+}} [[C_SZ2]],  2
   // TCHECK:  [[C_PRIV_BCAST:%.+]] = bitcast i{{[0-9]+}}* [[C_PRIV]] to i8*
   // TCHECK:  [[C_IN_BCAST:%.+]] = bitcast i{{[0-9]+}}* [[C_ADDR_REF]] to i8*
-  // TCHECK:  call void @llvm.memcpy.{{.+}}(i8* [[C_PRIV_BCAST]], i8* [[C_IN_BCAST]],{{.+}})
+  // TCHECK:  call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[C_PRIV_BCAST]], i8* align {{[0-9]+}} [[C_IN_BCAST]],{{.+}})
 
   // finish
   // TCHECK: [[RELOAD_SSTACK:%.+]] = load i8*, i8** [[SSTACK]],
@@ -594,7 +594,7 @@ int bar(int n, double *ptr){
 // firstprivate(b)
 // TCHECK:  [[B_PRIV_BCAST:%.+]] = bitcast [10 x i{{[0-9]+}}]* [[B_PRIV]] to i8*
 // TCHECK:  [[B_IN_BCAST:%.+]] = bitcast [10 x i{{[0-9]+}}]* [[B_ADDR_REF]] to i8*
-// TCHECK:  call void @llvm.memcpy.{{.+}}(i8* [[B_PRIV_BCAST]], i8* [[B_IN_BCAST]],{{.+}})
+// TCHECK:  call void @llvm.memcpy.{{.+}}(i8* align {{[0-9]+}} [[B_PRIV_BCAST]], i8* align {{[0-9]+}} [[B_IN_BCAST]],{{.+}})
 
 // TCHECK: ret void
 

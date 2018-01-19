@@ -52,7 +52,7 @@ entry:
   call void @llvm.dbg.declare(metadata i8*** %argv.addr, metadata !25, metadata !DIExpression()), !dbg !24
   call void @llvm.dbg.declare(metadata [4 x i32]* %array, metadata !26, metadata !DIExpression()), !dbg !30
   %0 = bitcast [4 x i32]* %array to i8*, !dbg !30
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* bitcast ([4 x i32]* @main.array to i8*), i64 16, i32 16, i1 false), !dbg !30
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %0, i8* align 16 bitcast ([4 x i32]* @main.array to i8*), i64 16, i1 false), !dbg !30
   %arraydecay = getelementptr inbounds [4 x i32], [4 x i32]* %array, i32 0, i32 0, !dbg !31
   call void @f(i32* %arraydecay), !dbg !31
   %arrayidx = getelementptr inbounds [4 x i32], [4 x i32]* %array, i32 0, i64 0, !dbg !32
@@ -61,7 +61,7 @@ entry:
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) #2
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #2
 
 attributes #0 = { nounwind ssp uwtable }
 attributes #1 = { nounwind readnone }

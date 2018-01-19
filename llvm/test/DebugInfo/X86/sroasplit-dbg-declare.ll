@@ -8,7 +8,7 @@ entry:
   %0 = alloca [9 x i32]
   call void @llvm.dbg.declare(metadata [9 x i32]* %0, metadata !11, metadata !DIExpression()), !dbg !17
   %1 = bitcast [9 x i32]* %0 to i8*
-  call void @llvm.memset.p0i8.i64(i8* %1, i8 0, i64 36, i32 16, i1 true)
+  call void @llvm.memset.p0i8.i64(i8* align 16 %1, i8 0, i64 36, i1 true)
   %2 = getelementptr [9 x i32], [9 x i32]* %0, i32 0, i32 0
   store volatile i32 1, i32* %2
   ret void
@@ -18,7 +18,7 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1) #0
+declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1) #0
 
 attributes #0 = { argmemonly nounwind }
 attributes #1 = { nounwind readnone speculatable }

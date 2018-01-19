@@ -4048,18 +4048,23 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
   case Intrinsic::memcpy:
   case Intrinsic::memmove:
   case Intrinsic::memset: {
-    ConstantInt *AlignCI = dyn_cast<ConstantInt>(CS.getArgOperand(3));
-    Assert(AlignCI,
-           "alignment argument of memory intrinsics must be a constant int",
-           CS);
     const auto *MI = cast<MemIntrinsic>(CS.getInstruction());
     auto IsValidAlignment = [&](unsigned Alignment) -> bool {
       return Alignment == 0 || isPowerOf2_32(Alignment);
     };
-    Assert(IsValidAlignment(MI->getAlignment()),
-           "alignment argument of memory intrinsics must be 0 or a power of 2",
+    Assert(IsValidAlignment(MI->getDestAlignment()),
+           "alignment of arg 0 of memory intrinsic must be 0 or a power of 2",
            CS);
-    Assert(isa<ConstantInt>(CS.getArgOperand(4)),
+    if (const auto *MTI = dyn_cast<MemTransferInst>(MI)) {
+      Assert(IsValidAlignment(MTI->getSourceAlignment()),
+             "alignment of arg 1 of memory intrinsic must be 0 or a power of 2",
+             CS);
+      // TODO: Remove this assert when we enhance IRBuilder API to create
+      //  memcpy/memmove with separate source & dest alignments.
+      Assert(MTI->getSourceAlignment() == MTI->getDestAlignment(),
+             "TEMPORARY: source and dest alignments must be the same");
+    }
+    Assert(isa<ConstantInt>(CS.getArgOperand(3)),
            "isvolatile argument of memory intrinsics must be a constant int",
            CS);
     break;

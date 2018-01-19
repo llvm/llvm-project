@@ -216,10 +216,10 @@ TEST(struct_misaligned_1)
 // CHECK:  [[RET:%.*]] = alloca [[STRUCT:%.*]], align 1
 // CHECK:  [[RES:%.*]] = alloca [[STRUCT]], align 1
 // CHECK:  [[CAST:%.*]] = bitcast [[STRUCT]]* [[RES]] to i8*
-// CHECK:  call void @llvm.memset{{.*}}(i8* [[CAST]], i8 0, i64 5
+// CHECK:  call void @llvm.memset{{.*}}(i8* align 1 [[CAST]], i8 0, i64 5
 // CHECK:  [[CASTRET:%.*]] = bitcast [[STRUCT]]* [[RET]] to i8*
 // CHECK:  [[CASTRES:%.*]] = bitcast [[STRUCT]]* [[RES]] to i8*
-// CHECK:  call void @llvm.memcpy{{.*}}(i8* [[CASTRET]], i8* [[CASTRES]], i64 5
+// CHECK:  call void @llvm.memcpy{{.*}}(i8* align 1 [[CASTRET]], i8* align 1 [[CASTRES]], i64 5
 // CHECK:  [[CAST:%.*]] = bitcast [[STRUCT]]* [[RET]] to { i64 }*
 // CHECK:  [[GEP:%.*]] = getelementptr inbounds { i64 }, { i64 }* [[CAST]], i32 0, i32 0
 // CHECK:  [[R0:%.*]] = load i64, i64* [[GEP]], align 1
@@ -269,10 +269,10 @@ TEST(union_het_fp)
 // CHECK:  [[RET:%.*]] = alloca [[UNION:%.*]], align 8
 // CHECK:  [[RES:%.*]] = alloca [[UNION]], align 8
 // CHECK:  [[CAST:%.*]] = bitcast [[UNION]]* [[RES]] to i8*
-// CHECK:  call void @llvm.memcpy{{.*}}(i8* [[CAST]]
+// CHECK:  call void @llvm.memcpy{{.*}}(i8* align 8 [[CAST]]
 // CHECK:  [[CASTRET:%.*]] = bitcast [[UNION]]* [[RET]] to i8*
 // CHECK:  [[CASTRES:%.*]] = bitcast [[UNION]]* [[RES]] to i8*
-// CHECK:  call void @llvm.memcpy{{.*}}(i8* [[CASTRET]], i8* [[CASTRES]]
+// CHECK:  call void @llvm.memcpy{{.*}}(i8* align 8 [[CASTRET]], i8* align 8 [[CASTRES]]
 // CHECK:  [[CAST:%.*]] = bitcast [[UNION]]* [[RET]] to { i64 }*
 // CHECK:  [[GEP:%.*]] = getelementptr inbounds { i64 }, { i64 }* [[CAST]], i32 0, i32 0
 // CHECK:  [[R0:%.*]] = load i64, i64* [[GEP]], align 8

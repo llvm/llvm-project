@@ -54,14 +54,14 @@ int test6(char *X) {
 int test7(int *p) {
   struct snd_pcm_hw_params_t* hwparams;  // incomplete type.
   
-  // CHECK: call void @llvm.memset{{.*}}256, i32 4, i1 false)
+  // CHECK: call void @llvm.memset{{.*}} align 4 {{.*}}256, i1 false)
   __builtin_memset(p, 0, 256);  // Should be alignment = 4
 
-  // CHECK: call void @llvm.memset{{.*}}256, i32 1, i1 false)
+  // CHECK: call void @llvm.memset{{.*}} align 1 {{.*}}256, i1 false)
   __builtin_memset((char*)p, 0, 256);  // Should be alignment = 1
 
   __builtin_memset(hwparams, 0, 256);  // No crash alignment = 1
-  // CHECK: call void @llvm.memset{{.*}}256, i32 1, i1 false)
+  // CHECK: call void @llvm.memset{{.*}} align 1{{.*}}256, i1 false)
 }
 
 // <rdar://problem/11314941>
@@ -73,13 +73,13 @@ struct PS {
 struct PS ps;
 void test8(int *arg) {
   // CHECK: @test8
-  // CHECK: call void @llvm.memcpy{{.*}} 16, i32 1, i1 false)
+  // CHECK: call void @llvm.memcpy{{.*}} align 1 {{.*}} align 1 {{.*}} 16, i1 false)
   __builtin_memcpy(arg, ps.modes, sizeof(struct PS));
 }
 
 __attribute((aligned(16))) int x[4], y[4];
 void test9() {
   // CHECK: @test9
-  // CHECK: call void @llvm.memcpy{{.*}} 16, i32 16, i1 false)
+  // CHECK: call void @llvm.memcpy{{.*}} align 16 {{.*}} align 16 {{.*}} 16, i1 false)
   __builtin_memcpy(x, y, sizeof(y));
 }

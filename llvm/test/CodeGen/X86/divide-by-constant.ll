@@ -49,7 +49,6 @@ define zeroext i8 @test3(i8 zeroext %x, i8 zeroext %c) nounwind readnone ssp nor
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    imull $171, %eax, %eax
 ; X32-NEXT:    shrl $9, %eax
-; X32-NEXT:    movzwl %ax, %eax
 ; X32-NEXT:    # kill: def %al killed %al killed %eax
 ; X32-NEXT:    retl
 ;
@@ -57,7 +56,6 @@ define zeroext i8 @test3(i8 zeroext %x, i8 zeroext %c) nounwind readnone ssp nor
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    imull $171, %esi, %eax
 ; X64-NEXT:    shrl $9, %eax
-; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    # kill: def %al killed %al killed %eax
 ; X64-NEXT:    retq
 entry:
@@ -168,7 +166,6 @@ define i8 @test8(i8 %x) nounwind {
 ; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    imull $211, %eax, %eax
 ; X32-NEXT:    shrl $13, %eax
-; X32-NEXT:    movzwl %ax, %eax
 ; X32-NEXT:    # kill: def %al killed %al killed %eax
 ; X32-NEXT:    retl
 ;
@@ -178,7 +175,6 @@ define i8 @test8(i8 %x) nounwind {
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    imull $211, %eax, %eax
 ; X64-NEXT:    shrl $13, %eax
-; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    # kill: def %al killed %al killed %eax
 ; X64-NEXT:    retq
   %div = udiv i8 %x, 78
@@ -193,7 +189,6 @@ define i8 @test9(i8 %x) nounwind {
 ; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    imull $71, %eax, %eax
 ; X32-NEXT:    shrl $11, %eax
-; X32-NEXT:    movzwl %ax, %eax
 ; X32-NEXT:    # kill: def %al killed %al killed %eax
 ; X32-NEXT:    retl
 ;
@@ -203,7 +198,6 @@ define i8 @test9(i8 %x) nounwind {
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    imull $71, %eax, %eax
 ; X64-NEXT:    shrl $11, %eax
-; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    # kill: def %al killed %al killed %eax
 ; X64-NEXT:    retq
   %div = udiv i8 %x, 116

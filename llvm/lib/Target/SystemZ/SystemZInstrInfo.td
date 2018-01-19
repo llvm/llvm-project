@@ -2131,18 +2131,6 @@ def  : Pat<(add GR64:$src1, imm64zx32n:$src2),
 def  : Pat<(sub GR64:$src1, (azextloadi32 bdxaddr20only:$addr)),
            (SLGF GR64:$src1, bdxaddr20only:$addr)>;
 
-// Optimize sign-extended 1/0 selects to -1/0 selects.  This is important
-// for vector legalization.
-def : Pat<(sra (shl (i32 (z_select_ccmask 1, 0, imm32zx4:$valid, imm32zx4:$cc)),
-                         (i32 31)),
-                    (i32 31)),
-          (Select32 (LHI -1), (LHI 0), imm32zx4:$valid, imm32zx4:$cc)>;
-def : Pat<(sra (shl (i64 (anyext (i32 (z_select_ccmask 1, 0, imm32zx4:$valid,
-                                                       imm32zx4:$cc)))),
-                    (i32 63)),
-               (i32 63)),
-          (Select64 (LGHI -1), (LGHI 0), imm32zx4:$valid, imm32zx4:$cc)>;
-
 // Avoid generating 2 XOR instructions. (xor (and x, y), y) is
 // equivalent to (and (xor x, -1), y)
 def : Pat<(and (xor GR64:$x, (i64 -1)), GR64:$y),
