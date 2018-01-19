@@ -230,6 +230,9 @@ bool AArch64RegisterInfo::requiresVirtualBaseRegisters(
 bool
 AArch64RegisterInfo::useFPForScavengingIndex(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
+  // See also AArch64FrameLowering::hasFP().
+  if (MFI.getMaxCallFrameSize() > 255)
+    return true;
   // AArch64FrameLowering::resolveFrameIndexReference() can always fall back
   // to the stack pointer, so only put the emergency spill slot next to the
   // FP when there's no better way to access it (SP or base pointer).
