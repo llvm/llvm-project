@@ -202,20 +202,20 @@ template <class InputIterator1, class InputIterator2, class OutputIterator, clas
               OutputIterator result, BinaryOperation binary_op);
 
 template <class ForwardIterator, class T>
-    void
+    constexpr void      // constexpr in C++20
     replace(ForwardIterator first, ForwardIterator last, const T& old_value, const T& new_value);
 
 template <class ForwardIterator, class Predicate, class T>
-    void
+    constexpr void      // constexpr in C++20
     replace_if(ForwardIterator first, ForwardIterator last, Predicate pred, const T& new_value);
 
 template <class InputIterator, class OutputIterator, class T>
-    OutputIterator
+    constexpr OutputIterator      // constexpr in C++20
     replace_copy(InputIterator first, InputIterator last, OutputIterator result,
                  const T& old_value, const T& new_value);
 
 template <class InputIterator, class OutputIterator, class Predicate, class T>
-    OutputIterator
+    constexpr OutputIterator      // constexpr in C++20
     replace_copy_if(InputIterator first, InputIterator last, OutputIterator result, Predicate pred, const T& new_value);
 
 template <class ForwardIterator, class T>
@@ -1461,9 +1461,9 @@ __is_permutation(_ForwardIterator1 __first1, _ForwardIterator1 __last1,
         if (!__pred(*__first1, *__first2))
             break;
     if (__first1 == __last1)
-    	return __first2 == __last2;
+        return __first2 == __last2;
     else if (__first2 == __last2)
-    	return false;
+        return false;
 
     typedef typename iterator_traits<_ForwardIterator1>::difference_type _D1;
     _D1 __l1 = _VSTD::distance(__first1, __last1);
@@ -1969,7 +1969,7 @@ transform(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __f
 // replace
 
 template <class _ForwardIterator, class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 replace(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __old_value, const _Tp& __new_value)
 {
@@ -1981,7 +1981,7 @@ replace(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __old_valu
 // replace_if
 
 template <class _ForwardIterator, class _Predicate, class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 replace_if(_ForwardIterator __first, _ForwardIterator __last, _Predicate __pred, const _Tp& __new_value)
 {
@@ -1993,7 +1993,7 @@ replace_if(_ForwardIterator __first, _ForwardIterator __last, _Predicate __pred,
 // replace_copy
 
 template <class _InputIterator, class _OutputIterator, class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _OutputIterator
 replace_copy(_InputIterator __first, _InputIterator __last, _OutputIterator __result,
              const _Tp& __old_value, const _Tp& __new_value)
@@ -2009,7 +2009,7 @@ replace_copy(_InputIterator __first, _InputIterator __last, _OutputIterator __re
 // replace_copy_if
 
 template <class _InputIterator, class _OutputIterator, class _Predicate, class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _OutputIterator
 replace_copy_if(_InputIterator __first, _InputIterator __last, _OutputIterator __result,
                 _Predicate __pred, const _Tp& __new_value)
