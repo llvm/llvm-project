@@ -78,7 +78,7 @@ class CPP11EnumTypesTestCase(TestBase):
 
     def image_lookup_for_enum_type(self):
         """Test C++11 enumeration class types."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break inside the main.

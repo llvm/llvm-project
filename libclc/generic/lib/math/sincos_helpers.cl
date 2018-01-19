@@ -90,6 +90,23 @@ _CLC_DEF float __clc_cosf_piby4(float x, float y) {
     return ret;
 }
 
+_CLC_DEF float __clc_tanf_piby4(float x, int regn)
+{
+    // Core Remez [1,2] approximation to tan(x) on the interval [0,pi/4].
+    float r = x * x;
+
+    float a = mad(r, -0.0172032480471481694693109f, 0.385296071263995406715129f);
+
+    float b = mad(r,
+	          mad(r, 0.01844239256901656082986661f, -0.51396505478854532132342f),
+	          1.15588821434688393452299f);
+
+    float t = mad(x*r, native_divide(a, b), x);
+    float tr = -MATH_RECIP(t);
+
+    return regn & 1 ? tr : t;
+}
+
 _CLC_DEF void __clc_fullMulS(float *hi, float *lo, float a, float b, float bh, float bt)
 {
     if (HAVE_HW_FMA32()) {

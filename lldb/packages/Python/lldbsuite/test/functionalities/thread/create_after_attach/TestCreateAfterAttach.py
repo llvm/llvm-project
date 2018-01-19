@@ -51,7 +51,7 @@ class CreateAfterAttachTestCase(TestBase):
     def create_after_attach(self, use_fork):
         """Test thread creation after process attach."""
 
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Spawn a new process
         if use_fork:

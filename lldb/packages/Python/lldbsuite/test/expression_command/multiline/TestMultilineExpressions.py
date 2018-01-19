@@ -28,7 +28,7 @@ class MultilineExpressionsTestCase(TestBase):
         """Test that multiline expressions work correctly"""
         self.build()
         import pexpect
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         prompt = "(lldb) "
 
         # So that the child gets torn down after the test.

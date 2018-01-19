@@ -28,7 +28,7 @@ class HelloWatchpointTestCase(TestBase):
         # And the watchpoint variable declaration line number.
         self.decl = line_number(self.source,
                                 '// Watchpoint variable declaration.')
-        self.exe_name = 'a.out'
+        self.exe_name = self.getBuildArtifact('a.out')
         self.d = {'C_SOURCES': self.source, 'EXE': self.exe_name}
 
     @expectedFailureAll(

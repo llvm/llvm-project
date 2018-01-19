@@ -31,7 +31,7 @@ class RegexpBreakCommandTestCase(TestBase):
 
     def regexp_break_command(self):
         """Test the super consie "b" command, which is analias for _regexp-break."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         break_results = lldbutil.run_break_set_command(

@@ -36,7 +36,7 @@ class WatchpointIgnoreCountTestCase(TestBase):
     def test_set_watch_ignore_count(self):
         """Test SBWatchpoint.SetIgnoreCount() API."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)

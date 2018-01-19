@@ -28,7 +28,7 @@ class ThreadSpecificBreakPlusConditionTestCase(TestBase):
     def test_python(self):
         """Test that we obey thread conditioned breakpoints."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)

@@ -41,7 +41,7 @@ class ChangedInferiorTestCase(TestBase):
 
     def inferior_crashing(self):
         """Inferior crashes upon launching; lldb should catch the event and stop."""
-        self.exe = os.path.join(os.getcwd(), "a.out")
+        self.exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + self.exe, CURRENT_EXECUTABLE_SET)
 
         self.runCmd("run", RUN_SUCCEEDED)

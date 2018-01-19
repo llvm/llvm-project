@@ -29,7 +29,7 @@ class TestDarwinLogFilterRegexCategory(darwin_log.DarwinLogTestBase):
         self.source = 'main.c'
 
         # Output filename.
-        self.exe_name = 'a.out'
+        self.exe_name = self.getBuildArtifact("a.out")
         self.d = {'C_SOURCES': self.source, 'EXE': self.exe_name}
 
         # Locate breakpoint.

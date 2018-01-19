@@ -58,7 +58,7 @@ class BreakpointNames(TestBase):
         self.do_check_configuring_permissions_cli()
 
     def setup_target(self):
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a targets we are making breakpoint in and copying to:
         self.target = self.dbg.CreateTarget(exe)

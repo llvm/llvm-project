@@ -34,7 +34,7 @@ class LogTestCase(TestBase):
             self.command_log_tests("dwarf")
 
     def command_log_tests(self, type):
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.expect("file " + exe,
                     patterns=["Current executable set to .*a.out"])
 

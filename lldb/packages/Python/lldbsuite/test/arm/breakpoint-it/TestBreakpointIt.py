@@ -21,7 +21,7 @@ class TestBreakpointIt(TestBase):
     @skipIf(archs=no_match(["arm"]))
     def test_false(self):
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         self.runCmd("target create %s" % exe)
         lldbutil.run_break_set_by_symbol(self, "bkpt_false",
@@ -34,7 +34,7 @@ class TestBreakpointIt(TestBase):
     @skipIf(archs=no_match(["arm"]))
     def test_true(self):
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         self.runCmd("target create %s" % exe)
         bpid = lldbutil.run_break_set_by_symbol(self, "bkpt_true",

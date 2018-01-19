@@ -24,7 +24,7 @@ class CommandInterpreterAPICase(TestBase):
     def test_with_process_launch_api(self):
         """Test the SBCommandInterpreter APIs."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)

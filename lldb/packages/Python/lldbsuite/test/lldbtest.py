@@ -1573,7 +1573,8 @@ class Base(unittest2.TestCase):
     def buildGo(self):
         """Build the default go binary.
         """
-        system([[which('go'), 'build -gcflags "-N -l" -o a.out main.go']])
+        exe = self.getBuildArtifact("a.out")
+        system([[which('go'), 'build -gcflags "-N -l" -o %s main.go' % exe]])
 
     def signBinary(self, binary_path):
         if sys.platform.startswith("darwin"):
@@ -2268,6 +2269,10 @@ class TestBase(Base):
         else:
             self.fail("Can't build for debug info: %s" % self.debug_info)
 
+    def getBuildArtifact(self, name="a.out"):
+        """Return absolute path to an artifact in the test's build directory."""
+        return os.path.join(os.getcwd(), name)
+            
     def run_platform_command(self, cmd):
         platform = self.dbg.GetSelectedPlatform()
         shell_command = lldb.SBPlatformShellCommand(cmd)
