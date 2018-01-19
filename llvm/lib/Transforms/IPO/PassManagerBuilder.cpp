@@ -524,7 +524,7 @@ void PassManagerBuilder::populateModulePassManager(
   bool RerunAfterTapirLowering = false;
   bool TapirHasBeenLowered = (tapirTarget == nullptr);
 
-  if (tapirTarget && DisableTapirOpts) {// -fdetach
+  if (tapirTarget && DisableTapirOpts) { // -fdetach
     MPM.add(createLowerTapirToTargetPass(tapirTarget));
     TapirHasBeenLowered = true;
   }

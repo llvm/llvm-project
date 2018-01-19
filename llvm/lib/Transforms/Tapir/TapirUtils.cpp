@@ -11,8 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Tapir/CilkABI.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/Transforms/Tapir/CilkABI.h"
+#include "llvm/Transforms/Tapir/OpenMPABI.h"
+#include "llvm/Transforms/Tapir/CilkRABI.h"
 #include "llvm/Transforms/Tapir/Outline.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
@@ -22,6 +24,21 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "tapir"
+
+TapirTarget *llvm::getTapirTargetFromType(TapirTargetType Type) {
+  switch(Type) {
+  case TapirTargetType::Cilk:
+    return new CilkABI();
+  case TapirTargetType::OpenMP:
+    return new OpenMPABI();
+  case TapirTargetType::CilkR:
+    return new CilkRABI();
+  case TapirTargetType::None:
+  case TapirTargetType::Serial:
+  default:
+    return nullptr;
+  }
+}
 
 bool llvm::verifyDetachedCFG(const DetachInst &Detach, DominatorTree &DT,
                              bool error) {

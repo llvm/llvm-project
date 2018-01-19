@@ -17,7 +17,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Transforms/Tapir/TapirTypes.h"
+#include "llvm/Transforms/Tapir/TapirUtils.h"
 
 #define LS_NAME "loop-spawning"
 
