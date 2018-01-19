@@ -122,11 +122,11 @@ LH_5_params:
         # File table entries
         .byte   2               # Two files
         .asciz "File5a"
-        .byte   1
+        .byte   0
         .byte   0x51
         .byte   0x52
         .asciz "File5b"
-        .byte   2
+        .byte   1
         .byte   0x53
         .byte   0x54
 LH_5_header_end:
@@ -141,9 +141,9 @@ LH_5_end:
 # CHECK: seg_select_size: 0
 # CHECK: prologue_length: 0x00000044
 # CHECK: max_ops_per_inst: 1
-# CHECK: include_directories[  1] = 'Directory5a'
-# CHECK: include_directories[  2] = 'Directory5b'
+# CHECK: include_directories[  0] = 'Directory5a'
+# CHECK: include_directories[  1] = 'Directory5b'
 # CHECK-NOT: include_directories
-# CHECK: file_names[  1]    1 0x00000051 0x00000052 File5a{{$}}
-# CHECK: file_names[  2]    2 0x00000053 0x00000054 File5b{{$}}
+# CHECK: file_names[  1]    0 0x00000051 0x00000052 File5a{{$}}
+# CHECK: file_names[  2]    1 0x00000053 0x00000054 File5b{{$}}
 # CHECK-NOT: file_names

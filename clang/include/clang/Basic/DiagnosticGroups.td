@@ -444,8 +444,7 @@ def TautologicalInRangeCompare : DiagGroup<"tautological-constant-in-range-compa
                                             TautologicalUnsignedEnumZeroCompare]>;
 def TautologicalOutOfRangeCompare : DiagGroup<"tautological-constant-out-of-range-compare">;
 def TautologicalConstantCompare : DiagGroup<"tautological-constant-compare",
-                                            [TautologicalInRangeCompare,
-                                             TautologicalOutOfRangeCompare]>;
+                                            [TautologicalOutOfRangeCompare]>;
 def TautologicalPointerCompare : DiagGroup<"tautological-pointer-compare">;
 def TautologicalOverlapCompare : DiagGroup<"tautological-overlap-compare">;
 def TautologicalUndefinedCompare : DiagGroup<"tautological-undefined-compare">;
@@ -719,7 +718,6 @@ def IntToPointerCast : DiagGroup<"int-to-pointer-cast",
 def Move : DiagGroup<"move", [PessimizingMove, RedundantMove, SelfMove]>;
 
 def Extra : DiagGroup<"extra", [
-    TautologicalInRangeCompare,
     MissingFieldInitializers,
     IgnoredQualifiers,
     InitializerOverrides,

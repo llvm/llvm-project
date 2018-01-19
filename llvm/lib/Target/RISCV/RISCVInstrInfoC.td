@@ -188,8 +188,8 @@ def C_ADDI4SPN : RVInst16CIW<0b000, 0b00, (outs GPRC:$rd),
   let Inst{5} = imm{3};
 }
 
-def C_FLD  : CLoad_ri<0b001, "c.fld", FPR64C, uimm8_lsb000>,
-             Requires<[HasStdExtD]> {
+let Predicates = [HasStdExtC, HasStdExtD] in
+def C_FLD  : CLoad_ri<0b001, "c.fld", FPR64C, uimm8_lsb000> {
   bits<8> imm;
   let Inst{12-10} = imm{5-3};
   let Inst{6-5} = imm{7-6};
@@ -202,24 +202,24 @@ def C_LW : CLoad_ri<0b010, "c.lw", GPRC, uimm7_lsb00> {
   let Inst{5} = imm{6};
 }
 
-let DecoderNamespace = "RISCV32Only_" in
-def C_FLW  : CLoad_ri<0b011, "c.flw", FPR32C, uimm7_lsb00>,
-             Requires<[HasStdExtF, IsRV32]> {
+let DecoderNamespace = "RISCV32Only_",
+    Predicates = [HasStdExtC, HasStdExtF, IsRV32] in
+def C_FLW  : CLoad_ri<0b011, "c.flw", FPR32C, uimm7_lsb00> {
   bits<7> imm;
   let Inst{12-10} = imm{5-3};
   let Inst{6} = imm{2};
   let Inst{5} = imm{6};
 }
 
-def C_LD : CLoad_ri<0b011, "c.ld", GPRC, uimm8_lsb000>,
-           Requires<[IsRV64]> {
+let Predicates = [HasStdExtC, IsRV64] in
+def C_LD : CLoad_ri<0b011, "c.ld", GPRC, uimm8_lsb000> {
   bits<8> imm;
   let Inst{12-10} = imm{5-3};
   let Inst{6-5} = imm{7-6};
 }
 
-def C_FSD  : CStore_rri<0b101, "c.fsd", FPR64C, uimm8_lsb000>,
-             Requires<[HasStdExtD]> {
+let Predicates = [HasStdExtC, HasStdExtD] in
+def C_FSD  : CStore_rri<0b101, "c.fsd", FPR64C, uimm8_lsb000> {
   bits<8> imm;
   let Inst{12-10} = imm{5-3};
   let Inst{6-5} = imm{7-6};
@@ -232,17 +232,17 @@ def C_SW : CStore_rri<0b110, "c.sw", GPRC, uimm7_lsb00> {
   let Inst{5} = imm{6};
 }
 
-let DecoderNamespace = "RISCV32Only_" in
-def C_FSW  : CStore_rri<0b111, "c.fsw", FPR32C, uimm7_lsb00>,
-             Requires<[HasStdExtF, IsRV32]> {
+let DecoderNamespace = "RISCV32Only_",
+    Predicates = [HasStdExtC, HasStdExtF, IsRV32]  in
+def C_FSW  : CStore_rri<0b111, "c.fsw", FPR32C, uimm7_lsb00> {
   bits<7> imm;
   let Inst{12-10} = imm{5-3};
   let Inst{6} = imm{2};
   let Inst{5} = imm{6};
 }
 
-def C_SD : CStore_rri<0b111, "c.sd", GPRC, uimm8_lsb000>,
-           Requires<[IsRV64]> {
+let Predicates = [HasStdExtC, IsRV64] in
+def C_SD : CStore_rri<0b111, "c.sd", GPRC, uimm8_lsb000> {
   bits<8> imm;
   let Inst{12-10} = imm{5-3};
   let Inst{6-5} = imm{7-6};
@@ -260,16 +260,16 @@ def C_ADDI : RVInst16CI<0b000, 0b01, (outs GPRNoX0:$rd_wb),
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCall = 1,
-    DecoderNamespace = "RISCV32Only_", Defs = [X1] in
+    DecoderNamespace = "RISCV32Only_", Defs = [X1],
+    Predicates = [HasStdExtC, IsRV32]  in
 def C_JAL : RVInst16CJ<0b001, 0b01, (outs), (ins simm12_lsb0:$offset),
-                       "c.jal", "$offset">,
-            Requires<[IsRV32]>;
+                       "c.jal", "$offset">;
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0,
+    Predicates = [HasStdExtC, IsRV64] in
 def C_ADDIW : RVInst16CI<0b001, 0b01, (outs GPRNoX0:$rd_wb),
                          (ins GPRNoX0:$rd, simm6:$imm),
-                         "c.addiw", "$rd, $imm">,
-              Requires<[IsRV64]> {
+                         "c.addiw", "$rd, $imm"> {
   let Constraints = "$rd = $rd_wb";
   let Inst{6-2} = imm{4-0};
 }
@@ -317,8 +317,10 @@ def C_XOR  : CS_ALU<0b01, "c.xor", GPRC, 0>;
 def C_OR   : CS_ALU<0b10, "c.or" , GPRC, 0>;
 def C_AND  : CS_ALU<0b11, "c.and", GPRC, 0>;
 
-def C_SUBW : CS_ALU<0b00, "c.subw", GPRC, 1>, Requires<[IsRV64]>;
-def C_ADDW : CS_ALU<0b01, "c.addw", GPRC, 1>, Requires<[IsRV64]>;
+let Predicates = [HasStdExtC, IsRV64] in {
+def C_SUBW : CS_ALU<0b00, "c.subw", GPRC, 1>;
+def C_ADDW : CS_ALU<0b01, "c.addw", GPRC, 1>;
+}
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def C_J : RVInst16CJ<0b101, 0b01, (outs), (ins simm12_lsb0:$offset),
@@ -339,8 +341,8 @@ def C_SLLI : RVInst16CI<0b000, 0b10, (outs GPRNoX0:$rd_wb),
   let Inst{6-2} = imm{4-0};
 }
 
-def C_FLDSP  : CStackLoad<0b001, "c.fldsp", FPR64, uimm9_lsb000>,
-               Requires<[HasStdExtD]> {
+let Predicates = [HasStdExtC, HasStdExtD] in
+def C_FLDSP  : CStackLoad<0b001, "c.fldsp", FPR64, uimm9_lsb000> {
   let Inst{6-5} = imm{4-3};
   let Inst{4-2} = imm{8-6};
 }
@@ -350,15 +352,15 @@ def C_LWSP : CStackLoad<0b010, "c.lwsp", GPRNoX0, uimm8_lsb00> {
   let Inst{3-2} = imm{7-6};
 }
 
-let DecoderNamespace = "RISCV32Only_" in
-def C_FLWSP  : CStackLoad<0b011, "c.flwsp", FPR32, uimm8_lsb00>,
-               Requires<[HasStdExtF, IsRV32]> {
+let DecoderNamespace = "RISCV32Only_",
+    Predicates = [HasStdExtC, HasStdExtF, IsRV32] in
+def C_FLWSP  : CStackLoad<0b011, "c.flwsp", FPR32, uimm8_lsb00> {
   let Inst{6-4} = imm{4-2};
   let Inst{3-2} = imm{7-6};
 }
 
-def C_LDSP : CStackLoad<0b011, "c.ldsp", GPRNoX0, uimm9_lsb000>,
-             Requires<[IsRV64]> {
+let Predicates = [HasStdExtC, IsRV64] in
+def C_LDSP : CStackLoad<0b011, "c.ldsp", GPRNoX0, uimm9_lsb000> {
   let Inst{6-5} = imm{4-3};
   let Inst{4-2} = imm{8-6};
 }
@@ -392,8 +394,8 @@ def C_ADD : RVInst16CR<0b1001, 0b10, (outs GPRNoX0:$rs1_wb),
   let Constraints = "$rs1 = $rs1_wb";
 }
 
-def C_FSDSP  : CStackStore<0b101, "c.fsdsp", FPR64, uimm9_lsb000>,
-               Requires<[HasStdExtD]> {
+let Predicates = [HasStdExtC, HasStdExtD] in
+def C_FSDSP  : CStackStore<0b101, "c.fsdsp", FPR64, uimm9_lsb000> {
   let Inst{12-10} = imm{5-3};
   let Inst{9-7}   = imm{8-6};
 }
@@ -403,15 +405,15 @@ def C_SWSP : CStackStore<0b110, "c.swsp", GPR, uimm8_lsb00> {
   let Inst{8-7}  = imm{7-6};
 }
 
-let DecoderNamespace = "RISCV32Only_" in
-def C_FSWSP  : CStackStore<0b111, "c.fswsp", FPR32, uimm8_lsb00>,
-               Requires<[HasStdExtF, IsRV32]> {
+let DecoderNamespace = "RISCV32Only_",
+    Predicates = [HasStdExtC, HasStdExtF, IsRV32] in
+def C_FSWSP  : CStackStore<0b111, "c.fswsp", FPR32, uimm8_lsb00> {
   let Inst{12-9} = imm{5-2};
   let Inst{8-7}  = imm{7-6};
 }
 
-def C_SDSP : CStackStore<0b111, "c.sdsp", GPR, uimm9_lsb000>,
-             Requires<[IsRV64]> {
+let Predicates = [HasStdExtC, IsRV64] in
+def C_SDSP : CStackStore<0b111, "c.sdsp", GPR, uimm9_lsb000> {
   let Inst{12-10} = imm{5-3};
   let Inst{9-7}   = imm{8-6};
 }

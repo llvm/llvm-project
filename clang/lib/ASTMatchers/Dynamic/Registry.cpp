@@ -361,6 +361,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(isProtected);
   REGISTER_MATCHER(isPublic);
   REGISTER_MATCHER(isPure);
+  REGISTER_MATCHER(isScoped);
   REGISTER_MATCHER(isSignedInteger);
   REGISTER_MATCHER(isStaticStorageClass);
   REGISTER_MATCHER(isStruct);

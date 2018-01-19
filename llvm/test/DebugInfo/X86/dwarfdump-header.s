@@ -308,11 +308,11 @@ LH_5_params:
         # File table entries
         .byte   2               # Two files
         .asciz "File5a"
-        .byte   1
+        .byte   0
         .quad   0x7766554433221100
         .quad   0xffeeddccbbaa9988
         .asciz "File5b"
-        .byte   2
+        .byte   1
         .quad   0x8899aabbccddeeff
         .quad   0x0011223344556677
 LH_5_header_end:
@@ -324,12 +324,12 @@ LH_5_end:
 # CHECK: address_size: 8
 # CHECK: seg_select_size: 0
 # CHECK: max_ops_per_inst: 1
-# CHECK: include_directories[  1] = 'Directory5a'
-# CHECK: include_directories[  2] = 'Directory5b'
+# CHECK: include_directories[  0] = 'Directory5a'
+# CHECK: include_directories[  1] = 'Directory5b'
 # CHECK-NOT: include_directories
 # CHECK: MD5 Checksum
-# CHECK: file_names[  1]    1 00112233445566778899aabbccddeeff File5a{{$}}
-# CHECK: file_names[  2]    2 ffeeddccbbaa99887766554433221100 File5b{{$}}
+# CHECK: file_names[  1]    0 00112233445566778899aabbccddeeff File5a{{$}}
+# CHECK: file_names[  2]    1 ffeeddccbbaa99887766554433221100 File5b{{$}}
 # CHECK-NOT: file_names
 
 	.section .debug_line.dwo,"",@progbits
@@ -383,11 +383,11 @@ dwo_LH_5_params:
         # File table entries
         .byte   2               # Two files
         .asciz "DWOFile5a"
-        .byte   1
+        .byte   0
         .byte   0x15
         .byte   0x25
         .asciz "DWOFile5b"
-        .byte   2
+        .byte   1
         .byte   0x35
         .byte   0x45
 dwo_LH_5_header_end:
@@ -399,9 +399,9 @@ dwo_LH_5_end:
 # CHECK: address_size: 8
 # CHECK: seg_select_size: 0
 # CHECK: max_ops_per_inst: 1
-# CHECK: include_directories[  1] = 'DWODirectory5a'
-# CHECK: include_directories[  2] = 'DWODirectory5b'
+# CHECK: include_directories[  0] = 'DWODirectory5a'
+# CHECK: include_directories[  1] = 'DWODirectory5b'
 # CHECK-NOT: include_directories
-# CHECK: file_names[  1]    1 0x00000015 0x00000025 DWOFile5a{{$}}
-# CHECK: file_names[  2]    2 0x00000035 0x00000045 DWOFile5b{{$}}
+# CHECK: file_names[  1]    0 0x00000015 0x00000025 DWOFile5a{{$}}
+# CHECK: file_names[  2]    1 0x00000035 0x00000045 DWOFile5b{{$}}
 # CHECK-NOT: file_names

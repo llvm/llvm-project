@@ -85,7 +85,10 @@ enum : uint64_t {
   ClampHi = UINT64_C(1) << 48,
 
   // Is a packed VOP3P instruction.
-  IsPacked = UINT64_C(1) << 49
+  IsPacked = UINT64_C(1) << 49,
+
+  // "d16" bit set or not.
+  D16 = UINT64_C(1) << 50
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.

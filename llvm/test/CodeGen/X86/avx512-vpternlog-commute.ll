@@ -216,7 +216,7 @@ define <16 x i32> @vpternlog_v16i32_012_load0_mask(<16 x i32>* %x0ptr, <16 x i32
 ; CHECK-LABEL: vpternlog_v16i32_012_load0_mask:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vmovdqa32 (%rdi), %zmm2
+; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm2
 ; CHECK-NEXT:    vpternlogd $114, %zmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
@@ -317,7 +317,7 @@ define <16 x i32> @vpternlog_v16i32_102_load1_mask(<16 x i32> %x0, <16 x i32>* %
 ; CHECK-LABEL: vpternlog_v16i32_102_load1_mask:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vmovdqa32 (%rdi), %zmm2
+; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm2
 ; CHECK-NEXT:    vpternlogd $114, %zmm1, %zmm0, %zmm2 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
@@ -366,7 +366,7 @@ define <16 x i32> @vpternlog_v16i32_210_load2_mask(<16 x i32> %x0, <16 x i32> %x
 ; CHECK-LABEL: vpternlog_v16i32_210_load2_mask:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vmovdqa32 (%rdi), %zmm2
+; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm2
 ; CHECK-NEXT:    vpternlogd $114, %zmm0, %zmm1, %zmm2 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
@@ -379,7 +379,7 @@ define <16 x i32> @vpternlog_v16i32_021_load0_mask(<16 x i32>* %x0ptr, <16 x i32
 ; CHECK-LABEL: vpternlog_v16i32_021_load0_mask:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vmovdqa32 (%rdi), %zmm2
+; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm2
 ; CHECK-NEXT:    vpternlogd $114, %zmm0, %zmm1, %zmm2 {%k1}
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq

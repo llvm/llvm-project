@@ -73,10 +73,13 @@ void DWARFDebugLine::Prologue::dump(raw_ostream &OS) const {
     OS << format("standard_opcode_lengths[%s] = %u\n",
                  LNStandardString(I + 1).data(), StandardOpcodeLengths[I]);
 
-  if (!IncludeDirectories.empty())
+  if (!IncludeDirectories.empty()) {
+    // DWARF v5 starts directory indexes at 0.
+    uint32_t DirBase = getVersion() >= 5 ? 0 : 1;
     for (uint32_t I = 0; I != IncludeDirectories.size(); ++I)
-      OS << format("include_directories[%3u] = '", I + 1)
+      OS << format("include_directories[%3u] = '", I + DirBase)
          << IncludeDirectories[I] << "'\n";
+  }
 
   if (!FileNames.empty()) {
     if (HasMD5)

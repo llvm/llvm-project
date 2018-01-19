@@ -20,13 +20,13 @@
 
 # CHECK: ********** MI Scheduling **********
 # CHECK: ScheduleDAGMILive::schedule starting
-# CHECK: SU(1):   %1:qqpr = VLD4d8Pseudo %0, 8, 14, %noreg; mem:LD32[%A](align=8)
+# CHECK: SU(1):   %1:qqpr = VLD4d8Pseudo %0:gpr, 8, 14, %noreg; mem:LD32[%A](align=8)
 # CHECK: Latency            : 8
 # CHECK: Single Issue       : true;
-# CHECK: SU(2):   %4:dpr = VADDv8i8 %1.dsub_0, %1.dsub_1, 14, %noreg
+# CHECK: SU(2):   %4:dpr = VADDv8i8 %1.dsub_0:qqpr, %1.dsub_1:qqpr, 14, %noreg
 # CHECK: Latency            : 5
 # CHECK: Single Issue       : false;
-# CHECK: SU(3):   %5:gpr, %6:gpr = VMOVRRD %4, 14, %noreg
+# CHECK: SU(3):   %5:gpr, %6:gpr = VMOVRRD %4:dpr, 14, %noreg
 # CHECK: Latency            : 4
 # CHECK: Single Issue       : false;
 

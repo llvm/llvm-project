@@ -104,13 +104,21 @@ public:
   /// Changes options inside \p CI to use PCH from this preamble. Also remaps
   /// main file to \p MainFileBuffer and updates \p VFS to ensure the preamble
   /// is accessible.
-  /// For in-memory preambles, PrecompiledPreamble instance continues to own
-  /// the MemoryBuffer with the Preamble after this method returns. The caller
-  /// is reponsible for making sure the PrecompiledPreamble instance outlives
-  /// the compiler run and the AST that will be using the PCH.
+  /// Requires that CanReuse() is true.
+  /// For in-memory preambles, PrecompiledPreamble instance continues to own the
+  /// MemoryBuffer with the Preamble after this method returns. The caller is
+  /// reponsible for making sure the PrecompiledPreamble instance outlives the
+  /// compiler run and the AST that will be using the PCH.
   void AddImplicitPreamble(CompilerInvocation &CI,
                            IntrusiveRefCntPtr<vfs::FileSystem> &VFS,
                            llvm::MemoryBuffer *MainFileBuffer) const;
+
+  /// Configure \p CI to use this preamble.
+  /// Like AddImplicitPreamble, but doesn't assume CanReuse() is true.
+  /// If this preamble does not match the file, it may parse differently.
+  void OverridePreamble(CompilerInvocation &CI,
+                        IntrusiveRefCntPtr<vfs::FileSystem> &VFS,
+                        llvm::MemoryBuffer *MainFileBuffer) const;
 
 private:
   PrecompiledPreamble(PCHStorage Storage, std::vector<char> PreambleBytes,
@@ -221,6 +229,12 @@ private:
       return !(LHS == RHS);
     }
   };
+
+  /// Helper function to set up PCH for the preamble into \p CI and \p VFS to
+  /// with the specified \p Bounds.
+  void configurePreamble(PreambleBounds Bounds, CompilerInvocation &CI,
+                         IntrusiveRefCntPtr<vfs::FileSystem> &VFS,
+                         llvm::MemoryBuffer *MainFileBuffer) const;
 
   /// Sets up the PreprocessorOptions and changes VFS, so that PCH stored in \p
   /// Storage is accessible to clang. This method is an implementation detail of
