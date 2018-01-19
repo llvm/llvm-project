@@ -20,8 +20,6 @@
  * THE SOFTWARE.
  */
 
-#undef half_sqrt
-
 #define __CLC_BODY <clc/math/unary_decl.inc>
 #define __CLC_FUNCTION half_sqrt
 #define __FLOAT_ONLY
