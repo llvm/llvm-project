@@ -32,28 +32,28 @@ for.cond1:
 for.body3:
   %add = add nsw i32 %i.0, 1
   %conv = sext i32 %add to i64
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %conv, i32 1, i1 false), !prof !30
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst2, i8* %src2, i64 %conv, i32 1, i1 false), !prof !31
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %conv, i1 false), !prof !30
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst2, i8* %src2, i64 %conv, i1 false), !prof !31
   br label %for.inc
 
 ; MEMOP_OPT:  switch i64 %conv, label %[[DEFAULT_LABEL:.*]] [
 ; MEMOP_OPT:    i64 1, label %[[CASE_1_LABEL:.*]]
 ; MEMOP_OPT:  ], !prof [[SWITCH_BW:![0-9]+]] 
 ; MEMOP_OPT: [[CASE_1_LABEL]]:
-; MEMOP_OPT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 1, i32 1, i1 false)
+; MEMOP_OPT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 1, i1 false)
 ; MEMOP_OPT:   br label %[[MERGE_LABEL:.*]]
 ; MEMOP_OPT: [[DEFAULT_LABEL]]:
-; MEMOP_OPT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %conv, i32 1, i1 false), !prof [[NEWVP:![0-9]+]]
+; MEMOP_OPT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %conv, i1 false), !prof [[NEWVP:![0-9]+]]
 ; MEMOP_OPT:   br label %[[MERGE_LABEL]]
 ; MEMOP_OPT: [[MERGE_LABEL]]:
 ; MEMOP_OPT:  switch i64 %conv, label %[[DEFAULT_LABEL2:.*]] [
 ; MEMOP_OPT:    i64 1, label %[[CASE_1_LABEL2:.*]]
 ; MEMOP_OPT:  ], !prof [[SWITCH_BW:![0-9]+]] 
 ; MEMOP_OPT: [[CASE_1_LABEL2]]:
-; MEMOP_OPT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst2, i8* %src2, i64 1, i32 1, i1 false)
+; MEMOP_OPT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst2, i8* %src2, i64 1, i1 false)
 ; MEMOP_OPT:   br label %[[MERGE_LABEL2:.*]]
 ; MEMOP_OPT: [[DEFAULT_LABEL2]]:
-; MEMOP_OPT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst2, i8* %src2, i64 %conv, i32 1, i1 false), !prof [[NEWVP]]
+; MEMOP_OPT:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst2, i8* %src2, i64 %conv, i1 false), !prof [[NEWVP]]
 ; MEMOP_OPT:   br label %[[MERGE_LABEL2]]
 ; MEMOP_OPT: [[MERGE_LABEL2]]:
 ; MEMOP_OPT:   br label %for.inc
@@ -116,7 +116,7 @@ for.end6:
 
 declare void @llvm.lifetime.start(i64, i8* nocapture)
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1)
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1)
 
 declare void @llvm.lifetime.end(i64, i8* nocapture)
 

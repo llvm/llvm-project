@@ -143,9 +143,9 @@ void test_static_var_local(void) {
 // NOOPT: store i8* null, i8** %sp3, align 4
 // NOOPT: store i8* null, i8** %sp4, align 4
 // NOOPT: %[[SS1:.*]] = bitcast %struct.StructTy1* %SS1 to i8*
-// NOOPT: call void @llvm.memcpy.p0i8.p2i8.i64(i8* %[[SS1]], i8 addrspace(2)* bitcast (%struct.StructTy1 addrspace(2)* @test_func_scope_var_private.SS1 to i8 addrspace(2)*), i64 32, i32 8, i1 false)
+// NOOPT: call void @llvm.memcpy.p0i8.p2i8.i64(i8* align 8 %[[SS1]], i8 addrspace(2)* align 8 bitcast (%struct.StructTy1 addrspace(2)* @test_func_scope_var_private.SS1 to i8 addrspace(2)*), i64 32, i1 false)
 // NOOPT: %[[SS2:.*]] = bitcast %struct.StructTy2* %SS2 to i8*
-// NOOPT: call void @llvm.memset.p0i8.i64(i8* %[[SS2]], i8 0, i64 24, i32 8, i1 false)
+// NOOPT: call void @llvm.memset.p0i8.i64(i8* align 8 %[[SS2]], i8 0, i64 24, i1 false)
 void test_func_scope_var_private(void) {
   private char *sp1 = 0;
   private char *sp2 = NULL;
@@ -163,9 +163,9 @@ void test_func_scope_var_private(void) {
 // NOOPT: store i8 addrspace(3)* null, i8 addrspace(3)** %sp3, align 4
 // NOOPT: store i8 addrspace(3)* null, i8 addrspace(3)** %sp4, align 4
 // NOOPT: %[[SS1:.*]] = bitcast %struct.StructTy1* %SS1 to i8*
-// NOOPT: call void @llvm.memcpy.p0i8.p2i8.i64(i8* %[[SS1]], i8 addrspace(2)* bitcast (%struct.StructTy1 addrspace(2)* @test_func_scope_var_local.SS1 to i8 addrspace(2)*), i64 32, i32 8, i1 false)
+// NOOPT: call void @llvm.memcpy.p0i8.p2i8.i64(i8* align 8 %[[SS1]], i8 addrspace(2)* align 8 bitcast (%struct.StructTy1 addrspace(2)* @test_func_scope_var_local.SS1 to i8 addrspace(2)*), i64 32, i1 false)
 // NOOPT: %[[SS2:.*]] = bitcast %struct.StructTy2* %SS2 to i8*
-// NOOPT: call void @llvm.memset.p0i8.i64(i8* %[[SS2]], i8 0, i64 24, i32 8, i1 false)
+// NOOPT: call void @llvm.memset.p0i8.i64(i8* align 8 %[[SS2]], i8 0, i64 24, i1 false)
 void test_func_scope_var_local(void) {
   local char *sp1 = 0;
   local char *sp2 = NULL;
@@ -510,7 +510,7 @@ typedef struct {
 } StructTy3;
 
 // CHECK-LABEL: test_memset_private
-// CHECK: call void @llvm.memset.p0i8.i64(i8* nonnull {{.*}}, i8 0, i64 40, i32 8, i1 false)
+// CHECK: call void @llvm.memset.p0i8.i64(i8* nonnull align 8 {{.*}}, i8 0, i64 40, i1 false)
 void test_memset_private(private StructTy3 *ptr) {
   StructTy3 S3 = {0, 0, 0, 0, 0};
   *ptr = S3;

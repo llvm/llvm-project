@@ -6,14 +6,14 @@ define i8* @warn(i8* returned, i8*, i64) local_unnamed_addr #0 !dbg !6 {
   tail call void @llvm.dbg.value(metadata i8* %0, i64 0, metadata !14, metadata !17), !dbg !18
   tail call void @llvm.dbg.value(metadata i8* %1, i64 0, metadata !15, metadata !17), !dbg !19
   tail call void @llvm.dbg.value(metadata i64 %2, i64 0, metadata !16, metadata !17), !dbg !20
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 %2, i32 1, i1 false), !dbg !21
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 %2, i1 false), !dbg !21
   %4 = tail call i8* @foo(i8* %0, i8* %1, i64 %2) #5, !dbg !22
   %5 = tail call fastcc i8* @bar(i8* %0), !dbg !23
   ret i8* %5, !dbg !24
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1) #1
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
 
 declare i8* @foo(i8*, i8*, i64) local_unnamed_addr #2
 

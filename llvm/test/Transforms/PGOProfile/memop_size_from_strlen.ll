@@ -1,6 +1,6 @@
 ; RUN: opt < %s -pgo-instr-gen -S | FileCheck %s
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i32, i1)
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i1)
 declare i32 @strlen(i8* nocapture)
 
 ; CHECK_LABEL: test
@@ -9,6 +9,6 @@ declare i32 @strlen(i8* nocapture)
 
 define void @test(i8* %a, i8* %p) {
   %c = call i32 @strlen(i8* %p)
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a, i8* %p, i32 %c, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a, i8* %p, i32 %c, i1 false)
   ret void
 }

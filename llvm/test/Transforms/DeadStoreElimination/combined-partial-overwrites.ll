@@ -146,7 +146,7 @@ i32 (i8*, i8**, i32, i8, i8*)*,
 i32 (i8*, i8**, i32, i8, i8*)*,
 void (i8*, i32, i32)*
 }
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1)
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
 declare void @goFunc(%struct.foostruct*)
 declare i32 @fa(i8*, i8**, i32, i8, i8*)
 
@@ -156,7 +156,7 @@ entry:
 
   %bang = alloca %struct.foostruct, align 8
   %v1 = bitcast %struct.foostruct* %bang to i8*
-  call void @llvm.memset.p0i8.i64(i8* %v1, i8 0, i64 40, i32 8, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* align 8 %v1, i8 0, i64 40, i1 false)
   %v2 = getelementptr inbounds %struct.foostruct, %struct.foostruct* %bang, i64 0, i32 0
   store i32 (i8*, i8**, i32, i8, i8*)* @fa, i32 (i8*, i8**, i32, i8, i8*)** %v2, align 8
   %v3 = getelementptr inbounds %struct.foostruct, %struct.foostruct* %bang, i64 0, i32 1

@@ -51,7 +51,7 @@ entry:
   store i8* %call, i8** bitcast (i32** @b to i8**), align 8, !dbg !45, !tbaa !46
   %1 = getelementptr inbounds %struct.A, %struct.A* %agg.tmp, i64 0, i32 0, !dbg !48
   %2 = getelementptr inbounds %struct.A, %struct.A* %p1, i64 0, i32 0, !dbg !48
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* %2, i64 24, i32 8, i1 false), !dbg !48, !tbaa.struct !49
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %1, i8* align 8 %2, i64 24, i1 false), !dbg !48, !tbaa.struct !49
   call void @_Z2f91A(%struct.A* %agg.tmp), !dbg !52
   ret void, !dbg !53
 }
@@ -65,7 +65,7 @@ declare noalias i8* @_Znwm(i64) #1
 declare void @_Z2f91A(%struct.A*)
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1) #2
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #2
 
 define void @_Z3f111A(%struct.A* nocapture readonly %p1) !dbg !54 {
 entry:
@@ -77,7 +77,7 @@ entry:
   %2 = load i64, i64* @a, align 8, !dbg !61, !tbaa !40
   %call.i = tail call noalias i8* @_Znwm(i64 %2) #4, !dbg !62
   store i8* %call.i, i8** bitcast (i32** @b to i8**), align 8, !dbg !63, !tbaa !46
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* %0, i64 24, i32 8, i1 false), !dbg !64
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %1, i8* align 8 %0, i64 24, i1 false), !dbg !64
   call void @_Z2f91A(%struct.A* %agg.tmp.i), !dbg !65
   call void @llvm.lifetime.end(i64 24, i8* %1), !dbg !66
   ret void, !dbg !67
@@ -112,11 +112,11 @@ call.i.i.noexc:                                   ; preds = %entry
   store i8* %call.i.i5, i8** bitcast (i32** @b to i8**), align 8, !dbg !88, !tbaa !46
   store i8 1, i8* %1, align 8, !dbg !89
   %agg.tmp.sroa.2.0..sroa_raw_idx = getelementptr inbounds i8, i8* %1, i64 1, !dbg !89
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %agg.tmp.sroa.2.0..sroa_raw_idx, i8* %agg.tmp.sroa.2.1..sroa_idx, i64 15, i32 1, i1 false), !dbg !89
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %agg.tmp.sroa.2.0..sroa_raw_idx, i8* %agg.tmp.sroa.2.1..sroa_idx, i64 15, i1 false), !dbg !89
   %agg.tmp.sroa.3.0..sroa_idx = getelementptr inbounds %struct.A, %struct.A* %agg.tmp.i.i, i64 0, i32 2, !dbg !89
   store i8 1, i8* %agg.tmp.sroa.3.0..sroa_idx, align 8, !dbg !89
   %agg.tmp.sroa.4.0..sroa_raw_idx = getelementptr inbounds i8, i8* %1, i64 17, !dbg !89
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %agg.tmp.sroa.4.0..sroa_raw_idx, i8* %agg.tmp.sroa.4.17..sroa_idx, i64 7, i32 1, i1 false), !dbg !89
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %agg.tmp.sroa.4.0..sroa_raw_idx, i8* %agg.tmp.sroa.4.17..sroa_idx, i64 7, i1 false), !dbg !89
   invoke void @_Z2f91A(%struct.A* %agg.tmp.i.i)
           to label %invoke.cont unwind label %lpad, !dbg !90
 

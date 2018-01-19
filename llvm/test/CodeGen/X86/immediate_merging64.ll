@@ -19,7 +19,7 @@ define i1 @imm_multiple_users(i64 %a, i64* %b) optsize {
   ret i1 %cmp
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1)
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
 
 ; Inlined memsets requiring multiple same-sized stores should be lowered using
 ; the register, rather than immediate, form of stores when optimizing for
@@ -31,6 +31,6 @@ define void @memset_zero(i8* noalias nocapture %D) optsize {
 ; CHECK-NEXT:    movq %rax, 7(%rdi)
 ; CHECK-NEXT:    movq %rax, (%rdi)
 ; CHECK-NEXT:    retq
-  tail call void @llvm.memset.p0i8.i64(i8* %D, i8 0, i64 15, i32 1, i1 false)
+  tail call void @llvm.memset.p0i8.i64(i8* %D, i8 0, i64 15, i1 false)
   ret void
 }

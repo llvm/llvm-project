@@ -1359,7 +1359,7 @@ float16x8_t test_vbslq_f16(uint16x8_t a, float16x8_t b, float16x8_t c) {
 // CHECK:   store <4 x half> [[VZIP1_I]], <4 x half>* [[TMP2]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.float16x4x2_t* [[RETVAL]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.float16x4x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 16, i32 8, i1 false)
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP5]], i8* align 8 [[TMP6]], i64 16, i1 false)
 float16x4x2_t test_vzip_f16(float16x4_t a, float16x4_t b) {
   return vzip_f16(a, b);
 }
@@ -1376,7 +1376,7 @@ float16x4x2_t test_vzip_f16(float16x4_t a, float16x4_t b) {
 // CHECK:   store <8 x half> [[VZIP1_I]], <8 x half>* [[TMP2]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.float16x8x2_t* [[RETVAL]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.float16x8x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 32, i32 16, i1 false)
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP5]], i8* align 16 [[TMP6]], i64 32, i1 false)
 float16x8x2_t test_vzipq_f16(float16x8_t a, float16x8_t b) {
   return vzipq_f16(a, b);
 }
@@ -1393,7 +1393,7 @@ float16x8x2_t test_vzipq_f16(float16x8_t a, float16x8_t b) {
 // CHECK:   store <4 x half> [[VZIP1_I]], <4 x half>* [[TMP2]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.float16x4x2_t* [[RETVAL]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.float16x4x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 16, i32 8, i1 false)
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP5]], i8* align 8 [[TMP6]], i64 16, i1 false)
 float16x4x2_t test_vuzp_f16(float16x4_t a, float16x4_t b) {
   return vuzp_f16(a, b);
 }
@@ -1410,7 +1410,7 @@ float16x4x2_t test_vuzp_f16(float16x4_t a, float16x4_t b) {
 // CHECK:   store <8 x half> [[VZIP1_I]], <8 x half>* [[TMP2]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.float16x8x2_t* [[RETVAL]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.float16x8x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 32, i32 16, i1 false)
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP5]], i8* align 16 [[TMP6]], i64 32, i1 false)
 float16x8x2_t test_vuzpq_f16(float16x8_t a, float16x8_t b) {
   return vuzpq_f16(a, b);
 }
@@ -1427,7 +1427,7 @@ float16x8x2_t test_vuzpq_f16(float16x8_t a, float16x8_t b) {
 // CHECK:   store <4 x half> [[VZIP1_I]], <4 x half>* [[TMP2]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.float16x4x2_t* [[RETVAL]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.float16x4x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 16, i32 8, i1 false)
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP5]], i8* align 8 [[TMP6]], i64 16, i1 false)
 float16x4x2_t test_vtrn_f16(float16x4_t a, float16x4_t b) {
   return vtrn_f16(a, b);
 }
@@ -1444,7 +1444,7 @@ float16x4x2_t test_vtrn_f16(float16x4_t a, float16x4_t b) {
 // CHECK:   store <8 x half> [[VZIP1_I]], <8 x half>* [[TMP2]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.float16x8x2_t* [[RETVAL]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.float16x8x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 32, i32 16, i1 false)
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP5]], i8* align 16 [[TMP6]], i64 32, i1 false)
 float16x8x2_t test_vtrnq_f16(float16x8_t a, float16x8_t b) {
   return vtrnq_f16(a, b);
 }

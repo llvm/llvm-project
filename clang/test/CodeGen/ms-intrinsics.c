@@ -20,12 +20,12 @@ void test__stosb(unsigned char *Dest, unsigned char Data, size_t Count) {
 }
 
 // CHECK-I386: define{{.*}}void @test__stosb
-// CHECK-I386:   tail call void @llvm.memset.p0i8.i32(i8* %Dest, i8 %Data, i32 %Count, i32 1, i1 true)
+// CHECK-I386:   tail call void @llvm.memset.p0i8.i32(i8* align 1 %Dest, i8 %Data, i32 %Count, i1 true)
 // CHECK-I386:   ret void
 // CHECK-I386: }
 
 // CHECK-X64: define{{.*}}void @test__stosb
-// CHECK-X64:   tail call void @llvm.memset.p0i8.i64(i8* %Dest, i8 %Data, i64 %Count, i32 1, i1 true)
+// CHECK-X64:   tail call void @llvm.memset.p0i8.i64(i8* align 1 %Dest, i8 %Data, i64 %Count, i1 true)
 // CHECK-X64:   ret void
 // CHECK-X64: }
 

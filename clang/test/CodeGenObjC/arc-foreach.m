@@ -42,7 +42,7 @@ void test0(NSArray *array) {
 
 // Initialize the fast enumaration state.
 // CHECK-LP64-NEXT: [[T0:%.*]] = bitcast [[STATE_T]]* [[STATE]] to i8*
-// CHECK-LP64-NEXT: call void @llvm.memset.p0i8.i64(i8* [[T0]], i8 0, i64 64, i32 8, i1 false)
+// CHECK-LP64-NEXT: call void @llvm.memset.p0i8.i64(i8* align 8 [[T0]], i8 0, i64 64, i1 false)
 
 // Evaluate the collection expression and retain.
 // CHECK-LP64-NEXT: [[T0:%.*]] = load [[ARRAY_T]]*, [[ARRAY_T]]** [[ARRAY]], align 8

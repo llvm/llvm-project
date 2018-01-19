@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
 // CHECK-DAG:   store i8* bitcast (void (i8*, i8*)* @[[ACOMB:.+]] to i8*), i8** [[TMP9]],
 // CHECK-DAG:   [[TMP10:%.+]] = getelementptr inbounds [[T1]], [[T1]]* [[GEPA]], i32 0, i32 5
 // CHECK-DAG:   [[TMP11:%.+]] = bitcast i32* [[TMP10]] to i8*
-// CHECK-DAG:   call void @llvm.memset.p0i8.i64(i8* [[TMP11]], i8 0, i64 4, i32 8, i1 false)
+// CHECK-DAG:   call void @llvm.memset.p0i8.i64(i8* align 8 [[TMP11]], i8 0, i64 4, i1 false)
 // CHECK-DAG:   [[TMP13:%.+]] = bitcast float* [[B]] to i8*
 // CHECK-DAG:   store i8* [[TMP13]], i8** [[TMP12:%[^,]+]],
 // CHECK-DAG:   [[TMP12]] = getelementptr inbounds [[T1]], [[T1]]* [[GEPB:%[^,]+]], i32 0, i32 0
@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
 // CHECK-DAG:   store i8* bitcast (void (i8*, i8*)* @[[BCOMB:.+]] to i8*), i8** [[TMP17]],
 // CHECK-DAG:   [[TMP18:%.+]] = getelementptr inbounds [[T1]], [[T1]]* [[GEPB]], i32 0, i32 5
 // CHECK-DAG:   [[TMP19:%.+]] = bitcast i32* [[TMP18]] to i8*
-// CHECK-DAG:   call void @llvm.memset.p0i8.i64(i8* [[TMP19]], i8 0, i64 4, i32 8, i1 false)
+// CHECK-DAG:   call void @llvm.memset.p0i8.i64(i8* align 8 [[TMP19]], i8 0, i64 4, i1 false)
 // CHECK-DAG:   [[TMP21:%.+]] = bitcast i32* [[ARGC_ADDR]] to i8*
 // CHECK-DAG:   store i8* [[TMP21]], i8** [[TMP20:%[^,]+]],
 // CHECK-DAG:   [[TMP20]] = getelementptr inbounds [[T1]], [[T1]]* [[GEPARGC:%[^,]+]], i32 0, i32 0
@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
 // CHECK-DAG:   store i8* bitcast (void (i8*, i8*)* @[[ARGCCOMB:.+]] to i8*), i8** [[TMP25]],
 // CHECK-DAG:   [[TMP26:%.+]] = getelementptr inbounds [[T1]], [[T1]]* [[GEPARGC]], i32 0, i32 5
 // CHECK-DAG:   [[TMP27:%.+]] = bitcast i32* [[TMP26]] to i8*
-// CHECK-DAG:   call void @llvm.memset.p0i8.i64(i8* [[TMP27]], i8 0, i64 4, i32 8, i1 false)
+// CHECK-DAG:   call void @llvm.memset.p0i8.i64(i8* align 8 [[TMP27]], i8 0, i64 4, i1 false)
 // CHECK-DAG:   [[TMP28:%.+]] = bitcast [3 x [[T1]]]* [[RD_IN1]] to i8*
 // CHECK-DAG:   [[TMP29:%.+]] = call i8* @__kmpc_task_reduction_init(i32 [[GTID]], i32 3, i8* [[TMP28]])
 // DEBUG-DAG:   call void @llvm.dbg.declare(metadata i8** [[TD1]],
@@ -114,7 +114,7 @@ int main(int argc, char **argv) {
 // CHECK-DAG:   store i8* bitcast (void (i8*, i8*)* @[[CCOMB:.+]] to i8*), i8** [[TMP35]],
 // CHECK-DAG:   [[TMP36:%.+]] = getelementptr inbounds [[T2]], [[T2]]* [[GEPC]], i32 0, i32 5
 // CHECK-DAG:   [[TMP37:%.+]] = bitcast i32* [[TMP36]] to i8*
-// CHECK-DAG:   call void @llvm.memset.p0i8.i64(i8* [[TMP37]], i8 0, i64 4, i32 8, i1 false)
+// CHECK-DAG:   call void @llvm.memset.p0i8.i64(i8* align 8 [[TMP37]], i8 0, i64 4, i1 false)
 // CHECK-DAG:   [[TMP39:%.+]] = bitcast i16* [[VLA]] to i8*
 // CHECK-DAG:   store i8* [[TMP39]], i8** [[TMP38:%[^,]+]],
 // CHECK-DAG:   [[TMP38]] = getelementptr inbounds [[T2]], [[T2]]* [[GEPVLA:%[^,]+]], i32 0, i32 0

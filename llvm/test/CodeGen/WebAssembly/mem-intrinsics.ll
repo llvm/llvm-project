@@ -5,9 +5,9 @@
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown-wasm"
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i32, i1)
-declare void @llvm.memmove.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i32, i1)
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i32, i1)
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i1)
+declare void @llvm.memmove.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i1)
+declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1)
 
 ; Test that return values are optimized.
 
@@ -15,7 +15,7 @@ declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i32, i1)
 ; CHECK:      i32.call $push0=, memcpy@FUNCTION, $0, $1, $2{{$}}
 ; CHECK-NEXT: return   $pop0{{$}}
 define i8* @copy_yes(i8* %dst, i8* %src, i32 %len) {
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dst, i8* %src, i32 %len, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dst, i8* %src, i32 %len, i1 false)
   ret i8* %dst
 }
 
@@ -23,7 +23,7 @@ define i8* @copy_yes(i8* %dst, i8* %src, i32 %len) {
 ; CHECK:      i32.call $drop=, memcpy@FUNCTION, $0, $1, $2{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @copy_no(i8* %dst, i8* %src, i32 %len) {
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dst, i8* %src, i32 %len, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dst, i8* %src, i32 %len, i1 false)
   ret void
 }
 
@@ -31,7 +31,7 @@ define void @copy_no(i8* %dst, i8* %src, i32 %len) {
 ; CHECK:      i32.call $push0=, memmove@FUNCTION, $0, $1, $2{{$}}
 ; CHECK-NEXT: return   $pop0{{$}}
 define i8* @move_yes(i8* %dst, i8* %src, i32 %len) {
-  call void @llvm.memmove.p0i8.p0i8.i32(i8* %dst, i8* %src, i32 %len, i32 1, i1 false)
+  call void @llvm.memmove.p0i8.p0i8.i32(i8* %dst, i8* %src, i32 %len, i1 false)
   ret i8* %dst
 }
 
@@ -39,7 +39,7 @@ define i8* @move_yes(i8* %dst, i8* %src, i32 %len) {
 ; CHECK:      i32.call $drop=, memmove@FUNCTION, $0, $1, $2{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @move_no(i8* %dst, i8* %src, i32 %len) {
-  call void @llvm.memmove.p0i8.p0i8.i32(i8* %dst, i8* %src, i32 %len, i32 1, i1 false)
+  call void @llvm.memmove.p0i8.p0i8.i32(i8* %dst, i8* %src, i32 %len, i1 false)
   ret void
 }
 
@@ -47,7 +47,7 @@ define void @move_no(i8* %dst, i8* %src, i32 %len) {
 ; CHECK:      i32.call $push0=, memset@FUNCTION, $0, $1, $2{{$}}
 ; CHECK-NEXT: return   $pop0{{$}}
 define i8* @set_yes(i8* %dst, i8 %src, i32 %len) {
-  call void @llvm.memset.p0i8.i32(i8* %dst, i8 %src, i32 %len, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %dst, i8 %src, i32 %len, i1 false)
   ret i8* %dst
 }
 
@@ -55,7 +55,7 @@ define i8* @set_yes(i8* %dst, i8 %src, i32 %len) {
 ; CHECK:      i32.call $drop=, memset@FUNCTION, $0, $1, $2{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @set_no(i8* %dst, i8 %src, i32 %len) {
-  call void @llvm.memset.p0i8.i32(i8* %dst, i8 %src, i32 %len, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %dst, i8 %src, i32 %len, i1 false)
   ret void
 }
 
@@ -70,8 +70,8 @@ entry:
   %b = alloca [2048 x i8], align 16
   %0 = getelementptr inbounds [2048 x i8], [2048 x i8]* %a, i32 0, i32 0
   %1 = getelementptr inbounds [2048 x i8], [2048 x i8]* %b, i32 0, i32 0
-  call void @llvm.memset.p0i8.i32(i8* %0, i8 256, i32 1024, i32 16, i1 false)
-  call void @llvm.memset.p0i8.i32(i8* %1, i8 256, i32 1024, i32 16, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* align 16 %0, i8 256, i32 1024, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* align 16 %1, i8 256, i32 1024, i1 false)
   ret void
 }
 
@@ -93,7 +93,7 @@ bb5:
   br i1 %tmp6, label %bb7, label %bb8
 
 bb7:
-  call void @llvm.memset.p0i8.i32(i8* %arg, i8 %arg1, i32 %arg2, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %arg, i8 %arg1, i32 %arg2, i1 false)
   br label %bb11
 
 bb8:
@@ -124,7 +124,7 @@ bb5:
   br i1 %tmp6, label %bb7, label %bb8
 
 bb7:
-  call void @llvm.memset.p0i8.i32(i8* %arg, i8 %arg1, i32 %arg2, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %arg, i8 %arg1, i32 %arg2, i1 false)
   br label %bb11
 
 bb8:

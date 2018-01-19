@@ -94,7 +94,7 @@ entry:
   %a = alloca [5 x i32], align 4
   call void @llvm.dbg.declare(metadata [5 x i32]* %a, metadata !9, metadata !14), !dbg !15
   %0 = bitcast [5 x i32]* %a to i8*, !dbg !15
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %0, i8* bitcast ([5 x i32]* @"\01?a@?1??f@@YAXXZ@3PAHA" to i8*), i32 20, i32 4, i1 false), !dbg !15
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %0, i8* align 4 bitcast ([5 x i32]* @"\01?a@?1??f@@YAXXZ@3PAHA" to i8*), i32 20, i1 false), !dbg !15
   %arraydecay = getelementptr inbounds [5 x i32], [5 x i32]* %a, i32 0, i32 0, !dbg !16
   %arrayidx = getelementptr inbounds [5 x i32], [5 x i32]* %a, i32 0, i32 0, !dbg !17
   %1 = load i32, i32* %arrayidx, align 4, !dbg !17
@@ -106,7 +106,7 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i32, i1) #2
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i1) #2
 
 declare void @"\01?usevars@@YAXHZZ"(i32, ...) #3
 

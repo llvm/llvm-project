@@ -118,23 +118,23 @@ define { i32, i1 } @volatile_cmpxchg_group_to_flat(i32 addrspace(3)* %group.ptr,
 ; FIXME: Shouldn't be losing names
 ; CHECK-LABEL: @volatile_memset_group_to_flat(
 ; CHECK: addrspacecast i8 addrspace(3)* %group.ptr to i8 addrspace(4)*
-; CHECK: call void @llvm.memset.p4i8.i64(i8 addrspace(4)* %1, i8 4, i64 32, i32 4, i1 true)
+; CHECK: call void @llvm.memset.p4i8.i64(i8 addrspace(4)* align 4 %1, i8 4, i64 32, i1 true)
 define amdgpu_kernel void @volatile_memset_group_to_flat(i8 addrspace(3)* %group.ptr, i32 %y) #0 {
   %cast = addrspacecast i8 addrspace(3)* %group.ptr to i8 addrspace(4)*
-  call void @llvm.memset.p4i8.i64(i8 addrspace(4)* %cast, i8 4, i64 32, i32 4, i1 true)
+  call void @llvm.memset.p4i8.i64(i8 addrspace(4)* align 4 %cast, i8 4, i64 32, i1 true)
   ret void
 }
 
 ; CHECK-LABEL: @volatile_memset_global_to_flat(
 ; CHECK: addrspacecast i8 addrspace(1)* %global.ptr to i8 addrspace(4)*
-; CHECK: call void @llvm.memset.p4i8.i64(i8 addrspace(4)* %1, i8 4, i64 32, i32 4, i1 true)
+; CHECK: call void @llvm.memset.p4i8.i64(i8 addrspace(4)* align 4 %1, i8 4, i64 32, i1 true)
 define amdgpu_kernel void @volatile_memset_global_to_flat(i8 addrspace(1)* %global.ptr, i32 %y) #0 {
   %cast = addrspacecast i8 addrspace(1)* %global.ptr to i8 addrspace(4)*
-  call void @llvm.memset.p4i8.i64(i8 addrspace(4)* %cast, i8 4, i64 32, i32 4, i1 true)
+  call void @llvm.memset.p4i8.i64(i8 addrspace(4)* align 4 %cast, i8 4, i64 32, i1 true)
   ret void
 }
 
-declare void @llvm.memset.p4i8.i64(i8 addrspace(4)* nocapture writeonly, i8, i64, i32, i1) #1
+declare void @llvm.memset.p4i8.i64(i8 addrspace(4)* nocapture writeonly, i8, i64, i1) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }

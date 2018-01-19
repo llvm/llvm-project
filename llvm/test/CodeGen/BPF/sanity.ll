@@ -103,7 +103,7 @@ declare i32 @manyarg(i32, i32, i32, i32, i32) #2
 define void @foo_printf() #1 {
   %fmt = alloca [9 x i8], align 1
   %1 = getelementptr inbounds [9 x i8], [9 x i8]* %fmt, i64 0, i64 0
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @foo_printf.fmt, i64 0, i64 0), i64 9, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @foo_printf.fmt, i64 0, i64 0), i64 9, i1 false)
 ; CHECK-LABEL: foo_printf:
 ; CHECK: r1 = 729618802566522216 ll
   %2 = call i32 (i8*, ...) @printf(i8* %1) #3
@@ -111,7 +111,7 @@ define void @foo_printf() #1 {
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) #3
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) #3
 
 ; Function Attrs: nounwind
 declare i32 @printf(i8* nocapture, ...) #4

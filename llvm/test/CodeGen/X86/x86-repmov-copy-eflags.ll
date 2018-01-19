@@ -10,7 +10,7 @@ entry:
   %g = alloca %struct.T, align 8
   %r = alloca i32, align 8
   store i32 0, i32* %r, align 4
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %p, i8* %q, i32 24, i32 8, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 %p, i8* align 8 %q, i32 24, i1 false)
   br label %while.body
 
 while.body:                                       ; preds = %while.body, %entry
@@ -26,7 +26,7 @@ while.end:                                        ; preds = %while.body
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i32, i1) #1
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i1) #1
 
 declare void @g(%struct.T*)
 

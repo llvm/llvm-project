@@ -296,9 +296,12 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::UO_F32] = i32_func_f32_f32;
     Table[RTLIB::UO_F64] = i32_func_f64_f64;
     Table[RTLIB::UO_F128] = i32_func_i64_i64_i64_i64;
-    Table[RTLIB::O_F32] = i32_func_f32_f32;
-    Table[RTLIB::O_F64] = i32_func_f64_f64;
-    Table[RTLIB::O_F128] = i32_func_i64_i64_i64_i64;
+    // O_FXX has the weird property that it uses the same libcall name as UO_FXX
+    // This breaks our name-based lookup. Fortunately only the UO family of
+    // libcalls appears to be actually used.
+    Table[RTLIB::O_F32] = unsupported;
+    Table[RTLIB::O_F64] = unsupported;
+    Table[RTLIB::O_F128] = unsupported;
 
     // Memory
     Table[RTLIB::MEMCPY] = iPTR_func_iPTR_iPTR_iPTR;
@@ -455,25 +458,23 @@ struct RuntimeLibcallSignatureTable {
   }
 };
 
-
-StringRef StringRefOrEmpty(const char* arg) {
-  if (arg) return StringRef(arg);
-  return StringRef();
-}
+ManagedStatic<RuntimeLibcallSignatureTable> RuntimeLibcallSignatures;
 
 // Maps libcall names to their RTLIB::Libcall number. Builds the map in a
 // constructor for use with ManagedStatic
 struct StaticLibcallNameMap {
   StringMap<RTLIB::Libcall> Map;
   StaticLibcallNameMap() {
-#define HANDLE_LIBCALL(code, name) \
-    Map[StringRefOrEmpty(name)] = RTLIB::code;
-    #include "llvm/CodeGen/RuntimeLibcalls.def"
+#define HANDLE_LIBCALL(code, name)                                           \
+  if (name && RuntimeLibcallSignatures->Table[RTLIB::code] != unsupported) { \
+    assert(Map.find(StringRef::withNullAsEmpty(name)) == Map.end() &&        \
+           "duplicate libcall names in name map");                           \
+    Map[StringRef::withNullAsEmpty(name)] = RTLIB::code;                     \
+  }
+#include "llvm/CodeGen/RuntimeLibcalls.def"
 #undef HANDLE_LIBCALL
   }
 };
-
-ManagedStatic<RuntimeLibcallSignatureTable> RuntimeLibcallSignatures;
 
 } // end anonymous namespace
 

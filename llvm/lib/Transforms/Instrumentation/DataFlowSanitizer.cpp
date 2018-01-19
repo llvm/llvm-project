@@ -1382,20 +1382,19 @@ void DFSanVisitor::visitMemTransferInst(MemTransferInst &I) {
   Value *LenShadow = IRB.CreateMul(
       I.getLength(),
       ConstantInt::get(I.getLength()->getType(), DFSF.DFS.ShadowWidth / 8));
-  Value *AlignShadow;
-  if (ClPreserveAlignment) {
-    AlignShadow = IRB.CreateMul(I.getAlignmentCst(),
-                                ConstantInt::get(I.getAlignmentType(),
-                                                 DFSF.DFS.ShadowWidth / 8));
-  } else {
-    AlignShadow = ConstantInt::get(I.getAlignmentType(),
-                                   DFSF.DFS.ShadowWidth / 8);
-  }
   Type *Int8Ptr = Type::getInt8PtrTy(*DFSF.DFS.Ctx);
   DestShadow = IRB.CreateBitCast(DestShadow, Int8Ptr);
   SrcShadow = IRB.CreateBitCast(SrcShadow, Int8Ptr);
-  IRB.CreateCall(I.getCalledValue(), {DestShadow, SrcShadow, LenShadow,
-                                      AlignShadow, I.getVolatileCst()});
+  auto *MTI = cast<MemTransferInst>(
+      IRB.CreateCall(I.getCalledValue(),
+                     {DestShadow, SrcShadow, LenShadow, I.getVolatileCst()}));
+  // FIXME: Set the source & dest alignments of MTI based on the separate
+  // source & dest alignments of I
+  if (ClPreserveAlignment) {
+    MTI->setAlignment(I.getAlignment() * (DFSF.DFS.ShadowWidth / 8));
+  } else {
+    MTI->setAlignment(DFSF.DFS.ShadowWidth / 8);
+  }
 }
 
 void DFSanVisitor::visitReturnInst(ReturnInst &RI) {

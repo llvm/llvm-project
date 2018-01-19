@@ -26,7 +26,7 @@ define void @test_alloca() sanitize_hwaddress {
 ; CHECK: %[[E:[^ ]*]] = ptrtoint i32* %[[X]] to i64
 ; CHECK: %[[F:[^ ]*]] = lshr i64 %[[E]], 4
 ; CHECK: %[[X_SHADOW:[^ ]*]] = inttoptr i64 %[[F]] to i8*
-; CHECK: call void @llvm.memset.p0i8.i64(i8* %[[X_SHADOW]], i8 %[[X_TAG2]], i64 1, i32 1, i1 false)
+; CHECK: call void @llvm.memset.p0i8.i64(i8* align 1 %[[X_SHADOW]], i8 %[[X_TAG2]], i64 1, i1 false)
 ; CHECK: call void @use32(i32* nonnull %[[X_HWASAN]])
 
 ; CHECK: %[[X_TAG_UAR:[^ ]*]] = xor i64 %[[BASE_TAG]], 255
@@ -34,7 +34,7 @@ define void @test_alloca() sanitize_hwaddress {
 ; CHECK: %[[E2:[^ ]*]] = ptrtoint i32* %[[X]] to i64
 ; CHECK: %[[F2:[^ ]*]] = lshr i64 %[[E2]], 4
 ; CHECK: %[[X_SHADOW2:[^ ]*]] = inttoptr i64 %[[F2]] to i8*
-; CHECK: call void @llvm.memset.p0i8.i64(i8* %[[X_SHADOW2]], i8 %[[X_TAG_UAR2]], i64 1, i32 1, i1 false)
+; CHECK: call void @llvm.memset.p0i8.i64(i8* align 1 %[[X_SHADOW2]], i8 %[[X_TAG_UAR2]], i64 1, i1 false)
 ; CHECK: ret void
 
 

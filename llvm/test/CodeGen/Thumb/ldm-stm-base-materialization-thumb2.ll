@@ -22,7 +22,7 @@ entry:
   %2 = load i32*, i32** @b, align 4
   %arrayidx1 = getelementptr inbounds i32, i32* %2, i32 1
   %3 = bitcast i32* %arrayidx1 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %1, i8* %3, i32 24, i32 4, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %1, i8* align 4 %3, i32 24, i1 false)
   ret void
 }
 
@@ -43,7 +43,7 @@ entry:
   %2 = load i32*, i32** @b, align 4
   %arrayidx1 = getelementptr inbounds i32, i32* %2, i32 1
   %3 = bitcast i32* %arrayidx1 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %1, i8* %3, i32 28, i32 4, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %1, i8* align 4 %3, i32 28, i1 false)
   ret void
 }
 
@@ -64,7 +64,7 @@ entry:
   %2 = load i32*, i32** @b, align 4
   %arrayidx1 = getelementptr inbounds i32, i32* %2, i32 1
   %3 = bitcast i32* %arrayidx1 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %1, i8* %3, i32 32, i32 4, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %1, i8* align 4 %3, i32 32, i1 false)
   ret void
 }
 
@@ -85,9 +85,9 @@ entry:
   %2 = load i32*, i32** @b, align 4
   %arrayidx1 = getelementptr inbounds i32, i32* %2, i32 1
   %3 = bitcast i32* %arrayidx1 to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %1, i8* %3, i32 36, i32 4, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %1, i8* align 4 %3, i32 36, i1 false)
   ret void
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i32, i1) #1
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i1) #1

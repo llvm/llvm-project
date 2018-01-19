@@ -154,7 +154,7 @@ void *r = new T[n][3]{ { 1, 2, 3 }, { 4, 5, 6 } };
 //
 // CHECK: %[[SIZE:.*]] = sub i64 %{{.*}}, 24
 // CHECK: %[[REST:.*]] = bitcast %[[T]]* %[[T_2_AS_T]] to i8*
-// CHECK: call void @llvm.memset.p0i8.i64(i8* %[[REST]], i8 0, i64 %[[SIZE]], i32 4, i1 false)
+// CHECK: call void @llvm.memset.p0i8.i64(i8* align 4 %[[REST]], i8 0, i64 %[[SIZE]], i1 false)
 //
 // CHECK: }
 

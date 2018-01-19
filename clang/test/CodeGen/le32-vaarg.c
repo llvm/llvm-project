@@ -23,7 +23,7 @@ void get_struct(va_list *args) {
 // CHECK: [[RESULT:%[a-z_0-9]+]] = va_arg {{.*}}, %struct.Foo{{$}}
 // CHECK: store %struct.Foo [[RESULT]], %struct.Foo* [[LOC:%[a-z_0-9]+]]
 // CHECK: [[LOC2:%[a-z_0-9]+]] = bitcast {{.*}} [[LOC]] to i8*
-// CHECK: call void @llvm.memcpy{{.*}}@dest{{.*}}, i8* [[LOC2]]
+// CHECK: call void @llvm.memcpy{{.*}}@dest{{.*}}, i8* align {{[0-9]+}} [[LOC2]]
 
 void skip_struct(va_list *args) {
   va_arg(*args, struct Foo);

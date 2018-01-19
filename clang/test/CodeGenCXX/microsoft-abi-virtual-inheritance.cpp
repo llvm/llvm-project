@@ -490,7 +490,7 @@ C::C() : B() {}
 // CHECK:   %[[B:.*]] = bitcast %"struct.test5::C"* %[[THIS]] to %"struct.test5::B"*
 // CHECK:   %[[B_i8:.*]] = bitcast %"struct.test5::B"* %[[B]] to i8*
 // CHECK:   %[[FIELD:.*]] = getelementptr inbounds i8, i8* %[[B_i8]], i32 4
-// CHECK:   call void @llvm.memset.p0i8.i32(i8* %[[FIELD]], i8 0, i32 4, i32 4, i1 false)
+// CHECK:   call void @llvm.memset.p0i8.i32(i8* align 4 %[[FIELD]], i8 0, i32 4, i1 false)
 }
 
 namespace pr27621 {
@@ -530,5 +530,5 @@ D::D() : C() {}
 // CHECK:   %[[C:.*]] = bitcast %"class.test6::D"* %[[THIS]] to %"class.test6::C"*
 // CHECK:   %[[C_i8:.*]] = bitcast %"class.test6::C"* %[[C]] to i8*
 // CHECK:   %[[FIELD:.*]] = getelementptr inbounds i8, i8* %[[C_i8]], i32 8
-// CHECK:   call void @llvm.memset.p0i8.i32(i8* %[[FIELD]], i8 0, i32 4, i32 4, i1 false)
+// CHECK:   call void @llvm.memset.p0i8.i32(i8* align 4 %[[FIELD]], i8 0, i32 4, i1 false)
 }

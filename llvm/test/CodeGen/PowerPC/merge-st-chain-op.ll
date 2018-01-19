@@ -17,7 +17,7 @@ _ZN4llvm18IntrusiveRefCntPtrIN5clang13DiagnosticIDsEEC2EPS2_.exit: ; preds = %en
   store <2 x i8*> <i8* bitcast (i64* getelementptr inbounds ([0 x i64], [0 x i64]* @_ZNSs4_Rep20_S_empty_rep_storageE, i64 0, i64 3) to i8*), i8* bitcast (i64* getelementptr inbounds ([0 x i64], [0 x i64]* @_ZNSs4_Rep20_S_empty_rep_storageE, i64 0, i64 3) to i8*)>, <2 x i8*>* undef, align 8
   %IgnoreWarnings.i = getelementptr inbounds i8, i8* %call2, i64 4
   %0 = bitcast i8* %IgnoreWarnings.i to i32*
-  call void @llvm.memset.p0i8.i64(i8* null, i8 0, i64 48, i32 8, i1 false) #4
+  call void @llvm.memset.p0i8.i64(i8* align 8 null, i8 0, i64 48, i1 false) #4
   store i32 251658240, i32* %0, align 4
   store i256 37662610426935100959726589394453639584271499769928088551424, i256* null, align 8
   store i32 1, i32* %ref_cnt.i.i, align 4
@@ -31,7 +31,7 @@ return:                                           ; preds = %entry
 declare noalias i8* @_Znwm() #1
 
 ; Function Attrs: nounwind argmemonly
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) #2
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) #2
 
 attributes #0 = { nounwind "target-cpu"="pwr7" }
 attributes #1 = { nobuiltin "target-cpu"="pwr7" }
