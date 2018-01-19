@@ -22,7 +22,7 @@ entry:
 
 end:
   ; copy third element into first element by memcpy
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull %dst, i8* %src, i64 16, i32 8, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 nonnull %dst, i8* align 8 %src, i64 16, i1 false)
   ; copy third element into second element by LD/ST
   %vec2 = load <2 x i64>, <2 x i64>* %pvec2, align 8
   store <2 x i64> %vec2, <2 x i64>* %pvec1, align 8
@@ -30,7 +30,7 @@ end:
 
 dummy:
   ; to make use of %src in another BB
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %src, i8* %src, i64 0, i32 0, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %src, i8* %src, i64 0, i1 false)
   br label %end
 }
 
@@ -55,7 +55,7 @@ entry:
 
 end:
   ; copy third element into first element by memcpy
-  call void @llvm.memmove.p0i8.p0i8.i64(i8* nonnull %dst, i8* %src, i64 16, i32 8, i1 false)
+  call void @llvm.memmove.p0i8.p0i8.i64(i8* align 8 nonnull %dst, i8* align 8 %src, i64 16, i1 false)
   ; copy third element into second element by LD/ST
   %vec2 = load <2 x i64>, <2 x i64>* %pvec2, align 8
   store <2 x i64> %vec2, <2 x i64>* %pvec1, align 8
@@ -63,12 +63,12 @@ end:
 
 dummy:
   ; to make use of %src in another BB
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %src, i8* %src, i64 0, i32 0, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %src, i8* %src, i64 0, i1 false)
   br label %end
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1) #1
-declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1) #1
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
+declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
 
 attributes #1 = { argmemonly nounwind }

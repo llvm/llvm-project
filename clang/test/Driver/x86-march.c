@@ -76,6 +76,10 @@
 // RUN:   | FileCheck %s -check-prefix=silvermont
 // silvermont: "-target-cpu" "silvermont"
 //
+// RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=goldmont 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=goldmont
+// goldmont: "-target-cpu" "goldmont"
+//
 // RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=k8 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=k8
 // k8: "-target-cpu" "k8"

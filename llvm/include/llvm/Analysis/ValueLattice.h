@@ -189,14 +189,14 @@ public:
     }
 
     if (isConstant()) {
-      if (RHS.isConstant() && Val == RHS.Val)
+      if (RHS.isConstant() && getConstant() == RHS.getConstant())
         return false;
       markOverdefined();
       return true;
     }
 
     if (isNotConstant()) {
-      if (RHS.isNotConstant() && Val == RHS.Val)
+      if (RHS.isNotConstant() && getNotConstant() == RHS.getNotConstant())
         return false;
       markOverdefined();
       return true;
@@ -209,7 +209,7 @@ public:
       markOverdefined();
       return true;
     }
-    ConstantRange NewR = Range.unionWith(RHS.getConstantRange());
+    ConstantRange NewR = getConstantRange().unionWith(RHS.getConstantRange());
     if (NewR.isFullSet())
       markOverdefined();
     else

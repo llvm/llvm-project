@@ -10,11 +10,11 @@ entry:
   store i8* %P, i8** %P_addr
   %tmp = load i8*, i8** %P_addr, align 4
   %tmp1 = getelementptr [4 x i8], [4 x i8]* @.str, i32 0, i32 0
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp, i8* %tmp1, i32 4, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp, i8* %tmp1, i32 4, i1 false)
   br label %return
 
 return:                                           ; preds = %entry
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind

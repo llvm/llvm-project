@@ -30,6 +30,14 @@ def NotHasNontrappingFPToInt :
     Predicate<"!Subtarget->hasNontrappingFPToInt()">,
               AssemblerPredicate<"!FeatureNontrappingFPToInt",
                                  "nontrapping-fptoint">;
+def HasSignExt :
+    Predicate<"Subtarget->hasSignExt()">,
+              AssemblerPredicate<"FeatureSignExt",
+                                 "sign-ext">;
+def NotHasSignExt :
+    Predicate<"!Subtarget->hasSignExt()">,
+              AssemblerPredicate<"!FeatureSignExt",
+                                 "sign-ext">;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific DAG Node Types.

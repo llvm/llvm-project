@@ -93,11 +93,11 @@ struct S test_struct(char *fmt, ...) {
 // CHECK:   [[R3:%[^,=]+]] = bitcast i8* [[ARGP_CUR]] to [[STRUCT_S]]*
 // CHECK:   [[R4:%[^,=]+]] = bitcast [[STRUCT_S]]* [[V]] to i8*
 // CHECK:   [[R5:%[^,=]+]] = bitcast [[STRUCT_S]]* [[R3]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[R4]], i8* [[R5]], i32 12, i32 4, i1 false)
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[R4]], i8* align 4 [[R5]], i32 12, i1 false)
 // CHECK:   [[VA2:%[^,=]+]] = bitcast i8** [[VA]] to i8*
 // CHECK:   call void @llvm.va_end(i8* [[VA2]])
 // CHECK:   [[R6:%[^,=]+]] = bitcast [[STRUCT_S]]* %agg.result to i8*
 // CHECK:   [[R7:%[^,=]+]] = bitcast [[STRUCT_S]]* [[V]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[R6]], i8* [[R7]], i32 12, i32 4, i1 false)
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[R6]], i8* align 4 [[R7]], i32 12, i1 false)
 // CHECK:   ret void
 // CHECK: }

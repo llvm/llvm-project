@@ -385,14 +385,14 @@ double f_va_3(char *fmt, ...) {
 // CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8* [[ARGP_CUR4]] to %struct.tiny*
 // CHECK-NEXT:    [[TMP6:%.*]] = bitcast %struct.tiny* [[TS]] to i8*
 // CHECK-NEXT:    [[TMP7:%.*]] = bitcast %struct.tiny* [[TMP5]] to i8*
-// CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[TMP6]], i8* [[TMP7]], i32 4, i32 1, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[TMP6]], i8* align 1 [[TMP7]], i32 4, i1 false)
 // CHECK-NEXT:    [[ARGP_CUR6:%.*]] = load i8*, i8** [[VA]], align 4
 // CHECK-NEXT:    [[ARGP_NEXT7:%.*]] = getelementptr inbounds i8, i8* [[ARGP_CUR6]], i32 8
 // CHECK-NEXT:    store i8* [[ARGP_NEXT7]], i8** [[VA]], align 4
 // CHECK-NEXT:    [[TMP8:%.*]] = bitcast i8* [[ARGP_CUR6]] to %struct.small*
 // CHECK-NEXT:    [[TMP9:%.*]] = bitcast %struct.small* [[SS]] to i8*
 // CHECK-NEXT:    [[TMP10:%.*]] = bitcast %struct.small* [[TMP8]] to i8*
-// CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[TMP9]], i8* [[TMP10]], i32 8, i32 4, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[TMP9]], i8* align 4 [[TMP10]], i32 8, i1 false)
 // CHECK-NEXT:    [[ARGP_CUR8:%.*]] = load i8*, i8** [[VA]], align 4
 // CHECK-NEXT:    [[ARGP_NEXT9:%.*]] = getelementptr inbounds i8, i8* [[ARGP_CUR8]], i32 4
 // CHECK-NEXT:    store i8* [[ARGP_NEXT9]], i8** [[VA]], align 4
@@ -400,7 +400,7 @@ double f_va_3(char *fmt, ...) {
 // CHECK-NEXT:    [[TMP12:%.*]] = load %struct.large*, %struct.large** [[TMP11]], align 4
 // CHECK-NEXT:    [[TMP13:%.*]] = bitcast %struct.large* [[LS]] to i8*
 // CHECK-NEXT:    [[TMP14:%.*]] = bitcast %struct.large* [[TMP12]] to i8*
-// CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[TMP13]], i8* [[TMP14]], i32 16, i32 4, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[TMP13]], i8* align 4 [[TMP14]], i32 16, i1 false)
 // CHECK-NEXT:    [[VA10:%.*]] = bitcast i8** [[VA]] to i8*
 // CHECK-NEXT:    call void @llvm.va_end(i8* [[VA10]])
 int f_va_4(char *fmt, ...) {

@@ -15,6 +15,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Statepoint.h"
@@ -83,13 +84,16 @@ CreateMemSet(Value *Ptr, Value *Val, Value *Size, unsigned Align,
              bool isVolatile, MDNode *TBAATag, MDNode *ScopeTag,
              MDNode *NoAliasTag) {
   Ptr = getCastedInt8PtrValue(Ptr);
-  Value *Ops[] = { Ptr, Val, Size, getInt32(Align), getInt1(isVolatile) };
+  Value *Ops[] = {Ptr, Val, Size, getInt1(isVolatile)};
   Type *Tys[] = { Ptr->getType(), Size->getType() };
   Module *M = BB->getParent()->getParent();
   Value *TheFn = Intrinsic::getDeclaration(M, Intrinsic::memset, Tys);
   
   CallInst *CI = createCallHelper(TheFn, Ops, this);
-  
+
+  if (Align > 0)
+    cast<MemSetInst>(CI)->setDestAlignment(Align);
+
   // Set the TBAA info if present.
   if (TBAATag)
     CI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
@@ -99,7 +103,7 @@ CreateMemSet(Value *Ptr, Value *Val, Value *Size, unsigned Align,
  
   if (NoAliasTag)
     CI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
- 
+
   return CI;
 }
 
@@ -107,16 +111,20 @@ CallInst *IRBuilderBase::
 CreateMemCpy(Value *Dst, Value *Src, Value *Size, unsigned Align,
              bool isVolatile, MDNode *TBAATag, MDNode *TBAAStructTag,
              MDNode *ScopeTag, MDNode *NoAliasTag) {
+  assert((Align == 0 || isPowerOf2_32(Align)) && "Must be 0 or a power of 2");
   Dst = getCastedInt8PtrValue(Dst);
   Src = getCastedInt8PtrValue(Src);
 
-  Value *Ops[] = { Dst, Src, Size, getInt32(Align), getInt1(isVolatile) };
+  Value *Ops[] = {Dst, Src, Size, getInt1(isVolatile)};
   Type *Tys[] = { Dst->getType(), Src->getType(), Size->getType() };
   Module *M = BB->getParent()->getParent();
   Value *TheFn = Intrinsic::getDeclaration(M, Intrinsic::memcpy, Tys);
   
   CallInst *CI = createCallHelper(TheFn, Ops, this);
-  
+
+  if (Align > 0)
+    cast<MemCpyInst>(CI)->setAlignment(Align);
+
   // Set the TBAA info if present.
   if (TBAATag)
     CI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
@@ -130,7 +138,7 @@ CreateMemCpy(Value *Dst, Value *Src, Value *Size, unsigned Align,
  
   if (NoAliasTag)
     CI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
- 
+
   return CI;  
 }
 
@@ -154,8 +162,9 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemCpy(
   CallInst *CI = createCallHelper(TheFn, Ops, this);
 
   // Set the alignment of the pointer args.
-  CI->addParamAttr(0, Attribute::getWithAlignment(CI->getContext(), DstAlign));
-  CI->addParamAttr(1, Attribute::getWithAlignment(CI->getContext(), SrcAlign));
+  auto *AMCI = cast<AtomicMemCpyInst>(CI);
+  AMCI->setDestAlignment(DstAlign);
+  AMCI->setSourceAlignment(SrcAlign);
 
   // Set the TBAA info if present.
   if (TBAATag)
@@ -178,16 +187,21 @@ CallInst *IRBuilderBase::
 CreateMemMove(Value *Dst, Value *Src, Value *Size, unsigned Align,
               bool isVolatile, MDNode *TBAATag, MDNode *ScopeTag,
               MDNode *NoAliasTag) {
+  assert((Align == 0 || isPowerOf2_32(Align)) && "Must be 0 or a power of 2");
   Dst = getCastedInt8PtrValue(Dst);
   Src = getCastedInt8PtrValue(Src);
-  
-  Value *Ops[] = { Dst, Src, Size, getInt32(Align), getInt1(isVolatile) };
+
+  Value *Ops[] = {Dst, Src, Size, getInt1(isVolatile)};
   Type *Tys[] = { Dst->getType(), Src->getType(), Size->getType() };
   Module *M = BB->getParent()->getParent();
   Value *TheFn = Intrinsic::getDeclaration(M, Intrinsic::memmove, Tys);
   
   CallInst *CI = createCallHelper(TheFn, Ops, this);
-  
+
+  auto *MMI = cast<MemMoveInst>(CI);
+  if (Align > 0)
+    MMI->setAlignment(Align);
+
   // Set the TBAA info if present.
   if (TBAATag)
     CI->setMetadata(LLVMContext::MD_tbaa, TBAATag);

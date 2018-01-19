@@ -157,7 +157,7 @@ entry:
   %retval = alloca %struct.HVA4, align 16
   %0 = bitcast %struct.HVA4* %retval to i8*
   %1 = bitcast %struct.HVA4* %b to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %0, i8* %1, i32 64, i32 16, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 %0, i8* align 16 %1, i32 64, i1 false)
   %2 = load %struct.HVA4, %struct.HVA4* %retval, align 16
   ret %struct.HVA4 %2
 }
@@ -168,18 +168,18 @@ entry:
 ; CHECK:       movaps	48(%{{[re]}}sp), %xmm3
 ; CHECK:       ret{{[ql]}}
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1)
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1)
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i32, i1)
+declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1)
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1)
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i1)
 
 define x86_vectorcallcc void @test_mixed_7(%struct.HVA5* noalias sret %agg.result) {
 entry:
   %a = alloca %struct.HVA5, align 16
   %0 = bitcast %struct.HVA5* %a to i8*
-  call void @llvm.memset.p0i8.i64(i8* %0, i8 0, i64 80, i32 16, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* align 16 %0, i8 0, i64 80, i1 false)
   %1 = bitcast %struct.HVA5* %agg.result to i8*
   %2 = bitcast %struct.HVA5* %a to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* %2, i64 80, i32 16, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %1, i8* align 16 %2, i64 80, i1 false)
   ret void
 }
 ; CHECK-LABEL: test_mixed_7

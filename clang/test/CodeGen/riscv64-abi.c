@@ -375,14 +375,14 @@ long double f_va_3(char *fmt, ...) {
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[ARGP_CUR2]] to %struct.tiny*
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast %struct.tiny* [[TS]] to i8*
 // CHECK-NEXT:    [[TMP4:%.*]] = bitcast %struct.tiny* [[TMP2]] to i8*
-// CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP3]], i8* [[TMP4]], i64 8, i32 2, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 2 [[TMP3]], i8* align 2 [[TMP4]], i64 8, i1 false)
 // CHECK-NEXT:    [[ARGP_CUR4:%.*]] = load i8*, i8** [[VA]], align 8
 // CHECK-NEXT:    [[ARGP_NEXT5:%.*]] = getelementptr inbounds i8, i8* [[ARGP_CUR4]], i64 16
 // CHECK-NEXT:    store i8* [[ARGP_NEXT5]], i8** [[VA]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8* [[ARGP_CUR4]] to %struct.small*
 // CHECK-NEXT:    [[TMP6:%.*]] = bitcast %struct.small* [[SS]] to i8*
 // CHECK-NEXT:    [[TMP7:%.*]] = bitcast %struct.small* [[TMP5]] to i8*
-// CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP6]], i8* [[TMP7]], i64 16, i32 8, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP6]], i8* align 8 [[TMP7]], i64 16, i1 false)
 // CHECK-NEXT:    [[ARGP_CUR6:%.*]] = load i8*, i8** [[VA]], align 8
 // CHECK-NEXT:    [[ARGP_NEXT7:%.*]] = getelementptr inbounds i8, i8* [[ARGP_CUR6]], i64 8
 // CHECK-NEXT:    store i8* [[ARGP_NEXT7]], i8** [[VA]], align 8
@@ -390,7 +390,7 @@ long double f_va_3(char *fmt, ...) {
 // CHECK-NEXT:    [[TMP9:%.*]] = load %struct.large*, %struct.large** [[TMP8]], align 8
 // CHECK-NEXT:    [[TMP10:%.*]] = bitcast %struct.large* [[LS]] to i8*
 // CHECK-NEXT:    [[TMP11:%.*]] = bitcast %struct.large* [[TMP9]] to i8*
-// CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP10]], i8* [[TMP11]], i64 32, i32 8, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP10]], i8* align 8 [[TMP11]], i64 32, i1 false)
 // CHECK-NEXT:    [[VA8:%.*]] = bitcast i8** [[VA]] to i8*
 // CHECK-NEXT:    call void @llvm.va_end(i8* [[VA8]])
 // CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_TINY]], %struct.tiny* [[TS]], i32 0, i32 0

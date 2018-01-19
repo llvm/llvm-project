@@ -102,6 +102,18 @@ static llvm::Optional<StringRef> getRawStringDelimiter(StringRef TokenText) {
   return Delimiter;
 }
 
+// Returns the canonical delimiter for \p Language, or the empty string if no
+// canonical delimiter is specified.
+static StringRef
+getCanonicalRawStringDelimiter(const FormatStyle &Style,
+                               FormatStyle::LanguageKind Language) {
+  for (const auto &Format : Style.RawStringFormats) {
+    if (Format.Language == Language)
+      return StringRef(Format.CanonicalDelimiter);
+  }
+  return "";
+}
+
 RawStringFormatStyleManager::RawStringFormatStyleManager(
     const FormatStyle &CodeStyle) {
   for (const auto &RawStringFormat : CodeStyle.RawStringFormats) {
@@ -1312,14 +1324,32 @@ unsigned ContinuationIndenter::reformatRawStringLiteral(
     const FormatToken &Current, LineState &State,
     const FormatStyle &RawStringStyle, bool DryRun) {
   unsigned StartColumn = State.Column - Current.ColumnWidth;
-  auto Delimiter = *getRawStringDelimiter(Current.TokenText);
+  StringRef OldDelimiter = *getRawStringDelimiter(Current.TokenText);
+  StringRef NewDelimiter =
+      getCanonicalRawStringDelimiter(Style, RawStringStyle.Language);
+  if (NewDelimiter.empty() || OldDelimiter.empty())
+    NewDelimiter = OldDelimiter;
   // The text of a raw string is between the leading 'R"delimiter(' and the
   // trailing 'delimiter)"'.
-  unsigned PrefixSize = 3 + Delimiter.size();
-  unsigned SuffixSize = 2 + Delimiter.size();
+  unsigned OldPrefixSize = 3 + OldDelimiter.size();
+  unsigned OldSuffixSize = 2 + OldDelimiter.size();
+  // We create a virtual text environment which expects a null-terminated
+  // string, so we cannot use StringRef.
+  std::string RawText =
+      Current.TokenText.substr(OldPrefixSize).drop_back(OldSuffixSize);
+  if (NewDelimiter != OldDelimiter) {
+    // Don't update to the canonical delimiter 'deli' if ')deli"' occurs in the
+    // raw string.
+    std::string CanonicalDelimiterSuffix = (")" + NewDelimiter + "\"").str();
+    if (StringRef(RawText).contains(CanonicalDelimiterSuffix))
+      NewDelimiter = OldDelimiter;
+  }
 
-  // The first start column is the column the raw text starts.
-  unsigned FirstStartColumn = StartColumn + PrefixSize;
+  unsigned NewPrefixSize = 3 + NewDelimiter.size();
+  unsigned NewSuffixSize = 2 + NewDelimiter.size();
+
+  // The first start column is the column the raw text starts after formatting.
+  unsigned FirstStartColumn = StartColumn + NewPrefixSize;
 
   // The next start column is the intended indentation a line break inside
   // the raw string at level 0. It is determined by the following rules:
@@ -1330,7 +1360,7 @@ unsigned ContinuationIndenter::reformatRawStringLiteral(
   // These rules have the advantage that the formatted content both does not
   // violate the rectangle rule and visually flows within the surrounding
   // source.
-  bool ContentStartsOnNewline = Current.TokenText[PrefixSize] == '\n';
+  bool ContentStartsOnNewline = Current.TokenText[OldPrefixSize] == '\n';
   unsigned NextStartColumn = ContentStartsOnNewline
                                  ? State.Stack.back().Indent + Style.IndentWidth
                                  : FirstStartColumn;
@@ -1344,11 +1374,8 @@ unsigned ContinuationIndenter::reformatRawStringLiteral(
   //   - if the raw string prefix does not start on a newline, it is the current
   //     indent.
   unsigned LastStartColumn = Current.NewlinesBefore
-                                 ? FirstStartColumn - PrefixSize
+                                 ? FirstStartColumn - NewPrefixSize
                                  : State.Stack.back().Indent;
-
-  std::string RawText =
-      Current.TokenText.substr(PrefixSize).drop_back(SuffixSize);
 
   std::pair<tooling::Replacements, unsigned> Fixes = internal::reformat(
       RawStringStyle, RawText, {tooling::Range(0, RawText.size())},
@@ -1362,8 +1389,33 @@ unsigned ContinuationIndenter::reformatRawStringLiteral(
     return 0;
   }
   if (!DryRun) {
+    if (NewDelimiter != OldDelimiter) {
+      // In 'R"delimiter(...', the delimiter starts 2 characters after the start
+      // of the token.
+      SourceLocation PrefixDelimiterStart =
+          Current.Tok.getLocation().getLocWithOffset(2);
+      auto PrefixErr = Whitespaces.addReplacement(tooling::Replacement(
+          SourceMgr, PrefixDelimiterStart, OldDelimiter.size(), NewDelimiter));
+      if (PrefixErr) {
+        llvm::errs()
+            << "Failed to update the prefix delimiter of a raw string: "
+            << llvm::toString(std::move(PrefixErr)) << "\n";
+      }
+      // In 'R"delimiter(...)delimiter"', the suffix delimiter starts at
+      // position length - 1 - |delimiter|.
+      SourceLocation SuffixDelimiterStart =
+          Current.Tok.getLocation().getLocWithOffset(Current.TokenText.size() -
+                                                     1 - OldDelimiter.size());
+      auto SuffixErr = Whitespaces.addReplacement(tooling::Replacement(
+          SourceMgr, SuffixDelimiterStart, OldDelimiter.size(), NewDelimiter));
+      if (SuffixErr) {
+        llvm::errs()
+            << "Failed to update the suffix delimiter of a raw string: "
+            << llvm::toString(std::move(SuffixErr)) << "\n";
+      }
+    }
     SourceLocation OriginLoc =
-        Current.Tok.getLocation().getLocWithOffset(PrefixSize);
+        Current.Tok.getLocation().getLocWithOffset(OldPrefixSize);
     for (const tooling::Replacement &Fix : Fixes.first) {
       auto Err = Whitespaces.addReplacement(tooling::Replacement(
           SourceMgr, OriginLoc.getLocWithOffset(Fix.getOffset()),
@@ -1376,7 +1428,7 @@ unsigned ContinuationIndenter::reformatRawStringLiteral(
   }
   unsigned RawLastLineEndColumn = getLastLineEndColumn(
       *NewCode, FirstStartColumn, Style.TabWidth, Encoding);
-  State.Column = RawLastLineEndColumn + SuffixSize;
+  State.Column = RawLastLineEndColumn + NewSuffixSize;
   return Fixes.second;
 }
 

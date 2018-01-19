@@ -79,7 +79,7 @@ sum = 0.0;
 // CHECK-DAG:    store i8* bitcast (void (i8*, i8*)* @[[RED_COMB1:.+]] to i8*), i8** [[TMP25]],
 // CHECK-DAG:    [[TMP26:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_RED_INPUT_T]], %struct.kmp_task_red_input_t* [[DOTRD_INPUT_GEP_]], i32 0, i32 5
 // CHECK-DAG:    [[TMP27:%.*]] = bitcast i32* [[TMP26]] to i8*
-// CHECK-DAG:    call void @llvm.memset.p0i8.i64(i8* [[TMP27]], i8 0, i64 4, i32 8, i1 false)
+// CHECK-DAG:    call void @llvm.memset.p0i8.i64(i8* align 8 [[TMP27]], i8 0, i64 4, i1 false)
 // CHECK-DAG:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [100 x %struct.S], [100 x %struct.S]* [[C]], i64 0, i64 0
 // CHECK-DAG:    [[LB_ADD_LEN:%.*]] = add nsw i64 -1, %
 // CHECK-DAG:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [100 x %struct.S], [100 x %struct.S]* [[C]], i64 0, i64 [[LB_ADD_LEN]]
@@ -116,7 +116,7 @@ sum = 0.0;
 // CHECK-DAG:    store i8* bitcast (void (i8*, i8*)* @[[RED_COMB3:.+]] to i8*), i8** [[TMP49]],
 // CHECK-DAG:    [[TMP50:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_RED_INPUT_T]], %struct.kmp_task_red_input_t* [[DOTRD_INPUT_GEP_7]], i32 0, i32 5
 // CHECK-DAG:    [[TMP51:%.*]] = bitcast i32* [[TMP50]] to i8*
-// CHECK-DAG:    call void @llvm.memset.p0i8.i64(i8* [[TMP51]], i8 0, i64 4, i32 8, i1 false)
+// CHECK-DAG:    call void @llvm.memset.p0i8.i64(i8* align 8 [[TMP51]], i8 0, i64 4, i1 false)
 // CHECK-DAG:    [[TMP53:%.*]] = bitcast float* [[VLA]] to i8*
 // CHECK-DAG:    store i8* [[TMP53]], i8** [[TMP52:%[^,]+]],
 // CHECK-DAG:    [[TMP52]] = getelementptr inbounds [[STRUCT_KMP_TASK_RED_INPUT_T]], %struct.kmp_task_red_input_t* [[DOTRD_INPUT_GEP_8:%.+]], i32 0, i32 0

@@ -24,6 +24,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -94,7 +95,11 @@ public:
 
   LLVM_ATTRIBUTE_RETURNS_NONNULL void *Allocate(size_t Size,
                                                 size_t /*Alignment*/) {
-    return malloc(Size);
+    void* memPtr =  malloc(Size);
+    if (memPtr == nullptr) 
+      report_bad_alloc_error("Allocation in MallocAllocator failed.");
+
+    return memPtr;
   }
 
   // Pull in base class overloads.

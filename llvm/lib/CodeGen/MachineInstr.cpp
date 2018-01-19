@@ -1425,6 +1425,15 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     }
   }
 
+  if (!SkipDebugLoc) {
+    if (const DebugLoc &DL = getDebugLoc()) {
+      if (!FirstOp)
+        OS << ',';
+      OS << " debug-location ";
+      DL->printAsOperand(OS, MST);
+    }
+  }
+
   bool HaveSemi = false;
   if (!memoperands_empty()) {
     if (!HaveSemi) {
@@ -1440,6 +1449,9 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
         OS << " ";
     }
   }
+
+  if (SkipDebugLoc)
+    return;
 
   // Print debug location information.
   if (isDebugValue() && getOperand(e - 2).isMetadata()) {
@@ -1457,13 +1469,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     }
     if (isIndirectDebugValue())
       OS << " indirect";
-  } else if (SkipDebugLoc) {
-    return;
-  } else if (debugLoc && MF) {
-    if (!HaveSemi)
-      OS << ";";
-    OS << " dbg:";
-    debugLoc.print(OS);
   }
 
   OS << '\n';

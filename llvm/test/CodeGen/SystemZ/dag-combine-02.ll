@@ -18,7 +18,7 @@
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1) #0
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #0
 
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #0
@@ -100,7 +100,7 @@ define signext i32 @main(i32 signext, i8** nocapture readonly) local_unnamed_add
   store i64 0, i64* @g_56, align 8
   %62 = bitcast [4 x [7 x i16*]]* %3 to i8*
   call void @llvm.lifetime.start.p0i8(i64 224, i8* nonnull %62) #5
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull %62, i8* bitcast ([4 x [7 x i16*]]* @func_22.l_91 to i8*), i64 224, i32 8, i1 false) #5
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 nonnull %62, i8* align 8 bitcast ([4 x [7 x i16*]]* @func_22.l_91 to i8*), i64 224, i1 false) #5
   %63 = getelementptr inbounds [4 x [7 x i16*]], [4 x [7 x i16*]]* %3, i64 0, i64 0, i64 2
   store i16** %63, i16*** @g_102, align 8
   %64 = load i64, i64* @g_56, align 8

@@ -3,10 +3,9 @@
 
 define i32* @test1a(i32* %p, i32* %q) {
 ; CHECK-LABEL: @test1a(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, i32* [[P:%.*]], i64 4
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i32, i32* [[Q:%.*]], i64 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32* [[P]], [[Q]]
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32* [[GEP1]], i32* [[GEP2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32* [[P:%.*]], [[Q:%.*]]
+; CHECK-NEXT:    [[SELECT_V:%.*]] = select i1 [[CMP]], i32* [[P]], i32* [[Q]]
+; CHECK-NEXT:    [[SELECT:%.*]] = getelementptr i32, i32* [[SELECT_V]], i64 4
 ; CHECK-NEXT:    ret i32* [[SELECT]]
 ;
   %gep1 = getelementptr i32, i32* %p, i64 4
@@ -18,10 +17,9 @@ define i32* @test1a(i32* %p, i32* %q) {
 
 define i32* @test1b(i32* %p, i32* %q) {
 ; CHECK-LABEL: @test1b(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 4
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i32, i32* [[Q:%.*]], i64 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32* [[P]], [[Q]]
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32* [[GEP1]], i32* [[GEP2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32* [[P:%.*]], [[Q:%.*]]
+; CHECK-NEXT:    [[SELECT_V:%.*]] = select i1 [[CMP]], i32* [[P]], i32* [[Q]]
+; CHECK-NEXT:    [[SELECT:%.*]] = getelementptr i32, i32* [[SELECT_V]], i64 4
 ; CHECK-NEXT:    ret i32* [[SELECT]]
 ;
   %gep1 = getelementptr inbounds i32, i32* %p, i64 4
@@ -33,10 +31,9 @@ define i32* @test1b(i32* %p, i32* %q) {
 
 define i32* @test1c(i32* %p, i32* %q) {
 ; CHECK-LABEL: @test1c(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, i32* [[P:%.*]], i64 4
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, i32* [[Q:%.*]], i64 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32* [[P]], [[Q]]
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32* [[GEP1]], i32* [[GEP2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32* [[P:%.*]], [[Q:%.*]]
+; CHECK-NEXT:    [[SELECT_V:%.*]] = select i1 [[CMP]], i32* [[P]], i32* [[Q]]
+; CHECK-NEXT:    [[SELECT:%.*]] = getelementptr i32, i32* [[SELECT_V]], i64 4
 ; CHECK-NEXT:    ret i32* [[SELECT]]
 ;
   %gep1 = getelementptr i32, i32* %p, i64 4
@@ -48,10 +45,9 @@ define i32* @test1c(i32* %p, i32* %q) {
 
 define i32* @test1d(i32* %p, i32* %q) {
 ; CHECK-LABEL: @test1d(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 4
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, i32* [[Q:%.*]], i64 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32* [[P]], [[Q]]
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32* [[GEP1]], i32* [[GEP2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32* [[P:%.*]], [[Q:%.*]]
+; CHECK-NEXT:    [[SELECT_V:%.*]] = select i1 [[CMP]], i32* [[P]], i32* [[Q]]
+; CHECK-NEXT:    [[SELECT:%.*]] = getelementptr inbounds i32, i32* [[SELECT_V]], i64 4
 ; CHECK-NEXT:    ret i32* [[SELECT]]
 ;
   %gep1 = getelementptr inbounds i32, i32* %p, i64 4
@@ -63,10 +59,9 @@ define i32* @test1d(i32* %p, i32* %q) {
 
 define i32* @test2(i32* %p, i64 %x, i64 %y) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 [[X:%.*]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[X]], [[Y]]
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32* [[GEP1]], i32* [[GEP2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SELECT_V:%.*]] = select i1 [[CMP]], i64 [[X]], i64 [[Y]]
+; CHECK-NEXT:    [[SELECT:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 [[SELECT_V]]
 ; CHECK-NEXT:    ret i32* [[SELECT]]
 ;
   %gep1 = getelementptr inbounds i32, i32* %p, i64 %x

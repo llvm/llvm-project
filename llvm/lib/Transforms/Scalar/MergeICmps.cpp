@@ -127,7 +127,7 @@ class BCECmpBlock {
     return Lhs_.Base() != nullptr && Rhs_.Base() != nullptr;
   }
 
-  // Assert the the block is consistent: If valid, it should also have
+  // Assert the block is consistent: If valid, it should also have
   // non-null members besides Lhs_ and Rhs_.
   void AssertConsistent() const {
     if (IsValid()) {
@@ -552,7 +552,7 @@ bool processPhi(PHINode &Phi, const TargetLibraryInfo *const TLI) {
   //  - The last basic block (bb4 here) must branch unconditionally to bb_phi.
   //    It's the only block that contributes a non-constant value to the Phi.
   //  - All other blocks (b1, b2, b3) must have exactly two successors, one of
-  //    them being the the phi block.
+  //    them being the phi block.
   //  - All intermediate blocks (bb2, bb3) must have only one predecessor.
   //  - Blocks cannot do other work besides the comparison, see doesOtherWork()
 

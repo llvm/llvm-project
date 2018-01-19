@@ -164,8 +164,11 @@ math/sinh.cl
 math/sinpi.cl
 math/clc_sqrt.cl
 math/sqrt.cl
+math/clc_tan.cl
 math/tan.cl
 math/tanh.cl
+math/clc_tanpi.cl
+math/tanpi.cl
 math/tgamma.cl
 misc/shuffle.cl
 misc/shuffle2.cl

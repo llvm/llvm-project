@@ -17,7 +17,6 @@
 #include "SourceCode.h"
 #include "TestFS.h"
 #include "index/MemIndex.h"
-#include "index/Merge.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -82,7 +81,7 @@ MATCHER_P(Snippet, Text, "") {
   return arg.insertTextFormat == clangd::InsertTextFormat::Snippet &&
          arg.insertText == Text;
 }
-MATCHER(FilterContainsName, "") {
+MATCHER(NameContainsFilter, "") {
   if (arg.filterText.empty())
     return true;
   return llvm::StringRef(arg.insertText).contains(arg.filterText);
@@ -129,14 +128,27 @@ CompletionList completions(StringRef Text,
           .get()
           .second.Value;
   // Sanity-check that filterText is valid.
-  EXPECT_THAT(CompletionList.items, Each(FilterContainsName()));
+  EXPECT_THAT(CompletionList.items, Each(NameContainsFilter()));
   return CompletionList;
 }
 
+std::string replace(StringRef Haystack, StringRef Needle, StringRef Repl) {
+  std::string Result;
+  raw_string_ostream OS(Result);
+  std::pair<StringRef, StringRef> Split;
+  for (Split = Haystack.split(Needle); !Split.second.empty();
+       Split = Split.first.split(Needle))
+    OS << Split.first << Repl;
+  Result += Split.first;
+  OS.flush();
+  return Result;
+}
+
 // Helpers to produce fake index symbols for memIndex() or completions().
-Symbol sym(StringRef QName, index::SymbolKind Kind) {
+// USRFormat is a regex replacement string for the unqualified part of the USR.
+Symbol sym(StringRef QName, index::SymbolKind Kind, StringRef USRFormat) {
   Symbol Sym;
-  Sym.ID = SymbolID(QName);
+  std::string USR = "c:"; // We synthesize a few simple cases of USRs by hand!
   size_t Pos = QName.rfind("::");
   if (Pos == llvm::StringRef::npos) {
     Sym.Name = QName;
@@ -144,15 +156,25 @@ Symbol sym(StringRef QName, index::SymbolKind Kind) {
   } else {
     Sym.Name = QName.substr(Pos + 2);
     Sym.Scope = QName.substr(0, Pos);
+    USR += "@N@" + replace(Sym.Scope, "::", "@N@"); // ns:: -> @N@ns
   }
+  USR += Regex("^.*$").sub(USRFormat, Sym.Name); // e.g. func -> @F@func#
+  Sym.ID = SymbolID(USR);
   Sym.CompletionPlainInsertText = Sym.Name;
+  Sym.CompletionSnippetInsertText = Sym.Name;
   Sym.CompletionLabel = Sym.Name;
   Sym.SymInfo.Kind = Kind;
   return Sym;
 }
-Symbol func(StringRef Name) { return sym(Name, index::SymbolKind::Function); }
-Symbol cls(StringRef Name) { return sym(Name, index::SymbolKind::Class); }
-Symbol var(StringRef Name) { return sym(Name, index::SymbolKind::Variable); }
+Symbol func(StringRef Name) { // Assumes the function has no args.
+  return sym(Name, index::SymbolKind::Function, "@F@\\0#"); // no args
+}
+Symbol cls(StringRef Name) {
+  return sym(Name, index::SymbolKind::Class, "@S@\\0@S@\\0");
+}
+Symbol var(StringRef Name) {
+  return sym(Name, index::SymbolKind::Variable, "@\\0");
+}
 
 TEST(CompletionTest, Limit) {
   clangd::CodeCompleteOptions Opts;
@@ -226,7 +248,7 @@ void TestAfterDotCompletion(clangd::CodeCompleteOptions Opts) {
         ClassWithMembers().^
       }
       )cpp",
-      /*IndexSymbols=*/{}, Opts);
+      {cls("IndexClass"), var("index_var"), func("index_func")}, Opts);
 
   // Class members. The only items that must be present in after-dot
   // completion.
@@ -236,9 +258,11 @@ void TestAfterDotCompletion(clangd::CodeCompleteOptions Opts) {
   EXPECT_IFF(Opts.IncludeIneligibleResults, Results.items,
              Has("private_field"));
   // Global items.
-  EXPECT_THAT(Results.items, Not(AnyOf(Has("global_var"), Has("global_func"),
-                                       Has("global_func()"), Has("GlobalClass"),
-                                       Has("MACRO"), Has("LocalClass"))));
+  EXPECT_THAT(
+      Results.items,
+      Not(AnyOf(Has("global_var"), Has("index_var"), Has("global_func"),
+                Has("global_func()"), Has("index_func"), Has("GlobalClass"),
+                Has("IndexClass"), Has("MACRO"), Has("LocalClass"))));
   // There should be no code patterns (aka snippets) in after-dot
   // completion. At least there aren't any we're aware of.
   EXPECT_THAT(Results.items, Not(Contains(Kind(CompletionItemKind::Snippet))));
@@ -271,16 +295,17 @@ void TestGlobalScopeCompletion(clangd::CodeCompleteOptions Opts) {
         ^
       }
       )cpp",
-      /*IndexSymbols=*/{}, Opts);
+      {cls("IndexClass"), var("index_var"), func("index_func")}, Opts);
 
   // Class members. Should never be present in global completions.
   EXPECT_THAT(Results.items,
               Not(AnyOf(Has("method"), Has("method()"), Has("field"))));
   // Global items.
   EXPECT_THAT(Results.items,
-              AllOf(Has("global_var"),
+              AllOf(Has("global_var"), Has("index_var"),
                     Has(Opts.EnableSnippets ? "global_func()" : "global_func"),
-                    Has("GlobalClass")));
+                    Has("index_func" /* our fake symbol doesn't include () */),
+                    Has("GlobalClass"), Has("IndexClass")));
   // A macro.
   EXPECT_IFF(Opts.IncludeMacros, Results.items, Has("MACRO"));
   // Local items. Must be present always.
@@ -399,83 +424,67 @@ TEST(CompletionTest, Snippets) {
 }
 
 TEST(CompletionTest, Kinds) {
-  auto Results = completions(R"cpp(
-      #define MACRO X
-      int variable;
-      struct Struct {};
-      int function();
-      int X = ^
-  )cpp");
-  EXPECT_THAT(Results.items, Has("function", CompletionItemKind::Function));
-  EXPECT_THAT(Results.items, Has("variable", CompletionItemKind::Variable));
-  EXPECT_THAT(Results.items, Has("int", CompletionItemKind::Keyword));
-  EXPECT_THAT(Results.items, Has("Struct", CompletionItemKind::Class));
-  EXPECT_THAT(Results.items, Has("MACRO", CompletionItemKind::Text));
+  auto Results = completions(
+      R"cpp(
+          #define MACRO X
+          int variable;
+          struct Struct {};
+          int function();
+          int X = ^
+      )cpp",
+      {func("indexFunction"), var("indexVariable"), cls("indexClass")});
+  EXPECT_THAT(Results.items,
+              AllOf(Has("function", CompletionItemKind::Function),
+                    Has("variable", CompletionItemKind::Variable),
+                    Has("int", CompletionItemKind::Keyword),
+                    Has("Struct", CompletionItemKind::Class),
+                    Has("MACRO", CompletionItemKind::Text),
+                    Has("indexFunction", CompletionItemKind::Function),
+                    Has("indexVariable", CompletionItemKind::Variable),
+                    Has("indexClass", CompletionItemKind::Class)));
 
   Results = completions("nam^");
   EXPECT_THAT(Results.items, Has("namespace", CompletionItemKind::Snippet));
 }
 
 TEST(CompletionTest, NoDuplicates) {
-  auto Items = completions(R"cpp(
-struct Adapter {
-  void method();
-};
+  auto Results = completions(
+      R"cpp(
+          class Adapter {
+            void method();
+          };
 
-void Adapter::method() {
-  Adapter^
-}
-  )cpp")
-                   .items;
+          void Adapter::method() {
+            Adapter^
+          }
+      )cpp",
+      {cls("Adapter")});
 
   // Make sure there are no duplicate entries of 'Adapter'.
-  EXPECT_THAT(Items, ElementsAre(Named("Adapter"), Named("~Adapter")));
+  EXPECT_THAT(Results.items, ElementsAre(Named("Adapter"), Named("~Adapter")));
 }
 
-TEST(CompletionTest, FuzzyRanking) {
-  auto Items = completions(R"cpp(
-      struct fake { int BigBang, Babble, Ball; };
-      int main() { fake().bb^ }")cpp").items;
+TEST(CompletionTest, ScopedNoIndex) {
+  auto Results = completions(
+      R"cpp(
+          namespace fake { int BigBang, Babble, Ball; };
+          int main() { fake::bb^ }
+      ")cpp");
   // BigBang is a better match than Babble. Ball doesn't match at all.
-  EXPECT_THAT(Items, ElementsAre(Named("BigBang"), Named("Babble")));
+  EXPECT_THAT(Results.items, ElementsAre(Named("BigBang"), Named("Babble")));
 }
 
-TEST(CompletionTest, NoIndex) {
-  auto Results = completions(R"cpp(
-      namespace ns { class Local {}; }
-      void f() { ns::^ }
-  )cpp");
-  EXPECT_THAT(Results.items, Has("Local"));
-}
-
-TEST(CompletionTest, StaticAndDynamicIndex) {
-  clangd::CodeCompleteOptions Opts;
-  auto StaticIdx = memIndex({cls("ns::XYZ")});
-  auto DynamicIdx = memIndex({func("ns::foo")});
-  auto Merge = mergeIndex(DynamicIdx.get(), StaticIdx.get());
-  Opts.Index = Merge.get();
-
+TEST(CompletionTest, Scoped) {
   auto Results = completions(
       R"cpp(
-          void f() { ::ns::^ }
-      )cpp",
-      /*IndexSymbols=*/{}, Opts);
-  EXPECT_THAT(Results.items, Contains(Labeled("[I]XYZ")));
-  EXPECT_THAT(Results.items, Contains(Labeled("[I]foo")));
+          namespace fake { int Babble, Ball; };
+          int main() { fake::bb^ }
+      ")cpp",
+      {var("fake::BigBang")});
+  EXPECT_THAT(Results.items, ElementsAre(Named("BigBang"), Named("Babble")));
 }
 
-TEST(CompletionTest, IndexScope) {
-  auto Results = completions(
-      R"cpp(
-          namespace ns { int local; }
-          void f() { ns::^ }
-      )cpp",
-      {cls("ns::XYZ"), cls("nx::XYZ"), func("ns::foo")});
-  EXPECT_THAT(Results.items,
-              UnorderedElementsAre(Named("XYZ"), Named("foo"), Named("local")));
-}
-
-TEST(CompletionTest, IndexBasedWithFilter) {
+TEST(CompletionTest, ScopedWithFilter) {
   auto Results = completions(
       R"cpp(
           void f() { ns::x^ }
@@ -485,7 +494,7 @@ TEST(CompletionTest, IndexBasedWithFilter) {
               UnorderedElementsAre(AllOf(Named("XYZ"), Filter("XYZ"))));
 }
 
-TEST(CompletionTest, IndexGlobalQualified) {
+TEST(CompletionTest, GlobalQualified) {
   auto Results = completions(
       R"cpp(
           void f() { ::^ }
@@ -495,13 +504,28 @@ TEST(CompletionTest, IndexGlobalQualified) {
                                    Has("f", CompletionItemKind::Function)));
 }
 
-TEST(CompletionTest, IndexFullyQualifiedScope) {
+TEST(CompletionTest, FullyQualified) {
   auto Results = completions(
       R"cpp(
+          namespace ns { void bar(); }
           void f() { ::ns::^ }
       )cpp",
       {cls("ns::XYZ")});
-  EXPECT_THAT(Results.items, Has("XYZ", CompletionItemKind::Class));
+  EXPECT_THAT(Results.items, AllOf(Has("XYZ", CompletionItemKind::Class),
+                                   Has("bar", CompletionItemKind::Function)));
+}
+
+TEST(CompletionTest, SemaIndexMerge) {
+  auto Results = completions(
+      R"cpp(
+          namespace ns { int local; void both(); }
+          void f() { ::ns::^ }
+      )cpp",
+      {func("ns::both"), cls("ns::Index")});
+  // We get results from both index and sema, with no duplicates.
+  EXPECT_THAT(
+      Results.items,
+      UnorderedElementsAre(Named("local"), Named("Index"), Named("both")));
 }
 
 TEST(CompletionTest, IndexSuppressesPreambleCompletions) {

@@ -217,7 +217,7 @@ struct PartialInlinerImpl {
   // outline function due to code size.
   std::pair<bool, Function *> unswitchFunction(Function *F);
 
-  // This class speculatively clones the the function to be partial inlined.
+  // This class speculatively clones the function to be partial inlined.
   // At the end of partial inlining, the remaining callsites to the cloned
   // function that are not partially inlined will be fixed up to reference
   // the original function, and the cloned function will be erased.

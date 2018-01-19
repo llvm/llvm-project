@@ -42,6 +42,6 @@ entry:
 ; CHECK:     Relocation {
 ; CHECK:       Type: R_WEBASSEMBLY_TABLE_INDEX_SLEB (1)
 ; CHECK:       Offset: 0x1E
-; CHECK:       Index: 0x0
+; CHECK:       Index: 0x1
 ; CHECK:     }
 ; CHECK:   }

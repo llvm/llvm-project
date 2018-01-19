@@ -20,7 +20,7 @@ entry:
 for.body:
   store i8 1, i8* %p, align 1
   store i8 2, i8* %p1, align 1
-  call void @llvm.memset.p0i8.i32(i8* %p, i8 255, i32 4, i32 1, i1 false)  
+  call void @llvm.memset.p0i8.i32(i8* %p, i8 255, i32 4, i1 false)
   br label %for.latch
   
 for.latch:
@@ -30,4 +30,4 @@ end:
   ret i32 0
 }
 
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i32, i1)
+declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1)

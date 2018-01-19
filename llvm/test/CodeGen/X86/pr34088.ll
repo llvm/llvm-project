@@ -31,13 +31,13 @@ define i32 @pr34088() local_unnamed_addr {
 entry:
   %foo = alloca %struct.Foo, align 4
   %0 = bitcast %struct.Foo* %foo to i8*
-  call void @llvm.memset.p0i8.i32(i8* nonnull %0, i8 0, i32 20, i32 4, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* align 4 nonnull %0, i8 0, i32 20, i1 false)
   %buffer1 = getelementptr inbounds %struct.Foo, %struct.Foo* %foo, i32 0, i32 1, i32 1
   %1 = bitcast %struct.Buffer* %buffer1 to i64*
   %2 = load i64, i64* %1, align 4
-  call void @llvm.memset.p0i8.i32(i8* nonnull %0, i8 -51, i32 20, i32 4, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* align 4 nonnull %0, i8 -51, i32 20, i1 false)
   store i64 %2, i64* %1, align 4
   ret i32 0
 }
 
-declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i32, i1)
+declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1)

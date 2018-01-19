@@ -243,11 +243,20 @@ namespace llvm {
       return cast<PointerType>(getRawDest()->getType())->getAddressSpace();
     }
 
+    unsigned getDestAlignment() const { return getParamAlignment(ARG_DEST); }
+
     /// Set the specified arguments of the instruction.
     void setDest(Value *Ptr) {
       assert(getRawDest()->getType() == Ptr->getType() &&
              "setDest called with pointer of wrong type!");
       setArgOperand(ARG_DEST, Ptr);
+    }
+
+    void setDestAlignment(unsigned Align) {
+      removeParamAttr(ARG_DEST, Attribute::Alignment);
+      if (Align > 0)
+        addParamAttr(ARG_DEST,
+                     Attribute::getWithAlignment(getContext(), Align));
     }
 
     void setLength(Value *L) {
@@ -347,10 +356,21 @@ namespace llvm {
       return cast<PointerType>(getRawSource()->getType())->getAddressSpace();
     }
 
+    unsigned getSourceAlignment() const {
+      return getParamAlignment(ARG_SOURCE);
+    }
+
     void setSource(Value *Ptr) {
       assert(getRawSource()->getType() == Ptr->getType() &&
              "setSource called with pointer of wrong type!");
       setArgOperand(ARG_SOURCE, Ptr);
+    }
+
+    void setSourceAlignment(unsigned Align) {
+      removeParamAttr(ARG_SOURCE, Attribute::Alignment);
+      if (Align > 0)
+        addParamAttr(ARG_SOURCE,
+                     Attribute::getWithAlignment(getContext(), Align));
     }
 
     static bool classof(const IntrinsicInst *I) {
@@ -394,16 +414,13 @@ namespace llvm {
   /// This is the common base class for memset/memcpy/memmove.
   class MemIntrinsic : public MemIntrinsicBase<MemIntrinsic> {
   private:
-    enum { ARG_ALIGN = 3, ARG_VOLATILE = 4 };
+    enum { ARG_VOLATILE = 3 };
 
   public:
-    ConstantInt *getAlignmentCst() const {
-      return cast<ConstantInt>(const_cast<Value *>(getArgOperand(ARG_ALIGN)));
-    }
-
-    unsigned getAlignment() const {
-      return getAlignmentCst()->getZExtValue();
-    }
+    // TODO: Remove this method entirely.
+    // Interim, for now, during transition from having an alignment
+    // arg to using alignment attributes.
+    unsigned getAlignment() const;
 
     ConstantInt *getVolatileCst() const {
       return cast<ConstantInt>(
@@ -414,15 +431,12 @@ namespace llvm {
       return !getVolatileCst()->isZero();
     }
 
-    void setAlignment(unsigned Align) {
-      setArgOperand(ARG_ALIGN, ConstantInt::get(getAlignmentType(), Align));
-    }
+    // TODO: Remove this method entirely. It is here only during transition
+    // from having an explicit alignment arg to using alignment attributes.
+    // For now we always set dest & source alignment attributes to match
+    void setAlignment(unsigned Align);
 
     void setVolatile(Constant *V) { setArgOperand(ARG_VOLATILE, V); }
-
-    Type *getAlignmentType() const {
-      return getArgOperand(ARG_ALIGN)->getType();
-    }
 
     // Methods for support type inquiry through isa, cast, and dyn_cast:
     static bool classof(const IntrinsicInst *I) {
@@ -482,10 +496,21 @@ namespace llvm {
       return cast<PointerType>(getRawSource()->getType())->getAddressSpace();
     }
 
+    unsigned getSourceAlignment() const {
+      return getParamAlignment(ARG_SOURCE);
+    }
+
     void setSource(Value *Ptr) {
       assert(getRawSource()->getType() == Ptr->getType() &&
              "setSource called with pointer of wrong type!");
       setArgOperand(ARG_SOURCE, Ptr);
+    }
+
+    void setSourceAlignment(unsigned Align) {
+      removeParamAttr(ARG_SOURCE, Attribute::Alignment);
+      if (Align > 0)
+        addParamAttr(ARG_SOURCE,
+                     Attribute::getWithAlignment(getContext(), Align));
     }
 
     // Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -497,6 +522,19 @@ namespace llvm {
       return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
     }
   };
+
+  inline unsigned MemIntrinsic::getAlignment() const {
+    if (const auto *MTI = dyn_cast<MemTransferInst>(this))
+      return std::min(MTI->getDestAlignment(), MTI->getSourceAlignment());
+    else
+      return getDestAlignment();
+  }
+
+  inline void MemIntrinsic::setAlignment(unsigned Align) {
+    setDestAlignment(Align);
+    if (auto *MTI = dyn_cast<MemTransferInst>(this))
+      MTI->setSourceAlignment(Align);
+  }
 
   /// This class wraps the llvm.memcpy intrinsic.
   class MemCpyInst : public MemTransferInst {
@@ -611,10 +649,21 @@ namespace llvm {
       return cast<PointerType>(getRawSource()->getType())->getAddressSpace();
     }
 
+    unsigned getSourceAlignment() const {
+      return getParamAlignment(ARG_SOURCE);
+    }
+
     void setSource(Value *Ptr) {
       assert(getRawSource()->getType() == Ptr->getType() &&
              "setSource called with pointer of wrong type!");
       setArgOperand(ARG_SOURCE, Ptr);
+    }
+
+    void setSourceAlignment(unsigned Align) {
+      removeParamAttr(ARG_SOURCE, Attribute::Alignment);
+      if (Align > 0)
+        addParamAttr(ARG_SOURCE,
+                     Attribute::getWithAlignment(getContext(), Align));
     }
 
     static bool classof(const IntrinsicInst *I) {

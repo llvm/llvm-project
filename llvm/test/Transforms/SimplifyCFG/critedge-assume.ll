@@ -64,7 +64,7 @@ declare i32 @_ZNK1F5beginEv(%class.F*)
 
 declare i32 @_ZNK1F3endEv(%class.F*)
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1)
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1)
 
 declare noalias nonnull i8* @_Znwm(i64)
 

@@ -226,7 +226,7 @@ static IdentifyingPassPtr overridePass(AnalysisID StandardID,
   if (StandardID == &TailDuplicateID)
     return applyDisable(TargetID, DisableTailDuplicate);
 
-  if (StandardID == &TargetPassConfig::EarlyTailDuplicateID)
+  if (StandardID == &EarlyTailDuplicateID)
     return applyDisable(TargetID, DisableEarlyTailDup);
 
   if (StandardID == &MachineBlockPlacementID)
@@ -241,13 +241,13 @@ static IdentifyingPassPtr overridePass(AnalysisID StandardID,
   if (StandardID == &EarlyIfConverterID)
     return applyDisable(TargetID, DisableEarlyIfConversion);
 
-  if (StandardID == &MachineLICMID)
+  if (StandardID == &EarlyMachineLICMID)
     return applyDisable(TargetID, DisableMachineLICM);
 
   if (StandardID == &MachineCSEID)
     return applyDisable(TargetID, DisableMachineCSE);
 
-  if (StandardID == &TargetPassConfig::PostRAMachineLICMID)
+  if (StandardID == &MachineLICMID)
     return applyDisable(TargetID, DisablePostRAMachineLICM);
 
   if (StandardID == &MachineSinkingID)
@@ -266,10 +266,6 @@ static IdentifyingPassPtr overridePass(AnalysisID StandardID,
 INITIALIZE_PASS(TargetPassConfig, "targetpassconfig",
                 "Target Pass Configuration", false, false)
 char TargetPassConfig::ID = 0;
-
-// Pseudo Pass IDs.
-char TargetPassConfig::EarlyTailDuplicateID = 0;
-char TargetPassConfig::PostRAMachineLICMID = 0;
 
 namespace {
 
@@ -365,10 +361,6 @@ TargetPassConfig::TargetPassConfig(LLVMTargetMachine &TM, PassManagerBase &pm)
   // Also register alias analysis passes required by codegen passes.
   initializeBasicAAWrapperPassPass(*PassRegistry::getPassRegistry());
   initializeAAResultsWrapperPassPass(*PassRegistry::getPassRegistry());
-
-  // Substitute Pseudo Pass IDs for real ones.
-  substitutePass(&EarlyTailDuplicateID, &TailDuplicateID);
-  substitutePass(&PostRAMachineLICMID, &MachineLICMID);
 
   if (StringRef(PrintMachineInstrs.getValue()).equals(""))
     TM.Options.PrintMachineCode = true;
@@ -935,7 +927,7 @@ void TargetPassConfig::addMachineSSAOptimization() {
   // loop info, just like LICM and CSE below.
   addILPOpts();
 
-  addPass(&MachineLICMID, false);
+  addPass(&EarlyMachineLICMID, false);
   addPass(&MachineCSEID, false);
 
   addPass(&MachineSinkingID);
@@ -1087,7 +1079,7 @@ void TargetPassConfig::addOptimizedRegAlloc(FunctionPass *RegAllocPass) {
     // Run post-ra machine LICM to hoist reloads / remats.
     //
     // FIXME: can this move into MachineLateOptimization?
-    addPass(&PostRAMachineLICMID);
+    addPass(&MachineLICMID);
   }
 }
 

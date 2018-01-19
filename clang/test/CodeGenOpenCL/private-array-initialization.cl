@@ -5,5 +5,5 @@
 void test() {
   __private int arr[] = {1, 2, 3};
 // CHECK:  %[[arr_i8_ptr:[0-9]+]] = bitcast [3 x i32]* %arr to i8*
-// CHECK:  call void @llvm.memcpy.p0i8.p2i8.i32(i8* %[[arr_i8_ptr]], i8 addrspace(2)* bitcast ([3 x i32] addrspace(2)* @test.arr to i8 addrspace(2)*), i32 12, i32 4, i1 false)
+// CHECK:  call void @llvm.memcpy.p0i8.p2i8.i32(i8* align 4 %[[arr_i8_ptr]], i8 addrspace(2)* align 4 bitcast ([3 x i32] addrspace(2)* @test.arr to i8 addrspace(2)*), i32 12, i1 false)
 }

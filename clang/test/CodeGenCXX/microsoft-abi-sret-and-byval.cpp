@@ -405,7 +405,7 @@ void fn2(FnPtr1 a, SmallWithDtor b) { fn1(a, b); };
 // WIN32:   %[[argmem:[^ ]*]] = alloca inalloca [[argmem_ty]]
 // WIN32:   %[[gep1:[^ ]*]] = getelementptr inbounds [[argmem_ty]], [[argmem_ty]]* %[[argmem]], i32 0, i32 1
 // WIN32:   %[[bc1:[^ ]*]] = bitcast %struct.SmallWithDtor* %[[gep1]] to i8*
-// WIN32:   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %[[bc1]], i8* {{.*}}, i32 4, i32 4, i1 false)
+// WIN32:   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %[[bc1]], i8* align 4 {{.*}}, i32 4, i1 false)
 // WIN32:   %[[a2:[^ ]*]] = load void [[dst_ty]], void [[dst_ty]]* %[[a1]], align 4
 // WIN32:   %[[gep2:[^ ]*]] = getelementptr inbounds [[argmem_ty]], [[argmem_ty]]* %[[argmem]], i32 0, i32 0
 // WIN32:   %[[addr:[^ ]*]] = bitcast {}** %[[gep2]] to void [[dst_ty]]*

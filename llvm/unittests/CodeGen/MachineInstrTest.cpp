@@ -14,6 +14,8 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
@@ -244,4 +246,25 @@ TEST(MachineInstrExpressionTraitTest, IsEqualAgreesWithGetHashValue) {
 
   checkHashAndIsEqualMatch(VD2PU, VD2PD);
 }
+
+TEST(MachineInstrPrintingTest, DebugLocPrinting) {
+  auto MF = createMachineFunction();
+
+  MCOperandInfo OpInfo{0, 0, MCOI::OPERAND_REGISTER, 0};
+  MCInstrDesc MCID = {0, 1,       1,       0,       0, 0,
+                      0, nullptr, nullptr, &OpInfo, 0, nullptr};
+
+  LLVMContext Ctx;
+  DILocation *DIL = DILocation::get(Ctx, 1, 5, (Metadata *)nullptr, nullptr);
+  DebugLoc DL(DIL);
+  MachineInstr *MI = MF->CreateMachineInstr(MCID, DL);
+  MI->addOperand(*MF, MachineOperand::CreateReg(0, /*isDef*/ true));
+
+  std::string str;
+  raw_string_ostream OS(str);
+  MI->print(OS);
+  ASSERT_TRUE(
+      StringRef(OS.str()).startswith("%noreg = UNKNOWN debug-location "));
+}
+
 } // end namespace

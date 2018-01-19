@@ -48,7 +48,7 @@ entry:
 ; X86-64: movq $0
   %tmp1 = alloca [25 x i8]
   %tmp2 = bitcast [25 x i8]* %tmp1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp2, i8* getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i32 0, i32 0), i32 25, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %tmp2, i8* align 1 getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i32 0, i32 0), i32 25, i1 false)
   unreachable
 }
 
@@ -86,7 +86,7 @@ entry:
 ; X86-64: movaps %xmm0, (%rdi)
   %tmp2 = bitcast %struct.s0* %a to i8*           ; <i8*> [#uses=1]
   %tmp3 = bitcast %struct.s0* %b to i8*           ; <i8*> [#uses=1]
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp2, i8* %tmp3, i32 16, i32 16, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 %tmp2, i8* align 16 %tmp3, i32 16, i1 false)
   ret void
 }
 
@@ -135,7 +135,7 @@ entry:
 ; X86-64: movq %rax, (%rdi)
   %tmp2 = bitcast %struct.s0* %a to i8*           ; <i8*> [#uses=1]
   %tmp3 = bitcast %struct.s0* %b to i8*           ; <i8*> [#uses=1]
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp2, i8* %tmp3, i32 16, i32 8, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 %tmp2, i8* align 8 %tmp3, i32 16, i1 false)
   ret void
 }
 
@@ -202,8 +202,8 @@ entry:
 
   %tmp1 = alloca [30 x i8]
   %tmp2 = bitcast [30 x i8]* %tmp1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp2, i8* getelementptr inbounds ([30 x i8], [30 x i8]* @.str2, i32 0, i32 0), i32 30, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %tmp2, i8* align 1 getelementptr inbounds ([30 x i8], [30 x i8]* @.str2, i32 0, i32 0), i32 30, i1 false)
   unreachable
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind

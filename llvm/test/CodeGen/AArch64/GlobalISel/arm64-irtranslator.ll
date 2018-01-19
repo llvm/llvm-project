@@ -1147,7 +1147,7 @@ define void()* @test_global_func() {
   ret void()* @allocai64
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i32 %align, i1 %volatile)
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i1)
 define void @test_memcpy(i8* %dst, i8* %src, i64 %size) {
 ; CHECK-LABEL: name: test_memcpy
 ; CHECK: [[DST:%[0-9]+]]:_(p0) = COPY %x0
@@ -1157,11 +1157,11 @@ define void @test_memcpy(i8* %dst, i8* %src, i64 %size) {
 ; CHECK: %x1 = COPY [[SRC]]
 ; CHECK: %x2 = COPY [[SIZE]]
 ; CHECK: BL &memcpy, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %x0, implicit %x1, implicit %x2
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %size, i32 1, i1 0)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %size, i1 0)
   ret void
 }
 
-declare void @llvm.memmove.p0i8.p0i8.i64(i8*, i8*, i64, i32 %align, i1 %volatile)
+declare void @llvm.memmove.p0i8.p0i8.i64(i8*, i8*, i64, i1)
 define void @test_memmove(i8* %dst, i8* %src, i64 %size) {
 ; CHECK-LABEL: name: test_memmove
 ; CHECK: [[DST:%[0-9]+]]:_(p0) = COPY %x0
@@ -1171,11 +1171,11 @@ define void @test_memmove(i8* %dst, i8* %src, i64 %size) {
 ; CHECK: %x1 = COPY [[SRC]]
 ; CHECK: %x2 = COPY [[SIZE]]
 ; CHECK: BL &memmove, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %x0, implicit %x1, implicit %x2
-  call void @llvm.memmove.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %size, i32 1, i1 0)
+  call void @llvm.memmove.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %size, i1 0)
   ret void
 }
 
-declare void @llvm.memset.p0i8.i64(i8*, i8, i64, i32 %align, i1 %volatile)
+declare void @llvm.memset.p0i8.i64(i8*, i8, i64, i1)
 define void @test_memset(i8* %dst, i8 %val, i64 %size) {
 ; CHECK-LABEL: name: test_memset
 ; CHECK: [[DST:%[0-9]+]]:_(p0) = COPY %x0
@@ -1187,7 +1187,7 @@ define void @test_memset(i8* %dst, i8 %val, i64 %size) {
 ; CHECK: %w1 = COPY [[SRC_TMP]]
 ; CHECK: %x2 = COPY [[SIZE]]
 ; CHECK: BL &memset, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %x0, implicit %w1, implicit %x2
-  call void @llvm.memset.p0i8.i64(i8* %dst, i8 %val, i64 %size, i32 1, i1 0)
+  call void @llvm.memset.p0i8.i64(i8* %dst, i8 %val, i64 %size, i1 0)
   ret void
 }
 

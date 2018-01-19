@@ -67,10 +67,10 @@ entry:
 
 if.then:
   %0 = alloca i8, i32 %i
-  call void @llvm.memset.p0i8.i32(i8* %0, i8 0, i32 %i, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %0, i8 0, i32 %i, i1 false)
   %call = call i32 @f(i8* %0)
   %conv = sext i32 %call to i64
   ret i64 %conv
 }
 
-declare void @llvm.memset.p0i8.i32(i8*, i8, i32, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i32(i8*, i8, i32, i1) nounwind

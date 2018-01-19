@@ -14,7 +14,7 @@ entry:
 ; CHECK-NOT:  ldm
   %mystring = alloca [31 x i8], align 1
   %0 = getelementptr inbounds [31 x i8], [31 x i8]* %mystring, i32 0, i32 0
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %0, i8* getelementptr inbounds ([31 x i8], [31 x i8]* @.str, i32 0, i32 0), i32 31, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %0, i8* align 1 getelementptr inbounds ([31 x i8], [31 x i8]* @.str, i32 0, i32 0), i32 31, i1 false)
   ret void
 }
 
@@ -24,10 +24,10 @@ entry:
 ; CHECK-NOT:   __aeabi_memcpy
   %mystring = alloca [31 x i8], align 1
   %0 = getelementptr inbounds [31 x i8], [31 x i8]* %mystring, i32 0, i32 0
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %0, i8* getelementptr inbounds ([21 x i8], [21 x i8]* @.str.1, i32 0, i32 0), i32 21, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %0, i8* align 1 getelementptr inbounds ([21 x i8], [21 x i8]* @.str.1, i32 0, i32 0), i32 21, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i32, i1) #1
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i1) #1
 
 attributes #0 = { minsize noinline nounwind optsize }

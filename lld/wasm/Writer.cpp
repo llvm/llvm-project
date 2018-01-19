@@ -748,7 +748,7 @@ void Writer::assignIndexes() {
   for (ObjFile *File : Symtab->ObjectFiles) {
     DEBUG(dbgs() << "Table Indexes: " << File->getName() << "\n");
     for (Symbol *Sym : File->getTableSymbols()) {
-      if (Sym->hasTableIndex() || !Sym->hasOutputIndex())
+      if (!Sym || Sym->hasTableIndex() || !Sym->hasOutputIndex())
         continue;
       Sym->setTableIndex(TableIndex++);
       IndirectFunctions.emplace_back(Sym);

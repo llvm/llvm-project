@@ -2,8 +2,8 @@
 ; RUN: opt < %s -aa-pipeline=basic-aa -passes=dse -S | FileCheck %s
 target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128"
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 declare void @llvm.init.trampoline(i8*, i8*, i8*)
 
 define void @test1(i32* %Q, i32* %P) {
@@ -64,7 +64,7 @@ define void @test5(i32* %Q) {
 ; alias).
 define void @test6(i32 *%p, i8 *%q) {
   store i32 10, i32* %p, align 4       ;; dead.
-  call void @llvm.memset.p0i8.i64(i8* %q, i8 42, i64 900, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* %q, i8 42, i64 900, i1 false)
   store i32 30, i32* %p, align 4
   ret void
 ; CHECK-LABEL: @test6(
@@ -75,7 +75,7 @@ define void @test6(i32 *%p, i8 *%q) {
 ; alias).
 define void @test7(i32 *%p, i8 *%q, i8* noalias %r) {
   store i32 10, i32* %p, align 4       ;; dead.
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %q, i8* %r, i64 900, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %q, i8* %r, i64 900, i1 false)
   store i32 30, i32* %p, align 4
   ret void
 ; CHECK-LABEL: @test7(
@@ -209,8 +209,8 @@ define void @test14(i32* %Q) {
 
 ;; Fully dead overwrite of memcpy.
 define void @test15(i8* %P, i8* %Q) nounwind ssp {
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i1 false)
   ret void
 ; CHECK-LABEL: @test15(
 ; CHECK-NEXT: call void @llvm.memcpy
@@ -219,8 +219,8 @@ define void @test15(i8* %P, i8* %Q) nounwind ssp {
 
 ;; Full overwrite of smaller memcpy.
 define void @test16(i8* %P, i8* %Q) nounwind ssp {
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 8, i32 1, i1 false)
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 8, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i1 false)
   ret void
 ; CHECK-LABEL: @test16(
 ; CHECK-NEXT: call void @llvm.memcpy
@@ -229,8 +229,8 @@ define void @test16(i8* %P, i8* %Q) nounwind ssp {
 
 ;; Overwrite of memset by memcpy.
 define void @test17(i8* %P, i8* noalias %Q) nounwind ssp {
-  tail call void @llvm.memset.p0i8.i64(i8* %P, i8 42, i64 8, i32 1, i1 false)
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
+  tail call void @llvm.memset.p0i8.i64(i8* %P, i8 42, i64 8, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i1 false)
   ret void
 ; CHECK-LABEL: @test17(
 ; CHECK-NEXT: call void @llvm.memcpy
@@ -239,8 +239,8 @@ define void @test17(i8* %P, i8* noalias %Q) nounwind ssp {
 
 ; Should not delete the volatile memset.
 define void @test17v(i8* %P, i8* %Q) nounwind ssp {
-  tail call void @llvm.memset.p0i8.i64(i8* %P, i8 42, i64 8, i32 1, i1 true)
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
+  tail call void @llvm.memset.p0i8.i64(i8* %P, i8 42, i64 8, i1 true)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i1 false)
   ret void
 ; CHECK-LABEL: @test17v(
 ; CHECK-NEXT: call void @llvm.memset
@@ -253,8 +253,8 @@ define void @test17v(i8* %P, i8* %Q) nounwind ssp {
 ; A = B
 ; A = A
 define void @test18(i8* %P, i8* %Q, i8* %R) nounwind ssp {
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i32 1, i1 false)
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %R, i64 12, i32 1, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %R, i64 12, i1 false)
   ret void
 ; CHECK-LABEL: @test18(
 ; CHECK-NEXT: call void @llvm.memcpy

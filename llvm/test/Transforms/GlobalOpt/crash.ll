@@ -60,10 +60,10 @@ entry:
 
 @data8 = internal global [8000 x i8] zeroinitializer, align 16
 define void @memset_with_strange_user() ssp {
-  call void @llvm.memset.p0i8.i64(i8* getelementptr inbounds ([8000 x i8], [8000 x i8]* @data8, i64 0, i64 0), i8 undef, i64 ptrtoint (i8* getelementptr ([8000 x i8], [8000 x i8]* @data8, i64 1, i64 sub (i64 0, i64 ptrtoint ([8000 x i8]* @data8 to i64))) to i64), i32 16, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* align 16 getelementptr inbounds ([8000 x i8], [8000 x i8]* @data8, i64 0, i64 0), i8 undef, i64 ptrtoint (i8* getelementptr ([8000 x i8], [8000 x i8]* @data8, i64 1, i64 sub (i64 0, i64 ptrtoint ([8000 x i8]* @data8 to i64))) to i64), i1 false)
   ret void
 }
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
 
 
 ; PR9856

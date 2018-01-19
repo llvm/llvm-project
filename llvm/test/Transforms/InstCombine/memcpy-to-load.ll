@@ -4,7 +4,7 @@
 ; RUN: opt < %s -instcombine -S -data-layout=n32:64     | FileCheck %s --check-prefix=ALL --check-prefix=I64
 ; RUN: opt < %s -instcombine -S -data-layout=n32:64:128 | FileCheck %s --check-prefix=ALL --check-prefix=I128
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
 
 ; memcpy can be expanded inline with load/store (based on the datalayout?)
 
@@ -14,7 +14,7 @@ define void @copy_1_byte(i8* %d, i8* %s) {
 ; ALL-NEXT:    store i8 [[TMP1]], i8* [[D:%.*]], align 1
 ; ALL-NEXT:    ret void
 ;
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %d, i8* %s, i32 1, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %d, i8* %s, i32 1, i1 false)
   ret void
 }
 
@@ -26,7 +26,7 @@ define void @copy_2_bytes(i8* %d, i8* %s) {
 ; ALL-NEXT:    store i16 [[TMP3]], i16* [[TMP2]], align 1
 ; ALL-NEXT:    ret void
 ;
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %d, i8* %s, i32 2, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %d, i8* %s, i32 2, i1 false)
   ret void
 }
 
@@ -34,10 +34,10 @@ define void @copy_2_bytes(i8* %d, i8* %s) {
 
 define void @copy_3_bytes(i8* %d, i8* %s) {
 ; ALL-LABEL: @copy_3_bytes(
-; ALL-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[D:%.*]], i8* [[S:%.*]], i32 3, i32 1, i1 false)
+; ALL-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[D:%.*]], i8* align 1 [[S:%.*]], i32 3, i1 false)
 ; ALL-NEXT:    ret void
 ;
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %d, i8* %s, i32 3, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %d, i8* %s, i32 3, i1 false)
   ret void
 }
 
@@ -49,7 +49,7 @@ define void @copy_4_bytes(i8* %d, i8* %s) {
 ; ALL-NEXT:    store i32 [[TMP3]], i32* [[TMP2]], align 1
 ; ALL-NEXT:    ret void
 ;
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %d, i8* %s, i32 4, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %d, i8* %s, i32 4, i1 false)
   ret void
 }
 
@@ -57,10 +57,10 @@ define void @copy_4_bytes(i8* %d, i8* %s) {
 
 define void @copy_5_bytes(i8* %d, i8* %s) {
 ; ALL-LABEL: @copy_5_bytes(
-; ALL-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[D:%.*]], i8* [[S:%.*]], i32 5, i32 1, i1 false)
+; ALL-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[D:%.*]], i8* align 1 [[S:%.*]], i32 5, i1 false)
 ; ALL-NEXT:    ret void
 ;
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %d, i8* %s, i32 5, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %d, i8* %s, i32 5, i1 false)
   ret void
 }
 
@@ -72,16 +72,16 @@ define void @copy_8_bytes(i8* %d, i8* %s) {
 ; ALL-NEXT:    store i64 [[TMP3]], i64* [[TMP2]], align 1
 ; ALL-NEXT:    ret void
 ;
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %d, i8* %s, i32 8, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %d, i8* %s, i32 8, i1 false)
   ret void
 }
 
 define void @copy_16_bytes(i8* %d, i8* %s) {
 ; ALL-LABEL: @copy_16_bytes(
-; ALL-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[D:%.*]], i8* [[S:%.*]], i32 16, i32 1, i1 false)
+; ALL-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[D:%.*]], i8* align 1 [[S:%.*]], i32 16, i1 false)
 ; ALL-NEXT:    ret void
 ;
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %d, i8* %s, i32 16, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %d, i8* %s, i32 16, i1 false)
   ret void
 }
 

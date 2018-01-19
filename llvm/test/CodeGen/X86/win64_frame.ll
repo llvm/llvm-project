@@ -177,9 +177,8 @@ define i32 @f8(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) "no-frame-pointer-elim"="
 ; ALL-NEXT:    movq %rsp, %rbx
 ; ALL-NEXT:    movl 288(%rbp), %esi
 ; ALL-NEXT:    movl %ecx, %eax
-; ALL-NEXT:    leaq 15(,%rax,4), %rcx
-; ALL-NEXT:    movabsq $34359738352, %rax # imm = 0x7FFFFFFF0
-; ALL-NEXT:    andq %rcx, %rax
+; ALL-NEXT:    leaq 15(,%rax,4), %rax
+; ALL-NEXT:    andq $-16, %rax
 ; ALL-NEXT:    callq __chkstk
 ; ALL-NEXT:    subq %rax, %rsp
 ; ALL-NEXT:    subq $32, %rsp

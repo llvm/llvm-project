@@ -2736,7 +2736,7 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
     }
     I = CmpInstr;
     E = MI;
-  } else {
+  } else if (E != B) {
     // Allow the loop below to search E (which was initially MI).  Since MI and
     // SubAdd have different tests, even if that instruction could not be MI, it
     // could still potentially be SubAdd.
@@ -2763,8 +2763,7 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
       return false;
 
     if (I == B)
-      // The 'and' is below the comparison instruction.
-      return false;
+      break;
   }
 
   // Return false if no candidates exist.

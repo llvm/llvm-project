@@ -294,10 +294,10 @@ int main() {
 
 // threadprivate_vec = vec;
 // CHECK: call {{.*}}i8* @__kmpc_threadprivate_cached({{.+}} [[VEC]]
-// CHECK: call void @llvm.memcpy{{.*}}(i8* %{{.+}}, i8* bitcast ([2 x i{{[0-9]+}}]* [[VEC]] to i8*),
+// CHECK: call void @llvm.memcpy{{.*}}(i8* align {{[0-9]+}}  %{{.+}}, i8* align {{[0-9]+}} bitcast ([2 x i{{[0-9]+}}]* [[VEC]] to i8*),
 
 // TLS-CHECK: [[MASTER_CAST:%.+]] = bitcast [2 x i32]* [[MASTER_REF2]] to i8*
-// TLS-CHECK: call void @llvm.memcpy{{.*}}(i8* bitcast ([2 x i{{[0-9]+}}]* [[VEC]] to i8*), i8* [[MASTER_CAST]]
+// TLS-CHECK: call void @llvm.memcpy{{.*}}(i8* align {{[0-9]+}} bitcast ([2 x i{{[0-9]+}}]* [[VEC]] to i8*), i8* align {{[0-9]+}} [[MASTER_CAST]]
 
 // threadprivate_s_arr = s_arr;
 // CHECK: call {{.*}}i8* @__kmpc_threadprivate_cached({{.+}} [[S_ARR]]
@@ -415,10 +415,10 @@ int main() {
 
 // threadprivate_vec = vec;
 // CHECK: call {{.*}}i8* @__kmpc_threadprivate_cached({{.+}} [[TMAIN_VEC]]
-// CHECK: call {{.*}}void @llvm.memcpy{{.*}}(i8* %{{.+}}, i8* bitcast ([2 x i{{[0-9]+}}]* [[TMAIN_VEC]] to i8*),
+// CHECK: call {{.*}}void @llvm.memcpy{{.*}}(i8* align {{[0-9]+}} %{{.+}}, i8* align {{[0-9]+}} bitcast ([2 x i{{[0-9]+}}]* [[TMAIN_VEC]] to i8*),
 
 // TLS-CHECK: [[MASTER_CAST:%.+]] = bitcast [2 x i32]* [[MASTER_REF1]] to i8*
-// TLS-CHECK: call void @llvm.memcpy{{.*}}(i8* bitcast ([2 x i{{[0-9]+}}]* [[TMAIN_VEC]] to i8*), i8* [[MASTER_CAST]]
+// TLS-CHECK: call void @llvm.memcpy{{.*}}(i8* align {{[0-9]+}} bitcast ([2 x i{{[0-9]+}}]* [[TMAIN_VEC]] to i8*), i8* align {{[0-9]+}} [[MASTER_CAST]]
 
 // threadprivate_s_arr = s_arr;
 // CHECK: call {{.*}}i8* @__kmpc_threadprivate_cached({{.+}} [[TMAIN_S_ARR]]
@@ -508,13 +508,13 @@ void array_func() {
   static St s[2];
 // ARRAY: @__kmpc_fork_call(
 // ARRAY: call i8* @__kmpc_threadprivate_cached(
-// ARRAY: call void @llvm.memcpy.p0i8.p0i8.i64(i8* %{{.+}}, i8* bitcast ([2 x i32]* @{{.+}} to i8*), i64 8, i32 4, i1 false)
+// ARRAY: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %{{.+}}, i8* align 4 bitcast ([2 x i32]* @{{.+}} to i8*), i64 8, i1 false)
 // ARRAY: call dereferenceable(8) %struct.St* @{{.+}}(%struct.St* %{{.+}}, %struct.St* dereferenceable(8) %{{.+}})
 
 // TLS-ARRAY: @__kmpc_fork_call(
 // TLS-ARRAY: [[REFT:%.+]] = load [2 x i32]*, [2 x i32]** [[ADDR:%.+]],
 // TLS-ARRAY: [[REF:%.+]] = bitcast [2 x i32]* [[REFT]] to i8*
-// TLS-ARRAY: call void @llvm.memcpy.p0i8.p0i8.i64(i8* bitcast ([2 x i32]* @{{.+}} to i8*), i8* [[REF]], i64 8, i32 4, i1 false)
+// TLS-ARRAY: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 bitcast ([2 x i32]* @{{.+}} to i8*), i8* align 4 [[REF]], i64 8, i1 false)
 // TLS-ARRAY: call dereferenceable(8) %struct.St* @{{.+}}(%struct.St* %{{.+}}, %struct.St* dereferenceable(8) %{{.+}})
 
 #pragma omp threadprivate(a, s)

@@ -241,6 +241,12 @@ def simm9 : Operand<i64>, ImmLeaf<i64, [{ return Imm >= -256 && Imm < 256; }]> {
   let DecoderMethod = "DecodeSImm<9>";
 }
 
+def SImm6Operand : SImmOperand<6>;
+def simm6_32b : Operand<i32>, ImmLeaf<i32, [{ return Imm >= -32 && Imm < 32; }]> {
+  let ParserMatchClass = SImm6Operand;
+  let DecoderMethod = "DecodeSImm<6>";
+}
+
 // simm7sN predicate - True if the immediate is a multiple of N in the range
 // [-64 * N, 63 * N].
 class SImm7Scaled<int Scale> : AsmOperandClass {

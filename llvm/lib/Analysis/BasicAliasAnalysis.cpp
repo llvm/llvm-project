@@ -852,8 +852,11 @@ ModRefInfo BasicAAResult::getModRefInfo(ImmutableCallSite CS,
       IsMustAlias = false;
 
     // Early return if we improved mod ref information
-    if (!isModAndRefSet(Result))
+    if (!isModAndRefSet(Result)) {
+      if (isNoModRef(Result))
+        return ModRefInfo::NoModRef;
       return IsMustAlias ? setMust(Result) : clearMust(Result);
+    }
   }
 
   // If the CallSite is to malloc or calloc, we can assume that it doesn't
