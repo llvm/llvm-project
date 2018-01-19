@@ -300,12 +300,13 @@ Instruction *InstCombiner::foldSelectOpOp(SelectInst &SI, Instruction *TI,
                             TI->getType());
   }
 
-  // Only handle binary operators with one-use here. As with the cast case
-  // above, it may be possible to relax the one-use constraint, but that needs
-  // be examined carefully since it may not reduce the total number of
-  // instructions.
-  BinaryOperator *BO = dyn_cast<BinaryOperator>(TI);
-  if (!BO || !TI->hasOneUse() || !FI->hasOneUse())
+  // Only handle binary operators (including two-operand getelementptr) with
+  // one-use here. As with the cast case above, it may be possible to relax the
+  // one-use constraint, but that needs be examined carefully since it may not
+  // reduce the total number of instructions.
+  if (TI->getNumOperands() != 2 || FI->getNumOperands() != 2 ||
+      (!isa<BinaryOperator>(TI) && !isa<GetElementPtrInst>(TI)) ||
+      !TI->hasOneUse() || !FI->hasOneUse())
     return nullptr;
 
   // Figure out if the operations have any operands in common.
@@ -342,7 +343,18 @@ Instruction *InstCombiner::foldSelectOpOp(SelectInst &SI, Instruction *TI,
                                       SI.getName() + ".v", &SI);
   Value *Op0 = MatchIsOpZero ? MatchOp : NewSI;
   Value *Op1 = MatchIsOpZero ? NewSI : MatchOp;
-  return BinaryOperator::Create(BO->getOpcode(), Op0, Op1);
+  if (auto *BO = dyn_cast<BinaryOperator>(TI)) {
+    return BinaryOperator::Create(BO->getOpcode(), Op0, Op1);
+  }
+  if (auto *TGEP = dyn_cast<GetElementPtrInst>(TI)) {
+    auto *FGEP = cast<GetElementPtrInst>(FI);
+    Type *ElementType = TGEP->getResultElementType();
+    return TGEP->isInBounds() && FGEP->isInBounds()
+               ? GetElementPtrInst::CreateInBounds(ElementType, Op0, {Op1})
+               : GetElementPtrInst::Create(ElementType, Op0, {Op1});
+  }
+  llvm_unreachable("Expected BinaryOperator or GEP");
+  return nullptr;
 }
 
 static bool isSelect01(const APInt &C1I, const APInt &C2I) {

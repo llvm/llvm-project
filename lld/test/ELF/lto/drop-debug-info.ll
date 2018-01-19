@@ -4,6 +4,6 @@
 ; -gline-tables-only, so it contains old debug info.
 ;
 ; RUN: ld.lld -m elf_x86_64 -shared %p/Inputs/drop-debug-info.bc \
-; RUN: -disable-verify 2>&1 | FileCheck %s
+; RUN: -disable-verify -o %t 2>&1 | FileCheck %s
 ; CHECK: ignoring debug info with an invalid version (1) in {{.*}}drop-debug-info.bc
 
