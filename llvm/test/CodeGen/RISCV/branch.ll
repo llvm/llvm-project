@@ -5,10 +5,6 @@
 define void @foo(i32 %a, i32 *%b, i1 %c) {
 ; RV32I-LABEL: foo:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    sw s0, 8(sp)
-; RV32I-NEXT:    addi s0, sp, 16
 ; RV32I-NEXT:    lw a3, 0(a1)
 ; RV32I-NEXT:    beq a3, a0, .LBB0_12
 ; RV32I-NEXT:  # %bb.1: # %test2
@@ -45,9 +41,6 @@ define void @foo(i32 %a, i32 *%b, i1 %c) {
 ; RV32I-NEXT:  # %bb.11: # %test12
 ; RV32I-NEXT:    lw a0, 0(a1)
 ; RV32I-NEXT:  .LBB0_12: # %end
-; RV32I-NEXT:    lw s0, 8(sp)
-; RV32I-NEXT:    lw ra, 12(sp)
-; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 
   %val1 = load volatile i32, i32* %b

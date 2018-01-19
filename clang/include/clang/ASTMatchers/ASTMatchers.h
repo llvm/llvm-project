@@ -5880,6 +5880,17 @@ AST_MATCHER(CXXRecordDecl, hasDefinition) {
   return Node.hasDefinition();
 }
 
+/// \brief Matches C++11 scoped enum declaration.
+///
+/// Example matches Y (matcher = enumDecl(isScoped()))
+/// \code
+/// enum X {};
+/// enum class Y {};
+/// \endcode
+AST_MATCHER(EnumDecl, isScoped) {
+  return Node.isScoped();
+}
+
 } // namespace ast_matchers
 } // namespace clang
 

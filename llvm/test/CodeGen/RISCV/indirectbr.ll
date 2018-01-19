@@ -7,12 +7,9 @@ define i32 @indirectbr(i8* %target) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    sw s0, 8(sp)
-; RV32I-NEXT:    addi s0, sp, 16
 ; RV32I-NEXT:    jr a0
 ; RV32I-NEXT:  .LBB0_1: # %ret
 ; RV32I-NEXT:    mv a0, zero
-; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -28,12 +25,9 @@ define i32 @indirectbr_with_offset(i8* %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    sw s0, 8(sp)
-; RV32I-NEXT:    addi s0, sp, 16
 ; RV32I-NEXT:    jalr zero, a0, 1380
 ; RV32I-NEXT:  .LBB1_1: # %ret
 ; RV32I-NEXT:    mv a0, zero
-; RV32I-NEXT:    lw s0, 8(sp)
 ; RV32I-NEXT:    lw ra, 12(sp)
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret

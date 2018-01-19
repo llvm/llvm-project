@@ -6476,6 +6476,137 @@ INTERCEPTOR(int, acct, const char *file) {
 #define INIT_ACCT
 #endif
 
+#if SANITIZER_INTERCEPT_USER_FROM_UID
+INTERCEPTOR(const char *, user_from_uid, u32 uid, int nouser) {
+  void *ctx;
+  const char *user;
+  COMMON_INTERCEPTOR_ENTER(ctx, user_from_uid, uid, nouser);
+  user = REAL(user_from_uid)(uid, nouser);
+  if (user)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, user, REAL(strlen)(user) + 1);
+  return user;
+}
+#define INIT_USER_FROM_UID COMMON_INTERCEPT_FUNCTION(user_from_uid)
+#else
+#define INIT_USER_FROM_UID
+#endif
+
+#if SANITIZER_INTERCEPT_UID_FROM_USER
+INTERCEPTOR(int, uid_from_user, const char *name, u32 *uid) {
+  void *ctx;
+  int res;
+  COMMON_INTERCEPTOR_ENTER(ctx, uid_from_user, name, uid);
+  if (name)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, name, REAL(strlen)(name) + 1);
+  res = REAL(uid_from_user)(name, uid);
+  if (uid)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, uid, sizeof(*uid));
+  return ret;
+}
+#define INIT_UID_FROM_USER COMMON_INTERCEPT_FUNCTION(uid_from_user)
+#else
+#define INIT_UID_FROM_USER
+#endif
+
+#if SANITIZER_INTERCEPT_GROUP_FROM_GID
+INTERCEPTOR(const char *, group_from_gid, u32 gid, int nogroup) {
+  void *ctx;
+  const char *group;
+  COMMON_INTERCEPTOR_ENTER(ctx, group_from_gid, gid, nogroup);
+  group = REAL(group_from_gid)(gid, nogroup);
+  if (group)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, group, REAL(strlen)(group) + 1);
+  return group;
+}
+#define INIT_GROUP_FROM_GID COMMON_INTERCEPT_FUNCTION(group_from_gid)
+#else
+#define INIT_GROUP_FROM_GID
+#endif
+
+#if SANITIZER_INTERCEPT_GID_FROM_GROUP
+INTERCEPTOR(int, gid_from_group, const char *group, u32 *gid) {
+  void *ctx;
+  int res;
+  COMMON_INTERCEPTOR_ENTER(ctx, gid_from_group, group, gid);
+  if (group)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, group, REAL(strlen)(group) + 1);
+  res = REAL(gid_from_group)(group, gid);
+  if (gid)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, gid, sizeof(*gid));
+  return ret;
+}
+#define INIT_GID_FROM_GROUP COMMON_INTERCEPT_FUNCTION(gid_from_group)
+#else
+#define INIT_GID_FROM_GROUP
+#endif
+
+#if SANITIZER_INTERCEPT_ACCESS
+INTERCEPTOR(int, access, const char *path, int mode) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, access, path, mode);
+  if (path)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, path, REAL(strlen)(path) + 1);
+  return REAL(access)(path, mode);
+}
+#define INIT_ACCESS COMMON_INTERCEPT_FUNCTION(access)
+#else
+#define INIT_ACCESS
+#endif
+
+#if SANITIZER_INTERCEPT_FACCESSAT
+INTERCEPTOR(int, faccessat, int fd, const char *path, int mode, int flags) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, faccessat, fd, path, mode, flags);
+  if (path)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, path, REAL(strlen)(path) + 1);
+  return REAL(faccessat)(fd, path, mode, flags);
+}
+#define INIT_FACCESSAT COMMON_INTERCEPT_FUNCTION(faccessat)
+#else
+#define INIT_FACCESSAT
+#endif
+
+#if SANITIZER_INTERCEPT_GETGROUPLIST
+INTERCEPTOR(int, getgrouplist, const char *name, u32 basegid, u32 *groups,
+            int *ngroups) {
+  void *ctx;
+  int res;
+  COMMON_INTERCEPTOR_ENTER(ctx, getgrouplist, name, basegid, groups, ngroups);
+  if (name)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, name, REAL(strlen)(name) + 1);
+  if (ngroups)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, ngroups, sizeof(*ngroups));
+  res = REAL(getgrouplist)(name, basegid, groups, ngroups);
+  if (!res && groups && ngroups) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, groups, sizeof(*groups) * (*ngroups));
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ngroups, sizeof(*ngroups));
+  }
+  return res;
+}
+
+INTERCEPTOR(int, getgroupmembership, const char *name, u32 basegid, u32 *groups,
+            int maxgrp, int *ngroups) {
+  void *ctx;
+  int res;
+  COMMON_INTERCEPTOR_ENTER(ctx, getgroupmembership, name, basegid, groups,
+                           maxgrp, ngroups);
+  if (name)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, name, REAL(strlen)(name) + 1);
+  res = REAL(getgroupmembership)(name, basegid, groups, maxgrp, ngroups);
+  if (!res && groups && ngroups) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, groups, sizeof(*groups) * (*ngroups));
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ngroups, sizeof(*ngroups));
+  }
+  return res;
+}
+
+#define INIT_GETGROUPLIST \
+  COMMON_INTERCEPT_FUNCTION(getgrouplist); \
+  COMMON_INTERCEPT_FUNCTION(getgroupmembership);
+#else
+#define INIT_GETGROUPLIST
+#endif
+
 static void InitializeCommonInterceptors() {
   static u64 metadata_mem[sizeof(MetadataHashMap) / sizeof(u64) + 1];
   interceptor_metadata_map = new((void *)&metadata_mem) MetadataHashMap();
@@ -6688,6 +6819,13 @@ static void InitializeCommonInterceptors() {
   INIT_WCSLEN;
   INIT_WCSCAT;
   INIT_ACCT;
+  INIT_USER_FROM_UID;
+  INIT_UID_FROM_USER;
+  INIT_GROUP_FROM_GID;
+  INIT_GID_FROM_GROUP;
+  INIT_ACCESS;
+  INIT_FACCESSAT;
+  INIT_GETGROUPLIST;
 
 #if SANITIZER_NETBSD
   COMMON_INTERCEPT_FUNCTION(__libc_mutex_lock);

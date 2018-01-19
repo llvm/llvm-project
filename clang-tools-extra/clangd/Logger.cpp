@@ -8,6 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Logger.h"
+#include "llvm/Support/raw_ostream.h"
+#include <mutex>
 
 namespace clang {
 namespace clangd {
@@ -24,9 +26,13 @@ LoggingSession::LoggingSession(clangd::Logger &Instance) {
 LoggingSession::~LoggingSession() { L = nullptr; }
 
 void log(const Context &Ctx, const llvm::Twine &Message) {
-  if (!L)
-    return;
-  L->log(Ctx, Message);
+  if (L)
+    L->log(Ctx, Message);
+  else {
+    static std::mutex Mu;
+    std::lock_guard<std::mutex> Guard(Mu);
+    llvm::errs() << Message << "\n";
+  }
 }
 
 } // namespace clangd

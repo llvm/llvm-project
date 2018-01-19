@@ -595,7 +595,7 @@ define <16 x i32> @test_2xi32_to_16xi32_mem(<2 x i32>* %vp) {
 ; CHECK-LABEL: test_2xi32_to_16xi32_mem:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovzxdq {{.*#+}} xmm0 = mem[0],zero,mem[1],zero
-; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm1 = [0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2]
 ; CHECK-NEXT:    vpermd %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %vec = load <2 x i32>, <2 x i32>* %vp
@@ -606,7 +606,7 @@ define <16 x i32> @test_masked_2xi32_to_16xi32_mem_mask0(<2 x i32>* %vp, <16 x i
 ; CHECK-LABEL: test_masked_2xi32_to_16xi32_mem_mask0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovzxdq {{.*#+}} xmm2 = mem[0],zero,mem[1],zero
-; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm3 = [0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2]
 ; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm1, %k1
 ; CHECK-NEXT:    vpermd %zmm2, %zmm3, %zmm0 {%k1}
@@ -622,7 +622,7 @@ define <16 x i32> @test_masked_z_2xi32_to_16xi32_mem_mask0(<2 x i32>* %vp, <16 x
 ; CHECK-LABEL: test_masked_z_2xi32_to_16xi32_mem_mask0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovzxdq {{.*#+}} xmm1 = mem[0],zero,mem[1],zero
-; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2]
 ; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm0, %k1
 ; CHECK-NEXT:    vpermd %zmm1, %zmm2, %zmm0 {%k1} {z}
@@ -637,7 +637,7 @@ define <16 x i32> @test_masked_2xi32_to_16xi32_mem_mask1(<2 x i32>* %vp, <16 x i
 ; CHECK-LABEL: test_masked_2xi32_to_16xi32_mem_mask1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovzxdq {{.*#+}} xmm2 = mem[0],zero,mem[1],zero
-; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm3 = [0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2]
 ; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm1, %k1
 ; CHECK-NEXT:    vpermd %zmm2, %zmm3, %zmm0 {%k1}
@@ -653,7 +653,7 @@ define <16 x i32> @test_masked_z_2xi32_to_16xi32_mem_mask1(<2 x i32>* %vp, <16 x
 ; CHECK-LABEL: test_masked_z_2xi32_to_16xi32_mem_mask1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovzxdq {{.*#+}} xmm1 = mem[0],zero,mem[1],zero
-; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2]
 ; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm0, %k1
 ; CHECK-NEXT:    vpermd %zmm1, %zmm2, %zmm0 {%k1} {z}
@@ -668,7 +668,7 @@ define <16 x i32> @test_masked_2xi32_to_16xi32_mem_mask2(<2 x i32>* %vp, <16 x i
 ; CHECK-LABEL: test_masked_2xi32_to_16xi32_mem_mask2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovzxdq {{.*#+}} xmm2 = mem[0],zero,mem[1],zero
-; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm3 = [0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2]
 ; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm1, %k1
 ; CHECK-NEXT:    vpermd %zmm2, %zmm3, %zmm0 {%k1}
@@ -684,7 +684,7 @@ define <16 x i32> @test_masked_z_2xi32_to_16xi32_mem_mask2(<2 x i32>* %vp, <16 x
 ; CHECK-LABEL: test_masked_z_2xi32_to_16xi32_mem_mask2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovzxdq {{.*#+}} xmm1 = mem[0],zero,mem[1],zero
-; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2]
 ; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm0, %k1
 ; CHECK-NEXT:    vpermd %zmm1, %zmm2, %zmm0 {%k1} {z}
@@ -699,7 +699,7 @@ define <16 x i32> @test_masked_2xi32_to_16xi32_mem_mask3(<2 x i32>* %vp, <16 x i
 ; CHECK-LABEL: test_masked_2xi32_to_16xi32_mem_mask3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovzxdq {{.*#+}} xmm2 = mem[0],zero,mem[1],zero
-; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm3 = [0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2]
 ; CHECK-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vpcmpeqd %zmm4, %zmm1, %k1
 ; CHECK-NEXT:    vpermd %zmm2, %zmm3, %zmm0 {%k1}
@@ -715,7 +715,7 @@ define <16 x i32> @test_masked_z_2xi32_to_16xi32_mem_mask3(<2 x i32>* %vp, <16 x
 ; CHECK-LABEL: test_masked_z_2xi32_to_16xi32_mem_mask3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovzxdq {{.*#+}} xmm1 = mem[0],zero,mem[1],zero
-; CHECK-NEXT:    vmovdqa32 {{.*#+}} zmm2 = [0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,2,0,2,0,2,0,2,0,2,0,2,0,2,0,2]
 ; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vpcmpeqd %zmm3, %zmm0, %k1
 ; CHECK-NEXT:    vpermd %zmm1, %zmm2, %zmm0 {%k1} {z}
