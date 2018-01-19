@@ -212,6 +212,10 @@ namespace llvm {
   /// into tails of their predecessors.
   extern char &TailDuplicateID;
 
+  /// Duplicate blocks with unconditional branches into tails of their
+  /// predecessors. Variant that works before register allocation.
+  extern char &EarlyTailDuplicateID;
+
   /// MachineTraceMetrics - This pass computes critical path and CPU resource
   /// usage in an ensemble of traces.
   extern char &MachineTraceMetricsID;

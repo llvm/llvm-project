@@ -76,6 +76,14 @@ bool CodeViewContext::addFile(MCStreamer &OS, unsigned FileNumber,
   return true;
 }
 
+MCCVFunctionInfo *CodeViewContext::getCVFunctionInfo(unsigned FuncId) {
+  if (FuncId >= Functions.size())
+    return nullptr;
+  if (Functions[FuncId].isUnallocatedFunctionInfo())
+    return nullptr;
+  return &Functions[FuncId];
+}
+
 bool CodeViewContext::recordFunctionId(unsigned FuncId) {
   if (FuncId >= Functions.size())
     Functions.resize(FuncId + 1);
@@ -245,6 +253,67 @@ void CodeViewContext::emitFileChecksumOffset(MCObjectStreamer &OS,
       MCSymbolRefExpr::create(Files[Idx].ChecksumTableOffset, OS.getContext());
 
   OS.EmitValueImpl(SRE, 4);
+}
+
+void CodeViewContext::addLineEntry(const MCCVLineEntry &LineEntry) {
+  size_t Offset = MCCVLines.size();
+  auto I = MCCVLineStartStop.insert(
+      {LineEntry.getFunctionId(), {Offset, Offset + 1}});
+  if (!I.second)
+    I.first->second.second = Offset + 1;
+  MCCVLines.push_back(LineEntry);
+}
+
+std::vector<MCCVLineEntry>
+CodeViewContext::getFunctionLineEntries(unsigned FuncId) {
+  std::vector<MCCVLineEntry> FilteredLines;
+  auto I = MCCVLineStartStop.find(FuncId);
+  if (I != MCCVLineStartStop.end()) {
+    MCCVFunctionInfo *SiteInfo = getCVFunctionInfo(FuncId);
+    for (size_t Idx = I->second.first, End = I->second.second; Idx != End;
+         ++Idx) {
+      unsigned LocationFuncId = MCCVLines[Idx].getFunctionId();
+      if (LocationFuncId == FuncId) {
+        // This was a .cv_loc directly for FuncId, so record it.
+        FilteredLines.push_back(MCCVLines[Idx]);
+      } else {
+        // Check if the current location is inlined in this function. If it is,
+        // synthesize a statement .cv_loc at the original inlined call site.
+        auto I = SiteInfo->InlinedAtMap.find(LocationFuncId);
+        if (I != SiteInfo->InlinedAtMap.end()) {
+          MCCVFunctionInfo::LineInfo &IA = I->second;
+          // Only add the location if it differs from the previous location.
+          // Large inlined calls will have many .cv_loc entries and we only need
+          // one line table entry in the parent function.
+          if (FilteredLines.empty() ||
+              FilteredLines.back().getFileNum() != IA.File ||
+              FilteredLines.back().getLine() != IA.Line ||
+              FilteredLines.back().getColumn() != IA.Col) {
+            FilteredLines.push_back(MCCVLineEntry(
+                MCCVLines[Idx].getLabel(),
+                MCCVLoc(FuncId, IA.File, IA.Line, IA.Col, false, false)));
+          }
+        }
+      }
+    }
+  }
+  return FilteredLines;
+}
+
+std::pair<size_t, size_t> CodeViewContext::getLineExtent(unsigned FuncId) {
+  auto I = MCCVLineStartStop.find(FuncId);
+  // Return an empty extent if there are no cv_locs for this function id.
+  if (I == MCCVLineStartStop.end())
+    return {~0ULL, 0};
+  return I->second;
+}
+
+ArrayRef<MCCVLineEntry> CodeViewContext::getLinesForExtent(size_t L, size_t R) {
+  if (R <= L)
+    return None;
+  if (L >= MCCVLines.size())
+    return None;
+  return makeArrayRef(&MCCVLines[L], R - L);
 }
 
 void CodeViewContext::emitLineTableForFunction(MCObjectStreamer &OS,

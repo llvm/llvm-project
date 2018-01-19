@@ -326,6 +326,8 @@ public:
       return false;
     }
   }
+
+  void mirFileLoaded(MachineFunction &MF) const override;
 };
 } // End llvm namespace
 

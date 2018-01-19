@@ -90,10 +90,6 @@ public:
   /// TargetPassConfig APIs to identify multiple occurrences of the same pass.
   ///
 
-  /// EarlyTailDuplicate - A clone of the TailDuplicate pass that runs early
-  /// during codegen, on SSA form.
-  static char EarlyTailDuplicateID;
-
   /// PostRAMachineLICM - A clone of the LICM pass that runs during late machine
   /// optimization after regalloc.
   static char PostRAMachineLICMID;

@@ -107,7 +107,44 @@ entry:
 
 ; RELOC:          Name:            linking
 ; RELOC-NEXT:     DataSize:        0
-; RELOC-NEXT:     InitFunctions:   
+; RELOC-NEXT:     SymbolInfo:      
+; RELOC-NEXT:       - Name:            func1
+; RELOC-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+; RELOC-NEXT:       - Name:            func2
+; RELOC-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+; RELOC-NEXT:       - Name:            func3
+; RELOC-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+; RELOC-NEXT:       - Name:            func4
+; RELOC-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+; RELOC-NEXT:       - Name:            _start
+; RELOC-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+; RELOC-NEXT:       - Name:            .Lcall_dtors.101
+; RELOC-NEXT:         Flags:           [ BINDING_LOCAL ]
+; RELOC-NEXT:       - Name:            .Lregister_call_dtors.101
+; RELOC-NEXT:         Flags:           [ BINDING_LOCAL ]
+; RELOC-NEXT:       - Name:            .Lbitcast
+; RELOC-NEXT:         Flags:           [ BINDING_LOCAL ]
+; RELOC-NEXT:       - Name:            .Lcall_dtors.1001
+; RELOC-NEXT:         Flags:           [ BINDING_LOCAL ]
+; RELOC-NEXT:       - Name:            .Lregister_call_dtors.1001
+; RELOC-NEXT:         Flags:           [ BINDING_LOCAL ]
+; RELOC-NEXT:       - Name:            myctor
+; RELOC-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+; RELOC-NEXT:       - Name:            mydtor
+; RELOC-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+; RELOC-NEXT:       - Name:            .Lcall_dtors.101.1
+; RELOC-NEXT:         Flags:           [ BINDING_LOCAL ]
+; RELOC-NEXT:       - Name:            .Lregister_call_dtors.101.1
+; RELOC-NEXT:         Flags:           [ BINDING_LOCAL ]
+; RELOC-NEXT:       - Name:            .Lcall_dtors.202
+; RELOC-NEXT:         Flags:           [ BINDING_LOCAL ]
+; RELOC-NEXT:       - Name:            .Lregister_call_dtors.202
+; RELOC-NEXT:         Flags:           [ BINDING_LOCAL ]
+; RELOC-NEXT:       - Name:            .Lcall_dtors.2002
+; RELOC-NEXT:         Flags:           [ BINDING_LOCAL ]
+; RELOC-NEXT:       - Name:            .Lregister_call_dtors.2002
+; RELOC-NEXT:         Flags:           [ BINDING_LOCAL ]
+; RELOC-NEXT:     InitFunctions:
 ; RELOC-NEXT:       - Priority:        101
 ; RELOC-NEXT:         FunctionIndex:   0
 ; RELOC-NEXT:       - Priority:        101
