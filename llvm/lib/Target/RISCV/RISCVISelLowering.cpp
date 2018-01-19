@@ -77,18 +77,20 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SUBC, XLenVT, Expand);
   setOperationAction(ISD::SUBE, XLenVT, Expand);
 
-  setOperationAction(ISD::SREM, XLenVT, Expand);
-  setOperationAction(ISD::SDIVREM, XLenVT, Expand);
-  setOperationAction(ISD::SDIV, XLenVT, Expand);
-  setOperationAction(ISD::UREM, XLenVT, Expand);
-  setOperationAction(ISD::UDIVREM, XLenVT, Expand);
-  setOperationAction(ISD::UDIV, XLenVT, Expand);
+  if (!Subtarget.hasStdExtM()) {
+    setOperationAction(ISD::MUL, XLenVT, Expand);
+    setOperationAction(ISD::MULHS, XLenVT, Expand);
+    setOperationAction(ISD::MULHU, XLenVT, Expand);
+    setOperationAction(ISD::SDIV, XLenVT, Expand);
+    setOperationAction(ISD::UDIV, XLenVT, Expand);
+    setOperationAction(ISD::SREM, XLenVT, Expand);
+    setOperationAction(ISD::UREM, XLenVT, Expand);
+  }
 
-  setOperationAction(ISD::MUL, XLenVT, Expand);
+  setOperationAction(ISD::SDIVREM, XLenVT, Expand);
+  setOperationAction(ISD::UDIVREM, XLenVT, Expand);
   setOperationAction(ISD::SMUL_LOHI, XLenVT, Expand);
   setOperationAction(ISD::UMUL_LOHI, XLenVT, Expand);
-  setOperationAction(ISD::MULHS, XLenVT, Expand);
-  setOperationAction(ISD::MULHU, XLenVT, Expand);
 
   setOperationAction(ISD::SHL_PARTS, XLenVT, Expand);
   setOperationAction(ISD::SRL_PARTS, XLenVT, Expand);

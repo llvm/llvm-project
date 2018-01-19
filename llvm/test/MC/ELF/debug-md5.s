@@ -9,9 +9,9 @@
 
 # CHECK: debug_line[0x00000000]
 # CHECK: version: 5
-# CHECK: include_directories[ 1] = ''
-# CHECK: include_directories[ 2] = 'dir1'
-# CHECK: include_directories[ 3] = 'dir2'
+# CHECK: include_directories[ 0] = ''
+# CHECK: include_directories[ 1] = 'dir1'
+# CHECK: include_directories[ 2] = 'dir2'
 # CHECK-NOT: include_directories
 # CHECK: Dir MD5 Checksum File Name
 # CHECK: file_names[ 1] 1 00112233445566778899aabbccddeeff foo

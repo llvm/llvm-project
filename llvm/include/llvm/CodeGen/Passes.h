@@ -212,6 +212,10 @@ namespace llvm {
   /// into tails of their predecessors.
   extern char &TailDuplicateID;
 
+  /// Duplicate blocks with unconditional branches into tails of their
+  /// predecessors. Variant that works before register allocation.
+  extern char &EarlyTailDuplicateID;
+
   /// MachineTraceMetrics - This pass computes critical path and CPU resource
   /// usage in an ensemble of traces.
   extern char &MachineTraceMetricsID;
@@ -269,8 +273,12 @@ namespace llvm {
   /// memory operations.
   extern char &ImplicitNullChecksID;
 
-  /// MachineLICM - This pass performs LICM on machine instructions.
+  /// This pass performs loop invariant code motion on machine instructions.
   extern char &MachineLICMID;
+
+  /// This pass performs loop invariant code motion on machine instructions.
+  /// This variant works before register allocation. \see MachineLICMID.
+  extern char &EarlyMachineLICMID;
 
   /// MachineSinking - This pass performs sinking on machine instructions.
   extern char &MachineSinkingID;

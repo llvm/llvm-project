@@ -580,7 +580,7 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
       KnownBits LHSKnown;
       // Do not increment Depth here; that can cause an infinite loop.
       TLO.DAG.computeKnownBits(Op0, LHSKnown, Depth);
-      // If the LHS already has zeros where RHSC does, this and is dead.
+      // If the LHS already has zeros where RHSC does, this 'and' is dead.
       if ((LHSKnown.Zero & NewMask) == (~RHSC->getAPIntValue() & NewMask))
         return TLO.CombineTo(Op, Op0);
 

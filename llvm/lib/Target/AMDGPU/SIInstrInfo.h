@@ -456,6 +456,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::Gather4;
   }
 
+  static bool isD16(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::D16;
+  }
+
+  bool isD16(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::D16;
+  }
+
   static bool isFLAT(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::FLAT;
   }

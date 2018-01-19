@@ -186,6 +186,7 @@ bool HWAddressSanitizer::doInitialization(Module &M) {
   IntptrTy = IRB.getIntPtrTy(DL);
   Int8Ty = IRB.getInt8Ty();
 
+  HwasanCtorFunction = nullptr;
   if (!ClEnableKhwasan) {
     std::tie(HwasanCtorFunction, std::ignore) =
         createSanitizerCtorAndInitFunctions(M, kHwasanModuleCtorName,

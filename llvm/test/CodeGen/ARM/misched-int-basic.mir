@@ -28,37 +28,37 @@
   }
 
 # CHECK:       ********** MI Scheduling **********
-# CHECK:       SU(2):   %2:gpr = SMULBB %1, %1, 14, %noreg
+# CHECK:       SU(2):   %2:gpr = SMULBB %1:gpr, %1:gpr, 14, %noreg
 # CHECK_A9:    Latency    : 2
 # CHECK_SWIFT: Latency    : 4
 # CHECK_R52:   Latency    : 4
 #
-# CHECK:       SU(3):   %3:gprnopc = SMLABB %0, %0, %2, 14, %noreg
+# CHECK:       SU(3):   %3:gprnopc = SMLABB %0:gprnopc, %0:gprnopc, %2:gpr, 14, %noreg
 # CHECK_A9:    Latency    : 2
 # CHECK_SWIFT: Latency    : 4
 # CHECK_R52:   Latency    : 4
 #
-# CHECK:       SU(4):   %4:gprnopc = UXTH %3, 0, 14, %noreg
+# CHECK:       SU(4):   %4:gprnopc = UXTH %3:gprnopc, 0, 14, %noreg
 # CHECK_A9:    Latency    : 1
 # CHECK_SWIFT: Latency    : 1
 # CHECK_R52:   Latency    : 3
 #
-# CHECK:       SU(5):   %5:gprnopc = MUL %4, %4, 14, %noreg, %noreg
+# CHECK:       SU(5):   %5:gprnopc = MUL %4:gprnopc, %4:gprnopc, 14, %noreg, %noreg
 # CHECK_A9:    Latency    : 2
 # CHECK_SWIFT: Latency    : 4
 # CHECK_R52:   Latency    : 4
 #
-# CHECK:       SU(6):   %6:gprnopc = MLA %5, %5, %5, 14, %noreg, %noreg
+# CHECK:       SU(6):   %6:gprnopc = MLA %5:gprnopc, %5:gprnopc, %5:gprnopc, 14, %noreg, %noreg
 # CHECK_A9:    Latency    : 2
 # CHECK_SWIFT: Latency    : 4
 # CHECK_R52:   Latency    : 4
 #
-# CHECK:       SU(7):   %7:gprnopc, %8:gprnopc = UMULL %6, %6, 14, %noreg, %noreg
+# CHECK:       SU(7):   %7:gprnopc, %8:gprnopc = UMULL %6:gprnopc, %6:gprnopc, 14, %noreg, %noreg
 # CHECK_A9:    Latency    : 3
 # CHECK_SWIFT: Latency    : 5
 # CHECK_R52:   Latency    : 4
 #
-# CHECK:       SU(11):   %13:gpr, %14:gprnopc = UMLAL %6, %6, %13, %14, 14, %noreg, %noreg
+# CHECK:       SU(11):   %13:gpr, %14:gprnopc = UMLAL %6:gprnopc, %6:gprnopc, %13:gpr, %14:gprnopc, 14, %noreg, %noreg
 # CHECK_SWIFT: Latency    : 7
 # CHECK_A9:    Latency    : 3
 # CHECK_R52:   Latency    : 4

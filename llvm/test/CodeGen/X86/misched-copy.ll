@@ -10,7 +10,7 @@
 ;
 ; CHECK: *** Final schedule for %bb.1 ***
 ; CHECK:      %eax = COPY
-; CHECK-NEXT: MUL32r %{{[0-9]+}}, implicit-def %eax, implicit-def %edx, implicit-def dead %eflags, implicit %eax
+; CHECK-NEXT: MUL32r %{{[0-9]+}}:gr32, implicit-def %eax, implicit-def %edx, implicit-def dead %eflags, implicit %eax
 ; CHECK-NEXT: COPY %e{{[ad]}}x
 ; CHECK-NEXT: COPY %e{{[ad]}}x
 ; CHECK:      DIVSSrm

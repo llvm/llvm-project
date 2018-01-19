@@ -22,10 +22,10 @@ target triple = "arm64-apple-ios"
 ; DISABLE: cmp w0, w1
 ; DISABLE-NEXT: b.ge [[EXIT_LABEL:LBB[0-9_]+]]
 ;
-; Store %a in the alloca.
-; CHECK: stur w0, {{\[}}[[SAVE_SP]], #-4]
 ; Set the alloca address in the second argument.
-; CHECK-NEXT: sub x1, [[SAVE_SP]], #4
+; CHECK: sub x1, [[SAVE_SP]], #4
+; Store %a in the alloca.
+; CHECK-NEXT: stur w0, {{\[}}[[SAVE_SP]], #-4]
 ; Set the first argument to zero.
 ; CHECK-NEXT: mov w0, wzr
 ; CHECK-NEXT: bl _doSomething
