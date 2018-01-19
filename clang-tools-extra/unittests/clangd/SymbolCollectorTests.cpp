@@ -43,9 +43,7 @@ MATCHER_P(Plain, Text, "") { return arg.CompletionPlainInsertText == Text; }
 MATCHER_P(Snippet, S, "") {
   return arg.CompletionSnippetInsertText == S;
 }
-MATCHER_P(QName, Name, "") {
-  return (arg.Scope + (arg.Scope.empty() ? "" : "::") + arg.Name).str() == Name;
-}
+MATCHER_P(QName, Name, "") { return (arg.Scope + arg.Name).str() == Name; }
 
 namespace clang {
 namespace clangd {
@@ -291,7 +289,7 @@ TEST_F(SymbolCollectorTest, YAMLConversions) {
 ---
 ID: 057557CEBF6E6B2DD437FBF60CC58F352D1DF856
 Name:   'Foo1'
-Scope:   'clang'
+Scope:   'clang::'
 SymInfo:
   Kind:            Function
   Lang:            Cpp
@@ -311,7 +309,7 @@ Detail:
 ---
 ID: 057557CEBF6E6B2DD437FBF60CC58F352D1DF858
 Name:   'Foo2'
-Scope:   'clang'
+Scope:   'clang::'
 SymInfo:
   Kind:            Function
   Lang:            Cpp

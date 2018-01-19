@@ -70,7 +70,7 @@ define void @ret_large_struct(%struct.st12_t* noalias nocapture sret %agg.result
 entry:
   %0 = bitcast %struct.st12_t* %agg.result to i8*
   %1 = bitcast %struct.st12_t* %r to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %0, i8* %1, i32 48, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %0, i8* %1, i32 48, i1 false)
   ret void
 }
 
@@ -104,7 +104,7 @@ define i32 @test_fp128(fp128* %ptr) #0 {
   ret i32 %ret
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i32, i1) #1
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i1) #1
 
 ; CHECK-LABEL: test_alignment_d:
 ; CHECK-NOT: andl  {{.+}}, %esp

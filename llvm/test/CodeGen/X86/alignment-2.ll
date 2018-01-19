@@ -23,8 +23,8 @@ bb:
 ; CHECK-NOT: movaps {{[0-9]*}}(%{{[a-z]*}}), {{%xmm[0-9]}}
   %myopt = alloca %struct.printQueryOpt, align 4
   %tmp = bitcast %struct.printQueryOpt* %myopt to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %tmp, i8* bitcast (%struct.printQueryOpt* getelementptr inbounds (%struct._psqlSettings, %struct._psqlSettings* @pset, i32 0, i32 4) to i8*), i32 76, i32 4, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %tmp, i8* align 4 bitcast (%struct.printQueryOpt* getelementptr inbounds (%struct._psqlSettings, %struct._psqlSettings* @pset, i32 0, i32 4) to i8*), i32 76, i1 false)
   ret i8 0
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind

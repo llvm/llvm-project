@@ -39,7 +39,7 @@ if.else:                                          ; preds = %entry
 if.end:                                           ; preds = %if.else, %if.then
   %1 = bitcast %struct.Pair* %p to i8*, !dbg !51
   %2 = bitcast %struct.Pair* @pair to i8*, !dbg !51
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %2, i8* %1, i64 8, i32 4, i1 false), !dbg !51
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %2, i8* align 4 %1, i64 8, i1 false), !dbg !51
   ret void
 }
 
@@ -62,7 +62,7 @@ if.end:                                           ; preds = %if.else, %if.then
 ; CHECK: ![[PVAR]] = !DILocalVariable(name: "p", {{.*}})
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1) #2
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #2
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.addr(metadata, metadata, metadata)

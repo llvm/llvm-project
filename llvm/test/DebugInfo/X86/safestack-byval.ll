@@ -31,7 +31,7 @@ entry:
   %0 = getelementptr i8, i8* %unsafe_stack_ptr, i32 -400, !dbg !22
   %zzz.unsafe-byval = bitcast i8* %0 to %struct.S*, !dbg !22
   %1 = bitcast %struct.S* %zzz to i8*, !dbg !24
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 400, i32 8, i1 false), !dbg !24
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %0, i8* align 8 %1, i64 400, i1 false), !dbg !24
   tail call void @llvm.dbg.value(metadata i64 %len, metadata !18, metadata !25), !dbg !24
   %arrayidx = getelementptr inbounds %struct.S, %struct.S* %zzz.unsafe-byval, i64 0, i32 0, i64 %len, !dbg !26
   %2 = load i32, i32* %arrayidx, align 4, !dbg !26, !tbaa !27
@@ -46,7 +46,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) #2
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #2
 
 attributes #0 = { norecurse nounwind readonly safestack uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }

@@ -58,7 +58,7 @@ cleanup:
 ; CHECK-NEXT:    br i1 %cmp, label %cleanup, label %if.end
 ; CHECK:       if.end: 
 ; CHECK-NEXT:    %bc = bitcast i8* %call to float*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* nonnull %call, i8 0, i32 %size, i32 1, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* nonnull align 1 %call, i8 0, i32 %size, i1 false)
 ; CHECK-NEXT:    br label %cleanup
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    %retval.0 = phi float* [ %bc, %if.end ], [ null, %entry ]

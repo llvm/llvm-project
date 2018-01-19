@@ -899,7 +899,7 @@ poly16x8_t test_vtrn2q_p16(poly16x8_t a, poly16x8_t b) {
 // CHECK:   store <8 x i8> [[VUZP1_I]], <8 x i8>* [[TMP2]]
 // CHECK:   [[TMP3:%.*]] = bitcast %struct.int8x8x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP4:%.*]] = bitcast %struct.int8x8x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP3]], i8* [[TMP4]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP3]], i8* align 8 [[TMP4]], i64 16, i1 false) #2
 // CHECK:   [[TMP5:%.*]] = load %struct.int8x8x2_t, %struct.int8x8x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP6:%.*]] = getelementptr inbounds %struct.int8x8x2_t, %struct.int8x8x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP7:%.*]] = extractvalue %struct.int8x8x2_t [[TMP5]], 0
@@ -925,7 +925,7 @@ int8x8x2_t test_vuzp_s8(int8x8_t a, int8x8_t b) {
 // CHECK:   store <4 x i16> [[VUZP1_I]], <4 x i16>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.int16x4x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.int16x4x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP5]], i8* align 8 [[TMP6]], i64 16, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.int16x4x2_t, %struct.int16x4x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.int16x4x2_t, %struct.int16x4x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.int16x4x2_t [[TMP7]], 0
@@ -951,7 +951,7 @@ int16x4x2_t test_vuzp_s16(int16x4_t a, int16x4_t b) {
 // CHECK:   store <2 x i32> [[VUZP1_I]], <2 x i32>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.int32x2x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.int32x2x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP5]], i8* align 8 [[TMP6]], i64 16, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.int32x2x2_t, %struct.int32x2x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.int32x2x2_t, %struct.int32x2x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.int32x2x2_t [[TMP7]], 0
@@ -975,7 +975,7 @@ int32x2x2_t test_vuzp_s32(int32x2_t a, int32x2_t b) {
 // CHECK:   store <8 x i8> [[VUZP1_I]], <8 x i8>* [[TMP2]]
 // CHECK:   [[TMP3:%.*]] = bitcast %struct.uint8x8x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP4:%.*]] = bitcast %struct.uint8x8x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP3]], i8* [[TMP4]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP3]], i8* align 8 [[TMP4]], i64 16, i1 false) #2
 // CHECK:   [[TMP5:%.*]] = load %struct.uint8x8x2_t, %struct.uint8x8x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP6:%.*]] = getelementptr inbounds %struct.uint8x8x2_t, %struct.uint8x8x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP7:%.*]] = extractvalue %struct.uint8x8x2_t [[TMP5]], 0
@@ -1001,7 +1001,7 @@ uint8x8x2_t test_vuzp_u8(uint8x8_t a, uint8x8_t b) {
 // CHECK:   store <4 x i16> [[VUZP1_I]], <4 x i16>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.uint16x4x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.uint16x4x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP5]], i8* align 8 [[TMP6]], i64 16, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.uint16x4x2_t, %struct.uint16x4x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.uint16x4x2_t, %struct.uint16x4x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.uint16x4x2_t [[TMP7]], 0
@@ -1027,7 +1027,7 @@ uint16x4x2_t test_vuzp_u16(uint16x4_t a, uint16x4_t b) {
 // CHECK:   store <2 x i32> [[VUZP1_I]], <2 x i32>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.uint32x2x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.uint32x2x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP5]], i8* align 8 [[TMP6]], i64 16, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.uint32x2x2_t, %struct.uint32x2x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.uint32x2x2_t, %struct.uint32x2x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.uint32x2x2_t [[TMP7]], 0
@@ -1053,7 +1053,7 @@ uint32x2x2_t test_vuzp_u32(uint32x2_t a, uint32x2_t b) {
 // CHECK:   store <2 x float> [[VUZP1_I]], <2 x float>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.float32x2x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.float32x2x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP5]], i8* align 8 [[TMP6]], i64 16, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.float32x2x2_t, %struct.float32x2x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.float32x2x2_t, %struct.float32x2x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.float32x2x2_t [[TMP7]], 0
@@ -1077,7 +1077,7 @@ float32x2x2_t test_vuzp_f32(float32x2_t a, float32x2_t b) {
 // CHECK:   store <8 x i8> [[VUZP1_I]], <8 x i8>* [[TMP2]]
 // CHECK:   [[TMP3:%.*]] = bitcast %struct.poly8x8x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP4:%.*]] = bitcast %struct.poly8x8x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP3]], i8* [[TMP4]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP3]], i8* align 8 [[TMP4]], i64 16, i1 false) #2
 // CHECK:   [[TMP5:%.*]] = load %struct.poly8x8x2_t, %struct.poly8x8x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP6:%.*]] = getelementptr inbounds %struct.poly8x8x2_t, %struct.poly8x8x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP7:%.*]] = extractvalue %struct.poly8x8x2_t [[TMP5]], 0
@@ -1103,7 +1103,7 @@ poly8x8x2_t test_vuzp_p8(poly8x8_t a, poly8x8_t b) {
 // CHECK:   store <4 x i16> [[VUZP1_I]], <4 x i16>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.poly16x4x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.poly16x4x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP5]], i8* align 8 [[TMP6]], i64 16, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.poly16x4x2_t, %struct.poly16x4x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.poly16x4x2_t, %struct.poly16x4x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.poly16x4x2_t [[TMP7]], 0
@@ -1127,7 +1127,7 @@ poly16x4x2_t test_vuzp_p16(poly16x4_t a, poly16x4_t b) {
 // CHECK:   store <16 x i8> [[VUZP1_I]], <16 x i8>* [[TMP2]]
 // CHECK:   [[TMP3:%.*]] = bitcast %struct.int8x16x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP4:%.*]] = bitcast %struct.int8x16x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP3]], i8* [[TMP4]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP3]], i8* align 16 [[TMP4]], i64 32, i1 false) #2
 // CHECK:   [[TMP5:%.*]] = load %struct.int8x16x2_t, %struct.int8x16x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP6:%.*]] = getelementptr inbounds %struct.int8x16x2_t, %struct.int8x16x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP7:%.*]] = extractvalue %struct.int8x16x2_t [[TMP5]], 0
@@ -1153,7 +1153,7 @@ int8x16x2_t test_vuzpq_s8(int8x16_t a, int8x16_t b) {
 // CHECK:   store <8 x i16> [[VUZP1_I]], <8 x i16>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.int16x8x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.int16x8x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP5]], i8* align 16 [[TMP6]], i64 32, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.int16x8x2_t, %struct.int16x8x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.int16x8x2_t, %struct.int16x8x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.int16x8x2_t [[TMP7]], 0
@@ -1179,7 +1179,7 @@ int16x8x2_t test_vuzpq_s16(int16x8_t a, int16x8_t b) {
 // CHECK:   store <4 x i32> [[VUZP1_I]], <4 x i32>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.int32x4x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.int32x4x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP5]], i8* align 16 [[TMP6]], i64 32, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.int32x4x2_t, %struct.int32x4x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.int32x4x2_t, %struct.int32x4x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.int32x4x2_t [[TMP7]], 0
@@ -1203,7 +1203,7 @@ int32x4x2_t test_vuzpq_s32(int32x4_t a, int32x4_t b) {
 // CHECK:   store <16 x i8> [[VUZP1_I]], <16 x i8>* [[TMP2]]
 // CHECK:   [[TMP3:%.*]] = bitcast %struct.uint8x16x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP4:%.*]] = bitcast %struct.uint8x16x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP3]], i8* [[TMP4]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP3]], i8* align 16 [[TMP4]], i64 32, i1 false) #2
 // CHECK:   [[TMP5:%.*]] = load %struct.uint8x16x2_t, %struct.uint8x16x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP6:%.*]] = getelementptr inbounds %struct.uint8x16x2_t, %struct.uint8x16x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP7:%.*]] = extractvalue %struct.uint8x16x2_t [[TMP5]], 0
@@ -1229,7 +1229,7 @@ uint8x16x2_t test_vuzpq_u8(uint8x16_t a, uint8x16_t b) {
 // CHECK:   store <8 x i16> [[VUZP1_I]], <8 x i16>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.uint16x8x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.uint16x8x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP5]], i8* align 16 [[TMP6]], i64 32, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.uint16x8x2_t, %struct.uint16x8x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.uint16x8x2_t, %struct.uint16x8x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.uint16x8x2_t [[TMP7]], 0
@@ -1255,7 +1255,7 @@ uint16x8x2_t test_vuzpq_u16(uint16x8_t a, uint16x8_t b) {
 // CHECK:   store <4 x i32> [[VUZP1_I]], <4 x i32>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.uint32x4x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.uint32x4x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP5]], i8* align 16 [[TMP6]], i64 32, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.uint32x4x2_t, %struct.uint32x4x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.uint32x4x2_t, %struct.uint32x4x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.uint32x4x2_t [[TMP7]], 0
@@ -1281,7 +1281,7 @@ uint32x4x2_t test_vuzpq_u32(uint32x4_t a, uint32x4_t b) {
 // CHECK:   store <4 x float> [[VUZP1_I]], <4 x float>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.float32x4x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.float32x4x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP5]], i8* align 16 [[TMP6]], i64 32, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.float32x4x2_t, %struct.float32x4x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.float32x4x2_t, %struct.float32x4x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.float32x4x2_t [[TMP7]], 0
@@ -1305,7 +1305,7 @@ float32x4x2_t test_vuzpq_f32(float32x4_t a, float32x4_t b) {
 // CHECK:   store <16 x i8> [[VUZP1_I]], <16 x i8>* [[TMP2]]
 // CHECK:   [[TMP3:%.*]] = bitcast %struct.poly8x16x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP4:%.*]] = bitcast %struct.poly8x16x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP3]], i8* [[TMP4]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP3]], i8* align 16 [[TMP4]], i64 32, i1 false) #2
 // CHECK:   [[TMP5:%.*]] = load %struct.poly8x16x2_t, %struct.poly8x16x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP6:%.*]] = getelementptr inbounds %struct.poly8x16x2_t, %struct.poly8x16x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP7:%.*]] = extractvalue %struct.poly8x16x2_t [[TMP5]], 0
@@ -1331,7 +1331,7 @@ poly8x16x2_t test_vuzpq_p8(poly8x16_t a, poly8x16_t b) {
 // CHECK:   store <8 x i16> [[VUZP1_I]], <8 x i16>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.poly16x8x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.poly16x8x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP5]], i8* align 16 [[TMP6]], i64 32, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.poly16x8x2_t, %struct.poly16x8x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.poly16x8x2_t, %struct.poly16x8x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.poly16x8x2_t [[TMP7]], 0
@@ -1355,7 +1355,7 @@ poly16x8x2_t test_vuzpq_p16(poly16x8_t a, poly16x8_t b) {
 // CHECK:   store <8 x i8> [[VZIP1_I]], <8 x i8>* [[TMP2]]
 // CHECK:   [[TMP3:%.*]] = bitcast %struct.int8x8x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP4:%.*]] = bitcast %struct.int8x8x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP3]], i8* [[TMP4]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP3]], i8* align 8 [[TMP4]], i64 16, i1 false) #2
 // CHECK:   [[TMP5:%.*]] = load %struct.int8x8x2_t, %struct.int8x8x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP6:%.*]] = getelementptr inbounds %struct.int8x8x2_t, %struct.int8x8x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP7:%.*]] = extractvalue %struct.int8x8x2_t [[TMP5]], 0
@@ -1381,7 +1381,7 @@ int8x8x2_t test_vzip_s8(int8x8_t a, int8x8_t b) {
 // CHECK:   store <4 x i16> [[VZIP1_I]], <4 x i16>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.int16x4x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.int16x4x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP5]], i8* align 8 [[TMP6]], i64 16, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.int16x4x2_t, %struct.int16x4x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.int16x4x2_t, %struct.int16x4x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.int16x4x2_t [[TMP7]], 0
@@ -1407,7 +1407,7 @@ int16x4x2_t test_vzip_s16(int16x4_t a, int16x4_t b) {
 // CHECK:   store <2 x i32> [[VZIP1_I]], <2 x i32>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.int32x2x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.int32x2x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP5]], i8* align 8 [[TMP6]], i64 16, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.int32x2x2_t, %struct.int32x2x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.int32x2x2_t, %struct.int32x2x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.int32x2x2_t [[TMP7]], 0
@@ -1431,7 +1431,7 @@ int32x2x2_t test_vzip_s32(int32x2_t a, int32x2_t b) {
 // CHECK:   store <8 x i8> [[VZIP1_I]], <8 x i8>* [[TMP2]]
 // CHECK:   [[TMP3:%.*]] = bitcast %struct.uint8x8x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP4:%.*]] = bitcast %struct.uint8x8x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP3]], i8* [[TMP4]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP3]], i8* align 8 [[TMP4]], i64 16, i1 false) #2
 // CHECK:   [[TMP5:%.*]] = load %struct.uint8x8x2_t, %struct.uint8x8x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP6:%.*]] = getelementptr inbounds %struct.uint8x8x2_t, %struct.uint8x8x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP7:%.*]] = extractvalue %struct.uint8x8x2_t [[TMP5]], 0
@@ -1457,7 +1457,7 @@ uint8x8x2_t test_vzip_u8(uint8x8_t a, uint8x8_t b) {
 // CHECK:   store <4 x i16> [[VZIP1_I]], <4 x i16>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.uint16x4x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.uint16x4x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP5]], i8* align 8 [[TMP6]], i64 16, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.uint16x4x2_t, %struct.uint16x4x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.uint16x4x2_t, %struct.uint16x4x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.uint16x4x2_t [[TMP7]], 0
@@ -1483,7 +1483,7 @@ uint16x4x2_t test_vzip_u16(uint16x4_t a, uint16x4_t b) {
 // CHECK:   store <2 x i32> [[VZIP1_I]], <2 x i32>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.uint32x2x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.uint32x2x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP5]], i8* align 8 [[TMP6]], i64 16, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.uint32x2x2_t, %struct.uint32x2x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.uint32x2x2_t, %struct.uint32x2x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.uint32x2x2_t [[TMP7]], 0
@@ -1509,7 +1509,7 @@ uint32x2x2_t test_vzip_u32(uint32x2_t a, uint32x2_t b) {
 // CHECK:   store <2 x float> [[VZIP1_I]], <2 x float>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.float32x2x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.float32x2x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP5]], i8* align 8 [[TMP6]], i64 16, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.float32x2x2_t, %struct.float32x2x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.float32x2x2_t, %struct.float32x2x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.float32x2x2_t [[TMP7]], 0
@@ -1533,7 +1533,7 @@ float32x2x2_t test_vzip_f32(float32x2_t a, float32x2_t b) {
 // CHECK:   store <8 x i8> [[VZIP1_I]], <8 x i8>* [[TMP2]]
 // CHECK:   [[TMP3:%.*]] = bitcast %struct.poly8x8x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP4:%.*]] = bitcast %struct.poly8x8x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP3]], i8* [[TMP4]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP3]], i8* align 8 [[TMP4]], i64 16, i1 false) #2
 // CHECK:   [[TMP5:%.*]] = load %struct.poly8x8x2_t, %struct.poly8x8x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP6:%.*]] = getelementptr inbounds %struct.poly8x8x2_t, %struct.poly8x8x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP7:%.*]] = extractvalue %struct.poly8x8x2_t [[TMP5]], 0
@@ -1559,7 +1559,7 @@ poly8x8x2_t test_vzip_p8(poly8x8_t a, poly8x8_t b) {
 // CHECK:   store <4 x i16> [[VZIP1_I]], <4 x i16>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.poly16x4x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.poly16x4x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP5]], i8* align 8 [[TMP6]], i64 16, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.poly16x4x2_t, %struct.poly16x4x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.poly16x4x2_t, %struct.poly16x4x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.poly16x4x2_t [[TMP7]], 0
@@ -1583,7 +1583,7 @@ poly16x4x2_t test_vzip_p16(poly16x4_t a, poly16x4_t b) {
 // CHECK:   store <16 x i8> [[VZIP1_I]], <16 x i8>* [[TMP2]]
 // CHECK:   [[TMP3:%.*]] = bitcast %struct.int8x16x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP4:%.*]] = bitcast %struct.int8x16x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP3]], i8* [[TMP4]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP3]], i8* align 16 [[TMP4]], i64 32, i1 false) #2
 // CHECK:   [[TMP5:%.*]] = load %struct.int8x16x2_t, %struct.int8x16x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP6:%.*]] = getelementptr inbounds %struct.int8x16x2_t, %struct.int8x16x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP7:%.*]] = extractvalue %struct.int8x16x2_t [[TMP5]], 0
@@ -1609,7 +1609,7 @@ int8x16x2_t test_vzipq_s8(int8x16_t a, int8x16_t b) {
 // CHECK:   store <8 x i16> [[VZIP1_I]], <8 x i16>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.int16x8x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.int16x8x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP5]], i8* align 16 [[TMP6]], i64 32, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.int16x8x2_t, %struct.int16x8x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.int16x8x2_t, %struct.int16x8x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.int16x8x2_t [[TMP7]], 0
@@ -1635,7 +1635,7 @@ int16x8x2_t test_vzipq_s16(int16x8_t a, int16x8_t b) {
 // CHECK:   store <4 x i32> [[VZIP1_I]], <4 x i32>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.int32x4x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.int32x4x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP5]], i8* align 16 [[TMP6]], i64 32, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.int32x4x2_t, %struct.int32x4x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.int32x4x2_t, %struct.int32x4x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.int32x4x2_t [[TMP7]], 0
@@ -1659,7 +1659,7 @@ int32x4x2_t test_vzipq_s32(int32x4_t a, int32x4_t b) {
 // CHECK:   store <16 x i8> [[VZIP1_I]], <16 x i8>* [[TMP2]]
 // CHECK:   [[TMP3:%.*]] = bitcast %struct.uint8x16x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP4:%.*]] = bitcast %struct.uint8x16x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP3]], i8* [[TMP4]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP3]], i8* align 16 [[TMP4]], i64 32, i1 false) #2
 // CHECK:   [[TMP5:%.*]] = load %struct.uint8x16x2_t, %struct.uint8x16x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP6:%.*]] = getelementptr inbounds %struct.uint8x16x2_t, %struct.uint8x16x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP7:%.*]] = extractvalue %struct.uint8x16x2_t [[TMP5]], 0
@@ -1685,7 +1685,7 @@ uint8x16x2_t test_vzipq_u8(uint8x16_t a, uint8x16_t b) {
 // CHECK:   store <8 x i16> [[VZIP1_I]], <8 x i16>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.uint16x8x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.uint16x8x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP5]], i8* align 16 [[TMP6]], i64 32, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.uint16x8x2_t, %struct.uint16x8x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.uint16x8x2_t, %struct.uint16x8x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.uint16x8x2_t [[TMP7]], 0
@@ -1711,7 +1711,7 @@ uint16x8x2_t test_vzipq_u16(uint16x8_t a, uint16x8_t b) {
 // CHECK:   store <4 x i32> [[VZIP1_I]], <4 x i32>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.uint32x4x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.uint32x4x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP5]], i8* align 16 [[TMP6]], i64 32, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.uint32x4x2_t, %struct.uint32x4x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.uint32x4x2_t, %struct.uint32x4x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.uint32x4x2_t [[TMP7]], 0
@@ -1737,7 +1737,7 @@ uint32x4x2_t test_vzipq_u32(uint32x4_t a, uint32x4_t b) {
 // CHECK:   store <4 x float> [[VZIP1_I]], <4 x float>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.float32x4x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.float32x4x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP5]], i8* align 16 [[TMP6]], i64 32, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.float32x4x2_t, %struct.float32x4x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.float32x4x2_t, %struct.float32x4x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.float32x4x2_t [[TMP7]], 0
@@ -1761,7 +1761,7 @@ float32x4x2_t test_vzipq_f32(float32x4_t a, float32x4_t b) {
 // CHECK:   store <16 x i8> [[VZIP1_I]], <16 x i8>* [[TMP2]]
 // CHECK:   [[TMP3:%.*]] = bitcast %struct.poly8x16x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP4:%.*]] = bitcast %struct.poly8x16x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP3]], i8* [[TMP4]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP3]], i8* align 16 [[TMP4]], i64 32, i1 false) #2
 // CHECK:   [[TMP5:%.*]] = load %struct.poly8x16x2_t, %struct.poly8x16x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP6:%.*]] = getelementptr inbounds %struct.poly8x16x2_t, %struct.poly8x16x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP7:%.*]] = extractvalue %struct.poly8x16x2_t [[TMP5]], 0
@@ -1787,7 +1787,7 @@ poly8x16x2_t test_vzipq_p8(poly8x16_t a, poly8x16_t b) {
 // CHECK:   store <8 x i16> [[VZIP1_I]], <8 x i16>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.poly16x8x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.poly16x8x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP5]], i8* align 16 [[TMP6]], i64 32, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.poly16x8x2_t, %struct.poly16x8x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.poly16x8x2_t, %struct.poly16x8x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.poly16x8x2_t [[TMP7]], 0
@@ -1811,7 +1811,7 @@ poly16x8x2_t test_vzipq_p16(poly16x8_t a, poly16x8_t b) {
 // CHECK:   store <8 x i8> [[VTRN1_I]], <8 x i8>* [[TMP2]]
 // CHECK:   [[TMP3:%.*]] = bitcast %struct.int8x8x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP4:%.*]] = bitcast %struct.int8x8x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP3]], i8* [[TMP4]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP3]], i8* align 8 [[TMP4]], i64 16, i1 false) #2
 // CHECK:   [[TMP5:%.*]] = load %struct.int8x8x2_t, %struct.int8x8x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP6:%.*]] = getelementptr inbounds %struct.int8x8x2_t, %struct.int8x8x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP7:%.*]] = extractvalue %struct.int8x8x2_t [[TMP5]], 0
@@ -1837,7 +1837,7 @@ int8x8x2_t test_vtrn_s8(int8x8_t a, int8x8_t b) {
 // CHECK:   store <4 x i16> [[VTRN1_I]], <4 x i16>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.int16x4x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.int16x4x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP5]], i8* align 8 [[TMP6]], i64 16, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.int16x4x2_t, %struct.int16x4x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.int16x4x2_t, %struct.int16x4x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.int16x4x2_t [[TMP7]], 0
@@ -1863,7 +1863,7 @@ int16x4x2_t test_vtrn_s16(int16x4_t a, int16x4_t b) {
 // CHECK:   store <2 x i32> [[VTRN1_I]], <2 x i32>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.int32x2x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.int32x2x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP5]], i8* align 8 [[TMP6]], i64 16, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.int32x2x2_t, %struct.int32x2x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.int32x2x2_t, %struct.int32x2x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.int32x2x2_t [[TMP7]], 0
@@ -1887,7 +1887,7 @@ int32x2x2_t test_vtrn_s32(int32x2_t a, int32x2_t b) {
 // CHECK:   store <8 x i8> [[VTRN1_I]], <8 x i8>* [[TMP2]]
 // CHECK:   [[TMP3:%.*]] = bitcast %struct.uint8x8x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP4:%.*]] = bitcast %struct.uint8x8x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP3]], i8* [[TMP4]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP3]], i8* align 8 [[TMP4]], i64 16, i1 false) #2
 // CHECK:   [[TMP5:%.*]] = load %struct.uint8x8x2_t, %struct.uint8x8x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP6:%.*]] = getelementptr inbounds %struct.uint8x8x2_t, %struct.uint8x8x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP7:%.*]] = extractvalue %struct.uint8x8x2_t [[TMP5]], 0
@@ -1913,7 +1913,7 @@ uint8x8x2_t test_vtrn_u8(uint8x8_t a, uint8x8_t b) {
 // CHECK:   store <4 x i16> [[VTRN1_I]], <4 x i16>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.uint16x4x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.uint16x4x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP5]], i8* align 8 [[TMP6]], i64 16, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.uint16x4x2_t, %struct.uint16x4x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.uint16x4x2_t, %struct.uint16x4x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.uint16x4x2_t [[TMP7]], 0
@@ -1939,7 +1939,7 @@ uint16x4x2_t test_vtrn_u16(uint16x4_t a, uint16x4_t b) {
 // CHECK:   store <2 x i32> [[VTRN1_I]], <2 x i32>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.uint32x2x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.uint32x2x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP5]], i8* align 8 [[TMP6]], i64 16, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.uint32x2x2_t, %struct.uint32x2x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.uint32x2x2_t, %struct.uint32x2x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.uint32x2x2_t [[TMP7]], 0
@@ -1965,7 +1965,7 @@ uint32x2x2_t test_vtrn_u32(uint32x2_t a, uint32x2_t b) {
 // CHECK:   store <2 x float> [[VTRN1_I]], <2 x float>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.float32x2x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.float32x2x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP5]], i8* align 8 [[TMP6]], i64 16, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.float32x2x2_t, %struct.float32x2x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.float32x2x2_t, %struct.float32x2x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.float32x2x2_t [[TMP7]], 0
@@ -1989,7 +1989,7 @@ float32x2x2_t test_vtrn_f32(float32x2_t a, float32x2_t b) {
 // CHECK:   store <8 x i8> [[VTRN1_I]], <8 x i8>* [[TMP2]]
 // CHECK:   [[TMP3:%.*]] = bitcast %struct.poly8x8x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP4:%.*]] = bitcast %struct.poly8x8x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP3]], i8* [[TMP4]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP3]], i8* align 8 [[TMP4]], i64 16, i1 false) #2
 // CHECK:   [[TMP5:%.*]] = load %struct.poly8x8x2_t, %struct.poly8x8x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP6:%.*]] = getelementptr inbounds %struct.poly8x8x2_t, %struct.poly8x8x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP7:%.*]] = extractvalue %struct.poly8x8x2_t [[TMP5]], 0
@@ -2015,7 +2015,7 @@ poly8x8x2_t test_vtrn_p8(poly8x8_t a, poly8x8_t b) {
 // CHECK:   store <4 x i16> [[VTRN1_I]], <4 x i16>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.poly16x4x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.poly16x4x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 16, i32 8, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP5]], i8* align 8 [[TMP6]], i64 16, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.poly16x4x2_t, %struct.poly16x4x2_t* [[RETVAL_I]], align 8
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.poly16x4x2_t, %struct.poly16x4x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.poly16x4x2_t [[TMP7]], 0
@@ -2039,7 +2039,7 @@ poly16x4x2_t test_vtrn_p16(poly16x4_t a, poly16x4_t b) {
 // CHECK:   store <16 x i8> [[VTRN1_I]], <16 x i8>* [[TMP2]]
 // CHECK:   [[TMP3:%.*]] = bitcast %struct.int8x16x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP4:%.*]] = bitcast %struct.int8x16x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP3]], i8* [[TMP4]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP3]], i8* align 16 [[TMP4]], i64 32, i1 false) #2
 // CHECK:   [[TMP5:%.*]] = load %struct.int8x16x2_t, %struct.int8x16x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP6:%.*]] = getelementptr inbounds %struct.int8x16x2_t, %struct.int8x16x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP7:%.*]] = extractvalue %struct.int8x16x2_t [[TMP5]], 0
@@ -2065,7 +2065,7 @@ int8x16x2_t test_vtrnq_s8(int8x16_t a, int8x16_t b) {
 // CHECK:   store <8 x i16> [[VTRN1_I]], <8 x i16>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.int16x8x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.int16x8x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP5]], i8* align 16 [[TMP6]], i64 32, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.int16x8x2_t, %struct.int16x8x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.int16x8x2_t, %struct.int16x8x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.int16x8x2_t [[TMP7]], 0
@@ -2091,7 +2091,7 @@ int16x8x2_t test_vtrnq_s16(int16x8_t a, int16x8_t b) {
 // CHECK:   store <4 x i32> [[VTRN1_I]], <4 x i32>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.int32x4x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.int32x4x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP5]], i8* align 16 [[TMP6]], i64 32, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.int32x4x2_t, %struct.int32x4x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.int32x4x2_t, %struct.int32x4x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.int32x4x2_t [[TMP7]], 0
@@ -2115,7 +2115,7 @@ int32x4x2_t test_vtrnq_s32(int32x4_t a, int32x4_t b) {
 // CHECK:   store <16 x i8> [[VTRN1_I]], <16 x i8>* [[TMP2]]
 // CHECK:   [[TMP3:%.*]] = bitcast %struct.uint8x16x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP4:%.*]] = bitcast %struct.uint8x16x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP3]], i8* [[TMP4]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP3]], i8* align 16 [[TMP4]], i64 32, i1 false) #2
 // CHECK:   [[TMP5:%.*]] = load %struct.uint8x16x2_t, %struct.uint8x16x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP6:%.*]] = getelementptr inbounds %struct.uint8x16x2_t, %struct.uint8x16x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP7:%.*]] = extractvalue %struct.uint8x16x2_t [[TMP5]], 0
@@ -2141,7 +2141,7 @@ uint8x16x2_t test_vtrnq_u8(uint8x16_t a, uint8x16_t b) {
 // CHECK:   store <8 x i16> [[VTRN1_I]], <8 x i16>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.uint16x8x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.uint16x8x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP5]], i8* align 16 [[TMP6]], i64 32, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.uint16x8x2_t, %struct.uint16x8x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.uint16x8x2_t, %struct.uint16x8x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.uint16x8x2_t [[TMP7]], 0
@@ -2167,7 +2167,7 @@ uint16x8x2_t test_vtrnq_u16(uint16x8_t a, uint16x8_t b) {
 // CHECK:   store <4 x i32> [[VTRN1_I]], <4 x i32>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.uint32x4x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.uint32x4x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP5]], i8* align 16 [[TMP6]], i64 32, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.uint32x4x2_t, %struct.uint32x4x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.uint32x4x2_t, %struct.uint32x4x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.uint32x4x2_t [[TMP7]], 0
@@ -2193,7 +2193,7 @@ uint32x4x2_t test_vtrnq_u32(uint32x4_t a, uint32x4_t b) {
 // CHECK:   store <4 x float> [[VTRN1_I]], <4 x float>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.float32x4x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.float32x4x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP5]], i8* align 16 [[TMP6]], i64 32, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.float32x4x2_t, %struct.float32x4x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.float32x4x2_t, %struct.float32x4x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.float32x4x2_t [[TMP7]], 0
@@ -2217,7 +2217,7 @@ float32x4x2_t test_vtrnq_f32(float32x4_t a, float32x4_t b) {
 // CHECK:   store <16 x i8> [[VTRN1_I]], <16 x i8>* [[TMP2]]
 // CHECK:   [[TMP3:%.*]] = bitcast %struct.poly8x16x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP4:%.*]] = bitcast %struct.poly8x16x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP3]], i8* [[TMP4]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP3]], i8* align 16 [[TMP4]], i64 32, i1 false) #2
 // CHECK:   [[TMP5:%.*]] = load %struct.poly8x16x2_t, %struct.poly8x16x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP6:%.*]] = getelementptr inbounds %struct.poly8x16x2_t, %struct.poly8x16x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP7:%.*]] = extractvalue %struct.poly8x16x2_t [[TMP5]], 0
@@ -2243,7 +2243,7 @@ poly8x16x2_t test_vtrnq_p8(poly8x16_t a, poly8x16_t b) {
 // CHECK:   store <8 x i16> [[VTRN1_I]], <8 x i16>* [[TMP4]]
 // CHECK:   [[TMP5:%.*]] = bitcast %struct.poly16x8x2_t* [[RETVAL_I]] to i8*
 // CHECK:   [[TMP6:%.*]] = bitcast %struct.poly16x8x2_t* [[__RET_I]] to i8*
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP5]], i8* [[TMP6]], i64 32, i32 16, i1 false) #2
+// CHECK:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP5]], i8* align 16 [[TMP6]], i64 32, i1 false) #2
 // CHECK:   [[TMP7:%.*]] = load %struct.poly16x8x2_t, %struct.poly16x8x2_t* [[RETVAL_I]], align 16
 // CHECK:   [[TMP8:%.*]] = getelementptr inbounds %struct.poly16x8x2_t, %struct.poly16x8x2_t* [[RETVAL]], i32 0, i32 0
 // CHECK:   [[TMP9:%.*]] = extractvalue %struct.poly16x8x2_t [[TMP7]], 0

@@ -56,7 +56,7 @@ entry:
   %0 = load %class.A*, %class.A** %a.addr, align 8, !dbg !28
   %1 = bitcast %struct.SA* %agg.tmp to i8*, !dbg !28
   %2 = bitcast %struct.SA* %sa to i8*, !dbg !28
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* %2, i64 4, i32 4, i1 false), !dbg !28
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %1, i8* align 4 %2, i64 4, i1 false), !dbg !28
   %coerce.dive1 = getelementptr %struct.SA, %struct.SA* %agg.tmp, i32 0, i32 0, !dbg !28
   %3 = load i32, i32* %coerce.dive1, !dbg !28
   call void @_ZN1A5testAE2SA(%class.A* %0, i32 %3), !dbg !28
@@ -81,7 +81,7 @@ entry:
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) #3
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #3
 
 attributes #0 = { ssp uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }

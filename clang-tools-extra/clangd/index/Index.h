@@ -114,10 +114,9 @@ struct Symbol {
   SymbolID ID;
   // The symbol information, like symbol kind.
   index::SymbolInfo SymInfo;
-  // The unqualified name of the symbol, e.g. "bar" (for "n1::n2::bar").
+  // The unqualified name of the symbol, e.g. "bar" (for ns::bar).
   llvm::StringRef Name;
-  // The scope (e.g. namespace) of the symbol, e.g. "n1::n2" (for
-  // "n1::n2::bar").
+  // The containing namespace. e.g. "" (global), "ns::" (top-level namespace).
   llvm::StringRef Scope;
   // The location of the canonical declaration of the symbol.
   //
@@ -221,12 +220,11 @@ struct FuzzyFindRequest {
   /// un-qualified identifiers and should not contain qualifiers like "::".
   std::string Query;
   /// \brief If this is non-empty, symbols must be in at least one of the scopes
-  /// (e.g. namespaces) excluding nested scopes. For example, if a scope "xyz"
-  /// is provided, the matched symbols must be defined in scope "xyz" but not
-  /// "xyz::abc".
+  /// (e.g. namespaces) excluding nested scopes. For example, if a scope "xyz::"
+  /// is provided, the matched symbols must be defined in namespace xyz but not
+  /// namespace xyz::abc.
   ///
-  /// A scope must be fully qualified without leading or trailing "::" e.g.
-  /// "n1::n2". "" is interpreted as the global namespace, and "::" is invalid.
+  /// The global scope is "", a top level scope is "foo::", etc.
   std::vector<std::string> Scopes;
   /// \brief The number of top candidates to return. The index may choose to
   /// return more than this, e.g. if it doesn't know which candidates are best.

@@ -16,7 +16,7 @@ entry:
   store i32 3, i32* %arrayinit.element2, align 8
   %arrayinit.start = getelementptr inbounds %struct.S, %struct.S* %.compoundliteral, i64 0, i32 0, i64 3
   %scevgep4 = bitcast i32* %arrayinit.start to i8*
-  call void @llvm.memset.p0i8.i64(i8* %scevgep4, i8 0, i64 28, i32 4, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* align 4 %scevgep4, i8 0, i64 28, i1 false)
   call void @foo(i32 %a, %struct.S* byval align 8 %.compoundliteral) #3
   ret void
 }
@@ -24,4 +24,4 @@ entry:
 declare void @foo(i32, %struct.S* byval align 8) #1
 
 ; Function Attrs: nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) #3
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) #3

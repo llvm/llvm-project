@@ -386,14 +386,21 @@ void Writer::createLinkingSection() {
     return;
 
   std::vector<std::pair<StringRef, uint32_t>> SymbolInfo;
-  for (const WasmExportEntry &E : ExportedSymbols) {
+  auto addSymInfo = [&](const Symbol *Sym, StringRef ExternalName) {
     uint32_t Flags =
-        (E.Sym->isLocal() ? WASM_SYMBOL_BINDING_LOCAL :
-         E.Sym->isWeak() ? WASM_SYMBOL_BINDING_WEAK : 0) |
-        (E.Sym->isHidden() ? WASM_SYMBOL_VISIBILITY_HIDDEN : 0);
+        (Sym->isLocal() ? WASM_SYMBOL_BINDING_LOCAL :
+         Sym->isWeak() ? WASM_SYMBOL_BINDING_WEAK : 0) |
+        (Sym->isHidden() ? WASM_SYMBOL_VISIBILITY_HIDDEN : 0);
     if (Flags)
-      SymbolInfo.emplace_back(E.FieldName, Flags);
-  }
+      SymbolInfo.emplace_back(ExternalName, Flags);
+  };
+  // (Imports can't have internal linkage, their names don't need to be budged.)
+  for (const Symbol *Sym : ImportedFunctions)
+    addSymInfo(Sym, Sym->getName());
+  for (const Symbol *Sym : ImportedGlobals)
+    addSymInfo(Sym, Sym->getName());
+  for (const WasmExportEntry &E : ExportedSymbols)
+    addSymInfo(E.Sym, E.FieldName);
   if (!SymbolInfo.empty()) {
     SubSection SubSection(WASM_SYMBOL_INFO);
     writeUleb128(SubSection.getStream(), SymbolInfo.size(), "num sym info");
@@ -596,7 +603,7 @@ void Writer::createSections() {
 
 void Writer::calculateImports() {
   for (Symbol *Sym : Symtab->getSymbols()) {
-    if (!Sym->isUndefined() || Sym->isWeak())
+    if (!Sym->isUndefined() || (Sym->isWeak() && !Config->EmitRelocs))
       continue;
 
     if (Sym->isFunction()) {
@@ -748,7 +755,7 @@ void Writer::assignIndexes() {
   for (ObjFile *File : Symtab->ObjectFiles) {
     DEBUG(dbgs() << "Table Indexes: " << File->getName() << "\n");
     for (Symbol *Sym : File->getTableSymbols()) {
-      if (Sym->hasTableIndex() || !Sym->hasOutputIndex())
+      if (!Sym || Sym->hasTableIndex() || !Sym->hasOutputIndex())
         continue;
       Sym->setTableIndex(TableIndex++);
       IndirectFunctions.emplace_back(Sym);

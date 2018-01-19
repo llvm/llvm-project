@@ -3,10 +3,10 @@
 %s = type { i8 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i32, i1) #0
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i1) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memset.p0i8.i8.i32(i8* nocapture writeonly, i8, i32, i32, i1) #0
+declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1) #0
 
 declare void @f1(%s* noalias nocapture sret, %s* nocapture readnone)
 
@@ -16,7 +16,7 @@ entry:
   %tmp = alloca %s
   %0 = bitcast %s* %c to i8*
   %1 = bitcast %s* %tmp to i8*
-  call void @llvm.memset.p0i8.i8.i32(i8* %0, i8 0, i32 1, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %0, i8 0, i32 1, i1 false)
   call void @f1(%s* sret %c, %s* %c)
   ret void
 }
@@ -34,7 +34,7 @@ entry:
   %tmp = alloca %s
   %0 = bitcast %s* %c to i8*
   %1 = bitcast %s* %tmp to i8*
-  call void @llvm.memset.p0i8.i8.i32(i8* %0, i8 0, i32 1, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %0, i8 0, i32 1, i1 false)
   call void @f3(%s* sret %c, %s* byval %c)
   ret void
 }

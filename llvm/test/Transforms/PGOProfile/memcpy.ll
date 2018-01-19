@@ -24,7 +24,7 @@ for.cond1:
 for.body3:
   %conv = sext i32 %add to i64
 ; CHECK: call void @__llvm_profile_instrument_range(i64 %conv, i8* bitcast ({ i64, i64, i64*, i8*, i8*, i32, [2 x i16] }* @__profd_foo to i8*), i32 0, i64 0, i64 8, i64 8192)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %conv, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %conv, i1 false)
   %inc = add nsw i32 %j.0, 1
   br label %for.cond1
 
@@ -32,4 +32,4 @@ for.end6:
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1)
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1)

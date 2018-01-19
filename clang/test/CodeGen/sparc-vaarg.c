@@ -19,7 +19,7 @@ struct Foo dest;
 // CHECK-LABEL: define void @get_struct
 // CHECK: [[RESULT:%[a-z_0-9]+]] = va_arg {{.*}}, %struct.Foo*{{$}}
 // CHECK: [[RESULT2:%[a-z_0-9]+]] = bitcast {{.*}} [[RESULT]] to i8*
-// CHECK: call void @llvm.memcpy{{.*}}@dest{{.*}}, i8* [[RESULT2]]
+// CHECK: call void @llvm.memcpy{{.*}}@dest{{.*}}, i8* align {{[0-9]+}} [[RESULT2]]
 void get_struct(va_list *args) {
  dest = va_arg(*args, struct Foo);
 }

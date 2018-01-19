@@ -459,6 +459,7 @@ template <> struct MappingTraits<FormatStyle::RawStringFormat> {
     IO.mapOptional("Language", Format.Language);
     IO.mapOptional("Delimiters", Format.Delimiters);
     IO.mapOptional("EnclosingFunctions", Format.EnclosingFunctions);
+    IO.mapOptional("CanonicalDelimiter", Format.CanonicalDelimiter);
     IO.mapOptional("BasedOnStyle", Format.BasedOnStyle);
   }
 };
@@ -713,6 +714,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
            "PARSE_TEXT_PROTO",
            "ParseTextProto",
        },
+      /*CanonicalDelimiter=*/"",
       /*BasedOnStyle=*/"google",
   }};
   GoogleStyle.SpacesBeforeTrailingComments = 2;

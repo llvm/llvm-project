@@ -115,11 +115,11 @@ entry:
   %C = getelementptr inbounds [12 x i8], [12 x i8]* %a2, i64 0, i64 4
   %1 = bitcast i8* %C to i64*
   store i64 0, i64* %1, align 4
-  call void @llvm.memset.p0i8.i64(i8* %0, i8 0, i64 8, i32 8, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* align 8 %0, i8 0, i64 8, i1 false)
   ret void
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1)
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
 
 
 attributes #0 = { nounwind }

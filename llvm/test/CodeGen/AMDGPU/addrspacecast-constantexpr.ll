@@ -1,6 +1,6 @@
 ; RUN: opt -mtriple=amdgcn-unknown-amdhsa -S -amdgpu-annotate-kernel-features < %s | FileCheck -check-prefix=HSA %s
 
-declare void @llvm.memcpy.p1i32.p4i32.i32(i32 addrspace(1)* nocapture, i32 addrspace(4)* nocapture, i32, i32, i1) #0
+declare void @llvm.memcpy.p1i32.p4i32.i32(i32 addrspace(1)* nocapture, i32 addrspace(4)* nocapture, i32, i1) #0
 
 @lds.i32 = unnamed_addr addrspace(3) global i32 undef, align 4
 @lds.arr = unnamed_addr addrspace(3) global [256 x i32] undef, align 4
@@ -68,7 +68,7 @@ define amdgpu_kernel void @cmpxchg_constant_cast_group_gv_gep_to_flat(i32 addrsp
 
 ; HSA: @memcpy_constant_cast_group_gv_gep_to_flat(i32 addrspace(1)* %out) #2
 define amdgpu_kernel void @memcpy_constant_cast_group_gv_gep_to_flat(i32 addrspace(1)* %out) #1 {
-  call void @llvm.memcpy.p1i32.p4i32.i32(i32 addrspace(1)* %out, i32 addrspace(4)* getelementptr ([256 x i32], [256 x i32] addrspace(4)* addrspacecast ([256 x i32] addrspace(3)* @lds.arr to [256 x i32] addrspace(4)*), i64 0, i64 8), i32 32, i32 4, i1 false)
+  call void @llvm.memcpy.p1i32.p4i32.i32(i32 addrspace(1)* align 4 %out, i32 addrspace(4)* align 4 getelementptr ([256 x i32], [256 x i32] addrspace(4)* addrspacecast ([256 x i32] addrspace(3)* @lds.arr to [256 x i32] addrspace(4)*), i64 0, i64 8), i32 32, i1 false)
   ret void
 }
 

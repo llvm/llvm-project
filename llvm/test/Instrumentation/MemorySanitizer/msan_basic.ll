@@ -200,11 +200,11 @@ entry:
 ; memset
 define void @MemSet(i8* nocapture %x) nounwind uwtable sanitize_memory {
 entry:
-  call void @llvm.memset.p0i8.i64(i8* %x, i8 42, i64 10, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* %x, i8 42, i64 10, i1 false)
   ret void
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
 
 ; CHECK-LABEL: @MemSet
 ; CHECK: call i8* @__msan_memset
@@ -214,11 +214,11 @@ declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
 ; memcpy
 define void @MemCpy(i8* nocapture %x, i8* nocapture %y) nounwind uwtable sanitize_memory {
 entry:
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %x, i8* %y, i64 10, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %x, i8* %y, i64 10, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 
 ; CHECK-LABEL: @MemCpy
 ; CHECK: call i8* @__msan_memcpy
@@ -228,11 +228,11 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, 
 ; memmove is lowered to a call
 define void @MemMove(i8* nocapture %x, i8* nocapture %y) nounwind uwtable sanitize_memory {
 entry:
-  call void @llvm.memmove.p0i8.p0i8.i64(i8* %x, i8* %y, i64 10, i32 1, i1 false)
+  call void @llvm.memmove.p0i8.p0i8.i64(i8* %x, i8* %y, i64 10, i1 false)
   ret void
 }
 
-declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
+declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 
 ; CHECK-LABEL: @MemMove
 ; CHECK: call i8* @__msan_memmove
@@ -676,7 +676,7 @@ define void @VACopy(i8* %p1, i8* %p2) nounwind uwtable sanitize_memory {
 }
 
 ; CHECK-LABEL: @VACopy
-; CHECK: call void @llvm.memset.p0i8.i64({{.*}}, i8 0, i64 24, i32 8, i1 false)
+; CHECK: call void @llvm.memset.p0i8.i64({{.*}}, i8 0, i64 24, i1 false)
 ; CHECK: ret void
 
 
@@ -757,7 +757,7 @@ entry:
 declare i32 @NoSanitizeMemoryAllocaHelper(i32* %p)
 
 ; CHECK-LABEL: @NoSanitizeMemoryAlloca
-; CHECK: call void @llvm.memset.p0i8.i64(i8* {{.*}}, i8 0, i64 4, i32 4, i1 false)
+; CHECK: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 0, i64 4, i1 false)
 ; CHECK: call i32 @NoSanitizeMemoryAllocaHelper(i32*
 ; CHECK: ret i32
 
@@ -876,7 +876,7 @@ entry:
   %agg.tmp.sroa.2.0..sroa_cast = bitcast i32* %agg.tmp.sroa.2.0..sroa_idx to i64*
   %agg.tmp.sroa.2.0.copyload = load i64, i64* %agg.tmp.sroa.2.0..sroa_cast, align 4
   %1 = bitcast %struct.StructByVal* %agg.tmp2 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* %0, i64 16, i32 4, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %1, i8* align 4 %0, i64 16, i1 false)
   call void (i32, ...) @VAArgStructFn(i32 undef, i64 %agg.tmp.sroa.0.0.copyload, i64 %agg.tmp.sroa.2.0.copyload, i64 %agg.tmp.sroa.0.0.copyload, i64 %agg.tmp.sroa.2.0.copyload, %struct.StructByVal* byval align 8 %agg.tmp2)
   ret void
 }

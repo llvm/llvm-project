@@ -281,9 +281,9 @@ void ObjFile::initializeSymbols() {
       fatal(getName() + ": unsupported element segment");
     if (Segment.TableIndex != 0)
       fatal(getName() + ": unsupported table index in elem segment");
-    if (Segment.Offset.Value.Int32 != 0)
-      fatal(getName() + ": unsupported element segment offset");
-    TableSymbols.reserve(Segment.Functions.size());
+    uint32_t Offset = Segment.Offset.Value.Int32;
+    TableSymbols.resize(Offset);
+    TableSymbols.reserve(Offset + Segment.Functions.size());
     for (uint64_t FunctionIndex : Segment.Functions)
       TableSymbols.push_back(FunctionSymbols[FunctionIndex]);
   }

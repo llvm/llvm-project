@@ -1,5 +1,5 @@
 ; RUN: not llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals -mattr=+atomics | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals -mattr=+atomics,+sign-ext | FileCheck %s
 
 ; Test that atomic loads are assembled properly.
 

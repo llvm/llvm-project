@@ -219,13 +219,13 @@ entry:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Ensure that esan converts memcpy intrinsics to calls:
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1)
-declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1)
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1)
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1)
+declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1)
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
 
 define void @memCpyTest(i8* nocapture %x, i8* nocapture %y) {
 entry:
-    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %x, i8* %y, i64 16, i32 4, i1 false)
+    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %x, i8* align 4 %y, i64 16, i1 false)
     ret void
 ; CHECK: define void @memCpyTest
 ; CHECK: call i8* @memcpy
@@ -234,7 +234,7 @@ entry:
 
 define void @memMoveTest(i8* nocapture %x, i8* nocapture %y) {
 entry:
-    tail call void @llvm.memmove.p0i8.p0i8.i64(i8* %x, i8* %y, i64 16, i32 4, i1 false)
+    tail call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 %x, i8* align 4 %y, i64 16, i1 false)
     ret void
 ; CHECK: define void @memMoveTest
 ; CHECK: call i8* @memmove
@@ -243,7 +243,7 @@ entry:
 
 define void @memSetTest(i8* nocapture %x) {
 entry:
-    tail call void @llvm.memset.p0i8.i64(i8* %x, i8 77, i64 16, i32 4, i1 false)
+    tail call void @llvm.memset.p0i8.i64(i8* align 4 %x, i8 77, i64 16, i1 false)
     ret void
 ; CHECK: define void @memSetTest
 ; CHECK: call i8* @memset

@@ -2320,6 +2320,8 @@ WebAssembly
 -----------
 .. option:: -mnontrapping-fptoint, -mno-nontrapping-fptoint
 
+.. option:: -msign-ext, -mno-sign-ext
+
 .. option:: -msimd128, -mno-simd128
 
 X86
