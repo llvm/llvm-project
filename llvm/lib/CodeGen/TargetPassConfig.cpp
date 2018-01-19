@@ -226,7 +226,7 @@ static IdentifyingPassPtr overridePass(AnalysisID StandardID,
   if (StandardID == &TailDuplicateID)
     return applyDisable(TargetID, DisableTailDuplicate);
 
-  if (StandardID == &TargetPassConfig::EarlyTailDuplicateID)
+  if (StandardID == &EarlyTailDuplicateID)
     return applyDisable(TargetID, DisableEarlyTailDup);
 
   if (StandardID == &MachineBlockPlacementID)
@@ -268,7 +268,6 @@ INITIALIZE_PASS(TargetPassConfig, "targetpassconfig",
 char TargetPassConfig::ID = 0;
 
 // Pseudo Pass IDs.
-char TargetPassConfig::EarlyTailDuplicateID = 0;
 char TargetPassConfig::PostRAMachineLICMID = 0;
 
 namespace {
@@ -367,7 +366,6 @@ TargetPassConfig::TargetPassConfig(LLVMTargetMachine &TM, PassManagerBase &pm)
   initializeAAResultsWrapperPassPass(*PassRegistry::getPassRegistry());
 
   // Substitute Pseudo Pass IDs for real ones.
-  substitutePass(&EarlyTailDuplicateID, &TailDuplicateID);
   substitutePass(&PostRAMachineLICMID, &MachineLICMID);
 
   if (StringRef(PrintMachineInstrs.getValue()).equals(""))

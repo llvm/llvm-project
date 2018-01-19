@@ -36,9 +36,9 @@ define void @test_tailcall_explicit_sret_alloca_unused() #0 {
 
 ; CHECK-LABEL: _test_tailcall_explicit_sret_alloca_dummyusers:
 ; CHECK: ldr [[PTRLOAD1:q[0-9]+]], [x0]
-; CHECK: str [[PTRLOAD1]], [sp]
 ; CHECK: mov  x8, sp
-; CHECK-NEXT: bl _test_explicit_sret
+; CHECK: str [[PTRLOAD1]], [sp]
+; CHECK: bl _test_explicit_sret
 ; CHECK: ret
 define void @test_tailcall_explicit_sret_alloca_dummyusers(i1024* %ptr) #0 {
   %l = alloca i1024, align 8
@@ -75,10 +75,10 @@ define i1024 @test_tailcall_explicit_sret_alloca_returned() #0 {
 }
 
 ; CHECK-LABEL: _test_indirect_tailcall_explicit_sret_nosret_arg:
-; CHECK-DAG: mov  x[[CALLERX8NUM:[0-9]+]], x8
-; CHECK-DAG: mov  [[FPTR:x[0-9]+]], x0
+; CHECK: mov  [[FPTR:x[0-9]+]], x0
 ; CHECK: mov  x0, sp
-; CHECK-NEXT: blr [[FPTR]]
+; CHECK: mov  x[[CALLERX8NUM:[0-9]+]], x8
+; CHECK: blr [[FPTR]]
 ; CHECK: ldr [[CALLERSRET1:q[0-9]+]], [sp]
 ; CHECK: str [[CALLERSRET1:q[0-9]+]], [x[[CALLERX8NUM]]]
 ; CHECK: ret

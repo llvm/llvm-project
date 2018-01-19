@@ -63,10 +63,10 @@ define void @simple_rets() {
   store [2 x i64] %arr, [2 x i64]* @varsmallstruct
 ; CHECK: bl return_smallstruct
 ; CHECK: add x[[VARSMALLSTRUCT:[0-9]+]], {{x[0-9]+}}, :lo12:varsmallstruct
+; CHECK: add x8, {{x[0-9]+}}, {{#?}}:lo12:varstruct
 ; CHECK: stp x0, x1, [x[[VARSMALLSTRUCT]]]
 
   call void @return_large_struct(%myStruct* sret @varstruct)
-; CHECK: add x8, {{x[0-9]+}}, {{#?}}:lo12:varstruct
 ; CHECK: bl return_large_struct
 
   ret void

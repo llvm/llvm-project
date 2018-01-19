@@ -200,6 +200,21 @@ entry:
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
 ; CHECK-NEXT:     DataSize:        23
+; CHECK-NEXT:     SymbolInfo:
+; CHECK-NEXT:       - Name:            hello
+; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+; CHECK-NEXT:       - Name:            my_func
+; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+; CHECK-NEXT:       - Name:            func_comdat
+; CHECK-NEXT:         Flags:           [ BINDING_WEAK ]
+; CHECK-NEXT:       - Name:            data_comdat
+; CHECK-NEXT:         Flags:           [ BINDING_WEAK ]
+; CHECK-NEXT:       - Name:            func_addr1
+; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+; CHECK-NEXT:       - Name:            func_addr2
+; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
+; CHECK-NEXT:       - Name:            data_addr1
+; CHECK-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
 ; CHECK-NEXT:     SegmentInfo:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            .rodata.hello_str

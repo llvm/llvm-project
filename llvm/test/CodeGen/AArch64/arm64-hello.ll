@@ -5,9 +5,9 @@
 ; CHECK:	sub	sp, sp, #32
 ; CHECK-NEXT:	stp	x29, x30, [sp, #16]
 ; CHECK-NEXT:	add	x29, sp, #16
-; CHECK-NEXT:	stur	wzr, [x29, #-4]
 ; CHECK:	adrp	x0, l_.str@PAGE
 ; CHECK:	add	x0, x0, l_.str@PAGEOFF
+; CHECK-NEXT:	stur	wzr, [x29, #-4]
 ; CHECK-NEXT:	bl	_puts
 ; CHECK-NEXT:	ldp	x29, x30, [sp, #16]
 ; CHECK-NEXT:	add	sp, sp, #32
@@ -15,9 +15,9 @@
 
 ; CHECK-LINUX-LABEL: main:
 ; CHECK-LINUX:	str	x30, [sp, #-16]!
-; CHECK-LINUX-NEXT:	str	wzr, [sp, #12]
 ; CHECK-LINUX:	adrp	x0, .L.str
 ; CHECK-LINUX:	add	x0, x0, :lo12:.L.str
+; CHECK-LINUX-NEXT:	str	wzr, [sp, #12]
 ; CHECK-LINUX-NEXT:	bl	puts
 ; CHECK-LINUX-NEXT:	ldr	x30, [sp], #16
 ; CHECK-LINUX-NEXT:	ret

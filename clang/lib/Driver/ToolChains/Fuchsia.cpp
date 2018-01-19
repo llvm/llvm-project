@@ -278,8 +278,9 @@ void Fuchsia::AddCXXStdlibLibArgs(const ArgList &Args,
 
 SanitizerMask Fuchsia::getSupportedSanitizers() const {
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
-  Res |= SanitizerKind::SafeStack;
   Res |= SanitizerKind::Address;
+  Res |= SanitizerKind::Fuzzer;
+  Res |= SanitizerKind::SafeStack;
   Res |= SanitizerKind::Scudo;
   return Res;
 }

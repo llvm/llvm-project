@@ -135,3 +135,29 @@ Ltmp1:
 	.cv_filechecksums               # File index to string table offset subsection
 	.cv_stringtable                 # String table
 
+# CHECK-LABEL:  FunctionLineTable [
+# CHECK:    LinkageName: ?baz@@YAXXZ
+# CHECK:    Flags: 0x1
+# CHECK:    CodeSize: 0x3D
+# CHECK:    FilenameSegment [
+# CHECK:      Filename: D:\src\llvm\build\t.cpp (0x0)
+# CHECK:      +0x0 [
+# CHECK:        LineNumberStart: 13
+# CHECK:      ]
+# CHECK:      +0x1 [
+# CHECK:        LineNumberStart: 14
+# CHECK:      ]
+# CHECK:      +0x8 [
+# CHECK:        LineNumberStart: 15
+# CHECK:      ]
+#	There shouldn't be any other line number entries because all the other
+#	.cv_locs are on line 15 where the top-level inline call site is.
+# CHECK-NOT: LineNumberStart
+# CHECK:      +0x34 [
+# CHECK:        LineNumberStart: 16
+# CHECK:      ]
+# CHECK:      +0x3B [
+# CHECK:        LineNumberStart: 17
+# CHECK:      ]
+# CHECK:    ]
+# CHECK:  ]
