@@ -31,7 +31,7 @@ class ExprCommandCallStopContinueTestCase(TestBase):
     def test(self):
         """Test gathering result from interrupted function call."""
         self.build()
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         # Some versions of GCC encode two locations for the 'return' statement
         # in main.cpp

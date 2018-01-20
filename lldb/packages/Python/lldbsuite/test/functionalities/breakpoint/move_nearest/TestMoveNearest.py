@@ -24,7 +24,7 @@ class TestMoveNearest(TestBase):
         """Test target.move-to-nearest logic"""
 
         self.build()
-        target = self.dbg.CreateTarget("a.out")
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.assertTrue(target, VALID_TARGET)
 
         lldbutil.run_break_set_by_symbol(self, 'main', sym_exact=True)

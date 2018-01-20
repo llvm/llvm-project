@@ -26,7 +26,7 @@ class TypedefTestCase(TestBase):
 
     def image_lookup_for_multiple_typedefs(self):
         """Test 'image lookup -t a' at different scopes and check for correct display."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
         typearray = (
             "float",

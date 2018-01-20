@@ -26,7 +26,7 @@ class TestIndirectFunctions(TestBase):
     def test_with_python_api(self):
         """Test stepping and setting breakpoints in indirect and re-exported symbols."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)

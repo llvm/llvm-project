@@ -30,7 +30,8 @@ class ExprCommandCallFunctionTestCase(TestBase):
     def test_with(self):
         """Test calling std::String member function."""
         self.build()
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"),
+                    CURRENT_EXECUTABLE_SET)
 
         # Some versions of GCC encode two locations for the 'return' statement
         # in main.cpp

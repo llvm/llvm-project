@@ -40,7 +40,7 @@ class ReturnValueTestCase(TestBase):
     def test_with_python(self):
         """Test getting return values from stepping out."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         error = lldb.SBError()
 
         self.target = self.dbg.CreateTarget(exe)
@@ -189,7 +189,7 @@ class ReturnValueTestCase(TestBase):
     @skipIfDarwinEmbedded # <rdar://problem/33976032> ABIMacOSX_arm64 doesn't get structs this big correctly
     def test_vector_values(self):
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         error = lldb.SBError()
 
         self.target = self.dbg.CreateTarget(exe)

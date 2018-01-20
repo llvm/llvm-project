@@ -44,7 +44,7 @@ class RecursiveTypesTestCase(TestBase):
         self.print_struct()
 
     def print_struct(self):
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
             self,

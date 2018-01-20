@@ -33,7 +33,7 @@ class ObjCPropertyTestCase(TestBase):
             self.skipTest("requires modern objc runtime")
 
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target from the debugger.
 

@@ -35,7 +35,7 @@ class LaunchInTerminalTestCase(TestBase):
     @no_debug_info_test
     def test_launch_in_terminal(self):
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         launch_info = lldb.SBLaunchInfo(["-lAF", "/tmp/"])

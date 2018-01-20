@@ -18,8 +18,8 @@ class TestConflictingSymbols(TestBase):
 
     def test_conflicting_symbols(self):
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
-        target = self.dbg.CreateTarget("a.out")
+        exe = self.getBuildArtifact("a.out")
+        target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
         # Register our shared libraries for remote targets so they get
@@ -89,8 +89,8 @@ class TestConflictingSymbols(TestBase):
     @expectedFailureAll(bugnumber="llvm.org/pr35043")
     def test_shadowed(self):
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
-        target = self.dbg.CreateTarget("a.out")
+        exe = self.getBuildArtifact("a.out")
+        target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
         # Register our shared libraries for remote targets so they get

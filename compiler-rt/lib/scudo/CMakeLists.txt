@@ -7,6 +7,8 @@ set(SCUDO_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 list(APPEND SCUDO_CFLAGS -fbuiltin)
 append_rtti_flag(OFF SCUDO_CFLAGS)
 
+set(SCUDO_DYNAMIC_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
+
 set(SCUDO_SOURCES
   scudo_allocator.cpp
   scudo_flags.cpp
@@ -68,6 +70,7 @@ if(COMPILER_RT_HAS_SCUDO)
                 RTUbsan
                 RTUbsan_cxx
     CFLAGS ${SCUDO_CFLAGS}
+    LINK_FLAGS ${SCUDO_DYNAMIC_LINK_FLAGS}
     LINK_LIBS ${SCUDO_DYNAMIC_LIBS}
     PARENT_TARGET scudo)
 endif()

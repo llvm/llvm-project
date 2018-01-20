@@ -130,12 +130,13 @@ unsigned X86TTIImpl::getNumberOfRegisters(bool Vector) {
 }
 
 unsigned X86TTIImpl::getRegisterBitWidth(bool Vector) const {
+  unsigned PreferVectorWidth = ST->getPreferVectorWidth();
   if (Vector) {
-    if (ST->hasAVX512())
+    if (ST->hasAVX512() && PreferVectorWidth >= 512)
       return 512;
-    if (ST->hasAVX())
+    if (ST->hasAVX() && PreferVectorWidth >= 256)
       return 256;
-    if (ST->hasSSE1())
+    if (ST->hasSSE1() && PreferVectorWidth >= 128)
       return 128;
     return 0;
   }
@@ -2523,7 +2524,7 @@ bool X86TTIImpl::isLegalMaskedGather(Type *DataTy) {
   // TODO: Remove the explicit ST->hasAVX512()?, That would mean we would only
   // enable gather with a -march.
   return (DataWidth == 32 || DataWidth == 64) &&
-    (ST->hasAVX512() || (ST->hasFastGather() && ST->hasAVX2()));
+         (ST->hasAVX512() || (ST->hasFastGather() && ST->hasAVX2()));
 }
 
 bool X86TTIImpl::isLegalMaskedScatter(Type *DataType) {

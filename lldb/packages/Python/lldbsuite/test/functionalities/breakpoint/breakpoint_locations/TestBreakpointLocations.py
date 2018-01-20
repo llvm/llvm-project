@@ -41,7 +41,7 @@ class BreakpointLocationsTestCase(TestBase):
         self.line = line_number('main.c', '// Set break point at this line.')
 
     def set_breakpoint (self):
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, "Target %s is not valid"%(exe))
 

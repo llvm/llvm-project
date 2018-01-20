@@ -38,7 +38,7 @@ class ConstVariableTestCase(TestBase):
     def test_and_run_command(self):
         """Test interpreted and JITted expressions on constant values."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break inside the main.

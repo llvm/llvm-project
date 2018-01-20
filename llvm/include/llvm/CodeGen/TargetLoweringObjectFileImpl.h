@@ -163,6 +163,9 @@ public:
 
   void emitLinkerFlagsForGlobal(raw_ostream &OS,
                                 const GlobalValue *GV) const override;
+
+  void emitLinkerFlagsForUsed(raw_ostream &OS,
+                              const GlobalValue *GV) const override;
 };
 
 class TargetLoweringObjectFileWasm : public TargetLoweringObjectFile {

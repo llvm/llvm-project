@@ -255,7 +255,24 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
   if (SoftFloat)
     Key += FS.empty() ? "+soft-float" : ",+soft-float";
 
-  FS = Key.substr(CPU.size());
+  // Keep track of the key width after all features are added so we can extract
+  // the feature string out later.
+  unsigned CPUFSWidth = Key.size();
+
+  // Translate vector width function attribute into subtarget features. This
+  // overrides any CPU specific turning parameter
+  unsigned PreferVectorWidthOverride = 0;
+  if (F.hasFnAttribute("prefer-vector-width")) {
+    StringRef Val = F.getFnAttribute("prefer-vector-width").getValueAsString();
+    unsigned Width;
+    if (!Val.getAsInteger(0, Width)) {
+      Key += ",prefer-vector-width=";
+      Key += Val;
+      PreferVectorWidthOverride = Width;
+    }
+  }
+
+  FS = Key.slice(CPU.size(), CPUFSWidth);
 
   auto &I = SubtargetMap[Key];
   if (!I) {
@@ -264,7 +281,8 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
     // function that reside in TargetOptions.
     resetTargetOptions(F);
     I = llvm::make_unique<X86Subtarget>(TargetTriple, CPU, FS, *this,
-                                        Options.StackAlignmentOverride);
+                                        Options.StackAlignmentOverride,
+                                        PreferVectorWidthOverride);
   }
   return I.get();
 }

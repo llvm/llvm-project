@@ -39,11 +39,10 @@ static struct RegisterJIT {
 extern "C" void LLVMLinkInMCJIT() {
 }
 
-ExecutionEngine*
-MCJIT::createJIT(std::unique_ptr<Module> M,
-                 std::string *ErrorStr,
+ExecutionEngine *
+MCJIT::createJIT(std::unique_ptr<Module> M, std::string *ErrorStr,
                  std::shared_ptr<MCJITMemoryManager> MemMgr,
-                 std::shared_ptr<JITSymbolResolver> Resolver,
+                 std::shared_ptr<LegacyJITSymbolResolver> Resolver,
                  std::unique_ptr<TargetMachine> TM) {
   // Try to register the program as a source of symbols to resolve against.
   //
@@ -64,7 +63,7 @@ MCJIT::createJIT(std::unique_ptr<Module> M,
 
 MCJIT::MCJIT(std::unique_ptr<Module> M, std::unique_ptr<TargetMachine> TM,
              std::shared_ptr<MCJITMemoryManager> MemMgr,
-             std::shared_ptr<JITSymbolResolver> Resolver)
+             std::shared_ptr<LegacyJITSymbolResolver> Resolver)
     : ExecutionEngine(TM->createDataLayout(), std::move(M)), TM(std::move(TM)),
       Ctx(nullptr), MemMgr(std::move(MemMgr)),
       Resolver(*this, std::move(Resolver)), Dyld(*this->MemMgr, this->Resolver),

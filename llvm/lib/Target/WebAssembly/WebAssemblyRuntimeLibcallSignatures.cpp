@@ -465,11 +465,12 @@ ManagedStatic<RuntimeLibcallSignatureTable> RuntimeLibcallSignatures;
 struct StaticLibcallNameMap {
   StringMap<RTLIB::Libcall> Map;
   StaticLibcallNameMap() {
-#define HANDLE_LIBCALL(code, name)                                           \
-  if (name && RuntimeLibcallSignatures->Table[RTLIB::code] != unsupported) { \
-    assert(Map.find(StringRef::withNullAsEmpty(name)) == Map.end() &&        \
-           "duplicate libcall names in name map");                           \
-    Map[StringRef::withNullAsEmpty(name)] = RTLIB::code;                     \
+#define HANDLE_LIBCALL(code, name)                                    \
+  if ((const char *)name &&                                           \
+      RuntimeLibcallSignatures->Table[RTLIB::code] != unsupported) {  \
+    assert(Map.find(StringRef::withNullAsEmpty(name)) == Map.end() && \
+           "duplicate libcall names in name map");                    \
+    Map[StringRef::withNullAsEmpty(name)] = RTLIB::code;              \
   }
 #include "llvm/CodeGen/RuntimeLibcalls.def"
 #undef HANDLE_LIBCALL

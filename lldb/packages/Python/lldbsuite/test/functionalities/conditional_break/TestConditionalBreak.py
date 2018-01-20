@@ -39,7 +39,7 @@ class ConditionalBreakTestCase(TestBase):
         bugnumber="llvm.org/pr26265: args in frames other than #0 are not evaluated correctly")
     def do_conditional_break(self):
         """Exercise some thread and frame APIs to break if c() is called by a()."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
@@ -112,9 +112,9 @@ class ConditionalBreakTestCase(TestBase):
         if not self.TraceOn():
             self.HideStdout()
 
-        # Separate out the "file a.out" command from .lldb file, for the sake of
+        # Separate out the "file " + self.getBuildArtifact("a.out") command from .lldb file, for the sake of
         # remote testsuite.
-        self.runCmd("file a.out")
+        self.runCmd("file " + self.getBuildArtifact("a.out"))
         self.runCmd("command source .lldb")
 
         self.runCmd("break list")

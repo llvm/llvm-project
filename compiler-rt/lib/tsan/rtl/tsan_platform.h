@@ -79,25 +79,27 @@ struct Mapping {
 #define TSAN_MID_APP_RANGE 1
 #elif defined(__mips64)
 /*
-C/C++ on linux/mips64
-0100 0000 00 - 0200 0000 00: main binary
-0200 0000 00 - 1400 0000 00: -
-1400 0000 00 - 2400 0000 00: shadow
-2400 0000 00 - 3000 0000 00: -
-3000 0000 00 - 4000 0000 00: metainfo (memory blocks and sync objects)
-4000 0000 00 - 6000 0000 00: -
-6000 0000 00 - 6200 0000 00: traces
-6200 0000 00 - fe00 0000 00: -
-fe00 0000 00 - ff00 0000 00: heap
-ff00 0000 00 - ff80 0000 00: -
-ff80 0000 00 - ffff ffff ff: modules and main thread stack
+C/C++ on linux/mips64 (40-bit VMA)
+0000 0000 00 - 0100 0000 00: -                                           (4 GB)
+0100 0000 00 - 0200 0000 00: main binary                                 (4 GB)
+0200 0000 00 - 2000 0000 00: -                                         (120 GB)
+2000 0000 00 - 4000 0000 00: shadow                                    (128 GB)
+4000 0000 00 - 5000 0000 00: metainfo (memory blocks and sync objects)  (64 GB)
+5000 0000 00 - aa00 0000 00: -                                         (360 GB)
+aa00 0000 00 - ab00 0000 00: main binary (PIE)                           (4 GB)
+ab00 0000 00 - b000 0000 00: -                                          (20 GB)
+b000 0000 00 - b200 0000 00: traces                                      (8 GB)
+b200 0000 00 - fe00 0000 00: -                                         (304 GB)
+fe00 0000 00 - ff00 0000 00: heap                                        (4 GB)
+ff00 0000 00 - ff80 0000 00: -                                           (2 GB)
+ff80 0000 00 - ffff ffff ff: modules and main thread stack              (<2 GB)
 */
 struct Mapping {
   static const uptr kMetaShadowBeg = 0x4000000000ull;
   static const uptr kMetaShadowEnd = 0x5000000000ull;
   static const uptr kTraceMemBeg   = 0xb000000000ull;
   static const uptr kTraceMemEnd   = 0xb200000000ull;
-  static const uptr kShadowBeg     = 0x2400000000ull;
+  static const uptr kShadowBeg     = 0x2000000000ull;
   static const uptr kShadowEnd     = 0x4000000000ull;
   static const uptr kHeapMemBeg    = 0xfe00000000ull;
   static const uptr kHeapMemEnd    = 0xff00000000ull;

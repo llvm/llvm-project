@@ -82,7 +82,7 @@ class ThreadStateTestCase(TestBase):
 
     def thread_state_after_breakpoint_test(self):
         """Test thread state after breakpoint."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # This should create a breakpoint in the main thread.
@@ -122,7 +122,7 @@ class ThreadStateTestCase(TestBase):
 
     def thread_state_after_continue_test(self):
         """Test thread state after continue."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # This should create a breakpoint in the main thread.
@@ -164,7 +164,7 @@ class ThreadStateTestCase(TestBase):
 
     def thread_state_after_expression_test(self):
         """Test thread state after expression."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # This should create a breakpoint in the main thread.
@@ -200,7 +200,7 @@ class ThreadStateTestCase(TestBase):
 
     def process_interrupt_test(self):
         """Test process interrupt and continue."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # This should create a breakpoint in the main thread.
@@ -240,7 +240,7 @@ class ThreadStateTestCase(TestBase):
 
     def thread_states_test(self):
         """Test thread states (comprehensive)."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # This should create a breakpoint in the main thread.

@@ -88,6 +88,7 @@
 #define glob __glob30
 #define gmtime __gmtime50
 #define gmtime_r __gmtime_r50
+#define localtime __locatime50
 #define localtime_r __localtime_r50
 #define mktime __mktime50
 #define opendir __opendir30
