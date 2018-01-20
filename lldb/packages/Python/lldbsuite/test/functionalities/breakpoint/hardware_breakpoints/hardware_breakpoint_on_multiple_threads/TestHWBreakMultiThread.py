@@ -47,12 +47,8 @@ class HardwareBreakpointMultiThreadTestCase(TestBase):
 
     def break_multi_thread(self, removal_type):
         """Test that lldb hardware breakpoints work for multiple threads."""
-        self.runCmd(
-            "file %s" %
-            os.path.join(
-                os.getcwd(),
-                'a.out'),
-            CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"),
+                    CURRENT_EXECUTABLE_SET)
 
         # Stop in main before creating any threads.
         lldbutil.run_break_set_by_file_and_line(

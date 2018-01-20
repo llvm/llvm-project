@@ -34,7 +34,7 @@ class ObjcOptimizedTestCase(TestBase):
     def test_break(self):
         """Test 'expr member' continues to work for optimized build."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_symbol(

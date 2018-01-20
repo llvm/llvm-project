@@ -35,7 +35,7 @@ class BSDArchivesTestCase(TestBase):
         """Break inside a() and b() defined within libfoo.a."""
         self.build()
 
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break inside a() by file and line first.

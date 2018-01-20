@@ -1250,6 +1250,11 @@ void TargetLoweringObjectFileCOFF::emitLinkerFlagsForGlobal(
   emitLinkerFlagsForGlobalCOFF(OS, GV, getTargetTriple(), getMangler());
 }
 
+void TargetLoweringObjectFileCOFF::emitLinkerFlagsForUsed(
+    raw_ostream &OS, const GlobalValue *GV) const {
+  emitLinkerFlagsForUsedCOFF(OS, GV, getTargetTriple(), getMangler());
+}
+
 //===----------------------------------------------------------------------===//
 //                                  Wasm
 //===----------------------------------------------------------------------===//

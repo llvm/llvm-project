@@ -328,7 +328,8 @@ public:
   /// @return A handle that can be used to refer to the loaded object (for
   ///         symbol searching, finalization, freeing memory, etc.).
   Expected<ObjHandleT>
-  addObject(ObjectPtr Object, std::shared_ptr<JITSymbolResolver> Resolver) {
+  addObject(ObjectPtr Object,
+            std::shared_ptr<LegacyJITSymbolResolver> Resolver) {
     StringRef ObjBuffer = Object->getBinary()->getData();
     if (auto HandleOrErr =
           this->Remote.template callB<AddObject>(ObjBuffer)) {
@@ -386,7 +387,8 @@ private:
   }
 
   std::map<remote::ResourceIdMgr::ResourceId,
-           std::shared_ptr<JITSymbolResolver>> Resolvers;
+           std::shared_ptr<LegacyJITSymbolResolver>>
+      Resolvers;
 };
 
 /// RemoteObjectServerLayer acts as a server and handling RPC calls for the

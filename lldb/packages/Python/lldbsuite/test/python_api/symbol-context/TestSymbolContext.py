@@ -31,7 +31,7 @@ class SymbolContextAPITestCase(TestBase):
     def test(self):
         """Exercise SBSymbolContext API extensively."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)
@@ -66,7 +66,7 @@ class SymbolContextAPITestCase(TestBase):
         module = context.GetModule()
         desc = lldbutil.get_description(module)
         self.expect(desc, "The module should match", exe=False,
-                    substrs=[os.path.join(self.mydir, 'a.out')])
+                    substrs=[self.getBuildArtifact("a.out")])
 
         compileUnit = context.GetCompileUnit()
         self.expect(

@@ -35,7 +35,7 @@ class MiLibraryLoadedTestCase(lldbmi_testcase.MiTestCaseBase):
             "Contents",
             "Resources",
             "DWARF",
-            self.myexe)
+            "a.out")
 
         def add_slashes(x): return x.replace(
             "\\",

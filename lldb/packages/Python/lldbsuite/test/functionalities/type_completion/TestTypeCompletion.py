@@ -25,7 +25,7 @@ class TypeCompletionTestCase(TestBase):
     def test_with_run_command(self):
         """Check that types only get completed when necessary."""
         self.build()
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_source_regexp(
             self, "// Set break point at this line.")

@@ -146,6 +146,9 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
   class AdvSIMD_CvtFPToFx_Intrinsic
     : Intrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty, llvm_i32_ty],
                 [IntrNoMem]>;
+
+  class AdvSIMD_1Arg_Intrinsic
+    : Intrinsic<[llvm_any_ty], [LLVMMatchType<0>], [IntrNoMem]>;
 }
 
 // Arithmetic ops
@@ -244,7 +247,7 @@ let TargetPrefix = "aarch64", IntrProperties = [IntrNoMem] in {
   // Vector Max
   def int_aarch64_neon_smax : AdvSIMD_2VectorArg_Intrinsic;
   def int_aarch64_neon_umax : AdvSIMD_2VectorArg_Intrinsic;
-  def int_aarch64_neon_fmax : AdvSIMD_2VectorArg_Intrinsic;
+  def int_aarch64_neon_fmax : AdvSIMD_2FloatArg_Intrinsic;
   def int_aarch64_neon_fmaxnmp : AdvSIMD_2VectorArg_Intrinsic;
 
   // Vector Max Across Lanes
@@ -256,7 +259,7 @@ let TargetPrefix = "aarch64", IntrProperties = [IntrNoMem] in {
   // Vector Min
   def int_aarch64_neon_smin : AdvSIMD_2VectorArg_Intrinsic;
   def int_aarch64_neon_umin : AdvSIMD_2VectorArg_Intrinsic;
-  def int_aarch64_neon_fmin : AdvSIMD_2VectorArg_Intrinsic;
+  def int_aarch64_neon_fmin : AdvSIMD_2FloatArg_Intrinsic;
   def int_aarch64_neon_fminnmp : AdvSIMD_2VectorArg_Intrinsic;
 
   // Vector Min/Max Number
@@ -354,7 +357,7 @@ let TargetPrefix = "aarch64", IntrProperties = [IntrNoMem] in {
   def int_aarch64_neon_sqxtun : AdvSIMD_1VectorArg_Narrow_Intrinsic;
 
   // Vector Absolute Value
-  def int_aarch64_neon_abs : AdvSIMD_1IntArg_Intrinsic;
+  def int_aarch64_neon_abs : AdvSIMD_1Arg_Intrinsic;
 
   // Vector Saturating Absolute Value
   def int_aarch64_neon_sqabs : AdvSIMD_1IntArg_Intrinsic;

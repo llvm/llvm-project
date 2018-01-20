@@ -313,7 +313,7 @@ llvm::Optional<SymbolID> getSymbolID(const CodeCompletionResult &R) {
 /// completion (e.g. "ns::ab?").
 struct SpecifiedScope {
   /// The scope specifier as written. For example, for completion "ns::ab?", the
-  /// written scope specifier is "ns::". Doesn't include leading "::".
+  /// written scope specifier is "ns::".
   std::string Written;
   // If this scope specifier is recognized in Sema (e.g. as a namespace
   // context), this will be set to the fully qualfied name of the corresponding
@@ -321,7 +321,8 @@ struct SpecifiedScope {
   std::string Resolved;
 
   llvm::StringRef forIndex() {
-    return Resolved.empty() ? Written.ltrim('::') : Resolved;
+    return Resolved.empty() ? StringRef(Written).ltrim("::")
+                            : StringRef(Resolved);
   }
 };
 

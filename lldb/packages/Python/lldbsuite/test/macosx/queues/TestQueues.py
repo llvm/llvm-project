@@ -105,7 +105,7 @@ class TestQueues(TestBase):
 
     def queues(self):
         """Test queues inspection SB APIs without libBacktraceRecording."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
@@ -246,7 +246,7 @@ class TestQueues(TestBase):
 
     def queues_with_libBacktraceRecording(self):
         """Test queues inspection SB APIs with libBacktraceRecording present."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         if not os.path.isfile(
                 '/Applications/Xcode.app/Contents/Developer/usr/lib/libBacktraceRecording.dylib'):

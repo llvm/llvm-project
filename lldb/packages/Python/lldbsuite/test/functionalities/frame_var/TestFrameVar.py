@@ -31,7 +31,7 @@ class TestFrameVar(TestBase):
         TestBase.setUp(self)
 
     def do_test(self):
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)

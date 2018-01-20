@@ -22,7 +22,7 @@ class SBValuePersistTestCase(TestBase):
         """Test SBValue::Persist"""
         self.build()
         self.setTearDownCleanup()
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_source_regexp(self, "break here")
 

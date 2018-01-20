@@ -23,7 +23,7 @@ class Radar9531204TestCase(TestBase):
         """The evaluating printf(...) after break stop and then up a stack frame."""
         self.build()
 
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_symbol(
             self, 'foo', sym_exact=True, num_expected_locations=1)

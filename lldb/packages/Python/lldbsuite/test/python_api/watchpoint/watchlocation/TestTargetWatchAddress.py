@@ -36,7 +36,7 @@ class TargetWatchAddressAPITestCase(TestBase):
     def test_watch_address(self):
         """Exercise SBTarget.WatchAddress() API to set a watchpoint."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)
@@ -112,7 +112,7 @@ class TargetWatchAddressAPITestCase(TestBase):
     def test_watch_address_with_invalid_watch_size(self):
         """Exercise SBTarget.WatchAddress() API but pass an invalid watch_size."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)

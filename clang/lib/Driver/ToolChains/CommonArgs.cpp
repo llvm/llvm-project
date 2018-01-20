@@ -555,6 +555,9 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
   // Required for backtrace on some OSes
   if (TC.getTriple().getOS() == llvm::Triple::NetBSD)
     CmdArgs.push_back("-lexecinfo");
+  // Required for kvm (kernel memory interface) on some OSes
+  if (TC.getTriple().getOS() == llvm::Triple::NetBSD)
+    CmdArgs.push_back("-lkvm");
 }
 
 static void
