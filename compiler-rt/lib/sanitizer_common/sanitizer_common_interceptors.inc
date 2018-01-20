@@ -88,6 +88,7 @@
 #define glob __glob30
 #define gmtime __gmtime50
 #define gmtime_r __gmtime_r50
+#define localtime __locatime50
 #define localtime_r __localtime_r50
 #define mktime __mktime50
 #define opendir __opendir30
@@ -6501,7 +6502,7 @@ INTERCEPTOR(int, uid_from_user, const char *name, u32 *uid) {
   res = REAL(uid_from_user)(name, uid);
   if (uid)
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, uid, sizeof(*uid));
-  return ret;
+  return res;
 }
 #define INIT_UID_FROM_USER COMMON_INTERCEPT_FUNCTION(uid_from_user)
 #else
@@ -6533,7 +6534,7 @@ INTERCEPTOR(int, gid_from_group, const char *group, u32 *gid) {
   res = REAL(gid_from_group)(group, gid);
   if (gid)
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, gid, sizeof(*gid));
-  return ret;
+  return res;
 }
 #define INIT_GID_FROM_GROUP COMMON_INTERCEPT_FUNCTION(gid_from_group)
 #else
