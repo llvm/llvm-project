@@ -731,7 +731,14 @@ bool RuntimeDyldCheckerImpl::checkAllRulesInBuffer(StringRef RulePrefix,
 bool RuntimeDyldCheckerImpl::isSymbolValid(StringRef Symbol) const {
   if (getRTDyld().getSymbol(Symbol))
     return true;
-  return !!getRTDyld().Resolver.findSymbol(Symbol);
+  JITSymbolResolver::SymbolNameSet Symbols({Symbol});
+  auto Result = getRTDyld().Resolver.lookup(Symbols);
+  if (!Result) {
+    logAllUnhandledErrors(Result.takeError(), errs(), "RTDyldChecker: ");
+    return false;
+  }
+  assert(Result->count(Symbol) && "Missing symbol result");
+  return true;
 }
 
 uint64_t RuntimeDyldCheckerImpl::getSymbolLocalAddr(StringRef Symbol) const {
@@ -742,7 +749,16 @@ uint64_t RuntimeDyldCheckerImpl::getSymbolLocalAddr(StringRef Symbol) const {
 uint64_t RuntimeDyldCheckerImpl::getSymbolRemoteAddr(StringRef Symbol) const {
   if (auto InternalSymbol = getRTDyld().getSymbol(Symbol))
     return InternalSymbol.getAddress();
-  return cantFail(getRTDyld().Resolver.findSymbol(Symbol).getAddress());
+
+  JITSymbolResolver::SymbolNameSet Symbols({Symbol});
+  auto Result = getRTDyld().Resolver.lookup(Symbols);
+  if (!Result) {
+    logAllUnhandledErrors(Result.takeError(), errs(), "RTDyldChecker: ");
+    return 0;
+  }
+  auto I = Result->find(Symbol);
+  assert(I != Result->end() && "Missing symbol result");
+  return I->second.getAddress();
 }
 
 uint64_t RuntimeDyldCheckerImpl::readMemoryAtAddr(uint64_t SrcAddr,

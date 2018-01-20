@@ -30,7 +30,8 @@ class TestBenchmarkLibcxxMap(BenchBase):
 
     def data_formatter_commands(self):
         """Benchmark the std::map data formatter (libc++)"""
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " +self.getBuildArtifact("a.out"),
+                    CURRENT_EXECUTABLE_SET)
 
         bkpt = self.target().FindBreakpointByID(
             lldbutil.run_break_set_by_source_regexp(

@@ -28,10 +28,10 @@ class AppleTypesTestCase(TestBase):
 
         self.build()
         if self.debug_info == "dsym":
-            exe = os.path.join(os.getcwd(),
+            exe = self.getBuildArtifact(
                                "a.out.dSYM/Contents/Resources/DWARF/a.out")
         else:
-            exe = os.path.join(os.getcwd(), "main.o")
+            exe = self.getBuildArtifact("main.o")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)

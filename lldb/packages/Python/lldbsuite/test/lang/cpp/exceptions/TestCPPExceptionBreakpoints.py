@@ -30,7 +30,7 @@ class CPPBreakpointTestCase(TestBase):
     def test(self):
         """Test lldb exception breakpoint command for CPP."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target from the debugger.
 

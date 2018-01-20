@@ -618,8 +618,17 @@ bool ObjCARCContract::runOnFunction(Function &F) {
       else if (isa<GlobalAlias>(Arg) &&
                !cast<GlobalAlias>(Arg)->isInterposable())
         Arg = cast<GlobalAlias>(Arg)->getAliasee();
-      else
+      else {
+        // If Arg is a PHI node, get PHIs that are equivalent to it and replace
+        // their uses.
+        if (PHINode *PN = dyn_cast<PHINode>(Arg)) {
+          SmallVector<Value *, 1> PHIList;
+          getEquivalentPHIs(*PN, PHIList);
+          for (Value *PHI : PHIList)
+            ReplaceArgUses(PHI);
+        }
         break;
+      }
     }
 
     // Replace bitcast users of Arg that are dominated by Inst.

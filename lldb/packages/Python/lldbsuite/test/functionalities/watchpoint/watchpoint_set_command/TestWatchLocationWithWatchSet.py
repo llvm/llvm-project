@@ -44,7 +44,7 @@ class WatchLocationUsingWatchpointSetTestCase(TestBase):
         self.build()
         self.setTearDownCleanup()
 
-        exe = os.path.join(os.getcwd(), 'a.out')
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Add a breakpoint to set a watchpoint when stopped on the breakpoint.

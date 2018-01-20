@@ -26,7 +26,7 @@ class CreateDuringStepTestCase(TestBase):
     def test_step_inst_with(self):
         """Test thread creation during step-inst handling."""
         self.build(dictionary=self.getBuildFlags())
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target and target.IsValid(), "Target is valid")

@@ -204,3 +204,13 @@ void llvm::emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
       OS << ",data";
   }
 }
+
+void llvm::emitLinkerFlagsForUsedCOFF(raw_ostream &OS, const GlobalValue *GV,
+                                      const Triple &T, Mangler &M) {
+  if (!T.isKnownWindowsMSVCEnvironment())
+    return;
+
+  OS << " /INCLUDE:";
+  M.getNameWithPrefix(OS, GV, false);
+}
+

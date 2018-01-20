@@ -83,7 +83,8 @@ class AddDsymCommandCase(TestBase):
 
     def do_add_dsym_with_error(self, exe_name):
         """Test that the 'add-dsym' command informs the user about failures."""
-        self.runCmd("file " + exe_name, CURRENT_EXECUTABLE_SET)
+        exe_path = self.getBuildArtifact(exe_name)
+        self.runCmd("file " + exe_path, CURRENT_EXECUTABLE_SET)
 
         wrong_path = os.path.join("%s.dSYM" % exe_name, "Contents")
         self.expect("add-dsym " + wrong_path, error=True,
@@ -91,7 +92,7 @@ class AddDsymCommandCase(TestBase):
 
         right_path = os.path.join(
             "%s.dSYM" %
-            exe_name,
+            exe_path,
             "Contents",
             "Resources",
             "DWARF",
@@ -101,13 +102,14 @@ class AddDsymCommandCase(TestBase):
 
     def do_add_dsym_with_success(self, exe_name):
         """Test that the 'add-dsym' command informs the user about success."""
-        self.runCmd("file " + exe_name, CURRENT_EXECUTABLE_SET)
+        exe_path = self.getBuildArtifact(exe_name)
+        self.runCmd("file " + exe_path, CURRENT_EXECUTABLE_SET)
 
         # This time, the UUID should match and we expect some feedback from
         # lldb.
         right_path = os.path.join(
             "%s.dSYM" %
-            exe_name,
+            exe_path,
             "Contents",
             "Resources",
             "DWARF",
@@ -117,9 +119,10 @@ class AddDsymCommandCase(TestBase):
 
     def do_add_dsym_with_dSYM_bundle(self, exe_name):
         """Test that the 'add-dsym' command informs the user about success when loading files in bundles."""
-        self.runCmd("file " + exe_name, CURRENT_EXECUTABLE_SET)
+        exe_path = self.getBuildArtifact(exe_name)
+        self.runCmd("file " + exe_path, CURRENT_EXECUTABLE_SET)
 
         # This time, the UUID should be found inside the bundle
-        right_path = "%s.dSYM" % exe_name
+        right_path = "%s.dSYM" % exe_path
         self.expect("add-dsym " + right_path,
                     substrs=['symbol file', 'has been added to'])

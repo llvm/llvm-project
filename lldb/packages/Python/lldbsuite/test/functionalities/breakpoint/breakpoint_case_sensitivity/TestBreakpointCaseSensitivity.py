@@ -39,7 +39,7 @@ class BreakpointCaseSensitivityTestCase(TestBase):
         if case_insensitive:
             exe = exe.upper()
 
-        exe = os.path.join(os.getcwd(), exe)
+        exe = self.getBuildArtifact(exe)
 
         # Create a target by the debugger.
         self.target = self.dbg.CreateTarget(exe)

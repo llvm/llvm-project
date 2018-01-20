@@ -27,7 +27,7 @@ class CmdPythonTestCase(TestBase):
         self.expect('targetname',
                     substrs=['a.out'], matching=False, error=True)
 
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.expect("file " + exe,
                     patterns=["Current executable set to .*a.out"])
 

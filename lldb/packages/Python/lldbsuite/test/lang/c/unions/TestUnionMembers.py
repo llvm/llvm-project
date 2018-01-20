@@ -47,7 +47,7 @@ class TestUnionMembers(TestBase):
         self.assertTrue(self.src_file_spec.IsValid(), "breakpoint file")
 
         # Get the path of the executable
-        exe_path = os.path.join(cwd, 'a.out')
+        exe_path = self.getBuildArtifact("a.out")
 
         # Load the executable
         self.target = self.dbg.CreateTarget(exe_path)

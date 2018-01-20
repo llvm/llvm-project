@@ -52,7 +52,7 @@ class AvoidsFdLeakTestCase(TestBase):
 
     def do_test(self, commands):
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         for c in commands:
             self.runCmd(c)
@@ -81,7 +81,7 @@ class AvoidsFdLeakTestCase(TestBase):
     @skipIfDarwinEmbedded # <rdar://problem/33888742>  # debugserver on ios has an extra fd open on launch
     def test_fd_leak_multitarget(self):
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         breakpoint = target.BreakpointCreateBySourceRegex(

@@ -38,7 +38,7 @@ class StopHookCmdTestCase(TestBase):
     def test(self):
         """Test a sequence of target stop-hook commands."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(

@@ -725,19 +725,29 @@ def get_crashed_threads(test, process):
             threads.append(thread)
     return threads
 
-def run_to_source_breakpoint(test, bkpt_pattern, source_spec, launch_info = None, exe_name = "a.out", in_cwd = True):
-    """Start up a target, using exe_name as the executable, and run it to 
+def run_to_source_breakpoint(test, bkpt_pattern, source_spec,
+                             launch_info = None, exe_name = "a.out",
+                             in_cwd = True):
+    """Start up a target, using exe_name as the executable, and run it to
        a breakpoint set by source regex bkpt_pattern.
-       If you want to pass in launch arguments or environment variables, you can optionally pass in 
-       an SBLaunchInfo.  If you do that, remember to set the working directory as well.
-       If your executable isn't called a.out, you can pass that in.  And if your executable isn't
-       in the CWD, pass in the absolute path to the executable in exe_name, and set in_cwd to False.
+
+       If you want to pass in launch arguments or environment
+       variables, you can optionally pass in an SBLaunchInfo.  If you
+       do that, remember to set the working directory as well.
+
+       If your executable isn't called a.out, you can pass that in.
+       And if your executable isn't in the CWD, pass in the absolute
+       path to the executable in exe_name, and set in_cwd to False.
+
        If the target isn't valid, the breakpoint isn't found, or hit, the
        function will cause a testsuite failure.
-       If successful it returns a tuple with the target process and thread that hit the breakpoint."""
+
+       If successful it returns a tuple with the target process and
+       thread that hit the breakpoint.
+    """
 
     if in_cwd:
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = test.getBuildArtifact(exe_name)
     
     # Create the target
     target = test.dbg.CreateTarget(exe)

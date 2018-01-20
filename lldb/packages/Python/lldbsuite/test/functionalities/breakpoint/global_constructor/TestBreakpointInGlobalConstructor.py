@@ -22,7 +22,7 @@ class TestBreakpointInGlobalConstructors(TestBase):
         self.line_foo = line_number('foo.cpp', '// !BR_foo')
         self.line_main = line_number('main.cpp', '// !BR_main')
 
-        target = self.dbg.CreateTarget("a.out")
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.assertTrue(target, VALID_TARGET)
 
         env= self.registerSharedLibrariesWithTarget(target, ["foo"])

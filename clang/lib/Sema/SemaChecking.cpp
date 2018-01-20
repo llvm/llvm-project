@@ -1353,6 +1353,7 @@ bool Sema::CheckNeonBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   switch (BuiltinID) {
 #define GET_NEON_OVERLOAD_CHECK
 #include "clang/Basic/arm_neon.inc"
+#include "clang/Basic/arm_fp16.inc"
 #undef GET_NEON_OVERLOAD_CHECK
   }
 
@@ -1404,6 +1405,7 @@ bool Sema::CheckNeonBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     return false;
 #define GET_NEON_IMMEDIATE_CHECK
 #include "clang/Basic/arm_neon.inc"
+#include "clang/Basic/arm_fp16.inc"
 #undef GET_NEON_IMMEDIATE_CHECK
   }
 

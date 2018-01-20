@@ -51,12 +51,12 @@ class ExecTestCase(TestBase):
                 "'%s' -g -O0 -arch i386 -arch x86_64 '%s'" %
                 (os.environ["CC"], o_file))
             if self.debug_info != "dsym":
-                dsym_path = os.path.join(os.getcwd(), "a.out.dSYM")
+                dsym_path = self.getBuildArtifact("a.out.dSYM")
                 execute_command("rm -rf '%s'" % (dsym_path))
         else:
             self.build()
 
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

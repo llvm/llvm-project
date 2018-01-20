@@ -105,7 +105,7 @@ class LoadUnloadTestCase(TestBase):
         old_dylib = os.path.join(os.getcwd(), dylibName)
         new_dylib = os.path.join(new_dir, dylibName)
 
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         self.expect("target modules list",
@@ -156,7 +156,7 @@ class LoadUnloadTestCase(TestBase):
         self.build()
         self.copy_shlibs_to_remote(hidden_dir=True)
 
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Shut off ANSI color usage so we don't get ANSI escape sequences
@@ -222,7 +222,7 @@ class LoadUnloadTestCase(TestBase):
         self.build()
         self.copy_shlibs_to_remote()
 
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break at main.cpp before the call to dlopen().
@@ -300,7 +300,7 @@ class LoadUnloadTestCase(TestBase):
         self.build()
         self.copy_shlibs_to_remote()
 
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break by function name a_function (not yet loaded).
@@ -343,7 +343,7 @@ class LoadUnloadTestCase(TestBase):
         self.build()
         self.copy_shlibs_to_remote()
 
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break by function name a_function (not yet loaded).
@@ -374,7 +374,7 @@ class LoadUnloadTestCase(TestBase):
         self.build()
         self.copy_shlibs_to_remote()
 
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         a_init_bp_num = lldbutil.run_break_set_by_symbol(

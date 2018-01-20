@@ -35,7 +35,7 @@ class ListenToModuleLoadedEvents (TestBase):
             lldb.SBTarget.GetBroadcasterClassName(),
             lldb.SBTarget.eBroadcastBitBreakpointChanged)
 
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
 

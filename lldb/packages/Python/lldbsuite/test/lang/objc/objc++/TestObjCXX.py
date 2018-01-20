@@ -24,7 +24,7 @@ class ObjCXXTestCase(TestBase):
             self.skipTest("requires Objective-C 2.0 runtime")
 
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_source_regexp(

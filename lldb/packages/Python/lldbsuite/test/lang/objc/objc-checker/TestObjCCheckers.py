@@ -33,7 +33,7 @@ class ObjCCheckerTestCase(TestBase):
             self.skipTest("requires Objective-C 2.0 runtime")
 
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target from the debugger.
 

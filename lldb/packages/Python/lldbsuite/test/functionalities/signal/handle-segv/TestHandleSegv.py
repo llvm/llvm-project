@@ -20,7 +20,7 @@ class HandleSegvTestCase(TestBase):
     @skipIfDarwin
     def test_inferior_handle_sigsegv(self):
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)

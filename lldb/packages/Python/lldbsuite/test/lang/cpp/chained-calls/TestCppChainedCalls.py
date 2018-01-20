@@ -19,7 +19,7 @@ class TestCppChainedCalls(TestBase):
 
         # Get the path of the executable
         cwd = os.getcwd()
-        exe_file = "a.out"
+        exe_file = self.getBuildArtifact("a.out")
         exe_path = os.path.join(cwd, exe_file)
 
         # Load the executable
