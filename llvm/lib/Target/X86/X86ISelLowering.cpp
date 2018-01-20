@@ -6014,8 +6014,11 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
   case X86ISD::PINSRW: {
     SDValue InVec = N.getOperand(0);
     SDValue InScl = N.getOperand(1);
+    SDValue InIndex = N.getOperand(2);
+    if (!isa<ConstantSDNode>(InIndex) ||
+        cast<ConstantSDNode>(InIndex)->getAPIntValue().uge(NumElts))
+      return false;
     uint64_t InIdx = N.getConstantOperandVal(2);
-    assert(InIdx < NumElts && "Illegal insertion index");
 
     // Attempt to recognise a PINSR*(VEC, 0, Idx) shuffle pattern.
     if (X86::isZeroNode(InScl)) {
@@ -6033,8 +6036,12 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
       return false;
 
     SDValue ExVec = InScl.getOperand(0);
+    SDValue ExIndex = InScl.getOperand(1);
+    if (!isa<ConstantSDNode>(ExIndex) ||
+        cast<ConstantSDNode>(ExIndex)->getAPIntValue().uge(NumElts))
+      return false;
     uint64_t ExIdx = InScl.getConstantOperandVal(1);
-    assert(ExIdx < NumElts && "Illegal extraction index");
+
     Ops.push_back(InVec);
     Ops.push_back(ExVec);
     for (unsigned i = 0; i != NumElts; ++i)
@@ -27876,6 +27883,65 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 //===----------------------------------------------------------------------===//
 //                           X86 Optimization Hooks
 //===----------------------------------------------------------------------===//
+
+bool
+X86TargetLowering::targetShrinkDemandedConstant(SDValue Op,
+                                                const APInt &Demanded,
+                                                TargetLoweringOpt &TLO) const {
+  // Only optimize Ands to prevent shrinking a constant that could be
+  // matched by movzx.
+  if (Op.getOpcode() != ISD::AND)
+    return false;
+
+  EVT VT = Op.getValueType();
+
+  // Ignore vectors.
+  if (VT.isVector())
+    return false;
+
+  unsigned Size = VT.getSizeInBits();
+
+  // Make sure the RHS really is a constant.
+  ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op.getOperand(1));
+  if (!C)
+    return false;
+
+  const APInt &Mask = C->getAPIntValue();
+
+  // Clear all non-demanded bits initially.
+  APInt ShrunkMask = Mask & Demanded;
+
+  // Find the width of the shrunk mask.
+  unsigned Width = ShrunkMask.getActiveBits();
+
+  // If the mask is all 0s there's nothing to do here.
+  if (Width == 0)
+    return false;
+
+  // Find the next power of 2 width, rounding up to a byte.
+  Width = PowerOf2Ceil(std::max(Width, 8U));
+  // Truncate the width to size to handle illegal types.
+  Width = std::min(Width, Size);
+
+  // Calculate a possible zero extend mask for this constant.
+  APInt ZeroExtendMask = APInt::getLowBitsSet(Size, Width);
+
+  // If we aren't changing the mask, just return true to keep it and prevent
+  // the caller from optimizing.
+  if (ZeroExtendMask == Mask)
+    return true;
+
+  // Make sure the bits in the ZeroExtendMask are also set in the original mask.
+  // TODO: We should be able to set bits that aren't demanded too.
+  if (!ZeroExtendMask.isSubsetOf(Mask))
+    return false;
+
+  // Replace the constant with the zero extend mask.
+  SDLoc DL(Op);
+  SDValue NewC = TLO.DAG.getConstant(ZeroExtendMask, DL, VT);
+  SDValue NewOp = TLO.DAG.getNode(ISD::AND, DL, VT, Op.getOperand(0), NewC);
+  return TLO.CombineTo(Op, NewOp);
+}
 
 void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
                                                       KnownBits &Known,

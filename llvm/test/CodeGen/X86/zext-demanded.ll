@@ -5,25 +5,22 @@
 ; demanded bits shortcomings.
 
 ; The backend will insert a zext to promote the shift to i32.
-; TODO: we should be able to use movzx here.
 define i16 @test1(i16 %x) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andl $65534, %edi # imm = 0xFFFE
-; CHECK-NEXT:    shrl %edi
-; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    movzwl %di, %eax
+; CHECK-NEXT:    shrl %eax
+; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    retq
   %y = lshr i16 %x, 1
   ret i16 %y
 }
 
-; TODO: we should be able to use movzx here.
 define i32 @test2(i32 %x) {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andl $65534, %edi # imm = 0xFFFE
-; CHECK-NEXT:    shrl %edi
-; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    movzwl %di, %eax
+; CHECK-NEXT:    shrl %eax
 ; CHECK-NEXT:    retq
   %y = and i32 %x, 65535
   %z = lshr i32 %y, 1

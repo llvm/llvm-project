@@ -33,6 +33,11 @@ uintptr_t GetCurrentProcess(void);
   #include <machine/sysarch.h>
 #endif
 
+#if defined(__OpenBSD__) && defined(__mips__)
+  #include <sys/types.h>
+  #include <machine/sysarch.h>
+#endif
+
 #if defined(__linux__) && defined(__mips__)
   #include <sys/cachectl.h>
   #include <sys/syscall.h>
@@ -142,6 +147,8 @@ void __clear_cache(void *start, void *end) {
     #else
         syscall(__NR_cacheflush, start, (end_int - start_int), BCACHE);
     #endif
+#elif defined(__mips__) && defined(__OpenBSD__)
+  cacheflush(start, (uintptr_t)end - (uintptr_t)start, BCACHE);
 #elif defined(__aarch64__) && !defined(__APPLE__)
   uint64_t xstart = (uint64_t)(uintptr_t) start;
   uint64_t xend = (uint64_t)(uintptr_t) end;

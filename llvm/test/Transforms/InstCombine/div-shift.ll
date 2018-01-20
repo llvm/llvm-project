@@ -4,8 +4,8 @@
 define i32 @t1(i16 zeroext %x, i32 %y) {
 ; CHECK-LABEL: @t1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV:%.*]] = zext i16 %x to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 %y, 1
+; CHECK-NEXT:    [[CONV:%.*]] = zext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[Y:%.*]], 1
 ; CHECK-NEXT:    [[D:%.*]] = lshr i32 [[CONV]], [[TMP0]]
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
@@ -34,8 +34,8 @@ entry:
 ; rdar://11721329
 define i64 @t2(i64 %x, i32 %y) {
 ; CHECK-LABEL: @t2(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 %y to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 %x, [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[Y:%.*]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
   %1 = shl i32 1, %y
@@ -47,9 +47,9 @@ define i64 @t2(i64 %x, i32 %y) {
 ; PR13250
 define i64 @t3(i64 %x, i32 %y) {
 ; CHECK-LABEL: @t3(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 %y, 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[Y:%.*]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 %x, [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[X:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret i64 [[TMP3]]
 ;
   %1 = shl i32 4, %y
@@ -60,9 +60,9 @@ define i64 @t3(i64 %x, i32 %y) {
 
 define i32 @t4(i32 %x, i32 %y) {
 ; CHECK-LABEL: @t4(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 %y, 5
-; CHECK-NEXT:    [[DOTV:%.*]] = select i1 [[TMP1]], i32 %y, i32 5
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 %x, [[DOTV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[Y:%.*]], 5
+; CHECK-NEXT:    [[DOTV:%.*]] = select i1 [[TMP1]], i32 [[Y]], i32 5
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[X:%.*]], [[DOTV]]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %1 = shl i32 1, %y
@@ -74,9 +74,9 @@ define i32 @t4(i32 %x, i32 %y) {
 
 define i32 @t5(i1 %x, i1 %y, i32 %V) {
 ; CHECK-LABEL: @t5(
-; CHECK-NEXT:    [[DOTV:%.*]] = select i1 %x, i32 5, i32 6
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 %V, [[DOTV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 %y, i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[DOTV:%.*]] = select i1 [[X:%.*]], i32 5, i32 6
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[V:%.*]], [[DOTV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[Y:%.*]], i32 [[TMP1]], i32 0
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %1 = shl i32 1, %V
@@ -88,13 +88,129 @@ define i32 @t5(i1 %x, i1 %y, i32 %V) {
 
 define i32 @t6(i32 %x, i32 %z) {
 ; CHECK-LABEL: @t6(
-; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = icmp eq i32 %x, 0
-; CHECK-NEXT:    [[DIVISOR:%.*]] = select i1 [[X_IS_ZERO]], i32 1, i32 %x
-; CHECK-NEXT:    [[Y:%.*]] = udiv i32 %z, [[DIVISOR]]
+; CHECK-NEXT:    [[X_IS_ZERO:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[DIVISOR:%.*]] = select i1 [[X_IS_ZERO]], i32 1, i32 [[X]]
+; CHECK-NEXT:    [[Y:%.*]] = udiv i32 [[Z:%.*]], [[DIVISOR]]
 ; CHECK-NEXT:    ret i32 [[Y]]
 ;
   %x_is_zero = icmp eq i32 %x, 0
   %divisor = select i1 %x_is_zero, i32 1, i32 %x
   %y = udiv i32 %z, %divisor
   ret i32 %y
+}
+
+; (X << C1) / X -> 1 << C1 optimizations
+
+define i32 @t7(i32 %x) {
+; CHECK-LABEL: @t7(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[R:%.*]] = sdiv i32 [[SHL]], [[X]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shl = shl nsw i32 %x, 2
+  %r = sdiv i32 %shl, %x
+  ret i32 %r
+}
+
+; make sure the previous opt doesn't take place for wrapped shifts
+
+define i32 @t8(i32 %x) {
+; CHECK-LABEL: @t8(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[R:%.*]] = sdiv i32 [[SHL]], [[X]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shl = shl i32 %x, 2
+  %r = sdiv i32 %shl, %x
+  ret i32 %r
+}
+
+define <2 x i32> @t9(<2 x i32> %x) {
+; CHECK-LABEL: @t9(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw <2 x i32> [[X:%.*]], <i32 2, i32 3>
+; CHECK-NEXT:    [[R:%.*]] = sdiv <2 x i32> [[SHL]], [[X]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %shl = shl nsw <2 x i32> %x, <i32 2, i32 3>
+  %r = sdiv <2 x i32> %shl, %x
+  ret <2 x i32> %r
+}
+
+define i32 @t10(i32 %x, i32 %y) {
+; CHECK-LABEL: @t10(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sdiv i32 [[SHL]], [[X]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shl = shl nsw i32 %x, %y
+  %r = sdiv i32 %shl, %x
+  ret i32 %r
+}
+
+define <2 x i32> @t11(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @t11(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw <2 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sdiv <2 x i32> [[SHL]], [[X]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %shl = shl nsw <2 x i32> %x, %y
+  %r = sdiv <2 x i32> %shl, %x
+  ret <2 x i32> %r
+}
+
+define i32 @t12(i32 %x) {
+; CHECK-LABEL: @t12(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[SHL]], [[X]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shl = shl nuw i32 %x, 2
+  %r = udiv i32 %shl, %x
+  ret i32 %r
+}
+
+; make sure the previous opt doesn't take place for wrapped shifts
+
+define i32 @t13(i32 %x) {
+; CHECK-LABEL: @t13(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[SHL]], [[X]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shl = shl i32 %x, 2
+  %r = udiv i32 %shl, %x
+  ret i32 %r
+}
+
+define <2 x i32> @t14(<2 x i32> %x) {
+; CHECK-LABEL: @t14(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <2 x i32> [[X:%.*]], <i32 2, i32 3>
+; CHECK-NEXT:    [[R:%.*]] = udiv <2 x i32> [[SHL]], [[X]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %shl = shl nuw <2 x i32> %x, <i32 2, i32 3>
+  %r = udiv <2 x i32> %shl, %x
+  ret <2 x i32> %r
+}
+
+define i32 @t15(i32 %x, i32 %y) {
+; CHECK-LABEL: @t15(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[SHL]], [[X]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shl = shl nuw i32 %x, %y
+  %r = udiv i32 %shl, %x
+  ret i32 %r
+}
+
+define <2 x i32> @t16(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @t16(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <2 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = udiv <2 x i32> [[SHL]], [[X]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %shl = shl nuw <2 x i32> %x, %y
+  %r = udiv <2 x i32> %shl, %x
+  ret <2 x i32> %r
 }
