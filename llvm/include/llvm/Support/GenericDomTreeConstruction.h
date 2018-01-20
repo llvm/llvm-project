@@ -706,7 +706,7 @@ struct SemiNCAInfo {
       // algorithm does not really know or use the set of roots and can make a
       // different (implicit) decision about which nodes within an infinite loop
       // becomes a root.
-      if (DT.isVirtualRoot(TN->getIDom())) {
+      if (TN && !DT.isVirtualRoot(TN->getIDom())) {
         DEBUG(dbgs() << "Root " << BlockNamePrinter(R)
                      << " is not virtual root's child\n"
                      << "The entire tree needs to be rebuilt\n");
@@ -940,21 +940,21 @@ struct SemiNCAInfo {
     const NodePtr NCDBlock = DT.findNearestCommonDominator(From, To);
     const TreeNodePtr NCD = DT.getNode(NCDBlock);
 
-    // To dominates From -- nothing to do.
-    if (ToTN == NCD) return;
+    // If To dominates From -- nothing to do.
+    if (ToTN != NCD) {
+      DT.DFSInfoValid = false;
 
-    DT.DFSInfoValid = false;
+      const TreeNodePtr ToIDom = ToTN->getIDom();
+      DEBUG(dbgs() << "\tNCD " << BlockNamePrinter(NCD) << ", ToIDom "
+                   << BlockNamePrinter(ToIDom) << "\n");
 
-    const TreeNodePtr ToIDom = ToTN->getIDom();
-    DEBUG(dbgs() << "\tNCD " << BlockNamePrinter(NCD) << ", ToIDom "
-                 << BlockNamePrinter(ToIDom) << "\n");
-
-    // To remains reachable after deletion.
-    // (Based on the caption under Figure 4. from the second paper.)
-    if (FromTN != ToIDom || HasProperSupport(DT, BUI, ToTN))
-      DeleteReachable(DT, BUI, FromTN, ToTN);
-    else
-      DeleteUnreachable(DT, BUI, ToTN);
+      // To remains reachable after deletion.
+      // (Based on the caption under Figure 4. from the second paper.)
+      if (FromTN != ToIDom || HasProperSupport(DT, BUI, ToTN))
+        DeleteReachable(DT, BUI, FromTN, ToTN);
+      else
+        DeleteUnreachable(DT, BUI, ToTN);
+    }
 
     if (IsPostDom) UpdateRootsAfterUpdate(DT, BUI);
   }
