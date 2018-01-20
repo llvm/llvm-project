@@ -309,9 +309,19 @@ ProgramStateRef CStringChecker::CheckLocation(CheckerContext &C,
     if (!N)
       return nullptr;
 
+    CheckName Name;
+    // These checks are either enabled by the CString out-of-bounds checker
+    // explicitly or the "basic" CStringNullArg checker support that Malloc
+    // checker enables.
+    assert(Filter.CheckCStringOutOfBounds || Filter.CheckCStringNullArg);
+    if (Filter.CheckCStringOutOfBounds)
+      Name = Filter.CheckNameCStringOutOfBounds;
+    else
+      Name = Filter.CheckNameCStringNullArg;
+
     if (!BT_Bounds) {
       BT_Bounds.reset(new BuiltinBug(
-          Filter.CheckNameCStringOutOfBounds, "Out-of-bound array access",
+          Name, "Out-of-bound array access",
           "Byte string function accesses out-of-bound array element"));
     }
     BuiltinBug *BT = static_cast<BuiltinBug*>(BT_Bounds.get());
