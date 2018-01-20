@@ -114,7 +114,7 @@ loop.exit:                           ; preds = %for.body.i
 
 define void @init() local_unnamed_addr #1 {
 entry:
-  call void @llvm.memset.p0i8.i32(i8* bitcast ([8 x <2 x double>]* @"\01?v@@3PAU__m128d@@A" to i8*), i8 0, i32 128, i32 16, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* align 16 bitcast ([8 x <2 x double>]* @"\01?v@@3PAU__m128d@@A" to i8*), i8 0, i32 128, i1 false)
   %call.i = tail call i64 @_time64(i64* null)
   %conv = trunc i64 %call.i to i32
   tail call void @srand(i32 %conv)
@@ -284,7 +284,7 @@ declare i32 @fclose(%struct._iobuf* nocapture) local_unnamed_addr #5
 declare i64 @_time64(i64*) local_unnamed_addr #4
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i32, i1) #6
+declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1) #6
 
 attributes #0 = { norecurse "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pentium4" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pentium4" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }

@@ -164,10 +164,10 @@ entry:
   %4 = bitcast i8* %ap.align to %struct.s41*
   %5 = bitcast %struct.s41* %vs to i8*
   %6 = bitcast %struct.s41* %4 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %5, i8* %6, i64 16, i32 16, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %5, i8* align 16 %6, i64 16, i1 false)
   ret void
 }
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 
 define void @bar2(i32 %x, i128 %s41.coerce) nounwind {
 entry:

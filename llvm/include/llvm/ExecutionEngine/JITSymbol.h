@@ -19,8 +19,11 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <map>
+#include <set>
 #include <string>
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -269,10 +272,49 @@ private:
   JITSymbolFlags Flags;
 };
 
-/// \brief Symbol resolution.
+/// @brief Symbol resolution interface.
+///
+/// Allows symbol flags and addresses to be looked up by name.
+/// Symbol queries are done in bulk (i.e. you request resolution of a set of
+/// symbols, rather than a single one) to reduce IPC overhead in the case of
+/// remote JITing, and expose opportunities for parallel compilation.
 class JITSymbolResolver {
 public:
+  using SymbolNameSet = std::set<StringRef>;
+  using LookupResult = std::map<StringRef, JITEvaluatedSymbol>;
+  using LookupFlagsResult = std::map<StringRef, JITSymbolFlags>;
+
   virtual ~JITSymbolResolver() = default;
+
+  /// @brief Returns the fully resolved address and flags for each of the given
+  ///        symbols.
+  ///
+  /// This method will return an error if any of the given symbols can not be
+  /// resolved, or if the resolution process itself triggers an error.
+  virtual Expected<LookupResult> lookup(const SymbolNameSet &Symbols) = 0;
+
+  /// @brief Returns the symbol flags for each of the given symbols.
+  ///
+  /// This method does NOT return an error if any of the given symbols is
+  /// missing. Instead, that symbol will be left out of the result map.
+  virtual Expected<LookupFlagsResult>
+  lookupFlags(const SymbolNameSet &Symbols) = 0;
+
+private:
+  virtual void anchor();
+};
+
+/// \brief Legacy symbol resolution interface.
+class LegacyJITSymbolResolver : public JITSymbolResolver {
+public:
+  /// @brief Performs lookup by, for each symbol, first calling
+  ///        findSymbolInLogicalDylib and if that fails calling
+  ///        findSymbol.
+  Expected<LookupResult> lookup(const SymbolNameSet &Symbols) final;
+
+  /// @brief Performs flags lookup by calling findSymbolInLogicalDylib and
+  ///        returning the flags value for that symbol.
+  Expected<LookupFlagsResult> lookupFlags(const SymbolNameSet &Symbols) final;
 
   /// This method returns the address of the specified symbol if it exists
   /// within the logical dynamic library represented by this JITSymbolResolver.

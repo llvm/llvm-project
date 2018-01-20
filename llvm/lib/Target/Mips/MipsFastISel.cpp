@@ -1628,7 +1628,7 @@ bool MipsFastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     if (!MTI->getLength()->getType()->isIntegerTy(32))
       return false;
     const char *IntrMemName = isa<MemCpyInst>(II) ? "memcpy" : "memmove";
-    return lowerCallTo(II, IntrMemName, II->getNumArgOperands() - 2);
+    return lowerCallTo(II, IntrMemName, II->getNumArgOperands() - 1);
   }
   case Intrinsic::memset: {
     const MemSetInst *MSI = cast<MemSetInst>(II);
@@ -1637,7 +1637,7 @@ bool MipsFastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
       return false;
     if (!MSI->getLength()->getType()->isIntegerTy(32))
       return false;
-    return lowerCallTo(II, "memset", II->getNumArgOperands() - 2);
+    return lowerCallTo(II, "memset", II->getNumArgOperands() - 1);
   }
   }
   return false;

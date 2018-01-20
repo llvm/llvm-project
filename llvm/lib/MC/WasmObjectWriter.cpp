@@ -38,6 +38,10 @@ using namespace llvm;
 
 namespace {
 
+// Went we ceate the indirect function table we start at 1, so that there is
+// and emtpy slot at 0 and therefore calling a null function pointer will trap.
+static const uint32_t kInitialTableOffset = 1;
+
 // For patching purposes, we need to remember where each section starts, both
 // for patching up the section size field, and for patching up references to
 // locations within the section.
@@ -789,7 +793,7 @@ void WasmObjectWriter::writeElemSection(ArrayRef<uint32_t> TableElems) {
 
   // init expr for starting offset
   write8(wasm::WASM_OPCODE_I32_CONST);
-  encodeSLEB128(0, getStream());
+  encodeSLEB128(kInitialTableOffset, getStream());
   write8(wasm::WASM_OPCODE_END);
 
   encodeULEB128(TableElems.size(), getStream());
@@ -1326,7 +1330,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
         case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32:
         case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB: {
           uint32_t Index = SymbolIndices.find(&WS)->second;
-          IndirectSymbolIndices[&WS] = TableElems.size();
+          IndirectSymbolIndices[&WS] = TableElems.size() + kInitialTableOffset;
           DEBUG(dbgs() << "  -> adding to table: " << TableElems.size() << "\n");
           TableElems.push_back(Index);
           registerFunctionType(WS);

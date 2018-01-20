@@ -225,7 +225,7 @@ define void @memset_16_nonconst_bytes(i8* %x, i8 %c) {
 ; AVX2-NEXT:    vpbroadcastb %xmm0, %xmm0
 ; AVX2-NEXT:    vmovdqu %xmm0, (%rdi)
 ; AVX2-NEXT:    retq
-  tail call void @llvm.memset.p0i8.i64(i8* %x, i8 %c, i64 16, i32 1, i1 false)
+  tail call void @llvm.memset.p0i8.i64(i8* %x, i8 %c, i64 16, i1 false)
   ret void
 }
 
@@ -268,7 +268,7 @@ define void @memset_32_nonconst_bytes(i8* %x, i8 %c) {
 ; AVX2-NEXT:    vmovdqu %ymm0, (%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  tail call void @llvm.memset.p0i8.i64(i8* %x, i8 %c, i64 32, i32 1, i1 false)
+  tail call void @llvm.memset.p0i8.i64(i8* %x, i8 %c, i64 32, i1 false)
   ret void
 }
 
@@ -319,7 +319,7 @@ define void @memset_64_nonconst_bytes(i8* %x, i8 %c) {
 ; AVX2-NEXT:    vmovdqu %ymm0, (%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  tail call void @llvm.memset.p0i8.i64(i8* %x, i8 %c, i64 64, i32 1, i1 false)
+  tail call void @llvm.memset.p0i8.i64(i8* %x, i8 %c, i64 64, i1 false)
   ret void
 }
 
@@ -386,7 +386,7 @@ define void @memset_128_nonconst_bytes(i8* %x, i8 %c) {
 ; AVX2-NEXT:    vmovdqu %ymm0, (%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  tail call void @llvm.memset.p0i8.i64(i8* %x, i8 %c, i64 128, i32 1, i1 false)
+  tail call void @llvm.memset.p0i8.i64(i8* %x, i8 %c, i64 128, i1 false)
   ret void
 }
 
@@ -451,9 +451,9 @@ define void @memset_256_nonconst_bytes(i8* %x, i8 %c) {
 ; AVX2-NEXT:    vmovdqu %ymm0, (%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  tail call void @llvm.memset.p0i8.i64(i8* %x, i8 %c, i64 256, i32 1, i1 false)
+  tail call void @llvm.memset.p0i8.i64(i8* %x, i8 %c, i64 256, i1 false)
   ret void
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) #1
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) #1
 

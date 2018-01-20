@@ -69,7 +69,7 @@ cond.true:
 
   %0 = bitcast { i64, i32 }* %g_b.coerce to i8*, !dbg !8
   %1 = bitcast %struct.B* @g_b to i8*, !dbg !8
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 12, i32 4, i1 false), !dbg !8
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 %1, i64 12, i1 false), !dbg !8
   %2 = getelementptr inbounds { i64, i32 }, { i64, i32 }* %g_b.coerce, i32 0, i32 0, !dbg !8
   %3 = load i64, i64* %2, align 4, !dbg !8
   %4 = getelementptr inbounds { i64, i32 }, { i64, i32 }* %g_b.coerce, i32 0, i32 1, !dbg !8
@@ -84,7 +84,7 @@ cond.end:                                         ; preds = %entry, %cond.true
 
 declare i32 @bar(i64, i32, i32)
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1) #1
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
 
 attributes #0 = { noinline nounwind uwtable }
 attributes #1 = { argmemonly nounwind }

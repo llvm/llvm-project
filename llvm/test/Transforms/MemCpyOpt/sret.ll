@@ -21,10 +21,10 @@ entry:
   call void @ccoshl(%0* noalias sret %memtmp, %0* byval align 8 %iz) nounwind
   %memtmp14 = bitcast %0* %memtmp to i8*
   %agg.result15 = bitcast %0* %agg.result to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %agg.result15, i8* %memtmp14, i32 32, i32 16, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 %agg.result15, i8* align 16 %memtmp14, i32 32, i1 false)
   ret void
 }
 
 declare void @ccoshl(%0* noalias nocapture sret, %0* byval) nounwind
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind

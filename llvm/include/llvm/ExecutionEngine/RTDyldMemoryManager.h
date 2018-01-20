@@ -56,7 +56,7 @@ public:
 // FIXME: As the RuntimeDyld fills out, additional routines will be needed
 //        for the varying types of objects to be allocated.
 class RTDyldMemoryManager : public MCJITMemoryManager,
-                            public JITSymbolResolver {
+                            public LegacyJITSymbolResolver {
 public:
   RTDyldMemoryManager() = default;
   RTDyldMemoryManager(const RTDyldMemoryManager&) = delete;

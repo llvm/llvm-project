@@ -47,3 +47,53 @@ ARMJITSymbolFlags llvm::ARMJITSymbolFlags::fromObjectSymbol(
     Flags |= ARMJITSymbolFlags::Thumb;
   return Flags;
 }
+
+/// @brief Performs lookup by, for each symbol, first calling
+///        findSymbolInLogicalDylib and if that fails calling
+///        findSymbol.
+Expected<JITSymbolResolver::LookupResult>
+LegacyJITSymbolResolver::lookup(const SymbolNameSet &Symbols) {
+  JITSymbolResolver::LookupResult Result;
+  for (auto &Symbol : Symbols) {
+    std::string SymName = Symbol.str();
+    if (auto Sym = findSymbolInLogicalDylib(SymName)) {
+      if (auto AddrOrErr = Sym.getAddress())
+        Result[Symbol] = JITEvaluatedSymbol(*AddrOrErr, Sym.getFlags());
+      else
+        return AddrOrErr.takeError();
+    } else if (auto Err = Sym.takeError())
+      return std::move(Err);
+    else {
+      // findSymbolInLogicalDylib failed. Lets try findSymbol.
+      if (auto Sym = findSymbol(SymName)) {
+        if (auto AddrOrErr = Sym.getAddress())
+          Result[Symbol] = JITEvaluatedSymbol(*AddrOrErr, Sym.getFlags());
+        else
+          return AddrOrErr.takeError();
+      } else if (auto Err = Sym.takeError())
+        return std::move(Err);
+      else
+        return make_error<StringError>("Symbol not found: " + Symbol,
+                                       inconvertibleErrorCode());
+    }
+  }
+
+  return std::move(Result);
+}
+
+/// @brief Performs flags lookup by calling findSymbolInLogicalDylib and
+///        returning the flags value for that symbol.
+Expected<JITSymbolResolver::LookupFlagsResult>
+LegacyJITSymbolResolver::lookupFlags(const SymbolNameSet &Symbols) {
+  JITSymbolResolver::LookupFlagsResult Result;
+
+  for (auto &Symbol : Symbols) {
+    std::string SymName = Symbol.str();
+    if (auto Sym = findSymbolInLogicalDylib(SymName))
+      Result[Symbol] = Sym.getFlags();
+    else if (auto Err = Sym.takeError())
+      return std::move(Err);
+  }
+
+  return std::move(Result);
+}

@@ -5,7 +5,7 @@ define i64 @test(i64 %A) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    shrq $54, %rdi
-; CHECK-NEXT:    andl $1020, %edi # imm = 0x3FC
+; CHECK-NEXT:    andq $-4, %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    retq
     %B = lshr i64 %A, 56

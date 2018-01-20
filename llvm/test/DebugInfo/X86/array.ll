@@ -51,7 +51,7 @@ entry:
   %0 = bitcast [4 x i32]* %array to i8*, !dbg !38
   call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %0) #3, !dbg !38
   tail call void @llvm.dbg.declare(metadata [4 x i32]* %array, metadata !32, metadata !15), !dbg !39
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull %0, i8* bitcast ([4 x i32]* @main.array to i8*), i64 16, i32 16, i1 false), !dbg !39
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 nonnull %0, i8* align 16 bitcast ([4 x i32]* @main.array to i8*), i64 16, i1 false), !dbg !39
   %arraydecay = getelementptr inbounds [4 x i32], [4 x i32]* %array, i64 0, i64 0, !dbg !40
   call void @f(i32* nonnull %arraydecay), !dbg !41
   %1 = load i32, i32* %arraydecay, align 16, !dbg !42, !tbaa !18
@@ -63,7 +63,7 @@ entry:
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #2
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1) #2
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #2
 
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #2

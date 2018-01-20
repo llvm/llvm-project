@@ -652,6 +652,11 @@ void ObjCARCOpt::OptimizeAutoreleaseRVCall(Function &F,
 
   SmallVector<const Value *, 2> Users;
   Users.push_back(Ptr);
+
+  // Add PHIs that are equivalent to Ptr to Users.
+  if (const PHINode *PN = dyn_cast<PHINode>(Ptr))
+    getEquivalentPHIs(*PN, Users);
+
   do {
     Ptr = Users.pop_back_val();
     for (const User *U : Ptr->users()) {

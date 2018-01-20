@@ -369,6 +369,21 @@ static bool terminalHasColors(int fd) {
   // Return true if we found a color capabilities for the current terminal.
   if (HasColors)
     return true;
+#else
+  // When the terminfo database is not available, check if the current terminal
+  // is one of terminals that are known to support ANSI color escape codes.
+  if (const char *TermStr = std::getenv("TERM")) {
+    return StringSwitch<bool>(TermStr)
+      .Case("ansi", true)
+      .Case("cygwin", true)
+      .Case("linux", true)
+      .StartsWith("screen", true)
+      .StartsWith("xterm", true)
+      .StartsWith("vt100", true)
+      .StartsWith("rxvt", true)
+      .EndsWith("color", true)
+      .Default(false);
+  }
 #endif
 
   // Otherwise, be conservative.

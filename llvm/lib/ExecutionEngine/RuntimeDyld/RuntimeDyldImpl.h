@@ -385,7 +385,8 @@ protected:
   /// new section for them and update the symbol mappings in the object and
   /// symbol table.
   Error emitCommonSymbols(const ObjectFile &Obj,
-                          CommonSymbolList &CommonSymbols);
+                          CommonSymbolList &CommonSymbols, uint64_t CommonSize,
+                          uint32_t CommonAlign);
 
   /// \brief Emits section data from the object file to the MemoryManager.
   /// \param IsCode if it's true then allocateCodeSection() will be

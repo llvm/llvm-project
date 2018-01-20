@@ -32,7 +32,7 @@ bb:
   %tmp1 = bitcast %class.basic_string.11.42.73* %arg to %union.anon.8.39.70**
   store %union.anon.8.39.70* %tmp, %union.anon.8.39.70** %tmp1, align 8
   %tmp2 = bitcast %union.anon.8.39.70* %tmp to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp2, i8* nonnull undef, i64 13, i32 1, i1 false)
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp2, i8* nonnull undef, i64 13, i1 false)
   %tmp3 = getelementptr inbounds %class.basic_string.11.42.73, %class.basic_string.11.42.73* %arg, i64 0, i32 0, i32 0, i32 1
   store i64 13, i64* %tmp3, align 8
   %tmp4 = getelementptr inbounds %class.basic_string.11.42.73, %class.basic_string.11.42.73* %arg, i64 0, i32 0, i32 0, i32 2, i32 1, i64 5
@@ -42,6 +42,6 @@ bb:
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32, i1) #0
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #0
 
 attributes #0 = { argmemonly nounwind }

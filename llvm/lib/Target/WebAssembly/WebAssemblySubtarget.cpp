@@ -41,8 +41,8 @@ WebAssemblySubtarget::WebAssemblySubtarget(const Triple &TT,
                                            const std::string &FS,
                                            const TargetMachine &TM)
     : WebAssemblyGenSubtargetInfo(TT, CPU, FS), HasSIMD128(false),
-      HasAtomics(false), HasNontrappingFPToInt(false), CPUString(CPU),
-      TargetTriple(TT), FrameLowering(),
+      HasAtomics(false), HasNontrappingFPToInt(false), HasSignExt(false),
+      CPUString(CPU), TargetTriple(TT), FrameLowering(),
       InstrInfo(initializeSubtargetDependencies(FS)), TSInfo(),
       TLInfo(TM, *this) {}
 

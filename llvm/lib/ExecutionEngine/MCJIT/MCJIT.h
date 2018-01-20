@@ -26,11 +26,11 @@ class MCJIT;
 // functions across modules that it owns.  It aggregates the memory manager
 // that is passed in to the MCJIT constructor and defers most functionality
 // to that object.
-class LinkingSymbolResolver : public JITSymbolResolver {
+class LinkingSymbolResolver : public LegacyJITSymbolResolver {
 public:
   LinkingSymbolResolver(MCJIT &Parent,
-                        std::shared_ptr<JITSymbolResolver> Resolver)
-    : ParentEngine(Parent), ClientResolver(std::move(Resolver)) {}
+                        std::shared_ptr<LegacyJITSymbolResolver> Resolver)
+      : ParentEngine(Parent), ClientResolver(std::move(Resolver)) {}
 
   JITSymbol findSymbol(const std::string &Name) override;
 
@@ -41,7 +41,7 @@ public:
 
 private:
   MCJIT &ParentEngine;
-  std::shared_ptr<JITSymbolResolver> ClientResolver;
+  std::shared_ptr<LegacyJITSymbolResolver> ClientResolver;
 };
 
 // About Module states: added->loaded->finalized.
@@ -67,7 +67,7 @@ private:
 class MCJIT : public ExecutionEngine {
   MCJIT(std::unique_ptr<Module> M, std::unique_ptr<TargetMachine> tm,
         std::shared_ptr<MCJITMemoryManager> MemMgr,
-        std::shared_ptr<JITSymbolResolver> Resolver);
+        std::shared_ptr<LegacyJITSymbolResolver> Resolver);
 
   typedef llvm::SmallPtrSet<Module *, 4> ModulePtrSet;
 
@@ -300,11 +300,10 @@ public:
     MCJITCtor = createJIT;
   }
 
-  static ExecutionEngine*
-  createJIT(std::unique_ptr<Module> M,
-            std::string *ErrorStr,
+  static ExecutionEngine *
+  createJIT(std::unique_ptr<Module> M, std::string *ErrorStr,
             std::shared_ptr<MCJITMemoryManager> MemMgr,
-            std::shared_ptr<JITSymbolResolver> Resolver,
+            std::shared_ptr<LegacyJITSymbolResolver> Resolver,
             std::unique_ptr<TargetMachine> TM);
 
   // @}

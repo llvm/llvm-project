@@ -6,7 +6,7 @@
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc"
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i32, i1) argmemonly nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i1) argmemonly nounwind
 declare <2 x i64> @_mm_xor_si128(<2 x i64>, <2 x i64>) optsize
 declare <2 x i64> @llvm.x86.pclmulqdq(<2 x i64>, <2 x i64>, i8) nounwind readnone
 declare <4 x float> @_mm_castsi128_ps(<2 x i64>) optsize
@@ -15,7 +15,7 @@ declare <4 x float> @_mm_castsi128_ps(<2 x i64>) optsize
 define void @test1(i8* nocapture readonly %src, i32 %len) #0 {
   %parts = alloca [4 x i32], align 4
   %part0 = bitcast [4 x i32]* %parts to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %part0, i8* %src, i32 %len, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %part0, i8* %src, i32 %len, i1 false)
   %call0 = tail call <2 x i64> @_mm_xor_si128(<2 x i64> undef, <2 x i64> <i64 -9187201950435737472, i64 -9187201950435737472>)
   %tmp0 = tail call <2 x i64> @llvm.x86.pclmulqdq(<2 x i64> undef, <2 x i64> <i64 7631803798, i64 5708721108>, i8 16)
   %call1 = tail call <4 x float> @_mm_castsi128_ps(<2 x i64> %tmp0)

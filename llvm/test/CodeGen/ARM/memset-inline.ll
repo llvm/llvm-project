@@ -12,7 +12,7 @@ entry:
 ; CHECK-6M: str r1, [r0]
 ; CHECK-6M: str r1, [r0, #4]
 ; CHECK-6M: str r1, [r0, #8]
-  call void @llvm.memset.p0i8.i64(i8* %c, i8 0, i64 12, i32 8, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* align 8 %c, i8 0, i64 12, i1 false)
   ret void
 }
 
@@ -33,7 +33,7 @@ entry:
 ; CHECK-6M: str  [[REG]], [sp]
   %buf = alloca [26 x i8], align 1
   %0 = getelementptr inbounds [26 x i8], [26 x i8]* %buf, i32 0, i32 0
-  call void @llvm.memset.p0i8.i32(i8* %0, i8 0, i32 26, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %0, i8 0, i32 26, i1 false)
   call void @something(i8* %0) nounwind
   ret void
 }
@@ -54,7 +54,7 @@ entry:
 for.body:
   %i = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %0 = trunc i32 %i to i8
-  call void @llvm.memset.p0i8.i32(i8* %p, i8 %0, i32 4, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %p, i8 %0, i32 4, i1 false)
   call void @something(i8* %p)
   %inc = add nuw nsw i32 %i, 1
   %exitcond = icmp eq i32 %inc, 255
@@ -78,7 +78,7 @@ entry:
 for.body:
   %i = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %0 = trunc i32 %i to i8
-  call void @llvm.memset.p0i8.i32(i8* %p, i8 %0, i32 4, i32 2, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* align 2 %p, i8 %0, i32 4, i1 false)
   call void @something(i8* %p)
   %inc = add nuw nsw i32 %i, 1
   %exitcond = icmp eq i32 %inc, 255
@@ -89,5 +89,5 @@ for.end:
 }
 
 declare void @something(i8*) nounwind
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i32, i1) nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) nounwind
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind

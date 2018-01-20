@@ -183,7 +183,7 @@ private:
       return Error::success();
     }
 
-    std::shared_ptr<JITSymbolResolver> ExternalSymbolResolver;
+    std::shared_ptr<LegacyJITSymbolResolver> ExternalSymbolResolver;
     std::unique_ptr<IndirectStubsMgrT> StubsMgr;
     StaticGlobalRenamer StaticRenamer;
     SourceModulesList SourceModules;
@@ -223,7 +223,7 @@ public:
   /// @brief Add a module to the compile-on-demand layer.
   Expected<ModuleHandleT>
   addModule(std::shared_ptr<Module> M,
-            std::shared_ptr<JITSymbolResolver> Resolver) {
+            std::shared_ptr<LegacyJITSymbolResolver> Resolver) {
 
     LogicalDylibs.push_back(LogicalDylib());
     auto &LD = LogicalDylibs.back();

@@ -26,4 +26,4 @@ L.0:
 return:
 	ret void
 }
-declare void @llvm.memcpy.p0a0i8.p0a0i8.i32([0 x i8]* nocapture, [0 x i8]* nocapture readonly, i32, i32, i1) nounwind
+declare void @llvm.memcpy.p0a0i8.p0a0i8.i32([0 x i8]* nocapture, [0 x i8]* nocapture readonly, i32, i1) nounwind

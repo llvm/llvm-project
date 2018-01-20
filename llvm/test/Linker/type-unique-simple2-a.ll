@@ -35,14 +35,14 @@ define i32 @_Z3barv() #0 !dbg !27 {
 entry:
   %tmp = alloca %class.A, align 8
   %0 = bitcast %class.A* %tmp to i8*, !dbg !38
-  call void @llvm.memset.p0i8.i64(i8* %0, i8 0, i64 8, i32 8, i1 false), !dbg !38
+  call void @llvm.memset.p0i8.i64(i8* align 8 %0, i8 0, i64 8, i1 false), !dbg !38
   call void @_ZN1AC1Ev(%class.A* %tmp) #1, !dbg !38
   %call = call i32 @_ZN1A6getFooEv(%class.A* %tmp), !dbg !38
   ret i32 %call, !dbg !38
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) #1
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) #1
 
 ; Function Attrs: inlinehint nounwind
 define linkonce_odr void @_ZN1AC1Ev(%class.A* %this) unnamed_addr #2 align 2 !dbg !31 {

@@ -22,5 +22,5 @@ for.body:                                         ; preds = %for.body, %for.body
 }
 
 ; CHECK-LABEL: define void @test1(
-; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* null, i8* inttoptr (i64 4 to i8*), i64 24, i32 4, i1 false)
+; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 null, i8* align 4 inttoptr (i64 4 to i8*), i64 24, i1 false)
 ; CHECK-NOT: store

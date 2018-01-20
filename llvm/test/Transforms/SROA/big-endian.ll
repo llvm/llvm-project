@@ -226,7 +226,7 @@ entry:
   store i64 34494054408, i64* %a2
   %tmp0 = bitcast { i32, i24 }* %a to i8*
   %tmp1 = bitcast i64* %a2 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp0, i8* %tmp1, i64 8, i32 4, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %tmp0, i8* align 4 %tmp1, i64 8, i1 false)
 ; CHECK: %[[LO_SHR:.*]] = lshr i64 34494054408, 32
 ; CHECK: %[[LO_START:.*]] = trunc i64 %[[LO_SHR]] to i32
 ; CHECK: %[[HI_START:.*]] = trunc i64 34494054408 to i32
@@ -249,4 +249,4 @@ entry:
 ; CHECK: ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i32, i1)
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i1)

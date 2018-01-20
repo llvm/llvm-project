@@ -34,7 +34,7 @@ entry:
   call fastcc void @uw_init_context_1(%struct._Unwind_Context* %this_context, i8* %0, i8* %1)
   %2 = bitcast %struct._Unwind_Context* %cur_context to i8*
   %3 = bitcast %struct._Unwind_Context* %this_context to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %2, i8* %3, i64 240, i32 8, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %2, i8* align 8 %3, i64 240, i1 false)
   %personality = getelementptr inbounds %struct._Unwind_FrameState, %struct._Unwind_FrameState* %fs, i64 0, i32 6
   %retaddr_column.i = getelementptr inbounds %struct._Unwind_FrameState, %struct._Unwind_FrameState* %fs, i64 0, i32 9
   %flags.i.i.i.i = getelementptr inbounds %struct._Unwind_Context, %struct._Unwind_Context* %cur_context, i64 0, i32 5
@@ -121,7 +121,7 @@ while.end:                                        ; preds = %if.then4
   %16 = ptrtoint i8* %15 to i64
   %private_2 = getelementptr inbounds %struct._Unwind_Exception, %struct._Unwind_Exception* %exc, i64 0, i32 3
   store i64 %16, i64* %private_2, align 8
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %2, i8* %3, i64 240, i32 8, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %2, i8* align 8 %3, i64 240, i1 false)
   %17 = bitcast %struct._Unwind_FrameState* %fs.i to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %17)
   %personality.i = getelementptr inbounds %struct._Unwind_FrameState, %struct._Unwind_FrameState* %fs.i, i64 0, i32 6
@@ -234,7 +234,7 @@ declare i8* @llvm.eh.dwarf.cfa(i32) nounwind
 
 declare i8* @llvm.returnaddress(i32) nounwind readnone
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 
 declare fastcc i64 @uw_install_context_1(%struct._Unwind_Context*, %struct._Unwind_Context*) uwtable
 

@@ -25,4 +25,8 @@ let Predicates = [HasSVE] in {
   defm ZIP2_PPP : sve_int_perm_bin_perm_pp<0b001, "zip2">;
 
   defm DUP_ZR  : sve_int_perm_dup_r<"dup">;
+
+  def RDVLI_XI  : sve_int_read_vl_a<0b0, 0b11111, "rdvl">;
+  def ADDVL_XXI : sve_int_arith_vl<0b0, "addvl">;
+  def ADDPL_XXI : sve_int_arith_vl<0b1, "addpl">;
 }
