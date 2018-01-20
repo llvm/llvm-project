@@ -349,8 +349,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       Sym->setHidden(false);
   }
 
-  if (!Config->Entry.empty() && !Symtab->find(Config->Entry)->isDefined())
-    error("entry point not found: " + Config->Entry);
   if (errorCount())
     return;
 

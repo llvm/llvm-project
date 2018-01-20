@@ -31,7 +31,7 @@ class NamespaceBreakpointTestCase(TestBase):
             "A::func(int)"]
 
         # Create a target by the debugger.
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
         module_list = lldb.SBFileSpecList()
@@ -56,7 +56,7 @@ class NamespaceBreakpointTestCase(TestBase):
         names = ["func()", "func(int)"]
 
         # Create a target by the debugger.
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
         module_list = lldb.SBFileSpecList()
@@ -81,7 +81,7 @@ class NamespaceBreakpointTestCase(TestBase):
         names = ["A::func()", "A::func(int)"]
 
         # Create a target by the debugger.
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
         module_list = lldb.SBFileSpecList()
@@ -132,7 +132,7 @@ class NamespaceTestCase(TestBase):
     def test_with_run_command(self):
         """Test that anonymous and named namespace variables display correctly."""
         self.build()
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
             self,

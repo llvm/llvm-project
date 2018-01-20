@@ -114,7 +114,7 @@ class ConcurrentEventsBase(TestBase):
             watchpoint_func. The inferior is continued until exit or a crash takes place, and the number of events seen by LLDB
             is verified to match the expected number of events.
         """
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Get the target

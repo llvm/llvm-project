@@ -50,7 +50,7 @@ class SourceManagerTestCase(TestBase):
 
     def do_display_source_python_api(self, use_color, column_marker_regex):
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         target = self.dbg.CreateTarget(exe)
@@ -116,7 +116,7 @@ class SourceManagerTestCase(TestBase):
     def test_move_and_then_display_source(self):
         """Test that target.source-map settings work by moving main.c to hidden/main.c."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Move main.c to hidden/main.c.
@@ -152,7 +152,7 @@ class SourceManagerTestCase(TestBase):
     def test_modify_source_file_while_debugging(self):
         """Modify a source file while debugging the executable."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
@@ -237,7 +237,7 @@ class SourceManagerTestCase(TestBase):
         self.runCmd("settings set target.source-map %s %s" %
                     (os.getcwd(), os.path.join(os.getcwd(), "hidden")))
 
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         main = os.path.join(os.getcwd(), "hidden", "main.c")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 

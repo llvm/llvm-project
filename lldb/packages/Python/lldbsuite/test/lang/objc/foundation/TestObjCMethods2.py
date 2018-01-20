@@ -47,7 +47,7 @@ class FoundationTestCase2(TestBase):
     def test_more_expr_commands(self):
         """More expression commands for objective-c."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Create a bunch of breakpoints.
@@ -84,7 +84,7 @@ class FoundationTestCase2(TestBase):
     def test_NSArray_expr_commands(self):
         """Test expression commands for NSArray."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break inside Test_NSArray:
@@ -111,7 +111,7 @@ class FoundationTestCase2(TestBase):
     def test_NSString_expr_commands(self):
         """Test expression commands for NSString."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break inside Test_NSString:
@@ -141,7 +141,7 @@ class FoundationTestCase2(TestBase):
     def test_MyString_dump_with_runtime(self):
         """Test dump of a known Objective-C object by dereferencing it."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         line = self.lines[4]
@@ -162,7 +162,7 @@ class FoundationTestCase2(TestBase):
     def test_runtime_types(self):
         """Test commands that require runtime types"""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break inside Test_NSString:
@@ -190,7 +190,7 @@ class FoundationTestCase2(TestBase):
     def test_NSError_p(self):
         """Test that p of the result of an unknown method does require a cast."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         line = self.lines[4]

@@ -13,7 +13,7 @@ class CPPTestDiamondInheritance(TestBase):
     def test_with_run_command(self):
         """Test that virtual base classes work in when SBValue objects are used to explore the variable value"""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)

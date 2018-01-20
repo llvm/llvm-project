@@ -35,9 +35,7 @@ class TestWatchpointSetEnable(TestBase):
     def do_test(self, test_enable):
         """Set a watchpoint, disable it and make sure it doesn't get hit."""
 
-        exe = 'a.out'
-
-        exe = os.path.join(os.getcwd(), exe)
+        exe = self.getBuildArtifact("a.out")
         main_file_spec = lldb.SBFileSpec("main.c")
 
         # Create a target by the debugger.

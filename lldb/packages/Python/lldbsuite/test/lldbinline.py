@@ -166,8 +166,7 @@ class InlineTest(TestBase):
         exec(__command, globals(), locals())
 
     def do_test(self):
-        exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact("a.out")
         source_files = [f for f in os.listdir(os.getcwd()) if source_type(f)]
         target = self.dbg.CreateTarget(exe)
 

@@ -303,8 +303,9 @@ class CommandLineCompletionTestCase(TestBase):
         bugnumber="llvm.org/pr25485,<rdar://problem/28573448>")
     def test_symbol_name(self):
         self.build()
-        self.complete_from_to('''file a.out
-                                 breakpoint set -n Fo''',
+        self.complete_from_to('''file %s
+                                 breakpoint set -n Fo''' %
+                              self.getBuildArtifact("a.out"),
                               'breakpoint set -n Foo::Bar(int,\\ int)',
                               turn_off_re_match=True)
 

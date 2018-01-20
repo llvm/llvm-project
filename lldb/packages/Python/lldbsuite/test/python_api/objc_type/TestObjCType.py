@@ -28,7 +28,7 @@ class ObjCSBTypeTestCase(TestBase):
     def test(self):
         """Test SBType for ObjC classes."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)

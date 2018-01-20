@@ -202,7 +202,32 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
   ObjSectionToIDMap LocalSections;
 
   // Common symbols requiring allocation, with their sizes and alignments
-  CommonSymbolList CommonSymbols;
+  CommonSymbolList CommonSymbolsToAllocate;
+
+  uint64_t CommonSize = 0;
+  uint32_t CommonAlign = 0;
+
+  // First, collect all weak and common symbols. We need to know if stronger
+  // definitions occur elsewhere.
+  JITSymbolResolver::LookupFlagsResult SymbolFlags;
+  {
+    JITSymbolResolver::SymbolNameSet Symbols;
+    for (auto &Sym : Obj.symbols()) {
+      uint32_t Flags = Sym.getFlags();
+      if ((Flags & SymbolRef::SF_Common) || (Flags & SymbolRef::SF_Weak)) {
+        // Get symbol name.
+        if (auto NameOrErr = Sym.getName())
+          Symbols.insert(*NameOrErr);
+        else
+          return NameOrErr.takeError();
+      }
+    }
+
+    if (auto FlagsResultOrErr = Resolver.lookupFlags(Symbols))
+      SymbolFlags = std::move(*FlagsResultOrErr);
+    else
+      return FlagsResultOrErr.takeError();
+  }
 
   // Parse symbols
   DEBUG(dbgs() << "Parse symbols:\n");
@@ -214,102 +239,108 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
     if (Flags & SymbolRef::SF_Undefined)
       continue;
 
-    if (Flags & SymbolRef::SF_Common)
-      CommonSymbols.push_back(*I);
-    else {
+    // Get the symbol type.
+    object::SymbolRef::Type SymType;
+    if (auto SymTypeOrErr = I->getType())
+      SymType = *SymTypeOrErr;
+    else
+      return SymTypeOrErr.takeError();
 
-      // Get the symbol type.
-      object::SymbolRef::Type SymType;
-      if (auto SymTypeOrErr = I->getType())
-        SymType =  *SymTypeOrErr;
+    // Get symbol name.
+    StringRef Name;
+    if (auto NameOrErr = I->getName())
+      Name = *NameOrErr;
+    else
+      return NameOrErr.takeError();
+
+    // Compute JIT symbol flags.
+    JITSymbolFlags JITSymFlags = getJITSymbolFlags(*I);
+
+    // If this is a weak definition, check to see if there's a strong one.
+    // If there is, skip this symbol (we won't be providing it: the strong
+    // definition will). If there's no strong definition, make this definition
+    // strong.
+    if (JITSymFlags.isWeak() || JITSymFlags.isCommon()) {
+      // First check whether there's already a definition in this instance.
+      // FIXME: Override existing weak definitions with strong ones.
+      if (GlobalSymbolTable.count(Name))
+        continue;
+
+      // Then check whether we found flags for an existing symbol during the
+      // flags lookup earlier.
+      auto FlagsI = SymbolFlags.find(Name);
+      if (FlagsI == SymbolFlags.end() ||
+          (JITSymFlags.isWeak() && !FlagsI->second.isStrong()) ||
+          (JITSymFlags.isCommon() && FlagsI->second.isCommon())) {
+        if (JITSymFlags.isWeak())
+          JITSymFlags &= ~JITSymbolFlags::Weak;
+        if (JITSymFlags.isCommon()) {
+          JITSymFlags &= ~JITSymbolFlags::Common;
+          uint32_t Align = I->getAlignment();
+          uint64_t Size = I->getCommonSize();
+          if (!CommonAlign)
+            CommonAlign = Align;
+          CommonSize += alignTo(CommonSize, Align) + Size;
+          CommonSymbolsToAllocate.push_back(*I);
+        }
+      } else
+        continue;
+    }
+
+    if (Flags & SymbolRef::SF_Absolute &&
+        SymType != object::SymbolRef::ST_File) {
+      uint64_t Addr = 0;
+      if (auto AddrOrErr = I->getAddress())
+        Addr = *AddrOrErr;
       else
-        return SymTypeOrErr.takeError();
+        return AddrOrErr.takeError();
 
-      // Get symbol name.
-      StringRef Name;
-      if (auto NameOrErr = I->getName())
-        Name = *NameOrErr;
+      unsigned SectionID = AbsoluteSymbolSection;
+
+      DEBUG(dbgs() << "\tType: " << SymType << " (absolute) Name: " << Name
+                   << " SID: " << SectionID
+                   << " Offset: " << format("%p", (uintptr_t)Addr)
+                   << " flags: " << Flags << "\n");
+      GlobalSymbolTable[Name] = SymbolTableEntry(SectionID, Addr, JITSymFlags);
+    } else if (SymType == object::SymbolRef::ST_Function ||
+               SymType == object::SymbolRef::ST_Data ||
+               SymType == object::SymbolRef::ST_Unknown ||
+               SymType == object::SymbolRef::ST_Other) {
+
+      section_iterator SI = Obj.section_end();
+      if (auto SIOrErr = I->getSection())
+        SI = *SIOrErr;
       else
-        return NameOrErr.takeError();
+        return SIOrErr.takeError();
 
-      // Compute JIT symbol flags.
-      JITSymbolFlags JITSymFlags = getJITSymbolFlags(*I);
+      if (SI == Obj.section_end())
+        continue;
 
-      // If this is a weak definition, check to see if there's a strong one.
-      // If there is, skip this symbol (we won't be providing it: the strong
-      // definition will). If there's no strong definition, make this definition
-      // strong.
-      if (JITSymFlags.isWeak()) {
-        // First check whether there's already a definition in this instance.
-        // FIXME: Override existing weak definitions with strong ones.
-        if (GlobalSymbolTable.count(Name))
-          continue;
-        // Then check the symbol resolver to see if there's a definition
-        // elsewhere in this logical dylib.
-        if (auto Sym = Resolver.findSymbolInLogicalDylib(Name)) {
-          if (Sym.getFlags().isStrong())
-            continue;
-        } else if (auto Err = Sym.takeError())
-          return std::move(Err);
-        // else
-        JITSymFlags &= ~JITSymbolFlags::Weak;
-      }
+      // Get symbol offset.
+      uint64_t SectOffset;
+      if (auto Err = getOffset(*I, *SI, SectOffset))
+        return std::move(Err);
 
-      if (Flags & SymbolRef::SF_Absolute &&
-          SymType != object::SymbolRef::ST_File) {
-        uint64_t Addr = 0;
-        if (auto AddrOrErr = I->getAddress())
-          Addr = *AddrOrErr;
-        else
-          return AddrOrErr.takeError();
+      bool IsCode = SI->isText();
+      unsigned SectionID;
+      if (auto SectionIDOrErr =
+              findOrEmitSection(Obj, *SI, IsCode, LocalSections))
+        SectionID = *SectionIDOrErr;
+      else
+        return SectionIDOrErr.takeError();
 
-        unsigned SectionID = AbsoluteSymbolSection;
-
-        DEBUG(dbgs() << "\tType: " << SymType << " (absolute) Name: " << Name
-                     << " SID: " << SectionID << " Offset: "
-                     << format("%p", (uintptr_t)Addr)
-                     << " flags: " << Flags << "\n");
-        GlobalSymbolTable[Name] =
-          SymbolTableEntry(SectionID, Addr, JITSymFlags);
-      } else if (SymType == object::SymbolRef::ST_Function ||
-                 SymType == object::SymbolRef::ST_Data ||
-                 SymType == object::SymbolRef::ST_Unknown ||
-                 SymType == object::SymbolRef::ST_Other) {
-
-        section_iterator SI = Obj.section_end();
-        if (auto SIOrErr = I->getSection())
-          SI = *SIOrErr;
-        else
-          return SIOrErr.takeError();
-
-        if (SI == Obj.section_end())
-          continue;
-
-        // Get symbol offset.
-        uint64_t SectOffset;
-        if (auto Err = getOffset(*I, *SI, SectOffset))
-          return std::move(Err);
-
-        bool IsCode = SI->isText();
-        unsigned SectionID;
-        if (auto SectionIDOrErr = findOrEmitSection(Obj, *SI, IsCode,
-                                                    LocalSections))
-          SectionID = *SectionIDOrErr;
-        else
-          return SectionIDOrErr.takeError();
-
-        DEBUG(dbgs() << "\tType: " << SymType << " Name: " << Name
-                     << " SID: " << SectionID << " Offset: "
-                     << format("%p", (uintptr_t)SectOffset)
-                     << " flags: " << Flags << "\n");
-        GlobalSymbolTable[Name] =
+      DEBUG(dbgs() << "\tType: " << SymType << " Name: " << Name
+                   << " SID: " << SectionID
+                   << " Offset: " << format("%p", (uintptr_t)SectOffset)
+                   << " flags: " << Flags << "\n");
+      GlobalSymbolTable[Name] =
           SymbolTableEntry(SectionID, SectOffset, JITSymFlags);
-      }
     }
   }
 
   // Allocate common symbols
-  if (auto Err = emitCommonSymbols(Obj, CommonSymbols))
+  if (auto Err = emitCommonSymbols(Obj, CommonSymbolsToAllocate, CommonSize,
+                                   CommonAlign))
     return std::move(Err);
 
   // Parse and process relocations
@@ -621,44 +652,11 @@ JITSymbolFlags RuntimeDyldImpl::getJITSymbolFlags(const BasicSymbolRef &SR) {
 }
 
 Error RuntimeDyldImpl::emitCommonSymbols(const ObjectFile &Obj,
-                                         CommonSymbolList &CommonSymbols) {
-  if (CommonSymbols.empty())
+                                         CommonSymbolList &SymbolsToAllocate,
+                                         uint64_t CommonSize,
+                                         uint32_t CommonAlign) {
+  if (SymbolsToAllocate.empty())
     return Error::success();
-
-  uint64_t CommonSize = 0;
-  uint32_t CommonAlign = CommonSymbols.begin()->getAlignment();
-  CommonSymbolList SymbolsToAllocate;
-
-  DEBUG(dbgs() << "Processing common symbols...\n");
-
-  for (const auto &Sym : CommonSymbols) {
-    StringRef Name;
-    if (auto NameOrErr = Sym.getName())
-      Name = *NameOrErr;
-    else
-      return NameOrErr.takeError();
-
-    // Skip common symbols already elsewhere.
-    if (GlobalSymbolTable.count(Name)) {
-      DEBUG(dbgs() << "\tSkipping already emitted common symbol '" << Name
-                   << "'\n");
-      continue;
-    }
-
-    if (auto Sym = Resolver.findSymbolInLogicalDylib(Name)) {
-      if (!Sym.getFlags().isCommon()) {
-        DEBUG(dbgs() << "\tSkipping common symbol '" << Name
-                     << "' in favor of stronger definition.\n");
-        continue;
-      }
-    }
-    uint32_t Align = Sym.getAlignment();
-    uint64_t Size = Sym.getCommonSize();
-
-    CommonSize = alignTo(CommonSize, Align) + Size;
-
-    SymbolsToAllocate.push_back(Sym);
-  }
 
   // Allocate memory for the section
   unsigned SectionID = Sections.size();
@@ -997,7 +995,40 @@ void RuntimeDyldImpl::resolveRelocationList(const RelocationList &Relocs,
 }
 
 Error RuntimeDyldImpl::resolveExternalSymbols() {
+  StringMap<JITEvaluatedSymbol> ExternalSymbolMap;
+
+  // Resolution can trigger emission of more symbols, so iterate until
+  // we've resolved *everything*.
+  {
+    JITSymbolResolver::SymbolNameSet ResolvedSymbols;
+
+    while (true) {
+      JITSymbolResolver::SymbolNameSet NewSymbols;
+
+      for (auto &RelocKV : ExternalSymbolRelocations) {
+        StringRef Name = RelocKV.first();
+        if (!Name.empty() && !GlobalSymbolTable.count(Name) &&
+            !ResolvedSymbols.count(Name))
+          NewSymbols.insert(Name);
+      }
+
+      if (NewSymbols.empty())
+        break;
+
+      auto NewResolverResults = Resolver.lookup(NewSymbols);
+      if (!NewResolverResults)
+        return NewResolverResults.takeError();
+
+      for (auto &RRKV : *NewResolverResults) {
+        assert(!ResolvedSymbols.count(RRKV.first) && "Redundant resolution?");
+        ExternalSymbolMap.insert(RRKV);
+        ResolvedSymbols.insert(RRKV.first);
+      }
+    }
+  }
+
   while (!ExternalSymbolRelocations.empty()) {
+
     StringMap<RelocationList>::iterator i = ExternalSymbolRelocations.begin();
 
     StringRef Name = i->first();
@@ -1012,29 +1043,10 @@ Error RuntimeDyldImpl::resolveExternalSymbols() {
       JITSymbolFlags Flags;
       RTDyldSymbolTable::const_iterator Loc = GlobalSymbolTable.find(Name);
       if (Loc == GlobalSymbolTable.end()) {
-        // This is an external symbol, try to get its address from the symbol
-        // resolver.
-        // First search for the symbol in this logical dylib.
-        if (auto Sym = Resolver.findSymbolInLogicalDylib(Name.data())) {
-          if (auto AddrOrErr = Sym.getAddress()) {
-            Addr = *AddrOrErr;
-            Flags = Sym.getFlags();
-          } else
-            return AddrOrErr.takeError();
-        } else if (auto Err = Sym.takeError())
-          return Err;
-
-        // If that fails, try searching for an external symbol.
-        if (!Addr) {
-          if (auto Sym = Resolver.findSymbol(Name.data())) {
-            if (auto AddrOrErr = Sym.getAddress()) {
-              Addr = *AddrOrErr;
-              Flags = Sym.getFlags();
-            } else
-              return AddrOrErr.takeError();
-          } else if (auto Err = Sym.takeError())
-            return Err;
-        }
+        auto RRI = ExternalSymbolMap.find(Name);
+        assert(RRI != ExternalSymbolMap.end() && "No result for symbol");
+        Addr = RRI->second.getAddress();
+        Flags = RRI->second.getFlags();
         // The call to getSymbolAddress may have caused additional modules to
         // be loaded, which may have added new entries to the
         // ExternalSymbolRelocations map.  Consquently, we need to update our
@@ -1095,6 +1107,7 @@ uint64_t RuntimeDyld::LoadedObjectInfo::getSectionLoadAddress(
 
 void RuntimeDyld::MemoryManager::anchor() {}
 void JITSymbolResolver::anchor() {}
+void LegacyJITSymbolResolver::anchor() {}
 
 RuntimeDyld::RuntimeDyld(RuntimeDyld::MemoryManager &MemMgr,
                          JITSymbolResolver &Resolver)

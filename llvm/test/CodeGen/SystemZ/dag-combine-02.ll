@@ -94,8 +94,8 @@ define signext i32 @main(i32 signext, i8** nocapture readonly) local_unnamed_add
 
 ; <label>:61:                                     ; preds = %13
 ; CHECK-LABEL: %bb.6:
-; CHECK: stgrl   %r1, g_56
-; CHECK: llhrl   %r1, g_56+6
+; CHECK: stgrl   %r0, g_56
+; CHECK: llhrl   %r0, g_56+6
 ; CHECK: stgrl   %r2, g_56
   store i64 0, i64* @g_56, align 8
   %62 = bitcast [4 x [7 x i16*]]* %3 to i8*

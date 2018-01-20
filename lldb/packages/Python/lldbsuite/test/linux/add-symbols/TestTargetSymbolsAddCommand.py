@@ -23,7 +23,7 @@ class TargetSymbolsAddCommand(TestBase):
         even if gnu.build-id and gnu_debuglink are not present in the module.
         Similar to test_add_dsym_mid_execution test for macos."""
         self.build(clean=True)
-        exe = os.path.join(os.getcwd(), "stripped.out")
+        exe = self.getBuildArtifact("stripped.out")
 
         self.target = self.dbg.CreateTarget(exe)
         self.assertTrue(self.target, VALID_TARGET)
@@ -46,7 +46,8 @@ class TargetSymbolsAddCommand(TestBase):
         self.expect("frame select", substrs=['main.c'], matching=False)
 
         # Tell LLDB that a.out has symbols for stripped.out
-        self.runCmd("target symbols add -s stripped.out a.out")
+        self.runCmd("target symbols add -s %s %s" %
+                    exe, self.getBuildArtifact("a.out"))
 
         # Check that symbols are now loaded and main.c is in the output.
         self.expect("frame select", substrs=['main.c'])

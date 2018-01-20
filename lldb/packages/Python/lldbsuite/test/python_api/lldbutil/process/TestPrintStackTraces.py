@@ -37,7 +37,7 @@ class ThreadsStackTracesTestCase(TestBase):
     def test_stack_traces(self):
         """Test SBprocess and SBThread APIs with printing of the stack traces."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)

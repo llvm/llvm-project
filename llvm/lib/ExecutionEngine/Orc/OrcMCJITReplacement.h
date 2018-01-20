@@ -138,7 +138,7 @@ class OrcMCJITReplacement : public ExecutionEngine {
     std::shared_ptr<MCJITMemoryManager> ClientMM;
   };
 
-  class LinkingResolver : public JITSymbolResolver {
+  class LinkingResolver : public LegacyJITSymbolResolver {
   public:
     LinkingResolver(OrcMCJITReplacement &M) : M(M) {}
 
@@ -160,20 +160,19 @@ private:
   static ExecutionEngine *
   createOrcMCJITReplacement(std::string *ErrorMsg,
                             std::shared_ptr<MCJITMemoryManager> MemMgr,
-                            std::shared_ptr<JITSymbolResolver> Resolver,
+                            std::shared_ptr<LegacyJITSymbolResolver> Resolver,
                             std::unique_ptr<TargetMachine> TM) {
     return new OrcMCJITReplacement(std::move(MemMgr), std::move(Resolver),
                                    std::move(TM));
   }
 
 public:
-  OrcMCJITReplacement(
-      std::shared_ptr<MCJITMemoryManager> MemMgr,
-      std::shared_ptr<JITSymbolResolver> ClientResolver,
-      std::unique_ptr<TargetMachine> TM)
+  OrcMCJITReplacement(std::shared_ptr<MCJITMemoryManager> MemMgr,
+                      std::shared_ptr<LegacyJITSymbolResolver> ClientResolver,
+                      std::unique_ptr<TargetMachine> TM)
       : ExecutionEngine(TM->createDataLayout()), TM(std::move(TM)),
-        MemMgr(std::make_shared<MCJITReplacementMemMgr>(*this,
-                                                        std::move(MemMgr))),
+        MemMgr(
+            std::make_shared<MCJITReplacementMemMgr>(*this, std::move(MemMgr))),
         Resolver(std::make_shared<LinkingResolver>(*this)),
         ClientResolver(std::move(ClientResolver)), NotifyObjectLoaded(*this),
         NotifyFinalized(*this),
@@ -378,7 +377,7 @@ private:
   std::unique_ptr<TargetMachine> TM;
   std::shared_ptr<MCJITReplacementMemMgr> MemMgr;
   std::shared_ptr<LinkingResolver> Resolver;
-  std::shared_ptr<JITSymbolResolver> ClientResolver;
+  std::shared_ptr<LegacyJITSymbolResolver> ClientResolver;
   Mangler Mang;
 
   // IMPORTANT: ShouldDelete *must* come before LocalModules: The shared_ptr

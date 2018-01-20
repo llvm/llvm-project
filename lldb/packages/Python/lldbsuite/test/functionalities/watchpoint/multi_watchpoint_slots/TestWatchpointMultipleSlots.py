@@ -27,7 +27,7 @@ class WatchpointSlotsTestCase(TestBase):
         self.source = 'main.c'
 
         # Output filename.
-        self.exe_name = 'a.out'
+        self.exe_name = self.getBuildArtifact("a.out")
         self.d = {'C_SOURCES': self.source, 'EXE': self.exe_name}
 
     # This is a arm and aarch64 specific test case. No other architectures tested.

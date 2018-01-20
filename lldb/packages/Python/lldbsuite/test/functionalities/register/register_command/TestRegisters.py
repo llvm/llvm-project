@@ -124,7 +124,7 @@ class RegisterCommandsTestCase(TestBase):
         self.convenience_registers_with_process_attach(test_16bit_regs=True)
 
     def common_setup(self):
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
@@ -185,7 +185,7 @@ class RegisterCommandsTestCase(TestBase):
                 new_value])
 
     def fp_special_purpose_register_read(self):
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)
@@ -266,7 +266,7 @@ class RegisterCommandsTestCase(TestBase):
                 1 << fstat_top_pointer_initial)
 
     def fp_register_write(self):
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)
@@ -441,7 +441,7 @@ class RegisterCommandsTestCase(TestBase):
 
     def convenience_registers_with_process_attach(self, test_16bit_regs):
         """Test convenience registers after a 'process attach'."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Spawn a new process
         pid = self.spawnSubprocess(exe, ['wait_for_attach']).pid

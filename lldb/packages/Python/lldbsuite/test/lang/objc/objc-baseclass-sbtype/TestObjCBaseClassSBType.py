@@ -33,7 +33,7 @@ class ObjCDynamicValueTestCase(TestBase):
             self.skipTest("Dynamic types for ObjC V1 runtime not implemented")
 
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target from the debugger.
 

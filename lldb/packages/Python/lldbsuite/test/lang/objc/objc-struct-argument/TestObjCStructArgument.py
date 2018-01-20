@@ -29,7 +29,7 @@ class TestObjCStructArgument(TestBase):
     def test_with_python_api(self):
         """Test passing structs to Objective-C methods."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)

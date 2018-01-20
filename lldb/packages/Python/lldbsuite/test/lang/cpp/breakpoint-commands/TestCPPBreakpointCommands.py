@@ -35,7 +35,7 @@ class CPPBreakpointCommandsTestCase(TestBase):
         """Test a sequence of breakpoint command add, list, and delete."""
         self.build()
 
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target from the debugger.
 

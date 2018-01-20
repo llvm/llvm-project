@@ -26,7 +26,7 @@ class TestCStepping(TestBase):
 
     def do_until (self, args, until_lines, expected_linenum):
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
