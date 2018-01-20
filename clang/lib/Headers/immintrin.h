@@ -247,6 +247,18 @@ _mm256_cvtph_ps(__m128i __a)
 #include <gfniintrin.h>
 #endif
 
+#if !defined(_MSC_VER) || __has_feature(modules) || defined(__RDPID__)
+/// \brief Returns the value of the IA32_TSC_AUX MSR (0xc0000103).
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the <c> RDPID </c> instruction.
+static __inline__ unsigned int __attribute__((__always_inline__, __nodebug__, __target__("rdpid")))
+_rdpid_u32(void) {
+  return __builtin_ia32_rdpid();
+}
+#endif // __RDPID__
+
 #if !defined(_MSC_VER) || __has_feature(modules) || defined(__RDRND__)
 static __inline__ int __attribute__((__always_inline__, __nodebug__, __target__("rdrnd")))
 _rdrand16_step(unsigned short *__p)

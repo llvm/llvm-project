@@ -125,3 +125,7 @@
 // VBMI2: "-target-feature" "+avx512vbmi2"
 // NO-VBMI2: "-target-feature" "-avx512vbmi2"
 
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mrdpid %s -### -o %t.o 2>&1 | FileCheck -check-prefix=RDPID %s
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-rdpid %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-RDPID %s
+// RDPID: "-target-feature" "+rdpid"
+// NO-RDPID: "-target-feature" "-rdpid"
