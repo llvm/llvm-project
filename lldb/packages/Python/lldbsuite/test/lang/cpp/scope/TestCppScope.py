@@ -29,8 +29,7 @@ class TestCppScopes(TestBase):
 
         # Get the path of the executable
         cwd = os.getcwd()
-        exe_file = "a.out"
-        exe_path = os.path.join(cwd, exe_file)
+        exe_path = self.getBuildArtifact("a.out")
 
         # Load the executable
         target = self.dbg.CreateTarget(exe_path)

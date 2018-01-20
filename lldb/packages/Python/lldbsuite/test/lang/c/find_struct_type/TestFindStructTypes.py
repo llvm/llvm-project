@@ -33,7 +33,7 @@ class TestFindTypesOnStructType(TestBase):
 
     def do_test(self):
         """Make sure FindTypes actually finds 'struct typename' not just 'typename'."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)

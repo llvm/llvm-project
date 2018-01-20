@@ -20,8 +20,11 @@
  * THE SOFTWARE.
  */
 
+#include "clc/clcfunc.h"
+
 _CLC_DECL float __clc_sinf_piby4(float x, float y);
 _CLC_DECL float __clc_cosf_piby4(float x, float y);
+_CLC_DECL float __clc_tanf_piby4(float x, int y);
 _CLC_DECL int __clc_argReductionS(float *r, float *rr, float x);
 
 #ifdef cl_khr_fp64

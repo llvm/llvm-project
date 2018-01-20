@@ -183,6 +183,8 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if ((FPU & NeonMode) && HasFullFP16)
     Builder.defineMacro("__ARM_FEATURE_FP16_VECTOR_ARITHMETIC", "1");
+  if (HasFullFP16)
+   Builder.defineMacro("__ARM_FEATURE_FP16_SCALAR_ARITHMETIC", "1");
 
   switch (ArchKind) {
   default:

@@ -34,7 +34,7 @@ class ThreadSteppingTestCase(TestBase):
     def test_step_out_with_run_command(self):
         """Exercise thread step-out and frame select followed by thread step-out."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Create a breakpoint inside function 'c'.

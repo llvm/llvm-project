@@ -13,7 +13,7 @@ class FrameVariableAnonymousUnionsTestCase(TestBase):
     def test_with_run_command(self):
         """Tests that frame variable looks into anonymous unions"""
         self.build()
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         line = line_number('main.cpp', '// break here')
         lldbutil.run_break_set_by_file_and_line(

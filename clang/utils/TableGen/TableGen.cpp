@@ -52,6 +52,7 @@ enum ActionType {
   GenClangCommentCommandInfo,
   GenClangCommentCommandList,
   GenArmNeon,
+  GenArmFP16,
   GenArmNeonSema,
   GenArmNeonTest,
   GenAttrDocs,
@@ -139,6 +140,7 @@ cl::opt<ActionType> Action(
                    "Generate list of commands that are used in "
                    "documentation comments"),
         clEnumValN(GenArmNeon, "gen-arm-neon", "Generate arm_neon.h for clang"),
+        clEnumValN(GenArmFP16, "gen-arm-fp16", "Generate arm_fp16.h for clang"),
         clEnumValN(GenArmNeonSema, "gen-arm-neon-sema",
                    "Generate ARM NEON sema support for clang"),
         clEnumValN(GenArmNeonTest, "gen-arm-neon-test",
@@ -249,6 +251,9 @@ bool ClangTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenArmNeon:
     EmitNeon(Records, OS);
+    break;
+  case GenArmFP16:
+    EmitFP16(Records, OS);
     break;
   case GenArmNeonSema:
     EmitNeonSema(Records, OS);

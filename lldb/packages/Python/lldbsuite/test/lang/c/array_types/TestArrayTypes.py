@@ -24,7 +24,7 @@ class ArrayTypesTestCase(TestBase):
     def test_and_run_command(self):
         """Test 'frame variable var_name' on some variables with array types."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
@@ -85,7 +85,7 @@ class ArrayTypesTestCase(TestBase):
     def test_and_python_api(self):
         """Use Python APIs to inspect variables with array types."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)

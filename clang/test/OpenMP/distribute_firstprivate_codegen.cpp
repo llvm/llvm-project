@@ -255,7 +255,7 @@ int main() {
 // CHECK-DAG: [[VEC_ADDR_VAL:%.+]] = load [2 x i{{[0-9]+}}]*, [2 x i{{[0-9]+}}]** [[VEC_ADDR]],
 // CHECK-DAG: [[VEC_ADDR_VAL_BCAST:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_ADDR_VAL]] to i{{[0-9]+}}*
 // CHECK-DAG: [[VEC_PRIV_BCAST:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_PRIV]] to i{{[0-9]+}}*
-// CHECK-DAG: call void @llvm.memcpy.{{.*}}(i{{[0-9]+}}* [[VEC_PRIV_BCAST]], i{{[0-9]+}}* [[VEC_ADDR_VAL_BCAST]],{{.+}})
+// CHECK-DAG: call void @llvm.memcpy.{{.*}}(i{{[0-9]+}}* align {{[0-9]+}} [[VEC_PRIV_BCAST]], i{{[0-9]+}}* align {{[0-9]+}} [[VEC_ADDR_VAL_BCAST]],{{.+}})
 
 // init s_arr
 // CHECK-DAG: [[S_ARR_ADDR_VAL:%.+]] = load [2 x [[S_FLOAT_TY]]]*, [2 x [[S_FLOAT_TY]]]** [[S_ARR_ADDR]],
@@ -270,7 +270,7 @@ int main() {
 // CHECK-DAG: [[S_ARR_DST_PAST:%.+]] = phi{{.+}} [ [[S_ARR_PRIV_BGN]],{{.+}} ], [ [[S_ARR_DST:%.+]],{{.+}} ]
 // CHECK-DAG: [[S_ARR_SRC_BCAST:%.+]] = bitcast{{.+}} [[S_ARR_SRC_PAST]] to{{.+}}
 // CHECK-DAG: [[S_ARR_DST_BCAST:%.+]] = bitcast{{.+}} [[S_ARR_DST_PAST]] to{{.+}}
-// CHECK-DAG: call{{.+}} @llvm.memcpy.{{.+}}({{.+}}* [[S_ARR_DST_BCAST]], {{.+}}* [[S_ARR_SRC_BCAST]]{{.+}})
+// CHECK-DAG: call{{.+}} @llvm.memcpy.{{.+}}({{.+}}* align {{[0-9]+}} [[S_ARR_DST_BCAST]], {{.+}}* align {{[0-9]+}} [[S_ARR_SRC_BCAST]]{{.+}})
 // CHECK-DAG: [[S_ARR_SRC]] = getelementptr{{.+}}
 // CHECK-DAG: [[S_ARR_DST]] = getelementptr{{.+}}
 // CHECK-DAG: [[S_ARR_CPY_FIN:%.+]] = icmp{{.+}} [[S_ARR_DST]], [[S_ARR_PRIV_NEXT]]
@@ -283,7 +283,7 @@ int main() {
 // CHECK-DAG: [[TMP_VAL:%.+]] = load [[S_FLOAT_TY]]*, [[S_FLOAT_TY]]** [[TMP]],
 // CHECK-DAG: [[VAR_PRIV_BCAST:%.+]] = bitcast [[S_FLOAT_TY]]* [[VAR_PRIV]] to{{.+}}
 // CHECK-DAG: [[TMP_BCAST:%.+]] = bitcast [[S_FLOAT_TY]]* [[TMP_VAL]] to{{.+}}
-// CHECK-DAG: call{{.+}} @llvm.memcpy.{{.+}}({{.+}}* [[VAR_PRIV_BCAST]], {{.+}}* [[TMP_BCAST]],{{.+}})
+// CHECK-DAG: call{{.+}} @llvm.memcpy.{{.+}}({{.+}}* align {{[0-9]+}} [[VAR_PRIV_BCAST]], {{.+}}* align {{[0-9]+}} [[TMP_BCAST]],{{.+}})
 // CHECK-DAG: store [[S_FLOAT_TY]]* [[VAR_PRIV]], [[S_FLOAT_TY]]** [[TMP_PRIV]],
 
 // init svar
@@ -350,7 +350,7 @@ int main() {
 // CHECK-DAG: [[VEC_ADDR_VAL:%.+]] = load [2 x i{{[0-9]+}}]*, [2 x i{{[0-9]+}}]** [[VEC_ADDR]],
 // CHECK-DAG: [[VEC_ADDR_VAL_BCAST:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_ADDR_VAL]] to i{{[0-9]+}}*
 // CHECK-DAG: [[VEC_PRIV_BCAST:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_PRIV]] to i{{[0-9]+}}*
-// CHECK-DAG: call void @llvm.memcpy.{{.*}}(i{{[0-9]+}}* [[VEC_PRIV_BCAST]], i{{[0-9]+}}* [[VEC_ADDR_VAL_BCAST]],{{.+}})
+// CHECK-DAG: call void @llvm.memcpy.{{.*}}(i{{[0-9]+}}* align {{[0-9]+}} [[VEC_PRIV_BCAST]], i{{[0-9]+}}* align {{[0-9]+}} [[VEC_ADDR_VAL_BCAST]],{{.+}})
 
 // init s_arr
 // CHECK-DAG: [[S_ARR_ADDR_VAL:%.+]] = load [2 x [[S_INT_TY]]]*, [2 x [[S_INT_TY]]]** [[S_ARR_ADDR]],
@@ -365,7 +365,7 @@ int main() {
 // CHECK-DAG: [[S_ARR_DST_PAST:%.+]] = phi{{.+}} [ [[S_ARR_PRIV_BGN]],{{.+}} ], [ [[S_ARR_DST:%.+]],{{.+}} ]
 // CHECK-DAG: [[S_ARR_SRC_BCAST:%.+]] = bitcast{{.+}} [[S_ARR_SRC_PAST]] to{{.+}}
 // CHECK-DAG: [[S_ARR_DST_BCAST:%.+]] = bitcast{{.+}} [[S_ARR_DST_PAST]] to{{.+}}
-// CHECK-DAG: call{{.+}} @llvm.memcpy.{{.+}}({{.+}}* [[S_ARR_DST_BCAST]], {{.+}}* [[S_ARR_SRC_BCAST]]{{.+}})
+// CHECK-DAG: call{{.+}} @llvm.memcpy.{{.+}}({{.+}}* align {{[0-9]+}} [[S_ARR_DST_BCAST]], {{.+}}* align {{[0-9]+}} [[S_ARR_SRC_BCAST]]{{.+}})
 // CHECK-DAG: [[S_ARR_SRC]] = getelementptr{{.+}}
 // CHECK-DAG: [[S_ARR_DST]] = getelementptr{{.+}}
 // CHECK-DAG: [[S_ARR_CPY_FIN:%.+]] = icmp{{.+}} [[S_ARR_DST]], [[S_ARR_PRIV_NEXT]]
@@ -378,7 +378,7 @@ int main() {
 // CHECK-DAG: [[TMP_VAL:%.+]] = load [[S_INT_TY]]*, [[S_INT_TY]]** [[TMP]],
 // CHECK-DAG: [[VAR_PRIV_BCAST:%.+]] = bitcast [[S_INT_TY]]* [[VAR_PRIV]] to{{.+}}
 // CHECK-DAG: [[TMP_BCAST:%.+]] = bitcast [[S_INT_TY]]* [[TMP_VAL]] to{{.+}}
-// CHECK-DAG: call{{.+}} @llvm.memcpy.{{.+}}({{.+}}* [[VAR_PRIV_BCAST]], {{.+}}* [[TMP_BCAST]],{{.+}})
+// CHECK-DAG: call{{.+}} @llvm.memcpy.{{.+}}({{.+}}* align {{[0-9]+}} [[VAR_PRIV_BCAST]], {{.+}}* align {{[0-9]+}} [[TMP_BCAST]],{{.+}})
 // CHECK-DAG: store [[S_INT_TY]]* [[VAR_PRIV]], [[S_INT_TY]]** [[TMP_PRIV]],
 
 // CHECK-DAG: store i{{[0-9]+}} 0, i{{[0-9]+}}* %.omp{{.+}},

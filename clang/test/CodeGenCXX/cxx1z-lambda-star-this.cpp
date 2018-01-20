@@ -16,7 +16,7 @@ int X = A{}.foo()();
 //CHECK: %[[I1:.+]] = bitcast %struct.A* %[[I0]] to i8*
 //CHECK: %[[I2:.+]] = bitcast %struct.A* %this1 to i8*
 // copy the contents ...
-//CHECK: call void @llvm.memcpy.p0i8.p0i8.i32(i8* %[[I1]], i8* %[[I2]], i32 8, i32 8, i1 false)
+//CHECK: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 %[[I1]], i8* align 8 %[[I2]], i32 8, i1 false)
 
 struct B {
   double b = 222;

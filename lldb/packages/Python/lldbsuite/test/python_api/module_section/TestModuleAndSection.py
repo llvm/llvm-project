@@ -26,7 +26,7 @@ class ModuleAndSectionAPIsTestCase(TestBase):
     def test_module_and_section(self):
         """Test module and section APIs."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
@@ -77,7 +77,7 @@ class ModuleAndSectionAPIsTestCase(TestBase):
     def test_module_and_section_boundary_condition(self):
         """Test module and section APIs by passing None when it expects a Python string."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
@@ -118,7 +118,7 @@ class ModuleAndSectionAPIsTestCase(TestBase):
     def test_module_compile_unit_iter(self):
         """Test module's compile unit iterator APIs."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)

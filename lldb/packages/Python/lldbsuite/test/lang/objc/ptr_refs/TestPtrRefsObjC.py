@@ -19,8 +19,7 @@ class TestPtrRefsObjC(TestBase):
     def test_ptr_refs(self):
         """Test the ptr_refs tool on Darwin with Objective-C"""
         self.build()
-        exe_name = 'a.out'
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)

@@ -34,7 +34,7 @@ class FatArchiveTestCase(TestBase):
         DWARF in .o file debugging. The only thing this test needs to do is to compile and
         set a breakpoint in the target and verify any breakpoint locations have valid debug
         info for the function, and source file and line.'''
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

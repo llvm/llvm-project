@@ -15,7 +15,7 @@ class NoSuchArchTestCase(TestBase):
 
     def test(self):
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Check that passing an invalid arch via the command-line fails but
         # doesn't crash

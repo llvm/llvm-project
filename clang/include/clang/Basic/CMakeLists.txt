@@ -46,3 +46,7 @@ clang_tablegen(arm_neon.inc -gen-arm-neon-sema
   -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE arm_neon.td
   TARGET ClangARMNeon)
+clang_tablegen(arm_fp16.inc -gen-arm-neon-sema
+  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  SOURCE arm_fp16.td
+  TARGET ClangARMFP16)

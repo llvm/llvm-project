@@ -1369,6 +1369,8 @@ struct FormatStyle {
     std::vector<std::string> Delimiters;
     /// \brief A list of enclosing function names that match this language.
     std::vector<std::string> EnclosingFunctions;
+    /// \brief The canonical delimiter for this language.
+    std::string CanonicalDelimiter;
     /// \brief The style name on which this raw string format is based on.
     /// If not specified, the raw string format is based on the style that this
     /// format is based on.
@@ -1376,6 +1378,7 @@ struct FormatStyle {
     bool operator==(const RawStringFormat &Other) const {
       return Language == Other.Language && Delimiters == Other.Delimiters &&
              EnclosingFunctions == Other.EnclosingFunctions &&
+             CanonicalDelimiter == Other.CanonicalDelimiter &&
              BasedOnStyle == Other.BasedOnStyle;
     }
   };
@@ -1391,6 +1394,9 @@ struct FormatStyle {
   /// found, the formatting is based on llvm style. A matching delimiter takes
   /// precedence over a matching enclosing function name for determining the
   /// language of the raw string contents.
+  ///
+  /// If a canonical delimiter is specified, occurences of other delimiters for
+  /// the same language will be updated to the canonical if possible.
   ///
   /// There should be at most one specification per language and each delimiter
   /// and enclosing function should not occur in multiple specifications.
@@ -1410,6 +1416,7 @@ struct FormatStyle {
   ///           - 'cc'
   ///           - 'cpp'
   ///         BasedOnStyle: llvm
+  ///         CanonicalDelimiter: 'cc'
   /// \endcode
   std::vector<RawStringFormat> RawStringFormats;
 

@@ -50,7 +50,7 @@ class NamespaceLookupTestCase(TestBase):
     def test_scope_lookup_with_run_command(self):
         """Test scope lookup of functions in lldb."""
         self.build()
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
             self,
@@ -151,7 +151,7 @@ class NamespaceLookupTestCase(TestBase):
     def test_function_scope_lookup_with_run_command(self):
         """Test scope lookup of functions in lldb."""
         self.build()
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
             self,
@@ -188,7 +188,7 @@ class NamespaceLookupTestCase(TestBase):
     def test_file_scope_lookup_with_run_command(self):
         """Test file scope lookup in lldb."""
         self.build()
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
             self,
@@ -208,7 +208,7 @@ class NamespaceLookupTestCase(TestBase):
     def test_scope_lookup_before_using_with_run_command(self):
         """Test scope lookup before using in lldb."""
         self.build()
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
             self,
@@ -238,7 +238,7 @@ class NamespaceLookupTestCase(TestBase):
     def test_scope_after_using_directive_lookup_with_run_command(self):
         """Test scope lookup after using directive in lldb."""
         self.build()
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
             self,
@@ -260,7 +260,7 @@ class NamespaceLookupTestCase(TestBase):
     def test_scope_after_using_declaration_lookup_with_run_command(self):
         """Test scope lookup after using declaration in lldb."""
         self.build()
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
             self,
@@ -279,7 +279,7 @@ class NamespaceLookupTestCase(TestBase):
     def test_scope_ambiguity_after_using_lookup_with_run_command(self):
         """Test scope lookup ambiguity after using in lldb."""
         self.build()
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
             self,
@@ -305,7 +305,7 @@ class NamespaceLookupTestCase(TestBase):
     def test_scope_lookup_shadowed_by_using_with_run_command(self):
         """Test scope lookup shadowed by using in lldb."""
         self.build()
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
             self,
