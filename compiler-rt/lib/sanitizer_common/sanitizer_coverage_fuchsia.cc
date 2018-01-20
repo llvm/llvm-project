@@ -113,10 +113,10 @@ class TracePcGuardController final {
   // We can always spare the 32G of address space.
   static constexpr size_t MappingSize = sizeof(uptr) << 32;
 
-  BlockingMutex setup_lock_ = {LINKER_INITIALIZED};
+  BlockingMutex setup_lock_ = BlockingMutex(LINKER_INITIALIZED);
   uptr *array_ = nullptr;
   u32 next_index_ = 0;
-  zx_handle_t vmo _ = {};
+  zx_handle_t vmo_ = {};
   char vmo_name_[ZX_MAX_NAME_LEN] = {};
 
   size_t DataSize() const { return next_index_ * sizeof(uintptr_t); }

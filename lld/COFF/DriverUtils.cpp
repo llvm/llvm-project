@@ -558,6 +558,12 @@ err:
 static StringRef undecorate(StringRef Sym) {
   if (Config->Machine != I386)
     return Sym;
+  // In MSVC mode, a fully decorated stdcall function is exported
+  // as-is with the leading underscore (with type IMPORT_NAME).
+  // In MinGW mode, a decorated stdcall function gets the underscore
+  // removed, just like normal cdecl functions.
+  if (Sym.startswith("_") && Sym.contains('@') && !Config->MinGW)
+    return Sym;
   return Sym.startswith("_") ? Sym.substr(1) : Sym;
 }
 
