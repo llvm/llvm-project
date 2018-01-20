@@ -14,7 +14,7 @@ import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.decorators as decorators
 
-class TestClassConstrainedProtocol(TestBase):
+class TestClassConstrainedProtocolArgument(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
