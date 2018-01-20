@@ -33,6 +33,7 @@ do_asserts="no"
 do_compare="yes"
 do_rt="yes"
 do_libs="yes"
+do_libcxxabi="yes"
 do_libunwind="yes"
 do_test_suite="yes"
 do_openmp="yes"
@@ -62,6 +63,7 @@ function usage() {
     echo "                      For example -svn-path trunk or -svn-path branches/release_37"
     echo " -no-rt               Disable check-out & build Compiler-RT"
     echo " -no-libs             Disable check-out & build libcxx/libcxxabi/libunwind"
+    echo " -no-libcxxabi        Disable check-out & build libcxxabi"
     echo " -no-libunwind        Disable check-out & build libunwind"
     echo " -no-test-suite       Disable check-out & build test-suite"
     echo " -no-openmp           Disable check-out & build libomp"
@@ -135,6 +137,9 @@ while [ $# -gt 0 ]; do
         -no-libs )
             do_libs="no"
             ;;
+        -no-libcxxabi )
+            do_libcxxabi="no"
+            ;;
         -no-libunwind )
             do_libunwind="no"
             ;;
@@ -206,7 +211,10 @@ if [ $do_rt = "yes" ]; then
   projects="$projects compiler-rt"
 fi
 if [ $do_libs = "yes" ]; then
-  projects="$projects libcxx libcxxabi"
+  projects="$projects libcxx"
+  if [ $do_libcxxabi = "yes" ]; then
+    projects="$projects libcxxabi"
+  fi
   if [ $do_libunwind = "yes" ]; then
     projects="$projects libunwind"
   fi

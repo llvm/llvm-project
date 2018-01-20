@@ -16,6 +16,7 @@
 #include "rtl.h"
 
 #include <cassert>
+#include <cstdlib>
 #include <cstring>
 #include <dlfcn.h>
 #include <mutex>
