@@ -540,7 +540,7 @@ static void createImportLibrary(bool AsLib) {
   }
 
   auto E = writeImportLibrary(getImportName(AsLib), getImplibPath(), Exports,
-                              Config->Machine, false);
+                              Config->Machine, false, Config->MinGW);
   handleAllErrors(std::move(E),
                   [&](ErrorInfoBase &EIB) { error(EIB.message()); });
 }
