@@ -98,6 +98,7 @@ bool Symbol::isHidden() const {
 }
 
 void Symbol::setHidden(bool IsHidden) {
+  DEBUG(dbgs() << "setHidden: " << Name << " -> " << IsHidden << "\n");
   Flags &= ~WASM_SYMBOL_VISIBILITY_MASK;
   if (IsHidden)
     Flags |= WASM_SYMBOL_VISIBILITY_HIDDEN;
