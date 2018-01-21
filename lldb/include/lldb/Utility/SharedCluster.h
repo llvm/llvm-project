@@ -15,6 +15,8 @@
 
 #include "llvm/ADT/SmallPtrSet.h"
 
+#include <mutex>
+
 namespace lldb_private {
 
 namespace imp {
