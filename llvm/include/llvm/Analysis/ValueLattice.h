@@ -49,14 +49,73 @@ class ValueLatticeElement {
     overdefined
   };
 
-  /// Val: This stores the current lattice value along with the Constant* for
-  /// the constant if this is a 'constant' or 'notconstant' value.
   ValueLatticeElementTy Tag;
-  Constant *Val;
-  ConstantRange Range;
+
+  /// The union either stores a pointer to a constant or a constant range,
+  /// associated to the lattice element. We have to ensure that Range is
+  /// initialized or destroyed when changing state to or from constantrange.
+  union {
+    Constant *ConstVal;
+    ConstantRange Range;
+  };
 
 public:
-  ValueLatticeElement() : Tag(undefined), Val(nullptr), Range(1, true) {}
+  // Const and Range are initialized on-demand.
+  ValueLatticeElement() : Tag(undefined) {}
+
+  /// Custom destructor to ensure Range is properly destroyed, when the object
+  /// is deallocated.
+  ~ValueLatticeElement() {
+    switch (Tag) {
+    case overdefined:
+    case undefined:
+    case constant:
+    case notconstant:
+      break;
+    case constantrange:
+      Range.~ConstantRange();
+      break;
+    };
+  }
+
+  /// Custom copy constructor, to ensure Range gets initialized when
+  /// copying a constant range lattice element.
+  ValueLatticeElement(const ValueLatticeElement &Other) : Tag(undefined) {
+    *this = Other;
+  }
+
+  /// Custom assignment operator, to ensure Range gets initialized when
+  /// assigning a constant range lattice element.
+  ValueLatticeElement &operator=(const ValueLatticeElement &Other) {
+    // If we change the state of this from constant range to non constant range,
+    // destroy Range.
+    if (isConstantRange() && !Other.isConstantRange())
+      Range.~ConstantRange();
+
+    // If we change the state of this from a valid ConstVal to another a state
+    // without a valid ConstVal, zero the pointer.
+    if ((isConstant() || isNotConstant()) && !Other.isConstant() &&
+        !Other.isNotConstant())
+      ConstVal = nullptr;
+
+    switch (Other.Tag) {
+    case constantrange:
+      if (!isConstantRange())
+        new (&Range) ConstantRange(Other.Range);
+      else
+        Range = Other.Range;
+      break;
+    case constant:
+    case notconstant:
+      ConstVal = Other.ConstVal;
+      break;
+    case overdefined:
+    case undefined:
+      break;
+    }
+    Tag = Other.Tag;
+    return *this;
+  }
 
   static ValueLatticeElement get(Constant *C) {
     ValueLatticeElement Res;
@@ -89,12 +148,12 @@ public:
 
   Constant *getConstant() const {
     assert(isConstant() && "Cannot get the constant of a non-constant!");
-    return Val;
+    return ConstVal;
   }
 
   Constant *getNotConstant() const {
     assert(isNotConstant() && "Cannot get the constant of a non-notconstant!");
-    return Val;
+    return ConstVal;
   }
 
   const ConstantRange &getConstantRange() const {
@@ -104,10 +163,10 @@ public:
   }
 
   Optional<APInt> asConstantInteger() const {
-    if (isConstant() && isa<ConstantInt>(Val)) {
-      return cast<ConstantInt>(Val)->getValue();
-    } else if (isConstantRange() && Range.isSingleElement()) {
-      return *Range.getSingleElement();
+    if (isConstant() && isa<ConstantInt>(getConstant())) {
+      return cast<ConstantInt>(getConstant())->getValue();
+    } else if (isConstantRange() && getConstantRange().isSingleElement()) {
+      return *getConstantRange().getSingleElement();
     }
     return None;
   }
@@ -116,6 +175,10 @@ private:
   void markOverdefined() {
     if (isOverdefined())
       return;
+    if (isConstant() || isNotConstant())
+      ConstVal = nullptr;
+    if (isConstantRange())
+      Range.~ConstantRange();
     Tag = overdefined;
   }
 
@@ -132,7 +195,7 @@ private:
            "Marking constant with different value");
     assert(isUndefined());
     Tag = constant;
-    Val = V;
+    ConstVal = V;
   }
 
   void markNotConstant(Constant *V) {
@@ -150,7 +213,7 @@ private:
            "Marking !constant with different value");
     assert(isUndefined() || isConstant());
     Tag = notconstant;
-    Val = V;
+    ConstVal = V;
   }
 
   void markConstantRange(ConstantRange NewR) {
@@ -168,7 +231,7 @@ private:
       markOverdefined();
     else {
       Tag = constantrange;
-      Range = std::move(NewR);
+      new (&Range) ConstantRange(std::move(NewR));
     }
   }
 

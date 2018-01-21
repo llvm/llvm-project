@@ -617,8 +617,6 @@ void Writer::calculateImports() {
 }
 
 void Writer::calculateExports() {
-  Symbol *EntrySym = Symtab->find(Config->Entry);
-  bool ExportEntry = !Config->Relocatable && EntrySym && EntrySym->isDefined();
   bool ExportHidden = Config->EmitRelocs;
   StringSet<> UsedNames;
   auto BudgeLocalName = [&](const Symbol *Sym) {
@@ -640,11 +638,7 @@ void Writer::calculateExports() {
     }
   };
 
-  if (ExportEntry)
-    ExportedSymbols.emplace_back(WasmExportEntry{EntrySym, EntrySym->getName()});
-
-  if (Config->CtorSymbol && ExportHidden &&
-      !(ExportEntry && Config->CtorSymbol == EntrySym))
+  if (Config->CtorSymbol && (!Config->CtorSymbol->isHidden() || ExportHidden))
     ExportedSymbols.emplace_back(
         WasmExportEntry{Config->CtorSymbol, Config->CtorSymbol->getName()});
 
@@ -658,8 +652,6 @@ void Writer::calculateExports() {
         continue;
 
       if ((Sym->isHidden() || Sym->isLocal()) && !ExportHidden)
-        continue;
-      if (ExportEntry && Sym == EntrySym)
         continue;
       ExportedSymbols.emplace_back(WasmExportEntry{Sym, BudgeLocalName(Sym)});
     }

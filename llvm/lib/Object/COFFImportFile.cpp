@@ -91,7 +91,15 @@ static void writeStringTable(std::vector<uint8_t> &B,
 }
 
 static ImportNameType getNameType(StringRef Sym, StringRef ExtName,
-                                  MachineTypes Machine) {
+                                  MachineTypes Machine, bool MinGW) {
+  // A decorated stdcall function in MSVC is exported with the
+  // type IMPORT_NAME, and the exported function name includes the
+  // the leading underscore. In MinGW on the other hand, a decorated
+  // stdcall function still omits the underscore (IMPORT_NAME_NOPREFIX).
+  // See the comment in isDecorated in COFFModuleDefinition.cpp for more
+  // details.
+  if (ExtName.startswith("_") && ExtName.contains('@') && !MinGW)
+    return IMPORT_NAME;
   if (Sym != ExtName)
     return IMPORT_NAME_UNDECORATE;
   if (Machine == IMAGE_FILE_MACHINE_I386 && Sym.startswith("_"))
@@ -558,7 +566,8 @@ NewArchiveMember ObjectFactory::createWeakExternal(StringRef Sym,
 
 Error writeImportLibrary(StringRef ImportName, StringRef Path,
                          ArrayRef<COFFShortExport> Exports,
-                         MachineTypes Machine, bool MakeWeakAliases) {
+                         MachineTypes Machine, bool MakeWeakAliases,
+                         bool MinGW) {
 
   std::vector<NewArchiveMember> Members;
   ObjectFactory OF(llvm::sys::path::filename(ImportName), Machine);
@@ -589,7 +598,7 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
       ImportType = IMPORT_CONST;
 
     StringRef SymbolName = E.SymbolName.empty() ? E.Name : E.SymbolName;
-    ImportNameType NameType = getNameType(SymbolName, E.Name, Machine);
+    ImportNameType NameType = getNameType(SymbolName, E.Name, Machine, MinGW);
     Expected<std::string> Name = E.ExtName.empty()
                                      ? SymbolName
                                      : replace(SymbolName, E.Name, E.ExtName);

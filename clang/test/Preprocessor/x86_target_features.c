@@ -436,3 +436,6 @@
 // VPCLMULQDQNOPCLMUL-NOT: #define __PCLMUL__ 1
 // VPCLMULQDQNOPCLMUL-NOT: #define __VPCLMULQDQ__ 1
 
+// RUN: %clang -target i386-unknown-unknown -march=atom -mrdpid -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=RDPID %s
+
+// RDPID: #define __RDPID__ 1

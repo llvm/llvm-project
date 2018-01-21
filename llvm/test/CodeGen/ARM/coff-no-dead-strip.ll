@@ -10,5 +10,4 @@
 ; CHECK: .ascii " /INCLUDE:i"
 ; CHECK: .ascii " /INCLUDE:j"
 ; CHECK-NOT: .ascii " /INCLUDE:k"
-; CHECK: .ascii " /INCLUDE:l@@0"
 

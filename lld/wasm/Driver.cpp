@@ -134,14 +134,6 @@ static Optional<std::string> findFile(StringRef Path1, const Twine &Path2) {
   return None;
 }
 
-// Inject a new undefined symbol into the link.  This will cause the link to
-// fail unless this symbol can be found.
-static void addSyntheticUndefinedFunction(StringRef Name,
-                                          const WasmSignature *Type) {
-  log("injecting undefined func: " + Name);
-  Symtab->addUndefinedFunction(Name, Type);
-}
-
 static void printHelp(const char *Argv0) {
   WasmOptTable().PrintHelp(outs(), Argv0, "LLVM Linker", false);
 }
@@ -290,14 +282,15 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (Config->Relocatable && Args.hasArg(OPT_undefined))
     error("undefined symbols specified for relocatable output file");
 
+  Symbol *EntrySym = nullptr;
   if (!Config->Relocatable) {
     static WasmSignature Signature = {{}, WASM_TYPE_NORESULT};
     if (!Config->Entry.empty())
-      addSyntheticUndefinedFunction(Config->Entry, &Signature);
+      EntrySym = Symtab->addUndefinedFunction(Config->Entry, &Signature);
 
     // Handle the `--undefined <sym>` options.
     for (auto* Arg : Args.filtered(OPT_undefined))
-      addSyntheticUndefinedFunction(Arg->getValue(), nullptr);
+      Symtab->addUndefinedFunction(Arg->getValue(), nullptr);
 
     // Create linker-synthetic symbols
     // __wasm_call_ctors:
@@ -348,6 +341,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     else
       Sym->setHidden(false);
   }
+
+  if (EntrySym)
+    EntrySym->setHidden(false);
 
   if (errorCount())
     return;

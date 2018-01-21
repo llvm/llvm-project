@@ -3419,9 +3419,6 @@ SDValue TargetLowering::scalarizeVectorLoad(LoadSDNode *LD,
   return DAG.getMergeValues({ Value, NewChain }, SL);
 }
 
-// FIXME: This relies on each element having a byte size, otherwise the stride
-// is 0 and just overwrites the same location. ExpandStore currently expects
-// this broken behavior.
 SDValue TargetLowering::scalarizeVectorStore(StoreSDNode *ST,
                                              SelectionDAG &DAG) const {
   SDLoc SL(ST);
@@ -3438,11 +3435,40 @@ SDValue TargetLowering::scalarizeVectorStore(StoreSDNode *ST,
   // The type of data as saved in memory.
   EVT MemSclVT = StVT.getScalarType();
 
-  // Store Stride in bytes
-  unsigned Stride = MemSclVT.getSizeInBits() / 8;
   EVT IdxVT = getVectorIdxTy(DAG.getDataLayout());
   unsigned NumElem = StVT.getVectorNumElements();
 
+  // A vector must always be stored in memory as-is, i.e. without any padding
+  // between the elements, since various code depend on it, e.g. in the
+  // handling of a bitcast of a vector type to int, which may be done with a
+  // vector store followed by an integer load. A vector that does not have
+  // elements that are byte-sized must therefore be stored as an integer
+  // built out of the extracted vector elements.
+  if (!MemSclVT.isByteSized()) {
+    unsigned NumBits = StVT.getSizeInBits();
+    EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), NumBits);
+
+    SDValue CurrVal = DAG.getConstant(0, SL, IntVT);
+
+    for (unsigned Idx = 0; Idx < NumElem; ++Idx) {
+      SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, RegSclVT, Value,
+                                DAG.getConstant(Idx, SL, IdxVT));
+      SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, MemSclVT, Elt);
+      SDValue ExtElt = DAG.getNode(ISD::ZERO_EXTEND, SL, IntVT, Trunc);
+      SDValue ShiftAmount =
+        DAG.getConstant(Idx * MemSclVT.getSizeInBits(), SL, IntVT);
+      SDValue ShiftedElt = DAG.getNode(ISD::SHL, SL, IntVT, ExtElt, ShiftAmount);
+      CurrVal = DAG.getNode(ISD::OR, SL, IntVT, CurrVal, ShiftedElt);
+    }
+
+    return DAG.getStore(Chain, SL, CurrVal, BasePtr, ST->getPointerInfo(),
+                        ST->getAlignment(), ST->getMemOperand()->getFlags(),
+                        ST->getAAInfo());
+  }
+
+  // Store Stride in bytes
+  unsigned Stride = MemSclVT.getSizeInBits() / 8;
+  assert (Stride && "Zero stride!");
   // Extract each of the elements from the original vector and save them into
   // memory individually.
   SmallVector<SDValue, 8> Stores;

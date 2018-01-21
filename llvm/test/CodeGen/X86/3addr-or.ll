@@ -14,16 +14,18 @@ define i32 @test1(i32 %x) nounwind ssp {
   ret i32 %t1
 }
 
+; This test no longer requires or to be converted to 3 addr form because we are
+; are able to use a zero extend instead of an 'and' which gives the register
+; allocator freedom.
 define i64 @test2(i8 %A, i8 %B) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def %esi killed %esi def %rsi
 ; CHECK-NEXT:    # kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    shll $4, %edi
 ; CHECK-NEXT:    andl $48, %edi
-; CHECK-NEXT:    andl $240, %esi
-; CHECK-NEXT:    shrq $4, %rsi
-; CHECK-NEXT:    leaq (%rsi,%rdi), %rax
+; CHECK-NEXT:    movzbl %sil, %eax
+; CHECK-NEXT:    shrq $4, %rax
+; CHECK-NEXT:    orq %rdi, %rax
 ; CHECK-NEXT:    retq
   %C = zext i8 %A to i64
   %D = shl i64 %C, 4
