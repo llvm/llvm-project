@@ -56,6 +56,11 @@ public:
     Materializing = 1U << 6
   };
 
+  static JITSymbolFlags stripTransientFlags(JITSymbolFlags Orig) {
+    return static_cast<FlagNames>(Orig.Flags &
+                                  ~(NotMaterialized | Materializing));
+  }
+
   /// @brief Default-construct a JITSymbolFlags instance.
   JITSymbolFlags() = default;
 

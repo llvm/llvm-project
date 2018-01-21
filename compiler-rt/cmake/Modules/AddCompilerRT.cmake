@@ -463,40 +463,51 @@ endmacro(add_compiler_rt_script src name)
 # Can be used to build sanitized versions of libc++ for running unit tests.
 # add_custom_libcxx(<name> <prefix>
 #                   DEPS <list of build deps>
-#                   CFLAGS <list of compile flags>)
+#                   CFLAGS <list of compile flags>
+#                   USE_TOOLCHAIN)
 macro(add_custom_libcxx name prefix)
   if(NOT COMPILER_RT_LIBCXX_PATH)
     message(FATAL_ERROR "libcxx not found!")
   endif()
 
-  cmake_parse_arguments(LIBCXX "" "" "DEPS;CFLAGS;CMAKE_ARGS" ${ARGN})
+  cmake_parse_arguments(LIBCXX "USE_TOOLCHAIN" "" "DEPS;CFLAGS;CMAKE_ARGS" ${ARGN})
   foreach(flag ${LIBCXX_CFLAGS})
     set(flagstr "${flagstr} ${flag}")
   endforeach()
   set(LIBCXX_CFLAGS ${flagstr})
 
-  if(NOT COMPILER_RT_STANDALONE_BUILD)
-    list(APPEND LIBCXX_DEPS clang)
+  if(LIBCXX_USE_TOOLCHAIN)
+    set(compiler_args -DCMAKE_C_COMPILER=${COMPILER_RT_TEST_COMPILER}
+                      -DCMAKE_CXX_COMPILER=${COMPILER_RT_TEST_CXX_COMPILER})
+    if(NOT COMPILER_RT_STANDALONE_BUILD)
+      set(force_deps DEPENDS clang)
+    endif()
+  endif()
+
+  if(CMAKE_SYSROOT)
+    set(sysroot_arg -DCMAKE_SYSROOT=${CMAKE_SYSROOT})
   endif()
 
   ExternalProject_Add(${name}
+    DEPENDS ${LIBCXX_DEPS}
     PREFIX ${prefix}
     SOURCE_DIR ${COMPILER_RT_LIBCXX_PATH}
-    CMAKE_ARGS -DCMAKE_MAKE_PROGRAM:STRING=${CMAKE_MAKE_PROGRAM}
-               -DCMAKE_C_COMPILER=${COMPILER_RT_TEST_COMPILER}
-               -DCMAKE_CXX_COMPILER=${COMPILER_RT_TEST_CXX_COMPILER}
+    CMAKE_ARGS -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
+               ${compiler_args}
+               ${sysroot_arg}
                -DCMAKE_C_FLAGS=${LIBCXX_CFLAGS}
                -DCMAKE_CXX_FLAGS=${LIBCXX_CFLAGS}
                -DCMAKE_BUILD_TYPE=Release
-               -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
+               -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
                -DLLVM_PATH=${LLVM_MAIN_SRC_DIR}
                -DLIBCXX_STANDALONE_BUILD=On
                ${LIBCXX_CMAKE_ARGS}
+    STEP_TARGETS configure build install
     LOG_BUILD 1
     LOG_CONFIGURE 1
     LOG_INSTALL 1
+    EXCLUDE_FROM_ALL TRUE
     )
-  set_target_properties(${name} PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
   ExternalProject_Add_Step(${name} force-reconfigure
     DEPENDERS configure
@@ -508,7 +519,7 @@ macro(add_custom_libcxx name prefix)
     COMMAND ${CMAKE_COMMAND} -E make_directory <BINARY_DIR>
     COMMENT "Clobberring ${name} build directory..."
     DEPENDERS configure
-    DEPENDS ${LIBCXX_DEPS}
+    ${force_deps}
     )
 endmacro()
 

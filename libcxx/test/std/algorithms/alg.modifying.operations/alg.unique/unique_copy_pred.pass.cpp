@@ -15,13 +15,29 @@
 //         && HasAssign<InIter::value_type, InIter::reference>
 //         && Constructible<InIter::value_type, InIter::reference>
 //         && CopyConstructible<Pred>
-//   OutIter
+//   constexpr OutIter        // constexpr after C++17
 //   unique_copy(InIter first, InIter last, OutIter result, Pred pred);
 
 #include <algorithm>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
+
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool test_constexpr() {
+          int ia[]       = {0, 1, 2, 2, 4};
+          int ib[]       = {0, 0, 0, 0, 0};
+    const int expected[] = {0, 1, 2, 4};
+
+    auto it = std::unique_copy(std::begin(ia), std::end(ia), std::begin(ib),
+                         [](int a, int b) {return a == b; });
+    return it == (std::begin(ib) + std::size(expected))
+        && *it == 0 // don't overwrite final value in output
+        && std::equal(std::begin(ib), it, std::begin(expected), std::end(expected))
+        ;
+    }
+#endif
 
 struct count_equal
 {
@@ -149,4 +165,8 @@ int main()
     test<const int*, bidirectional_iterator<int*> >();
     test<const int*, random_access_iterator<int*> >();
     test<const int*, int*>();
+
+#if TEST_STD_VER > 17
+    static_assert(test_constexpr());
+#endif
 }

@@ -141,7 +141,7 @@ function(llvm_ExternalProject_Add name source_dir)
                       -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
                       -DCMAKE_AR=${CMAKE_AR}
                       -DCMAKE_RANLIB=${CMAKE_RANLIB})
-    set(llvm_config_path "${LLVM_NATIVE_BUILD}/bin/llvm-config")
+    set(llvm_config_path ${LLVM_CONFIG_PATH})
   else()
     set(llvm_config_path "$<TARGET_FILE:llvm-config>")
   endif()
