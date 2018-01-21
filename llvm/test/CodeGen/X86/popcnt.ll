@@ -71,7 +71,6 @@ define i16 @cnt16(i16 %x) nounwind readnone {
 ; X32-NEXT:    andl $13107, %eax # imm = 0x3333
 ; X32-NEXT:    addl %ecx, %eax
 ; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    andl $-16, %ecx
 ; X32-NEXT:    shrl $4, %ecx
 ; X32-NEXT:    addl %eax, %ecx
 ; X32-NEXT:    andl $3855, %ecx # imm = 0xF0F
@@ -94,7 +93,6 @@ define i16 @cnt16(i16 %x) nounwind readnone {
 ; X64-NEXT:    andl $13107, %edi # imm = 0x3333
 ; X64-NEXT:    addl %eax, %edi
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    andl $-16, %eax
 ; X64-NEXT:    shrl $4, %eax
 ; X64-NEXT:    addl %edi, %eax
 ; X64-NEXT:    andl $3855, %eax # imm = 0xF0F

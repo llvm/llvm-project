@@ -1514,6 +1514,10 @@ def : Pat<(i8 (trunc GR16:$src)),
           (EXTRACT_SUBREG GR16:$src, sub_8bit)>,
       Requires<[In64BitMode]>;
 
+def immff00_ffff  : ImmLeaf<i32, [{
+  return Imm >= 0xff00 && Imm <= 0xffff;
+}]>;
+
 // h-register tricks
 def : Pat<(i8 (trunc (srl_su GR16:$src, (i8 8)))),
           (EXTRACT_SUBREG GR16:$src, sub_8bit_hi)>,
@@ -1534,7 +1538,7 @@ def : Pat<(i32 (anyext (srl_su GR16:$src, (i8 8)))),
           (MOVZX32_NOREXrr8 (EXTRACT_SUBREG GR16:$src, sub_8bit_hi))>;
 def : Pat<(and (srl_su GR32:$src, (i8 8)), (i32 255)),
           (MOVZX32_NOREXrr8 (EXTRACT_SUBREG GR32:$src, sub_8bit_hi))>;
-def : Pat<(srl (and_su GR32:$src, 0xff00), (i8 8)),
+def : Pat<(srl (and_su GR32:$src, immff00_ffff), (i8 8)),
           (MOVZX32_NOREXrr8 (EXTRACT_SUBREG GR32:$src, sub_8bit_hi))>;
 
 // h-register tricks.
