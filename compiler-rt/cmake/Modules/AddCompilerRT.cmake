@@ -482,6 +482,9 @@ macro(add_custom_libcxx name prefix)
     if(NOT COMPILER_RT_STANDALONE_BUILD)
       set(force_deps DEPENDS clang)
     endif()
+  else()
+    set(compiler_args -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+                      -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER})
   endif()
 
   if(CMAKE_SYSROOT)
