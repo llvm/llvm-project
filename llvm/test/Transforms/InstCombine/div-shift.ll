@@ -103,9 +103,7 @@ define i32 @t6(i32 %x, i32 %z) {
 
 define i32 @t7(i32 %x) {
 ; CHECK-LABEL: @t7(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[R:%.*]] = sdiv i32 [[SHL]], [[X]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 4
 ;
   %shl = shl nsw i32 %x, 2
   %r = sdiv i32 %shl, %x
@@ -127,9 +125,7 @@ define i32 @t8(i32 %x) {
 
 define <2 x i32> @t9(<2 x i32> %x) {
 ; CHECK-LABEL: @t9(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nsw <2 x i32> [[X:%.*]], <i32 2, i32 3>
-; CHECK-NEXT:    [[R:%.*]] = sdiv <2 x i32> [[SHL]], [[X]]
-; CHECK-NEXT:    ret <2 x i32> [[R]]
+; CHECK-NEXT:    ret <2 x i32> <i32 4, i32 8>
 ;
   %shl = shl nsw <2 x i32> %x, <i32 2, i32 3>
   %r = sdiv <2 x i32> %shl, %x
@@ -138,8 +134,7 @@ define <2 x i32> @t9(<2 x i32> %x) {
 
 define i32 @t10(i32 %x, i32 %y) {
 ; CHECK-LABEL: @t10(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = sdiv i32 [[SHL]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = shl nsw i32 1, [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %shl = shl nsw i32 %x, %y
@@ -149,8 +144,7 @@ define i32 @t10(i32 %x, i32 %y) {
 
 define <2 x i32> @t11(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @t11(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nsw <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = sdiv <2 x i32> [[SHL]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = shl nsw <2 x i32> <i32 1, i32 1>, [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %shl = shl nsw <2 x i32> %x, %y
@@ -160,9 +154,7 @@ define <2 x i32> @t11(<2 x i32> %x, <2 x i32> %y) {
 
 define i32 @t12(i32 %x) {
 ; CHECK-LABEL: @t12(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[SHL]], [[X]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 4
 ;
   %shl = shl nuw i32 %x, 2
   %r = udiv i32 %shl, %x
@@ -184,9 +176,7 @@ define i32 @t13(i32 %x) {
 
 define <2 x i32> @t14(<2 x i32> %x) {
 ; CHECK-LABEL: @t14(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <2 x i32> [[X:%.*]], <i32 2, i32 3>
-; CHECK-NEXT:    [[R:%.*]] = udiv <2 x i32> [[SHL]], [[X]]
-; CHECK-NEXT:    ret <2 x i32> [[R]]
+; CHECK-NEXT:    ret <2 x i32> <i32 4, i32 8>
 ;
   %shl = shl nuw <2 x i32> %x, <i32 2, i32 3>
   %r = udiv <2 x i32> %shl, %x
@@ -195,8 +185,7 @@ define <2 x i32> @t14(<2 x i32> %x) {
 
 define i32 @t15(i32 %x, i32 %y) {
 ; CHECK-LABEL: @t15(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[SHL]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw i32 1, [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %shl = shl nuw i32 %x, %y
@@ -206,8 +195,7 @@ define i32 @t15(i32 %x, i32 %y) {
 
 define <2 x i32> @t16(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @t16(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = udiv <2 x i32> [[SHL]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw <2 x i32> <i32 1, i32 1>, [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %shl = shl nuw <2 x i32> %x, %y
