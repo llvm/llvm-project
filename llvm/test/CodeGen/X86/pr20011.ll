@@ -7,20 +7,22 @@
 define void @crash(i64 %x0, i64 %y0, %destTy* nocapture %dest) nounwind {
 ; X86-LABEL: crash:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %dl
-; X86-NEXT:    andb $3, %dl
-; X86-NEXT:    movb %dl, (%ecx)
-; X86-NEXT:    andb $3, %al
-; X86-NEXT:    movb %al, (%ecx)
+; X86-NEXT:    shlb $2, %dl
+; X86-NEXT:    andb $3, %cl
+; X86-NEXT:    orb %dl, %cl
+; X86-NEXT:    andb $15, %cl
+; X86-NEXT:    movb %cl, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: crash:
 ; X64:       # %bb.0:
-; X64-NEXT:    andl $3, %esi
-; X64-NEXT:    movb %sil, (%rdx)
-; X64-NEXT:    andl $3, %edi
+; X64-NEXT:    shlb $2, %sil
+; X64-NEXT:    andb $3, %dil
+; X64-NEXT:    orb %sil, %dil
+; X64-NEXT:    andb $15, %dil
 ; X64-NEXT:    movb %dil, (%rdx)
 ; X64-NEXT:    retq
   %x1 = trunc i64 %x0 to i2
