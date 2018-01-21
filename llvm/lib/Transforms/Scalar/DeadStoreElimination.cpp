@@ -146,7 +146,8 @@ deleteDeadInstruction(Instruction *I, BasicBlock::iterator *BBI,
 
 /// Does this instruction write some memory?  This only returns true for things
 /// that we can analyze with other helpers below.
-static bool hasMemoryWrite(Instruction *I, const TargetLibraryInfo &TLI) {
+static bool hasAnalyzableMemoryWrite(Instruction *I,
+                                     const TargetLibraryInfo &TLI) {
   if (isa<StoreInst>(I))
     return true;
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
@@ -180,7 +181,8 @@ static bool hasMemoryWrite(Instruction *I, const TargetLibraryInfo &TLI) {
 /// Return a Location stored to by the specified instruction. If isRemovable
 /// returns true, this function and getLocForRead completely describe the memory
 /// operations for this instruction.
-static MemoryLocation getLocForWrite(Instruction *Inst, AliasAnalysis &AA) {
+static MemoryLocation getLocForWrite(Instruction *Inst) {
+  
   if (StoreInst *SI = dyn_cast<StoreInst>(Inst))
     return MemoryLocation::get(SI);
 
@@ -190,29 +192,30 @@ static MemoryLocation getLocForWrite(Instruction *Inst, AliasAnalysis &AA) {
     return Loc;
   }
 
-  IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst);
-  if (!II)
-    return MemoryLocation();
-
-  switch (II->getIntrinsicID()) {
-  default:
-    return MemoryLocation(); // Unhandled intrinsic.
-  case Intrinsic::init_trampoline:
-    // FIXME: We don't know the size of the trampoline, so we can't really
-    // handle it here.
-    return MemoryLocation(II->getArgOperand(0));
-  case Intrinsic::lifetime_end: {
-    uint64_t Len = cast<ConstantInt>(II->getArgOperand(0))->getZExtValue();
-    return MemoryLocation(II->getArgOperand(1), Len);
+  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
+    switch (II->getIntrinsicID()) {
+    default:
+      return MemoryLocation(); // Unhandled intrinsic.
+    case Intrinsic::init_trampoline:
+      return MemoryLocation(II->getArgOperand(0));
+    case Intrinsic::lifetime_end: {
+      uint64_t Len = cast<ConstantInt>(II->getArgOperand(0))->getZExtValue();
+      return MemoryLocation(II->getArgOperand(1), Len);
+    }
+    }
   }
-  }
+  if (auto CS = CallSite(Inst))
+    // All the supported TLI functions so far happen to have dest as their
+    // first argument.
+    return MemoryLocation(CS.getArgument(0));
+  return MemoryLocation();
 }
 
-/// Return the location read by the specified "hasMemoryWrite" instruction if
-/// any.
+/// Return the location read by the specified "hasAnalyzableMemoryWrite"
+/// instruction if any.
 static MemoryLocation getLocForRead(Instruction *Inst,
                                     const TargetLibraryInfo &TLI) {
-  assert(hasMemoryWrite(Inst, TLI) && "Unknown instruction case");
+  assert(hasAnalyzableMemoryWrite(Inst, TLI) && "Unknown instruction case");
 
   // The only instructions that both read and write are the mem transfer
   // instructions (memcpy/memmove).
@@ -230,7 +233,7 @@ static bool isRemovable(Instruction *I) {
 
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
     switch (II->getIntrinsicID()) {
-    default: llvm_unreachable("doesn't pass 'hasMemoryWrite' predicate");
+    default: llvm_unreachable("doesn't pass 'hasAnalyzableMemoryWrite' predicate");
     case Intrinsic::lifetime_end:
       // Never remove dead lifetime_end's, e.g. because it is followed by a
       // free.
@@ -246,6 +249,7 @@ static bool isRemovable(Instruction *I) {
     }
   }
 
+  // note: only get here for calls with analyzable writes - i.e. libcalls
   if (auto CS = CallSite(I))
     return CS.getInstruction()->use_empty();
 
@@ -286,23 +290,12 @@ static bool isShortenableAtTheBeginning(Instruction *I) {
 
 /// Return the pointer that is being written to.
 static Value *getStoredPointerOperand(Instruction *I) {
-  if (StoreInst *SI = dyn_cast<StoreInst>(I))
-    return SI->getPointerOperand();
-  if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(I))
-    return MI->getDest();
-
-  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
-    switch (II->getIntrinsicID()) {
-    default: llvm_unreachable("Unexpected intrinsic!");
-    case Intrinsic::init_trampoline:
-      return II->getArgOperand(0);
-    }
-  }
-
-  CallSite CS(I);
-  // All the supported functions so far happen to have dest as their first
-  // argument.
-  return CS.getArgument(0);
+  //TODO: factor this to reuse getLocForWrite
+  MemoryLocation Loc = getLocForWrite(I);
+  assert(Loc.Ptr &&
+         "unable to find pointer writen for analyzable instruction?");
+  // TODO: most APIs don't expect const Value *
+  return const_cast<Value*>(Loc.Ptr);
 }
 
 static uint64_t getPointerSize(const Value *V, const DataLayout &DL,
@@ -650,7 +643,8 @@ static bool handleFree(CallInst *F, AliasAnalysis *AA,
         MD->getPointerDependencyFrom(Loc, false, InstPt->getIterator(), BB);
     while (Dep.isDef() || Dep.isClobber()) {
       Instruction *Dependency = Dep.getInst();
-      if (!hasMemoryWrite(Dependency, *TLI) || !isRemovable(Dependency))
+      if (!hasAnalyzableMemoryWrite(Dependency, *TLI) ||
+          !isRemovable(Dependency))
         break;
 
       Value *DepPointer =
@@ -754,7 +748,7 @@ static bool handleEndBlock(BasicBlock &BB, AliasAnalysis *AA,
     --BBI;
 
     // If we find a store, check to see if it points into a dead stack value.
-    if (hasMemoryWrite(&*BBI, *TLI) && isRemovable(&*BBI)) {
+    if (hasAnalyzableMemoryWrite(&*BBI, *TLI) && isRemovable(&*BBI)) {
       // See through pointer-to-pointer bitcasts
       SmallVector<Value *, 4> Pointers;
       GetUnderlyingObjects(getStoredPointerOperand(&*BBI), Pointers, DL);
@@ -966,7 +960,7 @@ static bool removePartiallyOverlappedStores(AliasAnalysis *AA,
   bool Changed = false;
   for (auto OI : IOL) {
     Instruction *EarlierWrite = OI.first;
-    MemoryLocation Loc = getLocForWrite(EarlierWrite, *AA);
+    MemoryLocation Loc = getLocForWrite(EarlierWrite);
     assert(isRemovable(EarlierWrite) && "Expect only removable instruction");
     assert(Loc.Size != MemoryLocation::UnknownSize && "Unexpected mem loc");
 
@@ -1067,7 +1061,7 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
     }
 
     // Check to see if Inst writes to memory.  If not, continue.
-    if (!hasMemoryWrite(Inst, *TLI))
+    if (!hasAnalyzableMemoryWrite(Inst, *TLI))
       continue;
 
     // eliminateNoopStore will update in iterator, if necessary.
@@ -1085,7 +1079,7 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
       continue;
 
     // Figure out what location is being stored to.
-    MemoryLocation Loc = getLocForWrite(Inst, *AA);
+    MemoryLocation Loc = getLocForWrite(Inst);
 
     // If we didn't get a useful location, fail.
     if (!Loc.Ptr)
@@ -1107,7 +1101,9 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
       //
       // Find out what memory location the dependent instruction stores.
       Instruction *DepWrite = InstDep.getInst();
-      MemoryLocation DepLoc = getLocForWrite(DepWrite, *AA);
+      if (!hasAnalyzableMemoryWrite(DepWrite, *TLI))
+        break;
+      MemoryLocation DepLoc = getLocForWrite(DepWrite);
       // If we didn't get a useful location, or if it isn't a size, bail out.
       if (!DepLoc.Ptr)
         break;

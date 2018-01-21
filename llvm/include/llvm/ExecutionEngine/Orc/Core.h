@@ -138,6 +138,11 @@ public:
       std::map<SymbolStringPtr, RelativeLinkageStrength>;
   using SourceWorkMap = std::map<SymbolSource *, SymbolNameSet>;
 
+  struct LookupFlagsResult {
+    SymbolFlagsMap SymbolFlags;
+    SymbolNameSet SymbolsNotFound;
+  };
+
   struct LookupResult {
     SourceWorkMap MaterializationWork;
     SymbolNameSet UnresolvedSymbols;
@@ -174,6 +179,12 @@ public:
 
   /// @brief Finalize the given symbols.
   void finalize(SymbolNameSet SymbolsToFinalize);
+
+  /// @brief Look up the flags for the given symbols.
+  ///
+  /// Returns the flags for the give symbols, together with the set of symbols
+  /// not found.
+  LookupFlagsResult lookupFlags(SymbolNameSet Symbols);
 
   /// @brief Apply the given query to the given symbols in this VSO.
   ///
