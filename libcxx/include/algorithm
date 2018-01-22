@@ -236,19 +236,19 @@ template <class OutputIterator, class Size, class Generator>
     generate_n(OutputIterator first, Size n, Generator gen);
 
 template <class ForwardIterator, class T>
-    ForwardIterator
+    constexpr ForwardIterator     // constexpr in C++20
     remove(ForwardIterator first, ForwardIterator last, const T& value);
 
 template <class ForwardIterator, class Predicate>
-    ForwardIterator
+    constexpr ForwardIterator     // constexpr in C++20
     remove_if(ForwardIterator first, ForwardIterator last, Predicate pred);
 
 template <class InputIterator, class OutputIterator, class T>
-    OutputIterator
+    constexpr OutputIterator     // constexpr in C++20
     remove_copy(InputIterator first, InputIterator last, OutputIterator result, const T& value);
 
 template <class InputIterator, class OutputIterator, class Predicate>
-    OutputIterator
+    constexpr OutputIterator     // constexpr in C++20
     remove_copy_if(InputIterator first, InputIterator last, OutputIterator result, Predicate pred);
 
 template <class ForwardIterator>
@@ -272,7 +272,7 @@ template <class BidirectionalIterator>
     reverse(BidirectionalIterator first, BidirectionalIterator last);
 
 template <class BidirectionalIterator, class OutputIterator>
-    OutputIterator
+    constexpr OutputIterator       // constexpr in C++20
     reverse_copy(BidirectionalIterator first, BidirectionalIterator last, OutputIterator result);
 
 template <class ForwardIterator>
@@ -2098,7 +2098,7 @@ generate_n(_OutputIterator __first, _Size __orig_n, _Generator __gen)
 // remove
 
 template <class _ForwardIterator, class _Tp>
-_ForwardIterator
+_LIBCPP_CONSTEXPR_AFTER_CXX17 _ForwardIterator
 remove(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value_)
 {
     __first = _VSTD::find(__first, __last, __value_);
@@ -2120,7 +2120,7 @@ remove(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value_)
 // remove_if
 
 template <class _ForwardIterator, class _Predicate>
-_ForwardIterator
+_LIBCPP_CONSTEXPR_AFTER_CXX17 _ForwardIterator
 remove_if(_ForwardIterator __first, _ForwardIterator __last, _Predicate __pred)
 {
     __first = _VSTD::find_if<_ForwardIterator, typename add_lvalue_reference<_Predicate>::type>
@@ -2143,7 +2143,7 @@ remove_if(_ForwardIterator __first, _ForwardIterator __last, _Predicate __pred)
 // remove_copy
 
 template <class _InputIterator, class _OutputIterator, class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _OutputIterator
 remove_copy(_InputIterator __first, _InputIterator __last, _OutputIterator __result, const _Tp& __value_)
 {
@@ -2161,7 +2161,7 @@ remove_copy(_InputIterator __first, _InputIterator __last, _OutputIterator __res
 // remove_copy_if
 
 template <class _InputIterator, class _OutputIterator, class _Predicate>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _OutputIterator
 remove_copy_if(_InputIterator __first, _InputIterator __last, _OutputIterator __result, _Predicate __pred)
 {
@@ -2327,7 +2327,7 @@ reverse(_BidirectionalIterator __first, _BidirectionalIterator __last)
 // reverse_copy
 
 template <class _BidirectionalIterator, class _OutputIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _OutputIterator
 reverse_copy(_BidirectionalIterator __first, _BidirectionalIterator __last, _OutputIterator __result)
 {
