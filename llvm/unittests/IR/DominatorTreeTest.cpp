@@ -925,3 +925,28 @@ TEST(DominatorTree, InsertDeleteExhaustive) {
     }
   }
 }
+
+TEST(DominatorTree, InsertIntoIrreducible) {
+  std::vector<CFGBuilder::Arc> Arcs = {
+      {"0", "1"},
+      {"1", "27"}, {"1", "7"},
+      {"10", "18"},
+      {"13", "10"},
+      {"18", "13"}, {"18", "23"},
+      {"23", "13"}, {"23", "24"},
+      {"24", "1"}, {"24", "18"},
+      {"27", "24"}};
+
+  CFGHolder Holder;
+  CFGBuilder B(Holder.F, Arcs, {{Insert, {"7", "23"}}});
+  DominatorTree DT(*Holder.F);
+  EXPECT_TRUE(DT.verify());
+
+  B.applyUpdate();
+  BasicBlock *From = B.getOrAddBlock("7");
+  BasicBlock *To = B.getOrAddBlock("23");
+  DT.insertEdge(From, To);
+
+  EXPECT_TRUE(DT.verify());
+}
+
