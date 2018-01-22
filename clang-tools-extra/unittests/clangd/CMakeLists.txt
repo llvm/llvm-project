@@ -18,6 +18,7 @@ add_extra_unittest(ClangdTests
   FuzzyMatchTests.cpp
   IndexTests.cpp
   JSONExprTests.cpp
+  URITests.cpp
   TestFS.cpp
   TraceTests.cpp
   SourceCodeTests.cpp

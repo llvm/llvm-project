@@ -584,7 +584,7 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
 bool DevirtModule::runForTesting(
     Module &M, function_ref<AAResults &(Function &)> AARGetter,
     function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter) {
-  ModuleSummaryIndex Summary;
+  ModuleSummaryIndex Summary(/*IsPerformingAnalysis=*/false);
 
   // Handle the command-line summary arguments. This code is for testing
   // purposes only, so we handle errors directly.

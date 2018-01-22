@@ -645,7 +645,7 @@ ObjCDeallocChecker::findPropertyOnDeallocatingInstance(
 bool ObjCDeallocChecker::diagnoseExtraRelease(SymbolRef ReleasedValue,
                                               const ObjCMethodCall &M,
                                               CheckerContext &C) const {
-  // Try to get the region from which the the released value was loaded.
+  // Try to get the region from which the released value was loaded.
   // Note that, unlike diagnosing for missing releases, here we don't track
   // values that must not be released in the state. This is because even if
   // these values escape, it is still an error under the rules of MRR to

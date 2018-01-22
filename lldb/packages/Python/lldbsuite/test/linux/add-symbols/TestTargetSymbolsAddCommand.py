@@ -47,7 +47,7 @@ class TargetSymbolsAddCommand(TestBase):
 
         # Tell LLDB that a.out has symbols for stripped.out
         self.runCmd("target symbols add -s %s %s" %
-                    exe, self.getBuildArtifact("a.out"))
+                    (exe, self.getBuildArtifact("a.out")))
 
         # Check that symbols are now loaded and main.c is in the output.
         self.expect("frame select", substrs=['main.c'])

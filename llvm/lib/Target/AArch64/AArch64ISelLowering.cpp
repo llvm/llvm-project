@@ -7298,8 +7298,21 @@ SDValue AArch64TargetLowering::LowerVSETCC(SDValue Op,
     return DAG.getSExtOrTrunc(Cmp, dl, Op.getValueType());
   }
 
-  if (LHS.getValueType().getVectorElementType() == MVT::f16)
-    return SDValue();
+  const bool FullFP16 =
+    static_cast<const AArch64Subtarget &>(DAG.getSubtarget()).hasFullFP16();
+
+  // Make v4f16 (only) fcmp operations utilise vector instructions
+  // v8f16 support will be a litle more complicated
+  if (LHS.getValueType().getVectorElementType() == MVT::f16) {
+    if (!FullFP16 && LHS.getValueType().getVectorNumElements() == 4) {
+      LHS = DAG.getNode(ISD::FP_EXTEND, dl, MVT::v4f32, LHS);
+      RHS = DAG.getNode(ISD::FP_EXTEND, dl, MVT::v4f32, RHS);
+      SDValue NewSetcc = DAG.getSetCC(dl, MVT::v4i16, LHS, RHS, CC);
+      DAG.ReplaceAllUsesWith(Op, NewSetcc);
+      CmpVT = MVT::v4i32;
+    } else
+      return SDValue();
+  }
 
   assert(LHS.getValueType().getVectorElementType() == MVT::f32 ||
          LHS.getValueType().getVectorElementType() == MVT::f64);
