@@ -363,7 +363,7 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx, Twine Filename,
   if (!Find.empty()) {
     DumpOffsets[DIDT_ID_DebugInfo] = [&]() -> llvm::Optional<uint64_t> {
       for (auto Name : Find) {
-        auto find = [&](const DWARFAcceleratorTable &Accel)
+        auto find = [&](const AppleAcceleratorTable &Accel)
             -> llvm::Optional<uint64_t> {
           for (auto Entry : Accel.equal_range(Name))
             for (auto Atom : Entry)
