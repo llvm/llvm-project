@@ -209,7 +209,7 @@ OpenCL C Language Changes in Clang
 OpenMP Support in Clang
 ----------------------------------
 
-- Added options `-f[no]-openmp-simd` that support code emission only foe OpenMP
+- Added options `-f[no]-openmp-simd` that support code emission only for OpenMP
   SIMD-based directives, like `#pragma omp simd`, `#pragma omp parallel for simd`
   etc. The code is emitted only for simd-based part of the combined directives
   and clauses.
