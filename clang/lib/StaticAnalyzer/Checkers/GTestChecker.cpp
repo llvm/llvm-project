@@ -161,7 +161,7 @@ void GTestChecker::modelAssertionResultCopyConstructor(
     const CXXConstructorCall *Call, CheckerContext &C) const {
   assert(Call->getNumArgs() == 1);
 
-  // The first parameter of the the copy constructor must be the other
+  // The first parameter of the copy constructor must be the other
   // instance to initialize this instances fields from.
   SVal OtherVal = Call->getArgSVal(0);
   SVal ThisVal = Call->getCXXThisVal();
