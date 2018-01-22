@@ -15,14 +15,31 @@
 //   requires OutputIterator<OutIter, InIter1::reference>
 //         && OutputIterator<OutIter, InIter2::reference>
 //         && HasLess<InIter2::value_type, InIter1::value_type>
-//   OutIter
+//   constexpr OutIter       // constexpr after C++17
 //   merge(InIter1 first1, InIter1 last1, InIter2 first2, InIter2 last2, OutIter result);
 
 #include <algorithm>
 #include <random>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
+
+
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool test_constexpr() {
+          int ia[]       = {0, 1, 2, 3, 4};
+          int ib[]       = {2, 4, 6, 8};
+          int ic[]       = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    const int expected[] = {0, 1, 2, 2, 3, 4, 4, 6, 8};
+
+    auto it = std::merge(std::begin(ia), std::end(ia), std::begin(ib), std::end(ib), std::begin(ic));
+    return std::distance(std::begin(ic), it) == (std::size(ia) + std::size(ib))
+        && *it == 0
+        && std::equal(std::begin(ic), it, std::begin(expected), std::end(expected))
+        ;
+    }
+#endif
 
 std::mt19937 randomness;
 
@@ -224,4 +241,9 @@ int main()
     test<const int*, const int*, bidirectional_iterator<int*> >();
     test<const int*, const int*, random_access_iterator<int*> >();
     test<const int*, const int*, int*>();
+
+#if TEST_STD_VER > 17
+//  Not yet - waiting on std::copy
+//     static_assert(test_constexpr());
+#endif
 }
