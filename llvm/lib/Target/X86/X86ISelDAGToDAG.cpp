@@ -628,11 +628,11 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     SDNode *N = &*I++; // Preincrement iterator to avoid invalidation issues.
 
     if (OptLevel != CodeGenOpt::None &&
-        // Only does this when target favors doesn't favor register indirect
-        // call.
+        // Only do this when the target can fold the load into the call or
+        // jmp.
+        !Subtarget->useRetpoline() &&
         ((N->getOpcode() == X86ISD::CALL && !Subtarget->slowTwoMemOps()) ||
          (N->getOpcode() == X86ISD::TC_RETURN &&
-          // Only does this if load can be folded into TC_RETURN.
           (Subtarget->is64Bit() ||
            !getTargetMachine().isPositionIndependent())))) {
       /// Also try moving call address load from outside callseq_start to just

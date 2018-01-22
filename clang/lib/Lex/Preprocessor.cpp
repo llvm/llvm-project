@@ -773,8 +773,13 @@ void Preprocessor::Lex(Token &Result) {
     }
   } while (!ReturnedToken);
 
-  if (Result.is(tok::code_completion))
+  if (Result.is(tok::code_completion) && Result.getIdentifierInfo()) {
+    // Remember the identifier before code completion token.
     setCodeCompletionIdentifierInfo(Result.getIdentifierInfo());
+    // Set IdenfitierInfo to null to avoid confusing code that handles both
+    // identifiers and completion tokens.
+    Result.setIdentifierInfo(nullptr);
+  }
 
   LastTokenWasAt = Result.is(tok::at);
 }

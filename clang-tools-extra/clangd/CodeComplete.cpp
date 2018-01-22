@@ -361,6 +361,10 @@ struct CompletionRecorder : public CodeCompleteConsumer {
           (Result.Availability == CXAvailability_NotAvailable ||
            Result.Availability == CXAvailability_NotAccessible))
         continue;
+      // Destructor completion is rarely useful, and works inconsistently.
+      // (s.^ completes ~string, but s.~st^ is an error).
+      if (dyn_cast_or_null<CXXDestructorDecl>(Result.Declaration))
+        continue;
       Results.push_back(Result);
     }
   }

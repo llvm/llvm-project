@@ -25820,6 +25820,15 @@ X86TargetLowering::isVectorClearMaskLegal(const SmallVectorImpl<int> &Mask,
   return isShuffleMaskLegal(Mask, VT);
 }
 
+bool X86TargetLowering::areJTsAllowed(const Function *Fn) const {
+  // If the subtarget is using retpolines, we need to not generate jump tables.
+  if (Subtarget.useRetpoline())
+    return false;
+
+  // Otherwise, fallback on the generic logic.
+  return TargetLowering::areJTsAllowed(Fn);
+}
+
 //===----------------------------------------------------------------------===//
 //                           X86 Scheduler Hooks
 //===----------------------------------------------------------------------===//
@@ -27122,6 +27131,115 @@ X86TargetLowering::EmitLoweredTLSCall(MachineInstr &MI,
   return BB;
 }
 
+static unsigned getOpcodeForRetpoline(unsigned RPOpc) {
+  switch (RPOpc) {
+  case X86::RETPOLINE_CALL32:
+    return X86::CALLpcrel32;
+  case X86::RETPOLINE_CALL64:
+    return X86::CALL64pcrel32;
+  case X86::RETPOLINE_TCRETURN32:
+    return X86::TCRETURNdi;
+  case X86::RETPOLINE_TCRETURN64:
+    return X86::TCRETURNdi64;
+  }
+  llvm_unreachable("not retpoline opcode");
+}
+
+static const char *getRetpolineSymbol(const X86Subtarget &Subtarget,
+                                      unsigned Reg) {
+  switch (Reg) {
+  case 0:
+    assert(!Subtarget.is64Bit() && "R11 should always be available on x64");
+    return Subtarget.useRetpolineExternalThunk()
+               ? "__llvm_external_retpoline_push"
+               : "__llvm_retpoline_push";
+  case X86::EAX:
+    return Subtarget.useRetpolineExternalThunk()
+               ? "__llvm_external_retpoline_eax"
+               : "__llvm_retpoline_eax";
+  case X86::ECX:
+    return Subtarget.useRetpolineExternalThunk()
+               ? "__llvm_external_retpoline_ecx"
+               : "__llvm_retpoline_ecx";
+  case X86::EDX:
+    return Subtarget.useRetpolineExternalThunk()
+               ? "__llvm_external_retpoline_edx"
+               : "__llvm_retpoline_edx";
+  case X86::R11:
+    return Subtarget.useRetpolineExternalThunk()
+               ? "__llvm_external_retpoline_r11"
+               : "__llvm_retpoline_r11";
+  }
+  llvm_unreachable("unexpected reg for retpoline");
+}
+
+MachineBasicBlock *
+X86TargetLowering::EmitLoweredRetpoline(MachineInstr &MI,
+                                        MachineBasicBlock *BB) const {
+  // Copy the virtual register into the R11 physical register and
+  // call the retpoline thunk.
+  DebugLoc DL = MI.getDebugLoc();
+  const X86InstrInfo *TII = Subtarget.getInstrInfo();
+  unsigned CalleeVReg = MI.getOperand(0).getReg();
+  unsigned Opc = getOpcodeForRetpoline(MI.getOpcode());
+
+  // Find an available scratch register to hold the callee. On 64-bit, we can
+  // just use R11, but we scan for uses anyway to ensure we don't generate
+  // incorrect code. On 32-bit, we use one of EAX, ECX, or EDX that isn't
+  // already a register use operand to the call to hold the callee. If none
+  // are available, push the callee instead. This is less efficient, but is
+  // necessary for functions using 3 regparms. Such function calls are
+  // (currently) not eligible for tail call optimization, because there is no
+  // scratch register available to hold the address of the callee.
+  SmallVector<unsigned, 3> AvailableRegs;
+  if (Subtarget.is64Bit())
+    AvailableRegs.push_back(X86::R11);
+  else
+    AvailableRegs.append({X86::EAX, X86::ECX, X86::EDX});
+
+  // Zero out any registers that are already used.
+  for (const auto &MO : MI.operands()) {
+    if (MO.isReg() && MO.isUse())
+      for (unsigned &Reg : AvailableRegs)
+        if (Reg == MO.getReg())
+          Reg = 0;
+  }
+
+  // Choose the first remaining non-zero available register.
+  unsigned AvailableReg = 0;
+  for (unsigned MaybeReg : AvailableRegs) {
+    if (MaybeReg) {
+      AvailableReg = MaybeReg;
+      break;
+    }
+  }
+
+  const char *Symbol = getRetpolineSymbol(Subtarget, AvailableReg);
+
+  if (AvailableReg == 0) {
+    // No register available. Use PUSH. This must not be a tailcall, and this
+    // must not be x64.
+    if (Subtarget.is64Bit())
+      report_fatal_error(
+          "Cannot make an indirect call on x86-64 using both retpoline and a "
+          "calling convention that preservers r11");
+    if (Opc != X86::CALLpcrel32)
+      report_fatal_error("Cannot make an indirect tail call on x86 using "
+                         "retpoline without a preserved register");
+    BuildMI(*BB, MI, DL, TII->get(X86::PUSH32r)).addReg(CalleeVReg);
+    MI.getOperand(0).ChangeToES(Symbol);
+    MI.setDesc(TII->get(Opc));
+  } else {
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), AvailableReg)
+        .addReg(CalleeVReg);
+    MI.getOperand(0).ChangeToES(Symbol);
+    MI.setDesc(TII->get(Opc));
+    MachineInstrBuilder(*BB->getParent(), &MI)
+        .addReg(AvailableReg, RegState::Implicit | RegState::Kill);
+  }
+  return BB;
+}
+
 MachineBasicBlock *
 X86TargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
                                     MachineBasicBlock *MBB) const {
@@ -27627,6 +27745,11 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::TLS_base_addr32:
   case X86::TLS_base_addr64:
     return EmitLoweredTLSAddr(MI, BB);
+  case X86::RETPOLINE_CALL32:
+  case X86::RETPOLINE_CALL64:
+  case X86::RETPOLINE_TCRETURN32:
+  case X86::RETPOLINE_TCRETURN64:
+    return EmitLoweredRetpoline(MI, BB);
   case X86::CATCHRET:
     return EmitLoweredCatchRet(MI, BB);
   case X86::CATCHPAD:

@@ -2736,25 +2736,23 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
     }
     I = CmpInstr;
     E = MI;
-  } else if (E != B) {
-    // Allow the loop below to search E (which was initially MI).  Since MI and
-    // SubAdd have different tests, even if that instruction could not be MI, it
-    // could still potentially be SubAdd.
-    --E;
   }
 
   // Check that CPSR isn't set between the comparison instruction and the one we
   // want to change. At the same time, search for SubAdd.
   const TargetRegisterInfo *TRI = &getRegisterInfo();
-  --I;
-  for (; I != E; --I) {
-    const MachineInstr &Instr = *I;
+  do {
+    const MachineInstr &Instr = *--I;
 
     // Check whether CmpInstr can be made redundant by the current instruction.
-    if (isRedundantFlagInstr(&CmpInstr, SrcReg, SrcReg2, CmpValue, &*I)) {
+    if (isRedundantFlagInstr(&CmpInstr, SrcReg, SrcReg2, CmpValue, &Instr)) {
       SubAdd = &*I;
       break;
     }
+
+    // Allow E (which was initially MI) to be SubAdd but do not search before E.
+    if (I == E)
+      break;
 
     if (Instr.modifiesRegister(ARM::CPSR, TRI) ||
         Instr.readsRegister(ARM::CPSR, TRI))
@@ -2762,9 +2760,7 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
       // change. We can't do this transformation.
       return false;
 
-    if (I == B)
-      break;
-  }
+  } while (I != B);
 
   // Return false if no candidates exist.
   if (!MI && !SubAdd)

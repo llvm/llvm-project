@@ -461,7 +461,7 @@ TEST(CompletionTest, NoDuplicates) {
       {cls("Adapter")});
 
   // Make sure there are no duplicate entries of 'Adapter'.
-  EXPECT_THAT(Results.items, ElementsAre(Named("Adapter"), Named("~Adapter")));
+  EXPECT_THAT(Results.items, ElementsAre(Named("Adapter")));
 }
 
 TEST(CompletionTest, ScopedNoIndex) {

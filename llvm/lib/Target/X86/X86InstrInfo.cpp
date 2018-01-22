@@ -8336,7 +8336,7 @@ void X86InstrInfo::breakPartialRegDependency(
     // Using XOR32rr because it has shorter encoding and zeros up the upper bits
     // as well.
     unsigned XReg = TRI->getSubReg(Reg, X86::sub_32bit);
-    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), get(X86::XOR32rr), Reg)
+    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), get(X86::XOR32rr), XReg)
         .addReg(XReg, RegState::Undef)
         .addReg(XReg, RegState::Undef)
         .addReg(Reg, RegState::ImplicitDefine);

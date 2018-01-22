@@ -843,6 +843,12 @@ void ResultBuilder::MaybeAddConstructorResults(Result R) {
   }
 }
 
+static bool isConstructor(const Decl *ND) {
+  if (const auto *Tmpl = dyn_cast<FunctionTemplateDecl>(ND))
+    ND = Tmpl->getTemplatedDecl();
+  return isa<CXXConstructorDecl>(ND);
+}
+
 void ResultBuilder::MaybeAddResult(Result R, DeclContext *CurContext) {
   assert(!ShadowMaps.empty() && "Must enter into a results scope");
   
@@ -870,7 +876,7 @@ void ResultBuilder::MaybeAddResult(Result R, DeclContext *CurContext) {
     return;
       
   // C++ constructors are never found by name lookup.
-  if (isa<CXXConstructorDecl>(R.Declaration))
+  if (isConstructor(R.Declaration))
     return;
 
   ShadowMap &SMap = ShadowMaps.back();
@@ -983,7 +989,7 @@ void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
     return;
   
   // C++ constructors are never found by name lookup.
-  if (isa<CXXConstructorDecl>(R.Declaration))
+  if (isConstructor(R.Declaration))
     return;
 
   if (Hiding && CheckHiddenResult(R, CurContext, Hiding))
@@ -2145,7 +2151,7 @@ static void AddResultTypeChunk(ASTContext &Context,
 
   // Skip constructors and conversion functions, which have their return types
   // built into their names.
-  if (isa<CXXConstructorDecl>(ND) || isa<CXXConversionDecl>(ND))
+  if (isConstructor(ND) || isa<CXXConversionDecl>(ND))
     return;
 
   // Determine the type of the declaration (if it has a type).
