@@ -177,13 +177,7 @@ public:
                                unsigned IACol);
 
   /// Retreive the function info if this is a valid function id, or nullptr.
-  MCCVFunctionInfo *getCVFunctionInfo(unsigned FuncId) {
-    if (FuncId >= Functions.size())
-      return nullptr;
-    if (Functions[FuncId].isUnallocatedFunctionInfo())
-      return nullptr;
-    return &Functions[FuncId];
-  }
+  MCCVFunctionInfo *getCVFunctionInfo(unsigned FuncId);
 
   /// Saves the information from the currently parsed .cv_loc directive
   /// and sets CVLocSeen.  When the next instruction is assembled an entry
@@ -199,50 +193,22 @@ public:
     CurrentCVLoc.setIsStmt(IsStmt);
     CVLocSeen = true;
   }
-  void clearCVLocSeen() { CVLocSeen = false; }
 
   bool getCVLocSeen() { return CVLocSeen; }
+  void clearCVLocSeen() { CVLocSeen = false; }
+
   const MCCVLoc &getCurrentCVLoc() { return CurrentCVLoc; }
 
   bool isValidCVFileNumber(unsigned FileNumber);
 
   /// \brief Add a line entry.
-  void addLineEntry(const MCCVLineEntry &LineEntry) {
-    size_t Offset = MCCVLines.size();
-    auto I = MCCVLineStartStop.insert(
-        {LineEntry.getFunctionId(), {Offset, Offset + 1}});
-    if (!I.second)
-      I.first->second.second = Offset + 1;
-    MCCVLines.push_back(LineEntry);
-  }
+  void addLineEntry(const MCCVLineEntry &LineEntry);
 
-  std::vector<MCCVLineEntry> getFunctionLineEntries(unsigned FuncId) {
-    std::vector<MCCVLineEntry> FilteredLines;
+  std::vector<MCCVLineEntry> getFunctionLineEntries(unsigned FuncId);
 
-    auto I = MCCVLineStartStop.find(FuncId);
-    if (I != MCCVLineStartStop.end())
-      for (size_t Idx = I->second.first, End = I->second.second; Idx != End;
-           ++Idx)
-        if (MCCVLines[Idx].getFunctionId() == FuncId)
-          FilteredLines.push_back(MCCVLines[Idx]);
-    return FilteredLines;
-  }
+  std::pair<size_t, size_t> getLineExtent(unsigned FuncId);
 
-  std::pair<size_t, size_t> getLineExtent(unsigned FuncId) {
-    auto I = MCCVLineStartStop.find(FuncId);
-    // Return an empty extent if there are no cv_locs for this function id.
-    if (I == MCCVLineStartStop.end())
-      return {~0ULL, 0};
-    return I->second;
-  }
-
-  ArrayRef<MCCVLineEntry> getLinesForExtent(size_t L, size_t R) {
-    if (R <= L)
-      return None;
-    if (L >= MCCVLines.size())
-      return None;
-    return makeArrayRef(&MCCVLines[L], R - L);
-  }
+  ArrayRef<MCCVLineEntry> getLinesForExtent(size_t L, size_t R);
 
   /// Emits a line table substream.
   void emitLineTableForFunction(MCObjectStreamer &OS, unsigned FuncId,
