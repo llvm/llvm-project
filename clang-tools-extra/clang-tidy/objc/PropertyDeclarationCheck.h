@@ -34,7 +34,8 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Options) override;
 
 private:
-    const std::vector<std::string> SpecialAcronyms;
+  const std::vector<std::string> SpecialAcronyms;
+  const bool IncludeDefaultAcronyms;
 };
 
 } // namespace objc
