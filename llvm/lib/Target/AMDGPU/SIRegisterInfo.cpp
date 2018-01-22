@@ -1054,8 +1054,8 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         // Convert to an absolute stack address by finding the offset from the
         // scratch wave base and scaling by the wave size.
         //
-        // In an entry function/kernel the stack address is already the absolute
-        // address relative to the the scratch wave offset.
+        // In an entry function/kernel the stack address is already the
+        // absolute address relative to the scratch wave offset.
 
         unsigned DiffReg
           = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);

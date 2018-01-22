@@ -288,7 +288,7 @@ void MipsSEDAGToDAGISel::selectAddE(SDNode *Node, const SDLoc &DL) const {
                     SDValue(Carry, 0)};
   SDNode *DSPCFWithCarry = CurDAG->getMachineNode(Mips::INS, DL, MVT::i32, Ops);
 
-  // My reading of the the MIPS DSP 3.01 specification isn't as clear as I
+  // My reading of the MIPS DSP 3.01 specification isn't as clear as I
   // would like about whether bit 20 always gets overwritten by addwc.
   // Hence take an extremely conservative view and presume it's sticky. We
   // therefore need to clear it.

@@ -731,7 +731,7 @@ bool RuntimeDyldCheckerImpl::checkAllRulesInBuffer(StringRef RulePrefix,
 bool RuntimeDyldCheckerImpl::isSymbolValid(StringRef Symbol) const {
   if (getRTDyld().getSymbol(Symbol))
     return true;
-  JITSymbolResolver::SymbolNameSet Symbols({Symbol});
+  JITSymbolResolver::LookupSet Symbols({Symbol});
   auto Result = getRTDyld().Resolver.lookup(Symbols);
   if (!Result) {
     logAllUnhandledErrors(Result.takeError(), errs(), "RTDyldChecker: ");
@@ -750,7 +750,7 @@ uint64_t RuntimeDyldCheckerImpl::getSymbolRemoteAddr(StringRef Symbol) const {
   if (auto InternalSymbol = getRTDyld().getSymbol(Symbol))
     return InternalSymbol.getAddress();
 
-  JITSymbolResolver::SymbolNameSet Symbols({Symbol});
+  JITSymbolResolver::LookupSet Symbols({Symbol});
   auto Result = getRTDyld().Resolver.lookup(Symbols);
   if (!Result) {
     logAllUnhandledErrors(Result.takeError(), errs(), "RTDyldChecker: ");
