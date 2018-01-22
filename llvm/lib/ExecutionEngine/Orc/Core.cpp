@@ -13,6 +13,7 @@
 namespace llvm {
 namespace orc {
 
+void SymbolResolver::anchor() {}
 void SymbolSource::anchor() {}
 
 AsynchronousSymbolQuery::AsynchronousSymbolQuery(
@@ -287,7 +288,7 @@ void VSO::finalize(SymbolNameSet SymbolsToFinalize) {
   }
 }
 
-VSO::LookupFlagsResult VSO::lookupFlags(SymbolNameSet Names) {
+LookupFlagsResult VSO::lookupFlags(SymbolNameSet Names) {
   SymbolFlagsMap FlagsFound;
 
   for (SymbolNameSet::iterator I = Names.begin(), E = Names.end(); I != E;) {
@@ -331,6 +332,8 @@ VSO::LookupResult VSO::lookup(AsynchronousSymbolQuery &Query,
 
   return {std::move(MaterializationWork), std::move(Names)};
 }
+
+ExecutionSession::ExecutionSession(SymbolStringPool &SSP) : SSP(SSP) {}
 
 VModuleKey ExecutionSession::allocateVModule() { return ++LastKey; }
 

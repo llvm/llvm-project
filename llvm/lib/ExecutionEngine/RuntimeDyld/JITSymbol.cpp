@@ -52,7 +52,7 @@ ARMJITSymbolFlags llvm::ARMJITSymbolFlags::fromObjectSymbol(
 ///        findSymbolInLogicalDylib and if that fails calling
 ///        findSymbol.
 Expected<JITSymbolResolver::LookupResult>
-LegacyJITSymbolResolver::lookup(const SymbolNameSet &Symbols) {
+LegacyJITSymbolResolver::lookup(const LookupSet &Symbols) {
   JITSymbolResolver::LookupResult Result;
   for (auto &Symbol : Symbols) {
     std::string SymName = Symbol.str();
@@ -84,7 +84,7 @@ LegacyJITSymbolResolver::lookup(const SymbolNameSet &Symbols) {
 /// @brief Performs flags lookup by calling findSymbolInLogicalDylib and
 ///        returning the flags value for that symbol.
 Expected<JITSymbolResolver::LookupFlagsResult>
-LegacyJITSymbolResolver::lookupFlags(const SymbolNameSet &Symbols) {
+LegacyJITSymbolResolver::lookupFlags(const LookupSet &Symbols) {
   JITSymbolResolver::LookupFlagsResult Result;
 
   for (auto &Symbol : Symbols) {

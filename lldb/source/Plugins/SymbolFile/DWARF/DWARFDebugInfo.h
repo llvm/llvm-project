@@ -13,6 +13,7 @@
 #include <map>
 #include <vector>
 
+#include "DWARFCompileUnit.h"
 #include "DWARFDIE.h"
 #include "SymbolFileDWARF.h"
 #include "lldb/Core/STLUtils.h"

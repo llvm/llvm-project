@@ -628,7 +628,7 @@ void Liveness::computePhiInfo() {
 
         // Collect the set PropUp of uses that are reached by the current
         // phi PA, and are not covered by any intervening def between the
-        // currently visited use UA and the the upward phi P.
+        // currently visited use UA and the upward phi P.
 
         if (MidDefs.hasCoverOf(UR))
           continue;

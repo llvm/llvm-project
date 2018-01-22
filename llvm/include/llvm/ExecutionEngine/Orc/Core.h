@@ -92,6 +92,25 @@ private:
   SymbolsReadyCallback NotifySymbolsReady;
 };
 
+/// @brief A SymbolFlagsMap containing flags of found symbols, plus a set of
+///        not-found symbols. Shared between SymbolResolver::lookupFlags and
+///        VSO::lookupFlags for convenience.
+struct LookupFlagsResult {
+  SymbolFlagsMap SymbolFlags;
+  SymbolNameSet SymbolsNotFound;
+};
+
+class SymbolResolver {
+public:
+  virtual ~SymbolResolver() = default;
+  virtual LookupFlagsResult lookupFlags(const SymbolNameSet &Symbols) = 0;
+  virtual SymbolNameSet lookup(AsynchronousSymbolQuery &Query,
+                               SymbolNameSet Symbols) = 0;
+
+private:
+  virtual void anchor();
+};
+
 /// @brief Represents a source of symbol definitions which may be materialized
 ///        (turned into data / code through some materialization process) or
 ///        discarded (if the definition is overridden by a stronger one).
@@ -137,11 +156,6 @@ public:
   using SetDefinitionsResult =
       std::map<SymbolStringPtr, RelativeLinkageStrength>;
   using SourceWorkMap = std::map<SymbolSource *, SymbolNameSet>;
-
-  struct LookupFlagsResult {
-    SymbolFlagsMap SymbolFlags;
-    SymbolNameSet SymbolsNotFound;
-  };
 
   struct LookupResult {
     SourceWorkMap MaterializationWork;
@@ -245,6 +259,14 @@ private:
 /// @brief An ExecutionSession represents a running JIT program.
 class ExecutionSession {
 public:
+  /// @brief Construct an ExecutionEngine.
+  ///
+  /// SymbolStringPools may be shared between ExecutionSessions.
+  ExecutionSession(SymbolStringPool &SSP);
+
+  /// @brief Returns the SymbolStringPool for this ExecutionSession.
+  SymbolStringPool &getSymbolStringPool() const { return SSP; }
+
   /// @brief Allocate a module key for a new module to add to the JIT.
   VModuleKey allocateVModule();
 
@@ -254,6 +276,7 @@ public:
   void releaseVModule(VModuleKey Key);
 
 public:
+  SymbolStringPool &SSP;
   VModuleKey LastKey = 0;
 };
 
