@@ -27,7 +27,7 @@ class UbsanBasicTestCase(TestBase):
 
     def ubsan_tests(self):
         # Load the test
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.expect(
             "file " + exe,
             patterns=["Current executable set to .*a.out"])

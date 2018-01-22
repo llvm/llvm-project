@@ -17,7 +17,7 @@ class ForwardDeclarationTestCase(TestBase):
     def test_and_run_command(self):
         """Display *bar_ptr when stopped on a function with forward declaration of struct bar."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break inside the foo function which takes a bar_ptr argument.

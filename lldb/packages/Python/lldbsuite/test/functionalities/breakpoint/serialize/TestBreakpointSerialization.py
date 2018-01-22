@@ -60,7 +60,7 @@ class BreakpointSerialization(TestBase):
         self.addTearDownHook(cleanup)
         self.RemoveTempFile(self.bkpts_file_path)
 
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create the targets we are making breakpoints in and copying them to:
         self.orig_target = self.dbg.CreateTarget(exe)

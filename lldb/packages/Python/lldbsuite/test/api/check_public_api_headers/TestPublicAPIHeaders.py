@@ -20,7 +20,7 @@ class SBDirCheckerCase(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         self.source = 'main.cpp'
-        self.exe_name = 'a.out'
+        self.exe_name = self.getBuildArtifact("a.out")
         self.generateSource(self.source)
 
     @skipIfNoSBHeaders
@@ -39,7 +39,7 @@ class SBDirCheckerCase(TestBase):
 
     def sanity_check_executable(self, exe_name):
         """Sanity check executable compiled from the auto-generated program."""
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
         self.runCmd("file %s" % exe, CURRENT_EXECUTABLE_SET)
 
         self.line_to_break = line_number(

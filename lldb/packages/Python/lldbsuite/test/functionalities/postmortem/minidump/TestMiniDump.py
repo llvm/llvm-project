@@ -63,7 +63,7 @@ class MiniDumpTestCase(TestBase):
     def test_deeper_stack_in_mini_dump(self):
         """Test that we can examine a more interesting stack in a mini dump."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         core = os.path.join(os.getcwd(), "core.dmp")
         try:
             # Set a breakpoint and capture a mini dump.
@@ -99,7 +99,7 @@ class MiniDumpTestCase(TestBase):
     def test_local_variables_in_mini_dump(self):
         """Test that we can examine local variables in a mini dump."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         core = os.path.join(os.getcwd(), "core.dmp")
         try:
             # Set a breakpoint and capture a mini dump.

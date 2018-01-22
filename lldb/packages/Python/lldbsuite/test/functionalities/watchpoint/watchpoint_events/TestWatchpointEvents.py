@@ -33,7 +33,7 @@ class TestWatchpointEvents (TestBase):
         """Test that adding, deleting and modifying watchpoints sends the appropriate events."""
         self.build()
 
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)

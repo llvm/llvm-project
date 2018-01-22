@@ -27,7 +27,7 @@ class UnsignedTypesTestCase(TestBase):
     def test(self):
         """Test that variables with unsigned types display correctly."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # GCC puts a breakpoint on the last line of a multi-line expression, so

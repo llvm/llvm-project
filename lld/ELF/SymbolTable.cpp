@@ -488,8 +488,8 @@ void SymbolTable::addShared(StringRef Name, SharedFile<ELFT> &File,
 
   // An undefined symbol with non default visibility must be satisfied
   // in the same DSO.
-  if (WasInserted || ((S->isUndefined() || S->isLazy()) &&
-                      S->getVisibility() == STV_DEFAULT)) {
+  if (WasInserted ||
+      ((S->isUndefined() || S->isLazy()) && S->Visibility == STV_DEFAULT)) {
     uint8_t Binding = S->Binding;
     replaceSymbol<SharedSymbol>(S, File, Name, Sym.getBinding(), Sym.st_other,
                                 Sym.getType(), Sym.st_value, Sym.st_size,

@@ -79,7 +79,7 @@ class SettingsCommandTestCase(TestBase):
         to stdout. Compare the stdout with args_out."""
         self.buildDefault()
 
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         self.runCmd("process launch -- " + args_in)

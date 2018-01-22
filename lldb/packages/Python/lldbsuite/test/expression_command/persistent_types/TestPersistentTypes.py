@@ -22,7 +22,7 @@ class PersistenttypesTestCase(TestBase):
         """Test that lldb persistent types works correctly."""
         self.build()
 
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         self.runCmd("breakpoint set --name main")
 

@@ -28,7 +28,7 @@ class RuntimeTypesTestCase(TestBase):
             self.skipTest("This only applies to the v2 runtime")
 
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Stop at -[MyString description].

@@ -26,7 +26,7 @@ class TsanThreadLeakTestCase(TestBase):
         self.tsan_tests()
 
     def tsan_tests(self):
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.expect(
             "file " + exe,
             patterns=["Current executable set to .*a.out"])

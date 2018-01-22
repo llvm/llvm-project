@@ -33,7 +33,7 @@ class InlinedBreakpointsTestCase(TestBase):
 
     def inlined_breakpoints(self):
         """Test 'b basic_types.cpp:176' does break (where int.cpp includes basic_type.cpp)."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # With the inline-breakpoint-strategy, our file+line breakpoint should

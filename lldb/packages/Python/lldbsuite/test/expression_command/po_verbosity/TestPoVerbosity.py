@@ -37,7 +37,7 @@ class PoVerbosityTestCase(TestBase):
         self.addTearDownHook(cleanup)
 
         """Test expr + formatters for good interoperability."""
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
             self, "main.m", self.line, loc_exact=True)

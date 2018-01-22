@@ -27,10 +27,7 @@ entry:
 ; correctly.
 
 ; CHECK:      00000003 T _start
-; CHECK-NEXT: 00000003 T _start
 ; CHECK-NEXT: 00000001 T bar
-; CHECK-NEXT: 00000001 T bar
-; CHECK-NEXT: 00000002 T foo
 ; CHECK-NEXT: 00000002 T foo
 
 ; Verify that symbols from unused objects don't appear in the symbol table

@@ -48,7 +48,7 @@ class TlsGlobalTestCase(TestBase):
     def test(self):
         """Test thread-local storage."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)
         if self.platformIsDarwin():
             self.registerSharedLibrariesWithTarget(target, ['liba.dylib'])

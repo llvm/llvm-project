@@ -17,6 +17,7 @@
 #include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Timer.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -163,6 +164,9 @@ private:
 namespace lld {
 namespace coff {
 
+static Timer CodeLayoutTimer("Code Layout", Timer::root());
+static Timer DiskCommitTimer("Commit Output File", Timer::root());
+
 void writeResult() { Writer().run(); }
 
 void OutputSection::setRVA(uint64_t RVA) {
@@ -177,6 +181,9 @@ void OutputSection::setFileOffset(uint64_t Off) {
   // by the loader.
   if (Header.SizeOfRawData == 0)
     return;
+
+  // It is possible that this assignment could cause an overflow of the u32,
+  // but that should be caught by the FileSize check in OutputSection::run().
   Header.PointerToRawData = Off;
 }
 
@@ -284,6 +291,8 @@ static Optional<codeview::DebugInfo> loadExistingBuildId(StringRef Path) {
 
 // The main function of the writer.
 void Writer::run() {
+  ScopedTimer T1(CodeLayoutTimer);
+
   createSections();
   createMiscChunks();
   createImportTables();
@@ -294,6 +303,10 @@ void Writer::run() {
   removeEmptySections();
   setSectionPermissions();
   createSymbolAndStringTable();
+
+  if (FileSize > UINT32_MAX)
+    fatal("image size (" + Twine(FileSize) + ") " +
+        "exceeds maximum allowable size (" + Twine(UINT32_MAX) + ")");
 
   // We must do this before opening the output file, as it depends on being able
   // to read the contents of the existing output file.
@@ -308,14 +321,16 @@ void Writer::run() {
   sortExceptionTable();
   writeBuildId();
 
-  if (!Config->PDBPath.empty() && Config->Debug) {
+  T1.stop();
 
+  if (!Config->PDBPath.empty() && Config->Debug) {
     assert(BuildId);
     createPDB(Symtab, OutputSections, SectionTable, *BuildId->BuildId);
   }
 
   writeMapFile(OutputSections);
 
+  ScopedTimer T2(DiskCommitTimer);
   if (auto E = Buffer->commit())
     fatal("failed to write the output file: " + toString(std::move(E)));
 }
@@ -571,10 +586,8 @@ void Writer::createSymbolAndStringTable() {
   if (OutputSymtab.empty() && Strtab.empty())
     return;
 
-  OutputSection *LastSection = OutputSections.back();
   // We position the symbol table to be adjacent to the end of the last section.
-  uint64_t FileOff = LastSection->getFileOff() +
-                     alignTo(LastSection->getRawSize(), SectorSize);
+  uint64_t FileOff = FileSize;
   PointerToSymbolTable = FileOff;
   FileOff += OutputSymtab.size() * sizeof(coff_symbol16);
   FileOff += 4 + Strtab.size();
@@ -590,7 +603,7 @@ void Writer::assignAddresses() {
   SizeOfHeaders +=
       Config->is64() ? sizeof(pe32plus_header) : sizeof(pe32_header);
   SizeOfHeaders = alignTo(SizeOfHeaders, SectorSize);
-  uint64_t RVA = 0x1000; // The first page is kept unmapped.
+  uint64_t RVA = PageSize; // The first page is kept unmapped.
   FileSize = SizeOfHeaders;
   // Move DISCARDABLE (or non-memory-mapped) sections to the end of file because
   // the loader cannot handle holes.

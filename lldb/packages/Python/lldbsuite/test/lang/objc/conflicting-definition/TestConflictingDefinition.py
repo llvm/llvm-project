@@ -46,7 +46,7 @@ class TestRealDefinition(TestBase):
                 "42"])
 
     def common_setup(self):
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)
         self.registerSharedLibrariesWithTarget(target, self.shlib_names)
 

@@ -131,6 +131,9 @@ Symbol *SymbolTable::addDefinedFunction(StringRef Name,
     S->setFunctionType(Type);
   } else if (!S->isFunction()) {
     error("symbol type mismatch: " + Name);
+  } else if (!S->isDefined()) {
+    DEBUG(dbgs() << "resolving existing undefined function: " << Name << "\n");
+    S->update(Symbol::DefinedFunctionKind, nullptr, Flags);
   }
   return S;
 }
@@ -140,10 +143,14 @@ Symbol *SymbolTable::addDefinedGlobal(StringRef Name) {
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);
-  if (WasInserted)
+  if (WasInserted) {
     S->update(Symbol::DefinedGlobalKind);
-  else if (!S->isGlobal())
+  } else if (!S->isGlobal()) {
     error("symbol type mismatch: " + Name);
+  } else {
+    DEBUG(dbgs() << "resolving existing undefined global: " << Name << "\n");
+    S->update(Symbol::DefinedGlobalKind);
+  }
   return S;
 }
 
@@ -187,6 +194,7 @@ Symbol *SymbolTable::addDefined(StringRef Name, Symbol::Kind Kind,
 
 Symbol *SymbolTable::addUndefinedFunction(StringRef Name,
                                           const WasmSignature *Type) {
+  DEBUG(dbgs() << "addUndefinedFunction: " << Name << "\n");
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);

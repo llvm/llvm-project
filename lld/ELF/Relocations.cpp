@@ -613,7 +613,7 @@ static bool maybeReportUndefined(Symbol &Sym, InputSectionBase &Sec,
     return false;
 
   bool CanBeExternal =
-      Sym.computeBinding() != STB_LOCAL && Sym.getVisibility() == STV_DEFAULT;
+      Sym.computeBinding() != STB_LOCAL && Sym.Visibility == STV_DEFAULT;
   if (Config->UnresolvedSymbols == UnresolvedPolicy::Ignore && CanBeExternal)
     return false;
 
@@ -744,7 +744,10 @@ template <class ELFT> static void addGotEntry(Symbol &Sym) {
 static bool canDefineSymbolInExecutable(Symbol &Sym) {
   // If the symbol has default visibility the symbol defined in the
   // executable will preempt it.
-  if (Sym.getVisibility() == STV_DEFAULT)
+  // Note that we want the visibility of the shared symbol itself, not
+  // the visibility of the symbol in the output file we are producing. That is
+  // why we use Sym.StOther.
+  if ((Sym.StOther & 0x3) == STV_DEFAULT)
     return true;
 
   // If we are allowed to break address equality of functions, defining

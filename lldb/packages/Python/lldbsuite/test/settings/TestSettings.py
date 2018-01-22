@@ -125,7 +125,7 @@ class SettingsCommandTestCase(TestBase):
         """Test that 'set frame-format' with a backtick char in the format string works as well as fullpath."""
         self.build()
 
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         def cleanup():
@@ -161,7 +161,7 @@ class SettingsCommandTestCase(TestBase):
         """Test that after 'set auto-confirm true', manual confirmation should not kick in."""
         self.build()
 
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         self.runCmd("settings set auto-confirm true")
@@ -186,7 +186,7 @@ class SettingsCommandTestCase(TestBase):
         """Test that user options for the disassembler take effect."""
         self.build()
 
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # AT&T syntax
@@ -219,7 +219,7 @@ class SettingsCommandTestCase(TestBase):
     def test_run_args_and_env_vars(self):
         """Test that run-args and env-vars are passed to the launched process."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Set the run-args and the env-vars.
@@ -253,7 +253,7 @@ class SettingsCommandTestCase(TestBase):
         """Test that the host env vars are passed to the launched process."""
         self.build()
 
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # By default, inherit-env is 'true'.
@@ -292,7 +292,7 @@ class SettingsCommandTestCase(TestBase):
         """Test that setting target.error/output-path for the launched process works."""
         self.build()
 
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Set the error-path and output-path and verify both are set.
