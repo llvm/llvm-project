@@ -165,7 +165,7 @@ static int DiskFilesOrDirectories(const llvm::Twine &partial_name,
     // search in the fully resolved directory, but CompletionBuffer keeps the
     // unmodified form that the user typed.
     Storage = Resolved;
-    SearchDir = Resolved;
+    SearchDir = Storage;
   } else {
     SearchDir = path::parent_path(CompletionBuffer);
   }
