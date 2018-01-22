@@ -63,6 +63,15 @@ static bool isShiftOverflow(const BinaryOperator *B, CheckerContext &C) {
       B->getRHS(), C.getASTContext().getIntWidth(B->getLHS()->getType()));
 }
 
+static bool isLeftShiftResultUnrepresentable(const BinaryOperator *B,
+                                             CheckerContext &C) {
+  SValBuilder &SB = C.getSValBuilder();
+  ProgramStateRef State = C.getState();
+  const llvm::APSInt *LHS = SB.getKnownValue(State, C.getSVal(B->getLHS()));
+  const llvm::APSInt *RHS = SB.getKnownValue(State, C.getSVal(B->getRHS()));
+  return (unsigned)RHS->getZExtValue() > LHS->countLeadingZeros();
+}
+
 void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
                                        CheckerContext &C) const {
   if (C.getSVal(B).isUndef()) {
@@ -138,6 +147,19 @@ void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
                  C.isNegative(B->getLHS())) {
         OS << "The result of the left shift is undefined because the left "
               "operand is negative";
+      } else if (B->getOpcode() == BinaryOperatorKind::BO_Shl &&
+                 isLeftShiftResultUnrepresentable(B, C)) {
+        ProgramStateRef State = C.getState();
+        SValBuilder &SB = C.getSValBuilder();
+        const llvm::APSInt *LHS =
+            SB.getKnownValue(State, C.getSVal(B->getLHS()));
+        const llvm::APSInt *RHS =
+            SB.getKnownValue(State, C.getSVal(B->getRHS()));
+        OS << "The result of the left shift is undefined due to shifting \'"
+           << LHS->getSExtValue() << "\' by \'" << RHS->getZExtValue()
+           << "\', which is unrepresentable in the unsigned version of "
+           << "the return type \'" << B->getLHS()->getType().getAsString()
+           << "\'";
       } else {
         OS << "The result of the '"
            << BinaryOperator::getOpcodeStr(B->getOpcode())
