@@ -231,7 +231,7 @@ updateValueInfoForIndirectCalls(const ModuleSummaryIndex &Index, ValueInfo VI) {
   // it, rather than needing to perform this mapping on each walk.
   auto GUID = Index.getGUIDFromOriginalID(VI.getGUID());
   if (GUID == 0)
-    return nullptr;
+    return ValueInfo();
   return Index.getValueInfo(GUID);
 }
 
@@ -517,7 +517,7 @@ void llvm::computeDeadSymbols(
     for (auto &S : Entry.second.SummaryList)
       if (S->isLive()) {
         DEBUG(dbgs() << "Live root: " << Entry.first << "\n");
-        Worklist.push_back(ValueInfo(&Entry));
+        Worklist.push_back(ValueInfo(/*IsAnalysis=*/false, &Entry));
         ++LiveSymbols;
         break;
       }

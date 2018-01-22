@@ -11,6 +11,7 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Regex.h"
 #include <algorithm>
@@ -26,61 +27,62 @@ namespace {
 /// https://developer.apple.com/library/content/documentation/Cocoa/Conceptual/CodingGuidelines/Articles/APIAbbreviations.html#//apple_ref/doc/uid/20001285-BCIHCGAE
 ///
 /// Keep this list sorted.
-constexpr char DefaultSpecialAcronyms[] =
-    "ACL;"
-    "API;"
-    "ARGB;"
-    "ASCII;"
-    "BGRA;"
-    "CMYK;"
-    "DNS;"
-    "FPS;"
-    "FTP;"
-    "GIF;"
-    "GPS;"
-    "HD;"
-    "HDR;"
-    "HTML;"
-    "HTTP;"
-    "HTTPS;"
-    "HUD;"
-    "ID;"
-    "JPG;"
-    "JS;"
-    "LAN;"
-    "LZW;"
-    "MDNS;"
-    "MIDI;"
-    "OS;"
-    "PDF;"
-    "PIN;"
-    "PNG;"
-    "POI;"
-    "PSTN;"
-    "PTR;"
-    "QA;"
-    "QOS;"
-    "RGB;"
-    "RGBA;"
-    "RGBX;"
-    "ROM;"
-    "RPC;"
-    "RTF;"
-    "RTL;"
-    "SDK;"
-    "SSO;"
-    "TCP;"
-    "TIFF;"
-    "TTS;"
-    "UI;"
-    "URI;"
-    "URL;"
-    "VC;"
-    "VOIP;"
-    "VPN;"
-    "VR;"
-    "WAN;"
-    "XML";
+constexpr llvm::StringLiteral DefaultSpecialAcronyms[] = {
+    "ACL",
+    "API",
+    "ARGB",
+    "ASCII",
+    "BGRA",
+    "CMYK",
+    "DNS",
+    "FPS",
+    "FTP",
+    "GIF",
+    "GPS",
+    "HD",
+    "HDR",
+    "HTML",
+    "HTTP",
+    "HTTPS",
+    "HUD",
+    "ID",
+    "JPG",
+    "JS",
+    "LAN",
+    "LZW",
+    "MDNS",
+    "MIDI",
+    "OS",
+    "PDF",
+    "PIN",
+    "PNG",
+    "POI",
+    "PSTN",
+    "PTR",
+    "QA",
+    "QOS",
+    "RGB",
+    "RGBA",
+    "RGBX",
+    "ROM",
+    "RPC",
+    "RTF",
+    "RTL",
+    "SDK",
+    "SSO",
+    "TCP",
+    "TIFF",
+    "TTS",
+    "UI",
+    "URI",
+    "URL",
+    "VC",
+    "VOIP",
+    "VPN",
+    "VR",
+    "WAN",
+    "XML",
+};
 
 /// For now we will only fix 'CamelCase' property to
 /// 'camelCase'. For other cases the users need to
@@ -97,14 +99,7 @@ FixItHint generateFixItHint(const ObjCPropertyDecl *Decl) {
   return FixItHint();
 }
 
-std::string validPropertyNameRegex(const std::vector<std::string> &Acronyms) {
-  std::vector<std::string> EscapedAcronyms;
-  EscapedAcronyms.reserve(Acronyms.size());
-  // In case someone defines a custom prefix which includes a regex
-  // special character, escape all the prefixes.
-  std::transform(Acronyms.begin(), Acronyms.end(),
-                 std::back_inserter(EscapedAcronyms), [](const std::string& s) {
-                   return llvm::Regex::escape(s); });
+std::string validPropertyNameRegex(const std::vector<std::string> &EscapedAcronyms) {
   // Allow any of these names:
   // foo
   // fooBar
@@ -123,15 +118,32 @@ std::string validPropertyNameRegex(const std::vector<std::string> &Acronyms) {
 PropertyDeclarationCheck::PropertyDeclarationCheck(StringRef Name,
                                                    ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      SpecialAcronyms(utils::options::parseStringList(
-          Options.get("Acronyms", DefaultSpecialAcronyms))) {}
+      SpecialAcronyms(
+          utils::options::parseStringList(Options.get("Acronyms", ""))),
+      IncludeDefaultAcronyms(Options.get("IncludeDefaultAcronyms", true)) {}
 
 void PropertyDeclarationCheck::registerMatchers(MatchFinder *Finder) {
+  std::vector<std::string> EscapedAcronyms;
+  if (IncludeDefaultAcronyms) {
+    EscapedAcronyms.reserve(llvm::array_lengthof(DefaultSpecialAcronyms) +
+                            SpecialAcronyms.size());
+    // No need to regex-escape the default acronyms.
+    EscapedAcronyms.insert(EscapedAcronyms.end(),
+                           std::begin(DefaultSpecialAcronyms),
+                           std::end(DefaultSpecialAcronyms));
+  } else {
+    EscapedAcronyms.reserve(SpecialAcronyms.size());
+  }
+  // In case someone defines a prefix which includes a regex
+  // special character, regex-escape all the user-defined prefixes.
+  std::transform(SpecialAcronyms.begin(), SpecialAcronyms.end(),
+                 std::back_inserter(EscapedAcronyms),
+                 [](const std::string &s) { return llvm::Regex::escape(s); });
   Finder->addMatcher(
       objcPropertyDecl(
           // the property name should be in Lower Camel Case like
           // 'lowerCamelCase'
-          unless(matchesName(validPropertyNameRegex(SpecialAcronyms))))
+          unless(matchesName(validPropertyNameRegex(EscapedAcronyms))))
           .bind("property"),
       this);
 }
@@ -149,6 +161,7 @@ void PropertyDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
 void PropertyDeclarationCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "Acronyms",
                 utils::options::serializeStringList(SpecialAcronyms));
+  Options.store(Opts, "IncludeDefaultAcronyms", IncludeDefaultAcronyms);
 }
 
 }  // namespace objc

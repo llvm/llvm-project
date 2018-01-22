@@ -164,6 +164,13 @@ void MultiplexExternalSemaSource::PrintStats() {
     Sources[i]->PrintStats();
 }
 
+Module *MultiplexExternalSemaSource::getModule(unsigned ID) {
+  for (size_t i = 0; i < Sources.size(); ++i)
+    if (auto M = Sources[i]->getModule(ID))
+      return M;
+  return nullptr;
+}
+
 bool MultiplexExternalSemaSource::layoutRecordType(const RecordDecl *Record,
                                                    uint64_t &Size, 
                                                    uint64_t &Alignment,

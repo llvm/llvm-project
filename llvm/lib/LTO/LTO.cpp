@@ -388,7 +388,8 @@ LTO::RegularLTOState::RegularLTOState(unsigned ParallelCodeGenParallelismLevel,
       Ctx(Conf), CombinedModule(llvm::make_unique<Module>("ld-temp.o", Ctx)),
       Mover(llvm::make_unique<IRMover>(*CombinedModule)) {}
 
-LTO::ThinLTOState::ThinLTOState(ThinBackend Backend) : Backend(Backend) {
+LTO::ThinLTOState::ThinLTOState(ThinBackend Backend)
+    : Backend(Backend), CombinedIndex(/*IsPeformingAnalysis*/ false) {
   if (!Backend)
     this->Backend =
         createInProcessThinBackend(llvm::heavyweight_hardware_concurrency());

@@ -11,6 +11,68 @@
 //
 //===----------------------------------------------------------------------===//
 
+def SVEPatternOperand : AsmOperandClass {
+  let Name = "SVEPattern";
+  let ParserMethod = "tryParseSVEPattern";
+  let PredicateMethod = "isSVEPattern";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidSVEPattern";
+}
+
+def sve_pred_enum : Operand<i32>, ImmLeaf<i32, [{
+  return (((uint32_t)Imm) < 32);
+  }]> {
+
+  let PrintMethod = "printSVEPattern";
+  let ParserMatchClass = SVEPatternOperand;
+}
+
+//===----------------------------------------------------------------------===//
+// SVE PTrue - These are used extensively throughout the pattern matching so
+//             it's important we define them first.
+//===----------------------------------------------------------------------===//
+
+class sve_int_ptrue<bits<2> sz8_64, bits<3> opc, string asm, PPRRegOp pprty>
+: I<(outs pprty:$Pd), (ins sve_pred_enum:$pattern),
+  asm, "\t$Pd, $pattern",
+  "",
+  []>, Sched<[]> {
+  bits<4> Pd;
+  bits<5> pattern;
+  let Inst{31-24} = 0b00100101;
+  let Inst{23-22} = sz8_64;
+  let Inst{21-19} = 0b011;
+  let Inst{18-17} = opc{2-1};
+  let Inst{16}    = opc{0};
+  let Inst{15-10} = 0b111000;
+  let Inst{9-5}   = pattern;
+  let Inst{4}     = 0b0;
+  let Inst{3-0}   = Pd;
+
+  let Defs = !if(!eq (opc{0}, 1), [NZCV], []);
+}
+
+multiclass sve_int_ptrue<bits<3> opc, string asm> {
+  def _B : sve_int_ptrue<0b00, opc, asm, PPR8>;
+  def _H : sve_int_ptrue<0b01, opc, asm, PPR16>;
+  def _S : sve_int_ptrue<0b10, opc, asm, PPR32>;
+  def _D : sve_int_ptrue<0b11, opc, asm, PPR64>;
+
+  def : InstAlias<asm # "\t$Pd",
+                  (!cast<Instruction>(NAME # _B) PPR8:$Pd, 0b11111), 1>;
+  def : InstAlias<asm # "\t$Pd",
+                  (!cast<Instruction>(NAME # _H) PPR16:$Pd, 0b11111), 1>;
+  def : InstAlias<asm # "\t$Pd",
+                  (!cast<Instruction>(NAME # _S) PPR32:$Pd, 0b11111), 1>;
+  def : InstAlias<asm # "\t$Pd",
+                  (!cast<Instruction>(NAME # _D) PPR64:$Pd, 0b11111), 1>;
+}
+
+let Predicates = [HasSVE] in {
+  defm PTRUE  : sve_int_ptrue<0b000, "ptrue">;
+  defm PTRUES : sve_int_ptrue<0b001, "ptrues">;
+}
+
 //===----------------------------------------------------------------------===//
 // SVE Permute - Cross Lane Group
 //===----------------------------------------------------------------------===//

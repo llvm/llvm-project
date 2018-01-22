@@ -428,6 +428,9 @@ namespace llvm {
   /// Creates Break False Dependencies pass. \see BreakFalseDeps.cpp
   FunctionPass *createBreakFalseDeps();
 
+  // This pass expands indirectbr instructions.
+  FunctionPass *createIndirectBrExpandPass();
+
 } // End llvm namespace
 
 #endif

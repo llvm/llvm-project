@@ -67,7 +67,9 @@ private:
   size_t m_pos;
 };
 
-GoParser::GoParser(const char *src) : m_lexer(src), m_pos(0), m_failed(false) {}
+GoParser::GoParser(const char *src)
+    : m_lexer(src), m_pos(0), m_last_tok(GoLexer::TOK_INVALID),
+      m_failed(false) {}
 
 GoASTStmt *GoParser::Statement() {
   Rule r("Statement", this);

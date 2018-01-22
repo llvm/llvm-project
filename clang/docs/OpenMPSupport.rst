@@ -65,4 +65,4 @@ Combined directives
 * #pragma omp target teams distribute parallel for [simd]: :good:`Complete`.
 
 Clang does not support any constructs/updates from upcoming OpenMP 5.0 except for `reduction`-based clauses in the `task` and `target`-based directives.
-
+In addition, the LLVM OpenMP runtime `libomp` supports the OpenMP Tools Interface (OMPT) on x86, x86_64, AArch64, and PPC64 on Linux, Windows, and mac OS.

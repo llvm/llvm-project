@@ -12,13 +12,25 @@
 // template<InputIterator Iter1, InputIterator Iter2>
 //   requires HasLess<Iter1::value_type, Iter2::value_type>
 //         && HasLess<Iter2::value_type, Iter1::value_type>
-//   bool
+//   constexpr bool             // constexpr after C++17
 //   lexicographical_compare(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2);
 
 #include <algorithm>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
+
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool test_constexpr() {
+    int ia[] = {1, 2, 3};
+    int ib[] = {1, 3, 5, 2, 4, 6};
+
+    return  std::lexicographical_compare(std::begin(ia), std::end(ia), std::begin(ib), std::end(ib))
+        && !std::lexicographical_compare(std::begin(ib), std::end(ib), std::begin(ia), std::end(ia))
+           ;
+    }
+#endif
 
 template <class Iter1, class Iter2>
 void
@@ -66,4 +78,8 @@ int main()
     test<const int*, bidirectional_iterator<const int*> >();
     test<const int*, random_access_iterator<const int*> >();
     test<const int*, const int*>();
+
+#if TEST_STD_VER > 17
+    static_assert(test_constexpr());
+#endif
 }

@@ -12,13 +12,26 @@
 // template<InputIterator InIter, OutputIterator<auto, InIter::reference> OutIter,
 //          Predicate<auto, InIter::value_type> Pred>
 //   requires CopyConstructible<Pred>
-//   OutIter
+//   constexpr OutIter   // constexpr after C++17
 //   copy_if(InIter first, InIter last, OutIter result, Pred pred);
 
 #include <algorithm>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
+
+// #if TEST_STD_VER > 17
+// TEST_CONSTEXPR bool test_constexpr() {
+//     int ia[] = {2, 4, 6, 8, 6};
+//     int ic[] = {0, 0, 0, 0, 0, 0};
+// 
+// 	auto p = std::copy_if(std::begin(ia), std::end(ia), std::begin(ic), is6);
+// 	return std::all_of(std::begin(ic), p, [](int a){return a == 6;})
+// 	    && std::all_of(p, std::end(ic),   [](int a){return a == 0;})
+// 	    ;	    
+//     }
+// #endif
 
 struct Pred
 {
@@ -77,4 +90,8 @@ int main()
     test<const int*, bidirectional_iterator<int*> >();
     test<const int*, random_access_iterator<int*> >();
     test<const int*, int*>();
+
+// #if TEST_STD_VER > 17
+//     static_assert(test_constexpr());
+// #endif
 }
