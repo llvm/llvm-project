@@ -66,6 +66,8 @@ static void InitializeFlags() {
   if (Verbosity()) ReportUnrecognizedFlags();
 
   if (common_flags()->help) parser.PrintFlagDescriptions();
+
+  __sanitizer_set_report_path(common_flags()->log_path);
 }
 
 static void OnStackUnwind(const SignalContext &sig, const void *,

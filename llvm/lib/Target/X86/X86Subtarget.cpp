@@ -329,6 +329,8 @@ void X86Subtarget::initializeEnvironment() {
   HasSSEUnalignedMem = false;
   HasCmpxchg16b = false;
   UseLeaForSP = false;
+  HasPOPCNTFalseDeps = false;
+  HasLZCNTFalseDeps = false;
   HasFastVariableShuffle = false;
   HasFastPartialYMMorZMMWrite = false;
   HasFastGather = false;

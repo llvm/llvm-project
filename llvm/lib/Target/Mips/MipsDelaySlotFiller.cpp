@@ -632,7 +632,7 @@ bool Filler::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
           // TODO: Implement an instruction mapping table of 16bit opcodes to
           // 32bit opcodes so that an instruction can be expanded. This would
           // save 16 bits as a TAILCALL_MM pseudo requires a fullsized nop.
-          // TODO: Permit b16 when branching backwards to the the same function
+          // TODO: Permit b16 when branching backwards to the same function
           // if it is in range.
           DSI->setDesc(TII->get(getEquivalentCallShort(DSI->getOpcode())));
         }

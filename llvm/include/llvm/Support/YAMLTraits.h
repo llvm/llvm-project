@@ -511,13 +511,18 @@ inline QuotingType needsQuotes(StringRef S) {
     return QuotingType::Single;
   if (isspace(S.front()) || isspace(S.back()))
     return QuotingType::Single;
-  if (S.front() == ',')
-    return QuotingType::Single;
   if (isNull(S))
     return QuotingType::Single;
   if (isBool(S))
     return QuotingType::Single;
   if (isNumeric(S))
+    return QuotingType::Single;
+
+  // 7.3.3 Plain Style
+  // Plain scalars must not begin with most indicators, as this would cause
+  // ambiguity with other YAML constructs.
+  static constexpr char Indicators[] = R"(-?:\,[]{}#&*!|>'"%@`)";
+  if (S.find_first_of(Indicators) == 0)
     return QuotingType::Single;
 
   QuotingType MaxQuotingNeeded = QuotingType::None;

@@ -360,7 +360,7 @@ let isReMaterializable = 1, isAsCheapAsAMove = 1, canFoldAsLoad = 1,
 
 // Alias instruction that maps zero vector to pxor / xorp* for sse.
 // This is expanded by ExpandPostRAPseudos to an xorps / vxorps, and then
-// swizzled by ExecutionDepsFix to pxor.
+// swizzled by ExecutionDomainFix to pxor.
 // We set canFoldAsLoad because this can be converted to a constant-pool
 // load of an all-zeros value if folding it would be beneficial.
 let isReMaterializable = 1, isAsCheapAsAMove = 1, canFoldAsLoad = 1,
@@ -3218,7 +3218,7 @@ multiclass avx_fp_unop_s<bits<8> opc, string OpcodeStr, RegisterClass RC,
   // which has a clobber before the rcp, vs.
   // vrcpss mem, %xmm0, %xmm0
   // TODO: In theory, we could fold the load, and avoid the stall caused by
-  // the partial register store, either in ExecutionDepsFix or with smarter RA.
+  // the partial register store, either in BreakFalseDeps or with smarter RA.
   let Predicates = [target] in {
    def : Pat<(OpNode RC:$src),  (!cast<Instruction>("V"#NAME#Suffix##r)
                                 (ScalarVT (IMPLICIT_DEF)), RC:$src)>;

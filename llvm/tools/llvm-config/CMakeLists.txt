@@ -64,18 +64,17 @@ endif()
 # Add the dependency on the generation step.
 add_file_dependencies(${CMAKE_CURRENT_SOURCE_DIR}/llvm-config.cpp ${BUILDVARIABLES_OBJPATH})
 
-if(CMAKE_CROSSCOMPILING)
-  set(${project}_LLVM_CONFIG_EXE "${LLVM_NATIVE_BUILD}/bin/llvm-config")
-  set(${project}_LLVM_CONFIG_EXE ${${project}_LLVM_CONFIG_EXE} PARENT_SCOPE)
+if(CMAKE_CROSSCOMPILING AND NOT LLVM_CONFIG_PATH)
+  set(LLVM_CONFIG_PATH "${LLVM_NATIVE_BUILD}/bin/llvm-config" CACHE STRING "")
 
-  add_custom_command(OUTPUT "${${project}_LLVM_CONFIG_EXE}"
+  add_custom_command(OUTPUT "${LLVM_CONFIG_PATH}"
     COMMAND ${CMAKE_COMMAND} --build . --target llvm-config --config $<CONFIGURATION>
     DEPENDS ${LLVM_NATIVE_BUILD}/CMakeCache.txt
     WORKING_DIRECTORY ${LLVM_NATIVE_BUILD}
     COMMENT "Building native llvm-config..."
     USES_TERMINAL)
-  add_custom_target(${project}NativeLLVMConfig DEPENDS ${${project}_LLVM_CONFIG_EXE})
-  add_dependencies(${project}NativeLLVMConfig CONFIGURE_LLVM_NATIVE)
+  add_custom_target(NativeLLVMConfig DEPENDS ${LLVM_CONFIG_PATH})
+  add_dependencies(NativeLLVMConfig CONFIGURE_LLVM_NATIVE)
 
-  add_dependencies(llvm-config ${project}NativeLLVMConfig)
-endif(CMAKE_CROSSCOMPILING)
+  add_dependencies(llvm-config NativeLLVMConfig)
+endif()

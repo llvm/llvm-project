@@ -2,6 +2,7 @@ add_llvm_library(LLVMOrcJIT
   Core.cpp
   ExecutionUtils.cpp
   IndirectionUtils.cpp
+  Legacy.cpp
   NullResolver.cpp
   OrcABISupport.cpp
   OrcCBindings.cpp

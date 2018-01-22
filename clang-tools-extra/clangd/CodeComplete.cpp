@@ -227,7 +227,7 @@ struct CompletionCandidate {
   float score() const {
     // For now we just use the Sema priority, mapping it onto a 0-1 interval.
     if (!SemaResult) // FIXME(sammccall): better scoring for index results.
-      return 0.3;    // fixed mediocre score for index-only results.
+      return 0.3f;   // fixed mediocre score for index-only results.
 
     // Priority 80 is a really bad score.
     float Score = 1 - std::min<float>(80, SemaResult->Priority) / 80;
