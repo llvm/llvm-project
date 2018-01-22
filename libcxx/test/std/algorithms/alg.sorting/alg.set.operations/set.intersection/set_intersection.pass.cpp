@@ -14,14 +14,33 @@
 //         && OutputIterator<OutIter, InIter2::reference>
 //         && HasLess<InIter2::value_type, InIter1::value_type>
 //         && HasLess<InIter1::value_type, InIter2::value_type>
-//   OutIter
+//   constpexr OutIter       // constexpr after C++17
 //   set_intersection(InIter1 first1, InIter1 last1, InIter2 first2, InIter2 last2,
 //                    OutIter result);
 
 #include <algorithm>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
+
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool test_constexpr() {
+    const int ia[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4};
+    const int ib[] = {2, 4, 4, 6};
+          int results[std::size(ia)] = {0};
+    
+    auto it = std::set_intersection(std::begin(ia), std::end(ia),
+                                    std::begin(ib), std::end(ib), std::begin(results));
+
+    return std::includes(std::begin(ia), std::end(ia), std::begin(results), it)
+        && std::includes(std::begin(ib), std::end(ib), std::begin(results), it)
+        && std::is_sorted(std::begin(results), it)
+        && std::all_of(it, std::end(results), [](int a) {return a == 0; })
+           ;
+    }
+#endif
+
 
 template <class Iter1, class Iter2, class OutIter>
 void
@@ -195,4 +214,8 @@ int main()
     test<const int*, const int*, bidirectional_iterator<int*> >();
     test<const int*, const int*, random_access_iterator<int*> >();
     test<const int*, const int*, int*>();
+
+#if TEST_STD_VER > 17
+    static_assert(test_constexpr());
+#endif
 }

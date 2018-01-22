@@ -108,7 +108,7 @@ void InputChunk::calcRelocations() {
                  << " offset=" << Reloc.Offset
                  << " newOffset=" << NewReloc.Reloc.Offset << "\n");
 
-    if (Config->EmitRelocs)
+    if (Config->Relocatable)
       NewReloc.NewIndex = File->calcNewIndex(Reloc);
 
     switch (Reloc.Type) {
