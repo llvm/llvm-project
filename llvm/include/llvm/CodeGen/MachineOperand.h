@@ -74,7 +74,7 @@ public:
 private:
   /// OpKind - Specify what kind of operand this is.  This discriminates the
   /// union.
-  MachineOperandType OpKind : 8;
+  unsigned OpKind : 8;
 
   /// Subregister number for MO_Register.  A value of 0 indicates the
   /// MO_Register has no subReg.
@@ -85,17 +85,17 @@ private:
   /// TiedTo - Non-zero when this register operand is tied to another register
   /// operand. The encoding of this field is described in the block comment
   /// before MachineInstr::tieOperands().
-  unsigned char TiedTo : 4;
+  unsigned TiedTo : 4;
 
   /// IsDef - True if this is a def, false if this is a use of the register.
   /// This is only valid on register operands.
   ///
-  bool IsDef : 1;
+  unsigned IsDef : 1;
 
   /// IsImp - True if this is an implicit def or use, false if it is explicit.
   /// This is only valid on register opderands.
   ///
-  bool IsImp : 1;
+  unsigned IsImp : 1;
 
   /// IsDeadOrKill
   /// For uses: IsKill - True if this instruction is the last use of the
@@ -103,14 +103,14 @@ private:
   /// For defs: IsDead - True if this register is never used by a subsequent
   /// instruction.
   /// This is only valid on register operands.
-  bool IsDeadOrKill : 1;
+  unsigned IsDeadOrKill : 1;
 
   /// IsRenamable - True if this register may be renamed, i.e. it does not
   /// generate a value that is somehow read in a way that is not represented by
   /// the Machine IR (e.g. to meet an ABI or ISA requirement).  This is only
   /// valid on physical register operands.  Virtual registers are assumed to
   /// always be renamable regardless of the value of this field.
-  bool IsRenamable : 1;
+  unsigned IsRenamable : 1;
 
   /// IsUndef - True if this register operand reads an "undef" value, i.e. the
   /// read value doesn't matter.  This flag can be set on both use and def
@@ -129,7 +129,7 @@ private:
   /// Any register can be used for %2, and its value doesn't matter, but
   /// the two operands must be the same register.
   ///
-  bool IsUndef : 1;
+  unsigned IsUndef : 1;
 
   /// IsInternalRead - True if this operand reads a value that was defined
   /// inside the same instruction or bundle.  This flag can be set on both use
@@ -140,16 +140,16 @@ private:
   /// When this flag is set, the instruction bundle must contain at least one
   /// other def of the register.  If multiple instructions in the bundle define
   /// the register, the meaning is target-defined.
-  bool IsInternalRead : 1;
+  unsigned IsInternalRead : 1;
 
   /// IsEarlyClobber - True if this MO_Register 'def' operand is written to
   /// by the MachineInstr before all input registers are read.  This is used to
   /// model the GCC inline asm '&' constraint modifier.
-  bool IsEarlyClobber : 1;
+  unsigned IsEarlyClobber : 1;
 
   /// IsDebug - True if this MO_Register 'use' operand is in a debug pseudo,
   /// not a real instruction.  Such uses should be ignored during codegen.
-  bool IsDebug : 1;
+  unsigned IsDebug : 1;
 
   /// SmallContents - This really should be part of the Contents union, but
   /// lives out here so we can get a better packed struct.
@@ -198,7 +198,19 @@ private:
   } Contents;
 
   explicit MachineOperand(MachineOperandType K)
-    : OpKind(K), SubReg_TargetFlags(0), ParentMI(nullptr) {}
+    : OpKind(K), SubReg_TargetFlags(0), ParentMI(nullptr) {
+    // Assert that the layout is what we expect. It's easy to grow this object.
+    static_assert(alignof(MachineOperand) <= alignof(int64_t),
+                  "MachineOperand shouldn't be more than 8 byte aligned");
+    static_assert(sizeof(Contents) <= 2 * sizeof(void *),
+                  "Contents should be at most two pointers");
+    static_assert(sizeof(MachineOperand) <=
+                      alignTo<alignof(int64_t)>(2 * sizeof(unsigned) +
+                                                3 * sizeof(void *)),
+                  "MachineOperand too big. Should be Kind, SmallContents, "
+                  "ParentMI, and Contents");
+  }
+
 public:
   /// getType - Returns the MachineOperandType for this operand.
   ///

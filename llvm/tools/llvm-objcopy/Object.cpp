@@ -409,12 +409,20 @@ static bool segmentOverlapsSegment(const Segment &Child,
          Parent.OriginalOffset + Parent.FileSize > Child.OriginalOffset;
 }
 
-static bool compareSegments(const Segment *A, const Segment *B) {
+static bool compareSegmentsByOffset(const Segment *A, const Segment *B) {
   // Any segment without a parent segment should come before a segment
   // that has a parent segment.
   if (A->OriginalOffset < B->OriginalOffset)
     return true;
   if (A->OriginalOffset > B->OriginalOffset)
+    return false;
+  return A->Index < B->Index;
+}
+
+static bool compareSegmentsByPAddr(const Segment *A, const Segment *B) {
+  if (A->PAddr < B->PAddr)
+    return true;
+  if (A->PAddr > B->PAddr)
     return false;
   return A->Index < B->Index;
 }
@@ -456,9 +464,9 @@ void Object<ELFT>::readProgramHeaders(const ELFFile<ELFT> &ElfFile) {
       if (&Child != &Parent && segmentOverlapsSegment(*Child, *Parent)) {
         // We want a canonical "most parental" segment but this requires
         // inspecting the ParentSegment.
-        if (compareSegments(Parent.get(), Child.get()))
+        if (compareSegmentsByOffset(Parent.get(), Child.get()))
           if (Child->ParentSegment == nullptr ||
-              compareSegments(Parent.get(), Child->ParentSegment)) {
+              compareSegmentsByOffset(Parent.get(), Child->ParentSegment)) {
             Child->ParentSegment = Parent.get();
           }
       }
@@ -784,7 +792,8 @@ static uint64_t alignToAddr(uint64_t Offset, uint64_t Addr, uint64_t Align) {
 
 // Orders segments such that if x = y->ParentSegment then y comes before x.
 static void OrderSegments(std::vector<Segment *> &Segments) {
-  std::stable_sort(std::begin(Segments), std::end(Segments), compareSegments);
+  std::stable_sort(std::begin(Segments), std::end(Segments),
+                   compareSegmentsByOffset);
 }
 
 // This function finds a consistent layout for a list of segments starting from
@@ -793,7 +802,7 @@ static void OrderSegments(std::vector<Segment *> &Segments) {
 static uint64_t LayoutSegments(std::vector<Segment *> &Segments,
                                uint64_t Offset) {
   assert(std::is_sorted(std::begin(Segments), std::end(Segments),
-                        compareSegments));
+                        compareSegmentsByOffset));
   // The only way a segment should move is if a section was between two
   // segments and that section was removed. If that section isn't in a segment
   // then it's acceptable, but not ideal, to simply move it to after the
@@ -947,13 +956,28 @@ template <class ELFT> void BinaryObject<ELFT>::finalize() {
       OrderedSegments.push_back(Section->ParentSegment);
     }
   }
-  OrderSegments(OrderedSegments);
+
+  // For binary output, we're going to use physical addresses instead of
+  // virtual addresses, since a binary output is used for cases like ROM
+  // loading and physical addresses are intended for ROM loading.
+  // However, if no segment has a physical address, we'll fallback to using
+  // virtual addresses for all.
+  if (std::all_of(std::begin(OrderedSegments), std::end(OrderedSegments),
+                  [](const Segment *Segment) { return Segment->PAddr == 0; }))
+    for (const auto &Segment : OrderedSegments)
+      Segment->PAddr = Segment->VAddr;
+
+  std::stable_sort(std::begin(OrderedSegments), std::end(OrderedSegments),
+                   compareSegmentsByPAddr);
+
   // Because we add a ParentSegment for each section we might have duplicate
   // segments in OrderedSegments. If there were duplicates then LayoutSegments
   // would do very strange things.
   auto End =
       std::unique(std::begin(OrderedSegments), std::end(OrderedSegments));
   OrderedSegments.erase(End, std::end(OrderedSegments));
+
+  uint64_t Offset = 0;
 
   // Modify the first segment so that there is no gap at the start. This allows
   // our layout algorithm to proceed as expected while not out writing out the
@@ -963,18 +987,17 @@ template <class ELFT> void BinaryObject<ELFT>::finalize() {
     auto Sec = Seg->firstSection();
     auto Diff = Sec->OriginalOffset - Seg->OriginalOffset;
     Seg->OriginalOffset += Diff;
-    // The size needs to be shrunk as well
+    // The size needs to be shrunk as well.
     Seg->FileSize -= Diff;
-    Seg->MemSize -= Diff;
-    // The VAddr needs to be adjusted so that the alignment is correct as well
-    Seg->VAddr += Diff;
-    Seg->PAddr = Seg->VAddr;
-    // We don't want this to be shifted by alignment so we need to set the
-    // alignment to zero.
-    Seg->Align = 0;
+    // The PAddr needs to be increased to remove the gap before the first
+    // section.
+    Seg->PAddr += Diff;
+    uint64_t LowestPAddr = Seg->PAddr;
+    for (auto &Segment : OrderedSegments) {
+      Segment->Offset = Segment->PAddr - LowestPAddr;
+      Offset = std::max(Offset, Segment->Offset + Segment->FileSize);
+    }
   }
-
-  uint64_t Offset = LayoutSegments(OrderedSegments, 0);
 
   // TODO: generalize LayoutSections to take a range. Pass a special range
   // constructed from an iterator that skips values for which a predicate does

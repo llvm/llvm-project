@@ -322,6 +322,8 @@ void X86Subtarget::initializeEnvironment() {
   HasCLFLUSHOPT = false;
   HasCLWB = false;
   HasRDPID = false;
+  UseRetpoline = false;
+  UseRetpolineExternalThunk = false;
   IsPMULLDSlow = false;
   IsSHLDSlow = false;
   IsUAMem16Slow = false;

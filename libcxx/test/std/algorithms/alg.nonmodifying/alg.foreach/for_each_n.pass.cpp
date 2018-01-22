@@ -11,13 +11,28 @@
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 
 // template<class InputIterator, class Size, class Function>
-//    InputIterator for_each_n(InputIterator first, Size n, Function f);
+//    constexpr InputIterator      // constexpr after C++17
+//    for_each_n(InputIterator first, Size n, Function f);
 
 
 #include <algorithm>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
+
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool test_constexpr() {
+    int ia[] = {1, 3, 6, 7};
+    int expected[] = {3, 5, 8, 9};
+    const size_t N = 4;
+    
+    auto it = std::for_each_n(std::begin(ia), N, [](int &a) { a += 2; });
+    return it == (std::begin(ia) + N)
+        && std::equal(std::begin(ia), std::end(ia), std::begin(expected))
+        ;
+    }
+#endif
 
 struct for_each_test
 {
@@ -58,4 +73,8 @@ int main()
     for (unsigned i = 0; i < 1; ++i)
         assert(ia[i] == static_cast<int>(i+2));
     }
+
+#if TEST_STD_VER > 17
+    static_assert(test_constexpr());
+#endif
 }

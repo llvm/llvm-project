@@ -123,6 +123,7 @@ if (LIBCXX_CXX_ABI STREQUAL "default")
           ${LLVM_MAIN_SRC_DIR}/runtimes/libcxxabi/include
           ${LLVM_MAIN_SRC_DIR}/../libcxxabi/include
     NO_DEFAULT_PATH
+    NO_CMAKE_FIND_ROOT_PATH
   )
   if (LIBCXX_TARGETING_MSVC)
     # FIXME: Figure out how to configure the ABI library on Windows.
