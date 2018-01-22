@@ -522,198 +522,242 @@ define i64 @v64i8(<64 x i8> %a, <64 x i8> %b, <64 x i8> %c, <64 x i8> %d) {
 ; SSE-NEXT:    pand %xmm0, %xmm10
 ; SSE-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm11
 ; SSE-NEXT:    pand %xmm1, %xmm11
-; SSE-NEXT:    pextrb $15, %xmm11, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $14, %xmm11, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $13, %xmm11, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $12, %xmm11, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $11, %xmm11, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $10, %xmm11, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $9, %xmm11, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $8, %xmm11, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $7, %xmm11, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $6, %xmm11, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $5, %xmm11, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $4, %xmm11, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $3, %xmm11, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $2, %xmm11, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    pextrb $1, %xmm11, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $0, %xmm11, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $15, %xmm10, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $14, %xmm10, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $13, %xmm10, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $12, %xmm10, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $11, %xmm10, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $10, %xmm10, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $9, %xmm10, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $8, %xmm10, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $7, %xmm10, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $6, %xmm10, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $5, %xmm10, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $4, %xmm10, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $3, %xmm10, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $2, %xmm10, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    andl $1, %eax
+; SSE-NEXT:    pextrb $0, %xmm11, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    leal (%rcx,%rax,2), %eax
+; SSE-NEXT:    pextrb $2, %xmm11, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    leal (%rax,%rcx,4), %eax
+; SSE-NEXT:    pextrb $3, %xmm11, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    leal (%rax,%rcx,8), %eax
+; SSE-NEXT:    pextrb $4, %xmm11, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    shll $4, %ecx
+; SSE-NEXT:    orl %eax, %ecx
+; SSE-NEXT:    pextrb $5, %xmm11, %eax
+; SSE-NEXT:    andl $1, %eax
+; SSE-NEXT:    shll $5, %eax
+; SSE-NEXT:    orl %ecx, %eax
+; SSE-NEXT:    pextrb $6, %xmm11, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    shll $6, %ecx
+; SSE-NEXT:    pextrb $7, %xmm11, %edx
+; SSE-NEXT:    andl $1, %edx
+; SSE-NEXT:    shll $7, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    pextrb $8, %xmm11, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    shll $8, %ecx
+; SSE-NEXT:    orl %edx, %ecx
+; SSE-NEXT:    pextrb $9, %xmm11, %edx
+; SSE-NEXT:    andl $1, %edx
+; SSE-NEXT:    shll $9, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    pextrb $10, %xmm11, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    shll $10, %ecx
+; SSE-NEXT:    orl %edx, %ecx
+; SSE-NEXT:    pextrb $11, %xmm11, %edx
+; SSE-NEXT:    andl $1, %edx
+; SSE-NEXT:    shll $11, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    pextrb $12, %xmm11, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    shll $12, %ecx
+; SSE-NEXT:    orl %edx, %ecx
+; SSE-NEXT:    pextrb $13, %xmm11, %edx
+; SSE-NEXT:    andl $1, %edx
+; SSE-NEXT:    shll $13, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    pextrb $14, %xmm11, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    shll $14, %ecx
+; SSE-NEXT:    orl %edx, %ecx
+; SSE-NEXT:    pextrb $15, %xmm11, %edx
+; SSE-NEXT:    shll $15, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    orl %eax, %edx
+; SSE-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    pextrb $1, %xmm10, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $0, %xmm10, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $15, %xmm9, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $14, %xmm9, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $13, %xmm9, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $12, %xmm9, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $11, %xmm9, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $10, %xmm9, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $9, %xmm9, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $8, %xmm9, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $7, %xmm9, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $6, %xmm9, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $5, %xmm9, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $4, %xmm9, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $3, %xmm9, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $2, %xmm9, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    andl $1, %eax
+; SSE-NEXT:    pextrb $0, %xmm10, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    leal (%rcx,%rax,2), %eax
+; SSE-NEXT:    pextrb $2, %xmm10, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    leal (%rax,%rcx,4), %eax
+; SSE-NEXT:    pextrb $3, %xmm10, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    leal (%rax,%rcx,8), %eax
+; SSE-NEXT:    pextrb $4, %xmm10, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    shll $4, %ecx
+; SSE-NEXT:    orl %eax, %ecx
+; SSE-NEXT:    pextrb $5, %xmm10, %eax
+; SSE-NEXT:    andl $1, %eax
+; SSE-NEXT:    shll $5, %eax
+; SSE-NEXT:    orl %ecx, %eax
+; SSE-NEXT:    pextrb $6, %xmm10, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    shll $6, %ecx
+; SSE-NEXT:    pextrb $7, %xmm10, %edx
+; SSE-NEXT:    andl $1, %edx
+; SSE-NEXT:    shll $7, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    pextrb $8, %xmm10, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    shll $8, %ecx
+; SSE-NEXT:    orl %edx, %ecx
+; SSE-NEXT:    pextrb $9, %xmm10, %edx
+; SSE-NEXT:    andl $1, %edx
+; SSE-NEXT:    shll $9, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    pextrb $10, %xmm10, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    shll $10, %ecx
+; SSE-NEXT:    orl %edx, %ecx
+; SSE-NEXT:    pextrb $11, %xmm10, %edx
+; SSE-NEXT:    andl $1, %edx
+; SSE-NEXT:    shll $11, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    pextrb $12, %xmm10, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    shll $12, %ecx
+; SSE-NEXT:    orl %edx, %ecx
+; SSE-NEXT:    pextrb $13, %xmm10, %edx
+; SSE-NEXT:    andl $1, %edx
+; SSE-NEXT:    shll $13, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    pextrb $14, %xmm10, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    shll $14, %ecx
+; SSE-NEXT:    orl %edx, %ecx
+; SSE-NEXT:    pextrb $15, %xmm10, %edx
+; SSE-NEXT:    shll $15, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    orl %eax, %edx
+; SSE-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    pextrb $1, %xmm9, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $0, %xmm9, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $15, %xmm8, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $14, %xmm8, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $13, %xmm8, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $12, %xmm8, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $11, %xmm8, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $10, %xmm8, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $9, %xmm8, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $8, %xmm8, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $7, %xmm8, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $6, %xmm8, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $5, %xmm8, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $4, %xmm8, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $3, %xmm8, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $2, %xmm8, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    andl $1, %eax
+; SSE-NEXT:    pextrb $0, %xmm9, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    leal (%rcx,%rax,2), %eax
+; SSE-NEXT:    pextrb $2, %xmm9, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    leal (%rax,%rcx,4), %eax
+; SSE-NEXT:    pextrb $3, %xmm9, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    leal (%rax,%rcx,8), %eax
+; SSE-NEXT:    pextrb $4, %xmm9, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    shll $4, %ecx
+; SSE-NEXT:    orl %eax, %ecx
+; SSE-NEXT:    pextrb $5, %xmm9, %eax
+; SSE-NEXT:    andl $1, %eax
+; SSE-NEXT:    shll $5, %eax
+; SSE-NEXT:    orl %ecx, %eax
+; SSE-NEXT:    pextrb $6, %xmm9, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    shll $6, %ecx
+; SSE-NEXT:    pextrb $7, %xmm9, %edx
+; SSE-NEXT:    andl $1, %edx
+; SSE-NEXT:    shll $7, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    pextrb $8, %xmm9, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    shll $8, %ecx
+; SSE-NEXT:    orl %edx, %ecx
+; SSE-NEXT:    pextrb $9, %xmm9, %edx
+; SSE-NEXT:    andl $1, %edx
+; SSE-NEXT:    shll $9, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    pextrb $10, %xmm9, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    shll $10, %ecx
+; SSE-NEXT:    orl %edx, %ecx
+; SSE-NEXT:    pextrb $11, %xmm9, %edx
+; SSE-NEXT:    andl $1, %edx
+; SSE-NEXT:    shll $11, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    pextrb $12, %xmm9, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    shll $12, %ecx
+; SSE-NEXT:    orl %edx, %ecx
+; SSE-NEXT:    pextrb $13, %xmm9, %edx
+; SSE-NEXT:    andl $1, %edx
+; SSE-NEXT:    shll $13, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    pextrb $14, %xmm9, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    shll $14, %ecx
+; SSE-NEXT:    orl %edx, %ecx
+; SSE-NEXT:    pextrb $15, %xmm9, %edx
+; SSE-NEXT:    shll $15, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    orl %eax, %edx
+; SSE-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    pextrb $1, %xmm8, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    pextrb $0, %xmm8, %eax
-; SSE-NEXT:    andb $1, %al
-; SSE-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    andl $1, %eax
+; SSE-NEXT:    pextrb $0, %xmm8, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    leal (%rcx,%rax,2), %eax
+; SSE-NEXT:    pextrb $2, %xmm8, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    leal (%rax,%rcx,4), %eax
+; SSE-NEXT:    pextrb $3, %xmm8, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    leal (%rax,%rcx,8), %eax
+; SSE-NEXT:    pextrb $4, %xmm8, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    shll $4, %ecx
+; SSE-NEXT:    orl %eax, %ecx
+; SSE-NEXT:    pextrb $5, %xmm8, %eax
+; SSE-NEXT:    andl $1, %eax
+; SSE-NEXT:    shll $5, %eax
+; SSE-NEXT:    orl %ecx, %eax
+; SSE-NEXT:    pextrb $6, %xmm8, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    shll $6, %ecx
+; SSE-NEXT:    pextrb $7, %xmm8, %edx
+; SSE-NEXT:    andl $1, %edx
+; SSE-NEXT:    shll $7, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    pextrb $8, %xmm8, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    shll $8, %ecx
+; SSE-NEXT:    orl %edx, %ecx
+; SSE-NEXT:    pextrb $9, %xmm8, %edx
+; SSE-NEXT:    andl $1, %edx
+; SSE-NEXT:    shll $9, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    pextrb $10, %xmm8, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    shll $10, %ecx
+; SSE-NEXT:    orl %edx, %ecx
+; SSE-NEXT:    pextrb $11, %xmm8, %edx
+; SSE-NEXT:    andl $1, %edx
+; SSE-NEXT:    shll $11, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    pextrb $12, %xmm8, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    shll $12, %ecx
+; SSE-NEXT:    orl %edx, %ecx
+; SSE-NEXT:    pextrb $13, %xmm8, %edx
+; SSE-NEXT:    andl $1, %edx
+; SSE-NEXT:    shll $13, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    pextrb $14, %xmm8, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    shll $14, %ecx
+; SSE-NEXT:    orl %edx, %ecx
+; SSE-NEXT:    pextrb $15, %xmm8, %edx
+; SSE-NEXT:    shll $15, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    orl %eax, %edx
+; SSE-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; SSE-NEXT:    shll $16, %eax
 ; SSE-NEXT:    movzwl -{{[0-9]+}}(%rsp), %ecx
@@ -757,200 +801,254 @@ define i64 @v64i8(<64 x i8> %a, <64 x i8> %b, <64 x i8> %c, <64 x i8> %d) {
 ; AVX1-NEXT:    vpcmpgtb %xmm6, %xmm4, %xmm3
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
 ; AVX1-NEXT:    vandps %ymm2, %ymm1, %ymm1
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vpextrb $15, %xmm2, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $14, %xmm2, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $13, %xmm2, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $12, %xmm2, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $11, %xmm2, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $10, %xmm2, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $9, %xmm2, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $8, %xmm2, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $7, %xmm2, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $6, %xmm2, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $5, %xmm2, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $4, %xmm2, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $3, %xmm2, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $2, %xmm2, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $1, %xmm2, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $0, %xmm2, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $15, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $14, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $13, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $12, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $11, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $10, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $9, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $8, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $7, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $6, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $5, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $4, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $3, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $2, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
 ; AVX1-NEXT:    vpextrb $1, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vpextrb $0, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, (%rsp)
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpextrb $15, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $14, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $13, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $12, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $11, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $10, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $9, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $8, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $7, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $6, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
+; AVX1-NEXT:    andl $1, %eax
+; AVX1-NEXT:    vpextrb $0, %xmm1, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    leal (%rcx,%rax,2), %eax
+; AVX1-NEXT:    vpextrb $2, %xmm1, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    leal (%rax,%rcx,4), %eax
+; AVX1-NEXT:    vpextrb $3, %xmm1, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    leal (%rax,%rcx,8), %eax
+; AVX1-NEXT:    vpextrb $4, %xmm1, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $4, %ecx
+; AVX1-NEXT:    orl %eax, %ecx
 ; AVX1-NEXT:    vpextrb $5, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $4, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $3, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $2, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $1, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $0, %xmm1, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $15, %xmm0, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $14, %xmm0, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $13, %xmm0, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $12, %xmm0, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $11, %xmm0, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $10, %xmm0, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $9, %xmm0, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $8, %xmm0, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $7, %xmm0, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $6, %xmm0, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $5, %xmm0, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $4, %xmm0, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $3, %xmm0, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $2, %xmm0, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
+; AVX1-NEXT:    andl $1, %eax
+; AVX1-NEXT:    shll $5, %eax
+; AVX1-NEXT:    orl %ecx, %eax
+; AVX1-NEXT:    vpextrb $6, %xmm1, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $6, %ecx
+; AVX1-NEXT:    vpextrb $7, %xmm1, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    shll $7, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    vpextrb $8, %xmm1, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $8, %ecx
+; AVX1-NEXT:    orl %edx, %ecx
+; AVX1-NEXT:    vpextrb $9, %xmm1, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    shll $9, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    vpextrb $10, %xmm1, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $10, %ecx
+; AVX1-NEXT:    orl %edx, %ecx
+; AVX1-NEXT:    vpextrb $11, %xmm1, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    shll $11, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    vpextrb $12, %xmm1, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $12, %ecx
+; AVX1-NEXT:    orl %edx, %ecx
+; AVX1-NEXT:    vpextrb $13, %xmm1, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    shll $13, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    vpextrb $14, %xmm1, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $14, %ecx
+; AVX1-NEXT:    orl %edx, %ecx
+; AVX1-NEXT:    vpextrb $15, %xmm1, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    shll $15, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vpextrb $0, %xmm1, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $16, %ecx
+; AVX1-NEXT:    orl %edx, %ecx
+; AVX1-NEXT:    vpextrb $1, %xmm1, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    shll $17, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    vpextrb $2, %xmm1, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $18, %ecx
+; AVX1-NEXT:    orl %edx, %ecx
+; AVX1-NEXT:    vpextrb $3, %xmm1, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    shll $19, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    vpextrb $4, %xmm1, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $20, %ecx
+; AVX1-NEXT:    orl %edx, %ecx
+; AVX1-NEXT:    vpextrb $5, %xmm1, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    shll $21, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    vpextrb $6, %xmm1, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $22, %ecx
+; AVX1-NEXT:    orl %edx, %ecx
+; AVX1-NEXT:    vpextrb $7, %xmm1, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    shll $23, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    vpextrb $8, %xmm1, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $24, %ecx
+; AVX1-NEXT:    orl %edx, %ecx
+; AVX1-NEXT:    vpextrb $9, %xmm1, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    shll $25, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    vpextrb $10, %xmm1, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $26, %ecx
+; AVX1-NEXT:    orl %edx, %ecx
+; AVX1-NEXT:    vpextrb $11, %xmm1, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    shll $27, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    vpextrb $12, %xmm1, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $28, %ecx
+; AVX1-NEXT:    orl %edx, %ecx
+; AVX1-NEXT:    vpextrb $13, %xmm1, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    shll $29, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    vpextrb $14, %xmm1, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $30, %ecx
+; AVX1-NEXT:    orl %edx, %ecx
+; AVX1-NEXT:    vpextrb $15, %xmm1, %edx
+; AVX1-NEXT:    shll $31, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    orl %eax, %edx
+; AVX1-NEXT:    movl %edx, (%rsp)
 ; AVX1-NEXT:    vpextrb $1, %xmm0, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX1-NEXT:    vpextrb $0, %xmm0, %eax
-; AVX1-NEXT:    andb $1, %al
-; AVX1-NEXT:    movb %al, {{[0-9]+}}(%rsp)
+; AVX1-NEXT:    andl $1, %eax
+; AVX1-NEXT:    vpextrb $0, %xmm0, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    leal (%rcx,%rax,2), %eax
+; AVX1-NEXT:    vpextrb $2, %xmm0, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    leal (%rax,%rcx,4), %eax
+; AVX1-NEXT:    vpextrb $3, %xmm0, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    leal (%rax,%rcx,8), %eax
+; AVX1-NEXT:    vpextrb $4, %xmm0, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $4, %ecx
+; AVX1-NEXT:    orl %eax, %ecx
+; AVX1-NEXT:    vpextrb $5, %xmm0, %eax
+; AVX1-NEXT:    andl $1, %eax
+; AVX1-NEXT:    shll $5, %eax
+; AVX1-NEXT:    orl %ecx, %eax
+; AVX1-NEXT:    vpextrb $6, %xmm0, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $6, %ecx
+; AVX1-NEXT:    vpextrb $7, %xmm0, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    shll $7, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    vpextrb $8, %xmm0, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $8, %ecx
+; AVX1-NEXT:    orl %edx, %ecx
+; AVX1-NEXT:    vpextrb $9, %xmm0, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    shll $9, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    vpextrb $10, %xmm0, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $10, %ecx
+; AVX1-NEXT:    orl %edx, %ecx
+; AVX1-NEXT:    vpextrb $11, %xmm0, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    shll $11, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    vpextrb $12, %xmm0, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $12, %ecx
+; AVX1-NEXT:    orl %edx, %ecx
+; AVX1-NEXT:    vpextrb $13, %xmm0, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    shll $13, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    vpextrb $14, %xmm0, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $14, %ecx
+; AVX1-NEXT:    orl %edx, %ecx
+; AVX1-NEXT:    vpextrb $15, %xmm0, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    shll $15, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpextrb $0, %xmm0, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $16, %ecx
+; AVX1-NEXT:    orl %edx, %ecx
+; AVX1-NEXT:    vpextrb $1, %xmm0, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    shll $17, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    vpextrb $2, %xmm0, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $18, %ecx
+; AVX1-NEXT:    orl %edx, %ecx
+; AVX1-NEXT:    vpextrb $3, %xmm0, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    shll $19, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    vpextrb $4, %xmm0, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $20, %ecx
+; AVX1-NEXT:    orl %edx, %ecx
+; AVX1-NEXT:    vpextrb $5, %xmm0, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    shll $21, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    vpextrb $6, %xmm0, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $22, %ecx
+; AVX1-NEXT:    orl %edx, %ecx
+; AVX1-NEXT:    vpextrb $7, %xmm0, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    shll $23, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    vpextrb $8, %xmm0, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $24, %ecx
+; AVX1-NEXT:    orl %edx, %ecx
+; AVX1-NEXT:    vpextrb $9, %xmm0, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    shll $25, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    vpextrb $10, %xmm0, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $26, %ecx
+; AVX1-NEXT:    orl %edx, %ecx
+; AVX1-NEXT:    vpextrb $11, %xmm0, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    shll $27, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    vpextrb $12, %xmm0, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $28, %ecx
+; AVX1-NEXT:    orl %edx, %ecx
+; AVX1-NEXT:    vpextrb $13, %xmm0, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    shll $29, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    vpextrb $14, %xmm0, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    shll $30, %ecx
+; AVX1-NEXT:    orl %edx, %ecx
+; AVX1-NEXT:    vpextrb $15, %xmm0, %edx
+; AVX1-NEXT:    shll $31, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    orl %eax, %edx
+; AVX1-NEXT:    movl %edx, {{[0-9]+}}(%rsp)
 ; AVX1-NEXT:    movl (%rsp), %ecx
 ; AVX1-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; AVX1-NEXT:    shlq $32, %rax
@@ -975,200 +1073,254 @@ define i64 @v64i8(<64 x i8> %a, <64 x i8> %b, <64 x i8> %c, <64 x i8> %d) {
 ; AVX2-NEXT:    vpand %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vpcmpgtb %ymm6, %ymm4, %ymm1
 ; AVX2-NEXT:    vpand %ymm1, %ymm2, %ymm1
-; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX2-NEXT:    vpextrb $15, %xmm2, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $14, %xmm2, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $13, %xmm2, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $12, %xmm2, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $11, %xmm2, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $10, %xmm2, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $9, %xmm2, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $8, %xmm2, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $7, %xmm2, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $6, %xmm2, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $5, %xmm2, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $4, %xmm2, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $3, %xmm2, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $2, %xmm2, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $1, %xmm2, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $0, %xmm2, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $15, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $14, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $13, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $12, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $11, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $10, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $9, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $8, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $7, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $6, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $5, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $4, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $3, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $2, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
 ; AVX2-NEXT:    vpextrb $1, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vpextrb $0, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, (%rsp)
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpextrb $15, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $14, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $13, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $12, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $11, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $10, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $9, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $8, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $7, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $6, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    vpextrb $0, %xmm1, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    leal (%rcx,%rax,2), %eax
+; AVX2-NEXT:    vpextrb $2, %xmm1, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    leal (%rax,%rcx,4), %eax
+; AVX2-NEXT:    vpextrb $3, %xmm1, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    leal (%rax,%rcx,8), %eax
+; AVX2-NEXT:    vpextrb $4, %xmm1, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $4, %ecx
+; AVX2-NEXT:    orl %eax, %ecx
 ; AVX2-NEXT:    vpextrb $5, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $4, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $3, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $2, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $1, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $0, %xmm1, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $15, %xmm0, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $14, %xmm0, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $13, %xmm0, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $12, %xmm0, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $11, %xmm0, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $10, %xmm0, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $9, %xmm0, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $8, %xmm0, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $7, %xmm0, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $6, %xmm0, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $5, %xmm0, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $4, %xmm0, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $3, %xmm0, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $2, %xmm0, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    shll $5, %eax
+; AVX2-NEXT:    orl %ecx, %eax
+; AVX2-NEXT:    vpextrb $6, %xmm1, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $6, %ecx
+; AVX2-NEXT:    vpextrb $7, %xmm1, %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    shll $7, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    vpextrb $8, %xmm1, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $8, %ecx
+; AVX2-NEXT:    orl %edx, %ecx
+; AVX2-NEXT:    vpextrb $9, %xmm1, %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    shll $9, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    vpextrb $10, %xmm1, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $10, %ecx
+; AVX2-NEXT:    orl %edx, %ecx
+; AVX2-NEXT:    vpextrb $11, %xmm1, %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    shll $11, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    vpextrb $12, %xmm1, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $12, %ecx
+; AVX2-NEXT:    orl %edx, %ecx
+; AVX2-NEXT:    vpextrb $13, %xmm1, %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    shll $13, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    vpextrb $14, %xmm1, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $14, %ecx
+; AVX2-NEXT:    orl %edx, %ecx
+; AVX2-NEXT:    vpextrb $15, %xmm1, %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    shll $15, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; AVX2-NEXT:    vpextrb $0, %xmm1, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $16, %ecx
+; AVX2-NEXT:    orl %edx, %ecx
+; AVX2-NEXT:    vpextrb $1, %xmm1, %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    shll $17, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    vpextrb $2, %xmm1, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $18, %ecx
+; AVX2-NEXT:    orl %edx, %ecx
+; AVX2-NEXT:    vpextrb $3, %xmm1, %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    shll $19, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    vpextrb $4, %xmm1, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $20, %ecx
+; AVX2-NEXT:    orl %edx, %ecx
+; AVX2-NEXT:    vpextrb $5, %xmm1, %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    shll $21, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    vpextrb $6, %xmm1, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $22, %ecx
+; AVX2-NEXT:    orl %edx, %ecx
+; AVX2-NEXT:    vpextrb $7, %xmm1, %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    shll $23, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    vpextrb $8, %xmm1, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $24, %ecx
+; AVX2-NEXT:    orl %edx, %ecx
+; AVX2-NEXT:    vpextrb $9, %xmm1, %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    shll $25, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    vpextrb $10, %xmm1, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $26, %ecx
+; AVX2-NEXT:    orl %edx, %ecx
+; AVX2-NEXT:    vpextrb $11, %xmm1, %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    shll $27, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    vpextrb $12, %xmm1, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $28, %ecx
+; AVX2-NEXT:    orl %edx, %ecx
+; AVX2-NEXT:    vpextrb $13, %xmm1, %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    shll $29, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    vpextrb $14, %xmm1, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $30, %ecx
+; AVX2-NEXT:    orl %edx, %ecx
+; AVX2-NEXT:    vpextrb $15, %xmm1, %edx
+; AVX2-NEXT:    shll $31, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    orl %eax, %edx
+; AVX2-NEXT:    movl %edx, (%rsp)
 ; AVX2-NEXT:    vpextrb $1, %xmm0, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpextrb $0, %xmm0, %eax
-; AVX2-NEXT:    andb $1, %al
-; AVX2-NEXT:    movb %al, {{[0-9]+}}(%rsp)
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    vpextrb $0, %xmm0, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    leal (%rcx,%rax,2), %eax
+; AVX2-NEXT:    vpextrb $2, %xmm0, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    leal (%rax,%rcx,4), %eax
+; AVX2-NEXT:    vpextrb $3, %xmm0, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    leal (%rax,%rcx,8), %eax
+; AVX2-NEXT:    vpextrb $4, %xmm0, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $4, %ecx
+; AVX2-NEXT:    orl %eax, %ecx
+; AVX2-NEXT:    vpextrb $5, %xmm0, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    shll $5, %eax
+; AVX2-NEXT:    orl %ecx, %eax
+; AVX2-NEXT:    vpextrb $6, %xmm0, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $6, %ecx
+; AVX2-NEXT:    vpextrb $7, %xmm0, %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    shll $7, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    vpextrb $8, %xmm0, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $8, %ecx
+; AVX2-NEXT:    orl %edx, %ecx
+; AVX2-NEXT:    vpextrb $9, %xmm0, %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    shll $9, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    vpextrb $10, %xmm0, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $10, %ecx
+; AVX2-NEXT:    orl %edx, %ecx
+; AVX2-NEXT:    vpextrb $11, %xmm0, %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    shll $11, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    vpextrb $12, %xmm0, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $12, %ecx
+; AVX2-NEXT:    orl %edx, %ecx
+; AVX2-NEXT:    vpextrb $13, %xmm0, %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    shll $13, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    vpextrb $14, %xmm0, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $14, %ecx
+; AVX2-NEXT:    orl %edx, %ecx
+; AVX2-NEXT:    vpextrb $15, %xmm0, %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    shll $15, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX2-NEXT:    vpextrb $0, %xmm0, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $16, %ecx
+; AVX2-NEXT:    orl %edx, %ecx
+; AVX2-NEXT:    vpextrb $1, %xmm0, %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    shll $17, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    vpextrb $2, %xmm0, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $18, %ecx
+; AVX2-NEXT:    orl %edx, %ecx
+; AVX2-NEXT:    vpextrb $3, %xmm0, %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    shll $19, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    vpextrb $4, %xmm0, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $20, %ecx
+; AVX2-NEXT:    orl %edx, %ecx
+; AVX2-NEXT:    vpextrb $5, %xmm0, %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    shll $21, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    vpextrb $6, %xmm0, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $22, %ecx
+; AVX2-NEXT:    orl %edx, %ecx
+; AVX2-NEXT:    vpextrb $7, %xmm0, %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    shll $23, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    vpextrb $8, %xmm0, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $24, %ecx
+; AVX2-NEXT:    orl %edx, %ecx
+; AVX2-NEXT:    vpextrb $9, %xmm0, %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    shll $25, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    vpextrb $10, %xmm0, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $26, %ecx
+; AVX2-NEXT:    orl %edx, %ecx
+; AVX2-NEXT:    vpextrb $11, %xmm0, %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    shll $27, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    vpextrb $12, %xmm0, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $28, %ecx
+; AVX2-NEXT:    orl %edx, %ecx
+; AVX2-NEXT:    vpextrb $13, %xmm0, %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    shll $29, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    vpextrb $14, %xmm0, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    shll $30, %ecx
+; AVX2-NEXT:    orl %edx, %ecx
+; AVX2-NEXT:    vpextrb $15, %xmm0, %edx
+; AVX2-NEXT:    shll $31, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    orl %eax, %edx
+; AVX2-NEXT:    movl %edx, {{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    movl (%rsp), %ecx
 ; AVX2-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; AVX2-NEXT:    shlq $32, %rax

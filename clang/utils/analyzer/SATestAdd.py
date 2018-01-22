@@ -32,11 +32,11 @@ the Repository Directory.
                                      (e.g., to adapt to newer version of clang)
                                      that should be applied to CachedSource
                                      before analysis. To construct this patch,
-                                     run the the download script to download
+                                     run the download script to download
                                      the project to CachedSource, copy the
                                      CachedSource to another directory (for
                                      example, PatchedSource) and make any
-                                     needed modifications to the the copied
+                                     needed modifications to the copied
                                      source.
                                      Then run:
                                           diff -ur CachedSource PatchedSource \

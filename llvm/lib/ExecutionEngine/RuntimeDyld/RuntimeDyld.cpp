@@ -211,7 +211,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
   // definitions occur elsewhere.
   JITSymbolResolver::LookupFlagsResult SymbolFlags;
   {
-    JITSymbolResolver::SymbolNameSet Symbols;
+    JITSymbolResolver::LookupSet Symbols;
     for (auto &Sym : Obj.symbols()) {
       uint32_t Flags = Sym.getFlags();
       if ((Flags & SymbolRef::SF_Common) || (Flags & SymbolRef::SF_Weak)) {
@@ -1000,10 +1000,10 @@ Error RuntimeDyldImpl::resolveExternalSymbols() {
   // Resolution can trigger emission of more symbols, so iterate until
   // we've resolved *everything*.
   {
-    JITSymbolResolver::SymbolNameSet ResolvedSymbols;
+    JITSymbolResolver::LookupSet ResolvedSymbols;
 
     while (true) {
-      JITSymbolResolver::SymbolNameSet NewSymbols;
+      JITSymbolResolver::LookupSet NewSymbols;
 
       for (auto &RelocKV : ExternalSymbolRelocations) {
         StringRef Name = RelocKV.first();

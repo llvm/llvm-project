@@ -651,7 +651,7 @@ public:
     typedef typename __alloc_traits::pointer             pointer;
     typedef typename __alloc_traits::const_pointer       const_pointer;
 
-    static_assert(is_pod<value_type>::value, "Character type of basic_string must be a POD");
+    static_assert(is_trivial<value_type>::value, "Character type of basic_string must be trivial");
     static_assert((is_same<_CharT, typename traits_type::char_type>::value),
                   "traits_type::char_type must be the same type as CharT");
     static_assert((is_same<typename allocator_type::value_type, value_type>::value),

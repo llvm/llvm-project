@@ -130,6 +130,56 @@ TEST(CoreAPIsTest, SimpleAsynchronousSymbolQueryAgainstVSO) {
   EXPECT_TRUE(OnReadyRun) << "OnReady was not run";
 }
 
+TEST(CoreAPIsTest, LookupFlagsTest) {
+
+  // Test that lookupFlags works on a predefined symbol, and does not trigger
+  // materialization of a lazy symbol.
+
+  SymbolStringPool SP;
+  auto Foo = SP.intern("foo");
+  auto Bar = SP.intern("bar");
+  auto Baz = SP.intern("baz");
+
+  VSO V;
+
+  auto Source = std::make_shared<SimpleSource>(
+      [](VSO &V, SymbolNameSet Symbols) -> Error {
+        llvm_unreachable("Symbol materialized on flags lookup");
+      },
+      [](VSO &V, SymbolStringPtr Name) -> Error {
+        llvm_unreachable("Symbol finalized on flags lookup");
+      });
+
+  JITSymbolFlags FooFlags = JITSymbolFlags::Exported;
+  JITSymbolFlags BarFlags = static_cast<JITSymbolFlags::FlagNames>(
+      JITSymbolFlags::Exported | JITSymbolFlags::Weak);
+
+  SymbolMap InitialDefs;
+  InitialDefs[Foo] = JITEvaluatedSymbol(0xdeadbeef, FooFlags);
+  cantFail(V.define(std::move(InitialDefs)));
+
+  SymbolFlagsMap InitialLazyDefs({{Bar, BarFlags}});
+  cantFail(V.defineLazy(InitialLazyDefs, *Source));
+
+  SymbolNameSet Names({Foo, Bar, Baz});
+
+  auto LFR = V.lookupFlags(Names);
+
+  EXPECT_EQ(LFR.SymbolsNotFound.size(), 1U) << "Expected one not-found symbol";
+  EXPECT_EQ(*LFR.SymbolsNotFound.begin(), Baz)
+      << "Expected Baz to be not-found";
+  EXPECT_EQ(LFR.SymbolFlags.size(), 2U)
+      << "Returned symbol flags contains unexpected results";
+  EXPECT_EQ(LFR.SymbolFlags.count(Foo), 1U)
+      << "Missing lookupFlags result for Foo";
+  EXPECT_EQ(LFR.SymbolFlags[Foo], FooFlags)
+      << "Incorrect flags returned for Foo";
+  EXPECT_EQ(LFR.SymbolFlags.count(Bar), 1U)
+      << "Missing  lookupFlags result for Bar";
+  EXPECT_EQ(LFR.SymbolFlags[Bar], BarFlags)
+      << "Incorrect flags returned for Bar";
+}
+
 TEST(CoreAPIsTest, AddAndMaterializeLazySymbol) {
 
   constexpr JITTargetAddress FakeFooAddr = 0xdeadbeef;

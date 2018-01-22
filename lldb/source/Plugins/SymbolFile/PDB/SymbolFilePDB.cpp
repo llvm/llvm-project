@@ -211,7 +211,7 @@ void SymbolFilePDB::GetCompileUnitIndex(
   if (!results_up)
     return;
   auto uid = pdb_compiland->getSymIndexId();
-  for (int cu_idx = 0; cu_idx < GetNumCompileUnits(); ++cu_idx) {
+  for (uint32_t cu_idx = 0; cu_idx < GetNumCompileUnits(); ++cu_idx) {
     auto compiland_up = results_up->getChildAtIndex(cu_idx);
     if (!compiland_up)
       continue;

@@ -62,7 +62,14 @@ define void @f6(<4 x i32> %val, <4 x i16> *%ptr) {
 
 ; Test a v2i64->v2i1 truncation.
 define void @f7(<2 x i64> %val, <2 x i1> *%ptr) {
-; No expected output, but must compile.
+; CHECK-LABEL: f7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vlgvg %r0, %v24, 0
+; CHECK-NEXT:    vlgvg %r1, %v24, 1
+; CHECK-NEXT:    risbgn %r0, %r1, 32, 62, 1
+; CHECK-NEXT:    nilf %r0, 3
+; CHECK-NEXT:    stc %r0, 0(%r2)
+; CHECK-NEXT:    br %r14
   %trunc = trunc <2 x i64> %val to <2 x i1>
   store <2 x i1> %trunc, <2 x i1> *%ptr
   ret void

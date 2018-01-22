@@ -662,7 +662,6 @@ SDValue VectorLegalizer::ExpandLoad(SDValue Op) {
 
 SDValue VectorLegalizer::ExpandStore(SDValue Op) {
   StoreSDNode *ST = cast<StoreSDNode>(Op.getNode());
-
   SDValue TF = TLI.scalarizeVectorStore(ST, DAG);
   AddLegalizedOperand(Op, TF);
   return TF;

@@ -17,6 +17,7 @@
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "../Utils/AArch64BaseInfo.h"
 
 namespace llvm {
 
@@ -165,6 +166,8 @@ protected:
   void printGPRSeqPairsClassOperand(const MCInst *MI, unsigned OpNum,
                                     const MCSubtargetInfo &STI,
                                     raw_ostream &O);
+  void printSVEPattern(const MCInst *MI, unsigned OpNum,
+                       const MCSubtargetInfo &STI, raw_ostream &O);
   template <char = 0>
   void printSVERegOp(const MCInst *MI, unsigned OpNum,
                     const MCSubtargetInfo &STI, raw_ostream &O);
