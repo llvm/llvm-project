@@ -483,10 +483,7 @@ TEST_F(SymbolFilePDBTests, TestTypedefs) {
   llvm::DenseSet<SymbolFile *> searched_files;
   TypeMap results;
 
-  const char *TypedefsToCheck[] = {
-      "ClassTypedef", "NSClassTypedef",
-      "FuncPointerTypedef", "VariadicFuncPointerTypedef"
-  };
+  const char *TypedefsToCheck[] = {"ClassTypedef", "NSClassTypedef"};
   for (auto Typedef : TypedefsToCheck) {
     TypeMap results;
     EXPECT_EQ(1u, symfile->FindTypes(sc, ConstString(Typedef), nullptr, false,

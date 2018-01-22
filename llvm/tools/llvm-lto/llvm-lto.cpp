@@ -367,7 +367,7 @@ static void listSymbols(const TargetOptions &Options) {
 /// This is meant to enable testing of ThinLTO combined index generation,
 /// currently available via the gold plugin via -thinlto.
 static void createCombinedModuleSummaryIndex() {
-  ModuleSummaryIndex CombinedIndex;
+  ModuleSummaryIndex CombinedIndex(/*IsPerformingAnalysis=*/false);
   uint64_t NextModuleId = 0;
   for (auto &Filename : InputFilenames) {
     ExitOnError ExitOnErr("llvm-lto: error loading file '" + Filename + "': ");

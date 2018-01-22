@@ -56,9 +56,9 @@ void TestArm64InstEmulation::TearDownTestCase() {
 
 TEST_F(TestArm64InstEmulation, TestSimpleDarwinFunction) {
   ArchSpec arch("arm64-apple-ios10");
-  UnwindAssemblyInstEmulation *engine =
+  std::unique_ptr<UnwindAssemblyInstEmulation> engine(
       static_cast<UnwindAssemblyInstEmulation *>(
-          UnwindAssemblyInstEmulation::CreateInstance(arch));
+          UnwindAssemblyInstEmulation::CreateInstance(arch)));
   ASSERT_NE(nullptr, engine);
 
   UnwindPlan::RowSP row_sp;
@@ -152,9 +152,9 @@ TEST_F(TestArm64InstEmulation, TestSimpleDarwinFunction) {
 
 TEST_F(TestArm64InstEmulation, TestMediumDarwinFunction) {
   ArchSpec arch("arm64-apple-ios10");
-  UnwindAssemblyInstEmulation *engine =
+  std::unique_ptr<UnwindAssemblyInstEmulation> engine(
       static_cast<UnwindAssemblyInstEmulation *>(
-          UnwindAssemblyInstEmulation::CreateInstance(arch));
+          UnwindAssemblyInstEmulation::CreateInstance(arch)));
   ASSERT_NE(nullptr, engine);
 
   UnwindPlan::RowSP row_sp;
@@ -314,9 +314,9 @@ TEST_F(TestArm64InstEmulation, TestMediumDarwinFunction) {
 
 TEST_F(TestArm64InstEmulation, TestFramelessThreeEpilogueFunction) {
   ArchSpec arch("arm64-apple-ios10");
-  UnwindAssemblyInstEmulation *engine =
+  std::unique_ptr<UnwindAssemblyInstEmulation> engine(
       static_cast<UnwindAssemblyInstEmulation *>(
-          UnwindAssemblyInstEmulation::CreateInstance(arch));
+          UnwindAssemblyInstEmulation::CreateInstance(arch)));
   ASSERT_NE(nullptr, engine);
 
   UnwindPlan::RowSP row_sp;
@@ -409,9 +409,9 @@ TEST_F(TestArm64InstEmulation, TestFramelessThreeEpilogueFunction) {
 
 TEST_F(TestArm64InstEmulation, TestRegisterSavedTwice) {
   ArchSpec arch("arm64-apple-ios10");
-  UnwindAssemblyInstEmulation *engine =
+  std::unique_ptr<UnwindAssemblyInstEmulation> engine(
       static_cast<UnwindAssemblyInstEmulation *>(
-          UnwindAssemblyInstEmulation::CreateInstance(arch));
+          UnwindAssemblyInstEmulation::CreateInstance(arch)));
   ASSERT_NE(nullptr, engine);
 
   UnwindPlan::RowSP row_sp;
@@ -511,9 +511,9 @@ TEST_F(TestArm64InstEmulation, TestRegisterSavedTwice) {
 
 TEST_F(TestArm64InstEmulation, TestRegisterDoubleSpills) {
   ArchSpec arch("arm64-apple-ios10");
-  UnwindAssemblyInstEmulation *engine =
+  std::unique_ptr<UnwindAssemblyInstEmulation> engine(
       static_cast<UnwindAssemblyInstEmulation *>(
-          UnwindAssemblyInstEmulation::CreateInstance(arch));
+          UnwindAssemblyInstEmulation::CreateInstance(arch)));
   ASSERT_NE(nullptr, engine);
 
   UnwindPlan::RowSP row_sp;

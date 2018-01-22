@@ -533,6 +533,7 @@ struct StringTypes {
   std::string stdstr9;
   std::string stdstr10;
   std::string stdstr11;
+  std::string stdstr12;
 };
 
 namespace llvm {
@@ -562,6 +563,7 @@ namespace yaml {
       io.mapRequired("stdstr9",   st.stdstr9);
       io.mapRequired("stdstr10",  st.stdstr10);
       io.mapRequired("stdstr11",  st.stdstr11);
+      io.mapRequired("stdstr12",  st.stdstr12);
     }
   };
 }
@@ -593,6 +595,7 @@ TEST(YAMLIO, TestReadWriteStringTypes) {
     map.stdstr9 = "~";
     map.stdstr10 = "0.2e20";
     map.stdstr11 = "0x30";
+    map.stdstr12 = "- match";
 
     llvm::raw_string_ostream ostr(intermediate);
     Output yout(ostr);
@@ -611,6 +614,7 @@ TEST(YAMLIO, TestReadWriteStringTypes) {
   EXPECT_NE(llvm::StringRef::npos, flowOut.find("'~'\n"));
   EXPECT_NE(llvm::StringRef::npos, flowOut.find("'0.2e20'\n"));
   EXPECT_NE(llvm::StringRef::npos, flowOut.find("'0x30'\n"));
+  EXPECT_NE(llvm::StringRef::npos, flowOut.find("'- match'\n"));
   EXPECT_NE(std::string::npos, flowOut.find("'''eee"));
   EXPECT_NE(std::string::npos, flowOut.find("'\"fff'"));
   EXPECT_NE(std::string::npos, flowOut.find("'`ggg'"));

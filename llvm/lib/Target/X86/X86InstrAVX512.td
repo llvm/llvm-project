@@ -439,7 +439,7 @@ multiclass AVX512_maskable_logic<bits<8> O, Format F, X86VectorVTInfo _,
 
 // Alias instruction that maps zero vector to pxor / xorp* for AVX-512.
 // This is expanded by ExpandPostRAPseudos to an xorps / vxorps, and then
-// swizzled by ExecutionDepsFix to pxor.
+// swizzled by ExecutionDomainFix to pxor.
 // We set canFoldAsLoad because this can be converted to a constant-pool
 // load of an all-zeros value if folding it would be beneficial.
 let isReMaterializable = 1, isAsCheapAsAMove = 1, canFoldAsLoad = 1,

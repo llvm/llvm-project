@@ -703,37 +703,37 @@ const DWARFDebugMacro *DWARFContext::getDebugMacro() {
   return Macro.get();
 }
 
-static DWARFAcceleratorTable &
-getAccelTable(std::unique_ptr<DWARFAcceleratorTable> &Cache,
+static AppleAcceleratorTable &
+getAccelTable(std::unique_ptr<AppleAcceleratorTable> &Cache,
               const DWARFObject &Obj, const DWARFSection &Section,
               StringRef StringSection, bool IsLittleEndian) {
   if (Cache)
     return *Cache;
   DWARFDataExtractor AccelSection(Obj, Section, IsLittleEndian, 0);
   DataExtractor StrData(StringSection, IsLittleEndian, 0);
-  Cache.reset(new DWARFAcceleratorTable(AccelSection, StrData));
+  Cache.reset(new AppleAcceleratorTable(AccelSection, StrData));
   if (Error E = Cache->extract())
     llvm::consumeError(std::move(E));
   return *Cache;
 }
 
-const DWARFAcceleratorTable &DWARFContext::getAppleNames() {
+const AppleAcceleratorTable &DWARFContext::getAppleNames() {
   return getAccelTable(AppleNames, *DObj, DObj->getAppleNamesSection(),
                        DObj->getStringSection(), isLittleEndian());
 }
 
-const DWARFAcceleratorTable &DWARFContext::getAppleTypes() {
+const AppleAcceleratorTable &DWARFContext::getAppleTypes() {
   return getAccelTable(AppleTypes, *DObj, DObj->getAppleTypesSection(),
                        DObj->getStringSection(), isLittleEndian());
 }
 
-const DWARFAcceleratorTable &DWARFContext::getAppleNamespaces() {
+const AppleAcceleratorTable &DWARFContext::getAppleNamespaces() {
   return getAccelTable(AppleNamespaces, *DObj,
                        DObj->getAppleNamespacesSection(),
                        DObj->getStringSection(), isLittleEndian());
 }
 
-const DWARFAcceleratorTable &DWARFContext::getAppleObjC() {
+const AppleAcceleratorTable &DWARFContext::getAppleObjC() {
   return getAccelTable(AppleObjC, *DObj, DObj->getAppleObjCSection(),
                        DObj->getStringSection(), isLittleEndian());
 }
