@@ -25,7 +25,6 @@ struct Configuration {
   bool AllowUndefined;
   bool CheckSignatures;
   bool Demangle;
-  bool EmitRelocs;
   bool ImportMemory;
   bool Relocatable;
   bool StripAll;

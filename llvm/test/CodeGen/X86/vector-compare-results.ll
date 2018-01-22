@@ -6654,171 +6654,163 @@ define <32 x i1> @test_cmp_v32f64(<32 x double> %a0, <32 x double> %a1) nounwind
 ; SSE42-NEXT:    pushq %r13
 ; SSE42-NEXT:    pushq %r12
 ; SSE42-NEXT:    pushq %rbx
+; SSE42-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp) # 8-byte Spill
 ; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm8
 ; SSE42-NEXT:    cmpltpd %xmm7, %xmm8
 ; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm7
 ; SSE42-NEXT:    cmpltpd %xmm6, %xmm7
-; SSE42-NEXT:    shufps {{.*#+}} xmm7 = xmm7[0,2],xmm8[0,2]
 ; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm6
 ; SSE42-NEXT:    cmpltpd %xmm5, %xmm6
 ; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm5
 ; SSE42-NEXT:    cmpltpd %xmm4, %xmm5
-; SSE42-NEXT:    shufps {{.*#+}} xmm5 = xmm5[0,2],xmm6[0,2]
-; SSE42-NEXT:    packssdw %xmm7, %xmm5
 ; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm4
 ; SSE42-NEXT:    cmpltpd %xmm3, %xmm4
 ; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm3
 ; SSE42-NEXT:    cmpltpd %xmm2, %xmm3
-; SSE42-NEXT:    shufps {{.*#+}} xmm3 = xmm3[0,2],xmm4[0,2]
 ; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm2
 ; SSE42-NEXT:    cmpltpd %xmm1, %xmm2
 ; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm1
 ; SSE42-NEXT:    cmpltpd %xmm0, %xmm1
 ; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
-; SSE42-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[0,2]
-; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm2
-; SSE42-NEXT:    packssdw %xmm3, %xmm1
-; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm3
-; SSE42-NEXT:    packsswb %xmm5, %xmm1
-; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm4
-; SSE42-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm4
-; SSE42-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm3
-; SSE42-NEXT:    shufps {{.*#+}} xmm3 = xmm3[0,2],xmm4[0,2]
-; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm4
-; SSE42-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm4
-; SSE42-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm2
-; SSE42-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm4[0,2]
-; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm4
-; SSE42-NEXT:    packssdw %xmm3, %xmm2
-; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm3
-; SSE42-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm3
-; SSE42-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm4
-; SSE42-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,2],xmm3[0,2]
-; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm3
-; SSE42-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm3
 ; SSE42-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm0
-; SSE42-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm3[0,2]
-; SSE42-NEXT:    packssdw %xmm4, %xmm0
-; SSE42-NEXT:    packsswb %xmm2, %xmm0
-; SSE42-NEXT:    pextrb $1, %xmm0, %eax
-; SSE42-NEXT:    andl $1, %eax
-; SSE42-NEXT:    pextrb $0, %xmm0, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    leal (%rcx,%rax,2), %eax
-; SSE42-NEXT:    pextrb $2, %xmm0, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    leal (%rax,%rcx,4), %r8d
-; SSE42-NEXT:    pextrb $3, %xmm0, %r9d
-; SSE42-NEXT:    pextrb $4, %xmm0, %r14d
-; SSE42-NEXT:    pextrb $5, %xmm0, %r11d
-; SSE42-NEXT:    pextrb $6, %xmm0, %r10d
-; SSE42-NEXT:    pextrb $7, %xmm0, %r15d
+; SSE42-NEXT:    pextrb $8, %xmm0, %r8d
+; SSE42-NEXT:    pextrb $0, %xmm0, %r10d
+; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
+; SSE42-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm0
+; SSE42-NEXT:    pextrb $0, %xmm0, %ebp
+; SSE42-NEXT:    pextrb $8, %xmm0, %edi
+; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
+; SSE42-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm0
+; SSE42-NEXT:    pextrb $0, %xmm0, %r15d
+; SSE42-NEXT:    pextrb $8, %xmm0, %r11d
+; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
+; SSE42-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm0
+; SSE42-NEXT:    pextrb $0, %xmm0, %r14d
+; SSE42-NEXT:    pextrb $8, %xmm0, %r9d
+; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
+; SSE42-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm0
+; SSE42-NEXT:    pextrb $0, %xmm0, %esi
 ; SSE42-NEXT:    pextrb $8, %xmm0, %r12d
-; SSE42-NEXT:    pextrb $9, %xmm0, %r13d
-; SSE42-NEXT:    pextrb $10, %xmm0, %ebx
-; SSE42-NEXT:    pextrb $11, %xmm0, %ebp
-; SSE42-NEXT:    pextrb $12, %xmm0, %esi
-; SSE42-NEXT:    pextrb $13, %xmm0, %edx
-; SSE42-NEXT:    pextrb $14, %xmm0, %ecx
-; SSE42-NEXT:    pextrb $15, %xmm0, %eax
-; SSE42-NEXT:    andl $1, %r9d
-; SSE42-NEXT:    leal (%r8,%r9,8), %r8d
-; SSE42-NEXT:    andl $1, %r14d
-; SSE42-NEXT:    shll $4, %r14d
-; SSE42-NEXT:    orl %r8d, %r14d
+; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
+; SSE42-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm0
+; SSE42-NEXT:    pextrb $0, %xmm0, %edx
+; SSE42-NEXT:    pextrb $8, %xmm0, %ebx
+; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
+; SSE42-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm0
+; SSE42-NEXT:    pextrb $0, %xmm0, %eax
+; SSE42-NEXT:    pextrb $8, %xmm0, %r13d
+; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
+; SSE42-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm0
+; SSE42-NEXT:    andl $1, %r8d
+; SSE42-NEXT:    andl $1, %r10d
+; SSE42-NEXT:    leal (%r10,%r8,2), %ecx
+; SSE42-NEXT:    andl $1, %ebp
+; SSE42-NEXT:    leal (%rcx,%rbp,4), %r8d
+; SSE42-NEXT:    pextrb $0, %xmm0, %ecx
+; SSE42-NEXT:    pextrb $8, %xmm0, %ebp
+; SSE42-NEXT:    andl $1, %edi
+; SSE42-NEXT:    leal (%r8,%rdi,8), %r8d
+; SSE42-NEXT:    andl $1, %r15d
+; SSE42-NEXT:    shll $4, %r15d
+; SSE42-NEXT:    orl %r8d, %r15d
+; SSE42-NEXT:    pextrb $8, %xmm1, %edi
+; SSE42-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp) # 8-byte Spill
+; SSE42-NEXT:    pextrb $0, %xmm1, %r10d
 ; SSE42-NEXT:    andl $1, %r11d
 ; SSE42-NEXT:    shll $5, %r11d
-; SSE42-NEXT:    orl %r14d, %r11d
-; SSE42-NEXT:    andl $1, %r10d
-; SSE42-NEXT:    shll $6, %r10d
-; SSE42-NEXT:    andl $1, %r15d
-; SSE42-NEXT:    shll $7, %r15d
-; SSE42-NEXT:    orl %r10d, %r15d
-; SSE42-NEXT:    andl $1, %r12d
-; SSE42-NEXT:    shll $8, %r12d
-; SSE42-NEXT:    orl %r15d, %r12d
-; SSE42-NEXT:    andl $1, %r13d
-; SSE42-NEXT:    shll $9, %r13d
-; SSE42-NEXT:    orl %r12d, %r13d
-; SSE42-NEXT:    andl $1, %ebx
-; SSE42-NEXT:    shll $10, %ebx
-; SSE42-NEXT:    orl %r13d, %ebx
-; SSE42-NEXT:    andl $1, %ebp
-; SSE42-NEXT:    shll $11, %ebp
-; SSE42-NEXT:    orl %ebx, %ebp
+; SSE42-NEXT:    orl %r15d, %r11d
+; SSE42-NEXT:    andl $1, %r14d
+; SSE42-NEXT:    shll $6, %r14d
+; SSE42-NEXT:    andl $1, %r9d
+; SSE42-NEXT:    shll $7, %r9d
+; SSE42-NEXT:    orl %r14d, %r9d
+; SSE42-NEXT:    pextrb $0, %xmm2, %r14d
+; SSE42-NEXT:    pextrb $8, %xmm2, %edi
+; SSE42-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp) # 8-byte Spill
 ; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $12, %esi
-; SSE42-NEXT:    orl %ebp, %esi
+; SSE42-NEXT:    shll $8, %esi
+; SSE42-NEXT:    orl %r9d, %esi
+; SSE42-NEXT:    andl $1, %r12d
+; SSE42-NEXT:    shll $9, %r12d
+; SSE42-NEXT:    orl %esi, %r12d
+; SSE42-NEXT:    pextrb $0, %xmm3, %r8d
+; SSE42-NEXT:    pextrb $8, %xmm3, %r15d
 ; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $13, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $14, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    shll $15, %eax
-; SSE42-NEXT:    orl %ecx, %eax
-; SSE42-NEXT:    orl %r11d, %eax
-; SSE42-NEXT:    movw %ax, 2(%rdi)
-; SSE42-NEXT:    pextrb $1, %xmm1, %eax
+; SSE42-NEXT:    shll $10, %edx
+; SSE42-NEXT:    orl %r12d, %edx
+; SSE42-NEXT:    andl $1, %ebx
+; SSE42-NEXT:    shll $11, %ebx
+; SSE42-NEXT:    orl %edx, %ebx
+; SSE42-NEXT:    pextrb $0, %xmm4, %r12d
+; SSE42-NEXT:    pextrb $8, %xmm4, %edi
 ; SSE42-NEXT:    andl $1, %eax
-; SSE42-NEXT:    pextrb $0, %xmm1, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    leal (%rcx,%rax,2), %eax
-; SSE42-NEXT:    pextrb $2, %xmm1, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    leal (%rax,%rcx,4), %r8d
-; SSE42-NEXT:    pextrb $3, %xmm1, %r9d
-; SSE42-NEXT:    pextrb $4, %xmm1, %r14d
-; SSE42-NEXT:    pextrb $5, %xmm1, %r11d
-; SSE42-NEXT:    pextrb $6, %xmm1, %r10d
-; SSE42-NEXT:    pextrb $7, %xmm1, %r15d
-; SSE42-NEXT:    pextrb $8, %xmm1, %r12d
-; SSE42-NEXT:    pextrb $9, %xmm1, %r13d
-; SSE42-NEXT:    pextrb $10, %xmm1, %ebx
-; SSE42-NEXT:    pextrb $11, %xmm1, %ebp
-; SSE42-NEXT:    pextrb $12, %xmm1, %edx
-; SSE42-NEXT:    pextrb $13, %xmm1, %esi
-; SSE42-NEXT:    pextrb $14, %xmm1, %ecx
-; SSE42-NEXT:    pextrb $15, %xmm1, %eax
-; SSE42-NEXT:    andl $1, %r9d
-; SSE42-NEXT:    leal (%r8,%r9,8), %r8d
-; SSE42-NEXT:    andl $1, %r14d
-; SSE42-NEXT:    shll $4, %r14d
-; SSE42-NEXT:    orl %r8d, %r14d
-; SSE42-NEXT:    andl $1, %r11d
-; SSE42-NEXT:    shll $5, %r11d
-; SSE42-NEXT:    orl %r14d, %r11d
-; SSE42-NEXT:    andl $1, %r10d
-; SSE42-NEXT:    shll $6, %r10d
-; SSE42-NEXT:    andl $1, %r15d
-; SSE42-NEXT:    shll $7, %r15d
-; SSE42-NEXT:    orl %r10d, %r15d
-; SSE42-NEXT:    andl $1, %r12d
-; SSE42-NEXT:    shll $8, %r12d
-; SSE42-NEXT:    orl %r15d, %r12d
+; SSE42-NEXT:    shll $12, %eax
+; SSE42-NEXT:    orl %ebx, %eax
 ; SSE42-NEXT:    andl $1, %r13d
-; SSE42-NEXT:    shll $9, %r13d
-; SSE42-NEXT:    orl %r12d, %r13d
-; SSE42-NEXT:    andl $1, %ebx
-; SSE42-NEXT:    shll $10, %ebx
-; SSE42-NEXT:    orl %r13d, %ebx
-; SSE42-NEXT:    andl $1, %ebp
-; SSE42-NEXT:    shll $11, %ebp
-; SSE42-NEXT:    orl %ebx, %ebp
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %ebp, %edx
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
+; SSE42-NEXT:    shll $13, %r13d
+; SSE42-NEXT:    orl %eax, %r13d
+; SSE42-NEXT:    pextrb $0, %xmm5, %eax
+; SSE42-NEXT:    pextrb $8, %xmm5, %ebx
 ; SSE42-NEXT:    andl $1, %ecx
 ; SSE42-NEXT:    shll $14, %ecx
-; SSE42-NEXT:    orl %esi, %ecx
-; SSE42-NEXT:    shll $15, %eax
-; SSE42-NEXT:    orl %ecx, %eax
-; SSE42-NEXT:    orl %r11d, %eax
-; SSE42-NEXT:    movw %ax, (%rdi)
-; SSE42-NEXT:    movq %rdi, %rax
+; SSE42-NEXT:    orl %r13d, %ecx
+; SSE42-NEXT:    shll $15, %ebp
+; SSE42-NEXT:    orl %ecx, %ebp
+; SSE42-NEXT:    pextrb $0, %xmm6, %r13d
+; SSE42-NEXT:    pextrb $8, %xmm6, %edx
+; SSE42-NEXT:    orl %r11d, %ebp
+; SSE42-NEXT:    movq -{{[0-9]+}}(%rsp), %r9 # 8-byte Reload
+; SSE42-NEXT:    movw %bp, 2(%r9)
+; SSE42-NEXT:    pextrb $0, %xmm7, %r11d
+; SSE42-NEXT:    pextrb $8, %xmm7, %ecx
+; SSE42-NEXT:    movq -{{[0-9]+}}(%rsp), %rsi # 8-byte Reload
+; SSE42-NEXT:    andl $1, %esi
+; SSE42-NEXT:    andl $1, %r10d
+; SSE42-NEXT:    leal (%r10,%rsi,2), %esi
+; SSE42-NEXT:    andl $1, %r14d
+; SSE42-NEXT:    leal (%rsi,%r14,4), %r14d
+; SSE42-NEXT:    pextrb $0, %xmm8, %r10d
+; SSE42-NEXT:    pextrb $8, %xmm8, %ebp
+; SSE42-NEXT:    movq -{{[0-9]+}}(%rsp), %rsi # 8-byte Reload
+; SSE42-NEXT:    andl $1, %esi
+; SSE42-NEXT:    leal (%r14,%rsi,8), %esi
+; SSE42-NEXT:    andl $1, %r8d
+; SSE42-NEXT:    shll $4, %r8d
+; SSE42-NEXT:    orl %esi, %r8d
+; SSE42-NEXT:    andl $1, %r15d
+; SSE42-NEXT:    shll $5, %r15d
+; SSE42-NEXT:    orl %r8d, %r15d
+; SSE42-NEXT:    andl $1, %r12d
+; SSE42-NEXT:    shll $6, %r12d
+; SSE42-NEXT:    andl $1, %edi
+; SSE42-NEXT:    shll $7, %edi
+; SSE42-NEXT:    orl %r12d, %edi
+; SSE42-NEXT:    andl $1, %eax
+; SSE42-NEXT:    shll $8, %eax
+; SSE42-NEXT:    orl %edi, %eax
+; SSE42-NEXT:    andl $1, %ebx
+; SSE42-NEXT:    shll $9, %ebx
+; SSE42-NEXT:    orl %eax, %ebx
+; SSE42-NEXT:    andl $1, %r13d
+; SSE42-NEXT:    shll $10, %r13d
+; SSE42-NEXT:    orl %ebx, %r13d
+; SSE42-NEXT:    andl $1, %edx
+; SSE42-NEXT:    shll $11, %edx
+; SSE42-NEXT:    orl %r13d, %edx
+; SSE42-NEXT:    andl $1, %r11d
+; SSE42-NEXT:    shll $12, %r11d
+; SSE42-NEXT:    orl %edx, %r11d
+; SSE42-NEXT:    andl $1, %ecx
+; SSE42-NEXT:    shll $13, %ecx
+; SSE42-NEXT:    orl %r11d, %ecx
+; SSE42-NEXT:    andl $1, %r10d
+; SSE42-NEXT:    shll $14, %r10d
+; SSE42-NEXT:    orl %ecx, %r10d
+; SSE42-NEXT:    shll $15, %ebp
+; SSE42-NEXT:    orl %r10d, %ebp
+; SSE42-NEXT:    orl %r15d, %ebp
+; SSE42-NEXT:    movw %bp, (%r9)
+; SSE42-NEXT:    movq %r9, %rax
 ; SSE42-NEXT:    popq %rbx
 ; SSE42-NEXT:    popq %r12
 ; SSE42-NEXT:    popq %r13
@@ -7325,158 +7317,144 @@ define <32 x i1> @test_cmp_v32i64(<32 x i64> %a0, <32 x i64> %a1) nounwind {
 ;
 ; SSE42-LABEL: test_cmp_v32i64:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm8
-; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm11
-; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm10
-; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm12
-; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm9
+; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm15
 ; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm14
 ; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm13
-; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm15
+; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm12
+; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm11
+; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm10
+; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm9
+; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm8
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm7
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm6
-; SSE42-NEXT:    shufps {{.*#+}} xmm6 = xmm6[0,2],xmm7[0,2]
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm5
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm4
-; SSE42-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,2],xmm5[0,2]
-; SSE42-NEXT:    packssdw %xmm6, %xmm4
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm3
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm2
-; SSE42-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[0,2]
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm1
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm0
-; SSE42-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
-; SSE42-NEXT:    packssdw %xmm2, %xmm0
-; SSE42-NEXT:    packsswb %xmm4, %xmm0
-; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm15
-; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm13
-; SSE42-NEXT:    shufps {{.*#+}} xmm13 = xmm13[0,2],xmm15[0,2]
-; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm14
-; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm9
-; SSE42-NEXT:    shufps {{.*#+}} xmm9 = xmm9[0,2],xmm14[0,2]
-; SSE42-NEXT:    packssdw %xmm13, %xmm9
-; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm12
-; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm10
-; SSE42-NEXT:    shufps {{.*#+}} xmm10 = xmm10[0,2],xmm12[0,2]
-; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm11
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm8
-; SSE42-NEXT:    shufps {{.*#+}} xmm8 = xmm8[0,2],xmm11[0,2]
-; SSE42-NEXT:    packssdw %xmm10, %xmm8
-; SSE42-NEXT:    packsswb %xmm9, %xmm8
-; SSE42-NEXT:    pextrb $1, %xmm8, %eax
+; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm9
+; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm10
+; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm11
+; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm12
+; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm13
+; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm14
+; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm15
+; SSE42-NEXT:    pextrb $8, %xmm15, %eax
 ; SSE42-NEXT:    andl $1, %eax
-; SSE42-NEXT:    pextrb $0, %xmm8, %ecx
+; SSE42-NEXT:    pextrb $0, %xmm15, %ecx
 ; SSE42-NEXT:    andl $1, %ecx
 ; SSE42-NEXT:    leal (%rcx,%rax,2), %eax
-; SSE42-NEXT:    pextrb $2, %xmm8, %ecx
+; SSE42-NEXT:    pextrb $0, %xmm14, %ecx
 ; SSE42-NEXT:    andl $1, %ecx
 ; SSE42-NEXT:    leal (%rax,%rcx,4), %eax
-; SSE42-NEXT:    pextrb $3, %xmm8, %ecx
+; SSE42-NEXT:    pextrb $8, %xmm14, %ecx
 ; SSE42-NEXT:    andl $1, %ecx
 ; SSE42-NEXT:    leal (%rax,%rcx,8), %eax
-; SSE42-NEXT:    pextrb $4, %xmm8, %ecx
+; SSE42-NEXT:    pextrb $0, %xmm13, %ecx
 ; SSE42-NEXT:    andl $1, %ecx
 ; SSE42-NEXT:    shll $4, %ecx
 ; SSE42-NEXT:    orl %eax, %ecx
-; SSE42-NEXT:    pextrb $5, %xmm8, %eax
+; SSE42-NEXT:    pextrb $8, %xmm13, %eax
 ; SSE42-NEXT:    andl $1, %eax
 ; SSE42-NEXT:    shll $5, %eax
 ; SSE42-NEXT:    orl %ecx, %eax
-; SSE42-NEXT:    pextrb $6, %xmm8, %ecx
+; SSE42-NEXT:    pextrb $0, %xmm12, %ecx
 ; SSE42-NEXT:    andl $1, %ecx
 ; SSE42-NEXT:    shll $6, %ecx
-; SSE42-NEXT:    pextrb $7, %xmm8, %edx
+; SSE42-NEXT:    pextrb $8, %xmm12, %edx
 ; SSE42-NEXT:    andl $1, %edx
 ; SSE42-NEXT:    shll $7, %edx
 ; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $8, %xmm8, %ecx
+; SSE42-NEXT:    pextrb $0, %xmm11, %ecx
 ; SSE42-NEXT:    andl $1, %ecx
 ; SSE42-NEXT:    shll $8, %ecx
 ; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $9, %xmm8, %edx
+; SSE42-NEXT:    pextrb $8, %xmm11, %edx
 ; SSE42-NEXT:    andl $1, %edx
 ; SSE42-NEXT:    shll $9, %edx
 ; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $10, %xmm8, %ecx
+; SSE42-NEXT:    pextrb $0, %xmm10, %ecx
 ; SSE42-NEXT:    andl $1, %ecx
 ; SSE42-NEXT:    shll $10, %ecx
 ; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $11, %xmm8, %edx
+; SSE42-NEXT:    pextrb $8, %xmm10, %edx
 ; SSE42-NEXT:    andl $1, %edx
 ; SSE42-NEXT:    shll $11, %edx
 ; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $12, %xmm8, %ecx
+; SSE42-NEXT:    pextrb $0, %xmm9, %ecx
 ; SSE42-NEXT:    andl $1, %ecx
 ; SSE42-NEXT:    shll $12, %ecx
 ; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $13, %xmm8, %edx
+; SSE42-NEXT:    pextrb $8, %xmm9, %edx
 ; SSE42-NEXT:    andl $1, %edx
 ; SSE42-NEXT:    shll $13, %edx
 ; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $14, %xmm8, %ecx
+; SSE42-NEXT:    pextrb $0, %xmm8, %ecx
 ; SSE42-NEXT:    andl $1, %ecx
 ; SSE42-NEXT:    shll $14, %ecx
 ; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $15, %xmm8, %edx
+; SSE42-NEXT:    pextrb $8, %xmm8, %edx
 ; SSE42-NEXT:    shll $15, %edx
 ; SSE42-NEXT:    orl %ecx, %edx
 ; SSE42-NEXT:    orl %eax, %edx
 ; SSE42-NEXT:    movw %dx, 2(%rdi)
-; SSE42-NEXT:    pextrb $1, %xmm0, %eax
+; SSE42-NEXT:    pextrb $8, %xmm0, %eax
 ; SSE42-NEXT:    andl $1, %eax
 ; SSE42-NEXT:    pextrb $0, %xmm0, %ecx
 ; SSE42-NEXT:    andl $1, %ecx
 ; SSE42-NEXT:    leal (%rcx,%rax,2), %eax
-; SSE42-NEXT:    pextrb $2, %xmm0, %ecx
+; SSE42-NEXT:    pextrb $0, %xmm1, %ecx
 ; SSE42-NEXT:    andl $1, %ecx
 ; SSE42-NEXT:    leal (%rax,%rcx,4), %eax
-; SSE42-NEXT:    pextrb $3, %xmm0, %ecx
+; SSE42-NEXT:    pextrb $8, %xmm1, %ecx
 ; SSE42-NEXT:    andl $1, %ecx
 ; SSE42-NEXT:    leal (%rax,%rcx,8), %eax
-; SSE42-NEXT:    pextrb $4, %xmm0, %ecx
+; SSE42-NEXT:    pextrb $0, %xmm2, %ecx
 ; SSE42-NEXT:    andl $1, %ecx
 ; SSE42-NEXT:    shll $4, %ecx
 ; SSE42-NEXT:    orl %eax, %ecx
-; SSE42-NEXT:    pextrb $5, %xmm0, %eax
+; SSE42-NEXT:    pextrb $8, %xmm2, %eax
 ; SSE42-NEXT:    andl $1, %eax
 ; SSE42-NEXT:    shll $5, %eax
 ; SSE42-NEXT:    orl %ecx, %eax
-; SSE42-NEXT:    pextrb $6, %xmm0, %ecx
+; SSE42-NEXT:    pextrb $0, %xmm3, %ecx
 ; SSE42-NEXT:    andl $1, %ecx
 ; SSE42-NEXT:    shll $6, %ecx
-; SSE42-NEXT:    pextrb $7, %xmm0, %edx
+; SSE42-NEXT:    pextrb $8, %xmm3, %edx
 ; SSE42-NEXT:    andl $1, %edx
 ; SSE42-NEXT:    shll $7, %edx
 ; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $8, %xmm0, %ecx
+; SSE42-NEXT:    pextrb $0, %xmm4, %ecx
 ; SSE42-NEXT:    andl $1, %ecx
 ; SSE42-NEXT:    shll $8, %ecx
 ; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $9, %xmm0, %edx
+; SSE42-NEXT:    pextrb $8, %xmm4, %edx
 ; SSE42-NEXT:    andl $1, %edx
 ; SSE42-NEXT:    shll $9, %edx
 ; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $10, %xmm0, %ecx
+; SSE42-NEXT:    pextrb $0, %xmm5, %ecx
 ; SSE42-NEXT:    andl $1, %ecx
 ; SSE42-NEXT:    shll $10, %ecx
 ; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $11, %xmm0, %edx
+; SSE42-NEXT:    pextrb $8, %xmm5, %edx
 ; SSE42-NEXT:    andl $1, %edx
 ; SSE42-NEXT:    shll $11, %edx
 ; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $12, %xmm0, %ecx
+; SSE42-NEXT:    pextrb $0, %xmm6, %ecx
 ; SSE42-NEXT:    andl $1, %ecx
 ; SSE42-NEXT:    shll $12, %ecx
 ; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $13, %xmm0, %edx
+; SSE42-NEXT:    pextrb $8, %xmm6, %edx
 ; SSE42-NEXT:    andl $1, %edx
 ; SSE42-NEXT:    shll $13, %edx
 ; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $14, %xmm0, %ecx
+; SSE42-NEXT:    pextrb $0, %xmm7, %ecx
 ; SSE42-NEXT:    andl $1, %ecx
 ; SSE42-NEXT:    shll $14, %ecx
 ; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $15, %xmm0, %edx
+; SSE42-NEXT:    pextrb $8, %xmm7, %edx
 ; SSE42-NEXT:    shll $15, %edx
 ; SSE42-NEXT:    orl %ecx, %edx
 ; SSE42-NEXT:    orl %eax, %edx

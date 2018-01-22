@@ -12,7 +12,7 @@
 // template<ForwardIterator Iter, Predicate<auto, Iter::value_type> Pred>
 //   requires OutputIterator<Iter, RvalueOf<Iter::reference>::type>
 //         && CopyConstructible<Pred>
-//   Iter
+//   constexpr Iter         // constexpr after C++17
 //   remove_if(Iter first, Iter last, Pred pred);
 
 #include <algorithm>
@@ -24,7 +24,19 @@
 #include "test_iterators.h"
 #include "counting_predicates.hpp"
 
-bool equal2 ( int i ) { return i == 2; }
+TEST_CONSTEXPR bool equal2 ( int i ) { return i == 2; }
+
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool test_constexpr() {
+    int ia[] = {1, 3, 5, 2, 5, 6};
+    
+    auto it = std::remove_if(std::begin(ia), std::end(ia), equal2);
+
+    return (std::begin(ia) + std::size(ia) - 1) == it  // we removed one element
+        && std::none_of(std::begin(ia), it, equal2)
+           ;
+    }
+#endif
 
 template <class Iter>
 void
@@ -90,4 +102,8 @@ int main()
     test1<random_access_iterator<std::unique_ptr<int>*> >();
     test1<std::unique_ptr<int>*>();
 #endif // TEST_STD_VER >= 11
+
+#if TEST_STD_VER > 17
+    static_assert(test_constexpr());
+#endif
 }

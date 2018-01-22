@@ -860,3 +860,81 @@ entry:
   ret <16 x i8> %0
 }
 
+; PR34370
+define <8 x float> @test_masked_permps_v8f32(<8 x float>* %vp, <8 x float> %vec2) {
+; SKX64-LABEL: test_masked_permps_v8f32:
+; SKX64:       # %bb.0:
+; SKX64-NEXT:    vmovaps (%rdi), %ymm2
+; SKX64-NEXT:    vmovaps {{.*#+}} ymm1 = [7,6,3,11,7,6,14,15]
+; SKX64-NEXT:    vpermi2ps %ymm0, %ymm2, %ymm1
+; SKX64-NEXT:    vmovaps %ymm1, %ymm0
+; SKX64-NEXT:    retq
+;
+; KNL64-LABEL: test_masked_permps_v8f32:
+; KNL64:       # %bb.0:
+; KNL64-NEXT:    vpermilps {{.*#+}} ymm1 = mem[3,2,2,3,7,6,6,7]
+; KNL64-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[2,0,2,3]
+; KNL64-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2],ymm0[3],ymm1[4,5],ymm0[6,7]
+; KNL64-NEXT:    retq
+;
+; SKX32-LABEL: test_masked_permps_v8f32:
+; SKX32:       # %bb.0:
+; SKX32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SKX32-NEXT:    vmovaps (%eax), %ymm2
+; SKX32-NEXT:    vmovaps {{.*#+}} ymm1 = [7,6,3,11,7,6,14,15]
+; SKX32-NEXT:    vpermi2ps %ymm0, %ymm2, %ymm1
+; SKX32-NEXT:    vmovaps %ymm1, %ymm0
+; SKX32-NEXT:    retl
+;
+; KNL32-LABEL: test_masked_permps_v8f32:
+; KNL32:       # %bb.0:
+; KNL32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; KNL32-NEXT:    vpermilps {{.*#+}} ymm1 = mem[3,2,2,3,7,6,6,7]
+; KNL32-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[2,0,2,3]
+; KNL32-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2],ymm0[3],ymm1[4,5],ymm0[6,7]
+; KNL32-NEXT:    retl
+  %vec = load <8 x float>, <8 x float>* %vp
+  %shuf = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 7, i32 6, i32 3, i32 0, i32 7, i32 6, i32 3, i32 0>
+  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0>, <8 x float> %shuf, <8 x float> %vec2
+  ret <8 x float> %res
+}
+
+define <16 x float> @test_masked_permps_v16f32(<16 x float>* %vp, <16 x float> %vec2) {
+; SKX64-LABEL: test_masked_permps_v16f32:
+; SKX64:       # %bb.0:
+; SKX64-NEXT:    vmovaps (%rdi), %zmm2
+; SKX64-NEXT:    vmovaps {{.*#+}} zmm1 = [15,13,11,19,14,12,22,23,7,6,3,27,7,29,3,31]
+; SKX64-NEXT:    vpermi2ps %zmm0, %zmm2, %zmm1
+; SKX64-NEXT:    vmovaps %zmm1, %zmm0
+; SKX64-NEXT:    retq
+;
+; KNL64-LABEL: test_masked_permps_v16f32:
+; KNL64:       # %bb.0:
+; KNL64-NEXT:    vmovaps (%rdi), %zmm2
+; KNL64-NEXT:    vmovaps {{.*#+}} zmm1 = [15,13,11,19,14,12,22,23,7,6,3,27,7,29,3,31]
+; KNL64-NEXT:    vpermi2ps %zmm0, %zmm2, %zmm1
+; KNL64-NEXT:    vmovaps %zmm1, %zmm0
+; KNL64-NEXT:    retq
+;
+; SKX32-LABEL: test_masked_permps_v16f32:
+; SKX32:       # %bb.0:
+; SKX32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SKX32-NEXT:    vmovaps (%eax), %zmm2
+; SKX32-NEXT:    vmovaps {{.*#+}} zmm1 = [15,13,11,19,14,12,22,23,7,6,3,27,7,29,3,31]
+; SKX32-NEXT:    vpermi2ps %zmm0, %zmm2, %zmm1
+; SKX32-NEXT:    vmovaps %zmm1, %zmm0
+; SKX32-NEXT:    retl
+;
+; KNL32-LABEL: test_masked_permps_v16f32:
+; KNL32:       # %bb.0:
+; KNL32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; KNL32-NEXT:    vmovaps (%eax), %zmm2
+; KNL32-NEXT:    vmovaps {{.*#+}} zmm1 = [15,13,11,19,14,12,22,23,7,6,3,27,7,29,3,31]
+; KNL32-NEXT:    vpermi2ps %zmm0, %zmm2, %zmm1
+; KNL32-NEXT:    vmovaps %zmm1, %zmm0
+; KNL32-NEXT:    retl
+  %vec = load <16 x float>, <16 x float>* %vp
+  %shuf = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 15, i32 13, i32 11, i32 9, i32 14, i32 12, i32 10, i32 8, i32 7, i32 6, i32 3, i32 0, i32 7, i32 6, i32 3, i32 0>
+  %res = select <16 x i1> <i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 0>, <16 x float> %shuf, <16 x float> %vec2
+  ret <16 x float> %res
+}

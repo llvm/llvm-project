@@ -354,6 +354,14 @@ protected:
   /// Processor support RDPID instruction
   bool HasRDPID;
 
+  /// Use a retpoline thunk rather than indirect calls to block speculative
+  /// execution.
+  bool UseRetpoline;
+
+  /// When using a retpoline thunk, call an externally provided thunk rather
+  /// than emitting one inside the compiler.
+  bool UseRetpolineExternalThunk;
+
   /// Use software floating point for code generation.
   bool UseSoftFloat;
 
@@ -602,6 +610,8 @@ public:
   bool hasCLFLUSHOPT() const { return HasCLFLUSHOPT; }
   bool hasCLWB() const { return HasCLWB; }
   bool hasRDPID() const { return HasRDPID; }
+  bool useRetpoline() const { return UseRetpoline; }
+  bool useRetpolineExternalThunk() const { return UseRetpolineExternalThunk; }
 
   unsigned getPreferVectorWidth() const { return PreferVectorWidth; }
 
@@ -736,6 +746,10 @@ public:
 
   /// Return true if the subtarget allows calls to immediate address.
   bool isLegalToCallImmediateAddr() const;
+
+  /// If we are using retpolines, we need to expand indirectbr to avoid it
+  /// lowering to an actual indirect jump.
+  bool enableIndirectBrExpand() const override { return useRetpoline(); }
 
   /// Enable the MachineScheduler pass for all X86 subtargets.
   bool enableMachineScheduler() const override { return true; }

@@ -51,8 +51,6 @@ def verbose: F<"verbose">, HelpText<"Verbose mode">;
 
 def relocatable: F<"relocatable">, HelpText<"Create relocatable object file">;
 
-def emit_relocs: F<"emit-relocs">, HelpText<"Generate relocations in output">;
-
 def strip_all: F<"strip-all">, HelpText<"Strip all symbols">;
 
 def strip_debug: F<"strip-debug">, HelpText<"Strip debugging information">;

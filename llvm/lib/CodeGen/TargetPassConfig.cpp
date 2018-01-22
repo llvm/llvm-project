@@ -896,6 +896,9 @@ void TargetPassConfig::addMachinePasses() {
   if (EnableMachineOutliner)
     PM->add(createMachineOutlinerPass(EnableLinkOnceODROutlining));
 
+  // Add passes that directly emit MI after all other MI passes.
+  addPreEmitPass2();
+
   AddingMachinePasses = false;
 }
 

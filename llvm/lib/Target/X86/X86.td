@@ -344,6 +344,27 @@ def FeaturePrefer256Bit
     : SubtargetFeature<"prefer-256-bit", "Prefer256Bit", "true",
                        "Prefer 256-bit AVX instructions">;
 
+// Enable mitigation of some aspects of speculative execution related
+// vulnerabilities by removing speculatable indirect branches. This disables
+// jump-table formation, rewrites explicit `indirectbr` instructions into
+// `switch` instructions, and uses a special construct called a "retpoline" to
+// prevent speculation of the remaining indirect branches (indirect calls and
+// tail calls).
+def FeatureRetpoline
+    : SubtargetFeature<"retpoline", "UseRetpoline", "true",
+                       "Remove speculation of indirect branches from the "
+                       "generated code, either by avoiding them entirely or "
+                       "lowering them with a speculation blocking construct.">;
+
+// Rely on external thunks for the emitted retpoline calls. This allows users
+// to provide their own custom thunk definitions in highly specialized
+// environments such as a kernel that does boot-time hot patching.
+def FeatureRetpolineExternalThunk
+    : SubtargetFeature<
+          "retpoline-external-thunk", "UseRetpolineExternalThunk", "true",
+          "Enable retpoline, but with an externally provided thunk.",
+          [FeatureRetpoline]>;
+
 //===----------------------------------------------------------------------===//
 // Register File Description
 //===----------------------------------------------------------------------===//

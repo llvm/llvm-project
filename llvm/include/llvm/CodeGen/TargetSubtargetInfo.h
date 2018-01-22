@@ -174,6 +174,9 @@ public:
   /// \brief True if the subtarget should run the atomic expansion pass.
   virtual bool enableAtomicExpand() const;
 
+  /// True if the subtarget should run the indirectbr expansion pass.
+  virtual bool enableIndirectBrExpand() const;
+
   /// \brief Override generic scheduling policy within a region.
   ///
   /// This is a convenient way for targets that don't provide any custom

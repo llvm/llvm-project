@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy -O binary %t %t2
-# RUN: od -t x2 %t2 | FileCheck %s
+# RUN: od -t x2 -v %t2 | FileCheck %s
 # RUN: wc -c < %t2 | FileCheck %s --check-prefix=SIZE
 
 !ELF
@@ -13,25 +13,30 @@ Sections:
   - Name:            .text
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
     AddressAlign:    0x0000000000001000
     Content:         "c3c3c3c3"
   - Name:            .data
     Type:            SHT_PROGBITS
-    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
-    AddressAlign:    0x0000000000001000
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x1004
+    AddressAlign:    0x0000000000000004
     Content:         "3232"
 ProgramHeaders:
   - Type: PT_LOAD
     Flags: [ PF_X, PF_R ]
+    VAddr: 0x1000
+    PAddr: 0x0000
+    Align: 0x1000
     Sections:
       - Section: .text
   - Type: PT_LOAD
-    Flags: [ PF_R ]
+    Flags: [ PF_R, PF_W ]
+    VAddr: 0x1004
+    PAddr: 0x0000
+    Align: 0x1000
     Sections:
       - Section: .data
 
-# CHECK:       0000000 c3c3 c3c3 0000 0000 0000 0000 0000 0000
-# CHECK-NEXT:  0000020 0000 0000 0000 0000 0000 0000 0000 0000
-# CHECK-NEXT:  *
-# CHECK-NEXT:  0010000 3232
-# SIZE:        4098
+# CHECK: 0000000 c3c3 c3c3 3232
+# SIZE:  6

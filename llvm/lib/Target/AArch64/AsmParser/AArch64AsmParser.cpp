@@ -140,8 +140,7 @@ private:
   template <bool ParseSuffix>
   OperandMatchResultTy tryParseSVEDataVector(OperandVector &Operands);
   OperandMatchResultTy tryParseSVEPredicateVector(OperandVector &Operands);
-  LLVM_ATTRIBUTE_UNUSED OperandMatchResultTy
-  tryParseSVEPattern(OperandVector &Operands);
+  OperandMatchResultTy tryParseSVEPattern(OperandVector &Operands);
 
 public:
   enum AArch64MatchResultTy {
@@ -3665,6 +3664,8 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
         ComputeAvailableFeatures(STI->getFeatureBits()));
     return Error(Loc, "unrecognized instruction mnemonic" + Suggestion);
   }
+  case Match_InvalidSVEPattern:
+    return Error(Loc, "invalid predicate pattern");
   case Match_InvalidSVEPredicateAnyReg:
   case Match_InvalidSVEPredicateBReg:
   case Match_InvalidSVEPredicateHReg:
@@ -4104,6 +4105,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidComplexRotationEven:
   case Match_InvalidComplexRotationOdd:
   case Match_InvalidSVEPredicateAnyReg:
+  case Match_InvalidSVEPattern:
   case Match_InvalidSVEPredicateBReg:
   case Match_InvalidSVEPredicateHReg:
   case Match_InvalidSVEPredicateSReg:
