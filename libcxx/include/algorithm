@@ -32,11 +32,12 @@ template <class InputIterator, class Predicate>
     none_of(InputIterator first, InputIterator last, Predicate pred);
 
 template <class InputIterator, class Function>
-    Function
+    constexpr Function          // constexpr in C++20
     for_each(InputIterator first, InputIterator last, Function f);
 
 template<class InputIterator, class Size, class Function>
-    InputIterator for_each_n(InputIterator first, Size n, Function f); // C++17
+    constexpr InputIterator     // constexpr in C++20
+    for_each_n(InputIterator first, Size n, Function f); // C++17
 
 template <class InputIterator, class T>
     constexpr InputIterator     // constexpr in C++20
@@ -311,7 +312,7 @@ template <class ForwardIterator, class Predicate>
 
 template <class InputIterator, class OutputIterator1,
           class OutputIterator2, class Predicate>
-    pair<OutputIterator1, OutputIterator2>
+    constexpr pair<OutputIterator1, OutputIterator2>   // constexpr in C++20
     partition_copy(InputIterator first, InputIterator last,
                    OutputIterator1 out_true, OutputIterator2 out_false,
                    Predicate pred);
@@ -607,11 +608,11 @@ template<class T, class Compare>
     minmax(initializer_list<T> t, Compare comp);  // constexpr in C++14
 
 template <class InputIterator1, class InputIterator2>
-    bool
+    constexpr bool     // constexpr in C++20
     lexicographical_compare(InputIterator1 first1, InputIterator1 last1, InputIterator2 first2, InputIterator2 last2);
 
 template <class InputIterator1, class InputIterator2, class Compare>
-    bool
+    constexpr bool     // constexpr in C++20
     lexicographical_compare(InputIterator1 first1, InputIterator1 last1,
                             InputIterator2 first2, InputIterator2 last2, Compare comp);
 
@@ -958,7 +959,7 @@ none_of(_InputIterator __first, _InputIterator __last, _Predicate __pred)
 // for_each
 
 template <class _InputIterator, class _Function>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _Function
 for_each(_InputIterator __first, _InputIterator __last, _Function __f)
 {
@@ -971,7 +972,7 @@ for_each(_InputIterator __first, _InputIterator __last, _Function __f)
 // for_each_n
 
 template <class _InputIterator, class _Size, class _Function>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _InputIterator
 for_each_n(_InputIterator __first, _Size __orig_n, _Function __f)
 {
@@ -3288,7 +3289,7 @@ partition(_ForwardIterator __first, _ForwardIterator __last, _Predicate __pred)
 
 template <class _InputIterator, class _OutputIterator1,
           class _OutputIterator2, class _Predicate>
-pair<_OutputIterator1, _OutputIterator2>
+_LIBCPP_CONSTEXPR_AFTER_CXX17 pair<_OutputIterator1, _OutputIterator2>
 partition_copy(_InputIterator __first, _InputIterator __last,
                _OutputIterator1 __out_true, _OutputIterator2 __out_false,
                _Predicate __pred)
@@ -5658,7 +5659,7 @@ set_symmetric_difference(_InputIterator1 __first1, _InputIterator1 __last1,
 // lexicographical_compare
 
 template <class _Compare, class _InputIterator1, class _InputIterator2>
-bool
+_LIBCPP_CONSTEXPR_AFTER_CXX17 bool
 __lexicographical_compare(_InputIterator1 __first1, _InputIterator1 __last1,
                           _InputIterator2 __first2, _InputIterator2 __last2, _Compare __comp)
 {
@@ -5673,7 +5674,7 @@ __lexicographical_compare(_InputIterator1 __first1, _InputIterator1 __last1,
 }
 
 template <class _InputIterator1, class _InputIterator2, class _Compare>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 bool
 lexicographical_compare(_InputIterator1 __first1, _InputIterator1 __last1,
                         _InputIterator2 __first2, _InputIterator2 __last2, _Compare __comp)
@@ -5689,7 +5690,7 @@ lexicographical_compare(_InputIterator1 __first1, _InputIterator1 __last1,
 }
 
 template <class _InputIterator1, class _InputIterator2>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 bool
 lexicographical_compare(_InputIterator1 __first1, _InputIterator1 __last1,
                         _InputIterator2 __first2, _InputIterator2 __last2)
