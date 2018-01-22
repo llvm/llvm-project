@@ -567,6 +567,17 @@ StringRef llvm::dwarf::AttributeValueString(uint16_t Attr, unsigned Val) {
   return StringRef();
 }
 
+StringRef llvm::dwarf::IndexString(unsigned Idx) {
+  switch (Idx) {
+  default:
+    return StringRef();
+#define HANDLE_DW_IDX(ID, NAME)                                                \
+  case DW_IDX_##NAME:                                                          \
+    return "DW_IDX_" #NAME;
+#include "llvm/BinaryFormat/Dwarf.def"
+  }
+}
+
 bool llvm::dwarf::isValidFormForVersion(Form F, unsigned Version,
                                         bool ExtensionsOk) {
   if (FormVendor(F) == DWARF_VENDOR_DWARF) {

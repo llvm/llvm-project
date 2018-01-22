@@ -12,15 +12,15 @@
 //===----------------------------------------------------------------------===//
 
 // TODO: Add other DW-based macros.
-#if !(defined HANDLE_DW_TAG || defined HANDLE_DW_AT ||                         \
-      defined HANDLE_DW_FORM || defined HANDLE_DW_OP ||                        \
-      defined HANDLE_DW_LANG || defined HANDLE_DW_ATE ||                       \
-      defined HANDLE_DW_VIRTUALITY || defined HANDLE_DW_DEFAULTED ||           \
-      defined HANDLE_DW_CC || defined HANDLE_DW_LNS ||                         \
-      defined HANDLE_DW_LNE || defined HANDLE_DW_LNCT ||                       \
-      defined HANDLE_DW_MACRO || defined HANDLE_DW_RLE ||                      \
-      defined HANDLE_DW_CFA || defined HANDLE_DW_APPLE_PROPERTY ||             \
-      defined HANDLE_DW_UT || defined HANDLE_DWARF_SECTION)
+#if !(                                                                         \
+    defined HANDLE_DW_TAG || defined HANDLE_DW_AT || defined HANDLE_DW_FORM || \
+    defined HANDLE_DW_OP || defined HANDLE_DW_LANG || defined HANDLE_DW_ATE || \
+    defined HANDLE_DW_VIRTUALITY || defined HANDLE_DW_DEFAULTED ||             \
+    defined HANDLE_DW_CC || defined HANDLE_DW_LNS || defined HANDLE_DW_LNE ||  \
+    defined HANDLE_DW_LNCT || defined HANDLE_DW_MACRO ||                       \
+    defined HANDLE_DW_RLE || defined HANDLE_DW_CFA ||                          \
+    defined HANDLE_DW_APPLE_PROPERTY || defined HANDLE_DW_UT ||                \
+    defined HANDLE_DWARF_SECTION || defined HANDLE_DW_IDX)
 #error "Missing macro definition of HANDLE_DW*"
 #endif
 
@@ -94,6 +94,10 @@
 
 #ifndef HANDLE_DWARF_SECTION
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME)
+#endif
+
+#ifndef HANDLE_DW_IDX
+#define HANDLE_DW_IDX(ID, NAME)
 #endif
 
 HANDLE_DW_TAG(0x0000, null, 2, DWARF)
@@ -839,6 +843,7 @@ HANDLE_DWARF_SECTION(DebugLine, ".debug_line", "debug-line")
 HANDLE_DWARF_SECTION(DebugLoc, ".debug_loc", "debug-loc")
 HANDLE_DWARF_SECTION(DebugFrame, ".debug_frame", "debug-frame")
 HANDLE_DWARF_SECTION(DebugMacro, ".debug_macro", "debug-macro")
+HANDLE_DWARF_SECTION(DebugNames, ".debug_names", "debug-names")
 HANDLE_DWARF_SECTION(DebugRanges, ".debug_ranges", "debug-ranges")
 HANDLE_DWARF_SECTION(DebugPubnames, ".debug_pubnames", "debug-pubnames")
 HANDLE_DWARF_SECTION(DebugPubtypes, ".debug_pubtypes", "debug-pubtypes")
@@ -854,6 +859,12 @@ HANDLE_DWARF_SECTION(AppleTypes, ".apple_types", "apple-types")
 HANDLE_DWARF_SECTION(AppleNamespaces, ".apple_namespaces", "apple-namespaces")
 HANDLE_DWARF_SECTION(AppleObjC, ".apple_objc", "apple-objc")
 HANDLE_DWARF_SECTION(GdbIndex, ".gdb_index", "gdb-index")
+
+HANDLE_DW_IDX(0x01, compile_unit)
+HANDLE_DW_IDX(0x02, type_unit)
+HANDLE_DW_IDX(0x03, die_offset)
+HANDLE_DW_IDX(0x04, parent)
+HANDLE_DW_IDX(0x05, type_hash)
 
 
 #undef HANDLE_DW_TAG
@@ -874,3 +885,4 @@ HANDLE_DWARF_SECTION(GdbIndex, ".gdb_index", "gdb-index")
 #undef HANDLE_DW_APPLE_PROPERTY
 #undef HANDLE_DW_UT
 #undef HANDLE_DWARF_SECTION
+#undef HANDLE_DW_IDX

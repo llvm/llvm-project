@@ -1340,6 +1340,16 @@ void AArch64InstPrinter::printComplexRotationOp(const MCInst *MI, unsigned OpNo,
   O << "#" << (Val * Angle) + Remainder;
 }
 
+void AArch64InstPrinter::printSVEPattern(const MCInst *MI, unsigned OpNum,
+                                         const MCSubtargetInfo &STI,
+                                         raw_ostream &O) {
+  unsigned Val = MI->getOperand(OpNum).getImm();
+  if (auto Pat = AArch64SVEPredPattern::lookupSVEPREDPATByEncoding(Val))
+    O << Pat->Name;
+  else
+    O << '#' << formatImm(Val);
+}
+
 template <char suffix>
 void AArch64InstPrinter::printSVERegOp(const MCInst *MI, unsigned OpNum,
                                        const MCSubtargetInfo &STI,

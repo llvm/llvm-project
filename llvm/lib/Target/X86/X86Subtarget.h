@@ -232,6 +232,12 @@ protected:
   /// the stack pointer. This is an optimization for Intel Atom processors.
   bool UseLeaForSP;
 
+  /// True if POPCNT instruction has a false dependency on the destination register.
+  bool HasPOPCNTFalseDeps;
+
+  /// True if LZCNT/TZCNT instructions have a false dependency on the destination register.
+  bool HasLZCNTFalseDeps;
+
   /// True if its preferable to combine to a single shuffle using a variable
   /// mask over multiple fixed shuffles.
   bool HasFastVariableShuffle;
@@ -557,6 +563,8 @@ public:
   bool hasSSEUnalignedMem() const { return HasSSEUnalignedMem; }
   bool hasCmpxchg16b() const { return HasCmpxchg16b; }
   bool useLeaForSP() const { return UseLeaForSP; }
+  bool hasPOPCNTFalseDeps() const { return HasPOPCNTFalseDeps; }
+  bool hasLZCNTFalseDeps() const { return HasLZCNTFalseDeps; }
   bool hasFastVariableShuffle() const {
     return HasFastVariableShuffle;
   }

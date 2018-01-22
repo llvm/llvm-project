@@ -891,6 +891,7 @@ bool InstCombiner::simplifyDivRemOfSelectWithZeroOp(BinaryOperator &I) {
 /// @brief Common integer divide transforms
 Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  bool IsSigned = I.getOpcode() == Instruction::SDiv;
 
   // The RHS is known non-zero.
   if (Value *V = simplifyValueKnownNonZero(I.getOperand(1), *this, I)) {
@@ -908,7 +909,6 @@ Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
     if (match(Op1, m_APInt(C2))) {
       Value *X;
       const APInt *C1;
-      bool IsSigned = I.getOpcode() == Instruction::SDiv;
 
       // (X / C1) / C2  -> X / (C1*C2)
       if ((IsSigned && match(LHS, m_SDiv(m_Value(X), m_APInt(C1)))) ||
@@ -999,13 +999,18 @@ Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
     return &I;
 
   // (X - (X rem Y)) / Y -> X / Y; usually originates as ((X / Y) * Y) / Y
-  Value *X = nullptr, *Z = nullptr;
-  if (match(Op0, m_Sub(m_Value(X), m_Value(Z)))) { // (X - Z) / Y; Y = Op1
-    bool isSigned = I.getOpcode() == Instruction::SDiv;
-    if ((isSigned && match(Z, m_SRem(m_Specific(X), m_Specific(Op1)))) ||
-        (!isSigned && match(Z, m_URem(m_Specific(X), m_Specific(Op1)))))
+  Value *X, *Z;
+  if (match(Op0, m_Sub(m_Value(X), m_Value(Z)))) // (X - Z) / Y; Y = Op1
+    if ((IsSigned && match(Z, m_SRem(m_Specific(X), m_Specific(Op1)))) ||
+        (!IsSigned && match(Z, m_URem(m_Specific(X), m_Specific(Op1)))))
       return BinaryOperator::Create(I.getOpcode(), X, Op1);
-  }
+
+  // (X << Y) / X -> 1 << Y
+  Value *Y;
+  if (IsSigned && match(Op0, m_NSWShl(m_Specific(Op1), m_Value(Y))))
+    return BinaryOperator::CreateNSWShl(ConstantInt::get(I.getType(), 1), Y);
+  if (!IsSigned && match(Op0, m_NUWShl(m_Specific(Op1), m_Value(Y))))
+    return BinaryOperator::CreateNUWShl(ConstantInt::get(I.getType(), 1), Y);
 
   return nullptr;
 }
