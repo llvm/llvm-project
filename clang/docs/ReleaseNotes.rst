@@ -163,6 +163,15 @@ Attribute Changes in Clang
 - The presence of __attribute__((availability(...))) on a declaration no longer
   implies default visibility for that declaration on macOS.
 
+- Clang now supports configuration files. These are collections of driver
+  options, which can be applied by specifying the configuration file, either
+  using command line option `--config foo.cfg` or encoding it into executable
+  name `foo-clang`. Clang behaves as if the options from this file were inserted
+  before the options specified in command line. This feature is primary intended
+  to facilitate cross compilation. Details can be found in
+  `Clang Compiler User's Manual
+  <http://clang.llvm.org/docs/UsersManual.html#configuration-files>`.
+
 - ...
 
 Windows Support
