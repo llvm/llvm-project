@@ -102,7 +102,7 @@ std::string resolveOrDie(const FileURI &U, llvm::StringRef HintPath = "") {
 
 TEST(URITest, Create) {
 #ifdef LLVM_ON_WIN32
-  EXPECT_THAT(createOrDie("c:\\x\\y\\z"), "file:///c:/x/y/z");
+  EXPECT_THAT(createOrDie("c:\\x\\y\\z"), "file:///c%3a/x/y/z");
 #else
   EXPECT_THAT(createOrDie("/x/y/z"), "file:///x/y/z");
   EXPECT_THAT(createOrDie("/(x)/y/\\ z"), "file:///%28x%29/y/%5c%20z");
@@ -180,7 +180,7 @@ TEST(URITest, ParseFailed) {
 
 TEST(URITest, Resolve) {
 #ifdef LLVM_ON_WIN32
-  EXPECT_THAT(resolveOrDie(parseOrDie("file:///c:/x/y/z")), "c:\\x\\y\\z");
+  EXPECT_THAT(resolveOrDie(parseOrDie("file:///c%3a/x/y/z")), "c:\\x\\y\\z");
 #else
   EXPECT_EQ(resolveOrDie(parseOrDie("file:/a/b/c")), "/a/b/c");
   EXPECT_EQ(resolveOrDie(parseOrDie("file://auth/a/b/c")), "/a/b/c");
