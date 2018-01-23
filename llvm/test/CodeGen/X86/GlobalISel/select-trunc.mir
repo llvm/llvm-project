@@ -40,6 +40,7 @@ regBankSelected: true
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: %edi
@@ -47,11 +48,13 @@ body:             |
     ; CHECK-LABEL: name: trunc_i32toi1
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY %edi
     ; CHECK: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
-    ; CHECK: %al = COPY [[COPY1]]
+    ; CHECK: [[COPY2:%[0-9]+]]:gr8 = COPY [[COPY1]]
+    ; CHECK: %al = COPY [[COPY2]]
     ; CHECK: RET 0, implicit %al
     %0(s32) = COPY %edi
     %1(s1) = G_TRUNC %0(s32)
-    %al = COPY %1(s1)
+    %2(s8) = G_ANYEXT %1(s1)
+    %al = COPY %2(s8)
     RET 0, implicit %al
 
 ...

@@ -13,8 +13,6 @@ entry:
 }
 
 ; CHECK:        - Type:            CUSTOM
-
-; CHECK:        - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
 ; CHECK-NEXT:     DataSize:        0
 ; CHECK-NEXT:     SymbolInfo:

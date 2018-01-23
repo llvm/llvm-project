@@ -1844,7 +1844,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    kxorq %k1, %k7, %k1
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $62, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k5, %k1, %k7
+; AVX512F-32-NEXT:    kxorq %k1, %k5, %k7
 ; AVX512F-32-NEXT:    kshiftrq $2, %k7, %k1
 ; AVX512F-32-NEXT:    kxorq %k2, %k1, %k2
 ; AVX512F-32-NEXT:    kmovd %ecx, %k5
@@ -1855,7 +1855,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrb %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k2, %k2
 ; AVX512F-32-NEXT:    kshiftrq $61, %k2, %k2
-; AVX512F-32-NEXT:    kxorq %k7, %k2, %k7
+; AVX512F-32-NEXT:    kxorq %k2, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $3, %k7, %k2
 ; AVX512F-32-NEXT:    kxorq %k0, %k2, %k0
 ; AVX512F-32-NEXT:    kmovd %ecx, %k2
@@ -1863,7 +1863,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrb $2, %dl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $60, %k0, %k0
-; AVX512F-32-NEXT:    kxorq %k7, %k0, %k0
+; AVX512F-32-NEXT:    kxorq %k0, %k7, %k0
 ; AVX512F-32-NEXT:    kshiftrq $4, %k0, %k7
 ; AVX512F-32-NEXT:    kxorq %k3, %k7, %k7
 ; AVX512F-32-NEXT:    kmovd %edx, %k3
@@ -1872,7 +1872,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrb $3, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $59, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k0, %k7, %k7
+; AVX512F-32-NEXT:    kxorq %k7, %k0, %k7
 ; AVX512F-32-NEXT:    kshiftrq $5, %k7, %k0
 ; AVX512F-32-NEXT:    kxorq %k4, %k0, %k4
 ; AVX512F-32-NEXT:    kmovd %ecx, %k0
@@ -1881,7 +1881,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    andb $1, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k4, %k4
 ; AVX512F-32-NEXT:    kshiftrq $58, %k4, %k4
-; AVX512F-32-NEXT:    kxorq %k7, %k4, %k7
+; AVX512F-32-NEXT:    kxorq %k4, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $6, %k7, %k4
 ; AVX512F-32-NEXT:    kxorq %k6, %k4, %k6
 ; AVX512F-32-NEXT:    kmovd %ecx, %k4
@@ -1890,7 +1890,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrb %bl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $57, %k6, %k6
-; AVX512F-32-NEXT:    kxorq %k7, %k6, %k6
+; AVX512F-32-NEXT:    kxorq %k6, %k7, %k6
 ; AVX512F-32-NEXT:    kshiftrq $7, %k6, %k7
 ; AVX512F-32-NEXT:    kxorq %k5, %k7, %k7
 ; AVX512F-32-NEXT:    kmovd %ebx, %k5
@@ -1898,7 +1898,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrb $2, %dl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $56, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k6, %k7, %k7
+; AVX512F-32-NEXT:    kxorq %k7, %k6, %k7
 ; AVX512F-32-NEXT:    kshiftrq $8, %k7, %k6
 ; AVX512F-32-NEXT:    kxorq %k1, %k6, %k1
 ; AVX512F-32-NEXT:    kmovd %edx, %k6
@@ -1906,7 +1906,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrb $3, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $55, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k7, %k1, %k7
+; AVX512F-32-NEXT:    kxorq %k1, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $9, %k7, %k1
 ; AVX512F-32-NEXT:    kxorq %k2, %k1, %k2
 ; AVX512F-32-NEXT:    kmovd %ecx, %k1
@@ -1914,7 +1914,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrb $4, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k2, %k2
 ; AVX512F-32-NEXT:    kshiftrq $54, %k2, %k2
-; AVX512F-32-NEXT:    kxorq %k7, %k2, %k7
+; AVX512F-32-NEXT:    kxorq %k2, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $10, %k7, %k2
 ; AVX512F-32-NEXT:    kxorq %k3, %k2, %k3
 ; AVX512F-32-NEXT:    kmovd %ecx, %k2
@@ -1927,12 +1927,12 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrl $12, %edx
 ; AVX512F-32-NEXT:    kshiftlq $63, %k3, %k3
 ; AVX512F-32-NEXT:    kshiftrq $53, %k3, %k3
-; AVX512F-32-NEXT:    kxorq %k7, %k3, %k3
+; AVX512F-32-NEXT:    kxorq %k3, %k7, %k3
 ; AVX512F-32-NEXT:    kshiftrq $11, %k3, %k7
 ; AVX512F-32-NEXT:    kxorq %k0, %k7, %k0
 ; AVX512F-32-NEXT:    kshiftlq $63, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $52, %k0, %k0
-; AVX512F-32-NEXT:    kxorq %k3, %k0, %k3
+; AVX512F-32-NEXT:    kxorq %k0, %k3, %k3
 ; AVX512F-32-NEXT:    kshiftrq $12, %k3, %k0
 ; AVX512F-32-NEXT:    kmovd %edx, %k7
 ; AVX512F-32-NEXT:    kxorq %k7, %k0, %k7
@@ -1943,24 +1943,24 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrl $14, %edi
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $51, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k3, %k7, %k3
+; AVX512F-32-NEXT:    kxorq %k7, %k3, %k3
 ; AVX512F-32-NEXT:    kshiftrq $13, %k3, %k7
 ; AVX512F-32-NEXT:    kxorq %k4, %k7, %k4
 ; AVX512F-32-NEXT:    kshiftlq $63, %k4, %k4
 ; AVX512F-32-NEXT:    kshiftrq $50, %k4, %k4
-; AVX512F-32-NEXT:    kxorq %k3, %k4, %k3
+; AVX512F-32-NEXT:    kxorq %k4, %k3, %k3
 ; AVX512F-32-NEXT:    kshiftrq $14, %k3, %k4
 ; AVX512F-32-NEXT:    kmovd %edi, %k7
 ; AVX512F-32-NEXT:    kxorq %k7, %k4, %k4
 ; AVX512F-32-NEXT:    kshiftlq $63, %k4, %k4
 ; AVX512F-32-NEXT:    kshiftrq $49, %k4, %k4
-; AVX512F-32-NEXT:    kxorq %k3, %k4, %k3
+; AVX512F-32-NEXT:    kxorq %k4, %k3, %k3
 ; AVX512F-32-NEXT:    kshiftrq $15, %k3, %k4
 ; AVX512F-32-NEXT:    kmovd %esi, %k7
 ; AVX512F-32-NEXT:    kxorq %k7, %k4, %k4
 ; AVX512F-32-NEXT:    kshiftlq $63, %k4, %k4
 ; AVX512F-32-NEXT:    kshiftrq $48, %k4, %k4
-; AVX512F-32-NEXT:    kxorq %k3, %k4, %k3
+; AVX512F-32-NEXT:    kxorq %k4, %k3, %k3
 ; AVX512F-32-NEXT:    kshiftrq $16, %k3, %k4
 ; AVX512F-32-NEXT:    kmovd %eax, %k7
 ; AVX512F-32-NEXT:    kxorq %k7, %k4, %k4
@@ -1971,14 +1971,14 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrb $7, %al
 ; AVX512F-32-NEXT:    kshiftlq $63, %k4, %k4
 ; AVX512F-32-NEXT:    kshiftrq $47, %k4, %k4
-; AVX512F-32-NEXT:    kxorq %k3, %k4, %k3
+; AVX512F-32-NEXT:    kxorq %k4, %k3, %k3
 ; AVX512F-32-NEXT:    kshiftrq $17, %k3, %k4
 ; AVX512F-32-NEXT:    kxorq %k5, %k4, %k4
 ; AVX512F-32-NEXT:    kmovd %eax, %k5
 ; AVX512F-32-NEXT:    movl %edx, %eax
 ; AVX512F-32-NEXT:    kshiftlq $63, %k4, %k4
 ; AVX512F-32-NEXT:    kshiftrq $46, %k4, %k4
-; AVX512F-32-NEXT:    kxorq %k3, %k4, %k4
+; AVX512F-32-NEXT:    kxorq %k4, %k3, %k4
 ; AVX512F-32-NEXT:    kshiftrq $18, %k4, %k3
 ; AVX512F-32-NEXT:    kxorq %k6, %k3, %k6
 ; AVX512F-32-NEXT:    kmovd %edx, %k3
@@ -1988,7 +1988,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrb %al
 ; AVX512F-32-NEXT:    kshiftlq $63, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $45, %k6, %k6
-; AVX512F-32-NEXT:    kxorq %k4, %k6, %k6
+; AVX512F-32-NEXT:    kxorq %k6, %k4, %k6
 ; AVX512F-32-NEXT:    kshiftrq $19, %k6, %k4
 ; AVX512F-32-NEXT:    kxorq %k1, %k4, %k1
 ; AVX512F-32-NEXT:    kmovd %eax, %k4
@@ -1996,7 +1996,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrb $2, %dl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $44, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k6, %k1, %k1
+; AVX512F-32-NEXT:    kxorq %k1, %k6, %k1
 ; AVX512F-32-NEXT:    kshiftrq $20, %k1, %k6
 ; AVX512F-32-NEXT:    kxorq %k2, %k6, %k6
 ; AVX512F-32-NEXT:    kmovd %edx, %k2
@@ -2005,7 +2005,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrb $3, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $43, %k6, %k6
-; AVX512F-32-NEXT:    kxorq %k1, %k6, %k6
+; AVX512F-32-NEXT:    kxorq %k6, %k1, %k6
 ; AVX512F-32-NEXT:    kshiftrq $21, %k6, %k1
 ; AVX512F-32-NEXT:    kxorq %k0, %k1, %k0
 ; AVX512F-32-NEXT:    kmovd %ecx, %k1
@@ -2014,7 +2014,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    andb $1, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $42, %k0, %k0
-; AVX512F-32-NEXT:    kxorq %k6, %k0, %k6
+; AVX512F-32-NEXT:    kxorq %k0, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $22, %k6, %k0
 ; AVX512F-32-NEXT:    kxorq %k7, %k0, %k7
 ; AVX512F-32-NEXT:    kmovd %ecx, %k0
@@ -2023,7 +2023,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrb %dl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $41, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k6, %k7, %k6
+; AVX512F-32-NEXT:    kxorq %k7, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $23, %k6, %k7
 ; AVX512F-32-NEXT:    kxorq %k5, %k7, %k7
 ; AVX512F-32-NEXT:    kmovd %edx, %k5
@@ -2031,7 +2031,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrb $2, %al
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $40, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k6, %k7, %k7
+; AVX512F-32-NEXT:    kxorq %k7, %k6, %k7
 ; AVX512F-32-NEXT:    kshiftrq $24, %k7, %k6
 ; AVX512F-32-NEXT:    kxorq %k3, %k6, %k3
 ; AVX512F-32-NEXT:    kmovd %eax, %k6
@@ -2040,7 +2040,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrb $3, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k3, %k3
 ; AVX512F-32-NEXT:    kshiftrq $39, %k3, %k3
-; AVX512F-32-NEXT:    kxorq %k7, %k3, %k7
+; AVX512F-32-NEXT:    kxorq %k3, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $25, %k7, %k3
 ; AVX512F-32-NEXT:    kxorq %k4, %k3, %k4
 ; AVX512F-32-NEXT:    kmovd %ecx, %k3
@@ -2048,7 +2048,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrb $4, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k4, %k4
 ; AVX512F-32-NEXT:    kshiftrq $38, %k4, %k4
-; AVX512F-32-NEXT:    kxorq %k7, %k4, %k4
+; AVX512F-32-NEXT:    kxorq %k4, %k7, %k4
 ; AVX512F-32-NEXT:    kshiftrq $26, %k4, %k7
 ; AVX512F-32-NEXT:    kxorq %k2, %k7, %k7
 ; AVX512F-32-NEXT:    kmovd %ecx, %k2
@@ -2059,12 +2059,12 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrl $28, %edx
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $37, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k4, %k7, %k4
+; AVX512F-32-NEXT:    kxorq %k7, %k4, %k4
 ; AVX512F-32-NEXT:    kshiftrq $27, %k4, %k7
 ; AVX512F-32-NEXT:    kxorq %k1, %k7, %k1
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $36, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k4, %k1, %k1
+; AVX512F-32-NEXT:    kxorq %k1, %k4, %k1
 ; AVX512F-32-NEXT:    kshiftrq $28, %k1, %k4
 ; AVX512F-32-NEXT:    kmovd %edx, %k7
 ; AVX512F-32-NEXT:    kxorq %k7, %k4, %k7
@@ -2077,24 +2077,24 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrl $30, %esi
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $35, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k1, %k7, %k1
+; AVX512F-32-NEXT:    kxorq %k7, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $29, %k1, %k7
 ; AVX512F-32-NEXT:    kxorq %k0, %k7, %k0
 ; AVX512F-32-NEXT:    kshiftlq $63, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $34, %k0, %k0
-; AVX512F-32-NEXT:    kxorq %k1, %k0, %k0
+; AVX512F-32-NEXT:    kxorq %k0, %k1, %k0
 ; AVX512F-32-NEXT:    kshiftrq $30, %k0, %k1
 ; AVX512F-32-NEXT:    kmovd %esi, %k7
 ; AVX512F-32-NEXT:    kxorq %k7, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $33, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k0, %k1, %k0
+; AVX512F-32-NEXT:    kxorq %k1, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $31, %k0, %k1
 ; AVX512F-32-NEXT:    kmovd %ecx, %k7
 ; AVX512F-32-NEXT:    kxorq %k7, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $32, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k0, %k1, %k0
+; AVX512F-32-NEXT:    kxorq %k1, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $32, %k0, %k1
 ; AVX512F-32-NEXT:    kmovd %ebx, %k7
 ; AVX512F-32-NEXT:    kxorq %k7, %k1, %k1
@@ -2103,12 +2103,12 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrb $7, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $31, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k0, %k1, %k0
+; AVX512F-32-NEXT:    kxorq %k1, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $33, %k0, %k1
 ; AVX512F-32-NEXT:    kxorq %k5, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $30, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k0, %k1, %k0
+; AVX512F-32-NEXT:    kxorq %k1, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $34, %k0, %k1
 ; AVX512F-32-NEXT:    kxorq %k6, %k1, %k5
 ; AVX512F-32-NEXT:    kmovd %ecx, %k6
@@ -2118,7 +2118,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrb %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k5, %k5
 ; AVX512F-32-NEXT:    kshiftrq $29, %k5, %k5
-; AVX512F-32-NEXT:    kxorq %k0, %k5, %k5
+; AVX512F-32-NEXT:    kxorq %k5, %k0, %k5
 ; AVX512F-32-NEXT:    kshiftrq $35, %k5, %k0
 ; AVX512F-32-NEXT:    kxorq %k3, %k0, %k3
 ; AVX512F-32-NEXT:    kmovd %ecx, %k0
@@ -2126,7 +2126,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrb $2, %al
 ; AVX512F-32-NEXT:    kshiftlq $63, %k3, %k3
 ; AVX512F-32-NEXT:    kshiftrq $28, %k3, %k3
-; AVX512F-32-NEXT:    kxorq %k5, %k3, %k5
+; AVX512F-32-NEXT:    kxorq %k3, %k5, %k5
 ; AVX512F-32-NEXT:    kshiftrq $36, %k5, %k3
 ; AVX512F-32-NEXT:    kxorq %k2, %k3, %k2
 ; AVX512F-32-NEXT:    kmovd %eax, %k3
@@ -2135,7 +2135,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrb $3, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k2, %k2
 ; AVX512F-32-NEXT:    kshiftrq $27, %k2, %k2
-; AVX512F-32-NEXT:    kxorq %k5, %k2, %k2
+; AVX512F-32-NEXT:    kxorq %k2, %k5, %k2
 ; AVX512F-32-NEXT:    kshiftrq $37, %k2, %k5
 ; AVX512F-32-NEXT:    kxorq %k4, %k5, %k5
 ; AVX512F-32-NEXT:    kmovd %ecx, %k4
@@ -2144,7 +2144,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    andb $1, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k5, %k5
 ; AVX512F-32-NEXT:    kshiftrq $26, %k5, %k5
-; AVX512F-32-NEXT:    kxorq %k2, %k5, %k2
+; AVX512F-32-NEXT:    kxorq %k5, %k2, %k2
 ; AVX512F-32-NEXT:    kshiftrq $38, %k2, %k5
 ; AVX512F-32-NEXT:    kxorq %k7, %k5, %k7
 ; AVX512F-32-NEXT:    kmovd %ecx, %k5
@@ -2153,7 +2153,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrb %dl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $25, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k2, %k7, %k7
+; AVX512F-32-NEXT:    kxorq %k7, %k2, %k7
 ; AVX512F-32-NEXT:    kshiftrq $39, %k7, %k2
 ; AVX512F-32-NEXT:    kxorq %k6, %k2, %k6
 ; AVX512F-32-NEXT:    kmovd %edx, %k2
@@ -2163,7 +2163,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrb $2, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $24, %k6, %k6
-; AVX512F-32-NEXT:    kxorq %k7, %k6, %k6
+; AVX512F-32-NEXT:    kxorq %k6, %k7, %k6
 ; AVX512F-32-NEXT:    kshiftrq $40, %k6, %k7
 ; AVX512F-32-NEXT:    kxorq %k1, %k7, %k7
 ; AVX512F-32-NEXT:    kmovd %ecx, %k1
@@ -2174,28 +2174,28 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrl $12, %ecx
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $23, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k6, %k7, %k6
+; AVX512F-32-NEXT:    kxorq %k7, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $41, %k6, %k7
 ; AVX512F-32-NEXT:    kxorq %k0, %k7, %k0
 ; AVX512F-32-NEXT:    kmovd %ecx, %k1
 ; AVX512F-32-NEXT:    shrl $14, %edi
 ; AVX512F-32-NEXT:    kshiftlq $63, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $22, %k0, %k0
-; AVX512F-32-NEXT:    kxorq %k6, %k0, %k0
+; AVX512F-32-NEXT:    kxorq %k0, %k6, %k0
 ; AVX512F-32-NEXT:    kshiftrq $42, %k0, %k6
 ; AVX512F-32-NEXT:    kxorq %k3, %k6, %k3
 ; AVX512F-32-NEXT:    kmovd %edi, %k7
 ; AVX512F-32-NEXT:    shrl $15, %esi
 ; AVX512F-32-NEXT:    kshiftlq $63, %k3, %k3
 ; AVX512F-32-NEXT:    kshiftrq $21, %k3, %k3
-; AVX512F-32-NEXT:    kxorq %k0, %k3, %k0
+; AVX512F-32-NEXT:    kxorq %k3, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $43, %k0, %k3
 ; AVX512F-32-NEXT:    kxorq %k4, %k3, %k3
 ; AVX512F-32-NEXT:    kmovd %esi, %k6
 ; AVX512F-32-NEXT:    shrb $3, %dl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k3, %k3
 ; AVX512F-32-NEXT:    kshiftrq $20, %k3, %k3
-; AVX512F-32-NEXT:    kxorq %k0, %k3, %k3
+; AVX512F-32-NEXT:    kxorq %k3, %k0, %k3
 ; AVX512F-32-NEXT:    kshiftrq $44, %k3, %k0
 ; AVX512F-32-NEXT:    kxorq %k1, %k0, %k1
 ; AVX512F-32-NEXT:    kmovd %edx, %k0
@@ -2203,7 +2203,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrb $4, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $19, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k3, %k1, %k1
+; AVX512F-32-NEXT:    kxorq %k1, %k3, %k1
 ; AVX512F-32-NEXT:    kshiftrq $45, %k1, %k3
 ; AVX512F-32-NEXT:    kxorq %k5, %k3, %k4
 ; AVX512F-32-NEXT:    kmovd %ecx, %k3
@@ -2212,7 +2212,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    andb $1, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k4, %k4
 ; AVX512F-32-NEXT:    kshiftrq $18, %k4, %k4
-; AVX512F-32-NEXT:    kxorq %k1, %k4, %k1
+; AVX512F-32-NEXT:    kxorq %k4, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $46, %k1, %k4
 ; AVX512F-32-NEXT:    kxorq %k7, %k4, %k5
 ; AVX512F-32-NEXT:    kmovd %ecx, %k4
@@ -2220,12 +2220,12 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrb $6, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k5, %k5
 ; AVX512F-32-NEXT:    kshiftrq $17, %k5, %k5
-; AVX512F-32-NEXT:    kxorq %k1, %k5, %k1
+; AVX512F-32-NEXT:    kxorq %k5, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $47, %k1, %k5
 ; AVX512F-32-NEXT:    kxorq %k6, %k5, %k5
 ; AVX512F-32-NEXT:    kshiftlq $63, %k5, %k5
 ; AVX512F-32-NEXT:    kshiftrq $16, %k5, %k5
-; AVX512F-32-NEXT:    kxorq %k1, %k5, %k1
+; AVX512F-32-NEXT:    kxorq %k5, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $48, %k1, %k5
 ; AVX512F-32-NEXT:    kmovd %eax, %k6
 ; AVX512F-32-NEXT:    kxorq %k6, %k5, %k6
@@ -2236,14 +2236,14 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrb $7, %al
 ; AVX512F-32-NEXT:    kshiftlq $63, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $15, %k6, %k6
-; AVX512F-32-NEXT:    kxorq %k1, %k6, %k1
+; AVX512F-32-NEXT:    kxorq %k6, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $49, %k1, %k6
 ; AVX512F-32-NEXT:    kxorq %k2, %k6, %k6
 ; AVX512F-32-NEXT:    kmovd %eax, %k2
 ; AVX512F-32-NEXT:    movl %edx, %eax
 ; AVX512F-32-NEXT:    kshiftlq $63, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $14, %k6, %k6
-; AVX512F-32-NEXT:    kxorq %k1, %k6, %k6
+; AVX512F-32-NEXT:    kxorq %k6, %k1, %k6
 ; AVX512F-32-NEXT:    kshiftrq $50, %k6, %k1
 ; AVX512F-32-NEXT:    kmovq {{[0-9]+}}(%esp), %k7 # 8-byte Reload
 ; AVX512F-32-NEXT:    kxorq %k7, %k1, %k7
@@ -2254,7 +2254,7 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrb %al
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $13, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k6, %k7, %k6
+; AVX512F-32-NEXT:    kxorq %k7, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $51, %k6, %k7
 ; AVX512F-32-NEXT:    kxorq %k0, %k7, %k7
 ; AVX512F-32-NEXT:    kmovd %eax, %k0
@@ -2262,14 +2262,14 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrb $2, %dl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $12, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k6, %k7, %k6
+; AVX512F-32-NEXT:    kxorq %k7, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $52, %k6, %k7
 ; AVX512F-32-NEXT:    kxorq %k3, %k7, %k7
 ; AVX512F-32-NEXT:    kmovd %edx, %k3
 ; AVX512F-32-NEXT:    shrb $3, %al
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $11, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k6, %k7, %k6
+; AVX512F-32-NEXT:    kxorq %k7, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $53, %k6, %k7
 ; AVX512F-32-NEXT:    kxorq %k4, %k7, %k7
 ; AVX512F-32-NEXT:    kmovd %eax, %k4
@@ -2278,40 +2278,40 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    andb $1, %al
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $10, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k6, %k7, %k6
+; AVX512F-32-NEXT:    kxorq %k7, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $54, %k6, %k7
 ; AVX512F-32-NEXT:    kxorq %k5, %k7, %k7
 ; AVX512F-32-NEXT:    kmovd %eax, %k5
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $9, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k6, %k7, %k6
+; AVX512F-32-NEXT:    kxorq %k7, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $55, %k6, %k7
 ; AVX512F-32-NEXT:    kxorq %k2, %k7, %k2
 ; AVX512F-32-NEXT:    kshiftlq $63, %k2, %k2
 ; AVX512F-32-NEXT:    kshiftrq $8, %k2, %k2
-; AVX512F-32-NEXT:    kxorq %k6, %k2, %k2
+; AVX512F-32-NEXT:    kxorq %k2, %k6, %k2
 ; AVX512F-32-NEXT:    kshiftrq $56, %k2, %k6
 ; AVX512F-32-NEXT:    kxorq %k1, %k6, %k1
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $7, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k2, %k1, %k1
+; AVX512F-32-NEXT:    kxorq %k1, %k2, %k1
 ; AVX512F-32-NEXT:    kshiftrq $57, %k1, %k2
 ; AVX512F-32-NEXT:    kxorq %k0, %k2, %k0
 ; AVX512F-32-NEXT:    kshiftlq $63, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $6, %k0, %k0
-; AVX512F-32-NEXT:    kxorq %k1, %k0, %k0
+; AVX512F-32-NEXT:    kxorq %k0, %k1, %k0
 ; AVX512F-32-NEXT:    kshiftrq $58, %k0, %k1
 ; AVX512F-32-NEXT:    kxorq %k3, %k1, %k1
 ; AVX512F-32-NEXT:    movl %ebx, %eax
 ; AVX512F-32-NEXT:    shrl $28, %eax
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $5, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k0, %k1, %k0
+; AVX512F-32-NEXT:    kxorq %k1, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $59, %k0, %k1
 ; AVX512F-32-NEXT:    kxorq %k4, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $4, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k0, %k1, %k0
+; AVX512F-32-NEXT:    kxorq %k1, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $60, %k0, %k1
 ; AVX512F-32-NEXT:    kmovd %eax, %k2
 ; AVX512F-32-NEXT:    kxorq %k2, %k1, %k1
@@ -2321,18 +2321,18 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    shrl $30, %ecx
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $3, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k0, %k1, %k0
+; AVX512F-32-NEXT:    kxorq %k1, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $61, %k0, %k1
 ; AVX512F-32-NEXT:    kxorq %k5, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $2, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k0, %k1, %k0
+; AVX512F-32-NEXT:    kxorq %k1, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $62, %k0, %k1
 ; AVX512F-32-NEXT:    kmovd %ecx, %k2
 ; AVX512F-32-NEXT:    kxorq %k2, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $1, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k0, %k1, %k0
+; AVX512F-32-NEXT:    kxorq %k1, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftlq $1, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $1, %k0, %k0
 ; AVX512F-32-NEXT:    kmovd %eax, %k1
@@ -2544,7 +2544,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    kxorq %k1, %k7, %k1
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $62, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k5, %k1, %k7
+; AVX512F-32-NEXT:    kxorq %k1, %k5, %k7
 ; AVX512F-32-NEXT:    kshiftrq $2, %k7, %k1
 ; AVX512F-32-NEXT:    kxorq %k2, %k1, %k2
 ; AVX512F-32-NEXT:    kmovd %ecx, %k5
@@ -2555,7 +2555,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrb %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k2, %k2
 ; AVX512F-32-NEXT:    kshiftrq $61, %k2, %k2
-; AVX512F-32-NEXT:    kxorq %k7, %k2, %k7
+; AVX512F-32-NEXT:    kxorq %k2, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $3, %k7, %k2
 ; AVX512F-32-NEXT:    kxorq %k0, %k2, %k0
 ; AVX512F-32-NEXT:    kmovd %ecx, %k2
@@ -2563,7 +2563,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrb $2, %dl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $60, %k0, %k0
-; AVX512F-32-NEXT:    kxorq %k7, %k0, %k0
+; AVX512F-32-NEXT:    kxorq %k0, %k7, %k0
 ; AVX512F-32-NEXT:    kshiftrq $4, %k0, %k7
 ; AVX512F-32-NEXT:    kxorq %k3, %k7, %k7
 ; AVX512F-32-NEXT:    kmovd %edx, %k3
@@ -2572,7 +2572,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrb $3, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $59, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k0, %k7, %k7
+; AVX512F-32-NEXT:    kxorq %k7, %k0, %k7
 ; AVX512F-32-NEXT:    kshiftrq $5, %k7, %k0
 ; AVX512F-32-NEXT:    kxorq %k4, %k0, %k4
 ; AVX512F-32-NEXT:    kmovd %ecx, %k0
@@ -2581,7 +2581,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    andb $1, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k4, %k4
 ; AVX512F-32-NEXT:    kshiftrq $58, %k4, %k4
-; AVX512F-32-NEXT:    kxorq %k7, %k4, %k7
+; AVX512F-32-NEXT:    kxorq %k4, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $6, %k7, %k4
 ; AVX512F-32-NEXT:    kxorq %k6, %k4, %k6
 ; AVX512F-32-NEXT:    kmovd %ecx, %k4
@@ -2590,7 +2590,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrb %bl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $57, %k6, %k6
-; AVX512F-32-NEXT:    kxorq %k7, %k6, %k6
+; AVX512F-32-NEXT:    kxorq %k6, %k7, %k6
 ; AVX512F-32-NEXT:    kshiftrq $7, %k6, %k7
 ; AVX512F-32-NEXT:    kxorq %k5, %k7, %k7
 ; AVX512F-32-NEXT:    kmovd %ebx, %k5
@@ -2598,7 +2598,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrb $2, %dl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $56, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k6, %k7, %k7
+; AVX512F-32-NEXT:    kxorq %k7, %k6, %k7
 ; AVX512F-32-NEXT:    kshiftrq $8, %k7, %k6
 ; AVX512F-32-NEXT:    kxorq %k1, %k6, %k1
 ; AVX512F-32-NEXT:    kmovd %edx, %k6
@@ -2606,7 +2606,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrb $3, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $55, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k7, %k1, %k7
+; AVX512F-32-NEXT:    kxorq %k1, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $9, %k7, %k1
 ; AVX512F-32-NEXT:    kxorq %k2, %k1, %k2
 ; AVX512F-32-NEXT:    kmovd %ecx, %k1
@@ -2614,7 +2614,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrb $4, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k2, %k2
 ; AVX512F-32-NEXT:    kshiftrq $54, %k2, %k2
-; AVX512F-32-NEXT:    kxorq %k7, %k2, %k7
+; AVX512F-32-NEXT:    kxorq %k2, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $10, %k7, %k2
 ; AVX512F-32-NEXT:    kxorq %k3, %k2, %k3
 ; AVX512F-32-NEXT:    kmovd %ecx, %k2
@@ -2627,12 +2627,12 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrl $12, %edx
 ; AVX512F-32-NEXT:    kshiftlq $63, %k3, %k3
 ; AVX512F-32-NEXT:    kshiftrq $53, %k3, %k3
-; AVX512F-32-NEXT:    kxorq %k7, %k3, %k3
+; AVX512F-32-NEXT:    kxorq %k3, %k7, %k3
 ; AVX512F-32-NEXT:    kshiftrq $11, %k3, %k7
 ; AVX512F-32-NEXT:    kxorq %k0, %k7, %k0
 ; AVX512F-32-NEXT:    kshiftlq $63, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $52, %k0, %k0
-; AVX512F-32-NEXT:    kxorq %k3, %k0, %k3
+; AVX512F-32-NEXT:    kxorq %k0, %k3, %k3
 ; AVX512F-32-NEXT:    kshiftrq $12, %k3, %k0
 ; AVX512F-32-NEXT:    kmovd %edx, %k7
 ; AVX512F-32-NEXT:    kxorq %k7, %k0, %k7
@@ -2643,24 +2643,24 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrl $14, %edi
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $51, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k3, %k7, %k3
+; AVX512F-32-NEXT:    kxorq %k7, %k3, %k3
 ; AVX512F-32-NEXT:    kshiftrq $13, %k3, %k7
 ; AVX512F-32-NEXT:    kxorq %k4, %k7, %k4
 ; AVX512F-32-NEXT:    kshiftlq $63, %k4, %k4
 ; AVX512F-32-NEXT:    kshiftrq $50, %k4, %k4
-; AVX512F-32-NEXT:    kxorq %k3, %k4, %k3
+; AVX512F-32-NEXT:    kxorq %k4, %k3, %k3
 ; AVX512F-32-NEXT:    kshiftrq $14, %k3, %k4
 ; AVX512F-32-NEXT:    kmovd %edi, %k7
 ; AVX512F-32-NEXT:    kxorq %k7, %k4, %k4
 ; AVX512F-32-NEXT:    kshiftlq $63, %k4, %k4
 ; AVX512F-32-NEXT:    kshiftrq $49, %k4, %k4
-; AVX512F-32-NEXT:    kxorq %k3, %k4, %k3
+; AVX512F-32-NEXT:    kxorq %k4, %k3, %k3
 ; AVX512F-32-NEXT:    kshiftrq $15, %k3, %k4
 ; AVX512F-32-NEXT:    kmovd %esi, %k7
 ; AVX512F-32-NEXT:    kxorq %k7, %k4, %k4
 ; AVX512F-32-NEXT:    kshiftlq $63, %k4, %k4
 ; AVX512F-32-NEXT:    kshiftrq $48, %k4, %k4
-; AVX512F-32-NEXT:    kxorq %k3, %k4, %k3
+; AVX512F-32-NEXT:    kxorq %k4, %k3, %k3
 ; AVX512F-32-NEXT:    kshiftrq $16, %k3, %k4
 ; AVX512F-32-NEXT:    kmovd %eax, %k7
 ; AVX512F-32-NEXT:    kxorq %k7, %k4, %k4
@@ -2671,14 +2671,14 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrb $7, %al
 ; AVX512F-32-NEXT:    kshiftlq $63, %k4, %k4
 ; AVX512F-32-NEXT:    kshiftrq $47, %k4, %k4
-; AVX512F-32-NEXT:    kxorq %k3, %k4, %k3
+; AVX512F-32-NEXT:    kxorq %k4, %k3, %k3
 ; AVX512F-32-NEXT:    kshiftrq $17, %k3, %k4
 ; AVX512F-32-NEXT:    kxorq %k5, %k4, %k4
 ; AVX512F-32-NEXT:    kmovd %eax, %k5
 ; AVX512F-32-NEXT:    movl %edx, %eax
 ; AVX512F-32-NEXT:    kshiftlq $63, %k4, %k4
 ; AVX512F-32-NEXT:    kshiftrq $46, %k4, %k4
-; AVX512F-32-NEXT:    kxorq %k3, %k4, %k4
+; AVX512F-32-NEXT:    kxorq %k4, %k3, %k4
 ; AVX512F-32-NEXT:    kshiftrq $18, %k4, %k3
 ; AVX512F-32-NEXT:    kxorq %k6, %k3, %k6
 ; AVX512F-32-NEXT:    kmovd %edx, %k3
@@ -2688,7 +2688,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrb %al
 ; AVX512F-32-NEXT:    kshiftlq $63, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $45, %k6, %k6
-; AVX512F-32-NEXT:    kxorq %k4, %k6, %k6
+; AVX512F-32-NEXT:    kxorq %k6, %k4, %k6
 ; AVX512F-32-NEXT:    kshiftrq $19, %k6, %k4
 ; AVX512F-32-NEXT:    kxorq %k1, %k4, %k1
 ; AVX512F-32-NEXT:    kmovd %eax, %k4
@@ -2696,7 +2696,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrb $2, %dl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $44, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k6, %k1, %k1
+; AVX512F-32-NEXT:    kxorq %k1, %k6, %k1
 ; AVX512F-32-NEXT:    kshiftrq $20, %k1, %k6
 ; AVX512F-32-NEXT:    kxorq %k2, %k6, %k6
 ; AVX512F-32-NEXT:    kmovd %edx, %k2
@@ -2705,7 +2705,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrb $3, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $43, %k6, %k6
-; AVX512F-32-NEXT:    kxorq %k1, %k6, %k6
+; AVX512F-32-NEXT:    kxorq %k6, %k1, %k6
 ; AVX512F-32-NEXT:    kshiftrq $21, %k6, %k1
 ; AVX512F-32-NEXT:    kxorq %k0, %k1, %k0
 ; AVX512F-32-NEXT:    kmovd %ecx, %k1
@@ -2714,7 +2714,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    andb $1, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $42, %k0, %k0
-; AVX512F-32-NEXT:    kxorq %k6, %k0, %k6
+; AVX512F-32-NEXT:    kxorq %k0, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $22, %k6, %k0
 ; AVX512F-32-NEXT:    kxorq %k7, %k0, %k7
 ; AVX512F-32-NEXT:    kmovd %ecx, %k0
@@ -2723,7 +2723,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrb %dl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $41, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k6, %k7, %k6
+; AVX512F-32-NEXT:    kxorq %k7, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $23, %k6, %k7
 ; AVX512F-32-NEXT:    kxorq %k5, %k7, %k7
 ; AVX512F-32-NEXT:    kmovd %edx, %k5
@@ -2731,7 +2731,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrb $2, %al
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $40, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k6, %k7, %k7
+; AVX512F-32-NEXT:    kxorq %k7, %k6, %k7
 ; AVX512F-32-NEXT:    kshiftrq $24, %k7, %k6
 ; AVX512F-32-NEXT:    kxorq %k3, %k6, %k3
 ; AVX512F-32-NEXT:    kmovd %eax, %k6
@@ -2740,7 +2740,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrb $3, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k3, %k3
 ; AVX512F-32-NEXT:    kshiftrq $39, %k3, %k3
-; AVX512F-32-NEXT:    kxorq %k7, %k3, %k7
+; AVX512F-32-NEXT:    kxorq %k3, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $25, %k7, %k3
 ; AVX512F-32-NEXT:    kxorq %k4, %k3, %k4
 ; AVX512F-32-NEXT:    kmovd %ecx, %k3
@@ -2748,7 +2748,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrb $4, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k4, %k4
 ; AVX512F-32-NEXT:    kshiftrq $38, %k4, %k4
-; AVX512F-32-NEXT:    kxorq %k7, %k4, %k4
+; AVX512F-32-NEXT:    kxorq %k4, %k7, %k4
 ; AVX512F-32-NEXT:    kshiftrq $26, %k4, %k7
 ; AVX512F-32-NEXT:    kxorq %k2, %k7, %k7
 ; AVX512F-32-NEXT:    kmovd %ecx, %k2
@@ -2759,12 +2759,12 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrl $28, %edx
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $37, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k4, %k7, %k4
+; AVX512F-32-NEXT:    kxorq %k7, %k4, %k4
 ; AVX512F-32-NEXT:    kshiftrq $27, %k4, %k7
 ; AVX512F-32-NEXT:    kxorq %k1, %k7, %k1
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $36, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k4, %k1, %k1
+; AVX512F-32-NEXT:    kxorq %k1, %k4, %k1
 ; AVX512F-32-NEXT:    kshiftrq $28, %k1, %k4
 ; AVX512F-32-NEXT:    kmovd %edx, %k7
 ; AVX512F-32-NEXT:    kxorq %k7, %k4, %k7
@@ -2777,24 +2777,24 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrl $30, %esi
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $35, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k1, %k7, %k1
+; AVX512F-32-NEXT:    kxorq %k7, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $29, %k1, %k7
 ; AVX512F-32-NEXT:    kxorq %k0, %k7, %k0
 ; AVX512F-32-NEXT:    kshiftlq $63, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $34, %k0, %k0
-; AVX512F-32-NEXT:    kxorq %k1, %k0, %k0
+; AVX512F-32-NEXT:    kxorq %k0, %k1, %k0
 ; AVX512F-32-NEXT:    kshiftrq $30, %k0, %k1
 ; AVX512F-32-NEXT:    kmovd %esi, %k7
 ; AVX512F-32-NEXT:    kxorq %k7, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $33, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k0, %k1, %k0
+; AVX512F-32-NEXT:    kxorq %k1, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $31, %k0, %k1
 ; AVX512F-32-NEXT:    kmovd %ecx, %k7
 ; AVX512F-32-NEXT:    kxorq %k7, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $32, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k0, %k1, %k0
+; AVX512F-32-NEXT:    kxorq %k1, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $32, %k0, %k1
 ; AVX512F-32-NEXT:    kmovd %ebx, %k7
 ; AVX512F-32-NEXT:    kxorq %k7, %k1, %k1
@@ -2803,12 +2803,12 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrb $7, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $31, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k0, %k1, %k0
+; AVX512F-32-NEXT:    kxorq %k1, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $33, %k0, %k1
 ; AVX512F-32-NEXT:    kxorq %k5, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $30, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k0, %k1, %k0
+; AVX512F-32-NEXT:    kxorq %k1, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $34, %k0, %k1
 ; AVX512F-32-NEXT:    kxorq %k6, %k1, %k5
 ; AVX512F-32-NEXT:    kmovd %ecx, %k6
@@ -2818,7 +2818,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrb %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k5, %k5
 ; AVX512F-32-NEXT:    kshiftrq $29, %k5, %k5
-; AVX512F-32-NEXT:    kxorq %k0, %k5, %k5
+; AVX512F-32-NEXT:    kxorq %k5, %k0, %k5
 ; AVX512F-32-NEXT:    kshiftrq $35, %k5, %k0
 ; AVX512F-32-NEXT:    kxorq %k3, %k0, %k3
 ; AVX512F-32-NEXT:    kmovd %ecx, %k0
@@ -2826,7 +2826,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrb $2, %al
 ; AVX512F-32-NEXT:    kshiftlq $63, %k3, %k3
 ; AVX512F-32-NEXT:    kshiftrq $28, %k3, %k3
-; AVX512F-32-NEXT:    kxorq %k5, %k3, %k5
+; AVX512F-32-NEXT:    kxorq %k3, %k5, %k5
 ; AVX512F-32-NEXT:    kshiftrq $36, %k5, %k3
 ; AVX512F-32-NEXT:    kxorq %k2, %k3, %k2
 ; AVX512F-32-NEXT:    kmovd %eax, %k3
@@ -2835,7 +2835,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrb $3, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k2, %k2
 ; AVX512F-32-NEXT:    kshiftrq $27, %k2, %k2
-; AVX512F-32-NEXT:    kxorq %k5, %k2, %k2
+; AVX512F-32-NEXT:    kxorq %k2, %k5, %k2
 ; AVX512F-32-NEXT:    kshiftrq $37, %k2, %k5
 ; AVX512F-32-NEXT:    kxorq %k4, %k5, %k5
 ; AVX512F-32-NEXT:    kmovd %ecx, %k4
@@ -2844,7 +2844,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    andb $1, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k5, %k5
 ; AVX512F-32-NEXT:    kshiftrq $26, %k5, %k5
-; AVX512F-32-NEXT:    kxorq %k2, %k5, %k2
+; AVX512F-32-NEXT:    kxorq %k5, %k2, %k2
 ; AVX512F-32-NEXT:    kshiftrq $38, %k2, %k5
 ; AVX512F-32-NEXT:    kxorq %k7, %k5, %k7
 ; AVX512F-32-NEXT:    kmovd %ecx, %k5
@@ -2853,7 +2853,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrb %dl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $25, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k2, %k7, %k7
+; AVX512F-32-NEXT:    kxorq %k7, %k2, %k7
 ; AVX512F-32-NEXT:    kshiftrq $39, %k7, %k2
 ; AVX512F-32-NEXT:    kxorq %k6, %k2, %k6
 ; AVX512F-32-NEXT:    kmovd %edx, %k2
@@ -2863,7 +2863,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrb $2, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $24, %k6, %k6
-; AVX512F-32-NEXT:    kxorq %k7, %k6, %k6
+; AVX512F-32-NEXT:    kxorq %k6, %k7, %k6
 ; AVX512F-32-NEXT:    kshiftrq $40, %k6, %k7
 ; AVX512F-32-NEXT:    kxorq %k1, %k7, %k7
 ; AVX512F-32-NEXT:    kmovd %ecx, %k1
@@ -2874,28 +2874,28 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrl $12, %ecx
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $23, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k6, %k7, %k6
+; AVX512F-32-NEXT:    kxorq %k7, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $41, %k6, %k7
 ; AVX512F-32-NEXT:    kxorq %k0, %k7, %k0
 ; AVX512F-32-NEXT:    kmovd %ecx, %k1
 ; AVX512F-32-NEXT:    shrl $14, %edi
 ; AVX512F-32-NEXT:    kshiftlq $63, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $22, %k0, %k0
-; AVX512F-32-NEXT:    kxorq %k6, %k0, %k0
+; AVX512F-32-NEXT:    kxorq %k0, %k6, %k0
 ; AVX512F-32-NEXT:    kshiftrq $42, %k0, %k6
 ; AVX512F-32-NEXT:    kxorq %k3, %k6, %k3
 ; AVX512F-32-NEXT:    kmovd %edi, %k7
 ; AVX512F-32-NEXT:    shrl $15, %esi
 ; AVX512F-32-NEXT:    kshiftlq $63, %k3, %k3
 ; AVX512F-32-NEXT:    kshiftrq $21, %k3, %k3
-; AVX512F-32-NEXT:    kxorq %k0, %k3, %k0
+; AVX512F-32-NEXT:    kxorq %k3, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $43, %k0, %k3
 ; AVX512F-32-NEXT:    kxorq %k4, %k3, %k3
 ; AVX512F-32-NEXT:    kmovd %esi, %k6
 ; AVX512F-32-NEXT:    shrb $3, %dl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k3, %k3
 ; AVX512F-32-NEXT:    kshiftrq $20, %k3, %k3
-; AVX512F-32-NEXT:    kxorq %k0, %k3, %k3
+; AVX512F-32-NEXT:    kxorq %k3, %k0, %k3
 ; AVX512F-32-NEXT:    kshiftrq $44, %k3, %k0
 ; AVX512F-32-NEXT:    kxorq %k1, %k0, %k1
 ; AVX512F-32-NEXT:    kmovd %edx, %k0
@@ -2903,7 +2903,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrb $4, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $19, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k3, %k1, %k1
+; AVX512F-32-NEXT:    kxorq %k1, %k3, %k1
 ; AVX512F-32-NEXT:    kshiftrq $45, %k1, %k3
 ; AVX512F-32-NEXT:    kxorq %k5, %k3, %k4
 ; AVX512F-32-NEXT:    kmovd %ecx, %k3
@@ -2912,7 +2912,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    andb $1, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k4, %k4
 ; AVX512F-32-NEXT:    kshiftrq $18, %k4, %k4
-; AVX512F-32-NEXT:    kxorq %k1, %k4, %k1
+; AVX512F-32-NEXT:    kxorq %k4, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $46, %k1, %k4
 ; AVX512F-32-NEXT:    kxorq %k7, %k4, %k5
 ; AVX512F-32-NEXT:    kmovd %ecx, %k4
@@ -2920,12 +2920,12 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrb $6, %cl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k5, %k5
 ; AVX512F-32-NEXT:    kshiftrq $17, %k5, %k5
-; AVX512F-32-NEXT:    kxorq %k1, %k5, %k1
+; AVX512F-32-NEXT:    kxorq %k5, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $47, %k1, %k5
 ; AVX512F-32-NEXT:    kxorq %k6, %k5, %k5
 ; AVX512F-32-NEXT:    kshiftlq $63, %k5, %k5
 ; AVX512F-32-NEXT:    kshiftrq $16, %k5, %k5
-; AVX512F-32-NEXT:    kxorq %k1, %k5, %k1
+; AVX512F-32-NEXT:    kxorq %k5, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $48, %k1, %k5
 ; AVX512F-32-NEXT:    kmovd %eax, %k6
 ; AVX512F-32-NEXT:    kxorq %k6, %k5, %k6
@@ -2936,14 +2936,14 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrb $7, %al
 ; AVX512F-32-NEXT:    kshiftlq $63, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $15, %k6, %k6
-; AVX512F-32-NEXT:    kxorq %k1, %k6, %k1
+; AVX512F-32-NEXT:    kxorq %k6, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $49, %k1, %k6
 ; AVX512F-32-NEXT:    kxorq %k2, %k6, %k6
 ; AVX512F-32-NEXT:    kmovd %eax, %k2
 ; AVX512F-32-NEXT:    movl %edx, %eax
 ; AVX512F-32-NEXT:    kshiftlq $63, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $14, %k6, %k6
-; AVX512F-32-NEXT:    kxorq %k1, %k6, %k6
+; AVX512F-32-NEXT:    kxorq %k6, %k1, %k6
 ; AVX512F-32-NEXT:    kshiftrq $50, %k6, %k1
 ; AVX512F-32-NEXT:    kmovq {{[0-9]+}}(%esp), %k7 # 8-byte Reload
 ; AVX512F-32-NEXT:    kxorq %k7, %k1, %k7
@@ -2954,7 +2954,7 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrb %al
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $13, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k6, %k7, %k6
+; AVX512F-32-NEXT:    kxorq %k7, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $51, %k6, %k7
 ; AVX512F-32-NEXT:    kxorq %k0, %k7, %k7
 ; AVX512F-32-NEXT:    kmovd %eax, %k0
@@ -2962,14 +2962,14 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrb $2, %dl
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $12, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k6, %k7, %k6
+; AVX512F-32-NEXT:    kxorq %k7, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $52, %k6, %k7
 ; AVX512F-32-NEXT:    kxorq %k3, %k7, %k7
 ; AVX512F-32-NEXT:    kmovd %edx, %k3
 ; AVX512F-32-NEXT:    shrb $3, %al
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $11, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k6, %k7, %k6
+; AVX512F-32-NEXT:    kxorq %k7, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $53, %k6, %k7
 ; AVX512F-32-NEXT:    kxorq %k4, %k7, %k7
 ; AVX512F-32-NEXT:    kmovd %eax, %k4
@@ -2978,40 +2978,40 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    andb $1, %al
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $10, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k6, %k7, %k6
+; AVX512F-32-NEXT:    kxorq %k7, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $54, %k6, %k7
 ; AVX512F-32-NEXT:    kxorq %k5, %k7, %k7
 ; AVX512F-32-NEXT:    kmovd %eax, %k5
 ; AVX512F-32-NEXT:    kshiftlq $63, %k7, %k7
 ; AVX512F-32-NEXT:    kshiftrq $9, %k7, %k7
-; AVX512F-32-NEXT:    kxorq %k6, %k7, %k6
+; AVX512F-32-NEXT:    kxorq %k7, %k6, %k6
 ; AVX512F-32-NEXT:    kshiftrq $55, %k6, %k7
 ; AVX512F-32-NEXT:    kxorq %k2, %k7, %k2
 ; AVX512F-32-NEXT:    kshiftlq $63, %k2, %k2
 ; AVX512F-32-NEXT:    kshiftrq $8, %k2, %k2
-; AVX512F-32-NEXT:    kxorq %k6, %k2, %k2
+; AVX512F-32-NEXT:    kxorq %k2, %k6, %k2
 ; AVX512F-32-NEXT:    kshiftrq $56, %k2, %k6
 ; AVX512F-32-NEXT:    kxorq %k1, %k6, %k1
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $7, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k2, %k1, %k1
+; AVX512F-32-NEXT:    kxorq %k1, %k2, %k1
 ; AVX512F-32-NEXT:    kshiftrq $57, %k1, %k2
 ; AVX512F-32-NEXT:    kxorq %k0, %k2, %k0
 ; AVX512F-32-NEXT:    kshiftlq $63, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $6, %k0, %k0
-; AVX512F-32-NEXT:    kxorq %k1, %k0, %k0
+; AVX512F-32-NEXT:    kxorq %k0, %k1, %k0
 ; AVX512F-32-NEXT:    kshiftrq $58, %k0, %k1
 ; AVX512F-32-NEXT:    kxorq %k3, %k1, %k1
 ; AVX512F-32-NEXT:    movl %ebx, %eax
 ; AVX512F-32-NEXT:    shrl $28, %eax
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $5, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k0, %k1, %k0
+; AVX512F-32-NEXT:    kxorq %k1, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $59, %k0, %k1
 ; AVX512F-32-NEXT:    kxorq %k4, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $4, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k0, %k1, %k0
+; AVX512F-32-NEXT:    kxorq %k1, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $60, %k0, %k1
 ; AVX512F-32-NEXT:    kmovd %eax, %k2
 ; AVX512F-32-NEXT:    kxorq %k2, %k1, %k1
@@ -3021,18 +3021,18 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    shrl $30, %ecx
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $3, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k0, %k1, %k0
+; AVX512F-32-NEXT:    kxorq %k1, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $61, %k0, %k1
 ; AVX512F-32-NEXT:    kxorq %k5, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $2, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k0, %k1, %k0
+; AVX512F-32-NEXT:    kxorq %k1, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $62, %k0, %k1
 ; AVX512F-32-NEXT:    kmovd %ecx, %k2
 ; AVX512F-32-NEXT:    kxorq %k2, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftlq $63, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrq $1, %k1, %k1
-; AVX512F-32-NEXT:    kxorq %k0, %k1, %k0
+; AVX512F-32-NEXT:    kxorq %k1, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftlq $1, %k0, %k0
 ; AVX512F-32-NEXT:    kshiftrq $1, %k0, %k0
 ; AVX512F-32-NEXT:    kmovd %eax, %k1

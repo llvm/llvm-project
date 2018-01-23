@@ -1,4 +1,4 @@
-; RUN: llc < %s -O0 -verify-machineinstrs -mtriple=wasm32-unknown-unknown-wasm | FileCheck %s
+; RUN: llc < %s -O0 -verify-machineinstrs | FileCheck %s
 
 ; CHECK: %bb.0
 ; CHECK: #DEBUG_VALUE: usage:self <- %4

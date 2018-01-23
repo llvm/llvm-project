@@ -2276,22 +2276,22 @@ body: |
   %xmm0 = VMOVQI2PQIZrm                        %rip, %noreg, %noreg, %noreg, %noreg                                        
   ; CHECK: %xmm0 = VMOVZPQILo2PQIrr            %xmm0                                               
   %xmm0 = VMOVZPQILo2PQIZrr                    %xmm0                                                   
-  ; CHECK: Int_VCOMISDrm                       %xmm0, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags
-  Int_VCOMISDZrm                               %xmm0, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags           
-  ; CHECK: Int_VCOMISDrr                       %xmm0, %xmm1, implicit-def %eflags  
-  Int_VCOMISDZrr                               %xmm0, %xmm1, implicit-def %eflags                      
-  ; CHECK: Int_VCOMISSrm                       %xmm0, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags 
-  Int_VCOMISSZrm                               %xmm0, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags           
-  ; CHECK: Int_VCOMISSrr                       %xmm0, %xmm1, implicit-def %eflags 
-  Int_VCOMISSZrr                               %xmm0, %xmm1, implicit-def %eflags                      
-  ; CHECK: Int_VUCOMISDrm                      %xmm0, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags 
-  Int_VUCOMISDZrm                              %xmm0, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags           
-  ; CHECK: Int_VUCOMISDrr                      %xmm0, %xmm1, implicit-def %eflags
-  Int_VUCOMISDZrr                              %xmm0, %xmm1, implicit-def %eflags                      
-  ; CHECK: Int_VUCOMISSrm                      %xmm0, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags 
-  Int_VUCOMISSZrm                              %xmm0, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags           
-  ; CHECK: Int_VUCOMISSrr                      %xmm0, %xmm1, implicit-def %eflags 
-  Int_VUCOMISSZrr                              %xmm0, %xmm1, implicit-def %eflags                      
+  ; CHECK: VCOMISDrm_Int                       %xmm0, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags
+  VCOMISDZrm_Int                               %xmm0, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags           
+  ; CHECK: VCOMISDrr_Int                       %xmm0, %xmm1, implicit-def %eflags  
+  VCOMISDZrr_Int                               %xmm0, %xmm1, implicit-def %eflags                      
+  ; CHECK: VCOMISSrm_Int                       %xmm0, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags 
+  VCOMISSZrm_Int                               %xmm0, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags           
+  ; CHECK: VCOMISSrr_Int                       %xmm0, %xmm1, implicit-def %eflags 
+  VCOMISSZrr_Int                               %xmm0, %xmm1, implicit-def %eflags                      
+  ; CHECK: VUCOMISDrm_Int                      %xmm0, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags 
+  VUCOMISDZrm_Int                              %xmm0, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags           
+  ; CHECK: VUCOMISDrr_Int                      %xmm0, %xmm1, implicit-def %eflags
+  VUCOMISDZrr_Int                              %xmm0, %xmm1, implicit-def %eflags                      
+  ; CHECK: VUCOMISSrm_Int                      %xmm0, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags 
+  VUCOMISSZrm_Int                              %xmm0, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags           
+  ; CHECK: VUCOMISSrr_Int                      %xmm0, %xmm1, implicit-def %eflags 
+  VUCOMISSZrr_Int                              %xmm0, %xmm1, implicit-def %eflags                      
   ; CHECK: VCOMISDrm                           %xmm0, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags 
   VCOMISDZrm                                   %xmm0, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags           
   ; CHECK: VCOMISDrr                           %xmm0, %xmm1, implicit-def %eflags 
@@ -4596,22 +4596,22 @@ body: |
   %xmm16 = VMOVQI2PQIZrm                       %rip, %noreg, %noreg, %noreg, %noreg                                           
   ; CHECK: %xmm16 = VMOVZPQILo2PQIZrr          %xmm16
   %xmm16 = VMOVZPQILo2PQIZrr                   %xmm16                                                     
-  ; CHECK: Int_VCOMISDZrm                      %xmm16, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags
-  Int_VCOMISDZrm                               %xmm16, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags             
-  ; CHECK: Int_VCOMISDZrr                      %xmm16, %xmm1, implicit-def %eflags  
-  Int_VCOMISDZrr                               %xmm16, %xmm1, implicit-def %eflags                        
-  ; CHECK: Int_VCOMISSZrm                      %xmm16, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags 
-  Int_VCOMISSZrm                               %xmm16, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags             
-  ; CHECK: Int_VCOMISSZrr                      %xmm16, %xmm1, implicit-def %eflags 
-  Int_VCOMISSZrr                               %xmm16, %xmm1, implicit-def %eflags                        
-  ; CHECK: Int_VUCOMISDZrm                     %xmm16, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags 
-  Int_VUCOMISDZrm                              %xmm16, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags             
-  ; CHECK: Int_VUCOMISDZrr                     %xmm16, %xmm1, implicit-def %eflags
-  Int_VUCOMISDZrr                              %xmm16, %xmm1, implicit-def %eflags                        
-  ; CHECK: Int_VUCOMISSZrm                     %xmm16, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags 
-  Int_VUCOMISSZrm                              %xmm16, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags             
-  ; CHECK: Int_VUCOMISSZrr                     %xmm16, %xmm1, implicit-def %eflags 
-  Int_VUCOMISSZrr                              %xmm16, %xmm1, implicit-def %eflags                        
+  ; CHECK: VCOMISDZrm_Int                      %xmm16, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags
+  VCOMISDZrm_Int                               %xmm16, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags             
+  ; CHECK: VCOMISDZrr_Int                      %xmm16, %xmm1, implicit-def %eflags  
+  VCOMISDZrr_Int                               %xmm16, %xmm1, implicit-def %eflags                        
+  ; CHECK: VCOMISSZrm_Int                      %xmm16, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags 
+  VCOMISSZrm_Int                               %xmm16, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags             
+  ; CHECK: VCOMISSZrr_Int                      %xmm16, %xmm1, implicit-def %eflags 
+  VCOMISSZrr_Int                               %xmm16, %xmm1, implicit-def %eflags                        
+  ; CHECK: VUCOMISDZrm_Int                     %xmm16, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags 
+  VUCOMISDZrm_Int                              %xmm16, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags             
+  ; CHECK: VUCOMISDZrr_Int                     %xmm16, %xmm1, implicit-def %eflags
+  VUCOMISDZrr_Int                              %xmm16, %xmm1, implicit-def %eflags                        
+  ; CHECK: VUCOMISSZrm_Int                     %xmm16, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags 
+  VUCOMISSZrm_Int                              %xmm16, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags             
+  ; CHECK: VUCOMISSZrr_Int                     %xmm16, %xmm1, implicit-def %eflags 
+  VUCOMISSZrr_Int                              %xmm16, %xmm1, implicit-def %eflags                        
   ; CHECK: VCOMISDZrm                          %xmm16, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags 
   VCOMISDZrm                                   %xmm16, %rdi, %noreg, %noreg, %noreg, %noreg, implicit-def %eflags             
   ; CHECK: VCOMISDZrr                          %xmm16, %xmm1, implicit-def %eflags 

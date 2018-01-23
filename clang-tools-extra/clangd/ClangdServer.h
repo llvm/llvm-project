@@ -331,7 +331,8 @@ private:
   std::future<Context>
   scheduleReparseAndDiags(Context Ctx, PathRef File, VersionedDraft Contents,
                           std::shared_ptr<CppFile> Resources,
-                          Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> TaggedFS);
+                          Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> TaggedFS,
+                          bool AllowCachedCompileFlags);
 
   std::future<Context>
   scheduleCancelRebuild(Context Ctx, std::shared_ptr<CppFile> Resources);

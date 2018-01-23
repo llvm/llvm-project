@@ -1963,8 +1963,8 @@ void HvxSelector::selectRor(SDNode *N) {
   SDNode *NewN = nullptr;
 
   if (auto *CN = dyn_cast<ConstantSDNode>(RotV.getNode())) {
-    unsigned S = CN->getZExtValue();
-    if (S % HST.getVectorLength() == 0) {
+    unsigned S = CN->getZExtValue() % HST.getVectorLength();
+    if (S == 0) {
       NewN = VecV.getNode();
     } else if (isUInt<3>(S)) {
       SDValue C = DAG.getTargetConstant(S, dl, MVT::i32);

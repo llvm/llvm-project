@@ -963,6 +963,18 @@ inline void consumeError(Error Err) {
   handleAllErrors(std::move(Err), [](const ErrorInfoBase &) {});
 }
 
+/// Helper for converting an Error to a bool.
+///
+/// This method returns true if Err is in an error state, or false if it is
+/// in a success state.  Puts Err in a checked state in both cases (unlike
+/// Error::operator bool(), which only does this for success states).
+inline bool errorToBool(Error Err) {
+  bool IsError = static_cast<bool>(Err);
+  if (IsError)
+    consumeError(std::move(Err));
+  return IsError;
+}
+
 /// Helper for Errors used as out-parameters.
 ///
 /// This helper is for use with the Error-as-out-parameter idiom, where an error

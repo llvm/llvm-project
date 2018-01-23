@@ -1449,6 +1449,7 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
       }
       moveInstruction(MI, CurrentBottom);
       CurrentBottom = MI;
+      BotRPTracker.setPos(CurrentBottom);
     }
     if (ShouldTrackPressure) {
       RegisterOperands RegOpers;

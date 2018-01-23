@@ -523,12 +523,21 @@ def : Pat<(truncstorei32 I64:$val, (WebAssemblywrapper texternalsym:$off)),
 let Defs = [ARGUMENTS] in {
 
 // Current memory size.
+def MEM_SIZE_I32 : I<(outs I32:$dst), (ins i32imm:$flags),
+                     [(set I32:$dst, (int_wasm_mem_size (i32 imm:$flags)))],
+                     "mem.size\t$dst, $flags", 0x3f>,
+                   Requires<[HasAddr32]>;
 def CURRENT_MEMORY_I32 : I<(outs I32:$dst), (ins i32imm:$flags),
                            [],
                            "current_memory\t$dst", 0x3f>,
                          Requires<[HasAddr32]>;
 
 // Grow memory.
+def MEM_GROW_I32 : I<(outs I32:$dst), (ins i32imm:$flags, I32:$delta),
+                     [(set I32:$dst,
+                           (int_wasm_mem_grow (i32 imm:$flags), I32:$delta))],
+                     "mem.grow\t$dst, $flags, $delta", 0x3f>,
+                   Requires<[HasAddr32]>;
 def GROW_MEMORY_I32 : I<(outs I32:$dst), (ins i32imm:$flags, I32:$delta),
                         [],
                         "grow_memory\t$dst, $delta", 0x40>,

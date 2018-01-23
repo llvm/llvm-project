@@ -522,11 +522,11 @@ declare <2 x double> @llvm.x86.sse2.cmp.sd(<2 x double>, <2 x double>, i8) nounw
 define i32 @test_comisd(<2 x double> %a0, <2 x double> %a1, <2 x double> *%a2) {
 ; GENERIC-LABEL: test_comisd:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    comisd %xmm1, %xmm0 # sched: [3:1.00]
+; GENERIC-NEXT:    comisd %xmm1, %xmm0 # sched: [2:1.00]
 ; GENERIC-NEXT:    setnp %al # sched: [1:0.50]
 ; GENERIC-NEXT:    sete %cl # sched: [1:0.50]
 ; GENERIC-NEXT:    andb %al, %cl # sched: [1:0.33]
-; GENERIC-NEXT:    comisd (%rdi), %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    comisd (%rdi), %xmm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    setnp %al # sched: [1:0.50]
 ; GENERIC-NEXT:    sete %dl # sched: [1:0.50]
 ; GENERIC-NEXT:    andb %al, %dl # sched: [1:0.33]
@@ -564,11 +564,11 @@ define i32 @test_comisd(<2 x double> %a0, <2 x double> %a1, <2 x double> *%a2) {
 ;
 ; SANDY-LABEL: test_comisd:
 ; SANDY:       # %bb.0:
-; SANDY-NEXT:    vcomisd %xmm1, %xmm0 # sched: [3:1.00]
+; SANDY-NEXT:    vcomisd %xmm1, %xmm0 # sched: [2:1.00]
 ; SANDY-NEXT:    setnp %al # sched: [1:0.50]
 ; SANDY-NEXT:    sete %cl # sched: [1:0.50]
 ; SANDY-NEXT:    andb %al, %cl # sched: [1:0.33]
-; SANDY-NEXT:    vcomisd (%rdi), %xmm0 # sched: [7:1.00]
+; SANDY-NEXT:    vcomisd (%rdi), %xmm0 # sched: [8:1.00]
 ; SANDY-NEXT:    setnp %al # sched: [1:0.50]
 ; SANDY-NEXT:    sete %dl # sched: [1:0.50]
 ; SANDY-NEXT:    andb %al, %dl # sched: [1:0.33]
@@ -606,11 +606,11 @@ define i32 @test_comisd(<2 x double> %a0, <2 x double> %a1, <2 x double> *%a2) {
 ;
 ; SKYLAKE-LABEL: test_comisd:
 ; SKYLAKE:       # %bb.0:
-; SKYLAKE-NEXT:    vcomisd %xmm1, %xmm0 # sched: [3:1.00]
+; SKYLAKE-NEXT:    vcomisd %xmm1, %xmm0 # sched: [2:1.00]
 ; SKYLAKE-NEXT:    setnp %al # sched: [1:0.50]
 ; SKYLAKE-NEXT:    sete %cl # sched: [1:0.50]
 ; SKYLAKE-NEXT:    andb %al, %cl # sched: [1:0.25]
-; SKYLAKE-NEXT:    vcomisd (%rdi), %xmm0 # sched: [8:1.00]
+; SKYLAKE-NEXT:    vcomisd (%rdi), %xmm0 # sched: [7:1.00]
 ; SKYLAKE-NEXT:    setnp %al # sched: [1:0.50]
 ; SKYLAKE-NEXT:    sete %dl # sched: [1:0.50]
 ; SKYLAKE-NEXT:    andb %al, %dl # sched: [1:0.25]
@@ -620,11 +620,11 @@ define i32 @test_comisd(<2 x double> %a0, <2 x double> %a1, <2 x double> *%a2) {
 ;
 ; SKX-LABEL: test_comisd:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vcomisd %xmm1, %xmm0 # sched: [3:1.00]
+; SKX-NEXT:    vcomisd %xmm1, %xmm0 # sched: [2:1.00]
 ; SKX-NEXT:    setnp %al # sched: [1:0.50]
 ; SKX-NEXT:    sete %cl # sched: [1:0.50]
 ; SKX-NEXT:    andb %al, %cl # sched: [1:0.25]
-; SKX-NEXT:    vcomisd (%rdi), %xmm0 # sched: [8:1.00]
+; SKX-NEXT:    vcomisd (%rdi), %xmm0 # sched: [7:1.00]
 ; SKX-NEXT:    setnp %al # sched: [1:0.50]
 ; SKX-NEXT:    sete %dl # sched: [1:0.50]
 ; SKX-NEXT:    andb %al, %dl # sched: [1:0.25]
@@ -9040,11 +9040,11 @@ define double @test_subsd(double %a0, double %a1, double *%a2) {
 define i32 @test_ucomisd(<2 x double> %a0, <2 x double> %a1, <2 x double> *%a2) {
 ; GENERIC-LABEL: test_ucomisd:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    ucomisd %xmm1, %xmm0 # sched: [3:1.00]
+; GENERIC-NEXT:    ucomisd %xmm1, %xmm0 # sched: [2:1.00]
 ; GENERIC-NEXT:    setnp %al # sched: [1:0.50]
 ; GENERIC-NEXT:    sete %cl # sched: [1:0.50]
 ; GENERIC-NEXT:    andb %al, %cl # sched: [1:0.33]
-; GENERIC-NEXT:    ucomisd (%rdi), %xmm0 # sched: [7:1.00]
+; GENERIC-NEXT:    ucomisd (%rdi), %xmm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    setnp %al # sched: [1:0.50]
 ; GENERIC-NEXT:    sete %dl # sched: [1:0.50]
 ; GENERIC-NEXT:    andb %al, %dl # sched: [1:0.33]
@@ -9082,11 +9082,11 @@ define i32 @test_ucomisd(<2 x double> %a0, <2 x double> %a1, <2 x double> *%a2) 
 ;
 ; SANDY-LABEL: test_ucomisd:
 ; SANDY:       # %bb.0:
-; SANDY-NEXT:    vucomisd %xmm1, %xmm0 # sched: [3:1.00]
+; SANDY-NEXT:    vucomisd %xmm1, %xmm0 # sched: [2:1.00]
 ; SANDY-NEXT:    setnp %al # sched: [1:0.50]
 ; SANDY-NEXT:    sete %cl # sched: [1:0.50]
 ; SANDY-NEXT:    andb %al, %cl # sched: [1:0.33]
-; SANDY-NEXT:    vucomisd (%rdi), %xmm0 # sched: [7:1.00]
+; SANDY-NEXT:    vucomisd (%rdi), %xmm0 # sched: [8:1.00]
 ; SANDY-NEXT:    setnp %al # sched: [1:0.50]
 ; SANDY-NEXT:    sete %dl # sched: [1:0.50]
 ; SANDY-NEXT:    andb %al, %dl # sched: [1:0.33]
@@ -9124,11 +9124,11 @@ define i32 @test_ucomisd(<2 x double> %a0, <2 x double> %a1, <2 x double> *%a2) 
 ;
 ; SKYLAKE-LABEL: test_ucomisd:
 ; SKYLAKE:       # %bb.0:
-; SKYLAKE-NEXT:    vucomisd %xmm1, %xmm0 # sched: [3:1.00]
+; SKYLAKE-NEXT:    vucomisd %xmm1, %xmm0 # sched: [2:1.00]
 ; SKYLAKE-NEXT:    setnp %al # sched: [1:0.50]
 ; SKYLAKE-NEXT:    sete %cl # sched: [1:0.50]
 ; SKYLAKE-NEXT:    andb %al, %cl # sched: [1:0.25]
-; SKYLAKE-NEXT:    vucomisd (%rdi), %xmm0 # sched: [8:1.00]
+; SKYLAKE-NEXT:    vucomisd (%rdi), %xmm0 # sched: [7:1.00]
 ; SKYLAKE-NEXT:    setnp %al # sched: [1:0.50]
 ; SKYLAKE-NEXT:    sete %dl # sched: [1:0.50]
 ; SKYLAKE-NEXT:    andb %al, %dl # sched: [1:0.25]
@@ -9138,11 +9138,11 @@ define i32 @test_ucomisd(<2 x double> %a0, <2 x double> %a1, <2 x double> *%a2) 
 ;
 ; SKX-LABEL: test_ucomisd:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vucomisd %xmm1, %xmm0 # sched: [3:1.00]
+; SKX-NEXT:    vucomisd %xmm1, %xmm0 # sched: [2:1.00]
 ; SKX-NEXT:    setnp %al # sched: [1:0.50]
 ; SKX-NEXT:    sete %cl # sched: [1:0.50]
 ; SKX-NEXT:    andb %al, %cl # sched: [1:0.25]
-; SKX-NEXT:    vucomisd (%rdi), %xmm0 # sched: [8:1.00]
+; SKX-NEXT:    vucomisd (%rdi), %xmm0 # sched: [7:1.00]
 ; SKX-NEXT:    setnp %al # sched: [1:0.50]
 ; SKX-NEXT:    sete %dl # sched: [1:0.50]
 ; SKX-NEXT:    andb %al, %dl # sched: [1:0.25]
