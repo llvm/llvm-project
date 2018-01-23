@@ -163,6 +163,15 @@ Attribute Changes in Clang
 - The presence of __attribute__((availability(...))) on a declaration no longer
   implies default visibility for that declaration on macOS.
 
+- Clang now supports configuration files. These are collections of driver
+  options, which can be applied by specifying the configuration file, either
+  using command line option `--config foo.cfg` or encoding it into executable
+  name `foo-clang`. Clang behaves as if the options from this file were inserted
+  before the options specified in command line. This feature is primary intended
+  to facilitate cross compilation. Details can be found in
+  `Clang Compiler User's Manual
+  <http://clang.llvm.org/docs/UsersManual.html#configuration-files>`.
+
 - ...
 
 Windows Support
@@ -221,6 +230,13 @@ OpenMP Support in Clang
 
 - Added support for `reduction`-based clauses on `task`-based directives from
   upcoming OpenMP 5.0.
+
+- The LLVM OpenMP runtime `libomp` now supports the OpenMP Tools Interface (OMPT)
+  on x86, x86_64, AArch64, and PPC64 on Linux, Windows, and macOS. If you observe
+  a measurable performance impact on one of your applications without a tool
+  attached, please rebuild the runtime library with `-DLIBOMP_OMPT_SUPPORT=OFF` and
+  file a bug at `LLVM's Bugzilla <https://bugs.llvm.org/>`_ or send a message to the
+  `OpenMP development list <http://lists.llvm.org/cgi-bin/mailman/listinfo/openmp-dev>`_.
 
 Internal API Changes
 --------------------
