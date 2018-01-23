@@ -48,23 +48,19 @@ static void applyRelocation(uint8_t *Buf, const OutputRelocation &Reloc) {
   switch (Reloc.Reloc.Type) {
   case R_WEBASSEMBLY_TYPE_INDEX_LEB:
   case R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
+  case R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
     ExistingValue = decodeULEB128(Buf);
+    // Additional check to verify that the existing value that the location
+    // matches our expectations.
     if (ExistingValue != Reloc.Reloc.Index) {
       DEBUG(dbgs() << "existing value: " << decodeULEB128(Buf) << "\n");
       assert(decodeULEB128(Buf) == Reloc.Reloc.Index);
     }
     LLVM_FALLTHROUGH;
   case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
-  case R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
     encodeULEB128(Reloc.Value, Buf, 5);
     break;
   case R_WEBASSEMBLY_TABLE_INDEX_SLEB:
-    ExistingValue = decodeSLEB128(Buf);
-    if (ExistingValue != Reloc.Reloc.Index) {
-      DEBUG(dbgs() << "existing value: " << decodeSLEB128(Buf) << "\n");
-      assert(decodeSLEB128(Buf) == Reloc.Reloc.Index);
-    }
-    LLVM_FALLTHROUGH;
   case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
     encodeSLEB128(static_cast<int32_t>(Reloc.Value), Buf, 5);
     break;
@@ -111,17 +107,7 @@ void InputChunk::calcRelocations() {
     if (Config->Relocatable)
       NewReloc.NewIndex = File->calcNewIndex(Reloc);
 
-    switch (Reloc.Type) {
-    case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
-    case R_WEBASSEMBLY_MEMORY_ADDR_I32:
-    case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
-      NewReloc.Value = File->getRelocatedAddress(Reloc.Index) + Reloc.Addend;
-      break;
-    default:
-      NewReloc.Value = File->calcNewIndex(Reloc);
-      break;
-    }
-
+    NewReloc.Value = File->calcNewValue(Reloc);
     OutRelocations.emplace_back(NewReloc);
   }
 }

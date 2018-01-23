@@ -54,14 +54,14 @@
 <!--
 	<tr><td><a href="https://wg21.link/n3346">3346</a></td><td>LWG</td><td>Terminology for Container Element Requirements - Rev 1</td><td>Kona</td><td>Complete</td><td>3.4</td></tr>
 -->
-	<tr><td><a href="https://wg21.link/P0463R1">P0463R1</a></td><td>LWG</td><td>Endian just Endian</td><td>Toronto</td><td>In progress</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/P0463R1">P0463R1</a></td><td>LWG</td><td>Endian just Endian</td><td>Toronto</td><td><I>In progress</I></td><td>7.0</td></tr>
 	<tr><td><a href="https://wg21.link/P0674R1">P0674R1</a></td><td>LWG</td><td>Extending make_shared to Support Arrays</td><td>Toronto</td><td></td><td></td></tr>
 
   	<tr><td></td><td></td><td></td><td></td><td></td><td></td></tr>
 	<tr><td><a href="https://wg21.link/P0020R6">P0020R6</a></td><td>LWG</td><td>Floating Point Atomic</td><td>Albuquerque</td><td></td><td></td></tr>
 	<tr><td><a href="https://wg21.link/P0053R7">P0053R7</a></td><td>LWG</td><td>C++ Synchronized Buffered Ostream</td><td>Albuquerque</td><td></td><td></td></tr>
 	<tr><td><a href="https://wg21.link/P0202R3">P0202R3</a></td><td>LWG</td><td>Add constexpr modifiers to functions in &lt;algorithm&gt; and &lt;utility&gt; Headers</td><td>Albuquerque</td><td><I>In Progress</I></td><td>7.0</td></tr>
-	<tr><td><a href="https://wg21.link/P0415R1">P0415R1</a></td><td>LWG</td><td>Constexpr for <tt>std::complex</tt></td><td>Albuquerque</td><td></td><td></td></tr>
+	<tr><td><a href="https://wg21.link/P0415R1">P0415R1</a></td><td>LWG</td><td>Constexpr for <tt>std::complex</tt></td><td>Albuquerque</td><td><I>In Progress</I></td><td>7.0</td></tr>
 	<tr><td><a href="https://wg21.link/P0439R0">P0439R0</a></td><td>LWG</td><td>Make <tt>std::memory_order</tt> a scoped enumeration</td><td>Albuquerque</td><td></td><td></td></tr>
 	<tr><td><a href="https://wg21.link/P0457R2">P0457R2</a></td><td>LWG</td><td>String Prefix and Suffix Checking</td><td>Albuquerque</td><td>Complete</td><td>6.0</td></tr>
 	<tr><td><a href="https://wg21.link/P0550R2">P0550R2</a></td><td>LWG</td><td>Transformation Trait <tt>remove_cvref</tt></td><td>Albuquerque</td><td>Complete</td><td>6.0</td></tr>
@@ -78,7 +78,10 @@
 
 <p><i>[ Note: "Nothing to do" means that no library changes were needed to implement this change -- end note]</i></p>
 
-<p><i>The missing bits in P0600 are in [mem.res.class], [mem.poly.allocator.class], and [container.node.overview]</i></p>
+<p>The missing bits in P0600 are in [mem.res.class], [mem.poly.allocator.class], and [container.node.overview]</p>
+
+<p>The missing bits in P0202 are in <tt>copy</tt>, <tt>copy_backwards</tt>, <tt>move</tt>, and <tt>move_backwards</tt> (and the ones that call them: <tt>copy_n</tt>, <tt>rotate_copy</tt>, <tt>merge</tt>, <tt>set_union</tt>, <tt>set_difference</tt>, and <tt>set_symmetric_difference</tt>). This is because the first four algorithms have specializations that call <tt>memmove</tt> which is not constexpr. See <a href="https://bugs.llvm.org/show_bug.cgi?id=25165">Bug 25165</a></p>
+
 
   <h3>Library Working group Issues Status</h3>
 <!--   <I>Note: "NAD" means that the issue was deemed "Not a defect"</I> -->
@@ -115,7 +118,7 @@
 	<tr><td><a href="https://wg21.link/LWG2958">2958</a></td><td>Moves improperly defined as deleted</td><td>Albuquerque</td><td></td></tr>
 	<tr><td><a href="https://wg21.link/LWG2964">2964</a></td><td>Apparently redundant requirement for dynamic_pointer_cast</td><td>Albuquerque</td><td></td></tr>
 	<tr><td><a href="https://wg21.link/LWG2965">2965</a></td><td>Non-existing path::native_string() in filesystem_error::what() specification</td><td>Albuquerque</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2972">2972</a></td><td>What is is_trivially_destructible_v<int>?</td><td>Albuquerque</td><td>Complete</td></tr>
+	<tr><td><a href="https://wg21.link/LWG2972">2972</a></td><td>What is is_trivially_destructible_v&lt;int&gt;?</td><td>Albuquerque</td><td>Complete</td></tr>
 	<tr><td><a href="https://wg21.link/LWG2976">2976</a></td><td>Dangling uses_allocator specialization for packaged_task</td><td>Albuquerque</td><td>Complete</td></tr>
 	<tr><td><a href="https://wg21.link/LWG2977">2977</a></td><td>unordered_meow::merge() has incorrect Throws: clause</td><td>Albuquerque</td><td></td></tr>
 	<tr><td><a href="https://wg21.link/LWG2978">2978</a></td><td>Hash support for pmr::string and friends</td><td>Albuquerque</td><td></td></tr>
@@ -132,7 +135,7 @@
 <!-- 	<tr><td></td><td></td><td></td><td></td></tr> -->
   </table>
 
-  <p>Last Updated: 15-Jan-2018</p>
+  <p>Last Updated: 22-Jan-2018</p>
 </div>
 </body>
 </html>

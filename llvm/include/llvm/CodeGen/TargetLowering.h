@@ -820,7 +820,7 @@ public:
   /// Return true if lowering to a jump table is suitable for a set of case
   /// clusters which may contain \p NumCases cases, \p Range range of values.
   /// FIXME: This function check the maximum table size and density, but the
-  /// minimum size is not checked. It would be nice if the the minimum size is
+  /// minimum size is not checked. It would be nice if the minimum size is
   /// also combined within this function. Currently, the minimum size check is
   /// performed in findJumpTable() in SelectionDAGBuiler and
   /// getEstimatedNumberOfCaseClusters() in BasicTTIImpl.

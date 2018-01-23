@@ -43,7 +43,7 @@ define i32 @Test_get_remainder(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    # kill: def %eax killed %eax def %ax
 ; CHECK-NEXT:    divb %cl
-; CHECK-NEXT:    movzbl %ah, %eax # NOREX
+; CHECK-NEXT:    movzbl %ah, %eax
 ; CHECK-NEXT:    retl
   %result = srem i32 %a, %b
   ret i32 %result
@@ -67,7 +67,7 @@ define i32 @Test_get_quotient_and_remainder(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    # kill: def %eax killed %eax def %ax
 ; CHECK-NEXT:    divb %cl
-; CHECK-NEXT:    movzbl %ah, %edx # NOREX
+; CHECK-NEXT:    movzbl %ah, %edx
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    addl %edx, %eax
 ; CHECK-NEXT:    retl

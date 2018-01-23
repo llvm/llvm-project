@@ -499,25 +499,44 @@ static const MCSymbolWasm* ResolveSymbol(const MCSymbolWasm& Symbol) {
 }
 
 // Compute a value to write into the code at the location covered
-// by RelEntry. This value isn't used by the static linker, since
-// we have addends; it just serves to make the code more readable
-// and to make standalone wasm modules directly usable.
+// by RelEntry. This value isn't used by the static linker; it just serves
+// to make the object format more readable and more likely to be directly
+// useable.
 uint32_t
 WasmObjectWriter::getProvisionalValue(const WasmRelocationEntry &RelEntry) {
-  const MCSymbolWasm *Sym = ResolveSymbol(*RelEntry.Symbol);
 
-  // For undefined symbols, use zero
-  if (!Sym->isDefined())
-    return 0;
+  switch (RelEntry.Type) {
+  case wasm::R_WEBASSEMBLY_TABLE_INDEX_SLEB:
+  case wasm::R_WEBASSEMBLY_TABLE_INDEX_I32:
+    // Provitional value is the indirect symbol index
+    if (!IndirectSymbolIndices.count(RelEntry.Symbol))
+      report_fatal_error("symbol not found in table index space: " +
+                         RelEntry.Symbol->getName());
+    return IndirectSymbolIndices[RelEntry.Symbol];
+  case wasm::R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
+  case wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB:
+  case wasm::R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
+    // Provitional value is function/type/global index itself
+    return getRelocationIndexValue(RelEntry);
+  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_LEB:
+  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32:
+  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB: {
+    // Provitional value is address of the global
+    const MCSymbolWasm *Sym = ResolveSymbol(*RelEntry.Symbol);
+    // For undefined symbols, use zero
+    if (!Sym->isDefined())
+      return 0;
 
-  uint32_t GlobalIndex = SymbolIndices[Sym];
-  const WasmGlobal& Global = Globals[GlobalIndex - NumGlobalImports];
-  uint64_t Address = Global.InitialValue + RelEntry.Addend;
+    uint32_t GlobalIndex = SymbolIndices[Sym];
+    const WasmGlobal& Global = Globals[GlobalIndex - NumGlobalImports];
+    uint64_t Address = Global.InitialValue + RelEntry.Addend;
 
-  // Ignore overflow. LLVM allows address arithmetic to silently wrap.
-  uint32_t Value = Address;
-
-  return Value;
+    // Ignore overflow. LLVM allows address arithmetic to silently wrap.
+    return Address;
+  }
+  default:
+    llvm_unreachable("invalid relocation type");
+  }
 }
 
 static void addData(SmallVectorImpl<char> &DataBytes,
@@ -564,32 +583,19 @@ static void addData(SmallVectorImpl<char> &DataBytes,
   DEBUG(dbgs() << "addData -> " << DataBytes.size() << "\n");
 }
 
-uint32_t WasmObjectWriter::getRelocationIndexValue(
-    const WasmRelocationEntry &RelEntry) {
-  switch (RelEntry.Type) {
-  case wasm::R_WEBASSEMBLY_TABLE_INDEX_SLEB:
-  case wasm::R_WEBASSEMBLY_TABLE_INDEX_I32:
-    if (!IndirectSymbolIndices.count(RelEntry.Symbol))
-      report_fatal_error("symbol not found in table index space: " +
-                         RelEntry.Symbol->getName());
-    return IndirectSymbolIndices[RelEntry.Symbol];
-  case wasm::R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
-  case wasm::R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
-  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_LEB:
-  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
-  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32:
-    if (!SymbolIndices.count(RelEntry.Symbol))
-      report_fatal_error("symbol not found in function/global index space: " +
-                         RelEntry.Symbol->getName());
-    return SymbolIndices[RelEntry.Symbol];
-  case wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB:
+uint32_t
+WasmObjectWriter::getRelocationIndexValue(const WasmRelocationEntry &RelEntry) {
+  if (RelEntry.Type == wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB) {
     if (!TypeIndices.count(RelEntry.Symbol))
       report_fatal_error("symbol not found in type index space: " +
                          RelEntry.Symbol->getName());
     return TypeIndices[RelEntry.Symbol];
-  default:
-    llvm_unreachable("invalid relocation type");
   }
+
+  if (!SymbolIndices.count(RelEntry.Symbol))
+    report_fatal_error("symbol not found in function/global index space: " +
+                       RelEntry.Symbol->getName());
+  return SymbolIndices[RelEntry.Symbol];
 }
 
 // Apply the portions of the relocation records that we can handle ourselves
@@ -603,35 +609,23 @@ void WasmObjectWriter::applyRelocations(
                       RelEntry.Offset;
 
     DEBUG(dbgs() << "applyRelocation: " << RelEntry << "\n");
+    uint32_t Value = getProvisionalValue(RelEntry);
+
     switch (RelEntry.Type) {
-    case wasm::R_WEBASSEMBLY_TABLE_INDEX_SLEB:
     case wasm::R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
     case wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB:
-    case wasm::R_WEBASSEMBLY_GLOBAL_INDEX_LEB: {
-      uint32_t Index = getRelocationIndexValue(RelEntry);
-      WritePatchableSLEB(Stream, Index, Offset);
-      break;
-    }
-    case wasm::R_WEBASSEMBLY_TABLE_INDEX_I32: {
-      uint32_t Index = getRelocationIndexValue(RelEntry);
-      WriteI32(Stream, Index, Offset);
-      break;
-    }
-    case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB: {
-      uint32_t Value = getProvisionalValue(RelEntry);
-      WritePatchableSLEB(Stream, Value, Offset);
-      break;
-    }
-    case wasm::R_WEBASSEMBLY_MEMORY_ADDR_LEB: {
-      uint32_t Value = getProvisionalValue(RelEntry);
+    case wasm::R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
+    case wasm::R_WEBASSEMBLY_MEMORY_ADDR_LEB:
       WritePatchableLEB(Stream, Value, Offset);
       break;
-    }
-    case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32: {
-      uint32_t Value = getProvisionalValue(RelEntry);
+    case wasm::R_WEBASSEMBLY_TABLE_INDEX_I32:
+    case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32:
       WriteI32(Stream, Value, Offset);
       break;
-    }
+    case wasm::R_WEBASSEMBLY_TABLE_INDEX_SLEB:
+    case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
+      WritePatchableSLEB(Stream, Value, Offset);
+      break;
     default:
       llvm_unreachable("invalid relocation type");
     }

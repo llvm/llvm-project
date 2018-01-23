@@ -95,22 +95,22 @@ def MOVZX32rm16: I<0xB7, MRMSrcMem, (outs GR32:$dst), (ins i16mem:$src),
 let hasSideEffects = 0, isCodeGenOnly = 1 in {
 def MOVZX32_NOREXrr8 : I<0xB6, MRMSrcReg,
                          (outs GR32_NOREX:$dst), (ins GR8_NOREX:$src),
-                         "movz{bl|x}\t{$src, $dst|$dst, $src}  # NOREX",
+                         "movz{bl|x}\t{$src, $dst|$dst, $src}",
                          [], IIC_MOVZX>, TB, OpSize32, Sched<[WriteALU]>;
 let mayLoad = 1 in
 def MOVZX32_NOREXrm8 : I<0xB6, MRMSrcMem,
                          (outs GR32_NOREX:$dst), (ins i8mem_NOREX:$src),
-                         "movz{bl|x}\t{$src, $dst|$dst, $src}  # NOREX",
+                         "movz{bl|x}\t{$src, $dst|$dst, $src}",
                          [], IIC_MOVZX>, TB, OpSize32, Sched<[WriteALULd]>;
 
 def MOVSX32_NOREXrr8 : I<0xBE, MRMSrcReg,
                          (outs GR32_NOREX:$dst), (ins GR8_NOREX:$src),
-                         "movs{bl|x}\t{$src, $dst|$dst, $src}  # NOREX",
+                         "movs{bl|x}\t{$src, $dst|$dst, $src}",
                          [], IIC_MOVSX>, TB, OpSize32, Sched<[WriteALU]>;
 let mayLoad = 1 in
 def MOVSX32_NOREXrm8 : I<0xBE, MRMSrcMem,
                          (outs GR32_NOREX:$dst), (ins i8mem_NOREX:$src),
-                         "movs{bl|x}\t{$src, $dst|$dst, $src}  # NOREX",
+                         "movs{bl|x}\t{$src, $dst|$dst, $src}",
                          [], IIC_MOVSX>, TB, OpSize32, Sched<[WriteALULd]>;
 }
 
