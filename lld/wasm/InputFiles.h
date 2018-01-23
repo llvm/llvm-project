@@ -94,8 +94,8 @@ public:
   void dumpInfo() const;
 
   uint32_t relocateFunctionIndex(uint32_t Original) const;
-  uint32_t getRelocatedAddress(uint32_t Index) const;
   uint32_t calcNewIndex(const WasmRelocation &Reloc) const;
+  uint32_t calcNewValue(const WasmRelocation &Reloc) const;
 
   const WasmSection *CodeSection = nullptr;
   const WasmSection *DataSection = nullptr;
@@ -104,10 +104,14 @@ public:
   std::vector<InputSegment *> Segments;
   std::vector<InputFunction *> Functions;
 
-  ArrayRef<Symbol *> getSymbols() { return Symbols; }
-  ArrayRef<Symbol *> getTableSymbols() { return TableSymbols; }
+  ArrayRef<Symbol *> getSymbols() const { return Symbols; }
+
+  Symbol *getFunctionSymbol(uint32_t Index) const {
+    return FunctionSymbols[Index];
+  }
 
 private:
+  uint32_t relocateVirtualAddress(uint32_t Index) const;
   uint32_t relocateTypeIndex(uint32_t Original) const;
   uint32_t relocateGlobalIndex(uint32_t Original) const;
   uint32_t relocateTableIndex(uint32_t Original) const;
@@ -133,9 +137,6 @@ private:
 
   // List of all global symbols indexed by the global index space
   std::vector<Symbol *> GlobalSymbols;
-
-  // List of all indirect symbols indexed by table index space.
-  std::vector<Symbol *> TableSymbols;
 
   uint32_t NumGlobalImports = 0;
   uint32_t NumFunctionImports = 0;
