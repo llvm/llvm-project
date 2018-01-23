@@ -20,7 +20,6 @@
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/TypeMap.h"
-#include "lldb/Symbol/TypeList.h"
 #include "lldb/Utility/RegularExpression.h"
 
 #include "llvm/DebugInfo/PDB/GenericError.h"
@@ -319,33 +318,8 @@ SymbolFilePDB::ParseFunctionBlocks(const lldb_private::SymbolContext &sc) {
 }
 
 size_t SymbolFilePDB::ParseTypes(const lldb_private::SymbolContext &sc) {
-  lldbassert(sc.module_sp.get());
-  size_t num_added = 0;
-  auto results_up = m_session_up->getGlobalScope()->findAllChildren();
-  if (!results_up)
-    return 0;
-  while (auto symbol_up = results_up->getNext()) {
-    switch (symbol_up->getSymTag()) {
-    case PDB_SymType::Enum:
-    case PDB_SymType::UDT:
-    case PDB_SymType::Typedef:
-      break;
-    default:
-      continue;
-    }
-
-    auto type_uid = symbol_up->getSymIndexId();
-    if (m_types.find(type_uid) != m_types.end())
-      continue;
-
-    // This should cause the type to get cached and stored in the `m_types`
-    // lookup.
-    if (!ResolveTypeUID(symbol_up->getSymIndexId()))
-      continue;
-
-    ++num_added;
-  }
-  return num_added;
+  // TODO: Implement this
+  return size_t();
 }
 
 size_t
@@ -375,11 +349,8 @@ lldb_private::Type *SymbolFilePDB::ResolveTypeUID(lldb::user_id_t type_uid) {
     return nullptr;
 
   lldb::TypeSP result = pdb->CreateLLDBTypeFromPDBType(*pdb_type);
-  if (result.get()) {
+  if (result.get())
     m_types.insert(std::make_pair(type_uid, result));
-    auto type_list = GetTypeList();
-    type_list->Insert(result);
-  }
   return result.get();
 }
 
@@ -678,9 +649,7 @@ size_t SymbolFilePDB::FindTypes(
   return 0;
 }
 
-lldb_private::TypeList *SymbolFilePDB::GetTypeList() {
-  return m_obj_file->GetModule()->GetTypeList();
-}
+lldb_private::TypeList *SymbolFilePDB::GetTypeList() { return nullptr; }
 
 size_t SymbolFilePDB::GetTypes(lldb_private::SymbolContextScope *sc_scope,
                                uint32_t type_mask,

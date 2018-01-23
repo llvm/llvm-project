@@ -249,7 +249,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->AllowUndefined = Args.hasArg(OPT_allow_undefined);
   Config->CheckSignatures =
       Args.hasFlag(OPT_check_signatures, OPT_no_check_signatures, false);
-  Config->EmitRelocs = Args.hasArg(OPT_emit_relocs);
   Config->Entry = getEntry(Args, Args.hasArg(OPT_relocatable) ? "" : "_start");
   Config->ImportMemory = Args.hasArg(OPT_import_memory);
   Config->OutputFile = Args.getLastArgValue(OPT_o);
@@ -259,8 +258,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->StripDebug = Args.hasArg(OPT_strip_debug);
   errorHandler().Verbose = Args.hasArg(OPT_verbose);
   ThreadsEnabled = Args.hasFlag(OPT_threads, OPT_no_threads, true);
-  if (Config->Relocatable)
-    Config->EmitRelocs = true;
 
   Config->InitialMemory = args::getInteger(Args, OPT_initial_memory, 0);
   Config->GlobalBase = args::getInteger(Args, OPT_global_base, 1024);
