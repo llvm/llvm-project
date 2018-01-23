@@ -539,10 +539,39 @@ static void createImportLibrary(bool AsLib) {
     Exports.push_back(E2);
   }
 
-  auto E = writeImportLibrary(getImportName(AsLib), getImplibPath(), Exports,
-                              Config->Machine, false, Config->MinGW);
-  handleAllErrors(std::move(E),
-                  [&](ErrorInfoBase &EIB) { error(EIB.message()); });
+  auto HandleError = [](Error &&E) {
+    handleAllErrors(std::move(E),
+                    [](ErrorInfoBase &EIB) { error(EIB.message()); });
+  };
+  std::string LibName = getImportName(AsLib);
+  std::string Path = getImplibPath();
+
+  // If the import library already exists, replace it only if the contents
+  // have changed.
+  ErrorOr<std::unique_ptr<MemoryBuffer>> OldBuf = MemoryBuffer::getFile(Path);
+  if (!OldBuf) {
+    HandleError(writeImportLibrary(LibName, Path, Exports, Config->Machine,
+                                   false, Config->MinGW));
+    return;
+  }
+
+  SmallString<128> TmpName;
+  if (std::error_code EC =
+          sys::fs::createUniqueFile(Path + ".tmp-%%%%%%%%.lib", TmpName))
+    fatal("cannot create temporary file for import library " + Path + ": " +
+          EC.message());
+
+  if (Error E = writeImportLibrary(LibName, TmpName, Exports, Config->Machine,
+                                   false, Config->MinGW)) {
+    HandleError(std::move(E));
+    return;
+  }
+
+  std::unique_ptr<MemoryBuffer> NewBuf = check(MemoryBuffer::getFile(TmpName));
+  if ((*OldBuf)->getBuffer() != NewBuf->getBuffer()) {
+    OldBuf->reset();
+    HandleError(errorCodeToError(sys::fs::rename(TmpName, Path)));
+  }
 }
 
 static void parseModuleDefs(StringRef Path) {
@@ -640,8 +669,8 @@ filterBitcodeFiles(StringRef Path, std::vector<std::string> &TemporaryFiles) {
   log("Creating a temporary archive for " + Path + " to remove bitcode files");
 
   SmallString<128> S;
-  if (auto EC = sys::fs::createTemporaryFile("lld-" + sys::path::stem(Path),
-                                             ".lib", S))
+  if (std::error_code EC = sys::fs::createTemporaryFile(
+          "lld-" + sys::path::stem(Path), ".lib", S))
     fatal("cannot create a temporary file: " + EC.message());
   std::string Temp = S.str();
   TemporaryFiles.push_back(Temp);

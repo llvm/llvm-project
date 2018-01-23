@@ -385,13 +385,13 @@
 ; RELOC-NEXT:         Index:           5
 ; RELOC-NEXT:         Offset:          0x0000006A
 ; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_SLEB
-; RELOC-NEXT:         Index:           3
+; RELOC-NEXT:         Index:           9
 ; RELOC-NEXT:         Offset:          0x00000073
 ; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_SLEB
-; RELOC-NEXT:         Index:           4
+; RELOC-NEXT:         Index:           10
 ; RELOC-NEXT:         Offset:          0x0000007C
 ; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_SLEB
-; RELOC-NEXT:         Index:           5
+; RELOC-NEXT:         Index:           11
 ; RELOC-NEXT:         Offset:          0x00000085
 ; RELOC-NEXT:     Functions:       
 ; RELOC-NEXT:       - Index:           0

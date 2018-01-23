@@ -46,6 +46,7 @@ public:
   }
 
   uint32_t getOutputOffset() const { return OutputOffset; }
+  ArrayRef<WasmRelocation> getRelocations() const { return Relocations; }
 
   virtual StringRef getComdat() const = 0;
 
