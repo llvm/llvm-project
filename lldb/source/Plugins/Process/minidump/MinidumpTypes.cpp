@@ -44,9 +44,14 @@ llvm::Optional<std::string>
 lldb_private::minidump::parseMinidumpString(llvm::ArrayRef<uint8_t> &data) {
   std::string result;
 
-  const uint32_t *source_length;
-  Status error = consumeObject(data, source_length);
-  if (error.Fail() || *source_length > data.size() || *source_length % 2 != 0)
+  const uint32_t *source_length_ptr;
+  Status error = consumeObject(data, source_length_ptr);
+
+  // Copy non-aligned source_length data into aligned memory.
+  uint32_t source_length;
+  std::memcpy(&source_length, source_length_ptr, sizeof(source_length));
+
+  if (error.Fail() || source_length > data.size() || source_length % 2 != 0)
     return llvm::None;
 
   auto source_start = reinterpret_cast<const llvm::UTF16 *>(data.data());
@@ -54,9 +59,9 @@ lldb_private::minidump::parseMinidumpString(llvm::ArrayRef<uint8_t> &data) {
   // we need the length of the string in UTF-16 characters/code points (16 bits
   // per char)
   // that's why it's divided by 2
-  const auto source_end = source_start + (*source_length) / 2;
+  const auto source_end = source_start + source_length / 2;
   // resize to worst case length
-  result.resize(UNI_MAX_UTF8_BYTES_PER_CODE_POINT * (*source_length) / 2);
+  result.resize(UNI_MAX_UTF8_BYTES_PER_CODE_POINT * source_length / 2);
   auto result_start = reinterpret_cast<llvm::UTF8 *>(&result[0]);
   const auto result_end = result_start + result.size();
   llvm::ConvertUTF16toUTF8(&source_start, source_end, &result_start, result_end,

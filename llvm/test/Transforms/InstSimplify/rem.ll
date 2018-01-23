@@ -189,9 +189,7 @@ define i32 @rem4() {
 
 define i32 @rem5(i32 %x, i32 %y) {
 ; CHECK-LABEL: @rem5(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[MOD:%.*]] = srem i32 [[SHL]], [[X]]
-; CHECK-NEXT:    ret i32 [[MOD]]
+; CHECK-NEXT:    ret i32 0
 ;
   %shl = shl nsw i32 %x, %y
   %mod = srem i32 %shl, %x
@@ -200,9 +198,7 @@ define i32 @rem5(i32 %x, i32 %y) {
 
 define <2 x i32> @rem6(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @rem6(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nsw <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[MOD:%.*]] = srem <2 x i32> [[SHL]], [[X]]
-; CHECK-NEXT:    ret <2 x i32> [[MOD]]
+; CHECK-NEXT:    ret <2 x i32> zeroinitializer
 ;
   %shl = shl nsw <2 x i32> %x, %y
   %mod = srem <2 x i32> %shl, %x
@@ -224,9 +220,7 @@ define i32 @rem7(i32 %x, i32 %y) {
 
 define i32 @rem8(i32 %x, i32 %y) {
 ; CHECK-LABEL: @rem8(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[MOD:%.*]] = urem i32 [[SHL]], [[X]]
-; CHECK-NEXT:    ret i32 [[MOD]]
+; CHECK-NEXT:    ret i32 0
 ;
   %shl = shl nuw i32 %x, %y
   %mod = urem i32 %shl, %x
@@ -235,9 +229,7 @@ define i32 @rem8(i32 %x, i32 %y) {
 
 define <2 x i32> @rem9(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @rem9(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[MOD:%.*]] = urem <2 x i32> [[SHL]], [[X]]
-; CHECK-NEXT:    ret <2 x i32> [[MOD]]
+; CHECK-NEXT:    ret <2 x i32> zeroinitializer
 ;
   %shl = shl nuw <2 x i32> %x, %y
   %mod = urem <2 x i32> %shl, %x

@@ -1,10 +1,12 @@
 # Instructions that are valid
 #
-# RUN: llvm-mc %s -triple=mips-unknown-linux -show-encoding -mcpu=mips1 | FileCheck %s
+# RUN: llvm-mc %s -triple=mips-unknown-linux -show-encoding -show-inst -mcpu=mips1 | FileCheck %s
 a:
         .set noat
-        abs.d     $f7,$f25             # CHECK: encoding:
-        abs.s     $f9,$f16
+        abs.d     $f0,$f12             # CHECK: abs.d  $f0, $f12 # encoding: [0x46,0x20,0x60,0x05]
+                                       # CHECK-NEXT:             # <MCInst #{{[0-9]+}} FABS_D32
+        abs.s     $f0,$f12             # CHECK: abs.s  $f0, $f12 # encoding: [0x46,0x00,0x60,0x05]
+                                       # CHECK-NEXT:             # <MCInst #{{[0-9]+}} FABS_S
         add       $s7,$s2,$a1
         add.d     $f1,$f7,$f29
         add.s     $f8,$f21,$f24

@@ -17,3 +17,18 @@ entry:
   ret i64 %v
 }
 
+@gv1 = external global i8, align 16
+@gv2 = external global i8, align 16
+
+; Select when both GV and base reg are present.
+define i8 @test2(i1 %c, i64 %b) {
+; CHECK-LABEL: @test2
+entry:
+; CHECK-LABEL: entry:
+  %g1 = getelementptr inbounds i8, i8* @gv1, i64 %b
+  %g2 = getelementptr inbounds i8, i8* @gv2, i64 %b
+  %s = select i1 %c, i8* %g1, i8* %g2
+; CHECK-NOT: sunkaddr
+  %v = load i8 , i8* %s, align 8
+  ret i8 %v
+}

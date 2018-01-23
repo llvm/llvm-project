@@ -1040,6 +1040,13 @@ static Value *simplifyRem(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
        match(Op0, m_URem(m_Value(), m_Specific(Op1)))))
     return Op0;
 
+  // (X << Y) % X -> 0
+  if ((Opcode == Instruction::SRem &&
+       match(Op0, m_NSWShl(m_Specific(Op1), m_Value()))) ||
+      (Opcode == Instruction::URem &&
+       match(Op0, m_NUWShl(m_Specific(Op1), m_Value()))))
+    return Constant::getNullValue(Op0->getType());
+
   // If the operation is with the result of a select instruction, check whether
   // operating on either branch of the select always yields the same value.
   if (isa<SelectInst>(Op0) || isa<SelectInst>(Op1))
