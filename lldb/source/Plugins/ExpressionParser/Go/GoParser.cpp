@@ -439,8 +439,10 @@ GoASTExpr *GoParser::CompositeLit() {
   if (!type)
     return r.error();
   GoASTCompositeLit *lit = LiteralValue();
-  if (!lit)
+  if (!lit) {
+    delete type;
     return r.error();
+  }
   lit->SetType(type);
   return lit;
 }
@@ -548,6 +550,7 @@ GoASTExpr *GoParser::Arguments(GoASTExpr *e) {
 GoASTExpr *GoParser::Conversion() {
   Rule r("Conversion", this);
   if (GoASTExpr *t = Type2()) {
+    std::unique_ptr<GoASTExpr> owner(t);
     if (match(GoLexer::OP_LPAREN)) {
       GoASTExpr *v = Expression();
       if (!v)
@@ -557,6 +560,7 @@ GoASTExpr *GoParser::Conversion() {
         return r.error();
       GoASTCallExpr *call = new GoASTCallExpr(false);
       call->SetFun(t);
+      owner.release();
       call->AddArgs(v);
       return call;
     }

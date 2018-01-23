@@ -24,7 +24,7 @@ namespace clang {
 /// of QualType.
 ///
 enum class LangAS : unsigned {
-  // The default value 0 is the value used in QualType for the the situation
+  // The default value 0 is the value used in QualType for the situation
   // where there is no address space qualifier.
   Default = 0,
 

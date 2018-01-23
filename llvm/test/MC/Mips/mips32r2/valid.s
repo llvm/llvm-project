@@ -1,10 +1,12 @@
 # Instructions that are valid
 #
-# RUN: llvm-mc %s -triple=mips-unknown-linux -show-encoding -mcpu=mips32r2 | FileCheck %s
+# RUN: llvm-mc %s -triple=mips-unknown-linux -show-encoding -show-inst -mcpu=mips32r2 | FileCheck %s
 a:
         .set noat
-        abs.d     $f7,$f25             # CHECK: encoding:
-        abs.s     $f9,$f16
+        abs.d     $f0,$f12             # CHECK: abs.d  $f0, $f12 # encoding: [0x46,0x20,0x60,0x05]
+                                       # CHECK-NEXT:             # <MCInst #{{[0-9]+}} FABS_D32
+        abs.s     $f0,$f12             # CHECK: abs.s  $f0, $f12 # encoding: [0x46,0x00,0x60,0x05]
+                                       # CHECK-NEXT:             # <MCInst #{{[0-9]+}} FABS_S
         add       $s7,$s2,$a1
         add       $9,$14,15176         # CHECK: addi $9, $14, 15176   # encoding: [0x21,0xc9,0x3b,0x48]
         add       $24,-7193            # CHECK: addi $24, $24, -7193  # encoding: [0x23,0x18,0xe3,0xe7]
@@ -234,8 +236,10 @@ a:
         sltiu     $25,$25,-15531       # CHECK: sltiu $25, $25, -15531 # encoding: [0x2f,0x39,0xc3,0x55]
         sltu      $s4,$s5,$11          # CHECK: sltu  $20, $21, $11    # encoding: [0x02,0xab,0xa0,0x2b]
         sltu      $24,$25,-15531       # CHECK: sltiu $24, $25, -15531 # encoding: [0x2f,0x38,0xc3,0x55]
-        sqrt.d    $f17,$f22
-        sqrt.s    $f0,$f1
+        sqrt.d    $f0, $f12            # CHECK: sqrt.d  $f0, $f12      # encoding: [0x46,0x20,0x60,0x04]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} FSQRT_D32
+        sqrt.s    $f0, $f12            # CHECK: sqrt.s  $f0, $f12      # encoding: [0x46,0x00,0x60,0x04]
+                                       # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} FSQRT_S
         sra       $4, $5               # CHECK: srav $4, $4, $5        # encoding: [0x00,0xa4,0x20,0x07]
         sra       $s1,15               # CHECK: sra $17, $17, 15       # encoding: [0x00,0x11,0x8b,0xc3]
         sra       $s1,$s7,15           # CHECK: sra $17, $23, 15       # encoding: [0x00,0x17,0x8b,0xc3]

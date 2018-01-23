@@ -241,6 +241,10 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
   SourceLocation NewStart = New->getSourceRange().getBegin();
   SourceLocation NewEnd = New->getSourceRange().getEnd();
 
+  // Skip when the source location of the new expression is invalid.
+  if (NewStart.isInvalid() || NewEnd.isInvalid())
+    return false;
+
   std::string ArraySizeExpr;
   if (const auto* ArraySize = New->getArraySize()) {
     ArraySizeExpr = Lexer::getSourceText(CharSourceRange::getTokenRange(

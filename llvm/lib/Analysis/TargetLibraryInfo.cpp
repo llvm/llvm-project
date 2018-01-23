@@ -397,6 +397,15 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_flsll);
   }
 
+  // Android uses bionic instead of glibc. So disable some finite
+  // lib calls in glibc for Android. The list of unsupported lib
+  // calls for Android may expand as the need arises.
+  if (T.isAndroid()) {
+    TLI.setUnavailable(LibFunc_exp_finite);
+    TLI.setUnavailable(LibFunc_exp2_finite);
+    TLI.setUnavailable(LibFunc_pow_finite);
+  }
+
   // The following functions are available on at least Linux:
   if (!T.isOSLinux()) {
     TLI.setUnavailable(LibFunc_dunder_strdup);

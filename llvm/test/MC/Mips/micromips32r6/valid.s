@@ -215,8 +215,10 @@
   cvt.s.d $f2, $f4         # CHECK: cvt.s.d $f2, $f4         # encoding: [0x54,0x44,0x1b,0x7b]
   cvt.s.w $f3, $f4         # CHECK: cvt.s.w $f3, $f4         # encoding: [0x54,0x64,0x3b,0x7b]
   cvt.s.l $f3, $f4         # CHECK: cvt.s.l $f3, $f4         # encoding: [0x54,0x64,0x5b,0x7b]
-  abs.s $f3, $f5           # CHECK: abs.s $f3, $f5      # encoding: [0x54,0x65,0x03,0x7b]
-  abs.d $f2, $f4           # CHECK: abs.d $f2, $f4      # encoding: [0x54,0x44,0x23,0x7b]
+  abs.s $f0, $f12          # CHECK: abs.s  $f0, $f12         # encoding: [0x54,0x0c,0x03,0x7b]
+                           # CHECK-NEXT:                     # <MCInst #{{[0-9]+}} FABS_S_MM
+  abs.d $f0, $f12          # CHECK: abs.d  $f0, $f12         # encoding: [0x54,0x0c,0x23,0x7b]
+                           # CHECK-NEXT:                     # <MCInst #{{[0-9]+}} FABS_D64_MM
   floor.l.s $f3, $f5       # CHECK: floor.l.s $f3, $f5  # encoding: [0x54,0x65,0x03,0x3b]
   floor.l.d $f2, $f4       # CHECK: floor.l.d $f2, $f4  # encoding: [0x54,0x44,0x43,0x3b]
   floor.w.s $f3, $f5       # CHECK: floor.w.s $f3, $f5  # encoding: [0x54,0x65,0x0b,0x3b]
@@ -229,8 +231,10 @@
   trunc.l.d $f2, $f4       # CHECK: trunc.l.d $f2, $f4  # encoding: [0x54,0x44,0x63,0x3b]
   trunc.w.s $f3, $f5       # CHECK: trunc.w.s $f3, $f5  # encoding: [0x54,0x65,0x2b,0x3b]
   trunc.w.d $f2, $f4       # CHECK: trunc.w.d $f2, $f4  # encoding: [0x54,0x44,0x6b,0x3b]
-  sqrt.s $f3, $f5          # CHECK: sqrt.s $f3, $f5     # encoding: [0x54,0x65,0x0a,0x3b]
-  sqrt.d $f2, $f4          # CHECK: sqrt.d $f2, $f4     # encoding: [0x54,0x44,0x4a,0x3b]
+  sqrt.s $f0, $f12         # CHECK: sqrt.s  $f0, $f12   # encoding: [0x54,0x0c,0x0a,0x3b]
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} FSQRT_S_MM
+  sqrt.d $f0, $f12         # CHECK: sqrt.d  $f0, $f12   # encoding: [0x54,0x0c,0x4a,0x3b]
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} FSQRT_D64_MM
   rsqrt.s $f3, $f5         # CHECK: rsqrt.s $f3, $f5    # encoding: [0x54,0x65,0x02,0x3b]
   rsqrt.d $f2, $f4         # CHECK: rsqrt.d $f2, $f4    # encoding: [0x54,0x44,0x42,0x3b]
   lw $3, -260($gp)         # CHECK: lw $3, -260($gp)    # encoding: [0xfc,0x7c,0xfe,0xfc]
