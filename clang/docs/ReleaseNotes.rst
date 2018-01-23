@@ -231,6 +231,13 @@ OpenMP Support in Clang
 - Added support for `reduction`-based clauses on `task`-based directives from
   upcoming OpenMP 5.0.
 
+- The LLVM OpenMP runtime `libomp` now supports the OpenMP Tools Interface (OMPT)
+  on x86, x86_64, AArch64, and PPC64 on Linux, Windows, and macOS. If you observe
+  a measurable performance impact on one of your applications without a tool
+  attached, please rebuild the runtime library with `-DLIBOMP_OMPT_SUPPORT=OFF` and
+  file a bug at `LLVM's Bugzilla <https://bugs.llvm.org/>`_ or send a message to the
+  `OpenMP development list <http://lists.llvm.org/cgi-bin/mailman/listinfo/openmp-dev>`_.
+
 Internal API Changes
 --------------------
 
