@@ -238,8 +238,8 @@ public:
   /// after formatting.
   BreakableStringLiteral(const FormatToken &Tok, unsigned StartColumn,
                          StringRef Prefix, StringRef Postfix,
-                         bool InPPDirective, encoding::Encoding Encoding,
-                         const FormatStyle &Style);
+                         unsigned UnbreakableTailLength, bool InPPDirective,
+                         encoding::Encoding Encoding, const FormatStyle &Style);
 
   Split getSplit(unsigned LineIndex, unsigned TailOffset, unsigned ColumnLimit,
                  unsigned ReflowColumn,

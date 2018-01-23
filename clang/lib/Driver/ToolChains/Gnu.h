@@ -250,6 +250,10 @@ public:
                              SmallVectorImpl<StringRef> &BiarchLibDirs,
                              SmallVectorImpl<StringRef> &BiarchTripleAliases);
 
+    void AddDefaultGCCPrefixes(const llvm::Triple &TargetTriple,
+                               SmallVectorImpl<std::string> &Prefixes,
+                               StringRef SysRoot);
+
     bool ScanGCCForMultilibs(const llvm::Triple &TargetTriple,
                              const llvm::opt::ArgList &Args,
                              StringRef Path,
@@ -260,12 +264,6 @@ public:
                                 const std::string &LibDir,
                                 StringRef CandidateTriple,
                                 bool NeedsBiarchSuffix = false);
-
-    void scanLibDirForGCCTripleSolaris(const llvm::Triple &TargetArch,
-                                       const llvm::opt::ArgList &Args,
-                                       const std::string &LibDir,
-                                       StringRef CandidateTriple,
-                                       bool NeedsBiarchSuffix = false);
 
     bool ScanGentooGccConfig(const llvm::Triple &TargetTriple,
                              const llvm::opt::ArgList &Args,
@@ -307,8 +305,8 @@ protected:
   /// \brief Check whether the target triple's architecture is 32-bits.
   bool isTarget32Bit() const { return getTriple().isArch32Bit(); }
 
-  // FIXME: This should be final, but the Solaris tool chain does weird
-  // things we can't easily represent.
+  // FIXME: This should be final, but the CrossWindows toolchain does weird
+  // things that can't be easily generalized.
   void AddClangCXXStdlibIncludeArgs(
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;

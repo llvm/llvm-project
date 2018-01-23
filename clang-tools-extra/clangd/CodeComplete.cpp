@@ -309,22 +309,99 @@ llvm::Optional<SymbolID> getSymbolID(const CodeCompletionResult &R) {
   llvm_unreachable("unknown CodeCompletionResult kind");
 }
 
-/// \brief Information about the scope specifier in the qualified-id code
-/// completion (e.g. "ns::ab?").
+// Scopes of the paritial identifier we're trying to complete.
+// It is used when we query the index for more completion results.
 struct SpecifiedScope {
-  /// The scope specifier as written. For example, for completion "ns::ab?", the
-  /// written scope specifier is "ns::".
-  std::string Written;
-  // If this scope specifier is recognized in Sema (e.g. as a namespace
-  // context), this will be set to the fully qualfied name of the corresponding
-  // context.
-  std::string Resolved;
+  // The scopes we should look in, determined by Sema.
+  //
+  // If the qualifier was fully resolved, we look for completions in these
+  // scopes; if there is an unresolved part of the qualifier, it should be
+  // resolved within these scopes.
+  //
+  // Examples of qualified completion:
+  //
+  //   "::vec"                                      => {""}
+  //   "using namespace std; ::vec^"                => {"", "std::"}
+  //   "namespace ns {using namespace std;} ns::^"  => {"ns::", "std::"}
+  //   "std::vec^"                                  => {""}  // "std" unresolved
+  //
+  // Examples of unqualified completion:
+  //
+  //   "vec^"                                       => {""}
+  //   "using namespace std; vec^"                  => {"", "std::"}
+  //   "using namespace std; namespace ns { vec^ }" => {"ns::", "std::", ""}
+  //
+  // "" for global namespace, "ns::" for normal namespace.
+  std::vector<std::string> AccessibleScopes;
+  // The full scope qualifier as typed by the user (without the leading "::").
+  // Set if the qualifier is not fully resolved by Sema.
+  llvm::Optional<std::string> UnresolvedQualifier;
 
-  llvm::StringRef forIndex() {
-    return Resolved.empty() ? StringRef(Written).ltrim("::")
-                            : StringRef(Resolved);
+  // Construct scopes being queried in indexes.
+  // This method format the scopes to match the index request representation.
+  std::vector<std::string> scopesForIndexQuery() {
+    std::vector<std::string> Results;
+    for (llvm::StringRef AS : AccessibleScopes) {
+      Results.push_back(AS);
+      if (UnresolvedQualifier)
+        Results.back() += *UnresolvedQualifier;
+    }
+    return Results;
   }
 };
+
+// Get all scopes that will be queried in indexes.
+std::vector<std::string> getQueryScopes(CodeCompletionContext &CCContext,
+                                        const SourceManager& SM) {
+  auto GetAllAccessibleScopes = [](CodeCompletionContext& CCContext) {
+    SpecifiedScope Info;
+    for (auto* Context : CCContext.getVisitedContexts()) {
+      if (isa<TranslationUnitDecl>(Context))
+        Info.AccessibleScopes.push_back(""); // global namespace
+      else if (const auto*NS = dyn_cast<NamespaceDecl>(Context))
+        Info.AccessibleScopes.push_back(NS->getQualifiedNameAsString() + "::");
+    }
+    return Info;
+  };
+
+  auto SS = CCContext.getCXXScopeSpecifier();
+
+  // Unqualified completion (e.g. "vec^").
+  if (!SS) {
+    // FIXME: Once we can insert namespace qualifiers and use the in-scope
+    //        namespaces for scoring, search in all namespaces.
+    // FIXME: Capture scopes and use for scoring, for example,
+    //        "using namespace std; namespace foo {v^}" =>
+    //        foo::value > std::vector > boost::variant
+    return GetAllAccessibleScopes(CCContext).scopesForIndexQuery();
+  }
+
+  // Qualified completion ("std::vec^"), we have two cases depending on whether
+  // the qualifier can be resolved by Sema.
+  if ((*SS)->isValid()) { // Resolved qualifier.
+    // FIXME: Disable Sema typo correction during code completion.
+    // The resolved qualifier might not perfectly match the written qualifier.
+    // e.g. "namespace clang { clangd::^ }", we will get "clang" declaration
+    // for completion "clangd::".
+    return GetAllAccessibleScopes(CCContext).scopesForIndexQuery();
+  }
+
+  // Unresolved qualifier.
+  // FIXME: When Sema can resolve part of a scope chain (e.g.
+  // "known::unknown::id"), we should expand the known part ("known::") rather
+  // than treating the whole thing as unknown.
+  SpecifiedScope Info;
+  Info.AccessibleScopes.push_back(""); // global namespace
+
+  Info.UnresolvedQualifier =
+      Lexer::getSourceText(CharSourceRange::getCharRange((*SS)->getRange()),
+                           SM, clang::LangOptions()).ltrim("::");
+  // Sema excludes the trailing "::".
+  if (!Info.UnresolvedQualifier->empty())
+    *Info.UnresolvedQualifier += "::";
+
+  return Info.scopesForIndexQuery();
+}
 
 // The CompletionRecorder captures Sema code-complete output, including context.
 // It filters out ignored results (but doesn't apply fuzzy-filtering yet).
@@ -629,25 +706,6 @@ bool semaCodeComplete(const Context &Ctx,
   return true;
 }
 
-SpecifiedScope getSpecifiedScope(Sema &S, const CXXScopeSpec &SS) {
-  SpecifiedScope Info;
-  auto &SM = S.getSourceManager();
-  auto SpecifierRange = SS.getRange();
-  Info.Written = Lexer::getSourceText(
-      CharSourceRange::getCharRange(SpecifierRange), SM, clang::LangOptions());
-  if (!Info.Written.empty())
-    Info.Written += "::"; // Sema excludes the trailing ::.
-  if (SS.isValid()) {
-    DeclContext *DC = S.computeDeclContext(SS);
-    if (auto *NS = llvm::dyn_cast<NamespaceDecl>(DC)) {
-      Info.Resolved = NS->getQualifiedNameAsString() + "::";
-    } else if (llvm::dyn_cast<TranslationUnitDecl>(DC) != nullptr) {
-      Info.Resolved = "";
-    }
-  }
-  return Info;
-}
-
 // Should we perform index-based completion in this context?
 // FIXME: consider allowing completion, but restricting the result types.
 bool allowIndex(enum CodeCompletionContext::Kind K) {
@@ -807,16 +865,11 @@ private:
     // Build the query.
     FuzzyFindRequest Req;
     Req.Query = Filter->pattern();
-    // If the user typed a scope, e.g. a::b::xxx(), restrict to that scope.
-    // FIXME(ioeric): add scopes based on using directives and enclosing ns.
-    if (auto SS = Recorder.CCContext.getCXXScopeSpecifier())
-      Req.Scopes = {getSpecifiedScope(*Recorder.CCSema, **SS).forIndex()};
-    else
-      // Unless the user typed a ns qualifier, complete in global scope only.
-      // FIXME: once we know what namespaces are in scope (D42073), use those.
-      // FIXME: once we can insert namespace qualifiers and use the in-scope
-      //        namespaces for scoring, search in all namespaces.
-      Req.Scopes = {""};
+    Req.Scopes =
+        getQueryScopes(Recorder.CCContext, Recorder.CCSema->getSourceManager());
+    log(Ctx, llvm::formatv(
+                 "Code complete: fuzzyFind(\"{0}\", Scopes: [{1}]", Req.Query,
+                 llvm::join(Req.Scopes.begin(), Req.Scopes.end(), ",")));
     // Run the query against the index.
     Incomplete |= !Opts.Index->fuzzyFind(
         Ctx, Req, [&](const Symbol &Sym) { ResultsBuilder.insert(Sym); });
