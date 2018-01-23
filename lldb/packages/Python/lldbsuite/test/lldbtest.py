@@ -717,6 +717,10 @@ class Base(unittest2.TestCase):
             lldb.remote_platform.Run(shell_cmd)
         self.addTearDownHook(clean_working_directory)
 
+    def getBuildArtifact(self, name="a.out"):
+        """Return absolute path to an artifact in the test's build directory."""
+        return os.path.join(os.getcwd(), name)
+
     def setUp(self):
         """Fixture for unittest test case setup.
 
@@ -2277,10 +2281,6 @@ class TestBase(Base):
         else:
             self.fail("Can't build for debug info: %s" % self.debug_info)
 
-    def getBuildArtifact(self, name="a.out"):
-        """Return absolute path to an artifact in the test's build directory."""
-        return os.path.join(os.getcwd(), name)
-            
     def run_platform_command(self, cmd):
         platform = self.dbg.GetSelectedPlatform()
         shell_command = lldb.SBPlatformShellCommand(cmd)
