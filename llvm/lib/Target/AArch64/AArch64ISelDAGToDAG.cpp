@@ -1681,7 +1681,7 @@ static bool isBitfieldExtractOpFromShr(SDNode *N, unsigned &Opc, SDValue &Opd0,
     // later find more redundancy.
     Opd0 = N->getOperand(0).getOperand(0);
     TruncBits = Opd0->getValueType(0).getSizeInBits() - VT.getSizeInBits();
-    VT = Opd0->getValueType(0);
+    VT = Opd0.getValueType();
     assert(VT == MVT::i64 && "the promoted type should be i64");
   } else if (BiggerPattern) {
     // Let's pretend a 0 shift left has been performed.
