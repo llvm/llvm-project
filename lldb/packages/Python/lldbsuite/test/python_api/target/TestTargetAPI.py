@@ -243,7 +243,7 @@ class TargetAPITestCase(TestBase):
 
     def get_description(self):
         """Exercise SBTaget.GetDescription() API."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)
@@ -271,7 +271,7 @@ class TargetAPITestCase(TestBase):
     @not_remote_testsuite_ready
     def launch_new_process_and_redirect_stdout(self):
         """Exercise SBTaget.Launch() API with redirected stdout."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)
@@ -333,7 +333,7 @@ class TargetAPITestCase(TestBase):
 
     def resolve_symbol_context_with_address(self):
         """Exercise SBTaget.ResolveSymbolContextForAddress() API."""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)

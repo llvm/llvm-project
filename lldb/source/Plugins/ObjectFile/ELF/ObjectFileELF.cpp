@@ -3507,6 +3507,7 @@ size_t ObjectFileELF::ReadSectionData(Section *section,
   if (!Decompressor) {
     LLDB_LOG(log, "Unable to initialize decompressor for section {0}: {1}",
              section->GetName(), llvm::toString(Decompressor.takeError()));
+    consumeError(Decompressor.takeError());
     return result;
   }
   auto buffer_sp =
@@ -3516,6 +3517,7 @@ size_t ObjectFileELF::ReadSectionData(Section *section,
            size_t(buffer_sp->GetByteSize())})) {
     LLDB_LOG(log, "Decompression of section {0} failed: {1}",
              section->GetName(), llvm::toString(std::move(Error)));
+    consumeError(std::move(Error));
     return result;
   }
   section_data.SetData(buffer_sp);

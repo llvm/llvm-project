@@ -92,7 +92,7 @@ class ReturnValueTestCase(TestBase):
             (name, pattern))
 
     def get_to_starting_point(self):
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         error = lldb.SBError()
 
         self.target = self.dbg.CreateTarget(exe)

@@ -11,18 +11,21 @@ from lldbsuite.test.lldbtest import *
 class MiTestCaseBase(Base):
 
     mydir = None
-    myexe = "a.out"
-    mylog = "child.log"
+    myexe = None
+    mylog = None
 
     @classmethod
     def classCleanup(cls):
-        TestBase.RemoveTempFile(cls.myexe)
-        TestBase.RemoveTempFile(cls.mylog)
+        if cls.myexe:
+            TestBase.RemoveTempFile(cls.myexe)
+        if cls.mylog:
+            TestBase.RemoveTempFile(cls.mylog)
 
     def setUp(self):
         Base.setUp(self)
         self.buildDefault()
         self.child_prompt = "(gdb)"
+        self.myexe = self.getBuildArtifact("a.out")
 
     def tearDown(self):
         if self.TraceOn():
@@ -38,6 +41,7 @@ class MiTestCaseBase(Base):
         self.child = pexpect.spawn("%s --interpreter %s" % (
             self.lldbMiExec, args if args else ""))
         self.child.setecho(True)
+        self.mylog = self.getBuildArtifact("child.log")
         self.child.logfile_read = open(self.mylog, "w")
         # wait until lldb-mi has started up and is ready to go
         self.expect(self.child_prompt, exactly=True)

@@ -31,7 +31,7 @@ class DisasmAPITestCase(TestBase):
     def test(self):
         """Exercise getting SBAddress objects, disassembly, and SBAddress APIs."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)

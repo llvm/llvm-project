@@ -28,7 +28,7 @@ class ObjCNewSyntaxTestCase(TestBase):
 
     def runToBreakpoint(self):
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break inside the foo function which takes a bar_ptr argument.

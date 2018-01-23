@@ -58,7 +58,7 @@ class RaiseTestCase(TestBase):
 
     def signal_test(self, signal, test_passing):
         """Test that we handle inferior raising signals"""
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)
@@ -197,7 +197,7 @@ class RaiseTestCase(TestBase):
         """Test that we catch a signal in the edge case where the process receives it while we are
         about to interrupt it"""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)

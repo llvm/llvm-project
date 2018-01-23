@@ -32,7 +32,7 @@ class DataFormatterOneIsSingularTestCase(TestBase):
 
     def oneness_data_formatter_commands(self):
         """Test that 1 item is not as reported as 1 items."""
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
             self, "main.m", self.line, num_expected_locations=1, loc_exact=True)

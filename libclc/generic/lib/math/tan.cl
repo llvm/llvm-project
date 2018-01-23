@@ -1,8 +1,7 @@
 #include <clc/clc.h>
 
-#ifdef cl_khr_fp64
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-#endif
+#include <math/clc_tan.h>
 
-#define __CLC_BODY <tan.inc>
+#define __CLC_FUNC tan
+#define __CLC_BODY <clc_sw_unary.inc>
 #include <clc/math/gentype.inc>

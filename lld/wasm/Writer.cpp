@@ -62,6 +62,12 @@ struct WasmSignatureDenseMapInfo {
   }
 };
 
+// A Wasm export to be written into the export section.
+struct WasmExportEntry {
+  const Symbol *Sym;
+  StringRef FieldName; // may not match the Symbol name
+};
+
 // The writer writes a SymbolTable result to a file.
 class Writer {
 public:
@@ -76,7 +82,7 @@ private:
   void calculateInitFunctions();
   void assignIndexes();
   void calculateImports();
-  void calculateOffsets();
+  void calculateExports();
   void calculateTypes();
   void createOutputSegments();
   void layoutMemory();
@@ -115,6 +121,7 @@ private:
   DenseMap<WasmSignature, int32_t, WasmSignatureDenseMapInfo> TypeIndices;
   std::vector<const Symbol *> ImportedFunctions;
   std::vector<const Symbol *> ImportedGlobals;
+  std::vector<WasmExportEntry> ExportedSymbols;
   std::vector<const Symbol *> DefinedGlobals;
   std::vector<InputFunction *> DefinedFunctions;
   std::vector<const Symbol *> IndirectFunctions;
@@ -260,35 +267,8 @@ void Writer::createTableSection() {
 
 void Writer::createExportSection() {
   bool ExportMemory = !Config->Relocatable && !Config->ImportMemory;
-  Symbol *EntrySym = Symtab->find(Config->Entry);
-  bool ExportEntry = !Config->Relocatable && EntrySym && EntrySym->isDefined();
-  bool ExportHidden = Config->EmitRelocs;
 
-  uint32_t NumExports = ExportMemory ? 1 : 0;
-
-  std::vector<const Symbol *> SymbolExports;
-  if (ExportEntry)
-    SymbolExports.emplace_back(EntrySym);
-
-  for (const Symbol *Sym : Symtab->getSymbols()) {
-    if (Sym->isUndefined() || Sym->isGlobal())
-      continue;
-    if (Sym->isHidden() && !ExportHidden)
-      continue;
-    if (ExportEntry && Sym == EntrySym)
-      continue;
-    SymbolExports.emplace_back(Sym);
-  }
-
-  for (const Symbol *Sym : DefinedGlobals) {
-    // Can't export the SP right now because it mutable and mutable globals
-    // connot be exported.
-    if (Sym == Config->StackPointerSymbol)
-      continue;
-    SymbolExports.emplace_back(Sym);
-  }
-
-  NumExports += SymbolExports.size();
+  uint32_t NumExports = (ExportMemory ? 1 : 0) + ExportedSymbols.size();
   if (!NumExports)
     return;
 
@@ -305,12 +285,12 @@ void Writer::createExportSection() {
     writeExport(OS, MemoryExport);
   }
 
-  for (const Symbol *Sym : SymbolExports) {
-    DEBUG(dbgs() << "Export: " << Sym->getName() << "\n");
+  for (const WasmExportEntry &E : ExportedSymbols) {
+    DEBUG(dbgs() << "Export: " << E.Sym->getName() << "\n");
     WasmExport Export;
-    Export.Name = Sym->getName();
-    Export.Index = Sym->getOutputIndex();
-    if (Sym->isFunction())
+    Export.Name = E.FieldName;
+    Export.Index = E.Sym->getOutputIndex();
+    if (E.Sym->isFunction())
       Export.Kind = WASM_EXTERNAL_FUNCTION;
     else
       Export.Kind = WASM_EXTERNAL_GLOBAL;
@@ -405,6 +385,33 @@ void Writer::createLinkingSection() {
   if (!Config->Relocatable)
     return;
 
+  std::vector<std::pair<StringRef, uint32_t>> SymbolInfo;
+  auto addSymInfo = [&](const Symbol *Sym, StringRef ExternalName) {
+    uint32_t Flags =
+        (Sym->isLocal() ? WASM_SYMBOL_BINDING_LOCAL :
+         Sym->isWeak() ? WASM_SYMBOL_BINDING_WEAK : 0) |
+        (Sym->isHidden() ? WASM_SYMBOL_VISIBILITY_HIDDEN : 0);
+    if (Flags)
+      SymbolInfo.emplace_back(ExternalName, Flags);
+  };
+  // (Imports can't have internal linkage, their names don't need to be budged.)
+  for (const Symbol *Sym : ImportedFunctions)
+    addSymInfo(Sym, Sym->getName());
+  for (const Symbol *Sym : ImportedGlobals)
+    addSymInfo(Sym, Sym->getName());
+  for (const WasmExportEntry &E : ExportedSymbols)
+    addSymInfo(E.Sym, E.FieldName);
+  if (!SymbolInfo.empty()) {
+    SubSection SubSection(WASM_SYMBOL_INFO);
+    writeUleb128(SubSection.getStream(), SymbolInfo.size(), "num sym info");
+    for (auto Pair: SymbolInfo) {
+      writeStr(SubSection.getStream(), Pair.first, "sym name");
+      writeUleb128(SubSection.getStream(), Pair.second, "sym flags");
+    }
+    SubSection.finalizeContents();
+    SubSection.writeToStream(OS);
+  }
+
   if (Segments.size()) {
     SubSection SubSection(WASM_SEGMENT_INFO);
     writeUleb128(SubSection.getStream(), Segments.size(), "num data segments");
@@ -420,7 +427,7 @@ void Writer::createLinkingSection() {
   if (!InitFunctions.empty()) {
     SubSection SubSection(WASM_INIT_FUNCS);
     writeUleb128(SubSection.getStream(), InitFunctions.size(),
-                 "num init functionsw");
+                 "num init functions");
     for (const WasmInitFunc &F : InitFunctions) {
       writeUleb128(SubSection.getStream(), F.Priority, "priority");
       writeUleb128(SubSection.getStream(), F.FunctionIndex, "function index");
@@ -470,58 +477,32 @@ void Writer::createLinkingSection() {
 
 // Create the custom "name" section containing debug symbol names.
 void Writer::createNameSection() {
-  // Create an array of all function sorted by function index space
-  std::vector<const Symbol *> Names;
+  unsigned NumNames = ImportedFunctions.size();
+  for (const InputFunction *F : DefinedFunctions)
+    if (!F->getName().empty())
+      ++NumNames;
 
-  auto AddToNames = [&](Symbol* S) {
-    if (!S->isFunction() || S->WrittenToNameSec)
-        return;
-    // We also need to guard against two different symbols (two different
-    // names) for the same wasm function.  While this is possible (aliases)
-    // it is not legal in the "name" section.
-    InputFunction *Function = S->getFunction();
-    if (Function) {
-      if (Function->WrittenToNameSec)
-        return;
-      Function->WrittenToNameSec = true;
-    }
-    S->WrittenToNameSec = true;
-    Names.emplace_back(S);
-  };
-
-  for (ObjFile *File : Symtab->ObjectFiles) {
-    Names.reserve(Names.size() + File->getSymbols().size());
-    DEBUG(dbgs() << "adding names from: " << File->getName() << "\n");
-    for (Symbol *S : File->getSymbols()) {
-      if (S->isWeak())
-        continue;
-      AddToNames(S);
-    }
-  }
-
-  DEBUG(dbgs() << "adding symtab names\n");
-  for (Symbol *S : Symtab->getSymbols()) {
-    DEBUG(dbgs() << "sym: " << S->getName() << "\n");
-    if (S->getFile())
-      continue;
-    AddToNames(S);
-  }
+  if (NumNames == 0)
+    return;
 
   SyntheticSection *Section = createSyntheticSection(WASM_SEC_CUSTOM, "name");
 
-  std::sort(Names.begin(), Names.end(), [](const Symbol *A, const Symbol *B) {
-    return A->getOutputIndex() < B->getOutputIndex();
-  });
-
   SubSection FunctionSubsection(WASM_NAMES_FUNCTION);
   raw_ostream &OS = FunctionSubsection.getStream();
-  writeUleb128(OS, Names.size(), "name count");
+  writeUleb128(OS, NumNames, "name count");
 
-  // We have to iterate through the inputs twice so that all the imports
-  // appear first before any of the local function names.
-  for (const Symbol *S : Names) {
-    writeUleb128(OS, S->getOutputIndex(), "func index");
+  // Names must appear in function index order.  As it happens ImportedFunctions
+  // and DefinedFunctions are numbers in order with imported functions coming
+  // first.
+  for (const Symbol *S : ImportedFunctions) {
+    writeUleb128(OS, S->getOutputIndex(), "import index");
     writeStr(OS, S->getName(), "symbol name");
+  }
+  for (const InputFunction *F : DefinedFunctions) {
+    if (!F->getName().empty()) {
+      writeUleb128(OS, F->getOutputIndex(), "func index");
+      writeStr(OS, F->getName(), "symbol name");
+    }
   }
 
   FunctionSubsection.finalizeContents();
@@ -572,6 +553,11 @@ void Writer::layoutMemory() {
     MemoryPtr += Config->ZStackSize;
     Config->StackPointerSymbol->setVirtualAddress(MemoryPtr);
     debugPrint("mem: stack top   = %d\n", MemoryPtr);
+    // Set `__heap_base` to directly follow the end of the stack.  We don't
+    // allocate any heap memory up front, but instead really on the malloc/brk
+    // implementation growing the memory at runtime.
+    Config->HeapBaseSymbol->setVirtualAddress(MemoryPtr);
+    debugPrint("mem: heap base   = %d\n", MemoryPtr);
   }
 
   uint32_t MemSize = alignTo(MemoryPtr, WasmPageSize);
@@ -602,7 +588,7 @@ void Writer::createSections() {
   createDataSection();
 
   // Custom sections
-  if (Config->EmitRelocs)
+  if (Config->Relocatable)
     createRelocSections();
   createLinkingSection();
   if (!Config->StripDebug && !Config->StripAll)
@@ -617,7 +603,7 @@ void Writer::createSections() {
 
 void Writer::calculateImports() {
   for (Symbol *Sym : Symtab->getSymbols()) {
-    if (!Sym->isUndefined() || Sym->isWeak())
+    if (!Sym->isUndefined() || (Sym->isWeak() && !Config->Relocatable))
       continue;
 
     if (Sym->isFunction()) {
@@ -627,6 +613,57 @@ void Writer::calculateImports() {
       Sym->setOutputIndex(ImportedGlobals.size());
       ImportedGlobals.push_back(Sym);
     }
+  }
+}
+
+void Writer::calculateExports() {
+  bool ExportHidden = Config->Relocatable;
+  StringSet<> UsedNames;
+  auto BudgeLocalName = [&](const Symbol *Sym) {
+    StringRef SymName = Sym->getName();
+    // We can't budge non-local names.
+    if (!Sym->isLocal())
+      return SymName;
+    // We must budge local names that have a collision with a symbol that we
+    // haven't yet processed.
+    if (!Symtab->find(SymName) && UsedNames.insert(SymName).second)
+      return SymName;
+    for (unsigned I = 1; ; ++I) {
+      std::string NameBuf = (SymName + "." + Twine(I)).str();
+      if (!UsedNames.count(NameBuf)) {
+        StringRef Name = Saver.save(NameBuf);
+        UsedNames.insert(Name); // Insert must use safe StringRef from save()
+        return Name;
+      }
+    }
+  };
+
+  if (Config->CtorSymbol && (!Config->CtorSymbol->isHidden() || ExportHidden))
+    ExportedSymbols.emplace_back(
+        WasmExportEntry{Config->CtorSymbol, Config->CtorSymbol->getName()});
+
+  for (ObjFile *File : Symtab->ObjectFiles) {
+    for (Symbol *Sym : File->getSymbols()) {
+      if (!Sym->isDefined() || File != Sym->getFile())
+        continue;
+      if (Sym->isGlobal())
+        continue;
+      if (Sym->getFunction()->Discarded)
+        continue;
+
+      if ((Sym->isHidden() || Sym->isLocal()) && !ExportHidden)
+        continue;
+      ExportedSymbols.emplace_back(WasmExportEntry{Sym, BudgeLocalName(Sym)});
+    }
+  }
+
+  for (const Symbol *Sym : DefinedGlobals) {
+    // Can't export the SP right now because its mutable, and mutuable globals
+    // are yet supported in the official binary format.
+    // TODO(sbc): Remove this if/when the "mutable global" proposal is accepted.
+    if (Sym == Config->StackPointerSymbol)
+      continue;
+    ExportedSymbols.emplace_back(WasmExportEntry{Sym, BudgeLocalName(Sym)});
   }
 }
 
@@ -669,13 +706,18 @@ void Writer::assignIndexes() {
     Config->StackPointerSymbol->setOutputIndex(GlobalIndex++);
   }
 
-  if (Config->EmitRelocs)
+  if (Config->HeapBaseSymbol) {
+    DefinedGlobals.emplace_back(Config->HeapBaseSymbol);
+    Config->HeapBaseSymbol->setOutputIndex(GlobalIndex++);
+  }
+
+  if (Config->Relocatable)
     DefinedGlobals.reserve(Symtab->getSymbols().size());
 
   uint32_t TableIndex = InitialTableOffset;
 
   for (ObjFile *File : Symtab->ObjectFiles) {
-    if (Config->EmitRelocs) {
+    if (Config->Relocatable) {
       DEBUG(dbgs() << "Globals: " << File->getName() << "\n");
       for (Symbol *Sym : File->getSymbols()) {
         // Create wasm globals for data symbols defined in this file
@@ -702,12 +744,26 @@ void Writer::assignIndexes() {
 
   for (ObjFile *File : Symtab->ObjectFiles) {
     DEBUG(dbgs() << "Table Indexes: " << File->getName() << "\n");
-    for (Symbol *Sym : File->getTableSymbols()) {
-      if (Sym->hasTableIndex() || !Sym->hasOutputIndex())
-        continue;
-      Sym->setTableIndex(TableIndex++);
-      IndirectFunctions.emplace_back(Sym);
-    }
+    auto HandleTableRelocs = [&](InputChunk *Chunk) {
+      if (Chunk->Discarded)
+        return;
+      for (const WasmRelocation& Reloc : Chunk->getRelocations()) {
+        if (Reloc.Type != R_WEBASSEMBLY_TABLE_INDEX_I32 &&
+            Reloc.Type != R_WEBASSEMBLY_TABLE_INDEX_SLEB)
+          continue;
+        DEBUG(dbgs() << "getFunctionSymbol: " << Reloc.Index << "\n");
+        Symbol *Sym = File->getFunctionSymbol(Reloc.Index);
+        DEBUG(dbgs() << "gotFunctionSymbol: " << Sym->getName() << "\n");
+        if (Sym->hasTableIndex() || !Sym->hasOutputIndex())
+          continue;
+        Sym->setTableIndex(TableIndex++);
+        IndirectFunctions.emplace_back(Sym);
+      }
+    };
+    for (InputFunction* Function : File->Functions)
+      HandleTableRelocs(Function);
+    for (InputSegment* Segment : File->Segments)
+      HandleTableRelocs(Segment);
   }
 }
 
@@ -775,7 +831,9 @@ void Writer::createCtorFunction() {
   ArrayRef<uint8_t> BodyArray(
       reinterpret_cast<const uint8_t *>(CtorFunctionBody.data()),
       CtorFunctionBody.size());
-  CtorFunction = llvm::make_unique<SyntheticFunction>(Signature, BodyArray);
+  CtorFunction = llvm::make_unique<SyntheticFunction>(
+      Signature, BodyArray, Config->CtorSymbol->getName());
+  CtorFunction->setOutputIndex(FunctionIndex);
   DefinedFunctions.emplace_back(CtorFunction.get());
 }
 
@@ -808,6 +866,8 @@ void Writer::run() {
   calculateImports();
   log("-- assignIndexes");
   assignIndexes();
+  log("-- calculateExports");
+  calculateExports();
   log("-- calculateInitFunctions");
   calculateInitFunctions();
   if (!Config->Relocatable)

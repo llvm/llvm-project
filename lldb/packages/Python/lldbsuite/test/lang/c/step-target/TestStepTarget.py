@@ -24,7 +24,7 @@ class TestStepTarget(TestBase):
     @add_test_categories(['pyapi'])
     def get_to_start(self):
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)

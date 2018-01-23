@@ -70,8 +70,19 @@
 #include <clc/math/fmod.h>
 #include <clc/math/fract.h>
 #include <clc/math/frexp.h>
+#include <clc/math/half_cos.h>
+#include <clc/math/half_divide.h>
+#include <clc/math/half_exp.h>
+#include <clc/math/half_exp10.h>
+#include <clc/math/half_exp2.h>
+#include <clc/math/half_log.h>
+#include <clc/math/half_log10.h>
+#include <clc/math/half_log2.h>
+#include <clc/math/half_recip.h>
 #include <clc/math/half_rsqrt.h>
+#include <clc/math/half_sin.h>
 #include <clc/math/half_sqrt.h>
+#include <clc/math/half_tan.h>
 #include <clc/math/hypot.h>
 #include <clc/math/ilogb.h>
 #include <clc/math/ldexp.h>
@@ -89,7 +100,9 @@
 #include <clc/math/nextafter.h>
 #include <clc/math/pow.h>
 #include <clc/math/pown.h>
+#include <clc/math/powr.h>
 #include <clc/math/rint.h>
+#include <clc/math/rootn.h>
 #include <clc/math/round.h>
 #include <clc/math/sin.h>
 #include <clc/math/sincos.h>
@@ -98,6 +111,7 @@
 #include <clc/math/sqrt.h>
 #include <clc/math/tan.h>
 #include <clc/math/tanh.h>
+#include <clc/math/tanpi.h>
 #include <clc/math/tgamma.h>
 #include <clc/math/trunc.h>
 #include <clc/math/native_cos.h>

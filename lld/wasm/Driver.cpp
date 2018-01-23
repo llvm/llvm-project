@@ -134,14 +134,6 @@ static Optional<std::string> findFile(StringRef Path1, const Twine &Path2) {
   return None;
 }
 
-// Inject a new undefined symbol into the link.  This will cause the link to
-// fail unless this symbol can be found.
-static void addSyntheticUndefinedFunction(StringRef Name,
-                                          const WasmSignature *Type) {
-  log("injecting undefined func: " + Name);
-  Symtab->addUndefinedFunction(Name, Type);
-}
-
 static void printHelp(const char *Argv0) {
   WasmOptTable().PrintHelp(outs(), Argv0, "LLVM Linker", false);
 }
@@ -257,7 +249,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->AllowUndefined = Args.hasArg(OPT_allow_undefined);
   Config->CheckSignatures =
       Args.hasFlag(OPT_check_signatures, OPT_no_check_signatures, false);
-  Config->EmitRelocs = Args.hasArg(OPT_emit_relocs);
   Config->Entry = getEntry(Args, Args.hasArg(OPT_relocatable) ? "" : "_start");
   Config->ImportMemory = Args.hasArg(OPT_import_memory);
   Config->OutputFile = Args.getLastArgValue(OPT_o);
@@ -267,8 +258,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->StripDebug = Args.hasArg(OPT_strip_debug);
   errorHandler().Verbose = Args.hasArg(OPT_verbose);
   ThreadsEnabled = Args.hasFlag(OPT_threads, OPT_no_threads, true);
-  if (Config->Relocatable)
-    Config->EmitRelocs = true;
 
   Config->InitialMemory = args::getInteger(Args, OPT_initial_memory, 0);
   Config->GlobalBase = args::getInteger(Args, OPT_global_base, 1024);
@@ -290,18 +279,29 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (Config->Relocatable && Args.hasArg(OPT_undefined))
     error("undefined symbols specified for relocatable output file");
 
+  Symbol *EntrySym = nullptr;
   if (!Config->Relocatable) {
     static WasmSignature Signature = {{}, WASM_TYPE_NORESULT};
     if (!Config->Entry.empty())
-      addSyntheticUndefinedFunction(Config->Entry, &Signature);
+      EntrySym = Symtab->addUndefinedFunction(Config->Entry, &Signature);
 
     // Handle the `--undefined <sym>` options.
     for (auto* Arg : Args.filtered(OPT_undefined))
-      addSyntheticUndefinedFunction(Arg->getValue(), nullptr);
+      Symtab->addUndefinedFunction(Arg->getValue(), nullptr);
 
+    // Create linker-synthetic symbols
+    // __wasm_call_ctors:
+    //    Function that directly calls all ctors in priority order.
+    // __stack_pointer:
+    //    Wasm global that holds the address of the top of the explict
+    //    value stack in linear memory.
+    // __dso_handle;
+    //    Global in calls to __cxa_atexit to determine current DLL
     Config->CtorSymbol = Symtab->addDefinedFunction(
         "__wasm_call_ctors", &Signature, WASM_SYMBOL_VISIBILITY_HIDDEN);
     Config->StackPointerSymbol = Symtab->addDefinedGlobal("__stack_pointer");
+    Config->HeapBaseSymbol = Symtab->addDefinedGlobal("__heap_base");
+    Symtab->addDefinedGlobal("__dso_handle")->setVirtualAddress(0);
   }
 
   createFiles(Args);
@@ -339,8 +339,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       Sym->setHidden(false);
   }
 
-  if (!Config->Entry.empty() && !Symtab->find(Config->Entry)->isDefined())
-    error("entry point not found: " + Config->Entry);
+  if (EntrySym)
+    EntrySym->setHidden(false);
+
   if (errorCount())
     return;
 

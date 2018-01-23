@@ -23,7 +23,7 @@
 ; IR:   %[[r4:[a-zA-Z0-9]*]] = bitcast i64* %scevgep8 to i8*
 ;
 ; IR: polly.stmt.for.body3:
-; IR:   call void @llvm.memmove.p0i8.p0i8.i64(i8* %[[r2]], i8* %[[r4]], i64 32, i32 4, i1 false)
+; IR:   call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 %[[r2]], i8* align 4 %[[r4]], i64 32, i1 false)
 ;
 ;    #include <string.h>
 ;

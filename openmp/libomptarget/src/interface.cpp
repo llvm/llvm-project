@@ -19,6 +19,7 @@
 #include "rtl.h"
 
 #include <cassert>
+#include <cstdlib>
 
 ////////////////////////////////////////////////////////////////////////////////
 /// adds a target shared library to the target execution image

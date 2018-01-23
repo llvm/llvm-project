@@ -36,7 +36,7 @@ class FoundationSymtabTestCase(TestBase):
     def test_with_python_api(self):
         """Test symbol table access with Python APIs."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         target = self.dbg.CreateTarget(exe)

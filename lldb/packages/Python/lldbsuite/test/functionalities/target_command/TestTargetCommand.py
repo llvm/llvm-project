@@ -25,15 +25,15 @@ class targetCommandTestCase(TestBase):
 
     def test_target_command(self):
         """Test some target commands: create, list, select."""
-        da = {'C_SOURCES': 'a.c', 'EXE': 'a.out'}
+        da = {'C_SOURCES': 'a.c', 'EXE': self.getBuildArtifact('a.out')}
         self.build(dictionary=da)
         self.addTearDownCleanup(dictionary=da)
 
-        db = {'C_SOURCES': 'b.c', 'EXE': 'b.out'}
+        db = {'C_SOURCES': 'b.c', 'EXE': self.getBuildArtifact('b.out')}
         self.build(dictionary=db)
         self.addTearDownCleanup(dictionary=db)
 
-        dc = {'C_SOURCES': 'c.c', 'EXE': 'c.out'}
+        dc = {'C_SOURCES': 'c.c', 'EXE': self.getBuildArtifact('c.out')}
         self.build(dictionary=dc)
         self.addTearDownCleanup(dictionary=dc)
 
@@ -44,7 +44,7 @@ class targetCommandTestCase(TestBase):
     @expectedFailureAndroid(archs=['aarch64'])
     def test_target_variable_command(self):
         """Test 'target variable' command before and after starting the inferior."""
-        d = {'C_SOURCES': 'globals.c', 'EXE': 'globals'}
+        d = {'C_SOURCES': 'globals.c', 'EXE': self.getBuildArtifact('globals')}
         self.build(dictionary=d)
         self.addTearDownCleanup(dictionary=d)
 
@@ -53,7 +53,7 @@ class targetCommandTestCase(TestBase):
     @expectedFailureAndroid(archs=['aarch64'])
     def test_target_variable_command_no_fail(self):
         """Test 'target variable' command before and after starting the inferior."""
-        d = {'C_SOURCES': 'globals.c', 'EXE': 'globals'}
+        d = {'C_SOURCES': 'globals.c', 'EXE': self.getBuildArtifact('globals')}
         self.build(dictionary=d)
         self.addTearDownCleanup(dictionary=d)
 
@@ -61,7 +61,7 @@ class targetCommandTestCase(TestBase):
 
     def do_target_command(self):
         """Exercise 'target create', 'target list', 'target select' commands."""
-        exe_a = os.path.join(os.getcwd(), "a.out")
+        exe_a = self.getBuildArtifact("a.out")
         exe_b = os.path.join(os.getcwd(), "b.out")
         exe_c = os.path.join(os.getcwd(), "c.out")
 

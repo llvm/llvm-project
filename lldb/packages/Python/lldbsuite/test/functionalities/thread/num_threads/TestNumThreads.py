@@ -27,7 +27,7 @@ class NumberOfThreadsTestCase(TestBase):
     def test_number_of_threads(self):
         """Test number of threads."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # This should create a breakpoint with 1 location.
@@ -66,7 +66,7 @@ class NumberOfThreadsTestCase(TestBase):
     def test_unique_stacks(self):
         """Test backtrace unique with multiple threads executing the same stack."""
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Set a break point on the thread3 notify all (should get hit on threads 4-13).

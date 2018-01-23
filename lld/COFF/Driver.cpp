@@ -17,6 +17,7 @@
 #include "lld/Common/Driver.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Timer.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -46,6 +47,8 @@ using llvm::sys::Process;
 
 namespace lld {
 namespace coff {
+
+static Timer InputFileTimer("Input File Reading", Timer::root());
 
 Configuration *Config;
 LinkerDriver *Driver;
@@ -536,10 +539,39 @@ static void createImportLibrary(bool AsLib) {
     Exports.push_back(E2);
   }
 
-  auto E = writeImportLibrary(getImportName(AsLib), getImplibPath(), Exports,
-                              Config->Machine, false);
-  handleAllErrors(std::move(E),
-                  [&](ErrorInfoBase &EIB) { error(EIB.message()); });
+  auto HandleError = [](Error &&E) {
+    handleAllErrors(std::move(E),
+                    [](ErrorInfoBase &EIB) { error(EIB.message()); });
+  };
+  std::string LibName = getImportName(AsLib);
+  std::string Path = getImplibPath();
+
+  // If the import library already exists, replace it only if the contents
+  // have changed.
+  ErrorOr<std::unique_ptr<MemoryBuffer>> OldBuf = MemoryBuffer::getFile(Path);
+  if (!OldBuf) {
+    HandleError(writeImportLibrary(LibName, Path, Exports, Config->Machine,
+                                   false, Config->MinGW));
+    return;
+  }
+
+  SmallString<128> TmpName;
+  if (std::error_code EC =
+          sys::fs::createUniqueFile(Path + ".tmp-%%%%%%%%.lib", TmpName))
+    fatal("cannot create temporary file for import library " + Path + ": " +
+          EC.message());
+
+  if (Error E = writeImportLibrary(LibName, TmpName, Exports, Config->Machine,
+                                   false, Config->MinGW)) {
+    HandleError(std::move(E));
+    return;
+  }
+
+  std::unique_ptr<MemoryBuffer> NewBuf = check(MemoryBuffer::getFile(TmpName));
+  if ((*OldBuf)->getBuffer() != NewBuf->getBuffer()) {
+    OldBuf->reset();
+    HandleError(errorCodeToError(sys::fs::rename(TmpName, Path)));
+  }
 }
 
 static void parseModuleDefs(StringRef Path) {
@@ -637,8 +669,8 @@ filterBitcodeFiles(StringRef Path, std::vector<std::string> &TemporaryFiles) {
   log("Creating a temporary archive for " + Path + " to remove bitcode files");
 
   SmallString<128> S;
-  if (auto EC = sys::fs::createTemporaryFile("lld-" + sys::path::stem(Path),
-                                             ".lib", S))
+  if (std::error_code EC = sys::fs::createTemporaryFile(
+          "lld-" + sys::path::stem(Path), ".lib", S))
     fatal("cannot create a temporary file: " + EC.message());
   std::string Temp = S.str();
   TemporaryFiles.push_back(Temp);
@@ -714,6 +746,8 @@ void LinkerDriver::enqueueTask(std::function<void()> Task) {
 }
 
 bool LinkerDriver::run() {
+  ScopedTimer T(InputFileTimer);
+
   bool DidWork = !TaskQueue.empty();
   while (!TaskQueue.empty()) {
     TaskQueue.front()();
@@ -765,6 +799,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     return;
   }
 
+  if (Args.hasArg(OPT_show_timing))
+    Config->ShowTiming = true;
+
+  ScopedTimer T(Timer::root());
   // Handle --version, which is an lld extension. This option is a bit odd
   // because it doesn't start with "/", but we deliberately chose "--" to
   // avoid conflict with /version and for compatibility with clang-cl.
@@ -1295,7 +1333,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // Handle /output-def (MinGW specific).
   if (auto *Arg = Args.getLastArg(OPT_output_def))
     writeDefFile(Arg->getValue());
-
+  
   // Set extra alignment for .comm symbols
   for (auto Pair : Config->AlignComm) {
     StringRef Name = Pair.first;
@@ -1331,6 +1369,11 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Write the result.
   writeResult();
+
+  // Stop early so we can print the results.
+  Timer::root().stop();
+  if (Config->ShowTiming)
+    Timer::root().print();
 }
 
 } // namespace coff

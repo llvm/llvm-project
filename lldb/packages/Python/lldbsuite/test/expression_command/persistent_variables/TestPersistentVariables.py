@@ -19,7 +19,7 @@ class PersistentVariablesTestCase(TestBase):
         """Test that lldb persistent variables works correctly."""
         self.build()
 
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         self.runCmd("breakpoint set --source-pattern-regexp break")
 

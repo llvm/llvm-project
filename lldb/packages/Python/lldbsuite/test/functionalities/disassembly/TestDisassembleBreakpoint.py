@@ -22,7 +22,7 @@ class DisassemblyTestCase(TestBase):
         bugnumber="function names print fully demangled instead of name-only")
     def test(self):
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
         self.expect("file " + exe,
                     patterns=["Current executable set to .*a.out.*"])
 

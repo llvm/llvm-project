@@ -717,6 +717,10 @@ class Base(unittest2.TestCase):
             lldb.remote_platform.Run(shell_cmd)
         self.addTearDownHook(clean_working_directory)
 
+    def getBuildArtifact(self, name="a.out"):
+        """Return absolute path to an artifact in the test's build directory."""
+        return os.path.join(os.getcwd(), name)
+
     def setUp(self):
         """Fixture for unittest test case setup.
 
@@ -1573,7 +1577,8 @@ class Base(unittest2.TestCase):
     def buildGo(self):
         """Build the default go binary.
         """
-        system([[which('go'), 'build -gcflags "-N -l" -o a.out main.go']])
+        exe = self.getBuildArtifact("a.out")
+        system([[which('go'), 'build -gcflags "-N -l" -o %s main.go' % exe]])
 
     def signBinary(self, binary_path):
         if sys.platform.startswith("darwin"):

@@ -21,7 +21,7 @@ class StdUniquePtrDataFormatterTestCase(TestBase):
     @skipIfwatchOS  # libstdcpp not ported to watchos
     def test_with_run_command(self):
         self.build()
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_source_regexp(
             self, "Set break point at this line.")
@@ -74,7 +74,7 @@ class StdUniquePtrDataFormatterTestCase(TestBase):
         # reference chain and that it correctly handles the different options
         # for the frame variable command in this case.
         self.build()
-        self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_source_regexp(
             self, "Set break point at this line.")

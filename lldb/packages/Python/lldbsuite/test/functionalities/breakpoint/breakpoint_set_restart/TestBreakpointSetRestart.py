@@ -16,7 +16,7 @@ class BreakpointSetRestart(TestBase):
         self.build()
 
         cwd = os.getcwd()
-        exe = os.path.join(cwd, 'a.out')
+        exe = self.getBuildArtifact("a.out")
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)

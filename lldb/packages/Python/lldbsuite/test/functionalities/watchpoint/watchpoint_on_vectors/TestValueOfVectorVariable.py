@@ -31,12 +31,12 @@ class TestValueOfVectorVariableTestCase(TestBase):
         TestBase.setUp(self)
         # Our simple source filename.
         self.source = 'main.c'
-        self.exe_name = 'a.out'
+        self.exe_name = self.getBuildArtifact("a.out")
         self.d = {'C_SOURCES': self.source, 'EXE': self.exe_name}
 
     def value_of_vector_variable_with_watchpoint_set(self):
         """Test verify displayed value of vector variable"""
-        exe = os.path.join(os.getcwd(), 'a.out')
+        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Set break to get a frame

@@ -55,12 +55,9 @@
 #include <unistd.h>
 
 #include "lldb/Core/Communication.h"
-#include "lldb/Core/Module.h"
-#include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/ThreadLauncher.h"
-#include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/CleanUp.h"
@@ -1463,36 +1460,28 @@ static bool ShouldLaunchUsingXPC(ProcessLaunchInfo &launch_info) {
 
 Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
   Status error;
-  char exe_path[PATH_MAX];
-  PlatformSP host_platform_sp(Platform::GetHostPlatform());
+  FileSpec exe_spec(launch_info.GetExecutableFile());
 
-  ModuleSpec exe_module_spec(launch_info.GetExecutableFile(),
-                             launch_info.GetArchitecture());
-
-  if (!llvm::sys::fs::is_regular_file(
-          exe_module_spec.GetFileSpec().GetPath())) {
-    lldb::ModuleSP exe_module_sp;
-    error = host_platform_sp->ResolveExecutable(exe_module_spec, exe_module_sp,
-                                                NULL);
-
-    if (error.Fail())
-      return error;
-
-    if (exe_module_sp)
-      exe_module_spec.GetFileSpec() = exe_module_sp->GetFileSpec();
+  llvm::sys::fs::file_status stats;
+  status(exe_spec.GetPath(), stats);
+  if (!exists(stats)) {
+    exe_spec.ResolvePath();
+    status(exe_spec.GetPath(), stats);
   }
-
-  if (exe_module_spec.GetFileSpec().Exists()) {
-    exe_module_spec.GetFileSpec().GetPath(exe_path, sizeof(exe_path));
-  } else {
-    launch_info.GetExecutableFile().GetPath(exe_path, sizeof(exe_path));
-    error.SetErrorStringWithFormat("executable doesn't exist: '%s'", exe_path);
+  if (!exists(stats)) {
+    exe_spec.ResolveExecutableLocation();
+    status(exe_spec.GetPath(), stats);
+  }
+  if (!exists(stats)) {
+    error.SetErrorStringWithFormatv("executable doesn't exist: '{0}'",
+                                    launch_info.GetExecutableFile());
     return error;
   }
 
   if (launch_info.GetFlags().Test(eLaunchFlagLaunchInTTY)) {
 #if !defined(__arm__) && !defined(__arm64__) && !defined(__aarch64__)
-    return LaunchInNewTerminalWithAppleScript(exe_path, launch_info);
+    return LaunchInNewTerminalWithAppleScript(exe_spec.GetPath().c_str(),
+                                              launch_info);
 #else
     error.SetErrorString("launching a process in a new terminal is not "
                          "supported on iOS devices");
@@ -1503,9 +1492,10 @@ Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
   lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
 
   if (ShouldLaunchUsingXPC(launch_info)) {
-    error = LaunchProcessXPC(exe_path, launch_info, pid);
+    error = LaunchProcessXPC(exe_spec.GetPath().c_str(), launch_info, pid);
   } else {
-    error = LaunchProcessPosixSpawn(exe_path, launch_info, pid);
+    error =
+        LaunchProcessPosixSpawn(exe_spec.GetPath().c_str(), launch_info, pid);
   }
 
   if (pid != LLDB_INVALID_PROCESS_ID) {
