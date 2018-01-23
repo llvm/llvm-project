@@ -8,7 +8,7 @@ from __future__ import print_function
 from lldbsuite.test.lldbtest import *
 
 
-class MiTestCaseBase(TestBase):
+class MiTestCaseBase(Base):
 
     mydir = None
     myexe = None
