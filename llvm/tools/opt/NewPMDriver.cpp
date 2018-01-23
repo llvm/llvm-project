@@ -82,6 +82,11 @@ static cl::opt<std::string> VectorizerStartEPPipeline(
     cl::desc("A textual description of the function pass pipeline inserted at "
              "the VectorizerStart extension point into default pipelines"),
     cl::Hidden);
+static cl::opt<std::string> PipelineStartEPPipeline(
+    "passes-ep-pipeline-start",
+    cl::desc("A textual description of the function pass pipeline inserted at "
+             "the PipelineStart extension point into default pipelines"),
+    cl::Hidden);
 enum PGOKind { NoPGO, InstrGen, InstrUse, SampleUse };
 static cl::opt<PGOKind> PGOKindFlag(
     "pgo-kind", cl::init(NoPGO), cl::Hidden,
@@ -159,6 +164,12 @@ static void registerEPCallbacks(PassBuilder &PB, bool VerifyEachPass,
       PB.parsePassPipeline(PM, VectorizerStartEPPipeline, VerifyEachPass,
                            DebugLogging);
     });
+  if (tryParsePipelineText<ModulePassManager>(PB, PipelineStartEPPipeline))
+    PB.registerPipelineStartEPCallback(
+        [&PB, VerifyEachPass, DebugLogging](ModulePassManager &PM) {
+          PB.parsePassPipeline(PM, PipelineStartEPPipeline, VerifyEachPass,
+                               DebugLogging);
+        });
 }
 
 #ifdef LINK_POLLY_INTO_TOOLS

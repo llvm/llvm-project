@@ -700,7 +700,7 @@ Example matches x.y() and y()
 Given
   switch(a) { case 42: break; default: break; }
 caseStmt()
-  matches 'case 42: break;'.
+  matches 'case 42:'.
 </pre></td></tr>
 
 
@@ -741,7 +741,7 @@ Example match: {1}, (1, 2)
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('compoundStmt0')"><a name="compoundStmt0Anchor">compoundStmt</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CompoundStmt.html">CompoundStmt</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="compoundStmt0"><pre>Matches compound statements.
 
-Example matches '{}' and '{{}}'in 'for (;;) {{}}'
+Example matches '{}' and '{{}}' in 'for (;;) {{}}'
   for (;;) {{}}
 </pre></td></tr>
 
@@ -1028,7 +1028,7 @@ declStmt()
 Given
   switch(a) { case 42: break; default: break; }
 defaultStmt()
-  matches 'default: break;'.
+  matches 'default:'.
 </pre></td></tr>
 
 
@@ -1197,9 +1197,9 @@ Example: Given
 materializeTemporaryExpr() matches 'f()' in these statements
   T u(f());
   g(f());
+  f().func();
 but does not match
   f();
-  f().func();
 </pre></td></tr>
 
 
@@ -1369,7 +1369,7 @@ substNonTypeTemplateParmExpr()
 Given
   switch(a) { case 42: break; default: break; }
 switchCase()
-  matches 'case 42: break;' and 'default: break;'.
+  matches 'case 42:' and 'default:'.
 </pre></td></tr>
 
 
@@ -2749,6 +2749,15 @@ Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXOp
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('hasTrailingReturn0')"><a name="hasTrailingReturn0Anchor">hasTrailingReturn</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="hasTrailingReturn0"><pre>Matches a function declared with a trailing return type.
+
+Example matches Y (matcher = functionDecl(hasTrailingReturn()))
+int X() {}
+auto Y() -&gt; int {}
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isConstexpr1')"><a name="isConstexpr1Anchor">isConstexpr</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isConstexpr1"><pre>Matches constexpr variable and function declarations.
 
@@ -2940,11 +2949,11 @@ Given
   void j(int i);
   void k(int x, int y, int z, ...);
 functionDecl(parameterCountIs(2))
-  matches void g(int i, int j) {}
+  matches g and h
 functionProtoType(parameterCountIs(2))
-  matches void h(int i, int j)
+  matches g and h
 functionProtoType(parameterCountIs(3))
-  matches void k(int x, int y, int z, ...);
+  matches k
 </pre></td></tr>
 
 
@@ -2990,11 +2999,11 @@ Given
   void j(int i);
   void k(int x, int y, int z, ...);
 functionDecl(parameterCountIs(2))
-  matches void g(int i, int j) {}
+  matches g and h
 functionProtoType(parameterCountIs(2))
-  matches void h(int i, int j)
+  matches g and h
 functionProtoType(parameterCountIs(3))
-  matches void k(int x, int y, int z, ...);
+  matches k
 </pre></td></tr>
 
 
@@ -3534,7 +3543,7 @@ an arbitrary precision integer. 'Value' must be euqal to the canonical
 representation of that integral value in base 10.
 
 Given
-  template&lt;int T&gt; struct A {};
+  template&lt;int T&gt; struct C {};
   C&lt;42&gt; c;
 classTemplateSpecializationDecl(
   hasAnyTemplateArgument(equalsIntegralValue("42")))
@@ -3546,7 +3555,7 @@ classTemplateSpecializationDecl(
 <tr><td colspan="4" class="doc" id="isIntegral0"><pre>Matches a TemplateArgument that is an integral value.
 
 Given
-  template&lt;int T&gt; struct A {};
+  template&lt;int T&gt; struct C {};
   C&lt;42&gt; c;
 classTemplateSpecializationDecl(
   hasAnyTemplateArgument(isIntegral()))
@@ -3973,10 +3982,11 @@ Usable as: Any Matcher
 <tr><td colspan="4" class="doc" id="forEachDescendant0"><pre>Matches AST nodes that have descendant AST nodes that match the
 provided matcher.
 
-Example matches X, A, B, C
+Example matches X, A, A::X, B, B::C, B::C::X
   (matcher = cxxRecordDecl(forEachDescendant(cxxRecordDecl(hasName("X")))))
-  class X {};  Matches X, because X::X is a class of name X inside X.
-  class A { class X {}; };
+  class X {};
+  class A { class X {}; };  Matches A, because A::X is a class of name
+                            X inside A.
   class B { class C { class X {}; }; };
 
 DescendantT must be an AST base type.
@@ -3999,10 +4009,11 @@ Usable as: Any Matcher
 <tr><td colspan="4" class="doc" id="forEach0"><pre>Matches AST nodes that have child AST nodes that match the
 provided matcher.
 
-Example matches X, Y
+Example matches X, Y, Y::X, Z::Y, Z::Y::X
   (matcher = cxxRecordDecl(forEach(cxxRecordDecl(hasName("X")))
-  class X {};  Matches X, because X::X is a class of name X inside X.
-  class Y { class X {}; };
+  class X {};
+  class Y { class X {}; };  Matches Y, because Y::X is a class of name X
+                            inside Y.
   class Z { class Y { class X {}; }; };  Does not match Z.
 
 ChildT must be an AST base type.
@@ -4479,7 +4490,7 @@ matches 'a' in
 Example matches y.x()
   (matcher = cxxMemberCallExpr(on(hasType(cxxRecordDecl(hasName("Y"))))))
   class Y { public: void x(); };
-  void z() { Y y; y.x(); }",
+  void z() { Y y; y.x(); }
 
 FIXME: Overload to allow directly matching types?
 </pre></td></tr>
@@ -4795,7 +4806,7 @@ Given
   A&lt;bool, int&gt; b;
   A&lt;int, bool&gt; c;
 
-  template&lt;typename T&gt; f() {};
+  template&lt;typename T&gt; void f() {}
   void func() { f&lt;int&gt;(); };
 classTemplateSpecializationDecl(hasTemplateArgument(
     1, refersToType(asString("int"))))
@@ -5312,7 +5323,7 @@ Given
   A&lt;bool, int&gt; b;
   A&lt;int, bool&gt; c;
 
-  template&lt;typename T&gt; f() {};
+  template&lt;typename T&gt; void f() {}
   void func() { f&lt;int&gt;(); };
 classTemplateSpecializationDecl(hasTemplateArgument(
     1, refersToType(asString("int"))))
@@ -6000,8 +6011,8 @@ Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1AddrL
 <tr><td colspan="4" class="doc" id="isExpr0"><pre>Matches a sugar TemplateArgument that refers to a certain expression.
 
 Given
-  template&lt;typename T&gt; struct A {};
-  struct B { B* next; };
+  struct B { int next; };
+  template&lt;int(B::*next_ptr)&gt; struct A {};
   A&lt;&amp;B::next&gt; a;
 templateSpecializationType(hasAnyTemplateArgument(
   isExpr(hasDescendant(declRefExpr(to(fieldDecl(hasName("next"))))))))
@@ -6015,11 +6026,11 @@ templateSpecializationType(hasAnyTemplateArgument(
 declaration.
 
 Given
-  template&lt;typename T&gt; struct A {};
-  struct B { B* next; };
+  struct B { int next; };
+  template&lt;int(B::*next_ptr)&gt; struct A {};
   A&lt;&amp;B::next&gt; a;
 classTemplateSpecializationDecl(hasAnyTemplateArgument(
-    refersToDeclaration(fieldDecl(hasName("next"))))
+    refersToDeclaration(fieldDecl(hasName("next")))))
   matches the specialization A&lt;&amp;B::next&gt; with fieldDecl(...) matching
     B::next
 </pre></td></tr>
@@ -6029,7 +6040,7 @@ classTemplateSpecializationDecl(hasAnyTemplateArgument(
 <tr><td colspan="4" class="doc" id="refersToIntegralType0"><pre>Matches a TemplateArgument that referes to an integral type.
 
 Given
-  template&lt;int T&gt; struct A {};
+  template&lt;int T&gt; struct C {};
   C&lt;42&gt; c;
 classTemplateSpecializationDecl(
   hasAnyTemplateArgument(refersToIntegralType(asString("int"))))
@@ -6127,7 +6138,7 @@ Given
   A&lt;bool, int&gt; b;
   A&lt;int, bool&gt; c;
 
-  template&lt;typename T&gt; f() {};
+  template&lt;typename T&gt; void f() {}
   void func() { f&lt;int&gt;(); };
 classTemplateSpecializationDecl(hasTemplateArgument(
     1, refersToType(asString("int"))))
