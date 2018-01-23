@@ -168,8 +168,8 @@ public:
 
   /**
    * Sets the maximum cache size that can be persistent across build, in terms
-   * of percentage of the available space on the the disk. Set to 100 to
-   * indicate no limit, 50 to indicate that the cache size will not be left over
+   * of percentage of the available space on the disk. Set to 100 to indicate
+   * no limit, 50 to indicate that the cache size will not be left over
    * half the available space. A value over 100 will be reduced to 100, and a
    * value of 0 will be ignored.
    *

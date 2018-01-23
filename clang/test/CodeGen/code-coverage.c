@@ -3,8 +3,14 @@
 // RUN: %clang_cc1 -emit-llvm -disable-red-zone -femit-coverage-data -coverage-notes-file=aaa.gcno -coverage-data-file=bbb.gcda -dwarf-column-info -debug-info-kind=limited -dwarf-version=4 %s -o - | FileCheck %s --check-prefix GCOV_FILE_INFO
 
 // RUN: %clang_cc1 -emit-llvm-bc -o /dev/null -fexperimental-new-pass-manager -fdebug-pass-manager -femit-coverage-data %s 2>&1 | FileCheck --check-prefix=NEWPM %s
+// RUN: %clang_cc1 -emit-llvm-bc -o /dev/null -fexperimental-new-pass-manager -fdebug-pass-manager -femit-coverage-data -O3 %s 2>&1 | FileCheck --check-prefix=NEWPM-O3 %s
 
+// NEWPM-NOT: Running pass
 // NEWPM: Running pass: GCOVProfilerPass
+
+// NEWPM-O3-NOT: Running pass
+// NEWPM-O3: Running pass: ForceFunctionAttrsPass
+// NEWPM-O3: Running pass: GCOVProfilerPass
 
 
 int test1(int a) {

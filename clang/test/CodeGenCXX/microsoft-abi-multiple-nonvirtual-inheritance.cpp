@@ -88,8 +88,11 @@ void ChildOverride::right() {
 // ChildOverride::right gets 'this' cast to Right* in ECX (i.e. this+4) so we
 // need to adjust 'this' before use.
 //
+// CHECK: %[[THIS_STORE:.*]] = alloca %struct.ChildOverride*, align 4
 // CHECK: %[[THIS_ADDR:.*]] = alloca %struct.ChildOverride*, align 4
-// CHECK: %[[THIS_INIT:.*]] = bitcast i8* %[[ECX:.*]] to %struct.ChildOverride*
+// CHECK: %[[COERCE_VAL:.*]] = bitcast i8* %[[ECX:.*]] to %struct.ChildOverride*
+// CHECK: store %struct.ChildOverride* %[[COERCE_VAL]], %struct.ChildOverride** %[[THIS_STORE]], align 4
+// CHECK: %[[THIS_INIT:.*]] = load %struct.ChildOverride*, %struct.ChildOverride** %[[THIS_STORE]], align 4
 // CHECK: store %struct.ChildOverride* %[[THIS_INIT]], %struct.ChildOverride** %[[THIS_ADDR]], align 4
 // CHECK: %[[THIS_RELOAD:.*]] = load %struct.ChildOverride*, %struct.ChildOverride** %[[THIS_ADDR]]
 // CHECK: %[[THIS_i8:.*]] = bitcast %struct.ChildOverride* %[[THIS_RELOAD]] to i8*
@@ -132,8 +135,11 @@ struct GrandchildOverride : ChildOverride {
 void GrandchildOverride::right() {
 // CHECK-LABEL: define x86_thiscallcc void @"\01?right@GrandchildOverride@@UAEXXZ"(i8*
 //
+// CHECK: %[[THIS_STORE:.*]] = alloca %struct.GrandchildOverride*, align 4
 // CHECK: %[[THIS_ADDR:.*]] = alloca %struct.GrandchildOverride*, align 4
-// CHECK: %[[THIS_INIT:.*]] = bitcast i8* %[[ECX:.*]] to %struct.GrandchildOverride*
+// CHECK: %[[COERCE_VAL:.*]] = bitcast i8* %[[ECX:.*]] to %struct.GrandchildOverride*
+// CHECK: store %struct.GrandchildOverride* %[[COERCE_VAL]], %struct.GrandchildOverride** %[[THIS_STORE]], align 4
+// CHECK: %[[THIS_INIT:.*]] = load %struct.GrandchildOverride*, %struct.GrandchildOverride** %[[THIS_STORE]], align 4
 // CHECK: store %struct.GrandchildOverride* %[[THIS_INIT]], %struct.GrandchildOverride** %[[THIS_ADDR]], align 4
 // CHECK: %[[THIS_RELOAD:.*]] = load %struct.GrandchildOverride*, %struct.GrandchildOverride** %[[THIS_ADDR]]
 // CHECK: %[[THIS_i8:.*]] = bitcast %struct.GrandchildOverride* %[[THIS_RELOAD]] to i8*

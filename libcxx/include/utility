@@ -890,7 +890,7 @@ template<class... _Tp>
 
 #if _LIBCPP_STD_VER > 11
 template<class _T1, class _T2 = _T1>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _T1 exchange(_T1& __obj, _T2 && __new_value)
 {
     _T1 __old_value = _VSTD::move(__obj);

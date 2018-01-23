@@ -200,7 +200,7 @@ private:
   /// references for the .debug_info section
   unsigned verifyDebugInfoReferences();
 
-  /// Verify the the DW_AT_stmt_list encoding and value and ensure that no
+  /// Verify the DW_AT_stmt_list encoding and value and ensure that no
   /// compile units that have the same DW_AT_stmt_list value.
   void verifyDebugLineStmtOffsets();
 

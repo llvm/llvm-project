@@ -744,12 +744,26 @@ void Writer::assignIndexes() {
 
   for (ObjFile *File : Symtab->ObjectFiles) {
     DEBUG(dbgs() << "Table Indexes: " << File->getName() << "\n");
-    for (Symbol *Sym : File->getTableSymbols()) {
-      if (!Sym || Sym->hasTableIndex() || !Sym->hasOutputIndex())
-        continue;
-      Sym->setTableIndex(TableIndex++);
-      IndirectFunctions.emplace_back(Sym);
-    }
+    auto HandleTableRelocs = [&](InputChunk *Chunk) {
+      if (Chunk->Discarded)
+        return;
+      for (const WasmRelocation& Reloc : Chunk->getRelocations()) {
+        if (Reloc.Type != R_WEBASSEMBLY_TABLE_INDEX_I32 &&
+            Reloc.Type != R_WEBASSEMBLY_TABLE_INDEX_SLEB)
+          continue;
+        DEBUG(dbgs() << "getFunctionSymbol: " << Reloc.Index << "\n");
+        Symbol *Sym = File->getFunctionSymbol(Reloc.Index);
+        DEBUG(dbgs() << "gotFunctionSymbol: " << Sym->getName() << "\n");
+        if (Sym->hasTableIndex() || !Sym->hasOutputIndex())
+          continue;
+        Sym->setTableIndex(TableIndex++);
+        IndirectFunctions.emplace_back(Sym);
+      }
+    };
+    for (InputFunction* Function : File->Functions)
+      HandleTableRelocs(Function);
+    for (InputSegment* Segment : File->Segments)
+      HandleTableRelocs(Segment);
   }
 }
 

@@ -316,7 +316,7 @@ define i32 @bextr32_subreg(i32 %x)  uwtable  ssp {
 ; CHECK-LABEL: bextr32_subreg:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    movzbl %ah, %eax # NOREX
+; CHECK-NEXT:    movzbl %ah, %eax
 ; CHECK-NEXT:    retq
   %1 = lshr i32 %x, 8
   %2 = and i32 %1, 255
@@ -374,7 +374,7 @@ define i64 @bextr64_subreg(i64 %x)  uwtable  ssp {
 ; CHECK-LABEL: bextr64_subreg:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    movzbl %ah, %eax # NOREX
+; CHECK-NEXT:    movzbl %ah, %eax
 ; CHECK-NEXT:    retq
   %1 = lshr i64 %x, 8
   %2 = and i64 %1, 255

@@ -114,7 +114,7 @@ define void @extract_i8_15(i8* nocapture %dst, <16 x i8> %foo) nounwind {
 ; SSE2-X64-LABEL: extract_i8_15:
 ; SSE2-X64:       # %bb.0:
 ; SSE2-X64-NEXT:    pextrw $7, %xmm0, %eax
-; SSE2-X64-NEXT:    movb %ah, (%rdi) # NOREX
+; SSE2-X64-NEXT:    movb %ah, (%rdi)
 ; SSE2-X64-NEXT:    retq
 ;
 ; SSE41-X32-LABEL: extract_i8_15:
@@ -142,7 +142,7 @@ define void @extract_i8_15(i8* nocapture %dst, <16 x i8> %foo) nounwind {
 ; SSE-F128-LABEL: extract_i8_15:
 ; SSE-F128:       # %bb.0:
 ; SSE-F128-NEXT:    pextrw $7, %xmm0, %eax
-; SSE-F128-NEXT:    movb %ah, (%rdi) # NOREX
+; SSE-F128-NEXT:    movb %ah, (%rdi)
 ; SSE-F128-NEXT:    retq
   %vecext = extractelement <16 x i8> %foo, i32 15
   store i8 %vecext, i8* %dst, align 1
