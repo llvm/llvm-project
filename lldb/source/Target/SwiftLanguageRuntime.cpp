@@ -1194,6 +1194,19 @@ SwiftLanguageRuntime::GetMemoryReader() {
       if (m_process->GetTarget().GetImages().FindSymbolsWithNameAndType(
               name_cs, lldb::eSymbolTypeAny, sc_list)) {
         SymbolContext sym_ctx;
+        // Remove undefined symbols from the list:
+        size_t num_sc_matches = sc_list.GetSize();
+        if (num_sc_matches > 1) {
+          SymbolContextList tmp_sc_list(sc_list);
+          sc_list.Clear();
+          for (size_t idx = 0; idx < num_sc_matches; idx++) {
+            tmp_sc_list.GetContextAtIndex(idx, sym_ctx);
+            if (sym_ctx.symbol &&
+                sym_ctx.symbol->GetType() != lldb::eSymbolTypeUndefined) {
+                sc_list.Append(sym_ctx);
+            }
+          }
+        }
         if (sc_list.GetSize() == 1 && sc_list.GetContextAtIndex(0, sym_ctx)) {
           if (sym_ctx.symbol) {
             auto load_addr =
