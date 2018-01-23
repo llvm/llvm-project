@@ -296,6 +296,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(hasTemplateArgument);
   REGISTER_MATCHER(hasThen);
   REGISTER_MATCHER(hasThreadStorageDuration);
+  REGISTER_MATCHER(hasTrailingReturn);
   REGISTER_MATCHER(hasTrueExpression);
   REGISTER_MATCHER(hasTypeLoc);
   REGISTER_MATCHER(hasUnaryOperand);

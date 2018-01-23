@@ -148,8 +148,10 @@ public:
   /// \brief Print any statistics that have been gathered regarding
   /// the external AST source.
   void PrintStats() override;
-  
-  
+
+  /// \brief Retrieve the module that corresponds to the given module ID.
+  Module *getModule(unsigned ID) override;
+
   /// \brief Perform layout on the given record.
   ///
   /// This routine allows the external AST source to provide an specific 

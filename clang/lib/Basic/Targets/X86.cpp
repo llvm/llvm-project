@@ -787,6 +787,10 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasCLZERO = true;
     } else if (Feature == "+rdpid") {
       HasRDPID = true;
+    } else if (Feature == "+retpoline") {
+      HasRetpoline = true;
+    } else if (Feature == "+retpoline-external-thunk") {
+      HasRetpolineExternalThunk = true;
     }
 
     X86SSEEnum Level = llvm::StringSwitch<X86SSEEnum>(Feature)
@@ -1333,6 +1337,8 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("rdpid", HasRDPID)
       .Case("rdrnd", HasRDRND)
       .Case("rdseed", HasRDSEED)
+      .Case("retpoline", HasRetpoline)
+      .Case("retpoline-external-thunk", HasRetpolineExternalThunk)
       .Case("rtm", HasRTM)
       .Case("sgx", HasSGX)
       .Case("sha", HasSHA)

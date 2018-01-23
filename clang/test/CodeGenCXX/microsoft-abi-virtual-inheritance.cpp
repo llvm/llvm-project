@@ -115,9 +115,15 @@ void B::foo() {
 // B::foo gets 'this' cast to VBase* in ECX (i.e. this+8) so we
 // need to adjust 'this' before use.
 //
-// Store initial this:
+// Coerce this to correct type:
+// CHECK:   %[[THIS_STORE:.*]] = alloca %struct.B*
 // CHECK:   %[[THIS_ADDR:.*]] = alloca %struct.B*
-// CHECK:   store %struct.B* %{{.*}}, %struct.B** %[[THIS_ADDR]], align 4
+// CHECK:   %[[COERCE_VAL:.*]] = bitcast i8* %{{.*}} to %struct.B*
+// CHECK:   store %struct.B* %[[COERCE_VAL]], %struct.B** %[[THIS_STORE]], align 4
+//
+// Store initial this:
+// CHECK:   %[[THIS_INIT:.*]] = load %struct.B*, %struct.B** %[[THIS_STORE]]
+// CHECK:   store %struct.B* %[[THIS_INIT]], %struct.B** %[[THIS_ADDR]], align 4
 //
 // Reload and adjust the this parameter:
 // CHECK:   %[[THIS_RELOAD:.*]] = load %struct.B*, %struct.B** %[[THIS_ADDR]]

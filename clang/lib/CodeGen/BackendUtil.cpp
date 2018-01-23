@@ -909,6 +909,9 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
     bool IsLTO = CodeGenOpts.PrepareForLTO;
 
     if (CodeGenOpts.OptimizationLevel == 0) {
+      if (Optional<GCOVOptions> Options = getGCOVOptions(CodeGenOpts))
+        MPM.addPass(GCOVProfilerPass(*Options));
+
       // Build a minimal pipeline based on the semantics required by Clang,
       // which is just that always inlining occurs.
       MPM.addPass(AlwaysInlinerPass());
@@ -932,6 +935,10 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
             [](FunctionPassManager &FPM, PassBuilder::OptimizationLevel Level) {
               FPM.addPass(BoundsCheckingPass());
             });
+      if (Optional<GCOVOptions> Options = getGCOVOptions(CodeGenOpts))
+        PB.registerPipelineStartEPCallback([Options](ModulePassManager &MPM) {
+          MPM.addPass(GCOVProfilerPass(*Options));
+        });
 
       if (IsThinLTO) {
         MPM = PB.buildThinLTOPreLinkDefaultPipeline(
@@ -944,9 +951,6 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
         MPM = PB.buildPerModuleDefaultPipeline(Level,
                                                CodeGenOpts.DebugPassManager);
       }
-    }
-    if (Optional<GCOVOptions> Options = getGCOVOptions(CodeGenOpts)) {
-      MPM.addPass(GCOVProfilerPass(*Options));
     }
   }
 
