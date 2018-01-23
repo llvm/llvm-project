@@ -48,8 +48,8 @@ ProgramHeaders:
       - Section: .text2
   - Type: PT_LOAD
     Flags: [ PF_R ]
-    VAddr: 0x1000
-    PAddr: 0x1000
+    VAddr: 0x3000
+    PAddr: 0x3000
     Sections:
       - Section: .text3
       - Section: .text4

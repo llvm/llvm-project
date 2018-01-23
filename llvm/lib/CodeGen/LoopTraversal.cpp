@@ -14,7 +14,7 @@
 using namespace llvm;
 
 bool LoopTraversal::isBlockDone(MachineBasicBlock *MBB) {
-  int MBBNumber = MBB->getNumber();
+  unsigned MBBNumber = MBB->getNumber();
   assert(MBBNumber < MBBInfos.size() && "Unexpected basic block number.");
   return MBBInfos[MBBNumber].PrimaryCompleted &&
          MBBInfos[MBBNumber].IncomingCompleted ==
@@ -33,7 +33,7 @@ LoopTraversal::TraversalOrder LoopTraversal::traverse(MachineFunction &MF) {
   for (MachineBasicBlock *MBB : RPOT) {
     // N.B: IncomingProcessed and IncomingCompleted were already updated while
     // processing this block's predecessors.
-    int MBBNumber = MBB->getNumber();
+    unsigned MBBNumber = MBB->getNumber();
     assert(MBBNumber < MBBInfos.size() && "Unexpected basic block number.");
     MBBInfos[MBBNumber].PrimaryCompleted = true;
     MBBInfos[MBBNumber].PrimaryIncoming = MBBInfos[MBBNumber].IncomingProcessed;
@@ -45,7 +45,7 @@ LoopTraversal::TraversalOrder LoopTraversal::traverse(MachineFunction &MF) {
       bool Done = isBlockDone(ActiveMBB);
       MBBTraversalOrder.push_back(TraversedMBBInfo(ActiveMBB, Primary, Done));
       for (MachineBasicBlock *Succ : ActiveMBB->successors()) {
-        int SuccNumber = Succ->getNumber();
+        unsigned SuccNumber = Succ->getNumber();
         assert(SuccNumber < MBBInfos.size() &&
                "Unexpected basic block number.");
         if (!isBlockDone(Succ)) {

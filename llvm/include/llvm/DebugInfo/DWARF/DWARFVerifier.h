@@ -24,7 +24,6 @@ struct DWARFAttribute;
 class DWARFContext;
 class DWARFDie;
 class DWARFUnit;
-class DWARFAcceleratorTable;
 class DWARFDataExtractor;
 class DWARFDebugAbbrev;
 class DataExtractor;
@@ -201,7 +200,7 @@ private:
   /// references for the .debug_info section
   unsigned verifyDebugInfoReferences();
 
-  /// Verify the the DW_AT_stmt_list encoding and value and ensure that no
+  /// Verify the DW_AT_stmt_list encoding and value and ensure that no
   /// compile units that have the same DW_AT_stmt_list value.
   void verifyDebugLineStmtOffsets();
 
@@ -229,8 +228,9 @@ private:
   /// \param SectionName the name of the table we're verifying
   ///
   /// \returns The number of errors occured during verification
-  unsigned verifyAccelTable(const DWARFSection *AccelSection,
-                            DataExtractor *StrData, const char *SectionName);
+  unsigned verifyAppleAccelTable(const DWARFSection *AccelSection,
+                                 DataExtractor *StrData,
+                                 const char *SectionName);
 
 public:
   DWARFVerifier(raw_ostream &S, DWARFContext &D,

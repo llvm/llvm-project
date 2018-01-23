@@ -44,6 +44,12 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
 
   enum class CPU { P5600 };
 
+  // Used to avoid printing dsp warnings multiple times.
+  static bool DspWarningPrinted;
+
+  // Used to avoid printing msa warnings multiple times.
+  static bool MSAWarningPrinted;
+
   // Mips architecture version
   MipsArchEnum MipsArchVersion;
 

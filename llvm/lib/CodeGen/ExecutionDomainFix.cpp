@@ -167,7 +167,7 @@ void ExecutionDomainFix::enterBasicBlock(
 
   // Try to coalesce live-out registers from predecessors.
   for (MachineBasicBlock *pred : MBB->predecessors()) {
-    assert(pred->getNumber() < MBBOutRegsInfos.size() &&
+    assert(unsigned(pred->getNumber()) < MBBOutRegsInfos.size() &&
            "Should have pre-allocated MBBInfos for all MBBs");
     LiveRegsDVInfo &Incoming = MBBOutRegsInfos[pred->getNumber()];
     // Incoming is null if this is a backedge from a BB
@@ -208,7 +208,7 @@ void ExecutionDomainFix::enterBasicBlock(
 void ExecutionDomainFix::leaveBasicBlock(
     const LoopTraversal::TraversedMBBInfo &TraversedMBB) {
   assert(!LiveRegs.empty() && "Must enter basic block first.");
-  int MBBNumber = TraversedMBB.MBB->getNumber();
+  unsigned MBBNumber = TraversedMBB.MBB->getNumber();
   assert(MBBNumber < MBBOutRegsInfos.size() &&
          "Unexpected basic block number.");
   // Save register clearances at end of MBB - used by enterBasicBlock().

@@ -37,7 +37,7 @@ struct CachePruningPolicy {
   std::chrono::seconds Expiration = std::chrono::hours(7 * 24); // 1w
 
   /// The maximum size for the cache directory, in terms of percentage of the
-  /// available space on the the disk. Set to 100 to indicate no limit, 50 to
+  /// available space on the disk. Set to 100 to indicate no limit, 50 to
   /// indicate that the cache size will not be left over half the available disk
   /// space. A value over 100 will be reduced to 100. A value of 0 disables the
   /// percentage size-based pruning.

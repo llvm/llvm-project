@@ -170,7 +170,7 @@ InlineParams getInlineParams(int Threshold);
 /// line options. If -inline-threshold option is not explicitly passed,
 /// the default threshold is computed from \p OptLevel and \p SizeOptLevel.
 /// An \p OptLevel value above 3 is considered an aggressive optimization mode.
-/// \p SizeOptLevel of 1 corresponds to the the -Os flag and 2 corresponds to
+/// \p SizeOptLevel of 1 corresponds to the -Os flag and 2 corresponds to
 /// the -Oz flag.
 InlineParams getInlineParams(unsigned OptLevel, unsigned SizeOptLevel);
 

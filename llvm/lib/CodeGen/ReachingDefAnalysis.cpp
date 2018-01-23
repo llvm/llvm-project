@@ -23,7 +23,7 @@ void ReachingDefAnalysis::enterBasicBlock(
     const LoopTraversal::TraversedMBBInfo &TraversedMBB) {
 
   MachineBasicBlock *MBB = TraversedMBB.MBB;
-  int MBBNumber = MBB->getNumber();
+  unsigned MBBNumber = MBB->getNumber();
   assert(MBBNumber < MBBReachingDefs.size() &&
          "Unexpected basic block number.");
   MBBReachingDefs[MBBNumber].resize(NumRegUnits);
@@ -53,7 +53,7 @@ void ReachingDefAnalysis::enterBasicBlock(
 
   // Try to coalesce live-out registers from predecessors.
   for (MachineBasicBlock *pred : MBB->predecessors()) {
-    assert(pred->getNumber() < MBBOutRegsInfos.size() &&
+    assert(unsigned(pred->getNumber()) < MBBOutRegsInfos.size() &&
            "Should have pre-allocated MBBInfos for all MBBs");
     const LiveRegsDefInfo &Incoming = MBBOutRegsInfos[pred->getNumber()];
     // Incoming is null if this is a backedge from a BB
@@ -77,7 +77,7 @@ void ReachingDefAnalysis::enterBasicBlock(
 void ReachingDefAnalysis::leaveBasicBlock(
     const LoopTraversal::TraversedMBBInfo &TraversedMBB) {
   assert(!LiveRegs.empty() && "Must enter basic block first.");
-  int MBBNumber = TraversedMBB.MBB->getNumber();
+  unsigned MBBNumber = TraversedMBB.MBB->getNumber();
   assert(MBBNumber < MBBOutRegsInfos.size() &&
          "Unexpected basic block number.");
   // Save register clearances at end of MBB - used by enterBasicBlock().
@@ -95,7 +95,7 @@ void ReachingDefAnalysis::leaveBasicBlock(
 void ReachingDefAnalysis::processDefs(MachineInstr *MI) {
   assert(!MI->isDebugValue() && "Won't process debug values");
 
-  int MBBNumber = MI->getParent()->getNumber();
+  unsigned MBBNumber = MI->getParent()->getNumber();
   assert(MBBNumber < MBBReachingDefs.size() &&
          "Unexpected basic block number.");
   const MCInstrDesc &MCID = MI->getDesc();
@@ -174,7 +174,7 @@ int ReachingDefAnalysis::getReachingDef(MachineInstr *MI, int PhysReg) {
   assert(InstIds.count(MI) && "Unexpected machine instuction.");
   int InstId = InstIds[MI];
   int DefRes = ReachingDedDefaultVal;
-  int MBBNumber = MI->getParent()->getNumber();
+  unsigned MBBNumber = MI->getParent()->getNumber();
   assert(MBBNumber < MBBReachingDefs.size() &&
          "Unexpected basic block number.");
   int LatestDef = ReachingDedDefaultVal;

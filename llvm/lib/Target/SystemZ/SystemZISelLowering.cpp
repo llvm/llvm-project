@@ -5484,6 +5484,23 @@ static bool combineCCMask(SDValue &Glue, int &CCValid, int &CCMask) {
   return true;
 }
 
+static bool combineMergeChains(SDValue &Chain, SDValue Glue) {
+  // We are about to glue an instruction with input chain Chain to the
+  // instruction Glue.  Verify that this would not create an invalid
+  // topological sort due to intervening chain nodes.
+
+  SDNode *Node = Glue.getNode();
+  for (int ResNo = Node->getNumValues() - 1; ResNo >= 0; --ResNo)
+    if (Node->getValueType(ResNo) == MVT::Other) {
+      SDValue OutChain = SDValue(Node, ResNo);
+      // FIXME: We should be able to at least handle an intervening
+      // TokenFactor node by swapping chains around a bit ...
+      return Chain == OutChain;
+    }
+
+  return true;
+}
+
 SDValue SystemZTargetLowering::combineBR_CCMASK(
     SDNode *N, DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -5496,11 +5513,13 @@ SDValue SystemZTargetLowering::combineBR_CCMASK(
 
   int CCValidVal = CCValid->getZExtValue();
   int CCMaskVal = CCMask->getZExtValue();
+  SDValue Chain = N->getOperand(0);
   SDValue Glue = N->getOperand(4);
 
-  if (combineCCMask(Glue, CCValidVal, CCMaskVal))
+  if (combineCCMask(Glue, CCValidVal, CCMaskVal)
+      && combineMergeChains(Chain, Glue))
     return DAG.getNode(SystemZISD::BR_CCMASK, SDLoc(N), N->getValueType(0),
-                       N->getOperand(0),
+                       Chain,
                        DAG.getConstant(CCValidVal, SDLoc(N), MVT::i32),
                        DAG.getConstant(CCMaskVal, SDLoc(N), MVT::i32),
                        N->getOperand(3), Glue);

@@ -18,20 +18,20 @@ define i64 @foo(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, i64 %h) 
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movq %rsi, %rax
 ; CHECK-NEXT:    movq %rdi, %rbx
-; CHECK-NEXT:    movzbl %bh, %esi # NOREX
-; CHECK-NEXT:    movzbl %ah, %eax # NOREX
+; CHECK-NEXT:    movzbl %bh, %esi
+; CHECK-NEXT:    movzbl %ah, %eax
 ; CHECK-NEXT:    movq %rax, %r10
-; CHECK-NEXT:    movzbl %dh, %edx # NOREX
-; CHECK-NEXT:    movzbl %ch, %eax # NOREX
+; CHECK-NEXT:    movzbl %dh, %edx
+; CHECK-NEXT:    movzbl %ch, %eax
 ; CHECK-NEXT:    movq %rax, %r11
 ; CHECK-NEXT:    movq %r8, %rax
-; CHECK-NEXT:    movzbl %ah, %ecx # NOREX
+; CHECK-NEXT:    movzbl %ah, %ecx
 ; CHECK-NEXT:    movq %r9, %rax
-; CHECK-NEXT:    movzbl %ah, %ebp # NOREX
+; CHECK-NEXT:    movzbl %ah, %ebp
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; CHECK-NEXT:    movzbl %ah, %eax # NOREX
+; CHECK-NEXT:    movzbl %ah, %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %ebx
-; CHECK-NEXT:    movzbl %bh, %edi # NOREX
+; CHECK-NEXT:    movzbl %bh, %edi
 ; CHECK-NEXT:    movq %r10, %r8
 ; CHECK-NEXT:    addq %r8, %rsi
 ; CHECK-NEXT:    addq %r11, %rdx
@@ -54,20 +54,20 @@ define i64 @foo(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, i64 %h) 
 ; GNUX32-NEXT:    .cfi_offset %rbp, -16
 ; GNUX32-NEXT:    movq %rsi, %rax
 ; GNUX32-NEXT:    movq %rdi, %rbx
-; GNUX32-NEXT:    movzbl %bh, %esi # NOREX
-; GNUX32-NEXT:    movzbl %ah, %eax # NOREX
+; GNUX32-NEXT:    movzbl %bh, %esi
+; GNUX32-NEXT:    movzbl %ah, %eax
 ; GNUX32-NEXT:    movq %rax, %r10
-; GNUX32-NEXT:    movzbl %dh, %edx # NOREX
-; GNUX32-NEXT:    movzbl %ch, %eax # NOREX
+; GNUX32-NEXT:    movzbl %dh, %edx
+; GNUX32-NEXT:    movzbl %ch, %eax
 ; GNUX32-NEXT:    movq %rax, %r11
 ; GNUX32-NEXT:    movq %r8, %rax
-; GNUX32-NEXT:    movzbl %ah, %ecx # NOREX
+; GNUX32-NEXT:    movzbl %ah, %ecx
 ; GNUX32-NEXT:    movq %r9, %rax
-; GNUX32-NEXT:    movzbl %ah, %ebp # NOREX
+; GNUX32-NEXT:    movzbl %ah, %ebp
 ; GNUX32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; GNUX32-NEXT:    movzbl %ah, %eax # NOREX
+; GNUX32-NEXT:    movzbl %ah, %eax
 ; GNUX32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; GNUX32-NEXT:    movzbl %bh, %edi # NOREX
+; GNUX32-NEXT:    movzbl %bh, %edi
 ; GNUX32-NEXT:    movq %r10, %r8
 ; GNUX32-NEXT:    addq %r8, %rsi
 ; GNUX32-NEXT:    addq %r11, %rdx

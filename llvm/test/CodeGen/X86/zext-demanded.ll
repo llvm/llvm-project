@@ -27,51 +27,45 @@ define i32 @test2(i32 %x) {
   ret i32 %z
 }
 
-; TODO: We need to stop moving the and across the shift to get a movzx
 define i32 @test3(i32 %x) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shrl %edi
-; CHECK-NEXT:    andl $127, %edi
-; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    shrl %eax
 ; CHECK-NEXT:    retq
   %y = and i32 %x, 255
   %z = lshr i32 %y, 1
   ret i32 %z
 }
 
-; TODO: We need to stop moving the and across the shift to get a movzx
 define i16 @test4(i16 %x) {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shrl %edi
-; CHECK-NEXT:    andl $127, %edi
-; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    shrl %eax
+; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    retq
   %y = and i16 %x, 255
   %z = lshr i16 %y, 1
   ret i16 %z
 }
 
-; TODO: We need to stop moving the and across the shift to get a movzx
 define i16 @test5(i16 %x) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shrl $9, %edi
-; CHECK-NEXT:    andl $127, %edi
-; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    movzwl %di, %eax
+; CHECK-NEXT:    shrl $9, %eax
+; CHECK-NEXT:    # kill: def %ax killed %ax killed %eax
 ; CHECK-NEXT:    retq
   %y = lshr i16 %x, 9
   ret i16 %y
 }
 
-; TODO: We need to stop moving the and across the shift to get a movzx
 define i32 @test6(i32 %x) {
 ; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shrl $9, %edi
-; CHECK-NEXT:    andl $127, %edi
-; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    movzwl %di, %eax
+; CHECK-NEXT:    shrl $9, %eax
 ; CHECK-NEXT:    retq
   %y = and i32 %x, 65535
   %z = lshr i32 %y, 9

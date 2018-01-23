@@ -360,7 +360,7 @@ def update_test_file(llc, test, remove_common_prefixes=False,
             if m:
                 state = 'ir function prefix'
                 func_name = m.group('func')
-            if input_line.strip() == '---':
+            if input_line.rstrip('| \r\n') == '---':
                 state = 'document'
             output_lines.append(input_line)
         elif state == 'document':
