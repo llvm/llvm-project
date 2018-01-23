@@ -465,7 +465,7 @@ struct StatepointDirectives {
 /// AS.
 StatepointDirectives parseStatepointDirectivesFromAttrs(AttributeList AS);
 
-/// Return \c true if the the \p Attr is an attribute that is a statepoint
+/// Return \c true if the \p Attr is an attribute that is a statepoint
 /// directive.
 bool isStatepointDirectiveAttr(Attribute Attr);
 

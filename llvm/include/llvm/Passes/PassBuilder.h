@@ -19,6 +19,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include <vector>
 
@@ -476,6 +477,16 @@ public:
     VectorizerStartEPCallbacks.push_back(C);
   }
 
+  /// Register a callback for a default optimizer pipeline extension point.
+  ///
+  /// This extension point allows adding optimization once at the start of the
+  /// pipeline. This does not apply to 'backend' compiles (LTO and ThinLTO
+  /// link-time pipelines).
+  void registerPipelineStartEPCallback(
+      const std::function<void(ModulePassManager &)> &C) {
+    PipelineStartEPCallbacks.push_back(C);
+  }
+
   /// \brief Register a callback for parsing an AliasAnalysis Name to populate
   /// the given AAManager \p AA
   void registerParseAACallback(
@@ -589,6 +600,8 @@ private:
   SmallVector<std::function<void(FunctionPassManager &, OptimizationLevel)>, 2>
       VectorizerStartEPCallbacks;
   // Module callbacks
+  SmallVector<std::function<void(ModulePassManager &)>, 2>
+      PipelineStartEPCallbacks;
   SmallVector<std::function<void(ModuleAnalysisManager &)>, 2>
       ModuleAnalysisRegistrationCallbacks;
   SmallVector<std::function<bool(StringRef, ModulePassManager &,

@@ -12,14 +12,29 @@
 // template<InputIterator Iter1, InputIterator Iter2, typename Compare>
 //   requires Predicate<Compare, Iter1::value_type, Iter2::value_type>
 //         && Predicate<Compare, Iter2::value_type, Iter1::value_type>
-//   bool
+//   constexpr bool             // constexpr after C++17
 //   includes(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2, Compare comp);
 
 #include <algorithm>
 #include <functional>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
+
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool test_constexpr() {
+    int ia[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4};
+    int ib[] = {2, 4};
+    int ic[] = {3, 3, 3, 3};
+    
+    auto comp = [](int a, int b) {return a < b; };
+    return  std::includes(std::begin(ia), std::end(ia), std::begin(ib), std::end(ib), comp)
+        && !std::includes(std::begin(ia), std::end(ia), std::begin(ic), std::end(ic), comp)
+           ;
+    }
+#endif
+
 
 template <class Iter1, class Iter2>
 void
@@ -82,4 +97,8 @@ int main()
     test<const int*, bidirectional_iterator<const int*> >();
     test<const int*, random_access_iterator<const int*> >();
     test<const int*, const int*>();
+
+#if TEST_STD_VER > 17
+   static_assert(test_constexpr());
+#endif
 }

@@ -6,7 +6,7 @@
 #include <stdlib.h>
 
 int bar(char *p, char *q) {
-  return p <= q;
+  return p - q;
 }
 
 char global[10000] = {};

@@ -2112,5 +2112,24 @@ TEST(IsScopedEnum, MatchesScopedEnum) {
   EXPECT_TRUE(notMatches("enum X {};", enumDecl(isScoped())));
 }
 
+TEST(HasTrailingReturn, MatchesTrailingReturn) {
+  EXPECT_TRUE(matches("auto Y() -> int { return 0; }",
+                      functionDecl(hasTrailingReturn())));
+  EXPECT_TRUE(matches("auto X() -> int;", functionDecl(hasTrailingReturn())));
+  EXPECT_TRUE(notMatches("int X() { return 0; }", 
+                      functionDecl(hasTrailingReturn())));
+  EXPECT_TRUE(notMatches("int X();", functionDecl(hasTrailingReturn())));
+  EXPECT_TRUE(notMatchesC("void X();", functionDecl(hasTrailingReturn())));
+}
+
+TEST(HasTrailingReturn, MatchesLambdaTrailingReturn) {
+  EXPECT_TRUE(matches(
+          "auto lambda2 = [](double x, double y) -> double {return x + y;};",
+          functionDecl(hasTrailingReturn())));
+  EXPECT_TRUE(notMatches(
+          "auto lambda2 = [](double x, double y) {return x + y;};",
+          functionDecl(hasTrailingReturn())));
+}
+
 } // namespace ast_matchers
 } // namespace clang

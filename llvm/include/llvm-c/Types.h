@@ -7,7 +7,7 @@
 |*                                                                            *|
 |*===----------------------------------------------------------------------===*|
 |*                                                                            *|
-|* This file defines types used by the the C interface to LLVM.               *|
+|* This file defines types used by the C interface to LLVM.                   *|
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 

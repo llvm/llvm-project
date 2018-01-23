@@ -1384,7 +1384,7 @@ public:
   ///
   /// The above 3 components are encoded into a 32bit unsigned integer in
   /// order. If the lowest bit is 1, the current component is empty, and the
-  /// next component will start in the next bit. Otherwise, the the current
+  /// next component will start in the next bit. Otherwise, the current
   /// component is non-empty, and its content starts in the next bit. The
   /// length of each components is either 5 bit or 12 bit: if the 7th bit
   /// is 0, the bit 2~6 (5 bits) are used to represent the component; if the

@@ -793,7 +793,7 @@ extern void thinlto_codegen_set_cache_pruning_interval(thinlto_code_gen_t cg,
 
 /**
  * Sets the maximum cache size that can be persistent across build, in terms of
- * percentage of the available space on the the disk. Set to 100 to indicate
+ * percentage of the available space on the disk. Set to 100 to indicate
  * no limit, 50 to indicate that the cache size will not be left over half the
  * available space. A value over 100 will be reduced to 100, a value of 0 will
  * be ignored. An unspecified default value will be applied.

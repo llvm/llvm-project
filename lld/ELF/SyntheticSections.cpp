@@ -2173,7 +2173,7 @@ void GdbIndexSection::writeTo(uint8_t *Buf) {
 bool GdbIndexSection::empty() const { return !Out::DebugInfo; }
 
 EhFrameHeader::EhFrameHeader()
-    : SyntheticSection(SHF_ALLOC, SHT_PROGBITS, 1, ".eh_frame_hdr") {}
+    : SyntheticSection(SHF_ALLOC, SHT_PROGBITS, 4, ".eh_frame_hdr") {}
 
 // .eh_frame_hdr contains a binary search table of pointers to FDEs.
 // Each entry of the search table consists of two values,
