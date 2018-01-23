@@ -2301,7 +2301,7 @@ static bool tryBitfieldInsertOpFromOr(SDNode *N, const APInt &UsefulBits,
       continue;
 
     // Check the second part of the pattern
-    EVT VT = OrOpd1->getValueType(0);
+    EVT VT = OrOpd1Val.getValueType();
     assert((VT == MVT::i32 || VT == MVT::i64) && "unexpected OR operand");
 
     // Compute the Known Zero for the candidate of the first operand.
