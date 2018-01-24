@@ -4863,7 +4863,7 @@ CheckOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
   }
 
   // Loop condition (IV < NumIterations) or (IV <= UB) for worksharing loops.
-  SourceLocation CondLoc;
+  SourceLocation CondLoc = AStmt->getLocStart();
   ExprResult Cond =
       (isOpenMPWorksharingDirective(DKind) ||
        isOpenMPTaskLoopDirective(DKind) || isOpenMPDistributeDirective(DKind))
@@ -4876,7 +4876,7 @@ CheckOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
         SemaRef.BuildBinOp(CurScope, CondLoc, BO_LE, IV.get(), CombUB.get());
   }
   // Loop increment (IV = IV + 1)
-  SourceLocation IncLoc;
+  SourceLocation IncLoc = AStmt->getLocStart();
   ExprResult Inc =
       SemaRef.BuildBinOp(CurScope, IncLoc, BO_Add, IV.get(),
                          SemaRef.ActOnIntegerConstant(IncLoc, 1).get());
@@ -4943,7 +4943,7 @@ CheckOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
   // directive with for as IV = IV + ST; ensure upper bound expression based
   // on PrevUB instead of NumIterations - used to implement 'for' when found
   // in combination with 'distribute', like in 'distribute parallel for'
-  SourceLocation DistIncLoc;
+  SourceLocation DistIncLoc = AStmt->getLocStart();
   ExprResult DistCond, DistInc, PrevEUB;
   if (isOpenMPLoopBoundSharingDirective(DKind)) {
     DistCond = SemaRef.BuildBinOp(CurScope, CondLoc, BO_LE, IV.get(), UB.get());
@@ -4959,7 +4959,7 @@ CheckOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
 
     // Build expression: UB = min(UB, prevUB) for #for in composite or combined
     // construct
-    SourceLocation DistEUBLoc;
+    SourceLocation DistEUBLoc = AStmt->getLocStart();
     ExprResult IsUBGreater =
         SemaRef.BuildBinOp(CurScope, DistEUBLoc, BO_GT, UB.get(), PrevUB.get());
     ExprResult CondOp = SemaRef.ActOnConditionalOp(

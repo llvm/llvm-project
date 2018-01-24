@@ -203,6 +203,11 @@ QuietA("quiet", cl::desc("Alias for -q"), cl::aliasopt(Quiet));
 static cl::opt<bool>
 AnalyzeOnly("analyze", cl::desc("Only perform analysis, no optimization"));
 
+static cl::opt<bool> EnableDebugify(
+    "enable-debugify",
+    cl::desc(
+        "Start the pipeline with debugify and end it with check-debugify"));
+
 static cl::opt<bool>
 PrintBreakpoints("print-breakpoints-for-testing",
                  cl::desc("Print select breakpoints location for testing"));
@@ -251,6 +256,9 @@ static cl::opt<std::string>
     RemarksFilename("pass-remarks-output",
                     cl::desc("YAML output filename for pass remarks"),
                     cl::value_desc("filename"));
+
+extern ModulePass *createDebugifyPass();
+extern ModulePass *createCheckDebugifyPass();
 
 static inline void addPass(legacy::PassManagerBase &PM, Pass *P) {
   // Add the pass to the pass manager...
@@ -570,6 +578,9 @@ int main(int argc, char **argv) {
   Passes.add(createTargetTransformInfoWrapperPass(TM ? TM->getTargetIRAnalysis()
                                                      : TargetIRAnalysis()));
 
+  if (EnableDebugify)
+    Passes.add(createDebugifyPass());
+
   std::unique_ptr<legacy::FunctionPassManager> FPasses;
   if (OptLevelO0 || OptLevelO1 || OptLevelO2 || OptLevelOs || OptLevelOz ||
       OptLevelO3) {
@@ -714,6 +725,9 @@ int main(int argc, char **argv) {
   // Check that the module is well formed on completion of optimization
   if (!NoVerify && !VerifyEach)
     Passes.add(createVerifierPass());
+
+  if (EnableDebugify)
+    Passes.add(createCheckDebugifyPass());
 
   // In run twice mode, we want to make sure the output is bit-by-bit
   // equivalent if we run the pass manager again, so setup two buffers and

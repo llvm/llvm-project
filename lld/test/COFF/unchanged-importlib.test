@@ -4,4 +4,4 @@
 # RUN: lld-link -out:%t.dll -dll %t.obj
 # RUN: ls -l %t.lib | FileCheck --check-prefix=CHECK %s
 
-# CHECK: Feb 1 1980
+# CHECK: {{Feb 1 1980|1980-02-01}}

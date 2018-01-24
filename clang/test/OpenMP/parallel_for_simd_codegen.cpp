@@ -685,5 +685,6 @@ void parallel_simd(float *a) {
     a[i] += bar();
 }
 // TERM_DEBUG: !{{[0-9]+}} = !DILocation(line: [[@LINE-11]],
+// TERM_DEBUG-NOT: line: 0,
 #endif // HEADER
 

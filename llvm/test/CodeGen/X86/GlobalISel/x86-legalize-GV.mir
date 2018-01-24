@@ -1,4 +1,3 @@
-# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=legalizer %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X64
 # RUN: llc -mtriple=i386-linux-gnu   -global-isel -run-pass=legalizer %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X32
 --- |
 
@@ -20,12 +19,12 @@ regBankSelected: false
 registers:
   - { id: 0, class: _, preferred-register: '' }
 # ALL:          %0:_(p0) = G_GLOBAL_VALUE @g_int
-# ALL-NEXT:     %rax = COPY %0(p0)
+# ALL-NEXT:     %eax = COPY %0(p0)
 # ALL-NEXT:     RET 0, implicit %rax
 body:             |
   bb.1.entry:
     %0(p0) = G_GLOBAL_VALUE @g_int
-    %rax = COPY %0(p0)
+    %eax = COPY %0(p0)
     RET 0, implicit %rax
 
 ...

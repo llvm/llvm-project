@@ -383,10 +383,16 @@ BugDriver::extractMappedBlocksFromModule(const std::vector<BasicBlock *> &BBs,
   }
   DiscardTemp Discard{*Temp};
 
+  // Extract all of the blocks except the ones in BBs.
+  SmallVector<BasicBlock *, 32> BlocksToExtract;
+  for (Function &F : *M)
+    for (BasicBlock &BB : F)
+      // Check if this block is going to be extracted.
+      if (std::find(BBs.begin(), BBs.end(), &BB) == BBs.end())
+        BlocksToExtract.push_back(&BB);
+
   raw_fd_ostream OS(Temp->FD, /*shouldClose*/ false);
-  for (std::vector<BasicBlock *>::const_iterator I = BBs.begin(), E = BBs.end();
-       I != E; ++I) {
-    BasicBlock *BB = *I;
+  for (BasicBlock *BB : BBs) {
     // If the BB doesn't have a name, give it one so we have something to key
     // off of.
     if (!BB->hasName())

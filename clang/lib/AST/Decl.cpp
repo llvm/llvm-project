@@ -2901,6 +2901,13 @@ unsigned FunctionDecl::getBuiltinID() const {
       Context.BuiltinInfo.isPredefinedLibFunction(BuiltinID))
     return 0;
 
+  // CUDA does not have device-side standard library. printf and malloc are the
+  // only special cases that are supported by device-side runtime.
+  if (Context.getLangOpts().CUDA && hasAttr<CUDADeviceAttr>() &&
+      !hasAttr<CUDAHostAttr>() &&
+      !(BuiltinID == Builtin::BIprintf || BuiltinID == Builtin::BImalloc))
+    return 0;
+
   return BuiltinID;
 }
 
