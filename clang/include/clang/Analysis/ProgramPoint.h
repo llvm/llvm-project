@@ -73,8 +73,9 @@ public:
               PostStoreKind,
               PostConditionKind,
               PostLValueKind,
+              PostAllocatorCallKind,
               MinPostStmtKind = PostStmtKind,
-              MaxPostStmtKind = PostLValueKind,
+              MaxPostStmtKind = PostAllocatorCallKind,
               PostInitializerKind,
               CallEnterKind,
               CallExitBeginKind,
@@ -577,6 +578,20 @@ private:
   PostImplicitCall() {}
   static bool isKind(const ProgramPoint &Location) {
     return Location.getKind() == PostImplicitCallKind;
+  }
+};
+
+class PostAllocatorCall : public StmtPoint {
+public:
+  PostAllocatorCall(const Stmt *S, const LocationContext *L,
+                    const ProgramPointTag *Tag = nullptr)
+      : StmtPoint(S, nullptr, PostAllocatorCallKind, L, Tag) {}
+
+private:
+  friend class ProgramPoint;
+  PostAllocatorCall() {}
+  static bool isKind(const ProgramPoint &Location) {
+    return Location.getKind() == PostAllocatorCallKind;
   }
 };
 
