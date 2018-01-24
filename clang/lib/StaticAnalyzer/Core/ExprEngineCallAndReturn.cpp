@@ -573,7 +573,19 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
   QualType ResultTy = Call.getResultType();
   SValBuilder &SVB = getSValBuilder();
   unsigned Count = currBldrCtx->blockCount();
-  SVal R = SVB.conjureSymbolVal(nullptr, E, LCtx, ResultTy, Count);
+
+  // See if we need to conjure a heap pointer instead of
+  // a regular unknown pointer.
+  bool IsHeapPointer = false;
+  if (const auto *CNE = dyn_cast<CXXNewExpr>(E))
+    if (CNE->getOperatorNew()->isReplaceableGlobalAllocationFunction()) {
+      // FIXME: Delegate this to evalCall in MallocChecker?
+      IsHeapPointer = true;
+    }
+
+  SVal R = IsHeapPointer
+               ? SVB.getConjuredHeapSymbolVal(E, LCtx, Count)
+               : SVB.conjureSymbolVal(nullptr, E, LCtx, ResultTy, Count);
   return State->BindExpr(E, LCtx, R);
 }
 
