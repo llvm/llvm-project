@@ -2965,12 +2965,12 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     case ISD::ZERO_EXTEND:
       LHS = DAG.getNode(ISD::AssertZext, dl, OuterType, Res,
                         DAG.getValueType(AtomicType));
-      RHS = DAG.getNode(ISD::ZERO_EXTEND, dl, OuterType, Node->getOperand(2));
+      RHS = DAG.getZeroExtendInReg(Node->getOperand(2), dl, AtomicType);
       ExtRes = LHS;
       break;
     case ISD::ANY_EXTEND:
       LHS = DAG.getZeroExtendInReg(Res, dl, AtomicType);
-      RHS = DAG.getNode(ISD::ZERO_EXTEND, dl, OuterType, Node->getOperand(2));
+      RHS = DAG.getZeroExtendInReg(Node->getOperand(2), dl, AtomicType);
       break;
     default:
       llvm_unreachable("Invalid atomic op extension");
