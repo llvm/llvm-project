@@ -1,5 +1,7 @@
-; RUN: llc -mtriple=wasm32-unknown-unknown-wasm -filetype=obj -o %t.o %s
-; RUN: llc -mtriple=wasm32-unknown-unknown-wasm -filetype=obj %S/Inputs/global-ctor-dtor.ll -o %t.global-ctor-dtor.o
+; RUN: llc -filetype=obj -o %t.o %s
+; RUN: llc -filetype=obj %S/Inputs/global-ctor-dtor.ll -o %t.global-ctor-dtor.o
+
+target triple = "wasm32-unknown-unknown-wasm"
 
 define hidden void @func1() {
 entry:

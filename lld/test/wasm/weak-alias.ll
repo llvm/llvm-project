@@ -1,9 +1,11 @@
-; RUN: llc -mtriple=wasm32-unknown-unknown-wasm -filetype=obj -o %t.o %s
-; RUN: llc -mtriple=wasm32-unknown-unknown-wasm -filetype=obj %S/Inputs/weak-alias.ll -o %t2.o
+; RUN: llc -filetype=obj -o %t.o %s
+; RUN: llc -filetype=obj %S/Inputs/weak-alias.ll -o %t2.o
 ; RUN: lld -flavor wasm %t.o %t2.o -o %t.wasm
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 ; Test that weak aliases (alias_fn is a weak alias of direct_fn) are linked correctly
+
+target triple = "wasm32-unknown-unknown-wasm"
 
 declare i32 @alias_fn() local_unnamed_addr #1
 

@@ -1,3 +1,5 @@
+target triple = "wasm32-unknown-unknown-wasm"
+
 @indirect_bar = internal local_unnamed_addr global i64 ()* @bar, align 4
 @indirect_foo = internal local_unnamed_addr global i32 ()* @foo, align 4
 
