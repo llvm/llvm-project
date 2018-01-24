@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/Symbols.h"
-#include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Target.h"

@@ -30,50 +30,34 @@
 // CHECK-NEXT: 1103d:       59      popl    %ecx
 // CHECK-NEXT: 1103e:       c3      retl
 // CHECK-NEXT: 1103f:       cc      int3
-// CHECK-NEXT: 11040:       cc      int3
-// CHECK-NEXT: 11041:       cc      int3
-// CHECK-NEXT: 11042:       cc      int3
-// CHECK-NEXT: 11043:       cc      int3
-// CHECK-NEXT: 11044:       cc      int3
-// CHECK-NEXT: 11045:       cc      int3
-// CHECK-NEXT: 11046:       cc      int3
-// CHECK-NEXT: 11047:       cc      int3
-// CHECK-NEXT: 11048:       cc      int3
-// CHECK-NEXT: 11049:       cc      int3
-// CHECK-NEXT: 1104a:       cc      int3
-// CHECK-NEXT: 1104b:       cc      int3
-// CHECK-NEXT: 1104c:       cc      int3
-// CHECK-NEXT: 1104d:       cc      int3
-// CHECK-NEXT: 1104e:       cc      int3
-// CHECK-NEXT: 1104f:       cc      int3
-// CHECK-NEXT: 11050:       50      pushl   %eax
-// CHECK-NEXT: 11051:       a1 0c 20 01 00  movl    73740, %eax
-// CHECK-NEXT: 11056:       e8 d5 ff ff ff  calll   -43 <.plt+0x20>
-// CHECK-NEXT: 1105b:       e9 c1 ff ff ff  jmp     -63 <.plt+0x11>
-// CHECK-NEXT: 11060:       68 00 00 00 00  pushl   $0
-// CHECK-NEXT: 11065:       e9 a6 ff ff ff  jmp     -90 <.plt>
-// CHECK-NEXT: 1106a:       cc      int3
-// CHECK-NEXT: 1106b:       cc      int3
-// CHECK-NEXT: 1106c:       cc      int3
-// CHECK-NEXT: 1106d:       cc      int3
-// CHECK-NEXT: 1106e:       cc      int3
-// CHECK-NEXT: 1106f:       cc      int3
-// CHECK-NEXT: 11070:       50      pushl   %eax
-// CHECK-NEXT: 11071:       a1 10 20 01 00  movl    73744, %eax
-// CHECK-NEXT: 11076:       e8 b5 ff ff ff  calll   -75 <.plt+0x20>
-// CHECK-NEXT: 1107b:       e9 a1 ff ff ff  jmp     -95 <.plt+0x11>
-// CHECK-NEXT: 11080:       68 08 00 00 00  pushl   $8
-// CHECK-NEXT: 11085:       e9 86 ff ff ff  jmp     -122 <.plt>
-// CHECK-NEXT: 1108a:       cc      int3
-// CHECK-NEXT: 1108b:       cc      int3
-// CHECK-NEXT: 1108c:       cc      int3
-// CHECK-NEXT: 1108d:       cc      int3
-// CHECK-NEXT: 1108e:       cc      int3
-// CHECK-NEXT: 1108f:       cc      int3
+// CHECK-NEXT: 11040:       50      pushl   %eax
+// CHECK-NEXT: 11041:       a1 0c 20 01 00  movl    73740, %eax
+// CHECK-NEXT: 11046:       e8 e5 ff ff ff  calll   -27 <.plt+0x20>
+// CHECK-NEXT: 1104b:       e9 d1 ff ff ff  jmp     -47 <.plt+0x11>
+// CHECK-NEXT: 11050:       68 00 00 00 00  pushl   $0
+// CHECK-NEXT: 11055:       e9 b6 ff ff ff  jmp     -74 <.plt>
+// CHECK-NEXT: 1105a:       cc      int3
+// CHECK-NEXT: 1105b:       cc      int3
+// CHECK-NEXT: 1105c:       cc      int3
+// CHECK-NEXT: 1105d:       cc      int3
+// CHECK-NEXT: 1105e:       cc      int3
+// CHECK-NEXT: 1105f:       cc      int3
+// CHECK-NEXT: 11060:       50      pushl   %eax
+// CHECK-NEXT: 11061:       a1 10 20 01 00  movl    73744, %eax
+// CHECK-NEXT: 11066:       e8 c5 ff ff ff  calll   -59 <.plt+0x20>
+// CHECK-NEXT: 1106b:       e9 b1 ff ff ff  jmp     -79 <.plt+0x11>
+// CHECK-NEXT: 11070:       68 08 00 00 00  pushl   $8
+// CHECK-NEXT: 11075:       e9 96 ff ff ff  jmp     -106 <.plt>
+// CHECK-NEXT: 1107a:       cc      int3
+// CHECK-NEXT: 1107b:       cc      int3
+// CHECK-NEXT: 1107c:       cc      int3
+// CHECK-NEXT: 1107d:       cc      int3
+// CHECK-NEXT: 1107e:       cc      int3
+// CHECK-NEXT: 1107f:       cc      int3
 
 // CHECK:      Contents of section .got.plt:
-// CHECK-NEXT: 00300100 00000000 00000000 60100100
-// CHECK-NEXT: 80100100
+// CHECK-NEXT: 00300100 00000000 00000000 50100100
+// CHECK-NEXT: 70100100
 
 .global _start
 _start:
