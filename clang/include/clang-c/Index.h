@@ -5247,9 +5247,9 @@ enum CXCodeComplete_Flags {
   CXCodeComplete_IncludeBriefComments = 0x04,
 
   /**
-   * \brief Whether to speed up completion by omitting some entities which are
-   * defined in the preamble. There's no guarantee any particular entity will
-   * be omitted. This may be useful if the headers are indexed externally.
+   * Whether to speed up completion by omitting top- or namespace-level entities
+   * defined in the preamble. There's no guarantee any particular entity is
+   * omitted. This may be useful if the headers are indexed externally.
    */
   CXCodeComplete_SkipPreamble = 0x08
 };
