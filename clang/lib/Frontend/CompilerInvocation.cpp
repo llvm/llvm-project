@@ -305,6 +305,14 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
     }
   }
 
+  llvm::raw_string_ostream os(Opts.FullCompilerInvocation);
+  for (unsigned i=0; i<Args.getNumInputArgStrings(); i++) {
+    if (i != 0)
+      os << " ";
+    os << Args.getArgString(i);
+  }
+  os.flush();
+
   return Success;
 }
 
