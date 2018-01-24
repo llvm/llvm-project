@@ -63,6 +63,20 @@ typedef std::pair<const CXXBindTemporaryExpr *, const StackFrameContext *>
 REGISTER_TRAIT_WITH_PROGRAMSTATE(InitializedTemporariesSet,
                                  llvm::ImmutableSet<CXXBindTemporaryContext>)
 
+typedef llvm::ImmutableMap<std::pair<const CXXNewExpr *,
+                           const LocationContext *>, SVal>
+    CXXNewAllocatorValuesTy;
+
+// Keeps track of return values of various operator new() calls between
+// evaluation of the inlined operator new(), through the constructor call,
+// to the actual evaluation of the CXXNewExpr.
+// TODO: Refactor the key for this trait into a LocationContext sub-class,
+// which would be put on the stack of location contexts before operator new()
+// is evaluated, and removed from the stack when the whole CXXNewExpr
+// is fully evaluated.
+// Probably do something similar to the previous trait as well.
+REGISTER_TRAIT_WITH_PROGRAMSTATE(CXXNewAllocatorValues, CXXNewAllocatorValuesTy)
+
 //===----------------------------------------------------------------------===//
 // Engine construction and deletion.
 //===----------------------------------------------------------------------===//
@@ -308,6 +322,43 @@ ExprEngine::createTemporaryRegionIfNeeded(ProgramStateRef State,
   return State;
 }
 
+ProgramStateRef
+ExprEngine::setCXXNewAllocatorValue(ProgramStateRef State,
+                                    const CXXNewExpr *CNE,
+                                    const LocationContext *CallerLC, SVal V) {
+  assert(!State->get<CXXNewAllocatorValues>(std::make_pair(CNE, CallerLC)) &&
+         "Allocator value already set!");
+  return State->set<CXXNewAllocatorValues>(std::make_pair(CNE, CallerLC), V);
+}
+
+SVal ExprEngine::getCXXNewAllocatorValue(ProgramStateRef State,
+                                         const CXXNewExpr *CNE,
+                                         const LocationContext *CallerLC) {
+  return *State->get<CXXNewAllocatorValues>(std::make_pair(CNE, CallerLC));
+}
+
+ProgramStateRef
+ExprEngine::clearCXXNewAllocatorValue(ProgramStateRef State,
+                                      const CXXNewExpr *CNE,
+                                      const LocationContext *CallerLC) {
+  return State->remove<CXXNewAllocatorValues>(std::make_pair(CNE, CallerLC));
+}
+
+bool ExprEngine::areCXXNewAllocatorValuesClear(ProgramStateRef State,
+                                               const LocationContext *FromLC,
+                                               const LocationContext *ToLC) {
+  const LocationContext *LC = FromLC;
+  do {
+    for (auto I : State->get<CXXNewAllocatorValues>())
+      if (I.first.second == LC)
+        return false;
+
+    LC = LC->getParent();
+    assert(LC && "ToLC must be a parent of FromLC!");
+  } while (LC != ToLC);
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // Top-level transfer function logic (Dispatcher).
 //===----------------------------------------------------------------------===//
@@ -428,6 +479,13 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
 
   const StackFrameContext *SFC = LC ? LC->getCurrentStackFrame() : nullptr;
   SymbolReaper SymReaper(SFC, ReferenceStmt, SymMgr, getStoreManager());
+
+  for (auto I : CleanedState->get<CXXNewAllocatorValues>()) {
+    if (SymbolRef Sym = I.second.getAsSymbol())
+      SymReaper.markLive(Sym);
+    if (const MemRegion *MR = I.second.getAsRegion())
+      SymReaper.markElementIndicesLive(MR);
+  }
 
   getCheckerManager().runCheckersForLiveSymbols(CleanedState, SymReaper);
 

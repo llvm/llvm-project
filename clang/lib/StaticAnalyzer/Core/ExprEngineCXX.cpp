@@ -115,14 +115,25 @@ ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
 
   if (auto Elem = findElementDirectlyInitializedByCurrentConstructor()) {
     if (Optional<CFGStmt> StmtElem = Elem->getAs<CFGStmt>()) {
-      auto *DS = cast<DeclStmt>(StmtElem->getStmt());
-      if (const auto *Var = dyn_cast<VarDecl>(DS->getSingleDecl())) {
-        if (Var->getInit() && Var->getInit()->IgnoreImplicit() == CE) {
-          SVal LValue = State->getLValue(Var, LCtx);
-          QualType Ty = Var->getType();
-          LValue = makeZeroElementRegion(State, LValue, Ty);
-          return LValue.getAsRegion();
+      if (const CXXNewExpr *CNE = dyn_cast<CXXNewExpr>(StmtElem->getStmt())) {
+        if (AMgr.getAnalyzerOptions().mayInlineCXXAllocator()) {
+          // TODO: Detect when the allocator returns a null pointer.
+          // Constructor shall not be called in this case.
+          if (const MemRegion *MR =
+                  getCXXNewAllocatorValue(State, CNE, LCtx).getAsRegion())
+            return MR;
         }
+      } else if (auto *DS = dyn_cast<DeclStmt>(StmtElem->getStmt())) {
+        if (const auto *Var = dyn_cast<VarDecl>(DS->getSingleDecl())) {
+          if (Var->getInit() && Var->getInit()->IgnoreImplicit() == CE) {
+            SVal LValue = State->getLValue(Var, LCtx);
+            QualType Ty = Var->getType();
+            LValue = makeZeroElementRegion(State, LValue, Ty);
+            return LValue.getAsRegion();
+          }
+        }
+      } else {
+        llvm_unreachable("Unexpected directly initialized element!");
       }
     } else if (Optional<CFGInitializer> InitElem = Elem->getAs<CFGInitializer>()) {
       const CXXCtorInitializer *Init = InitElem->getInitializer();
@@ -164,6 +175,9 @@ static bool canHaveDirectConstructor(CFGElement Elem){
 
   if (Optional<CFGStmt> StmtElem = Elem.getAs<CFGStmt>()) {
     if (isa<DeclStmt>(StmtElem->getStmt())) {
+      return true;
+    }
+    if (isa<CXXNewExpr>(StmtElem->getStmt())) {
       return true;
     }
   }
@@ -455,12 +469,23 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
   getCheckerManager().runCheckersForPreCall(DstPreCall, Pred,
                                             *Call, *this);
 
-  ExplodedNodeSet DstInvalidated;
-  StmtNodeBuilder Bldr(DstPreCall, DstInvalidated, *currBldrCtx);
-  for (ExplodedNodeSet::iterator I = DstPreCall.begin(), E = DstPreCall.end();
-       I != E; ++I)
-    defaultEvalCall(Bldr, *I, *Call);
-  getCheckerManager().runCheckersForPostCall(Dst, DstInvalidated,
+  ExplodedNodeSet DstPostCall;
+  StmtNodeBuilder CallBldr(DstPreCall, DstPostCall, *currBldrCtx);
+  for (auto I : DstPreCall)
+    defaultEvalCall(CallBldr, I, *Call);
+
+  // Store return value of operator new() for future use, until the actual
+  // CXXNewExpr gets processed.
+  ExplodedNodeSet DstPostValue;
+  StmtNodeBuilder ValueBldr(DstPostCall, DstPostValue, *currBldrCtx);
+  for (auto I : DstPostCall) {
+    ProgramStateRef State = I->getState();
+    ValueBldr.generateNode(
+        CNE, I,
+        setCXXNewAllocatorValue(State, CNE, LCtx, State->getSVal(CNE, LCtx)));
+  }
+
+  getCheckerManager().runCheckersForPostCall(Dst, DstPostValue,
                                              *Call, *this);
 }
 
@@ -474,7 +499,7 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
 
   unsigned blockCount = currBldrCtx->blockCount();
   const LocationContext *LCtx = Pred->getLocationContext();
-  DefinedOrUnknownSVal symVal = UnknownVal();
+  SVal symVal = UnknownVal();
   FunctionDecl *FD = CNE->getOperatorNew();
 
   bool IsStandardGlobalOpNewFunction = false;
@@ -490,26 +515,37 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
       IsStandardGlobalOpNewFunction = (FD->getNumParams() == 1);
   }
 
+  ProgramStateRef State = Pred->getState();
+
+  // Retrieve the stored operator new() return value.
+  if (AMgr.getAnalyzerOptions().mayInlineCXXAllocator()) {
+    symVal = getCXXNewAllocatorValue(State, CNE, LCtx);
+    State = clearCXXNewAllocatorValue(State, CNE, LCtx);
+  }
+
   // We assume all standard global 'operator new' functions allocate memory in
   // heap. We realize this is an approximation that might not correctly model
   // a custom global allocator.
-  if (IsStandardGlobalOpNewFunction)
-    symVal = svalBuilder.getConjuredHeapSymbolVal(CNE, LCtx, blockCount);
-  else
-    symVal = svalBuilder.conjureSymbolVal(nullptr, CNE, LCtx, CNE->getType(),
-                                          blockCount);
+  if (symVal.isUnknown()) {
+    if (IsStandardGlobalOpNewFunction)
+      symVal = svalBuilder.getConjuredHeapSymbolVal(CNE, LCtx, blockCount);
+    else
+      symVal = svalBuilder.conjureSymbolVal(nullptr, CNE, LCtx, CNE->getType(),
+                                            blockCount);
+  }
 
-  ProgramStateRef State = Pred->getState();
   CallEventManager &CEMgr = getStateManager().getCallEventManager();
   CallEventRef<CXXAllocatorCall> Call =
     CEMgr.getCXXAllocatorCall(CNE, State, LCtx);
 
-  // Invalidate placement args.
-  // FIXME: Once we figure out how we want allocators to work,
-  // we should be using the usual pre-/(default-)eval-/post-call checks here.
-  State = Call->invalidateRegions(blockCount);
-  if (!State)
-    return;
+  if (!AMgr.getAnalyzerOptions().mayInlineCXXAllocator()) {
+    // Invalidate placement args.
+    // FIXME: Once we figure out how we want allocators to work,
+    // we should be using the usual pre-/(default-)eval-/post-call checks here.
+    State = Call->invalidateRegions(blockCount);
+    if (!State)
+      return;
+  }
 
   // If this allocation function is not declared as non-throwing, failures
   // /must/ be signalled by exceptions, and thus the return value will never be
@@ -522,7 +558,8 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
     QualType Ty = FD->getType();
     if (const FunctionProtoType *ProtoType = Ty->getAs<FunctionProtoType>())
       if (!ProtoType->isNothrow(getContext()))
-        State = State->assume(symVal, true);
+        if (auto dSymVal = symVal.getAs<DefinedOrUnknownSVal>())
+          State = State->assume(*dSymVal, true);
   }
 
   StmtNodeBuilder Bldr(Pred, Dst, *currBldrCtx);
