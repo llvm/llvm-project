@@ -175,6 +175,8 @@ class __tuple_leaf
     static constexpr bool __can_bind_reference() {
 #if __has_keyword(__reference_binds_to_temporary)
       return !__reference_binds_to_temporary(_Hp, _Tp);
+#else
+      return true;
 #endif
     }
 
