@@ -2744,6 +2744,11 @@ public:
   /// Return the list of ScopStmts that represent the given @p BB.
   ArrayRef<ScopStmt *> getStmtListFor(BasicBlock *BB) const;
 
+  /// Get the statement to put a PHI WRITE into.
+  ///
+  /// @param U The operand of a PHINode.
+  ScopStmt *getIncomingStmtFor(const Use &U) const;
+
   /// Return the last statement representing @p BB.
   ///
   /// Of the sequence of statements that represent a @p BB, this is the last one

@@ -1,5 +1,7 @@
-; RUN: llc -mtriple=wasm32-unknown-unknown-wasm -filetype=obj %s -o %t.o
+; RUN: llc -filetype=obj %s -o %t.o
 ; RUN: not lld -flavor wasm -o %t.wasm -z stack-size=1 %t.o 2>&1 | FileCheck %s
+
+target triple = "wasm32-unknown-unknown-wasm"
 
 define i32 @_start() local_unnamed_addr #1 {
 entry:

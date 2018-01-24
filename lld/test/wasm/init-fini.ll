@@ -1,5 +1,7 @@
-; RUN: llc -mtriple=wasm32-unknown-unknown-wasm -filetype=obj -o %t.o %s
-; RUN: llc -mtriple=wasm32-unknown-unknown-wasm -filetype=obj %S/Inputs/global-ctor-dtor.ll -o %t.global-ctor-dtor.o
+; RUN: llc -filetype=obj -o %t.o %s
+; RUN: llc -filetype=obj %S/Inputs/global-ctor-dtor.ll -o %t.global-ctor-dtor.o
+
+target triple = "wasm32-unknown-unknown-wasm"
 
 define hidden void @func1() {
 entry:
@@ -46,8 +48,8 @@ entry:
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 ; CHECK:        - Type:            ELEM
-; CHECK-NEXT:     Segments:        
-; CHECK-NEXT:       - Offset:          
+; CHECK-NEXT:     Segments:
+; CHECK-NEXT:       - Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1
 ; CHECK-NEXT:         Functions:       [ 6, 9, 13, 15, 17 ]
@@ -58,7 +60,7 @@ entry:
 ; CHECK-NEXT:     DataSize:        0
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            name
-; CHECK-NEXT:     FunctionNames:   
+; CHECK-NEXT:     FunctionNames:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            func1
 ; CHECK-NEXT:       - Index:           1
@@ -107,7 +109,7 @@ entry:
 
 ; RELOC:          Name:            linking
 ; RELOC-NEXT:     DataSize:        0
-; RELOC-NEXT:     SymbolInfo:      
+; RELOC-NEXT:     SymbolInfo:
 ; RELOC-NEXT:       - Name:            __dso_handle
 ; RELOC-NEXT:         Flags:           [ BINDING_WEAK, VISIBILITY_HIDDEN ]
 ; RELOC-NEXT:       - Name:            func1
@@ -171,7 +173,7 @@ entry:
 ; RELOC-NEXT:         FunctionIndex:   18
 ; RELOC-NEXT:   - Type:            CUSTOM
 ; RELOC-NEXT:     Name:            name
-; RELOC-NEXT:     FunctionNames:   
+; RELOC-NEXT:     FunctionNames:
 ; RELOC-NEXT:       - Index:           0
 ; RELOC-NEXT:         Name:            func1
 ; RELOC-NEXT:       - Index:           1

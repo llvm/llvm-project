@@ -4,6 +4,8 @@
 ; RUN: lld -flavor wasm -o %t.wasm %t.o %t1.o %t2.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
+target triple = "wasm32-unknown-unknown-wasm"
+
 declare i32 @inlineFn()
 
 define void @_start() local_unnamed_addr {

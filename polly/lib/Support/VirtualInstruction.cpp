@@ -21,13 +21,33 @@ using namespace llvm;
 VirtualUse VirtualUse ::create(Scop *S, const Use &U, LoopInfo *LI,
                                bool Virtual) {
   auto *UserBB = getUseBlock(U);
+  Loop *UserScope = LI->getLoopFor(UserBB);
   Instruction *UI = dyn_cast<Instruction>(U.getUser());
-  ScopStmt *UserStmt = nullptr;
-  if (PHINode *PHI = dyn_cast<PHINode>(UI))
-    UserStmt = S->getLastStmtFor(PHI->getIncomingBlock(U));
-  else
-    UserStmt = S->getStmtFor(UI);
-  auto *UserScope = LI->getLoopFor(UserBB);
+  ScopStmt *UserStmt = S->getStmtFor(UI);
+
+  // Uses by PHI nodes are always reading values written by other statements,
+  // except it is within a region statement.
+  if (PHINode *PHI = dyn_cast<PHINode>(UI)) {
+    // Handle PHI in exit block.
+    if (S->getRegion().getExit() == PHI->getParent())
+      return VirtualUse(UserStmt, U.get(), Inter, nullptr, nullptr);
+
+    if (UserStmt->getEntryBlock() != PHI->getParent())
+      return VirtualUse(UserStmt, U.get(), Intra, nullptr, nullptr);
+
+    // The MemoryAccess is expected to be set if @p Virtual is true.
+    MemoryAccess *IncomingMA = nullptr;
+    if (Virtual) {
+      if (const ScopArrayInfo *SAI =
+              S->getScopArrayInfoOrNull(PHI, MemoryKind::PHI)) {
+        IncomingMA = S->getPHIRead(SAI);
+        assert(IncomingMA->getStatement() == UserStmt);
+      }
+    }
+
+    return VirtualUse(UserStmt, U.get(), Inter, nullptr, IncomingMA);
+  }
+
   return create(S, UserStmt, UserScope, U.get(), Virtual);
 }
 

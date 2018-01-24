@@ -1,10 +1,12 @@
-; RUN: llc -mtriple=wasm32-unknown-unknown-wasm -filetype=obj -o %t.o %s
-; RUN: llc -mtriple=wasm32-unknown-unknown-wasm -filetype=obj %S/Inputs/weak-alias.ll -o %t2.o
+; RUN: llc -filetype=obj -o %t.o %s
+; RUN: llc -filetype=obj %S/Inputs/weak-alias.ll -o %t2.o
 ; RUN: lld -flavor wasm %t.o %t2.o -o %t.wasm
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 ; Test that the strongly defined alias_fn from this file is used both here
 ; and in call_alias.
+
+target triple = "wasm32-unknown-unknown-wasm"
 
 define i32 @alias_fn() local_unnamed_addr #1 {
   ret i32 1
@@ -85,8 +87,8 @@ entry:
 ; CHECK-NEXT:         Kind:            GLOBAL
 ; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:   - Type:            ELEM
-; CHECK-NEXT:     Segments:        
-; CHECK-NEXT:       - Offset:          
+; CHECK-NEXT:     Segments:
+; CHECK-NEXT:       - Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1
 ; CHECK-NEXT:         Functions:       [ 0, 2 ]
@@ -108,12 +110,12 @@ entry:
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            1080808080000B
 ; CHECK-NEXT:       - Index:           5
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:           - Type:            I32
 ; CHECK-NEXT:             Count:           2
 ; CHECK-NEXT:         Body:            23808080800041106B220024808080800020004181808080003602081080808080002101200041106A24808080800020010B
 ; CHECK-NEXT:       - Index:           6
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:           - Type:            I32
 ; CHECK-NEXT:             Count:           2
 ; CHECK-NEXT:         Body:            23808080800041106B220024808080800020004182808080003602081082808080002101200041106A24808080800020010B
