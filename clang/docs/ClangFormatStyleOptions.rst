@@ -1577,8 +1577,20 @@ the configuration (without a prefix: ``Auto``).
 
 
 **RawStringFormats** (``std::vector<RawStringFormat>``)
-  Raw string delimiters denoting that the raw string contents are
-  code in a particular language and can be reformatted.
+  Defines hints for detecting supported languages code blocks in raw
+  strings.
+
+  A raw string with a matching delimiter or a matching enclosing function
+  name will be reformatted assuming the specified language based on the
+  style for that language defined in the .clang-format file. If no style has
+  been defined in the .clang-format file for the specific language, a
+  predefined style given by 'BasedOnStyle' is used. If 'BasedOnStyle' is not
+  found, the formatting is based on llvm style. A matching delimiter takes
+  precedence over a matching enclosing function name for determining the
+  language of the raw string contents.
+
+  If a canonical delimiter is specified, occurrences of other delimiters for
+  the same language will be updated to the canonical if possible.
 
   A raw string with a matching delimiter will be reformatted assuming the
   specified language based on a predefined style given by 'BasedOnStyle'.

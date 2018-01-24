@@ -1380,9 +1380,11 @@ struct FormatStyle {
   /// \brief Raw string delimiters denoting that the raw string contents are
   /// code in a particular language and can be reformatted.
   ///
-  /// A raw string with a matching delimiter will be reformatted assuming the
-  /// specified language based on a predefined style given by 'BasedOnStyle'.
-  /// If 'BasedOnStyle' is not found, the formatting is based on llvm style.
+  /// If a canonical delimiter is specified, occurrences of other delimiters for
+  /// the same language will be updated to the canonical if possible.
+  ///
+  /// There should be at most one specification per language and each delimiter
+  /// and enclosing function should not occur in multiple specifications.
   ///
   /// To configure this in the .clang-format file, use:
   /// \code{.yaml}

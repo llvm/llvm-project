@@ -351,7 +351,7 @@ struct FilenamePatternConstraint {
 /// Analyzes the pattern of the referenced variables in a statement.
 class VariablePattern {
 
-  /// Describes an occurence of a variable reference in a statement.
+  /// Describes an occurrence of a variable reference in a statement.
   struct VariableOccurence {
     /// The index of the associated VarDecl in the Variables vector.
     size_t KindID;
@@ -362,7 +362,7 @@ class VariablePattern {
         : KindID(KindID), Mention(Mention) {}
   };
 
-  /// All occurences of referenced variables in the order of appearance.
+  /// All occurrences of referenced variables in the order of appearance.
   std::vector<VariableOccurence> Occurences;
   /// List of referenced variables in the order of appearance.
   /// Every item in this list is unique.
