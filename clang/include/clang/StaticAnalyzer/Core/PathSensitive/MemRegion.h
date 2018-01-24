@@ -103,6 +103,7 @@ public:
   const MemRegion *getBaseRegion() const;
 
   /// Check if the region is a subregion of the given region.
+  /// Each region is a subregion of itself.
   virtual bool isSubRegionOf(const MemRegion *R) const;
 
   const MemRegion *StripCasts(bool StripBaseCasts = true) const;
