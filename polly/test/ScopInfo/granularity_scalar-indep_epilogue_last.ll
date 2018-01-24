@@ -1,8 +1,7 @@
 ; RUN: opt %loadPolly -polly-stmt-granularity=scalar-indep -polly-print-instructions -polly-scops -analyze < %s | FileCheck %s -match-full-lines
 ;
-; Check that the statement where the PHI writes are in always comes last.
-; Otherwise we'd need to introduce a scalar dependency from the statement
-; defining a value to the last statement of a basic block.
+; Check that the PHI Write of value that is defined in the same basic
+; block is in the statement where it is defined.
 ;
 ; for (int j = 0; j < n; j += 1) {
 ; bodyA:
@@ -52,20 +51,27 @@ return:
 ; CHECK-NEXT:         Domain :=
 ; CHECK-NEXT:             [n] -> { Stmt_bodyA[i0] : 0 <= i0 < n };
 ; CHECK-NEXT:         Schedule :=
-; CHECK-NEXT:             [n] -> { Stmt_bodyA[i0] -> [i0] };
+; CHECK-NEXT:             [n] -> { Stmt_bodyA[i0] -> [i0, 0] };
 ; CHECK-NEXT:         ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [n] -> { Stmt_bodyA[i0] -> MemRef_A[0] };
 ; CHECK-NEXT:         MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [n] -> { Stmt_bodyA[i0] -> MemRef_A[0] };
-; CHECK-NEXT:         ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             [n] -> { Stmt_bodyA[i0] -> MemRef_B[0] };
-; CHECK-NEXT:         MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             [n] -> { Stmt_bodyA[i0] -> MemRef_B[0] };
 ; CHECK-NEXT:         MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:             [n] -> { Stmt_bodyA[i0] -> MemRef_phi__phi[] };
 ; CHECK-NEXT:         Instructions {
 ; CHECK-NEXT:               %valA = load double, double* %A
 ; CHECK-NEXT:               store double %valA, double* %A
+; CHECK-NEXT:         }
+; CHECK-NEXT:     Stmt_bodyA_b
+; CHECK-NEXT:         Domain :=
+; CHECK-NEXT:             [n] -> { Stmt_bodyA_b[i0] : 0 <= i0 < n };
+; CHECK-NEXT:         Schedule :=
+; CHECK-NEXT:             [n] -> { Stmt_bodyA_b[i0] -> [i0, 1] };
+; CHECK-NEXT:         ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [n] -> { Stmt_bodyA_b[i0] -> MemRef_B[0] };
+; CHECK-NEXT:         MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [n] -> { Stmt_bodyA_b[i0] -> MemRef_B[0] };
+; CHECK-NEXT:         Instructions {
 ; CHECK-NEXT:               %valB = load double, double* %B
 ; CHECK-NEXT:               store double %valB, double* %B
 ; CHECK-NEXT:         }

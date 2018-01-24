@@ -406,396 +406,396 @@ entry:
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:         Index:           129
 ; CHECK-NEXT:         Offset:          0x00000611
-; CHECK-NEXT:     Functions:       
+; CHECK-NEXT:     Functions:
 ; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           1
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           2
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           3
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           4
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           5
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           6
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           7
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           8
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           9
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           10
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           11
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           12
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           13
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           14
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           15
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           16
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           17
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           18
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           19
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           20
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           21
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           22
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           23
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           24
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           25
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           26
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           27
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           28
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           29
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           30
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           31
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           32
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           33
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           34
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           35
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           36
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           37
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           38
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           39
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           40
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           41
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           42
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           43
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           44
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           45
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           46
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           47
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           48
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           49
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           50
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           51
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           52
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           53
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           54
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           55
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           56
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           57
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           58
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           59
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           60
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           61
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           62
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           63
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           64
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           65
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           66
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           67
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           68
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           69
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           70
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           71
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           72
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           73
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           74
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           75
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           76
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           77
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           78
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           79
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           80
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           81
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           82
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           83
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           84
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           85
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           86
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           87
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           88
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           89
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           90
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           91
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           92
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           93
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           94
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           95
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           96
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           97
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           98
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           99
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           100
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           101
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           102
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           103
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           104
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           105
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           106
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           107
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           108
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           109
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           110
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           111
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           112
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           113
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           114
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           115
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           116
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           117
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           118
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           119
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           120
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           121
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           122
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           123
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           124
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           125
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           126
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280284808080000B
 ; CHECK-NEXT:       - Index:           127
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280280808080000B
 ; CHECK-NEXT:       - Index:           128
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            4100280280808080000B
 ; CHECK-NEXT:       - Index:           129
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            1081818080000B
 ; CHECK-NEXT:   - Type:            DATA
 ; CHECK-NEXT:     Segments:

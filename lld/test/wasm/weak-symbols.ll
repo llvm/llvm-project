@@ -25,7 +25,7 @@ entry:
 ; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         ReturnType:      NORESULT
-; CHECK-NEXT:         ParamTypes:   
+; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:   - Type:            FUNCTION
 ; CHECK-NEXT:     FunctionTypes:   [ 0, 0, 0, 0, 0, 1 ]
 ; CHECK-NEXT:   - Type:            TABLE
