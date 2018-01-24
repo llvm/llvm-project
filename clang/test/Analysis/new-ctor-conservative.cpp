@@ -1,6 +1,7 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config c++-allocator-inlining=true -std=c++11 -verify %s
+// RUN: %clang_analyze_cc1 -w -analyzer-checker=core,debug.ExprInspection -analyzer-config c++-allocator-inlining=true -std=c++11 -verify %s
 
 void clang_analyzer_eval(bool);
+void clang_analyzer_warnIfReached();
 
 struct S {
   int x;
@@ -26,4 +27,20 @@ void checkNewArray() {
   S *s = new S[10];
   // FIXME: Should be true once we inline array constructors.
   clang_analyzer_eval(s[0].x == 1); // expected-warning{{UNKNOWN}}
+}
+
+struct NullS {
+  NullS() {
+    if (this) {}
+  }
+  NullS(int x) {
+    if (!this) {
+      clang_analyzer_warnIfReached(); // no-warning
+    }
+  }
+};
+
+void checkNullThis() {
+  NullS *nulls = new NullS(); // no-crash
+  NullS *nulls2 = new NullS(0);
 }
