@@ -430,6 +430,11 @@ namespace llvm {
       /// The 4xf32 load used for v4i1 constants.
       QVLFSb,
 
+      /// ATOMIC_CMP_SWAP - the exact same as the target-independent nodes
+      /// except they ensure that the compare input is zero-extended for
+      /// sub-word versions because the atomic loads zero-extend.
+      ATOMIC_CMP_SWAP_8, ATOMIC_CMP_SWAP_16,
+
       /// GPRC = TOC_ENTRY GA, TOC
       /// Loads the entry for GA from the TOC, where the TOC base is given by
       /// the last operand.
@@ -955,6 +960,7 @@ namespace llvm {
     SDValue LowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerREM(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBSWAP(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSCALAR_TO_VECTOR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSIGN_EXTEND_INREG(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerMUL(SDValue Op, SelectionDAG &DAG) const;
