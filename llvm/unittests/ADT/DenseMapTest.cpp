@@ -384,7 +384,7 @@ TEST(DenseMapCustomTest, DefaultMinReservedSizeTest) {
   EXPECT_EQ(MemorySize, Map.getMemorySize());
   // Check that move was called the expected number of times
   EXPECT_EQ(ExpectedMaxInitialEntries, CountCopyAndMove::Move);
-  // Check that no copy occured
+  // Check that no copy occurred
   EXPECT_EQ(0, CountCopyAndMove::Copy);
 
   // Adding one extra element should grow the map
@@ -397,7 +397,7 @@ TEST(DenseMapCustomTest, DefaultMinReservedSizeTest) {
   // Check that move was called the expected number of times
   //  This relies on move-construction elision, and cannot be reliably tested.
   //   EXPECT_EQ(ExpectedMaxInitialEntries + 2, CountCopyAndMove::Move);
-  // Check that no copy occured
+  // Check that no copy occurred
   EXPECT_EQ(0, CountCopyAndMove::Copy);
 }
 
@@ -422,7 +422,7 @@ TEST(DenseMapCustomTest, InitialSizeTest) {
     EXPECT_EQ(MemorySize, Map.getMemorySize());
     // Check that move was called the expected number of times
     EXPECT_EQ(Size, CountCopyAndMove::Move);
-    // Check that no copy occured
+    // Check that no copy occurred
     EXPECT_EQ(0, CountCopyAndMove::Copy);
   }
 }
@@ -438,7 +438,7 @@ TEST(DenseMapCustomTest, InitFromIterator) {
   CountCopyAndMove::Move = 0;
   CountCopyAndMove::Copy = 0;
   DenseMap<int, CountCopyAndMove> Map(Values.begin(), Values.end());
-  // Check that no move occured
+  // Check that no move occurred
   EXPECT_EQ(0, CountCopyAndMove::Move);
   // Check that copy was called the expected number of times
   EXPECT_EQ(Count, CountCopyAndMove::Copy);
@@ -466,7 +466,7 @@ TEST(DenseMapCustomTest, ReserveTest) {
     EXPECT_EQ(MemorySize, Map.getMemorySize());
     // Check that move was called the expected number of times
     EXPECT_EQ(Size, CountCopyAndMove::Move);
-    // Check that no copy occured
+    // Check that no copy occurred
     EXPECT_EQ(0, CountCopyAndMove::Copy);
   }
 }

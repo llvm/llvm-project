@@ -30,6 +30,8 @@ struct AMDGPURegisterInfo : public AMDGPUGenRegisterInfo {
   /// \returns the sub reg enum value for the given \p Channel
   /// (e.g. getSubRegFromChannel(0) -> AMDGPU::sub0)
   unsigned getSubRegFromChannel(unsigned Channel) const;
+
+  void reserveRegisterTuples(BitVector &, unsigned Reg) const;
 };
 
 } // End namespace llvm

@@ -4013,7 +4013,7 @@ basic_regex<_CharT, _Traits>::__parse_character_class(_ForwardIterator __first,
     char_class_type __class_type =
         __traits_.lookup_classname(__first, __temp, __flags_ & icase);
     if (__class_type == 0)
-        __throw_regex_error<regex_constants::error_brack>();
+        __throw_regex_error<regex_constants::error_ctype>();
     __ml->__add_class(__class_type);
     __first = _VSTD::next(__temp, 2);
     return __first;

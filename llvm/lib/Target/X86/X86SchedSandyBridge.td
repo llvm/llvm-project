@@ -840,11 +840,11 @@ def SBWriteResGroup17 : SchedWriteRes<[SBPort5,SBPort15]> {
 def: InstRW<[SBWriteResGroup17], (instregex "PINSRBrr")>;
 def: InstRW<[SBWriteResGroup17], (instregex "PINSRDrr")>;
 def: InstRW<[SBWriteResGroup17], (instregex "PINSRQrr")>;
-def: InstRW<[SBWriteResGroup17], (instregex "PINSRWrri")>;
+def: InstRW<[SBWriteResGroup17], (instregex "PINSRWrr")>;
 def: InstRW<[SBWriteResGroup17], (instregex "VPINSRBrr")>;
 def: InstRW<[SBWriteResGroup17], (instregex "VPINSRDrr")>;
 def: InstRW<[SBWriteResGroup17], (instregex "VPINSRQrr")>;
-def: InstRW<[SBWriteResGroup17], (instregex "VPINSRWrri")>;
+def: InstRW<[SBWriteResGroup17], (instregex "VPINSRWrr")>;
 
 def SBWriteResGroup18 : SchedWriteRes<[SBPort5,SBPort015]> {
   let Latency = 2;
@@ -1016,11 +1016,11 @@ def SBWriteResGroup23 : SchedWriteRes<[SBPort0,SBPort15]> {
 def: InstRW<[SBWriteResGroup23], (instregex "PEXTRBrr")>;
 def: InstRW<[SBWriteResGroup23], (instregex "PEXTRDrr")>;
 def: InstRW<[SBWriteResGroup23], (instregex "PEXTRQrr")>;
-def: InstRW<[SBWriteResGroup23], (instregex "PEXTRWri")>;
+def: InstRW<[SBWriteResGroup23], (instregex "PEXTRWrr")>;
 def: InstRW<[SBWriteResGroup23], (instregex "VPEXTRBrr")>;
 def: InstRW<[SBWriteResGroup23], (instregex "VPEXTRDrr")>;
 def: InstRW<[SBWriteResGroup23], (instregex "VPEXTRQrr")>;
-def: InstRW<[SBWriteResGroup23], (instregex "VPEXTRWri")>;
+def: InstRW<[SBWriteResGroup23], (instregex "VPEXTRWrr")>;
 
 def SBWriteResGroup23_2 : SchedWriteRes<[SBPort05]> {
   let Latency = 3;
@@ -1680,7 +1680,7 @@ def: InstRW<[SBWriteResGroup59], (instregex "PCMPGTWrm")>;
 def: InstRW<[SBWriteResGroup59], (instregex "PINSRBrm")>;
 def: InstRW<[SBWriteResGroup59], (instregex "PINSRDrm")>;
 def: InstRW<[SBWriteResGroup59], (instregex "PINSRQrm")>;
-def: InstRW<[SBWriteResGroup59], (instregex "PINSRWrmi")>;
+def: InstRW<[SBWriteResGroup59], (instregex "PINSRWrm")>;
 def: InstRW<[SBWriteResGroup59], (instregex "PMAXSBrm")>;
 def: InstRW<[SBWriteResGroup59], (instregex "PMAXSDrm")>;
 def: InstRW<[SBWriteResGroup59], (instregex "PMAXSWrm")>;
@@ -1757,7 +1757,7 @@ def: InstRW<[SBWriteResGroup59], (instregex "VPCMPGTWrm")>;
 def: InstRW<[SBWriteResGroup59], (instregex "VPINSRBrm")>;
 def: InstRW<[SBWriteResGroup59], (instregex "VPINSRDrm")>;
 def: InstRW<[SBWriteResGroup59], (instregex "VPINSRQrm")>;
-def: InstRW<[SBWriteResGroup59], (instregex "VPINSRWrmi")>;
+def: InstRW<[SBWriteResGroup59], (instregex "VPINSRWrm")>;
 def: InstRW<[SBWriteResGroup59], (instregex "VPMAXSBrm")>;
 def: InstRW<[SBWriteResGroup59], (instregex "VPMAXSDrm")>;
 def: InstRW<[SBWriteResGroup59], (instregex "VPMAXSWrm")>;

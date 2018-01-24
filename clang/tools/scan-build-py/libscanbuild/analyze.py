@@ -317,7 +317,7 @@ def run(opts):
 
         return arch_check(opts)
     except Exception:
-        logging.error("Problem occured during analyzis.", exc_info=1)
+        logging.error("Problem occurred during analyzis.", exc_info=1)
         return None
 
 

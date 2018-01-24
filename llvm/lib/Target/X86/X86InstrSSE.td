@@ -4234,7 +4234,7 @@ let Constraints = "$src1 = $dst" in {
 
 let ExeDomain = SSEPackedInt in {
 multiclass sse2_pinsrw<bit Is2Addr = 1> {
-  def rri : Ii8<0xC4, MRMSrcReg,
+  def rr : Ii8<0xC4, MRMSrcReg,
        (outs VR128:$dst), (ins VR128:$src1,
         GR32orGR64:$src2, u8imm:$src3),
        !if(Is2Addr,
@@ -4243,9 +4243,9 @@ multiclass sse2_pinsrw<bit Is2Addr = 1> {
        [(set VR128:$dst,
          (X86pinsrw VR128:$src1, GR32orGR64:$src2, imm:$src3))],
        IIC_SSE_PINSRW>, Sched<[WriteShuffle]>;
-  def rmi : Ii8<0xC4, MRMSrcMem,
-                       (outs VR128:$dst), (ins VR128:$src1,
-                        i16mem:$src2, u8imm:$src3),
+  def rm : Ii8<0xC4, MRMSrcMem,
+                      (outs VR128:$dst), (ins VR128:$src1,
+                       i16mem:$src2, u8imm:$src3),
        !if(Is2Addr,
            "pinsrw\t{$src3, $src2, $dst|$dst, $src2, $src3}",
            "vpinsrw\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
@@ -4257,18 +4257,18 @@ multiclass sse2_pinsrw<bit Is2Addr = 1> {
 
 // Extract
 let Predicates = [HasAVX, NoBWI] in
-def VPEXTRWri : Ii8<0xC5, MRMSrcReg,
+def VPEXTRWrr : Ii8<0xC5, MRMSrcReg,
                     (outs GR32orGR64:$dst), (ins VR128:$src1, u8imm:$src2),
                     "vpextrw\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                     [(set GR32orGR64:$dst, (X86pextrw (v8i16 VR128:$src1),
-                                            imm:$src2))]>, PD, VEX,
-                Sched<[WriteShuffle]>;
-def PEXTRWri : PDIi8<0xC5, MRMSrcReg,
+                                            imm:$src2))], IIC_SSE_PEXTRW>,
+                PD, VEX, Sched<[WriteShuffle]>;
+def PEXTRWrr : PDIi8<0xC5, MRMSrcReg,
                     (outs GR32orGR64:$dst), (ins VR128:$src1, u8imm:$src2),
                     "pextrw\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                     [(set GR32orGR64:$dst, (X86pextrw (v8i16 VR128:$src1),
                                             imm:$src2))], IIC_SSE_PEXTRW>,
-               Sched<[WriteShuffleLd, ReadAfterLd]>;
+               Sched<[WriteShuffle]>;
 
 // Insert
 let Predicates = [HasAVX, NoBWI] in
@@ -5632,7 +5632,7 @@ multiclass SS41I_extract16<bits<8> opc, string OpcodeStr> {
                    (ins VR128:$src1, u8imm:$src2),
                    !strconcat(OpcodeStr,
                    "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-                   []>, Sched<[WriteShuffle]>, FoldGenData<NAME#ri>;
+                   [], IIC_SSE_PEXTRW>, Sched<[WriteShuffle]>, FoldGenData<NAME#ri>;
 
   let hasSideEffects = 0, mayStore = 1,
       SchedRW = [WriteShuffleLd, WriteRMW] in

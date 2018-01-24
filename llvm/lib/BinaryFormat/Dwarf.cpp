@@ -587,8 +587,7 @@ bool llvm::dwarf::isValidFormForVersion(Form F, unsigned Version,
   return ExtensionsOk;
 }
 
-uint32_t llvm::dwarf::djbHash(StringRef Buffer) {
-  uint32_t H = 5381;
+uint32_t llvm::dwarf::djbHash(StringRef Buffer, uint32_t H) {
   for (char C : Buffer.bytes())
     H = ((H << 5) + H) + C;
   return H;

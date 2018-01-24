@@ -339,8 +339,7 @@ def : InstRW<[WriteALULd], (instregex "(ADD|SUB)(8|16|32|64)m(r|i)",
 // r,r/i.
 def : InstRW<[WriteALU], (instregex "(ADC|SBB)(8|16|32|64)r(r|i)",
                           "(ADC|SBB)(16|32|64)ri8",
-                          "(ADC|SBB)64ri32",
-                          "(ADC|SBB)(8|16|32|64)rr_REV")>;
+                          "(ADC|SBB)64ri32")>;
 
 // r,m.
 def : InstRW<[WriteALULd, ReadAfterLd],
@@ -919,11 +918,10 @@ def : InstRW<[ZnWriteFPU], (instregex "MMX_MOVQ64rr")>;
 
 // (V)MOVDQA/U.
 // x <- x.
-def : InstRW<[ZnWriteFPU], (instregex "MOVDQ(A|U)rr", "VMOVDQ(A|U)rr",
-                           "MOVDQ(A|U)rr_REV", "VMOVDQ(A|U)rr_REV")>;
+def : InstRW<[ZnWriteFPU], (instregex "MOVDQ(A|U)rr", "VMOVDQ(A|U)rr")>;
 
 // y <- y.
-def : InstRW<[ZnWriteFPUY], (instregex "VMOVDQ(A|U)Yrr", "VMOVDQ(A|U)Yrr_REV")>;
+def : InstRW<[ZnWriteFPUY], (instregex "VMOVDQ(A|U)Yrr")>;
 
 // MOVDQ2Q.
 def : InstRW<[ZnWriteFPU], (instregex "MMX_MOVDQ2Qrr")>;
@@ -1033,7 +1031,7 @@ def ZnWritePEXTRr : SchedWriteRes<[ZnFPU12, ZnFPU2]> {
   let Latency = 2;
   let ResourceCycles = [1, 2];
 }
-def : InstRW<[ZnWritePEXTRr], (instregex "PEXTR(B|W|D|Q)rr", "MMX_PEXTRWirri")>;
+def : InstRW<[ZnWritePEXTRr], (instregex "PEXTR(B|W|D|Q)rr", "MMX_PEXTRWrr")>;
 
 def ZnWritePEXTRm : SchedWriteRes<[ZnAGU, ZnFPU12, ZnFPU2]> {
   let Latency = 5;
@@ -1621,8 +1619,8 @@ def : InstRW<[ZnWriteFMADDr],
     (instregex
     "VF(N?)M(ADD|SUB|ADDSUB|SUBADD)P(S|D)(213|132|231)(Y?)r",
     "VF(N?)M(ADD|SUB)(132|231|213)S(S|D)r",
-    "VF(N?)M(ADD|SUB)S(S|D)4rr(_REV|_Int)?",
-    "VF(N?)M(ADD|SUB)P(S|D)4(Y?)rr(_REV)?")>;
+    "VF(N?)M(ADD|SUB)S(S|D)4rr(_Int)?",
+    "VF(N?)M(ADD|SUB)P(S|D)4(Y?)rr")>;
 
 // v,v,m.
 def ZnWriteFMADDm : SchedWriteRes<[ZnAGU, ZnFPU03]> {

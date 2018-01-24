@@ -25,6 +25,7 @@ add_clang_unittest(ToolingTests
   RecursiveASTVisitorTestCallVisitor.cpp
   RecursiveASTVisitorTestDeclVisitor.cpp
   RecursiveASTVisitorTestExprVisitor.cpp
+  RecursiveASTVisitorTestPostOrderVisitor.cpp
   RecursiveASTVisitorTestTypeLocVisitor.cpp
   RefactoringActionRulesTest.cpp
   RefactoringCallbacksTest.cpp

@@ -93,7 +93,7 @@ public:
       Bundle(const ObjectInfo &Info) : DeclTimeInfo(Info) {}
     };
     std::map<BundleKey, Bundle> BundleData;
-    // Bundles are listed in the order of their first occurence.
+    // Bundles are listed in the order of their first occurrence.
     std::vector<BundleKey> BundleList;
   } StringTableData;
 
