@@ -1,6 +1,8 @@
-; RUN: llc -mtriple wasm32-unknown-unknown-wasm -filetype=obj %s -o %t.o
+; RUN: llc -filetype=obj %s -o %t.o
 ; RUN: obj2yaml %t.o | FileCheck %s
 ; RUN: llvm-objdump -t %t.o | FileCheck --check-prefix=CHECK-SYMS %s
+
+target triple = "wasm32-unknown-unknown-wasm"
 
 ; 'foo_alias()' is weak alias of function 'foo()'
 ; 'bar_alias' is weak alias of global variable 'bar'
@@ -189,8 +191,13 @@ entry:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           8
 ; CHECK-NEXT:         Content:         '01000000'
-
-; CHECK:        - Type:            CUSTOM
+; CHECK-NEXT:       - SectionOffset:   24
+; CHECK-NEXT:         MemoryIndex:     0
+; CHECK-NEXT:         Offset:          
+; CHECK-NEXT:           Opcode:          I32_CONST
+; CHECK-NEXT:           Value:           16
+; CHECK-NEXT:         Content:         '02000000'
+; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
 ; CHECK-NEXT:     DataSize:        20
 ; CHECK-NEXT:     SymbolInfo:      

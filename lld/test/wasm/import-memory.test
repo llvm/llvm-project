@@ -5,9 +5,9 @@
 # Verify the --import-memory flag creates a memory import
 
 # CHECK:       - Type:            IMPORT
-# CHECK-NEXT:    Imports:         
+# CHECK-NEXT:    Imports:
 # CHECK-NEXT:      - Module:          env
 # CHECK-NEXT:        Field:           memory
 # CHECK-NEXT:        Kind:            MEMORY
-# CHECK-NEXT:        Memory:          
+# CHECK-NEXT:        Memory:
 # CHECK-NEXT:          Initial:         0x00000002

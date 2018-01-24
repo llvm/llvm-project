@@ -11948,10 +11948,12 @@ SDValue PPCTargetLowering::combineFPToIntToFP(SDNode *N,
   SDLoc dl(N);
   SDValue Op(N, 0);
 
-  // Don't handle ppc_fp128 here or i1 conversions.
+  // Don't handle ppc_fp128 here or conversions that are out-of-range capable
+  // from the hardware.
   if (Op.getValueType() != MVT::f32 && Op.getValueType() != MVT::f64)
     return SDValue();
-  if (Op.getOperand(0).getValueType() == MVT::i1)
+  if (Op.getOperand(0).getValueType().getSimpleVT() <= MVT(MVT::i1) ||
+      Op.getOperand(0).getValueType().getSimpleVT() > MVT(MVT::i64))
     return SDValue();
 
   SDValue FirstOperand(Op.getOperand(0));

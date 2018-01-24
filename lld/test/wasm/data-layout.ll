@@ -11,31 +11,31 @@
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 ; CHECK:        - Type:            GLOBAL
-; CHECK-NEXT:     Globals:         
+; CHECK-NEXT:     Globals:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         true
-; CHECK-NEXT:         InitExpr:        
+; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           66608
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         false
-; CHECK-NEXT:         InitExpr:        
+; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           66608
 
 ; CHECK:         - Type:            DATA
-; CHECK-NEXT:     Segments:        
+; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - SectionOffset:   7
 ; CHECK-NEXT:         MemoryIndex:     0
-; CHECK-NEXT:         Offset:          
+; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1024
 ; CHECK-NEXT:         Content:         0100000000000000000000000000000003000000000000001C040000
 ; CHECK-NEXT:       - SectionOffset:   41
 ; CHECK-NEXT:         MemoryIndex:     0
-; CHECK-NEXT:         Offset:          
+; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1052
 ; CHECK-NEXT:         Content:         68656C6C6F0A00

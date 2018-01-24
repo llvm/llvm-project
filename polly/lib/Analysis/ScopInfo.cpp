@@ -4823,6 +4823,23 @@ ArrayRef<ScopStmt *> Scop::getStmtListFor(BasicBlock *BB) const {
   return StmtMapIt->second;
 }
 
+ScopStmt *Scop::getIncomingStmtFor(const Use &U) const {
+  auto *PHI = cast<PHINode>(U.getUser());
+  BasicBlock *IncomingBB = PHI->getIncomingBlock(U);
+
+  // If the value is a non-synthesizable from the incoming block, use the
+  // statement that contains it as user statement.
+  if (auto *IncomingInst = dyn_cast<Instruction>(U.get())) {
+    if (IncomingInst->getParent() == IncomingBB) {
+      if (ScopStmt *IncomingStmt = getStmtFor(IncomingInst))
+        return IncomingStmt;
+    }
+  }
+
+  // Otherwise, use the epilogue/last statement.
+  return getLastStmtFor(IncomingBB);
+}
+
 ScopStmt *Scop::getLastStmtFor(BasicBlock *BB) const {
   ArrayRef<ScopStmt *> StmtList = getStmtListFor(BB);
   if (!StmtList.empty())

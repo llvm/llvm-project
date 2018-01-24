@@ -48,11 +48,11 @@ define void @call_ptr(i64 (i64)* %arg) {
 ; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:       - Index:           3
 ; CHECK-NEXT:         ReturnType:      NORESULT
-; CHECK-NEXT:         ParamTypes:      
+; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:           - I32
 ; CHECK-NEXT:       - Index:           4
 ; CHECK-NEXT:         ReturnType:      I64
-; CHECK-NEXT:         ParamTypes:      
+; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:           - I64
 ; CHECK-NEXT:   - Type:            FUNCTION
 ; CHECK-NEXT:     FunctionTypes:   [ 0, 1, 2, 2, 3, 1 ]
@@ -115,7 +115,7 @@ define void @call_ptr(i64 (i64)* %arg) {
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            42010B
 ; CHECK-NEXT:       - Index:           1
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:            - Type:            I32
 ; CHECK-NEXT:              Count:           1
 ; CHECK-NEXT:          Body:            4100280284888080002100410028028088808000118080808000001A2000118280808000001A0B

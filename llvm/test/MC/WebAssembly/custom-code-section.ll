@@ -1,4 +1,6 @@
-; RUN: llc -mtriple wasm32-unknown-unknown-wasm -O2 -filetype=obj %s -o %t.o
+; RUN: llc -O2 -filetype=obj %s -o %t.o
+
+target triple = "wasm32-unknown-unknown-wasm"
 
 ; Wasm silently ignores custom sections for code.
 ; We had a bug where this cause a crash

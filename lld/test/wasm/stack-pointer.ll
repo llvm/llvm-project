@@ -19,7 +19,7 @@ entry:
 ; CHECK-NEXT:         ReturnType:      I32
 ; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:   - Type:            IMPORT
-; CHECK-NEXT:     Imports:         
+; CHECK-NEXT:     Imports:
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           __stack_pointer
 ; CHECK-NEXT:         Kind:            GLOBAL
@@ -38,7 +38,7 @@ entry:
 ; CHECK-NEXT:     Memories:
 ; CHECK-NEXT:       - Initial:         0x00000000
 ; CHECK-NEXT:   - Type:            EXPORT
-; CHECK-NEXT:     Exports:         
+; CHECK-NEXT:     Exports:
 ; CHECK-NEXT:       - Name:            _start
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           0

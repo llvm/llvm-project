@@ -159,6 +159,38 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
 
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
 
+  for (MachineBasicBlock &MBB : MF) {
+    if (MBB.empty())
+      continue;
+
+    // Try to find redundant copies b/w vregs of the same register class.
+    bool ReachedBegin = false;
+    for (auto MII = std::prev(MBB.end()), Begin = MBB.begin(); !ReachedBegin;) {
+      // Select this instruction.
+      MachineInstr &MI = *MII;
+
+      // And have our iterator point to the next instruction, if there is one.
+      if (MII == Begin)
+        ReachedBegin = true;
+      else
+        --MII;
+      if (MI.getOpcode() != TargetOpcode::COPY)
+        continue;
+      unsigned SrcReg = MI.getOperand(1).getReg();
+      unsigned DstReg = MI.getOperand(0).getReg();
+      if (TargetRegisterInfo::isVirtualRegister(SrcReg) &&
+          TargetRegisterInfo::isVirtualRegister(DstReg)) {
+        MachineRegisterInfo &MRI = MF.getRegInfo();
+        auto SrcRC = MRI.getRegClass(SrcReg);
+        auto DstRC = MRI.getRegClass(DstReg);
+        if (SrcRC == DstRC) {
+          MRI.replaceRegWith(DstReg, SrcReg);
+          MI.eraseFromParentAndMarkDBGValuesForRemoval();
+        }
+      }
+    }
+  }
+
   // Now that selection is complete, there are no more generic vregs.  Verify
   // that the size of the now-constrained vreg is unchanged and that it has a
   // register class.

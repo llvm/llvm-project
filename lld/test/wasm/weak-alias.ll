@@ -25,7 +25,7 @@ entry:
 ; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         ReturnType:      NORESULT
-; CHECK-NEXT:         ParamTypes:   
+; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:   - Type:            FUNCTION
 ; CHECK-NEXT:     FunctionTypes:   [ 0, 0, 0, 0, 0, 0, 1 ]
 ; CHECK-NEXT:   - Type:            TABLE
@@ -82,8 +82,8 @@ entry:
 ; CHECK-NEXT:         Kind:            GLOBAL
 ; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:   - Type:            ELEM
-; CHECK-NEXT:     Segments:        
-; CHECK-NEXT:       - Offset:          
+; CHECK-NEXT:     Segments:
+; CHECK-NEXT:       - Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1
 ; CHECK-NEXT:         Functions:       [ 1, 1 ]
@@ -102,12 +102,12 @@ entry:
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            1081808080000B
 ; CHECK-NEXT:       - Index:           4
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:           - Type:            I32
 ; CHECK-NEXT:             Count:           2
 ; CHECK-NEXT:         Body:            23808080800041106B220024808080800020004181808080003602081081808080002101200041106A24808080800020010B
 ; CHECK-NEXT:       - Index:           5
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:           - Type:            I32
 ; CHECK-NEXT:             Count:           2
 ; CHECK-NEXT:         Body:            23808080800041106B220024808080800020004182808080003602081081808080002101200041106A24808080800020010B
@@ -135,3 +135,150 @@ entry:
 ; CHECK-NEXT:       - Index:           6
 ; CHECK-NEXT:         Name:            __wasm_call_ctors
 ; CHECK-NEXT: ...
+
+; RUN: lld -flavor wasm --relocatable %t.o %t2.o -o %t.reloc.o
+; RUN: obj2yaml %t.reloc.o | FileCheck %s -check-prefix=RELOC
+
+; RELOC:      --- !WASM
+; RELOC-NEXT: FileHeader:
+; RELOC-NEXT:   Version:         0x00000001
+; RELOC-NEXT: Sections:
+; RELOC-NEXT:   - Type:            TYPE
+; RELOC-NEXT:     Signatures:
+; RELOC-NEXT:       - Index:           0
+; RELOC-NEXT:         ReturnType:      I32
+; RELOC-NEXT:         ParamTypes:
+; RELOC-NEXT:   - Type:            IMPORT
+; RELOC-NEXT:     Imports:
+; RELOC-NEXT:       - Module:          env
+; RELOC-NEXT:         Field:           __stack_pointer
+; RELOC-NEXT:         Kind:            GLOBAL
+; RELOC-NEXT:         GlobalType:      I32
+; RELOC-NEXT:         GlobalMutable:   false
+; RELOC-NEXT:   - Type:            FUNCTION
+; RELOC-NEXT:     FunctionTypes:   [ 0, 0, 0, 0, 0, 0 ]
+; RELOC-NEXT:   - Type:            TABLE
+; RELOC-NEXT:     Tables:
+; RELOC-NEXT:       - ElemType:        ANYFUNC
+; RELOC-NEXT:         Limits:
+; RELOC-NEXT:           Flags:           [ HAS_MAX ]
+; RELOC-NEXT:           Initial:         0x00000002
+; RELOC-NEXT:           Maximum:         0x00000002
+; RELOC-NEXT:   - Type:            MEMORY
+; RELOC-NEXT:     Memories:
+; RELOC-NEXT:       - Initial:         0x00000000
+; RELOC-NEXT:   - Type:            EXPORT
+; RELOC-NEXT:     Exports:
+; RELOC-NEXT:       - Name:            _start
+; RELOC-NEXT:         Kind:            FUNCTION
+; RELOC-NEXT:         Index:           0
+; RELOC-NEXT:       - Name:            alias_fn
+; RELOC-NEXT:         Kind:            FUNCTION
+; RELOC-NEXT:         Index:           1
+; RELOC-NEXT:       - Name:            direct_fn
+; RELOC-NEXT:         Kind:            FUNCTION
+; RELOC-NEXT:         Index:           1
+; RELOC-NEXT:       - Name:            call_direct
+; RELOC-NEXT:         Kind:            FUNCTION
+; RELOC-NEXT:         Index:           2
+; RELOC-NEXT:       - Name:            call_alias
+; RELOC-NEXT:         Kind:            FUNCTION
+; RELOC-NEXT:         Index:           3
+; RELOC-NEXT:       - Name:            call_alias_ptr
+; RELOC-NEXT:         Kind:            FUNCTION
+; RELOC-NEXT:         Index:           4
+; RELOC-NEXT:       - Name:            call_direct_ptr
+; RELOC-NEXT:         Kind:            FUNCTION
+; RELOC-NEXT:         Index:           5
+; RELOC-NEXT:   - Type:            ELEM
+; RELOC-NEXT:     Segments:
+; RELOC-NEXT:       - Offset:
+; RELOC-NEXT:           Opcode:          I32_CONST
+; RELOC-NEXT:           Value:           0
+; RELOC-NEXT:         Functions:       [ 1, 1 ]
+; RELOC-NEXT:   - Type:            CODE
+; RELOC-NEXT:     Relocations:
+; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
+; RELOC-NEXT:         Index:           1
+; RELOC-NEXT:         Offset:          0x00000004
+; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
+; RELOC-NEXT:         Index:           1
+; RELOC-NEXT:         Offset:          0x00000012
+; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
+; RELOC-NEXT:         Index:           1
+; RELOC-NEXT:         Offset:          0x0000001B
+; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_GLOBAL_INDEX_LEB
+; RELOC-NEXT:         Index:           0
+; RELOC-NEXT:         Offset:          0x00000026
+; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_GLOBAL_INDEX_LEB
+; RELOC-NEXT:         Index:           0
+; RELOC-NEXT:         Offset:          0x00000031
+; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_SLEB
+; RELOC-NEXT:         Index:           1
+; RELOC-NEXT:         Offset:          0x00000039
+; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
+; RELOC-NEXT:         Index:           1
+; RELOC-NEXT:         Offset:          0x00000042
+; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_GLOBAL_INDEX_LEB
+; RELOC-NEXT:         Index:           0
+; RELOC-NEXT:         Offset:          0x0000004F
+; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_GLOBAL_INDEX_LEB
+; RELOC-NEXT:         Index:           0
+; RELOC-NEXT:         Offset:          0x0000005C
+; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_GLOBAL_INDEX_LEB
+; RELOC-NEXT:         Index:           0
+; RELOC-NEXT:         Offset:          0x00000067
+; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_SLEB
+; RELOC-NEXT:         Index:           1
+; RELOC-NEXT:         Offset:          0x0000006F
+; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
+; RELOC-NEXT:         Index:           1
+; RELOC-NEXT:         Offset:          0x00000078
+; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_GLOBAL_INDEX_LEB
+; RELOC-NEXT:         Index:           0
+; RELOC-NEXT:         Offset:          0x00000085
+; RELOC-NEXT:     Functions:
+; RELOC-NEXT:       - Index:           0
+; RELOC-NEXT:         Locals:
+; RELOC-NEXT:         Body:            1081808080000B
+; RELOC-NEXT:       - Index:           1
+; RELOC-NEXT:         Locals:
+; RELOC-NEXT:         Body:            41000B
+; RELOC-NEXT:       - Index:           2
+; RELOC-NEXT:         Locals:
+; RELOC-NEXT:         Body:            1081808080000B
+; RELOC-NEXT:       - Index:           3
+; RELOC-NEXT:         Locals:
+; RELOC-NEXT:         Body:            1081808080000B
+; RELOC-NEXT:       - Index:           4
+; RELOC-NEXT:         Locals:
+; RELOC-NEXT:           - Type:            I32
+; RELOC-NEXT:             Count:           2
+; RELOC-NEXT:         Body:            23808080800041106B220024808080800020004180808080003602081081808080002101200041106A24808080800020010B
+; RELOC-NEXT:       - Index:           5
+; RELOC-NEXT:         Locals:
+; RELOC-NEXT:           - Type:            I32
+; RELOC-NEXT:             Count:           2
+; RELOC-NEXT:         Body:            23808080800041106B220024808080800020004181808080003602081081808080002101200041106A24808080800020010B
+; RELOC-NEXT:   - Type:            CUSTOM
+; RELOC-NEXT:     Name:            linking
+; RELOC-NEXT:     DataSize:        0
+; RELOC-NEXT:     SymbolInfo:
+; RELOC-NEXT:       - Name:            alias_fn
+; RELOC-NEXT:         Flags:           [ BINDING_WEAK ]
+; RELOC-NEXT:   - Type:            CUSTOM
+; RELOC-NEXT:     Name:            name
+; RELOC-NEXT:     FunctionNames:
+; RELOC-NEXT:       - Index:           0
+; RELOC-NEXT:         Name:            _start
+; RELOC-NEXT:       - Index:           1
+; RELOC-NEXT:         Name:            direct_fn
+; RELOC-NEXT:       - Index:           2
+; RELOC-NEXT:         Name:            call_direct
+; RELOC-NEXT:       - Index:           3
+; RELOC-NEXT:         Name:            call_alias
+; RELOC-NEXT:       - Index:           4
+; RELOC-NEXT:         Name:            call_alias_ptr
+; RELOC-NEXT:       - Index:           5
+; RELOC-NEXT:         Name:            call_direct_ptr
+; RELOC-NEXT: ...

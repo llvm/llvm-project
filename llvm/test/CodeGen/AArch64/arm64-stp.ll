@@ -105,8 +105,8 @@ define void @splat_v4i32(i32 %v, i32 *%p) {
 entry:
 
 ; CHECK-LABEL: splat_v4i32
-; CHECK-DAG: stp w0, w0, [x1]
-; CHECK-DAG: stp w0, w0, [x1, #8]
+; CHECK-DAG: dup v0.4s, w0
+; CHECK-DAG: str q0, [x1]
 ; CHECK: ret
 
   %p17 = insertelement <4 x i32> undef, i32 %v, i32 0
@@ -129,8 +129,7 @@ entry:
 ; CHECK-DAG: mov v[[REG1]].s[1], w0
 ; CHECK-DAG: mov v[[REG1]].s[2], w0
 ; CHECK-DAG: mov v[[REG1]].s[3], w0
-; CHECK: ext v[[REG2:[0-9]+]].16b, v[[REG1]].16b, v[[REG1]].16b, #8
-; CHECK: stp d[[REG1]], d[[REG2]], [x1]
+; CHECK: str q[[REG1]], [x1]
 ; CHECK: ret
 
   %p17 = insertelement <4 x i32> undef, i32 %v, i32 %v
@@ -151,8 +150,7 @@ entry:
 ; CHECK: mov v[[REG1]].s[1], w0
 ; CHECK-DAG: mov v[[REG1]].s[2], w0
 ; CHECK-DAG: mov v[[REG1]].s[3], w0
-; CHECK: ext v[[REG2:[0-9]+]].16b, v[[REG1]].16b, v[[REG1]].16b, #8
-; CHECK: stp d[[REG1]], d[[REG2]], [x1]
+; CHECK: str q[[REG1]], [x1]
 ; CHECK: ret
 
   %p18 = insertelement <4 x i32> %vin, i32 %v, i32 1

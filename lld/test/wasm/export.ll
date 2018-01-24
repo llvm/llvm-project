@@ -16,7 +16,7 @@ entry:
 ; CHECK-ERROR: error: symbol exported via --export not found: missing
 
 ; CHECK:        - Type:            EXPORT
-; CHECK-NEXT:     Exports:         
+; CHECK-NEXT:     Exports:
 ; CHECK-NEXT:       - Name:            memory
 ; CHECK-NEXT:         Kind:            MEMORY
 ; CHECK-NEXT:         Index:           0

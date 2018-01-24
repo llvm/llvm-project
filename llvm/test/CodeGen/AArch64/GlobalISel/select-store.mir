@@ -93,8 +93,7 @@ body:             |
     ; CHECK-LABEL: name: store_s16_gpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY %w1
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY [[COPY1]]
-    ; CHECK: STRHHui [[COPY2]], [[COPY]], 0 :: (store 2 into %ir.addr)
+    ; CHECK: STRHHui [[COPY1]], [[COPY]], 0 :: (store 2 into %ir.addr)
     %0(p0) = COPY %x0
     %2:gpr(s32) = COPY %w1
     %1(s16) = G_TRUNC %2
@@ -118,8 +117,7 @@ body:             |
     ; CHECK-LABEL: name: store_s8_gpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY %w1
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY [[COPY1]]
-    ; CHECK: STRBBui [[COPY2]], [[COPY]], 0 :: (store 1 into %ir.addr)
+    ; CHECK: STRBBui [[COPY1]], [[COPY]], 0 :: (store 1 into %ir.addr)
     %0(p0) = COPY %x0
     %2:gpr(s32) = COPY %w1
     %1(s8) = G_TRUNC %2
@@ -265,8 +263,7 @@ body:             |
     ; CHECK-LABEL: name: store_gep_64_s16_gpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY %w1
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY [[COPY1]]
-    ; CHECK: STRHHui [[COPY2]], [[COPY]], 32 :: (store 2 into %ir.addr)
+    ; CHECK: STRHHui [[COPY1]], [[COPY]], 32 :: (store 2 into %ir.addr)
     %0(p0) = COPY %x0
     %4:gpr(s32) = COPY %w1
     %1(s16) = G_TRUNC %4
@@ -293,8 +290,7 @@ body:             |
     ; CHECK-LABEL: name: store_gep_1_s8_gpr
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY %x0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY %w1
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY [[COPY1]]
-    ; CHECK: STRBBui [[COPY2]], [[COPY]], 1 :: (store 1 into %ir.addr)
+    ; CHECK: STRBBui [[COPY1]], [[COPY]], 1 :: (store 1 into %ir.addr)
     %0(p0) = COPY %x0
     %4:gpr(s32) = COPY %w1
     %1(s8) = G_TRUNC %4

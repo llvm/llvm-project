@@ -25681,6 +25681,10 @@ bool X86TargetLowering::isVectorShiftByScalarCheap(Type *Ty) const {
   if (Subtarget.hasAVX2() && (Bits == 32 || Bits == 64))
     return false;
 
+  // AVX512BW has shifts such as vpsllvw.
+  if (Subtarget.hasBWI() && Bits == 16)
+      return false;
+
   // Otherwise, it's significantly cheaper to shift by a scalar amount than by a
   // fully general vector.
   return true;

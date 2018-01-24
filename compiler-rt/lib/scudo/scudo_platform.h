@@ -55,6 +55,12 @@
 # define SCUDO_CAN_USE_PUBLIC_INTERFACE 1
 #endif
 
+// Hooks in the allocation & deallocation paths can become a security concern if
+// implemented improperly, or if overwritten by an attacker. Use with caution.
+#ifndef SCUDO_CAN_USE_HOOKS
+# define SCUDO_CAN_USE_HOOKS 0
+#endif
+
 namespace __scudo {
 
 #if SANITIZER_CAN_USE_ALLOCATOR64
