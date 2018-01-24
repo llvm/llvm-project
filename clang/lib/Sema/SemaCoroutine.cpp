@@ -494,9 +494,67 @@ VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
   CheckVariableDeclarationType(VD);
   if (VD->isInvalidDecl())
     return nullptr;
-  ActOnUninitializedDecl(VD);
+
+  auto *ScopeInfo = getCurFunction();
+  // Build a list of arguments, based on the coroutine functions arguments,
+  // that will be passed to the promise type's constructor.
+  llvm::SmallVector<Expr *, 4> CtorArgExprs;
+  auto &Moves = ScopeInfo->CoroutineParameterMoves;
+  for (auto *PD : FD->parameters()) {
+    if (PD->getType()->isDependentType())
+      continue;
+
+    auto RefExpr = ExprEmpty();
+    auto Move = Moves.find(PD);
+    if (Move != Moves.end()) {
+      // If a reference to the function parameter exists in the coroutine
+      // frame, use that reference.
+      auto *MoveDecl =
+          cast<VarDecl>(cast<DeclStmt>(Move->second)->getSingleDecl());
+      RefExpr = BuildDeclRefExpr(MoveDecl, MoveDecl->getType(),
+                                 ExprValueKind::VK_LValue, FD->getLocation());
+    } else {
+      // If the function parameter doesn't exist in the coroutine frame, it
+      // must be a scalar value. Use it directly.
+      assert(!PD->getType()->getAsCXXRecordDecl() &&
+             "Non-scalar types should have been moved and inserted into the "
+             "parameter moves map");
+      RefExpr =
+          BuildDeclRefExpr(PD, PD->getOriginalType().getNonReferenceType(),
+                           ExprValueKind::VK_LValue, FD->getLocation());
+    }
+
+    if (RefExpr.isInvalid())
+      return nullptr;
+    CtorArgExprs.push_back(RefExpr.get());
+  }
+
+  // Create an initialization sequence for the promise type using the
+  // constructor arguments, wrapped in a parenthesized list expression.
+  Expr *PLE = new (Context) ParenListExpr(Context, FD->getLocation(),
+                                          CtorArgExprs, FD->getLocation());
+  InitializedEntity Entity = InitializedEntity::InitializeVariable(VD);
+  InitializationKind Kind = InitializationKind::CreateForInit(
+      VD->getLocation(), /*DirectInit=*/true, PLE);
+  InitializationSequence InitSeq(*this, Entity, Kind, CtorArgExprs,
+                                 /*TopLevelOfInitList=*/false,
+                                 /*TreatUnavailableAsInvalid=*/false);
+
+  // Attempt to initialize the promise type with the arguments.
+  // If that fails, fall back to the promise type's default constructor.
+  if (InitSeq) {
+    ExprResult Result = InitSeq.Perform(*this, Entity, Kind, CtorArgExprs);
+    if (Result.isInvalid()) {
+      VD->setInvalidDecl();
+    } else if (Result.get()) {
+      VD->setInit(MaybeCreateExprWithCleanups(Result.get()));
+      VD->setInitStyle(VarDecl::CallInit);
+      CheckCompleteVariableDeclaration(VD);
+    }
+  } else
+    ActOnUninitializedDecl(VD);
+
   FD->addDecl(VD);
-  assert(!VD->isInvalidDecl());
   return VD;
 }
 
@@ -517,6 +575,9 @@ static FunctionScopeInfo *checkCoroutineContext(Sema &S, SourceLocation Loc,
 
   if (ScopeInfo->CoroutinePromise)
     return ScopeInfo;
+
+  if (!S.buildCoroutineParameterMoves(Loc))
+    return nullptr;
 
   ScopeInfo->CoroutinePromise = S.buildCoroutinePromise(Loc);
   if (!ScopeInfo->CoroutinePromise)
@@ -861,6 +922,11 @@ CoroutineStmtBuilder::CoroutineStmtBuilder(Sema &S, FunctionDecl &FD,
           !Fn.CoroutinePromise ||
           Fn.CoroutinePromise->getType()->isDependentType()) {
   this->Body = Body;
+
+  for (auto KV : Fn.CoroutineParameterMoves)
+    this->ParamMovesVector.push_back(KV.second);
+  this->ParamMoves = this->ParamMovesVector;
+
   if (!IsPromiseDependentType) {
     PromiseRecordDecl = Fn.CoroutinePromise->getType()->getAsCXXRecordDecl();
     assert(PromiseRecordDecl && "Type should have already been checked");
@@ -870,7 +936,7 @@ CoroutineStmtBuilder::CoroutineStmtBuilder(Sema &S, FunctionDecl &FD,
 
 bool CoroutineStmtBuilder::buildStatements() {
   assert(this->IsValid && "coroutine already invalid");
-  this->IsValid = makeReturnObject() && makeParamMoves();
+  this->IsValid = makeReturnObject();
   if (this->IsValid && !IsPromiseDependentType)
     buildDependentStatements();
   return this->IsValid;
@@ -884,12 +950,6 @@ bool CoroutineStmtBuilder::buildDependentStatements() {
                   makeGroDeclAndReturnStmt() && makeReturnOnAllocFailure() &&
                   makeNewAndDeleteExpr();
   return this->IsValid;
-}
-
-bool CoroutineStmtBuilder::buildParameterMoves() {
-  assert(this->IsValid && "coroutine already invalid");
-  assert(this->ParamMoves.empty() && "param moves already built");
-  return this->IsValid = makeParamMoves();
 }
 
 bool CoroutineStmtBuilder::makePromiseStmt() {
@@ -1304,47 +1364,50 @@ static Expr *castForMoving(Sema &S, Expr *E, QualType T = QualType()) {
       .get();
 }
 
-
 /// \brief Build a variable declaration for move parameter.
 static VarDecl *buildVarDecl(Sema &S, SourceLocation Loc, QualType Type,
                              IdentifierInfo *II) {
   TypeSourceInfo *TInfo = S.Context.getTrivialTypeSourceInfo(Type, Loc);
-  VarDecl *Decl =
-      VarDecl::Create(S.Context, S.CurContext, Loc, Loc, II, Type, TInfo, SC_None);
+  VarDecl *Decl = VarDecl::Create(S.Context, S.CurContext, Loc, Loc, II, Type,
+                                  TInfo, SC_None);
   Decl->setImplicit();
   return Decl;
 }
 
-bool CoroutineStmtBuilder::makeParamMoves() {
-  for (auto *paramDecl : FD.parameters()) {
-    auto Ty = paramDecl->getType();
-    if (Ty->isDependentType())
+// Build statements that move coroutine function parameters to the coroutine
+// frame, and store them on the function scope info.
+bool Sema::buildCoroutineParameterMoves(SourceLocation Loc) {
+  assert(isa<FunctionDecl>(CurContext) && "not in a function scope");
+  auto *FD = cast<FunctionDecl>(CurContext);
+
+  auto *ScopeInfo = getCurFunction();
+  assert(ScopeInfo->CoroutineParameterMoves.empty() &&
+         "Should not build parameter moves twice");
+
+  for (auto *PD : FD->parameters()) {
+    if (PD->getType()->isDependentType())
       continue;
 
-    // No need to copy scalars, llvm will take care of them.
-    if (Ty->getAsCXXRecordDecl()) {
-      ExprResult ParamRef =
-          S.BuildDeclRefExpr(paramDecl, paramDecl->getType(),
-                             ExprValueKind::VK_LValue, Loc); // FIXME: scope?
-      if (ParamRef.isInvalid())
+    // No need to copy scalars, LLVM will take care of them.
+    if (PD->getType()->getAsCXXRecordDecl()) {
+      ExprResult PDRefExpr = BuildDeclRefExpr(
+          PD, PD->getType(), ExprValueKind::VK_LValue, Loc); // FIXME: scope?
+      if (PDRefExpr.isInvalid())
         return false;
 
-      Expr *RCast = castForMoving(S, ParamRef.get());
+      Expr *CExpr = castForMoving(*this, PDRefExpr.get());
 
-      auto D = buildVarDecl(S, Loc, Ty, paramDecl->getIdentifier());
-      S.AddInitializerToDecl(D, RCast, /*DirectInit=*/true);
+      auto D = buildVarDecl(*this, Loc, PD->getType(), PD->getIdentifier());
+      AddInitializerToDecl(D, CExpr, /*DirectInit=*/true);
 
       // Convert decl to a statement.
-      StmtResult Stmt = S.ActOnDeclStmt(S.ConvertDeclToDeclGroup(D), Loc, Loc);
+      StmtResult Stmt = ActOnDeclStmt(ConvertDeclToDeclGroup(D), Loc, Loc);
       if (Stmt.isInvalid())
         return false;
 
-      ParamMovesVector.push_back(Stmt.get());
+      ScopeInfo->CoroutineParameterMoves.insert(std::make_pair(PD, Stmt.get()));
     }
   }
-
-  // Convert to ArrayRef in CtorArgs structure that builder inherits from.
-  ParamMoves = ParamMovesVector;
   return true;
 }
 

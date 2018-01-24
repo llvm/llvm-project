@@ -1171,4 +1171,73 @@ template CoroMemberTag DepTestType<int>::test_member_template(long, const char *
 
 template CoroMemberTag DepTestType<int>::test_static_template<void>(const char *volatile &, unsigned);
 
+struct bad_promise_deleted_constructor {
+  // expected-note@+1 {{'bad_promise_deleted_constructor' has been explicitly marked deleted here}}
+  bad_promise_deleted_constructor() = delete;
+  coro<bad_promise_deleted_constructor> get_return_object();
+  suspend_always initial_suspend();
+  suspend_always final_suspend();
+  void return_void();
+  void unhandled_exception();
+};
+
+coro<bad_promise_deleted_constructor>
+bad_coroutine_calls_deleted_promise_constructor() {
+  // expected-error@-1 {{call to deleted constructor of 'std::experimental::coroutine_traits<coro<CoroHandleMemberFunctionTest::bad_promise_deleted_constructor>>::promise_type' (aka 'CoroHandleMemberFunctionTest::bad_promise_deleted_constructor')}}
+  co_return;
+}
+
+// Test that, when the promise type has a constructor whose signature matches
+// that of the coroutine function, that constructor is used. If no matching
+// constructor exists, the default constructor is used as a fallback. If no
+// matching constructors exist at all, an error is emitted. This is an
+// experimental feature that will be proposed for the Coroutines TS.
+
+struct good_promise_default_constructor {
+  good_promise_default_constructor(double, float, int);
+  good_promise_default_constructor() = default;
+  coro<good_promise_default_constructor> get_return_object();
+  suspend_always initial_suspend();
+  suspend_always final_suspend();
+  void return_void();
+  void unhandled_exception();
+};
+
+coro<good_promise_default_constructor>
+good_coroutine_calls_default_constructor() {
+  co_return;
+}
+
+struct good_promise_custom_constructor {
+  good_promise_custom_constructor(double, float, int);
+  good_promise_custom_constructor() = delete;
+  coro<good_promise_custom_constructor> get_return_object();
+  suspend_always initial_suspend();
+  suspend_always final_suspend();
+  void return_void();
+  void unhandled_exception();
+};
+
+coro<good_promise_custom_constructor>
+good_coroutine_calls_custom_constructor(double, float, int) {
+  co_return;
+}
+
+struct bad_promise_no_matching_constructor {
+  bad_promise_no_matching_constructor(int, int, int);
+  // expected-note@+1 {{'bad_promise_no_matching_constructor' has been explicitly marked deleted here}}
+  bad_promise_no_matching_constructor() = delete;
+  coro<bad_promise_no_matching_constructor> get_return_object();
+  suspend_always initial_suspend();
+  suspend_always final_suspend();
+  void return_void();
+  void unhandled_exception();
+};
+
+coro<bad_promise_no_matching_constructor>
+bad_coroutine_calls_with_no_matching_constructor(int, int) {
+  // expected-error@-1 {{call to deleted constructor of 'std::experimental::coroutine_traits<coro<CoroHandleMemberFunctionTest::bad_promise_no_matching_constructor>, int, int>::promise_type' (aka 'CoroHandleMemberFunctionTest::bad_promise_no_matching_constructor')}}
+  co_return;
+}
+
 } // namespace CoroHandleMemberFunctionTest

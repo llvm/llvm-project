@@ -22,6 +22,7 @@
 #include "clang/Sema/CleanupInfo.h"
 #include "clang/Sema/Ownership.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -171,6 +172,10 @@ public:
 
   /// \brief The promise object for this coroutine, if any.
   VarDecl *CoroutinePromise = nullptr;
+
+  /// \brief A mapping between the coroutine function parameters that were moved
+  /// to the coroutine frame, and their move statements.
+  llvm::SmallMapVector<ParmVarDecl *, Stmt *, 4> CoroutineParameterMoves;
 
   /// \brief The initial and final coroutine suspend points.
   std::pair<Stmt *, Stmt *> CoroutineSuspends;
