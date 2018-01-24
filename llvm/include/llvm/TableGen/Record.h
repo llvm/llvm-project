@@ -1309,7 +1309,7 @@ public:
 
   unsigned getID() const { return ID; }
 
-  StringRef getName() const;
+  StringRef getName() const { return cast<StringInit>(Name)->getValue(); }
 
   Init *getNameInit() const {
     return Name;

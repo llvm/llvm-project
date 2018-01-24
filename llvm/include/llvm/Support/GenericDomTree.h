@@ -234,7 +234,7 @@ void ApplyUpdates(DomTreeT &DT,
                   ArrayRef<typename DomTreeT::UpdateType> Updates);
 
 template <typename DomTreeT>
-bool Verify(const DomTreeT &DT);
+bool Verify(const DomTreeT &DT, typename DomTreeT::VerificationLevel VL);
 }  // namespace DomTreeBuilder
 
 /// \brief Core dominator tree base class.
@@ -259,7 +259,9 @@ class DominatorTreeBase {
   static constexpr UpdateKind Insert = UpdateKind::Insert;
   static constexpr UpdateKind Delete = UpdateKind::Delete;
 
- protected:
+  enum class VerificationLevel { Fast, Basic, Full };
+
+protected:
   // Dominators always have a single root, postdominators can have more.
   SmallVector<NodeT *, IsPostDom ? 4 : 1> Roots;
 
@@ -315,6 +317,12 @@ class DominatorTreeBase {
   /// dominator tree base. Otherwise return true.
   bool compare(const DominatorTreeBase &Other) const {
     if (Parent != Other.Parent) return true;
+
+    if (Roots.size() != Other.Roots.size())
+      return false;
+
+    if (!std::is_permutation(Roots.begin(), Roots.end(), Other.Roots.begin()))
+      return false;
 
     const DomTreeNodeMapType &OtherDomTreeNodes = Other.DomTreeNodes;
     if (DomTreeNodes.size() != OtherDomTreeNodes.size())
@@ -750,10 +758,25 @@ public:
     DomTreeBuilder::Calculate(*this);
   }
 
-  /// verify - check parent and sibling property
-  bool verify() const { return DomTreeBuilder::Verify(*this); }
+  /// verify - checks if the tree is correct. There are 3 level of verification:
+  ///  - Full --  verifies if the tree is correct by making sure all the
+  ///             properties (including the parent and the sibling property)
+  ///             hold.
+  ///             Takes O(N^3) time.
+  ///
+  ///  - Basic -- checks if the tree is correct, but compares it to a freshly
+  ///             constructed tree instead of checking the sibling property.
+  ///             Takes O(N^2) time.
+  ///
+  ///  - Fast  -- checks basic tree structure and compares it with a freshly
+  ///             constructed tree.
+  ///             Takes O(N^2) time worst case, but is faster in practise (same
+  ///             as tree construction).
+  bool verify(VerificationLevel VL = VerificationLevel::Full) const {
+    return DomTreeBuilder::Verify(*this, VL);
+  }
 
- protected:
+protected:
   void addRoot(NodeT *BB) { this->Roots.push_back(BB); }
 
   void reset() {

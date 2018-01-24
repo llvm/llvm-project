@@ -28,15 +28,16 @@
 #include <algorithm>
 using namespace llvm;
 
-// Always verify dominfo if expensive checking is enabled.
-#ifdef EXPENSIVE_CHECKS
-bool llvm::VerifyDomInfo = true;
-#else
 bool llvm::VerifyDomInfo = false;
-#endif
 static cl::opt<bool, true>
     VerifyDomInfoX("verify-dom-info", cl::location(VerifyDomInfo), cl::Hidden,
                    cl::desc("Verify dominator info (time consuming)"));
+
+#ifdef EXPENSIVE_CHECKS
+static constexpr bool ExpensiveChecksEnabled = true;
+#else
+static constexpr bool ExpensiveChecksEnabled = false;
+#endif
 
 bool BasicBlockEdge::isSingleEdge() const {
   const TerminatorInst *TI = Start->getTerminator();
@@ -88,9 +89,11 @@ template void llvm::DomTreeBuilder::ApplyUpdates<DomTreeBuilder::BBPostDomTree>(
     DomTreeBuilder::BBPostDomTree &DT, DomTreeBuilder::BBUpdates);
 
 template bool llvm::DomTreeBuilder::Verify<DomTreeBuilder::BBDomTree>(
-    const DomTreeBuilder::BBDomTree &DT);
+    const DomTreeBuilder::BBDomTree &DT,
+    DomTreeBuilder::BBDomTree::VerificationLevel VL);
 template bool llvm::DomTreeBuilder::Verify<DomTreeBuilder::BBPostDomTree>(
-    const DomTreeBuilder::BBPostDomTree &DT);
+    const DomTreeBuilder::BBPostDomTree &DT,
+    DomTreeBuilder::BBPostDomTree::VerificationLevel VL);
 
 bool DominatorTree::invalidate(Function &F, const PreservedAnalyses &PA,
                                FunctionAnalysisManager::Invalidator &) {
@@ -305,24 +308,16 @@ bool DominatorTree::isReachableFromEntry(const Use &U) const {
 
 void DominatorTree::verifyDomTree() const {
   // Perform the expensive checks only when VerifyDomInfo is set.
-  if (VerifyDomInfo && !verify()) {
+  VerificationLevel VL = VerificationLevel::Fast;
+  if (VerifyDomInfo)
+    VL = VerificationLevel::Full;
+  else if (ExpensiveChecksEnabled)
+    VL = VerificationLevel::Basic;
+
+  if (!verify(VL)) {
     errs() << "\n~~~~~~~~~~~\n\t\tDomTree verification failed!\n~~~~~~~~~~~\n";
-    print(errs());
-    abort();
-  }
-
-  Function &F = *getRoot()->getParent();
-
-  DominatorTree OtherDT;
-  OtherDT.recalculate(F);
-  if (compare(OtherDT)) {
-    errs() << "DominatorTree for function " << F.getName()
-           << " is not up to date!\nComputed:\n";
-    print(errs());
-    errs() << "\nActual:\n";
-    OtherDT.print(errs());
     errs() << "\nCFG:\n";
-    F.print(errs());
+    getRoot()->getParent()->print(errs());
     errs().flush();
     abort();
   }
@@ -382,8 +377,8 @@ bool DominatorTreeWrapperPass::runOnFunction(Function &F) {
 }
 
 void DominatorTreeWrapperPass::verifyAnalysis() const {
-    if (VerifyDomInfo)
-      DT.verifyDomTree();
+  if (ExpensiveChecksEnabled || VerifyDomInfo)
+    DT.verifyDomTree();
 }
 
 void DominatorTreeWrapperPass::print(raw_ostream &OS, const Module *) const {

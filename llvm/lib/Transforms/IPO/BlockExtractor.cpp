@@ -74,7 +74,7 @@ ModulePass *llvm::createBlockExtractorPass(
 /// Gets all of the blocks specified in the input file.
 void BlockExtractor::loadFile() {
   auto ErrOrBuf = MemoryBuffer::getFile(BlockExtractorFile);
-  if (std::error_code EC = ErrOrBuf.getError())
+  if (ErrOrBuf.getError())
     report_fatal_error("BlockExtractor couldn't load the file.");
   // Read the file.
   auto &Buf = *ErrOrBuf;

@@ -475,7 +475,7 @@ void RetpolinePic::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
 }
 
 RetpolineNoPic::RetpolineNoPic() {
-  PltHeaderSize = 64;
+  PltHeaderSize = 48;
   PltEntrySize = 32;
 }
 

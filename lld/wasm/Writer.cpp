@@ -751,9 +751,7 @@ void Writer::assignIndexes() {
         if (Reloc.Type != R_WEBASSEMBLY_TABLE_INDEX_I32 &&
             Reloc.Type != R_WEBASSEMBLY_TABLE_INDEX_SLEB)
           continue;
-        DEBUG(dbgs() << "getFunctionSymbol: " << Reloc.Index << "\n");
         Symbol *Sym = File->getFunctionSymbol(Reloc.Index);
-        DEBUG(dbgs() << "gotFunctionSymbol: " << Sym->getName() << "\n");
         if (Sym->hasTableIndex() || !Sym->hasOutputIndex())
           continue;
         Sym->setTableIndex(TableIndex++);
