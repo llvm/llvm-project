@@ -1929,6 +1929,12 @@ static bool isNumericLiteralExpression(const Expr *E) {
          isa<CXXBoolLiteralExpr>(E);
 }
 
+static std::string describeRegion(const MemRegion *MR) {
+  // Once we support more storage locations for bindings,
+  // this would need to be improved.
+  return cast<VarRegion>(MR)->getDecl()->getName();
+}
+
 /// Returns true if this stack frame is for an Objective-C method that is a
 /// property getter or setter whose body has been synthesized by the analyzer.
 static bool isSynthesizedAccessor(const StackFrameContext *SFC) {
@@ -2395,7 +2401,7 @@ CFRefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
 
   if (FirstBinding) {
     os << "object allocated and stored into '"
-       << FirstBinding->getString() << '\'';
+       << describeRegion(FirstBinding) << '\'';
   }
   else
     os << "allocated object";
@@ -2523,7 +2529,7 @@ void CFRefLeakReport::createDescription(CheckerContext &Ctx, bool GCEnabled, boo
   os << "of an object";
 
   if (AllocBinding) {
-    os << " stored into '" << AllocBinding->getString() << '\'';
+    os << " stored into '" << describeRegion(AllocBinding) << '\'';
     if (IncludeAllocationLine) {
       FullSourceLoc SL(AllocStmt->getLocStart(), Ctx.getSourceManager());
       os << " (allocated on line " << SL.getSpellingLineNumber() << ")";
