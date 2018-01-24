@@ -1321,7 +1321,9 @@ void DwarfUnit::constructSubrangeDIE(DIE &Buffer, const DISubrange *SR,
   // DW_AT_lower_bound and DW_AT_count attributes.
   int64_t LowerBound = SR->getLowerBound();
   int64_t DefaultLowerBound = getDefaultLowerBound();
-  int64_t Count = SR->getCount();
+  int64_t Count = -1;
+  if (auto *CI = SR->getCount().dyn_cast<ConstantInt*>())
+    Count = CI->getSExtValue();
 
   if (DefaultLowerBound == -1 || LowerBound != DefaultLowerBound)
     addUInt(DW_Subrange, dwarf::DW_AT_lower_bound, None, LowerBound);

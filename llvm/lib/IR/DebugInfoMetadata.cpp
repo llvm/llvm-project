@@ -249,8 +249,17 @@ void GenericDINode::recalculateHash() {
 
 DISubrange *DISubrange::getImpl(LLVMContext &Context, int64_t Count, int64_t Lo,
                                 StorageType Storage, bool ShouldCreate) {
-  DEFINE_GETIMPL_LOOKUP(DISubrange, (Count, Lo));
-  DEFINE_GETIMPL_STORE_NO_OPS(DISubrange, (Count, Lo));
+  auto *CountNode = ConstantAsMetadata::get(
+      ConstantInt::getSigned(Type::getInt64Ty(Context), Count));
+  return getImpl(Context, CountNode, Lo, Storage, ShouldCreate);
+}
+
+DISubrange *DISubrange::getImpl(LLVMContext &Context, Metadata *CountNode,
+                                int64_t Lo, StorageType Storage,
+                                bool ShouldCreate) {
+  DEFINE_GETIMPL_LOOKUP(DISubrange, (CountNode, Lo));
+  Metadata *Ops[] = { CountNode };
+  DEFINE_GETIMPL_STORE(DISubrange, (CountNode, Lo), Ops);
 }
 
 DIEnumerator *DIEnumerator::getImpl(LLVMContext &Context, int64_t Value,
