@@ -4307,9 +4307,11 @@ DISubrange
 """"""""""
 
 ``DISubrange`` nodes are the elements for ``DW_TAG_array_type`` variants of
-:ref:`DICompositeType`. ``count: -1`` indicates an empty array.
-``count: !9`` describes the count with a :ref:`DILocalVariable`.
-``count: !11`` describes the count with a :ref:`DIGlobalVariable`.
+:ref:`DICompositeType`.
+
+- ``count: -1`` indicates an empty array.
+- ``count: !9`` describes the count with a :ref:`DILocalVariable`.
+- ``count: !11`` describes the count with a :ref:`DIGlobalVariable`.
 
 .. code-block:: llvm
 
@@ -4377,6 +4379,8 @@ DINamespace
 .. code-block:: llvm
 
     !0 = !DINamespace(name: "myawesomeproject", scope: !1, file: !2, line: 7)
+
+.. _DIGlobalVariable:
 
 DIGlobalVariable
 """"""""""""""""
