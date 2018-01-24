@@ -112,7 +112,7 @@ define double @stp_double_aa_after(double %d0, double %a, double %b, double* noc
 
 ; Check that the stores %c and %d are paired after the fadd instruction,
 ; and then the stores %a and %d are paired after proving that they do not
-; depend on the the (%c, %d) pair.
+; depend on the (%c, %d) pair.
 ;
 ; CHECK-LABEL: st1:
 ; CHECK: stp q0, q1, [x{{[0-9]+}}]

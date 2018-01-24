@@ -1618,10 +1618,6 @@ DefInit *Record::getDefInit() {
   return TheInit;
 }
 
-StringRef Record::getName() const {
-  return cast<StringInit>(Name)->getValue();
-}
-
 void Record::setName(Init *NewName) {
   Name = NewName;
   checkName();

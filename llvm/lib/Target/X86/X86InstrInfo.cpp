@@ -842,9 +842,9 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
 
     // XOP foldable instructions
     { X86::VFRCZPDrr,          X86::VFRCZPDrm,        0 },
-    { X86::VFRCZPDrrY,         X86::VFRCZPDrmY,       0 },
+    { X86::VFRCZPDYrr,         X86::VFRCZPDYrm,       0 },
     { X86::VFRCZPSrr,          X86::VFRCZPSrm,        0 },
-    { X86::VFRCZPSrrY,         X86::VFRCZPSrmY,       0 },
+    { X86::VFRCZPSYrr,         X86::VFRCZPSYrm,       0 },
     { X86::VFRCZSDrr,          X86::VFRCZSDrm,        0 },
     { X86::VFRCZSSrr,          X86::VFRCZSSrm,        0 },
     { X86::VPHADDBDrr,         X86::VPHADDBDrm,       0 },

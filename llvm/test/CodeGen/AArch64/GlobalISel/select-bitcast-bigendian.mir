@@ -10,8 +10,7 @@ body:             |
 
     ; CHECK-LABEL: name: bitcast_v2f32_to_s64
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY %x0
-    ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY [[COPY]]
-    ; CHECK: [[REV:%[0-9]+]]:fpr64 = REV64v2i32 [[COPY1]]
+    ; CHECK: [[REV:%[0-9]+]]:fpr64 = REV64v2i32 [[COPY]]
     ; CHECK: %x0 = COPY [[REV]]
     %0:fpr(<2 x s32>) = COPY %x0
     %1:fpr(s64) = G_BITCAST %0

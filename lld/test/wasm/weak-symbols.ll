@@ -1,8 +1,10 @@
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %p/Inputs/weak-symbol1.ll -o %t1.o
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %p/Inputs/weak-symbol2.ll -o %t2.o
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %s -o %t.o
+; RUN: llc -filetype=obj %p/Inputs/weak-symbol1.ll -o %t1.o
+; RUN: llc -filetype=obj %p/Inputs/weak-symbol2.ll -o %t2.o
+; RUN: llc -filetype=obj %s -o %t.o
 ; RUN: lld -flavor wasm -o %t.wasm %t.o %t1.o %t2.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
+
+target triple = "wasm32-unknown-unknown-wasm"
 
 declare i32 @weakFn() local_unnamed_addr
 @weakGlobal = external global i32
@@ -25,7 +27,7 @@ entry:
 ; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         ReturnType:      NORESULT
-; CHECK-NEXT:         ParamTypes:   
+; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:   - Type:            FUNCTION
 ; CHECK-NEXT:     FunctionTypes:   [ 0, 0, 0, 0, 0, 1 ]
 ; CHECK-NEXT:   - Type:            TABLE

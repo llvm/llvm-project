@@ -1281,6 +1281,7 @@ struct SemiNCAInfo {
   // root which is the function's entry node. A PostDominatorTree can have
   // multiple roots - one for each node with no successors and for infinite
   // loops.
+  // Running time: O(N).
   bool verifyRoots(const DomTreeT &DT) {
     if (!DT.Parent && !DT.Roots.empty()) {
       errs() << "Tree has no parent but has roots!\n";
@@ -1321,6 +1322,7 @@ struct SemiNCAInfo {
   }
 
   // Checks if the tree contains all reachable nodes in the input graph.
+  // Running time: O(N).
   bool verifyReachability(const DomTreeT &DT) {
     clear();
     doFullDFSWalk(DT, AlwaysDescend);
@@ -1356,6 +1358,7 @@ struct SemiNCAInfo {
 
   // Check if for every parent with a level L in the tree all of its children
   // have level L + 1.
+  // Running time: O(N).
   static bool VerifyLevels(const DomTreeT &DT) {
     for (auto &NodeToTN : DT.DomTreeNodes) {
       const TreeNodePtr TN = NodeToTN.second.get();
@@ -1387,6 +1390,7 @@ struct SemiNCAInfo {
 
   // Check if the computed DFS numbers are correct. Note that DFS info may not
   // be valid, and when that is the case, we don't verify the numbers.
+  // Running time: O(N log(N)).
   static bool VerifyDFSNumbers(const DomTreeT &DT) {
     if (!DT.DFSInfoValid || !DT.Parent)
       return true;
@@ -1517,10 +1521,10 @@ struct SemiNCAInfo {
   // linear time, but the algorithms are complex. Instead, we do it in a
   // straightforward N^2 and N^3 way below, using direct path reachability.
 
-
   // Checks if the tree has the parent property: if for all edges from V to W in
   // the input graph, such that V is reachable, the parent of W in the tree is
   // an ancestor of V in the tree.
+  // Running time: O(N^2).
   //
   // This means that if a node gets disconnected from the graph, then all of
   // the nodes it dominated previously will now become unreachable.
@@ -1553,6 +1557,7 @@ struct SemiNCAInfo {
 
   // Check if the tree has sibling property: if a node V does not dominate a
   // node W for all siblings V and W in the tree.
+  // Running time: O(N^3).
   //
   // This means that if a node gets disconnected from the graph, then all of its
   // siblings will now still be reachable.
@@ -1587,6 +1592,30 @@ struct SemiNCAInfo {
 
     return true;
   }
+
+  // Check if the given tree is the same as a freshly computed one for the same
+  // Parent.
+  // Running time: O(N^2), but faster in practise (same as tree construction).
+  //
+  // Note that this does not check if that the tree construction algorithm is
+  // correct and should be only used for fast (but possibly unsound)
+  // verification.
+  static bool IsSameAsFreshTree(const DomTreeT &DT) {
+    DomTreeT FreshTree;
+    FreshTree.recalculate(*DT.Parent);
+    const bool Different = DT.compare(FreshTree);
+
+    if (Different) {
+      errs() << "DominatorTree is different than a freshly computed one!\n"
+             << "\tCurrent:\n";
+      DT.print(errs());
+      errs() << "\n\tFreshly computed tree:\n";
+      FreshTree.print(errs());
+      errs().flush();
+    }
+
+    return !Different;
+  }
 };
 
 template <class DomTreeT>
@@ -1615,11 +1644,27 @@ void ApplyUpdates(DomTreeT &DT,
 }
 
 template <class DomTreeT>
-bool Verify(const DomTreeT &DT) {
+bool Verify(const DomTreeT &DT, typename DomTreeT::VerificationLevel VL) {
   SemiNCAInfo<DomTreeT> SNCA(nullptr);
-  return SNCA.verifyRoots(DT) && SNCA.verifyReachability(DT) &&
-         SNCA.VerifyLevels(DT) && SNCA.verifyParentProperty(DT) &&
-         SNCA.verifySiblingProperty(DT) && SNCA.VerifyDFSNumbers(DT);
+  const bool InitialChecks = SNCA.verifyRoots(DT) &&
+                             SNCA.verifyReachability(DT) &&
+                             SNCA.VerifyLevels(DT) && SNCA.VerifyDFSNumbers(DT);
+
+  if (!InitialChecks)
+    return false;
+
+  switch (VL) {
+  case DomTreeT::VerificationLevel::Fast:
+    return SNCA.IsSameAsFreshTree(DT);
+
+  case DomTreeT::VerificationLevel::Basic:
+    return SNCA.verifyParentProperty(DT) && SNCA.IsSameAsFreshTree(DT);
+
+  case DomTreeT::VerificationLevel::Full:
+    return SNCA.verifyParentProperty(DT) && SNCA.verifySiblingProperty(DT);
+  }
+
+  llvm_unreachable("Unhandled DomTree VerificationLevel");
 }
 
 }  // namespace DomTreeBuilder

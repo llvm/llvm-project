@@ -1,4 +1,6 @@
-; RUN: llc -mtriple wasm32-unknown-unknown-wasm -O2 -filetype=obj %s -o - | llvm-readobj -r -s -expand-relocs | FileCheck %s
+; RUN: llc -O2 -filetype=obj %s -o - | llvm-readobj -r -s -expand-relocs | FileCheck %s
+
+target triple = "wasm32-unknown-unknown-wasm"
 
 declare i32 @import1()
 declare i32 @import2()

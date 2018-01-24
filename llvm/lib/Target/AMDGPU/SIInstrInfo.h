@@ -44,7 +44,7 @@ private:
   const SIRegisterInfo RI;
   const SISubtarget &ST;
 
-  // The the inverse predicate should have the negative value.
+  // The inverse predicate should have the negative value.
   enum BranchPredicate {
     INVALID_BR = 0,
     SCC_TRUE = 1,

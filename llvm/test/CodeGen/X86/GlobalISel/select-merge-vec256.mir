@@ -24,15 +24,13 @@ body:             |
     ; AVX: [[DEF:%[0-9]+]]:vr128 = IMPLICIT_DEF
     ; AVX: undef %2.sub_xmm:vr256 = COPY [[DEF]]
     ; AVX: [[VINSERTF128rr:%[0-9]+]]:vr256 = VINSERTF128rr %2, [[DEF]], 1
-    ; AVX: [[COPY:%[0-9]+]]:vr256 = COPY [[VINSERTF128rr]]
-    ; AVX: %ymm0 = COPY [[COPY]]
+    ; AVX: %ymm0 = COPY [[VINSERTF128rr]]
     ; AVX: RET 0, implicit %ymm0
     ; AVX512VL-LABEL: name: test_merge
     ; AVX512VL: [[DEF:%[0-9]+]]:vr128x = IMPLICIT_DEF
     ; AVX512VL: undef %2.sub_xmm:vr256x = COPY [[DEF]]
     ; AVX512VL: [[VINSERTF32x4Z256rr:%[0-9]+]]:vr256x = VINSERTF32x4Z256rr %2, [[DEF]], 1
-    ; AVX512VL: [[COPY:%[0-9]+]]:vr256x = COPY [[VINSERTF32x4Z256rr]]
-    ; AVX512VL: %ymm0 = COPY [[COPY]]
+    ; AVX512VL: %ymm0 = COPY [[VINSERTF32x4Z256rr]]
     ; AVX512VL: RET 0, implicit %ymm0
     %0(<4 x s32>) = IMPLICIT_DEF
     %1(<8 x s32>) = G_MERGE_VALUES %0(<4 x s32>), %0(<4 x s32>)

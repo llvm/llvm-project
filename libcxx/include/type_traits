@@ -4941,6 +4941,21 @@ struct __can_extract_map_key<_ValTy, _Key, _Key, _RawValTy>
 
 #endif
 
+#if _LIBCPP_STD_VER > 17
+enum class endian
+{
+    little = 0xDEAD,
+    big    = 0xFACE,
+#if defined(_LIBCPP_LITTLE_ENDIAN)
+    native = little
+#elif defined(_LIBCPP_BIG_ENDIAN)
+    native = big
+#else
+    native = 0xCAFE
+#endif
+};
+#endif
+
 _LIBCPP_END_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER > 14

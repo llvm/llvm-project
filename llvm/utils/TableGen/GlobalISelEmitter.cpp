@@ -2651,7 +2651,7 @@ private:
 
   /// Takes a sequence of \p Rules and group them based on the predicates
   /// they share. \p StorageGroupMatcher is used as a memory container
-  /// for the the group that are created as part of this process.
+  /// for the group that are created as part of this process.
   /// The optimization process does not change the relative order of
   /// the rules. In particular, we don't try to share predicates if
   /// that means reordering the rules (e.g., we won't group R1 and R3

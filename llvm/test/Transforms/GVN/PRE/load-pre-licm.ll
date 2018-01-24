@@ -88,7 +88,7 @@ merge:
 ; TODO: at the moment, our anticipation check does not handle anything
 ; other than straight-line unconditional fallthrough.  This particular
 ; case could be solved through either a backwards anticipation walk or
-; use of the the "safe to speculate" status (if we annotate the param)
+; use of the "safe to speculate" status (if we annotate the param)
 define i32 @test3(i1 %cnd, i32* %p) {
 entry: 
 ; CHECK-LABEL: @test3
