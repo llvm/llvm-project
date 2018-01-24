@@ -144,6 +144,7 @@ TEST_F(FormatTestJava, ClassDeclarations) {
   verifyFormat("public interface SomeInterface {\n"
                "  void doStuff(int theStuff);\n"
                "  void doMoreStuff(int moreStuff);\n"
+               "  default void doStuffWithDefault() {}\n"
                "}");
   verifyFormat("@interface SomeInterface {\n"
                "  void doStuff(int theStuff);\n"

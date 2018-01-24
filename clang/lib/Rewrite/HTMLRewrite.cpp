@@ -288,82 +288,128 @@ void html::AddHeaderFooterInternalBuiltinCSS(Rewriter &R, FileID FID,
   if (!title.empty())
     os << "<title>" << html::EscapeText(title) << "</title>\n";
 
-  os << "<style type=\"text/css\">\n"
-      " body { color:#000000; background-color:#ffffff }\n"
-      " body { font-family:Helvetica, sans-serif; font-size:10pt }\n"
-      " h1 { font-size:14pt }\n"
-      " .FileName { margin-top: 5px; margin-bottom: 5px; display: inline; }\n"
-      " .FileNav { margin-left: 5px; margin-right: 5px; display: inline; }\n"
-      " .FileNav a { text-decoration:none; font-size: larger; }\n"
-      " .divider { margin-top: 30px; margin-bottom: 30px; height: 15px; }\n"
-      " .divider { background-color: gray; }\n"
-      " .code { border-collapse:collapse; width:100%; }\n"
-      " .code { font-family: \"Monospace\", monospace; font-size:10pt }\n"
-      " .code { line-height: 1.2em }\n"
-      " .comment { color: green; font-style: oblique }\n"
-      " .keyword { color: blue }\n"
-      " .string_literal { color: red }\n"
-      " .directive { color: darkmagenta }\n"
-      // Macro expansions.
-      " .expansion { display: none; }\n"
-      " .macro:hover .expansion { display: block; border: 2px solid #FF0000; "
-          "padding: 2px; background-color:#FFF0F0; font-weight: normal; "
-          "  -webkit-border-radius:5px;  -webkit-box-shadow:1px 1px 7px #000; "
-          "  border-radius:5px;  box-shadow:1px 1px 7px #000; "
-          "position: absolute; top: -1em; left:10em; z-index: 1 } \n"
-      " #tooltiphint { position: fixed; width: 50em; margin-left: -25em;"
-                     "left: 50%; padding: 10px; border: 1px solid #b0b0b0;"
-                     "border-radius: 2px; box-shadow: 1px 1px 7px black; "
-                     "background-color: #c0c0c0; z-index: 2; }\n"
-      " .macro { color: darkmagenta; background-color:LemonChiffon;"
-             // Macros are position: relative to provide base for expansions.
-             " position: relative }\n"
-      " .num { width:2.5em; padding-right:2ex; background-color:#eeeeee }\n"
-      " .num { text-align:right; font-size:8pt }\n"
-      " .num { color:#444444 }\n"
-      " .line { padding-left: 1ex; border-left: 3px solid #ccc }\n"
-      " .line { white-space: pre }\n"
-      " .msg { -webkit-box-shadow:1px 1px 7px #000 }\n"
-      " .msg { box-shadow:1px 1px 7px #000 }\n"
-      " .msg { -webkit-border-radius:5px }\n"
-      " .msg { border-radius:5px }\n"
-      " .msg { font-family:Helvetica, sans-serif; font-size:8pt }\n"
-      " .msg { float:left }\n"
-      " .msg { padding:0.25em 1ex 0.25em 1ex }\n"
-      " .msg { margin-top:10px; margin-bottom:10px }\n"
-      " .msg { font-weight:bold }\n"
-      " .msg { max-width:60em; word-wrap: break-word; white-space: pre-wrap }\n"
-      " .msgT { padding:0x; spacing:0x }\n"
-      " .msgEvent { background-color:#fff8b4; color:#000000 }\n"
-      " .msgControl { background-color:#bbbbbb; color:#000000 }\n"
-      " .msgNote { background-color:#ddeeff; color:#000000 }\n"
-      " .mrange { background-color:#dfddf3 }\n"
-      " .mrange { border-bottom:1px solid #6F9DBE }\n"
-      " .PathIndex { font-weight: bold; padding:0px 5px; "
-        "margin-right:5px; }\n"
-      " .PathIndex { -webkit-border-radius:8px }\n"
-      " .PathIndex { border-radius:8px }\n"
-      " .PathIndexEvent { background-color:#bfba87 }\n"
-      " .PathIndexControl { background-color:#8c8c8c }\n"
-      " .PathNav a { text-decoration:none; font-size: larger }\n"
-      " .CodeInsertionHint { font-weight: bold; background-color: #10dd10 }\n"
-      " .CodeRemovalHint { background-color:#de1010 }\n"
-      " .CodeRemovalHint { border-bottom:1px solid #6F9DBE }\n"
-      " .selected{ background-color:orange !important; }\n"
-      " table.simpletable {\n"
-      "   padding: 5px;\n"
-      "   font-size:12pt;\n"
-      "   margin:20px;\n"
-      "   border-collapse: collapse; border-spacing: 0px;\n"
-      " }\n"
-      " td.rowname {\n"
-      "   text-align: right;\n"
-      "   vertical-align: top;\n"
-      "   font-weight: bold;\n"
-      "   color:#444444;\n"
-      "   padding-right:2ex;\n"
-      " }\n"
-      "</style>\n</head>\n<body>";
+  os << R"<<<(
+<style type="text/css">
+body { color:#000000; background-color:#ffffff }
+body { font-family:Helvetica, sans-serif; font-size:10pt }
+h1 { font-size:14pt }
+.FileName { margin-top: 5px; margin-bottom: 5px; display: inline; }
+.FileNav { margin-left: 5px; margin-right: 5px; display: inline; }
+.FileNav a { text-decoration:none; font-size: larger; }
+.divider { margin-top: 30px; margin-bottom: 30px; height: 15px; }
+.divider { background-color: gray; }
+.code { border-collapse:collapse; width:100%; }
+.code { font-family: "Monospace", monospace; font-size:10pt }
+.code { line-height: 1.2em }
+.comment { color: green; font-style: oblique }
+.keyword { color: blue }
+.string_literal { color: red }
+.directive { color: darkmagenta }
+/* Macro expansions. */
+.expansion { display: none; }
+.macro:hover .expansion {
+  display: block;
+  border: 2px solid #FF0000;
+  padding: 2px;
+  background-color:#FFF0F0;
+  font-weight: normal;
+  -webkit-border-radius:5px;
+  -webkit-box-shadow:1px 1px 7px #000;
+  border-radius:5px;
+  box-shadow:1px 1px 7px #000;
+  position: absolute;
+  top: -1em;
+  left:10em;
+  z-index: 1
+}
+
+#tooltiphint {
+  position: fixed;
+  width: 50em;
+  margin-left: -25em;
+  left: 50%;
+  padding: 10px;
+  border: 1px solid #b0b0b0;
+  border-radius: 2px;
+  box-shadow: 1px 1px 7px black;
+  background-color: #c0c0c0;
+  z-index: 2;
+}
+.macro {
+  color: darkmagenta;
+  background-color:LemonChiffon;
+  /* Macros are position: relative to provide base for expansions. */
+  position: relative;
+}
+
+.num { width:2.5em; padding-right:2ex; background-color:#eeeeee }
+.num { text-align:right; font-size:8pt }
+.num { color:#444444 }
+.line { padding-left: 1ex; border-left: 3px solid #ccc }
+.line { white-space: pre }
+.msg { -webkit-box-shadow:1px 1px 7px #000 }
+.msg { box-shadow:1px 1px 7px #000 }
+.msg { -webkit-border-radius:5px }
+.msg { border-radius:5px }
+.msg { font-family:Helvetica, sans-serif; font-size:8pt }
+.msg { float:left }
+.msg { padding:0.25em 1ex 0.25em 1ex }
+.msg { margin-top:10px; margin-bottom:10px }
+.msg { font-weight:bold }
+.msg { max-width:60em; word-wrap: break-word; white-space: pre-wrap }
+.msgT { padding:0x; spacing:0x }
+.msgEvent { background-color:#fff8b4; color:#000000 }
+.msgControl { background-color:#bbbbbb; color:#000000 }
+.msgNote { background-color:#ddeeff; color:#000000 }
+.mrange { background-color:#dfddf3 }
+.mrange { border-bottom:1px solid #6F9DBE }
+.PathIndex { font-weight: bold; padding:0px 5px; margin-right:5px; }
+.PathIndex { -webkit-border-radius:8px }
+.PathIndex { border-radius:8px }
+.PathIndexEvent { background-color:#bfba87 }
+.PathIndexControl { background-color:#8c8c8c }
+.PathNav a { text-decoration:none; font-size: larger }
+.CodeInsertionHint { font-weight: bold; background-color: #10dd10 }
+.CodeRemovalHint { background-color:#de1010 }
+.CodeRemovalHint { border-bottom:1px solid #6F9DBE }
+.selected{ background-color:orange !important; }
+
+table.simpletable {
+  padding: 5px;
+  font-size:12pt;
+  margin:20px;
+  border-collapse: collapse; border-spacing: 0px;
+}
+td.rowname {
+  text-align: right;
+  vertical-align: top;
+  font-weight: bold;
+  color:#444444;
+  padding-right:2ex;
+}
+
+/* Hidden text. */
+input.spoilerhider + label {
+  cursor: pointer;
+  text-decoration: underline;
+  display: block;
+}
+input.spoilerhider {
+ display: none;
+}
+input.spoilerhider ~ .spoiler {
+  overflow: hidden;
+  margin: 10px auto 0;
+  height: 0;
+  opacity: 0;
+}
+input.spoilerhider:checked + label + .spoiler{
+  height: auto;
+  opacity: 1;
+}
+</style>
+</head>
+<body>)<<<";
 
   // Generate header
   R.InsertTextBefore(StartLoc, os.str());

@@ -190,8 +190,8 @@ class OMPCapturedExprDecl final : public VarDecl {
 
   OMPCapturedExprDecl(ASTContext &C, DeclContext *DC, IdentifierInfo *Id,
                       QualType Type, SourceLocation StartLoc)
-      : VarDecl(OMPCapturedExpr, C, DC, StartLoc, SourceLocation(), Id, Type,
-                nullptr, SC_None) {
+      : VarDecl(OMPCapturedExpr, C, DC, StartLoc, StartLoc, Id, Type, nullptr,
+                SC_None) {
     setImplicit();
   }
 

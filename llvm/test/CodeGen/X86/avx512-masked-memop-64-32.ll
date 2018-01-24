@@ -240,18 +240,18 @@ declare <16 x double> @llvm.masked.load.v16f64.p0v16f64(<16 x double>* %ptrs, i3
 define <32 x double> @test_load_32f64(<32 x double>* %ptrs, <32 x i1> %mask, <32 x double> %src0)  {
 ; AVX512F-LABEL: test_load_32f64:
 ; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm5
-; AVX512F-NEXT:    vpmovsxbd %xmm5, %zmm5
+; AVX512F-NEXT:    vpmovsxbd %xmm0, %zmm5
 ; AVX512F-NEXT:    vpslld $31, %zmm5, %zmm5
 ; AVX512F-NEXT:    vptestmd %zmm5, %zmm5, %k1
-; AVX512F-NEXT:    vblendmpd 128(%rdi), %zmm3, %zmm5 {%k1}
+; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX512F-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512F-NEXT:    vpslld $31, %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k2
-; AVX512F-NEXT:    vblendmpd (%rdi), %zmm1, %zmm0 {%k2}
+; AVX512F-NEXT:    vblendmpd 128(%rdi), %zmm3, %zmm5 {%k2}
+; AVX512F-NEXT:    vblendmpd (%rdi), %zmm1, %zmm0 {%k1}
+; AVX512F-NEXT:    kshiftrw $8, %k2, %k2
+; AVX512F-NEXT:    vblendmpd 192(%rdi), %zmm4, %zmm3 {%k2}
 ; AVX512F-NEXT:    kshiftrw $8, %k1, %k1
-; AVX512F-NEXT:    vblendmpd 192(%rdi), %zmm4, %zmm3 {%k1}
-; AVX512F-NEXT:    kshiftrw $8, %k2, %k1
 ; AVX512F-NEXT:    vblendmpd 64(%rdi), %zmm2, %zmm1 {%k1}
 ; AVX512F-NEXT:    vmovapd %zmm5, %zmm2
 ; AVX512F-NEXT:    retq

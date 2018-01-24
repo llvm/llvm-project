@@ -291,8 +291,6 @@ private:
   void writeCodeSection(const MCAssembler &Asm, const MCAsmLayout &Layout,
                         ArrayRef<WasmFunction> Functions);
   void writeDataSection(ArrayRef<WasmDataSegment> Segments);
-  void writeNameSection(ArrayRef<WasmFunction> Functions,
-                        ArrayRef<WasmImport> Imports);
   void writeCodeRelocSection();
   void writeDataRelocSection();
   void writeLinkingMetaDataSection(
@@ -851,36 +849,6 @@ void WasmObjectWriter::writeDataSection(ArrayRef<WasmDataSegment> Segments) {
   endSection(Section);
 }
 
-void WasmObjectWriter::writeNameSection(ArrayRef<WasmFunction> Functions,
-                                        ArrayRef<WasmImport> Imports) {
-  uint32_t TotalFunctions = NumFunctionImports + Functions.size();
-  if (TotalFunctions == 0)
-    return;
-
-  SectionBookkeeping Section;
-  startSection(Section, wasm::WASM_SEC_CUSTOM, "name");
-  SectionBookkeeping SubSection;
-  startSection(SubSection, wasm::WASM_NAMES_FUNCTION);
-
-  encodeULEB128(TotalFunctions, getStream());
-  uint32_t Index = 0;
-  for (const WasmImport &Import : Imports) {
-    if (Import.Kind == wasm::WASM_EXTERNAL_FUNCTION) {
-      encodeULEB128(Index, getStream());
-      writeString(Import.FieldName);
-      ++Index;
-    }
-  }
-  for (const WasmFunction &Func : Functions) {
-    encodeULEB128(Index, getStream());
-    writeString(Func.Sym->getName());
-    ++Index;
-  }
-
-  endSection(SubSection);
-  endSection(Section);
-}
-
 void WasmObjectWriter::writeCodeRelocSection() {
   // See: https://github.com/WebAssembly/tool-conventions/blob/master/Linking.md
   // for descriptions of the reloc sections.
@@ -1405,7 +1373,6 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   writeElemSection(TableElems);
   writeCodeSection(Asm, Layout, Functions);
   writeDataSection(DataSegments);
-  writeNameSection(Functions, Imports);
   writeCodeRelocSection();
   writeDataRelocSection();
   writeLinkingMetaDataSection(DataSegments, DataSize, SymbolFlags,

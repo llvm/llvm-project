@@ -75,7 +75,7 @@ public:
             const_cast<VarDecl *>(VD),
             isCapturedVar(CGF, VD) || (CGF.CapturedStmtInfo &&
                                        InlinedShareds.isGlobalVarCaptured(VD)),
-            VD->getType().getNonReferenceType(), VK_LValue, SourceLocation());
+            VD->getType().getNonReferenceType(), VK_LValue, C.getLocation());
         InlinedShareds.addPrivate(VD, [&CGF, &DRE]() -> Address {
           return CGF.EmitLValue(&DRE).getAddress();
         });
@@ -196,7 +196,7 @@ public:
                               (CGF.CapturedStmtInfo &&
                                InlinedShareds.isGlobalVarCaptured(VD)),
                           VD->getType().getNonReferenceType(), VK_LValue,
-                          SourceLocation());
+                          C.getLocation());
           InlinedShareds.addPrivate(VD, [&CGF, &DRE]() -> Address {
             return CGF.EmitLValue(&DRE).getAddress();
           });
@@ -265,8 +265,7 @@ void CodeGenFunction::GenerateOpenMPCapturedVars(
     } else if (CurCap->capturesThis())
       CapturedVars.push_back(CXXThisValue);
     else if (CurCap->capturesVariableByCopy()) {
-      llvm::Value *CV =
-          EmitLoadOfLValue(EmitLValue(*I), SourceLocation()).getScalarVal();
+      llvm::Value *CV = EmitLoadOfScalar(EmitLValue(*I), CurCap->getLocation());
 
       // If the field is not a pointer, we need to save the actual value
       // and load it as a void pointer.
@@ -279,7 +278,7 @@ void CodeGenFunction::GenerateOpenMPCapturedVars(
 
         auto *SrcAddrVal = EmitScalarConversion(
             DstAddr.getPointer(), Ctx.getPointerType(Ctx.getUIntPtrType()),
-            Ctx.getPointerType(CurField->getType()), SourceLocation());
+            Ctx.getPointerType(CurField->getType()), CurCap->getLocation());
         LValue SrcLV =
             MakeNaturalAlignAddrLValue(SrcAddrVal, CurField->getType());
 
@@ -287,7 +286,7 @@ void CodeGenFunction::GenerateOpenMPCapturedVars(
         EmitStoreThroughLValue(RValue::get(CV), SrcLV);
 
         // Load the value using the destination type pointer.
-        CV = EmitLoadOfLValue(DstLV, SourceLocation()).getScalarVal();
+        CV = EmitLoadOfScalar(DstLV, CurCap->getLocation());
       }
       CapturedVars.push_back(CV);
     } else {
@@ -297,14 +296,15 @@ void CodeGenFunction::GenerateOpenMPCapturedVars(
   }
 }
 
-static Address castValueFromUintptr(CodeGenFunction &CGF, QualType DstType,
-                                    StringRef Name, LValue AddrLV,
+static Address castValueFromUintptr(CodeGenFunction &CGF, SourceLocation Loc,
+                                    QualType DstType, StringRef Name,
+                                    LValue AddrLV,
                                     bool isReferenceType = false) {
   ASTContext &Ctx = CGF.getContext();
 
-  auto *CastedPtr = CGF.EmitScalarConversion(
-      AddrLV.getAddress().getPointer(), Ctx.getUIntPtrType(),
-      Ctx.getPointerType(DstType), SourceLocation());
+  auto *CastedPtr = CGF.EmitScalarConversion(AddrLV.getAddress().getPointer(),
+                                             Ctx.getUIntPtrType(),
+                                             Ctx.getPointerType(DstType), Loc);
   auto TmpAddr =
       CGF.MakeNaturalAlignAddrLValue(CastedPtr, Ctx.getPointerType(DstType))
           .getAddress();
@@ -495,13 +495,12 @@ static llvm::Function *emitOutlinedFunctionPrologue(
                                         AlignmentSource::Decl);
     if (FD->hasCapturedVLAType()) {
       if (FO.UIntPtrCastRequired) {
-        ArgLVal = CGF.MakeAddrLValue(castValueFromUintptr(CGF, FD->getType(),
-                                                          Args[Cnt]->getName(),
-                                                          ArgLVal),
-                                     FD->getType(), AlignmentSource::Decl);
+        ArgLVal = CGF.MakeAddrLValue(
+            castValueFromUintptr(CGF, I->getLocation(), FD->getType(),
+                                 Args[Cnt]->getName(), ArgLVal),
+            FD->getType(), AlignmentSource::Decl);
       }
-      auto *ExprArg =
-          CGF.EmitLoadOfLValue(ArgLVal, SourceLocation()).getScalarVal();
+      auto *ExprArg = CGF.EmitLoadOfScalar(ArgLVal, I->getLocation());
       auto VAT = FD->getCapturedVLAType();
       VLASizes.insert({Args[Cnt], {VAT->getSizeExpr(), ExprArg}});
     } else if (I->capturesVariable()) {
@@ -529,16 +528,15 @@ static llvm::Function *emitOutlinedFunctionPrologue(
       QualType VarTy = Var->getType();
       LocalAddrs.insert(
           {Args[Cnt],
-           {Var,
-            FO.UIntPtrCastRequired
-                ? castValueFromUintptr(CGF, FD->getType(), Args[Cnt]->getName(),
-                                       ArgLVal, VarTy->isReferenceType())
-                : ArgLVal.getAddress()}});
+           {Var, FO.UIntPtrCastRequired
+                     ? castValueFromUintptr(CGF, I->getLocation(),
+                                            FD->getType(), Args[Cnt]->getName(),
+                                            ArgLVal, VarTy->isReferenceType())
+                     : ArgLVal.getAddress()}});
     } else {
       // If 'this' is captured, load it into CXXThisValue.
       assert(I->capturesThis());
-      CXXThisValue = CGF.EmitLoadOfLValue(ArgLVal, Args[Cnt]->getLocation())
-                         .getScalarVal();
+      CXXThisValue = CGF.EmitLoadOfScalar(ArgLVal, I->getLocation());
       LocalAddrs.insert({Args[Cnt], {nullptr, ArgLVal.getAddress()}});
     }
     ++Cnt;
@@ -603,7 +601,7 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
           I->second.second,
           I->second.first ? I->second.first->getType() : Arg->getType(),
           AlignmentSource::Decl);
-      CallArg = WrapperCGF.EmitLoadOfScalar(LV, SourceLocation());
+      CallArg = WrapperCGF.EmitLoadOfScalar(LV, S.getLocStart());
     } else {
       auto EI = VLASizes.find(Arg);
       if (EI != VLASizes.end())
@@ -612,7 +610,7 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
         LValue LV = WrapperCGF.MakeAddrLValue(WrapperCGF.GetAddrOfLocalVar(Arg),
                                               Arg->getType(),
                                               AlignmentSource::Decl);
-        CallArg = WrapperCGF.EmitLoadOfScalar(LV, SourceLocation());
+        CallArg = WrapperCGF.EmitLoadOfScalar(LV, S.getLocStart());
       }
     }
     CallArgs.emplace_back(WrapperCGF.EmitFromMemory(CallArg, Arg->getType()));
@@ -2032,14 +2030,18 @@ emitDistributeParallelForInnerBounds(CodeGenFunction &CGF,
   // the current ones.
   LValue PrevLB = CGF.EmitLValue(LS.getPrevLowerBoundVariable());
   LValue PrevUB = CGF.EmitLValue(LS.getPrevUpperBoundVariable());
-  llvm::Value *PrevLBVal = CGF.EmitLoadOfScalar(PrevLB, SourceLocation());
+  llvm::Value *PrevLBVal = CGF.EmitLoadOfScalar(
+      PrevLB, LS.getPrevLowerBoundVariable()->getExprLoc());
   PrevLBVal = CGF.EmitScalarConversion(
       PrevLBVal, LS.getPrevLowerBoundVariable()->getType(),
-      LS.getIterationVariable()->getType(), SourceLocation());
-  llvm::Value *PrevUBVal = CGF.EmitLoadOfScalar(PrevUB, SourceLocation());
+      LS.getIterationVariable()->getType(),
+      LS.getPrevLowerBoundVariable()->getExprLoc());
+  llvm::Value *PrevUBVal = CGF.EmitLoadOfScalar(
+      PrevUB, LS.getPrevUpperBoundVariable()->getExprLoc());
   PrevUBVal = CGF.EmitScalarConversion(
       PrevUBVal, LS.getPrevUpperBoundVariable()->getType(),
-      LS.getIterationVariable()->getType(), SourceLocation());
+      LS.getIterationVariable()->getType(),
+      LS.getPrevUpperBoundVariable()->getExprLoc());
 
   CGF.EmitStoreOfScalar(PrevLBVal, LB);
   CGF.EmitStoreOfScalar(PrevUBVal, UB);
@@ -2065,10 +2067,10 @@ emitDistributeParallelForDispatchBounds(CodeGenFunction &CGF,
   // is not normalized as each team only executes its own assigned
   // distribute chunk
   QualType IteratorTy = IVExpr->getType();
-  llvm::Value *LBVal = CGF.EmitLoadOfScalar(LB, /*Volatile=*/false, IteratorTy,
-                                            SourceLocation());
-  llvm::Value *UBVal = CGF.EmitLoadOfScalar(UB, /*Volatile=*/false, IteratorTy,
-                                            SourceLocation());
+  llvm::Value *LBVal =
+      CGF.EmitLoadOfScalar(LB, /*Volatile=*/false, IteratorTy, S.getLocStart());
+  llvm::Value *UBVal =
+      CGF.EmitLoadOfScalar(UB, /*Volatile=*/false, IteratorTy, S.getLocStart());
   return {LBVal, UBVal};
 }
 
@@ -2489,9 +2491,9 @@ void CodeGenFunction::EmitSections(const OMPExecutableDirective &S) {
       // }
       // .omp.sections.exit:
       auto *ExitBB = CGF.createBasicBlock(".omp.sections.exit");
-      auto *SwitchStmt = CGF.Builder.CreateSwitch(
-          CGF.EmitLoadOfLValue(IV, S.getLocStart()).getScalarVal(), ExitBB,
-          CS == nullptr ? 1 : CS->size());
+      auto *SwitchStmt =
+          CGF.Builder.CreateSwitch(CGF.EmitLoadOfScalar(IV, S.getLocStart()),
+                                   ExitBB, CS == nullptr ? 1 : CS->size());
       if (CS) {
         unsigned CaseNumber = 0;
         for (auto *SubStmt : CS->children()) {
@@ -2886,7 +2888,7 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
                         Replacement.getPointer(), CGF.getContext().VoidPtrTy,
                         CGF.getContext().getPointerType(
                             Data.ReductionCopies[Cnt]->getType()),
-                        SourceLocation()),
+                        Data.ReductionCopies[Cnt]->getExprLoc()),
                     Replacement.getAlignment());
         Replacement = RedCG.adjustPrivateAddress(CGF, Cnt, Replacement);
         Scope.addPrivate(RedCG.getBaseDecl(Cnt),
@@ -2928,15 +2930,16 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
         RedCG.emitAggregateType(CGF, Cnt);
         // The taskgroup descriptor variable is always implicit firstprivate and
         // privatized already during procoessing of the firstprivates.
-        llvm::Value *ReductionsPtr = CGF.EmitLoadOfScalar(
-            CGF.EmitLValue(TaskgroupDescriptors[Cnt]), SourceLocation());
+        llvm::Value *ReductionsPtr =
+            CGF.EmitLoadOfScalar(CGF.EmitLValue(TaskgroupDescriptors[Cnt]),
+                                 TaskgroupDescriptors[Cnt]->getExprLoc());
         Address Replacement = CGF.CGM.getOpenMPRuntime().getTaskReductionItem(
             CGF, S.getLocStart(), ReductionsPtr, RedCG.getSharedLValue(Cnt));
         Replacement = Address(
             CGF.EmitScalarConversion(
                 Replacement.getPointer(), CGF.getContext().VoidPtrTy,
                 CGF.getContext().getPointerType(InRedPrivs[Cnt]->getType()),
-                SourceLocation()),
+                InRedPrivs[Cnt]->getExprLoc()),
             Replacement.getAlignment());
         Replacement = RedCG.adjustPrivateAddress(CGF, Cnt, Replacement);
         InRedScope.addPrivate(RedCG.getBaseDecl(Cnt),
@@ -2962,27 +2965,24 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
 
 static ImplicitParamDecl *
 createImplicitFirstprivateForType(ASTContext &C, OMPTaskDataTy &Data,
-                                  QualType Ty, CapturedDecl *CD) {
-  auto *OrigVD = ImplicitParamDecl::Create(
-      C, CD, SourceLocation(), /*Id=*/nullptr, Ty, ImplicitParamDecl::Other);
-  auto *OrigRef =
-      DeclRefExpr::Create(C, NestedNameSpecifierLoc(), SourceLocation(), OrigVD,
-                          /*RefersToEnclosingVariableOrCapture=*/false,
-                          SourceLocation(), Ty, VK_LValue);
-  auto *PrivateVD = ImplicitParamDecl::Create(
-      C, CD, SourceLocation(), /*Id=*/nullptr, Ty, ImplicitParamDecl::Other);
+                                  QualType Ty, CapturedDecl *CD,
+                                  SourceLocation Loc) {
+  auto *OrigVD = ImplicitParamDecl::Create(C, CD, Loc, /*Id=*/nullptr, Ty,
+                                           ImplicitParamDecl::Other);
+  auto *OrigRef = DeclRefExpr::Create(
+      C, NestedNameSpecifierLoc(), SourceLocation(), OrigVD,
+      /*RefersToEnclosingVariableOrCapture=*/false, Loc, Ty, VK_LValue);
+  auto *PrivateVD = ImplicitParamDecl::Create(C, CD, Loc, /*Id=*/nullptr, Ty,
+                                              ImplicitParamDecl::Other);
   auto *PrivateRef = DeclRefExpr::Create(
       C, NestedNameSpecifierLoc(), SourceLocation(), PrivateVD,
-      /*RefersToEnclosingVariableOrCapture=*/false, SourceLocation(), Ty,
-      VK_LValue);
+      /*RefersToEnclosingVariableOrCapture=*/false, Loc, Ty, VK_LValue);
   QualType ElemType = C.getBaseElementType(Ty);
-  auto *InitVD =
-      ImplicitParamDecl::Create(C, CD, SourceLocation(), /*Id=*/nullptr,
-                                ElemType, ImplicitParamDecl::Other);
-  auto *InitRef =
-      DeclRefExpr::Create(C, NestedNameSpecifierLoc(), SourceLocation(), InitVD,
-                          /*RefersToEnclosingVariableOrCapture=*/false,
-                          SourceLocation(), ElemType, VK_LValue);
+  auto *InitVD = ImplicitParamDecl::Create(C, CD, Loc, /*Id=*/nullptr, ElemType,
+                                           ImplicitParamDecl::Other);
+  auto *InitRef = DeclRefExpr::Create(
+      C, NestedNameSpecifierLoc(), SourceLocation(), InitVD,
+      /*RefersToEnclosingVariableOrCapture=*/false, Loc, ElemType, VK_LValue);
   PrivateVD->setInitStyle(VarDecl::CInit);
   PrivateVD->setInit(ImplicitCastExpr::Create(C, ElemType, CK_LValueToRValue,
                                               InitRef, /*BasePath=*/nullptr,
@@ -3029,14 +3029,15 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
     QualType BaseAndPointersType = getContext().getConstantArrayType(
         getContext().VoidPtrTy, ArrSize, ArrayType::Normal,
         /*IndexTypeQuals=*/0);
-    BPVD = createImplicitFirstprivateForType(getContext(), Data,
-                                             BaseAndPointersType, CD);
-    PVD = createImplicitFirstprivateForType(getContext(), Data,
-                                            BaseAndPointersType, CD);
+    BPVD = createImplicitFirstprivateForType(
+        getContext(), Data, BaseAndPointersType, CD, S.getLocStart());
+    PVD = createImplicitFirstprivateForType(
+        getContext(), Data, BaseAndPointersType, CD, S.getLocStart());
     QualType SizesType = getContext().getConstantArrayType(
         getContext().getSizeType(), ArrSize, ArrayType::Normal,
         /*IndexTypeQuals=*/0);
-    SVD = createImplicitFirstprivateForType(getContext(), Data, SizesType, CD);
+    SVD = createImplicitFirstprivateForType(getContext(), Data, SizesType, CD,
+                                            S.getLocStart());
     TargetScope.addPrivate(
         BPVD, [&InputInfo]() { return InputInfo.BasePointersArray; });
     TargetScope.addPrivate(PVD,

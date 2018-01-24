@@ -215,6 +215,12 @@ TEST_F(FormatTestObjC, FormatObjCInterface) {
                "@end");
 
   verifyFormat("@interface Foo : Bar\n"
+               "@property(assign, readwrite) NSInteger bar;\n"
+               "+ (id)init;\n"
+               "@end");
+
+  verifyFormat("FOUNDATION_EXPORT NS_AVAILABLE_IOS(10.0) @interface Foo : Bar\n"
+               "@property(assign, readwrite) NSInteger bar;\n"
                "+ (id)init;\n"
                "@end");
 
@@ -392,6 +398,10 @@ TEST_F(FormatTestObjC, FormatObjCProtocol) {
   verifyFormat("@protocol Foo\n"
                "@end\n"
                "@protocol Bar\n"
+               "@end");
+
+  verifyFormat("FOUNDATION_EXPORT NS_AVAILABLE_IOS(10.0) @protocol Foo\n"
+               "@property(assign, readwrite) NSInteger bar;\n"
                "@end");
 
   verifyFormat("@protocol myProtocol\n"

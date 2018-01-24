@@ -139,6 +139,10 @@ public:
   AnalysisPurgeMode AnalysisPurgeOpt;
   
   std::string AnalyzeSpecificFunction;
+
+  /// Store full compiler invocation for reproducible instructions in the
+  /// generated report.
+  std::string FullCompilerInvocation;
   
   /// \brief The maximum number of times the analyzer visits a block.
   unsigned maxBlockVisitOnPath;

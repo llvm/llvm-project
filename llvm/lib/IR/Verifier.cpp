@@ -4525,8 +4525,8 @@ void Verifier::visitDbgIntrinsic(StringRef Kind, DbgInfoIntrinsic &DII) {
   // The scopes for variables and !dbg attachments must agree.
   DILocalVariable *Var = DII.getVariable();
   DILocation *Loc = DII.getDebugLoc();
-  Assert(Loc, "llvm.dbg." + Kind + " intrinsic requires a !dbg attachment",
-         &DII, BB, F);
+  AssertDI(Loc, "llvm.dbg." + Kind + " intrinsic requires a !dbg attachment",
+           &DII, BB, F);
 
   DISubprogram *VarSP = getSubprogram(Var->getRawScope());
   DISubprogram *LocSP = getSubprogram(Loc->getRawScope());

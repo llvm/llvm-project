@@ -41,10 +41,6 @@ entry:
 ; CHECK:  }
 ; CHECK:  Section {
 ; CHECK:    Type: CUSTOM (0x0)
-; CHECK:    Name: name
-; CHECK:  }
-; CHECK:  Section {
-; CHECK:    Type: CUSTOM (0x0)
 ; CHECK:    Name: reloc.CODE
 ; CHECK:  }
 ; CHECK:]

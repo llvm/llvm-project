@@ -2161,20 +2161,14 @@ define <2 x i64> @test_2f64toub(<2 x double> %a, <2 x i64> %passthru) {
 ; KNL-LABEL: test_2f64toub:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    # kill: def %xmm1 killed %xmm1 def %zmm1
-; KNL-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; KNL-NEXT:    vcvttsd2si %xmm2, %eax
-; KNL-NEXT:    kmovw %eax, %k0
 ; KNL-NEXT:    vcvttsd2si %xmm0, %eax
 ; KNL-NEXT:    andl $1, %eax
+; KNL-NEXT:    kmovw %eax, %k0
+; KNL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; KNL-NEXT:    vcvttsd2si %xmm0, %eax
 ; KNL-NEXT:    kmovw %eax, %k1
-; KNL-NEXT:    kshiftrw $1, %k0, %k2
-; KNL-NEXT:    kshiftlw $1, %k2, %k2
-; KNL-NEXT:    korw %k1, %k2, %k1
-; KNL-NEXT:    kshiftrw $1, %k1, %k2
-; KNL-NEXT:    kxorw %k0, %k2, %k0
-; KNL-NEXT:    kshiftlw $15, %k0, %k0
-; KNL-NEXT:    kshiftrw $14, %k0, %k0
-; KNL-NEXT:    kxorw %k1, %k0, %k1
+; KNL-NEXT:    kshiftlw $1, %k1, %k1
+; KNL-NEXT:    korw %k1, %k0, %k1
 ; KNL-NEXT:    vmovdqa64 %zmm1, %zmm0 {%k1} {z}
 ; KNL-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
 ; KNL-NEXT:    vzeroupper
@@ -2194,17 +2188,12 @@ define <2 x i64> @test_2f64toub(<2 x double> %a, <2 x i64> %passthru) {
 ; AVX512DQ-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX512DQ-NEXT:    vcvttsd2si %xmm2, %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k0
+; AVX512DQ-NEXT:    kshiftlb $1, %k0, %k0
 ; AVX512DQ-NEXT:    vcvttsd2si %xmm0, %eax
-; AVX512DQ-NEXT:    andl $1, %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k1
-; AVX512DQ-NEXT:    kshiftrw $1, %k0, %k2
-; AVX512DQ-NEXT:    kshiftlw $1, %k2, %k2
-; AVX512DQ-NEXT:    korw %k1, %k2, %k1
-; AVX512DQ-NEXT:    kshiftrw $1, %k1, %k2
-; AVX512DQ-NEXT:    kxorw %k0, %k2, %k0
-; AVX512DQ-NEXT:    kshiftlw $15, %k0, %k0
-; AVX512DQ-NEXT:    kshiftrw $14, %k0, %k0
-; AVX512DQ-NEXT:    kxorw %k1, %k0, %k1
+; AVX512DQ-NEXT:    kshiftlb $7, %k1, %k1
+; AVX512DQ-NEXT:    kshiftrb $7, %k1, %k1
+; AVX512DQ-NEXT:    korb %k0, %k1, %k1
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm1, %zmm0 {%k1} {z}
 ; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
 ; AVX512DQ-NEXT:    vzeroupper
@@ -2213,20 +2202,14 @@ define <2 x i64> @test_2f64toub(<2 x double> %a, <2 x i64> %passthru) {
 ; AVX512BW-LABEL: test_2f64toub:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    # kill: def %xmm1 killed %xmm1 def %zmm1
-; AVX512BW-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX512BW-NEXT:    vcvttsd2si %xmm2, %eax
-; AVX512BW-NEXT:    kmovd %eax, %k0
 ; AVX512BW-NEXT:    vcvttsd2si %xmm0, %eax
 ; AVX512BW-NEXT:    andl $1, %eax
-; AVX512BW-NEXT:    kmovw %eax, %k1
-; AVX512BW-NEXT:    kshiftrw $1, %k0, %k2
-; AVX512BW-NEXT:    kshiftlw $1, %k2, %k2
-; AVX512BW-NEXT:    korw %k1, %k2, %k1
-; AVX512BW-NEXT:    kshiftrw $1, %k1, %k2
-; AVX512BW-NEXT:    kxorw %k0, %k2, %k0
-; AVX512BW-NEXT:    kshiftlw $15, %k0, %k0
-; AVX512BW-NEXT:    kshiftrw $14, %k0, %k0
-; AVX512BW-NEXT:    kxorw %k1, %k0, %k1
+; AVX512BW-NEXT:    kmovw %eax, %k0
+; AVX512BW-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX512BW-NEXT:    vcvttsd2si %xmm0, %eax
+; AVX512BW-NEXT:    kmovd %eax, %k1
+; AVX512BW-NEXT:    kshiftlw $1, %k1, %k1
+; AVX512BW-NEXT:    korw %k1, %k0, %k1
 ; AVX512BW-NEXT:    vmovdqa64 %zmm1, %zmm0 {%k1} {z}
 ; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
 ; AVX512BW-NEXT:    vzeroupper
@@ -2365,20 +2348,14 @@ define <2 x i64> @test_2f64tosb(<2 x double> %a, <2 x i64> %passthru) {
 ; KNL-LABEL: test_2f64tosb:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    # kill: def %xmm1 killed %xmm1 def %zmm1
-; KNL-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; KNL-NEXT:    vcvttsd2si %xmm2, %eax
-; KNL-NEXT:    kmovw %eax, %k0
 ; KNL-NEXT:    vcvttsd2si %xmm0, %eax
 ; KNL-NEXT:    andl $1, %eax
+; KNL-NEXT:    kmovw %eax, %k0
+; KNL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; KNL-NEXT:    vcvttsd2si %xmm0, %eax
 ; KNL-NEXT:    kmovw %eax, %k1
-; KNL-NEXT:    kshiftrw $1, %k0, %k2
-; KNL-NEXT:    kshiftlw $1, %k2, %k2
-; KNL-NEXT:    korw %k1, %k2, %k1
-; KNL-NEXT:    kshiftrw $1, %k1, %k2
-; KNL-NEXT:    kxorw %k0, %k2, %k0
-; KNL-NEXT:    kshiftlw $15, %k0, %k0
-; KNL-NEXT:    kshiftrw $14, %k0, %k0
-; KNL-NEXT:    kxorw %k1, %k0, %k1
+; KNL-NEXT:    kshiftlw $1, %k1, %k1
+; KNL-NEXT:    korw %k1, %k0, %k1
 ; KNL-NEXT:    vmovdqa64 %zmm1, %zmm0 {%k1} {z}
 ; KNL-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
 ; KNL-NEXT:    vzeroupper
@@ -2398,17 +2375,12 @@ define <2 x i64> @test_2f64tosb(<2 x double> %a, <2 x i64> %passthru) {
 ; AVX512DQ-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX512DQ-NEXT:    vcvttsd2si %xmm2, %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k0
+; AVX512DQ-NEXT:    kshiftlb $1, %k0, %k0
 ; AVX512DQ-NEXT:    vcvttsd2si %xmm0, %eax
-; AVX512DQ-NEXT:    andl $1, %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k1
-; AVX512DQ-NEXT:    kshiftrw $1, %k0, %k2
-; AVX512DQ-NEXT:    kshiftlw $1, %k2, %k2
-; AVX512DQ-NEXT:    korw %k1, %k2, %k1
-; AVX512DQ-NEXT:    kshiftrw $1, %k1, %k2
-; AVX512DQ-NEXT:    kxorw %k0, %k2, %k0
-; AVX512DQ-NEXT:    kshiftlw $15, %k0, %k0
-; AVX512DQ-NEXT:    kshiftrw $14, %k0, %k0
-; AVX512DQ-NEXT:    kxorw %k1, %k0, %k1
+; AVX512DQ-NEXT:    kshiftlb $7, %k1, %k1
+; AVX512DQ-NEXT:    kshiftrb $7, %k1, %k1
+; AVX512DQ-NEXT:    korb %k0, %k1, %k1
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm1, %zmm0 {%k1} {z}
 ; AVX512DQ-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
 ; AVX512DQ-NEXT:    vzeroupper
@@ -2417,20 +2389,14 @@ define <2 x i64> @test_2f64tosb(<2 x double> %a, <2 x i64> %passthru) {
 ; AVX512BW-LABEL: test_2f64tosb:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    # kill: def %xmm1 killed %xmm1 def %zmm1
-; AVX512BW-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX512BW-NEXT:    vcvttsd2si %xmm2, %eax
-; AVX512BW-NEXT:    kmovd %eax, %k0
 ; AVX512BW-NEXT:    vcvttsd2si %xmm0, %eax
 ; AVX512BW-NEXT:    andl $1, %eax
-; AVX512BW-NEXT:    kmovw %eax, %k1
-; AVX512BW-NEXT:    kshiftrw $1, %k0, %k2
-; AVX512BW-NEXT:    kshiftlw $1, %k2, %k2
-; AVX512BW-NEXT:    korw %k1, %k2, %k1
-; AVX512BW-NEXT:    kshiftrw $1, %k1, %k2
-; AVX512BW-NEXT:    kxorw %k0, %k2, %k0
-; AVX512BW-NEXT:    kshiftlw $15, %k0, %k0
-; AVX512BW-NEXT:    kshiftrw $14, %k0, %k0
-; AVX512BW-NEXT:    kxorw %k1, %k0, %k1
+; AVX512BW-NEXT:    kmovw %eax, %k0
+; AVX512BW-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX512BW-NEXT:    vcvttsd2si %xmm0, %eax
+; AVX512BW-NEXT:    kmovd %eax, %k1
+; AVX512BW-NEXT:    kshiftlw $1, %k1, %k1
+; AVX512BW-NEXT:    korw %k1, %k0, %k1
 ; AVX512BW-NEXT:    vmovdqa64 %zmm1, %zmm0 {%k1} {z}
 ; AVX512BW-NEXT:    # kill: def %xmm0 killed %xmm0 killed %zmm0
 ; AVX512BW-NEXT:    vzeroupper

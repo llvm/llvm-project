@@ -1833,15 +1833,12 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     llvm_unreachable("placeholder types shouldn't get to name mangling");
 
   case BuiltinType::ObjCId:
-    Out << "PA";
     mangleArtificalTagType(TTK_Struct, "objc_object");
     break;
   case BuiltinType::ObjCClass:
-    Out << "PA";
     mangleArtificalTagType(TTK_Struct, "objc_class");
     break;
   case BuiltinType::ObjCSel:
-    Out << "PA";
     mangleArtificalTagType(TTK_Struct, "objc_selector");
     break;
 
@@ -2337,9 +2334,6 @@ void MicrosoftCXXNameMangler::mangleType(const PointerType *T, Qualifiers Quals,
 
 void MicrosoftCXXNameMangler::mangleType(const ObjCObjectPointerType *T,
                                          Qualifiers Quals, SourceRange Range) {
-  if (T->isObjCIdType() || T->isObjCClassType())
-    return mangleType(T->getPointeeType(), Range, QMM_Drop);
-
   QualType PointeeType = T->getPointeeType();
   manglePointerCVQualifiers(Quals);
   manglePointerExtQualifiers(Quals, PointeeType);

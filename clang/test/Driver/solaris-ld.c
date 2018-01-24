@@ -10,7 +10,7 @@
 // CHECK-LD-SPARC32-NOT: warning:
 // CHECK-LD-SPARC32: {{.*/clang}}" "-cc1" "-triple" "sparc-sun-solaris2.11"
 // CHECK-LD-SPARC32-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
-// CHECK-LD-SPARC32: {{.*/ld}}"
+// CHECK-LD-SPARC32: "{{(.*/)?ld}}"
 // CHECK-LD-SPARC32-SAME: "--dynamic-linker" "[[SYSROOT]]/usr/lib/ld.so.1"
 // CHECK-LD-SPARC32-SAME: "[[SYSROOT]]/usr/gcc/4.8/lib/gcc/sparc-sun-solaris2.11/4.8.2/crt1.o"
 // CHECK-LD-SPARC32-SAME: "[[SYSROOT]]/usr/lib/crti.o"
@@ -34,7 +34,7 @@
 // CHECK-LD-SPARC64-NOT: warning:
 // CHECK-LD-SPARC64: {{.*/clang}}" "-cc1" "-triple" "sparcv9-sun-solaris2.11"
 // CHECK-LD-SPARC64-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
-// CHECK-LD-SPARC64: {{.*/ld}}"
+// CHECK-LD-SPARC64: "{{(.*/)?ld}}"
 // CHECK-LD-SPARC64-SAME: "--dynamic-linker" "[[SYSROOT]]/usr/lib/sparcv9/ld.so.1"
 // CHECK-LD-SPARC64-SAME: "[[SYSROOT]]/usr/gcc/4.8/lib/gcc/sparc-sun-solaris2.11/4.8.2/sparcv9/crt1.o"
 // CHECK-LD-SPARC64-SAME: "[[SYSROOT]]/usr/lib/sparcv9/crti.o"
@@ -58,7 +58,7 @@
 // CHECK-LD-X32-NOT: warning:
 // CHECK-LD-X32: {{.*/clang}}" "-cc1" "-triple" "i386-pc-solaris2.11"
 // CHECK-LD-X32-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
-// CHECK-LD-X32: {{.*/ld}}"
+// CHECK-LD-X32: "{{(.*/)?ld}}"
 // CHECK-LD-X32-SAME: "--dynamic-linker" "[[SYSROOT]]/usr/lib/ld.so.1"
 // CHECK-LD-X32-SAME: "[[SYSROOT]]/usr/lib/crt1.o"
 // CHECK-LD-X32-SAME: "[[SYSROOT]]/usr/lib/crti.o"
@@ -82,7 +82,7 @@
 // CHECK-LD-X64-NOT: warning:
 // CHECK-LD-X64: {{.*/clang}}" "-cc1" "-triple" "x86_64-pc-solaris2.11"
 // CHECK-LD-X64-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
-// CHECK-LD-X64: {{.*/ld}}"
+// CHECK-LD-X64: "{{(.*/)?ld}}"
 // CHECK-LD-X64-SAME: "--dynamic-linker" "[[SYSROOT]]/usr/lib/amd64/ld.so.1"
 // CHECK-LD-X64-SAME: "[[SYSROOT]]/usr/lib/amd64/crt1.o"
 // CHECK-LD-X64-SAME: "[[SYSROOT]]/usr/lib/amd64/crti.o"
@@ -103,7 +103,7 @@
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/solaris_sparc_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-SPARC32-SHARED %s
-// CHECK-SPARC32-SHARED: {{.*/ld}}"
+// CHECK-SPARC32-SHARED: "{{(.*/)?ld}}"
 // CHECK-SPARC32-SHARED-SAME: "-lgcc_s"
 // CHECK-SPARC32-SHARED-SAME: "-lc"
 // CHECK-SPARC32-SHARED-NOT: "-lgcc"

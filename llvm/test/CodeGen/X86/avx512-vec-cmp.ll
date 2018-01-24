@@ -206,21 +206,12 @@ define i16 @test12(<16 x i64> %a, <16 x i64> %b) nounwind {
 define i32 @test12_v32i32(<32 x i32> %a, <32 x i32> %b) nounwind {
 ; KNL-LABEL: test12_v32i32:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:    andq $-32, %rsp
-; KNL-NEXT:    subq $32, %rsp
-; KNL-NEXT:    vpcmpeqd %zmm3, %zmm1, %k1
-; KNL-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
-; KNL-NEXT:    vptestmd %zmm1, %zmm1, %k0
-; KNL-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
-; KNL-NEXT:    vpcmpeqd %zmm2, %zmm0, %k1
-; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; KNL-NEXT:    kmovw %k0, (%rsp)
-; KNL-NEXT:    movl (%rsp), %eax
-; KNL-NEXT:    movq %rbp, %rsp
-; KNL-NEXT:    popq %rbp
+; KNL-NEXT:    vpcmpeqd %zmm2, %zmm0, %k0
+; KNL-NEXT:    kmovw %k0, %ecx
+; KNL-NEXT:    vpcmpeqd %zmm3, %zmm1, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    shll $16, %eax
+; KNL-NEXT:    orl %ecx, %eax
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
@@ -249,32 +240,28 @@ define i32 @test12_v32i32(<32 x i32> %a, <32 x i32> %b) nounwind {
 define i64 @test12_v64i16(<64 x i16> %a, <64 x i16> %b) nounwind {
 ; KNL-LABEL: test12_v64i16:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    pushq %rbp
-; KNL-NEXT:    movq %rsp, %rbp
-; KNL-NEXT:    andq $-32, %rsp
-; KNL-NEXT:    subq $64, %rsp
-; KNL-NEXT:    vpcmpeqw %ymm5, %ymm1, %ymm1
-; KNL-NEXT:    vpmovsxwd %ymm1, %zmm1
-; KNL-NEXT:    vptestmd %zmm1, %zmm1, %k0
-; KNL-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
 ; KNL-NEXT:    vpcmpeqw %ymm4, %ymm0, %ymm0
 ; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; KNL-NEXT:    kmovw %k0, (%rsp)
-; KNL-NEXT:    vpcmpeqw %ymm7, %ymm3, %ymm0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    vpcmpeqw %ymm5, %ymm1, %ymm0
 ; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; KNL-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    kmovw %k0, %ecx
+; KNL-NEXT:    shll $16, %ecx
+; KNL-NEXT:    orl %eax, %ecx
 ; KNL-NEXT:    vpcmpeqw %ymm6, %ymm2, %ymm0
 ; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; KNL-NEXT:    kmovw %k0, {{[0-9]+}}(%rsp)
-; KNL-NEXT:    movl (%rsp), %ecx
-; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %k0, %edx
+; KNL-NEXT:    vpcmpeqw %ymm7, %ymm3, %ymm0
+; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
+; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    shll $16, %eax
+; KNL-NEXT:    orl %edx, %eax
 ; KNL-NEXT:    shlq $32, %rax
 ; KNL-NEXT:    orq %rcx, %rax
-; KNL-NEXT:    movq %rbp, %rsp
-; KNL-NEXT:    popq %rbp
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;

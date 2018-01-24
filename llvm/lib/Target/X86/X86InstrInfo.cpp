@@ -563,6 +563,8 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::CMP32rr,         X86::CMP32rm,             0 },
     { X86::CMP64rr,         X86::CMP64rm,             0 },
     { X86::CMP8rr,          X86::CMP8rm,              0 },
+    { X86::COMISDrr_Int,    X86::COMISDrm_Int,        TB_NO_REVERSE },
+    { X86::COMISSrr_Int,    X86::COMISSrm_Int,        TB_NO_REVERSE },
     { X86::CVTDQ2PDrr,      X86::CVTDQ2PDrm,          TB_NO_REVERSE },
     { X86::CVTDQ2PSrr,      X86::CVTDQ2PSrm,          TB_ALIGN_16 },
     { X86::CVTPD2DQrr,      X86::CVTPD2DQrm,          TB_ALIGN_16 },
@@ -595,10 +597,6 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::IMUL32rri8,      X86::IMUL32rmi8,          0 },
     { X86::IMUL64rri32,     X86::IMUL64rmi32,         0 },
     { X86::IMUL64rri8,      X86::IMUL64rmi8,          0 },
-    { X86::Int_COMISDrr,    X86::Int_COMISDrm,        TB_NO_REVERSE },
-    { X86::Int_COMISSrr,    X86::Int_COMISSrm,        TB_NO_REVERSE },
-    { X86::Int_UCOMISDrr,   X86::Int_UCOMISDrm,       TB_NO_REVERSE },
-    { X86::Int_UCOMISSrr,   X86::Int_UCOMISSrm,       TB_NO_REVERSE },
     { X86::MOV16rr,         X86::MOV16rm,             0 },
     { X86::MOV32rr,         X86::MOV32rm,             0 },
     { X86::MOV64rr,         X86::MOV64rm,             0 },
@@ -672,7 +670,9 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::SQRTSSr_Int,     X86::SQRTSSm_Int,         TB_NO_REVERSE },
     // FIXME: TEST*rr EAX,EAX ---> CMP [mem], 0
     { X86::UCOMISDrr,       X86::UCOMISDrm,           0 },
+    { X86::UCOMISDrr_Int,   X86::UCOMISDrm_Int,       TB_NO_REVERSE },
     { X86::UCOMISSrr,       X86::UCOMISSrm,           0 },
+    { X86::UCOMISSrr_Int,   X86::UCOMISSrm_Int,       TB_NO_REVERSE },
 
     // MMX version of foldable instructions
     { X86::MMX_CVTPD2PIirr,   X86::MMX_CVTPD2PIirm,   TB_ALIGN_16 },
@@ -696,10 +696,8 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::PSWAPDrr,        X86::PSWAPDrm,            0 },
 
     // AVX 128-bit versions of foldable instructions
-    { X86::Int_VCOMISDrr,   X86::Int_VCOMISDrm,       TB_NO_REVERSE },
-    { X86::Int_VCOMISSrr,   X86::Int_VCOMISSrm,       TB_NO_REVERSE },
-    { X86::Int_VUCOMISDrr,  X86::Int_VUCOMISDrm,      TB_NO_REVERSE },
-    { X86::Int_VUCOMISSrr,  X86::Int_VUCOMISSrm,      TB_NO_REVERSE },
+    { X86::VCOMISDrr_Int,   X86::VCOMISDrm_Int,       TB_NO_REVERSE },
+    { X86::VCOMISSrr_Int,   X86::VCOMISSrm_Int,       TB_NO_REVERSE },
     { X86::VCVTTSD2SI64rr,  X86::VCVTTSD2SI64rm,      0 },
     { X86::VCVTTSD2SI64rr_Int,X86::VCVTTSD2SI64rm_Int,TB_NO_REVERSE },
     { X86::VCVTTSD2SIrr,    X86::VCVTTSD2SIrm,        0 },
@@ -769,7 +767,9 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VTESTPDrr,       X86::VTESTPDrm,           0 },
     { X86::VTESTPSrr,       X86::VTESTPSrm,           0 },
     { X86::VUCOMISDrr,      X86::VUCOMISDrm,          0 },
+    { X86::VUCOMISDrr_Int,  X86::VUCOMISDrm_Int,      TB_NO_REVERSE },
     { X86::VUCOMISSrr,      X86::VUCOMISSrm,          0 },
+    { X86::VUCOMISSrr_Int,  X86::VUCOMISSrm_Int,      TB_NO_REVERSE },
 
     // AVX 256-bit foldable instructions
     { X86::VCVTDQ2PDYrr,    X86::VCVTDQ2PDYrm,        0 },
