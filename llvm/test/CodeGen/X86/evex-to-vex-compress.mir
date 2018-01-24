@@ -2088,7 +2088,7 @@ body: |
   %rax = VPEXTRQZrr                            %xmm0, 1                                                
   ; CHECK: VPEXTRWmr                           %rdi, 1, %noreg, 0, %noreg,  %xmm0, 3       
   VPEXTRWZmr                                   %rdi, 1, %noreg, 0, %noreg,  %xmm0, 3                             
-  ; CHECK: %eax = VPEXTRWri                    %xmm0, 1                                                     
+  ; CHECK: %eax = VPEXTRWrr                    %xmm0, 1                                                     
   %eax = VPEXTRWZrr                            %xmm0, 1                                                    
   ; CHECK: %eax = VPEXTRWrr_REV               %xmm0, 1      
   %eax = VPEXTRWZrr_REV                        %xmm0, 1                                                     
@@ -2104,9 +2104,9 @@ body: |
   %xmm0 = VPINSRQZrm                           %xmm0, %rsi, 1, %noreg, 0, %noreg, 3                              
   ; CHECK: %xmm0 = VPINSRQrr                   %xmm0, %rdi, 5            
   %xmm0 = VPINSRQZrr                           %xmm0, %rdi, 5                                          
-  ; CHECK: %xmm0 = VPINSRWrmi                  %xmm0, %rsi, 1, %noreg, 0, %noreg, 3      
+  ; CHECK: %xmm0 = VPINSRWrm                   %xmm0, %rsi, 1, %noreg, 0, %noreg, 3      
   %xmm0 = VPINSRWZrm                           %xmm0, %rsi, 1, %noreg, 0, %noreg, 3                              
-  ; CHECK: %xmm0 = VPINSRWrri                  %xmm0, %edi, 5                                               
+  ; CHECK: %xmm0 = VPINSRWrr                   %xmm0, %edi, 5                                               
   %xmm0 = VPINSRWZrr                           %xmm0, %edi, 5                                              
   ; CHECK: %xmm0 = VSQRTSDm                    %xmm0, %noreg, %noreg, %noreg, %noreg, %noreg
   %xmm0 = VSQRTSDZm                            %xmm0, %noreg, %noreg, %noreg, %noreg, %noreg                                    

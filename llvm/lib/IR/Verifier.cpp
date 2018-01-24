@@ -868,7 +868,12 @@ void Verifier::visitDIScope(const DIScope &N) {
 
 void Verifier::visitDISubrange(const DISubrange &N) {
   AssertDI(N.getTag() == dwarf::DW_TAG_subrange_type, "invalid tag", &N);
-  AssertDI(N.getCount() >= -1, "invalid subrange count", &N);
+  auto Count = N.getCount();
+  AssertDI(Count, "Count must either be a signed constant or a DIVariable",
+           &N);
+  AssertDI(!Count.is<ConstantInt*>() ||
+               Count.get<ConstantInt*>()->getSExtValue() >= -1,
+           "invalid subrange count", &N);
 }
 
 void Verifier::visitDIEnumerator(const DIEnumerator &N) {

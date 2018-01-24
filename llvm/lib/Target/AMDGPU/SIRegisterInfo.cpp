@@ -101,13 +101,6 @@ SIRegisterInfo::SIRegisterInfo(const SISubtarget &ST) :
          VGPRSetID < NumRegPressureSets);
 }
 
-void SIRegisterInfo::reserveRegisterTuples(BitVector &Reserved, unsigned Reg) const {
-  MCRegAliasIterator R(Reg, this, true);
-
-  for (; R.isValid(); ++R)
-    Reserved.set(*R);
-}
-
 unsigned SIRegisterInfo::reservedPrivateSegmentBufferReg(
   const MachineFunction &MF) const {
 

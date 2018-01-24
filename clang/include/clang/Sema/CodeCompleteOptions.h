@@ -35,8 +35,8 @@ public:
   /// Show brief documentation comments in code completion results.
   unsigned IncludeBriefComments : 1;
 
-  /// Hint whether to load data from the external AST in order to provide
-  /// full results. If false, declarations from the preamble may be omitted.
+  /// Hint whether to load data from the external AST to provide full results.
+  /// If false, namespace-level declarations from the preamble may be omitted.
   unsigned LoadExternal : 1;
 
   CodeCompleteOptions()

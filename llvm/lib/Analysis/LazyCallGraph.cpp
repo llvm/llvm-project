@@ -1294,7 +1294,7 @@ LazyCallGraph::RefSCC::removeInternalRefEdge(Node &SourceN,
 
   // Otherwise we create a collection of new RefSCC nodes and build
   // a radix-sort style map from postorder number to these new RefSCCs. We then
-  // append SCCs to each of these RefSCCs in the order they occured in the
+  // append SCCs to each of these RefSCCs in the order they occurred in the
   // original SCCs container.
   for (int i = 0; i < PostOrderNumber; ++i)
     Result.push_back(G->createRefSCC(*G));

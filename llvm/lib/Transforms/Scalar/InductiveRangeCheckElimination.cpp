@@ -1643,8 +1643,6 @@ InductiveRangeCheck::computeSafeIterationSpace(
   // values, depending on type of latch condition that defines IV iteration
   // space.
   auto ClampedSubstract = [&](const SCEV *X, const SCEV *Y) {
-    assert(SE.isKnownNonNegative(X) &&
-           "We can only substract from values in [0; SINT_MAX]!");
     if (IsLatchSigned) {
       // X is a number from signed range, Y is interpreted as signed.
       // Even if Y is SINT_MAX, (X - Y) does not reach SINT_MIN. So the only

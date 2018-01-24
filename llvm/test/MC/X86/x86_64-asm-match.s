@@ -17,11 +17,11 @@
 // CHECK:   Matching formal operand class MCK_FR32 against actual operand at index 3 (Reg:xmm2): match success using generic matcher
 // CHECK:   Matching formal operand class InvalidMatchClass against actual operand at index 4: actual operand index out of range Opcode result: complete match, selecting this opcode
 // CHECK: AsmMatcher: found 4 encodings with mnemonic 'pinsrw'
-// CHECK: Trying to match opcode MMX_PINSRWirri
+// CHECK: Trying to match opcode MMX_PINSRWrr
 // CHECK:   Matching formal operand class MCK_ImmUnsignedi8 against actual operand at index 1 (Imm:3): match success using generic matcher
 // CHECK:   Matching formal operand class MCK_GR32orGR64 against actual operand at index 2 (Reg:ecx): match success using generic matcher
 // CHECK:   Matching formal operand class MCK_VR64 against actual operand at index 3 (Reg:xmm5): Opcode result: multiple operand mismatches, ignoring this opcode
-// CHECK: Trying to match opcode PINSRWrri
+// CHECK: Trying to match opcode PINSRWrr
 // CHECK:   Matching formal operand class MCK_ImmUnsignedi8 against actual operand at index 1 (Imm:3): match success using generic matcher
 // CHECK:   Matching formal operand class MCK_GR32orGR64 against actual operand at index 2 (Reg:ecx): match success using generic matcher
 // CHECK:   Matching formal operand class MCK_FR32 against actual operand at index 3 (Reg:xmm5): match success using generic matcher

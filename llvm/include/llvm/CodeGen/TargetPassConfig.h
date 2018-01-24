@@ -212,7 +212,7 @@ public:
   /// representation to the MI representation.
   /// Adds IR based lowering and target specific optimization passes and finally
   /// the core instruction selection passes.
-  /// \returns true if an error occured, false otherwise.
+  /// \returns true if an error occurred, false otherwise.
   bool addISelPasses();
 
   /// Add common target configurable passes that perform LLVM IR to IR

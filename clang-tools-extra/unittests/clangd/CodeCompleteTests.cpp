@@ -537,12 +537,13 @@ TEST(CompletionTest, IndexSuppressesPreambleCompletions) {
                       /*StorePreamblesInMemory=*/true);
 
   FS.Files[getVirtualTestFilePath("bar.h")] =
-      R"cpp(namespace ns { int preamble; })cpp";
+      R"cpp(namespace ns { struct preamble { int member; }; })cpp";
   auto File = getVirtualTestFilePath("foo.cpp");
   Annotations Test(R"cpp(
       #include "bar.h"
       namespace ns { int local; }
-      void f() { ns::^ }
+      void f() { ns::^; }
+      void f() { ns::preamble().$2^; }
   )cpp");
   Server.addDocument(Context::empty(), File, Test.code()).wait();
   clangd::CodeCompleteOptions Opts = {};
@@ -562,6 +563,11 @@ TEST(CompletionTest, IndexSuppressesPreambleCompletions) {
           .second.Value;
   EXPECT_THAT(WithIndex.items,
               UnorderedElementsAre(Named("local"), Named("index")));
+  auto ClassFromPreamble =
+      Server.codeComplete(Context::empty(), File, Test.point("2"), Opts)
+          .get()
+          .second.Value;
+  EXPECT_THAT(ClassFromPreamble.items, Contains(Named("member")));
 }
 
 TEST(CompletionTest, DynamicIndexMultiFile) {

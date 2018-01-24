@@ -7,7 +7,7 @@ define i32 @mul_f(<4 x i8>* %A) {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pmovzxbd {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
-; X86-NEXT:    pmulld %xmm0, %xmm0
+; X86-NEXT:    pmaddwd %xmm0, %xmm0
 ; X86-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
 ; X86-NEXT:    movd %xmm0, (%eax)
 ; X86-NEXT:    xorl %eax, %eax
@@ -16,7 +16,7 @@ define i32 @mul_f(<4 x i8>* %A) {
 ; X64-LABEL: mul_f:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pmovzxbd {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
-; X64-NEXT:    pmulld %xmm0, %xmm0
+; X64-NEXT:    pmaddwd %xmm0, %xmm0
 ; X64-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
 ; X64-NEXT:    movd %xmm0, (%rax)
 ; X64-NEXT:    xorl %eax, %eax

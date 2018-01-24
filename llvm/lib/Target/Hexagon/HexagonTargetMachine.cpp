@@ -299,6 +299,11 @@ void HexagonPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
   bool NoOpt = (getOptLevel() == CodeGenOpt::None);
 
+  if (!NoOpt) {
+    addPass(createConstantPropagationPass());
+    addPass(createDeadCodeEliminationPass());
+  }
+
   addPass(createAtomicExpandPass());
   if (!NoOpt) {
     if (EnableLoopPrefetch)

@@ -4165,17 +4165,18 @@ static SelectPatternResult matchClamp(CmpInst::Predicate Pred,
 ///   a < c ? min(a,b) : min(b,c) ==> min(min(a,b),min(b,c))
 static SelectPatternResult matchMinMaxOfMinMax(CmpInst::Predicate Pred,
                                                Value *CmpLHS, Value *CmpRHS,
-                                               Value *TrueVal, Value *FalseVal) {
+                                               Value *TVal, Value *FVal,
+                                               unsigned Depth) {
   // TODO: Allow FP min/max with nnan/nsz.
   assert(CmpInst::isIntPredicate(Pred) && "Expected integer comparison");
 
   Value *A, *B;
-  SelectPatternResult L = matchSelectPattern(TrueVal, A, B);
+  SelectPatternResult L = matchSelectPattern(TVal, A, B, nullptr, Depth + 1);
   if (!SelectPatternResult::isMinOrMax(L.Flavor))
     return {SPF_UNKNOWN, SPNB_NA, false};
 
   Value *C, *D;
-  SelectPatternResult R = matchSelectPattern(FalseVal, C, D);
+  SelectPatternResult R = matchSelectPattern(FVal, C, D, nullptr, Depth + 1);
   if (L.Flavor != R.Flavor)
     return {SPF_UNKNOWN, SPNB_NA, false};
 
@@ -4259,7 +4260,8 @@ static SelectPatternResult matchMinMaxOfMinMax(CmpInst::Predicate Pred,
 static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
                                        Value *CmpLHS, Value *CmpRHS,
                                        Value *TrueVal, Value *FalseVal,
-                                       Value *&LHS, Value *&RHS) {
+                                       Value *&LHS, Value *&RHS,
+                                       unsigned Depth) {
   // Assume success. If there's no match, callers should not use these anyway.
   LHS = TrueVal;
   RHS = FalseVal;
@@ -4268,7 +4270,7 @@ static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
   if (SPR.Flavor != SelectPatternFlavor::SPF_UNKNOWN)
     return SPR;
 
-  SPR = matchMinMaxOfMinMax(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal);
+  SPR = matchMinMaxOfMinMax(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal, Depth);
   if (SPR.Flavor != SelectPatternFlavor::SPF_UNKNOWN)
     return SPR;
   
@@ -4332,7 +4334,8 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
                                               FastMathFlags FMF,
                                               Value *CmpLHS, Value *CmpRHS,
                                               Value *TrueVal, Value *FalseVal,
-                                              Value *&LHS, Value *&RHS) {
+                                              Value *&LHS, Value *&RHS,
+                                              unsigned Depth) {
   LHS = CmpLHS;
   RHS = CmpRHS;
 
@@ -4448,7 +4451,7 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
   }
 
   if (CmpInst::isIntPredicate(Pred))
-    return matchMinMax(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal, LHS, RHS);
+    return matchMinMax(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal, LHS, RHS, Depth);
 
   // According to (IEEE 754-2008 5.3.1), minNum(0.0, -0.0) and similar
   // may return either -0.0 or 0.0, so fcmp/select pair has stricter
@@ -4569,7 +4572,11 @@ static Value *lookThroughCast(CmpInst *CmpI, Value *V1, Value *V2,
 }
 
 SelectPatternResult llvm::matchSelectPattern(Value *V, Value *&LHS, Value *&RHS,
-                                             Instruction::CastOps *CastOp) {
+                                             Instruction::CastOps *CastOp,
+                                             unsigned Depth) {
+  if (Depth >= MaxDepth)
+    return {SPF_UNKNOWN, SPNB_NA, false};
+
   SelectInst *SI = dyn_cast<SelectInst>(V);
   if (!SI) return {SPF_UNKNOWN, SPNB_NA, false};
 
@@ -4598,7 +4605,7 @@ SelectPatternResult llvm::matchSelectPattern(Value *V, Value *&LHS, Value *&RHS,
         FMF.setNoSignedZeros();
       return ::matchSelectPattern(Pred, FMF, CmpLHS, CmpRHS,
                                   cast<CastInst>(TrueVal)->getOperand(0), C,
-                                  LHS, RHS);
+                                  LHS, RHS, Depth);
     }
     if (Value *C = lookThroughCast(CmpI, FalseVal, TrueVal, CastOp)) {
       // If this is a potential fmin/fmax with a cast to integer, then ignore
@@ -4607,11 +4614,11 @@ SelectPatternResult llvm::matchSelectPattern(Value *V, Value *&LHS, Value *&RHS,
         FMF.setNoSignedZeros();
       return ::matchSelectPattern(Pred, FMF, CmpLHS, CmpRHS,
                                   C, cast<CastInst>(FalseVal)->getOperand(0),
-                                  LHS, RHS);
+                                  LHS, RHS, Depth);
     }
   }
   return ::matchSelectPattern(Pred, FMF, CmpLHS, CmpRHS, TrueVal, FalseVal,
-                              LHS, RHS);
+                              LHS, RHS, Depth);
 }
 
 /// Return true if "icmp Pred LHS RHS" is always true.

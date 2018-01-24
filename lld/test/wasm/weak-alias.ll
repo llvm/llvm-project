@@ -35,8 +35,8 @@ entry:
 ; CHECK-NEXT:       - ElemType:        ANYFUNC
 ; CHECK-NEXT:         Limits:
 ; CHECK-NEXT:           Flags:           [ HAS_MAX ]
-; CHECK-NEXT:           Initial:         0x00000003
-; CHECK-NEXT:           Maximum:         0x00000003
+; CHECK-NEXT:           Initial:         0x00000002
+; CHECK-NEXT:           Maximum:         0x00000002
 ; CHECK-NEXT:   - Type:            MEMORY
 ; CHECK-NEXT:     Memories:
 ; CHECK-NEXT:       - Initial:         0x00000002
@@ -88,7 +88,7 @@ entry:
 ; CHECK-NEXT:       - Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1
-; CHECK-NEXT:         Functions:       [ 1, 1 ]
+; CHECK-NEXT:         Functions:       [ 1 ]
 ; CHECK-NEXT:   - Type:            CODE
 ; CHECK-NEXT:     Functions:
 ; CHECK-NEXT:       - Index:           0
@@ -112,7 +112,7 @@ entry:
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:           - Type:            I32
 ; CHECK-NEXT:             Count:           2
-; CHECK-NEXT:         Body:            23808080800041106B220024808080800020004182808080003602081081808080002101200041106A24808080800020010B
+; CHECK-NEXT:         Body:            23808080800041106B220024808080800020004181808080003602081081808080002101200041106A24808080800020010B
 ; CHECK-NEXT:       - Index:           6
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            0B
@@ -196,8 +196,8 @@ entry:
 ; RELOC-NEXT:     Segments:
 ; RELOC-NEXT:       - Offset:
 ; RELOC-NEXT:           Opcode:          I32_CONST
-; RELOC-NEXT:           Value:           0
-; RELOC-NEXT:         Functions:       [ 1, 1 ]
+; RELOC-NEXT:           Value:           1
+; RELOC-NEXT:         Functions:       [ 1 ]
 ; RELOC-NEXT:   - Type:            CODE
 ; RELOC-NEXT:     Relocations:
 ; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
@@ -256,7 +256,7 @@ entry:
 ; RELOC-NEXT:         Locals:
 ; RELOC-NEXT:           - Type:            I32
 ; RELOC-NEXT:             Count:           2
-; RELOC-NEXT:         Body:            23808080800041106B220024808080800020004180808080003602081081808080002101200041106A24808080800020010B
+; RELOC-NEXT:         Body:            23808080800041106B220024808080800020004181808080003602081081808080002101200041106A24808080800020010B
 ; RELOC-NEXT:       - Index:           5
 ; RELOC-NEXT:         Locals:
 ; RELOC-NEXT:           - Type:            I32

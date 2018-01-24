@@ -321,19 +321,34 @@ template <> struct MDNodeKeyImpl<GenericDINode> : MDNodeOpsKey {
 };
 
 template <> struct MDNodeKeyImpl<DISubrange> {
-  int64_t Count;
+  Metadata *CountNode;
   int64_t LowerBound;
 
-  MDNodeKeyImpl(int64_t Count, int64_t LowerBound)
-      : Count(Count), LowerBound(LowerBound) {}
+  MDNodeKeyImpl(Metadata *CountNode, int64_t LowerBound)
+      : CountNode(CountNode), LowerBound(LowerBound) {}
   MDNodeKeyImpl(const DISubrange *N)
-      : Count(N->getCount()), LowerBound(N->getLowerBound()) {}
+      : CountNode(N->getRawCountNode()),
+        LowerBound(N->getLowerBound()) {}
 
   bool isKeyOf(const DISubrange *RHS) const {
-    return Count == RHS->getCount() && LowerBound == RHS->getLowerBound();
+    if (LowerBound != RHS->getLowerBound())
+      return false;
+
+    if (auto *RHSCount = RHS->getCount().dyn_cast<ConstantInt*>())
+      if (auto *MD = dyn_cast<ConstantAsMetadata>(CountNode))
+        if (RHSCount->getSExtValue() ==
+            cast<ConstantInt>(MD->getValue())->getSExtValue())
+          return true;
+
+    return CountNode == RHS->getRawCountNode();
   }
 
-  unsigned getHashValue() const { return hash_combine(Count, LowerBound); }
+  unsigned getHashValue() const {
+    if (auto *MD = dyn_cast<ConstantAsMetadata>(CountNode))
+      return hash_combine(cast<ConstantInt>(MD->getValue())->getSExtValue(),
+                          LowerBound);
+    return hash_combine(CountNode, LowerBound);
+  }
 };
 
 template <> struct MDNodeKeyImpl<DIEnumerator> {

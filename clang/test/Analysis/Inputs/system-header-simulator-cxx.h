@@ -584,10 +584,21 @@ namespace std {
 
 }
 
+#ifdef TEST_INLINABLE_ALLOCATORS
+namespace std {
+  void *malloc(size_t);
+  void free(void *);
+}
+void* operator new(std::size_t size, const std::nothrow_t&) throw() { return std::malloc(size); }
+void* operator new[](std::size_t size, const std::nothrow_t&) throw() { return std::malloc(size); }
+void operator delete(void* ptr, const std::nothrow_t&) throw() { std::free(ptr); }
+void operator delete[](void* ptr, const std::nothrow_t&) throw() { std::free(ptr); }
+#else
 void* operator new(std::size_t, const std::nothrow_t&) throw();
 void* operator new[](std::size_t, const std::nothrow_t&) throw();
 void operator delete(void*, const std::nothrow_t&) throw();
 void operator delete[](void*, const std::nothrow_t&) throw();
+#endif
 
 void* operator new (std::size_t size, void* ptr) throw() { return ptr; };
 void* operator new[] (std::size_t size, void* ptr) throw() { return ptr; };

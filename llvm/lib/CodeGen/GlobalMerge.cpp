@@ -577,7 +577,8 @@ bool GlobalMerge::doInitialization(Module &M) {
   for (auto &GV : M.globals()) {
     // Merge is safe for "normal" internal or external globals only
     if (GV.isDeclaration() || GV.isThreadLocal() ||
-        GV.hasSection() || GV.hasImplicitSection())
+        GV.hasSection() || GV.hasImplicitSection() ||
+        GV.hasDLLExportStorageClass())
       continue;
 
     // It's not safe to merge globals that may be preempted
