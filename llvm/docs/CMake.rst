@@ -551,6 +551,14 @@ LLVM-specific variables
   <http://clang.llvm.org/docs/SourceBasedCodeCoverage.html>`_ instrumentation
   is enabled while building llvm.
 
+**LLVM_CCACHE_BUILD**:BOOL
+  If enabled and the ``ccache`` program is available, then LLVM will be
+  built using ``ccache`` to speed up rebuilds of LLVM and its components.
+  Defaults to OFF.  The size and location of the cache maintained
+  by ``ccache`` can be adjusted via the LLVM_CCACHE_MAXSIZE and LLVM_CCACHE_DIR
+  options, which are passed to the CCACHE_MAXSIZE and CCACHE_DIR environment
+  variables, respectively.
+
 CMake Caches
 ============
 

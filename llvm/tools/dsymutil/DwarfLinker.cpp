@@ -775,10 +775,13 @@ void DwarfStreamer::emitDIE(DIE &Die) {
 /// Emit the debug_str section stored in \p Pool.
 void DwarfStreamer::emitStrings(const NonRelocatableStringpool &Pool) {
   Asm->OutStreamer->SwitchSection(MOFI->getDwarfStrSection());
-  for (auto *Entry = Pool.getFirstEntry(); Entry;
-       Entry = Pool.getNextEntry(Entry))
+  std::vector<DwarfStringPoolEntryRef> Entries = Pool.getEntries();
+  for (auto Entry : Entries) {
+    if (Entry.getIndex() == -1U)
+      break;
     Asm->OutStreamer->EmitBytes(
-        StringRef(Entry->getKey().data(), Entry->getKey().size() + 1));
+        StringRef(Entry.getString().data(), Entry.getString().size() + 1));
+  }
 }
 
 /// Emit the swift_ast section stored in \p Buffers.
@@ -3697,28 +3700,23 @@ bool DwarfLinker::link(const DebugMap &Map) {
   return Options.NoOutput ? true : Streamer->finish(Map);
 }
 
-/// Get the offset of string \p S in the string table. This
-/// can insert a new element or return the offset of a preexisitng
-/// one.
-uint32_t NonRelocatableStringpool::getStringOffset(StringRef S) {
+DwarfStringPoolEntryRef NonRelocatableStringpool::getEntry(StringRef S) {
   if (S.empty() && !Strings.empty())
-    return 0;
+    return EmptyString;
 
-  std::pair<uint32_t, StringMapEntryBase *> Entry(0, nullptr);
-  MapTy::iterator It;
-  bool Inserted;
-
-  // A non-empty string can't be at offset 0, so if we have an entry
-  // with a 0 offset, it must be a previously interned string.
-  std::tie(It, Inserted) = Strings.insert(std::make_pair(S, Entry));
-  if (Inserted || It->getValue().first == 0) {
-    // Set offset and chain at the end of the entries list.
-    It->getValue().first = CurrentEndOffset;
-    CurrentEndOffset += S.size() + 1; // +1 for the '\0'.
-    Last->getValue().second = &*It;
-    Last = &*It;
+  auto I = Strings.insert(std::make_pair(S, DwarfStringPoolEntry()));
+  auto &Entry = I.first->second;
+  if (I.second || Entry.Index == -1U) {
+    Entry.Index = NumEntries++;
+    Entry.Offset = CurrentEndOffset;
+    Entry.Symbol = nullptr;
+    CurrentEndOffset += S.size() + 1;
   }
-  return It->getValue().first;
+  return DwarfStringPoolEntryRef(*I.first);
+}
+
+uint32_t NonRelocatableStringpool::getStringOffset(StringRef S) {
+  return getEntry(S).getOffset();
 }
 
 /// Put \p S into the StringMap so that it gets permanent
@@ -3726,9 +3724,23 @@ uint32_t NonRelocatableStringpool::getStringOffset(StringRef S) {
 /// that go into the output section. A latter call to
 /// getStringOffset() with the same string will chain it though.
 StringRef NonRelocatableStringpool::internString(StringRef S) {
-  std::pair<uint32_t, StringMapEntryBase *> Entry(0, nullptr);
+  DwarfStringPoolEntry Entry{nullptr, 0, -1U};
   auto InsertResult = Strings.insert(std::make_pair(S, Entry));
   return InsertResult.first->getKey();
+}
+
+std::vector<DwarfStringPoolEntryRef>
+NonRelocatableStringpool::getEntries() const {
+  std::vector<DwarfStringPoolEntryRef> Result;
+  Result.reserve(Strings.size());
+  for (const auto &E : Strings)
+    Result.emplace_back(E);
+  std::sort(
+      Result.begin(), Result.end(),
+      [](const DwarfStringPoolEntryRef A, const DwarfStringPoolEntryRef B) {
+        return A.getIndex() < B.getIndex();
+      });
+  return Result;
 }
 
 void warn(const Twine &Warning, const Twine &Context) {

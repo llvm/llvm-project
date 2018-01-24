@@ -59,8 +59,8 @@ public:
                                            MI.getOperand(1).getReg(), MRI)) {
       unsigned DstReg = MI.getOperand(0).getReg();
       LLT DstTy = MRI.getType(DstReg);
-      if (isInstUnsupported(TargetOpcode::G_AND, DstTy) ||
-          isInstUnsupported(TargetOpcode::G_CONSTANT, DstTy))
+      if (isInstUnsupported({TargetOpcode::G_AND, {DstTy}}) ||
+          isInstUnsupported({TargetOpcode::G_CONSTANT, {DstTy}}))
         return false;
       DEBUG(dbgs() << ".. Combine MI: " << MI;);
       Builder.setInstr(MI);
@@ -87,9 +87,9 @@ public:
                                            MI.getOperand(1).getReg(), MRI)) {
       unsigned DstReg = MI.getOperand(0).getReg();
       LLT DstTy = MRI.getType(DstReg);
-      if (isInstUnsupported(TargetOpcode::G_SHL, DstTy) ||
-          isInstUnsupported(TargetOpcode::G_ASHR, DstTy) ||
-          isInstUnsupported(TargetOpcode::G_CONSTANT, DstTy))
+      if (isInstUnsupported({TargetOpcode::G_SHL, {DstTy}}) ||
+          isInstUnsupported({TargetOpcode::G_ASHR, {DstTy}}) ||
+          isInstUnsupported({TargetOpcode::G_CONSTANT, {DstTy}}))
         return false;
       DEBUG(dbgs() << ".. Combine MI: " << MI;);
       Builder.setInstr(MI);
@@ -121,7 +121,7 @@ public:
                                            MI.getOperand(1).getReg(), MRI)) {
       unsigned DstReg = MI.getOperand(0).getReg();
       LLT DstTy = MRI.getType(DstReg);
-      if (isInstUnsupported(TargetOpcode::G_IMPLICIT_DEF, DstTy))
+      if (isInstUnsupported({TargetOpcode::G_IMPLICIT_DEF, {DstTy}}))
         return false;
       DEBUG(dbgs() << ".. Combine EXT(IMPLICIT_DEF) " << MI;);
       Builder.setInstr(MI);
@@ -277,10 +277,10 @@ private:
 
   /// Checks if the target legalizer info has specified anything about the
   /// instruction, or if unsupported.
-  bool isInstUnsupported(unsigned Opcode, const LLT &DstTy) const {
-    auto Action = LI.getAction({Opcode, 0, DstTy});
-    return Action.first == LegalizerInfo::LegalizeAction::Unsupported ||
-           Action.first == LegalizerInfo::LegalizeAction::NotFound;
+  bool isInstUnsupported(const LegalityQuery &Query) const {
+    auto Step = LI.getAction(Query);
+    return Step.Action == LegalizerInfo::LegalizeAction::Unsupported ||
+           Step.Action == LegalizerInfo::LegalizeAction::NotFound;
   }
 };
 

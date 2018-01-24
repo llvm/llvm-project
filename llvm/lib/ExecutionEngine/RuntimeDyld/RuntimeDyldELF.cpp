@@ -326,6 +326,9 @@ void RuntimeDyldELF::resolveX86Relocation(const SectionEntry &Section,
         Value + Addend;
     break;
   }
+  // Handle R_386_PLT32 like R_386_PC32 since it should be able to
+  // reach any 32 bit address.
+  case ELF::R_386_PLT32:
   case ELF::R_386_PC32: {
     uint32_t FinalAddress =
         Section.getLoadAddressWithOffset(Offset) & 0xFFFFFFFF;

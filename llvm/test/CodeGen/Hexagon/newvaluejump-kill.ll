@@ -8,10 +8,11 @@ target triple = "hexagon"
 
 @g0 = external hidden unnamed_addr global [182 x i16], align 8
 
-define void @fred(i16 signext %a0) local_unnamed_addr #0 {
+define void @fred(i16 signext %a0, i16 signext %a1) #0 {
 b1:
-  %v2 = getelementptr inbounds [182 x i16], [182 x i16]* @g0, i32 0, i32 0
-  %v3 = sext i16 %a0 to i32
+  %v1 = sext i16 %a0 to i32
+  %v2 = getelementptr inbounds [182 x i16], [182 x i16]* @g0, i32 0, i32 %v1
+  %v3 = sext i16 %a1 to i32
   %v4 = call i32 @llvm.hexagon.A2.asrh(i32 undef)
   %v5 = trunc i32 %v4 to i16
   br i1 undef, label %b6, label %b14

@@ -820,6 +820,13 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SRA,       MVT::i64, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i64, Custom);
 
+  // Expand to __aeabi_l{lsl,lsr,asr} calls for Thumb1.
+  if (Subtarget->isThumb1Only()) {
+    setOperationAction(ISD::SHL_PARTS, MVT::i32, Expand);
+    setOperationAction(ISD::SRA_PARTS, MVT::i32, Expand);
+    setOperationAction(ISD::SRL_PARTS, MVT::i32, Expand);
+  }
+
   setOperationAction(ISD::ADDC,      MVT::i32, Custom);
   setOperationAction(ISD::ADDE,      MVT::i32, Custom);
   setOperationAction(ISD::SUBC,      MVT::i32, Custom);

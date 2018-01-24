@@ -29369,12 +29369,13 @@ static SDValue combineX86ShufflesConstants(const SmallVectorImpl<SDValue> &Ops,
 /// combining in this recursive walk.
 static SDValue combineX86ShufflesRecursively(
     ArrayRef<SDValue> SrcOps, int SrcOpIndex, SDValue Root,
-    ArrayRef<int> RootMask, ArrayRef<const SDNode *> SrcNodes, int Depth,
+    ArrayRef<int> RootMask, ArrayRef<const SDNode *> SrcNodes, unsigned Depth,
     bool HasVariableMask, SelectionDAG &DAG,
     TargetLowering::DAGCombinerInfo &DCI, const X86Subtarget &Subtarget) {
   // Bound the depth of our recursive combine because this is ultimately
   // quadratic in nature.
-  if (Depth > 8)
+  const unsigned MaxRecursionDepth = 8;
+  if (Depth > MaxRecursionDepth)
     return SDValue();
 
   // Directly rip through bitcasts to find the underlying operand.
@@ -29527,13 +29528,17 @@ static SDValue combineX86ShufflesRecursively(
   // See if we can recurse into each shuffle source op (if it's a target
   // shuffle). The source op should only be combined if it either has a
   // single use (i.e. current Op) or all its users have already been combined.
-  for (int i = 0, e = Ops.size(); i < e; ++i)
-    if (Ops[i].getNode()->hasOneUse() ||
-        SDNode::areOnlyUsersOf(CombinedNodes, Ops[i].getNode()))
-      if (SDValue Res = combineX86ShufflesRecursively(
-              Ops, i, Root, Mask, CombinedNodes, Depth + 1, HasVariableMask,
-              DAG, DCI, Subtarget))
-        return Res;
+  // Don't recurse if we already have more source ops than we can combine in
+  // the remaining recursion depth.
+  if (Ops.size() < (MaxRecursionDepth - Depth)) {
+    for (int i = 0, e = Ops.size(); i < e; ++i)
+      if (Ops[i].getNode()->hasOneUse() ||
+          SDNode::areOnlyUsersOf(CombinedNodes, Ops[i].getNode()))
+        if (SDValue Res = combineX86ShufflesRecursively(
+                Ops, i, Root, Mask, CombinedNodes, Depth + 1, HasVariableMask,
+                DAG, DCI, Subtarget))
+          return Res;
+  }
 
   // Attempt to constant fold all of the constant source ops.
   if (SDValue Cst = combineX86ShufflesConstants(

@@ -51,6 +51,15 @@ struct InstrAspect {
   }
 };
 
+/// The LegalityQuery object bundles together all the information that's needed
+/// to decide whether a given operation is legal or not.
+/// For efficiency, it doesn't make a copy of Types so care must be taken not
+/// to free it before using the query.
+struct LegalityQuery {
+  unsigned Opcode;
+  ArrayRef<LLT> Types;
+};
+
 class LegalizerInfo {
 public:
   enum LegalizeAction : std::uint8_t {
@@ -98,6 +107,27 @@ public:
 
     /// Sentinel value for when no action was found in the specified table.
     NotFound,
+  };
+
+  /// The result of a query. It either indicates a final answer of Legal or
+  /// Unsupported or describes an action that must be taken to make an operation
+  /// more legal.
+  struct LegalizeActionStep {
+    /// The action to take or the final answer.
+    LegalizeAction Action;
+    /// If describing an action, the type index to change. Otherwise zero.
+    unsigned TypeIdx;
+    /// If describing an action, the new type for TypeIdx. Otherwise LLT{}.
+    LLT NewType;
+
+    LegalizeActionStep(LegalizeAction Action, unsigned TypeIdx,
+                       const LLT &NewType)
+        : Action(Action), TypeIdx(TypeIdx), NewType(NewType) {}
+
+    bool operator==(const LegalizeActionStep &RHS) const {
+      return std::tie(Action, TypeIdx, NewType) ==
+          std::tie(RHS.Action, RHS.TypeIdx, RHS.NewType);
+    }
   };
 
   LegalizerInfo();
@@ -259,22 +289,18 @@ public:
                                               LegalizeAction DecreaseAction,
                                               LegalizeAction IncreaseAction);
 
-  /// Determine what action should be taken to legalize the given generic
-  /// instruction opcode, type-index and type. Requires computeTables to have
-  /// been called.
+  /// Determine what action should be taken to legalize the described
+  /// instruction. Requires computeTables to have been called.
   ///
-  /// \returns a pair consisting of the kind of legalization that should be
-  /// performed and the destination type.
-  std::pair<LegalizeAction, LLT> getAction(const InstrAspect &Aspect) const;
+  /// \returns a description of the next legalization step to perform.
+  LegalizeActionStep getAction(const LegalityQuery &Query) const;
 
   /// Determine what action should be taken to legalize the given generic
   /// instruction.
   ///
-  /// \returns a tuple consisting of the LegalizeAction that should be
-  /// performed, the type-index it should be performed on and the destination
-  /// type.
-  std::tuple<LegalizeAction, unsigned, LLT>
-  getAction(const MachineInstr &MI, const MachineRegisterInfo &MRI) const;
+  /// \returns a description of the next legalization step to perform.
+  LegalizeActionStep getAction(const MachineInstr &MI,
+                               const MachineRegisterInfo &MRI) const;
 
   bool isLegal(const MachineInstr &MI, const MachineRegisterInfo &MRI) const;
 
@@ -283,6 +309,15 @@ public:
                               MachineIRBuilder &MIRBuilder) const;
 
 private:
+  /// Determine what action should be taken to legalize the given generic
+  /// instruction opcode, type-index and type. Requires computeTables to have
+  /// been called.
+  ///
+  /// \returns a pair consisting of the kind of legalization that should be
+  /// performed and the destination type.
+  std::pair<LegalizeAction, LLT>
+  getAspectAction(const InstrAspect &Aspect) const;
+
   /// The SizeAndActionsVec is a representation mapping between all natural
   /// numbers and an Action. The natural number represents the bit size of
   /// the InstrAspect. For example, for a target with native support for 32-bit

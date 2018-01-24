@@ -35,6 +35,22 @@ define <2 x i8> @urem_zero_elt_vec(<2 x i8> %x) {
   ret <2 x i8> %rem
 }
 
+define <2 x i8> @srem_undef_elt_vec(<2 x i8> %x) {
+; CHECK-LABEL: @srem_undef_elt_vec(
+; CHECK-NEXT:    ret <2 x i8> undef
+;
+  %rem = srem <2 x i8> %x, <i8 -42, i8 undef>
+  ret <2 x i8> %rem
+}
+
+define <2 x i8> @urem_undef_elt_vec(<2 x i8> %x) {
+; CHECK-LABEL: @urem_undef_elt_vec(
+; CHECK-NEXT:    ret <2 x i8> undef
+;
+  %rem = urem <2 x i8> %x, <i8 undef, i8 42>
+  ret <2 x i8> %rem
+}
+
 ; Division-by-zero is undef. UB in any vector lane means the whole op is undef.
 ; Thus, we can simplify this: if any element of 'y' is 0, we can do anything.
 ; Therefore, assume that all elements of 'y' must be 1.
