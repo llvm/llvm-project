@@ -709,6 +709,14 @@ OutputSection *ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   if (consume(">"))
     Cmd->MemoryRegionName = next();
 
+  if (consume("AT")) {
+    expect(">");
+    Cmd->LMARegionName = next();
+  }
+
+  if (Cmd->LMAExpr && !Cmd->LMARegionName.empty())
+    error("section can't have both LMA and a load region");
+
   Cmd->Phdrs = readOutputSectionPhdrs();
 
   if (consume("="))
@@ -922,7 +930,10 @@ ByteCommand *ScriptParser::readByteCommand(StringRef Tok) {
 
 StringRef ScriptParser::readParenLiteral() {
   expect("(");
+  bool Orig = InExpr;
+  InExpr = false;
   StringRef Tok = next();
+  InExpr = Orig;
   expect(")");
   return Tok;
 }
