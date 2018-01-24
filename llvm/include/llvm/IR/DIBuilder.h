@@ -503,6 +503,7 @@ namespace llvm {
     /// Create a descriptor for a value range.  This
     /// implicitly uniques the values returned.
     DISubrange *getOrCreateSubrange(int64_t Lo, int64_t Count);
+    DISubrange *getOrCreateSubrange(int64_t Lo, Metadata *CountNode);
 
     /// Create a new descriptor for the specified variable.
     /// \param Context     Variable scope.

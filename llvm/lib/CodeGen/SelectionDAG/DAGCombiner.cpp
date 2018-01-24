@@ -15188,6 +15188,10 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
       if (!SclTy.isFloatingPoint() && !SclTy.isInteger())
         return SDValue();
 
+      // Bail out if the vector size is not a multiple of the scalar size.
+      if (VT.getSizeInBits() % SclTy.getSizeInBits())
+        return SDValue();
+
       unsigned VNTNumElms = VT.getSizeInBits() / SclTy.getSizeInBits();
       if (VNTNumElms < 2)
         return SDValue();

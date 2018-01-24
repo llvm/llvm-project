@@ -84,6 +84,14 @@ void llvm::handleExecNameEncodedOptimizerOpts(StringRef ExecName) {
   for (StringRef Opt : Opts) {
     if (Opt.startswith("instcombine")) {
       Args.push_back("-passes=instcombine");
+    } else if (Opt.startswith("earlycse")) {
+      Args.push_back("-passes=early-cse");
+    } else if (Opt.startswith("simplifycfg")) {
+      Args.push_back("-passes=simplify-cfg");
+    } else if (Opt.startswith("gvn")) {
+      Args.push_back("-passes=gvn");
+    } else if (Opt.startswith("sccp")) {
+      Args.push_back("-passes=sccp");
     } else if (Triple(Opt).getArch()) {
       Args.push_back("-mtriple=" + Opt.str());
     } else {

@@ -68,7 +68,7 @@ private:
 };
 
 // Tokenize Input.
-// In case no error occured, the return value contains
+// In case no error occurred, the return value contains
 //   tokens in order they were in the input file.
 // In case of any error, the return value contains
 //   a textual representation of error.

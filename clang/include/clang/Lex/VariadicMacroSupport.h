@@ -55,7 +55,7 @@ namespace clang {
 
     /// Client code should call this function as soon as the Preprocessor has
     /// either completed lexing the macro's definition tokens, or an error
-    /// occured and the context is being exited.  This function is idempotent
+    /// occurred and the context is being exited.  This function is idempotent
     /// (might be explicitly called, and then reinvoked via the destructor).
     void exitScope() {
       Ident__VA_ARGS__->setIsPoisoned(true);
