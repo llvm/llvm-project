@@ -3081,6 +3081,25 @@ let Predicates = [UseHVX] in {
   def: Pat<(VecI32 (zext_invec HVI8:$Vs)),
            (LoVec (VZxth (LoVec (VZxtb $Vs))))>;
 
+  // The "source" types are not legal, and there are no parameterized
+  // definitions for them, but they are length-specific.
+  let Predicates = [UseHVX,UseHVX64B] in {
+    def: Pat<(VecI16 (sext_inreg HVI16:$Vs, v32i8)),
+             (V6_vasrh (V6_vaslh HVI16:$Vs, (A2_tfrsi 8)), (A2_tfrsi 8))>;
+    def: Pat<(VecI32 (sext_inreg HVI32:$Vs, v16i8)),
+             (V6_vasrh (V6_vaslh HVI32:$Vs, (A2_tfrsi 24)), (A2_tfrsi 24))>;
+    def: Pat<(VecI32 (sext_inreg HVI32:$Vs, v16i16)),
+             (V6_vasrh (V6_vaslh HVI32:$Vs, (A2_tfrsi 16)), (A2_tfrsi 16))>;
+  }
+  let Predicates = [UseHVX,UseHVX128B] in {
+    def: Pat<(VecI16 (sext_inreg HVI16:$Vs, v64i8)),
+             (V6_vasrh (V6_vaslh HVI16:$Vs, (A2_tfrsi 8)), (A2_tfrsi 8))>;
+    def: Pat<(VecI32 (sext_inreg HVI32:$Vs, v32i8)),
+             (V6_vasrh (V6_vaslh HVI32:$Vs, (A2_tfrsi 24)), (A2_tfrsi 24))>;
+    def: Pat<(VecI32 (sext_inreg HVI32:$Vs, v32i16)),
+             (V6_vasrh (V6_vaslh HVI32:$Vs, (A2_tfrsi 16)), (A2_tfrsi 16))>;
+  }
+
   def: Pat<(VecI8 (trunc HWI16:$Vss)),
            (V6_vpackeb (HiVec $Vss), (LoVec $Vss))>;
   def: Pat<(VecI16 (trunc HWI32:$Vss)),

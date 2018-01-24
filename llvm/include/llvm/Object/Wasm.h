@@ -205,6 +205,9 @@ public:
 
 private:
   bool isValidFunctionIndex(uint32_t Index) const;
+  bool isDefinedFunctionIndex(uint32_t Index) const;
+  wasm::WasmFunction& getDefinedFunction(uint32_t Index);
+
   const WasmSection &getWasmSection(DataRefImpl Ref) const;
   const wasm::WasmRelocation &getWasmRelocation(DataRefImpl Ref) const;
 

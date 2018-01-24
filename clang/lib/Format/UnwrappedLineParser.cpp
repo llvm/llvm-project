@@ -344,6 +344,7 @@ void UnwrappedLineParser::parseLevel(bool HasOpeningBrace) {
         break;
       }
       // Else, if it is 'default:', fall through to the case handling.
+      LLVM_FALLTHROUGH;
     }
     case tok::kw_case:
       if (Style.Language == FormatStyle::LK_JavaScript &&

@@ -34,8 +34,7 @@ body:             |
     ; CHECK-LABEL: name: anyext_s64_from_s32
     ; CHECK: [[COPY:%[0-9]+]]:gpr32all = COPY %w0
     ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, [[COPY]], %subreg.sub_32
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64all = COPY [[SUBREG_TO_REG]]
-    ; CHECK: %x0 = COPY [[COPY1]]
+    ; CHECK: %x0 = COPY [[SUBREG_TO_REG]]
     %0(s32) = COPY %w0
     %1(s64) = G_ANYEXT %0
     %x0 = COPY %1(s64)
@@ -56,8 +55,7 @@ body:             |
 
     ; CHECK-LABEL: name: anyext_s32_from_s8
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY %w0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr32all = COPY [[COPY1]]
+    ; CHECK: [[COPY2:%[0-9]+]]:gpr32all = COPY [[COPY]]
     ; CHECK: %w0 = COPY [[COPY2]]
     %2:gpr(s32) = COPY %w0
     %0(s8) = G_TRUNC %2
@@ -103,8 +101,7 @@ body:             |
 
     ; CHECK-LABEL: name: zext_s32_from_s16
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY %w0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
-    ; CHECK: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY1]], 0, 15
+    ; CHECK: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY]], 0, 15
     ; CHECK: %w0 = COPY [[UBFMWri]]
     %2:gpr(s32) = COPY %w0
     %0(s16) = G_TRUNC %2
@@ -127,8 +124,7 @@ body:             |
 
     ; CHECK-LABEL: name: zext_s32_from_s8
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY %w0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
-    ; CHECK: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY1]], 0, 15
+    ; CHECK: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY]], 0, 15
     ; CHECK: %w0 = COPY [[UBFMWri]]
     %2:gpr(s32) = COPY %w0
     %0(s16) = G_TRUNC %2
@@ -151,8 +147,7 @@ body:             |
 
     ; CHECK-LABEL: name: zext_s16_from_s8
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY %w0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
-    ; CHECK: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY1]], 0, 7
+    ; CHECK: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY]], 0, 7
     ; CHECK: [[COPY2:%[0-9]+]]:gpr32all = COPY [[UBFMWri]]
     ; CHECK: %w0 = COPY [[COPY2]]
     %2:gpr(s32) = COPY %w0
@@ -200,8 +195,7 @@ body:             |
 
     ; CHECK-LABEL: name: sext_s32_from_s16
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY %w0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
-    ; CHECK: [[SBFMWri:%[0-9]+]]:gpr32 = SBFMWri [[COPY1]], 0, 15
+    ; CHECK: [[SBFMWri:%[0-9]+]]:gpr32 = SBFMWri [[COPY]], 0, 15
     ; CHECK: %w0 = COPY [[SBFMWri]]
     %2:gpr(s32) = COPY %w0
     %0(s16) = G_TRUNC %2
@@ -224,8 +218,7 @@ body:             |
 
     ; CHECK-LABEL: name: sext_s32_from_s8
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY %w0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
-    ; CHECK: [[SBFMWri:%[0-9]+]]:gpr32 = SBFMWri [[COPY1]], 0, 7
+    ; CHECK: [[SBFMWri:%[0-9]+]]:gpr32 = SBFMWri [[COPY]], 0, 7
     ; CHECK: %w0 = COPY [[SBFMWri]]
     %2:gpr(s32) = COPY %w0
     %0(s8) = G_TRUNC %2
@@ -248,8 +241,7 @@ body:             |
 
     ; CHECK-LABEL: name: sext_s16_from_s8
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY %w0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
-    ; CHECK: [[SBFMWri:%[0-9]+]]:gpr32 = SBFMWri [[COPY1]], 0, 7
+    ; CHECK: [[SBFMWri:%[0-9]+]]:gpr32 = SBFMWri [[COPY]], 0, 7
     ; CHECK: [[COPY2:%[0-9]+]]:gpr32all = COPY [[SBFMWri]]
     ; CHECK: %w0 = COPY [[COPY2]]
     %2:gpr(s32) = COPY %w0

@@ -184,12 +184,11 @@ HexagonTargetLowering::buildHvxVectorReg(ArrayRef<SDValue> Values,
   }
 
   unsigned NumWords = Words.size();
-  bool IsUndef = true, IsSplat = true;
+  bool IsSplat = true;
   SDValue SplatV;
   for (unsigned i = 0; i != NumWords && IsSplat; ++i) {
     if (isUndef(Words[i]))
       continue;
-    IsUndef = false;
     if (!SplatV.getNode())
       SplatV = Words[i];
     else if (SplatV != Words[i])

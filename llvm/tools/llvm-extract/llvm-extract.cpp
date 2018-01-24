@@ -67,6 +67,12 @@ ExtractRegExpFuncs("rfunc", cl::desc("Specify function(s) to extract using a "
                                      "regular expression"),
                    cl::ZeroOrMore, cl::value_desc("rfunction"));
 
+// ExtractBlocks - The blocks to extract from the module.
+static cl::list<std::string>
+    ExtractBlocks("bb",
+                  cl::desc("Specify <function, basic block> pairs to extract"),
+                  cl::ZeroOrMore, cl::value_desc("function:bb"));
+
 // ExtractAlias - The alias to extract from the module.
 static cl::list<std::string>
 ExtractAliases("alias", cl::desc("Specify alias to extract"),
@@ -228,6 +234,32 @@ int main(int argc, char **argv) {
     }
   }
 
+  // Figure out which BasicBlocks we should extract.
+  SmallVector<BasicBlock *, 4> BBs;
+  for (StringRef StrPair : ExtractBlocks) {
+    auto BBInfo = StrPair.split(':');
+    // Get the function.
+    Function *F = M->getFunction(BBInfo.first);
+    if (!F) {
+      errs() << argv[0] << ": program doesn't contain a function named '"
+             << BBInfo.first << "'!\n";
+      return 1;
+    }
+    // Do not materialize this function.
+    GVs.insert(F);
+    // Get the basic block.
+    auto Res = llvm::find_if(*F, [&](const BasicBlock &BB) {
+      return BB.getName().equals(BBInfo.second);
+    });
+    if (Res == F->end()) {
+      errs() << argv[0] << ": function " << F->getName()
+             << " doesn't contain a basic block named '" << BBInfo.second
+             << "'!\n";
+      return 1;
+    }
+    BBs.push_back(&*Res);
+  }
+
   // Use *argv instead of argv[0] to work around a wrong GCC warning.
   ExitOnError ExitOnErr(std::string(*argv) + ": error reading input: ");
 
@@ -284,6 +316,14 @@ int main(int argc, char **argv) {
     // materialized.
     // FIXME: should the GVExtractionPass handle this?
     ExitOnErr(M->materializeAll());
+  }
+
+  // Extract the specified basic blocks from the module and erase the existing
+  // functions.
+  if (!ExtractBlocks.empty()) {
+    legacy::PassManager PM;
+    PM.add(createBlockExtractorPass(BBs, true));
+    PM.run(*M);
   }
 
   // In addition to deleting all other functions, we also want to spiff it

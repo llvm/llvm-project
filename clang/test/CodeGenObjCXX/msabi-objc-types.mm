@@ -68,6 +68,24 @@ void m(const id) {}
 void m(const I *) {}
 // CHECK-LABEL: "\01?m@@YAXPBUI@@@Z"
 
+void n(SEL) {}
+// CHECK-LABEL: "\01?n@@YAXPAUobjc_selector@@@Z"
+
+void n(SEL *) {}
+// CHECK-LABEL: "\01?n@@YAXPAPAUobjc_selector@@@Z"
+
+void n(const SEL *) {}
+// CHECK-LABEL: "\01?n@@YAXPBQAUobjc_selector@@@Z"
+
+void n(SEL &) {}
+// CHECK-LABEL: "\01?n@@YAXAAPAUobjc_selector@@@Z"
+
+void n(const SEL &) {}
+// CHECK-LABEL: "\01?n@@YAXABQAUobjc_selector@@@Z"
+
+void n(SEL &&) {}
+// CHECK-LABEL: "\01?n@@YAX$$QAPAUobjc_selector@@@Z"
+
 struct __declspec(dllexport) s {
   struct s &operator=(const struct s &) = delete;
 
@@ -124,6 +142,27 @@ struct __declspec(dllexport) s {
 
   void m(const Class &&) {}
   // CHECK-LABEL: "\01?m@s@@QAAX$$QBQAUobjc_class@@@Z"
+
+  void m(SEL) {}
+  // CHECK-LABEL: "\01?m@s@@QAAXPAUobjc_selector@@@Z"
+
+  void m(SEL *) {}
+  // CHECK-LABEL: "\01?m@s@@QAAXPAPAUobjc_selector@@@Z"
+
+  void m(const SEL *) {}
+  // CHECK-LABEL: "\01?m@s@@QAAXPBQAUobjc_selector@@@Z"
+
+  void m(SEL &) {}
+  // CHECK-LABEL: "\01?m@s@@QAAXAAPAUobjc_selector@@@Z"
+
+  void m(const SEL &) {}
+  // CHECK-LABEL: "\01?m@s@@QAAXABQAUobjc_selector@@@Z"
+
+  void m(SEL &&) {}
+  // CHECK-LABEL: "\01?m@s@@QAAX$$QAPAUobjc_selector@@@Z"
+
+  void m(const SEL &&) {}
+  // CHECK-LABEL: "\01?m@s@@QAAX$$QBQAUobjc_selector@@@Z"
 };
 
 template <typename T>
@@ -144,4 +183,10 @@ template struct t<id>;
 
 template struct t<remove_pointer<id>::type>;
 // CHECK-LABEL: "\01??0?$t@Uobjc_object@@@@QAA@XZ"
+
+template struct t<SEL>;
+// CHECK-LABEL: "\01??0?$t@PAUobjc_selector@@@@QAA@XZ"
+
+template struct t<remove_pointer<SEL>::type>;
+// CHECK-LABEL: "\01??0?$t@Uobjc_selector@@@@QAA@XZ"
 

@@ -48,8 +48,7 @@ body:             |
     ; CHECK-LABEL: name: trunc_i32toi1
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY %edi
     ; CHECK: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
-    ; CHECK: [[COPY2:%[0-9]+]]:gr8 = COPY [[COPY1]]
-    ; CHECK: %al = COPY [[COPY2]]
+    ; CHECK: %al = COPY [[COPY1]]
     ; CHECK: RET 0, implicit %al
     %0(s32) = COPY %edi
     %1(s1) = G_TRUNC %0(s32)

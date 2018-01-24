@@ -1839,7 +1839,6 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     mangleArtificalTagType(TTK_Struct, "objc_class");
     break;
   case BuiltinType::ObjCSel:
-    Out << "PA";
     mangleArtificalTagType(TTK_Struct, "objc_selector");
     break;
 

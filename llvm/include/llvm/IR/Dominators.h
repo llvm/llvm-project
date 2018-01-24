@@ -63,8 +63,10 @@ extern template void DeleteEdge<BBPostDomTree>(BBPostDomTree &DT,
 extern template void ApplyUpdates<BBDomTree>(BBDomTree &DT, BBUpdates);
 extern template void ApplyUpdates<BBPostDomTree>(BBPostDomTree &DT, BBUpdates);
 
-extern template bool Verify<BBDomTree>(const BBDomTree &DT);
-extern template bool Verify<BBPostDomTree>(const BBPostDomTree &DT);
+extern template bool Verify<BBDomTree>(const BBDomTree &DT,
+                                       BBDomTree::VerificationLevel VL);
+extern template bool Verify<BBPostDomTree>(const BBPostDomTree &DT,
+                                           BBPostDomTree::VerificationLevel VL);
 }  // namespace DomTreeBuilder
 
 using DomTreeNode = DomTreeNodeBase<BasicBlock>;
@@ -147,15 +149,6 @@ class DominatorTree : public DominatorTreeBase<BasicBlock, false> {
   /// Handle invalidation explicitly.
   bool invalidate(Function &F, const PreservedAnalyses &PA,
                   FunctionAnalysisManager::Invalidator &);
-
-  /// \brief Returns *false* if the other dominator tree matches this dominator
-  /// tree.
-  inline bool compare(const DominatorTree &Other) const {
-    const DomTreeNode *R = getRootNode();
-    const DomTreeNode *OtherR = Other.getRootNode();
-    return !R || !OtherR || R->getBlock() != OtherR->getBlock() ||
-           Base::compare(Other);
-  }
 
   // Ensure base-class overloads are visible.
   using Base::dominates;

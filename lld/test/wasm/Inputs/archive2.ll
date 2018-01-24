@@ -1,3 +1,5 @@
+target triple = "wasm32-unknown-unknown-wasm"
+
 declare i32 @foo() local_unnamed_addr #1
 
 define i32 @bar() local_unnamed_addr #0 {

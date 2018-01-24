@@ -285,8 +285,7 @@ registers:
 # X32:          %0:gr32_abcd = COPY %edi
 # X64:          %0:gr32 = COPY %edi
 # ALL-NEXT:     %1:gr8 = COPY %0.sub_8bit
-# ALL-NEXT:     %2:gr8 = COPY %1
-# ALL-NEXT:     %al = COPY %2
+# ALL-NEXT:     %al = COPY %1
 # ALL-NEXT:     RET 0, implicit %al
 body:             |
   bb.1 (%ir-block.0):

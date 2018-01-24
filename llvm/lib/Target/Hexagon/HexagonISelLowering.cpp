@@ -3038,7 +3038,7 @@ HexagonTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     // Always produce 8 bits, repeat inputs if necessary.
     unsigned Rep = 8 / VecTy.getVectorNumElements();
     for (unsigned i = 0; i != 8; ++i) {
-      SDValue S = DAG.getConstant(1 << i, dl, MVT::i32);
+      SDValue S = DAG.getConstant(1ull << i, dl, MVT::i32);
       Rs[i] = DAG.getSelect(dl, MVT::i32, Ops[i/Rep], S, Z);
     }
     for (ArrayRef<SDValue> A(Rs); A.size() != 1; A = A.drop_back(A.size()/2)) {
