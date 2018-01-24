@@ -54,6 +54,8 @@ Non-comprehensive list of changes in this release
   ``DIVariables`` to the instructions in a ``Module``. The ``CheckDebugify``
   pass determines how much of the metadata is lost.
 
+* Significantly improved quality of CodeView debug info for Windows.
+
 * Note..
 
 .. NOTE
