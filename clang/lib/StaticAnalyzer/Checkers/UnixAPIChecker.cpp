@@ -194,7 +194,7 @@ void UnixAPIChecker::CheckOpenVariant(CheckerContext &C,
 
   // Now check if oflags has O_CREAT set.
   const Expr *oflagsEx = CE->getArg(FlagsArgIndex);
-  const SVal V = state->getSVal(oflagsEx, C.getLocationContext());
+  const SVal V = C.getSVal(oflagsEx);
   if (!V.getAs<NonLoc>()) {
     // The case where 'V' can be a location can only be due to a bad header,
     // so in this case bail out.
@@ -248,8 +248,7 @@ void UnixAPIChecker::CheckPthreadOnce(CheckerContext &C,
   // Check if the first argument is stack allocated.  If so, issue a warning
   // because that's likely to be bad news.
   ProgramStateRef state = C.getState();
-  const MemRegion *R =
-    state->getSVal(CE->getArg(0), C.getLocationContext()).getAsRegion();
+  const MemRegion *R = C.getSVal(CE->getArg(0)).getAsRegion();
   if (!R || !isa<StackSpaceRegion>(R->getMemorySpace()))
     return;
 
@@ -336,7 +335,7 @@ void UnixAPIChecker::BasicAllocationCheck(CheckerContext &C,
   ProgramStateRef state = C.getState();
   ProgramStateRef trueState = nullptr, falseState = nullptr;
   const Expr *arg = CE->getArg(sizeArg);
-  SVal argVal = state->getSVal(arg, C.getLocationContext());
+  SVal argVal = C.getSVal(arg);
 
   if (argVal.isUnknownOrUndef())
     return;
@@ -364,7 +363,7 @@ void UnixAPIChecker::CheckCallocZero(CheckerContext &C,
   unsigned int i;
   for (i = 0; i < nArgs; i++) {
     const Expr *arg = CE->getArg(i);
-    SVal argVal = state->getSVal(arg, C.getLocationContext());
+    SVal argVal = C.getSVal(arg);
     if (argVal.isUnknownOrUndef()) {
       if (i == 0)
         continue;
