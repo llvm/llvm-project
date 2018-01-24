@@ -38,3 +38,18 @@ void checkNestedNew() {
   Sp *p = new Sp(new Sp(0));
   clang_analyzer_eval(p->p->p == 0); // expected-warning{{TRUE}}
 }
+
+void checkNewPOD() {
+  int *i = new int;
+  clang_analyzer_eval(*i == 0); // expected-warning{{UNKNOWN}}
+  int *j = new int();
+  clang_analyzer_eval(*j == 0); // expected-warning{{TRUE}}
+  int *k = new int(5);
+  clang_analyzer_eval(*k == 5); // expected-warning{{TRUE}}
+}
+
+void checkTrivialCopy() {
+  S s;
+  S *t = new S(s); // no-crash
+  clang_analyzer_eval(t->x == 1); // expected-warning{{TRUE}}
+}
