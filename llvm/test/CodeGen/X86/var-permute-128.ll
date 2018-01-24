@@ -207,13 +207,12 @@ define <8 x i16> @var_shuffle_v8i16(<8 x i16> %v, <8 x i16> %indices) nounwind {
 define <16 x i8> @var_shuffle_v16i8(<16 x i8> %v, <16 x i8> %indices) nounwind {
 ; SSSE3-LABEL: var_shuffle_v16i8:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    pshufb %xmm0, %xmm1
-; SSSE3-NEXT:    movdqa %xmm1, %xmm0
+; SSSE3-NEXT:    pshufb %xmm1, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; AVX-LABEL: var_shuffle_v16i8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufb %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %index0 = extractelement <16 x i8> %indices, i32 0
   %index1 = extractelement <16 x i8> %indices, i32 1
