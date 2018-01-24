@@ -163,12 +163,14 @@ void __clear_cache(void *start, void *end) {
    * uintptr_t in case this runs in an IPL32 environment.
    */
   const size_t dcache_line_size = 4 << ((ctr_el0 >> 16) & 15);
-  for (addr = xstart; addr < xend; addr += dcache_line_size)
+  for (addr = xstart & ~(dcache_line_size - 1); addr < xend;
+       addr += dcache_line_size)
     __asm __volatile("dc cvau, %0" :: "r"(addr));
   __asm __volatile("dsb ish");
 
   const size_t icache_line_size = 4 << ((ctr_el0 >> 0) & 15);
-  for (addr = xstart; addr < xend; addr += icache_line_size)
+  for (addr = xstart & ~(icache_line_size - 1); addr < xend;
+       addr += icache_line_size)
     __asm __volatile("ic ivau, %0" :: "r"(addr));
   __asm __volatile("isb sy");
 #elif defined (__powerpc64__)

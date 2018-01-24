@@ -1,6 +1,7 @@
 // Verifies that parameters are copied with move constructors
 // Verifies that parameter copies are destroyed
 // Vefifies that parameter copies are used in the body of the coroutine
+// Verifies that parameter copies are used to construct the promise type, if that type has a matching constructor
 // RUN: %clang_cc1 -std=c++1z -fcoroutines-ts -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s -disable-llvm-passes -fexceptions | FileCheck %s
 
 namespace std::experimental {
@@ -126,4 +127,32 @@ struct B {
 
 void call_dependent_params() {
   dependent_params(A{}, B{}, B{});
+}
+
+// Test that, when the promise type has a constructor whose signature matches
+// that of the coroutine function, that constructor is used. This is an
+// experimental feature that will be proposed for the Coroutines TS.
+
+struct promise_matching_constructor {};
+
+template<>
+struct std::experimental::coroutine_traits<void, promise_matching_constructor, int, float, double> {
+  struct promise_type {
+    promise_type(promise_matching_constructor, int, float, double) {}
+    promise_type() = delete;
+    void get_return_object() {}
+    suspend_always initial_suspend() { return {}; }
+    suspend_always final_suspend() { return {}; }
+    void return_void() {}
+    void unhandled_exception() {}
+  };
+};
+
+// CHECK-LABEL: void @_Z38coroutine_matching_promise_constructor28promise_matching_constructorifd(i32, float, double)
+void coroutine_matching_promise_constructor(promise_matching_constructor, int, float, double) {
+  // CHECK: %[[INT:.+]] = load i32, i32* %.addr, align 4
+  // CHECK: %[[FLOAT:.+]] = load float, float* %.addr1, align 4
+  // CHECK: %[[DOUBLE:.+]] = load double, double* %.addr2, align 8
+  // CHECK: invoke void @_ZNSt12experimental16coroutine_traitsIJv28promise_matching_constructorifdEE12promise_typeC1ES1_ifd(%"struct.std::experimental::coroutine_traits<void, promise_matching_constructor, int, float, double>::promise_type"* %__promise, i32 %[[INT]], float %[[FLOAT]], double %[[DOUBLE]])
+  co_return;
 }

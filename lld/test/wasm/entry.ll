@@ -1,4 +1,6 @@
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %s -o %t.o
+; RUN: llc -filetype=obj %s -o %t.o
+
+target triple = "wasm32-unknown-unknown-wasm"
 
 define hidden void @entry() local_unnamed_addr #0 {
 entry:

@@ -203,7 +203,7 @@ bool AnalyzerOptions::mayInlineTemplateFunctions() {
 bool AnalyzerOptions::mayInlineCXXAllocator() {
   return getBooleanOption(InlineCXXAllocator,
                           "c++-allocator-inlining",
-                          /*Default=*/false);
+                          /*Default=*/true);
 }
 
 bool AnalyzerOptions::mayInlineCXXContainerMethods() {

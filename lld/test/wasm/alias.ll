@@ -1,6 +1,8 @@
-; RUN: llc -mtriple=wasm32-unknown-unknown-wasm -filetype=obj -o %t.o %s
+; RUN: llc -filetype=obj -o %t.o %s
 ; RUN: lld -flavor wasm %t.o -o %t.wasm
 ; RUN: obj2yaml %t.wasm | FileCheck %s
+
+target triple = "wasm32-unknown-unknown-wasm"
 
 @start_alias = alias i32 (), i32 ()* @_start
 

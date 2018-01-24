@@ -66,7 +66,7 @@ struct CachePruningPolicy {
 Expected<CachePruningPolicy> parseCachePruningPolicy(StringRef PolicyStr);
 
 /// Peform pruning using the supplied policy, returns true if pruning
-/// occured, i.e. if Policy.Interval was expired.
+/// occurred, i.e. if Policy.Interval was expired.
 ///
 /// As a safeguard against data loss if the user specifies the wrong directory
 /// as their cache directory, this function will ignore files not matching the

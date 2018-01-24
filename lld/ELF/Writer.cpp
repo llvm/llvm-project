@@ -1309,7 +1309,7 @@ static void removeUnusedSyntheticSections() {
     if (!SS)
       return;
     OutputSection *OS = SS->getParent();
-    if (!SS->empty() || !OS)
+    if (!OS || !SS->empty())
       continue;
 
     std::vector<BaseCommand *>::iterator Empty = OS->SectionCommands.end();

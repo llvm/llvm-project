@@ -1741,6 +1741,63 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
     Builder.CreateMemSet(Dest, ByteVal, SizeVal, false);
     return RValue::get(Dest.getPointer());
   }
+  case Builtin::BI__builtin_wmemcmp: {
+    // The MSVC runtime library does not provide a definition of wmemcmp, so we
+    // need an inline implementation.
+    if (!getTarget().getTriple().isOSMSVCRT())
+      break;
+
+    llvm::Type *WCharTy = ConvertType(getContext().WCharTy);
+
+    Value *Dst = EmitScalarExpr(E->getArg(0));
+    Value *Src = EmitScalarExpr(E->getArg(1));
+    Value *Size = EmitScalarExpr(E->getArg(2));
+
+    BasicBlock *Entry = Builder.GetInsertBlock();
+    BasicBlock *CmpGT = createBasicBlock("wmemcmp.gt");
+    BasicBlock *CmpLT = createBasicBlock("wmemcmp.lt");
+    BasicBlock *Next = createBasicBlock("wmemcmp.next");
+    BasicBlock *Exit = createBasicBlock("wmemcmp.exit");
+    Value *SizeEq0 = Builder.CreateICmpEQ(Size, ConstantInt::get(SizeTy, 0));
+    Builder.CreateCondBr(SizeEq0, Exit, CmpGT);
+
+    EmitBlock(CmpGT);
+    PHINode *DstPhi = Builder.CreatePHI(Dst->getType(), 2);
+    DstPhi->addIncoming(Dst, Entry);
+    PHINode *SrcPhi = Builder.CreatePHI(Src->getType(), 2);
+    SrcPhi->addIncoming(Src, Entry);
+    PHINode *SizePhi = Builder.CreatePHI(SizeTy, 2);
+    SizePhi->addIncoming(Size, Entry);
+    CharUnits WCharAlign =
+        getContext().getTypeAlignInChars(getContext().WCharTy);
+    Value *DstCh = Builder.CreateAlignedLoad(WCharTy, DstPhi, WCharAlign);
+    Value *SrcCh = Builder.CreateAlignedLoad(WCharTy, SrcPhi, WCharAlign);
+    Value *DstGtSrc = Builder.CreateICmpUGT(DstCh, SrcCh);
+    Builder.CreateCondBr(DstGtSrc, Exit, CmpLT);
+
+    EmitBlock(CmpLT);
+    Value *DstLtSrc = Builder.CreateICmpULT(DstCh, SrcCh);
+    Builder.CreateCondBr(DstLtSrc, Exit, Next);
+
+    EmitBlock(Next);
+    Value *NextDst = Builder.CreateConstInBoundsGEP1_32(WCharTy, DstPhi, 1);
+    Value *NextSrc = Builder.CreateConstInBoundsGEP1_32(WCharTy, SrcPhi, 1);
+    Value *NextSize = Builder.CreateSub(SizePhi, ConstantInt::get(SizeTy, 1));
+    Value *NextSizeEq0 =
+        Builder.CreateICmpEQ(NextSize, ConstantInt::get(SizeTy, 0));
+    Builder.CreateCondBr(NextSizeEq0, Exit, CmpGT);
+    DstPhi->addIncoming(NextDst, Next);
+    SrcPhi->addIncoming(NextSrc, Next);
+    SizePhi->addIncoming(NextSize, Next);
+
+    EmitBlock(Exit);
+    PHINode *Ret = Builder.CreatePHI(IntTy, 4);
+    Ret->addIncoming(ConstantInt::get(IntTy, 0), Entry);
+    Ret->addIncoming(ConstantInt::get(IntTy, 1), CmpGT);
+    Ret->addIncoming(ConstantInt::get(IntTy, -1), CmpLT);
+    Ret->addIncoming(ConstantInt::get(IntTy, 0), Next);
+    return RValue::get(Ret);
+  }
   case Builtin::BI__builtin_dwarf_cfa: {
     // The offset in bytes from the first argument to the CFA.
     //

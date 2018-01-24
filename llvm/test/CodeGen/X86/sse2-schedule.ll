@@ -5496,7 +5496,7 @@ define i16 @test_pextrw(<8 x i16> %a0) {
 ;
 ; SLM-LABEL: test_pextrw:
 ; SLM:       # %bb.0:
-; SLM-NEXT:    pextrw $6, %xmm0, %eax # sched: [4:1.00]
+; SLM-NEXT:    pextrw $6, %xmm0, %eax # sched: [1:1.00]
 ; SLM-NEXT:    # kill: def %ax killed %ax killed %eax
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;

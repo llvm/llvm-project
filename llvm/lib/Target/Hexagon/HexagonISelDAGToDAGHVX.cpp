@@ -983,15 +983,11 @@ void HvxSelector::materialize(const ResultStack &Results) {
       MVT OpTy = Op.getValueType().getSimpleVT();
       if (Part != OpRef::Whole) {
         assert(Part == OpRef::LoHalf || Part == OpRef::HiHalf);
-        if (Op.getOpcode() == HexagonISD::VCOMBINE) {
-          Op = (Part == OpRef::HiHalf) ? Op.getOperand(0) : Op.getOperand(1);
-        } else {
-          MVT HalfTy = MVT::getVectorVT(OpTy.getVectorElementType(),
-                                        OpTy.getVectorNumElements()/2);
-          unsigned Sub = (Part == OpRef::LoHalf) ? Hexagon::vsub_lo
-                                                 : Hexagon::vsub_hi;
-          Op = DAG.getTargetExtractSubreg(Sub, dl, HalfTy, Op);
-        }
+        MVT HalfTy = MVT::getVectorVT(OpTy.getVectorElementType(),
+                                      OpTy.getVectorNumElements()/2);
+        unsigned Sub = (Part == OpRef::LoHalf) ? Hexagon::vsub_lo
+                                               : Hexagon::vsub_hi;
+        Op = DAG.getTargetExtractSubreg(Sub, dl, HalfTy, Op);
       }
       Ops.push_back(Op);
     } // for (Node : Results)

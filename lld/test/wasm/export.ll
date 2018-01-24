@@ -1,7 +1,9 @@
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %s -o %t.o
+; RUN: llc -filetype=obj %s -o %t.o
 ; RUN: not lld -flavor wasm --export=missing -o %t.wasm %t.o 2>&1 | FileCheck -check-prefix=CHECK-ERROR %s
 ; RUN: lld -flavor wasm --export=hidden_function -o %t.wasm %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
+
+target triple = "wasm32-unknown-unknown-wasm"
 
 define hidden i32 @hidden_function() local_unnamed_addr {
 entry:

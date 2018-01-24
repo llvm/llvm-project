@@ -1,5 +1,5 @@
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %p/Inputs/call-indirect.ll -o %t2.o
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %s -o %t.o
+; RUN: llc -filetype=obj %p/Inputs/call-indirect.ll -o %t2.o
+; RUN: llc -filetype=obj %s -o %t.o
 ; RUN: lld -flavor wasm -o %t.wasm %t2.o %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
@@ -7,6 +7,8 @@
 ; int foo(void) { return 1; }
 ; int (*indirect_func)(void) = &foo;
 ; void _start(void) { indirect_func(); }
+
+target triple = "wasm32-unknown-unknown-wasm"
 
 @indirect_func = local_unnamed_addr global i32 ()* @foo, align 4
 

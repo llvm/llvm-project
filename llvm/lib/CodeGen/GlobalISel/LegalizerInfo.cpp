@@ -163,7 +163,7 @@ void LegalizerInfo::computeTables() {
 // we have any hope of doing well with something like <13 x i3>. Even the common
 // cases should do better than what we have now.
 std::pair<LegalizerInfo::LegalizeAction, LLT>
-LegalizerInfo::getAction(const InstrAspect &Aspect) const {
+LegalizerInfo::getAspectAction(const InstrAspect &Aspect) const {
   assert(TablesInitialized && "backend forgot to call computeTables");
   // These *have* to be implemented for now, they're the fundamental basis of
   // how everything else is transformed.
@@ -186,9 +186,20 @@ static LLT getTypeFromTypeIdx(const MachineInstr &MI,
   return MRI.getType(MI.getOperand(OpIdx).getReg());
 }
 
-std::tuple<LegalizerInfo::LegalizeAction, unsigned, LLT>
+LegalizerInfo::LegalizeActionStep
+LegalizerInfo::getAction(const LegalityQuery &Query) const {
+  for (unsigned i = 0; i < Query.Types.size(); ++i) {
+    auto Action = getAspectAction({Query.Opcode, i, Query.Types[i]});
+    if (Action.first != Legal)
+      return {Action.first, i, Action.second};
+  }
+  return {Legal, 0, LLT{}};
+}
+
+LegalizerInfo::LegalizeActionStep
 LegalizerInfo::getAction(const MachineInstr &MI,
                          const MachineRegisterInfo &MRI) const {
+  SmallVector<LLT, 2> Types;
   SmallBitVector SeenTypes(8);
   const MCOperandInfo *OpInfo = MI.getDesc().OpInfo;
   // FIXME: probably we'll need to cache the results here somehow?
@@ -205,16 +216,14 @@ LegalizerInfo::getAction(const MachineInstr &MI,
     SeenTypes.set(TypeIdx);
 
     LLT Ty = getTypeFromTypeIdx(MI, MRI, i, TypeIdx);
-    auto Action = getAction({MI.getOpcode(), TypeIdx, Ty});
-    if (Action.first != Legal)
-      return std::make_tuple(Action.first, TypeIdx, Action.second);
+    Types.push_back(Ty);
   }
-  return std::make_tuple(Legal, 0, LLT{});
+  return getAction({MI.getOpcode(), Types});
 }
 
 bool LegalizerInfo::isLegal(const MachineInstr &MI,
                             const MachineRegisterInfo &MRI) const {
-  return std::get<0>(getAction(MI, MRI)) == Legal;
+  return getAction(MI, MRI).Action == Legal;
 }
 
 bool LegalizerInfo::legalizeCustom(MachineInstr &MI, MachineRegisterInfo &MRI,

@@ -3625,7 +3625,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       options::OPT_finstrument_function_entry_bare))
     A->render(Args, CmdArgs);
 
-  addPGOAndCoverageFlags(C, D, Output, Args, CmdArgs);
+  // NVPTX doesn't support PGO or coverage. There's no runtime support for
+  // sampling, overhead of call arc collection is way too high and there's no
+  // way to collect the output.
+  if (!Triple.isNVPTX())
+    addPGOAndCoverageFlags(C, D, Output, Args, CmdArgs);
 
   if (auto *ABICompatArg = Args.getLastArg(options::OPT_fclang_abi_compat_EQ))
     ABICompatArg->render(Args, CmdArgs);

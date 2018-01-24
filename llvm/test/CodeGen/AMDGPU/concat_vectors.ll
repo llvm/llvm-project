@@ -294,3 +294,15 @@ bb:
   store <8 x float> %tmp2, <8 x float> addrspace(1)* %out, align 32
   ret void
 }
+
+; FUNC-LABEL: {{^}}concat_vector_crash2:
+; SI: s_endpgm
+define amdgpu_kernel void @concat_vector_crash2(<8 x i8> addrspace(1)* %out, i32 addrspace(1)* %in) {
+  %tmp = load i32, i32 addrspace(1)* %in, align 1
+  %tmp1 = trunc i32 %tmp to i24
+  %tmp2 = bitcast i24 %tmp1 to <3 x i8>
+  %tmp3 = shufflevector <3 x i8> %tmp2, <3 x i8> undef, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 1, i32 undef, i32 undef>
+  %tmp4 = shufflevector <8 x i8> %tmp3, <8 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 7, i8 8>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 14, i32 15>
+  store <8 x i8> %tmp4, <8 x i8> addrspace(1)* %out, align 8
+  ret void
+}

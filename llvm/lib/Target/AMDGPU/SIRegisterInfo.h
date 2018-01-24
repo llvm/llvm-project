@@ -36,7 +36,6 @@ private:
   bool SpillSGPRToVGPR;
   bool SpillSGPRToSMEM;
 
-  void reserveRegisterTuples(BitVector &, unsigned Reg) const;
   void classifyPressureSet(unsigned PSetID, unsigned Reg,
                            BitVector &PressureSets) const;
 public:

@@ -117,3 +117,9 @@ void InputFunction::setOutputIndex(uint32_t Index) {
   assert(!hasOutputIndex());
   OutputIndex = Index;
 }
+
+void InputFunction::setTableIndex(uint32_t Index) {
+  DEBUG(dbgs() << "InputFunction::setTableIndex " << Index << "\n");
+  assert(!hasTableIndex());
+  TableIndex = Index;
+}

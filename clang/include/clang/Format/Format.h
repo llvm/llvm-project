@@ -1395,7 +1395,7 @@ struct FormatStyle {
   /// precedence over a matching enclosing function name for determining the
   /// language of the raw string contents.
   ///
-  /// If a canonical delimiter is specified, occurences of other delimiters for
+  /// If a canonical delimiter is specified, occurrences of other delimiters for
   /// the same language will be updated to the canonical if possible.
   ///
   /// There should be at most one specification per language and each delimiter
