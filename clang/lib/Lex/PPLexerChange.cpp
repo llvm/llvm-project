@@ -444,6 +444,7 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
       }
 
       CurPPLexer = nullptr;
+      recomputeCurLexerKind();
       return true;
     }
 
