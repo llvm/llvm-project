@@ -868,13 +868,14 @@ static Value *simplifyDivRem(Value *Op0, Value *Op1, bool IsDiv) {
   if (match(Op1, m_Zero()))
     return UndefValue::get(Ty);
 
-  // If any element of a constant divisor vector is zero, the whole op is undef.
+  // If any element of a constant divisor vector is zero or undef, the whole op
+  // is undef.
   auto *Op1C = dyn_cast<Constant>(Op1);
   if (Op1C && Ty->isVectorTy()) {
     unsigned NumElts = Ty->getVectorNumElements();
     for (unsigned i = 0; i != NumElts; ++i) {
       Constant *Elt = Op1C->getAggregateElement(i);
-      if (Elt && Elt->isNullValue())
+      if (Elt && (Elt->isNullValue() || isa<UndefValue>(Elt)))
         return UndefValue::get(Ty);
     }
   }

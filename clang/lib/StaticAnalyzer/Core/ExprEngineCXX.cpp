@@ -500,9 +500,24 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
     // is breaking too much to evaluate the no-op symbolic cast over it, so we
     // skip it for now.
     ProgramStateRef State = I->getState();
-    ValueBldr.generateNode(
-        CNE, I,
-        setCXXNewAllocatorValue(State, CNE, LCtx, State->getSVal(CNE, LCtx)));
+    SVal RetVal = State->getSVal(CNE, LCtx);
+
+    // If this allocation function is not declared as non-throwing, failures
+    // /must/ be signalled by exceptions, and thus the return value will never
+    // be NULL. -fno-exceptions does not influence this semantics.
+    // FIXME: GCC has a -fcheck-new option, which forces it to consider the case
+    // where new can return NULL. If we end up supporting that option, we can
+    // consider adding a check for it here.
+    // C++11 [basic.stc.dynamic.allocation]p3.
+    if (const FunctionDecl *FD = CNE->getOperatorNew()) {
+      QualType Ty = FD->getType();
+      if (const auto *ProtoType = Ty->getAs<FunctionProtoType>())
+        if (!ProtoType->isNothrow(getContext()))
+          State = State->assume(RetVal.castAs<DefinedOrUnknownSVal>(), true);
+    }
+
+    ValueBldr.generateNode(CNE, I,
+                           setCXXNewAllocatorValue(State, CNE, LCtx, RetVal));
   }
 
   ExplodedNodeSet DstPostPostCallCallback;
@@ -559,21 +574,21 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
     State = Call->invalidateRegions(blockCount);
     if (!State)
       return;
-  }
 
-  // If this allocation function is not declared as non-throwing, failures
-  // /must/ be signalled by exceptions, and thus the return value will never be
-  // NULL. -fno-exceptions does not influence this semantics.
-  // FIXME: GCC has a -fcheck-new option, which forces it to consider the case
-  // where new can return NULL. If we end up supporting that option, we can
-  // consider adding a check for it here.
-  // C++11 [basic.stc.dynamic.allocation]p3.
-  if (FD) {
-    QualType Ty = FD->getType();
-    if (const FunctionProtoType *ProtoType = Ty->getAs<FunctionProtoType>())
-      if (!ProtoType->isNothrow(getContext()))
-        if (auto dSymVal = symVal.getAs<DefinedOrUnknownSVal>())
-          State = State->assume(*dSymVal, true);
+    // If this allocation function is not declared as non-throwing, failures
+    // /must/ be signalled by exceptions, and thus the return value will never
+    // be NULL. -fno-exceptions does not influence this semantics.
+    // FIXME: GCC has a -fcheck-new option, which forces it to consider the case
+    // where new can return NULL. If we end up supporting that option, we can
+    // consider adding a check for it here.
+    // C++11 [basic.stc.dynamic.allocation]p3.
+    if (FD) {
+      QualType Ty = FD->getType();
+      if (const auto *ProtoType = Ty->getAs<FunctionProtoType>())
+        if (!ProtoType->isNothrow(getContext()))
+          if (auto dSymVal = symVal.getAs<DefinedOrUnknownSVal>())
+            State = State->assume(*dSymVal, true);
+    }
   }
 
   StmtNodeBuilder Bldr(Pred, Dst, *currBldrCtx);

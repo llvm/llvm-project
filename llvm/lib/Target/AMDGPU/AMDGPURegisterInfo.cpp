@@ -37,6 +37,13 @@ unsigned AMDGPURegisterInfo::getSubRegFromChannel(unsigned Channel) const {
   return SubRegs[Channel];
 }
 
+void AMDGPURegisterInfo::reserveRegisterTuples(BitVector &Reserved, unsigned Reg) const {
+  MCRegAliasIterator R(Reg, this, true);
+
+  for (; R.isValid(); ++R)
+    Reserved.set(*R);
+}
+
 #define GET_REGINFO_TARGET_DESC
 #include "AMDGPUGenRegisterInfo.inc"
 

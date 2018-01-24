@@ -54,7 +54,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "lldb/Core/Communication.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/ThreadLauncher.h"

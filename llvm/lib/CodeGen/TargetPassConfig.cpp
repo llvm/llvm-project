@@ -708,6 +708,8 @@ bool TargetPassConfig::addCoreISelPasses() {
   if (EnableGlobalISelOption == cl::BOU_TRUE ||
       (EnableGlobalISelOption == cl::BOU_UNSET &&
        TM->Options.EnableGlobalISel && EnableFastISelOption != cl::BOU_TRUE)) {
+    TM->setFastISel(false);
+
     if (addIRTranslator())
       return true;
 

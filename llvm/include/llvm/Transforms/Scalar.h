@@ -142,13 +142,6 @@ FunctionPass *createInstructionCombiningPass(bool ExpensiveCombines = true);
 
 //===----------------------------------------------------------------------===//
 //
-// AggressiveInstCombiner - Combine expression patterns to form expressions with
-// fewer, simple instructions. This pass does not modify the CFG.
-//
-FunctionPass *createAggressiveInstCombinerPass();
-
-//===----------------------------------------------------------------------===//
-//
 // LICM - This pass is a loop invariant code motion and memory promotion pass.
 //
 Pass *createLICMPass();

@@ -1083,7 +1083,7 @@ define i32 @test_pextrw(<8 x i16> %a0, i16 *%a1) {
 ;
 ; SLM-LABEL: test_pextrw:
 ; SLM:       # %bb.0:
-; SLM-NEXT:    pextrw $3, %xmm0, %eax # sched: [4:1.00]
+; SLM-NEXT:    pextrw $3, %xmm0, %eax # sched: [1:1.00]
 ; SLM-NEXT:    pextrw $1, %xmm0, (%rdi) # sched: [4:2.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;

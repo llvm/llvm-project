@@ -258,4 +258,70 @@ TEST(CoreAPIsTest, AddAndMaterializeLazySymbol) {
   EXPECT_TRUE(OnReadyRun) << "OnReady was not run";
 }
 
+TEST(CoreAPIsTest, TestLambdaSymbolResolver) {
+  JITEvaluatedSymbol FooSym(0xdeadbeef, JITSymbolFlags::Exported);
+  JITEvaluatedSymbol BarSym(0xcafef00d, JITSymbolFlags::Exported);
+
+  SymbolStringPool SP;
+  auto Foo = SP.intern("foo");
+  auto Bar = SP.intern("bar");
+  auto Baz = SP.intern("baz");
+
+  VSO V;
+  cantFail(V.define({{Foo, FooSym}, {Bar, BarSym}}));
+
+  auto Resolver = createSymbolResolver(
+      [&](const SymbolNameSet &Symbols) { return V.lookupFlags(Symbols); },
+      [&](AsynchronousSymbolQuery &Q, SymbolNameSet Symbols) {
+        auto LR = V.lookup(Q, Symbols);
+        assert(LR.MaterializationWork.empty() &&
+               "Test generated unexpected materialization "
+               "work?");
+        return std::move(LR.UnresolvedSymbols);
+      });
+
+  SymbolNameSet Symbols({Foo, Bar, Baz});
+
+  LookupFlagsResult LFR = Resolver->lookupFlags(Symbols);
+
+  EXPECT_EQ(LFR.SymbolFlags.size(), 2U)
+      << "lookupFlags returned the wrong number of results";
+  EXPECT_EQ(LFR.SymbolFlags.count(Foo), 1U)
+      << "Missing lookupFlags result for foo";
+  EXPECT_EQ(LFR.SymbolFlags.count(Bar), 1U)
+      << "Missing lookupFlags result for bar";
+  EXPECT_EQ(LFR.SymbolFlags[Foo], FooSym.getFlags())
+      << "Incorrect lookupFlags result for Foo";
+  EXPECT_EQ(LFR.SymbolFlags[Bar], BarSym.getFlags())
+      << "Incorrect lookupFlags result for Bar";
+  EXPECT_EQ(LFR.SymbolsNotFound.size(), 1U)
+      << "Expected one symbol not found in lookupFlags";
+  EXPECT_EQ(LFR.SymbolsNotFound.count(Baz), 1U)
+      << "Expected baz not to be found in lookupFlags";
+
+  bool OnResolvedRun = false;
+
+  auto OnResolved = [&](Expected<SymbolMap> Result) {
+    OnResolvedRun = true;
+    EXPECT_TRUE(!!Result) << "Unexpected error";
+    EXPECT_EQ(Result->size(), 2U) << "Unexpected number of resolved symbols";
+    EXPECT_EQ(Result->count(Foo), 1U) << "Missing lookup result for foo";
+    EXPECT_EQ(Result->count(Bar), 1U) << "Missing lookup result for bar";
+    EXPECT_EQ((*Result)[Foo].getAddress(), FooSym.getAddress())
+        << "Incorrect address for foo";
+    EXPECT_EQ((*Result)[Bar].getAddress(), BarSym.getAddress())
+        << "Incorrect address for bar";
+  };
+  auto OnReady = [&](Error Err) {
+    EXPECT_FALSE(!!Err) << "Finalization should never fail in this test";
+  };
+
+  AsynchronousSymbolQuery Q({Foo, Bar}, OnResolved, OnReady);
+  auto Unresolved = Resolver->lookup(Q, Symbols);
+
+  EXPECT_EQ(Unresolved.size(), 1U) << "Expected one unresolved symbol";
+  EXPECT_EQ(Unresolved.count(Baz), 1U) << "Expected baz to not be resolved";
+  EXPECT_TRUE(OnResolvedRun) << "OnResolved was never run";
+}
+
 } // namespace
