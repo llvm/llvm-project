@@ -37,7 +37,7 @@ registers:
 
 # CHECK:  body:
 # CHECK:   bb.0:
-# CHECK:    TBNZW %0, 0, %bb.1
+# CHECK:    TBNZW %1, 0, %bb.1
 # CHECK:    B %bb.0
 body:             |
   bb.0:

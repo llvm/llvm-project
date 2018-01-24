@@ -582,6 +582,10 @@ DISubrange *DIBuilder::getOrCreateSubrange(int64_t Lo, int64_t Count) {
   return DISubrange::get(VMContext, Count, Lo);
 }
 
+DISubrange *DIBuilder::getOrCreateSubrange(int64_t Lo, Metadata *CountNode) {
+  return DISubrange::get(VMContext, CountNode, Lo);
+}
+
 static void checkGlobalVariableScope(DIScope *Context) {
 #ifndef NDEBUG
   if (auto *CT =

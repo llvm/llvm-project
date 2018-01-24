@@ -1,4 +1,6 @@
-; RUN: llc -mtriple wasm32-unknown-unknown-wasm -filetype=obj %s -o - | obj2yaml | FileCheck %s
+; RUN: llc -filetype=obj %s -o - | obj2yaml | FileCheck %s
+
+target triple = "wasm32-unknown-unknown-wasm"
 
 @global1 = global i32 1025, align 8
 
@@ -136,27 +138,6 @@ declare void @func3()
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           0
 ; CHECK-NEXT:         Content:         '01040000'
-; CHECK-NEXT:   - Type:            CUSTOM
-; CHECK-NEXT:     Name:            name
-; CHECK-NEXT:     FunctionNames:   
-; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         Name:            func3
-; CHECK-NEXT:       - Index:           1
-; CHECK-NEXT:         Name:            __cxa_atexit
-; CHECK-NEXT:       - Index:           2
-; CHECK-NEXT:         Name:            func2
-; CHECK-NEXT:       - Index:           3
-; CHECK-NEXT:         Name:            func1
-; CHECK-NEXT:       - Index:           4
-; CHECK-NEXT:         Name:            func0
-; CHECK-NEXT:       - Index:           5
-; CHECK-NEXT:         Name:            .Lcall_dtors.42
-; CHECK-NEXT:       - Index:           6
-; CHECK-NEXT:         Name:            .Lregister_call_dtors.42
-; CHECK-NEXT:       - Index:           7
-; CHECK-NEXT:         Name:            .Lcall_dtors
-; CHECK-NEXT:       - Index:           8
-; CHECK-NEXT:         Name:            .Lregister_call_dtors
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
 ; CHECK-NEXT:     DataSize:        4

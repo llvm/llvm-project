@@ -294,7 +294,6 @@ def ProcCyclone : SubtargetFeature<"cyclone", "ARMProcFamily", "Cyclone",
                                    FeatureFuseAES,
                                    FeatureNEON,
                                    FeaturePerfMon,
-                                   FeatureSlowMisaligned128Store,
                                    FeatureZCRegMove,
                                    FeatureZCZeroing,
                                    FeatureZCZeroingFPWorkaround

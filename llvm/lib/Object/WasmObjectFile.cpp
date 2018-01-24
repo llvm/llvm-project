@@ -292,10 +292,10 @@ Error WasmObjectFile::parseNameSection(const uint8_t *Ptr, const uint8_t *End) {
           return make_error<GenericBinaryError>("Invalid name entry",
                                                 object_error::parse_failed);
         DebugNames.push_back(wasm::WasmFunctionName{Index, Name});
-        if (Index >= NumImportedFunctions) {
+        if (isDefinedFunctionIndex(Index)) {
           // Override any existing name; the name specified by the "names"
           // section is the Function's canonical name.
-          Functions[Index - NumImportedFunctions].Name = Name;
+          getDefinedFunction(Index).Name = Name;
         }
       }
       break;
@@ -369,8 +369,9 @@ void WasmObjectFile::populateSymbolTable() {
                      << " sym index:" << SymIndex << "\n");
       }
     }
-    if (Export.Kind == wasm::WASM_EXTERNAL_FUNCTION) {
-      auto &Function = Functions[Export.Index - NumImportedFunctions];
+    if (Export.Kind == wasm::WASM_EXTERNAL_FUNCTION &&
+        isDefinedFunctionIndex(Export.Index)) {
+      auto &Function = getDefinedFunction(Export.Index);
       if (Function.Name.empty()) {
         // Use the export's name to set a name for the Function, but only if one
         // hasn't already been set.
@@ -501,14 +502,13 @@ Error WasmObjectFile::parseLinkingSectionComdat(const uint8_t *&Ptr,
         DataSegments[Index].Data.Comdat = Name;
         break;
       case wasm::WASM_COMDAT_FUNCTION:
-        if (Index < NumImportedFunctions || !isValidFunctionIndex(Index))
+        if (!isDefinedFunctionIndex(Index))
           return make_error<GenericBinaryError>("COMDAT function index out of range",
                                                 object_error::parse_failed);
-        Index -= NumImportedFunctions;
-        if (!Functions[Index].Comdat.empty())
+        if (!getDefinedFunction(Index).Comdat.empty())
           return make_error<GenericBinaryError>("Function in two COMDATs",
                                                 object_error::parse_failed);
-        Functions[Index].Comdat = Name;
+        getDefinedFunction(Index).Comdat = Name;
         break;
       }
     }
@@ -736,7 +736,7 @@ Error WasmObjectFile::parseExportSection(const uint8_t *Ptr, const uint8_t *End)
     Ex.Index = readVaruint32(Ptr);
     switch (Ex.Kind) {
     case wasm::WASM_EXTERNAL_FUNCTION:
-      if (Ex.Index >= FunctionTypes.size() + NumImportedFunctions)
+      if (!isValidFunctionIndex(Ex.Index))
         return make_error<GenericBinaryError>("Invalid function export",
                                               object_error::parse_failed);
       break;
@@ -763,6 +763,15 @@ Error WasmObjectFile::parseExportSection(const uint8_t *Ptr, const uint8_t *End)
 
 bool WasmObjectFile::isValidFunctionIndex(uint32_t Index) const {
   return Index < FunctionTypes.size() + NumImportedFunctions;
+}
+
+bool WasmObjectFile::isDefinedFunctionIndex(uint32_t Index) const {
+  return Index >= NumImportedFunctions && isValidFunctionIndex(Index);
+}
+
+wasm::WasmFunction& WasmObjectFile::getDefinedFunction(uint32_t Index) {
+  assert(isDefinedFunctionIndex(Index));
+  return Functions[Index - NumImportedFunctions];
 }
 
 Error WasmObjectFile::parseStartSection(const uint8_t *Ptr, const uint8_t *End) {

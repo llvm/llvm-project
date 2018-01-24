@@ -64,51 +64,6 @@ FunctionPass *createHexagonISelDag(HexagonTargetMachine &TM,
 }
 }
 
-// Intrinsics that return a a predicate.
-static bool doesIntrinsicReturnPredicate(unsigned ID) {
-  switch (ID) {
-    default:
-      return false;
-    case Intrinsic::hexagon_C2_cmpeq:
-    case Intrinsic::hexagon_C2_cmpgt:
-    case Intrinsic::hexagon_C2_cmpgtu:
-    case Intrinsic::hexagon_C2_cmpgtup:
-    case Intrinsic::hexagon_C2_cmpgtp:
-    case Intrinsic::hexagon_C2_cmpeqp:
-    case Intrinsic::hexagon_C2_bitsset:
-    case Intrinsic::hexagon_C2_bitsclr:
-    case Intrinsic::hexagon_C2_cmpeqi:
-    case Intrinsic::hexagon_C2_cmpgti:
-    case Intrinsic::hexagon_C2_cmpgtui:
-    case Intrinsic::hexagon_C2_cmpgei:
-    case Intrinsic::hexagon_C2_cmpgeui:
-    case Intrinsic::hexagon_C2_cmplt:
-    case Intrinsic::hexagon_C2_cmpltu:
-    case Intrinsic::hexagon_C2_bitsclri:
-    case Intrinsic::hexagon_C2_and:
-    case Intrinsic::hexagon_C2_or:
-    case Intrinsic::hexagon_C2_xor:
-    case Intrinsic::hexagon_C2_andn:
-    case Intrinsic::hexagon_C2_not:
-    case Intrinsic::hexagon_C2_orn:
-    case Intrinsic::hexagon_C2_pxfer_map:
-    case Intrinsic::hexagon_C2_any8:
-    case Intrinsic::hexagon_C2_all8:
-    case Intrinsic::hexagon_A2_vcmpbeq:
-    case Intrinsic::hexagon_A2_vcmpbgtu:
-    case Intrinsic::hexagon_A2_vcmpheq:
-    case Intrinsic::hexagon_A2_vcmphgt:
-    case Intrinsic::hexagon_A2_vcmphgtu:
-    case Intrinsic::hexagon_A2_vcmpweq:
-    case Intrinsic::hexagon_A2_vcmpwgt:
-    case Intrinsic::hexagon_A2_vcmpwgtu:
-    case Intrinsic::hexagon_C2_tfrrp:
-    case Intrinsic::hexagon_S2_tstbit_i:
-    case Intrinsic::hexagon_S2_tstbit_r:
-      return true;
-  }
-}
-
 void HexagonDAGToDAGISel::SelectIndexedLoad(LoadSDNode *LD, const SDLoc &dl) {
   SDValue Chain = LD->getChain();
   SDValue Base = LD->getBasePtr();
@@ -553,85 +508,6 @@ void HexagonDAGToDAGISel::SelectSHL(SDNode *N) {
   return Default();
 }
 
-
-//
-// If there is an zero_extend followed an intrinsic in DAG (this means - the
-// result of the intrinsic is predicate); convert the zero_extend to
-// transfer instruction.
-//
-// Zero extend -> transfer is lowered here. Otherwise, zero_extend will be
-// converted into a MUX as predicate registers defined as 1 bit in the
-// compiler. Architecture defines them as 8-bit registers.
-// We want to preserve all the lower 8-bits and, not just 1 LSB bit.
-//
-void HexagonDAGToDAGISel::SelectZeroExtend(SDNode *N) {
-  SDLoc dl(N);
-
-  SDValue Op0 = N->getOperand(0);
-  EVT OpVT = Op0.getValueType();
-  unsigned OpBW = OpVT.getSizeInBits();
-
-  // Special handling for zero-extending a vector of booleans.
-  if (OpVT.isVector() && OpVT.getVectorElementType() == MVT::i1 && OpBW <= 64) {
-    SDNode *Mask = CurDAG->getMachineNode(Hexagon::C2_mask, dl, MVT::i64, Op0);
-    unsigned NE = OpVT.getVectorNumElements();
-    EVT ExVT = N->getValueType(0);
-    unsigned ES = ExVT.getScalarSizeInBits();
-    uint64_t MV = 0, Bit = 1;
-    for (unsigned i = 0; i < NE; ++i) {
-      MV |= Bit;
-      Bit <<= ES;
-    }
-    SDValue Ones = CurDAG->getTargetConstant(MV, dl, MVT::i64);
-    SDNode *OnesReg = CurDAG->getMachineNode(Hexagon::CONST64, dl,
-                                             MVT::i64, Ones);
-    if (ExVT.getSizeInBits() == 32) {
-      SDNode *And = CurDAG->getMachineNode(Hexagon::A2_andp, dl, MVT::i64,
-                                           SDValue(Mask,0), SDValue(OnesReg,0));
-      SDValue SubR = CurDAG->getTargetConstant(Hexagon::isub_lo, dl, MVT::i32);
-      ReplaceNode(N, CurDAG->getMachineNode(Hexagon::EXTRACT_SUBREG, dl, ExVT,
-                                            SDValue(And, 0), SubR));
-      return;
-    }
-    ReplaceNode(N,
-                CurDAG->getMachineNode(Hexagon::A2_andp, dl, ExVT,
-                                       SDValue(Mask, 0), SDValue(OnesReg, 0)));
-    return;
-  }
-
-  SDNode *Int = N->getOperand(0).getNode();
-  if ((Int->getOpcode() == ISD::INTRINSIC_WO_CHAIN)) {
-    unsigned ID = cast<ConstantSDNode>(Int->getOperand(0))->getZExtValue();
-    if (doesIntrinsicReturnPredicate(ID)) {
-      // Now we need to differentiate target data types.
-      if (N->getValueType(0) == MVT::i64) {
-        // Convert the zero_extend to Rs = Pd followed by A2_combinew(0,Rs).
-        SDValue TargetConst0 = CurDAG->getTargetConstant(0, dl, MVT::i32);
-        SDNode *Result_1 = CurDAG->getMachineNode(Hexagon::C2_tfrpr, dl,
-                                                  MVT::i32, SDValue(Int, 0));
-        SDNode *Result_2 = CurDAG->getMachineNode(Hexagon::A2_tfrsi, dl,
-                                                  MVT::i32, TargetConst0);
-        SDNode *Result_3 = CurDAG->getMachineNode(Hexagon::A2_combinew, dl,
-                                                  MVT::i64, MVT::Other,
-                                                  SDValue(Result_2, 0),
-                                                  SDValue(Result_1, 0));
-        ReplaceNode(N, Result_3);
-        return;
-      }
-      if (N->getValueType(0) == MVT::i32) {
-        // Convert the zero_extend to Rs = Pd
-        SDNode* RsPd = CurDAG->getMachineNode(Hexagon::C2_tfrpr, dl,
-                                              MVT::i32, SDValue(Int, 0));
-        ReplaceNode(N, RsPd);
-        return;
-      }
-      llvm_unreachable("Unexpected value type");
-    }
-  }
-  SelectCode(N);
-}
-
-
 //
 // Handling intrinsics for circular load and bitreverse load.
 //
@@ -781,6 +657,56 @@ void HexagonDAGToDAGISel::SelectBitcast(SDNode *N) {
   CurDAG->RemoveDeadNode(N);
 }
 
+// Handle these nodes here to avoid having to write patterns for all
+// combinations of input/output types. In all cases, the resulting
+// instruction is the same.
+void HexagonDAGToDAGISel::SelectTypecast(SDNode *N) {
+  SDValue Op = N->getOperand(0);
+  MVT OpTy = Op.getValueType().getSimpleVT();
+  SDNode *T = CurDAG->MorphNodeTo(N, N->getOpcode(),
+                                  CurDAG->getVTList(OpTy), {Op});
+  ReplaceNode(T, Op.getNode());
+  CurDAG->RemoveDeadNode(T);
+}
+
+void HexagonDAGToDAGISel::SelectP2D(SDNode *N) {
+  MVT ResTy = N->getValueType(0).getSimpleVT();
+  SDNode *T = CurDAG->getMachineNode(Hexagon::C2_mask, SDLoc(N), ResTy,
+                                     N->getOperand(0));
+  ReplaceNode(N, T);
+}
+
+void HexagonDAGToDAGISel::SelectD2P(SDNode *N) {
+  const SDLoc &dl(N);
+  MVT ResTy = N->getValueType(0).getSimpleVT();
+  SDValue Zero = CurDAG->getTargetConstant(0, dl, MVT::i32);
+  SDNode *T = CurDAG->getMachineNode(Hexagon::A4_vcmpbgtui, dl, ResTy,
+                                     N->getOperand(0), Zero);
+  ReplaceNode(N, T);
+}
+
+void HexagonDAGToDAGISel::SelectV2Q(SDNode *N) {
+  const SDLoc &dl(N);
+  MVT ResTy = N->getValueType(0).getSimpleVT();
+
+  SDValue C = CurDAG->getTargetConstant(-1, dl, MVT::i32);
+  SDNode *R = CurDAG->getMachineNode(Hexagon::A2_tfrsi, dl, MVT::i32, C);
+  SDNode *T = CurDAG->getMachineNode(Hexagon::V6_vandvrt, dl, ResTy,
+                                     N->getOperand(0), SDValue(R,0));
+  ReplaceNode(N, T);
+}
+
+void HexagonDAGToDAGISel::SelectQ2V(SDNode *N) {
+  const SDLoc &dl(N);
+  MVT ResTy = N->getValueType(0).getSimpleVT();
+
+  SDValue C = CurDAG->getTargetConstant(-1, dl, MVT::i32);
+  SDNode *R = CurDAG->getMachineNode(Hexagon::A2_tfrsi, dl, MVT::i32, C);
+  SDNode *T = CurDAG->getMachineNode(Hexagon::V6_vandqrt, dl, ResTy,
+                                     N->getOperand(0), SDValue(R,0));
+  ReplaceNode(N, T);
+}
+
 void HexagonDAGToDAGISel::Select(SDNode *N) {
   if (N->isMachineOpcode())
     return N->setNodeId(-1);  // Already selected.
@@ -793,9 +719,13 @@ void HexagonDAGToDAGISel::Select(SDNode *N) {
   case ISD::SHL:                  return SelectSHL(N);
   case ISD::LOAD:                 return SelectLoad(N);
   case ISD::STORE:                return SelectStore(N);
-  case ISD::ZERO_EXTEND:          return SelectZeroExtend(N);
   case ISD::INTRINSIC_W_CHAIN:    return SelectIntrinsicWChain(N);
   case ISD::INTRINSIC_WO_CHAIN:   return SelectIntrinsicWOChain(N);
+  case HexagonISD::TYPECAST:      return SelectTypecast(N);
+  case HexagonISD::P2D:           return SelectP2D(N);
+  case HexagonISD::D2P:           return SelectD2P(N);
+  case HexagonISD::Q2V:           return SelectQ2V(N);
+  case HexagonISD::V2Q:           return SelectV2Q(N);
   }
 
   if (HST->useHVXOps()) {

@@ -7310,12 +7310,25 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
 
 namespace {
 
-template <typename T> static uint64_t readNext(const char *&Buf) {
+template <typename T>
+static uint64_t read(StringRef Contents, ptrdiff_t Offset) {
   using llvm::support::little;
   using llvm::support::unaligned;
 
-  uint64_t Val = support::endian::read<T, little, unaligned>(Buf);
-  Buf += sizeof(T);
+  if (Offset + sizeof(T) > Contents.size()) {
+    outs() << "warning: attempt to read past end of buffer\n";
+    return T();
+  }
+
+  uint64_t Val =
+      support::endian::read<T, little, unaligned>(Contents.data() + Offset);
+  return Val;
+}
+
+template <typename T>
+static uint64_t readNext(StringRef Contents, ptrdiff_t &Offset) {
+  T Val = read<T>(Contents, Offset);
+  Offset += sizeof(T);
   return Val;
 }
 
@@ -7335,18 +7348,18 @@ struct CompactUnwindEntry {
   CompactUnwindEntry(StringRef Contents, unsigned Offset, bool Is64)
       : OffsetInSection(Offset) {
     if (Is64)
-      read<uint64_t>(Contents.data() + Offset);
+      read<uint64_t>(Contents, Offset);
     else
-      read<uint32_t>(Contents.data() + Offset);
+      read<uint32_t>(Contents, Offset);
   }
 
 private:
-  template <typename UIntPtr> void read(const char *Buf) {
-    FunctionAddr = readNext<UIntPtr>(Buf);
-    Length = readNext<uint32_t>(Buf);
-    CompactEncoding = readNext<uint32_t>(Buf);
-    PersonalityAddr = readNext<UIntPtr>(Buf);
-    LSDAAddr = readNext<UIntPtr>(Buf);
+  template <typename UIntPtr> void read(StringRef Contents, ptrdiff_t Offset) {
+    FunctionAddr = readNext<UIntPtr>(Contents, Offset);
+    Length = readNext<uint32_t>(Contents, Offset);
+    CompactEncoding = readNext<uint32_t>(Contents, Offset);
+    PersonalityAddr = readNext<UIntPtr>(Contents, Offset);
+    LSDAAddr = readNext<UIntPtr>(Contents, Offset);
   }
 };
 }
@@ -7448,7 +7461,7 @@ printMachOCompactUnwindSection(const MachOObjectFile *Obj,
 
   // First populate the initial raw offsets, encodings and so on from the entry.
   for (unsigned Offset = 0; Offset < Contents.size(); Offset += EntrySize) {
-    CompactUnwindEntry Entry(Contents.data(), Offset, Is64);
+    CompactUnwindEntry Entry(Contents, Offset, Is64);
     CompactUnwinds.push_back(Entry);
   }
 
@@ -7515,19 +7528,19 @@ printMachOCompactUnwindSection(const MachOObjectFile *Obj,
 // __unwind_info section dumping
 //===----------------------------------------------------------------------===//
 
-static void printRegularSecondLevelUnwindPage(const char *PageStart) {
-  const char *Pos = PageStart;
-  uint32_t Kind = readNext<uint32_t>(Pos);
+static void printRegularSecondLevelUnwindPage(StringRef PageData) {
+  ptrdiff_t Pos = 0;
+  uint32_t Kind = readNext<uint32_t>(PageData, Pos);
   (void)Kind;
   assert(Kind == 2 && "kind for a regular 2nd level index should be 2");
 
-  uint16_t EntriesStart = readNext<uint16_t>(Pos);
-  uint16_t NumEntries = readNext<uint16_t>(Pos);
+  uint16_t EntriesStart = readNext<uint16_t>(PageData, Pos);
+  uint16_t NumEntries = readNext<uint16_t>(PageData, Pos);
 
-  Pos = PageStart + EntriesStart;
+  Pos = EntriesStart;
   for (unsigned i = 0; i < NumEntries; ++i) {
-    uint32_t FunctionOffset = readNext<uint32_t>(Pos);
-    uint32_t Encoding = readNext<uint32_t>(Pos);
+    uint32_t FunctionOffset = readNext<uint32_t>(PageData, Pos);
+    uint32_t Encoding = readNext<uint32_t>(PageData, Pos);
 
     outs() << "      [" << i << "]: "
            << "function offset=" << format("0x%08" PRIx32, FunctionOffset)
@@ -7537,24 +7550,23 @@ static void printRegularSecondLevelUnwindPage(const char *PageStart) {
 }
 
 static void printCompressedSecondLevelUnwindPage(
-    const char *PageStart, uint32_t FunctionBase,
+    StringRef PageData, uint32_t FunctionBase,
     const SmallVectorImpl<uint32_t> &CommonEncodings) {
-  const char *Pos = PageStart;
-  uint32_t Kind = readNext<uint32_t>(Pos);
+  ptrdiff_t Pos = 0;
+  uint32_t Kind = readNext<uint32_t>(PageData, Pos);
   (void)Kind;
   assert(Kind == 3 && "kind for a compressed 2nd level index should be 3");
 
-  uint16_t EntriesStart = readNext<uint16_t>(Pos);
-  uint16_t NumEntries = readNext<uint16_t>(Pos);
+  uint16_t EntriesStart = readNext<uint16_t>(PageData, Pos);
+  uint16_t NumEntries = readNext<uint16_t>(PageData, Pos);
 
-  uint16_t EncodingsStart = readNext<uint16_t>(Pos);
-  readNext<uint16_t>(Pos);
-  const auto *PageEncodings = reinterpret_cast<const support::ulittle32_t *>(
-      PageStart + EncodingsStart);
+  uint16_t EncodingsStart = readNext<uint16_t>(PageData, Pos);
+  readNext<uint16_t>(PageData, Pos);
+  StringRef PageEncodings = PageData.substr(EncodingsStart, StringRef::npos);
 
-  Pos = PageStart + EntriesStart;
+  Pos = EntriesStart;
   for (unsigned i = 0; i < NumEntries; ++i) {
-    uint32_t Entry = readNext<uint32_t>(Pos);
+    uint32_t Entry = readNext<uint32_t>(PageData, Pos);
     uint32_t FunctionOffset = FunctionBase + (Entry & 0xffffff);
     uint32_t EncodingIdx = Entry >> 24;
 
@@ -7562,7 +7574,9 @@ static void printCompressedSecondLevelUnwindPage(
     if (EncodingIdx < CommonEncodings.size())
       Encoding = CommonEncodings[EncodingIdx];
     else
-      Encoding = PageEncodings[EncodingIdx - CommonEncodings.size()];
+      Encoding = read<uint32_t>(PageEncodings,
+                                sizeof(uint32_t) *
+                                    (EncodingIdx - CommonEncodings.size()));
 
     outs() << "      [" << i << "]: "
            << "function offset=" << format("0x%08" PRIx32, FunctionOffset)
@@ -7585,13 +7599,13 @@ static void printMachOUnwindInfoSection(const MachOObjectFile *Obj,
 
   StringRef Contents;
   UnwindInfo.getContents(Contents);
-  const char *Pos = Contents.data();
+  ptrdiff_t Pos = 0;
 
   //===----------------------------------
   // Section header
   //===----------------------------------
 
-  uint32_t Version = readNext<uint32_t>(Pos);
+  uint32_t Version = readNext<uint32_t>(Contents, Pos);
   outs() << "  Version:                                   "
          << format("0x%" PRIx32, Version) << '\n';
   if (Version != 1) {
@@ -7599,24 +7613,24 @@ static void printMachOUnwindInfoSection(const MachOObjectFile *Obj,
     return;
   }
 
-  uint32_t CommonEncodingsStart = readNext<uint32_t>(Pos);
+  uint32_t CommonEncodingsStart = readNext<uint32_t>(Contents, Pos);
   outs() << "  Common encodings array section offset:     "
          << format("0x%" PRIx32, CommonEncodingsStart) << '\n';
-  uint32_t NumCommonEncodings = readNext<uint32_t>(Pos);
+  uint32_t NumCommonEncodings = readNext<uint32_t>(Contents, Pos);
   outs() << "  Number of common encodings in array:       "
          << format("0x%" PRIx32, NumCommonEncodings) << '\n';
 
-  uint32_t PersonalitiesStart = readNext<uint32_t>(Pos);
+  uint32_t PersonalitiesStart = readNext<uint32_t>(Contents, Pos);
   outs() << "  Personality function array section offset: "
          << format("0x%" PRIx32, PersonalitiesStart) << '\n';
-  uint32_t NumPersonalities = readNext<uint32_t>(Pos);
+  uint32_t NumPersonalities = readNext<uint32_t>(Contents, Pos);
   outs() << "  Number of personality functions in array:  "
          << format("0x%" PRIx32, NumPersonalities) << '\n';
 
-  uint32_t IndicesStart = readNext<uint32_t>(Pos);
+  uint32_t IndicesStart = readNext<uint32_t>(Contents, Pos);
   outs() << "  Index array section offset:                "
          << format("0x%" PRIx32, IndicesStart) << '\n';
-  uint32_t NumIndices = readNext<uint32_t>(Pos);
+  uint32_t NumIndices = readNext<uint32_t>(Contents, Pos);
   outs() << "  Number of indices in array:                "
          << format("0x%" PRIx32, NumIndices) << '\n';
 
@@ -7631,9 +7645,9 @@ static void printMachOUnwindInfoSection(const MachOObjectFile *Obj,
 
   SmallVector<uint32_t, 64> CommonEncodings;
   outs() << "  Common encodings: (count = " << NumCommonEncodings << ")\n";
-  Pos = Contents.data() + CommonEncodingsStart;
+  Pos = CommonEncodingsStart;
   for (unsigned i = 0; i < NumCommonEncodings; ++i) {
-    uint32_t Encoding = readNext<uint32_t>(Pos);
+    uint32_t Encoding = readNext<uint32_t>(Contents, Pos);
     CommonEncodings.push_back(Encoding);
 
     outs() << "    encoding[" << i << "]: " << format("0x%08" PRIx32, Encoding)
@@ -7648,9 +7662,9 @@ static void printMachOUnwindInfoSection(const MachOObjectFile *Obj,
   // roughly). Particularly since they only get 2 bits in the compact encoding.
 
   outs() << "  Personality functions: (count = " << NumPersonalities << ")\n";
-  Pos = Contents.data() + PersonalitiesStart;
+  Pos = PersonalitiesStart;
   for (unsigned i = 0; i < NumPersonalities; ++i) {
-    uint32_t PersonalityFn = readNext<uint32_t>(Pos);
+    uint32_t PersonalityFn = readNext<uint32_t>(Contents, Pos);
     outs() << "    personality[" << i + 1
            << "]: " << format("0x%08" PRIx32, PersonalityFn) << '\n';
   }
@@ -7671,13 +7685,13 @@ static void printMachOUnwindInfoSection(const MachOObjectFile *Obj,
   SmallVector<IndexEntry, 4> IndexEntries;
 
   outs() << "  Top level indices: (count = " << NumIndices << ")\n";
-  Pos = Contents.data() + IndicesStart;
+  Pos = IndicesStart;
   for (unsigned i = 0; i < NumIndices; ++i) {
     IndexEntry Entry;
 
-    Entry.FunctionOffset = readNext<uint32_t>(Pos);
-    Entry.SecondLevelPageStart = readNext<uint32_t>(Pos);
-    Entry.LSDAStart = readNext<uint32_t>(Pos);
+    Entry.FunctionOffset = readNext<uint32_t>(Contents, Pos);
+    Entry.SecondLevelPageStart = readNext<uint32_t>(Contents, Pos);
+    Entry.LSDAStart = readNext<uint32_t>(Contents, Pos);
     IndexEntries.push_back(Entry);
 
     outs() << "    [" << i << "]: "
@@ -7696,12 +7710,14 @@ static void printMachOUnwindInfoSection(const MachOObjectFile *Obj,
   // the first top-level index's LSDAOffset to the last (sentinel).
 
   outs() << "  LSDA descriptors:\n";
-  Pos = Contents.data() + IndexEntries[0].LSDAStart;
-  int NumLSDAs = (IndexEntries.back().LSDAStart - IndexEntries[0].LSDAStart) /
-                 (2 * sizeof(uint32_t));
+  Pos = IndexEntries[0].LSDAStart;
+  const uint32_t LSDASize = 2 * sizeof(uint32_t);
+  int NumLSDAs =
+      (IndexEntries.back().LSDAStart - IndexEntries[0].LSDAStart) / LSDASize;
+
   for (int i = 0; i < NumLSDAs; ++i) {
-    uint32_t FunctionOffset = readNext<uint32_t>(Pos);
-    uint32_t LSDAOffset = readNext<uint32_t>(Pos);
+    uint32_t FunctionOffset = readNext<uint32_t>(Contents, Pos);
+    uint32_t LSDAOffset = readNext<uint32_t>(Contents, Pos);
     outs() << "    [" << i << "]: "
            << "function offset=" << format("0x%08" PRIx32, FunctionOffset)
            << ", "
@@ -7729,12 +7745,19 @@ static void printMachOUnwindInfoSection(const MachOObjectFile *Obj,
            << "base function offset="
            << format("0x%08" PRIx32, IndexEntries[i].FunctionOffset) << '\n';
 
-    Pos = Contents.data() + IndexEntries[i].SecondLevelPageStart;
-    uint32_t Kind = *reinterpret_cast<const support::ulittle32_t *>(Pos);
+    Pos = IndexEntries[i].SecondLevelPageStart;
+    if (Pos + sizeof(uint32_t) > Contents.size()) {
+      outs() << "warning: invalid offset for second level page: " << Pos << '\n';
+      continue;
+    }
+
+    uint32_t Kind =
+        *reinterpret_cast<const support::ulittle32_t *>(Contents.data() + Pos);
     if (Kind == 2)
-      printRegularSecondLevelUnwindPage(Pos);
+      printRegularSecondLevelUnwindPage(Contents.substr(Pos, 4096));
     else if (Kind == 3)
-      printCompressedSecondLevelUnwindPage(Pos, IndexEntries[i].FunctionOffset,
+      printCompressedSecondLevelUnwindPage(Contents.substr(Pos, 4096),
+                                           IndexEntries[i].FunctionOffset,
                                            CommonEncodings);
     else
       outs() << "    Skipping 2nd level page with unknown kind " << Kind

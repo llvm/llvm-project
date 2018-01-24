@@ -1,4 +1,6 @@
-; RUN: llc -mtriple wasm32-unknown-unknown-wasm -filetype=obj %s -o - | obj2yaml | FileCheck %s
+; RUN: llc -filetype=obj %s -o - | obj2yaml | FileCheck %s
+
+target triple = "wasm32-unknown-unknown-wasm"
 
 ; Import a function just so we can check the index arithmetic for
 ; WASM_COMDAT_FUNCTION entries is performed correctly
@@ -93,17 +95,6 @@ define linkonce_odr i32 @sharedFn() #1 comdat($sharedComdat) {
 ; CHECK-NEXT:          Opcode:          I32_CONST
 ; CHECK-NEXT:          Value:           0
 ; CHECK-NEXT:        Content:         '616263'
-; CHECK-NEXT:  - Type:            CUSTOM
-; CHECK-NEXT:    Name:            name
-; CHECK-NEXT:    FunctionNames:
-; CHECK-NEXT:      - Index:           0
-; CHECK-NEXT:        Name:            funcImport
-; CHECK-NEXT:      - Index:           1
-; CHECK-NEXT:        Name:            callImport
-; CHECK-NEXT:      - Index:           2
-; CHECK-NEXT:        Name:            basicInlineFn
-; CHECK-NEXT:      - Index:           3
-; CHECK-NEXT:        Name:            sharedFn
 ; CHECK-NEXT:  - Type:            CUSTOM
 ; CHECK-NEXT:    Name:            linking
 ; CHECK-NEXT:    DataSize:        3

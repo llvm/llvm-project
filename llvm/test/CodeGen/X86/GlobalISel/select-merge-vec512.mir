@@ -27,8 +27,7 @@ body:             |
     ; ALL: [[VINSERTF32x4Zrr:%[0-9]+]]:vr512 = VINSERTF32x4Zrr %2, [[DEF]], 1
     ; ALL: [[VINSERTF32x4Zrr1:%[0-9]+]]:vr512 = VINSERTF32x4Zrr [[VINSERTF32x4Zrr]], [[DEF]], 2
     ; ALL: [[VINSERTF32x4Zrr2:%[0-9]+]]:vr512 = VINSERTF32x4Zrr [[VINSERTF32x4Zrr1]], [[DEF]], 3
-    ; ALL: [[COPY:%[0-9]+]]:vr512 = COPY [[VINSERTF32x4Zrr2]]
-    ; ALL: %zmm0 = COPY [[COPY]]
+    ; ALL: %zmm0 = COPY [[VINSERTF32x4Zrr2]]
     ; ALL: RET 0, implicit %zmm0
     %0(<4 x s32>) = IMPLICIT_DEF
     %1(<16 x s32>) = G_MERGE_VALUES %0(<4 x s32>), %0(<4 x s32>), %0(<4 x s32>), %0(<4 x s32>)
@@ -51,8 +50,7 @@ body:             |
     ; ALL: [[DEF:%[0-9]+]]:vr256x = IMPLICIT_DEF
     ; ALL: undef %2.sub_ymm:vr512 = COPY [[DEF]]
     ; ALL: [[VINSERTF64x4Zrr:%[0-9]+]]:vr512 = VINSERTF64x4Zrr %2, [[DEF]], 1
-    ; ALL: [[COPY:%[0-9]+]]:vr512 = COPY [[VINSERTF64x4Zrr]]
-    ; ALL: %zmm0 = COPY [[COPY]]
+    ; ALL: %zmm0 = COPY [[VINSERTF64x4Zrr]]
     ; ALL: RET 0, implicit %zmm0
     %0(<8 x s32>) = IMPLICIT_DEF
     %1(<16 x s32>) = G_MERGE_VALUES %0(<8 x s32>), %0(<8 x s32>)

@@ -1,4 +1,6 @@
-; RUN: llc -mtriple wasm32-unknown-unknown-wasm -filetype=obj %s -o - | llvm-readobj -s | FileCheck %s
+; RUN: llc -filetype=obj %s -o - | llvm-readobj -s | FileCheck %s
+
+target triple = "wasm32-unknown-unknown-wasm"
 
 ; external function
 declare i32 @a()
@@ -12,7 +14,6 @@ entry:
     %tmp1 = call i32 @a()
     ret i32 %tmp1
 }
-
 
 ; CHECK: Format: WASM
 ; CHECK: Arch: wasm32
@@ -38,10 +39,6 @@ entry:
 ; CHECK:  }
 ; CHECK:  Section {
 ; CHECK:    Type: DATA (0xB)
-; CHECK:  }
-; CHECK:  Section {
-; CHECK:    Type: CUSTOM (0x0)
-; CHECK:    Name: name
 ; CHECK:  }
 ; CHECK:  Section {
 ; CHECK:    Type: CUSTOM (0x0)

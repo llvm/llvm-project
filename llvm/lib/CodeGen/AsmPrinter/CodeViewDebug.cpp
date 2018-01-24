@@ -1325,7 +1325,9 @@ TypeIndex CodeViewDebug::lowerTypeArray(const DICompositeType *Ty) {
     const DISubrange *Subrange = cast<DISubrange>(Element);
     assert(Subrange->getLowerBound() == 0 &&
            "codeview doesn't support subranges with lower bounds");
-    int64_t Count = Subrange->getCount();
+    int64_t Count = -1;
+    if (auto *CI = Subrange->getCount().dyn_cast<ConstantInt*>())
+      Count = CI->getSExtValue();
 
     // Forward declarations of arrays without a size and VLAs use a count of -1.
     // Emit a count of zero in these cases to match what MSVC does for arrays

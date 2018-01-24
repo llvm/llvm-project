@@ -103,7 +103,7 @@ while [[ $# -gt 0 ]]; do
 
       if [ "$PROJ" == "clang-tools-extra" ]; then
         if [ $CLANG_TOOLS_EXTRA_ENABLED -ne 0 ]; then
-          echo "Project 'clang-tools-extra' is already enabled, ignoring extra occurences."
+          echo "Project 'clang-tools-extra' is already enabled, ignoring extra occurrences."
         else
           CLANG_TOOLS_EXTRA_ENABLED=1
         fi
@@ -114,7 +114,7 @@ while [[ $# -gt 0 ]]; do
       if ! contains_project "$PROJ" ; then
         append_project "$PROJ"
       else
-        echo "Project '$PROJ' is already enabled, ignoring extra occurences."
+        echo "Project '$PROJ' is already enabled, ignoring extra occurrences."
       fi
       ;;
     -i|--install-target)

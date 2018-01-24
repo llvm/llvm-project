@@ -7655,19 +7655,19 @@ let Defs = [EFLAGS], Predicates = [HasAVX512] in {
                                     VEX_LIG, VEX_W, EVEX_CD8<64, CD8VT1>;
   }
   let isCodeGenOnly = 1 in {
-    defm Int_VUCOMISSZ  : sse12_ord_cmp_int<0x2E, VR128X, X86ucomi, v4f32, ssmem,
-                              sse_load_f32, "ucomiss", SSE_COMIS>, PS, EVEX, VEX_LIG,
-                              EVEX_CD8<32, CD8VT1>;
-    defm Int_VUCOMISDZ  : sse12_ord_cmp_int<0x2E, VR128X, X86ucomi, v2f64, sdmem,
-                              sse_load_f64, "ucomisd", SSE_COMIS>, PD, EVEX,
-                              VEX_LIG, VEX_W, EVEX_CD8<64, CD8VT1>;
+    defm VUCOMISSZ  : sse12_ord_cmp_int<0x2E, VR128X, X86ucomi, v4f32, ssmem,
+                          sse_load_f32, "ucomiss", SSE_COMIS>, PS, EVEX, VEX_LIG,
+                          EVEX_CD8<32, CD8VT1>;
+    defm VUCOMISDZ  : sse12_ord_cmp_int<0x2E, VR128X, X86ucomi, v2f64, sdmem,
+                          sse_load_f64, "ucomisd", SSE_COMIS>, PD, EVEX,
+                          VEX_LIG, VEX_W, EVEX_CD8<64, CD8VT1>;
 
-    defm Int_VCOMISSZ  : sse12_ord_cmp_int<0x2F, VR128X, X86comi, v4f32, ssmem,
-                              sse_load_f32, "comiss", SSE_COMIS>, PS, EVEX, VEX_LIG,
-                              EVEX_CD8<32, CD8VT1>;
-    defm Int_VCOMISDZ  : sse12_ord_cmp_int<0x2F, VR128X, X86comi, v2f64, sdmem,
-                              sse_load_f64, "comisd", SSE_COMIS>, PD, EVEX,
-                              VEX_LIG, VEX_W, EVEX_CD8<64, CD8VT1>;
+    defm VCOMISSZ  : sse12_ord_cmp_int<0x2F, VR128X, X86comi, v4f32, ssmem,
+                          sse_load_f32, "comiss", SSE_COMIS>, PS, EVEX, VEX_LIG,
+                          EVEX_CD8<32, CD8VT1>;
+    defm VCOMISDZ  : sse12_ord_cmp_int<0x2F, VR128X, X86comi, v2f64, sdmem,
+                          sse_load_f64, "comisd", SSE_COMIS>, PD, EVEX,
+                          VEX_LIG, VEX_W, EVEX_CD8<64, CD8VT1>;
   }
 }
 
@@ -8740,7 +8740,7 @@ defm VSCATTERPF1QPD: avx512_gather_scatter_prefetch<0xC7, MRM6m, "vscatterpf1qpd
 multiclass cvt_by_vec_width<bits<8> opc, X86VectorVTInfo Vec, string OpcodeStr > {
 def rr : AVX512XS8I<opc, MRMSrcReg, (outs Vec.RC:$dst), (ins Vec.KRC:$src),
                   !strconcat(OpcodeStr##Vec.Suffix, "\t{$src, $dst|$dst, $src}"),
-                  [(set Vec.RC:$dst, (Vec.VT (X86vsext Vec.KRC:$src)))],
+                  [(set Vec.RC:$dst, (Vec.VT (sext Vec.KRC:$src)))],
                   IIC_SSE_MOV_S_RR>, EVEX, Sched<[WriteMove]>;
 }
 
@@ -8805,6 +8805,16 @@ defm VPMOVD2M : avx512_convert_vector_to_mask<0x39, "vpmovd2m",
                                               avx512vl_i32_info, HasDQI>;
 defm VPMOVQ2M : avx512_convert_vector_to_mask<0x39, "vpmovq2m",
                                               avx512vl_i64_info, HasDQI>, VEX_W;
+
+// Patterns for handling sext from a mask register to v16i8/v16i16 when DQI
+// is available, but BWI is not. We can't handle this in lowering because
+// a target independent DAG combine likes to combine sext and trunc.
+let Predicates = [HasDQI, NoBWI] in {
+  def : Pat<(v16i8 (sext (v16i1 VK16:$src))),
+            (VPMOVDBZrr (v16i32 (VPMOVM2DZrr VK16:$src)))>;
+  def : Pat<(v16i16 (sext (v16i1 VK16:$src))),
+            (VPMOVDWZrr (v16i32 (VPMOVM2DZrr VK16:$src)))>;
+}
 
 //===----------------------------------------------------------------------===//
 // AVX-512 - COMPRESS and EXPAND
