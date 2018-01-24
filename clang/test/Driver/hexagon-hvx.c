@@ -65,7 +65,7 @@
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXEQ %s
 // CHECK-HVXEQ: "-target-feature" "+hvxv62"
 
-// Honor the last occured -mhvx=, -mhvx flag.
+// Honor the last occurred -mhvx=, -mhvx flag.
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv60 -mhvx=v62 -mhvx\
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXEQ-PRE %s
 // CHECK-HVXEQ-PRE-NOT: "-target-feature" "+hvxv62"

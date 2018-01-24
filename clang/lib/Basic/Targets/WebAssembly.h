@@ -45,6 +45,7 @@ public:
     SigAtomicType = SignedLong;
     LongDoubleWidth = LongDoubleAlign = 128;
     LongDoubleFormat = &llvm::APFloat::IEEEquad();
+    MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
     SizeType = UnsignedInt;
     PtrDiffType = SignedInt;
     IntPtrType = SignedInt;
@@ -118,7 +119,6 @@ public:
   explicit WebAssembly32TargetInfo(const llvm::Triple &T,
                                    const TargetOptions &Opts)
       : WebAssemblyTargetInfo(T, Opts) {
-    MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
     resetDataLayout("e-m:e-p:32:32-i64:64-n32:64-S128");
   }
 
@@ -135,7 +135,6 @@ public:
       : WebAssemblyTargetInfo(T, Opts) {
     LongAlign = LongWidth = 64;
     PointerAlign = PointerWidth = 64;
-    MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
     SizeType = UnsignedLong;
     PtrDiffType = SignedLong;
     IntPtrType = SignedLong;

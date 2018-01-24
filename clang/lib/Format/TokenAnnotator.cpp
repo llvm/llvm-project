@@ -1516,7 +1516,7 @@ public:
                    AnnotatedLine &Line)
       : Style(Style), Keywords(Keywords), Current(Line.First) {}
 
-  /// \brief Parse expressions with the given operatore precedence.
+  /// \brief Parse expressions with the given operator precedence.
   void parse(int Precedence = 0) {
     // Skip 'return' and ObjC selector colons as they are not part of a binary
     // expression.

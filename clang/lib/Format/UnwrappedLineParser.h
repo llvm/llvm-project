@@ -119,7 +119,7 @@ private:
   void parseObjCProtocolList();
   void parseObjCUntilAtEnd();
   void parseObjCInterfaceOrImplementation();
-  void parseObjCProtocol();
+  bool parseObjCProtocol();
   void parseJavaScriptEs6ImportExport();
   bool tryToParseLambda();
   bool tryToParseLambdaIntroducer();

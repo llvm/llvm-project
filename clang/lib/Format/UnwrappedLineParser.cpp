@@ -333,7 +333,19 @@ void UnwrappedLineParser::parseLevel(bool HasOpeningBrace) {
       nextToken();
       addUnwrappedLine();
       break;
-    case tok::kw_default:
+    case tok::kw_default: {
+      unsigned StoredPosition = Tokens->getPosition();
+      FormatToken *Next = Tokens->getNextToken();
+      FormatTok = Tokens->setPosition(StoredPosition);
+      if (Next && Next->isNot(tok::colon)) {
+        // default not followed by ':' is not a case label; treat it like
+        // an identifier.
+        parseStructuralElement();
+        break;
+      }
+      // Else, if it is 'default:', fall through to the case handling.
+      LLVM_FALLTHROUGH;
+    }
     case tok::kw_case:
       if (Style.Language == FormatStyle::LK_JavaScript &&
           Line->MustBeDeclaration) {
@@ -932,49 +944,6 @@ void UnwrappedLineParser::parseStructuralElement() {
     return;
   }
   switch (FormatTok->Tok.getKind()) {
-  case tok::at:
-    nextToken();
-    if (FormatTok->Tok.is(tok::l_brace)) {
-      nextToken();
-      parseBracedList();
-      break;
-    }
-    switch (FormatTok->Tok.getObjCKeywordID()) {
-    case tok::objc_public:
-    case tok::objc_protected:
-    case tok::objc_package:
-    case tok::objc_private:
-      return parseAccessSpecifier();
-    case tok::objc_interface:
-    case tok::objc_implementation:
-      return parseObjCInterfaceOrImplementation();
-    case tok::objc_protocol:
-      return parseObjCProtocol();
-    case tok::objc_end:
-      return; // Handled by the caller.
-    case tok::objc_optional:
-    case tok::objc_required:
-      nextToken();
-      addUnwrappedLine();
-      return;
-    case tok::objc_autoreleasepool:
-      nextToken();
-      if (FormatTok->Tok.is(tok::l_brace)) {
-        if (Style.BraceWrapping.AfterObjCDeclaration)
-          addUnwrappedLine();
-        parseBlock(/*MustBeDeclaration=*/false);
-      }
-      addUnwrappedLine();
-      return;
-    case tok::objc_try:
-      // This branch isn't strictly necessary (the kw_try case below would
-      // do this too after the tok::at is parsed above).  But be explicit.
-      parseTryCatch();
-      return;
-    default:
-      break;
-    }
-    break;
   case tok::kw_asm:
     nextToken();
     if (FormatTok->is(tok::l_brace)) {
@@ -1032,8 +1001,12 @@ void UnwrappedLineParser::parseStructuralElement() {
       // 'default: string' field declaration.
       break;
     nextToken();
-    parseLabel();
-    return;
+    if (FormatTok->is(tok::colon)) {
+      parseLabel();
+      return;
+    }
+    // e.g. "default void f() {}" in a Java interface.
+    break;
   case tok::kw_case:
     if (Style.Language == FormatStyle::LK_JavaScript && Line->MustBeDeclaration)
       // 'case: string' field declaration.
@@ -1117,6 +1090,44 @@ void UnwrappedLineParser::parseStructuralElement() {
       if (FormatTok->Tok.is(tok::l_brace)) {
         nextToken();
         parseBracedList();
+        break;
+      }
+      switch (FormatTok->Tok.getObjCKeywordID()) {
+      case tok::objc_public:
+      case tok::objc_protected:
+      case tok::objc_package:
+      case tok::objc_private:
+        return parseAccessSpecifier();
+      case tok::objc_interface:
+      case tok::objc_implementation:
+        return parseObjCInterfaceOrImplementation();
+      case tok::objc_protocol:
+        if (parseObjCProtocol())
+          return;
+        break;
+      case tok::objc_end:
+        return; // Handled by the caller.
+      case tok::objc_optional:
+      case tok::objc_required:
+        nextToken();
+        addUnwrappedLine();
+        return;
+      case tok::objc_autoreleasepool:
+        nextToken();
+        if (FormatTok->Tok.is(tok::l_brace)) {
+          if (Style.BraceWrapping.AfterObjCDeclaration)
+            addUnwrappedLine();
+          parseBlock(/*MustBeDeclaration=*/false);
+        }
+        addUnwrappedLine();
+        return;
+      case tok::objc_try:
+        // This branch isn't strictly necessary (the kw_try case below would
+        // do this too after the tok::at is parsed above).  But be explicit.
+        parseTryCatch();
+        return;
+      default:
+        break;
       }
       break;
     case tok::kw_enum:
@@ -2113,6 +2124,8 @@ void UnwrappedLineParser::parseObjCUntilAtEnd() {
 }
 
 void UnwrappedLineParser::parseObjCInterfaceOrImplementation() {
+  assert(FormatTok->Tok.getObjCKeywordID() == tok::objc_interface ||
+         FormatTok->Tok.getObjCKeywordID() == tok::objc_implementation);
   nextToken();
   nextToken(); // interface name
 
@@ -2140,8 +2153,21 @@ void UnwrappedLineParser::parseObjCInterfaceOrImplementation() {
   parseObjCUntilAtEnd();
 }
 
-void UnwrappedLineParser::parseObjCProtocol() {
+// Returns true for the declaration/definition form of @protocol,
+// false for the expression form.
+bool UnwrappedLineParser::parseObjCProtocol() {
+  assert(FormatTok->Tok.getObjCKeywordID() == tok::objc_protocol);
   nextToken();
+
+  if (FormatTok->is(tok::l_paren))
+    // The expression form of @protocol, e.g. "Protocol* p = @protocol(foo);".
+    return false;
+
+  // The definition/declaration form,
+  // @protocol Foo
+  // - (int)someMethod;
+  // @end
+
   nextToken(); // protocol name
 
   if (FormatTok->Tok.is(tok::less))
@@ -2150,11 +2176,13 @@ void UnwrappedLineParser::parseObjCProtocol() {
   // Check for protocol declaration.
   if (FormatTok->Tok.is(tok::semi)) {
     nextToken();
-    return addUnwrappedLine();
+    addUnwrappedLine();
+    return true;
   }
 
   addUnwrappedLine();
   parseObjCUntilAtEnd();
+  return true;
 }
 
 void UnwrappedLineParser::parseJavaScriptEs6ImportExport() {

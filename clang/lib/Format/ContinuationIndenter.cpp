@@ -1576,9 +1576,16 @@ std::unique_ptr<BreakableToken> ContinuationIndenter::createBreakableToken(
           Text.startswith(Prefix = "u8\"") ||
           Text.startswith(Prefix = "L\""))) ||
         (Text.startswith(Prefix = "_T(\"") && Text.endswith(Postfix = "\")"))) {
+      // We need this to address the case where there is an unbreakable tail
+      // only if certain other formatting decisions have been taken. The
+      // UnbreakableTailLength of Current is an overapproximation is that case
+      // and we need to be correct here.
+      unsigned UnbreakableTailLength = (State.NextToken && canBreak(State))
+                                           ? 0
+                                           : Current.UnbreakableTailLength;
       return llvm::make_unique<BreakableStringLiteral>(
-          Current, StartColumn, Prefix, Postfix, State.Line->InPPDirective,
-          Encoding, Style);
+          Current, StartColumn, Prefix, Postfix, UnbreakableTailLength,
+          State.Line->InPPDirective, Encoding, Style);
     }
   } else if (Current.is(TT_BlockComment)) {
     if (!Style.ReflowComments ||
