@@ -140,7 +140,7 @@ void ScopBuilder::buildPHIAccesses(ScopStmt *PHIStmt, PHINode *PHI,
   for (unsigned u = 0; u < PHI->getNumIncomingValues(); u++) {
     Value *Op = PHI->getIncomingValue(u);
     BasicBlock *OpBB = PHI->getIncomingBlock(u);
-    ScopStmt *OpStmt = scop->getLastStmtFor(OpBB);
+    ScopStmt *OpStmt = scop->getIncomingStmtFor(PHI->getOperandUse(u));
 
     // Do not build PHI dependences inside a non-affine subregion, but make
     // sure that the necessary scalar values are still made available.
@@ -696,13 +696,16 @@ bool ScopBuilder::shouldModelInst(Instruction *Inst, Loop *L) {
 /// @param Count  The index of the created statement in @p BB.
 /// @param IsMain Whether this is the main of all statement for @p BB. If true,
 ///               no suffix will be added.
+/// @param IsLast Uses a special indicator for the last statement of a BB.
 static std::string makeStmtName(BasicBlock *BB, long BBIdx, int Count,
-                                bool IsMain) {
+                                bool IsMain, bool IsLast = false) {
   std::string Suffix;
   if (!IsMain) {
     if (UseInstructionNames)
       Suffix = '_';
-    if (Count < 26)
+    if (IsLast)
+      Suffix += "last";
+    else if (Count < 26)
       Suffix += 'a' + Count;
     else
       Suffix += std::to_string(Count);
@@ -773,32 +776,6 @@ static void joinOperandTree(EquivalenceClasses<Instruction *> &UnionFind,
   }
 }
 
-/// Join instructions that are used as incoming value in successor PHIs into the
-/// epilogue.
-static void
-joinIncomingPHIValuesIntoEpilogue(EquivalenceClasses<Instruction *> &UnionFind,
-                                  ArrayRef<Instruction *> ModeledInsts,
-                                  BasicBlock *BB) {
-  for (BasicBlock *Succ : successors(BB)) {
-    for (Instruction &SuccInst : *Succ) {
-      PHINode *SuccPHI = dyn_cast<PHINode>(&SuccInst);
-      if (!SuccPHI)
-        break;
-
-      Value *IncomingVal = SuccPHI->getIncomingValueForBlock(BB);
-      Instruction *IncomingInst = dyn_cast<Instruction>(IncomingVal);
-      if (!IncomingInst)
-        continue;
-      if (IncomingInst->getParent() != BB)
-        continue;
-      if (UnionFind.findValue(IncomingInst) == UnionFind.end())
-        continue;
-
-      UnionFind.unionSets(nullptr, IncomingInst);
-    }
-  }
-}
-
 /// Ensure that the order of ordered instructions does not change.
 ///
 /// If we encounter an ordered instruction enclosed in instructions belonging to
@@ -832,29 +809,6 @@ joinOrderedInstructions(EquivalenceClasses<Instruction *> &UnionFind,
   }
 }
 
-/// Also ensure that the epilogue is the last statement relative to all ordered
-/// instructions.
-///
-/// This is basically joinOrderedInstructions() but using the epilogue as
-/// 'ordered instruction'.
-static void joinAllAfterEpilogue(EquivalenceClasses<Instruction *> &UnionFind,
-                                 ArrayRef<Instruction *> ModeledInsts) {
-  bool EpilogueSeen = false;
-  for (Instruction *Inst : ModeledInsts) {
-    auto PHIWritesLeader = UnionFind.findLeader(nullptr);
-    auto InstLeader = UnionFind.findLeader(Inst);
-
-    if (PHIWritesLeader == InstLeader)
-      EpilogueSeen = true;
-
-    if (!isOrderedInstruction(Inst))
-      continue;
-
-    if (EpilogueSeen)
-      UnionFind.unionSets(PHIWritesLeader, InstLeader);
-  }
-}
-
 void ScopBuilder::buildEqivClassBlockStmts(BasicBlock *BB) {
   Loop *L = LI.getLoopFor(BB);
 
@@ -879,28 +833,14 @@ void ScopBuilder::buildEqivClassBlockStmts(BasicBlock *BB) {
       MainInst = &Inst;
   }
 
-  // 'nullptr' represents the last statement for a basic block. It contains no
-  // instructions, but holds the PHI write accesses for successor basic blocks.
-  // If a PHI has an incoming value defined in this BB, it can also be merged
-  // with other statements.
-  // TODO: We wouldn't need this if we would add PHIWrites into the statement
-  // that defines the incoming value (if in the BB) instead of always the last,
-  // so we could unconditionally always add a last statement.
-  UnionFind.insert(nullptr);
-
   joinOperandTree(UnionFind, ModeledInsts);
-  joinIncomingPHIValuesIntoEpilogue(UnionFind, ModeledInsts, BB);
   joinOrderedInstructions(UnionFind, ModeledInsts);
-  joinAllAfterEpilogue(UnionFind, ModeledInsts);
 
   // The list of instructions for statement (statement represented by the leader
   // instruction). The order of statements instructions is reversed such that
   // the epilogue is first. This makes it easier to ensure that the epilogue is
   // the last statement.
   MapVector<Instruction *, std::vector<Instruction *>> LeaderToInstList;
-
-  // Ensure that the epilogue is last.
-  LeaderToInstList[nullptr];
 
   // Collect the instructions of all leaders. UnionFind's member iterator
   // unfortunately are not in any specific order.
@@ -932,6 +872,13 @@ void ScopBuilder::buildEqivClassBlockStmts(BasicBlock *BB) {
     scop->addScopStmt(BB, Name, L, std::move(InstList));
     Count += 1;
   }
+
+  // Unconditionally add an epilogue (last statement). It contains no
+  // instructions, but holds the PHI write accesses for successor basic blocks,
+  // if the incoming value is not defined in another statement if the same BB.
+  // The epilogue will be removed if no PHIWrite is added to it.
+  std::string EpilogueName = makeStmtName(BB, BBIdx, Count, false, true);
+  scop->addScopStmt(BB, EpilogueName, L, {});
 }
 
 void ScopBuilder::buildStmts(Region &SR) {

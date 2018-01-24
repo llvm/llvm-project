@@ -1,6 +1,8 @@
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %s -o %t.o
+; RUN: llc -filetype=obj %s -o %t.o
 ; RUN: lld -flavor wasm --relocatable -o %t.wasm %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
+
+target triple = "wasm32-unknown-unknown-wasm"
 
 ; Function Attrs: nounwind
 define i32 @_start() local_unnamed_addr {
@@ -19,7 +21,7 @@ entry:
 ; CHECK-NEXT:         ReturnType:      I32
 ; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:   - Type:            IMPORT
-; CHECK-NEXT:     Imports:         
+; CHECK-NEXT:     Imports:
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           __stack_pointer
 ; CHECK-NEXT:         Kind:            GLOBAL
@@ -38,7 +40,7 @@ entry:
 ; CHECK-NEXT:     Memories:
 ; CHECK-NEXT:       - Initial:         0x00000000
 ; CHECK-NEXT:   - Type:            EXPORT
-; CHECK-NEXT:     Exports:         
+; CHECK-NEXT:     Exports:
 ; CHECK-NEXT:       - Name:            _start
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           0

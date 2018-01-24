@@ -1,12 +1,14 @@
 ; Verify that the -u / --undefined option is able to pull in symbols from
 ; an archive, and doesn't error when uses to pull in a symbol already loaded.
 ;
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %S/Inputs/ret64.ll -o %t.o
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %S/Inputs/ret32.ll -o %t2.o
-; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown-wasm %s -o %t3.o
+; RUN: llc -filetype=obj %S/Inputs/ret64.ll -o %t.o
+; RUN: llc -filetype=obj %S/Inputs/ret32.ll -o %t2.o
+; RUN: llc -filetype=obj %s -o %t3.o
 ; RUN: llvm-ar rcs %t2.a %t2.o
 ; RUN: lld -flavor wasm %t3.o %t2.a %t.o -o %t.wasm -u ret32 --undefined ret64
 ; RUN: obj2yaml %t.wasm | FileCheck %s
+
+target triple = "wasm32-unknown-unknown-wasm"
 
 define i32 @_start() local_unnamed_addr {
 entry:

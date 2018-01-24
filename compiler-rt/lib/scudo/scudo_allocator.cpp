@@ -430,7 +430,8 @@ struct ScudoAllocator {
     }
     void *Ptr = reinterpret_cast<void *>(UserPtr);
     Chunk::storeHeader(Ptr, &Header);
-    // if (&__sanitizer_malloc_hook) __sanitizer_malloc_hook(Ptr, Size);
+    if (SCUDO_CAN_USE_HOOKS && &__sanitizer_malloc_hook)
+      __sanitizer_malloc_hook(Ptr, Size);
     return Ptr;
   }
 
@@ -480,7 +481,8 @@ struct ScudoAllocator {
     // the TLS destructors, ending up in initialized thread specific data never
     // being destroyed properly. Any other heap operation will do a full init.
     initThreadMaybe(/*MinimalInit=*/true);
-    // if (&__sanitizer_free_hook) __sanitizer_free_hook(Ptr);
+    if (SCUDO_CAN_USE_HOOKS && &__sanitizer_free_hook)
+      __sanitizer_free_hook(Ptr);
     if (UNLIKELY(!Ptr))
       return;
     if (UNLIKELY(!Chunk::isAligned(Ptr))) {

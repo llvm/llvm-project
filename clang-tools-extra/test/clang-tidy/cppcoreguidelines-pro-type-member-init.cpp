@@ -474,6 +474,7 @@ struct PositiveBitfieldMember {
   PositiveBitfieldMember() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: constructor does not initialize these fields: F
   unsigned F : 5;
+  // CHECK-FIXES-NOT: unsigned F : 5{};
 };
 
 struct NegativeUnnamedBitfieldMember {

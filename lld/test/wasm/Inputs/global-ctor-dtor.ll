@@ -1,3 +1,5 @@
+target triple = "wasm32-unknown-unknown-wasm"
+
 define hidden void @myctor() {
 entry:
   ret void
