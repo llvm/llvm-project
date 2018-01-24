@@ -173,16 +173,9 @@ class __tuple_leaf
 
     template <class _Tp>
     static constexpr bool __can_bind_reference() {
-        using _RawTp = typename remove_reference<_Tp>::type;
-        using _RawHp = typename remove_reference<_Hp>::type;
-        using _CheckLValueArg = integral_constant<bool,
-            is_lvalue_reference<_Tp>::value
-        ||  is_same<_RawTp, reference_wrapper<_RawHp>>::value
-        ||  is_same<_RawTp, reference_wrapper<typename remove_const<_RawHp>::type>>::value
-        >;
-        return  !is_reference<_Hp>::value
-            || (is_lvalue_reference<_Hp>::value && _CheckLValueArg::value)
-            || (is_rvalue_reference<_Hp>::value && !is_lvalue_reference<_Tp>::value);
+#if __has_keyword(__reference_binds_to_temporary)
+      return !__reference_binds_to_temporary(_Hp, _Tp);
+#endif
     }
 
     __tuple_leaf& operator=(const __tuple_leaf&);
@@ -224,15 +217,15 @@ public:
         _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
         explicit __tuple_leaf(_Tp&& __t) _NOEXCEPT_((is_nothrow_constructible<_Hp, _Tp>::value))
             : __value_(_VSTD::forward<_Tp>(__t))
-        {static_assert(__can_bind_reference<_Tp>(),
-       "Attempted to construct a reference element in a tuple with an rvalue");}
+        {static_assert(__can_bind_reference<_Tp&&>(),
+       "Attempted construction of reference element binds to a temporary whose lifetime has ended");}
 
     template <class _Tp, class _Alloc>
         _LIBCPP_INLINE_VISIBILITY
         explicit __tuple_leaf(integral_constant<int, 0>, const _Alloc&, _Tp&& __t)
             : __value_(_VSTD::forward<_Tp>(__t))
-        {static_assert(__can_bind_reference<_Tp>(),
-       "Attempted to construct a reference element in a tuple with an rvalue");}
+        {static_assert(__can_bind_reference<_Tp&&>(),
+       "Attempted construction of reference element binds to a temporary whose lifetime has ended");}
 
     template <class _Tp, class _Alloc>
         _LIBCPP_INLINE_VISIBILITY
