@@ -85,11 +85,6 @@ def ROUND_W_MM : MMRel, StdMMR6Rel, ABSS_FT<"round.w.d", FGR32Opnd, AFGR64Opnd,
                  ISA_MICROMIPS, FGR_32;
 def TRUNC_W_MM : MMRel, ABSS_FT<"trunc.w.d", FGR32Opnd, AFGR64Opnd, II_TRUNC>,
                  ROUND_W_FM_MM<1, 0xac>, ISA_MICROMIPS, FGR_32;
-
-def FSQRT_MM : MMRel, ABSS_FT<"sqrt.d", AFGR64Opnd, AFGR64Opnd, II_SQRT_D,
-                              fsqrt>, ROUND_W_FM_MM<1, 0x28>,
-               ISA_MICROMIPS, FGR_32;
-
 def CVT_L_S_MM   : MMRel, ABSS_FT<"cvt.l.s", FGR64Opnd, FGR32Opnd, II_CVT>,
                    ROUND_W_FM_MM<0, 0x4>, ISA_MICROMIPS, FGR_64;
 def CVT_L_D64_MM : MMRel, ABSS_FT<"cvt.l.d", FGR64Opnd, FGR64Opnd, II_CVT>,
@@ -97,11 +92,25 @@ def CVT_L_D64_MM : MMRel, ABSS_FT<"cvt.l.d", FGR64Opnd, FGR64Opnd, II_CVT>,
 
 }
 
+multiclass ABSS_MMM<string opstr, InstrItinClass Itin,
+                    SDPatternOperator OpNode = null_frag> {
+  def _D32_MM : MMRel, ABSS_FT<opstr, AFGR64Opnd, AFGR64Opnd, Itin, OpNode>,
+                ISA_MICROMIPS, FGR_32 {
+    string DecoderNamespace = "MicroMips";
+  }
+  // FIXME: This needs to be part of the instruction mapping tables.
+  def _D64_MM : ABSS_FT<opstr, FGR64Opnd, FGR64Opnd, Itin, OpNode>,
+                ISA_MICROMIPS, FGR_64 {
+    string DecoderNamespace = "MicroMipsFP64";
+  }
+}
+
+defm FSQRT : ABSS_MMM<"sqrt.d", II_SQRT_D, fsqrt>, ROUND_W_FM_MM<1, 0x28>;
+defm FABS : ABSS_MMM<"abs.d", II_SQRT_D, fabs>, ABS_FM_MM<1, 0xd>;
+
 let DecoderNamespace = "MicroMips" in {
   def FABS_S_MM : MMRel, ABSS_FT<"abs.s", FGR32Opnd, FGR32Opnd, II_ABS, fabs>,
                   ABS_FM_MM<0, 0xd>, ISA_MICROMIPS;
-  def FABS_MM : MMRel, ABSS_FT<"abs.d", AFGR64Opnd, AFGR64Opnd, II_ABS, fabs>,
-                ABS_FM_MM<1, 0xd>, ISA_MICROMIPS, FGR_32;
 }
 
 let isCodeGenOnly = 1 in {
@@ -184,7 +193,9 @@ def TRUNC_W_S_MM : MMRel, StdMMR6Rel, ABSS_FT<"trunc.w.s", FGR32Opnd,
 def CEIL_W_S_MM  : MMRel, ABSS_FT<"ceil.w.s", FGR32Opnd, FGR32Opnd, II_CEIL>,
                    ROUND_W_FM_MM<0, 0x6c>, ISA_MICROMIPS;
 def FSQRT_S_MM : MMRel, ABSS_FT<"sqrt.s", FGR32Opnd, FGR32Opnd, II_SQRT_S,
-                                fsqrt>, ROUND_W_FM_MM<0, 0x28>, ISA_MICROMIPS;
+                                fsqrt>, ROUND_W_FM_MM<0, 0x28>, ISA_MICROMIPS {
+  string DecoderNamespace = "MicroMips";
+}
 def MTHC1_MM : MMRel, MTC1_64_FT<"mthc1", AFGR64Opnd, GPR32Opnd, II_MTHC1>,
                MFC1_FM_MM<0xe0>, ISA_MICROMIPS, FGR_32;
 def MFHC1_MM : MMRel, MFC1_FT<"mfhc1", GPR32Opnd, AFGR64Opnd, II_MFHC1>,

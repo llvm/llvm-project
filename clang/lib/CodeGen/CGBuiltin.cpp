@@ -10495,6 +10495,21 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
 Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
                                                    const CallExpr *E) {
   switch (BuiltinID) {
+  case WebAssembly::BI__builtin_wasm_mem_size: {
+    llvm::Type *ResultType = ConvertType(E->getType());
+    Value *I = EmitScalarExpr(E->getArg(0));
+    Value *Callee = CGM.getIntrinsic(Intrinsic::wasm_mem_size, ResultType);
+    return Builder.CreateCall(Callee, I);
+  }
+  case WebAssembly::BI__builtin_wasm_mem_grow: {
+    llvm::Type *ResultType = ConvertType(E->getType());
+    Value *Args[] = {
+      EmitScalarExpr(E->getArg(0)),
+      EmitScalarExpr(E->getArg(1))
+    };
+    Value *Callee = CGM.getIntrinsic(Intrinsic::wasm_mem_grow, ResultType);
+    return Builder.CreateCall(Callee, Args);
+  }
   case WebAssembly::BI__builtin_wasm_current_memory: {
     llvm::Type *ResultType = ConvertType(E->getType());
     Value *Callee = CGM.getIntrinsic(Intrinsic::wasm_current_memory, ResultType);

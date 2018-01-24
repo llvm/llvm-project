@@ -32,7 +32,7 @@ define i64 @test_ret_i64() {
 define i8 @test_arg_i8(i8 %a) {
 ; X32-LABEL: test_arg_i8:
 ; X32:       # %bb.0:
-; X32-NEXT:    movb 4(%esp), %al
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_arg_i8:
@@ -45,7 +45,7 @@ define i8 @test_arg_i8(i8 %a) {
 define i16 @test_arg_i16(i16 %a) {
 ; X32-LABEL: test_arg_i16:
 ; X32:       # %bb.0:
-; X32-NEXT:    movzwl 4(%esp), %eax
+; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_arg_i16:
@@ -58,7 +58,7 @@ define i16 @test_arg_i16(i16 %a) {
 define i32 @test_arg_i32(i32 %a) {
 ; X32-LABEL: test_arg_i32:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl 4(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_arg_i32:
@@ -71,8 +71,8 @@ define i32 @test_arg_i32(i32 %a) {
 define i64 @test_arg_i64(i64 %a) {
 ; X32-LABEL: test_arg_i64:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl 4(%esp), %eax
-; X32-NEXT:    movl 8(%esp), %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_arg_i64:
@@ -85,13 +85,13 @@ define i64 @test_arg_i64(i64 %a) {
 define i64 @test_i64_args_8(i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4, i64 %arg5, i64 %arg6, i64 %arg7, i64 %arg8) {
 ; X32-LABEL: test_i64_args_8:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl 60(%esp), %eax
-; X32-NEXT:    movl 64(%esp), %edx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_i64_args_8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq 16(%rsp), %rax
+; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    retq
   ret i64 %arg8
 }
@@ -114,7 +114,7 @@ define <8 x i32> @test_v8i32_args(<8 x i32> %arg1, <8 x i32> %arg2) {
 ; X32:       # %bb.0:
 ; X32-NEXT:    subl $12, %esp
 ; X32-NEXT:    .cfi_def_cfa_offset 16
-; X32-NEXT:    movups 16(%esp), %xmm1
+; X32-NEXT:    movups {{[0-9]+}}(%esp), %xmm1
 ; X32-NEXT:    movaps %xmm2, %xmm0
 ; X32-NEXT:    addl $12, %esp
 ; X32-NEXT:    retl
@@ -154,10 +154,10 @@ define void @test_simple_arg_call(i32 %in0, i32 %in1) {
 ; X32:       # %bb.0:
 ; X32-NEXT:    subl $12, %esp
 ; X32-NEXT:    .cfi_def_cfa_offset 16
-; X32-NEXT:    movl 16(%esp), %eax
-; X32-NEXT:    movl 20(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl %ecx, (%esp)
-; X32-NEXT:    movl %eax, 4(%esp)
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X32-NEXT:    calll simple_arg_callee
 ; X32-NEXT:    addl $12, %esp
 ; X32-NEXT:    retl
@@ -182,15 +182,15 @@ define void @test_simple_arg8_call(i32 %in0) {
 ; X32:       # %bb.0:
 ; X32-NEXT:    subl $44, %esp
 ; X32-NEXT:    .cfi_def_cfa_offset 48
-; X32-NEXT:    movl 48(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl %eax, (%esp)
-; X32-NEXT:    movl %eax, 4(%esp)
-; X32-NEXT:    movl %eax, 8(%esp)
-; X32-NEXT:    movl %eax, 12(%esp)
-; X32-NEXT:    movl %eax, 16(%esp)
-; X32-NEXT:    movl %eax, 20(%esp)
-; X32-NEXT:    movl %eax, 24(%esp)
-; X32-NEXT:    movl %eax, 28(%esp)
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X32-NEXT:    calll simple_arg8_callee
 ; X32-NEXT:    addl $44, %esp
 ; X32-NEXT:    retl
@@ -200,7 +200,7 @@ define void @test_simple_arg8_call(i32 %in0) {
 ; X64-NEXT:    subq $24, %rsp
 ; X64-NEXT:    .cfi_def_cfa_offset 32
 ; X64-NEXT:    movl %edi, (%rsp)
-; X64-NEXT:    movl %edi, 8(%rsp)
+; X64-NEXT:    movl %edi, {{[0-9]+}}(%rsp)
 ; X64-NEXT:    movl %edi, %esi
 ; X64-NEXT:    movl %edi, %edx
 ; X64-NEXT:    movl %edi, %ecx
@@ -247,12 +247,12 @@ define <8 x i32> @test_split_return_callee(<8 x i32> %arg1, <8 x i32> %arg2) {
 ; X32-NEXT:    subl $44, %esp
 ; X32-NEXT:    .cfi_def_cfa_offset 48
 ; X32-NEXT:    movaps %xmm0, (%esp) # 16-byte Spill
-; X32-NEXT:    movaps %xmm1, 16(%esp) # 16-byte Spill
-; X32-NEXT:    movdqu 48(%esp), %xmm1
+; X32-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp) # 16-byte Spill
+; X32-NEXT:    movdqu {{[0-9]+}}(%esp), %xmm1
 ; X32-NEXT:    movdqa %xmm2, %xmm0
 ; X32-NEXT:    calll split_return_callee
 ; X32-NEXT:    paddd (%esp), %xmm0 # 16-byte Folded Reload
-; X32-NEXT:    paddd 16(%esp), %xmm1 # 16-byte Folded Reload
+; X32-NEXT:    paddd {{[0-9]+}}(%esp), %xmm1 # 16-byte Folded Reload
 ; X32-NEXT:    addl $44, %esp
 ; X32-NEXT:    retl
 ;
@@ -261,12 +261,12 @@ define <8 x i32> @test_split_return_callee(<8 x i32> %arg1, <8 x i32> %arg2) {
 ; X64-NEXT:    subq $40, %rsp
 ; X64-NEXT:    .cfi_def_cfa_offset 48
 ; X64-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; X64-NEXT:    movaps %xmm1, 16(%rsp) # 16-byte Spill
+; X64-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp) # 16-byte Spill
 ; X64-NEXT:    movdqa %xmm2, %xmm0
 ; X64-NEXT:    movdqa %xmm3, %xmm1
 ; X64-NEXT:    callq split_return_callee
 ; X64-NEXT:    paddd (%rsp), %xmm0 # 16-byte Folded Reload
-; X64-NEXT:    paddd 16(%rsp), %xmm1 # 16-byte Folded Reload
+; X64-NEXT:    paddd {{[0-9]+}}(%rsp), %xmm1 # 16-byte Folded Reload
 ; X64-NEXT:    addq $40, %rsp
 ; X64-NEXT:    retq
   %call = call <8 x i32> @split_return_callee(<8 x i32> %arg2)
@@ -279,7 +279,7 @@ define void @test_indirect_call(void()* %func) {
 ; X32:       # %bb.0:
 ; X32-NEXT:    subl $12, %esp
 ; X32-NEXT:    .cfi_def_cfa_offset 16
-; X32-NEXT:    calll *16(%esp)
+; X32-NEXT:    calll *{{[0-9]+}}(%esp)
 ; X32-NEXT:    addl $12, %esp
 ; X32-NEXT:    retl
 ;
@@ -306,7 +306,7 @@ define void @test_abi_exts_call(i8* %addr) {
 ; X32-NEXT:    .cfi_def_cfa_offset 16
 ; X32-NEXT:    .cfi_offset %esi, -12
 ; X32-NEXT:    .cfi_offset %ebx, -8
-; X32-NEXT:    movl 16(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movb (%eax), %bl
 ; X32-NEXT:    movzbl %bl, %esi
 ; X32-NEXT:    movl %esi, (%esp)
@@ -349,12 +349,12 @@ define void @test_variadic_call_1(i8** %addr_ptr, i32* %val_ptr) {
 ; X32:       # %bb.0:
 ; X32-NEXT:    subl $12, %esp
 ; X32-NEXT:    .cfi_def_cfa_offset 16
-; X32-NEXT:    movl 16(%esp), %eax
-; X32-NEXT:    movl 20(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl (%eax), %eax
 ; X32-NEXT:    movl (%ecx), %ecx
 ; X32-NEXT:    movl %eax, (%esp)
-; X32-NEXT:    movl %ecx, 4(%esp)
+; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X32-NEXT:    calll variadic_callee
 ; X32-NEXT:    addl $12, %esp
 ; X32-NEXT:    retl
@@ -381,15 +381,15 @@ define void @test_variadic_call_2(i8** %addr_ptr, double* %val_ptr) {
 ; X32:       # %bb.0:
 ; X32-NEXT:    subl $12, %esp
 ; X32-NEXT:    .cfi_def_cfa_offset 16
-; X32-NEXT:    movl 16(%esp), %eax
-; X32-NEXT:    movl 20(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl (%eax), %eax
 ; X32-NEXT:    movl (%ecx), %edx
 ; X32-NEXT:    movl 4(%ecx), %ecx
 ; X32-NEXT:    movl %eax, (%esp)
 ; X32-NEXT:    movl $4, %eax
 ; X32-NEXT:    leal (%esp,%eax), %eax
-; X32-NEXT:    movl %edx, 4(%esp)
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl %ecx, 4(%eax)
 ; X32-NEXT:    calll variadic_callee
 ; X32-NEXT:    addl $12, %esp

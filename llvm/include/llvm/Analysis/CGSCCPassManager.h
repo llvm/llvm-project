@@ -397,7 +397,7 @@ public:
         DEBUG(dbgs() << "Running an SCC pass across the RefSCC: " << *RC
                      << "\n");
 
-        // Push the initial SCCs in reverse post-order as we'll pop off the the
+        // Push the initial SCCs in reverse post-order as we'll pop off the
         // back and so see this in post-order.
         for (LazyCallGraph::SCC &C : llvm::reverse(*RC))
           CWorklist.insert(&C);

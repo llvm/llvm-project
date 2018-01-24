@@ -24,11 +24,6 @@ entry:
 
 
 ; CHECK:        - Type:            CUSTOM
-; CHECK-NEXT:     Name:            name
-; CHECK-NEXT:     FunctionNames:   
-; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         Name:            weak_function
-; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
 ; CHECK-NEXT:     DataSize:        0
 ; CHECK-NEXT:     SymbolInfo:      

@@ -391,7 +391,7 @@ public:
   /// Access to memory operands of the instruction
   mmo_iterator memoperands_begin() const { return MemRefs; }
   mmo_iterator memoperands_end() const { return MemRefs + NumMemRefs; }
-  /// Return true if we don't have any memory operands which described the the
+  /// Return true if we don't have any memory operands which described the
   /// memory access done by this instruction.  If this is true, calling code
   /// must be conservative.
   bool memoperands_empty() const { return NumMemRefs == 0; }

@@ -94,17 +94,6 @@ define linkonce_odr i32 @sharedFn() #1 comdat($sharedComdat) {
 ; CHECK-NEXT:          Value:           0
 ; CHECK-NEXT:        Content:         '616263'
 ; CHECK-NEXT:  - Type:            CUSTOM
-; CHECK-NEXT:    Name:            name
-; CHECK-NEXT:    FunctionNames:
-; CHECK-NEXT:      - Index:           0
-; CHECK-NEXT:        Name:            funcImport
-; CHECK-NEXT:      - Index:           1
-; CHECK-NEXT:        Name:            callImport
-; CHECK-NEXT:      - Index:           2
-; CHECK-NEXT:        Name:            basicInlineFn
-; CHECK-NEXT:      - Index:           3
-; CHECK-NEXT:        Name:            sharedFn
-; CHECK-NEXT:  - Type:            CUSTOM
 ; CHECK-NEXT:    Name:            linking
 ; CHECK-NEXT:    DataSize:        3
 ; CHECK-NEXT:    SymbolInfo:

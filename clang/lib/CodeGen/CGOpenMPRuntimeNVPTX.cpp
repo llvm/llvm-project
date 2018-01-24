@@ -1260,7 +1260,7 @@ static void emitReductionListCopy(
         SrcElementAddr, CGF.ConvertTypeForMem(Private->getType()));
     llvm::Value *Elem =
         CGF.EmitLoadOfScalar(SrcElementAddr, /*Volatile=*/false,
-                             Private->getType(), SourceLocation());
+                             Private->getType(), Private->getExprLoc());
 
     // Now that all active lanes have read the element in the
     // Reduce list, shuffle over the value from the remote lane.
@@ -1380,29 +1380,27 @@ static llvm::Value *emitReduceScratchpadFunction(
   Address ReduceListAddr(
       Bld.CreatePointerBitCastOrAddrSpaceCast(
           CGF.EmitLoadOfScalar(AddrReduceListArg, /*Volatile=*/false,
-                               C.VoidPtrTy, SourceLocation()),
+                               C.VoidPtrTy, Loc),
           CGF.ConvertTypeForMem(ReductionArrayTy)->getPointerTo()),
       CGF.getPointerAlign());
 
   Address AddrScratchPadArg = CGF.GetAddrOfLocalVar(&ScratchPadArg);
   llvm::Value *ScratchPadBase = CGF.EmitLoadOfScalar(
-      AddrScratchPadArg, /*Volatile=*/false, C.VoidPtrTy, SourceLocation());
+      AddrScratchPadArg, /*Volatile=*/false, C.VoidPtrTy, Loc);
 
   Address AddrIndexArg = CGF.GetAddrOfLocalVar(&IndexArg);
-  llvm::Value *IndexVal =
-      Bld.CreateIntCast(CGF.EmitLoadOfScalar(AddrIndexArg, /*Volatile=*/false,
-                                             Int32Ty, SourceLocation()),
-                        CGM.SizeTy, /*isSigned=*/true);
+  llvm::Value *IndexVal = Bld.CreateIntCast(
+      CGF.EmitLoadOfScalar(AddrIndexArg, /*Volatile=*/false, Int32Ty, Loc),
+      CGM.SizeTy, /*isSigned=*/true);
 
   Address AddrWidthArg = CGF.GetAddrOfLocalVar(&WidthArg);
-  llvm::Value *WidthVal =
-      Bld.CreateIntCast(CGF.EmitLoadOfScalar(AddrWidthArg, /*Volatile=*/false,
-                                             Int32Ty, SourceLocation()),
-                        CGM.SizeTy, /*isSigned=*/true);
+  llvm::Value *WidthVal = Bld.CreateIntCast(
+      CGF.EmitLoadOfScalar(AddrWidthArg, /*Volatile=*/false, Int32Ty, Loc),
+      CGM.SizeTy, /*isSigned=*/true);
 
   Address AddrShouldReduceArg = CGF.GetAddrOfLocalVar(&ShouldReduceArg);
   llvm::Value *ShouldReduceVal = CGF.EmitLoadOfScalar(
-      AddrShouldReduceArg, /*Volatile=*/false, Int32Ty, SourceLocation());
+      AddrShouldReduceArg, /*Volatile=*/false, Int32Ty, Loc);
 
   // The absolute ptr address to the base addr of the next element to copy.
   llvm::Value *CumulativeElemBasePtr =
@@ -1502,19 +1500,18 @@ static llvm::Value *emitCopyToScratchpad(CodeGenModule &CGM,
   Address SrcDataAddr(
       Bld.CreatePointerBitCastOrAddrSpaceCast(
           CGF.EmitLoadOfScalar(AddrReduceListArg, /*Volatile=*/false,
-                               C.VoidPtrTy, SourceLocation()),
+                               C.VoidPtrTy, Loc),
           CGF.ConvertTypeForMem(ReductionArrayTy)->getPointerTo()),
       CGF.getPointerAlign());
 
   Address AddrScratchPadArg = CGF.GetAddrOfLocalVar(&ScratchPadArg);
   llvm::Value *ScratchPadBase = CGF.EmitLoadOfScalar(
-      AddrScratchPadArg, /*Volatile=*/false, C.VoidPtrTy, SourceLocation());
+      AddrScratchPadArg, /*Volatile=*/false, C.VoidPtrTy, Loc);
 
   Address AddrIndexArg = CGF.GetAddrOfLocalVar(&IndexArg);
-  llvm::Value *IndexVal =
-      Bld.CreateIntCast(CGF.EmitLoadOfScalar(AddrIndexArg, /*Volatile=*/false,
-                                             Int32Ty, SourceLocation()),
-                        CGF.SizeTy, /*isSigned=*/true);
+  llvm::Value *IndexVal = Bld.CreateIntCast(
+      CGF.EmitLoadOfScalar(AddrIndexArg, /*Volatile=*/false, Int32Ty, Loc),
+      CGF.SizeTy, /*isSigned=*/true);
 
   Address AddrWidthArg = CGF.GetAddrOfLocalVar(&WidthArg);
   llvm::Value *WidthVal =

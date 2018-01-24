@@ -77,7 +77,7 @@ define i16 @cnt16(i16 %x) nounwind readnone {
 ; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    shll $8, %eax
 ; X32-NEXT:    addl %ecx, %eax
-; X32-NEXT:    movzbl %ah, %eax # NOREX
+; X32-NEXT:    movzbl %ah, %eax
 ; X32-NEXT:    # kill: def %ax killed %ax killed %eax
 ; X32-NEXT:    retl
 ;
@@ -99,7 +99,7 @@ define i16 @cnt16(i16 %x) nounwind readnone {
 ; X64-NEXT:    movl %eax, %ecx
 ; X64-NEXT:    shll $8, %ecx
 ; X64-NEXT:    addl %eax, %ecx
-; X64-NEXT:    movzbl %ch, %eax # NOREX
+; X64-NEXT:    movzbl %ch, %eax
 ; X64-NEXT:    # kill: def %ax killed %ax killed %eax
 ; X64-NEXT:    retq
 ;

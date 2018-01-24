@@ -214,11 +214,11 @@ unsigned BreakableStringLiteral::getContentStartColumn(unsigned LineIndex,
 
 BreakableStringLiteral::BreakableStringLiteral(
     const FormatToken &Tok, unsigned StartColumn, StringRef Prefix,
-    StringRef Postfix, bool InPPDirective, encoding::Encoding Encoding,
-    const FormatStyle &Style)
+    StringRef Postfix, unsigned UnbreakableTailLength, bool InPPDirective,
+    encoding::Encoding Encoding, const FormatStyle &Style)
     : BreakableToken(Tok, InPPDirective, Encoding, Style),
       StartColumn(StartColumn), Prefix(Prefix), Postfix(Postfix),
-      UnbreakableTailLength(Tok.UnbreakableTailLength) {
+      UnbreakableTailLength(UnbreakableTailLength) {
   assert(Tok.TokenText.startswith(Prefix) && Tok.TokenText.endswith(Postfix));
   Line = Tok.TokenText.substr(
       Prefix.size(), Tok.TokenText.size() - Prefix.size() - Postfix.size());

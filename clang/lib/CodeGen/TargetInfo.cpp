@@ -5721,10 +5721,11 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty,
     return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
   }
 
-  // __fp16 gets passed as if it were an int or float, but with the top 16 bits
-  // unspecified. This is not done for OpenCL as it handles the half type
-  // natively, and does not need to interwork with AAPCS code.
-  if (Ty->isHalfType() && !getContext().getLangOpts().NativeHalfArgsAndReturns) {
+  // _Float16 and __fp16 get passed as if it were an int or float, but with
+  // the top 16 bits unspecified. This is not done for OpenCL as it handles the
+  // half type natively, and does not need to interwork with AAPCS code.
+  if ((Ty->isFloat16Type() || Ty->isHalfType()) &&
+      !getContext().getLangOpts().NativeHalfArgsAndReturns) {
     llvm::Type *ResType = IsEffectivelyAAPCS_VFP ?
       llvm::Type::getFloatTy(getVMContext()) :
       llvm::Type::getInt32Ty(getVMContext());
@@ -5919,10 +5920,11 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy,
     return getNaturalAlignIndirect(RetTy);
   }
 
-  // __fp16 gets returned as if it were an int or float, but with the top 16
-  // bits unspecified. This is not done for OpenCL as it handles the half type
-  // natively, and does not need to interwork with AAPCS code.
-  if (RetTy->isHalfType() && !getContext().getLangOpts().NativeHalfArgsAndReturns) {
+  // _Float16 and __fp16 get returned as if it were an int or float, but with
+  // the top 16 bits unspecified. This is not done for OpenCL as it handles the
+  // half type natively, and does not need to interwork with AAPCS code.
+  if ((RetTy->isFloat16Type() || RetTy->isHalfType()) &&
+      !getContext().getLangOpts().NativeHalfArgsAndReturns) {
     llvm::Type *ResType = IsEffectivelyAAPCS_VFP ?
       llvm::Type::getFloatTy(getVMContext()) :
       llvm::Type::getInt32Ty(getVMContext());

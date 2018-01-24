@@ -2694,26 +2694,32 @@ public:
     else if (DifferentField != ThisDifferentField)
       DifferentField = ExtAddrMode::MultipleFields;
 
-    // If NewAddrMode differs in only one dimension, and that dimension isn't
-    // the amount that ScaledReg is scaled by, then we can handle it by
-    // inserting a phi/select later on. Even if NewAddMode is the same
-    // we still need to collect it due to original value is different.
-    // And later we will need all original values as anchors during
-    // finding the common Phi node.
+    // If NewAddrMode differs in more than one dimension we cannot handle it.
+    bool CanHandle = DifferentField != ExtAddrMode::MultipleFields;
+
+    // If Scale Field is different then we reject.
+    CanHandle = CanHandle && DifferentField != ExtAddrMode::ScaleField;
+
     // We also must reject the case when base offset is different and
     // scale reg is not null, we cannot handle this case due to merge of
     // different offsets will be used as ScaleReg.
-    if (DifferentField != ExtAddrMode::MultipleFields &&
-        DifferentField != ExtAddrMode::ScaleField &&
-        (DifferentField != ExtAddrMode::BaseOffsField ||
-         !NewAddrMode.ScaledReg)) {
-      AddrModes.emplace_back(NewAddrMode);
-      return true;
-    }
+    CanHandle = CanHandle && (DifferentField != ExtAddrMode::BaseOffsField ||
+                              !NewAddrMode.ScaledReg);
 
-    // We couldn't combine NewAddrMode with the rest, so return failure.
-    AddrModes.clear();
-    return false;
+    // We also must reject the case when GV is different and BaseReg installed
+    // due to we want to use base reg as a merge of GV values.
+    CanHandle = CanHandle && (DifferentField != ExtAddrMode::BaseGVField ||
+                              !NewAddrMode.HasBaseReg);
+
+    // Even if NewAddMode is the same we still need to collect it due to
+    // original value is different. And later we will need all original values
+    // as anchors during finding the common Phi node.
+    if (CanHandle)
+      AddrModes.emplace_back(NewAddrMode);
+    else
+      AddrModes.clear();
+
+    return CanHandle;
   }
 
   /// \brief Combine the addressing modes we've collected into a single

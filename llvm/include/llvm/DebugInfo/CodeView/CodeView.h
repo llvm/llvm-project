@@ -531,7 +531,7 @@ enum LineFlags : uint16_t {
   LF_HaveColumns = 1, // CV_LINES_HAVE_COLUMNS
 };
 
-/// Data in the the SUBSEC_FRAMEDATA subection.
+/// Data in the SUBSEC_FRAMEDATA subection.
 struct FrameData {
   support::ulittle32_t RvaStart;
   support::ulittle32_t CodeSize;

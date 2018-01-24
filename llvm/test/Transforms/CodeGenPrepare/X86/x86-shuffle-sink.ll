@@ -1,4 +1,5 @@
-; RUN: opt -S -codegenprepare -mcpu=core-avx2 %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-AVX2
+; RUN: opt -S -codegenprepare -mcpu=skylake-avx512 %s | FileCheck %s --check-prefixes=CHECK,CHECK-AVX,CHECK-AVX512BW
+; RUN: opt -S -codegenprepare -mcpu=core-avx2 %s | FileCheck %s --check-prefixes=CHECK,CHECK-AVX,CHECK-AVX2
 ; RUN: opt -S -codegenprepare -mcpu=corei7 %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-SSE2
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
@@ -62,10 +63,10 @@ if_false:
 }
 
 define <4 x i32> @test_32bit(<4 x i32> %lhs, <4 x i32> %tmp, i1 %tst) {
-; CHECK-AVX2-LABEL: @test_32bit
-; CHECK-AVX2: if_false:
-; CHECK-AVX2-NOT: shufflevector
-; CHECK-AVX2: ashr <4 x i32> %lhs, %mask
+; CHECK-AVX-LABEL: @test_32bit
+; CHECK-AVX: if_false:
+; CHECK-AVX-NOT: shufflevector
+; CHECK-AVX: ashr <4 x i32> %lhs, %mask
 
 ; CHECK-SSE2-LABEL: @test_32bit
 ; CHECK-SSE2: if_false:
@@ -83,10 +84,10 @@ if_false:
 }
 
 define <2 x i64> @test_64bit(<2 x i64> %lhs, <2 x i64> %tmp, i1 %tst) {
-; CHECK-AVX2-LABEL: @test_64bit
-; CHECK-AVX2: if_false:
-; CHECK-AVX2-NOT: shufflevector
-; CHECK-AVX2: lshr <2 x i64> %lhs, %mask
+; CHECK-AVX-LABEL: @test_64bit
+; CHECK-AVX: if_false:
+; CHECK-AVX-NOT: shufflevector
+; CHECK-AVX: lshr <2 x i64> %lhs, %mask
 
 ; CHECK-SSE2-LABEL: @test_64bit
 ; CHECK-SSE2: if_false:

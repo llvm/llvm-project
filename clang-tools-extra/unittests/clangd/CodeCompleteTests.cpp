@@ -58,6 +58,7 @@ using ::testing::Each;
 using ::testing::ElementsAre;
 using ::testing::Not;
 using ::testing::UnorderedElementsAre;
+using ::testing::Field;
 
 class IgnoreDiagnostics : public DiagnosticsConsumer {
   void
@@ -674,6 +675,123 @@ TEST(SignatureHelpTest, ActiveArg) {
                               {"int a", "int b", "int c"})));
   EXPECT_EQ(0, Results.activeSignature);
   EXPECT_EQ(1, Results.activeParameter);
+}
+
+class IndexRequestCollector : public SymbolIndex {
+public:
+  bool
+  fuzzyFind(const Context &Ctx, const FuzzyFindRequest &Req,
+            llvm::function_ref<void(const Symbol &)> Callback) const override {
+    Requests.push_back(Req);
+    return false;
+  }
+
+  const std::vector<FuzzyFindRequest> allRequests() const { return Requests; }
+
+private:
+  mutable std::vector<FuzzyFindRequest> Requests;
+};
+
+std::vector<FuzzyFindRequest> captureIndexRequests(llvm::StringRef Code) {
+  clangd::CodeCompleteOptions Opts;
+  IndexRequestCollector Requests;
+  Opts.Index = &Requests;
+  completions(Code, {}, Opts);
+  return Requests.allRequests();
+}
+
+TEST(CompletionTest, UnqualifiedIdQuery) {
+  auto Requests = captureIndexRequests(R"cpp(
+      namespace std {}
+      using namespace std;
+      namespace ns {
+      void f() {
+        vec^
+      }
+      }
+  )cpp");
+
+  EXPECT_THAT(Requests,
+              ElementsAre(Field(&FuzzyFindRequest::Scopes,
+                                UnorderedElementsAre("", "ns::", "std::"))));
+}
+
+TEST(CompletionTest, ResolvedQualifiedIdQuery) {
+  auto Requests = captureIndexRequests(R"cpp(
+      namespace ns1 {}
+      namespace ns2 {} // ignore
+      namespace ns3 { namespace nns3 {} }
+      namespace foo {
+      using namespace ns1;
+      using namespace ns3::nns3;
+      }
+      namespace ns {
+      void f() {
+        foo::^
+      }
+      }
+  )cpp");
+
+  EXPECT_THAT(Requests,
+              ElementsAre(Field(
+                  &FuzzyFindRequest::Scopes,
+                  UnorderedElementsAre("foo::", "ns1::", "ns3::nns3::"))));
+}
+
+TEST(CompletionTest, UnresolvedQualifierIdQuery) {
+  auto Requests = captureIndexRequests(R"cpp(
+      namespace a {}
+      using namespace a;
+      namespace ns {
+      void f() {
+      bar::^
+      }
+      } // namespace ns
+  )cpp");
+
+  EXPECT_THAT(Requests, ElementsAre(Field(&FuzzyFindRequest::Scopes,
+                                          UnorderedElementsAre("bar::"))));
+}
+
+TEST(CompletionTest, UnresolvedNestedQualifierIdQuery) {
+  auto Requests = captureIndexRequests(R"cpp(
+      namespace a {}
+      using namespace a;
+      namespace ns {
+      void f() {
+      ::a::bar::^
+      }
+      } // namespace ns
+  )cpp");
+
+  EXPECT_THAT(Requests, ElementsAre(Field(&FuzzyFindRequest::Scopes,
+                                          UnorderedElementsAre("a::bar::"))));
+}
+
+TEST(CompletionTest, EmptyQualifiedQuery) {
+  auto Requests = captureIndexRequests(R"cpp(
+      namespace ns {
+      void f() {
+      ^
+      }
+      } // namespace ns
+  )cpp");
+
+  EXPECT_THAT(Requests, ElementsAre(Field(&FuzzyFindRequest::Scopes,
+                                          UnorderedElementsAre("", "ns::"))));
+}
+
+TEST(CompletionTest, GlobalQualifiedQuery) {
+  auto Requests = captureIndexRequests(R"cpp(
+      namespace ns {
+      void f() {
+      ::^
+      }
+      } // namespace ns
+  )cpp");
+
+  EXPECT_THAT(Requests, ElementsAre(Field(&FuzzyFindRequest::Scopes,
+                                          UnorderedElementsAre(""))));
 }
 
 } // namespace

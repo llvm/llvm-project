@@ -441,7 +441,8 @@ struct FormatToken {
   }
 
   prec::Level getPrecedence() const {
-    return getBinOpPrecedence(Tok.getKind(), true, true);
+    return getBinOpPrecedence(Tok.getKind(), /*GreaterThanIsOperator=*/true,
+                              /*CPlusPlus11=*/true);
   }
 
   /// \brief Returns the previous token ignoring comments.

@@ -227,6 +227,7 @@ ClangTidyOptions::OptionMap getCheckOptions(const ClangTidyOptions &Options);
 void runClangTidy(clang::tidy::ClangTidyContext &Context,
                   const tooling::CompilationDatabase &Compilations,
                   ArrayRef<std::string> InputFiles,
+                  llvm::IntrusiveRefCntPtr<vfs::FileSystem> BaseFS,
                   ProfileData *Profile = nullptr);
 
 // FIXME: This interface will need to be significantly extended to be useful.
@@ -236,7 +237,8 @@ void runClangTidy(clang::tidy::ClangTidyContext &Context,
 /// Errors containing fixes are automatically applied and reformatted. If no
 /// clang-format configuration file is found, the given \P FormatStyle is used.
 void handleErrors(ClangTidyContext &Context, bool Fix,
-                  unsigned &WarningsAsErrorsCount);
+                  unsigned &WarningsAsErrorsCount,
+                  llvm::IntrusiveRefCntPtr<vfs::FileSystem> BaseFS);
 
 /// \brief Serializes replacements into YAML and writes them to the specified
 /// output stream.

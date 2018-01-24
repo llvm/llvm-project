@@ -32,41 +32,18 @@ public:
 
   std::shared_ptr<CppFile>
   getOrCreateFile(PathRef File, PathRef ResourceDir,
-                  GlobalCompilationDatabase &CDB, bool StorePreamblesInMemory,
+                  bool StorePreamblesInMemory,
                   std::shared_ptr<PCHContainerOperations> PCHs) {
     std::lock_guard<std::mutex> Lock(Mutex);
-
     auto It = OpenedFiles.find(File);
     if (It == OpenedFiles.end()) {
-      auto Command = getCompileCommand(CDB, File, ResourceDir);
-
       It = OpenedFiles
-               .try_emplace(File, CppFile::Create(File, std::move(Command),
-                                                  StorePreamblesInMemory,
+               .try_emplace(File, CppFile::Create(File, StorePreamblesInMemory,
                                                   std::move(PCHs), ASTCallback))
                .first;
     }
     return It->second;
   }
-
-  struct RecreateResult {
-    /// A CppFile, stored in this CppFileCollection for the corresponding
-    /// filepath after calling recreateFileIfCompileCommandChanged.
-    std::shared_ptr<CppFile> FileInCollection;
-    /// If a new CppFile had to be created to account for changed
-    /// CompileCommand, a previous CppFile instance will be returned in this
-    /// field.
-    std::shared_ptr<CppFile> RemovedFile;
-  };
-
-  /// Similar to getOrCreateFile, but will replace a current CppFile for \p File
-  /// with a new one if CompileCommand, provided by \p CDB has changed.
-  /// If a currently stored CppFile had to be replaced, the previous instance
-  /// will be returned in RecreateResult.RemovedFile.
-  RecreateResult recreateFileIfCompileCommandChanged(
-      PathRef File, PathRef ResourceDir, GlobalCompilationDatabase &CDB,
-      bool StorePreamblesInMemory,
-      std::shared_ptr<PCHContainerOperations> PCHs);
 
   std::shared_ptr<CppFile> getFile(PathRef File) {
     std::lock_guard<std::mutex> Lock(Mutex);
@@ -82,12 +59,6 @@ public:
   std::shared_ptr<CppFile> removeIfPresent(PathRef File);
 
 private:
-  tooling::CompileCommand getCompileCommand(GlobalCompilationDatabase &CDB,
-                                            PathRef File, PathRef ResourceDir);
-
-  bool compileCommandsAreEqual(tooling::CompileCommand const &LHS,
-                               tooling::CompileCommand const &RHS);
-
   std::mutex Mutex;
   llvm::StringMap<std::shared_ptr<CppFile>> OpenedFiles;
   ASTParsedCallback ASTCallback;
