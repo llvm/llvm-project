@@ -67,7 +67,26 @@ void Symbol::setOutputIndex(uint32_t Index) {
   OutputIndex = Index;
 }
 
+uint32_t Symbol::getTableIndex() const {
+  if (Function)
+    return Function->getTableIndex();
+  return TableIndex.getValue();
+}
+
+bool Symbol::hasTableIndex() const {
+  if (Function)
+    return Function->hasTableIndex();
+  return TableIndex.hasValue();
+}
+
 void Symbol::setTableIndex(uint32_t Index) {
+  // For imports, we set the table index here on the Symbol; for defined
+  // functions we set the index on the InputFunction so that we don't export
+  // the same thing twice (keeps the table size down).
+  if (Function) {
+    Function->setTableIndex(Index);
+    return;
+  }
   DEBUG(dbgs() << "setTableIndex " << Name << " -> " << Index << "\n");
   assert(!TableIndex.hasValue());
   TableIndex = Index;
