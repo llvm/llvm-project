@@ -163,21 +163,18 @@ TEST(CoreAPIsTest, LookupFlagsTest) {
 
   SymbolNameSet Names({Foo, Bar, Baz});
 
-  auto LFR = V.lookupFlags(Names);
+  SymbolFlagsMap SymbolFlags;
+  auto SymbolsNotFound = V.lookupFlags(SymbolFlags, Names);
 
-  EXPECT_EQ(LFR.SymbolsNotFound.size(), 1U) << "Expected one not-found symbol";
-  EXPECT_EQ(*LFR.SymbolsNotFound.begin(), Baz)
-      << "Expected Baz to be not-found";
-  EXPECT_EQ(LFR.SymbolFlags.size(), 2U)
+  EXPECT_EQ(SymbolsNotFound.size(), 1U) << "Expected one not-found symbol";
+  EXPECT_EQ(SymbolsNotFound.count(Baz), 1U) << "Expected Baz to be not-found";
+  EXPECT_EQ(SymbolFlags.size(), 2U)
       << "Returned symbol flags contains unexpected results";
-  EXPECT_EQ(LFR.SymbolFlags.count(Foo), 1U)
-      << "Missing lookupFlags result for Foo";
-  EXPECT_EQ(LFR.SymbolFlags[Foo], FooFlags)
-      << "Incorrect flags returned for Foo";
-  EXPECT_EQ(LFR.SymbolFlags.count(Bar), 1U)
+  EXPECT_EQ(SymbolFlags.count(Foo), 1U) << "Missing lookupFlags result for Foo";
+  EXPECT_EQ(SymbolFlags[Foo], FooFlags) << "Incorrect flags returned for Foo";
+  EXPECT_EQ(SymbolFlags.count(Bar), 1U)
       << "Missing  lookupFlags result for Bar";
-  EXPECT_EQ(LFR.SymbolFlags[Bar], BarFlags)
-      << "Incorrect flags returned for Bar";
+  EXPECT_EQ(SymbolFlags[Bar], BarFlags) << "Incorrect flags returned for Bar";
 }
 
 TEST(CoreAPIsTest, AddAndMaterializeLazySymbol) {
@@ -271,7 +268,9 @@ TEST(CoreAPIsTest, TestLambdaSymbolResolver) {
   cantFail(V.define({{Foo, FooSym}, {Bar, BarSym}}));
 
   auto Resolver = createSymbolResolver(
-      [&](const SymbolNameSet &Symbols) { return V.lookupFlags(Symbols); },
+      [&](SymbolFlagsMap &SymbolFlags, const SymbolNameSet &Symbols) {
+        return V.lookupFlags(SymbolFlags, Symbols);
+      },
       [&](AsynchronousSymbolQuery &Q, SymbolNameSet Symbols) {
         auto LR = V.lookup(Q, Symbols);
         assert(LR.MaterializationWork.empty() &&
@@ -282,21 +281,20 @@ TEST(CoreAPIsTest, TestLambdaSymbolResolver) {
 
   SymbolNameSet Symbols({Foo, Bar, Baz});
 
-  LookupFlagsResult LFR = Resolver->lookupFlags(Symbols);
+  SymbolFlagsMap SymbolFlags;
+  SymbolNameSet SymbolsNotFound = Resolver->lookupFlags(SymbolFlags, Symbols);
 
-  EXPECT_EQ(LFR.SymbolFlags.size(), 2U)
+  EXPECT_EQ(SymbolFlags.size(), 2U)
       << "lookupFlags returned the wrong number of results";
-  EXPECT_EQ(LFR.SymbolFlags.count(Foo), 1U)
-      << "Missing lookupFlags result for foo";
-  EXPECT_EQ(LFR.SymbolFlags.count(Bar), 1U)
-      << "Missing lookupFlags result for bar";
-  EXPECT_EQ(LFR.SymbolFlags[Foo], FooSym.getFlags())
+  EXPECT_EQ(SymbolFlags.count(Foo), 1U) << "Missing lookupFlags result for foo";
+  EXPECT_EQ(SymbolFlags.count(Bar), 1U) << "Missing lookupFlags result for bar";
+  EXPECT_EQ(SymbolFlags[Foo], FooSym.getFlags())
       << "Incorrect lookupFlags result for Foo";
-  EXPECT_EQ(LFR.SymbolFlags[Bar], BarSym.getFlags())
+  EXPECT_EQ(SymbolFlags[Bar], BarSym.getFlags())
       << "Incorrect lookupFlags result for Bar";
-  EXPECT_EQ(LFR.SymbolsNotFound.size(), 1U)
+  EXPECT_EQ(SymbolsNotFound.size(), 1U)
       << "Expected one symbol not found in lookupFlags";
-  EXPECT_EQ(LFR.SymbolsNotFound.count(Baz), 1U)
+  EXPECT_EQ(SymbolsNotFound.count(Baz), 1U)
       << "Expected baz not to be found in lookupFlags";
 
   bool OnResolvedRun = false;

@@ -92,14 +92,6 @@ private:
   SymbolsReadyCallback NotifySymbolsReady;
 };
 
-/// @brief A SymbolFlagsMap containing flags of found symbols, plus a set of
-///        not-found symbols. Shared between SymbolResolver::lookupFlags and
-///        VSO::lookupFlags for convenience.
-struct LookupFlagsResult {
-  SymbolFlagsMap SymbolFlags;
-  SymbolNameSet SymbolsNotFound;
-};
-
 /// @brief SymbolResolver is a composable interface for looking up symbol flags
 ///        and addresses using the AsynchronousSymbolQuery type. It will
 ///        eventually replace the LegacyJITSymbolResolver interface as the
@@ -110,7 +102,8 @@ public:
 
   /// @brief Returns the flags for each symbol in Symbols that can be found,
   ///        along with the set of symbol that could not be found.
-  virtual LookupFlagsResult lookupFlags(const SymbolNameSet &Symbols) = 0;
+  virtual SymbolNameSet lookupFlags(SymbolFlagsMap &Flags,
+                                    const SymbolNameSet &Symbols) = 0;
 
   /// @brief For each symbol in Symbols that can be found, assigns that symbols
   ///        value in Query. Returns the set of symbols that could not be found.
@@ -131,8 +124,9 @@ public:
       : LookupFlags(std::forward<LookupFlagsFnRef>(LookupFlags)),
         Lookup(std::forward<LookupFnRef>(Lookup)) {}
 
-  LookupFlagsResult lookupFlags(const SymbolNameSet &Symbols) final {
-    return LookupFlags(Symbols);
+  SymbolNameSet lookupFlags(SymbolFlagsMap &Flags,
+                            const SymbolNameSet &Symbols) final {
+    return LookupFlags(Flags, Symbols);
   }
 
   SymbolNameSet lookup(AsynchronousSymbolQuery &Query,
@@ -250,7 +244,7 @@ public:
   ///
   /// Returns the flags for the give symbols, together with the set of symbols
   /// not found.
-  LookupFlagsResult lookupFlags(SymbolNameSet Symbols);
+  SymbolNameSet lookupFlags(SymbolFlagsMap &Flags, SymbolNameSet Symbols);
 
   /// @brief Apply the given query to the given symbols in this VSO.
   ///

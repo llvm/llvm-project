@@ -1,3 +1,4 @@
+// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -11,21 +12,79 @@
 
 // <tuple>
 
-// Test the diagnostics libc++ generates for invalid reference binding.
-// Libc++ attempts to diagnose the following cases:
-//  * Constructing an lvalue reference from an rvalue.
-//  * Constructing an rvalue reference from an lvalue.
+// See llvm.org/PR20855
 
 #include <tuple>
 #include <string>
-#include <functional>
-#include <cassert>
+#include "test_macros.h"
+
+#if TEST_HAS_BUILTIN_IDENTIFIER(__reference_binds_to_temporary)
+# define ASSERT_REFERENCE_BINDS_TEMPORARY(...) static_assert(__reference_binds_to_temporary(__VA_ARGS__), "")
+# define ASSERT_NOT_REFERENCE_BINDS_TEMPORARY(...) static_assert(!__reference_binds_to_temporary(__VA_ARGS__), "")
+#else
+# define ASSERT_REFERENCE_BINDS_TEMPORARY(...) static_assert(true, "")
+# define ASSERT_NOT_REFERENCE_BINDS_TEMPORARY(...) static_assert(true, "")
+#endif
+
+template <class Tp>
+struct ConvertsTo {
+  using RawTp = typename std::remove_cv< typename std::remove_reference<Tp>::type>::type;
+
+  operator Tp() const {
+    return static_cast<Tp>(value);
+  }
+
+  mutable RawTp value;
+};
+
+struct Base {};
+struct Derived : Base {};
+
+
+static_assert(std::is_same<decltype("abc"), decltype(("abc"))>::value, "");
+ASSERT_REFERENCE_BINDS_TEMPORARY(std::string const&, decltype("abc"));
+ASSERT_REFERENCE_BINDS_TEMPORARY(std::string const&, decltype(("abc")));
+ASSERT_REFERENCE_BINDS_TEMPORARY(std::string const&, const char*&&);
+
+ASSERT_NOT_REFERENCE_BINDS_TEMPORARY(int&, const ConvertsTo<int&>&);
+ASSERT_NOT_REFERENCE_BINDS_TEMPORARY(const int&, ConvertsTo<int&>&);
+ASSERT_NOT_REFERENCE_BINDS_TEMPORARY(Base&, Derived&);
+
 
 static_assert(std::is_constructible<int&, std::reference_wrapper<int>>::value, "");
 static_assert(std::is_constructible<int const&, std::reference_wrapper<int>>::value, "");
 
+template <class T> struct CannotDeduce {
+ using type = T;
+};
 
-int main() {
+template <class ...Args>
+void F(typename CannotDeduce<std::tuple<Args...>>::type const&) {}
+
+void compile_tests() {
+  {
+    F<int, int const&>(std::make_tuple(42, 42));
+  }
+  {
+    F<int, int const&>(std::make_tuple<const int&, const int&>(42, 42));
+    std::tuple<int, int const&> t(std::make_tuple<const int&, const int&>(42, 42));
+  }
+  {
+    auto fn = &F<int, std::string const&>;
+    fn(std::tuple<int, std::string const&>(42, std::string("a")));
+    fn(std::make_tuple(42, std::string("a")));
+  }
+  {
+    Derived d;
+    std::tuple<Base&, Base const&> t(d, d);
+  }
+  {
+    ConvertsTo<int&> ct;
+    std::tuple<int, int&> t(42, ct);
+  }
+}
+
+void allocator_tests() {
     std::allocator<void> alloc;
     int x = 42;
     {
@@ -68,4 +127,10 @@ int main() {
         std::tuple<int const&> t4(std::allocator_arg, alloc, cr);
         assert(&std::get<0>(t4) == &x);
     }
+}
+
+
+int main() {
+  compile_tests();
+  allocator_tests();
 }

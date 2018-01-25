@@ -1211,6 +1211,9 @@ std::string StackHintGeneratorForSymbol::getMessage(const ExplodedNode *N){
 
     // Check if the parameter is a pointer to the symbol.
     if (Optional<loc::MemRegionVal> Reg = SV.getAs<loc::MemRegionVal>()) {
+      // Do not attempt to dereference void*.
+      if ((*I)->getType()->isVoidPointerType())
+        continue;
       SVal PSV = N->getState()->getSVal(Reg->getRegion());
       SymbolRef AS = PSV.getAsLocSymbol();
       if (AS == Sym) {
