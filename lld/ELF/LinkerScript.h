@@ -206,6 +206,7 @@ class LinkerScript final {
     uint64_t ThreadBssOffset = 0;
     OutputSection *OutSec = nullptr;
     MemoryRegion *MemRegion = nullptr;
+    MemoryRegion *LMARegion = nullptr;
     uint64_t LMAOffset = 0;
   };
 

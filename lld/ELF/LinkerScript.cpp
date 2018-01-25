@@ -589,6 +589,10 @@ void LinkerScript::output(InputSection *S) {
 
   // If there is a memory region associated with this input section, then
   // place the section in that region and update the region index.
+  if (Ctx->LMARegion)
+    Ctx->LMARegion->CurPos += Pos - Before;
+  // FIXME: should we also produce overflow errors for LMARegion?
+
   if (Ctx->MemRegion) {
     uint64_t &CurOffset = Ctx->MemRegion->CurPos;
     CurOffset += Pos - Before;
@@ -651,6 +655,7 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
     setDot(Sec->AddrExpr, Sec->Location, false);
 
   Ctx->MemRegion = Sec->MemRegion;
+  Ctx->LMARegion = Sec->LMARegion;
   if (Ctx->MemRegion)
     Dot = Ctx->MemRegion->CurPos;
 
@@ -660,7 +665,7 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
     Ctx->LMAOffset = Sec->LMAExpr().getValue() - Dot;
 
   if (MemoryRegion *MR = Sec->LMARegion)
-    Ctx->LMAOffset = MR->Origin - Dot;
+    Ctx->LMAOffset = MR->CurPos - Dot;
 
   // If neither AT nor AT> is specified for an allocatable section, the linker
   // will set the LMA such that the difference between VMA and LMA for the
@@ -690,6 +695,8 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
       Dot += Cmd->Size;
       if (Ctx->MemRegion)
         Ctx->MemRegion->CurPos += Cmd->Size;
+      if (Ctx->LMARegion)
+        Ctx->LMARegion->CurPos += Cmd->Size;
       Ctx->OutSec->Size = Dot - Ctx->OutSec->Addr;
       continue;
     }
