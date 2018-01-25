@@ -379,10 +379,6 @@ std::vector<std::string> getQueryScopes(CodeCompletionContext &CCContext,
   // Qualified completion ("std::vec^"), we have two cases depending on whether
   // the qualifier can be resolved by Sema.
   if ((*SS)->isValid()) { // Resolved qualifier.
-    // FIXME: Disable Sema typo correction during code completion.
-    // The resolved qualifier might not perfectly match the written qualifier.
-    // e.g. "namespace clang { clangd::^ }", we will get "clang" declaration
-    // for completion "clangd::".
     return GetAllAccessibleScopes(CCContext).scopesForIndexQuery();
   }
 
@@ -678,6 +674,9 @@ bool semaCodeComplete(const Context &Ctx,
   auto &DiagOpts = Clang->getDiagnosticOpts();
   DiagOpts.IgnoreWarnings = true;
 
+  // Disable typo correction in Sema.
+  Clang->getLangOpts().SpellChecking = false;
+
   auto &FrontendOpts = Clang->getFrontendOpts();
   FrontendOpts.SkipFunctionBodies = true;
   FrontendOpts.CodeCompleteOpts = Options;
@@ -864,6 +863,8 @@ private:
     SymbolSlab::Builder ResultsBuilder;
     // Build the query.
     FuzzyFindRequest Req;
+    if (Opts.Limit)
+      Req.MaxCandidateCount = Opts.Limit;
     Req.Query = Filter->pattern();
     Req.Scopes =
         getQueryScopes(Recorder.CCContext, Recorder.CCSema->getSourceManager());

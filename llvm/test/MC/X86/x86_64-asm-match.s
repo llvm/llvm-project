@@ -2,7 +2,7 @@
 // REQUIRES: asserts
 
 // CHECK: AsmMatcher: found 4 encodings with mnemonic 'pshufb'
-// CHECK: Trying to match opcode MMX_PSHUFBrr64
+// CHECK: Trying to match opcode MMX_PSHUFBrr
 // CHECK:   Matching formal operand class MCK_VR64 against actual operand at index 1 (Memory: ModeSize=64,BaseReg=rip,Scale=1,Disp=CPI1_0): Opcode result: multiple operand mismatches, ignoring this opcode
 // CHECK: Trying to match opcode PSHUFBrr
 // CHECK:   Matching formal operand class MCK_FR32 against actual operand at index 1 (Memory: ModeSize=64,BaseReg=rip,Scale=1,Disp=CPI1_0): Opcode result: multiple operand mismatches, ignoring this opcode

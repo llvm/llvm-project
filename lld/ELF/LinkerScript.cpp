@@ -590,7 +590,7 @@ void LinkerScript::output(InputSection *S) {
   // If there is a memory region associated with this input section, then
   // place the section in that region and update the region index.
   if (Ctx->MemRegion) {
-    uint64_t &CurOffset = Ctx->MemRegionOffset[Ctx->MemRegion];
+    uint64_t &CurOffset = Ctx->MemRegion->CurPos;
     CurOffset += Pos - Before;
     uint64_t CurSize = CurOffset - Ctx->MemRegion->Origin;
     if (CurSize > Ctx->MemRegion->Length) {
@@ -652,7 +652,7 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
 
   Ctx->MemRegion = Sec->MemRegion;
   if (Ctx->MemRegion)
-    Dot = Ctx->MemRegionOffset[Ctx->MemRegion];
+    Dot = Ctx->MemRegion->CurPos;
 
   switchTo(Sec);
 
@@ -693,7 +693,7 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
       Cmd->Offset = Dot - Ctx->OutSec->Addr;
       Dot += Cmd->Size;
       if (Ctx->MemRegion)
-        Ctx->MemRegionOffset[Ctx->MemRegion] += Cmd->Size;
+        Ctx->MemRegion->CurPos += Cmd->Size;
       Ctx->OutSec->Size = Dot - Ctx->OutSec->Addr;
       continue;
     }
@@ -888,8 +888,8 @@ void LinkerScript::allocateHeaders(std::vector<PhdrEntry *> &Phdrs) {
 
 LinkerScript::AddressState::AddressState() {
   for (auto &MRI : Script->MemoryRegions) {
-    const MemoryRegion *MR = MRI.second;
-    MemRegionOffset[MR] = MR->Origin;
+    MemoryRegion *MR = MRI.second;
+    MR->CurPos = MR->Origin;
   }
 }
 
