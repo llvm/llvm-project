@@ -864,6 +864,8 @@ private:
     SymbolSlab::Builder ResultsBuilder;
     // Build the query.
     FuzzyFindRequest Req;
+    if (Opts.Limit)
+      Req.MaxCandidateCount = Opts.Limit;
     Req.Query = Filter->pattern();
     Req.Scopes =
         getQueryScopes(Recorder.CCContext, Recorder.CCSema->getSourceManager());
