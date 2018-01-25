@@ -206,7 +206,7 @@ class LinkerScript final {
     uint64_t ThreadBssOffset = 0;
     OutputSection *OutSec = nullptr;
     MemoryRegion *MemRegion = nullptr;
-    std::function<uint64_t()> LMAOffset;
+    uint64_t LMAOffset = 0;
   };
 
   llvm::DenseMap<StringRef, OutputSection *> NameToOutputSection;

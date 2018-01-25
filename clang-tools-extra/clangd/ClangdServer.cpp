@@ -19,6 +19,7 @@
 #include "clang/Tooling/Refactoring/RefactoringResultConsumer.h"
 #include "clang/Tooling/Refactoring/Rename/RenamingAction.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatProviders.h"
@@ -576,7 +577,8 @@ std::future<Context> ClangdServer::scheduleReparseAndDiags(
                 const Context &)>
                 DeferredRebuild,
             std::promise<Context> DonePromise, Context Ctx) -> void {
-    auto Guard = onScopeExit([&]() { DonePromise.set_value(std::move(Ctx)); });
+    auto Guard =
+        llvm::make_scope_exit([&]() { DonePromise.set_value(std::move(Ctx)); });
 
     auto CurrentVersion = DraftMgr.getVersion(FileStr);
     if (CurrentVersion != Version)
