@@ -597,7 +597,7 @@ extern "C" int TSAN_INTERCEPTOR_SIGSETJMP(void *env) {
   return 0;
 }
 
-#if !SANITIEZER_NETBSD
+#if !SANITIZER_NETBSD
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 int __interceptor___sigsetjmp(void *env);
 extern "C" int __interceptor___sigsetjmp(void *env) {
@@ -609,13 +609,13 @@ extern "C" int __interceptor___sigsetjmp(void *env) {
 extern "C" int setjmp_symname(void *env);
 extern "C" int _setjmp(void *env);
 extern "C" int sigsetjmp_symname(void *env);
-#if !SANITIEZER_NETBSD
+#if !SANITIZER_NETBSD
 extern "C" int __sigsetjmp(void *env);
 #endif
 DEFINE_REAL(int, setjmp_symname, void *env)
 DEFINE_REAL(int, _setjmp, void *env)
 DEFINE_REAL(int, sigsetjmp_symname, void *env)
-#if !SANITIEZER_NETBSD
+#if !SANITIZER_NETBSD
 DEFINE_REAL(int, __sigsetjmp, void *env)
 #endif
 #endif  // SANITIZER_MAC

@@ -498,7 +498,10 @@ StringRef llvm::dwarf::AtomTypeString(unsigned AT) {
   case DW_ATOM_die_tag:
     return "DW_ATOM_die_tag";
   case DW_ATOM_type_flags:
+  case DW_ATOM_type_type_flags:
     return "DW_ATOM_type_flags";
+  case DW_ATOM_qual_name_hash:
+    return "DW_ATOM_qual_name_hash";
   }
   return StringRef();
 }

@@ -529,6 +529,19 @@ TEST(CompletionTest, SemaIndexMerge) {
       UnorderedElementsAre(Named("local"), Named("Index"), Named("both")));
 }
 
+TEST(CompletionTest, SemaIndexMergeWithLimit) {
+  clangd::CodeCompleteOptions Opts;
+  Opts.Limit = 1;
+  auto Results = completions(
+      R"cpp(
+          namespace ns { int local; void both(); }
+          void f() { ::ns::^ }
+      )cpp",
+      {func("ns::both"), cls("ns::Index")}, Opts);
+  EXPECT_EQ(Results.items.size(), Opts.Limit);
+  EXPECT_TRUE(Results.isIncomplete);
+}
+
 TEST(CompletionTest, IndexSuppressesPreambleCompletions) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
@@ -606,6 +619,14 @@ TEST(CompletionTest, DynamicIndexMultiFile) {
   EXPECT_THAT(Results.items, Contains(AllOf(Named("fooooo"), Filter("fooooo"),
                                             Kind(CompletionItemKind::Function),
                                             Doc("Doooc"), Detail("void"))));
+}
+
+TEST(CodeCompleteTest, DisableTypoCorrection) {
+  auto Results = completions(R"cpp(
+     namespace clang { int v; }
+     void f() { clangd::^
+  )cpp");
+  EXPECT_TRUE(Results.items.empty());
 }
 
 SignatureHelp signatures(StringRef Text) {

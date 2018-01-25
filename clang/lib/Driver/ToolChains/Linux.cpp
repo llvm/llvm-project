@@ -846,6 +846,8 @@ bool Linux::isPIEDefault() const {
 SanitizerMask Linux::getSupportedSanitizers() const {
   const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
+  const bool IsMIPS = getTriple().getArch() == llvm::Triple::mips ||
+                      getTriple().getArch() == llvm::Triple::mipsel;
   const bool IsMIPS64 = getTriple().getArch() == llvm::Triple::mips64 ||
                         getTriple().getArch() == llvm::Triple::mips64el;
   const bool IsPowerPC64 = getTriple().getArch() == llvm::Triple::ppc64 ||
@@ -875,7 +877,7 @@ SanitizerMask Linux::getSupportedSanitizers() const {
     Res |= SanitizerKind::Efficiency;
   if (IsX86 || IsX86_64)
     Res |= SanitizerKind::Function;
-  if (IsX86_64 || IsMIPS64 || IsAArch64 || IsX86 || IsArmArch)
+  if (IsX86_64 || IsMIPS64 || IsAArch64 || IsX86 || IsMIPS || IsArmArch)
     Res |= SanitizerKind::Scudo;
   if (IsAArch64)
     Res |= SanitizerKind::HWAddress;
