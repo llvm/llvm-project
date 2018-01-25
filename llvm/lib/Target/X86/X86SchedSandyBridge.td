@@ -936,7 +936,7 @@ def: InstRW<[SBWriteResGroup21], (instregex "MIN(C?)SSrr")>;
 def: InstRW<[SBWriteResGroup21], (instregex "MMX_CVTPI2PSirr")>;
 def: InstRW<[SBWriteResGroup21], (instregex "MMX_CVTPS2PIirr")>;
 def: InstRW<[SBWriteResGroup21], (instregex "MMX_CVTTPS2PIirr")>;
-def: InstRW<[SBWriteResGroup21], (instregex "MUL8r")>;
+def: InstRW<[SBWriteResGroup21], (instrs MUL8r)>;
 def: InstRW<[SBWriteResGroup21], (instregex "POPCNT(16|32|64)rr")>;
 def: InstRW<[SBWriteResGroup21], (instregex "PUSHFS64")>;
 def: InstRW<[SBWriteResGroup21], (instregex "ROUNDPDr")>;
@@ -1111,7 +1111,7 @@ def SBWriteResGroup27 : SchedWriteRes<[SBPort0,SBPort1]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[SBWriteResGroup27], (instregex "MUL(16|32|64)r")>;
+def: InstRW<[SBWriteResGroup27], (instrs MUL16r, MUL32r, MUL64r)>;
 
 def SBWriteResGroup28 : SchedWriteRes<[SBPort1,SBPort5]> {
   let Latency = 4;
@@ -1962,7 +1962,7 @@ def: InstRW<[SBWriteResGroup72], (instregex "FCOM32m")>;
 def: InstRW<[SBWriteResGroup72], (instregex "FCOM64m")>;
 def: InstRW<[SBWriteResGroup72], (instregex "FCOMP32m")>;
 def: InstRW<[SBWriteResGroup72], (instregex "FCOMP64m")>;
-def: InstRW<[SBWriteResGroup72], (instregex "MUL8m")>;
+def: InstRW<[SBWriteResGroup72], (instrs MUL8m)>;
 
 def SBWriteResGroup73 : SchedWriteRes<[SBPort5,SBPort23]> {
   let Latency = 8;
@@ -2272,7 +2272,7 @@ def: InstRW<[SBWriteResGroup93], (instregex "CVTTSD2SI64rm")>;
 def: InstRW<[SBWriteResGroup93], (instregex "CVTTSD2SIrm")>;
 def: InstRW<[SBWriteResGroup93], (instregex "CVTTSS2SI64rm")>;
 def: InstRW<[SBWriteResGroup93], (instregex "CVTTSS2SIrm")>;
-def: InstRW<[SBWriteResGroup93], (instregex "MUL(16|32|64)m")>;
+def: InstRW<[SBWriteResGroup93], (instrs MUL16m, MUL32m, MUL64m)>;
 
 def SBWriteResGroup94 : SchedWriteRes<[SBPort0,SBPort5,SBPort23]> {
   let Latency = 9;

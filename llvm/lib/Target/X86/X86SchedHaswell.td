@@ -1545,9 +1545,9 @@ def: InstRW<[HWWriteResGroup12], (instregex "FCOM32m")>;
 def: InstRW<[HWWriteResGroup12], (instregex "FCOM64m")>;
 def: InstRW<[HWWriteResGroup12], (instregex "FCOMP32m")>;
 def: InstRW<[HWWriteResGroup12], (instregex "FCOMP64m")>;
-def: InstRW<[HWWriteResGroup12], (instregex "IMUL(16|32|64)m")>;
-def: InstRW<[HWWriteResGroup12], (instregex "IMUL(16|32|64)rm(i8)?")>;
-def: InstRW<[HWWriteResGroup12], (instregex "IMUL8m")>;
+def: InstRW<[HWWriteResGroup12], (instrs IMUL16m, IMUL32m, IMUL64m)>;
+def: InstRW<[HWWriteResGroup12], (instrs IMUL16rm, IMUL16rmi, IMUL16rmi8, IMUL32rm, IMUL32rmi, IMUL32rmi8, IMUL64rm, IMUL64rmi32, IMUL64rmi8)>;
+def: InstRW<[HWWriteResGroup12], (instrs IMUL8m)>;
 def: InstRW<[HWWriteResGroup12], (instregex "LZCNT(16|32|64)rm")>;
 def: InstRW<[HWWriteResGroup12], (instregex "MAX(C?)SDrm")>;
 def: InstRW<[HWWriteResGroup12], (instregex "MAX(C?)SSrm")>;
@@ -1556,8 +1556,8 @@ def: InstRW<[HWWriteResGroup12], (instregex "MIN(C?)SSrm")>;
 def: InstRW<[HWWriteResGroup12], (instregex "MMX_CVTPI2PSirm")>;
 def: InstRW<[HWWriteResGroup12], (instregex "MMX_CVTPS2PIirm")>;
 def: InstRW<[HWWriteResGroup12], (instregex "MMX_CVTTPS2PIirm")>;
-def: InstRW<[HWWriteResGroup12], (instregex "MUL(16|32|64)m")>;
-def: InstRW<[HWWriteResGroup12], (instregex "MUL8m")>;
+def: InstRW<[HWWriteResGroup12], (instrs MUL16m, MUL32m, MUL64m)>;
+def: InstRW<[HWWriteResGroup12], (instrs MUL8m)>;
 def: InstRW<[HWWriteResGroup12], (instregex "PDEP(32|64)rm")>;
 def: InstRW<[HWWriteResGroup12], (instregex "PEXT(32|64)rm")>;
 def: InstRW<[HWWriteResGroup12], (instregex "POPCNT(16|32|64)rm")>;
@@ -2498,8 +2498,8 @@ def: InstRW<[HWWriteResGroup50], (instregex "COMISSrr")>;
 def: InstRW<[HWWriteResGroup50], (instregex "CVTDQ2PSrr")>;
 def: InstRW<[HWWriteResGroup50], (instregex "CVTPS2DQrr")>;
 def: InstRW<[HWWriteResGroup50], (instregex "CVTTPS2DQrr")>;
-def: InstRW<[HWWriteResGroup50], (instregex "IMUL64rr(i8)?")>;
-def: InstRW<[HWWriteResGroup50], (instregex "IMUL8r")>;
+def: InstRW<[HWWriteResGroup50], (instrs IMUL64rr, IMUL64rri32, IMUL64rri8)>;
+def: InstRW<[HWWriteResGroup50], (instrs IMUL8r)>;
 def: InstRW<[HWWriteResGroup50], (instregex "LZCNT(16|32|64)rr")>;
 def: InstRW<[HWWriteResGroup50], (instregex "MAX(C?)PDrr")>;
 def: InstRW<[HWWriteResGroup50], (instregex "MAX(C?)PSrr")>;
@@ -2510,7 +2510,7 @@ def: InstRW<[HWWriteResGroup50], (instregex "MIN(C?)PSrr")>;
 def: InstRW<[HWWriteResGroup50], (instregex "MIN(C?)SDrr")>;
 def: InstRW<[HWWriteResGroup50], (instregex "MIN(C?)SSrr")>;
 def: InstRW<[HWWriteResGroup50], (instregex "MMX_CVTPI2PSirr")>;
-def: InstRW<[HWWriteResGroup50], (instregex "MUL8r")>;
+def: InstRW<[HWWriteResGroup50], (instrs MUL8r)>;
 def: InstRW<[HWWriteResGroup50], (instregex "PDEP(32|64)rr")>;
 def: InstRW<[HWWriteResGroup50], (instregex "PEXT(32|64)rr")>;
 def: InstRW<[HWWriteResGroup50], (instregex "POPCNT(16|32|64)rr")>;
@@ -2578,13 +2578,13 @@ def HWWriteResGroup50_16 : SchedWriteRes<[HWPort1, HWPort0156]> {
   let Latency = 3;
   let NumMicroOps = 4;
 }
-def: InstRW<[HWWriteResGroup50_16], (instregex "IMUL16rr(i8)?")>;
+def: InstRW<[HWWriteResGroup50_16], (instrs IMUL16rr, IMUL16rri, IMUL16rri8)>;
 
 def HWWriteResGroup50_32 : SchedWriteRes<[HWPort1, HWPort0156]> {
   let Latency = 3;
   let NumMicroOps = 3;
 }
-def: InstRW<[HWWriteResGroup50_32], (instregex "IMUL32rr(i8)?")>;
+def: InstRW<[HWWriteResGroup50_32], (instrs IMUL32rr, IMUL32rri, IMUL32rri8)>;
 
 def HWWriteResGroup51 : SchedWriteRes<[HWPort5]> {
   let Latency = 3;
@@ -3038,23 +3038,23 @@ def HWWriteResGroup74 : SchedWriteRes<[HWPort1,HWPort6]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[HWWriteResGroup74], (instregex "IMUL64r")>;
-def: InstRW<[HWWriteResGroup74], (instregex "MUL64r")>;
-def: InstRW<[HWWriteResGroup74], (instregex "MULX64rr")>;
+def: InstRW<[HWWriteResGroup74], (instrs IMUL64r)>;
+def: InstRW<[HWWriteResGroup74], (instrs MUL64r)>;
+def: InstRW<[HWWriteResGroup74], (instrs MULX64rr)>;
 
 def HWWriteResGroup74_16 : SchedWriteRes<[HWPort1, HWPort0156]> {
   let Latency = 4;
   let NumMicroOps = 4;
 }
-def: InstRW<[HWWriteResGroup74_16], (instregex "IMUL16r")>;
-def: InstRW<[HWWriteResGroup74_16], (instregex "MUL16r")>;
+def: InstRW<[HWWriteResGroup74_16], (instrs IMUL16r)>;
+def: InstRW<[HWWriteResGroup74_16], (instrs MUL16r)>;
 
 def HWWriteResGroup74_32 : SchedWriteRes<[HWPort1,HWPort0156]> {
   let Latency = 4;
   let NumMicroOps = 3;
 }
-def: InstRW<[HWWriteResGroup74_32], (instregex "IMUL32r")>;
-def: InstRW<[HWWriteResGroup74_32], (instregex "MUL32r")>;
+def: InstRW<[HWWriteResGroup74_32], (instrs IMUL32r)>;
+def: InstRW<[HWWriteResGroup74_32], (instrs MUL32r)>;
 
 def HWWriteResGroup75 : SchedWriteRes<[HWPort1,HWPort23]> {
   let Latency = 11;
@@ -3128,7 +3128,7 @@ def HWWriteResGroup79 : SchedWriteRes<[HWPort1,HWPort6,HWPort23]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[HWWriteResGroup79], (instregex "MULX64rm")>;
+def: InstRW<[HWWriteResGroup79], (instrs MULX64rm)>;
 
 def HWWriteResGroup80 : SchedWriteRes<[HWPort5,HWPort23,HWPort015]> {
   let Latency = 9;
@@ -3424,7 +3424,7 @@ def HWWriteResGroup95 : SchedWriteRes<[HWPort1,HWPort06,HWPort0156]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[HWWriteResGroup95], (instregex "MULX32rr")>;
+def: InstRW<[HWWriteResGroup95], (instrs MULX32rr)>;
 
 def HWWriteResGroup96 : SchedWriteRes<[HWPort1,HWPort5,HWPort23]> {
   let Latency = 11;
@@ -3462,7 +3462,7 @@ def HWWriteResGroup98 : SchedWriteRes<[HWPort1,HWPort23,HWPort06,HWPort0156]> {
   let NumMicroOps = 4;
   let ResourceCycles = [1,1,1,1];
 }
-def: InstRW<[HWWriteResGroup98], (instregex "MULX32rm")>;
+def: InstRW<[HWWriteResGroup98], (instrs MULX32rm)>;
 
 def HWWriteResGroup99 : SchedWriteRes<[HWPort6,HWPort0156]> {
   let Latency = 5;
