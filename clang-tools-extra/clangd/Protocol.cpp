@@ -137,6 +137,12 @@ json::Expr toJSON(const TextEdit &P) {
   };
 }
 
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const TextEdit &TE) {
+  OS << TE.range << " => \"";
+  PrintEscapedString(TE.newText, OS);
+  return OS << '"';
+}
+
 bool fromJSON(const json::Expr &E, TraceLevel &Out) {
   if (auto S = E.asString()) {
     if (*S == "off") {
@@ -253,6 +259,28 @@ bool fromJSON(const json::Expr &Params, Diagnostic &R) {
 bool fromJSON(const json::Expr &Params, CodeActionContext &R) {
   json::ObjectMapper O(Params);
   return O && O.map("diagnostics", R.diagnostics);
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Diagnostic &D) {
+  OS << D.range << " [";
+  switch (D.severity) {
+    case 1:
+      OS << "error";
+      break;
+    case 2:
+      OS << "warning";
+      break;
+    case 3:
+      OS << "note";
+      break;
+    case 4:
+      OS << "remark";
+      break;
+    default:
+      OS << "diagnostic";
+      break;
+  }
+  return OS << '(' << D.severity << "): " << D.message << "]";
 }
 
 bool fromJSON(const json::Expr &Params, CodeActionParams &R) {
