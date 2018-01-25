@@ -86,6 +86,12 @@ static llvm::cl::opt<PCHStorageFlag> PCHStorage(
         clEnumValN(PCHStorageFlag::Memory, "memory", "store PCHs in memory")),
     llvm::cl::init(PCHStorageFlag::Disk));
 
+static llvm::cl::opt<int> LimitCompletionResult(
+    "limit-completion",
+    llvm::cl::desc("Limit the number of completion results returned by clangd. "
+                   "0 means no limit."),
+    llvm::cl::init(0));
+
 static llvm::cl::opt<bool> RunSynchronously(
     "run-synchronously",
     llvm::cl::desc("Parse on main thread. If set, -j is ignored"),
@@ -215,6 +221,7 @@ int main(int argc, char *argv[]) {
   clangd::CodeCompleteOptions CCOpts;
   CCOpts.EnableSnippets = EnableSnippets;
   CCOpts.IncludeIneligibleResults = IncludeIneligibleResults;
+  CCOpts.Limit = LimitCompletionResult;
   // Initialize and run ClangdLSPServer.
   ClangdLSPServer LSPServer(Out, WorkerThreadsCount, StorePreamblesInMemory,
                             CCOpts, ResourceDirRef, CompileCommandsDirPath,

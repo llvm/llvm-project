@@ -17,6 +17,11 @@ cmake_policy(SET CMP0056 NEW)
 
 cmake_policy(SET CMP0057 NEW)
 
+if(POLICY CMP0068)
+  cmake_policy(SET CMP0068 NEW)
+  set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
+endif()
+
 if(NOT DEFINED LLVM_VERSION_MAJOR)
   set(LLVM_VERSION_MAJOR 7)
 endif()

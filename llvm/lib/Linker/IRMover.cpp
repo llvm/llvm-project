@@ -95,6 +95,12 @@ void TypeMapTy::addTypeMapping(Type *DstTy, Type *SrcTy) {
     for (StructType *Ty : SpeculativeDstOpaqueTypes)
       DstResolvedOpaqueTypes.erase(Ty);
   } else {
+    // SrcTy and DstTy are recursively ismorphic. We clear names of SrcTy
+    // and all its descendants to lower amount of renaming in LLVM context
+    // Renaming occurs because we load all source modules to the same context
+    // and declaration with existing name gets renamed (i.e Foo -> Foo.42).
+    // As a result we may get several different types in the destination
+    // module, which are in fact the same.
     for (Type *Ty : SpeculativeTypes)
       if (auto *STy = dyn_cast<StructType>(Ty))
         if (STy->hasName())

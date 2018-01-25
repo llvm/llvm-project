@@ -231,8 +231,6 @@ private:
   /// are listed in the derived FunctionSummary object.
   std::vector<ValueInfo> RefEdgeList;
 
-  bool isLive() const { return Flags.Live; }
-
 protected:
   GlobalValueSummary(SummaryKind K, GVFlags Flags, std::vector<ValueInfo> Refs)
       : Kind(K), Flags(Flags), RefEdgeList(std::move(Refs)) {
@@ -277,6 +275,8 @@ public:
   /// Return true if this global value can't be imported.
   bool notEligibleToImport() const { return Flags.NotEligibleToImport; }
 
+  bool isLive() const { return Flags.Live; }
+
   void setLive(bool Live) { Flags.Live = Live; }
 
   void setDSOLocal(bool Local) { Flags.DSOLocal = Local; }
@@ -295,8 +295,6 @@ public:
   const GlobalValueSummary *getBaseObject() const;
 
   friend class ModuleSummaryIndex;
-  friend void computeDeadSymbols(class ModuleSummaryIndex &,
-                                 const DenseSet<GlobalValue::GUID> &);
 };
 
 /// \brief Alias summary information.

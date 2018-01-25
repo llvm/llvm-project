@@ -255,6 +255,11 @@ public:
   ///      with the same (scalar or vector) type).
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
+  template <typename DstTy, typename... UseArgsTy>
+  MachineInstrBuilder buildSub(DstTy &&Ty, UseArgsTy &&... UseArgs) {
+    unsigned Res = getDestFromArg(Ty);
+    return buildSub(Res, (getRegFromArg(UseArgs))...);
+  }
   MachineInstrBuilder buildSub(unsigned Res, unsigned Op0,
                                unsigned Op1);
 
@@ -268,6 +273,11 @@ public:
   ///      with the same (scalar or vector) type).
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
+  template <typename DstTy, typename... UseArgsTy>
+  MachineInstrBuilder buildMul(DstTy &&Ty, UseArgsTy &&... UseArgs) {
+    unsigned Res = getDestFromArg(Ty);
+    return buildMul(Res, (getRegFromArg(UseArgs))...);
+  }
   MachineInstrBuilder buildMul(unsigned Res, unsigned Op0,
                                unsigned Op1);
 
@@ -399,6 +409,10 @@ public:
   /// \pre \p Op must be smaller than \p Res
   ///
   /// \return The newly created instruction.
+  template <typename DstType, typename ArgType>
+  MachineInstrBuilder buildSExt(DstType &&Res, ArgType &&Arg) {
+    return buildSExt(getDestFromArg(Res), getRegFromArg(Arg));
+  }
   MachineInstrBuilder buildSExt(unsigned Res, unsigned Op);
 
   /// Build and insert \p Res = G_ZEXT \p Op
@@ -413,6 +427,10 @@ public:
   /// \pre \p Op must be smaller than \p Res
   ///
   /// \return The newly created instruction.
+  template <typename DstType, typename ArgType>
+  MachineInstrBuilder buildZExt(DstType &&Res, ArgType &&Arg) {
+    return buildZExt(getDestFromArg(Res), getRegFromArg(Arg));
+  }
   MachineInstrBuilder buildZExt(unsigned Res, unsigned Op);
 
   /// Build and insert \p Res = G_SEXT \p Op, \p Res = G_TRUNC \p Op, or

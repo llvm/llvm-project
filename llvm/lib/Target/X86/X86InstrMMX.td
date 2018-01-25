@@ -145,16 +145,16 @@ let Constraints = "$src1 = $dst" in {
 /// Unary MMX instructions requiring SSSE3.
 multiclass SS3I_unop_rm_int_mm<bits<8> opc, string OpcodeStr,
                                Intrinsic IntId64, OpndItins itins> {
-  def rr64 : MMXSS38I<opc, MRMSrcReg, (outs VR64:$dst), (ins VR64:$src),
-                   !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
-                   [(set VR64:$dst, (IntId64 VR64:$src))], itins.rr>,
-             Sched<[itins.Sched]>;
+  def rr : MMXSS38I<opc, MRMSrcReg, (outs VR64:$dst), (ins VR64:$src),
+                 !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
+                 [(set VR64:$dst, (IntId64 VR64:$src))], itins.rr>,
+           Sched<[itins.Sched]>;
 
-  def rm64 : MMXSS38I<opc, MRMSrcMem, (outs VR64:$dst), (ins i64mem:$src),
-                   !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
-                   [(set VR64:$dst,
-                     (IntId64 (bitconvert (load_mmx addr:$src))))],
-                   itins.rm>, Sched<[itins.Sched.Folded]>;
+  def rm : MMXSS38I<opc, MRMSrcMem, (outs VR64:$dst), (ins i64mem:$src),
+                 !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
+                 [(set VR64:$dst,
+                   (IntId64 (bitconvert (load_mmx addr:$src))))],
+                 itins.rm>, Sched<[itins.Sched.Folded]>;
 }
 
 /// Binary MMX instructions requiring SSSE3.
@@ -163,12 +163,12 @@ multiclass SS3I_binop_rm_int_mm<bits<8> opc, string OpcodeStr,
                              Intrinsic IntId64, OpndItins itins,
                              bit Commutable = 0> {
   let isCommutable = Commutable in
-  def rr64 : MMXSS38I<opc, MRMSrcReg, (outs VR64:$dst),
+  def rr : MMXSS38I<opc, MRMSrcReg, (outs VR64:$dst),
        (ins VR64:$src1, VR64:$src2),
         !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
        [(set VR64:$dst, (IntId64 VR64:$src1, VR64:$src2))], itins.rr>,
       Sched<[itins.Sched]>;
-  def rm64 : MMXSS38I<opc, MRMSrcMem, (outs VR64:$dst),
+  def rm : MMXSS38I<opc, MRMSrcMem, (outs VR64:$dst),
        (ins VR64:$src1, i64mem:$src2),
         !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
        [(set VR64:$dst,
@@ -180,12 +180,12 @@ multiclass SS3I_binop_rm_int_mm<bits<8> opc, string OpcodeStr,
 
 /// PALIGN MMX instructions (require SSSE3).
 multiclass ssse3_palign_mm<string asm, Intrinsic IntId> {
-  def R64irr  : MMXSS3AI<0x0F, MRMSrcReg, (outs VR64:$dst),
+  def rri  : MMXSS3AI<0x0F, MRMSrcReg, (outs VR64:$dst),
       (ins VR64:$src1, VR64:$src2, u8imm:$src3),
       !strconcat(asm, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
       [(set VR64:$dst, (IntId VR64:$src1, VR64:$src2, (i8 imm:$src3)))]>,
       Sched<[WriteShuffle]>;
-  def R64irm  : MMXSS3AI<0x0F, MRMSrcMem, (outs VR64:$dst),
+  def rmi  : MMXSS3AI<0x0F, MRMSrcMem, (outs VR64:$dst),
       (ins VR64:$src1, i64mem:$src2, u8imm:$src3),
       !strconcat(asm, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
       [(set VR64:$dst, (IntId VR64:$src1,
@@ -388,7 +388,7 @@ defm MMX_PADDUSW : MMXI_binop_rm_int<0xDD, "paddusw", int_x86_mmx_paddus_w,
 
 defm MMX_PHADDW  : SS3I_binop_rm_int_mm<0x01, "phaddw", int_x86_ssse3_phadd_w,
                                    MMX_PHADDSUBW>;
-defm MMX_PHADD   : SS3I_binop_rm_int_mm<0x02, "phaddd", int_x86_ssse3_phadd_d,
+defm MMX_PHADDD  : SS3I_binop_rm_int_mm<0x02, "phaddd", int_x86_ssse3_phadd_d,
                                    MMX_PHADDSUBD>;
 defm MMX_PHADDSW : SS3I_binop_rm_int_mm<0x03, "phaddsw",int_x86_ssse3_phadd_sw,
                                    MMX_PHADDSUBW>;
@@ -470,7 +470,7 @@ defm MMX_PSIGNW :  SS3I_binop_rm_int_mm<0x09, "psignw", int_x86_ssse3_psign_w,
 defm MMX_PSIGND :  SS3I_binop_rm_int_mm<0x0A, "psignd", int_x86_ssse3_psign_d,
                                         MMX_MISC_FUNC_ITINS>;
 let Constraints = "$src1 = $dst" in
-  defm MMX_PALIGN : ssse3_palign_mm<"palignr", int_x86_mmx_palignr_b>;
+  defm MMX_PALIGNR : ssse3_palign_mm<"palignr", int_x86_mmx_palignr_b>;
 
 // Logical Instructions
 defm MMX_PAND : MMXI_binop_rm_int<0xDB, "pand", int_x86_mmx_pand,
