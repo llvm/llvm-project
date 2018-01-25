@@ -44,7 +44,7 @@ public:
     return It->second;
   }
 
-  std::shared_ptr<CppFile> getFile(PathRef File) {
+  std::shared_ptr<CppFile> getFile(PathRef File) const {
     std::lock_guard<std::mutex> Lock(Mutex);
 
     auto It = OpenedFiles.find(File);
@@ -57,8 +57,11 @@ public:
   /// returns it.
   std::shared_ptr<CppFile> removeIfPresent(PathRef File);
 
+  /// Gets used memory for each of the stored files.
+  std::vector<std::pair<Path, std::size_t>> getUsedBytesPerFile() const;
+
 private:
-  std::mutex Mutex;
+  mutable std::mutex Mutex;
   llvm::StringMap<std::shared_ptr<CppFile>> OpenedFiles;
   ASTParsedCallback ASTCallback;
 };

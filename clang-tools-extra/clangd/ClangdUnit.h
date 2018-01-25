@@ -96,6 +96,10 @@ public:
 
   const std::vector<DiagWithFixIts> &getDiagnostics() const;
 
+  /// Returns the esitmated size of the AST and the accessory structures, in
+  /// bytes. Does not include the size of the preamble.
+  std::size_t getUsedBytes() const;
+
 private:
   ParsedAST(std::shared_ptr<const PreambleData> Preamble,
             std::unique_ptr<CompilerInstance> Clang,
@@ -216,6 +220,10 @@ public:
   /// always be non-null.
   std::shared_future<std::shared_ptr<ParsedASTWrapper>> getAST() const;
 
+  /// Returns an estimated size, in bytes, currently occupied by the AST and the
+  /// Preamble.
+  std::size_t getUsedBytes() const;
+
 private:
   /// A helper guard that manages the state of CppFile during rebuild.
   class RebuildGuard {
@@ -243,6 +251,11 @@ private:
   bool RebuildInProgress;
   /// Condition variable to indicate changes to RebuildInProgress.
   std::condition_variable RebuildCond;
+
+  /// Size of the last built AST, in bytes.
+  std::size_t ASTMemUsage;
+  /// Size of the last build Preamble, in bytes.
+  std::size_t PreambleMemUsage;
 
   /// Promise and future for the latests AST. Fulfilled during rebuild.
   /// We use std::shared_ptr here because MVSC fails to compile non-copyable

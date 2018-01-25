@@ -635,3 +635,8 @@ void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
   // FIXME: Do nothing for now. This will be used for indexing and potentially
   // invalidating other caches.
 }
+
+std::vector<std::pair<Path, std::size_t>>
+ClangdServer::getUsedBytesPerFile() const {
+  return Units.getUsedBytesPerFile();
+}

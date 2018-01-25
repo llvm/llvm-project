@@ -322,6 +322,15 @@ public:
   /// Called when an event occurs for a watched file in the workspace.
   void onFileEvent(const DidChangeWatchedFilesParams &Params);
 
+  /// Returns estimated memory usage for each of the currently open files.
+  /// The order of results is unspecified.
+  /// Overall memory usage of clangd may be significantly more than reported
+  /// here, as this metric does not account (at least) for:
+  ///   - memory occupied by static and dynamic index,
+  ///   - memory required for in-flight requests,
+  /// FIXME: those metrics might be useful too, we should add them.
+  std::vector<std::pair<Path, std::size_t>> getUsedBytesPerFile() const;
+
 private:
   /// FIXME: This stats several files to find a .clang-format file. I/O can be
   /// slow. Think of a way to cache this.
