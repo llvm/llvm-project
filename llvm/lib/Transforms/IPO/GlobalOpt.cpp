@@ -483,7 +483,6 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
     StartAlignment = DL.getABITypeAlignment(GV->getType());
 
   if (StructType *STy = dyn_cast<StructType>(Ty)) {
-    uint64_t FragmentOffset = 0;
     unsigned NumElements = STy->getNumElements();
     NewGlobals.reserve(NumElements);
     const StructLayout &Layout = *DL.getStructLayout(STy);
@@ -509,10 +508,9 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
         NGV->setAlignment(NewAlign);
 
       // Copy over the debug info for the variable.
-      FragmentOffset = alignTo(FragmentOffset, NewAlign);
       uint64_t Size = DL.getTypeSizeInBits(NGV->getValueType());
-      transferSRADebugInfo(GV, NGV, FragmentOffset, Size, NumElements);
-      FragmentOffset += Size;
+      uint64_t FragmentOffsetInBits = Layout.getElementOffsetInBits(i);
+      transferSRADebugInfo(GV, NGV, FragmentOffsetInBits, Size, NumElements);
     }
   } else if (SequentialType *STy = dyn_cast<SequentialType>(Ty)) {
     unsigned NumElements = STy->getNumElements();

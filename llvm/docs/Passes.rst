@@ -641,6 +641,21 @@ not library calls are simplified is controlled by the
 :ref:`-functionattrs <passes-functionattrs>` pass and LLVM's knowledge of
 library calls on different targets.
 
+.. _passes-aggressive-instcombine:
+
+``-aggressive-instcombine``: Combine expression patterns
+--------------------------------------------------------
+
+Combine expression patterns to form expressions with fewer, simple instructions.
+This pass does not modify the CFG.
+
+For example, this pass reduce width of expressions post-dominated by TruncInst
+into smaller width when applicable.
+
+It differs from instcombine pass in that it contains pattern optimization that
+requires higher complexity than the O(1), thus, it should run fewer times than
+instcombine pass.
+
 ``-internalize``: Internalize Global Symbols
 --------------------------------------------
 

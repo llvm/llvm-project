@@ -64,6 +64,18 @@ std::unique_ptr<Module> parseAssembly(
   return M;
 }
 
+void IterateOnSource(StringRef Source, IRMutator &Mutator) {
+  LLVMContext Ctx;
+
+  for (int i = 0; i < 10; ++i) {
+    auto M = parseAssembly(Source.data(), Ctx);
+    ASSERT_TRUE(M && !verifyModule(*M, &errs()));
+
+    Mutator.mutateModule(*M, Seed, Source.size(), Source.size() + 100);
+    EXPECT_TRUE(!verifyModule(*M, &errs()));
+  }
+}
+
 TEST(InjectorIRStrategyTest, EmptyModule) {
   // Test that we can inject into empty module
 
@@ -81,7 +93,6 @@ TEST(InjectorIRStrategyTest, EmptyModule) {
 TEST(InstDeleterIRStrategyTest, EmptyFunction) {
   // Test that we don't crash even if we can't remove from one of the functions.
 
-  LLVMContext Ctx;
   StringRef Source = ""
       "define <8 x i32> @func1() {\n"
         "ret <8 x i32> undef\n"
@@ -96,15 +107,33 @@ TEST(InstDeleterIRStrategyTest, EmptyFunction) {
   auto Mutator = createDeleterMutator();
   ASSERT_TRUE(Mutator);
 
-  // We need to choose 'func1' in order for the crash to appear.
-  // Loop 10 times and assume we are lucky.
-  for (int i = 0; i < 10; ++i) {
-    auto M = parseAssembly(Source.data(), Ctx);
-    ASSERT_TRUE(M && !verifyModule(*M, &errs()));
+  IterateOnSource(Source, *Mutator);
+}
 
-    Mutator->mutateModule(*M, Seed, Source.size(), Source.size() + 100);
-    EXPECT_TRUE(!verifyModule(*M, &errs()));
-  }
+TEST(InstDeleterIRStrategyTest, PhiNodes) {
+  // Test that inst deleter works correctly with the phi nodes.
+
+  LLVMContext Ctx;
+  StringRef Source = "\n\
+      define i32 @earlyreturncrash(i32 %x) {\n\
+      entry:\n\
+        switch i32 %x, label %sw.epilog [\n\
+          i32 1, label %sw.bb1\n\
+        ]\n\
+      \n\
+      sw.bb1:\n\
+        br label %sw.epilog\n\
+      \n\
+      sw.epilog:\n\
+        %a.0 = phi i32 [ 7, %entry ],  [ 9, %sw.bb1 ]\n\
+        %b.0 = phi i32 [ 10, %entry ], [ 4, %sw.bb1 ]\n\
+        ret i32 %a.0\n\
+      }";
+
+  auto Mutator = createDeleterMutator();
+  ASSERT_TRUE(Mutator);
+
+  IterateOnSource(Source, *Mutator);
 }
 
 }

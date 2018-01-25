@@ -152,10 +152,14 @@ uint64_t InstDeleterIRStrategy::getWeight(size_t CurrentSize, size_t MaxSize,
 
 void InstDeleterIRStrategy::mutate(Function &F, RandomIRBuilder &IB) {
   auto RS = makeSampler<Instruction *>(IB.Rand);
-  // Avoid terminators so we don't have to worry about keeping the CFG coherent.
-  for (Instruction &Inst : instructions(F))
-    if (!Inst.isTerminator())
-      RS.sample(&Inst, /*Weight=*/1);
+  for (Instruction &Inst : instructions(F)) {
+    // TODO: We can't handle these instructions.
+    if (Inst.isTerminator() || Inst.isEHPad() ||
+        Inst.isSwiftError() || isa<PHINode>(Inst))
+      continue;
+
+    RS.sample(&Inst, /*Weight=*/1);
+  }
   if (RS.isEmpty())
     return;
 
@@ -191,4 +195,5 @@ void InstDeleterIRStrategy::mutate(Instruction &Inst, RandomIRBuilder &IB) {
     RS.sample(IB.newSource(*BB, InstsBefore, {}, Pred), /*Weight=*/1);
 
   Inst.replaceAllUsesWith(RS.getSelection());
+  Inst.eraseFromParent();
 }
