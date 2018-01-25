@@ -89,6 +89,7 @@ public:
 
   // The following members are normally only used in linker scripts.
   MemoryRegion *MemRegion = nullptr;
+  MemoryRegion *LMARegion = nullptr;
   Expr AddrExpr;
   Expr AlignExpr;
   Expr LMAExpr;

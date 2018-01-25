@@ -1067,12 +1067,12 @@ def : InstRW<[WriteMicrocoded], (instregex "VPGATHER(Q|D)(Q|D)(Y?)rm")>;
 
 // HADD, HSUB PS/PD
 // PHADD|PHSUB (S) W/D.
-def : InstRW<[WriteMicrocoded], (instregex "MMX_PHADD(W?)r(r|m)64",
-                               "MMX_PHADDSWr(r|m)64",
-                               "MMX_PHSUB(W|D)r(r|m)64",
-                               "MMX_PHSUBSWrr64",
+def : InstRW<[WriteMicrocoded], (instregex "MMX_PHADD(W|D)r(r|m)",
+                               "MMX_PHADDSWr(r|m)",
+                               "MMX_PHSUB(W|D)r(r|m)",
+                               "MMX_PHSUBSWrr",
                                "(V?)PH(ADD|SUB)(W|D)(Y?)r(r|m)",
-                               "(V?)PH(ADD|SUB)SWr(r|m)(256)?")>;
+                               "(V?)PH(ADD|SUB)SW(Y?)r(r|m)")>;
 
 
 // PCMPGTQ.
@@ -1594,21 +1594,21 @@ def : InstRW<[ZnWriteVDIVPDYLd], (instregex "VDIVPDYrm")>;
 def ZnWriteVRCPPSr : SchedWriteRes<[ZnFPU01]> {
   let Latency = 5;
 }
-def : InstRW<[ZnWriteVRCPPSr], (instregex "VRCPPSYr(_Int)?")>;
+def : InstRW<[ZnWriteVRCPPSr], (instregex "VRCPPSYr")>;
 
 // y,m256.
 def ZnWriteVRCPPSLd : SchedWriteRes<[ZnAGU, ZnFPU01]> {
   let Latency = 12;
   let NumMicroOps = 3;
 }
-def : InstRW<[ZnWriteVRCPPSLd], (instregex "VRCPPSYm(_Int)?")>;
+def : InstRW<[ZnWriteVRCPPSLd], (instregex "VRCPPSYm")>;
 
 // ROUND SS/SD PS/PD.
 // v,v,i.
 def ZnWriteROUNDr : SchedWriteRes<[ZnFPU3]> {
   let Latency = 4;
 }
-def : InstRW<[ZnWriteROUNDr], (instregex "(V?)ROUND(Y?)(S|P)(S|D)r(_Int)?")>;
+def : InstRW<[ZnWriteROUNDr], (instregex "(V?)ROUND(Y?)(S|P)(S|D)r")>;
 
 // VFMADD.
 // v,v,v.
@@ -1619,7 +1619,7 @@ def : InstRW<[ZnWriteFMADDr],
     (instregex
     "VF(N?)M(ADD|SUB|ADDSUB|SUBADD)P(S|D)(213|132|231)(Y?)r",
     "VF(N?)M(ADD|SUB)(132|231|213)S(S|D)r",
-    "VF(N?)M(ADD|SUB)S(S|D)4rr(_Int)?",
+    "VF(N?)M(ADD|SUB)S(S|D)4rr",
     "VF(N?)M(ADD|SUB)P(S|D)4(Y?)rr")>;
 
 // v,v,m.
@@ -1631,7 +1631,7 @@ def : InstRW<[ZnWriteFMADDm],
     (instregex
     "VF(N?)M(ADD|SUB|ADDSUB|SUBADD)(213|132|231)P(S|D)(Y?)m",
     "VF(N?)M(ADD|SUB)(132|231|213)S(S|D)m",
-    "VF(N?)M(ADD|SUB)S(S|D)4(rm|mr)(_Int)?",
+    "VF(N?)M(ADD|SUB)S(S|D)4(rm|mr)",
     "VF(N?)M(ADD|SUB)P(S|D)4(Y?)(rm|mr)")>;
 
 // v,m,i.
@@ -1639,7 +1639,7 @@ def ZnWriteROUNDm : SchedWriteRes<[ZnAGU, ZnFPU3]> {
   let Latency = 11;
   let NumMicroOps = 2;
 }
-def : InstRW<[ZnWriteROUNDm], (instregex "(V?)ROUND(Y?)(S|P)(S|D)m(_Int)?")>;
+def : InstRW<[ZnWriteROUNDm], (instregex "(V?)ROUND(Y?)(S|P)(S|D)m")>;
 
 // DPPS.
 // x,x,i / v,v,v,i.
@@ -1692,14 +1692,14 @@ def : InstRW<[ZnWriteVSQRTPDYLd], (instregex "VSQRTPDYm")>;
 def ZnWriteRSQRTSSr : SchedWriteRes<[ZnFPU02]> {
   let Latency = 5;
 }
-def : InstRW<[ZnWriteRSQRTSSr], (instregex "(V?)RSQRTSS(Y?)r(_Int)?")>;
+def : InstRW<[ZnWriteRSQRTSSr], (instregex "(V?)RSQRTSS(Y?)r")>;
 
 // RSQRTPS
 // x,x.
 def ZnWriteRSQRTPSr : SchedWriteRes<[ZnFPU01]> {
   let Latency = 5;
 }
-def : InstRW<[ZnWriteRSQRTPSr], (instregex "(V?)RSQRTPS(Y?)r(_Int)?")>;
+def : InstRW<[ZnWriteRSQRTPSr], (instregex "(V?)RSQRTPS(Y?)r")>;
 
 // RSQRTSSm
 // x,m128.
@@ -1708,14 +1708,14 @@ def ZnWriteRSQRTSSLd: SchedWriteRes<[ZnAGU, ZnFPU02]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,2];
 }
-def : InstRW<[ZnWriteRSQRTSSLd], (instregex "(V?)RSQRTSSm(_Int)?")>;
+def : InstRW<[ZnWriteRSQRTSSLd], (instregex "(V?)RSQRTSSm")>;
 
 // RSQRTPSm
 def ZnWriteRSQRTPSLd : SchedWriteRes<[ZnAGU, ZnFPU01]> {
   let Latency = 12;
   let NumMicroOps = 2;
 }
-def : InstRW<[ZnWriteRSQRTPSLd], (instregex "(V?)RSQRTPSm(_Int)?")>;
+def : InstRW<[ZnWriteRSQRTPSLd], (instregex "(V?)RSQRTPSm")>;
 
 // RSQRTPS 256.
 // y,y.
@@ -1724,14 +1724,14 @@ def ZnWriteRSQRTPSYr : SchedWriteRes<[ZnFPU01]> {
   let NumMicroOps = 2;
   let ResourceCycles = [2];
 }
-def : InstRW<[ZnWriteRSQRTPSYr], (instregex "VRSQRTPSYr(_Int)?")>;
+def : InstRW<[ZnWriteRSQRTPSYr], (instregex "VRSQRTPSYr")>;
 
 // y,m256.
 def ZnWriteRSQRTPSYLd : SchedWriteRes<[ZnAGU, ZnFPU01]> {
   let Latency = 12;
   let NumMicroOps = 2;
 }
-def : InstRW<[ZnWriteRSQRTPSYLd], (instregex "VRSQRTPSYm(_Int)?")>;
+def : InstRW<[ZnWriteRSQRTPSYLd], (instregex "VRSQRTPSYm")>;
 
 //-- Logic instructions --//
 

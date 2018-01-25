@@ -590,7 +590,7 @@ void LinkerScript::output(InputSection *S) {
   // If there is a memory region associated with this input section, then
   // place the section in that region and update the region index.
   if (Ctx->MemRegion) {
-    uint64_t &CurOffset = Ctx->MemRegionOffset[Ctx->MemRegion];
+    uint64_t &CurOffset = Ctx->MemRegion->CurPos;
     CurOffset += Pos - Before;
     uint64_t CurSize = CurOffset - Ctx->MemRegion->Origin;
     if (CurSize > Ctx->MemRegion->Length) {
@@ -617,9 +617,8 @@ MemoryRegion *LinkerScript::findMemoryRegion(OutputSection *Sec) {
   // If a memory region name was specified in the output section command,
   // then try to find that region first.
   if (!Sec->MemoryRegionName.empty()) {
-    auto It = MemoryRegions.find(Sec->MemoryRegionName);
-    if (It != MemoryRegions.end())
-      return It->second;
+    if (MemoryRegion *M = MemoryRegions.lookup(Sec->MemoryRegionName))
+      return M;
     error("memory region '" + Sec->MemoryRegionName + "' not declared");
     return nullptr;
   }
@@ -653,7 +652,7 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
 
   Ctx->MemRegion = Sec->MemRegion;
   if (Ctx->MemRegion)
-    Dot = Ctx->MemRegionOffset[Ctx->MemRegion];
+    Dot = Ctx->MemRegion->CurPos;
 
   switchTo(Sec);
 
@@ -662,13 +661,9 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
     Ctx->LMAOffset = [=] { return Sec->LMAExpr().getValue() - D; };
   }
 
-  if (!Sec->LMARegionName.empty()) {
-    if (MemoryRegion *MR = MemoryRegions.lookup(Sec->LMARegionName)) {
-      uint64_t Offset = MR->Origin - Dot;
-      Ctx->LMAOffset = [=] { return Offset; };
-    } else {
-      error("memory region '" + Sec->LMARegionName + "' not declared");
-    }
+  if (MemoryRegion *MR = Sec->LMARegion) {
+    uint64_t Offset = MR->Origin - Dot;
+    Ctx->LMAOffset = [=] { return Offset; };
   }
 
   // If neither AT nor AT> is specified for an allocatable section, the linker
@@ -698,7 +693,7 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
       Cmd->Offset = Dot - Ctx->OutSec->Addr;
       Dot += Cmd->Size;
       if (Ctx->MemRegion)
-        Ctx->MemRegionOffset[Ctx->MemRegion] += Cmd->Size;
+        Ctx->MemRegion->CurPos += Cmd->Size;
       Ctx->OutSec->Size = Dot - Ctx->OutSec->Addr;
       continue;
     }
@@ -797,6 +792,12 @@ void LinkerScript::adjustSectionsAfterSorting() {
     if (auto *Sec = dyn_cast<OutputSection>(Base)) {
       if (!Sec->Live)
         continue;
+      if (!Sec->LMARegionName.empty()) {
+        if (MemoryRegion *M = MemoryRegions.lookup(Sec->LMARegionName))
+          Sec->LMARegion = M;
+        else
+          error("memory region '" + Sec->LMARegionName + "' not declared");
+      }
       Sec->MemRegion = findMemoryRegion(Sec);
       // Handle align (e.g. ".foo : ALIGN(16) { ... }").
       if (Sec->AlignExpr)
@@ -887,8 +888,8 @@ void LinkerScript::allocateHeaders(std::vector<PhdrEntry *> &Phdrs) {
 
 LinkerScript::AddressState::AddressState() {
   for (auto &MRI : Script->MemoryRegions) {
-    const MemoryRegion *MR = MRI.second;
-    MemRegionOffset[MR] = MR->Origin;
+    MemoryRegion *MR = MRI.second;
+    MR->CurPos = MR->Origin;
   }
 }
 

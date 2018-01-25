@@ -199,7 +199,7 @@ public:
     template <class... _Args>
         _LIBCPP_INLINE_VISIBILITY
 #if _LIBCPP_STD_VER > 14
-        reference emplace(_Args&&... __args)
+        decltype(auto) emplace(_Args&&... __args)
         { return c.emplace_back(_VSTD::forward<_Args>(__args)...);}
 #else
         void      emplace(_Args&&... __args)
