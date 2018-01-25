@@ -131,6 +131,41 @@ bool lldb_private::formatters::swift::UnicodeScalar_SummaryProvider(
   return Char32SummaryProvider(*value_sp.get(), stream, options);
 }
 
+static bool invokeNSStringFormatter(Process &process, ValueObject &valobj,
+                                    Stream &stream,
+                                    const TypeSummaryOptions &summary_options) {
+  static ConstString g__owner("_owner");
+  static ConstString g_Some("some");
+  static ConstString g_instance_type("instance_type");
+
+  ValueObjectSP dyn_inst_type0(
+      valobj.GetChildAtNamePath({g__owner, g_Some, g_instance_type}));
+  if (!dyn_inst_type0)
+    return false;
+  lldb::addr_t dyn_inst_type0_ptr =
+      dyn_inst_type0->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+  if (dyn_inst_type0_ptr == 0 || dyn_inst_type0_ptr == LLDB_INVALID_ADDRESS)
+    return false;
+
+  InferiorSizedWord dataAddress_isw =
+      InferiorSizedWord(dyn_inst_type0_ptr, process);
+
+  DataExtractor id_ptr = dataAddress_isw.GetAsData(process.GetByteOrder());
+  CompilerType id_type =
+      process.GetTarget().GetScratchClangASTContext()->GetBasicType(
+          lldb::eBasicTypeObjCID);
+
+  if (!id_type)
+    return false;
+
+  ValueObjectSP nsstringhere_sp = ValueObject::CreateValueObjectFromData(
+      "nsstringhere", id_ptr, valobj.GetExecutionContextRef(), id_type);
+  if (nsstringhere_sp)
+    return NSStringSummaryProvider(*nsstringhere_sp.get(), stream,
+                                   summary_options);
+  return false;
+}
+
 bool lldb_private::formatters::swift::StringCore_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   return StringCore_SummaryProvider(
@@ -172,37 +207,8 @@ bool lldb_private::formatters::swift::StringCore_SummaryProvider(
 
   if (baseAddress == 0) {
     if (hasCocoaBuffer) {
-      static ConstString g__owner("_owner");
-      static ConstString g_Some("some");
-      static ConstString g_instance_type("instance_type");
-
-      ValueObjectSP dyn_inst_type0(
-          valobj.GetChildAtNamePath({g__owner, g_Some, g_instance_type}));
-      if (!dyn_inst_type0)
-        return false;
-      lldb::addr_t dyn_inst_type0_ptr =
-          dyn_inst_type0->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-      if (dyn_inst_type0_ptr == 0 || dyn_inst_type0_ptr == LLDB_INVALID_ADDRESS)
-        return false;
-
-      InferiorSizedWord dataAddress_isw =
-          InferiorSizedWord(dyn_inst_type0_ptr, *process_sp.get());
-
-      DataExtractor id_ptr =
-          dataAddress_isw.GetAsData(process_sp->GetByteOrder());
-      CompilerType id_type =
-          process_sp->GetTarget().GetScratchClangASTContext()->GetBasicType(
-              lldb::eBasicTypeObjCID);
-
-      if (!id_type)
-        return false;
-
-      ValueObjectSP nsstringhere_sp = ValueObject::CreateValueObjectFromData(
-          "nsstringhere", id_ptr, valobj.GetExecutionContextRef(), id_type);
-      if (nsstringhere_sp)
-        return NSStringSummaryProvider(*nsstringhere_sp.get(), stream,
-                                       summary_options);
-      return false;
+      return invokeNSStringFormatter(*process_sp.get(), valobj, stream,
+                                     summary_options);
     } else {
       stream.Printf("\"\"");
       return true;
@@ -243,6 +249,118 @@ bool lldb_private::formatters::swift::StringCore_SummaryProvider(
         StringPrinter::StringElementType::UTF16>(read_options);
 }
 
+bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  return StringGuts_SummaryProvider(
+      valobj, stream, options,
+      StringPrinter::ReadStringAndDumpToStreamOptions());
+}
+
+bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &summary_options,
+    StringPrinter::ReadStringAndDumpToStreamOptions read_options) {
+  ProcessSP process_sp(valobj.GetProcessSP());
+  if (!process_sp)
+    return false;
+
+  Status error;
+  static ConstString g_object("_object");
+  static ConstString g_otherBits("_otherBits");
+  static ConstString g_value("_value");
+
+  ValueObjectSP object_sp(valobj.GetChildAtNamePath({g_object, g_object}));
+  ValueObjectSP otherBits_sp(valobj.GetChildAtNamePath({g_otherBits, g_value}));
+
+  if (!object_sp || !otherBits_sp)
+    return false;
+
+  uint64_t objectAddr = object_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+  if (objectAddr == LLDB_INVALID_ADDRESS)
+    return false;
+
+  // Taken from StringObject.swift:
+  // ## _StringObject bit layout
+  //
+  // x86-64 and arm64: (one 64-bit word)
+  // +---+---+---|---+------+--------------------------------------------------+
+  // + t | v | o | w | uuuu | payload (56 bits) |
+  // +---+---+---|---+------+--------------------------------------------------+
+  //  msb lsb
+  //
+  // i386 and arm: (two 32-bit words)
+  // _variant                               _bits
+  // +------------------------------------+
+  // +------------------------------------+
+  // + .strong(AnyObject)                 | | v | o | w | unused (29 bits) |
+  // +------------------------------------+
+  // +------------------------------------+
+  // + .unmanaged{Single,Double}Byte      | | start address (32 bits) |
+  // +------------------------------------+
+  // +------------------------------------+
+  // + .small{Single,Double}Byte          | | payload (32 bits) |
+  // +------------------------------------+
+  // +------------------------------------+
+  //  msb                              lsb   msb lsb
+  //
+  // where t: is-a-value, i.e. a tag bit that says not to perform ARC
+  //       v: sub-variant bit, i.e. set for isCocoa or isSmall
+  //       o: is-opaque, i.e. opaque vs contiguously stored strings
+  //       w: width indicator bit (0: ASCII, 1: UTF-16)
+  //       u: unused bits
+  //
+  // payload is:
+  //   isNative: the native StringStorage object
+  //   isCocoa: the Cocoa object
+  //   isOpaque & !isCocoa: the _OpaqueString object
+  //   isUnmanaged: the pointer to code units
+  //   isSmall: opaque bits used for inline storage // TODO: use them!
+
+  bool is_64bit = process_sp->GetAddressByteSize() == 8;
+
+  if (is_64bit) {
+    bool is_a_value = objectAddr & (1ULL << 63);
+    bool is_Cocoa_or_small = objectAddr & (1ULL << 62);
+    bool is_opaque = objectAddr & (1ULL << 61);
+    bool is_utf_16 = objectAddr & (1ULL << 60);
+    uint64_t payloadAddr = objectAddr & ((1ULL << 56) - 1);
+
+    // FIXME: Remove printf debugging.
+    // stream.Printf("payload address = %llu\n", payloadAddr);
+    // stream.Printf("t (is-a-value) = %d\n", is_a_value);
+    // stream.Printf("v (sub-variant) = %d\n", is_Cocoa_or_small);
+    // stream.Printf("o (opaque) = %d\n", is_opaque);
+    // stream.Printf("w (width) = %d\n", is_utf_16);
+
+    if (!is_opaque && ((is_a_value && !is_Cocoa_or_small) ||
+                       (!is_a_value && !is_Cocoa_or_small))) {
+      uint64_t count = otherBits_sp->GetValueAsUnsigned(0) & ((1ULL << 48) - 1);
+
+      read_options.SetLocation(payloadAddr);
+      read_options.SetProcessSP(process_sp);
+      read_options.SetStream(&stream);
+      read_options.SetSourceSize(count);
+      read_options.SetNeedsZeroTermination(false);
+      read_options.SetIgnoreMaxLength(summary_options.GetCapping() ==
+                                      lldb::eTypeSummaryUncapped);
+      read_options.SetBinaryZeroIsTerminator(false);
+      read_options.SetLanguage(summary_options.GetLanguage());
+
+      if (!is_utf_16)
+        return StringPrinter::ReadStringAndDumpToStream<
+            StringPrinter::StringElementType::UTF8>(read_options);
+      else
+        return StringPrinter::ReadStringAndDumpToStream<
+            StringPrinter::StringElementType::UTF16>(read_options);
+    } else if (is_Cocoa_or_small) {
+      // TODO:
+    }
+  } else {
+    // TODO:
+  }
+  return false;
+}
+
 bool lldb_private::formatters::swift::String_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   return String_SummaryProvider(
@@ -254,11 +372,18 @@ bool lldb_private::formatters::swift::String_SummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &summary_options,
     StringPrinter::ReadStringAndDumpToStreamOptions read_options) {
+  static ConstString g_guts("_guts");
+  ValueObjectSP guts_sp = valobj.GetChildMemberWithName(g_guts, true);
+  if (guts_sp)
+    return StringGuts_SummaryProvider(*guts_sp, stream, summary_options,
+                                      read_options);
+
   static ConstString g_core("_core");
   ValueObjectSP core_sp = valobj.GetChildMemberWithName(g_core, true);
   if (core_sp)
     return StringCore_SummaryProvider(*core_sp, stream, summary_options,
                                       read_options);
+
   return false;
 }
 
@@ -324,6 +449,11 @@ bool lldb_private::formatters::swift::StaticString_SummaryProvider(
 
 bool lldb_private::formatters::swift::NSContiguousString_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  static ConstString g_guts("_guts");
+  ValueObjectSP guts_sp = valobj.GetChildMemberWithName(g_guts, true);
+  if (guts_sp)
+    return StringGuts_SummaryProvider(*guts_sp, stream, options);
+
   static ConstString g_StringCoreType(SwiftLanguageRuntime::GetCurrentMangledName("_TtVs11_StringCore"));
   lldb::addr_t core_location = valobj.GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
   if (core_location == LLDB_INVALID_ADDRESS)
