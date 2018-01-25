@@ -346,14 +346,15 @@ def executeBuiltinDiff(cmd, cmd_shenv):
     """executeBuiltinDiff - Compare files line by line."""
     args = expand_glob_expressions(cmd.args, cmd_shenv.cwd)[1:]
     try:
-        opts, args = getopt.gnu_getopt(args, "wbu", ["strip-trailing-cr"])
+        opts, args = getopt.gnu_getopt(args, "wbur", ["strip-trailing-cr"])
     except getopt.GetoptError as err:
         raise InternalShellError(cmd, "Unsupported: 'diff':  %s" % str(err))
 
-    filelines, filepaths = ([] for i in range(2))
+    filelines, filepaths, dir_trees = ([] for i in range(3))
     ignore_all_space = False
     ignore_space_change = False
     unified_diff = False
+    recursive_diff = False
     strip_trailing_cr = False
     for o, a in opts:
         if o == "-w":
@@ -362,6 +363,8 @@ def executeBuiltinDiff(cmd, cmd_shenv):
             ignore_space_change = True
         elif o == "-u":
             unified_diff = True
+        elif o == "-r":
+            recursive_diff = True
         elif o == "--strip-trailing-cr":
             strip_trailing_cr = True
         else:
@@ -370,17 +373,24 @@ def executeBuiltinDiff(cmd, cmd_shenv):
     if len(args) != 2:
         raise InternalShellError(cmd, "Error:  missing or extra operand")
 
-    stderr = StringIO()
-    stdout = StringIO()
-    exitCode = 0
-    try:
-        for file in args:
-            if not os.path.isabs(file):
-                file = os.path.realpath(os.path.join(cmd_shenv.cwd, file))
-            filepaths.append(file)
+    def getDirTree(path, basedir=""):
+        # Tree is a tuple of form (dirname, child_trees).
+        # An empty dir has child_trees = [], a file has child_trees = None.
+        child_trees = []
+        for dirname, child_dirs, files in os.walk(os.path.join(basedir, path)):
+            for child_dir in child_dirs:
+                child_trees.append(getDirTree(child_dir, dirname))
+            for filename in files:
+                child_trees.append((filename, None))
+            return path, sorted(child_trees)
+
+    def compareTwoFiles(filepaths):
+        filelines = []
+        for file in filepaths:
             with open(file, 'r') as f:
                 filelines.append(f.readlines())
 
+        exitCode = 0 
         def compose2(f, g):
             return lambda x: f(g(x))
 
@@ -399,6 +409,99 @@ def executeBuiltinDiff(cmd, cmd_shenv):
         for diff in func(filelines[0], filelines[1], filepaths[0], filepaths[1]):
             stdout.write(diff)
             exitCode = 1
+        return exitCode
+
+    def printDirVsFile(dir_path, file_path):
+        if os.path.getsize(file_path):
+            msg = "File %s is a directory while file %s is a regular file"
+        else:
+            msg = "File %s is a directory while file %s is a regular empty file"
+        stdout.write(msg % (dir_path, file_path) + "\n")
+
+    def printFileVsDir(file_path, dir_path):
+        if os.path.getsize(file_path):
+            msg = "File %s is a regular file while file %s is a directory"
+        else:
+            msg = "File %s is a regular empty file while file %s is a directory"
+        stdout.write(msg % (file_path, dir_path) + "\n")
+
+    def printOnlyIn(basedir, path, name):
+        stdout.write("Only in %s: %s\n" % (os.path.join(basedir, path), name))
+
+    def compareDirTrees(dir_trees, base_paths=["", ""]):
+        # Dirnames of the trees are not checked, it's caller's responsibility,
+        # as top-level dirnames are always different. Base paths are important
+        # for doing os.walk, but we don't put it into tree's dirname in order
+        # to speed up string comparison below and while sorting in getDirTree.
+        left_tree, right_tree = dir_trees[0], dir_trees[1]
+        left_base, right_base = base_paths[0], base_paths[1]
+
+        # Compare two files or report file vs. directory mismatch.
+        if left_tree[1] is None and right_tree[1] is None:
+            return compareTwoFiles([os.path.join(left_base, left_tree[0]),
+                                    os.path.join(right_base, right_tree[0])])
+
+        if left_tree[1] is None and right_tree[1] is not None:
+            printFileVsDir(os.path.join(left_base, left_tree[0]),
+                           os.path.join(right_base, right_tree[0]))
+            return 1
+
+        if left_tree[1] is not None and right_tree[1] is None:
+            printDirVsFile(os.path.join(left_base, left_tree[0]),
+                           os.path.join(right_base, right_tree[0]))
+            return 1
+
+        # Compare two directories via recursive use of compareDirTrees.
+        exitCode = 0
+        left_names = [node[0] for node in left_tree[1]]
+        right_names = [node[0] for node in right_tree[1]]
+        l, r = 0, 0
+        while l < len(left_names) and r < len(right_names):
+            # Names are sorted in getDirTree, rely on that order.
+            if left_names[l] < right_names[r]:
+                exitCode = 1
+                printOnlyIn(left_base, left_tree[0], left_names[l])
+                l += 1
+            elif left_names[l] > right_names[r]:
+                exitCode = 1
+                printOnlyIn(right_base, right_tree[0], right_names[r])
+                r += 1
+            else:
+                exitCode |= compareDirTrees([left_tree[1][l], right_tree[1][r]],
+                                            [os.path.join(left_base, left_tree[0]),
+                                            os.path.join(right_base, right_tree[0])])
+                l += 1
+                r += 1
+
+        # At least one of the trees has ended. Report names from the other tree.
+        while l < len(left_names):
+            exitCode = 1
+            printOnlyIn(left_base, left_tree[0], left_names[l])
+            l += 1
+        while r < len(right_names):
+            exitCode = 1
+            printOnlyIn(right_base, right_tree[0], right_names[r])
+            r += 1
+        return exitCode
+
+    stderr = StringIO()
+    stdout = StringIO()
+    exitCode = 0
+    try:
+        for file in args:
+            if not os.path.isabs(file):
+                file = os.path.realpath(os.path.join(cmd_shenv.cwd, file))
+    
+            if recursive_diff:
+                dir_trees.append(getDirTree(file))
+            else:
+                filepaths.append(file)
+
+        if not recursive_diff:
+            exitCode = compareTwoFiles(filepaths)
+        else:
+            exitCode = compareDirTrees(dir_trees)
+
     except IOError as err:
         stderr.write("Error: 'diff' command failed, %s\n" % str(err))
         exitCode = 1
