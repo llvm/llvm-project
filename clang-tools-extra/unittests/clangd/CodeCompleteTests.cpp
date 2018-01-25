@@ -621,6 +621,14 @@ TEST(CompletionTest, DynamicIndexMultiFile) {
                                             Doc("Doooc"), Detail("void"))));
 }
 
+TEST(CodeCompleteTest, DisableTypoCorrection) {
+  auto Results = completions(R"cpp(
+     namespace clang { int v; }
+     void f() { clangd::^
+  )cpp");
+  EXPECT_TRUE(Results.items.empty());
+}
+
 SignatureHelp signatures(StringRef Text) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
