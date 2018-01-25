@@ -1380,8 +1380,10 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
   FastISelFailed = false;
   // Initialize the Fast-ISel state, if needed.
   FastISel *FastIS = nullptr;
-  if (TM.Options.EnableFastISel)
+  if (TM.Options.EnableFastISel) {
+    DEBUG(dbgs() << "Enabling fast-isel\n");
     FastIS = TLI->createFastISel(*FuncInfo, LibInfo);
+  }
 
   setupSwiftErrorVals(Fn, TLI, FuncInfo);
 
