@@ -150,6 +150,7 @@ struct TextEdit {
 };
 bool fromJSON(const json::Expr &, TextEdit &);
 json::Expr toJSON(const TextEdit &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const TextEdit &);
 
 struct TextDocumentItem {
   /// The text document's URI.
@@ -341,6 +342,7 @@ struct LSPDiagnosticCompare {
   }
 };
 bool fromJSON(const json::Expr &, Diagnostic &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Diagnostic &);
 
 struct CodeActionContext {
   /// An array of diagnostics.

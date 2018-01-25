@@ -1626,7 +1626,8 @@ template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
     // different flags or is loaded at a discontiguous address using AT linker
     // script command.
     uint64_t NewFlags = computeFlags(Sec->getPhdrFlags());
-    if (Sec->LMAExpr || Flags != NewFlags) {
+    if (Sec->LMAExpr || Sec->MemRegion != Load->FirstSec->MemRegion ||
+        Flags != NewFlags) {
       Load = AddHdr(PT_LOAD, NewFlags);
       Flags = NewFlags;
     }

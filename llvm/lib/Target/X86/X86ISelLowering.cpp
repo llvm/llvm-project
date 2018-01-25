@@ -34294,7 +34294,7 @@ static bool isSATValidOnAVX512Subtarget(EVT SrcVT, EVT DstVT,
   return false;
 }
 
-/// Detect a pattern of truncation with saturation:
+/// Detect a pattern of truncation with unsigned saturation:
 /// (truncate (umin (x, unsigned_max_of_dest_type)) to dest_type).
 /// Return the source value to be truncated or SDValue() if the pattern was not
 /// matched.
@@ -34302,16 +34302,15 @@ static SDValue detectUSatPattern(SDValue In, EVT VT) {
   if (In.getOpcode() != ISD::UMIN)
     return SDValue();
 
-  //Saturation with truncation. We truncate from InVT to VT.
+  // Saturation with truncation. We truncate from InVT to VT.
   assert(In.getScalarValueSizeInBits() > VT.getScalarSizeInBits() &&
-    "Unexpected types for truncate operation");
+         "Unexpected types for truncate operation");
 
   APInt C;
   if (ISD::isConstantSplatVector(In.getOperand(1).getNode(), C)) {
     // C should be equal to UINT32_MAX / UINT16_MAX / UINT8_MAX according
     // the element size of the destination type.
-    return C.isMask(VT.getScalarSizeInBits()) ? In.getOperand(0) :
-      SDValue();
+    return C.isMask(VT.getScalarSizeInBits()) ? In.getOperand(0) : SDValue();
   }
   return SDValue();
 }

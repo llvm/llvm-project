@@ -42,6 +42,7 @@ public:
   virtual StringRef getDebugFrameSection() const { return ""; }
   virtual StringRef getEHFrameSection() const { return ""; }
   virtual const DWARFSection &getLineSection() const { return Dummy; }
+  virtual StringRef getLineStringSection() const { return ""; }
   virtual StringRef getStringSection() const { return ""; }
   virtual const DWARFSection &getRangeSection() const { return Dummy; }
   virtual StringRef getMacinfoSection() const { return ""; }

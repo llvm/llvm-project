@@ -256,6 +256,11 @@ enum GlobalValueSummarySymtabCodes {
   // strings in strtab.
   // [n * name]
   FS_CFI_FUNCTION_DECLS = 18,
+  // Per-module summary that also adds relative block frequency to callee info.
+  // PERMODULE_RELBF: [valueid, flags, instcount, numrefs,
+  //                   numrefs x valueid,
+  //                   n x (valueid, relblockfreq)]
+  FS_PERMODULE_RELBF = 19,
 };
 
 enum MetadataCodes {

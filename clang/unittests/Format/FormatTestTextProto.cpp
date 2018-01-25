@@ -289,6 +289,10 @@ TEST_F(FormatTestTextProto, SupportsAngleBracketMessageFields) {
                "  headheadheadheadheadhead_id: 1\n"
                "  product_data <product {1}>\n"
                ">");
+
+  verifyFormat("dcccwrnfioeruvginerurneitinfo {\n"
+               "  exte3nsionrnfvui {key: value}\n"
+               "}");
 }
 
 TEST_F(FormatTestTextProto, DiscardsUnbreakableTailIfCanBreakAfter) {

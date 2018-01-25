@@ -13,6 +13,7 @@
 #include "ClangdUnit.h"
 #include "ClangdUnitStore.h"
 #include "CodeComplete.h"
+#include "CompileArgsCache.h"
 #include "DraftStore.h"
 #include "Function.h"
 #include "GlobalCompilationDatabase.h"
@@ -321,6 +322,15 @@ public:
   /// Called when an event occurs for a watched file in the workspace.
   void onFileEvent(const DidChangeWatchedFilesParams &Params);
 
+  /// Returns estimated memory usage for each of the currently open files.
+  /// The order of results is unspecified.
+  /// Overall memory usage of clangd may be significantly more than reported
+  /// here, as this metric does not account (at least) for:
+  ///   - memory occupied by static and dynamic index,
+  ///   - memory required for in-flight requests,
+  /// FIXME: those metrics might be useful too, we should add them.
+  std::vector<std::pair<Path, std::size_t>> getUsedBytesPerFile() const;
+
 private:
   /// FIXME: This stats several files to find a .clang-format file. I/O can be
   /// slow. Think of a way to cache this.
@@ -331,13 +341,12 @@ private:
   std::future<Context>
   scheduleReparseAndDiags(Context Ctx, PathRef File, VersionedDraft Contents,
                           std::shared_ptr<CppFile> Resources,
-                          Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> TaggedFS,
-                          bool AllowCachedCompileFlags);
+                          Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> TaggedFS);
 
   std::future<Context>
   scheduleCancelRebuild(Context Ctx, std::shared_ptr<CppFile> Resources);
 
-  GlobalCompilationDatabase &CDB;
+  CompileArgsCache CompileArgs;
   DiagnosticsConsumer &DiagConsumer;
   FileSystemProvider &FSProvider;
   DraftStore DraftMgr;
@@ -352,7 +361,6 @@ private:
   // If present, a merged view of FileIdx and an external index. Read via Index.
   std::unique_ptr<SymbolIndex> MergedIndex;
   CppFileCollection Units;
-  std::string ResourceDir;
   // If set, this represents the workspace path.
   llvm::Optional<std::string> RootPath;
   std::shared_ptr<PCHContainerOperations> PCHs;

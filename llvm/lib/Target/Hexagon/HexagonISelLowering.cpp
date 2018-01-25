@@ -1289,7 +1289,8 @@ SDValue HexagonTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   EVT RHSVT = RHS.getValueType();
 
   if (LHSVT == MVT::v2i16) {
-    assert(ISD::isSignedIntSetCC(CC) || ISD::isUnsignedIntSetCC(CC));
+    assert(CC == ISD::SETEQ || CC == ISD::SETNE ||
+           ISD::isSignedIntSetCC(CC) || ISD::isUnsignedIntSetCC(CC));
     unsigned ExtOpc = ISD::isSignedIntSetCC(CC) ? ISD::SIGN_EXTEND
                                                 : ISD::ZERO_EXTEND;
     SDValue LX = DAG.getNode(ExtOpc, dl, MVT::v2i32, LHS);
