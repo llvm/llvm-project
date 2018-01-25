@@ -25,3 +25,13 @@ std::shared_ptr<CppFile> CppFileCollection::removeIfPresent(PathRef File) {
   OpenedFiles.erase(It);
   return Result;
 }
+std::vector<std::pair<Path, std::size_t>>
+CppFileCollection::getUsedBytesPerFile() const {
+  std::lock_guard<std::mutex> Lock(Mutex);
+  std::vector<std::pair<Path, std::size_t>> Result;
+  Result.reserve(OpenedFiles.size());
+  for (auto &&PathAndFile : OpenedFiles)
+    Result.push_back(
+        {PathAndFile.first().str(), PathAndFile.second->getUsedBytes()});
+  return Result;
+}

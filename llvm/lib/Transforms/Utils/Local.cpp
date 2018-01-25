@@ -73,6 +73,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
 #include <climits>
@@ -1339,6 +1340,43 @@ bool llvm::LowerDbgDeclare(Function &F) {
     }
   }
   return true;
+}
+
+/// Propagate dbg.value intrinsics through the newly inserted PHIs.
+void llvm::insertDebugValuesForPHIs(BasicBlock *BB,
+                                    SmallVectorImpl<PHINode *> &InsertedPHIs) {
+  assert(BB && "No BasicBlock to clone dbg.value(s) from.");
+  if (InsertedPHIs.size() == 0)
+    return;
+
+  // Map existing PHI nodes to their dbg.values.
+  ValueToValueMapTy DbgValueMap;
+  for (auto &I : *BB) {
+    if (auto DbgII = dyn_cast<DbgInfoIntrinsic>(&I)) {
+      if (auto *Loc = dyn_cast_or_null<PHINode>(DbgII->getVariableLocation()))
+        DbgValueMap.insert({Loc, DbgII});
+    }
+  }
+  if (DbgValueMap.size() == 0)
+    return;
+
+  // Then iterate through the new PHIs and look to see if they use one of the
+  // previously mapped PHIs. If so, insert a new dbg.value intrinsic that will
+  // propagate the info through the new PHI.
+  LLVMContext &C = BB->getContext();
+  for (auto PHI : InsertedPHIs) {
+    for (auto VI : PHI->operand_values()) {
+      auto V = DbgValueMap.find(VI);
+      if (V != DbgValueMap.end()) {
+        auto *DbgII = cast<DbgInfoIntrinsic>(V->second);
+        Instruction *NewDbgII = DbgII->clone();
+        auto PhiMAV = MetadataAsValue::get(C, ValueAsMetadata::get(PHI));
+        NewDbgII->setOperand(0, PhiMAV);
+        BasicBlock *Parent = PHI->getParent();
+        NewDbgII->insertBefore(Parent->getFirstNonPHIOrDbgOrLifetime());
+      }
+    }
+  }
 }
 
 /// Finds all intrinsics declaring local variables as living in the memory that

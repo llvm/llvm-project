@@ -51,6 +51,8 @@ public:
     return true;
   }
   void PreprocessISelDAG() override;
+  void EmitFunctionEntryCode() override;
+
   void Select(SDNode *N) override;
 
   // Complex Pattern Selectors.
@@ -137,7 +139,6 @@ private:
   void ppAddrReorderAddShl(std::vector<SDNode*> &&Nodes);
   void ppAddrRewriteAndSrl(std::vector<SDNode*> &&Nodes);
   void ppHoistZextI1(std::vector<SDNode*> &&Nodes);
-  void ppEmitAligna();
 
   SmallDenseMap<SDNode *,int> RootWeights;
   SmallDenseMap<SDNode *,int> RootHeights;

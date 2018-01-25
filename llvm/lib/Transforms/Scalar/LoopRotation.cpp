@@ -169,38 +169,6 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
   }
 }
 
-/// Propagate dbg.value intrinsics through the newly inserted Phis.
-static void insertDebugValues(BasicBlock *OrigHeader,
-                              SmallVectorImpl<PHINode*> &InsertedPHIs) {
-  ValueToValueMapTy DbgValueMap;
-
-  // Map existing PHI nodes to their dbg.values.
-  for (auto &I : *OrigHeader) {
-    if (auto DbgII = dyn_cast<DbgInfoIntrinsic>(&I)) {
-      if (auto *Loc = dyn_cast_or_null<PHINode>(DbgII->getVariableLocation()))
-        DbgValueMap.insert({Loc, DbgII});
-    }
-  }
-
-  // Then iterate through the new PHIs and look to see if they use one of the
-  // previously mapped PHIs. If so, insert a new dbg.value intrinsic that will
-  // propagate the info through the new PHI.
-  LLVMContext &C = OrigHeader->getContext();
-  for (auto PHI : InsertedPHIs) {
-    for (auto VI : PHI->operand_values()) {
-      auto V = DbgValueMap.find(VI);
-      if (V != DbgValueMap.end()) {
-        auto *DbgII = cast<DbgInfoIntrinsic>(V->second);
-        Instruction *NewDbgII = DbgII->clone();
-        auto PhiMAV = MetadataAsValue::get(C, ValueAsMetadata::get(PHI));
-        NewDbgII->setOperand(0, PhiMAV);
-        BasicBlock *Parent = PHI->getParent();
-        NewDbgII->insertBefore(Parent->getFirstNonPHIOrDbgOrLifetime());
-      }
-    }
-  }
-}
-
 /// Rotate loop LP. Return true if the loop is rotated.
 ///
 /// \param SimplifiedLatch is true if the latch was just folded into the final
@@ -405,7 +373,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
   // previously had debug metadata attached. This keeps the debug info
   // up-to-date in the loop body.
   if (!InsertedPHIs.empty())
-    insertDebugValues(OrigHeader, InsertedPHIs);
+    insertDebugValuesForPHIs(OrigHeader, InsertedPHIs);
 
   // NewHeader is now the header of the loop.
   L->moveToHeader(NewHeader);

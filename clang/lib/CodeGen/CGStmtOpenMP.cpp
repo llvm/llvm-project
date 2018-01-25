@@ -692,7 +692,9 @@ void CodeGenFunction::EmitOMPCopy(QualType OriginalType, Address DestAddr,
     auto *BO = dyn_cast<BinaryOperator>(Copy);
     if (BO && BO->getOpcode() == BO_Assign) {
       // Perform simple memcpy for simple copying.
-      EmitAggregateAssign(DestAddr, SrcAddr, OriginalType);
+      LValue Dest = MakeAddrLValue(DestAddr, OriginalType);
+      LValue Src = MakeAddrLValue(SrcAddr, OriginalType);
+      EmitAggregateAssign(Dest, Src, OriginalType);
     } else {
       // For arrays with complex element types perform element by element
       // copying.
@@ -765,7 +767,8 @@ bool CodeGenFunction::EmitOMPFirstprivateClause(const OMPExecutableDirective &D,
         DeclRefExpr DRE(const_cast<VarDecl *>(OrigVD),
                         /*RefersToEnclosingVariableOrCapture=*/FD != nullptr,
                         (*IRef)->getType(), VK_LValue, (*IRef)->getExprLoc());
-        Address OriginalAddr = EmitLValue(&DRE).getAddress();
+        LValue OriginalLVal = EmitLValue(&DRE);
+        Address OriginalAddr = OriginalLVal.getAddress();
         QualType Type = VD->getType();
         if (Type->isArrayType()) {
           // Emit VarDecl with copy init for arrays.
@@ -776,8 +779,9 @@ bool CodeGenFunction::EmitOMPFirstprivateClause(const OMPExecutableDirective &D,
             auto *Init = VD->getInit();
             if (!isa<CXXConstructExpr>(Init) || isTrivialInitializer(Init)) {
               // Perform simple memcpy.
-              EmitAggregateAssign(Emission.getAllocatedAddress(), OriginalAddr,
-                                  Type);
+              LValue Dest = MakeAddrLValue(Emission.getAllocatedAddress(),
+                                           Type);
+              EmitAggregateAssign(Dest, OriginalLVal, Type);
             } else {
               EmitOMPAggregateAssign(
                   Emission.getAllocatedAddress(), OriginalAddr, Type,

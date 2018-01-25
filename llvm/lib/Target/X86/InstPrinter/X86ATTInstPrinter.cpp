@@ -51,9 +51,7 @@ void X86ATTInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
         EmitAnyX86InstComments(MI, *CommentStream, getRegisterName);
 
   unsigned Flags = MI->getFlags();
-  if (TSFlags & X86II::LOCK)
-    OS << "\tlock\t";
-  if (!(TSFlags & X86II::LOCK) && Flags & X86::IP_HAS_LOCK)
+  if ((TSFlags & X86II::LOCK) || (Flags & X86::IP_HAS_LOCK))
     OS << "\tlock\t";
 
   if (Flags & X86::IP_HAS_REPEAT_NE)

@@ -11,9 +11,9 @@ set(SCUDO_DYNAMIC_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
 
 set(SCUDO_SOURCES
   scudo_allocator.cpp
-  scudo_flags.cpp
   scudo_crc32.cpp
-  scudo_interceptors.cpp
+  scudo_flags.cpp
+  scudo_malloc.cpp
   scudo_termination.cpp
   scudo_tsd_exclusive.cpp
   scudo_tsd_shared.cpp
