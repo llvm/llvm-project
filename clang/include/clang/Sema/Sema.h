@@ -8478,6 +8478,7 @@ public:
   StmtResult BuildCoreturnStmt(SourceLocation KwLoc, Expr *E,
                                bool IsImplicit = false);
   StmtResult BuildCoroutineBodyStmt(CoroutineBodyStmt::CtorArgs);
+  bool buildCoroutineParameterMoves(SourceLocation Loc);
   VarDecl *buildCoroutinePromise(SourceLocation Loc);
   void CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body);
 

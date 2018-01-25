@@ -77,10 +77,10 @@ public:
   // space of the output object.
   void setOutputIndex(uint32_t Index);
 
-  uint32_t getTableIndex() const { return TableIndex.getValue(); }
+  uint32_t getTableIndex() const;
 
   // Returns true if a table index has been set for this symbol
-  bool hasTableIndex() const { return TableIndex.hasValue(); }
+  bool hasTableIndex() const;
 
   // Set the table index of the symbol
   void setTableIndex(uint32_t Index);

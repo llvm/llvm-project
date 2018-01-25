@@ -7,12 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// Linux specific malloc interception functions.
+/// Interceptors for malloc related functions.
 ///
 //===----------------------------------------------------------------------===//
-
-#include "sanitizer_common/sanitizer_platform.h"
-#if SANITIZER_LINUX
 
 #include "scudo_allocator.h"
 
@@ -71,5 +68,3 @@ INTERCEPTOR(uptr, malloc_usable_size, void *ptr) {
 INTERCEPTOR(int, mallopt, int cmd, int value) {
   return -1;
 }
-
-#endif  // SANITIZER_LINUX
