@@ -345,13 +345,18 @@ GetInstByName(const char *Name,
   return I->second.get();
 }
 
+static const char *const FixedInstrs[] = {
+#define HANDLE_TARGET_OPCODE(OPC) #OPC,
+#include "llvm/CodeGen/TargetOpcodes.def"
+    nullptr};
+
+unsigned CodeGenTarget::getNumFixedInstructions() {
+  return array_lengthof(FixedInstrs) - 1;
+}
+
 /// \brief Return all of the instructions defined by the target, ordered by
 /// their enum value.
 void CodeGenTarget::ComputeInstrsByEnum() const {
-  static const char *const FixedInstrs[] = {
-#define HANDLE_TARGET_OPCODE(OPC) #OPC,
-#include "llvm/CodeGen/TargetOpcodes.def"
-      nullptr};
   const auto &Insts = getInstructions();
   for (const char *const *p = FixedInstrs; *p; ++p) {
     const CodeGenInstruction *Instr = GetInstByName(*p, Insts, Records);
@@ -360,6 +365,8 @@ void CodeGenTarget::ComputeInstrsByEnum() const {
     InstrsByEnum.push_back(Instr);
   }
   unsigned EndOfPredefines = InstrsByEnum.size();
+  assert(EndOfPredefines == getNumFixedInstructions() &&
+         "Missing generic opcode");
 
   for (const auto &I : Insts) {
     const CodeGenInstruction *CGI = I.second.get();
