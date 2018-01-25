@@ -116,6 +116,12 @@ public:
   FunctionCoverageInfo(size_t Executed, size_t NumFunctions)
       : Executed(Executed), NumFunctions(NumFunctions) {}
 
+  FunctionCoverageInfo &operator+=(const FunctionCoverageInfo &RHS) {
+    Executed += RHS.Executed;
+    NumFunctions += RHS.NumFunctions;
+    return *this;
+  }
+
   void addFunction(bool Covered) {
     if (Covered)
       ++Executed;
@@ -175,6 +181,14 @@ struct FileCoverageSummary {
   FileCoverageSummary(StringRef Name)
       : Name(Name), RegionCoverage(), LineCoverage(), FunctionCoverage(),
         InstantiationCoverage() {}
+
+  FileCoverageSummary &operator+=(const FileCoverageSummary &RHS) {
+    RegionCoverage += RHS.RegionCoverage;
+    LineCoverage += RHS.LineCoverage;
+    FunctionCoverage += RHS.FunctionCoverage;
+    InstantiationCoverage += RHS.InstantiationCoverage;
+    return *this;
+  }
 
   void addFunction(const FunctionCoverageSummary &Function) {
     RegionCoverage += Function.RegionCoverage;
