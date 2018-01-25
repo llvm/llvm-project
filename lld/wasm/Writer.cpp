@@ -35,6 +35,7 @@ using namespace lld;
 using namespace lld::wasm;
 
 static constexpr int kStackAlignment = 16;
+static constexpr int kInitialTableOffset = 1;
 
 namespace {
 
@@ -115,7 +116,6 @@ private:
   uint64_t FileSize = 0;
   uint32_t DataSize = 0;
   uint32_t NumMemoryPages = 0;
-  uint32_t InitialTableOffset = 0;
 
   std::vector<const WasmSignature *> Types;
   DenseMap<WasmSignature, int32_t, WasmSignatureDenseMapInfo> TypeIndices;
@@ -253,7 +253,7 @@ void Writer::createTableSection() {
   //     no address-taken function will fail at validation time since it is
   //     a validation error to include a call_indirect instruction if there
   //     is not table.
-  uint32_t TableSize = InitialTableOffset + IndirectFunctions.size();
+  uint32_t TableSize = kInitialTableOffset + IndirectFunctions.size();
 
   SyntheticSection *Section = createSyntheticSection(WASM_SEC_TABLE);
   raw_ostream &OS = Section->getStream();
@@ -311,11 +311,11 @@ void Writer::createElemSection() {
   writeUleb128(OS, 0, "table index");
   WasmInitExpr InitExpr;
   InitExpr.Opcode = WASM_OPCODE_I32_CONST;
-  InitExpr.Value.Int32 = InitialTableOffset;
+  InitExpr.Value.Int32 = kInitialTableOffset;
   writeInitExpr(OS, InitExpr);
   writeUleb128(OS, IndirectFunctions.size(), "elem count");
 
-  uint32_t TableIndex = InitialTableOffset;
+  uint32_t TableIndex = kInitialTableOffset;
   for (const Symbol *Sym : IndirectFunctions) {
     assert(Sym->getTableIndex() == TableIndex);
     writeUleb128(OS, Sym->getOutputIndex(), "function index");
@@ -714,7 +714,7 @@ void Writer::assignIndexes() {
   if (Config->Relocatable)
     DefinedGlobals.reserve(Symtab->getSymbols().size());
 
-  uint32_t TableIndex = InitialTableOffset;
+  uint32_t TableIndex = kInitialTableOffset;
 
   for (ObjFile *File : Symtab->ObjectFiles) {
     if (Config->Relocatable) {
@@ -855,9 +855,6 @@ void Writer::calculateInitFunctions() {
 }
 
 void Writer::run() {
-  if (!Config->Relocatable)
-    InitialTableOffset = 1;
-
   log("-- calculateTypes");
   calculateTypes();
   log("-- calculateImports");

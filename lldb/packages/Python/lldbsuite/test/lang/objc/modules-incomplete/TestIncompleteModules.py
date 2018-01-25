@@ -24,7 +24,7 @@ class IncompleteModulesTestCase(TestBase):
 
     @skipUnlessDarwin
     @unittest2.expectedFailure("rdar://20416388")
-    @skipIf(macos_version=["<", "10.12"])
+    @skipIf(macos_version=["<", "10.12"], debug_info=no_match(["gmodules"]))
     def test_expr(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
