@@ -44,6 +44,7 @@ struct PhdrEntry {
   OutputSection *FirstSec = nullptr;
   OutputSection *LastSec = nullptr;
   bool HasLMA = false;
+  uint64_t LMAOffset = 0;
 };
 
 void addReservedSymbols();
