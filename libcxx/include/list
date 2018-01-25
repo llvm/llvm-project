@@ -2058,15 +2058,15 @@ list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __f, con
 #endif
     if (__f != __l)
     {
-        if (this != &__c)
-        {
-            size_type __s = _VSTD::distance(__f, __l);
-            __c.__sz() -= __s;
-            base::__sz() += __s;
-        }
         __link_pointer __first = __f.__ptr_;
         --__l;
         __link_pointer __last = __l.__ptr_;
+        if (this != &__c)
+        {
+            size_type __s = _VSTD::distance(__f, __l) + 1;
+            __c.__sz() -= __s;
+            base::__sz() += __s;
+        }
         base::__unlink_nodes(__first, __last);
         __link_nodes(__p.__ptr_, __first, __last);
 #if _LIBCPP_DEBUG_LEVEL >= 2
