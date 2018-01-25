@@ -46,6 +46,13 @@ bool StringCore_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &,
     StringPrinter::ReadStringAndDumpToStreamOptions);
 
+bool StringGuts_SummaryProvider(ValueObject &valobj, Stream &stream,
+                                const TypeSummaryOptions &options);
+
+bool StringGuts_SummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &,
+    StringPrinter::ReadStringAndDumpToStreamOptions);
+
 bool String_SummaryProvider(ValueObject &valobj, Stream &stream,
                             const TypeSummaryOptions &options);
 
