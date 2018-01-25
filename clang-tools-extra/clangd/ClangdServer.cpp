@@ -32,18 +32,6 @@ using namespace clang::clangd;
 
 namespace {
 
-tooling::CompileCommand getCompileCommand(GlobalCompilationDatabase &CDB,
-                                          PathRef File, PathRef ResourceDir) {
-  llvm::Optional<tooling::CompileCommand> C = CDB.getCompileCommand(File);
-  if (!C) // FIXME: Suppress diagnostics? Let the user know?
-    C = CDB.getFallbackCommand(File);
-
-  // Inject the resource dir.
-  // FIXME: Don't overwrite it if it's already there.
-  C->CommandLine.push_back("-resource-dir=" + ResourceDir.str());
-  return std::move(*C);
-}
-
 std::string getStandardResourceDir() {
   static int Dummy; // Just an address in this process.
   return CompilerInvocation::GetResourcesPath("clangd", (void *)&Dummy);
@@ -149,7 +137,9 @@ ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
                            bool StorePreamblesInMemory,
                            bool BuildDynamicSymbolIndex, SymbolIndex *StaticIdx,
                            llvm::Optional<StringRef> ResourceDir)
-    : CDB(CDB), DiagConsumer(DiagConsumer), FSProvider(FSProvider),
+    : CompileArgs(CDB,
+                  ResourceDir ? ResourceDir->str() : getStandardResourceDir()),
+      DiagConsumer(DiagConsumer), FSProvider(FSProvider),
       FileIdx(BuildDynamicSymbolIndex ? new FileIndex() : nullptr),
       // Pass a callback into `Units` to extract symbols from a newly parsed
       // file and rebuild the file index synchronously each time an AST is
@@ -160,7 +150,6 @@ ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
                 ? [this](const Context &Ctx, PathRef Path,
                          ParsedAST *AST) { FileIdx->update(Ctx, Path, AST); }
                 : ASTParsedCallback()),
-      ResourceDir(ResourceDir ? ResourceDir->str() : getStandardResourceDir()),
       PCHs(std::make_shared<PCHContainerOperations>()),
       StorePreamblesInMemory(StorePreamblesInMemory),
       WorkScheduler(AsyncThreadsCount) {
@@ -188,15 +177,16 @@ std::future<Context> ClangdServer::addDocument(Context Ctx, PathRef File,
 
   auto TaggedFS = FSProvider.getTaggedFileSystem(File);
   std::shared_ptr<CppFile> Resources =
-      Units.getOrCreateFile(File, ResourceDir, StorePreamblesInMemory, PCHs);
+      Units.getOrCreateFile(File, StorePreamblesInMemory, PCHs);
   return scheduleReparseAndDiags(std::move(Ctx), File,
                                  VersionedDraft{Version, Contents.str()},
-                                 std::move(Resources), std::move(TaggedFS),
-                                 /*AllowCachedCompileFlags=*/true);
+                                 std::move(Resources), std::move(TaggedFS));
 }
 
 std::future<Context> ClangdServer::removeDocument(Context Ctx, PathRef File) {
   DraftMgr.removeDraft(File);
+  CompileArgs.invalidate(File);
+
   std::shared_ptr<CppFile> Resources = Units.removeIfPresent(File);
   return scheduleCancelRebuild(std::move(Ctx), std::move(Resources));
 }
@@ -206,12 +196,15 @@ std::future<Context> ClangdServer::forceReparse(Context Ctx, PathRef File) {
   assert(FileContents.Draft &&
          "forceReparse() was called for non-added document");
 
+  // forceReparse promises to request new compilation flags from CDB, so we
+  // remove any cahced flags.
+  CompileArgs.invalidate(File);
+
   auto TaggedFS = FSProvider.getTaggedFileSystem(File);
   std::shared_ptr<CppFile> Resources =
-      Units.getOrCreateFile(File, ResourceDir, StorePreamblesInMemory, PCHs);
+      Units.getOrCreateFile(File, StorePreamblesInMemory, PCHs);
   return scheduleReparseAndDiags(std::move(Ctx), File, FileContents,
-                                 std::move(Resources), std::move(TaggedFS),
-                                 /*AllowCachedCompileFlags=*/false);
+                                 std::move(Resources), std::move(TaggedFS));
 }
 
 std::future<std::pair<Context, Tagged<CompletionList>>>
@@ -277,11 +270,7 @@ void ClangdServer::codeComplete(
   Path FileStr = File;
   // Copy PCHs to avoid accessing this->PCHs concurrently
   std::shared_ptr<PCHContainerOperations> PCHs = this->PCHs;
-
-  assert(Resources->getLastCommand() &&
-         "CppFile is in inconsistent state, missing CompileCommand");
-  tooling::CompileCommand CompileCommand = *Resources->getLastCommand();
-
+  tooling::CompileCommand CompileCommand = CompileArgs.getCompileCommand(File);
   // A task that will be run asynchronously.
   auto Task =
       // 'mutable' to reassign Preamble variable.
@@ -332,12 +321,9 @@ ClangdServer::signatureHelp(const Context &Ctx, PathRef File, Position Pos,
         "signatureHelp is called for non-added document",
         llvm::errc::invalid_argument);
 
-  assert(Resources->getLastCommand() &&
-         "CppFile is in inconsistent state, missing CompileCommand");
-
   auto Preamble = Resources->getPossiblyStalePreamble();
   auto Result =
-      clangd::signatureHelp(Ctx, File, *Resources->getLastCommand(),
+      clangd::signatureHelp(Ctx, File, CompileArgs.getCompileCommand(File),
                             Preamble ? &Preamble->Preamble : nullptr,
                             *OverridenContents, Pos, TaggedFS.Value, PCHs);
   return make_tagged(std::move(Result), TaggedFS.Tag);
@@ -571,18 +557,11 @@ ClangdServer::findDocumentHighlights(const Context &Ctx, PathRef File,
 std::future<Context> ClangdServer::scheduleReparseAndDiags(
     Context Ctx, PathRef File, VersionedDraft Contents,
     std::shared_ptr<CppFile> Resources,
-    Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> TaggedFS,
-    bool AllowCachedCompileFlags) {
-  llvm::Optional<tooling::CompileCommand> ReusedCommand;
-  if (AllowCachedCompileFlags)
-    ReusedCommand = Resources->getLastCommand();
-  tooling::CompileCommand Command =
-      ReusedCommand ? std::move(*ReusedCommand)
-                    : getCompileCommand(CDB, File, ResourceDir);
-
-  ParseInputs Inputs = {std::move(Command), std::move(TaggedFS.Value),
-                        *std::move(Contents.Draft)};
+    Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> TaggedFS) {
   assert(Contents.Draft && "Draft must have contents");
+  ParseInputs Inputs = {CompileArgs.getCompileCommand(File),
+                        std::move(TaggedFS.Value), *std::move(Contents.Draft)};
+
   UniqueFunction<llvm::Optional<std::vector<DiagWithFixIts>>(const Context &)>
       DeferredRebuild = Resources->deferRebuild(std::move(Inputs));
   std::promise<Context> DonePromise;

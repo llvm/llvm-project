@@ -455,7 +455,6 @@ CppFile::deferRebuild(ParseInputs &&Inputs) {
       this->ASTPromise = std::promise<std::shared_ptr<ParsedASTWrapper>>();
       this->ASTFuture = this->ASTPromise.get_future();
     }
-    this->LastCommand = Inputs.CompileCommand;
   } // unlock Mutex.
   // Notify about changes to RebuildCounter.
   RebuildCond.notify_all();
@@ -634,11 +633,6 @@ std::shared_ptr<const PreambleData> CppFile::getPossiblyStalePreamble() const {
 std::shared_future<std::shared_ptr<ParsedASTWrapper>> CppFile::getAST() const {
   std::lock_guard<std::mutex> Lock(Mutex);
   return ASTFuture;
-}
-
-llvm::Optional<tooling::CompileCommand> CppFile::getLastCommand() const {
-  std::lock_guard<std::mutex> Lock(Mutex);
-  return LastCommand;
 }
 
 CppFile::RebuildGuard::RebuildGuard(CppFile &File,

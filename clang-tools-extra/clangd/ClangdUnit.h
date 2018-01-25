@@ -216,14 +216,6 @@ public:
   /// always be non-null.
   std::shared_future<std::shared_ptr<ParsedASTWrapper>> getAST() const;
 
-  /// Get the latest CompileCommand used to build this CppFile. Returns
-  /// llvm::None before first call to rebuild() or after calls to
-  /// cancelRebuild().
-  // In practice we always call rebuild() when adding a CppFile to the
-  // CppFileCollection, and only `cancelRebuild()` after removing it. This means
-  // files in the CppFileCollection always have a compile command available.
-  llvm::Optional<tooling::CompileCommand> getLastCommand() const;
-
 private:
   /// A helper guard that manages the state of CppFile during rebuild.
   class RebuildGuard {
@@ -251,7 +243,6 @@ private:
   bool RebuildInProgress;
   /// Condition variable to indicate changes to RebuildInProgress.
   std::condition_variable RebuildCond;
-  llvm::Optional<tooling::CompileCommand> LastCommand;
 
   /// Promise and future for the latests AST. Fulfilled during rebuild.
   /// We use std::shared_ptr here because MVSC fails to compile non-copyable

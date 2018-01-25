@@ -31,8 +31,7 @@ public:
       : ASTCallback(std::move(ASTCallback)) {}
 
   std::shared_ptr<CppFile>
-  getOrCreateFile(PathRef File, PathRef ResourceDir,
-                  bool StorePreamblesInMemory,
+  getOrCreateFile(PathRef File, bool StorePreamblesInMemory,
                   std::shared_ptr<PCHContainerOperations> PCHs) {
     std::lock_guard<std::mutex> Lock(Mutex);
     auto It = OpenedFiles.find(File);

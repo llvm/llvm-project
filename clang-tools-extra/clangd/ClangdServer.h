@@ -13,6 +13,7 @@
 #include "ClangdUnit.h"
 #include "ClangdUnitStore.h"
 #include "CodeComplete.h"
+#include "CompileArgsCache.h"
 #include "DraftStore.h"
 #include "Function.h"
 #include "GlobalCompilationDatabase.h"
@@ -331,13 +332,12 @@ private:
   std::future<Context>
   scheduleReparseAndDiags(Context Ctx, PathRef File, VersionedDraft Contents,
                           std::shared_ptr<CppFile> Resources,
-                          Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> TaggedFS,
-                          bool AllowCachedCompileFlags);
+                          Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> TaggedFS);
 
   std::future<Context>
   scheduleCancelRebuild(Context Ctx, std::shared_ptr<CppFile> Resources);
 
-  GlobalCompilationDatabase &CDB;
+  CompileArgsCache CompileArgs;
   DiagnosticsConsumer &DiagConsumer;
   FileSystemProvider &FSProvider;
   DraftStore DraftMgr;
@@ -352,7 +352,6 @@ private:
   // If present, a merged view of FileIdx and an external index. Read via Index.
   std::unique_ptr<SymbolIndex> MergedIndex;
   CppFileCollection Units;
-  std::string ResourceDir;
   // If set, this represents the workspace path.
   llvm::Optional<std::string> RootPath;
   std::shared_ptr<PCHContainerOperations> PCHs;
