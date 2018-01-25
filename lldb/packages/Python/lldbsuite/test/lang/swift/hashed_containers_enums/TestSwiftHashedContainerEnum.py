@@ -15,8 +15,9 @@ class TestSwiftHashedContainerEnum(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.skipUnlessDarwin
+    # @decorators.skipUnlessDarwin
     @decorators.swiftTest
+    @decorators.expectedFailureAll # rdar://36847830
     def test_any_object_type(self):
         """Test combinations of hashed swift containers with enums"""
         self.build()
