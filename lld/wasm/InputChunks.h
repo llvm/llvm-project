@@ -120,6 +120,9 @@ public:
   uint32_t getOutputIndex() const { return OutputIndex.getValue(); }
   bool hasOutputIndex() const { return OutputIndex.hasValue(); }
   void setOutputIndex(uint32_t Index);
+  uint32_t getTableIndex() const { return TableIndex.getValue(); }
+  bool hasTableIndex() const { return TableIndex.hasValue(); }
+  void setTableIndex(uint32_t Index);
 
   const WasmSignature &Signature;
 
@@ -134,6 +137,7 @@ protected:
 
   const WasmFunction *Function;
   llvm::Optional<uint32_t> OutputIndex;
+  llvm::Optional<uint32_t> TableIndex;
 };
 
 class SyntheticFunction : public InputFunction {

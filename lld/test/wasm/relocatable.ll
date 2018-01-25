@@ -71,8 +71,8 @@ entry:
 ; CHECK-NEXT:       - ElemType:        ANYFUNC
 ; CHECK-NEXT:         Limits:
 ; CHECK-NEXT:           Flags:           [ HAS_MAX ]
-; CHECK-NEXT:           Initial:         0x00000003
-; CHECK-NEXT:           Maximum:         0x00000003
+; CHECK-NEXT:           Initial:         0x00000004
+; CHECK-NEXT:           Maximum:         0x00000004
 ; CHECK-NEXT:   - Type:            MEMORY
 ; CHECK-NEXT:     Memories:
 ; CHECK-NEXT:       - Initial:         0x00000001
@@ -147,7 +147,7 @@ entry:
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           0
+; CHECK-NEXT:           Value:           1
 ; CHECK-NEXT:         Functions:       [ 4, 1, 2 ]
 ; CHECK-NEXT:   - Type:            CODE
 ; CHECK-NEXT:     Relocations:
@@ -202,19 +202,19 @@ entry:
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           8
-; CHECK-NEXT:         Content:         '00000000'
+; CHECK-NEXT:         Content:         '01000000'
 ; CHECK-NEXT:       - SectionOffset:   27
 ; CHECK-NEXT:         MemoryIndex:     0
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           12
-; CHECK-NEXT:         Content:         '01000000'
+; CHECK-NEXT:         Content:         '02000000'
 ; CHECK-NEXT:       - SectionOffset:   36
 ; CHECK-NEXT:         MemoryIndex:     0
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           16
-; CHECK-NEXT:         Content:         '02000000'
+; CHECK-NEXT:         Content:         '03000000'
 ; CHECK-NEXT:       - SectionOffset:   45
 ; CHECK-NEXT:         MemoryIndex:     0
 ; CHECK-NEXT:         Offset:
