@@ -19,7 +19,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Regex.h"
@@ -104,9 +103,10 @@ struct InstRegexOp : public SetTheory::Operator {
       RegexList.push_back(std::make_pair(Prefix, Regex(pat)));
     }
     for (auto &R : RegexList) {
+      unsigned NumGeneric = Target.getNumFixedInstructions();
       // The generic opcodes are unsorted, handle them manually.
-      for (auto *Inst : Target.getInstructionsByEnumValue().slice(
-               0, TargetOpcode::GENERIC_OP_END + 1)) {
+      for (auto *Inst :
+           Target.getInstructionsByEnumValue().slice(0, NumGeneric + 1)) {
         if (Inst->TheDef->getName().startswith(R.first) &&
             (!R.second ||
              R.second->match(Inst->TheDef->getName().substr(R.first.size()))))
@@ -114,8 +114,7 @@ struct InstRegexOp : public SetTheory::Operator {
       }
 
       ArrayRef<const CodeGenInstruction *> Instructions =
-          Target.getInstructionsByEnumValue().slice(
-              TargetOpcode::GENERIC_OP_END + 1);
+          Target.getInstructionsByEnumValue().slice(NumGeneric + 1);
 
       // Target instructions are sorted. Find the range that starts with our
       // prefix.

@@ -61,28 +61,38 @@ TEST(LegalizerInfoTest, ScalarRISC) {
   for (unsigned opcode : {G_ADD, G_SUB}) {
     // Check we infer the correct types and actually do what we're told.
     ASSERT_EQ(L.getAction({opcode, {LLT::scalar(8)}}),
-              LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0, LLT::scalar(32)));
+              LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0,
+                                                LLT::scalar(32)));
     ASSERT_EQ(L.getAction({opcode, {LLT::scalar(16)}}),
-              LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0, LLT::scalar(32)));
-    ASSERT_EQ(L.getAction({opcode, {LLT::scalar(32)}}),
-              LegalizerInfo::LegalizeActionStep(LegalizerInfo::Legal, 0, LLT{}));
-    ASSERT_EQ(L.getAction({opcode, {LLT::scalar(64)}}),
-              LegalizerInfo::LegalizeActionStep(LegalizerInfo::Legal, 0, LLT{}));
+              LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0,
+                                                LLT::scalar(32)));
+    ASSERT_EQ(
+        L.getAction({opcode, {LLT::scalar(32)}}),
+        LegalizerInfo::LegalizeActionStep(LegalizerInfo::Legal, 0, LLT{}));
+    ASSERT_EQ(
+        L.getAction({opcode, {LLT::scalar(64)}}),
+        LegalizerInfo::LegalizeActionStep(LegalizerInfo::Legal, 0, LLT{}));
 
     // Make sure the default for over-sized types applies.
     ASSERT_EQ(L.getAction({opcode, {LLT::scalar(128)}}),
-              LegalizerInfo::LegalizeActionStep(LegalizerInfo::NarrowScalar, 0, LLT::scalar(64)));
+              LegalizerInfo::LegalizeActionStep(LegalizerInfo::NarrowScalar, 0,
+                                                LLT::scalar(64)));
     // Make sure we also handle unusual sizes
     ASSERT_EQ(L.getAction({opcode, {LLT::scalar(1)}}),
-              LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0, LLT::scalar(32)));
+              LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0,
+                                                LLT::scalar(32)));
     ASSERT_EQ(L.getAction({opcode, {LLT::scalar(31)}}),
-              LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0, LLT::scalar(32)));
+              LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0,
+                                                LLT::scalar(32)));
     ASSERT_EQ(L.getAction({opcode, {LLT::scalar(33)}}),
-              LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0, LLT::scalar(64)));
+              LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0,
+                                                LLT::scalar(64)));
     ASSERT_EQ(L.getAction({opcode, {LLT::scalar(63)}}),
-              LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0, LLT::scalar(64)));
+              LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0,
+                                                LLT::scalar(64)));
     ASSERT_EQ(L.getAction({opcode, {LLT::scalar(65)}}),
-              LegalizerInfo::LegalizeActionStep(LegalizerInfo::NarrowScalar, 0, LLT::scalar(64)));
+              LegalizerInfo::LegalizeActionStep(LegalizerInfo::NarrowScalar, 0,
+                                                LLT::scalar(64)));
   }
 }
 
@@ -109,16 +119,21 @@ TEST(LegalizerInfoTest, VectorRISC) {
   ASSERT_EQ(L.getAction({G_ADD, {LLT::vector(8, 8)}}),
             LegalizerInfo::LegalizeActionStep(LegalizerInfo::Legal, 0, LLT{}));
   ASSERT_EQ(L.getAction({G_ADD, {LLT::vector(8, 7)}}),
-            LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0, LLT::vector(8, 8)));
+            LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0,
+                                              LLT::vector(8, 8)));
   ASSERT_EQ(L.getAction({G_ADD, {LLT::vector(2, 8)}}),
-            LegalizerInfo::LegalizeActionStep(LegalizerInfo::MoreElements, 0, LLT::vector(8, 8)));
+            LegalizerInfo::LegalizeActionStep(LegalizerInfo::MoreElements, 0,
+                                              LLT::vector(8, 8)));
   ASSERT_EQ(L.getAction({G_ADD, {LLT::vector(8, 32)}}),
-            LegalizerInfo::LegalizeActionStep(LegalizerInfo::FewerElements, 0, LLT::vector(4, 32)));
+            LegalizerInfo::LegalizeActionStep(LegalizerInfo::FewerElements, 0,
+                                              LLT::vector(4, 32)));
   // Check a few non-power-of-2 sizes:
   ASSERT_EQ(L.getAction({G_ADD, {LLT::vector(3, 3)}}),
-            LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0, LLT::vector(3, 8)));
+            LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0,
+                                              LLT::vector(3, 8)));
   ASSERT_EQ(L.getAction({G_ADD, {LLT::vector(3, 8)}}),
-            LegalizerInfo::LegalizeActionStep(LegalizerInfo::MoreElements, 0, LLT::vector(8, 8)));
+            LegalizerInfo::LegalizeActionStep(LegalizerInfo::MoreElements, 0,
+                                              LLT::vector(8, 8)));
 }
 
 TEST(LegalizerInfoTest, MultipleTypes) {
@@ -144,9 +159,9 @@ TEST(LegalizerInfoTest, MultipleTypes) {
   ASSERT_EQ(
       L.getAction({G_PTRTOINT, {LLT::scalar(65), s64}}),
       LegalizerInfo::LegalizeActionStep(LegalizerInfo::NarrowScalar, 0, s64));
-  ASSERT_EQ(
-      L.getAction({G_PTRTOINT, {s64, LLT::pointer(0, 32)}}),
-      LegalizerInfo::LegalizeActionStep(LegalizerInfo::Unsupported, 1, LLT::pointer(0, 32)));
+  ASSERT_EQ(L.getAction({G_PTRTOINT, {s64, LLT::pointer(0, 32)}}),
+            LegalizerInfo::LegalizeActionStep(LegalizerInfo::Unsupported, 1,
+                                              LLT::pointer(0, 32)));
 }
 
 TEST(LegalizerInfoTest, MultipleSteps) {
@@ -163,9 +178,11 @@ TEST(LegalizerInfoTest, MultipleSteps) {
   L.computeTables();
 
   ASSERT_EQ(L.getAction({G_UREM, {LLT::scalar(16)}}),
-            LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0, LLT::scalar(32)));
+            LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0,
+                                              LLT::scalar(32)));
   ASSERT_EQ(L.getAction({G_UREM, {LLT::scalar(32)}}),
-            LegalizerInfo::LegalizeActionStep(LegalizerInfo::Lower, 0, LLT::scalar(32)));
+            LegalizerInfo::LegalizeActionStep(LegalizerInfo::Lower, 0,
+                                              LLT::scalar(32)));
 }
 
 TEST(LegalizerInfoTest, SizeChangeStrategy) {
@@ -180,20 +197,27 @@ TEST(LegalizerInfoTest, SizeChangeStrategy) {
 
   // Check we infer the correct types and actually do what we're told.
   for (unsigned Size : {1, 8, 16, 32}) {
-    ASSERT_EQ(L.getAction({G_UREM, {LLT::scalar(Size)}}),
-              LegalizerInfo::LegalizeActionStep(LegalizerInfo::Legal, 0, LLT{}));
+    ASSERT_EQ(
+        L.getAction({G_UREM, {LLT::scalar(Size)}}),
+        LegalizerInfo::LegalizeActionStep(LegalizerInfo::Legal, 0, LLT{}));
   }
   ASSERT_EQ(L.getAction({G_UREM, {LLT::scalar(2)}}),
-            LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0, LLT::scalar(8)));
+            LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0,
+                                              LLT::scalar(8)));
   ASSERT_EQ(L.getAction({G_UREM, {LLT::scalar(7)}}),
-            LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0, LLT::scalar(8)));
+            LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0,
+                                              LLT::scalar(8)));
   ASSERT_EQ(L.getAction({G_UREM, {LLT::scalar(9)}}),
-            LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0, LLT::scalar(16)));
+            LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0,
+                                              LLT::scalar(16)));
   ASSERT_EQ(L.getAction({G_UREM, {LLT::scalar(17)}}),
-            LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0, LLT::scalar(32)));
+            LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0,
+                                              LLT::scalar(32)));
   ASSERT_EQ(L.getAction({G_UREM, {LLT::scalar(31)}}),
-            LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0, LLT::scalar(32)));
+            LegalizerInfo::LegalizeActionStep(LegalizerInfo::WidenScalar, 0,
+                                              LLT::scalar(32)));
   ASSERT_EQ(L.getAction({G_UREM, {LLT::scalar(33)}}),
-            LegalizerInfo::LegalizeActionStep(LegalizerInfo::Unsupported, 0, LLT::scalar(33)));
+            LegalizerInfo::LegalizeActionStep(LegalizerInfo::Unsupported, 0,
+                                              LLT::scalar(33)));
 }
 }

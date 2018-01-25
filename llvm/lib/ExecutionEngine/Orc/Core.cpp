@@ -288,8 +288,7 @@ void VSO::finalize(SymbolNameSet SymbolsToFinalize) {
   }
 }
 
-LookupFlagsResult VSO::lookupFlags(SymbolNameSet Names) {
-  SymbolFlagsMap FlagsFound;
+SymbolNameSet VSO::lookupFlags(SymbolFlagsMap &Flags, SymbolNameSet Names) {
 
   for (SymbolNameSet::iterator I = Names.begin(), E = Names.end(); I != E;) {
     auto Tmp = I++;
@@ -301,11 +300,11 @@ LookupFlagsResult VSO::lookupFlags(SymbolNameSet Names) {
 
     Names.erase(Tmp);
 
-    FlagsFound[SymI->first] =
+    Flags[SymI->first] =
         JITSymbolFlags::stripTransientFlags(SymI->second.getFlags());
   }
 
-  return {std::move(FlagsFound), std::move(Names)};
+  return Names;
 }
 
 VSO::LookupResult VSO::lookup(AsynchronousSymbolQuery &Query,

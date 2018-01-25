@@ -641,7 +641,7 @@ LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
 
       // Set the 'local' flag based on the linker resolution for this symbol.
       if (Res.FinalDefinitionInLinkageUnit)
-        GV->setDSOLocal(Res.FinalDefinitionInLinkageUnit);
+        GV->setDSOLocal(true);
     }
     // Common resolution: collect the maximum size/alignment over all commons.
     // We also record if we see an instance of a common as prevailing, so that

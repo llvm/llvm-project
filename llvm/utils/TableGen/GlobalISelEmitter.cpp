@@ -2488,6 +2488,7 @@ void RuleMatcher::emit(MatchTable &Table) {
 
   Table << MatchTable::Opcode("GIR_Done", -1) << MatchTable::LineBreak
         << MatchTable::Label(LabelID);
+  ++NumPatternEmitted;
 }
 
 bool RuleMatcher::isHigherPriorityThan(const RuleMatcher &B) const {
@@ -3949,10 +3950,9 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
                          : InputRules;
 
   MatchTable Table(0);
-  for (Matcher *Rule : OptRules) {
+  for (Matcher *Rule : OptRules)
     Rule->emit(Table);
-    ++NumPatternEmitted;
-  }
+
   Table << MatchTable::Opcode("GIM_Reject") << MatchTable::LineBreak;
   Table.emitDeclaration(OS);
   OS << "  if (executeMatchTable(*this, OutMIs, State, ISelInfo, ";

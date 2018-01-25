@@ -62,8 +62,10 @@ JITSymbolResolverAdapter::lookupFlags(const LookupSet &Symbols) {
   for (auto &S : Symbols)
     InternedSymbols.insert(ES.getSymbolStringPool().intern(S));
 
+  SymbolFlagsMap SymbolFlags;
+  R.lookupFlags(SymbolFlags, InternedSymbols);
   LookupFlagsResult Result;
-  for (auto &KV : R.lookupFlags(InternedSymbols).SymbolFlags) {
+  for (auto &KV : SymbolFlags) {
     ResolvedStrings.insert(KV.first);
     Result[*KV.first] = KV.second;
   }
