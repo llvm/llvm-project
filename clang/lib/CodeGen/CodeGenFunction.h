@@ -2101,16 +2101,14 @@ public:
   ///
   /// The difference to EmitAggregateCopy is that tail padding is not copied.
   /// This is required for correctness when assigning non-POD structures in C++.
-  void EmitAggregateAssign(Address DestPtr, Address SrcPtr,
-                           QualType EltTy) {
+  void EmitAggregateAssign(LValue Dest, LValue Src, QualType EltTy) {
     bool IsVolatile = hasVolatileMember(EltTy);
-    EmitAggregateCopy(DestPtr, SrcPtr, EltTy, IsVolatile, true);
+    EmitAggregateCopy(Dest, Src, EltTy, IsVolatile, /* isAssignment= */ true);
   }
 
-  void EmitAggregateCopyCtor(Address DestPtr, Address SrcPtr,
-                             QualType DestTy, QualType SrcTy) {
-    EmitAggregateCopy(DestPtr, SrcPtr, SrcTy, /*IsVolatile=*/false,
-                      /*IsAssignment=*/false);
+  void EmitAggregateCopyCtor(LValue Dest, LValue Src) {
+    EmitAggregateCopy(Dest, Src, Src.getType(),
+                      /* IsVolatile= */ false, /* IsAssignment= */ false);
   }
 
   /// EmitAggregateCopy - Emit an aggregate copy.
@@ -2119,9 +2117,8 @@ public:
   /// volatile.
   /// \param isAssignment - If false, allow padding to be copied.  This often
   /// yields more efficient.
-  void EmitAggregateCopy(Address DestPtr, Address SrcPtr,
-                         QualType EltTy, bool isVolatile=false,
-                         bool isAssignment = false);
+  void EmitAggregateCopy(LValue Dest, LValue Src, QualType EltTy,
+                         bool isVolatile = false, bool isAssignment = false);
 
   /// GetAddrOfLocalVar - Return the address of a local variable.
   Address GetAddrOfLocalVar(const VarDecl *VD) {

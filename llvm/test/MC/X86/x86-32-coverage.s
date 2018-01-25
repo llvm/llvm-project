@@ -10774,3 +10774,9 @@ btcl $4, (%eax)
 // CHECK: 	clzero
 // CHECK:  encoding: [0x0f,0x01,0xfc]
         	clzero
+
+// CHECK: lock addl %esi, (%edi)
+// INTEL: lock add dword ptr [edi], esi
+// CHECK:  encoding: [0xf0,0x01,0x37]
+        	lock add %esi, (%edi)
+

@@ -264,6 +264,7 @@ bool DWARFFormValue::isFormClass(DWARFFormValue::FormClass FC) const {
   case DW_FORM_strx2:
   case DW_FORM_strx3:
   case DW_FORM_strx4:
+  case DW_FORM_line_strp:
     return (FC == FC_String);
   case DW_FORM_implicit_const:
     return (FC == FC_Constant);
@@ -582,6 +583,11 @@ Optional<const char *> DWARFFormValue::getAsCString() const {
   if (Form == DW_FORM_GNU_strp_alt || U == nullptr)
     return None;
   uint32_t Offset = Value.uval;
+  if (Form == DW_FORM_line_strp) {
+    if (const char *Str = U->getLineStringExtractor().getCStr(&Offset))
+      return Str;
+    return None;
+  }
   if (Form == DW_FORM_GNU_str_index || Form == DW_FORM_strx ||
       Form == DW_FORM_strx1 || Form == DW_FORM_strx2 || Form == DW_FORM_strx3 ||
       Form == DW_FORM_strx4) {

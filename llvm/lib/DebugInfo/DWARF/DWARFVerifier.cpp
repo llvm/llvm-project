@@ -282,8 +282,8 @@ bool DWARFVerifier::handleDebugInfo() {
             DCtx, DObj.getInfoSection(), DCtx.getDebugAbbrev(),
             &DObj.getRangeSection(), DObj.getStringSection(),
             DObj.getStringOffsetSection(), &DObj.getAppleObjCSection(),
-            DObj.getLineSection(), DCtx.isLittleEndian(), false, TUSection,
-            nullptr));
+            DObj.getLineSection(), DObj.getLineStringSection(),
+            DCtx.isLittleEndian(), false, TUSection, nullptr));
         break;
       }
       case dwarf::DW_UT_skeleton:
@@ -297,8 +297,8 @@ bool DWARFVerifier::handleDebugInfo() {
             DCtx, DObj.getInfoSection(), DCtx.getDebugAbbrev(),
             &DObj.getRangeSection(), DObj.getStringSection(),
             DObj.getStringOffsetSection(), &DObj.getAppleObjCSection(),
-            DObj.getLineSection(), DCtx.isLittleEndian(), false, CUSection,
-            nullptr));
+            DObj.getLineSection(), DObj.getLineStringSection(),
+            DCtx.isLittleEndian(), false, CUSection, nullptr));
         break;
       }
       default: { llvm_unreachable("Invalid UnitType."); }

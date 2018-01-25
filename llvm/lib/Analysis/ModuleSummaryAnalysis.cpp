@@ -273,9 +273,24 @@ computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
         // to record the call edge to the alias in that case. Eventually
         // an alias summary will be created to associate the alias and
         // aliasee.
-        CallGraphEdges[Index.getOrInsertValueInfo(
-                           cast<GlobalValue>(CalledValue))]
-            .updateHotness(Hotness);
+        auto &ValueInfo = CallGraphEdges[Index.getOrInsertValueInfo(
+            cast<GlobalValue>(CalledValue))];
+        ValueInfo.updateHotness(Hotness);
+        // Add the relative block frequency to CalleeInfo if there is no profile
+        // information.
+        if (BFI != nullptr && Hotness == CalleeInfo::HotnessType::Unknown) {
+          auto BBFreq = BFI->getBlockFreq(&BB).getFrequency();
+          // FIXME: This might need some scaling to prevent BBFreq values from
+          // being rounded down to 0.
+          auto EntryFreq = BFI->getEntryFreq();
+          // Block frequencies can be directly set for a block and so we need to
+          // handle the case of entry frequency being 0.
+          if (EntryFreq)
+            BBFreq /= EntryFreq;
+          else
+            BBFreq = 0;
+          ValueInfo.updateRelBlockFreq(BBFreq);
+        }
       } else {
         // Skip inline assembly calls.
         if (CI && CI->isInlineAsm())

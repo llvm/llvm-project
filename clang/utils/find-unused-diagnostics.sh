@@ -8,7 +8,7 @@
 ALL_DIAGS=$(grep -E --only-matching --no-filename '(err_|warn_|ext_|note_)[a-z_]+' ./include/clang/Basic/Diagnostic*.td)
 
 # Now look for all potential identifiers in the source files.
-ALL_SOURCES=$(find lib include tools -name \*.cpp -or -name \*.h)
+ALL_SOURCES=$(find lib include tools utils -name \*.cpp -or -name \*.h)
 DIAGS_IN_SOURCES=$(grep -E --only-matching --no-filename '(err_|warn_|ext_|note_)[a-z_]+' $ALL_SOURCES)
 
 # Print all diags that occur in the .td files but not in the source.

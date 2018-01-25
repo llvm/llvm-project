@@ -25,6 +25,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -54,13 +55,30 @@ struct CalleeInfo {
     Hot = 3,
     Critical = 4
   };
-  HotnessType Hotness = HotnessType::Unknown;
 
-  CalleeInfo() = default;
-  explicit CalleeInfo(HotnessType Hotness) : Hotness(Hotness) {}
+  // The size of the bit-field might need to be adjusted if more values are
+  // added to HotnessType enum.
+  uint32_t Hotness : 3;
+  uint32_t RelBlockFreq : 29;
+  static constexpr uint64_t MaxRelBlockFreq = (1 << 29) - 1;
+
+  CalleeInfo()
+      : Hotness(static_cast<uint32_t>(HotnessType::Unknown)), RelBlockFreq(0) {}
+  explicit CalleeInfo(HotnessType Hotness, uint64_t RelBF)
+      : Hotness(static_cast<uint32_t>(Hotness)), RelBlockFreq(RelBF) {}
 
   void updateHotness(const HotnessType OtherHotness) {
-    Hotness = std::max(Hotness, OtherHotness);
+    Hotness = std::max(Hotness, static_cast<uint32_t>(OtherHotness));
+  }
+
+  HotnessType getHotness() const { return HotnessType(Hotness); }
+
+  // When there are multiple edges between the same (caller, callee) pair, the
+  // relative block frequencies are summed up.
+  void updateRelBlockFreq(uint64_t RBF) {
+    uint64_t Sum = SaturatingAdd<uint64_t>(RelBlockFreq, RBF);
+    Sum = std::min(Sum, uint64_t(MaxRelBlockFreq));
+    RelBlockFreq = static_cast<uint32_t>(Sum);
   }
 };
 

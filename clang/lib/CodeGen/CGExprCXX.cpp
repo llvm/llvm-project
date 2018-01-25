@@ -242,11 +242,15 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     }
   }
 
-  Address This = Address::invalid();
-  if (IsArrow)
-    This = EmitPointerWithAlignment(Base);
-  else
-    This = EmitLValue(Base).getAddress();
+  LValue This;
+  if (IsArrow) {
+    LValueBaseInfo BaseInfo;
+    TBAAAccessInfo TBAAInfo;
+    Address ThisValue = EmitPointerWithAlignment(Base, &BaseInfo, &TBAAInfo);
+    This = MakeAddrLValue(ThisValue, Base->getType(), BaseInfo, TBAAInfo);
+  } else {
+    This = EmitLValue(Base);
+  }
 
 
   if (MD->isTrivial() || (MD->isDefaulted() && MD->getParent()->isUnion())) {
@@ -264,7 +268,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
                                (*RtlArgs)[0].RV.getScalarVal(),
                                (*(CE->arg_begin() + 1))->getType())
                          : EmitLValue(*CE->arg_begin());
-        EmitAggregateAssign(This, RHS.getAddress(), CE->getType());
+        EmitAggregateAssign(This, RHS, CE->getType());
         return RValue::get(This.getPointer());
       }
 
@@ -272,8 +276,10 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
           cast<CXXConstructorDecl>(MD)->isCopyOrMoveConstructor()) {
         // Trivial move and copy ctor are the same.
         assert(CE->getNumArgs() == 1 && "unexpected argcount for trivial ctor");
-        Address RHS = EmitLValue(*CE->arg_begin()).getAddress();
-        EmitAggregateCopy(This, RHS, (*CE->arg_begin())->getType());
+        const Expr *Arg = *CE->arg_begin();
+        LValue RHS = EmitLValue(Arg);
+        LValue Dest = MakeAddrLValue(This.getAddress(), Arg->getType());
+        EmitAggregateCopy(Dest, RHS, Arg->getType());
         return RValue::get(This.getPointer());
       }
       llvm_unreachable("unknown trivial member function");
@@ -335,7 +341,8 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     assert(ReturnValue.isNull() && "Destructor shouldn't have return value");
     if (UseVirtualCall) {
       CGM.getCXXABI().EmitVirtualDestructorCall(
-          *this, Dtor, Dtor_Complete, This, cast<CXXMemberCallExpr>(CE));
+          *this, Dtor, Dtor_Complete, This.getAddress(),
+          cast<CXXMemberCallExpr>(CE));
     } else {
       CGCallee Callee;
       if (getLangOpts().AppleKext && MD->isVirtual() && HasQualifier)
@@ -364,7 +371,8 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
                   CGM.GetAddrOfFunction(GlobalDecl(Ctor, Ctor_Complete), Ty),
                                  Ctor);
   } else if (UseVirtualCall) {
-    Callee = CGM.getCXXABI().getVirtualFunctionPointer(*this, MD, This, Ty,
+    Callee = CGM.getCXXABI().getVirtualFunctionPointer(*this, MD,
+                                                       This.getAddress(), Ty,
                                                        CE->getLocStart());
   } else {
     if (SanOpts.has(SanitizerKind::CFINVCall) &&
@@ -372,7 +380,8 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
       llvm::Value *VTable;
       const CXXRecordDecl *RD;
       std::tie(VTable, RD) =
-          CGM.getCXXABI().LoadVTablePtr(*this, This, MD->getParent());
+          CGM.getCXXABI().LoadVTablePtr(*this, This.getAddress(),
+                                        MD->getParent());
       EmitVTablePtrCheckForCall(RD, VTable, CFITCK_NVCall, CE->getLocStart());
     }
 
@@ -388,8 +397,10 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
   }
 
   if (MD->isVirtual()) {
-    This = CGM.getCXXABI().adjustThisArgumentForVirtualFunctionCall(
-        *this, CalleeDecl, This, UseVirtualCall);
+    Address NewThisAddr =
+        CGM.getCXXABI().adjustThisArgumentForVirtualFunctionCall(
+            *this, CalleeDecl, This.getAddress(), UseVirtualCall);
+    This.setAddress(NewThisAddr);
   }
 
   return EmitCXXMemberOrOperatorCall(

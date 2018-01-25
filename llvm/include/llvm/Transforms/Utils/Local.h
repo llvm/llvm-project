@@ -339,6 +339,10 @@ void ConvertDebugDeclareToDebugValue(DbgInfoIntrinsic *DII,
 /// llvm.dbg.value intrinsics.
 bool LowerDbgDeclare(Function &F);
 
+/// Propagate dbg.value intrinsics through the newly inserted PHIs.
+void insertDebugValuesForPHIs(BasicBlock *BB,
+                              SmallVectorImpl<PHINode *> &InsertedPHIs);
+
 /// Finds all intrinsics declaring local variables as living in the memory that
 /// 'V' points to. This may include a mix of dbg.declare and
 /// dbg.addr intrinsics.

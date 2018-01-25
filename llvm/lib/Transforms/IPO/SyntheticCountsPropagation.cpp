@@ -102,23 +102,34 @@ PreservedAnalyses SyntheticCountsPropagation::run(Module &M,
   // Set initial entry counts.
   initializeCounts(M, [&](Function *F, uint64_t Count) { Counts[F] = Count; });
 
-  // Compute the relative block frequency for a callsite. Use scaled numbers
+  // Compute the relative block frequency for a call edge. Use scaled numbers
   // and not integers since the relative block frequency could be less than 1.
-  auto GetCallSiteRelFreq = [&](CallSite CS) {
+  auto GetCallSiteRelFreq = [&](const CallGraphNode::CallRecord &Edge) {
+    Optional<Scaled64> Res = None;
+    if (!Edge.first)
+      return Res;
+    assert(isa<Instruction>(Edge.first));
+    CallSite CS(cast<Instruction>(Edge.first));
     Function *Caller = CS.getCaller();
     auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(*Caller);
     BasicBlock *CSBB = CS.getInstruction()->getParent();
     Scaled64 EntryFreq(BFI.getEntryFreq(), 0);
     Scaled64 BBFreq(BFI.getBlockFreq(CSBB).getFrequency(), 0);
     BBFreq /= EntryFreq;
-    return BBFreq;
+    return Optional<Scaled64>(BBFreq);
   };
 
   CallGraph CG(M);
   // Propgate the entry counts on the callgraph.
-  propagateSyntheticCounts(
-      CG, GetCallSiteRelFreq, [&](Function *F) { return Counts[F]; },
-      [&](Function *F, uint64_t New) { Counts[F] += New; });
+  SyntheticCountsUtils<const CallGraph *>::propagate(
+      &CG, GetCallSiteRelFreq,
+      [&](const CallGraphNode *N) { return Counts[N->getFunction()]; },
+      [&](const CallGraphNode *N, uint64_t New) {
+        auto F = N->getFunction();
+        if (!F || F->isDeclaration())
+          return;
+        Counts[F] += New;
+      });
 
   // Set the counts as metadata.
   for (auto Entry : Counts)

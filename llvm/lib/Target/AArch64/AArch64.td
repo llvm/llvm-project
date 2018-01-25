@@ -149,6 +149,12 @@ def FeatureLSLFast : SubtargetFeature<
     "lsl-fast", "HasLSLFast", "true",
     "CPU has a fastpath logical shift of up to 3 places">;
 
+def FeatureAggressiveFMA :
+  SubtargetFeature<"aggressive-fma",
+                   "HasAggressiveFMA",
+                   "true",
+                   "Enable Aggressive FMA for floating-point.">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //
@@ -390,6 +396,7 @@ def ProcSaphira  : SubtargetFeature<"saphira", "ARMProcFamily", "Saphira",
 def ProcThunderX2T99  : SubtargetFeature<"thunderx2t99", "ARMProcFamily",
                                          "ThunderX2T99",
                                          "Cavium ThunderX2 processors", [
+                                          FeatureAggressiveFMA,
                                           FeatureCRC,
                                           FeatureCrypto,
                                           FeatureFPARMv8,
