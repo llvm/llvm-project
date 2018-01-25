@@ -1,4 +1,4 @@
-//===--- CompileArgsCache.cpp - Main clangd server code ------------------===//
+//===--- CompileArgsCache.cpp --------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
