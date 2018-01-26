@@ -457,7 +457,7 @@ define void @trunc(i64 %a) {
 ; CHECK: [[ADDR:%[0-9]+]]:_(p0) = COPY %x0
 ; CHECK: [[ADDR42:%[0-9]+]]:_(p42) = COPY %x1
 ; CHECK: [[VAL1:%[0-9]+]]:_(s64) = G_LOAD [[ADDR]](p0) :: (load 8 from %ir.addr, align 16)
-; CHECK: [[VAL2:%[0-9]+]]:_(s64) = G_LOAD [[ADDR42]](p42) :: (load 8 from %ir.addr42)
+; CHECK: [[VAL2:%[0-9]+]]:_(s64) = G_LOAD [[ADDR42]](p42) :: (load 8 from %ir.addr42, addrspace 42)
 ; CHECK: [[SUM2:%.*]]:_(s64) = G_ADD [[VAL1]], [[VAL2]]
 ; CHECK: [[VAL3:%[0-9]+]]:_(s64) = G_LOAD [[ADDR]](p0) :: (volatile load 8 from %ir.addr)
 ; CHECK: [[SUM3:%[0-9]+]]:_(s64) = G_ADD [[SUM2]], [[VAL3]]
@@ -480,7 +480,7 @@ define i64 @load(i64* %addr, i64 addrspace(42)* %addr42) {
 ; CHECK: [[VAL1:%[0-9]+]]:_(s64) = COPY %x2
 ; CHECK: [[VAL2:%[0-9]+]]:_(s64) = COPY %x3
 ; CHECK: G_STORE [[VAL1]](s64), [[ADDR]](p0) :: (store 8 into %ir.addr, align 16)
-; CHECK: G_STORE [[VAL2]](s64), [[ADDR42]](p42) :: (store 8 into %ir.addr42)
+; CHECK: G_STORE [[VAL2]](s64), [[ADDR42]](p42) :: (store 8 into %ir.addr42, addrspace 42)
 ; CHECK: G_STORE [[VAL1]](s64), [[ADDR]](p0) :: (volatile store 8 into %ir.addr)
 ; CHECK: RET_ReallyLR
 define void @store(i64* %addr, i64 addrspace(42)* %addr42, i64 %val1, i64 %val2) {

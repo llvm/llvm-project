@@ -797,7 +797,7 @@ private:
     uint64_t Size = DL.getTypeStoreSize(ValOp->getType());
 
     // If this memory access can be shown to *statically* extend outside the
-    // bounds of of the allocation, it's behavior is undefined, so simply
+    // bounds of the allocation, it's behavior is undefined, so simply
     // ignore it. Note that this is more strict than the generic clamping
     // behavior of insertUse. We also try to handle cases which might run the
     // risk of overflow.

@@ -912,7 +912,7 @@ where they are built (a Canadian Cross build). To generate build files for
 cross-compiling CMake provides a variable ``CMAKE_TOOLCHAIN_FILE`` which can
 define compiler flags and variables used during the CMake test operations.
 
-The result of such a build is executables that are not runnable on on the build
+The result of such a build is executables that are not runnable on the build
 host but can be executed on the target. As an example the following CMake
 invocation can generate build files targeting iOS. This will work on Mac OS X
 with the latest Xcode:

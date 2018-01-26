@@ -1170,7 +1170,7 @@ bool HexagonDAGToDAGISel::SelectAnyImmediate(SDValue &N, SDValue &R,
   }
   case HexagonISD::JT:
   case HexagonISD::CP:
-    // These are assumed to always be aligned at at least 8-byte boundary.
+    // These are assumed to always be aligned at least 8-byte boundary.
     if (LogAlign > 3)
       return false;
     R = N.getOperand(0);
@@ -1182,7 +1182,7 @@ bool HexagonDAGToDAGISel::SelectAnyImmediate(SDValue &N, SDValue &R,
     R = N;
     return true;
   case ISD::BlockAddress:
-    // Block address is always aligned at at least 4-byte boundary.
+    // Block address is always aligned at least 4-byte boundary.
     if (LogAlign > 2 || !IsAligned(cast<BlockAddressSDNode>(N)->getOffset()))
       return false;
     R = N;

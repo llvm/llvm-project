@@ -228,6 +228,7 @@ public:
                                          Optional<unsigned> &TiedDefIdx);
   bool parseOffset(int64_t &Offset);
   bool parseAlignment(unsigned &Alignment);
+  bool parseAddrspace(unsigned &Addrspace);
   bool parseOperandsOffset(MachineOperand &Op);
   bool parseIRValue(const Value *&V);
   bool parseMemoryOperandFlag(MachineMemOperand::Flags &Flags);
@@ -2094,6 +2095,17 @@ bool MIParser::parseAlignment(unsigned &Alignment) {
   return false;
 }
 
+bool MIParser::parseAddrspace(unsigned &Addrspace) {
+  assert(Token.is(MIToken::kw_addrspace));
+  lex();
+  if (Token.isNot(MIToken::IntegerLiteral) || Token.integerValue().isSigned())
+    return error("expected an integer literal after 'addrspace'");
+  if (getUnsigned(Addrspace))
+    return true;
+  lex();
+  return false;
+}
+
 bool MIParser::parseOperandsOffset(MachineOperand &Op) {
   int64_t Offset = 0;
   if (parseOffset(Offset))
@@ -2403,6 +2415,10 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
     switch (Token.kind()) {
     case MIToken::kw_align:
       if (parseAlignment(BaseAlignment))
+        return true;
+      break;
+    case MIToken::kw_addrspace:
+      if (parseAddrspace(Ptr.AddrSpace))
         return true;
       break;
     case MIToken::md_tbaa:

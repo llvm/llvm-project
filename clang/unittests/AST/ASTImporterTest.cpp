@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MatchVerifier.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTImporter.h"
-#include "MatchVerifier.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
@@ -99,7 +99,11 @@ testImport(const std::string &FromCode, const ArgVector &FromArgs,
   if (FoundDecls.size() != 1)
     return testing::AssertionFailure() << "Multiple declarations were found!";
 
-  auto Imported = Importer.Import(*FoundDecls.begin());
+  // Sanity check: the node being imported should match in the same way as
+  // the result node.
+  EXPECT_TRUE(Verifier.match(FoundDecls.front(), AMatcher));
+
+  auto Imported = Importer.Import(FoundDecls.front());
   if (!Imported)
     return testing::AssertionFailure() << "Import failed, nullptr returned!";
 
@@ -624,7 +628,7 @@ TEST(ImportExpr, ImportCXXPseudoDestructorExpr) {
 TEST(ImportDecl, ImportUsingDecl) {
   MatchVerifier<Decl> Verifier;
   testImport("namespace foo { int bar; }"
-             "int declToImport(){ using foo::bar; }",
+             "void declToImport() { using foo::bar; }",
              Lang_CXX, "", Lang_CXX, Verifier,
              functionDecl(
                has(
@@ -665,13 +669,13 @@ TEST(ImportExpr, ImportUnresolvedLookupExpr) {
              "}"
              "void instantiate() { declToImport<int>(); }",
              Lang_CXX, "", Lang_CXX, Verifier,
-             functionTemplateDecl(has(functionDecl(has(
-                 compoundStmt(has(unresolvedLookupExpr())))))));
+             functionTemplateDecl(has(functionDecl(
+                 has(compoundStmt(has(unresolvedLookupExpr())))))));
 }
 
 TEST(ImportExpr, ImportCXXUnresolvedConstructExpr) {
   MatchVerifier<Decl> Verifier;
-  testImport("template <typename T> class C { T t; };"
+  testImport("template <typename T> struct C { T t; };"
              "template <typename T> void declToImport() {"
              "  C<T> d;"
              "  d.t = T();"
@@ -680,7 +684,7 @@ TEST(ImportExpr, ImportCXXUnresolvedConstructExpr) {
              Lang_CXX, "", Lang_CXX, Verifier,
              functionTemplateDecl(has(functionDecl(has(compoundStmt(has(
                  binaryOperator(has(cxxUnresolvedConstructExpr())))))))));
-  testImport("template <typename T> class C { T t; };"
+  testImport("template <typename T> struct C { T t; };"
              "template <typename T> void declToImport() {"
              "  C<T> d;"
              "  (&d)->t = T();"
@@ -689,6 +693,23 @@ TEST(ImportExpr, ImportCXXUnresolvedConstructExpr) {
              Lang_CXX, "", Lang_CXX, Verifier,
              functionTemplateDecl(has(functionDecl(has(compoundStmt(has(
                  binaryOperator(has(cxxUnresolvedConstructExpr())))))))));
+}
+
+/// Check that function "declToImport()" (which is the templated function
+/// for corresponding FunctionTemplateDecl) is not added into DeclContext.
+/// Same for class template declarations.
+TEST(ImportDecl, ImportTemplatedDeclForTemplate) {
+  MatchVerifier<Decl> Verifier;
+  testImport("template <typename T> void declToImport() { T a = 1; }"
+             "void instantiate() { declToImport<int>(); }",
+             Lang_CXX, "", Lang_CXX, Verifier,
+             functionTemplateDecl(hasAncestor(translationUnitDecl(
+                 unless(has(functionDecl(hasName("declToImport"))))))));
+  testImport("template <typename T> struct declToImport { T t; };"
+             "void instantiate() { declToImport<int>(); }",
+             Lang_CXX, "", Lang_CXX, Verifier,
+             classTemplateDecl(hasAncestor(translationUnitDecl(
+                 unless(has(cxxRecordDecl(hasName("declToImport"))))))));
 }
 
 } // end namespace ast_matchers

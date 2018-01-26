@@ -84,6 +84,9 @@ public:
 ///
 /// Keys are typically used across multiple functions, so most of the time you
 /// would want to make them static class members or global variables.
+///
+/// FIXME: Rather than manual plumbing, pass Context using thread-local storage
+/// by default, and make thread boundaries deal with propagation explicitly.
 class Context {
 public:
   /// Returns an empty context that contains no data. Useful for calling
@@ -148,6 +151,18 @@ public:
         /*Parent=*/std::move(DataPtr), &Key,
         llvm::make_unique<TypedAnyStorage<typename std::decay<Type>::type>>(
             std::move(Value))}));
+  }
+
+  /// Derives a child context, using an anonymous key.
+  /// Intended for objects stored only for their destructor's side-effect.
+  template <class Type> Context derive(Type &&Value) const & {
+    static Key<typename std::decay<Type>::type> Private;
+    return derive(Private, std::forward<Type>(Value));
+  }
+
+  template <class Type> Context derive(Type &&Value) && {
+    static Key<typename std::decay<Type>::type> Private;
+    return std::move(this)->derive(Private, std::forward<Type>(Value));
   }
 
   /// Clone this context object.

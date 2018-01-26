@@ -199,7 +199,6 @@ struct CodeGenProcModel {
 
   // Per-operand machine model resources associated with this processor.
   RecVec ProcResourceDefs;
-  RecVec ProcResGroupDefs;
 
   CodeGenProcModel(unsigned Idx, const std::string &Name, Record *MDef,
                    Record *IDef) :

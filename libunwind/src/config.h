@@ -72,7 +72,9 @@
     (!defined(__APPLE__) && defined(__arm__)) ||                               \
     (defined(__arm64__) || defined(__aarch64__)) ||                            \
     defined(__mips__)
+#if !defined(_LIBUNWIND_BUILD_SJLJ_APIS)
 #define _LIBUNWIND_BUILD_ZERO_COST_APIS
+#endif
 #endif
 
 #if defined(__powerpc64__) && defined(_ARCH_PWR8)

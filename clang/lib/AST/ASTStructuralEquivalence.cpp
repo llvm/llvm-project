@@ -1153,17 +1153,39 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                   D2->getTemplateParameters());
 }
 
+static bool IsTemplateDeclCommonStructurallyEquivalent(
+    StructuralEquivalenceContext &Ctx, TemplateDecl *D1, TemplateDecl *D2) {
+  if (!IsStructurallyEquivalent(D1->getIdentifier(), D2->getIdentifier()))
+    return false;
+  if (!D1->getIdentifier()) // Special name
+    if (D1->getNameAsString() != D2->getNameAsString())
+      return false;
+  return IsStructurallyEquivalent(Ctx, D1->getTemplateParameters(),
+                                  D2->getTemplateParameters());
+}
+
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      ClassTemplateDecl *D1,
                                      ClassTemplateDecl *D2) {
   // Check template parameters.
-  if (!IsStructurallyEquivalent(Context, D1->getTemplateParameters(),
-                                D2->getTemplateParameters()))
+  if (!IsTemplateDeclCommonStructurallyEquivalent(Context, D1, D2))
     return false;
 
   // Check the templated declaration.
   return Context.IsStructurallyEquivalent(D1->getTemplatedDecl(),
                                           D2->getTemplatedDecl());
+}
+
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     FunctionTemplateDecl *D1,
+                                     FunctionTemplateDecl *D2) {
+  // Check template parameters.
+  if (!IsTemplateDeclCommonStructurallyEquivalent(Context, D1, D2))
+    return false;
+
+  // Check the templated declaration.
+  return Context.IsStructurallyEquivalent(D1->getTemplatedDecl()->getType(),
+                                          D2->getTemplatedDecl()->getType());
 }
 
 /// Determine structural equivalence of two declarations.
@@ -1293,6 +1315,7 @@ bool StructuralEquivalenceContext::Finish() {
         // Record/non-record mismatch.
         Equivalent = false;
       }
+
     } else if (EnumDecl *Enum1 = dyn_cast<EnumDecl>(D1)) {
       if (EnumDecl *Enum2 = dyn_cast<EnumDecl>(D2)) {
         // Check for equivalent enum names.
@@ -1309,6 +1332,7 @@ bool StructuralEquivalenceContext::Finish() {
         // Enum/non-enum mismatch
         Equivalent = false;
       }
+
     } else if (TypedefNameDecl *Typedef1 = dyn_cast<TypedefNameDecl>(D1)) {
       if (TypedefNameDecl *Typedef2 = dyn_cast<TypedefNameDecl>(D2)) {
         if (!::IsStructurallyEquivalent(Typedef1->getIdentifier(),
@@ -1320,17 +1344,30 @@ bool StructuralEquivalenceContext::Finish() {
         // Typedef/non-typedef mismatch.
         Equivalent = false;
       }
+
     } else if (ClassTemplateDecl *ClassTemplate1 =
                    dyn_cast<ClassTemplateDecl>(D1)) {
       if (ClassTemplateDecl *ClassTemplate2 = dyn_cast<ClassTemplateDecl>(D2)) {
-        if (!::IsStructurallyEquivalent(ClassTemplate1->getIdentifier(),
-                                        ClassTemplate2->getIdentifier()) ||
-            !::IsStructurallyEquivalent(*this, ClassTemplate1, ClassTemplate2))
+        if (!::IsStructurallyEquivalent(*this, ClassTemplate1,
+                                        ClassTemplate2))
           Equivalent = false;
       } else {
         // Class template/non-class-template mismatch.
         Equivalent = false;
       }
+
+    } else if (FunctionTemplateDecl *FunctionTemplate1 =
+               dyn_cast<FunctionTemplateDecl>(D1)) {
+      if (FunctionTemplateDecl *FunctionTemplate2 =
+          dyn_cast<FunctionTemplateDecl>(D2)) {
+        if (!::IsStructurallyEquivalent(*this, FunctionTemplate1,
+                                        FunctionTemplate2))
+          Equivalent = false;
+      } else {
+        // Class template/non-class-template mismatch.
+        Equivalent = false;
+      }
+
     } else if (TemplateTypeParmDecl *TTP1 =
                    dyn_cast<TemplateTypeParmDecl>(D1)) {
       if (TemplateTypeParmDecl *TTP2 = dyn_cast<TemplateTypeParmDecl>(D2)) {
@@ -1350,6 +1387,7 @@ bool StructuralEquivalenceContext::Finish() {
         // Kind mismatch.
         Equivalent = false;
       }
+
     } else if (TemplateTemplateParmDecl *TTP1 =
                    dyn_cast<TemplateTemplateParmDecl>(D1)) {
       if (TemplateTemplateParmDecl *TTP2 =

@@ -16,6 +16,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExternalASTMerger.h"
 
 using namespace clang;
@@ -351,6 +352,27 @@ void ExternalASTMerger::RemoveSources(llvm::ArrayRef<ImporterSource> Sources) {
   }
 }
 
+template <typename DeclTy>
+static bool importSpecializations(DeclTy *D, ASTImporter *Importer) {
+  for (auto *Spec : D->specializations())
+    if (!Importer->Import(Spec))
+      return true;
+  return false;
+}
+
+/// Imports specializations from template declarations that can be specialized.
+static bool importSpecializationsIfNeeded(Decl *D, ASTImporter *Importer) {
+  if (!isa<TemplateDecl>(D))
+    return false;
+  if (auto *FunctionTD = dyn_cast<FunctionTemplateDecl>(D))
+    return importSpecializations(FunctionTD, Importer);
+  else if (auto *ClassTD = dyn_cast<ClassTemplateDecl>(D))
+    return importSpecializations(ClassTD, Importer);
+  else if (auto *VarTD = dyn_cast<VarTemplateDecl>(D))
+    return importSpecializations(VarTD, Importer);
+  return false;
+}
+
 bool ExternalASTMerger::FindExternalVisibleDeclsByName(const DeclContext *DC,
                                                        DeclarationName Name) {
   llvm::SmallVector<NamedDecl *, 1> Decls;
@@ -376,9 +398,18 @@ bool ExternalASTMerger::FindExternalVisibleDeclsByName(const DeclContext *DC,
 
   Decls.reserve(Candidates.size());
   for (const Candidate &C : Candidates) {
-    NamedDecl *d = cast<NamedDecl>(C.second->Import(C.first.get()));
-    assert(d);
-    Decls.push_back(d);
+    Decl *LookupRes = C.first.get();
+    ASTImporter *Importer = C.second;
+    NamedDecl *ND = cast_or_null<NamedDecl>(Importer->Import(LookupRes));
+    assert(ND);
+    // If we don't import specialization, they are not available via lookup
+    // because the lookup result is imported TemplateDecl and it does not
+    // reference its specializations until they are imported explicitly.
+    bool IsSpecImportFailed =
+        importSpecializationsIfNeeded(LookupRes, Importer);
+    assert(!IsSpecImportFailed);
+    (void)IsSpecImportFailed;
+    Decls.push_back(ND);
   }
   SetExternalVisibleDeclsForName(DC, Name, Decls);
   return true;
