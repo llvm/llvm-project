@@ -159,6 +159,11 @@ int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIdx);
 LLVM_READONLY
 int getMaskedMIMGOp(const MCInstrInfo &MII,
                     unsigned Opc, unsigned NewChannels);
+
+LLVM_READONLY
+int getMaskedMIMGAtomicOp(const MCInstrInfo &MII,
+                          unsigned Opc, unsigned NewChannels);
+
 LLVM_READONLY
 int getMCOpcode(uint16_t Opcode, unsigned Gen);
 

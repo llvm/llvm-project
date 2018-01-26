@@ -3001,6 +3001,19 @@ def VSxth: OutPatFrag<(ops node:$Vs), (V6_vunpackh  $Vs)>;
 def VZxtb: OutPatFrag<(ops node:$Vs), (V6_vunpackub $Vs)>;
 def VZxth: OutPatFrag<(ops node:$Vs), (V6_vunpackuh $Vs)>;
 
+def SplatB: SDNodeXForm<imm, [{
+  uint32_t V = N->getZExtValue();
+  assert(isUInt<8>(V));
+  uint32_t S = V << 24 | V << 16 | V << 8 | V;
+  return CurDAG->getTargetConstant(S, SDLoc(N), MVT::i32);
+}]>;
+
+def SplatH: SDNodeXForm<imm, [{
+  uint32_t V = N->getZExtValue();
+  assert(isUInt<16>(V));
+  return CurDAG->getTargetConstant(V << 16 | V, SDLoc(N), MVT::i32);
+}]>;
+
 let Predicates = [UseHVX] in {
   def: Pat<(VecI8  vzero), (V6_vd0)>;
   def: Pat<(VecI16 vzero), (V6_vd0)>;
@@ -3027,6 +3040,14 @@ let Predicates = [UseHVX] in {
   def: Pat<(HexagonVINSERTW0 HVI32:$Vu, I32:$Rt),
            (V6_vinsertwr HvxVR:$Vu, I32:$Rt)>;
 
+  let AddedComplexity = 10 in {
+    def: Pat<(VecI8 (HexagonVSPLAT u8_0ImmPred:$V)),
+             (V6_lvsplatw (ToI32 (SplatB $V)))>;
+    def: Pat<(VecI16 (HexagonVSPLAT u16_0ImmPred:$V)),
+             (V6_lvsplatw (ToI32 (SplatH $V)))>;
+    def: Pat<(VecI32 (HexagonVSPLAT anyimm:$V)),
+             (V6_lvsplatw (ToI32 $V))>;
+  }
   def: Pat<(VecI8 (HexagonVSPLAT I32:$Rs)),
            (V6_lvsplatw (S2_vsplatrb I32:$Rs))>;
   def: Pat<(VecI16 (HexagonVSPLAT I32:$Rs)),

@@ -16,6 +16,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/KnownBits.h"
 using namespace llvm;
@@ -265,7 +266,20 @@ Instruction *InstCombiner::commonCastTransforms(CastInst &CI) {
     if (Instruction::CastOps NewOpc = isEliminableCastPair(CSrc, &CI)) {
       // The first cast (CSrc) is eliminable so we need to fix up or replace
       // the second cast (CI). CSrc will then have a good chance of being dead.
-      return CastInst::Create(NewOpc, CSrc->getOperand(0), CI.getType());
+      auto *Res = CastInst::Create(NewOpc, CSrc->getOperand(0), CI.getType());
+
+      // If the eliminable cast has debug users, insert a debug value after the
+      // cast pointing to the new Value.
+      SmallVector<DbgInfoIntrinsic *, 1> CSrcDbgInsts;
+      findDbgUsers(CSrcDbgInsts, CSrc);
+      if (CSrcDbgInsts.size()) {
+        DIBuilder DIB(*CI.getModule());
+        for (auto *DII : CSrcDbgInsts)
+          DIB.insertDbgValueIntrinsic(
+              Res, DII->getVariable(), DII->getExpression(),
+              DII->getDebugLoc().get(), &*std::next(CI.getIterator()));
+      }
+      return Res;
     }
   }
 

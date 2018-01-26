@@ -1418,7 +1418,11 @@ is_permutation(_ForwardIterator1 __first1, _ForwardIterator1 __last1,
     for (_ForwardIterator1 __i = __first1; __i != __last1; ++__i)
     {
     //  Have we already counted the number of *__i in [f1, l1)?
-        if (find(__first1, __i, *__i) == __i) {
+        _ForwardIterator1 __match = __first1;
+        for (; __match != __i; ++__match)
+            if (__pred(*__match, *__i))
+                break;
+        if (__match == __i) {
             // Count number of *__i in [f2, l2)
             _D1 __c2 = 0;
             for (_ForwardIterator2 __j = __first2; __j != __last2; ++__j)
@@ -1479,7 +1483,11 @@ __is_permutation(_ForwardIterator1 __first1, _ForwardIterator1 __last1,
     for (_ForwardIterator1 __i = __first1; __i != __last1; ++__i)
     {
     //  Have we already counted the number of *__i in [f1, l1)?
-        if (find(__first1, __i, *__i) == __i) {
+        _ForwardIterator1 __match = __first1;
+        for (; __match != __i; ++__match)
+            if (__pred(*__match, *__i))
+                break;
+        if (__match == __i) {
             // Count number of *__i in [f2, l2)
             _D1 __c2 = 0;
             for (_ForwardIterator2 __j = __first2; __j != __last2; ++__j)

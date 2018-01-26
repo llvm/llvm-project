@@ -1409,8 +1409,8 @@ define <8 x i32> @sext_8i1_8i32(<8 x i32> %a1, <8 x i32> %a2) nounwind {
 ; KNL-LABEL: sext_8i1_8i32:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vpcmpgtd %ymm0, %ymm1, %ymm0
-; KNL-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; KNL-NEXT:    vpxor %ymm1, %ymm0, %ymm0
+; KNL-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; KNL-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: sext_8i1_8i32:
