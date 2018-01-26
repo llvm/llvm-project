@@ -20,9 +20,35 @@ using namespace clang;
 using namespace clangd;
 
 namespace {
-static Key<std::unique_ptr<trace::Span>> RequestSpan;
 static Key<json::Expr> RequestID;
 static Key<JSONOutput *> RequestOut;
+
+// When tracing, we trace a request and attach the repsonse in reply().
+// Because the Span isn't available, we find the current request using Context.
+class RequestSpan {
+  RequestSpan(json::obj *Args) : Args(Args) {}
+  std::mutex Mu;
+  json::obj *Args;
+  static Key<std::unique_ptr<RequestSpan>> Key;
+
+public:
+  // Return a context that's aware of the enclosing request, identified by Span.
+  static Context stash(const trace::Span &Span) {
+    return Span.Ctx.derive(RequestSpan::Key, std::unique_ptr<RequestSpan>(
+                                                 new RequestSpan(Span.Args)));
+  }
+
+  // If there's an enclosing request and the tracer is interested, calls \p F
+  // with a json::obj where request info can be added.
+  template <typename Func> static void attach(const Context &Ctx, Func &&F) {
+    auto *RequestArgs = Ctx.get(RequestSpan::Key);
+    if (!RequestArgs || !*RequestArgs || !(*RequestArgs)->Args)
+      return;
+    std::lock_guard<std::mutex> Lock((*RequestArgs)->Mu);
+    F(*(*RequestArgs)->Args);
+  }
+};
+Key<std::unique_ptr<RequestSpan>> RequestSpan::Key;
 } // namespace
 
 void JSONOutput::writeMessage(const json::Expr &Message) {
@@ -66,8 +92,7 @@ void clangd::reply(const Context &Ctx, json::Expr &&Result) {
     return;
   }
 
-  if (auto *Span = Ctx.get(RequestSpan))
-    SPAN_ATTACH(**Span, "Reply", Result);
+  RequestSpan::attach(Ctx, [&](json::obj &Args) { Args["Reply"] = Result; });
 
   Ctx.getExisting(RequestOut)
       ->writeMessage(json::obj{
@@ -80,10 +105,10 @@ void clangd::reply(const Context &Ctx, json::Expr &&Result) {
 void clangd::replyError(const Context &Ctx, ErrorCode code,
                         const llvm::StringRef &Message) {
   log(Ctx, "Error " + Twine(static_cast<int>(code)) + ": " + Message);
-  if (auto *Span = Ctx.get(RequestSpan))
-    SPAN_ATTACH(**Span, "Error",
-                (json::obj{{"code", static_cast<int>(code)},
-                           {"message", Message.str()}}));
+  RequestSpan::attach(Ctx, [&](json::obj &Args) {
+    Args["Error"] =
+        json::obj{{"code", static_cast<int>(code)}, {"message", Message.str()}};
+  });
 
   if (auto ID = Ctx.get(RequestID)) {
     Ctx.getExisting(RequestOut)
@@ -99,9 +124,9 @@ void clangd::replyError(const Context &Ctx, ErrorCode code,
 void clangd::call(const Context &Ctx, StringRef Method, json::Expr &&Params) {
   // FIXME: Generate/Increment IDs for every request so that we can get proper
   // replies once we need to.
-  if (auto *Span = Ctx.get(RequestSpan))
-    SPAN_ATTACH(**Span, "Call",
-                (json::obj{{"method", Method.str()}, {"params", Params}}));
+  RequestSpan::attach(Ctx, [&](json::obj &Args) {
+    Args["Call"] = json::obj{{"method", Method.str()}, {"params", Params}};
+  });
   Ctx.getExisting(RequestOut)
       ->writeMessage(json::obj{
           {"jsonrpc", "2.0"},
@@ -143,15 +168,13 @@ bool JSONRPCDispatcher::call(const json::Expr &Message, JSONOutput &Out) const {
     Ctx = std::move(Ctx).derive(RequestID, *ID);
 
   // Create a tracing Span covering the whole request lifetime.
-  auto Tracer = llvm::make_unique<trace::Span>(Ctx, *Method);
+  trace::Span Tracer(Ctx, *Method);
   if (ID)
-    SPAN_ATTACH(*Tracer, "ID", *ID);
-  SPAN_ATTACH(*Tracer, "Params", Params);
+    SPAN_ATTACH(Tracer, "ID", *ID);
+  SPAN_ATTACH(Tracer, "Params", Params);
 
-  // Update Ctx to include Tracer.
-  Ctx = std::move(Ctx).derive(RequestSpan, std::move(Tracer));
-
-  Handler(std::move(Ctx), std::move(Params));
+  // Stash a reference to the span args, so later calls can add metadata.
+  Handler(RequestSpan::stash(Tracer), std::move(Params));
   return true;
 }
 

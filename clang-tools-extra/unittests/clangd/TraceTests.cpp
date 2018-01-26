@@ -78,8 +78,8 @@ TEST(TraceTest, SmokeTest) {
     auto JSONTracer = trace::createJSONTracer(OS);
     trace::Session Session(*JSONTracer);
     {
-      trace::Span S(Context::empty(), "A");
-      trace::log(Context::empty(), "B");
+      trace::Span Tracer(Context::empty(), "A");
+      trace::log(Tracer.Ctx, "B");
     }
   }
 

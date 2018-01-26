@@ -8,7 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "Trace.h"
+#include "Context.h"
+#include "Function.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -43,14 +46,12 @@ public:
     Out.flush();
   }
 
-  EndEventCallback beginSpan(const Context &Ctx,
-                             llvm::StringRef Name) override {
+  Context beginSpan(const Context &Ctx, llvm::StringRef Name,
+                    json::obj *Args) override {
     jsonEvent("B", json::obj{{"name", Name}});
-
-    // The callback that will run when event ends.
-    return [this](json::Expr &&Args) {
-      jsonEvent("E", json::obj{{"args", std::move(Args)}});
-    };
+    return Ctx.derive(make_scope_exit([this, Args] {
+      jsonEvent("E", json::obj{{"args", std::move(*Args)}});
+    }));
   }
 
   void instant(const Context &Ctx, llvm::StringRef Name,
@@ -125,24 +126,14 @@ void log(const Context &Ctx, const Twine &Message) {
   T->instant(Ctx, "Log", json::obj{{"Message", Message.str()}});
 }
 
-Span::Span(const Context &Ctx, llvm::StringRef Name) {
-  if (!T)
-    return;
-
-  Callback = T->beginSpan(Ctx, Name);
-  if (!Callback)
-    return;
-
-  Args = llvm::make_unique<json::obj>();
-}
-
-Span::~Span() {
-  if (!Callback)
-    return;
-
-  assert(Args && "Args must be non-null if Callback is defined");
-  Callback(std::move(*Args));
-}
+// Span keeps a non-owning pointer to the args, which is how users access them.
+// The args are owned by the context though. They stick around until the
+// beginSpan() context is destroyed, when the tracing engine will consume them.
+Span::Span(const Context &Ctx, llvm::StringRef Name)
+    : Args(T ? new json::obj() : nullptr),
+      Ctx(T ? T->beginSpan(Ctx.derive(std::unique_ptr<json::obj>(Args)), Name,
+                           Args)
+            : Ctx.clone()) {}
 
 } // namespace trace
 } // namespace clangd
