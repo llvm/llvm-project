@@ -376,9 +376,13 @@
 
 // ADX: #define __ADX__ 1
 
-// RUN: %clang -target i386-unknown-unknown -mshstk -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=CETSS %s
+// RUN: %clang -target i386-unknown-unknown -mshstk -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=SHSTK %s
 
-// CETSS: #define __SHSTK__ 1
+// SHSTK: #define __SHSTK__ 1
+
+// RUN: %clang -target i386-unknown-unknown -mibt -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=IBT %s
+
+// IBT: #define __IBT__ 1
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -mrdseed -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=RDSEED %s
 

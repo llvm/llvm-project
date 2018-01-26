@@ -7847,6 +7847,13 @@ LowerBUILD_VECTORAsVariablePermute(SDValue V, SelectionDAG &DAG,
       if (Subtarget.hasSSE3())
         Opcode = X86ISD::PSHUFB;
       break;
+    case MVT::v4f32:
+    case MVT::v4i32:
+      if (Subtarget.hasAVX()) {
+        Opcode = X86ISD::VPERMILPV;
+        ShuffleVT = MVT::v4f32;
+      }
+      break;
     case MVT::v2f64:
     case MVT::v2i64:
       if (Subtarget.hasAVX()) {
@@ -22262,13 +22269,6 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
     assert(Subtarget.hasSSE2() && !Subtarget.hasSSE41() &&
            "Should not custom lower when pmulld is available!");
 
-    // If the upper 17 bits of each element are zero then we can use PMADDWD.
-    APInt Mask17 = APInt::getHighBitsSet(32, 17);
-    if (DAG.MaskedValueIsZero(A, Mask17) && DAG.MaskedValueIsZero(B, Mask17))
-      return DAG.getNode(X86ISD::VPMADDWD, dl, VT,
-                         DAG.getBitcast(MVT::v8i16, A),
-                         DAG.getBitcast(MVT::v8i16, B));
-
     // Extract the odd parts.
     static const int UnpackMask[] = { 1, -1, 3, -1 };
     SDValue Aodds = DAG.getVectorShuffle(VT, dl, A, A, UnpackMask);
@@ -31246,102 +31246,7 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   if (SDValue MinMax = combineHorizontalMinMaxResult(N, DAG, Subtarget))
     return MinMax;
 
-  // Only operate on vectors of 4 elements, where the alternative shuffling
-  // gets to be more expensive.
-  if (SrcVT != MVT::v4i32)
-    return SDValue();
-
-  // Check whether every use of InputVector is an EXTRACT_VECTOR_ELT with a
-  // single use which is a sign-extend or zero-extend, and all elements are
-  // used.
-  SmallVector<SDNode *, 4> Uses;
-  unsigned ExtractedElements = 0;
-  for (SDNode::use_iterator UI = InputVector.getNode()->use_begin(),
-       UE = InputVector.getNode()->use_end(); UI != UE; ++UI) {
-    if (UI.getUse().getResNo() != InputVector.getResNo())
-      return SDValue();
-
-    SDNode *Extract = *UI;
-    if (Extract->getOpcode() != ISD::EXTRACT_VECTOR_ELT)
-      return SDValue();
-
-    if (Extract->getValueType(0) != MVT::i32)
-      return SDValue();
-    if (!Extract->hasOneUse())
-      return SDValue();
-    if (Extract->use_begin()->getOpcode() != ISD::SIGN_EXTEND &&
-        Extract->use_begin()->getOpcode() != ISD::ZERO_EXTEND)
-      return SDValue();
-    if (!isa<ConstantSDNode>(Extract->getOperand(1)))
-      return SDValue();
-
-    // Record which element was extracted.
-    ExtractedElements |= 1 << Extract->getConstantOperandVal(1);
-    Uses.push_back(Extract);
-  }
-
-  // If not all the elements were used, this may not be worthwhile.
-  if (ExtractedElements != 15)
-    return SDValue();
-
-  // Ok, we've now decided to do the transformation.
-  // If 64-bit shifts are legal, use the extract-shift sequence,
-  // otherwise bounce the vector off the cache.
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  SDValue Vals[4];
-
-  if (TLI.isOperationLegal(ISD::SRA, MVT::i64)) {
-    SDValue Cst = DAG.getBitcast(MVT::v2i64, InputVector);
-    auto &DL = DAG.getDataLayout();
-    EVT VecIdxTy = DAG.getTargetLoweringInfo().getVectorIdxTy(DL);
-    SDValue BottomHalf = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i64, Cst,
-      DAG.getConstant(0, dl, VecIdxTy));
-    SDValue TopHalf = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i64, Cst,
-      DAG.getConstant(1, dl, VecIdxTy));
-
-    SDValue ShAmt = DAG.getConstant(
-        32, dl, DAG.getTargetLoweringInfo().getShiftAmountTy(MVT::i64, DL));
-    Vals[0] = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, BottomHalf);
-    Vals[1] = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32,
-      DAG.getNode(ISD::SRA, dl, MVT::i64, BottomHalf, ShAmt));
-    Vals[2] = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, TopHalf);
-    Vals[3] = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32,
-      DAG.getNode(ISD::SRA, dl, MVT::i64, TopHalf, ShAmt));
-  } else {
-    // Store the value to a temporary stack slot.
-    SDValue StackPtr = DAG.CreateStackTemporary(SrcVT);
-    SDValue Ch = DAG.getStore(DAG.getEntryNode(), dl, InputVector, StackPtr,
-                              MachinePointerInfo());
-
-    EVT ElementType = SrcVT.getVectorElementType();
-    unsigned EltSize = ElementType.getSizeInBits() / 8;
-
-    // Replace each use (extract) with a load of the appropriate element.
-    for (unsigned i = 0; i < 4; ++i) {
-      uint64_t Offset = EltSize * i;
-      auto PtrVT = TLI.getPointerTy(DAG.getDataLayout());
-      SDValue OffsetVal = DAG.getConstant(Offset, dl, PtrVT);
-
-      SDValue ScalarAddr =
-          DAG.getNode(ISD::ADD, dl, PtrVT, StackPtr, OffsetVal);
-
-      // Load the scalar.
-      Vals[i] =
-          DAG.getLoad(ElementType, dl, Ch, ScalarAddr, MachinePointerInfo());
-    }
-  }
-
-  // Replace the extracts
-  for (SmallVectorImpl<SDNode *>::iterator UI = Uses.begin(),
-    UE = Uses.end(); UI != UE; ++UI) {
-    SDNode *Extract = *UI;
-
-    uint64_t IdxVal = Extract->getConstantOperandVal(1);
-    DAG.ReplaceAllUsesOfValueWith(SDValue(Extract, 0), Vals[IdxVal]);
-  }
-
-  // The replacement was made in place; return N so it won't be revisited.
-  return SDValue(N, 0);
+  return SDValue();
 }
 
 /// If a vector select has an operand that is -1 or 0, try to simplify the
@@ -34204,6 +34109,42 @@ static SDValue detectUSatPattern(SDValue In, EVT VT) {
   return SDValue();
 }
 
+/// Detect patterns of truncation with signed saturation:
+/// (truncate (smin ((smax (x, signed_min_of_dest_type)),
+///                  signed_max_of_dest_type)) to dest_type)
+/// or:
+/// (truncate (smax ((smin (x, signed_max_of_dest_type)),
+///                  signed_min_of_dest_type)) to dest_type).
+/// Return the source value to be truncated or SDValue() if the pattern was not
+/// matched.
+static SDValue detectSSatPattern(SDValue In, EVT VT) {
+  unsigned NumDstBits = VT.getScalarSizeInBits();
+  unsigned NumSrcBits = In.getScalarValueSizeInBits();
+  assert(NumSrcBits > NumDstBits && "Unexpected types for truncate operation");
+
+  auto MatchMinMax = [](SDValue V, unsigned Opcode,
+                        const APInt &Limit) -> SDValue {
+    APInt C;
+    if (V.getOpcode() == Opcode &&
+        ISD::isConstantSplatVector(V.getOperand(1).getNode(), C) && C == Limit)
+      return V.getOperand(0);
+    return SDValue();
+  };
+
+  APInt SignedMax = APInt::getSignedMaxValue(NumDstBits).sext(NumSrcBits);
+  APInt SignedMin = APInt::getSignedMinValue(NumDstBits).sext(NumSrcBits);
+
+  if (SDValue SMin = MatchMinMax(In, ISD::SMIN, SignedMax))
+    if (SDValue SMax = MatchMinMax(SMin, ISD::SMAX, SignedMin))
+      return SMax;
+
+  if (SDValue SMax = MatchMinMax(In, ISD::SMAX, SignedMin))
+    if (SDValue SMin = MatchMinMax(SMax, ISD::SMIN, SignedMax))
+      return SMin;
+
+  return SDValue();
+}
+
 /// Detect a pattern of truncation with saturation:
 /// (truncate (umin (x, unsigned_max_of_dest_type)) to dest_type).
 /// The types should allow to use VPMOVUS* instruction on AVX512.
@@ -34216,15 +34157,18 @@ static SDValue detectAVX512USatPattern(SDValue In, EVT VT,
   return detectUSatPattern(In, VT);
 }
 
-static SDValue combineTruncateWithUSat(SDValue In, EVT VT, const SDLoc &DL,
-                                       SelectionDAG &DAG,
-                                       const X86Subtarget &Subtarget) {
+static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
+                                      SelectionDAG &DAG,
+                                      const X86Subtarget &Subtarget) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (!TLI.isTypeLegal(In.getValueType()) || !TLI.isTypeLegal(VT))
     return SDValue();
-  if (auto USatVal = detectUSatPattern(In, VT))
-    if (isSATValidOnAVX512Subtarget(In.getValueType(), VT, Subtarget))
+  if (isSATValidOnAVX512Subtarget(In.getValueType(), VT, Subtarget)) {
+    if (auto SSatVal = detectSSatPattern(In, VT))
+      return DAG.getNode(X86ISD::VTRUNCS, DL, VT, SSatVal);
+    if (auto USatVal = detectUSatPattern(In, VT))
       return DAG.getNode(X86ISD::VTRUNCUS, DL, VT, USatVal);
+  }
   return SDValue();
 }
 
@@ -35488,8 +35432,8 @@ static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
   if (SDValue Avg = detectAVGPattern(Src, VT, DAG, Subtarget, DL))
     return Avg;
 
-  // Try to combine truncation with unsigned saturation.
-  if (SDValue Val = combineTruncateWithUSat(Src, VT, DL, DAG, Subtarget))
+  // Try to combine truncation with signed/unsigned saturation.
+  if (SDValue Val = combineTruncateWithSat(Src, VT, DL, DAG, Subtarget))
     return Val;
 
   // The bitcast source is a direct mmx result.
@@ -36278,6 +36222,10 @@ static SDValue combineExtSetcc(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   SDLoc dl(N);
 
+  // Only handle sext/aext for now.
+  if (N->getOpcode() != ISD::SIGN_EXTEND && N->getOpcode() != ISD::ANY_EXTEND)
+    return SDValue();
+
   // Only do this combine with AVX512 for vector extends.
   if (!Subtarget.hasAVX512() || !VT.isVector() || N0->getOpcode() != ISD::SETCC)
     return SDValue();
@@ -36530,6 +36478,10 @@ static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue NewCMov = combineToExtendCMOV(N, DAG))
     return NewCMov;
+
+  if (DCI.isBeforeLegalizeOps())
+    if (SDValue V = combineExtSetcc(N, DAG, Subtarget))
+      return V;
 
   if (SDValue V = combineToExtendVectorInReg(N, DAG, DCI, Subtarget))
     return V;
@@ -38972,7 +38924,7 @@ int X86TargetLowering::getScalingFactorCost(const DataLayout &DL,
   // will take 2 allocations in the out of order engine instead of 1
   // for plain addressing mode, i.e. inst (reg1).
   // E.g.,
-  // vaddps (%rsi,%drx), %ymm0, %ymm1
+  // vaddps (%rsi,%rdx), %ymm0, %ymm1
   // Requires two allocations (one for the load, one for the computation)
   // whereas:
   // vaddps (%rsi), %ymm0, %ymm1

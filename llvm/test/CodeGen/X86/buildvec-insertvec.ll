@@ -556,3 +556,18 @@ define <16 x i8> @test_buildvector_v16i8_register_zero_2(i8 %a2, i8 %a3, i8 %a6,
   %ins15 = insertelement <16 x i8> %ins14, i8  %a15, i32 15
   ret <16 x i8> %ins15
 }
+
+; OSS-Fuzz #5688
+; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=5688
+define <4 x i32> @ossfuzz5688(i32 %a0) {
+; CHECK-LABEL: ossfuzz5688:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    retq
+  %1 = insertelement <4 x i32> zeroinitializer, i32 -2147483648, i32 %a0
+  %2 = extractelement <4 x i32> %1, i32 %a0
+  %3 = extractelement <4 x i32> <i32 30, i32 53, i32 42, i32 12>, i32 %2
+  %4 = extractelement <4 x i32> zeroinitializer, i32 %2
+  %5 = insertelement <4 x i32> undef, i32 %3, i32 undef
+  store i32 %4, i32* undef
+  ret <4 x i32> %5
+}

@@ -323,6 +323,12 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
   // GDB does not fully support the DWARF 4 representation for bitfields.
   UseDWARF2Bitfields = (DwarfVersion < 4) || tuneForGDB();
 
+  // The DWARF v5 string offsets table has - possibly shared - contributions
+  // from each compile and type unit each preceded by a header. The string
+  // offsets table used by the pre-DWARF v5 split-DWARF implementation uses
+  // a monolithic string offsets table without any header.
+  UseSegmentedStringOffsetsTable = DwarfVersion >= 5;
+
   Asm->OutStreamer->getContext().setDwarfVersion(DwarfVersion);
 }
 
@@ -488,6 +494,10 @@ DwarfDebug::getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit) {
                 DIUnit->getSourceLanguage());
   NewCU.addString(Die, dwarf::DW_AT_name, FN);
 
+  // Add DW_str_offsets_base to the unit DIE, except for split units.
+  if (useSegmentedStringOffsetsTable() && !useSplitDwarf())
+    NewCU.addStringOffsetsStart();
+
   if (!useSplitDwarf()) {
     NewCU.initStmtList();
 
@@ -591,6 +601,13 @@ void DwarfDebug::beginModule() {
     for (auto *GVE : GVs)
       GVMap[GVE->getVariable()].push_back({&Global, GVE->getExpression()});
   }
+
+  // Create the symbol that designates the start of the unit's contribution
+  // to the string offsets table. In a split DWARF scenario, only the skeleton
+  // unit has the DW_AT_str_offsets_base attribute (and hence needs the symbol).
+  if (useSegmentedStringOffsetsTable())
+    (useSplitDwarf() ? SkeletonHolder : InfoHolder)
+        .setStringOffsetsStartSym(Asm->createTempSymbol("str_offsets_base"));
 
   for (DICompileUnit *CUNode : M->debug_compile_units()) {
     // FIXME: Move local imported entities into a list attached to the
@@ -1401,6 +1418,12 @@ void DwarfDebug::emitAbbreviations() {
   Holder.emitAbbrevs(Asm->getObjFileLowering().getDwarfAbbrevSection());
 }
 
+void DwarfDebug::emitStringOffsetsTableHeader() {
+  DwarfFile &Holder = useSplitDwarf() ? SkeletonHolder : InfoHolder;
+  Holder.emitStringOffsetsTableHeader(
+      Asm->getObjFileLowering().getDwarfStrOffSection());
+}
+
 void DwarfDebug::emitAccel(DwarfAccelTable &Accel, MCSection *Section,
                            StringRef TableName) {
   Accel.FinalizeTable(Asm, TableName);
@@ -1575,8 +1598,14 @@ void DwarfDebug::emitDebugPubSection(bool GnuStyle, StringRef Name,
 
 /// Emit null-terminated strings into a debug str section.
 void DwarfDebug::emitDebugStr() {
+  MCSection *StringOffsetsSection = nullptr;
+  if (useSegmentedStringOffsetsTable()) {
+    emitStringOffsetsTableHeader();
+    StringOffsetsSection = Asm->getObjFileLowering().getDwarfStrOffSection();
+  }
   DwarfFile &Holder = useSplitDwarf() ? SkeletonHolder : InfoHolder;
-  Holder.emitStrings(Asm->getObjFileLowering().getDwarfStrSection());
+  Holder.emitStrings(Asm->getObjFileLowering().getDwarfStrSection(),
+                     StringOffsetsSection, /* UseRelativeOffsets = */ true);
 }
 
 void DwarfDebug::emitDebugLocEntry(ByteStreamer &Streamer,
@@ -2026,6 +2055,9 @@ DwarfCompileUnit &DwarfDebug::constructSkeletonCU(const DwarfCompileUnit &CU) {
 
   NewCU.initStmtList();
 
+  if (useSegmentedStringOffsetsTable())
+    NewCU.addStringOffsetsStart();
+
   initSkeletonUnit(CU, NewCU.getUnitDie(), std::move(OwnedUnit));
 
   return NewCU;
@@ -2053,14 +2085,22 @@ void DwarfDebug::emitDebugLineDWO() {
   SplitTypeUnitFileTable.Emit(*Asm->OutStreamer, MCDwarfLineTableParams());
 }
 
+void DwarfDebug::emitStringOffsetsTableHeaderDWO() {
+  assert(useSplitDwarf() && "No split dwarf?");
+  InfoHolder.emitStringOffsetsTableHeader(
+      Asm->getObjFileLowering().getDwarfStrOffDWOSection());
+}
+
 // Emit the .debug_str.dwo section for separated dwarf. This contains the
 // string section and is identical in format to traditional .debug_str
 // sections.
 void DwarfDebug::emitDebugStrDWO() {
+  if (useSegmentedStringOffsetsTable())
+    emitStringOffsetsTableHeaderDWO();
   assert(useSplitDwarf() && "No split dwarf?");
   MCSection *OffSec = Asm->getObjFileLowering().getDwarfStrOffDWOSection();
   InfoHolder.emitStrings(Asm->getObjFileLowering().getDwarfStrDWOSection(),
-                         OffSec);
+                         OffSec, /* UseRelativeOffsets = */ false);
 }
 
 MCDwarfDwoLineTable *DwarfDebug::getDwoLineTable(const DwarfCompileUnit &CU) {
@@ -2119,6 +2159,11 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
     CU.applyStmtList(UnitDie);
     NewTU.setSection(Asm->getObjFileLowering().getDwarfTypesSection(Signature));
   }
+
+  // Add DW_AT_str_offsets_base to the type unit DIE, but not for split type
+  // units.
+  if (useSegmentedStringOffsetsTable() && !useSplitDwarf())
+    NewTU.addStringOffsetsStart();
 
   NewTU.setType(NewTU.createTypeDIE(CTy));
 

@@ -738,6 +738,30 @@ int main()
                                    std::equal_to<const int>()) == false);
 #endif
     }
+    {
+      struct S {
+          S(int i) : i_(i) {}
+          bool operator==(const S& other) = delete;
+          int i_;
+      };
+      struct eq {
+          bool operator()(const S& a, const S&b) { return a.i_ == b.i_; }
+      };
+      const S a[] = {S(0), S(1)};
+      const S b[] = {S(1), S(0)};
+      const unsigned sa = sizeof(a)/sizeof(a[0]);
+      assert(std::is_permutation(forward_iterator<const S*>(a),
+                                 forward_iterator<const S*>(a + sa),
+                                 forward_iterator<const S*>(b),
+                                 eq()));
+#if TEST_STD_VER >= 14
+      assert(std::is_permutation(forward_iterator<const S*>(a),
+                                 forward_iterator<const S*>(a + sa),
+                                 forward_iterator<const S*>(b),
+                                 forward_iterator<const S*>(b + sa),
+                                 eq()));
+#endif
+    }
 
 #if TEST_STD_VER > 17
     static_assert(test_constexpr());

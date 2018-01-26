@@ -2040,6 +2040,22 @@ def getMaskedMIMGOp4 : InstrMapping {
   let ValueCols = [["1"], ["2"], ["3"] ];
 }
 
+def getMIMGAtomicOp1 : InstrMapping {
+  let FilterClass = "MIMG_Atomic_Size";
+  let RowFields = ["Op"];
+  let ColFields = ["AtomicSize"];
+  let KeyCol = ["1"];
+  let ValueCols = [["2"]];
+}
+
+def getMIMGAtomicOp2 : InstrMapping {
+  let FilterClass = "MIMG_Atomic_Size";
+  let RowFields = ["Op"];
+  let ColFields = ["AtomicSize"];
+  let KeyCol = ["2"];
+  let ValueCols = [["1"]];
+}
+
 // Maps an commuted opcode to its original version
 def getCommuteOrig : InstrMapping {
   let FilterClass = "Commutable_REV";

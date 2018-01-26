@@ -12,6 +12,11 @@ class MIMG_Mask <string op, int channels> {
   int Channels = channels;
 }
 
+class MIMG_Atomic_Size <string op, bit is32Bit> {
+  string Op = op;
+  int AtomicSize = !if(is32Bit, 1, 2);
+}
+
 class mimg <bits<7> si, bits<7> vi = si> {
   field bits<7> SI = si;
   field bits<7> VI = vi;
@@ -173,9 +178,13 @@ class MIMG_Atomic_Real_vi<mimg op, string name, string asm,
   let DisableDecoder = DisableVIDecoder;
 }
 
-multiclass MIMG_Atomic_Helper_m <mimg op, string name, string asm,
+multiclass MIMG_Atomic_Helper_m <mimg op,
+                                 string name,
+                                 string asm,
+                                 string key,
                                  RegisterClass data_rc,
                                  RegisterClass addr_rc,
+                                 bit is32Bit,
                                  bit enableDasm = 0> {
   let isPseudo = 1, isCodeGenOnly = 1 in {
     def "" : MIMG_Atomic_Helper<asm, data_rc, addr_rc>,
@@ -183,18 +192,35 @@ multiclass MIMG_Atomic_Helper_m <mimg op, string name, string asm,
   }
 
   let ssamp = 0 in {
-    def _si : MIMG_Atomic_Real_si<op, name, asm, data_rc, addr_rc, enableDasm>;
+    def _si : MIMG_Atomic_Real_si<op, name, asm, data_rc, addr_rc, enableDasm>,
+              MIMG_Atomic_Size<key # "_si", is32Bit>;
 
-    def _vi : MIMG_Atomic_Real_vi<op, name, asm, data_rc, addr_rc, enableDasm>;
+    def _vi : MIMG_Atomic_Real_vi<op, name, asm, data_rc, addr_rc, enableDasm>,
+              MIMG_Atomic_Size<key # "_vi", is32Bit>;
   }
 }
 
-multiclass MIMG_Atomic <mimg op, string asm, RegisterClass data_rc = VGPR_32> {
+multiclass MIMG_Atomic_Addr_Helper_m <mimg op,
+                                      string name,
+                                      string asm,
+                                      RegisterClass data_rc,
+                                      bit is32Bit,
+                                      bit enableDasm = 0> {
   // _V* variants have different address size, but the size is not encoded.
   // So only one variant can be disassembled. V1 looks the safest to decode.
-  defm _V1 : MIMG_Atomic_Helper_m <op, asm # "_V1", asm, data_rc, VGPR_32, 1>;
-  defm _V2 : MIMG_Atomic_Helper_m <op, asm # "_V2", asm, data_rc, VReg_64>;
-  defm _V4 : MIMG_Atomic_Helper_m <op, asm # "_V3", asm, data_rc, VReg_128>;
+  defm _V1 : MIMG_Atomic_Helper_m <op, name # "_V1", asm, asm # "_V1", data_rc, VGPR_32, is32Bit, enableDasm>;
+  defm _V2 : MIMG_Atomic_Helper_m <op, name # "_V2", asm, asm # "_V2", data_rc, VReg_64, is32Bit>;
+  defm _V4 : MIMG_Atomic_Helper_m <op, name # "_V3", asm, asm # "_V3", data_rc, VReg_128, is32Bit>;
+}
+
+multiclass MIMG_Atomic <mimg op, string asm,
+                        RegisterClass data_rc_32 = VGPR_32,   // 32-bit atomics
+                        RegisterClass data_rc_64 = VReg_64> { // 64-bit atomics
+  // _V* variants have different dst size, but the size is encoded implicitly,
+  // using dmask and tfe. Only 32-bit variant is registered with disassembler.
+  // Other variants are reconstructed by disassembler using dmask and tfe.
+  defm _V1 : MIMG_Atomic_Addr_Helper_m <op, asm # "_V1", asm, data_rc_32, 1, 1>;
+  defm _V2 : MIMG_Atomic_Addr_Helper_m <op, asm # "_V2", asm, data_rc_64, 0>;
 }
 
 class MIMG_Sampler_Helper <bits<7> op, string asm,
@@ -344,7 +370,7 @@ defm IMAGE_GET_RESINFO : MIMG_NoSampler <0x0000000e, "image_get_resinfo">;
 }
 
 defm IMAGE_ATOMIC_SWAP : MIMG_Atomic <mimg<0x0f, 0x10>, "image_atomic_swap">;
-defm IMAGE_ATOMIC_CMPSWAP : MIMG_Atomic <mimg<0x10, 0x11>, "image_atomic_cmpswap", VReg_64>;
+defm IMAGE_ATOMIC_CMPSWAP : MIMG_Atomic <mimg<0x10, 0x11>, "image_atomic_cmpswap", VReg_64, VReg_128>;
 defm IMAGE_ATOMIC_ADD : MIMG_Atomic <mimg<0x11, 0x12>, "image_atomic_add">;
 defm IMAGE_ATOMIC_SUB : MIMG_Atomic <mimg<0x12, 0x13>, "image_atomic_sub">;
 //def IMAGE_ATOMIC_RSUB : MIMG_NoPattern_ <"image_atomic_rsub", 0x00000013>; -- not on VI
@@ -590,9 +616,9 @@ class ImageAtomicPattern<SDPatternOperator name, MIMG opcode, ValueType vt> : GC
 
 // ImageAtomic patterns.
 multiclass ImageAtomicPatterns<SDPatternOperator name, string opcode> {
-  def : ImageAtomicPattern<name, !cast<MIMG>(opcode # _V1), i32>;
-  def : ImageAtomicPattern<name, !cast<MIMG>(opcode # _V2), v2i32>;
-  def : ImageAtomicPattern<name, !cast<MIMG>(opcode # _V4), v4i32>;
+  def : ImageAtomicPattern<name, !cast<MIMG>(opcode # _V1_V1), i32>;
+  def : ImageAtomicPattern<name, !cast<MIMG>(opcode # _V1_V2), v2i32>;
+  def : ImageAtomicPattern<name, !cast<MIMG>(opcode # _V1_V4), v4i32>;
 }
 
 // ImageAtomicCmpSwap for amdgcn.
@@ -784,9 +810,9 @@ defm : ImageSamplePatterns<int_amdgcn_image_getlod, "IMAGE_GET_LOD">;
 
 // Image atomics
 defm : ImageAtomicPatterns<int_amdgcn_image_atomic_swap, "IMAGE_ATOMIC_SWAP">;
-def : ImageAtomicCmpSwapPattern<IMAGE_ATOMIC_CMPSWAP_V1, i32>;
-def : ImageAtomicCmpSwapPattern<IMAGE_ATOMIC_CMPSWAP_V2, v2i32>;
-def : ImageAtomicCmpSwapPattern<IMAGE_ATOMIC_CMPSWAP_V4, v4i32>;
+def : ImageAtomicCmpSwapPattern<IMAGE_ATOMIC_CMPSWAP_V1_V1, i32>;
+def : ImageAtomicCmpSwapPattern<IMAGE_ATOMIC_CMPSWAP_V1_V2, v2i32>;
+def : ImageAtomicCmpSwapPattern<IMAGE_ATOMIC_CMPSWAP_V1_V4, v4i32>;
 defm : ImageAtomicPatterns<int_amdgcn_image_atomic_add, "IMAGE_ATOMIC_ADD">;
 defm : ImageAtomicPatterns<int_amdgcn_image_atomic_sub, "IMAGE_ATOMIC_SUB">;
 defm : ImageAtomicPatterns<int_amdgcn_image_atomic_smin, "IMAGE_ATOMIC_SMIN">;

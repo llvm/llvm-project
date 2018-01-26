@@ -383,16 +383,6 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   }
 }
 
-void llvm::PrintEscapedString(StringRef Name, raw_ostream &Out) {
-  for (unsigned i = 0, e = Name.size(); i != e; ++i) {
-    unsigned char C = Name[i];
-    if (isprint(C) && C != '\\' && C != '"')
-      Out << C;
-    else
-      Out << '\\' << hexdigit(C >> 4) << hexdigit(C & 0x0F);
-  }
-}
-
 enum PrefixType {
   GlobalPrefix,
   ComdatPrefix,

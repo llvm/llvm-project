@@ -58,9 +58,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   unsigned Opcode = Node->getOpcode();
   MVT XLenVT = Subtarget->getXLenVT();
 
-  // Dump information about the Node being selected.
-  DEBUG(dbgs() << "Selecting: "; Node->dump(CurDAG); dbgs() << "\n");
-
   // If we have a custom node, we have already selected
   if (Node->isMachineOpcode()) {
     DEBUG(dbgs() << "== "; Node->dump(CurDAG); dbgs() << "\n");
