@@ -47,7 +47,8 @@ bool applyDebugifyMetadata(Module &M) {
   // Get a DIType which corresponds to Ty.
   DenseMap<uint64_t, DIType *> TypeCache;
   auto getCachedDIType = [&](Type *Ty) -> DIType * {
-    uint64_t Size = M.getDataLayout().getTypeAllocSizeInBits(Ty);
+    uint64_t Size =
+        Ty->isSized() ? M.getDataLayout().getTypeAllocSizeInBits(Ty) : 0;
     DIType *&DTy = TypeCache[Size];
     if (!DTy) {
       std::string Name = "ty" + utostr(Size);
