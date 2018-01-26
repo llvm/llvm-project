@@ -105,8 +105,10 @@ void Preprocessor::CachingLex(Token &Result) {
 }
 
 void Preprocessor::EnterCachingLexMode() {
-  if (InCachingLexMode())
+  if (InCachingLexMode()) {
+    assert(CurLexerKind == CLK_CachingLexer && "Unexpected lexer kind");
     return;
+  }
 
   PushIncludeMacroStack();
   CurLexerKind = CLK_CachingLexer;
