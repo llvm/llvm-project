@@ -23,100 +23,91 @@
 
 using namespace llvm;
 
-// Given a set of functions in an SCC, propagate entry counts to functions
-// called by the SCC.
-static void
-propagateFromSCC(const SmallPtrSetImpl<Function *> &SCCFunctions,
-                 function_ref<Scaled64(CallSite CS)> GetCallSiteRelFreq,
-                 function_ref<uint64_t(Function *F)> GetCount,
-                 function_ref<void(Function *F, uint64_t)> AddToCount) {
+// Given an SCC, propagate entry counts along the edge of the SCC nodes.
+template <typename CallGraphType>
+void SyntheticCountsUtils<CallGraphType>::propagateFromSCC(
+    const SccTy &SCC, GetRelBBFreqTy GetRelBBFreq, GetCountTy GetCount,
+    AddCountTy AddCount) {
 
-  SmallVector<CallSite, 16> CallSites;
+  SmallPtrSet<NodeRef, 8> SCCNodes;
+  SmallVector<std::pair<NodeRef, EdgeRef>, 8> SCCEdges, NonSCCEdges;
 
-  // Gather all callsites in the SCC.
-  auto GatherCallSites = [&]() {
-    for (auto *F : SCCFunctions) {
-      assert(F && !F->isDeclaration());
-      for (auto &I : instructions(F)) {
-        if (auto CS = CallSite(&I)) {
-          CallSites.push_back(CS);
-        }
-      }
+  for (auto &Node : SCC)
+    SCCNodes.insert(Node);
+
+  // Partition the edges coming out of the SCC into those whose destination is
+  // in the SCC and the rest.
+  for (const auto &Node : SCCNodes) {
+    for (auto &E : call_edges<CallGraphType>(Node)) {
+      if (SCCNodes.count(CGT::edge_dest(E)))
+        SCCEdges.emplace_back(Node, E);
+      else
+        NonSCCEdges.emplace_back(Node, E);
     }
-  };
+  }
 
-  GatherCallSites();
-
-  // Partition callsites so that the callsites that call functions in the same
-  // SCC come first.
-  auto Mid = partition(CallSites, [&](CallSite &CS) {
-    auto *Callee = CS.getCalledFunction();
-    if (Callee)
-      return SCCFunctions.count(Callee);
-    // FIXME: Use the !callees metadata to propagate counts through indirect
-    // calls.
-    return 0U;
-  });
-
-  // For functions in the same SCC, update the counts in two steps:
-  // 1. Compute the additional count for each function by propagating the counts
-  // along all incoming edges to the function that originate from the same SCC
-  // and summing them up.
-  // 2. Add the additional counts to the functions in the SCC.
+  // For nodes in the same SCC, update the counts in two steps:
+  // 1. Compute the additional count for each node by propagating the counts
+  // along all incoming edges to the node that originate from within the same
+  // SCC and summing them up.
+  // 2. Add the additional counts to the nodes in the SCC.
   // This ensures that the order of
-  // traversal of functions within the SCC doesn't change the final result.
+  // traversal of nodes within the SCC doesn't affect the final result.
 
-  DenseMap<Function *, uint64_t> AdditionalCounts;
-  for (auto It = CallSites.begin(); It != Mid; It++) {
-    auto &CS = *It;
-    auto RelFreq = GetCallSiteRelFreq(CS);
-    Function *Callee = CS.getCalledFunction();
-    Function *Caller = CS.getCaller();
+  DenseMap<NodeRef, uint64_t> AdditionalCounts;
+  for (auto &E : SCCEdges) {
+    auto OptRelFreq = GetRelBBFreq(E.second);
+    if (!OptRelFreq)
+      continue;
+    Scaled64 RelFreq = OptRelFreq.getValue();
+    auto Caller = E.first;
+    auto Callee = CGT::edge_dest(E.second);
     RelFreq *= Scaled64(GetCount(Caller), 0);
     uint64_t AdditionalCount = RelFreq.toInt<uint64_t>();
     AdditionalCounts[Callee] += AdditionalCount;
   }
 
-  // Update the counts for the functions in the SCC.
+  // Update the counts for the nodes in the SCC.
   for (auto &Entry : AdditionalCounts)
-    AddToCount(Entry.first, Entry.second);
+    AddCount(Entry.first, Entry.second);
 
-  // Now update the counts for functions not in SCC.
-  for (auto It = Mid; It != CallSites.end(); It++) {
-    auto &CS = *It;
-    auto Weight = GetCallSiteRelFreq(CS);
-    Function *Callee = CS.getCalledFunction();
-    Function *Caller = CS.getCaller();
-    Weight *= Scaled64(GetCount(Caller), 0);
-    AddToCount(Callee, Weight.toInt<uint64_t>());
+  // Now update the counts for nodes outside the SCC.
+  for (auto &E : NonSCCEdges) {
+    auto OptRelFreq = GetRelBBFreq(E.second);
+    if (!OptRelFreq)
+      continue;
+    Scaled64 RelFreq = OptRelFreq.getValue();
+    auto Caller = E.first;
+    auto Callee = CGT::edge_dest(E.second);
+    RelFreq *= Scaled64(GetCount(Caller), 0);
+    AddCount(Callee, RelFreq.toInt<uint64_t>());
   }
 }
 
-/// Propgate synthetic entry counts on a callgraph.
+/// Propgate synthetic entry counts on a callgraph \p CG.
 ///
 /// This performs a reverse post-order traversal of the callgraph SCC. For each
-/// SCC, it first propagates the entry counts to the functions within the SCC
+/// SCC, it first propagates the entry counts to the nodes within the SCC
 /// through call edges and updates them in one shot. Then the entry counts are
-/// propagated to functions outside the SCC.
-void llvm::propagateSyntheticCounts(
-    const CallGraph &CG, function_ref<Scaled64(CallSite CS)> GetCallSiteRelFreq,
-    function_ref<uint64_t(Function *F)> GetCount,
-    function_ref<void(Function *F, uint64_t)> AddToCount) {
+/// propagated to nodes outside the SCC. This requires \p CallGraphTraits
+/// to have a specialization for \p CallGraphType.
 
-  SmallVector<SmallPtrSet<Function *, 8>, 16> SCCs;
-  for (auto I = scc_begin(&CG); !I.isAtEnd(); ++I) {
-    auto SCC = *I;
+template <typename CallGraphType>
+void SyntheticCountsUtils<CallGraphType>::propagate(const CallGraphType &CG,
+                                                    GetRelBBFreqTy GetRelBBFreq,
+                                                    GetCountTy GetCount,
+                                                    AddCountTy AddCount) {
+  std::vector<SccTy> SCCs;
 
-    SmallPtrSet<Function *, 8> SCCFunctions;
-    for (auto *Node : SCC) {
-      Function *F = Node->getFunction();
-      if (F && !F->isDeclaration()) {
-        SCCFunctions.insert(F);
-      }
-    }
-    SCCs.push_back(SCCFunctions);
-  }
+  // Collect all the SCCs.
+  for (auto I = scc_begin(CG); !I.isAtEnd(); ++I)
+    SCCs.push_back(*I);
 
-  for (auto &SCCFunctions : reverse(SCCs))
-    propagateFromSCC(SCCFunctions, GetCallSiteRelFreq, GetCount, AddToCount);
+  // The callgraph-scc needs to be visited in top-down order for propagation.
+  // The scc iterator returns the scc in bottom-up order, so reverse the SCCs
+  // and call propagateFromSCC.
+  for (auto &SCC : reverse(SCCs))
+    propagateFromSCC(SCC, GetRelBBFreq, GetCount, AddCount);
 }
+
+template class llvm::SyntheticCountsUtils<const CallGraph *>;
