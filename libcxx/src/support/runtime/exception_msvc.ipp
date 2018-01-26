@@ -97,6 +97,7 @@ bad_array_length::what() const _NOEXCEPT
     return "bad_array_length";
 }
 
+#if defined(_LIBCPP_NO_VCRUNTIME)
 bad_cast::bad_cast() _NOEXCEPT
 {
 }
@@ -125,7 +126,6 @@ bad_typeid::what() const _NOEXCEPT
   return "std::bad_typeid";
 }
 
-#if defined(_LIBCPP_NO_VCRUNTIME)
 exception::~exception() _NOEXCEPT
 {
 }
