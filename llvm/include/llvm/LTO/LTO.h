@@ -320,6 +320,9 @@ private:
 
     bool UnnamedAddr = true;
 
+    /// True if IR contains the prevailing definition.
+    bool Prevailing = false;
+
     /// This field keeps track of the partition number of this global. The
     /// regular LTO object is partition 0, while each ThinLTO object has its own
     /// partition number from 1 onwards.

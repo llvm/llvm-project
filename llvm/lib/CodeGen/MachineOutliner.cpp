@@ -1152,7 +1152,7 @@ void MachineOutliner::pruneOverlaps(
     if (C1.getStartIdx() > MaxCandidateLen)
       FarthestPossibleIdx = C1.getStartIdx() - MaxCandidateLen;
 
-    // Compare against the candidates in the list that start at at most
+    // Compare against the candidates in the list that start at most
     // FarthestPossibleIdx indices away from C1. There are at most
     // MaxCandidateLen of these.
     for (auto Sit = It + 1; Sit != Et; Sit++) {

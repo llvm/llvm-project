@@ -2247,7 +2247,6 @@ void AddressSanitizer::initializeCallbacks(Module &M) {
     for (size_t AccessIsWrite = 0; AccessIsWrite <= 1; AccessIsWrite++) {
       const std::string TypeStr = AccessIsWrite ? "store" : "load";
       const std::string ExpStr = Exp ? "exp_" : "";
-      const std::string SuffixStr = CompileKernel ? "N" : "_n";
       const std::string EndingStr = Recover ? "_noabort" : "";
 
       SmallVector<Type *, 3> Args2 = {IntptrTy, IntptrTy};
@@ -2259,8 +2258,7 @@ void AddressSanitizer::initializeCallbacks(Module &M) {
       }
       AsanErrorCallbackSized[AccessIsWrite][Exp] =
           checkSanitizerInterfaceFunction(M.getOrInsertFunction(
-              kAsanReportErrorTemplate + ExpStr + TypeStr + SuffixStr +
-                  EndingStr,
+              kAsanReportErrorTemplate + ExpStr + TypeStr + "_n" + EndingStr,
               FunctionType::get(IRB.getVoidTy(), Args2, false)));
 
       AsanMemoryAccessCallbackSized[AccessIsWrite][Exp] =

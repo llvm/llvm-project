@@ -564,15 +564,16 @@ CppFile::deferRebuild(ParseInputs &&Inputs) {
       CI->getFrontendOpts().SkipFunctionBodies = false;
 
       if (BuiltPreamble) {
-        log(Ctx, "Built preamble of size " + Twine(BuiltPreamble->getSize()) +
-                     " for file " + Twine(That->FileName));
+        log(Tracer.Ctx, "Built preamble of size " +
+                            Twine(BuiltPreamble->getSize()) + " for file " +
+                            Twine(That->FileName));
 
         return std::make_shared<PreambleData>(
             std::move(*BuiltPreamble),
             SerializedDeclsCollector.takeTopLevelDeclIDs(),
             std::move(PreambleDiags));
       } else {
-        log(Ctx,
+        log(Tracer.Ctx,
             "Could not build a preamble for file " + Twine(That->FileName));
         return nullptr;
       }
@@ -605,8 +606,9 @@ CppFile::deferRebuild(ParseInputs &&Inputs) {
     {
       trace::Span Tracer(Ctx, "Build");
       SPAN_ATTACH(Tracer, "File", That->FileName);
-      NewAST = ParsedAST::Build(Ctx, std::move(CI), std::move(NewPreamble),
-                                std::move(ContentsBuffer), PCHs, Inputs.FS);
+      NewAST =
+          ParsedAST::Build(Tracer.Ctx, std::move(CI), std::move(NewPreamble),
+                           std::move(ContentsBuffer), PCHs, Inputs.FS);
     }
 
     if (NewAST) {

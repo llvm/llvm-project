@@ -69,8 +69,17 @@ def vfp_f64imm : Operand<f64>,
   let ParserMatchClass = FPImmOperand;
 }
 
+def alignedload16 : PatFrag<(ops node:$ptr), (load node:$ptr), [{
+  return cast<LoadSDNode>(N)->getAlignment() >= 2;
+}]>;
+
 def alignedload32 : PatFrag<(ops node:$ptr), (load node:$ptr), [{
   return cast<LoadSDNode>(N)->getAlignment() >= 4;
+}]>;
+
+def alignedstore16 : PatFrag<(ops node:$val, node:$ptr),
+                             (store node:$val, node:$ptr), [{
+  return cast<StoreSDNode>(N)->getAlignment() >= 2;
 }]>;
 
 def alignedstore32 : PatFrag<(ops node:$val, node:$ptr),
@@ -113,9 +122,9 @@ def VLDRS : ASI5<0b1101, 0b01, (outs SPR:$Sd), (ins addrmode5:$addr),
   let D = VFPNeonDomain;
 }
 
-def VLDRH : AHI5<0b1101, 0b01, (outs SPR:$Sd), (ins addrmode5fp16:$addr),
+def VLDRH : AHI5<0b1101, 0b01, (outs HPR:$Sd), (ins addrmode5fp16:$addr),
                  IIC_fpLoad16, "vldr", ".16\t$Sd, $addr",
-                 []>,
+                 [(set HPR:$Sd, (alignedload16 addrmode5fp16:$addr))]>,
             Requires<[HasFullFP16]>;
 
 } // End of 'let canFoldAsLoad = 1, isReMaterializable = 1 in'
@@ -132,9 +141,9 @@ def VSTRS : ASI5<0b1101, 0b00, (outs), (ins SPR:$Sd, addrmode5:$addr),
   let D = VFPNeonDomain;
 }
 
-def VSTRH : AHI5<0b1101, 0b00, (outs), (ins SPR:$Sd, addrmode5fp16:$addr),
+def VSTRH : AHI5<0b1101, 0b00, (outs), (ins HPR:$Sd, addrmode5fp16:$addr),
                  IIC_fpStore16, "vstr", ".16\t$Sd, $addr",
-                 []>,
+                 [(alignedstore16 HPR:$Sd, addrmode5fp16:$addr)]>,
             Requires<[HasFullFP16]>;
 
 //===----------------------------------------------------------------------===//
@@ -335,9 +344,9 @@ def VADDS  : ASbIn<0b11100, 0b11, 0, 0,
 
 let TwoOperandAliasConstraint = "$Sn = $Sd" in
 def VADDH  : AHbI<0b11100, 0b11, 0, 0,
-                  (outs SPR:$Sd), (ins SPR:$Sn, SPR:$Sm),
+                  (outs HPR:$Sd), (ins HPR:$Sn, HPR:$Sm),
                   IIC_fpALU16, "vadd", ".f16\t$Sd, $Sn, $Sm",
-                  []>,
+                  [(set HPR:$Sd, (fadd HPR:$Sn, HPR:$Sm))]>,
              Sched<[WriteFPALU32]>;
 
 let TwoOperandAliasConstraint = "$Dn = $Dd" in
@@ -360,9 +369,9 @@ def VSUBS  : ASbIn<0b11100, 0b11, 1, 0,
 
 let TwoOperandAliasConstraint = "$Sn = $Sd" in
 def VSUBH  : AHbI<0b11100, 0b11, 1, 0,
-                  (outs SPR:$Sd), (ins SPR:$Sn, SPR:$Sm),
+                  (outs HPR:$Sd), (ins HPR:$Sn, HPR:$Sm),
                   IIC_fpALU16, "vsub", ".f16\t$Sd, $Sn, $Sm",
-                  []>,
+                  [(set HPR:$Sd, (fsub HPR:$Sn, HPR:$Sm))]>,
             Sched<[WriteFPALU32]>;
 
 let TwoOperandAliasConstraint = "$Dn = $Dd" in
@@ -658,17 +667,19 @@ def VCVTSD  : VFPAI<(outs SPR:$Sd), (ins DPR:$Dm), VFPUnaryFrm,
   let Predicates = [HasVFP2, HasDPVFP];
 }
 
-// Between half, single and double-precision.  For disassembly only.
-
+// Between half, single and double-precision.
 def VCVTBHS: ASuI<0b11101, 0b11, 0b0010, 0b01, 0, (outs SPR:$Sd), (ins SPR:$Sm),
                  /* FIXME */ IIC_fpCVTSH, "vcvtb", ".f32.f16\t$Sd, $Sm",
-                 [/* For disassembly only; pattern left blank */]>,
+                 [ /* intentionally left blank, see rule below */ ]>,
                  Requires<[HasFP16]>,
              Sched<[WriteFPCVT]>;
 
+def : Pat<(f32 (fpextend HPR:$Sm)),
+          (VCVTBHS (COPY_TO_REGCLASS HPR:$Sm, SPR))>;
+
 def VCVTBSH: ASuI<0b11101, 0b11, 0b0011, 0b01, 0, (outs SPR:$Sd), (ins SPR:$Sm),
                  /* FIXME */ IIC_fpCVTHS, "vcvtb", ".f16.f32\t$Sd, $Sm",
-                 [/* For disassembly only; pattern left blank */]>,
+                 []>,
                  Requires<[HasFP16]>,
              Sched<[WriteFPCVT]>;
 

@@ -459,6 +459,16 @@ void DWARFContext::dump(
       strDWOOffset = offset;
     }
   }
+  if (shouldDump(Explicit, ".debug_line_str", DIDT_ID_DebugLineStr,
+                 DObj->getLineStringSection())) {
+    DataExtractor strData(DObj->getLineStringSection(), isLittleEndian(), 0);
+    uint32_t offset = 0;
+    uint32_t strOffset = 0;
+    while (const char *s = strData.getCStr(&offset)) {
+      OS << format("0x%8.8x: \"%s\"\n", strOffset, s);
+      strOffset = offset;
+    }
+  }
 
   if (shouldDump(Explicit, ".debug_ranges", DIDT_ID_DebugRanges,
                  DObj->getRangeSection().Data)) {
@@ -1193,6 +1203,7 @@ class DWARFObjInMemory final : public DWARFObject {
   StringRef CUIndexSection;
   StringRef GdbIndexSection;
   StringRef TUIndexSection;
+  StringRef LineStringSection;
 
   SmallVector<SmallString<32>, 4> UncompressedSections;
 
@@ -1215,6 +1226,7 @@ class DWARFObjInMemory final : public DWARFObject {
         .Case("debug_cu_index", &CUIndexSection)
         .Case("debug_tu_index", &TUIndexSection)
         .Case("gdb_index", &GdbIndexSection)
+        .Case("debug_line_str", &LineStringSection)
         // Any more debug info sections go here.
         .Default(nullptr);
   }
@@ -1433,6 +1445,7 @@ public:
   const DWARFSection &getStringOffsetSection() const override {
     return StringOffsetSection;
   }
+  StringRef getLineStringSection() const override { return LineStringSection; }
 
   // Sections for DWARF5 split dwarf proposal.
   const DWARFSection &getInfoDWOSection() const override {

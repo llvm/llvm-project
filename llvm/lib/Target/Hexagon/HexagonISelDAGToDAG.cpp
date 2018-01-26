@@ -1034,23 +1034,6 @@ void HexagonDAGToDAGISel::ppHoistZextI1(std::vector<SDNode*> &&Nodes) {
   }
 }
 
-void HexagonDAGToDAGISel::ppEmitAligna() {
-  auto &HST = static_cast<const HexagonSubtarget&>(MF->getSubtarget());
-  auto &HFI = *HST.getFrameLowering();
-  if (!HFI.needsAligna(*MF))
-    return;
-
-  MachineFrameInfo &MFI = MF->getFrameInfo();
-  MachineBasicBlock &EntryBB = MF->front();
-  unsigned AR = FuncInfo->CreateReg(MVT::i32);
-  unsigned MaxA = MFI.getMaxAlignment();
-  MachineBasicBlock::iterator End = EntryBB.end();
-  DebugLoc DL = EntryBB.findDebugLoc(End);
-  BuildMI(EntryBB, End, DL, HII->get(Hexagon::PS_aligna), AR)
-      .addImm(MaxA);
-  MF->getInfo<HexagonMachineFunctionInfo>()->setStackAlignBaseVReg(AR);
-}
-
 void HexagonDAGToDAGISel::PreprocessISelDAG() {
   // Repack all nodes before calling each preprocessing function,
   // because each of them can modify the set of nodes.
@@ -1106,11 +1089,21 @@ void HexagonDAGToDAGISel::PreprocessISelDAG() {
       CurDAG->dump();
     });
   }
+}
 
-  // Finally, emit the PS_aligna instruction, if necessary. Do it late,
-  // because the max required stack layout may change up until right before
-  // instruction selection.
-  ppEmitAligna();
+void HexagonDAGToDAGISel::EmitFunctionEntryCode() {
+  auto &HST = static_cast<const HexagonSubtarget&>(MF->getSubtarget());
+  auto &HFI = *HST.getFrameLowering();
+  if (!HFI.needsAligna(*MF))
+    return;
+
+  MachineFrameInfo &MFI = MF->getFrameInfo();
+  MachineBasicBlock *EntryBB = &MF->front();
+  unsigned AR = FuncInfo->CreateReg(MVT::i32);
+  unsigned MaxA = MFI.getMaxAlignment();
+  BuildMI(EntryBB, DebugLoc(), HII->get(Hexagon::PS_aligna), AR)
+      .addImm(MaxA);
+  MF->getInfo<HexagonMachineFunctionInfo>()->setStackAlignBaseVReg(AR);
 }
 
 // Match a frame index that can be used in an addressing mode.
@@ -1177,7 +1170,7 @@ bool HexagonDAGToDAGISel::SelectAnyImmediate(SDValue &N, SDValue &R,
   }
   case HexagonISD::JT:
   case HexagonISD::CP:
-    // These are assumed to always be aligned at at least 8-byte boundary.
+    // These are assumed to always be aligned at least 8-byte boundary.
     if (LogAlign > 3)
       return false;
     R = N.getOperand(0);
@@ -1189,7 +1182,7 @@ bool HexagonDAGToDAGISel::SelectAnyImmediate(SDValue &N, SDValue &R,
     R = N;
     return true;
   case ISD::BlockAddress:
-    // Block address is always aligned at at least 4-byte boundary.
+    // Block address is always aligned at least 4-byte boundary.
     if (LogAlign > 2 || !IsAligned(cast<BlockAddressSDNode>(N)->getOffset()))
       return false;
     R = N;

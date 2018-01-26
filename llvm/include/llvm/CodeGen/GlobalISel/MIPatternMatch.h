@@ -54,7 +54,7 @@ struct ConstantMatch {
   }
 };
 
-ConstantMatch m_ICst(uint64_t &Cst) { return ConstantMatch(Cst); }
+inline ConstantMatch m_ICst(uint64_t &Cst) { return ConstantMatch(Cst); }
 
 // TODO: Rework this for different kinds of MachineOperand.
 // Currently assumes the Src for a match is a register.
@@ -68,7 +68,7 @@ struct operand_type_match {
   }
 };
 
-operand_type_match m_Reg() { return operand_type_match(); }
+inline operand_type_match m_Reg() { return operand_type_match(); }
 
 /// Matching combinators.
 template <typename... Preds> struct And {

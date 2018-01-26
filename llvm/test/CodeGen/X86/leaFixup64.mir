@@ -810,7 +810,7 @@ body:             |
     ; CHECK: %rbx = MOV64rr %rbp
     ; CHECK: %rbx = ADD64rr %rbx, %rbp
  
-    %rbx = LEA64r %rbp, 1, %rbp, 0, %noreg
+    %rbx = LEA64r killed %rbp, 1, %rbp, 0, %noreg
     RETQ %ebx
 
 ...

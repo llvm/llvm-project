@@ -354,7 +354,7 @@ body:             |
     ; CHECK: %ebx = MOV32rr  %ebp
     ; CHECK: %ebx = ADD32rr %ebx, %ebp
  
-    %ebx = LEA32r %ebp, 1, %ebp, 0, %noreg
+    %ebx = LEA32r killed %ebp, 1, %ebp, 0, %noreg
     RETQ %ebx
 
 ...

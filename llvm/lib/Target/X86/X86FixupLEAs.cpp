@@ -548,7 +548,8 @@ FixupLEAPass::processInstrForSlow3OpLEA(MachineInstr &MI,
 
   // lea (%base,%index,1), %dst => mov %base,%dst; add %index,%dst
   if (IsScale1 && !hasLEAOffset(Offset)) {
-    TII->copyPhysReg(*MFI, MI, DL, DstR, BaseR, Base.isKill());
+    bool BIK = Base.isKill() && BaseR != IndexR;
+    TII->copyPhysReg(*MFI, MI, DL, DstR, BaseR, BIK);
     DEBUG(MI.getPrevNode()->dump(););
 
     MachineInstr *NewMI =

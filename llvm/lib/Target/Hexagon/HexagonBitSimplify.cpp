@@ -622,7 +622,7 @@ bool HexagonBitSimplify::getUsedBitsInStore(unsigned Opc, BitVector &Bits,
 // operand may be a subregister of a larger register, while Bits would
 // correspond to the larger register in its entirety. Because of that,
 // the parameter Begin can be used to indicate which bit of Bits should be
-// considered the LSB of of the operand.
+// considered the LSB of the operand.
 bool HexagonBitSimplify::getUsedBits(unsigned Opc, unsigned OpN,
       BitVector &Bits, uint16_t Begin, const HexagonInstrInfo &HII) {
   using namespace Hexagon;

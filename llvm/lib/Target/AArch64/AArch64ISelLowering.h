@@ -456,6 +456,9 @@ public:
     return true;
   }
 
+  /// Enable aggressive FMA fusion on targets that want it.
+  bool enableAggressiveFMAFusion(EVT VT) const override;
+
   /// Returns the size of the platform's va_list object.
   unsigned getVaListSizeInBits(const DataLayout &DL) const override;
 

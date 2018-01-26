@@ -46,7 +46,6 @@ template <typename T, bool IsPodLike> struct OptionalStorage {
   OptionalStorage(OptionalStorage &&O) : hasVal(O.hasVal) {
     if (O.hasVal) {
       new (storage.buffer) T(std::move(*O.getPointer()));
-      O.reset();
     }
   }
 
@@ -64,7 +63,6 @@ template <typename T, bool IsPodLike> struct OptionalStorage {
       reset();
     else {
       *this = std::move(*O.getPointer());
-      O.reset();
     }
     return *this;
   }

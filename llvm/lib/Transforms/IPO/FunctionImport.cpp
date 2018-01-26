@@ -269,7 +269,7 @@ static void computeImportForFunction(
     };
 
     const auto NewThreshold =
-        Threshold * GetBonusMultiplier(Edge.second.Hotness);
+        Threshold * GetBonusMultiplier(Edge.second.getHotness());
 
     auto *CalleeSummary = selectCallee(Index, VI.getSummaryList(), NewThreshold,
                                        Summary.modulePath());
@@ -293,7 +293,8 @@ static void computeImportForFunction(
       return Threshold * ImportInstrFactor;
     };
 
-    bool IsHotCallsite = Edge.second.Hotness == CalleeInfo::HotnessType::Hot;
+    bool IsHotCallsite =
+        Edge.second.getHotness() == CalleeInfo::HotnessType::Hot;
     const auto AdjThreshold = GetAdjustedThreshold(Threshold, IsHotCallsite);
 
     auto ExportModulePath = ResolvedCalleeSummary->modulePath();

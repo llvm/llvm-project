@@ -59,6 +59,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h"
 #include "llvm/Transforms/GCOVProfiler.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/IPO/ArgumentPromotion.h"
@@ -363,6 +364,8 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(JumpThreadingPass());
   FPM.addPass(CorrelatedValuePropagationPass());
   FPM.addPass(SimplifyCFGPass());
+  if (Level == O3)
+    FPM.addPass(AggressiveInstCombinePass());
   FPM.addPass(InstCombinePass());
 
   if (!isOptimizingForSize(Level))
@@ -1010,6 +1013,8 @@ ModulePassManager PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // function pointers.  When this happens, we often have to resolve varargs
   // calls, etc, so let instcombine do this.
   FunctionPassManager PeepholeFPM(DebugLogging);
+  if (Level == O3)
+    PeepholeFPM.addPass(AggressiveInstCombinePass());
   PeepholeFPM.addPass(InstCombinePass());
   invokePeepholeEPCallbacks(PeepholeFPM, Level);
 
