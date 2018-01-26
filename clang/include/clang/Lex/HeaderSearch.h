@@ -416,7 +416,7 @@ public:
     return FrameworkMap[FWName];
   }
 
-  /// \brief Mark the specified file as a target of of a \#include,
+  /// \brief Mark the specified file as a target of a \#include,
   /// \#include_next, or \#import directive.
   ///
   /// \return false if \#including the file will have no effect or true

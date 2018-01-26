@@ -29,7 +29,7 @@ namespace serialized_diags {
 ///  a bitcode file.
 ///
 /// The created DiagnosticConsumer is designed for quick and lightweight
-/// transfer of of diagnostics to the enclosing build system (e.g., an IDE).
+/// transfer of diagnostics to the enclosing build system (e.g., an IDE).
 /// This allows wrapper tools for Clang to get diagnostics from Clang
 /// (via libclang) without needing to parse Clang's command line output.
 ///

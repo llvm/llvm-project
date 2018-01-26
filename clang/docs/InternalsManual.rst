@@ -1823,7 +1823,7 @@ Note that setting this member to 1 will opt out of common attribute semantic
 handling, requiring extra implementation efforts to ensure the attribute
 appertains to the appropriate subject, etc.
 
-If the attribute should not be propagated from from a template declaration to an
+If the attribute should not be propagated from a template declaration to an
 instantiation of the template, set the ``Clone`` member to 0. By default, all
 attributes will be cloned to template instantiations.
 
