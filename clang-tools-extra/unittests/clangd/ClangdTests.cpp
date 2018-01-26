@@ -17,6 +17,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <algorithm>
 #include <chrono>
@@ -28,6 +29,14 @@
 
 namespace clang {
 namespace clangd {
+
+using ::testing::ElementsAre;
+using ::testing::Eq;
+using ::testing::Gt;
+using ::testing::IsEmpty;
+using ::testing::Pair;
+using ::testing::UnorderedElementsAre;
+
 namespace {
 
 // Don't wait for async ops in clangd test more than that to avoid blocking
@@ -414,6 +423,42 @@ struct bar { T x; };
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
   Server.addDocument(Context::empty(), FooCpp, SourceContents2);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
+}
+
+TEST_F(ClangdVFSTest, MemoryUsage) {
+  MockFSProvider FS;
+  ErrorCheckingDiagConsumer DiagConsumer;
+  MockCompilationDatabase CDB;
+  ClangdServer Server(CDB, DiagConsumer, FS,
+                      /*AsyncThreadsCount=*/0,
+                      /*StorePreamblesInMemory=*/true);
+
+  // No need to sync reparses, because reparses are performed on the calling
+  // thread.
+  Path FooCpp = getVirtualTestFilePath("foo.cpp").str();
+  const auto SourceContents = R"cpp(
+struct Something {
+  int method();
+};
+)cpp";
+  Path BarCpp = getVirtualTestFilePath("bar.cpp").str();
+
+  FS.Files[FooCpp] = "";
+  FS.Files[BarCpp] = "";
+
+  EXPECT_THAT(Server.getUsedBytesPerFile(), IsEmpty());
+
+  Server.addDocument(Context::empty(), FooCpp, SourceContents);
+  Server.addDocument(Context::empty(), BarCpp, SourceContents);
+
+  EXPECT_THAT(Server.getUsedBytesPerFile(),
+              UnorderedElementsAre(Pair(FooCpp, Gt(0u)), Pair(BarCpp, Gt(0u))));
+
+  Server.removeDocument(Context::empty(), FooCpp);
+  EXPECT_THAT(Server.getUsedBytesPerFile(), ElementsAre(Pair(BarCpp, Gt(0u))));
+
+  Server.removeDocument(Context::empty(), BarCpp);
+  EXPECT_THAT(Server.getUsedBytesPerFile(), IsEmpty());
 }
 
 class ClangdThreadingTest : public ClangdVFSTest {};

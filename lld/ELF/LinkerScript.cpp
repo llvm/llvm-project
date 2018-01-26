@@ -589,6 +589,10 @@ void LinkerScript::output(InputSection *S) {
 
   // If there is a memory region associated with this input section, then
   // place the section in that region and update the region index.
+  if (Ctx->LMARegion)
+    Ctx->LMARegion->CurPos += Pos - Before;
+  // FIXME: should we also produce overflow errors for LMARegion?
+
   if (Ctx->MemRegion) {
     uint64_t &CurOffset = Ctx->MemRegion->CurPos;
     CurOffset += Pos - Before;
@@ -651,27 +655,24 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
     setDot(Sec->AddrExpr, Sec->Location, false);
 
   Ctx->MemRegion = Sec->MemRegion;
+  Ctx->LMARegion = Sec->LMARegion;
   if (Ctx->MemRegion)
     Dot = Ctx->MemRegion->CurPos;
 
   switchTo(Sec);
 
-  if (Sec->LMAExpr) {
-    uint64_t D = Dot;
-    Ctx->LMAOffset = [=] { return Sec->LMAExpr().getValue() - D; };
-  }
+  if (Sec->LMAExpr)
+    Ctx->LMAOffset = Sec->LMAExpr().getValue() - Dot;
 
-  if (MemoryRegion *MR = Sec->LMARegion) {
-    uint64_t Offset = MR->Origin - Dot;
-    Ctx->LMAOffset = [=] { return Offset; };
-  }
+  if (MemoryRegion *MR = Sec->LMARegion)
+    Ctx->LMAOffset = MR->CurPos - Dot;
 
   // If neither AT nor AT> is specified for an allocatable section, the linker
   // will set the LMA such that the difference between VMA and LMA for the
   // section is the same as the preceding output section in the same region
   // https://sourceware.org/binutils/docs-2.20/ld/Output-Section-LMA.html
-  if (Ctx->LMAOffset)
-    Ctx->OutSec->LMAOffset = Ctx->LMAOffset();
+  if (PhdrEntry *L = Ctx->OutSec->PtLoad)
+    L->LMAOffset = Ctx->LMAOffset;
 
   // The Size previously denoted how many InputSections had been added to this
   // section, and was used for sorting SHF_LINK_ORDER sections. Reset it to
@@ -694,6 +695,8 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
       Dot += Cmd->Size;
       if (Ctx->MemRegion)
         Ctx->MemRegion->CurPos += Cmd->Size;
+      if (Ctx->LMARegion)
+        Ctx->LMARegion->CurPos += Cmd->Size;
       Ctx->OutSec->Size = Dot - Ctx->OutSec->Addr;
       continue;
     }

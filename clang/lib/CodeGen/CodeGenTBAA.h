@@ -201,6 +201,11 @@ public:
   /// purpose of conditional operator.
   TBAAAccessInfo mergeTBAAInfoForConditionalOperator(TBAAAccessInfo InfoA,
                                                      TBAAAccessInfo InfoB);
+
+  /// mergeTBAAInfoForMemoryTransfer - Get merged TBAA information for the
+  /// purpose of memory transfer calls.
+  TBAAAccessInfo mergeTBAAInfoForMemoryTransfer(TBAAAccessInfo DestInfo,
+                                                TBAAAccessInfo SrcInfo);
 };
 
 }  // end namespace CodeGen

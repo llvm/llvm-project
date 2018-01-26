@@ -1008,12 +1008,13 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
                          /*init*/ true);
       return;
     }
-    case TEK_Aggregate:
+    case TEK_Aggregate: {
       // The return value slot is guaranteed to not be aliased, but
       // that's not necessarily the same as "on the stack", so
       // we still potentially need objc_memmove_collectable.
-      EmitAggregateCopy(ReturnValue, LV.getAddress(), ivarType);
-      return;
+      EmitAggregateCopy(/* Dest= */ MakeAddrLValue(ReturnValue, ivarType),
+                        /* Src= */ LV, ivarType);
+      return; }
     case TEK_Scalar: {
       llvm::Value *value;
       if (propType->isReferenceType()) {
@@ -2070,7 +2071,7 @@ CodeGenFunction::EmitARCRetainAutoreleasedReturnValue(llvm::Value *value) {
 
 /// Claim a possibly-autoreleased return value at +0.  This is only
 /// valid to do in contexts which do not rely on the retain to keep
-/// the object valid for for all of its uses; for example, when
+/// the object valid for all of its uses; for example, when
 /// the value is ignored, or when it is being assigned to an
 /// __unsafe_unretained variable.
 ///

@@ -391,3 +391,21 @@ CodeGenTBAA::mergeTBAAInfoForConditionalOperator(TBAAAccessInfo InfoA,
   // access type regardless of their base types.
   return TBAAAccessInfo::getMayAliasInfo();
 }
+
+TBAAAccessInfo
+CodeGenTBAA::mergeTBAAInfoForMemoryTransfer(TBAAAccessInfo DestInfo,
+                                            TBAAAccessInfo SrcInfo) {
+  if (DestInfo == SrcInfo)
+    return DestInfo;
+
+  if (!DestInfo || !SrcInfo)
+    return TBAAAccessInfo();
+
+  if (DestInfo.isMayAlias() || SrcInfo.isMayAlias())
+    return TBAAAccessInfo::getMayAliasInfo();
+
+  // TODO: Implement the rest of the logic here. For example, two accesses
+  // with same final access types result in an access to an object of that final
+  // access type regardless of their base types.
+  return TBAAAccessInfo::getMayAliasInfo();
+}
