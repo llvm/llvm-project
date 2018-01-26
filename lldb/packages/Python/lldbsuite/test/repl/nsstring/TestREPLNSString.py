@@ -25,7 +25,7 @@ class REPLNSStringTestCase (lldbrepl.REPLTest):
 
     @decorators.swiftTest
     @decorators.no_debug_info_test
-    @decorators.skipIf
+    @decorators.skipIf # rdar://36843869
     def testREPL(self):
         lldbrepl.REPLTest.testREPL(self)
 
