@@ -1373,7 +1373,9 @@ void llvm::insertDebugValuesForPHIs(BasicBlock *BB,
         auto PhiMAV = MetadataAsValue::get(C, ValueAsMetadata::get(PHI));
         NewDbgII->setOperand(0, PhiMAV);
         BasicBlock *Parent = PHI->getParent();
-        NewDbgII->insertBefore(Parent->getFirstNonPHIOrDbgOrLifetime());
+        auto InsertionPt = Parent->getFirstInsertionPt();
+        assert(InsertionPt != Parent->end() && "Ill-formed basic block");
+        NewDbgII->insertBefore(&*InsertionPt);
       }
     }
   }

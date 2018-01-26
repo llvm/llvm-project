@@ -1456,10 +1456,10 @@ bool AsmPrinter::doFinalization(Module &M) {
         for (const Value *Op : A->operands()) {
           const auto *GV =
               cast<GlobalValue>(Op->stripPointerCastsNoFollowAliases());
-          // Global symbols with internal linkage are not visible to the linker,
-          // and thus would cause an error when the linker tried to preserve the
-          // symbol due to the `/include:` directive.
-          if (GV->hasInternalLinkage())
+          // Global symbols with internal or private linkage are not visible to
+          // the linker, and thus would cause an error when the linker tried to
+          // preserve the symbol due to the `/include:` directive.
+          if (GV->hasInternalLinkage() || GV->hasPrivateLinkage())
             continue;
 
           raw_string_ostream OS(Flags);

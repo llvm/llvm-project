@@ -130,42 +130,42 @@ using SectionPred = std::function<bool(const SectionBase &Sec)>;
 
 bool IsDWOSection(const SectionBase &Sec) { return Sec.Name.endswith(".dwo"); }
 
-template <class ELFT>
-bool OnlyKeepDWOPred(const Object<ELFT> &Obj, const SectionBase &Sec) {
+bool OnlyKeepDWOPred(const Object &Obj, const SectionBase &Sec) {
   // We can't remove the section header string table.
-  if (&Sec == Obj.getSectionHeaderStrTab())
+  if (&Sec == Obj.SectionNames)
     return false;
   // Short of keeping the string table we want to keep everything that is a DWO
   // section and remove everything else.
   return !IsDWOSection(Sec);
 }
 
-template <class ELFT>
-void WriteObjectFile(const Object<ELFT> &Obj, StringRef File) {
-  std::unique_ptr<FileOutputBuffer> Buffer;
-  Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
-      FileOutputBuffer::create(File, Obj.totalSize(),
-                               FileOutputBuffer::F_executable);
-  handleAllErrors(BufferOrErr.takeError(), [](const ErrorInfoBase &) {
-    error("failed to open " + OutputFilename);
-  });
-  Buffer = std::move(*BufferOrErr);
+static ElfType OutputElfType;
 
-  Obj.write(*Buffer);
-  if (auto E = Buffer->commit())
-    reportError(File, errorToErrorCode(std::move(E)));
+std::unique_ptr<Writer> CreateWriter(Object &Obj, StringRef File) {
+  if (OutputFormat == "binary") {
+    return llvm::make_unique<BinaryWriter>(OutputFilename, Obj);
+  }
+  // Depending on the initial ELFT and OutputFormat we need a different Writer.
+  switch (OutputElfType) {
+  case ELFT_ELF32LE:
+    return llvm::make_unique<ELFWriter<ELF32LE>>(File, Obj, !StripSections);
+  case ELFT_ELF64LE:
+    return llvm::make_unique<ELFWriter<ELF64LE>>(File, Obj, !StripSections);
+  case ELFT_ELF32BE:
+    return llvm::make_unique<ELFWriter<ELF32BE>>(File, Obj, !StripSections);
+  case ELFT_ELF64BE:
+    return llvm::make_unique<ELFWriter<ELF64BE>>(File, Obj, !StripSections);
+  }
+  llvm_unreachable("Invalid output format");
 }
 
-template <class ELFT>
-void SplitDWOToFile(const ELFObjectFile<ELFT> &ObjFile, StringRef File) {
-  // Construct a second output file for the DWO sections.
-  ELFObject<ELFT> DWOFile(ObjFile);
-
-  DWOFile.removeSections([&](const SectionBase &Sec) {
-    return OnlyKeepDWOPred<ELFT>(DWOFile, Sec);
-  });
-  DWOFile.finalize();
-  WriteObjectFile(DWOFile, File);
+void SplitDWOToFile(const Reader &Reader, StringRef File) {
+  auto DWOFile = Reader.create();
+  DWOFile->removeSections(
+      [&](const SectionBase &Sec) { return OnlyKeepDWOPred(*DWOFile, Sec); });
+  auto Writer = CreateWriter(*DWOFile, File);
+  Writer->finalize();
+  Writer->write();
 }
 
 // This function handles the high level operations of GNU objcopy including
@@ -175,23 +175,16 @@ void SplitDWOToFile(const ELFObjectFile<ELFT> &ObjFile, StringRef File) {
 // any previous removals. Lastly whether or not something is removed shouldn't
 // depend a) on the order the options occur in or b) on some opaque priority
 // system. The only priority is that keeps/copies overrule removes.
-template <class ELFT> void CopyBinary(const ELFObjectFile<ELFT> &ObjFile) {
-  std::unique_ptr<Object<ELFT>> Obj;
+void HandleArgs(Object &Obj, const Reader &Reader) {
 
-  if (!OutputFormat.empty() && OutputFormat != "binary")
-    error("invalid output format '" + OutputFormat + "'");
-  if (!OutputFormat.empty() && OutputFormat == "binary")
-    Obj = llvm::make_unique<BinaryObject<ELFT>>(ObjFile);
-  else
-    Obj = llvm::make_unique<ELFObject<ELFT>>(ObjFile);
-
-  if (!SplitDWO.empty())
-    SplitDWOToFile<ELFT>(ObjFile, SplitDWO.getValue());
+  if (!SplitDWO.empty()) {
+    SplitDWOToFile(Reader, SplitDWO);
+  }
 
   // Localize:
 
   if (LocalizeHidden) {
-    Obj->getSymTab()->localize([](const Symbol &Sym) {
+    Obj.SymbolTable->localize([](const Symbol &Sym) {
       return Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL;
     });
   }
@@ -214,7 +207,7 @@ template <class ELFT> void CopyBinary(const ELFObjectFile<ELFT> &ObjFile) {
 
   if (ExtractDWO)
     RemovePred = [RemovePred, &Obj](const SectionBase &Sec) {
-      return OnlyKeepDWOPred(*Obj, Sec) || RemovePred(Sec);
+      return OnlyKeepDWOPred(Obj, Sec) || RemovePred(Sec);
     };
 
   if (StripAllGNU)
@@ -223,7 +216,7 @@ template <class ELFT> void CopyBinary(const ELFObjectFile<ELFT> &ObjFile) {
         return true;
       if ((Sec.Flags & SHF_ALLOC) != 0)
         return false;
-      if (&Sec == Obj->getSectionHeaderStrTab())
+      if (&Sec == Obj.SectionNames)
         return false;
       switch (Sec.Type) {
       case SHT_SYMTAB:
@@ -239,7 +232,6 @@ template <class ELFT> void CopyBinary(const ELFObjectFile<ELFT> &ObjFile) {
     RemovePred = [RemovePred](const SectionBase &Sec) {
       return RemovePred(Sec) || (Sec.Flags & SHF_ALLOC) == 0;
     };
-    Obj->WriteSectionHeaders = false;
   }
 
   if (StripDebug) {
@@ -252,7 +244,7 @@ template <class ELFT> void CopyBinary(const ELFObjectFile<ELFT> &ObjFile) {
     RemovePred = [RemovePred, &Obj](const SectionBase &Sec) {
       if (RemovePred(Sec))
         return true;
-      if (&Sec == Obj->getSectionHeaderStrTab())
+      if (&Sec == Obj.SectionNames)
         return false;
       return (Sec.Flags & SHF_ALLOC) == 0;
     };
@@ -261,7 +253,7 @@ template <class ELFT> void CopyBinary(const ELFObjectFile<ELFT> &ObjFile) {
     RemovePred = [RemovePred, &Obj](const SectionBase &Sec) {
       if (RemovePred(Sec))
         return true;
-      if (&Sec == Obj->getSectionHeaderStrTab())
+      if (&Sec == Obj.SectionNames)
         return false;
       if (Sec.Name.startswith(".gnu.warning"))
         return false;
@@ -278,17 +270,15 @@ template <class ELFT> void CopyBinary(const ELFObjectFile<ELFT> &ObjFile) {
         return false;
 
       // Allow all implicit removes.
-      if (RemovePred(Sec)) {
+      if (RemovePred(Sec))
         return true;
-      }
 
       // Keep special sections.
-      if (Obj->getSectionHeaderStrTab() == &Sec) {
+      if (Obj.SectionNames == &Sec)
         return false;
-      }
-      if (Obj->getSymTab() == &Sec || Obj->getSymTab()->getStrTab() == &Sec) {
+      if (Obj.SymbolTable == &Sec || Obj.SymbolTable->getStrTab() == &Sec)
         return false;
-      }
+
       // Remove everything else.
       return true;
     };
@@ -305,7 +295,7 @@ template <class ELFT> void CopyBinary(const ELFObjectFile<ELFT> &ObjFile) {
     };
   }
 
-  Obj->removeSections(RemovePred);
+  Obj.removeSections(RemovePred);
 
   if (!AddSection.empty()) {
     for (const auto &Flag : AddSection) {
@@ -318,16 +308,22 @@ template <class ELFT> void CopyBinary(const ELFObjectFile<ELFT> &ObjFile) {
       auto Buf = std::move(*BufOrErr);
       auto BufPtr = reinterpret_cast<const uint8_t *>(Buf->getBufferStart());
       auto BufSize = Buf->getBufferSize();
-      Obj->addSection(SecName, ArrayRef<uint8_t>(BufPtr, BufSize));
+      Obj.addSection<OwnedDataSection>(SecName,
+                                       ArrayRef<uint8_t>(BufPtr, BufSize));
     }
   }
 
   if (!AddGnuDebugLink.empty()) {
-    Obj->addGnuDebugLink(AddGnuDebugLink);
+    Obj.addSection<GnuDebugLinkSection>(StringRef(AddGnuDebugLink));
   }
+}
 
-  Obj->finalize();
-  WriteObjectFile(*Obj, OutputFilename.getValue());
+std::unique_ptr<Reader> CreateReader() {
+  // Right now we can only read ELF files so there's only one reader;
+  auto Out = llvm::make_unique<ELFReader>(StringRef(InputFilename));
+  // We need to set the default ElfType for output.
+  OutputElfType = Out->getElfType();
+  return std::move(Out);
 }
 
 int main(int argc, char **argv) {
@@ -341,25 +337,11 @@ int main(int argc, char **argv) {
     cl::PrintHelpMessage();
     return 2;
   }
-  Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(InputFilename);
-  if (!BinaryOrErr)
-    reportError(InputFilename, BinaryOrErr.takeError());
-  Binary &Binary = *BinaryOrErr.get().getBinary();
-  if (auto *o = dyn_cast<ELFObjectFile<ELF64LE>>(&Binary)) {
-    CopyBinary(*o);
-    return 0;
-  }
-  if (auto *o = dyn_cast<ELFObjectFile<ELF32LE>>(&Binary)) {
-    CopyBinary(*o);
-    return 0;
-  }
-  if (auto *o = dyn_cast<ELFObjectFile<ELF64BE>>(&Binary)) {
-    CopyBinary(*o);
-    return 0;
-  }
-  if (auto *o = dyn_cast<ELFObjectFile<ELF32BE>>(&Binary)) {
-    CopyBinary(*o);
-    return 0;
-  }
-  reportError(InputFilename, object_error::invalid_file_type);
+
+  auto Reader = CreateReader();
+  auto Obj = Reader->create();
+  auto Writer = CreateWriter(*Obj, OutputFilename);
+  HandleArgs(*Obj, *Reader);
+  Writer->finalize();
+  Writer->write();
 }
