@@ -308,7 +308,7 @@ public:
   /// compared to the same memory location accessed through a pointer with a
   /// different address space.
   //
-  /// This is for for targets with different pointer representations which can
+  /// This is for targets with different pointer representations which can
   /// be converted with the addrspacecast instruction. If a pointer is converted
   /// to this address space, optimizations should attempt to replace the access
   /// with the source address space.

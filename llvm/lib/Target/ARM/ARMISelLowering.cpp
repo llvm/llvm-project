@@ -522,6 +522,13 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::f64, &ARM::DPRRegClass);
   }
 
+  if (Subtarget->hasFullFP16()) {
+    addRegisterClass(MVT::f16, &ARM::HPRRegClass);
+    // Clean up bitcast of incoming arguments if hard float abi is enabled.
+    if (Subtarget->isTargetHardFloat())
+      setOperationAction(ISD::BITCAST, MVT::i16, Custom);
+  }
+
   for (MVT VT : MVT::vector_valuetypes()) {
     for (MVT InnerVT : MVT::vector_valuetypes()) {
       setTruncStoreAction(VT, InnerVT, Expand);
@@ -2474,12 +2481,37 @@ ARMTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     assert(VA.isRegLoc() && "Can only return in registers!");
 
     SDValue Arg = OutVals[realRVLocIdx];
+    bool ReturnF16 = false;
+
+    if (Subtarget->hasFullFP16() && Subtarget->isTargetHardFloat()) {
+      // Half-precision return values can be returned like this:
+      //
+      // t11 f16 = fadd ...
+      // t12: i16 = bitcast t11
+      //   t13: i32 = zero_extend t12
+      // t14: f32 = bitcast t13
+      //
+      // to avoid code generation for bitcasts, we simply set Arg to the node
+      // that produces the f16 value, t11 in this case.
+      //
+      if (Arg.getValueType() == MVT::f32) {
+        SDValue ZE = Arg.getOperand(0);
+        if (ZE.getOpcode() == ISD::ZERO_EXTEND && ZE.getValueType() == MVT::i32) {
+          SDValue BC = ZE.getOperand(0);
+          if (BC.getOpcode() == ISD::BITCAST && BC.getValueType() == MVT::i16) {
+            Arg = BC.getOperand(0);
+            ReturnF16 = true;
+          }
+        }
+      }
+    }
 
     switch (VA.getLocInfo()) {
     default: llvm_unreachable("Unknown loc info!");
     case CCValAssign::Full: break;
     case CCValAssign::BCvt:
-      Arg = DAG.getNode(ISD::BITCAST, dl, VA.getLocVT(), Arg);
+      if (!ReturnF16)
+        Arg = DAG.getNode(ISD::BITCAST, dl, VA.getLocVT(), Arg);
       break;
     }
 
@@ -2527,7 +2559,8 @@ ARMTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     // Guarantee that all emitted copies are
     // stuck together, avoiding something bad.
     Flag = Chain.getValue(1);
-    RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
+    RetOps.push_back(DAG.getRegister(VA.getLocReg(),
+                                     ReturnF16 ? MVT::f16 : VA.getLocVT()));
   }
   const ARMBaseRegisterInfo *TRI = Subtarget->getRegisterInfo();
   const MCPhysReg *I =
@@ -3684,7 +3717,10 @@ SDValue ARMTargetLowering::LowerFormalArguments(
       } else {
         const TargetRegisterClass *RC;
 
-        if (RegVT == MVT::f32)
+
+        if (RegVT == MVT::f16)
+          RC = &ARM::HPRRegClass;
+        else if (RegVT == MVT::f32)
           RC = &ARM::SPRRegClass;
         else if (RegVT == MVT::f64)
           RC = &ARM::DPRRegClass;
@@ -5024,6 +5060,37 @@ static SDValue ExpandBITCAST(SDNode *N, SelectionDAG &DAG) {
   // source or destination of the bit convert.
   EVT SrcVT = Op.getValueType();
   EVT DstVT = N->getValueType(0);
+
+  // Half-precision arguments can be passed in like this:
+  //
+  //    t4: f32,ch = CopyFromReg t0, Register:f32 %1
+  //            t8: i32 = bitcast t4
+  //          t9: i16 = truncate t8
+  //        t10: f16 = bitcast t9   <~~~~ SDNode N
+  //
+  // but we want to avoid code generation for the bitcast, so transform this
+  // into:
+  //
+  // t18: f16 = CopyFromReg t0, Register:f32 %0
+  //
+  if (SrcVT == MVT::i16 && DstVT == MVT::f16) {
+     if (Op.getOpcode() != ISD::TRUNCATE)
+        return SDValue();
+
+    SDValue Bitcast = Op.getOperand(0);
+    if (Bitcast.getOpcode() != ISD::BITCAST ||
+        Bitcast.getValueType() != MVT::i32)
+      return SDValue();
+
+    SDValue Copy = Bitcast.getOperand(0);
+    if (Copy.getOpcode() != ISD::CopyFromReg ||
+        Copy.getValueType() != MVT::f32)
+      return SDValue();
+
+    SDValue Ops[] = { Copy->getOperand(0), Copy->getOperand(1) };
+    return DAG.getNode(ISD::CopyFromReg, SDLoc(Copy), MVT::f16, Ops);
+  }
+
   assert((SrcVT == MVT::i64 || DstVT == MVT::i64) &&
          "ExpandBITCAST called for non-i64 type");
 

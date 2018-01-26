@@ -566,9 +566,9 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   switch (IntrID) {
   case Intrinsic::amdgcn_atomic_inc:
   case Intrinsic::amdgcn_atomic_dec:
-  case Intrinsic::amdgcn_atomic_fadd:
-  case Intrinsic::amdgcn_atomic_fmin:
-  case Intrinsic::amdgcn_atomic_fmax: {
+  case Intrinsic::amdgcn_ds_fadd:
+  case Intrinsic::amdgcn_ds_fmin:
+  case Intrinsic::amdgcn_ds_fmax: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
@@ -807,9 +807,9 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   switch (II->getIntrinsicID()) {
   case Intrinsic::amdgcn_atomic_inc:
   case Intrinsic::amdgcn_atomic_dec:
-  case Intrinsic::amdgcn_atomic_fadd:
-  case Intrinsic::amdgcn_atomic_fmin:
-  case Intrinsic::amdgcn_atomic_fmax: {
+  case Intrinsic::amdgcn_ds_fadd:
+  case Intrinsic::amdgcn_ds_fmin:
+  case Intrinsic::amdgcn_ds_fmax: {
     Value *Ptr = II->getArgOperand(0);
     AccessTy = II->getType();
     Ops.push_back(Ptr);
@@ -4827,9 +4827,9 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   switch (IntrID) {
   case Intrinsic::amdgcn_atomic_inc:
   case Intrinsic::amdgcn_atomic_dec:
-  case Intrinsic::amdgcn_atomic_fadd:
-  case Intrinsic::amdgcn_atomic_fmin:
-  case Intrinsic::amdgcn_atomic_fmax: {
+  case Intrinsic::amdgcn_ds_fadd:
+  case Intrinsic::amdgcn_ds_fmin:
+  case Intrinsic::amdgcn_ds_fmax: {
     MemSDNode *M = cast<MemSDNode>(Op);
     unsigned Opc;
     switch (IntrID) {
@@ -4839,13 +4839,13 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     case Intrinsic::amdgcn_atomic_dec:
       Opc = AMDGPUISD::ATOMIC_DEC;
       break;
-    case Intrinsic::amdgcn_atomic_fadd:
+    case Intrinsic::amdgcn_ds_fadd:
       Opc = AMDGPUISD::ATOMIC_LOAD_FADD;
       break;
-    case Intrinsic::amdgcn_atomic_fmin:
+    case Intrinsic::amdgcn_ds_fmin:
       Opc = AMDGPUISD::ATOMIC_LOAD_FMIN;
       break;
-    case Intrinsic::amdgcn_atomic_fmax:
+    case Intrinsic::amdgcn_ds_fmax:
       Opc = AMDGPUISD::ATOMIC_LOAD_FMAX;
       break;
     default:

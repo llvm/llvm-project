@@ -3,7 +3,7 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr9 -O2 -fast-isel=false -mattr=+vsx < %s | FileCheck -check-prefix=CHECK-P9 %s
 
 ; Verify internal alignment of long double in a struct.  The double
-; argument comes in in GPR3; GPR4 is skipped; GPRs 5 and 6 contain
+; argument comes in GPR3; GPR4 is skipped; GPRs 5 and 6 contain
 ; the long double.  Check that these are stored to proper locations
 ; in the parameter save area and loaded from there for return in FPR1/2.
 

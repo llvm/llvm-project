@@ -195,7 +195,7 @@ body:             |
     liveins: %r9d
 
     %r9b = MOV8rr undef %r10b, implicit-def %r9d, implicit killed %r9d, implicit-def %eflags
-    ; CHECK-NOT: MOV32rr
+    ; CHECK: %r9b = MOV8rr undef %r10b, implicit-def %r9d, implicit killed %r9d, implicit-def %eflags
     %ax = OR16rr undef %ax, %r9w, implicit-def %eflags
     RETQ %ax
 ...

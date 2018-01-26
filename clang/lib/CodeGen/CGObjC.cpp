@@ -2071,7 +2071,7 @@ CodeGenFunction::EmitARCRetainAutoreleasedReturnValue(llvm::Value *value) {
 
 /// Claim a possibly-autoreleased return value at +0.  This is only
 /// valid to do in contexts which do not rely on the retain to keep
-/// the object valid for for all of its uses; for example, when
+/// the object valid for all of its uses; for example, when
 /// the value is ignored, or when it is being assigned to an
 /// __unsafe_unretained variable.
 ///

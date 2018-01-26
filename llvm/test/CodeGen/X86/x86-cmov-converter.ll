@@ -234,7 +234,7 @@ for.body:                                         ; preds = %for.body.preheader,
 }
 
 ; CHECK-LABEL: BinarySearch
-; CHECK: cmov
+; CHECK: set
 
 define i32 @BinarySearch(i32 %Mask, %struct.Node* nocapture readonly %Curr, %struct.Node* nocapture readonly %Next) #0 {
 entry:

@@ -384,7 +384,7 @@ SDValue DAGTypeLegalizer::ExpandOp_BUILD_VECTOR(SDNode *N) {
 
   // Build a vector of twice the length out of the expanded elements.
   // For example <3 x i64> -> <6 x i32>.
-  std::vector<SDValue> NewElts;
+  SmallVector<SDValue, 16> NewElts;
   NewElts.reserve(NumElts*2);
 
   for (unsigned i = 0; i < NumElts; ++i) {

@@ -434,7 +434,7 @@ namespace destructors {
     const CtorWithNoReturnDtor &c = CtorWithNoReturnDtor();
 
     // This represents an (expected) loss of coverage, since the destructor
-    // of the lifetime-exended temporary is executed at at the end of
+    // of the lifetime-exended temporary is executed at the end of
     // scope.
     clang_analyzer_warnIfReached();  // no-warning
   }
