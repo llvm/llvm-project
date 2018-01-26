@@ -300,18 +300,18 @@ LH_5_params:
         # File table format
         .byte   3               # Three elements per file entry
         .byte   1               # DW_LNCT_path
-        .byte   0x08            # DW_FORM_string
+        .byte   0x1f            # DW_FORM_line_strp (-> .debug_line_str)
         .byte   2               # DW_LNCT_directory_index
         .byte   0x0b            # DW_FORM_data1
         .byte   5               # DW_LNCT_MD5
         .byte   0x1e            # DW_FORM_data16
         # File table entries
         .byte   2               # Two files
-        .asciz "File5a"
+        .long   lstr_LT_5a
         .byte   0
         .quad   0x7766554433221100
         .quad   0xffeeddccbbaa9988
-        .asciz "File5b"
+        .long   lstr_LT_5b
         .byte   1
         .quad   0x8899aabbccddeeff
         .quad   0x0011223344556677
@@ -331,6 +331,12 @@ LH_5_end:
 # CHECK: file_names[  1]    0 00112233445566778899aabbccddeeff File5a{{$}}
 # CHECK: file_names[  2]    1 ffeeddccbbaa99887766554433221100 File5b{{$}}
 # CHECK-NOT: file_names
+
+        .section .debug_line_str,"MS",@progbits,1
+lstr_LT_5a:
+        .asciz "File5a"
+lstr_LT_5b:
+        .asciz "File5b"
 
 	.section .debug_line.dwo,"",@progbits
 # CHECK-LABEL: .debug_line.dwo

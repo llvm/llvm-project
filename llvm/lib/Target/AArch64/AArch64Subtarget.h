@@ -80,6 +80,7 @@ protected:
   bool HasLSLFast = false;
   bool HasSVE = false;
   bool HasRCPC = false;
+  bool HasAggressiveFMA = false;
 
   // HasZeroCycleRegMove - Has zero-cycle register mov instructions.
   bool HasZeroCycleRegMove = false;
@@ -269,6 +270,7 @@ public:
   bool hasLSLFast() const { return HasLSLFast; }
   bool hasSVE() const { return HasSVE; }
   bool hasRCPC() const { return HasRCPC; }
+  bool hasAggressiveFMA() const { return HasAggressiveFMA; }
 
   bool isLittleEndian() const { return IsLittle; }
 

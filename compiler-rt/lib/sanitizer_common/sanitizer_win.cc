@@ -1106,9 +1106,10 @@ bool GetRandom(void *buffer, uptr length, bool blocking) {
   UNIMPLEMENTED();
 }
 
-// FIXME: implement on this platform.
 u32 GetNumberOfCPUs() {
-  UNIMPLEMENTED();
+  SYSTEM_INFO sysinfo = {0};
+  GetNativeSystemInfo(&sysinfo);
+  return sysinfo.dwNumberOfProcessors;
 }
 
 }  // namespace __sanitizer

@@ -1559,12 +1559,11 @@ MicrosoftCXXNameMangler::mangleRefQualifier(RefQualifierKind RefQualifier) {
 
 void MicrosoftCXXNameMangler::manglePointerExtQualifiers(Qualifiers Quals,
                                                          QualType PointeeType) {
-  bool HasRestrict = Quals.hasRestrict();
   if (PointersAre64Bit &&
       (PointeeType.isNull() || !PointeeType->isFunctionType()))
     Out << 'E';
 
-  if (HasRestrict)
+  if (Quals.hasRestrict())
     Out << 'I';
 
   if (Quals.hasUnaligned() ||
