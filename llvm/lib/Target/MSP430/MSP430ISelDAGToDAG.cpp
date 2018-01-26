@@ -381,11 +381,6 @@ bool MSP430DAGToDAGISel::tryIndexedBinOp(SDNode *Op, SDValue N1, SDValue N2,
 void MSP430DAGToDAGISel::Select(SDNode *Node) {
   SDLoc dl(Node);
 
-  // Dump information about the Node being selected
-  DEBUG(errs() << "Selecting: ");
-  DEBUG(Node->dump(CurDAG));
-  DEBUG(errs() << "\n");
-
   // If we have a custom node, we already have selected!
   if (Node->isMachineOpcode()) {
     DEBUG(errs() << "== ";

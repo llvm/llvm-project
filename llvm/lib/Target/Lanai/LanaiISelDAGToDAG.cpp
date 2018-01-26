@@ -273,9 +273,6 @@ bool LanaiDAGToDAGISel::SelectInlineAsmMemoryOperand(
 void LanaiDAGToDAGISel::Select(SDNode *Node) {
   unsigned Opcode = Node->getOpcode();
 
-  // Dump information about the Node being selected
-  DEBUG(errs() << "Selecting: "; Node->dump(CurDAG); errs() << "\n");
-
   // If we have a custom node, we already have selected!
   if (Node->isMachineOpcode()) {
     DEBUG(errs() << "== "; Node->dump(CurDAG); errs() << "\n");

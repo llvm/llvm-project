@@ -156,6 +156,28 @@ int getMaskedMIMGOp(const MCInstrInfo &MII, unsigned Opc, unsigned NewChannels) 
   }
 }
 
+int getMaskedMIMGAtomicOp(const MCInstrInfo &MII, unsigned Opc, unsigned NewChannels) {
+  assert(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst) != -1);
+  assert(NewChannels == 1 || NewChannels == 2 || NewChannels == 4);
+
+  unsigned OrigChannels = rcToChannels(MII.get(Opc).OpInfo[0].RegClass);
+  assert(OrigChannels == 1 || OrigChannels == 2 || OrigChannels == 4);
+
+  if (NewChannels == OrigChannels) return Opc;
+
+  if (OrigChannels <= 2 && NewChannels <= 2) {
+    // This is an ordinary atomic (not an atomic_cmpswap)
+    return (OrigChannels == 1)?
+      AMDGPU::getMIMGAtomicOp1(Opc) : AMDGPU::getMIMGAtomicOp2(Opc);
+  } else if (OrigChannels >= 2 && NewChannels >= 2) {
+    // This is an atomic_cmpswap
+    return (OrigChannels == 2)?
+      AMDGPU::getMIMGAtomicOp1(Opc) : AMDGPU::getMIMGAtomicOp2(Opc);
+  } else { // invalid OrigChannels/NewChannels value
+    return -1;
+  }
+}
+
 // Wrapper for Tablegen'd function.  enum Subtarget is not defined in any
 // header files, so we need to wrap it in a function that takes unsigned
 // instead.

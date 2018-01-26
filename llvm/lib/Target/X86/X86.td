@@ -544,6 +544,7 @@ class SilvermontProc<string Name> : ProcessorModel<Name, SLMModel, [
   FeatureSlowLEA,
   FeatureSlowIncDec,
   FeatureSlowPMULLD,
+  FeatureRDRAND,
   FeatureLAHFSAHF
 ]>;
 def : SilvermontProc<"silvermont">;

@@ -265,11 +265,20 @@ DecodeStatus AMDGPUDisassembler::convertSDWAInst(MCInst &MI) const {
 }
 
 DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
+  int VDstIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                           AMDGPU::OpName::vdst);
+
   int VDataIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
                                             AMDGPU::OpName::vdata);
 
   int DMaskIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
                                             AMDGPU::OpName::dmask);
+
+  assert(VDataIdx != -1);
+  assert(DMaskIdx != -1);
+
+  bool isAtomic = (VDstIdx != -1);
+
   unsigned DMask = MI.getOperand(DMaskIdx).getImm() & 0xf;
   if (DMask == 0)
     return MCDisassembler::Success;
@@ -278,12 +287,26 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
   if (ChannelCount == 1)
     return MCDisassembler::Success;
 
-  int NewOpcode = AMDGPU::getMaskedMIMGOp(*MCII, MI.getOpcode(), ChannelCount);
-  assert(NewOpcode != -1 && "could not find matching mimg channel instruction");
+  int NewOpcode = -1;
+
+  if (isAtomic) {
+    if (DMask == 0x1 || DMask == 0x3 || DMask == 0xF) {
+      NewOpcode = AMDGPU::getMaskedMIMGAtomicOp(*MCII, MI.getOpcode(), ChannelCount);
+    }
+    if (NewOpcode == -1) return MCDisassembler::Success;
+  } else {
+    NewOpcode = AMDGPU::getMaskedMIMGOp(*MCII, MI.getOpcode(), ChannelCount);
+    assert(NewOpcode != -1 && "could not find matching mimg channel instruction");
+  }
+
   auto RCID = MCII->get(NewOpcode).OpInfo[VDataIdx].RegClass;
 
-  // Widen the register to the correct number of enabled channels.
+  // Get first subregister of VData
   unsigned Vdata0 = MI.getOperand(VDataIdx).getReg();
+  unsigned VdataSub0 = MRI.getSubReg(Vdata0, AMDGPU::sub0);
+  Vdata0 = (VdataSub0 != 0)? VdataSub0 : Vdata0;
+
+  // Widen the register to the correct number of enabled channels.
   auto NewVdata = MRI.getMatchingSuperReg(Vdata0, AMDGPU::sub0,
                                           &MRI.getRegClass(RCID));
   if (NewVdata == AMDGPU::NoRegister) {
@@ -297,6 +320,12 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
   // how it is usually emitted because the number of register components is not
   // in the instruction encoding.
   MI.getOperand(VDataIdx) = MCOperand::createReg(NewVdata);
+
+  if (isAtomic) {
+    // Atomic operations have an additional operand (a copy of data)
+    MI.getOperand(VDstIdx) = MCOperand::createReg(NewVdata);
+  }
+
   return MCDisassembler::Success;
 }
 

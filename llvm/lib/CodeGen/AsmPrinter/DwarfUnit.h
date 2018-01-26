@@ -273,6 +273,10 @@ public:
   /// call insertDIE if MD is not null.
   DIE &createAndAddDIE(unsigned Tag, DIE &Parent, const DINode *N = nullptr);
 
+  bool useSegmentedStringOffsetsTable() const {
+    return DD->useSegmentedStringOffsetsTable();
+  }
+
   /// Compute the size of a header for this unit, not including the initial
   /// length field.
   virtual unsigned getHeaderSize() const {
@@ -285,6 +289,9 @@ public:
 
   /// Emit the header for this unit, not including the initial length field.
   virtual void emitHeader(bool UseOffsets) = 0;
+
+  /// Add the DW_AT_str_offsets_base attribute to the unit DIE.
+  void addStringOffsetsStart();
 
   virtual DwarfCompileUnit &getCU() = 0;
 

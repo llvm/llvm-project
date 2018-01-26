@@ -43,6 +43,10 @@ class DwarfFile {
 
   DwarfStringPool StrPool;
 
+  /// DWARF v5: The symbol that designates the start of the contribution to
+  /// the string offsets table. The contribution is shared by all units.
+  MCSymbol *StringOffsetsStartSym = nullptr;
+
   // Collection of dbg variables of a scope.
   DenseMap<LexicalScope *, SmallVector<DbgVariable *, 8>> ScopeVariables;
 
@@ -75,6 +79,9 @@ public:
   /// \brief Add a unit to the list of CUs.
   void addUnit(std::unique_ptr<DwarfCompileUnit> U);
 
+  /// Emit the string table offsets header.
+  void emitStringOffsetsTableHeader(MCSection *Section);
+
   /// \brief Emit all of the units to the section listed with the given
   /// abbreviation section.
   void emitUnits(bool UseOffsets);
@@ -85,11 +92,19 @@ public:
   /// \brief Emit a set of abbreviations to the specific section.
   void emitAbbrevs(MCSection *);
 
-  /// \brief Emit all of the strings to the section given.
-  void emitStrings(MCSection *StrSection, MCSection *OffsetSection = nullptr);
+  /// Emit all of the strings to the section given. If OffsetSection is
+  /// non-null, emit a table of string offsets to it. If UseRelativeOffsets
+  /// is false, emit absolute offsets to the strings. Otherwise, emit
+  /// relocatable references to the strings if they are supported by the target.
+  void emitStrings(MCSection *StrSection, MCSection *OffsetSection = nullptr,
+                   bool UseRelativeOffsets = false);
 
   /// \brief Returns the string pool.
   DwarfStringPool &getStringPool() { return StrPool; }
+
+  MCSymbol *getStringOffsetsStartSym() const { return StringOffsetsStartSym; }
+
+  void setStringOffsetsStartSym(MCSymbol *Sym) { StringOffsetsStartSym = Sym; }
 
   /// \returns false if the variable was merged with a previous one.
   bool addScopeVariable(LexicalScope *LS, DbgVariable *Var);

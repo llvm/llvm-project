@@ -1272,6 +1272,7 @@
 // CHECK_SLM_M32: #define __PCLMUL__ 1
 // CHECK_SLM_M32: #define __POPCNT__ 1
 // CHECK_SLM_M32: #define __PRFCHW__ 1
+// CHECK_SLM_M32: #define __RDRND__ 1
 // CHECK_SLM_M32: #define __SSE2__ 1
 // CHECK_SLM_M32: #define __SSE3__ 1
 // CHECK_SLM_M32: #define __SSE4_1__ 1
@@ -1293,6 +1294,7 @@
 // CHECK_SLM_M64: #define __PCLMUL__ 1
 // CHECK_SLM_M64: #define __POPCNT__ 1
 // CHECK_SLM_M64: #define __PRFCHW__ 1
+// CHECK_SLM_M64: #define __RDRND__ 1
 // CHECK_SLM_M64: #define __SSE2_MATH__ 1
 // CHECK_SLM_M64: #define __SSE2__ 1
 // CHECK_SLM_M64: #define __SSE3__ 1

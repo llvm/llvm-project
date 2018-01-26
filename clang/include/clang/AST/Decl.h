@@ -83,7 +83,7 @@ class VarTemplateDecl;
 /// TypeLoc TL = TypeSourceInfo->getTypeLoc();
 /// TL.getStartLoc().print(OS, SrcMgr);
 /// @endcode
-class TypeSourceInfo {
+class LLVM_ALIGNAS(8) TypeSourceInfo {
   // Contains a memory block after the class, used for type source information,
   // allocated by ASTContext.
   friend class ASTContext;
@@ -2813,7 +2813,10 @@ public:
 
 /// Base class for declarations which introduce a typedef-name.
 class TypedefNameDecl : public TypeDecl, public Redeclarable<TypedefNameDecl> {
-  using ModedTInfo = std::pair<TypeSourceInfo *, QualType>;
+  struct LLVM_ALIGNAS(8) ModedTInfo {
+    TypeSourceInfo *first;
+    QualType second;
+  };
 
   /// If int part is 0, we have not computed IsTransparentTag.
   /// Otherwise, IsTransparentTag is (getInt() >> 1).
@@ -2877,7 +2880,7 @@ public:
 
   void setModedTypeSourceInfo(TypeSourceInfo *unmodedTSI, QualType modedTy) {
     MaybeModedTInfo.setPointer(new (getASTContext(), 8)
-                                   ModedTInfo(unmodedTSI, modedTy));
+                                   ModedTInfo({unmodedTSI, modedTy}));
   }
 
   /// Retrieves the canonical declaration of this typedef-name.
