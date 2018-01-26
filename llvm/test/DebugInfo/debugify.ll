@@ -9,6 +9,9 @@
 ; RUN: opt -debugify -strip -check-debugify -S -o - < %s | \
 ; RUN:   FileCheck %s -check-prefix=CHECK-FAIL
 
+; RUN: opt -enable-debugify -strip -S -o - < %s | \
+; RUN:   FileCheck %s -check-prefix=CHECK-FAIL
+
 ; CHECK-LABEL: define void @foo
 define void @foo() {
 ; CHECK: ret void, !dbg ![[RET1:.*]]

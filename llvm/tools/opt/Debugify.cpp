@@ -204,6 +204,10 @@ struct CheckDebugifyPass : public ModulePass {
 
 } // end anonymous namespace
 
+ModulePass *createDebugifyPass() { return new DebugifyPass(); }
+
+ModulePass *createCheckDebugifyPass() { return new CheckDebugifyPass(); }
+
 char DebugifyPass::ID = 0;
 static RegisterPass<DebugifyPass> X("debugify",
                                     "Attach debug info to everything");
