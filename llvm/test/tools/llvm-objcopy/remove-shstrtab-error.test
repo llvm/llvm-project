@@ -8,4 +8,4 @@ FileHeader:
   Type:            ET_REL
   Machine:         EM_X86_64
 
-# CHECK: Cannot remove .shstrtab because it is the section header string table.
+# CHECK: Cannot write section header table because section header string table was removed.

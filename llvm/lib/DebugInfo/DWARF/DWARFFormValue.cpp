@@ -28,7 +28,7 @@ using namespace llvm;
 using namespace dwarf;
 using namespace syntax;
 
-static const DWARFFormValue::FormClass DWARF4FormClasses[] = {
+static const DWARFFormValue::FormClass DWARF5FormClasses[] = {
     DWARFFormValue::FC_Unknown,  // 0x0
     DWARFFormValue::FC_Address,  // 0x01 DW_FORM_addr
     DWARFFormValue::FC_Unknown,  // 0x02 unused
@@ -57,6 +57,26 @@ static const DWARFFormValue::FormClass DWARF4FormClasses[] = {
     DWARFFormValue::FC_SectionOffset, // 0x17 DW_FORM_sec_offset
     DWARFFormValue::FC_Exprloc,       // 0x18 DW_FORM_exprloc
     DWARFFormValue::FC_Flag,          // 0x19 DW_FORM_flag_present
+    DWARFFormValue::FC_String,        // 0x1a DW_FORM_strx
+    DWARFFormValue::FC_Address,       // 0x1b DW_FORM_addrx
+    DWARFFormValue::FC_Reference,     // 0x1c DW_FORM_ref_sup4
+    DWARFFormValue::FC_String,        // 0x1d DW_FORM_strp_sup
+    DWARFFormValue::FC_Constant,      // 0x1e DW_FORM_data16
+    DWARFFormValue::FC_String,        // 0x1f DW_FORM_line_strp
+    DWARFFormValue::FC_Reference,     // 0x20 DW_FORM_ref_sig8
+    DWARFFormValue::FC_Constant,      // 0x21 DW_FORM_implicit_const
+    DWARFFormValue::FC_SectionOffset, // 0x22 DW_FORM_loclistx
+    DWARFFormValue::FC_SectionOffset, // 0x23 DW_FORM_rnglistx
+    DWARFFormValue::FC_Reference,     // 0x24 DW_FORM_ref_sup8
+    DWARFFormValue::FC_String,        // 0x25 DW_FORM_strx1
+    DWARFFormValue::FC_String,        // 0x26 DW_FORM_strx2
+    DWARFFormValue::FC_String,        // 0x27 DW_FORM_strx3
+    DWARFFormValue::FC_String,        // 0x28 DW_FORM_strx4
+    DWARFFormValue::FC_Address,       // 0x29 DW_FORM_addrx1
+    DWARFFormValue::FC_Address,       // 0x2a DW_FORM_addrx2
+    DWARFFormValue::FC_Address,       // 0x2b DW_FORM_addrx3
+    DWARFFormValue::FC_Address,       // 0x2c DW_FORM_addrx4
+
 };
 
 Optional<uint8_t>
@@ -246,28 +266,19 @@ bool DWARFFormValue::skipValue(dwarf::Form Form, DataExtractor DebugInfoData,
 }
 
 bool DWARFFormValue::isFormClass(DWARFFormValue::FormClass FC) const {
-  // First, check DWARF4 form classes.
-  if (Form < makeArrayRef(DWARF4FormClasses).size() &&
-      DWARF4FormClasses[Form] == FC)
+  // First, check DWARF5 form classes.
+  if (Form < makeArrayRef(DWARF5FormClasses).size() &&
+      DWARF5FormClasses[Form] == FC)
     return true;
-  // Check more forms from DWARF4 and DWARF5 proposals.
+  // Check more forms from extensions and proposals.
   switch (Form) {
-  case DW_FORM_ref_sig8:
   case DW_FORM_GNU_ref_alt:
     return (FC == FC_Reference);
   case DW_FORM_GNU_addr_index:
     return (FC == FC_Address);
   case DW_FORM_GNU_str_index:
   case DW_FORM_GNU_strp_alt:
-  case DW_FORM_strx:
-  case DW_FORM_strx1:
-  case DW_FORM_strx2:
-  case DW_FORM_strx3:
-  case DW_FORM_strx4:
-  case DW_FORM_line_strp:
     return (FC == FC_String);
-  case DW_FORM_implicit_const:
-    return (FC == FC_Constant);
   default:
     break;
   }
