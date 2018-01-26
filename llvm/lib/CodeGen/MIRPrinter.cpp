@@ -892,6 +892,8 @@ void MIPrinter::print(const LLVMContext &Context, const TargetInstrInfo &TII,
     OS << ", !range ";
     Op.getRanges()->printAsOperand(OS, MST);
   }
+  if (unsigned AS = Op.getAddrSpace())
+    OS << ", addrspace " << AS;
   OS << ')';
 }
 

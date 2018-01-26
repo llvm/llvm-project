@@ -119,7 +119,7 @@ public:
   /// Note, we don't care about the input value of 'ReadAnyTokens'.  The caller
   /// ensures that this is only called if there are no tokens read before the
   /// \#ifndef.  The caller is required to do this, because reading the \#if
-  /// line obviously reads in in tokens.
+  /// line obviously reads in tokens.
   void EnterTopLevelIfndef(const IdentifierInfo *M, SourceLocation Loc) {
     // If the macro is already set, this is after the top-level #endif.
     if (TheMacro)

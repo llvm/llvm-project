@@ -693,8 +693,8 @@ ELFReader::ELFReader(StringRef File) {
   auto BinaryOrErr = createBinary(File);
   if (!BinaryOrErr)
     reportError(File, BinaryOrErr.takeError());
-  auto TmpBin = std::move(BinaryOrErr.get());
-  std::tie(Bin, Data) = TmpBin.takeBinary();
+  auto OwnedBin = std::move(BinaryOrErr.get());
+  std::tie(Bin, Data) = OwnedBin.takeBinary();
 }
 
 ElfType ELFReader::getElfType() const {
@@ -1004,6 +1004,8 @@ void BinaryWriter::write() {
       continue;
     Section.accept(*SecWriter);
   }
+  if (auto E = BufPtr->commit())
+    reportError(File, errorToErrorCode(std::move(E)));
 }
 
 void BinaryWriter::finalize() {

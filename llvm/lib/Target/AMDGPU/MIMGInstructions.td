@@ -136,12 +136,14 @@ multiclass MIMG_Store <bits<7> op, string asm> {
 }
 
 class MIMG_Atomic_Helper <string asm, RegisterClass data_rc,
-                          RegisterClass addr_rc> : MIMG_Helper <
+                          RegisterClass addr_rc, string dns="",
+                          bit enableDasm = 0> : MIMG_Helper <
     (outs data_rc:$vdst),
     (ins data_rc:$vdata, addr_rc:$vaddr, SReg_256:$srsrc,
          dmask:$dmask, unorm:$unorm, GLC:$glc, slc:$slc,
          r128:$r128, tfe:$tfe, lwe:$lwe, da:$da),
-    asm#" $vdst, $vaddr, $srsrc$dmask$unorm$glc$slc$r128$tfe$lwe$da"> {
+    asm#" $vdst, $vaddr, $srsrc$dmask$unorm$glc$slc$r128$tfe$lwe$da",
+    !if(enableDasm, dns, "")> {
   let mayLoad = 1;
   let mayStore = 1;
   let hasSideEffects = 1; // FIXME: Remove this
@@ -152,43 +154,45 @@ class MIMG_Atomic_Helper <string asm, RegisterClass data_rc,
 }
 
 class MIMG_Atomic_Real_si<mimg op, string name, string asm,
-  RegisterClass data_rc, RegisterClass addr_rc> :
-  MIMG_Atomic_Helper<asm, data_rc, addr_rc>,
+  RegisterClass data_rc, RegisterClass addr_rc, bit enableDasm> :
+  MIMG_Atomic_Helper<asm, data_rc, addr_rc, "SICI", enableDasm>,
   SIMCInstr<name, SIEncodingFamily.SI>,
   MIMGe<op.SI> {
   let isCodeGenOnly = 0;
   let AssemblerPredicates = [isSICI];
-  let DecoderNamespace = "SICI";
   let DisableDecoder = DisableSIDecoder;
 }
 
 class MIMG_Atomic_Real_vi<mimg op, string name, string asm,
-  RegisterClass data_rc, RegisterClass addr_rc> :
-  MIMG_Atomic_Helper<asm, data_rc, addr_rc>,
+  RegisterClass data_rc, RegisterClass addr_rc, bit enableDasm> :
+  MIMG_Atomic_Helper<asm, data_rc, addr_rc, "VI", enableDasm>,
   SIMCInstr<name, SIEncodingFamily.VI>,
   MIMGe<op.VI> {
   let isCodeGenOnly = 0;
   let AssemblerPredicates = [isVI];
-  let DecoderNamespace = "VI";
   let DisableDecoder = DisableVIDecoder;
 }
 
 multiclass MIMG_Atomic_Helper_m <mimg op, string name, string asm,
-                                 RegisterClass data_rc, RegisterClass addr_rc> {
+                                 RegisterClass data_rc,
+                                 RegisterClass addr_rc,
+                                 bit enableDasm = 0> {
   let isPseudo = 1, isCodeGenOnly = 1 in {
     def "" : MIMG_Atomic_Helper<asm, data_rc, addr_rc>,
              SIMCInstr<name, SIEncodingFamily.NONE>;
   }
 
   let ssamp = 0 in {
-    def _si : MIMG_Atomic_Real_si<op, name, asm, data_rc, addr_rc>;
+    def _si : MIMG_Atomic_Real_si<op, name, asm, data_rc, addr_rc, enableDasm>;
 
-    def _vi : MIMG_Atomic_Real_vi<op, name, asm, data_rc, addr_rc>;
+    def _vi : MIMG_Atomic_Real_vi<op, name, asm, data_rc, addr_rc, enableDasm>;
   }
 }
 
 multiclass MIMG_Atomic <mimg op, string asm, RegisterClass data_rc = VGPR_32> {
-  defm _V1 : MIMG_Atomic_Helper_m <op, asm # "_V1", asm, data_rc, VGPR_32>;
+  // _V* variants have different address size, but the size is not encoded.
+  // So only one variant can be disassembled. V1 looks the safest to decode.
+  defm _V1 : MIMG_Atomic_Helper_m <op, asm # "_V1", asm, data_rc, VGPR_32, 1>;
   defm _V2 : MIMG_Atomic_Helper_m <op, asm # "_V2", asm, data_rc, VReg_64>;
   defm _V4 : MIMG_Atomic_Helper_m <op, asm # "_V3", asm, data_rc, VReg_128>;
 }

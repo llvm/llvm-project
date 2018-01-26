@@ -2409,6 +2409,14 @@ bool llvm::rewriteARMFrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
       NumBits = 8;
       Scale = 4;
       break;
+    case ARMII::AddrMode5FP16:
+      ImmIdx = FrameRegIdx+1;
+      InstrOffs = ARM_AM::getAM5Offset(MI.getOperand(ImmIdx).getImm());
+      if (ARM_AM::getAM5Op(MI.getOperand(ImmIdx).getImm()) == ARM_AM::sub)
+        InstrOffs *= -1;
+      NumBits = 8;
+      Scale = 2;
+      break;
     default:
       llvm_unreachable("Unsupported addressing mode!");
     }

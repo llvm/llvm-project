@@ -118,8 +118,10 @@ public:
                        SDValue &Offset, SDValue &Opc);
   bool SelectAddrMode3Offset(SDNode *Op, SDValue N,
                              SDValue &Offset, SDValue &Opc);
-  bool SelectAddrMode5(SDValue N, SDValue &Base,
-                       SDValue &Offset);
+  bool IsAddressingMode5(SDValue N, SDValue &Base, SDValue &Offset,
+                         int Lwb, int Upb, bool FP16);
+  bool SelectAddrMode5(SDValue N, SDValue &Base, SDValue &Offset);
+  bool SelectAddrMode5FP16(SDValue N, SDValue &Base, SDValue &Offset);
   bool SelectAddrMode6(SDNode *Parent, SDValue N, SDValue &Addr,SDValue &Align);
   bool SelectAddrMode6Offset(SDNode *Op, SDValue N, SDValue &Offset);
 
@@ -886,8 +888,8 @@ bool ARMDAGToDAGISel::SelectAddrMode3Offset(SDNode *Op, SDValue N,
   return true;
 }
 
-bool ARMDAGToDAGISel::SelectAddrMode5(SDValue N,
-                                      SDValue &Base, SDValue &Offset) {
+bool ARMDAGToDAGISel::IsAddressingMode5(SDValue N, SDValue &Base, SDValue &Offset,
+                                        int Lwb, int Upb, bool FP16) {
   if (!CurDAG->isBaseWithConstantOffset(N)) {
     Base = N;
     if (N.getOpcode() == ISD::FrameIndex) {
@@ -907,8 +909,9 @@ bool ARMDAGToDAGISel::SelectAddrMode5(SDValue N,
 
   // If the RHS is +/- imm8, fold into addr mode.
   int RHSC;
-  if (isScaledConstantInRange(N.getOperand(1), /*Scale=*/4,
-                              -256 + 1, 256, RHSC)) {
+  const int Scale = FP16 ? 2 : 4;
+
+  if (isScaledConstantInRange(N.getOperand(1), Scale, Lwb, Upb, RHSC)) {
     Base = N.getOperand(0);
     if (Base.getOpcode() == ISD::FrameIndex) {
       int FI = cast<FrameIndexSDNode>(Base)->getIndex();
@@ -921,15 +924,41 @@ bool ARMDAGToDAGISel::SelectAddrMode5(SDValue N,
       AddSub = ARM_AM::sub;
       RHSC = -RHSC;
     }
-    Offset = CurDAG->getTargetConstant(ARM_AM::getAM5Opc(AddSub, RHSC),
-                                       SDLoc(N), MVT::i32);
+
+    if (FP16)
+      Offset = CurDAG->getTargetConstant(ARM_AM::getAM5FP16Opc(AddSub, RHSC),
+                                         SDLoc(N), MVT::i32);
+    else
+      Offset = CurDAG->getTargetConstant(ARM_AM::getAM5Opc(AddSub, RHSC),
+                                         SDLoc(N), MVT::i32);
+
     return true;
   }
 
   Base = N;
-  Offset = CurDAG->getTargetConstant(ARM_AM::getAM5Opc(ARM_AM::add, 0),
-                                     SDLoc(N), MVT::i32);
+
+  if (FP16)
+    Offset = CurDAG->getTargetConstant(ARM_AM::getAM5FP16Opc(ARM_AM::add, 0),
+                                       SDLoc(N), MVT::i32);
+  else
+    Offset = CurDAG->getTargetConstant(ARM_AM::getAM5Opc(ARM_AM::add, 0),
+                                       SDLoc(N), MVT::i32);
+
   return true;
+}
+
+bool ARMDAGToDAGISel::SelectAddrMode5(SDValue N,
+                                      SDValue &Base, SDValue &Offset) {
+  int Lwb = -256 + 1;
+  int Upb = 256;
+  return IsAddressingMode5(N, Base, Offset, Lwb, Upb, /*FP16=*/ false);
+}
+
+bool ARMDAGToDAGISel::SelectAddrMode5FP16(SDValue N,
+                                          SDValue &Base, SDValue &Offset) {
+  int Lwb = -512 + 1;
+  int Upb = 512;
+  return IsAddressingMode5(N, Base, Offset, Lwb, Upb, /*FP16=*/ true);
 }
 
 bool ARMDAGToDAGISel::SelectAddrMode6(SDNode *Parent, SDValue N, SDValue &Addr,

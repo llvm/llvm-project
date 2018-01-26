@@ -535,7 +535,7 @@ void ObjCDeallocChecker::diagnoseMissingReleases(CheckerContext &C) const {
       continue;
 
     // Prevents diagnosing multiple times for the same instance variable
-    // at, for example, both a return and at the end of of the function.
+    // at, for example, both a return and at the end of the function.
     NewUnreleased = F.remove(NewUnreleased, IvarSymbol);
 
     if (State->getStateManager()

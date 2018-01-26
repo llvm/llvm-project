@@ -122,3 +122,20 @@ void useTemplateType() {
 const bool ExpressionTrait = __is_lvalue_expr(1);
 const unsigned ArrayRank = __array_rank(int[10][20]);
 const unsigned ArrayExtent = __array_extent(int[10][20], 1);
+
+constexpr int testLambdaAdd(int toAdd) {
+  const int Captured1 = 1, Captured2 = 2;
+  constexpr auto LambdaAdd = [Captured1, Captured2](int k) -> int {
+    return Captured1 + Captured2 + k;
+  };
+  return LambdaAdd(toAdd);
+}
+
+template<typename T>
+struct TestLambdaTemplate {
+  T i, j;
+  TestLambdaTemplate(T i, const T &j) : i(i), j(j) {}
+  T testLambda(T k) {
+    return [this](T k) -> decltype(auto) { return i + j + k; }(k);
+  }
+};

@@ -187,6 +187,7 @@ def RetCC_ARM_AAPCS : CallingConv<[
 
   CCIfType<[f64, v2f64], CCCustom<"RetCC_ARM_AAPCS_Custom_f64">>,
   CCIfType<[f32], CCBitConvertToType<i32>>,
+
   CCDelegateTo<RetCC_ARM_AAPCS_Common>
 ]>;
 
@@ -233,7 +234,7 @@ def RetCC_ARM_AAPCS_VFP : CallingConv<[
   CCIfType<[v2f64], CCAssignToReg<[Q0, Q1, Q2, Q3]>>,
   CCIfType<[f64], CCAssignToReg<[D0, D1, D2, D3, D4, D5, D6, D7]>>,
   CCIfType<[f32], CCAssignToReg<[S0, S1, S2, S3, S4, S5, S6, S7, S8,
-                                 S9, S10, S11, S12, S13, S14, S15]>>,
+                                      S9, S10, S11, S12, S13, S14, S15]>>,
   CCDelegateTo<RetCC_ARM_AAPCS_Common>
 ]>;
 

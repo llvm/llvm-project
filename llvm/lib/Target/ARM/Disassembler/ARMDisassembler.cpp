@@ -158,6 +158,8 @@ static DecodeStatus DecoderGPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeHPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeSPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeDPRRegisterClass(MCInst &Inst, unsigned RegNo,
@@ -994,6 +996,11 @@ static DecodeStatus DecodeSPRRegisterClass(MCInst &Inst, unsigned RegNo,
   unsigned Register = SPRDecoderTable[RegNo];
   Inst.addOperand(MCOperand::createReg(Register));
   return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeHPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder) {
+  return DecodeSPRRegisterClass(Inst, RegNo, Address, Decoder);
 }
 
 static const uint16_t DPRDecoderTable[] = {

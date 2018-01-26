@@ -230,7 +230,7 @@ HexagonTargetLowering::createHvxPrefixPred(SDValue PredV, const SDLoc &dl,
     // Move the vector predicate SubV to a vector register, and scale it
     // down to match the representation (bytes per type element) that VecV
     // uses. The scaling down will pick every 2nd or 4th (every Scale-th
-    // in general) element and put them at at the front of the resulting
+    // in general) element and put them at the front of the resulting
     // vector. This subvector will then be inserted into the Q2V of VecV.
     // To avoid having an operation that generates an illegal type (short
     // vector), generate a full size vector.

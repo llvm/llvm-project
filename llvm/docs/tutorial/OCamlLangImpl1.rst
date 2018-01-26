@@ -193,7 +193,7 @@ as:
 
 ``Lexer.lex`` works by recursing over a ``char Stream.t`` to read
 characters one at a time from the standard input. It eats them as it
-recognizes them and stores them in in a ``Token.token`` variant. The
+recognizes them and stores them in a ``Token.token`` variant. The
 first thing that it has to do is ignore whitespace between tokens. This
 is accomplished with the recursive call above.
 
