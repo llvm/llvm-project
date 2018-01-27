@@ -93,6 +93,7 @@ struct MIToken {
     kw_non_temporal,
     kw_invariant,
     kw_align,
+    kw_addrspace,
     kw_stack,
     kw_got,
     kw_jump_table,

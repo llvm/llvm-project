@@ -693,37 +693,37 @@ ELFReader::ELFReader(StringRef File) {
   auto BinaryOrErr = createBinary(File);
   if (!BinaryOrErr)
     reportError(File, BinaryOrErr.takeError());
-  auto Bin = std::move(BinaryOrErr.get());
-  std::tie(Binary, Data) = Bin.takeBinary();
+  auto OwnedBin = std::move(BinaryOrErr.get());
+  std::tie(Bin, Data) = OwnedBin.takeBinary();
 }
 
 ElfType ELFReader::getElfType() const {
-  if (auto *o = dyn_cast<ELFObjectFile<ELF32LE>>(Binary.get()))
+  if (isa<ELFObjectFile<ELF32LE>>(Bin.get()))
     return ELFT_ELF32LE;
-  if (auto *o = dyn_cast<ELFObjectFile<ELF64LE>>(Binary.get()))
+  if (isa<ELFObjectFile<ELF64LE>>(Bin.get()))
     return ELFT_ELF64LE;
-  if (auto *o = dyn_cast<ELFObjectFile<ELF32BE>>(Binary.get()))
+  if (isa<ELFObjectFile<ELF32BE>>(Bin.get()))
     return ELFT_ELF32BE;
-  if (auto *o = dyn_cast<ELFObjectFile<ELF64BE>>(Binary.get()))
+  if (isa<ELFObjectFile<ELF64BE>>(Bin.get()))
     return ELFT_ELF64BE;
   llvm_unreachable("Invalid ELFType");
 }
 
 std::unique_ptr<Object> ELFReader::create() const {
   auto Obj = llvm::make_unique<Object>(Data);
-  if (auto *o = dyn_cast<ELFObjectFile<ELF32LE>>(Binary.get())) {
+  if (auto *o = dyn_cast<ELFObjectFile<ELF32LE>>(Bin.get())) {
     ELFBuilder<ELF32LE> Builder(*o, *Obj);
     Builder.build();
     return Obj;
-  } else if (auto *o = dyn_cast<ELFObjectFile<ELF64LE>>(Binary.get())) {
+  } else if (auto *o = dyn_cast<ELFObjectFile<ELF64LE>>(Bin.get())) {
     ELFBuilder<ELF64LE> Builder(*o, *Obj);
     Builder.build();
     return Obj;
-  } else if (auto *o = dyn_cast<ELFObjectFile<ELF32BE>>(Binary.get())) {
+  } else if (auto *o = dyn_cast<ELFObjectFile<ELF32BE>>(Bin.get())) {
     ELFBuilder<ELF32BE> Builder(*o, *Obj);
     Builder.build();
     return Obj;
-  } else if (auto *o = dyn_cast<ELFObjectFile<ELF64BE>>(Binary.get())) {
+  } else if (auto *o = dyn_cast<ELFObjectFile<ELF64BE>>(Bin.get())) {
     ELFBuilder<ELF64BE> Builder(*o, *Obj);
     Builder.build();
     return Obj;
@@ -1004,6 +1004,8 @@ void BinaryWriter::write() {
       continue;
     Section.accept(*SecWriter);
   }
+  if (auto E = BufPtr->commit())
+    reportError(File, errorToErrorCode(std::move(E)));
 }
 
 void BinaryWriter::finalize() {

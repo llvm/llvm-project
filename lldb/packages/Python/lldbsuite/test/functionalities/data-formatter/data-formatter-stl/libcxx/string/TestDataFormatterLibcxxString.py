@@ -27,6 +27,7 @@ class LibcxxStringDataFormatterTestCase(TestBase):
         self.namespace = 'std::__' + ns + '1'
 
     @add_test_categories(["libc++"])
+    @expectedFailureAll(bugnumber="llvm.org/pr36109", debug_info="gmodules", triple=".*-android")
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()

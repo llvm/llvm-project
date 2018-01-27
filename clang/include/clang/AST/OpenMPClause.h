@@ -3902,7 +3902,7 @@ public:
                               OpenMPMapClauseKind Type, bool TypeIsImplicit,
                               SourceLocation TypeLoc);
 
-  /// \brief Creates an empty clause with the place for for \a NumVars original
+  /// \brief Creates an empty clause with the place for \a NumVars original
   /// expressions, \a NumUniqueDeclarations declarations, \NumComponentLists
   /// lists, and \a NumComponents expression components.
   ///

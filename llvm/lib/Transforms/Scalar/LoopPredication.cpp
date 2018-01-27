@@ -558,7 +558,7 @@ bool LoopPredication::widenGuardConditions(IntrinsicInst *Guard,
 
   // The guard condition is expected to be in form of:
   //   cond1 && cond2 && cond3 ...
-  // Iterate over subconditions looking for for icmp conditions which can be
+  // Iterate over subconditions looking for icmp conditions which can be
   // widened across loop iterations. Widening these conditions remember the
   // resulting list of subconditions in Checks vector.
   SmallVector<Value *, 4> Worklist(1, Guard->getOperand(0));

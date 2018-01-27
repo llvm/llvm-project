@@ -94,6 +94,9 @@ static cl::opt<bool> EnableVectorPrint("enable-hexagon-vector-print",
   cl::Hidden, cl::ZeroOrMore, cl::init(false),
   cl::desc("Enable Hexagon Vector print instr pass"));
 
+static cl::opt<bool> EnableVExtractOpt("hexagon-opt-vextract", cl::Hidden,
+  cl::ZeroOrMore, cl::init(true), cl::desc("Enable vextract optimization"));
+
 static cl::opt<bool> EnableTrapUnreachable("hexagon-trap-unreachable",
   cl::Hidden, cl::ZeroOrMore, cl::init(false),
   cl::desc("Enable generating trap for unreachable"));
@@ -133,6 +136,7 @@ namespace llvm {
   void initializeHexagonOptAddrModePass(PassRegistry&);
   void initializeHexagonPacketizerPass(PassRegistry&);
   void initializeHexagonRDFOptPass(PassRegistry&);
+  void initializeHexagonVExtractPass(PassRegistry&);
   Pass *createHexagonLoopIdiomPass();
   Pass *createHexagonVectorLoopCarriedReusePass();
 
@@ -165,6 +169,7 @@ namespace llvm {
   FunctionPass *createHexagonSplitDoubleRegs();
   FunctionPass *createHexagonStoreWidening();
   FunctionPass *createHexagonVectorPrint();
+  FunctionPass *createHexagonVExtract();
 } // end namespace llvm;
 
 static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
@@ -194,6 +199,7 @@ extern "C" void LLVMInitializeHexagonTarget() {
   initializeHexagonOptAddrModePass(PR);
   initializeHexagonPacketizerPass(PR);
   initializeHexagonRDFOptPass(PR);
+  initializeHexagonVExtractPass(PR);
 }
 
 HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
@@ -326,6 +332,8 @@ bool HexagonPassConfig::addInstSelector() {
   addPass(createHexagonISelDag(TM, getOptLevel()));
 
   if (!NoOpt) {
+    if (EnableVExtractOpt)
+      addPass(createHexagonVExtract());
     // Create logical operations on predicate registers.
     if (EnableGenPred)
       addPass(createHexagonGenPredicate());

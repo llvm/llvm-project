@@ -12,19 +12,16 @@ define void @func(<4 x float> %vx) {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    pextrq $1, %xmm0, %rax
-; CHECK-NEXT:    movzwl %ax, %ecx
-; CHECK-NEXT:    shrq $32, %rax
-; CHECK-NEXT:    movq %xmm0, %rdx
-; CHECK-NEXT:    movzwl %dx, %r8d
-; CHECK-NEXT:    movq %rdx, %r9
-; CHECK-NEXT:    shrq $32, %r9
+; CHECK-NEXT:    movd %xmm0, %r8d
 ; CHECK-NEXT:    leaq stuff(%r8), %rdi
-; CHECK-NEXT:    leaq stuff(%r9), %rsi
-; CHECK-NEXT:    leaq stuff(%rcx), %rdx
-; CHECK-NEXT:    leaq stuff(%rax), %rcx
+; CHECK-NEXT:    pextrd $1, %xmm0, %eax
+; CHECK-NEXT:    leaq stuff(%rax), %rsi
+; CHECK-NEXT:    pextrd $2, %xmm0, %edx
+; CHECK-NEXT:    pextrd $3, %xmm0, %ecx
+; CHECK-NEXT:    leaq stuff(%rdx), %rdx
+; CHECK-NEXT:    leaq stuff(%rcx), %rcx
 ; CHECK-NEXT:    leaq stuff+8(%r8), %r8
-; CHECK-NEXT:    leaq stuff+8(%r9), %r9
+; CHECK-NEXT:    leaq stuff+8(%rax), %r9
 ; CHECK-NEXT:    callq toto
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq

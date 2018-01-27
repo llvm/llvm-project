@@ -1424,7 +1424,7 @@ def : Mips16Pat<(addc  CPU16Regs:$src, immSExt16:$imm),
 // setcc instead and earlier I had implemented setcc first so may have masked
 // the problem. The setcc variants are suboptimal for mips16 so I may wantto
 // figure out how to enable the brcond patterns or else possibly new
-// combinations of of brcond and setcc.
+// combinations of brcond and setcc.
 //
 //
 // bcond-seteq

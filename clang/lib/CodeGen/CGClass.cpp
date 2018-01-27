@@ -615,7 +615,14 @@ static void EmitMemberInitializer(CodeGenFunction &CGF,
 
   llvm::Value *ThisPtr = CGF.LoadCXXThis();
   QualType RecordTy = CGF.getContext().getTypeDeclType(ClassDecl);
-  LValue LHS = CGF.MakeNaturalAlignAddrLValue(ThisPtr, RecordTy);
+  LValue LHS;
+
+  // If a base constructor is being emitted, create an LValue that has the
+  // non-virtual alignment.
+  if (CGF.CurGD.getCtorType() == Ctor_Base)
+    LHS = CGF.MakeNaturalAlignPointeeAddrLValue(ThisPtr, RecordTy);
+  else
+    LHS = CGF.MakeNaturalAlignAddrLValue(ThisPtr, RecordTy);
 
   EmitLValueForAnyFieldInitialization(CGF, MemberInit, LHS);
 

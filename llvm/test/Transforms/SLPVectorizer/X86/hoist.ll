@@ -16,19 +16,18 @@ target triple = "i386-apple-macosx10.9.0"
 define i32 @foo(i32* nocapture %A, i32 %n, i32 %k) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> undef, i32 [[N:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[K:%.*]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[N]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[K]], i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> undef, i32 [[N:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[K:%.*]], i32 1
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_024:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD10:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[I_024]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32* [[ARRAYIDX]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x i32>, <4 x i32>* [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32* [[ARRAYIDX]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[TMP6]], <4 x i32>* [[TMP7]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[ARRAYIDX]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[SHUFFLE]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32* [[ARRAYIDX]] to <4 x i32>*
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], <4 x i32>* [[TMP5]], align 4
 ; CHECK-NEXT:    [[ADD10]] = add nsw i32 [[I_024]], 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD10]], 10000
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]

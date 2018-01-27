@@ -42,6 +42,7 @@ def merge   : P<"merge", "Combine sections">;
 def mllvm   : P<"mllvm", "Options to pass to LLVM">;
 def nodefaultlib : P<"nodefaultlib", "Remove a default library">;
 def opt     : P<"opt", "Control optimizations">;
+def order   : P<"order", "Put functions in order">;
 def out     : P<"out", "Path to file to write output">;
 def pdb : P<"pdb", "PDB file path">;
 def section : P<"section", "Specify section attributes">;

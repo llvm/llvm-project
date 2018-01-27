@@ -28,6 +28,26 @@ void DwarfFile::addUnit(std::unique_ptr<DwarfCompileUnit> U) {
   CUs.push_back(std::move(U));
 }
 
+void DwarfFile::emitStringOffsetsTableHeader(MCSection *Section) {
+  if (StrPool.empty())
+    return;
+  Asm->OutStreamer->SwitchSection(Section);
+  unsigned EntrySize = 4;
+  // FIXME: DWARF64
+  // We are emitting the header for a contribution to the string offsets
+  // table. The header consists of an entry with the contribution's
+  // size (not including the size of the header), the DWARF version and
+  // 2 bytes of padding.
+  Asm->EmitInt32(StrPool.size() * EntrySize);
+  Asm->EmitInt16(Asm->getDwarfVersion());
+  Asm->EmitInt16(0);
+  // Define the symbol that marks the start of the contribution. It is
+  // referenced by most unit headers via DW_AT_str_offsets_base.
+  // Split units do not use the attribute.
+  if (StringOffsetsStartSym)
+    Asm->OutStreamer->EmitLabel(StringOffsetsStartSym);
+}
+
 // Emit the various dwarf units to the unit section USection with
 // the abbreviations going into ASection.
 void DwarfFile::emitUnits(bool UseOffsets) {
@@ -77,8 +97,9 @@ unsigned DwarfFile::computeSizeAndOffset(DIE &Die, unsigned Offset) {
 void DwarfFile::emitAbbrevs(MCSection *Section) { Abbrevs.Emit(Asm, Section); }
 
 // Emit strings into a string section.
-void DwarfFile::emitStrings(MCSection *StrSection, MCSection *OffsetSection) {
-  StrPool.emit(*Asm, StrSection, OffsetSection);
+void DwarfFile::emitStrings(MCSection *StrSection, MCSection *OffsetSection,
+                            bool UseRelativeOffsets) {
+  StrPool.emit(*Asm, StrSection, OffsetSection, UseRelativeOffsets);
 }
 
 bool DwarfFile::addScopeVariable(LexicalScope *LS, DbgVariable *Var) {

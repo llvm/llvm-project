@@ -999,15 +999,19 @@ unsigned HCE::getDirectRegReplacement(unsigned ExtOpc) const {
   return 0;
 }
 
-// Return the allowable deviation from the current value of Rb which the
+// Return the allowable deviation from the current value of Rb (i.e. the
+// range of values that can be added to the current value) which the
 // instruction MI can accommodate.
 // The instruction MI is a user of register Rb, which is defined via an
 // extender. It may be possible for MI to be tweaked to work for a register
 // defined with a slightly different value. For example
-//   ... = L2_loadrub_io Rb, 0
+//   ... = L2_loadrub_io Rb, 1
 // can be modifed to be
-//   ... = L2_loadrub_io Rb', 1
-// if Rb' = Rb-1.
+//   ... = L2_loadrub_io Rb', 0
+// if Rb' = Rb+1.
+// The range for Rb would be [Min+1, Max+1], where [Min, Max] is a range
+// for L2_loadrub with offset 0. That means that Rb could be replaced with
+// Rc, where Rc-Rb belongs to [Min+1, Max+1].
 OffsetRange HCE::getOffsetRange(Register Rb, const MachineInstr &MI) const {
   unsigned Opc = MI.getOpcode();
   // Instructions that are constant-extended may be replaced with something
@@ -1618,7 +1622,7 @@ bool HCE::replaceInstrExpr(const ExtDesc &ED, const ExtenderInit &ExtI,
     assert(IdxOpc == Hexagon::A2_addi);
 
     // Clamp Diff to the 16 bit range.
-    int32_t D = isInt<16>(Diff) ? Diff : (Diff > 32767 ? 32767 : -32767);
+    int32_t D = isInt<16>(Diff) ? Diff : (Diff > 0 ? 32767 : -32768);
     BuildMI(MBB, At, dl, HII->get(IdxOpc))
       .add(MI.getOperand(0))
       .add(MachineOperand(ExtR))
@@ -1626,11 +1630,13 @@ bool HCE::replaceInstrExpr(const ExtDesc &ED, const ExtenderInit &ExtI,
     Diff -= D;
 #ifndef NDEBUG
     // Make sure the output is within allowable range for uses.
+    // "Diff" is a difference in the "opposite direction", i.e. Ext - DefV,
+    // not DefV - Ext, as the getOffsetRange would calculate.
     OffsetRange Uses = getOffsetRange(MI.getOperand(0));
-    if (!Uses.contains(Diff))
-      dbgs() << "Diff: " << Diff << " out of range " << Uses
+    if (!Uses.contains(-Diff))
+      dbgs() << "Diff: " << -Diff << " out of range " << Uses
              << " for " << MI;
-    assert(Uses.contains(Diff));
+    assert(Uses.contains(-Diff));
 #endif
     MBB.erase(MI);
     return true;

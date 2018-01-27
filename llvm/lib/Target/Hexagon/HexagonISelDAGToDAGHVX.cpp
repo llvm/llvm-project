@@ -911,18 +911,24 @@ static bool isPermutation(ArrayRef<int> Mask) {
 }
 
 bool HvxSelector::selectVectorConstants(SDNode *N) {
-  // Constant vectors are generated as loads from constant pools.
+  // Constant vectors are generated as loads from constant pools or
+  // as VSPLATs of a constant value.
   // Since they are generated during the selection process, the main
   // selection algorithm is not aware of them. Select them directly
   // here.
-  SmallVector<SDNode*,4> Loads;
+  SmallVector<SDNode*,4> Nodes;
   SetVector<SDNode*> WorkQ;
 
   // The DAG can change (due to CSE) during selection, so cache all the
   // unselected nodes first to avoid traversing a mutating DAG.
 
-  auto IsLoadToSelect = [] (SDNode *N) {
-    if (!N->isMachineOpcode() && N->getOpcode() == ISD::LOAD) {
+  auto IsNodeToSelect = [] (SDNode *N) {
+    if (N->isMachineOpcode())
+      return false;
+    unsigned Opc = N->getOpcode();
+    if (Opc == HexagonISD::VSPLAT || Opc == ISD::BITCAST)
+      return true;
+    if (Opc == ISD::LOAD) {
       SDValue Addr = cast<LoadSDNode>(N)->getBasePtr();
       unsigned AddrOpc = Addr.getOpcode();
       if (AddrOpc == HexagonISD::AT_PCREL || AddrOpc == HexagonISD::CP)
@@ -935,18 +941,16 @@ bool HvxSelector::selectVectorConstants(SDNode *N) {
   WorkQ.insert(N);
   for (unsigned i = 0; i != WorkQ.size(); ++i) {
     SDNode *W = WorkQ[i];
-    if (IsLoadToSelect(W)) {
-      Loads.push_back(W);
-      continue;
-    }
+    if (IsNodeToSelect(W))
+      Nodes.push_back(W);
     for (unsigned j = 0, f = W->getNumOperands(); j != f; ++j)
       WorkQ.insert(W->getOperand(j).getNode());
   }
 
-  for (SDNode *L : Loads)
+  for (SDNode *L : Nodes)
     ISel.Select(L);
 
-  return !Loads.empty();
+  return !Nodes.empty();
 }
 
 void HvxSelector::materialize(const ResultStack &Results) {

@@ -112,7 +112,7 @@ protected:
 
   virtual void emitTypeInfos(unsigned TTypeEncoding);
 
-  // Helpers for for identifying what kind of clause an EH typeid or selector
+  // Helpers for identifying what kind of clause an EH typeid or selector
   // corresponds to. Negative selectors are for filter clauses, the zero
   // selector is for cleanups, and positive selectors are for catch clauses.
   static bool isFilterEHSelector(int Selector) { return Selector < 0; }

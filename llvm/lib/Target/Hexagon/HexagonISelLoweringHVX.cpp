@@ -151,22 +151,6 @@ HexagonTargetLowering::buildHvxVectorReg(ArrayRef<SDValue> Values,
   unsigned ElemWidth = ElemTy.getSizeInBits();
   unsigned HwLen = Subtarget.getVectorLength();
 
-  // TODO: Recognize constant splats.
-  SmallVector<ConstantInt*, 128> Consts(VecLen);
-  bool AllConst = getBuildVectorConstInts(Values, VecTy, DAG, Consts);
-  if (AllConst) {
-    if (llvm::all_of(Consts, [](ConstantInt *CI) { return CI->isZero(); }))
-      return getZero(dl, VecTy, DAG);
-
-    ArrayRef<Constant*> Tmp((Constant**)Consts.begin(),
-                            (Constant**)Consts.end());
-    Constant *CV = ConstantVector::get(Tmp);
-    unsigned Align = HwLen;
-    SDValue CP = LowerConstantPool(DAG.getConstantPool(CV, VecTy, Align), DAG);
-    return DAG.getLoad(VecTy, dl, DAG.getEntryNode(), CP,
-                       MachinePointerInfo::getConstantPool(MF), Align);
-  }
-
   unsigned ElemSize = ElemWidth / 8;
   assert(ElemSize*VecLen == HwLen);
   SmallVector<SDValue,32> Words;
@@ -196,7 +180,26 @@ HexagonTargetLowering::buildHvxVectorReg(ArrayRef<SDValue> Values,
   }
   if (IsSplat) {
     assert(SplatV.getNode());
-    return DAG.getNode(HexagonISD::VSPLAT, dl, VecTy, SplatV);
+    auto *IdxN = dyn_cast<ConstantSDNode>(SplatV.getNode());
+    if (IdxN && IdxN->isNullValue())
+      return getZero(dl, VecTy, DAG);
+    MVT WordTy = MVT::getVectorVT(MVT::i32, HwLen/4);
+    SDValue SV = DAG.getNode(HexagonISD::VSPLAT, dl, WordTy, SplatV);
+    return DAG.getBitcast(VecTy, SV);
+  }
+
+  // Delay recognizing constant vectors until here, so that we can generate
+  // a vsplat.
+  SmallVector<ConstantInt*, 128> Consts(VecLen);
+  bool AllConst = getBuildVectorConstInts(Values, VecTy, DAG, Consts);
+  if (AllConst) {
+    ArrayRef<Constant*> Tmp((Constant**)Consts.begin(),
+                            (Constant**)Consts.end());
+    Constant *CV = ConstantVector::get(Tmp);
+    unsigned Align = HwLen;
+    SDValue CP = LowerConstantPool(DAG.getConstantPool(CV, VecTy, Align), DAG);
+    return DAG.getLoad(VecTy, dl, DAG.getEntryNode(), CP,
+                       MachinePointerInfo::getConstantPool(MF), Align);
   }
 
   // Construct two halves in parallel, then or them together.
@@ -230,7 +233,7 @@ HexagonTargetLowering::createHvxPrefixPred(SDValue PredV, const SDLoc &dl,
     // Move the vector predicate SubV to a vector register, and scale it
     // down to match the representation (bytes per type element) that VecV
     // uses. The scaling down will pick every 2nd or 4th (every Scale-th
-    // in general) element and put them at at the front of the resulting
+    // in general) element and put them at the front of the resulting
     // vector. This subvector will then be inserted into the Q2V of VecV.
     // To avoid having an operation that generates an illegal type (short
     // vector), generate a full size vector.

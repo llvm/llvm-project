@@ -239,7 +239,6 @@ bool X86TargetInfo::initFeatureMap(
 
   case CK_Goldmont:
     setFeatureEnabledImpl(Features, "sha", true);
-    setFeatureEnabledImpl(Features, "rdrnd", true);
     setFeatureEnabledImpl(Features, "rdseed", true);
     setFeatureEnabledImpl(Features, "xsave", true);
     setFeatureEnabledImpl(Features, "xsaveopt", true);
@@ -250,6 +249,7 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "fsgsbase", true);
     LLVM_FALLTHROUGH;
   case CK_Silvermont:
+    setFeatureEnabledImpl(Features, "rdrnd", true);
     setFeatureEnabledImpl(Features, "aes", true);
     setFeatureEnabledImpl(Features, "pclmul", true);
     setFeatureEnabledImpl(Features, "sse4.2", true);
@@ -1124,6 +1124,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__MPX__");
   if (HasSHSTK)
     Builder.defineMacro("__SHSTK__");
+  if (HasIBT)
+    Builder.defineMacro("__IBT__");
   if (HasSGX)
     Builder.defineMacro("__SGX__");
   if (HasPREFETCHWT1)

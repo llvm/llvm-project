@@ -46,3 +46,37 @@ struct D : B, C  {
 D::D() { }
 
 }
+
+namespace virtualBaseAlignment {
+
+// Check that the store to B::x in the base constructor has an 8-byte alignment.
+
+// CHECK: define linkonce_odr void @_ZN20virtualBaseAlignment1BC1Ev(%[[STRUCT_B:.*]]* %[[THIS:.*]])
+// CHECK: %[[THIS_ADDR:.*]] = alloca %[[STRUCT_B]]*, align 8
+// CHECK: store %[[STRUCT_B]]* %[[THIS]], %[[STRUCT_B]]** %[[THIS_ADDR]], align 8
+// CHECK: %[[THIS1:.*]] = load %[[STRUCT_B]]*, %[[STRUCT_B]]** %[[THIS_ADDR]], align 8
+// CHECK: %[[X:.*]] = getelementptr inbounds %[[STRUCT_B]], %[[STRUCT_B]]* %[[THIS1]], i32 0, i32 2
+// CHECK: store i32 123, i32* %[[X]], align 16
+
+// CHECK: define linkonce_odr void @_ZN20virtualBaseAlignment1BC2Ev(%[[STRUCT_B]]* %[[THIS:.*]], i8** %{{.*}})
+// CHECK: %[[THIS_ADDR:.*]] = alloca %[[STRUCT_B]]*, align 8
+// CHECK: store %[[STRUCT_B]]* %[[THIS]], %[[STRUCT_B]]** %[[THIS_ADDR]], align 8
+// CHECK: %[[THIS1:.*]] = load %[[STRUCT_B]]*, %[[STRUCT_B]]** %[[THIS_ADDR]], align 8
+// CHECK: %[[X:.*]] = getelementptr inbounds %[[STRUCT_B]], %[[STRUCT_B]]* %[[THIS1]], i32 0, i32 2
+// CHECK: store i32 123, i32* %[[X]], align 8
+
+struct A {
+  __attribute__((aligned(16))) double data1;
+};
+
+struct B : public virtual A {
+  B() : x(123) {}
+  double a;
+  int x;
+};
+
+struct C : public virtual B {};
+
+void test() { B b; C c; }
+
+}

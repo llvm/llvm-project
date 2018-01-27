@@ -3433,7 +3433,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_EXTEND(SDNode *N) {
   // low lanes.
   switch (N->getOpcode()) {
   default:
-    llvm_unreachable("Extend legalization on on extend operation!");
+    llvm_unreachable("Extend legalization on extend operation!");
   case ISD::ANY_EXTEND:
     return DAG.getAnyExtendVectorInReg(InOp, DL, VT);
   case ISD::SIGN_EXTEND:

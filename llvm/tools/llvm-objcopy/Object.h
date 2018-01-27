@@ -530,7 +530,7 @@ public:
 
 class ELFReader : public Reader {
 private:
-  std::unique_ptr<Binary> Binary;
+  std::unique_ptr<Binary> Bin;
   std::shared_ptr<MemoryBuffer> Data;
 
 public:

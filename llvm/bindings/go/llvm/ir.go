@@ -1872,7 +1872,7 @@ func (pm PassManager) InitializeFunc() bool { return C.LLVMInitializeFunctionPas
 // See llvm::FunctionPassManager::run(Function&).
 func (pm PassManager) RunFunc(f Value) bool { return C.LLVMRunFunctionPassManager(pm.C, f.C) != 0 }
 
-// Finalizes all of the function passes scheduled in in the function pass
+// Finalizes all of the function passes scheduled in the function pass
 // manager. Returns 1 if any of the passes modified the module, 0 otherwise.
 // See llvm::FunctionPassManager::doFinalization.
 func (pm PassManager) FinalizeFunc() bool { return C.LLVMFinalizeFunctionPassManager(pm.C) != 0 }

@@ -32,17 +32,15 @@ namespace trace {
 /// Implmentations of this interface must be thread-safe.
 class EventTracer {
 public:
-  /// A callback executed when an event with duration ends. Args represent data
-  /// that was attached to the event via SPAN_ATTACH.
-  using EndEventCallback = UniqueFunction<void(json::obj &&Args)>;
-
   virtual ~EventTracer() = default;
 
-  /// Called when event that has a duration starts. The returned callback will
-  /// be executed when the event ends. \p Name is a descriptive name
-  /// of the event that was passed to Span constructor.
-  virtual EndEventCallback beginSpan(const Context &Ctx,
-                                     llvm::StringRef Name) = 0;
+  /// Called when event that has a duration starts. \p Name describes the event.
+  /// Returns a derived context that will be destroyed when the event ends.
+  /// Usually implementations will store an object in the returned context
+  /// whose destructor records the end of the event.
+  /// The args are *Args, only complete when the event ends.
+  virtual Context beginSpan(const Context &Ctx, llvm::StringRef Name,
+                            json::obj *Args) = 0;
 
   /// Called for instant events.
   virtual void instant(const Context &Ctx, llvm::StringRef Name,
@@ -70,30 +68,35 @@ std::unique_ptr<EventTracer> createJSONTracer(llvm::raw_ostream &OS,
 void log(const Context &Ctx, const llvm::Twine &Name);
 
 /// Records an event whose duration is the lifetime of the Span object.
+/// This lifetime is extended when the span's context is reused.
+///
 /// This is the main public interface for producing tracing events.
 ///
 /// Arbitrary JSON metadata can be attached while this span is active:
 ///   SPAN_ATTACH(MySpan, "Payload", SomeJSONExpr);
+///
 /// SomeJSONExpr is evaluated and copied only if actually needed.
 class Span {
 public:
   Span(const Context &Ctx, llvm::StringRef Name);
-  ~Span();
 
-  /// Returns mutable span metadata if this span is interested.
+  /// Mutable metadata, if this span is interested.
   /// Prefer to use SPAN_ATTACH rather than accessing this directly.
-  json::obj *args() { return Args.get(); }
-
-private:
-  std::unique_ptr<json::obj> Args;
-  EventTracer::EndEventCallback Callback;
+  json::obj *const Args;
+  /// Propagating this context will keep the span alive.
+  const Context Ctx;
 };
 
+/// Returns mutable span metadata if this span is interested.
+/// Prefer to use SPAN_ATTACH rather than accessing this directly.
+json::obj *spanArgs(const Context &Ctx);
+
+/// Attach a key-value pair to a Span event.
+/// This is not threadsafe when used with the same Span.
 #define SPAN_ATTACH(S, Name, Expr)                                             \
   do {                                                                         \
-    if ((S).args() != nullptr) {                                               \
-      (*((S).args()))[(Name)] = (Expr);                                        \
-    }                                                                          \
+    if (auto *Args = (S).Args)                                                 \
+      (*Args)[Name] = Expr;                                                    \
   } while (0)
 
 } // namespace trace
