@@ -1472,32 +1472,58 @@ HexagonTargetLowering::LowerGLOBALADDRESS(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
   auto *GAN = cast<GlobalAddressSDNode>(Op);
   auto PtrVT = getPointerTy(DAG.getDataLayout());
-  auto *GV = GAN->getGlobal();
-  int64_t Offset = GAN->getOffset();
+  const GlobalValue *GV = GAN->getGlobal();
+  int32_t Offset = GAN->getOffset();
+  int32_t Addend = 0;
+
+  unsigned GlobAlign = GV->getAlignment();
+  if (GlobAlign != 0 && Offset % GlobAlign != 0) {
+    unsigned MinAlign = GlobAlign;
+    for (SDNode *U : GAN->uses()) {
+      if (auto *M = dyn_cast<MemSDNode>(U))
+        MinAlign = std::min(MinAlign, M->getAlignment());
+    }
+    assert(isPowerOf2_32(MinAlign));
+    if (Offset % MinAlign != 0) {
+      Addend = Offset & (MinAlign-1);   // Always non-negative.
+      Offset -= Addend;
+    }
+  }
 
   auto &HLOF = *HTM.getObjFileLowering();
   Reloc::Model RM = HTM.getRelocationModel();
+  SDValue Res;
 
   if (RM == Reloc::Static) {
     SDValue GA = DAG.getTargetGlobalAddress(GV, dl, PtrVT, Offset);
     const GlobalObject *GO = GV->getBaseObject();
     if (GO && HLOF.isGlobalInSmallSection(GO, HTM))
-      return DAG.getNode(HexagonISD::CONST32_GP, dl, PtrVT, GA);
-    return DAG.getNode(HexagonISD::CONST32, dl, PtrVT, GA);
+      Res = DAG.getNode(HexagonISD::CONST32_GP, dl, PtrVT, GA);
+    else
+      Res = DAG.getNode(HexagonISD::CONST32, dl, PtrVT, GA);
+  } else {
+    bool UsePCRel = HTM.shouldAssumeDSOLocal(*GV->getParent(), GV);
+    if (UsePCRel) {
+      SDValue GA = DAG.getTargetGlobalAddress(GV, dl, PtrVT, Offset,
+                                              HexagonII::MO_PCREL);
+      Res = DAG.getNode(HexagonISD::AT_PCREL, dl, PtrVT, GA);
+    } else {
+      // Use GOT index.
+      SDValue GOT = DAG.getGLOBAL_OFFSET_TABLE(PtrVT);
+      SDValue GA = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0,
+                                              HexagonII::MO_GOT);
+      SDValue Off = DAG.getConstant(Offset, dl, MVT::i32);
+      Res = DAG.getNode(HexagonISD::AT_GOT, dl, PtrVT, GOT, GA, Off);
+    }
   }
 
-  bool UsePCRel = getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV);
-  if (UsePCRel) {
-    SDValue GA = DAG.getTargetGlobalAddress(GV, dl, PtrVT, Offset,
-                                            HexagonII::MO_PCREL);
-    return DAG.getNode(HexagonISD::AT_PCREL, dl, PtrVT, GA);
+  assert(Res.getNode() != nullptr);
+  if (Addend != 0) {
+    SDValue A = DAG.getConstant(Addend, dl, MVT::i32);
+    Res = DAG.getNode(ISD::ADD, dl, MVT::i32, Res, A);
   }
 
-  // Use GOT index.
-  SDValue GOT = DAG.getGLOBAL_OFFSET_TABLE(PtrVT);
-  SDValue GA = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, HexagonII::MO_GOT);
-  SDValue Off = DAG.getConstant(Offset, dl, MVT::i32);
-  return DAG.getNode(HexagonISD::AT_GOT, dl, PtrVT, GOT, GA, Off);
+  return Res;
 }
 
 // Specifies that for loads and stores VT can be promoted to PromotedLdStVT.

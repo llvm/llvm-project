@@ -34122,7 +34122,8 @@ static SDValue detectSSatPattern(SDValue In, EVT VT) {
   unsigned NumSrcBits = In.getScalarValueSizeInBits();
   assert(NumSrcBits > NumDstBits && "Unexpected types for truncate operation");
 
-  auto MatchMinMax = [](SDValue V, unsigned Opcode, const APInt &Limit) {
+  auto MatchMinMax = [](SDValue V, unsigned Opcode,
+                        const APInt &Limit) -> SDValue {
     APInt C;
     if (V.getOpcode() == Opcode &&
         ISD::isConstantSplatVector(V.getOperand(1).getNode(), C) && C == Limit)
@@ -36221,6 +36222,10 @@ static SDValue combineExtSetcc(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   SDLoc dl(N);
 
+  // Only handle sext/aext for now.
+  if (N->getOpcode() != ISD::SIGN_EXTEND && N->getOpcode() != ISD::ANY_EXTEND)
+    return SDValue();
+
   // Only do this combine with AVX512 for vector extends.
   if (!Subtarget.hasAVX512() || !VT.isVector() || N0->getOpcode() != ISD::SETCC)
     return SDValue();
@@ -36473,6 +36478,10 @@ static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue NewCMov = combineToExtendCMOV(N, DAG))
     return NewCMov;
+
+  if (DCI.isBeforeLegalizeOps())
+    if (SDValue V = combineExtSetcc(N, DAG, Subtarget))
+      return V;
 
   if (SDValue V = combineToExtendVectorInReg(N, DAG, DCI, Subtarget))
     return V;

@@ -59,6 +59,7 @@ add_llvm_target(HexagonCodeGen
   HexagonTargetTransformInfo.cpp
   HexagonVectorLoopCarriedReuse.cpp
   HexagonVectorPrint.cpp
+  HexagonVExtract.cpp
   HexagonVLIWPacketizer.cpp
   RDFCopy.cpp
   RDFDeadCode.cpp
