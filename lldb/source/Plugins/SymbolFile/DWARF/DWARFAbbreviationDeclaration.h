@@ -13,8 +13,6 @@
 #include "DWARFAttribute.h"
 #include "SymbolFileDWARF.h"
 
-class DWARFCompileUnit;
-
 class DWARFAbbreviationDeclaration {
 public:
   enum { InvalidCode = 0 };
