@@ -29,26 +29,26 @@ class RequestSpan {
   RequestSpan(json::obj *Args) : Args(Args) {}
   std::mutex Mu;
   json::obj *Args;
-  static Key<std::unique_ptr<RequestSpan>> Key;
+  static Key<std::unique_ptr<RequestSpan>> RSKey;
 
 public:
   // Return a context that's aware of the enclosing request, identified by Span.
   static Context stash(const trace::Span &Span) {
-    return Span.Ctx.derive(RequestSpan::Key, std::unique_ptr<RequestSpan>(
+    return Span.Ctx.derive(RSKey, std::unique_ptr<RequestSpan>(
                                                  new RequestSpan(Span.Args)));
   }
 
   // If there's an enclosing request and the tracer is interested, calls \p F
   // with a json::obj where request info can be added.
   template <typename Func> static void attach(const Context &Ctx, Func &&F) {
-    auto *RequestArgs = Ctx.get(RequestSpan::Key);
+    auto *RequestArgs = Ctx.get(RSKey);
     if (!RequestArgs || !*RequestArgs || !(*RequestArgs)->Args)
       return;
     std::lock_guard<std::mutex> Lock((*RequestArgs)->Mu);
     F(*(*RequestArgs)->Args);
   }
 };
-Key<std::unique_ptr<RequestSpan>> RequestSpan::Key;
+Key<std::unique_ptr<RequestSpan>> RequestSpan::RSKey;
 } // namespace
 
 void JSONOutput::writeMessage(const json::Expr &Message) {

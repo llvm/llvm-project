@@ -1776,13 +1776,15 @@ void Preprocessor::RegisterBuiltinPragmas() {
   ModuleHandler->AddPragma(new PragmaModuleEndHandler());
   ModuleHandler->AddPragma(new PragmaModuleBuildHandler());
   ModuleHandler->AddPragma(new PragmaModuleLoadHandler());
+    
+  // Add region pragmas.
+  AddPragmaHandler(new PragmaRegionHandler("region"));
+  AddPragmaHandler(new PragmaRegionHandler("endregion"));
 
   // MS extensions.
   if (LangOpts.MicrosoftExt) {
     AddPragmaHandler(new PragmaWarningHandler());
     AddPragmaHandler(new PragmaIncludeAliasHandler());
-    AddPragmaHandler(new PragmaRegionHandler("region"));
-    AddPragmaHandler(new PragmaRegionHandler("endregion"));
   }
 
   // Pragmas added by plugins
