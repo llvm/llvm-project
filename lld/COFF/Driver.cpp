@@ -14,6 +14,7 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "Writer.h"
+#include "lld/Common/Args.h"
 #include "lld/Common/Driver.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
@@ -756,6 +757,33 @@ bool LinkerDriver::run() {
   return DidWork;
 }
 
+// Parse an /order file. If an option is given, the linker places
+// COMDAT sections in the same order as their names appear in the
+// given file.
+static void parseOrderFile(StringRef Arg) {
+  // For some reason, the MSVC linker requires a filename to be
+  // preceded by "@".
+  if (!Arg.startswith("@")) {
+    error("malformed /order option: '@' missing");
+    return;
+  }
+
+  // Open a file.
+  StringRef Path = Arg.substr(1);
+  std::unique_ptr<MemoryBuffer> MB = CHECK(
+      MemoryBuffer::getFile(Path, -1, false, true), "could not open " + Path);
+
+  // Parse a file. An order file contains one symbol per line.
+  // All symbols that were not present in a given order file are
+  // considered to have the lowest priority 0 and are placed at
+  // end of an output section.
+  for (std::string S : args::getLines(MB->getMemBufferRef())) {
+    if (Config->Machine == I386 && !isDecorated(S))
+      S = "_" + S;
+    Config->Order[S] = INT_MIN + Config->Order.size();
+  }
+}
+
 void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // If the first command line argument is "/lib", link.exe acts like lib.exe.
   // We call our own implementation of lib.exe that understands bitcode files.
@@ -1159,6 +1187,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       log("Entry name inferred: " + S);
     }
   }
+
+  // Handle /order
+  if (auto *Arg = Args.getLastArg(OPT_order))
+    parseOrderFile(Arg->getValue());
 
   // Handle /export
   for (auto *Arg : Args.filtered(OPT_export)) {

@@ -10,6 +10,7 @@
 #ifndef LLD_COFF_CONFIG_H
 #define LLD_COFF_CONFIG_H
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/CachePruning.h"
@@ -152,6 +153,9 @@ struct Configuration {
 
   // Used for /alternatename.
   std::map<StringRef, StringRef> AlternateNames;
+
+  // Used for /order.
+  llvm::StringMap<int> Order;
 
   // Used for /lldmap.
   std::string MapFile;
