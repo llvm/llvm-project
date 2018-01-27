@@ -7031,18 +7031,16 @@ entry:
 define <4 x i32> @test4(<4 x i64> %x, <4 x i64> %y, <4 x i64> %x1, <4 x i64> %y1) {
 ; GENERIC-LABEL: test4:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpcmpgtq %ymm1, %ymm0, %k0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vpcmpgtq %ymm3, %ymm2, %k1 # sched: [3:1.00]
-; GENERIC-NEXT:    kandnw %k0, %k1, %k0 # sched: [1:1.00]
+; GENERIC-NEXT:    vpcmpleq %ymm1, %ymm0, %k0 {%k1} # sched: [3:1.00]
 ; GENERIC-NEXT:    vpmovm2d %k0, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test4:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpcmpgtq %ymm1, %ymm0, %k0 # sched: [3:1.00]
 ; SKX-NEXT:    vpcmpgtq %ymm3, %ymm2, %k1 # sched: [3:1.00]
-; SKX-NEXT:    kandnw %k0, %k1, %k0 # sched: [1:1.00]
+; SKX-NEXT:    vpcmpleq %ymm1, %ymm0, %k0 {%k1} # sched: [3:1.00]
 ; SKX-NEXT:    vpmovm2d %k0, %xmm0 # sched: [1:0.25]
 ; SKX-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
@@ -7056,17 +7054,15 @@ define <4 x i32> @test4(<4 x i64> %x, <4 x i64> %y, <4 x i64> %x1, <4 x i64> %y1
 define <2 x i64> @vcmp_test5(<2 x i64> %x, <2 x i64> %y, <2 x i64> %x1, <2 x i64> %y1) {
 ; GENERIC-LABEL: vcmp_test5:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpcmpgtq %xmm0, %xmm1, %k0 # sched: [3:1.00]
-; GENERIC-NEXT:    vpcmpgtq %xmm3, %xmm2, %k1 # sched: [3:1.00]
-; GENERIC-NEXT:    kandnw %k1, %k0, %k0 # sched: [1:1.00]
+; GENERIC-NEXT:    vpcmpgtq %xmm0, %xmm1, %k1 # sched: [3:1.00]
+; GENERIC-NEXT:    vpcmpleq %xmm3, %xmm2, %k0 {%k1} # sched: [3:1.00]
 ; GENERIC-NEXT:    vpmovm2q %k0, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: vcmp_test5:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpcmpgtq %xmm0, %xmm1, %k0 # sched: [3:1.00]
-; SKX-NEXT:    vpcmpgtq %xmm3, %xmm2, %k1 # sched: [3:1.00]
-; SKX-NEXT:    kandnw %k1, %k0, %k0 # sched: [1:1.00]
+; SKX-NEXT:    vpcmpgtq %xmm0, %xmm1, %k1 # sched: [3:1.00]
+; SKX-NEXT:    vpcmpleq %xmm3, %xmm2, %k0 {%k1} # sched: [3:1.00]
 ; SKX-NEXT:    vpmovm2q %k0, %xmm0 # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %x_gt_y = icmp slt <2 x i64> %x, %y
