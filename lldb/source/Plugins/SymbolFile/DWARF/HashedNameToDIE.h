@@ -21,10 +21,6 @@
 #include "DWARFFormValue.h"
 #include "NameToDIE.h"
 
-class SymbolFileDWARF;
-class DWARFCompileUnit;
-class DWARFDebugInfoEntry;
-
 class DWARFMappedHash {
 public:
   enum AtomType : uint16_t {

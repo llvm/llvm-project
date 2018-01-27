@@ -348,6 +348,21 @@ static StringRef getOutputSection(StringRef Name) {
   return It->second;
 }
 
+// For /order.
+static void sortBySectionOrder(std::vector<Chunk *> &Chunks) {
+  auto GetPriority = [](const Chunk *C) {
+    if (auto *Sec = dyn_cast<SectionChunk>(C))
+      if (Sec->Sym)
+        return Config->Order.lookup(Sec->Sym->getName());
+    return 0;
+  };
+
+  std::stable_sort(Chunks.begin(), Chunks.end(),
+                   [=](const Chunk *A, const Chunk *B) {
+                     return GetPriority(A) < GetPriority(B);
+                   });
+}
+
 // Create output section objects and add them to OutputSections.
 void Writer::createSections() {
   // First, bin chunks by name.
@@ -361,6 +376,11 @@ void Writer::createSections() {
     }
     Map[C->getSectionName()].push_back(C);
   }
+
+  // Process an /order option.
+  if (!Config->Order.empty())
+    for (auto &Pair : Map)
+      sortBySectionOrder(Pair.second);
 
   // Then create an OutputSection for each section.
   // '$' and all following characters in input section names are
