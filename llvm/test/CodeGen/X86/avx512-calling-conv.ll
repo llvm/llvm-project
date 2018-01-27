@@ -161,28 +161,16 @@ define <16 x i32> @test6(<16 x i32>%a, <16 x i32>%b) {
 declare <4 x i1> @func4xi1(<4 x i1> %a)
 
 define <4 x i32> @test7(<4 x i32>%a, <4 x i32>%b) {
-; KNL-LABEL: test7:
-; KNL:       ## %bb.0:
-; KNL-NEXT:    pushq %rax
-; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
-; KNL-NEXT:    callq _func4xi1
-; KNL-NEXT:    vpslld $31, %xmm0, %xmm0
-; KNL-NEXT:    vpsrad $31, %xmm0, %xmm0
-; KNL-NEXT:    popq %rax
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: test7:
-; SKX:       ## %bb.0:
-; SKX-NEXT:    pushq %rax
-; SKX-NEXT:    .cfi_def_cfa_offset 16
-; SKX-NEXT:    vpcmpgtd %xmm1, %xmm0, %k0
-; SKX-NEXT:    vpmovm2d %k0, %xmm0
-; SKX-NEXT:    callq _func4xi1
-; SKX-NEXT:    vpslld $31, %xmm0, %xmm0
-; SKX-NEXT:    vpsrad $31, %xmm0, %xmm0
-; SKX-NEXT:    popq %rax
-; SKX-NEXT:    retq
+; ALL_X64-LABEL: test7:
+; ALL_X64:       ## %bb.0:
+; ALL_X64-NEXT:    pushq %rax
+; ALL_X64-NEXT:    .cfi_def_cfa_offset 16
+; ALL_X64-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; ALL_X64-NEXT:    callq _func4xi1
+; ALL_X64-NEXT:    vpslld $31, %xmm0, %xmm0
+; ALL_X64-NEXT:    vpsrad $31, %xmm0, %xmm0
+; ALL_X64-NEXT:    popq %rax
+; ALL_X64-NEXT:    retq
 ;
 ; KNL_X32-LABEL: test7:
 ; KNL_X32:       ## %bb.0:

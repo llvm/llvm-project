@@ -37,9 +37,12 @@ public:
   DwarfStringPool(BumpPtrAllocator &A, AsmPrinter &Asm, StringRef Prefix);
 
   void emit(AsmPrinter &Asm, MCSection *StrSection,
-            MCSection *OffsetSection = nullptr);
+            MCSection *OffsetSection = nullptr,
+            bool UseRelativeOffsets = false);
 
   bool empty() const { return Pool.empty(); }
+
+  unsigned size() const { return Pool.size(); }
 
   /// Get a reference to an entry in the string pool.
   EntryRef getEntry(AsmPrinter &Asm, StringRef Str);

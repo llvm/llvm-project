@@ -2282,50 +2282,52 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
 
   // Fold away ALL boolean setcc's.
   SDValue Temp;
-  if (N0.getValueType() == MVT::i1 && foldBooleans) {
+  if (N0.getValueType().getScalarType() == MVT::i1 && foldBooleans) {
+    EVT OpVT = N0.getValueType();
     switch (Cond) {
     default: llvm_unreachable("Unknown integer setcc!");
     case ISD::SETEQ:  // X == Y  -> ~(X^Y)
-      Temp = DAG.getNode(ISD::XOR, dl, MVT::i1, N0, N1);
-      N0 = DAG.getNOT(dl, Temp, MVT::i1);
+      Temp = DAG.getNode(ISD::XOR, dl, OpVT, N0, N1);
+      N0 = DAG.getNOT(dl, Temp, OpVT);
       if (!DCI.isCalledByLegalizer())
         DCI.AddToWorklist(Temp.getNode());
       break;
     case ISD::SETNE:  // X != Y   -->  (X^Y)
-      N0 = DAG.getNode(ISD::XOR, dl, MVT::i1, N0, N1);
+      N0 = DAG.getNode(ISD::XOR, dl, OpVT, N0, N1);
       break;
     case ISD::SETGT:  // X >s Y   -->  X == 0 & Y == 1  -->  ~X & Y
     case ISD::SETULT: // X <u Y   -->  X == 0 & Y == 1  -->  ~X & Y
-      Temp = DAG.getNOT(dl, N0, MVT::i1);
-      N0 = DAG.getNode(ISD::AND, dl, MVT::i1, N1, Temp);
+      Temp = DAG.getNOT(dl, N0, OpVT);
+      N0 = DAG.getNode(ISD::AND, dl, OpVT, N1, Temp);
       if (!DCI.isCalledByLegalizer())
         DCI.AddToWorklist(Temp.getNode());
       break;
     case ISD::SETLT:  // X <s Y   --> X == 1 & Y == 0  -->  ~Y & X
     case ISD::SETUGT: // X >u Y   --> X == 1 & Y == 0  -->  ~Y & X
-      Temp = DAG.getNOT(dl, N1, MVT::i1);
-      N0 = DAG.getNode(ISD::AND, dl, MVT::i1, N0, Temp);
+      Temp = DAG.getNOT(dl, N1, OpVT);
+      N0 = DAG.getNode(ISD::AND, dl, OpVT, N0, Temp);
       if (!DCI.isCalledByLegalizer())
         DCI.AddToWorklist(Temp.getNode());
       break;
     case ISD::SETULE: // X <=u Y  --> X == 0 | Y == 1  -->  ~X | Y
     case ISD::SETGE:  // X >=s Y  --> X == 0 | Y == 1  -->  ~X | Y
-      Temp = DAG.getNOT(dl, N0, MVT::i1);
-      N0 = DAG.getNode(ISD::OR, dl, MVT::i1, N1, Temp);
+      Temp = DAG.getNOT(dl, N0, OpVT);
+      N0 = DAG.getNode(ISD::OR, dl, OpVT, N1, Temp);
       if (!DCI.isCalledByLegalizer())
         DCI.AddToWorklist(Temp.getNode());
       break;
     case ISD::SETUGE: // X >=u Y  --> X == 1 | Y == 0  -->  ~Y | X
     case ISD::SETLE:  // X <=s Y  --> X == 1 | Y == 0  -->  ~Y | X
-      Temp = DAG.getNOT(dl, N1, MVT::i1);
-      N0 = DAG.getNode(ISD::OR, dl, MVT::i1, N0, Temp);
+      Temp = DAG.getNOT(dl, N1, OpVT);
+      N0 = DAG.getNode(ISD::OR, dl, OpVT, N0, Temp);
       break;
     }
-    if (VT != MVT::i1) {
+    if (VT.getScalarType() != MVT::i1) {
       if (!DCI.isCalledByLegalizer())
         DCI.AddToWorklist(N0.getNode());
       // FIXME: If running after legalize, we probably can't do this.
-      N0 = DAG.getNode(ISD::ZERO_EXTEND, dl, VT, N0);
+      ISD::NodeType ExtendCode = getExtendForContent(getBooleanContents(OpVT));
+      N0 = DAG.getNode(ExtendCode, dl, VT, N0);
     }
     return N0;
   }

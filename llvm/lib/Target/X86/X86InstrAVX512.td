@@ -10207,6 +10207,42 @@ defm VPTERNLOGD : avx512_common_ternlog<"vpternlogd", SSE_INTALU_ITINS_P,
 defm VPTERNLOGQ : avx512_common_ternlog<"vpternlogq", SSE_INTALU_ITINS_P,
                                         avx512vl_i64_info>, VEX_W;
 
+
+// Patterns to implement vnot using vpternlog instead of creating all ones
+// using pcmpeq or vpternlog and then xoring with that. The value 15 is chosen
+// so that the result is only dependent on src0. But we use the same source
+// for all operands to prevent a false dependency.
+// TODO: We should maybe have a more generalized algorithm for folding to
+// vpternlog.
+let Predicates = [HasAVX512] in {
+  def : Pat<(v8i64 (xor VR512:$src, (bc_v8i64 (v16i32 immAllOnesV)))),
+            (VPTERNLOGQZrri VR512:$src, VR512:$src, VR512:$src, (i8 15))>;
+}
+
+let Predicates = [HasAVX512, NoVLX] in {
+  def : Pat<(v2i64 (xor VR128X:$src, (bc_v2i64 (v4i32 immAllOnesV)))),
+            (EXTRACT_SUBREG
+             (VPTERNLOGQZrri
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR128X:$src, sub_xmm),
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR128X:$src, sub_xmm),
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR128X:$src, sub_xmm),
+              (i8 15)), sub_xmm)>;
+  def : Pat<(v4i64 (xor VR256X:$src, (bc_v4i64 (v8i32 immAllOnesV)))),
+            (EXTRACT_SUBREG
+             (VPTERNLOGQZrri
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR256X:$src, sub_ymm),
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR256X:$src, sub_ymm),
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR256X:$src, sub_ymm),
+              (i8 15)), sub_ymm)>;
+}
+
+let Predicates = [HasVLX] in {
+  def : Pat<(v2i64 (xor VR128X:$src, (bc_v2i64 (v4i32 immAllOnesV)))),
+            (VPTERNLOGQZ128rri VR128X:$src, VR128X:$src, VR128X:$src, (i8 15))>;
+  def : Pat<(v4i64 (xor VR256X:$src, (bc_v4i64 (v8i32 immAllOnesV)))),
+            (VPTERNLOGQZ256rri VR256X:$src, VR256X:$src, VR256X:$src, (i8 15))>;
+}
+
 //===----------------------------------------------------------------------===//
 // AVX-512 - FixupImm
 //===----------------------------------------------------------------------===//

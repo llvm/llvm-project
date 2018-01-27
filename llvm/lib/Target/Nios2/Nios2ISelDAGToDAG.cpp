@@ -59,9 +59,6 @@ public:
 // expanded, promoted and normal instructions
 void Nios2DAGToDAGISel::Select(SDNode *Node) {
 
-  // Dump information about the Node being selected
-  DEBUG(errs() << "Selecting: "; Node->dump(CurDAG); errs() << "\n");
-
   // If we have a custom node, we already have selected!
   if (Node->isMachineOpcode()) {
     DEBUG(errs() << "== "; Node->dump(CurDAG); errs() << "\n");

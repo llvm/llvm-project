@@ -176,9 +176,6 @@ bool BPFDAGToDAGISel::SelectInlineAsmMemoryOperand(
 void BPFDAGToDAGISel::Select(SDNode *Node) {
   unsigned Opcode = Node->getOpcode();
 
-  // Dump information about the Node being selected
-  DEBUG(dbgs() << "Selecting: "; Node->dump(CurDAG); dbgs() << '\n');
-
   // If we have a custom node, we already have selected!
   if (Node->isMachineOpcode()) {
     DEBUG(dbgs() << "== "; Node->dump(CurDAG); dbgs() << '\n');

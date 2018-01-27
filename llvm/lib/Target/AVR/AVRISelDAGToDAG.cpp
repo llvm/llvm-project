@@ -519,9 +519,6 @@ bool AVRDAGToDAGISel::selectMultiplication(llvm::SDNode *N) {
 }
 
 void AVRDAGToDAGISel::Select(SDNode *N) {
-  // Dump information about the Node being selected
-  DEBUG(errs() << "Selecting: "; N->dump(CurDAG); errs() << "\n");
-
   // If we have a custom node, we already have selected!
   if (N->isMachineOpcode()) {
     DEBUG(errs() << "== "; N->dump(CurDAG); errs() << "\n");

@@ -985,13 +985,16 @@ void SelectionDAGISel::DoInstructionSelection() {
       if (Node->isStrictFPOpcode())
         Node = CurDAG->mutateStrictFPToFP(Node);
 
+      DEBUG(dbgs() << "\nISEL: Starting selection on root node: ";
+            Node->dump(CurDAG));
+
       Select(Node);
     }
 
     CurDAG->setRoot(Dummy.getValue());
   }
 
-  DEBUG(dbgs() << "===== Instruction selection ends:\n");
+  DEBUG(dbgs() << "\n===== Instruction selection ends:\n");
 
   PostprocessISelDAG();
 }
@@ -2988,9 +2991,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
   // update the chain results when the pattern is complete.
   SmallVector<SDNode*, 3> ChainNodesMatched;
 
-  DEBUG(dbgs() << "ISEL: Starting pattern match on root node: ";
-        NodeToMatch->dump(CurDAG);
-        dbgs() << '\n');
+  DEBUG(dbgs() << "ISEL: Starting pattern match\n");
 
   // Determine where to start the interpreter.  Normally we start at opcode #0,
   // but if the state machine starts with an OPC_SwitchOpcode, then we
@@ -3665,8 +3666,6 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
                << (IsMorphNodeTo ? "Morphed" : "Created")
                << " node: ";
         Res->dump(CurDAG);
-
-        dbgs() << '\n';
       );
 
       // If this was a MorphNodeTo then we're completely done!

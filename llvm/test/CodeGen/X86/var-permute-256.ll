@@ -119,36 +119,32 @@ define <8 x i32> @var_shuffle_v8i32(<8 x i32> %v, <8 x i32> %indices) nounwind {
 ; AVX1-NEXT:    movq %rsp, %rbp
 ; AVX1-NEXT:    andq $-32, %rsp
 ; AVX1-NEXT:    subq $64, %rsp
-; AVX1-NEXT:    vpextrq $1, %xmm1, %r8
-; AVX1-NEXT:    movq %r8, %rcx
-; AVX1-NEXT:    shrq $30, %rcx
-; AVX1-NEXT:    vmovq %xmm1, %r9
-; AVX1-NEXT:    movq %r9, %rsi
-; AVX1-NEXT:    shrq $30, %rsi
+; AVX1-NEXT:    vmovd %xmm1, %r8d
+; AVX1-NEXT:    vpextrd $1, %xmm1, %r9d
+; AVX1-NEXT:    vpextrd $2, %xmm1, %r10d
+; AVX1-NEXT:    vpextrd $3, %xmm1, %esi
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; AVX1-NEXT:    vpextrq $1, %xmm1, %r10
-; AVX1-NEXT:    movq %r10, %rdi
-; AVX1-NEXT:    shrq $30, %rdi
-; AVX1-NEXT:    vmovq %xmm1, %rax
-; AVX1-NEXT:    movq %rax, %rdx
-; AVX1-NEXT:    shrq $30, %rdx
+; AVX1-NEXT:    vmovd %xmm1, %edi
+; AVX1-NEXT:    vpextrd $1, %xmm1, %eax
+; AVX1-NEXT:    vpextrd $2, %xmm1, %ecx
+; AVX1-NEXT:    vpextrd $3, %xmm1, %edx
 ; AVX1-NEXT:    vmovaps %ymm0, (%rsp)
-; AVX1-NEXT:    andl $7, %r9d
-; AVX1-NEXT:    andl $28, %esi
 ; AVX1-NEXT:    andl $7, %r8d
-; AVX1-NEXT:    andl $28, %ecx
-; AVX1-NEXT:    andl $7, %eax
-; AVX1-NEXT:    andl $28, %edx
+; AVX1-NEXT:    andl $7, %r9d
 ; AVX1-NEXT:    andl $7, %r10d
-; AVX1-NEXT:    andl $28, %edi
+; AVX1-NEXT:    andl $7, %esi
+; AVX1-NEXT:    andl $7, %edi
+; AVX1-NEXT:    andl $7, %eax
+; AVX1-NEXT:    andl $7, %ecx
+; AVX1-NEXT:    andl $7, %edx
 ; AVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX1-NEXT:    vpinsrd $1, (%rsp,%rdx), %xmm0, %xmm0
-; AVX1-NEXT:    vpinsrd $2, (%rsp,%r10,4), %xmm0, %xmm0
-; AVX1-NEXT:    vpinsrd $3, (%rsp,%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vpinsrd $1, (%rsp,%rax,4), %xmm0, %xmm0
+; AVX1-NEXT:    vpinsrd $2, (%rsp,%rcx,4), %xmm0, %xmm0
+; AVX1-NEXT:    vpinsrd $3, (%rsp,%rdx,4), %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX1-NEXT:    vpinsrd $1, (%rsp,%rsi), %xmm1, %xmm1
-; AVX1-NEXT:    vpinsrd $2, (%rsp,%r8,4), %xmm1, %xmm1
-; AVX1-NEXT:    vpinsrd $3, (%rsp,%rcx), %xmm1, %xmm1
+; AVX1-NEXT:    vpinsrd $1, (%rsp,%r9,4), %xmm1, %xmm1
+; AVX1-NEXT:    vpinsrd $2, (%rsp,%r10,4), %xmm1, %xmm1
+; AVX1-NEXT:    vpinsrd $3, (%rsp,%rsi,4), %xmm1, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    movq %rbp, %rsp
 ; AVX1-NEXT:    popq %rbp
@@ -1212,28 +1208,24 @@ define <8 x float> @var_shuffle_v8f32(<8 x float> %v, <8 x i32> %indices) nounwi
 ; AVX1-NEXT:    movq %rsp, %rbp
 ; AVX1-NEXT:    andq $-32, %rsp
 ; AVX1-NEXT:    subq $64, %rsp
-; AVX1-NEXT:    vpextrq $1, %xmm1, %r8
-; AVX1-NEXT:    movq %r8, %rcx
-; AVX1-NEXT:    shrq $30, %rcx
-; AVX1-NEXT:    vmovq %xmm1, %r9
-; AVX1-NEXT:    movq %r9, %rdx
-; AVX1-NEXT:    shrq $30, %rdx
+; AVX1-NEXT:    vmovd %xmm1, %esi
+; AVX1-NEXT:    vpextrd $1, %xmm1, %r8d
+; AVX1-NEXT:    vpextrd $2, %xmm1, %r9d
+; AVX1-NEXT:    vpextrd $3, %xmm1, %r10d
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; AVX1-NEXT:    vpextrq $1, %xmm1, %r10
-; AVX1-NEXT:    movq %r10, %rdi
-; AVX1-NEXT:    shrq $30, %rdi
-; AVX1-NEXT:    vmovq %xmm1, %rax
-; AVX1-NEXT:    movq %rax, %rsi
-; AVX1-NEXT:    shrq $30, %rsi
+; AVX1-NEXT:    vmovd %xmm1, %edx
+; AVX1-NEXT:    vpextrd $1, %xmm1, %edi
+; AVX1-NEXT:    vpextrd $2, %xmm1, %eax
+; AVX1-NEXT:    vpextrd $3, %xmm1, %ecx
 ; AVX1-NEXT:    vmovaps %ymm0, (%rsp)
-; AVX1-NEXT:    andl $7, %r9d
-; AVX1-NEXT:    andl $28, %edx
+; AVX1-NEXT:    andl $7, %esi
 ; AVX1-NEXT:    andl $7, %r8d
-; AVX1-NEXT:    andl $28, %ecx
-; AVX1-NEXT:    andl $7, %eax
-; AVX1-NEXT:    andl $28, %esi
+; AVX1-NEXT:    andl $7, %r9d
 ; AVX1-NEXT:    andl $7, %r10d
-; AVX1-NEXT:    andl $28, %edi
+; AVX1-NEXT:    andl $7, %edx
+; AVX1-NEXT:    andl $7, %edi
+; AVX1-NEXT:    andl $7, %eax
+; AVX1-NEXT:    andl $7, %ecx
 ; AVX1-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
@@ -1375,36 +1367,32 @@ define <4 x i64> @var_shuffle_v4i64_from_v2i64(<2 x i64> %v, <4 x i64> %indices)
 define <8 x i32> @var_shuffle_v8i32_from_v4i32(<4 x i32> %v, <8 x i32> %indices) unnamed_addr nounwind {
 ; AVX1-LABEL: var_shuffle_v8i32_from_v4i32:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vpextrq $1, %xmm1, %r8
-; AVX1-NEXT:    movq %r8, %r10
-; AVX1-NEXT:    shrq $30, %r10
-; AVX1-NEXT:    vmovq %xmm1, %r9
-; AVX1-NEXT:    movq %r9, %rsi
-; AVX1-NEXT:    shrq $30, %rsi
+; AVX1-NEXT:    vmovd %xmm1, %r8d
 ; AVX1-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; AVX1-NEXT:    andl $3, %r9d
-; AVX1-NEXT:    andl $12, %esi
 ; AVX1-NEXT:    andl $3, %r8d
-; AVX1-NEXT:    andl $12, %r10d
+; AVX1-NEXT:    vpextrd $1, %xmm1, %r9d
+; AVX1-NEXT:    andl $3, %r9d
+; AVX1-NEXT:    vpextrd $2, %xmm1, %r10d
+; AVX1-NEXT:    andl $3, %r10d
+; AVX1-NEXT:    vpextrd $3, %xmm1, %esi
+; AVX1-NEXT:    andl $3, %esi
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm0
-; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX1-NEXT:    movq %rax, %rdi
-; AVX1-NEXT:    shrq $30, %rdi
-; AVX1-NEXT:    vmovq %xmm0, %rcx
-; AVX1-NEXT:    movq %rcx, %rdx
-; AVX1-NEXT:    shrq $30, %rdx
-; AVX1-NEXT:    andl $3, %ecx
-; AVX1-NEXT:    andl $12, %edx
+; AVX1-NEXT:    vmovd %xmm0, %edi
+; AVX1-NEXT:    andl $3, %edi
+; AVX1-NEXT:    vpextrd $1, %xmm0, %eax
 ; AVX1-NEXT:    andl $3, %eax
-; AVX1-NEXT:    andl $12, %edi
+; AVX1-NEXT:    vpextrd $2, %xmm0, %ecx
+; AVX1-NEXT:    andl $3, %ecx
+; AVX1-NEXT:    vpextrd $3, %xmm0, %edx
+; AVX1-NEXT:    andl $3, %edx
 ; AVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX1-NEXT:    vpinsrd $1, -24(%rsp,%rdx), %xmm0, %xmm0
-; AVX1-NEXT:    vpinsrd $2, -24(%rsp,%rax,4), %xmm0, %xmm0
-; AVX1-NEXT:    vpinsrd $3, -24(%rsp,%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vpinsrd $1, -24(%rsp,%rax,4), %xmm0, %xmm0
+; AVX1-NEXT:    vpinsrd $2, -24(%rsp,%rcx,4), %xmm0, %xmm0
+; AVX1-NEXT:    vpinsrd $3, -24(%rsp,%rdx,4), %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX1-NEXT:    vpinsrd $1, -24(%rsp,%rsi), %xmm1, %xmm1
-; AVX1-NEXT:    vpinsrd $2, -24(%rsp,%r8,4), %xmm1, %xmm1
-; AVX1-NEXT:    vpinsrd $3, -24(%rsp,%r10), %xmm1, %xmm1
+; AVX1-NEXT:    vpinsrd $1, -24(%rsp,%r9,4), %xmm1, %xmm1
+; AVX1-NEXT:    vpinsrd $2, -24(%rsp,%r10,4), %xmm1, %xmm1
+; AVX1-NEXT:    vpinsrd $3, -24(%rsp,%rsi,4), %xmm1, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -2402,28 +2390,24 @@ define <4 x double> @var_shuffle_v4f64_from_v2f64(<2 x double> %v, <4 x i64> %in
 define <8 x float> @var_shuffle_v8f32_from_v4f32(<4 x float> %v, <8 x i32> %indices) unnamed_addr nounwind {
 ; AVX1-LABEL: var_shuffle_v8f32_from_v4f32:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vpextrq $1, %xmm1, %r8
-; AVX1-NEXT:    movq %r8, %r10
-; AVX1-NEXT:    shrq $30, %r10
-; AVX1-NEXT:    vmovq %xmm1, %r9
-; AVX1-NEXT:    movq %r9, %rdx
-; AVX1-NEXT:    shrq $30, %rdx
+; AVX1-NEXT:    vmovd %xmm1, %r8d
 ; AVX1-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; AVX1-NEXT:    andl $3, %r9d
-; AVX1-NEXT:    andl $12, %edx
 ; AVX1-NEXT:    andl $3, %r8d
-; AVX1-NEXT:    andl $12, %r10d
+; AVX1-NEXT:    vpextrd $1, %xmm1, %r9d
+; AVX1-NEXT:    andl $3, %r9d
+; AVX1-NEXT:    vpextrd $2, %xmm1, %r10d
+; AVX1-NEXT:    andl $3, %r10d
+; AVX1-NEXT:    vpextrd $3, %xmm1, %esi
+; AVX1-NEXT:    andl $3, %esi
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm0
-; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX1-NEXT:    movq %rax, %rdi
-; AVX1-NEXT:    shrq $30, %rdi
-; AVX1-NEXT:    vmovq %xmm0, %rcx
-; AVX1-NEXT:    movq %rcx, %rsi
-; AVX1-NEXT:    shrq $30, %rsi
-; AVX1-NEXT:    andl $3, %ecx
-; AVX1-NEXT:    andl $12, %esi
+; AVX1-NEXT:    vmovd %xmm0, %edi
+; AVX1-NEXT:    andl $3, %edi
+; AVX1-NEXT:    vpextrd $1, %xmm0, %eax
 ; AVX1-NEXT:    andl $3, %eax
-; AVX1-NEXT:    andl $12, %edi
+; AVX1-NEXT:    vpextrd $2, %xmm0, %ecx
+; AVX1-NEXT:    andl $3, %ecx
+; AVX1-NEXT:    vpextrd $3, %xmm0, %edx
+; AVX1-NEXT:    andl $3, %edx
 ; AVX1-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
@@ -2475,19 +2459,17 @@ define <4 x i32> @var_shuffle_v4i32_from_v8i32(<8 x i32> %v, <4 x i32> %indices)
 ; AVX-NEXT:    movq %rsp, %rbp
 ; AVX-NEXT:    andq $-32, %rsp
 ; AVX-NEXT:    subq $64, %rsp
-; AVX-NEXT:    vmovq %xmm1, %rax
-; AVX-NEXT:    movq %rax, %rcx
-; AVX-NEXT:    shrq $30, %rcx
-; AVX-NEXT:    andl $28, %ecx
-; AVX-NEXT:    vpextrq $1, %xmm1, %rdx
-; AVX-NEXT:    movq %rdx, %rsi
-; AVX-NEXT:    sarq $32, %rsi
-; AVX-NEXT:    andl $7, %eax
-; AVX-NEXT:    andl $7, %edx
+; AVX-NEXT:    vmovd %xmm1, %eax
 ; AVX-NEXT:    vmovaps %ymm0, (%rsp)
+; AVX-NEXT:    andl $7, %eax
+; AVX-NEXT:    vpextrd $1, %xmm1, %ecx
+; AVX-NEXT:    andl $7, %ecx
+; AVX-NEXT:    vpextrd $2, %xmm1, %edx
+; AVX-NEXT:    andl $7, %edx
+; AVX-NEXT:    vpextrd $3, %xmm1, %esi
 ; AVX-NEXT:    andl $7, %esi
 ; AVX-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-NEXT:    vpinsrd $1, (%rsp,%rcx), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrd $1, (%rsp,%rcx,4), %xmm0, %xmm0
 ; AVX-NEXT:    vpinsrd $2, (%rsp,%rdx,4), %xmm0, %xmm0
 ; AVX-NEXT:    vpinsrd $3, (%rsp,%rsi,4), %xmm0, %xmm0
 ; AVX-NEXT:    movq %rbp, %rsp
