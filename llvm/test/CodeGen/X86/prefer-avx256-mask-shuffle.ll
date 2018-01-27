@@ -11,9 +11,10 @@
 define <16 x i1> @shuf16i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0(<8 x i32>* %a, <8 x i32>* %b) {
 ; AVX256VL-LABEL: shuf16i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0:
 ; AVX256VL:       # %bb.0:
-; AVX256VL-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX256VL-NEXT:    vpcmpeqd (%rdi), %ymm0, %k1
-; AVX256VL-NEXT:    vpcmpeqd (%rsi), %ymm0, %k2
+; AVX256VL-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX256VL-NEXT:    vmovdqa (%rsi), %ymm1
+; AVX256VL-NEXT:    vptestnmd %ymm0, %ymm0, %k1
+; AVX256VL-NEXT:    vptestnmd %ymm1, %ymm1, %k2
 ; AVX256VL-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; AVX256VL-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k2} {z}
 ; AVX256VL-NEXT:    vpmovdw %ymm1, %xmm1
@@ -44,9 +45,10 @@ define <16 x i1> @shuf16i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0(<8 x i32>* %a, <8
 ;
 ; AVX512VL-LABEL: shuf16i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpcmpeqd (%rdi), %ymm0, %k1
-; AVX512VL-NEXT:    vpcmpeqd (%rsi), %ymm0, %k2
+; AVX512VL-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX512VL-NEXT:    vmovdqa (%rsi), %ymm1
+; AVX512VL-NEXT:    vptestnmd %ymm0, %ymm0, %k1
+; AVX512VL-NEXT:    vptestnmd %ymm1, %ymm1, %k2
 ; AVX512VL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k2} {z}
 ; AVX512VL-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
 ; AVX512VL-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [3,6,18,20,3,7,7,0,3,6,1,21,3,19,7,0]
@@ -59,9 +61,10 @@ define <16 x i1> @shuf16i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0(<8 x i32>* %a, <8
 ;
 ; AVX256VLBW-LABEL: shuf16i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0:
 ; AVX256VLBW:       # %bb.0:
-; AVX256VLBW-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX256VLBW-NEXT:    vpcmpeqd (%rdi), %ymm0, %k0
-; AVX256VLBW-NEXT:    vpcmpeqd (%rsi), %ymm0, %k1
+; AVX256VLBW-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX256VLBW-NEXT:    vmovdqa (%rsi), %ymm1
+; AVX256VLBW-NEXT:    vptestnmd %ymm0, %ymm0, %k0
+; AVX256VLBW-NEXT:    vptestnmd %ymm1, %ymm1, %k1
 ; AVX256VLBW-NEXT:    vpmovm2w %k1, %ymm0
 ; AVX256VLBW-NEXT:    vpmovm2w %k0, %ymm1
 ; AVX256VLBW-NEXT:    vmovdqa {{.*#+}} ymm2 = [3,6,18,20,3,7,7,0,3,6,1,21,3,19,7,0]
@@ -73,9 +76,10 @@ define <16 x i1> @shuf16i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0(<8 x i32>* %a, <8
 ;
 ; AVX512VLBW-LABEL: shuf16i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0:
 ; AVX512VLBW:       # %bb.0:
-; AVX512VLBW-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX512VLBW-NEXT:    vpcmpeqd (%rdi), %ymm0, %k1
-; AVX512VLBW-NEXT:    vpcmpeqd (%rsi), %ymm0, %k2
+; AVX512VLBW-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX512VLBW-NEXT:    vmovdqa (%rsi), %ymm1
+; AVX512VLBW-NEXT:    vptestnmd %ymm0, %ymm0, %k1
+; AVX512VLBW-NEXT:    vptestnmd %ymm1, %ymm1, %k2
 ; AVX512VLBW-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k2} {z}
 ; AVX512VLBW-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
 ; AVX512VLBW-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [3,6,18,20,3,7,7,0,3,6,1,21,3,19,7,0]
@@ -89,9 +93,8 @@ define <16 x i1> @shuf16i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0(<8 x i32>* %a, <8
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512F-NEXT:    vmovdqa (%rsi), %ymm1
-; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpcmpeqd %zmm2, %zmm0, %k1
-; AVX512F-NEXT:    vpcmpeqd %zmm2, %zmm1, %k2
+; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k1
+; AVX512F-NEXT:    vptestnmd %zmm1, %zmm1, %k2
 ; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k2} {z}
 ; AVX512F-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [3,6,18,20,3,7,7,0,3,6,1,21,3,19,7,0]
@@ -106,9 +109,8 @@ define <16 x i1> @shuf16i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0(<8 x i32>* %a, <8
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512BW-NEXT:    vmovdqa (%rsi), %ymm1
-; AVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512BW-NEXT:    vpcmpeqd %zmm2, %zmm0, %k1
-; AVX512BW-NEXT:    vpcmpeqd %zmm2, %zmm1, %k2
+; AVX512BW-NEXT:    vptestnmd %zmm0, %zmm0, %k1
+; AVX512BW-NEXT:    vptestnmd %zmm1, %zmm1, %k2
 ; AVX512BW-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k2} {z}
 ; AVX512BW-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [3,6,18,20,3,7,7,0,3,6,1,21,3,19,7,0]
@@ -200,8 +202,7 @@ define <32 x i1> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0
 ;
 ; AVX256VLBW-LABEL: shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0:
 ; AVX256VLBW:       # %bb.0:
-; AVX256VLBW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX256VLBW-NEXT:    vpcmpeqb %ymm1, %ymm0, %k0
+; AVX256VLBW-NEXT:    vptestnmb %ymm0, %ymm0, %k0
 ; AVX256VLBW-NEXT:    vpmovm2b %k0, %ymm0
 ; AVX256VLBW-NEXT:    vpermq {{.*#+}} ymm1 = ymm0[2,3,0,1]
 ; AVX256VLBW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[3,6,u,12,3,7,7,0,3,6,1,13,3,u,7,0,u,u,22,u,u,u,u,u,u,u,u,u,u,21,u,u]
@@ -214,8 +215,7 @@ define <32 x i1> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0
 ;
 ; AVX512VLBW-LABEL: shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0:
 ; AVX512VLBW:       # %bb.0:
-; AVX512VLBW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512VLBW-NEXT:    vpcmpeqb %ymm1, %ymm0, %k0
+; AVX512VLBW-NEXT:    vptestnmb %ymm0, %ymm0, %k0
 ; AVX512VLBW-NEXT:    vpmovm2w %k0, %zmm0
 ; AVX512VLBW-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0,3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
 ; AVX512VLBW-NEXT:    vpermw %zmm0, %zmm1, %zmm0
@@ -226,8 +226,7 @@ define <32 x i1> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0
 ; AVX512BW-LABEL: shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
-; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512BW-NEXT:    vpcmpeqb %zmm1, %zmm0, %k0
+; AVX512BW-NEXT:    vptestnmb %zmm0, %zmm0, %k0
 ; AVX512BW-NEXT:    vpmovm2w %k0, %zmm0
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0,3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
 ; AVX512BW-NEXT:    vpermw %zmm0, %zmm1, %zmm0

@@ -307,8 +307,7 @@ define <32 x i16> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_
 ;
 ; VL_BW_DQ-LABEL: shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_icmp_v32i16:
 ; VL_BW_DQ:       # %bb.0:
-; VL_BW_DQ-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; VL_BW_DQ-NEXT:    vpcmpeqw %zmm3, %zmm0, %k0
+; VL_BW_DQ-NEXT:    vptestnmw %zmm0, %zmm0, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2w %k0, %zmm0
 ; VL_BW_DQ-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0,3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
 ; VL_BW_DQ-NEXT:    vpermw %zmm0, %zmm3, %zmm0
@@ -364,8 +363,7 @@ define <32 x i8> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0
 ;
 ; VL_BW_DQ-LABEL: shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_icmp_v32i8:
 ; VL_BW_DQ:       # %bb.0:
-; VL_BW_DQ-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; VL_BW_DQ-NEXT:    vpcmpeqb %ymm3, %ymm0, %k0
+; VL_BW_DQ-NEXT:    vptestnmb %ymm0, %ymm0, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2w %k0, %zmm0
 ; VL_BW_DQ-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0,3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
 ; VL_BW_DQ-NEXT:    vpermw %zmm0, %zmm3, %zmm0
@@ -381,9 +379,8 @@ define <32 x i8> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0
 define <32 x i16> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_icmp_v32i16_split(<16 x i32> %a, <16 x i32> %b, <32 x i16> %c, <32 x i16> %d) {
 ; AVX512F-LABEL: shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_icmp_v32i16_split:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpxor %xmm6, %xmm6, %xmm6
-; AVX512F-NEXT:    vpcmpeqd %zmm6, %zmm0, %k1
-; AVX512F-NEXT:    vpcmpeqd %zmm6, %zmm1, %k2
+; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k1
+; AVX512F-NEXT:    vptestnmd %zmm1, %zmm1, %k2
 ; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k2} {z}
 ; AVX512F-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm6 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
@@ -397,9 +394,8 @@ define <32 x i16> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_
 ;
 ; AVX512VL-LABEL: shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_icmp_v32i16_split:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpxor %xmm6, %xmm6, %xmm6
-; AVX512VL-NEXT:    vpcmpeqd %zmm6, %zmm0, %k1
-; AVX512VL-NEXT:    vpcmpeqd %zmm6, %zmm1, %k2
+; AVX512VL-NEXT:    vptestnmd %zmm0, %zmm0, %k1
+; AVX512VL-NEXT:    vptestnmd %zmm1, %zmm1, %k2
 ; AVX512VL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k2} {z}
 ; AVX512VL-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
 ; AVX512VL-NEXT:    vmovdqa64 {{.*#+}} zmm6 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
@@ -413,9 +409,8 @@ define <32 x i16> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_
 ;
 ; VL_BW_DQ-LABEL: shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_icmp_v32i16_split:
 ; VL_BW_DQ:       # %bb.0:
-; VL_BW_DQ-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; VL_BW_DQ-NEXT:    vpcmpeqd %zmm4, %zmm0, %k0
-; VL_BW_DQ-NEXT:    vpcmpeqd %zmm4, %zmm1, %k1
+; VL_BW_DQ-NEXT:    vptestnmd %zmm0, %zmm0, %k0
+; VL_BW_DQ-NEXT:    vptestnmd %zmm1, %zmm1, %k1
 ; VL_BW_DQ-NEXT:    kunpckwd %k0, %k1, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2w %k0, %zmm0
 ; VL_BW_DQ-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0,3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
@@ -434,9 +429,8 @@ define <32 x i16> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_
 define <32 x i8> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_icmp_v32i8_split(<16 x i32> %a, <16 x i32> %b, <32 x i8> %c, <32 x i8> %d) {
 ; AVX512F-LABEL: shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_icmp_v32i8_split:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX512F-NEXT:    vpcmpeqd %zmm4, %zmm0, %k1
-; AVX512F-NEXT:    vpcmpeqd %zmm4, %zmm1, %k2
+; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k1
+; AVX512F-NEXT:    vptestnmd %zmm1, %zmm1, %k2
 ; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k2} {z}
 ; AVX512F-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm4 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
@@ -450,9 +444,8 @@ define <32 x i8> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0
 ;
 ; AVX512VL-LABEL: shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_icmp_v32i8_split:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX512VL-NEXT:    vpcmpeqd %zmm4, %zmm0, %k1
-; AVX512VL-NEXT:    vpcmpeqd %zmm4, %zmm1, %k2
+; AVX512VL-NEXT:    vptestnmd %zmm0, %zmm0, %k1
+; AVX512VL-NEXT:    vptestnmd %zmm1, %zmm1, %k2
 ; AVX512VL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k2} {z}
 ; AVX512VL-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
 ; AVX512VL-NEXT:    vmovdqa64 {{.*#+}} zmm4 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]
@@ -466,9 +459,8 @@ define <32 x i8> @shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0
 ;
 ; VL_BW_DQ-LABEL: shuf32i1_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_3_6_22_12_3_7_7_0_3_6_1_13_3_21_7_0_icmp_v32i8_split:
 ; VL_BW_DQ:       # %bb.0:
-; VL_BW_DQ-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; VL_BW_DQ-NEXT:    vpcmpeqd %zmm4, %zmm0, %k0
-; VL_BW_DQ-NEXT:    vpcmpeqd %zmm4, %zmm1, %k1
+; VL_BW_DQ-NEXT:    vptestnmd %zmm0, %zmm0, %k0
+; VL_BW_DQ-NEXT:    vptestnmd %zmm1, %zmm1, %k1
 ; VL_BW_DQ-NEXT:    kunpckwd %k0, %k1, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2w %k0, %zmm0
 ; VL_BW_DQ-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0,3,6,22,12,3,7,7,0,3,6,1,13,3,21,7,0]

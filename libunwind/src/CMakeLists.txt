@@ -108,7 +108,7 @@ set(LIBUNWIND_TARGETS)
 # Build the shared library.
 if (LIBUNWIND_ENABLE_SHARED)
   add_library(unwind_shared SHARED $<TARGET_OBJECTS:unwind_objects>)
-  if(LLVM_FOUND)
+  if(COMMAND llvm_setup_rpath)
     llvm_setup_rpath(unwind_shared)
   endif()
   target_link_libraries(unwind_shared ${libraries})

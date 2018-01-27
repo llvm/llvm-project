@@ -127,7 +127,7 @@ set(LIBCXXABI_TARGETS)
 # Build the shared library.
 if (LIBCXXABI_ENABLE_SHARED)
   add_library(cxxabi_shared SHARED $<TARGET_OBJECTS:cxxabi_objects>)
-  if(LLVM_FOUND)
+  if(COMMAND llvm_setup_rpath)
     llvm_setup_rpath(cxxabi_shared)
   endif()
   target_link_libraries(cxxabi_shared ${LIBCXXABI_LIBRARIES})

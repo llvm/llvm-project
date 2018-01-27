@@ -581,9 +581,8 @@ void Writer::createSymbolAndStringTable() {
       continue;
     // If a section isn't discardable (i.e. will be mapped at runtime),
     // prefer a truncated section name over a long section name in
-    // the string table that is unavailable at runtime. This is different from
-    // what link.exe does, but finding ".eh_fram" instead of "/4" is useful
-    // to libunwind.
+    // the string table that is unavailable at runtime. Note that link.exe
+    // always truncates, even for discardable sections.
     if ((Sec->getPermissions() & IMAGE_SCN_MEM_DISCARDABLE) == 0)
       continue;
     Sec->setStringTableOff(addEntryToStringTable(Name));

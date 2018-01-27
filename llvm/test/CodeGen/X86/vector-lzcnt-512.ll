@@ -370,8 +370,7 @@ define <32 x i16> @testv32i16(<32 x i16> %in) nounwind {
 ; AVX512BW-NEXT:    vpandq %zmm1, %zmm4, %zmm1
 ; AVX512BW-NEXT:    vpshufb %zmm1, %zmm3, %zmm1
 ; AVX512BW-NEXT:    vpaddb %zmm1, %zmm2, %zmm1
-; AVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512BW-NEXT:    vpcmpeqb %zmm2, %zmm0, %k0
+; AVX512BW-NEXT:    vptestnmb %zmm0, %zmm0, %k0
 ; AVX512BW-NEXT:    vpmovm2b %k0, %zmm0
 ; AVX512BW-NEXT:    vpsrlw $8, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpandq %zmm0, %zmm1, %zmm0
@@ -457,8 +456,7 @@ define <32 x i16> @testv32i16u(<32 x i16> %in) nounwind {
 ; AVX512BW-NEXT:    vpandq %zmm1, %zmm4, %zmm1
 ; AVX512BW-NEXT:    vpshufb %zmm1, %zmm3, %zmm1
 ; AVX512BW-NEXT:    vpaddb %zmm1, %zmm2, %zmm1
-; AVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512BW-NEXT:    vpcmpeqb %zmm2, %zmm0, %k0
+; AVX512BW-NEXT:    vptestnmb %zmm0, %zmm0, %k0
 ; AVX512BW-NEXT:    vpmovm2b %k0, %zmm0
 ; AVX512BW-NEXT:    vpsrlw $8, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpandq %zmm0, %zmm1, %zmm0

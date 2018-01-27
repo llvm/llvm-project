@@ -926,8 +926,7 @@ define <2 x i64> @test46(<2 x float> %x, <2 x float> %y) #0 {
 define <16 x i8> @test47(<16 x i32> %a, <16 x i8> %b, <16 x i8> %c) {
 ; KNL-LABEL: test47:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; KNL-NEXT:    vpcmpeqd %zmm3, %zmm0, %k1
+; KNL-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vpmovdb %zmm0, %xmm0
 ; KNL-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0
@@ -938,8 +937,7 @@ define <16 x i8> @test47(<16 x i32> %a, <16 x i8> %b, <16 x i8> %c) {
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    ## kill: def %xmm2 killed %xmm2 def %zmm2
 ; AVX512BW-NEXT:    ## kill: def %xmm1 killed %xmm1 def %zmm1
-; AVX512BW-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX512BW-NEXT:    vpcmpeqd %zmm3, %zmm0, %k1
+; AVX512BW-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; AVX512BW-NEXT:    vpblendmb %zmm1, %zmm2, %zmm0 {%k1}
 ; AVX512BW-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %zmm0
 ; AVX512BW-NEXT:    vzeroupper
@@ -947,8 +945,7 @@ define <16 x i8> @test47(<16 x i32> %a, <16 x i8> %b, <16 x i8> %c) {
 ;
 ; SKX-LABEL: test47:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; SKX-NEXT:    vpcmpeqd %zmm3, %zmm0, %k1
+; SKX-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; SKX-NEXT:    vpblendmb %xmm1, %xmm2, %xmm0 {%k1}
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
@@ -960,8 +957,7 @@ define <16 x i8> @test47(<16 x i32> %a, <16 x i8> %b, <16 x i8> %c) {
 define <16 x i16> @test48(<16 x i32> %a, <16 x i16> %b, <16 x i16> %c) {
 ; KNL-LABEL: test48:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; KNL-NEXT:    vpcmpeqd %zmm3, %zmm0, %k1
+; KNL-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
 ; KNL-NEXT:    vpblendvb %ymm0, %ymm1, %ymm2, %ymm0
@@ -971,16 +967,14 @@ define <16 x i16> @test48(<16 x i32> %a, <16 x i16> %b, <16 x i16> %c) {
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    ## kill: def %ymm2 killed %ymm2 def %zmm2
 ; AVX512BW-NEXT:    ## kill: def %ymm1 killed %ymm1 def %zmm1
-; AVX512BW-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX512BW-NEXT:    vpcmpeqd %zmm3, %zmm0, %k1
+; AVX512BW-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; AVX512BW-NEXT:    vpblendmw %zmm1, %zmm2, %zmm0 {%k1}
 ; AVX512BW-NEXT:    ## kill: def %ymm0 killed %ymm0 killed %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; SKX-LABEL: test48:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; SKX-NEXT:    vpcmpeqd %zmm3, %zmm0, %k1
+; SKX-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; SKX-NEXT:    vpblendmw %ymm1, %ymm2, %ymm0 {%k1}
 ; SKX-NEXT:    retq
   %cmp = icmp eq <16 x i32> %a, zeroinitializer
@@ -991,8 +985,7 @@ define <16 x i16> @test48(<16 x i32> %a, <16 x i16> %b, <16 x i16> %c) {
 define <8 x i16> @test49(<8 x i64> %a, <8 x i16> %b, <8 x i16> %c) {
 ; KNL-LABEL: test49:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; KNL-NEXT:    vpcmpeqq %zmm3, %zmm0, %k1
+; KNL-NEXT:    vptestnmq %zmm0, %zmm0, %k1
 ; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
 ; KNL-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0
@@ -1003,8 +996,7 @@ define <8 x i16> @test49(<8 x i64> %a, <8 x i16> %b, <8 x i16> %c) {
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    ## kill: def %xmm2 killed %xmm2 def %zmm2
 ; AVX512BW-NEXT:    ## kill: def %xmm1 killed %xmm1 def %zmm1
-; AVX512BW-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX512BW-NEXT:    vpcmpeqq %zmm3, %zmm0, %k1
+; AVX512BW-NEXT:    vptestnmq %zmm0, %zmm0, %k1
 ; AVX512BW-NEXT:    vpblendmw %zmm1, %zmm2, %zmm0 {%k1}
 ; AVX512BW-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %zmm0
 ; AVX512BW-NEXT:    vzeroupper
@@ -1012,8 +1004,7 @@ define <8 x i16> @test49(<8 x i64> %a, <8 x i16> %b, <8 x i16> %c) {
 ;
 ; SKX-LABEL: test49:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; SKX-NEXT:    vpcmpeqq %zmm3, %zmm0, %k1
+; SKX-NEXT:    vptestnmq %zmm0, %zmm0, %k1
 ; SKX-NEXT:    vpblendmw %xmm1, %xmm2, %xmm0 {%k1}
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq

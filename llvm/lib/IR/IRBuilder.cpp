@@ -108,10 +108,11 @@ CreateMemSet(Value *Ptr, Value *Val, Value *Size, unsigned Align,
 }
 
 CallInst *IRBuilderBase::
-CreateMemCpy(Value *Dst, Value *Src, Value *Size, unsigned Align,
-             bool isVolatile, MDNode *TBAATag, MDNode *TBAAStructTag,
-             MDNode *ScopeTag, MDNode *NoAliasTag) {
-  assert((Align == 0 || isPowerOf2_32(Align)) && "Must be 0 or a power of 2");
+CreateMemCpy(Value *Dst, unsigned DstAlign, Value *Src, unsigned SrcAlign,
+             Value *Size, bool isVolatile, MDNode *TBAATag,
+             MDNode *TBAAStructTag, MDNode *ScopeTag, MDNode *NoAliasTag) {
+  assert((DstAlign == 0 || isPowerOf2_32(DstAlign)) && "Must be 0 or a power of 2");
+  assert((SrcAlign == 0 || isPowerOf2_32(SrcAlign)) && "Must be 0 or a power of 2");
   Dst = getCastedInt8PtrValue(Dst);
   Src = getCastedInt8PtrValue(Src);
 
@@ -122,8 +123,11 @@ CreateMemCpy(Value *Dst, Value *Src, Value *Size, unsigned Align,
   
   CallInst *CI = createCallHelper(TheFn, Ops, this);
 
-  if (Align > 0)
-    cast<MemCpyInst>(CI)->setAlignment(Align);
+  auto* MCI = cast<MemCpyInst>(CI);
+  if (DstAlign > 0)
+    MCI->setDestAlignment(DstAlign);
+  if (SrcAlign > 0)
+    MCI->setSourceAlignment(SrcAlign);
 
   // Set the TBAA info if present.
   if (TBAATag)
@@ -184,10 +188,11 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemCpy(
 }
 
 CallInst *IRBuilderBase::
-CreateMemMove(Value *Dst, Value *Src, Value *Size, unsigned Align,
-              bool isVolatile, MDNode *TBAATag, MDNode *ScopeTag,
+CreateMemMove(Value *Dst, unsigned DstAlign, Value *Src, unsigned SrcAlign,
+              Value *Size, bool isVolatile, MDNode *TBAATag, MDNode *ScopeTag,
               MDNode *NoAliasTag) {
-  assert((Align == 0 || isPowerOf2_32(Align)) && "Must be 0 or a power of 2");
+  assert((DstAlign == 0 || isPowerOf2_32(DstAlign)) && "Must be 0 or a power of 2");
+  assert((SrcAlign == 0 || isPowerOf2_32(SrcAlign)) && "Must be 0 or a power of 2");
   Dst = getCastedInt8PtrValue(Dst);
   Src = getCastedInt8PtrValue(Src);
 
@@ -199,8 +204,10 @@ CreateMemMove(Value *Dst, Value *Src, Value *Size, unsigned Align,
   CallInst *CI = createCallHelper(TheFn, Ops, this);
 
   auto *MMI = cast<MemMoveInst>(CI);
-  if (Align > 0)
-    MMI->setAlignment(Align);
+  if (DstAlign > 0)
+    MMI->setDestAlignment(DstAlign);
+  if (SrcAlign > 0)
+    MMI->setSourceAlignment(SrcAlign);
 
   // Set the TBAA info if present.
   if (TBAATag)
