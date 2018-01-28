@@ -528,9 +528,6 @@ private:
 /// Constants that define the DWARF format as 32 or 64 bit.
 enum DwarfFormat : uint8_t { DWARF32, DWARF64 };
 
-/// The Bernstein hash function used by the accelerator tables.
-uint32_t djbHash(StringRef Buffer, uint32_t H = 5381);
-
 } // End of namespace dwarf
 
 } // End of namespace llvm
