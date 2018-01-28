@@ -101,8 +101,7 @@ define <2 x double> @test6(<2 x i64> %trigger, <2 x double>* %addr, <2 x double>
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    ## kill: def %xmm1 killed %xmm1 def %zmm1
 ; AVX512F-NEXT:    ## kill: def %xmm0 killed %xmm0 def %zmm0
-; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpcmpeqq %zmm2, %zmm0, %k0
+; AVX512F-NEXT:    vptestnmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kshiftlw $14, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $14, %k0, %k1
 ; AVX512F-NEXT:    vblendmpd (%rdi), %zmm1, %zmm0 {%k1}
@@ -112,8 +111,7 @@ define <2 x double> @test6(<2 x i64> %trigger, <2 x double>* %addr, <2 x double>
 ;
 ; SKX-LABEL: test6:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; SKX-NEXT:    vpcmpeqq %xmm2, %xmm0, %k1
+; SKX-NEXT:    vptestnmq %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vblendmpd (%rdi), %xmm1, %xmm0 {%k1}
 ; SKX-NEXT:    retq
   %mask = icmp eq <2 x i64> %trigger, zeroinitializer
@@ -134,8 +132,7 @@ define <4 x float> @test7(<4 x i32> %trigger, <4 x float>* %addr, <4 x float> %d
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    ## kill: def %xmm1 killed %xmm1 def %zmm1
 ; AVX512F-NEXT:    ## kill: def %xmm0 killed %xmm0 def %zmm0
-; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpcmpeqd %zmm2, %zmm0, %k0
+; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
 ; AVX512F-NEXT:    vblendmps (%rdi), %zmm1, %zmm0 {%k1}
@@ -145,8 +142,7 @@ define <4 x float> @test7(<4 x i32> %trigger, <4 x float>* %addr, <4 x float> %d
 ;
 ; SKX-LABEL: test7:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; SKX-NEXT:    vpcmpeqd %xmm2, %xmm0, %k1
+; SKX-NEXT:    vptestnmd %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vblendmps (%rdi), %xmm1, %xmm0 {%k1}
 ; SKX-NEXT:    retq
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
@@ -175,8 +171,7 @@ define <4 x i32> @test8(<4 x i32> %trigger, <4 x i32>* %addr, <4 x i32> %dst) {
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    ## kill: def %xmm1 killed %xmm1 def %zmm1
 ; AVX512F-NEXT:    ## kill: def %xmm0 killed %xmm0 def %zmm0
-; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpcmpeqd %zmm2, %zmm0, %k0
+; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
 ; AVX512F-NEXT:    vpblendmd (%rdi), %zmm1, %zmm0 {%k1}
@@ -186,8 +181,7 @@ define <4 x i32> @test8(<4 x i32> %trigger, <4 x i32>* %addr, <4 x i32> %dst) {
 ;
 ; SKX-LABEL: test8:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; SKX-NEXT:    vpcmpeqd %xmm2, %xmm0, %k1
+; SKX-NEXT:    vptestnmd %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vpblendmd (%rdi), %xmm1, %xmm0 {%k1}
 ; SKX-NEXT:    retq
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
@@ -214,8 +208,7 @@ define void @test9(<4 x i32> %trigger, <4 x i32>* %addr, <4 x i32> %val) {
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    ## kill: def %xmm1 killed %xmm1 def %zmm1
 ; AVX512F-NEXT:    ## kill: def %xmm0 killed %xmm0 def %zmm0
-; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpcmpeqd %zmm2, %zmm0, %k0
+; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
 ; AVX512F-NEXT:    vmovdqu32 %zmm1, (%rdi) {%k1}
@@ -224,8 +217,7 @@ define void @test9(<4 x i32> %trigger, <4 x i32>* %addr, <4 x i32> %val) {
 ;
 ; SKX-LABEL: test9:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; SKX-NEXT:    vpcmpeqd %xmm2, %xmm0, %k1
+; SKX-NEXT:    vptestnmd %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vmovdqu32 %xmm1, (%rdi) {%k1}
 ; SKX-NEXT:    retq
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
@@ -259,8 +251,7 @@ define <4 x double> @test10(<4 x i32> %trigger, <4 x double>* %addr, <4 x double
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    ## kill: def %ymm1 killed %ymm1 def %zmm1
 ; AVX512F-NEXT:    ## kill: def %xmm0 killed %xmm0 def %zmm0
-; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpcmpeqd %zmm2, %zmm0, %k0
+; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
 ; AVX512F-NEXT:    vblendmpd (%rdi), %zmm1, %zmm0 {%k1}
@@ -269,8 +260,7 @@ define <4 x double> @test10(<4 x i32> %trigger, <4 x double>* %addr, <4 x double
 ;
 ; SKX-LABEL: test10:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; SKX-NEXT:    vpcmpeqd %xmm2, %xmm0, %k1
+; SKX-NEXT:    vptestnmd %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vblendmpd (%rdi), %ymm1, %ymm0 {%k1}
 ; SKX-NEXT:    retq
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
@@ -301,8 +291,7 @@ define <4 x double> @test10b(<4 x i32> %trigger, <4 x double>* %addr, <4 x doubl
 ; AVX512F-LABEL: test10b:
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    ## kill: def %xmm0 killed %xmm0 def %zmm0
-; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
+; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
 ; AVX512F-NEXT:    vmovupd (%rdi), %zmm0 {%k1} {z}
@@ -311,8 +300,7 @@ define <4 x double> @test10b(<4 x i32> %trigger, <4 x double>* %addr, <4 x doubl
 ;
 ; SKX-LABEL: test10b:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; SKX-NEXT:    vpcmpeqd %xmm1, %xmm0, %k1
+; SKX-NEXT:    vptestnmd %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vmovapd (%rdi), %ymm0 {%k1} {z}
 ; SKX-NEXT:    retq
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
@@ -344,8 +332,7 @@ define <8 x float> @test11a(<8 x i32> %trigger, <8 x float>* %addr, <8 x float> 
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    ## kill: def %ymm1 killed %ymm1 def %zmm1
 ; AVX512F-NEXT:    ## kill: def %ymm0 killed %ymm0 def %zmm0
-; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpcmpeqd %zmm2, %zmm0, %k0
+; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kshiftlw $8, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $8, %k0, %k1
 ; AVX512F-NEXT:    vblendmps (%rdi), %zmm1, %zmm0 {%k1}
@@ -354,8 +341,7 @@ define <8 x float> @test11a(<8 x i32> %trigger, <8 x float>* %addr, <8 x float> 
 ;
 ; SKX-LABEL: test11a:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; SKX-NEXT:    vpcmpeqd %ymm2, %ymm0, %k1
+; SKX-NEXT:    vptestnmd %ymm0, %ymm0, %k1
 ; SKX-NEXT:    vblendmps (%rdi), %ymm1, %ymm0 {%k1}
 ; SKX-NEXT:    retq
   %mask = icmp eq <8 x i32> %trigger, zeroinitializer
@@ -510,8 +496,7 @@ define void @test12(<8 x i32> %trigger, <8 x i32>* %addr, <8 x i32> %val) {
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    ## kill: def %ymm1 killed %ymm1 def %zmm1
 ; AVX512F-NEXT:    ## kill: def %ymm0 killed %ymm0 def %zmm0
-; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpcmpeqd %zmm2, %zmm0, %k0
+; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kshiftlw $8, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $8, %k0, %k1
 ; AVX512F-NEXT:    vmovdqu32 %zmm1, (%rdi) {%k1}
@@ -520,8 +505,7 @@ define void @test12(<8 x i32> %trigger, <8 x i32>* %addr, <8 x i32> %val) {
 ;
 ; SKX-LABEL: test12:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; SKX-NEXT:    vpcmpeqd %ymm2, %ymm0, %k1
+; SKX-NEXT:    vptestnmd %ymm0, %ymm0, %k1
 ; SKX-NEXT:    vmovdqu32 %ymm1, (%rdi) {%k1}
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
@@ -554,7 +538,7 @@ define void @test14(<2 x i32> %trigger, <2 x float>* %addr, <2 x float> %val) {
 ; AVX512F-NEXT:    ## kill: def %xmm1 killed %xmm1 def %zmm1
 ; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; AVX512F-NEXT:    vpcmpeqq %zmm2, %zmm0, %k0
+; AVX512F-NEXT:    vptestnmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kshiftlw $14, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $14, %k0, %k1
 ; AVX512F-NEXT:    vmovups %zmm1, (%rdi) {%k1}
@@ -565,7 +549,7 @@ define void @test14(<2 x i32> %trigger, <2 x float>* %addr, <2 x float> %val) {
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; SKX-NEXT:    vpcmpeqq %xmm2, %xmm0, %k1
+; SKX-NEXT:    vptestnmq %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vmovups %xmm1, (%rdi) {%k1}
 ; SKX-NEXT:    retq
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
@@ -598,10 +582,10 @@ define void @test15(<2 x i32> %trigger, <2 x i32>* %addr, <2 x i32> %val) {
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; AVX512F-NEXT:    vpcmpeqq %zmm2, %zmm0, %k0
+; AVX512F-NEXT:    vptestnmq %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
 ; AVX512F-NEXT:    kshiftlw $14, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $14, %k0, %k1
-; AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
 ; AVX512F-NEXT:    vmovdqu32 %zmm0, (%rdi) {%k1}
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -610,7 +594,7 @@ define void @test15(<2 x i32> %trigger, <2 x i32>* %addr, <2 x i32> %val) {
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; SKX-NEXT:    vpcmpeqq %xmm2, %xmm0, %k1
+; SKX-NEXT:    vptestnmq %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vpmovqd %xmm1, (%rdi) {%k1}
 ; SKX-NEXT:    retq
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
@@ -644,7 +628,7 @@ define <2 x float> @test16(<2 x i32> %trigger, <2 x float>* %addr, <2 x float> %
 ; AVX512F-NEXT:    ## kill: def %xmm1 killed %xmm1 def %zmm1
 ; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; AVX512F-NEXT:    vpcmpeqq %zmm2, %zmm0, %k0
+; AVX512F-NEXT:    vptestnmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kshiftlw $14, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $14, %k0, %k1
 ; AVX512F-NEXT:    vblendmps (%rdi), %zmm1, %zmm0 {%k1}
@@ -656,7 +640,7 @@ define <2 x float> @test16(<2 x i32> %trigger, <2 x float>* %addr, <2 x float> %
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; SKX-NEXT:    vpcmpeqq %xmm2, %xmm0, %k1
+; SKX-NEXT:    vptestnmq %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vblendmps (%rdi), %xmm1, %xmm0 {%k1}
 ; SKX-NEXT:    retq
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
@@ -693,10 +677,10 @@ define <2 x i32> @test17(<2 x i32> %trigger, <2 x i32>* %addr, <2 x i32> %dst) {
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; AVX512F-NEXT:    vpcmpeqq %zmm2, %zmm0, %k0
+; AVX512F-NEXT:    vptestnmq %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
 ; AVX512F-NEXT:    kshiftlw $14, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $14, %k0, %k1
-; AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
 ; AVX512F-NEXT:    vmovdqu32 (%rdi), %zmm0 {%k1}
 ; AVX512F-NEXT:    vpmovsxdq %xmm0, %xmm0
 ; AVX512F-NEXT:    vzeroupper
@@ -706,7 +690,7 @@ define <2 x i32> @test17(<2 x i32> %trigger, <2 x i32>* %addr, <2 x i32> %dst) {
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; SKX-NEXT:    vpcmpeqq %xmm2, %xmm0, %k1
+; SKX-NEXT:    vptestnmq %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
 ; SKX-NEXT:    vmovdqu32 (%rdi), %xmm0 {%k1}
 ; SKX-NEXT:    vpmovsxdq %xmm0, %xmm0
@@ -739,7 +723,7 @@ define <2 x float> @test18(<2 x i32> %trigger, <2 x float>* %addr) {
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512F-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
-; AVX512F-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0
+; AVX512F-NEXT:    vptestnmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kshiftlw $14, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $14, %k0, %k1
 ; AVX512F-NEXT:    vmovups (%rdi), %zmm0 {%k1} {z}
@@ -751,7 +735,7 @@ define <2 x float> @test18(<2 x i32> %trigger, <2 x float>* %addr) {
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; SKX-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
-; SKX-NEXT:    vpcmpeqq %xmm1, %xmm0, %k1
+; SKX-NEXT:    vptestnmq %xmm0, %xmm0, %k1
 ; SKX-NEXT:    vmovups (%rdi), %xmm0 {%k1} {z}
 ; SKX-NEXT:    retq
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer

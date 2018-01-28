@@ -32,10 +32,10 @@ foo *test1(void *f, const foo &x) {
 foo *test2(const foo &x) {
   return new foo(x);
 // CHECK-POD: test2
-// CHECK-POD: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 8 {{.*}} align 8 {{.*}}i64 24
+// CHECK-POD: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 16 {{.*}} align 8 {{.*}}i64 24
 
 // CHECK-NONPOD: test2
-// CHECK-NONPOD: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 8 {{.*}} align 8 {{.*}}i64 24
+// CHECK-NONPOD: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 16 {{.*}} align 8 {{.*}}i64 24
 }
 
 foo test3(const foo &x) {
@@ -51,10 +51,10 @@ foo test3(const foo &x) {
 foo *test4(foo &&x) {
   return new foo(x);
 // CHECK-POD: test4
-// CHECK-POD: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 8 {{.*}} align 8 {{.*}}i64 24
+// CHECK-POD: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 16 {{.*}} align 8 {{.*}}i64 24
 
 // CHECK-NONPOD: test4
-// CHECK-NONPOD: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 8 {{.*}} align 8 {{.*}}i64 24
+// CHECK-NONPOD: call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} align 16 {{.*}} align 8 {{.*}}i64 24
 }
 
 void test5(foo &f, const foo &x) {

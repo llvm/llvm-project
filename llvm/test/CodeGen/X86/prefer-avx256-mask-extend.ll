@@ -70,10 +70,9 @@ define <16 x i8> @testv16i1_sext_v16i8(<8 x i32>* %p, <8 x i32>* %q) {
 ; AVX512F-LABEL: testv16i1_sext_v16i8:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
+; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    vmovdqa (%rsi), %ymm0
-; AVX512F-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1
+; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    kunpckbw %k0, %k1, %k1
 ; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
@@ -115,10 +114,9 @@ define <16 x i16> @testv16i1_sext_v16i16(<8 x i32>* %p, <8 x i32>* %q) {
 ; AVX512F-LABEL: testv16i1_sext_v16i16:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
+; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    vmovdqa (%rsi), %ymm0
-; AVX512F-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1
+; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    kunpckbw %k0, %k1, %k1
 ; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
@@ -197,10 +195,9 @@ define <16 x i8> @testv16i1_zext_v16i8(<8 x i32>* %p, <8 x i32>* %q) {
 ; AVX512F-LABEL: testv16i1_zext_v16i8:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
+; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    vmovdqa (%rsi), %ymm0
-; AVX512F-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1
+; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    kunpckbw %k0, %k1, %k1
 ; AVX512F-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
@@ -242,10 +239,9 @@ define <16 x i16> @testv16i1_zext_v16i16(<8 x i32>* %p, <8 x i32>* %q) {
 ; AVX512F-LABEL: testv16i1_zext_v16i16:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
+; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    vmovdqa (%rsi), %ymm0
-; AVX512F-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1
+; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    kunpckbw %k0, %k1, %k1
 ; AVX512F-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    vpmovdw %zmm0, %ymm0

@@ -153,12 +153,6 @@ def X86cmpp    : SDNode<"X86ISD::CMPP",      SDTX86VFCMP>;
 def X86pcmpeq  : SDNode<"X86ISD::PCMPEQ", SDTIntBinOp, [SDNPCommutative]>;
 def X86pcmpgt  : SDNode<"X86ISD::PCMPGT", SDTIntBinOp>;
 
-def X86IntCmpMask : SDTypeProfile<1, 2,
-    [SDTCisVec<0>, SDTCVecEltisVT<0, i1>, SDTCisSameAs<1, 2>, SDTCisInt<1>,
-     SDTCisSameNumEltsAs<0, 1>]>;
-def X86pcmpeqm  : SDNode<"X86ISD::PCMPEQM", X86IntCmpMask, [SDNPCommutative]>;
-def X86pcmpgtm  : SDNode<"X86ISD::PCMPGTM", X86IntCmpMask>;
-
 def X86CmpMaskCC :
       SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCVecEltisVT<0, i1>,
                        SDTCisVec<1>, SDTCisSameAs<2, 1>,
@@ -240,10 +234,6 @@ def SDTX86CmpPTest : SDTypeProfile<1, 2, [SDTCisVT<0, i32>,
                                           SDTCisVec<1>,
                                           SDTCisSameAs<2, 1>]>;
 
-def SDTX86Testm : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
-                                       SDTCisSameAs<2, 1>, SDTCVecEltisVT<0, i1>,
-                                       SDTCisSameNumEltsAs<0, 1>]>;
-
 def X86addus   : SDNode<"X86ISD::ADDUS", SDTIntBinOp, [SDNPCommutative]>;
 def X86subus   : SDNode<"X86ISD::SUBUS", SDTIntBinOp>;
 def X86adds    : SDNode<"X86ISD::ADDS", SDTIntBinOp, [SDNPCommutative]>;
@@ -254,8 +244,6 @@ def X86ptest   : SDNode<"X86ISD::PTEST", SDTX86CmpPTest>;
 def X86testp   : SDNode<"X86ISD::TESTP", SDTX86CmpPTest>;
 def X86kortest : SDNode<"X86ISD::KORTEST", SDTX86CmpPTest>;
 def X86ktest   : SDNode<"X86ISD::KTEST", SDTX86CmpPTest>;
-def X86testm   : SDNode<"X86ISD::TESTM", SDTX86Testm, [SDNPCommutative]>;
-def X86testnm  : SDNode<"X86ISD::TESTNM", SDTX86Testm, [SDNPCommutative]>;
 
 def X86movmsk : SDNode<"X86ISD::MOVMSK",
                         SDTypeProfile<1, 1, [SDTCisVT<0, i32>, SDTCisVec<1>]>>;
