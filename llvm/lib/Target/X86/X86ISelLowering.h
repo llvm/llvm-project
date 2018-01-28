@@ -329,8 +329,6 @@ namespace llvm {
 
       // Vector integer comparisons.
       PCMPEQ, PCMPGT,
-      // Vector integer comparisons, the result is in a mask vector.
-      PCMPEQM, PCMPGTM,
 
       // v8i16 Horizontal minimum and position.
       PHMINPOS,

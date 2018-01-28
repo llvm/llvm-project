@@ -1994,7 +1994,7 @@ let Predicates = [HasAVX512] in {
                                    SSE_ALU_F64S>, AVX512XDIi8Base, VEX_W;
 }
 
-multiclass avx512_icmp_packed<bits<8> opc, string OpcodeStr, SDNode OpNode,
+multiclass avx512_icmp_packed<bits<8> opc, string OpcodeStr, PatFrag OpNode,
               OpndItins itins, X86VectorVTInfo _, bit IsCommutable> {
   let isCommutable = IsCommutable in
   def rr : AVX512BI<opc, MRMSrcReg,
@@ -2027,7 +2027,7 @@ multiclass avx512_icmp_packed<bits<8> opc, string OpcodeStr, SDNode OpNode,
               itins.rm>, EVEX_4V, EVEX_K, Sched<[itins.Sched.Folded, ReadAfterLd]>;
 }
 
-multiclass avx512_icmp_packed_rmb<bits<8> opc, string OpcodeStr, SDNode OpNode,
+multiclass avx512_icmp_packed_rmb<bits<8> opc, string OpcodeStr, PatFrag OpNode,
               OpndItins itins,  X86VectorVTInfo _, bit IsCommutable> :
            avx512_icmp_packed<opc, OpcodeStr, OpNode, itins, _, IsCommutable> {
   def rmb : AVX512BI<opc, MRMSrcMem,
@@ -2051,7 +2051,7 @@ multiclass avx512_icmp_packed_rmb<bits<8> opc, string OpcodeStr, SDNode OpNode,
                Sched<[itins.Sched.Folded, ReadAfterLd]>;
 }
 
-multiclass avx512_icmp_packed_vl<bits<8> opc, string OpcodeStr, SDNode OpNode,
+multiclass avx512_icmp_packed_vl<bits<8> opc, string OpcodeStr, PatFrag OpNode,
                                  OpndItins itins, AVX512VLVectorVTInfo VTInfo,
                                  Predicate prd, bit IsCommutable = 0> {
   let Predicates = [prd] in
@@ -2067,7 +2067,7 @@ multiclass avx512_icmp_packed_vl<bits<8> opc, string OpcodeStr, SDNode OpNode,
 }
 
 multiclass avx512_icmp_packed_rmb_vl<bits<8> opc, string OpcodeStr,
-                                     SDNode OpNode, OpndItins itins,
+                                     PatFrag OpNode, OpndItins itins,
                                      AVX512VLVectorVTInfo VTInfo,
                                      Predicate prd, bit IsCommutable = 0> {
   let Predicates = [prd] in
@@ -2081,6 +2081,11 @@ multiclass avx512_icmp_packed_rmb_vl<bits<8> opc, string OpcodeStr,
                                        IsCommutable>, EVEX_V128;
   }
 }
+
+def X86pcmpeqm : PatFrag<(ops node:$src1, node:$src2),
+                         (X86cmpm node:$src1, node:$src2, (i8 0))>;
+def X86pcmpgtm : PatFrag<(ops node:$src1, node:$src2),
+                         (X86cmpm node:$src1, node:$src2, (i8 6))>;
 
 // FIXME: Is there a better scheduler itinerary for VPCMP?
 defm VPCMPEQB : avx512_icmp_packed_vl<0x74, "vpcmpeqb", X86pcmpeqm,
@@ -2950,10 +2955,10 @@ multiclass avx512_mask_shiftop_w<bits<8> opc1, bits<8> opc2, string OpcodeStr,
 defm KSHIFTL : avx512_mask_shiftop_w<0x32, 0x33, "kshiftl", X86kshiftl, SSE_PSHUF>;
 defm KSHIFTR : avx512_mask_shiftop_w<0x30, 0x31, "kshiftr", X86kshiftr, SSE_PSHUF>;
 
-multiclass axv512_icmp_packed_no_vlx_lowering<SDNode OpNode, string InstStr,
+multiclass axv512_icmp_packed_no_vlx_lowering<PatFrag Frag, string InstStr,
                                               X86VectorVTInfo Narrow,
                                               X86VectorVTInfo Wide> {
-def : Pat<(Narrow.KVT (OpNode (Narrow.VT Narrow.RC:$src1),
+def : Pat<(Narrow.KVT (Frag (Narrow.VT Narrow.RC:$src1),
                               (Narrow.VT Narrow.RC:$src2))),
           (COPY_TO_REGCLASS
            (!cast<Instruction>(InstStr##Zrr)
@@ -2962,7 +2967,7 @@ def : Pat<(Narrow.KVT (OpNode (Narrow.VT Narrow.RC:$src1),
            Narrow.KRC)>;
 
 def : Pat<(Narrow.KVT (and Narrow.KRC:$mask,
-                           (OpNode (Narrow.VT Narrow.RC:$src1),
+                           (Frag (Narrow.VT Narrow.RC:$src1),
                                    (Narrow.VT Narrow.RC:$src2)))),
           (COPY_TO_REGCLASS
            (!cast<Instruction>(InstStr##Zrrk)

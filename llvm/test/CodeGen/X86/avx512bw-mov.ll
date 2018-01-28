@@ -24,8 +24,7 @@ define void @test2(i8 * %addr, <64 x i8> %data) {
 define <64 x i8> @test3(i8 * %addr, <64 x i8> %old, <64 x i8> %mask1) {
 ; CHECK-LABEL: test3:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpneqb %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestmb %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vmovdqu8 (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %mask = icmp ne <64 x i8> %mask1, zeroinitializer
@@ -38,8 +37,7 @@ define <64 x i8> @test3(i8 * %addr, <64 x i8> %old, <64 x i8> %mask1) {
 define <64 x i8> @test4(i8 * %addr, <64 x i8> %mask1) {
 ; CHECK-LABEL: test4:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpneqb %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestmb %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vmovdqu8 (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %mask = icmp ne <64 x i8> %mask1, zeroinitializer
@@ -72,8 +70,7 @@ define void @test6(i8 * %addr, <32 x i16> %data) {
 define <32 x i16> @test7(i8 * %addr, <32 x i16> %old, <32 x i16> %mask1) {
 ; CHECK-LABEL: test7:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpcmpneqw %zmm2, %zmm1, %k1
+; CHECK-NEXT:    vptestmw %zmm1, %zmm1, %k1
 ; CHECK-NEXT:    vmovdqu16 (%rdi), %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %mask = icmp ne <32 x i16> %mask1, zeroinitializer
@@ -86,8 +83,7 @@ define <32 x i16> @test7(i8 * %addr, <32 x i16> %old, <32 x i16> %mask1) {
 define <32 x i16> @test8(i8 * %addr, <32 x i16> %mask1) {
 ; CHECK-LABEL: test8:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpcmpneqw %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vptestmw %zmm0, %zmm0, %k1
 ; CHECK-NEXT:    vmovdqu16 (%rdi), %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %mask = icmp ne <32 x i16> %mask1, zeroinitializer

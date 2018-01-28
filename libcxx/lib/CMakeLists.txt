@@ -222,7 +222,7 @@ set(LIBCXX_TARGETS)
 # Build the shared library.
 if (LIBCXX_ENABLE_SHARED)
   add_library(cxx_shared SHARED $<TARGET_OBJECTS:cxx_objects>)
-  if(LLVM_FOUND)
+  if(COMMAND llvm_setup_rpath)
     llvm_setup_rpath(cxx_shared)
   endif()
   target_link_libraries(cxx_shared ${LIBCXX_LIBRARIES})
