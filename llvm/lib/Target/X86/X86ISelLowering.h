@@ -329,8 +329,6 @@ namespace llvm {
 
       // Vector integer comparisons.
       PCMPEQ, PCMPGT,
-      // Vector integer comparisons, the result is in a mask vector.
-      PCMPEQM, PCMPGTM,
 
       // v8i16 Horizontal minimum and position.
       PHMINPOS,
@@ -369,10 +367,6 @@ namespace llvm {
 
       // Vector packed fp sign bitwise comparisons.
       TESTP,
-
-      // Vector "test" in AVX-512, the result is in a mask vector.
-      TESTM,
-      TESTNM,
 
       // OR/AND test for masks.
       KORTEST,

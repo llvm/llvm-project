@@ -345,7 +345,7 @@ define void @buildvector_v4f32_0404(float %a, float %b, <4 x float>* %ptr) {
 ;
 ; X64AVX2-LABEL: buildvector_v4f32_0404:
 ; X64AVX2:       # %bb.0:
-; X64AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; X64AVX2-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X64AVX2-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; X64AVX2-NEXT:    vmovapd %xmm0, (%rdi)
 ; X64AVX2-NEXT:    retq

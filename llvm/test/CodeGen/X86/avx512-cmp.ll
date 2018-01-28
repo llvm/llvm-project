@@ -14,7 +14,6 @@ define double @test1(double %a, double %b) nounwind {
 ; ALL-NEXT:  LBB0_2: ## %l2
 ; ALL-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; ALL-NEXT:    retq
-; ALL-NEXT:    ## -- End function
   %tobool = fcmp une double %a, %b
   br i1 %tobool, label %l1, label %l2
 
@@ -37,7 +36,6 @@ define float @test2(float %a, float %b) nounwind {
 ; ALL-NEXT:  LBB1_2: ## %l2
 ; ALL-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; ALL-NEXT:    retq
-; ALL-NEXT:    ## -- End function
   %tobool = fcmp olt float %a, %b
   br i1 %tobool, label %l1, label %l2
 
