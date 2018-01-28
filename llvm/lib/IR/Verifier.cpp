@@ -4064,10 +4064,6 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
       Assert(IsValidAlignment(MTI->getSourceAlignment()),
              "alignment of arg 1 of memory intrinsic must be 0 or a power of 2",
              CS);
-      // TODO: Remove this assert when we enhance IRBuilder API to create
-      //  memcpy/memmove with separate source & dest alignments.
-      Assert(MTI->getSourceAlignment() == MTI->getDestAlignment(),
-             "TEMPORARY: source and dest alignments must be the same");
     }
     Assert(isa<ConstantInt>(CS.getArgOperand(3)),
            "isvolatile argument of memory intrinsics must be a constant int",
