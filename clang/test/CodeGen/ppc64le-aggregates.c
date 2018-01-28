@@ -104,7 +104,7 @@ void call_f8(void) { global_f8 = func_f8(global_f8); }
 // CHECK-LABEL: @call_f9
 // CHECK: %[[TMP1:[^ ]+]] = alloca [5 x i64]
 // CHECK: %[[TMP2:[^ ]+]] = bitcast [5 x i64]* %[[TMP1]] to i8*
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %[[TMP2]], i8* align 4 bitcast (%struct.f9* @global_f9 to i8*), i64 36, i1 false)
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %[[TMP2]], i8* align 4 bitcast (%struct.f9* @global_f9 to i8*), i64 36, i1 false)
 // CHECK: %[[TMP3:[^ ]+]] = load [5 x i64], [5 x i64]* %[[TMP1]]
 // CHECK: call void @func_f9(%struct.f9* sret %{{[^ ]+}}, [5 x i64] %[[TMP3]])
 struct f9 global_f9;
