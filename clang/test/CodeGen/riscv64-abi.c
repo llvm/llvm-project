@@ -375,7 +375,7 @@ long double f_va_3(char *fmt, ...) {
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[ARGP_CUR2]] to %struct.tiny*
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast %struct.tiny* [[TS]] to i8*
 // CHECK-NEXT:    [[TMP4:%.*]] = bitcast %struct.tiny* [[TMP2]] to i8*
-// CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 2 [[TMP3]], i8* align 2 [[TMP4]], i64 8, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 2 [[TMP3]], i8* align 8 [[TMP4]], i64 8, i1 false)
 // CHECK-NEXT:    [[ARGP_CUR4:%.*]] = load i8*, i8** [[VA]], align 8
 // CHECK-NEXT:    [[ARGP_NEXT5:%.*]] = getelementptr inbounds i8, i8* [[ARGP_CUR4]], i64 16
 // CHECK-NEXT:    store i8* [[ARGP_NEXT5]], i8** [[VA]], align 8

@@ -2040,12 +2040,18 @@ bool llvm::isInlineViable(Function &F) {
           cast<CallInst>(CS.getInstruction())->canReturnTwice())
         return false;
 
-      // Disallow inlining functions that call @llvm.localescape. Doing this
-      // correctly would require major changes to the inliner.
-      if (CS.getCalledFunction() &&
-          CS.getCalledFunction()->getIntrinsicID() ==
-              llvm::Intrinsic::localescape)
-        return false;
+      if (CS.getCalledFunction())
+        switch (CS.getCalledFunction()->getIntrinsicID()) {
+        default:
+          break;
+        // Disallow inlining functions that call @llvm.localescape. Doing this
+        // correctly would require major changes to the inliner.
+        case llvm::Intrinsic::localescape:
+        // Disallow inlining of functions that access VarArgs.
+        case llvm::Intrinsic::vastart:
+        case llvm::Intrinsic::vaend:
+          return false;
+        }
     }
   }
 

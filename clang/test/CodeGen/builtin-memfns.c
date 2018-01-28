@@ -73,7 +73,7 @@ struct PS {
 struct PS ps;
 void test8(int *arg) {
   // CHECK: @test8
-  // CHECK: call void @llvm.memcpy{{.*}} align 1 {{.*}} align 1 {{.*}} 16, i1 false)
+  // CHECK: call void @llvm.memcpy{{.*}} align 4 {{.*}} align 1 {{.*}} 16, i1 false)
   __builtin_memcpy(arg, ps.modes, sizeof(struct PS));
 }
 

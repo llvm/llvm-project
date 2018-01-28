@@ -42,7 +42,7 @@ int test5() {
 // <rdar://problem/11220251>
 void test6() {
   // CHECK: @test6
-  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 bitcast (%struct.X* getelementptr inbounds (%struct.Y, %struct.Y* @g, i32 0, i32 1) to i8*), i8* align 1 %{{.*}}, i64 24, i1 false)
+  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 bitcast (%struct.X* getelementptr inbounds (%struct.Y, %struct.Y* @g, i32 0, i32 1) to i8*), i8* align 4 %{{.*}}, i64 24, i1 false)
   g.y = foo();
 }
 
