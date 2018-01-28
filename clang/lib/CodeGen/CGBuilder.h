@@ -258,23 +258,23 @@ public:
   using CGBuilderBaseTy::CreateMemCpy;
   llvm::CallInst *CreateMemCpy(Address Dest, Address Src, llvm::Value *Size,
                                bool IsVolatile = false) {
-    auto Align = std::min(Dest.getAlignment(), Src.getAlignment());
-    return CreateMemCpy(Dest.getPointer(), Src.getPointer(), Size,
-                        Align.getQuantity(), IsVolatile);
+    return CreateMemCpy(Dest.getPointer(), Dest.getAlignment().getQuantity(),
+                        Src.getPointer(), Src.getAlignment().getQuantity(),
+                        Size,IsVolatile);
   }
   llvm::CallInst *CreateMemCpy(Address Dest, Address Src, uint64_t Size,
                                bool IsVolatile = false) {
-    auto Align = std::min(Dest.getAlignment(), Src.getAlignment());
-    return CreateMemCpy(Dest.getPointer(), Src.getPointer(), Size,
-                        Align.getQuantity(), IsVolatile);
+    return CreateMemCpy(Dest.getPointer(), Dest.getAlignment().getQuantity(),
+                        Src.getPointer(), Src.getAlignment().getQuantity(),
+                        Size, IsVolatile);
   }
 
   using CGBuilderBaseTy::CreateMemMove;
   llvm::CallInst *CreateMemMove(Address Dest, Address Src, llvm::Value *Size,
                                 bool IsVolatile = false) {
-    auto Align = std::min(Dest.getAlignment(), Src.getAlignment());
-    return CreateMemMove(Dest.getPointer(), Src.getPointer(), Size,
-                         Align.getQuantity(), IsVolatile);
+    return CreateMemMove(Dest.getPointer(), Dest.getAlignment().getQuantity(),
+                         Src.getPointer(), Src.getAlignment().getQuantity(),
+                         Size, IsVolatile);
   }
 
   using CGBuilderBaseTy::CreateMemSet;
