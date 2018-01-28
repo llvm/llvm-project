@@ -990,11 +990,11 @@ void DAGTypeLegalizer::PromoteSetCCOperands(SDValue &NewLHS,SDValue &NewRHS,
     // than the width of NewLHS/NewRH, we can avoid inserting real truncate
     // instruction, which is redudant eventually.
     unsigned OpLEffectiveBits =
-        OpL.getValueSizeInBits() - DAG.ComputeNumSignBits(OpL) + 1;
+        OpL.getScalarValueSizeInBits() - DAG.ComputeNumSignBits(OpL) + 1;
     unsigned OpREffectiveBits =
-        OpR.getValueSizeInBits() - DAG.ComputeNumSignBits(OpR) + 1;
-    if (OpLEffectiveBits <= NewLHS.getValueSizeInBits() &&
-        OpREffectiveBits <= NewRHS.getValueSizeInBits()) {
+        OpR.getScalarValueSizeInBits() - DAG.ComputeNumSignBits(OpR) + 1;
+    if (OpLEffectiveBits <= NewLHS.getScalarValueSizeInBits() &&
+        OpREffectiveBits <= NewRHS.getScalarValueSizeInBits()) {
       NewLHS = OpL;
       NewRHS = OpR;
     } else {
