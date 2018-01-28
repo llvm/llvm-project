@@ -13,6 +13,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/DJB.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstddef>
@@ -236,7 +237,7 @@ AppleAcceleratorTable::equal_range(StringRef Key) const {
     return make_range(ValueIterator(), ValueIterator());
 
   // Find the bucket.
-  unsigned HashValue = dwarf::djbHash(Key);
+  unsigned HashValue = djbHash(Key);
   unsigned Bucket = HashValue % Hdr.NumBuckets;
   unsigned BucketBase = sizeof(Hdr) + Hdr.HeaderDataLength;
   unsigned HashesBase = BucketBase + Hdr.NumBuckets * 4;
