@@ -5043,8 +5043,6 @@ static bool isMaskedZeroUpperBitsvXi1(unsigned int Opcode) {
   switch (Opcode) {
   default:
     return false;
-  case X86ISD::TESTM:
-  case X86ISD::TESTNM:
   case X86ISD::CMPM:
   case X86ISD::CMPMU:
   case X86ISD::CMPM_RND:
@@ -14639,9 +14637,11 @@ SDValue X86TargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
     assert(Cond.getValueType().getScalarSizeInBits() ==
                VT.getScalarSizeInBits() &&
            "Should have a size-matched integer condition!");
-    // Build a mask by testing the condition against itself (tests for zero).
+    // Build a mask by testing the condition against zero.
     MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
-    SDValue Mask = DAG.getNode(X86ISD::TESTM, dl, MaskVT, Cond, Cond);
+    SDValue Mask = DAG.getNode(X86ISD::CMPM, dl, MaskVT, Cond,
+                               getZeroVector(VT, Subtarget, DAG, dl),
+                               DAG.getConstant(4, dl, MVT::i8));
     // Now return a new VSELECT using the mask.
     return DAG.getSelect(dl, VT, Mask, Op.getOperand(1), Op.getOperand(2));
   }
@@ -16609,7 +16609,9 @@ static SDValue LowerTruncateVecI1(SDValue Op, SelectionDAG &DAG,
     In = DAG.getNode(ISD::SHL, DL, InVT, In,
                      DAG.getConstant(ShiftInx, DL, InVT));
   }
-  return DAG.getNode(X86ISD::TESTM, DL, VT, In, In);
+  return DAG.getNode(X86ISD::CMPM, DL, VT, In,
+                     getZeroVector(InVT, Subtarget, DAG, DL),
+                     DAG.getConstant(4, DL, MVT::i8));
 }
 
 SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
@@ -17765,26 +17767,6 @@ static SDValue LowerIntVSETCC_AVX512(SDValue Op, SelectionDAG &DAG) {
   }
   if (Swap)
     std::swap(Op0, Op1);
-
-  //  See if it is the case of CMP(EQ|NEQ,AND(A,B),ZERO) and change it to TESTM|NM.
-  if (SSECC == 4 || SSECC == 0) {
-    SDValue A = peekThroughBitcasts(Op0);
-    if ((A.getOpcode() == ISD::AND || A.getOpcode() == X86ISD::FAND) &&
-        ISD::isBuildVectorAllZeros(Op1.getNode())) {
-      MVT VT0 = Op0.getSimpleValueType();
-      SDValue RHS = DAG.getBitcast(VT0, A.getOperand(0));
-      SDValue LHS = DAG.getBitcast(VT0, A.getOperand(1));
-      return DAG.getNode(SSECC == 0 ? X86ISD::TESTNM : X86ISD::TESTM,
-                         dl, VT, RHS, LHS);
-    }
-
-    // If this is just a comparison with 0 without an AND, we can just use
-    // the same input twice to avoid creating a zero vector.
-    if (ISD::isBuildVectorAllZeros(Op1.getNode())) {
-      return DAG.getNode(SSECC == 0 ? X86ISD::TESTNM : X86ISD::TESTM,
-                         dl, VT, Op0, Op0);
-    }
-  }
 
   unsigned Opc = ISD::isUnsignedIntSetCC(SetCCOpcode) ? X86ISD::CMPMU
                                                       : X86ISD::CMPM;
@@ -25365,8 +25347,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::MOVMSK:             return "X86ISD::MOVMSK";
   case X86ISD::PTEST:              return "X86ISD::PTEST";
   case X86ISD::TESTP:              return "X86ISD::TESTP";
-  case X86ISD::TESTM:              return "X86ISD::TESTM";
-  case X86ISD::TESTNM:             return "X86ISD::TESTNM";
   case X86ISD::KORTEST:            return "X86ISD::KORTEST";
   case X86ISD::KTEST:              return "X86ISD::KTEST";
   case X86ISD::KSHIFTL:            return "X86ISD::KSHIFTL";
@@ -37674,28 +37654,6 @@ static SDValue combineVSZext(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue combineTestM(SDNode *N, SelectionDAG &DAG,
-                            const X86Subtarget &Subtarget) {
-  SDValue Op0 = N->getOperand(0);
-  SDValue Op1 = N->getOperand(1);
-
-  MVT VT = N->getSimpleValueType(0);
-  SDLoc DL(N);
-
-  // TEST (AND a, b) ,(AND a, b) -> TEST a, b
-  if (Op0 == Op1 && Op1->getOpcode() == ISD::AND)
-    return DAG.getNode(X86ISD::TESTM, DL, VT, Op0->getOperand(0),
-                       Op0->getOperand(1));
-
-  // TEST op0, BUILD_VECTOR(all_zero) -> BUILD_VECTOR(all_zero)
-  // TEST BUILD_VECTOR(all_zero), op1 -> BUILD_VECTOR(all_zero)
-  if (ISD::isBuildVectorAllZeros(Op0.getNode()) ||
-      ISD::isBuildVectorAllZeros(Op1.getNode()))
-    return getZeroVector(VT, Subtarget, DAG, DL);
-
-  return SDValue();
-}
-
 static SDValue combineVectorCompare(SDNode *N, SelectionDAG &DAG,
                                     const X86Subtarget &Subtarget) {
   MVT VT = N->getSimpleValueType(0);
@@ -38001,7 +37959,6 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::MSCATTER:
   case ISD::MGATHER:
   case ISD::MSCATTER:       return combineGatherScatter(N, DAG, DCI, Subtarget);
-  case X86ISD::TESTM:       return combineTestM(N, DAG, Subtarget);
   case X86ISD::PCMPEQ:
   case X86ISD::PCMPGT:      return combineVectorCompare(N, DAG, Subtarget);
   }

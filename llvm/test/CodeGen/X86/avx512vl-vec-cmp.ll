@@ -1119,3 +1119,29 @@ define <4 x i32> @test128_20(<4 x i32> %x, <4 x i32> %x1, <4 x i32>* %y.ptr) nou
   %max = select <4 x i1> %mask, <4 x i32> %x, <4 x i32> %x1
   ret <4 x i32> %max
 }
+
+define <8 x i32> @testnm_and(<8 x i32> %a, <8 x i32> %b, <8 x i32> %x, <8 x i32> %y) {
+; VLX-LABEL: testnm_and:
+; VLX:       # %bb.0:
+; VLX-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; VLX-NEXT:    vptestnmd %ymm0, %ymm0, %k1
+; VLX-NEXT:    vpblendmd %ymm2, %ymm3, %ymm0 {%k1}
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: testnm_and:
+; NoVLX:       # %bb.0:
+; NoVLX-NEXT:    # kill: def %ymm3 killed %ymm3 def %zmm3
+; NoVLX-NEXT:    # kill: def %ymm2 killed %ymm2 def %zmm2
+; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; NoVLX-NEXT:    vptestnmd %zmm0, %zmm0, %k1
+; NoVLX-NEXT:    vptestnmd %zmm1, %zmm1, %k1 {%k1}
+; NoVLX-NEXT:    vpblendmd %zmm2, %zmm3, %zmm0 {%k1}
+; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
+; NoVLX-NEXT:    retq
+  %c = icmp eq <8 x i32> %a, zeroinitializer
+  %d = icmp eq <8 x i32> %b, zeroinitializer
+  %e = and <8 x i1> %c, %d
+  %z = select <8 x i1> %e, <8 x i32> %x, <8 x i32> %y
+  ret <8 x i32> %z
+}
