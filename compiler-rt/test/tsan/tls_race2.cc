@@ -22,6 +22,8 @@ int main() {
   pthread_t t;
   pthread_create(&t, 0, Thread, 0);
   pthread_join(t, 0);
+  fprintf(stderr, "DONE\n");
+  return 0;
 }
 
 // CHECK: WARNING: ThreadSanitizer: data race
@@ -29,3 +31,4 @@ int main() {
 // CHECK-FreeBSD:   Location is TLS of thread T1.
 // CHECK-NetBSD:   Location is TLS of thread T1.
 // CHECK-Darwin:   Location is heap block of size 4
+// CHECK: DONE

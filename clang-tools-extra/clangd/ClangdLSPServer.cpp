@@ -10,6 +10,7 @@
 #include "ClangdLSPServer.h"
 #include "JSONRPCDispatcher.h"
 #include "SourceCode.h"
+#include "URI.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace clang::clangd;
@@ -157,7 +158,7 @@ void ClangdLSPServer::onRename(Ctx C, RenameParams &Params) {
 
   std::vector<TextEdit> Edits = replacementsToEdits(*Code, *Replacements);
   WorkspaceEdit WE;
-  WE.changes = {{Params.textDocument.uri.uri, Edits}};
+  WE.changes = {{Params.textDocument.uri.uri(), Edits}};
   reply(C, WE);
 }
 
@@ -227,7 +228,7 @@ void ClangdLSPServer::onCodeAction(Ctx C, CodeActionParams &Params) {
     auto Edits = getFixIts(Params.textDocument.uri.file, D);
     if (!Edits.empty()) {
       WorkspaceEdit WE;
-      WE.changes = {{Params.textDocument.uri.uri, std::move(Edits)}};
+      WE.changes = {{Params.textDocument.uri.uri(), std::move(Edits)}};
       Commands.push_back(json::obj{
           {"title", llvm::formatv("Apply FixIt {0}", D.message)},
           {"command", ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND},
@@ -279,8 +280,7 @@ void ClangdLSPServer::onGoToDefinition(Ctx C,
 void ClangdLSPServer::onSwitchSourceHeader(Ctx C,
                                            TextDocumentIdentifier &Params) {
   llvm::Optional<Path> Result = Server.switchSourceHeader(Params.uri.file);
-  std::string ResultUri;
-  reply(C, Result ? URI::fromFile(*Result).uri : "");
+  reply(C, Result ? URI::createFile(*Result).toString() : "");
 }
 
 void ClangdLSPServer::onDocumentHighlight(Ctx C,
@@ -377,7 +377,7 @@ void ClangdLSPServer::onDiagnosticsReady(
       {"method", "textDocument/publishDiagnostics"},
       {"params",
        json::obj{
-           {"uri", URI::fromFile(File)},
+           {"uri", URIForFile{File}},
            {"diagnostics", std::move(DiagnosticsJSON)},
        }},
   });

@@ -76,8 +76,7 @@ ObjectFile::createELFObjectFile(MemoryBufferRef Obj) {
 
 SubtargetFeatures ELFObjectFileBase::getMIPSFeatures() const {
   SubtargetFeatures Features;
-  unsigned PlatformFlags;
-  getPlatformFlags(PlatformFlags);
+  unsigned PlatformFlags = getPlatformFlags();
 
   switch (PlatformFlags & ELF::EF_MIPS_ARCH) {
   case ELF::EF_MIPS_ARCH_1:

@@ -157,8 +157,9 @@ parseV5EntryFormat(const DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
 static bool
 parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
                      uint32_t *OffsetPtr, uint64_t EndPrologueOffset,
-                     const DWARFFormParams &FormParams, const DWARFUnit *U,
-                     bool &HasMD5, std::vector<StringRef> &IncludeDirectories,
+                     const DWARFFormParams &FormParams, const DWARFContext &Ctx,
+                     const DWARFUnit *U, bool &HasMD5,
+                     std::vector<StringRef> &IncludeDirectories,
                      std::vector<DWARFDebugLine::FileNameEntry> &FileNames) {
   // Get the directory entry description.
   ContentDescriptors DirDescriptors =
@@ -175,7 +176,7 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
       DWARFFormValue Value(Descriptor.Form);
       switch (Descriptor.Type) {
       case DW_LNCT_path:
-        if (!Value.extractValue(DebugLineData, OffsetPtr, FormParams, U))
+        if (!Value.extractValue(DebugLineData, OffsetPtr, FormParams, &Ctx, U))
           return false;
         IncludeDirectories.push_back(Value.getAsCString().getValue());
         break;
@@ -200,7 +201,7 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
     DWARFDebugLine::FileNameEntry FileEntry;
     for (auto Descriptor : FileDescriptors) {
       DWARFFormValue Value(Descriptor.Form);
-      if (!Value.extractValue(DebugLineData, OffsetPtr, FormParams, U))
+      if (!Value.extractValue(DebugLineData, OffsetPtr, FormParams, &Ctx, U))
         return false;
       switch (Descriptor.Type) {
       case DW_LNCT_path:
@@ -230,7 +231,9 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
 }
 
 bool DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
-                                     uint32_t *OffsetPtr, const DWARFUnit *U) {
+                                     uint32_t *OffsetPtr,
+                                     const DWARFContext &Ctx,
+                                     const DWARFUnit *U) {
   const uint64_t PrologueOffset = *OffsetPtr;
 
   clear();
@@ -271,7 +274,7 @@ bool DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
 
   if (getVersion() >= 5) {
     if (!parseV5DirFileTables(DebugLineData, OffsetPtr, EndPrologueOffset,
-                              FormParams, U, HasMD5, IncludeDirectories,
+                              FormParams, Ctx, U, HasMD5, IncludeDirectories,
                               FileNames)) {
       fprintf(stderr,
               "warning: parsing line table prologue at 0x%8.8" PRIx64
@@ -401,25 +404,27 @@ DWARFDebugLine::getLineTable(uint32_t Offset) const {
 
 const DWARFDebugLine::LineTable *
 DWARFDebugLine::getOrParseLineTable(DWARFDataExtractor &DebugLineData,
-                                    uint32_t Offset, const DWARFUnit *U) {
+                                    uint32_t Offset, const DWARFContext &Ctx,
+                                    const DWARFUnit *U) {
   std::pair<LineTableIter, bool> Pos =
       LineTableMap.insert(LineTableMapTy::value_type(Offset, LineTable()));
   LineTable *LT = &Pos.first->second;
   if (Pos.second) {
-    if (!LT->parse(DebugLineData, &Offset, U))
+    if (!LT->parse(DebugLineData, &Offset, Ctx, U))
       return nullptr;
   }
   return LT;
 }
 
 bool DWARFDebugLine::LineTable::parse(DWARFDataExtractor &DebugLineData,
-                                      uint32_t *OffsetPtr, const DWARFUnit *U,
-                                      raw_ostream *OS) {
+                                      uint32_t *OffsetPtr,
+                                      const DWARFContext &Ctx,
+                                      const DWARFUnit *U, raw_ostream *OS) {
   const uint32_t DebugLineOffset = *OffsetPtr;
 
   clear();
 
-  if (!Prologue.parse(DebugLineData, OffsetPtr, U)) {
+  if (!Prologue.parse(DebugLineData, OffsetPtr, Ctx, U)) {
     // Restore our offset and return false to indicate failure!
     *OffsetPtr = DebugLineOffset;
     return false;

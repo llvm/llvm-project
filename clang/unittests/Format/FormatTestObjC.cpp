@@ -276,6 +276,20 @@ TEST_F(FormatTestObjC, FormatObjCInterface) {
                "+ (id)init;\n"
                "@end");
 
+  Style.ColumnLimit = 40;
+  verifyFormat("@interface ccccccccccccc () <\n"
+               "    ccccccccccccc, ccccccccccccc,\n"
+               "    ccccccccccccc, ccccccccccccc> {\n"
+               "}");
+
+  Style.BinPackParameters = false;
+  verifyFormat("@interface ddddddddddddd () <\n"
+               "    ddddddddddddd,\n"
+               "    ddddddddddddd,\n"
+               "    ddddddddddddd,\n"
+               "    ddddddddddddd> {\n"
+               "}");
+
   Style = getGoogleStyle(FormatStyle::LK_ObjC);
   verifyFormat("@interface Foo : NSObject <NSSomeDelegate> {\n"
                " @public\n"
