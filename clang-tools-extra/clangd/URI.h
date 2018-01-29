@@ -26,8 +26,10 @@ namespace clangd {
 /// Clangd handles URIs of the form <scheme>:[//<authority>]<body>. It doesn't
 /// further split the authority or body into constituent parts (e.g. query
 /// strings is included in the body).
-class FileURI {
+class URI {
 public:
+  URI(llvm::StringRef Scheme, llvm::StringRef Authority, llvm::StringRef Body);
+
   /// Returns decoded scheme e.g. "https"
   llvm::StringRef scheme() const { return Scheme; }
   /// Returns decoded authority e.g. "reviews.lvm.org"
@@ -38,35 +40,38 @@ public:
   /// Returns a string URI with all components percent-encoded.
   std::string toString() const;
 
-  /// Create a FileURI from unescaped scheme+authority+body.
-  static llvm::Expected<FileURI> create(llvm::StringRef Scheme,
-                                        llvm::StringRef Authority,
-                                        llvm::StringRef Body);
-
-  /// Creates a FileURI for a file in the given scheme. \p Scheme must be
+  /// Creates a URI for a file in the given scheme. \p Scheme must be
   /// registered. The URI is percent-encoded.
-  static llvm::Expected<FileURI> create(llvm::StringRef AbsolutePath,
-                                        llvm::StringRef Scheme = "file");
+  static llvm::Expected<URI> create(llvm::StringRef AbsolutePath,
+                                    llvm::StringRef Scheme);
+
+  /// This creates a file:// URI for \p AbsolutePath. The path must be absolute.
+  static URI createFile(llvm::StringRef AbsolutePath);
 
   /// Parse a URI string "<scheme>:[//<authority>/]<path>". Percent-encoded
   /// characters in the URI will be decoded.
-  static llvm::Expected<FileURI> parse(llvm::StringRef Uri);
+  static llvm::Expected<URI> parse(llvm::StringRef Uri);
 
   /// Resolves the absolute path of \p U. If there is no matching scheme, or the
   /// URI is invalid in the scheme, this returns an error.
   ///
   /// \p HintPath A related path, such as the current file or working directory,
   /// which can help disambiguate when the same file exists in many workspaces.
-  static llvm::Expected<std::string> resolve(const FileURI &U,
+  static llvm::Expected<std::string> resolve(const URI &U,
                                              llvm::StringRef HintPath = "");
 
-  friend bool operator==(const FileURI &LHS, const FileURI &RHS) {
+  friend bool operator==(const URI &LHS, const URI &RHS) {
     return std::tie(LHS.Scheme, LHS.Authority, LHS.Body) ==
            std::tie(RHS.Scheme, RHS.Authority, RHS.Body);
   }
 
+  friend bool operator<(const URI &LHS, const URI &RHS) {
+    return std::tie(LHS.Scheme, LHS.Authority, LHS.Body) <
+           std::tie(RHS.Scheme, RHS.Authority, RHS.Body);
+  }
+
 private:
-  FileURI() = default;
+  URI() = default;
 
   std::string Scheme;
   std::string Authority;
@@ -81,13 +86,13 @@ public:
   virtual ~URIScheme() = default;
 
   /// Returns the absolute path of the file corresponding to the URI
-  /// authority+body in the file system. See FileURI::resolve for semantics of
+  /// authority+body in the file system. See URI::resolve for semantics of
   /// \p HintPath.
   virtual llvm::Expected<std::string>
   getAbsolutePath(llvm::StringRef Authority, llvm::StringRef Body,
                   llvm::StringRef HintPath) const = 0;
 
-  virtual llvm::Expected<FileURI>
+  virtual llvm::Expected<URI>
   uriFromAbsolutePath(llvm::StringRef AbsolutePath) const = 0;
 };
 

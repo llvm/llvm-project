@@ -25,6 +25,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_PROTOCOL_H
 
 #include "JSONExpr.h"
+#include "URI.h"
 #include "llvm/ADT/Optional.h"
 #include <string>
 #include <vector>
@@ -47,32 +48,31 @@ enum class ErrorCode {
   RequestCancelled = -32800,
 };
 
-struct URI {
-  std::string uri;
+struct URIForFile {
   std::string file;
 
-  static URI fromUri(llvm::StringRef uri);
-  static URI fromFile(llvm::StringRef file);
+  std::string uri() const { return URI::createFile(file).toString(); }
 
-  friend bool operator==(const URI &LHS, const URI &RHS) {
-    return LHS.uri == RHS.uri;
+  friend bool operator==(const URIForFile &LHS, const URIForFile &RHS) {
+    return LHS.file == RHS.file;
   }
 
-  friend bool operator!=(const URI &LHS, const URI &RHS) {
+  friend bool operator!=(const URIForFile &LHS, const URIForFile &RHS) {
     return !(LHS == RHS);
   }
 
-  friend bool operator<(const URI &LHS, const URI &RHS) {
-    return LHS.uri < RHS.uri;
+  friend bool operator<(const URIForFile &LHS, const URIForFile &RHS) {
+    return LHS.file < RHS.file;
   }
 };
-json::Expr toJSON(const URI &U);
-bool fromJSON(const json::Expr &, URI &);
-llvm::raw_ostream &operator<<(llvm::raw_ostream &, const URI &);
+
+/// Serialize/deserialize \p URIForFile to/from a string URI.
+json::Expr toJSON(const URIForFile &U);
+bool fromJSON(const json::Expr &, URIForFile &);
 
 struct TextDocumentIdentifier {
   /// The text document's URI.
-  URI uri;
+  URIForFile uri;
 };
 bool fromJSON(const json::Expr &, TextDocumentIdentifier &);
 
@@ -116,7 +116,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Range &);
 
 struct Location {
   /// The text document's URI.
-  URI uri;
+  URIForFile uri;
   Range range;
 
   friend bool operator==(const Location &LHS, const Location &RHS) {
@@ -154,7 +154,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const TextEdit &);
 
 struct TextDocumentItem {
   /// The text document's URI.
-  URI uri;
+  URIForFile uri;
 
   /// The text document's language identifier.
   std::string languageId;
@@ -195,7 +195,7 @@ struct InitializeParams {
   /// The rootUri of the workspace. Is null if no
   /// folder is open. If both `rootPath` and `rootUri` are set
   /// `rootUri` wins.
-  llvm::Optional<URI> rootUri;
+  llvm::Optional<URIForFile> rootUri;
 
   // User provided initialization options.
   // initializationOptions?: any;
@@ -253,7 +253,7 @@ bool fromJSON(const json::Expr &E, FileChangeType &Out);
 
 struct FileEvent {
   /// The file's URI.
-  URI uri;
+  URIForFile uri;
   /// The change type.
   FileChangeType type;
 };

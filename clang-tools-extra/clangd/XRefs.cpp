@@ -7,6 +7,8 @@
 //
 //===---------------------------------------------------------------------===//
 #include "XRefs.h"
+#include "Logger.h"
+#include "URI.h"
 #include "clang/Index/IndexDataConsumer.h"
 #include "clang/Index/IndexingAction.h"
 namespace clang {
@@ -139,7 +141,7 @@ getDeclarationLocation(ParsedAST &AST, const SourceRange &ValSourceRange) {
   StringRef FilePath = F->tryGetRealPathName();
   if (FilePath.empty())
     FilePath = F->getName();
-  L.uri = URI::fromFile(FilePath);
+  L.uri.file = FilePath;
   L.range = R;
   return L;
 }

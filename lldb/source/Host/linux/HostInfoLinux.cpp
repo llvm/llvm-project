@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Host/Config.h"
 #include "lldb/Host/linux/HostInfoLinux.h"
 #include "lldb/Utility/Log.h"
 
@@ -204,7 +205,7 @@ bool HostInfoLinux::ComputeSupportExeDirectory(FileSpec &file_spec) {
 }
 
 bool HostInfoLinux::ComputeSystemPluginsDirectory(FileSpec &file_spec) {
-  FileSpec temp_file("/usr/lib/lldb/plugins", true);
+  FileSpec temp_file("/usr/lib" LLDB_LIBDIR_SUFFIX "/lldb/plugins", true);
   file_spec.GetDirectory().SetCString(temp_file.GetPath().c_str());
   return true;
 }

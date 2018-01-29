@@ -34,6 +34,10 @@ if(TARGET lldb-mi)
   list(APPEND LLDB_TEST_DEPS lldb-mi)
 endif()
 
+if(NOT LLDB_BUILT_STANDALONE)
+  list(APPEND LLDB_TEST_DEPS yaml2obj)
+endif()
+
 # The default architecture with which to compile test executables is the default LLVM target
 # architecture, which itself defaults to the host architecture.
 string(TOLOWER "${LLVM_TARGET_ARCH}" LLDB_DEFAULT_TEST_ARCH)
