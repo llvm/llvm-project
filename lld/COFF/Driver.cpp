@@ -768,6 +768,13 @@ static void parseOrderFile(StringRef Arg) {
     return;
   }
 
+  // Get a list of all comdat sections for error checking.
+  DenseSet<StringRef> Set;
+  for (Chunk *C : Symtab->getChunks())
+    if (auto *Sec = dyn_cast<SectionChunk>(C))
+      if (Sec->Sym)
+        Set.insert(Sec->Sym->getName());
+
   // Open a file.
   StringRef Path = Arg.substr(1);
   std::unique_ptr<MemoryBuffer> MB = CHECK(
@@ -780,7 +787,11 @@ static void parseOrderFile(StringRef Arg) {
   for (std::string S : args::getLines(MB->getMemBufferRef())) {
     if (Config->Machine == I386 && !isDecorated(S))
       S = "_" + S;
-    Config->Order[S] = INT_MIN + Config->Order.size();
+
+    if (Set.count(S) == 0)
+      warn("/order:" + Arg + ": missing symbol: " + S);
+    else
+      Config->Order[S] = INT_MIN + Config->Order.size();
   }
 }
 
@@ -1188,10 +1199,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     }
   }
 
-  // Handle /order
-  if (auto *Arg = Args.getLastArg(OPT_order))
-    parseOrderFile(Arg->getValue());
-
   // Handle /export
   for (auto *Arg : Args.filtered(OPT_export)) {
     Export E = parseExport(Arg->getValue());
@@ -1390,6 +1397,12 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // Windows specific -- Create a side-by-side manifest file.
   if (Config->Manifest == Configuration::SideBySide)
     createSideBySideManifest();
+
+  // Handle /order. We want to do this at this moment because we
+  // need a complete list of comdat sections to warn on nonexistent
+  // functions.
+  if (auto *Arg = Args.getLastArg(OPT_order))
+    parseOrderFile(Arg->getValue());
 
   // Identify unreferenced COMDAT sections.
   if (Config->DoGC)

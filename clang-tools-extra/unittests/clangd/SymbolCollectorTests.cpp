@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TestFS.h"
 #include "index/SymbolCollector.h"
 #include "index/SymbolYAML.h"
 #include "clang/Basic/FileManager.h"
@@ -44,7 +45,7 @@ MATCHER_P(Snippet, S, "") {
   return arg.CompletionSnippetInsertText == S;
 }
 MATCHER_P(QName, Name, "") { return (arg.Scope + arg.Name).str() == Name; }
-MATCHER_P(Path, P, "") { return arg.CanonicalDeclaration.FilePath == P; }
+MATCHER_P(CPath, P, "") { return arg.CanonicalDeclaration.FilePath == P; }
 
 namespace clang {
 namespace clangd {
@@ -156,15 +157,16 @@ TEST_F(SymbolCollectorTest, SymbolRelativeNoFallback) {
   CollectorOpts.IndexMainFiles = false;
   runSymbolCollector("class Foo {};", /*Main=*/"");
   EXPECT_THAT(Symbols,
-              UnorderedElementsAre(AllOf(QName("Foo"), Path("symbols.h"))));
+              UnorderedElementsAre(AllOf(QName("Foo"), CPath("symbols.h"))));
 }
 
 TEST_F(SymbolCollectorTest, SymbolRelativeWithFallback) {
   CollectorOpts.IndexMainFiles = false;
-  CollectorOpts.FallbackDir = "/cwd";
+  CollectorOpts.FallbackDir = getVirtualTestRoot();
   runSymbolCollector("class Foo {};", /*Main=*/"");
-  EXPECT_THAT(Symbols, UnorderedElementsAre(
-                           AllOf(QName("Foo"), Path("/cwd/symbols.h"))));
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(AllOf(
+                  QName("Foo"), CPath(getVirtualTestFilePath("symbols.h")))));
 }
 
 TEST_F(SymbolCollectorTest, IncludeEnums) {
