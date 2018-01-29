@@ -368,7 +368,7 @@ public:
 
   void emit(AsmPrinter *Asm) const override;
 
-  static constexpr AppleAccelTableHeader::Atom Atoms[] = {
+  static constexpr const AppleAccelTableHeader::Atom Atoms[] = {
       AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_offset,
                                   dwarf::DW_FORM_data4)};
 
@@ -391,7 +391,7 @@ public:
 
   void emit(AsmPrinter *Asm) const override;
 
-  static constexpr AppleAccelTableHeader::Atom Atoms[] = {
+  static constexpr const AppleAccelTableHeader::Atom Atoms[] = {
       AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_offset,
                                   dwarf::DW_FORM_data4),
       AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_tag, dwarf::DW_FORM_data2),
@@ -414,7 +414,7 @@ public:
 
   void emit(AsmPrinter *Asm) const override;
 
-  static constexpr AppleAccelTableHeader::Atom Atoms[] = {
+  static constexpr const AppleAccelTableHeader::Atom Atoms[] = {
       AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_offset,
                                   dwarf::DW_FORM_data4)};
 
@@ -443,7 +443,7 @@ public:
 
   void emit(AsmPrinter *Asm) const override;
 
-  static constexpr AppleAccelTableHeader::Atom Atoms[] = {
+  static constexpr const AppleAccelTableHeader::Atom Atoms[] = {
       AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_offset,
                                   dwarf::DW_FORM_data4),
       AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_tag, dwarf::DW_FORM_data2),
