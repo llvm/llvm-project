@@ -1459,7 +1459,7 @@ bool AsmPrinter::doFinalization(Module &M) {
           // Global symbols with internal or private linkage are not visible to
           // the linker, and thus would cause an error when the linker tried to
           // preserve the symbol due to the `/include:` directive.
-          if (GV->hasInternalLinkage() || GV->hasPrivateLinkage())
+          if (GV->hasLocalLinkage())
             continue;
 
           raw_string_ostream OS(Flags);

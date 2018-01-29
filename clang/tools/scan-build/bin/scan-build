@@ -51,6 +51,7 @@ my %Options = (
   OutputDir => undef,        # Parent directory to store HTML files.
   HtmlTitle => basename($CurrentDir)." - scan-build results",
   IgnoreErrors => 0,         # Ignore build errors.
+  KeepCC => 0,               # Do not override CC and CXX make variables
   ViewResults => 0,          # View results when the build terminates.
   ExitStatusFoundBugs => 0,  # Exit status reflects whether bugs were found
   ShowDescription => 0,      # Display the description of the defect in the list
@@ -1062,6 +1063,7 @@ sub RunXcodebuild {
 sub RunBuildCommand {
   my $Args = shift;
   my $IgnoreErrors = shift;
+  my $KeepCC = shift;
   my $Cmd = $Args->[0];
   my $CCAnalyzer = shift;
   my $CXXAnalyzer = shift;
@@ -1099,8 +1101,10 @@ sub RunBuildCommand {
     unshift @$Args, $CXXAnalyzer;
   }
   elsif ($Cmd eq "make" or $Cmd eq "gmake" or $Cmd eq "mingw32-make") {
-    AddIfNotPresent($Args, "CC=$CCAnalyzer");
-    AddIfNotPresent($Args, "CXX=$CXXAnalyzer");
+    if (!$KeepCC) {
+      AddIfNotPresent($Args, "CC=$CCAnalyzer");
+      AddIfNotPresent($Args, "CXX=$CXXAnalyzer");
+    }
     if ($IgnoreErrors) {
       AddIfNotPresent($Args,"-k");
       AddIfNotPresent($Args,"-i");
@@ -1157,6 +1161,12 @@ OPTIONS:
    Add a "keep on going" option to the specified build command. This option
    currently supports make and xcodebuild. This is a convenience option; one
    can specify this behavior directly using build options.
+
+ --keep-cc
+
+   Do not override CC and CXX make variables. Useful when running make in
+   autoconf-based (and similar) projects where configure can add extra flags
+   to those variables.
 
  --html-title [title]
  --html-title=[title]
@@ -1532,6 +1542,12 @@ sub ProcessArgs {
       next;
     }
 
+    if ($arg eq "--keep-cc") {
+      shift @$Args;
+      $Options{KeepCC} = 1;
+      next;
+    }
+
     if ($arg =~ /^--use-cc(=(.+))?$/) {
       shift @$Args;
       my $cc;
@@ -1838,8 +1854,8 @@ my %EnvVars = (
 );
 
 # Run the build.
-my $ExitStatus = RunBuildCommand(\@ARGV, $Options{IgnoreErrors}, $Cmd, $CmdCXX,
-                                \%EnvVars);
+my $ExitStatus = RunBuildCommand(\@ARGV, $Options{IgnoreErrors}, $Options{KeepCC},
+	                        $Cmd, $CmdCXX, \%EnvVars);
 
 if (defined $Options{OutputFormat}) {
   if ($Options{OutputFormat} =~ /plist/) {

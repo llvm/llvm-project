@@ -26,6 +26,7 @@
 #define DEBUG_TYPE "legalizer"
 
 using namespace llvm;
+using namespace LegalizeActions;
 
 LegalizerHelper::LegalizerHelper(MachineFunction &MF)
     : MRI(MF.getRegInfo()), LI(*MF.getSubtarget().getLegalizerInfo()) {
@@ -38,25 +39,25 @@ LegalizerHelper::legalizeInstrStep(MachineInstr &MI) {
 
   auto Step = LI.getAction(MI, MRI);
   switch (Step.Action) {
-  case LegalizerInfo::Legal:
+  case Legal:
     DEBUG(dbgs() << ".. Already legal\n");
     return AlreadyLegal;
-  case LegalizerInfo::Libcall:
+  case Libcall:
     DEBUG(dbgs() << ".. Convert to libcall\n");
     return libcall(MI);
-  case LegalizerInfo::NarrowScalar:
+  case NarrowScalar:
     DEBUG(dbgs() << ".. Narrow scalar\n");
     return narrowScalar(MI, Step.TypeIdx, Step.NewType);
-  case LegalizerInfo::WidenScalar:
+  case WidenScalar:
     DEBUG(dbgs() << ".. Widen scalar\n");
     return widenScalar(MI, Step.TypeIdx, Step.NewType);
-  case LegalizerInfo::Lower:
+  case Lower:
     DEBUG(dbgs() << ".. Lower\n");
     return lower(MI, Step.TypeIdx, Step.NewType);
-  case LegalizerInfo::FewerElements:
+  case FewerElements:
     DEBUG(dbgs() << ".. Reduce number of elements\n");
     return fewerElementsVector(MI, Step.TypeIdx, Step.NewType);
-  case LegalizerInfo::Custom:
+  case Custom:
     DEBUG(dbgs() << ".. Custom legalization\n");
     return LI.legalizeCustom(MI, MRI, MIRBuilder) ? Legalized
                                                   : UnableToLegalize;
@@ -941,7 +942,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     // Lower (G_FSUB LHS, RHS) to (G_FADD LHS, (G_FNEG RHS)).
     // First, check if G_FNEG is marked as Lower. If so, we may
     // end up with an infinite loop as G_FSUB is used to legalize G_FNEG.
-    if (LI.getAction({G_FNEG, {Ty}}).Action == LegalizerInfo::Lower)
+    if (LI.getAction({G_FNEG, {Ty}}).Action == Lower)
       return UnableToLegalize;
     unsigned Res = MI.getOperand(0).getReg();
     unsigned LHS = MI.getOperand(1).getReg();

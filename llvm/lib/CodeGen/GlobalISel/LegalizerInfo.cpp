@@ -24,12 +24,49 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LowLevelTypeImpl.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <map>
+
 using namespace llvm;
+using namespace LegalizeActions;
+
+#define DEBUG_TYPE "legalizer-info"
+
+raw_ostream &LegalityQuery::print(raw_ostream &OS) const {
+  OS << Opcode << ", {";
+  for (const auto &Type : Types) {
+    OS << Type << ", ";
+  }
+  OS << "}";
+  return OS;
+}
+
+LegalizeActionStep LegalizeRuleSet::apply(const LegalityQuery &Query) const {
+  DEBUG(dbgs() << "Applying legalizer ruleset to: "; Query.print(dbgs());
+        dbgs() << "\n");
+  if (Rules.empty()) {
+    DEBUG(dbgs() << ".. fallback to legacy rules (no rules defined)\n");
+    return {LegalizeAction::UseLegacyRules, 0, LLT{}};
+  }
+  for (const auto &Rule : Rules) {
+    if (Rule.match(Query)) {
+      DEBUG(dbgs() << ".. match\n");
+      std::pair<unsigned, LLT> Mutation = Rule.determineMutation(Query);
+      DEBUG(dbgs() << ".. .. " << (unsigned)Rule.getAction() << ", "
+                   << Mutation.first << ", " << Mutation.second << "\n");
+      assert(Query.Types[Mutation.first] != Mutation.second &&
+             "Simple loop detected");
+      return {Rule.getAction(), Mutation.first, Mutation.second};
+    } else
+      DEBUG(dbgs() << ".. no match\n");
+  }
+  DEBUG(dbgs() << ".. unsupported\n");
+  return {LegalizeAction::Unsupported, 0, LLT{}};
+}
 
 LegalizerInfo::LegalizerInfo() : TablesInitialized(false) {
   // Set defaults.
@@ -162,7 +199,7 @@ void LegalizerInfo::computeTables() {
 // probably going to need specialized lookup structures for various types before
 // we have any hope of doing well with something like <13 x i3>. Even the common
 // cases should do better than what we have now.
-std::pair<LegalizerInfo::LegalizeAction, LLT>
+std::pair<LegalizeAction, LLT>
 LegalizerInfo::getAspectAction(const InstrAspect &Aspect) const {
   assert(TablesInitialized && "backend forgot to call computeTables");
   // These *have* to be implemented for now, they're the fundamental basis of
@@ -186,17 +223,79 @@ static LLT getTypeFromTypeIdx(const MachineInstr &MI,
   return MRI.getType(MI.getOperand(OpIdx).getReg());
 }
 
-LegalizerInfo::LegalizeActionStep
+unsigned LegalizerInfo::getOpcodeIdxForOpcode(unsigned Opcode) const {
+  assert(Opcode >= FirstOp && Opcode <= LastOp && "Unsupported opcode");
+  return Opcode - FirstOp;
+}
+
+unsigned LegalizerInfo::getActionDefinitionsIdx(unsigned Opcode) const {
+  unsigned OpcodeIdx = getOpcodeIdxForOpcode(Opcode);
+  if (unsigned Alias = RulesForOpcode[OpcodeIdx].getAlias()) {
+    DEBUG(dbgs() << ".. opcode " << Opcode << " is aliased to " << Alias
+                 << "\n");
+    OpcodeIdx = getOpcodeIdxForOpcode(Alias);
+    DEBUG(dbgs() << ".. opcode " << Alias << " is aliased to "
+                 << RulesForOpcode[OpcodeIdx].getAlias() << "\n");
+    assert(RulesForOpcode[OpcodeIdx].getAlias() == 0 && "Cannot chain aliases");
+  }
+
+  return OpcodeIdx;
+}
+
+const LegalizeRuleSet &
+LegalizerInfo::getActionDefinitions(unsigned Opcode) const {
+  unsigned OpcodeIdx = getActionDefinitionsIdx(Opcode);
+  return RulesForOpcode[OpcodeIdx];
+}
+
+LegalizeRuleSet &LegalizerInfo::getActionDefinitionsBuilder(unsigned Opcode) {
+  unsigned OpcodeIdx = getActionDefinitionsIdx(Opcode);
+  auto &Result = RulesForOpcode[OpcodeIdx];
+  assert(!Result.isAliasedByAnother() && "Modifying this opcode will modify aliases");
+  return Result;
+}
+
+LegalizeRuleSet &LegalizerInfo::getActionDefinitionsBuilder(
+    std::initializer_list<unsigned> Opcodes) {
+  unsigned Representative = *Opcodes.begin();
+
+  for (auto I = Opcodes.begin() + 1, E = Opcodes.end(); I != E; ++I)
+    aliasActionDefinitions(Representative, *I);
+
+  auto &Return = getActionDefinitionsBuilder(Representative);
+  Return.setIsAliasedByAnother();
+  return Return;
+}
+
+void LegalizerInfo::aliasActionDefinitions(unsigned OpcodeTo,
+                                           unsigned OpcodeFrom) {
+  assert(OpcodeTo != OpcodeFrom && "Cannot alias to self");
+  assert(OpcodeTo >= FirstOp && OpcodeTo <= LastOp && "Unsupported opcode");
+  const unsigned OpcodeFromIdx = getOpcodeIdxForOpcode(OpcodeFrom);
+  RulesForOpcode[OpcodeFromIdx].aliasTo(OpcodeTo);
+}
+
+LegalizeActionStep
 LegalizerInfo::getAction(const LegalityQuery &Query) const {
+  LegalizeActionStep Step = getActionDefinitions(Query.Opcode).apply(Query);
+  if (Step.Action != LegalizeAction::UseLegacyRules) {
+    return Step;
+  }
+
   for (unsigned i = 0; i < Query.Types.size(); ++i) {
     auto Action = getAspectAction({Query.Opcode, i, Query.Types[i]});
-    if (Action.first != Legal)
+    if (Action.first != Legal) {
+      DEBUG(dbgs() << ".. (legacy) Type " << i << " Action="
+                   << (unsigned)Action.first << ", " << Action.second << "\n");
       return {Action.first, i, Action.second};
+    } else
+      DEBUG(dbgs() << ".. (legacy) Type " << i << " Legal\n");
   }
+  DEBUG(dbgs() << ".. (legacy) Legal\n");
   return {Legal, 0, LLT{}};
 }
 
-LegalizerInfo::LegalizeActionStep
+LegalizeActionStep
 LegalizerInfo::getAction(const MachineInstr &MI,
                          const MachineRegisterInfo &MRI) const {
   SmallVector<LLT, 2> Types;
@@ -321,17 +420,18 @@ LegalizerInfo::findAction(const SizeAndActionsVec &Vec, const uint32_t Size) {
   case Unsupported:
     return {Size, Unsupported};
   case NotFound:
+  case UseLegacyRules:
     llvm_unreachable("NotFound");
   }
   llvm_unreachable("Action has an unknown enum value");
 }
 
-std::pair<LegalizerInfo::LegalizeAction, LLT>
+std::pair<LegalizeAction, LLT>
 LegalizerInfo::findScalarLegalAction(const InstrAspect &Aspect) const {
   assert(Aspect.Type.isScalar() || Aspect.Type.isPointer());
   if (Aspect.Opcode < FirstOp || Aspect.Opcode > LastOp)
     return {NotFound, LLT()};
-  const unsigned OpcodeIdx = Aspect.Opcode - FirstOp;
+  const unsigned OpcodeIdx = getOpcodeIdxForOpcode(Aspect.Opcode);
   if (Aspect.Type.isPointer() &&
       AddrSpace2PointerActions[OpcodeIdx].find(Aspect.Type.getAddressSpace()) ==
           AddrSpace2PointerActions[OpcodeIdx].end()) {
@@ -355,14 +455,14 @@ LegalizerInfo::findScalarLegalAction(const InstrAspect &Aspect) const {
                                                 SizeAndAction.first)};
 }
 
-std::pair<LegalizerInfo::LegalizeAction, LLT>
+std::pair<LegalizeAction, LLT>
 LegalizerInfo::findVectorLegalAction(const InstrAspect &Aspect) const {
   assert(Aspect.Type.isVector());
   // First legalize the vector element size, then legalize the number of
   // lanes in the vector.
   if (Aspect.Opcode < FirstOp || Aspect.Opcode > LastOp)
     return {NotFound, Aspect.Type};
-  const unsigned OpcodeIdx = Aspect.Opcode - FirstOp;
+  const unsigned OpcodeIdx = getOpcodeIdxForOpcode(Aspect.Opcode);
   const unsigned TypeIdx = Aspect.Idx;
   if (TypeIdx >= ScalarInVectorActions[OpcodeIdx].size())
     return {NotFound, Aspect.Type};

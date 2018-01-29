@@ -14,6 +14,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Index/USRGeneration.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 
@@ -22,36 +23,42 @@ namespace clangd {
 
 namespace {
 // Make the Path absolute using the current working directory of the given
-// SourceManager if the Path is not an absolute path.
+// SourceManager if the Path is not an absolute path. If failed, this combine
+// relative paths with \p FallbackDir to get an absolute path.
 //
 // The Path can be a path relative to the build directory, or retrieved from
 // the SourceManager.
-std::string makeAbsolutePath(const SourceManager &SM, StringRef Path) {
+std::string makeAbsolutePath(const SourceManager &SM, StringRef Path,
+                             StringRef FallbackDir) {
   llvm::SmallString<128> AbsolutePath(Path);
   if (std::error_code EC =
           SM.getFileManager().getVirtualFileSystem()->makeAbsolute(
               AbsolutePath))
     llvm::errs() << "Warning: could not make absolute file: '" << EC.message()
                  << '\n';
-  // Handle the symbolic link path case where the current working directory
-  // (getCurrentWorkingDirectory) is a symlink./ We always want to the real
-  // file path (instead of the symlink path) for the  C++ symbols.
-  //
-  // Consider the following example:
-  //
-  //   src dir: /project/src/foo.h
-  //   current working directory (symlink): /tmp/build -> /project/src/
-  //
-  // The file path of Symbol is "/project/src/foo.h" instead of
-  // "/tmp/build/foo.h"
-  const DirectoryEntry *Dir = SM.getFileManager().getDirectory(
-      llvm::sys::path::parent_path(AbsolutePath.str()));
-  if (Dir) {
-    StringRef DirName = SM.getFileManager().getCanonicalName(Dir);
-    SmallString<128> AbsoluteFilename;
-    llvm::sys::path::append(AbsoluteFilename, DirName,
-                            llvm::sys::path::filename(AbsolutePath.str()));
-    return AbsoluteFilename.str();
+  if (llvm::sys::path::is_absolute(AbsolutePath)) {
+    // Handle the symbolic link path case where the current working directory
+    // (getCurrentWorkingDirectory) is a symlink./ We always want to the real
+    // file path (instead of the symlink path) for the  C++ symbols.
+    //
+    // Consider the following example:
+    //
+    //   src dir: /project/src/foo.h
+    //   current working directory (symlink): /tmp/build -> /project/src/
+    //
+    // The file path of Symbol is "/project/src/foo.h" instead of
+    // "/tmp/build/foo.h"
+    if (const DirectoryEntry *Dir = SM.getFileManager().getDirectory(
+            llvm::sys::path::parent_path(AbsolutePath.str()))) {
+      StringRef DirName = SM.getFileManager().getCanonicalName(Dir);
+      SmallString<128> AbsoluteFilename;
+      llvm::sys::path::append(AbsoluteFilename, DirName,
+                              llvm::sys::path::filename(AbsolutePath.str()));
+      AbsolutePath = AbsoluteFilename;
+    }
+  } else if (!FallbackDir.empty()) {
+    llvm::sys::fs::make_absolute(FallbackDir, AbsolutePath);
+    llvm::sys::path::remove_dots(AbsolutePath, /*remove_dot_dot=*/true);
   }
   return AbsolutePath.str();
 }
@@ -142,8 +149,8 @@ bool SymbolCollector::handleDeclOccurence(
       return true;
 
     auto &SM = ND->getASTContext().getSourceManager();
-    std::string FilePath =
-        makeAbsolutePath(SM, SM.getFilename(D->getLocation()));
+    std::string FilePath = makeAbsolutePath(
+        SM, SM.getFilename(D->getLocation()), Opts.FallbackDir);
     SymbolLocation Location = {FilePath, SM.getFileOffset(D->getLocStart()),
                                SM.getFileOffset(D->getLocEnd())};
     std::string QName = ND->getQualifiedNameAsString();

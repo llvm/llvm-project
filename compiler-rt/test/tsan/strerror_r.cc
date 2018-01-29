@@ -2,25 +2,27 @@
 // RUN: %clangxx_tsan -O1 -DTEST_ERROR=-1 %s -o %t && not %run %t 2>&1 | FileCheck --check-prefixes=CHECK,CHECK-USER %s
 // UNSUPPORTED: darwin
 
-#include <assert.h>
+#include "test.h"
+
 #include <errno.h>
 #include <pthread.h>
-#include <stdio.h>
 #include <string.h>
 
 char buffer[1000];
 
 void *Thread(void *p) {
+  barrier_wait(&barrier);
   strerror_r(TEST_ERROR, buffer, sizeof(buffer));
   return buffer;
 }
 
 int main() {
-  pthread_t th[2];
-  pthread_create(&th[0], 0, Thread, 0);
-  pthread_create(&th[1], 0, Thread, 0);
-  pthread_join(th[0], 0);
-  pthread_join(th[1], 0);
+  barrier_init(&barrier, 2);
+  pthread_t th;
+  pthread_create(&th, 0, Thread, 0);
+  strerror_r(TEST_ERROR, buffer, sizeof(buffer));
+  barrier_wait(&barrier);
+  pthread_join(th, 0);
   fprintf(stderr, "DONE\n");
 }
 

@@ -166,7 +166,7 @@ Options for ``libomp``
   Create the Fortran modules (requires Fortran compiler).
 
 macOS* Fat Libraries
-""""""""""""""""""
+""""""""""""""""""""
 On macOS* machines, it is possible to build universal (or fat) libraries which
 include both i386 and x86_64 architecture objects in a single archive.
 
@@ -253,6 +253,40 @@ Options for ``libomptarget``
 **LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER** = ``""``
   Path of the folder that contains ``libomp.so``.  This is required for testing
   out-of-tree builds.
+
+Options for ``NVPTX device RTL``
+--------------------------------
+
+**LIBOMPTARGET_NVPTX_ENABLE_BCLIB** = ``OFF|ON``
+  Enable CUDA LLVM bitcode offloading device RTL. This is used for link time
+  optimization of the OMP runtime and application code.
+
+**LIBOMPTARGET_NVPTX_CUDA_COMPILER** = ``""``
+  Location of a CUDA compiler capable of emitting LLVM bitcode. Currently only
+  the Clang compiler is supported. This is only used when building the CUDA LLVM
+  bitcode offloading device RTL. If unspecified and the CMake C compiler is
+  Clang, then Clang is used.
+
+**LIBOMPTARGET_NVPTX_BC_LINKER** = ``""``
+  Location of a linker capable of linking LLVM bitcode objects. This is only
+  used when building the CUDA LLVM bitcode offloading device RTL. If unspecified
+  and the CMake C compiler is Clang and there exists a llvm-link binary in the
+  directory containing Clang, then this llvm-link binary is used.
+
+**LIBOMPTARGET_NVPTX_ALTERNATE_HOST_COMPILER** = ``""``
+  Host compiler to use with NVCC. This compiler is not going to be used to
+  produce any binary. Instead, this is used to overcome the input compiler
+  checks done by NVCC. E.g. if using a default host compiler that is not
+  compatible with NVCC, this option can be use to pass to NVCC a valid compiler
+  to avoid the error.
+
+ **LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITY** = ``35``
+  CUDA compute capability that should be supported by the NVPTX device RTL. E.g.
+  for compute capability 6.0, the option "60" should be used. Compute capability
+  3.5 is the minimum required.
+
+ **LIBOMPTARGET_NVPTX_DEBUG** = ``OFF|ON``
+  Enable printing of debug messages from the NVPTX device RTL.
 
 Example Usages of CMake
 =======================

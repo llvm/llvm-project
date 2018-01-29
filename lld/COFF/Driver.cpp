@@ -1365,7 +1365,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // Handle /output-def (MinGW specific).
   if (auto *Arg = Args.getLastArg(OPT_output_def))
     writeDefFile(Arg->getValue());
-  
+
   // Set extra alignment for .comm symbols
   for (auto Pair : Config->AlignComm) {
     StringRef Name = Pair.first;

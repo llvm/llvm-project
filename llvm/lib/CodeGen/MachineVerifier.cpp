@@ -1101,12 +1101,14 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
           }
         }
       }
-      if (MO->isRenamable() &&
-          ((MO->isDef() && MI->hasExtraDefRegAllocReq()) ||
-           (MO->isUse() && MI->hasExtraSrcRegAllocReq()))) {
-        report("Illegal isRenamable setting for opcode with extra regalloc "
-               "requirements",
-               MO, MONum);
+      if (MO->isRenamable()) {
+        if ((MO->isDef() && MI->hasExtraDefRegAllocReq()) ||
+            (MO->isUse() && MI->hasExtraSrcRegAllocReq()))
+          report("Illegal isRenamable setting for opcode with extra regalloc "
+                 "requirements",
+                 MO, MONum);
+        if (MRI->isReserved(Reg))
+          report("isRenamable set on reserved register", MO, MONum);
         return;
       }
     } else {

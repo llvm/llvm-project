@@ -40,7 +40,7 @@ stack:
 constants:
 body:             |
   bb.0.entry:
-    renamable %zero = SLL_MMR6 killed renamable %zero, 0
+    %zero = SLL_MMR6 killed %zero, 0
     JRC16_MM undef %ra, implicit %v0
 
 ...
