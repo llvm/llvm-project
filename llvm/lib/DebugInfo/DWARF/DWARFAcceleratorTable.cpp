@@ -67,8 +67,8 @@ llvm::Error AppleAcceleratorTable::extract() {
   Hdr.Magic = AccelSection.getU32(&Offset);
   Hdr.Version = AccelSection.getU16(&Offset);
   Hdr.HashFunction = AccelSection.getU16(&Offset);
-  Hdr.NumBuckets = AccelSection.getU32(&Offset);
-  Hdr.NumHashes = AccelSection.getU32(&Offset);
+  Hdr.BucketCount = AccelSection.getU32(&Offset);
+  Hdr.HashCount = AccelSection.getU32(&Offset);
   Hdr.HeaderDataLength = AccelSection.getU32(&Offset);
 
   // Check that we can read all the hashes and offsets from the
@@ -76,7 +76,7 @@ llvm::Error AppleAcceleratorTable::extract() {
   // We need to substract one because we're checking for an *offset* which is
   // equal to the size for an empty table and hence pointer after the section.
   if (!AccelSection.isValidOffset(sizeof(Hdr) + Hdr.HeaderDataLength +
-                                  Hdr.NumBuckets * 4 + Hdr.NumHashes * 8 - 1))
+                                  Hdr.BucketCount * 4 + Hdr.HashCount * 8 - 1))
     return make_error<StringError>(
         "Section too small: cannot read buckets and hashes.",
         inconvertibleErrorCode());
@@ -94,8 +94,8 @@ llvm::Error AppleAcceleratorTable::extract() {
   return Error::success();
 }
 
-uint32_t AppleAcceleratorTable::getNumBuckets() { return Hdr.NumBuckets; }
-uint32_t AppleAcceleratorTable::getNumHashes() { return Hdr.NumHashes; }
+uint32_t AppleAcceleratorTable::getNumBuckets() { return Hdr.BucketCount; }
+uint32_t AppleAcceleratorTable::getNumHashes() { return Hdr.HashCount; }
 uint32_t AppleAcceleratorTable::getSizeHdr() { return sizeof(Hdr); }
 uint32_t AppleAcceleratorTable::getHeaderDataLength() {
   return Hdr.HeaderDataLength;
@@ -149,78 +149,101 @@ AppleAcceleratorTable::readAtoms(uint32_t &HashDataOffset) {
   return {DieOffset, DieTag};
 }
 
+void AppleAcceleratorTable::Header::dump(ScopedPrinter &W) const {
+  DictScope HeaderScope(W, "Header");
+  W.printHex("Magic", Magic);
+  W.printHex("Version", Version);
+  W.printHex("Hash function", HashFunction);
+  W.printNumber("Bucket count", BucketCount);
+  W.printNumber("Hashes count", HashCount);
+  W.printNumber("HeaderData length", HeaderDataLength);
+}
+
+bool AppleAcceleratorTable::dumpName(ScopedPrinter &W,
+                                     SmallVectorImpl<DWARFFormValue> &AtomForms,
+                                     uint32_t *DataOffset) const {
+  DWARFFormParams FormParams = {Hdr.Version, 0, dwarf::DwarfFormat::DWARF32};
+  uint32_t NameOffset = *DataOffset;
+  if (!AccelSection.isValidOffsetForDataOfSize(*DataOffset, 4)) {
+    W.printString("Incorrectly terminated list.");
+    return false;
+  }
+  unsigned StringOffset = AccelSection.getRelocatedValue(4, DataOffset);
+  if (!StringOffset)
+    return false; // End of list
+
+  DictScope NameScope(W, ("Name@0x" + Twine::utohexstr(NameOffset)).str());
+  W.startLine() << format("String: 0x%08x", StringOffset);
+  W.getOStream() << " \"" << StringSection.getCStr(&StringOffset) << "\"\n";
+
+  unsigned NumData = AccelSection.getU32(DataOffset);
+  for (unsigned Data = 0; Data < NumData; ++Data) {
+    ListScope DataScope(W, ("Data " + Twine(Data)).str());
+    unsigned i = 0;
+    for (auto &Atom : AtomForms) {
+      W.startLine() << format("Atom[%d]: ", i++);
+      if (Atom.extractValue(AccelSection, DataOffset, FormParams))
+        Atom.dump(W.getOStream());
+      else
+        W.getOStream() << "Error extracting the value";
+      W.getOStream() << "\n";
+    }
+  }
+  return true; // more entries follow
+}
+
 LLVM_DUMP_METHOD void AppleAcceleratorTable::dump(raw_ostream &OS) const {
   if (!IsValid)
     return;
 
-  // Dump the header.
-  OS << "Magic = " << format("0x%08x", Hdr.Magic) << '\n'
-     << "Version = " << format("0x%04x", Hdr.Version) << '\n'
-     << "Hash function = " << format("0x%08x", Hdr.HashFunction) << '\n'
-     << "Bucket count = " << Hdr.NumBuckets << '\n'
-     << "Hashes count = " << Hdr.NumHashes << '\n'
-     << "HeaderData length = " << Hdr.HeaderDataLength << '\n'
-     << "DIE offset base = " << HdrData.DIEOffsetBase << '\n'
-     << "Number of atoms = " << HdrData.Atoms.size() << '\n';
+  ScopedPrinter W(OS);
 
-  unsigned i = 0;
+  Hdr.dump(W);
+
+  W.printNumber("DIE offset base", HdrData.DIEOffsetBase);
+  W.printNumber("Number of atoms", HdrData.Atoms.size());
   SmallVector<DWARFFormValue, 3> AtomForms;
-  for (const auto &Atom: HdrData.Atoms) {
-    OS << format("Atom[%d] Type: ", i++) << formatAtom(Atom.first)
-       << " Form: " << formatForm(Atom.second) << '\n';
-    AtomForms.push_back(DWARFFormValue(Atom.second));
+  {
+    ListScope AtomsScope(W, "Atoms");
+    unsigned i = 0;
+    for (const auto &Atom : HdrData.Atoms) {
+      DictScope AtomScope(W, ("Atom " + Twine(i++)).str());
+      W.startLine() << "Type: " << formatAtom(Atom.first) << '\n';
+      W.startLine() << "Form: " << formatForm(Atom.second) << '\n';
+      AtomForms.push_back(DWARFFormValue(Atom.second));
+    }
   }
 
   // Now go through the actual tables and dump them.
   uint32_t Offset = sizeof(Hdr) + Hdr.HeaderDataLength;
-  unsigned HashesBase = Offset + Hdr.NumBuckets * 4;
-  unsigned OffsetsBase = HashesBase + Hdr.NumHashes * 4;
-  DWARFFormParams FormParams = {Hdr.Version, 0, dwarf::DwarfFormat::DWARF32};
+  unsigned HashesBase = Offset + Hdr.BucketCount * 4;
+  unsigned OffsetsBase = HashesBase + Hdr.HashCount * 4;
 
-  for (unsigned Bucket = 0; Bucket < Hdr.NumBuckets; ++Bucket) {
+  for (unsigned Bucket = 0; Bucket < Hdr.BucketCount; ++Bucket) {
     unsigned Index = AccelSection.getU32(&Offset);
 
-    OS << format("Bucket[%d]\n", Bucket);
+    ListScope BucketScope(W, ("Bucket " + Twine(Bucket)).str());
     if (Index == UINT32_MAX) {
-      OS << "  EMPTY\n";
+      W.printString("EMPTY");
       continue;
     }
 
-    for (unsigned HashIdx = Index; HashIdx < Hdr.NumHashes; ++HashIdx) {
+    for (unsigned HashIdx = Index; HashIdx < Hdr.HashCount; ++HashIdx) {
       unsigned HashOffset = HashesBase + HashIdx*4;
       unsigned OffsetsOffset = OffsetsBase + HashIdx*4;
       uint32_t Hash = AccelSection.getU32(&HashOffset);
 
-      if (Hash % Hdr.NumBuckets != Bucket)
+      if (Hash % Hdr.BucketCount != Bucket)
         break;
 
       unsigned DataOffset = AccelSection.getU32(&OffsetsOffset);
-      OS << format("  Hash = 0x%08x Offset = 0x%08x\n", Hash, DataOffset);
+      ListScope HashScope(W, ("Hash 0x" + Twine::utohexstr(Hash)).str());
       if (!AccelSection.isValidOffset(DataOffset)) {
-        OS << "    Invalid section offset\n";
+        W.printString("Invalid section offset");
         continue;
       }
-      while (AccelSection.isValidOffsetForDataOfSize(DataOffset, 4)) {
-        unsigned StringOffset = AccelSection.getRelocatedValue(4, &DataOffset);
-        if (!StringOffset)
-          break;
-        OS << format("    Name: %08x \"%s\"\n", StringOffset,
-                     StringSection.getCStr(&StringOffset));
-        unsigned NumData = AccelSection.getU32(&DataOffset);
-        for (unsigned Data = 0; Data < NumData; ++Data) {
-          OS << format("    Data[%d] => ", Data);
-          unsigned i = 0;
-          for (auto &Atom : AtomForms) {
-            OS << format("{Atom[%d]: ", i++);
-            if (Atom.extractValue(AccelSection, &DataOffset, FormParams))
-              Atom.dump(OS);
-            else
-              OS << "Error extracting the value";
-            OS << "} ";
-          }
-          OS << '\n';
-        }
-      }
+      while (dumpName(W, AtomForms, &DataOffset))
+        /*empty*/;
     }
   }
 }
@@ -261,21 +284,21 @@ AppleAcceleratorTable::equal_range(StringRef Key) const {
 
   // Find the bucket.
   unsigned HashValue = djbHash(Key);
-  unsigned Bucket = HashValue % Hdr.NumBuckets;
+  unsigned Bucket = HashValue % Hdr.BucketCount;
   unsigned BucketBase = sizeof(Hdr) + Hdr.HeaderDataLength;
-  unsigned HashesBase = BucketBase + Hdr.NumBuckets * 4;
-  unsigned OffsetsBase = HashesBase + Hdr.NumHashes * 4;
+  unsigned HashesBase = BucketBase + Hdr.BucketCount * 4;
+  unsigned OffsetsBase = HashesBase + Hdr.HashCount * 4;
 
   unsigned BucketOffset = BucketBase + Bucket * 4;
   unsigned Index = AccelSection.getU32(&BucketOffset);
 
   // Search through all hashes in the bucket.
-  for (unsigned HashIdx = Index; HashIdx < Hdr.NumHashes; ++HashIdx) {
+  for (unsigned HashIdx = Index; HashIdx < Hdr.HashCount; ++HashIdx) {
     unsigned HashOffset = HashesBase + HashIdx * 4;
     unsigned OffsetsOffset = OffsetsBase + HashIdx * 4;
     uint32_t Hash = AccelSection.getU32(&HashOffset);
 
-    if (Hash % Hdr.NumBuckets != Bucket)
+    if (Hash % Hdr.BucketCount != Bucket)
       // We are already in the next bucket.
       break;
 

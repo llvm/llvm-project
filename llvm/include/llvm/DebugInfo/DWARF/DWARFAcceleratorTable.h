@@ -54,9 +54,11 @@ class AppleAcceleratorTable : public DWARFAcceleratorTable {
     uint32_t Magic;
     uint16_t Version;
     uint16_t HashFunction;
-    uint32_t NumBuckets;
-    uint32_t NumHashes;
+    uint32_t BucketCount;
+    uint32_t HashCount;
     uint32_t HeaderDataLength;
+
+    void dump(ScopedPrinter &W) const;
   };
 
   struct HeaderData {
@@ -70,6 +72,11 @@ class AppleAcceleratorTable : public DWARFAcceleratorTable {
   struct Header Hdr;
   struct HeaderData HdrData;
   bool IsValid = false;
+
+  /// Returns true if we should continue scanning for entries or false if we've
+  /// reached the last (sentinel) entry of encountered a parsing error.
+  bool dumpName(ScopedPrinter &W, SmallVectorImpl<DWARFFormValue> &AtomForms,
+                uint32_t *DataOffset) const;
 
 public:
   /// An iterator for the entries associated with one key. Each entry can have
