@@ -93,17 +93,19 @@ NativeProcessNetBSD::Factory::Launch(ProcessLaunchInfo &launch_info,
   }
   LLDB_LOG(log, "inferior started, now in stopped state");
 
-  ArchSpec arch;
-  if ((status = ResolveProcessArchitecture(pid, arch)).Fail())
-    return status.ToError();
+  ProcessInstanceInfo Info;
+  if (!Host::GetProcessInfo(pid, Info)) {
+    return llvm::make_error<StringError>("Cannot get process architecture",
+                                         llvm::inconvertibleErrorCode());
+  }
 
   // Set the architecture to the exe architecture.
   LLDB_LOG(log, "pid = {0:x}, detected architecture {1}", pid,
-           arch.GetArchitectureName());
+           Info.GetArchitecture().GetArchitectureName());
 
   std::unique_ptr<NativeProcessNetBSD> process_up(new NativeProcessNetBSD(
       pid, launch_info.GetPTY().ReleaseMasterFileDescriptor(), native_delegate,
-      arch, mainloop));
+      Info.GetArchitecture(), mainloop));
 
   status = process_up->ReinitializeThreads();
   if (status.Fail())
@@ -124,13 +126,14 @@ NativeProcessNetBSD::Factory::Attach(
   LLDB_LOG(log, "pid = {0:x}", pid);
 
   // Retrieve the architecture for the running process.
-  ArchSpec arch;
-  Status status = ResolveProcessArchitecture(pid, arch);
-  if (!status.Success())
-    return status.ToError();
+  ProcessInstanceInfo Info;
+  if (!Host::GetProcessInfo(pid, Info)) {
+    return llvm::make_error<StringError>("Cannot get process architecture",
+                                         llvm::inconvertibleErrorCode());
+  }
 
-  std::unique_ptr<NativeProcessNetBSD> process_up(
-      new NativeProcessNetBSD(pid, -1, native_delegate, arch, mainloop));
+  std::unique_ptr<NativeProcessNetBSD> process_up(new NativeProcessNetBSD(
+      pid, -1, native_delegate, Info.GetArchitecture(), mainloop));
 
   status = process_up->Attach();
   if (!status.Success())

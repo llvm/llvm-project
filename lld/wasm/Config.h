@@ -14,12 +14,10 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/Wasm.h"
 
-#include "Symbols.h"
-
-using llvm::wasm::WasmGlobal;
-
 namespace lld {
 namespace wasm {
+
+class Symbol;
 
 struct Configuration {
   bool AllowUndefined;

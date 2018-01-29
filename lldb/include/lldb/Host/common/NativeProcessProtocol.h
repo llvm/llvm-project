@@ -466,11 +466,6 @@ protected:
 
   NativeThreadProtocol *GetThreadByIDUnlocked(lldb::tid_t tid);
 
-  // -----------------------------------------------------------
-  // Static helper methods for derived classes.
-  // -----------------------------------------------------------
-  static Status ResolveProcessArchitecture(lldb::pid_t pid, ArchSpec &arch);
-
 private:
   void SynchronouslyNotifyProcessStateChanged(lldb::StateType state);
 };
