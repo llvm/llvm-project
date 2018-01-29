@@ -47,7 +47,7 @@ public:
     return std::string(Path.begin(), Path.end());
   }
 
-  llvm::Expected<FileURI>
+  llvm::Expected<URI>
   uriFromAbsolutePath(llvm::StringRef AbsolutePath) const override {
     using namespace llvm::sys;
 
@@ -56,7 +56,7 @@ public:
     if (AbsolutePath.size() > 1 && AbsolutePath[1] == ':')
       Body = "/";
     Body += path::convert_to_slash(AbsolutePath);
-    return FileURI::create(Scheme, /*Authority=*/"", Body);
+    return URI(Scheme, /*Authority=*/"", Body);
   }
 };
 
@@ -129,22 +129,15 @@ std::string percentDecode(llvm::StringRef Content) {
 
 } // namespace
 
-llvm::Expected<FileURI> FileURI::create(llvm::StringRef Scheme,
-                                        llvm::StringRef Authority,
-                                        llvm::StringRef Body) {
-  if (Scheme.empty())
-    return make_string_error("Scheme must be specified in a URI.");
-  if (!Authority.empty() && !Body.startswith("/"))
-    return make_string_error(
-        "URI body must start with '/' when authority is present.");
-  FileURI U;
-  U.Scheme = Scheme;
-  U.Authority = Authority;
-  U.Body = Body;
-  return U;
+URI::URI(llvm::StringRef Scheme, llvm::StringRef Authority,
+         llvm::StringRef Body)
+    : Scheme(Scheme), Authority(Authority), Body(Body) {
+  assert(!Scheme.empty());
+  assert((Authority.empty() || Body.startswith("/")) &&
+         "URI body must start with '/' when authority is present.");
 }
 
-std::string FileURI::toString() const {
+std::string URI::toString() const {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
   OS << percentEncode(Scheme) << ":";
@@ -159,8 +152,8 @@ std::string FileURI::toString() const {
   return Result;
 }
 
-llvm::Expected<FileURI> FileURI::parse(llvm::StringRef OrigUri) {
-  FileURI U;
+llvm::Expected<URI> URI::parse(llvm::StringRef OrigUri) {
+  URI U;
   llvm::StringRef Uri = OrigUri;
 
   auto Pos = Uri.find(':');
@@ -177,8 +170,8 @@ llvm::Expected<FileURI> FileURI::parse(llvm::StringRef OrigUri) {
   return U;
 }
 
-llvm::Expected<FileURI> FileURI::create(llvm::StringRef AbsolutePath,
-                                        llvm::StringRef Scheme) {
+llvm::Expected<URI> URI::create(llvm::StringRef AbsolutePath,
+                                llvm::StringRef Scheme) {
   if (!llvm::sys::path::is_absolute(AbsolutePath))
     return make_string_error("Not a valid absolute path: " + AbsolutePath);
   auto S = findSchemeByName(Scheme);
@@ -187,8 +180,15 @@ llvm::Expected<FileURI> FileURI::create(llvm::StringRef AbsolutePath,
   return S->get()->uriFromAbsolutePath(AbsolutePath);
 }
 
-llvm::Expected<std::string> FileURI::resolve(const FileURI &Uri,
-                                             llvm::StringRef HintPath) {
+URI URI::createFile(llvm::StringRef AbsolutePath) {
+  auto U = create(AbsolutePath, "file");
+  if (!U)
+    llvm_unreachable(llvm::toString(U.takeError()).c_str());
+  return std::move(*U);
+}
+
+llvm::Expected<std::string> URI::resolve(const URI &Uri,
+                                         llvm::StringRef HintPath) {
   auto S = findSchemeByName(Uri.Scheme);
   if (!S)
     return S.takeError();

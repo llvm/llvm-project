@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Protocol.h"
+#include "URI.h"
+#include "Logger.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Format.h"
@@ -22,45 +24,32 @@
 namespace clang {
 namespace clangd {
 
-URI URI::fromUri(llvm::StringRef uri) {
-  URI Result;
-  Result.uri = uri;
-  uri.consume_front("file://");
-  // Also trim authority-less URIs
-  uri.consume_front("file:");
-  // For Windows paths e.g. /X:
-  if (uri.size() > 2 && uri[0] == '/' && uri[2] == ':')
-    uri.consume_front("/");
-  // Make sure that file paths are in native separators
-  Result.file = llvm::sys::path::convert_to_slash(uri);
-  return Result;
-}
-
-URI URI::fromFile(llvm::StringRef file) {
-  using namespace llvm::sys;
-  URI Result;
-  Result.file = file;
-  Result.uri = "file://";
-  // For Windows paths e.g. X:
-  if (file.size() > 1 && file[1] == ':')
-    Result.uri += "/";
-  // Make sure that uri paths are with posix separators
-  Result.uri += path::convert_to_slash(file, path::Style::posix);
-  return Result;
-}
-
-bool fromJSON(const json::Expr &E, URI &R) {
+bool fromJSON(const json::Expr &E, URIForFile &R) {
   if (auto S = E.asString()) {
-    R = URI::fromUri(*S);
+    auto U = URI::parse(*S);
+    if (!U) {
+      log(Context::empty(),
+          "Failed to parse URI " + *S + ": " + llvm::toString(U.takeError()));
+      return false;
+    }
+    if (U->scheme() != "file") {
+      log(Context::empty(),
+          "Clangd only supports 'file' URI scheme for workspace files: " + *S);
+      return false;
+    }
+    // We know that body of a file URI is absolute path.
+    R.file = U->body();
     return true;
   }
   return false;
 }
 
-json::Expr toJSON(const URI &U) { return U.uri; }
+json::Expr toJSON(const URIForFile &U) {
+  return U.uri();
+}
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const URI &U) {
-  return OS << U.uri;
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const URIForFile &U) {
+  return OS << U.uri();
 }
 
 bool fromJSON(const json::Expr &Params, TextDocumentIdentifier &R) {
