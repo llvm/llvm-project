@@ -119,6 +119,14 @@ static void checkSymbolTypes(const Symbol &Existing, const InputFile &F,
         " in " + F.getName());
 }
 
+static void checkSymbolTypes(const Symbol &Existing, const InputFile &F,
+                             Symbol::Kind Kind, const InputChunk *Chunk) {
+  const WasmSignature *Sig = nullptr;
+  if (auto *F = dyn_cast_or_null<InputFunction>(Chunk))
+    Sig = &F->Signature;
+  return checkSymbolTypes(Existing, F, Kind, Sig);
+}
+
 Symbol *SymbolTable::addDefinedFunction(StringRef Name,
                                         const WasmSignature *Type,
                                         uint32_t Flags) {
@@ -155,27 +163,26 @@ Symbol *SymbolTable::addDefinedGlobal(StringRef Name) {
 }
 
 Symbol *SymbolTable::addDefined(StringRef Name, Symbol::Kind Kind,
-                                uint32_t Flags, InputFile *F,
-                                const InputSegment *Segment,
-                                InputFunction *Function, uint32_t Address) {
+                                uint32_t Flags, InputFile *F, InputChunk *Chunk,
+                                uint32_t Address) {
   DEBUG(dbgs() << "addDefined: " << Name << " addr:" << Address << "\n");
   Symbol *S;
   bool WasInserted;
 
   std::tie(S, WasInserted) = insert(Name);
   if (WasInserted) {
-    S->update(Kind, F, Flags, Segment, Function, Address);
+    S->update(Kind, F, Flags, Chunk, Address);
   } else if (S->isLazy()) {
     // The existing symbol is lazy. Replace it without checking types since
     // lazy symbols don't have any type information.
     DEBUG(dbgs() << "replacing existing lazy symbol: " << Name << "\n");
-    S->update(Kind, F, Flags, Segment, Function, Address);
+    S->update(Kind, F, Flags, Chunk, Address);
   } else if (!S->isDefined()) {
     // The existing symbol table entry is undefined. The new symbol replaces
     // it, after checking the type matches
     DEBUG(dbgs() << "resolving existing undefined symbol: " << Name << "\n");
-    checkSymbolTypes(*S, *F, Kind, Function ? &Function->Signature : nullptr);
-    S->update(Kind, F, Flags, Segment, Function, Address);
+    checkSymbolTypes(*S, *F, Kind, Chunk);
+    S->update(Kind, F, Flags, Chunk, Address);
   } else if ((Flags & WASM_SYMBOL_BINDING_MASK) == WASM_SYMBOL_BINDING_WEAK) {
     // the new symbol is weak we can ignore it
     DEBUG(dbgs() << "existing symbol takes precedence\n");
@@ -183,8 +190,8 @@ Symbol *SymbolTable::addDefined(StringRef Name, Symbol::Kind Kind,
     // the new symbol is not weak and the existing symbol is, so we replace
     // it
     DEBUG(dbgs() << "replacing existing weak symbol\n");
-    checkSymbolTypes(*S, *F, Kind, Function ? &Function->Signature : nullptr);
-    S->update(Kind, F, Flags, Segment, Function, Address);
+    checkSymbolTypes(*S, *F, Kind, Chunk);
+    S->update(Kind, F, Flags, Chunk, Address);
   } else {
     // neither symbol is week. They conflict.
     reportDuplicate(S, F);

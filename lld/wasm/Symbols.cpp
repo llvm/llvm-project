@@ -23,8 +23,8 @@ using namespace lld;
 using namespace lld::wasm;
 
 const WasmSignature &Symbol::getFunctionType() const {
-  if (Function != nullptr)
-    return Function->Signature;
+  if (Chunk != nullptr)
+    return dyn_cast<InputFunction>(Chunk)->Signature;
 
   assert(FunctionType != nullptr);
   return *FunctionType;
@@ -32,25 +32,26 @@ const WasmSignature &Symbol::getFunctionType() const {
 
 void Symbol::setFunctionType(const WasmSignature *Type) {
   assert(FunctionType == nullptr);
-  assert(Function == nullptr);
+  assert(!Chunk);
   FunctionType = Type;
 }
 
 uint32_t Symbol::getVirtualAddress() const {
   assert(isGlobal());
   DEBUG(dbgs() << "getVirtualAddress: " << getName() << "\n");
-  return Segment ? Segment->translateVA(VirtualAddress) : VirtualAddress;
+  return Chunk ? dyn_cast<InputSegment>(Chunk)->translateVA(VirtualAddress)
+               : VirtualAddress;
 }
 
 bool Symbol::hasOutputIndex() const {
-  if (Function)
-    return Function->hasOutputIndex();
+  if (auto *F = dyn_cast_or_null<InputFunction>(Chunk))
+    return F->hasOutputIndex();
   return OutputIndex.hasValue();
 }
 
 uint32_t Symbol::getOutputIndex() const {
-  if (Function)
-    return Function->getOutputIndex();
+  if (auto *F = dyn_cast_or_null<InputFunction>(Chunk))
+    return F->getOutputIndex();
   return OutputIndex.getValue();
 }
 
@@ -62,20 +63,20 @@ void Symbol::setVirtualAddress(uint32_t Value) {
 
 void Symbol::setOutputIndex(uint32_t Index) {
   DEBUG(dbgs() << "setOutputIndex " << Name << " -> " << Index << "\n");
-  assert(!Function);
+  assert(!dyn_cast_or_null<InputFunction>(Chunk));
   assert(!OutputIndex.hasValue());
   OutputIndex = Index;
 }
 
 uint32_t Symbol::getTableIndex() const {
-  if (Function)
-    return Function->getTableIndex();
+  if (auto *F = dyn_cast_or_null<InputFunction>(Chunk))
+    return F->getTableIndex();
   return TableIndex.getValue();
 }
 
 bool Symbol::hasTableIndex() const {
-  if (Function)
-    return Function->hasTableIndex();
+  if (auto *F = dyn_cast_or_null<InputFunction>(Chunk))
+    return F->hasTableIndex();
   return TableIndex.hasValue();
 }
 
@@ -83,8 +84,8 @@ void Symbol::setTableIndex(uint32_t Index) {
   // For imports, we set the table index here on the Symbol; for defined
   // functions we set the index on the InputFunction so that we don't export
   // the same thing twice (keeps the table size down).
-  if (Function) {
-    Function->setTableIndex(Index);
+  if (auto *F = dyn_cast_or_null<InputFunction>(Chunk)) {
+    F->setTableIndex(Index);
     return;
   }
   DEBUG(dbgs() << "setTableIndex " << Name << " -> " << Index << "\n");
@@ -92,14 +93,12 @@ void Symbol::setTableIndex(uint32_t Index) {
   TableIndex = Index;
 }
 
-void Symbol::update(Kind K, InputFile *F, uint32_t Flags_,
-                    const InputSegment *Seg, InputFunction *Func,
+void Symbol::update(Kind K, InputFile *F, uint32_t Flags_, InputChunk *Chunk_,
                     uint32_t Address) {
   SymbolKind = K;
   File = F;
   Flags = Flags_;
-  Segment = Seg;
-  Function = Func;
+  Chunk = Chunk_;
   if (Address != UINT32_MAX)
     setVirtualAddress(Address);
 }
