@@ -1132,10 +1132,8 @@ define <8 x i32> @testnm_and(<8 x i32> %a, <8 x i32> %b, <8 x i32> %x, <8 x i32>
 ; NoVLX:       # %bb.0:
 ; NoVLX-NEXT:    # kill: def %ymm3 killed %ymm3 def %zmm3
 ; NoVLX-NEXT:    # kill: def %ymm2 killed %ymm2 def %zmm2
-; NoVLX-NEXT:    # kill: def %ymm1 killed %ymm1 def %zmm1
-; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
+; NoVLX-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; NoVLX-NEXT:    vptestnmd %zmm0, %zmm0, %k1
-; NoVLX-NEXT:    vptestnmd %zmm1, %zmm1, %k1 {%k1}
 ; NoVLX-NEXT:    vpblendmd %zmm2, %zmm3, %zmm0 {%k1}
 ; NoVLX-NEXT:    # kill: def %ymm0 killed %ymm0 killed %zmm0
 ; NoVLX-NEXT:    retq

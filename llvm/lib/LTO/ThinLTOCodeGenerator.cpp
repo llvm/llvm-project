@@ -621,6 +621,18 @@ static void internalizeAndPromoteInIndex(
   thinLTOInternalizeAndPromoteInIndex(Index, isExported);
 }
 
+static void computeDeadSymbolsInIndex(
+    ModuleSummaryIndex &Index,
+    const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) {
+  // We have no symbols resolution available. And can't do any better now in the
+  // case where the prevailing symbol is in a native object. It can be refined
+  // with linker information in the future.
+  auto isPrevailing = [&](GlobalValue::GUID G) {
+    return PrevailingType::Unknown;
+  };
+  computeDeadSymbols(Index, GUIDPreservedSymbols, isPrevailing);
+}
+
 /**
  * Perform promotion and renaming of exported internal functions.
  * Index is updated to reflect linkage changes from weak resolution.
@@ -639,7 +651,7 @@ void ThinLTOCodeGenerator::promote(Module &TheModule,
       PreservedSymbols, Triple(TheModule.getTargetTriple()));
 
   // Compute "dead" symbols, we don't want to import/export these!
-  computeDeadSymbols(Index, GUIDPreservedSymbols);
+  computeDeadSymbolsInIndex(Index, GUIDPreservedSymbols);
 
   // Generate import/export list
   StringMap<FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
@@ -678,7 +690,7 @@ void ThinLTOCodeGenerator::crossModuleImport(Module &TheModule,
       PreservedSymbols, Triple(TheModule.getTargetTriple()));
 
   // Compute "dead" symbols, we don't want to import/export these!
-  computeDeadSymbols(Index, GUIDPreservedSymbols);
+  computeDeadSymbolsInIndex(Index, GUIDPreservedSymbols);
 
   // Generate import/export list
   StringMap<FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
@@ -755,7 +767,7 @@ void ThinLTOCodeGenerator::internalize(Module &TheModule,
   Index.collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
 
   // Compute "dead" symbols, we don't want to import/export these!
-  computeDeadSymbols(Index, GUIDPreservedSymbols);
+  computeDeadSymbolsInIndex(Index, GUIDPreservedSymbols);
 
   // Generate import/export list
   StringMap<FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
@@ -901,7 +913,7 @@ void ThinLTOCodeGenerator::run() {
       computeGUIDPreservedSymbols(PreservedSymbols, TMBuilder.TheTriple);
 
   // Compute "dead" symbols, we don't want to import/export these!
-  computeDeadSymbols(*Index, GUIDPreservedSymbols);
+  computeDeadSymbolsInIndex(*Index, GUIDPreservedSymbols);
 
   // Collect the import/export lists for all modules from the call-graph in the
   // combined index.

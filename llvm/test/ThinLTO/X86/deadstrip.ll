@@ -50,7 +50,7 @@
 ; LTO2: define internal void @_GLOBAL__I_a()
 ; LTO2: define internal void @bar() {
 ; LTO2: define internal void @bar_internal()
-; LTO2: define internal void @dead_func() {
+; LTO2: declare dso_local void @dead_func()
 ; LTO2-NOT: available_externally {{.*}} @baz()
 
 ; Make sure we didn't internalize @boo, which is reachable via

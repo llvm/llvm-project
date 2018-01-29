@@ -69,6 +69,7 @@ class DWARFContext : public DIContext {
   std::unique_ptr<DWARFDebugFrame> DebugFrame;
   std::unique_ptr<DWARFDebugFrame> EHFrame;
   std::unique_ptr<DWARFDebugMacro> Macro;
+  std::unique_ptr<DWARFDebugNames> Names;
   std::unique_ptr<AppleAcceleratorTable> AppleNames;
   std::unique_ptr<AppleAcceleratorTable> AppleTypes;
   std::unique_ptr<AppleAcceleratorTable> AppleNamespaces;
@@ -241,6 +242,9 @@ public:
 
   /// Get a pointer to the parsed DebugMacro object.
   const DWARFDebugMacro *getDebugMacro();
+
+  /// Get a reference to the parsed accelerator table object.
+  const DWARFDebugNames &getDebugNames();
 
   /// Get a reference to the parsed accelerator table object.
   const AppleAcceleratorTable &getAppleNames();
