@@ -135,7 +135,7 @@ NativeProcessNetBSD::Factory::Attach(
   std::unique_ptr<NativeProcessNetBSD> process_up(new NativeProcessNetBSD(
       pid, -1, native_delegate, Info.GetArchitecture(), mainloop));
 
-  status = process_up->Attach();
+  Status status = process_up->Attach();
   if (!status.Success())
     return status.ToError();
 
