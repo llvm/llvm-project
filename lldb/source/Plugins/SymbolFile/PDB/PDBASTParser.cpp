@@ -270,7 +270,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     // Drop last variadic argument.
     if (is_variadic)
       --num_args;
-    for (int arg_idx = 0; arg_idx < num_args; arg_idx++) {
+    for (uint32_t arg_idx = 0; arg_idx < num_args; arg_idx++) {
       auto arg = arg_enum->getChildAtIndex(arg_idx);
       if (!arg)
         break;
