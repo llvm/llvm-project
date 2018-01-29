@@ -1985,7 +1985,7 @@ SDValue AMDGPUTargetLowering::LowerFTRUNC(SDValue Op, SelectionDAG &DAG) const {
   const SDValue SignBitMask = DAG.getConstant(UINT32_C(1) << 31, SL, MVT::i32);
   SDValue SignBit = DAG.getNode(ISD::AND, SL, MVT::i32, Hi, SignBitMask);
 
-  // Extend back to to 64-bits.
+  // Extend back to 64-bits.
   SDValue SignBit64 = DAG.getBuildVector(MVT::v2i32, SL, {Zero, SignBit});
   SignBit64 = DAG.getNode(ISD::BITCAST, SL, MVT::i64, SignBit64);
 

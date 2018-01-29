@@ -1416,6 +1416,11 @@ bool lldb_private::operator<(const ArchSpec &lhs, const ArchSpec &rhs) {
   return lhs_core < rhs_core;
 }
 
+
+bool lldb_private::operator==(const ArchSpec &lhs, const ArchSpec &rhs) {
+  return lhs.GetCore() == rhs.GetCore();
+}
+
 bool ArchSpec::IsFullySpecifiedTriple() const {
   const auto &user_specified_triple = GetTriple();
 

@@ -213,7 +213,8 @@ static inline uint64_t ror(uint64_t elt, unsigned size) {
 static inline bool processLogicalImmediate(uint64_t Imm, unsigned RegSize,
                                            uint64_t &Encoding) {
   if (Imm == 0ULL || Imm == ~0ULL ||
-      (RegSize != 64 && (Imm >> RegSize != 0 || Imm == ~0U)))
+      (RegSize != 64 &&
+        (Imm >> RegSize != 0 || Imm == (~0ULL >> (64 - RegSize)))))
     return false;
 
   // First, determine the element size.

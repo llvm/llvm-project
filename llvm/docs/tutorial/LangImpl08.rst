@@ -44,7 +44,7 @@ returns the target triple of the current machine.
 
     auto TargetTriple = sys::getDefaultTargetTriple();
 
-LLVM doesn't require us to to link in all the target
+LLVM doesn't require us to link in all the target
 functionality. For example, if we're just using the JIT, we don't need
 the assembly printers. Similarly, if we're only targeting certain
 architectures, we can only link in the functionality for those

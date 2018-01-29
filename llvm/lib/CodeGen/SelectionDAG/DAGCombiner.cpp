@@ -3525,7 +3525,7 @@ SDValue DAGCombiner::foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
   // operations on the left and right operands, so those types must match.
   EVT VT = N0.getValueType();
   EVT OpVT = LL.getValueType();
-  if (LegalOperations || VT != MVT::i1)
+  if (LegalOperations || VT.getScalarType() != MVT::i1)
     if (VT != getSetCCResultType(OpVT))
       return SDValue();
   if (OpVT != RL.getValueType())

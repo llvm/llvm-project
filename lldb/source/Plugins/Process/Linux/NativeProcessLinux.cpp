@@ -245,13 +245,15 @@ NativeProcessLinux::Factory::Launch(ProcessLaunchInfo &launch_info,
   }
   LLDB_LOG(log, "inferior started, now in stopped state");
 
-  ArchSpec arch;
-  if ((status = ResolveProcessArchitecture(pid, arch)).Fail())
-    return status.ToError();
+  ProcessInstanceInfo Info;
+  if (!Host::GetProcessInfo(pid, Info)) {
+    return llvm::make_error<StringError>("Cannot get process architecture",
+                                         llvm::inconvertibleErrorCode());
+  }
 
   // Set the architecture to the exe architecture.
   LLDB_LOG(log, "pid = {0:x}, detected architecture {1}", pid,
-           arch.GetArchitectureName());
+           Info.GetArchitecture().GetArchitectureName());
 
   status = SetDefaultPtraceOpts(pid);
   if (status.Fail()) {
@@ -261,7 +263,7 @@ NativeProcessLinux::Factory::Launch(ProcessLaunchInfo &launch_info,
 
   return std::unique_ptr<NativeProcessLinux>(new NativeProcessLinux(
       pid, launch_info.GetPTY().ReleaseMasterFileDescriptor(), native_delegate,
-      arch, mainloop, {pid}));
+      Info.GetArchitecture(), mainloop, {pid}));
 }
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
@@ -272,17 +274,18 @@ NativeProcessLinux::Factory::Attach(
   LLDB_LOG(log, "pid = {0:x}", pid);
 
   // Retrieve the architecture for the running process.
-  ArchSpec arch;
-  Status status = ResolveProcessArchitecture(pid, arch);
-  if (!status.Success())
-    return status.ToError();
+  ProcessInstanceInfo Info;
+  if (!Host::GetProcessInfo(pid, Info)) {
+    return llvm::make_error<StringError>("Cannot get process architecture",
+                                         llvm::inconvertibleErrorCode());
+  }
 
   auto tids_or = NativeProcessLinux::Attach(pid);
   if (!tids_or)
     return tids_or.takeError();
 
   return std::unique_ptr<NativeProcessLinux>(new NativeProcessLinux(
-      pid, -1, native_delegate, arch, mainloop, *tids_or));
+      pid, -1, native_delegate, Info.GetArchitecture(), mainloop, *tids_or));
 }
 
 // -----------------------------------------------------------------------------

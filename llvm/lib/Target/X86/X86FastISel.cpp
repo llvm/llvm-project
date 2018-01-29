@@ -2675,7 +2675,7 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
             (FrameReg == X86::EBP && VT == MVT::i32)) &&
            "Invalid Frame Register!");
 
-    // Always make a copy of the frame register to to a vreg first, so that we
+    // Always make a copy of the frame register to a vreg first, so that we
     // never directly reference the frame register (the TwoAddressInstruction-
     // Pass doesn't like that).
     unsigned SrcReg = createResultReg(RC);

@@ -545,6 +545,9 @@ void DWARFContext::dump(
   if (shouldDump(Explicit, ".apple_objc", DIDT_ID_AppleObjC,
                  DObj->getAppleObjCSection().Data))
     getAppleObjC().dump(OS);
+  if (shouldDump(Explicit, ".debug_names", DIDT_ID_DebugNames,
+                 DObj->getDebugNamesSection().Data))
+    getDebugNames().dump(OS);
 }
 
 DWARFCompileUnit *DWARFContext::getDWOCompileUnitForHash(uint64_t Hash) {
@@ -713,18 +716,23 @@ const DWARFDebugMacro *DWARFContext::getDebugMacro() {
   return Macro.get();
 }
 
-static AppleAcceleratorTable &
-getAccelTable(std::unique_ptr<AppleAcceleratorTable> &Cache,
-              const DWARFObject &Obj, const DWARFSection &Section,
-              StringRef StringSection, bool IsLittleEndian) {
+template <typename T>
+static T &getAccelTable(std::unique_ptr<T> &Cache, const DWARFObject &Obj,
+                        const DWARFSection &Section, StringRef StringSection,
+                        bool IsLittleEndian) {
   if (Cache)
     return *Cache;
   DWARFDataExtractor AccelSection(Obj, Section, IsLittleEndian, 0);
   DataExtractor StrData(StringSection, IsLittleEndian, 0);
-  Cache.reset(new AppleAcceleratorTable(AccelSection, StrData));
+  Cache.reset(new T(AccelSection, StrData));
   if (Error E = Cache->extract())
     llvm::consumeError(std::move(E));
   return *Cache;
+}
+
+const DWARFDebugNames &DWARFContext::getDebugNames() {
+  return getAccelTable(Names, *DObj, DObj->getDebugNamesSection(),
+                       DObj->getStringSection(), isLittleEndian());
 }
 
 const AppleAcceleratorTable &DWARFContext::getAppleNames() {
@@ -1167,6 +1175,7 @@ class DWARFObjInMemory final : public DWARFObject {
   DWARFSectionMap AppleTypesSection;
   DWARFSectionMap AppleNamespacesSection;
   DWARFSectionMap AppleObjCSection;
+  DWARFSectionMap DebugNamesSection;
 
   DWARFSectionMap *mapNameToDWARFSection(StringRef Name) {
     return StringSwitch<DWARFSectionMap *>(Name)
@@ -1178,6 +1187,7 @@ class DWARFObjInMemory final : public DWARFObject {
         .Case("debug_info.dwo", &InfoDWOSection)
         .Case("debug_loc.dwo", &LocDWOSection)
         .Case("debug_line.dwo", &LineDWOSection)
+        .Case("debug_names", &DebugNamesSection)
         .Case("debug_str_offsets.dwo", &StringOffsetDWOSection)
         .Case("debug_addr", &AddrSection)
         .Case("apple_names", &AppleNamesSection)
@@ -1485,6 +1495,9 @@ public:
   }
   const DWARFSection &getAppleObjCSection() const override {
     return AppleObjCSection;
+  }
+  const DWARFSection &getDebugNamesSection() const override {
+    return DebugNamesSection;
   }
 
   StringRef getFileName() const override { return FileName; }

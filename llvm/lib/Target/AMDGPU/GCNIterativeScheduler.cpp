@@ -452,7 +452,7 @@ unsigned GCNIterativeScheduler::tryMaximizeOccupancy(unsigned TargetOcc) {
   // TODO: assert Regions are sorted descending by pressure
   const auto &ST = MF.getSubtarget<SISubtarget>();
   const auto Occ = Regions.front()->MaxPressure.getOccupancy(ST);
-  DEBUG(dbgs() << "Trying to to improve occupancy, target = " << TargetOcc
+  DEBUG(dbgs() << "Trying to improve occupancy, target = " << TargetOcc
                << ", current = " << Occ << '\n');
 
   auto NewOcc = TargetOcc;

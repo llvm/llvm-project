@@ -1580,9 +1580,15 @@ void HeaderSearch::loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir) {
 std::string HeaderSearch::suggestPathToFileForDiagnostics(const FileEntry *File,
                                                           bool *IsSystem) {
   // FIXME: We assume that the path name currently cached in the FileEntry is
-  // the most appropriate one for this analysis (and that it's spelled the same
-  // way as the corresponding header search path).
-  StringRef Name = File->getName();
+  // the most appropriate one for this analysis (and that it's spelled the
+  // same way as the corresponding header search path).
+  return suggestPathToFileForDiagnostics(File->getName(), /*BuildDir=*/"",
+                                         IsSystem);
+}
+
+std::string HeaderSearch::suggestPathToFileForDiagnostics(
+    llvm::StringRef File, llvm::StringRef WorkingDir, bool *IsSystem) {
+  using namespace llvm::sys;
 
   unsigned BestPrefixLength = 0;
   unsigned BestSearchDir;
@@ -1593,12 +1599,17 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(const FileEntry *File,
       continue;
 
     StringRef Dir = SearchDirs[I].getDir()->getName();
-    for (auto NI = llvm::sys::path::begin(Name),
-              NE = llvm::sys::path::end(Name),
-              DI = llvm::sys::path::begin(Dir),
-              DE = llvm::sys::path::end(Dir);
+    llvm::SmallString<32> DirPath(Dir.begin(), Dir.end());
+    if (!WorkingDir.empty() && !path::is_absolute(Dir)) {
+      auto err = fs::make_absolute(WorkingDir, DirPath);
+      if (!err)
+        path::remove_dots(DirPath, /*remove_dot_dot=*/true);
+      Dir = DirPath;
+    }
+    for (auto NI = path::begin(File), NE = path::end(File),
+              DI = path::begin(Dir), DE = path::end(Dir);
          /*termination condition in loop*/; ++NI, ++DI) {
-      // '.' components in Name are ignored.
+      // '.' components in File are ignored.
       while (NI != NE && *NI == ".")
         ++NI;
       if (NI == NE)
@@ -1608,9 +1619,9 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(const FileEntry *File,
       while (DI != DE && *DI == ".")
         ++DI;
       if (DI == DE) {
-        // Dir is a prefix of Name, up to '.' components and choice of path
+        // Dir is a prefix of File, up to '.' components and choice of path
         // separators.
-        unsigned PrefixLength = NI - llvm::sys::path::begin(Name);
+        unsigned PrefixLength = NI - path::begin(File);
         if (PrefixLength > BestPrefixLength) {
           BestPrefixLength = PrefixLength;
           BestSearchDir = I;
@@ -1625,5 +1636,5 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(const FileEntry *File,
 
   if (IsSystem)
     *IsSystem = BestPrefixLength ? BestSearchDir >= SystemDirIdx : false;
-  return Name.drop_front(BestPrefixLength);
+  return File.drop_front(BestPrefixLength);
 }

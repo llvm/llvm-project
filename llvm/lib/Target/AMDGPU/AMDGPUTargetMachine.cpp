@@ -79,7 +79,7 @@ static cl::opt<bool> EnableLoadStoreVectorizer(
   cl::init(true),
   cl::Hidden);
 
-// Option to to control global loads scalarization
+// Option to control global loads scalarization
 static cl::opt<bool> ScalarizeGlobal(
   "amdgpu-scalarize-global-loads",
   cl::desc("Enable global load scalarization"),

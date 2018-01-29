@@ -7267,7 +7267,7 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
       continue;
 
     // If this is a memory input, and if the operand is not indirect, do what we
-    // need to to provide an address for the memory input.
+    // need to provide an address for the memory input.
     if (OpInfo.ConstraintType == TargetLowering::C_Memory &&
         !OpInfo.isIndirect) {
       assert((OpInfo.isMultipleAlternative ||

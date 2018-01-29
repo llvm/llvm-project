@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -disable-post-ra -verify-machineinstrs -mattr=+lse < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64_be-none-linux-gnu -disable-post-ra -verify-machineinstrs -mattr=+lse < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -disable-post-ra -verify-machineinstrs -mattr=+lse < %s | FileCheck %s --check-prefix=CHECK-REG
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -disable-post-ra -verify-machineinstrs -mcpu=saphira < %s | FileCheck %s
 
@@ -11,6 +12,7 @@
 @var16 = global i16 0
 @var32 = global i32 0
 @var64 = global i64 0
+@var128 = global i128 0
 
 define i8 @test_atomic_load_add_i8(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i8:
@@ -711,6 +713,21 @@ define i64 @test_atomic_cmpxchg_i64(i64 %wanted, i64 %new) nounwind {
 ; CHECK-NOT: dmb
 
    ret i64 %old
+}
+
+define i128 @test_atomic_cmpxchg_i128(i128 %wanted, i128 %new) nounwind {
+; CHECK-LABEL: test_atomic_cmpxchg_i128:
+   %pair = cmpxchg i128* @var128, i128 %wanted, i128 %new acquire acquire
+   %old = extractvalue { i128, i1 } %pair, 0
+
+; CHECK-NOT: dmb
+; CHECK: adrp [[TMPADDR:x[0-9]+]], var128
+; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var128
+
+; CHECK: caspa x0, x1, x2, x3, [x[[ADDR]]]
+; CHECK-NOT: dmb
+
+   ret i128 %old
 }
 
 define i8 @test_atomic_load_sub_i8(i8 %offset) nounwind {
@@ -1705,6 +1722,21 @@ define i64 @test_atomic_cmpxchg_i64_acquire(i64 %wanted, i64 %new) nounwind {
    ret i64 %old
 }
 
+define i128 @test_atomic_cmpxchg_i128_acquire(i128 %wanted, i128 %new) nounwind {
+; CHECK-LABEL: test_atomic_cmpxchg_i128_acquire:
+   %pair = cmpxchg i128* @var128, i128 %wanted, i128 %new acquire acquire
+   %old = extractvalue { i128, i1 } %pair, 0
+
+; CHECK-NOT: dmb
+; CHECK: adrp [[TMPADDR:x[0-9]+]], var128
+; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var128
+
+; CHECK: caspa x0, x1, x2, x3, [x[[ADDR]]]
+; CHECK-NOT: dmb
+
+   ret i128 %old
+}
+
 define i8 @test_atomic_cmpxchg_i8_monotonic(i8 %wanted, i8 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i8_monotonic:
    %pair = cmpxchg i8* @var8, i8 %wanted, i8 %new monotonic monotonic
@@ -1765,6 +1797,21 @@ define i64 @test_atomic_cmpxchg_i64_monotonic(i64 %wanted, i64 %new) nounwind {
    ret i64 %old
 }
 
+define i128 @test_atomic_cmpxchg_i128_monotonic(i128 %wanted, i128 %new) nounwind {
+; CHECK-LABEL: test_atomic_cmpxchg_i128_monotonic:
+   %pair = cmpxchg i128* @var128, i128 %wanted, i128 %new monotonic monotonic
+   %old = extractvalue { i128, i1 } %pair, 0
+
+; CHECK-NOT: dmb
+; CHECK: adrp [[TMPADDR:x[0-9]+]], var128
+; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var128
+
+; CHECK: casp x0, x1, x2, x3, [x[[ADDR]]]
+; CHECK-NOT: dmb
+
+   ret i128 %old
+}
+
 define i8 @test_atomic_cmpxchg_i8_seq_cst(i8 %wanted, i8 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i8_seq_cst:
    %pair = cmpxchg i8* @var8, i8 %wanted, i8 %new seq_cst seq_cst
@@ -1823,6 +1870,21 @@ define i64 @test_atomic_cmpxchg_i64_seq_cst(i64 %wanted, i64 %new) nounwind {
 ; CHECK-NOT: dmb
 
    ret i64 %old
+}
+
+define i128 @test_atomic_cmpxchg_i128_seq_cst(i128 %wanted, i128 %new) nounwind {
+; CHECK-LABEL: test_atomic_cmpxchg_i128_seq_cst:
+   %pair = cmpxchg i128* @var128, i128 %wanted, i128 %new seq_cst seq_cst
+   %old = extractvalue { i128, i1 } %pair, 0
+
+; CHECK-NOT: dmb
+; CHECK: adrp [[TMPADDR:x[0-9]+]], var128
+; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var128
+
+; CHECK: caspal x0, x1, x2, x3, [x[[ADDR]]]
+; CHECK-NOT: dmb
+
+   ret i128 %old
 }
 
 define i8 @test_atomic_load_max_i8_acq_rel(i8 %offset) nounwind {
