@@ -153,10 +153,18 @@ private:
     /// base is used to describe the offset for all forms in the list of atoms.
     uint32_t DieOffsetBase;
 
-    SmallVector<Atom, 3> Atoms;
+    const SmallVector<Atom, 4> Atoms;
 
+#ifndef _MSC_VER
+    // See the `static constexpr` below why we need an alternative
+    // implementation for MSVC.
     HeaderData(ArrayRef<Atom> AtomList, uint32_t Offset = 0)
         : DieOffsetBase(Offset), Atoms(AtomList.begin(), AtomList.end()) {}
+#else
+    // FIXME: Erase this path once the minimum MSCV version has been bumped.
+    HeaderData(const SmallVectorImpl<Atom> &Atoms, uint32_t Offset = 0)
+        : DieOffsetBase(Offset), Atoms(Atoms.begin(), Atoms.end()) {}
+#endif
 
 #ifndef NDEBUG
     void print(raw_ostream &OS) const {
@@ -174,8 +182,16 @@ private:
 
 public:
   /// The length of the header data is always going to be 4 + 4 + 4*NumAtoms.
+#ifndef _MSC_VER
+  // See the `static constexpr` below why we need an alternative implementation
+  // for MSVC.
   AppleAccelTableHeader(ArrayRef<AppleAccelTableHeader::Atom> Atoms)
       : Header(8 + (Atoms.size() * 4)), HeaderData(Atoms) {}
+#else
+  // FIXME: Erase this path once the minimum MSCV version has been bumped.
+  AppleAccelTableHeader(const SmallVectorImpl<Atom> &Atoms)
+      : Header(8 + (Atoms.size() * 4)), HeaderData(Atoms) {}
+#endif
 
   /// Update header with hash and bucket count.
   void setBucketAndHashCount(uint32_t HashCount);
@@ -270,8 +286,16 @@ protected:
   using BucketList = std::vector<HashList>;
   BucketList Buckets;
 
+#ifndef _MSC_VER
+  // See the `static constexpr` below why we need an alternative implementation
+  // for MSVC.
   AppleAccelTableBase(ArrayRef<AppleAccelTableHeader::Atom> Atoms)
       : Header(Atoms), Entries(Allocator) {}
+#else
+  // FIXME: Erase this path once the minimum MSCV version has been bumped.
+  AppleAccelTableBase(const SmallVectorImpl<AppleAccelTableHeader::Atom> &Atoms)
+      : Header(Atoms), Entries(Allocator) {}
+#endif
 
 private:
   /// Emits the header for the table via the AsmPrinter.
@@ -368,9 +392,15 @@ public:
 
   void emit(AsmPrinter *Asm) const override;
 
-  static constexpr const AppleAccelTableHeader::Atom Atoms[] = {
+#ifndef _MSC_VER
+  // The line below is rejected by older versions (TBD) of MSVC.
+  static constexpr AppleAccelTableHeader::Atom Atoms[] = {
       AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_offset,
                                   dwarf::DW_FORM_data4)};
+#else
+  // FIXME: Erase this path once the minimum MSCV version has been bumped.
+  static const SmallVector<AppleAccelTableHeader::Atom, 4> Atoms;
+#endif
 
 #ifndef NDEBUG
   void print(raw_ostream &OS) const override {
@@ -391,12 +421,18 @@ public:
 
   void emit(AsmPrinter *Asm) const override;
 
-  static constexpr const AppleAccelTableHeader::Atom Atoms[] = {
+#ifndef _MSC_VER
+  // The line below is rejected by older versions (TBD) of MSVC.
+  static constexpr AppleAccelTableHeader::Atom Atoms[] = {
       AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_offset,
                                   dwarf::DW_FORM_data4),
       AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_tag, dwarf::DW_FORM_data2),
       AppleAccelTableHeader::Atom(dwarf::DW_ATOM_type_flags,
                                   dwarf::DW_FORM_data1)};
+#else
+  // FIXME: Erase this path once the minimum MSCV version has been bumped.
+  static const SmallVector<AppleAccelTableHeader::Atom, 4> Atoms;
+#endif
 
 #ifndef NDEBUG
   void print(raw_ostream &OS) const override {
@@ -414,9 +450,15 @@ public:
 
   void emit(AsmPrinter *Asm) const override;
 
-  static constexpr const AppleAccelTableHeader::Atom Atoms[] = {
+#ifndef _MSC_VER
+  // The line below is rejected by older versions (TBD) of MSVC.
+  static constexpr AppleAccelTableHeader::Atom Atoms[] = {
       AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_offset,
                                   dwarf::DW_FORM_data4)};
+#else
+  // FIXME: Erase this path once the minimum MSCV version has been bumped.
+  static const SmallVector<AppleAccelTableHeader::Atom, 4> Atoms;
+#endif
 
 #ifndef NDEBUG
   void print(raw_ostream &OS) const override {
@@ -443,12 +485,18 @@ public:
 
   void emit(AsmPrinter *Asm) const override;
 
-  static constexpr const AppleAccelTableHeader::Atom Atoms[] = {
+#ifndef _MSC_VER
+  // The line below is rejected by older versions (TBD) of MSVC.
+  static constexpr AppleAccelTableHeader::Atom Atoms[] = {
       AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_offset,
                                   dwarf::DW_FORM_data4),
       AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_tag, dwarf::DW_FORM_data2),
       AppleAccelTableHeader::Atom(5, dwarf::DW_FORM_data1),
       AppleAccelTableHeader::Atom(6, dwarf::DW_FORM_data4)};
+#else
+  // FIXME: Erase this path once the minimum MSCV version has been bumped.
+  static const SmallVector<AppleAccelTableHeader::Atom, 4> Atoms;
+#endif
 
 #ifndef NDEBUG
   void print(raw_ostream &OS) const override {
