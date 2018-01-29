@@ -25,6 +25,7 @@ define void @patatino() {
 ; CHECK:       bb32:
 ; CHECK-NEXT:    br i1 undef, label [[BB40]], label [[BB24]]
 ; CHECK:       bb40:
+; CHECK-NEXT:    [[TMP41:%.*]] = phi i64 [ 4, [[BB4]] ], [ [[TMP20]], [[BB14]] ], [ undef, [[BB32]] ]
 ; CHECK-NEXT:    ret void
 ;
   br i1 undef, label %bb3, label %bb4

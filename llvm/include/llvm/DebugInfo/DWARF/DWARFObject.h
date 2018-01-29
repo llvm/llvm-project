@@ -68,6 +68,7 @@ public:
   virtual const DWARFSection &getAppleNamespacesSection() const {
     return Dummy;
   }
+  virtual const DWARFSection &getDebugNamesSection() const { return Dummy; }
   virtual const DWARFSection &getAppleObjCSection() const { return Dummy; }
   virtual StringRef getCUIndexSection() const { return ""; }
   virtual StringRef getGdbIndexSection() const { return ""; }

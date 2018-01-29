@@ -501,27 +501,35 @@ def logical_imm64_XFORM : SDNodeXForm<imm, [{
 let DiagnosticType = "LogicalSecondSource" in {
   def LogicalImm32Operand : AsmOperandClass {
     let Name = "LogicalImm32";
+    let PredicateMethod = "isLogicalImm<int32_t>";
+    let RenderMethod = "addLogicalImmOperands<int32_t>";
   }
   def LogicalImm64Operand : AsmOperandClass {
     let Name = "LogicalImm64";
+    let PredicateMethod = "isLogicalImm<int64_t>";
+    let RenderMethod = "addLogicalImmOperands<int64_t>";
   }
   def LogicalImm32NotOperand : AsmOperandClass {
     let Name = "LogicalImm32Not";
+    let PredicateMethod = "isLogicalImm<int32_t>";
+    let RenderMethod = "addLogicalImmNotOperands<int32_t>";
   }
   def LogicalImm64NotOperand : AsmOperandClass {
     let Name = "LogicalImm64Not";
+    let PredicateMethod = "isLogicalImm<int64_t>";
+    let RenderMethod = "addLogicalImmNotOperands<int64_t>";
   }
 }
 def logical_imm32 : Operand<i32>, IntImmLeaf<i32, [{
   return AArch64_AM::isLogicalImmediate(Imm.getZExtValue(), 32);
 }], logical_imm32_XFORM> {
-  let PrintMethod = "printLogicalImm32";
+  let PrintMethod = "printLogicalImm<int32_t>";
   let ParserMatchClass = LogicalImm32Operand;
 }
 def logical_imm64 : Operand<i64>, IntImmLeaf<i64, [{
   return AArch64_AM::isLogicalImmediate(Imm.getZExtValue(), 64);
 }], logical_imm64_XFORM> {
-  let PrintMethod = "printLogicalImm64";
+  let PrintMethod = "printLogicalImm<int64_t>";
   let ParserMatchClass = LogicalImm64Operand;
 }
 def logical_imm32_not : Operand<i32> {

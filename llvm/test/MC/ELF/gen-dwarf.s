@@ -8,7 +8,7 @@
 
 
 // Test that on ELF:
-// 1. the debug info has a relocation to debug_abbrev and one to to debug_line.
+// 1. the debug info has a relocation to debug_abbrev and one to debug_line.
 // 2. the debug_aranges has relocations to text and debug_line.
 
 

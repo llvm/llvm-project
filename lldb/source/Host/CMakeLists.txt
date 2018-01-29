@@ -188,5 +188,6 @@ add_lldb_library(lldbHost
     ${EXTRA_LIBS}
   
   LINK_COMPONENTS
+    Object
     Support
   )

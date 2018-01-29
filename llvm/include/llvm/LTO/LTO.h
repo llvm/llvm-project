@@ -320,8 +320,13 @@ private:
 
     bool UnnamedAddr = true;
 
-    /// True if IR contains the prevailing definition.
+    /// True if module contains the prevailing definition.
     bool Prevailing = false;
+
+    /// Returns true if module contains the prevailing definition and symbol is
+    /// an IR symbol. For example when module-level inline asm block is used,
+    /// symbol can be prevailing in module but have no IR name.
+    bool isPrevailingIRSymbol() const { return Prevailing && !IRName.empty(); }
 
     /// This field keeps track of the partition number of this global. The
     /// regular LTO object is partition 0, while each ThinLTO object has its own

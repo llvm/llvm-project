@@ -22,7 +22,7 @@ define amdgpu_kernel void @test_no_round_size_1(i8 addrspace(1)* %out, i8 addrsp
   ret void
 }
 
-; There are two objects, so one requires padding to to be correctly
+; There are two objects, so one requires padding to be correctly
 ; aligned after the other.
 
 ; (38 -> 48) + 38 = 92

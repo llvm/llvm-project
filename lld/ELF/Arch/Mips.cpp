@@ -222,8 +222,8 @@ static void writeValue(uint8_t *Loc, uint64_t V, uint8_t BitsSize,
 }
 
 template <endianness E>
-static void writeMicroRelocation32(uint8_t *Loc, uint64_t V, uint8_t BitsSize,
-                                   uint8_t Shift) {
+static void writeShuffleValue(uint8_t *Loc, uint64_t V, uint8_t BitsSize,
+                              uint8_t Shift) {
   // See comments in readShuffle for purpose of this code.
   uint16_t *Words = (uint16_t *)Loc;
   if (E == support::little)
@@ -512,10 +512,10 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     break;
   case R_MICROMIPS_GOT16:
     if (Config->Relocatable) {
-      writeMicroRelocation32<E>(Loc, Val + 0x8000, 16, 16);
+      writeShuffleValue<E>(Loc, Val + 0x8000, 16, 16);
     } else {
       checkInt<16>(Loc, Val, Type);
-      writeMicroRelocation32<E>(Loc, Val, 16, 0);
+      writeShuffleValue<E>(Loc, Val, 16, 0);
     }
     break;
   case R_MIPS_CALL16:
@@ -542,7 +542,7 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_MICROMIPS_TLS_GD:
   case R_MICROMIPS_TLS_LDM:
     checkInt<16>(Loc, Val, Type);
-    writeMicroRelocation32<E>(Loc, Val, 16, 0);
+    writeShuffleValue<E>(Loc, Val, 16, 0);
     break;
   case R_MICROMIPS_CALL16:
   case R_MICROMIPS_CALL_LO16:
@@ -551,11 +551,11 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_MICROMIPS_TLS_DTPREL_LO16:
   case R_MICROMIPS_TLS_GOTTPREL:
   case R_MICROMIPS_TLS_TPREL_LO16:
-    writeMicroRelocation32<E>(Loc, Val, 16, 0);
+    writeShuffleValue<E>(Loc, Val, 16, 0);
     break;
   case R_MICROMIPS_GPREL7_S2:
     checkInt<7>(Loc, Val, Type);
-    writeMicroRelocation32<E>(Loc, Val, 7, 2);
+    writeShuffleValue<E>(Loc, Val, 7, 2);
     break;
   case R_MIPS_CALL_HI16:
   case R_MIPS_GOT_HI16:
@@ -570,7 +570,7 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_MICROMIPS_HI16:
   case R_MICROMIPS_TLS_DTPREL_HI16:
   case R_MICROMIPS_TLS_TPREL_HI16:
-    writeMicroRelocation32<E>(Loc, Val + 0x8000, 16, 16);
+    writeShuffleValue<E>(Loc, Val + 0x8000, 16, 16);
     break;
   case R_MIPS_HIGHER:
     writeValue<E>(Loc, Val + 0x80008000, 16, 32);
@@ -579,10 +579,10 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     writeValue<E>(Loc, Val + 0x800080008000, 16, 48);
     break;
   case R_MICROMIPS_HIGHER:
-    writeMicroRelocation32<E>(Loc, Val + 0x80008000, 16, 32);
+    writeShuffleValue<E>(Loc, Val + 0x80008000, 16, 32);
     break;
   case R_MICROMIPS_HIGHEST:
-    writeMicroRelocation32<E>(Loc, Val + 0x800080008000, 16, 48);
+    writeShuffleValue<E>(Loc, Val + 0x800080008000, 16, 48);
     break;
   case R_MIPS_JALR:
   case R_MICROMIPS_JALR:
@@ -614,7 +614,7 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_MICROMIPS_26_S1:
   case R_MICROMIPS_PC26_S1:
     checkInt<27>(Loc, Val, Type);
-    writeMicroRelocation32<E>(Loc, Val, 26, 1);
+    writeShuffleValue<E>(Loc, Val, 26, 1);
     break;
   case R_MICROMIPS_PC7_S1:
     checkInt<8>(Loc, Val, Type);
@@ -626,23 +626,23 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     break;
   case R_MICROMIPS_PC16_S1:
     checkInt<17>(Loc, Val, Type);
-    writeMicroRelocation32<E>(Loc, Val, 16, 1);
+    writeShuffleValue<E>(Loc, Val, 16, 1);
     break;
   case R_MICROMIPS_PC18_S3:
     checkInt<21>(Loc, Val, Type);
-    writeMicroRelocation32<E>(Loc, Val, 18, 3);
+    writeShuffleValue<E>(Loc, Val, 18, 3);
     break;
   case R_MICROMIPS_PC19_S2:
     checkInt<21>(Loc, Val, Type);
-    writeMicroRelocation32<E>(Loc, Val, 19, 2);
+    writeShuffleValue<E>(Loc, Val, 19, 2);
     break;
   case R_MICROMIPS_PC21_S1:
     checkInt<22>(Loc, Val, Type);
-    writeMicroRelocation32<E>(Loc, Val, 21, 1);
+    writeShuffleValue<E>(Loc, Val, 21, 1);
     break;
   case R_MICROMIPS_PC23_S2:
     checkInt<25>(Loc, Val, Type);
-    writeMicroRelocation32<E>(Loc, Val, 23, 2);
+    writeShuffleValue<E>(Loc, Val, 23, 2);
     break;
   default:
     error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));

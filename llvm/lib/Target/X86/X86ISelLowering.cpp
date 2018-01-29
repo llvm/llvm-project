@@ -13917,7 +13917,7 @@ static SDValue lowerV4X128VectorShuffle(const SDLoc &DL, MVT VT,
     return insert128BitVector(V1, Subvec, V2Index * 2, DAG, DL);
   }
 
-  // Try to lower to to vshuf64x2/vshuf32x4.
+  // Try to lower to vshuf64x2/vshuf32x4.
   SDValue Ops[2] = {DAG.getUNDEF(VT), DAG.getUNDEF(VT)};
   unsigned PermMask = 0;
   // Insure elements came from the same Op.

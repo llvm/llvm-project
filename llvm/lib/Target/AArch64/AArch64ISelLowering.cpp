@@ -10655,11 +10655,79 @@ static std::pair<SDValue, SDValue> splitInt128(SDValue N, SelectionDAG &DAG) {
   return std::make_pair(Lo, Hi);
 }
 
+// Create an even/odd pair of X registers holding integer value V.
+static SDValue createGPRPairNode(SelectionDAG &DAG, SDValue V) {
+  SDLoc dl(V.getNode());
+  SDValue VLo = DAG.getAnyExtOrTrunc(V, dl, MVT::i64);
+  SDValue VHi = DAG.getAnyExtOrTrunc(
+      DAG.getNode(ISD::SRL, dl, MVT::i128, V, DAG.getConstant(64, dl, MVT::i64)),
+      dl, MVT::i64);
+  if (DAG.getDataLayout().isBigEndian())
+    std::swap (VLo, VHi);
+  SDValue RegClass =
+      DAG.getTargetConstant(AArch64::XSeqPairsClassRegClassID, dl, MVT::i32);
+  SDValue SubReg0 = DAG.getTargetConstant(AArch64::sube64, dl, MVT::i32);
+  SDValue SubReg1 = DAG.getTargetConstant(AArch64::subo64, dl, MVT::i32);
+  const SDValue Ops[] = { RegClass, VLo, SubReg0, VHi, SubReg1 };
+  return SDValue(
+      DAG.getMachineNode(TargetOpcode::REG_SEQUENCE, dl, MVT::Untyped, Ops), 0);
+}
+
 static void ReplaceCMP_SWAP_128Results(SDNode *N,
-                                       SmallVectorImpl<SDValue> & Results,
-                                       SelectionDAG &DAG) {
+                                       SmallVectorImpl<SDValue> &Results,
+                                       SelectionDAG &DAG,
+                                       const AArch64Subtarget *Subtarget) {
   assert(N->getValueType(0) == MVT::i128 &&
          "AtomicCmpSwap on types less than 128 should be legal");
+
+  if (Subtarget->hasLSE()) {
+    // LSE has a 128-bit compare and swap (CASP), but i128 is not a legal type,
+    // so lower it here, wrapped in REG_SEQUENCE and EXTRACT_SUBREG.
+    SDValue Ops[] = {
+        createGPRPairNode(DAG, N->getOperand(2)), // Compare value
+        createGPRPairNode(DAG, N->getOperand(3)), // Store value
+        N->getOperand(1), // Ptr
+        N->getOperand(0), // Chain in
+    };
+
+    MachineFunction &MF = DAG.getMachineFunction();
+    MachineSDNode::mmo_iterator MemOp = MF.allocateMemRefsArray(1);
+    MemOp[0] = cast<MemSDNode>(N)->getMemOperand();
+
+    unsigned Opcode;
+    switch (MemOp[0]->getOrdering()) {
+    case AtomicOrdering::Monotonic:
+      Opcode = AArch64::CASPX;
+      break;
+    case AtomicOrdering::Acquire:
+      Opcode = AArch64::CASPAX;
+      break;
+    case AtomicOrdering::Release:
+      Opcode = AArch64::CASPLX;
+      break;
+    case AtomicOrdering::AcquireRelease:
+    case AtomicOrdering::SequentiallyConsistent:
+      Opcode = AArch64::CASPALX;
+      break;
+    default:
+      llvm_unreachable("Unexpected ordering!");
+    }
+
+    MachineSDNode *CmpSwap = DAG.getMachineNode(
+        Opcode, SDLoc(N), DAG.getVTList(MVT::Untyped, MVT::Other), Ops);
+    CmpSwap->setMemRefs(MemOp, MemOp + 1);
+
+    unsigned SubReg1 = AArch64::sube64, SubReg2 = AArch64::subo64;
+    if (DAG.getDataLayout().isBigEndian())
+      std::swap(SubReg1, SubReg2);
+    Results.push_back(DAG.getTargetExtractSubreg(SubReg1, SDLoc(N), MVT::i64,
+                                                 SDValue(CmpSwap, 0)));
+    Results.push_back(DAG.getTargetExtractSubreg(SubReg2, SDLoc(N), MVT::i64,
+                                                 SDValue(CmpSwap, 0)));
+    Results.push_back(SDValue(CmpSwap, 1)); // Chain out
+    return;
+  }
+
   auto Desired = splitInt128(N->getOperand(2), DAG);
   auto New = splitInt128(N->getOperand(3), DAG);
   SDValue Ops[] = {N->getOperand(1), Desired.first, Desired.second,
@@ -10718,7 +10786,7 @@ void AArch64TargetLowering::ReplaceNodeResults(
     // Let normal code take care of it by not adding anything to Results.
     return;
   case ISD::ATOMIC_CMP_SWAP:
-    ReplaceCMP_SWAP_128Results(N, Results, DAG);
+    ReplaceCMP_SWAP_128Results(N, Results, DAG, Subtarget);
     return;
   }
 }
