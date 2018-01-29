@@ -50,8 +50,8 @@ public:
   ObjFile *findComdat(StringRef Name) const;
 
   Symbol *addDefined(StringRef Name, Symbol::Kind Kind, uint32_t Flags,
-                     InputFile *F, const InputSegment *Segment = nullptr,
-                     InputFunction *Function = nullptr, uint32_t Address = 0);
+                     InputFile *F, InputChunk *Chunk = nullptr,
+                     uint32_t Address = 0);
   Symbol *addUndefined(StringRef Name, Symbol::Kind Kind, uint32_t Flags,
                        InputFile *F, const WasmSignature *Signature = nullptr);
   Symbol *addUndefinedFunction(StringRef Name, const WasmSignature *Type);

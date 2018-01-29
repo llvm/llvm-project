@@ -21,8 +21,7 @@ namespace lld {
 namespace wasm {
 
 class InputFile;
-class InputSegment;
-class InputFunction;
+class InputChunk;
 
 class Symbol {
 public:
@@ -62,6 +61,7 @@ public:
 
   // Returns the file from which this symbol was created.
   InputFile *getFile() const { return File; }
+  InputChunk *getChunk() const { return Chunk; }
 
   bool hasFunctionType() const { return FunctionType != nullptr; }
   const WasmSignature &getFunctionType() const;
@@ -92,12 +92,10 @@ public:
   void setVirtualAddress(uint32_t VA);
 
   void update(Kind K, InputFile *F = nullptr, uint32_t Flags = 0,
-              const InputSegment *Segment = nullptr,
-              InputFunction *Function = nullptr, uint32_t Address = UINT32_MAX);
+              InputChunk *chunk = nullptr, uint32_t Address = UINT32_MAX);
 
   void setArchiveSymbol(const Archive::Symbol &Sym) { ArchiveSymbol = Sym; }
   const Archive::Symbol &getArchiveSymbol() { return ArchiveSymbol; }
-  InputFunction *getFunction() { return Function; }
 
 protected:
   uint32_t Flags;
@@ -107,8 +105,7 @@ protected:
   Archive::Symbol ArchiveSymbol = {nullptr, 0, 0};
   Kind SymbolKind = InvalidKind;
   InputFile *File = nullptr;
-  const InputSegment *Segment = nullptr;
-  InputFunction *Function = nullptr;
+  InputChunk *Chunk = nullptr;
   llvm::Optional<uint32_t> OutputIndex;
   llvm::Optional<uint32_t> TableIndex;
   const WasmSignature *FunctionType = nullptr;

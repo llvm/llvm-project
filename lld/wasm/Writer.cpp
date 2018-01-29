@@ -648,7 +648,7 @@ void Writer::calculateExports() {
         continue;
       if (Sym->isGlobal())
         continue;
-      if (Sym->getFunction()->Discarded)
+      if (Sym->getChunk()->Discarded)
         continue;
 
       if ((Sym->isHidden() || Sym->isLocal()) && !ExportHidden)
