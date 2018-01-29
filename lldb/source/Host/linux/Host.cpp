@@ -20,7 +20,9 @@
 
 // C++ Includes
 // Other libraries and framework includes
+#include "llvm/Object/ELF.h"
 #include "llvm/Support/ScopedPrinter.h"
+
 // Project includes
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Log.h"
@@ -29,11 +31,8 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/linux/Support.h"
-#include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/DataExtractor.h"
-
-#include "lldb/Core/ModuleSpec.h"
-#include "lldb/Symbol/ObjectFile.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -123,28 +122,27 @@ static bool IsDirNumeric(const char *dname) {
   return true;
 }
 
-static bool GetELFProcessCPUType(llvm::StringRef exe_path,
-                                 ProcessInstanceInfo &process_info) {
-  // Clear the architecture.
-  process_info.GetArchitecture().Clear();
+static ArchSpec GetELFProcessCPUType(llvm::StringRef exe_path) {
+  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
 
-  ModuleSpecList specs;
-  FileSpec filespec(exe_path, false);
-  const size_t num_specs =
-      ObjectFile::GetModuleSpecifications(filespec, 0, 0, specs);
-  // GetModuleSpecifications() could fail if the executable has been deleted or
-  // is locked.
-  // But it shouldn't return more than 1 architecture.
-  assert(num_specs <= 1 && "Linux plugin supports only a single architecture");
-  if (num_specs == 1) {
-    ModuleSpec module_spec;
-    if (specs.GetModuleSpecAtIndex(0, module_spec) &&
-        module_spec.GetArchitecture().IsValid()) {
-      process_info.GetArchitecture() = module_spec.GetArchitecture();
-      return true;
-    }
+  auto buffer_sp = DataBufferLLVM::CreateSliceFromPath(exe_path, 0x20, 0);
+  if (!buffer_sp)
+    return ArchSpec();
+
+  uint8_t exe_class =
+      llvm::object::getElfArchType(
+          {buffer_sp->GetChars(), size_t(buffer_sp->GetByteSize())})
+          .first;
+
+  switch (exe_class) {
+  case llvm::ELF::ELFCLASS32:
+    return HostInfo::GetArchitecture(HostInfo::eArchKind32);
+  case llvm::ELF::ELFCLASS64:
+    return HostInfo::GetArchitecture(HostInfo::eArchKind64);
+  default:
+    LLDB_LOG(log, "Unknown elf class ({0}) in file {1}", exe_class, exe_path);
+    return ArchSpec();
   }
-  return false;
 }
 
 static bool GetProcessAndStatInfo(::pid_t pid,
@@ -173,7 +171,7 @@ static bool GetProcessAndStatInfo(::pid_t pid,
   llvm::StringRef PathRef = ExePath;
   PathRef.consume_back(" (deleted)");
 
-  GetELFProcessCPUType(PathRef, process_info);
+  process_info.SetArchitecture(GetELFProcessCPUType(PathRef));
 
   // Get the process environment.
   auto BufferOrError = getProcFile(pid, "environ");
@@ -193,7 +191,6 @@ static bool GetProcessAndStatInfo(::pid_t pid,
 
   process_info.SetProcessID(pid);
   process_info.GetExecutableFile().SetFile(PathRef, false);
-  process_info.GetArchitecture().MergeFrom(HostInfo::GetArchitecture());
 
   llvm::StringRef Rest = Environ->getBuffer();
   while (!Rest.empty()) {

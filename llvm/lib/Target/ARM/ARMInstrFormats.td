@@ -1024,6 +1024,12 @@ class Thumb2DSPPat<dag pattern, dag result> : Pat<pattern, result> {
 class Thumb2DSPMulPat<dag pattern, dag result> : Pat<pattern, result> {
   list<Predicate> Predicates = [IsThumb2, UseMulOps, HasDSP];
 }
+class FP16Pat<dag pattern, dag result> : Pat<pattern, result> {
+  list<Predicate> Predicates = [HasFP16];
+}
+class FullFP16Pat<dag pattern, dag result> : Pat<pattern, result> {
+  list<Predicate> Predicates = [HasFullFP16];
+}
 //===----------------------------------------------------------------------===//
 // Thumb Instruction Format Definitions.
 //

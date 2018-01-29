@@ -423,6 +423,14 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
              "Multiple prevailing defs are not allowed");
       GlobalRes.Prevailing = true;
       GlobalRes.IRName = Sym.getIRName();
+    } else if (!GlobalRes.Prevailing && GlobalRes.IRName.empty()) {
+      // Sometimes it can be two copies of symbol in a module and prevailing
+      // symbol can have no IR name. That might happen if symbol is defined in
+      // module level inline asm block. In case we have multiple modules with
+      // the same symbol we want to use IR name of the prevailing symbol.
+      // Otherwise, if we haven't seen a prevailing symbol, set the name so that
+      // we can later use it to check if there is any prevailing copy in IR.
+      GlobalRes.IRName = Sym.getIRName();
     }
 
     // Set the partition to external if we know it is re-defined by the linker
@@ -747,12 +755,31 @@ unsigned LTO::getMaxTasks() const {
 Error LTO::run(AddStreamFn AddStream, NativeObjectCache Cache) {
   // Compute "dead" symbols, we don't want to import/export these!
   DenseSet<GlobalValue::GUID> GUIDPreservedSymbols;
-  for (auto &Res : GlobalResolutions)
+  DenseMap<GlobalValue::GUID, PrevailingType> GUIDPrevailingResolutions;
+  for (auto &Res : GlobalResolutions) {
+    // Normally resolution have IR name of symbol. We can do nothing here
+    // otherwise. See comments in GlobalResolution struct for more details.
+    if (Res.second.IRName.empty())
+      continue;
+
+    GlobalValue::GUID GUID = GlobalValue::getGUID(
+        GlobalValue::dropLLVMManglingEscape(Res.second.IRName));
+
     if (Res.second.VisibleOutsideSummary && Res.second.Prevailing)
       GUIDPreservedSymbols.insert(GlobalValue::getGUID(
           GlobalValue::dropLLVMManglingEscape(Res.second.IRName)));
 
-  computeDeadSymbols(ThinLTO.CombinedIndex, GUIDPreservedSymbols);
+    GUIDPrevailingResolutions[GUID] =
+        Res.second.Prevailing ? PrevailingType::Yes : PrevailingType::No;
+  }
+
+  auto isPrevailing = [&](GlobalValue::GUID G) {
+    auto It = GUIDPrevailingResolutions.find(G);
+    if (It == GUIDPrevailingResolutions.end())
+      return PrevailingType::Unknown;
+    return It->second;
+  };
+  computeDeadSymbols(ThinLTO.CombinedIndex, GUIDPreservedSymbols, isPrevailing);
 
   if (auto E = runRegularLTO(AddStream))
     return E;
@@ -800,7 +827,7 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
 
   if (!Conf.CodeGenOnly) {
     for (const auto &R : GlobalResolutions) {
-      if (!R.second.Prevailing)
+      if (!R.second.isPrevailingIRSymbol())
         continue;
       if (R.second.Partition != 0 &&
           R.second.Partition != GlobalResolution::External)
@@ -1114,7 +1141,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache) {
     // If the symbol does not have external references or it is not prevailing,
     // then not need to mark it as exported from a ThinLTO partition.
     if (Res.second.Partition != GlobalResolution::External ||
-        !Res.second.Prevailing)
+        !Res.second.isPrevailingIRSymbol())
       continue;
     auto GUID = GlobalValue::getGUID(
         GlobalValue::dropLLVMManglingEscape(Res.second.IRName));
