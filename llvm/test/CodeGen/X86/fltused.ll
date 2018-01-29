@@ -1,4 +1,4 @@
-; The purpose of this test to to verify that the fltused symbol is emitted when
+; The purpose of this test to verify that the fltused symbol is emitted when
 ; any function is called with floating point arguments on Windows. And that it
 ; is not emitted otherwise.
 

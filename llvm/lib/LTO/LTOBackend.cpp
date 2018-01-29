@@ -399,6 +399,17 @@ Error lto::backend(Config &C, AddStreamFn AddStream,
   return Error::success();
 }
 
+static void dropDeadSymbols(Module &Mod, const GVSummaryMapTy &DefinedGlobals,
+                            const ModuleSummaryIndex &Index) {
+  for (auto &GV : Mod) {
+    auto It = DefinedGlobals.find(GV.getGUID());
+    if (It == DefinedGlobals.end())
+      continue;
+    if (!Index.isGlobalValueLive(It->second))
+      convertToDeclaration(GV);
+  }
+}
+
 Error lto::thinBackend(Config &Conf, unsigned Task, AddStreamFn AddStream,
                        Module &Mod, const ModuleSummaryIndex &CombinedIndex,
                        const FunctionImporter::ImportMapTy &ImportList,
@@ -419,6 +430,8 @@ Error lto::thinBackend(Config &Conf, unsigned Task, AddStreamFn AddStream,
     return Error::success();
 
   renameModuleForThinLTO(Mod, CombinedIndex);
+
+  dropDeadSymbols(Mod, DefinedGlobals, CombinedIndex);
 
   thinLTOResolveWeakForLinkerModule(Mod, DefinedGlobals);
 

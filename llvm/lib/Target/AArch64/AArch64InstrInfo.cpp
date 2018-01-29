@@ -2592,6 +2592,16 @@ void AArch64InstrInfo::storeRegToStackSlot(
       assert(Subtarget.hasNEON() && "Unexpected register store without NEON");
       Opc = AArch64::ST1Twov1d;
       Offset = false;
+    } else if (AArch64::XSeqPairsClassRegClass.hasSubClassEq(RC)) {
+      BuildMI(MBB, MBBI, DL, get(AArch64::STPXi))
+          .addReg(TRI->getSubReg(SrcReg, AArch64::sube64),
+                  getKillRegState(isKill))
+          .addReg(TRI->getSubReg(SrcReg, AArch64::subo64),
+                  getKillRegState(isKill))
+          .addFrameIndex(FI)
+          .addImm(0)
+          .addMemOperand(MMO);
+      return;
     }
     break;
   case 24:
@@ -2690,6 +2700,16 @@ void AArch64InstrInfo::loadRegFromStackSlot(
       assert(Subtarget.hasNEON() && "Unexpected register load without NEON");
       Opc = AArch64::LD1Twov1d;
       Offset = false;
+    } else if (AArch64::XSeqPairsClassRegClass.hasSubClassEq(RC)) {
+      BuildMI(MBB, MBBI, DL, get(AArch64::LDPXi))
+          .addReg(TRI->getSubReg(DestReg, AArch64::sube64),
+                  getDefRegState(true))
+          .addReg(TRI->getSubReg(DestReg, AArch64::subo64),
+                  getDefRegState(true))
+          .addFrameIndex(FI)
+          .addImm(0)
+          .addMemOperand(MMO);
+      return;
     }
     break;
   case 24:

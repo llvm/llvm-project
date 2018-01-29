@@ -1675,7 +1675,7 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
   }
 
   // Step 3: Note that the population count is exactly the trip count of the
-  // loop in question, which enable us to to convert the loop from noncountable
+  // loop in question, which enable us to convert the loop from noncountable
   // loop into a countable one. The benefit is twofold:
   //
   //  - If the loop only counts population, the entire loop becomes dead after

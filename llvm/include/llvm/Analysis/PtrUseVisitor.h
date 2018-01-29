@@ -275,7 +275,7 @@ protected:
     enqueueUsers(GEPI);
   }
 
-  // No-op intrinsics which we know don't escape the pointer to to logic in
+  // No-op intrinsics which we know don't escape the pointer to logic in
   // some other function.
   void visitDbgInfoIntrinsic(DbgInfoIntrinsic &I) {}
   void visitMemIntrinsic(MemIntrinsic &I) {}

@@ -32,6 +32,8 @@
     %t2 = or i16 undef, %t1
     ret i16 %t2
   }
+
+  define void @test5() {ret void}
 ...
 ---
 # CHECK-LABEL: name: test1
@@ -198,4 +200,47 @@ body:             |
     ; CHECK: %r9b = MOV8rr undef %r10b, implicit-def %r9d, implicit killed %r9d, implicit-def %eflags
     %ax = OR16rr undef %ax, %r9w, implicit-def %eflags
     RETQ %ax
+...
+
+---
+# CHECK-LABEL: name: test5
+name:            test5
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+liveins:
+  - { reg: '%ch', reg: '%bl' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+constants:
+body:             |
+  bb.0:
+    successors:
+    liveins: %ch, %bl
+
+    %cl = MOV8rr %bl, implicit-def %cx, implicit killed %ch, implicit-def %eflags
+    ; CHECK: %cl = MOV8rr %bl, implicit-def %cx, implicit killed %ch, implicit-def %eflags
+
+    RETQ %cx
 ...
