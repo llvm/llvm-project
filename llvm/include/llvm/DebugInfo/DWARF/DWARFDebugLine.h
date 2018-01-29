@@ -101,7 +101,7 @@ public:
     void clear();
     void dump(raw_ostream &OS) const;
     bool parse(const DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
-               const DWARFUnit *U = nullptr);
+               const DWARFContext &Ctx, const DWARFUnit *U = nullptr);
   };
 
   /// Standard .debug_line state machine structure.
@@ -224,7 +224,8 @@ public:
 
     /// Parse prologue and all rows.
     bool parse(DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
-               const DWARFUnit *U, raw_ostream *OS = nullptr);
+               const DWARFContext &Ctx, const DWARFUnit *U,
+               raw_ostream *OS = nullptr);
 
     using RowVector = std::vector<Row>;
     using RowIter = RowVector::const_iterator;
@@ -242,7 +243,8 @@ public:
 
   const LineTable *getLineTable(uint32_t Offset) const;
   const LineTable *getOrParseLineTable(DWARFDataExtractor &DebugLineData,
-                                       uint32_t Offset, const DWARFUnit *U);
+                                       uint32_t Offset, const DWARFContext &C,
+                                       const DWARFUnit *U);
 
 private:
   struct ParsingState {

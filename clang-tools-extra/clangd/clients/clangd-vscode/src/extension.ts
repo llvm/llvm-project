@@ -27,13 +27,6 @@ export function activate(context: vscode.ExtensionContext) {
     const clientOptions: vscodelc.LanguageClientOptions = {
         // Register the server for C/C++ files
         documentSelector: [{scheme: 'file', pattern: filePattern}],
-        uriConverters: {
-            // FIXME: by default the URI sent over the protocol will be percent encoded (see rfc3986#section-2.1)
-            //        the "workaround" below disables temporarily the encoding until decoding
-            //        is implemented properly in clangd
-            code2Protocol: (uri: vscode.Uri) : string => uri.toString(true),
-            protocol2Code: (uri: string) : vscode.Uri => vscode.Uri.parse(uri)
-        },
         synchronize: !syncFileEvents ? undefined : {
             fileEvents: vscode.workspace.createFileSystemWatcher(filePattern)
         }

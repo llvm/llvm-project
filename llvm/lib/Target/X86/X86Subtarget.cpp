@@ -335,6 +335,8 @@ void X86Subtarget::initializeEnvironment() {
   HasLZCNTFalseDeps = false;
   HasFastVariableShuffle = false;
   HasFastPartialYMMorZMMWrite = false;
+  HasFast11ByteNOP = false;
+  HasFast15ByteNOP = false;
   HasFastGather = false;
   HasFastScalarFSQRT = false;
   HasFastVectorFSQRT = false;

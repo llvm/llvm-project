@@ -278,9 +278,9 @@ private:
   /// Checks if the target legalizer info has specified anything about the
   /// instruction, or if unsupported.
   bool isInstUnsupported(const LegalityQuery &Query) const {
+    using namespace LegalizeActions;
     auto Step = LI.getAction(Query);
-    return Step.Action == LegalizerInfo::LegalizeAction::Unsupported ||
-           Step.Action == LegalizerInfo::LegalizeAction::NotFound;
+    return Step.Action == Unsupported || Step.Action == NotFound;
   }
 };
 

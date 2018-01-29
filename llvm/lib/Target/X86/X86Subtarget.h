@@ -246,6 +246,14 @@ protected:
   /// of a YMM or ZMM register without clearing the upper part.
   bool HasFastPartialYMMorZMMWrite;
 
+  /// True if there is no performance penalty for writing NOPs with up to
+  /// 11 bytes.
+  bool HasFast11ByteNOP;
+
+  /// True if there is no performance penalty for writing NOPs with up to
+  /// 15 bytes.
+  bool HasFast15ByteNOP;
+
   /// True if gather is reasonably fast. This is true for Skylake client and
   /// all AVX-512 CPUs.
   bool HasFastGather;

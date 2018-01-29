@@ -244,6 +244,8 @@ ParsedAST::Build(const Context &Ctx,
   auto Clang = prepareCompilerInstance(
       std::move(CI), PreamblePCH, std::move(Buffer), std::move(PCHs),
       std::move(VFS), /*ref*/ UnitDiagsConsumer);
+  if (!Clang)
+    return llvm::None;
 
   // Recover resources if we crash before exiting this method.
   llvm::CrashRecoveryContextCleanupRegistrar<CompilerInstance> CICleanup(

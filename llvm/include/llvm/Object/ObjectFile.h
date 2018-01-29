@@ -287,12 +287,6 @@ public:
   /// @brief Create a triple from the data in this object file.
   Triple makeTriple() const;
 
-  /// Returns platform-specific object flags, if any.
-  virtual std::error_code getPlatformFlags(unsigned &Result) const {
-    Result = 0;
-    return object_error::invalid_file_type;
-  }
-
   virtual std::error_code
     getBuildAttributes(ARMAttributeParser &Attributes) const {
       return std::error_code();

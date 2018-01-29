@@ -387,7 +387,7 @@ void DWARFContext::dump(
       if (DumpOffset && Offset != *DumpOffset) {
         // Find the size of this part of the line table section and skip it.
         unsigned OldOffset = Offset;
-        LineTable.Prologue.parse(LineData, &Offset, U);
+        LineTable.Prologue.parse(LineData, &Offset, *this, U);
         Offset = OldOffset + LineTable.Prologue.TotalLength +
                  LineTable.Prologue.sizeofTotalLength();
         continue;
@@ -397,9 +397,9 @@ void DWARFContext::dump(
       OS << "debug_line[" << format("0x%8.8x", Offset) << "]\n";
       unsigned OldOffset = Offset;
       if (DumpOpts.Verbose) {
-        LineTable.parse(LineData, &Offset, U, &OS);
+        LineTable.parse(LineData, &Offset, *this, U, &OS);
       } else {
-        LineTable.parse(LineData, &Offset, U);
+        LineTable.parse(LineData, &Offset, *this, U);
         LineTable.dump(OS);
       }
       // Check for unparseable prologue, to avoid infinite loops.
@@ -422,7 +422,7 @@ void DWARFContext::dump(
         U = It->second;
       DWARFDebugLine::LineTable LineTable;
       unsigned OldOffset = Offset;
-      if (!LineTable.Prologue.parse(LineData, &Offset, U))
+      if (!LineTable.Prologue.parse(LineData, &Offset, *this, U))
         break;
       if (!DumpOffset || OldOffset == *DumpOffset)
         LineTable.dump(OS);
@@ -781,7 +781,7 @@ DWARFContext::getLineTableForUnit(DWARFUnit *U) {
   // We have to parse it first.
   DWARFDataExtractor lineData(*DObj, U->getLineSection(), isLittleEndian(),
                               U->getAddressByteSize());
-  return Line->getOrParseLineTable(lineData, stmtOffset, U);
+  return Line->getOrParseLineTable(lineData, stmtOffset, *this, U);
 }
 
 void DWARFContext::parseCompileUnits() {

@@ -18,6 +18,16 @@ image_load    v[4:7], v[237:240], s[28:35] dmask:0x7 tfe
 // SICI: image_load v[4:7], v[237:240], s[28:35] dmask:0x7 tfe ; encoding: [0x00,0x07,0x01,0xf0,0xed,0x04,0x07,0x00]
 // VI:   image_load v[4:7], v[237:240], s[28:35] dmask:0x7 tfe ; encoding: [0x00,0x07,0x01,0xf0,0xed,0x04,0x07,0x00]
 
+// Verify support of all possible modifiers.
+// FIXME: This test is incorrect because r128 assumes a 128-bit SRSRC.
+// FIXME: Check that d16 is not supported before VI
+image_load    v[5:6], v[1:4], s[8:15] dmask:0x1 unorm glc slc r128 tfe lwe da d16
+// VI:   image_load v[5:6], v[1:4], s[8:15] dmask:0x1 unorm glc slc r128 tfe lwe da d16 ; encoding: [0x00,0xf1,0x03,0xf2,0x01,0x05,0x02,0x80]
+
+// FIXME: Check that d16 is not supported before VI
+image_load v5, v[1:4], s[8:15] d16
+// VI:   image_load v5, v[1:4], s[8:15] d16 ; encoding: [0x00,0x00,0x00,0xf0,0x01,0x05,0x02,0x80]
+
 image_store   v[193:195], v[237:240], s[28:35] dmask:0x7 unorm
 // SICI: image_store v[193:195], v[237:240], s[28:35] dmask:0x7 unorm ; encoding: [0x00,0x17,0x20,0xf0,0xed,0xc1,0x07,0x00]
 // VI:   image_store v[193:195], v[237:240], s[28:35] dmask:0x7 unorm ; encoding: [0x00,0x17,0x20,0xf0,0xed,0xc1,0x07,0x00]
@@ -29,6 +39,16 @@ image_store   v193, v[237:240], s[28:35]
 image_store   v[193:194], v[237:240], s[28:35] tfe
 // SICI: image_store v[193:194], v[237:240], s[28:35] tfe ; encoding: [0x00,0x00,0x21,0xf0,0xed,0xc1,0x07,0x00]
 // VI:   image_store v[193:194], v[237:240], s[28:35] tfe ; encoding: [0x00,0x00,0x21,0xf0,0xed,0xc1,0x07,0x00]
+
+// Verify support of all possible modifiers.
+// FIXME: This test is incorrect because r128 assumes a 128-bit SRSRC.
+// FIXME: Check that d16 is not supported before VI
+image_store   v5, v[1:4], s[8:15] dmask:0x1 unorm glc slc r128 lwe da d16
+// VI:   image_store v5, v[1:4], s[8:15] dmask:0x1 unorm glc slc r128 lwe da d16 ; encoding: [0x00,0xf1,0x22,0xf2,0x01,0x05,0x02,0x80]
+
+// FIXME: Check that d16 is not supported before VI
+image_store    v5, v[1:4], s[8:15] d16
+// VI:   image_store v5, v[1:4], s[8:15] d16 ; encoding: [0x00,0x00,0x20,0xf0,0x01,0x05,0x02,0x80]
 
 //===----------------------------------------------------------------------===//
 // Image Sample

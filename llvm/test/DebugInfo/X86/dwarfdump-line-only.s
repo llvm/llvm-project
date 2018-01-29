@@ -1,6 +1,5 @@
 # Test object to verify dwarfdump handles dumping a DWARF v5 line table
 # without an associated unit.
-# FIXME: Support FORM_strp in this situation.
 #
 # RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o - | \
 # RUN: llvm-dwarfdump -v - | FileCheck %s
@@ -42,17 +41,17 @@ LH_5_params:
         # Directory table format
         .byte   1               # One element per directory entry
         .byte   1               # DW_LNCT_path
-        .byte   0x08            # DW_FORM_string
+        .byte   0x0e            # DW_FORM_strp (-> .debug_str)
         # Directory table entries
         .byte   2               # Two directory entries
-        .asciz  "Directory1"
-        .asciz  "Directory2"
+        .long   str_D1
+        .long   str_D2
         # File table format
         .byte   4               # Four elements per file entry
         .byte   2               # DW_LNCT_directory_index
         .byte   0x0b            # DW_FORM_data1
         .byte   1               # DW_LNCT_path
-        .byte   0x08            # DW_FORM_string
+        .byte   0x1f            # DW_FORM_line_strp (-> .debug_line_str)
         .byte   3               # DW_LNCT_timestamp
         .byte   0x0f            # DW_FORM_udata
         .byte   4               # DW_LNCT_size
@@ -60,11 +59,11 @@ LH_5_params:
         # File table entries
         .byte   2               # Two file entries
         .byte   1
-        .asciz "File1"
+        .long   ls_F1
         .byte   0x51
         .byte   0x52
         .byte   0
-        .asciz "File2"
+        .long   ls_F2
         .byte   0x53
         .byte   0x54
 LH_5_header_end:
@@ -78,6 +77,14 @@ LH_5_header_end:
         .byte   1
         .byte   1               # DW_LNE_end_sequence
 LH_5_end:
+
+        .section .debug_str,"MS",@progbits,1
+str_D1: .asciz  "Directory1"
+str_D2: .asciz  "Directory2"
+
+        .section .debug_line_str,"MS",@progbits,1
+ls_F1:  .asciz "File1"
+ls_F2:  .asciz "File2"
 
 # CHECK: Line table prologue:
 # CHECK: version: 5

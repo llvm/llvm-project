@@ -30,6 +30,10 @@ public:
     /// Whether to collect symbols in main files (e.g. the source file
     /// corresponding to a TU).
     bool IndexMainFiles = false;
+    // When symbol paths cannot be resolved to absolute paths (e.g. files in
+    // VFS that does not have absolute path), combine the fallback directory
+    // with symbols' paths to get absolute paths. This must be an absolute path.
+    std::string FallbackDir;
   };
 
   SymbolCollector(Options Opts);
