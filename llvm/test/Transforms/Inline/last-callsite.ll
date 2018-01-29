@@ -51,7 +51,7 @@ entry:
 
 
 ; The 'test2_' prefixed functions test that we can discover the last callsite
-; bonus after having inlined the prior call site. For this to to work, we need
+; bonus after having inlined the prior call site. For this to work, we need
 ; a callsite dependent cost so we have a trivial predicate guarding all the
 ; cost, and set that in a particular direction.
 

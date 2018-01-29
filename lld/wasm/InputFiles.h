@@ -117,8 +117,7 @@ private:
   uint32_t relocateTableIndex(uint32_t Original) const;
 
   Symbol *createDefined(const WasmSymbol &Sym, Symbol::Kind Kind,
-                        const InputSegment *Segment = nullptr,
-                        InputFunction *Function = nullptr,
+                        InputChunk *Chunk = nullptr,
                         uint32_t Address = UINT32_MAX);
   Symbol *createUndefined(const WasmSymbol &Sym, Symbol::Kind Kind,
                           const WasmSignature *Signature = nullptr);

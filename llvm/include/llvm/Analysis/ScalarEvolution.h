@@ -678,7 +678,7 @@ public:
                                 const SCEV *LHS, const SCEV *RHS);
 
   /// Test whether the backedge of the loop is protected by a conditional
-  /// between LHS and RHS.  This is used to to eliminate casts.
+  /// between LHS and RHS.  This is used to eliminate casts.
   bool isLoopBackedgeGuardedByCond(const Loop *L, ICmpInst::Predicate Pred,
                                    const SCEV *LHS, const SCEV *RHS);
 
