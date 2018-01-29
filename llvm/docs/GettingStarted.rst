@@ -324,7 +324,7 @@ However, some Linux distributions and some other or older BSDs sometimes have
 extremely old versions of GCC. These steps attempt to help you upgrade you
 compiler even on such a system. However, if at all possible, we encourage you
 to use a recent version of a distribution with a modern system compiler that
-meets these requirements. Note that it is tempting to to install a prior
+meets these requirements. Note that it is tempting to install a prior
 version of Clang and libc++ to be the host compiler, however libc++ was not
 well tested or set up to build on Linux until relatively recently. As
 a consequence, this guide suggests just using libstdc++ and a modern GCC as the

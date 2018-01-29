@@ -687,7 +687,7 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
 
   if (!MFI->isEntryFunction()) {
     // Wait for any outstanding memory operations that the input registers may
-    // depend on. We can't track them and it's better to to the wait after the
+    // depend on. We can't track them and it's better to the wait after the
     // costly call sequence.
 
     // TODO: Could insert earlier and schedule more liberally with operations

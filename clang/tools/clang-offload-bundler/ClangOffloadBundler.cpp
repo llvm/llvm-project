@@ -412,7 +412,7 @@ class ObjectFileHandler final : public FileHandler {
   /// read from the buffers.
   unsigned NumberOfProcessedInputs = 0;
 
-  /// LLVM context used to to create the auxiliary modules.
+  /// LLVM context used to create the auxiliary modules.
   LLVMContext VMContext;
 
   /// LLVM module used to create an object with all the bundle
