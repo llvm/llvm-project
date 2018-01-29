@@ -34,6 +34,10 @@ class OutputSegment;
 
 class InputChunk {
 public:
+  enum Kind { DataSegment, Function };
+
+  Kind kind() const { return SectionKind; };
+
   uint32_t getSize() const { return data().size(); }
 
   void copyRelocations(const WasmSection &Section);
@@ -47,14 +51,16 @@ public:
 
   uint32_t getOutputOffset() const { return OutputOffset; }
   ArrayRef<WasmRelocation> getRelocations() const { return Relocations; }
+  StringRef getFileName() const { return File->getName(); }
 
   virtual StringRef getComdat() const = 0;
+  virtual StringRef getName() const = 0;
 
   bool Discarded = false;
   std::vector<OutputRelocation> OutRelocations;
 
 protected:
-  InputChunk(const ObjFile *F) : File(F) {}
+  InputChunk(const ObjFile *F, Kind K) : File(F), SectionKind(K) {}
   virtual ~InputChunk() = default;
   void calcRelocations();
   virtual ArrayRef<uint8_t> data() const = 0;
@@ -63,6 +69,7 @@ protected:
   std::vector<WasmRelocation> Relocations;
   int32_t OutputOffset = 0;
   const ObjFile *File;
+  Kind SectionKind;
 };
 
 // Represents a WebAssembly data segment which can be included as part of
@@ -76,7 +83,9 @@ protected:
 class InputSegment : public InputChunk {
 public:
   InputSegment(const WasmSegment &Seg, const ObjFile *F)
-      : InputChunk(F), Segment(Seg) {}
+      : InputChunk(F, InputChunk::DataSegment), Segment(Seg) {}
+
+  static bool classof(const InputChunk *C) { return C->kind() == DataSegment; }
 
   // Translate an offset in the input segment to an offset in the output
   // segment.
@@ -92,7 +101,7 @@ public:
   uint32_t getAlignment() const { return Segment.Data.Alignment; }
   uint32_t startVA() const { return Segment.Data.Offset.Value.Int32; }
   uint32_t endVA() const { return startVA() + getSize(); }
-  StringRef getName() const { return Segment.Data.Name; }
+  StringRef getName() const override { return Segment.Data.Name; }
   StringRef getComdat() const override { return Segment.Data.Comdat; }
 
   int32_t OutputSegmentOffset = 0;
@@ -113,9 +122,13 @@ class InputFunction : public InputChunk {
 public:
   InputFunction(const WasmSignature &S, const WasmFunction *Func,
                 const ObjFile *F)
-      : InputChunk(F), Signature(S), Function(Func) {}
+      : InputChunk(F, InputChunk::Function), Signature(S), Function(Func) {}
 
-  virtual StringRef getName() const { return Function->Name; }
+  static bool classof(const InputChunk *C) {
+    return C->kind() == InputChunk::Function;
+  }
+
+  StringRef getName() const override { return Function->Name; }
   StringRef getComdat() const override { return Function->Comdat; }
   uint32_t getOutputIndex() const { return OutputIndex.getValue(); }
   bool hasOutputIndex() const { return OutputIndex.hasValue(); }

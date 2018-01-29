@@ -385,7 +385,7 @@ double f_va_3(char *fmt, ...) {
 // CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8* [[ARGP_CUR4]] to %struct.tiny*
 // CHECK-NEXT:    [[TMP6:%.*]] = bitcast %struct.tiny* [[TS]] to i8*
 // CHECK-NEXT:    [[TMP7:%.*]] = bitcast %struct.tiny* [[TMP5]] to i8*
-// CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[TMP6]], i8* align 1 [[TMP7]], i32 4, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[TMP6]], i8* align 4 [[TMP7]], i32 4, i1 false)
 // CHECK-NEXT:    [[ARGP_CUR6:%.*]] = load i8*, i8** [[VA]], align 4
 // CHECK-NEXT:    [[ARGP_NEXT7:%.*]] = getelementptr inbounds i8, i8* [[ARGP_CUR6]], i32 8
 // CHECK-NEXT:    store i8* [[ARGP_NEXT7]], i8** [[VA]], align 4

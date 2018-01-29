@@ -12862,7 +12862,7 @@ void __ovld mem_fence(cl_mem_fence_flags flags);
  * Read memory barrier that orders only
  * loads.
  * The flags argument specifies the memory
- * address space and can be set to to a
+ * address space and can be set to a
  * combination of the following literal
  * values:
  * CLK_LOCAL_MEM_FENCE
@@ -12874,7 +12874,7 @@ void __ovld read_mem_fence(cl_mem_fence_flags flags);
  * Write memory barrier that orders only
  * stores.
  * The flags argument specifies the memory
- * address space and can be set to to a
+ * address space and can be set to a
  * combination of the following literal
  * values:
  * CLK_LOCAL_MEM_FENCE

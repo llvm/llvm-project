@@ -215,6 +215,6 @@ float32x4_t f35(int i, s35_with_align s1, s35_with_align s2) {
 // AAPCS: %[[a:.*]] = alloca %struct.s35, align 16
 // AAPCS: %[[b:.*]] = bitcast %struct.s35* %[[a]] to i8*
 // AAPCS: %[[c:.*]] = bitcast %struct.s35* %0 to i8*
-// AAPCS: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 %[[b]], i8* align 8 %[[c]]
+// AAPCS: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 %[[b]], i8* align 8 %[[c]]
 // AAPCS: %[[d:.*]] = bitcast %struct.s35* %[[a]] to <4 x float>*
 // AAPCS: load <4 x float>, <4 x float>* %[[d]], align 16
