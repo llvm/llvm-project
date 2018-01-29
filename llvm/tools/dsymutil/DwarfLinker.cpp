@@ -30,6 +30,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/CodeGen/AccelTable.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/Config/config.h"
@@ -62,6 +63,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/DJB.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -357,29 +359,56 @@ public:
   /// debug_loc section.
   void noteLocationAttribute(PatchLocation Attr, int64_t PcOffset);
 
-  /// Add a name accelerator entry for \p Die with \p Name which is stored in
-  /// the string table at \p Offset.
-  void addNameAccelerator(const DIE *Die, const char *Name, uint32_t Offset,
+  /// Add a name accelerator entry for \a Die with \a Name.
+  void addNamespaceAccelerator(const DIE *Die, DwarfStringPoolEntryRef Name);
+
+  /// Add a name accelerator entry for \a Die with \a Name.
+  void addNameAccelerator(const DIE *Die, DwarfStringPoolEntryRef Name,
+                          bool SkipPubnamesSection = false);
+
+  /// Add various accelerator entries for \p Die with \p Name which is stored
+  /// in the string table at \p Offset. \p Name must be an Objective-C
+  /// selector.
+  void addObjCAccelerator(const DIE *Die, DwarfStringPoolEntryRef Name,
                           bool SkipPubnamesSection = false);
 
   /// Add a type accelerator entry for \p Die with \p Name which is stored in
   /// the string table at \p Offset.
-  void addTypeAccelerator(const DIE *Die, const char *Name, uint32_t Offset);
+  void addTypeAccelerator(const DIE *Die, DwarfStringPoolEntryRef Name,
+                          bool ObjcClassImplementation,
+                          uint32_t QualifiedNameHash);
 
   struct AccelInfo {
-    StringRef Name;      ///< Name of the entry.
-    const DIE *Die;      ///< DIE this entry describes.
-    uint32_t NameOffset; ///< Offset of Name in the string pool.
-    bool SkipPubSection; ///< Emit this entry only in the apple_* sections.
+    /// Name of the entry.
+    DwarfStringPoolEntryRef Name;
 
-    AccelInfo(StringRef Name, const DIE *Die, uint32_t NameOffset,
+    /// DIE this entry describes.
+    const DIE *Die;
+
+    /// Hash of the fully qualified name.
+    uint32_t QualifiedNameHash;
+
+    /// Emit this entry only in the apple_* sections.
+    bool SkipPubSection;
+
+    /// Is this an ObjC class implem?
+    bool ObjcClassImplementation;
+
+    AccelInfo(DwarfStringPoolEntryRef Name, const DIE *Die,
               bool SkipPubSection = false)
-        : Name(Name), Die(Die), NameOffset(NameOffset),
-          SkipPubSection(SkipPubSection) {}
+        : Name(Name), Die(Die), SkipPubSection(SkipPubSection) {}
+
+    AccelInfo(DwarfStringPoolEntryRef Name, const DIE *Die,
+              uint32_t QualifiedNameHash, bool ObjCClassIsImplementation)
+        : Name(Name), Die(Die), QualifiedNameHash(QualifiedNameHash),
+          SkipPubSection(false),
+          ObjcClassImplementation(ObjCClassIsImplementation) {}
   };
 
   const std::vector<AccelInfo> &getPubnames() const { return Pubnames; }
   const std::vector<AccelInfo> &getPubtypes() const { return Pubtypes; }
+  const std::vector<AccelInfo> &getNamespaces() const { return Namespaces; }
+  const std::vector<AccelInfo> &getObjC() const { return ObjC; }
 
   /// Get the full path for file \a FileNum in the line table
   StringRef getResolvedPath(unsigned FileNum) {
@@ -442,6 +471,8 @@ private:
   /// @{
   std::vector<AccelInfo> Pubnames;
   std::vector<AccelInfo> Pubtypes;
+  std::vector<AccelInfo> Namespaces;
+  std::vector<AccelInfo> ObjC;
   /// @}
 
   /// Cached resolved paths from the line table.
@@ -518,18 +549,28 @@ void CompileUnit::noteLocationAttribute(PatchLocation Attr, int64_t PcOffset) {
   LocationAttributes.emplace_back(Attr, PcOffset);
 }
 
-/// Add a name accelerator entry for \p Die with \p Name
-/// which is stored in the string table at \p Offset.
-void CompileUnit::addNameAccelerator(const DIE *Die, const char *Name,
-                                     uint32_t Offset, bool SkipPubSection) {
-  Pubnames.emplace_back(Name, Die, Offset, SkipPubSection);
+void CompileUnit::addNamespaceAccelerator(const DIE *Die,
+                                          DwarfStringPoolEntryRef Name) {
+  Namespaces.emplace_back(Name, Die);
 }
 
-/// Add a type accelerator entry for \p Die with \p Name
-/// which is stored in the string table at \p Offset.
-void CompileUnit::addTypeAccelerator(const DIE *Die, const char *Name,
-                                     uint32_t Offset) {
-  Pubtypes.emplace_back(Name, Die, Offset, false);
+void CompileUnit::addObjCAccelerator(const DIE *Die,
+                                     DwarfStringPoolEntryRef Name,
+                                     bool SkipPubSection) {
+  ObjC.emplace_back(Name, Die, SkipPubSection);
+}
+
+void CompileUnit::addNameAccelerator(const DIE *Die,
+                                     DwarfStringPoolEntryRef Name,
+                                     bool SkipPubSection) {
+  Pubnames.emplace_back(Name, Die, SkipPubSection);
+}
+
+void CompileUnit::addTypeAccelerator(const DIE *Die,
+                                     DwarfStringPoolEntryRef Name,
+                                     bool ObjcClassImplementation,
+                                     uint32_t QualifiedNameHash) {
+  Pubtypes.emplace_back(Name, Die, QualifiedNameHash, ObjcClassImplementation);
 }
 
 namespace {
@@ -641,6 +682,19 @@ public:
   /// Emit an FDE with data \p Bytes.
   void emitFDE(uint32_t CIEOffset, uint32_t AddreSize, uint32_t Address,
                StringRef Bytes);
+
+  /// Emit Apple namespaces accelerator table.
+  void
+  emitAppleNamespaces(AppleAccelTable<AppleAccelTableStaticOffsetData> &Table);
+
+  /// Emit Apple names accelerator table.
+  void emitAppleNames(AppleAccelTable<AppleAccelTableStaticOffsetData> &Table);
+
+  /// Emit Apple Objective-C accelerator table.
+  void emitAppleObjc(AppleAccelTable<AppleAccelTableStaticOffsetData> &Table);
+
+  /// Emit Apple type accelerator table.
+  void emitAppleTypes(AppleAccelTable<AppleAccelTableStaticTypeData> &Table);
 
   uint32_t getFrameSectionSize() const { return FrameSectionSize; }
 };
@@ -779,9 +833,47 @@ void DwarfStreamer::emitStrings(const NonRelocatableStringpool &Pool) {
   for (auto Entry : Entries) {
     if (Entry.getIndex() == -1U)
       break;
-    Asm->OutStreamer->EmitBytes(
-        StringRef(Entry.getString().data(), Entry.getString().size() + 1));
+    // Emit the string itself.
+    Asm->OutStreamer->EmitBytes(Entry.getString());
+    // Emit a null terminator.
+    Asm->EmitInt8(0);
   }
+}
+
+void DwarfStreamer::emitAppleNamespaces(
+    AppleAccelTable<AppleAccelTableStaticOffsetData> &Table) {
+  Asm->OutStreamer->SwitchSection(MOFI->getDwarfAccelNamespaceSection());
+  Table.finalizeTable(Asm.get(), "namespac");
+  auto *SectionBegin = Asm->createTempSymbol("namespac_begin");
+  Asm->OutStreamer->EmitLabel(SectionBegin);
+  Table.emit(Asm.get(), SectionBegin);
+}
+
+void DwarfStreamer::emitAppleNames(
+    AppleAccelTable<AppleAccelTableStaticOffsetData> &Table) {
+  Asm->OutStreamer->SwitchSection(MOFI->getDwarfAccelNamesSection());
+  Table.finalizeTable(Asm.get(), "names");
+  auto *SectionBegin = Asm->createTempSymbol("names_begin");
+  Asm->OutStreamer->EmitLabel(SectionBegin);
+  Table.emit(Asm.get(), SectionBegin);
+}
+
+void DwarfStreamer::emitAppleObjc(
+    AppleAccelTable<AppleAccelTableStaticOffsetData> &Table) {
+  Asm->OutStreamer->SwitchSection(MOFI->getDwarfAccelObjCSection());
+  Table.finalizeTable(Asm.get(), "objc");
+  auto *SectionBegin = Asm->createTempSymbol("objc_begin");
+  Asm->OutStreamer->EmitLabel(SectionBegin);
+  Table.emit(Asm.get(), SectionBegin);
+}
+
+void DwarfStreamer::emitAppleTypes(
+    AppleAccelTable<AppleAccelTableStaticTypeData> &Table) {
+  Asm->OutStreamer->SwitchSection(MOFI->getDwarfAccelTypesSection());
+  Table.finalizeTable(Asm.get(), "types");
+  auto *SectionBegin = Asm->createTempSymbol("types_begin");
+  Asm->OutStreamer->EmitLabel(SectionBegin);
+  Table.emit(Asm.get(), SectionBegin);
 }
 
 /// Emit the swift_ast section stored in \p Buffers.
@@ -1137,8 +1229,11 @@ void DwarfStreamer::emitPubSectionForUnit(
       HeaderEmitted = true;
     }
     Asm->EmitInt32(Name.Die->getOffset());
-    Asm->OutStreamer->EmitBytes(
-        StringRef(Name.Name.data(), Name.Name.size() + 1));
+
+    // Emit the string itself.
+    Asm->OutStreamer->EmitBytes(Name.Name.getString());
+    // Emit a null terminator.
+    Asm->EmitInt8(0);
   }
 
   if (!HeaderEmitted)
@@ -1396,8 +1491,7 @@ private:
     /// clone*Attributes helpers about the attributes of a particular DIE.
     struct AttributesInfo {
       /// Names.
-      const char *Name = nullptr;
-      const char *MangledName = nullptr;
+      DwarfStringPoolEntryRef Name, MangledName, NameWithoutTemplate;
 
       /// Offsets in the string pool.
       uint32_t NameOffset = 0;
@@ -1414,6 +1508,9 @@ private:
 
       /// Does the DIE have a low_pc attribute?
       bool HasLowPc = false;
+
+      /// Does the DIE have a ranges attribute?
+      bool HasRanges = false;
 
       /// Is this DIE only a declaration?
       bool IsDeclaration = false;
@@ -1470,10 +1567,18 @@ private:
     /// described by \p Die and store them in \Info if they are not
     /// already there.
     /// \returns is a name was found.
-    bool getDIENames(const DWARFDie &Die, AttributesInfo &Info);
+    bool getDIENames(const DWARFDie &Die, AttributesInfo &Info,
+                     bool StripTemplate = false);
 
     /// Create a copy of abbreviation Abbrev.
     void copyAbbrev(const DWARFAbbreviationDeclaration &Abbrev, bool hasODR);
+
+    uint32_t hashFullyQualifiedName(DWARFDie DIE, CompileUnit &U,
+                                    int RecurseDepth = 0);
+
+    /// Helper for cloneDIE.
+    void addObjCAccelerator(CompileUnit &Unit, const DIE *Die,
+                            DwarfStringPoolEntryRef Name, bool SkipPubSection);
   };
 
   /// Assign an abbreviation number to \p Abbrev
@@ -1568,6 +1673,12 @@ private:
   /// Offset of the last CIE that has been emitted in the output
   /// debug_frame section.
   uint32_t LastCIEOffset = 0;
+
+  /// Apple accelerator tables.
+  AppleAccelTable<AppleAccelTableStaticOffsetData> AppleNames;
+  AppleAccelTable<AppleAccelTableStaticOffsetData> AppleNamespaces;
+  AppleAccelTable<AppleAccelTableStaticOffsetData> AppleObjc;
+  AppleAccelTable<AppleAccelTableStaticTypeData> AppleTypes;
 
   /// Mapping the PCM filename to the DwoId.
   StringMap<uint64_t> ClangModules;
@@ -1829,16 +1940,30 @@ PointerIntPair<DeclContext *, 1> DeclContextTree::getChildDeclContext(
 }
 
 bool DwarfLinker::DIECloner::getDIENames(const DWARFDie &Die,
-                                         AttributesInfo &Info) {
+                                         AttributesInfo &Info,
+                                         bool StripTemplate) {
+  // This function will be called on DIEs having low_pcs and
+  // ranges. As getting the name might be more expansive, filter out
+  // blocks directly.
+  if (Die.getTag() == dwarf::DW_TAG_lexical_block)
+    return false;
+
   // FIXME: a bit wasteful as the first getName might return the
   // short name.
-  if (!Info.MangledName &&
-      (Info.MangledName = Die.getName(DINameKind::LinkageName)))
-    Info.MangledNameOffset =
-        Linker.StringPool.getStringOffset(Info.MangledName);
+  if (!Info.MangledName)
+    if (const char *MangledName = Die.getName(DINameKind::LinkageName))
+      Info.MangledName = Linker.StringPool.getEntry(MangledName);
 
-  if (!Info.Name && (Info.Name = Die.getName(DINameKind::ShortName)))
-    Info.NameOffset = Linker.StringPool.getStringOffset(Info.Name);
+  if (!Info.Name)
+    if (const char *Name = Die.getName(DINameKind::ShortName))
+      Info.Name = Linker.StringPool.getEntry(Name);
+
+  if (StripTemplate && Info.Name && Info.MangledName != Info.Name) {
+    // FIXME: dsymutil compatibility. This is wrong for operator<
+    auto Split = Info.Name.getString().split('<');
+    if (!Split.second.empty())
+      Info.NameWithoutTemplate = Linker.StringPool.getEntry(Split.first);
+  }
 
   return Info.Name || Info.MangledName;
 }
@@ -2623,6 +2748,7 @@ unsigned DwarfLinker::DIECloner::cloneAddressAttribute(
     DIE &Die, AttributeSpec AttrSpec, const DWARFFormValue &Val,
     const CompileUnit &Unit, AttributesInfo &Info) {
   uint64_t Addr = *Val.getAsAddress();
+
   if (AttrSpec.Attr == dwarf::DW_AT_low_pc) {
     if (Die.getTag() == dwarf::DW_TAG_inlined_subroutine ||
         Die.getTag() == dwarf::DW_TAG_lexical_block)
@@ -2684,8 +2810,10 @@ unsigned DwarfLinker::DIECloner::cloneScalarAttribute(
   PatchLocation Patch =
       Die.addValue(DIEAlloc, dwarf::Attribute(AttrSpec.Attr),
                    dwarf::Form(AttrSpec.Form), DIEInteger(Value));
-  if (AttrSpec.Attr == dwarf::DW_AT_ranges)
+  if (AttrSpec.Attr == dwarf::DW_AT_ranges) {
     Unit.noteRangeAttribute(Die, Patch);
+    Info.HasRanges = true;
+  }
 
   // A more generic way to check for location attributes would be
   // nice, but it's very unlikely that any other attribute needs a
@@ -2823,6 +2951,55 @@ static bool isTypeTag(uint16_t Tag) {
     break;
   }
   return false;
+}
+
+static bool isObjCSelector(StringRef Name) {
+  return Name.size() > 2 && (Name[0] == '-' || Name[0] == '+') &&
+         (Name[1] == '[');
+}
+
+void DwarfLinker::DIECloner::addObjCAccelerator(CompileUnit &Unit,
+                                                const DIE *Die,
+                                                DwarfStringPoolEntryRef Name,
+                                                bool SkipPubSection) {
+  assert(isObjCSelector(Name.getString()) && "not an objc selector");
+  // Objective C method or class function.
+  // "- [Class(Category) selector :withArg ...]"
+  StringRef ClassNameStart(Name.getString().drop_front(2));
+  size_t FirstSpace = ClassNameStart.find(' ');
+  if (FirstSpace == StringRef::npos)
+    return;
+
+  StringRef SelectorStart(ClassNameStart.data() + FirstSpace + 1);
+  if (!SelectorStart.size())
+    return;
+
+  StringRef Selector(SelectorStart.data(), SelectorStart.size() - 1);
+  Unit.addNameAccelerator(Die, Linker.StringPool.getEntry(Selector),
+                          SkipPubSection);
+
+  // Add an entry for the class name that points to this
+  // method/class function.
+  StringRef ClassName(ClassNameStart.data(), FirstSpace);
+  Unit.addObjCAccelerator(Die, Linker.StringPool.getEntry(ClassName),
+                          SkipPubSection);
+
+  if (ClassName[ClassName.size() - 1] == ')') {
+    size_t OpenParens = ClassName.find('(');
+    if (OpenParens != StringRef::npos) {
+      StringRef ClassNameNoCategory(ClassName.data(), OpenParens);
+      Unit.addObjCAccelerator(
+          Die, Linker.StringPool.getEntry(ClassNameNoCategory), SkipPubSection);
+
+      std::string MethodNameNoCategory(Name.getString().data(), OpenParens + 2);
+      // FIXME: The missing space here may be a bug, but
+      //        dsymutil-classic also does it this way.
+      MethodNameNoCategory.append(SelectorStart);
+      Unit.addNameAccelerator(Die,
+                              Linker.StringPool.getEntry(MethodNameNoCategory),
+                              SkipPubSection);
+    }
+  }
 }
 
 static bool
@@ -2965,25 +3142,46 @@ DIE *DwarfLinker::DIECloner::cloneDIE(
   // FIXME: This is slightly wrong. An inline_subroutine without a
   // low_pc, but with AT_ranges might be interesting to get into the
   // accelerator tables too. For now stick with dsymutil's behavior.
-  if ((Info.InDebugMap || AttrInfo.HasLowPc) &&
+  if ((Info.InDebugMap || AttrInfo.HasLowPc || AttrInfo.HasRanges) &&
       Tag != dwarf::DW_TAG_compile_unit &&
-      getDIENames(InputDIE, AttrInfo)) {
+      getDIENames(InputDIE, AttrInfo,
+                  Tag != dwarf::DW_TAG_inlined_subroutine)) {
     if (AttrInfo.MangledName && AttrInfo.MangledName != AttrInfo.Name)
       Unit.addNameAccelerator(Die, AttrInfo.MangledName,
-                              AttrInfo.MangledNameOffset,
                               Tag == dwarf::DW_TAG_inlined_subroutine);
-    if (AttrInfo.Name)
-      Unit.addNameAccelerator(Die, AttrInfo.Name, AttrInfo.NameOffset,
+    if (AttrInfo.Name) {
+      if (AttrInfo.NameWithoutTemplate)
+        Unit.addNameAccelerator(Die, AttrInfo.NameWithoutTemplate,
+                                /* SkipPubSection */ true);
+      Unit.addNameAccelerator(Die, AttrInfo.Name,
                               Tag == dwarf::DW_TAG_inlined_subroutine);
+    }
+    if (AttrInfo.Name && isObjCSelector(AttrInfo.Name.getString()))
+      addObjCAccelerator(Unit, Die, AttrInfo.Name, /* SkipPubSection =*/true);
+
+  } else if (Tag == dwarf::DW_TAG_namespace) {
+    if (!AttrInfo.Name)
+      AttrInfo.Name = Linker.StringPool.getEntry("(anonymous namespace)");
+    Unit.addNamespaceAccelerator(Die, AttrInfo.Name);
   } else if (isTypeTag(Tag) && !AttrInfo.IsDeclaration &&
-             getDIENames(InputDIE, AttrInfo)) {
-    if (AttrInfo.Name)
-      Unit.addTypeAccelerator(Die, AttrInfo.Name, AttrInfo.NameOffset);
+             getDIENames(InputDIE, AttrInfo) && AttrInfo.Name &&
+             AttrInfo.Name.getString()[0]) {
+    uint32_t Hash = hashFullyQualifiedName(InputDIE, Unit);
+    uint64_t RuntimeLang =
+        dwarf::toUnsigned(InputDIE.find(dwarf::DW_AT_APPLE_runtime_class))
+            .getValueOr(0);
+    bool ObjCClassIsImplementation =
+        (RuntimeLang == dwarf::DW_LANG_ObjC ||
+         RuntimeLang == dwarf::DW_LANG_ObjC_plus_plus) &&
+        dwarf::toUnsigned(InputDIE.find(dwarf::DW_AT_APPLE_objc_complete_type))
+            .getValueOr(0);
+    Unit.addTypeAccelerator(Die, AttrInfo.Name, ObjCClassIsImplementation,
+                            Hash);
   }
 
   // Determine whether there are any children that we want to keep.
   bool HasChildren = false;
-  for (auto Child: InputDIE.children()) {
+  for (auto Child : InputDIE.children()) {
     unsigned Idx = U.getDIEIndex(Child);
     if (Unit.getInfo(Idx).Keep) {
       HasChildren = true;
@@ -3263,8 +3461,32 @@ void DwarfLinker::patchLineTableForUnit(CompileUnit &Unit,
 }
 
 void DwarfLinker::emitAcceleratorEntriesForUnit(CompileUnit &Unit) {
-  Streamer->emitPubNamesForUnit(Unit);
-  Streamer->emitPubTypesForUnit(Unit);
+  // Add namespaces.
+  for (const auto &Namespace : Unit.getNamespaces())
+    AppleNamespaces.addName(Namespace.Name,
+                            Namespace.Die->getOffset() + Unit.getStartOffset());
+
+  /// Add names.
+  if (!Options.Minimize)
+    Streamer->emitPubNamesForUnit(Unit);
+  for (const auto &Pubname : Unit.getPubnames())
+    AppleNames.addName(Pubname.Name,
+                       Pubname.Die->getOffset() + Unit.getStartOffset());
+
+  /// Add types.
+  if (!Options.Minimize)
+    Streamer->emitPubTypesForUnit(Unit);
+  for (const auto &Pubtype : Unit.getPubtypes())
+    AppleTypes.addName(
+        Pubtype.Name, Pubtype.Die->getOffset() + Unit.getStartOffset(),
+        Pubtype.Die->getTag(),
+        Pubtype.ObjcClassImplementation ? dwarf::DW_FLAG_type_implementation
+                                        : 0,
+        Pubtype.QualifiedNameHash);
+
+  /// Add ObjC names.
+  for (const auto &ObjC : Unit.getObjC())
+    AppleObjc.addName(ObjC.Name, ObjC.Die->getOffset() + Unit.getStartOffset());
 }
 
 /// Read the frame info stored in the object, and emit the
@@ -3365,6 +3587,50 @@ void DwarfLinker::DIECloner::copyAbbrev(
   }
 
   Linker.AssignAbbrev(Copy);
+}
+
+uint32_t DwarfLinker::DIECloner::hashFullyQualifiedName(DWARFDie DIE,
+                                                        CompileUnit &U,
+                                                        int RecurseDepth) {
+  const char *Name = nullptr;
+  DWARFUnit *OrigUnit = &U.getOrigUnit();
+  CompileUnit *CU = &U;
+  Optional<DWARFFormValue> Ref;
+
+  while (1) {
+    if (const char *CurrentName = DIE.getName(DINameKind::ShortName))
+      Name = CurrentName;
+
+    if (!(Ref = DIE.find(dwarf::DW_AT_specification)) &&
+        !(Ref = DIE.find(dwarf::DW_AT_abstract_origin)))
+      break;
+
+    if (!Ref->isFormClass(DWARFFormValue::FC_Reference))
+      break;
+
+    CompileUnit *RefCU;
+    if (auto RefDIE = resolveDIEReference(Linker, CompileUnits, *Ref,
+                                          U.getOrigUnit(), DIE, RefCU)) {
+      CU = RefCU;
+      OrigUnit = &RefCU->getOrigUnit();
+      DIE = RefDIE;
+    }
+  }
+
+  unsigned Idx = OrigUnit->getDIEIndex(DIE);
+  if (!Name && DIE.getTag() == dwarf::DW_TAG_namespace)
+    Name = "(anonymous namespace)";
+
+  if (CU->getInfo(Idx).ParentIdx == 0 ||
+      // FIXME: dsymutil-classic compatibility. Ignore modules.
+      CU->getOrigUnit().getDIEAtIndex(CU->getInfo(Idx).ParentIdx).getTag() ==
+          dwarf::DW_TAG_module)
+    return djbHash(Name ? Name : "", djbHash(RecurseDepth ? "" : "::"));
+
+  DWARFDie Die = OrigUnit->getDIEAtIndex(CU->getInfo(Idx).ParentIdx);
+  return djbHash((Name ? Name : ""),
+                 djbHash((Name ? "::" : ""),
+                         hashFullyQualifiedName(Die, *CU, ++RecurseDepth)));
 }
 
 static uint64_t getDwoId(const DWARFDie &CUDie,
@@ -3565,9 +3831,9 @@ void DwarfLinker::DIECloner::cloneAllCompileUnits(DWARFContext &DwarfContext) {
     // an empty line table for the unit, even if the unit doesn't
     // actually exist in the DIE tree.
     Linker.patchLineTableForUnit(*CurrentUnit, DwarfContext);
+    Linker.emitAcceleratorEntriesForUnit(*CurrentUnit);
     Linker.patchRangesForUnit(*CurrentUnit, DwarfContext);
     Linker.Streamer->emitLocationsForUnit(*CurrentUnit, DwarfContext);
-    Linker.emitAcceleratorEntriesForUnit(*CurrentUnit);
   }
 
   if (Linker.Options.NoOutput)
@@ -3695,6 +3961,10 @@ bool DwarfLinker::link(const DebugMap &Map) {
   if (!Options.NoOutput) {
     Streamer->emitAbbrevs(Abbreviations, MaxDwarfVersion);
     Streamer->emitStrings(StringPool);
+    Streamer->emitAppleNames(AppleNames);
+    Streamer->emitAppleNamespaces(AppleNamespaces);
+    Streamer->emitAppleTypes(AppleTypes);
+    Streamer->emitAppleObjc(AppleObjc);
   }
 
   return Options.NoOutput ? true : Streamer->finish(Map);

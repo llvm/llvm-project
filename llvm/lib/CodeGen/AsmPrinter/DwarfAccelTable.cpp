@@ -72,6 +72,8 @@ void AppleAccelTableHeader::setBucketAndHashCount(uint32_t HashCount) {
 
 constexpr AppleAccelTableHeader::Atom AppleAccelTableTypeData::Atoms[];
 constexpr AppleAccelTableHeader::Atom AppleAccelTableOffsetData::Atoms[];
+constexpr AppleAccelTableHeader::Atom AppleAccelTableStaticOffsetData::Atoms[];
+constexpr AppleAccelTableHeader::Atom AppleAccelTableStaticTypeData::Atoms[];
 
 void AppleAccelTableBase::emitHeader(AsmPrinter *Asm) { Header.emit(Asm); }
 
@@ -218,4 +220,16 @@ void AppleAccelTableTypeData::emit(AsmPrinter *Asm) const {
   Asm->EmitInt32(Die->getDebugSectionOffset());
   Asm->EmitInt16(Die->getTag());
   Asm->EmitInt8(0);
+}
+
+void AppleAccelTableStaticOffsetData::emit(AsmPrinter *Asm) const {
+  Asm->EmitInt32(Offset);
+}
+
+void AppleAccelTableStaticTypeData::emit(AsmPrinter *Asm) const {
+  Asm->EmitInt32(Offset);
+  Asm->EmitInt16(Tag);
+  Asm->EmitInt8(ObjCClassIsImplementation ? dwarf::DW_FLAG_type_implementation
+                                          : 0);
+  Asm->EmitInt32(QualifiedNameHash);
 }

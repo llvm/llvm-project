@@ -39,6 +39,9 @@ struct LinkOptions {
   /// Do not unique types according to ODR
   bool NoODR;
 
+  /// Minimize
+  bool Minimize = false;
+
   /// Do not check swiftmodule timestamp
   bool NoTimestamp = false;
 
