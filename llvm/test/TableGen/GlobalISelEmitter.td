@@ -308,6 +308,7 @@ def : Pat<(select GPR32:$src1, (complex_rr GPR32:$src2a, GPR32:$src2b),
 // CHECK-NEXT:    GIR_ComplexRenderer, /*InsnID*/1, /*RendererID*/1,
 // CHECK-NEXT:    GIR_ComplexSubOperandRenderer, /*InsnID*/1, /*RendererID*/2, /*SubOperand*/0, // src5a
 // CHECK-NEXT:    GIR_ComplexSubOperandRenderer, /*InsnID*/1, /*RendererID*/2, /*SubOperand*/1, // src5b
+// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/1,
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::INSN3,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1

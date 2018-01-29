@@ -35,6 +35,14 @@ using clang::clangd::SymbolSlab;
 namespace clang {
 namespace clangd {
 
+static llvm::cl::opt<std::string> AssumedHeaderDir(
+    "assume-header-dir",
+    llvm::cl::desc("The index includes header that a symbol is defined in. "
+                   "If the absolute path cannot be determined (e.g. an "
+                   "in-memory VFS) then the relative path is resolved against "
+                   "this directory, which must be absolute. If this flag is "
+                   "not given, such headers will have relative paths."));
+
 class SymbolIndexActionFactory : public tooling::FrontendActionFactory {
 public:
   SymbolIndexActionFactory(tooling::ExecutionContext *Ctx) : Ctx(Ctx) {}
@@ -72,9 +80,11 @@ public:
     IndexOpts.SystemSymbolFilter =
         index::IndexingOptions::SystemSymbolFilterKind::All;
     IndexOpts.IndexFunctionLocals = false;
+    auto CollectorOpts = SymbolCollector::Options();
+    CollectorOpts.FallbackDir = AssumedHeaderDir;
     return new WrappedIndexAction(
-        std::make_shared<SymbolCollector>(SymbolCollector::Options()),
-        IndexOpts, Ctx);
+        std::make_shared<SymbolCollector>(std::move(CollectorOpts)), IndexOpts,
+        Ctx);
   }
 
   tooling::ExecutionContext *Ctx;
@@ -95,6 +105,12 @@ int main(int argc, const char **argv) {
 
   if (!Executor) {
     llvm::errs() << llvm::toString(Executor.takeError()) << "\n";
+    return 1;
+  }
+
+  if (!clang::clangd::AssumedHeaderDir.empty() &&
+      !llvm::sys::path::is_absolute(clang::clangd::AssumedHeaderDir)) {
+    llvm::errs() << "--assume-header-dir must be an absolute path.\n";
     return 1;
   }
 

@@ -344,10 +344,18 @@ bool X86AsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
     return true;
   }
 
-  uint64_t MaxNopLength = STI.getFeatureBits()[X86::ProcIntelSLM] ? 7 : 15;
+  // 15-bytes is the longest single NOP instruction, but 10-bytes is
+  // commonly the longest that can be efficiently decoded.
+  uint64_t MaxNopLength = 10;
+  if (STI.getFeatureBits()[X86::ProcIntelSLM])
+    MaxNopLength = 7;
+  else if (STI.getFeatureBits()[X86::FeatureFast15ByteNOP])
+    MaxNopLength = 15;
+  else if (STI.getFeatureBits()[X86::FeatureFast11ByteNOP])
+    MaxNopLength = 11;
 
-  // 15 is the longest single nop instruction.  Emit as many 15-byte nops as
-  // needed, then emit a nop of the remaining length.
+  // Emit as many MaxNopLength NOPs as needed, then emit a NOP of the remaining
+  // length.
   do {
     const uint8_t ThisNopLength = (uint8_t) std::min(Count, MaxNopLength);
     const uint8_t Prefixes = ThisNopLength <= 10 ? 0 : ThisNopLength - 10;

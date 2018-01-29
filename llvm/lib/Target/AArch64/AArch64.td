@@ -199,7 +199,7 @@ include "AArch64SchedA57.td"
 include "AArch64SchedCyclone.td"
 include "AArch64SchedFalkor.td"
 include "AArch64SchedKryo.td"
-include "AArch64SchedM1.td"
+include "AArch64SchedExynosM1.td"
 include "AArch64SchedThunderX.td"
 include "AArch64SchedThunderX2T99.td"
 

@@ -9,6 +9,7 @@
 #include "Annotations.h"
 #include "ClangdUnit.h"
 #include "Matchers.h"
+#include "TestFS.h"
 #include "XRefs.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PCHContainerOperations.h"
@@ -38,7 +39,9 @@ using testing::UnorderedElementsAreArray;
 
 // FIXME: this is duplicated with FileIndexTests. Share it.
 ParsedAST build(StringRef Code) {
-  auto CI = createInvocationFromCommandLine({"clang", "-xc++", "Foo.cpp"});
+  auto TestFile = getVirtualTestFilePath("Foo.cpp");
+  auto CI =
+      createInvocationFromCommandLine({"clang", "-xc++", TestFile.c_str()});
   auto Buf = MemoryBuffer::getMemBuffer(Code);
   auto AST = ParsedAST::Build(
       Context::empty(), std::move(CI), nullptr, std::move(Buf),

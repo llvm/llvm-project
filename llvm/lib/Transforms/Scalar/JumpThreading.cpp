@@ -1149,8 +1149,8 @@ bool JumpThreadingPass::ProcessBlock(BasicBlock *BB) {
 
   // TODO: There are other places where load PRE would be profitable, such as
   // more complex comparisons.
-  if (LoadInst *LI = dyn_cast<LoadInst>(SimplifyValue))
-    if (SimplifyPartiallyRedundantLoad(LI))
+  if (LoadInst *LoadI = dyn_cast<LoadInst>(SimplifyValue))
+    if (SimplifyPartiallyRedundantLoad(LoadI))
       return true;
 
   // Before threading, try to propagate profile data backwards:
@@ -1229,17 +1229,17 @@ static bool isOpDefinedInBlock(Value *Op, BasicBlock *BB) {
   return false;
 }
 
-/// SimplifyPartiallyRedundantLoad - If LI is an obviously partially redundant
-/// load instruction, eliminate it by replacing it with a PHI node.  This is an
-/// important optimization that encourages jump threading, and needs to be run
-/// interlaced with other jump threading tasks.
-bool JumpThreadingPass::SimplifyPartiallyRedundantLoad(LoadInst *LI) {
+/// SimplifyPartiallyRedundantLoad - If LoadI is an obviously partially
+/// redundant load instruction, eliminate it by replacing it with a PHI node.
+/// This is an important optimization that encourages jump threading, and needs
+/// to be run interlaced with other jump threading tasks.
+bool JumpThreadingPass::SimplifyPartiallyRedundantLoad(LoadInst *LoadI) {
   // Don't hack volatile and ordered loads.
-  if (!LI->isUnordered()) return false;
+  if (!LoadI->isUnordered()) return false;
 
   // If the load is defined in a block with exactly one predecessor, it can't be
   // partially redundant.
-  BasicBlock *LoadBB = LI->getParent();
+  BasicBlock *LoadBB = LoadI->getParent();
   if (LoadBB->getSinglePredecessor())
     return false;
 
@@ -1249,7 +1249,7 @@ bool JumpThreadingPass::SimplifyPartiallyRedundantLoad(LoadInst *LI) {
   if (LoadBB->isEHPad())
     return false;
 
-  Value *LoadedPtr = LI->getOperand(0);
+  Value *LoadedPtr = LoadI->getOperand(0);
 
   // If the loaded operand is defined in the LoadBB and its not a phi,
   // it can't be available in predecessors.
@@ -1258,26 +1258,27 @@ bool JumpThreadingPass::SimplifyPartiallyRedundantLoad(LoadInst *LI) {
 
   // Scan a few instructions up from the load, to see if it is obviously live at
   // the entry to its block.
-  BasicBlock::iterator BBIt(LI);
+  BasicBlock::iterator BBIt(LoadI);
   bool IsLoadCSE;
   if (Value *AvailableVal = FindAvailableLoadedValue(
-          LI, LoadBB, BBIt, DefMaxInstsToScan, AA, &IsLoadCSE)) {
+          LoadI, LoadBB, BBIt, DefMaxInstsToScan, AA, &IsLoadCSE)) {
     // If the value of the load is locally available within the block, just use
     // it.  This frequently occurs for reg2mem'd allocas.
 
     if (IsLoadCSE) {
-      LoadInst *NLI = cast<LoadInst>(AvailableVal);
-      combineMetadataForCSE(NLI, LI);
+      LoadInst *NLoadI = cast<LoadInst>(AvailableVal);
+      combineMetadataForCSE(NLoadI, LoadI);
     };
 
     // If the returned value is the load itself, replace with an undef. This can
     // only happen in dead loops.
-    if (AvailableVal == LI) AvailableVal = UndefValue::get(LI->getType());
-    if (AvailableVal->getType() != LI->getType())
-      AvailableVal =
-          CastInst::CreateBitOrPointerCast(AvailableVal, LI->getType(), "", LI);
-    LI->replaceAllUsesWith(AvailableVal);
-    LI->eraseFromParent();
+    if (AvailableVal == LoadI)
+      AvailableVal = UndefValue::get(LoadI->getType());
+    if (AvailableVal->getType() != LoadI->getType())
+      AvailableVal = CastInst::CreateBitOrPointerCast(
+          AvailableVal, LoadI->getType(), "", LoadI);
+    LoadI->replaceAllUsesWith(AvailableVal);
+    LoadI->eraseFromParent();
     return true;
   }
 
@@ -1290,7 +1291,7 @@ bool JumpThreadingPass::SimplifyPartiallyRedundantLoad(LoadInst *LI) {
   // If all of the loads and stores that feed the value have the same AA tags,
   // then we can propagate them onto any newly inserted loads.
   AAMDNodes AATags;
-  LI->getAAMetadata(AATags);
+  LoadI->getAAMetadata(AATags);
 
   SmallPtrSet<BasicBlock*, 8> PredsScanned;
 
@@ -1312,13 +1313,14 @@ bool JumpThreadingPass::SimplifyPartiallyRedundantLoad(LoadInst *LI) {
     Value *PredAvailable = nullptr;
     // NOTE: We don't CSE load that is volatile or anything stronger than
     // unordered, that should have been checked when we entered the function.
-    assert(LI->isUnordered() && "Attempting to CSE volatile or atomic loads");
+    assert(LoadI->isUnordered() &&
+           "Attempting to CSE volatile or atomic loads");
     // If this is a load on a phi pointer, phi-translate it and search
     // for available load/store to the pointer in predecessors.
     Value *Ptr = LoadedPtr->DoPHITranslation(LoadBB, PredBB);
     PredAvailable = FindAvailablePtrLoadStore(
-        Ptr, LI->getType(), LI->isAtomic(), PredBB, BBIt, DefMaxInstsToScan,
-        AA, &IsLoadCSE, &NumScanedInst);
+        Ptr, LoadI->getType(), LoadI->isAtomic(), PredBB, BBIt,
+        DefMaxInstsToScan, AA, &IsLoadCSE, &NumScanedInst);
 
     // If PredBB has a single predecessor, continue scanning through the
     // single precessor.
@@ -1329,7 +1331,7 @@ bool JumpThreadingPass::SimplifyPartiallyRedundantLoad(LoadInst *LI) {
       if (SinglePredBB) {
         BBIt = SinglePredBB->end();
         PredAvailable = FindAvailablePtrLoadStore(
-            Ptr, LI->getType(), LI->isAtomic(), SinglePredBB, BBIt,
+            Ptr, LoadI->getType(), LoadI->isAtomic(), SinglePredBB, BBIt,
             (DefMaxInstsToScan - NumScanedInst), AA, &IsLoadCSE,
             &NumScanedInst);
       }
@@ -1361,15 +1363,15 @@ bool JumpThreadingPass::SimplifyPartiallyRedundantLoad(LoadInst *LI) {
 
   // If the value is unavailable in one of predecessors, we will end up
   // inserting a new instruction into them. It is only valid if all the
-  // instructions before LI are guaranteed to pass execution to its successor,
-  // or if LI is safe to speculate.
+  // instructions before LoadI are guaranteed to pass execution to its
+  // successor, or if LoadI is safe to speculate.
   // TODO: If this logic becomes more complex, and we will perform PRE insertion
   // farther than to a predecessor, we need to reuse the code from GVN's PRE.
   // It requires domination tree analysis, so for this simple case it is an
   // overkill.
   if (PredsScanned.size() != AvailablePreds.size() &&
-      !isSafeToSpeculativelyExecute(LI))
-    for (auto I = LoadBB->begin(); &*I != LI; ++I)
+      !isSafeToSpeculativelyExecute(LoadI))
+    for (auto I = LoadBB->begin(); &*I != LoadI; ++I)
       if (!isGuaranteedToTransferExecutionToSuccessor(&*I))
         return false;
 
@@ -1408,11 +1410,12 @@ bool JumpThreadingPass::SimplifyPartiallyRedundantLoad(LoadInst *LI) {
   if (UnavailablePred) {
     assert(UnavailablePred->getTerminator()->getNumSuccessors() == 1 &&
            "Can't handle critical edge here!");
-    LoadInst *NewVal = new LoadInst(
-        LoadedPtr->DoPHITranslation(LoadBB, UnavailablePred),
-        LI->getName() + ".pr", false, LI->getAlignment(), LI->getOrdering(),
-        LI->getSyncScopeID(), UnavailablePred->getTerminator());
-    NewVal->setDebugLoc(LI->getDebugLoc());
+    LoadInst *NewVal =
+        new LoadInst(LoadedPtr->DoPHITranslation(LoadBB, UnavailablePred),
+                     LoadI->getName() + ".pr", false, LoadI->getAlignment(),
+                     LoadI->getOrdering(), LoadI->getSyncScopeID(),
+                     UnavailablePred->getTerminator());
+    NewVal->setDebugLoc(LoadI->getDebugLoc());
     if (AATags)
       NewVal->setAAMetadata(AATags);
 
@@ -1425,10 +1428,10 @@ bool JumpThreadingPass::SimplifyPartiallyRedundantLoad(LoadInst *LI) {
 
   // Create a PHI node at the start of the block for the PRE'd load value.
   pred_iterator PB = pred_begin(LoadBB), PE = pred_end(LoadBB);
-  PHINode *PN = PHINode::Create(LI->getType(), std::distance(PB, PE), "",
+  PHINode *PN = PHINode::Create(LoadI->getType(), std::distance(PB, PE), "",
                                 &LoadBB->front());
-  PN->takeName(LI);
-  PN->setDebugLoc(LI->getDebugLoc());
+  PN->takeName(LoadI);
+  PN->setDebugLoc(LoadI->getDebugLoc());
 
   // Insert new entries into the PHI for each predecessor.  A single block may
   // have multiple entries here.
@@ -1446,19 +1449,19 @@ bool JumpThreadingPass::SimplifyPartiallyRedundantLoad(LoadInst *LI) {
     // AvailablePreds vector as we go so that all of the PHI entries for this
     // predecessor use the same bitcast.
     Value *&PredV = I->second;
-    if (PredV->getType() != LI->getType())
-      PredV = CastInst::CreateBitOrPointerCast(PredV, LI->getType(), "",
+    if (PredV->getType() != LoadI->getType())
+      PredV = CastInst::CreateBitOrPointerCast(PredV, LoadI->getType(), "",
                                                P->getTerminator());
 
     PN->addIncoming(PredV, I->first);
   }
 
-  for (LoadInst *PredLI : CSELoads) {
-    combineMetadataForCSE(PredLI, LI);
+  for (LoadInst *PredLoadI : CSELoads) {
+    combineMetadataForCSE(PredLoadI, LoadI);
   }
 
-  LI->replaceAllUsesWith(PN);
-  LI->eraseFromParent();
+  LoadI->replaceAllUsesWith(PN);
+  LoadI->eraseFromParent();
 
   return true;
 }

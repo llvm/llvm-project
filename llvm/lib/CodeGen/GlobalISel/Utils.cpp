@@ -53,6 +53,24 @@ unsigned llvm::constrainOperandRegClass(
          "PhysReg not implemented");
 
   const TargetRegisterClass *RegClass = TII.getRegClass(II, OpIdx, &TRI, MF);
+  // Some of the target independent instructions, like COPY, may not impose any
+  // register class constraints on some of their operands:
+  if (!RegClass) {
+    assert(!isTargetSpecificOpcode(II.getOpcode()) &&
+           "Only target independent instructions are allowed to have operands "
+           "with no register class constraints");
+    // FIXME: Just bailing out like this here could be not enough, unless we
+    // expect the users of this function to do the right thing for PHIs and
+    // COPY:
+    //   v1 = COPY v0
+    //   v2 = COPY v1
+    // v1 here may end up not being constrained at all. Please notice that to
+    // reproduce the issue we likely need a destination pattern of a selection
+    // rule producing such extra copies, not just an input GMIR with them as
+    // every existing target using selectImpl handles copies before calling it
+    // and they never reach this function.
+    return Reg;
+  }
   return constrainRegToClass(MRI, TII, RBI, InsertPt, Reg, *RegClass);
 }
 
@@ -60,6 +78,8 @@ bool llvm::constrainSelectedInstRegOperands(MachineInstr &I,
                                             const TargetInstrInfo &TII,
                                             const TargetRegisterInfo &TRI,
                                             const RegisterBankInfo &RBI) {
+  assert(!isPreISelGenericOpcode(I.getOpcode()) &&
+         "A selected instruction is expected");
   MachineBasicBlock &MBB = *I.getParent();
   MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
