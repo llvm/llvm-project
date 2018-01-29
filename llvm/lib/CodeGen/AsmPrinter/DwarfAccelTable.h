@@ -66,121 +66,135 @@
 namespace llvm {
 
 class AsmPrinter;
-class DwarfDebug;
 
-class DwarfAccelTable {
-  // Helper function to compute the number of buckets needed based on
-  // the number of unique hashes.
-  void ComputeBucketCount();
+/// Representation of the header of an Apple accelerator table. This consists
+/// of the fixed header and the header data. The latter contains the atoms
+/// which define the columns of the table.
+class AppleAccelTableHeader {
+  struct Header {
+    uint32_t Magic = MagicHash;
+    uint16_t Version = 1;
+    uint16_t HashFunction = dwarf::DW_hash_function_djb;
+    uint32_t BucketCount = 0;
+    uint32_t HashCount = 0;
+    uint32_t HeaderDataLength;
 
-  struct TableHeader {
-    uint32_t magic = MagicHash; // 'HASH' magic value to allow endian detection
-    uint16_t version = 1;       // Version number.
-    uint16_t hash_function = dwarf::DW_hash_function_djb;
-    // The hash function enumeration that was used.
-    uint32_t bucket_count = 0;  // The number of buckets in this hash table.
-    uint32_t hashes_count = 0;  // The total number of unique hash values
-                                // and hash data offsets in this table.
-    uint32_t header_data_len;   // The bytes to skip to get to the hash
-                                // indexes (buckets) for correct alignment.
-    // Also written to disk is the implementation specific header data.
-
+    /// 'HASH' magic value to detect endianness.
     static const uint32_t MagicHash = 0x48415348;
 
-    TableHeader(uint32_t data_len) : header_data_len(data_len) {}
-
-#ifndef NDEBUG
-    void print(raw_ostream &OS) {
-      OS << "Magic: " << format("0x%x", magic) << "\n"
-         << "Version: " << version << "\n"
-         << "Hash Function: " << hash_function << "\n"
-         << "Bucket Count: " << bucket_count << "\n"
-         << "Header Data Length: " << header_data_len << "\n";
-    }
-
-    void dump() { print(dbgs()); }
-#endif
-  };
-
-public:
-  // The HeaderData describes the form of each set of data. In general this
-  // is as a list of atoms (atom_count) where each atom contains a type
-  // (AtomType type) of data, and an encoding form (form). In the case of
-  // data that is referenced via DW_FORM_ref_* the die_offset_base is
-  // used to describe the offset for all forms in the list of atoms.
-  // This also serves as a public interface of sorts.
-  // When written to disk this will have the form:
-  //
-  // uint32_t die_offset_base
-  // uint32_t atom_count
-  // atom_count Atoms
-
-  // Make these public so that they can be used as a general interface to
-  // the class.
-  struct Atom {
-    uint16_t type; // enum AtomType
-    uint16_t form; // DWARF DW_FORM_ defines
-
-    constexpr Atom(uint16_t type, uint16_t form) : type(type), form(form) {}
-
-#ifndef NDEBUG
-    void print(raw_ostream &OS) {
-      OS << "Type: " << dwarf::AtomTypeString(type) << "\n"
-         << "Form: " << dwarf::FormEncodingString(form) << "\n";
-    }
-
-    void dump() { print(dbgs()); }
-#endif
-  };
-
-private:
-  struct TableHeaderData {
-    uint32_t die_offset_base;
-    SmallVector<Atom, 3> Atoms;
-
-    TableHeaderData(ArrayRef<Atom> AtomList, uint32_t offset = 0)
-        : die_offset_base(offset), Atoms(AtomList.begin(), AtomList.end()) {}
-
-#ifndef NDEBUG
-    void print(raw_ostream &OS) {
-      OS << "die_offset_base: " << die_offset_base << "\n";
-      for (size_t i = 0; i < Atoms.size(); i++)
-        Atoms[i].print(OS);
-    }
-
-    void dump() { print(dbgs()); }
-#endif
-  };
-
-  // The data itself consists of a str_offset, a count of the DIEs in the
-  // hash and the offsets to the DIEs themselves.
-  // On disk each data section is ended with a 0 KeyType as the end of the
-  // hash chain.
-  // On output this looks like:
-  // uint32_t str_offset
-  // uint32_t hash_data_count
-  // HashData[hash_data_count]
-public:
-  struct HashDataContents {
-    const DIE *Die;   // Offsets
-    char Flags; // Specific flags to output
-
-    HashDataContents(const DIE *D, char Flags) : Die(D), Flags(Flags) {}
+    Header(uint32_t DataLength) : HeaderDataLength(DataLength) {}
 
 #ifndef NDEBUG
     void print(raw_ostream &OS) const {
-      OS << "  Offset: " << Die->getOffset() << "\n"
-         << "  Tag: " << dwarf::TagString(Die->getTag()) << "\n"
-         << "  Flags: " << Flags << "\n";
+      OS << "Magic: " << format("0x%x", Magic) << "\n"
+         << "Version: " << Version << "\n"
+         << "Hash Function: " << HashFunction << "\n"
+         << "Bucket Count: " << BucketCount << "\n"
+         << "Header Data Length: " << HeaderDataLength << "\n";
     }
+
+    void dump() const { print(dbgs()); }
+#endif
+  };
+
+public:
+  /// An Atom defines the form of the data in the accelerator table.
+  /// Conceptually it is a column in the accelerator consisting of a type and a
+  /// specification of the form of its data.
+  struct Atom {
+    /// Atom Type.
+    const uint16_t Type;
+    /// DWARF Form.
+    const uint16_t Form;
+
+    constexpr Atom(uint16_t Type, uint16_t Form) : Type(Type), Form(Form) {}
+
+#ifndef NDEBUG
+    void print(raw_ostream &OS) const {
+      OS << "Type: " << dwarf::AtomTypeString(Type) << "\n"
+         << "Form: " << dwarf::FormEncodingString(Form) << "\n";
+    }
+
+    void dump() const { print(dbgs()); }
 #endif
   };
 
 private:
-  // String Data
+  /// The HeaderData describes the structure of the accelerator table through a
+  /// list of Atoms.
+  struct HeaderData {
+    /// In the case of data that is referenced via DW_FORM_ref_* the offset
+    /// base is used to describe the offset for all forms in the list of atoms.
+    uint32_t DieOffsetBase;
+
+    SmallVector<Atom, 3> Atoms;
+
+    HeaderData(ArrayRef<Atom> AtomList, uint32_t Offset = 0)
+        : DieOffsetBase(Offset), Atoms(AtomList.begin(), AtomList.end()) {}
+
+#ifndef NDEBUG
+    void print(raw_ostream &OS) const {
+      OS << "DIE Offset Base: " << DieOffsetBase << "\n";
+      for (auto Atom : Atoms)
+        Atom.print(OS);
+    }
+
+    void dump() const { print(dbgs()); }
+#endif
+  };
+
+  Header Header;
+  HeaderData HeaderData;
+
+public:
+  /// The length of the header data is always going to be 4 + 4 + 4*NumAtoms.
+  AppleAccelTableHeader(ArrayRef<AppleAccelTableHeader::Atom> Atoms)
+      : Header(8 + (Atoms.size() * 4)), HeaderData(Atoms) {}
+
+  /// Update header with hash and bucket count.
+  void setBucketAndHashCount(uint32_t HashCount);
+
+  uint32_t getHashCount() const { return Header.HashCount; }
+  uint32_t getBucketCount() const { return Header.BucketCount; }
+
+  /// Emits the header via the AsmPrinter.
+  void emit(AsmPrinter *);
+
+#ifndef NDEBUG
+  void print(raw_ostream &OS) const {
+    Header.print(OS);
+    HeaderData.print(OS);
+  }
+
+  void dump() const { print(dbgs()); }
+#endif
+};
+
+/// Interface which the different types of accelerator table data have to
+/// conform.
+class AppleAccelTableData {
+public:
+  virtual ~AppleAccelTableData() = default;
+
+  virtual void emit(AsmPrinter *Asm) const = 0;
+
+  bool operator<(const AppleAccelTableData &Other) const {
+    return order() < Other.order();
+  }
+
+#ifndef NDEBUG
+  virtual void print(raw_ostream &OS) const = 0;
+#endif
+protected:
+  virtual uint64_t order() const;
+};
+
+/// Apple-style accelerator table base class.
+class AppleAccelTableBase {
+protected:
   struct DataArray {
     DwarfStringPoolEntryRef Name;
-    std::vector<HashDataContents *> Values;
+    std::vector<AppleAccelTableData *> Values;
   };
 
   friend struct HashData;
@@ -189,10 +203,9 @@ private:
     StringRef Str;
     uint32_t HashValue;
     MCSymbol *Sym;
-    DwarfAccelTable::DataArray &Data; // offsets
+    DataArray &Data;
 
-    HashData(StringRef S, DwarfAccelTable::DataArray &Data)
-        : Str(S), Data(Data) {
+    HashData(StringRef S, DataArray &Data) : Str(S), Data(Data) {
       HashValue = djbHash(S);
     }
 
@@ -206,54 +219,164 @@ private:
       else
         OS << "<none>";
       OS << "\n";
-      for (HashDataContents *C : Data.Values) {
-        OS << "  Offset: " << C->Die->getOffset() << "\n";
-        OS << "  Tag: " << dwarf::TagString(C->Die->getTag()) << "\n";
-        OS << "  Flags: " << C->Flags << "\n";
-      }
+      for (auto *Value : Data.Values)
+        Value->print(OS);
     }
 
     void dump() { print(dbgs()); }
 #endif
   };
 
-  // Internal Functions
-  void EmitHeader(AsmPrinter *);
-  void EmitBuckets(AsmPrinter *);
-  void EmitHashes(AsmPrinter *);
-  void emitOffsets(AsmPrinter *, const MCSymbol *);
-  void EmitData(AsmPrinter *, DwarfDebug *D);
-
-  // Allocator for HashData and HashDataContents.
+  /// Allocator for HashData and Values.
   BumpPtrAllocator Allocator;
 
-  // Output Variables
-  TableHeader Header;
-  TableHeaderData HeaderData;
+  /// Header containing both the header and header data.
+  AppleAccelTableHeader Header;
+
   std::vector<HashData *> Data;
 
   using StringEntries = StringMap<DataArray, BumpPtrAllocator &>;
-
   StringEntries Entries;
 
-  // Buckets/Hashes/Offsets
   using HashList = std::vector<HashData *>;
-  using BucketList = std::vector<HashList>;
-  BucketList Buckets;
   HashList Hashes;
 
-  // Public Implementation
-public:
-  DwarfAccelTable(ArrayRef<DwarfAccelTable::Atom>);
-  DwarfAccelTable(const DwarfAccelTable &) = delete;
-  DwarfAccelTable &operator=(const DwarfAccelTable &) = delete;
+  using BucketList = std::vector<HashList>;
+  BucketList Buckets;
 
-  void AddName(DwarfStringPoolEntryRef Name, const DIE *Die, char Flags = 0);
-  void FinalizeTable(AsmPrinter *, StringRef);
-  void emit(AsmPrinter *, const MCSymbol *, DwarfDebug *);
+  AppleAccelTableBase(ArrayRef<AppleAccelTableHeader::Atom> Atoms)
+      : Header(Atoms), Entries(Allocator) {}
+
+private:
+  /// Emits the header for the table via the AsmPrinter.
+  void emitHeader(AsmPrinter *Asm);
+
+  /// Helper function to compute the number of buckets needed based on the
+  /// number of unique hashes.
+  void computeBucketCount();
+
+  /// Walk through and emit the buckets for the table. Each index is an offset
+  /// into the list of hashes.
+  void emitBuckets(AsmPrinter *);
+
+  /// Walk through the buckets and emit the individual hashes for each bucket.
+  void emitHashes(AsmPrinter *);
+
+  /// Walk through the buckets and emit the individual offsets for each element
+  /// in each bucket. This is done via a symbol subtraction from the beginning
+  /// of the section. The non-section symbol will be output later when we emit
+  /// the actual data.
+  void emitOffsets(AsmPrinter *, const MCSymbol *);
+
+  /// Walk through the buckets and emit the full data for each element in the
+  /// bucket. For the string case emit the dies and the various offsets.
+  /// Terminate each HashData bucket with 0.
+  void emitData(AsmPrinter *);
+
+public:
+  void finalizeTable(AsmPrinter *, StringRef);
+
+  void emit(AsmPrinter *Asm, const MCSymbol *SecBegin) {
+    emitHeader(Asm);
+    emitBuckets(Asm);
+    emitHashes(Asm);
+    emitOffsets(Asm, SecBegin);
+    emitData(Asm);
+  }
+
 #ifndef NDEBUG
-  void print(raw_ostream &OS);
-  void dump() { print(dbgs()); }
+  void print(raw_ostream &OS) const {
+    // Print Header.
+    Header.print(OS);
+
+    // Print Content.
+    OS << "Entries: \n";
+    for (const auto &Entry : Entries) {
+      OS << "Name: " << Entry.first() << "\n";
+      for (auto *V : Entry.second.Values)
+        V->print(OS);
+    }
+
+    OS << "Buckets and Hashes: \n";
+    for (auto &Bucket : Buckets)
+      for (auto &Hash : Bucket)
+        Hash->print(OS);
+
+    OS << "Data: \n";
+    for (auto &D : Data)
+      D->print(OS);
+  }
+  void dump() const { print(dbgs()); }
+#endif
+};
+
+template <typename AppleAccelTableDataT>
+class AppleAccelTable : public AppleAccelTableBase {
+public:
+  AppleAccelTable() : AppleAccelTableBase(AppleAccelTableDataT::Atoms) {}
+  AppleAccelTable(const AppleAccelTable &) = delete;
+  AppleAccelTable &operator=(const AppleAccelTable &) = delete;
+
+  template <class... Types>
+  void addName(DwarfStringPoolEntryRef Name, Types... Args);
+};
+
+template <typename AppleAccelTableDataT>
+template <class... Types>
+void AppleAccelTable<AppleAccelTableDataT>::addName(
+    DwarfStringPoolEntryRef Name, Types... Args) {
+  assert(Data.empty() && "Already finalized!");
+  // If the string is in the list already then add this die to the list
+  // otherwise add a new one.
+  DataArray &DA = Entries[Name.getString()];
+  assert(!DA.Name || DA.Name == Name);
+  DA.Name = Name;
+  DA.Values.push_back(new (Allocator) AppleAccelTableDataT(Args...));
+}
+
+/// Accelerator table data implementation for simple accelerator tables with
+/// just a DIE reference.
+class AppleAccelTableOffsetData : public AppleAccelTableData {
+public:
+  AppleAccelTableOffsetData(const DIE *D) : Die(D) {}
+
+  void emit(AsmPrinter *Asm) const override;
+
+  static constexpr AppleAccelTableHeader::Atom Atoms[] = {
+      AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_offset,
+                                  dwarf::DW_FORM_data4)};
+
+#ifndef NDEBUG
+  void print(raw_ostream &OS) const override {
+    OS << "  Offset: " << Die->getOffset() << "\n";
+  }
+
+#endif
+protected:
+  uint64_t order() const override { return Die->getOffset(); }
+
+  const DIE *Die;
+};
+
+/// Accelerator table data implementation for type accelerator tables.
+class AppleAccelTableTypeData : public AppleAccelTableOffsetData {
+public:
+  AppleAccelTableTypeData(const DIE *D) : AppleAccelTableOffsetData(D) {}
+
+  void emit(AsmPrinter *Asm) const override;
+
+  static constexpr AppleAccelTableHeader::Atom Atoms[] = {
+      AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_offset,
+                                  dwarf::DW_FORM_data4),
+      AppleAccelTableHeader::Atom(dwarf::DW_ATOM_die_tag, dwarf::DW_FORM_data2),
+      AppleAccelTableHeader::Atom(dwarf::DW_ATOM_type_flags,
+                                  dwarf::DW_FORM_data1)};
+
+#ifndef NDEBUG
+  void print(raw_ostream &OS) const override {
+    OS << "  Offset: " << Die->getOffset() << "\n";
+    OS << "  Tag: " << dwarf::TagString(Die->getTag()) << "\n";
+  }
 #endif
 };
 

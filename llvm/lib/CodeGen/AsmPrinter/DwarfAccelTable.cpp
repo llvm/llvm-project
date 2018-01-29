@@ -22,129 +22,60 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
-#include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <iterator>
 #include <limits>
 #include <vector>
 
 using namespace llvm;
 
-// The length of the header data is always going to be 4 + 4 + 4*NumAtoms.
-DwarfAccelTable::DwarfAccelTable(ArrayRef<DwarfAccelTable::Atom> atomList)
-    : Header(8 + (atomList.size() * 4)), HeaderData(atomList),
-      Entries(Allocator) {}
-
-void DwarfAccelTable::AddName(DwarfStringPoolEntryRef Name, const DIE *die,
-                              char Flags) {
-  assert(Data.empty() && "Already finalized!");
-  // If the string is in the list already then add this die to the list
-  // otherwise add a new one.
-  DataArray &DIEs = Entries[Name.getString()];
-  assert(!DIEs.Name || DIEs.Name == Name);
-  DIEs.Name = Name;
-  DIEs.Values.push_back(new (Allocator) HashDataContents(die, Flags));
-}
-
-void DwarfAccelTable::ComputeBucketCount() {
-  // First get the number of unique hashes.
-  std::vector<uint32_t> uniques(Data.size());
-  for (size_t i = 0, e = Data.size(); i < e; ++i)
-    uniques[i] = Data[i]->HashValue;
-  array_pod_sort(uniques.begin(), uniques.end());
-  std::vector<uint32_t>::iterator p =
-      std::unique(uniques.begin(), uniques.end());
-  uint32_t num = std::distance(uniques.begin(), p);
-
-  // Then compute the bucket size, minimum of 1 bucket.
-  if (num > 1024)
-    Header.bucket_count = num / 4;
-  else if (num > 16)
-    Header.bucket_count = num / 2;
-  else
-    Header.bucket_count = num > 0 ? num : 1;
-
-  Header.hashes_count = num;
-}
-
-// compareDIEs - comparison predicate that sorts DIEs by their offset.
-static bool compareDIEs(const DwarfAccelTable::HashDataContents *A,
-                        const DwarfAccelTable::HashDataContents *B) {
-  return A->Die->getOffset() < B->Die->getOffset();
-}
-
-void DwarfAccelTable::FinalizeTable(AsmPrinter *Asm, StringRef Prefix) {
-  // Create the individual hash data outputs.
-  Data.reserve(Entries.size());
-  for (StringMap<DataArray>::iterator EI = Entries.begin(), EE = Entries.end();
-       EI != EE; ++EI) {
-
-    // Unique the entries.
-    std::stable_sort(EI->second.Values.begin(), EI->second.Values.end(), compareDIEs);
-    EI->second.Values.erase(
-        std::unique(EI->second.Values.begin(), EI->second.Values.end()),
-        EI->second.Values.end());
-
-    HashData *Entry = new (Allocator) HashData(EI->getKey(), EI->second);
-    Data.push_back(Entry);
-  }
-
-  // Figure out how many buckets we need, then compute the bucket
-  // contents and the final ordering. We'll emit the hashes and offsets
-  // by doing a walk during the emission phase. We add temporary
-  // symbols to the data so that we can reference them during the offset
-  // later, we'll emit them when we emit the data.
-  ComputeBucketCount();
-
-  // Compute bucket contents and final ordering.
-  Buckets.resize(Header.bucket_count);
-  for (size_t i = 0, e = Data.size(); i < e; ++i) {
-    uint32_t bucket = Data[i]->HashValue % Header.bucket_count;
-    Buckets[bucket].push_back(Data[i]);
-    Data[i]->Sym = Asm->createTempSymbol(Prefix);
-  }
-
-  // Sort the contents of the buckets by hash value so that hash
-  // collisions end up together. Stable sort makes testing easier and
-  // doesn't cost much more.
-  for (size_t i = 0; i < Buckets.size(); ++i)
-    std::stable_sort(Buckets[i].begin(), Buckets[i].end(),
-                     [] (HashData *LHS, HashData *RHS) {
-                       return LHS->HashValue < RHS->HashValue;
-                     });
-}
-
-// Emits the header for the table via the AsmPrinter.
-void DwarfAccelTable::EmitHeader(AsmPrinter *Asm) {
+void AppleAccelTableHeader::emit(AsmPrinter *Asm) {
+  // Emit Header.
   Asm->OutStreamer->AddComment("Header Magic");
-  Asm->EmitInt32(Header.magic);
+  Asm->EmitInt32(Header.Magic);
   Asm->OutStreamer->AddComment("Header Version");
-  Asm->EmitInt16(Header.version);
+  Asm->EmitInt16(Header.Version);
   Asm->OutStreamer->AddComment("Header Hash Function");
-  Asm->EmitInt16(Header.hash_function);
+  Asm->EmitInt16(Header.HashFunction);
   Asm->OutStreamer->AddComment("Header Bucket Count");
-  Asm->EmitInt32(Header.bucket_count);
+  Asm->EmitInt32(Header.BucketCount);
   Asm->OutStreamer->AddComment("Header Hash Count");
-  Asm->EmitInt32(Header.hashes_count);
+  Asm->EmitInt32(Header.HashCount);
   Asm->OutStreamer->AddComment("Header Data Length");
-  Asm->EmitInt32(Header.header_data_len);
+  Asm->EmitInt32(Header.HeaderDataLength);
+
+  //  Emit Header Data
   Asm->OutStreamer->AddComment("HeaderData Die Offset Base");
-  Asm->EmitInt32(HeaderData.die_offset_base);
+  Asm->EmitInt32(HeaderData.DieOffsetBase);
   Asm->OutStreamer->AddComment("HeaderData Atom Count");
   Asm->EmitInt32(HeaderData.Atoms.size());
+
   for (size_t i = 0; i < HeaderData.Atoms.size(); i++) {
     Atom A = HeaderData.Atoms[i];
-    Asm->OutStreamer->AddComment(dwarf::AtomTypeString(A.type));
-    Asm->EmitInt16(A.type);
-    Asm->OutStreamer->AddComment(dwarf::FormEncodingString(A.form));
-    Asm->EmitInt16(A.form);
+    Asm->OutStreamer->AddComment(dwarf::AtomTypeString(A.Type));
+    Asm->EmitInt16(A.Type);
+    Asm->OutStreamer->AddComment(dwarf::FormEncodingString(A.Form));
+    Asm->EmitInt16(A.Form);
   }
 }
 
-// Walk through and emit the buckets for the table. Each index is
-// an offset into the list of hashes.
-void DwarfAccelTable::EmitBuckets(AsmPrinter *Asm) {
+void AppleAccelTableHeader::setBucketAndHashCount(uint32_t HashCount) {
+  if (HashCount > 1024)
+    Header.BucketCount = HashCount / 4;
+  else if (HashCount > 16)
+    Header.BucketCount = HashCount / 2;
+  else
+    Header.BucketCount = HashCount > 0 ? HashCount : 1;
+
+  Header.HashCount = HashCount;
+}
+
+constexpr AppleAccelTableHeader::Atom AppleAccelTableTypeData::Atoms[];
+constexpr AppleAccelTableHeader::Atom AppleAccelTableOffsetData::Atoms[];
+
+void AppleAccelTableBase::emitHeader(AsmPrinter *Asm) { Header.emit(Asm); }
+
+void AppleAccelTableBase::emitBuckets(AsmPrinter *Asm) {
   unsigned index = 0;
   for (size_t i = 0, e = Buckets.size(); i < e; ++i) {
     Asm->OutStreamer->AddComment("Bucket " + Twine(i));
@@ -152,8 +83,8 @@ void DwarfAccelTable::EmitBuckets(AsmPrinter *Asm) {
       Asm->EmitInt32(index);
     else
       Asm->EmitInt32(std::numeric_limits<uint32_t>::max());
-    // Buckets point in the list of hashes, not to the data. Do not
-    // increment the index multiple times in case of hash collisions.
+    // Buckets point in the list of hashes, not to the data. Do not increment
+    // the index multiple times in case of hash collisions.
     uint64_t PrevHash = std::numeric_limits<uint64_t>::max();
     for (auto *HD : Buckets[i]) {
       uint32_t HashValue = HD->HashValue;
@@ -164,34 +95,27 @@ void DwarfAccelTable::EmitBuckets(AsmPrinter *Asm) {
   }
 }
 
-// Walk through the buckets and emit the individual hashes for each
-// bucket.
-void DwarfAccelTable::EmitHashes(AsmPrinter *Asm) {
+void AppleAccelTableBase::emitHashes(AsmPrinter *Asm) {
   uint64_t PrevHash = std::numeric_limits<uint64_t>::max();
-  for (size_t i = 0, e = Buckets.size(); i < e; ++i) {
-    for (HashList::const_iterator HI = Buckets[i].begin(),
-                                  HE = Buckets[i].end();
-         HI != HE; ++HI) {
-      uint32_t HashValue = (*HI)->HashValue;
+  unsigned BucketIdx = 0;
+  for (auto &Bucket : Buckets) {
+    for (auto &Hash : Bucket) {
+      uint32_t HashValue = Hash->HashValue;
       if (PrevHash == HashValue)
         continue;
-      Asm->OutStreamer->AddComment("Hash in Bucket " + Twine(i));
+      Asm->OutStreamer->AddComment("Hash in Bucket " + Twine(BucketIdx));
       Asm->EmitInt32(HashValue);
       PrevHash = HashValue;
     }
+    BucketIdx++;
   }
 }
 
-// Walk through the buckets and emit the individual offsets for each
-// element in each bucket. This is done via a symbol subtraction from the
-// beginning of the section. The non-section symbol will be output later
-// when we emit the actual data.
-void DwarfAccelTable::emitOffsets(AsmPrinter *Asm, const MCSymbol *SecBegin) {
+void AppleAccelTableBase::emitOffsets(AsmPrinter *Asm,
+                                      const MCSymbol *SecBegin) {
   uint64_t PrevHash = std::numeric_limits<uint64_t>::max();
   for (size_t i = 0, e = Buckets.size(); i < e; ++i) {
-    for (HashList::const_iterator HI = Buckets[i].begin(),
-                                  HE = Buckets[i].end();
-         HI != HE; ++HI) {
+    for (auto HI = Buckets[i].begin(), HE = Buckets[i].end(); HI != HE; ++HI) {
       uint32_t HashValue = (*HI)->HashValue;
       if (PrevHash == HashValue)
         continue;
@@ -206,37 +130,25 @@ void DwarfAccelTable::emitOffsets(AsmPrinter *Asm, const MCSymbol *SecBegin) {
   }
 }
 
-// Walk through the buckets and emit the full data for each element in
-// the bucket. For the string case emit the dies and the various offsets.
-// Terminate each HashData bucket with 0.
-void DwarfAccelTable::EmitData(AsmPrinter *Asm, DwarfDebug *D) {
+void AppleAccelTableBase::emitData(AsmPrinter *Asm) {
   for (size_t i = 0, e = Buckets.size(); i < e; ++i) {
     uint64_t PrevHash = std::numeric_limits<uint64_t>::max();
-    for (HashList::const_iterator HI = Buckets[i].begin(),
-                                  HE = Buckets[i].end();
-         HI != HE; ++HI) {
-      // Terminate the previous entry if there is no hash collision
-      // with the current one.
+    for (auto &Hash : Buckets[i]) {
+      // Terminate the previous entry if there is no hash collision with the
+      // current one.
       if (PrevHash != std::numeric_limits<uint64_t>::max() &&
-          PrevHash != (*HI)->HashValue)
+          PrevHash != Hash->HashValue)
         Asm->EmitInt32(0);
       // Remember to emit the label for our offset.
-      Asm->OutStreamer->EmitLabel((*HI)->Sym);
-      Asm->OutStreamer->AddComment((*HI)->Str);
-      Asm->emitDwarfStringOffset((*HI)->Data.Name);
+      Asm->OutStreamer->EmitLabel(Hash->Sym);
+      Asm->OutStreamer->AddComment(Hash->Str);
+      Asm->emitDwarfStringOffset(Hash->Data.Name);
       Asm->OutStreamer->AddComment("Num DIEs");
-      Asm->EmitInt32((*HI)->Data.Values.size());
-      for (HashDataContents *HD : (*HI)->Data.Values) {
-        // Emit the DIE offset
-        Asm->EmitInt32(HD->Die->getDebugSectionOffset());
-        // If we have multiple Atoms emit that info too.
-        // FIXME: A bit of a hack, we either emit only one atom or all info.
-        if (HeaderData.Atoms.size() > 1) {
-          Asm->EmitInt16(HD->Die->getTag());
-          Asm->EmitInt8(HD->Flags);
-        }
+      Asm->EmitInt32(Hash->Data.Values.size());
+      for (const auto *V : Hash->Data.Values) {
+        V->emit(Asm);
       }
-      PrevHash = (*HI)->HashValue;
+      PrevHash = Hash->HashValue;
     }
     // Emit the final end marker for the bucket.
     if (!Buckets[i].empty())
@@ -244,50 +156,66 @@ void DwarfAccelTable::EmitData(AsmPrinter *Asm, DwarfDebug *D) {
   }
 }
 
-// Emit the entire data structure to the output file.
-void DwarfAccelTable::emit(AsmPrinter *Asm, const MCSymbol *SecBegin,
-                           DwarfDebug *D) {
-  // Emit the header.
-  EmitHeader(Asm);
+void AppleAccelTableBase::computeBucketCount() {
+  // First get the number of unique hashes.
+  std::vector<uint32_t> uniques(Data.size());
+  for (size_t i = 0, e = Data.size(); i < e; ++i)
+    uniques[i] = Data[i]->HashValue;
+  array_pod_sort(uniques.begin(), uniques.end());
+  std::vector<uint32_t>::iterator p =
+      std::unique(uniques.begin(), uniques.end());
 
-  // Emit the buckets.
-  EmitBuckets(Asm);
-
-  // Emit the hashes.
-  EmitHashes(Asm);
-
-  // Emit the offsets.
-  emitOffsets(Asm, SecBegin);
-
-  // Emit the hash data.
-  EmitData(Asm, D);
+  // Compute the hashes count and use it to set that together with the bucket
+  // count in the header.
+  Header.setBucketAndHashCount(std::distance(uniques.begin(), p));
 }
 
-#ifndef NDEBUG
-void DwarfAccelTable::print(raw_ostream &OS) {
-  Header.print(OS);
-  HeaderData.print(OS);
+void AppleAccelTableBase::finalizeTable(AsmPrinter *Asm, StringRef Prefix) {
+  // Create the individual hash data outputs.
+  Data.reserve(Entries.size());
+  for (auto &E : Entries) {
+    // Unique the entries.
+    std::stable_sort(E.second.Values.begin(), E.second.Values.end(),
+                     [](const AppleAccelTableData *A,
+                        const AppleAccelTableData *B) { return *A < *B; });
+    E.second.Values.erase(
+        std::unique(E.second.Values.begin(), E.second.Values.end()),
+        E.second.Values.end());
 
-  OS << "Entries: \n";
-  for (StringMap<DataArray>::const_iterator EI = Entries.begin(),
-                                            EE = Entries.end();
-       EI != EE; ++EI) {
-    OS << "Name: " << EI->getKeyData() << "\n";
-    for (HashDataContents *HD : EI->second.Values)
-      HD->print(OS);
+    HashData *Entry = new (Allocator) HashData(E.first(), E.second);
+    Data.push_back(Entry);
   }
 
-  OS << "Buckets and Hashes: \n";
-  for (size_t i = 0, e = Buckets.size(); i < e; ++i)
-    for (HashList::const_iterator HI = Buckets[i].begin(),
-                                  HE = Buckets[i].end();
-         HI != HE; ++HI)
-      (*HI)->print(OS);
+  // Figure out how many buckets we need, then compute the bucket contents and
+  // the final ordering. We'll emit the hashes and offsets by doing a walk
+  // during the emission phase. We add temporary symbols to the data so that we
+  // can reference them during the offset later, we'll emit them when we emit
+  // the data.
+  computeBucketCount();
 
-  OS << "Data: \n";
-  for (std::vector<HashData *>::const_iterator DI = Data.begin(),
-                                               DE = Data.end();
-       DI != DE; ++DI)
-    (*DI)->print(OS);
+  // Compute bucket contents and final ordering.
+  Buckets.resize(Header.getBucketCount());
+  for (auto &D : Data) {
+    uint32_t bucket = D->HashValue % Header.getBucketCount();
+    Buckets[bucket].push_back(D);
+    D->Sym = Asm->createTempSymbol(Prefix);
+  }
+
+  // Sort the contents of the buckets by hash value so that hash collisions end
+  // up together. Stable sort makes testing easier and doesn't cost much more.
+  for (auto &Bucket : Buckets)
+    std::stable_sort(Bucket.begin(), Bucket.end(),
+                     [](HashData *LHS, HashData *RHS) {
+                       return LHS->HashValue < RHS->HashValue;
+                     });
 }
-#endif
+
+void AppleAccelTableOffsetData::emit(AsmPrinter *Asm) const {
+  Asm->EmitInt32(Die->getDebugSectionOffset());
+}
+
+void AppleAccelTableTypeData::emit(AsmPrinter *Asm) const {
+  Asm->EmitInt32(Die->getDebugSectionOffset());
+  Asm->EmitInt16(Die->getTag());
+  Asm->EmitInt8(0);
+}
