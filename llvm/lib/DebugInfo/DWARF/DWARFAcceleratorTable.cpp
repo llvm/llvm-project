@@ -201,7 +201,7 @@ LLVM_DUMP_METHOD void AppleAcceleratorTable::dump(raw_ostream &OS) const {
   Hdr.dump(W);
 
   W.printNumber("DIE offset base", HdrData.DIEOffsetBase);
-  W.printNumber("Number of atoms", HdrData.Atoms.size());
+  W.printNumber("Number of atoms", uint64_t(HdrData.Atoms.size()));
   SmallVector<DWARFFormValue, 3> AtomForms;
   {
     ListScope AtomsScope(W, "Atoms");
