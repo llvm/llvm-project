@@ -1,4 +1,4 @@
-//===- llvm/CodeGen/DwarfAccelTable.cpp - Dwarf Accelerator Tables --------===//
+//===- llvm/CodeGen/AsmPrinter/AccelTable.cpp - Accelerator Tables --------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains support for writing dwarf accelerator tables.
+// This file contains support for writing accelerator tables.
 //
 //===----------------------------------------------------------------------===//
 
-#include "DwarfAccelTable.h"
+#include "llvm/CodeGen/AccelTable.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"

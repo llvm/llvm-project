@@ -1,4 +1,5 @@
 add_llvm_library(LLVMAsmPrinter
+  AccelTable.cpp
   AddressPool.cpp
   ARMException.cpp
   AsmPrinter.cpp
@@ -9,7 +10,6 @@ add_llvm_library(LLVMAsmPrinter
   DebugLocStream.cpp
   DIE.cpp
   DIEHash.cpp
-  DwarfAccelTable.cpp
   DwarfCFIException.cpp
   DwarfCompileUnit.cpp
   DwarfDebug.cpp
