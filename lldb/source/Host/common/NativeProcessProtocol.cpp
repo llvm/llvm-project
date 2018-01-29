@@ -8,13 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/common/NativeProcessProtocol.h"
-#include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/State.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
 #include "lldb/Host/common/SoftwareBreakpoint.h"
-#include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
@@ -429,28 +427,6 @@ uint32_t NativeProcessProtocol::GetStopID() const {
 
 void NativeProcessProtocol::DoStopIDBumped(uint32_t /* newBumpId */) {
   // Default implementation does nothing.
-}
-
-Status NativeProcessProtocol::ResolveProcessArchitecture(lldb::pid_t pid,
-                                                         ArchSpec &arch) {
-  // Grab process info for the running process.
-  ProcessInstanceInfo process_info;
-  if (!Host::GetProcessInfo(pid, process_info))
-    return Status("failed to get process info");
-
-  // Resolve the executable module.
-  ModuleSpecList module_specs;
-  if (!ObjectFile::GetModuleSpecifications(process_info.GetExecutableFile(), 0,
-                                           0, module_specs))
-    return Status("failed to get module specifications");
-  lldbassert(module_specs.GetSize() == 1);
-
-  arch = module_specs.GetModuleSpecRefAtIndex(0).GetArchitecture();
-  if (arch.IsValid())
-    return Status();
-  else
-    return Status(
-        "failed to retrieve a valid architecture from the exe module");
 }
 
 NativeProcessProtocol::Factory::~Factory() = default;
