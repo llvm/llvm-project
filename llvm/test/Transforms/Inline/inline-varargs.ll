@@ -64,12 +64,25 @@ entry:
   ret i32 %va1
 }
 
+define internal i32 @varg_accessed_alwaysinline(...) alwaysinline {
+entry:
+  %vargs = alloca i8*, align 8
+  %vargs.ptr = bitcast i8** %vargs to i8*
+  call void @llvm.va_start(i8* %vargs.ptr)
+  %va1 = va_arg i8** %vargs, i32
+  call void @llvm.va_end(i8* %vargs.ptr)
+  ret i32 %va1
+}
+
 define i32 @call_vargs() {
-  %res = call i32 (...) @varg_accessed(i32 10)
+  %res1 = call i32 (...) @varg_accessed(i32 10)
+  %res2 = call i32 (...) @varg_accessed_alwaysinline(i32 15)
+  %res = add i32 %res1, %res2
   ret i32 %res
 }
 ; CHECK-LABEL: @call_vargs
-; CHECK: %res = call i32 (...) @varg_accessed(i32 10)
+; CHECK: %res1 = call i32 (...) @varg_accessed(i32 10)
+; CHECK-NEXT: %res2 = call i32 (...) @varg_accessed_alwaysinline(i32 15)
 
 declare void @llvm.va_start(i8*)
 declare void @llvm.va_end(i8*)
