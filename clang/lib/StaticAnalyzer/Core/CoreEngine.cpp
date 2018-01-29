@@ -37,8 +37,6 @@ STATISTIC(NumPathsExplored,
 // Worklist classes for exploration of reachable states.
 //===----------------------------------------------------------------------===//
 
-WorkList::Visitor::~Visitor() {}
-
 namespace {
 class DFS : public WorkList {
   SmallVector<WorkListUnit,20> Stack;
@@ -56,15 +54,6 @@ public:
     const WorkListUnit& U = Stack.back();
     Stack.pop_back(); // This technically "invalidates" U, but we are fine.
     return U;
-  }
-
-  bool visitItemsInWorkList(Visitor &V) override {
-    for (SmallVectorImpl<WorkListUnit>::iterator
-         I = Stack.begin(), E = Stack.end(); I != E; ++I) {
-      if (V.visit(*I))
-        return true;
-    }
-    return false;
   }
 };
 
@@ -85,14 +74,6 @@ public:
     return U;
   }
 
-  bool visitItemsInWorkList(Visitor &V) override {
-    for (std::deque<WorkListUnit>::iterator
-         I = Queue.begin(), E = Queue.end(); I != E; ++I) {
-      if (V.visit(*I))
-        return true;
-    }
-    return false;
-  }
 };
 
 } // end anonymous namespace
@@ -135,20 +116,6 @@ namespace {
       Queue.pop_front();
       return U;
     }
-    bool visitItemsInWorkList(Visitor &V) override {
-      for (SmallVectorImpl<WorkListUnit>::iterator
-           I = Stack.begin(), E = Stack.end(); I != E; ++I) {
-        if (V.visit(*I))
-          return true;
-      }
-      for (std::deque<WorkListUnit>::iterator
-           I = Queue.begin(), E = Queue.end(); I != E; ++I) {
-        if (V.visit(*I))
-          return true;
-      }
-      return false;
-    }
-
   };
 } // end anonymous namespace
 
