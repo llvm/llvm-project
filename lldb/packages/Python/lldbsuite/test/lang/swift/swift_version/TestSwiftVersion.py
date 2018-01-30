@@ -46,7 +46,7 @@ class TestSwiftVersion(TestBase):
         self.addTearDownHook(cleanup)
 
         exe_name = "main"
-        exe_path = os.path.join(os.getcwd(), exe_name)
+        exe_path = self.getBuildArtifact(exe_name)
 
         tests = [
           { 'file' : "mod3.swift",

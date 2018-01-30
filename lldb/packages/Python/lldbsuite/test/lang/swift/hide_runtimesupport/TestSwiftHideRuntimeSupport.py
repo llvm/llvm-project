@@ -51,7 +51,7 @@ class TestSwiftHideRuntimeSupport(TestBase):
         self.runCmd("settings set target.display-runtime-support-values false")
 
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

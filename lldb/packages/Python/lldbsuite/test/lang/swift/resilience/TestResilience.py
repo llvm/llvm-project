@@ -73,7 +73,7 @@ class TestResilience(TestBase):
         self.createSymlinks(exe_flavor, mod_flavor)
 
         exe_name = "main"
-        exe_path = os.path.join(os.getcwd(), exe_name)
+        exe_path = self.getBuildArtifact(exe_name)
 
         source_name = "main.swift"
         source_spec = lldb.SBFileSpec(source_name)

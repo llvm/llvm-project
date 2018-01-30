@@ -102,7 +102,7 @@ class TestSwiftStdlibDictionary(TestBase):
     def do_test(self):
         """Tests that we properly vend synthetic children for Swift.Dictionary"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

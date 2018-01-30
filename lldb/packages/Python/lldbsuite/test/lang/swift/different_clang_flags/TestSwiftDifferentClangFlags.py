@@ -58,7 +58,7 @@ class TestSwiftDifferentClangFlags(TestBase):
     def do_test(self):
         """Test that we use the right compiler flags when debugging"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         def cleanup():
             execute_command("make cleanup")

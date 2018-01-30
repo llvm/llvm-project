@@ -40,7 +40,7 @@ class TestSwiftObjCImportedTypes(TestBase):
     def do_test(self):
         """Test that we are able to deal with ObjC-imported types"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)
