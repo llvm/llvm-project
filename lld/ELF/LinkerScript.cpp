@@ -285,22 +285,10 @@ static void sortSections(MutableArrayRef<InputSection *> Vec,
 //    --sort-section is handled as an inner SORT command.
 // 3. If one SORT command is given, and if it is SORT_NONE, don't sort.
 // 4. If no SORT command is given, sort according to --sort-section.
-// 5. If no SORT commands are given and --sort-section is not specified,
-//    apply sorting provided by --symbol-ordering-file if any exist.
-static void sortInputSections(
-    MutableArrayRef<InputSection *> Vec, const SectionPattern &Pat,
-    const DenseMap<SectionBase *, int> &Order) {
+static void sortInputSections(MutableArrayRef<InputSection *> Vec,
+                              const SectionPattern &Pat) {
   if (Pat.SortOuter == SortSectionPolicy::None)
     return;
-
-  if (Pat.SortOuter == SortSectionPolicy::Default &&
-      Config->SortSection == SortSectionPolicy::Default) {
-    // If -symbol-ordering-file was given, sort accordingly.
-    // Usually, Order is empty.
-    if (!Order.empty())
-      sortByOrder(Vec, [&](InputSectionBase *S) { return Order.lookup(S); });
-    return;
-  }
 
   if (Pat.SortInner == SortSectionPolicy::Default)
     sortSections(Vec, Config->SortSection);
@@ -311,8 +299,7 @@ static void sortInputSections(
 
 // Compute and remember which sections the InputSectionDescription matches.
 std::vector<InputSection *>
-LinkerScript::computeInputSections(const InputSectionDescription *Cmd,
-                                   const DenseMap<SectionBase *, int> &Order) {
+LinkerScript::computeInputSections(const InputSectionDescription *Cmd) {
   std::vector<InputSection *> Ret;
 
   // Collects all sections that satisfy constraints of Cmd.
@@ -343,7 +330,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *Cmd,
     }
 
     sortInputSections(MutableArrayRef<InputSection *>(Ret).slice(SizeBefore),
-                      Pat, Order);
+                      Pat);
   }
   return Ret;
 }
@@ -360,13 +347,13 @@ void LinkerScript::discard(ArrayRef<InputSection *> V) {
   }
 }
 
-std::vector<InputSection *> LinkerScript::createInputSectionList(
-    OutputSection &OutCmd, const DenseMap<SectionBase *, int> &Order) {
+std::vector<InputSection *>
+LinkerScript::createInputSectionList(OutputSection &OutCmd) {
   std::vector<InputSection *> Ret;
 
   for (BaseCommand *Base : OutCmd.SectionCommands) {
     if (auto *Cmd = dyn_cast<InputSectionDescription>(Base)) {
-      Cmd->Sections = computeInputSections(Cmd, Order);
+      Cmd->Sections = computeInputSections(Cmd);
       Ret.insert(Ret.end(), Cmd->Sections.begin(), Cmd->Sections.end());
     }
   }
@@ -395,7 +382,6 @@ void LinkerScript::processSectionCommands() {
   Ctx->OutSec = Aether;
 
   size_t I = 0;
-  DenseMap<SectionBase *, int> Order = buildSectionOrder();
   // Add input sections to output sections.
   for (BaseCommand *Base : SectionCommands) {
     // Handle symbol assignments outside of any output section.
@@ -405,7 +391,7 @@ void LinkerScript::processSectionCommands() {
     }
 
     if (auto *Sec = dyn_cast<OutputSection>(Base)) {
-      std::vector<InputSection *> V = createInputSectionList(*Sec, Order);
+      std::vector<InputSection *> V = createInputSectionList(*Sec);
 
       // The output section name `/DISCARD/' is special.
       // Any input section assigned to it is discarded.

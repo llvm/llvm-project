@@ -1497,6 +1497,8 @@ class Base(unittest2.TestCase):
             dictionary=None,
             clean=True):
         """Platform specific way to build the default binaries."""
+        if self.debug_info:
+            raise Exception("buildDefault tests must set NO_DEBUG_INFO_TESTCASE")
         module = builder_module()
         dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
         if not module.buildDefault(

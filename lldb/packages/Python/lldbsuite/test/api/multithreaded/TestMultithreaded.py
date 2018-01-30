@@ -17,6 +17,8 @@ import unittest2
 @unittest2.skip("skipping due to frequent timeouts: rdar://28183131")
 class SBBreakpointCallbackCase(TestBase):
 
+    NO_DEBUG_INFO_TESTCASE = True
+   
     def setUp(self):
         TestBase.setUp(self)
         self.generateSource('driver.cpp')
