@@ -30,7 +30,7 @@ class AttachResumeTestCase(TestBase):
     def process_attach_continue_interrupt_detach(self):
         """Test attach/continue/interrupt/detach"""
 
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         popen = self.spawnSubprocess(exe)
         self.addTearDownHook(self.cleanupSubprocesses)

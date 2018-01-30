@@ -23,6 +23,9 @@ class TestConflictingSymbols(TestBase):
         self.Two_line = line_number('Two/Two.c', '// break here')
         self.main_line = line_number('main.c', '// break here')
 
+        lldbutil.mkdir_p(self.getBuildArtifact("One"))
+        lldbutil.mkdir_p(self.getBuildArtifact("Two"))
+
     def test_conflicting_symbols(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

@@ -64,7 +64,7 @@ class MiniDumpTestCase(TestBase):
         """Test that we can examine a more interesting stack in a mini dump."""
         self.build()
         exe = self.getBuildArtifact("a.out")
-        core = os.path.join(os.getcwd(), "core.dmp")
+        core = self.getBuildArtifact("core.dmp")
         try:
             # Set a breakpoint and capture a mini dump.
             target = self.dbg.CreateTarget(exe)
@@ -100,7 +100,7 @@ class MiniDumpTestCase(TestBase):
         """Test that we can examine local variables in a mini dump."""
         self.build()
         exe = self.getBuildArtifact("a.out")
-        core = os.path.join(os.getcwd(), "core.dmp")
+        core = self.getBuildArtifact("core.dmp")
         try:
             # Set a breakpoint and capture a mini dump.
             target = self.dbg.CreateTarget(exe)

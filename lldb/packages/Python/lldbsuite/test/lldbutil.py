@@ -9,6 +9,7 @@ from __future__ import absolute_import
 
 # System modules
 import collections
+import errno
 import os
 import re
 import sys
@@ -45,6 +46,14 @@ def which(program):
                 return exe_file
     return None
 
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise
+    if not os.path.isdir(path):
+        raise OSError(errno.ENOTDIR, "%s is not a directory"%path)
 # ===================================================
 # Disassembly for an SBFunction or an SBSymbol object
 # ===================================================

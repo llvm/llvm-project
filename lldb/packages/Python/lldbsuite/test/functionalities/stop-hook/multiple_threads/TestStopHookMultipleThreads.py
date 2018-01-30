@@ -46,7 +46,7 @@ class StopHookForMultipleThreadsTestCase(TestBase):
         self.setTearDownCleanup(dictionary=self.d)
 
         import pexpect
-        exe = os.path.join(os.getcwd(), self.exe_name)
+        exe = self.getBuildArtifact(self.exe_name)
         prompt = "(lldb) "
 
         # So that the child gets torn down after the test.
