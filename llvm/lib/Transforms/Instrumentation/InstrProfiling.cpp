@@ -434,13 +434,16 @@ void InstrProfiling::promoteCounterLoadStores(Function *F) {
 static bool containsProfilingIntrinsics(Module &M) {
   if (auto *F = M.getFunction(
           Intrinsic::getName(llvm::Intrinsic::instrprof_increment)))
-    return !F->use_empty();
+    if (!F->use_empty())
+      return true;
   if (auto *F = M.getFunction(
           Intrinsic::getName(llvm::Intrinsic::instrprof_increment_step)))
-    return !F->use_empty();
+    if (!F->use_empty())
+      return true;
   if (auto *F = M.getFunction(
           Intrinsic::getName(llvm::Intrinsic::instrprof_value_profile)))
-    return !F->use_empty();
+    if (!F->use_empty())
+      return true;
   return false;
 }
 
