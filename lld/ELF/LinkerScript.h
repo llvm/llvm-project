@@ -217,12 +217,9 @@ class LinkerScript final {
   void setDot(Expr E, const Twine &Loc, bool InSec);
 
   std::vector<InputSection *>
-  computeInputSections(const InputSectionDescription *,
-                       const llvm::DenseMap<SectionBase *, int> &Order);
+  computeInputSections(const InputSectionDescription *);
 
-  std::vector<InputSection *>
-  createInputSectionList(OutputSection &Cmd,
-                         const llvm::DenseMap<SectionBase *, int> &Order);
+  std::vector<InputSection *> createInputSectionList(OutputSection &Cmd);
 
   std::vector<size_t> getPhdrIndices(OutputSection *Sec);
 

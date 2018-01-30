@@ -8,11 +8,11 @@ main(int argc, char const *argv[])
 {
     int i;
 
-    FILE *output = fopen ("output.txt", "w");
+    FILE *output = fopen (argv[1], "w");
     if (output == NULL)
         exit (1);
 
-    for (i = 1; i < argc; ++i)
+    for (i = 2; i < argc; ++i)
         fwrite(argv[i], strlen(argv[i])+1, 1, output);
 
     fclose (output);

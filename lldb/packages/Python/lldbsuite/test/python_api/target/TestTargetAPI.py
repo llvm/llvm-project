@@ -149,7 +149,7 @@ class TargetAPITestCase(TestBase):
         self.assertEqual(len(content), 1)
 
     def create_simple_target(self, fn):
-        exe = os.path.join(os.getcwd(), fn)
+        exe = self.getBuildArtifact(fn)
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
         return target
@@ -175,7 +175,7 @@ class TargetAPITestCase(TestBase):
 
     def find_global_variables(self, exe_name):
         """Exercise SBTaget.FindGlobalVariables() API."""
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)
@@ -216,8 +216,7 @@ class TargetAPITestCase(TestBase):
         # While we are at it, let's also exercise the similar
         # SBModule.FindGlobalVariables() API.
         for m in target.module_iter():
-            if os.path.normpath(m.GetFileSpec().GetDirectory()) == os.getcwd(
-            ) and m.GetFileSpec().GetFilename() == exe_name:
+            if os.path.normpath(m.GetFileSpec().GetDirectory()) == self.getBuildDir() and m.GetFileSpec().GetFilename() == exe_name:
                 value_list = m.FindGlobalVariables(
                     target, 'my_global_var_of_char_type', 3)
                 self.assertTrue(value_list.GetSize() == 1)
@@ -227,7 +226,7 @@ class TargetAPITestCase(TestBase):
 
     def find_functions(self, exe_name):
         """Exercise SBTaget.FindFunctions() API."""
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)

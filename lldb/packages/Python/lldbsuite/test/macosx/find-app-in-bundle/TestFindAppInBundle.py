@@ -38,7 +38,7 @@ class FindAppInMacOSAppBundle(TestBase):
         # breakpoint, runs to it, and returns the thread, process & target.
         # It optionally takes an SBLaunchOption argument if you want to pass
         # arguments or environment variables.
-        exe = os.path.join(os.getcwd(), "TestApp.app")
+        exe = self.getBuildArtifact("TestApp.app")
         error = lldb.SBError()
         target = self.dbg.CreateTarget(exe, None, None, False, error)
         self.assertTrue(error.Success(), "Could not create target: %s"%(error.GetCString()))

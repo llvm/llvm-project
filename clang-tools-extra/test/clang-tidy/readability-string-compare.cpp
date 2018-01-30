@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-string-compare %t -- -- -std=c++11
+// RUN: %check_clang_tidy %s readability-string-compare %t -- -- -std=c++11
 
 namespace std {
 template <typename T>
@@ -34,10 +34,10 @@ void Test() {
 
   if (str1.compare(str2)) {
   }
-  // CHECK-MESSAGES: [[@LINE-2]]:7: warning: do not use 'compare' to test equality of strings; use the string equality operator instead [misc-string-compare]
+  // CHECK-MESSAGES: [[@LINE-2]]:7: warning: do not use 'compare' to test equality of strings; use the string equality operator instead [readability-string-compare]
   if (!str1.compare(str2)) {
   }
-  // CHECK-MESSAGES: [[@LINE-2]]:8: warning: do not use 'compare' to test equality of strings; use the string equality operator instead [misc-string-compare]
+  // CHECK-MESSAGES: [[@LINE-2]]:8: warning: do not use 'compare' to test equality of strings; use the string equality operator instead [readability-string-compare]
   if (str1.compare(str2) == 0) {
   }
   // CHECK-MESSAGES: [[@LINE-2]]:7: warning: do not use 'compare' to test equality of strings;

@@ -30,6 +30,32 @@ exceptional_return:
   ret i64 addrspace(1)* %obj1
 }
 
+declare <4 x i64 addrspace(1)*> @some_vector_call(<4 x i64 addrspace(1)*>)
+
+define <4 x i64 addrspace(1)*> @test_basic_vector(<4 x i64 addrspace(1)*> %objs, <4 x i64 addrspace(1)*> %objs1) gc "statepoint-example" personality i32 ()* @personality_function {
+; CHECK-LABEL: @test_basic_vector
+entry:
+; CHECK: invoke{{.*}}llvm.experimental.gc.statepoint{{.*}}some_vector_call
+  %ret_val = invoke <4 x i64 addrspace(1)*> @some_vector_call(<4 x i64 addrspace(1)*> %objs)
+               to label %normal_return unwind label %exceptional_return
+
+; CHECK-LABEL: normal_return:
+; CHECK: gc.result
+; CHECK: ret <4 x i64 addrspace(1)*>
+
+normal_return:
+  ret <4 x i64 addrspace(1)*> %ret_val
+
+; CHECK-LABEL: exceptional_return:
+; CHECK: landingpad
+; CHECK: ret <4 x i64 addrspace(1)*>
+
+exceptional_return:
+  %landing_pad4 = landingpad token
+          cleanup
+  ret <4 x i64 addrspace(1)*> %objs1
+}
+
 define i64 addrspace(1)* @test_two_invokes(i64 addrspace(1)* %obj, i64 addrspace(1)* %obj1) gc "statepoint-example" personality i32 ()* @personality_function {
 ; CHECK-LABEL: entry:
 entry:

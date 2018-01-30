@@ -12,12 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "scudo_flags.h"
+#include "scudo_interface_internal.h"
 #include "scudo_utils.h"
 
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
-
-SANITIZER_INTERFACE_WEAK_DEF(const char*, __scudo_default_options, void);
 
 namespace __scudo {
 
@@ -119,3 +118,9 @@ Flags *getFlags() {
 }
 
 }  // namespace __scudo
+
+#if !SANITIZER_SUPPORTS_WEAK_HOOKS
+SANITIZER_INTERFACE_WEAK_DEF(const char*, __scudo_default_options, void) {
+  return "";
+}
+#endif

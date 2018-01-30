@@ -47,7 +47,7 @@ class IncompleteModulesTestCase(TestBase):
 
         self.runCmd(
             "settings set target.clang-module-search-paths \"" +
-            os.getcwd() +
+            self.getSourceDir() +
             "\"")
 
         self.expect("expr @import myModule; 3", VARIABLES_DISPLAYED_CORRECTLY,

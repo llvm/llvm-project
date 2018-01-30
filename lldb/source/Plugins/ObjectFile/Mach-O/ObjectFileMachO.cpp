@@ -5136,10 +5136,8 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
         FileSpec file_spec = 
             exec_dir.CopyByAppendingPathComponent(at_exec_relative_path);
         file_spec = file_spec.GetNormalizedPath();
-        if (file_spec.Exists() && files.AppendIfUnique(file_spec)) {
+        if (file_spec.Exists() && files.AppendIfUnique(file_spec))
           count++;
-          break;
-        }
       }
     }
   }

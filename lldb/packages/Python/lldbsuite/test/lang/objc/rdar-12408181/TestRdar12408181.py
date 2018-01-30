@@ -41,7 +41,7 @@ class Rdar12408181TestCase(TestBase):
         self.build(dictionary=d)
         self.setTearDownCleanup(dictionary=d)
 
-        exe = os.path.join(os.getcwd(), self.exe_name)
+        exe = self.getBuildArtifact(self.exe_name)
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(

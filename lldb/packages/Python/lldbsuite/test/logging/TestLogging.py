@@ -39,7 +39,7 @@ class LogTestCase(TestBase):
                     patterns=["Current executable set to .*a.out"])
 
         log_file = os.path.join(
-            os.getcwd(),
+            self.getBuildDir(),
             "lldb-commands-log-%s-%s-%s.txt" %
             (type,
              os.path.basename(

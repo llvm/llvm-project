@@ -750,7 +750,7 @@ static void getThinLTOOldAndNewPrefix(std::string &OldPrefix,
   std::tie(OldPrefix, NewPrefix) = PrefixReplace.split(';');
 }
 
-static std::unique_ptr<LTO> createLTO() {
+static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite) {
   Config Conf;
   ThinBackend Backend;
 
@@ -777,7 +777,7 @@ static std::unique_ptr<LTO> createLTO() {
     getThinLTOOldAndNewPrefix(OldPrefix, NewPrefix);
     Backend = createWriteIndexesThinBackend(
         OldPrefix, NewPrefix, options::thinlto_emit_imports_files,
-        options::thinlto_linked_objects_file);
+        options::thinlto_linked_objects_file, OnIndexWrite);
   }
 
   Conf.OverrideTriple = options::triple;
@@ -826,9 +826,9 @@ static std::unique_ptr<LTO> createLTO() {
 // final link. Frequently the distributed build system will want to
 // confirm that all expected outputs are created based on all of the
 // modules provided to the linker.
-static void writeEmptyDistributedBuildOutputs(std::string &ModulePath,
-                                              std::string &OldPrefix,
-                                              std::string &NewPrefix) {
+static void writeEmptyDistributedBuildOutputs(const std::string &ModulePath,
+                                              const std::string &OldPrefix,
+                                              const std::string &NewPrefix) {
   std::string NewModulePath =
       getThinLTOOutputFile(ModulePath, OldPrefix, NewPrefix);
   std::error_code EC;
@@ -865,7 +865,13 @@ static ld_plugin_status allSymbolsReadHook() {
   // through Lto->run().
   DenseMap<void *, std::unique_ptr<PluginInputFile>> HandleToInputFile;
 
-  std::unique_ptr<LTO> Lto = createLTO();
+  // Owns string objects and tells if index file was already created.
+  StringMap<bool> ObjectToIndexFileState;
+
+  std::unique_ptr<LTO> Lto =
+      createLTO([&ObjectToIndexFileState](const std::string &Identifier) {
+        ObjectToIndexFileState[Identifier] = true;
+      });
 
   std::string OldPrefix, NewPrefix;
   if (options::thinlto_index_only)
@@ -873,29 +879,20 @@ static ld_plugin_status allSymbolsReadHook() {
 
   std::string OldSuffix, NewSuffix;
   getThinLTOOldAndNewSuffix(OldSuffix, NewSuffix);
-  // Set for owning string objects used as buffer identifiers.
-  StringSet<> ObjectFilenames;
 
   for (claimed_file &F : Modules) {
     if (options::thinlto && !HandleToInputFile.count(F.leader_handle))
       HandleToInputFile.insert(std::make_pair(
           F.leader_handle, llvm::make_unique<PluginInputFile>(F.handle)));
-    const void *View = getSymbolsAndView(F);
     // In case we are thin linking with a minimized bitcode file, ensure
     // the module paths encoded in the index reflect where the backends
     // will locate the full bitcode files for compiling/importing.
     std::string Identifier =
         getThinLTOObjectFileName(F.name, OldSuffix, NewSuffix);
-    auto ObjFilename = ObjectFilenames.insert(Identifier);
+    auto ObjFilename = ObjectToIndexFileState.insert({Identifier, false});
     assert(ObjFilename.second);
-    if (!View) {
-      if (options::thinlto_index_only)
-        // Write empty output files that may be expected by the distributed
-        // build system.
-        writeEmptyDistributedBuildOutputs(Identifier, OldPrefix, NewPrefix);
-      continue;
-    }
-    addModule(*Lto, F, View, ObjFilename.first->first());
+    if (const void *View = getSymbolsAndView(F))
+      addModule(*Lto, F, View, ObjFilename.first->first());
   }
 
   SmallString<128> Filename;
@@ -931,6 +928,14 @@ static ld_plugin_status allSymbolsReadHook() {
     Cache = check(localCache(options::cache_dir, AddBuffer));
 
   check(Lto->run(AddStream, Cache));
+
+  // Write empty output files that may be expected by the distributed build
+  // system.
+  if (options::thinlto_index_only)
+    for (auto &Identifier : ObjectToIndexFileState)
+      if (!Identifier.getValue())
+        writeEmptyDistributedBuildOutputs(Identifier.getKey(), OldPrefix,
+                                          NewPrefix);
 
   if (options::TheOutputType == options::OT_DISABLE ||
       options::TheOutputType == options::OT_BC_ONLY)

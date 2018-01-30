@@ -22,7 +22,7 @@ class SettingsCommandTestCase(TestBase):
     @classmethod
     def classCleanup(cls):
         """Cleanup the test byproducts."""
-        cls.RemoveTempFile("stdout.txt")
+        cls.RemoveTempFile(self.getBuildArtifact("stdout.txt"))
 
     @no_debug_info_test
     def test_no_quote(self):
@@ -82,16 +82,22 @@ class SettingsCommandTestCase(TestBase):
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
-        self.runCmd("process launch -- " + args_in)
+        local_outfile = self.getBuildArtifact("output.txt")
+        if lldb.remote_platform:
+            remote_outfile = "output.txt" # Relative to platform's PWD
+        else:
+            remote_outfile = local_outfile
+
+        self.runCmd("process launch -- %s %s" %(remote_outfile, args_in))
 
         if lldb.remote_platform:
-            src_file_spec = lldb.SBFileSpec('output.txt', False)
-            dst_file_spec = lldb.SBFileSpec('output.txt', True)
+            src_file_spec = lldb.SBFileSpec(remote_outfile, False)
+            dst_file_spec = lldb.SBFileSpec(local_outfile, True)
             lldb.remote_platform.Get(src_file_spec, dst_file_spec)
 
-        with open('output.txt', 'r') as f:
+        with open(local_outfile, 'r') as f:
             output = f.read()
 
-        self.RemoveTempFile("output.txt")
+        self.RemoveTempFile(local_outfile)
 
         self.assertEqual(output, args_out)

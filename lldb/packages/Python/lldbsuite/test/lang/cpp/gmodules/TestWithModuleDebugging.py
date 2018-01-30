@@ -13,9 +13,8 @@ class TestWithGmodulesDebugInfo(TestBase):
     @add_test_categories(["gmodules"])
     def test_specialized_typedef_from_pch(self):
         self.build()
-        cwd = os.getcwd()
 
-        src_file = os.path.join(cwd, "main.cpp")
+        src_file = os.path.join(self.getSourceDir(), "main.cpp")
         src_file_spec = lldb.SBFileSpec(src_file)
         self.assertTrue(src_file_spec.IsValid(), "breakpoint file")
 

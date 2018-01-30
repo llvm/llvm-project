@@ -41,22 +41,22 @@ class ExecTestCase(TestBase):
         self.do_test(True)
 
     def do_test(self, skip_exec):
+        self.makeBuildDir()
+        exe = self.getBuildArtifact("a.out")
         if self.getArchitecture() == 'x86_64':
-            source = os.path.join(os.getcwd(), "main.cpp")
-            o_file = os.path.join(os.getcwd(), "main.o")
+            source = self.getSourcePath("main.cpp")
+            o_file = self.getBuildArtifact("main.o")
             execute_command(
                 "'%s' -g -O0 -arch i386 -arch x86_64 '%s' -c -o '%s'" %
                 (os.environ["CC"], source, o_file))
             execute_command(
-                "'%s' -g -O0 -arch i386 -arch x86_64 '%s'" %
-                (os.environ["CC"], o_file))
+                "'%s' -g -O0 -arch i386 -arch x86_64 '%s' -o '%s'" %
+                (os.environ["CC"], o_file, exe))
             if self.debug_info != "dsym":
                 dsym_path = self.getBuildArtifact("a.out.dSYM")
                 execute_command("rm -rf '%s'" % (dsym_path))
         else:
             self.build()
-
-        exe = self.getBuildArtifact("a.out")
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

@@ -73,7 +73,7 @@ class BreakpointSerialization(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
 
-        self.bkpts_file_path = os.path.join(os.getcwd(), "breakpoints.json")
+        self.bkpts_file_path = self.getBuildArtifact("breakpoints.json")
         self.bkpts_file_spec = lldb.SBFileSpec(self.bkpts_file_path)
 
     def check_equivalence(self, source_bps, do_write = True):
@@ -119,7 +119,7 @@ class BreakpointSerialization(TestBase):
 
         empty_module_list = lldb.SBFileSpecList()
         empty_cu_list = lldb.SBFileSpecList()
-        blubby_file_spec = lldb.SBFileSpec(os.path.join(os.getcwd(), "blubby.c"))
+        blubby_file_spec = lldb.SBFileSpec(os.path.join(self.getSourceDir(), "blubby.c"))
 
         # It isn't actually important for these purposes that these breakpoint
         # actually have locations.
@@ -147,7 +147,7 @@ class BreakpointSerialization(TestBase):
         cu_list.Append(lldb.SBFileSpec("AnotherCU.c"))
         cu_list.Append(lldb.SBFileSpec("ThirdCU.c"))
 
-        blubby_file_spec = lldb.SBFileSpec(os.path.join(os.getcwd(), "blubby.c"))
+        blubby_file_spec = lldb.SBFileSpec(os.path.join(self.getSourceDir(), "blubby.c"))
 
         # It isn't actually important for these purposes that these breakpoint
         # actually have locations.
@@ -174,7 +174,7 @@ class BreakpointSerialization(TestBase):
 
         empty_module_list = lldb.SBFileSpecList()
         empty_cu_list = lldb.SBFileSpecList()
-        blubby_file_spec = lldb.SBFileSpec(os.path.join(os.getcwd(), "blubby.c"))
+        blubby_file_spec = lldb.SBFileSpec(os.path.join(self.getSourceDir(), "blubby.c"))
 
         # It isn't actually important for these purposes that these breakpoint
         # actually have locations.
@@ -218,7 +218,7 @@ class BreakpointSerialization(TestBase):
 
         empty_module_list = lldb.SBFileSpecList()
         empty_cu_list = lldb.SBFileSpecList()
-        blubby_file_spec = lldb.SBFileSpec(os.path.join(os.getcwd(), "blubby.c"))
+        blubby_file_spec = lldb.SBFileSpec(os.path.join(self.getSourceDir(), "blubby.c"))
 
         # It isn't actually important for these purposes that these breakpoint
         # actually have locations.

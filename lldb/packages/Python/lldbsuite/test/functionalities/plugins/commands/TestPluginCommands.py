@@ -45,7 +45,7 @@ class PluginCommandTestCase(TestBase):
         retobj = lldb.SBCommandReturnObject()
 
         retval = debugger.GetCommandInterpreter().HandleCommand(
-            "plugin load %s" % plugin_lib_name, retobj)
+            "plugin load %s" % self.getBuildArtifact(plugin_lib_name), retobj)
 
         retobj.Clear()
 

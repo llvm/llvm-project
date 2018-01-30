@@ -33,7 +33,7 @@ class UniversalTestCase(TestBase):
         self.build()
 
         # Note that "testit" is a universal binary.
-        exe = os.path.join(os.getcwd(), "testit")
+        exe = self.getBuildArtifact("testit")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTargetWithFileAndTargetTriple(
@@ -57,7 +57,7 @@ class UniversalTestCase(TestBase):
         self.build()
 
         # Note that "testit" is a universal binary.
-        exe = os.path.join(os.getcwd(), "testit")
+        exe = self.getBuildArtifact("testit")
 
         # By default, x86_64 is assumed if no architecture is specified.
         self.expect("file " + exe, CURRENT_EXECUTABLE_SET,
@@ -130,7 +130,7 @@ class UniversalTestCase(TestBase):
         self.build()
 
         # Note that "testit" is a universal binary.
-        exe = os.path.join(os.getcwd(), "testit")
+        exe = self.getBuildArtifact("testit")
 
         # Create a target by the debugger.
         target = self.dbg.CreateTargetWithFileAndTargetTriple(

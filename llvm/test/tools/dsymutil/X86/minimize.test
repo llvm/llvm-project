@@ -1,0 +1,9 @@
+RUN: llvm-dsymutil -f -o - -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 | llvm-readobj -sections - | FileCheck %s --check-prefix=FULL
+RUN: llvm-dsymutil --minimize -f -o - -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 | llvm-readobj -sections - | FileCheck %s
+RUN: llvm-dsymutil -z -f -o - -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 | llvm-readobj -sections - | FileCheck %s
+
+FULL: Name: __debug_pubnames
+FULL: Name: __debug_pubtypes
+
+CHECK-NOT: Name: __debug_pubnames
+CHECK-NOT: Name: __debug_pubtypes

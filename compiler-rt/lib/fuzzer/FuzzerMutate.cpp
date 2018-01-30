@@ -62,7 +62,7 @@ MutationDispatcher::MutationDispatcher(Random &Rand,
 
 static char RandCh(Random &Rand) {
   if (Rand.RandBool()) return Rand(256);
-  const char *Special = "!*'();:@&=+$,/?%#[]012Az-`~.\xff\x00";
+  const char Special[] = "!*'();:@&=+$,/?%#[]012Az-`~.\xff\x00";
   return Special[Rand(sizeof(Special) - 1)];
 }
 

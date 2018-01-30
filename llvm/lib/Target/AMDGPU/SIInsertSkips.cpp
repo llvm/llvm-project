@@ -262,14 +262,15 @@ void SIInsertSkips::kill(MachineInstr &MI) {
 
     assert(MI.getOperand(0).isReg());
 
+    MachineInstr *NewMI;
     if (TRI->isVGPR(MBB.getParent()->getRegInfo(),
                     MI.getOperand(0).getReg())) {
       Opcode = AMDGPU::getVOPe32(Opcode);
-      BuildMI(MBB, &MI, DL, TII->get(Opcode))
+      NewMI = BuildMI(MBB, &MI, DL, TII->get(Opcode))
           .add(MI.getOperand(1))
           .add(MI.getOperand(0));
     } else {
-      BuildMI(MBB, &MI, DL, TII->get(Opcode))
+      NewMI = BuildMI(MBB, &MI, DL, TII->get(Opcode))
           .addReg(AMDGPU::VCC, RegState::Define)
           .addImm(0)  // src0 modifiers
           .add(MI.getOperand(1))
@@ -277,6 +278,11 @@ void SIInsertSkips::kill(MachineInstr &MI) {
           .add(MI.getOperand(0))
           .addImm(0);  // omod
     }
+    // Clear isRenamable bit if new opcode requires it to be 0.
+    if (NewMI->hasExtraSrcRegAllocReq())
+      for (MachineOperand &NewMO : NewMI->uses())
+        if (NewMO.isReg() && NewMO.isUse())
+          NewMO.setIsRenamable(false);
     break;
   }
   case AMDGPU::SI_KILL_I1_TERMINATOR: {
