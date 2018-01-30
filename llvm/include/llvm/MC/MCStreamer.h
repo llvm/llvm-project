@@ -662,7 +662,7 @@ public:
 
   /// \brief Emit NumBytes bytes worth of the value specified by FillValue.
   /// This implements directives such as '.space'.
-  virtual void emitFill(uint64_t NumBytes, uint8_t FillValue);
+  void emitFill(uint64_t NumBytes, uint8_t FillValue);
 
   /// \brief Emit \p Size bytes worth of the value specified by \p FillValue.
   ///

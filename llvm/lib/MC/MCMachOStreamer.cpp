@@ -411,29 +411,19 @@ void MCMachOStreamer::EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
 
 void MCMachOStreamer::EmitZerofill(MCSection *Section, MCSymbol *Symbol,
                                    uint64_t Size, unsigned ByteAlignment) {
-  getAssembler().registerSection(*Section);
-
-  // The symbol may not be present, which only creates the section.
-  if (!Symbol)
-    return;
-
   // On darwin all virtual sections have zerofill type.
   assert(Section->isVirtualSection() && "Section does not have zerofill type!");
 
-  assert(Symbol->isUndefined() && "Cannot define a symbol twice!");
+  PushSection();
+  SwitchSection(Section);
 
-  getAssembler().registerSymbol(*Symbol);
-
-  // Emit an align fragment if necessary.
-  if (ByteAlignment != 1)
-    new MCAlignFragment(ByteAlignment, 0, 0, ByteAlignment, Section);
-
-  MCFragment *F = new MCFillFragment(0, Size, Section);
-  Symbol->setFragment(F);
-
-  // Update the maximum alignment on the zero fill section if necessary.
-  if (ByteAlignment > Section->getAlignment())
-    Section->setAlignment(ByteAlignment);
+  // The symbol may not be present, which only creates the section.
+  if (Symbol) {
+    EmitValueToAlignment(ByteAlignment, 0, 1, 0);
+    EmitLabel(Symbol);
+    EmitZeros(Size);
+  }
+  PopSection();
 }
 
 // This should always be called with the thread local bss section.  Like the
