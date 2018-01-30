@@ -1257,14 +1257,6 @@ let isCompare = 1 in {
     def TEST32mi   : BinOpMI_F<0xF6, "test", Xi32, X86testpat, MRM0m>;
     let Predicates = [In64BitMode] in
     def TEST64mi32 : BinOpMI_F<0xF6, "test", Xi64, X86testpat, MRM0m>;
-
-    // When testing the result of EXTRACT_SUBREG sub_8bit_hi, make sure the
-    // register class is constrained to GR8_NOREX. This pseudo is explicitly
-    // marked side-effect free, since it doesn't have an isel pattern like
-    // other test instructions.
-    let isPseudo = 1, hasSideEffects = 0 in
-    def TEST8ri_NOREX : I<0, Pseudo, (outs), (ins GR8_NOREX:$src, i8imm:$mask),
-                          "", [], IIC_BIN_NONMEM>, Sched<[WriteALU]>;
   } // Defs = [EFLAGS]
 
   def TEST8i8    : BinOpAI_F<0xA8, "test", Xi8 , AL,

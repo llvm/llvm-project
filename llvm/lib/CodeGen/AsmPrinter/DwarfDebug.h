@@ -18,7 +18,6 @@
 #include "DbgValueHistoryCalculator.h"
 #include "DebugHandlerBase.h"
 #include "DebugLocStream.h"
-#include "DwarfAccelTable.h"
 #include "DwarfFile.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -31,6 +30,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/CodeGen/AccelTable.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
@@ -289,10 +289,11 @@ class DwarfDebug : public DebugHandlerBase {
 
   AddressPool AddrPool;
 
-  DwarfAccelTable AccelNames;
-  DwarfAccelTable AccelObjC;
-  DwarfAccelTable AccelNamespace;
-  DwarfAccelTable AccelTypes;
+  /// Apple accelerator tables.
+  AppleAccelTable<AppleAccelTableOffsetData> AccelNames;
+  AppleAccelTable<AppleAccelTableOffsetData> AccelObjC;
+  AppleAccelTable<AppleAccelTableOffsetData> AccelNamespace;
+  AppleAccelTable<AppleAccelTableTypeData> AccelTypes;
 
   // Identify a debugger for "tuning" the debug info.
   DebuggerKind DebuggerTuning = DebuggerKind::Default;
@@ -334,8 +335,8 @@ class DwarfDebug : public DebugHandlerBase {
   void emitStringOffsetsTableHeader();
 
   /// Emit a specified accelerator table.
-  void emitAccel(DwarfAccelTable &Accel, MCSection *Section,
-                 StringRef TableName);
+  template <typename AccelTableT>
+  void emitAccel(AccelTableT &Accel, MCSection *Section, StringRef TableName);
 
   /// Emit visible names into a hashed accelerator table section.
   void emitAccelNames();

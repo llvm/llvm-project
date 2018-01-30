@@ -1733,7 +1733,7 @@ class LLDBTestCaseFactory(type):
                 # authoritative.  If none were specified, try with all debug
                 # info formats.
                 all_dbginfo_categories = set(
-                    test_categories.debug_info_categories)
+                    test_categories.debug_info_categories) - set(configuration.skipCategories)
                 categories = set(
                     getattr(
                         attrvalue,

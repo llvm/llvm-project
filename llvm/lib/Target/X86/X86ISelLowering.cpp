@@ -31828,9 +31828,10 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         // Check all uses of the condition operand to check whether it will be
         // consumed by non-BLEND instructions. Those may require that all bits
         // are set properly.
-        for (SDNode *U : Cond->uses()) {
+        for (SDNode::use_iterator UI = Cond->use_begin(), UE = Cond->use_end();
+             UI != UE; ++UI) {
           // TODO: Add other opcodes eventually lowered into BLEND.
-          if (U->getOpcode() != ISD::VSELECT)
+          if (UI->getOpcode() != ISD::VSELECT || UI.getOperandNo() != 0)
             return SDValue();
         }
 

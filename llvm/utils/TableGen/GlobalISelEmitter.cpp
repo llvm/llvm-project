@@ -610,8 +610,8 @@ public:
 /// Generates code to check that a match rule matches.
 class RuleMatcher : public Matcher {
 public:
-  using ActionVec = std::vector<std::unique_ptr<MatchAction>>;
-  using action_iterator = ActionVec::iterator;
+  using ActionList = std::list<std::unique_ptr<MatchAction>>;
+  using action_iterator = ActionList::iterator;
 
 protected:
   /// A list of matchers that all need to succeed for the current rule to match.
@@ -622,7 +622,7 @@ protected:
 
   /// A list of actions that need to be taken when all predicates in this rule
   /// have succeeded.
-  ActionVec Actions;
+  ActionList Actions;
 
   using DefinedInsnVariablesMap =
       std::map<const InstructionMatcher *, unsigned>;
@@ -2125,6 +2125,7 @@ public:
   BuildMIAction(unsigned InsnID, const CodeGenInstruction *I)
       : InsnID(InsnID), I(I), Matched(nullptr) {}
 
+  unsigned getInsnID() const { return InsnID; }
   const CodeGenInstruction *getCGI() const { return I; }
 
   void chooseInsnToMutate(RuleMatcher &Rule) {
@@ -3199,7 +3200,7 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
 
 Expected<action_iterator>
 GlobalISelEmitter::createAndImportSubInstructionRenderer(
-    action_iterator InsertPt, RuleMatcher &M, const TreePatternNode *Dst,
+    const action_iterator InsertPt, RuleMatcher &M, const TreePatternNode *Dst,
     unsigned TempRegID) {
   auto InsertPtOrError = createInstructionRenderer(InsertPt, M, Dst);
 
@@ -3207,7 +3208,6 @@ GlobalISelEmitter::createAndImportSubInstructionRenderer(
 
   if (auto Error = InsertPtOrError.takeError())
     return std::move(Error);
-  InsertPt = InsertPtOrError.get();
 
   BuildMIAction &DstMIBuilder =
       *static_cast<BuildMIAction *>(InsertPtOrError.get()->get());
@@ -3215,10 +3215,13 @@ GlobalISelEmitter::createAndImportSubInstructionRenderer(
   // Assign the result to TempReg.
   DstMIBuilder.addRenderer<TempRegRenderer>(TempRegID, true);
 
-  InsertPtOrError = importExplicitUseRenderers(InsertPt, M, DstMIBuilder, Dst);
+  InsertPtOrError =
+      importExplicitUseRenderers(InsertPtOrError.get(), M, DstMIBuilder, Dst);
   if (auto Error = InsertPtOrError.takeError())
     return std::move(Error);
 
+  M.insertAction<ConstrainOperandsToDefinitionAction>(InsertPt,
+                                                      DstMIBuilder.getInsnID());
   return InsertPtOrError.get();
 }
 

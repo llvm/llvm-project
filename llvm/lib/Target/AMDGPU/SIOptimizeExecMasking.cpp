@@ -246,6 +246,7 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
         DEBUG(dbgs() << "Fold exec copy: " << *PrepareExecInst);
 
         PrepareExecInst->getOperand(0).setReg(AMDGPU::EXEC);
+        PrepareExecInst->getOperand(0).setIsRenamable(false);
 
         DEBUG(dbgs() << "into: " << *PrepareExecInst << '\n');
 
@@ -352,7 +353,8 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
 
     for (MachineInstr *OtherInst : OtherUseInsts) {
       OtherInst->substituteRegister(CopyToExec, AMDGPU::EXEC,
-                                    AMDGPU::NoSubRegister, *TRI);
+                                    AMDGPU::NoSubRegister, *TRI,
+                                    /*ClearIsRenamable=*/true);
     }
   }
 

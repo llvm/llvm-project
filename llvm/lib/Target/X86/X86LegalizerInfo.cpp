@@ -21,6 +21,7 @@
 
 using namespace llvm;
 using namespace TargetOpcode;
+using namespace LegalizeActions;
 
 /// FIXME: The following static functions are SizeChangeStrategy functions
 /// that are meant to temporarily mimic the behaviour of the old legalization
@@ -38,7 +39,7 @@ addAndInterleaveWithUnsupported(LegalizerInfo::SizeAndActionsVec &result,
     result.push_back(v[i]);
     if (i + 1 < v[i].first && i + 1 < v.size() &&
         v[i + 1].first != v[i].first + 1)
-      result.push_back({v[i].first + 1, LegalizerInfo::Unsupported});
+      result.push_back({v[i].first + 1, Unsupported});
   }
 }
 
@@ -46,11 +47,11 @@ static LegalizerInfo::SizeAndActionsVec
 widen_1(const LegalizerInfo::SizeAndActionsVec &v) {
   assert(v.size() >= 1);
   assert(v[0].first > 1);
-  LegalizerInfo::SizeAndActionsVec result = {{1, LegalizerInfo::WidenScalar},
-                                             {2, LegalizerInfo::Unsupported}};
+  LegalizerInfo::SizeAndActionsVec result = {{1, WidenScalar},
+                                             {2, Unsupported}};
   addAndInterleaveWithUnsupported(result, v);
   auto Largest = result.back().first;
-  result.push_back({Largest + 1, LegalizerInfo::Unsupported});
+  result.push_back({Largest + 1, Unsupported});
   return result;
 }
 

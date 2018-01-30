@@ -52,7 +52,6 @@ def UnsafeFPMath : Predicate<"TM.Options.UnsafeFPMath">;
 def FMA : Predicate<"Subtarget->hasFMA()">;
 
 def InstFlag : OperandWithDefaultOps <i32, (ops (i32 0))>;
-def ADDRIndirect : ComplexPattern<iPTR, 2, "SelectADDRIndirect", [], []>;
 
 def u16ImmTarget : AsmOperandClass {
   let Name = "U16Imm";

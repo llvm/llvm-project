@@ -26,6 +26,7 @@
 #define DEBUG_TYPE "legalizer"
 
 using namespace llvm;
+using namespace LegalizeActions;
 
 LegalizerHelper::LegalizerHelper(MachineFunction &MF)
     : MRI(MF.getRegInfo()), LI(*MF.getSubtarget().getLegalizerInfo()) {
@@ -38,25 +39,25 @@ LegalizerHelper::legalizeInstrStep(MachineInstr &MI) {
 
   auto Step = LI.getAction(MI, MRI);
   switch (Step.Action) {
-  case LegalizerInfo::Legal:
+  case Legal:
     DEBUG(dbgs() << ".. Already legal\n");
     return AlreadyLegal;
-  case LegalizerInfo::Libcall:
+  case Libcall:
     DEBUG(dbgs() << ".. Convert to libcall\n");
     return libcall(MI);
-  case LegalizerInfo::NarrowScalar:
+  case NarrowScalar:
     DEBUG(dbgs() << ".. Narrow scalar\n");
     return narrowScalar(MI, Step.TypeIdx, Step.NewType);
-  case LegalizerInfo::WidenScalar:
+  case WidenScalar:
     DEBUG(dbgs() << ".. Widen scalar\n");
     return widenScalar(MI, Step.TypeIdx, Step.NewType);
-  case LegalizerInfo::Lower:
+  case Lower:
     DEBUG(dbgs() << ".. Lower\n");
     return lower(MI, Step.TypeIdx, Step.NewType);
-  case LegalizerInfo::FewerElements:
+  case FewerElements:
     DEBUG(dbgs() << ".. Reduce number of elements\n");
     return fewerElementsVector(MI, Step.TypeIdx, Step.NewType);
-  case LegalizerInfo::Custom:
+  case Custom:
     DEBUG(dbgs() << ".. Custom legalization\n");
     return LI.legalizeCustom(MI, MRI, MIRBuilder) ? Legalized
                                                   : UnableToLegalize;
@@ -149,6 +150,14 @@ static RTLIB::Libcall getConvRTLibDesc(unsigned Opcode, Type *ToType,
     return RTLIB::getFPEXT(FromMVT, ToMVT);
   case TargetOpcode::G_FPTRUNC:
     return RTLIB::getFPROUND(FromMVT, ToMVT);
+  case TargetOpcode::G_FPTOSI:
+    return RTLIB::getFPTOSINT(FromMVT, ToMVT);
+  case TargetOpcode::G_FPTOUI:
+    return RTLIB::getFPTOUINT(FromMVT, ToMVT);
+  case TargetOpcode::G_SITOFP:
+    return RTLIB::getSINTTOFP(FromMVT, ToMVT);
+  case TargetOpcode::G_UITOFP:
+    return RTLIB::getUINTTOFP(FromMVT, ToMVT);
   }
   llvm_unreachable("Unsupported libcall function");
 }
@@ -215,6 +224,35 @@ LegalizerHelper::libcall(MachineInstr &MI) {
       return UnableToLegalize;
     LegalizeResult Status = conversionLibcall(
         MI, MIRBuilder, Type::getFloatTy(Ctx), Type::getDoubleTy(Ctx));
+    if (Status != Legalized)
+      return Status;
+    break;
+  }
+  case TargetOpcode::G_FPTOSI:
+  case TargetOpcode::G_FPTOUI: {
+    // FIXME: Support other types
+    unsigned FromSize = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
+    unsigned ToSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+    if (ToSize != 32 || (FromSize != 32 && FromSize != 64))
+      return UnableToLegalize;
+    LegalizeResult Status = conversionLibcall(
+        MI, MIRBuilder, Type::getInt32Ty(Ctx),
+        FromSize == 64 ? Type::getDoubleTy(Ctx) : Type::getFloatTy(Ctx));
+    if (Status != Legalized)
+      return Status;
+    break;
+  }
+  case TargetOpcode::G_SITOFP:
+  case TargetOpcode::G_UITOFP: {
+    // FIXME: Support other types
+    unsigned FromSize = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
+    unsigned ToSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+    if (FromSize != 32 || (ToSize != 32 && ToSize != 64))
+      return UnableToLegalize;
+    LegalizeResult Status = conversionLibcall(
+        MI, MIRBuilder,
+        ToSize == 64 ? Type::getDoubleTy(Ctx) : Type::getFloatTy(Ctx),
+        Type::getInt32Ty(Ctx));
     if (Status != Legalized)
       return Status;
     break;
@@ -941,7 +979,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     // Lower (G_FSUB LHS, RHS) to (G_FADD LHS, (G_FNEG RHS)).
     // First, check if G_FNEG is marked as Lower. If so, we may
     // end up with an infinite loop as G_FSUB is used to legalize G_FNEG.
-    if (LI.getAction({G_FNEG, {Ty}}).Action == LegalizerInfo::Lower)
+    if (LI.getAction({G_FNEG, {Ty}}).Action == Lower)
       return UnableToLegalize;
     unsigned Res = MI.getOperand(0).getReg();
     unsigned LHS = MI.getOperand(1).getReg();

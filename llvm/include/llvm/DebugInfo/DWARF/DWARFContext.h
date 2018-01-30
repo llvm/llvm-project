@@ -34,6 +34,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Host.h"
 #include <cstdint>
@@ -43,7 +44,6 @@
 
 namespace llvm {
 
-class DataExtractor;
 class MCRegisterInfo;
 class MemoryBuffer;
 class raw_ostream;
@@ -69,6 +69,7 @@ class DWARFContext : public DIContext {
   std::unique_ptr<DWARFDebugFrame> DebugFrame;
   std::unique_ptr<DWARFDebugFrame> EHFrame;
   std::unique_ptr<DWARFDebugMacro> Macro;
+  std::unique_ptr<DWARFDebugNames> Names;
   std::unique_ptr<AppleAcceleratorTable> AppleNames;
   std::unique_ptr<AppleAcceleratorTable> AppleTypes;
   std::unique_ptr<AppleAcceleratorTable> AppleNamespaces;
@@ -243,6 +244,9 @@ public:
   const DWARFDebugMacro *getDebugMacro();
 
   /// Get a reference to the parsed accelerator table object.
+  const DWARFDebugNames &getDebugNames();
+
+  /// Get a reference to the parsed accelerator table object.
   const AppleAcceleratorTable &getAppleNames();
 
   /// Get a reference to the parsed accelerator table object.
@@ -256,6 +260,13 @@ public:
 
   /// Get a pointer to a parsed line table corresponding to a compile unit.
   const DWARFDebugLine::LineTable *getLineTableForUnit(DWARFUnit *cu);
+
+  DataExtractor getStringExtractor() const {
+    return DataExtractor(DObj->getStringSection(), false, 0);
+  }
+  DataExtractor getLineStringExtractor() const {
+    return DataExtractor(DObj->getLineStringSection(), false, 0);
+  }
 
   /// Wraps the returned DIEs for a given address.
   struct DIEsForAddress {

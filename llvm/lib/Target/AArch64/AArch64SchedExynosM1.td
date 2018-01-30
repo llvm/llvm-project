@@ -1,4 +1,4 @@
-//=- AArch64SchedM1.td - Samsung Exynos-M1 Scheduling Defs ---*- tablegen -*-=//
+//=- AArch64SchedExynosM1.td - Samsung Exynos M1 Sched Defs --*- tablegen -*-=//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the machine model for Samsung Exynos-M1 to support
+// This file defines the machine model for the Samsung Exynos M1 to support
 // instruction scheduling and other instruction cost heuristics.
 //
 //===----------------------------------------------------------------------===//

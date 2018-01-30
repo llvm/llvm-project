@@ -191,6 +191,9 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
       DwarfExpr = llvm::make_unique<DIEDwarfExpression>(*Asm, *this, *Loc);
     }
 
+    if (Expr)
+      DwarfExpr->addFragmentOffset(Expr);
+
     if (Global) {
       const MCSymbol *Sym = Asm->getSymbol(Global);
       if (Global->isThreadLocal()) {
@@ -226,10 +229,8 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
         addOpAddress(*Loc, Sym);
       }
     }
-    if (Expr) {
-      DwarfExpr->addFragmentOffset(Expr);
+    if (Expr)
       DwarfExpr->addExpression(Expr);
-    }
   }
   if (Loc)
     addBlock(*VariableDIE, dwarf::DW_AT_location, DwarfExpr->finalize());

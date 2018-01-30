@@ -71,10 +71,9 @@ protected:
                          const MCSubtargetInfo &STI, raw_ostream &O);
   void printAddSubImm(const MCInst *MI, unsigned OpNum,
                       const MCSubtargetInfo &STI, raw_ostream &O);
-  void printLogicalImm32(const MCInst *MI, unsigned OpNum,
-                         const MCSubtargetInfo &STI, raw_ostream &O);
-  void printLogicalImm64(const MCInst *MI, unsigned OpNum,
-                         const MCSubtargetInfo &STI, raw_ostream &O);
+  template <typename T>
+  void printLogicalImm(const MCInst *MI, unsigned OpNum,
+                       const MCSubtargetInfo &STI, raw_ostream &O);
   void printShifter(const MCInst *MI, unsigned OpNum,
                     const MCSubtargetInfo &STI, raw_ostream &O);
   void printShiftedRegister(const MCInst *MI, unsigned OpNum,

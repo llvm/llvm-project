@@ -3290,13 +3290,16 @@ multiclass avx512_alignedstore_vl<bits<8> opc, string OpcodeStr,
                                   string Name, bit NoMRPattern = 0> {
   let Predicates = [prd] in
   defm Z : avx512_store<opc, OpcodeStr, SSE_MOVA, _.info512, alignedstore,
-                        masked_store_aligned512, Name#Z>, EVEX_V512;
+                        masked_store_aligned512, Name#Z,
+                        NoMRPattern>, EVEX_V512;
 
   let Predicates = [prd, HasVLX] in {
     defm Z256 : avx512_store<opc, OpcodeStr, SSE_MOVA, _.info256, alignedstore,
-                             masked_store_aligned256, Name#Z256>, EVEX_V256;
+                             masked_store_aligned256, Name#Z256,
+                             NoMRPattern>, EVEX_V256;
     defm Z128 : avx512_store<opc, OpcodeStr, SSE_MOVA, _.info128, alignedstore,
-                             masked_store_aligned128, Name#Z128>, EVEX_V128;
+                             masked_store_aligned128, Name#Z128,
+                             NoMRPattern>, EVEX_V128;
   }
 }
 
@@ -3450,6 +3453,8 @@ let Predicates = [HasBWI, NoVLX] in {
 
 let Predicates = [HasAVX512] in {
   // 512-bit store.
+  def : Pat<(alignedstore (v16i32 VR512:$src), addr:$dst),
+            (VMOVDQA64Zmr addr:$dst, VR512:$src)>;
   def : Pat<(alignedstore (v32i16 VR512:$src), addr:$dst),
             (VMOVDQA64Zmr addr:$dst, VR512:$src)>;
   def : Pat<(alignedstore (v64i8 VR512:$src), addr:$dst),
@@ -3464,6 +3469,8 @@ let Predicates = [HasAVX512] in {
 
 let Predicates = [HasVLX] in {
   // 128-bit store.
+  def : Pat<(alignedstore (v4i32 VR128X:$src), addr:$dst),
+            (VMOVDQA64Z128mr addr:$dst, VR128X:$src)>;
   def : Pat<(alignedstore (v8i16 VR128X:$src), addr:$dst),
             (VMOVDQA64Z128mr addr:$dst, VR128X:$src)>;
   def : Pat<(alignedstore (v16i8 VR128X:$src), addr:$dst),
@@ -3476,6 +3483,8 @@ let Predicates = [HasVLX] in {
             (VMOVDQU64Z128mr addr:$dst, VR128X:$src)>;
 
   // 256-bit store.
+  def : Pat<(alignedstore (v8i32 VR256X:$src), addr:$dst),
+            (VMOVDQA64Z256mr addr:$dst, VR256X:$src)>;
   def : Pat<(alignedstore (v16i16 VR256X:$src), addr:$dst),
             (VMOVDQA64Z256mr addr:$dst, VR256X:$src)>;
   def : Pat<(alignedstore (v32i8 VR256X:$src), addr:$dst),

@@ -20,6 +20,7 @@
 
 namespace llvm {
 
+class DWARFContext;
 class DWARFUnit;
 class raw_ostream;
 
@@ -85,7 +86,7 @@ private:
   dwarf::Form Form;             /// Form for this value.
   ValueType Value;              /// Contains all data for the form.
   const DWARFUnit *U = nullptr; /// Remember the DWARFUnit at extract time.
-
+  const DWARFContext *C = nullptr; /// Context for extract time.
 public:
   DWARFFormValue(dwarf::Form F = dwarf::Form(0)) : Form(F) {}
 
@@ -108,10 +109,17 @@ public:
 
   /// Extracts a value in \p Data at offset \p *OffsetPtr. The information
   /// in \p FormParams is needed to interpret some forms. The optional
-  /// \p Unit allows extracting information if the form refers to other
-  /// sections (e.g., .debug_str).
+  /// \p Context and \p Unit allows extracting information if the form refers
+  /// to other sections (e.g., .debug_str).
   bool extractValue(const DWARFDataExtractor &Data, uint32_t *OffsetPtr,
-                    DWARFFormParams FormParams, const DWARFUnit *U = nullptr);
+                    DWARFFormParams FormParams,
+                    const DWARFContext *Context = nullptr,
+                    const DWARFUnit *Unit = nullptr);
+
+  bool extractValue(const DWARFDataExtractor &Data, uint32_t *OffsetPtr,
+                    DWARFFormParams FormParams, const DWARFUnit *U) {
+    return extractValue(Data, OffsetPtr, FormParams, nullptr, U);
+  }
 
   bool isInlinedCStr() const {
     return Value.data != nullptr && Value.data == (const uint8_t *)Value.cstr;

@@ -555,45 +555,23 @@ public:
     return (Val >= N && Val <= M);
   }
 
-  bool isLogicalImm32() const {
+  // NOTE: Also used for isLogicalImmNot as anything that can be represented as
+  // a logical immediate can always be represented when inverted.
+  template <typename T>
+  bool isLogicalImm() const {
     if (!isImm())
       return false;
     const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
     if (!MCE)
       return false;
+
     int64_t Val = MCE->getValue();
-    if (Val >> 32 != 0 && Val >> 32 != ~0LL)
+    int64_t SVal = typename std::make_signed<T>::type(Val);
+    int64_t UVal = typename std::make_unsigned<T>::type(Val);
+    if (Val != SVal && Val != UVal)
       return false;
-    Val &= 0xFFFFFFFF;
-    return AArch64_AM::isLogicalImmediate(Val, 32);
-  }
 
-  bool isLogicalImm64() const {
-    if (!isImm())
-      return false;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return false;
-    return AArch64_AM::isLogicalImmediate(MCE->getValue(), 64);
-  }
-
-  bool isLogicalImm32Not() const {
-    if (!isImm())
-      return false;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return false;
-    int64_t Val = ~MCE->getValue() & 0xFFFFFFFF;
-    return AArch64_AM::isLogicalImmediate(Val, 32);
-  }
-
-  bool isLogicalImm64Not() const {
-    if (!isImm())
-      return false;
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return false;
-    return AArch64_AM::isLogicalImmediate(~MCE->getValue(), 64);
+    return AArch64_AM::isLogicalImmediate(UVal, sizeof(T) * 8);
   }
 
   bool isShiftedImm() const { return Kind == k_ShiftedImm; }
@@ -1378,34 +1356,21 @@ public:
     Inst.addOperand(MCOperand::createImm(MCE->getValue()));
   }
 
-  void addLogicalImm32Operands(MCInst &Inst, unsigned N) const {
+  template <typename T>
+  void addLogicalImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
-    uint64_t encoding =
-        AArch64_AM::encodeLogicalImmediate(MCE->getValue() & 0xFFFFFFFF, 32);
+    typename std::make_unsigned<T>::type Val = MCE->getValue();
+    uint64_t encoding = AArch64_AM::encodeLogicalImmediate(Val, sizeof(T) * 8);
     Inst.addOperand(MCOperand::createImm(encoding));
   }
 
-  void addLogicalImm64Operands(MCInst &Inst, unsigned N) const {
+  template <typename T>
+  void addLogicalImmNotOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
-    uint64_t encoding = AArch64_AM::encodeLogicalImmediate(MCE->getValue(), 64);
-    Inst.addOperand(MCOperand::createImm(encoding));
-  }
-
-  void addLogicalImm32NotOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
-    int64_t Val = ~MCE->getValue() & 0xFFFFFFFF;
-    uint64_t encoding = AArch64_AM::encodeLogicalImmediate(Val, 32);
-    Inst.addOperand(MCOperand::createImm(encoding));
-  }
-
-  void addLogicalImm64NotOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
-    uint64_t encoding =
-        AArch64_AM::encodeLogicalImmediate(~MCE->getValue(), 64);
+    typename std::make_unsigned<T>::type Val = ~MCE->getValue();
+    uint64_t encoding = AArch64_AM::encodeLogicalImmediate(Val, sizeof(T) * 8);
     Inst.addOperand(MCOperand::createImm(encoding));
   }
 
