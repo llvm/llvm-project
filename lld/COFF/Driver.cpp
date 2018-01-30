@@ -572,6 +572,8 @@ static void createImportLibrary(bool AsLib) {
   if ((*OldBuf)->getBuffer() != NewBuf->getBuffer()) {
     OldBuf->reset();
     HandleError(errorCodeToError(sys::fs::rename(TmpName, Path)));
+  } else {
+    sys::fs::remove(TmpName);
   }
 }
 

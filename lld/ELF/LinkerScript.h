@@ -268,6 +268,7 @@ public:
   void assignAddresses();
   void allocateHeaders(std::vector<PhdrEntry *> &Phdrs);
   void processSectionCommands();
+  void declareSymbols();
 
   // SECTIONS command list.
   std::vector<BaseCommand *> SectionCommands;

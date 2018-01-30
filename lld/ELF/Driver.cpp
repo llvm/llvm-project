@@ -1063,6 +1063,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   if (!Config->Relocatable)
     addReservedSymbols();
 
+  // We want to declare linker script's symbols early,
+  // so that we can version them.
+  Script->declareSymbols();
+
   // Apply version scripts.
   Symtab->scanVersionScript();
 
