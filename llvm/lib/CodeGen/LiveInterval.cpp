@@ -991,6 +991,7 @@ void LiveInterval::print(raw_ostream &OS) const {
   // Print subranges
   for (const SubRange &SR : subranges())
     OS << SR;
+  OS << " weight:" << weight;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

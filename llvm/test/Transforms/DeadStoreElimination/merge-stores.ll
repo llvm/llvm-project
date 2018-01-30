@@ -186,6 +186,21 @@ define void @PR34074(i32* %x, i64* %y) {
   ret void
 }
 
+; FIXME: We can't eliminate the last store because P and Q may alias.
+
+define void @PR36129(i32* %P, i32* %Q) {
+; CHECK-LABEL: @PR36129(
+; CHECK-NEXT:    store i32 3, i32* [[P:%.*]]
+; CHECK-NEXT:    store i32 2, i32* [[Q:%.*]]
+; CHECK-NEXT:    ret void
+;
+  store i32 1, i32* %P
+  %P2 = bitcast i32* %P to i8*
+  store i32 2, i32* %Q
+  store i8 3, i8* %P2
+  ret void
+}
+
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 5.0.0 (trunk 306512)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "me.cpp", directory: "/compiler-explorer")
 !2 = !{}

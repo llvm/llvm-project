@@ -20,11 +20,10 @@ public:
   DWARFCompileUnit(DWARFContext &Context, const DWARFSection &Section,
                    const DWARFDebugAbbrev *DA, const DWARFSection *RS,
                    StringRef SS, const DWARFSection &SOS,
-                   const DWARFSection *AOS, const DWARFSection &LS,
-                   StringRef LSS, bool LE, bool IsDWO,
-                   const DWARFUnitSectionBase &UnitSection,
+                   const DWARFSection *AOS, const DWARFSection &LS, bool LE,
+                   bool IsDWO, const DWARFUnitSectionBase &UnitSection,
                    const DWARFUnitIndex::Entry *Entry)
-      : DWARFUnit(Context, Section, DA, RS, SS, SOS, AOS, LS, LSS, LE, IsDWO,
+      : DWARFUnit(Context, Section, DA, RS, SS, SOS, AOS, LS, LE, IsDWO,
                   UnitSection, Entry) {}
 
   // VTable anchor.

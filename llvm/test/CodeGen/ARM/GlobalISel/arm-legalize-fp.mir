@@ -29,6 +29,16 @@
   define void @test_fpext_float_to_double() { ret void }
   define void @test_fptrunc_double_to_float() { ret void }
 
+  define void @test_fptosi_float() { ret void }
+  define void @test_fptosi_double() { ret void }
+  define void @test_fptoui_float() { ret void }
+  define void @test_fptoui_double() { ret void }
+
+  define void @test_sitofp_float() { ret void }
+  define void @test_sitofp_double() { ret void }
+  define void @test_uitofp_float() { ret void }
+  define void @test_uitofp_double() { ret void }
+
   define void @test_fcmp_true_s32() { ret void }
   define void @test_fcmp_false_s32() { ret void }
 
@@ -812,6 +822,282 @@ body:             |
     %r0 = COPY %3(s32)
     BX_RET 14, %noreg, implicit %r0
 ---
+---
+name:            test_fptosi_float
+# CHECK-LABEL: name: test_fptosi_float
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    %0(s32) = COPY %r0
+    ; HARD: [[R:%[0-9]+]]:_(s32) = G_FPTOSI [[X]]
+    ; SOFT-NOT: G_FPTOSI
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X]]
+    ; SOFT-AEABI: BL &__aeabi_f2iz, {{.*}}, implicit %r0, implicit-def %r0
+    ; SOFT-DEFAULT: BL &__fixsfsi, {{.*}}, implicit %r0, implicit-def %r0
+    ; SOFT: [[R:%[0-9]+]]:_(s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-NOT: G_FPTOSI
+    %1(s32) = G_FPTOSI %0(s32)
+    ; CHECK: %r0 = COPY [[R]]
+    %r0 = COPY %1(s32)
+    BX_RET 14, %noreg, implicit %r0
+...
+---
+name:            test_fptosi_double
+# CHECK-LABEL: name: test_fptosi_double
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    ; CHECK-DAG: [[X0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[X1:%[0-9]+]]:_(s32) = COPY %r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; HARD: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[X0]]
+    %2(s64) = G_MERGE_VALUES %0(s32), %1(s32)
+    ; HARD: [[R:%[0-9]+]]:_(s32) = G_FPTOSI [[X]]
+    ; SOFT-NOT: G_FPTOSI
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r{{[0-1]}} = COPY [[X0]]
+    ; SOFT-DAG: %r{{[0-1]}} = COPY [[X1]]
+    ; SOFT-AEABI: BL &__aeabi_d2iz, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BL &__fixdfsi, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT: [[R:%[0-9]+]]:_(s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-NOT: G_FPTOSI
+    %3(s32) = G_FPTOSI %2(s64)
+    ; CHECK: %r0 = COPY [[R]](s32)
+    %r0 = COPY %3(s32)
+    BX_RET 14, %noreg, implicit %r0
+...
+---
+name:            test_fptoui_float
+# CHECK-LABEL: name: test_fptoui_float
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    %0(s32) = COPY %r0
+    ; HARD: [[R:%[0-9]+]]:_(s32) = G_FPTOUI [[X]]
+    ; SOFT-NOT: G_FPTOUI
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X]]
+    ; SOFT-AEABI: BL &__aeabi_f2uiz, {{.*}}, implicit %r0, implicit-def %r0
+    ; SOFT-DEFAULT: BL &__fixunssfsi, {{.*}}, implicit %r0, implicit-def %r0
+    ; SOFT: [[R:%[0-9]+]]:_(s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-NOT: G_FPTOUI
+    %1(s32) = G_FPTOUI %0(s32)
+    ; CHECK: %r0 = COPY [[R]]
+    %r0 = COPY %1(s32)
+    BX_RET 14, %noreg, implicit %r0
+...
+---
+name:            test_fptoui_double
+# CHECK-LABEL: name: test_fptoui_double
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    ; CHECK-DAG: [[X0:%[0-9]+]]:_(s32) = COPY %r0
+    ; CHECK-DAG: [[X1:%[0-9]+]]:_(s32) = COPY %r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; HARD: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[X0]]
+    %2(s64) = G_MERGE_VALUES %0(s32), %1(s32)
+    ; HARD: [[R:%[0-9]+]]:_(s32) = G_FPTOUI [[X]]
+    ; SOFT-NOT: G_FPTOUI
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r{{[0-1]}} = COPY [[X0]]
+    ; SOFT-DAG: %r{{[0-1]}} = COPY [[X1]]
+    ; SOFT-AEABI: BL &__aeabi_d2uiz, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BL &__fixunsdfsi, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT: [[R:%[0-9]+]]:_(s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-NOT: G_FPTOUI
+    %3(s32) = G_FPTOUI %2(s64)
+    ; CHECK: %r0 = COPY [[R]](s32)
+    %r0 = COPY %3(s32)
+    BX_RET 14, %noreg, implicit %r0
+...
+---
+name:            test_sitofp_float
+# CHECK-LABEL: name: test_sitofp_float
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    %0(s32) = COPY %r0
+    ; HARD: [[R:%[0-9]+]]:_(s32) = G_SITOFP [[X]]
+    ; SOFT-NOT: G_SITOFP
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X]]
+    ; SOFT-AEABI: BL &__aeabi_i2f, {{.*}}, implicit %r0, implicit-def %r0
+    ; SOFT-DEFAULT: BL &__floatsisf, {{.*}}, implicit %r0, implicit-def %r0
+    ; SOFT: [[R:%[0-9]+]]:_(s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-NOT: G_SITOFP
+    %1(s32) = G_SITOFP %0(s32)
+    ; CHECK: %r0 = COPY [[R]]
+    %r0 = COPY %1(s32)
+    BX_RET 14, %noreg, implicit %r0
+...
+---
+name:            test_sitofp_double
+# CHECK-LABEL: name: test_sitofp_double
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    ; CHECK: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    %0(s32) = COPY %r0
+    ; HARD: [[R:%[0-9]+]]:_(s64) = G_SITOFP [[X]]
+    ; SOFT-NOT: G_SITOFP
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT: %r0 = COPY [[X]]
+    ; SOFT-AEABI: BL &__aeabi_i2d, {{.*}}, implicit %r0, implicit-def %r0, implicit-def %r1
+    ; SOFT-DEFAULT: BL &__floatsidf, {{.*}}, implicit %r0, implicit-def %r0, implicit-def %r1
+    ; SOFT-DAG: [[R0:%[0-9]+]]:_(s32) = COPY %r0
+    ; SOFT-DAG: [[R1:%[0-9]+]]:_(s32) = COPY %r1
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-NOT: G_SITOFP
+    %1(s64) = G_SITOFP %0(s32)
+    ; HARD: [[R0:%[0-9]+]]:_(s32), [[R1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[R]]
+    %2(s32), %3(s32) = G_UNMERGE_VALUES %1(s64)
+    ; CHECK-DAG: %r0 = COPY [[R0]](s32)
+    ; CHECK-DAG: %r1 = COPY [[R1]](s32)
+    %r0 = COPY %2(s32)
+    %r1 = COPY %3(s32)
+    BX_RET 14, %noreg, implicit %r0, implicit %r1
+...
+---
+name:            test_uitofp_float
+# CHECK-LABEL: name: test_uitofp_float
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    %0(s32) = COPY %r0
+    ; HARD: [[R:%[0-9]+]]:_(s32) = G_UITOFP [[X]]
+    ; SOFT-NOT: G_UITOFP
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X]]
+    ; SOFT-AEABI: BL &__aeabi_ui2f, {{.*}}, implicit %r0, implicit-def %r0
+    ; SOFT-DEFAULT: BL &__floatunsisf, {{.*}}, implicit %r0, implicit-def %r0
+    ; SOFT: [[R:%[0-9]+]]:_(s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-NOT: G_UITOFP
+    %1(s32) = G_UITOFP %0(s32)
+    ; CHECK: %r0 = COPY [[R]]
+    %r0 = COPY %1(s32)
+    BX_RET 14, %noreg, implicit %r0
+...
+---
+name:            test_uitofp_double
+# CHECK-LABEL: name: test_uitofp_double
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    ; CHECK: [[X:%[0-9]+]]:_(s32) = COPY %r0
+    %0(s32) = COPY %r0
+    ; HARD: [[R:%[0-9]+]]:_(s64) = G_UITOFP [[X]]
+    ; SOFT-NOT: G_UITOFP
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT: %r0 = COPY [[X]]
+    ; SOFT-AEABI: BL &__aeabi_ui2d, {{.*}}, implicit %r0, implicit-def %r0, implicit-def %r1
+    ; SOFT-DEFAULT: BL &__floatunsidf, {{.*}}, implicit %r0, implicit-def %r0, implicit-def %r1
+    ; SOFT-DAG: [[R0:%[0-9]+]]:_(s32) = COPY %r0
+    ; SOFT-DAG: [[R1:%[0-9]+]]:_(s32) = COPY %r1
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-NOT: G_UITOFP
+    %1(s64) = G_UITOFP %0(s32)
+    ; HARD: [[R0:%[0-9]+]]:_(s32), [[R1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[R]]
+    %2(s32), %3(s32) = G_UNMERGE_VALUES %1(s64)
+    ; CHECK-DAG: %r0 = COPY [[R0]](s32)
+    ; CHECK-DAG: %r1 = COPY [[R1]](s32)
+    %r0 = COPY %2(s32)
+    %r1 = COPY %3(s32)
+    BX_RET 14, %noreg, implicit %r0, implicit %r1
+...
 ...
 name:            test_fcmp_true_s32
 # CHECK-LABEL: name: test_fcmp_true_s32
