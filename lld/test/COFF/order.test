@@ -24,6 +24,18 @@
 # DEFAULT: fn4
 # DEFAULT: fn1
 
+# RUN: echo fn1 > %t2.order
+# RUN: echo fn2 >> %t2.order
+# RUN: echo fn3 >> %t2.order
+# RUN: echo fn4 >> %t2.order
+# RUN: echo foo >> %t2.order
+# RUN: lld-link -entry:fn1 -subsystem:console -debug %t1.obj %t2.obj \
+# RUN:   -out:%t.exe -order:@%t2.order 2>&1 | FileCheck -check-prefix=WARN %s
+# WARN: warning: /order:{{.*}} missing symbol: foo
+# WARN-NOT: f2
+# WARN-NOT: f3
+# WARN-NOT: f4
+
 --- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_AMD64
