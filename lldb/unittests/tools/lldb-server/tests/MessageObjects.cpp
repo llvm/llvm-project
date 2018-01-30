@@ -67,8 +67,8 @@ StringRef ThreadInfo::ReadRegister(unsigned int register_id) const {
 
 bool ThreadInfo::ReadRegisterAsUint64(unsigned int register_id,
                                       uint64_t &value) const {
-  StringRef value_str(m_registers.lookup(register_id));
-  if (value_str.getAsInteger(16, value)) {
+  std::string value_str(m_registers.lookup(register_id));
+  if (!llvm::to_integer(value_str, value, 16)) {
     GTEST_LOG_(ERROR)
         << formatv("ThreadInfo: Unable to parse register value at {0}.",
                    register_id)
