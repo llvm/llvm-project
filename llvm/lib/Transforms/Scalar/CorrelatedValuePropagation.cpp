@@ -14,6 +14,7 @@
 #include "llvm/Transforms/Scalar/CorrelatedValuePropagation.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -120,8 +121,8 @@ static bool processSelect(SelectInst *S, LazyValueInfo *LVI) {
   return true;
 }
 
-static bool processPHI(PHINode *P, LazyValueInfo *LVI,
-                       const SimplifyQuery &SQ) {
+static bool processPHI(PHINode *P, LazyValueInfo *LVI, const SimplifyQuery &SQ,
+                       DenseSet<BasicBlock *> &ReachableBlocks) {
   bool Changed = false;
 
   BasicBlock *BB = P->getParent();
@@ -129,7 +130,18 @@ static bool processPHI(PHINode *P, LazyValueInfo *LVI,
     Value *Incoming = P->getIncomingValue(i);
     if (isa<Constant>(Incoming)) continue;
 
-    Value *V = LVI->getConstantOnEdge(Incoming, P->getIncomingBlock(i), BB, P);
+    // If the incoming value is coming from an unreachable block, replace
+    // it with undef and go on. This is good for two reasons:
+    // 1) We skip an LVI query for an unreachable block
+    // 2) We transform the incoming value so that the code below doesn't
+    //    mess around with IR in unreachable blocks.
+    BasicBlock *IncomingBB = P->getIncomingBlock(i);
+    if (!ReachableBlocks.count(IncomingBB)) {
+      P->setIncomingValue(i, UndefValue::get(P->getType()));
+      continue;
+    }
+
+    Value *V = LVI->getConstantOnEdge(Incoming, IncomingBB, BB, P);
 
     // Look if the incoming value is a select with a scalar condition for which
     // LVI can tells us the value. In that case replace the incoming value with
@@ -561,6 +573,14 @@ static Constant *getConstantAt(Value *V, Instruction *At, LazyValueInfo *LVI) {
 
 static bool runImpl(Function &F, LazyValueInfo *LVI, const SimplifyQuery &SQ) {
   bool FnChanged = false;
+
+  // Compute reachability from the entry block of this function via an RPO
+  // walk. We use this information when processing PHIs.
+  DenseSet<BasicBlock *> ReachableBlocks;
+  ReversePostOrderTraversal<Function *> RPOT(&F);
+  for (BasicBlock *BB : RPOT)
+    ReachableBlocks.insert(BB);
+
   // Visiting in a pre-order depth-first traversal causes us to simplify early
   // blocks before querying later blocks (which require us to analyze early
   // blocks).  Eagerly simplifying shallow blocks means there is strictly less
@@ -575,7 +595,7 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, const SimplifyQuery &SQ) {
         BBChanged |= processSelect(cast<SelectInst>(II), LVI);
         break;
       case Instruction::PHI:
-        BBChanged |= processPHI(cast<PHINode>(II), LVI, SQ);
+        BBChanged |= processPHI(cast<PHINode>(II), LVI, SQ, ReachableBlocks);
         break;
       case Instruction::ICmp:
       case Instruction::FCmp:
