@@ -35,6 +35,13 @@ OPTIONS
  Produce a flat dSYM file. A ``.dwarf`` extension will be appended to the
  executable name unless the output file is specified using the -o option.
 
+
+.. option:: -z, --minimize
+
+ When used when creating a dSYM file, this option will suppress the emission of
+ the .debug_inlines, .debug_pubnames, and .debug_pubtypes sections since
+ dsymutil currently has better equivalents: .apple_names and .apple_types.
+
 .. option:: --no-odr
 
  Do not use ODR (One Definition Rule) for uniquing C++ types.
