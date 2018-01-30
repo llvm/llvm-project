@@ -1603,8 +1603,9 @@ class Base(unittest2.TestCase):
                 return path
 
         # Tries to find clang at the same folder as the lldb
-        path = os.path.join(os.path.dirname(lldbtest_config.lldbExec), "clang")
-        if os.path.exists(path):
+        lldb_dir = os.path.dirname(lldbtest_config.lldbExec)
+        path = distutils.spawn.find_executable("clang", lldb_dir)
+        if path is not None:
             return path
 
         return os.environ["CC"]
