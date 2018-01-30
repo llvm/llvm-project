@@ -32,6 +32,15 @@ https://developer.apple.com/library/content/documentation/Cocoa/Conceptual/Codin
 
 The corresponding style rule: https://developer.apple.com/library/content/documentation/Cocoa/Conceptual/CodingGuidelines/Articles/NamingIvarsAndTypes.html#//apple_ref/doc/uid/20001284-1001757
 
+The check will also accept property declared in category with a prefix of
+lowercase letters followed by a '_' to avoid naming conflict. For example:
+
+.. code-block:: objc
+@property(nonatomic, assign) int abc_lowerCamelCase;
+
+The corresponding style rule: https://developer.apple.com/library/content/qa/qa1908/_index.html
+
+
 Options
 -------
 
