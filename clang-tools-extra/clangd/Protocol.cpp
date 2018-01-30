@@ -37,8 +37,12 @@ bool fromJSON(const json::Expr &E, URIForFile &R) {
           "Clangd only supports 'file' URI scheme for workspace files: " + *S);
       return false;
     }
-    // We know that body of a file URI is absolute path.
-    R.file = U->body();
+    auto Path = URI::resolve(*U);
+    if (!Path) {
+      log(Context::empty(), llvm::toString(Path.takeError()));
+      return false;
+    }
+    R.file = *Path;
     return true;
   }
   return false;

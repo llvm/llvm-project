@@ -87,10 +87,10 @@ static llvm::cl::opt<PCHStorageFlag> PCHStorage(
     llvm::cl::init(PCHStorageFlag::Disk));
 
 static llvm::cl::opt<int> LimitCompletionResult(
-    "limit-completion",
+    "completion-limit",
     llvm::cl::desc("Limit the number of completion results returned by clangd. "
                    "0 means no limit."),
-    llvm::cl::init(0));
+    llvm::cl::init(100));
 
 static llvm::cl::opt<bool> RunSynchronously(
     "run-synchronously",
@@ -117,9 +117,9 @@ static llvm::cl::opt<Path> TraceFile(
 static llvm::cl::opt<bool> EnableIndexBasedCompletion(
     "enable-index-based-completion",
     llvm::cl::desc(
-        "Enable index-based global code completion (experimental). Clangd will "
-        "use index built from symbols in opened files"),
-    llvm::cl::init(false), llvm::cl::Hidden);
+        "Enable index-based global code completion. "
+        "Clang uses an index built from symbols in opened files"),
+    llvm::cl::init(true));
 
 static llvm::cl::opt<Path> YamlSymbolFile(
     "yaml-symbol-file",
