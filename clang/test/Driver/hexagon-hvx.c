@@ -21,6 +21,9 @@
 
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 -mhvx \
 // RUN:  -mhvx-length=128B 2>&1 | FileCheck -check-prefix=CHECKHVX2 %s
+
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 -mhvx \
+// RUN:  -mhvx-length=128b 2>&1 | FileCheck -check-prefix=CHECKHVX2 %s
 // CHECKHVX2-NOT: "-target-feature" "+hvx-length64b"
 // CHECKHVX2: "-target-feature" "+hvx-length128b"
 
@@ -79,8 +82,10 @@
 // The default mode on v60,v62 is 64B.
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv60 -mhvx \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXLENGTH-64B %s
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv60 -mhvx -mhvx-length=64B\
-// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXLENGTH-64B %s
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv60 -mhvx \
+// RUN:  -mhvx-length=64b 2>&1 | FileCheck -check-prefix=CHECK-HVXLENGTH-64B %s
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv60 -mhvx \
+// RUN:  -mhvx-length=64B 2>&1 | FileCheck -check-prefix=CHECK-HVXLENGTH-64B %s
 // CHECK-HVXLENGTH-64B: "-target-feature" "+hvx{{.*}}" "-target-feature" "+hvx-length64b"
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 -mhvx -mhvx-length=128B\
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXLENGTH-128B %s
