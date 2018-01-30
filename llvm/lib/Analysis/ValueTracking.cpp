@@ -4215,7 +4215,7 @@ static SelectPatternResult matchMinMaxOfMinMax(CmpInst::Predicate Pred,
       break;
     return {SPF_UNKNOWN, SPNB_NA, false};
   default:
-    llvm_unreachable("Bad flavor while matching min/max");
+    return {SPF_UNKNOWN, SPNB_NA, false};
   }
 
   // a pred c ? m(a, b) : m(c, b) --> m(m(a, b), m(c, b))
