@@ -1538,6 +1538,9 @@ class Base(unittest2.TestCase):
         """Platform specific way to build binaries with dsym info."""
         if not testdir:
             testdir = self.mydir
+        if self.debug_info <> "dsym":
+            raise Exception("NO_DEBUG_INFO_TESTCASE must build with buildDefault")
+
         module = builder_module()
         dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
         if not module.buildDsym(self, architecture, compiler,
@@ -1554,6 +1557,9 @@ class Base(unittest2.TestCase):
         """Platform specific way to build binaries with dwarf maps."""
         if not testdir:
             testdir = self.mydir
+        if self.debug_info <> "dwarf":
+            raise Exception("NO_DEBUG_INFO_TESTCASE must build with buildDefault")
+
         module = builder_module()
         dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
         if not module.buildDwarf(self, architecture, compiler,
@@ -1570,6 +1576,9 @@ class Base(unittest2.TestCase):
         """Platform specific way to build binaries with dwarf maps."""
         if not testdir:
             testdir = self.mydir
+        if self.debug_info <> "dwo":
+            raise Exception("NO_DEBUG_INFO_TESTCASE must build with buildDefault")
+
         module = builder_module()
         dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
         if not module.buildDwo(self, architecture, compiler,
@@ -1586,6 +1595,9 @@ class Base(unittest2.TestCase):
         """Platform specific way to build binaries with gmodules info."""
         if not testdir:
             testdir = self.mydir
+        if self.debug_info <> "gmodules":
+            raise Exception("NO_DEBUG_INFO_TESTCASE must build with buildDefault")
+
         module = builder_module()
         dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
         if not module.buildGModules(self, architecture, compiler,
