@@ -661,7 +661,24 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   }
   case TargetOpcode::G_FCONSTANT: {
     unsigned DstExt = MRI.createGenericVirtualRegister(WideTy);
-    MIRBuilder.buildFConstant(DstExt, *MI.getOperand(1).getFPImm());
+    const ConstantFP *CFP = MI.getOperand(1).getFPImm();
+    APFloat Val = CFP->getValueAPF();
+    LLVMContext &Ctx = MIRBuilder.getMF().getFunction().getContext();
+    auto LLT2Sem = [](LLT Ty) {
+      switch (Ty.getSizeInBits()) {
+      case 32:
+        return &APFloat::IEEEsingle();
+        break;
+      case 64:
+        return &APFloat::IEEEdouble();
+        break;
+      default:
+        llvm_unreachable("Unhandled fp widen type");
+      }
+    };
+    bool LosesInfo;
+    Val.convert(*LLT2Sem(WideTy), APFloat::rmTowardZero, &LosesInfo);
+    MIRBuilder.buildFConstant(DstExt, *ConstantFP::get(Ctx, Val));
     MIRBuilder.buildFPTrunc(MI.getOperand(0).getReg(), DstExt);
     MI.eraseFromParent();
     return Legalized;
