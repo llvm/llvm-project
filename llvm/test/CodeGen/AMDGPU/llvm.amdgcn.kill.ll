@@ -234,6 +234,23 @@ define amdgpu_ps void @wqm(float %a) {
   ret void
 }
 
+; This checks that we use the 64-bit encoding when the operand is a SGPR.
+; SI-LABEL: {{^}}test_sgpr:
+; SI: v_cmpx_ge_f32_e64
+define amdgpu_ps void @test_sgpr(float inreg %a) #0 {
+  %c = fcmp ole float %a, 1.000000e+00
+  call void @llvm.amdgcn.kill(i1 %c) #1
+  ret void
+}
+
+; SI-LABEL: {{^}}test_non_inline_imm_sgpr:
+; SI-NOT: v_cmpx_ge_f32_e64
+define amdgpu_ps void @test_non_inline_imm_sgpr(float inreg %a) #0 {
+  %c = fcmp ole float %a, 1.500000e+00
+  call void @llvm.amdgcn.kill(i1 %c) #1
+  ret void
+}
+
 declare void @llvm.amdgcn.kill(i1) #0
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
 declare i1 @llvm.amdgcn.wqm.vote(i1)
