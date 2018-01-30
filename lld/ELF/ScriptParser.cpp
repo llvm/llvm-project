@@ -1293,8 +1293,8 @@ void ScriptParser::readMemory() {
     // Add the memory region to the region map.
     if (Script->MemoryRegions.count(Name))
       setError("region '" + Name + "' already defined");
-    MemoryRegion *MR = make<MemoryRegion>();
-    *MR = {Name, Origin, Length, Flags, NegFlags};
+    MemoryRegion *MR =
+        make<MemoryRegion>(Name, Origin, Length, Flags, NegFlags);
     Script->MemoryRegions[Name] = MR;
   }
 }
