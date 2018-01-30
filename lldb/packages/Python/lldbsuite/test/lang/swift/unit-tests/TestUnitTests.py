@@ -52,7 +52,7 @@ class TestUnitTests(TestBase):
     def do_test(self):
         """Test that XCTest-based unit tests work"""
         exe_name = "xctest"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         def cleanup():
             execute_command("make cleanup")

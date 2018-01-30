@@ -62,7 +62,7 @@ class TestSwiftGenericExpressions(lldbtest.TestBase):
     def do_test(self):
         """Test expressions in generic contexts"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)
@@ -101,7 +101,7 @@ class TestSwiftGenericExpressions(lldbtest.TestBase):
     def do_ivar_test(self):
         """Test expressions in generic contexts"""
         exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)

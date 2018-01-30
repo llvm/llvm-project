@@ -74,7 +74,7 @@ class SwiftStaticLinkingMacOSTestCase(TestBase):
         line_a = 5
         src_b = lldb.SBFileSpec("B.swift")
         line_b = 5
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)
