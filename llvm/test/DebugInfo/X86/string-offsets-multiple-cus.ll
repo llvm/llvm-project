@@ -1,7 +1,7 @@
 ; REQUIRES: object-emission
-; RUN: %llc_dwarf -mtriple=x86_64-unknown-linux-gnu -filetype=obj < %s | llvm-dwarfdump -v - | \
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -filetype=obj < %s | llvm-dwarfdump -v - | \
 ; RUN:    FileCheck --check-prefix=DEFAULT --check-prefix=BOTH %s
-; RUN: %llc_dwarf -mtriple=x86_64-unknown-linux-gnu -filetype=obj -generate-type-units < %s |  \
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -filetype=obj -generate-type-units < %s |  \
 ; RUN:    llvm-dwarfdump -v - | FileCheck --check-prefix=TYPEUNITS --check-prefix=BOTH %s
 ;
 ; Check that we generate the DWARF v5 string offsets section correctly when we

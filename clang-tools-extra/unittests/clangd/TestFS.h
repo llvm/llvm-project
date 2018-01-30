@@ -45,6 +45,9 @@ public:
   std::vector<std::string> ExtraClangFlags;
 };
 
+// Returns an absolute (fake) test directory for this OS.
+const char *getVirtualTestRoot();
+
 // Returns a suitable absolute path for this OS.
 llvm::SmallString<32> getVirtualTestFilePath(PathRef File);
 

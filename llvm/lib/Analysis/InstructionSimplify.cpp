@@ -4298,8 +4298,14 @@ static Value *SimplifyFDivInst(Value *Op0, Value *Op1, FastMathFlags FMF,
 
   if (FMF.noNaNs()) {
     // X / X -> 1.0 is legal when NaNs are ignored.
+    // We can ignore infinities because INF/INF is NaN.
     if (Op0 == Op1)
       return ConstantFP::get(Op0->getType(), 1.0);
+
+    // (X * Y) / Y --> X if we can reassociate to the above form.
+    Value *X;
+    if (FMF.allowReassoc() && match(Op0, m_c_FMul(m_Value(X), m_Specific(Op1))))
+      return X;
 
     // -X /  X -> -1.0 and
     //  X / -X -> -1.0 are legal when NaNs are ignored.
