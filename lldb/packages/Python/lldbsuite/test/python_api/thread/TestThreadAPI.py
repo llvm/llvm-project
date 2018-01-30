@@ -134,7 +134,7 @@ class ThreadAPITestCase(TestBase):
 
     def step_out_of_malloc_into_function_b(self, exe_name):
         """Test Python SBThread.StepOut() API to step out of a malloc call where the call site is at function b()."""
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
@@ -181,7 +181,7 @@ class ThreadAPITestCase(TestBase):
 
     def step_over_3_times(self, exe_name):
         """Test Python SBThread.StepOver() API."""
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
@@ -227,7 +227,7 @@ class ThreadAPITestCase(TestBase):
 
     def run_to_address(self, exe_name):
         """Test Python SBThread.RunToAddress() API."""
-        exe = os.path.join(os.getcwd(), exe_name)
+        exe = self.getBuildArtifact(exe_name)
 
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
