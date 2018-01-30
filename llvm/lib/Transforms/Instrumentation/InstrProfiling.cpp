@@ -430,7 +430,27 @@ void InstrProfiling::promoteCounterLoadStores(Function *F) {
   }
 }
 
+/// Check if the module contains uses of any profiling intrinsics.
+static bool containsProfilingIntrinsics(Module &M) {
+  if (auto *F = M.getFunction(
+          Intrinsic::getName(llvm::Intrinsic::instrprof_increment)))
+    return !F->use_empty();
+  if (auto *F = M.getFunction(
+          Intrinsic::getName(llvm::Intrinsic::instrprof_increment_step)))
+    return !F->use_empty();
+  if (auto *F = M.getFunction(
+          Intrinsic::getName(llvm::Intrinsic::instrprof_value_profile)))
+    return !F->use_empty();
+  return false;
+}
+
 bool InstrProfiling::run(Module &M, const TargetLibraryInfo &TLI) {
+  // Improve compile time by avoiding linear scans when there is no work.
+  GlobalVariable *CoverageNamesVar =
+      M.getNamedGlobal(getCoverageUnusedNamesVarName());
+  if (!containsProfilingIntrinsics(M) && !CoverageNamesVar)
+    return false;
+
   bool MadeChange = false;
 
   this->M = &M;
@@ -464,8 +484,7 @@ bool InstrProfiling::run(Module &M, const TargetLibraryInfo &TLI) {
   for (Function &F : M)
     MadeChange |= lowerIntrinsics(&F);
 
-  if (GlobalVariable *CoverageNamesVar =
-          M.getNamedGlobal(getCoverageUnusedNamesVarName())) {
+  if (CoverageNamesVar) {
     lowerCoverageData(CoverageNamesVar);
     MadeChange = true;
   }
