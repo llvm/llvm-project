@@ -1,6 +1,7 @@
 ;;; llvm-mode.el --- Major mode for the LLVM assembler language.
 
 ;; Maintainer:  The LLVM team, http://llvm.org/
+;; Version: 1.0
 
 ;;; Commentary:
 
@@ -20,9 +21,9 @@
 (defvar llvm-font-lock-keywords
   (list
    ;; Variables
-   '("%[-a-zA-Z$\._][-a-zA-Z$\._0-9]*" . font-lock-variable-name-face)
+   '("%[-a-zA-Z$._][-a-zA-Z$._0-9]*" . font-lock-variable-name-face)
    ;; Labels
-   '("[-a-zA-Z$\._0-9]+:" . font-lock-variable-name-face)
+   '("[-a-zA-Z$._0-9]+:" . font-lock-variable-name-face)
    ;; Unnamed variable slots
    '("%[-]?[0-9]+" . font-lock-variable-name-face)
    ;; Types
@@ -30,7 +31,7 @@
    ;; Integer literals
    '("\\b[-]?[0-9]+\\b" . font-lock-preprocessor-face)
    ;; Floating point constants
-   '("\\b[-+]?[0-9]+\.[0-9]*\([eE][-+]?[0-9]+\)?\\b" . font-lock-preprocessor-face)
+   '("\\b[-+]?[0-9]+.[0-9]*\\([eE][-+]?[0-9]+\\)?\\b" . font-lock-preprocessor-face)
    ;; Hex constants
    '("\\b0x[0-9A-Fa-f]+\\b" . font-lock-preprocessor-face)
    ;; Keywords
@@ -74,11 +75,11 @@
 \\{llvm-mode-map}
   Runs `llvm-mode-hook' on startup."
   (setq font-lock-defaults `(llvm-font-lock-keywords))
-  (setq comment-start ";"))
+  (setq-local comment-start ";"))
 
 ;; Associate .ll files with llvm-mode
 ;;;###autoload
-(add-to-list 'auto-mode-alist (cons (purecopy "\\.ll\\'")  'llvm-mode))
+(add-to-list 'auto-mode-alist (cons "\\.ll\\'" 'llvm-mode))
 
 (provide 'llvm-mode)
 

@@ -159,7 +159,7 @@ MockCompilationDatabase::getCompileCommand(PathRef File) const {
                                   std::move(CommandLine), "")};
 }
 
-static const char *getVirtualTestRoot() {
+const char *getVirtualTestRoot() {
 #ifdef LLVM_ON_WIN32
   return "C:\\clangd-test";
 #else

@@ -34,8 +34,8 @@ void DWARFUnitSectionBase::parse(DWARFContext &C, const DWARFSection &Section) {
   const DWARFObject &D = C.getDWARFObj();
   parseImpl(C, Section, C.getDebugAbbrev(), &D.getRangeSection(),
             D.getStringSection(), D.getStringOffsetSection(),
-            &D.getAddrSection(), D.getLineSection(), D.getLineStringSection(),
-            D.isLittleEndian(), false, false);
+            &D.getAddrSection(), D.getLineSection(), D.isLittleEndian(), false,
+            false);
 }
 
 void DWARFUnitSectionBase::parseDWO(DWARFContext &C,
@@ -43,21 +43,20 @@ void DWARFUnitSectionBase::parseDWO(DWARFContext &C,
   const DWARFObject &D = C.getDWARFObj();
   parseImpl(C, DWOSection, C.getDebugAbbrevDWO(), &D.getRangeDWOSection(),
             D.getStringDWOSection(), D.getStringOffsetDWOSection(),
-            &D.getAddrSection(), D.getLineDWOSection(), StringRef(),
-            C.isLittleEndian(), true, Lazy);
+            &D.getAddrSection(), D.getLineDWOSection(), C.isLittleEndian(),
+            true, Lazy);
 }
 
 DWARFUnit::DWARFUnit(DWARFContext &DC, const DWARFSection &Section,
                      const DWARFDebugAbbrev *DA, const DWARFSection *RS,
                      StringRef SS, const DWARFSection &SOS,
-                     const DWARFSection *AOS, const DWARFSection &LS,
-                     StringRef LSS, bool LE, bool IsDWO,
-                     const DWARFUnitSectionBase &UnitSection,
+                     const DWARFSection *AOS, const DWARFSection &LS, bool LE,
+                     bool IsDWO, const DWARFUnitSectionBase &UnitSection,
                      const DWARFUnitIndex::Entry *IndexEntry)
     : Context(DC), InfoSection(Section), Abbrev(DA), RangeSection(RS),
-      LineSection(LS), LineStringSection(LSS), StringSection(SS),
-      StringOffsetSection(SOS), AddrOffsetSection(AOS), isLittleEndian(LE),
-      isDWO(IsDWO), UnitSection(UnitSection), IndexEntry(IndexEntry) {
+      LineSection(LS), StringSection(SS), StringOffsetSection(SOS),
+      AddrOffsetSection(AOS), isLittleEndian(LE), isDWO(IsDWO),
+      UnitSection(UnitSection), IndexEntry(IndexEntry) {
   clear();
 }
 

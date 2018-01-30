@@ -60,8 +60,7 @@ protected:
                          const DWARFDebugAbbrev *DA, const DWARFSection *RS,
                          StringRef SS, const DWARFSection &SOS,
                          const DWARFSection *AOS, const DWARFSection &LS,
-                         StringRef LSS, bool isLittleEndian, bool isDWO,
-                         bool Lazy) = 0;
+                         bool isLittleEndian, bool isDWO, bool Lazy) = 0;
 };
 
 const DWARFUnitIndex &getDWARFUnitIndex(DWARFContext &Context,
@@ -120,7 +119,7 @@ private:
   void parseImpl(DWARFContext &Context, const DWARFSection &Section,
                  const DWARFDebugAbbrev *DA, const DWARFSection *RS,
                  StringRef SS, const DWARFSection &SOS, const DWARFSection *AOS,
-                 const DWARFSection &LS, StringRef LSS, bool LE, bool IsDWO,
+                 const DWARFSection &LS, bool LE, bool IsDWO,
                  bool Lazy) override {
     if (Parsed)
       return;
@@ -134,7 +133,7 @@ private:
         if (!Data.isValidOffset(Offset))
           return nullptr;
         auto U = llvm::make_unique<UnitType>(
-            Context, Section, DA, RS, SS, SOS, AOS, LS, LSS, LE, IsDWO, *this,
+            Context, Section, DA, RS, SS, SOS, AOS, LS, LE, IsDWO, *this,
             Index ? Index->getFromOffset(Offset) : nullptr);
         if (!U->extract(Data, &Offset))
           return nullptr;
@@ -198,7 +197,6 @@ class DWARFUnit {
   const DWARFSection *RangeSection;
   uint32_t RangeSectionBase;
   const DWARFSection &LineSection;
-  StringRef LineStringSection;
   StringRef StringSection;
   const DWARFSection &StringOffsetSection;
   const DWARFSection *AddrOffsetSection;
@@ -295,7 +293,7 @@ public:
   DWARFUnit(DWARFContext &Context, const DWARFSection &Section,
             const DWARFDebugAbbrev *DA, const DWARFSection *RS, StringRef SS,
             const DWARFSection &SOS, const DWARFSection *AOS,
-            const DWARFSection &LS, StringRef LSS, bool LE, bool IsDWO,
+            const DWARFSection &LS, bool LE, bool IsDWO,
             const DWARFUnitSectionBase &UnitSection,
             const DWARFUnitIndex::Entry *IndexEntry = nullptr);
 
@@ -304,7 +302,6 @@ public:
   DWARFContext& getContext() const { return Context; }
 
   const DWARFSection &getLineSection() const { return LineSection; }
-  StringRef getLineStringSection() const { return LineStringSection; }
   StringRef getStringSection() const { return StringSection; }
   const DWARFSection &getStringOffsetSection() const {
     return StringOffsetSection;
@@ -325,9 +322,6 @@ public:
 
   DWARFDataExtractor getDebugInfoExtractor() const;
 
-  DataExtractor getLineStringExtractor() const {
-    return DataExtractor(LineStringSection, false, 0);
-  }
   DataExtractor getStringExtractor() const {
     return DataExtractor(StringSection, false, 0);
   }

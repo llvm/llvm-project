@@ -775,7 +775,8 @@ def SKXFeatures : ProcessorFeatures<SKLFeatures.Value, [
 class SkylakeServerProc<string Name> : ProcModel<Name, SkylakeServerModel,
                                                  SKXFeatures.Value, [
   ProcIntelSKX,
-  FeatureHasFastGather
+  FeatureHasFastGather,
+  FeaturePOPCNTFalseDeps
 ]>;
 def : SkylakeServerProc<"skylake-avx512">;
 def : SkylakeServerProc<"skx">; // Legacy alias.
