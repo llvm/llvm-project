@@ -6,7 +6,6 @@ add_clang_library(clangTidyMiscModule
   MisplacedConstCheck.cpp
   UnconventionalAssignOperatorCheck.cpp
   DefinitionsInHeadersCheck.cpp
-  IncorrectRoundings.cpp
   MacroParenthesesCheck.cpp
   MacroRepeatedSideEffectsCheck.cpp
   MiscTidyModule.cpp

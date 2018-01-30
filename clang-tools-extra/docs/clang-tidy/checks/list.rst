@@ -25,6 +25,7 @@ Clang-Tidy Checks
    bugprone-fold-init-type
    bugprone-forward-declaration-namespace
    bugprone-inaccurate-erase
+   bugprone-incorrect-roundings
    bugprone-integer-division
    bugprone-misplaced-operator-in-strlen-in-alloc
    bugprone-move-forwarding-reference
@@ -126,7 +127,6 @@ Clang-Tidy Checks
    llvm-twine-local
    misc-definitions-in-headers
    misc-forwarding-reference-overload
-   misc-incorrect-roundings
    misc-lambda-function-name
    misc-macro-parentheses
    misc-macro-repeated-side-effects

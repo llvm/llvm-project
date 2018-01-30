@@ -12,7 +12,6 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "DefinitionsInHeadersCheck.h"
 #include "ForwardingReferenceOverloadCheck.h"
-#include "IncorrectRoundings.h"
 #include "LambdaFunctionNameCheck.h"
 #include "MacroParenthesesCheck.h"
 #include "MacroRepeatedSideEffectsCheck.h"
@@ -56,8 +55,6 @@ public:
         "misc-unconventional-assign-operator");
     CheckFactories.registerCheck<DefinitionsInHeadersCheck>(
         "misc-definitions-in-headers");
-    CheckFactories.registerCheck<IncorrectRoundings>(
-        "misc-incorrect-roundings");
     CheckFactories.registerCheck<MacroParenthesesCheck>(
         "misc-macro-parentheses");
     CheckFactories.registerCheck<MacroRepeatedSideEffectsCheck>(

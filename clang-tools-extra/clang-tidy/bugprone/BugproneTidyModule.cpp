@@ -18,6 +18,7 @@
 #include "FoldInitTypeCheck.h"
 #include "ForwardDeclarationNamespaceCheck.h"
 #include "InaccurateEraseCheck.h"
+#include "IncorrectRoundingsCheck.h"
 #include "IntegerDivisionCheck.h"
 #include "MisplacedOperatorInStrlenInAllocCheck.h"
 #include "MoveForwardingReferenceCheck.h"
@@ -51,6 +52,8 @@ public:
         "bugprone-forward-declaration-namespace");
     CheckFactories.registerCheck<InaccurateEraseCheck>(
         "bugprone-inaccurate-erase");
+    CheckFactories.registerCheck<IncorrectRoundingsCheck>(
+        "bugprone-incorrect-roundings");
     CheckFactories.registerCheck<IntegerDivisionCheck>(
         "bugprone-integer-division");
     CheckFactories.registerCheck<MisplacedOperatorInStrlenInAllocCheck>(

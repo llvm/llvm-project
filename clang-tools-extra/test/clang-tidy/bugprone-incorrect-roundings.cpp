@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-incorrect-roundings %t
+// RUN: %check_clang_tidy %s bugprone-incorrect-roundings %t
 
 void b(int x) {}
 
@@ -9,7 +9,7 @@ void f1() {
   int x;
 
   x = (d + 0.5);
-  // CHECK-MESSAGES: [[@LINE-1]]:7: warning: casting (double + 0.5) to integer leads to incorrect rounding; consider using lround (#include <cmath>) instead [misc-incorrect-roundings]
+  // CHECK-MESSAGES: [[@LINE-1]]:7: warning: casting (double + 0.5) to integer leads to incorrect rounding; consider using lround (#include <cmath>) instead [bugprone-incorrect-roundings]
   x = (d + 0.5f);
   // CHECK-MESSAGES: [[@LINE-1]]:7: warning: casting (double + 0.5)
   x = (f + 0.5);

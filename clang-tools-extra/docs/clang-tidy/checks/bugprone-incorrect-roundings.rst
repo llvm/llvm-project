@@ -1,7 +1,7 @@
-.. title:: clang-tidy - misc-incorrect-roundings
+.. title:: clang-tidy - bugprone-incorrect-roundings
 
-misc-incorrect-roundings
-========================
+bugprone-incorrect-roundings
+============================
 
 Checks the usage of patterns known to produce incorrect rounding.
 Programmers often use::
