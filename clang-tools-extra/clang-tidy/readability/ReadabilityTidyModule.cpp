@@ -34,6 +34,7 @@
 #include "SimplifyBooleanExprCheck.h"
 #include "StaticAccessedThroughInstanceCheck.h"
 #include "StaticDefinitionInAnonymousNamespaceCheck.h"
+#include "StringCompareCheck.h"
 #include "UniqueptrDeleteReleaseCheck.h"
 
 namespace clang {
@@ -75,6 +76,8 @@ public:
         "readability-static-accessed-through-instance");
     CheckFactories.registerCheck<StaticDefinitionInAnonymousNamespaceCheck>(
         "readability-static-definition-in-anonymous-namespace");
+    CheckFactories.registerCheck<StringCompareCheck>(
+        "readability-string-compare");
     CheckFactories.registerCheck<readability::NamedParameterCheck>(
         "readability-named-parameter");
     CheckFactories.registerCheck<NonConstParameterCheck>(

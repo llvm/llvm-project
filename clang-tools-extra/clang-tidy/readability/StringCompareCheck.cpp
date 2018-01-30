@@ -17,7 +17,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace readability {
 
 static const StringRef CompareMessage = "do not use 'compare' to test equality "
                                         "of strings; use the string equality "
@@ -77,6 +77,6 @@ void StringCompareCheck::check(const MatchFinder::MatchResult &Result) {
   // FIXME: Add fixit to fix the code for case one and two (match1).
 }
 
-} // namespace misc
+} // namespace readability
 } // namespace tidy
 } // namespace clang

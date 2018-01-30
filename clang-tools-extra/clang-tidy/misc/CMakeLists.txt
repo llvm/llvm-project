@@ -17,7 +17,6 @@ add_clang_library(clangTidyMiscModule
   SizeofContainerCheck.cpp
   SizeofExpressionCheck.cpp
   StaticAssertCheck.cpp
-  StringCompareCheck.cpp
   StringIntegerAssignmentCheck.cpp
   StringLiteralWithEmbeddedNulCheck.cpp
   SuspiciousEnumUsageCheck.cpp

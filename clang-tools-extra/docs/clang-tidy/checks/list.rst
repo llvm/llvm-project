@@ -93,7 +93,7 @@ Clang-Tidy Checks
    google-runtime-member-string-references
    google-runtime-operator
    google-runtime-references
-   hicpp-avoid-goto (redirects to cppcoreguidelines-avoid-goto) <hicpp-avoid-goto>
+   hicpp-avoid-goto
    hicpp-braces-around-statements (redirects to readability-braces-around-statements) <hicpp-braces-around-statements>
    hicpp-deprecated-headers (redirects to modernize-deprecated-headers) <hicpp-deprecated-headers>
    hicpp-exception-baseclass
@@ -138,7 +138,6 @@ Clang-Tidy Checks
    misc-sizeof-container
    misc-sizeof-expression
    misc-static-assert
-   misc-string-compare
    misc-string-integer-assignment
    misc-string-literal-with-embedded-nul
    misc-suspicious-enum-usage
@@ -220,4 +219,5 @@ Clang-Tidy Checks
    readability-simplify-boolean-expr
    readability-static-accessed-through-instance
    readability-static-definition-in-anonymous-namespace
+   readability-string-compare
    readability-uniqueptr-delete-release

@@ -24,7 +24,6 @@
 #include "SizeofContainerCheck.h"
 #include "SizeofExpressionCheck.h"
 #include "StaticAssertCheck.h"
-#include "StringCompareCheck.h"
 #include "StringIntegerAssignmentCheck.h"
 #include "StringLiteralWithEmbeddedNulCheck.h"
 #include "SuspiciousEnumUsageCheck.h"
@@ -75,7 +74,6 @@ public:
     CheckFactories.registerCheck<SizeofExpressionCheck>(
         "misc-sizeof-expression");
     CheckFactories.registerCheck<StaticAssertCheck>("misc-static-assert");
-    CheckFactories.registerCheck<StringCompareCheck>("misc-string-compare");
     CheckFactories.registerCheck<StringIntegerAssignmentCheck>(
         "misc-string-integer-assignment");
     CheckFactories.registerCheck<StringLiteralWithEmbeddedNulCheck>(
