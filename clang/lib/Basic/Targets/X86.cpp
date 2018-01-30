@@ -409,7 +409,7 @@ void X86TargetInfo::setSSELevel(llvm::StringMap<bool> &Features,
   if (Enabled) {
     switch (Level) {
     case AVX512F:
-      Features["avx512f"] = true;
+      Features["avx512f"] = Features["fma"] = Features["f16c"] = true;
       LLVM_FALLTHROUGH;
     case AVX2:
       Features["avx2"] = true;
@@ -623,6 +623,8 @@ void X86TargetInfo::setFeatureEnabledImpl(llvm::StringMap<bool> &Features,
   } else if (Name == "fma") {
     if (Enabled)
       setSSELevel(Features, AVX, Enabled);
+    else
+      setSSELevel(Features, AVX512F, Enabled);
   } else if (Name == "fma4") {
     setXOPLevel(Features, FMA4, Enabled);
   } else if (Name == "xop") {
@@ -632,6 +634,8 @@ void X86TargetInfo::setFeatureEnabledImpl(llvm::StringMap<bool> &Features,
   } else if (Name == "f16c") {
     if (Enabled)
       setSSELevel(Features, AVX, Enabled);
+    else
+      setSSELevel(Features, AVX512F, Enabled);
   } else if (Name == "sha") {
     if (Enabled)
       setSSELevel(Features, SSE2, Enabled);
