@@ -1555,6 +1555,20 @@ m_c_UMax(const LHS &L, const RHS &R) {
   return MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty, true>(L, R);
 }
 
+/// Matches FAdd with LHS and RHS in either order.
+template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, Instruction::FAdd, true>
+m_c_FAdd(const LHS &L, const RHS &R) {
+  return BinaryOp_match<LHS, RHS, Instruction::FAdd, true>(L, R);
+}
+
+/// Matches FMul with LHS and RHS in either order.
+template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, Instruction::FMul, true>
+m_c_FMul(const LHS &L, const RHS &R) {
+  return BinaryOp_match<LHS, RHS, Instruction::FMul, true>(L, R);
+}
+
 } // end namespace PatternMatch
 } // end namespace llvm
 
