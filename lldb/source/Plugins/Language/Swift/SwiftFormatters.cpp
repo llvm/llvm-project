@@ -335,6 +335,13 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     if (!is_opaque && ((is_a_value && !is_Cocoa_or_small) ||
                        (!is_a_value && !is_Cocoa_or_small))) {
       uint64_t count = otherBits_sp->GetValueAsUnsigned(0) & ((1ULL << 48) - 1);
+      if (count == 0) {
+        stream.Printf("\"\"");
+        return true;
+      }
+
+      if (!is_a_value)
+        payloadAddr += 32;
 
       read_options.SetLocation(payloadAddr);
       read_options.SetProcessSP(process_sp);
@@ -344,7 +351,7 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
       read_options.SetIgnoreMaxLength(summary_options.GetCapping() ==
                                       lldb::eTypeSummaryUncapped);
       read_options.SetBinaryZeroIsTerminator(false);
-      read_options.SetLanguage(summary_options.GetLanguage());
+      read_options.SetLanguage(lldb::eLanguageTypeSwift);
 
       if (!is_utf_16)
         return StringPrinter::ReadStringAndDumpToStream<
