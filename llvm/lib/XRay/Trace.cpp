@@ -120,9 +120,10 @@ Error loadNaiveFormatLog(StringRef Data, XRayFileHeader &FileHeader,
       auto TId = RecordExtractor.getU32(&OffsetPtr);
       if (Record.FuncId != FuncId || Record.TId != TId)
         return make_error<StringError>(
-            Twine("Corrupted log, found payload following non-matching "
-                  "function + thread record. Record for ") +
-                Twine(Record.FuncId) + " != " + Twine(FuncId),
+            Twine("Corrupted log, found arg payload following non-matching "
+                  "function + thread record. Record for function ") +
+                Twine(Record.FuncId) + " != " + Twine(FuncId) + "; offset: " +
+                Twine(S.data() - Data.data()),
             std::make_error_code(std::errc::executable_format_error));
       // Advance another four bytes to avoid padding.
       OffsetPtr += 4;

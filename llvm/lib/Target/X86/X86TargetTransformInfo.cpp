@@ -197,7 +197,7 @@ int X86TTIImpl::getArithmeticInstrCost(
     // v2i64/v4i64 mul is custom lowered as a series of long:
     // multiplies(3), shifts(3) and adds(2)
     // slm muldq version throughput is 2 and addq throughput 4
-    // thus: 3X2 (muldq throughput) + 3X1 (shift throuput) +
+    // thus: 3X2 (muldq throughput) + 3X1 (shift throughput) +
     //       3X4 (addq throughput) = 17
     { ISD::MUL,  MVT::v2i64, 17 },
     // slm addq\subq throughput is 4

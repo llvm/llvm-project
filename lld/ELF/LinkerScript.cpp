@@ -114,16 +114,28 @@ void LinkerScript::setDot(Expr E, const Twine &Loc, bool InSec) {
     Ctx->OutSec->Size = Dot - Ctx->OutSec->Addr;
 }
 
+// Used for handling linker symbol assignments, for both finalizing
+// their values and doing early declarations. Returns true if symbol
+// should be defined from linker script.
+static bool shouldDefineSym(SymbolAssignment *Cmd) {
+  if (Cmd->Name == ".")
+    return false;
+
+  if (!Cmd->Provide)
+    return true;
+
+  // If a symbol was in PROVIDE(), we need to define it only
+  // when it is a referenced undefined symbol.
+  Symbol *B = Symtab->find(Cmd->Name);
+  if (!B || B->isDefined())
+    return false;
+  return true;
+}
+
 // This function is called from processSectionCommands,
 // while we are fixing the output section layout.
 void LinkerScript::addSymbol(SymbolAssignment *Cmd) {
-  if (Cmd->Name == ".")
-    return;
-
-  // If a symbol was in PROVIDE(), we need to define it only when
-  // it is a referenced undefined symbol.
-  Symbol *B = Symtab->find(Cmd->Name);
-  if (Cmd->Provide && (!B || B->isDefined()))
+  if (!shouldDefineSym(Cmd))
     return;
 
   // Define a symbol.
@@ -151,6 +163,30 @@ void LinkerScript::addSymbol(SymbolAssignment *Cmd) {
   replaceSymbol<Defined>(Sym, nullptr, Cmd->Name, STB_GLOBAL, Visibility,
                          STT_NOTYPE, SymValue, 0, Sec);
   Cmd->Sym = cast<Defined>(Sym);
+}
+
+// Symbols defined in script should not be inlined by LTO. At the same time
+// we don't know their final values until late stages of link. Here we scan
+// over symbol assignment commands and create placeholder symbols if needed.
+void LinkerScript::declareSymbols() {
+  assert(!Ctx);
+  for (BaseCommand *Base : SectionCommands) {
+    auto *Cmd = dyn_cast<SymbolAssignment>(Base);
+    if (!Cmd || !shouldDefineSym(Cmd))
+      continue;
+
+    // We can't calculate final value right now.
+    Symbol *Sym;
+    uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
+    std::tie(Sym, std::ignore) =
+        Symtab->insert(Cmd->Name, /*Type*/ 0, Visibility,
+                       /*CanOmitFromDynSym*/ false,
+                       /*File*/ nullptr);
+    replaceSymbol<Defined>(Sym, nullptr, Cmd->Name, STB_GLOBAL, Visibility,
+                           STT_NOTYPE, 0, 0, nullptr);
+    Cmd->Sym = cast<Defined>(Sym);
+    Cmd->Provide = false;
+  }
 }
 
 // This function is called from assignAddresses, while we are

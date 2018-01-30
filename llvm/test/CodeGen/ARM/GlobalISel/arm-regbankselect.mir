@@ -68,6 +68,16 @@
   define void @test_fpext_s32_to_s64() #0 { ret void }
   define void @test_fptrunc_s64_to_s32() #0 { ret void }
 
+  define void @test_fptosi_s32() #0 { ret void }
+  define void @test_fptosi_s64() #0 { ret void }
+  define void @test_fptoui_s32() #0 { ret void }
+  define void @test_fptoui_s64() #0 { ret void }
+
+  define void @test_sitofp_s32() #0 { ret void }
+  define void @test_sitofp_s64() #0 { ret void }
+  define void @test_uitofp_s32() #0 { ret void }
+  define void @test_uitofp_s64() #0 { ret void }
+
   define void @test_soft_fp_s64() #0 { ret void }
 
   attributes #0 = { "target-features"="+vfp2"}
@@ -1241,6 +1251,178 @@ body:             |
     %1(s32) = G_FPTRUNC %0
     %s0 = COPY %1(s32)
     BX_RET 14, %noreg, implicit %s0
+...
+---
+name:            test_fptosi_s32
+# CHECK-LABEL: name: test_fptosi_s32
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK: registers:
+# CHECK: - { id: 0, class: fprb, preferred-register: '' }
+# CHECK: - { id: 1, class: gprb, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    liveins: %s0
+
+    %0(s32) = COPY %s0
+    %1(s32) = G_FPTOSI %0
+    %r0 = COPY %1(s32)
+    BX_RET 14, %noreg, implicit %r0
+
+...
+---
+name:            test_fptosi_s64
+# CHECK-LABEL: name: test_fptosi_s64
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK: registers:
+# CHECK: - { id: 0, class: fprb, preferred-register: '' }
+# CHECK: - { id: 1, class: gprb, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    liveins: %d0
+
+    %0(s64) = COPY %d0
+    %1(s32) = G_FPTOSI %0
+    %r0 = COPY %1(s32)
+    BX_RET 14, %noreg, implicit %r0
+...
+---
+name:            test_fptoui_s32
+# CHECK-LABEL: name: test_fptoui_s32
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK: registers:
+# CHECK: - { id: 0, class: fprb, preferred-register: '' }
+# CHECK: - { id: 1, class: gprb, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    liveins: %s0
+
+    %0(s32) = COPY %s0
+    %1(s32) = G_FPTOUI %0
+    %r0 = COPY %1(s32)
+    BX_RET 14, %noreg, implicit %r0
+
+...
+---
+name:            test_fptoui_s64
+# CHECK-LABEL: name: test_fptoui_s64
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK: registers:
+# CHECK: - { id: 0, class: fprb, preferred-register: '' }
+# CHECK: - { id: 1, class: gprb, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    liveins: %d0
+
+    %0(s64) = COPY %d0
+    %1(s32) = G_FPTOUI %0
+    %r0 = COPY %1(s32)
+    BX_RET 14, %noreg, implicit %r0
+...
+---
+name:            test_sitofp_s32
+# CHECK-LABEL: name: test_sitofp_s32
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK: registers:
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
+# CHECK: - { id: 1, class: fprb, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    %0(s32) = COPY %r0
+    %1(s32) = G_SITOFP %0
+    %s0 = COPY %1(s32)
+    BX_RET 14, %noreg, implicit %s0
+
+...
+---
+name:            test_sitofp_s64
+# CHECK-LABEL: name: test_sitofp_s64
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK: registers:
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
+# CHECK: - { id: 1, class: fprb, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    %0(s32) = COPY %r0
+    %1(s64) = G_SITOFP %0
+    %d0 = COPY %1(s64)
+    BX_RET 14, %noreg, implicit %d0
+...
+---
+name:            test_uitofp_s32
+# CHECK-LABEL: name: test_uitofp_s32
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK: registers:
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
+# CHECK: - { id: 1, class: fprb, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    %0(s32) = COPY %r0
+    %1(s32) = G_UITOFP %0
+    %s0 = COPY %1(s32)
+    BX_RET 14, %noreg, implicit %s0
+
+...
+---
+name:            test_uitofp_s64
+# CHECK-LABEL: name: test_uitofp_s64
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK: registers:
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
+# CHECK: - { id: 1, class: fprb, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0
+
+    %0(s32) = COPY %r0
+    %1(s64) = G_UITOFP %0
+    %d0 = COPY %1(s64)
+    BX_RET 14, %noreg, implicit %d0
 ...
 ---
 name:            test_soft_fp_s64

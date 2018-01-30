@@ -129,11 +129,6 @@ void BitcodeCompiler::add(BitcodeFile &F) {
   std::vector<Symbol *> Syms = F.getSymbols();
   std::vector<lto::SymbolResolution> Resols(Syms.size());
 
-  DenseSet<StringRef> ScriptSymbols;
-  for (BaseCommand *Base : Script->SectionCommands)
-    if (auto *Cmd = dyn_cast<SymbolAssignment>(Base))
-      ScriptSymbols.insert(Cmd->Name);
-
   bool IsExecutable = !Config->Shared && !Config->Relocatable;
 
   // Provide a resolution to the LTO API for each symbol.
@@ -164,12 +159,10 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     if (R.Prevailing)
       undefine(Sym);
 
-    // We tell LTO to not apply interprocedural optimization for following
-    // symbols because otherwise LTO would inline them while their values are
-    // still not final:
-    // 1) Aliased (with --defsym) or wrapped (with --wrap) symbols.
-    // 2) Symbols redefined in linker script.
-    R.LinkerRedefined = !Sym->CanInline || ScriptSymbols.count(Sym->getName());
+    // We tell LTO to not apply interprocedural optimization for wrapped
+    // (with --wrap) symbols because otherwise LTO would inline them while
+    // their values are still not final.
+    R.LinkerRedefined = !Sym->CanInline;
   }
   checkError(LTOObj->add(std::move(F.Obj), Resols));
 }

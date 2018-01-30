@@ -36,6 +36,7 @@ public:
 private:
   const std::vector<std::string> SpecialAcronyms;
   const bool IncludeDefaultAcronyms;
+  std::vector<std::string> EscapedAcronyms;
 };
 
 } // namespace objc

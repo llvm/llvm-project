@@ -50,6 +50,7 @@ import sys
 import time
 import traceback
 import types
+import distutils.spawn
 
 # Third-party modules
 import unittest2
@@ -1617,8 +1618,8 @@ class Base(unittest2.TestCase):
         """
         # Tries to find yaml2obj at the same folder as clang
         clang_dir = os.path.dirname(self.findBuiltClang())
-        path = os.path.join(clang_dir, "yaml2obj")
-        if os.path.exists(path):
+        path = distutils.spawn.find_executable("yaml2obj", clang_dir)
+        if path is not None:
             return path
         raise Exception("yaml2obj executable not found")
 
@@ -1733,7 +1734,7 @@ class LLDBTestCaseFactory(type):
                 # authoritative.  If none were specified, try with all debug
                 # info formats.
                 all_dbginfo_categories = set(
-                    test_categories.debug_info_categories)
+                    test_categories.debug_info_categories) - set(configuration.skipCategories)
                 categories = set(
                     getattr(
                         attrvalue,
