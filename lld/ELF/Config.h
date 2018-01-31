@@ -10,6 +10,7 @@
 #ifndef LLD_ELF_CONFIG_H
 #define LLD_ELF_CONFIG_H
 
+#include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -240,6 +241,12 @@ struct Configuration {
 // The only instance of Configuration struct.
 extern Configuration *Config;
 
+static inline void errorOrWarn(const Twine &Msg) {
+  if (!Config->NoinhibitExec)
+    error(Msg);
+  else
+    warn(Msg);
+}
 } // namespace elf
 } // namespace lld
 

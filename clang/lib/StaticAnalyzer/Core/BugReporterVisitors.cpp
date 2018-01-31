@@ -921,20 +921,14 @@ SuppressInlineDefensiveChecksVisitor::VisitNode(const ExplodedNode *Succ,
 
     SourceLocation TerminatorLoc = CurTerminatorStmt->getLocStart();
     if (TerminatorLoc.isMacroID()) {
-      const SourceManager &SMgr = BRC.getSourceManager();
-      std::pair<FileID, unsigned> TLInfo = SMgr.getDecomposedLoc(TerminatorLoc);
-      SrcMgr::SLocEntry SE = SMgr.getSLocEntry(TLInfo.first);
-      const SrcMgr::ExpansionInfo &EInfo = SE.getExpansion();
-      if (EInfo.isFunctionMacroExpansion()) {
-        SourceLocation BugLoc = BugPoint->getStmt()->getLocStart();
+      SourceLocation BugLoc = BugPoint->getStmt()->getLocStart();
 
-        // Suppress reports unless we are in that same macro.
-        if (!BugLoc.isMacroID() ||
-            getMacroName(BugLoc, BRC) != getMacroName(TerminatorLoc, BRC)) {
-          BR.markInvalid("Suppress Macro IDC", CurLC);
-        }
-        return nullptr;
+      // Suppress reports unless we are in that same macro.
+      if (!BugLoc.isMacroID() ||
+          getMacroName(BugLoc, BRC) != getMacroName(TerminatorLoc, BRC)) {
+        BR.markInvalid("Suppress Macro IDC", CurLC);
       }
+      return nullptr;
     }
   }
   return nullptr;

@@ -7,30 +7,30 @@
 // RUN: %clang_cc1 -fobjc-runtime=macosx-10.7.0 -triple x86_64-apple-darwin11 -Wno-objc-root-class -Wno-incompatible-pointer-types -Wno-arc-unsafe-retained-assign -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -o - %s | FileCheck -check-prefix=ARC-NATIVE %s
 
 // ARC-ALIEN: declare extern_weak void @objc_storeStrong(i8**, i8*)
-// ARC-ALIEN: declare extern_weak i8* @objc_retain(i8* returned)
-// ARC-ALIEN: declare extern_weak i8* @objc_autoreleaseReturnValue(i8* returned)
+// ARC-ALIEN: declare extern_weak i8* @objc_retain(i8*)
+// ARC-ALIEN: declare extern_weak i8* @objc_autoreleaseReturnValue(i8*)
 // ARC-ALIEN: declare i8* @objc_msgSend(i8*, i8*, ...) [[NLB:#[0-9]+]]
 // ARC-ALIEN: declare extern_weak void @objc_release(i8*)
-// ARC-ALIEN: declare extern_weak i8* @objc_retainAutoreleasedReturnValue(i8* returned)
+// ARC-ALIEN: declare extern_weak i8* @objc_retainAutoreleasedReturnValue(i8*)
 // ARC-ALIEN: declare extern_weak i8* @objc_initWeak(i8**, i8*)
 // ARC-ALIEN: declare extern_weak i8* @objc_storeWeak(i8**, i8*)
 // ARC-ALIEN: declare extern_weak i8* @objc_loadWeakRetained(i8**)
 // ARC-ALIEN: declare extern_weak void @objc_destroyWeak(i8**)
-// declare extern_weak i8* @objc_autorelease(i8*)
-// ARC-ALIEN: declare extern_weak i8* @objc_retainAutorelease(i8* returned)
+// ARC-ALIEN: declare extern_weak i8* @objc_autorelease(i8*)
+// ARC-ALIEN: declare extern_weak i8* @objc_retainAutorelease(i8*)
 
 // ARC-NATIVE: declare void @objc_storeStrong(i8**, i8*)
-// ARC-NATIVE: declare i8* @objc_retain(i8* returned) [[NLB:#[0-9]+]]
-// ARC-NATIVE: declare i8* @objc_autoreleaseReturnValue(i8* returned)
+// ARC-NATIVE: declare i8* @objc_retain(i8*) [[NLB:#[0-9]+]]
+// ARC-NATIVE: declare i8* @objc_autoreleaseReturnValue(i8*)
 // ARC-NATIVE: declare i8* @objc_msgSend(i8*, i8*, ...) [[NLB]]
 // ARC-NATIVE: declare void @objc_release(i8*) [[NLB]]
-// ARC-NATIVE: declare i8* @objc_retainAutoreleasedReturnValue(i8* returned)
+// ARC-NATIVE: declare i8* @objc_retainAutoreleasedReturnValue(i8*)
 // ARC-NATIVE: declare i8* @objc_initWeak(i8**, i8*)
 // ARC-NATIVE: declare i8* @objc_storeWeak(i8**, i8*)
 // ARC-NATIVE: declare i8* @objc_loadWeakRetained(i8**)
 // ARC-NATIVE: declare void @objc_destroyWeak(i8**)
-// declare i8* @objc_autorelease(i8*)
-// ARC-NATIVE: declare i8* @objc_retainAutorelease(i8* returned)
+// ARC-NATIVE: declare i8* @objc_autorelease(i8*)
+// ARC-NATIVE: declare i8* @objc_retainAutorelease(i8*)
 
 // CHECK-LABEL: define void @test0
 void test0(id x) {
@@ -1504,9 +1504,7 @@ void test68(void) {
 // CHECK:      [[SELF:%.*]] = alloca [[TEST69:%.*]]*, align 8
 // CHECK:      [[T0:%.*]] = load [[TEST69]]*, [[TEST69]]** [[SELF]], align 8
 // CHECK-NEXT: [[T1:%.*]] = bitcast [[TEST69]]* [[T0]] to i8*
-// CHECK-NEXT: [[RETAIN:%.*]] = call i8* @objc_retain(i8* [[T1]])
-// CHECK-NEXT: [[AUTORELEASE:%.*]] = tail call i8* @objc_autoreleaseReturnValue(i8* [[RETAIN]])
-// CHECK-NEXT: ret i8* [[AUTORELEASE]]
+// CHECK-NEXT: ret i8* [[T1]]
 
 // rdar://problem/10907547
 void test70(id i) {

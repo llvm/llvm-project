@@ -21,7 +21,9 @@ add_clang_library(clangDaemon
   Protocol.cpp
   ProtocolHandlers.cpp
   SourceCode.cpp
+  Threading.cpp
   Trace.cpp
+  TUScheduler.cpp
   URI.cpp
   XRefs.cpp
   index/FileIndex.cpp
