@@ -70,7 +70,7 @@ Error forEachCodeViewRecord(ArrayRef<uint8_t> StreamBuffer, Func F) {
     const RecordPrefix *Prefix =
         reinterpret_cast<const RecordPrefix *>(StreamBuffer.data());
 
-    uint16_t RealLen = Prefix->RecordLen + 2;
+    size_t RealLen = Prefix->RecordLen + 2;
     if (StreamBuffer.size() < RealLen)
       return make_error<CodeViewError>(cv_error_code::corrupt_record);
 

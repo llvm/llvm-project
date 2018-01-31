@@ -8,7 +8,9 @@ target triple = "x86_64-apple-macosx10.10.0"
 define i32 @check_flag(i32 %flags, ...) nounwind {
 ; CHECK-LABEL: check_flag:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    subq $56, %rsp
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    subq $48, %rsp
+; CHECK-NEXT:    movl %edi, %ebx
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je LBB0_2
 ; CHECK-NEXT:  ## %bb.1: ## %entry
@@ -27,7 +29,7 @@ define i32 @check_flag(i32 %flags, ...) nounwind {
 ; CHECK-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testl $512, %edi ## imm = 0x200
+; CHECK-NEXT:    testb $2, %bh
 ; CHECK-NEXT:    je LBB0_4
 ; CHECK-NEXT:  ## %bb.3: ## %if.then
 ; CHECK-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
@@ -38,7 +40,8 @@ define i32 @check_flag(i32 %flags, ...) nounwind {
 ; CHECK-NEXT:    movl $8, 0
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:  LBB0_4: ## %if.end
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    addq $48, %rsp
+; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
 entry:
   %and = and i32 %flags, 512

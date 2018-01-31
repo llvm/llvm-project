@@ -164,6 +164,8 @@ public:
 
   void printNotes() override;
 
+  void printELFLinkerOptions() override;
+
 private:
   std::unique_ptr<DumpStyle<ELFT>> ELFDumperStyle;
 
@@ -316,6 +318,7 @@ public:
   virtual void printProgramHeaders(const ELFFile<ELFT> *Obj) = 0;
   virtual void printHashHistogram(const ELFFile<ELFT> *Obj) = 0;
   virtual void printNotes(const ELFFile<ELFT> *Obj) = 0;
+  virtual void printELFLinkerOptions(const ELFFile<ELFT> *Obj) = 0;
   virtual void printMipsGOT(const MipsGOTParser<ELFT> &Parser) = 0;
   virtual void printMipsPLT(const MipsGOTParser<ELFT> &Parser) = 0;
   const ELFDumper<ELFT> *dumper() const { return Dumper; }
@@ -345,6 +348,7 @@ public:
   void printProgramHeaders(const ELFO *Obj) override;
   void printHashHistogram(const ELFFile<ELFT> *Obj) override;
   void printNotes(const ELFFile<ELFT> *Obj) override;
+  void printELFLinkerOptions(const ELFFile<ELFT> *Obj) override;
   void printMipsGOT(const MipsGOTParser<ELFT> &Parser) override;
   void printMipsPLT(const MipsGOTParser<ELFT> &Parser) override;
 
@@ -405,6 +409,7 @@ public:
   void printProgramHeaders(const ELFO *Obj) override;
   void printHashHistogram(const ELFFile<ELFT> *Obj) override;
   void printNotes(const ELFFile<ELFT> *Obj) override;
+  void printELFLinkerOptions(const ELFFile<ELFT> *Obj) override;
   void printMipsGOT(const MipsGOTParser<ELFT> &Parser) override;
   void printMipsPLT(const MipsGOTParser<ELFT> &Parser) override;
 
@@ -1499,6 +1504,10 @@ template <class ELFT> void ELFDumper<ELFT>::printHashHistogram() {
 
 template <class ELFT> void ELFDumper<ELFT>::printNotes() {
   ELFDumperStyle->printNotes(Obj);
+}
+
+template <class ELFT> void ELFDumper<ELFT>::printELFLinkerOptions() {
+  ELFDumperStyle->printELFLinkerOptions(Obj);
 }
 
 #define LLVM_READOBJ_TYPE_CASE(name) \
@@ -2694,6 +2703,8 @@ std::string getSectionTypeString(unsigned Arch, unsigned Type) {
     return "SYMTAB SECTION INDICES";
   case SHT_LLVM_ODRTAB:
     return "LLVM_ODRTAB";
+  case SHT_LLVM_LINKER_OPTIONS:
+    return "LLVM_LINKER_OPTIONS";
   // FIXME: Parse processor specific GNU attributes
   case SHT_GNU_ATTRIBUTES:
     return "ATTRIBUTES";
@@ -3555,6 +3566,11 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
 }
 
 template <class ELFT>
+void GNUStyle<ELFT>::printELFLinkerOptions(const ELFFile<ELFT> *Obj) {
+  OS << "printELFLinkerOptions not implemented!\n";
+}
+
+template <class ELFT>
 void GNUStyle<ELFT>::printMipsGOT(const MipsGOTParser<ELFT> &Parser) {
   size_t Bias = ELFT::Is64Bits ? 8 : 0;
   auto PrintEntry = [&](const Elf_Addr *E, StringRef Purpose) {
@@ -4060,6 +4076,27 @@ void LLVMStyle<ELFT>::printHashHistogram(const ELFFile<ELFT> *Obj) {
 template <class ELFT>
 void LLVMStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
   W.startLine() << "printNotes not implemented!\n";
+}
+
+template <class ELFT>
+void LLVMStyle<ELFT>::printELFLinkerOptions(const ELFFile<ELFT> *Obj) {
+  ListScope L(W, "LinkerOptions");
+
+  for (const Elf_Shdr &Shdr : unwrapOrError(Obj->sections())) {
+    if (Shdr.sh_type != ELF::SHT_LLVM_LINKER_OPTIONS)
+      continue;
+
+    ArrayRef<uint8_t> Contents = unwrapOrError(Obj->getSectionContents(&Shdr));
+    for (const uint8_t *P = Contents.begin(), *E = Contents.end(); P < E; ) {
+      StringRef Key = StringRef(reinterpret_cast<const char *>(P));
+      StringRef Value =
+          StringRef(reinterpret_cast<const char *>(P) + Key.size() + 1);
+
+      W.printString(Key, Value);
+
+      P = P + Key.size() + Value.size() + 2;
+    }
+  }
 }
 
 template <class ELFT>

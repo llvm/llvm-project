@@ -221,6 +221,45 @@ which is equivalent to just
         .section .foo,"a",@progbits
         .section .bar,"ao",@progbits,.foo
 
+``.linker-options`` Section (linker options)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In order to support passing linker options from the frontend to the linker, a
+special section of type ``SHT_LLVM_LINKER_OPTIONS`` (usually named
+``.linker-options`` though the name is not significant as it is identified by
+the type).  The contents of this section is a simple pair-wise encoding of
+directives for consideration by the linker.  The strings are encoded as standard
+null-terminated UTF-8 strings.  They are emitted inline to avoid having the
+linker traverse the object file for retrieving the value.  The linker is
+permitted to not honour the option and instead provide a warning/error to the
+user that the requested option was not honoured.
+
+The section has type ``SHT_LLVM_LINKER_OPTIONS`` and has the ``SHF_EXCLUDE``
+flag to ensure that the section is treated as opaque by linkers which do not
+support the feature and will not be emitted into the final linked binary.
+
+This would be equivalent to the follow raw assembly:
+
+.. code-block:: gas
+
+  .section ".linker-options","e",@llvm_linker_options
+  .asciz "option 1"
+  .asciz "value 1"
+  .asciz "option 2"
+  .asciz "value 2"
+
+The following directives are specified:
+
+  - lib
+
+    The parameter identifies a library to be linked against.  The library will
+    be looked up in the default and any specified library search paths
+    (specified to this point).
+
+  - libpath
+
+    The paramter identifies an additional library search path to be considered
+    when looking up libraries after the inclusion of this option.
 
 Target Specific Behaviour
 =========================

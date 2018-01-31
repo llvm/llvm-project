@@ -257,12 +257,9 @@ static void emitAbsValue(MCStreamer &OS, const MCExpr *Value, unsigned Size) {
   OS.EmitValue(ABS, Size);
 }
 
-static void
-emitV2FileDirTables(MCStreamer *MCOS,
-                    const SmallVectorImpl<std::string> &MCDwarfDirs,
-                    const SmallVectorImpl<MCDwarfFile> &MCDwarfFiles) {
+void MCDwarfLineTableHeader::emitV2FileDirTables(MCStreamer *MCOS) const {
   // First the directory table.
-  for (auto Dir : MCDwarfDirs) {
+  for (auto &Dir : MCDwarfDirs) {
     MCOS->EmitBytes(Dir);                // The DirectoryName, and...
     MCOS->EmitBytes(StringRef("\0", 1)); // its null terminator.
   }
@@ -280,11 +277,7 @@ emitV2FileDirTables(MCStreamer *MCOS,
   MCOS->EmitIntValue(0, 1); // Terminate the file list.
 }
 
-static void
-emitV5FileDirTables(MCStreamer *MCOS,
-                    const SmallVectorImpl<std::string> &MCDwarfDirs,
-                    const SmallVectorImpl<MCDwarfFile> &MCDwarfFiles,
-                    StringRef CompilationDir, bool HasMD5) {
+void MCDwarfLineTableHeader::emitV5FileDirTables(MCStreamer *MCOS) const {
   // The directory format, which is just inline null-terminated strings.
   MCOS->EmitIntValue(1, 1);
   MCOS->EmitULEB128IntValue(dwarf::DW_LNCT_path);
@@ -293,7 +286,7 @@ emitV5FileDirTables(MCStreamer *MCOS,
   MCOS->EmitULEB128IntValue(MCDwarfDirs.size() + 1);
   MCOS->EmitBytes(CompilationDir);
   MCOS->EmitBytes(StringRef("\0", 1));
-  for (auto Dir : MCDwarfDirs) {
+  for (auto &Dir : MCDwarfDirs) {
     MCOS->EmitBytes(Dir);                // The DirectoryName, and...
     MCOS->EmitBytes(StringRef("\0", 1)); // its null terminator.
   }
@@ -393,10 +386,9 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
   // Put out the directory and file tables.  The formats vary depending on
   // the version.
   if (LineTableVersion >= 5)
-    emitV5FileDirTables(MCOS, MCDwarfDirs, MCDwarfFiles, CompilationDir,
-                        HasMD5);
+    emitV5FileDirTables(MCOS);
   else
-    emitV2FileDirTables(MCOS, MCDwarfDirs, MCDwarfFiles);
+    emitV2FileDirTables(MCOS);
 
   // This is the end of the prologue, so set the value of the symbol at the
   // end of the prologue (that was used in a previous expression).

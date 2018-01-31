@@ -23,6 +23,11 @@ def arm_cmpfp0 : SDNode<"ARMISD::CMPFPw0", SDT_CMPFP0, [SDNPOutGlue]>;
 def arm_fmdrr  : SDNode<"ARMISD::VMOVDRR", SDT_VMOVDRR>;
 def arm_fmrrd  : SDNode<"ARMISD::VMOVRRD", SDT_VMOVRRD>;
 
+def SDT_VMOVhr : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVT<1, i32>] >;
+def SDT_VMOVrh : SDTypeProfile<1, 1, [SDTCisVT<0, i32>, SDTCisFP<1>] >;
+def arm_vmovhr : SDNode<"ARMISD::VMOVhr", SDT_VMOVhr>;
+def arm_vmovrh : SDNode<"ARMISD::VMOVrh", SDT_VMOVrh>;
+
 //===----------------------------------------------------------------------===//
 // Operand Definitions.
 //
@@ -1171,9 +1176,9 @@ def VMOVSRR : AVConv5I<0b11000100, 0b1010,
 
 // Move H->R, clearing top 16 bits
 def VMOVRH : AVConv2I<0b11100001, 0b1001,
-                      (outs GPR:$Rt), (ins SPR:$Sn),
+                      (outs GPR:$Rt), (ins HPR:$Sn),
                       IIC_fpMOVSI, "vmov", ".f16\t$Rt, $Sn",
-                      []>,
+                      [(set GPR:$Rt, (arm_vmovrh HPR:$Sn))]>,
              Requires<[HasFullFP16]>,
              Sched<[WriteFPMOV]> {
   // Instruction operands.
@@ -1191,9 +1196,9 @@ def VMOVRH : AVConv2I<0b11100001, 0b1001,
 
 // Move R->H, clearing top 16 bits
 def VMOVHR : AVConv4I<0b11100000, 0b1001,
-                      (outs SPR:$Sn), (ins GPR:$Rt),
+                      (outs HPR:$Sn), (ins GPR:$Rt),
                       IIC_fpMOVIS, "vmov", ".f16\t$Sn, $Rt",
-                      []>,
+                      [(set HPR:$Sn, (arm_vmovhr GPR:$Rt))]>,
              Requires<[HasFullFP16]>,
              Sched<[WriteFPMOV]> {
   // Instruction operands.

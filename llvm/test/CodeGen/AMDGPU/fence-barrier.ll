@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -enable-si-insert-waitcnts=1 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa-amdgiz -mcpu=gfx803 -enable-si-insert-waitcnts=1 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
+; RUN: llvm-as -data-layout=A5 < %s | llc -mtriple=amdgcn-amd-amdhsa-amdgiz -mcpu=gfx803 -enable-si-insert-waitcnts=1 -verify-machineinstrs | FileCheck --check-prefix=GCN %s
 
 declare i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
 declare i8 addrspace(2)* @llvm.amdgcn.implicitarg.ptr()
@@ -16,8 +17,8 @@ declare void @llvm.amdgcn.s.barrier()
 ; GCN-NEXT: s_barrier
 ; GCN: flat_store_dword
 define amdgpu_kernel void @test_local(i32 addrspace(1)*) {
-  %2 = alloca i32 addrspace(1)*, align 4
-  store i32 addrspace(1)* %0, i32 addrspace(1)** %2, align 4
+  %2 = alloca i32 addrspace(1)*, align 4, addrspace(5)
+  store i32 addrspace(1)* %0, i32 addrspace(1)* addrspace(5)* %2, align 4
   %3 = call i32 @llvm.amdgcn.workitem.id.x()
   %4 = zext i32 %3 to i64
   %5 = icmp eq i64 %4, 0
@@ -32,7 +33,7 @@ define amdgpu_kernel void @test_local(i32 addrspace(1)*) {
   call void @llvm.amdgcn.s.barrier()
   fence syncscope("workgroup") acquire
   %8 = load i32, i32 addrspace(3)* getelementptr inbounds ([1 x i32], [1 x i32] addrspace(3)* @test_local.temp, i64 0, i64 0), align 4
-  %9 = load i32 addrspace(1)*, i32 addrspace(1)** %2, align 4
+  %9 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(5)* %2, align 4
   %10 = call i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
   %11 = call i32 @llvm.amdgcn.workitem.id.x()
   %12 = call i32 @llvm.amdgcn.workgroup.id.x()
@@ -58,14 +59,14 @@ define amdgpu_kernel void @test_local(i32 addrspace(1)*) {
 ; GCN: s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
 ; GCN-NEXT: s_barrier
 define amdgpu_kernel void @test_global(i32 addrspace(1)*) {
-  %2 = alloca i32 addrspace(1)*, align 4
-  %3 = alloca i32, align 4
-  store i32 addrspace(1)* %0, i32 addrspace(1)** %2, align 4
-  store i32 0, i32* %3, align 4
+  %2 = alloca i32 addrspace(1)*, align 4, addrspace(5)
+  %3 = alloca i32, align 4, addrspace(5)
+  store i32 addrspace(1)* %0, i32 addrspace(1)* addrspace(5)* %2, align 4
+  store i32 0, i32 addrspace(5)* %3, align 4
   br label %4
 
 ; <label>:4:                                      ; preds = %58, %1
-  %5 = load i32, i32* %3, align 4
+  %5 = load i32, i32 addrspace(5)* %3, align 4
   %6 = sext i32 %5 to i64
   %7 = call i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
   %8 = call i32 @llvm.amdgcn.workitem.id.x()
@@ -101,8 +102,8 @@ define amdgpu_kernel void @test_global(i32 addrspace(1)*) {
   %36 = add i64 %35, %33
   %37 = add i64 %36, 2184
   %38 = trunc i64 %37 to i32
-  %39 = load i32 addrspace(1)*, i32 addrspace(1)** %2, align 4
-  %40 = load i32, i32* %3, align 4
+  %39 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(5)* %2, align 4
+  %40 = load i32, i32 addrspace(5)* %3, align 4
   %41 = sext i32 %40 to i64
   %42 = call i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
   %43 = call i32 @llvm.amdgcn.workitem.id.x()
@@ -127,9 +128,9 @@ define amdgpu_kernel void @test_global(i32 addrspace(1)*) {
   br label %58
 
 ; <label>:58:                                     ; preds = %22
-  %59 = load i32, i32* %3, align 4
+  %59 = load i32, i32 addrspace(5)* %3, align 4
   %60 = add nsw i32 %59, 1
-  store i32 %60, i32* %3, align 4
+  store i32 %60, i32 addrspace(5)* %3, align 4
   br label %4
 
 ; <label>:61:                                     ; preds = %4
@@ -143,9 +144,9 @@ define amdgpu_kernel void @test_global(i32 addrspace(1)*) {
 ; GCN-NEXT: s_barrier
 ; GCN: flat_store_dword
 define amdgpu_kernel void @test_global_local(i32 addrspace(1)*) {
-  %2 = alloca i32 addrspace(1)*, align 4
-  store i32 addrspace(1)* %0, i32 addrspace(1)** %2, align 4
-  %3 = load i32 addrspace(1)*, i32 addrspace(1)** %2, align 4
+  %2 = alloca i32 addrspace(1)*, align 4, addrspace(5)
+  store i32 addrspace(1)* %0, i32 addrspace(1)* addrspace(5)* %2, align 4
+  %3 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(5)* %2, align 4
   %4 = call i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
   %5 = call i32 @llvm.amdgcn.workitem.id.x()
   %6 = call i32 @llvm.amdgcn.workgroup.id.x()
@@ -176,7 +177,7 @@ define amdgpu_kernel void @test_global_local(i32 addrspace(1)*) {
   call void @llvm.amdgcn.s.barrier()
   fence syncscope("workgroup") acquire
   %24 = load i32, i32 addrspace(3)* getelementptr inbounds ([1 x i32], [1 x i32] addrspace(3)* @test_global_local.temp, i64 0, i64 0), align 4
-  %25 = load i32 addrspace(1)*, i32 addrspace(1)** %2, align 4
+  %25 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(5)* %2, align 4
   %26 = call i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
   %27 = call i32 @llvm.amdgcn.workitem.id.x()
   %28 = call i32 @llvm.amdgcn.workgroup.id.x()

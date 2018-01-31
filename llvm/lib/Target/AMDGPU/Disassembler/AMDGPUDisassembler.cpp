@@ -198,6 +198,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
       Res = tryDecodeInst(DecoderTableSDWA964, MI, QW, Address);
       if (Res) { IsSDWA = true;  break; }
+
+      if (STI.getFeatureBits()[AMDGPU::FeatureUnpackedD16VMem]) {
+        Res = tryDecodeInst(DecoderTableGFX80_UNPACKED64, MI, QW, Address);
+        if (Res) break;
+      }
     }
 
     // Reinitialize Bytes as DPP64 could have eaten too much

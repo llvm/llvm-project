@@ -561,12 +561,13 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX702``  36         ``gfx702``
      ``EF_AMDGPU_MACH_AMDGCN_GFX703``  37         ``gfx703``
      ``EF_AMDGPU_MACH_AMDGCN_GFX704``  38         ``gfx704``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX801``  39         ``gfx801``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX802``  40         ``gfx802``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX803``  41         ``gfx803``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX810``  42         ``gfx810``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX900``  43         ``gfx900``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX902``  44         ``gfx902``
+     *reserved*                        39         Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX801``  40         ``gfx801``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX802``  41         ``gfx802``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX803``  42         ``gfx803``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX810``  43         ``gfx810``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX900``  44         ``gfx900``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX902``  45         ``gfx902``
      ================================= ========== =============================
 
 Sections
@@ -773,24 +774,24 @@ The following relocation types are supported:
   .. table:: AMDGPU ELF Relocation Records
      :name: amdgpu-elf-relocation-records-table
 
-     ==========================  =====  ==========  ==============================
-     Relocation Type             Value  Field       Calculation
-     ==========================  =====  ==========  ==============================
-     ``R_AMDGPU_NONE``           0      *none*      *none*
-     ``R_AMDGPU_ABS32_LO``       1      ``word32``  (S + A) & 0xFFFFFFFF
-     ``R_AMDGPU_ABS32_HI``       2      ``word32``  (S + A) >> 32
-     ``R_AMDGPU_ABS64``          3      ``word64``  S + A
-     ``R_AMDGPU_REL32``          4      ``word32``  S + A - P
-     ``R_AMDGPU_REL64``          5      ``word64``  S + A - P
-     ``R_AMDGPU_ABS32``          6      ``word32``  S + A
-     ``R_AMDGPU_GOTPCREL``       7      ``word32``  G + GOT + A - P
-     ``R_AMDGPU_GOTPCREL32_LO``  8      ``word32``  (G + GOT + A - P) & 0xFFFFFFFF
-     ``R_AMDGPU_GOTPCREL32_HI``  9      ``word32``  (G + GOT + A - P) >> 32
-     ``R_AMDGPU_REL32_LO``       10     ``word32``  (S + A - P) & 0xFFFFFFFF
-     ``R_AMDGPU_REL32_HI``       11     ``word32``  (S + A - P) >> 32
-     *reserved*                  12
-     ``R_AMDGPU_RELATIVE64``     13     ``word64``  B + A
-     ==========================  =====  ==========  ==============================
+     ========================== ======= =====  ==========  ==============================
+     Relocation Type            Kind    Value  Field       Calculation
+     ========================== ======= =====  ==========  ==============================
+     ``R_AMDGPU_NONE``                  0      *none*      *none*
+     ``R_AMDGPU_ABS32_LO``      Dynamic 1      ``word32``  (S + A) & 0xFFFFFFFF
+     ``R_AMDGPU_ABS32_HI``      Dynamic 2      ``word32``  (S + A) >> 32
+     ``R_AMDGPU_ABS64``         Dynamic 3      ``word64``  S + A
+     ``R_AMDGPU_REL32``         Static  4      ``word32``  S + A - P
+     ``R_AMDGPU_REL64``         Static  5      ``word64``  S + A - P
+     ``R_AMDGPU_ABS32``         Static  6      ``word32``  S + A
+     ``R_AMDGPU_GOTPCREL``      Static  7      ``word32``  G + GOT + A - P
+     ``R_AMDGPU_GOTPCREL32_LO`` Static  8      ``word32``  (G + GOT + A - P) & 0xFFFFFFFF
+     ``R_AMDGPU_GOTPCREL32_HI`` Static  9      ``word32``  (G + GOT + A - P) >> 32
+     ``R_AMDGPU_REL32_LO``      Static  10     ``word32``  (S + A - P) & 0xFFFFFFFF
+     ``R_AMDGPU_REL32_HI``      Static  11     ``word32``  (S + A - P) >> 32
+     *reserved*                         12
+     ``R_AMDGPU_RELATIVE64``    Dynamic 13     ``word64``  B + A
+     ========================== ======= =====  ==========  ==============================
 
 .. _amdgpu-dwarf:
 
@@ -991,9 +992,11 @@ non-AMD key names should be prefixed by "*vendor-name*.".
      =================== ============== ========= ==============================
      String Key          Value Type     Required? Description
      =================== ============== ========= ==============================
-     "ReqdWorkGroupSize" sequence of              The dispatch work-group size
-                         3 integers               X, Y, Z must correspond to the
-                                                  specified values.
+     "ReqdWorkGroupSize" sequence of              If not 0, 0, 0 then all values
+                         3 integers               must be >=1 and the dispatch
+                                                  work-group size X, Y, Z must
+                                                  correspond to the specified
+                                                  values. Defaults to 0, 0, 0.
 
                                                   Corresponds to the OpenCL
                                                   ``reqd_work_group_size``
@@ -1286,19 +1289,9 @@ non-AMD key names should be prefixed by "*vendor-name*.".
                                                            supported by the
                                                            kernel in work-items.
                                                            Must be >=1 and
-                                                           consistent with any
-                                                           non-0 values in
-                                                           FixedWorkGroupSize.
-     "FixedWorkGroupSize"         sequence of              Corresponds to the
-                                  3 integers               dispatch work-group
-                                                           size X, Y, Z. If
-                                                           omitted, defaults to
-                                                           0, 0, 0. If an
-                                                           element is non-0 then
-                                                           the kernel must only
-                                                           be launched with a
-                                                           matching corresponding
-                                                           work-group size.
+                                                           consistent with
+                                                           ReqdWorkGroupSize if
+                                                           not 0, 0, 0.
      "NumSpilledSGPRs"            integer                  Number of stores from
                                                            a scalar register to
                                                            a register allocator
@@ -1530,30 +1523,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      entry point instruction
                                                      which must be 256 byte
                                                      aligned.
-     223:192 4 bytes MaxFlatWorkGroupSize            Maximum flat work-group
-                                                     size supported by the
-                                                     kernel in work-items. If
-                                                     an exact work-group size
-                                                     is required then must be
-                                                     omitted or 0 and
-                                                     ReqdWorkGroupSize* must
-                                                     be set to non-0.
-     239:224 2 bytes ReqdWorkGroupSizeX              If present and non-0 then
-                                                     the kernel
-                                                     must be executed with the
-                                                     specified work-group size
-                                                     for X.
-     255:240 2 bytes ReqdWorkGroupSizeY              If present and non-0 then
-                                                     the kernel
-                                                     must be executed with the
-                                                     specified work-group size
-                                                     for Y.
-     271:256 2 bytes ReqdWorkGroupSizeZ              If present and non-0 then
-                                                     the kernel
-                                                     must be executed with the
-                                                     specified work-group size
-                                                     for Z.
-     383:272 14                                      Reserved, must be 0.
+     383:192 24                                      Reserved, must be 0.
              bytes
      415:384 4 bytes ComputePgmRsrc1                 Compute Shader (CS)
                                                      program settings used by

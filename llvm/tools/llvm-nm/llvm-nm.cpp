@@ -1004,6 +1004,10 @@ static char getSymbolNMTypeChar(MachOObjectFile &Obj, basic_symbol_iterator I) {
     StringRef SectionName;
     Obj.getSectionName(Ref, SectionName);
     StringRef SegmentName = Obj.getSectionFinalSegmentName(Ref);
+    if (Obj.is64Bit() && 
+        Obj.getHeader64().filetype == MachO::MH_KEXT_BUNDLE &&
+        SegmentName == "__TEXT_EXEC" && SectionName == "__text")
+      return 't';
     if (SegmentName == "__TEXT" && SectionName == "__text")
       return 't';
     if (SegmentName == "__DATA" && SectionName == "__data")
