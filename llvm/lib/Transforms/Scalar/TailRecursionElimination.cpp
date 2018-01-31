@@ -797,6 +797,8 @@ static bool foldReturnAndProcessPred(
       getReturnBlocksToSync(OldEntryBlock, SI, ReturnBlocksToSync);
 
       // Remove the sync.
+      DEBUG(dbgs() << "FOLDING: " << *BB
+            << "INTO SYNC PRED: " << *Pred);
       ReturnInst *RI = FoldReturnIntoUncondBranch(Ret, BB, Pred);
 
       // Cleanup: if all predecessors of BB have been eliminated by
@@ -824,6 +826,12 @@ static bool foldReturnAndProcessPred(
                               SyncInst::Create(NewRetBlock, SyncRegion));
         }
         Change = true;
+      } else {
+        // Restore the sync that was eliminated.
+        BasicBlock *RetBlock = RI->getParent();
+        BasicBlock *NewRetBlock = SplitBlock(RetBlock, RI);
+        ReplaceInstWithInst(RetBlock->getTerminator(),
+                            SyncInst::Create(NewRetBlock, SyncRegion));
       }
     }
   }
