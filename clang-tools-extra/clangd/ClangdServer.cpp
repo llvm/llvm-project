@@ -34,25 +34,31 @@ namespace {
 // Issues an async read of AST and waits for results.
 template <class Ret, class Func>
 Ret blockingRunWithAST(TUScheduler &S, PathRef File, Func &&F) {
-  // Using Optional to workaround MSVC bug. It requires future<> arguments to
-  // have default ctor.
-  std::packaged_task<llvm::Optional<Ret>(llvm::Expected<InputsAndAST>)> Task(
-      std::forward<Func>(F));
+  // Using shared_ptr to workaround MSVC bug. It requires future<> arguments to
+  // have default and copy ctor.
+  auto SharedPtrFunc = [&](llvm::Expected<InputsAndAST> Arg) {
+    return std::make_shared<Ret>(F(std::move(Arg)));
+  };
+  std::packaged_task<std::shared_ptr<Ret>(llvm::Expected<InputsAndAST>)> Task(
+      SharedPtrFunc);
   auto Future = Task.get_future();
   S.runWithAST(File, std::move(Task));
-  return *Future.get();
+  return std::move(*Future.get());
 }
 
 // Issues an async read of preamble and waits for results.
 template <class Ret, class Func>
 Ret blockingRunWithPreamble(TUScheduler &S, PathRef File, Func &&F) {
-  // Using Optional to workaround MSVC bug. It requires future<> arguments to
-  // have default ctor.
-  std::packaged_task<llvm::Optional<Ret>(llvm::Expected<InputsAndPreamble>)>
-      Task(std::forward<Func>(F));
+  // Using shared_ptr to workaround MSVC bug. It requires future<> arguments to
+  // have default and copy ctor.
+  auto SharedPtrFunc = [&](llvm::Expected<InputsAndPreamble> Arg) {
+    return std::make_shared<Ret>(F(std::move(Arg)));
+  };
+  std::packaged_task<std::shared_ptr<Ret>(llvm::Expected<InputsAndPreamble>)>
+      Task(SharedPtrFunc);
   auto Future = Task.get_future();
   S.runWithPreamble(File, std::move(Task));
-  return *Future.get();
+  return std::move(*Future.get());
 }
 
 void ignoreError(llvm::Error Err) {
