@@ -239,7 +239,7 @@ define i64 @f_to_u64(float %a) nounwind {
 ; X87_WIN-NEXT:    fxch %st(1)
 ; X87_WIN-NEXT:    fucomp %st(2)
 ; X87_WIN-NEXT:    fnstsw %ax
-; X87_WIN-NEXT:    # kill: def %ah killed %ah killed %ax
+; X87_WIN-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87_WIN-NEXT:    sahf
 ; X87_WIN-NEXT:    ja LBB0_2
 ; X87_WIN-NEXT:  # %bb.1:
@@ -273,7 +273,7 @@ define i64 @f_to_u64(float %a) nounwind {
 ; X87_LIN-NEXT:    fxch %st(1)
 ; X87_LIN-NEXT:    fucomp %st(2)
 ; X87_LIN-NEXT:    fnstsw %ax
-; X87_LIN-NEXT:    # kill: def %ah killed %ah killed %ax
+; X87_LIN-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87_LIN-NEXT:    sahf
 ; X87_LIN-NEXT:    ja .LBB0_2
 ; X87_LIN-NEXT:  # %bb.1:
@@ -655,7 +655,7 @@ define i64 @d_to_u64(double %a) nounwind {
 ; X87_WIN-NEXT:    fxch %st(1)
 ; X87_WIN-NEXT:    fucomp %st(2)
 ; X87_WIN-NEXT:    fnstsw %ax
-; X87_WIN-NEXT:    # kill: def %ah killed %ah killed %ax
+; X87_WIN-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87_WIN-NEXT:    sahf
 ; X87_WIN-NEXT:    ja LBB2_2
 ; X87_WIN-NEXT:  # %bb.1:
@@ -689,7 +689,7 @@ define i64 @d_to_u64(double %a) nounwind {
 ; X87_LIN-NEXT:    fxch %st(1)
 ; X87_LIN-NEXT:    fucomp %st(2)
 ; X87_LIN-NEXT:    fnstsw %ax
-; X87_LIN-NEXT:    # kill: def %ah killed %ah killed %ax
+; X87_LIN-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87_LIN-NEXT:    sahf
 ; X87_LIN-NEXT:    ja .LBB2_2
 ; X87_LIN-NEXT:  # %bb.1:
@@ -1176,7 +1176,7 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; X87_WIN-NEXT:    fxch %st(1)
 ; X87_WIN-NEXT:    fucomp %st(2)
 ; X87_WIN-NEXT:    fnstsw %ax
-; X87_WIN-NEXT:    # kill: def %ah killed %ah killed %ax
+; X87_WIN-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87_WIN-NEXT:    sahf
 ; X87_WIN-NEXT:    ja LBB4_2
 ; X87_WIN-NEXT:  # %bb.1:
@@ -1210,7 +1210,7 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; X87_LIN-NEXT:    fxch %st(1)
 ; X87_LIN-NEXT:    fucomp %st(2)
 ; X87_LIN-NEXT:    fnstsw %ax
-; X87_LIN-NEXT:    # kill: def %ah killed %ah killed %ax
+; X87_LIN-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87_LIN-NEXT:    sahf
 ; X87_LIN-NEXT:    ja .LBB4_2
 ; X87_LIN-NEXT:  # %bb.1:

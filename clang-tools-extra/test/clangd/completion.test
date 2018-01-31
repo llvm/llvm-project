@@ -8,11 +8,11 @@ Content-Length: 125
 
 Content-Length: 186
 
-{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///main.cpp","languageId":"cpp","version":1,"text":"struct S { int a; };\nint main() {\nS().\n}"}}}
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///main.cpp","languageId":"cpp","version":1,"text":"struct S { int a; };\nint main() {\nS().\n}"}}}
 
 Content-Length: 148
 
-{"jsonrpc":"2.0","id":1,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":2,"character":4}}}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/completion","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":2,"character":4}}}
 #      CHECK:  "id": 1
 # CHECK-NEXT:  "jsonrpc": "2.0",
 # CHECK-NEXT:  "result": {
@@ -31,11 +31,11 @@ Content-Length: 148
 # Update the source file and check for completions again.
 Content-Length: 190
 
-{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///main.cpp","version":2},"contentChanges":[{"text":"struct S { int b; };\nint main() {\nS().\n}"}]}}
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///main.cpp","version":2},"contentChanges":[{"text":"struct S { int b; };\nint main() {\nS().\n}"}]}}
 
 Content-Length: 148
 
-{"jsonrpc":"2.0","id":3,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":2,"character":4}}}
+{"jsonrpc":"2.0","id":3,"method":"textDocument/completion","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":2,"character":4}}}
 #      CHECK:  "id": 3,
 # CHECK-NEXT:  "jsonrpc": "2.0",
 # CHECK-NEXT:  "result": {

@@ -20,6 +20,7 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Scalar.h"
 using namespace llvm;
@@ -55,20 +56,23 @@ public:
 void AggressiveInstCombinerLegacyPass::getAnalysisUsage(
     AnalysisUsage &AU) const {
   AU.setPreservesCFG();
+  AU.addRequired<DominatorTreeWrapperPass>();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
   AU.addPreserved<AAResultsWrapperPass>();
   AU.addPreserved<BasicAAWrapperPass>();
+  AU.addPreserved<DominatorTreeWrapperPass>();
   AU.addPreserved<GlobalsAAWrapperPass>();
 }
 
 bool AggressiveInstCombinerLegacyPass::runOnFunction(Function &F) {
+  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   auto &DL = F.getParent()->getDataLayout();
 
   bool MadeIRChange = false;
 
   // Handle TruncInst patterns
-  TruncInstCombine TIC(TLI, DL);
+  TruncInstCombine TIC(TLI, DL, DT);
   MadeIRChange |= TIC.run(F);
 
   // TODO: add more patterns to handle...
@@ -78,12 +82,13 @@ bool AggressiveInstCombinerLegacyPass::runOnFunction(Function &F) {
 
 PreservedAnalyses AggressiveInstCombinePass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &DL = F.getParent()->getDataLayout();
   bool MadeIRChange = false;
 
   // Handle TruncInst patterns
-  TruncInstCombine TIC(TLI, DL);
+  TruncInstCombine TIC(TLI, DL, DT);
   MadeIRChange |= TIC.run(F);
   if (!MadeIRChange)
     // No changes, all analyses are preserved.
@@ -101,6 +106,7 @@ char AggressiveInstCombinerLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(AggressiveInstCombinerLegacyPass,
                       "aggressive-instcombine",
                       "Combine pattern based expressions", false, false)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(AggressiveInstCombinerLegacyPass, "aggressive-instcombine",
                     "Combine pattern based expressions", false, false)

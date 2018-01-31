@@ -633,12 +633,11 @@ struct SemaCompleteInput {
 
 // Invokes Sema code completion on a file.
 // Callback will be invoked once completion is done, but before cleaning up.
-bool semaCodeComplete(const Context &Ctx,
-                      std::unique_ptr<CodeCompleteConsumer> Consumer,
+bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
                       const clang::CodeCompleteOptions &Options,
                       const SemaCompleteInput &Input,
                       llvm::function_ref<void()> Callback = nullptr) {
-  auto Tracer = llvm::make_unique<trace::Span>(Ctx, "Sema completion");
+  auto Tracer = llvm::make_unique<trace::Span>("Sema completion");
   std::vector<const char *> ArgStrs;
   for (const auto &S : Input.Command.CommandLine)
     ArgStrs.push_back(S.c_str());
@@ -690,13 +689,12 @@ bool semaCodeComplete(const Context &Ctx,
 
   SyntaxOnlyAction Action;
   if (!Action.BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0])) {
-    log(Ctx, "BeginSourceFile() failed when running codeComplete for " +
-                 Input.FileName);
+    log("BeginSourceFile() failed when running codeComplete for " +
+        Input.FileName);
     return false;
   }
   if (!Action.Execute()) {
-    log(Ctx,
-        "Execute() failed when running codeComplete for " + Input.FileName);
+    log("Execute() failed when running codeComplete for " + Input.FileName);
     return false;
   }
   Tracer.reset();
@@ -704,7 +702,7 @@ bool semaCodeComplete(const Context &Ctx,
   if (Callback)
     Callback();
 
-  Tracer = llvm::make_unique<trace::Span>(Ctx, "Sema completion cleanup");
+  Tracer = llvm::make_unique<trace::Span>("Sema completion cleanup");
   Action.EndSourceFile();
 
   return true;
@@ -801,8 +799,6 @@ clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts() const {
 //     This score is combined with the result quality score for the final score.
 //   - TopN determines the results with the best score.
 class CodeCompleteFlow {
-  trace::Span Tracer;
-  const Context &Ctx;
   const CodeCompleteOptions &Opts;
   // Sema takes ownership of Recorder. Recorder is valid until Sema cleanup.
   std::unique_ptr<CompletionRecorder> RecorderOwner;
@@ -813,21 +809,22 @@ class CodeCompleteFlow {
 
 public:
   // A CodeCompleteFlow object is only useful for calling run() exactly once.
-  CodeCompleteFlow(const Context &Ctx, const CodeCompleteOptions &Opts)
-      : Tracer(Ctx, "CodeCompleteFlow"), Ctx(Tracer.Ctx), Opts(Opts),
-        RecorderOwner(new CompletionRecorder(Opts)), Recorder(*RecorderOwner) {}
+  CodeCompleteFlow(const CodeCompleteOptions &Opts)
+      : Opts(Opts), RecorderOwner(new CompletionRecorder(Opts)),
+        Recorder(*RecorderOwner) {}
 
   CompletionList run(const SemaCompleteInput &SemaCCInput) && {
+    trace::Span Tracer("CodeCompleteFlow");
     // We run Sema code completion first. It builds an AST and calculates:
     //   - completion results based on the AST. These are saved for merging.
     //   - partial identifier and context. We need these for the index query.
     CompletionList Output;
-    semaCodeComplete(Ctx, std::move(RecorderOwner), Opts.getClangCompleteOpts(),
+    semaCodeComplete(std::move(RecorderOwner), Opts.getClangCompleteOpts(),
                      SemaCCInput, [&] {
                        if (Recorder.CCSema)
                          Output = runWithSema();
                        else
-                         log(Ctx, "Code complete: no Sema callback, 0 results");
+                         log("Code complete: no Sema callback, 0 results");
                      });
 
     SPAN_ATTACH(Tracer, "sema_results", NSema);
@@ -835,8 +832,7 @@ public:
     SPAN_ATTACH(Tracer, "merged_results", NBoth);
     SPAN_ATTACH(Tracer, "returned_results", Output.items.size());
     SPAN_ATTACH(Tracer, "incomplete", Output.isIncomplete);
-    log(Ctx,
-        llvm::formatv("Code complete: {0} results from Sema, {1} from Index, "
+    log(llvm::formatv("Code complete: {0} results from Sema, {1} from Index, "
                       "{2} matched, {3} returned{4}.",
                       NSema, NIndex, NBoth, Output.items.size(),
                       Output.isIncomplete ? " (incomplete)" : ""));
@@ -871,7 +867,7 @@ private:
   SymbolSlab queryIndex() {
     if (!Opts.Index || !allowIndex(Recorder.CCContext.getKind()))
       return SymbolSlab();
-    trace::Span Tracer(Ctx, "Query index");
+    trace::Span Tracer("Query index");
     SPAN_ATTACH(Tracer, "limit", Opts.Limit);
 
     SymbolSlab::Builder ResultsBuilder;
@@ -882,15 +878,12 @@ private:
     Req.Query = Filter->pattern();
     Req.Scopes =
         getQueryScopes(Recorder.CCContext, Recorder.CCSema->getSourceManager());
-    log(Tracer.Ctx,
-        llvm::formatv("Code complete: fuzzyFind(\"{0}\", Scopes: [{1}]",
+    log(llvm::formatv("Code complete: fuzzyFind(\"{0}\", scopes=[{1}])",
                       Req.Query,
                       llvm::join(Req.Scopes.begin(), Req.Scopes.end(), ",")));
     // Run the query against the index.
-    Incomplete |=
-        !Opts.Index->fuzzyFind(Tracer.Ctx, Req, [&](const Symbol &Sym) {
-          ResultsBuilder.insert(Sym);
-        });
+    Incomplete |= !Opts.Index->fuzzyFind(
+        Req, [&](const Symbol &Sym) { ResultsBuilder.insert(Sym); });
     return std::move(ResultsBuilder).build();
   }
 
@@ -899,7 +892,7 @@ private:
   std::vector<std::pair<CompletionCandidate, CompletionItemScores>>
   mergeResults(const std::vector<CodeCompletionResult> &SemaResults,
                const SymbolSlab &IndexResults) {
-    trace::Span Tracer(Ctx, "Merge and score results");
+    trace::Span Tracer("Merge and score results");
     // We only keep the best N results at any time, in "native" format.
     TopN Top(Opts.Limit == 0 ? TopN::Unbounded : Opts.Limit);
     llvm::DenseSet<const Symbol *> UsedIndexResults;
@@ -960,18 +953,18 @@ private:
   }
 };
 
-CompletionList codeComplete(const Context &Ctx, PathRef FileName,
+CompletionList codeComplete(PathRef FileName,
                             const tooling::CompileCommand &Command,
                             PrecompiledPreamble const *Preamble,
                             StringRef Contents, Position Pos,
                             IntrusiveRefCntPtr<vfs::FileSystem> VFS,
                             std::shared_ptr<PCHContainerOperations> PCHs,
                             CodeCompleteOptions Opts) {
-  return CodeCompleteFlow(Ctx, Opts).run(
+  return CodeCompleteFlow(Opts).run(
       {FileName, Command, Preamble, Contents, Pos, VFS, PCHs});
 }
 
-SignatureHelp signatureHelp(const Context &Ctx, PathRef FileName,
+SignatureHelp signatureHelp(PathRef FileName,
                             const tooling::CompileCommand &Command,
                             PrecompiledPreamble const *Preamble,
                             StringRef Contents, Position Pos,
@@ -983,10 +976,10 @@ SignatureHelp signatureHelp(const Context &Ctx, PathRef FileName,
   Options.IncludeMacros = false;
   Options.IncludeCodePatterns = false;
   Options.IncludeBriefComments = true;
-  semaCodeComplete(
-      Ctx, llvm::make_unique<SignatureHelpCollector>(Options, Result), Options,
-      {FileName, Command, Preamble, Contents, Pos, std::move(VFS),
-       std::move(PCHs)});
+  semaCodeComplete(llvm::make_unique<SignatureHelpCollector>(Options, Result),
+                   Options,
+                   {FileName, Command, Preamble, Contents, Pos, std::move(VFS),
+                    std::move(PCHs)});
   return Result;
 }
 

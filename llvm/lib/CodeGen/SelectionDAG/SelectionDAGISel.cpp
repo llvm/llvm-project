@@ -2157,7 +2157,9 @@ static bool findNonImmUse(SDNode *Use, SDNode* Def, SDNode *ImmedUse,
   while (!WorkList.empty()) {
     Use = WorkList.back();
     WorkList.pop_back();
-    if (Use->getNodeId() < Def->getNodeId() && Use->getNodeId() != -1)
+    // NodeId topological order of TokenFactors is not guaranteed. Do not skip.
+    if (Use->getOpcode() != ISD::TokenFactor &&
+        Use->getNodeId() < Def->getNodeId() && Use->getNodeId() != -1)
       continue;
 
     // Don't revisit nodes if we already scanned it and didn't fail, we know we

@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple x86_64-elf -filetype asm -o - %s | FileCheck %s
+; REQUIRES: x86-registered-target
 
 !llvm.linker.options = !{!0, !1}
 

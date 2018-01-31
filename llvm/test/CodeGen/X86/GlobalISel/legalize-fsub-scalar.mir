@@ -28,19 +28,19 @@ stack:
 constants:
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %xmm0, %xmm1
+    liveins: $xmm0, $xmm1
 
     ; CHECK-LABEL: name: test_fsub_float
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY %xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY %xmm1
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $xmm0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $xmm1
     ; CHECK: [[FSUB:%[0-9]+]]:_(s32) = G_FSUB [[COPY]], [[COPY1]]
-    ; CHECK: %xmm0 = COPY [[FSUB]](s32)
-    ; CHECK: RET 0, implicit %xmm0
-    %0(s32) = COPY %xmm0
-    %1(s32) = COPY %xmm1
+    ; CHECK: $xmm0 = COPY [[FSUB]](s32)
+    ; CHECK: RET 0, implicit $xmm0
+    %0(s32) = COPY $xmm0
+    %1(s32) = COPY $xmm1
     %2(s32) = G_FSUB %0, %1
-    %xmm0 = COPY %2(s32)
-    RET 0, implicit %xmm0
+    $xmm0 = COPY %2(s32)
+    RET 0, implicit $xmm0
 
 ...
 ---
@@ -58,18 +58,18 @@ stack:
 constants:
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %xmm0, %xmm1
+    liveins: $xmm0, $xmm1
 
     ; CHECK-LABEL: name: test_fsub_double
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY %xmm0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY %xmm1
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $xmm0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $xmm1
     ; CHECK: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[COPY]], [[COPY1]]
-    ; CHECK: %xmm0 = COPY [[FSUB]](s64)
-    ; CHECK: RET 0, implicit %xmm0
-    %0(s64) = COPY %xmm0
-    %1(s64) = COPY %xmm1
+    ; CHECK: $xmm0 = COPY [[FSUB]](s64)
+    ; CHECK: RET 0, implicit $xmm0
+    %0(s64) = COPY $xmm0
+    %1(s64) = COPY $xmm1
     %2(s64) = G_FSUB %0, %1
-    %xmm0 = COPY %2(s64)
-    RET 0, implicit %xmm0
+    $xmm0 = COPY %2(s64)
+    RET 0, implicit $xmm0
 
 ...

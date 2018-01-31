@@ -168,16 +168,19 @@ HexagonTargetLowering::buildHvxVectorReg(ArrayRef<SDValue> Values,
   }
 
   unsigned NumWords = Words.size();
-  bool IsSplat = true;
+  bool IsSplat = true, IsUndef = true;
   SDValue SplatV;
   for (unsigned i = 0; i != NumWords && IsSplat; ++i) {
     if (isUndef(Words[i]))
       continue;
+    IsUndef = false;
     if (!SplatV.getNode())
       SplatV = Words[i];
     else if (SplatV != Words[i])
       IsSplat = false;
   }
+  if (IsUndef)
+    return DAG.getUNDEF(VecTy);
   if (IsSplat) {
     assert(SplatV.getNode());
     auto *IdxN = dyn_cast<ConstantSDNode>(SplatV.getNode());
@@ -204,8 +207,8 @@ HexagonTargetLowering::buildHvxVectorReg(ArrayRef<SDValue> Values,
 
   // Construct two halves in parallel, then or them together.
   assert(4*Words.size() == Subtarget.getVectorLength());
-  SDValue HalfV0 = getNode(Hexagon::V6_vd0, dl, VecTy, {}, DAG);
-  SDValue HalfV1 = getNode(Hexagon::V6_vd0, dl, VecTy, {}, DAG);
+  SDValue HalfV0 = getInstr(Hexagon::V6_vd0, dl, VecTy, {}, DAG);
+  SDValue HalfV1 = getInstr(Hexagon::V6_vd0, dl, VecTy, {}, DAG);
   SDValue S = DAG.getConstant(4, dl, MVT::i32);
   for (unsigned i = 0; i != NumWords/2; ++i) {
     SDValue N = DAG.getNode(HexagonISD::VINSERTW0, dl, VecTy,
@@ -254,8 +257,8 @@ HexagonTargetLowering::createHvxPrefixPred(SDValue PredV, const SDLoc &dl,
       return S;
     // Fill the bytes beyond BlockLen with 0s.
     MVT BoolTy = MVT::getVectorVT(MVT::i1, HwLen);
-    SDValue Q = getNode(Hexagon::V6_pred_scalar2, dl, BoolTy,
-                        {DAG.getConstant(BlockLen, dl, MVT::i32)}, DAG);
+    SDValue Q = getInstr(Hexagon::V6_pred_scalar2, dl, BoolTy,
+                         {DAG.getConstant(BlockLen, dl, MVT::i32)}, DAG);
     SDValue M = DAG.getNode(HexagonISD::Q2V, dl, ByteTy, Q);
     return DAG.getNode(ISD::AND, dl, ByteTy, S, M);
   }
@@ -401,7 +404,7 @@ HexagonTargetLowering::extractHvxElementPred(SDValue VecV, SDValue IdxV,
 
   SDValue ExtB = extractHvxElementReg(ByteVec, IdxV, dl, MVT::i32, DAG);
   SDValue Zero = DAG.getTargetConstant(0, dl, MVT::i32);
-  return getNode(Hexagon::C2_cmpgtui, dl, MVT::i1, {ExtB, Zero}, DAG);
+  return getInstr(Hexagon::C2_cmpgtui, dl, MVT::i1, {ExtB, Zero}, DAG);
 }
 
 SDValue
@@ -570,8 +573,8 @@ HexagonTargetLowering::extractHvxSubvectorPred(SDValue VecV, SDValue IdxV,
   SDValue W1 = DAG.getNode(HexagonISD::VEXTRACTW, dl, MVT::i32,
                            {ShuffV, DAG.getConstant(4, dl, MVT::i32)});
   SDValue Vec64 = DAG.getNode(HexagonISD::COMBINE, dl, MVT::v8i8, {W1, W0});
-  return getNode(Hexagon::A4_vcmpbgtui, dl, ResTy,
-                 {Vec64, DAG.getTargetConstant(0, dl, MVT::i32)}, DAG);
+  return getInstr(Hexagon::A4_vcmpbgtui, dl, ResTy,
+                  {Vec64, DAG.getTargetConstant(0, dl, MVT::i32)}, DAG);
 }
 
 SDValue
@@ -694,9 +697,9 @@ HexagonTargetLowering::insertHvxSubvectorPred(SDValue VecV, SDValue SubV,
   // subvector should be inserted at index 0. Generate a predicate mask
   // and use vmux to do the insertion.
   MVT BoolTy = MVT::getVectorVT(MVT::i1, HwLen);
-  SDValue Q = getNode(Hexagon::V6_pred_scalar2, dl, BoolTy,
-                      {DAG.getConstant(BlockLen, dl, MVT::i32)}, DAG);
-  ByteVec = getNode(Hexagon::V6_vmux, dl, ByteTy, {Q, ByteSub, ByteVec}, DAG);
+  SDValue Q = getInstr(Hexagon::V6_pred_scalar2, dl, BoolTy,
+                       {DAG.getConstant(BlockLen, dl, MVT::i32)}, DAG);
+  ByteVec = getInstr(Hexagon::V6_vmux, dl, ByteTy, {Q, ByteSub, ByteVec}, DAG);
   // Rotate ByteVec back, and convert to a vector predicate.
   if (!IdxN || !IdxN->isNullValue()) {
     SDValue HwLenV = DAG.getConstant(HwLen, dl, MVT::i32);
@@ -872,7 +875,7 @@ HexagonTargetLowering::LowerHvxMul(SDValue Op, SelectionDAG &DAG) const {
       MVT ExtTy = typeExtElem(ResTy, 2);
       unsigned MpyOpc = ElemTy == MVT::i8 ? Hexagon::V6_vmpybv
                                           : Hexagon::V6_vmpyhv;
-      SDValue M = getNode(MpyOpc, dl, ExtTy, {Vs, Vt}, DAG);
+      SDValue M = getInstr(MpyOpc, dl, ExtTy, {Vs, Vt}, DAG);
 
       // Discard high halves of the resulting values, collect the low halves.
       for (unsigned I = 0; I < VecLen; I += 2) {
@@ -889,10 +892,10 @@ HexagonTargetLowering::LowerHvxMul(SDValue Op, SelectionDAG &DAG) const {
       // T1 = V6_vaslw T0, 16
       // T2 = V6_vmpyiewuh_acc T1, Vs, Vt
       SDValue S16 = DAG.getConstant(16, dl, MVT::i32);
-      SDValue T0 = getNode(Hexagon::V6_vmpyiowh, dl, ResTy, {Vs, Vt}, DAG);
-      SDValue T1 = getNode(Hexagon::V6_vaslw, dl, ResTy, {T0, S16}, DAG);
-      SDValue T2 = getNode(Hexagon::V6_vmpyiewuh_acc, dl, ResTy,
-                           {T1, Vs, Vt}, DAG);
+      SDValue T0 = getInstr(Hexagon::V6_vmpyiowh, dl, ResTy, {Vs, Vt}, DAG);
+      SDValue T1 = getInstr(Hexagon::V6_vaslw, dl, ResTy, {T0, S16}, DAG);
+      SDValue T2 = getInstr(Hexagon::V6_vmpyiewuh_acc, dl, ResTy,
+                            {T1, Vs, Vt}, DAG);
       return T2;
     }
     default:
@@ -925,7 +928,7 @@ HexagonTargetLowering::LowerHvxMulh(SDValue Op, SelectionDAG &DAG) const {
     unsigned MpyOpc = ElemTy == MVT::i8
         ? (IsSigned ? Hexagon::V6_vmpybv : Hexagon::V6_vmpyubv)
         : (IsSigned ? Hexagon::V6_vmpyhv : Hexagon::V6_vmpyuhv);
-    SDValue M = getNode(MpyOpc, dl, ExtTy, {Vs, Vt}, DAG);
+    SDValue M = getInstr(MpyOpc, dl, ExtTy, {Vs, Vt}, DAG);
 
     // Discard low halves of the resulting values, collect the high halves.
     for (unsigned I = 0; I < VecLen; I += 2) {
@@ -955,15 +958,15 @@ HexagonTargetLowering::LowerHvxMulh(SDValue Op, SelectionDAG &DAG) const {
     // Denote Hi(Vs) = Vs':
     //   = [Vs'*s Hi(Vt)*2^16 + Vs' *su Lo(Vt) + V6_vmpyewuh(Vt,Vs)] >> 16
     //   = Vs'*s Hi(Vt) + (V6_vmpyiewuh(Vs',Vt) + V6_vmpyewuh(Vt,Vs)) >> 16
-    SDValue T0 = getNode(Hexagon::V6_vmpyewuh, dl, ResTy, {Vt, Vs}, DAG);
+    SDValue T0 = getInstr(Hexagon::V6_vmpyewuh, dl, ResTy, {Vt, Vs}, DAG);
     // Get Vs':
-    SDValue S0 = getNode(Hexagon::V6_vasrw, dl, ResTy, {Vs, S16}, DAG);
-    SDValue T1 = getNode(Hexagon::V6_vmpyiewuh_acc, dl, ResTy,
-                         {T0, S0, Vt}, DAG);
+    SDValue S0 = getInstr(Hexagon::V6_vasrw, dl, ResTy, {Vs, S16}, DAG);
+    SDValue T1 = getInstr(Hexagon::V6_vmpyiewuh_acc, dl, ResTy,
+                          {T0, S0, Vt}, DAG);
     // Shift by 16:
-    SDValue S2 = getNode(Hexagon::V6_vasrw, dl, ResTy, {T1, S16}, DAG);
+    SDValue S2 = getInstr(Hexagon::V6_vasrw, dl, ResTy, {T1, S16}, DAG);
     // Get Vs'*Hi(Vt):
-    SDValue T2 = getNode(Hexagon::V6_vmpyiowh, dl, ResTy, {S0, Vt}, DAG);
+    SDValue T2 = getInstr(Hexagon::V6_vmpyiowh, dl, ResTy, {S0, Vt}, DAG);
     // Add:
     SDValue T3 = DAG.getNode(ISD::ADD, dl, ResTy, {S2, T2});
     return T3;
@@ -979,29 +982,29 @@ HexagonTargetLowering::LowerHvxMulh(SDValue Op, SelectionDAG &DAG) const {
   };
 
   MVT PairTy = typeJoin({ResTy, ResTy});
-  SDValue P = getNode(Hexagon::V6_lvsplatw, dl, ResTy,
-                      {DAG.getConstant(0x02020202, dl, MVT::i32)}, DAG);
+  SDValue P = getInstr(Hexagon::V6_lvsplatw, dl, ResTy,
+                       {DAG.getConstant(0x02020202, dl, MVT::i32)}, DAG);
   // Multiply-unsigned halfwords:
   //   LoVec = Vs.uh[2i] * Vt.uh[2i],
   //   HiVec = Vs.uh[2i+1] * Vt.uh[2i+1]
-  SDValue T0 = getNode(Hexagon::V6_vmpyuhv, dl, PairTy, {Vs, Vt}, DAG);
+  SDValue T0 = getInstr(Hexagon::V6_vmpyuhv, dl, PairTy, {Vs, Vt}, DAG);
   // The low halves in the LoVec of the pair can be discarded. They are
   // not added to anything (in the full-precision product), so they cannot
   // produce a carry into the higher bits.
-  SDValue T1 = getNode(Hexagon::V6_vlsrw, dl, ResTy, {LoVec(T0), S16}, DAG);
+  SDValue T1 = getInstr(Hexagon::V6_vlsrw, dl, ResTy, {LoVec(T0), S16}, DAG);
   // Swap low and high halves in Vt, and do the halfword multiplication
   // to get products Vs.uh[2i] * Vt.uh[2i+1] and Vs.uh[2i+1] * Vt.uh[2i].
-  SDValue D0 = getNode(Hexagon::V6_vdelta, dl, ResTy, {Vt, P}, DAG);
-  SDValue T2 = getNode(Hexagon::V6_vmpyuhv, dl, PairTy, {Vs, D0}, DAG);
+  SDValue D0 = getInstr(Hexagon::V6_vdelta, dl, ResTy, {Vt, P}, DAG);
+  SDValue T2 = getInstr(Hexagon::V6_vmpyuhv, dl, PairTy, {Vs, D0}, DAG);
   // T2 has mixed products of halfwords: Lo(Vt)*Hi(Vs) and Hi(Vt)*Lo(Vs).
   // These products are words, but cannot be added directly because the
   // sums could overflow. Add these products, by halfwords, where each sum
   // of a pair of halfwords gives a word.
-  SDValue T3 = getNode(Hexagon::V6_vadduhw, dl, PairTy,
-                       {LoVec(T2), HiVec(T2)}, DAG);
+  SDValue T3 = getInstr(Hexagon::V6_vadduhw, dl, PairTy,
+                        {LoVec(T2), HiVec(T2)}, DAG);
   // Add the high halfwords from the products of the low halfwords.
   SDValue T4 = DAG.getNode(ISD::ADD, dl, ResTy, {T1, LoVec(T3)});
-  SDValue T5 = getNode(Hexagon::V6_vlsrw, dl, ResTy, {T4, S16}, DAG);
+  SDValue T5 = getInstr(Hexagon::V6_vlsrw, dl, ResTy, {T4, S16}, DAG);
   SDValue T6 = DAG.getNode(ISD::ADD, dl, ResTy, {HiVec(T0), HiVec(T3)});
   SDValue T7 = DAG.getNode(ISD::ADD, dl, ResTy, {T5, T6});
   return T7;
@@ -1011,9 +1014,22 @@ SDValue
 HexagonTargetLowering::LowerHvxSetCC(SDValue Op, SelectionDAG &DAG) const {
   MVT VecTy = ty(Op.getOperand(0));
   assert(VecTy == ty(Op.getOperand(1)));
+  unsigned HwLen = Subtarget.getVectorLength();
+  const SDLoc &dl(Op);
 
   SDValue Cmp = Op.getOperand(2);
   ISD::CondCode CC = cast<CondCodeSDNode>(Cmp)->get();
+
+  if (VecTy.getSizeInBits() == 16*HwLen) {
+    VectorPair P0 = opSplit(Op.getOperand(0), dl, DAG);
+    VectorPair P1 = opSplit(Op.getOperand(1), dl, DAG);
+    MVT HalfTy = typeSplit(VecTy).first;
+
+    SDValue V0 = DAG.getSetCC(dl, HalfTy, P0.first, P1.first, CC);
+    SDValue V1 = DAG.getSetCC(dl, HalfTy, P0.second, P1.second, CC);
+    return DAG.getNode(ISD::CONCAT_VECTORS, dl, ty(Op), V1, V0);
+  }
+
   bool Negate = false, Swap = false;
 
   // HVX has instructions for SETEQ, SETGT, SETUGT. The other comparisons
@@ -1074,11 +1090,10 @@ HexagonTargetLowering::LowerHvxSetCC(SDValue Op, SelectionDAG &DAG) const {
   unsigned CmpOpc = OpcTable[Log2_32(ElemWidth)-3][getIdx(CC)];
 
   MVT ResTy = ty(Op);
-  const SDLoc &dl(Op);
   SDValue OpL = Swap ? Op.getOperand(1) : Op.getOperand(0);
   SDValue OpR = Swap ? Op.getOperand(0) : Op.getOperand(1);
-  SDValue CmpV = getNode(CmpOpc, dl, ResTy, {OpL, OpR}, DAG);
-  return Negate ? getNode(Hexagon::V6_pred_not, dl, ResTy, {CmpV}, DAG)
+  SDValue CmpV = getInstr(CmpOpc, dl, ResTy, {OpL, OpR}, DAG);
+  return Negate ? getInstr(Hexagon::V6_pred_not, dl, ResTy, {CmpV}, DAG)
                 : CmpV;
 }
 
@@ -1088,3 +1103,9 @@ HexagonTargetLowering::LowerHvxExtend(SDValue Op, SelectionDAG &DAG) const {
   assert(Op.getOpcode() == ISD::ANY_EXTEND_VECTOR_INREG);
   return DAG.getZeroExtendVectorInReg(Op.getOperand(0), SDLoc(Op), ty(Op));
 }
+
+SDValue
+HexagonTargetLowering::LowerHvxShift(SDValue Op, SelectionDAG &DAG) const {
+  return Op;
+}
+

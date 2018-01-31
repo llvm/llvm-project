@@ -423,11 +423,11 @@ static void reportDuplicate(Symbol *Sym, InputFile *NewFile) {
               toString(Sym->File) + "\n>>> defined in " + toString(NewFile));
 }
 
-static void reportDuplicate(Symbol *Sym, InputSectionBase *ErrSec,
-                            uint64_t ErrOffset) {
+static void reportDuplicate(Symbol *Sym, InputFile *NewFile,
+                            InputSectionBase *ErrSec, uint64_t ErrOffset) {
   Defined *D = cast<Defined>(Sym);
   if (!D->Section || !ErrSec) {
-    reportDuplicate(Sym, ErrSec ? ErrSec->File : nullptr);
+    reportDuplicate(Sym, NewFile);
     return;
   }
 
@@ -467,7 +467,8 @@ Symbol *SymbolTable::addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
     replaceSymbol<Defined>(S, File, Name, Binding, StOther, Type, Value, Size,
                            Section);
   else if (Cmp == 0)
-    reportDuplicate(S, dyn_cast_or_null<InputSectionBase>(Section), Value);
+    reportDuplicate(S, File, dyn_cast_or_null<InputSectionBase>(Section),
+                    Value);
   return S;
 }
 

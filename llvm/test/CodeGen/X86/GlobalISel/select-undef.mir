@@ -27,11 +27,11 @@ body:             |
   bb.1 (%ir-block.0):
     ; ALL-LABEL: name: test
     ; ALL: [[DEF:%[0-9]+]]:gr8 = IMPLICIT_DEF
-    ; ALL: %al = COPY [[DEF]]
-    ; ALL: RET 0, implicit %al
+    ; ALL: $al = COPY [[DEF]]
+    ; ALL: RET 0, implicit $al
     %0(s8) = G_IMPLICIT_DEF
-    %al = COPY %0(s8)
-    RET 0, implicit %al
+    $al = COPY %0(s8)
+    RET 0, implicit $al
 
 ...
 ---
@@ -49,18 +49,18 @@ stack:
 constants:
 body:             |
   bb.1 (%ir-block.0):
-    liveins: %edi
+    liveins: $edi
 
     ; ALL-LABEL: name: test2
-    ; ALL: [[COPY:%[0-9]+]]:gr8 = COPY %dil
+    ; ALL: [[COPY:%[0-9]+]]:gr8 = COPY $dil
     ; ALL: [[DEF:%[0-9]+]]:gr8 = IMPLICIT_DEF
-    ; ALL: [[ADD8rr:%[0-9]+]]:gr8 = ADD8rr [[COPY]], [[DEF]], implicit-def %eflags
-    ; ALL: %al = COPY [[ADD8rr]]
-    ; ALL: RET 0, implicit %al
-    %0(s8) = COPY %dil
+    ; ALL: [[ADD8rr:%[0-9]+]]:gr8 = ADD8rr [[COPY]], [[DEF]], implicit-def $eflags
+    ; ALL: $al = COPY [[ADD8rr]]
+    ; ALL: RET 0, implicit $al
+    %0(s8) = COPY $dil
     %1(s8) = G_IMPLICIT_DEF
     %2(s8) = G_ADD %0, %1
-    %al = COPY %2(s8)
-    RET 0, implicit %al
+    $al = COPY %2(s8)
+    RET 0, implicit $al
 
 ...

@@ -484,8 +484,7 @@ no:
 define void @truncand32(i16 inreg %x) nounwind {
 ; CHECK-LINUX64-LABEL: truncand32:
 ; CHECK-LINUX64:       # %bb.0:
-; CHECK-LINUX64-NEXT:    andl $2049, %edi # imm = 0x801
-; CHECK-LINUX64-NEXT:    testw %di, %di
+; CHECK-LINUX64-NEXT:    testl $2049, %edi # imm = 0x801
 ; CHECK-LINUX64-NEXT:    je .LBB11_1
 ; CHECK-LINUX64-NEXT:  # %bb.2: # %no
 ; CHECK-LINUX64-NEXT:    retq
@@ -498,8 +497,7 @@ define void @truncand32(i16 inreg %x) nounwind {
 ; CHECK-WIN32-64-LABEL: truncand32:
 ; CHECK-WIN32-64:       # %bb.0:
 ; CHECK-WIN32-64-NEXT:    subq $40, %rsp
-; CHECK-WIN32-64-NEXT:    andl $2049, %ecx # imm = 0x801
-; CHECK-WIN32-64-NEXT:    testw %cx, %cx
+; CHECK-WIN32-64-NEXT:    testl $2049, %ecx # imm = 0x801
 ; CHECK-WIN32-64-NEXT:    je .LBB11_1
 ; CHECK-WIN32-64-NEXT:  # %bb.2: # %no
 ; CHECK-WIN32-64-NEXT:    addq $40, %rsp
@@ -511,8 +509,7 @@ define void @truncand32(i16 inreg %x) nounwind {
 ;
 ; CHECK-X86-LABEL: truncand32:
 ; CHECK-X86:       # %bb.0:
-; CHECK-X86-NEXT:    andl $2049, %eax # imm = 0x801
-; CHECK-X86-NEXT:    testw %ax, %ax
+; CHECK-X86-NEXT:    testl $2049, %eax # imm = 0x801
 ; CHECK-X86-NEXT:    je .LBB11_1
 ; CHECK-X86-NEXT:  # %bb.2: # %no
 ; CHECK-X86-NEXT:    retl

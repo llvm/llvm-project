@@ -14,7 +14,7 @@
 ; The address of the (potentially now malloc'ed) alloca ends up
 ; in rdi, after which it is spilled to the stack. We record the
 ; spill OFFSET on the stack for checking the debug info below.
-; CHECK: #DEBUG_VALUE: bar:y <- [DW_OP_deref] [%rdi+0]
+; CHECK: #DEBUG_VALUE: bar:y <- [DW_OP_deref] [$rdi+0]
 ; CHECK: movq %rdi, [[OFFSET:[0-9]+]](%rsp)
 ; CHECK-NEXT: [[START_LABEL:.Ltmp[0-9]+]]
 ; CHECK-NEXT: #DEBUG_VALUE: bar:y <- [DW_OP_plus_uconst [[OFFSET]], DW_OP_deref, DW_OP_deref]

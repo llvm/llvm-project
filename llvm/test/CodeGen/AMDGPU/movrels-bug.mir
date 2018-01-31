@@ -20,12 +20,12 @@ name:            main
 tracksRegLiveness: true
 body:             |
   bb.0:
-    %m0 = S_MOV_B32 undef %sgpr0
-    V_MOVRELD_B32_e32 undef %vgpr2, 0, implicit %m0, implicit %exec, implicit-def %vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8, implicit undef %vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8(tied-def 4)
-    %m0 = S_MOV_B32 undef %sgpr0
-    %vgpr1 = V_MOVRELS_B32_e32 undef %vgpr1, implicit %m0, implicit %exec, implicit killed %vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8
-    %vgpr4 = V_MAC_F32_e32 undef %vgpr0, undef %vgpr0, undef %vgpr4, implicit %exec
-    EXP_DONE 15, undef %vgpr0, killed %vgpr1, killed %vgpr4, undef %vgpr0, 0, 0, 12, implicit %exec
+    $m0 = S_MOV_B32 undef $sgpr0
+    V_MOVRELD_B32_e32 undef $vgpr2, 0, implicit $m0, implicit $exec, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8, implicit undef $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8(tied-def 4)
+    $m0 = S_MOV_B32 undef $sgpr0
+    $vgpr1 = V_MOVRELS_B32_e32 undef $vgpr1, implicit $m0, implicit $exec, implicit killed $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8
+    $vgpr4 = V_MAC_F32_e32 undef $vgpr0, undef $vgpr0, undef $vgpr4, implicit $exec
+    EXP_DONE 15, undef $vgpr0, killed $vgpr1, killed $vgpr4, undef $vgpr0, 0, 0, 12, implicit $exec
     S_ENDPGM
 
 ...

@@ -14,7 +14,6 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_XREFS_H
 
 #include "ClangdUnit.h"
-#include "Context.h"
 #include "Protocol.h"
 #include <vector>
 
@@ -22,12 +21,11 @@ namespace clang {
 namespace clangd {
 
 /// Get definition of symbol at a specified \p Pos.
-std::vector<Location> findDefinitions(const Context &Ctx, ParsedAST &AST,
-                                      Position Pos);
+std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos);
 
 /// Returns highlights for all usages of a symbol at \p Pos.
-std::vector<DocumentHighlight>
-findDocumentHighlights(const Context &Ctx, ParsedAST &AST, Position Pos);
+std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
+                                                      Position Pos);
 
 } // namespace clangd
 } // namespace clang

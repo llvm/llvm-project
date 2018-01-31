@@ -26,30 +26,30 @@
 ; ASM: # %bb.0:                                 # %entry
 ; ASM:         pushq   %rsi
 ; ASM:         subq    $32, %rsp
-; ASM:         #DEBUG_VALUE: f:p <- %ecx
+; ASM:         #DEBUG_VALUE: f:p <- $ecx
 ; ASM:         movl    %ecx, %esi
 ; ASM: [[p_ecx_esi:\.Ltmp.*]]:
-; ASM:         #DEBUG_VALUE: f:p <- %esi
+; ASM:         #DEBUG_VALUE: f:p <- $esi
 ; ASM:         callq   getint
 ; ASM: [[after_getint:\.Ltmp.*]]:
-; ASM:         #DEBUG_VALUE: a <- %eax
-; ASM:         #DEBUG_VALUE: inlineinc:a <- %eax
-; ASM:         #DEBUG_VALUE: c <- %eax
+; ASM:         #DEBUG_VALUE: a <- $eax
+; ASM:         #DEBUG_VALUE: inlineinc:a <- $eax
+; ASM:         #DEBUG_VALUE: c <- $eax
 ; ASM:         testl   %esi, %esi
 ; ASM:         je      .LBB0_2
 ; ASM: [[after_je:\.Ltmp.*]]:
 ; ASM: # %bb.1:                                 # %if.then
-; ASM-DAG:     #DEBUG_VALUE: inlineinc:a <- %eax
-; ASM-DAG:     #DEBUG_VALUE: a <- %eax
-; ASM-DAG:     #DEBUG_VALUE: f:p <- %esi
+; ASM-DAG:     #DEBUG_VALUE: inlineinc:a <- $eax
+; ASM-DAG:     #DEBUG_VALUE: a <- $eax
+; ASM-DAG:     #DEBUG_VALUE: f:p <- $esi
 ; ASM:         addl    $1, %eax
 ; ASM: [[after_inc_eax:\.Ltmp.*]]:
-; ASM:         #DEBUG_VALUE: inlineinc:b <- %eax
-; ASM:         #DEBUG_VALUE: b <- %eax
+; ASM:         #DEBUG_VALUE: inlineinc:b <- $eax
+; ASM:         #DEBUG_VALUE: b <- $eax
 ; ASM:         addl    $1, x(%rip)
 ; ASM: [[after_if:\.Ltmp.*]]:
 ; ASM: .LBB0_2:                                # %if.else
-; ASM:         #DEBUG_VALUE: f:p <- %esi
+; ASM:         #DEBUG_VALUE: f:p <- $esi
 ; ASM:         movl    %eax, %ecx
 ; ASM:         addq    $32, %rsp
 ; ASM:         popq    %rsi

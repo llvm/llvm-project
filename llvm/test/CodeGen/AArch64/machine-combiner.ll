@@ -3,7 +3,7 @@
 ; Incremental updates of the instruction depths should be enough for this test
 ; case.
 ; RUN: llc -mtriple=aarch64-gnu-linux -mcpu=cortex-a57 -enable-unsafe-fp-math \
-; RUN:     -disable-post-ra -machine-combiner-inc-threshold=0 < %s | FileCheck %s
+; RUN:     -disable-post-ra -machine-combiner-inc-threshold=0 -machine-combiner-verify-pattern-order=true < %s | FileCheck %s
 
 ; Verify that the first two adds are independent regardless of how the inputs are
 ; commuted. The destination registers are used as source registers for the third add.

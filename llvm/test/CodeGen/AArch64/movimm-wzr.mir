@@ -32,11 +32,11 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0 (%ir-block.0):
-    %wzr = MOVi32imm 42
-    %xzr = MOVi64imm 42
-    RET_ReallyLR implicit killed %w0
+    $wzr = MOVi32imm 42
+    $xzr = MOVi64imm 42
+    RET_ReallyLR implicit killed $w0
 
 ...
 
 # CHECK: bb.0
-# CHECK-NEXT: RET undef %lr
+# CHECK-NEXT: RET undef $lr

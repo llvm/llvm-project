@@ -17,7 +17,7 @@ define i32 @pr32690(i32) {
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    addq $63, %rax
 ; X64-NEXT:    shrq $6, %rax
-; X64-NEXT:    # kill: def %eax killed %eax killed %rax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %2 = zext i32 %0 to i64
   %3 = add nuw nsw i64 %2, 63

@@ -22,10 +22,10 @@ registers:
   - { id: 6, class: _ }
 body: |
   bb.0.entry:
-    liveins: %x0, %x1, %x2, %x3
+    liveins: $x0, $x1, $x2, $x3
     ; CHECK-LABEL: name: test_shift
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY %x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY %x1
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
     ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[TRUNC]], [[C]]
@@ -36,7 +36,7 @@ body: |
     ; CHECK: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[SHL1]], [[C1]]
     ; CHECK: [[ASHR2:%[0-9]+]]:_(s32) = G_ASHR [[ASHR]], [[ASHR1]]
     ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ASHR2]](s32)
-    ; CHECK: %w0 = COPY [[COPY2]](s32)
+    ; CHECK: $w0 = COPY [[COPY2]](s32)
     ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
     ; CHECK: [[TRUNC2:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
     ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC2]], [[C2]]
@@ -45,27 +45,27 @@ body: |
     ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[TRUNC3]], [[C3]]
     ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[AND]], [[AND1]]
     ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
-    ; CHECK: %w0 = COPY [[COPY3]](s32)
+    ; CHECK: $w0 = COPY [[COPY3]](s32)
     ; CHECK: [[TRUNC4:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
     ; CHECK: [[TRUNC5:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
     ; CHECK: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[COPY1]]0, [[COPY1]]1
     ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY [[COPY1]]2(s32)
-    ; CHECK: %w0 = COPY [[COPY4]](s32)
-    %0(s64) = COPY %x0
-    %1(s64) = COPY %x1
+    ; CHECK: $w0 = COPY [[COPY4]](s32)
+    %0(s64) = COPY $x0
+    %1(s64) = COPY $x1
     %2(s8) = G_TRUNC %0
     %3(s8) = G_TRUNC %1
 
     %4(s8) = G_ASHR %2, %3
     %7:_(s32) = G_ANYEXT %4
-    %w0 = COPY %7
+    $w0 = COPY %7
 
 
     %5(s8) = G_LSHR %2, %3
     %8:_(s32) = G_ANYEXT %5
-    %w0 = COPY %8
+    $w0 = COPY %8
 
     %6(s8) = G_SHL %2, %3
     %9:_(s32) = G_ANYEXT %6
-    %w0 = COPY %9
+    $w0 = COPY %9
 ...

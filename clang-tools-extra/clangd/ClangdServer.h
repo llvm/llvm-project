@@ -18,17 +18,15 @@
 #include "Function.h"
 #include "GlobalCompilationDatabase.h"
 #include "Protocol.h"
+#include "TUScheduler.h"
 #include "index/FileIndex.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
-#include <condition_variable>
 #include <functional>
-#include <mutex>
 #include <string>
-#include <thread>
 #include <type_traits>
 #include <utility>
 
@@ -73,7 +71,7 @@ public:
 
   /// Called by ClangdServer when \p Diagnostics for \p File are ready.
   virtual void
-  onDiagnosticsReady(const Context &Ctx, PathRef File,
+  onDiagnosticsReady(PathRef File,
                      Tagged<std::vector<DiagWithFixIts>> Diagnostics) = 0;
 };
 
@@ -95,73 +93,6 @@ public:
   /// \return getRealFileSystem() tagged with default tag, i.e. VFSTag()
   Tagged<IntrusiveRefCntPtr<vfs::FileSystem>>
   getTaggedFileSystem(PathRef File) override;
-};
-
-class ClangdServer;
-
-/// Returns a number of a default async threads to use for ClangdScheduler.
-/// Returned value is always >= 1 (i.e. will not cause requests to be processed
-/// synchronously).
-unsigned getDefaultAsyncThreadsCount();
-
-/// Handles running WorkerRequests of ClangdServer on a number of worker
-/// threads.
-class ClangdScheduler {
-public:
-  /// If \p AsyncThreadsCount is 0, requests added using addToFront and addToEnd
-  /// will be processed synchronously on the calling thread.
-  // Otherwise, \p AsyncThreadsCount threads will be created to schedule the
-  // requests.
-  ClangdScheduler(unsigned AsyncThreadsCount);
-  ~ClangdScheduler();
-
-  /// Add a new request to run function \p F with args \p As to the start of the
-  /// queue. The request will be run on a separate thread.
-  template <class Func, class... Args>
-  void addToFront(Func &&F, Args &&... As) {
-    if (RunSynchronously) {
-      std::forward<Func>(F)(std::forward<Args>(As)...);
-      return;
-    }
-
-    {
-      std::lock_guard<std::mutex> Lock(Mutex);
-      RequestQueue.push_front(
-          BindWithForward(std::forward<Func>(F), std::forward<Args>(As)...));
-    }
-    RequestCV.notify_one();
-  }
-
-  /// Add a new request to run function \p F with args \p As to the end of the
-  /// queue. The request will be run on a separate thread.
-  template <class Func, class... Args> void addToEnd(Func &&F, Args &&... As) {
-    if (RunSynchronously) {
-      std::forward<Func>(F)(std::forward<Args>(As)...);
-      return;
-    }
-
-    {
-      std::lock_guard<std::mutex> Lock(Mutex);
-      RequestQueue.push_back(
-          BindWithForward(std::forward<Func>(F), std::forward<Args>(As)...));
-    }
-    RequestCV.notify_one();
-  }
-
-private:
-  bool RunSynchronously;
-  std::mutex Mutex;
-  /// We run some tasks on separate threads(parsing, CppFile cleanup).
-  /// These threads looks into RequestQueue to find requests to handle and
-  /// terminate when Done is set to true.
-  std::vector<std::thread> Workers;
-  /// Setting Done to true will make the worker threads terminate.
-  bool Done = false;
-  /// A queue of requests. Elements of this vector are async computations (i.e.
-  /// results of calling std::async(std::launch::deferred, ...)).
-  std::deque<UniqueFunction<void()>> RequestQueue;
-  /// Condition variable to wake up worker threads.
-  std::condition_variable RequestCV;
 };
 
 /// Provides API to manage ASTs for a collection of C++ files and request
@@ -221,26 +152,28 @@ public:
   /// constructor will receive onDiagnosticsReady callback.
   /// \return A future that will become ready when the rebuild (including
   /// diagnostics) is finished.
-  std::future<Context> addDocument(Context Ctx, PathRef File,
-                                   StringRef Contents);
+  /// FIXME: don't return futures here, LSP does not require a response for this
+  /// request.
+  std::future<void> addDocument(PathRef File, StringRef Contents);
+
   /// Remove \p File from list of tracked files, schedule a request to free
   /// resources associated with it.
   /// \return A future that will become ready when the file is removed and all
   /// associated resources are freed.
-  std::future<Context> removeDocument(Context Ctx, PathRef File);
+  /// FIXME: don't return futures here, LSP does not require a response for this
+  /// request.
+  std::future<void> removeDocument(PathRef File);
+
   /// Force \p File to be reparsed using the latest contents.
   /// Will also check if CompileCommand, provided by GlobalCompilationDatabase
   /// for \p File has changed. If it has, will remove currently stored Preamble
   /// and AST and rebuild them from scratch.
-  std::future<Context> forceReparse(Context Ctx, PathRef File);
+  /// FIXME: don't return futures here, LSP does not require a response for this
+  /// request.
+  std::future<void> forceReparse(PathRef File);
 
-  /// DEPRECATED. Please use a callback-based version, this API is deprecated
-  /// and will soon be removed.
-  ///
   /// Run code completion for \p File at \p Pos.
-  ///
-  /// Request is processed asynchronously. You can use the returned future to
-  /// wait for the results of the async request.
+  /// Request is processed asynchronously.
   ///
   /// If \p OverridenContents is not None, they will used only for code
   /// completion, i.e. no diagnostics update will be scheduled and a draft for
@@ -251,18 +184,18 @@ public:
   /// This method should only be called for currently tracked files. However, it
   /// is safe to call removeDocument for \p File after this method returns, even
   /// while returned future is not yet ready.
-  std::future<std::pair<Context, Tagged<CompletionList>>>
-  codeComplete(Context Ctx, PathRef File, Position Pos,
-               const clangd::CodeCompleteOptions &Opts,
-               llvm::Optional<StringRef> OverridenContents = llvm::None,
-               IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
-
   /// A version of `codeComplete` that runs \p Callback on the processing thread
   /// when codeComplete results become available.
-  void
-  codeComplete(Context Ctx, PathRef File, Position Pos,
+  void codeComplete(PathRef File, Position Pos,
+                    const clangd::CodeCompleteOptions &Opts,
+                    UniqueFunction<void(Tagged<CompletionList>)> Callback,
+                    llvm::Optional<StringRef> OverridenContents = llvm::None,
+                    IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
+
+  /// DEPRECATED: Please use the callback-based version of codeComplete.
+  std::future<Tagged<CompletionList>>
+  codeComplete(PathRef File, Position Pos,
                const clangd::CodeCompleteOptions &Opts,
-               UniqueFunction<void(Context, Tagged<CompletionList>)> Callback,
                llvm::Optional<StringRef> OverridenContents = llvm::None,
                IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
 
@@ -274,13 +207,13 @@ public:
   /// vfs::FileSystem used for signature help. This method should only be called
   /// for currently tracked files.
   llvm::Expected<Tagged<SignatureHelp>>
-  signatureHelp(const Context &Ctx, PathRef File, Position Pos,
+  signatureHelp(PathRef File, Position Pos,
                 llvm::Optional<StringRef> OverridenContents = llvm::None,
                 IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
 
   /// Get definition of symbol at a specified \p Line and \p Column in \p File.
-  llvm::Expected<Tagged<std::vector<Location>>>
-  findDefinitions(const Context &Ctx, PathRef File, Position Pos);
+  llvm::Expected<Tagged<std::vector<Location>>> findDefinitions(PathRef File,
+                                                                Position Pos);
 
   /// Helper function that returns a path to the corresponding source file when
   /// given a header file and vice versa.
@@ -288,7 +221,7 @@ public:
 
   /// Get document highlights for a given position.
   llvm::Expected<Tagged<std::vector<DocumentHighlight>>>
-  findDocumentHighlights(const Context &Ctx, PathRef File, Position Pos);
+  findDocumentHighlights(PathRef File, Position Pos);
 
   /// Run formatting for \p Rng inside \p File with content \p Code.
   llvm::Expected<tooling::Replacements> formatRange(StringRef Code,
@@ -305,8 +238,7 @@ public:
 
   /// Rename all occurrences of the symbol at the \p Pos in \p File to
   /// \p NewName.
-  Expected<std::vector<tooling::Replacement>> rename(const Context &Ctx,
-                                                     PathRef File, Position Pos,
+  Expected<std::vector<tooling::Replacement>> rename(PathRef File, Position Pos,
                                                      llvm::StringRef NewName);
 
   /// Gets current document contents for \p File. Returns None if \p File is not
@@ -338,13 +270,9 @@ private:
   formatCode(llvm::StringRef Code, PathRef File,
              ArrayRef<tooling::Range> Ranges);
 
-  std::future<Context>
-  scheduleReparseAndDiags(Context Ctx, PathRef File, VersionedDraft Contents,
-                          std::shared_ptr<CppFile> Resources,
+  std::future<void>
+  scheduleReparseAndDiags(PathRef File, VersionedDraft Contents,
                           Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> TaggedFS);
-
-  std::future<Context>
-  scheduleCancelRebuild(Context Ctx, std::shared_ptr<CppFile> Resources);
 
   CompileArgsCache CompileArgs;
   DiagnosticsConsumer &DiagConsumer;
@@ -360,11 +288,9 @@ private:
   std::unique_ptr<FileIndex> FileIdx;
   // If present, a merged view of FileIdx and an external index. Read via Index.
   std::unique_ptr<SymbolIndex> MergedIndex;
-  CppFileCollection Units;
   // If set, this represents the workspace path.
   llvm::Optional<std::string> RootPath;
   std::shared_ptr<PCHContainerOperations> PCHs;
-  bool StorePreamblesInMemory;
   /// Used to serialize diagnostic callbacks.
   /// FIXME(ibiryukov): get rid of an extra map and put all version counters
   /// into CppFile.
@@ -373,8 +299,8 @@ private:
   llvm::StringMap<DocVersion> ReportedDiagnosticVersions;
   // WorkScheduler has to be the last member, because its destructor has to be
   // called before all other members to stop the worker thread that references
-  // ClangdServer
-  ClangdScheduler WorkScheduler;
+  // ClangdServer.
+  TUScheduler WorkScheduler;
 };
 
 } // namespace clangd

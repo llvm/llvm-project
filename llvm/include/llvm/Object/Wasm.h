@@ -67,21 +67,26 @@ public:
     AltIndex = Index;
   }
 
-  bool isFunction() const {
+  bool isTypeFunction() const {
     return Type == WasmSymbol::SymbolType::FUNCTION_IMPORT ||
            Type == WasmSymbol::SymbolType::FUNCTION_EXPORT;
   }
 
+  bool isTypeGlobal() const {
+    return Type == SymbolType::GLOBAL_IMPORT ||
+           Type == SymbolType::GLOBAL_EXPORT;
+  }
 
-  bool isWeak() const {
+
+  bool isBindingWeak() const {
     return getBinding() == wasm::WASM_SYMBOL_BINDING_WEAK;
   }
 
-  bool isGlobal() const {
+  bool isBindingGlobal() const {
     return getBinding() == wasm::WASM_SYMBOL_BINDING_GLOBAL;
   }
 
-  bool isLocal() const {
+  bool isBindingLocal() const {
     return getBinding() == wasm::WASM_SYMBOL_BINDING_LOCAL;
   }
 

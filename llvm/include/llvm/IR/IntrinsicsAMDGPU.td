@@ -238,6 +238,26 @@ def int_amdgcn_cvt_pkrtz : Intrinsic<
   [IntrNoMem, IntrSpeculatable]
 >;
 
+def int_amdgcn_cvt_pknorm_i16 : Intrinsic<
+  [llvm_v2i16_ty], [llvm_float_ty, llvm_float_ty],
+  [IntrNoMem, IntrSpeculatable]
+>;
+
+def int_amdgcn_cvt_pknorm_u16 : Intrinsic<
+  [llvm_v2i16_ty], [llvm_float_ty, llvm_float_ty],
+  [IntrNoMem, IntrSpeculatable]
+>;
+
+def int_amdgcn_cvt_pk_i16 : Intrinsic<
+  [llvm_v2i16_ty], [llvm_i32_ty, llvm_i32_ty],
+  [IntrNoMem, IntrSpeculatable]
+>;
+
+def int_amdgcn_cvt_pk_u16 : Intrinsic<
+  [llvm_v2i16_ty], [llvm_i32_ty, llvm_i32_ty],
+  [IntrNoMem, IntrSpeculatable]
+>;
+
 def int_amdgcn_class : Intrinsic<
   [llvm_i1_ty], [llvm_anyfloat_ty, llvm_i32_ty],
   [IntrNoMem, IntrSpeculatable]

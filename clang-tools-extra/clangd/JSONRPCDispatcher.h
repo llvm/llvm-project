@@ -10,7 +10,6 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_JSONRPCDISPATCHER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_JSONRPCDISPATCHER_H
 
-#include "Context.h"
 #include "JSONExpr.h"
 #include "Logger.h"
 #include "Protocol.h"
@@ -38,7 +37,7 @@ public:
   void writeMessage(const json::Expr &Result);
 
   /// Write a line to the logging stream.
-  void log(const Context &Ctx, const Twine &Message) override;
+  void log(const Twine &Message) override;
 
   /// Mirror \p Message into InputMirror stream. Does nothing if InputMirror is
   /// null.
@@ -56,23 +55,22 @@ private:
   std::mutex StreamMutex;
 };
 
-/// Sends a successful reply. \p Ctx must either be the Context accepted by
-/// JSONRPCDispatcher::Handler or be derived from it.
-void reply(const Context &Ctx, json::Expr &&Result);
-/// Sends an error response to the client, and logs it. \p Ctx must either be
-/// the Context accepted by JSONRPCDispatcher::Handler or be derived from it.
-void replyError(const Context &Ctx, ErrorCode code,
-                const llvm::StringRef &Message);
-/// Sends a request to the client. \p Ctx must either be the Context accepted by
-/// JSONRPCDispatcher::Handler or be derived from it.
-void call(const Context &Ctx, llvm::StringRef Method, json::Expr &&Params);
+/// Sends a successful reply.
+/// Current context must derive from JSONRPCDispatcher::Handler.
+void reply(json::Expr &&Result);
+/// Sends an error response to the client, and logs it.
+/// Current context must derive from JSONRPCDispatcher::Handler.
+void replyError(ErrorCode code, const llvm::StringRef &Message);
+/// Sends a request to the client.
+/// Current context must derive from JSONRPCDispatcher::Handler.
+void call(llvm::StringRef Method, json::Expr &&Params);
 
 /// Main JSONRPC entry point. This parses the JSONRPC "header" and calls the
 /// registered Handler for the method received.
 class JSONRPCDispatcher {
 public:
   // A handler responds to requests for a particular method name.
-  using Handler = std::function<void(Context, const json::Expr &)>;
+  using Handler = std::function<void(const json::Expr &)>;
 
   /// Create a new JSONRPCDispatcher. UnknownHandler is called when an unknown
   /// method is received.

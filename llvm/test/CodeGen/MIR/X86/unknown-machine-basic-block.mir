@@ -23,14 +23,14 @@
 name:            foo
 body: |
   bb.0.entry:
-    %eax = MOV32rm %rdi, 1, _, 0, _
-    CMP32ri8 %eax, 10, implicit-def %eflags
+    $eax = MOV32rm $rdi, 1, _, 0, _
+    CMP32ri8 $eax, 10, implicit-def $eflags
     ; CHECK: [[@LINE+1]]:10: use of undefined machine basic block #4
-    JG_1 %bb.4, implicit %eflags
+    JG_1 %bb.4, implicit $eflags
 
   bb.1:
-    %eax = MOV32r0 implicit-def %eflags
+    $eax = MOV32r0 implicit-def $eflags
 
   bb.2:
-    RETQ %eax
+    RETQ $eax
 ...

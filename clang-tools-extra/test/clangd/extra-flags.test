@@ -7,7 +7,7 @@ Content-Length: 125
 #
 Content-Length: 205
 
-{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///foo.c","languageId":"c","version":1,"text":"int main() { int i; return i; }"},"metadata":{"extraFlags":["-Wall"]}}}
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///foo.c","languageId":"c","version":1,"text":"int main() { int i; return i; }"},"metadata":{"extraFlags":["-Wall"]}}}
 #      CHECK:  "method": "textDocument/publishDiagnostics",
 # CHECK-NEXT:  "params": {
 # CHECK-NEXT:    "diagnostics": [
@@ -40,11 +40,11 @@ Content-Length: 205
 # CHECK-NEXT:        "severity": 3
 # CHECK-NEXT:      }
 # CHECK-NEXT:    ],
-# CHECK-NEXT:    "uri": "file:///foo.c"
+# CHECK-NEXT:    "uri": "file://{{.*}}/foo.c"
 # CHECK-NEXT:  }
 Content-Length: 175
 
-{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///foo.c","version":2},"contentChanges":[{"text":"int main() { int i; return i; }"}]}}
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///foo.c","version":2},"contentChanges":[{"text":"int main() { int i; return i; }"}]}}
 #      CHECK:  "method": "textDocument/publishDiagnostics",
 # CHECK-NEXT:  "params": {
 # CHECK-NEXT:    "diagnostics": [
@@ -77,7 +77,7 @@ Content-Length: 175
 # CHECK-NEXT:        "severity": 3
 # CHECK-NEXT:      }
 # CHECK-NEXT:    ],
-# CHECK-NEXT:    "uri": "file:///foo.c"
+# CHECK-NEXT:    "uri": "file://{{.*}}/foo.c"
 # CHECK-NEXT:  }
 Content-Length: 44
 

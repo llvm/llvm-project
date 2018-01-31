@@ -123,9 +123,13 @@ void wasm::writeLimits(raw_ostream &OS, const WasmLimits &Limits) {
     writeUleb128(OS, Limits.Maximum, "limits max");
 }
 
+void wasm::writeGlobalType(raw_ostream &OS, const WasmGlobalType &Type) {
+  writeValueType(OS, Type.Type, "global type");
+  writeUleb128(OS, Type.Mutable, "global mutable");
+}
+
 void wasm::writeGlobal(raw_ostream &OS, const WasmGlobal &Global) {
-  writeValueType(OS, Global.Type, "global type");
-  writeUleb128(OS, Global.Mutable, "global mutable");
+  writeGlobalType(OS, Global.Type);
   writeInitExpr(OS, Global.InitExpr);
 }
 
@@ -138,8 +142,7 @@ void wasm::writeImport(raw_ostream &OS, const WasmImport &Import) {
     writeUleb128(OS, Import.SigIndex, "import sig index");
     break;
   case WASM_EXTERNAL_GLOBAL:
-    writeValueType(OS, Import.Global.Type, "import global type");
-    writeUleb128(OS, Import.Global.Mutable, "import global mutable");
+    writeGlobalType(OS, Import.Global);
     break;
   case WASM_EXTERNAL_MEMORY:
     writeLimits(OS, Import.Memory);

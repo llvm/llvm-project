@@ -13,13 +13,13 @@
 # CHECK-NEXT: V_ADD_F32
 # CHECK-NEXT: S_SETPC_B64
 liveins:
-  - { reg: '%sgpr0_sgpr1' }
-  - { reg: '%vgpr0' }
+  - { reg: '$sgpr0_sgpr1' }
+  - { reg: '$vgpr0' }
 
 name: entry_callee_wait
 body:             |
   bb.0:
-    %vgpr0 = V_ADD_F32_e32 %vgpr0, %vgpr0, implicit %exec
-    S_SETPC_B64 killed %sgpr0_sgpr1
+    $vgpr0 = V_ADD_F32_e32 $vgpr0, $vgpr0, implicit $exec
+    S_SETPC_B64 killed $sgpr0_sgpr1
 
 ...

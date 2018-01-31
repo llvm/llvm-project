@@ -205,6 +205,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::f32, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::v4f32, Custom);
+  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::v2i16, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::v2f16, Custom);
 
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::v2f16, Custom);
@@ -3870,7 +3871,8 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
   }
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IID = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
-    if (IID == Intrinsic::amdgcn_cvt_pkrtz) {
+    switch (IID) {
+    case Intrinsic::amdgcn_cvt_pkrtz: {
       SDValue Src0 = N->getOperand(1);
       SDValue Src1 = N->getOperand(2);
       SDLoc SL(N);
@@ -3878,6 +3880,29 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
                                 Src0, Src1);
       Results.push_back(DAG.getNode(ISD::BITCAST, SL, MVT::v2f16, Cvt));
       return;
+    }
+    case Intrinsic::amdgcn_cvt_pknorm_i16:
+    case Intrinsic::amdgcn_cvt_pknorm_u16:
+    case Intrinsic::amdgcn_cvt_pk_i16:
+    case Intrinsic::amdgcn_cvt_pk_u16: {
+      SDValue Src0 = N->getOperand(1);
+      SDValue Src1 = N->getOperand(2);
+      SDLoc SL(N);
+      unsigned Opcode;
+
+      if (IID == Intrinsic::amdgcn_cvt_pknorm_i16)
+        Opcode = AMDGPUISD::CVT_PKNORM_I16_F32;
+      else if (IID == Intrinsic::amdgcn_cvt_pknorm_u16)
+        Opcode = AMDGPUISD::CVT_PKNORM_U16_F32;
+      else if (IID == Intrinsic::amdgcn_cvt_pk_i16)
+        Opcode = AMDGPUISD::CVT_PK_I16_I32;
+      else
+        Opcode = AMDGPUISD::CVT_PK_U16_U32;
+
+      SDValue Cvt = DAG.getNode(Opcode, SL, MVT::i32, Src0, Src1);
+      Results.push_back(DAG.getNode(ISD::BITCAST, SL, MVT::v2i16, Cvt));
+      return;
+    }
     }
     break;
   }
@@ -4787,10 +4812,27 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_ubfe:
     return DAG.getNode(AMDGPUISD::BFE_U32, DL, VT,
                        Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
-  case Intrinsic::amdgcn_cvt_pkrtz: {
-    // FIXME: Stop adding cast if v2f16 legal.
+  case Intrinsic::amdgcn_cvt_pkrtz:
+  case Intrinsic::amdgcn_cvt_pknorm_i16:
+  case Intrinsic::amdgcn_cvt_pknorm_u16:
+  case Intrinsic::amdgcn_cvt_pk_i16:
+  case Intrinsic::amdgcn_cvt_pk_u16: {
+    // FIXME: Stop adding cast if v2f16/v2i16 are legal.
     EVT VT = Op.getValueType();
-    SDValue Node = DAG.getNode(AMDGPUISD::CVT_PKRTZ_F16_F32, DL, MVT::i32,
+    unsigned Opcode;
+
+    if (IntrinsicID == Intrinsic::amdgcn_cvt_pkrtz)
+      Opcode = AMDGPUISD::CVT_PKRTZ_F16_F32;
+    else if (IntrinsicID == Intrinsic::amdgcn_cvt_pknorm_i16)
+      Opcode = AMDGPUISD::CVT_PKNORM_I16_F32;
+    else if (IntrinsicID == Intrinsic::amdgcn_cvt_pknorm_u16)
+      Opcode = AMDGPUISD::CVT_PKNORM_U16_F32;
+    else if (IntrinsicID == Intrinsic::amdgcn_cvt_pk_i16)
+      Opcode = AMDGPUISD::CVT_PK_I16_I32;
+    else
+      Opcode = AMDGPUISD::CVT_PK_U16_U32;
+
+    SDValue Node = DAG.getNode(Opcode, DL, MVT::i32,
                                Op.getOperand(1), Op.getOperand(2));
     return DAG.getNode(ISD::BITCAST, DL, VT, Node);
   }

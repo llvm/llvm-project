@@ -42,20 +42,20 @@ name:            test1
 alignment:       4
 tracksRegLiveness: true
 liveins:
-  - { reg: '%rax' }
-# Verify that "movw (%rax), %ax" is changed to "movzwl (%rax), %rax".
+  - { reg: '$rax' }
+# Verify that "movw ($rax), $ax" is changed to "movzwl ($rax), $rax".
 #
 # For that to happen, the liveness information after the MOV16rm
-# instruction should be used, not before it because %rax is live
+# instruction should be used, not before it because $rax is live
 # before the MOV and is killed by it.
 body:             |
   bb.0:
-    liveins: %rax
+    liveins: $rax
 
-    %ax = MOV16rm killed %rax, 1, %noreg, 0, %noreg
-    ; CHECK: %eax = MOVZX32rm16 killed %rax
+    $ax = MOV16rm killed $rax, 1, $noreg, 0, $noreg
+    ; CHECK: $eax = MOVZX32rm16 killed $rax
 
-    RETQ %ax
+    RETQ $ax
 
 ...
 ---
@@ -64,19 +64,19 @@ name:            test2
 alignment:       4
 tracksRegLiveness: true
 liveins:
-  - { reg: '%rax' }
+  - { reg: '$rax' }
 # Imp-use of any super-register means the register is live before the MOV
 body:             |
   bb.0:
-    liveins: %dl, %rbx, %rcx, %r14
+    liveins: $dl, $rbx, $rcx, $r14
 
-    %cl = MOV8rr killed %dl, implicit killed %rcx, implicit-def %rcx
-    ; CHECK: %cl = MOV8rr killed %dl, implicit killed %rcx, implicit-def %rcx
+    $cl = MOV8rr killed $dl, implicit killed $rcx, implicit-def $rcx
+    ; CHECK: $cl = MOV8rr killed $dl, implicit killed $rcx, implicit-def $rcx
     JMP_1 %bb.1
   bb.1:
-    liveins: %rcx
+    liveins: $rcx
 
-    RETQ %cl
+    RETQ $cl
 
 ...
 ---
@@ -85,8 +85,8 @@ name:            test3
 alignment:       4
 tracksRegLiveness: true
 liveins:
-  - { reg: '%rdi' }
-# After MOV16rm the whole %eax is not *really* live, as can be seen by
+  - { reg: '$rdi' }
+# After MOV16rm the whole $eax is not *really* live, as can be seen by
 # missing implicit-uses of it in that MOV. Make sure that MOV is
 # transformed into MOVZX.
 # See the comment near the original IR on what preceding decisions can
@@ -94,23 +94,23 @@ liveins:
 body:             |
   bb.0.entry:
     successors: %bb.1(0x30000000), %bb.2.if.then(0x50000000)
-    liveins: %rdi
+    liveins: $rdi
 
-    TEST64rr %rdi, %rdi, implicit-def %eflags
-    JE_1 %bb.1, implicit %eflags
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JE_1 %bb.1, implicit $eflags
 
   bb.2.if.then:
-    liveins: %rdi
+    liveins: $rdi
 
-    %ax = MOV16rm killed %rdi, 1, %noreg, 0, %noreg, implicit-def %eax :: (load 2 from %ir.p)
-    ; CHECK: %eax = MOVZX32rm16 killed %rdi, 1, %noreg, 0, %noreg, implicit-def %eax :: (load 2 from %ir.p)
-    %ax = KILL %ax, implicit killed %eax
-    RETQ %ax
+    $ax = MOV16rm killed $rdi, 1, $noreg, 0, $noreg, implicit-def $eax :: (load 2 from %ir.p)
+    ; CHECK: $eax = MOVZX32rm16 killed $rdi, 1, $noreg, 0, $noreg, implicit-def $eax :: (load 2 from %ir.p)
+    $ax = KILL $ax, implicit killed $eax
+    RETQ $ax
 
   bb.1:
-    %eax = XOR32rr undef %eax, undef %eax, implicit-def dead %eflags
-    %ax = KILL %ax, implicit killed %eax
-    RETQ %ax
+    $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+    $ax = KILL $ax, implicit killed $eax
+    RETQ $ax
 
 ...
 ---
@@ -119,18 +119,18 @@ name:            test4
 alignment:       4
 tracksRegLiveness: true
 liveins:
-  - { reg: '%r9d' }
+  - { reg: '$r9d' }
 # This code copies r10b into r9b and then uses r9w. We would like to promote
 # the copy to a 32-bit copy, but because r9w is used this is not acceptable.
 body:             |
   bb.0.entry:
-    liveins: %r9d
+    liveins: $r9d
 
-    %r9b = MOV8rr undef %r10b, implicit-def %r9d, implicit killed %r9d, implicit-def %eflags
-    ; CHECK: %r9b = MOV8rr undef %r10b, implicit-def %r9d, implicit killed %r9d, implicit-def %eflags
+    $r9b = MOV8rr undef $r10b, implicit-def $r9d, implicit killed $r9d, implicit-def $eflags
+    ; CHECK: $r9b = MOV8rr undef $r10b, implicit-def $r9d, implicit killed $r9d, implicit-def $eflags
 
-    %ax = OR16rr undef %ax, %r9w, implicit-def %eflags
-    RETQ %ax
+    $ax = OR16rr undef $ax, $r9w, implicit-def $eflags
+    RETQ $ax
 
 ...
 ---
@@ -139,14 +139,14 @@ name:            test5
 alignment:       4
 tracksRegLiveness: true
 liveins:
-  - { reg: '%ch', reg: '%bl' }
+  - { reg: '$ch', reg: '$bl' }
 body:             |
   bb.0:
-    liveins: %ch, %bl
+    liveins: $ch, $bl
 
-    %cl = MOV8rr %bl, implicit-def %cx, implicit killed %ch, implicit-def %eflags
-    ; CHECK: %cl = MOV8rr %bl, implicit-def %cx, implicit killed %ch, implicit-def %eflags
+    $cl = MOV8rr $bl, implicit-def $cx, implicit killed $ch, implicit-def $eflags
+    ; CHECK: $cl = MOV8rr $bl, implicit-def $cx, implicit killed $ch, implicit-def $eflags
 
-    RETQ %cx
+    RETQ $cx
 
 ...

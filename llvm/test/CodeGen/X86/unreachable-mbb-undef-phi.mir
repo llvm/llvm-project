@@ -13,7 +13,7 @@ body:             |
 
   bb.1:
     %1 = PHI %0, %bb.0, %2, %bb.2
-    %2 = ADD32ri8 killed %1, 1, implicit-def %eflags
+    %2 = ADD32ri8 killed %1, 1, implicit-def $eflags
     JMP_1 %bb.3
 
   bb.2:

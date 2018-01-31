@@ -397,24 +397,18 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_flsll);
   }
 
-  // Android uses bionic instead of glibc. So disable some finite
-  // lib calls in glibc for Android. The list of unsupported lib
-  // calls for Android may expand as the need arises.
-  if (T.isAndroid()) {
-    TLI.setUnavailable(LibFunc_exp_finite);
-    TLI.setUnavailable(LibFunc_exp2_finite);
-    TLI.setUnavailable(LibFunc_pow_finite);
-  }
-
-  // The following functions are available on at least Linux:
-  if (!T.isOSLinux()) {
+  // The following functions are available on Linux,
+  // but Android uses bionic instead of glibc.
+  if (!T.isOSLinux() || T.isAndroid()) {
     TLI.setUnavailable(LibFunc_dunder_strdup);
     TLI.setUnavailable(LibFunc_dunder_strtok_r);
     TLI.setUnavailable(LibFunc_dunder_isoc99_scanf);
     TLI.setUnavailable(LibFunc_dunder_isoc99_sscanf);
     TLI.setUnavailable(LibFunc_under_IO_getc);
     TLI.setUnavailable(LibFunc_under_IO_putc);
-    TLI.setUnavailable(LibFunc_memalign);
+    // But, Android has memalign.
+    if (!T.isAndroid())
+      TLI.setUnavailable(LibFunc_memalign);
     TLI.setUnavailable(LibFunc_fopen64);
     TLI.setUnavailable(LibFunc_fseeko64);
     TLI.setUnavailable(LibFunc_fstat64);

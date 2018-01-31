@@ -1504,9 +1504,10 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
     FieldAlign = TypeSize;
 
     // If the previous field was not a bitfield, or was a bitfield
-    // with a different storage unit size, we're done with that
-    // storage unit.
-    if (LastBitfieldTypeSize != TypeSize) {
+    // with a different storage unit size, or if this field doesn't fit into
+    // the current storage unit, we're done with that storage unit.
+    if (LastBitfieldTypeSize != TypeSize ||
+        UnfilledBitsInLastUnit < FieldSize) {
       // Also, ignore zero-length bitfields after non-bitfields.
       if (!LastBitfieldTypeSize && !FieldSize)
         FieldAlign = 1;

@@ -21,12 +21,12 @@ fixedStack:
   - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16 }
 body: |
   bb.0.entry:
-    liveins: %rbp
+    liveins: $rbp
 
-    PUSH64r killed %rbp, implicit-def %rsp, implicit %rsp
+    PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 16
-    CFI_INSTRUCTION offset %rbp, -16
-    %rbp = MOV64rr %rsp
-    ; CHECK: CFI_INSTRUCTION def_cfa_register %rbp
-    CFI_INSTRUCTION def_cfa_register %rbp
+    CFI_INSTRUCTION offset $rbp, -16
+    $rbp = MOV64rr $rsp
+    ; CHECK: CFI_INSTRUCTION def_cfa_register $rbp
+    CFI_INSTRUCTION def_cfa_register $rbp
 ...

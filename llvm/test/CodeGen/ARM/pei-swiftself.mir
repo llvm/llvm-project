@@ -17,44 +17,44 @@ stack:
   - { id: 1, type: default, size: 4096, alignment: 8 }
 body: |
   bb.0:
-    liveins: %r10   ; swiftself parameter comes in as %r10
+    liveins: $r10   ; swiftself parameter comes in as $r10
 
     ; Bring up register pressure to force emergency spilling, coax scavenging
-    ; to use %r10 as that one is not spilled/restored.
-    %r0 = IMPLICIT_DEF
-    %r1 = IMPLICIT_DEF
-    %r2 = IMPLICIT_DEF
-    %r3 = IMPLICIT_DEF
-    %r4 = IMPLICIT_DEF
-    %r5 = IMPLICIT_DEF
-    %r6 = IMPLICIT_DEF
-    %r7 = IMPLICIT_DEF
-    %r8 = IMPLICIT_DEF
-    %r9 = IMPLICIT_DEF
-    %r11 = IMPLICIT_DEF
-    %r12 = IMPLICIT_DEF
-    %lr = IMPLICIT_DEF
+    ; to use $r10 as that one is not spilled/restored.
+    $r0 = IMPLICIT_DEF
+    $r1 = IMPLICIT_DEF
+    $r2 = IMPLICIT_DEF
+    $r3 = IMPLICIT_DEF
+    $r4 = IMPLICIT_DEF
+    $r5 = IMPLICIT_DEF
+    $r6 = IMPLICIT_DEF
+    $r7 = IMPLICIT_DEF
+    $r8 = IMPLICIT_DEF
+    $r9 = IMPLICIT_DEF
+    $r11 = IMPLICIT_DEF
+    $r12 = IMPLICIT_DEF
+    $lr = IMPLICIT_DEF
 
     ; Computing the large stack offset requires an extra register. We should
-    ; not just use %r10 for that.
-    ; CHECK-NOT: STRi12 %1,{{.*}}%r10
+    ; not just use $r10 for that.
+    ; CHECK-NOT: STRi12 %1,{{.*}}$r10
 
-    STRi12 %r1, %stack.0, 0, 14, %noreg :: (store 4)
+    STRi12 $r1, %stack.0, 0, 14, $noreg :: (store 4)
 
     ; use the swiftself parameter value.
-    KILL %r10
+    KILL $r10
 
-    KILL %r0
-    KILL %r1
-    KILL %r2
-    KILL %r3
-    KILL %r4
-    KILL %r5
-    KILL %r6
-    KILL %r7
-    KILL %r8
-    KILL %r9
-    KILL %r11
-    KILL %r12
-    KILL %lr
+    KILL $r0
+    KILL $r1
+    KILL $r2
+    KILL $r3
+    KILL $r4
+    KILL $r5
+    KILL $r6
+    KILL $r7
+    KILL $r8
+    KILL $r9
+    KILL $r11
+    KILL $r12
+    KILL $lr
 ...
