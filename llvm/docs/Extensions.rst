@@ -228,13 +228,13 @@ In order to support passing linker options from the frontend to the linker, a
 special section of type ``SHT_LLVM_LINKER_OPTIONS`` (usually named
 ``.linker-options`` though the name is not significant as it is identified by
 the type).  The contents of this section is a simple pair-wise encoding of
-options for consideration by the linker.  The strings are encoded as standard
+directives for consideration by the linker.  The strings are encoded as standard
 null-terminated UTF-8 strings.  They are emitted inline to avoid having the
-linker to traverse the object file for retrieving the value.  The linker is
+linker traverse the object file for retrieving the value.  The linker is
 permitted to not honour the option and instead provide a warning/error to the
 user that the requested option was not honoured.
 
-The section is marked as ``SHT_LLVM_LINKER_OPTIONS`` and has the ``SHF_EXCLUDE``
+The section has type ``SHT_LLVM_LINKER_OPTIONS`` and has the ``SHF_EXCLUDE``
 flag to ensure that the section is treated as opaque by linkers which do not
 support the feature and will not be emitted into the final linked binary.
 
@@ -248,14 +248,15 @@ This would be equivalent to the follow raw assembly:
   .asciz "option 2"
   .asciz "value 2"
 
-LLVM emits the following options:
+The following directives are specified:
+
   - lib
 
     The parameter identifies a library to be linked against.  The library will
     be looked up in the default and any specified library search paths
     (specified to this point).
 
-  - path
+  - libpath
 
     The paramter identifies an additional library search path to be considered
     when looking up libraries after the inclusion of this option.

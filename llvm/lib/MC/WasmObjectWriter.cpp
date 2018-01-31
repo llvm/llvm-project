@@ -194,15 +194,6 @@ raw_ostream &operator<<(raw_ostream &OS, const WasmRelocationEntry &Rel) {
 #endif
 
 class WasmObjectWriter : public MCObjectWriter {
-  /// Helper struct for containing some precomputed information on symbols.
-  struct WasmSymbolData {
-    const MCSymbolWasm *Symbol;
-    StringRef Name;
-
-    // Support lexicographic sorting.
-    bool operator<(const WasmSymbolData &RHS) const { return Name < RHS.Name; }
-  };
-
   /// The target specific Wasm writer instance.
   std::unique_ptr<MCWasmObjectTargetWriter> TargetObjectWriter;
 
@@ -1122,6 +1113,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
     if (cast<MCSectionWasm>(Sec).getSectionName().startswith(".init_array"))
       continue;
 
+    uint32_t SegmentIndex = DataSegments.size();
     DataSize = alignTo(DataSize, Section.getAlignment());
     DataSegments.emplace_back();
     WasmDataSegment &Segment = DataSegments.back();
@@ -1136,8 +1128,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
 
     if (const MCSymbolWasm *C = Section.getGroup()) {
       Comdats[C->getName()].emplace_back(
-          WasmComdatEntry{wasm::WASM_COMDAT_DATA,
-                          static_cast<uint32_t>(DataSegments.size()) - 1});
+          WasmComdatEntry{wasm::WASM_COMDAT_DATA, SegmentIndex});
     }
   }
 
@@ -1150,8 +1141,9 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
 
     const auto &WS = static_cast<const MCSymbolWasm &>(S);
     DEBUG(dbgs() << "MCSymbol: '" << S << "'"
-                 << " isDefined=" << S.isDefined() << " isExternal="
-                 << S.isExternal() << " isTemporary=" << S.isTemporary()
+                 << " isDefined=" << S.isDefined()
+                 << " isExternal=" << S.isExternal()
+                 << " isTemporary=" << S.isTemporary()
                  << " isFunction=" << WS.isFunction()
                  << " isWeak=" << WS.isWeak()
                  << " isHidden=" << WS.isHidden()
@@ -1293,7 +1285,8 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
         case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB: {
           uint32_t Index = SymbolIndices.find(&WS)->second;
           IndirectSymbolIndices[&WS] = TableElems.size() + kInitialTableOffset;
-          DEBUG(dbgs() << "  -> adding to table: " << TableElems.size() << "\n");
+          DEBUG(dbgs() << "  -> adding " << WS.getName()
+                       << " to table: " << TableElems.size() << "\n");
           TableElems.push_back(Index);
           registerFunctionType(WS);
           break;

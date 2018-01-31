@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -100,10 +101,11 @@ NodeId CopyPropagation::getLocalReachingDef(RegisterRef RefRR,
 
 bool CopyPropagation::run() {
   scanBlock(&DFG.getMF().front());
+  MachineRegisterInfo &MRI = DFG.getMF().getRegInfo();
 
   if (trace()) {
     dbgs() << "Copies:\n";
-    for (auto I : Copies) {
+    for (NodeId I : Copies) {
       dbgs() << "Instr: " << *DFG.addr<StmtNode*>(I).Addr->getCode();
       dbgs() << "   eq: {";
       for (auto J : CopyMap[I])
@@ -130,7 +132,7 @@ bool CopyPropagation::run() {
     return 0;
   };
 
-  for (auto C : Copies) {
+  for (NodeId C : Copies) {
 #ifndef NDEBUG
     if (HasLimit && CpCount >= CpLimit)
       break;
@@ -179,6 +181,8 @@ bool CopyPropagation::run() {
         unsigned NewReg = MinPhysReg(SR);
         Op.setReg(NewReg);
         Op.setSubReg(0);
+        if (MRI.isReserved(NewReg))
+          Op.setIsRenamable(false);
         DFG.unlinkUse(UA, false);
         if (AtCopy != 0) {
           UA.Addr->linkToDef(UA.Id, DFG.addr<DefNode*>(AtCopy));

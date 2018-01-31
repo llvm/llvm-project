@@ -9,7 +9,7 @@ target triple = "wasm32-unknown-unknown-wasm"
 @hello_str = external global i8*
 @external_ref = global i8** @hello_str, align 8
 
-; RUN: lld -flavor wasm --allow-undefined -o %t.wasm %t.o %t.hello.o
+; RUN: lld -flavor wasm -no-gc-sections --allow-undefined -o %t.wasm %t.o %t.hello.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 ; CHECK:        - Type:            GLOBAL

@@ -145,7 +145,7 @@ def buildDefault(
     commands = []
     if clean:
         commands.append(getMake(testdir) + ["clean", getCmdLine(dictionary)])
-    commands.append(getMake(testdir) + [getArchSpec(architecture),
+    commands.append(getMake(testdir) + ["all", getArchSpec(architecture),
                      getCCSpec(compiler), getCmdLine(dictionary)])
 
     runBuildCommands(commands, sender=sender)

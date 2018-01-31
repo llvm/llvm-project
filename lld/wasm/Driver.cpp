@@ -8,7 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lld/Common/Driver.h"
-#include "Config.h"
+#include "InputChunks.h"
+#include "MarkLive.h"
 #include "SymbolTable.h"
 #include "Writer.h"
 #include "lld/Common/Args.h"
@@ -22,6 +23,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+
+#define DEBUG_TYPE "lld"
 
 using namespace llvm;
 using namespace llvm::sys;
@@ -253,6 +256,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->ImportMemory = Args.hasArg(OPT_import_memory);
   Config->OutputFile = Args.getLastArgValue(OPT_o);
   Config->Relocatable = Args.hasArg(OPT_relocatable);
+  Config->GcSections =
+      Args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, !Config->Relocatable);
+  Config->PrintGcSections =
+      Args.hasFlag(OPT_print_gc_sections, OPT_no_print_gc_sections, false);
   Config->SearchPaths = args::getStrings(Args, OPT_L);
   Config->StripAll = Args.hasArg(OPT_strip_all);
   Config->StripDebug = Args.hasArg(OPT_strip_debug);
@@ -274,10 +281,14 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (!Args.hasArg(OPT_INPUT))
     error("no input files");
 
-  if (Config->Relocatable && !Config->Entry.empty())
-    error("entry point specified for relocatable output file");
-  if (Config->Relocatable && Args.hasArg(OPT_undefined))
-    error("undefined symbols specified for relocatable output file");
+  if (Config->Relocatable) {
+    if (!Config->Entry.empty())
+      error("entry point specified for relocatable output file");
+    if (Config->GcSections)
+      error("-r and --gc-sections may not be used together");
+    if (Args.hasArg(OPT_undefined))
+      error("-r -and --undefined may not be used together");
+  }
 
   Symbol *EntrySym = nullptr;
   if (!Config->Relocatable) {
@@ -344,6 +355,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   if (errorCount())
     return;
+
+  // Do size optimizations: garbage collection
+  markLive();
 
   // Write the result to the file.
   writeResult();
