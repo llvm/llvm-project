@@ -37,6 +37,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
 #include <iterator>
@@ -371,6 +372,13 @@ void TailDuplicator::duplicateInstruction(
     MachineInstr *MI, MachineBasicBlock *TailBB, MachineBasicBlock *PredBB,
     DenseMap<unsigned, RegSubRegPair> &LocalVRMap,
     const DenseSet<unsigned> &UsedByPhi) {
+  // Allow duplication of CFI instructions.
+  if (MI->isCFIInstruction()) {
+    BuildMI(*PredBB, PredBB->end(), PredBB->findDebugLoc(PredBB->begin()),
+      TII->get(TargetOpcode::CFI_INSTRUCTION)).addCFIIndex(
+      MI->getOperand(0).getCFIIndex());
+    return;
+  }
   MachineInstr &NewMI = TII->duplicate(*PredBB, PredBB->end(), *MI);
   if (PreRegAlloc) {
     for (unsigned i = 0, e = NewMI.getNumOperands(); i != e; ++i) {
@@ -585,7 +593,13 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
   unsigned InstrCount = 0;
   for (MachineInstr &MI : TailBB) {
     // Non-duplicable things shouldn't be tail-duplicated.
-    if (MI.isNotDuplicable())
+    // CFI instructions are marked as non-duplicable, because Darwin compact
+    // unwind info emission can't handle multiple prologue setups. In case of
+    // DWARF, allow them be duplicated, so that their existence doesn't prevent
+    // tail duplication of some basic blocks, that would be duplicated otherwise.
+    if (MI.isNotDuplicable() &&
+        (TailBB.getParent()->getTarget().getTargetTriple().isOSDarwin() ||
+        !MI.isCFIInstruction()))
       return false;
 
     // Convergent instructions can be duplicated only if doing so doesn't add
@@ -605,7 +619,7 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
     if (PreRegAlloc && MI.isCall())
       return false;
 
-    if (!MI.isPHI() && !MI.isDebugValue())
+    if (!MI.isPHI() && !MI.isMetaInstruction())
       InstrCount += 1;
 
     if (InstrCount > MaxDuplicateCount)

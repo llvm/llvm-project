@@ -11,11 +11,11 @@ FILE-NOT: Unexecuted instantiation
 
 RUN: FileCheck -check-prefix=INDEX %s -input-file %t.html.dir/index.html
 
-INDEX: <td class='column-entry-left'>Filename</td>
-INDEX: <td class='column-entry'>Function Coverage</td>
-INDEX: <td class='column-entry'>Instantiation Coverage</td>
-INDEX: <td class='column-entry'>Line Coverage</td>
-INDEX: <td class='column-entry'>Region Coverage</td>
+INDEX: <td class='column-entry-bold'>Filename</td>
+INDEX: <td class='column-entry-bold'>Function Coverage</td>
+INDEX: <td class='column-entry-bold'>Instantiation Coverage</td>
+INDEX: <td class='column-entry-bold'>Line Coverage</td>
+INDEX: <td class='column-entry-bold'>Region Coverage</td>
 INDEX: <td class='column-entry-red'>
 INDEX: 50.00% (1/2)
 INDEX: <td class='column-entry-red'>

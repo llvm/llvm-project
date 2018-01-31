@@ -22,9 +22,10 @@
 ; CHECK: bb.2.for.body:
 ; CHECK: SUBPDrr
 ; CHECK-NEXT: MOVAPSmr
-; CHECK-NEXT: MOVAPSrm
 ; CHECK-NEXT: MULPDrm
+; CHECK-NEXT: MOVAPSrm
 ; CHECK-NEXT: ADDPDrr
+; CHECK-NEXT: MOVAPSmr
 ; CHECK-NEXT: ADD32ri8
 
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"

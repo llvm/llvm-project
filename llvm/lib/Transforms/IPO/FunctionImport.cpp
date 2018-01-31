@@ -618,10 +618,12 @@ void llvm::convertToDeclaration(GlobalValue &GV) {
   if (Function *F = dyn_cast<Function>(&GV)) {
     F->deleteBody();
     F->clearMetadata();
+    F->setComdat(nullptr);
   } else if (GlobalVariable *V = dyn_cast<GlobalVariable>(&GV)) {
     V->setInitializer(nullptr);
     V->setLinkage(GlobalValue::ExternalLinkage);
     V->clearMetadata();
+    V->setComdat(nullptr);
   } else
     // For now we don't resolve or drop aliases. Once we do we'll
     // need to add support here for creating either a function or

@@ -293,6 +293,32 @@ TEST(ClangMove, MoveNonExistClass) {
   EXPECT_EQ(0u, Results.size());
 }
 
+TEST(ClangMove, HeaderIncludeSelf) {
+  move::MoveDefinitionSpec Spec;
+  Spec.Names = {std::string("Foo")};
+  Spec.OldHeader = "foo.h";
+  Spec.OldCC = "foo.cc";
+  Spec.NewHeader = "new_foo.h";
+  Spec.NewCC = "new_foo.cc";
+
+  const char TestHeader[] = "#ifndef FOO_H\n"
+                            "#define FOO_H\n"
+                            "#include \"foo.h\"\n"
+                            "class Foo {};\n"
+                            "#endif\n";
+  const char TestCode[] = "#include \"foo.h\"";
+  const char ExpectedNewHeader[] = "#ifndef FOO_H\n"
+                                   "#define FOO_H\n"
+                                   "#include \"new_foo.h\"\n"
+                                   "class Foo {};\n"
+                                   "#endif\n";
+  const char ExpectedNewCC[] = "#include \"new_foo.h\"";
+  auto Results = runClangMoveOnCode(Spec, TestHeader, TestCode);
+  EXPECT_EQ("", Results[Spec.OldHeader]);
+  EXPECT_EQ(ExpectedNewHeader, Results[Spec.NewHeader]);
+  EXPECT_EQ(ExpectedNewCC, Results[Spec.NewCC]);
+}
+
 TEST(ClangMove, MoveAll) {
   std::vector<std::string> TestHeaders = {
     "class A {\npublic:\n  int f();\n};",

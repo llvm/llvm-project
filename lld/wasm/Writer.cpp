@@ -236,8 +236,8 @@ void Writer::createGlobalSection() {
   writeUleb128(OS, DefinedGlobals.size(), "global count");
   for (const Symbol *Sym : DefinedGlobals) {
     WasmGlobal Global;
-    Global.Type = WASM_TYPE_I32;
-    Global.Mutable = Sym == Config->StackPointerSymbol;
+    Global.Type.Type = WASM_TYPE_I32;
+    Global.Type.Mutable = Sym == Config->StackPointerSymbol;
     Global.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
     Global.InitExpr.Value.Int32 = Sym->getVirtualAddress();
     writeGlobal(OS, Global);
@@ -653,6 +653,9 @@ void Writer::calculateExports() {
 
       if ((Sym->isHidden() || Sym->isLocal()) && !ExportHidden)
         continue;
+
+      // We should never be exporting a non-live symbol
+      assert(Sym->getChunk()->Live);
       ExportedSymbols.emplace_back(WasmExportEntry{Sym, BudgeLocalName(Sym)});
     }
   }
@@ -735,7 +738,7 @@ void Writer::assignIndexes() {
   for (ObjFile *File : Symtab->ObjectFiles) {
     DEBUG(dbgs() << "Functions: " << File->getName() << "\n");
     for (InputFunction *Func : File->Functions) {
-      if (Func->Discarded)
+      if (Func->Discarded || !Func->Live)
         continue;
       DefinedFunctions.emplace_back(Func);
       Func->setOutputIndex(FunctionIndex++);
@@ -784,7 +787,7 @@ static StringRef getOutputDataSegmentName(StringRef Name) {
 void Writer::createOutputSegments() {
   for (ObjFile *File : Symtab->ObjectFiles) {
     for (InputSegment *Segment : File->Segments) {
-      if (Segment->Discarded)
+      if (Segment->Discarded || !Segment->Live)
         continue;
       StringRef Name = getOutputDataSegmentName(Segment->getName());
       OutputSegment *&S = SegmentMap[Name];

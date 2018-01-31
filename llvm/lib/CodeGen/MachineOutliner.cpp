@@ -62,6 +62,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -1311,6 +1312,7 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
     DB.finalize();
   }
 
+  MF.getRegInfo().freezeReservedRegs(MF);
   return &MF;
 }
 

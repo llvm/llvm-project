@@ -24,7 +24,7 @@ class MergedIndex : public SymbolIndex {
    //          - find the generating file from each Symbol which is Static-only
    //          - ask Dynamic if it has that file (needs new SymbolIndex method)
    //          - if so, drop the Symbol.
-   bool fuzzyFind(const Context &Ctx, const FuzzyFindRequest &Req,
+   bool fuzzyFind(const FuzzyFindRequest &Req,
                   function_ref<void(const Symbol &)> Callback) const override {
      // We can't step through both sources in parallel. So:
      //  1) query all dynamic symbols, slurping results into a slab
@@ -34,13 +34,12 @@ class MergedIndex : public SymbolIndex {
      //  3) now yield all the dynamic symbols we haven't processed.
      bool More = false; // We'll be incomplete if either source was.
      SymbolSlab::Builder DynB;
-     More |=
-         Dynamic->fuzzyFind(Ctx, Req, [&](const Symbol &S) { DynB.insert(S); });
+     More |= Dynamic->fuzzyFind(Req, [&](const Symbol &S) { DynB.insert(S); });
      SymbolSlab Dyn = std::move(DynB).build();
 
      DenseSet<SymbolID> SeenDynamicSymbols;
      Symbol::Details Scratch;
-     More |= Static->fuzzyFind(Ctx, Req, [&](const Symbol &S) {
+     More |= Static->fuzzyFind(Req, [&](const Symbol &S) {
        auto DynS = Dyn.find(S.ID);
        if (DynS == Dyn.end())
          return Callback(S);

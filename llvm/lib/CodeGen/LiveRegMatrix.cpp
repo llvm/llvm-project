@@ -205,3 +205,19 @@ LiveRegMatrix::checkInterference(LiveInterval &VirtReg, unsigned PhysReg) {
 
   return IK_Free;
 }
+
+bool LiveRegMatrix::checkInterference(SlotIndex Start, SlotIndex End,
+                                      unsigned PhysReg) {
+  // Construct artificial live range containing only one segment [Start, End).
+  VNInfo valno(0, Start);
+  LiveRange::Segment Seg(Start, End, &valno);
+  LiveRange LR;
+  LR.addSegment(Seg);
+
+  // Check for interference with that segment
+  for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
+    if (query(LR, *Units).checkInterference())
+      return true;
+  }
+  return false;
+}

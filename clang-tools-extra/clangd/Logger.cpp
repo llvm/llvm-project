@@ -25,9 +25,9 @@ LoggingSession::LoggingSession(clangd::Logger &Instance) {
 
 LoggingSession::~LoggingSession() { L = nullptr; }
 
-void log(const Context &Ctx, const llvm::Twine &Message) {
+void log(const llvm::Twine &Message) {
   if (L)
-    L->log(Ctx, Message);
+    L->log(Message);
   else {
     static std::mutex Mu;
     std::lock_guard<std::mutex> Guard(Mu);

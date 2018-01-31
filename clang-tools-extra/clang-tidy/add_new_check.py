@@ -9,6 +9,7 @@
 #
 #===------------------------------------------------------------------------===#
 
+import argparse
 import os
 import re
 import sys
@@ -221,10 +222,10 @@ def add_release_notes(module_path, module, check_name):
 
 
 # Adds a test for the check.
-def write_test(module_path, module, check_name):
+def write_test(module_path, module, check_name, test_extension):
   check_name_dashes = module + '-' + check_name
   filename = os.path.normpath(os.path.join(module_path, '../../test/clang-tidy',
-                                           check_name_dashes + '.cpp'))
+                                           check_name_dashes + '.' + test_extension))
   print('Creating %s...' % filename)
   with open(filename, 'wb') as f:
     f.write("""// RUN: %%check_clang_tidy %%s %(check_name_dashes)s %%t
@@ -300,22 +301,37 @@ FIXME: Describe what patterns does the check detect and why. Give examples.
 
 
 def main():
-  if len(sys.argv) == 2 and sys.argv[1] == '--update-docs':
+  language_to_extension = {
+      'c': 'c',
+      'c++': 'cpp',
+      'objc': 'm',
+      'objc++': 'mm',
+  }
+  parser = argparse.ArgumentParser()
+  parser.add_argument(
+      '--update-docs',
+      action='store_true',
+      help='just update the list of documentation files, then exit')
+  parser.add_argument(
+      '--language',
+      help='language to use for new check (defaults to c++)',
+      choices=language_to_extension.keys(),
+      default='c++',
+      metavar='LANG')
+  parser.add_argument(
+      'module',
+      help='module directory under which to place the new tidy check (e.g., misc)')
+  parser.add_argument(
+      'check',
+      help='name of new tidy check to add (e.g. foo-do-the-stuff)')
+  args = parser.parse_args()
+
+  if args.update_docs:
     update_checks_list(os.path.dirname(sys.argv[0]))
     return
 
-  if len(sys.argv) != 3:
-    print """\
-Usage: add_new_check.py <module> <check>, e.g.
-  add_new_check.py misc awesome-functions
-
-Alternatively, run 'add_new_check.py --update-docs' to just update the list of
-documentation files."""
-
-    return
-
-  module = sys.argv[1]
-  check_name = sys.argv[2]
+  module = args.module
+  check_name = args.check
 
   if check_name.startswith(module):
     print 'Check name "%s" must not start with the module "%s". Exiting.' % (
@@ -332,7 +348,8 @@ documentation files."""
   write_implementation(module_path, module, check_name_camel)
   adapt_module(module_path, module, check_name, check_name_camel)
   add_release_notes(module_path, module, check_name)
-  write_test(module_path, module, check_name)
+  test_extension = language_to_extension.get(args.language)
+  write_test(module_path, module, check_name, test_extension)
   write_docs(module_path, module, check_name)
   update_checks_list(clang_tidy_path)
   print('Done. Now it\'s your turn!')

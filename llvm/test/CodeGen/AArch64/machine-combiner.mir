@@ -1,6 +1,6 @@
 # RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a57 -enable-unsafe-fp-math \
 # RUN:     -run-pass machine-combiner -machine-combiner-inc-threshold=0 \
-# RUN:     -verify-machineinstrs  -o - %s | FileCheck %s
+# RUN:     -machine-combiner-verify-pattern-order=true -verify-machineinstrs  -o - %s | FileCheck %s
 ---
 # Test incremental depth updates succeed when triggered after the removal of
 # the first instruction in a basic block.

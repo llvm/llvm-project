@@ -926,8 +926,13 @@ bool HvxSelector::selectVectorConstants(SDNode *N) {
     if (N->isMachineOpcode())
       return false;
     unsigned Opc = N->getOpcode();
-    if (Opc == HexagonISD::VSPLAT || Opc == ISD::BITCAST)
+    if (Opc == HexagonISD::VSPLAT)
       return true;
+    if (Opc == ISD::BITCAST) {
+      // Only select bitcasts of VSPLATs.
+      if (N->getOperand(0).getOpcode() == HexagonISD::VSPLAT)
+        return true;
+    }
     if (Opc == ISD::LOAD) {
       SDValue Addr = cast<LoadSDNode>(N)->getBasePtr();
       unsigned AddrOpc = Addr.getOpcode();

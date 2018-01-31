@@ -112,6 +112,37 @@ bool shouldFilterDecl(const NamedDecl *ND, ASTContext *ASTCtx,
   return false;
 }
 
+// Return the symbol location of the given declaration `D`.
+//
+// For symbols defined inside macros:
+//   * use expansion location, if the symbol is formed via macro concatenation.
+//   * use spelling location, otherwise.
+SymbolLocation GetSymbolLocation(const NamedDecl *D, SourceManager &SM,
+                                 StringRef FallbackDir,
+                                 std::string &FilePathStorage) {
+  SymbolLocation Location;
+
+  SourceLocation Loc = SM.getSpellingLoc(D->getLocation());
+  if (D->getLocation().isMacroID()) {
+    // The symbol is formed via macro concatenation, the spelling location will
+    // be "<scratch space>", which is not interesting to us, use the expansion
+    // location instead.
+    if (llvm::StringRef(Loc.printToString(SM)).startswith("<scratch")) {
+      FilePathStorage = makeAbsolutePath(
+          SM, SM.getFilename(SM.getExpansionLoc(D->getLocation())),
+          FallbackDir);
+      return {FilePathStorage,
+              SM.getFileOffset(SM.getExpansionRange(D->getLocStart()).first),
+              SM.getFileOffset(SM.getExpansionRange(D->getLocEnd()).second)};
+    }
+  }
+
+  FilePathStorage = makeAbsolutePath(SM, SM.getFilename(Loc), FallbackDir);
+  return {FilePathStorage,
+          SM.getFileOffset(SM.getSpellingLoc(D->getLocStart())),
+          SM.getFileOffset(SM.getSpellingLoc(D->getLocEnd()))};
+}
+
 } // namespace
 
 SymbolCollector::SymbolCollector(Options Opts) : Opts(std::move(Opts)) {}
@@ -149,17 +180,14 @@ bool SymbolCollector::handleDeclOccurence(
       return true;
 
     auto &SM = ND->getASTContext().getSourceManager();
-    std::string FilePath = makeAbsolutePath(
-        SM, SM.getFilename(D->getLocation()), Opts.FallbackDir);
-    SymbolLocation Location = {FilePath, SM.getFileOffset(D->getLocStart()),
-                               SM.getFileOffset(D->getLocEnd())};
     std::string QName = ND->getQualifiedNameAsString();
 
     Symbol S;
     S.ID = std::move(ID);
     std::tie(S.Scope, S.Name) = splitQualifiedName(QName);
     S.SymInfo = index::getSymbolInfo(D);
-    S.CanonicalDeclaration = Location;
+    std::string FilePath;
+    S.CanonicalDeclaration = GetSymbolLocation(ND, SM, Opts.FallbackDir, FilePath);
 
     // Add completion info.
     assert(ASTCtx && PP.get() && "ASTContext and Preprocessor must be set.");

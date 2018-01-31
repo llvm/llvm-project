@@ -43,9 +43,9 @@ ParsedAST build(StringRef Code) {
   auto CI =
       createInvocationFromCommandLine({"clang", "-xc++", TestFile.c_str()});
   auto Buf = MemoryBuffer::getMemBuffer(Code);
-  auto AST = ParsedAST::Build(
-      Context::empty(), std::move(CI), nullptr, std::move(Buf),
-      std::make_shared<PCHContainerOperations>(), vfs::getRealFileSystem());
+  auto AST = ParsedAST::Build(std::move(CI), nullptr, std::move(Buf),
+                              std::make_shared<PCHContainerOperations>(),
+                              vfs::getRealFileSystem());
   assert(AST.hasValue());
   return std::move(*AST);
 }
@@ -101,8 +101,7 @@ TEST(HighlightsTest, All) {
   for (const char *Test : Tests) {
     Annotations T(Test);
     auto AST = build(T.code());
-    EXPECT_THAT(findDocumentHighlights(Context::empty(), AST, T.point()),
-                HighlightsFrom(T))
+    EXPECT_THAT(findDocumentHighlights(AST, T.point()), HighlightsFrom(T))
         << Test;
   }
 }
@@ -222,7 +221,7 @@ TEST(GoToDefinition, All) {
   for (const char *Test : Tests) {
     Annotations T(Test);
     auto AST = build(T.code());
-    EXPECT_THAT(findDefinitions(Context::empty(), AST, T.point()),
+    EXPECT_THAT(findDefinitions(AST, T.point()),
                 ElementsAre(RangeIs(T.range())))
         << Test;
   }

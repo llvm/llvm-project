@@ -1,4 +1,5 @@
 // RUN: %clangxx -O0 %s -o %t && %run %t
+// UNSUPPORTED: android
 
 #include <assert.h>
 #include <fcntl.h>

@@ -448,6 +448,9 @@ private:
   bool splitCanCauseEvictionChain(unsigned Evictee, GlobalSplitCandidate &Cand,
                                   unsigned BBNumber,
                                   const AllocationOrder &Order);
+  bool splitCanCauseLocalSpill(unsigned VirtRegToSplit,
+                               GlobalSplitCandidate &Cand, unsigned BBNumber,
+                               const AllocationOrder &Order);
   BlockFrequency calcGlobalSplitCost(GlobalSplitCandidate &,
                                      const AllocationOrder &Order,
                                      bool *CanCauseEvictionChain);
@@ -1427,7 +1430,7 @@ BlockFrequency RAGreedy::calcSpillCost() {
 ///                 we are splitting for and the interferences.
 /// \param BBNumber The number of a BB for which the region split process will
 ///                 create a local split interval.
-/// \param Order    The phisical registers that may get evicted by a split
+/// \param Order    The physical registers that may get evicted by a split
 ///                 artifact of Evictee.
 /// \return True if splitting Evictee may cause a bad eviction chain, false
 /// otherwise.
@@ -1448,8 +1451,8 @@ bool RAGreedy::splitCanCauseEvictionChain(unsigned Evictee,
       getCheapestEvicteeWeight(Order, LIS->getInterval(Evictee),
                                Cand.Intf.first(), Cand.Intf.last(), &MaxWeight);
 
-  // The bad eviction chain occurs when either the split candidate the
-  // evited reg or one of the split artifact will evict the evicting reg.
+  // The bad eviction chain occurs when either the split candidate is the
+  // evicting reg or one of the split artifact will evict the evicting reg.
   if ((PhysReg != Cand.PhysReg) && (PhysReg != FutureEvictedPhysReg))
     return false;
 
@@ -1479,6 +1482,54 @@ bool RAGreedy::splitCanCauseEvictionChain(unsigned Evictee,
   return true;
 }
 
+/// \brief Check if splitting VirtRegToSplit will create a local split interval
+/// in basic block number BBNumber that may cause a spill.
+///
+/// \param VirtRegToSplit The register considered to be split.
+/// \param Cand           The split candidate that determines the physical
+///                       register we are splitting for and the interferences.
+/// \param BBNumber       The number of a BB for which the region split process
+///                       will create a local split interval.
+/// \param Order          The physical registers that may get evicted by a
+///                       split artifact of VirtRegToSplit.
+/// \return True if splitting VirtRegToSplit may cause a spill, false
+/// otherwise.
+bool RAGreedy::splitCanCauseLocalSpill(unsigned VirtRegToSplit,
+                                       GlobalSplitCandidate &Cand,
+                                       unsigned BBNumber,
+                                       const AllocationOrder &Order) {
+  Cand.Intf.moveToBlock(BBNumber);
+
+  // Check if the local interval will find a non interfereing assignment.
+  for (auto PhysReg : Order.getOrder()) {
+    if (!Matrix->checkInterference(Cand.Intf.first().getPrevIndex(),
+                                   Cand.Intf.last(), PhysReg))
+      return false;
+  }
+
+  // Check if the local interval will evict a cheaper interval.
+  float CheapestEvictWeight = 0;
+  unsigned FutureEvictedPhysReg = getCheapestEvicteeWeight(
+      Order, LIS->getInterval(VirtRegToSplit), Cand.Intf.first(),
+      Cand.Intf.last(), &CheapestEvictWeight);
+
+  // Have we found an interval that can be evicted?
+  if (FutureEvictedPhysReg) {
+    VirtRegAuxInfo VRAI(*MF, *LIS, VRM, getAnalysis<MachineLoopInfo>(), *MBFI);
+    float splitArtifactWeight =
+        VRAI.futureWeight(LIS->getInterval(VirtRegToSplit),
+                          Cand.Intf.first().getPrevIndex(), Cand.Intf.last());
+    // Will the weight of the local interval be higher than the cheapest evictee
+    // weight? If so it will evict it and will not cause a spill.
+    if (splitArtifactWeight >= 0 && splitArtifactWeight > CheapestEvictWeight)
+      return false;
+  }
+
+  // The local interval is not able to find non interferening assignment and not
+  // able to evict a less worthy interval, therfore, it can cause a spill.
+  return true;
+}
+
 /// calcGlobalSplitCost - Return the global split cost of following the split
 /// pattern in LiveBundles. This cost should be added to the local cost of the
 /// interference pattern in SplitConstraints.
@@ -1499,19 +1550,26 @@ BlockFrequency RAGreedy::calcGlobalSplitCost(GlobalSplitCandidate &Cand,
 
     Cand.Intf.moveToBlock(BC.Number);
     // Check wheather a local interval is going to be created during the region
-    // split.
-    if (EnableAdvancedRASplitCost && CanCauseEvictionChain &&
-        Cand.Intf.hasInterference() && BI.LiveIn && BI.LiveOut && RegIn &&
-        RegOut) {
+    // split. Calculate adavanced spilt cost (cost of local intervals) if option
+    // is enabled.
+    if (EnableAdvancedRASplitCost && Cand.Intf.hasInterference() && BI.LiveIn &&
+        BI.LiveOut && RegIn && RegOut) {
 
-      if (splitCanCauseEvictionChain(VirtRegToSplit, Cand, BC.Number, Order)) {
-        // This interfernce cause our eviction from this assignment, we might
-        // evict somebody else, add that cost.
+      if (CanCauseEvictionChain &&
+          splitCanCauseEvictionChain(VirtRegToSplit, Cand, BC.Number, Order)) {
+        // This interference causes our eviction from this assignment, we might
+        // evict somebody else and eventually someone will spill, add that cost.
         // See splitCanCauseEvictionChain for detailed description of scenarios.
         GlobalCost += SpillPlacer->getBlockFrequency(BC.Number);
         GlobalCost += SpillPlacer->getBlockFrequency(BC.Number);
 
         *CanCauseEvictionChain = true;
+
+      } else if (splitCanCauseLocalSpill(VirtRegToSplit, Cand, BC.Number,
+                                         Order)) {
+        // This interference causes local interval to spill, add that cost.
+        GlobalCost += SpillPlacer->getBlockFrequency(BC.Number);
+        GlobalCost += SpillPlacer->getBlockFrequency(BC.Number);
       }
     }
 
@@ -1540,7 +1598,7 @@ BlockFrequency RAGreedy::calcGlobalSplitCost(GlobalSplitCandidate &Cand,
         // region split.
         if (EnableAdvancedRASplitCost && CanCauseEvictionChain &&
             splitCanCauseEvictionChain(VirtRegToSplit, Cand, Number, Order)) {
-          // This interfernce cause our eviction from this assignment, we might
+          // This interference cause our eviction from this assignment, we might
           // evict somebody else, add that cost.
           // See splitCanCauseEvictionChain for detailed description of
           // scenarios.

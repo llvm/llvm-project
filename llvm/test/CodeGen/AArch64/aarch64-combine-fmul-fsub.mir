@@ -1,7 +1,7 @@
-# RUN: llc -run-pass=machine-combiner -o - -mtriple=aarch64-unknown-linux -mcpu=cortex-a57 -enable-unsafe-fp-math %s | FileCheck --check-prefixes=UNPROFITABLE,ALL %s
-# RUN: llc -run-pass=machine-combiner -o - -mtriple=aarch64-unknown-linux -mcpu=falkor -enable-unsafe-fp-math %s | FileCheck --check-prefixes=PROFITABLE,ALL %s
-# RUN: llc -run-pass=machine-combiner -o - -mtriple=aarch64-unknown-linux -mcpu=exynos-m1 -enable-unsafe-fp-math %s | FileCheck --check-prefixes=PROFITABLE,ALL %s
-# RUN: llc -run-pass=machine-combiner -o - -mtriple=aarch64-unknown-linux -mcpu=thunderx2t99 -enable-unsafe-fp-math %s | FileCheck --check-prefixes=PROFITABLE,ALL %s
+# RUN: llc -run-pass=machine-combiner -o - -mtriple=aarch64-unknown-linux -mcpu=cortex-a57 -enable-unsafe-fp-math -machine-combiner-verify-pattern-order=true %s | FileCheck --check-prefixes=UNPROFITABLE,ALL %s
+# RUN: llc -run-pass=machine-combiner -o - -mtriple=aarch64-unknown-linux -mcpu=falkor -enable-unsafe-fp-math %s -machine-combiner-verify-pattern-order=true | FileCheck --check-prefixes=PROFITABLE,ALL %s
+# RUN: llc -run-pass=machine-combiner -o - -mtriple=aarch64-unknown-linux -mcpu=exynos-m1 -enable-unsafe-fp-math -machine-combiner-verify-pattern-order=true %s | FileCheck --check-prefixes=PROFITABLE,ALL %s
+# RUN: llc -run-pass=machine-combiner -o - -mtriple=aarch64-unknown-linux -mcpu=thunderx2t99 -enable-unsafe-fp-math -machine-combiner-verify-pattern-order=true %s | FileCheck --check-prefixes=PROFITABLE,ALL %s
 #
 name:            f1_2s
 registers:
@@ -26,8 +26,8 @@ body:             |
 # UNPROFITABLE-NEXT: FSUBv2f32 killed %3, %2
 #
 # PROFITABLE-LABEL: name: f1_2s
-# PROFITABLE: %5:fpr64 = FNEGv2f32 %2
-# PROFITABLE-NEXT: FMLAv2f32 killed %5, %0, %1
+# PROFITABLE: [[R1:%[0-9]+]]:fpr64 = FNEGv2f32 %2
+# PROFITABLE-NEXT: FMLAv2f32 killed [[R1]], %0, %1
 ---
 name:            f1_4s
 registers:
@@ -52,8 +52,8 @@ body:             |
 # UNPROFITABLE-NEXT: FSUBv4f32 killed %3, %2
 #
 # PROFITABLE-LABEL: name: f1_4s
-# PROFITABLE: %5:fpr128 = FNEGv4f32 %2
-# PROFITABLE-NEXT: FMLAv4f32 killed %5, %0, %1
+# PROFITABLE: [[R1:%[0-9]+]]:fpr128 = FNEGv4f32 %2
+# PROFITABLE-NEXT: FMLAv4f32 killed [[R1]], %0, %1
 ---
 name:            f1_2d
 registers:
@@ -78,8 +78,8 @@ body:             |
 # UNPROFITABLE-NEXT: FSUBv2f64 killed %3, %2
 #
 # PROFITABLE-LABEL: name: f1_2d
-# PROFITABLE: %5:fpr128 = FNEGv2f64 %2
-# PROFITABLE-NEXT: FMLAv2f64 killed %5, %0, %1
+# PROFITABLE: [[R1:%[0-9]+]]:fpr128 = FNEGv2f64 %2
+# PROFITABLE-NEXT: FMLAv2f64 killed [[R1]], %0, %1
 ---
 name:            f1_both_fmul_2s
 registers:

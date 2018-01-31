@@ -6,6 +6,7 @@ add_lld_library(lldWasm
   Driver.cpp
   InputChunks.cpp
   InputFiles.cpp
+  MarkLive.cpp
   OutputSections.cpp
   SymbolTable.cpp
   Symbols.cpp

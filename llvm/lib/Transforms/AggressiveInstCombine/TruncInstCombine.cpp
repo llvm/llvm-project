@@ -31,6 +31,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 using namespace llvm;
 
@@ -380,10 +381,14 @@ bool TruncInstCombine::run(Function &F) {
   bool MadeIRChange = false;
 
   // Collect all TruncInst in the function into the Worklist for evaluating.
-  for (auto &BB : F)
+  for (auto &BB : F) {
+    // Ignore unreachable basic block.
+    if (!DT.isReachableFromEntry(&BB))
+      continue;
     for (auto &I : BB)
       if (auto *CI = dyn_cast<TruncInst>(&I))
         Worklist.push_back(CI);
+  }
 
   // Process all TruncInst in the Worklist, for each instruction:
   //   1. Check if it dominates an eligible expression dag to be reduced.

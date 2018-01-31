@@ -45,11 +45,13 @@ using namespace llvm;
 
 namespace llvm {
   class DataLayout;
+  class DominatorTree;
   class TargetLibraryInfo;
 
 class TruncInstCombine {
   TargetLibraryInfo &TLI;
   const DataLayout &DL;
+  const DominatorTree &DT;
 
   /// List of all TruncInst instructions to be processed.
   SmallVector<TruncInst *, 4> Worklist;
@@ -73,8 +75,9 @@ class TruncInstCombine {
   MapVector<Instruction *, Info> InstInfoMap;
 
 public:
-  TruncInstCombine(TargetLibraryInfo &TLI, const DataLayout &DL)
-      : TLI(TLI), DL(DL), CurrentTruncInst(nullptr) {}
+  TruncInstCombine(TargetLibraryInfo &TLI, const DataLayout &DL,
+                   const DominatorTree &DT)
+      : TLI(TLI), DL(DL), DT(DT), CurrentTruncInst(nullptr) {}
 
   /// Perform TruncInst pattern optimization on given function.
   bool run(Function &F);
