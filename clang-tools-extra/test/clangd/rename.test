@@ -7,16 +7,16 @@ Content-Length: 125
 
 Content-Length: 150
 
-{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///foo.cpp","languageId":"cpp","version":1,"text":"int foo;"}}}
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///foo.cpp","languageId":"cpp","version":1,"text":"int foo;"}}}
 
 Content-Length: 159
 
-{"jsonrpc":"2.0","id":1,"method":"textDocument/rename","params":{"textDocument":{"uri":"file:///foo.cpp"},"position":{"line":0,"character":5},"newName":"bar"}}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/rename","params":{"textDocument":{"uri":"test:///foo.cpp"},"position":{"line":0,"character":5},"newName":"bar"}}
 #      CHECK:  "id": 1,
 # CHECK-NEXT:  "jsonrpc": "2.0",
 # CHECK-NEXT:  "result": {
 # CHECK-NEXT:    "changes": {
-# CHECK-NEXT:      "file:///foo.cpp": [
+# CHECK-NEXT:      "file://{{.*}}/foo.cpp": [
 # CHECK-NEXT:        {
 # CHECK-NEXT:          "newText": "bar",
 # CHECK-NEXT:          "range": {
@@ -35,7 +35,7 @@ Content-Length: 159
 # CHECK-NEXT:  }
 Content-Length: 159
 
-{"jsonrpc":"2.0","id":2,"method":"textDocument/rename","params":{"textDocument":{"uri":"file:///foo.cpp"},"position":{"line":0,"character":2},"newName":"bar"}}
+{"jsonrpc":"2.0","id":2,"method":"textDocument/rename","params":{"textDocument":{"uri":"test:///foo.cpp"},"position":{"line":0,"character":2},"newName":"bar"}}
 #      CHECK:  "error": {
 # CHECK-NEXT:    "code": -32603,
 # CHECK-NEXT:    "message": "clang diagnostic"

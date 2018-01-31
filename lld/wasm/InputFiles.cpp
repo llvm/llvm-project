@@ -172,7 +172,7 @@ InputSegment *ObjFile::getSegment(const WasmSymbol &WasmSym) const {
 uint32_t ObjFile::getGlobalValue(const WasmSymbol &Sym) const {
   const WasmGlobal &Global =
       getWasmObj()->globals()[Sym.ElementIndex - NumGlobalImports];
-  assert(Global.Type == llvm::wasm::WASM_TYPE_I32);
+  assert(Global.Type.Type == llvm::wasm::WASM_TYPE_I32);
   return Global.InitExpr.Value.Int32;
 }
 
@@ -273,7 +273,7 @@ void ObjFile::initializeSymbols() {
     }
 
     Symbols.push_back(S);
-    if (WasmSym.isFunction()) {
+    if (WasmSym.isTypeFunction()) {
       FunctionSymbols[WasmSym.ElementIndex] = S;
       if (WasmSym.HasAltIndex)
         FunctionSymbols[WasmSym.AltIndex] = S;
@@ -301,7 +301,7 @@ Symbol *ObjFile::createUndefined(const WasmSymbol &Sym, Symbol::Kind Kind,
 Symbol *ObjFile::createDefined(const WasmSymbol &Sym, Symbol::Kind Kind,
                                InputChunk *Chunk, uint32_t Address) {
   Symbol *S;
-  if (Sym.isLocal()) {
+  if (Sym.isBindingLocal()) {
     S = make<Symbol>(Sym.Name, true);
     S->update(Kind, this, Sym.Flags, Chunk, Address);
     return S;

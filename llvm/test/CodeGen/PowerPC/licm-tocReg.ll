@@ -65,15 +65,15 @@
 define signext i32 @test(i32 (i32)* nocapture %FP) local_unnamed_addr #0 {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 6, 2, .LC0@toc@ha
-; CHECK-NEXT:    addis 4, 2, .LC1@toc@ha
-; CHECK-NEXT:    ld 5, .LC1@toc@l(4)
-; CHECK-NEXT:    ld 6, .LC0@toc@l(6)
-; CHECK-NEXT:    lwz 4, 0(5)
-; CHECK-NEXT:    lwz 7, 0(6)
-; CHECK-NEXT:    cmpw 4, 7
+; CHECK-NEXT:    addis 4, 2, .LC0@toc@ha
+; CHECK-NEXT:    addis 5, 2, .LC1@toc@ha
+; CHECK-NEXT:    mr 12, 3
+; CHECK-NEXT:    ld 4, .LC0@toc@l(4)
+; CHECK-NEXT:    ld 5, .LC1@toc@l(5)
+; CHECK-NEXT:    lwz 6, 0(4)
 ; CHECK-NEXT:    lwz 7, 0(5)
-; CHECK-NEXT:    mr 4, 3
+; CHECK-NEXT:    cmpw 6, 7
+; CHECK-NEXT:    lwz 6, 0(4)
 ; CHECK-NEXT:    bgt 0, .LBB0_2
 ; CHECK-NOT:    addis {{[0-9]+}}, 2, .LC0@toc@ha
 ; CHECK-NOT:    addis {{[0-9]+}}, 2, .LC1@toc@ha

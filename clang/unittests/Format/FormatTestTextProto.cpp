@@ -49,9 +49,9 @@ TEST_F(FormatTestTextProto, KeepsTopLevelEntriesFittingALine) {
 TEST_F(FormatTestTextProto, SupportsMessageFields) {
   verifyFormat("msg_field: {}");
 
-  verifyFormat("msg_field: {field_a: A}");
+  verifyFormat("msg_field: { field_a: A }");
 
-  verifyFormat("msg_field: {field_a: \"OK\" field_b: 123}");
+  verifyFormat("msg_field: { field_a: \"OK\" field_b: 123 }");
 
   verifyFormat("msg_field: {\n"
                "  field_a: 1\n"
@@ -63,9 +63,9 @@ TEST_F(FormatTestTextProto, SupportsMessageFields) {
 
   verifyFormat("msg_field {}");
 
-  verifyFormat("msg_field {field_a: A}");
+  verifyFormat("msg_field { field_a: A }");
 
-  verifyFormat("msg_field {field_a: \"OK\" field_b: 123}");
+  verifyFormat("msg_field { field_a: \"OK\" field_b: 123 }");
 
   verifyFormat("msg_field {\n"
                "  field_a: 1\n"
@@ -78,11 +78,11 @@ TEST_F(FormatTestTextProto, SupportsMessageFields) {
                "  field_h: 1234.567e-89\n"
                "}");
 
-  verifyFormat("msg_field: {msg_field {field_a: 1}}");
+  verifyFormat("msg_field: { msg_field { field_a: 1 } }");
 
   verifyFormat("id: \"ala.bala\"\n"
-               "item {type: ITEM_A rank: 1 score: 90.0}\n"
-               "item {type: ITEM_B rank: 2 score: 70.5}\n"
+               "item { type: ITEM_A rank: 1 score: 90.0 }\n"
+               "item { type: ITEM_B rank: 2 score: 70.5 }\n"
                "item {\n"
                "  type: ITEM_A\n"
                "  rank: 3\n"
@@ -102,24 +102,24 @@ TEST_F(FormatTestTextProto, AvoidsTopLevelBinPacking) {
   verifyFormat("field_a: OK\n"
                "field_b: \"OK\"\n"
                "field_c: \"OK\"\n"
-               "msg_field: {field_d: 123}\n"
+               "msg_field: { field_d: 123 }\n"
                "field_e: OK\n"
                "field_f: OK");
 
   verifyFormat("field_a: OK\n"
                "field_b: \"OK\"\n"
                "field_c: \"OK\"\n"
-               "msg_field: {field_d: 123 field_e: OK}");
+               "msg_field: { field_d: 123 field_e: OK }");
 
   verifyFormat("a: {\n"
                "  field_a: OK\n"
-               "  field_b {field_c: OK}\n"
+               "  field_b { field_c: OK }\n"
                "  field_d: OKOKOK\n"
                "  field_e: OK\n"
                "}");
 
   verifyFormat("field_a: OK,\n"
-               "field_b {field_c: OK},\n"
+               "field_b { field_c: OK },\n"
                "field_d: OKOKOK,\n"
                "field_e: OK");
 }
@@ -150,10 +150,10 @@ TEST_F(FormatTestTextProto, SupportsAngleBracketMessageFields) {
   verifyFormat("msg_field: <field_a <field_b: <>>>");
   verifyFormat("msg_field <field_a: OK, field_b: \"OK\">");
   verifyFormat("msg_field <field_a: OK field_b: <>, field_c: OK>");
-  verifyFormat("msg_field <field_a {field_b: 1}, field_c: <field_d: 2>>");
+  verifyFormat("msg_field <field_a { field_b: 1 }, field_c: <field_d: 2>>");
   verifyFormat("msg_field: <field_a: OK, field_b: \"OK\">");
   verifyFormat("msg_field: <field_a: OK field_b: <>, field_c: OK>");
-  verifyFormat("msg_field: <field_a {field_b: 1}, field_c: <field_d: 2>>");
+  verifyFormat("msg_field: <field_a { field_b: 1 }, field_c: <field_d: 2>>");
   verifyFormat("field_a: \"OK\", msg_field: <field_b: 123>, field_c: {}");
   verifyFormat("field_a <field_b: 1>, msg_field: <field_b: 123>, field_c <>");
   verifyFormat("field_a <field_b: 1> msg_field: <field_b: 123> field_c <>");
@@ -200,7 +200,7 @@ TEST_F(FormatTestTextProto, SupportsAngleBracketMessageFields) {
 
   verifyFormat("msg_field: <\n"
                "  field_a: \"OK\"\n"
-               "  msg_field: {field_b: OK}\n"
+               "  msg_field: { field_b: OK }\n"
                "  field_g: OK\n"
                "  field_g: OK\n"
                "  field_g: OK\n"
@@ -226,7 +226,7 @@ TEST_F(FormatTestTextProto, SupportsAngleBracketMessageFields) {
                "  field_b2: ok,\n"
                "  field_b3: <\n"
                "    field_x {}  // Comment\n"
-               "    field_y: {field_z: 1}\n"
+               "    field_y: { field_z: 1 }\n"
                "    field_w: ok\n"
                "  >\n"
                "  field {\n"
@@ -258,7 +258,7 @@ TEST_F(FormatTestTextProto, SupportsAngleBracketMessageFields) {
   verifyFormat("app_id: 'com.javax.swing.salsa.latino'\n"
                "head_id: 1\n"
                "data <key: value>\n"
-               "data {key: value}");
+               "data { key: value }");
 
   verifyFormat("app {\n"
                "  app_id: 'com.javax.swing.salsa.latino'\n"
@@ -274,11 +274,11 @@ TEST_F(FormatTestTextProto, SupportsAngleBracketMessageFields) {
 
   verifyFormat("app_id: 'com.javax.swing.salsa.latino'\n"
                "headheadheadheadheadhead_id: 1\n"
-               "product_data {product {1}}");
+               "product_data { product { 1 } }");
 
   verifyFormat("app_id: 'com.javax.swing.salsa.latino'\n"
                "headheadheadheadheadhead_id: 1\n"
-               "product_data <product {1}>");
+               "product_data <product { 1 }>");
 
   verifyFormat("app_id: 'com.javax.swing.salsa.latino'\n"
                "headheadheadheadheadhead_id: 1\n"
@@ -287,11 +287,11 @@ TEST_F(FormatTestTextProto, SupportsAngleBracketMessageFields) {
   verifyFormat("app <\n"
                "  app_id: 'com.javax.swing.salsa.latino'\n"
                "  headheadheadheadheadhead_id: 1\n"
-               "  product_data <product {1}>\n"
+               "  product_data <product { 1 }>\n"
                ">");
 
   verifyFormat("dcccwrnfioeruvginerurneitinfo {\n"
-               "  exte3nsionrnfvui {key: value}\n"
+               "  exte3nsionrnfvui { key: value }\n"
                "}");
 }
 

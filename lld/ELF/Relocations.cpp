@@ -534,13 +534,6 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol &SS) {
   InX::RelaDyn->addReloc({Target->CopyRel, Sec, 0, false, &SS, 0});
 }
 
-static void errorOrWarn(const Twine &Msg) {
-  if (!Config->NoinhibitExec)
-    error(Msg);
-  else
-    warn(Msg);
-}
-
 // MIPS has an odd notion of "paired" relocations to calculate addends.
 // For example, if a relocation is of R_MIPS_HI16, there must be a
 // R_MIPS_LO16 relocation after that, and an addend is calculated using

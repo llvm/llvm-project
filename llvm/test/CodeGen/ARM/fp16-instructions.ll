@@ -43,14 +43,11 @@ entry:
 ; CHECK-SOFTFP-FP16:  vcvtb.f16.f32 [[S0]], [[S0]]
 ; CHECK-SOFTFP-FP16:  vmov  r0, s0
 
-; CHECK-SOFTFP-FULLFP16:  strh  r1, {{.*}}
-; CHECK-SOFTFP-FULLFP16:  strh  r0, {{.*}}
-; CHECK-SOFTFP-FULLFP16:  vldr.16 [[S0:s[0-9]]], {{.*}}
-; CHECK-SOFTFP-FULLFP16:  vldr.16 [[S2:s[0-9]]], {{.*}}
-; CHECK-SOFTFP-FULLFP16:  vadd.f16  [[S0]], [[S2]], [[S0]]
-; CHECK-SOFTFP-FULLFP16:  vstr.16 [[S2:s[0-9]]],  {{.*}}
-; CHECK-SOFTFP-FULLFP16:  ldrh  r0, {{.*}}
-; CHECK-SOFTFP-FULLFP16:  mov pc, lr
+; CHECK-SOFTFP-FULLFP16:       vmov.f16  [[S0:s[0-9]]], r1
+; CHECK-SOFTFP-FULLFP16:       vmov.f16  [[S2:s[0-9]]], r0
+; CHECK-SOFTFP-FULLFP16:       vadd.f16  [[S0]], [[S2]], [[S0]]
+; CHECK-SOFTFP-FULLFP16-NEXT:  vmov.f16  r0, s0
+; CHECK-SOFTFP-FULLFP16-NEXT:  mov       pc, lr
 
 ; CHECK-HARDFP-VFP3:  vmov r{{.}}, s0
 ; CHECK-HARDFP-VFP3:  vmov{{.*}}, s1
@@ -69,4 +66,3 @@ entry:
 ; CHECK-HARDFP-FULLFP16-NEXT:  mov pc, lr
 
 }
-

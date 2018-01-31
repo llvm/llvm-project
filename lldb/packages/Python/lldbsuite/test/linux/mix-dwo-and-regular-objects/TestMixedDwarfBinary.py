@@ -22,7 +22,7 @@ class TestMixedDwarfBinary(TestBase):
         with/whithout -gsplit-dwarf correspondingly."""
 
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
+        exe = self.getBuildArtifact("a.out")
 
         self.target = self.dbg.CreateTarget(exe)
         self.assertTrue(self.target, VALID_TARGET)

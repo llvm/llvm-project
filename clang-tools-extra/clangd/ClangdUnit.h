@@ -10,7 +10,6 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_CLANGDUNIT_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CLANGDUNIT_H
 
-#include "Context.h"
 #include "Function.h"
 #include "Path.h"
 #include "Protocol.h"
@@ -71,7 +70,7 @@ public:
   /// Attempts to run Clang and store parsed AST. If \p Preamble is non-null
   /// it is reused during parsing.
   static llvm::Optional<ParsedAST>
-  Build(const Context &Ctx, std::unique_ptr<clang::CompilerInvocation> CI,
+  Build(std::unique_ptr<clang::CompilerInvocation> CI,
         std::shared_ptr<const PreambleData> Preamble,
         std::unique_ptr<llvm::MemoryBuffer> Buffer,
         std::shared_ptr<PCHContainerOperations> PCHs,
@@ -148,8 +147,7 @@ private:
   mutable llvm::Optional<ParsedAST> AST;
 };
 
-using ASTParsedCallback =
-    std::function<void(const Context &Ctx, PathRef Path, ParsedAST *)>;
+using ASTParsedCallback = std::function<void(PathRef Path, ParsedAST *)>;
 
 /// Manages resources, required by clangd. Allows to rebuild file with new
 /// contents, and provides AST and Preamble for it.
@@ -186,8 +184,7 @@ public:
   /// Returns a list of diagnostics or a llvm::None, if another rebuild was
   /// requested in parallel (effectively cancelling this rebuild) before
   /// diagnostics were produced.
-  llvm::Optional<std::vector<DiagWithFixIts>> rebuild(const Context &Ctx,
-                                                      ParseInputs &&Inputs);
+  llvm::Optional<std::vector<DiagWithFixIts>> rebuild(ParseInputs &&Inputs);
 
   /// Schedule a rebuild and return a deferred computation that will finish the
   /// rebuild, that can be called on a different thread.
@@ -203,7 +200,7 @@ public:
   /// The future to finish rebuild returns a list of diagnostics built during
   /// reparse, or None, if another deferRebuild was called before this
   /// rebuild was finished.
-  UniqueFunction<llvm::Optional<std::vector<DiagWithFixIts>>(const Context &)>
+  UniqueFunction<llvm::Optional<std::vector<DiagWithFixIts>>()>
   deferRebuild(ParseInputs &&Inputs);
 
   /// Returns a future to get the most fresh PreambleData for a file. The

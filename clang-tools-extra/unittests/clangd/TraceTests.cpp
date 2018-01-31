@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Context.h"
 #include "Trace.h"
 
 #include "llvm/ADT/DenseMap.h"
@@ -78,8 +77,8 @@ TEST(TraceTest, SmokeTest) {
     auto JSONTracer = trace::createJSONTracer(OS);
     trace::Session Session(*JSONTracer);
     {
-      trace::Span Tracer(Context::empty(), "A");
-      trace::log(Tracer.Ctx, "B");
+      trace::Span Tracer("A");
+      trace::log("B");
     }
   }
 

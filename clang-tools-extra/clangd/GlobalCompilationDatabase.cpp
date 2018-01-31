@@ -38,8 +38,7 @@ DirectoryBasedGlobalCompilationDatabase::getCompileCommand(PathRef File) const {
       return std::move(Candidates.front());
     }
   } else {
-    log(Context::empty(), // FIXME(ibiryukov): pass a proper Context here.
-        "Failed to find compilation database for " + Twine(File));
+    log("Failed to find compilation database for " + Twine(File));
   }
   return llvm::None;
 }

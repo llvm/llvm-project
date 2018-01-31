@@ -17,16 +17,16 @@ Content-Type: application/vscode-jsonrpc; charset-utf-8
 #      CHECK:  }
 Content-Length: 246
 
-{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///main.cpp","languageId":"cpp","version":1,"text":"struct fake { int a, bb, ccc; int f(int i, const float f) const; };\nint main() {\n  fake f;\n  f.\n}\n"}}}
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///main.cpp","languageId":"cpp","version":1,"text":"struct fake { int a, bb, ccc; int f(int i, const float f) const; };\nint main() {\n  fake f;\n  f.\n}\n"}}}
 
 Content-Length: 104
 
-{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///main.cpp"}}}
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///main.cpp"}}}
 
 Content-Type: application/vscode-jsonrpc; charset-utf-8
 Content-Length: 146
 
-{"jsonrpc":"2.0","id":1,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:/main.cpp"},"position":{"line":3,"character":5}}}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/completion","params":{"textDocument":{"uri":"test:/main.cpp"},"position":{"line":3,"character":5}}}
 # Test message with Content-Type before Content-Length
 #
 #      CHECK:  "id": 1,
@@ -49,13 +49,13 @@ Content-Length: 146
 Content-Type: application/vscode-jsonrpc; charset-utf-8
 X-Testing: Test
 
-{"jsonrpc":"2.0","id":2,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:/main.cpp"},"position":{"line":3,"character":5}}}
+{"jsonrpc":"2.0","id":2,"method":"textDocument/completion","params":{"textDocument":{"uri":"test:/main.cpp"},"position":{"line":3,"character":5}}}
 
 Content-Type: application/vscode-jsonrpc; charset-utf-8
 Content-Length: 10
 Content-Length: 146
 
-{"jsonrpc":"2.0","id":3,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:/main.cpp"},"position":{"line":3,"character":5}}}
+{"jsonrpc":"2.0","id":3,"method":"textDocument/completion","params":{"textDocument":{"uri":"test:/main.cpp"},"position":{"line":3,"character":5}}}
 # Test message with duplicate Content-Length headers
 #
 #      CHECK:  "id": 3,
@@ -76,7 +76,7 @@ Content-Length: 146
 Content-Type: application/vscode-jsonrpc; charset-utf-8
 Content-Length: 10
 
-{"jsonrpc":"2.0","id":4,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:/main.cpp"},"position":{"line":3,"character":5}}}
+{"jsonrpc":"2.0","id":4,"method":"textDocument/completion","params":{"textDocument":{"uri":"test:/main.cpp"},"position":{"line":3,"character":5}}}
 # Test message with malformed Content-Length
 #
 # STDERR: JSON parse error
@@ -84,7 +84,7 @@ Content-Length: 10
 
 Content-Length: 146
 
-{"jsonrpc":"2.0","id":5,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:/main.cpp"},"position":{"line":3,"character":5}}}
+{"jsonrpc":"2.0","id":5,"method":"textDocument/completion","params":{"textDocument":{"uri":"test:/main.cpp"},"position":{"line":3,"character":5}}}
 # Test message with Content-Type before Content-Length
 #
 #      CHECK:  "id": 5,
@@ -102,7 +102,7 @@ Content-Length: 146
 # CHECK-NEXT:  }
 Content-Length: 1024
 
-{"jsonrpc":"2.0","id":5,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:/main.cpp"},"position":{"line":3,"character":5}}}
+{"jsonrpc":"2.0","id":5,"method":"textDocument/completion","params":{"textDocument":{"uri":"test:/main.cpp"},"position":{"line":3,"character":5}}}
 # Test message which reads beyond the end of the stream.
 #
 # Ensure this is the last test in the file!

@@ -69,7 +69,7 @@ std::shared_ptr<std::vector<const Symbol *>> FileSymbols::allSymbols() {
   return {std::move(Snap), Pointers};
 }
 
-void FileIndex::update(const Context &Ctx, PathRef Path, ParsedAST *AST) {
+void FileIndex::update(PathRef Path, ParsedAST *AST) {
   if (!AST) {
     FSymbols.update(Path, nullptr);
   } else {
@@ -82,9 +82,9 @@ void FileIndex::update(const Context &Ctx, PathRef Path, ParsedAST *AST) {
 }
 
 bool FileIndex::fuzzyFind(
-    const Context &Ctx, const FuzzyFindRequest &Req,
+    const FuzzyFindRequest &Req,
     llvm::function_ref<void(const Symbol &)> Callback) const {
-  return Index.fuzzyFind(Ctx, Req, Callback);
+  return Index.fuzzyFind(Req, Callback);
 }
 
 } // namespace clangd

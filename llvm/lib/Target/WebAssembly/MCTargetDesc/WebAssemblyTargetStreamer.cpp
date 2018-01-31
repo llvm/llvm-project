@@ -87,27 +87,6 @@ void WebAssemblyTargetAsmStreamer::emitLocal(ArrayRef<MVT> Types) {
   }
 }
 
-void WebAssemblyTargetAsmStreamer::emitGlobal(
-    ArrayRef<wasm::Global> Globals) {
-  if (!Globals.empty()) {
-    OS << "\t.globalvar  \t";
-
-    bool First = true;
-    for (const wasm::Global &G : Globals) {
-      if (First)
-        First = false;
-      else
-        OS << ", ";
-      OS << WebAssembly::TypeToString(G.Type);
-      if (!G.InitialModule.empty())
-        OS << '=' << G.InitialModule << ':' << G.InitialName;
-      else
-        OS << '=' << G.InitialValue;
-    }
-    OS << '\n';
-  }
-}
-
 void WebAssemblyTargetAsmStreamer::emitEndFunc() { OS << "\t.endfunc\n"; }
 
 void WebAssemblyTargetAsmStreamer::emitIndirectFunctionType(
@@ -146,11 +125,6 @@ void WebAssemblyTargetELFStreamer::emitLocal(ArrayRef<MVT> Types) {
   Streamer.EmitULEB128IntValue(Types.size());
   for (MVT Type : Types)
     emitValueType(WebAssembly::toValType(Type));
-}
-
-void WebAssemblyTargetELFStreamer::emitGlobal(
-    ArrayRef<wasm::Global> Globals) {
-  llvm_unreachable(".globalvar encoding not yet implemented");
 }
 
 void WebAssemblyTargetELFStreamer::emitEndFunc() {
@@ -202,31 +176,6 @@ void WebAssemblyTargetWasmStreamer::emitLocal(ArrayRef<MVT> Types) {
     Streamer.EmitULEB128IntValue(Pair.second);
     emitValueType(WebAssembly::toValType(Pair.first));
   }
-}
-
-void WebAssemblyTargetWasmStreamer::emitGlobal(
-    ArrayRef<wasm::Global> Globals) {
-  // Encode the globals use by the funciton into the special .global_variables
-  // section. This will later be decoded and turned into contents for the
-  // Globals Section.
-  Streamer.PushSection();
-  Streamer.SwitchSection(Streamer.getContext().getWasmSection(
-      ".global_variables", SectionKind::getMetadata()));
-  for (const wasm::Global &G : Globals) {
-    Streamer.EmitIntValue(int32_t(G.Type), 1);
-    Streamer.EmitIntValue(G.Mutable, 1);
-    if (G.InitialModule.empty()) {
-      Streamer.EmitIntValue(0, 1); // indicate that we have an int value
-      Streamer.EmitSLEB128IntValue(0);
-    } else {
-      Streamer.EmitIntValue(1, 1); // indicate that we have a module import
-      Streamer.EmitBytes(G.InitialModule);
-      Streamer.EmitIntValue(0, 1); // nul-terminate
-      Streamer.EmitBytes(G.InitialName);
-      Streamer.EmitIntValue(0, 1); // nul-terminate
-    }
-  }
-  Streamer.PopSection();
 }
 
 void WebAssemblyTargetWasmStreamer::emitEndFunc() {
