@@ -34,21 +34,25 @@ namespace {
 // Issues an async read of AST and waits for results.
 template <class Ret, class Func>
 Ret blockingRunWithAST(TUScheduler &S, PathRef File, Func &&F) {
-  std::packaged_task<Ret(llvm::Expected<InputsAndAST>)> Task(
+  // Using Optional to workaround MSVC bug. It requires future<> arguments to
+  // have default ctor.
+  std::packaged_task<llvm::Optional<Ret>(llvm::Expected<InputsAndAST>)> Task(
       std::forward<Func>(F));
   auto Future = Task.get_future();
   S.runWithAST(File, std::move(Task));
-  return Future.get();
+  return *Future.get();
 }
 
 // Issues an async read of preamble and waits for results.
 template <class Ret, class Func>
 Ret blockingRunWithPreamble(TUScheduler &S, PathRef File, Func &&F) {
-  std::packaged_task<Ret(llvm::Expected<InputsAndPreamble>)> Task(
-      std::forward<Func>(F));
+  // Using Optional to workaround MSVC bug. It requires future<> arguments to
+  // have default ctor.
+  std::packaged_task<llvm::Optional<Ret>(llvm::Expected<InputsAndPreamble>)>
+      Task(std::forward<Func>(F));
   auto Future = Task.get_future();
   S.runWithPreamble(File, std::move(Task));
-  return Future.get();
+  return *Future.get();
 }
 
 void ignoreError(llvm::Error Err) {
