@@ -343,7 +343,7 @@ void CoveragePrinterHTML::emitFileSummary(raw_ostream &OS, StringRef SF,
     {
       raw_string_ostream RSO{S};
       if (Total)
-        RSO << format("%6.2f", 7, Pctg) << "% ";
+        RSO << format("%*.2f", 7, Pctg) << "% ";
       else
         RSO << "- ";
       RSO << '(' << Hit << '/' << Total << ')';
