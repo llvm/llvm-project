@@ -133,8 +133,7 @@ class ProcessLaunchTestCase(TestBase):
         err_file_name = "my_working_dir_test.err"
 
         my_working_dir_path = self.getBuildArtifact(mywd)
-        try: os.makedirs(my_working_dir_path)
-        except: pass
+        lldbutil.mkdir_p(my_working_dir_path)
         out_file_path = os.path.join(my_working_dir_path, out_file_name)
         err_file_path = os.path.join(my_working_dir_path, err_file_name)
 

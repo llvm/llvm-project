@@ -236,8 +236,8 @@ void Writer::createGlobalSection() {
   writeUleb128(OS, DefinedGlobals.size(), "global count");
   for (const Symbol *Sym : DefinedGlobals) {
     WasmGlobal Global;
-    Global.Type = WASM_TYPE_I32;
-    Global.Mutable = Sym == Config->StackPointerSymbol;
+    Global.Type.Type = WASM_TYPE_I32;
+    Global.Type.Mutable = Sym == Config->StackPointerSymbol;
     Global.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
     Global.InitExpr.Value.Int32 = Sym->getVirtualAddress();
     writeGlobal(OS, Global);
