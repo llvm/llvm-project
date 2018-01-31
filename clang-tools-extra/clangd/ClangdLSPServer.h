@@ -50,32 +50,30 @@ public:
 private:
   // Implement DiagnosticsConsumer.
   virtual void
-  onDiagnosticsReady(const Context &Ctx, PathRef File,
+  onDiagnosticsReady(PathRef File,
                      Tagged<std::vector<DiagWithFixIts>> Diagnostics) override;
 
   // Implement ProtocolCallbacks.
-  void onInitialize(Ctx C, InitializeParams &Params) override;
-  void onShutdown(Ctx C, ShutdownParams &Params) override;
-  void onExit(Ctx C, ExitParams &Params) override;
-  void onDocumentDidOpen(Ctx C, DidOpenTextDocumentParams &Params) override;
-  void onDocumentDidChange(Ctx C, DidChangeTextDocumentParams &Params) override;
-  void onDocumentDidClose(Ctx C, DidCloseTextDocumentParams &Params) override;
+  void onInitialize(InitializeParams &Params) override;
+  void onShutdown(ShutdownParams &Params) override;
+  void onExit(ExitParams &Params) override;
+  void onDocumentDidOpen(DidOpenTextDocumentParams &Params) override;
+  void onDocumentDidChange(DidChangeTextDocumentParams &Params) override;
+  void onDocumentDidClose(DidCloseTextDocumentParams &Params) override;
   void
-  onDocumentOnTypeFormatting(Ctx C,
-                             DocumentOnTypeFormattingParams &Params) override;
+  onDocumentOnTypeFormatting(DocumentOnTypeFormattingParams &Params) override;
   void
-  onDocumentRangeFormatting(Ctx C,
-                            DocumentRangeFormattingParams &Params) override;
-  void onDocumentFormatting(Ctx C, DocumentFormattingParams &Params) override;
-  void onCodeAction(Ctx C, CodeActionParams &Params) override;
-  void onCompletion(Ctx C, TextDocumentPositionParams &Params) override;
-  void onSignatureHelp(Ctx C, TextDocumentPositionParams &Params) override;
-  void onGoToDefinition(Ctx C, TextDocumentPositionParams &Params) override;
-  void onSwitchSourceHeader(Ctx C, TextDocumentIdentifier &Params) override;
-  void onDocumentHighlight(Ctx C, TextDocumentPositionParams &Params) override;
-  void onFileEvent(Ctx C, DidChangeWatchedFilesParams &Params) override;
-  void onCommand(Ctx C, ExecuteCommandParams &Params) override;
-  void onRename(Ctx C, RenameParams &Parames) override;
+  onDocumentRangeFormatting(DocumentRangeFormattingParams &Params) override;
+  void onDocumentFormatting(DocumentFormattingParams &Params) override;
+  void onCodeAction(CodeActionParams &Params) override;
+  void onCompletion(TextDocumentPositionParams &Params) override;
+  void onSignatureHelp(TextDocumentPositionParams &Params) override;
+  void onGoToDefinition(TextDocumentPositionParams &Params) override;
+  void onSwitchSourceHeader(TextDocumentIdentifier &Params) override;
+  void onDocumentHighlight(TextDocumentPositionParams &Params) override;
+  void onFileEvent(DidChangeWatchedFilesParams &Params) override;
+  void onCommand(ExecuteCommandParams &Params) override;
+  void onRename(RenameParams &Parames) override;
 
   std::vector<TextEdit> getFixIts(StringRef File, const clangd::Diagnostic &D);
 

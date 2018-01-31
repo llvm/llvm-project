@@ -15,7 +15,6 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_CODECOMPLETE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CODECOMPLETE_H
 
-#include "Context.h"
 #include "Logger.h"
 #include "Path.h"
 #include "Protocol.h"
@@ -67,7 +66,7 @@ struct CodeCompleteOptions {
 };
 
 /// Get code completions at a specified \p Pos in \p FileName.
-CompletionList codeComplete(const Context &Ctx, PathRef FileName,
+CompletionList codeComplete(PathRef FileName,
                             const tooling::CompileCommand &Command,
                             PrecompiledPreamble const *Preamble,
                             StringRef Contents, Position Pos,
@@ -76,7 +75,7 @@ CompletionList codeComplete(const Context &Ctx, PathRef FileName,
                             CodeCompleteOptions Opts);
 
 /// Get signature help at a specified \p Pos in \p FileName.
-SignatureHelp signatureHelp(const Context &Ctx, PathRef FileName,
+SignatureHelp signatureHelp(PathRef FileName,
                             const tooling::CompileCommand &Command,
                             PrecompiledPreamble const *Preamble,
                             StringRef Contents, Position Pos,

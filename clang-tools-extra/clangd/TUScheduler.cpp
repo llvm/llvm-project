@@ -23,9 +23,8 @@ TUScheduler::TUScheduler(unsigned AsyncThreadsCount,
       Threads(AsyncThreadsCount) {}
 
 void TUScheduler::update(
-    Context Ctx, PathRef File, ParseInputs Inputs,
-    UniqueFunction<void(Context Ctx,
-                        llvm::Optional<std::vector<DiagWithFixIts>>)>
+    PathRef File, ParseInputs Inputs,
+    UniqueFunction<void(llvm::Optional<std::vector<DiagWithFixIts>>)>
         OnUpdated) {
   CachedInputs[File] = Inputs;
 
@@ -33,12 +32,12 @@ void TUScheduler::update(
   auto DeferredRebuild = Resources->deferRebuild(std::move(Inputs));
 
   Threads.addToFront(
-      [](Context Ctx, decltype(OnUpdated) OnUpdated,
+      [](decltype(OnUpdated) OnUpdated,
          decltype(DeferredRebuild) DeferredRebuild) {
-        auto Diags = DeferredRebuild(Ctx);
-        OnUpdated(std::move(Ctx), Diags);
+        auto Diags = DeferredRebuild();
+        OnUpdated(Diags);
       },
-      std::move(Ctx), std::move(OnUpdated), std::move(DeferredRebuild));
+      std::move(OnUpdated), std::move(DeferredRebuild));
 }
 
 void TUScheduler::remove(PathRef File,

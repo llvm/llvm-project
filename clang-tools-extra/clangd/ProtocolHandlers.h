@@ -29,34 +29,28 @@ namespace clangd {
 // The interface implemented by ClangLSPServer to handle incoming requests.
 class ProtocolCallbacks {
 public:
-  // FIXME(ibiryukov): remove this typedef, inline its usages.
-  using Ctx = Context;
   virtual ~ProtocolCallbacks() = default;
 
-  virtual void onInitialize(Ctx C, InitializeParams &Params) = 0;
-  virtual void onShutdown(Ctx C, ShutdownParams &Params) = 0;
-  virtual void onExit(Ctx C, ExitParams &Params) = 0;
-  virtual void onDocumentDidOpen(Ctx C, DidOpenTextDocumentParams &Params) = 0;
-  virtual void onDocumentDidChange(Ctx C,
-                                   DidChangeTextDocumentParams &Params) = 0;
-  virtual void onDocumentDidClose(Ctx C,
-                                  DidCloseTextDocumentParams &Params) = 0;
-  virtual void onDocumentFormatting(Ctx C,
-                                    DocumentFormattingParams &Params) = 0;
+  virtual void onInitialize(InitializeParams &Params) = 0;
+  virtual void onShutdown(ShutdownParams &Params) = 0;
+  virtual void onExit(ExitParams &Params) = 0;
+  virtual void onDocumentDidOpen(DidOpenTextDocumentParams &Params) = 0;
+  virtual void onDocumentDidChange(DidChangeTextDocumentParams &Params) = 0;
+  virtual void onDocumentDidClose(DidCloseTextDocumentParams &Params) = 0;
+  virtual void onDocumentFormatting(DocumentFormattingParams &Params) = 0;
   virtual void
-  onDocumentOnTypeFormatting(Ctx C, DocumentOnTypeFormattingParams &Params) = 0;
+  onDocumentOnTypeFormatting(DocumentOnTypeFormattingParams &Params) = 0;
   virtual void
-  onDocumentRangeFormatting(Ctx C, DocumentRangeFormattingParams &Params) = 0;
-  virtual void onCodeAction(Ctx C, CodeActionParams &Params) = 0;
-  virtual void onCompletion(Ctx C, TextDocumentPositionParams &Params) = 0;
-  virtual void onSignatureHelp(Ctx C, TextDocumentPositionParams &Params) = 0;
-  virtual void onGoToDefinition(Ctx C, TextDocumentPositionParams &Params) = 0;
-  virtual void onSwitchSourceHeader(Ctx C, TextDocumentIdentifier &Params) = 0;
-  virtual void onFileEvent(Ctx C, DidChangeWatchedFilesParams &Params) = 0;
-  virtual void onCommand(Ctx C, ExecuteCommandParams &Params) = 0;
-  virtual void onRename(Ctx C, RenameParams &Parames) = 0;
-  virtual void onDocumentHighlight(Ctx C,
-                                   TextDocumentPositionParams &Params) = 0;
+  onDocumentRangeFormatting(DocumentRangeFormattingParams &Params) = 0;
+  virtual void onCodeAction(CodeActionParams &Params) = 0;
+  virtual void onCompletion(TextDocumentPositionParams &Params) = 0;
+  virtual void onSignatureHelp(TextDocumentPositionParams &Params) = 0;
+  virtual void onGoToDefinition(TextDocumentPositionParams &Params) = 0;
+  virtual void onSwitchSourceHeader(TextDocumentIdentifier &Params) = 0;
+  virtual void onFileEvent(DidChangeWatchedFilesParams &Params) = 0;
+  virtual void onCommand(ExecuteCommandParams &Params) = 0;
+  virtual void onRename(RenameParams &Parames) = 0;
+  virtual void onDocumentHighlight(TextDocumentPositionParams &Params) = 0;
 };
 
 void registerCallbackHandlers(JSONRPCDispatcher &Dispatcher, JSONOutput &Out,

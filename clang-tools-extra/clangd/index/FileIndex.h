@@ -17,7 +17,6 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_FILEINDEX_H
 
 #include "../ClangdUnit.h"
-#include "../Context.h"
 #include "Index.h"
 #include "MemIndex.h"
 
@@ -58,10 +57,10 @@ class FileIndex : public SymbolIndex {
 public:
   /// \brief Update symbols in \p Path with symbols in \p AST. If \p AST is
   /// nullptr, this removes all symbols in the file
-  void update(const Context &Ctx, PathRef Path, ParsedAST *AST);
+  void update(PathRef Path, ParsedAST *AST);
 
   bool
-  fuzzyFind(const Context &Ctx, const FuzzyFindRequest &Req,
+  fuzzyFind(const FuzzyFindRequest &Req,
             llvm::function_ref<void(const Symbol &)> Callback) const override;
 
 private:

@@ -43,9 +43,9 @@ ParsedAST build(StringRef Code, std::vector<const char*> Flags = {}) {
   Cmd.insert(Cmd.begin() + 1, Flags.begin(), Flags.end());
   auto CI = createInvocationFromCommandLine(Cmd);
   auto Buf = MemoryBuffer::getMemBuffer(Code);
-  auto AST = ParsedAST::Build(
-      Context::empty(), std::move(CI), nullptr, std::move(Buf),
-      std::make_shared<PCHContainerOperations>(), vfs::getRealFileSystem());
+  auto AST = ParsedAST::Build(std::move(CI), nullptr, std::move(Buf),
+                              std::make_shared<PCHContainerOperations>(),
+                              vfs::getRealFileSystem());
   assert(AST.hasValue());
   return std::move(*AST);
 }

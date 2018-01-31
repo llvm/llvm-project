@@ -10,6 +10,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_THREADING_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_THREADING_H
 
+#include "Context.h"
 #include "Function.h"
 #include <condition_variable>
 #include <deque>
@@ -42,8 +43,9 @@ public:
 
     {
       std::lock_guard<std::mutex> Lock(Mutex);
-      RequestQueue.push_front(
-          BindWithForward(std::forward<Func>(F), std::forward<Args>(As)...));
+      RequestQueue.emplace_front(
+          BindWithForward(std::forward<Func>(F), std::forward<Args>(As)...),
+          Context::current().clone());
     }
     RequestCV.notify_one();
   }
@@ -58,8 +60,9 @@ public:
 
     {
       std::lock_guard<std::mutex> Lock(Mutex);
-      RequestQueue.push_back(
-          BindWithForward(std::forward<Func>(F), std::forward<Args>(As)...));
+      RequestQueue.emplace_back(
+          BindWithForward(std::forward<Func>(F), std::forward<Args>(As)...),
+          Context::current().clone());
     }
     RequestCV.notify_one();
   }
@@ -74,7 +77,7 @@ private:
   /// Setting Done to true will make the worker threads terminate.
   bool Done = false;
   /// A queue of requests.
-  std::deque<UniqueFunction<void()>> RequestQueue;
+  std::deque<std::pair<UniqueFunction<void()>, Context>> RequestQueue;
   /// Condition variable to wake up worker threads.
   std::condition_variable RequestCV;
 };

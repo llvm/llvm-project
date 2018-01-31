@@ -46,16 +46,14 @@ public:
     Out.flush();
   }
 
-  Context beginSpan(const Context &Ctx, llvm::StringRef Name,
-                    json::obj *Args) override {
+  Context beginSpan(llvm::StringRef Name, json::obj *Args) override {
     jsonEvent("B", json::obj{{"name", Name}});
-    return Ctx.derive(make_scope_exit([this, Args] {
+    return Context::current().derive(make_scope_exit([this, Args] {
       jsonEvent("E", json::obj{{"args", std::move(*Args)}});
     }));
   }
 
-  void instant(const Context &Ctx, llvm::StringRef Name,
-               json::obj &&Args) override {
+  void instant(llvm::StringRef Name, json::obj &&Args) override {
     jsonEvent("i", json::obj{{"name", Name}, {"args", std::move(Args)}});
   }
 
@@ -120,20 +118,26 @@ std::unique_ptr<EventTracer> createJSONTracer(llvm::raw_ostream &OS,
   return llvm::make_unique<JSONTracer>(OS, Pretty);
 }
 
-void log(const Context &Ctx, const Twine &Message) {
+void log(const Twine &Message) {
   if (!T)
     return;
-  T->instant(Ctx, "Log", json::obj{{"Message", Message.str()}});
+  T->instant("Log", json::obj{{"Message", Message.str()}});
+}
+
+// Returned context owns Args.
+static Context makeSpanContext(llvm::StringRef Name, json::obj *Args) {
+  if (!T)
+    return Context::current().clone();
+  WithContextValue WithArgs{std::unique_ptr<json::obj>(Args)};
+  return T->beginSpan(Name, Args);
 }
 
 // Span keeps a non-owning pointer to the args, which is how users access them.
 // The args are owned by the context though. They stick around until the
 // beginSpan() context is destroyed, when the tracing engine will consume them.
-Span::Span(const Context &Ctx, llvm::StringRef Name)
+Span::Span(llvm::StringRef Name)
     : Args(T ? new json::obj() : nullptr),
-      Ctx(T ? T->beginSpan(Ctx.derive(std::unique_ptr<json::obj>(Args)), Name,
-                           Args)
-            : Ctx.clone()) {}
+      RestoreCtx(makeSpanContext(Name, Args)) {}
 
 } // namespace trace
 } // namespace clangd
