@@ -717,6 +717,13 @@ TEST(MemorySanitizer, readlink) {
   delete [] x;
 }
 
+TEST(MemorySanitizer, readlinkat) {
+  char *x = new char[1000];
+  readlinkat(AT_FDCWD, SYMLINK_TO_READ, x, 1000);
+  EXPECT_NOT_POISONED(x[0]);
+  delete[] x;
+}
+
 TEST(MemorySanitizer, stat) {
   struct stat* st = new struct stat;
   int res = stat(FILE_TO_READ, st);

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa-opencl -verify-machineinstrs -run-pass=machine-scheduler -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa-amdgizcl -verify-machineinstrs -run-pass=machine-scheduler -o - %s | FileCheck %s
 
 --- |
   %struct.widget.0 = type { float, i32, i32 }
@@ -14,7 +14,7 @@
   define amdgpu_kernel void @sched_dbg_value_crash(i8 addrspace(1)* nocapture readonly %arg, i32 addrspace(1)* nocapture readonly %arg1, %struct.widget.0 addrspace(1)* nocapture readonly %arg2, %struct.baz addrspace(1)* nocapture readonly %arg3, %struct.snork addrspace(1)* nocapture %arg4) local_unnamed_addr #2 {
   bb:
     %0 = getelementptr i32, i32 addrspace(1)* %arg1, i64 0, !amdgpu.uniform !3, !amdgpu.noclobber !3
-    %tmp5 = alloca %struct.wombat, align 16
+    %tmp5 = alloca %struct.wombat, align 16, addrspace(5)
     %1 = call noalias nonnull dereferenceable(64) i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
     %2 = bitcast i8 addrspace(2)* %1 to i32 addrspace(2)*
     %3 = getelementptr inbounds i32, i32 addrspace(2)* %2, i64 1
@@ -48,9 +48,9 @@
     %tmp20 = shl nuw nsw i64 %tmp19, 2
     %tmp21 = getelementptr inbounds i8, i8 addrspace(1)* %arg, i64 %tmp20
     %tmp22 = bitcast i8 addrspace(1)* %tmp21 to %struct.wombat.1 addrspace(1)*
-    %tmp23 = bitcast %struct.wombat* %tmp5 to i8*
-    call void @llvm.lifetime.start.p0i8(i64 144, i8* nonnull %tmp23) #3
-    %tmp24 = getelementptr inbounds %struct.wombat, %struct.wombat* %tmp5, i32 0, i32 6
+    %tmp23 = bitcast %struct.wombat addrspace(5)* %tmp5 to i8 addrspace(5)*
+    call void @llvm.lifetime.start.p5i8(i64 144, i8 addrspace(5)* nonnull %tmp23) #3
+    %tmp24 = getelementptr inbounds %struct.wombat, %struct.wombat addrspace(5)* %tmp5, i32 0, i32 6
     %tmp25 = getelementptr i32, i32 addrspace(1)* %arg1, i64 3, !amdgpu.uniform !3, !amdgpu.noclobber !3
     %tmp26 = load i32, i32 addrspace(1)* %tmp25, align 4
     %tmp27 = zext i32 %tmp26 to i64
@@ -103,7 +103,7 @@
     %tmp74 = insertelement <4 x float> <float undef, float undef, float undef, float 0.000000e+00>, float %tmp69, i32 0
     %tmp75 = insertelement <4 x float> %tmp74, float %tmp71, i32 1
     %tmp76 = insertelement <4 x float> %tmp75, float %tmp73, i32 2
-    store <4 x float> %tmp76, <4 x float>* %tmp24, align 16
+    store <4 x float> %tmp76, <4 x float> addrspace(5)* %tmp24, align 16
     %tmp77 = fsub float undef, %tmp60
     %tmp78 = fsub float undef, %tmp61
     %tmp79 = extractelement <4 x float> %tmp66, i32 2
@@ -125,26 +125,26 @@
     %tmp94 = call float @llvm.fmuladd.f32(float %tmp92, float %tmp36, float %tmp93)
     %tmp95 = call float @llvm.fmuladd.f32(float %tmp48, float undef, float %tmp94)
     %tmp96 = fsub float extractelement (<2 x float> fadd (<2 x float> fmul (<2 x float> undef, <2 x float> undef), <2 x float> undef), i64 1), %tmp95
-    %tmp97 = getelementptr inbounds %struct.wombat, %struct.wombat* %tmp5, i32 0, i32 8, i32 1
-    call void @func(float %tmp96, i64 0, i16* nonnull %tmp97) #3
+    %tmp97 = getelementptr inbounds %struct.wombat, %struct.wombat addrspace(5)* %tmp5, i32 0, i32 8, i32 1
+    call void @func(float %tmp96, i64 0, i16 addrspace(5)* nonnull %tmp97) #3
     %tmp984 = bitcast [16 x i8] addrspace(3)* %17 to i8 addrspace(3)*
     %tmp99 = getelementptr inbounds %struct.snork, %struct.snork addrspace(1)* %arg4, i64 %tmp12, i32 8, i32 1, i64 0
     call void @llvm.memcpy.p1i8.p3i8.i64(i8 addrspace(1)* %tmp99, i8 addrspace(3)* %tmp984, i64 16, i32 16, i1 false)
-    call void @llvm.lifetime.end.p0i8(i64 144, i8* nonnull %tmp23) #3
+    call void @llvm.lifetime.end.p5i8(i64 144, i8 addrspace(5)* nonnull %tmp23) #3
     ret void
   }
 
-  declare void @func(float, i64, i16*)
-  declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #0
+  declare void @func(float, i64, i16 addrspace(5)*)
+  declare void @llvm.lifetime.start.p5i8(i64, i8 addrspace(5)* nocapture) #0
   declare float @llvm.fmuladd.f32(float, float, float) #1
-  declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #0
+  declare void @llvm.lifetime.end.p5i8(i64, i8 addrspace(5)* nocapture) #0
   declare <2 x float> @llvm.fmuladd.v2f32(<2 x float>, <2 x float>, <2 x float>) #1
   declare i32 @llvm.amdgcn.workitem.id.x() #1
   declare void @llvm.dbg.value(metadata, metadata, metadata) #1
   declare i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr() #1
   declare i32 @llvm.amdgcn.workitem.id.y() #1
   declare i32 @llvm.amdgcn.workitem.id.z() #1
-  declare void @llvm.memcpy.p1i8.p0i8.i64(i8 addrspace(1)* nocapture writeonly, i8* nocapture readonly, i64, i32, i1) #0
+  declare void @llvm.memcpy.p1i8.p5i8.i64(i8 addrspace(1)* nocapture writeonly, i8 addrspace(5)* nocapture readonly, i64, i32, i1) #0
   declare void @llvm.memcpy.p1i8.p3i8.i64(i8 addrspace(1)* nocapture writeonly, i8 addrspace(3)* nocapture readonly, i64, i32, i1) #0
 
   attributes #0 = { argmemonly nounwind }

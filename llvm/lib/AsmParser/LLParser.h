@@ -143,12 +143,19 @@ namespace llvm {
     /// UpgradeDebuginfo so it can generate broken bitcode.
     bool UpgradeDebugInfo;
 
+    /// DataLayout string to override that in LLVM assembly.
+    StringRef DataLayoutStr;
+
   public:
     LLParser(StringRef F, SourceMgr &SM, SMDiagnostic &Err, Module *M,
-             SlotMapping *Slots = nullptr, bool UpgradeDebugInfo = true)
+             SlotMapping *Slots = nullptr, bool UpgradeDebugInfo = true,
+             StringRef DataLayoutString = "")
         : Context(M->getContext()), Lex(F, SM, Err, M->getContext()), M(M),
           Slots(Slots), BlockAddressPFS(nullptr),
-          UpgradeDebugInfo(UpgradeDebugInfo) {}
+          UpgradeDebugInfo(UpgradeDebugInfo), DataLayoutStr(DataLayoutString) {
+      if (!DataLayoutStr.empty())
+        M->setDataLayout(DataLayoutStr);
+    }
     bool Run();
 
     bool parseStandaloneConstantValue(Constant *&C, const SlotMapping *Slots);

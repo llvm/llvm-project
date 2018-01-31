@@ -458,7 +458,7 @@ int main(int argc, char **argv) {
 
   // Load the input module...
   std::unique_ptr<Module> M =
-      parseIRFile(InputFilename, Err, Context, !NoVerify);
+      parseIRFile(InputFilename, Err, Context, !NoVerify, ClDataLayout);
 
   if (!M) {
     Err.print(argv[0], errs());
@@ -469,6 +469,10 @@ int main(int argc, char **argv) {
   if (StripDebug)
     StripDebugInfo(*M);
 
+  // If we are supposed to override the target triple or data layout, do so now.
+  if (!TargetTriple.empty())
+    M->setTargetTriple(Triple::normalize(TargetTriple));
+
   // Immediately run the verifier to catch any problems before starting up the
   // pass pipelines.  Otherwise we can crash on broken code during
   // doInitialization().
@@ -477,12 +481,6 @@ int main(int argc, char **argv) {
            << ": error: input module is broken!\n";
     return 1;
   }
-
-  // If we are supposed to override the target triple or data layout, do so now.
-  if (!TargetTriple.empty())
-    M->setTargetTriple(Triple::normalize(TargetTriple));
-  if (!ClDataLayout.empty())
-    M->setDataLayout(ClDataLayout);
 
   // Figure out what stream we are supposed to write to...
   std::unique_ptr<ToolOutputFile> Out;

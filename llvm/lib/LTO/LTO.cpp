@@ -1033,16 +1033,18 @@ class WriteIndexesThinBackend : public ThinBackendProc {
   std::string LinkedObjectsFileName;
   std::unique_ptr<llvm::raw_fd_ostream> LinkedObjectsFile;
 
+  lto::IndexWriteCallback OnWrite;
+
 public:
   WriteIndexesThinBackend(
       Config &Conf, ModuleSummaryIndex &CombinedIndex,
       const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
       std::string OldPrefix, std::string NewPrefix, bool ShouldEmitImportsFiles,
-      std::string LinkedObjectsFileName)
+      std::string LinkedObjectsFileName, lto::IndexWriteCallback OnWrite)
       : ThinBackendProc(Conf, CombinedIndex, ModuleToDefinedGVSummaries),
         OldPrefix(OldPrefix), NewPrefix(NewPrefix),
         ShouldEmitImportsFiles(ShouldEmitImportsFiles),
-        LinkedObjectsFileName(LinkedObjectsFileName) {}
+        LinkedObjectsFileName(LinkedObjectsFileName), OnWrite(OnWrite) {}
 
   Error start(
       unsigned Task, BitcodeModule BM,
@@ -1075,9 +1077,14 @@ public:
       return errorCodeToError(EC);
     WriteIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex);
 
-    if (ShouldEmitImportsFiles)
-      return errorCodeToError(
-          EmitImportsFiles(ModulePath, NewModulePath + ".imports", ImportList));
+    if (ShouldEmitImportsFiles) {
+      EC = EmitImportsFiles(ModulePath, NewModulePath + ".imports", ImportList);
+      if (EC)
+        return errorCodeToError(EC);
+    }
+
+    if (OnWrite)
+      OnWrite(ModulePath);
     return Error::success();
   }
 
@@ -1088,13 +1095,14 @@ public:
 ThinBackend lto::createWriteIndexesThinBackend(std::string OldPrefix,
                                                std::string NewPrefix,
                                                bool ShouldEmitImportsFiles,
-                                               std::string LinkedObjectsFile) {
+                                               std::string LinkedObjectsFile,
+                                               IndexWriteCallback OnWrite) {
   return [=](Config &Conf, ModuleSummaryIndex &CombinedIndex,
              const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
              AddStreamFn AddStream, NativeObjectCache Cache) {
     return llvm::make_unique<WriteIndexesThinBackend>(
         Conf, CombinedIndex, ModuleToDefinedGVSummaries, OldPrefix, NewPrefix,
-        ShouldEmitImportsFiles, LinkedObjectsFile);
+        ShouldEmitImportsFiles, LinkedObjectsFile, OnWrite);
   };
 }
 

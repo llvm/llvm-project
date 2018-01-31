@@ -608,9 +608,9 @@ namespace {
     unsigned getInverseMxN(unsigned QP);
     Value *generate(BasicBlock::iterator At, ParsedValues &PV);
 
-    void setupSimplifier();
+    void setupPreSimplifier(Simplifier &S);
+    void setupPostSimplifier(Simplifier &S);
 
-    Simplifier Simp;
     Loop *CurLoop;
     const DataLayout &DL;
     const DominatorTree &DT;
@@ -985,6 +985,7 @@ bool PolynomialMultiplyRecognize::isPromotableTo(Value *Val,
     case Instruction::Xor:
     case Instruction::LShr: // Shift right is ok.
     case Instruction::Select:
+    case Instruction::Trunc:
       return true;
     case Instruction::ICmp:
       if (CmpInst *CI = cast<CmpInst>(In))
@@ -998,6 +999,8 @@ bool PolynomialMultiplyRecognize::isPromotableTo(Value *Val,
 
 void PolynomialMultiplyRecognize::promoteTo(Instruction *In,
       IntegerType *DestTy, BasicBlock *LoopB) {
+  Type *OrigTy = In->getType();
+
   // Leave boolean values alone.
   if (!In->getType()->isIntegerTy(1))
     In->mutateType(DestTy);
@@ -1026,6 +1029,14 @@ void PolynomialMultiplyRecognize::promoteTo(Instruction *In,
     if (Op->getType() == Z->getType())
       Z->replaceAllUsesWith(Op);
     Z->eraseFromParent();
+    return;
+  }
+  if (TruncInst *T = dyn_cast<TruncInst>(In)) {
+    IntegerType *TruncTy = cast<IntegerType>(OrigTy);
+    Value *Mask = ConstantInt::get(DestTy, (1u << TruncTy->getBitWidth()) - 1);
+    Value *And = IRBuilder<>(In).CreateAnd(T->getOperand(0), Mask);
+    T->replaceAllUsesWith(And);
+    T->eraseFromParent();
     return;
   }
 
@@ -1569,8 +1580,8 @@ static bool hasZeroSignBit(const Value *V) {
   return false;
 }
 
-void PolynomialMultiplyRecognize::setupSimplifier() {
-  Simp.addRule("sink-zext",
+void PolynomialMultiplyRecognize::setupPreSimplifier(Simplifier &S) {
+  S.addRule("sink-zext",
     // Sink zext past bitwise operations.
     [](Instruction *I, LLVMContext &Ctx) -> Value* {
       if (I->getOpcode() != Instruction::ZExt)
@@ -1591,7 +1602,7 @@ void PolynomialMultiplyRecognize::setupSimplifier() {
                            B.CreateZExt(T->getOperand(0), I->getType()),
                            B.CreateZExt(T->getOperand(1), I->getType()));
     });
-  Simp.addRule("xor/and -> and/xor",
+  S.addRule("xor/and -> and/xor",
     // (xor (and x a) (and y a)) -> (and (xor x y) a)
     [](Instruction *I, LLVMContext &Ctx) -> Value* {
       if (I->getOpcode() != Instruction::Xor)
@@ -1609,7 +1620,7 @@ void PolynomialMultiplyRecognize::setupSimplifier() {
       return B.CreateAnd(B.CreateXor(And0->getOperand(0), And1->getOperand(0)),
                          And0->getOperand(1));
     });
-  Simp.addRule("sink binop into select",
+  S.addRule("sink binop into select",
     // (Op (select c x y) z) -> (select c (Op x z) (Op y z))
     // (Op x (select c y z)) -> (select c (Op x y) (Op x z))
     [](Instruction *I, LLVMContext &Ctx) -> Value* {
@@ -1635,7 +1646,7 @@ void PolynomialMultiplyRecognize::setupSimplifier() {
       }
       return nullptr;
     });
-  Simp.addRule("fold select-select",
+  S.addRule("fold select-select",
     // (select c (select c x y) z) -> (select c x z)
     // (select c x (select c y z)) -> (select c x z)
     [](Instruction *I, LLVMContext &Ctx) -> Value* {
@@ -1654,7 +1665,7 @@ void PolynomialMultiplyRecognize::setupSimplifier() {
       }
       return nullptr;
     });
-  Simp.addRule("or-signbit -> xor-signbit",
+  S.addRule("or-signbit -> xor-signbit",
     // (or (lshr x 1) 0x800.0) -> (xor (lshr x 1) 0x800.0)
     [](Instruction *I, LLVMContext &Ctx) -> Value* {
       if (I->getOpcode() != Instruction::Or)
@@ -1666,7 +1677,7 @@ void PolynomialMultiplyRecognize::setupSimplifier() {
         return nullptr;
       return IRBuilder<>(Ctx).CreateXor(I->getOperand(0), Msb);
     });
-  Simp.addRule("sink lshr into binop",
+  S.addRule("sink lshr into binop",
     // (lshr (BitOp x y) c) -> (BitOp (lshr x c) (lshr y c))
     [](Instruction *I, LLVMContext &Ctx) -> Value* {
       if (I->getOpcode() != Instruction::LShr)
@@ -1688,7 +1699,7 @@ void PolynomialMultiplyRecognize::setupSimplifier() {
                 B.CreateLShr(BitOp->getOperand(0), S),
                 B.CreateLShr(BitOp->getOperand(1), S));
     });
-  Simp.addRule("expose bitop-const",
+  S.addRule("expose bitop-const",
     // (BitOp1 (BitOp2 x a) b) -> (BitOp2 x (BitOp1 a b))
     [](Instruction *I, LLVMContext &Ctx) -> Value* {
       auto IsBitOp = [](unsigned Op) -> bool {
@@ -1714,6 +1725,34 @@ void PolynomialMultiplyRecognize::setupSimplifier() {
       Value *X = BitOp2->getOperand(0);
       return B.CreateBinOp(BitOp2->getOpcode(), X,
                 B.CreateBinOp(BitOp1->getOpcode(), CA, CB));
+    });
+}
+
+void PolynomialMultiplyRecognize::setupPostSimplifier(Simplifier &S) {
+  S.addRule("(and (xor (and x a) y) b) -> (and (xor x y) b), if b == b&a",
+    [](Instruction *I, LLVMContext &Ctx) -> Value* {
+      if (I->getOpcode() != Instruction::And)
+        return nullptr;
+      Instruction *Xor = dyn_cast<Instruction>(I->getOperand(0));
+      ConstantInt *C0 = dyn_cast<ConstantInt>(I->getOperand(1));
+      if (!Xor || !C0)
+        return nullptr;
+      if (Xor->getOpcode() != Instruction::Xor)
+        return nullptr;
+      Instruction *And0 = dyn_cast<Instruction>(Xor->getOperand(0));
+      Instruction *And1 = dyn_cast<Instruction>(Xor->getOperand(1));
+      // Pick the first non-null and.
+      if (!And0 || And0->getOpcode() != Instruction::And)
+        std::swap(And0, And1);
+      ConstantInt *C1 = dyn_cast<ConstantInt>(And0->getOperand(1));
+      if (!C1)
+        return nullptr;
+      uint32_t V0 = C0->getZExtValue();
+      uint32_t V1 = C1->getZExtValue();
+      if (V0 != (V0 & V1))
+        return nullptr;
+      IRBuilder<> B(Ctx);
+      return B.CreateAnd(B.CreateXor(And0->getOperand(0), And1), C0);
     });
 }
 
@@ -1746,10 +1785,11 @@ bool PolynomialMultiplyRecognize::recognize() {
 
   Value *CIV = getCountIV(LoopB);
   ParsedValues PV;
+  Simplifier PreSimp;
   PV.IterCount = IterCount;
   DEBUG(dbgs() << "Loop IV: " << *CIV << "\nIterCount: " << IterCount << '\n');
 
-  setupSimplifier();
+  setupPreSimplifier(PreSimp);
 
   // Perform a preliminary scan of select instructions to see if any of them
   // looks like a generator of the polynomial multiply steps. Assume that a
@@ -1772,7 +1812,7 @@ bool PolynomialMultiplyRecognize::recognize() {
       continue;
 
     Simplifier::Context C(SI);
-    Value *T = Simp.simplify(C);
+    Value *T = PreSimp.simplify(C);
     SelectInst *SelI = (T && isa<SelectInst>(T)) ? cast<SelectInst>(T) : SI;
     DEBUG(dbgs() << "scanSelect(pre-scan): " << PE(C, SelI) << '\n');
     if (scanSelect(SelI, LoopB, EntryB, CIV, PV, true)) {
@@ -1798,6 +1838,24 @@ bool PolynomialMultiplyRecognize::recognize() {
     // wide as the target's pmpy instruction.
     if (!promoteTypes(LoopB, ExitB))
       return false;
+    // Run post-promotion simplifications.
+    Simplifier PostSimp;
+    setupPostSimplifier(PostSimp);
+    for (Instruction &In : *LoopB) {
+      SelectInst *SI = dyn_cast<SelectInst>(&In);
+      if (!SI || !FeedsPHI(SI))
+        continue;
+      Simplifier::Context C(SI);
+      Value *T = PostSimp.simplify(C);
+      SelectInst *SelI = dyn_cast_or_null<SelectInst>(T);
+      if (SelI != SI) {
+        Value *NewSel = C.materialize(LoopB, SI->getIterator());
+        SI->replaceAllUsesWith(NewSel);
+        RecursivelyDeleteTriviallyDeadInstructions(SI, &TLI);
+      }
+      break;
+    }
+
     if (!convertShiftsToLeft(LoopB, ExitB, IterCount))
       return false;
     cleanupLoopBody(LoopB);

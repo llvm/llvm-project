@@ -15,6 +15,7 @@
 #ifndef LLVM_IRREADER_IRREADER_H
 #define LLVM_IRREADER_IRREADER_H
 
+#include "llvm/ADT/StringRef.h"
 #include <memory>
 
 namespace llvm {
@@ -40,9 +41,11 @@ getLazyIRFileModule(StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
 /// \param UpgradeDebugInfo Run UpgradeDebugInfo, which runs the Verifier.
 ///                         This option should only be set to false by llvm-as
 ///                         for use inside the LLVM testuite!
+/// \param DataLayoutString Override datalayout in the llvm assembly.
 std::unique_ptr<Module> parseIR(MemoryBufferRef Buffer, SMDiagnostic &Err,
                                 LLVMContext &Context,
-                                bool UpgradeDebugInfo = true);
+                                bool UpgradeDebugInfo = true,
+                                StringRef DataLayoutString = "");
 
 /// If the given file holds a bitcode image, return a Module for it.
 /// Otherwise, attempt to parse it as LLVM Assembly and return a Module
@@ -50,9 +53,11 @@ std::unique_ptr<Module> parseIR(MemoryBufferRef Buffer, SMDiagnostic &Err,
 /// \param UpgradeDebugInfo Run UpgradeDebugInfo, which runs the Verifier.
 ///                         This option should only be set to false by llvm-as
 ///                         for use inside the LLVM testuite!
+/// \param DataLayoutString Override datalayout in the llvm assembly.
 std::unique_ptr<Module> parseIRFile(StringRef Filename, SMDiagnostic &Err,
                                     LLVMContext &Context,
-                                    bool UpgradeDebugInfo = true);
+                                    bool UpgradeDebugInfo = true,
+                                    StringRef DataLayoutString = "");
 }
 
 #endif

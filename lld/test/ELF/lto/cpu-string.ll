@@ -4,8 +4,8 @@
 ; RUN: ld.lld %t.o -o %t.so -shared
 ; RUN: llvm-objdump -d -section=".text" -no-leading-addr -no-show-raw-insn %t.so | FileCheck %s
 
-; RUN: ld.lld -mllvm -mcpu=znver1 %t.o -o %m.so -shared
-; RUN: llvm-objdump -d -section=".text" -no-leading-addr -no-show-raw-insn %m.so | FileCheck -check-prefix=ZNVER1 %s
+; RUN: ld.lld -mllvm -mcpu=znver1 %t.o -o %t.znver1.so -shared
+; RUN: llvm-objdump -d -section=".text" -no-leading-addr -no-show-raw-insn %t.znver1.so | FileCheck -check-prefix=ZNVER1 %s
 
 ; CHECK: nop{{$}}
 
