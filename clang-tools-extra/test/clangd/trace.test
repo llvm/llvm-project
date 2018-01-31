@@ -7,7 +7,7 @@ Content-Length: 125
 #
 Content-Length: 152
 
-{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///foo.c","languageId":"c","version":1,"text":"void main() {}"}}}
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///foo.c","languageId":"c","version":1,"text":"void main() {}"}}}
 #      CHECK: {"displayTimeUnit":"ns","traceEvents":[
 # Start opening the doc.
 #      CHECK: "name": "textDocument/didOpen"
@@ -16,7 +16,7 @@ Content-Length: 152
 #      CHECK: "name": "Preamble"
 #      CHECK: },
 # Finish building the preamble, with filename.
-#      CHECK: "File": "/foo.c"
+#      CHECK: "File": "{{.*}}/foo.c"
 # CHECK-NEXT: },
 # CHECK-NEXT: "ph": "E"
 # Start building the file.

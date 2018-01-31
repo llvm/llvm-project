@@ -31,7 +31,7 @@ bool fromJSON(const json::Expr &E, URIForFile &R) {
       log("Failed to parse URI " + *S + ": " + llvm::toString(U.takeError()));
       return false;
     }
-    if (U->scheme() != "file") {
+    if (U->scheme() != "file" && U->scheme() != "test") {
       log("Clangd only supports 'file' URI scheme for workspace files: " + *S);
       return false;
     }

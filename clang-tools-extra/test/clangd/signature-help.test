@@ -8,11 +8,11 @@ Content-Length: 125
 
 Content-Length: 172
 
-{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///main.cpp","languageId":"cpp","version":1,"text":"void x(int);\nint main(){\nx("}}}
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///main.cpp","languageId":"cpp","version":1,"text":"void x(int);\nint main(){\nx("}}}
 
 Content-Length: 151
 
-{"jsonrpc":"2.0","id":1,"method":"textDocument/signatureHelp","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":2,"character":2}}}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/signatureHelp","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":2,"character":2}}}
 #      CHECK: "id": 1,
 # CHECK-NEXT: "jsonrpc": "2.0",
 # CHECK-NEXT: "result": {

@@ -9,144 +9,144 @@ Content-Length: 125
 
 Content-Length: 172
 
-{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///main.cpp","languageId":"cpp","version":1,"text":"int main() {\nint a;\na;\n}\n"}}}
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///main.cpp","languageId":"cpp","version":1,"text":"int main() {\nint a;\na;\n}\n"}}}
 
 Content-Length: 148
 
-{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":2,"character":0}}}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":2,"character":0}}}
 # Go to local variable
 
 Content-Length: 148
 
-{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":2,"character":1}}}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":2,"character":1}}}
 # Go to local variable, end of token
 
 Content-Length: 214
 
-{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///main.cpp","version":2},"contentChanges":[{"text":"struct Foo {\nint x;\n};\nint main() {\n  Foo bar = { x : 1 };\n}\n"}]}}
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///main.cpp","version":2},"contentChanges":[{"text":"struct Foo {\nint x;\n};\nint main() {\n  Foo bar = { x : 1 };\n}\n"}]}}
 
 Content-Length: 149
 
-{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":4,"character":14}}}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":4,"character":14}}}
 # Go to field, GNU old-style field designator 
 
 Content-Length: 215
 
-{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///main.cpp","version":3},"contentChanges":[{"text":"struct Foo {\nint x;\n};\nint main() {\n  Foo baz = { .x = 2 };\n}\n"}]}}
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///main.cpp","version":3},"contentChanges":[{"text":"struct Foo {\nint x;\n};\nint main() {\n  Foo baz = { .x = 2 };\n}\n"}]}}
 
 Content-Length: 149
 
-{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":4,"character":15}}}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":4,"character":15}}}
 # Go to field, field designator 
 
 Content-Length: 187
 
-{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///main.cpp","version":4},"contentChanges":[{"text":"int main() {\n   main();\n   return 0;\n}"}]}}
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///main.cpp","version":4},"contentChanges":[{"text":"int main() {\n   main();\n   return 0;\n}"}]}}
 
 Content-Length: 148
 
-{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":1,"character":3}}}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":1,"character":3}}}
 # Go to function declaration, function call 
 
 Content-Length: 208
 
-{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///main.cpp","version":5},"contentChanges":[{"text":"struct Foo {\n};\nint main() {\n   Foo bar;\n   return 0;\n}\n"}]}}
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///main.cpp","version":5},"contentChanges":[{"text":"struct Foo {\n};\nint main() {\n   Foo bar;\n   return 0;\n}\n"}]}}
 
 Content-Length: 148
 
-{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":3,"character":3}}}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":3,"character":3}}}
 # Go to struct declaration, new struct instance 
 
 Content-Length: 231
 
-{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///main.cpp","version":5},"contentChanges":[{"text":"namespace n1 {\nstruct Foo {\n};\n}\nint main() {\n   n1::Foo bar;\n   return 0;\n}\n"}]}}
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///main.cpp","version":5},"contentChanges":[{"text":"namespace n1 {\nstruct Foo {\n};\n}\nint main() {\n   n1::Foo bar;\n   return 0;\n}\n"}]}}
 
 Content-Length: 148
 
-{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":5,"character":4}}}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":5,"character":4}}}
 # Go to struct declaration, new struct instance, qualified name 
 
 Content-Length: 215
 
-{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///main.cpp","version":6},"contentChanges":[{"text":"struct Foo {\n  int x;\n};\nint main() {\n   Foo bar;\n   bar.x;\n}\n"}]}}
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///main.cpp","version":6},"contentChanges":[{"text":"struct Foo {\n  int x;\n};\nint main() {\n   Foo bar;\n   bar.x;\n}\n"}]}}
 
 Content-Length: 148
 
-{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":5,"character":7}}}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":5,"character":7}}}
 # Go to field declaration, field reference 
 
 Content-Length: 220
 
-{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///main.cpp","version":7},"contentChanges":[{"text":"struct Foo {\n  void x();\n};\nint main() {\n   Foo bar;\n   bar.x();\n}\n"}]}}
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///main.cpp","version":7},"contentChanges":[{"text":"struct Foo {\n  void x();\n};\nint main() {\n   Foo bar;\n   bar.x();\n}\n"}]}}
 
 Content-Length: 148
 
-{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":5,"character":7}}}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":5,"character":7}}}
 # Go to method declaration, method call 
 
 Content-Length: 240
 
-{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///main.cpp","version":7},"contentChanges":[{"text":"struct Foo {\n};\ntypedef Foo TypedefFoo;\nint main() {\n   TypedefFoo bar;\n   return 0;\n}\n"}]}}
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///main.cpp","version":7},"contentChanges":[{"text":"struct Foo {\n};\ntypedef Foo TypedefFoo;\nint main() {\n   TypedefFoo bar;\n   return 0;\n}\n"}]}}
 
 Content-Length: 149
 
-{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":4,"character":10}}}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":4,"character":10}}}
 # Go to typedef 
 
 Content-Length: 254
 
-{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///main.cpp","version":7},"contentChanges":[{"text":"template <typename MyTemplateParam>\nvoid foo() {\n MyTemplateParam a;\n}\nint main() {\n   return 0;\n}\n"}]}}
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///main.cpp","version":7},"contentChanges":[{"text":"template <typename MyTemplateParam>\nvoid foo() {\n MyTemplateParam a;\n}\nint main() {\n   return 0;\n}\n"}]}}
 
 Content-Length: 149
 
-{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":2,"character":13}}}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":2,"character":13}}}
 # Go to template type parameter. Fails until clangIndex is modified to handle those.
-# no-CHECK: {"jsonrpc":"2.0","id":1,"result":[{"uri": "file:///main.cpp", "range": {"start": {"line": 0, "character": 10}, "end": {"line": 0, "character": 34}}}]}
+# no-CHECK: {"jsonrpc":"2.0","id":1,"result":[{"uri": "test:///main.cpp", "range": {"start": {"line": 0, "character": 10}, "end": {"line": 0, "character": 34}}}]}
 
 Content-Length: 256
 
-{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///main.cpp","version":7},"contentChanges":[{"text":"namespace ns {\nstruct Foo {\nstatic void bar() {}\n};\n}\nint main() {\n   ns::Foo::bar();\n   return 0;\n}\n"}]}}
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///main.cpp","version":7},"contentChanges":[{"text":"namespace ns {\nstruct Foo {\nstatic void bar() {}\n};\n}\nint main() {\n   ns::Foo::bar();\n   return 0;\n}\n"}]}}
 
 Content-Length: 148
 
-{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":6,"character":4}}}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":6,"character":4}}}
 # Go to namespace, static method call 
 
 Content-Length: 265
 
-{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///main.cpp","version":7},"contentChanges":[{"text":"namespace ns {\nstruct Foo {\n  int field;\n  Foo(int param) : field(param) {}\n};\n}\nint main() {\n   return 0;\n}\n"}]}}
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///main.cpp","version":7},"contentChanges":[{"text":"namespace ns {\nstruct Foo {\n  int field;\n  Foo(int param) : field(param) {}\n};\n}\nint main() {\n   return 0;\n}\n"}]}}
 
 Content-Length: 149
 
-{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":3,"character":21}}}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":3,"character":21}}}
 # Go to field, member initializer 
 
 Content-Length: 204
 
-{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///main.cpp","version":7},"contentChanges":[{"text":"#define MY_MACRO 0\nint main() {\n  return MY_MACRO;\n}\n"}]}}
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///main.cpp","version":7},"contentChanges":[{"text":"#define MY_MACRO 0\nint main() {\n  return MY_MACRO;\n}\n"}]}}
 
 Content-Length: 148
 
-{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":2,"character":9}}}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":2,"character":9}}}
 # Go to macro.
 
 Content-Length: 217
 
-{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///main.cpp","version":7},"contentChanges":[{"text":"#define FOO 1\nint a = FOO;\n#define FOO 2\nint b = FOO;\n#undef FOO\n"}]}}
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///main.cpp","version":7},"contentChanges":[{"text":"#define FOO 1\nint a = FOO;\n#define FOO 2\nint b = FOO;\n#undef FOO\n"}]}}
 
 Content-Length: 148
 
-{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":1,"character":8}}}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":1,"character":8}}}
 # Go to macro, re-defined later
 
 Content-Length: 148
 
-{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":3,"character":8}}}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":3,"character":8}}}
 # Go to macro, undefined later
 
 Content-Length: 148
 
-{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":4,"character":7}}}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":4,"character":7}}}
 # Go to macro, being undefined
 
 Content-Length: 44

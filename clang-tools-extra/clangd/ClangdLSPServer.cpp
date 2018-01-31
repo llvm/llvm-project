@@ -12,11 +12,50 @@
 #include "SourceCode.h"
 #include "URI.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Path.h"
 
 using namespace clang::clangd;
 using namespace clang;
 
 namespace {
+
+/// \brief Supports a test URI scheme with relaxed constraints for lit tests.
+/// The path in a test URI will be combined with a platform-specific fake
+/// directory to form an absolute path. For example, test:///a.cpp is resolved
+/// C:\clangd-test\a.cpp on Windows and /clangd-test/a.cpp on Unix.
+class TestScheme : public URIScheme {
+public:
+  llvm::Expected<std::string>
+  getAbsolutePath(llvm::StringRef /*Authority*/, llvm::StringRef Body,
+                  llvm::StringRef /*HintPath*/) const override {
+    using namespace llvm::sys;
+    // Still require "/" in body to mimic file scheme, as we want lengths of an
+    // equivalent URI in both schemes to be the same.
+    if (!Body.startswith("/"))
+      return llvm::make_error<llvm::StringError>(
+          "Expect URI body to be an absolute path starting with '/': " + Body,
+          llvm::inconvertibleErrorCode());
+    Body = Body.ltrim('/');
+#ifdef LLVM_ON_WIN32
+    constexpr char TestDir[] = "C:\\clangd-test";
+#else
+    constexpr char TestDir[] = "/clangd-test";
+#endif
+    llvm::SmallVector<char, 16> Path(Body.begin(), Body.end());
+    path::native(Path);
+    auto Err = fs::make_absolute(TestDir, Path);
+    assert(!Err);
+    return std::string(Path.begin(), Path.end());
+  }
+
+  llvm::Expected<URI>
+  uriFromAbsolutePath(llvm::StringRef AbsolutePath) const override {
+    llvm_unreachable("Clangd must never create a test URI.");
+  }
+};
+
+static URISchemeRegistry::Add<TestScheme>
+    X("test", "Test scheme for clangd lit tests.");
 
 TextEdit replacementToEdit(StringRef Code, const tooling::Replacement &R) {
   Range ReplacementRange = {

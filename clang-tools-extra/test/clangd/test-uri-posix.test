@@ -1,0 +1,19 @@
+# RUN: clangd -pretty -run-synchronously < %s | FileCheck -strict-whitespace %s
+# UNSUPPORTED: mingw32,win32
+# It is absolutely vital that this file has CRLF line endings.
+#
+# Test authority-less URI
+Content-Length: 125
+
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+#
+Content-Length: 152
+
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///foo.c","languageId":"c","version":1,"text":"void main() {}"}}}
+# CHECK:    "uri": "file:///clangd-test/foo.c"
+Content-Length: 44
+
+{"jsonrpc":"2.0","id":5,"method":"shutdown"}
+Content-Length: 33
+
+{"jsonrpc":"2.0","method":"exit"}

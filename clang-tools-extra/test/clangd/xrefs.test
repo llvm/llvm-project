@@ -7,11 +7,11 @@ Content-Length: 125
 
 Content-Length: 165
 
-{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///main.cpp","languageId":"cpp","version":1,"text":"int x = 0;\nint y = x;"}}}
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///main.cpp","languageId":"cpp","version":1,"text":"int x = 0;\nint y = x;"}}}
 
 Content-Length: 148
 
-{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":1,"character":8}}}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":1,"character":8}}}
 #      CHECK:  "id": 1,
 # CHECK-NEXT:  "jsonrpc": "2.0",
 # CHECK-NEXT:  "result": [
@@ -26,12 +26,12 @@ Content-Length: 148
 # CHECK-NEXT:          "line": 0
 # CHECK-NEXT:        }
 # CHECK-NEXT:      },
-# CHECK-NEXT:      "uri": "file:///{{([A-Z]:/)?}}main.cpp"
+# CHECK-NEXT:      "uri": "file://{{.*}}/{{([A-Z]:/)?}}main.cpp"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 Content-Length: 155
 
-{"jsonrpc":"2.0","id":1,"method":"textDocument/documentHighlight","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":1,"character":8}}}
+{"jsonrpc":"2.0","id":1,"method":"textDocument/documentHighlight","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":1,"character":8}}}
 #      CHECK: "id": 1
 # CHECK-NEXT: "jsonrpc": "2.0",
 # CHECK-NEXT: "result": [
