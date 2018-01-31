@@ -168,16 +168,19 @@ HexagonTargetLowering::buildHvxVectorReg(ArrayRef<SDValue> Values,
   }
 
   unsigned NumWords = Words.size();
-  bool IsSplat = true;
+  bool IsSplat = true, IsUndef = true;
   SDValue SplatV;
   for (unsigned i = 0; i != NumWords && IsSplat; ++i) {
     if (isUndef(Words[i]))
       continue;
+    IsUndef = false;
     if (!SplatV.getNode())
       SplatV = Words[i];
     else if (SplatV != Words[i])
       IsSplat = false;
   }
+  if (IsUndef)
+    return DAG.getUNDEF(VecTy);
   if (IsSplat) {
     assert(SplatV.getNode());
     auto *IdxN = dyn_cast<ConstantSDNode>(SplatV.getNode());

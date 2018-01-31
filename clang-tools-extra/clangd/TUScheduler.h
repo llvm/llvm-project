@@ -50,10 +50,9 @@ public:
   /// Schedule an update for \p File. Adds \p File to a list of tracked files if
   /// \p File was not part of it before.
   /// FIXME(ibiryukov): remove the callback from this function.
-  void update(
-      Context Ctx, PathRef File, ParseInputs Inputs,
-      UniqueFunction<void(Context, llvm::Optional<std::vector<DiagWithFixIts>>)>
-          OnUpdated);
+  void update(PathRef File, ParseInputs Inputs,
+              UniqueFunction<void(llvm::Optional<std::vector<DiagWithFixIts>>)>
+                  OnUpdated);
 
   /// Remove \p File from the list of tracked files and schedule removal of its
   /// resources. \p Action will be called when resources are freed.

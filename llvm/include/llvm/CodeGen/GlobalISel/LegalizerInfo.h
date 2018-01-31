@@ -313,6 +313,9 @@ public:
   LegalizeRuleSet &customIf(LegalityPredicate Predicate) {
     return actionIf(LegalizeAction::Custom, Predicate);
   }
+  LegalizeRuleSet &customFor(std::initializer_list<LLT> Types) {
+    return actionFor(LegalizeAction::Custom, Types);
+  }
   LegalizeRuleSet &customForCartesianProduct(std::initializer_list<LLT> Types) {
     return actionForCartesianProduct(LegalizeAction::Custom, Types);
   }

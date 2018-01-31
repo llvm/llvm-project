@@ -8018,9 +8018,6 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case X86::VMOVUPSZ256mr_NOVLX:
     return expandNOVLXStore(MIB, &getRegisterInfo(), get(X86::VMOVUPSYmr),
                             get(X86::VEXTRACTF64x4Zmr), X86::sub_ymm);
-  case X86::TEST8ri_NOREX:
-    MI.setDesc(get(X86::TEST8ri));
-    return true;
   case X86::MOV32ri64:
     MI.setDesc(get(X86::MOV32ri));
     return true;

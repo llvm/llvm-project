@@ -17,6 +17,7 @@ ThreadPool::ThreadPool(unsigned AsyncThreadsCount)
       llvm::set_thread_name(llvm::formatv("scheduler/{0}", I));
       while (true) {
         UniqueFunction<void()> Request;
+        Context Ctx;
 
         // Pick request from the queue
         {
@@ -33,10 +34,11 @@ ThreadPool::ThreadPool(unsigned AsyncThreadsCount)
           // ThreadPool have a way to prioritise their requests by putting
           // them to the either side of the queue (using either addToEnd or
           // addToFront).
-          Request = std::move(RequestQueue.front());
+          std::tie(Request, Ctx) = std::move(RequestQueue.front());
           RequestQueue.pop_front();
         } // unlock Mutex
 
+        WithContext WithCtx(std::move(Ctx));
         Request();
       }
     }));

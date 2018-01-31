@@ -16,15 +16,28 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CONTEXT_H_
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 #include <type_traits>
 
 namespace clang {
 namespace clangd {
 
-/// A key for a value of type \p Type, stored inside a context. Keys are
-/// non-movable and non-copyable. See documentation of the Context class for
-/// more details and usage examples.
+/// Values in a Context are indexed by typed keys.
+/// Key<T> serves two purposes:
+///   - it provides a lookup key for the context (each Key is unique),
+///   - it makes lookup type-safe: a Key<T> can only map to a T (or nothing).
+///
+/// Example:
+///    Key<int> RequestID;
+///    Key<int> Version;
+///
+///    Context Ctx = Context::empty().derive(RequestID, 10).derive(Version, 3);
+///    assert(*Ctx.get(RequestID) == 10);
+///    assert(*Ctx.get(Version) == 3);
+///
+/// Keys are typically used across multiple functions, so most of the time you
+/// would want to make them static class members or global variables.
 template <class Type> class Key {
 public:
   static_assert(!std::is_reference<Type>::value,
@@ -45,53 +58,24 @@ public:
 /// Conceptually, a context is a heterogeneous map<Key<T>, T>. Each key has
 /// an associated value type, which allows the map to be typesafe.
 ///
+/// There is an "ambient" context for each thread, Context::current().
+/// Most functions should read from this, and use WithContextValue or
+/// WithContext to extend or replace the context within a block scope.
+/// Only code dealing with threads and extension points should need to use
+/// other Context objects.
+///
 /// You can't add data to an existing context, instead you create a new
 /// immutable context derived from it with extra data added. When you retrieve
 /// data, the context will walk up the parent chain until the key is found.
-///
-/// Contexts should be:
-///  - passed by reference when calling synchronous functions
-///  - passed by value (move) when calling asynchronous functions. The result
-///    callback of async operations will receive the context again.
-///  - cloned only when 'forking' an asynchronous computation that we don't wait
-///    for.
-///
-/// Copy operations for this class are deleted, use an explicit clone() method
-/// when you need a copy of the context instead.
-///
-/// To derive a child context use derive() function, e.g.
-///     Context ChildCtx = ParentCtx.derive(RequestIdKey, 123);
-///
-/// To create a new root context, derive() from empty Context.
-/// e.g.:
-///     Context Ctx = Context::empty().derive(RequestIdKey, 123);
-///
-/// Values in the context are indexed by typed keys (instances of Key<T> class).
-/// Key<T> serves two purposes:
-///   - it provides a lookup key for the context (each instance of a key is
-///   unique),
-///   - it keeps the type information about the value stored in the context map
-///   in the template arguments.
-/// This provides a type-safe interface to store and access values of multiple
-/// types inside a single context.
-/// For example,
-///    Key<int> RequestID;
-///    Key<int> Version;
-///
-///    Context Ctx = Context::empty().derive(RequestID, 10).derive(Version, 3);
-///    assert(*Ctx.get(RequestID) == 10);
-///    assert(*Ctx.get(Version) == 3);
-///
-/// Keys are typically used across multiple functions, so most of the time you
-/// would want to make them static class members or global variables.
-///
-/// FIXME: Rather than manual plumbing, pass Context using thread-local storage
-/// by default, and make thread boundaries deal with propagation explicitly.
 class Context {
 public:
-  /// Returns an empty context that contains no data. Useful for calling
-  /// functions that require a context when no explicit context is available.
+  /// Returns an empty root context that contains no data.
   static Context empty();
+  /// Returns the context for the current thread, creating it if needed.
+  static const Context &current();
+  // Sets the current() context to Replacement, and returns the old context.
+  // Prefer to use WithContext or WithContextValue to do this safely.
+  static Context swapCurrent(Context Replacement);
 
 private:
   struct Data;
@@ -103,7 +87,8 @@ public:
   /// (arguments of std::future<> must be default-construcitble in MSVC).
   Context() = default;
 
-  /// Move-only.
+  /// Copy operations for this class are deleted, use an explicit clone() method
+  /// when you need a copy of the context instead.
   Context(Context const &) = delete;
   Context &operator=(const Context &) = delete;
 
@@ -131,9 +116,8 @@ public:
   }
 
   /// Derives a child context
-  /// It is safe to move or destroy a parent context after calling derive() from
-  /// it. The child context will continue to have access to the data stored in
-  /// the parent context.
+  /// It is safe to move or destroy a parent context after calling derive().
+  /// The child will keep its parent alive, and its data remains accessible.
   template <class Type>
   Context derive(const Key<Type> &Key,
                  typename std::decay<Type>::type Value) const & {
@@ -198,7 +182,40 @@ private:
   };
 
   std::shared_ptr<const Data> DataPtr;
-}; // namespace clangd
+};
+
+/// WithContext replaces Context::current() with a provided scope.
+/// When the WithContext is destroyed, the original scope is restored.
+/// For extending the current context with new value, prefer WithContextValue.
+class LLVM_NODISCARD WithContext {
+public:
+  WithContext(Context C) : Restore(Context::swapCurrent(std::move(C))) {}
+  ~WithContext() { Context::swapCurrent(std::move(Restore)); }
+  WithContext(const WithContext &) = delete;
+  WithContext &operator=(const WithContext &) = delete;
+  WithContext(WithContext &&) = delete;
+  WithContext &operator=(WithContext &&) = delete;
+
+private:
+  Context Restore;
+};
+
+/// WithContextValue extends Context::current() with a single value.
+/// When the WithContextValue is destroyed, the original scope is restored.
+class LLVM_NODISCARD WithContextValue {
+public:
+  template <typename T>
+  WithContextValue(const Key<T> &K, typename std::decay<T>::type V)
+      : Restore(Context::current().derive(K, std::move(V))) {}
+
+  // Anonymous values can be used for the destructor side-effect.
+  template <typename T>
+  WithContextValue(T &&V)
+      : Restore(Context::current().derive(std::forward<T>(V))) {}
+
+private:
+  WithContext Restore;
+};
 
 } // namespace clangd
 } // namespace clang

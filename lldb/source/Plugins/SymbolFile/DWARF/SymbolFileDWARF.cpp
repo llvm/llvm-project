@@ -392,9 +392,10 @@ SymbolFileDWARF::GetParentSymbolContextDIE(const DWARFDIE &child_die) {
 }
 
 SymbolFileDWARF::SymbolFileDWARF(ObjectFile *objfile)
-    : SymbolFile(objfile), UserID(0), // Used by SymbolFileDWARFDebugMap to when
-                                      // this class parses .o files to contain
-                                      // the .o file index/ID
+    : SymbolFile(objfile),
+      UserID(uint64_t(DW_INVALID_OFFSET) << 32), // Used by SymbolFileDWARFDebugMap to when
+                                                 // this class parses .o files to contain
+                                                 // the .o file index/ID
       m_debug_map_module_wp(), m_debug_map_symfile(NULL), m_data_debug_abbrev(),
       m_data_debug_aranges(), m_data_debug_frame(), m_data_debug_info(),
       m_data_debug_line(), m_data_debug_macro(), m_data_debug_loc(),

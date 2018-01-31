@@ -71,7 +71,7 @@ public:
 
   /// Called by ClangdServer when \p Diagnostics for \p File are ready.
   virtual void
-  onDiagnosticsReady(const Context &Ctx, PathRef File,
+  onDiagnosticsReady(PathRef File,
                      Tagged<std::vector<DiagWithFixIts>> Diagnostics) = 0;
 };
 
@@ -94,8 +94,6 @@ public:
   Tagged<IntrusiveRefCntPtr<vfs::FileSystem>>
   getTaggedFileSystem(PathRef File) override;
 };
-
-class ClangdServer;
 
 /// Provides API to manage ASTs for a collection of C++ files and request
 /// various language features.
@@ -156,30 +154,26 @@ public:
   /// diagnostics) is finished.
   /// FIXME: don't return futures here, LSP does not require a response for this
   /// request.
-  std::future<Context> addDocument(Context Ctx, PathRef File,
-                                   StringRef Contents);
+  std::future<void> addDocument(PathRef File, StringRef Contents);
+
   /// Remove \p File from list of tracked files, schedule a request to free
   /// resources associated with it.
   /// \return A future that will become ready when the file is removed and all
   /// associated resources are freed.
   /// FIXME: don't return futures here, LSP does not require a response for this
   /// request.
-  std::future<Context> removeDocument(Context Ctx, PathRef File);
+  std::future<void> removeDocument(PathRef File);
+
   /// Force \p File to be reparsed using the latest contents.
   /// Will also check if CompileCommand, provided by GlobalCompilationDatabase
   /// for \p File has changed. If it has, will remove currently stored Preamble
   /// and AST and rebuild them from scratch.
   /// FIXME: don't return futures here, LSP does not require a response for this
   /// request.
-  std::future<Context> forceReparse(Context Ctx, PathRef File);
+  std::future<void> forceReparse(PathRef File);
 
-  /// DEPRECATED. Please use a callback-based version, this API is deprecated
-  /// and will soon be removed.
-  ///
   /// Run code completion for \p File at \p Pos.
-  ///
-  /// Request is processed asynchronously. You can use the returned future to
-  /// wait for the results of the async request.
+  /// Request is processed asynchronously.
   ///
   /// If \p OverridenContents is not None, they will used only for code
   /// completion, i.e. no diagnostics update will be scheduled and a draft for
@@ -190,18 +184,18 @@ public:
   /// This method should only be called for currently tracked files. However, it
   /// is safe to call removeDocument for \p File after this method returns, even
   /// while returned future is not yet ready.
-  std::future<std::pair<Context, Tagged<CompletionList>>>
-  codeComplete(Context Ctx, PathRef File, Position Pos,
-               const clangd::CodeCompleteOptions &Opts,
-               llvm::Optional<StringRef> OverridenContents = llvm::None,
-               IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
-
   /// A version of `codeComplete` that runs \p Callback on the processing thread
   /// when codeComplete results become available.
-  void
-  codeComplete(Context Ctx, PathRef File, Position Pos,
+  void codeComplete(PathRef File, Position Pos,
+                    const clangd::CodeCompleteOptions &Opts,
+                    UniqueFunction<void(Tagged<CompletionList>)> Callback,
+                    llvm::Optional<StringRef> OverridenContents = llvm::None,
+                    IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
+
+  /// DEPRECATED: Please use the callback-based version of codeComplete.
+  std::future<Tagged<CompletionList>>
+  codeComplete(PathRef File, Position Pos,
                const clangd::CodeCompleteOptions &Opts,
-               UniqueFunction<void(Context, Tagged<CompletionList>)> Callback,
                llvm::Optional<StringRef> OverridenContents = llvm::None,
                IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
 
@@ -213,13 +207,13 @@ public:
   /// vfs::FileSystem used for signature help. This method should only be called
   /// for currently tracked files.
   llvm::Expected<Tagged<SignatureHelp>>
-  signatureHelp(const Context &Ctx, PathRef File, Position Pos,
+  signatureHelp(PathRef File, Position Pos,
                 llvm::Optional<StringRef> OverridenContents = llvm::None,
                 IntrusiveRefCntPtr<vfs::FileSystem> *UsedFS = nullptr);
 
   /// Get definition of symbol at a specified \p Line and \p Column in \p File.
-  llvm::Expected<Tagged<std::vector<Location>>>
-  findDefinitions(const Context &Ctx, PathRef File, Position Pos);
+  llvm::Expected<Tagged<std::vector<Location>>> findDefinitions(PathRef File,
+                                                                Position Pos);
 
   /// Helper function that returns a path to the corresponding source file when
   /// given a header file and vice versa.
@@ -227,7 +221,7 @@ public:
 
   /// Get document highlights for a given position.
   llvm::Expected<Tagged<std::vector<DocumentHighlight>>>
-  findDocumentHighlights(const Context &Ctx, PathRef File, Position Pos);
+  findDocumentHighlights(PathRef File, Position Pos);
 
   /// Run formatting for \p Rng inside \p File with content \p Code.
   llvm::Expected<tooling::Replacements> formatRange(StringRef Code,
@@ -244,8 +238,7 @@ public:
 
   /// Rename all occurrences of the symbol at the \p Pos in \p File to
   /// \p NewName.
-  Expected<std::vector<tooling::Replacement>> rename(const Context &Ctx,
-                                                     PathRef File, Position Pos,
+  Expected<std::vector<tooling::Replacement>> rename(PathRef File, Position Pos,
                                                      llvm::StringRef NewName);
 
   /// Gets current document contents for \p File. Returns None if \p File is not
@@ -277,8 +270,8 @@ private:
   formatCode(llvm::StringRef Code, PathRef File,
              ArrayRef<tooling::Range> Ranges);
 
-  std::future<Context>
-  scheduleReparseAndDiags(Context Ctx, PathRef File, VersionedDraft Contents,
+  std::future<void>
+  scheduleReparseAndDiags(PathRef File, VersionedDraft Contents,
                           Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> TaggedFS);
 
   CompileArgsCache CompileArgs;

@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Context.h"
 #include "TUScheduler.h"
 #include "TestFS.h"
 #include "gmock/gmock.h"
@@ -20,7 +21,7 @@ namespace clangd {
 using ::testing::Pair;
 using ::testing::Pointee;
 
-void ignoreUpdate(Context, llvm::Optional<std::vector<DiagWithFixIts>>) {}
+void ignoreUpdate(llvm::Optional<std::vector<DiagWithFixIts>>) {}
 void ignoreError(llvm::Error Err) {
   handleAllErrors(std::move(Err), [](const llvm::ErrorInfoBase &) {});
 }
@@ -52,7 +53,7 @@ TEST_F(TUSchedulerTests, MissingFiles) {
   auto Missing = getVirtualTestFilePath("missing.cpp");
   changeFile(Missing, "");
 
-  S.update(Context::empty(), Added, getInputs(Added, ""), ignoreUpdate);
+  S.update(Added, getInputs(Added, ""), ignoreUpdate);
 
   // Assert each operation for missing file is an error (even if it's available
   // in VFS).
@@ -122,46 +123,61 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
     llvm::StringRef AllContents[] = {Contents1, Contents2, Contents3};
     const int AllContentsSize = 3;
 
+    // Scheduler may run tasks asynchronously, but should propagate the context.
+    // We stash a nonce in the context, and verify it in the task.
+    static Key<int> NonceKey;
+    int Nonce = 0;
+
     for (int FileI = 0; FileI < FilesCount; ++FileI) {
       for (int UpdateI = 0; UpdateI < UpdatesPerFile; ++UpdateI) {
         auto Contents = AllContents[(FileI + UpdateI) % AllContentsSize];
 
         auto File = Files[FileI];
         auto Inputs = getInputs(File, Contents.str());
-        static Key<std::pair<int, int>> FileAndUpdateKey;
-        auto Ctx = Context::empty().derive(FileAndUpdateKey,
-                                           std::make_pair(FileI, UpdateI));
-        S.update(std::move(Ctx), File, Inputs,
-                 [FileI, UpdateI, &Mut, &TotalUpdates](
-                     Context Ctx,
-                     llvm::Optional<std::vector<DiagWithFixIts>> Diags) {
-                   EXPECT_THAT(Ctx.get(FileAndUpdateKey),
-                               Pointee(Pair(FileI, UpdateI)));
 
-                   std::lock_guard<std::mutex> Lock(Mut);
-                   ++TotalUpdates;
-                 });
+        {
+          WithContextValue WithNonce(NonceKey, ++Nonce);
+          S.update(File, Inputs,
+                   [Nonce, &Mut, &TotalUpdates](
+                       llvm::Optional<std::vector<DiagWithFixIts>> Diags) {
+                     EXPECT_THAT(Context::current().get(NonceKey),
+                                 Pointee(Nonce));
 
-        S.runWithAST(File, [Inputs, &Mut,
-                            &TotalASTReads](llvm::Expected<InputsAndAST> AST) {
-          ASSERT_TRUE((bool)AST);
-          EXPECT_EQ(AST->Inputs.FS, Inputs.FS);
-          EXPECT_EQ(AST->Inputs.Contents, Inputs.Contents);
+                     std::lock_guard<std::mutex> Lock(Mut);
+                     ++TotalUpdates;
+                   });
+        }
 
-          std::lock_guard<std::mutex> Lock(Mut);
-          ++TotalASTReads;
-        });
+        {
+          WithContextValue WithNonce(NonceKey, ++Nonce);
+          S.runWithAST(File, [Inputs, Nonce, &Mut, &TotalASTReads](
+                                 llvm::Expected<InputsAndAST> AST) {
+            EXPECT_THAT(Context::current().get(NonceKey), Pointee(Nonce));
 
-        S.runWithPreamble(
-            File, [Inputs, &Mut, &TotalPreambleReads](
-                      llvm::Expected<InputsAndPreamble> Preamble) {
-              ASSERT_TRUE((bool)Preamble);
-              EXPECT_EQ(Preamble->Inputs.FS, Inputs.FS);
-              EXPECT_EQ(Preamble->Inputs.Contents, Inputs.Contents);
+            ASSERT_TRUE((bool)AST);
+            EXPECT_EQ(AST->Inputs.FS, Inputs.FS);
+            EXPECT_EQ(AST->Inputs.Contents, Inputs.Contents);
 
-              std::lock_guard<std::mutex> Lock(Mut);
-              ++TotalPreambleReads;
-            });
+            std::lock_guard<std::mutex> Lock(Mut);
+            ++TotalASTReads;
+          });
+        }
+
+        {
+          WithContextValue WithNonce(NonceKey, ++Nonce);
+          S.runWithPreamble(
+              File, [Inputs, Nonce, &Mut, &TotalPreambleReads](
+                        llvm::Expected<InputsAndPreamble> Preamble) {
+                EXPECT_THAT(Context::current().get(NonceKey), Pointee(Nonce));
+
+                ASSERT_TRUE((bool)Preamble);
+                EXPECT_EQ(Preamble->Inputs.FS, Inputs.FS);
+                EXPECT_EQ(Preamble->Inputs.Contents, Inputs.Contents);
+
+                std::lock_guard<std::mutex> Lock(Mut);
+                ++TotalPreambleReads;
+              });
+        }
       }
     }
   } // TUScheduler destructor waits for all operations to finish.

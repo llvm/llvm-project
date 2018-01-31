@@ -4407,6 +4407,26 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue TrueVal = Op.getOperand(2);
   SDValue FalseVal = Op.getOperand(3);
 
+  // Try to convert expressions of the form x < k ? k : x (and similar forms) into
+  // more efficient bit operations, which is possible when k is 0 or -1
+  // On ARM and Thumb-2 which has flexible operand 2 this will result in single
+  // instructions. On Thumb the shift and the bit operation will be two instructions.
+  SDValue *K = isa<ConstantSDNode>(LHS) ? &LHS : isa<ConstantSDNode>(RHS)
+                                               ? &RHS
+                                               : nullptr;
+  SDValue KTmp = isa<ConstantSDNode>(TrueVal) ? TrueVal : FalseVal;
+  SDValue V = (KTmp == TrueVal) ? FalseVal : TrueVal;
+
+  if (K && isLowerSaturate(LHS, RHS, TrueVal, FalseVal, CC, *K) && *K == KTmp) {
+    SDValue ShiftV = DAG.getNode(ISD::SRA, dl, VT, V, DAG.getConstant(31, dl, VT));
+    if (isNullConstant(*K)) {
+      SDValue NotShiftV = DAG.getNode(ISD::XOR, dl, VT, ShiftV, DAG.getConstant(-1, dl, VT));
+      return DAG.getNode(ISD::AND, dl, VT, V, NotShiftV);
+    } else if (isAllOnesConstant(*K)) {
+      return DAG.getNode(ISD::OR, dl, VT, V, ShiftV);
+    }
+  }
+
   if (Subtarget->isFPOnlySP() && LHS.getValueType() == MVT::f64) {
     DAG.getTargetLoweringInfo().softenSetCCOperands(DAG, MVT::f64, LHS, RHS, CC,
                                                     dl);

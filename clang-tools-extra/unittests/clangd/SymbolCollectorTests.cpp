@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Annotations.h"
 #include "TestFS.h"
 #include "index/SymbolCollector.h"
 #include "index/SymbolYAML.h"
@@ -46,11 +47,22 @@ MATCHER_P(Snippet, S, "") {
 }
 MATCHER_P(QName, Name, "") { return (arg.Scope + arg.Name).str() == Name; }
 MATCHER_P(CPath, P, "") { return arg.CanonicalDeclaration.FilePath == P; }
+MATCHER_P(LocationOffsets, Offsets, "") {
+  // Offset range in SymbolLocation is [start, end] while in Clangd is [start,
+  // end).
+  return arg.CanonicalDeclaration.StartOffset == Offsets.first &&
+      arg.CanonicalDeclaration.EndOffset == Offsets.second - 1;
+}
+//MATCHER_P(FilePath, P, "") {
+  //return arg.CanonicalDeclaration.FilePath.contains(P);
+//}
 
 namespace clang {
 namespace clangd {
 
 namespace {
+const char TestHeaderName[] = "symbols.h";
+const char TestFileName[] = "symbol.cc";
 class SymbolIndexActionFactory : public tooling::FrontendActionFactory {
 public:
   SymbolIndexActionFactory(SymbolCollector::Options COpts)
@@ -79,21 +91,20 @@ public:
     llvm::IntrusiveRefCntPtr<FileManager> Files(
         new FileManager(FileSystemOptions(), InMemoryFileSystem));
 
-    const std::string FileName = "symbol.cc";
-    const std::string HeaderName = "symbols.h";
     auto Factory = llvm::make_unique<SymbolIndexActionFactory>(CollectorOpts);
 
     tooling::ToolInvocation Invocation(
-        {"symbol_collector", "-fsyntax-only", "-std=c++11", FileName},
+        {"symbol_collector", "-fsyntax-only", "-std=c++11", TestFileName},
         Factory->create(), Files.get(),
         std::make_shared<PCHContainerOperations>());
 
-    InMemoryFileSystem->addFile(HeaderName, 0,
+    InMemoryFileSystem->addFile(TestHeaderName, 0,
                                 llvm::MemoryBuffer::getMemBuffer(HeaderCode));
 
-    std::string Content = "#include\"" + std::string(HeaderName) + "\"";
-    Content += "\n" + MainCode.str();
-    InMemoryFileSystem->addFile(FileName, 0,
+    std::string Content = MainCode;
+    if (!HeaderCode.empty())
+      Content = "#include\"" + std::string(TestHeaderName) + "\"\n" + Content;
+    InMemoryFileSystem->addFile(TestFileName, 0,
                                 llvm::MemoryBuffer::getMemBuffer(Content));
     Invocation.run();
     Symbols = Factory->Collector->takeSymbols();
@@ -204,6 +215,57 @@ TEST_F(SymbolCollectorTest, IgnoreNamelessSymbols) {
   runSymbolCollector(Header, /*Main=*/"");
   EXPECT_THAT(Symbols,
               UnorderedElementsAre(QName("Foo")));
+}
+
+TEST_F(SymbolCollectorTest, SymbolFormedFromMacro) {
+  CollectorOpts.IndexMainFiles = false;
+
+  Annotations Header(R"(
+    #define FF(name) \
+      class name##_Test {};
+
+    $expansion[[FF(abc)]];
+
+    #define FF2() \
+      $spelling[[class Test {}]];
+
+    FF2();
+  )");
+
+  runSymbolCollector(Header.code(), /*Main=*/"");
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(
+                  AllOf(QName("abc_Test"),
+                        LocationOffsets(Header.offsetRange("expansion")),
+                        CPath(TestHeaderName)),
+                  AllOf(QName("Test"),
+                        LocationOffsets(Header.offsetRange("spelling")),
+                        CPath(TestHeaderName))));
+}
+
+TEST_F(SymbolCollectorTest, SymbolFormedFromMacroInMainFile) {
+  CollectorOpts.IndexMainFiles = true;
+
+  Annotations Main(R"(
+    #define FF(name) \
+      class name##_Test {};
+
+    $expansion[[FF(abc)]];
+
+    #define FF2() \
+      $spelling[[class Test {}]];
+
+    FF2();
+  )");
+  runSymbolCollector(/*Header=*/"", Main.code());
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(
+                  AllOf(QName("abc_Test"),
+                        LocationOffsets(Main.offsetRange("expansion")),
+                        CPath(TestFileName)),
+                  AllOf(QName("Test"),
+                        LocationOffsets(Main.offsetRange("spelling")),
+                        CPath(TestFileName))));
 }
 
 TEST_F(SymbolCollectorTest, IgnoreSymbolsInMainFile) {

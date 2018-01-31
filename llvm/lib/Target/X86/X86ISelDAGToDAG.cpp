@@ -3073,30 +3073,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         return;
       }
 
-      // For example, "testl %eax, $2048" to "testb %ah, $8".
-      if (isShiftedUInt<8, 8>(Mask) &&
-          (!(Mask & 0x8000) || hasNoSignedComparisonUses(Node))) {
-        // Shift the immediate right by 8 bits.
-        SDValue ShiftedImm = CurDAG->getTargetConstant(Mask >> 8, dl, MVT::i8);
-        SDValue Reg = N0.getOperand(0);
-
-        // Extract the h-register.
-        SDValue Subreg = CurDAG->getTargetExtractSubreg(X86::sub_8bit_hi, dl,
-                                                        MVT::i8, Reg);
-
-        // Emit a testb.  The EXTRACT_SUBREG becomes a COPY that can only
-        // target GR8_NOREX registers, so make sure the register class is
-        // forced.
-        SDNode *NewNode = CurDAG->getMachineNode(X86::TEST8ri_NOREX, dl,
-                                                 MVT::i32, Subreg, ShiftedImm);
-        // Replace SUB|CMP with TEST, since SUB has two outputs while TEST has
-        // one, do not call ReplaceAllUsesWith.
-        ReplaceUses(SDValue(Node, (Opcode == X86ISD::SUB ? 1 : 0)),
-                    SDValue(NewNode, 0));
-        CurDAG->RemoveDeadNode(Node);
-        return;
-      }
-
       // For example, "testl %eax, $32776" to "testw %ax, $32776".
       // NOTE: We only want to form TESTW instructions if optimizing for
       // min size. Otherwise we only save one byte and possibly get a length
@@ -3130,7 +3106,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         // Extract the 32-bit subregister.
         SDValue Subreg = CurDAG->getTargetExtractSubreg(X86::sub_32bit, dl,
                                                         MVT::i32, Reg);
-
         // Emit a testl.
         SDNode *NewNode = CurDAG->getMachineNode(X86::TEST32ri, dl, MVT::i32,
                                                  Subreg, Imm);

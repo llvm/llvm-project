@@ -28,7 +28,7 @@ public:
   static std::unique_ptr<SymbolIndex> build(SymbolSlab Slab);
 
   bool
-  fuzzyFind(const Context &Ctx, const FuzzyFindRequest &Req,
+  fuzzyFind(const FuzzyFindRequest &Req,
             llvm::function_ref<void(const Symbol &)> Callback) const override;
 
 private:

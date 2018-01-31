@@ -712,10 +712,12 @@ define <16 x i8> @test8(<16 x i32>%a, <16 x i32>%b, i32 %a1, i32 %b1) {
 ; AVX512BW-NEXT:    jg LBB17_1
 ; AVX512BW-NEXT:  ## %bb.2:
 ; AVX512BW-NEXT:    vpcmpltud %zmm2, %zmm1, %k0
-; AVX512BW-NEXT:    jmp LBB17_3
+; AVX512BW-NEXT:    vpmovm2b %k0, %zmm0
+; AVX512BW-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %zmm0
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
 ; AVX512BW-NEXT:  LBB17_1:
 ; AVX512BW-NEXT:    vpcmpgtd %zmm2, %zmm0, %k0
-; AVX512BW-NEXT:  LBB17_3:
 ; AVX512BW-NEXT:    vpmovm2b %k0, %zmm0
 ; AVX512BW-NEXT:    ## kill: def %xmm0 killed %xmm0 killed %zmm0
 ; AVX512BW-NEXT:    vzeroupper
