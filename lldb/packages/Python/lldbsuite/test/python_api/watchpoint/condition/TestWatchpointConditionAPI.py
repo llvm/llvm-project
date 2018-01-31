@@ -42,7 +42,7 @@ class WatchpointConditionAPITestCase(TestBase):
         """Test watchpoint condition API."""
         self.build(dictionary=self.d)
         self.setTearDownCleanup(dictionary=self.d)
-        exe = os.path.join(os.getcwd(), self.exe_name)
+        exe = self.getBuildArtifact(self.exe_name)
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)

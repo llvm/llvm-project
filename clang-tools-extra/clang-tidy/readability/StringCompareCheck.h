@@ -7,20 +7,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_STRING_COMPARE_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_STRING_COMPARE_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_STRINGCOMPARECHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_STRINGCOMPARECHECK_H
 
 #include "../ClangTidy.h"
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace readability {
 
 /// This check flags all calls compare when used to check for string
 /// equality or inequality.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc-string-compare.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/readability-string-compare.html
 class StringCompareCheck : public ClangTidyCheck {
 public:
   StringCompareCheck(StringRef Name, ClangTidyContext *Context)
@@ -29,8 +29,8 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace misc
+} // namespace readability
 } // namespace tidy
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_STRING_COMPARE_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_STRINGCOMPARECHECK_H

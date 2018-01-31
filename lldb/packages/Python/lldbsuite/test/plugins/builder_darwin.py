@@ -5,20 +5,23 @@ import lldbsuite.test.lldbtest as lldbtest
 
 from builder_base import *
 
-
 def buildDsym(
         sender=None,
         architecture=None,
         compiler=None,
         dictionary=None,
-        clean=True):
+        clean=True,
+        testdir=None):
     """Build the binaries with dsym debug info."""
     commands = []
 
     if clean:
-        commands.append(["make", "clean", getCmdLine(dictionary)])
-    commands.append(["make", "MAKE_DSYM=YES", getArchSpec(
-        architecture), getCCSpec(compiler), getCmdLine(dictionary)])
+        commands.append(getMake(testdir) + ["clean", getCmdLine(dictionary)])
+    commands.append(getMake(testdir) +
+                    ["MAKE_DSYM=YES",
+                     getArchSpec(architecture),
+                     getCCSpec(compiler),
+                     "all", getCmdLine(dictionary)])
 
     runBuildCommands(commands, sender=sender)
 

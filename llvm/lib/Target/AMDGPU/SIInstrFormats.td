@@ -203,6 +203,8 @@ class VPseudoInstSI<dag outs, dag ins, list<dag> pattern = [], string asm = "">
   : PseudoInstSI<outs, ins, pattern, asm> {
   let VALU = 1;
   let Uses = [EXEC];
+  // Avoid changing source registers in a way that violates constant bus read limitations.
+  let hasExtraSrcRegAllocReq = 1;
 }
 
 class CFPseudoInstSI<dag outs, dag ins, list<dag> pattern = [],

@@ -476,6 +476,12 @@ findBaseDefiningValueOfVector(Value *I) {
   if (auto *BC = dyn_cast<BitCastInst>(I))
     return findBaseDefiningValue(BC->getOperand(0));
 
+  // We assume that functions in the source language only return base
+  // pointers.  This should probably be generalized via attributes to support
+  // both source language and internal functions.
+  if (isa<CallInst>(I) || isa<InvokeInst>(I))
+    return BaseDefiningValueResult(I, true);
+
   // A PHI or Select is a base defining value.  The outer findBasePointer
   // algorithm is responsible for constructing a base value for this BDV.
   assert((isa<SelectInst>(I) || isa<PHINode>(I)) &&

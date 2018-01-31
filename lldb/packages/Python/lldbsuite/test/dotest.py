@@ -474,6 +474,8 @@ def parseOptionsAndInitTestdirs():
         configuration.lldb_platform_url = args.lldb_platform_url
     if args.lldb_platform_working_dir:
         configuration.lldb_platform_working_dir = args.lldb_platform_working_dir
+    if args.test_build_dir:
+        configuration.test_build_dir = args.test_build_dir
 
     if args.event_add_entries and len(args.event_add_entries) > 0:
         entries = {}
@@ -622,6 +624,12 @@ def setupSysPath():
         sys.exit(-1)
 
     os.environ["LLDB_TEST"] = scriptPath
+
+    # Set up the root build directory.
+    builddir = configuration.test_build_dir
+    if not configuration.test_build_dir:
+        raise Exception("test_build_dir is not set")
+    os.environ["LLDB_BUILD"] = os.path.abspath(configuration.test_build_dir)
 
     # Set up the LLDB_SRC environment variable, so that the tests can locate
     # the LLDB source code.
@@ -1185,6 +1193,11 @@ def run_suite():
         lldb.remote_platform = None
         configuration.lldb_platform_working_dir = None
         configuration.lldb_platform_url = None
+
+    # Set up the working directory.
+    # Note that it's not dotest's job to clean this directory.
+    try: os.makedirs(configuration.test_build_dir)
+    except: pass
 
     target_platform = lldb.DBG.GetSelectedPlatform().GetTriple().split('-')[2]
 

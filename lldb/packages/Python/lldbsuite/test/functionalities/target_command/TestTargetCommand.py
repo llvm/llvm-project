@@ -62,8 +62,8 @@ class targetCommandTestCase(TestBase):
     def do_target_command(self):
         """Exercise 'target create', 'target list', 'target select' commands."""
         exe_a = self.getBuildArtifact("a.out")
-        exe_b = os.path.join(os.getcwd(), "b.out")
-        exe_c = os.path.join(os.getcwd(), "c.out")
+        exe_b = self.getBuildArtifact("b.out")
+        exe_c = self.getBuildArtifact("c.out")
 
         self.runCmd("target list")
         output = self.res.GetOutput()
@@ -114,7 +114,8 @@ class targetCommandTestCase(TestBase):
 
     def do_target_variable_command(self, exe_name):
         """Exercise 'target variable' command before and after starting the inferior."""
-        self.runCmd("file " + exe_name, CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact(exe_name),
+                    CURRENT_EXECUTABLE_SET)
 
         self.expect(
             "target variable my_global_char",
@@ -206,7 +207,8 @@ class targetCommandTestCase(TestBase):
 
     def do_target_variable_command_no_fail(self, exe_name):
         """Exercise 'target variable' command before and after starting the inferior."""
-        self.runCmd("file " + exe_name, CURRENT_EXECUTABLE_SET)
+        self.runCmd("file " + self.getBuildArtifact(exe_name),
+                    CURRENT_EXECUTABLE_SET)
 
         self.expect(
             "target variable my_global_char",

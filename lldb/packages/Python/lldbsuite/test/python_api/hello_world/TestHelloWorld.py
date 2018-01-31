@@ -21,7 +21,7 @@ class HelloWorldTestCase(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
         # Get the full path to our executable to be attached/debugged.
-        self.exe = os.path.join(os.getcwd(), self.testMethodName)
+        self.exe = self.getBuildArtifact(self.testMethodName)
         self.d = {'EXE': self.testMethodName}
         # Find a couple of the line numbers within main.c.
         self.line1 = line_number('main.c', '// Set break point at this line.')

@@ -736,6 +736,18 @@ uptr __sanitizer_get_allocated_size(const void *Ptr) {
   return Instance.getUsableSize(Ptr);
 }
 
+#if !SANITIZER_SUPPORTS_WEAK_HOOKS
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_malloc_hook,
+                             void *Ptr, uptr Size) {
+  (void)Ptr;
+  (void)Size;
+}
+
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_free_hook, void *Ptr) {
+  (void)Ptr;
+}
+#endif
+
 // Interface functions
 
 void __scudo_set_rss_limit(uptr LimitMb, s32 HardLimit) {

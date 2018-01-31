@@ -6,7 +6,6 @@ add_clang_library(clangTidyMiscModule
   MisplacedConstCheck.cpp
   UnconventionalAssignOperatorCheck.cpp
   DefinitionsInHeadersCheck.cpp
-  IncorrectRoundings.cpp
   MacroParenthesesCheck.cpp
   MacroRepeatedSideEffectsCheck.cpp
   MiscTidyModule.cpp
@@ -17,7 +16,6 @@ add_clang_library(clangTidyMiscModule
   SizeofContainerCheck.cpp
   SizeofExpressionCheck.cpp
   StaticAssertCheck.cpp
-  StringCompareCheck.cpp
   StringIntegerAssignmentCheck.cpp
   StringLiteralWithEmbeddedNulCheck.cpp
   SuspiciousEnumUsageCheck.cpp

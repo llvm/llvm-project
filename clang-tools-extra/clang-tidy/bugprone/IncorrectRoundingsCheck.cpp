@@ -1,4 +1,4 @@
-//===--- IncorrectRoundings.cpp - clang-tidy ------------------------------===//
+//===--- IncorrectRoundingsCheck.cpp - clang-tidy ------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "IncorrectRoundings.h"
+#include "IncorrectRoundingsCheck.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -18,7 +18,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 namespace {
 AST_MATCHER(FloatingLiteral, floatHalf) {
@@ -31,7 +31,7 @@ AST_MATCHER(FloatingLiteral, floatHalf) {
 }
 } // namespace
 
-void IncorrectRoundings::registerMatchers(MatchFinder *MatchFinder) {
+void IncorrectRoundingsCheck::registerMatchers(MatchFinder *MatchFinder) {
   // Match a floating literal with value 0.5.
   auto FloatHalf = floatLiteral(floatHalf());
 
@@ -59,13 +59,13 @@ void IncorrectRoundings::registerMatchers(MatchFinder *MatchFinder) {
       this);
 }
 
-void IncorrectRoundings::check(const MatchFinder::MatchResult &Result) {
+void IncorrectRoundingsCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *CastExpr = Result.Nodes.getNodeAs<ImplicitCastExpr>("CastExpr");
   diag(CastExpr->getLocStart(),
        "casting (double + 0.5) to integer leads to incorrect rounding; "
        "consider using lround (#include <cmath>) instead");
 }
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang

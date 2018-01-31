@@ -134,8 +134,8 @@ void OutputSection::addSection(InputSection *IS) {
   }
 }
 
-void elf::sortByOrder(MutableArrayRef<InputSection *> In,
-                      std::function<int(InputSectionBase *S)> Order) {
+static void sortByOrder(MutableArrayRef<InputSection *> In,
+                        std::function<int(InputSectionBase *S)> Order) {
   typedef std::pair<int, InputSection *> Pair;
   auto Comp = [](const Pair &A, const Pair &B) { return A.first < B.first; };
 

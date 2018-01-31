@@ -1,10 +1,12 @@
-; RUN: llc < %s -mtriple=aarch64-eabi -mattr=+slow-paired-128 -verify-machineinstrs -asm-verbose=false | FileCheck %s
-; RUN: llc < %s -mtriple=aarch64-eabi -mcpu=exynos-m1 -verify-machineinstrs -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64-eabi -mattr=+slow-paired-128 -verify-machineinstrs -asm-verbose=false | FileCheck %s --check-prefixes=CHECK,SLOW
+; RUN: llc < %s -mtriple=aarch64-eabi -mcpu=exynos-m1         -verify-machineinstrs -asm-verbose=false | FileCheck %s --check-prefixes=CHECK,SLOW
+; RUN: llc < %s -mtriple=aarch64-eabi -mcpu=exynos-m3         -verify-machineinstrs -asm-verbose=false | FileCheck %s --check-prefixes=CHECK,FAST
 
 ; CHECK-LABEL: test_nopair_st
-; CHECK: str
-; CHECK: stur
-; CHECK-NOT: stp
+; SLOW: str
+; SLOW: stur
+; SLOW-NOT: stp
+; FAST: stp
 define void @test_nopair_st(double* %ptr, <2 x double> %v1, <2 x double> %v2) {
   %tmp1 = bitcast double* %ptr to <2 x double>*
   store <2 x double> %v2, <2 x double>* %tmp1, align 16
@@ -15,9 +17,10 @@ define void @test_nopair_st(double* %ptr, <2 x double> %v1, <2 x double> %v2) {
 }
 
 ; CHECK-LABEL: test_nopair_ld
-; CHECK: ldr
-; CHECK: ldr
-; CHECK-NOT: ldp
+; SLOW: ldr
+; SLOW: ldr
+; SLOW-NOT: ldp
+; FAST: ldp
 define <2 x i64> @test_nopair_ld(i64* %p) {
   %a1 = bitcast i64* %p to <2 x i64>*
   %tmp1 = load <2 x i64>, < 2 x i64>* %a1, align 8

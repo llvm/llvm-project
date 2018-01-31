@@ -1,4 +1,4 @@
-//===--- IncorrectRoundings.h - clang-tidy ----------------------*- C++ -*-===//
+//===--- IncorrectRoundingsCheckCheck.h - clang-tidy -----------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,7 +14,7 @@
 
 namespace clang {
 namespace tidy {
-namespace misc {
+namespace bugprone {
 
 /// \brief Checks the usage of patterns known to produce incorrect rounding.
 /// Programmers often use
@@ -24,15 +24,15 @@ namespace misc {
 ///  2. It is incorrect. The number 0.499999975 (smallest representable float
 ///     number below 0.5) rounds to 1.0. Even worse behavior for negative
 ///     numbers where both -0.5f and -1.4f both round to 0.0.
-class IncorrectRoundings : public ClangTidyCheck {
+class IncorrectRoundingsCheck : public ClangTidyCheck {
 public:
-  IncorrectRoundings(StringRef Name, ClangTidyContext *Context)
+  IncorrectRoundingsCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang
 

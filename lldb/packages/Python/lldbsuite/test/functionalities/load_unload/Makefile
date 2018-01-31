@@ -7,11 +7,10 @@ CXX_SOURCES := main.cpp
 
 include $(LEVEL)/Makefile.rules
 
-.PHONY:
 a.out: lib_a lib_b lib_c lib_d hidden_lib_d install_name_tool
 
 lib_%:
-	$(MAKE) -f $*.mk
+	$(MAKE) VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/$*.mk
 
 install_name_tool:
 ifeq ($(OS),Darwin)
@@ -20,11 +19,11 @@ endif
 
 
 hidden_lib_d:
-	$(MAKE) -C hidden
+	$(MAKE) VPATH=$(SRCDIR)/hidden -I $(SRCDIR)/hidden -C hidden -f $(SRCDIR)/hidden/Makefile
 
 clean::
-	$(MAKE) -f a.mk clean
-	$(MAKE) -f b.mk clean
-	$(MAKE) -f c.mk clean
-	$(MAKE) -f d.mk clean
-	$(MAKE) -C hidden clean
+	$(MAKE) -f $(SRCDIR)/a.mk clean
+	$(MAKE) -f $(SRCDIR)/b.mk clean
+	$(MAKE) -f $(SRCDIR)/c.mk clean
+	$(MAKE) -f $(SRCDIR)/d.mk clean
+	$(MAKE) -I $(SRCDIR)/hidden -C hidden -f $(SRCDIR)/hidden/Makefile clean

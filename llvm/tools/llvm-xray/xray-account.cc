@@ -237,16 +237,19 @@ ResultRow getStats(std::vector<uint64_t> &Timings) {
   auto MinMax = std::minmax_element(Timings.begin(), Timings.end());
   R.Min = *MinMax.first;
   R.Max = *MinMax.second;
+  R.Count = Timings.size();
+
   auto MedianOff = Timings.size() / 2;
   std::nth_element(Timings.begin(), Timings.begin() + MedianOff, Timings.end());
   R.Median = Timings[MedianOff];
+
   auto Pct90Off = std::floor(Timings.size() * 0.9);
   std::nth_element(Timings.begin(), Timings.begin() + Pct90Off, Timings.end());
   R.Pct90 = Timings[Pct90Off];
+
   auto Pct99Off = std::floor(Timings.size() * 0.99);
-  std::nth_element(Timings.begin(), Timings.begin() + Pct90Off, Timings.end());
+  std::nth_element(Timings.begin(), Timings.begin() + Pct99Off, Timings.end());
   R.Pct99 = Timings[Pct99Off];
-  R.Count = Timings.size();
   return R;
 }
 

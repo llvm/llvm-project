@@ -20,10 +20,10 @@ class ProcessIOTestCase(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
         # Get the full path to our executable to be debugged.
-        self.exe = os.path.join(os.getcwd(), "process_io")
-        self.local_input_file = os.path.join(os.getcwd(), "input.txt")
-        self.local_output_file = os.path.join(os.getcwd(), "output.txt")
-        self.local_error_file = os.path.join(os.getcwd(), "error.txt")
+        self.exe = self.getBuildArtifact("process_io")
+        self.local_input_file = self.getBuildArtifact("input.txt")
+        self.local_output_file = self.getBuildArtifact("output.txt")
+        self.local_error_file = self.getBuildArtifact("error.txt")
 
         self.input_file = os.path.join(
             self.get_process_working_directory(), "input.txt")

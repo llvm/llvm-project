@@ -1,7 +1,7 @@
-.. title:: clang-tidy - misc-string-compare
+.. title:: clang-tidy - readability-string-compare
 
-misc-string-compare
-===================
+readability-string-compare
+==========================
 
 Finds string comparisons using the compare method.
 
