@@ -325,13 +325,6 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     bool is_utf_16 = objectAddr & (1ULL << 60);
     uint64_t payloadAddr = objectAddr & ((1ULL << 56) - 1);
 
-    // FIXME: Remove printf debugging.
-    // stream.Printf("payload address = %llu\n", payloadAddr);
-    // stream.Printf("t (is-a-value) = %d\n", is_a_value);
-    // stream.Printf("v (sub-variant) = %d\n", is_Cocoa_or_small);
-    // stream.Printf("o (opaque) = %d\n", is_opaque);
-    // stream.Printf("w (width) = %d\n", is_utf_16);
-
     if (!is_opaque && ((is_a_value && !is_Cocoa_or_small) ||
                        (!is_a_value && !is_Cocoa_or_small))) {
       uint64_t count = otherBits_sp->GetValueAsUnsigned(0) & ((1ULL << 48) - 1);
