@@ -189,15 +189,18 @@ AArch64Subtarget::ClassifyGlobalReference(const GlobalValue *GV,
   if (TM.getCodeModel() == CodeModel::Large && isTargetMachO())
     return AArch64II::MO_GOT;
 
+  unsigned Flags = GV->hasDLLImportStorageClass() ? AArch64II::MO_DLLIMPORT
+                                                  : AArch64II::MO_NO_FLAG;
+
   if (!TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
-    return AArch64II::MO_GOT;
+    return AArch64II::MO_GOT | Flags;
 
   // The small code model's direct accesses use ADRP, which cannot
   // necessarily produce the value 0 (if the code is above 4GB).
   if (useSmallAddressing() && GV->hasExternalWeakLinkage())
-    return AArch64II::MO_GOT;
+    return AArch64II::MO_GOT | Flags;
 
-  return AArch64II::MO_NO_FLAG;
+  return Flags;
 }
 
 unsigned char AArch64Subtarget::classifyGlobalFunctionReference(

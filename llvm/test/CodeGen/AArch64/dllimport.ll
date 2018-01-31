@@ -1,4 +1,5 @@
-; RUN: llc -mtriple aarch64-unknown-windows-msvc -filetype asm -o - %s | FileCheck %s
+; RUN: llc -mtriple aarch64-unknown-windows-msvc -filetype asm -o - %s | FileCheck %s -check-prefixes=CHECK,DAG-ISEL
+; RUN: llc -mtriple aarch64-unknown-windows-msvc -fast-isel -filetype asm -o - %s | FileCheck %s -check-prefixes=CHECK,FAST-ISEL
 
 @var = external dllimport global i32
 @ext = external global i32
@@ -23,7 +24,9 @@ define i32 @get_ext() {
 
 ; CHECK-LABEL: get_ext
 ; CHECK: adrp x8, ext
-; CHECK: ldr w0, [x8, ext]
+; DAG-ISEL: ldr w0, [x8, ext]
+; FAST-ISEL: add x8, x8, ext
+; FAST-ISEL: ldr w0, [x8]
 ; CHECK: ret
 
 define i32* @get_var_pointer() {
@@ -31,8 +34,8 @@ define i32* @get_var_pointer() {
 }
 
 ; CHECK-LABEL: get_var_pointer
-; CHECK: adrp x0, __imp_var
-; CHECK: ldr x0, [x0, __imp_var]
+; CHECK: adrp [[REG1:x[0-9]+]], __imp_var
+; CHECK: ldr {{x[0-9]+}}, {{\[}}[[REG1]], __imp_var]
 ; CHECK: ret
 
 define i32 @call_external() {
