@@ -13,7 +13,9 @@ set(CILKSAN_SOURCES
 
 include_directories(..)
 
-set(CILKSAN_CFLAGS ${SANITIZER_COMMON_CFLAGS} -std=c++11)
+set(CILKSAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
+
+append_list_if(COMPILER_RT_HAS_STD_CXX11_FLAG -std=c++11 CILKSAN_CFLAGS)
 
 append_rtti_flag(OFF CILKSAN_CFLAGS)
 
